@@ -17,6 +17,7 @@ using System.Windows;
 using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 using Serilog;
+using PileDesign.Services;
 namespace PileDesign.ViewModels
 {
     public partial class HorizontalCalculationViewModel : ObservableObject
@@ -75,7 +76,12 @@ namespace PileDesign.ViewModels
             string CaseTag, int Level, int LoadCaseNo, int ComboNo, bool IsLiquefaction,
             int Step, int NStep, int BisectionAttempt, int Iterations,
             double FinalResidual, double EffectiveAlpha, double MaxDisp,
-            StepStatus Status, double ElapsedSec);
+            StepStatus Status, double ElapsedSec,
+            // 2026-05-06: NR モード追跡。
+            //   KRebuildCount = ステップ内で K 行列を組み直した反復数 (= Full NR 反復数)
+            //   KReuseCount   = K を再利用した反復数 (= Modified NR 反復数)
+            //   合計は Iterations に一致 (Iterations = KRebuildCount + KReuseCount)。
+            int KRebuildCount = 0, int KReuseCount = 0);
         private readonly System.Collections.Concurrent.ConcurrentBag<StepSummary> _stepSummaries = new();
 
         private void StartLogTimerIfNeeded()
@@ -273,6 +279,15 @@ namespace PileDesign.ViewModels
         // ラインサーチ（線探索）- Newton方向に沿って最適なステップ長を自動探索
         // 既存コードとの互換性のため維持
         private bool _useLineSearch = true;  // v15: デフォルトをtrueに変更
+
+        // Phase 3 (2026-05-06) step-level cut-back retry 機構の有効化フラグ。
+        // false: 従来挙動 — ステップ未収束時は attempt 全体を破棄して nStep×2 で再試行。
+        // true: end-of-step k チェックポイントから巻き戻して失敗ステップだけ細分化 (1/M)。
+        // 各 attempt で許容する cut-back 回数は MAX_CUTBACKS_PER_ATTEMPT で制限。
+        // 2026-05-06: 実機検証で counter-loading 系が極端に遅くなる問題が判明し一時的に false に戻す。
+        private const bool _useStepLevelCutback = false;
+        private const int MAX_CUTBACKS_PER_ATTEMPT = 3;
+        private const int CUTBACK_DIVISOR = 2;  // 失敗ステップを 1/M に分割 (M=2 で半分)
         public bool UseLineSearch
         {
             get => _useLineSearch;
@@ -496,6 +511,20 @@ namespace PileDesign.ViewModels
         // 解析実行中のみ増加。解析開始時にリセット。
         private int _bisectionExtraSteps = 0;
 
+        /// <summary>
+        /// `_bisectionExtraSteps` 変更時に並列モニタとメインプログレスバー両方に
+        /// 反映するため、関連プロパティ全部の PropertyChanged を一括で発火。
+        /// (旧実装は TotalCalculationCount と ProgressText だけ発火しており、
+        /// 並列モニタが直接バインドしている EffectiveProgressTotal が更新されなかった)
+        /// </summary>
+        private void NotifyProgressPropertiesChanged()
+        {
+            OnPropertyChanged(nameof(TotalCalculationCount));
+            OnPropertyChanged(nameof(EffectiveProgressTotal));
+            OnPropertyChanged(nameof(EffectiveProgress));
+            OnPropertyChanged(nameof(ProgressText));
+        }
+
         // E3c-3 (2026-04-23): ケース並列化用。
         // DeepCopy 直後の主モデル結果件数 snapshot と、case body 完了後の
         // AppendCaseResultsToMain 呼出は共に targetModel の ObservableCollection
@@ -648,7 +677,10 @@ namespace PileDesign.ViewModels
         {
             get
             {
-                string baseText = $"{EffectiveProgress}/{EffectiveProgressTotal}";
+                // 単位「ステップ評価」= 各荷重ケースのステップ × 再試行回数 の総和。
+                // 並列モニタの「ステップ X/Y (再試行含む)」と同じ意味で、再試行で総数が増える点を明示。
+                // 詳細は ProgressTextTooltip 参照 (ステータスバー TextBlock の ToolTip にバインド)。
+                string baseText = $"ステップ評価 {EffectiveProgress}/{EffectiveProgressTotal} (再試行含む)";
                 string elapsed = ElapsedTimeText;
                 string remaining = EstimatedRemainingText;
                 if (string.IsNullOrEmpty(elapsed) && string.IsNullOrEmpty(remaining))
@@ -658,6 +690,15 @@ namespace PileDesign.ViewModels
                 return $"{baseText}  ┃  {elapsed} / {remaining}";
             }
         }
+
+        /// <summary>
+        /// プログレスバーテキストのツールチップ。「○○/○○」が何を意味するかをユーザーに説明する。
+        /// </summary>
+        public string ProgressTextTooltip =>
+            $"全荷重ケースの全ステップ評価数 (再試行含む)\n" +
+            $"  - 各ケースの計画ステップ数 (counter-loading 検出時は 2× 自動増加)\n" +
+            $"  - ステップ未収束で再試行発動時は nStep が倍増し総数も増える\n" +
+            $"  - 例: 2 ケース × 16 ステップ → 各ケース retry で 32 に倍増 → 計 80 評価";
 
         // v29 (2026-04-27): 解析開始時刻 (経過/残り時間表示用)。RunAsync 冒頭でセット。
         private DateTime? _analysisStartUtc;
@@ -836,7 +877,7 @@ namespace PileDesign.ViewModels
 
                 if (errorMessage != null || modelling == null)
                 {
-                    MessageBox.Show(errorMessage ?? "モデル作成に失敗しました。", "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show(errorMessage ?? "モデル作成に失敗しました。", "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     RequestClose?.Invoke(this, EventArgs.Empty);
                     return;
                 }
@@ -875,7 +916,7 @@ namespace PileDesign.ViewModels
                 b.NodeI_Type == NodeReferenceType.PileLayout || b.NodeJ_Type == NodeReferenceType.PileLayout);
             if (!hasFoundationNodes && !hasPileReferences)
             {
-                MessageBox.Show("剛床連結モードでは基礎梁節点が必要です。\n基礎梁入力で節点を定義するか、杭配置を参照してください。",
+                MessageService.Show("剛床連結モードでは基礎梁節点が必要です。\n基礎梁入力で節点を定義するか、杭配置を参照してください。",
                     "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
@@ -1115,7 +1156,7 @@ namespace PileDesign.ViewModels
             // 解析が未実行の場合は警告を表示して終了
             if (!IsAnalysisExecuted)
             {
-                MessageBox.Show("解析が未了です。解析を実行してください。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show("解析が未了です。解析を実行してください。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1141,7 +1182,7 @@ namespace PileDesign.ViewModels
             // 解析実行済みの場合は確認メッセージを表示
             if (IsAnalysisExecuted)
             {
-                var result = MessageBox.Show(
+                var result = MessageService.Show(
                     "解析結果を登録せずにウィンドウを閉じますか？\n（「はい」を選ぶと結果は破棄されます）",
                     "確認",
                     MessageBoxButton.YesNo,
@@ -1182,7 +1223,7 @@ namespace PileDesign.ViewModels
                 {
                     // 基礎梁がない場合は自動的に剛体連結に切り替える
                     ConnectionMode = FoundationBeamConnectionMode.RigidBody;
-                    MessageBox.Show("基礎梁要素が定義されていないため、剛体連結モードに切り替えて解析を実行します。",
+                    MessageService.Show("基礎梁要素が定義されていないため、剛体連結モードに切り替えて解析を実行します。",
                         "接続モード変更", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else if (fbInput != null)
@@ -1193,7 +1234,7 @@ namespace PileDesign.ViewModels
                         b.NodeI_Type == NodeReferenceType.PileLayout || b.NodeJ_Type == NodeReferenceType.PileLayout);
                     if (!hasFoundationNodes && !hasPileReferences)
                     {
-                        MessageBox.Show("剛床連結モードでは基礎梁節点が必要です。\n基礎梁入力で節点を定義するか、杭配置を参照してください。",
+                        MessageService.Show("剛床連結モードでは基礎梁節点が必要です。\n基礎梁入力で節点を定義するか、杭配置を参照してください。",
                             "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return false;
                     }
@@ -1209,7 +1250,7 @@ namespace PileDesign.ViewModels
             }
             catch (InvalidOperationException ex)
             {
-                MessageBox.Show(ex.Message, "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(ex.Message, "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
 
@@ -1408,7 +1449,7 @@ namespace PileDesign.ViewModels
                 || (TryGetTargetAnaModel()?.AnalysisStepResults?.Count > 0);
             if (!additive && hasExistingResults)
             {
-                var result = MessageBox.Show(
+                var result = MessageService.Show(
                     "既に水平解析の結果が存在します。\n再実行すると既存の結果は上書きされます。\n\n解析を実行しますか？",
                     "解析結果の上書き確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result != MessageBoxResult.Yes)
@@ -1422,7 +1463,7 @@ namespace PileDesign.ViewModels
                 var msg = "以下の杭は地盤と重なっていないため、水平解析を実行できません。\n" +
                           "基本設定の「Z=0 の標高」を確認するか、杭頭 Z を見直してください。\n\n" +
                           string.Join("\n", pileGroundErrors);
-                MessageBox.Show(msg, "杭-地盤位置の不整合", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(msg, "杭-地盤位置の不整合", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -1438,7 +1479,7 @@ namespace PileDesign.ViewModels
                             "が登録されていません。\n\n" +
                             "このまま続行するとデフォルト値（FC30 / 0.8m×2.0m 矩形断面）で解析されます。\n" +
                             "材料・断面を入力してから解析する場合はキャンセルを押してください。";
-                var fbResult = MessageBox.Show(fbMsg, "基礎梁 材料・断面 未登録", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+                var fbResult = MessageService.Show(fbMsg, "基礎梁 材料・断面 未登録", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
                 if (fbResult != MessageBoxResult.OK)
                     return;
             }
@@ -1455,7 +1496,7 @@ namespace PileDesign.ViewModels
                     .Distinct();
                 var message = $"以下の荷重ケースで荷重がゼロのため解析をスキップします:\n{string.Join(", ", levelNames)}\n\n" +
                                "荷重ケースウィンドウで上部構造質量荷重または基礎構造質量荷重を設定してください。";
-                MessageBox.Show(message, "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show(message, "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
 
                 // すべての荷重ケースがゼロの場合は解析を中止
                 if (zeroForceLoadCases.Count == InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases.Count)
@@ -1486,7 +1527,7 @@ namespace PileDesign.ViewModels
                                    "半剛接合の効果を考慮するには杭体の非線形を有効にする必要があります。\n" +
                                    "すべての荷重ケースで杭体の非線形を有効にしますか？";
 
-                    var result = MessageBox.Show(message, "杭頭半剛接合の確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    var result = MessageService.Show(message, "杭頭半剛接合の確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
                     if (result == MessageBoxResult.Yes)
                     {
@@ -1537,7 +1578,7 @@ namespace PileDesign.ViewModels
                                    "（推奨: レベル1は4以上、レベル2は16〜32）\n\n" +
                                    "解析ステップ数を変更しますか？";
 
-                    var result = MessageBox.Show(message, "解析ステップ数の確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    var result = MessageService.Show(message, "解析ステップ数の確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
                     if (result == MessageBoxResult.Yes)
                     {
@@ -1550,7 +1591,7 @@ namespace PileDesign.ViewModels
                         {
                             Level2CalculationStepsCount = 16;
                         }
-                        MessageBox.Show($"解析ステップ数を更新しました。\n" +
+                        MessageService.Show($"解析ステップ数を更新しました。\n" +
                                          $"レベル1: {Level1CalculationStepsCount}\n" +
                                          $"レベル2: {Level2CalculationStepsCount}",
                                          "設定更新", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1574,7 +1615,7 @@ namespace PileDesign.ViewModels
                 if (existingTarget == null || existingTarget.AnalysisStepResults == null ||
                     existingTarget.AnalysisStepResults.Count == 0)
                 {
-                    MessageBox.Show(
+                    MessageService.Show(
                         "追加実行のための既存結果が見つかりません。\n通常実行でやり直してください。",
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -1586,7 +1627,7 @@ namespace PileDesign.ViewModels
             {
                 if (!ValidateIncrementalCompatibility(out var reason))
                 {
-                    var choice = MessageBox.Show(
+                    var choice = MessageService.Show(
                         $"追加実行できません。前回設定と相違があります。\n\n{reason}\n\n" +
                         "「はい」: 既存結果を破棄して新規実行に切替\n" +
                         "「いいえ」: キャンセル",
@@ -1629,7 +1670,7 @@ namespace PileDesign.ViewModels
                 IsAnalysisExecuted = true; // 解析実行済みフラグをセット
 
                 // 計算完了通知（UIスレッドで直接表示）
-                MessageBox.Show("計算が終了しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show("計算が終了しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (OperationCanceledException)
             {
@@ -1648,7 +1689,7 @@ namespace PileDesign.ViewModels
                 Application.Current?.Dispatcher.Invoke(() =>
                 {
                     _mainWindowViewModel.SetLatestAnalysisLogs(CalculationLog);
-                    MessageBox.Show($"解析中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show($"解析中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 });
 
                 IsAnalysisExecuted = false;
@@ -1778,7 +1819,7 @@ namespace PileDesign.ViewModels
                     continue;
                 }
 
-                // SoilPile.PileBodySegments を使用（要素分割後のセグメント）
+                // SoilPile.PileBodySegments を使用（杭要素分割後のセグメント）
                 if (seg < 0 || seg >= soilPile.PileBodySegments.Count)
                 {
                     skippedInvalidSeg++;
@@ -2374,9 +2415,8 @@ namespace PileDesign.ViewModels
 
             // v19: 解析開始時に再試行による追加ステップ数をリセット
             _bisectionExtraSteps = 0;
-            OnPropertyChanged(nameof(TotalCalculationCount));
+            NotifyProgressPropertiesChanged();
             OnPropertyChanged(nameof(TotalLoadCaseCount));
-            OnPropertyChanged(nameof(ProgressText));
 
             // 初期進捗を報告
             progress?.Report(new Models.AnalysisProgress
@@ -2602,8 +2642,7 @@ namespace PileDesign.ViewModels
                                 // 事前検出で初期から大きな nStep を選んだ場合、進捗カウンタが超過表示
                                 // （例: 207/180）になっていた。
                                 System.Threading.Interlocked.Add(ref _bisectionExtraSteps, baseNStep - configuredNStep);
-                                OnPropertyChanged(nameof(TotalCalculationCount));
-                                OnPropertyChanged(nameof(ProgressText));
+                                NotifyProgressPropertiesChanged();
                                 string directionLabel = loadDirection == LoadCombinationDirection.CounterLoading ? "逆方向組合せ" : "順方向組合せ";
                                 await AddLogAsync($"  🔎 荷重方向事前検出: {directionLabel} (αL={loadCombination.Alpha1:N2}, βU={loadCombination.Beta1:N2}, βL={loadCombination.Beta2:N2}) → 初期 nStep={baseNStep} (設定値 {configuredNStep} の代わり, 総ステップ数: {TotalCalculationCount})");
                             }
@@ -2661,9 +2700,14 @@ namespace PileDesign.ViewModels
                             // GraphViewModel / AnalysisResultTableService がケース別構成を可視化できるようにする。
                             SnapshotMThetaToOriginalSprings(caseModel, targetModel, loadCase, loadCombination, isLiquefaction);
 
-                            SetVectorDF(caseModel, loadCase, loadCombination, level, iLC, nStep);
+                            // Phase 3: ロード増分の denominator を別変数で管理。
+                            // ・nStep: for-loop 連番上限 (cut-back で「残りステップ分」だけ増える)
+                            // ・effectiveDenom: SetVectorDF / InitializeSoilDisp に渡す増分分母 (cut-back で ×M)
+                            // フラグ off ではどちらも nStep のまま動作 (= 従来挙動)。
+                            int effectiveDenom = nStep;
+                            SetVectorDF(caseModel, loadCase, loadCombination, level, iLC, effectiveDenom);
                             caseModel.MapOnVectorDF();
-                            InitializeSoilDisplacementIncrement(caseModel, loadCase, loadCombination, level, isLiquefaction, nStep);
+                            InitializeSoilDisplacementIncrement(caseModel, loadCase, loadCombination, level, isLiquefaction, effectiveDenom);
 
                             if (bisectionAttempt > 0)
                                 await AddLogAsync($"  ♻ ケース再試行 ({bisectionAttempt}/{MAX_STEP_BISECTIONS}): ステップ数を {baseNStep} → {nStep} に増やして再計算 (以降の総ステップ数: {TotalCalculationCount})");
@@ -2684,10 +2728,18 @@ namespace PileDesign.ViewModels
                             MathNet.Numerics.LinearAlgebra.Vector<double>? prevStepDispIncrement = null;
                             MathNet.Numerics.LinearAlgebra.Vector<double>? prevPrevStepDispIncrement = null;
 
-                            // v26 (案 B): 早期適応検出用の反復数累積。最初の EARLY_ADAPTIVE_OBS_STEPS
-                            // ステップの平均反復数が閾値を超えたら即 retry。30 反復停滞の検出より早く発火する。
-                            // v28 (2026-04-23): retry attempt でも計測し、改善ゲートで無効 retry を検出する。
-                            int iterSumFirstSteps = 0;
+                            // v29 (2026-05-05): 退化トレンド検出 — 各ステップの反復数を履歴に蓄積し、
+                            // 「直近 3 ステップで反復数が単調増加」かつ「最新 ≥ 60 反復」の複合条件で発火。
+                            // v26 (案 B) の「最初 2 ステップの平均反復数 ≥ 18」は「収束しているが反復多い」
+                            // を退化と誤判定する事案 (例題 9 + 基礎梁) があったため、複合条件で誤検知を避ける。
+                            var stepIterHistory = new List<int>();
+
+                            // Phase 3 (2026-05-06): step-level cut-back retry のための状態変数。
+                            // ・lastSuccessCheckpoint: 直近成功ステップ終了時点の状態。null = 未捕捉。
+                            // ・cutbackCount: この attempt 内で発動した cut-back 回数 (上限 MAX_CUTBACKS_PER_ATTEMPT)。
+                            // フラグ off (`_useStepLevelCutback==false`) では capture せず、cut-back 経路も使用しない。
+                            FEM.StepCheckpoint? lastSuccessCheckpoint = null;
+                            int cutbackCount = 0;
 
                             // 引張定着筋なし半剛接合杭で引張軸力 NG をログ済みの杭番号 (1 ケース内重複抑制)。
                             // ローカル変数のため MDOP>1 並列でも安全。
@@ -2835,10 +2887,27 @@ namespace PileDesign.ViewModels
                             int slowDivergenceCount = 0;            // 連続増加回数
                             const int SLOW_DIVERGENCE_LIMIT = 10;   // この回数連続増加で緩やかな発散と判定
 
-                            // v18: 長期未改善検出（counter-loading で残差が振動するケース対策）
+                            // v18: 長期未改善検出（counter-loading で residual が振動するケース対策）
                             // minResidualSeen が一定回数更新されない場合、収束基準を minSeen * 1.2 に緩和
                             int iterationsSinceMinUpdated = 0;
                             const int NO_IMPROVEMENT_LIMIT = 30;
+
+                            // 2026-05-06: NR モード追跡 (Full NR / Modified NR)
+                            //   K 行列を組み直した反復 = Full NR 反復 (kRebuildCount)
+                            //   K を再利用した反復     = Modified NR 反復 (kReuseCount)
+                            //   サマリーレポート / iter ログ / per-step プロファイル行に表示。
+                            int kRebuildCount = 0;
+                            int kReuseCount = 0;
+
+                            // 2026-05-06 (D): 改善率ベース緩和判定。
+                            // 残差が「微減し続ける」ケースでは minResidualSeen が更新され続け、
+                            // iterationsSinceMinUpdated が NO_IMPROVEMENT_LIMIT に到達せず緩和が発火しない問題対策。
+                            // 過去 SLOW_IMPROVEMENT_WINDOW 反復前の残差と現在残差を比較し、改善率が
+                            // SLOW_IMPROVEMENT_THRESHOLD 未満なら「実質停滞」とみなして緩和を発火する。
+                            const int SLOW_IMPROVEMENT_WINDOW = 30;       // 比較ウィンドウ
+                            const double SLOW_IMPROVEMENT_THRESHOLD = 0.10; // 30 反復で 10% 未満の減少なら停滞
+                            const double SLOW_IMPROVEMENT_RELAX_CAP = 1e-2; // この残差を超えていたら緩和しない (発散領域なので)
+                            var residualHistory = new Queue<double>();
 
                             // v17: 長時間反復時の収束基準緩和（40反復以上 + 残差≦RELAXED_ALPHA で緩和）
 
@@ -2893,6 +2962,9 @@ namespace PileDesign.ViewModels
                                 bool effectiveUseLineSearch = UseLineSearch || autoSwitchedToLineSearch;
                                 double usedRelaxFactor = currentRelaxFactor; // このステップで使う値を保存
 
+                                // 2026-05-06: NR モード追跡用フラグ。RunWork 内で更新、ログ出力 (RunWork 外) で参照。
+                                bool kRebuiltThisIter = false;
+
                                 // v28: Mcr 同期 Mode 切替で新規クラック検出したばね名を収集 (Task.Run 外でログ出力するため)
                                 var newlyCrackedSprings = new List<(string Name, double M, double Mcr)>();
 
@@ -2936,6 +3008,8 @@ namespace PileDesign.ViewModels
                                         (springKMin, springKMax) = FindK(iLC, caseModel);
                                         profFindKTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFindK;
                                         profFindKCalls++;
+                                        kRebuiltThisIter = true;
+                                        kRebuildCount++;
 
                                         // 初回反復時のみ剛性マトリクスの安定性チェック
                                         if (n_iteration == 1)
@@ -2945,6 +3019,8 @@ namespace PileDesign.ViewModels
                                     }
                                     else
                                     {
+                                        kRebuiltThisIter = false;
+                                        kReuseCount++;
                                     }
 
                                     // ラインサーチ or 通常の更新
@@ -3213,23 +3289,32 @@ namespace PileDesign.ViewModels
                                 string convergeFlag = isConverged ? " ✓Converged" : "";
 
                                 // 支配 DOF (flip 検出を含む) — リミットサイクル原因 DOF の特定
+                                // 案 A (2026-05-06): flip カウントを「DOF 種別 (Ry/Rx/Rz/Ux/Uy/Uz)」単位で集計。
+                                // 旧実装は「同一 DOF キー (例: "InputNode-6:Ry") のみで連続カウント」だったため、
+                                // InputNode-3:Ry ↔ InputNode-6:Ry ↔ FoundationNode-P28:Ry の交互支配で
+                                // カウンタが毎回リセットされ、Aitken トリガに到達しない事案があった。
+                                // 同種別 DOF 間の符号反転もリミットサイクルとして数えるよう拡張。
                                 string dominantStr = "";
                                 if (dominantDofs != null && dominantDofs.Count > 0)
                                 {
                                     const double FLIP_THRESHOLD = 1e-10;
                                     var top = dominantDofs[0];
                                     int curSign = Math.Sign(top.Value);
+                                    string curDofType = ExtractDofType(top.Key);
+                                    string? prevDofType = prevDominantDofKey != null ? ExtractDofType(prevDominantDofKey) : null;
+
                                     string flipInfo = "";
                                     if (Math.Abs(top.Value) > FLIP_THRESHOLD
-                                        && prevDominantDofKey == top.Key
+                                        && prevDofType != null && prevDofType == curDofType
                                         && prevDominantSign != 0 && curSign != 0
                                         && curSign != prevDominantSign)
                                     {
                                         flipFlopCount++;
                                         flipInfo = $" ⚠flip#{flipFlopCount}";
                                     }
-                                    else if (prevDominantDofKey != top.Key)
+                                    else if (prevDofType != curDofType)
                                     {
+                                        // DOF 種別境界 (例: Ry ⇄ Ux) でリセット
                                         flipFlopCount = 0;
                                     }
                                     prevDominantDofKey = top.Key;
@@ -3239,13 +3324,30 @@ namespace PileDesign.ViewModels
                                     dominantStr = $"  ▶{top.Key}={SignedExp(top.Value)}{flipInfo}";
                                 }
 
-                                await AddLogAsync(
-                                    $"{caseTag}iter {n_iteration,2}  {stepSuffix}  " +
-                                    $"‖R‖²={caseModel.NormsROnNormsFint:E2}{compareSym}{alpha:E1}{convergeFlag}  " +
-                                    $"max|δu|={dispMaxAbs:E2}  " +
-                                    $"K=[{diagKMin:E1},{diagKMax:E1}]  " +
-                                    $"k=[{springKMin:E1},{springKMax:E1}]" +
-                                    dominantStr);
+                                // 案 C (2026-05-05): 並列実行時 (MDOP > 1) は iter ログを間引いて UI 負荷を軽減。
+                                //   常時ログ: 最初 3 反復、収束時、flip 検出時、5 の倍数反復
+                                //   それ以外は省略 (詳細トレースは MDOP=1 で逐次実行時に取得する)
+                                bool isParallelMode = MaxCaseDegreeOfParallelism > 1;
+                                bool isFlipDetected = !string.IsNullOrEmpty(dominantStr) && dominantStr.Contains("⚠flip");
+                                bool shouldLogIter = !isParallelMode
+                                    || isConverged
+                                    || n_iteration <= 3
+                                    || isFlipDetected
+                                    || n_iteration % 5 == 0;
+
+                                if (shouldLogIter)
+                                {
+                                    // 2026-05-06: NR モード可視化。K 行列を組み直した反復 (Full NR) は "[NR]"、
+                                    // 再利用した反復 (Modified NR) は "[MNR]" を末尾に付与。
+                                    string nrTag = kRebuiltThisIter ? "[NR]" : "[MNR]";
+                                    await AddLogAsync(
+                                        $"{caseTag}iter {n_iteration,2} {nrTag} {stepSuffix}  " +
+                                        $"‖R‖²={caseModel.NormsROnNormsFint:E2}{compareSym}{alpha:E1}{convergeFlag}  " +
+                                        $"max|δu|={dispMaxAbs:E2}  " +
+                                        $"K=[{diagKMin:E1},{diagKMax:E1}]  " +
+                                        $"k=[{springKMin:E1},{springKMax:E1}]" +
+                                        dominantStr);
+                                }
 
                                 // v27: 案 A — リミットサイクル Aitken 平均化
                                 // 支配 DOF の flip が AITKEN_FLIP_TRIGGER 回連続検出されたら、
@@ -3365,6 +3467,33 @@ namespace PileDesign.ViewModels
                                     }
                                 }
 
+                                // 2026-05-06 (D): 改善率ベース緩和判定
+                                // 「微減し続ける」ケース (毎反復 minSeen 更新でも改善が遅い) を救済する。
+                                // 過去 SLOW_IMPROVEMENT_WINDOW 反復前の残差と比較し、改善率が閾値未満で停滞判定。
+                                residualHistory.Enqueue(currentResidual);
+                                if (residualHistory.Count > SLOW_IMPROVEMENT_WINDOW)
+                                {
+                                    double residualPast = residualHistory.Dequeue();
+                                    if (!SkipIteration
+                                        && currentResidual > effectiveAlpha
+                                        && currentResidual <= SLOW_IMPROVEMENT_RELAX_CAP
+                                        && residualPast > 1e-30)
+                                    {
+                                        double improvement = (residualPast - currentResidual) / residualPast;
+                                        if (improvement < SLOW_IMPROVEMENT_THRESHOLD)
+                                        {
+                                            // 改善率不足 → 現状を accept できるよう緩和
+                                            double relaxed = Math.Max(currentResidual * 1.1, RELAXED_ALPHA);
+                                            if (relaxed > effectiveAlpha)
+                                            {
+                                                effectiveAlpha = relaxed;
+                                                await AddLogAsync($"  ⚠ 改善率不足: {SLOW_IMPROVEMENT_WINDOW} 反復で残差 {residualPast:E2}→{currentResidual:E2} ({improvement * 100:F1}% 減のみ)。収束基準を緩和 ({alpha:E2}→{effectiveAlpha:E2})");
+                                                residualHistory.Clear();  // 緩和発火後はリセット
+                                            }
+                                        }
+                                    }
+                                }
+
                                 // v17: 長時間反復時の収束基準緩和
                                 // 40反復以上で残差が RELAXED_ALPHA 以下なら、十分収束したとみなす
                                 // （M-φ/M-θ非線形で残差が振動停滞するケースへの対策）
@@ -3466,6 +3595,72 @@ namespace PileDesign.ViewModels
                             {
                                 double finalResidual = caseModel.NormsROnNormsFint;
                                 await AddLogAsync($"  → 未収束: 最大反復回数 {maxIterations} に到達。残差ノルム={finalResidual:E3} (許容値={effectiveAlpha:E3}){dispInfo}");
+
+                                // Phase 3 step-level cut-back: 直近成功ステップに巻き戻して、失敗ステップだけ 1/M に分割して再試行。
+                                // 条件: フラグ on, checkpoint 取得済 (= step >= 1 で前ステップ収束), cut-back 上限未達。
+                                //
+                                // インデックスは「連番」を採用。step は常に +1 ずつ進む (cut-back でジャンプしない)。
+                                // 結果リストの Step 番号も連番で隙間なく埋まる (下流コンシューマ互換のため)。
+                                // 内部の「ロード増分分母」は effectiveDenom が別途管理し cut-back で ×M される。
+                                if (_useStepLevelCutback
+                                    && lastSuccessCheckpoint != null
+                                    && cutbackCount < MAX_CUTBACKS_PER_ATTEMPT)
+                                {
+                                    int oldStep = step;             // 失敗ステップの連番 (= 直近成功ステップ + 1)
+                                    int curNStep = nStep;            // 連番上限 (cut-back で増える)
+                                    int oldEffDenom = effectiveDenom; // ロード増分分母 (cut-back で ×M)
+                                    int newEffDenom = effectiveDenom * CUTBACK_DIVISOR;
+                                    int remainingSteps = curNStep - oldStep;  // 失敗時の残ステップ (失敗自身を含む)
+                                    int addedSteps = (CUTBACK_DIVISOR - 1) * remainingSteps;  // 細分化で追加されるステップ数
+
+                                    await AddLogAsync($"  ↩ cut-back ({cutbackCount + 1}/{MAX_CUTBACKS_PER_ATTEMPT}): step{step + 1}/{curNStep} 未収束 → end-of-step{step} へ巻き戻し、残 {remainingSteps} ステップを 1/{CUTBACK_DIVISOR} 細分化 (denom {oldEffDenom}→{newEffDenom}, 連番上限 {curNStep}→{curNStep + addedSteps})");
+
+                                    // ① state を end-of-step{step-1} に巻き戻し
+                                    lastSuccessCheckpoint.Restore(caseModel);
+
+                                    // ② 結果リストを成功ステップ末尾までトリム (= step エントリ分残す。0-indexed で step 個)
+                                    int keepCount = lastSuccessCheckpoint.StepIndex + 1;
+                                    while (caseModel.AnalysisStepResults.Count > keepCount)
+                                        caseModel.AnalysisStepResults.RemoveAt(caseModel.AnalysisStepResults.Count - 1);
+                                    foreach (var n in caseModel.Nodes)
+                                        while (n.NodeResults.Count > keepCount)
+                                            n.NodeResults.RemoveAt(n.NodeResults.Count - 1);
+                                    foreach (var b in caseModel.Beams)
+                                        while (b.BeamResults.Count > keepCount)
+                                            b.BeamResults.RemoveAt(b.BeamResults.Count - 1);
+                                    foreach (var hs in caseModel.HorizontalSoilSprings)
+                                        while (hs.HorizontalSpringResults.Count > keepCount)
+                                            hs.HorizontalSpringResults.RemoveAt(hs.HorizontalSpringResults.Count - 1);
+                                    if (caseModel.RotationalSprings != null)
+                                        foreach (var rs in caseModel.RotationalSprings)
+                                            while (rs.RotationalSpringResults.Count > keepCount)
+                                                rs.RotationalSpringResults.RemoveAt(rs.RotationalSpringResults.Count - 1);
+
+                                    // ③ ロード増分分母を ×M、連番上限を +addedSteps で更新
+                                    effectiveDenom = newEffDenom;
+                                    nStep = curNStep + addedSteps;
+
+                                    // ④ 増分を新分母で書換 (累積側は保持)
+                                    SetVectorDF(caseModel, loadCase, loadCombination, level, iLC, effectiveDenom, resetCumulative: false);
+                                    caseModel.MapOnVectorDF();
+                                    InitializeSoilDisplacementIncrement(caseModel, loadCase, loadCombination, level, isLiquefaction, effectiveDenom, resetCumulative: false);
+
+                                    // ⑤ 進捗カウンタを追加ステップ分インクリメント
+                                    System.Threading.Interlocked.Add(ref _bisectionExtraSteps, addedSteps);
+                                    NotifyProgressPropertiesChanged();
+
+                                    // ⑥ 予測器・トレンド検出履歴をクリア (増分が変わったので無効)
+                                    prevStepDispIncrement = null;
+                                    prevPrevStepDispIncrement = null;
+                                    stepIterHistory.Clear();
+
+                                    // ⑦ for-loop の step を 1 巻き戻し → post-incr で oldStep に戻り、失敗ステップを最初の substep として再実行
+                                    step = oldStep - 1;
+
+                                    cutbackCount++;
+                                    continue;  // step++ → 次イテレーションで substep 開始
+                                }
+
                                 caseFailedThisAttempt = true;
                             }
                             else
@@ -3539,7 +3734,9 @@ namespace PileDesign.ViewModels
                                     EffectiveAlpha: effectiveAlpha,
                                     MaxDisp: double.IsNaN(dispMaxAbs) ? 0.0 : dispMaxAbs,
                                     Status: _status,
-                                    ElapsedSec: _elapsedSec));
+                                    ElapsedSec: _elapsedSec,
+                                    KRebuildCount: kRebuildCount,
+                                    KReuseCount: kReuseCount));
                             }
 
                             // v21 Phase 3 prep: 自動ライン探索はステップ局所の effectiveUseLineSearch で
@@ -3599,56 +3796,71 @@ namespace PileDesign.ViewModels
                             // v19: このステップが完了したことを記録
                             stepsExecutedInAttempt = step + 1;
 
-                            // v26 (案 B): 早期適応検出 — 最初 EARLY_ADAPTIVE_OBS_STEPS ステップの
-                            // 平均反復数が閾値を超えたら即 retry。30 反復停滞検出より早く発火する。
-                            // v28 (2026-04-23): 改善ゲート追加。retry 後 attempt で avg iter が前 attempt より
-                            // 十分改善していない場合 (構造的ラインサーチ制約等で細分化が無効) は
-                            // 再 retry を抑制し、現 nStep で完遂させる。
-                            const int EARLY_ADAPTIVE_OBS_STEPS = 2;
-                            const double EARLY_ADAPTIVE_ITER_THRESHOLD = 18.0;
-                            const double RETRY_IMPROVEMENT_MIN_RATIO = 0.10;  // 10% 以上改善必要
-                            if (step < EARLY_ADAPTIVE_OBS_STEPS)
+                            // Phase 3: cut-back retry のため、収束したステップ終了時点を checkpoint として保持
+                            // (フラグ off では capture しない — メモリ/CPU コストゼロ)
+                            if (_useStepLevelCutback)
                             {
-                                iterSumFirstSteps += Math.Min(n_iteration, maxIterations);
+                                lastSuccessCheckpoint = FEM.StepCheckpoint.Capture(caseModel, step);
                             }
-                            if (step + 1 == EARLY_ADAPTIVE_OBS_STEPS
+
+                            // v29 (2026-05-05): 退化トレンド検出 — 複合条件版
+                            // 「直近 3 ステップで反復数が単調増加」AND「最新ステップが ≥ 60 反復」
+                            // の両方を満たした場合のみ「真の退化トレンド」と判定して retry。
+                            // 単に反復数が多いだけのケース (非線形性が強いだけのモデル) を誤検知しない。
+                            //
+                            // 履歴は閾値を効かせず全ステップ記録 (改善ゲート用)。
+                            // 改善ゲート: retry 後の attempt で同条件発火しても、平均反復数が前 attempt 比
+                            // 10% 以上改善していなければ細分化が無効と判断して以降抑制する。
+                            const int TREND_OBS_STEPS = 3;
+                            const int TREND_HIGH_ITER_THRESHOLD = 60;
+                            const double RETRY_IMPROVEMENT_MIN_RATIO = 0.10;
+
+                            stepIterHistory.Add(Math.Min(n_iteration, maxIterations));
+
+                            if (stepIterHistory.Count >= TREND_OBS_STEPS
                                 && !caseFailedThisAttempt && !physicallyUnconvergeable
                                 && !retryGateDisabled
                                 && bisectionAttempt < MAX_STEP_BISECTIONS)
                             {
-                                double avgIter = iterSumFirstSteps / (double)EARLY_ADAPTIVE_OBS_STEPS;
-                                bool threshExceeded = avgIter >= EARLY_ADAPTIVE_ITER_THRESHOLD;
+                                int n = stepIterHistory.Count;
+                                int latest = stepIterHistory[n - 1];
+                                int prev = stepIterHistory[n - 2];
+                                int prevPrev = stepIterHistory[n - 3];
 
-                                if (bisectionAttempt == 0)
+                                bool monotonicIncrease = prevPrev < prev && prev < latest;
+                                bool absoluteHigh = latest >= TREND_HIGH_ITER_THRESHOLD;
+
+                                if (monotonicIncrease && absoluteHigh)
                                 {
-                                    // 初回 attempt: 閾値ベース判定 (従来ロジック)
-                                    if (threshExceeded)
+                                    if (bisectionAttempt == 0)
                                     {
-                                        await AddLogAsync($"  🚨 早期適応検出: 最初 {EARLY_ADAPTIVE_OBS_STEPS} ステップの平均反復数 {avgIter:N1} が閾値 {EARLY_ADAPTIVE_ITER_THRESHOLD:N0} を超過 → ステップ分割を増やして再試行");
+                                        // 初回 attempt: 退化トレンド検出 → retry
+                                        await AddLogAsync($"  🚨 退化トレンド検出: 反復数 [{prevPrev}→{prev}→{latest}] 単調増加 かつ 最新 ≥ {TREND_HIGH_ITER_THRESHOLD} → ステップ分割を増やして再試行");
                                         caseFailedThisAttempt = true;
                                     }
-                                }
-                                else
-                                {
-                                    // retry attempt: 改善ゲート — 閾値超過 AND 前 attempt 比 10% 以上改善 の両方で再 retry
-                                    double improvement = prevAttemptAvgIter > 0 && double.IsFinite(prevAttemptAvgIter)
-                                        ? (prevAttemptAvgIter - avgIter) / prevAttemptAvgIter
-                                        : 1.0;
-
-                                    if (threshExceeded && improvement >= RETRY_IMPROVEMENT_MIN_RATIO)
+                                    else
                                     {
-                                        await AddLogAsync($"  🚨 早期適応検出 (retry {bisectionAttempt}/{MAX_STEP_BISECTIONS}): 平均反復数 {avgIter:N1} (前 attempt {prevAttemptAvgIter:N1}, 改善 {improvement * 100:F1}%) → さらに分割して再試行");
-                                        caseFailedThisAttempt = true;
-                                    }
-                                    else if (threshExceeded)
-                                    {
-                                        // 閾値は超えているが改善が 10% 未満 → 細分化が無効な構造 → retry 抑制
-                                        await AddLogAsync($"  ✋ 改善ゲート: retry 後平均反復数 {avgIter:N1} (前 attempt {prevAttemptAvgIter:N1}, 改善 {improvement * 100:F1}%) が最小改善率 {RETRY_IMPROVEMENT_MIN_RATIO * 100:F0}% 未満 → 以降の retry を抑制、現 nStep={nStep} で完遂");
-                                        retryGateDisabled = true;
+                                        // retry attempt: 改善ゲート — 平均反復数が前 attempt 比で十分改善していれば再 retry
+                                        double currentAvg = stepIterHistory.Average();
+                                        double improvement = prevAttemptAvgIter > 0 && double.IsFinite(prevAttemptAvgIter)
+                                            ? (prevAttemptAvgIter - currentAvg) / prevAttemptAvgIter
+                                            : 1.0;
+
+                                        if (improvement >= RETRY_IMPROVEMENT_MIN_RATIO)
+                                        {
+                                            await AddLogAsync($"  🚨 退化トレンド検出 (retry {bisectionAttempt}/{MAX_STEP_BISECTIONS}): [{prevPrev}→{prev}→{latest}] 平均 {currentAvg:N1} (前 attempt {prevAttemptAvgIter:N1}, 改善 {improvement * 100:F1}%) → さらに分割して再試行");
+                                            caseFailedThisAttempt = true;
+                                        }
+                                        else
+                                        {
+                                            // 退化トレンド継続中だが改善が 10% 未満 → 細分化が無効と判断
+                                            await AddLogAsync($"  ✋ 改善ゲート: 退化トレンド継続中だが平均反復数 {currentAvg:N1} (前 attempt {prevAttemptAvgIter:N1}, 改善 {improvement * 100:F1}%) が最小改善率 {RETRY_IMPROVEMENT_MIN_RATIO * 100:F0}% 未満 → 以降の retry を抑制、現 nStep={nStep} で完遂");
+                                            retryGateDisabled = true;
+                                        }
+
+                                        prevAttemptAvgIter = currentAvg;
                                     }
                                 }
-
-                                prevAttemptAvgIter = avgIter;
                             }
 
                             // v20 Phase 2: 物理的未収束なら直ちに中止（再試行しない）
@@ -3660,8 +3872,7 @@ namespace PileDesign.ViewModels
                                     await AddLogAsync($"  ⛔ 物理的未収束のため残り {remainingPhys} ステップをスキップ");
                                     // v25: 未実行ステップ分を総ステップ数から差し引き、進捗バーを 100% 到達させる
                                     System.Threading.Interlocked.Add(ref _bisectionExtraSteps, -remainingPhys);
-                                    OnPropertyChanged(nameof(TotalCalculationCount));
-                                    OnPropertyChanged(nameof(ProgressText));
+                                    NotifyProgressPropertiesChanged();
                                 }
                                 break;
                             }
@@ -3700,8 +3911,7 @@ namespace PileDesign.ViewModels
                             if (remainingAtMax > 0)
                             {
                                 System.Threading.Interlocked.Add(ref _bisectionExtraSteps, -remainingAtMax);
-                                OnPropertyChanged(nameof(TotalCalculationCount));
-                                OnPropertyChanged(nameof(ProgressText));
+                                NotifyProgressPropertiesChanged();
                             }
                             break;  // 諦めて次のケースへ
                         }
@@ -3728,14 +3938,18 @@ namespace PileDesign.ViewModels
                         // v19: 総ステップ数の調整
                         // baseline は旧 nStep (=oldNStep) を計上済み
                         // 実際にこのアテンプトで実行したのは stepsExecutedInAttempt ステップ
-                        // 次のアテンプトで新 nStep (=oldNStep*2) ステップを実行する
+                        // 次のアテンプトで新 nStep ステップを実行する
                         // → 調整 = (実行済 + 新 nStep) - 旧 nStep = stepsExecutedInAttempt + newNStep - oldNStep
+                        //
+                        // 2026-05-06 cut-back 対応: cut-back で nStep が膨張した状態 (例 16→23) で
+                        // ×2 すると 46 になり、cut-back の効果と複合して指数的に成長する問題があった。
+                        // 修正: 標準 retry では baseNStep × 2^attempt で常に「クリーンな」 nStep を使う。
+                        // cut-back 内の膨張は今回 attempt 内で完結し、次 attempt には引き継がない。
                         int oldNStep = nStep;
                         bisectionAttempt++;
-                        nStep *= 2;
+                        nStep = baseNStep * (1 << bisectionAttempt);  // 2^attempt × base (16,32,64,128,…)
                         System.Threading.Interlocked.Add(ref _bisectionExtraSteps, stepsExecutedInAttempt + nStep - oldNStep);
-                        OnPropertyChanged(nameof(TotalCalculationCount));
-                        OnPropertyChanged(nameof(ProgressText));
+                        NotifyProgressPropertiesChanged();
                     }  // end retry while-loop
 
                     _ = caseConverged; // 抑制: 未使用警告（将来診断に利用する可能性）
@@ -3878,6 +4092,19 @@ namespace PileDesign.ViewModels
                 {
                     try
                     {
+                        // 2026-05-06: サマリーレポートがメインウィンドウのログに反映されない問題対策。
+                        // OutputStepSummaryReport は AddLogAsync でキューに追加するだけ (Timer 駆動 flush)。
+                        // SetLatestAnalysisLogs 時点で _logQueue に未 flush 行が残っていると欠落するため、
+                        // ここで同期的にキューをドレインして CalculationLog に確実に反映してから渡す。
+                        while (_logQueue.TryDequeue(out var line))
+                        {
+                            CalculationLog.Add(line);
+                            if (_logTextBuilder.Length > 0) _logTextBuilder.Append(Environment.NewLine);
+                            _logTextBuilder.Append(line);
+                        }
+                        _cachedLogText = _logTextBuilder.ToString();
+                        OnPropertyChanged(nameof(CalculationLogText));
+
                         _mainWindowViewModel.SetLatestAnalysisLogs(CalculationLog);
 
                         if (Application.Current.MainWindow is PileDesign.Views.MainWindow mainWin)
@@ -3914,7 +4141,7 @@ namespace PileDesign.ViewModels
         /*
         private void ComputeCapacityRatiosForAllResults(AnaModel targetModel)
         {
-            // SoilPile（要素分割後）をPileBodyNoで検索するための辞書
+            // SoilPile（杭要素分割後）をPileBodyNoで検索するための辞書
             var soilPileDict = new Dictionary<int, Models.InputData.SoilPile>();
             if (InputModel.ElementDivision?.SoilPiles != null)
             {
@@ -4269,6 +4496,20 @@ namespace PileDesign.ViewModels
                     beam.SetResolvedCombinedMPhi(curve.Value.Phis, curve.Value.Moments);
                 }
             }
+        }
+
+        /// <summary>
+        /// DOF キー "InputNode-6:Ry" / "杭節点-3-2:Ux" 等から DOF 種別の接尾辞 ("Ry" / "Ux") を抽出。
+        /// flip カウントを DOF 種別単位で集計するために使用 (リミットサイクルが
+        /// 複数の同種ノード間で起きた場合にもトリガできるようにする)。
+        /// </summary>
+        private static string ExtractDofType(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return "";
+            int colonIdx = key.LastIndexOf(':');
+            return colonIdx >= 0 && colonIdx < key.Length - 1
+                ? key.Substring(colonIdx + 1)
+                : key;
         }
 
         // UIスレッドでログを追加
@@ -4626,7 +4867,7 @@ namespace PileDesign.ViewModels
         /// E2 (2026-04-23): ケース識別子の短いタグ。並列化後にログが混在しても
         /// どのケース由来か即座に分かるようにするため、反復・収束・プロファイル
         /// などの反復性ログの先頭に付与する。
-        /// 形式: [L{level}-{iLC+1}.C{iLCOM+1}.{Liq|Dry}]  (例: [L2-1.C4.Liq])
+        /// 形式: [L{level}-{iLC+1}.C{iLCOM+1}.{Liq|NoLq}]  (例: [L2-1.C4.Liq] / [L2-1.C4.NoLq])
         /// </summary>
         private static string BuildCaseTag(int level, int iLC, int iLCOM, bool isLiquefaction)
             => $"[L{level}-{iLC + 1}.C{iLCOM + 1}.{(isLiquefaction ? "Liq" : "NoLq")}] ";
@@ -4874,13 +5115,13 @@ namespace PileDesign.ViewModels
             var text = BuildStepSummaryText("\t");
             if (string.IsNullOrEmpty(text))
             {
-                MessageBox.Show("サマリーデータがありません。先に解析を実行してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show("サマリーデータがありません。先に解析を実行してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             try { System.Windows.Clipboard.SetText(text); }
             catch (Exception ex)
             {
-                MessageBox.Show($"クリップボードへのコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"クリップボードへのコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
             StatusMessage = $"サマリー {_stepSummaries.Count} 行をクリップボードにコピーしました";
@@ -4892,7 +5133,7 @@ namespace PileDesign.ViewModels
             var text = BuildStepSummaryText(",");
             if (string.IsNullOrEmpty(text))
             {
-                MessageBox.Show("サマリーデータがありません。先に解析を実行してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show("サマリーデータがありません。先に解析を実行してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             var dialog = new Microsoft.Win32.SaveFileDialog
@@ -4910,7 +5151,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"CSV 保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"CSV 保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -4983,7 +5224,8 @@ namespace PileDesign.ViewModels
             // 列の視覚幅 (MS Gothic 上での col 数)。データの最大幅以上に確保すること:
             //   wRes/wMaxD: "X.XXE-NNN" = 9 col 必要、wAlpha: "X.XE-NNN" = 8 col 必要
             //   wTime: " XX.Xs" = 6 col、wIter: 3 桁反復まで = 4 col
-            const int wCase = 18, wStep = 5, wRetry = 4, wIter = 4, wRes = 9, wAlpha = 8, wMaxD = 9, wStat = 14, wTime = 6;
+            //   wNRMode: "FNR=NN/MNR=NN" 等を表示するため "NR/MNR" = 8 col 確保
+            const int wCase = 18, wStep = 5, wRetry = 4, wIter = 4, wNRMode = 9, wRes = 9, wAlpha = 8, wMaxD = 9, wStat = 14, wTime = 6;
 
             // 表ヘッダ + 区切り行 (視覚幅でパディング)
             // ASCII-only ヘッダ — Consolas/MS Gothic 混在環境で CJK 幅が ASCII×2 と
@@ -4991,12 +5233,14 @@ namespace PileDesign.ViewModels
             emit(
                 "  " + VisualPad("Case", wCase) + " | " + VisualPad("Step", wStep) +
                 " | " + VisualPad("Try", wRetry) + " | " + VisualPad("Iter", wIter) +
+                " | " + VisualPad("NR/MNR", wNRMode) +
                 " | " + VisualPad("Resid", wRes) + " | " + VisualPad("a_tol", wAlpha) +
                 " | " + VisualPad("max|du|", wMaxD) + " | " + VisualPad("Status", wStat) +
                 " | " + VisualPad("Time", wTime));
             emit(
                 "  " + new string('-', wCase + 1) + "+" + new string('-', wStep + 2) +
                 "+" + new string('-', wRetry + 2) + "+" + new string('-', wIter + 2) +
+                "+" + new string('-', wNRMode + 2) +
                 "+" + new string('-', wRes + 2) + "+" + new string('-', wAlpha + 2) +
                 "+" + new string('-', wMaxD + 2) + "+" + new string('-', wStat + 2) +
                 "+" + new string('-', wTime + 1));
@@ -5011,10 +5255,13 @@ namespace PileDesign.ViewModels
                 };
                 string retryTag = s.BisectionAttempt > 0 ? $"#{s.BisectionAttempt}" : "-";
                 string stepStr = $"{s.Step,2}/{s.NStep,-2}";
+                // NR/MNR 列: "K 行列を再計算した反復数 / 再利用した反復数" を表示
+                string nrModeStr = $"{s.KRebuildCount}/{s.KReuseCount}";
                 emit(
                     "  " + VisualPad(s.CaseTag, wCase) + " | " + VisualPad(stepStr, wStep) +
                     " | " + VisualPad(retryTag, wRetry, rightAlign: true) +
                     " | " + VisualPad(s.Iterations.ToString(), wIter, rightAlign: true) +
+                    " | " + VisualPad(nrModeStr, wNRMode, rightAlign: true) +
                     " | " + VisualPad(s.FinalResidual.ToString("E2"), wRes, rightAlign: true) +
                     " | " + VisualPad(s.EffectiveAlpha.ToString("E1"), wAlpha, rightAlign: true) +
                     " | " + VisualPad(s.MaxDisp.ToString("E2"), wMaxD, rightAlign: true) +
@@ -5407,7 +5654,10 @@ namespace PileDesign.ViewModels
 
         #endregion
 
-        private void InitializeSoilDisplacementIncrement(AnaModel targetModel, LoadCase loadCase, LoadCombination loadCombination, int level, bool isLiquefaction, double nStep)
+        // Phase 2 (step-level cut-back): resetCumulative パラメータを追加。
+        //   resetCumulative=true (default): 従来挙動 — IncrementalForcedDisp と CumulativeForcedDisp を両方上書き (= ステップ 1 から開始)
+        //   resetCumulative=false: substep モード — IncrementalForcedDisp のみ上書きし、CumulativeForcedDisp は保持 (=チェックポイント復元後の継続実行)
+        private void InitializeSoilDisplacementIncrement(AnaModel targetModel, LoadCase loadCase, LoadCombination loadCombination, int level, bool isLiquefaction, double nStep, bool resetCumulative = true)
         {
             double loadAngle = loadCase.LoadAngle;
             double alpha1 = loadCombination.Alpha1;
@@ -5437,7 +5687,8 @@ namespace PileDesign.ViewModels
                     NodeDisp dd = CalcDisplacement(groundDisp1, groundDisp2, level, alpha1, nStep, loadAngle);
 
                     soilNodes[i].SetIncrementalForcedDisp(dd);
-                    soilNodes[i].SetCumulativeForcedDisp(initialCumulativeSoilDisplacement);
+                    if (resetCumulative)
+                        soilNodes[i].SetCumulativeForcedDisp(initialCumulativeSoilDisplacement);
                 }
             }
 
@@ -5453,17 +5704,22 @@ namespace PileDesign.ViewModels
                     NodeDisp dd = CalcDisplacement(groundDisp1, groundDisp2, level, alpha1, nStep, loadAngle);
                     FEM.Node soilNode = targetModel.FindNode("根入部地盤節点", null, null, z);
                     soilNode.SetIncrementalForcedDisp(dd);
-                    soilNode.SetCumulativeForcedDisp(initialCumulativeSoilDisplacement);
+                    if (resetCumulative)
+                        soilNode.SetCumulativeForcedDisp(initialCumulativeSoilDisplacement);
                 }
             }
         }
 
         // 増分荷重の取得 慣性力の節点荷重へのセット
-        private void SetVectorDF(AnaModel targetModel, LoadCase loadCase, LoadCombination loadCombination, int level, int iLC, double nStep) // PileDesign
+        // Phase 2 (step-level cut-back): resetCumulative パラメータを追加。
+        //   resetCumulative=true (default): 従来挙動 — IncrementalLoad/VectorDF と CumulativeLoad/VectorF を初期化 (=ステップ 1 から)
+        //   resetCumulative=false: substep モード — IncrementalLoad/VectorDF のみ更新、累積側は保持 (=チェックポイント復元後の継続実行)
+        // AxialForceIncrement は常に書換 (per-step 値、累積はモデル内で別管理)。
+        private void SetVectorDF(AnaModel targetModel, LoadCase loadCase, LoadCombination loadCombination, int level, int iLC, double nStep, bool resetCumulative = true) // PileDesign
         {
             double loadAngle = loadCase.LoadAngle;
-            double beta1 = loadCombination.Beta1; // 荷重組合せ上部構造慣性力の荷重係数β1 
-            double beta2 = loadCombination.Beta2; // 荷重組合せ基礎構造慣性力の荷重係数β2 
+            double beta1 = loadCombination.Beta1; // 荷重組合せ上部構造慣性力の荷重係数β1
+            double beta2 = loadCombination.Beta2; // 荷重組合せ基礎構造慣性力の荷重係数β2
 
             double upperMassForce = loadCase.UpperMassForce; // 上部構造質量荷重 [kN]
             double foundationMassForce = loadCase.FoundationMassForce; // 基礎構造質量荷重 [kN]
@@ -5476,8 +5732,11 @@ namespace PileDesign.ViewModels
             targetModel.Nodes[0].SetIncrementalLoad(new(x, y, 0.0, 0.0, 0.0, 0.0)); // 増分荷重ベクトル [kN]
             targetModel.MapOnVectorDF();
 
-            targetModel.Nodes[0].SetCumulativeLoad(new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)); // 荷重ベクトル [kN]
-            targetModel.MapOnVectorF();
+            if (resetCumulative)
+            {
+                targetModel.Nodes[0].SetCumulativeLoad(new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)); // 荷重ベクトル [kN]
+                targetModel.MapOnVectorF();
+            }
 
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
@@ -5749,44 +6008,16 @@ namespace PileDesign.ViewModels
                     kTan = SafeK(kTan);
                     kSec = SafeK(kSec);
 
-                    // 最下端節点で k=0 の場合、隣接要素の剛性を使用（剛性マトリクス特異防止）
-                    if ((isTan ? kTan : kSec) <= 0.0 && i > 0 && i - 2 >= 0 && i - 2 < reactionCount)
+                    // 2026-05-06 簡素化: 単一節点で k=0 となるケース (砂質土の有効上載圧 σv'=0 等) は、
+                    // 杭が他深さの地盤ばねで支持されているため解析の安定性に問題はない。
+                    // ただし「杭全体で k=0」(杭全体が地表より上にある等) の極端なケースでは
+                    // 剛性マトリクスが特異化して解析が解けなくなるため、最上端節点 (i=0) のみ
+                    // 物理的に無視できる極小値 1e-3 kN/m で代用する保険的処置を残す。
+                    if ((isTan ? kTan : kSec) <= 0.0 && i == 0)
                     {
-                        double kFallbackTan = horizontalReactions[i - 2].GetSoilTangentReactionCoefficient(abs, false, isFrontPile);
-                        double kFallbackSec = horizontalReactions[i - 2].GetSoilSecantReactionCoefficient(abs, false, isFrontPile);
-                        if (kTan <= 0.0) kTan = SafeK(kFallbackTan);
-                        if (kSec <= 0.0) kSec = SafeK(kFallbackSec);
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[UpdateSoilSprings] WARNING: Pile-{pileLayoutItem.PileNo} node {i} k=0 → 隣接要素の剛性 tan={kTan:E3}/sec={kSec:E3} を代用");
-                    }
-
-                    // 最上端節点 (i=0) で k=0 の場合のフォールバック。
-                    // 杭頭が地表より上にある場合、上端要素の py が σv'=0 のため 0 になる。
-                    // 全要素 (上端→下端) を走査し最初に見つかった非ゼロ剛性を採用、
-                    // それでもダメな場合 (杭全体が地表上 等) は微小値で正則化して特異化を防ぐ。
-                    if ((isTan ? kTan : kSec) <= 0.0 && i == 0 && reactionCount > 0)
-                    {
-                        for (int k = 0; k < reactionCount && (kTan <= 0.0 || kSec <= 0.0); k++)
-                        {
-                            if (kTan <= 0.0)
-                            {
-                                double t1 = horizontalReactions[k].GetSoilTangentReactionCoefficient(abs, true, isFrontPile);
-                                double t2 = horizontalReactions[k].GetSoilTangentReactionCoefficient(abs, false, isFrontPile);
-                                kTan = SafeK(Math.Max(t1, t2));
-                            }
-                            if (kSec <= 0.0)
-                            {
-                                double s1 = horizontalReactions[k].GetSoilSecantReactionCoefficient(abs, true, isFrontPile);
-                                double s2 = horizontalReactions[k].GetSoilSecantReactionCoefficient(abs, false, isFrontPile);
-                                kSec = SafeK(Math.Max(s1, s2));
-                            }
-                        }
-                        // すべての要素で k=0 (杭全体が地表上 等)。微小値で正則化し剛性マトリクス特異化を回避。
                         const double KFloor = 1.0e-3; // kN/m, 物理的に無視できる値
                         if (kTan <= 0.0) kTan = KFloor;
                         if (kSec <= 0.0) kSec = KFloor;
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[UpdateSoilSprings] WARNING: Pile-{pileLayoutItem.PileNo} 最上端節点 k=0 → 全要素走査でフォールバック tan={kTan:E3}/sec={kSec:E3}");
                     }
 
                     var spring = pileSprings[i];
@@ -5856,8 +6087,23 @@ namespace PileDesign.ViewModels
                             // ヒステリシス: θ_proj_max の更新 (前進時のみ大きくなる)
                             if (thetaProj > rxy.ThetaProjMax) rxy.ThetaProjMax = thetaProj;
 
+                            // 2026-05-06 (A): forward / unloading branch の K_tan が境界 (thetaProj = thetaMax) で
+                            // 100× ジャンプして Newton 方向を毎反復激変させる問題の対策。
+                            // K_tan を境界周辺で smooth blend し連続化する (K_sec は元々連続なので変更不要)。
+                            //   forward (thetaProj >= thetaMax)               → K_post_crack
+                            //   transition (thetaMax - δ <= thetaProj < thetaMax) → smoothstep blend
+                            //   pure unloading (thetaProj < thetaMax - δ)      → K_unload
+                            // δ = max(5% × thetaMax, 1e-6) の幅で smoothstep (3t² − 2t³)。
+                            // F_int は K_sec × disp で計算されるため物理的整合性は保たれる
+                            // (transition zone でも K_tan は単に「Newton 方向の安定化用近似 Jacobian」)。
+                            double thetaMax = rxy.ThetaProjMax;
+                            double mMaxLock = rxy.CurveXY.EvaluateMoment(thetaMax);
+                            double kUnload = (thetaMax > 1e-15)
+                                ? SafeK(Math.Abs(mMaxLock) / thetaMax)
+                                : SafeK(rxy.CurveXY.EvaluateTangent(0));
+
                             double kParTan, kParSec;  // n 方向の接線/割線剛性
-                            if (thetaProj >= rxy.ThetaProjMax - 1e-15)
+                            if (thetaProj >= thetaMax - 1e-15)
                             {
                                 // 前進: post-crack curve (1e-8 の急勾配はバイパス)
                                 double absProj = Math.Abs(thetaProj);
@@ -5866,13 +6112,22 @@ namespace PileDesign.ViewModels
                             }
                             else
                             {
-                                // 除荷 (θ_proj < θ_proj_max): 線形戻り (剛)
-                                // (0, 0) → (θ_proj_max, M_max) の直線 → K = M_max / θ_proj_max
-                                double thetaMax = rxy.ThetaProjMax;
-                                double mMax = rxy.CurveXY.EvaluateMoment(thetaMax);
-                                double kUnload = (thetaMax > 1e-15) ? SafeK(Math.Abs(mMax) / thetaMax) : SafeK(rxy.CurveXY.EvaluateTangent(0));
-                                kParTan = kUnload;
-                                kParSec = kUnload;  // 線形なので接線 = 割線
+                                // 除荷: K_sec は線形戻り (M_max/thetaMax)、K_tan は境界周辺で smooth blend
+                                kParSec = kUnload;
+                                double delta = thetaMax - thetaProj;  // > 0 in unloading
+                                double transitionWidth = Math.Max(0.05 * Math.Abs(thetaMax), 1e-6);
+                                if (delta < transitionWidth && transitionWidth > 0.0)
+                                {
+                                    // smooth blend: K_post_crack (delta=0) → K_unload (delta=transitionWidth)
+                                    double t = delta / transitionWidth;
+                                    double s = t * t * (3.0 - 2.0 * t);  // smoothstep
+                                    double kFwdAtBoundary = SafeK(rxy.CurveXY.EvaluatePostCrackTangent(thetaMax));
+                                    kParTan = (1.0 - s) * kFwdAtBoundary + s * kUnload;
+                                }
+                                else
+                                {
+                                    kParTan = kUnload;
+                                }
                             }
 
                             // ランク 1 + 小さな直交剛性 (数値的安定化)

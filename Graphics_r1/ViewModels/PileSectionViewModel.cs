@@ -322,10 +322,10 @@ namespace PileDesign.ViewModels
             double maxN = double.MinValue, minN = double.MaxValue;
             UpdateSeries("(低減前)使用限界", serviceN, serviceM, NikkenSKColor.DeepBlue, isDashed: true);
             UpdateSeries("(低減前)損傷限界", damageN, damageM, NikkenSKColor.Green, isDashed: true);
-            UpdateSeries("(低減前)安全限界", ultimateN, ultimateM, NikkenSKColor.Red, isDashed: true);
+            UpdateSeries("(低減前)安全限界", ultimateN, ultimateM, NikkenSKColor.PaleRed, isDashed: true);
             UpdateSeries("(低減後)使用限界", factoredServiceN, factoredServiceM, NikkenSKColor.DeepBlue);
             UpdateSeries("(低減後)損傷限界", factoredDamageN, factoredDamageM, NikkenSKColor.Green);
-            UpdateSeries("(低減後)安全限界", factoredUltimateN, factoredUltimateM, NikkenSKColor.Red);
+            UpdateSeries("(低減後)安全限界", factoredUltimateN, factoredUltimateM, NikkenSKColor.PaleRed);
 
             var black = new ScottPlot.Color(0, 0, 0);
             wpf.Plot.Add.VerticalLine(0, 1, black);
@@ -402,8 +402,8 @@ namespace PileDesign.ViewModels
             TryPlot(damageUnfactored, "(低減前) 損傷限界 Q-N", NikkenSKColor.Green, true, 1.5);
             TryPlot(damageFactored, "(低減後) 損傷限界 Q-N", NikkenSKColor.Green, false, 2.0);
 
-            TryPlot(ultimateUnfactored, "(低減前) 安全限界 Q-N", NikkenSKColor.Red, true, 1.5);
-            TryPlot(ultimateFactored, "(低減後) 安全限界 Q-N", NikkenSKColor.Red, false, 2.0);
+            TryPlot(ultimateUnfactored, "(低減前) 安全限界 Q-N", NikkenSKColor.PaleRed, true, 1.5);
+            TryPlot(ultimateFactored, "(低減後) 安全限界 Q-N", NikkenSKColor.PaleRed, false, 2.0);
 
             var blackNQ = new ScottPlot.Color(0, 0, 0);
             wpf.Plot.Add.VerticalLine(0, 1, blackNQ);

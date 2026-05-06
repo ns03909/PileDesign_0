@@ -1,4 +1,4 @@
-<Window x:Class="PileDesign.Views.WelcomeDialog"
+﻿<Window x:Class="PileDesign.Views.WelcomeDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -21,7 +21,7 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="0,8"/>
             <Setter Property="FontSize" Value="13.5"/>
-            <Setter Property="Foreground" Value="#555555"/>
+            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -35,7 +35,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="text" Property="Foreground" Value="#3271AD"/>
+                                <Setter TargetName="text" Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
                                 <Setter TargetName="text" Property="TextDecorations" Value="Underline"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
@@ -83,7 +83,7 @@
                                 HorizontalAlignment="Center">
                         <TextBlock Text="杭基礎検討プログラム"
                                    FontSize="15" FontWeight="SemiBold"
-                                   Foreground="#333333"
+                                   Foreground="{StaticResource LogForegroundBrush}"
                                    HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding AppVersion, Source={x:Static local:WelcomeDialogViewModel.Instance}}"
                                    FontSize="10.5" Foreground="#BBBBBB"

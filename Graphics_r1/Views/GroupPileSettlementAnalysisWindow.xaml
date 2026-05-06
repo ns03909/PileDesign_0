@@ -87,7 +87,7 @@
 
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsElementSplit}" Value="False">
-                    <Setter Property="Background" Value="#F7B515"/>
+                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -107,7 +107,7 @@
                         <Condition Binding="{Binding IsElementSplit}" Value="True"/>
                         <Condition Binding="{Binding IsVerticalAnalysisDone}" Value="False"/>
                     </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#F7B515"/>
+                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </MultiDataTrigger>
                 <MultiDataTrigger>
@@ -137,7 +137,7 @@
                         <Condition Binding="{Binding IsElementSplit}" Value="True"/>
                         <Condition Binding="{Binding IsHorizontalAnalysisDone}" Value="False"/>
                     </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#F7B515"/>
+                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </MultiDataTrigger>
                 <MultiDataTrigger>
@@ -161,7 +161,7 @@
 
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="False">
-                    <Setter Property="Background" Value="#F7B515"/>
+                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -181,7 +181,7 @@
 
         <!-- ToolTipのスタイルを定義 -->
         <Style TargetType="ToolTip" x:Key="DeepBlueToolTipStyle">
-            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
             <!-- フォントの色を赤に設定 -->
         </Style>
 
@@ -656,12 +656,11 @@
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
 
-                                    <common:EnhancedDataGrid x:Name="DataGridPileSettlement"
+                                    <common:EnhancedDataGrid x:Name="DataGridPileSettlement" CanUserSortColumns="False"
                                             ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
                                             SelectionChanged="DataGridPileAxialForce_SelectionChanged"
                                             AutoGenerateColumns="False"
                                             CanUserAddRows="False"
-                                            CanUserSortColumns="False"
                                             LoadingRow="DataGridPileSettlement_LoadingRow_Numbering"
                                             CellEditEnding="DataGridPileSettlement_CellEditEnding"
                                             MouseRightButtonDown="DataGridPileSettlement_MouseRightButtonDown"

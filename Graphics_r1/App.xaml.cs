@@ -1,4 +1,4 @@
-using PileDesign.Common.Logging;
+﻿using PileDesign.Common.Logging;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using PileDesign.Views;
@@ -8,6 +8,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using PileDesign.Services;
 
 namespace PileDesign
 {
@@ -47,7 +48,7 @@ namespace PileDesign
             catch (Exception ex)
             {
                 Log.Fatal(ex, "App constructor failed");
-                MessageBox.Show(
+                MessageService.Show(
                     $"アプリ起動時に致命的なエラーが発生しました。\n{ex.Message}\n\nログ: {AppLog.LogDirectory}",
                     "起動エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 AppLog.Close();
@@ -178,7 +179,7 @@ namespace PileDesign
                     "「はい」を押すとクラッシュレポートのフォルダを開きます。\n" +
                     "次回起動時に「最近開いたファイル」または上記の自動保存ファイルから復元できます。";
 
-                var result = MessageBox.Show(msg, "致命的エラー",
+                var result = MessageService.Show(msg, "致命的エラー",
                     MessageBoxButton.YesNo, MessageBoxImage.Error, MessageBoxResult.No);
 
                 if (result == MessageBoxResult.Yes && !string.IsNullOrEmpty(crashReportPath))

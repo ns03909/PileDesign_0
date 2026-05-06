@@ -17,6 +17,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using PileDesign.Services;
 
 
 namespace PileDesign.ViewModels
@@ -199,7 +200,7 @@ namespace PileDesign.ViewModels
                 else
                 {
                     // バリデーションエラーの処理
-                    MessageBox.Show("Xiの値は0より大きく、1以下でなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show("Xiの値は0より大きく、1以下でなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -218,7 +219,7 @@ namespace PileDesign.ViewModels
                 else
                 {
                     // バリデーションエラーの処理
-                    MessageBox.Show("R/Bの値は0より大きくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show("R/Bの値は0より大きくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -250,11 +251,11 @@ namespace PileDesign.ViewModels
             {
                 if (IsDoatsuGoryokuBaneVisible)
                 {
-                    return "すべての土層-杭セット、土層-根入れセットの要素分割を確認してください。";
+                    return "すべての土層-杭セット、土層-根入れセットの杭要素分割を確認してください。";
                 }
                 else
                 {
-                    return "すべての土層-杭セットの要素分割を確認してください。";
+                    return "すべての土層-杭セットの杭要素分割を確認してください。";
                 }
             }
         }
@@ -848,7 +849,7 @@ namespace PileDesign.ViewModels
 
             if (x1.Count == 0)
             {
-                //MessageBox.Show("水平地盤反力データが存在しません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                //MessageService.Show("水平地盤反力データが存在しません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1438,7 +1439,7 @@ namespace PileDesign.ViewModels
                 }
                 else if (parameter == SelectedZDataItems[i] && SelectedZDataItems[i].IsChangeable == false)
                 {
-                    MessageBox.Show("この節点は削除できません。");
+                    MessageService.Show("この節点は削除できません。");
                 }
             }
             OnZDataItemsChanged();
@@ -1525,7 +1526,7 @@ namespace PileDesign.ViewModels
                 }
                 else if (parameter == EmbedmentZsCollection[i] && EmbedmentZsCollection[i].IsChangeable == false)
                 {
-                    MessageBox.Show("この節点は削除できません。");
+                    MessageService.Show("この節点は削除できません。");
                 }
             }
 
@@ -1621,7 +1622,7 @@ namespace PileDesign.ViewModels
 
                                     if (index > 0 && newValue >= items[index - 1].Z)
                                     {
-                                        MessageBox.Show("直上のZより小さい値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                                        MessageService.Show("直上のZより小さい値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                                         e.Cancel = true;
                                         isEditingCancelled = true;
                                         // 元の値に戻す
@@ -1631,7 +1632,7 @@ namespace PileDesign.ViewModels
 
                                     if (index < items.Count - 1 && newValue <= items[index + 1].Z)
                                     {
-                                        MessageBox.Show("直下のZより大きい値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                                        MessageService.Show("直下のZより大きい値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                                         e.Cancel = true;
                                         isEditingCancelled = true;
                                         // 元の値に戻す
@@ -1658,7 +1659,7 @@ namespace PileDesign.ViewModels
                         var editedElement = e.Row.Item as ZDataItem;
                         if (editedElement != null && !editedElement.IsChangeable)
                         {
-                            MessageBox.Show("この値は変更できません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageService.Show("この値は変更できません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                             e.Cancel = true;
                         }
                         else if (editedElement != null)

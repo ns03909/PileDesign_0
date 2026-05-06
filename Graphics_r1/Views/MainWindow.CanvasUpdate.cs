@@ -23,7 +23,7 @@ namespace PileDesign.Views
     /// </summary>
     /// 
 
-    public partial class MainWindow : RibbonWindow
+    public partial class MainWindow
     {
         // カラーバージオメトリコア
         private static List<ColorBaredGeometry> GetColorBarGeometriesCore(

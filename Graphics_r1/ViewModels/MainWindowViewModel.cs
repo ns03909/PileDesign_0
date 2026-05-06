@@ -55,7 +55,7 @@ namespace PileDesign.ViewModels
     /// - コレクション管理（杭配置、通り心、荷重面、土層の追加・削除）
     /// - ウィンドウ表示制御（各種ダイアログウィンドウの開閉）
     /// - DataGrid編集イベント処理
-    /// - 解析実行制御（要素分割、解析実行前チェック）
+    /// - 解析実行制御（杭要素分割、解析実行前チェック）
     /// - Undo/Redo機能
     /// - UI更新制御（デバウンス処理を含む）
     ///
@@ -564,9 +564,24 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _currentFilePath, value))
                 {
+                    // 実ファイルへの保存/読込が確定した時点で例題名は不要 (タイトルバー優先順位的にも下位扱い)
+                    if (!string.IsNullOrEmpty(value))
+                        _loadedExampleName = null;
                     RaiseAllCommandsCanExecute();
                     OnPropertyChanged(nameof(WindowTitle));
                 }
+            }
+        }
+
+        // 計算例ロード時にタイトルバーへ表示する例題名 (保存またはファイルロードでクリア)
+        private string? _loadedExampleName;
+        public string? LoadedExampleName
+        {
+            get => _loadedExampleName;
+            set
+            {
+                if (SetProperty(ref _loadedExampleName, value))
+                    OnPropertyChanged(nameof(WindowTitle));
             }
         }
 
@@ -580,15 +595,18 @@ namespace PileDesign.ViewModels
         public static string AppVersion => _appVersion;
 
         // ウィンドウタイトル（ファイル名表示）
+        // 優先順位: 保存ファイル名 > 計算例名 > [新規]
         public string WindowTitle
         {
             get
             {
                 const string appName = "杭基礎検討プログラム";
                 string ver = $"v{_appVersion}";
-                if (string.IsNullOrEmpty(CurrentFilePath))
-                    return $"{appName} {ver} - [新規]";
-                return $"{appName} {ver} - {System.IO.Path.GetFileName(CurrentFilePath)}";
+                if (!string.IsNullOrEmpty(CurrentFilePath))
+                    return $"{appName} {ver} - {System.IO.Path.GetFileName(CurrentFilePath)}";
+                if (!string.IsNullOrEmpty(_loadedExampleName))
+                    return $"{appName} {ver} - [{_loadedExampleName}]";
+                return $"{appName} {ver} - [新規]";
             }
         }
 
@@ -673,7 +691,7 @@ namespace PileDesign.ViewModels
                         var previousItem = dataGrid.Items[rowIndex - 1] as SettlementSoilLayer; // SettlementSoilLayer は適切なモデルクラスに置き換えてください
                         if (newValue >= previousItem.BottomAltitude)
                         {
-                            MessageBox.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageService.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                             e.Cancel = true;
                         }
                     }
@@ -709,12 +727,13 @@ namespace PileDesign.ViewModels
         }
 
         // 杭軸力更新時更新メソッド
-        // Phase A: useDebouncedUndo=true で連続編集を 1 つの Undo ステップにまとめて DeepCopy 回数を削減
         // updateTree=false で TreeView の不要な再構築を抑止 (軸力値は TreeView に表示されないため)
+        // Undo はセル単位 (デバウンスなし) — Ctrl+Z で 1 セルずつ巻き戻し可能。
+        // Phase D-2 のハイブリッド手書き Clone により DeepCopy は ~25ms と高速、セル単位でも体感無感。
         [RelayCommand]
         private void DataGridPileAxialForce_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
-            HandleDataGridCellEditEnding(e, updateTree: false, useDebouncedUndo: true);
+            HandleDataGridCellEditEnding(e, updateTree: false);
         }
 
         // 前後杭更新メソッド
@@ -739,13 +758,13 @@ namespace PileDesign.ViewModels
                 e.Cancel = true;
         }
 
-        // 要素分割解除確認メソッド
+        // 杭要素分割解除確認メソッド
         public bool CheckAndResetElementSplit(string text)
         {
             if (IsElementSplit == true)
             {
-                MessageBoxResult result = MessageBox.Show(
-                    $"{text}を編集、確定するには、入力済みの要素分割および、" +
+                MessageBoxResult result = MessageService.Show(
+                    $"{text}を編集、確定するには、入力済みの杭要素分割および、" +
                     $"\n解析結果が存在する場合は解析結果を削除する必要があります。" +
                     $"\nよろしいですか。",
                     "確認",
@@ -945,34 +964,39 @@ namespace PileDesign.ViewModels
 
         private void DataGridSettlementSoilLayers_OnCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
-            if (e.EditAction == DataGridEditAction.Commit)
-            {
-                // バインディングソースの更新
-                var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
-                binding?.UpdateSource();
-                if (e.Column is DataGridTextColumn && e.Column.Header.ToString().Contains("下端Z"))
-                {
-                    var dataGrid = sender as DataGrid;
-                    var editedItem = e.Row.Item as SettlementSoilLayer; // SettlementSoilLayer は適切なモデルクラスに置き換えてください
-                    var editedTextBox = e.EditingElement as TextBox;
+            if (e.EditAction != DataGridEditAction.Commit) return;
 
-                    if (double.TryParse(editedTextBox.Text, out double newValue))
+            // 「下端Z」列はバリデーションが必要 (一つ上のセル値より小さい必要あり)。
+            // バリデーションは TextBox.Text から先に行い、不正値ならコミットせず Undo にも残さない。
+            if (e.Column is DataGridTextColumn && e.Column.Header.ToString().Contains("下端Z"))
+            {
+                var dataGrid = sender as DataGrid;
+                var editedItem = e.Row.Item as SettlementSoilLayer;
+                var editedTextBox = e.EditingElement as TextBox;
+
+                if (editedTextBox != null && double.TryParse(editedTextBox.Text, out double newValue))
+                {
+                    int rowIndex = dataGrid?.Items.IndexOf(editedItem) ?? -1;
+                    if (rowIndex > 0
+                        && dataGrid.Items[rowIndex - 1] is SettlementSoilLayer previousItem
+                        && newValue >= previousItem.BottomAltitude)
                     {
-                        int rowIndex = dataGrid.Items.IndexOf(editedItem);
-                        if (rowIndex > 0)
-                        {
-                            var previousItem = dataGrid.Items[rowIndex - 1] as SettlementSoilLayer; // SettlementSoilLayer は適切なモデルクラスに置き換えてください
-                            if (newValue >= previousItem.BottomAltitude)
-                            {
-                                MessageBox.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                                e.Cancel = true;
-                            }
-                        }
+                        MessageService.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                        e.Cancel = true;
+                        return; // commit せず Undo にも残さない
                     }
                 }
-                // 変更後（以下の箇所で適用）
-                RequestUpdateWindow();
             }
+
+            // pre-edit 状態を Undo スナップショットに保存 (binding.UpdateSource より前に実行)
+            SaveUndoState();
+
+            // バインディングソースの更新 (= コミット)
+            var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
+            binding?.UpdateSource();
+
+            // 変更後の UI 更新
+            RequestUpdateWindow();
         }
 
         // 通り心選択対象距離 (m)
@@ -1673,50 +1697,124 @@ namespace PileDesign.ViewModels
         }
 
         // 要素の節点位置での分割
+        // 旧実装は FoundationNode (基礎梁節点) のみ参照していたが、ToolTip 「重なる一般節点で分割」の通り
+        // PileLayout (杭頭)・InputNode (一般)・FoundationNode の全種類を対象にする。
+        // 端点参照は NodeReferenceType + Guid の現代式で生成する。
         [RelayCommand]
         public void OnSplitElementsByNodes()
         {
-            if (CurrentInputModel?.FoundationBeamInput?.Beams == null ||
-                CurrentInputModel?.FoundationBeamInput?.Nodes == null) return;
+            var fb = CurrentInputModel?.FoundationBeamInput;
+            if (fb?.Beams == null) return;
 
             // Undoポイントを追加
             TrySaveUndoSnapshotSafely();
 
-            var beams = CurrentInputModel.FoundationBeamInput.Beams;
-            var nodes = CurrentInputModel.FoundationBeamInput.Nodes;
+            var beams = fb.Beams;
+            double tolerance = EditDistanceThreshold;
+
+            // 候補ノード一覧 (Type + Guid + 位置) を共通ヘルパで列挙 (PileLayout / GeneralNode / FoundationNode 全種)
+            var candidates = EnumerateAllCandidateNodes(includeFoundationNodes: true).ToList();
+
             var newBeams = new List<FoundationBeamElement>();
             var toRemove = new List<FoundationBeamElement>();
+            const double endEps = 1e-6;
 
-            int originalCount = beams.Count;
-
-            foreach (var beam in beams.ToList())
+            foreach (var beam in beams.Where(b => b.IsSelected).ToList())
             {
-                if (beam.IsSelected)
+                var posI = GetNodeAttachPosition(beam.NodeI_Type, beam.NodeI_Id);
+                var posJ = GetNodeAttachPosition(beam.NodeJ_Type, beam.NodeJ_Id);
+                if (posI == null || posJ == null) continue;
+
+                var pI = posI.Value;
+                var pJ = posJ.Value;
+                Vector3D line = pJ - pI;
+                double lineLengthSq = line.LengthSquared;
+                if (lineLengthSq < 1e-18) continue;
+
+                // 線上にある中間ノードを探す (端点除外、線分上の t∈(0, 1)、距離 ≤ tolerance)
+                var splits = new List<(NodeReferenceType Type, Guid Id, double T)>();
+                foreach (var cand in candidates)
                 {
-                    var splitBeams = SplitBeamByNodes(beam, nodes);
-                    if (splitBeams.Count > 1)
-                    {
-                        toRemove.Add(beam);
-                        newBeams.AddRange(splitBeams);
-                    }
+                    // 自分の端点はスキップ
+                    if (cand.Type == beam.NodeI_Type && cand.Id == beam.NodeI_Id) continue;
+                    if (cand.Type == beam.NodeJ_Type && cand.Id == beam.NodeJ_Id) continue;
+
+                    Vector3D v = cand.Pos - pI;
+                    double t = Vector3D.DotProduct(v, line) / lineLengthSq;
+                    if (t <= endEps || t >= 1.0 - endEps) continue;
+
+                    Point3D projection = pI + t * line;
+                    double dist = (cand.Pos - projection).Length;
+                    if (dist > tolerance) continue;
+
+                    splits.Add((cand.Type, cand.Id, t));
                 }
+
+                if (splits.Count == 0) continue;
+
+                // t の昇順でソート
+                splits.Sort((a, b) => a.T.CompareTo(b.T));
+
+                // 同一 t に近い候補は重複扱い (杭頭+ΔZc と一般節点が同位置にある場合等)
+                var dedupedSplits = new List<(NodeReferenceType Type, Guid Id, double T)>();
+                foreach (var s in splits)
+                {
+                    if (dedupedSplits.Count > 0 && Math.Abs(dedupedSplits[^1].T - s.T) < endEps)
+                        continue;
+                    dedupedSplits.Add(s);
+                }
+
+                // 分割セグメントを生成
+                var endpoints = new List<(NodeReferenceType Type, Guid Id)>
+                {
+                    (beam.NodeI_Type, beam.NodeI_Id)
+                };
+                foreach (var s in dedupedSplits)
+                    endpoints.Add((s.Type, s.Id));
+                endpoints.Add((beam.NodeJ_Type, beam.NodeJ_Id));
+
+                for (int i = 0; i < endpoints.Count - 1; i++)
+                {
+                    newBeams.Add(new FoundationBeamElement
+                    {
+                        NodeI_Type = endpoints[i].Type,
+                        NodeI_Id = endpoints[i].Id,
+                        NodeJ_Type = endpoints[i + 1].Type,
+                        NodeJ_Id = endpoints[i + 1].Id,
+                        MaterialNo = beam.MaterialNo,
+                        SectionNo = beam.SectionNo,
+                        SectionName = beam.SectionName,
+                        Width = beam.Width,
+                        Height = beam.Height,
+                        YoungModulus = beam.YoungModulus,
+                        ShearModulus = beam.ShearModulus,
+                        AngleBeta = beam.AngleBeta,
+                        IsVisible = beam.IsVisible,
+                    });
+                }
+                toRemove.Add(beam);
             }
 
             foreach (var beam in toRemove)
                 beams.Remove(beam);
-
             foreach (var beam in newBeams)
                 beams.Add(beam);
 
             RenumberFoundationBeams();
             RequestUpdateWindow();
 
-            int newCount = beams.Count;
-            System.Windows.MessageBox.Show(
-                $"{toRemove.Count} 個の要素を {newCount - originalCount + toRemove.Count} 個に分割しました。",
-                "節点分割完了",
-                System.Windows.MessageBoxButton.OK,
-                System.Windows.MessageBoxImage.Information);
+            if (toRemove.Count == 0)
+            {
+                ShowToast("選択要素上に分割できる中間節点が見つかりませんでした。", 2);
+            }
+            else
+            {
+                PileDesign.Services.MessageService.Show(
+                    $"{toRemove.Count} 個の要素を {newBeams.Count} 個に分割しました。",
+                    "節点分割完了",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
         }
 
         // 選択された梁要素を等分割するコマンド
@@ -1731,7 +1829,7 @@ namespace PileDesign.ViewModels
             var selectedBeams = beams.Where(b => b.IsSelected).ToList();
             if (selectedBeams.Count == 0)
             {
-                MessageBox.Show("分割する梁要素を選択してください。");
+                MessageService.Show("分割する梁要素を選択してください。");
                 return;
             }
 
@@ -1831,7 +1929,7 @@ namespace PileDesign.ViewModels
             RenumberFoundationBeams();
             RequestUpdateWindow();
 
-            MessageBox.Show(
+            MessageService.Show(
                 $"{toRemove.Count} 個の要素を {n} 等分しました（{toAdd.Count} 個の要素、{toRemove.Count * (n - 1)} 個の節点を生成）。",
                 "等分割完了", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -2058,7 +2156,7 @@ namespace PileDesign.ViewModels
             return result;
         }
 
-        // 交差点で要素分割
+        // 交差点で杭要素分割
         [RelayCommand]
         private void SplitElementsAtIntersections()
         {
@@ -2070,7 +2168,7 @@ namespace PileDesign.ViewModels
             var selectedBeams = beams.Where(b => b.IsSelected).ToList();
             if (selectedBeams.Count < 2)
             {
-                MessageBox.Show("交差判定するには梁要素を2本以上選択してください。",
+                MessageService.Show("交差判定するには梁要素を2本以上選択してください。",
                     "交差点分割", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -2186,7 +2284,7 @@ namespace PileDesign.ViewModels
 
             if (isUsed)
             {
-                System.Windows.MessageBox.Show(
+                PileDesign.Services.MessageService.Show(
                     $"節点 {node.No} は梁要素で使用されているため削除できません。\n先に関連する梁要素を削除してください。",
                     "削除エラー",
                     System.Windows.MessageBoxButton.OK,
@@ -2247,7 +2345,7 @@ namespace PileDesign.ViewModels
             RenumberFoundationBeams();
             RequestUpdateWindow();
 
-            System.Windows.MessageBox.Show(
+            PileDesign.Services.MessageService.Show(
                 $"{toRemove.Count} 個の重複要素を削除しました。",
                 "重複削除完了",
                 System.Windows.MessageBoxButton.OK,
@@ -2265,7 +2363,7 @@ namespace PileDesign.ViewModels
             if (HasAnyAnalysisResult)
                 message += "\n\n※ 既存の解析結果は消去されます。";
 
-            var result = System.Windows.MessageBox.Show(
+            var result = PileDesign.Services.MessageService.Show(
                 message,
                 "自動梁要素生成",
                 System.Windows.MessageBoxButton.YesNo,
@@ -2371,7 +2469,7 @@ namespace PileDesign.ViewModels
             RenumberFoundationBeams();
             RequestUpdateWindow();
 
-            MessageBox.Show(
+            MessageService.Show(
                 $"{addedCount} 本の基礎梁要素を自動生成しました。",
                 "自動梁要素生成完了",
                 MessageBoxButton.OK,
@@ -2410,6 +2508,29 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnAdjustRectLoadPlan()
         {
+            // 荷重面等価径 (GroupPileLoadDia) が 0 の地盤・杭・レベルセットがある場合は警告。
+            // 0 のものは群杭沈下解析でスキップされるため、ユーザーに気付かせる。
+            var soilPiles = CurrentInputModel?.ElementDivision?.SoilPiles;
+            if (soilPiles != null && soilPiles.Count > 0)
+            {
+                var zeroDiaPiles = soilPiles.Where(sp => sp.GroupPileLoadDia <= 0.0).ToList();
+                if (zeroDiaPiles.Count > 0)
+                {
+                    var sampleLines = zeroDiaPiles
+                        .Take(10)
+                        .Select(sp => $"  ・地盤{sp.GroundNo}・杭体{sp.PileBodyNo} (No.{sp.No})");
+                    var moreNote = zeroDiaPiles.Count > 10
+                        ? $"\n  …他 {zeroDiaPiles.Count - 10} 件"
+                        : "";
+                    var msg = $"荷重面等価径 (GroupPileLoadDia) が 0 (未入力) の地盤・杭・レベルセットが {zeroDiaPiles.Count} 件あります:\n" +
+                              string.Join("\n", sampleLines) + moreNote +
+                              "\n\n対象の杭は群杭沈下解析でスキップされます。\n続行しますか?";
+                    var result = MessageService.Show(msg, "荷重面等価径未入力の確認",
+                        MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                    if (result != MessageBoxResult.Yes) return;
+                }
+            }
+
             // Undoポイントを追加
             TrySaveUndoSnapshotSafelyOptimized();
 
@@ -2419,11 +2540,6 @@ namespace PileDesign.ViewModels
                 RectLoadPileDistance
             );
 
-            double adjustedMinX = boundingBox.MinX;
-            double adjustedMaxX = boundingBox.MaxX;
-            double adjustedMinY = boundingBox.MinY;
-            double adjustedMaxY = boundingBox.MaxY;
-
             // 全杭のVL軸力合計を荷重として設定
             double totalVL = 0;
             foreach (var pile in CurrentInputModel.PileLayoutItems)
@@ -2431,10 +2547,10 @@ namespace PileDesign.ViewModels
 
             CurrentInputModel.PileGroupSettlement.RectLoads.Add(new RectLoad()
             {
-                X1 = adjustedMinX,
-                X2 = adjustedMaxX,
-                Y1 = adjustedMinY,
-                Y2 = adjustedMaxY,
+                X1 = boundingBox.MinX,
+                X2 = boundingBox.MaxX,
+                Y1 = boundingBox.MinY,
+                Y2 = boundingBox.MaxY,
                 QA = totalVL
             }
             );
@@ -2466,17 +2582,12 @@ namespace PileDesign.ViewModels
                 EmbedmentPileDistance
             );
 
-            double adjustedMinX = boundingBox.MinX;
-            double adjustedMaxX = boundingBox.MaxX;
-            double adjustedMinY = boundingBox.MinY;
-            double adjustedMaxY = boundingBox.MaxY;
-
             foreach (var embedmentDataItem in CurrentInputModel.EmbedmentInput.EmbedmentLayers)
             {
-                embedmentDataItem.X1 = adjustedMinX;
-                embedmentDataItem.X2 = adjustedMaxX;
-                embedmentDataItem.Y1 = adjustedMinY;
-                embedmentDataItem.Y2 = adjustedMaxY;
+                embedmentDataItem.X1 = boundingBox.MinX;
+                embedmentDataItem.X2 = boundingBox.MaxX;
+                embedmentDataItem.Y1 = boundingBox.MinY;
+                embedmentDataItem.Y2 = boundingBox.MaxY;
             }
 
             // 変更後（以下の箇所で適用）
@@ -2492,7 +2603,7 @@ namespace PileDesign.ViewModels
 
             if (CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                MessageBox.Show("杭配置データがありません。");
+                MessageService.Show("杭配置データがありません。");
                 return;
             }
 
@@ -2573,7 +2684,7 @@ namespace PileDesign.ViewModels
                 var rectLoads = CurrentInputModel.PileGroupSettlement.RectLoads;
                 if (rectLoads == null || rectLoads.Count == 0)
                 {
-                    MessageBox.Show("群杭荷重（矩形荷重）が定義されていません。\n荷重タブで矩形荷重を追加してください。",
+                    MessageService.Show("群杭荷重（矩形荷重）が定義されていません。\n荷重タブで矩形荷重を追加してください。",
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -2581,7 +2692,7 @@ namespace PileDesign.ViewModels
                 // 荷重値が全て0かチェック
                 if (rectLoads.All(r => r.QA == 0))
                 {
-                    MessageBox.Show("値が0の群杭荷重（矩形荷重）しか定義されていません。\n荷重タブで荷重値を設定してください。",
+                    MessageService.Show("値が0の群杭荷重（矩形荷重）しか定義されていません。\n荷重タブで荷重値を設定してください。",
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -2592,14 +2703,14 @@ namespace PileDesign.ViewModels
                 var piles = CurrentInputModel.PileLayoutItems;
                 if (piles == null || piles.Count == 0)
                 {
-                    MessageBox.Show("杭が配置されていません。\n杭タブで杭を追加してください。",
+                    MessageService.Show("杭が配置されていません。\n杭タブで杭を追加してください。",
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
                 if (piles.All(p => (p.AxialForceVL0 + p.AxialForceVLAdditional) == 0))
                 {
-                    MessageBox.Show("全ての杭の軸力（VL0+VLadd）が0です。\n杭タブで軸力を設定してください。",
+                    MessageService.Show("全ての杭の軸力（VL0+VLadd）が0です。\n杭タブで軸力を設定してください。",
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -2608,7 +2719,7 @@ namespace PileDesign.ViewModels
             {
                 if (!IsVerticalBeamAnalysisDone || VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0)
                 {
-                    MessageBox.Show("基礎梁考慮鉛直解析が実行されていません。\n先に基礎梁考慮鉛直解析を実行してください。",
+                    MessageService.Show("基礎梁考慮鉛直解析が実行されていません。\n先に基礎梁考慮鉛直解析を実行してください。",
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -2616,7 +2727,7 @@ namespace PileDesign.ViewModels
                 var piles = CurrentInputModel.PileLayoutItems;
                 if (piles == null || piles.Count == 0)
                 {
-                    MessageBox.Show("杭が配置されていません。\n杭タブで杭を追加してください。",
+                    MessageService.Show("杭が配置されていません。\n杭タブで杭を追加してください。",
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -2624,7 +2735,7 @@ namespace PileDesign.ViewModels
             else
             {
                 // "なし" またはその他
-                MessageBox.Show("荷重タイプが設定されていません。\n荷重タブで荷重タイプを選択してください。",
+                MessageService.Show("荷重タイプが設定されていません。\n荷重タブで荷重タイプを選択してください。",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -2633,7 +2744,7 @@ namespace PileDesign.ViewModels
             var pgs = CurrentInputModel.PileGroupSettlement;
             if (pgs.SettlementSoilLayers == null || pgs.SettlementSoilLayers.Count == 0)
             {
-                MessageBox.Show("群杭沈下解析用の土層が1層以上必要です。\n土層タブで土層を追加してください。",
+                MessageService.Show("群杭沈下解析用の土層が1層以上必要です。\n土層タブで土層を追加してください。",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -2642,13 +2753,13 @@ namespace PileDesign.ViewModels
             double bottomAlt = pgs.SettlementSoilLayers[^1].BottomAltitude;
             if (loadAlt > topAlt + NumericalConstants.NEAR_ZERO_EPSILON)
             {
-                MessageBox.Show($"荷重面 Z ({loadAlt:N3} m) が土層上端 Z ({topAlt:N3} m) より高くなっています。\n荷重面を土層上端以下に設定してください。",
+                MessageService.Show($"荷重面 Z ({loadAlt:N3} m) が土層上端 Z ({topAlt:N3} m) より高くなっています。\n荷重面を土層上端以下に設定してください。",
                     "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
             if (loadAlt < bottomAlt - NumericalConstants.NEAR_ZERO_EPSILON)
             {
-                MessageBox.Show($"荷重面 Z ({loadAlt:N3} m) が最下層下端 Z ({bottomAlt:N3} m) より低くなっています。\n荷重面を最下層下端以上に設定してください。",
+                MessageService.Show($"荷重面 Z ({loadAlt:N3} m) が最下層下端 Z ({bottomAlt:N3} m) より低くなっています。\n荷重面を最下層下端以上に設定してください。",
                     "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -2671,7 +2782,7 @@ namespace PileDesign.ViewModels
 
             if (!result.Success)
             {
-                MessageBox.Show(result.ErrorMessage, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(result.ErrorMessage, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -2767,7 +2878,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"保存に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show($"保存に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 finally
                 {
@@ -2791,7 +2902,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"保存に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show($"保存に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 finally
                 {
@@ -2803,7 +2914,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void NewInputModelFile()
         {
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 "現在のデータを保存しますか？",
                 "確認",
                 MessageBoxButton.YesNoCancel,
@@ -2820,6 +2931,7 @@ namespace PileDesign.ViewModels
             CurrentInputModel.Reset();
             this.CurrentModel = null; // AnaModelもリセット
             CurrentFilePath = null;
+            LoadedExampleName = null;  // 新規作成時はタイトルバーを [新規] に戻す
 
             // ここで初期状態をUndoスタックに積む
             SaveUndoState();
@@ -2913,7 +3025,7 @@ namespace PileDesign.ViewModels
                 var loaded = InputModel.LoadFromFile(filePath, this);
                 if (loaded == null)
                 {
-                    MessageBox.Show($"ファイルの読込に失敗しました。\n{filePath}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show($"ファイルの読込に失敗しました。\n{filePath}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return false;
                 }
 
@@ -2925,7 +3037,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"ファイル読込中にエラーが発生しました。\n{ex.Message}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"ファイル読込中にエラーが発生しました。\n{ex.Message}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -3012,7 +3124,7 @@ namespace PileDesign.ViewModels
             var anaModel = CurrentModel;
             var soilPiles = CurrentInputModel?.ElementDivision?.SoilPiles;
 
-            // 要素分割済み判定: AnaModelにノードが存在する
+            // 杭要素分割済み判定: AnaModelにノードが存在する
             if (anaModel?.Nodes != null && anaModel.Nodes.Count > 0)
             {
                 IsElementSplit = true;
@@ -3083,7 +3195,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Word出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show($"Word出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 finally
                 {
@@ -3113,7 +3225,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"3dm出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show($"3dm出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -3139,7 +3251,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"DXF出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show($"DXF出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -3164,7 +3276,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"伏図DXF出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show($"伏図DXF出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -3175,7 +3287,7 @@ namespace PileDesign.ViewModels
         {
             if (CurrentModel == null)
             {
-                MessageBox.Show("水平解析が実行されていません。\n解析モデルをエクスポートするには、先に水平解析を実行してください。",
+                MessageService.Show("水平解析が実行されていません。\n解析モデルをエクスポートするには、先に水平解析を実行してください。",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -3197,7 +3309,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"MGT出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show($"MGT出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -3242,7 +3354,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"計算書出力ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"計算書出力ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -3306,7 +3418,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"オプションウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"オプションウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -3343,7 +3455,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"グラフウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"グラフウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         private bool CanOpenGraphWindow() => HasAnyAnalysisResult;
@@ -3445,7 +3557,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"テーブルウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"テーブルウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -3537,15 +3649,40 @@ namespace PileDesign.ViewModels
             return tables;
         }
 
+        // ケースタグ抽出正規表現 (例: [L2-1.C1.Liq], [L1-2.C3.NoLq])
+        // HorizontalCalculationWindow.xaml.cs の CaseTagPattern と同等。
+        private static readonly System.Text.RegularExpressions.Regex CaseTagPattern =
+            new(@"\[L\d+-\d+\.C\d+\.(?:Liq|NoLq)\]", System.Text.RegularExpressions.RegexOptions.Compiled);
+
         [RelayCommand(CanExecute = nameof(CanOpenLogWindow))]
         private void OpenLogWindow()
         {
             if (!CanOpenLogWindow()) return;
 
-            // ログ種別リストを構築
+            // ログ種別リストを構築。複数ケース解析時はケース別フィルタ済ビューも追加する。
             var logSources = new Dictionary<string, IEnumerable<string>>();
             if (HorizontalAnalysisLogs.Count > 0)
-                logSources["水平解析"] = HorizontalAnalysisLogs;
+            {
+                logSources["水平解析 (全体)"] = HorizontalAnalysisLogs;
+
+                // ログ内のユニークなケースタグを抽出して、ケース別カテゴリを追加
+                var caseTags = HorizontalAnalysisLogs
+                    .Select(line => CaseTagPattern.Match(line))
+                    .Where(m => m.Success)
+                    .Select(m => m.Value)
+                    .Distinct()
+                    .OrderBy(t => t, System.StringComparer.Ordinal)
+                    .ToList();
+
+                foreach (var tag in caseTags)
+                {
+                    // 該当ケースタグを含む行のみ抽出 (open 時点のスナップショット)
+                    var filtered = HorizontalAnalysisLogs
+                        .Where(line => line.Contains(tag))
+                        .ToList();
+                    logSources[$"水平解析 {tag}"] = filtered;
+                }
+            }
             if (VerticalBeamAnalysisLogs.Count > 0)
                 logSources["基礎梁考慮沈下解析"] = VerticalBeamAnalysisLogs;
 
@@ -3720,7 +3857,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"{errorPrefix}ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"{errorPrefix}ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -3776,7 +3913,7 @@ namespace PileDesign.ViewModels
 
                 if (!System.IO.File.Exists(mcpExePath))
                 {
-                    MessageBox.Show(
+                    MessageService.Show(
                         $"PileDesign.Mcp.exe が見つかりません。\n\n" +
                         $"検索パス: {mcpExePath}\n\n" +
                         "PileDesign.Mcp.exe をこのプログラムと同じフォルダに配置してください。",
@@ -3797,7 +3934,7 @@ namespace PileDesign.ViewModels
     }}
   }}
 }}";
-                    MessageBox.Show(
+                    MessageService.Show(
                         "Claude Desktop の設定ファイルが見つかりませんでした。\n\n" +
                         "Claude Desktop をインストール後、設定ファイル\n" +
                         "(claude_desktop_config.json) に以下を追加してください:\n\n" +
@@ -3832,7 +3969,7 @@ namespace PileDesign.ViewModels
                 // 既に登録済みかチェック
                 if (mcpServers.ContainsKey("piledesign"))
                 {
-                    var result = MessageBox.Show(
+                    var result = MessageService.Show(
                         "piledesign は既に登録されています。上書きしますか？",
                         "AI連携設定", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (result != MessageBoxResult.Yes) return;
@@ -3854,7 +3991,7 @@ namespace PileDesign.ViewModels
                 string newJson = root.ToJsonString(options);
                 System.IO.File.WriteAllText(configPath, newJson);
 
-                MessageBox.Show(
+                MessageService.Show(
                     $"Claude Desktop にAI連携を登録しました。\n\n" +
                     $"設定ファイル: {configPath}\n" +
                     $"MCPサーバー: {mcpExePath}\n\n" +
@@ -3863,7 +4000,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"設定中にエラーが発生しました:\n{ex.Message}",
+                MessageService.Show($"設定中にエラーが発生しました:\n{ex.Message}",
                     "AI連携設定", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -3952,7 +4089,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
             // 変更後（以下の箇所で適用）
@@ -3973,7 +4110,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"杭ライブラリ表示に失敗しました: {ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                PileDesign.Services.MessageService.Show($"杭ライブラリ表示に失敗しました: {ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
@@ -3998,13 +4135,14 @@ namespace PileDesign.ViewModels
             try
             {
                 // 選択節点がない場合は処理を中止してメッセージ表示
-                // 杭配置または一般節点のいずれかが選択されていればOK
+                // 杭配置・一般節点・梁要素のいずれかが選択されていればOK
                 bool hasPileLayoutSelected = CurrentInputModel?.PileLayoutItems?.Any(p => p.IsSelected) ?? false;
                 bool hasGeneralNodesSelected = CurrentInputModel?.InputNodes?.Any(n => n.Type == NodeType.General && n.IsSelected) ?? false;
+                bool hasBeamsSelected = CurrentInputModel?.FoundationBeamInput?.Beams?.Any(b => b.IsSelected) ?? false;
 
-                if (!hasPileLayoutSelected && !hasGeneralNodesSelected)
+                if (!hasPileLayoutSelected && !hasGeneralNodesSelected && !hasBeamsSelected)
                 {
-                    MessageBox.Show("杭配置または一般節点が選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageService.Show("杭配置・一般節点・梁要素のいずれも選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
@@ -4062,7 +4200,7 @@ namespace PileDesign.ViewModels
             {
                 // 例外発生時もカーソルをリセット
                 Mouse.OverrideCursor = null;
-                MessageBox.Show($"杭の移動・複製中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"杭の移動・複製中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -4070,9 +4208,198 @@ namespace PileDesign.ViewModels
         {
             // 新しいウィンドウでの操作の結果を処理する
             if (e.IsMove)
-                MoveNodes(e.DX, e.DY, e.DZ, e.IsInputNodesIncluded, e.IsPileLayoutIncluded);// 移動操作の処理
+            {
+                MoveNodes(e.DX, e.DY, e.DZ, e.IsInputNodesIncluded, e.IsPileLayoutIncluded);
+                if (e.IsBeamsIncluded) MoveBeams(e.DX, e.DY, e.DZ, EditDistanceThreshold);
+            }
             else if (e.IsCopy)
-                await CopyNodesAsync(e.DX, e.DY, e.DZ, e.RepetitionNumber, e.IsInputNodesIncluded, e.IsPileLayoutIncluded); // 複製操作の処理
+            {
+                await CopyNodesAsync(e.DX, e.DY, e.DZ, e.RepetitionNumber, e.IsInputNodesIncluded, e.IsPileLayoutIncluded);
+                if (e.IsBeamsIncluded) CopyBeams(e.DX, e.DY, e.DZ, e.RepetitionNumber, EditDistanceThreshold);
+            }
+        }
+
+        // ───────── 梁要素の移動・コピー (端点ノード解決ロジック付き) ─────────
+        // 端点解決の優先順位 (ResolveOrCreateNodeAt):
+        //   1. 杭頭節点 (PileLayout の杭頭+ΔZc 位置) との距離 ≤ tolerance → そこを参照
+        //   2. 一般節点 (InputNode, Type=General) との距離 ≤ tolerance → そこを参照
+        //   3. どちらも見つからなければ新規 InputNode を destination 位置に生成し、それを参照
+        //
+        // 移動 (Move): 元の梁の NodeI/J 参照を destination の参照に付け替える。
+        //   元の端点ノード (FoundationNode / InputNode) はそのまま残す (ユーザー仕様)。
+        //   杭頭節点は移動しない (杭自体は元位置のまま)。
+        // コピー (Copy): 同じロジックで新規 FoundationBeamElement を生成して追加。
+
+        private void MoveBeams(double dX, double dY, double dZ, double tolerance)
+        {
+            var fb = CurrentInputModel?.FoundationBeamInput;
+            if (fb?.Beams == null) return;
+            var selectedBeams = fb.Beams.Where(b => b.IsSelected).ToList();
+            if (selectedBeams.Count == 0) return;
+
+            foreach (var beam in selectedBeams)
+            {
+                var posI = GetNodeAttachPosition(beam.NodeI_Type, beam.NodeI_Id);
+                var posJ = GetNodeAttachPosition(beam.NodeJ_Type, beam.NodeJ_Id);
+                if (posI == null || posJ == null) continue;
+
+                var destI = new Point3D { X = posI.Value.X + dX, Y = posI.Value.Y + dY, Z = posI.Value.Z + dZ };
+                var destJ = new Point3D { X = posJ.Value.X + dX, Y = posJ.Value.Y + dY, Z = posJ.Value.Z + dZ };
+                var (typeI, idI) = ResolveOrCreateNodeAt(destI, tolerance);
+                var (typeJ, idJ) = ResolveOrCreateNodeAt(destJ, tolerance);
+
+                beam.NodeI_Type = typeI;
+                beam.NodeI_Id = idI;
+                beam.NodeJ_Type = typeJ;
+                beam.NodeJ_Id = idJ;
+            }
+        }
+
+        private void CopyBeams(double dX, double dY, double dZ, int repetitionNumber, double tolerance)
+        {
+            var fb = CurrentInputModel?.FoundationBeamInput;
+            if (fb?.Beams == null) return;
+            var selectedBeams = fb.Beams.Where(b => b.IsSelected).ToList();
+            if (selectedBeams.Count == 0) return;
+
+            int nextNo = (fb.Beams.Count == 0) ? 1 : (fb.Beams.Max(b => b.No) + 1);
+
+            foreach (var beam in selectedBeams)
+            {
+                var posI = GetNodeAttachPosition(beam.NodeI_Type, beam.NodeI_Id);
+                var posJ = GetNodeAttachPosition(beam.NodeJ_Type, beam.NodeJ_Id);
+                if (posI == null || posJ == null) continue;
+
+                for (int rep = 1; rep <= repetitionNumber; rep++)
+                {
+                    var destI = new Point3D { X = posI.Value.X + dX * rep, Y = posI.Value.Y + dY * rep, Z = posI.Value.Z + dZ * rep };
+                    var destJ = new Point3D { X = posJ.Value.X + dX * rep, Y = posJ.Value.Y + dY * rep, Z = posJ.Value.Z + dZ * rep };
+                    var (typeI, idI) = ResolveOrCreateNodeAt(destI, tolerance);
+                    var (typeJ, idJ) = ResolveOrCreateNodeAt(destJ, tolerance);
+
+                    var newBeam = new FoundationBeamElement
+                    {
+                        No = nextNo++,
+                        NodeI_Type = typeI,
+                        NodeI_Id = idI,
+                        NodeJ_Type = typeJ,
+                        NodeJ_Id = idJ,
+                        MaterialNo = beam.MaterialNo,
+                        SectionNo = beam.SectionNo,
+                        SectionName = beam.SectionName,
+                        Width = beam.Width,
+                        Height = beam.Height,
+                        YoungModulus = beam.YoungModulus,
+                        ShearModulus = beam.ShearModulus,
+                        AngleBeta = beam.AngleBeta,
+                        IsVisible = beam.IsVisible,
+                    };
+                    fb.Beams.Add(newBeam);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 節点参照タイプ + Id から、その節点の実際の取付位置 (3D 座標) を返す。
+        /// PileLayout: 杭頭 (X,Y,Z) + (0,0,FoundationBeamDeltaZc)
+        /// GeneralNode: InputNode の Point3D
+        /// FoundationNode: FoundationNode の Point3D
+        /// </summary>
+        private Point3D? GetNodeAttachPosition(NodeReferenceType type, Guid id)
+        {
+            switch (type)
+            {
+                case NodeReferenceType.PileLayout:
+                {
+                    var pile = CurrentInputModel?.PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
+                    if (pile == null) return null;
+                    return new Point3D { X = pile.X, Y = pile.Y, Z = pile.Z + pile.FoundationBeamDeltaZc };
+                }
+                case NodeReferenceType.GeneralNode:
+                {
+                    var node = CurrentInputModel?.InputNodes?.FirstOrDefault(n => n.UniqueId == id);
+                    return node?.Point3D;
+                }
+                case NodeReferenceType.FoundationNode:
+                {
+                    var fn = CurrentInputModel?.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n.Id == id);
+                    return fn != null ? new Point3D { X = fn.X, Y = fn.Y, Z = fn.Z } : null;
+                }
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// 梁要素の端点候補となるノードを (Type + Guid + Position) のタプルで列挙する。
+        /// 列挙順は ResolveOrCreateNodeAt の優先順位に対応:
+        ///   1. PileLayout (杭頭+ΔZc 位置)
+        ///   2. GeneralNode (InputNode, Type=General)
+        ///   3. FoundationNode (基礎梁節点) ※ includeFoundationNodes=true のときのみ
+        /// </summary>
+        private IEnumerable<(NodeReferenceType Type, Guid Id, Point3D Pos)> EnumerateAllCandidateNodes(
+            bool includeFoundationNodes = true)
+        {
+            if (CurrentInputModel?.PileLayoutItems != null)
+            {
+                foreach (var pile in CurrentInputModel.PileLayoutItems)
+                {
+                    yield return (NodeReferenceType.PileLayout, pile.UniqueId,
+                        new Point3D(pile.X, pile.Y, pile.Z + pile.FoundationBeamDeltaZc));
+                }
+            }
+            if (CurrentInputModel?.InputNodes != null)
+            {
+                foreach (var n in CurrentInputModel.InputNodes)
+                {
+                    if (n.Type != NodeType.General) continue;
+                    yield return (NodeReferenceType.GeneralNode, n.UniqueId, n.Point3D);
+                }
+            }
+            if (includeFoundationNodes && CurrentInputModel?.FoundationBeamInput?.Nodes != null)
+            {
+                foreach (var fn in CurrentInputModel.FoundationBeamInput.Nodes)
+                {
+                    yield return (NodeReferenceType.FoundationNode, fn.Id,
+                        new Point3D(fn.X, fn.Y, fn.Z));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 指定位置にある既存節点を解決、無ければ新規 InputNode (一般節点) を生成して返す。
+        /// 優先順位: PileLayout (杭頭+ΔZc) → GeneralNode → 新規 InputNode 生成。
+        /// FoundationNode は対象外 (snap 先として基礎梁節点を選ぶのは利用シーンとして想定外のため)。
+        /// </summary>
+        private (NodeReferenceType type, Guid id) ResolveOrCreateNodeAt(Point3D pos, double tolerance)
+        {
+            foreach (var (type, id, candPos) in EnumerateAllCandidateNodes(includeFoundationNodes: false))
+            {
+                if (Distance3D(candPos.X, candPos.Y, candPos.Z, pos.X, pos.Y, pos.Z) <= tolerance)
+                    return (type, id);
+            }
+            // 該当なし → 新規 InputNode を生成
+            var newNode = new InputNode
+            {
+                No = (CurrentInputModel?.InputNodes?.Count ?? 0) + 1,
+                Type = NodeType.General,
+                X = pos.X,
+                Y = pos.Y,
+                Z = pos.Z,
+                IsVisible = true
+            };
+            if (CurrentInputModel != null)
+            {
+                CurrentInputModel.InputNodes ??= [];
+                CurrentInputModel.InputNodes.Add(newNode);
+            }
+            return (NodeReferenceType.GeneralNode, newNode.UniqueId);
+        }
+
+        private static double Distance3D(double x1, double y1, double z1, double x2, double y2, double z2)
+        {
+            double dx = x1 - x2, dy = y1 - y2, dz = z1 - z2;
+            return Math.Sqrt(dx * dx + dy * dy + dz * dz);
         }
 
         private async Task CopyNodesAsync(double dX, double dY, double dZ, int repetitionNumber, bool isInputNodesIncluded, bool isPileLayoutIncluded)
@@ -4295,6 +4622,11 @@ namespace PileDesign.ViewModels
                 // UpdateWindow() 内で UpdateTreeView() も実行されるため updateTree: false
                 NotifyUIChanged(updateTree: false, immediate: true);
                 OnPropertyChanged(nameof(CurrentInputModel));
+
+                // Undo/Redo 後に SelectedItemProperties が古いインスタンスを参照したままに
+                // ならないよう、現在の選択状態に基づいてプロパティパネルを再構築する。
+                // (DeepCopy で杭/梁等のインスタンスが入れ替わるため必須)
+                UpdatePropertyPanel();
             }
             RaiseUndoStateChanged();
         }
@@ -4396,9 +4728,20 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OpenGroundWindow()
         {
+            // ダイアログ前後で InputModel.GroundsInput のインスタンス列が変わったか判定する。
+            // OnSave: Clear+Add で全インスタンスが入れ替わる → 変更ありと判定
+            // OnCancel: 何もしない (インスタンス据え置き) → 変更なしと判定
+            // 変更がない場合は IsElementSplit を保持し、SoilPiles 再生成も省略する。
+            var prevInstances = CurrentInputModel?.GroundsInput?.ToArray() ?? Array.Empty<GroundInput>();
+
             OpenDialogWindowWithUndo<GroundLayerViewModel, GroundWindow>(() =>
             {
-                // 地盤変更後は要素分割を再生成（地層境界の節点追加が必要）
+                var nowInstances = CurrentInputModel?.GroundsInput?.ToArray() ?? Array.Empty<GroundInput>();
+                bool changed = nowInstances.Length != prevInstances.Length
+                    || !nowInstances.Zip(prevInstances).All(p => ReferenceEquals(p.First, p.Second));
+                if (!changed) return;
+
+                // 地盤変更後は杭要素分割を再生成（地層境界の節点追加が必要）
                 IsElementSplit = false;
                 RequestGenerateSoilPiles();
             });
@@ -4415,9 +4758,18 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OpenPileBodyWindow()
         {
+            // ダイアログ前後で InputModel.PileBodies のインスタンス (コレクション参照) が変わったか判定する。
+            // OnOk: 新しい PileBodies に差し替える → 変更ありと判定
+            // OnCancel: 何もしない (参照据え置き) → 変更なしと判定
+            // 変更がない場合は IsElementSplit を保持し、SoilPiles 再生成も省略する。
+            var prevReference = CurrentInputModel?.PileBodies;
+
             OpenDialogWindowWithUndo<PileBodyViewModel, PileBodyWindow>(() =>
             {
-                // 杭体変更後は要素分割を再生成（地層境界の節点追加が必要）
+                bool changed = !ReferenceEquals(CurrentInputModel?.PileBodies, prevReference);
+                if (!changed) return;
+
+                // 杭体変更後は杭要素分割を再生成（地層境界の節点追加が必要）
                 IsElementSplit = false;
                 RequestGenerateSoilPiles();
             });
@@ -4429,7 +4781,7 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel == null || CurrentInputModel.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                MessageBox.Show("杭配置が存在しません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show("杭配置が存在しません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -4472,17 +4824,17 @@ namespace PileDesign.ViewModels
             }
 
             if (hasWarning)
-                MessageBox.Show(warningMessage, "警告", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show(warningMessage, "警告", MessageBoxButton.OK, MessageBoxImage.Information);
             else
                 ShowToast("各杭配置の軸力は各断面の軸力適用範囲内です。");
         }
 
-        // 要素分割ウィンドウの再入ガード
+        // 杭要素分割ウィンドウの再入ガード
         // F4 連打や Ctrl+D 連打で await Task.Run(DeepCopy) 中に次の呼出しが入ると、
         // 1 本目の ShowDialog 終了後に 2 本目が開いてしまうのを防ぐ
         private bool _isElementDivisionWindowOpening;
 
-        // 要素分割ウィンドウを開くメソッド
+        // 杭要素分割ウィンドウを開くメソッド
         [RelayCommand]
         public async Task OpenElementDivisionWindowAsync()
         {
@@ -4499,7 +4851,7 @@ namespace PileDesign.ViewModels
                     var validationError = ValidatePileAndGroundDepth();
                     if (!string.IsNullOrEmpty(validationError))
                     {
-                        MessageBox.Show(validationError, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageService.Show(validationError, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
 
@@ -4638,13 +4990,13 @@ namespace PileDesign.ViewModels
             {
                 if (CurrentInputModel.ElementDivision.SoilPiles == null || CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
-                    MessageBox.Show("杭配置が存在しません。");
+                    MessageService.Show("杭配置が存在しません。");
                     return;
                 }
                 else
                 {
                     if (IsElementSplit == false)
-                        System.Windows.MessageBox.Show("要素分割を行ってください。");
+                        PileDesign.Services.MessageService.Show("杭要素分割を行ってください。");
                     else
                         OpenDialogWindow<SettlementViewModel, SettlementWindow>(this);
                 }
@@ -4659,14 +5011,14 @@ namespace PileDesign.ViewModels
             {
                 if (CurrentInputModel.ElementDivision.SoilPiles == null || CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
-                    MessageBox.Show("杭配置が存在しません。");
+                    MessageService.Show("杭配置が存在しません。");
                     return;
                 }
                 else
                 {
                     if (IsElementSplit == false)
                     {
-                        System.Windows.MessageBox.Show("要素分割を行ってください。");
+                        PileDesign.Services.MessageService.Show("杭要素分割を行ってください。");
                     }
                     else
                     {
@@ -4693,7 +5045,7 @@ namespace PileDesign.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageService.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                         finally
                         {
@@ -4763,7 +5115,7 @@ namespace PileDesign.ViewModels
                 "  ① 引張定着筋を設置する\n" +
                 "  ② 入力軸力を見直す\n" +
                 "  ③ 杭頭工法を変更する";
-            System.Windows.MessageBox.Show(
+            PileDesign.Services.MessageService.Show(
                 msg, "杭頭半剛接合 軸力チェック",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Warning);
@@ -4821,13 +5173,13 @@ namespace PileDesign.ViewModels
             // バリデーション
             if (CurrentInputModel.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                MessageBox.Show("杭配置が定義されていません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show("杭配置が定義されていません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (CurrentInputModel.FoundationBeamInput?.Beams == null || CurrentInputModel.FoundationBeamInput.Beams.Count == 0)
             {
-                MessageBox.Show("基礎梁要素が定義されていません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show("基礎梁要素が定義されていません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -4851,7 +5203,7 @@ namespace PileDesign.ViewModels
             }
             if (anyMissing)
             {
-                MessageBox.Show("単杭沈下解析が未実行の杭があります。\n\n" +
+                MessageService.Show("単杭沈下解析が未実行の杭があります。\n\n" +
                     "基礎梁考慮沈下解析には、各杭の荷重-沈下関係（単杭沈下解析の結果）が必要です。\n" +
                     "先に「単杭沈下解析」を実行してください。\n\n" +
                     "※群杭沈下解析とは別の解析です。",
@@ -4884,7 +5236,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -4893,7 +5245,7 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                System.Windows.MessageBox.Show("杭配置が存在しません。");
+                PileDesign.Services.MessageService.Show("杭配置が存在しません。");
                 return false;
             }
             return true;
@@ -4910,7 +5262,7 @@ namespace PileDesign.ViewModels
         {
             if (SelectedGroundInputModelNo == 0)
             {
-                MessageBox.Show("地盤データが存在しません。");
+                MessageService.Show("地盤データが存在しません。");
                 return;
             }
 
@@ -5013,6 +5365,8 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.IsAxialForceVariationMode = value;
                 Common.AxialForceModeContext.IsVariationMode = value;
                 OnPropertyChanged();
+                // プロパティパネルの軸力ラベル/値表記が絶対⇔変動で切り替わるため再構築
+                UpdatePropertyPanel();
             }
         }
 
@@ -5027,7 +5381,7 @@ namespace PileDesign.ViewModels
                 return;
             if (!CheckAndResetAnalysisResults()) return;
 
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 "全杭の L1/L2 軸力に VL (常時軸力) を加算します。\n" +
                 "現在値が「地震時増分 ΔN」のときに「VL + 地震時 = 全軸力」へ変換するために使用します。\n\n" +
                 "実行してよろしいですか?\n" +
@@ -5052,7 +5406,7 @@ namespace PileDesign.ViewModels
                 return;
             if (!CheckAndResetAnalysisResults()) return;
 
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 "全杭の L1/L2 軸力から VL (常時軸力) を減算します。\n" +
                 "現在値が「VL + 地震時 = 全軸力」のときに「地震時増分 ΔN」へ変換するために使用します。\n\n" +
                 "実行してよろしいですか?",
@@ -5132,6 +5486,45 @@ namespace PileDesign.ViewModels
         {
             foreach (var item in CurrentInputModel.PileLayoutItems)
                 item.IsSelected = false;
+
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 選択された梁要素 (FoundationBeamInput.Beams) を削除するコマンド。
+        /// 削除対象の端点ノードは残す (他梁が参照している可能性があるため、孤立ノードはユーザーが手動整理)。
+        /// </summary>
+        [RelayCommand]
+        private void DeleteBeams()
+        {
+            if (!CheckAndResetAnalysisResults()) return;
+
+            var beams = CurrentInputModel?.FoundationBeamInput?.Beams;
+            if (beams == null) return;
+            var toRemove = beams.Where(b => b.IsSelected).ToList();
+            if (toRemove.Count == 0) return;
+
+            SaveUndoState();
+            foreach (var beam in toRemove)
+                beams.Remove(beam);
+
+            // 番号振り直し
+            for (int i = 0; i < beams.Count; i++)
+                beams[i].No = i + 1;
+
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// すべての梁要素の選択を解除するコマンド。
+        /// </summary>
+        [RelayCommand]
+        private void DeselectBeams()
+        {
+            var beams = CurrentInputModel?.FoundationBeamInput?.Beams;
+            if (beams == null) return;
+            foreach (var beam in beams)
+                beam.IsSelected = false;
 
             RequestUpdateWindow();
         }
@@ -5277,7 +5670,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"画像の保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    PileDesign.Services.MessageService.Show($"画像の保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -5348,7 +5741,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"画像のコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                PileDesign.Services.MessageService.Show($"画像のコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -5597,7 +5990,7 @@ namespace PileDesign.ViewModels
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             {
-                MessageBox.Show($"ファイルが見つかりません。\n{filePath}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"ファイルが見つかりません。\n{filePath}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 _mruService.RemoveFile(filePath);
                 return;
             }
@@ -5628,7 +6021,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"読込に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"読込に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -5648,7 +6041,7 @@ namespace PileDesign.ViewModels
             if (timeSinceAutoSave.TotalHours > 24)
                 return;
 
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 $"自動保存されたファイルが見つかりました。\n\n" +
                 $"保存日時: {fileInfo.CreationTime:yyyy/MM/dd HH:mm:ss}\n" +
                 $"ファイル: {System.IO.Path.GetFileName(latestAutoSave)}\n" +
@@ -5690,7 +6083,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"自動保存ファイルの復元に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show($"自動保存ファイルの復元に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
 
@@ -5824,7 +6217,7 @@ namespace PileDesign.ViewModels
 
             RequestUpdateWindow();
 
-            MessageBox.Show(
+            MessageService.Show(
                 $"{toRemove.Count} 個の重複一般節点を削除しました。",
                 "重複節点削除", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -5860,7 +6253,7 @@ namespace PileDesign.ViewModels
         {
             if (node == null) return;
 
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 $"節点 No.{node.No} を削除してもよろしいですか？",
                 "確認",
                 MessageBoxButton.OKCancel,
@@ -6087,7 +6480,7 @@ namespace PileDesign.ViewModels
             bool isUsed = CurrentInputModel.FoundationBeamInput.Beams.Any(b => b.MaterialNo == material.No);
             if (isUsed)
             {
-                System.Windows.MessageBox.Show(
+                PileDesign.Services.MessageService.Show(
                     $"材料No.{material.No}は梁要素で使用されているため削除できません。",
                     "削除不可",
                     System.Windows.MessageBoxButton.OK,
@@ -6113,7 +6506,7 @@ namespace PileDesign.ViewModels
             bool isUsed = CurrentInputModel.FoundationBeamInput.Beams.Any(b => b.SectionNo == section.No);
             if (isUsed)
             {
-                System.Windows.MessageBox.Show(
+                PileDesign.Services.MessageService.Show(
                     $"断面No.{section.No}は梁要素で使用されているため削除できません。",
                     "削除不可",
                     System.Windows.MessageBoxButton.OK,
@@ -6136,7 +6529,7 @@ namespace PileDesign.ViewModels
             var selectedBeams = CurrentInputModel?.FoundationBeamInput?.Beams?.Where(b => b.IsSelected).ToList();
             if (selectedBeams == null || selectedBeams.Count == 0)
             {
-                MessageBox.Show("一般梁要素が選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show("一般梁要素が選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 

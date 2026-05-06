@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using PileDesign.Services;
 
 
 namespace PileDesign.Views
@@ -33,23 +34,24 @@ namespace PileDesign.Views
             public int RepetitionNumber { get; set; }
             public bool IsInputNodesIncluded { get; set; }
             public bool IsPileLayoutIncluded { get; set; }
+            public bool IsBeamsIncluded { get; set; }
         }
 
         public event EventHandler<MoveCopyEventArgs> MoveCopyCompleted;
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
-            // 一般節点と杭配置の両方が選択されていない場合のチェック
-            if (!viewModel.IsInputNodesIncluded && !viewModel.IsPileLayoutIncluded)
+            // 対象が一つも選択されていない場合のチェック
+            if (!viewModel.IsInputNodesIncluded && !viewModel.IsPileLayoutIncluded && !viewModel.IsBeamsIncluded)
             {
-                MessageBox.Show("転記量が提供されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show("対象 (一般節点 / 杭配置 / 梁要素) が一つも選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
             // DX/DY/DZ の検証
             if (viewModel.DX == 0 && viewModel.DY == 0 && viewModel.DZ == 0)
             {
-                MessageBox.Show("DX, DY, DZのすべてが0です。値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("DX, DY, DZのすべてが0です。値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -95,7 +97,7 @@ namespace PileDesign.Views
                         else
                         {
                             // ヘルパが見つからない場合はフォールバックで同等の確認とリセットを実行
-                            var res = MessageBox.Show("解析結果を削除します。よろしいですか？", "確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                            var res = MessageService.Show("解析結果を削除します。よろしいですか？", "確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
                             if (res != MessageBoxResult.Yes) return;
 
                             // フラグをリセット（リフレクションで安全にセット）
@@ -147,7 +149,8 @@ namespace PileDesign.Views
                 DZ = viewModel.DZ,
                 RepetitionNumber = viewModel.RepetitionNumber,
                 IsInputNodesIncluded = viewModel.IsInputNodesIncluded,
-                IsPileLayoutIncluded = viewModel.IsPileLayoutIncluded
+                IsPileLayoutIncluded = viewModel.IsPileLayoutIncluded,
+                IsBeamsIncluded = viewModel.IsBeamsIncluded
             };
 
             MoveCopyCompleted?.Invoke(this, args);
@@ -168,7 +171,7 @@ namespace PileDesign.Views
             {
                 if (result <= 0)
                 {
-                    MessageBox.Show("自然数を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show("自然数を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
                 {
@@ -177,7 +180,7 @@ namespace PileDesign.Views
             }
             else
             {
-                MessageBox.Show("自然数を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("自然数を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

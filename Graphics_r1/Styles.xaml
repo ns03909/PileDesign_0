@@ -19,6 +19,11 @@
     <Color x:Key="LogBackgroundColor">#F5F5F5</Color>           <!-- ログ背景 -->
     <Color x:Key="LogForegroundColor">#333333</Color>           <!-- ログ本文 -->
     <Color x:Key="SubtleBackgroundColor">#FAFAFA</Color>        <!-- 微薄背景 -->
+    <Color x:Key="SurfaceMutedColor">#F0F0F0</Color>            <!-- 弱めグレー (見出し帯, 無効行) -->
+    <Color x:Key="SurfaceBorderColor">#E0E0E0</Color>           <!-- 罫線・区切り (薄) -->
+    <Color x:Key="StatusSuccessColor">#2E7D32</Color>           <!-- 成功 (解析済み, OK インジケータ) -->
+    <Color x:Key="StatusInfoColor">#1565C0</Color>              <!-- 情報 (編集済, アクティブ) -->
+    <Color x:Key="StatusWarningDarkColor">#E65100</Color>       <!-- 強い警告 (未保存, 注意喚起) -->
 
     <!-- ブラシ定義 (Foreground / Background での参照用) -->
     <SolidColorBrush x:Key="PrimaryAccentBrush" Color="{StaticResource PrimaryAccentColor}"/>
@@ -30,6 +35,20 @@
     <SolidColorBrush x:Key="LogBackgroundBrush" Color="{StaticResource LogBackgroundColor}"/>
     <SolidColorBrush x:Key="LogForegroundBrush" Color="{StaticResource LogForegroundColor}"/>
     <SolidColorBrush x:Key="SubtleBackgroundBrush" Color="{StaticResource SubtleBackgroundColor}"/>
+    <SolidColorBrush x:Key="SurfaceMutedBrush" Color="{StaticResource SurfaceMutedColor}"/>
+    <SolidColorBrush x:Key="SurfaceBorderBrush" Color="{StaticResource SurfaceBorderColor}"/>
+    <SolidColorBrush x:Key="StatusSuccessBrush" Color="{StaticResource StatusSuccessColor}"/>
+    <SolidColorBrush x:Key="StatusInfoBrush" Color="{StaticResource StatusInfoColor}"/>
+    <SolidColorBrush x:Key="StatusWarningDarkBrush" Color="{StaticResource StatusWarningDarkColor}"/>
+
+    <!-- 共通 hover / pressed 色 (DataGridCell / Button / TabItem / GroupBox 等で参照) -->
+    <SolidColorBrush x:Key="ControlHoverBackground" Color="#E8F4FB"/>
+    <SolidColorBrush x:Key="ControlPressedBackground" Color="#CFE6F4"/>
+    <SolidColorBrush x:Key="ControlBorderBrush" Color="#C8C8C8"/>
+    <SolidColorBrush x:Key="ControlBorderHoverBrush" Color="{StaticResource PrimaryAccentColor}"/>
+    <SolidColorBrush x:Key="ControlBorderFocusBrush" Color="{StaticResource PrimaryAccentColor}"/>
+    <SolidColorBrush x:Key="ControlDisabledBackground" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="ControlDisabledForeground" Color="#A0A0A0"/>
 
     <!-- Nikken カラー (限界状態などの分類色) -->
     <Color x:Key="NikkenSkyBlueColor">#62B0E2</Color>
@@ -97,6 +116,9 @@
     
     <Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
         <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource ControlHoverBackground}"/>
+            </Trigger>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                 <Setter Property="Foreground" Value="White"/>
@@ -108,16 +130,25 @@
 
     <Style TargetType="DataGridCell">
         <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource ControlHoverBackground}"/>
+            </Trigger>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="IsEditing" Value="True"/>
             </Trigger>
         </Style.Triggers>
     </Style>
-        
+
+    <!-- DataGrid 既定: 行交互背景 (zebra) と選択モード等の共通設定。
+         AlternatingRowBackground は SubtleBackgroundBrush (#FAFAFA) で控えめに。
+         <DataGrid.AlternatingRowBackground><ImageBrush/></DataGrid.AlternatingRowBackground>
+         の inline 上書きが効いている既存グリッドは zebra 無効化が維持される。 -->
     <Style TargetType="DataGrid">
         <Setter Property="SelectionUnit" Value="CellOrRowHeader"/>
         <Setter Property="SelectionMode" Value="Extended"/>
         <Setter Property="ClipboardCopyMode" Value="ExcludeHeader"/>
+        <Setter Property="RowBackground" Value="White"/>
+        <Setter Property="AlternatingRowBackground" Value="{StaticResource SubtleBackgroundBrush}"/>
     </Style>
 
     <!-- DataGrid 列ヘッダー: 全 DataGrid で太さ・配置・パディングを統一。
@@ -265,15 +296,6 @@
            - ComboBox は内部 Template が複雑なので暗黙置換しない (リスク回避)
     -->
 
-    <!-- 共通 hover / pressed 色 (TabItem / GroupBox / overlay 等で参照) -->
-    <SolidColorBrush x:Key="ControlHoverBackground" Color="#E8F4FB"/>
-    <SolidColorBrush x:Key="ControlPressedBackground" Color="#CFE6F4"/>
-    <SolidColorBrush x:Key="ControlBorderBrush" Color="#C8C8C8"/>
-    <SolidColorBrush x:Key="ControlBorderHoverBrush" Color="{StaticResource PrimaryAccentColor}"/>
-    <SolidColorBrush x:Key="ControlBorderFocusBrush" Color="{StaticResource PrimaryAccentColor}"/>
-    <SolidColorBrush x:Key="ControlDisabledBackground" Color="#F5F5F5"/>
-    <SolidColorBrush x:Key="ControlDisabledForeground" Color="#A0A0A0"/>
-
     <!-- 注: 当初 Button / TextBox / ToggleButton にも暗黙 Custom Template を置いていたが、
          (a) Ribbon 内の通常 Button にも適用されてアイコン枠が中途半端に出る
          (b) DataGrid 編集セル内 TextBox に角丸ボーダーが付き、未編集セルと不整合
@@ -288,7 +310,7 @@
     <!-- Button: フラット, 細いボーダー, accent hover。サイズはノータッチ -->
     <Style TargetType="Button">
         <Setter Property="Background" Value="White"/>
-        <Setter Property="Foreground" Value="#333333"/>
+        <Setter Property="Foreground" Value="{StaticResource LogForegroundBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -334,7 +356,7 @@
          RibbonToggleButton は Ribbon 側の独自 implicit Style に上書きされる。 -->
     <Style TargetType="ToggleButton">
         <Setter Property="Background" Value="White"/>
-        <Setter Property="Foreground" Value="#333333"/>
+        <Setter Property="Foreground" Value="{StaticResource LogForegroundBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>

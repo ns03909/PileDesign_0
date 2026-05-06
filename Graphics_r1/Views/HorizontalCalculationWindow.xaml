@@ -60,23 +60,23 @@
         
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#238966"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
         </Style>
         
         <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#F7B515"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
         </Style>
         
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
         </Style>
         
         <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#E95541"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
         
         <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#D82531"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
 
         <!-- 読み取り専用数値列の共通スタイル（灰色・右寄せ） -->
@@ -223,7 +223,7 @@
                 <Button Content="すべて除外" Command="{Binding UnapplyAllLoadCasesLevel1Command}" Width="80"/>
             </StackPanel>
 
-            <common:EnhancedDataGrid x:Name="DataGridLoadCasesLevel1"
+            <common:EnhancedDataGrid x:Name="DataGridLoadCasesLevel1" CanUserSortColumns="False"
                       ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel1}" AutoGenerateColumns="False" HeadersVisibility="Column"
                       CanUserAddRows="False" CanUserResizeRows="False"
                       SelectionUnit="FullRow"
@@ -237,7 +237,7 @@
                     <Style TargetType="DataGridRow">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding SumH}" Value="0">
-                                <Setter Property="Background" Value="#F0F0F0"/>
+                                <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}"/>
                                 <Setter Property="Foreground" Value="Silver"/>
                                 <Setter Property="FontStyle" Value="Italic"/>
                                 <Setter Property="ToolTip" Value="荷重がゼロのため解析時にスキップされます"/>
@@ -272,7 +272,7 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           FontSize="11" Foreground="#238966" FontWeight="Bold"
+                                           FontSize="11" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="Bold"
                                            ToolTip="このロードケースに 1 件以上の解析結果あり">
                                     <TextBlock.Text>
                                         <MultiBinding Converter="{StaticResource CompletedCaseToCheckMarkConverter}">
@@ -296,7 +296,7 @@
                 <Button Content="すべて除外" Command="{Binding UnapplyAllLoadCasesLevel2Command}" Width="80"/>
             </StackPanel>
 
-            <common:EnhancedDataGrid x:Name="DataGridLoadCasesLevel2"
+            <common:EnhancedDataGrid x:Name="DataGridLoadCasesLevel2" CanUserSortColumns="False"
                       ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel2}" AutoGenerateColumns="False" HeadersVisibility="Column"
                       CanUserAddRows="False" CanUserResizeRows="False"
                       SelectionUnit="FullRow"
@@ -310,7 +310,7 @@
                     <Style TargetType="DataGridRow">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding SumH}" Value="0">
-                                <Setter Property="Background" Value="#F0F0F0"/>
+                                <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}"/>
                                 <Setter Property="Foreground" Value="Silver"/>
                                 <Setter Property="FontStyle" Value="Italic"/>
                                 <Setter Property="ToolTip" Value="荷重がゼロのため解析時にスキップされます"/>
@@ -345,7 +345,7 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           FontSize="11" Foreground="#238966" FontWeight="Bold"
+                                           FontSize="11" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="Bold"
                                            ToolTip="このロードケースに 1 件以上の解析結果あり">
                                     <TextBlock.Text>
                                         <MultiBinding Converter="{StaticResource CompletedCaseToCheckMarkConverter}">
@@ -402,11 +402,13 @@
                          common:NumericInput.Min="1" common:NumericInput.Max="128"/>
             </Grid>
 
-            <DockPanel Margin="0,6,0,0">
-                <TextBlock Text="全解析ステップ数："/>
+            <DockPanel Margin="0,6,0,0"
+                       ToolTip="全荷重ケースの全ステップ評価数。再試行で nStep が増えると本数値も増加します。">
+                <TextBlock Text="ステップ評価数 (再試行含む)："/>
                 <TextBlock Text="{Binding TotalCalculationCount}" FontWeight="Bold" FontSize="16" HorizontalAlignment="Right"/>
             </DockPanel>
-            <TextBlock Text="荷重ケース × 組合せ × 液状化 × ステップ数 の総数。各ステップで収束計算を行います。" Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
+            <TextBlock Text="荷重ケース × 組合せ × 液状化 × ステップ数 の総和。各ステップで収束計算を行います (失敗ステップ再試行時は加算されます)。"
+                       Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
 
                         </StackPanel>
                     </ScrollViewer>
@@ -559,7 +561,8 @@
                     Margin="10,0,0,0" Foreground="{StaticResource PrimaryAccentBrush}"/>
             </StatusBarItem>
             <StatusBarItem>
-                <TextBlock Text="{Binding ProgressText}" Margin="10,0,0,0"/>
+                <TextBlock Text="{Binding ProgressText}" Margin="10,0,0,0"
+                           ToolTip="{Binding ProgressTextTooltip}"/>
             </StatusBarItem>
         </StatusBar>
         
@@ -574,7 +577,7 @@
                  - All タブ: 全ログを混在 (x:Name="LogTextBox")
                  - ケースタブ: 動的追加、case tag [L2-1.C1.Liq] を header にする
                  - 1 行増える毎に AppendText で増分追記 (Text binding 廃止) -->
-            <TabControl x:Name="LogTabControl" Grid.Row="1">
+            <TabControl x:Name="LogTabControl" Grid.Row="1" SelectionChanged="LogTabControl_SelectionChanged">
                 <TabItem Header="すべて" x:Name="LogTabAll">
                     <TextBox x:Name="LogTextBox"
                              IsReadOnly="True"
@@ -584,7 +587,7 @@
                              FontFamily="Consolas, MS Gothic"
                              FontSize="12"
                              FontWeight="Normal"
-                             Background="#FAFAFA"
+                             Background="{StaticResource SubtleBackgroundBrush}"
                              AcceptsReturn="True">
                         <TextBox.ContextMenu>
                             <ContextMenu>

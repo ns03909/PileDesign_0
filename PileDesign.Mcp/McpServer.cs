@@ -58,9 +58,16 @@ public sealed class McpServer
         var method = request["method"]?.GetValue<string>();
         var id = request["id"];
 
-        // Notification (no id) — no response needed
-        if (id == null && method == "notifications/initialized")
+        // JSON-RPC 2.0: id が無い (null) ものは Notification。
+        // method の既知/未知に関わらずレスポンスを返してはいけない (返すと
+        // クライアント側で「id 無しのエラー応答」として Zod バリデーション失敗を起こす)。
+        // 既知の通知: notifications/initialized, notifications/cancelled, notifications/progress 等
+        if (id == null)
+        {
+            if (method != null)
+                Log($"Notification received: {method} (no response)");
             return null;
+        }
 
         if (method == null)
             return MakeError(id, -32600, "Invalid Request");

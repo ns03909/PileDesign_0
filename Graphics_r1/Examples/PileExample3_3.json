@@ -30,8 +30,38 @@
       "settleAlpha": 0.3,
       "settleN": 2,
       "segments": [
-        { "no": 1, "segmentLength": 9.0, "segmentDepth": 9.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1900, "concreteThickness": 950, "mainBarDr": 1600, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 28, "mainBarSize": "D32", "concreteFc": 33.0, "concreteGsi": 1.0, "concreteGamma": 23.0 },
-        { "no": 2, "segmentLength": 12.0, "segmentDepth": 21.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1900, "concreteThickness": 950, "mainBarDr": 1600, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D29", "concreteFc": 33.0, "concreteGsi": 1.0, "concreteGamma": 23.0 }
+        {
+          "no": 1,
+          "segmentLength": 9.0,
+          "segmentDepth": 9.0,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1900,
+          "concreteThickness": 950,
+          "mainBarDr": 1600,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 28,
+          "mainBarSize": "D32",
+          "concreteFc": 33.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        },
+        {
+          "no": 2,
+          "segmentLength": 12.0,
+          "segmentDepth": 21.0,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1900,
+          "concreteThickness": 950,
+          "mainBarDr": 1600,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 24,
+          "mainBarSize": "D29",
+          "concreteFc": 33.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        }
       ]
     },
     {
@@ -48,8 +78,38 @@
       "settleAlpha": 0.3,
       "settleN": 2,
       "segments": [
-        { "no": 1, "segmentLength": 9.0, "segmentDepth": 9.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1900, "concreteThickness": 950, "mainBarDr": 1600, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 26, "mainBarSize": "D32", "concreteFc": 33.0, "concreteGsi": 1.0, "concreteGamma": 23.0 },
-        { "no": 2, "segmentLength": 12.0, "segmentDepth": 21.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1900, "concreteThickness": 950, "mainBarDr": 1600, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D29", "concreteFc": 33.0, "concreteGsi": 1.0, "concreteGamma": 23.0 }
+        {
+          "no": 1,
+          "segmentLength": 9.0,
+          "segmentDepth": 9.0,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1900,
+          "concreteThickness": 950,
+          "mainBarDr": 1600,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 26,
+          "mainBarSize": "D32",
+          "concreteFc": 33.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        },
+        {
+          "no": 2,
+          "segmentLength": 12.0,
+          "segmentDepth": 21.0,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1900,
+          "concreteThickness": 950,
+          "mainBarDr": 1600,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 24,
+          "mainBarSize": "D29",
+          "concreteFc": 33.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        }
       ]
     },
     {
@@ -66,8 +126,38 @@
       "settleAlpha": 0.3,
       "settleN": 2,
       "segments": [
-        { "no": 1, "segmentLength": 9.0, "segmentDepth": 9.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1900, "concreteThickness": 950, "mainBarDr": 1600, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 28, "mainBarSize": "D32", "concreteFc": 33.0, "concreteGsi": 1.0, "concreteGamma": 23.0 },
-        { "no": 2, "segmentLength": 12.0, "segmentDepth": 21.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1900, "concreteThickness": 950, "mainBarDr": 1600, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D29", "concreteFc": 33.0, "concreteGsi": 1.0, "concreteGamma": 23.0 }
+        {
+          "no": 1,
+          "segmentLength": 9.0,
+          "segmentDepth": 9.0,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1900,
+          "concreteThickness": 950,
+          "mainBarDr": 1600,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 28,
+          "mainBarSize": "D32",
+          "concreteFc": 33.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        },
+        {
+          "no": 2,
+          "segmentLength": 12.0,
+          "segmentDepth": 21.0,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1900,
+          "concreteThickness": 950,
+          "mainBarDr": 1600,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 24,
+          "mainBarSize": "D29",
+          "concreteFc": 33.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        }
       ]
     },
     {
@@ -84,8 +174,38 @@
       "settleAlpha": 0.3,
       "settleN": 2,
       "segments": [
-        { "no": 1, "segmentLength": 9.0, "segmentDepth": 9.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1900, "concreteThickness": 950, "mainBarDr": 1600, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 26, "mainBarSize": "D32", "concreteFc": 33.0, "concreteGsi": 1.0, "concreteGamma": 23.0 },
-        { "no": 2, "segmentLength": 12.0, "segmentDepth": 21.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1900, "concreteThickness": 950, "mainBarDr": 1600, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D29", "concreteFc": 33.0, "concreteGsi": 1.0, "concreteGamma": 23.0 }
+        {
+          "no": 1,
+          "segmentLength": 9.0,
+          "segmentDepth": 9.0,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1900,
+          "concreteThickness": 950,
+          "mainBarDr": 1600,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 26,
+          "mainBarSize": "D32",
+          "concreteFc": 33.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        },
+        {
+          "no": 2,
+          "segmentLength": 12.0,
+          "segmentDepth": 21.0,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1900,
+          "concreteThickness": 950,
+          "mainBarDr": 1600,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 24,
+          "mainBarSize": "D29",
+          "concreteFc": 33.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        }
       ]
     },
     {
@@ -102,163 +222,898 @@
       "settleAlpha": 0.3,
       "settleN": 2,
       "segments": [
-        { "no": 1, "segmentLength": 9.0, "segmentDepth": 9.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1800, "concreteThickness": 900, "mainBarDr": 1500, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 28, "mainBarSize": "D32", "concreteFc": 33.0, "concreteGsi": 1.0, "concreteGamma": 23.0 },
-        { "no": 2, "segmentLength": 12.0, "segmentDepth": 21.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1800, "concreteThickness": 900, "mainBarDr": 1500, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D29", "concreteFc": 33.0, "concreteGsi": 1.0, "concreteGamma": 23.0 }
+        {
+          "no": 1,
+          "segmentLength": 9.0,
+          "segmentDepth": 9.0,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1800,
+          "concreteThickness": 900,
+          "mainBarDr": 1500,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 28,
+          "mainBarSize": "D32",
+          "concreteFc": 33.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        },
+        {
+          "no": 2,
+          "segmentLength": 12.0,
+          "segmentDepth": 21.0,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1800,
+          "concreteThickness": 900,
+          "mainBarDr": 1500,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 24,
+          "mainBarSize": "D29",
+          "concreteFc": 33.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        }
       ]
     }
   ],
-  "pileLayoutItems": [
-    { "pileNo": 1, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 0.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 2757, "axialForceLevel1s": [1653, 707.5, 3861, 4806.5], "axialForceLevel2s": [549, -1342, 4965, 6856] },
-    { "pileNo": 2, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 0.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 3547, "axialForceLevel1s": [3554, 1546.5, 3540, 5547.5], "axialForceLevel2s": [3561, -454, 3533, 7548] },
-    { "pileNo": 3, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 0.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 4016, "axialForceLevel1s": [4623, 1877.5, 3409, 6154.5], "axialForceLevel2s": [5230, -261, 2802, 8293] },
-    { "pileNo": 4, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 0.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 5072, "axialForceLevel1s": [4861.5, 3068, 5282.5, 7076], "axialForceLevel2s": [4651, 1064, 5493, 9080] },
-    { "pileNo": 5, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 21, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 27.6, "y": 0.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 4750, "axialForceLevel1s": [5329, 3201.5, 4171, 6298.5], "axialForceLevel2s": [5908, 1653, 3592, 7847] },
-    { "pileNo": 6, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 45.6, "y": 0.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 4677, "axialForceLevel1s": [4206.5, 3566, 5147.5, 5788], "axialForceLevel2s": [3736, 2455, 5618, 6899] },
-    { "pileNo": 7, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 51.6, "y": 0.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 2829, "axialForceLevel1s": [3709, 1812, 1949, 3846], "axialForceLevel2s": [4589, 795, 1069, 4863] },
-    { "pileNo": 8, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 5.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 6905, "axialForceLevel1s": [5809, 8710.5, 8001, 5099.5], "axialForceLevel2s": [4713, 10516, 9097, 3294] },
-    { "pileNo": 9, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 5.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 9247, "axialForceLevel1s": [9284.5, 10765.5, 9209.5, 7728.5], "axialForceLevel2s": [9322, 12284, 9172, 6210] },
-    { "pileNo": 10, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 5.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 9667, "axialForceLevel1s": [9626.5, 11167.5, 9707.5, 8166.5], "axialForceLevel2s": [9586, 12668, 9748, 6666] },
-    { "pileNo": 11, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 5.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 6112, "axialForceLevel1s": [6212.5, 7821, 6011.5, 4403], "axialForceLevel2s": [6313, 9530, 5911, 2694] },
-    { "pileNo": 12, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 27.6, "y": 5.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 4731, "axialForceLevel1s": [4943, 5701, 4519, 3761], "axialForceLevel2s": [5155, 6671, 4307, 2791] },
-    { "pileNo": 13, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 33.6, "y": 5.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 8203, "axialForceLevel1s": [8347, 8156.5, 8059, 8249.5], "axialForceLevel2s": [8491, 8110, 7915, 8296] },
-    { "pileNo": 14, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 39.6, "y": 5.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 7863, "axialForceLevel1s": [7706, 7871.5, 8020, 7854.5], "axialForceLevel2s": [7549, 7880, 8177, 7846] },
-    { "pileNo": 15, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 45.6, "y": 5.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 5145, "axialForceLevel1s": [4981, 5898, 5309, 4392], "axialForceLevel2s": [4817, 6651, 5473, 3639] },
-    { "pileNo": 16, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 51.6, "y": 5.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 4317, "axialForceLevel1s": [5000, 5078, 3634, 3556], "axialForceLevel2s": [5683, 5839, 2951, 2795] },
-    { "pileNo": 17, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 14.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 1755, "axialForceLevel1s": [1755, 1755, 1755, 1755], "axialForceLevel2s": [1755, 1755, 1755, 1755] },
-    { "pileNo": 18, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 14.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 1932, "axialForceLevel1s": [1932, 1932, 1932, 1932], "axialForceLevel2s": [1932, 1932, 1932, 1932] },
-    { "pileNo": 19, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 14.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 1322, "axialForceLevel1s": [1322, 1322, 1322, 1322], "axialForceLevel2s": [1322, 1322, 1322, 1322] },
-    { "pileNo": 20, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 14.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 1076, "axialForceLevel1s": [1076, 1076, 1076, 1076], "axialForceLevel2s": [1076, 1076, 1076, 1076] },
-    { "pileNo": 21, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 27.6, "y": 14.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 1028, "axialForceLevel1s": [1028, 1028, 1028, 1028], "axialForceLevel2s": [1028, 1028, 1028, 1028] },
-    { "pileNo": 22, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 39.6, "y": 14.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 1052, "axialForceLevel1s": [1052, 1052, 1052, 1052], "axialForceLevel2s": [1052, 1052, 1052, 1052] },
-    { "pileNo": 23, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 51.6, "y": 14.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 1523, "axialForceLevel1s": [1523, 1523, 1523, 1523], "axialForceLevel2s": [1523, 1523, 1523, 1523] },
-    { "pileNo": 24, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 23.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 6700, "axialForceLevel1s": [5545.5, 4913.5, 7854.5, 8486.5], "axialForceLevel2s": [4391, 3127, 9009, 10273] },
-    { "pileNo": 25, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 23.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 9355, "axialForceLevel1s": [9362.5, 7803.5, 9347.5, 10906.5], "axialForceLevel2s": [9370, 6252, 9340, 12458] },
-    { "pileNo": 26, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 23.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 9939, "axialForceLevel1s": [9902, 8471, 9976, 11407], "axialForceLevel2s": [9865, 7003, 10013, 12875] },
-    { "pileNo": 27, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 23.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 5944, "axialForceLevel1s": [6057, 4203.5, 5831, 7684.5], "axialForceLevel2s": [6170, 2463, 5718, 9425] },
-    { "pileNo": 28, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 27.6, "y": 23.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 4373, "axialForceLevel1s": [4598, 3408, 4148, 5338], "axialForceLevel2s": [4823, 2443, 3923, 6303] },
-    { "pileNo": 29, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 33.6, "y": 23.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 7850, "axialForceLevel1s": [7992.5, 7844, 7707.5, 7856], "axialForceLevel2s": [8135, 7838, 7565, 7862] },
-    { "pileNo": 30, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 39.6, "y": 23.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 7772, "axialForceLevel1s": [7617.5, 7810.5, 7926.5, 7733.5], "axialForceLevel2s": [7463, 7849, 8081, 7695] },
-    { "pileNo": 31, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 45.6, "y": 23.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 5665, "axialForceLevel1s": [5526.5, 4896, 5803.5, 6434], "axialForceLevel2s": [5388, 4127, 5942, 7203] },
-    { "pileNo": 32, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 51.6, "y": 23.5, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 4837, "axialForceLevel1s": [5562, 4089, 4112, 5585], "axialForceLevel2s": [6287, 3341, 3387, 6333] },
-    { "pileNo": 33, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 29.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 2888, "axialForceLevel1s": [1810, 4931.5, 3966, 844.5], "axialForceLevel2s": [732, 6975, 5044, -1199] },
-    { "pileNo": 34, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 29.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 3740, "axialForceLevel1s": [3741.5, 5735, 3738.5, 1745], "axialForceLevel2s": [3743, 7730, 3737, -250] },
-    { "pileNo": 35, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 29.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 3943, "axialForceLevel1s": [4604.5, 6084.5, 3281.5, 1801.5], "axialForceLevel2s": [5266, 8226, 2620, -340] },
-    { "pileNo": 36, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 29.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 5024, "axialForceLevel1s": [4790.5, 7057.5, 5257.5, 2990.5], "axialForceLevel2s": [4557, 9091, 5491, 957] },
-    { "pileNo": 37, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 27.6, "y": 29.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 5069, "axialForceLevel1s": [5657.5, 6638, 4480.5, 3500], "axialForceLevel2s": [6246, 8207, 3892, 1931] },
-    { "pileNo": 38, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 45.6, "y": 29.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 2730, "axialForceLevel1s": [2215, 3846.5, 3245, 1613.5], "axialForceLevel2s": [1700, 4963, 3760, 497] },
-    { "pileNo": 39, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 51.6, "y": 29.0, "z": -1.4, "deltaZc": 0.95, "axialForceVL0": 1467, "axialForceLevel1s": [2308.5, 2466.5, 625.5, 467.5], "axialForceLevel2s": [3150, 3466, -216, -532] }
-  ],
   "inputNodes": [
-    { "no": 1, "x": 33.6, "y": 0.0, "z": -0.45 },
-    { "no": 2, "x": 39.6, "y": 0.0, "z": -0.45 },
-    { "no": 3, "x": 33.6, "y": 29.0, "z": -0.45 },
-    { "no": 4, "x": 39.6, "y": 29.0, "z": -0.45 },
-    { "no": 5, "x": 33.6, "y": 14.5, "z": -0.45 },
-    { "no": 6, "x": 45.6, "y": 14.5, "z": -0.45 }
+    {
+      "no": 1,
+      "x": 33.6,
+      "y": 0.0,
+      "z": -0.45
+    },
+    {
+      "no": 2,
+      "x": 39.6,
+      "y": 0.0,
+      "z": -0.45
+    },
+    {
+      "no": 3,
+      "x": 33.6,
+      "y": 29.0,
+      "z": -0.45
+    },
+    {
+      "no": 4,
+      "x": 39.6,
+      "y": 29.0,
+      "z": -0.45
+    },
+    {
+      "no": 5,
+      "x": 33.6,
+      "y": 14.5,
+      "z": -0.45
+    },
+    {
+      "no": 6,
+      "x": 45.6,
+      "y": 14.5,
+      "z": -0.45
+    }
   ],
   "gridXItems": [
-    { "name": "1", "coord": 0.0, "spacing": 0.0 },
-    { "name": "2", "coord": 7.2, "spacing": 7.2 },
-    { "name": "3", "coord": 14.4, "spacing": 7.2 },
-    { "name": "4", "coord": 21.6, "spacing": 7.2 },
-    { "name": "5", "coord": 27.6, "spacing": 6.0 },
-    { "name": "6", "coord": 33.6, "spacing": 6.0 },
-    { "name": "7", "coord": 39.6, "spacing": 6.0 },
-    { "name": "8", "coord": 45.6, "spacing": 6.0 },
-    { "name": "9", "coord": 51.6, "spacing": 6.0 }
+    {
+      "name": "1",
+      "coord": 0.0,
+      "spacing": 0.0
+    },
+    {
+      "name": "2",
+      "coord": 7.2,
+      "spacing": 7.2
+    },
+    {
+      "name": "3",
+      "coord": 14.4,
+      "spacing": 7.2
+    },
+    {
+      "name": "4",
+      "coord": 21.6,
+      "spacing": 7.2
+    },
+    {
+      "name": "5",
+      "coord": 27.6,
+      "spacing": 6.0
+    },
+    {
+      "name": "6",
+      "coord": 33.6,
+      "spacing": 6.0
+    },
+    {
+      "name": "7",
+      "coord": 39.6,
+      "spacing": 6.0
+    },
+    {
+      "name": "8",
+      "coord": 45.6,
+      "spacing": 6.0
+    },
+    {
+      "name": "9",
+      "coord": 51.6,
+      "spacing": 6.0
+    }
   ],
   "gridYItems": [
-    { "name": "A", "coord": 0.0, "spacing": 0.0 },
-    { "name": "B", "coord": 5.5, "spacing": 5.5 },
-    { "name": "C", "coord": 14.5, "spacing": 9.0 },
-    { "name": "D", "coord": 23.5, "spacing": 9.0 },
-    { "name": "E", "coord": 29.0, "spacing": 5.5 }
+    {
+      "name": "A",
+      "coord": 0.0,
+      "spacing": 0.0
+    },
+    {
+      "name": "B",
+      "coord": 5.5,
+      "spacing": 5.5
+    },
+    {
+      "name": "C",
+      "coord": 14.5,
+      "spacing": 9.0
+    },
+    {
+      "name": "D",
+      "coord": 23.5,
+      "spacing": 9.0
+    },
+    {
+      "name": "E",
+      "coord": 29.0,
+      "spacing": 5.5
+    }
   ],
   "foundationBeamInput": {
     "connectionMode": "RigidFloor",
     "materials": [
-      { "no": 1, "name": "FC30", "youngModulus": 26589000, "shearModulus": 11079000, "poissonRatio": 0.2 }
+      {
+        "no": 1,
+        "name": "FC30",
+        "youngModulus": 26589000,
+        "shearModulus": 11079000,
+        "poissonRatio": 0.2
+      }
     ],
     "sections": [
-      { "no": 1, "name": "G1", "width": 0.800, "height": 1.700 }
+      {
+        "no": 1,
+        "name": "G1",
+        "width": 0.8,
+        "height": 1.7
+      }
     ],
     "beams": [
-      { "no": 1, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 1, "nodeJ_type": "pile", "nodeJ_no": 8 },
-      { "no": 2, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 8, "nodeJ_type": "pile", "nodeJ_no": 17 },
-      { "no": 3, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 17, "nodeJ_type": "pile", "nodeJ_no": 24 },
-      { "no": 4, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 24, "nodeJ_type": "pile", "nodeJ_no": 33 },
-      { "no": 5, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 2, "nodeJ_type": "pile", "nodeJ_no": 9 },
-      { "no": 6, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 9, "nodeJ_type": "pile", "nodeJ_no": 18 },
-      { "no": 7, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 18, "nodeJ_type": "pile", "nodeJ_no": 25 },
-      { "no": 8, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 25, "nodeJ_type": "pile", "nodeJ_no": 34 },
-      { "no": 9, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 3, "nodeJ_type": "pile", "nodeJ_no": 10 },
-      { "no": 10, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 10, "nodeJ_type": "pile", "nodeJ_no": 19 },
-      { "no": 11, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 19, "nodeJ_type": "pile", "nodeJ_no": 26 },
-      { "no": 12, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 26, "nodeJ_type": "pile", "nodeJ_no": 35 },
-      { "no": 13, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 4, "nodeJ_type": "pile", "nodeJ_no": 11 },
-      { "no": 14, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 11, "nodeJ_type": "pile", "nodeJ_no": 20 },
-      { "no": 15, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 20, "nodeJ_type": "pile", "nodeJ_no": 27 },
-      { "no": 16, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 27, "nodeJ_type": "pile", "nodeJ_no": 36 },
-      { "no": 17, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 5, "nodeJ_type": "pile", "nodeJ_no": 12 },
-      { "no": 18, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 12, "nodeJ_type": "pile", "nodeJ_no": 21 },
-      { "no": 19, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 21, "nodeJ_type": "pile", "nodeJ_no": 28 },
-      { "no": 20, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 28, "nodeJ_type": "pile", "nodeJ_no": 37 },
-      { "no": 21, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 13, "nodeJ_type": "general", "nodeJ_no": 5 },
-      { "no": 22, "materialNo": 1, "sectionNo": 1, "nodeI_type": "general", "nodeI_no": 5, "nodeJ_type": "pile", "nodeJ_no": 29 },
-      { "no": 23, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 14, "nodeJ_type": "pile", "nodeJ_no": 22 },
-      { "no": 24, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 22, "nodeJ_type": "pile", "nodeJ_no": 30 },
-      { "no": 25, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 6, "nodeJ_type": "pile", "nodeJ_no": 15 },
-      { "no": 26, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 15, "nodeJ_type": "general", "nodeJ_no": 6 },
-      { "no": 27, "materialNo": 1, "sectionNo": 1, "nodeI_type": "general", "nodeI_no": 6, "nodeJ_type": "pile", "nodeJ_no": 31 },
-      { "no": 28, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 31, "nodeJ_type": "pile", "nodeJ_no": 38 },
-      { "no": 29, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 7, "nodeJ_type": "pile", "nodeJ_no": 16 },
-      { "no": 30, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 16, "nodeJ_type": "pile", "nodeJ_no": 23 },
-      { "no": 31, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 23, "nodeJ_type": "pile", "nodeJ_no": 32 },
-      { "no": 32, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 32, "nodeJ_type": "pile", "nodeJ_no": 39 },
-      { "no": 33, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 1, "nodeJ_type": "pile", "nodeJ_no": 2 },
-      { "no": 34, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 2, "nodeJ_type": "pile", "nodeJ_no": 3 },
-      { "no": 35, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 3, "nodeJ_type": "pile", "nodeJ_no": 4 },
-      { "no": 36, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 4, "nodeJ_type": "pile", "nodeJ_no": 5 },
-      { "no": 37, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 6, "nodeJ_type": "pile", "nodeJ_no": 7 },
-      { "no": 38, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 8, "nodeJ_type": "pile", "nodeJ_no": 9 },
-      { "no": 39, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 9, "nodeJ_type": "pile", "nodeJ_no": 10 },
-      { "no": 40, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 10, "nodeJ_type": "pile", "nodeJ_no": 11 },
-      { "no": 41, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 11, "nodeJ_type": "pile", "nodeJ_no": 12 },
-      { "no": 42, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 12, "nodeJ_type": "pile", "nodeJ_no": 13 },
-      { "no": 43, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 13, "nodeJ_type": "pile", "nodeJ_no": 14 },
-      { "no": 44, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 14, "nodeJ_type": "pile", "nodeJ_no": 15 },
-      { "no": 45, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 15, "nodeJ_type": "pile", "nodeJ_no": 16 },
-      { "no": 46, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 17, "nodeJ_type": "pile", "nodeJ_no": 18 },
-      { "no": 47, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 18, "nodeJ_type": "pile", "nodeJ_no": 19 },
-      { "no": 48, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 19, "nodeJ_type": "pile", "nodeJ_no": 20 },
-      { "no": 49, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 20, "nodeJ_type": "pile", "nodeJ_no": 21 },
-      { "no": 50, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 21, "nodeJ_type": "general", "nodeJ_no": 5 },
-      { "no": 51, "materialNo": 1, "sectionNo": 1, "nodeI_type": "general", "nodeI_no": 5, "nodeJ_type": "pile", "nodeJ_no": 22 },
-      { "no": 52, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 22, "nodeJ_type": "general", "nodeJ_no": 6 },
-      { "no": 53, "materialNo": 1, "sectionNo": 1, "nodeI_type": "general", "nodeI_no": 6, "nodeJ_type": "pile", "nodeJ_no": 23 },
-      { "no": 54, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 24, "nodeJ_type": "pile", "nodeJ_no": 25 },
-      { "no": 55, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 25, "nodeJ_type": "pile", "nodeJ_no": 26 },
-      { "no": 56, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 26, "nodeJ_type": "pile", "nodeJ_no": 27 },
-      { "no": 57, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 27, "nodeJ_type": "pile", "nodeJ_no": 28 },
-      { "no": 58, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 28, "nodeJ_type": "pile", "nodeJ_no": 29 },
-      { "no": 59, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 29, "nodeJ_type": "pile", "nodeJ_no": 30 },
-      { "no": 60, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 30, "nodeJ_type": "pile", "nodeJ_no": 31 },
-      { "no": 61, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 31, "nodeJ_type": "pile", "nodeJ_no": 32 },
-      { "no": 62, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 33, "nodeJ_type": "pile", "nodeJ_no": 34 },
-      { "no": 63, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 34, "nodeJ_type": "pile", "nodeJ_no": 35 },
-      { "no": 64, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 35, "nodeJ_type": "pile", "nodeJ_no": 36 },
-      { "no": 65, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 36, "nodeJ_type": "pile", "nodeJ_no": 37 },
-      { "no": 66, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 38, "nodeJ_type": "pile", "nodeJ_no": 39 },
-      { "no": 67, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 5, "nodeJ_type": "general", "nodeJ_no": 1 },
-      { "no": 68, "materialNo": 1, "sectionNo": 1, "nodeI_type": "general", "nodeI_no": 1, "nodeJ_type": "general", "nodeJ_no": 2 },
-      { "no": 69, "materialNo": 1, "sectionNo": 1, "nodeI_type": "general", "nodeI_no": 2, "nodeJ_type": "pile", "nodeJ_no": 6 },
-      { "no": 70, "materialNo": 1, "sectionNo": 1, "nodeI_type": "general", "nodeI_no": 2, "nodeJ_type": "pile", "nodeJ_no": 14 },
-      { "no": 71, "materialNo": 1, "sectionNo": 1, "nodeI_type": "general", "nodeI_no": 1, "nodeJ_type": "pile", "nodeJ_no": 13 },
-      { "no": 72, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 37, "nodeJ_type": "general", "nodeJ_no": 3 },
-      { "no": 73, "materialNo": 1, "sectionNo": 1, "nodeI_type": "general", "nodeI_no": 3, "nodeJ_type": "general", "nodeJ_no": 4 },
-      { "no": 74, "materialNo": 1, "sectionNo": 1, "nodeI_type": "general", "nodeI_no": 4, "nodeJ_type": "pile", "nodeJ_no": 38 },
-      { "no": 75, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 30, "nodeJ_type": "general", "nodeJ_no": 4 },
-      { "no": 76, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 29, "nodeJ_type": "general", "nodeJ_no": 3 }
+      {
+        "no": 1,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 1,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 8
+      },
+      {
+        "no": 2,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 8,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 17
+      },
+      {
+        "no": 3,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 17,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 24
+      },
+      {
+        "no": 4,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 24,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 33
+      },
+      {
+        "no": 5,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 2,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 9
+      },
+      {
+        "no": 6,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 9,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 18
+      },
+      {
+        "no": 7,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 18,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 25
+      },
+      {
+        "no": 8,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 25,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 34
+      },
+      {
+        "no": 9,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 3,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 10
+      },
+      {
+        "no": 10,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 10,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 19
+      },
+      {
+        "no": 11,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 19,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 26
+      },
+      {
+        "no": 12,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 26,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 35
+      },
+      {
+        "no": 13,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 4,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 11
+      },
+      {
+        "no": 14,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 11,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 20
+      },
+      {
+        "no": 15,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 20,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 27
+      },
+      {
+        "no": 16,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 27,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 36
+      },
+      {
+        "no": 17,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 5,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 12
+      },
+      {
+        "no": 18,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 12,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 21
+      },
+      {
+        "no": 19,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 21,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 28
+      },
+      {
+        "no": 20,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 28,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 37
+      },
+      {
+        "no": 21,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 13,
+        "nodeJ_type": "general",
+        "nodeJ_no": 5
+      },
+      {
+        "no": 22,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "general",
+        "nodeI_no": 5,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 29
+      },
+      {
+        "no": 23,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 14,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 22
+      },
+      {
+        "no": 24,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 22,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 30
+      },
+      {
+        "no": 25,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 6,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 15
+      },
+      {
+        "no": 26,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 15,
+        "nodeJ_type": "general",
+        "nodeJ_no": 6
+      },
+      {
+        "no": 27,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "general",
+        "nodeI_no": 6,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 31
+      },
+      {
+        "no": 28,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 31,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 38
+      },
+      {
+        "no": 29,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 7,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 16
+      },
+      {
+        "no": 30,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 16,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 23
+      },
+      {
+        "no": 31,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 23,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 32
+      },
+      {
+        "no": 32,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 32,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 39
+      },
+      {
+        "no": 33,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 1,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 2
+      },
+      {
+        "no": 34,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 2,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 3
+      },
+      {
+        "no": 35,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 3,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 4
+      },
+      {
+        "no": 36,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 4,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 5
+      },
+      {
+        "no": 37,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 6,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 7
+      },
+      {
+        "no": 38,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 8,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 9
+      },
+      {
+        "no": 39,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 9,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 10
+      },
+      {
+        "no": 40,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 10,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 11
+      },
+      {
+        "no": 41,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 11,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 12
+      },
+      {
+        "no": 42,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 12,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 13
+      },
+      {
+        "no": 43,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 13,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 14
+      },
+      {
+        "no": 44,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 14,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 15
+      },
+      {
+        "no": 45,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 15,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 16
+      },
+      {
+        "no": 46,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 17,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 18
+      },
+      {
+        "no": 47,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 18,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 19
+      },
+      {
+        "no": 48,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 19,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 20
+      },
+      {
+        "no": 49,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 20,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 21
+      },
+      {
+        "no": 50,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 21,
+        "nodeJ_type": "general",
+        "nodeJ_no": 5
+      },
+      {
+        "no": 51,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "general",
+        "nodeI_no": 5,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 22
+      },
+      {
+        "no": 52,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 22,
+        "nodeJ_type": "general",
+        "nodeJ_no": 6
+      },
+      {
+        "no": 53,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "general",
+        "nodeI_no": 6,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 23
+      },
+      {
+        "no": 54,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 24,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 25
+      },
+      {
+        "no": 55,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 25,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 26
+      },
+      {
+        "no": 56,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 26,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 27
+      },
+      {
+        "no": 57,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 27,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 28
+      },
+      {
+        "no": 58,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 28,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 29
+      },
+      {
+        "no": 59,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 29,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 30
+      },
+      {
+        "no": 60,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 30,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 31
+      },
+      {
+        "no": 61,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 31,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 32
+      },
+      {
+        "no": 62,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 33,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 34
+      },
+      {
+        "no": 63,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 34,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 35
+      },
+      {
+        "no": 64,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 35,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 36
+      },
+      {
+        "no": 65,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 36,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 37
+      },
+      {
+        "no": 66,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 38,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 39
+      },
+      {
+        "no": 67,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 5,
+        "nodeJ_type": "general",
+        "nodeJ_no": 1
+      },
+      {
+        "no": 68,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "general",
+        "nodeI_no": 1,
+        "nodeJ_type": "general",
+        "nodeJ_no": 2
+      },
+      {
+        "no": 69,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "general",
+        "nodeI_no": 2,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 6
+      },
+      {
+        "no": 70,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "general",
+        "nodeI_no": 2,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 14
+      },
+      {
+        "no": 71,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "general",
+        "nodeI_no": 1,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 13
+      },
+      {
+        "no": 72,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 37,
+        "nodeJ_type": "general",
+        "nodeJ_no": 3
+      },
+      {
+        "no": 73,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "general",
+        "nodeI_no": 3,
+        "nodeJ_type": "general",
+        "nodeJ_no": 4
+      },
+      {
+        "no": 74,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "general",
+        "nodeI_no": 4,
+        "nodeJ_type": "pile",
+        "nodeJ_no": 38
+      },
+      {
+        "no": 75,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 30,
+        "nodeJ_type": "general",
+        "nodeJ_no": 4
+      },
+      {
+        "no": 76,
+        "materialNo": 1,
+        "sectionNo": 1,
+        "nodeI_type": "pile",
+        "nodeI_no": 29,
+        "nodeJ_type": "general",
+        "nodeJ_no": 3
+      }
     ]
-  }
+  },
+  "pileLayoutItems": [
+    { "pileNo": 1, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 0.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 2757.0, "axialForceLevel1s": [1653.0, 2240.4, 3103.3, 3273.6], "axialForceLevel2s": [549.0, 1723.8, 3449.6, 3790.2] },
+    { "pileNo": 2, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 0.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 3547.0, "axialForceLevel1s": [3554.0, 3030.4, 3794.1, 4063.6], "axialForceLevel2s": [3561.0, 2513.8, 4041.2, 4580.2] },
+    { "pileNo": 3, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 0.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 4016.0, "axialForceLevel1s": [4623.0, 3499.4, 4163.9, 4532.6], "axialForceLevel2s": [5230.0, 2982.8, 4311.8, 5049.2] },
+    { "pileNo": 4, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 0.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 5072.0, "axialForceLevel1s": [4861.5, 4555.4, 5120.7, 5588.6], "axialForceLevel2s": [4651.0, 4038.8, 5169.5, 6105.2] },
+    { "pileNo": 5, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 21, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 27.6, "y": 0.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 4750.0, "axialForceLevel1s": [5329.0, 4233.4, 4716.1, 5266.6], "axialForceLevel2s": [5908.0, 3716.8, 4682.2, 5783.2] },
+    { "pileNo": 6, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 45.6, "y": 0.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 4677.0, "axialForceLevel1s": [4206.5, 4160.4, 4395.1, 5193.6], "axialForceLevel2s": [3736.0, 3643.8, 4113.3, 5710.2] },
+    { "pileNo": 7, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 51.6, "y": 0.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 2829.0, "axialForceLevel1s": [3709.0, 2312.4, 2464.5, 3345.6], "axialForceLevel2s": [4589.0, 1795.8, 2100.0, 3862.2] },
+    { "pileNo": 8, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 5.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 6905.0, "axialForceLevel1s": [5809.0, 6584.3, 7251.3, 7225.7], "axialForceLevel2s": [4713.0, 6263.7, 7597.6, 7546.3] },
+    { "pileNo": 9, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 5.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 9247.0, "axialForceLevel1s": [9284.5, 8926.3, 9494.1, 9567.7], "axialForceLevel2s": [9322.0, 8605.7, 9741.2, 9888.3] },
+    { "pileNo": 10, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 5.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 9667.0, "axialForceLevel1s": [9626.5, 9346.3, 9814.9, 9987.7], "axialForceLevel2s": [9586.0, 9025.7, 9962.8, 10308.3] },
+    { "pileNo": 11, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 5.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 6112.0, "axialForceLevel1s": [6212.5, 5791.3, 6160.7, 6432.7], "axialForceLevel2s": [6313.0, 5470.7, 6209.5, 6753.3] },
+    { "pileNo": 12, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 27.6, "y": 5.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 4731.0, "axialForceLevel1s": [4943.0, 4410.3, 4697.1, 5051.7], "axialForceLevel2s": [5155.0, 4089.7, 4663.2, 5372.3] },
+    { "pileNo": 13, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 33.6, "y": 5.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 8203.0, "axialForceLevel1s": [8347.0, 7882.3, 8086.4, 8523.7], "axialForceLevel2s": [8491.0, 7561.7, 7969.9, 8844.3] },
+    { "pileNo": 14, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 39.6, "y": 5.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 7863.0, "axialForceLevel1s": [7706.0, 7542.3, 7663.8, 8183.7], "axialForceLevel2s": [7549.0, 7221.7, 7464.6, 8504.3] },
+    { "pileNo": 15, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 45.6, "y": 5.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 5145.0, "axialForceLevel1s": [4981.0, 4824.3, 4863.1, 5465.7], "axialForceLevel2s": [4817.0, 4503.7, 4581.3, 5786.3] },
+    { "pileNo": 16, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 51.6, "y": 5.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 4317.0, "axialForceLevel1s": [5000.0, 3996.3, 3952.5, 4637.7], "axialForceLevel2s": [5683.0, 3675.7, 3588.0, 4958.3] },
+    { "pileNo": 17, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 14.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 1755.0, "axialForceLevel1s": [1755.0, 1755.0, 2101.3, 1755.0], "axialForceLevel2s": [1755.0, 1755.0, 2447.6, 1755.0] },
+    { "pileNo": 18, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 14.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 1932.0, "axialForceLevel1s": [1932.0, 1932.0, 2179.1, 1932.0], "axialForceLevel2s": [1932.0, 1932.0, 2426.2, 1932.0] },
+    { "pileNo": 19, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 14.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 1322.0, "axialForceLevel1s": [1322.0, 1322.0, 1469.9, 1322.0], "axialForceLevel2s": [1322.0, 1322.0, 1617.8, 1322.0] },
+    { "pileNo": 20, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 14.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 1076.0, "axialForceLevel1s": [1076.0, 1076.0, 1124.7, 1076.0], "axialForceLevel2s": [1076.0, 1076.0, 1173.5, 1076.0] },
+    { "pileNo": 21, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 27.6, "y": 14.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 1028.0, "axialForceLevel1s": [1028.0, 1028.0, 994.1, 1028.0], "axialForceLevel2s": [1028.0, 1028.0, 960.2, 1028.0] },
+    { "pileNo": 22, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 39.6, "y": 14.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 1052.0, "axialForceLevel1s": [1052.0, 1052.0, 852.8, 1052.0], "axialForceLevel2s": [1052.0, 1052.0, 653.6, 1052.0] },
+    { "pileNo": 23, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 51.6, "y": 14.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 1523.0, "axialForceLevel1s": [1523.0, 1523.0, 1158.5, 1523.0], "axialForceLevel2s": [1523.0, 1523.0, 794.0, 1523.0] },
+    { "pileNo": 24, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 23.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 6700.0, "axialForceLevel1s": [5545.5, 7020.7, 7046.3, 6379.3], "axialForceLevel2s": [4391.0, 7341.3, 7392.6, 6058.7] },
+    { "pileNo": 25, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 23.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 9355.0, "axialForceLevel1s": [9362.5, 9675.7, 9602.1, 9034.3], "axialForceLevel2s": [9370.0, 9996.3, 9849.2, 8713.7] },
+    { "pileNo": 26, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 23.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 9939.0, "axialForceLevel1s": [9902.0, 10259.7, 10086.9, 9618.3], "axialForceLevel2s": [9865.0, 10580.3, 10234.8, 9297.7] },
+    { "pileNo": 27, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 23.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 5944.0, "axialForceLevel1s": [6057.0, 6264.7, 5992.7, 5623.3], "axialForceLevel2s": [6170.0, 6585.3, 6041.5, 5302.7] },
+    { "pileNo": 28, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 27.6, "y": 23.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 4373.0, "axialForceLevel1s": [4598.0, 4693.7, 4339.1, 4052.3], "axialForceLevel2s": [4823.0, 5014.3, 4305.2, 3731.7] },
+    { "pileNo": 29, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 33.6, "y": 23.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 7850.0, "axialForceLevel1s": [7992.5, 8170.7, 7733.4, 7529.3], "axialForceLevel2s": [8135.0, 8491.3, 7616.9, 7208.7] },
+    { "pileNo": 30, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 39.6, "y": 23.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 7772.0, "axialForceLevel1s": [7617.5, 8092.7, 7572.8, 7451.3], "axialForceLevel2s": [7463.0, 8413.3, 7373.6, 7130.7] },
+    { "pileNo": 31, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 45.6, "y": 23.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 5665.0, "axialForceLevel1s": [5526.5, 5985.7, 5383.1, 5344.3], "axialForceLevel2s": [5388.0, 6306.3, 5101.3, 5023.7] },
+    { "pileNo": 32, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 51.6, "y": 23.5, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 4837.0, "axialForceLevel1s": [5562.0, 5157.7, 4472.5, 4516.3], "axialForceLevel2s": [6287.0, 5478.3, 4108.0, 4195.7] },
+    { "pileNo": 33, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 29.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 2888.0, "axialForceLevel1s": [1810.0, 3404.6, 3234.3, 2371.4], "axialForceLevel2s": [732.0, 3921.2, 3580.6, 1854.8] },
+    { "pileNo": 34, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 29.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 3740.0, "axialForceLevel1s": [3741.5, 4256.6, 3987.1, 3223.4], "axialForceLevel2s": [3743.0, 4773.2, 4234.2, 2706.8] },
+    { "pileNo": 35, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 29.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 3943.0, "axialForceLevel1s": [4604.5, 4459.6, 4090.9, 3426.4], "axialForceLevel2s": [5266.0, 4976.2, 4238.8, 2909.8] },
+    { "pileNo": 36, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 29.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 5024.0, "axialForceLevel1s": [4790.5, 5540.6, 5072.7, 4507.4], "axialForceLevel2s": [4557.0, 6057.2, 5121.5, 3990.8] },
+    { "pileNo": 37, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 27.6, "y": 29.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 5069.0, "axialForceLevel1s": [5657.5, 5585.6, 5035.1, 4552.4], "axialForceLevel2s": [6246.0, 6102.2, 5001.2, 4035.8] },
+    { "pileNo": 38, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 45.6, "y": 29.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 2730.0, "axialForceLevel1s": [2215.0, 3246.6, 2448.1, 2213.4], "axialForceLevel2s": [1700.0, 3763.2, 2166.3, 1696.8] },
+    { "pileNo": 39, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 51.6, "y": 29.0, "z": -4.0, "deltaZc": 0.95, "axialForceVL0": 1467.0, "axialForceLevel1s": [2308.5, 1983.6, 1102.5, 950.4], "axialForceLevel2s": [3150.0, 2500.2, 738.0, 433.8] }
+  ]
 }

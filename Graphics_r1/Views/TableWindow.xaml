@@ -146,7 +146,7 @@
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,3,0" VerticalAlignment="Center">
+                            <Ellipse Width="5" Height="5" Fill="{StaticResource StatusSuccessBrush}" Margin="0,0,3,0" VerticalAlignment="Center">
                                 <Ellipse.Visibility>
                                     <MultiBinding Converter="{StaticResource LoadCombinationAnalyzedConverter}">
                                         <Binding/>
@@ -170,7 +170,7 @@
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,3,0" VerticalAlignment="Center">
+                            <Ellipse Width="5" Height="5" Fill="{StaticResource StatusSuccessBrush}" Margin="0,0,3,0" VerticalAlignment="Center">
                                 <Ellipse.Visibility>
                                     <MultiBinding Converter="{StaticResource LiquefactionAnalyzedConverter}">
                                         <Binding/>

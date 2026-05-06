@@ -13,6 +13,15 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _soilPiles, value);
         }
 
+        /// <summary>
+        /// PropertyChanged を発火せずに _soilPiles を直接書換える (Undo スナップショット時の一時退避用)。
+        /// DataGrid (ItemsSource バインディング) の再構築を防ぎ、セル編集中に値がリセットされる問題を回避する。
+        /// </summary>
+        internal void SetSoilPilesSilently(ObservableCollection<SoilPile> value)
+        {
+            _soilPiles = value;
+        }
+
         public void UpdateSoilPileNumberOption()
         {
             SoilPileNumberOption = new ObservableCollection<int>(Enumerable.Range(1, SoilPiles.Count));

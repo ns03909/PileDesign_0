@@ -1,5 +1,6 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows;
+using PileDesign.Services;
 
 namespace PileDesign.ViewModels
 {
@@ -41,7 +42,7 @@ namespace PileDesign.ViewModels
                 if (value <= 0)
                 {
                     // 入力された値が自然数でない場合
-                    MessageBox.Show("回数は自然数で入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show("回数は自然数で入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
@@ -56,6 +57,11 @@ namespace PileDesign.ViewModels
         [ObservableProperty]
         private bool _isPileLayoutIncluded = true;
 
+        // 梁要素 (FoundationBeamInput.Beams) を移動・コピー対象に含めるか。
+        // コピー時は端点ノードの解決を「コピー先杭頭節点 → 一般節点 → 新規一般節点生成」の順で実施。
+        [ObservableProperty]
+        private bool _isBeamsIncluded = true;
+
         internal void ResetStatus()
         {
             DX = 0;
@@ -64,6 +70,7 @@ namespace PileDesign.ViewModels
             RepetitionNumber = 1;
             IsInputNodesIncluded = true;
             IsPileLayoutIncluded = true;
+            IsBeamsIncluded = true;
         }
     }
 }

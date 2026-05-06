@@ -1,8 +1,9 @@
-using PileDesign.ViewModels;
+﻿using PileDesign.ViewModels;
 using System;
 using System.ComponentModel;
 using System.Threading;
 using System.Windows;
+using PileDesign.Services;
 
 namespace PileDesign.Views
 {
@@ -45,7 +46,7 @@ namespace PileDesign.Views
         /// </summary>
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 "計算を中断しますか？\n\n中断すると、ここまでの計算結果は破棄されます。",
                 "確認",
                 MessageBoxButton.YesNo,

@@ -12,6 +12,7 @@ using System.Windows.Data;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using PileDesign.Services;
 
 namespace PileDesign.Common
 {
@@ -444,7 +445,7 @@ namespace PileDesign.Common
 
                 if (!TryGetPasteStart(out int startRowIndex, out int startDisplayIndex))
                 {
-                    MessageBox.Show(OwnerWindow, "貼り付け開始セルを特定できません。セルを選択してから実行してください。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageService.Show(OwnerWindow, "貼り付け開始セルを特定できません。セルを選択してから実行してください。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return false;
                 }
 
@@ -476,13 +477,13 @@ namespace PileDesign.Common
                     // それでも足りない場合はエラー
                     if (startRowIndex + pasteRowCount > Items.Count)
                     {
-                        MessageBox.Show(OwnerWindow, "貼り付け範囲が行数を超えています。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MessageService.Show(OwnerWindow, "貼り付け範囲が行数を超えています。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return false;
                     }
                 }
                 if (startDisplayIndex + pasteColCount > displayOrderedCols.Count)
                 {
-                    MessageBox.Show(OwnerWindow, "貼り付け範囲が列数を超えています。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageService.Show(OwnerWindow, "貼り付け範囲が列数を超えています。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return false;
                 }
 
@@ -539,7 +540,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                MessageBox.Show(OwnerWindow, $"貼り付け中にエラーが発生しました。\n{ex.Message}", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(OwnerWindow, $"貼り付け中にエラーが発生しました。\n{ex.Message}", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -572,7 +573,7 @@ namespace PileDesign.Common
                     if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind)) continue;
                     if (!CanConvert(cellText, targetType, columnKind))
                     {
-                        MessageBox.Show(OwnerWindow,
+                        MessageService.Show(OwnerWindow,
                             $"値 '{cellText}' は列「{GetColumnHeaderText(col)}」の型 ({PrettyTypeName(targetType)}) に変換できません。",
                             "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return false;
@@ -582,7 +583,7 @@ namespace PileDesign.Common
                 }
                 if (!anyWritable)
                 {
-                    MessageBox.Show(OwnerWindow, "選択範囲に書き込み可能なセルがありません。",
+                    MessageService.Show(OwnerWindow, "選択範囲に書き込み可能なセルがありません。",
                         "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return false;
                 }
@@ -605,7 +606,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                MessageBox.Show(OwnerWindow, $"塗り潰しペースト中にエラーが発生しました。\n{ex.Message}", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(OwnerWindow, $"塗り潰しペースト中にエラーが発生しました。\n{ex.Message}", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -1037,7 +1038,7 @@ namespace PileDesign.Common
 
         private bool FailFormat(int r, int c, string message)
         {
-            MessageBox.Show(
+            MessageService.Show(
                 OwnerWindow,
                 $"貼り付けできませんでした。\n行: {r + 1}, 列: {c + 1}\n理由: {message}",
                 "貼り付けエラー",

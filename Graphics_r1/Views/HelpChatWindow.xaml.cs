@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -242,7 +242,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("ヘルプを開けませんでした: " + ex.Message, "エラー",
+                MessageService.Show("ヘルプを開けませんでした: " + ex.Message, "エラー",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }

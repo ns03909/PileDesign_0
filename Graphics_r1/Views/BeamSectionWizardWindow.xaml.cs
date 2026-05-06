@@ -1,4 +1,4 @@
-using PileDesign.Models.InputData;
+﻿using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using PileDesign.Services;
 
 namespace PileDesign.Views
 {
@@ -92,7 +93,7 @@ namespace PileDesign.Views
         {
             if (ComboBoxSectionNo.SelectedItem == null)
             {
-                MessageBox.Show("断面を選択してください。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show("断面を選択してください。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
                 return false;
             }
 

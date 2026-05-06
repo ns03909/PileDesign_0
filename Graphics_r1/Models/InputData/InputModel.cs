@@ -14,6 +14,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Media.Media3D;
+using PileDesign.Services;
 
 namespace PileDesign.Models.InputData
 {
@@ -285,7 +286,7 @@ namespace PileDesign.Models.InputData
             _mainWindowViewModel?.UpdateViewCommand?.Execute(null);
         }
 
-        // 要素分割
+        // 杭要素分割
         private ElementDivision _elementDivision;
         public ElementDivision ElementDivision
         {
@@ -1372,7 +1373,7 @@ namespace PileDesign.Models.InputData
                 // 変換成功メッセージ
                 if (FoundationBeamInput.Nodes.Count > 0)
                 {
-                    System.Windows.MessageBox.Show(
+                    PileDesign.Services.MessageService.Show(
                         $"旧形式のデータを新しい形式に変換しました。\n" +
                         $"節点: {FoundationBeamInput.Nodes.Count} 個\n" +
                         $"梁要素: {FoundationBeamInput.Beams.Count} 個",
@@ -1386,7 +1387,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show(
+                PileDesign.Services.MessageService.Show(
                     $"データ変換中にエラーが発生しました: {ex.Message}",
                     "変換エラー",
                     System.Windows.MessageBoxButton.OK,
@@ -1419,7 +1420,7 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public void GenerateSoilPiles()
         {
-            // 要素分割済みの場合は再生成しない（分割結果を保持）
+            // 杭要素分割済みの場合は再生成しない（分割結果を保持）
             if (_mainWindowViewModel?.IsElementSplit == true)
             {
                 return;
@@ -1428,6 +1429,23 @@ namespace PileDesign.Models.InputData
             _suppressSoilPileNotify = true;
             try
             {
+                // ユーザーが編集した GroupPileLoadDia (荷重面等価径) を再生成後も維持するため
+                // (groundNo, pileBodyNo, zKey) → 値 のルックアップを保存しておく。
+                // GenerateSoilPiles は元々 SoilPile を新規構築するためデフォルト 0 になり、
+                // 個別十字荷重 編集が消える問題を回避する。
+                var preservedGroupPileLoadDia = new Dictionary<(int groundNo, int pileBodyNo, long zKey), double>();
+                if (ElementDivision?.SoilPiles != null)
+                {
+                    foreach (var oldSp in ElementDivision.SoilPiles)
+                    {
+                        if (oldSp.GroupPileLoadDia > 0.0)
+                        {
+                            long zk = (long)Math.Round(oldSp.Z / NumericalConstants.COORDINATE_TOLERANCE);
+                            preservedGroupPileLoadDia[(oldSp.GroundNo, oldSp.PileBodyNo, zk)] = oldSp.GroupPileLoadDia;
+                        }
+                    }
+                }
+
                 // O(1) 重複チェック用HashSet（座標は離散化してキー化）
                 var usedCombinations = new HashSet<(int groundNo, int pileBodyNo, long zKey)>();
                 var newPiles = new List<SoilPile>();
@@ -1545,6 +1563,13 @@ namespace PileDesign.Models.InputData
                         Z = pileTopAltitude,
                         ZDataItems = pileZDataItems
                     };
+
+                    // 旧 SoilPile に保存されていた GroupPileLoadDia (荷重面等価径) を復元
+                    long restoreKey = (long)Math.Round(pileTopAltitude / NumericalConstants.COORDINATE_TOLERANCE);
+                    if (preservedGroupPileLoadDia.TryGetValue((groundNo, pileBodyNo, restoreKey), out double dia))
+                    {
+                        sp.GroupPileLoadDia = dia;
+                    }
 
                     // 追加: R_* 等の特性を再計算
                     sp.UpdateProperties();
@@ -1667,10 +1692,13 @@ namespace PileDesign.Models.InputData
             ObservableCollection<SoilPile> savedSoilPiles = null;
             try
             {
+                // PropertyChanged を発火しないよう SetSoilPilesSilently 経由で退避・復元する。
+                // 公開セッター経由だと DataGrid (ItemsSource バインディング) の再構築が走り、
+                // セル編集中の値が 0 にリセットされる問題が発生する (SoilPile.GroupPileLoadDia 編集問題)。
                 if (ElementDivision?.SoilPiles != null && ElementDivision.SoilPiles.Count > 0)
                 {
                     savedSoilPiles = ElementDivision.SoilPiles;
-                    ElementDivision.SoilPiles = [];
+                    ElementDivision.SetSoilPilesSilently([]);
                 }
 
                 var copy = new InputModel
@@ -1707,18 +1735,10 @@ namespace PileDesign.Models.InputData
                 copy.EmbedmentInput = PileDesign.Common.DeepCopyUtil.CloneJson(this.EmbedmentInput);
                 copy.FoundationBeamInput = PileDesign.Common.DeepCopyUtil.CloneJson(this.FoundationBeamInput);
                 copy.PileGroupSettlement = PileDesign.Common.DeepCopyUtil.CloneJson(this.PileGroupSettlement);
-                if (this.InputNodes != null)
-                    copy.InputNodes = new ObservableCollection<InputNode>(
-                        this.InputNodes.Select(n => PileDesign.Common.DeepCopyUtil.CloneJson(n)!).Where(n => n != null));
-                if (this.Elements != null)
-                    copy.Elements = new ObservableCollection<Element>(
-                        this.Elements.Select(e => PileDesign.Common.DeepCopyUtil.CloneJson(e)!).Where(e => e != null));
-                if (this.GridXItems != null)
-                    copy.GridXItems = new ObservableCollection<GridDataItem>(
-                        this.GridXItems.Select(g => PileDesign.Common.DeepCopyUtil.CloneJson(g)!).Where(g => g != null));
-                if (this.GridYItems != null)
-                    copy.GridYItems = new ObservableCollection<GridDataItem>(
-                        this.GridYItems.Select(g => PileDesign.Common.DeepCopyUtil.CloneJson(g)!).Where(g => g != null));
+                copy.InputNodes = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.InputNodes);
+                copy.Elements = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.Elements);
+                copy.GridXItems = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.GridXItems);
+                copy.GridYItems = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.GridYItems);
                 long tJsonRest = swTotal.ElapsedMilliseconds - tStart - tHand - tQc;
 
                 // パフォーマンス監視用ログ (Verbose レベル: 通常は出力されない)。
@@ -1731,10 +1751,10 @@ namespace PileDesign.Models.InputData
             }
             finally
             {
-                // 退避した SoilPiles を復元
+                // 退避した SoilPiles を Silent 復元 (PropertyChanged を発火させない)
                 if (savedSoilPiles != null && ElementDivision != null)
                 {
-                    ElementDivision.SoilPiles = savedSoilPiles;
+                    ElementDivision.SetSoilPilesSilently(savedSoilPiles);
                 }
                 swTotal.Stop();
             }

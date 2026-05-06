@@ -14,6 +14,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 
 using Serilog;
+using PileDesign.Services;
 namespace PileDesign.Views
 {
     /// <summary>
@@ -140,7 +141,7 @@ namespace PileDesign.Views
             catch (Exception ex)
             {
                 Log.Warning(ex, "[GroundWindow_ContentRendered]");
-                MessageBox.Show($"地盤ウィンドウの初期化でエラーが発生しました: {ex.Message}",
+                MessageService.Show($"地盤ウィンドウの初期化でエラーが発生しました: {ex.Message}",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -377,7 +378,7 @@ namespace PileDesign.Views
             var masses = ground.GroundMassesData;
             if (masses == null || masses.Count == 0)
             {
-                MessageBox.Show("土質点データが空です。先に「土質点入力」で土質点を入力してください。",
+                MessageService.Show("土質点データが空です。先に「土質点入力」で土質点を入力してください。",
                     "コピー不可", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -391,7 +392,7 @@ namespace PileDesign.Views
             // 既存データがあれば確認
             if (profile.Count > 0)
             {
-                var ans = MessageBox.Show(
+                var ans = MessageService.Show(
                     $"現在「{vm.CustomDispCaseOptions[caseIndex]}」に {profile.Count} 件のデータがあります。\nこれらを破棄して自動計算値で置き換えますか?",
                     "上書き確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (ans != MessageBoxResult.Yes) return;
@@ -429,7 +430,7 @@ namespace PileDesign.Views
 
             if (newPoints.Count == 0)
             {
-                MessageBox.Show("自動計算値がすべて空または NaN でした。「液状化」タブで先に計算を実行してください。",
+                MessageService.Show("自動計算値がすべて空または NaN でした。「液状化」タブで先に計算を実行してください。",
                     "コピー不可", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -442,7 +443,7 @@ namespace PileDesign.Views
 
             string msg = $"{newPoints.Count} 件のデータをコピーしました。";
             if (skipped > 0) msg += $" ({skipped} 件は計算値なしでスキップ)";
-            MessageBox.Show(msg, "コピー完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageService.Show(msg, "コピー完了", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void CustomDispDataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
@@ -758,7 +759,7 @@ namespace PileDesign.Views
                 else
                 {
                     // キャストに失敗した場合はエラーを処理するか、適切な処理を行う
-                    MessageBox.Show("選択されたアイテムの型が正しくありません。");
+                    MessageService.Show("選択されたアイテムの型が正しくありません。");
                 }
                 DataGridGroundMass.Items.Refresh();
             }
@@ -778,7 +779,7 @@ namespace PileDesign.Views
                 else
                 {
                     // キャストに失敗した場合はエラーを処理するか、適切な処理を行う
-                    MessageBox.Show("選択されたアイテムの型が正しくありません。");
+                    MessageService.Show("選択されたアイテムの型が正しくありません。");
                 }
                 DataGridGroundLayer.Items.Refresh();
                 viewModel.Update();

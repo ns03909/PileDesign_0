@@ -8,8 +8,8 @@ namespace PileDesign.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            string trueContent = "要素分割(済)";
-            string falseContent = "要素分割(未)";
+            string trueContent = "杭要素分割(済)";
+            string falseContent = "杭要素分割(未)";
 
             if (parameter is string paramStr)
             {

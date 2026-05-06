@@ -36,6 +36,9 @@ namespace PileDesign.ViewModels
         public PropertyInputType InputType { get; } = inputType;
         public IReadOnlyList<string>? Options { get; } = options;
 
+        /// <summary>Unit が非空かを返す (XAML の Unit ラベル可視性制御に使用)</summary>
+        public bool HasUnit => !string.IsNullOrEmpty(Unit);
+
         private string _value = value;
         public string Value
         {
@@ -223,6 +226,10 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // プロパティパネル: 杭が 1 本以上選択されているか (軸力モードトグル表示制御用)
+        public bool IsAnyPileSelected
+            => CurrentInputModel?.PileLayoutItems?.Any(p => p.IsSelected) ?? false;
+
         // プロパティパネル: 選択中アイテムのPropertyChanged購読管理
         private INotifyPropertyChanged? _subscribedPropertyItem;
 
@@ -261,6 +268,7 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Clear();
             OnPropertyChanged(nameof(SelectedItemHeader));
             OnPropertyChanged(nameof(IsMultipleSelection));
+            OnPropertyChanged(nameof(IsAnyPileSelected));
 
             // 杭
             var piles = CurrentInputModel?.PileLayoutItems?.Where(p => p.IsSelected).ToList();
@@ -420,7 +428,7 @@ namespace PileDesign.ViewModels
 
             var pileLen = CalcPileLength(pile);
             if (pileLen.HasValue)
-                SelectedItemProperties.Add(new("杭長", $"{pileLen.Value:F3} m"));
+                SelectedItemProperties.Add(new("杭長", $"{pileLen.Value:F3}", "m"));
 
             SelectedItemProperties.Add(new("群杭係数 ξ", $"{pile.GroupPileFactor:F3}", "",
                 PropertyInputType.Number,
@@ -436,28 +444,54 @@ namespace PileDesign.ViewModels
                 MakeDoubleCommit(() => pile.AxialForceVL0, v => pile.AxialForceVL0 = v, "F1"),
                 nameColor: "#3271AD"));
 
-            // 軸力: レベル1 — 緑
+            bool isVar = Common.AxialForceModeContext.IsVariationMode;
+
+            // 軸力: レベル1 — 緑 (絶対 or 変動)
             for (int i = 0; i < pile.AxialForceLevel1s.Count; i++)
             {
                 int idx = i;
-                SelectedItemProperties.Add(new($"軸力 1-{i + 1}", $"{pile.AxialForceLevel1s[i]:F1}", "kN",
-                    PropertyInputType.Number,
-                    MakeDoubleCommit(
-                        () => pile.AxialForceLevel1s[idx],
-                        v => pile.AxialForceLevel1s[idx] = v, "F1"),
-                    nameColor: "#238966"));
+                if (isVar)
+                {
+                    SelectedItemProperties.Add(new($"ΔN 1-{i + 1}", $"{pile.AxialForceVariationLevel1s[i]:F1}", "kN",
+                        PropertyInputType.Number,
+                        MakeDoubleCommit(
+                            () => pile.AxialForceVariationLevel1s[idx],
+                            v => pile.AxialForceVariationLevel1s[idx] = v, "F1"),
+                        nameColor: "#238966"));
+                }
+                else
+                {
+                    SelectedItemProperties.Add(new($"軸力 1-{i + 1}", $"{pile.AxialForceLevel1s[i]:F1}", "kN",
+                        PropertyInputType.Number,
+                        MakeDoubleCommit(
+                            () => pile.AxialForceLevel1s[idx],
+                            v => pile.AxialForceLevel1s[idx] = v, "F1"),
+                        nameColor: "#238966"));
+                }
             }
 
-            // 軸力: レベル2 — 赤
+            // 軸力: レベル2 — 桃赤 (絶対 or 変動)
             for (int i = 0; i < pile.AxialForceLevel2s.Count; i++)
             {
                 int idx = i;
-                SelectedItemProperties.Add(new($"軸力 2-{i + 1}", $"{pile.AxialForceLevel2s[i]:F1}", "kN",
-                    PropertyInputType.Number,
-                    MakeDoubleCommit(
-                        () => pile.AxialForceLevel2s[idx],
-                        v => pile.AxialForceLevel2s[idx] = v, "F1"),
-                    nameColor: "#D82531"));
+                if (isVar)
+                {
+                    SelectedItemProperties.Add(new($"ΔN 2-{i + 1}", $"{pile.AxialForceVariationLevel2s[i]:F1}", "kN",
+                        PropertyInputType.Number,
+                        MakeDoubleCommit(
+                            () => pile.AxialForceVariationLevel2s[idx],
+                            v => pile.AxialForceVariationLevel2s[idx] = v, "F1"),
+                        nameColor: "#E95541"));
+                }
+                else
+                {
+                    SelectedItemProperties.Add(new($"軸力 2-{i + 1}", $"{pile.AxialForceLevel2s[i]:F1}", "kN",
+                        PropertyInputType.Number,
+                        MakeDoubleCommit(
+                            () => pile.AxialForceLevel2s[idx],
+                            v => pile.AxialForceLevel2s[idx] = v, "F1"),
+                        nameColor: "#E95541"));
+                }
             }
         }
 
@@ -469,10 +503,10 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("J端節点No", CurrentInputModel.GetNodeReferenceDisplayString(beam.NodeJ_Type, beam.NodeJ_Id)));
             SelectedItemProperties.Add(new("材料No",    $"{beam.MaterialNo}"));
             SelectedItemProperties.Add(new("断面No",    $"{beam.SectionNo}"));
-            SelectedItemProperties.Add(new("幅",        $"{beam.Width:F3} m"));
-            SelectedItemProperties.Add(new("高さ",      $"{beam.Height:F3} m"));
-            SelectedItemProperties.Add(new("ヤング率",   $"{beam.YoungModulus / 1000.0:N0} N/mm²"));
-            SelectedItemProperties.Add(new("横弾性係数", $"{beam.ShearModulus / 1000.0:N0} N/mm²"));
+            SelectedItemProperties.Add(new("幅",        $"{beam.Width:F3}", "m"));
+            SelectedItemProperties.Add(new("高さ",      $"{beam.Height:F3}", "m"));
+            SelectedItemProperties.Add(new("ヤング率",   $"{beam.YoungModulus / 1000.0:N0}", "N/mm²"));
+            SelectedItemProperties.Add(new("横弾性係数", $"{beam.ShearModulus / 1000.0:N0}", "N/mm²"));
 
             // 角度β のみ編集可能
             SelectedItemProperties.Add(new("角度β", $"{beam.AngleBeta:F1}", "°",
@@ -481,7 +515,7 @@ namespace PileDesign.ViewModels
 
             var len = CalcBeamLength(beam);
             if (len.HasValue)
-                SelectedItemProperties.Add(new("部材長", $"{len.Value:F3} m"));
+                SelectedItemProperties.Add(new("部材長", $"{len.Value:F3}", "m"));
         }
 
         private double? CalcBeamLength(FoundationBeamElement beam)
@@ -526,9 +560,9 @@ namespace PileDesign.ViewModels
         private void BuildFoundationNodeProperties(FoundationNode fNode)
         {
             SelectedItemProperties.Add(new("節点No", $"{fNode.No}"));
-            SelectedItemProperties.Add(new("X", $"{fNode.X:F3} m"));
-            SelectedItemProperties.Add(new("Y", $"{fNode.Y:F3} m"));
-            SelectedItemProperties.Add(new("Z", $"{fNode.Z:F3} m"));
+            SelectedItemProperties.Add(new("X", $"{fNode.X:F3}", "m"));
+            SelectedItemProperties.Add(new("Y", $"{fNode.Y:F3}", "m"));
+            SelectedItemProperties.Add(new("Z", $"{fNode.Z:F3}", "m"));
         }
 
         // -------------------------------------------------------
@@ -562,9 +596,9 @@ namespace PileDesign.ViewModels
             if (countValidLen > 0)
             {
                 if (PropertyDisplayIsTotal)
-                    SelectedItemProperties.Add(new("杭長 (total)", $"{totalPileLen:F3} m"));
+                    SelectedItemProperties.Add(new("杭長 (total)", $"{totalPileLen:F3}", "m"));
                 else
-                    SelectedItemProperties.Add(new("杭長 (each)", $"{CommonDoubleOrVarious(pileLengths)} m"));
+                    SelectedItemProperties.Add(new("杭長 (each)", CommonDoubleOrVarious(pileLengths), "m"));
             }
 
             // 杭体No（ComboBox: 同一値なら選択可、様々なら空欄）
@@ -625,64 +659,84 @@ namespace PileDesign.ViewModels
                 }));
 
             // 軸力 VL (total/each 切替、読み取り専用) — ディープブルー
+            // 単位 kN は別パラメータで渡し、XAML 側で Foreground=#888 の軽量ラベルとして描画させる
             if (PropertyDisplayIsTotal)
-                SelectedItemProperties.Add(new("軸力 VL (total)", $"{piles.Sum(p => p.AxialForceVL):F1} kN", nameColor: "#3271AD"));
+                SelectedItemProperties.Add(new("軸力 VL (total)", $"{piles.Sum(p => p.AxialForceVL):F1}", "kN", nameColor: "#3271AD"));
             else
-                SelectedItemProperties.Add(new("軸力 VL (each)", $"{CommonDoubleOrVarious(piles.Select(p => p.AxialForceVL), "F1")} kN", nameColor: "#3271AD"));
+                SelectedItemProperties.Add(new("軸力 VL (each)", CommonDoubleOrVarious(piles.Select(p => p.AxialForceVL), "F1"), "kN", nameColor: "#3271AD"));
+
+            bool isVar = Common.AxialForceModeContext.IsVariationMode;
+            string l1Prefix = isVar ? "ΔN" : "軸力";
+            string l2Prefix = isVar ? "ΔN" : "軸力";
 
             // レベル1軸力 — 緑 (total: 合計・読み取り専用、each: 各値・編集可)
             int level1Count = piles.Min(p => p.AxialForceLevel1s.Count);
             for (int i = 0; i < level1Count; i++)
             {
                 int idx = i;
+                // 絶対モードでは AxialForceLevel1s、変動モードでは AxialForceVariationLevel1s を読み書き
+                System.Func<PileLayoutDataItem, double> getter = isVar
+                    ? (p => p.AxialForceVariationLevel1s[idx])
+                    : (p => p.AxialForceLevel1s[idx]);
+                System.Action<PileLayoutDataItem, double> setter = isVar
+                    ? ((p, v) => p.AxialForceVariationLevel1s[idx] = v)
+                    : ((p, v) => p.AxialForceLevel1s[idx] = v);
+
                 if (PropertyDisplayIsTotal)
                 {
-                    SelectedItemProperties.Add(new($"軸力 1-{i + 1} (total)",
-                        $"{piles.Sum(p => p.AxialForceLevel1s[idx]):F1} kN",
+                    SelectedItemProperties.Add(new($"{l1Prefix} 1-{i + 1} (total)",
+                        $"{piles.Sum(p => getter(p)):F1}", "kN",
                         nameColor: "#238966"));
                 }
                 else
                 {
-                    SelectedItemProperties.Add(new($"軸力 1-{i + 1} (each)",
-                        CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1"), "kN",
+                    SelectedItemProperties.Add(new($"{l1Prefix} 1-{i + 1} (each)",
+                        CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1"), "kN",
                         PropertyInputType.Number,
                         (item, rawValue) =>
                         {
-                            if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1")); return; }
-                            if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1")); return; }
+                            if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                            if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
                             SaveUndoState();
-                            foreach (var p in piles) p.AxialForceLevel1s[idx] = newVal;
+                            foreach (var p in piles) setter(p, newVal);
                             RequestUpdateWindow();
                         },
                         nameColor: "#238966"));
                 }
             }
 
-            // レベル2軸力 — 赤 (total: 合計・読み取り専用、each: 各値・編集可)
+            // レベル2軸力 — 桃赤 (total: 合計・読み取り専用、each: 各値・編集可)
             int level2Count = piles.Min(p => p.AxialForceLevel2s.Count);
             for (int i = 0; i < level2Count; i++)
             {
                 int idx = i;
+                System.Func<PileLayoutDataItem, double> getter = isVar
+                    ? (p => p.AxialForceVariationLevel2s[idx])
+                    : (p => p.AxialForceLevel2s[idx]);
+                System.Action<PileLayoutDataItem, double> setter = isVar
+                    ? ((p, v) => p.AxialForceVariationLevel2s[idx] = v)
+                    : ((p, v) => p.AxialForceLevel2s[idx] = v);
+
                 if (PropertyDisplayIsTotal)
                 {
-                    SelectedItemProperties.Add(new($"軸力 2-{i + 1} (total)",
-                        $"{piles.Sum(p => p.AxialForceLevel2s[idx]):F1} kN",
-                        nameColor: "#D82531"));
+                    SelectedItemProperties.Add(new($"{l2Prefix} 2-{i + 1} (total)",
+                        $"{piles.Sum(p => getter(p)):F1}", "kN",
+                        nameColor: "#E95541"));
                 }
                 else
                 {
-                    SelectedItemProperties.Add(new($"軸力 2-{i + 1} (each)",
-                        CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1"), "kN",
+                    SelectedItemProperties.Add(new($"{l2Prefix} 2-{i + 1} (each)",
+                        CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1"), "kN",
                         PropertyInputType.Number,
                         (item, rawValue) =>
                         {
-                            if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1")); return; }
-                            if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1")); return; }
+                            if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                            if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
                             SaveUndoState();
-                            foreach (var p in piles) p.AxialForceLevel2s[idx] = newVal;
+                            foreach (var p in piles) setter(p, newVal);
                             RequestUpdateWindow();
                         },
-                        nameColor: "#D82531"));
+                        nameColor: "#E95541"));
                 }
             }
         }
@@ -692,16 +746,16 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("選択数",    $"{beams.Count} 本"));
             SelectedItemProperties.Add(new("材料No",    CommonOrVarious(beams.Select(b => b.MaterialNo))));
             SelectedItemProperties.Add(new("断面No",    CommonOrVarious(beams.Select(b => b.SectionNo))));
-            SelectedItemProperties.Add(new("幅",        $"{CommonDoubleOrVarious(beams.Select(b => b.Width))} m"));
-            SelectedItemProperties.Add(new("高さ",      $"{CommonDoubleOrVarious(beams.Select(b => b.Height))} m"));
-            SelectedItemProperties.Add(new("ヤング率",   $"{CommonDoubleOrVarious(beams.Select(b => b.YoungModulus), "N0", 0.001)} N/mm²"));
-            SelectedItemProperties.Add(new("横弾性係数", $"{CommonDoubleOrVarious(beams.Select(b => b.ShearModulus), "N0", 0.001)} N/mm²"));
-            SelectedItemProperties.Add(new("角度β",     $"{CommonDoubleOrVarious(beams.Select(b => b.AngleBeta), "F1")}°"));
+            SelectedItemProperties.Add(new("幅",        CommonDoubleOrVarious(beams.Select(b => b.Width)), "m"));
+            SelectedItemProperties.Add(new("高さ",      CommonDoubleOrVarious(beams.Select(b => b.Height)), "m"));
+            SelectedItemProperties.Add(new("ヤング率",   CommonDoubleOrVarious(beams.Select(b => b.YoungModulus), "N0", 0.001), "N/mm²"));
+            SelectedItemProperties.Add(new("横弾性係数", CommonDoubleOrVarious(beams.Select(b => b.ShearModulus), "N0", 0.001), "N/mm²"));
+            SelectedItemProperties.Add(new("角度β",     CommonDoubleOrVarious(beams.Select(b => b.AngleBeta), "F1"), "°"));
 
             double totalLen = 0; int countValid = 0;
             foreach (var b in beams) { var l = CalcBeamLength(b); if (l.HasValue) { totalLen += l.Value; countValid++; } }
             if (countValid > 0)
-                SelectedItemProperties.Add(new("部材長 (total)", $"{totalLen:F3} m"));
+                SelectedItemProperties.Add(new("部材長 (total)", $"{totalLen:F3}", "m"));
         }
 
         private void BuildMultiInputNodeProperties(List<InputNode> nodes)
@@ -729,7 +783,7 @@ namespace PileDesign.ViewModels
             get
             {
                 var statuses = new List<string>();
-                if (IsElementSplit) statuses.Add("要素分割済み");
+                if (IsElementSplit) statuses.Add("杭要素分割済み");
                 if (IsHorizontalAnalysisDone) statuses.Add("水平解析完了");
                 if (IsVerticalAnalysisDone) statuses.Add("沈下解析完了");
                 if (IsVerticalBeamAnalysisDone) statuses.Add("梁鉛直解析完了");
@@ -877,7 +931,7 @@ namespace PileDesign.ViewModels
             {
                 //if (value && !IsElementSplit)
                 //{
-                //    MessageBox.Show("要素分割が完了していないため、地盤変位描画を有効にできません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                //    MessageService.Show("杭要素分割が完了していないため、地盤変位描画を有効にできません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                 //    return;
                 //}
 
@@ -1317,13 +1371,13 @@ namespace PileDesign.ViewModels
 
         private ObservableCollection<string> _analysisResultNodeDisplacementOption = [
             "UH",
+            "θH",
             "UX",
             "UY",
             "UZ",
             "θX",
             "θY",
             "θZ",
-            "θH",
             ];
 
         public ObservableCollection<string> AnalysisResultNodeDisplacementOption
@@ -1343,14 +1397,14 @@ namespace PileDesign.ViewModels
         }
 
         private ObservableCollection<string> _analysisSoilSpringOption = [
-            "R",
+            "RH",
+            "MH",
             "RX",
             "RY",
             "RZ",
             "MX",
             "MY",
             "MZ",
-            "MH",
             ];
 
         public ObservableCollection<string> AnalysisResultSoilSpringOption
@@ -1358,7 +1412,7 @@ namespace PileDesign.ViewModels
             get => _analysisSoilSpringOption;
             set => SetProperty(ref _analysisSoilSpringOption, value);
         }
-        private string _analysisResultSoilSpringType = "R";
+        private string _analysisResultSoilSpringType = "RH";
         public string AnalysisResultSoilSpringType
         {
             get => _analysisResultSoilSpringType;
@@ -1409,11 +1463,12 @@ namespace PileDesign.ViewModels
             {
                 if (!SetProperty(ref _isMidSpanResultValueVisibleOnly, value)) return;
 
-                // 自分がtrueになったら、もう片方をfalseに
+                // 自分がtrueになったら、他のオンリー系をfalseに
                 if (value && !_suppressMutualToggle)
                 {
                     _suppressMutualToggle = true;
                     IsPileTopResultValueVisibleOnly = false;
+                    IsPileMaxMinResultValueVisibleOnly = false;
                     _suppressMutualToggle = false;
                 }
 
@@ -1436,11 +1491,35 @@ namespace PileDesign.ViewModels
                 {
                     _suppressMutualToggle = true;
                     IsMidSpanResultValueVisibleOnly = false;
+                    IsPileMaxMinResultValueVisibleOnly = false;
                     _suppressMutualToggle = false;
                 }
 
                 if (!_suppressMutualToggle)
                     UpdateCanvas3DAction?.Invoke(); // 3Dキャンバス更新（内側更新では抑止）
+            }
+        }
+
+        // 杭最大最小値表示: 各杭の応力ダイアグラム値のうち最大と最小だけを表示する。
+        // 多数の杭でログが埋まる問題への対策。要素中間 / 杭頭 とは相互排他。
+        private bool _isPileMaxMinResultValueVisibleOnly = false;
+        public bool IsPileMaxMinResultValueVisibleOnly
+        {
+            get => _isPileMaxMinResultValueVisibleOnly;
+            set
+            {
+                if (!SetProperty(ref _isPileMaxMinResultValueVisibleOnly, value)) return;
+
+                if (value && !_suppressMutualToggle)
+                {
+                    _suppressMutualToggle = true;
+                    IsMidSpanResultValueVisibleOnly = false;
+                    IsPileTopResultValueVisibleOnly = false;
+                    _suppressMutualToggle = false;
+                }
+
+                if (!_suppressMutualToggle)
+                    UpdateCanvas3DAction?.Invoke();
             }
         }
 
@@ -1460,14 +1539,56 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 杭応力ダイアグラム非表示 (上面図モードと併用すると基礎梁応力だけが見える)
-        private bool _isPileStressHidden = false;
-        public bool IsPileStressHidden
+        // 杭応力ダイアグラム表示 (false にすると 上面図モードと併用で基礎梁応力だけが見える)
+        private bool _isPileStressVisible = true;
+        public bool IsPileStressVisible
         {
-            get => _isPileStressHidden;
+            get => _isPileStressVisible;
             set
             {
-                if (SetProperty(ref _isPileStressHidden, value))
+                if (SetProperty(ref _isPileStressVisible, value))
+                {
+                    UpdateCanvas3DAction?.Invoke();
+                }
+            }
+        }
+
+        // 基礎梁応力ダイアグラム表示 (false にすると基礎梁応力ダイアグラムをスキップ)
+        private bool _isFoundationBeamStressVisible = true;
+        public bool IsFoundationBeamStressVisible
+        {
+            get => _isFoundationBeamStressVisible;
+            set
+            {
+                if (SetProperty(ref _isFoundationBeamStressVisible, value))
+                {
+                    UpdateCanvas3DAction?.Invoke();
+                }
+            }
+        }
+
+        // 杭変位ダイアグラム表示 (false にすると杭体・RigidLink・根入れ部の変位描画をスキップ)
+        private bool _isPileDisplacementVisible = true;
+        public bool IsPileDisplacementVisible
+        {
+            get => _isPileDisplacementVisible;
+            set
+            {
+                if (SetProperty(ref _isPileDisplacementVisible, value))
+                {
+                    UpdateCanvas3DAction?.Invoke();
+                }
+            }
+        }
+
+        // 基礎梁変位ダイアグラム表示 (false にすると基礎梁の変位描画をスキップ)
+        private bool _isFoundationBeamDisplacementVisible = true;
+        public bool IsFoundationBeamDisplacementVisible
+        {
+            get => _isFoundationBeamDisplacementVisible;
+            set
+            {
+                if (SetProperty(ref _isFoundationBeamDisplacementVisible, value))
                 {
                     UpdateCanvas3DAction?.Invoke();
                 }
@@ -2005,7 +2126,7 @@ namespace PileDesign.ViewModels
             {
                 if (value && !IsVerticalAnalysisDone && !IsHorizontalAnalysisDone && !IsGroupPileSettlementAnalysisDone && !IsVerticalBeamAnalysisDone)
                 {
-                    MessageBox.Show("水平解析、単杭解析、群杭解析、基礎梁鉛直解析のいずれかを実行後でないと解析結果表示はできません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageService.Show("水平解析、単杭解析、群杭解析、基礎梁鉛直解析のいずれかを実行後でないと解析結果表示はできません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                     SetProperty(ref _isAnalysisResultVisible, false); // 明示的に戻す
                     return;
                 }
@@ -2622,7 +2743,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _isGroupPileSettlementColorArrowVisible, value);
         }
 
-        // 要素分割済か否か
+        // 杭要素分割済か否か
         private bool _isElementSplit;
         public bool IsElementSplit
         {
@@ -2633,7 +2754,7 @@ namespace PileDesign.ViewModels
                 {
                     if (value)
                     {
-                        // 要素分割が完了したら、保留中のSoilPiles生成をキャンセル
+                        // 杭要素分割が完了したら、保留中のSoilPiles生成をキャンセル
                         _generateSoilPilesDebounceTimer?.Stop();
                         _generateSoilPilesDebounceTimer = null;
                         _soilPilesGenerationPending = false;

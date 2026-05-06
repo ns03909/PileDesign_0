@@ -3,7 +3,8 @@ using System;
 
 namespace PileDesign.FEM
 {
-    internal class Solver
+    // PileDesign.Cli / PileDesign.Mcp (prototype) が SolveDisp を直接呼ぶため public で公開。
+    public class Solver
     {
         // ソルバ（緩和係数対応版）
         public static void SolveDisp(AnaModel anaModel, double relaxationFactor = 1.0)

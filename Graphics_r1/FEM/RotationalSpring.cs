@@ -37,6 +37,23 @@ namespace PileDesign.FEM
             Points.Sort((a, b) => a.Theta.CompareTo(b.Theta));
         }
 
+        // 2026-05-06: post-yield (θ > θ_last) で K_tan = 0 になり Newton 方向が不定になる問題対策。
+        // 降伏時割線剛性 (= M_last / θ_last) の 1% を post-yield 接線勾配として与える。
+        // 物理的影響は微小 (|θ|=2×θ_last でも M は 1% 程度の超過) で、p-y curve の v22 修正と同方針。
+        // EvaluateMoment / EvaluateTangent / EvaluatePostCrackTangent / EvaluateSecant で同じ値を使う。
+        private const double PostYieldSlopeRatio = 0.01;
+
+        // 末尾点 Points[^1] における降伏時割線剛性 × ratio を返す。
+        // Points[^1].Theta == 0 の場合は 0 (退化曲線、外挿しない)。
+        private double GetPostYieldSlope()
+        {
+            if (Points.Count == 0) return 0.0;
+            double tLast = Points[^1].Theta;
+            if (tLast <= 0.0) return 0.0;
+            double secantAtYield = Points[^1].Moment / tLast;
+            return PostYieldSlopeRatio * secantAtYield;
+        }
+
         public double EvaluateMoment(double theta)
         {
             if (Points.Count == 0) return 0.0;
@@ -47,7 +64,12 @@ namespace PileDesign.FEM
             double sign = theta < 0.0 ? -1.0 : 1.0;
             if (Points.Count == 1) return sign * InterpFromOrigin(Points[0], t);
             if (t <= Points[0].Theta) return sign * InterpFromOrigin(Points[0], t);
-            if (t >= Points[^1].Theta) return sign * Points[^1].Moment;
+            if (t >= Points[^1].Theta)
+            {
+                // post-yield: M_last + (1% × secant) × (t - θ_last) で線形外挿。
+                double extrapSlope = GetPostYieldSlope();
+                return sign * (Points[^1].Moment + extrapSlope * (t - Points[^1].Theta));
+            }
 
             int idx = FindSegmentIndex(t);
             var a = (Theta: (idx == 0 ? 0.0 : Points[idx - 1].Theta), Moment: (idx == 0 ? 0.0 : Points[idx - 1].Moment));
@@ -84,10 +106,11 @@ namespace PileDesign.FEM
             }
             else if (t >= Points[^1].Theta)
             {
-                // EvaluateMoment は θ > θ_last で M = M_last（定数）を返すため、
-                // 接線剛性もゼロでなければ K/F 不整合になる
-                result = 0.0;
-                region = "above_last_flat";
+                // 2026-05-06: post-yield 微小勾配を採用。EvaluateMoment と整合 (K_tan = dM/dθ)。
+                // 旧: 0 (真のプラトー) だったが、多数の杭頭が同時に plateau に到達する
+                // counter-loading で K 行列特異化 → Newton 方向不定 → α=0.05 limit cycle の主因。
+                result = GetPostYieldSlope();
+                region = "above_last_post_yield_gradient";
             }
             else
             {
@@ -125,8 +148,8 @@ namespace PileDesign.FEM
             {
                 return SafeSlope(Points[1], Points[2]);
             }
-            // θ が末尾点を超える → plateau (EvaluateTangent と同挙動)
-            if (t >= Points[^1].Theta) return 0.0;
+            // θ が末尾点を超える → post-yield 微小勾配 (EvaluateTangent と同挙動)
+            if (t >= Points[^1].Theta) return GetPostYieldSlope();
 
             // 中間セグメント: 通常通り (Points[1] 以降のセグメントを探索)
             int idx = FindSegmentIndex(t);
@@ -299,6 +322,16 @@ namespace PileDesign.FEM
             HasCrackedXY = false;
             CrackNx = null; CrackNy = null;
             ThetaProjMax = 0.0;
+        }
+
+        // Phase 1 (step-level cut-back retry): スナップショットからの方向ロック状態復元用。
+        // post-crack 状態 (HasCrackedXY/CrackNx/CrackNy/ThetaProjMax) を一括で書き戻す。
+        public void RestoreLockState(bool hasCracked, double? crackNx, double? crackNy, double thetaProjMax)
+        {
+            HasCrackedXY = hasCracked;
+            CrackNx = crackNx;
+            CrackNy = crackNy;
+            ThetaProjMax = thetaProjMax;
         }
 
         public int? PileBodyNo { get; set; }

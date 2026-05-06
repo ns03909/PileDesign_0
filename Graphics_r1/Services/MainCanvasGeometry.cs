@@ -30,7 +30,7 @@ namespace PileDesign.Services
         public PathGeometry PathGeoPileDias { get; set; } = new();
         public PathGeometry PathGeoPileDividedDias { get; set; } = new();
         public PathGeometry PathGeoPileToeInnerDashed { get; set; } = new(); // 根固め部内部の杭体（破線）
-        public PathGeometry PathGeoPileToeInnerDashedDivided { get; set; } = new(); // 根固め部内部の杭体（破線・要素分割後）
+        public PathGeometry PathGeoPileToeInnerDashedDivided { get; set; } = new(); // 根固め部内部の杭体（破線・杭要素分割後）
 
         public PathGeometry PathGeoPileSoils { get; set; } = new();
         public PathGeometry PathGeoClay { get; set; } = new();
@@ -357,7 +357,7 @@ namespace PileDesign.Services
                 Name = "Node"
             });
 
-            // 要素分割後杭径
+            // 杭要素分割後杭径
             canvas.Children.Add(new Path()
             {
                 Stroke = Brushes.SkyBlue,
@@ -376,7 +376,7 @@ namespace PileDesign.Services
                 Name = "Node"
             });
 
-            // 根固め部内部の杭体（破線・要素分割後）
+            // 根固め部内部の杭体（破線・杭要素分割後）
             canvas.Children.Add(new Path()
             {
                 Stroke = Brushes.SkyBlue,

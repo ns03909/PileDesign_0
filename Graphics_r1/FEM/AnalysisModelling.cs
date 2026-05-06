@@ -880,9 +880,12 @@ namespace PileDesign.FEM
                     throw new InvalidOperationException("剛床連結モードでは基礎梁要素が必要です。");
             }
 
-            // 剛リンク用セクション（非常に高い剛性でCapNode-ConnectionNode間を実質剛結合）
-            var rigidLinkMat = _materialCache.GetOrAdd(1e10, y => new Material(y, 0.2));
-            var rigidLinkSecKey = (1.0, 0.14, Math.Round(1.0 / 12.0, 5), 1e10, Math.Round(1e10 / 2.4, 0));
+            // 剛リンク用セクション (CapNode-ConnectionNode 間を実質剛結合)
+            // 2026-05-06: E を 1e10 → 1e9 kN/m² (= 1,000 GPa、鋼の約 5 倍) に低減。
+            //   K 行列条件数を 1 桁改善し非線形収束を安定化。1m×1m 断面・L=1m で
+            //   軸変位は 10000 kN 載荷時 0.06mm 程度に抑えられ、剛体扱いとして実用上問題なし。
+            var rigidLinkMat = _materialCache.GetOrAdd(1e9, y => new Material(y, 0.2));
+            var rigidLinkSecKey = (1.0, 0.14, Math.Round(1.0 / 12.0, 5), 1e9, Math.Round(1e9 / 2.4, 0));
             var rigidLinkSec = _sectionCache.GetOrAdd(rigidLinkSecKey,
                 _ => new Section(rigidLinkMat, 1.0, 1.0, 1.0, 0.14, 1.0 / 12.0, 1.0 / 12.0));
 
@@ -941,11 +944,15 @@ namespace PileDesign.FEM
                 else
                 {
                     // 同位置: ペナルティばねで接続
-                    const double Kbig = 1e8;
+                    // 2026-05-06 (改): DOF 別 Kbig を採用。並進 KbigT=1e7 kN/m と回転 KbigR=1e8 kN·m/rad
+                    // を分離。並進は条件数改善のため 1 桁低減を維持、回転は基礎梁/RC 杭の典型 EI/L
+                    // (1e7 オーダー) に対して 10× の余裕で剛接合扱いを担保。
+                    const double KbigT = 1e7;
+                    const double KbigR = 1e8;
                     var penaltySpring = new HorizontalSoilSpring(
                         $"PenaltySpring-{pile.No}", connectionNode, capNode);
-                    penaltySpring.SetKe(Kbig, Kbig, Kbig, Kbig, Kbig, Kbig, true);
-                    penaltySpring.SetKe(Kbig, Kbig, Kbig, Kbig, Kbig, Kbig, false);
+                    penaltySpring.SetKe(KbigT, KbigT, KbigT, KbigR, KbigR, KbigR, true);
+                    penaltySpring.SetKe(KbigT, KbigT, KbigT, KbigR, KbigR, KbigR, false);
                     PenaltySprings.Add(penaltySpring);
                 }
 
@@ -990,7 +997,10 @@ namespace PileDesign.FEM
             ));
             log.AppendLine($"ActionPoint boundary updated: Uz=fixed, Rx=fixed, Ry=fixed (rigid floor mode)");
 
-            const double Kbig = 1e8; // ペナルティ剛性 [kN/m or kNm/rad]
+            // 2026-05-06 (改): DOF 別 Kbig — 並進 1e7 kN/m / 回転 1e8 kN·m/rad
+            // (上記 ConnectCapsRigidBody と同方針)。
+            const double KbigT = 1e7; // 並進ペナルティ剛性 [kN/m]
+            const double KbigR = 1e8; // 回転ペナルティ剛性 [kN·m/rad]
 
             // ── 1. 各ConnectionNodeを ActionPoint の部分slave（Ux, Uy, Rz）に設定 ──
             // ── 2. 各ConnectionNode↔CapNode 間にペナルティばね（全6DOF）を作成 ──
@@ -1044,11 +1054,11 @@ namespace PileDesign.FEM
                     // 同位置: ペナルティばねで接続
                     var penaltySpring = new HorizontalSoilSpring(
                         $"PenaltySpring-{pile.No}", connectionNode, capNode);
-                    penaltySpring.SetKe(Kbig, Kbig, Kbig, Kbig, Kbig, Kbig, true);
-                    penaltySpring.SetKe(Kbig, Kbig, Kbig, Kbig, Kbig, Kbig, false);
+                    penaltySpring.SetKe(KbigT, KbigT, KbigT, KbigR, KbigR, KbigR, true);
+                    penaltySpring.SetKe(KbigT, KbigT, KbigT, KbigR, KbigR, KbigR, false);
                     PenaltySprings.Add(penaltySpring);
                     penaltyCount++;
-                    log.AppendLine($"  {connectionNode.Name} ↔ {capNode.Name}: ペナルティばね Kbig={Kbig:E1}");
+                    log.AppendLine($"  {connectionNode.Name} ↔ {capNode.Name}: ペナルティばね KbigT={KbigT:E1}, KbigR={KbigR:E1}");
                 }
 
                 // PileNode-0 → CapNode slave（全6DOF: Ux,Uy,Uz,Rx,Ry,Rz）

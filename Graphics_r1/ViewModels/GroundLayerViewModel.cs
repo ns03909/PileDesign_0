@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using AvalonDock.Layout;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -19,6 +19,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using PileDesign.Services;
 //using System.Windows.Media;
 
 namespace PileDesign.ViewModels
@@ -542,7 +543,7 @@ namespace PileDesign.ViewModels
 
             if (errors.Count > 0)
             {
-                MessageBox.Show(string.Join("\n", errors), "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show(string.Join("\n", errors), "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -552,7 +553,7 @@ namespace PileDesign.ViewModels
             // 地盤が1つしかない場合は削除不可
             if (GroundsInput.Count <= 1)
             {
-                MessageBox.Show("地盤が1つしか存在しないため、削除できません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show("地盤が1つしか存在しないため、削除できません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -560,12 +561,12 @@ namespace PileDesign.ViewModels
             int index = GroundNo - 1;
             if (index < 0 || index >= GroundsInput.Count)
             {
-                MessageBox.Show("削除対象が選択されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("削除対象が選択されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             // 確認メッセージ
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 $"地盤番号 {GroundNo} を削除しますか？\n元に戻せません。",
                 "確認",
                 MessageBoxButton.YesNo,
@@ -712,8 +713,8 @@ namespace PileDesign.ViewModels
                 {
                     (custom.Level1NonLiq, "L1 非液状化", NikkenSKColor.Green),
                     (custom.Level1Liq, "L1 液状化", NikkenSKColor.SkyBlue),
-                    (custom.Level2NonLiq, "L2 非液状化", NikkenSKColor.Red),
-                    (custom.Level2Liq, "L2 液状化", NikkenSKColor.PaleRed),
+                    (custom.Level2NonLiq, "L2 非液状化", NikkenSKColor.PaleRed),
+                    (custom.Level2Liq, "L2 液状化", NikkenSKColor.LineOrange),
                 };
 
                 foreach (var (profile, label, color) in caseProfiles)
@@ -1718,7 +1719,7 @@ namespace PileDesign.ViewModels
             // 必要に応じてメッセージ表示
             if (hasError)
             {
-                MessageBox.Show(errorMessage, "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(errorMessage, "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -2011,7 +2012,7 @@ namespace PileDesign.ViewModels
                 if (hasWarning)
                 {
                     warningMessage += "\n状態を保存してウィンドウを閉じますか？";
-                    MessageBoxResult result = MessageBox.Show(warningMessage, "警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+                    MessageBoxResult result = MessageService.Show(warningMessage, "警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
                     if (result == MessageBoxResult.Cancel) return;
                 }
 
@@ -2029,7 +2030,7 @@ namespace PileDesign.ViewModels
 
                         if (HasCustomDispWarnings)
                         {
-                            MessageBoxResult dispResult = MessageBox.Show(
+                            MessageBoxResult dispResult = MessageService.Show(
                                 $"地盤番号{i + 1}の任意地盤変位に警告があります:\n\n{CustomDispWarnings}\n\n状態を保存してウィンドウを閉じますか？",
                                 "任意地盤変位 警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
                             if (dispResult == MessageBoxResult.Cancel) return;
@@ -2051,16 +2052,11 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnCancel()
         {
-            // InputModel.GroundsInputをクリア
-            InputModel.GroundsInput.Clear();
-
-            // PrevGroundsInputの内容をInputModel.GroundsInputに追加
-            foreach (var groundInput in PrevGroundsInput)
-            {
-                InputModel.GroundsInput.Add(groundInput.DeepCopy());
-            }
-
-            // ダイアログを閉じる
+            // ViewModel は自前の GroundsInput (DeepCopy) を編集対象としており、
+            // 編集中に InputModel.GroundsInput は変更されない。
+            // よってキャンセル時に InputModel.GroundsInput を Clear+Add する必要はない。
+            // (旧実装は CollectionChanged を発火させて SoilPiles 再生成 → IsElementSplit=false の
+            //  リセットを引き起こしていた)
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 

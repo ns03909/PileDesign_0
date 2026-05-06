@@ -47,7 +47,7 @@ namespace PileDesign.ViewModels
             var oldValue = InputModel.FundamentalInput.ReferenceAltitude;
             if (oldValue == value) return;
 
-            // 解析結果・要素分割があればユーザーに確認（キャンセルなら値を戻す）
+            // 解析結果・杭要素分割があればユーザーに確認（キャンセルなら値を戻す）
             if (!_mainWindowViewModel.ConfirmResetAllForGeometryChange("Z=0 の標高の変更"))
             {
                 _suppressReferenceAltitudeConfirm = true;

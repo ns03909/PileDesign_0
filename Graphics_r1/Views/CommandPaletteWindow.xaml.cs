@@ -1,4 +1,4 @@
-using PileDesign.ViewModels;
+﻿using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using PileDesign.Services;
 
 namespace PileDesign.Views
 {
@@ -132,7 +133,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"コマンド実行に失敗しました:\n{ex.Message}", "コマンドパレット",
+                MessageService.Show($"コマンド実行に失敗しました:\n{ex.Message}", "コマンドパレット",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -179,7 +180,7 @@ namespace PileDesign.Views
                 () => vm.OpenVerticalBeamCalculationCommand?.Execute(null));
             Add(list, "群杭沈下解析", "グループ杭沈下解析", null, "group pile settlement 群杭",
                 () => vm.PileGroupSettlementAnalysisCommand?.Execute(null));
-            Add(list, "要素分割ウィンドウ", "杭の要素分割設定", null, "element division 要素 分割",
+            Add(list, "杭要素分割ウィンドウ", "杭の杭要素分割設定", null, "element division 要素 分割",
                 () => vm.OpenElementDivisionWindowCommand?.Execute(null));
 
             // ── 入力ウィンドウ ────────────────────────────────────────

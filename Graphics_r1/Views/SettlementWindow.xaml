@@ -35,27 +35,27 @@
         
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#238966"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#F7B515"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#E95541"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#D82531"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
@@ -581,7 +581,7 @@
                         <ScottPlot:WpfPlot x:Name="wpfPlotCircum" Grid.Row="1" Grid.Column="1" />
                         <TextBlock Text="{Binding CrosshairPositionText_PileCircumstance}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
 
-                        <common:EnhancedDataGrid x:Name="DataGridCircum"
+                        <common:EnhancedDataGrid x:Name="DataGridCircum" CanUserSortColumns="False"
                             Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
                             ItemsSource="{Binding SoilPile.PileCircumVerticals}"
                                   SelectedItem="{Binding SelectedPileCircumstanceVertical}"

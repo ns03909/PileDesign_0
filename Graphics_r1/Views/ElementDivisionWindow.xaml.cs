@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using PileDesign.Services;
 
 namespace PileDesign.Views
 {
@@ -104,7 +105,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "初期化エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(ex.Message, "初期化エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 Close();
                 return;
             }
@@ -495,7 +496,7 @@ namespace PileDesign.Views
         private void InitializePaneMaximizer()
         {
             _paneMaximizer = new PileDesign.Common.PaneFloatMaximizer(dockingManager);
-            _paneMaximizer.Register("Youso", YousoTab, ButtonMaximizeYouso, "要素分割");
+            _paneMaximizer.Register("Youso", YousoTab, ButtonMaximizeYouso, "杭要素分割");
             _paneMaximizer.Register("Shape", ShapeTab, ButtonMaximizeShape, "杭姿図");
             _paneMaximizer.Register("Kh",    KhTab,    ButtonMaximizeKh,    "水平地盤反力");
             _paneMaximizer.Register("Graph", GraphTab, ButtonMaximizeGraph, "グラフ");

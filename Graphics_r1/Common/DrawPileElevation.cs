@@ -31,7 +31,8 @@ namespace PileDesign.Common
             bool showLiquefactionFL = false,
             bool showGroundDisplacement = false,
             int seismicLevelIndex = 0,
-            bool displacementWithLiquefaction = false)
+            bool displacementWithLiquefaction = false,
+            bool showUnconfinedCompressiveStrength = false)
 
         {
             if (canvas == null || canvas.ActualWidth == 0 || canvas.ActualHeight == 0) return;
@@ -56,7 +57,7 @@ namespace PileDesign.Common
             // 杭の深さを複数のソースから計算
             double pileDepth = pileLengthFromSegments;
 
-            // 要素分割点がある場合は、分割点の範囲も考慮
+            // 杭要素分割点がある場合は、分割点の範囲も考慮
             if (zs != null && zs.Count >= 2)
             {
                 // zsの範囲（最浅点から最深点までの距離）
@@ -94,6 +95,9 @@ namespace PileDesign.Common
 
                 if (showGroundDisplacement)
                     DrawDisplacementValues(canvas, groundInput, pileTopAltitude, ratio, topMargin, seismicLevelIndex, displacementWithLiquefaction);
+
+                if (showUnconfinedCompressiveStrength)
+                    DrawQuValues(canvas, groundInput, pileTopAltitude, ratio, topMargin);
             }
 
             foreach (var segment in pileBodySegments)
@@ -381,23 +385,17 @@ namespace PileDesign.Common
             double waterAltitude = groundInput.GroundTopAltitude + groundInput.GroundWaterGLDepth;
             double yWater = (-waterAltitude + pileTopAltitude) * ratio + topMargin;
 
-            // メインライン (Nikken DeepBlue、地盤ウィンドウのグラフと統一: 太さ 2)
+            // メインライン (Nikken DeepBlue、▽ の下端頂点が乗る位置)
             var mainColor = Color.FromRgb(0x32, 0x71, 0xAD); // NikkenDeepBlueColor #3271AD
-            DrawLine(canvas, 0, yWater, canvasWidth, yWater, new SolidColorBrush(mainColor), 0, 2);
+            DrawLine(canvas, 0, yWater, canvasWidth, yWater, new SolidColorBrush(mainColor), 0, 1.0);
 
-            // Y 軸レンジから線間隔を決定 (地層底までの 0.5%)
-            double range = 0;
-            if (groundInput.GroundLayers != null && groundInput.GroundLayers.Count > 0)
-            {
-                double bottomAlt = groundInput.GroundLayers[^1].BottomAltitude;
-                range = Math.Abs(groundInput.GroundTopAltitude - bottomAlt);
-            }
-            double lineGap = range > 0 ? range / 200.0 * ratio : 2.0;
-            if (lineGap < 1.5) lineGap = 1.5;
+            // 直下サブラインの間隔は杭/地盤の深さに依存しない一定の px 値で描画
+            const double lineGap = 7.0;
 
-            // 直下 3 本 (alpha 200, 130, 70、太さ 1 — 地盤ウィンドウと統一)
-            // 直接 Line を生成 (DrawLine ヘルパー経由だと StrokeDashArray=[0] で薄い線が不安定)
-            byte[] alphas = [200, 130, 70];
+            // 主線 + サブ 3 本 = 計 4 本のラインで地下水位を表現。
+            // すべて細め (1.0 px) で統一し、4 本線として視認できるようにする。
+            // サブラインは下に行くほど薄くなる漸減アルファ。
+            byte[] alphas = [220, 170, 120];
             for (int i = 0; i < alphas.Length; i++)
             {
                 double y = yWater + (i + 1) * lineGap;
@@ -406,45 +404,64 @@ namespace PileDesign.Common
                 var subLine = new Line
                 {
                     Stroke = transBrush,
-                    StrokeThickness = 1,
+                    StrokeThickness = 1.0,
                     X1 = 0, Y1 = y,
-                    X2 = canvasWidth, Y2 = y
+                    X2 = canvasWidth, Y2 = y,
+                    SnapsToDevicePixels = true
                 };
+                System.Windows.Media.RenderOptions.SetEdgeMode(subLine, System.Windows.Media.EdgeMode.Aliased);
                 canvas.Children.Add(subLine);
             }
 
-            // 「▽GWT」マーカー (左端)、土層境界と区別しやすくするための識別ラベル
+            // 「▽GWT」マーカー (左端)。▽ の下側頂点 ≒ フォントの baseline 位置に来るため、
+            // baseline を主線 (yWater) に合わせて配置する (TextBlock の bottom 揃えだと
+            // descender 分だけ ▽ 先端が主線より上にズレる)。
+            // 背景は透明に: 半透明白を入れると baseline 揃え時に主線・サブ線の上を覆い
+            // 「▽直下に青線が見えない」現象が発生する。
             var label = new TextBlock
             {
                 Text = "▽GWT",
                 Foreground = new SolidColorBrush(mainColor),
                 FontSize = 10,
                 FontWeight = FontWeights.Bold,
-                Background = new SolidColorBrush(Color.FromArgb(180, 255, 255, 255))
+                Background = null
             };
             label.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            double baseline = label.BaselineOffset;
+            if (double.IsNaN(baseline) || baseline <= 0)
+                baseline = label.DesiredSize.Height * 0.8; // フォールバック (heuristic)
             Canvas.SetLeft(label, 2);
-            Canvas.SetTop(label, yWater - label.DesiredSize.Height);
+            Canvas.SetTop(label, yWater - baseline);
             canvas.Children.Add(label);
         }
 
         // 各データ点に半透明のホバーマーカーを追加 (ToolTip 表示用)
-        private static void AddHoverMarker(Canvas canvas, double x, double y, string tooltipText, Brush color)
+        // invisible=true のときはマーカー本体を非表示にし、ヒット領域だけを確保する (例: qu 階段グラフ)。
+        private static void AddHoverMarker(Canvas canvas, double x, double y, string tooltipText, Brush color, bool invisible = false)
         {
-            const double markerSize = 5.0;
-            var srcColor = ((SolidColorBrush)color).Color;
+            double markerSize = invisible ? 12.0 : 5.0;
             var ellipse = new System.Windows.Shapes.Ellipse
             {
                 Width = markerSize,
                 Height = markerSize,
-                // 透過すぎると Hit-Test が抜けるため不透明度を上げる
-                Fill = new SolidColorBrush(Color.FromArgb(120, srcColor.R, srcColor.G, srcColor.B)),
-                Stroke = color,
-                StrokeThickness = 1.0,
                 ToolTip = new System.Windows.Controls.ToolTip { Content = tooltipText },
                 Cursor = System.Windows.Input.Cursors.Hand,
                 IsHitTestVisible = true
             };
+            if (invisible)
+            {
+                // Brushes.Transparent はヒットテスト可能 (alpha=0 でも入力捕捉される)。
+                ellipse.Fill = System.Windows.Media.Brushes.Transparent;
+                ellipse.Stroke = null;
+            }
+            else
+            {
+                var srcColor = ((SolidColorBrush)color).Color;
+                // 透過すぎると Hit-Test が抜けるため不透明度を上げる
+                ellipse.Fill = new SolidColorBrush(Color.FromArgb(120, srcColor.R, srcColor.G, srcColor.B));
+                ellipse.Stroke = color;
+                ellipse.StrokeThickness = 1.0;
+            }
             // ToolTip を素早く表示
             System.Windows.Controls.ToolTipService.SetInitialShowDelay(ellipse, 100);
             System.Windows.Controls.ToolTipService.SetBetweenShowDelay(ellipse, 0);
@@ -455,7 +472,10 @@ namespace PileDesign.Common
         }
 
 
-        // N値描画メソッド
+        // 土層 N 値のステップ図描画用ブラシ (土質点N値の灰色折れ線と区別)
+        private static readonly SolidColorBrush LayerNStrokeBrush = new(Color.FromRgb(60, 60, 60)); // 濃い灰
+
+        // N値描画メソッド (土質点 N 値の折れ線 + 土層 N 値の階段図)
         private static void DrawNValues(
             Canvas canvas, GroundInput groundInput, double pileTopAltitude, double ratio, double topMargin)
         {
@@ -480,6 +500,49 @@ namespace PileDesign.Common
             };
 
             canvas.Children.Add(polyline);
+
+            // 土層 N 値の階段図 (GroundLayer.NValue を層境で階段状に描画)
+            if (groundInput.GroundLayers != null && groundInput.GroundLayers.Count > 0)
+            {
+                var stepPoints = new PointCollection();
+                double topAlt = groundInput.GroundTopAltitude;
+                double prevN = Math.Min(Math.Max(groundInput.GroundLayers[0].NValue, 0.0), 60.0);
+                double yTop0 = (-topAlt + pileTopAltitude) * ratio + topMargin;
+                stepPoints.Add(new Point(prevN / 60.0 / 4.0 * canvasWidth, yTop0));
+
+                foreach (var layer in groundInput.GroundLayers)
+                {
+                    double n = Math.Min(Math.Max(layer.NValue, 0.0), 60.0);
+                    double yBot = (-layer.BottomAltitude + pileTopAltitude) * ratio + topMargin;
+                    if (Math.Abs(n - prevN) > 1e-9)
+                    {
+                        // 層境で水平セグメント (前のN値→現在のN値) を挿入
+                        double yLayerTop = stepPoints[^1].Y;
+                        stepPoints.Add(new Point(n / 60.0 / 4.0 * canvasWidth, yLayerTop));
+                    }
+                    stepPoints.Add(new Point(n / 60.0 / 4.0 * canvasWidth, yBot));
+                    prevN = n;
+                }
+
+                canvas.Children.Add(new Polyline
+                {
+                    Stroke = LayerNStrokeBrush,
+                    StrokeThickness = 1.2,
+                    Points = stepPoints,
+                });
+
+                // 各層中心に不可視ホバーマーカー (層 N 値の数値表示)
+                double cumTop = topAlt;
+                foreach (var layer in groundInput.GroundLayers)
+                {
+                    double n = Math.Min(Math.Max(layer.NValue, 0.0), 60.0);
+                    double yMid = (-(cumTop + layer.BottomAltitude) / 2.0 + pileTopAltitude) * ratio + topMargin;
+                    double xMark = n / 60.0 / 4.0 * canvasWidth;
+                    AddHoverMarker(canvas, xMark, yMid,
+                        $"層: {layer.Name}\n土層 N値 = {layer.NValue:0.#}", LayerNStrokeBrush, invisible: true);
+                    cumTop = layer.BottomAltitude;
+                }
+            }
 
             // 各点にホバーマーカー (N値の数値表示)
             foreach (var (x, y, val, dep) in pointInfo)
@@ -517,6 +580,19 @@ namespace PileDesign.Common
                 Canvas.SetTop(text, y1 - textHeight); // 文字の位置を調整
                 canvas.Children.Add(text);
             }
+
+            // 軸タイトル「N値」(qu (= 2Cu) と対になる位置: スケール目盛の上、左寄せ)
+            var nTitle = new TextBlock
+            {
+                Text = "N値",
+                Foreground = Brushes.Black,
+                FontSize = 10,
+                FontWeight = FontWeights.Bold
+            };
+            nTitle.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            Canvas.SetLeft(nTitle, 0);
+            Canvas.SetTop(nTitle, y1 - nTitle.DesiredSize.Height * 2.0 - 2);
+            canvas.Children.Add(nTitle);
         }
 
         // 落ち着いた色のブラシ (再利用)
@@ -705,6 +781,107 @@ namespace PileDesign.Common
             };
             title.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
             // 右揃え (右端 = rightEnd)
+            Canvas.SetLeft(title, rightEnd - title.DesiredSize.Width);
+            Canvas.SetTop(title, y1 - title.DesiredSize.Height * 2.0 - 2);
+            canvas.Children.Add(title);
+        }
+
+        // 一軸圧縮強度 qu (= 2 Cu) 描画メソッド (杭姿図右側に重ね描き、auto-scale、左→右で値が増加)
+        // 粘性土層の Cu (kN/m²) を 2 倍した qu を、層境で階段状に表示する。
+        private static readonly SolidColorBrush QuStrokeBrush = new(Color.FromRgb(120, 80, 130)); // 落ち着いた紫系
+        private static readonly SolidColorBrush QuGridBrush   = new(Color.FromArgb(48, 120, 80, 130));
+
+        private static void DrawQuValues(
+            Canvas canvas, GroundInput groundInput, double pileTopAltitude, double ratio, double topMargin)
+        {
+            if (groundInput?.GroundLayers == null || groundInput.GroundLayers.Count == 0) return;
+
+            // Cu>0 の層が一つもなければ描画しない
+            double maxQu = groundInput.GroundLayers.Max(l => 2.0 * Math.Max(0.0, l.Cohesive));
+            if (maxQu <= 0) return;
+
+            double scaleMax = NiceCeil(maxQu);
+
+            double canvasWidth = canvas.ActualWidth;
+            double leftOrigin = canvasWidth * 0.72;       // qu = 0
+            double rightEnd   = canvasWidth * 0.96;       // qu = scaleMax
+            double xScale = (rightEnd - leftOrigin) / scaleMax;
+
+            // 階段状ポリラインを構築 (各層: 上端→下端で qu 一定)
+            var points = new PointCollection();
+            double topAlt = groundInput.GroundTopAltitude;
+            double prevQu = 2.0 * Math.Max(0.0, groundInput.GroundLayers[0].Cohesive);
+            double yTop = (-topAlt + pileTopAltitude) * ratio + topMargin;
+            points.Add(new Point(leftOrigin + prevQu * xScale, yTop));
+
+            foreach (var layer in groundInput.GroundLayers)
+            {
+                double qu = 2.0 * Math.Max(0.0, layer.Cohesive);
+                double yBot = (-layer.BottomAltitude + pileTopAltitude) * ratio + topMargin;
+                // 層上端 (前層との境界) で qu が変わる場合は水平セグメントを挿入
+                if (Math.Abs(qu - prevQu) > 1e-9)
+                {
+                    double yLayerTop = points[^1].Y;
+                    points.Add(new Point(leftOrigin + qu * xScale, yLayerTop));
+                }
+                points.Add(new Point(leftOrigin + qu * xScale, yBot));
+                prevQu = qu;
+            }
+
+            canvas.Children.Add(new Polyline
+            {
+                Stroke = QuStrokeBrush,
+                StrokeThickness = 1.5,
+                Points = points
+            });
+
+            // 各層中心にホバーマーカー (qu 値表示)
+            double cumTop = topAlt;
+            foreach (var layer in groundInput.GroundLayers)
+            {
+                double qu = 2.0 * Math.Max(0.0, layer.Cohesive);
+                if (qu <= 0) { cumTop = layer.BottomAltitude; continue; }
+                double yMid = (-(cumTop + layer.BottomAltitude) / 2.0 + pileTopAltitude) * ratio + topMargin;
+                double xMark = leftOrigin + qu * xScale;
+                AddHoverMarker(canvas, xMark, yMid,
+                    $"層: {layer.Name}\nCu = {layer.Cohesive:0.#} kN/m²\nqu (= 2Cu) = {qu:0.#} kN/m²", QuStrokeBrush, invisible: true);
+                cumTop = layer.BottomAltitude;
+            }
+
+            double y1 = (-topAlt + pileTopAltitude) * ratio + topMargin;
+            double y2 = (-groundInput.GroundLayers[^1].BottomAltitude + pileTopAltitude) * ratio + topMargin;
+            const int tickCount = 4;
+            for (int k = 0; k <= tickCount; k++)
+            {
+                double v = scaleMax * k / tickCount;
+                double x = leftOrigin + v * xScale;
+                canvas.Children.Add(new Line
+                {
+                    Stroke = QuGridBrush,
+                    StrokeThickness = 1,
+                    X1 = x, X2 = x, Y1 = y1, Y2 = y2
+                });
+
+                var text = new TextBlock
+                {
+                    Text = v.ToString("0"),
+                    Foreground = QuStrokeBrush,
+                    FontSize = 10
+                };
+                text.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                Canvas.SetLeft(text, x - text.DesiredSize.Width / 2);
+                Canvas.SetTop(text, y1 - text.DesiredSize.Height);
+                canvas.Children.Add(text);
+            }
+
+            var title = new TextBlock
+            {
+                Text = "qu (= 2Cu) kN/m²",
+                Foreground = QuStrokeBrush,
+                FontSize = 10,
+                FontWeight = FontWeights.Bold
+            };
+            title.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
             Canvas.SetLeft(title, rightEnd - title.DesiredSize.Width);
             Canvas.SetTop(title, y1 - title.DesiredSize.Height * 2.0 - 2);
             canvas.Children.Add(title);

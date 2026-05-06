@@ -136,5 +136,23 @@ namespace PileDesign.Common
                 ?? throw new InvalidOperationException($"DeepCopy (JSON) of {typeof(T).Name} returned null");
             return clone;
         }
+
+        /// <summary>
+        /// コレクション全体を per-item JSON で deep clone し、ObservableCollection に詰めて返す。
+        /// 個々の item が CloneJson に失敗 (null 返却) した場合は除外する。
+        /// source が null のとき、null を返す。
+        /// </summary>
+        public static System.Collections.ObjectModel.ObservableCollection<T> CloneCollectionViaJson<T>(
+            System.Collections.Generic.IEnumerable<T> source) where T : class
+        {
+            if (source is null) return null;
+            var result = new System.Collections.ObjectModel.ObservableCollection<T>();
+            foreach (var item in source)
+            {
+                var cloned = CloneJson(item);
+                if (cloned != null) result.Add(cloned);
+            }
+            return result;
+        }
     }
 }

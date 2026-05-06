@@ -147,6 +147,10 @@ namespace PileDesign.ViewModels
             // 最終描画（UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない）
             UpdateWindowImmediate();
 
+            // タイトルバーに例題名を表示 (ファイル保存または別ファイル読込でクリアされる)
+            CurrentFilePath = null;
+            LoadedExampleName = displayName;
+
             // 読み込み完了メッセージ
             ShowToast($"{displayName}を読み込みました。");
         }
@@ -170,7 +174,7 @@ namespace PileDesign.ViewModels
             // SoilPile再生成通知を抑制（読み込み完了後に一括で行う）
             CurrentInputModel.SuppressNotifications();
 
-            // 要素分割・解析状態をリセット
+            // 杭要素分割・解析状態をリセット
             IsElementSplit = false;
             IsHorizontalAnalysisDone = false;
             IsVerticalAnalysisDone = false;
@@ -241,6 +245,10 @@ namespace PileDesign.ViewModels
             // 最終描画（UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない）
             UpdateWindowImmediate();
 
+            // タイトルバーに例題名を表示 (ファイル保存または別ファイル読込でクリアされる)
+            CurrentFilePath = null;
+            LoadedExampleName = displayName;
+
             // 読み込み完了メッセージ
             ShowToast($"{displayName}を読み込みました。");
         }
@@ -252,7 +260,7 @@ namespace PileDesign.ViewModels
             if (!TryStartExample(nameof(Example3_1))) return;
             try
             {
-                await LoadPileExampleAsync("PileExample3_1", "設計例3.1");
+                await LoadPileExampleAsync("PileExample3_1", "設計例集3.1");
             }
             finally
             {
@@ -268,7 +276,7 @@ namespace PileDesign.ViewModels
             if (!TryStartExample(nameof(Example3_2))) return;
             try
             {
-                await LoadPileExampleAsync("PileExample3_2", "設計例3.2");
+                await LoadPileExampleAsync("PileExample3_2", "設計例集3.2");
             }
             finally
             {
@@ -285,7 +293,7 @@ namespace PileDesign.ViewModels
             if (!TryStartExample(nameof(Example3_3))) return;
             try
             {
-                await LoadPileExampleAsync("PileExample3_3", "設計例3.3");
+                await LoadPileExampleAsync("PileExample3_3", "設計例集3.3");
             }
             finally
             {
@@ -302,7 +310,7 @@ namespace PileDesign.ViewModels
             if (!TryStartExample(nameof(Example3_4))) return;
             try
             {
-                await LoadPileExampleAsync("PileExample3_4", "設計例3.4");
+                await LoadPileExampleAsync("PileExample3_4", "設計例集3.4");
             }
             finally
             {
@@ -319,7 +327,7 @@ namespace PileDesign.ViewModels
             if (!TryStartExample(nameof(Example3_5))) return;
             try
             {
-                await LoadPileExampleAsync("PileExample3_5", "設計例3.5");
+                await LoadPileExampleAsync("PileExample3_5", "設計例集3.5");
             }
             finally
             {
@@ -335,7 +343,7 @@ namespace PileDesign.ViewModels
             if (!TryStartExample(nameof(ExampleK8))) return;
             try
             {
-                await LoadPileExampleAsync("PileExampleK8", "関東支部8");
+                await LoadPileExampleAsync("PileExampleK8", "関東支部 計算例8");
             }
             finally
             {
@@ -377,7 +385,7 @@ namespace PileDesign.ViewModels
             if (!TryStartExample(nameof(Example7))) return;
             try
             {
-                await LoadPileExampleAsync("PileExample7", "計算例7");
+                await LoadPileExampleAsync("PileExample7", "基礎指針'19 計算例7");
             }
             finally
             {
@@ -427,7 +435,7 @@ namespace PileDesign.ViewModels
             if (!TryStartExample(nameof(ExampleK7))) return;
             try
             {
-                await LoadGroupSettlementExampleAsync("GroupSettlementK7", "設計例7");
+                await LoadGroupSettlementExampleAsync("GroupSettlementK7", "関東支部 設計例7");
             }
             finally
             {
@@ -459,7 +467,7 @@ namespace PileDesign.ViewModels
             if (!TryStartExample(nameof(OnExample2_1))) return;
             try
             {
-                await LoadGroupSettlementExampleAsync("GroupSettlement2_1", "設計例2.1");
+                await LoadGroupSettlementExampleAsync("GroupSettlement2_1", "設計例集2.1");
             }
             finally
             {

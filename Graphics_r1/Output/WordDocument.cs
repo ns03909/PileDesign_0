@@ -3272,10 +3272,10 @@ namespace PileDesign.Output
                 multiplot.AddPlots(1);
                 var plot = multiplot.Subplots.GetPlot(0);
 
-                // 限界状態カーブの色: 安全限界=Red(レベル2), 損傷限界=Green(レベル1), 使用限界=DeepBlue(常時)
+                // 限界状態カーブの色: 安全限界=PaleRed(レベル2), 損傷限界=Green(レベル1), 使用限界=DeepBlue(常時)
                 ScottPlot.Color[] lineColors = [
-                    ScottPlot.Color.FromSKColor(NikkenSKColor.Red),      // 安全限界(低減前)
-                    ScottPlot.Color.FromSKColor(NikkenSKColor.Red),      // 安全限界(低減後)
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.PaleRed),  // 安全限界(低減前)
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.PaleRed),  // 安全限界(低減後)
                     ScottPlot.Color.FromSKColor(NikkenSKColor.Green),    // 損傷限界(低減前)
                     ScottPlot.Color.FromSKColor(NikkenSKColor.Green),    // 損傷限界(低減後)
                     ScottPlot.Color.FromSKColor(NikkenSKColor.DeepBlue), // 使用限界(低減前)
@@ -3299,9 +3299,9 @@ namespace PileDesign.Output
                     }
                 }
 
-                // 散布点の色: レベル2=Red, レベル1=Green, 常時=DeepBlue
+                // 散布点の色: レベル2=PaleRed, レベル1=Green, 常時=DeepBlue
                 ScottPlot.Color[] scatterColors = [
-                    ScottPlot.Color.FromSKColor(NikkenSKColor.Red),
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.PaleRed),
                     ScottPlot.Color.FromSKColor(NikkenSKColor.Green),
                     ScottPlot.Color.FromSKColor(NikkenSKColor.DeepBlue),
                 ];

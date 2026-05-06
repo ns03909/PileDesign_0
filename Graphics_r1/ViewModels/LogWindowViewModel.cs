@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using System;
@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using PileDesign.Services;
 
 namespace PileDesign.ViewModels
 {
@@ -25,9 +26,6 @@ namespace PileDesign.ViewModels
         /// CollectionChanged を購読して増分のみを追加するので、数万行でも軽快。
         /// </summary>
         public ObservableCollection<string> LogLines { get; } = [];
-
-        [ObservableProperty]
-        private bool _autoScroll = true;
 
         [ObservableProperty]
         private string _statusText = "Ready";
@@ -152,7 +150,7 @@ namespace PileDesign.ViewModels
                         break;
                 }
                 StatusText = $"{LogLines.Count} log entries";
-                if (AutoScroll) RequestScrollToEnd();
+                RequestScrollToEnd();
             }
             catch
             {
@@ -162,8 +160,8 @@ namespace PileDesign.ViewModels
 
         private void RequestScrollToEnd()
         {
-            if (!AutoScroll) return;
             // 既に保留中ならスキップ。Background プライオリティで UI idle 時に 1 回だけ実行。
+            // (旧: AutoScroll トグル制御。「カテゴリ切替時 / オープン時 / バルク追加時に末尾へ」を内部固定し UI を簡素化)
             if (_scrollPending) return;
             _scrollPending = true;
             Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
@@ -236,22 +234,6 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
-        private void ClearLog()
-        {
-            var result = MessageBox.Show(
-                "ログ表示をクリアしますか？（元データは残ります）",
-                "確認",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
-            {
-                LogLines.Clear();
-                StatusText = "クリアしました";
-            }
-        }
-
-        [RelayCommand]
         private void ExportLog()
         {
             try
@@ -271,7 +253,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                MessageService.Show(
                     $"Error exporting log:\n{ex.Message}",
                     "Export Error",
                     MessageBoxButton.OK,

@@ -9,6 +9,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using PileDesign.Services;
 
 namespace PileDesign.Output
 {
@@ -47,7 +48,7 @@ namespace PileDesign.Output
             {
                 if (!File.Exists(imagePath))
                 {
-                    System.Windows.MessageBox.Show($"画像ファイルが見つかりません: {imagePath}");
+                    PileDesign.Services.MessageService.Show($"画像ファイルが見つかりません: {imagePath}");
                     return;
                 }
                 // mm→ピクセル変換
@@ -118,7 +119,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"画像挿入時にエラー: {ex}");
+                PileDesign.Services.MessageService.Show($"画像挿入時にエラー: {ex}");
             }
         }
 

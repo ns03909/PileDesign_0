@@ -1,4 +1,4 @@
-<Window x:Class="PileDesign.Views.CommandPaletteWindow"
+﻿<Window x:Class="PileDesign.Views.CommandPaletteWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="コマンドパレット"
@@ -38,7 +38,7 @@
             <!-- 検索ボックス -->
             <Border Grid.Row="1" Margin="12,4,12,8" Padding="8,4" CornerRadius="3"
                     BorderBrush="{StaticResource ControlBorderBrush}" BorderThickness="1"
-                    Background="#FAFAFA">
+                    Background="{StaticResource SubtleBackgroundBrush}">
                 <TextBox x:Name="SearchTextBox" BorderThickness="0" Background="Transparent"
                          FontSize="14" Padding="0"
                          TextChanged="SearchTextBox_TextChanged"

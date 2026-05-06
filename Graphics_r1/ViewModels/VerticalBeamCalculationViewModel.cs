@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MathNet.Numerics.LinearAlgebra;
 using PileDesign.FEM;
@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using PileDesign.Services;
 
 namespace PileDesign.ViewModels
 {
@@ -212,7 +213,7 @@ namespace PileDesign.ViewModels
             string error = ValidateInput();
             if (error != null)
             {
-                MessageBox.Show(error, "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show(error, "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -248,7 +249,7 @@ namespace PileDesign.ViewModels
                 await AddLogAsync($"解析中にエラーが発生しました: {ex.Message}");
                 Application.Current?.Dispatcher.Invoke(() =>
                 {
-                    MessageBox.Show($"解析エラー:\n{ex.Message}", "エラー",
+                    MessageService.Show($"解析エラー:\n{ex.Message}", "エラー",
                         MessageBoxButton.OK, MessageBoxImage.Error);
                 });
             }

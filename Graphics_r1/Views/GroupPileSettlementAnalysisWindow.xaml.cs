@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using PileDesign.Services;
 
 namespace PileDesign.Views
 {
@@ -102,7 +103,7 @@ namespace PileDesign.Views
                                     var previousItem = dataGrid.Items[rowIndex - 1] as SettlementSoilLayer; // SettlementSoilLayer は適切なモデルクラスに置き換えてください
                                     if (newValue >= previousItem.BottomAltitude)
                                     {
-                                        MessageBox.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                                        MessageService.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                                         e.Cancel = true;
 
                                         // 編集内容を元に戻す

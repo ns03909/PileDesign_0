@@ -11,6 +11,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using PileDesign.Services;
 
 
 namespace PileDesign.Common
@@ -320,7 +321,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"画像のコピーに失敗しました:\n{ex.Message}", "エラー",
+                MessageService.Show($"画像のコピーに失敗しました:\n{ex.Message}", "エラー",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -341,12 +342,12 @@ namespace PileDesign.Common
                 try
                 {
                     wpfPlot.Plot.Save(dlg.FileName, (int)wpfPlot.ActualWidth * 2, (int)wpfPlot.ActualHeight * 2);
-                    MessageBox.Show($"画像を保存しました:\n{dlg.FileName}", "保存完了",
+                    MessageService.Show($"画像を保存しました:\n{dlg.FileName}", "保存完了",
                         MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"画像の保存に失敗しました:\n{ex.Message}", "エラー",
+                    MessageService.Show($"画像の保存に失敗しました:\n{ex.Message}", "エラー",
                         MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
@@ -454,7 +455,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"クリップボードへのコピーに失敗しました:\n{ex.Message}",
+                MessageService.Show($"クリップボードへのコピーに失敗しました:\n{ex.Message}",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -480,7 +481,7 @@ namespace PileDesign.Common
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"CSVの保存に失敗しました:\n{ex.Message}",
+                    MessageService.Show($"CSVの保存に失敗しました:\n{ex.Message}",
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }

@@ -14,7 +14,7 @@ using Point = System.Windows.Point;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : RibbonWindow
+    public partial class MainWindow
     {
         // クラスフィールドのどこか適切な場所（他の _xxx フィールドに倣う）
         private ObservableCollection<Point3D>? _pendingSettlementPoints;
@@ -34,7 +34,7 @@ namespace PileDesign.Views
             {
                 if (viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
-                    //MessageBox.Show("個別十字荷重を作成するには地盤杭セットが作られている必要があります。キャンセルします。");
+                    //MessageService.Show("個別十字荷重を作成するには地盤杭セットが作られている必要があります。キャンセルします。");
                     return;
                 }
 

@@ -43,19 +43,19 @@
         </Style>
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#238966"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
         </Style>
         <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#F7B515"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
         </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
         </Style>
         <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#E95541"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
         <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#D82531"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
     </Window.Resources>
 
@@ -127,11 +127,10 @@
                                                             </StackPanel>
 
                                                             <!--<StackPanel Orientation="Horizontal">-->
-                                                            <common:EnhancedDataGrid x:Name="DataGridGroundLayer"
+                                                            <common:EnhancedDataGrid x:Name="DataGridGroundLayer" CanUserSortColumns="False"
                                                                     AutoGenerateColumns="False"
                                                                     HorizontalAlignment="Left"
                                                                     CanUserAddRows="False"
-                                                                    CanUserSortColumns="False"
                                                                     FrozenColumnCount="6"
                                                                     ItemsSource="{Binding SelectedGroundLayerCollection}"
                                                                     SelectedItem="{Binding SelectedGroundLayerOnDataGrid, Mode=TwoWay}"
@@ -246,11 +245,10 @@
                                                             <StackPanel Orientation="Horizontal" Grid.Row="0">
 
                                                             </StackPanel>
-                                                            <common:EnhancedDataGrid x:Name="DataGridPileLayout" ItemsSource="{Binding InputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
+                                                            <common:EnhancedDataGrid x:Name="DataGridPileLayout" CanUserSortColumns="False" ItemsSource="{Binding InputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
                                                                 SelectionChanged="DataGridPileLayout_SelectionChanged"
                                                                 AutoGenerateColumns="False"
                                                                 CanUserAddRows="False"
-                                                                CanUserSortColumns="False"
                                                                 VerticalScrollBarVisibility="Auto"
                                                                 HorizontalScrollBarVisibility="Auto"
                                                                 LoadingRow="DataGrid_LoadingRow_Numbering"

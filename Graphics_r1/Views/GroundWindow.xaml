@@ -156,19 +156,19 @@
 
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#238966"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
         </Style>
         <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#F7B515"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
         </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
         </Style>
         <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#E95541"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
         <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#D82531"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
 
         <Style x:Key="GrayCheckBoxStyle" TargetType="CheckBox">
@@ -789,8 +789,8 @@
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="Auto"/>
                                                 </Grid.RowDefinitions>
-                                                <Border Grid.Row="0" Grid.Column="0" Padding="10,4" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="1,1,0,1"><TextBlock Text="PL 値" FontWeight="Bold"/></Border>
-                                                <Border Grid.Row="0" Grid.Column="1" Padding="10,4" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="1"><TextBlock Text="液状化危険度" FontWeight="Bold"/></Border>
+                                                <Border Grid.Row="0" Grid.Column="0" Padding="10,4" Background="{StaticResource SurfaceMutedBrush}" BorderBrush="#CCC" BorderThickness="1,1,0,1"><TextBlock Text="PL 値" FontWeight="Bold"/></Border>
+                                                <Border Grid.Row="0" Grid.Column="1" Padding="10,4" Background="{StaticResource SurfaceMutedBrush}" BorderBrush="#CCC" BorderThickness="1"><TextBlock Text="液状化危険度" FontWeight="Bold"/></Border>
                                                 <Border Grid.Row="1" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="0"/></Border>
                                                 <Border Grid.Row="1" Grid.Column="1" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,1,1"><TextBlock Text="なし"/></Border>
                                                 <Border Grid.Row="2" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="0 &lt; PL ≤ 5"/></Border>
@@ -1604,11 +1604,10 @@
                                             <ColumnDefinition Width="auto"/>
                                         </Grid.ColumnDefinitions>
                                         <!--<StackPanel Orientation="Horizontal">-->
-                                        <common:EnhancedDataGrid x:Name="DataGridGroundLayer"
+                                        <common:EnhancedDataGrid x:Name="DataGridGroundLayer" CanUserSortColumns="False"
                                                 AutoGenerateColumns="False"
                                                 HorizontalAlignment="Stretch"
                                                 CanUserAddRows="False"
-                                                CanUserSortColumns="False"
                                                 FrozenColumnCount="6"
                                                 HorizontalScrollBarVisibility="Auto"
                                                 VerticalScrollBarVisibility="Auto"
@@ -2016,11 +2015,10 @@
                                         </ToolBar>
                                     </ToolBarTray>
 
-                                    <common:EnhancedDataGrid x:Name="DataGridGroundMass"
+                                    <common:EnhancedDataGrid x:Name="DataGridGroundMass" CanUserSortColumns="False"
                                               AutoGenerateColumns="False"
                                               HorizontalAlignment="Left"
                                             CanUserAddRows="False"
-                                              CanUserSortColumns="False"
                                                FrozenColumnCount="6"
 
 
@@ -2891,19 +2889,18 @@
                                                 ToolTip="基礎指針2019 4.5節の自動計算結果 (土質点ごとの DmaxU* または DmaxU*+ΣγcyH) を、選択中のケース (レベル/液状化条件) に合わせて標高Z・変位データグリッドにペーストします&#x0a;※既存データはクリアされます"/>
                                     </WrapPanel>
 
-                                    <common:EnhancedDataGrid x:Name="DataGridCustomDisplacement" Grid.Row="2"
+                                    <common:EnhancedDataGrid x:Name="DataGridCustomDisplacement" CanUserSortColumns="False" Grid.Row="2"
                                         ItemsSource="{Binding SelectedCustomDispProfile}"
                                         CellEditEnding="CustomDispDataGrid_CellEditEnding"
                                         PasteCompleted="CustomDispDataGrid_PasteCompleted"
                                         AutoGenerateColumns="False"
                                         CanUserAddRows="False"
                                         CanUserDeleteRows="False"
-                                        CanUserSortColumns="False"
                                         HeadersVisibility="All"
                                         RowHeaderWidth="30"
                                         GridLinesVisibility="All"
-                                        HorizontalGridLinesBrush="#E0E0E0"
-                                        VerticalGridLinesBrush="#E0E0E0"
+                                        HorizontalGridLinesBrush="{StaticResource SurfaceBorderBrush}"
+                                        VerticalGridLinesBrush="{StaticResource SurfaceBorderBrush}"
                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                         ToolTip="Excelから標高(m)・変位(mm)の2列をコピーしてCtrl+Vでペースト可能">
                                         <common:EnhancedDataGrid.ColumnHeaderStyle>
@@ -2968,7 +2965,7 @@
                                         <Border Margin="0,4,0,0" Padding="4" Background="#FFF3E0" BorderBrush="#FF9800" BorderThickness="1" CornerRadius="3"
                                                 Visibility="{Binding HasCustomDispWarnings, Converter={StaticResource BooleanToVisibilityConverter}}">
                                             <StackPanel>
-                                                <TextBlock Text="⚠ Warning" FontWeight="Bold" Foreground="#E65100" FontSize="12"/>
+                                                <TextBlock Text="⚠ Warning" FontWeight="Bold" Foreground="{StaticResource StatusWarningDarkBrush}" FontSize="12"/>
                                                 <TextBlock Text="{Binding CustomDispWarnings}" Foreground="#BF360C" FontSize="11" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </Border>

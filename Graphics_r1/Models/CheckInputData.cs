@@ -1,6 +1,7 @@
 ﻿using PileDesign.Models.InputData;
 using System.Collections.ObjectModel;
 using System.Windows;
+using PileDesign.Services;
 
 
 namespace PileDesign.Models
@@ -17,12 +18,12 @@ namespace PileDesign.Models
 
             if (message != "")
             {
-                MessageBox.Show(message);
+                MessageService.Show(message);
                 return false;
             }
             else
             {
-                MessageBox.Show("問題は検出されませんでした。\n" +
+                MessageService.Show("問題は検出されませんでした。\n" +
                     "\n杭体の存在高さ範囲すべてに選定された土層の定義が存在します。" +
                     "\n根入部の存在高さ範囲すべてに選定された土層の定義が存在します。");
                 return true;

@@ -10,7 +10,7 @@ using Point = System.Windows.Point;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : RibbonWindow
+    public partial class MainWindow
     {
         // 杭周地盤描画の更新
         private void UpdateGround3D()

@@ -9,6 +9,23 @@ namespace PileDesign.FEM
     {
         public List<(double Phi, double Moment)> Points { get; } = new();
 
+        // 2026-05-06: post-yield (φ > φ_last) で K_tan が 0 または微小になり Newton 方向が不定に
+        // なる問題対策。降伏時割線剛性 (= M_last / φ_last) の 1% を post-yield 接線勾配の下限とする。
+        // 自然な最終セグメント勾配 (strain hardening) がこの下限より大きければそちらを優先。
+        // 物理的影響は微小で、p-y curve の v22 修正および M-θ curve の同方針修正と整合。
+        private const double PostYieldSlopeRatio = 0.01;
+
+        // 末尾点の post-yield 接線勾配の下限値 = 0.01 × (M_last / φ_last)。
+        // Points[^1].Phi == 0 の場合は 0 (退化曲線)。
+        private double GetPostYieldSlopeFloor()
+        {
+            if (Points == null || Points.Count == 0) return 0.0;
+            double pLast = Points[^1].Phi;
+            if (pLast <= 0.0) return 0.0;
+            double secantAtYield = Points[^1].Moment / pLast;
+            return PostYieldSlopeRatio * secantAtYield;
+        }
+
         // 点列が φ ≥ 0 のみで定義されている場合に true。
         // この場合、負の φ に対しては原点対称（奇関数）として |φ| で評価し sign(φ) を乗じる。
         // counter-loading（βU=-1 等）で杭体が負の曲率側へ振れても、正側と同じ塑性挙動
@@ -96,12 +113,15 @@ namespace PileDesign.FEM
             }
             else
             {
+                // post-yield 外挿: 自然な最終セグメント勾配と「降伏時割線×1%」の大きい方を採用。
+                // 末尾点 (p1, m1) を起点に外挿して連続性を保つ。
                 var (p0, m0) = Points[^2];
                 var (p1, m1) = Points[^1];
                 double denom = (p1 - p0);
                 if (Math.Abs(denom) <= 0.0) return m1;
-                double k = (m1 - m0) / denom;
-                return m0 + k * (phi - p0);
+                double naturalSlope = (m1 - m0) / denom;
+                double extrapSlope = Math.Max(naturalSlope, GetPostYieldSlopeFloor());
+                return m1 + extrapSlope * (phi - p1);
             }
         }
 
@@ -155,8 +175,10 @@ namespace PileDesign.FEM
             }
 
             // 範囲外の場合は端部の傾きを使用
-            double result = (lookup < Points[0].Phi) ? slopes[0] : slopes[^1];
-            return result;
+            // post-yield (lookup > Points[^1].Phi): 自然な最終セグメント勾配と「降伏時割線×1%」の大きい方。
+            // EvaluateMomentCore の post-yield 外挿と整合させ K_tan = dM/dφ を保つ。
+            if (lookup < Points[0].Phi) return slopes[0];
+            return Math.Max(slopes[^1], GetPostYieldSlopeFloor());
         }
 
         // 割線剛性: M/φ（内力計算用）

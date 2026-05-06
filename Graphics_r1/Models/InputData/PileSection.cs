@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
+using PileDesign.Services;
 
 namespace PileDesign.Models.InputData
 {
@@ -860,7 +861,7 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
-                    MessageBox.Show($"杭径再計算中にエラーが発生しました。\n{ex.Message}", "杭径再計算エラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                    MessageService.Show($"杭径再計算中にエラーが発生しました。\n{ex.Message}", "杭径再計算エラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
         }
 
@@ -937,7 +938,7 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
-                    MessageBox.Show($"断面プロパティのリセット中にエラーが発生しました。\n{ex.Message}", "断面リセットエラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                    MessageService.Show($"断面プロパティのリセット中にエラーが発生しました。\n{ex.Message}", "断面リセットエラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
         }
 

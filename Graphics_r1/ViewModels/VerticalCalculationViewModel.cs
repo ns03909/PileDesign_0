@@ -4,6 +4,7 @@ using PileDesign.Models.InputData;
 using System;
 using System.Collections.ObjectModel;
 using System.Windows;
+using PileDesign.Services;
 
 namespace PileDesign.ViewModels
 {
@@ -71,7 +72,7 @@ namespace PileDesign.ViewModels
         {
             if (previousSelectedGroundNo != -1)
             {
-                MessageBoxResult result = MessageBox.Show($"地盤番号{previousSelectedGroundNo}の定義を保存しますか？", "確認", MessageBoxButton.YesNoCancel);
+                MessageBoxResult result = MessageService.Show($"地盤番号{previousSelectedGroundNo}の定義を保存しますか？", "確認", MessageBoxButton.YesNoCancel);
 
                 if (result == MessageBoxResult.Yes)
                 {

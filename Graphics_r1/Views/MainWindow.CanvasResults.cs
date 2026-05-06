@@ -17,7 +17,7 @@ using Point = System.Windows.Point;
 using Serilog;
 namespace PileDesign.Views
 {
-    public partial class MainWindow : RibbonWindow
+    public partial class MainWindow
     {
  
         private static IEnumerable<LoadCase> GetSelectedLoadCases(MainWindowViewModel vm)
@@ -295,10 +295,12 @@ namespace PileDesign.Views
                         continue;
                     }
 
-                    // 杭応力非表示モード: 基礎梁以外 (杭体・RigidLink 含む) を全部スキップ
-                    // 上面図モードと併用すると基礎梁応力だけが見えるようになる。
-                    if (viewModel.IsPileStressHidden && !beam.Name.StartsWith("FoundationBeam-"))
-                        continue;
+                    // 応力表示の有無 (チェック OFF でスキップ):
+                    //   - 杭応力非表示: 基礎梁以外 (杭体・RigidLink 含む) を全部スキップ
+                    //   - 基礎梁応力非表示: 基礎梁要素 (FoundationBeam-) を全部スキップ
+                    bool isFoundationBeam = beam.Name.StartsWith("FoundationBeam-");
+                    if (!viewModel.IsPileStressVisible && !isFoundationBeam) continue;
+                    if (!viewModel.IsFoundationBeamStressVisible && isFoundationBeam) continue;
 
                     // 接続用節点が非表示でもRigidLinkの応力図は描画する（スキップしない）
 
@@ -399,6 +401,49 @@ namespace PileDesign.Views
                         return Vector<double>.Build.DenseOfArray([mx, mz, my]);
                     else
                         return Vector<double>.Build.DenseOfArray([fx, fy, fz]);
+                }
+
+                // 「杭MaxMin」モード用の事前計算: 各杭の (max, min) 値の出現位置 (beam, I/J) を特定する。
+                // 表示時の値規約: I 端 = originalForceI, J 端 = -originalForceJ
+                // (line 502 の values リスト [originalForceI, originalForceI, -originalForceJ, -originalForceJ] と整合)
+                var pileMaxMinShow = new Dictionary<Beam, (bool showI, bool showJ)>();
+                if (viewModel.IsPileMaxMinResultValueVisibleOnly)
+                {
+                    var beamForceMap = beamResults.ToDictionary(t => t.beam, t => (t.originalForceI, t.originalForceJ));
+                    foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                    {
+                        var pileBeams = anaModel.GetPileBeams(pile);
+                        if (pileBeams == null || pileBeams.Count == 0) continue;
+
+                        Beam maxBeam = null; bool maxIsI = false; double maxVal = double.NegativeInfinity;
+                        Beam minBeam = null; bool minIsI = false; double minVal = double.PositiveInfinity;
+                        foreach (var b in pileBeams)
+                        {
+                            if (!beamForceMap.TryGetValue(b, out var force)) continue;
+                            double valI = force.originalForceI;
+                            double valJ = -force.originalForceJ;
+                            if (double.IsFinite(valI))
+                            {
+                                if (valI > maxVal) { maxVal = valI; maxBeam = b; maxIsI = true; }
+                                if (valI < minVal) { minVal = valI; minBeam = b; minIsI = true; }
+                            }
+                            if (double.IsFinite(valJ))
+                            {
+                                if (valJ > maxVal) { maxVal = valJ; maxBeam = b; maxIsI = false; }
+                                if (valJ < minVal) { minVal = valJ; minBeam = b; minIsI = false; }
+                            }
+                        }
+
+                        void Mark(Beam b, bool isI)
+                        {
+                            if (b == null) return;
+                            (bool showI, bool showJ) cur = pileMaxMinShow.TryGetValue(b, out var v) ? v : (false, false);
+                            if (isI) cur.showI = true; else cur.showJ = true;
+                            pileMaxMinShow[b] = cur;
+                        }
+                        Mark(maxBeam, maxIsI);
+                        Mark(minBeam, minIsI);
+                    }
                 }
 
                 foreach (var (beam, _, _, originalForceI, originalForceJ) in beamResults)
@@ -512,7 +557,20 @@ namespace PileDesign.Views
                     if (viewModel.IsResultValueVisible)
                     {
                         string format = "{0:N" + viewModel.DecimalPlaces + "}";
-                        if (viewModel.IsPileTopResultValueVisibleOnly && !isFoundationBeam)
+                        if (viewModel.IsPileMaxMinResultValueVisibleOnly && !isFoundationBeam)
+                        {
+                            // 各杭で算出した (max, min) の発生位置のみ描画
+                            if (pileMaxMinShow.TryGetValue(beam, out var show))
+                            {
+                                if (show.showI)
+                                    AddText3D(Brushes.Black, string.Format(format, originalForceI),
+                                        nodeIForce2D.X, nodeIForce2D.Y, "C", "C", 0.0);
+                                if (show.showJ)
+                                    AddText3D(Brushes.Black, string.Format(format, -originalForceJ),
+                                        nodeJForce2D.X, nodeJForce2D.Y, "C", "C", 0.0);
+                            }
+                        }
+                        else if (viewModel.IsPileTopResultValueVisibleOnly && !isFoundationBeam)
                         {
                             if (beam.IsPileHeadElement)
                             {
@@ -714,8 +772,10 @@ namespace PileDesign.Views
                             ? viewModel.DisplacementDiagramRatio * viewModel.ModelExtent / maxRawDisp
                             : 0);
 
-                    // DummyBeams（根入れ部）描画 — 非アクティブ杭が存在する場合はスキップ
-                    if (!hasInvisiblePile && viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane != null && anaModel?.DummyBeams != null)
+                    // DummyBeams（根入れ部）描画 — 非アクティブ杭が存在する場合はスキップ。
+                    // 杭変位非表示モードでは丸ごとスキップ (根入れ部は杭側の表現)。
+                    if (!hasInvisiblePile && viewModel.IsPileDisplacementVisible
+                        && viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane != null && anaModel?.DummyBeams != null)
                     {
                         foreach (var dummyBeam in anaModel.DummyBeams)
                         {
@@ -775,14 +835,19 @@ namespace PileDesign.Views
                         }
                     }
 
-                    // Beams（杭要素）描画 — 非アクティブ杭/基礎梁のビームはスキップ
+                    // Beams（杭要素 + 基礎梁）描画 — 非アクティブ杭/基礎梁のビームはスキップ
                     foreach (var beam in anaModel.Beams)
                     {
-                        if (beam.Name.StartsWith("FoundationBeam-"))
+                        bool isFoundationBeam = beam.Name.StartsWith("FoundationBeam-");
+                        if (isFoundationBeam)
                         {
                             if (invisibleFBNames.Contains(beam.Name)) continue;
                         }
                         else if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)) continue;
+
+                        // 変位表示の有無 (チェック OFF でスキップ)
+                        if (!viewModel.IsPileDisplacementVisible && !isFoundationBeam) continue;
+                        if (!viewModel.IsFoundationBeamDisplacementVisible && isFoundationBeam) continue;
 
                         // RigidLinkの変位図も描画する（スキップしない）
 
@@ -831,7 +896,7 @@ namespace PileDesign.Views
 
                         if (viewModel.IsResultValueVisible)
                         {
-                            bool isFoundationBeam = beam.Name.StartsWith("FoundationBeam-");
+                            // isFoundationBeam は外側ループで宣言済み (再宣言不要)
                             if (viewModel.IsPileTopResultValueVisibleOnly && !isFoundationBeam)
                             {
                                 if (beam.IsPileHeadElement)
@@ -1154,12 +1219,17 @@ namespace PileDesign.Views
                 foreach (var beam in anaModel.Beams)
                 {
                     // 表示フィルタ
-                    if (beam.Name.StartsWith("FoundationBeam-"))
+                    bool isFoundationBeam = beam.Name.StartsWith("FoundationBeam-");
+                    if (isFoundationBeam)
                     {
                         if (invisibleFBNames.Contains(beam.Name)) continue;
                     }
                     else if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam))
                         continue;
+
+                    // 変位表示の有無 (チェック OFF でスキップ)
+                    if (!viewModel.IsPileDisplacementVisible && !isFoundationBeam) continue;
+                    if (!viewModel.IsFoundationBeamDisplacementVisible && isFoundationBeam) continue;
 
                     DrawDeformedBeam(viewModel, anaModel, beam, selectedLoadCase, selectedLoadCombination,
                         dispScale, ResolvePath(beam.NodeI, beam.NodeJ));
@@ -1167,7 +1237,8 @@ namespace PileDesign.Views
             }
 
             // DummyBeam（座標変換なし → 直線補間で変形後位置を描画）
-            if (!hasInvisiblePile && anaModel.DummyBeams != null)
+            // 杭変位非表示モードでは丸ごとスキップ (根入れ部は杭側の表現)
+            if (!hasInvisiblePile && viewModel.IsPileDisplacementVisible && anaModel.DummyBeams != null)
             {
                 foreach (var db in anaModel.DummyBeams)
                 {
@@ -1176,11 +1247,46 @@ namespace PileDesign.Views
                 }
             }
 
+            // 表示対象杭の杭番号セットを構築 (hasInvisiblePile 時のみ。RotationalSpring と RigidBody の
+             // 杭連結フィルタに使用 — 非表示杭の代表節点〜接合節点〜杭頭リンクを描かないため)
+            HashSet<int> visiblePileNos = null;
+            if (hasInvisiblePile && viewModel.CurrentInputModel?.PileLayoutItems != null)
+            {
+                visiblePileNos = new HashSet<int>();
+                foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                {
+                    if (pile.IsVisible) visiblePileNos.Add(pile.No);
+                }
+            }
+
+            // ノード名 (CapNode-{No} / FoundationNode-P{No}) から杭番号を抽出して可視性判定
+            bool IsPileNodeOfVisiblePile(Node node)
+            {
+                if (visiblePileNos == null) return true;  // 全杭可視
+                if (node == null) return true;
+                string name = node.Name ?? "";
+                int dashIdx;
+                string prefixCap = "CapNode-";
+                string prefixFn = "FoundationNode-P";
+                if (name.StartsWith(prefixCap, StringComparison.Ordinal))
+                {
+                    if (int.TryParse(name.Substring(prefixCap.Length), out int no)) return visiblePileNos.Contains(no);
+                }
+                else if (name.StartsWith(prefixFn, StringComparison.Ordinal))
+                {
+                    if (int.TryParse(name.Substring(prefixFn.Length), out int no)) return visiblePileNos.Contains(no);
+                }
+                // 杭体ノードは visibleFemNodes 側で扱われる。それ以外 (一般節点等) は常に表示。
+                return true;
+            }
+
             // RotationalSpring（杭頭～接合節点のリンク要素）
             if (anaModel.RotationalSprings != null)
             {
                 foreach (var rs in anaModel.RotationalSprings)
                 {
+                    // 非表示杭に属する杭頭〜接合節点のリンクはスキップ
+                    if (!IsPileNodeOfVisiblePile(rs.NodeI) && !IsPileNodeOfVisiblePile(rs.NodeJ)) continue;
                     DrawDeformedTwoNodeLink(viewModel, anaModel, rs.NodeI, rs.NodeJ,
                         selectedLoadCase, selectedLoadCombination,
                         dispScale, ResolvePath(rs.NodeI, rs.NodeJ));
@@ -1204,6 +1310,9 @@ namespace PileDesign.Views
                     if (rb.MasterNode == null || rb.SlaveNodes == null) continue;
                     foreach (var slave in rb.SlaveNodes)
                     {
+                        // 非表示杭の代表節点〜接合節点 / 代表節点〜杭頭 リンクはスキップ
+                        if (!IsPileNodeOfVisiblePile(slave)) continue;
+
                         PathGeometry target = ResolvePath(rb.MasterNode, slave);
                         if (slave.Name.StartsWith("CapNode-") &&
                             capNodeToJointZ.TryGetValue(slave.Name, out double jointZ) &&
@@ -1505,7 +1614,7 @@ namespace PileDesign.Views
                 // 非 colorize 時は単色用（従来通り）
                 PathGeometry sectionPathGeo = colorize ? null : defaultPathGeo;
 
-                // 要素分割後のセグメント情報を取得（SoilPile経由）
+                // 杭要素分割後のセグメント情報を取得（SoilPile経由）
                 ObservableCollection<PileBodySegment> soilPileSegments = null;
                 if (pile.SoilPileAltNo > 0 &&
                     pile.SoilPileAltNo <= viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count)
@@ -2227,7 +2336,7 @@ namespace PileDesign.Views
             }
 
             // 選択されたタイプを取得
-            string springType = viewModel.AnalysisResultSoilSpringType ?? "R";
+            string springType = viewModel.AnalysisResultSoilSpringType ?? "RH";
 
             // 1) 全ばねの値を収集（カラーバー用） — 非アクティブ杭のばねはスキップ
             var allValues = new ObservableCollection<double>();
@@ -2315,8 +2424,8 @@ namespace PileDesign.Views
                         "RX" => new System.Windows.Media.Media3D.Vector3D(fx, 0, 0),
                         "RY" => new System.Windows.Media.Media3D.Vector3D(0, fy, 0),
                         "RZ" => new System.Windows.Media.Media3D.Vector3D(0, 0, fz),
-                        "R" => new System.Windows.Media.Media3D.Vector3D(fx, fy, fz),
-                        _ => new System.Windows.Media.Media3D.Vector3D(fx, fy, fz)
+                        "RH" => new System.Windows.Media.Media3D.Vector3D(fx, fy, 0),  // 水平合反力 (Z 成分は除外、MH と整合)
+                        _ => new System.Windows.Media.Media3D.Vector3D(fx, fy, 0)
                     };
 
                     // 表示スケール: 最大反力値で正規化し、比率×ModelExtentを適用
@@ -2392,8 +2501,8 @@ namespace PileDesign.Views
                 }
             }
 
-            // 3b) 杭先端反力の描画（R または RZ 選択時）
-            if (springType == "R" || springType == "RZ")
+            // 3b) 杭先端反力の描画（RH または RZ 選択時）
+            if (springType == "RH" || springType == "RZ")
             {
                 foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                 {
@@ -2405,17 +2514,16 @@ namespace PileDesign.Views
                     double tipFy = tipNode.CumulativeReaction.Fy;
                     double tipFz = tipNode.CumulativeReaction.Fz;
 
-                    // R選択時: 水平成分 sqrt(Fx²+Fy²) と鉛直成分 Fz を分けて描画
+                    // RH選択時: 水平成分 sqrt(Fx²+Fy²) のみ描画 (鉛直成分は RZ で別途)
                     // RZ選択時: Fz のみ描画
                     var components = new System.Collections.Generic.List<(double value, System.Windows.Media.Media3D.Vector3D dir)>();
 
-                    if (springType == "R")
+                    if (springType == "RH")
                     {
+                        // 水平合反力のみ描画 (Z は別タイプ RZ で表示する)
                         double tipRH = Math.Sqrt(tipFx * tipFx + tipFy * tipFy);
                         if (double.IsFinite(tipRH) && tipRH > 1e-15)
                             components.Add((tipRH, new System.Windows.Media.Media3D.Vector3D(tipFx, tipFy, 0)));
-                        if (double.IsFinite(tipFz) && Math.Abs(tipFz) > 1e-15)
-                            components.Add((tipFz, new System.Windows.Media.Media3D.Vector3D(0, 0, tipFz)));
                     }
                     else // RZ
                     {
@@ -2522,12 +2630,12 @@ namespace PileDesign.Views
                 "RX" => fx,
                 "RY" => fy,
                 "RZ" => fz,
-                "R" => Math.Sqrt(fx * fx + fy * fy + fz * fz),  // 全方向反力（符号反転の有無に影響されない絶対値）
+                "RH" => Math.Sqrt(fx * fx + fy * fy),  // 水平合反力 (絶対値、Z 成分は除外、MH と整合)
                 "MX" => mx,
                 "MY" => my,
                 "MZ" => mz,
                 "MH" => Math.Sqrt(mx * mx + my * my),  // 水平モーメント（絶対値）
-                _ => Math.Sqrt(fx * fx + fy * fy + fz * fz)     // デフォルトはR
+                _ => Math.Sqrt(fx * fx + fy * fy)      // デフォルトは RH
             };
         }
 
@@ -2541,12 +2649,12 @@ namespace PileDesign.Views
                 "RX" => "地盤反力RX",
                 "RY" => "地盤反力RY",
                 "RZ" => "地盤反力RZ",
-                "R" => "地盤反力R",
+                "RH" => "地盤反力RH",
                 "MX" => "地盤反力MX",
                 "MY" => "地盤反力MY",
                 "MZ" => "地盤反力MZ",
                 "MH" => "地盤反力MH",
-                _ => "地盤反力R"
+                _ => "地盤反力RH"
             };
         }
 

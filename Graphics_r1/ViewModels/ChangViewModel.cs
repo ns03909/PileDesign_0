@@ -21,6 +21,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 
 using Serilog;
+using PileDesign.Services;
 namespace PileDesign.ViewModels
 {
     public partial class ChangViewModel : BaseViewModel
@@ -506,13 +507,13 @@ namespace PileDesign.ViewModels
             var input = _inputModel;
             if (input == null)
             {
-                MessageBox.Show("InputModel が見つかりません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("InputModel が見つかりません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             if (input.PileBodies == null || input.PileBodies.Count == 0)
             {
-                MessageBox.Show("入力に杭体情報が含まれていません。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show("入力に杭体情報が含まれていません。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -632,7 +633,7 @@ namespace PileDesign.ViewModels
 
             RefreshPlots();
 
-            MessageBox.Show("InputModel を適用しました。\n" +
+            MessageService.Show("InputModel を適用しました。\n" +
                 (selectedLC != null && selectedComb != null
                     ? $"選択荷重: {selectedLC.LoadName} / 組合せ: {selectedComb.GetName()}\n全体水平力 (X 方向): {TotalHorizontalLoad:N0} kN\n"
                     : "荷重ケース／組合せが未選択のため水平力の設定は行っていません。\n") +
@@ -647,7 +648,7 @@ namespace PileDesign.ViewModels
             // Changs が空なら中止
             if (Changs == null || Changs.Count == 0)
             {
-                MessageBox.Show(
+                MessageService.Show(
                     "解析対象の Chang が1件も存在しません。解析を中止します。",
                     "計算中止",
                     MessageBoxButton.OK,
@@ -671,7 +672,7 @@ namespace PileDesign.ViewModels
                     sb.AppendLine($"行 {it.Index + 1}: Kh0 = {it.Chang.Kh0:G6}, β0 = {it.Chang.Beta0:G6}");
                 }
 
-                MessageBox.Show(
+                MessageService.Show(
                     $"以下の Chang で Kh0 または β0 が 0 または無効です。計算を中止します。\n\n{sb}",
                     "計算中止",
                     MessageBoxButton.OK,
@@ -718,7 +719,7 @@ namespace PileDesign.ViewModels
 
             if (!result.Success)
             {
-                MessageBox.Show(result.Error, "計算エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(result.Error, "計算エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 

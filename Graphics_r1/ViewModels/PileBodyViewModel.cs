@@ -14,6 +14,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using PileDesign.Services;
 
 namespace PileDesign.ViewModels
 {
@@ -327,7 +328,7 @@ namespace PileDesign.ViewModels
             // 杭体が1つしかない場合は削除不可
             if (PileBodies.Count <= 1)
             {
-                MessageBox.Show("杭体が1つしか存在しないため、削除できません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show("杭体が1つしか存在しないため、削除できません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -335,12 +336,12 @@ namespace PileDesign.ViewModels
             int index = PileBodyNo - 1;
             if (index < 0 || index >= PileBodies.Count)
             {
-                MessageBox.Show("削除対象が選択されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("削除対象が選択されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             // 確認メッセージ
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 $"杭体番号 {PileBodyNo} を削除しますか？\n元に戻せません。",
                 "確認",
                 MessageBoxButton.YesNo,
@@ -423,7 +424,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnOk()
         {
-            // 追加: 編集前に要素分割解除確認
+            // 追加: 編集前に杭要素分割解除確認
             if (!_mainWindowViewModel.CheckAndResetElementSplit("杭体"))
                 return; // キャンセル時は処理中断
 
@@ -434,8 +435,11 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnCancel()
         {
-            InputModel.PileBodies = PrevPileBodies;
-            //// プロパティを前回の保存時の値に戻す
+            // ViewModel は自前の PileBodies (DeepCopy) を編集対象としており、
+            // 編集中に InputModel.PileBodies は変更されない。
+            // よってキャンセル時に InputModel.PileBodies を置き換える必要はない。
+            // (旧実装は PropertyChanged を発火させて SoilPiles 再生成 → IsElementSplit=false の
+            //  リセットを引き起こしていた)
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
@@ -542,7 +546,7 @@ namespace PileDesign.ViewModels
             }
             else
             {
-                MessageBox.Show("杭区間が存在しません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("杭区間が存在しません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -644,7 +648,7 @@ namespace PileDesign.ViewModels
             }
             else
             {
-                MessageBox.Show("選択されたアイテムの型が正しくありません。");
+                MessageService.Show("選択されたアイテムの型が正しくありません。");
             }
         }
 
@@ -765,7 +769,7 @@ namespace PileDesign.ViewModels
             }
             else
             {
-                MessageBox.Show("選択されたアイテムの型が正しくありません。");
+                MessageService.Show("選択されたアイテムの型が正しくありません。");
             }
         }
 
@@ -781,7 +785,7 @@ namespace PileDesign.ViewModels
             }
             else
             {
-                MessageBox.Show("選択されたアイテムの型が正しくありません。");
+                MessageService.Show("選択されたアイテムの型が正しくありません。");
             }
         }
 

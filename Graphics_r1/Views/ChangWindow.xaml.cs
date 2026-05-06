@@ -17,6 +17,7 @@ using System.Windows.Data;
 
 
 using Serilog;
+using PileDesign.Services;
 namespace PileDesign.Views
 {
     public partial class ChangWindow : Window
@@ -50,7 +51,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Chang 初期化中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"Chang 初期化中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -262,7 +263,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"CSV 出力に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(this, $"CSV 出力に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         // Save / Load ハンドラ（JSON）
@@ -270,7 +271,7 @@ namespace PileDesign.Views
         {
             if (DataContext is not ChangViewModel vm)
             {
-                MessageBox.Show(this, "ViewModel が設定されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(this, "ViewModel が設定されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -341,7 +342,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(this, $"保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -349,7 +350,7 @@ namespace PileDesign.Views
         {
             if (DataContext is not ChangViewModel vm)
             {
-                MessageBox.Show(this, "ViewModel が設定されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(this, "ViewModel が設定されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -485,7 +486,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"読み込みに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(this, $"読み込みに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

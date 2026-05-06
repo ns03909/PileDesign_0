@@ -19,7 +19,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
-using System.Windows.Controls.Ribbon;
+using MenuItem = System.Windows.Controls.MenuItem;
 using System.Windows.Shapes;
 
 using Serilog;
@@ -28,7 +28,7 @@ namespace PileDesign.Views
     /// <summary>
     /// MainWindow.xaml の相互作用ロジック
     /// </summary>
-    public partial class MainWindow : RibbonWindow, INotifyPropertyChanged
+    public partial class MainWindow : Fluent.RibbonWindow, INotifyPropertyChanged
     {
         // クラス内フィールドを追加
         private readonly Dictionary<(object item, string path), object?> _dgOldValues = [];
@@ -273,6 +273,14 @@ namespace PileDesign.Views
             var layoutAnchorable = inputDataAnchorable;
             layoutAnchorable?.ToggleAutoHide();
 
+            // 「形状確認ビュー（凍結中）」タブをレイアウトから除去 (HelixViewport3D 機能凍結中のため非表示)
+            // 名前付きコントロールはコードビハインドが参照するため、要素自体は XAML に残置している。
+            try
+            {
+                FrozenShapeViewDocument?.Close();
+            }
+            catch { /* 既にクローズ済み等は無視 */ }
+
             if (DataContext is MainWindowViewModel vm)
             {
                 vm.PropertyChanged += VmOnPropertyChanged;
@@ -325,7 +333,7 @@ namespace PileDesign.Views
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             // 確認ダイアログを表示
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 "現在のデータを保存しますか？",
                 "確認",
                 MessageBoxButton.YesNoCancel,
@@ -1636,13 +1644,7 @@ namespace PileDesign.Views
                         {
                             if (item is MenuItem mi)
                             {
-                                var newItem = new MenuItem
-                                {
-                                    Header = mi.Header,
-                                    Command = mi.Command,
-                                    CommandParameter = mi.CommandParameter
-                                };
-                                contextMenu.Items.Add(newItem);
+                                contextMenu.Items.Add(CloneMenuItemForContextMerge(mi));
                             }
                             else if (item is Separator)
                             {
@@ -1658,19 +1660,13 @@ namespace PileDesign.Views
                     {
                         foreach (var item in beamMenu.Items)
                         {
-                            if (item is MenuItem mi && mi.Command != null)
+                            if (item is MenuItem mi)
                             {
                                 // 画像コピー/保存は重複するのでスキップ
                                 var header = mi.Header?.ToString() ?? "";
                                 if (header.Contains("画像")) continue;
 
-                                var newItem = new MenuItem
-                                {
-                                    Header = mi.Header,
-                                    Command = mi.Command,
-                                    CommandParameter = mi.CommandParameter
-                                };
-                                contextMenu.Items.Add(newItem);
+                                contextMenu.Items.Add(CloneMenuItemForContextMerge(mi));
                             }
                         }
                     }
@@ -1709,6 +1705,34 @@ namespace PileDesign.Views
         //// マウスホイールドラッグ完了時のメソッド マウスホイールが離された時の処理
         //private void Canvas3DLayout_PreviewMouseUp(object sender, MouseButtonEventArgs e)
         //{
+        /// <summary>
+        /// ContextMenu を動的にマージ構築する際に MenuItem を「正しく」複製する。
+        ///
+        /// 注意: 元の MenuItem の Command プロパティは XAML で {Binding ...} 経由で指定されている場合、
+        /// 元 ContextMenu が一度も Open されないと binding が評価されず mi.Command は null になる。
+        /// したがって `new MenuItem { Command = mi.Command }` だと null コマンドの MenuItem が生成され、
+        /// クリックしても無反応になる。
+        ///
+        /// 本ヘルパでは BindingOperations.GetBinding で元の Binding を取得して新 MenuItem に再設定し、
+        /// PlacementTarget の DataContext から binding が評価されるようにする。
+        /// </summary>
+        private static MenuItem CloneMenuItemForContextMerge(MenuItem source)
+        {
+            var newItem = new MenuItem { Header = source.Header };
+
+            // Command (Binding を保持)
+            var cmdBinding = System.Windows.Data.BindingOperations.GetBinding(source, MenuItem.CommandProperty);
+            if (cmdBinding != null) newItem.SetBinding(MenuItem.CommandProperty, cmdBinding);
+            else if (source.Command != null) newItem.Command = source.Command;
+
+            // CommandParameter (Binding を保持)
+            var paramBinding = System.Windows.Data.BindingOperations.GetBinding(source, MenuItem.CommandParameterProperty);
+            if (paramBinding != null) newItem.SetBinding(MenuItem.CommandParameterProperty, paramBinding);
+            else if (source.CommandParameter != null) newItem.CommandParameter = source.CommandParameter;
+
+            return newItem;
+        }
+
         //    if (e.MiddleButton == MouseButtonState.Released)
         //    {
         //        IsMouseWheelPressed = false;
@@ -1803,7 +1827,7 @@ namespace PileDesign.Views
         {
             if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
             {
-                // Ctrl + Shift + A が押されたときの処理
+                // Ctrl + Shift + A が押されたときの処理: 全選択
                 SelectAllNodes();
                 e.Handled = true;
             }
@@ -2390,6 +2414,28 @@ namespace PileDesign.Views
             // 個別十字系に切り替わった場合は RectLoads を自動生成で置換
             if (vm != null && (selectedItem == "個別十字" || selectedItem == "個別十字（基礎梁考慮）"))
             {
+                // 既存の RectLoads (任意矩形等で入力済) があれば、上書き確認ダイアログを表示
+                var existingRectLoads = vm.CurrentInputModel?.PileGroupSettlement?.RectLoads;
+                int existingCount = existingRectLoads?.Count ?? 0;
+                if (existingCount > 0)
+                {
+                    var prevName = _prevLoadingType as string ?? "(以前の荷重タイプ)";
+                    var msg = $"現在「{prevName}」で {existingCount} 件の矩形荷重が登録されています。\n\n" +
+                              $"「{selectedItem}」へ切替えると、これらは破棄され、杭頭ごとの十字形矩形荷重で上書きされます。\n\n" +
+                              "切替えを続行しますか? (キャンセルで元の荷重タイプに戻ります)";
+                    var result = PileDesign.Services.MessageService.Show(
+                        msg, "荷重タイプ切替確認",
+                        System.Windows.MessageBoxButton.OKCancel,
+                        System.Windows.MessageBoxImage.Warning);
+                    if (result != System.Windows.MessageBoxResult.OK)
+                    {
+                        // キャンセル: 前回値に戻す (SelectionChanged 再発火は短絡される)
+                        if (_prevLoadingType != null)
+                            comboBox.SelectedItem = _prevLoadingType;
+                        return;
+                    }
+                }
+
                 // UpdateSourceTrigger=LostFocus のためモデル側 LoadingType が
                 // まだ古い値の可能性 → 先にソース更新してから再生成
                 comboBox?.GetBindingExpression(ComboBox.SelectedItemProperty)?.UpdateSource();
@@ -2580,7 +2626,7 @@ namespace PileDesign.Views
             }
             else
             {
-                MessageBox.Show("削除対象のアイテムが正しく取得できませんでした。");
+                MessageService.Show("削除対象のアイテムが正しく取得できませんでした。");
             }
         }
 
@@ -2609,7 +2655,7 @@ namespace PileDesign.Views
             }
             else
             {
-                MessageBox.Show("削除対象のアイテムが正しく取得できませんでした。");
+                MessageService.Show("削除対象のアイテムが正しく取得できませんでした。");
             }
         }
         //{
@@ -2629,7 +2675,7 @@ namespace PileDesign.Views
         //        else
         //        {
         //            // キャストに失敗した場合はエラーを処理するか、適切な処理を行う
-        //            MessageBox.Show("選択されたアイテムの型が正しくありません。");
+        //            MessageService.Show("選択されたアイテムの型が正しくありません。");
         //        }
         //    }
         //}
@@ -2976,13 +3022,13 @@ namespace PileDesign.Views
                 viewModel?.OpenPileBodyWindow();
                 e.Handled = true;
             }
-            // 要素分割
+            // 杭要素分割
             else if (e.Key == Key.D && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 _ = viewModel?.OpenElementDivisionWindowAsync();
                 e.Handled = true;
             }
-            // 要素分割（F4）
+            // 杭要素分割（F4）
             else if (e.Key == Key.F4 && Keyboard.Modifiers == ModifierKeys.None)
             {
                 _ = viewModel?.OpenElementDivisionWindowAsync();
@@ -3126,7 +3172,7 @@ namespace PileDesign.Views
         private void ButtonGroupPileSettlement_Click(object sender, RoutedEventArgs e)
         {
             ActivateGroupPileLoadTab();
-            MessageBox.Show("（初期状態で左側にある）「群杭荷重」タブで「荷重」、「土層」、「グリッド」を設定し、" +
+            MessageService.Show("（初期状態で左側にある）「群杭荷重」タブで「荷重」、「土層」、「グリッド」を設定し、" +
                 "最下段の「群杭沈下解析実行」ボタンを押してください。\n\n" +
                 "群杭沈下解析は「群杭荷重」で行ってください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -3240,13 +3286,9 @@ namespace PileDesign.Views
                     return;
                 }
 
-                // Phase A 改善: BeginningEdit を「セッション開始」ポイントとし、編集セッション中は
-                // 連続して延長する。これにより CellEditEnding → 次セル移動 (>500ms) で session timer が
-                // 切れる問題を回避し、編集中は常にデバウンスタイマーが新鮮に保たれる。
-                //
-                // ・初回編集 (session 不在) → SaveUndoStateDebounced が pre-edit snapshot を 1 回取得
-                // ・既セッション中 → snapshot は取らずタイマーだけ延長 (内部で early-return)
-                vm.SaveUndoStateDebounced("DataGridPileAxialForce_OnCellEditEnding");
+                // Undo はセル単位とするためデバウンスは使用しない。
+                // CellEditEnding (DataGridPileAxialForce_OnCellEditEnding) で SaveUndoState が
+                // セル毎に呼ばれるため、Ctrl+Z で 1 セルずつ巻き戻し可能。
             }
         }
 
@@ -3610,7 +3652,7 @@ namespace PileDesign.Views
                 // 2回目のクリック: 要素を作成
                 if (hitRef.Type == vm.TempStartNode.Type && hitRef.Id == vm.TempStartNode.Id)
                 {
-                    MessageBox.Show("同じノードは接続できません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageService.Show("同じノードは接続できません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     vm.TempStartNode = null;
                     vm.StatusMessage = string.Empty;
                     ClearFoundationBeamPreview(); // プレビュー線をクリア
@@ -3681,7 +3723,7 @@ namespace PileDesign.Views
             if (hitNode == null) return false;
 
             // 確認ダイアログ
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 $"ノード '{hitNode.Name}' を削除しますか？\n接続されている要素も削除されます。",
                 "削除確認",
                 MessageBoxButton.YesNo,

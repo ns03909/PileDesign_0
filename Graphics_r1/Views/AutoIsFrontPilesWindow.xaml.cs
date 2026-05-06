@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using PileDesign.Services;
 
 
 namespace PileDesign.Views
@@ -36,7 +37,7 @@ namespace PileDesign.Views
             // OKボタン押下時にも角度を再検証
             if (viewModel.Angle <= 0 || viewModel.Angle >= 90)
             {
-                MessageBox.Show("角度は0より大きく90より小さい値を入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show("角度は0より大きく90より小さい値を入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -62,11 +63,11 @@ namespace PileDesign.Views
             {
                 if (result <= 0)
                 {
-                    MessageBox.Show("0より大きな数値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show("0より大きな数値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else if (result >= 90)
                 {
-                    MessageBox.Show("90より小さな数値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.Show("90より小さな数値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
                 {
@@ -76,7 +77,7 @@ namespace PileDesign.Views
             }
             else
             {
-                MessageBox.Show("数値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("数値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

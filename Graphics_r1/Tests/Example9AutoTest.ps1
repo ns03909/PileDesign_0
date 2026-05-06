@@ -169,7 +169,7 @@ Write-Host ""
 Write-Host "To run the automated test:" -ForegroundColor Yellow
 Write-Host "1. Open the PileDesign application" -ForegroundColor White
 Write-Host "2. From the main menu, select 'Example 9' (基礎指針'19 計算例9)" -ForegroundColor White
-Write-Host "3. Open the Element Division window (要素分割)" -ForegroundColor White
+Write-Host "3. Open the Element Division window (杭要素分割)" -ForegroundColor White
 Write-Host "4. Click the automatic division button and close the window" -ForegroundColor White
 Write-Host "5. Open the Horizontal Analysis window (水平解析)" -ForegroundColor White
 Write-Host "6. Verify that Level 2 earthquake (レベル2地震) 1-direction is checked" -ForegroundColor White

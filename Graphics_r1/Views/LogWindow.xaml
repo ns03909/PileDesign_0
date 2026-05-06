@@ -1,4 +1,4 @@
-<Window x:Class="PileDesign.Views.LogWindow"
+﻿<Window x:Class="PileDesign.Views.LogWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -42,10 +42,6 @@
                     ToolTip="選択不要で全行をコピー (Ctrl+A→Ctrl+C より高速)"/>
             <Separator/>
             <Button Content="ファイル出力" Command="{Binding ExportLogCommand}" Padding="10,2"/>
-            <Separator/>
-            <Button Content="クリア" Command="{Binding ClearLogCommand}" Padding="10,2"/>
-            <Separator/>
-            <CheckBox Content="自動スクロール" IsChecked="{Binding AutoScroll}" VerticalAlignment="Center" Margin="5,0"/>
             <Separator Visibility="{Binding IsCategorySelectorVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             <ComboBox ItemsSource="{Binding LogCategories}"
                       SelectedItem="{Binding SelectedLogCategory}"
@@ -60,8 +56,8 @@
                  SelectionMode="Extended"
                  FontFamily="MS Gothic"
                  FontSize="12"
-                 Background="#F5F5F5"
-                 Foreground="#333333"
+                 Background="{StaticResource LogBackgroundBrush}"
+                 Foreground="{StaticResource LogForegroundBrush}"
                  BorderThickness="0"
                  HorizontalContentAlignment="Stretch"
                  VirtualizingStackPanel.IsVirtualizing="True"

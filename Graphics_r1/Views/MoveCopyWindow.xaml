@@ -54,6 +54,8 @@
                 <StackPanel Orientation="Horizontal">
                     <CheckBox Content="一般節点" IsChecked="{Binding IsInputNodesIncluded}" Margin="5,0" VerticalAlignment="Center"/>
                     <CheckBox Content="杭配置" IsChecked="{Binding IsPileLayoutIncluded}" Margin="5,0" VerticalAlignment="Center"/>
+                    <CheckBox Content="梁要素" IsChecked="{Binding IsBeamsIncluded}" Margin="5,0" VerticalAlignment="Center"
+                              ToolTip="選択された梁要素を対象に含めます。&#x0a;端点ノードは「梁要素タブの距離(m)」内に杭頭節点があればそれを、&#x0a;なければ一般節点があればそれを、どちらもなければ新規に一般節点を生成して接続します。"/>
                 </StackPanel>
             </GroupBox>
 

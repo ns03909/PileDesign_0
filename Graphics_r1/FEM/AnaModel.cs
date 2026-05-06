@@ -815,6 +815,21 @@ namespace PileDesign.FEM
             VectorDD = incrementalDispVector.Clone();
         }
 
+        // Phase 1 (step-level cut-back): StepCheckpoint からの全ベクトル一括復元用。
+        // VectorD/VectorDD/VectorF/VectorDF/VectorR を任意に書き戻せる。
+        // null 引数の場合は該当ベクトルだけスキップ (現在値を保持)。
+        public void RestoreFEMVectors(
+            Vector<double>? d, Vector<double>? dd,
+            Vector<double>? f, Vector<double>? df,
+            Vector<double>? r)
+        {
+            if (d != null) VectorD = d;
+            if (dd != null) VectorDD = dd;
+            if (f != null) VectorF = f;
+            if (df != null) VectorDF = df;
+            if (r != null) VectorR = r;
+        }
+
         // v15: 変位予測器用: 変位増分を累積変位に加算
         public void ApplyDispIncrement(Vector<double> dispIncrement)
         {

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using PileDesign.Services;
 
 namespace PileDesign.Views
 {
@@ -31,7 +32,7 @@ namespace PileDesign.Views
                 var baseDir = FindGraphicsR1Folder(AppDomain.CurrentDomain.BaseDirectory);
                 if (baseDir == null)
                 {
-                    MessageBox.Show(this, "プロジェクト内の Graphics_r1 フォルダが見つかりません。CSV ファイルを自動検出できません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageService.Show(this, "プロジェクト内の Graphics_r1 フォルダが見つかりません。CSV ファイルを自動検出できません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -90,12 +91,12 @@ namespace PileDesign.Views
 
                 if (TabControlLibraries.Items.Count == 0)
                 {
-                    MessageBox.Show(this, $"ライブラリ CSV が見つかりませんでした。期待パス: {libFolder}", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageService.Show(this, $"ライブラリ CSV が見つかりませんでした。期待パス: {libFolder}", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"ライブラリの読み込みに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(this, $"ライブラリの読み込みに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -114,7 +115,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"フォルダ探索中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"フォルダ探索中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return null;
             }
         }
@@ -144,7 +145,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"CSV読込中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"CSV読込中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 // エラー時は空のDataTableを返す
             }
             return dt;

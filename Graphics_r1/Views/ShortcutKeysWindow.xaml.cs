@@ -30,7 +30,7 @@ namespace PileDesign.Views
                 new("入力ウィンドウ", "杭体編集", "Ctrl + B"),
                 new("入力ウィンドウ", "軸力確認", "Ctrl + K"),
                 new("入力ウィンドウ", "自動梁要素生成", "Ctrl + Shift + B"),
-                new("入力ウィンドウ", "要素分割", "F4 / Ctrl + D"),
+                new("入力ウィンドウ", "杭要素分割", "F4 / Ctrl + D"),
 
                 // 解析
                 new("解析", "水平解析実行", "F5"),

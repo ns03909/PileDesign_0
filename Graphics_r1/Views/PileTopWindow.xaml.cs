@@ -7,6 +7,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using PileDesign.Services;
 
 namespace PileDesign.Views
 {
@@ -473,7 +474,7 @@ namespace PileDesign.Views
 
                 if (enteredValue > maxTDorTB)
                 {
-                    MessageBox.Show("tDmaxまたはtBmaxよりも大きな値が入力されました。tDmax、TBmax以下の数値を入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageService.Show("tDmaxまたはtBmaxよりも大きな値が入力されました。tDmax、TBmax以下の数値を入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     // テキストボックスのテキストをクリアまたは前の値に戻します。
                     TextBoxTDorTB.Text = maxTDorTB.ToString();
                 }
@@ -485,7 +486,7 @@ namespace PileDesign.Views
             else
             {
                 // 入力が数値に変換できない場合の処理
-                MessageBox.Show("数値を入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show("数値を入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 TextBoxTDorTB.Clear();
             }
         }

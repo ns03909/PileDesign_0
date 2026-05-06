@@ -2,12 +2,15 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:PileDesign"
-             xmlns:ribbon="clr-namespace:System.Windows.Controls.Ribbon;assembly=System.Windows.Controls.Ribbon"
              >
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!-- Fluent.Ribbon テーマ — Fluent コントロールの ControlTemplate と色を提供 -->
+                <ResourceDictionary Source="pack://application:,,,/Fluent;component/Themes/Themes/Light.Blue.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Fluent;component/Themes/Styles.xaml"/>
                 <ResourceDictionary Source="pack://application:,,,/PileDesign;component/Styles.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/PileDesign;component/Themes/AvalonDockTabStyles.xaml"/>
                 <!--<ResourceDictionary Source="pack://application:,,,/PileDesign;component/Graphics_r1/Resources/CommonResources.xaml"/>-->
             </ResourceDictionary.MergedDictionaries>
 
@@ -21,18 +24,7 @@
                 <!-- 表示継続時間(ms) -->
             </Style>
 
-            <!-- RibbonApplicationMenuItem のバインディングエラー回避用スタイル -->
-            <!-- ItemsControl の祖先が見つからない問題を解消 -->
-            <Style TargetType="{x:Type ribbon:RibbonApplicationMenuItem}">
-                <Setter Property="HorizontalContentAlignment" Value="Left"/>
-                <Setter Property="VerticalContentAlignment" Value="Center"/>
-            </Style>
 
-            <!-- Ribbon のバインディングエラー回避用スタイル -->
-            <!-- RibbonWindow の祖先が見つからない問題を解消 -->
-            <Style TargetType="{x:Type ribbon:Ribbon}">
-                <Setter Property="WindowIconVisibility" Value="Collapsed"/>
-            </Style>
             
         </ResourceDictionary>
 

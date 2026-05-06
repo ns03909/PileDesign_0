@@ -215,7 +215,7 @@ namespace PileDesign.Models.InputData
         // y<0 側は clamp されず負方向に無制限に伸びていた（v22 で GetKh の plateau が
         // `py/|y|` → `(gradient*(|y|-yy)+py)/|y|` に変わり post-yield creep が生じた副作用）。
         // 現在は `sign(y) × min(Kh(|y|) × |y|, py)` で両側対称に clamp する。
-        // ※ 表示専用（グラフ / MGT エクスポート / 要素分割ダイアログ）。
+        // ※ 表示専用（グラフ / MGT エクスポート / 杭要素分割ダイアログ）。
         //    FEM 本体は `GetSoilSecantReactionCoefficient` / `GetSoilTangentReactionCoefficient`
         //    経由で |y| 対称、post-yield creep を許容する（本メソッドと意図的に挙動が異なる）
         public double GetP(double y, double py)

@@ -13,7 +13,7 @@ using Point = System.Windows.Point;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : RibbonWindow
+    public partial class MainWindow
     {
         // 3D荷重更新メソッド
         public void UpdateLoading3D()

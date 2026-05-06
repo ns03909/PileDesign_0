@@ -15,10 +15,11 @@ using System.Windows.Media.Media3D;
 using Color = System.Windows.Media.Color;
 using Colors = System.Windows.Media.Colors;
 using Media3DMaterial = System.Windows.Media.Media3D.Material;
+using PileDesign.Services;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : RibbonWindow
+    public partial class MainWindow
     {
         private readonly MainWindowViewModel _mainWindowViewModel;
         
@@ -582,7 +583,7 @@ namespace PileDesign.Views
                 {
                     encoder.Save(fileStream);
                 }
-                MessageBox.Show($"Image saved to {saveFileDialog.FileName}", "Save Image", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show($"Image saved to {saveFileDialog.FileName}", "Save Image", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -692,11 +693,11 @@ namespace PileDesign.Views
                 dataObject.SetData(DataFormats.Dib, new System.IO.MemoryStream(dibBytes), false);
                 Clipboard.SetDataObject(dataObject, true);
 
-                MessageBox.Show($"画像をクリップボードにコピーしました ({width}x{height})", "コピー", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show($"画像をクリップボードにコピーしました ({width}x{height})", "コピー", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"画像のコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show($"画像のコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

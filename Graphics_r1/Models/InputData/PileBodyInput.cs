@@ -11,6 +11,7 @@ using System.Text;
 using System.Windows;
 
 using Serilog;
+using PileDesign.Services;
 namespace PileDesign.Models.InputData
 {
     public class PileBodyInput : BaseModel
@@ -136,7 +137,7 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
-                    MessageBox.Show($"杭区間情報の更新中にエラーが発生しました。\n{ex.Message}", "区間更新エラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                    MessageService.Show($"杭区間情報の更新中にエラーが発生しました。\n{ex.Message}", "区間更新エラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
         }
 
@@ -405,7 +406,7 @@ namespace PileDesign.Models.InputData
                 catch (Exception ex)
                 {
                     Application.Current?.Dispatcher.Invoke(() =>
-                        MessageBox.Show($"杭体タイプ設定中にエラーが発生しました。\n{ex.Message}", "プロパティエラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                        MessageService.Show($"杭体タイプ設定中にエラーが発生しました。\n{ex.Message}", "プロパティエラー", MessageBoxButton.OK, MessageBoxImage.Error));
                 }
             }
         }
@@ -463,7 +464,7 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
-                    MessageBox.Show($"杭区間コレクション変更時にエラーが発生しました。\n{ex.Message}", "コレクションエラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                    MessageService.Show($"杭区間コレクション変更時にエラーが発生しました。\n{ex.Message}", "コレクションエラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
         }
 

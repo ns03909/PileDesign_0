@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using Color = System.Windows.Media.Color;
 using TextAlignment = System.Windows.TextAlignment;
+using PileDesign.Services;
 
 namespace PileDesign.Services
 {
@@ -40,7 +41,7 @@ namespace PileDesign.Services
         public static Color GetColor(double valueToInterpolate)
         {
             //    if (valueToInterpolate < 0 || 1 < valueToInterpolate)
-            //    { MessageBox.Show("no."); }
+            //    { MessageService.Show("no."); }
             valueToInterpolate = Math.Max(Math.Min(valueToInterpolate, 1), 0);
             // Turbo に類似した 6 色レインボー (青→シアン→緑→黄→橙→赤)。
             // 旧 5 色 (#000088→#0000FF→#00FFFF→#FFFF00→#FF0000) は低値域が

@@ -14,7 +14,7 @@ namespace PileDesign.Views
     /// 根入れ部のコードビハインド
     /// </summary>
     /// 
-    public partial class MainWindow : RibbonWindow
+    public partial class MainWindow
     {
         // ===== 静的フローズンブラシキャッシュ（描画ループ内での毎フレーム生成を回避） =====
         private static readonly SolidColorBrush BrushMinimapStroke = Freeze(new SolidColorBrush(Color.FromArgb(160, 100, 100, 100)));

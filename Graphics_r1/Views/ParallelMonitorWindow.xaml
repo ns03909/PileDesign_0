@@ -18,22 +18,32 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 進捗サマリ -->
-        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,4">
-            <TextBlock Text="完了: " FontWeight="SemiBold"/>
-            <TextBlock Text="{Binding CompletedCaseCount}" MinWidth="30"/>
-            <TextBlock Text=" / "/>
-            <TextBlock Text="{Binding TotalPlannedCaseCount}" MinWidth="30"/>
-            <TextBlock Text="    実行中: " FontWeight="SemiBold"/>
-            <TextBlock Text="{Binding ActiveCasesCount}" MinWidth="20"/>
-            <TextBlock Text="    待機: " FontWeight="SemiBold"/>
-            <TextBlock Text="{Binding PendingCaseCount}" MinWidth="30"/>
+        <!-- 進捗サマリ: ケース単位 (完了/実行中/待機) + ステップ単位 (細粒度) を併記 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,4">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                <TextBlock Text="ケース: " FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding CompletedCaseCount}" MinWidth="20"/>
+                <TextBlock Text=" / "/>
+                <TextBlock Text="{Binding TotalPlannedCaseCount}" MinWidth="20"/>
+                <TextBlock Text=" 完了    実行中: " FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding ActiveCasesCount}" MinWidth="20"/>
+                <TextBlock Text="    待機: " FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding PendingCaseCount}" MinWidth="30"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="ステップ評価: " FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding EffectiveProgress}" MinWidth="30"/>
+                <TextBlock Text=" / "/>
+                <TextBlock Text="{Binding EffectiveProgressTotal}" MinWidth="30"/>
+                <TextBlock Text=" (再試行含む)" Foreground="Gray"/>
+            </StackPanel>
         </StackPanel>
 
+        <!-- ステップ単位進捗 (細粒度。ケース単位だと 1 ケースが大半の時間を占めると 50% に張り付くため) -->
         <ProgressBar Grid.Row="1"
                      Minimum="0"
-                     Maximum="{Binding TotalPlannedCaseCount}"
-                     Value="{Binding CompletedCaseCount, Mode=OneWay}"
+                     Maximum="{Binding EffectiveProgressTotal, Mode=OneWay}"
+                     Value="{Binding EffectiveProgress, Mode=OneWay}"
                      Height="10" Margin="0,0,0,8"
                      Foreground="{StaticResource PrimaryAccentBrush}"/>
 

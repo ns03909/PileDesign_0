@@ -251,11 +251,11 @@
                                 Background="{StaticResource PrimaryAccentBrush}" Foreground="White"/>
                     </ToolBar>
 
-                    <common:EnhancedDataGrid x:Name="DataGridPileBody" MinHeight="120" MaxHeight="240"
+                    <common:EnhancedDataGrid x:Name="DataGridPileBody" CanUserSortColumns="False" MinHeight="120" MaxHeight="240"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Auto"
                               Loaded="DataGrid_Loaded" AutoGenerateColumns="False"
-                              CanUserAddRows="False" CanUserSortColumns="False"
+                              CanUserAddRows="False"
                               ItemsSource="{Binding PileBody.PileBodySegments, UpdateSourceTrigger=LostFocus}"
                               LoadingRow="DataGridPileBody_LoadingRow" HorizontalAlignment="Stretch"
                               CellEditEnding="DataGridPileBody_CellEditEnding"

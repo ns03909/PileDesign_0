@@ -14,7 +14,7 @@ using Point = System.Windows.Point;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : RibbonWindow
+    public partial class MainWindow
     {
         // バブルチャート描画メソッド
         // バブル（値は mm 前提）

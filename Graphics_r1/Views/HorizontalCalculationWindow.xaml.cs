@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 
 using Serilog;
+using PileDesign.Services;
 namespace PileDesign.Views
 {
     /// <summary>
@@ -83,7 +84,7 @@ namespace PileDesign.Views
             catch (Exception ex)
             {
                 Log.Warning(ex, "[HorizontalCalculationWindow_Closing]");
-                MessageBox.Show($"ウィンドウ終了処理でエラーが発生しました: {ex.Message}",
+                MessageService.Show($"ウィンドウ終了処理でエラーが発生しました: {ex.Message}",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -94,12 +95,19 @@ namespace PileDesign.Views
         // 居た場合のみ追記後に自動スクロールする。手動で上を見ている時は引き戻さない。
         private const double AutoScrollThresholdPx = 32.0;
 
-        // ケースタグ抽出正規表現: [L2-1.C1.Liq] 等、[Lx-x.Cx.(Liq|Dry)]
+        // ケースタグ抽出正規表現: [L2-1.C1.Liq] / [L2-1.C1.NoLq] 等、[Lx-x.Cx.(Liq|NoLq)]
+        // ※ 旧来は "Dry" だったが、BuildCaseTag が実際に出力するのは "NoLq" なので合わせる
         private static readonly Regex CaseTagPattern = new(
-            @"\[L\d+-\d+\.C\d+\.(?:Liq|Dry)\]", RegexOptions.Compiled);
+            @"\[L\d+-\d+\.C\d+\.(?:Liq|NoLq)\]", RegexOptions.Compiled);
 
         // 動的生成したケースタブの TextBox (ケースタグ → TextBox)
         private readonly Dictionary<string, TextBox> _caseTabTextBoxes = new();
+
+        // UI フリーズ対策 (2026-05-05 案 A): 非アクティブタブのログ更新を遅延化。
+        // 各 TextBox に対する未反映ログをバッファリングし、タブ切替時にまとめて drain する。
+        // これにより並列解析中の AppendText 回数が約 1/(タブ数) に削減される。
+        private readonly Dictionary<TextBox, List<string>> _tabBuffers = new();
+        private const int MAX_TAB_BUFFER_LINES = 20000;
 
         private static string? ExtractCaseTag(string? line)
         {
@@ -161,6 +169,9 @@ namespace PileDesign.Views
             // index 0 = "すべて" タブ。後ろから削除
             for (int i = LogTabControl.Items.Count - 1; i >= 1; i--)
                 LogTabControl.Items.RemoveAt(i);
+            // 削除した TextBox に対応するバッファも除去 (LogTextBox のものは保持)
+            foreach (var tb in _caseTabTextBoxes.Values)
+                _tabBuffers.Remove(tb);
             _caseTabTextBoxes.Clear();
         }
 
@@ -171,11 +182,14 @@ namespace PileDesign.Views
             // Option B (2026-04-24): ケースタグ [Lx-x.Cx.(Liq|Dry)] が含まれる行は
             // 「すべて」タブと併せて対応するケースタブにも追記する。
             // 案 X (2026-04-24): MDOP=1 (逐次) では並列追跡の必要がないためケースタブを作らない。
+            // 案 A (2026-05-05): 並列実行時 16 ケース × 高頻度 iter ログで UI スレッド飽和 → ハング。
+            // アクティブタブのみ即時 AppendText、非アクティブタブはバッファリングして
+            // タブ切替時に drain する。AppendText 回数を 1/(タブ数) に削減。
             if (LogTextBox == null || LogTabControl == null) return;
 
             // 追記前に visible タブの TextBox が最下段付近に居たか判定 (smart scroll)
-            var visibleTextBox = GetVisibleTabTextBox();
-            bool wasAtBottom = IsTextBoxAtBottom(visibleTextBox);
+            var activeTextBox = GetVisibleTabTextBox();
+            bool wasAtBottom = IsTextBoxAtBottom(activeTextBox);
 
             // ケースタブを作るかどうか: MDOP > 1 の時のみ作成
             bool createCaseTabs = (DataContext as HorizontalCalculationViewModel)?.MaxCaseDegreeOfParallelism > 1;
@@ -185,7 +199,9 @@ namespace PileDesign.Views
                 foreach (string item in e.NewItems)
                 {
                     string line = item + Environment.NewLine;
-                    LogTextBox.AppendText(line);  // 常に「すべて」タブへ追記
+
+                    // 「すべて」タブ: アクティブなら即時 AppendText、非アクティブならバッファ
+                    AppendOrBuffer(LogTextBox, line, activeTextBox);
 
                     if (createCaseTabs)
                     {
@@ -193,7 +209,7 @@ namespace PileDesign.Views
                         if (caseTag != null)
                         {
                             var caseTb = EnsureCaseTab(caseTag);
-                            caseTb.AppendText(line);
+                            AppendOrBuffer(caseTb, line, activeTextBox);
                         }
                     }
                 }
@@ -202,6 +218,7 @@ namespace PileDesign.Views
             {
                 LogTextBox.Clear();
                 ClearCaseTabs();
+                _tabBuffers.Clear();
             }
 
             if (!wasAtBottom) return;
@@ -213,6 +230,42 @@ namespace PileDesign.Views
                 // 現在表示中のタブの TextBox を末尾へスクロール
                 GetVisibleTabTextBox()?.ScrollToEnd();
             });
+        }
+
+        /// <summary>target がアクティブタブの TextBox なら即時 AppendText、そうでなければバッファに追加。</summary>
+        private void AppendOrBuffer(TextBox target, string line, TextBox? activeTextBox)
+        {
+            if (target == activeTextBox)
+            {
+                target.AppendText(line);
+            }
+            else
+            {
+                if (!_tabBuffers.TryGetValue(target, out var buf))
+                {
+                    buf = new List<string>(256);
+                    _tabBuffers[target] = buf;
+                }
+                buf.Add(line);
+                // 暴走防止: 上限超過時は古い行を捨てる
+                if (buf.Count > MAX_TAB_BUFFER_LINES)
+                    buf.RemoveRange(0, buf.Count - MAX_TAB_BUFFER_LINES);
+            }
+        }
+
+        /// <summary>タブ切替時、新たにアクティブになった TextBox のバッファを drain して AppendText。</summary>
+        private void LogTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender != LogTabControl) return;  // 子 TabControl 由来のイベントを除外
+            var active = GetVisibleTabTextBox();
+            if (active == null) return;
+            if (!_tabBuffers.TryGetValue(active, out var buf) || buf.Count == 0) return;
+
+            // 一括連結 → 1 回の AppendText で済ませて TextContainer の更新を最小化
+            string combined = string.Concat(buf);
+            buf.Clear();
+            active.AppendText(combined);
+            active.ScrollToEnd();
         }
 
         /// <summary>
@@ -306,7 +359,7 @@ namespace PileDesign.Views
             catch (Exception ex)
             {
                 Log.Warning(ex, "[HorizontalCalculationWindow_Loaded]");
-                MessageBox.Show($"水平解析ウィンドウの初期化でエラーが発生しました: {ex.Message}",
+                MessageService.Show($"水平解析ウィンドウの初期化でエラーが発生しました: {ex.Message}",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -550,7 +603,7 @@ namespace PileDesign.Views
         private void OnRequestShowWarning(string message)
         {
             // UI スレッドで確実に表示
-            MessageBox.Show(message, "解析中止", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageService.Show(message, "解析中止", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         private void CopyToClipboardFromContextMenu_Click(object sender, RoutedEventArgs e)

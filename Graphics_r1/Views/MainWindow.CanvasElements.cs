@@ -15,7 +15,7 @@ using Point = System.Windows.Point;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : RibbonWindow
+    public partial class MainWindow
     {
 
         // 短縮要素の節点を返すメソッド
@@ -54,7 +54,7 @@ namespace PileDesign.Views
                 }
             }
 
-            else // 要素分割済の場合
+            else // 杭要素分割済の場合
             {
                 if (pileLocation.SoilPileAltNo <= 0 ||
                 pileLocation.SoilPileAltNo > viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count)

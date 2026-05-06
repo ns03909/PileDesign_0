@@ -1,4 +1,4 @@
-<Window x:Class="PileDesign.Views.EvaluationWindow"
+﻿<Window x:Class="PileDesign.Views.EvaluationWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -47,8 +47,8 @@
                      TextWrapping="Wrap"
                      FontFamily="Consolas"
                      FontSize="12"
-                     Background="#F5F5F5"
-                     Foreground="#333333"
+                     Background="{StaticResource LogBackgroundBrush}"
+                     Foreground="{StaticResource LogForegroundBrush}"
                      Padding="10"
                      BorderThickness="0"/>
         </ScrollViewer>

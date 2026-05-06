@@ -396,7 +396,7 @@
                         </Grid>
                     </StackPanel>
 
-                    <common:EnhancedDataGrid Grid.Row="3" Grid.Column ="1"  x:Name="DataGridLoadCombination"  AutoGenerateColumns="False"
+                    <common:EnhancedDataGrid Grid.Row="3" Grid.Column ="1"  x:Name="DataGridLoadCombination" CanUserSortColumns="False"  AutoGenerateColumns="False"
                         CanUserAddRows="False" 
                         LoadingRow="DataGrid_LoadingRow_Numbering"
                         VerticalAlignment="Center"
@@ -503,7 +503,7 @@
 
                             <TextBlock Text="共通入力" Foreground="{StaticResource PrimaryAccentBrush}" Grid.Row="0" Grid.Column="0"/>
 
-                            <common:EnhancedDataGrid x:Name="DataGridCommonLoadCase1"
+                            <common:EnhancedDataGrid x:Name="DataGridCommonLoadCase1" CanUserSortColumns="False"
                                 ItemsSource="{Binding LoadCasesLevel1Common, UpdateSourceTrigger=LostFocus}"
                                 AutoGenerateColumns="False" CanUserAddRows="False"
                                 ScrollViewer.VerticalScrollBarVisibility="Visible"
@@ -717,8 +717,8 @@
                                 </common:EnhancedDataGrid.Columns>
                             </common:EnhancedDataGrid>
 
-                            <TextBlock Text="荷重ケース" Foreground="#3271AD" Grid.Row="2" Grid.Column="0"/>
-                            <common:EnhancedDataGrid x:Name="DataGridLoadCase1"
+                            <TextBlock Text="荷重ケース" Foreground="{StaticResource NikkenDeepBlueBrush}" Grid.Row="2" Grid.Column="0"/>
+                            <common:EnhancedDataGrid x:Name="DataGridLoadCase1" CanUserSortColumns="False"
                                     ItemsSource="{Binding LoadCasesLevel1, UpdateSourceTrigger=LostFocus}"
                                     AutoGenerateColumns="False" CanUserAddRows="False"
                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
@@ -746,7 +746,7 @@
                                 <common:EnhancedDataGrid.ColumnHeaderStyle>
                                     <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                         <Setter Property="HorizontalContentAlignment" Value="Center" />
-                                        <Setter Property="Foreground" Value="#3271AD" />
+                                        <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}" />
                                     </Style>
                                 </common:EnhancedDataGrid.ColumnHeaderStyle>
                                 <common:EnhancedDataGrid.Columns>
@@ -930,7 +930,7 @@
                                 </common:EnhancedDataGrid.Columns>
                             </common:EnhancedDataGrid>
 
-                            <TextBlock Text="" Foreground="#3271AD" Grid.Row="2" Grid.Column="1">
+                            <TextBlock Text="" Foreground="{StaticResource NikkenDeepBlueBrush}" Grid.Row="2" Grid.Column="1">
                                 <Run Text="重ね合わせケース合計慣性力 β"/>
                                 <Run Text="U" BaselineAlignment="Subscript" FontSize="10"/>
                                 <Run Text="・P"/>
@@ -1160,7 +1160,7 @@
                             <!--<StackPanel Grid.Column="0">-->
                             <TextBlock Text="共通入力" Foreground="{StaticResource PrimaryAccentBrush}" Grid.Row="0" Grid.Column="0"/>
                             <!-- 共通LoadCases2用のDataGridのColumns -->
-                            <common:EnhancedDataGrid x:Name="DataGridCommonLoadCase2" ItemsSource="{Binding LoadCasesLevel2Common, UpdateSourceTrigger=LostFocus}"
+                            <common:EnhancedDataGrid x:Name="DataGridCommonLoadCase2" CanUserSortColumns="False" ItemsSource="{Binding LoadCasesLevel2Common, UpdateSourceTrigger=LostFocus}"
                                 AutoGenerateColumns="False" CanUserAddRows="False"
                                 ScrollViewer.VerticalScrollBarVisibility="Visible"
                                 LoadingRow="DataGrid_LoadingRow_Numbering"
@@ -1378,8 +1378,8 @@
 
 
                             <!-- LoadCases2用のDataGridのColumns -->
-                            <TextBlock Text="荷重ケース" Foreground="#3271AD" Grid.Row="2" Grid.Column="0"/>
-                            <common:EnhancedDataGrid x:Name="DataGridLoadCase2"
+                            <TextBlock Text="荷重ケース" Foreground="{StaticResource NikkenDeepBlueBrush}" Grid.Row="2" Grid.Column="0"/>
+                            <common:EnhancedDataGrid x:Name="DataGridLoadCase2" CanUserSortColumns="False"
                               ItemsSource="{Binding LoadCasesLevel2, UpdateSourceTrigger=LostFocus}"
                               AutoGenerateColumns="False" CanUserAddRows="False"
                               ScrollViewer.VerticalScrollBarVisibility="Visible"
@@ -1406,7 +1406,7 @@
                                 <common:EnhancedDataGrid.ColumnHeaderStyle>
                                     <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                         <Setter Property="HorizontalContentAlignment" Value="Center" />
-                                        <Setter Property="Foreground" Value="#3271AD" />
+                                        <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}" />
                                     </Style>
                                 </common:EnhancedDataGrid.ColumnHeaderStyle>
                                 <common:EnhancedDataGrid.Columns>
@@ -1592,7 +1592,7 @@
 
 
 
-                            <TextBlock Text="" Foreground="#3271AD" Grid.Row="2" Grid.Column="1">
+                            <TextBlock Text="" Foreground="{StaticResource NikkenDeepBlueBrush}" Grid.Row="2" Grid.Column="1">
                                 <Run Text="重ね合わせケース合計慣性力 β"/>
                                 <Run Text="U" BaselineAlignment="Subscript" FontSize="10"/>
                                 <Run Text="・P"/>

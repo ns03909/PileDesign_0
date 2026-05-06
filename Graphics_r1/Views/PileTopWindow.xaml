@@ -675,10 +675,9 @@
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable x:Name="SpecsTab" Title="諸元" CanClose="False" CanHide="False">
                                 <!--<TextBlock Text="諸元"/>-->
-                                <common:EnhancedDataGrid x:Name="DrawGridSpecifications"
+                                <common:EnhancedDataGrid x:Name="DrawGridSpecifications" CanUserSortColumns="False"
                                           ItemsSource="{Binding PileTop.SelectedPileTopSpecification}"
                                           AutoGenerateColumns="False"
-                                          CanUserSortColumns="False"
                                           CellStyle="{StaticResource CustomDataGridCellStyle}"
                                           common:DataGridNavigationBehavior.Enable="True">
 

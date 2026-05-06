@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using PileDesign.Services;
 
 namespace PileDesign.ViewModels
 {
@@ -355,7 +356,7 @@ namespace PileDesign.ViewModels
             // 先端平均N値が0の場合に警告メッセージを表示
             if (SoilPile.PileToeNValue == 0)
             {
-                System.Windows.MessageBox.Show(
+                PileDesign.Services.MessageService.Show(
                     "杭先端平均N値が0です。地盤データや杭の設定を確認してください。",
                     "警告",
                     MessageBoxButton.OK,
@@ -555,8 +556,8 @@ namespace PileDesign.ViewModels
 
             if (SelectedLoadDisplacement != null)
             {
-                // 選択位置を赤色の細い縦線で強調表示
-                var selectedColor = Color.FromSKColor(NikkenSKColor.Red);
+                // 選択位置を桃赤の細い縦線で強調表示
+                var selectedColor = Color.FromSKColor(NikkenSKColor.PaleRed);
 
                 // 杭頭沈下グラフ: 垂直線（沈下量）のみ
                 wpf.Plot.Add.VerticalLine(SelectedLoadDisplacement.D0s, 1, selectedColor);
@@ -1155,7 +1156,12 @@ namespace PileDesign.ViewModels
                 null,            // zs
                 null,            // selectedZ
                 selectedTop,     // 選択区間上端
-                selectedBottom); // 選択区間下端
+                selectedBottom, // 選択区間下端
+                showLiquefactionFL: false,
+                showGroundDisplacement: false,
+                seismicLevelIndex: 0,
+                displacementWithLiquefaction: false,
+                showUnconfinedCompressiveStrength: true);
         }
 
         // DataGridSelectionコピーメソッド

@@ -7,12 +7,12 @@ namespace PileDesign.Converters
 {
     /// <summary>
     /// LoadCase.Level (int) から Foreground色を返す IValueConverter
-    /// Level==1 → 緑, Level==2 → 赤
+    /// Level==1 → 緑, Level==2 → 桃赤
     /// </summary>
     public class LoadCaseLevelToColorConverter : IValueConverter
     {
         private static readonly Brush Level1Brush = new SolidColorBrush(Color.FromRgb(0x23, 0x89, 0x66));
-        private static readonly Brush Level2Brush = new SolidColorBrush(Color.FromRgb(0xD8, 0x25, 0x31));
+        private static readonly Brush Level2Brush = new SolidColorBrush(Color.FromRgb(0xE9, 0x55, 0x41));
         private static readonly Brush DefaultBrush = Brushes.Black;
 
         static LoadCaseLevelToColorConverter()

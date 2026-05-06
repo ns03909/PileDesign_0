@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Windows;
+using PileDesign.Services;
 //using System.Windows.Forms;
 
 namespace PileDesign.Models
@@ -21,7 +22,7 @@ namespace PileDesign.Models
         {
             if (forces.Count != displacements.Count)
             {
-                MessageBox.Show("ForcesとDisplacementsの数が異なります。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("ForcesとDisplacementsの数が異なります。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -43,7 +44,7 @@ namespace PileDesign.Models
         {
             if (tangentStiffnesses.Count != displacements.Count + 1)
             {
-                MessageBox.Show("tangentStiffnessesの数がDisplacementsの数+1ではありません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("tangentStiffnessesの数がDisplacementsの数+1ではありません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
             TangentStiffnesses = tangentStiffnesses;

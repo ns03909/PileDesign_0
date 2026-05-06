@@ -23,7 +23,7 @@ namespace PileDesign.Views
     /// </summary>
     /// 
 
-    public partial class MainWindow : RibbonWindow
+    public partial class MainWindow
     {
         private static bool IsEdgeHidden(Vector3D viewVector, Point3D p3a, Point3D p3b, int closestVertexIndex, Point3D[] cubePoints)
         {

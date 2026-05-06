@@ -13,7 +13,7 @@
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         d:DataContext="{d:DesignInstance Type=local:ElementDivisionViewModel}"
         mc:Ignorable="d"
-        Title="要素分割" Height="650" Width="650"
+        Title="杭要素分割" Height="650" Width="650"
         Loaded="ElementDivisionWindow_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown"
         common:EscapeKeyBehavior.Enable="True">
@@ -75,23 +75,23 @@
 
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#238966"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#F7B515"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#E95541"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#D82531"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 
@@ -160,7 +160,7 @@
             <!-- 全杭セット自動分割ボタン＋パラメータ -->
             <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="8,0"/>
             <Button Command="{Binding AutoZsAllPilesCommand}"
-                    ToolTip="全杭セット自動分割 (Ctrl+A): 全ての土層-杭セットに対して自動要素分割を実行します" Padding="6,2" Margin="2" VerticalAlignment="Center">
+                    ToolTip="全杭セット自動分割 (Ctrl+A): 全ての土層-杭セットに対して自動杭要素分割を実行します" Padding="6,2" Margin="2" VerticalAlignment="Center">
                     <svgc:SvgViewbox Source="/Icons/AutoSplitAll.svg" Style="{StaticResource SvgIconStyle24}"/>
             </Button>
 
@@ -203,7 +203,7 @@
                         <avalonDock:LayoutPanel Orientation="Horizontal">
                             <avalonDock:LayoutDocumentPaneGroup DockWidth="*" Orientation="Horizontal">
                                 <avalonDock:LayoutDocumentPane DockWidth="*" DockMinWidth="350">
-                                    <avalonDock:LayoutAnchorable x:Name="YousoTab" Title="要素分割"  CanClose="False" CanFloat="true" CanHide="False">
+                                    <avalonDock:LayoutAnchorable x:Name="YousoTab" Title="杭要素分割"  CanClose="False" CanFloat="true" CanHide="False">
                                         <ContentControl>
                                             <Grid>
                                                 <Grid.RowDefinitions>
@@ -258,8 +258,8 @@
                                                 <!--</ToolBar>-->
                                                 </StackPanel>
 
-                                                <common:EnhancedDataGrid x:Name="DataGridZs" AutoGenerateColumns="False" HorizontalAlignment="Stretch"
-                                                        CanUserAddRows="False" CanUserSortColumns="False"
+                                                <common:EnhancedDataGrid x:Name="DataGridZs" CanUserSortColumns="False" AutoGenerateColumns="False" HorizontalAlignment="Stretch"
+                                                        CanUserAddRows="False"
                                                         ItemsSource="{Binding SelectedZDataItems, UpdateSourceTrigger=PropertyChanged}"
                                                         SelectedItem="{Binding SelectedZDataItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                         SelectionUnit="FullRow"
@@ -414,8 +414,8 @@
 
                                                 <TextBlock Text="基準水平地盤反力係数と塑性水平地盤反力度（上段：要素上端の値，下段：要素下端の値）" Grid.Row="1"/>
 
-                                                <common:EnhancedDataGrid x:Name="horizon" AutoGenerateColumns="False" HorizontalAlignment="Stretch"
-                                                        CanUserAddRows="False" CanUserSortColumns="False"
+                                                <common:EnhancedDataGrid x:Name="horizon" CanUserSortColumns="False" AutoGenerateColumns="False" HorizontalAlignment="Stretch"
+                                                        CanUserAddRows="False"
                                                         ItemsSource="{Binding SelectedHorizontalSoilReactions, UpdateSourceTrigger=PropertyChanged}"
                                                         SelectedItem="{Binding SelectedLayeronDataGrid, UpdateSourceTrigger=PropertyChanged}"
                                                         ScrollViewer.VerticalScrollBarVisibility="Visible"
@@ -665,7 +665,7 @@
                         <avalonDock:LayoutPanel Orientation="Horizontal">
                             <avalonDock:LayoutDocumentPaneGroup DockWidth="*" Orientation="Vertical">
                                 <avalonDock:LayoutDocumentPane DockWidth="*" DockMinWidth="450">
-                                    <avalonDock:LayoutAnchorable Title="要素分割" CanClose="False" CanFloat="True" CanHide="False">
+                                    <avalonDock:LayoutAnchorable Title="杭要素分割" CanClose="False" CanFloat="True" CanHide="False">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
@@ -691,7 +691,7 @@
                                                     <TextBlock Text="m"/>
                                                 </StackPanel>
 
-                                                <GroupBox Header="自動要素分割">
+                                                <GroupBox Header="自動杭要素分割">
                                                     <StackPanel>
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="最大節点間距離(m)" Width="175"/>
@@ -701,7 +701,7 @@
                                                                     common:NumericInput.Min="0.1"/>
                                                         </StackPanel>
 
-                                                        <Button x:Name="ButtonEmbedmentAuto" ToolTip="自動要素分割実行" Width="100"
+                                                        <Button x:Name="ButtonEmbedmentAuto" ToolTip="自動杭要素分割実行" Width="100"
                                                                 Command="{Binding AutoEmbedmentZsCommand}"
                                                                 HorizontalAlignment="Left">
                                                             <svgc:SvgViewbox Source="/Icons/AutoSplitD.svg" Style="{StaticResource SvgIconStyle24}"/>
@@ -721,8 +721,8 @@
                                                 <Button x:Name="ButtonAddEmbedmentZs" Grid.Row="1" Content="選択行下への行追加"  Command="{Binding AddEmbedmentZsCommand}"/>
 
 
-                                                <common:EnhancedDataGrid x:Name="DataGridEmbedmentZs" AutoGenerateColumns="False" HorizontalAlignment="Stretch"
-                                                        CanUserAddRows="False" CanUserSortColumns="False"
+                                                <common:EnhancedDataGrid x:Name="DataGridEmbedmentZs" CanUserSortColumns="False" AutoGenerateColumns="False" HorizontalAlignment="Stretch"
+                                                        CanUserAddRows="False"
                                                         ItemsSource="{Binding EmbedmentZsCollection, UpdateSourceTrigger=PropertyChanged}"
                                                         SelectedItem="{Binding SelectedEmbedmentZ, UpdateSourceTrigger=PropertyChanged}"
                                                         SelectionUnit="FullRow"
@@ -864,8 +864,8 @@
 
                                                 <TextBlock Text="静止土圧，受働土圧（上段：層上端の値，下段：層下端の値）"/>
 
-                                                <common:EnhancedDataGrid x:Name="DoatsuGoryokuBaneDataGrid" AutoGenerateColumns="False" HorizontalAlignment="Stretch"
-                                                        CanUserAddRows="False" CanUserSortColumns="False"
+                                                <common:EnhancedDataGrid x:Name="DoatsuGoryokuBaneDataGrid" CanUserSortColumns="False" AutoGenerateColumns="False" HorizontalAlignment="Stretch"
+                                                        CanUserAddRows="False"
                                                         ItemsSource="{Binding DoatsuGoryokuBane.Items, UpdateSourceTrigger=PropertyChanged}"
                                                         SelectedItem="{Binding SelectedDoatsuGoryokuBaneItem, UpdateSourceTrigger=PropertyChanged}"
                                                         SelectionUnit="FullRow"
@@ -1109,8 +1109,8 @@
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="アンドック・最大化:" VerticalAlignment="Center" Margin="0,0,8,0"
                            Foreground="{StaticResource MutedTextBrush}" FontSize="11"/>
-                <Button x:Name="ButtonMaximizeYouso" Content="要素分割" Height="26" Padding="8,0" Margin="0,0,4,0"
-                        ToolTip="要素分割ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
+                <Button x:Name="ButtonMaximizeYouso" Content="杭要素分割" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="杭要素分割ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
                 <Button x:Name="ButtonMaximizeShape" Content="杭姿図" Height="26" Padding="8,0" Margin="0,0,4,0"
                         ToolTip="杭姿図ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
                 <Button x:Name="ButtonMaximizeKh" Content="水平地盤反力" Height="26" Padding="8,0" Margin="0,0,4,0"

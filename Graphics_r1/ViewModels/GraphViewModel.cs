@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Serilog;
+using PileDesign.Services;
 //using System.Windows.Forms;
 
 namespace PileDesign.ViewModels
@@ -329,7 +330,7 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 現在のグラフ種別に合わせて PileSegmentOptions を再構築する。
         /// p-y 以外（NMINT/QNINT/M-φ/EI-φ 等）は入力杭体セグメント数を、
-        /// p-y は要素分割後の HorizontalSoilReactions 数を使う。
+        /// p-y は杭要素分割後の HorizontalSoilReactions 数を使う。
         /// </summary>
         private void EnsurePileSegmentOptionsForCurrentGraph()
         {
@@ -984,7 +985,7 @@ namespace PileDesign.ViewModels
                 //GraphOptions.Add("杭頭応力変形関係M");
                 //GraphOptions.Add("杭応力F");
                 //GraphOptions.Add("杭応力M");
-                //GraphOptions.Add("杭変位U");
+                //GraphOptions.Add("杭変位UH");
                 GraphOptions.Add("杭変位応力");
                 GraphOptions.Add("NMINT");
                 GraphOptions.Add("QNINT");
@@ -1485,7 +1486,7 @@ namespace PileDesign.ViewModels
                 {
                     var s when s.EndsWith("UX") => ("UX", "m"),
                     var s when s.EndsWith("UY") => ("UY", "m"),
-                    var s when s.EndsWith('U') => ("U", "m"),
+                    var s when s.EndsWith("UH") => ("UH", "m"),  // 旧 "U" を "UH" にリネーム (節点変位ドロップダウンと統一)
                     _ => (string.Empty, string.Empty)
                 };
 
@@ -2080,7 +2081,7 @@ namespace PileDesign.ViewModels
                 // ホバーポップアップ用マップをクリア（3 パネル共通）
                 _graphHoverMap.Clear();
 
-                try { DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "U", "mm"); }
+                try { DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "UH", "mm"); }
                 catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Disp] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"変位グラフ描画エラー: {ex.Message}"; }
                 try { DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "F", "kN"); }
                 catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Force] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"せん断力グラフ描画エラー: {ex.Message}"; }
@@ -2108,7 +2109,7 @@ namespace PileDesign.ViewModels
             {
                 if (GridOptions.Count == 0)
                 {
-                    System.Windows.MessageBox.Show("沈下グラフを描くには、杭心を通る通り心を定義してください");
+                    PileDesign.Services.MessageService.Show("沈下グラフを描くには、杭心を通る通り心を定義してください");
                 }
 
                 IsLoadCaseOptionVisible = true;
@@ -2212,7 +2213,7 @@ namespace PileDesign.ViewModels
                 IsLiquefactionOptionVisible = true;
                 IsGridOptionVisible = false;
 
-                // 杭区間オプションを要素分割後のセグメント数に更新
+                // 杭区間オプションを杭要素分割後のセグメント数に更新
                 EnsurePileSegmentOptionsForCurrentGraph();
 
                 DrawPyCurvesWithMarker(WpfPlot, MyCrosshair, "CrosshairPositionText");
@@ -2418,7 +2419,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // 対応するBeam要素を見つける
-                // SoilPileの要素分割（地層境界・0.5D分割）でBeam数 > 入力セグメント数のため、
+                // SoilPileの杭要素分割（地層境界・0.5D分割）でBeam数 > 入力セグメント数のため、
                 // SegmentIndexからSoilPileのセグメント番号で逆引きする
                 SoilPile soilPile = null;
                 {
@@ -3663,7 +3664,7 @@ namespace PileDesign.ViewModels
                                 {
                                     pileDisps.Add(result.CumulativeDisp.Uy * 1000.0);
                                 }
-                                else if (dispType == "U")
+                                else if (dispType == "UH")
                                 {
                                     pileDisps.Add(result.CumulativeDisp.Uh * 1000.0);
                                 }
@@ -3690,7 +3691,7 @@ namespace PileDesign.ViewModels
                                 {
                                     soilDisps.Add(result.CumulativeDisp.Uy * 1000.0);
                                 }
-                                else if (dispType == "U")
+                                else if (dispType == "UH")
                                 {
                                     soilDisps.Add(result.CumulativeDisp.Uh * 1000.0);
                                 }

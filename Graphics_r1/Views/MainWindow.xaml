@@ -1,4 +1,4 @@
-﻿<ribbon:RibbonWindow x:Class="PileDesign.Views.MainWindow"
+﻿<Fluent:RibbonWindow x:Class="PileDesign.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -15,7 +15,7 @@
         xmlns:views="clr-namespace:PileDesign.Views"
         xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:models="clr-namespace:PileDesign.Models.InputData"
-        xmlns:ribbon="clr-namespace:System.Windows.Controls.Ribbon;assembly=System.Windows.Controls.Ribbon"
+        xmlns:Fluent="urn:fluent-ribbon"
         mc:Ignorable="d"
         Loaded="Window_Loaded"
         Closing="Window_Closing"
@@ -83,7 +83,10 @@
         </ContextMenu>
 
         <ContextMenu x:Key="BeamElementContextMenu">
+            <MenuItem Header="コピー／移動" Command="{Binding MoveCopyPilesCommand}"/>
             <MenuItem Header="梁要素プロパティの変更" Command="{Binding EditBeamElementsCommand}"/>
+            <MenuItem Header="削除" Command="{Binding DeleteBeamsCommand}"/>
+            <MenuItem Header="選択解除" Command="{Binding DeselectBeamsCommand}"/>
             <Separator/>
             <MenuItem Header="画像コピー(x1.0)" Command="{Binding ImageCopyCommand}" CommandParameter="1.0"/>
             <MenuItem Header="画像コピー(x2.0)" Command="{Binding ImageCopyCommand}" CommandParameter="2.0"/>
@@ -146,7 +149,7 @@
 
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsElementSplit}" Value="False">
-                    <Setter Property="Background" Value="#F7B515"/>
+                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -166,7 +169,7 @@
                         <Condition Binding="{Binding IsElementSplit}" Value="True"/>
                         <Condition Binding="{Binding IsVerticalAnalysisDone}" Value="False"/>
                     </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#F7B515"/>
+                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </MultiDataTrigger>
                 <MultiDataTrigger>
@@ -194,7 +197,7 @@
                         <Condition Binding="{Binding IsElementSplit}" Value="True"/>
                         <Condition Binding="{Binding IsHorizontalAnalysisDone}" Value="False"/>
                     </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#F7B515"/>
+                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </MultiDataTrigger>
                 <MultiDataTrigger>
@@ -218,7 +221,7 @@
 
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="False">
-                    <Setter Property="Background" Value="#F7B515"/>
+                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -231,9 +234,10 @@
         </Style>
 
         <!-- SvgViewboxコントロール用のスタイルを定義
-             Style.Triggers で親 ButtonBase の IsEnabled=False を検知して薄く表示する。
-             ボタンが活性化していないとき、リボン LargeImageSource (raster) は WPF Ribbon が
-             自動で灰色化するが、SvgViewbox は何もしないため明示的に Opacity を下げる. -->
+             SvgViewbox 自身の IsEnabled が False のとき (UIElement.IsEnabled は親から自動継承されるため、
+             親 Button の IsEnabled=False が伝播する) に薄く表示する。
+             RelativeSource AncestorType=ButtonBase 方式 (旧実装) は SvgViewbox が Button 外で使われた
+             場合に「源が見つからない」警告を出すが、本方式は警告ゼロかつ意図する挙動が得られる。 -->
         <Style x:Key="SvgIconStyle16" TargetType="svgc:SvgViewbox">
             <Setter Property="Width" Value="16"/>
             <Setter Property="Height" Value="16"/>
@@ -242,9 +246,9 @@
             <Setter Property="ClipToBounds" Value="True"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=ButtonBase}}" Value="False">
+                <Trigger Property="IsEnabled" Value="False">
                     <Setter Property="Opacity" Value="0.35"/>
-                </DataTrigger>
+                </Trigger>
             </Style.Triggers>
         </Style>
 
@@ -256,9 +260,9 @@
             <Setter Property="ClipToBounds" Value="True"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=ButtonBase}}" Value="False">
+                <Trigger Property="IsEnabled" Value="False">
                     <Setter Property="Opacity" Value="0.35"/>
-                </DataTrigger>
+                </Trigger>
             </Style.Triggers>
         </Style>
 
@@ -270,15 +274,15 @@
             <Setter Property="ClipToBounds" Value="True"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=ButtonBase}}" Value="False">
+                <Trigger Property="IsEnabled" Value="False">
                     <Setter Property="Opacity" Value="0.35"/>
-                </DataTrigger>
+                </Trigger>
             </Style.Triggers>
         </Style>
 
         <!-- ToolTipのスタイルを定義 -->
         <Style TargetType="ToolTip" x:Key="DeepBlueToolTipStyle">
-            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
             <!-- フォントの色を赤に設定 -->
         </Style>
 
@@ -291,23 +295,23 @@
         <!-- 特定の列ヘッダーの色を変更するスタイル
              BasedOn で Styles.xaml の暗黙 DataGridColumnHeader Style (FontWeight=SemiBold) を継承 -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-            <Setter Property="Foreground" Value="#238966"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
         </Style>
         <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-            <Setter Property="Foreground" Value="#F7B515"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
         </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
         </Style>
         <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-            <Setter Property="Foreground" Value="#E95541"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
         <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-            <Setter Property="Foreground" Value="#D82531"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
 
         <!--RibbonToggleButton 用: 大アイコン ToolTip スタイル-->
-        <Style x:Key="LargeIconToolTipRibbonToggleButtonStyle" TargetType="ribbon:RibbonToggleButton">
+        <Style x:Key="LargeIconToolTipRibbonToggleButtonStyle" TargetType="Fluent:ToggleButton">
             <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
             <Setter Property="ToolTip">
                 <Setter.Value>
@@ -356,7 +360,7 @@
         </Style>
 
         <!--RibbonButton 用: 大アイコンToolTip スタイル（LargeImageSource を優先し、なければ SmallImageSource。さらに Content が Svg の場合も対応）-->
-        <Style x:Key="LargeIconToolTipRibbonButtonStyle" TargetType="ribbon:RibbonButton">
+        <Style x:Key="LargeIconToolTipRibbonButtonStyle" TargetType="Fluent:Button">
             <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
             <Setter Property="ToolTip">
                 <Setter.Value>
@@ -460,7 +464,7 @@
                                 BorderBrush="#999"
                                 BorderThickness="1"
                                 Padding="6,2"
-                                Background="#F0F0F0"
+                                Background="{StaticResource SurfaceMutedBrush}"
                                 CornerRadius="2">
                             <TextBlock x:Name="text"
                                        Text="{TemplateBinding Content}"
@@ -480,7 +484,7 @@
                                     <Condition Property="IsMouseOver" Value="True"/>
                                     <Condition Property="IsChecked" Value="False"/>
                                 </MultiTrigger.Conditions>
-                                <Setter TargetName="border" Property="Background" Value="#E0E0E0"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource SurfaceBorderBrush}"/>
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -492,7 +496,7 @@
         <DataTemplate x:Key="LoadCaseItemTemplate">
             <StackPanel Orientation="Horizontal">
                 <!-- 水平解析済み (Green) -->
-                <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,1,0" VerticalAlignment="Center">
+                <Ellipse Width="5" Height="5" Fill="{StaticResource StatusSuccessBrush}" Margin="0,0,1,0" VerticalAlignment="Center">
                     <Ellipse.Visibility>
                         <MultiBinding Converter="{StaticResource LoadCaseAnalyzedConverter}">
                             <Binding/>
@@ -502,7 +506,7 @@
                     </Ellipse.Visibility>
                 </Ellipse>
                 <!-- 単杭沈下解析済み (Blue) -->
-                <Ellipse Width="5" Height="5" Fill="#1565C0" Margin="0,0,1,0" VerticalAlignment="Center">
+                <Ellipse Width="5" Height="5" Fill="{StaticResource StatusInfoBrush}" Margin="0,0,1,0" VerticalAlignment="Center">
                     <Ellipse.Visibility>
                         <MultiBinding Converter="{StaticResource SettlementAnalyzedConverter}">
                             <Binding/>
@@ -512,7 +516,7 @@
                     </Ellipse.Visibility>
                 </Ellipse>
                 <!-- 群杭沈下解析済み (Orange) - VLのみ -->
-                <Ellipse Width="5" Height="5" Fill="#E65100" Margin="0,0,3,0" VerticalAlignment="Center">
+                <Ellipse Width="5" Height="5" Fill="{StaticResource StatusWarningDarkBrush}" Margin="0,0,3,0" VerticalAlignment="Center">
                     <Ellipse.Visibility>
                         <MultiBinding Converter="{StaticResource GroupSettlementAnalyzedConverter}">
                             <Binding/>
@@ -536,7 +540,7 @@
         <!-- 荷重組み合わせComboBox用 ItemTemplate（解析済みインジケータ付き） -->
         <DataTemplate x:Key="LoadCombinationItemTemplate">
             <StackPanel Orientation="Horizontal">
-                <Ellipse Width="6" Height="6" Fill="#2E7D32" Margin="0,0,4,0" VerticalAlignment="Center">
+                <Ellipse Width="6" Height="6" Fill="{StaticResource StatusSuccessBrush}" Margin="0,0,4,0" VerticalAlignment="Center">
                     <Ellipse.Visibility>
                         <MultiBinding Converter="{StaticResource LoadCombinationAnalyzedConverter}">
                             <Binding/>
@@ -561,10 +565,10 @@
                                 BorderBrush="#999"
                                 BorderThickness="1"
                                 Padding="6,2"
-                                Background="#F0F0F0"
+                                Background="{StaticResource SurfaceMutedBrush}"
                                 CornerRadius="2">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Ellipse Width="6" Height="6" Fill="#2E7D32"
+                                <Ellipse Width="6" Height="6" Fill="{StaticResource StatusSuccessBrush}"
                                          Margin="0,0,3,0" VerticalAlignment="Center"
                                          Visibility="{Binding Tag, RelativeSource={RelativeSource TemplatedParent},
                                                       Converter={StaticResource BooleanToVisibilityConverter}}"/>
@@ -586,7 +590,7 @@
                                     <Condition Property="IsMouseOver" Value="True"/>
                                     <Condition Property="IsChecked" Value="False"/>
                                 </MultiTrigger.Conditions>
-                                <Setter TargetName="border" Property="Background" Value="#E0E0E0"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource SurfaceBorderBrush}"/>
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -621,7 +625,7 @@
             </StackPanel>
         </DataTemplate>
 
-        <!-- 要素分割ボタン専用: 大アイコンToolTip + 動的アイコン切替 -->
+        <!-- 杭要素分割ボタン専用: 大アイコンToolTip + 動的アイコン切替 -->
         <Style x:Key="ElementDivisionButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource LargeIconToolTipButtonStyle}">
@@ -633,7 +637,7 @@
                 </Setter.Value>
             </Setter>
             <!-- 既定タグ（ToolTip文言） -->
-            <Setter Property="Tag" Value="要素分割(未) (F4/Ctrl+D)"/>
+            <Setter Property="Tag" Value="杭要素分割(未) (F4/Ctrl+D)"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsElementSplit}" Value="True">
                     <Setter Property="Content">
@@ -642,7 +646,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="要素分割(済) (F4/Ctrl+D)"/>
+                    <Setter Property="Tag" Value="杭要素分割(済) (F4/Ctrl+D)"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -667,7 +671,7 @@
                         </Setter.Value>
                     </Setter>
                     <Setter Property="Tag" Value="水平解析 ✓ (F5)"/>
-                    <Setter Property="Foreground" Value="#2E7D32"/>
+                    <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -692,7 +696,7 @@
                         </Setter.Value>
                     </Setter>
                     <Setter Property="Tag" Value="荷重沈下関係解析 ✓ (F6)"/>
-                    <Setter Property="Foreground" Value="#1565C0"/>
+                    <Setter Property="Foreground" Value="{StaticResource StatusInfoBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -717,20 +721,12 @@
                         </Setter.Value>
                     </Setter>
                     <Setter Property="Tag" Value="群杭沈下解析 ✓ (F8)"/>
-                    <Setter Property="Foreground" Value="#E65100"/>
+                    <Setter Property="Foreground" Value="{StaticResource StatusWarningDarkBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
 
-        <ribbon:RibbonQuickAccessToolBar x:Key="MainQAT" x:Shared="False">
-            <ribbon:RibbonButton ToolTip="{Binding UndoToolTip}"
-                           Command="{Binding UndoCommand}"
-            SmallImageSource="pack://application:,,,/Icons/Undo.png"/>
-
-            <ribbon:RibbonButton ToolTip="{Binding RedoToolTip}"
-                           Command="{Binding RedoCommand}"
-            SmallImageSource="pack://application:,,,/Icons/Redo.png"/>
-        </ribbon:RibbonQuickAccessToolBar>
+        <!-- 旧 ribbon:RibbonQuickAccessToolBar リソースは Fluent:Ribbon.QuickAccessItems に移行済 (下方参照) -->
 
     </Window.Resources>
 
@@ -741,7 +737,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <ribbon:Ribbon Grid.Row="0"
+        <Fluent:Ribbon Grid.Row="0"
                Margin="0"
                Padding="0"
                BorderThickness="0"
@@ -750,203 +746,169 @@
 
             <!-- リボン右端のボタンは削除（画面右下のボタンは維持） -->
 
-            <ribbon:Ribbon.QuickAccessToolBar>
-                <!--リソースを 1 回だけ使用-->
-                <StaticResource ResourceKey="MainQAT"/>
-            </ribbon:Ribbon.QuickAccessToolBar>
+            <!-- QuickAccessToolBar (タイトルバー上の Undo/Redo 等) -->
+            <Fluent:Ribbon.ToolBarItems>
+                <Fluent:Button ToolTip="{Binding UndoToolTip}"
+                               Command="{Binding UndoCommand}"
+                               Icon="pack://application:,,,/Icons/Undo.png"
+                               Size="Small"/>
+                <Fluent:Button ToolTip="{Binding RedoToolTip}"
+                               Command="{Binding RedoCommand}"
+                               Icon="pack://application:,,,/Icons/Redo.png"
+                               Size="Small"/>
+            </Fluent:Ribbon.ToolBarItems>
 
-            <!-- ApplicationMenu で左上濃紺領域を活用 -->
-            <ribbon:Ribbon.ApplicationMenu>
-                <ribbon:RibbonApplicationMenu SmallImageSource="pack://application:,,,/Icons/OpenFile.png">
+            <!-- Backstage (旧 RibbonApplicationMenu の置換、Office 365 風の全画面メニュー) -->
+            <Fluent:Ribbon.Menu>
+                <Fluent:Backstage Header="ファイル" KeyTip="F">
+                    <Fluent:BackstageTabControl>
+                        <!-- 新規 -->
+                        <Fluent:Button Header="新規" Command="{Binding NewInputModelFileCommand}"
+                                       Icon="pack://application:,,,/Icons/NewFile.png"
+                                       LargeIcon="pack://application:,,,/Icons/NewFile.png"
+                                       KeyTip="N"/>
 
-                    <ribbon:RibbonApplicationMenuItem Command="{Binding NewInputModelFileCommand}" ImageSource="pack://application:,,,/Icons/NewFile.png">
-                        <ribbon:RibbonApplicationMenuItem.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="新規"/>
-                                <TextBlock Text="Ctrl+N" Foreground="Gray" Margin="12,0,0,0"/>
-                            </StackPanel>
-                        </ribbon:RibbonApplicationMenuItem.Header>
-                    </ribbon:RibbonApplicationMenuItem>
+                        <!-- 開く -->
+                        <Fluent:Button Header="開く" Command="{Binding OpenInputModelFileCommand}"
+                                       Icon="pack://application:,,,/Icons/OpenFile.png"
+                                       LargeIcon="pack://application:,,,/Icons/OpenFile.png"
+                                       KeyTip="O"/>
 
-                    <ribbon:RibbonApplicationMenuItem Command="{Binding OpenInputModelFileCommand}" ImageSource="pack://application:,,,/Icons/OpenFile.png">
-                        <ribbon:RibbonApplicationMenuItem.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="開く"/>
-                                <TextBlock Text="Ctrl+O" Foreground="Gray" Margin="12,0,0,0"/>
-                            </StackPanel>
-                        </ribbon:RibbonApplicationMenuItem.Header>
-                    </ribbon:RibbonApplicationMenuItem>
-
-                    <!-- 最近使ったファイル -->
-                    <ribbon:RibbonSeparator/>
-                    <ribbon:RibbonApplicationMenuItem Header="最近使ったファイル" ItemsSource="{Binding MruItems}">
-                        <ribbon:RibbonApplicationMenuItem.ItemContainerStyle>
-                            <Style TargetType="ribbon:RibbonApplicationMenuItem">
-                                <Setter Property="Header" Value="{Binding DisplayName}"/>
-                                <Setter Property="ToolTip" Value="{Binding FilePath}"/>
-                                <Setter Property="Command" Value="{Binding DataContext.OpenFromMruCommand, RelativeSource={RelativeSource AncestorType=ribbon:Ribbon}}"/>
-                                <Setter Property="CommandParameter" Value="{Binding FilePath}"/>
-                            </Style>
-                        </ribbon:RibbonApplicationMenuItem.ItemContainerStyle>
-                    </ribbon:RibbonApplicationMenuItem>
-                    <ribbon:RibbonSeparator/>
-
-                    <ribbon:RibbonApplicationMenuItem Command="{Binding SaveInputModelFileCommand}" ImageSource="pack://application:,,,/Icons/SaveFile.png">
-                        <ribbon:RibbonApplicationMenuItem.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="保存"/>
-                                <TextBlock Text="Ctrl+S" Foreground="Gray" Margin="12,0,0,0"/>
-                            </StackPanel>
-                        </ribbon:RibbonApplicationMenuItem.Header>
-                    </ribbon:RibbonApplicationMenuItem>
-
-                    <ribbon:RibbonApplicationMenuItem Command="{Binding SaveInputModelFileAsCommand}" ImageSource="pack://application:,,,/Icons/SaveFile.png">
-                        <ribbon:RibbonApplicationMenuItem.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="名前を付けて保存"/>
-                                <TextBlock Text="Ctrl+Shift+S" Foreground="Gray" Margin="12,0,0,0"/>
-                            </StackPanel>
-                        </ribbon:RibbonApplicationMenuItem.Header>
-                    </ribbon:RibbonApplicationMenuItem>
-
-                    <!-- Docx ファイル出力はツール(T) タブの「レポート」グループに移動 (2026-05-04) -->
-
-                    <!-- ダミー項目（メニューの高さ確保用） -->
-                    <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
-                        <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
-                        <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
-                    </ribbon:RibbonApplicationMenuItem>
-
-                    <!-- ダミー項目（メニューの高さ確保用） -->
-                    <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
-
-                        <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
-                        <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
-                    </ribbon:RibbonApplicationMenuItem>
-
-                    <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
-                        <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
-                        <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
-                    </ribbon:RibbonApplicationMenuItem>
-
-                    <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
-                        <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
-                        <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
-                    </ribbon:RibbonApplicationMenuItem>
-
-                    <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
-                        <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
-                        <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
-                    </ribbon:RibbonApplicationMenuItem>
-
-                    <!-- 計算例: 右側補助ペイン -->
-                    <ribbon:RibbonApplicationMenu.AuxiliaryPaneContent >
-                        <Border BorderBrush="Gray" BorderThickness="0" Background="White" MinWidth="320" Padding="6" ClipToBounds="True">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  CanContentScroll="False"
-                                  PanningMode="VerticalOnly"
-                                  Focusable="False">
-                                <!-- StackPanel は必ず ScrollViewer の単一子として入れる -->
-                                <StackPanel Margin="0" VerticalAlignment="Top">
-
-                                    <!-- 基礎指針'19 -->
-                                    <TextBlock Text="建築基礎構造設計指針 2019" FontWeight="Bold" Foreground="#3271AD" Margin="0,4,0,2"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="計算例5　直接基礎の即時沈下量"
-                                              KeyTip="E1"
-                                              Command="{Binding Example5PileCommand}"
-                                              ToolTip="基礎指針'19 計算例5 直接基礎の即時沈下量（PHC杭φ600 L=14m 12本付き）"
-                                              ImageSource="pack://application:,,,/Icons/cover.png"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="計算例7　杭の限界鉛直支持力および限界引抜き抵抗力"
-                                              KeyTip="E1b"
-                                              Command="{Binding Example7Command}"
-                                              ToolTip="基礎指針'19 計算例7 杭の限界鉛直支持力および限界引抜き抵抗力"
-                                              ImageSource="pack://application:,,,/Icons/cover.png"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="計算例9　地下室下の杭"
-                                              KeyTip="E2"
-                                              Command="{Binding Example9Command}"
-                                              ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗"
-                                              ImageSource="pack://application:,,,/Icons/cover.png"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="計算例10　場所打ちRC杭"
-                                              KeyTip="E2b"
-                                              Command="{Binding Example10Command}"
-                                              ToolTip="基礎指針'19 計算例10 場所打ち鉄筋コンクリート杭φ1500 L=37.5m"
-                                              ImageSource="pack://application:,,,/Icons/cover.png"/>
-
-                                    <Separator Margin="0,4"/>
-
-                                    <!-- 関東支部 -->
-                                    <TextBlock Text="基礎構造の設計（関東支部）" FontWeight="Bold" Foreground="#3271AD" Margin="0,2,0,2"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="7. 直接基礎の設計例"
-                                              KeyTip="E3"
-                                              Command="{Binding ExampleK7Command}"
-                                              ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例7を実行"
-                                              ImageSource="pack://application:,,,/Icons/332-8002.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="8. 杭基礎の設計例"
-                                              KeyTip="E4"
-                                              Command="{Binding ExampleK8Command}"
-                                              ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例8を実行"
-                                              ImageSource="pack://application:,,,/Icons/332-8002.jpg"/>
-
-                                    <Separator Margin="0,4"/>
-
-                                    <!-- 設計例集 -->
-                                    <TextBlock Text="建築基礎構造設計例集" FontWeight="Bold" Foreground="#3271AD" Margin="0,2,0,2"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="3.1　SC杭, PRC杭"
-                                              KeyTip="E5"
-                                              Command="{Binding Example3_1Command}"
-                                              ToolTip="日本建築学会　建築基礎構造設計例集3.1　非液状化地盤に建つ建物のPHC杭基礎"
-                                              ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="3.2　PHC杭"
-                                              KeyTip="E6"
-                                              Command="{Binding Example3_2Command}"
-                                              ToolTip="日本建築学会　建築基礎構造設計例集3.2　砂地盤に建つ建物のPHC節杭基礎"
-                                              ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="3.3　場所打ち杭"
-                                              KeyTip="E7"
-                                              Command="{Binding Example3_3Command}"
-                                              ToolTip="日本建築学会　建築基礎構造設計例集3.3　粘性土地盤に建つ免振建物の場所打ち鉄筋コンクリート杭基礎"
-                                              ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="3.4　SC杭"
-                                              KeyTip="E8"
-                                              Command="{Binding Example3_4Command}"
-                                              ToolTip="日本建築学会　建築基礎構造設計例集3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎"
-                                              ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="3.5　鋼管杭"
-                                              KeyTip="E9"
-                                              Command="{Binding Example3_5Command}"
-                                              ToolTip="日本建築学会　建築基礎構造設計例集3.5　鋼管杭基礎"
-                                              ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
-
-                                    <!-- 追加計算例が増える場合はここに同様に列挙 -->
+                        <!-- 最近使ったファイル -->
+                        <Fluent:BackstageTabItem Header="最近使ったファイル" KeyTip="R">
+                            <Border Padding="20">
+                                <StackPanel>
+                                    <TextBlock Text="最近使ったファイル" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
+                                    <ItemsControl ItemsSource="{Binding MruItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                        Padding="12,8" Margin="0,2"
+                                                        Command="{Binding DataContext.OpenFromMruCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding FilePath}"
+                                                        ToolTip="{Binding FilePath}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding FilePath}" FontSize="11" Foreground="Gray"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </StackPanel>
-                            </ScrollViewer>
-                        </Border>
-                    </ribbon:RibbonApplicationMenu.AuxiliaryPaneContent>
+                            </Border>
+                        </Fluent:BackstageTabItem>
 
-                    <!-- 任意: 下端フッター -->
-                    <ribbon:RibbonApplicationMenu.FooterPaneContent>
-                        <TextBlock Text="{Binding WindowTitle}" Foreground="Gray" Margin="8,0,8,4"/>
-                    </ribbon:RibbonApplicationMenu.FooterPaneContent>
-                </ribbon:RibbonApplicationMenu>
-            </ribbon:Ribbon.ApplicationMenu>
+                        <Fluent:SeparatorTabItem/>
 
-            <ribbon:RibbonTab Header="表示(V)" KeyTip="V">
+                        <!-- 上書き保存 -->
+                        <Fluent:Button Header="上書き保存" Command="{Binding SaveInputModelFileCommand}"
+                                       Icon="pack://application:,,,/Icons/SaveFile.png"
+                                       LargeIcon="pack://application:,,,/Icons/SaveFile.png"
+                                       KeyTip="S"/>
+
+                        <!-- 名前を付けて保存 -->
+                        <Fluent:Button Header="名前を付けて保存" Command="{Binding SaveInputModelFileAsCommand}"
+                                       Icon="pack://application:,,,/Icons/SaveFile.png"
+                                       LargeIcon="pack://application:,,,/Icons/SaveFile.png"
+                                       KeyTip="A"/>
+
+                        <Fluent:SeparatorTabItem/>
+
+                        <!-- 計算例 -->
+                        <Fluent:BackstageTabItem Header="計算例" KeyTip="E">
+                            <Border Padding="20">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel>
+                                        <TextBlock Text="計算例の読み込み" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
+
+                                        <!-- 建築基礎構造設計指針 2019 -->
+                                        <TextBlock Text="建築基礎構造設計指針 2019" FontWeight="Bold" Foreground="#3271AD" Margin="0,8,0,4" FontSize="14"/>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example5PileCommand}"
+                                                ToolTip="基礎指針'19 計算例5 直接基礎の即時沈下量（PHC杭φ600 L=14m 12本付き）">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例5　直接基礎の即時沈下量" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example7Command}"
+                                                ToolTip="基礎指針'19 計算例7 杭の限界鉛直支持力および限界引抜き抵抗力">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例7　杭の限界鉛直支持力および限界引抜き抵抗力" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example9Command}"
+                                                ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例9　地下室下の杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example10Command}"
+                                                ToolTip="基礎指針'19 計算例10 場所打ち鉄筋コンクリート杭φ1500 L=37.5m">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例10　場所打ちRC杭" VerticalAlignment="Center"/></StackPanel></Button>
+
+                                        <!-- 関東支部 -->
+                                        <TextBlock Text="基礎構造の設計（関東支部）" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding ExampleK7Command}"
+                                                ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 設計例7（直接基礎）を実行">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/332-8002.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="7. 直接基礎の設計例 (関東支部 設計例7)" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding ExampleK8Command}"
+                                                ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例8（杭基礎）を実行">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/332-8002.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="8. 杭基礎の設計例 (関東支部 計算例8)" VerticalAlignment="Center"/></StackPanel></Button>
+
+                                        <!-- 設計例集 -->
+                                        <TextBlock Text="建築基礎構造設計例集" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example3_1Command}"
+                                                ToolTip="日本建築学会　建築基礎構造設計例集3.1　非液状化地盤に建つ建物のPHC杭基礎">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.1　SC杭, PRC杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example3_2Command}"
+                                                ToolTip="日本建築学会　建築基礎構造設計例集3.2　砂地盤に建つ建物のPHC節杭基礎">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.2　PHC杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example3_3Command}"
+                                                ToolTip="日本建築学会　建築基礎構造設計例集3.3　粘性土地盤に建つ免振建物の場所打ち鉄筋コンクリート杭基礎">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.3　場所打ち杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example3_4Command}"
+                                                ToolTip="日本建築学会　建築基礎構造設計例集3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.4　SC杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example3_5Command}"
+                                                ToolTip="日本建築学会　建築基礎構造設計例集3.5　鋼管杭基礎">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.5　鋼管杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Border>
+                        </Fluent:BackstageTabItem>
+                    </Fluent:BackstageTabControl>
+                </Fluent:Backstage>
+            </Fluent:Ribbon.Menu>
+
+
+            <Fluent:RibbonTabItem Header="表示(V)" KeyTip="V">
                 <!-- よく使う: 荷重ケース -->
-                <ribbon:RibbonGroup Header="荷重ケース" SmallImageSource="pack://application:,,,/Icons/LoadCaseWindow.png">
-                    <ComboBox Width="120"
+                <Fluent:RibbonGroupBox Header="荷重ケース" Icon="pack://application:,,,/Icons/LoadCaseWindow.png">
+                    <Fluent:ComboBox Header="荷重ケース" Width="180"
                           ItemsSource="{Binding LoadCaseNameOption}"
                           SelectedItem="{Binding SelectedLoadCaseName}"
                           ItemTemplate="{StaticResource LoadCaseItemTemplate}"
-                          ribbon:RibbonControlService.Label="荷重ケース"
                           ToolTip="荷重ケース">
+                        <Fluent:ComboBox.Foreground>
+                            <MultiBinding Converter="{StaticResource LoadCaseNameToColorConverter}">
+                                <Binding Path="SelectedLoadCaseName"/>
+                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
+                            </MultiBinding>
+                        </Fluent:ComboBox.Foreground>
+                        <Fluent:ComboBox.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Foreground="#555555"/>
+                            </DataTemplate>
+                        </Fluent:ComboBox.HeaderTemplate>
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="SelectionChanged">
                                 <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
                         
-                    </ComboBox>
+                    </Fluent:ComboBox>
                     <!--<TextBlock Margin="0,4,0,0">
                         <TextBlock.Visibility>
                             <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
@@ -961,12 +923,11 @@
                         <Run Text="/β"/>
                         <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
                     </TextBlock>-->
-                    <ComboBox Width="120"
+                    <Fluent:ComboBox Header="組み合わせ" Width="200"
                           ItemsSource="{Binding LoadCombinationNameOption}"
                           SelectedItem="{Binding SelectedLoadCombinationName}"
-                          ItemTemplate="{StaticResource LoadCombinationItemTemplate}"
-                          ribbon:RibbonControlService.Label="組み合わせ">
-                        <ComboBox.ToolTip>
+                          ItemTemplate="{StaticResource LoadCombinationItemTemplate}">
+                        <Fluent:ComboBox.ToolTip>
                             <TextBlock>
                                 <Run Text="組合せケース α"/>
                                 <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
@@ -975,19 +936,19 @@
                                 <Run Text="/β"/>
                                 <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
                             </TextBlock>
-                        </ComboBox.ToolTip>
-                        <ComboBox.Visibility>
+                        </Fluent:ComboBox.ToolTip>
+                        <Fluent:ComboBox.Visibility>
                             <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
                                 <Binding Path="SelectedLoadCaseName"/>
                                 <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
                             </MultiBinding>
-                        </ComboBox.Visibility>
+                        </Fluent:ComboBox.Visibility>
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="SelectionChanged">
                                 <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
-                    </ComboBox>
+                    </Fluent:ComboBox>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                 ToolTip="液状化・非液状化の切替">
                         <StackPanel.Visibility>
@@ -1009,151 +970,157 @@
                                      Margin="0,0,0,0"
                                      Width="60"/>
                     </StackPanel>
-                </ribbon:RibbonGroup>
+                </Fluent:RibbonGroupBox>
 
                 <!-- 目盛・通り心 -->
-                <ribbon:RibbonGroup Header="目盛・通り心" SmallImageSource="pack://application:,,,/Icons/GridVisible.png">
-                    <ribbon:RibbonToggleButton Label="目盛" IsChecked="{Binding IsTickMarkVisible}"
-                                               LargeImageSource="pack://application:,,,/Icons/TickMarkVisible.png"
-                                               SmallImageSource="pack://application:,,,/Icons/TickMarkVisible.png"
-                                               ToolTip="Z軸に平行なビュー、Z軸に垂直なビューのときの5m間隔の目盛の表示／非表示を切り替えます。"/>
-                    <ribbon:RibbonToggleButton Label="通り心" IsChecked="{Binding IsGridLineVisible}"
-                                               LargeImageSource="pack://application:,,,/Icons/GridVisible.png"
-                                               SmallImageSource="pack://application:,,,/Icons/GridVisible.png"
-                                               ToolTip="定義した通り心の表示／非表示を切り替えます。"/>
-                    <ribbon:RibbonToggleButton Label="XYZ 軸" IsChecked="{Binding IsXYZAxesVisible}"
-                                               LargeImageSource="pack://application:,,,/Icons/AxesVisible.png"
-                                               SmallImageSource="pack://application:,,,/Icons/AxesVisible.png"
-                                               ToolTip="XYZ座標軸の表示／非表示を切り替えます。"/>
-                </ribbon:RibbonGroup>
+                <Fluent:RibbonGroupBox Header="目盛・通り心" Icon="pack://application:,,,/Icons/GridVisible.png">
+                    <Fluent:ToggleButton Header="目盛" IsChecked="{Binding IsTickMarkVisible}"
+                                               LargeIcon="pack://application:,,,/Icons/TickMarkVisible.png"
+                                               Icon="pack://application:,,,/Icons/TickMarkVisible.png"
+                                               ToolTip="Z軸に平行なビュー、Z軸に垂直なビューのときの5m間隔の目盛の表示／非表示を切り替えます。" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="通り心" IsChecked="{Binding IsGridLineVisible}"
+                                               LargeIcon="pack://application:,,,/Icons/GridVisible.png"
+                                               Icon="pack://application:,,,/Icons/GridVisible.png"
+                                               ToolTip="定義した通り心の表示／非表示を切り替えます。" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="XYZ 軸" IsChecked="{Binding IsXYZAxesVisible}"
+                                               LargeIcon="pack://application:,,,/Icons/AxesVisible.png"
+                                               Icon="pack://application:,,,/Icons/AxesVisible.png"
+                                               ToolTip="XYZ座標軸の表示／非表示を切り替えます。" SizeDefinition="Middle, Middle, Middle"/>
+                </Fluent:RibbonGroupBox>
 
                 <!-- 形状関連 -->
-                <ribbon:RibbonGroup Header="形状関連" SmallImageSource="pack://application:,,,/Icons/WireFrameVisible.png">
+                <Fluent:RibbonGroupBox Header="形状関連" Icon="pack://application:,,,/Icons/WireFrameVisible.png">
                     <!-- その他 -->
-                    <ribbon:RibbonToggleButton Label="慣性力作用点" ToolTip="慣性力作用点の表示／非表示を切り替えます。"
+                    <Fluent:ToggleButton Header="慣性力作用点" ToolTip="慣性力作用点の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsActionPointVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/LateralLoadActionPointVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="連結" ToolTip="連結線の表示／非表示を切り替えます。"
+                                                Icon="pack://application:,,,/Icons/LateralLoadActionPointVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="連結" ToolTip="連結線の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsRigidFloorVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/IsRigidConnectionVisible.png"/>
+                                                Icon="pack://application:,,,/Icons/IsRigidConnectionVisible.png" SizeDefinition="Middle, Middle, Middle"/>
                     <!-- 節点系 -->
-                    <ribbon:RibbonSplitButton Label="節点" IsCheckable="True" IsChecked="{Binding IsNodeVisible}"
-                                              ribbon:RibbonControlService.ToolTipTitle="節点"
-                                              ribbon:RibbonControlService.ToolTipDescription="節点の表示／非表示を切り替えます。▼メニューから接続用節点の表示を個別に制御できます。"
-                                              LargeImageSource="pack://application:,,,/Icons/NodeVisible.png"
-                                              SmallImageSource="pack://application:,,,/Icons/NodeVisible.png">
-                        <ribbon:RibbonMenuItem Header="接続用節点" ToolTip="基礎梁接続用節点（杭頭+ΔZc位置）の表示/非表示"
+                    <Fluent:SplitButton Header="節点" IsCheckable="True" IsChecked="{Binding IsNodeVisible}"
+                                              LargeIcon="pack://application:,,,/Icons/NodeVisible.png"
+                                              Icon="pack://application:,,,/Icons/NodeVisible.png" SizeDefinition="Middle, Middle, Middle">
+                        <Fluent:SplitButton.ToolTip>
+                            <Fluent:ScreenTip Title="節点"
+                                              Text="節点の表示／非表示を切り替えます。▼メニューから接続用節点の表示を個別に制御できます。"/>
+                        </Fluent:SplitButton.ToolTip>
+                        <Fluent:MenuItem Header="接続用節点" ToolTip="基礎梁接続用節点（杭頭+ΔZc位置）の表示/非表示"
                                                IsCheckable="True" IsChecked="{Binding IsConnectingNodeVisible}"
-                                               ImageSource="pack://application:,,,/Icons/ConnectionNodeVisible.png"/>
-                    </ribbon:RibbonSplitButton>
-                    <ribbon:RibbonToggleButton Label="要素縮小表示" ToolTip="要素の端点を縮小して節点が見やすくします。"
+                                               Icon="pack://application:,,,/Icons/ConnectionNodeVisible.png"/>
+                    </Fluent:SplitButton>
+                    <Fluent:ToggleButton Header="要素縮小表示" ToolTip="要素の端点を縮小して節点が見やすくします。"
                                                 IsChecked="{Binding IsShrinkElementMode}"
-                                                SmallImageSource="pack://application:,,,/Icons/ShrinkElementMode.png"/>
+                                                Icon="pack://application:,,,/Icons/ShrinkElementMode.png" SizeDefinition="Middle, Middle, Middle"/>
                     <!-- 杭系 -->
-                    <ribbon:RibbonToggleButton Label="根入部形状" ToolTip="根入部形状の表示／非表示を切り替えます。"
+                    <Fluent:ToggleButton Header="根入部形状" ToolTip="根入部形状の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsEmbedmentBoxVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png"/>
+                                                Icon="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png" SizeDefinition="Middle, Middle, Middle"/>
                     <!-- 梁系 -->
-                    <ribbon:RibbonSplitButton Label="梁 中心線" IsCheckable="True" IsChecked="{Binding IsFoundationBeamVisible}"
-                                              ribbon:RibbonControlService.ToolTipTitle="梁中心線"
-                                              ribbon:RibbonControlService.ToolTipDescription="梁中心線の表示／非表示を切り替えます。▼メニューから杭中心線・要素軸の表示を個別に制御できます。"
-                                              LargeImageSource="pack://application:,,,/Icons/ElementVisible.png"
-                                              SmallImageSource="pack://application:,,,/Icons/ElementVisible.png">
-                        <ribbon:RibbonMenuItem Header="杭中心線" ToolTip="杭中心線の表示／非表示を切り替えます。"
+                    <Fluent:SplitButton Header="梁 中心線" IsCheckable="True" IsChecked="{Binding IsFoundationBeamVisible}"
+                                              LargeIcon="pack://application:,,,/Icons/ElementVisible.png"
+                                              Icon="pack://application:,,,/Icons/ElementVisible.png" SizeDefinition="Middle, Middle, Middle">
+                        <Fluent:SplitButton.ToolTip>
+                            <Fluent:ScreenTip Title="梁中心線"
+                                              Text="梁中心線の表示／非表示を切り替えます。▼メニューから杭中心線・要素軸の表示を個別に制御できます。"/>
+                        </Fluent:SplitButton.ToolTip>
+                        <Fluent:MenuItem Header="杭中心線" ToolTip="杭中心線の表示／非表示を切り替えます。"
                                                IsCheckable="True" IsChecked="{Binding IsPileCenterLineVisible}"
-                                               ImageSource="pack://application:,,,/Icons/ElementVisible.png"/>
-                        <ribbon:RibbonMenuItem Header="要素軸" ToolTip="要素座標軸の表示／非表示を切り替えます。"
+                                               Icon="pack://application:,,,/Icons/ElementVisible.png"/>
+                        <Fluent:MenuItem Header="要素軸" ToolTip="要素座標軸の表示／非表示を切り替えます。"
                                                IsCheckable="True" IsChecked="{Binding IsBeamLocalAxesVisible}"
-                                               ImageSource="pack://application:,,,/Icons/IsElementLocalAxesVisible.png"/>
-                    </ribbon:RibbonSplitButton>
-                    <ribbon:RibbonSplitButton Label="梁形状" IsCheckable="True" IsChecked="{Binding IsBeamElementSectionVisible}"
-                                              ribbon:RibbonControlService.ToolTipTitle="梁形状"
-                                              ribbon:RibbonControlService.ToolTipDescription="梁断面形状の表示／非表示を切り替えます。▼メニューから杭体形状の表示を個別に制御できます。"
-                                              LargeImageSource="pack://application:,,,/Icons/BeamVisible.png"
-                                              SmallImageSource="pack://application:,,,/Icons/BeamVisible.png">
-                        <ribbon:RibbonMenuItem Header="杭体形状" ToolTip="杭体形状の表示／非表示を切り替えます。"
+                                               Icon="pack://application:,,,/Icons/IsElementLocalAxesVisible.png"/>
+                    </Fluent:SplitButton>
+                    <Fluent:SplitButton Header="梁形状" IsCheckable="True" IsChecked="{Binding IsBeamElementSectionVisible}"
+                                              LargeIcon="pack://application:,,,/Icons/BeamVisible.png"
+                                              Icon="pack://application:,,,/Icons/BeamVisible.png" SizeDefinition="Middle, Middle, Middle">
+                        <Fluent:SplitButton.ToolTip>
+                            <Fluent:ScreenTip Title="梁形状"
+                                              Text="梁断面形状の表示／非表示を切り替えます。▼メニューから杭体形状の表示を個別に制御できます。"/>
+                        </Fluent:SplitButton.ToolTip>
+                        <Fluent:MenuItem Header="杭体形状" ToolTip="杭体形状の表示／非表示を切り替えます。"
                                                IsCheckable="True" IsChecked="{Binding IsPileSectionVisible}"
-                                               ImageSource="pack://application:,,,/Icons/WireFrameVisible.png"/>
-                    </ribbon:RibbonSplitButton>
-                </ribbon:RibbonGroup>
+                                               Icon="pack://application:,,,/Icons/WireFrameVisible.png"/>
+                    </Fluent:SplitButton>
+                </Fluent:RibbonGroupBox>
 
                 <!-- 一般梁要素ラベル -->
-                <ribbon:RibbonGroup Header="一般梁要素ラベル" SmallImageSource="pack://application:,,,/Icons/ElementNo.png">
-                    <ribbon:RibbonToggleButton Label="梁要素番号" ToolTip="梁要素番号ラベルの表示／非表示を切り替えます。"
+                <Fluent:RibbonGroupBox Header="一般梁要素ラベル" Icon="pack://application:,,,/Icons/ElementNo.png">
+                    <Fluent:ToggleButton Header="梁要素番号" ToolTip="梁要素番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsElementNoVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/ElementNo.png"/>
-                    <ribbon:RibbonToggleButton Label="材料No" ToolTip="梁要素の材料番号ラベルの表示／非表示を切り替えます。"
+                               Icon="pack://application:,,,/Icons/ElementNo.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="材料No" ToolTip="梁要素の材料番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamMaterialNoVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/BeamMaterialNoVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="材料名称" ToolTip="梁要素の材料名称ラベルの表示／非表示を切り替えます。"
+                               Icon="pack://application:,,,/Icons/BeamMaterialNoVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="材料名称" ToolTip="梁要素の材料名称ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamMaterialNameVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/BeamMaterialNameVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="断面No" ToolTip="梁要素の断面番号ラベルの表示／非表示を切り替えます。"
+                               Icon="pack://application:,,,/Icons/BeamMaterialNameVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="断面No" ToolTip="梁要素の断面番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamSectionNoVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/BeamSectionNoVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="断面名称" ToolTip="梁要素の断面名称ラベルの表示／非表示を切り替えます。"
+                               Icon="pack://application:,,,/Icons/BeamSectionNoVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="断面名称" ToolTip="梁要素の断面名称ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamSectionNameVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/BeamSectionNameVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="β" ToolTip="梁要素のβ角度ラベルの表示／非表示を切り替えます。"
+                               Icon="pack://application:,,,/Icons/BeamSectionNameVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="β" ToolTip="梁要素のβ角度ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamAngleBetaVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/BeamAngleBetaVisible.png"/>
-                </ribbon:RibbonGroup>
+                               Icon="pack://application:,,,/Icons/BeamAngleBetaVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                </Fluent:RibbonGroupBox>
 
                 <!-- 節点ラベル -->
-                <ribbon:RibbonGroup Header="節点ラベル" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png">
-                    <ribbon:RibbonToggleButton Label="節点番号" ToolTip="節点番号ラベルの表示／非表示を切り替えます。"
-                                               IsChecked="{Binding IsNodeNoVisible}" SmallImageSource="pack://application:,,,/Icons/NodeNo.png"/>
-                    <ribbon:RibbonToggleButton Label="一般Z" ToolTip="一般節点のZ座標ラベルの表示／非表示を切り替えます。"
+                <Fluent:RibbonGroupBox Header="節点ラベル" Icon="pack://application:,,,/Icons/IsPileRefVisible.png">
+                    <Fluent:ToggleButton Header="節点番号" ToolTip="節点番号ラベルの表示／非表示を切り替えます。"
+                                               IsChecked="{Binding IsNodeNoVisible}" Icon="pack://application:,,,/Icons/NodeNo.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="一般Z" ToolTip="一般節点のZ座標ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsGeneralNodeZVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsGeneralLevelVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="杭体番号" ToolTip="杭体番号ラベルの表示／非表示を切り替えます。"
-                                               IsChecked="{Binding IsPileRefVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="杭頭Z" ToolTip="杭頭のZ座標ラベルの表示／非表示を切り替えます。"
-                                               IsChecked="{Binding IsPileTopLevelVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="接合Z" ToolTip="接合節点（杭頭+ΔZc）のZ座標ラベルの表示／非表示を切り替えます。"
+                               Icon="pack://application:,,,/Icons/IsGeneralLevelVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="杭体番号" ToolTip="杭体番号ラベルの表示／非表示を切り替えます。"
+                                               IsChecked="{Binding IsPileRefVisible}" Icon="pack://application:,,,/Icons/IsPileRefVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="杭頭Z" ToolTip="杭頭のZ座標ラベルの表示／非表示を切り替えます。"
+                                               IsChecked="{Binding IsPileTopLevelVisible}" Icon="pack://application:,,,/Icons/IsPileTopLevelVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="接合Z" ToolTip="接合節点（杭頭+ΔZc）のZ座標ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsConnectingNodeZVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsConnectionLevelVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="杭間隔比" ToolTip="杭間隔比ラベルの表示／非表示を切り替えます。"
+                               Icon="pack://application:,,,/Icons/IsConnectionLevelVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="杭間隔比" ToolTip="杭間隔比ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsPileDiaSpacingRatioLabelVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsPileDiaSpacingRatioVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="前後方杭" ToolTip="前後方杭ラベルの表示／非表示を切り替えます。"
+                               Icon="pack://application:,,,/Icons/IsPileDiaSpacingRatioVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="前後方杭" ToolTip="前後方杭ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsFrontPileLabelVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsFrontPileVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="地盤番号" ToolTip="地盤番号ラベルの表示／非表示を切り替えます。"
+                               Icon="pack://application:,,,/Icons/IsFrontPileVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="地盤番号" ToolTip="地盤番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsSoilRefVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsSoilRefVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="群杭係数" ToolTip="群杭係数ラベルの表示／非表示を切り替えます。"
+                               Icon="pack://application:,,,/Icons/IsSoilRefVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="群杭係数" ToolTip="群杭係数ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsGroupPileFactorLabelVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsGroupPileFactorVisible.png"/>
-                </ribbon:RibbonGroup>
+                               Icon="pack://application:,,,/Icons/IsGroupPileFactorVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                </Fluent:RibbonGroupBox>
 
                 <!-- 荷重 -->
-                <ribbon:RibbonGroup Header="荷重" SmallImageSource="pack://application:,,,/Icons/IsActionPointLoadVisible.png">
-                    <ribbon:RibbonToggleButton Label="慣性力"
+                <Fluent:RibbonGroupBox Header="荷重" Icon="pack://application:,,,/Icons/IsActionPointLoadVisible.png">
+                    <Fluent:ToggleButton Header="慣性力"
                                                ToolTip="慣性力の表示／非表示を切り替えます。"
                                                IsChecked="{Binding IsMassLoadingVisible}"
-                                               LargeImageSource="pack://application:,,,/Icons/IsActionPointLoadVisible.png"
-                                               SmallImageSource="pack://application:,,,/Icons/IsActionPointLoadVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="杭軸力"
+                                               LargeIcon="pack://application:,,,/Icons/IsActionPointLoadVisible.png"
+                                               Icon="pack://application:,,,/Icons/IsActionPointLoadVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="杭軸力"
                                                ToolTip="杭軸力の表示／非表示を切り替えます。"
                                                IsChecked="{Binding IsAxialLoadingVisible}"
-                                               LargeImageSource="pack://application:,,,/Icons/IsAxialLoadVisible.png"
-                                               SmallImageSource="pack://application:,,,/Icons/IsAxialLoadVisible.png"/>
+                                               LargeIcon="pack://application:,,,/Icons/IsAxialLoadVisible.png"
+                                               Icon="pack://application:,,,/Icons/IsAxialLoadVisible.png" SizeDefinition="Middle, Middle, Middle"/>
                     <!-- ダイアグラムスケール（応力）は右端「ダイアグラムスケール・テキスト・値表示」グループに統合済み -->
-                </ribbon:RibbonGroup>
+                </Fluent:RibbonGroupBox>
                 
                 <!-- 土層・土質点関連 -->
-                <ribbon:RibbonGroup Header="土層・土質点" SmallImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png">
-                    <ribbon:RibbonToggleButton Label="杭周 土層" ToolTip="杭周土層の表示／非表示を切り替えます。"
+                <Fluent:RibbonGroupBox Header="土層・土質点" Icon="pack://application:,,,/Icons/SurroundingSoilVisible.png">
+                    <Fluent:ToggleButton Header="杭周 土層" ToolTip="杭周土層の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsGroundVisible}"
-                                                   LargeImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png"
-                                                   SmallImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png"/>
+                                                   LargeIcon="pack://application:,,,/Icons/SurroundingSoilVisible.png"
+                                                   Icon="pack://application:,,,/Icons/SurroundingSoilVisible.png" SizeDefinition="Middle, Middle, Middle"/>
                     <!-- 土層パラメータ: トグル＋項目選択を縦配置 -->
                     <StackPanel>
-                        <ribbon:RibbonToggleButton Label="土層"
+                        <Fluent:ToggleButton Header="土層"
                                    ToolTip="土層パラメータ（密度・粘着力・Vs・Es）の表示／非表示"
                                    IsChecked="{Binding IsSoilLayerParamDisplayEnabled}"
-                                   SmallImageSource="pack://application:,,,/Icons/GroundLayerParametersVisible.png"/>
+                                   Icon="pack://application:,,,/Icons/GroundLayerParametersVisible.png" SizeDefinition="Middle, Middle, Middle"/>
                         <ComboBox Width="70" Margin="0,1,0,0"
                             ItemsSource="{Binding SoilParamDisplayOptions}"
                             SelectedItem="{Binding SelectedSoilParamDisplay}"
@@ -1161,93 +1128,93 @@
                     </StackPanel>
                     <!-- 土質点パラメータ: トグル＋項目選択を縦配置 -->
                     <StackPanel>
-                        <ribbon:RibbonToggleButton Label="土質点"
+                        <Fluent:ToggleButton Header="土質点"
                                    ToolTip="土質点パラメータ（N値・Vs0・Fc）の表示／非表示"
                                    IsChecked="{Binding IsSoilMassParamDisplayEnabled}"
-                                   SmallImageSource="pack://application:,,,/Icons/GroundPointParametersVisible.png"/>
+                                   Icon="pack://application:,,,/Icons/GroundPointParametersVisible.png" SizeDefinition="Middle, Middle, Middle"/>
                         <ComboBox Width="70" Margin="0,1,0,0"
                               ItemsSource="{Binding SoilMassParamDisplayOptions}"
                               SelectedItem="{Binding SelectedSoilMassParamDisplay}"
                               IsEnabled="{Binding IsSoilMassParamDisplayEnabled}"/>
                     </StackPanel>
-                    <ribbon:RibbonToggleButton Label="値表示"
+                    <Fluent:ToggleButton Header="値表示"
                         ToolTip="土層・土質点のパラメータの値の表示／非表示を切り替えます。"
                         IsChecked="{Binding IsSoilValueVisible}"
-                        SmallImageSource="pack://application:,,,/Icons/GroundParameterValueVisible.png"/>
-                </ribbon:RibbonGroup>
+                        Icon="pack://application:,,,/Icons/GroundParameterValueVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                </Fluent:RibbonGroupBox>
 
                 <!-- 地盤変位 -->
-                <ribbon:RibbonGroup Header="地盤変位" SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png">
-                    <ribbon:RibbonToggleButton Label="地盤 変位" ToolTip="地盤変位の表示／非表示を切り替えます。"
+                <Fluent:RibbonGroupBox Header="地盤変位" Icon="pack://application:,,,/Icons/IsForcedDispVisible.png">
+                    <Fluent:ToggleButton Header="地盤 変位" ToolTip="地盤変位の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsForcedDisplacementVisible}"
-                                                   LargeImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"
-                                                   SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"/>
+                                                   LargeIcon="pack://application:,,,/Icons/IsForcedDispVisible.png"
+                                                   Icon="pack://application:,,,/Icons/IsForcedDispVisible.png" SizeDefinition="Middle, Middle, Middle"/>
                     <!-- ダイアグラムスケール（変位）は右端「ダイアグラムスケール・テキスト・値表示」グループに統合済み -->
-                </ribbon:RibbonGroup>
+                </Fluent:RibbonGroupBox>
 
                 <!-- 群杭沈下ビュー -->
-                <ribbon:RibbonGroup Header="群杭沈下" SmallImageSource="pack://application:,,,/Icons/IsSettlementGridVisible.png">
-                    <ribbon:RibbonToggleButton Label="群杭沈下グリッド" ToolTip="群杭沈下グリッド表示"
+                <Fluent:RibbonGroupBox Header="群杭沈下" Icon="pack://application:,,,/Icons/IsSettlementGridVisible.png">
+                    <Fluent:ToggleButton Header="群杭沈下グリッド" ToolTip="群杭沈下グリッド表示"
                                IsChecked="{Binding IsGroupPileGridVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsSettlementGridVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="群杭沈下土層" ToolTip="群杭沈下用土層表示（水平視）"
+                               Icon="pack://application:,,,/Icons/IsSettlementGridVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="群杭沈下土層" ToolTip="群杭沈下用土層表示（水平視）"
                                IsChecked="{Binding IsSettlementGroundVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/SoilLayerVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="群杭沈下荷重面" ToolTip="群杭沈下用荷重面表示"
+                               Icon="pack://application:,,,/Icons/SoilLayerVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:ToggleButton Header="群杭沈下荷重面" ToolTip="群杭沈下用荷重面表示"
                                IsChecked="{Binding IsSettlementLoadVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/LoadingPlaneVisible.png"/>
-                </ribbon:RibbonGroup>
+                               Icon="pack://application:,,,/Icons/LoadingPlaneVisible.png" SizeDefinition="Middle, Middle, Middle"/>
+                </Fluent:RibbonGroupBox>
 
                 <!-- XYZ平行軸グループは目盛・通り心に統合済み -->
 
                 <!-- 選択・表示 (Small icons のみ) -->
-                <ribbon:RibbonGroup Header="選択・表示" SmallImageSource="pack://application:,,,/Icons/ActiveAll.png">
-                    <ribbon:RibbonButton ToolTip="すべて選択 (Ctrl + Shift + A)"
+                <Fluent:RibbonGroupBox Header="選択・表示" Icon="pack://application:,,,/Icons/ActiveAll.png">
+                    <Fluent:Button ToolTip="すべて選択 (Ctrl + Shift + A)"
                              Click="SelectAllNodesButton_Click"
-                             SmallImageSource="pack://application:,,,/Icons/SelectAll.png"/>
-                    <ribbon:RibbonButton ToolTip="全選択解除 (Esc)"
+                             Icon="pack://application:,,,/Icons/SelectAll.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:Button ToolTip="全選択解除 (Esc)"
                              Click="DeselectAllNodesButton_Click"
-                             SmallImageSource="pack://application:,,,/Icons/DeselectAll.png"/>
-                    <ribbon:RibbonSeparator/>
-                    <ribbon:RibbonButton ToolTip="すべてアクティブ (Ctrl + A)"
+                             Icon="pack://application:,,,/Icons/DeselectAll.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Separator/>
+                    <Fluent:Button ToolTip="すべてアクティブ (Ctrl + A)"
                              Click="ShowAllNodesButton_Click"
-                             SmallImageSource="pack://application:,,,/Icons/ActiveAll.png"/>
-                    <ribbon:RibbonButton ToolTip="選択のみアクティブ (F2)"
+                             Icon="pack://application:,,,/Icons/ActiveAll.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:Button ToolTip="選択のみアクティブ (F2)"
                              Click="ShowSelectedNodesButton_Click"
-                             SmallImageSource="pack://application:,,,/Icons/SelectedActive.png"/>
-                    <ribbon:RibbonButton ToolTip="選択を非アクティブ (Shift + F2)"
+                             Icon="pack://application:,,,/Icons/SelectedActive.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:Button ToolTip="選択を非アクティブ (Shift + F2)"
                              Click="ShowUnselectedNodesButton_Click"
-                             SmallImageSource="pack://application:,,,/Icons/SelectedInactive.png"/>
-                    <ribbon:RibbonButton ToolTip="アクティブ反転"
+                             Icon="pack://application:,,,/Icons/SelectedInactive.png" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:Button ToolTip="アクティブ反転"
                              Click="InvertActiveNodesButton_click"
-                             SmallImageSource="pack://application:,,,/Icons/InvertActive.png"/>
-                </ribbon:RibbonGroup>
+                             Icon="pack://application:,,,/Icons/InvertActive.png" SizeDefinition="Middle, Middle, Middle"/>
+                </Fluent:RibbonGroupBox>
 
 
                 <!-- ビュー切替 (Small icons のみ) -->
-                <ribbon:RibbonGroup Header="ビュー切替" SmallImageSource="pack://application:,,,/Icons/ZoomFit.png">
-                    <ribbon:RibbonButton Label="ズームフィット" Command="{Binding ZoomFitCommand}"
-                                         SmallImageSource="pack://application:,,,/Icons/ZoomFit.png"
-                                         ToolTip="ズームフィット (ctrl + 0)"/>
-                    <ribbon:RibbonButton Label="平面" Command="{Binding ViewXYPlaneCommand}"
-                                         SmallImageSource="pack://application:,,,/Icons/TopView.png"
-                                         ToolTip="平面 (Ctrl + Shift + T)"/>
-                    <ribbon:RibbonButton Label="正面" Command="{Binding ViewXZPlaneCommand}"
-                                         SmallImageSource="pack://application:,,,/Icons/FrontView.png"
-                                         ToolTip="正面 (Ctrl + Shift + F)"/>
-                    <ribbon:RibbonButton Label="右面" Command="{Binding ViewYZPlaneCommand}"
-                                         SmallImageSource="pack://application:,,,/Icons/RightView.png"
-                                         ToolTip="右面 (Ctrl + Shift + R)"/>
-                    <ribbon:RibbonButton Label="アイソメ" Command="{Binding ViewIsometricCommand}"
-                                         SmallImageSource="pack://application:,,,/Icons/IsometricView.png"
-                                         ToolTip="アイソメ (Ctrl + Shift + I)"/>
-                </ribbon:RibbonGroup>
+                <Fluent:RibbonGroupBox Header="ビュー切替" Icon="pack://application:,,,/Icons/ZoomFit.png">
+                    <Fluent:Button Header="ズームフィット" Command="{Binding ZoomFitCommand}"
+                                         Icon="pack://application:,,,/Icons/ZoomFit.png"
+                                         ToolTip="ズームフィット (ctrl + 0)" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:Button Header="平面" Command="{Binding ViewXYPlaneCommand}"
+                                         Icon="pack://application:,,,/Icons/TopView.png"
+                                         ToolTip="平面 (Ctrl + Shift + T)" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:Button Header="正面" Command="{Binding ViewXZPlaneCommand}"
+                                         Icon="pack://application:,,,/Icons/FrontView.png"
+                                         ToolTip="正面 (Ctrl + Shift + F)" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:Button Header="右面" Command="{Binding ViewYZPlaneCommand}"
+                                         Icon="pack://application:,,,/Icons/RightView.png"
+                                         ToolTip="右面 (Ctrl + Shift + R)" SizeDefinition="Middle, Middle, Middle"/>
+                    <Fluent:Button Header="アイソメ" Command="{Binding ViewIsometricCommand}"
+                                         Icon="pack://application:,,,/Icons/IsometricView.png"
+                                         ToolTip="アイソメ (Ctrl + Shift + I)" SizeDefinition="Middle, Middle, Middle"/>
+                </Fluent:RibbonGroupBox>
 
 
                 <!-- 値表示・ダイアグラムスケール・テキスト 統合グループ（右端、解析結果タブと同じ） -->
-                <ribbon:RibbonGroup Header="ダイアグラムスケール・テキスト・値表示"
-                                    LargeImageSource="pack://application:,,,/Icons/LabelSize.png"
-                                    SmallImageSource="pack://application:,,,/Icons/LabelSize.png">
+                <Fluent:RibbonGroupBox Header="ダイアグラムスケール・テキスト・値表示"
+                                    LargeIcon="pack://application:,,,/Icons/LabelSize.png"
+                                    Icon="pack://application:,,,/Icons/LabelSize.png">
                     <StackPanel Orientation="Horizontal">
                         <!-- ===== 1 列目: テキストサイズ → 応力スケール → 変位スケール (最大 3 行) ===== -->
                         <StackPanel Orientation="Vertical" Margin="0,0,10,0" VerticalAlignment="Center">
@@ -1305,16 +1272,36 @@
                                       IsEnabled="{Binding IsResultValueVisible}" Margin="0,0,6,0"/>
                                 <CheckBox Content="杭頭"
                                       IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
-                                      IsEnabled="{Binding IsResultValueVisible}"/>
+                                      IsEnabled="{Binding IsResultValueVisible}" Margin="0,0,6,0"/>
+                                <CheckBox Content="杭MaxMin"
+                                      IsChecked="{Binding IsPileMaxMinResultValueVisibleOnly}"
+                                      IsEnabled="{Binding IsResultValueVisible}"
+                                      ToolTip="各杭の応力ダイアグラム値のうち、最大と最小の 2 値だけを表示"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <CheckBox Content="基礎梁応力 水平表示"
-                                          IsChecked="{Binding IsFoundationBeamStressRotatedToHorizontal}"
-                                          ToolTip="基礎梁の鉛直方向成分 (My/Qz など) を梁軸まわりに 90° 回転して水平面に表示。上面図 (+Z) で確認しやすくなります。"
+                                <TextBlock Text="応力表示:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <CheckBox Content="杭"
+                                          IsChecked="{Binding IsPileStressVisible}"
+                                          ToolTip="杭体・RigidLink の応力ダイアグラムを表示。OFF で非表示 (上面図モードと併用で基礎梁応力だけが見える)。"
                                           Margin="0,0,6,0"/>
-                                <CheckBox Content="杭応力 非表示"
-                                          IsChecked="{Binding IsPileStressHidden}"
-                                          ToolTip="杭体・RigidLink の応力ダイアグラムを非表示。上面図モードと併用すると基礎梁応力だけが見えます。"/>
+                                <CheckBox Content="基礎梁"
+                                          IsChecked="{Binding IsFoundationBeamStressVisible}"
+                                          ToolTip="基礎梁の応力ダイアグラムを表示。OFF で非表示。"
+                                          Margin="0,0,8,0"/>
+                                <Separator Width="1" Background="#DDD" Margin="0,0,8,0"/>
+                                <CheckBox Content="基礎梁 水平表示"
+                                          IsChecked="{Binding IsFoundationBeamStressRotatedToHorizontal}"
+                                          ToolTip="基礎梁の鉛直方向成分 (My/Qz など) を梁軸まわりに 90° 回転して水平面に表示。上面図 (+Z) で確認しやすくなります。"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="変位表示:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <CheckBox Content="杭"
+                                          IsChecked="{Binding IsPileDisplacementVisible}"
+                                          ToolTip="杭体・RigidLink・根入れ部の変位ダイアグラムを表示。OFF で非表示。"
+                                          Margin="0,0,6,0"/>
+                                <CheckBox Content="基礎梁"
+                                          IsChecked="{Binding IsFoundationBeamDisplacementVisible}"
+                                          ToolTip="基礎梁の変位ダイアグラムを表示。OFF で非表示。"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -1348,173 +1335,172 @@
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
-                </ribbon:RibbonGroup>
+                </Fluent:RibbonGroupBox>
 
-            </ribbon:RibbonTab>
+            </Fluent:RibbonTabItem>
 
-            <ribbon:RibbonTab Header="解析条件/解析(S)" KeyTip="S">
-                <ribbon:RibbonGroup Header="解析条件設定">
-                    <ribbon:RibbonButton x:Name="ButtonFundamental"
-                         Label="基本 設定"
+            <Fluent:RibbonTabItem Header="解析条件/解析(S)" KeyTip="S">
+                <Fluent:RibbonGroupBox Header="解析条件設定">
+                    <Fluent:Button x:Name="ButtonFundamental"
+                         Header="基本 設定"
                          ToolTip="基本設定 (Ctrl+E)"
                          Command="{Binding OpenFundamentalWindowCommand}"
-                         LargeImageSource="pack://application:,,,/Icons/FundamentalWindow.png"
-                         SmallImageSource="pack://application:,,,/Icons/FundamentalWindow.png"/>
+                         LargeIcon="pack://application:,,,/Icons/FundamentalWindow.png"
+                         Icon="pack://application:,,,/Icons/FundamentalWindow.png"/>
 
-                    <ribbon:RibbonButton x:Name="RibbonButtonLoadCase"
-                         Label="荷重"
+                    <Fluent:Button x:Name="RibbonButtonLoadCase"
+                         Header="荷重"
                          Command="{Binding OpenLoadCaseWindowCommand}"
-                         LargeImageSource="pack://application:,,,/Icons/LoadCaseWindow.png"
-                         SmallImageSource="pack://application:,,,/Icons/LoadCaseWindow.png"/>
+                         LargeIcon="pack://application:,,,/Icons/LoadCaseWindow.png"
+                         Icon="pack://application:,,,/Icons/LoadCaseWindow.png"/>
 
-                    <ribbon:RibbonButton x:Name="RibbonButtonGround"
-                         Label="地盤"
+                    <Fluent:Button x:Name="RibbonButtonGround"
+                         Header="地盤"
                          PreviewMouseDown="ButtonGround_PreviewMouseDown"
                          Command="{Binding OpenGroundWindowCommand}"
-                         LargeImageSource="pack://application:,,,/Icons/GroundWindow.png"
-                         SmallImageSource="pack://application:,,,/Icons/GroundWindow.png"/>
+                         LargeIcon="pack://application:,,,/Icons/GroundWindow.png"
+                         Icon="pack://application:,,,/Icons/GroundWindow.png"/>
 
-                    <ribbon:RibbonButton x:Name="RibbonButtonPileBody"
-                         Label="杭体"
+                    <Fluent:Button x:Name="RibbonButtonPileBody"
+                         Header="杭体"
                          PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
                          Command="{Binding OpenPileBodyWindowCommand}"
-                         LargeImageSource="pack://application:,,,/Icons/PileBodyWindow.png"
-                         SmallImageSource="pack://application:,,,/Icons/PileBodyWindow.png"/>
+                         LargeIcon="pack://application:,,,/Icons/PileBodyWindow.png"
+                         Icon="pack://application:,,,/Icons/PileBodyWindow.png"/>
 
-                    <ribbon:RibbonButton x:Name="RibbonButtonAxialForceCheck"
-                         Label="軸力 確認"
+                    <Fluent:Button x:Name="RibbonButtonAxialForceCheck"
+                         Header="軸力 確認"
                          PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
                          Command="{Binding AxialForceCheckCommand}"
-                         LargeImageSource="pack://application:,,,/Icons/AxialForceVeirification.png"
-                         SmallImageSource="pack://application:,,,/Icons/AxialForceVeirification.png"/>
+                         LargeIcon="pack://application:,,,/Icons/AxialForceVeirification.png"
+                         Icon="pack://application:,,,/Icons/AxialForceVeirification.png"/>
 
-                    <ribbon:RibbonButton x:Name="RibbonButtonExecuteAnalyse"
-                             Label="{Binding IsElementSplit, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='要素分割(済),要素分割(未)'}"
-                             ToolTip="要素分割 (F4)"
+                    <Fluent:Button x:Name="RibbonButtonExecuteAnalyse"
+                             Header="{Binding IsElementSplit, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='杭要素 分割(済),杭要素 分割(未)'}"
+                             ToolTip="杭要素分割 (F4)"
                              Command="{Binding OpenElementDivisionWindowCommand}">
-                        <ribbon:RibbonButton.Style>
-                            <Style TargetType="ribbon:RibbonButton">
+                        <Fluent:Button.Style>
+                            <Style TargetType="Fluent:Button">
                                 <!-- 未分割時（既定） -->
-                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/ElementDivisionWindow.png"/>
-                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/ElementDivisionWindow.png"/>
+                                <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/ElementDivisionWindow.png"/>
+                                <Setter Property="Icon" Value="pack://application:,,,/Icons/ElementDivisionWindow.png"/>
                                 <Style.Triggers>
                                     <!-- 分割済み時に差し替え -->
                                     <DataTrigger Binding="{Binding IsElementSplit}" Value="True">
-                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/ElementDivisionWindowDone.png"/>
-                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/ElementDivisionWindowDone.png"/>
+                                        <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/ElementDivisionWindowDone.png"/>
+                                        <Setter Property="Icon" Value="pack://application:,,,/Icons/ElementDivisionWindowDone.png"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </ribbon:RibbonButton.Style>
-                    </ribbon:RibbonButton>
-                </ribbon:RibbonGroup>
+                        </Fluent:Button.Style>
+                    </Fluent:Button>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="水平解析">
-                    <ribbon:RibbonButton x:Name="RibbonButtonLateralLoadAnalysisSettlement"
+                <Fluent:RibbonGroupBox Header="水平解析">
+                    <Fluent:Button x:Name="RibbonButtonLateralLoadAnalysisSettlement"
                          Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
                          IsEnabled="{Binding IsElementSplit}">
-                        <ribbon:RibbonButton.Style>
-                            <Style TargetType="ribbon:RibbonButton">
-                                <Setter Property="Label" Value="水平解析"/>
-                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"/>
-                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"/>
+                        <Fluent:Button.Style>
+                            <Style TargetType="Fluent:Button">
+                                <Setter Property="Header" Value="水平解析"/>
+                                <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"/>
+                                <Setter Property="Icon" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="True">
-                                        <Setter Property="Label" Value="水平解析 ✓"/>
-                                        <Setter Property="Foreground" Value="#2E7D32"/>
-                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindowDone.png"/>
-                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindowDone.png"/>
+                                        <Setter Property="Header" Value="水平解析 ✓"/>
+                                        <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
+                                        <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindowDone.png"/>
+                                        <Setter Property="Icon" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindowDone.png"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </ribbon:RibbonButton.Style>
-                    </ribbon:RibbonButton>
-                </ribbon:RibbonGroup>
+                        </Fluent:Button.Style>
+                    </Fluent:Button>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="単杭沈下解析">
-                    <ribbon:RibbonButton x:Name="RibbonButtonSettlement"
+                <Fluent:RibbonGroupBox Header="単杭沈下解析">
+                    <Fluent:Button x:Name="RibbonButtonSettlement"
                          PreviewMouseDown="ButtonButtonSettlement_PreviewMouseDown"
                          Command="{Binding OpenSettlementWindowCommand}"
-                         ToolTip="各杭の荷重-沈下関係を計算します。要素分割が前提です。"
+                         ToolTip="各杭の荷重-沈下関係を計算します。杭要素分割が前提です。"
                          IsEnabled="{Binding IsElementSplit}">
-                        <ribbon:RibbonButton.Style>
-                            <Style TargetType="ribbon:RibbonButton">
-                                <Setter Property="Label" Value="荷重沈下関係解析"/>
-                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
-                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
+                        <Fluent:Button.Style>
+                            <Style TargetType="Fluent:Button">
+                                <Setter Property="Header" Value="荷重沈下 関係解析"/>
+                                <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
+                                <Setter Property="Icon" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="True">
-                                        <Setter Property="Label" Value="荷重沈下関係解析 ✓"/>
-                                        <Setter Property="Foreground" Value="#1565C0"/>
-                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
-                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
+                                        <Setter Property="Header" Value="荷重沈下 関係解析 ✓"/>
+                                        <Setter Property="Foreground" Value="{StaticResource StatusInfoBrush}"/>
+                                        <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
+                                        <Setter Property="Icon" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </ribbon:RibbonButton.Style>
-                    </ribbon:RibbonButton>
+                        </Fluent:Button.Style>
+                    </Fluent:Button>
 
-                    <ribbon:RibbonButton x:Name="RibbonButtonVerticalBeamCalculation"
+                    <Fluent:Button x:Name="RibbonButtonVerticalBeamCalculation"
                          Command="{Binding OpenVerticalBeamCalculationCommand}"
                          ToolTipService.ShowOnDisabled="True"
                          ToolTip="基礎梁の剛性を考慮した沈下解析です。基礎梁を含むモデルで荷重沈下関係解析を実行したときに押下可能となります。">
-                        <ribbon:RibbonButton.Style>
-                            <Style TargetType="ribbon:RibbonButton">
-                                <Setter Property="Label" Value="基礎梁考慮沈下解析"/>
-                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindow.png"/>
-                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindow.png"/>
+                        <Fluent:Button.Style>
+                            <Style TargetType="Fluent:Button">
+                                <Setter Property="Header" Value="基礎梁考慮 沈下解析"/>
+                                <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/SettlementWithBeamWindow.png"/>
+                                <Setter Property="Icon" Value="pack://application:,,,/Icons/SettlementWithBeamWindow.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsVerticalBeamAnalysisDone}" Value="True">
-                                        <Setter Property="Label" Value="基礎梁考慮沈下解析 ✓"/>
-                                        <Setter Property="Foreground" Value="#1565C0"/>
-                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindowDone.png"/>
-                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindowDone.png"/>
+                                        <Setter Property="Header" Value="基礎梁考慮 沈下解析 ✓"/>
+                                        <Setter Property="Foreground" Value="{StaticResource StatusInfoBrush}"/>
+                                        <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/SettlementWithBeamWindowDone.png"/>
+                                        <Setter Property="Icon" Value="pack://application:,,,/Icons/SettlementWithBeamWindowDone.png"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </ribbon:RibbonButton.Style>
-                    </ribbon:RibbonButton>
-                </ribbon:RibbonGroup>
+                        </Fluent:Button.Style>
+                    </Fluent:Button>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="群杭沈下解析">
-                    <ribbon:RibbonButton x:Name="RibbonButtonGroupPileSettlement"
+                <Fluent:RibbonGroupBox Header="群杭沈下解析">
+                    <Fluent:Button x:Name="RibbonButtonGroupPileSettlement"
                      Click="ButtonGroupPileSettlement_Click"
                      ToolTip="スタインブレナー近似式による即時沈下量を計算します。群杭荷重タブで荷重面・土層を設定してください。">
-                        <ribbon:RibbonButton.Style>
-                            <Style TargetType="ribbon:RibbonButton">
-                                <Setter Property="Label" Value="群杭沈下解析"/>
-                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
-                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
+                        <Fluent:Button.Style>
+                            <Style TargetType="Fluent:Button">
+                                <Setter Property="Header" Value="群杭 沈下解析"/>
+                                <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
+                                <Setter Property="Icon" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
-                                        <Setter Property="Label" Value="群杭沈下解析 ✓"/>
-                                        <Setter Property="Foreground" Value="#E65100"/>
-                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
-                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
+                                        <Setter Property="Header" Value="群杭 沈下解析 ✓"/>
+                                        <Setter Property="Foreground" Value="{StaticResource StatusWarningDarkBrush}"/>
+                                        <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
+                                        <Setter Property="Icon" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </ribbon:RibbonButton.Style>
-                    </ribbon:RibbonButton>
-                </ribbon:RibbonGroup>
+                        </Fluent:Button.Style>
+                    </Fluent:Button>
+                </Fluent:RibbonGroupBox>
 
 
-            </ribbon:RibbonTab>
+            </Fluent:RibbonTabItem>
 
-            <ribbon:RibbonTab x:Name="AnalysisResultRibbonTab" Header="解析結果(R)" KeyTip="R">
-                <ribbon:RibbonGroup Header="解析結果表示">
-                    <ribbon:RibbonToggleButton Label="杭・梁 要素"
+            <Fluent:RibbonTabItem x:Name="AnalysisResultRibbonTab" Header="解析結果(R)" KeyTip="R">
+                <Fluent:RibbonGroupBox Header="解析結果表示">
+                    <Fluent:ToggleButton Header="杭・梁 要素"
                         ToolTip="杭・梁要素の解析結果表示/非表示"
                         IsChecked="{Binding IsAnalysisResultVisible}"
                         IsEnabled="{Binding HasAnyAnalysisResult}"
-                        LargeImageSource="pack://application:,,,/Icons/AnalysisResult.png"
-                        SmallImageSource="pack://application:,,,/Icons/AnalysisResult.png"/>
+                        LargeIcon="pack://application:,,,/Icons/AnalysisResult.png"
+                        Icon="pack://application:,,,/Icons/AnalysisResult.png"/>
 
-                    <ComboBox Width="100"
+                    <Fluent:ComboBox Header="内容" Width="100"
                           SelectedItem="{Binding AnalysisResultContent}"
-                          ribbon:RibbonControlService.Label="内容"
                              Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <ComboBox.Resources>
+                        <Fluent:ComboBox.Resources>
                             <!-- カテゴリ（沈下解析結果／水平解析結果）でグループ化 -->
                             <CollectionViewSource x:Key="GroupedAnalysisContents"
                                                   Source="{Binding AnalysisResultContentOption}">
@@ -1522,11 +1508,11 @@
                                     <PropertyGroupDescription Converter="{StaticResource AnalysisContentCategoryConverter}"/>
                                 </CollectionViewSource.GroupDescriptions>
                             </CollectionViewSource>
-                        </ComboBox.Resources>
-                        <ComboBox.ItemsSource>
+                        </Fluent:ComboBox.Resources>
+                        <Fluent:ComboBox.ItemsSource>
                             <Binding Source="{StaticResource GroupedAnalysisContents}"/>
-                        </ComboBox.ItemsSource>
-                        <ComboBox.GroupStyle>
+                        </Fluent:ComboBox.ItemsSource>
+                        <Fluent:ComboBox.GroupStyle>
                             <GroupStyle>
                                 <GroupStyle.HeaderTemplate>
                                     <DataTemplate>
@@ -1536,20 +1522,19 @@
                                     </DataTemplate>
                                 </GroupStyle.HeaderTemplate>
                             </GroupStyle>
-                        </ComboBox.GroupStyle>
+                        </Fluent:ComboBox.GroupStyle>
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="SelectionChanged">
                                 <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
-                    </ComboBox>
+                    </Fluent:ComboBox>
 
                     <!-- 沈下種別 -->
-                    <ComboBox Width="100"
+                    <Fluent:ComboBox Header="沈下種別" Width="100"
                           ItemsSource="{Binding AnalysisResultSettlementOption}"
-                          SelectedItem="{Binding AnalysisResultSettlementType}"
-                          ribbon:RibbonControlService.Label="沈下種別">
-                        <ComboBox.Style>
+                          SelectedItem="{Binding AnalysisResultSettlementType}">
+                        <Fluent:ComboBox.Style>
                             <Style TargetType="ComboBox">
                                 <!-- 既定は非表示 -->
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -1584,20 +1569,19 @@
                                     </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </ComboBox.Style>
+                        </Fluent:ComboBox.Style>
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="SelectionChanged">
                                 <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
-                    </ComboBox>
+                    </Fluent:ComboBox>
 
                     <!-- 梁応力 / 沈下応力 -->
-                    <ComboBox Width="100"
+                    <Fluent:ComboBox Header="梁応力" Width="100"
                           ItemsSource="{Binding AnalysisResultBeamForceOption}"
-                          SelectedItem="{Binding AnalysisResultBeamForceType}"
-                          ribbon:RibbonControlService.Label="梁応力">
-                        <ComboBox.Style>
+                          SelectedItem="{Binding AnalysisResultBeamForceType}">
+                        <Fluent:ComboBox.Style>
                             <Style TargetType="ComboBox">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                                 <Style.Triggers>
@@ -1617,20 +1601,19 @@
                                     </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </ComboBox.Style>
+                        </Fluent:ComboBox.Style>
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="SelectionChanged">
                                 <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
-                    </ComboBox>
+                    </Fluent:ComboBox>
 
                     <!-- 節点変位 -->
-                    <ComboBox Width="100"
+                    <Fluent:ComboBox Header="節点変位" Width="100"
                           ItemsSource="{Binding AnalysisResultNodeDisplacementOption}"
-                          SelectedItem="{Binding AnalysisResultNodeDisplacementType}"
-                          ribbon:RibbonControlService.Label="節点変位">
-                        <ComboBox.Style>
+                          SelectedItem="{Binding AnalysisResultNodeDisplacementType}">
+                        <Fluent:ComboBox.Style>
                             <Style TargetType="ComboBox">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                                 <Style.Triggers>
@@ -1643,20 +1626,19 @@
                                     </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </ComboBox.Style>
+                        </Fluent:ComboBox.Style>
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="SelectionChanged">
                                 <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
-                    </ComboBox>
+                    </Fluent:ComboBox>
 
                     <!-- 地盤反力 -->
-                    <ComboBox Width="100"
+                    <Fluent:ComboBox Header="地盤反力" Width="100"
                           ItemsSource="{Binding AnalysisResultSoilSpringOption}"
-                          SelectedItem="{Binding AnalysisResultSoilSpringType}"
-                          ribbon:RibbonControlService.Label="地盤反力">
-                        <ComboBox.Style>
+                          SelectedItem="{Binding AnalysisResultSoilSpringType}">
+                        <Fluent:ComboBox.Style>
                             <Style TargetType="ComboBox">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                                 <Style.Triggers>
@@ -1669,27 +1651,29 @@
                                     </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </ComboBox.Style>
+                        </Fluent:ComboBox.Style>
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="SelectionChanged">
                                 <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
-                    </ComboBox>
-                    <ribbon:RibbonToggleButton Label="群杭グリッド 変位"
+                    </Fluent:ComboBox>
+                    <Fluent:ToggleButton Header="群杭グリッド 変位"
                                ToolTip="群杭グリッド変位表示"
                                IsChecked="{Binding IsGroupPileGridDeformationVisible}"
-                               LargeImageSource="pack://application:,,,/Icons/GroupPileContorVisible.png"
-                               SmallImageSource="pack://application:,,,/Icons/GroupPileContorVisible.png"/>
-                </ribbon:RibbonGroup>
+                               LargeIcon="pack://application:,,,/Icons/GroupPileContorVisible.png"
+                               Icon="pack://application:,,,/Icons/GroupPileContorVisible.png"/>
+                </Fluent:RibbonGroupBox>
                 
-                <ribbon:RibbonGroup Header="バブル">
-                    <ribbon:RibbonSplitButton Label="バブル 表示" IsCheckable="True"
+                <Fluent:RibbonGroupBox Header="バブル">
+                    <Fluent:SplitButton Header="バブル 表示" IsCheckable="True"
                                               IsChecked="{Binding IsBubbleVisible}"
-                                              LargeImageSource="pack://application:,,,/Icons/BubbleVisible.png"
-                                              SmallImageSource="pack://application:,,,/Icons/BubbleVisible.png"
-                                              ribbon:RibbonControlService.ToolTipTitle="バブル表示"
-                                              ribbon:RibbonControlService.ToolTipDescription="沈下解析結果の表示時に、各杭位置に沈下量に比例した円（バブル）をカラーコードで描画します。平面ビューでの表示に適しています。">
+                                              LargeIcon="pack://application:,,,/Icons/BubbleVisible.png"
+                                              Icon="pack://application:,,,/Icons/BubbleVisible.png">
+                        <Fluent:SplitButton.ToolTip>
+                            <Fluent:ScreenTip Title="バブル表示"
+                                              Text="沈下解析結果の表示時に、各杭位置に沈下量に比例した円（バブル）をカラーコードで描画します。平面ビューでの表示に適しています。"/>
+                        </Fluent:SplitButton.ToolTip>
                         <StackPanel Orientation="Horizontal" Margin="4">
                             <TextBlock Text="径" VerticalAlignment="Center" Margin="0,0,4,0"/>
                             <Slider Width="100" Minimum="0" Maximum="200"
@@ -1699,17 +1683,19 @@
                                  PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  KeyDown="TextBox_KeyDown"/>
                         </StackPanel>
-                    </ribbon:RibbonSplitButton>
-                </ribbon:RibbonGroup>
+                    </Fluent:SplitButton>
+                </Fluent:RibbonGroupBox>
 
 
-                <ribbon:RibbonGroup Header="矢印">
-                    <ribbon:RibbonSplitButton Label="矢印 表示" IsCheckable="True"
+                <Fluent:RibbonGroupBox Header="矢印">
+                    <Fluent:SplitButton Header="矢印 表示" IsCheckable="True"
                                               IsChecked="{Binding IsArrowVisible}"
-                                              LargeImageSource="pack://application:,,,/Icons/ArrowVisible.png"
-                                              SmallImageSource="pack://application:,,,/Icons/ArrowVisible.png"
-                                              ribbon:RibbonControlService.ToolTipTitle="矢印表示"
-                                              ribbon:RibbonControlService.ToolTipDescription="沈下解析結果の表示時に、各杭位置に沈下量に比例した矢印をカラーコードで描画します。立面ビューでの表示に適しています。">
+                                              LargeIcon="pack://application:,,,/Icons/ArrowVisible.png"
+                                              Icon="pack://application:,,,/Icons/ArrowVisible.png">
+                        <Fluent:SplitButton.ToolTip>
+                            <Fluent:ScreenTip Title="矢印表示"
+                                              Text="沈下解析結果の表示時に、各杭位置に沈下量に比例した矢印をカラーコードで描画します。立面ビューでの表示に適しています。"/>
+                        </Fluent:SplitButton.ToolTip>
                         <StackPanel Margin="4">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
                                 <TextBlock Text="全長" VerticalAlignment="Center" Margin="0,0,4,0" Width="28"/>
@@ -1739,50 +1725,50 @@
                                      KeyDown="TextBox_KeyDown"/>
                             </StackPanel>
                         </StackPanel>
-                    </ribbon:RibbonSplitButton>
-                </ribbon:RibbonGroup>
+                    </Fluent:SplitButton>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="変形後">
-                    <ribbon:RibbonToggleButton Label="変形後 形状"
+                <Fluent:RibbonGroupBox Header="変形後">
+                    <Fluent:ToggleButton Header="変形後 形状"
                                    IsChecked="{Binding IsDeformedElementVisible}"
-                                   LargeImageSource="pack://application:,,,/Icons/DeformedElementVisible.png"
-                                   SmallImageSource="pack://application:,,,/Icons/DeformedElementVisible.png"
+                                   LargeIcon="pack://application:,,,/Icons/DeformedElementVisible.png"
+                                   Icon="pack://application:,,,/Icons/DeformedElementVisible.png"
                                    ToolTip="水平解析結果の変形後形状を描画します。&#x0a;杭体形状ONの場合は変形後の杭体断面も表示します。&#x0a;梁断面形状ONの場合は変形後の基礎梁断面も表示します。&#x0a;解析結果表示がOFFでも独立して動作します。"/>
-                </ribbon:RibbonGroup>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="グラフ・テーブル">
-                    <ribbon:RibbonButton Label="グラフ 出力"
+                <Fluent:RibbonGroupBox Header="グラフ・テーブル">
+                    <Fluent:Button Header="グラフ 出力"
                              ToolTip="杭変位応力グラフ・沈下曲線などの結果グラフウィンドウを開きます。"
                              Command="{Binding OpenGraphWindowCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/Graph.png"
-                             SmallImageSource="pack://application:,,,/Icons/Graph.png"/>
-                    <ribbon:RibbonButton Label="テーブル 出力"
+                             LargeIcon="pack://application:,,,/Icons/Graph.png"
+                             Icon="pack://application:,,,/Icons/Graph.png"/>
+                    <Fluent:Button Header="テーブル 出力"
                              ToolTip="解析結果をテーブル形式で表示します。"
                              Command="{Binding OpenTableWindowCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/Table.png"
-                             SmallImageSource="pack://application:,,,/Icons/Table.png"/>
-                </ribbon:RibbonGroup>
+                             LargeIcon="pack://application:,,,/Icons/Table.png"
+                             Icon="pack://application:,,,/Icons/Table.png"/>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="ログ">
-                    <ribbon:RibbonButton Label="ログ 表示"
+                <Fluent:RibbonGroupBox Header="ログ">
+                    <Fluent:Button Header="ログ 表示"
                              ToolTip="解析ログウィンドウを開きます。"
                              Command="{Binding OpenLogWindowCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/Log.png"
-                             SmallImageSource="pack://application:,,,/Icons/Log.png"/>
-                </ribbon:RibbonGroup>
+                             LargeIcon="pack://application:,,,/Icons/Log.png"
+                             Icon="pack://application:,,,/Icons/Log.png"/>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="検定">
-                    <ribbon:RibbonButton Label="検定"
+                <Fluent:RibbonGroupBox Header="検定">
+                    <Fluent:Button Header="検定"
                              ToolTip="解析結果の検定ウィンドウを開きます。"
                              Command="{Binding OpenEvaluationWindowCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/Check.png"
-                             SmallImageSource="pack://application:,,,/Icons/Check.png"/>
-                </ribbon:RibbonGroup>
+                             LargeIcon="pack://application:,,,/Icons/Check.png"
+                             Icon="pack://application:,,,/Icons/Check.png"/>
+                </Fluent:RibbonGroupBox>
 
                 <!-- 値表示・ダイアグラムスケール・テキスト 統合グループ（右端） -->
-                <ribbon:RibbonGroup Header="ダイアグラムスケール・テキスト・値表示"
-                                    LargeImageSource="pack://application:,,,/Icons/LabelSize.png"
-                                    SmallImageSource="pack://application:,,,/Icons/LabelSize.png">
+                <Fluent:RibbonGroupBox Header="ダイアグラムスケール・テキスト・値表示"
+                                    LargeIcon="pack://application:,,,/Icons/LabelSize.png"
+                                    Icon="pack://application:,,,/Icons/LabelSize.png">
                     <StackPanel Orientation="Horizontal">
                         <!-- ===== 1 列目: テキストサイズ → 応力スケール → 変位スケール (最大 3 行) ===== -->
                         <StackPanel Orientation="Vertical" Margin="0,0,10,0" VerticalAlignment="Center">
@@ -1840,16 +1826,36 @@
                                       IsEnabled="{Binding IsResultValueVisible}" Margin="0,0,6,0"/>
                                 <CheckBox Content="杭頭"
                                       IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
-                                      IsEnabled="{Binding IsResultValueVisible}"/>
+                                      IsEnabled="{Binding IsResultValueVisible}" Margin="0,0,6,0"/>
+                                <CheckBox Content="杭MaxMin"
+                                      IsChecked="{Binding IsPileMaxMinResultValueVisibleOnly}"
+                                      IsEnabled="{Binding IsResultValueVisible}"
+                                      ToolTip="各杭の応力ダイアグラム値のうち、最大と最小の 2 値だけを表示"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <CheckBox Content="基礎梁応力 水平表示"
-                                          IsChecked="{Binding IsFoundationBeamStressRotatedToHorizontal}"
-                                          ToolTip="基礎梁の鉛直方向成分 (My/Qz など) を梁軸まわりに 90° 回転して水平面に表示。上面図 (+Z) で確認しやすくなります。"
+                                <TextBlock Text="応力表示:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <CheckBox Content="杭"
+                                          IsChecked="{Binding IsPileStressVisible}"
+                                          ToolTip="杭体・RigidLink の応力ダイアグラムを表示。OFF で非表示 (上面図モードと併用で基礎梁応力だけが見える)。"
                                           Margin="0,0,6,0"/>
-                                <CheckBox Content="杭応力 非表示"
-                                          IsChecked="{Binding IsPileStressHidden}"
-                                          ToolTip="杭体・RigidLink の応力ダイアグラムを非表示。上面図モードと併用すると基礎梁応力だけが見えます。"/>
+                                <CheckBox Content="基礎梁"
+                                          IsChecked="{Binding IsFoundationBeamStressVisible}"
+                                          ToolTip="基礎梁の応力ダイアグラムを表示。OFF で非表示。"
+                                          Margin="0,0,8,0"/>
+                                <Separator Width="1" Background="#DDD" Margin="0,0,8,0"/>
+                                <CheckBox Content="基礎梁 水平表示"
+                                          IsChecked="{Binding IsFoundationBeamStressRotatedToHorizontal}"
+                                          ToolTip="基礎梁の鉛直方向成分 (My/Qz など) を梁軸まわりに 90° 回転して水平面に表示。上面図 (+Z) で確認しやすくなります。"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="変位表示:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <CheckBox Content="杭"
+                                          IsChecked="{Binding IsPileDisplacementVisible}"
+                                          ToolTip="杭体・RigidLink・根入れ部の変位ダイアグラムを表示。OFF で非表示。"
+                                          Margin="0,0,6,0"/>
+                                <CheckBox Content="基礎梁"
+                                          IsChecked="{Binding IsFoundationBeamDisplacementVisible}"
+                                          ToolTip="基礎梁の変位ダイアグラムを表示。OFF で非表示。"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -1883,191 +1889,192 @@
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
-                </ribbon:RibbonGroup>
+                </Fluent:RibbonGroupBox>
 
-            </ribbon:RibbonTab>
+            </Fluent:RibbonTabItem>
 
 
-            <ribbon:RibbonTab Header="ツール(T)" KeyTip="T">
-                <ribbon:RibbonGroup Header="計算書">
-                    <ribbon:RibbonButton Label="Docx 出力"
+            <Fluent:RibbonTabItem Header="ツール(T)" KeyTip="T">
+                <Fluent:RibbonGroupBox Header="計算書">
+                    <Fluent:Button Header="Docx 出力"
                         ToolTip="計算書を Word (.docx) ファイルとして出力"
                         Command="{Binding OpenDocxOutputWindowCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/DocxFileOutput.png"
-                        SmallImageSource="pack://application:,,,/Icons/DocxFileOutput.png"/>
-                </ribbon:RibbonGroup>
+                        LargeIcon="pack://application:,,,/Icons/DocxFileOutput.png"
+                        Icon="pack://application:,,,/Icons/DocxFileOutput.png"/>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="エクスポート">
-                    <ribbon:RibbonButton Label="3dm 出力"
+
+                <Fluent:RibbonGroupBox Header="エクスポート">
+                    <Fluent:Button Header="3dm 出力"
                         ToolTip="杭・根入れ部・基礎梁の3Dモデルを Rhino 3D (.3dm) ファイルにエクスポート"
                         Command="{Binding Export3dmFileCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/rhino8-.png"
-                        SmallImageSource="pack://application:,,,/Icons/rhino8-.png"/>
-                    <ribbon:RibbonButton Label="DXF (3D)"
+                        LargeIcon="pack://application:,,,/Icons/rhino8-.png"
+                        Icon="pack://application:,,,/Icons/rhino8-.png"/>
+                    <Fluent:Button Header="DXF (3D)"
                         ToolTip="杭・根入れ部・基礎梁の3Dモデルを DXF ファイルにエクスポート"
                         Command="{Binding ExportDxfFileCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/dxf.png"
-                        SmallImageSource="pack://application:,,,/Icons/dxf.png"/>
-                    <ribbon:RibbonButton Label="DXF (伏図)"
+                        LargeIcon="pack://application:,,,/Icons/dxf.png"
+                        Icon="pack://application:,,,/Icons/dxf.png"/>
+                    <Fluent:Button Header="DXF (伏図)"
                         ToolTip="杭伏図（通り心・寸法・杭位置・基礎梁）を2D DXFファイルにエクスポート"
                         Command="{Binding ExportDxfPlanFileCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/dxf.png"
-                        SmallImageSource="pack://application:,,,/Icons/dxf.png"/>
-                    <ribbon:RibbonButton Label="MGT 出力"
+                        LargeIcon="pack://application:,,,/Icons/dxf.png"
+                        Icon="pack://application:,,,/Icons/dxf.png"/>
+                    <Fluent:Button Header="MGT 出力"
                         ToolTip="FEM解析モデルを midas iGen / Gen MGT テキスト形式でエクスポート（非線形地盤ばね・慣性力・強制変位・荷重組み合わせを含む）"
                         Command="{Binding ExportMgtFileCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/mgtFile.png"
-                        SmallImageSource="pack://application:,,,/Icons/mgtFile.png"/>
-                </ribbon:RibbonGroup>
+                        LargeIcon="pack://application:,,,/Icons/mgtFile.png"
+                        Icon="pack://application:,,,/Icons/mgtFile.png"/>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="ライブラリ">
-                    <ribbon:RibbonButton Label="杭断面 ライブラリ" ToolTip="杭ライブラリを確認"
+                <Fluent:RibbonGroupBox Header="ライブラリ">
+                    <Fluent:Button Header="杭断面 ライブラリ" ToolTip="杭ライブラリを確認"
                         Command="{Binding OpenPileSectionLibraryWindowCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/PileSectionLibrary.png"
-                        SmallImageSource="pack://application:,,,/Icons/PileSectionLibrary.png"/>
-                </ribbon:RibbonGroup>
+                        LargeIcon="pack://application:,,,/Icons/PileSectionLibrary.png"
+                        Icon="pack://application:,,,/Icons/PileSectionLibrary.png"/>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="画像">
-                    <ribbon:RibbonButton Label="画像コピー (x1.0)"
+                <Fluent:RibbonGroupBox Header="画像">
+                    <Fluent:Button Header="画像コピー (x1.0)"
                              ToolTip="現在の画面を画像としてクリップボードにコピー（等倍）"
                              Command="{Binding ImageCopyCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/CopyPicture1.png"
-                             SmallImageSource="pack://application:,,,/Icons/CopyPicture1.png"
+                             LargeIcon="pack://application:,,,/Icons/CopyPicture1.png"
+                             Icon="pack://application:,,,/Icons/CopyPicture1.png"
                              CommandParameter="1.0"/>
-                    <ribbon:RibbonButton Label="画像コピー (x2.0)"
+                    <Fluent:Button Header="画像コピー (x2.0)"
                              ToolTip="現在の画面を画像としてクリップボードにコピー（2倍解像度）"
                              Command="{Binding ImageCopyCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/CopyPicture2.png"
-                             SmallImageSource="pack://application:,,,/Icons/CopyPicture2.png"
+                             LargeIcon="pack://application:,,,/Icons/CopyPicture2.png"
+                             Icon="pack://application:,,,/Icons/CopyPicture2.png"
                              CommandParameter="2.0"/>
-                    <ribbon:RibbonButton Label="画像保存 (x1.0)"
+                    <Fluent:Button Header="画像保存 (x1.0)"
                              ToolTip="現在の画面を画像ファイルとして保存（等倍）"
                              Command="{Binding ImageSaveCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/SavePicture1.png"
-                             SmallImageSource="pack://application:,,,/Icons/SavePicture1.png"
+                             LargeIcon="pack://application:,,,/Icons/SavePicture1.png"
+                             Icon="pack://application:,,,/Icons/SavePicture1.png"
                              CommandParameter="1.0"/>
-                    <ribbon:RibbonButton Label="画像保存 (x2.0)"
+                    <Fluent:Button Header="画像保存 (x2.0)"
                              ToolTip="現在の画面を画像ファイルとして保存（2倍解像度）"
                              Command="{Binding ImageSaveCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/SavePicture2.png"
-                             SmallImageSource="pack://application:,,,/Icons/SavePicture2.png"
+                             LargeIcon="pack://application:,,,/Icons/SavePicture2.png"
+                             Icon="pack://application:,,,/Icons/SavePicture2.png"
                              CommandParameter="2.0"/>
-                </ribbon:RibbonGroup>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="サブプログラム">
-                    <ribbon:RibbonButton Label="Chang" ToolTip="Chang"
+                <Fluent:RibbonGroupBox Header="サブプログラム">
+                    <Fluent:Button Header="Chang" ToolTip="Chang"
                         Command="{Binding OpenChangWindowCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/ChangPile.png"
-                        SmallImageSource="pack://application:,,,/Icons/ChangPile.png"/>
-                </ribbon:RibbonGroup>
+                        LargeIcon="pack://application:,,,/Icons/ChangPile.png"
+                        Icon="pack://application:,,,/Icons/ChangPile.png"/>
+                </Fluent:RibbonGroupBox>
 
 
-            </ribbon:RibbonTab>
+            </Fluent:RibbonTabItem>
 
-            <ribbon:RibbonTab Header="ウィンドウ(W)" KeyTip="W">
-                <ribbon:RibbonGroup Header="パネル">
-                    <ribbon:RibbonToggleButton x:Name="LeftTabsToggle"
-                                         Label="データ タブ"
+            <Fluent:RibbonTabItem Header="ウィンドウ(W)" KeyTip="W">
+                <Fluent:RibbonGroupBox Header="パネル">
+                    <Fluent:ToggleButton x:Name="LeftTabsToggle"
+                                         Header="データ タブ"
                                          ToolTip="データタブ（一般節点～群杭荷重）の表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleLeftTabs_Click"
-                                         LargeImageSource="pack://application:,,,/Icons/DataTabVisible.png"
-                                         SmallImageSource="pack://application:,,,/Icons/DataTabVisible.png"/>
-                    <ribbon:RibbonToggleButton x:Name="InputDataPanelToggle"
-                                         Label="入力 データ"
+                                         LargeIcon="pack://application:,,,/Icons/DataTabVisible.png"
+                                         Icon="pack://application:,,,/Icons/DataTabVisible.png"/>
+                    <Fluent:ToggleButton x:Name="InputDataPanelToggle"
+                                         Header="入力 データ"
                                          ToolTip="入力データパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleInputDataPanel_Click"
-                                         LargeImageSource="pack://application:,,,/Icons/InputDataVisible.png"
-                                         SmallImageSource="pack://application:,,,/Icons/InputDataVisible.png"/>
-                    <ribbon:RibbonToggleButton x:Name="PropertiesPanelToggle"
-                                         Label="プロパティ"
+                                         LargeIcon="pack://application:,,,/Icons/InputDataVisible.png"
+                                         Icon="pack://application:,,,/Icons/InputDataVisible.png"/>
+                    <Fluent:ToggleButton x:Name="PropertiesPanelToggle"
+                                         Header="プロパティ"
                                          ToolTip="プロパティパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="TogglePropertiesPanel_Click"
-                                         LargeImageSource="pack://application:,,,/Icons/PropertyVisible.png"
-                                         SmallImageSource="pack://application:,,,/Icons/PropertyVisible.png"/>
-                    <ribbon:RibbonToggleButton x:Name="MinimapPanelToggle"
-                                         Label="ミニ マップ"
+                                         LargeIcon="pack://application:,,,/Icons/PropertyVisible.png"
+                                         Icon="pack://application:,,,/Icons/PropertyVisible.png"/>
+                    <Fluent:ToggleButton x:Name="MinimapPanelToggle"
+                                         Header="ミニ マップ"
                                          ToolTip="ミニマップパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleMinimapPanel_Click"
-                                         LargeImageSource="pack://application:,,,/Icons/MiniMapVisible.png"
-                                         SmallImageSource="pack://application:,,,/Icons/MiniMapVisible.png"/>
-                </ribbon:RibbonGroup>
-                <ribbon:RibbonGroup Header="3Dビュー">
-                    <ribbon:RibbonToggleButton Label="ビュー キューブ"
+                                         LargeIcon="pack://application:,,,/Icons/MiniMapVisible.png"
+                                         Icon="pack://application:,,,/Icons/MiniMapVisible.png"/>
+                </Fluent:RibbonGroupBox>
+                <Fluent:RibbonGroupBox Header="3Dビュー">
+                    <Fluent:ToggleButton Header="ビュー キューブ"
                                                 ToolTip="ビューキューブの表示/非表示"
                                                 IsChecked="{Binding IsViewCubeVisible}"
-                                                LargeImageSource="pack://application:,,,/Icons/ViewCubeVisible.png"
-                                                SmallImageSource="pack://application:,,,/Icons/ViewCubeVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="ツール"
+                                                LargeIcon="pack://application:,,,/Icons/ViewCubeVisible.png"
+                                                Icon="pack://application:,,,/Icons/ViewCubeVisible.png"/>
+                    <Fluent:ToggleButton Header="ツール"
                                                 ToolTip="右ツール群の表示/非表示"
                                                 IsChecked="{Binding IsRightToolbarVisible}"
-                                                LargeImageSource="pack://application:,,,/Icons/ToolVisible.png"
-                                                SmallImageSource="pack://application:,,,/Icons/ToolVisible.png"/>
-                </ribbon:RibbonGroup>
+                                                LargeIcon="pack://application:,,,/Icons/ToolVisible.png"
+                                                Icon="pack://application:,,,/Icons/ToolVisible.png"/>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="ダッシュボード">
-                    <ribbon:RibbonButton Label="解析結果 ダッシュボード"
+                <Fluent:RibbonGroupBox Header="ダッシュボード">
+                    <Fluent:Button Header="解析結果 ダッシュボード"
                         ToolTip="現在の解析モデル・水平/沈下/梁鉛直解析の状況をカード形式で一括表示"
                         Click="OpenResultDashboard_Click"
-                        LargeImageSource="pack://application:,,,/Icons/Dashboard.png"
-                        SmallImageSource="pack://application:,,,/Icons/Dashboard.png"/>
-                    <ribbon:RibbonButton Label="コマンド パレット"
+                        LargeIcon="pack://application:,,,/Icons/Dashboard.png"
+                        Icon="pack://application:,,,/Icons/Dashboard.png"/>
+                    <Fluent:Button Header="コマンド パレット"
                         ToolTip="コマンドパレット (Ctrl+Shift+P): 機能名で検索して実行"
                         Click="OpenCommandPalette_Click"
-                        LargeImageSource="pack://application:,,,/Icons/CommandPalette.png"
-                        SmallImageSource="pack://application:,,,/Icons/CommandPalette.png"/>
-                </ribbon:RibbonGroup>
+                        LargeIcon="pack://application:,,,/Icons/CommandPalette.png"
+                        Icon="pack://application:,,,/Icons/CommandPalette.png"/>
+                </Fluent:RibbonGroupBox>
 
-                <ribbon:RibbonGroup Header="説明用">
-                    <ribbon:RibbonToggleButton Label="INPUT 表示"
+                <Fluent:RibbonGroupBox Header="説明用">
+                    <Fluent:ToggleButton Header="INPUT 表示"
                         ToolTip="マウス・キーボード入力状態を画面右下に表示 (F12)"
                         IsChecked="{Binding IsInputVisualizerVisible}"
-                        LargeImageSource="pack://application:,,,/Icons/Mouse.png"
-                        SmallImageSource="pack://application:,,,/Icons/Mouse.png"/>
-                </ribbon:RibbonGroup>
-            </ribbon:RibbonTab>
+                        LargeIcon="pack://application:,,,/Icons/Mouse.png"
+                        Icon="pack://application:,,,/Icons/Mouse.png"/>
+                </Fluent:RibbonGroupBox>
+            </Fluent:RibbonTabItem>
 
-            <ribbon:RibbonTab Header="ヘルプ(H)" KeyTip="H">
-                <ribbon:RibbonGroup Header="ヘルプ">
-                    <ribbon:RibbonButton x:Name="RibbonButtonHelp"
-                                 Label="ヘルプ"
+            <Fluent:RibbonTabItem Header="ヘルプ(H)" KeyTip="H">
+                <Fluent:RibbonGroupBox Header="ヘルプ">
+                    <Fluent:Button x:Name="RibbonButtonHelp"
+                                 Header="ヘルプ"
                                          ToolTip="ヘルプ (F1)"
                                  Command="{Binding OpenHelpWindowCommand}"
-                                 LargeImageSource="pack://application:,,,/Icons/Help.png"
-                                 SmallImageSource="pack://application:,,,/Icons/Help.png"/>
-                    <ribbon:RibbonButton x:Name="RibbonButtonHelpChat"
-                                 Label="ヘルプ チャット"
+                                 LargeIcon="pack://application:,,,/Icons/Help.png"
+                                 Icon="pack://application:,,,/Icons/Help.png"/>
+                    <Fluent:Button x:Name="RibbonButtonHelpChat"
+                                 Header="ヘルプ チャット"
                                  ToolTip="質問入力でヘルプを検索"
                                  Command="{Binding OpenHelpChatWindowCommand}"
-                                 LargeImageSource="pack://application:,,,/Icons/Help.png"
-                                 SmallImageSource="pack://application:,,,/Icons/Help.png"/>
-                    <ribbon:RibbonToggleButton x:Name="RibbonToggleQuickHint"
-                                   Label="クイック ヒント"
+                                 LargeIcon="pack://application:,,,/Icons/Help.png"
+                                 Icon="pack://application:,,,/Icons/Help.png"/>
+                    <Fluent:ToggleButton x:Name="RibbonToggleQuickHint"
+                                   Header="クイック ヒント"
                                                ToolTip="クイックヒント (Shift + F1)"
                                    IsChecked="{Binding IsQuickHintVisible}"
-                                   LargeImageSource="pack://application:,,,/Icons/QuickHint.png"
-                                   SmallImageSource="pack://application:,,,/Icons/QuickHint.png"
+                                   LargeIcon="pack://application:,,,/Icons/QuickHint.png"
+                                   Icon="pack://application:,,,/Icons/QuickHint.png"
                                    Checked="QuickHintToggle_Checked"
                                    Unchecked="QuickHintToggle_Unchecked"
                                    KeyTip="Q"/>
-                    <ribbon:RibbonButton x:Name="RibbonButtonShortcutKeys"
-                                 Label="ショート カット"
+                    <Fluent:Button x:Name="RibbonButtonShortcutKeys"
+                                 Header="ショート カット"
                                  ToolTip="ショートカット (Ctrl + /)"
                                  Command="{Binding OpenShortcutKeysWindowCommand}"
-                                 LargeImageSource="pack://application:,,,/Icons/ShortcutKeys.png"
-                                 SmallImageSource="pack://application:,,,/Icons/ShortcutKeys.png"
+                                 LargeIcon="pack://application:,,,/Icons/ShortcutKeys.png"
+                                 Icon="pack://application:,,,/Icons/ShortcutKeys.png"
                                  />
-                    <ribbon:RibbonButton Label="検証"
+                    <Fluent:Button Header="検証"
                                  ToolTip="設計例によるプログラムの検証"
                                  Command="{Binding OpenVerificationWindowCommand}"
-                                 LargeImageSource="pack://application:,,,/Icons/Verification.png"
-                                 SmallImageSource="pack://application:,,,/Icons/Verification.png"/>
-                </ribbon:RibbonGroup>
-            </ribbon:RibbonTab>
-        </ribbon:Ribbon>
+                                 LargeIcon="pack://application:,,,/Icons/Verification.png"
+                                 Icon="pack://application:,,,/Icons/Verification.png"/>
+                </Fluent:RibbonGroupBox>
+            </Fluent:RibbonTabItem>
+        </Fluent:Ribbon>
 
         <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="1">
             <avalonDock:LayoutRoot>
@@ -2145,14 +2152,13 @@
                                                Text="※杭と梁要素（基礎梁）との連結部には一般節点は使いません。杭配置のΔZcオフセットされた接合節点に梁要素（基礎梁）をつなげてください。"/>
 
                                     <!-- DataGrid -->
-                                    <common:EnhancedDataGrid x:Name="DataGridInputNodes"
+                                    <common:EnhancedDataGrid x:Name="DataGridInputNodes" CanUserSortColumns="False"
                                               Grid.Row="2"
                                               ItemsSource="{Binding CurrentInputModel.InputNodes, UpdateSourceTrigger=LostFocus}"
                                               SelectionChanged="DataGridInputNodes_SelectionChanged"
                                               AutoGenerateColumns="False"
                                               CanUserAddRows="False"
                                               CanUserDeleteRows="False"
-                                              CanUserSortColumns="True"
                                               VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Auto"
                                               LoadingRow="DataGridInputNodes_LoadingRow_Numbering"
@@ -2264,7 +2270,7 @@
 
                                             <!-- 材料一覧DataGrid -->
                                             <GroupBox Grid.Row="1" Header="材料一覧" Margin="2">
-                                        <common:EnhancedDataGrid x:Name="DataGridBeamMaterials"
+                                        <common:EnhancedDataGrid x:Name="DataGridBeamMaterials" CanUserSortColumns="False"
                                                 ItemsSource="{Binding CurrentInputModel.FoundationBeamInput.Materials, UpdateSourceTrigger=PropertyChanged}"
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="True"
@@ -2374,7 +2380,7 @@
 
 
                                             <GroupBox Grid.Row="1" Header="断面一覧" Margin="2">
-                                        <common:EnhancedDataGrid x:Name="DataGridBeamSections"
+                                        <common:EnhancedDataGrid x:Name="DataGridBeamSections" CanUserSortColumns="False"
                                                 ItemsSource="{Binding CurrentInputModel.FoundationBeamInput.Sections, UpdateSourceTrigger=PropertyChanged}"
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="True"
@@ -2558,7 +2564,7 @@
                                                         Command="{Binding DeleteDupulicateElementsCommand}">
                                                     <svgc:SvgViewbox Source="/Icons/MergeElems.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
-                                                <Button ToolTip="交差点で要素分割:選択要素同士の交差点に一般節点を生成し、要素を分割します"
+                                                <Button ToolTip="交差点で杭要素分割:選択要素同士の交差点に一般節点を生成し、要素を分割します"
                                                         Command="{Binding SplitElementsAtIntersectionsCommand}">
                                                     <svgc:SvgViewbox Source="/Icons/Intersect.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
@@ -2599,7 +2605,7 @@
 
                                         <!-- 梁要素一覧DataGrid -->
                                         <GroupBox Grid.Row="1" Header="梁要素一覧" Margin="2">
-                                        <common:EnhancedDataGrid x:Name="DataGridFoundationBeams"
+                                        <common:EnhancedDataGrid x:Name="DataGridFoundationBeams" CanUserSortColumns="False"
                                                 ItemsSource="{Binding CurrentInputModel.FoundationBeamInput.Beams, UpdateSourceTrigger=PropertyChanged}"
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="False"
@@ -2843,11 +2849,10 @@
                                             </StackPanel>
                                             <!--</ToolBar>-->
 
-                                            <common:EnhancedDataGrid x:Name="DataGridPileLayout" ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
+                                            <common:EnhancedDataGrid x:Name="DataGridPileLayout" CanUserSortColumns="False" ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
                                                     SelectionChanged="DataGridPileLayout_SelectionChanged"
                                                     AutoGenerateColumns="False"
                                                     CanUserAddRows="False"
-                                                    CanUserSortColumns="True"
                                                     VerticalScrollBarVisibility="Auto"
                                                     HorizontalScrollBarVisibility="Auto"
                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
@@ -3084,7 +3089,7 @@
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
-                                                        <StackPanel Orientation="Horizontal" Grid.Column="0" >
+                                                        <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
                                                             <Button x:Name="ButtonEInput" ToolTip="転倒モーメント簡易入力"
                                                             Command="{Binding AutoOverturningMomentCommand}">
                                                                 <svgc:SvgViewbox Source="/Icons/OTMInput.svg" Style="{StaticResource SvgIconStyle24}"/>
@@ -3093,29 +3098,22 @@
                                                             Command="{Binding AutoActionPointXYCommand}">
                                                                 <svgc:SvgViewbox Source="/Icons/MoveActionPointToGravityCenter.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                             </Button>
-                                                            <Separator Width="8"/>
-                                                            <ToggleButton Padding="8,2" Margin="2,0" MinWidth="100"
-                                                                          IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay}"
-                                                                          ToolTip="地震時軸力の入力/表示モードを切替&#x0a;絶対モード: L1/L2 列に絶対軸力 (VL+地震時) を表示・編集&#x0a;変動モード: L1/L2 列に変動軸力 (= 絶対 − VL) を表示・編集 (VL 変更時は絶対が連動)">
-                                                                <ToggleButton.Style>
-                                                                    <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
-                                                                        <Setter Property="Content" Value="モード: 絶対"/>
-                                                                        <Style.Triggers>
-                                                                            <Trigger Property="IsChecked" Value="True">
-                                                                                <Setter Property="Content" Value="モード: 変動"/>
-                                                                                <Setter Property="Background" Value="#FFF3E0"/>
-                                                                            </Trigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </ToggleButton.Style>
-                                                            </ToggleButton>
-                                                            <Separator Width="8"/>
-                                                            <Button Content="L1/L2 + VL" Padding="6,2" Margin="2,0"
-                                                                    Command="{Binding AddVLToL1L2AxialForceCommand}"
-                                                                    ToolTip="全杭の L1/L2 軸力に VL (常時軸力) を加算&#x0a;(地震時増分 ΔN → VL + 地震時 = 全軸力 への変換)"/>
-                                                            <Button Content="L1/L2 − VL" Padding="6,2" Margin="2,0"
-                                                                    Command="{Binding SubtractVLFromL1L2AxialForceCommand}"
-                                                                    ToolTip="全杭の L1/L2 軸力から VL (常時軸力) を減算&#x0a;(VL + 地震時 → 地震時増分 ΔN への変換、または「+VL」誤適用の取り消し)"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1"
+                                                                    CornerRadius="3" Padding="6,3" Margin="8,2,0,2"
+                                                                    Background="#FAFAFA" VerticalAlignment="Center">
+                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                    <TextBlock Text="軸力モード:" VerticalAlignment="Center"
+                                                                               FontWeight="Bold" Margin="0,0,8,0"/>
+                                                                    <RadioButton Content="絶対" Padding="4,2" Margin="0,0,10,0" VerticalAlignment="Center"
+                                                                                 GroupName="AxialModeTab"
+                                                                                 IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                                                                                 ToolTip="絶対モード: L1/L2 列に絶対軸力 (VL+地震時) を表示・編集"/>
+                                                                    <RadioButton Content="変動" Padding="4,2" VerticalAlignment="Center"
+                                                                                 GroupName="AxialModeTab"
+                                                                                 IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay}"
+                                                                                 ToolTip="変動モード: L1/L2 列に変動軸力 (= 絶対 − VL) を表示・編集 (VL 変更時は絶対が連動)"/>
+                                                                </StackPanel>
+                                                            </Border>
                                                         </StackPanel>
 
                                                     </Grid>
@@ -3156,7 +3154,7 @@
 
                                                             <TextBlock Text="VL0" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryAccentBrush}"/>
                                                             <TextBlock Text="VLadd" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryAccentBrush}"/>
-                                                            <TextBlock Text="VL (VL0 + VLadd)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center" Foreground="#3271AD"/>
+                                                            <TextBlock Text="VL (VL0 + VLadd)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center" Foreground="{StaticResource NikkenDeepBlueBrush}"/>
 
                                                             <TextBlock Text="重心 (m)" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="Σ (kN)" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center"/>
@@ -3280,15 +3278,15 @@
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="7"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="8"/>
 
-                                                            <TextBlock Text="1-1" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Foreground="#238966"/>
-                                                            <TextBlock Text="1-2" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" Foreground="#238966"/>
-                                                            <TextBlock Text="1-3" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center" Foreground="#238966"/>
-                                                            <TextBlock Text="1-4" Grid.Row="0" Grid.Column="4" HorizontalAlignment="Center" Foreground="#238966"/>
+                                                            <TextBlock Text="1-1" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Foreground="{StaticResource NikkenGreenBrush}"/>
+                                                            <TextBlock Text="1-2" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" Foreground="{StaticResource NikkenGreenBrush}"/>
+                                                            <TextBlock Text="1-3" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center" Foreground="{StaticResource NikkenGreenBrush}"/>
+                                                            <TextBlock Text="1-4" Grid.Row="0" Grid.Column="4" HorizontalAlignment="Center" Foreground="{StaticResource NikkenGreenBrush}"/>
 
-                                                            <TextBlock Text="2-1" Grid.Row="0" Grid.Column="5" HorizontalAlignment="Center" Foreground="#D82531"/>
-                                                            <TextBlock Text="2-2" Grid.Row="0" Grid.Column="6" HorizontalAlignment="Center" Foreground="#D82531"/>
-                                                            <TextBlock Text="2-3" Grid.Row="0" Grid.Column="7" HorizontalAlignment="Center" Foreground="#D82531"/>
-                                                            <TextBlock Text="2-4" Grid.Row="0" Grid.Column="8" HorizontalAlignment="Center" Foreground="#D82531"/>
+                                                            <TextBlock Text="2-1" Grid.Row="0" Grid.Column="5" HorizontalAlignment="Center" Foreground="{StaticResource NikkenPaleRedBrush}"/>
+                                                            <TextBlock Text="2-2" Grid.Row="0" Grid.Column="6" HorizontalAlignment="Center" Foreground="{StaticResource NikkenPaleRedBrush}"/>
+                                                            <TextBlock Text="2-3" Grid.Row="0" Grid.Column="7" HorizontalAlignment="Center" Foreground="{StaticResource NikkenPaleRedBrush}"/>
+                                                            <TextBlock Text="2-4" Grid.Row="0" Grid.Column="8" HorizontalAlignment="Center" Foreground="{StaticResource NikkenPaleRedBrush}"/>
 
                                                             <!--<TextBlock Text="OTM X (MNm)" Grid.Row="1" Grid.Column="0"/>-->
                                                             <TextBlock Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center">
@@ -3363,13 +3361,12 @@
                                                 <!--</ToolBar>-->
                                             </StackPanel>
 
-                                            <common:EnhancedDataGrid x:Name="DataGridPileAxialForce"
+                                            <common:EnhancedDataGrid x:Name="DataGridPileAxialForce" CanUserSortColumns="False"
                                                     ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
                                                     SelectionChanged="DataGridPileAxialForce_SelectionChanged"
                                                     SelectedCellsChanged="DataGridPileAxialForce_SelectedCellsChanged"
                                                     AutoGenerateColumns="False"
                                                     CanUserAddRows="False"
-                                                    CanUserSortColumns="True"
                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                     AutoGeneratingColumn="DataGridPileLayout_AutoGeneratingColumn"
                                                     CellEditEnding="DataGridPileAxialForce_CellEditEnding"
@@ -3915,12 +3912,11 @@
                                                 </StackPanel>
                                             </Border>
 
-                                            <common:EnhancedDataGrid x:Name="DataGridIsFrontPile"
+                                            <common:EnhancedDataGrid x:Name="DataGridIsFrontPile" CanUserSortColumns="False"
                                                                     ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
                                                                     SelectionChanged="DataGridIsFrontPile_SelectionChanged"
                                                                     AutoGenerateColumns="False"
                                                                     CanUserAddRows="False"
-                                                                    CanUserSortColumns="True"
                                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                                     CellEditEnding="DataGridIsFrontPile_CellEditEnding"
                                                                     BeginningEdit="DataGridIsFrontPile_BeginningEdit"
@@ -4090,12 +4086,11 @@
                                         <!--</ToolBar>-->
                                     </StackPanel>
 
-                                    <common:EnhancedDataGrid x:Name="DataGridEmbedment" ItemsSource="{Binding CurrentInputModel.EmbedmentInput.EmbedmentLayers, Mode=TwoWay,
+                                    <common:EnhancedDataGrid x:Name="DataGridEmbedment" CanUserSortColumns="False" ItemsSource="{Binding CurrentInputModel.EmbedmentInput.EmbedmentLayers, Mode=TwoWay,
                                         UpdateSourceTrigger=LostFocus}"
                                         HorizontalAlignment="Left"
                                         AutoGenerateColumns="False"
                                         CanUserAddRows="False"
-                                        CanUserSortColumns="True"
                                         VerticalScrollBarVisibility="Auto"
                                         HorizontalScrollBarVisibility="Auto"
                                         LoadingRow="DataGrid_LoadingRow_Numbering"
@@ -4277,7 +4272,7 @@
                                     </Button>
 
 
-                                    <common:EnhancedDataGrid x:Name="DataGridGridX" ItemsSource="{Binding CurrentInputModel.GridXItems, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
+                                    <common:EnhancedDataGrid x:Name="DataGridGridX" CanUserSortColumns="False" ItemsSource="{Binding CurrentInputModel.GridXItems, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
                                             Grid.Row="2" Grid.Column="0"
                                             AutoGenerateColumns="False"
                                             CanUserAddRows="False"
@@ -4398,7 +4393,7 @@
                                         <svgc:SvgViewbox Source="/Icons/AddYGrid.svg" Style="{StaticResource SvgIconStyle24}"/>
                                     </Button>
 
-                                    <common:EnhancedDataGrid x:Name="DataGridGridY"  ItemsSource="{Binding CurrentInputModel.GridYItems, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
+                                    <common:EnhancedDataGrid x:Name="DataGridGridY" CanUserSortColumns="False"  ItemsSource="{Binding CurrentInputModel.GridYItems, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
                                         Grid.Row="2" Grid.Column="1" AutoGenerateColumns="False"
                                         CanUserAddRows="False"
                                         CurrentCellChanged="DataGridGridY_CurrentCellChanged"
@@ -5295,12 +5290,11 @@
                                                     <RowDefinition Height="*"/>
                                                 </Grid.RowDefinitions>
 
-                                                <common:EnhancedDataGrid x:Name="DataGridPileSettlement"
+                                                <common:EnhancedDataGrid x:Name="DataGridPileSettlement" CanUserSortColumns="False"
                                                         ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
                                                         SelectionChanged="DataGridPileAxialForce_SelectionChanged"
                                                         AutoGenerateColumns="False"
                                                         CanUserAddRows="False"
-                                                        CanUserSortColumns="True"
                                                         LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                         CellEditEnding="DataGridPileAxialForce_CellEditEnding"
                                                         MouseRightButtonDown="DataGridPileLayout_MouseRightButtonDown"
@@ -5678,9 +5672,9 @@
                                                         <svgc:SvgViewbox Source="/Icons/AxialForceVeirification.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
 
-                                                    <!-- 追加: 要素分割（状態でアイコン切替） -->
+                                                    <!-- 追加: 杭要素分割（状態でアイコン切替） -->
 
-                                                    <!-- 行1: 要素分割 -->
+                                                    <!-- 行1: 杭要素分割 -->
                                                     <Button Grid.Row="1" Grid.Column="0"
                                                         Padding="0"
                                                         Style="{StaticResource ElementDivisionButtonStyle}"
@@ -5736,24 +5730,35 @@
                                                     </Grid.RowDefinitions>
 
                                                     <!-- 荷重ケース -->
-                                                    <ComboBox Grid.Row="0"
+                                                    <Fluent:ComboBox Header="荷重ケース" Grid.Row="0"
                                                           ItemsSource="{Binding LoadCaseNameOption}"
                                                           SelectedItem="{Binding SelectedLoadCaseName}"
                                                           ItemTemplate="{StaticResource LoadCaseItemTemplate}"
                                                           ToolTip="荷重ケース">
+                                                        <Fluent:ComboBox.Foreground>
+                                                            <MultiBinding Converter="{StaticResource LoadCaseNameToColorConverter}">
+                                                                <Binding Path="SelectedLoadCaseName"/>
+                                                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
+                                                            </MultiBinding>
+                                                        </Fluent:ComboBox.Foreground>
+                                                        <Fluent:ComboBox.HeaderTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding}" Foreground="#555555"/>
+                                                            </DataTemplate>
+                                                        </Fluent:ComboBox.HeaderTemplate>
                                                         <i:Interaction.Triggers>
                                                             <i:EventTrigger EventName="SelectionChanged">
                                                                 <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
                                                             </i:EventTrigger>
                                                         </i:Interaction.Triggers>
-                                                    </ComboBox>
+                                                    </Fluent:ComboBox>
 
                                                     <!-- 組み合わせケース -->
-                                                    <ComboBox Grid.Row="1"
+                                                    <Fluent:ComboBox Header="組み合わせ" Grid.Row="1"
                                                               ItemsSource="{Binding LoadCombinationNameOption}"
                                                               SelectedItem="{Binding SelectedLoadCombinationName}"
                                                               ItemTemplate="{StaticResource LoadCombinationItemTemplate}">
-                                                        <ComboBox.ToolTip>
+                                                        <Fluent:ComboBox.ToolTip>
                                                             <TextBlock>
                                                                 <Run Text="組合せケース α"/>
                                                                 <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
@@ -5762,19 +5767,19 @@
                                                                 <Run Text="/β"/>
                                                                 <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
                                                             </TextBlock>
-                                                        </ComboBox.ToolTip>
-                                                        <ComboBox.Visibility>
+                                                        </Fluent:ComboBox.ToolTip>
+                                                        <Fluent:ComboBox.Visibility>
                                                             <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
                                                                 <Binding Path="SelectedLoadCaseName"/>
                                                                 <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
                                                             </MultiBinding>
-                                                        </ComboBox.Visibility>
+                                                        </Fluent:ComboBox.Visibility>
                                                         <i:Interaction.Triggers>
                                                             <i:EventTrigger EventName="SelectionChanged">
                                                                 <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
                                                             </i:EventTrigger>
                                                         </i:Interaction.Triggers>
-                                                    </ComboBox>
+                                                    </Fluent:ComboBox>
 
                                                     <!-- 液状化・非液状化 セグメントボタン -->
                                                     <UniformGrid Grid.Row="2" Rows="1" Margin="0,2,0,0"
@@ -5808,21 +5813,21 @@
                                                     <StackPanel Grid.Row="4" Orientation="Vertical" Margin="0,4,0,0"
                                                         Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <!-- 内容 -->
-                                                        <ComboBox 
+                                                        <Fluent:ComboBox Header="内容" 
                                                               ItemsSource="{Binding AnalysisResultContentOption}"
                                                               SelectedItem="{Binding AnalysisResultContent}">
-                                                            <ComboBox.ToolTip>
+                                                            <Fluent:ComboBox.ToolTip>
                                                                 <TextBlock Text="解析結果の種類選択"/>
-                                                            </ComboBox.ToolTip>
+                                                            </Fluent:ComboBox.ToolTip>
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
                                                                 </i:EventTrigger>
                                                             </i:Interaction.Triggers>
-                                                        </ComboBox>
+                                                        </Fluent:ComboBox>
 
                                                         <!-- 沈下種別 -->
-                                                        <ComboBox 
+                                                        <Fluent:ComboBox Header="沈下種別" 
                                                               ItemsSource="{Binding AnalysisResultSettlementOption}"
                                                               SelectedItem="{Binding AnalysisResultSettlementType}"
                                                               Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=沈下量|沈下部材角|沈下反力|沈下応力}">
@@ -5831,10 +5836,10 @@
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
                                                                 </i:EventTrigger>
                                                             </i:Interaction.Triggers>
-                                                        </ComboBox>
+                                                        </Fluent:ComboBox>
 
                                                         <!-- 梁応力種別 -->
-                                                        <ComboBox
+                                                        <Fluent:ComboBox Header="梁応力"
                                                               ItemsSource="{Binding AnalysisResultBeamForceOption}"
                                                               SelectedItem="{Binding AnalysisResultBeamForceType}"
                                                               Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=梁応力（水平）|沈下応力}">
@@ -5843,10 +5848,10 @@
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
                                                                 </i:EventTrigger>
                                                             </i:Interaction.Triggers>
-                                                        </ComboBox>
+                                                        </Fluent:ComboBox>
 
                                                         <!-- 節点変位種別 -->
-                                                        <ComboBox 
+                                                        <Fluent:ComboBox Header="節点変位" 
                                                               ItemsSource="{Binding AnalysisResultNodeDisplacementOption}"
                                                               SelectedItem="{Binding AnalysisResultNodeDisplacementType}"
                                                               Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=節点変位（水平）}">
@@ -5855,10 +5860,10 @@
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
                                                                 </i:EventTrigger>
                                                             </i:Interaction.Triggers>
-                                                        </ComboBox>
+                                                        </Fluent:ComboBox>
 
                                                         <!-- 地盤反力種別 -->
-                                                        <ComboBox
+                                                        <Fluent:ComboBox Header="地盤反力"
                                                               ItemsSource="{Binding AnalysisResultSoilSpringOption}"
                                                               SelectedItem="{Binding AnalysisResultSoilSpringType}"
                                                               Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=地盤反力（水平）}">
@@ -5867,7 +5872,7 @@
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
                                                                 </i:EventTrigger>
                                                             </i:Interaction.Triggers>
-                                                        </ComboBox>
+                                                        </Fluent:ComboBox>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
@@ -5915,7 +5920,7 @@
                                 名前付きフィールドは維持したまま、UpdatePerspectiveView 側のフラグ (IsHelixViewFrozen) で描画をスキップしています。
                                 再有効化する場合: Grid の Visibility を Visible に戻し、MainWindow.VIewPort3D.cs の IsHelixViewFrozen を false にしてください。
                             -->
-                            <avalonDock:LayoutDocument Title="形状確認ビュー（凍結中）" CanClose="False">
+                            <avalonDock:LayoutDocument x:Name="FrozenShapeViewDocument" Title="形状確認ビュー（凍結中）" CanClose="False">
                                 <Grid Visibility="Collapsed">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -5964,38 +5969,39 @@
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
 
-                                    <!-- ヘッダー -->
-                                    <Border Grid.Row="0" Background="#F0F0F0" Padding="8,6">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0"
-                                                       Text="{Binding SelectedItemHeader}"
+                                    <!-- ヘッダー: 1 行目はタイトル、2 行目は杭選択時のみモード/合計トグル群 -->
+                                    <Border Grid.Row="0" Background="{StaticResource SurfaceMutedBrush}" Padding="8,4">
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock Text="{Binding SelectedItemHeader}"
                                                        FontWeight="SemiBold" FontSize="13"
-                                                       Foreground="#333"
-                                                       VerticalAlignment="Center"/>
-                                            <!-- 複数選択時のみ表示する total/each トグル -->
-                                            <StackPanel Grid.Column="1"
-                                                        Orientation="Horizontal"
-                                                        VerticalAlignment="Center"
-                                                        Visibility="{Binding IsMultipleSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                <RadioButton Content="合計"
-                                                             FontSize="11"
-                                                             Padding="6,2"
-                                                             GroupName="PropDisplayMode"
-                                                             IsChecked="{Binding PropertyDisplayIsTotal, Mode=TwoWay}"
-                                                             ToolTip="複数杭の合計値を表示"/>
-                                                <RadioButton Content="各値"
-                                                             FontSize="11"
-                                                             Padding="6,2"
-                                                             Margin="4,0,0,0"
-                                                             GroupName="PropDisplayMode"
-                                                             IsChecked="{Binding PropertyDisplayIsTotal, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
-                                                             ToolTip="各杭の値 (異なれば (various)) を表示"/>
+                                                       Foreground="#333"/>
+                                            <!-- サブ行: 杭選択時のみ。軸力モード (絶対/変動) と複数選択時の合計/各値 を一列に並べる -->
+                                            <StackPanel Orientation="Horizontal"
+                                                        Margin="0,2,0,0"
+                                                        Visibility="{Binding IsAnyPileSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <!-- 軸力モード: 絶対 / 変動 (軸力タブと IsAxialForceVariationMode を共有) -->
+                                                <RadioButton Content="絶対" FontSize="11" Padding="3,1"
+                                                             GroupName="AxialModePanel"
+                                                             IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                                                             ToolTip="絶対モード: 軸力 1-1 等に絶対値 (VL+地震時) を表示・編集"/>
+                                                <RadioButton Content="変動" FontSize="11" Padding="3,1" Margin="3,0,0,0"
+                                                             GroupName="AxialModePanel"
+                                                             IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay}"
+                                                             ToolTip="変動モード: ΔN 1-1 等に変動値 (= 絶対 − VL) を表示・編集"/>
+                                                <!-- 複数選択時のみ表示する合計/各値 -->
+                                                <StackPanel Orientation="Horizontal" Margin="10,0,0,0"
+                                                            Visibility="{Binding IsMultipleSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <RadioButton Content="合計" FontSize="11" Padding="3,1"
+                                                                 GroupName="PropDisplayMode"
+                                                                 IsChecked="{Binding PropertyDisplayIsTotal, Mode=TwoWay}"
+                                                                 ToolTip="複数杭の合計値を表示"/>
+                                                    <RadioButton Content="各値" FontSize="11" Padding="3,1" Margin="3,0,0,0"
+                                                                 GroupName="PropDisplayMode"
+                                                                 IsChecked="{Binding PropertyDisplayIsTotal, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                                                                 ToolTip="各杭の値 (異なれば (various)) を表示"/>
+                                                </StackPanel>
                                             </StackPanel>
-                                        </Grid>
+                                        </StackPanel>
                                     </Border>
 
                                     <!-- プロパティ一覧（スクロール可能） -->
@@ -6008,7 +6014,7 @@
                                                       Margin="0">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Padding="8,4" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+                                                    <Border Padding="8,4" BorderBrush="{StaticResource SurfaceBorderBrush}" BorderThickness="0,0,0,1">
                                                         <Grid>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="Auto" MinWidth="70"/>
@@ -6022,8 +6028,9 @@
                                                                        FontSize="12"
                                                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
 
-                                                            <!-- 読み取り専用 TextBlock -->
-                                                            <TextBlock Grid.Column="1" Grid.ColumnSpan="2"
+                                                            <!-- 読み取り専用 TextBlock。Unit を separate に渡している場合はここで値だけ、
+                                                                 単位は下の Unit ラベルで描画。Unit が空の場合は ColumnSpan=2 で値が拡張. -->
+                                                            <TextBlock Grid.Column="1"
                                                                        Text="{Binding Value}"
                                                                        Foreground="#222" FontSize="12" FontWeight="Medium"
                                                                        VerticalAlignment="Center"
@@ -6031,12 +6038,17 @@
                                                                 <TextBlock.Style>
                                                                     <Style TargetType="TextBlock">
                                                                         <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Setter Property="Grid.ColumnSpan" Value="2"/>
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding InputType}" Value="Number">
                                                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                                             </DataTrigger>
                                                                             <DataTrigger Binding="{Binding InputType}" Value="ComboBox">
                                                                                 <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                            <!-- ReadOnly でも Unit が空でなければ value 列だけに収め、Unit ラベルを別で描画 -->
+                                                                            <DataTrigger Binding="{Binding HasUnit}" Value="True">
+                                                                                <Setter Property="Grid.ColumnSpan" Value="1"/>
                                                                             </DataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>
@@ -6064,7 +6076,8 @@
                                                                 </TextBox.Style>
                                                             </TextBox>
 
-                                                            <!-- 単位ラベル -->
+                                                            <!-- 単位ラベル: Number で Unit が非空、または ReadOnly で Unit が非空のとき表示。
+                                                                 ComboBox では非表示 (ComboBox 自体が ColumnSpan=2 で領域を占有) -->
                                                             <TextBlock Grid.Column="2"
                                                                        Text="{Binding Unit}"
                                                                        Foreground="#888" FontSize="11"
@@ -6073,9 +6086,20 @@
                                                                     <Style TargetType="TextBlock">
                                                                         <Setter Property="Visibility" Value="Collapsed"/>
                                                                         <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding InputType}" Value="Number">
+                                                                            <MultiDataTrigger>
+                                                                                <MultiDataTrigger.Conditions>
+                                                                                    <Condition Binding="{Binding InputType}" Value="Number"/>
+                                                                                    <Condition Binding="{Binding HasUnit}" Value="True"/>
+                                                                                </MultiDataTrigger.Conditions>
                                                                                 <Setter Property="Visibility" Value="Visible"/>
-                                                                            </DataTrigger>
+                                                                            </MultiDataTrigger>
+                                                                            <MultiDataTrigger>
+                                                                                <MultiDataTrigger.Conditions>
+                                                                                    <Condition Binding="{Binding InputType}" Value="ReadOnly"/>
+                                                                                    <Condition Binding="{Binding HasUnit}" Value="True"/>
+                                                                                </MultiDataTrigger.Conditions>
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                            </MultiDataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>
                                                                 </TextBlock.Style>
@@ -6167,10 +6191,10 @@
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="4,0,0,0" VerticalAlignment="Center">
                 <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusMessageColor}" Margin="0,0,16,0"/>
-                <TextBlock Text="{Binding SelectionCountText}" Foreground="#E95541" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding SelectionCountText}" Foreground="{StaticResource NikkenPaleRedBrush}" Margin="0,0,16,0"/>
                 <TextBlock Text="{Binding PileCountText}" Foreground="DarkBlue" Margin="0,0,16,0"/>
                 <TextBlock Text="{Binding AnalysisStatusText}" Foreground="DarkGreen" Margin="0,0,16,0"/>
-                <TextBlock Text="{Binding LastAnalysisTimeText}" Foreground="#3271AD" Margin="0,0,16,0"
+                <TextBlock Text="{Binding LastAnalysisTimeText}" Foreground="{StaticResource NikkenDeepBlueBrush}" Margin="0,0,16,0"
                            ToolTip="直近で完了した解析の時刻"/>
                 <TextBlock Text="{Binding LastAutoSaveText}" Foreground="{Binding LastAutoSaveBrush}" Margin="0,0,16,0"
                            ToolTip="自動保存の最終結果（失敗時は赤）"/>
@@ -6203,4 +6227,4 @@
             </StackPanel>
         </Grid>
     </Grid>
-</ribbon:RibbonWindow>
+</Fluent:RibbonWindow>

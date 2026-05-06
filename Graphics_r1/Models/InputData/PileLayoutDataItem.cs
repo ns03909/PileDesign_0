@@ -325,56 +325,48 @@ namespace PileDesign.Models.InputData
             finally { _isSyncingAxial = false; }
         }
 
+        /// <summary>
+        /// source の各要素に transform を適用して destination へ反映する。
+        /// destination のサイズは source.Count に合わせて自動的にリサイズされる。
+        /// 4 つの Sync* メソッド (絶対↔変動 × L1/L2) で重複していたコレクション同期処理を集約。
+        /// </summary>
+        private static void SyncCollectionWithTransform(
+            ObservableCollection<double> source,
+            ObservableCollection<double> destination,
+            Func<double, double> transform)
+        {
+            if (source == null || destination == null) return;
+            int n = source.Count;
+            while (destination.Count > n)
+                destination.RemoveAt(destination.Count - 1);
+            while (destination.Count < n)
+                destination.Add(0.0);
+            for (int i = 0; i < n; i++)
+                destination[i] = transform(source[i]);
+        }
+
         private void SyncVariationL1FromAbsolute()
         {
-            if (_axialForceLevel1s == null || _axialForceVariationLevel1s == null) return;
             double vl = AxialForceVL;
-            int n = _axialForceLevel1s.Count;
-            while (_axialForceVariationLevel1s.Count > n)
-                _axialForceVariationLevel1s.RemoveAt(_axialForceVariationLevel1s.Count - 1);
-            while (_axialForceVariationLevel1s.Count < n)
-                _axialForceVariationLevel1s.Add(0.0);
-            for (int i = 0; i < n; i++)
-                _axialForceVariationLevel1s[i] = _axialForceLevel1s[i] - vl;
+            SyncCollectionWithTransform(_axialForceLevel1s, _axialForceVariationLevel1s, abs => abs - vl);
         }
 
         private void SyncVariationL2FromAbsolute()
         {
-            if (_axialForceLevel2s == null || _axialForceVariationLevel2s == null) return;
             double vl = AxialForceVL;
-            int n = _axialForceLevel2s.Count;
-            while (_axialForceVariationLevel2s.Count > n)
-                _axialForceVariationLevel2s.RemoveAt(_axialForceVariationLevel2s.Count - 1);
-            while (_axialForceVariationLevel2s.Count < n)
-                _axialForceVariationLevel2s.Add(0.0);
-            for (int i = 0; i < n; i++)
-                _axialForceVariationLevel2s[i] = _axialForceLevel2s[i] - vl;
+            SyncCollectionWithTransform(_axialForceLevel2s, _axialForceVariationLevel2s, abs => abs - vl);
         }
 
         private void SyncAbsoluteL1FromVariation()
         {
-            if (_axialForceLevel1s == null || _axialForceVariationLevel1s == null) return;
             double vl = AxialForceVL;
-            int n = _axialForceVariationLevel1s.Count;
-            while (_axialForceLevel1s.Count > n)
-                _axialForceLevel1s.RemoveAt(_axialForceLevel1s.Count - 1);
-            while (_axialForceLevel1s.Count < n)
-                _axialForceLevel1s.Add(0.0);
-            for (int i = 0; i < n; i++)
-                _axialForceLevel1s[i] = vl + _axialForceVariationLevel1s[i];
+            SyncCollectionWithTransform(_axialForceVariationLevel1s, _axialForceLevel1s, var => vl + var);
         }
 
         private void SyncAbsoluteL2FromVariation()
         {
-            if (_axialForceLevel2s == null || _axialForceVariationLevel2s == null) return;
             double vl = AxialForceVL;
-            int n = _axialForceVariationLevel2s.Count;
-            while (_axialForceLevel2s.Count > n)
-                _axialForceLevel2s.RemoveAt(_axialForceLevel2s.Count - 1);
-            while (_axialForceLevel2s.Count < n)
-                _axialForceLevel2s.Add(0.0);
-            for (int i = 0; i < n; i++)
-                _axialForceLevel2s[i] = vl + _axialForceVariationLevel2s[i];
+            SyncCollectionWithTransform(_axialForceVariationLevel2s, _axialForceLevel2s, var => vl + var);
         }
 
         /// <summary>

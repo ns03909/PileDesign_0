@@ -12,6 +12,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using PileDesign.Services;
 
 namespace PileDesign.Views
 {
@@ -68,7 +69,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"エラーが発生しました: {ex.Message}");
+                MessageService.Show($"エラーが発生しました: {ex.Message}");
             }
 
             // コンストラクタ末尾の登録を修正

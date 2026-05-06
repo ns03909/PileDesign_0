@@ -74,23 +74,23 @@
 
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#238966"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#F7B515"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#E95541"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="#D82531"/>
+            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 
@@ -233,12 +233,11 @@
                                         <Button Content="杭地盤セット追加" Command="{Binding AddChangSoilPileCommand}" 
                                                 HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Grid.Row="0"/>
 
-                                        <common:EnhancedDataGrid x:Name="DataGridSoilPile"
+                                        <common:EnhancedDataGrid x:Name="DataGridSoilPile" CanUserSortColumns="False"
                                                                  ItemsSource="{Binding ChangSoilPiles, UpdateSourceTrigger=LostFocus}"
                                                                  AutoGenerateColumns="False"
                                                                  CanUserAddRows="False"
                                                                  CanUserDeleteRows="False"
-                                                                 CanUserSortColumns="False"
                                                                  FrozenColumnCount="1"
                                                                  LoadingRow="DataGrid_LoadingRow"
                                                                  Grid.Row="1"
@@ -638,12 +637,11 @@
                                                 HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Grid.Row="0"/>
 
 
-                                        <common:EnhancedDataGrid x:Name="DataGridChang"
+                                        <common:EnhancedDataGrid x:Name="DataGridChang" CanUserSortColumns="False"
                                                                  ItemsSource="{Binding Changs, UpdateSourceTrigger=LostFocus}"
                                                                  AutoGenerateColumns="False"
                                                                  CanUserAddRows="False"
                                                                  CanUserDeleteRows="False"
-                                                                 CanUserSortColumns="False"
                                                                  LoadingRow="DataGrid_LoadingRow"
                                                                  Grid.Row="1"
                                                                  PreparingCellForEdit="DataGrid_PreparingCellForEdit"
@@ -1011,13 +1009,12 @@
 
                         <Button Content="杭地盤セット追加" Command="{Binding AddChangSoilPileCommand}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Grid.Row="0"/>
 
-                        <common:EnhancedDataGrid x:Name="DataGridSoilPile"
+                        <common:EnhancedDataGrid x:Name="DataGridSoilPile" CanUserSortColumns="False"
                             ItemsSource="{Binding ChangSoilPiles, UpdateSourceTrigger=LostFocus}"
                             Grid.Row="2"
                             AutoGenerateColumns="False"
                             CanUserAddRows="False"
                             CanUserDeleteRows="False"
-                            CanUserSortColumns="False"
                             FrozenColumnCount="1"
                             Grid.ColumnSpan="2"
                             LoadingRow="DataGrid_LoadingRow">
@@ -1238,13 +1235,12 @@
 
                         <Button Content="杭地盤セット配置追加" Command="{Binding AddChangCommand}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Grid.Row="0"/>
 
-                        <common:EnhancedDataGrid x:Name="DataGridChang"
+                        <common:EnhancedDataGrid x:Name="DataGridChang" CanUserSortColumns="False"
                             ItemsSource="{Binding Changs, UpdateSourceTrigger=LostFocus}"
                             Grid.Row="1"
                             AutoGenerateColumns="False"
                             CanUserAddRows="False"
                             CanUserDeleteRows="False"
-                            CanUserSortColumns="False"
                             FrozenColumnCount="0"
                             LoadingRow="DataGrid_LoadingRow">
                             <DataGrid.AlternatingRowBackground>

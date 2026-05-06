@@ -1,4 +1,4 @@
-using PileDesign.Common.Undo;
+﻿using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using PileDesign.Services;
 
 namespace PileDesign.Views
 {
@@ -150,7 +151,7 @@ namespace PileDesign.Views
                                     var previousItem = dataGrid.Items[rowIndex - 1] as SettlementSoilLayer;
                                     if (newValue >= previousItem.BottomAltitude)
                                     {
-                                        MessageBox.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                                        MessageService.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                                         e.Cancel = true;
 
                                         editedTextBox.Text = editedItem.BottomAltitude.ToString("F2");
