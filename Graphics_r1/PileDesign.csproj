@@ -8,8 +8,8 @@
 	     コードを修正したら下記リストから該当コードを削除して strict 化する。
 	     2026-04-29 baseline (全 6076 警告 → 29 種類のコードを許容)。-->
 	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-	<!-- 解消済: CS0067 CS0108 CS0169 CS0414 CS1717 CS8073 CS8321 CS8621 CS8765 CS8767 CS9113 (2026-04-29) -->
-	<WarningsNotAsErrors>CS0162;CS0168;CS0219;CS0618;CS0649;CS4014;CS8600;CS8601;CS8602;CS8603;CS8604;CS8605;CS8612;CS8618;CS8619;CS8622;CS8625;CS8629;NU1701</WarningsNotAsErrors>
+	<!-- 解消済: CS0067 CS0108 CS0169 CS0414 CS1717 CS8073 CS8321 CS8621 CS8765 CS8767 CS9113 (2026-04-29) / CS0168 CS0219 (2026-05-11) -->
+	<WarningsNotAsErrors>CS0162;CS0649;CS4014;CS8600;CS8601;CS8602;CS8603;CS8604;CS8605;CS8612;CS8618;CS8619;CS8622;CS8625;CS8629;NU1701</WarningsNotAsErrors>
     <OutputType>WinExe</OutputType>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>
@@ -20,10 +20,10 @@
     <ApplicationIcon>Icons\ApplicationIcon\ApplicationIcon.ico</ApplicationIcon>
 
     <!-- バージョン管理 -->
-    <Version>1.0.5-beta</Version>
-    <AssemblyVersion>1.0.5.0</AssemblyVersion>
-    <FileVersion>1.0.5.0</FileVersion>
-    <InformationalVersion>1.0.5-beta</InformationalVersion>
+    <Version>1.0.8-beta</Version>
+    <AssemblyVersion>1.0.8.0</AssemblyVersion>
+    <FileVersion>1.0.8.0</FileVersion>
+    <InformationalVersion>1.0.8-beta</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
@@ -42,7 +42,22 @@
     <Compile Remove="PileNode.cs" />
     <Compile Remove="RestoringForce.cs" />
     <Compile Remove="ViewModels\LoadCaseCommon.cs" />
-  </ItemGroup>	
+  </ItemGroup>
+
+  <!--
+    Icons/ -> Help/icons/ build-time sync.
+    Single edit location: Icons/ (the original WPF icon folder).
+    Before each build, mirror Icons/X to Help/icons/X for every filename present in Help/icons/
+    (the 92 icons referenced by help.html). help.html keeps using relative 'icons/X.png' paths.
+    Icons/-only files (287) stay where they are.
+    Note: Help/icons/ remains tracked in git so users without a recent build still see icons in the help.
+  -->
+  <Target Name="SyncIconsToHelpIcons" BeforeTargets="BeforeBuild">
+    <ItemGroup>
+      <_HelpIconDest Include="Help\icons\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_HelpIconDest -> 'Icons\%(Filename)%(Extension)')" DestinationFiles="@(_HelpIconDest)" SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true" />
+  </Target>
 
   <ItemGroup>
     <None Remove="Help\images\0669.jpg" />
@@ -216,6 +231,8 @@
     <None Remove="Icons\CreateAutoUniformlyDistributedLoad.svg" />
     <None Remove="Icons\BeamedCrossFormPressure.png" />
     <None Remove="Icons\BeamedCrossFormPressure.svg" />
+    <None Remove="Icons\BeamedSquareFormPressure.png" />
+    <None Remove="Icons\BeamedSquareFormPressure.svg" />
     <None Remove="Icons\CrossFormPressure.png" />
     <None Remove="Icons\CrossFormPressure.svg" />
     <None Remove="Icons\CsvFileOutput.svg" />
@@ -247,6 +264,8 @@
     <None Remove="Icons\ElementNo.svg" />
     <None Remove="Icons\ElementVisible.png" />
     <None Remove="Icons\ElementVisible.svg" />
+    <None Remove="Icons\Examples.png" />
+    <None Remove="Icons\Examples.svg" />
     <None Remove="Icons\FrontView.png" />
     <None Remove="Icons\FrontView.svg" />
     <None Remove="Icons\FundamentalWindow.png" />
@@ -273,10 +292,18 @@
     <None Remove="Icons\GroupPileSettlementDone.png" />
     <None Remove="Icons\GroupPileSettlementDone.svg" />
     <None Remove="Icons\GroupPileSettlementDone_2.svg" />
+    <None Remove="Icons\GroupPileSettlementWithBeamWindow.png" />
+    <None Remove="Icons\GroupPileSettlementWithBeamWindow.svg" />
+    <None Remove="Icons\GroupPileSettlementWithBeamWindowDone.png" />
+    <None Remove="Icons\GroupPileSettlementWithBeamWindowDone.svg" />
     <None Remove="Icons\Help.png" />
     <None Remove="Icons\Help.svg" />
+    <None Remove="Icons\HelpChat.png" />
+    <None Remove="Icons\HelpChat.svg" />
     <None Remove="Icons\HideRibbon.png" />
     <None Remove="Icons\HideRibbon.svg" />
+    <None Remove="Icons\History.png" />
+    <None Remove="Icons\History.svg" />
     <None Remove="Icons\HorizontalRotation.svg" />
     <None Remove="Icons\InputDataVisible.png" />
     <None Remove="Icons\InputDataVisible.svg" />
@@ -344,6 +371,8 @@
     <None Remove="Icons\LoadingPlaneVisible.svg" />
     <None Remove="Icons\log.png" />
     <None Remove="Icons\log.svg" />
+    <None Remove="Icons\Masing-Pyke.png" />
+    <None Remove="Icons\Masing-Pyke.svg" />
     <None Remove="Icons\MaterialWizard.png" />
     <None Remove="Icons\MaterialWizard.svg" />
     <None Remove="Icons\MergeElements.png" />
@@ -397,6 +426,8 @@
     <None Remove="Icons\PropertyVisible.svg" />
     <None Remove="Icons\QuickHint.png" />
     <None Remove="Icons\QuickHint.svg" />
+    <None Remove="Icons\RecentFiles.png" />
+    <None Remove="Icons\RecentFiles.svg" />
     <None Remove="Icons\Redo.png" />
     <None Remove="Icons\Redo.svg" />
     <None Remove="Icons\RemoveResults.png" />
@@ -458,6 +489,8 @@
     <None Remove="Icons\SplitElementByNodes.svg" />
     <None Remove="Icons\SplitElementEqually.png" />
     <None Remove="Icons\SplitElementEqually.svg" />
+    <None Remove="Icons\SquareFormPressure.png" />
+    <None Remove="Icons\SquareFormPressure.svg" />
     <None Remove="Icons\Stop.svg" />
     <None Remove="Icons\SurroundingSoilVisible.png" />
     <None Remove="Icons\SurroundingSoilVisible.svg" />
@@ -589,6 +622,13 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Help\icons\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- WebView2 Evergreen Bootstrapper (~3MB) — Runtime 未インストール時に自動起動して per-user install
+         する。ファイルが存在する場合のみコピー (CI / 開発環境で未配置でもビルド失敗しない)。
+         配置: Graphics_r1/MicrosoftEdgeWebview2Setup.exe
+         入手: https://developer.microsoft.com/microsoft-edge/webview2/ -->
+    <Content Include="MicrosoftEdgeWebview2Setup.exe" Condition="Exists('MicrosoftEdgeWebview2Setup.exe')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -1058,6 +1098,12 @@
     <Resource Include="Icons\BeamedCrossFormPressure.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\BeamedSquareFormPressure.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamedSquareFormPressure.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\CrossFormPressure.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1151,6 +1197,12 @@
     <Resource Include="Icons\ElementVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\Examples.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Examples.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\FrontView.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1229,16 +1281,40 @@
     <Resource Include="Icons\GroupPileSettlementDone_2.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\GroupPileSettlementWithBeamWindow.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroupPileSettlementWithBeamWindow.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroupPileSettlementWithBeamWindowDone.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroupPileSettlementWithBeamWindowDone.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\Help.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Help.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\HelpChat.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\HelpChat.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\HideRibbon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\HideRibbon.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\History.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\History.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\HorizontalRotation.svg">
@@ -1442,6 +1518,12 @@
     <Resource Include="Icons\log.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\Masing-Pyke.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Masing-Pyke.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\MaterialWizard.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1599,6 +1681,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\QuickHint.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\RecentFiles.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\RecentFiles.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Redo.png">
@@ -1784,6 +1872,12 @@
     <Resource Include="Icons\SplitElementEqually.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\SquareFormPressure.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SquareFormPressure.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\Stop.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1953,7 +2047,7 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <!-- WebView2: ランタイム同梱(Runtime.X64)からSDKのみに変更（-509MB）
          Windows 10/11にはWebView2 Evergreen Runtimeが標準搭載 -->
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3912.50" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
     <PackageReference Include="WpfMath" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
@@ -1966,7 +2060,7 @@
     <PackageReference Include="Dirkster.AvalonDock" Version="4.74.1" />
     <PackageReference Include="Dirkster.AvalonDock.Themes.VS2013" Version="4.74.1" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
-    <PackageReference Include="Fluent.Ribbon" Version="11.0.0" />
+    <PackageReference Include="Fluent.Ribbon" Version="11.0.2" />
     <PackageReference Include="DocumentFormat.OpenXml.Framework" Version="3.5.1" />
     <PackageReference Include="HarfBuzzSharp" Version="8.3.1.3" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" Version="8.3.1.3" />

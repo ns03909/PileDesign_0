@@ -325,7 +325,7 @@ namespace PileDesign.Views
                 // 支持力を再計算（Rfu, Rt_SLS, Rt_DLS, Rt_ULS等）とUI通知
                 viewModel.RecalculateResistances();
                 // 沈下を再計算
-                viewModel.ExecuteAnalysis();
+                _ = viewModel.ExecuteAnalysis();
             }
         }
     }

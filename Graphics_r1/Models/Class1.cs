@@ -25,6 +25,7 @@ namespace PileDesign.Models
         {
             var projectData = new ProjectData
             {
+                FormatVersion = 2,  // v2: PileLayoutItems[*].Z = 接合節点 Z (旧 v1 = 杭頭 Z)
                 InputModel = inputModel,
                 AnaModel = anaModel
             };

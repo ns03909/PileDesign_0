@@ -1,4 +1,4 @@
-﻿//using MathNet.Numerics.LinearAlgebra;
+//using MathNet.Numerics.LinearAlgebra;
 //using System;
 //using System.Collections.ObjectModel;
 //using System.Linq;
@@ -109,7 +109,7 @@
 //            Vector<double> dispNodeI = NodeI.CumulativeDisp.GetVector(); //double[] dispNodeI = nodeI.OutNode.Disp;
 //            Vector<double> dispNodeJ = NodeJ.CumulativeDisp.GetVector(); //double[] dispNodeJ = nodeJ.OutNode.Disp;
 
-//            // dispNodeIとdispNodeJを組み合わせて2n行のベクトルを作成
+//            // dispNodeIとdispNodeJを組合せて2n行のベクトルを作成
 //            Vector<double> disp = Vector<double>.Build.Dense(dispNodeI.Count + dispNodeJ.Count); //double[] disp = [.. dispNodeI, .. dispNodeJ];
 //            disp.SetSubVector(0, dispNodeI.Count, dispNodeI);
 //            disp.SetSubVector(dispNodeI.Count, dispNodeJ.Count, dispNodeJ);

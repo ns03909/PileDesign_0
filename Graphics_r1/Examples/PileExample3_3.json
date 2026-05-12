@@ -4,14 +4,14 @@
   "loadCaseLevel1": {
     "forceActionPointX": 26.6,
     "forceActionPointY": 15.3,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -3.05,
     "upperMassForce": 8247.5,
     "foundationMassForce": 9796
   },
   "loadCaseLevel2": {
     "forceActionPointX": 26.6,
     "forceActionPointY": 15.3,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -3.05,
     "upperMassForce": 16495,
     "foundationMassForce": 19592
   },
@@ -262,37 +262,37 @@
       "no": 1,
       "x": 33.6,
       "y": 0.0,
-      "z": -0.45
+      "z": -3.15
     },
     {
       "no": 2,
       "x": 39.6,
       "y": 0.0,
-      "z": -0.45
+      "z": -3.15
     },
     {
       "no": 3,
       "x": 33.6,
       "y": 29.0,
-      "z": -0.45
+      "z": -3.15
     },
     {
       "no": 4,
       "x": 39.6,
       "y": 29.0,
-      "z": -0.45
+      "z": -3.15
     },
     {
       "no": 5,
       "x": 33.6,
       "y": 14.5,
-      "z": -0.45
+      "z": -3.15
     },
     {
       "no": 6,
       "x": 45.6,
       "y": 14.5,
-      "z": -0.45
+      "z": -3.15
     }
   ],
   "gridXItems": [

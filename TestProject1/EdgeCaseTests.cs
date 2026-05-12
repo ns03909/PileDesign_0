@@ -466,7 +466,7 @@ namespace TestProject1
                 (0.010, 150.0),
             });
 
-            // 正側（既存挙動）
+            // 正側（既存挙動）— 折れ点上ピッタリは厳密一致
             Assert.AreEqual(100.0, curve.EvaluateMoment(0.001), 1e-6);
             Assert.AreEqual(150.0, curve.EvaluateMoment(0.010), 1e-6);
 
@@ -474,9 +474,12 @@ namespace TestProject1
             Assert.AreEqual(-100.0, curve.EvaluateMoment(-0.001), 1e-6);
             Assert.AreEqual(-150.0, curve.EvaluateMoment(-0.010), 1e-6);
 
-            // プラトー外挿（|θ| > θ_last）も対称
-            Assert.AreEqual(150.0, curve.EvaluateMoment(0.050), 1e-6);
-            Assert.AreEqual(-150.0, curve.EvaluateMoment(-0.050), 1e-6);
+            // post-yield 外挿（|θ| > θ_last）は奇関数: f(-θ) = -f(θ)
+            // 実装は微小 (1%) post-yield 勾配を持つため、厳密値ではなく対称性をチェック
+            double mPlus = curve.EvaluateMoment(0.050);
+            double mMinus = curve.EvaluateMoment(-0.050);
+            Assert.AreEqual(mPlus, -mMinus, 1e-10, "post-yield 外挿域でも奇関数性が保たれること");
+            Assert.IsTrue(mPlus >= 150.0, "post-yield 外挿は M_last 以上を返す");
 
             // セカント剛性は正のスカラー（F = K·θ で符号は θ 側から戻る）
             Assert.IsTrue(curve.EvaluateSecant(0.005) > 0);

@@ -46,8 +46,9 @@ namespace PileDesign.Output
 
         private double GetMaxPileTopZ()
         {
+            // v2 セマンティクス: pile.Z は接合節点 Z なので、杭頭最大値は PileHeadZ を使う
             if (_inputModel.PileLayoutItems == null || _inputModel.PileLayoutItems.Count == 0) return 0;
-            return _inputModel.PileLayoutItems.Max(p => p.Z);
+            return _inputModel.PileLayoutItems.Max(p => p.PileHeadZ);
         }
 
         private void AddGridAndDimensions(File3dm file, int gridLayerIdx, int dimLayerIdx, double z)
@@ -159,9 +160,10 @@ namespace PileDesign.Output
 
             foreach (var pile in _inputModel.PileLayoutItems)
             {
+                // v2 セマンティクス: 杭体描画の起点は杭頭 Z (= pile.Z - ΔZc)
                 double x = pile.Point3D.X;
                 double y = pile.Point3D.Y;
-                double z = pile.Point3D.Z;
+                double z = pile.PileHeadZ;
 
                 int bodyIndex = pile.PileBodyNo - 1;
                 if (bodyIndex < 0 || bodyIndex >= _inputModel.PileBodies.Count) continue;
@@ -316,8 +318,11 @@ namespace PileDesign.Output
             var fbInput = _inputModel.FoundationBeamInput;
             if (fbInput?.Beams == null) return;
 
-            var sectionDict = fbInput.Sections?.ToDictionary(s => s.No, s => s)
-                              ?? new Dictionary<int, BeamSection>();
+            // SectionNo (1-based 位置インデックス) → BeamSection マップ
+            var sectionDict = new Dictionary<int, BeamSection>();
+            if (fbInput.Sections != null)
+                for (int i = 0; i < fbInput.Sections.Count; i++)
+                    sectionDict[i + 1] = fbInput.Sections[i];
 
             foreach (var beam in fbInput.Beams)
             {
@@ -327,19 +332,9 @@ namespace PileDesign.Output
 
                 if (beam.NodeI_Id != Guid.Empty)
                     coordsI = _inputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
-                else if (beam.NodeI_No > 0)
-                {
-                    var nodeI = fbInput.Nodes?.FirstOrDefault(n => n.No == beam.NodeI_No);
-                    if (nodeI != null) coordsI = (nodeI.X, nodeI.Y, nodeI.Z);
-                }
 
                 if (beam.NodeJ_Id != Guid.Empty)
                     coordsJ = _inputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
-                else if (beam.NodeJ_No > 0)
-                {
-                    var nodeJ = fbInput.Nodes?.FirstOrDefault(n => n.No == beam.NodeJ_No);
-                    if (nodeJ != null) coordsJ = (nodeJ.X, nodeJ.Y, nodeJ.Z);
-                }
 
                 if (!coordsI.HasValue || !coordsJ.HasValue) continue;
 

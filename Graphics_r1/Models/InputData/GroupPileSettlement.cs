@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 
@@ -109,7 +109,7 @@ namespace PileDesign.Models.InputData
         // 矩形荷重面による沈下算定メソッド
         public static double Settlement(List<double> nus, List<double> Es, List<double> Hs, List<RectLoad> rectLoads, Point point)
         {
-            //'矩形載荷面の隅角部の沈下の組み合わせ
+            //'矩形載荷面の隅角部の沈下の組合せ
             // nus: ポアソン比 [0: jj]
             // Es: 縦弾性係数 (kN/m3) [0: jj]
             // Hs: 深さ (m) [0: jj]

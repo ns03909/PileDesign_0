@@ -1,5 +1,6 @@
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -103,8 +104,8 @@ namespace PileDesign.Services
         }
 
         /// <summary>
-        /// 「個別十字」系の荷重タイプに対し、杭ごとの十字形矩形荷重を自動生成する公開ヘルパー。
-        /// 荷重タイプが個別十字系でない場合は空のコレクションを返す。
+        /// 「個別十字」系および「個別矩形」系の荷重タイプに対し、杭ごとの矩形荷重を自動生成する公開ヘルパー。
+        /// 荷重タイプが自動生成系でない場合は既存 RectLoads を返す (任意矩形)。
         /// </summary>
         public static ObservableCollection<RectLoad> BuildAutoCrossRectLoads(
             PileGroupSettlement pileGroupSettlement,
@@ -139,6 +140,47 @@ namespace PileDesign.Services
             {
                 rectLoads = pileGroupSettlement.RectLoads;
             }
+            else if (pileGroupSettlement.LoadingType == "個別矩形")
+            {
+                // 個別矩形: 杭ごとに 1 矩形 (一辺 = √π · GroupPileLoadDia/2、円と等価面積)
+                // 自動生成後はユーザが DX/DY を変更可能 (DX/DY セッターは中心を保持)
+                // 既存 RectLoads に LinkedPileNo が設定されたものがあれば再利用 (DX/DY 編集を温存)
+                var existingByPileNo = pileGroupSettlement.RectLoads
+                    .Where(r => r.LinkedPileNo > 0)
+                    .ToDictionary(r => r.LinkedPileNo, r => r);
+
+                foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
+                {
+                    SoilPile soilPile = soilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                    double radius = soilPile.GroupPileLoadDia * 0.5;
+                    if (radius <= 0) continue;
+                    double qa = pileLayoutDataItem.AxialForceVL0 + pileLayoutDataItem.AxialForceVLAdditional;
+
+                    if (existingByPileNo.TryGetValue(pileLayoutDataItem.PileNo, out var existing))
+                    {
+                        // 既存矩形: 中心を杭位置に追従、QA は更新、DX/DY (寸法) は維持
+                        existing.CenterX = pileLayoutDataItem.Point3D.X;
+                        existing.CenterY = pileLayoutDataItem.Point3D.Y;
+                        existing.QA = qa;
+                        rectLoads.Add(existing);
+                    }
+                    else
+                    {
+                        // 新規生成: 一辺 = √π · r (面積 = π·r² で円と等価)
+                        double side = Math.Sqrt(Math.PI) * radius;
+                        double half = side * 0.5;
+                        rectLoads.Add(new RectLoad
+                        {
+                            X1 = pileLayoutDataItem.Point3D.X - half,
+                            X2 = pileLayoutDataItem.Point3D.X + half,
+                            Y1 = pileLayoutDataItem.Point3D.Y - half,
+                            Y2 = pileLayoutDataItem.Point3D.Y + half,
+                            QA = qa,
+                            LinkedPileNo = pileLayoutDataItem.PileNo
+                        });
+                    }
+                }
+            }
             else if (pileGroupSettlement.LoadingType == "個別十字")
             {
                 foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
@@ -156,7 +198,47 @@ namespace PileDesign.Services
                         rectLoads.Add(rectLoad);
                 }
             }
-            else if (pileGroupSettlement.LoadingType == "個別十字（基礎梁考慮）")
+            else if (pileGroupSettlement.LoadingType == "個別矩形（基礎梁考慮）")
+            {
+                // 個別矩形（基礎梁考慮）: 反復アルゴリズム (Steinbrenner ↔ 線形ばね基礎梁) 実装までは
+                // 個別矩形と同等の挙動。Pi 初期値は矩形荷重そのもの (既存 QA を維持)。
+                //  - 既存矩形 (LinkedPileNo 付き): QA・DX・DY を維持、中心のみ杭位置に追従
+                //  - 既存矩形なし: 一辺=√π·r、QA=AxialForceVL0+VLAdditional を初期値として生成
+                var existingByPileNo = pileGroupSettlement.RectLoads
+                    .Where(r => r.LinkedPileNo > 0)
+                    .ToDictionary(r => r.LinkedPileNo, r => r);
+
+                foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
+                {
+                    SoilPile soilPile = soilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                    double radius = soilPile.GroupPileLoadDia * 0.5;
+                    if (radius <= 0) continue;
+
+                    if (existingByPileNo.TryGetValue(pileLayoutDataItem.PileNo, out var existing))
+                    {
+                        // QA は触らない (反復実装後は ki·S2 で更新される)
+                        existing.CenterX = pileLayoutDataItem.Point3D.X;
+                        existing.CenterY = pileLayoutDataItem.Point3D.Y;
+                        rectLoads.Add(existing);
+                    }
+                    else
+                    {
+                        double side = Math.Sqrt(Math.PI) * radius;
+                        double half = side * 0.5;
+                        double qa = pileLayoutDataItem.AxialForceVL0 + pileLayoutDataItem.AxialForceVLAdditional;
+                        rectLoads.Add(new RectLoad
+                        {
+                            X1 = pileLayoutDataItem.Point3D.X - half,
+                            X2 = pileLayoutDataItem.Point3D.X + half,
+                            Y1 = pileLayoutDataItem.Point3D.Y - half,
+                            Y2 = pileLayoutDataItem.Point3D.Y + half,
+                            QA = qa,
+                            LinkedPileNo = pileLayoutDataItem.PileNo
+                        });
+                    }
+                }
+            }
+            else if (pileGroupSettlement.LoadingType == "個別十字（基礎梁反力）")
             {
                 // 基礎梁考慮鉛直解析（VL ケース）の杭反力を荷重に適用
                 var vbCase = FindVBLongTermCase(verticalBeamCaseResults);
@@ -218,6 +300,47 @@ namespace PileDesign.Services
             {
                 pilesArr[i].GroupPileSettlement = settlementsMm[i];
             }
+        }
+
+        /// <summary>
+        /// 任意の RectLoads から沈下グリッドを計算する公開ヘルパー (基礎梁考慮反復用)。
+        /// </summary>
+        public static ObservableCollection<SettlementGridDataItem> CalculateGridSettlementsPublic(
+            ObservableCollection<double> xs,
+            ObservableCollection<double> ys,
+            ObservableCollection<RectLoad> rectLoads,
+            ObservableCollection<SettlementSoilLayer> settlementSoilLayers)
+        {
+            int nx = xs?.Count ?? 0;
+            int ny = ys?.Count ?? 0;
+            var result = new ObservableCollection<SettlementGridDataItem>();
+            if (nx == 0 || ny == 0 || rectLoads == null || settlementSoilLayers == null) return result;
+
+            var xArray = xs.ToArray();
+            var yArray = ys.ToArray();
+            var settlementsMm = new double[nx * ny];
+
+            Parallel.For(0, nx * ny, idx =>
+            {
+                int ix = idx / ny;
+                int iy = idx % ny;
+                Point point = new() { X = xArray[ix], Y = yArray[iy] };
+                settlementsMm[idx] = Steinnbrener.CalcSettlement(point, rectLoads, settlementSoilLayers) * 1000;
+            });
+
+            for (int ix = 0; ix < nx; ix++)
+            {
+                for (int iy = 0; iy < ny; iy++)
+                {
+                    result.Add(new SettlementGridDataItem
+                    {
+                        X = xArray[ix],
+                        Y = yArray[iy],
+                        Settlement = settlementsMm[ix * ny + iy]
+                    });
+                }
+            }
+            return result;
         }
 
         /// <summary>

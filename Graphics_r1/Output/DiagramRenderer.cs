@@ -84,7 +84,7 @@ namespace PileDesign.Output
 
         // Example: WPF-based diagram -> PNG bytes (migrated from CreateLoadCombinationDiagramDrawing / SaveLoadCombinationDiagramByMm)
         public static byte[] RenderLoadCombinationDiagramPng(
-            double ps, double pf, double alphaL, double betaU, double betaL,
+            double _ps, double _pf, double alphaL, double betaU, double betaL,
             int widthMm = 30, int heightMm = 30, float dpi = 192f)
         {
             int widthPx = MmToPx(widthMm, dpi, 1.0);
@@ -237,7 +237,7 @@ namespace PileDesign.Output
                     double dpi = DefaultDpi,
                     double scale = 1.0)
         {
-            if (soilPile == null) throw new ArgumentNullException(nameof(soilPile));
+            ArgumentNullException.ThrowIfNull(soilPile);
             Func<byte[]> renderAction = () =>
             {
                 var segments = soilPile.PileBodySegments != null
@@ -615,8 +615,8 @@ namespace PileDesign.Output
             double dpi = DefaultDpi,
             double scale = 1.0)
         {
-            if (pileLayoutItems == null) throw new ArgumentNullException(nameof(pileLayoutItems));
-            if (markSelector == null) throw new ArgumentNullException(nameof(markSelector));
+            ArgumentNullException.ThrowIfNull(pileLayoutItems);
+            ArgumentNullException.ThrowIfNull(markSelector);
 
             Func<byte[]> renderAction = () =>
             {
@@ -630,7 +630,6 @@ namespace PileDesign.Output
                 double unitY = 5; // m
                 double tickLength = 1; // m (logical units, converted later)
                 double tickWidth = 1; // m (logical)
-                double pileWidth = 1; // m (logical)
                 double symbolCircleDiaInPixel = 20; //
                 double symbolTextHeight = symbolCircleDiaInPixel * 0.5;
 
@@ -969,7 +968,7 @@ namespace PileDesign.Output
             }
         }
 
-        private static void DrawGroundLayersInternal(DrawingHelper helper, GroundInput ground, double pileTopZ, double xOffset)
+        private static void DrawGroundLayersInternal(DrawingHelper helper, GroundInput ground, double _pileTopZ, double xOffset)
         {
             if (ground?.GroundLayers == null) return;
 
@@ -998,7 +997,7 @@ namespace PileDesign.Output
         /// <summary>
         /// N値グラフを描画（内部メソッド）
         /// </summary>
-        private static void DrawNValueGraphInternal(DrawingHelper helper, GroundInput ground, double pileTopZ, double xStart, double xEnd)
+        private static void DrawNValueGraphInternal(DrawingHelper helper, GroundInput ground, double _pileTopZ, double xStart, double xEnd)
         {
             if (ground?.GroundMassesData == null || ground.GroundMassesData.Count == 0) return;
 

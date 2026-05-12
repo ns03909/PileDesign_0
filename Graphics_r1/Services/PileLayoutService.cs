@@ -152,7 +152,7 @@ namespace PileDesign.Services
                     item.GroundNo = options.GroundNo;
             }
 
-            // 杭頭レベル
+            // 接合節点 Z 一括設定 (v2 セマンティクス: item.Z は接合節点 Z)
             if (options.ApplyPileTopLevel)
             {
                 foreach (var item in selectedItems)

@@ -305,7 +305,7 @@ namespace PileDesign.ViewModels
         }
 
         // 各グラフ共通のホバー用: Scatter → 詳細文字列（p-y, M-φ/EI-φ, 杭頭M-θ 等で利用）
-        private readonly Dictionary<ScottPlot.Plottables.Scatter, string> _graphHoverMap = new();
+        private readonly Dictionary<ScottPlot.Plottables.Scatter, string> _graphHoverMap = [];
 
         /// <summary>
         /// 描画メソッドが Scatter を登録するためのマップ。
@@ -1033,6 +1033,10 @@ namespace PileDesign.ViewModels
             if (IsVerticalBeamAnalysisDone && IsGroupPileSettlementAnalysisDone)
             {
                 GraphOptions.Add("沈下 基礎梁考慮単杭+群杭");
+            }
+            if (_mainWindowViewModel.HasGroupSettlementBeamAwareCases)
+            {
+                GraphOptions.Add("沈下 個別矩形(基礎梁考慮)");
             }
 
             if (GraphOptions.Count > 0 && string.IsNullOrEmpty(SelectedGraphOption))
@@ -1957,7 +1961,7 @@ namespace PileDesign.ViewModels
                             : SelectedLoadCaseOption == "VLadd" ? pileLayoutDataItem.AxialForceVLAdditional
                             : pileLayoutDataItem.AxialForceVL;
 
-                        var scatter = WpfPlot.Plot.Add.Scatter(new double[] { axialForce }, new double[] { 0.0 });
+                        var scatter = WpfPlot.Plot.Add.Scatter([axialForce], new double[] { 0.0 });
                         scatter.LegendText = $"P{pileLayoutDataItem.PileNo}";
                         scatter.LineStyle.Width = 0;
                     }
@@ -2105,7 +2109,8 @@ namespace PileDesign.ViewModels
                 SelectedGraphOption == "沈下 群杭" ||
                 SelectedGraphOption == "沈下 単杭+群杭" ||
                 SelectedGraphOption == "沈下 基礎梁考慮単杭" ||
-                SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭")
+                SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭" ||
+                SelectedGraphOption == "沈下 個別矩形(基礎梁考慮)")
             {
                 if (GridOptions.Count == 0)
                 {
@@ -2286,11 +2291,18 @@ namespace PileDesign.ViewModels
                                     sumFy += result.CumulativeForce.Fyi;
                                 }
                             }
-                            // 載荷方向への射影
+                            // 載荷方向への射影 (P-y 曲線慣用に合わせ符号反転)
+                            //
+                            // FEM 規約: NodeI(杭側) 内部力 Fxi は杭の動きと逆向き
+                            //   - 杭が +X に動く → Fxi < 0 (杭を引き戻す)
+                            // ここでは「土圧合力ばねが杭に与える抵抗力」(P-y 曲線の P と同じ向き) を
+                            // 表示したいので、内部力を符号反転して "soil resistance toward load direction"
+                            // として扱う。これで X (相対変位の大きさ) と Y (反力合計) が
+                            // 通常の P-y 曲線と同じ Q1 (両方正) に来る。
                             double radA = loadCase.LoadAngle * Math.PI / 180.0;
                             double cosA = Math.Cos(radA);
                             double sinA = Math.Sin(radA);
-                            double totalForce = sumFx * cosA + sumFy * sinA;
+                            double totalForce = -(sumFx * cosA + sumFy * sinA);
                             totalForcesTop.Add(totalForce);
                             totalForcesBtm.Add(totalForce);
 
@@ -2329,11 +2341,25 @@ namespace PileDesign.ViewModels
                         double seriesMax = Math.Max(topRelDisps.Max(), btmRelDisps.Max());
                         if (seriesMax > maxDispMm) maxDispMm = seriesMax;
 
+                        // 軸の意味を説明するホバー (X = 相対変位、Y = 抵抗反力合計)
+                        string axisExplain =
+                            "X 軸 (相対変位): 根入部節点 (NodeI, 杭側) の変位 − 地盤側 (NodeJ) の変位 の大きさ [mm]。\n"
+                            + "        ‖ (Dx_i − Dx_j, Dy_i − Dy_j) ‖ で計算。NodeJ は固定なので実質的に\n"
+                            + "        「杭の根入部の絶対変位」と等価。\n"
+                            + "Y 軸 (反力合計): 土圧合力ばね N 本の合計反力を載荷方向に射影 [kN]。\n"
+                            + "        P-y 曲線慣用に合わせ、ばねが杭を押し戻す向き (= 抵抗) を正としている。";
+
                         var scatterTop = wpfPlot.Plot.Add.Scatter(topRelDisps, totalForcesTop);
                         scatterTop.LegendText = $"最上点 {legend}";
                         scatterTop.Color = caseColor;
                         scatterTop.MarkerStyle.FillColor = caseColor;
                         scatterTop.MarkerStyle.LineColor = caseColor;
+                        _graphHoverMap[scatterTop] =
+                            $"系列: 最上点 (最大 Z の土圧合力ばね NodeI 位置)\n"
+                            + $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}° / 組合せ cmb{loadCombination.No}\n"
+                            + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}\n"
+                            + $"ステップ数: {lastStep}\n"
+                            + axisExplain;
 
                         var scatterBtm = wpfPlot.Plot.Add.Scatter(btmRelDisps, totalForcesBtm);
                         scatterBtm.LegendText = $"最下点 {legend}";
@@ -2341,6 +2367,12 @@ namespace PileDesign.ViewModels
                         scatterBtm.Color = caseColor;
                         scatterBtm.MarkerStyle.FillColor = caseColor;
                         scatterBtm.MarkerStyle.LineColor = caseColor;
+                        _graphHoverMap[scatterBtm] =
+                            $"系列: 最下点 (最小 Z の土圧合力ばね NodeI 位置)\n"
+                            + $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}° / 組合せ cmb{loadCombination.No}\n"
+                            + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}\n"
+                            + $"ステップ数: {lastStep}\n"
+                            + axisExplain;
 
                         // 等変形時の理論曲線（loadCase依存、最大変位×1.5まで描画）
                         var dgb = InputModel.ElementDivision?.DoatsuGoryokuBane;
@@ -2374,6 +2406,10 @@ namespace PileDesign.ViewModels
                             scatterTheor.LineStyle.Pattern = ScottPlot.LinePattern.Dotted;
                             scatterTheor.MarkerSize = 0;
                             scatterTheor.Color = caseColor;
+                            _graphHoverMap[scatterTheor] =
+                                $"系列: 等変形時 理論曲線 (全土圧合力ばねが同一相対変位の場合)\n"
+                                + $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}°\n"
+                                + axisExplain;
                         }
                     }
                 }
@@ -2628,7 +2664,6 @@ namespace PileDesign.ViewModels
                             {
                                 // 曲率：解析で保存した値を使用
                                 double phiFinal = beamResultForCurve.Curvature;
-                                string phiSource = "Curvature";
 
                                 // フォールバック：Curvatureが0以下の場合、回転角差から計算
                                 if (phiFinal <= 0.0 && beamResultForCurve.CumulativeDisp != null)
@@ -2640,7 +2675,6 @@ namespace PileDesign.ViewModels
                                         double dRyi = beamResultForCurve.CumulativeDisp.Ryj - beamResultForCurve.CumulativeDisp.Ryi;
                                         double dRzi = beamResultForCurve.CumulativeDisp.Rzj - beamResultForCurve.CumulativeDisp.Rzi;
                                         phiFinal = Math.Sqrt(dRyi * dRyi + dRzi * dRzi) / length;
-                                        phiSource = "CumulativeDisp(fallback)";
                                     }
                                 }
 
@@ -3289,7 +3323,6 @@ namespace PileDesign.ViewModels
                                     break;
                                 }
                             }
-                            return;
                         }
                     }
                 }
@@ -3304,6 +3337,10 @@ namespace PileDesign.ViewModels
                     if (SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭")
                         vbSettle += pile.GroupPileSettlement;
                     ys.Add(vbSettle);
+                }
+                else if (SelectedGraphOption == "沈下 個別矩形(基礎梁考慮)")
+                {
+                    ys.Add(GetBeamAwareCaseSettlement(pile, SelectedLoadCaseOption));
                 }
             }
 
@@ -3326,11 +3363,13 @@ namespace PileDesign.ViewModels
             }
 
             if (SelectedGraphOption == "沈下 群杭" || SelectedGraphOption == "沈下 単杭+群杭" ||
-                SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭")
+                SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭" ||
+                SelectedGraphOption == "沈下 個別矩形(基礎梁考慮)")
             {
                 List<double> xsGround = [];
                 List<double> ysGround = [];
-                foreach (var settlementGridDataItem in InputModel.PileGroupSettlement.SettlementGridData)
+                var groundSource = GetSettlementGridForCurrentOption();
+                foreach (var settlementGridDataItem in groundSource)
                 {
                     if (axis == "X" && xOnGrid == settlementGridDataItem.X) // X平行
                     {
@@ -3704,7 +3743,7 @@ namespace PileDesign.ViewModels
                             var scatterPile = wpfPlot.Plot.Add.Scatter(pileDisps.ToArray(), pileZs.ToArray());
                             var pileColor = scatterPile.LineStyle.Color; // 杭変位の色を取得
 
-                            var scatterSoil = wpfPlot.Plot.Add.Scatter(soilDisps.ToArray(), soilZs.ToArray());
+                            var scatterSoil = wpfPlot.Plot.Add.Scatter(soilDisps.ToArray(), [.. soilZs]);
                             scatterSoil.LineStyle.Pattern = LinePattern.Dashed;
                             scatterSoil.LineStyle.Color = pileColor; // 杭変位と同じ色を適用
                             scatterSoil.MarkerStyle.FillColor = pileColor;
@@ -4072,6 +4111,61 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 個別矩形（基礎梁考慮）反復解析の CaseRecord から指定杭の沈下量 (mm) を取得。
+        /// 荷重ケース名で CaseRecord を選び、なければアクティブケース、それも無ければ 0。
+        /// </summary>
+        private double GetBeamAwareCaseSettlement(PileLayoutDataItem pile, string loadCaseName)
+        {
+            var rec = ResolveBeamAwareCaseRecord(loadCaseName);
+            if (rec == null) return 0;
+            if (rec.PileSettlements_mm != null
+                && rec.PileSettlements_mm.TryGetValue(pile.PileNo, out double v))
+                return v;
+            return 0;
+        }
+
+        /// <summary>
+        /// SelectedGraphOption に応じた地盤沈下コンタ用のグリッドデータを返す。
+        /// 個別矩形（基礎梁考慮）が選ばれている場合は、対応する CaseRecord の SettlementGridData を返す。
+        /// </summary>
+        private IEnumerable<SettlementGridDataItem> GetSettlementGridForCurrentOption()
+        {
+            if (SelectedGraphOption == "沈下 個別矩形(基礎梁考慮)")
+            {
+                var rec = ResolveBeamAwareCaseRecord(SelectedLoadCaseOption);
+                if (rec?.SettlementGridData != null && rec.SettlementGridData.Count > 0)
+                    return rec.SettlementGridData;
+            }
+            return InputModel.PileGroupSettlement.SettlementGridData ?? [];
+        }
+
+        /// <summary>
+        /// 荷重ケース名から基礎梁考慮 CaseRecord を解決する。
+        /// 完全一致 → 末尾一致 (": <name>") → アクティブケース (あれば) → 最初の beam-aware ケース。
+        /// </summary>
+        private GroupSettlementCaseRecord ResolveBeamAwareCaseRecord(string loadCaseName)
+        {
+            var pgs = _mainWindowViewModel.CurrentInputModel?.PileGroupSettlement;
+            if (pgs?.CaseRecords == null) return null;
+            var beamAware = pgs.CaseRecords.Where(r => r.IsBeamAware).ToList();
+            if (beamAware.Count == 0) return null;
+
+            if (!string.IsNullOrEmpty(loadCaseName))
+            {
+                var exact = beamAware.FirstOrDefault(r => r.LoadCaseName == loadCaseName);
+                if (exact != null) return exact;
+                var suffix = beamAware.FirstOrDefault(r => r.LoadCaseName.EndsWith(": " + loadCaseName));
+                if (suffix != null) return suffix;
+            }
+
+            int idx = pgs.ActiveCaseIndex;
+            if (idx >= 0 && idx < pgs.CaseRecords.Count && pgs.CaseRecords[idx].IsBeamAware)
+                return pgs.CaseRecords[idx];
+
+            return beamAware[0];
+        }
+
+        /// <summary>
         /// NM/NQ曲線から指定軸力Nに対応する値（M or Q）を線形補間で取得
         /// </summary>
         private static double InterpolateLimitValue(List<double> nValues, List<double> mOrQValues, double targetN)
@@ -4186,9 +4280,9 @@ namespace PileDesign.ViewModels
                 if (sp.LoadDisplacements == null || sp.LoadDisplacements.Count == 0) continue;
 
                 var sorted = sp.LoadDisplacements.OrderBy(ld => ld.PileTopLoad).ToList();
-                double[] loads = sorted.Select(ld => ld.PileTopLoad).ToArray();
-                double[] headSettlements = sorted.Select(ld => ld.DD0s).ToArray();
-                double[] toeSettlements = sorted.Select(ld => ld.DDns).ToArray();
+                double[] loads = [.. sorted.Select(ld => ld.PileTopLoad)];
+                double[] headSettlements = [.. sorted.Select(ld => ld.DD0s)];
+                double[] toeSettlements = [.. sorted.Select(ld => ld.DDns)];
 
                 var color = colors[colorIdx % colors.Length];
                 string label = $"杭セット{spIdx + 1}";

@@ -28,7 +28,8 @@ namespace PileDesign.Models.InputData
                 var inputModel = InputModel;
                 if (inputModel == null) return CreateTemporarySoilPile();
 
-                var found = inputModel.LookupSoilPile(GroundNo, PileBodyNo, this.Point3D.Z);
+                // SoilPile キャッシュキーは杭頭 Z 基準 (v2 セマンティクスでは pile.Z は接合節点 Z なので PileHeadZ を渡す)
+                var found = inputModel.LookupSoilPile(GroundNo, PileBodyNo, this.PileHeadZ);
                 return found ?? CreateTemporarySoilPile();
             }
         }
@@ -50,15 +51,18 @@ namespace PileDesign.Models.InputData
             var segments = pileBody.PileBodySegments;
             var layers = ground.GroundLayers;
 
-            var zs = new ObservableCollection<double> { this.Point3D.Z };
+            // SoilPile は杭頭 Z 基準で構築する。v2 セマンティクスでは pile.Z は接合節点 Z なので、
+            // 杭頭は PileHeadZ (= pile.Z - ΔZc) を起点にする。
+            double pileTopZ = this.PileHeadZ;
+            var zs = new ObservableCollection<double> { pileTopZ };
             foreach (var seg in segments)
-                zs.Add(this.Point3D.Z - seg.SegmentDepth);
+                zs.Add(pileTopZ - seg.SegmentDepth);
 
             double bottomZ = zs[^1];
 
             foreach (var gl in layers)
             {
-                if (this.Point3D.Z > gl.BottomAltitude && gl.BottomAltitude > bottomZ)
+                if (pileTopZ > gl.BottomAltitude && gl.BottomAltitude > bottomZ)
                 {
                     for (int i = zs.Count - 1; i >= 0; i--)
                     {
@@ -98,7 +102,7 @@ namespace PileDesign.Models.InputData
                 groundInput: ground,
                 pileBodyNo: PileBodyNo,
                 pileBodyInput: pileBody,
-                z: this.Point3D.Z,
+                z: pileTopZ,  // SoilPile.Z は杭頭基準 (v2 セマンティクス)
                 zDataItems: zItems);
 
             temp.UpdateProperties();
@@ -157,13 +161,21 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _connectedFoundationNodeNo, value);
         }
 
-        // 基礎梁接続節点の相対高さ（杭頭からの鉛直オフセット）
+        // 基礎梁接合節点の相対高さ（杭頭からの鉛直オフセット, 通常 +）
         private double _foundationBeamDeltaZc = 1.0;
         public double FoundationBeamDeltaZc
         {
             get => _foundationBeamDeltaZc;
             set => SetProperty(ref _foundationBeamDeltaZc, value);
         }
+
+        /// <summary>
+        /// 杭頭節点 (cap node) の Z 座標。
+        /// v2 セマンティクスでは pile.Z は接合節点 Z を意味するため、
+        /// 杭頭は ΔZc を差し引いた位置となる。FEM の cap node, SoilPile.Z (杭頭高さ) はこの値を使う。
+        /// </summary>
+        [JsonIgnore]
+        public double PileHeadZ => Z - FoundationBeamDeltaZc;
 
         //群杭係数
         private double _groupPileFactor;
@@ -581,12 +593,18 @@ namespace PileDesign.Models.InputData
             }
             finally { _isSyncingAxial = false; }
 
-            // Z変更時にも SoilPile 再評価を通知
+            // Z 変更時にも SoilPile 再評価を通知
+            // Z または ΔZc 変更時に PileHeadZ (= Z - ΔZc) も再評価通知
             this.PropertyChanged += (s, e) =>
             {
-                if (e.PropertyName == "Z")
+                if (e.PropertyName == nameof(Z))
                 {
                     OnPropertyChanged(nameof(SoilPile));
+                    OnPropertyChanged(nameof(PileHeadZ));
+                }
+                else if (e.PropertyName == nameof(FoundationBeamDeltaZc))
+                {
+                    OnPropertyChanged(nameof(PileHeadZ));
                 }
             };
         }

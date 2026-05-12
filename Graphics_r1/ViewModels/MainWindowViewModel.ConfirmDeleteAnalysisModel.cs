@@ -34,12 +34,28 @@ namespace PileDesign.ViewModels
                 IsVerticalBeamAnalysisDone = false;
                 IsAnalysisResultVisible = false;
 
+                // 土層沈下 (反復) の CaseRecord も破棄 (杭配置/軸力/基礎梁の変更で結果無効化のため)
+                var pgs = CurrentInputModel?.PileGroupSettlement;
+                if (pgs?.CaseRecords != null && pgs.CaseRecords.Count > 0)
+                {
+                    pgs.CaseRecords.Clear();
+                    pgs.ActiveCaseIndex = -1;
+                    pgs.SettlementGridData = [];
+                    if (CurrentInputModel?.PileLayoutItems != null)
+                        foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
+                    OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
+                    OnPropertyChanged(nameof(HasGroupSettlementBeamAwareCases));
+                    OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
+                    OnPropertyChanged(nameof(AvailableActiveLoadingTypes));
+                    OnPropertyChanged(nameof(GroupSettlementRouteOptions));
+                    OnPropertyChanged(nameof(GroupSettlementRouteSelector));
+                }
+
                 // AnaModel の破棄
                 CurrentModel = null;
 
                 // 表示の更新
                 UpdateWindowImmediate();
-                UpdateTreeView();
             }
 
             return true;
@@ -48,9 +64,12 @@ namespace PileDesign.ViewModels
         // 置換: 解析結果の削除確認（以前の実装と同等の動作をヘルパ経由で）
         private bool CheckAndResetAnalysisResults()
         {
-            if (IsHorizontalAnalysisDone || IsVerticalAnalysisDone)
+            bool hasBeamAware = HasGroupSettlementBeamAwareCases;
+            if (IsHorizontalAnalysisDone || IsVerticalAnalysisDone || hasBeamAware)
             {
-                string msg = "杭要素分割内容、水平解析結果、単杭沈下解析結果が削除されます。続けますか？";
+                string parts = "杭要素分割内容、水平解析結果、単杭沈下解析結果";
+                if (hasBeamAware) parts += "、土層沈下解析（反復）結果";
+                string msg = parts + "が削除されます。続けますか？";
                 return ConfirmDeleteAnalysisModel(message: msg, caption: "確認", icon: MessageBoxImage.Warning, resetModel: true);
             }
             if (IsElementSplit)
@@ -69,7 +88,8 @@ namespace PileDesign.ViewModels
         public bool ConfirmResetAllForGeometryChange(string reason)
         {
             bool hasResults = IsHorizontalAnalysisDone || IsVerticalAnalysisDone
-                              || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone;
+                              || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone
+                              || HasGroupSettlementBeamAwareCases;
             if (!hasResults && !IsElementSplit) return true;
 
             string msg = $"{reason}により、";
@@ -89,7 +109,8 @@ namespace PileDesign.ViewModels
         public bool CheckAndResetAnalysisResultsKeepingSplit(string text)
         {
             bool hasResults = IsHorizontalAnalysisDone || IsVerticalAnalysisDone
-                              || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone;
+                              || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone
+                              || HasGroupSettlementBeamAwareCases;
             if (!hasResults) return true;
 
             MessageBoxResult result = MessageService.Show(
@@ -107,8 +128,24 @@ namespace PileDesign.ViewModels
             IsAnalysisResultVisible = false;
             CurrentModel = null;
 
+            // 土層沈下 (反復) の CaseRecord も破棄
+            var pgs = CurrentInputModel?.PileGroupSettlement;
+            if (pgs?.CaseRecords != null && pgs.CaseRecords.Count > 0)
+            {
+                pgs.CaseRecords.Clear();
+                pgs.ActiveCaseIndex = -1;
+                pgs.SettlementGridData = [];
+                if (CurrentInputModel?.PileLayoutItems != null)
+                    foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
+                OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
+                OnPropertyChanged(nameof(HasGroupSettlementBeamAwareCases));
+                OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
+                OnPropertyChanged(nameof(AvailableActiveLoadingTypes));
+                OnPropertyChanged(nameof(GroupSettlementRouteOptions));
+                OnPropertyChanged(nameof(GroupSettlementRouteSelector));
+            }
+
             UpdateWindowImmediate();
-            UpdateTreeView();
             return true;
         }
 
@@ -130,7 +167,6 @@ namespace PileDesign.ViewModels
             CurrentModel = null;
 
             UpdateWindowImmediate();
-            UpdateTreeView();
         }
 
         [RelayCommand]

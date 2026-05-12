@@ -96,8 +96,8 @@
             </Grid>
         </GroupBox>
 
-        <!-- 基礎梁要素 -->
-        <GroupBox Grid.Row="2" Header="基礎梁要素" Margin="0,5,0,10">
+        <!-- 基礎梁 -->
+        <GroupBox Grid.Row="2" Header="基礎梁" Margin="0,5,0,10">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>

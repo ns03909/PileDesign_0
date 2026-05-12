@@ -31,7 +31,9 @@ namespace PileDesign.Views
         // CPU/GPU コストを発生させない。再有効化時は false にすると同時に、
         // MainWindow.xaml の LayoutDocument「形状確認ビュー」内の Grid の
         // Visibility="Collapsed" を外すこと。
-        private const bool IsHelixViewFrozen = true;
+        // 'const' ではなく 'static readonly' とすることで、CS0162「到達できないコード」の警告を抑止し
+        // 凍結解除時のコードを保持する (実行時定数扱いになるため JIT 上の差は無視できる)。
+        private static readonly bool IsHelixViewFrozen = true;
 
         // Perspective Viewの更新メソッド
         private void UpdatePerspectiveView()
@@ -154,9 +156,10 @@ namespace PileDesign.Views
 
             foreach (PileLayoutDataItem pileLocation in InputModel.PileLayoutItems)
             {
+                // v2 セマンティクス: 杭体描画の起点は杭頭 Z (= pile.Z - ΔZc)
                 double x = pileLocation.Point3D.X;
                 double y = pileLocation.Point3D.Y;
-                double z = pileLocation.Point3D.Z;
+                double z = pileLocation.PileHeadZ;
 
                 int pileBodyIndex = pileLocation.PileBodyNo - 1;
                 if (pileBodyIndex < 0 || pileBodyIndex >= InputModel.PileBodies.Count)
@@ -203,9 +206,11 @@ namespace PileDesign.Views
 
             var fbInput = InputModel.FoundationBeamInput;
 
-            // 断面番号から断面情報を取得する辞書（空でも続行）
-            var sectionDict = fbInput.Sections?.ToDictionary(s => s.No, s => s)
-                              ?? new Dictionary<int, BeamSection>();
+            // SectionNo (1-based 位置インデックス) → BeamSection マップ
+            var sectionDict = new Dictionary<int, BeamSection>();
+            if (fbInput.Sections != null)
+                for (int i = 0; i < fbInput.Sections.Count; i++)
+                    sectionDict[i + 1] = fbInput.Sections[i];
 
             foreach (var beam in fbInput.Beams)
             {
@@ -220,11 +225,6 @@ namespace PileDesign.Views
                     if (coordsI.HasValue)
                         loc0 = new Point3D(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z);
                 }
-                else if (beam.NodeI_No > 0 && fbInput.Nodes.FirstOrDefault(n => n.No == beam.NodeI_No) is var nodeI && nodeI != null)
-                {
-                    // 旧方式（後方互換性）
-                    loc0 = new Point3D(nodeI.X, nodeI.Y, nodeI.Z);
-                }
 
                 // NodeJ の座標を解決
                 if (beam.NodeJ_Id != Guid.Empty)
@@ -232,11 +232,6 @@ namespace PileDesign.Views
                     var coordsJ = InputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
                     if (coordsJ.HasValue)
                         loc1 = new Point3D(coordsJ.Value.X, coordsJ.Value.Y, coordsJ.Value.Z);
-                }
-                else if (beam.NodeJ_No > 0 && fbInput.Nodes.FirstOrDefault(n => n.No == beam.NodeJ_No) is var nodeJ && nodeJ != null)
-                {
-                    // 旧方式（後方互換性）
-                    loc1 = new Point3D(nodeJ.X, nodeJ.Y, nodeJ.Z);
                 }
 
                 // 座標が両方とも解決できた場合のみ描画

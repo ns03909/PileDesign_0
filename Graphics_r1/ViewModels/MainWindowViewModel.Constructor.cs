@@ -1,4 +1,3 @@
-﻿using AvalonDock.Layout;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.FEM;
@@ -132,13 +131,6 @@ namespace PileDesign.ViewModels
         [ObservableProperty] // レベル1地震時軸力
         public bool _isElastic;
 
-        private ObservableCollection<CTreeViewData> _cTreeViewData = [];
-        public ObservableCollection<CTreeViewData> CTreeViewData
-        {
-            get => _cTreeViewData;
-            set => SetProperty(ref _cTreeViewData, value);
-        }
-
         public CanvasThreeDView CanvasThreeDView { get; set; }
 
         private ObservableCollection<int> _labelSizeOption = new(Enumerable.Range(7, 14)); // 7 to 20
@@ -242,7 +234,7 @@ namespace PileDesign.ViewModels
                 if (piles?.Count > 1) return $"杭 ×{piles.Count}";
 
                 var beams = CurrentInputModel?.FoundationBeamInput?.Beams?.Where(b => b.IsSelected).ToList();
-                if (beams?.Count == 1) return $"梁要素 #{beams[0].No}";
+                if (beams?.Count == 1) return $"梁要素 #{CurrentInputModel!.FoundationBeamInput!.GetBeamNo(beams[0])}";
                 if (beams?.Count > 1) return $"梁要素 ×{beams.Count}";
 
                 var nodes = CurrentInputModel?.InputNodes?.Where(n => n.IsSelected && n.Type == Models.InputData.NodeType.General).ToList();
@@ -338,7 +330,7 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(SelectedItemHeader));
 
             if (sender is PileLayoutDataItem pile) BuildPileProperties(pile);
-            else if (sender is FoundationBeamElement beam) BuildBeamProperties(beam);
+            else if (sender is FoundationBeam beam) BuildBeamProperties(beam);
             else if (sender is InputNode node) BuildInputNodeProperties(node);
             else if (sender is FoundationNode fNode) BuildFoundationNodeProperties(fNode);
         }
@@ -413,9 +405,11 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("Y", $"{pile.Y:F3}", "m",
                 PropertyInputType.Number,
                 MakeDoubleCommit(() => pile.Y, v => pile.Y = v)));
-            SelectedItemProperties.Add(new("Z (杭頭)", $"{pile.Z:F3}", "m",
+            SelectedItemProperties.Add(new("Z (接合節点)", $"{pile.Z:F3}", "m",
                 PropertyInputType.Number,
                 MakeDoubleCommit(() => pile.Z, v => pile.Z = v)));
+            // 杭頭 Z は読み取り専用で参考表示 (= pile.Z - ΔZc)
+            SelectedItemProperties.Add(new("Z (杭頭)", $"{pile.PileHeadZ:F3}", "m"));
 
             SelectedItemProperties.Add(new("杭体No", $"{pile.PileBodyNo}", "",
                 PropertyInputType.ComboBox,
@@ -433,7 +427,7 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("群杭係数 ξ", $"{pile.GroupPileFactor:F3}", "",
                 PropertyInputType.Number,
                 MakeDoubleCommit(() => pile.GroupPileFactor, v => pile.GroupPileFactor = v)));
-            SelectedItemProperties.Add(new("間隔係数 R/B", $"{pile.PileSpacingFactor:F3}"));
+            SelectedItemProperties.Add(new("杭間隔比 R/B", $"{pile.PileSpacingFactor:F3}"));
             SelectedItemProperties.Add(new("ΔZc", $"{pile.FoundationBeamDeltaZc:F3}", "m",
                 PropertyInputType.Number,
                 MakeDoubleCommit(() => pile.FoundationBeamDeltaZc, v => pile.FoundationBeamDeltaZc = v)));
@@ -495,10 +489,10 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private void BuildBeamProperties(FoundationBeamElement beam)
+        private void BuildBeamProperties(FoundationBeam beam)
         {
             if (CurrentInputModel == null) return;
-            SelectedItemProperties.Add(new("要素No",    $"{beam.No}"));
+            SelectedItemProperties.Add(new("要素No",    $"{CurrentInputModel.FoundationBeamInput.GetBeamNo(beam)}"));
             SelectedItemProperties.Add(new("I端節点No", CurrentInputModel.GetNodeReferenceDisplayString(beam.NodeI_Type, beam.NodeI_Id)));
             SelectedItemProperties.Add(new("J端節点No", CurrentInputModel.GetNodeReferenceDisplayString(beam.NodeJ_Type, beam.NodeJ_Id)));
             SelectedItemProperties.Add(new("材料No",    $"{beam.MaterialNo}"));
@@ -518,7 +512,7 @@ namespace PileDesign.ViewModels
                 SelectedItemProperties.Add(new("部材長", $"{len.Value:F3}", "m"));
         }
 
-        private double? CalcBeamLength(FoundationBeamElement beam)
+        private double? CalcBeamLength(FoundationBeam beam)
         {
             if (beam.NodeI_Id == Guid.Empty || beam.NodeJ_Id == Guid.Empty) return null;
             if (CurrentInputModel == null) return null;
@@ -642,8 +636,8 @@ namespace PileDesign.ViewModels
                     RequestUpdateWindow();
                 }));
 
-            // 間隔係数（読み取り専用）
-            SelectedItemProperties.Add(new("間隔係数 R/B", CommonDoubleOrVarious(piles.Select(p => p.PileSpacingFactor))));
+            // 杭間隔比（読み取り専用）
+            SelectedItemProperties.Add(new("杭間隔比 R/B", CommonDoubleOrVarious(piles.Select(p => p.PileSpacingFactor))));
 
             // ΔZc
             SelectedItemProperties.Add(new("ΔZc",
@@ -741,7 +735,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private void BuildMultiBeamProperties(List<FoundationBeamElement> beams)
+        private void BuildMultiBeamProperties(List<FoundationBeam> beams)
         {
             SelectedItemProperties.Add(new("選択数",    $"{beams.Count} 本"));
             SelectedItemProperties.Add(new("材料No",    CommonOrVarious(beams.Select(b => b.MaterialNo))));
@@ -777,18 +771,50 @@ namespace PileDesign.ViewModels
             ? $"×{CanvasThreeDView.Scale:F1}"
             : "";
 
-        // 解析状態表示
+        // 解析状態表示 (旧式: 1 行プレーンテキスト。後方互換 + ツールチップ等に利用可)
         public string AnalysisStatusText
         {
             get
             {
-                var statuses = new List<string>();
-                if (IsElementSplit) statuses.Add("杭要素分割済み");
-                if (IsHorizontalAnalysisDone) statuses.Add("水平解析完了");
-                if (IsVerticalAnalysisDone) statuses.Add("沈下解析完了");
-                if (IsVerticalBeamAnalysisDone) statuses.Add("梁鉛直解析完了");
-                return statuses.Count > 0 ? string.Join(" | ", statuses) : "未解析";
+                var items = AnalysisStatusItems;
+                return items.Count > 0 ? string.Join(" | ", items.Select(s => s.Text)) : "未解析";
             }
+        }
+
+        /// <summary>
+        /// ステータスバー表示用: 解析項目ごとの実施状態 + 色種別。
+        /// 色種別 (Color フィールド) は "Success" / "Info" / "Warning" / "Inactive" のいずれか。
+        /// XAML 側で DynamicResource (StatusSuccessBrush / StatusInfoBrush / StatusWarningDarkBrush) と紐付ける。
+        /// リボンボタンの ✓ 色と統一: 杭要素分割・水平解析=Success、荷重沈下・梁鉛直=Info、土層沈下=Warning。
+        /// </summary>
+        public List<AnalysisStatusItem> AnalysisStatusItems
+        {
+            get
+            {
+                var items = new List<AnalysisStatusItem>();
+                if (IsElementSplit)
+                    items.Add(new() { Text = "杭要素分割 ✓", Color = "SkyBlue" });
+                if (IsHorizontalAnalysisDone)
+                    items.Add(new() { Text = "水平解析 ✓", Color = "Success" });
+                if (IsVerticalAnalysisDone)
+                    items.Add(new() { Text = "荷重沈下関係解析 ✓", Color = "Info" });
+                if (IsVerticalBeamAnalysisDone)
+                    items.Add(new() { Text = "基礎梁考慮沈下解析 ✓", Color = "Info" });
+
+                var pgs = CurrentInputModel?.PileGroupSettlement;
+                if (pgs?.CaseRecords?.Any(r => !r.IsBeamAware) == true)
+                    items.Add(new() { Text = "土層沈下（一般） ✓", Color = "Warning" });
+                if (pgs?.CaseRecords?.Any(r => r.IsBeamAware) == true)
+                    items.Add(new() { Text = "土層沈下（反復） ✓", Color = "Warning" });
+                return items;
+            }
+        }
+
+        /// <summary>ステータスバー表示用 1 項目: 表示テキスト + 色種別 (Success/Info/Warning)。</summary>
+        public class AnalysisStatusItem
+        {
+            public string Text { get; set; } = "";
+            public string Color { get; set; } = "Inactive";
         }
 
         // 直近の解析完了時刻 (ステータスバー表示用)。各解析の完了処理から SetLatestAnalysisCompleted() で更新。
@@ -875,9 +901,6 @@ namespace PileDesign.ViewModels
                 OnPropertyChanged(nameof(IsCenterCoordEditorVisible));
             }
         }
-
-        // プロパティ
-        public LayoutAnchorable InputDataAnchorable { get; set; }
 
         // 慣性力描画
         private bool _isMassLoadingVisible;
@@ -1084,6 +1107,8 @@ namespace PileDesign.ViewModels
                     AutoDetectLiquefactionState();
                     OnPropertyChanged(nameof(IsCurrentNonLiquefactionAnalyzed));
                     OnPropertyChanged(nameof(IsCurrentLiquefactionAnalyzed));
+                    // 群杭沈下のケース別結果がある場合、荷重ケース連動でアクティブケースを切替
+                    SyncGroupSettlementActiveCaseFromLoadCase(value);
                     // 荷重ケース変更で解析結果表示を再描画（VB 沈下反力など）
                     UpdateCanvas3DAction?.Invoke();
                 }
@@ -1091,7 +1116,80 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 選択された荷重ケースと荷重組み合わせに対して、解析結果の液状化状態を自動検出し、IsLiquefaction を設定する
+        /// SelectedLoadCaseName の変更に応じて、群杭沈下解析の CaseRecords から
+        /// 一致するケースを ActiveCase として選択する。
+        /// 一致するケースが無い場合 (VL0/VLadd や 解析対象外ケース) は
+        /// ActiveCaseIndex = -1 にしてコンタを非表示化する。
+        /// </summary>
+        private void SyncGroupSettlementActiveCaseFromLoadCase(string loadCaseName)
+        {
+            var pgs = CurrentInputModel?.PileGroupSettlement;
+            if (pgs?.CaseRecords == null || pgs.CaseRecords.Count == 0) return;
+
+            int idx = FindMatchingCaseRecordIndex(pgs.CaseRecords, loadCaseName, pgs.ActiveLoadingType);
+            if (idx == pgs.ActiveCaseIndex) return;
+
+            if (idx < 0)
+            {
+                // 該当ケースなし: コンタ・杭沈下をクリアして非表示
+                pgs.ActiveCaseIndex = -1;
+                pgs.SettlementGridData = [];
+                if (CurrentInputModel?.PileLayoutItems != null)
+                {
+                    foreach (var pile in CurrentInputModel.PileLayoutItems)
+                        pile.GroupPileSettlement = 0;
+                }
+                OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
+                return;
+            }
+
+            pgs.ActiveCaseIndex = idx;
+            GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(pgs, pgs.CaseRecords[idx]);
+            OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
+        }
+
+        /// <summary>
+        /// LoadCase 名 (例: "VL", "U1") から CaseRecord の index を見つける。
+        /// activeLoadingType が指定された場合、その LoadingType の record だけを対象とする。
+        /// 一致順位: 厳密一致 → 末尾 ": <name>" 一致 → 完全一致 "VL" のみ VL ケースへフォールバック。
+        /// VL0 / VLadd など部分一致は無視する (一致なし → -1 で結果非表示)。
+        /// </summary>
+        private static int FindMatchingCaseRecordIndex(
+            ObservableCollection<Models.InputData.GroupSettlementCaseRecord> records,
+            string loadCaseName, string activeLoadingType = null)
+        {
+            if (records == null || records.Count == 0 || string.IsNullOrEmpty(loadCaseName)) return -1;
+            bool TypeMatch(int i) =>
+                string.IsNullOrEmpty(activeLoadingType) || records[i].LoadingType == activeLoadingType;
+
+            // 1. 厳密一致
+            for (int i = 0; i < records.Count; i++)
+                if (TypeMatch(i) && records[i].LoadCaseName == loadCaseName) return i;
+
+            // 2. 末尾一致 (例: "L1-1: U1" の "U1")
+            for (int i = 0; i < records.Count; i++)
+            {
+                if (!TypeMatch(i)) continue;
+                var name = records[i].LoadCaseName;
+                if (name.EndsWith(": " + loadCaseName)) return i;
+            }
+
+            // 3. "VL" の厳密一致のみ VL ケースへフォールバック (VL0/VLadd は対象外)
+            if (loadCaseName == "VL")
+            {
+                for (int i = 0; i < records.Count; i++)
+                {
+                    if (!TypeMatch(i)) continue;
+                    var name = records[i].LoadCaseName;
+                    // "矩形荷重 (VL)" / "杭軸力 VL" など VL ケースを示すラベル
+                    if (name == "VL" || name.EndsWith(" VL") || name.EndsWith("(VL)")) return i;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// 選択された荷重ケースと荷重組合せに対して、解析結果の液状化状態を自動検出し、IsLiquefaction を設定する
         /// </summary>
         private void AutoDetectLiquefactionState()
         {
@@ -1117,7 +1215,7 @@ namespace PileDesign.ViewModels
             var results = CurrentModel.AnalysisStepResults
                 .Where(r => r.LoadCase?.LoadName == selectedLoadCase.LoadName);
 
-            // 荷重組み合わせが選択されている場合はさらにフィルタリング
+            // 荷重組合せが選択されている場合はさらにフィルタリング
             // SelectedLoadCombinationNameはGetName()形式（"1.00/1.00/1.00"）なので、
             // LoadCombination.Name（"αL:1.00/βU:1.00/βL:1.00"）ではなくGetName()で比較する
             if (!string.IsNullOrEmpty(SelectedLoadCombinationName))
@@ -1472,6 +1570,7 @@ namespace PileDesign.ViewModels
                     _suppressMutualToggle = false;
                 }
 
+                OnPropertyChanged(nameof(SelectedResultValueDisplayMode));
                 if (!_suppressMutualToggle)
                     UpdateCanvas3DAction?.Invoke(); // 3Dキャンバス更新（内側更新では抑止）
             }
@@ -1495,6 +1594,7 @@ namespace PileDesign.ViewModels
                     _suppressMutualToggle = false;
                 }
 
+                OnPropertyChanged(nameof(SelectedResultValueDisplayMode));
                 if (!_suppressMutualToggle)
                     UpdateCanvas3DAction?.Invoke(); // 3Dキャンバス更新（内側更新では抑止）
             }
@@ -1518,8 +1618,39 @@ namespace PileDesign.ViewModels
                     _suppressMutualToggle = false;
                 }
 
+                OnPropertyChanged(nameof(SelectedResultValueDisplayMode));
                 if (!_suppressMutualToggle)
                     UpdateCanvas3DAction?.Invoke();
+            }
+        }
+
+        // 値表示モードの選択肢 (ComboBox 用)。
+        // 4 つの "Only" 系 bool プロパティ (3 つは相互排他、すべて false で「全表示」) を 1 列で表現。
+        public System.Collections.ObjectModel.ObservableCollection<string> ResultValueDisplayModeOptions { get; } =
+            ["全表示", "要素中間のみ", "杭頭のみ", "杭MaxMinのみ"];
+
+        // ComboBox の SelectedItem を受ける string プロパティ。get で 3 bool から、set で 3 bool に書き戻す。
+        public string SelectedResultValueDisplayMode
+        {
+            get
+            {
+                if (IsMidSpanResultValueVisibleOnly) return "要素中間のみ";
+                if (IsPileTopResultValueVisibleOnly) return "杭頭のみ";
+                if (IsPileMaxMinResultValueVisibleOnly) return "杭MaxMinのみ";
+                return "全表示";
+            }
+            set
+            {
+                _suppressMutualToggle = true;
+                _isMidSpanResultValueVisibleOnly = value == "要素中間のみ";
+                _isPileTopResultValueVisibleOnly = value == "杭頭のみ";
+                _isPileMaxMinResultValueVisibleOnly = value == "杭MaxMinのみ";
+                _suppressMutualToggle = false;
+                OnPropertyChanged(nameof(IsMidSpanResultValueVisibleOnly));
+                OnPropertyChanged(nameof(IsPileTopResultValueVisibleOnly));
+                OnPropertyChanged(nameof(IsPileMaxMinResultValueVisibleOnly));
+                OnPropertyChanged(nameof(SelectedResultValueDisplayMode));
+                UpdateCanvas3DAction?.Invoke();
             }
         }
 
@@ -1924,14 +2055,14 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 接続用節点表示（杭頭+ΔZc位置）
-        private bool _isConnectingNodeVisible = true;
-        public bool IsConnectingNodeVisible
+        // 接合節点表示（杭頭+ΔZc位置）
+        private bool _isConnectionNodeVisible = true;
+        public bool IsConnectionNodeVisible
         {
-            get => _isConnectingNodeVisible;
+            get => _isConnectionNodeVisible;
             set
             {
-                if (SetProperty(ref _isConnectingNodeVisible, value))
+                if (SetProperty(ref _isConnectionNodeVisible, value))
                 {
                     RequestUpdateWindow();
                 }
@@ -2049,13 +2180,13 @@ namespace PileDesign.ViewModels
         }
 
         // 接合節点レベル(m)ラベル描画
-        private bool _isConnectingNodeZVisible = false;
-        public bool IsConnectingNodeZVisible
+        private bool _isConnectionNodeZVisible = false;
+        public bool IsConnectionNodeZVisible
         {
-            get => _isConnectingNodeZVisible;
+            get => _isConnectionNodeZVisible;
             set
             {
-                if (SetProperty(ref _isConnectingNodeZVisible, value))
+                if (SetProperty(ref _isConnectionNodeZVisible, value))
                 {
                     RequestUpdateWindow();
                 }
@@ -2562,8 +2693,8 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 節点番号描画
-        private bool _isNodeNoVisible = true;
+        // 節点番号描画 (デフォルト OFF: 番号表示は煩雑になるため必要時のみ有効化)
+        private bool _isNodeNoVisible = false;
         public bool IsNodeNoVisible
         {
             get => _isNodeNoVisible;
@@ -2590,8 +2721,8 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 要素番号描画
-        private bool _isElementNoVisible = true;
+        // 要素番号描画 (デフォルト OFF: 梁要素番号は煩雑になるため必要時のみ有効化)
+        private bool _isElementNoVisible = false;
         public bool IsElementNoVisible
         {
             get => _isElementNoVisible;
@@ -2766,6 +2897,7 @@ namespace PileDesign.ViewModels
 
                     // ステータスバー更新
                     OnPropertyChanged(nameof(AnalysisStatusText));
+                    OnPropertyChanged(nameof(AnalysisStatusItems));
                 }
             }
         }
@@ -2803,6 +2935,7 @@ namespace PileDesign.ViewModels
 
                 // ステータスバー更新
                 OnPropertyChanged(nameof(AnalysisStatusText));
+                OnPropertyChanged(nameof(AnalysisStatusItems));
 
                 // docx 出力 CheckBox の表示更新
                 OnPropertyChanged(nameof(IncludeVertical));
@@ -2837,7 +2970,8 @@ namespace PileDesign.ViewModels
             Toggle("沈下部材角", hasBeams && hasAnySettlement);
             Toggle("沈下反力（地盤）", IsVerticalAnalysisDone || (hasBeams && IsVerticalBeamAnalysisDone));
             Toggle("沈下反力（杭頭集約）", IsVerticalAnalysisDone || (hasBeams && IsVerticalBeamAnalysisDone));
-            Toggle("沈下応力", hasBeams && IsVerticalBeamAnalysisDone);
+            // 沈下応力 (= 基礎梁の梁応力) は単杭基礎梁解析 OR 個別矩形（基礎梁考慮）反復のいずれかで生成される
+            Toggle("沈下応力", hasBeams && (IsVerticalBeamAnalysisDone || HasGroupSettlementBeamAwareCases));
         }
 
         private void Both()
@@ -2920,6 +3054,7 @@ namespace PileDesign.ViewModels
                     if (value) SetLatestAnalysisCompleted();
                     OnPropertyChanged(nameof(HasAnyAnalysisResult));
                     OnPropertyChanged(nameof(AnalysisStatusText));
+                    OnPropertyChanged(nameof(AnalysisStatusItems));
                     OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
                     RaiseResultCommandsCanExecute();
 
@@ -2936,7 +3071,7 @@ namespace PileDesign.ViewModels
                         VerticalBeamCaseResults = null;
 
                         // 基礎梁考慮オプションが選択中だった場合は「個別十字」にフォールバック
-                        if (CurrentInputModel?.PileGroupSettlement?.LoadingType == "個別十字（基礎梁考慮）")
+                        if (CurrentInputModel?.PileGroupSettlement?.LoadingType == "個別十字（基礎梁反力）")
                             CurrentInputModel.PileGroupSettlement.LoadingType = "個別十字";
                     }
                     UpdateSettlementCategories();
@@ -2948,17 +3083,543 @@ namespace PileDesign.ViewModels
         }
 
         // 荷重タイプコンボボックスに表示するオプション
-        // 基礎梁鉛直解析未実行時は「個別十字（基礎梁考慮）」を除外
+        //  - 個別十字（基礎梁反力）: 基礎梁鉛直解析 (単杭曲線+NR) の結果を直接使うため VB 解析が必須
+        //  - 個別矩形（基礎梁考慮）: Steinbrenner ↔ 線形ばね基礎梁の反復で完結するため基礎梁が必須
         public List<string> AvailableLoadingTypeOptions
         {
             get
             {
                 var all = CurrentInputModel?.PileGroupSettlement?.LoadingTypeOptions;
                 if (all == null) return [];
-                if (!IsVerticalBeamAnalysisDone)
-                    return [.. all.Where(o => o != "個別十字（基礎梁考慮）")];
-                return [.. all];
+                bool hasFoundationBeams = (CurrentInputModel?.FoundationBeamInput?.Beams?.Count ?? 0) > 0;
+                return [.. all.Where(o =>
+                    (o != "個別十字（基礎梁反力）" || IsVerticalBeamAnalysisDone) &&
+                    (o != "個別矩形（基礎梁考慮）" || hasFoundationBeams))];
             }
+        }
+
+        /// <summary>
+        /// 基礎梁無し用の群杭沈下解析ウィンドウ専用 LoadingType リスト。
+        /// 「個別矩形（基礎梁考慮）」は基礎梁考慮ウィンドウ専用なのでここからは除外する。
+        /// </summary>
+        public List<string> AvailableLoadingTypeOptionsNonBeam
+            => [.. AvailableLoadingTypeOptions.Where(o => o != "個別矩形（基礎梁考慮）")];
+
+        /// <summary>
+        /// 群杭沈下「基礎梁:有/無」ComboBox 用の2択リスト。
+        /// 「有」は基礎梁が定義されている場合のみ含める。
+        /// </summary>
+        public List<string> GroupSettlementBeamSelectorOptions
+        {
+            get
+            {
+                bool hasFoundationBeams = (CurrentInputModel?.FoundationBeamInput?.Beams?.Count ?? 0) > 0;
+                return hasFoundationBeams ? new List<string> { "無し", "有り" } : new List<string> { "無し" };
+            }
+        }
+
+        /// <summary>
+        /// 群杭沈下「基礎梁:有/無」ComboBox 用プロパティ。
+        /// 内部 LoadingType (canonical) から有り/無しを判定し、setter で対応する LoadingType に切替える。
+        /// </summary>
+        public string GroupSettlementBeamSelector
+        {
+            get
+            {
+                var lt = CurrentInputModel?.PileGroupSettlement?.LoadingType ?? "";
+                return lt == "個別矩形（基礎梁考慮）" ? "有り" : "無し";
+            }
+            set
+            {
+                var pgs = CurrentInputModel?.PileGroupSettlement;
+                if (pgs == null) return;
+                bool wantBeam = value == "有り";
+                bool currentBeam = GroupSettlementBeamSelector == "有り";
+                if (wantBeam == currentBeam) return;
+
+                if (wantBeam)
+                {
+                    // 無し → 有り: 個別矩形（基礎梁考慮）に切替
+                    if (!TrySetLoadingTypeWithWarning("個別矩形（基礎梁考慮）"))
+                    {
+                        OnPropertyChanged(nameof(GroupSettlementBeamSelector));
+                        return;
+                    }
+                }
+                else
+                {
+                    // 有り → 無し: 基礎梁無しスロットの既存 LoadingType か、なければ任意矩形
+                    string target = pgs.CaseRecords?
+                        .FirstOrDefault(r => !r.IsBeamAware && !string.IsNullOrEmpty(r.LoadingType))?.LoadingType
+                        ?? "任意矩形";
+                    if (!TrySetLoadingTypeWithWarning(target))
+                    {
+                        OnPropertyChanged(nameof(GroupSettlementBeamSelector));
+                        return;
+                    }
+                }
+                OnPropertyChanged(nameof(GroupSettlementBeamSelector));
+                OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
+                OnPropertyChanged(nameof(GroupSettlementLoadType));
+            }
+        }
+
+        /// <summary>
+        /// 群杭沈下「荷重タイプ」ComboBox 用の絞込リスト (基礎梁有無で内容が変わる)。
+        /// 基礎梁=有り の場合は「個別矩形（基礎梁考慮）」(フルネーム) を返し、
+        /// LoadingTypeItemTemplate の DataTrigger により BeamedSquareFormPressure アイコンが表示される。
+        /// </summary>
+        public List<string> GroupSettlementLoadTypeOptions
+        {
+            get
+            {
+                bool isBeam = GroupSettlementBeamSelector == "有り";
+                if (isBeam)
+                {
+                    return [.. new List<string> { "個別矩形（基礎梁考慮）" }];
+                }
+                var list = new List<string> { "任意矩形", "個別矩形", "個別十字" };
+                if (IsVerticalBeamAnalysisDone) list.Add("個別十字（基礎梁反力）");
+                list.Add("なし");
+                return list;
+            }
+        }
+
+        /// <summary>
+        /// 群杭沈下「荷重タイプ」ComboBox 用プロパティ。
+        /// 内部 LoadingType をそのまま返す (基礎梁=有り のときは "個別矩形（基礎梁考慮）" がそのまま表示される)。
+        /// </summary>
+        public string GroupSettlementLoadType
+        {
+            get => CurrentInputModel?.PileGroupSettlement?.LoadingType ?? "";
+            set
+            {
+                if (string.IsNullOrEmpty(value)) return;
+                if (value == (CurrentInputModel?.PileGroupSettlement?.LoadingType ?? "")) return;
+                if (!TrySetLoadingTypeWithWarning(value))
+                {
+                    OnPropertyChanged(nameof(GroupSettlementLoadType));
+                    return;
+                }
+                OnPropertyChanged(nameof(GroupSettlementLoadType));
+            }
+        }
+
+        /// <summary>
+        /// LoadingType を変更する。同じ「基礎梁有無スロット」の解析結果が既存なら、
+        /// MessageBox で警告し、削除確認後に変更を適用する。
+        /// 戻り値: true=適用された / false=ユーザーがキャンセル
+        /// </summary>
+        private bool TrySetLoadingTypeWithWarning(string newLoadingType)
+        {
+            var pgs = CurrentInputModel?.PileGroupSettlement;
+            if (pgs == null) return false;
+            string oldLoadingType = pgs.LoadingType ?? "";
+            if (oldLoadingType == newLoadingType) return true;
+
+            bool oldIsBeamAware = oldLoadingType == "個別矩形（基礎梁考慮）";
+            bool newIsBeamAware = newLoadingType == "個別矩形（基礎梁考慮）";
+
+            // 削除対象: 同スロット (基礎梁無し or 基礎梁有り) の既存 record で、新 LoadingType と異なるもの
+            // 異スロット (有↔無) への切替は両スロット独立保持なので何も削除しない
+            if (oldIsBeamAware == newIsBeamAware && pgs.CaseRecords != null)
+            {
+                var doomed = pgs.CaseRecords
+                    .Where(r => r.IsBeamAware == newIsBeamAware && r.LoadingType != newLoadingType)
+                    .ToList();
+                if (doomed.Count > 0)
+                {
+                    string oldNames = string.Join(" / ", doomed.Select(r => r.LoadingType).Distinct());
+                    var msg = $"現在保存されている {oldNames} の群杭沈下解析結果が削除されます。\n続行しますか？";
+                    var res = PileDesign.Services.MessageService.Show(msg, "解析結果の削除確認",
+                        System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Warning);
+                    if (res != System.Windows.MessageBoxResult.OK) return false;
+
+                    foreach (var r in doomed)
+                        pgs.CaseRecords.Remove(r);
+
+                    if (pgs.ActiveCaseIndex >= pgs.CaseRecords.Count)
+                        pgs.ActiveCaseIndex = pgs.CaseRecords.Count - 1;
+                    if (pgs.ActiveCaseIndex < 0)
+                    {
+                        pgs.SettlementGridData = [];
+                        if (CurrentInputModel?.PileLayoutItems != null)
+                            foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
+                    }
+                }
+            }
+
+            // LoadingType を確定 (XAML 側 binding は LoadingType に直接張られているのでこれで反映)
+            pgs.LoadingType = newLoadingType;
+
+            OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
+            OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
+            OnPropertyChanged(nameof(HasGroupSettlementBeamAwareCases));
+            OnPropertyChanged(nameof(AvailableActiveLoadingTypes));
+            OnPropertyChanged(nameof(SelectedActiveLoadingType));
+            return true;
+        }
+
+        /// <summary>
+        /// 個別矩形系モードで RectLoads が auto-gen 直後の状態かどうか (transient)。
+        /// true: ユーザ未編集 → 荷重面等価径 (GroupPileLoadDia) DataGrid を表示
+        /// false: ユーザが矩形を編集済 → GroupPileLoadDia を変更しても整合しないため非表示
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsRectLoadFreshFromAutoGen
+        {
+            get => _isRectLoadFreshFromAutoGen;
+            set => SetProperty(ref _isRectLoadFreshFromAutoGen, value);
+        }
+        private bool _isRectLoadFreshFromAutoGen = true;
+
+        /// <summary>群杭沈下解析結果のケースレコードが 1 つ以上あるか (XAML Visibility 用)。</summary>
+        public bool HasGroupSettlementCaseRecords =>
+            (CurrentInputModel?.PileGroupSettlement?.CaseRecords?.Count ?? 0) > 0;
+
+        /// <summary>群杭沈下のアクティブケースが基礎梁考慮反復の結果か (XAML バッジ用)。</summary>
+        public bool IsGroupSettlementActiveCaseBeamAware
+        {
+            get
+            {
+                var pgs = CurrentInputModel?.PileGroupSettlement;
+                if (pgs?.CaseRecords == null) return false;
+                int idx = pgs.ActiveCaseIndex;
+                if (idx < 0 || idx >= pgs.CaseRecords.Count) return false;
+                return pgs.CaseRecords[idx].IsBeamAware;
+            }
+        }
+
+        /// <summary>
+        /// 矩形荷重の手動追加・削除を許可するか。
+        /// 個別矩形（基礎梁考慮）では矩形荷重は反復解析で自動生成・収束されるため、
+        /// 手動編集を禁止して整合性を保つ。
+        /// </summary>
+        public bool IsManualRectLoadEditingEnabled
+            => CurrentInputModel?.PileGroupSettlement?.LoadingType != "個別矩形（基礎梁考慮）";
+
+        /// <summary>基礎梁考慮反復の CaseRecord が 1 件以上あるか。</summary>
+        public bool HasGroupSettlementBeamAwareCases
+        {
+            get
+            {
+                var pgs = CurrentInputModel?.PileGroupSettlement;
+                if (pgs?.CaseRecords == null) return false;
+                return pgs.CaseRecords.Any(r => r.IsBeamAware);
+            }
+        }
+
+        /// <summary>
+        /// 現在 CaseRecords に保持されている結果タイプ (LoadingType) の一覧 (重複なし、追加順)。
+        /// 解析結果メニューの「結果タイプ」ComboBox の ItemsSource に使う。
+        /// </summary>
+        public ObservableCollection<string> AvailableActiveLoadingTypes
+        {
+            get
+            {
+                var result = new ObservableCollection<string>();
+                var pgs = CurrentInputModel?.PileGroupSettlement;
+                if (pgs?.CaseRecords == null) return result;
+                foreach (var rec in pgs.CaseRecords)
+                {
+                    var lt = string.IsNullOrEmpty(rec.LoadingType)
+                        ? (rec.IsBeamAware ? "個別矩形（基礎梁考慮）" : "")
+                        : rec.LoadingType;
+                    if (!string.IsNullOrEmpty(lt) && !result.Contains(lt))
+                        result.Add(lt);
+                }
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// 一般解析タブの 荷重面Z 入力用プロキシ。値変更時、非 beam-aware 解析結果が
+        /// 保存されている場合は警告ダイアログを表示し、OK で結果を削除してから値を反映する。
+        /// </summary>
+        public double LoadingPlaneAltitudeNonBeamProxy
+        {
+            get => CurrentInputModel?.PileGroupSettlement?.LoadingPlaneAltitudeNonBeam ?? 0.0;
+            set
+            {
+                var pgs = CurrentInputModel?.PileGroupSettlement;
+                if (pgs == null) return;
+                double current = pgs.LoadingPlaneAltitudeNonBeam;
+                if (Math.Abs(current - value) < 1e-9) return;
+                if (!ConfirmAnalysisConditionChange("一般", "荷重面Z (一般)")) {
+                    OnPropertyChanged(nameof(LoadingPlaneAltitudeNonBeamProxy));
+                    return;
+                }
+                pgs.LoadingPlaneAltitudeNonBeam = value;
+                // アクティブが 一般 ルートなら Canvas 表示用 LoadingPlaneAltitude も同期
+                if (pgs.ActiveLoadingType != "個別矩形（基礎梁考慮）")
+                    pgs.LoadingPlaneAltitude = value;
+                OnPropertyChanged(nameof(LoadingPlaneAltitudeNonBeamProxy));
+                UpdateCanvas3DAction?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 反復解析タブの 荷重面Z 入力用プロキシ。値変更時、beam-aware 解析結果が
+        /// 保存されている場合は警告ダイアログを表示し、OK で結果を削除してから値を反映する。
+        /// </summary>
+        public double LoadingPlaneAltitudeBeamAwareProxy
+        {
+            get => CurrentInputModel?.PileGroupSettlement?.LoadingPlaneAltitudeBeamAware ?? 0.0;
+            set
+            {
+                var pgs = CurrentInputModel?.PileGroupSettlement;
+                if (pgs == null) return;
+                double current = pgs.LoadingPlaneAltitudeBeamAware;
+                if (Math.Abs(current - value) < 1e-9) return;
+                if (!ConfirmAnalysisConditionChange("反復", "荷重面Z (反復)")) {
+                    OnPropertyChanged(nameof(LoadingPlaneAltitudeBeamAwareProxy));
+                    return;
+                }
+                pgs.LoadingPlaneAltitudeBeamAware = value;
+                // アクティブが 反復 ルートなら Canvas 表示用 LoadingPlaneAltitude も同期
+                if (pgs.ActiveLoadingType == "個別矩形（基礎梁考慮）")
+                    pgs.LoadingPlaneAltitude = value;
+                OnPropertyChanged(nameof(LoadingPlaneAltitudeBeamAwareProxy));
+                UpdateCanvas3DAction?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 解析条件変更時の確認ダイアログ + 結果削除ヘルパ。
+        /// </summary>
+        /// <param name="route">対象ルート: "一般"=非beam-aware, "反復"=beam-aware, "両方"=両ルート (土層やグリッドなど共通入力)</param>
+        /// <param name="itemLabel">変更対象の項目名 (ダイアログメッセージに使用)</param>
+        /// <returns>true=変更を続行, false=ユーザーがキャンセル</returns>
+        private bool ConfirmAnalysisConditionChange(string route, string itemLabel)
+        {
+            var pgs = CurrentInputModel?.PileGroupSettlement;
+            if (pgs?.CaseRecords == null) return true;
+
+            List<GroupSettlementCaseRecord> doomed;
+            if (route == "両方")
+            {
+                doomed = [.. pgs.CaseRecords];
+            }
+            else
+            {
+                bool beamAware = route == "反復";
+                doomed = [.. pgs.CaseRecords.Where(r => r.IsBeamAware == beamAware)];
+            }
+            if (doomed.Count == 0) return true; // 該当結果なし → そのまま続行
+
+            var res = PileDesign.Services.MessageService.Show(
+                $"土層解析結果が保存されています。\n" +
+                $"「{itemLabel}」を変更するには、解析結果を削除する必要があります。\n\n" +
+                $"続けますか？",
+                "解析条件変更の確認",
+                System.Windows.MessageBoxButton.OKCancel,
+                System.Windows.MessageBoxImage.Warning);
+            if (res != System.Windows.MessageBoxResult.OK) return false;
+
+            // 該当ルートの CaseRecord を削除
+            foreach (var rec in doomed) pgs.CaseRecords.Remove(rec);
+
+            // ActiveCase が無効なら -1、Legacy フィールドも対応してクリア
+            if (pgs.ActiveCaseIndex >= pgs.CaseRecords.Count)
+                pgs.ActiveCaseIndex = pgs.CaseRecords.Count - 1;
+            bool activeWasDeleted;
+            if (route == "両方") activeWasDeleted = true;
+            else
+            {
+                bool beamAware = route == "反復";
+                activeWasDeleted = (pgs.ActiveLoadingType == "個別矩形（基礎梁考慮）") == beamAware;
+            }
+            if (activeWasDeleted)
+            {
+                pgs.ActiveCaseIndex = -1;
+                pgs.SettlementGridData = [];
+                if (CurrentInputModel?.PileLayoutItems != null)
+                    foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
+            }
+
+            // 通知 + Canvas 更新
+            OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
+            OnPropertyChanged(nameof(HasGroupSettlementBeamAwareCases));
+            OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
+            OnPropertyChanged(nameof(AvailableActiveLoadingTypes));
+            OnPropertyChanged(nameof(GroupSettlementRouteOptions));
+            OnPropertyChanged(nameof(GroupSettlementRouteSelector));
+            UpdateCanvas3DAction?.Invoke();
+            return true;
+        }
+
+        /// <summary>
+        /// 土層沈下「一般 / 反復」切替 ComboBox 用 (表示メニュー荷重ケースグループ + 右ペイン用)。
+        /// 解析有無に関わらず両方の選択肢を常に表示 (荷重描画ルートの切替にも使うため)。
+        /// </summary>
+        public ObservableCollection<string> GroupSettlementRouteOptions { get; }
+            = ["一般", "反復"];
+
+        /// <summary>
+        /// 土層沈下「一般 / 反復」切替の SelectedItem。内部 ActiveLoadingType と双方向マッピング。
+        /// "個別矩形（基礎梁考慮）" → "反復"、それ以外 (基礎梁無し系) → "一般"。
+        /// </summary>
+        public string GroupSettlementRouteSelector
+        {
+            get
+            {
+                var lt = CurrentInputModel?.PileGroupSettlement?.ActiveLoadingType ?? "";
+                return lt == "個別矩形（基礎梁考慮）" ? "反復" : "一般";
+            }
+            set
+            {
+                if (string.IsNullOrEmpty(value)) return;
+                string current = GroupSettlementRouteSelector;
+                if (current == value) return;
+
+                if (value == "反復")
+                {
+                    SelectedActiveLoadingType = "個別矩形（基礎梁考慮）";
+                }
+                else // "一般"
+                {
+                    var pgs = CurrentInputModel?.PileGroupSettlement;
+                    string target = pgs?.CaseRecords?
+                        .FirstOrDefault(r => !r.IsBeamAware)?.LoadingType
+                        ?? "任意矩形";
+                    SelectedActiveLoadingType = target;
+                }
+                OnPropertyChanged(nameof(GroupSettlementRouteSelector));
+            }
+        }
+
+        /// <summary>
+        /// 「結果タイプ」ComboBox の SelectedItem 用プロキシ。
+        /// PileGroupSettlement.ActiveLoadingType に対する MVVM ラッパで、
+        /// 切替時にアクティブケースを再評価し、legacy フィールドへ反映する。
+        /// </summary>
+        public string SelectedActiveLoadingType
+        {
+            get => CurrentInputModel?.PileGroupSettlement?.ActiveLoadingType ?? "";
+            set
+            {
+                var pgs = CurrentInputModel?.PileGroupSettlement;
+                if (pgs == null) return;
+                if (pgs.ActiveLoadingType == value) return;
+
+                // 遷移前に: 一般 → 反復 への切替なら、現在の pgs.RectLoads を 一般入力スナップショットへ保存。
+                // (反復で書き換わる前のユーザー入力を一般モードに戻る際に復元するため)
+                bool wasNonBeam = pgs.ActiveLoadingType != "個別矩形（基礎梁考慮）";
+                bool willBeBeam = value == "個別矩形（基礎梁考慮）";
+                if (wasNonBeam && willBeBeam && pgs.RectLoads != null && pgs.RectLoads.Count > 0)
+                {
+                    pgs.NonBeamRectLoadsSnapshot = new System.Collections.ObjectModel.ObservableCollection<Models.InputData.RectLoad>(
+                        pgs.RectLoads.Select(r => new Models.InputData.RectLoad
+                        {
+                            X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
+                            QA = r.QA, LinkedPileNo = r.LinkedPileNo,
+                        }));
+                }
+
+                pgs.ActiveLoadingType = value ?? "";
+
+                // ルート別 LoadingPlaneAltitude を Canvas 表示用 (legacy) に同期
+                bool newIsBeamAware = pgs.ActiveLoadingType == "個別矩形（基礎梁考慮）";
+                if (newIsBeamAware && !double.IsNaN(pgs.LoadingPlaneAltitudeBeamAware))
+                    pgs.LoadingPlaneAltitude = pgs.LoadingPlaneAltitudeBeamAware;
+                else if (!newIsBeamAware && !double.IsNaN(pgs.LoadingPlaneAltitudeNonBeam))
+                    pgs.LoadingPlaneAltitude = pgs.LoadingPlaneAltitudeNonBeam;
+
+                // 新タイプの中から SelectedLoadCaseName に対応するケースを探して切替。
+                // 一致するケースが無ければコンタを消去 (1回解析の結果を地震時ケースに誤って表示しないため)。
+                if (pgs.CaseRecords != null && pgs.CaseRecords.Count > 0)
+                {
+                    int idx = FindMatchingCaseRecordIndex(pgs.CaseRecords, SelectedLoadCaseName, pgs.ActiveLoadingType);
+                    if (idx >= 0)
+                    {
+                        pgs.ActiveCaseIndex = idx;
+                        GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(pgs, pgs.CaseRecords[idx]);
+                    }
+                    else
+                    {
+                        pgs.ActiveCaseIndex = -1;
+                        pgs.SettlementGridData = [];
+
+                        // 一般モードに切替えた場合、反復前にスナップショットした RectLoads を復元
+                        // (反復で書き換えられた収束反力ではなく、ユーザーの原入力に戻す)
+                        if (!newIsBeamAware
+                            && pgs.NonBeamRectLoadsSnapshot != null
+                            && pgs.NonBeamRectLoadsSnapshot.Count > 0)
+                        {
+                            pgs.RectLoads = new System.Collections.ObjectModel.ObservableCollection<Models.InputData.RectLoad>(
+                                pgs.NonBeamRectLoadsSnapshot.Select(r => new Models.InputData.RectLoad
+                                {
+                                    X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
+                                    QA = r.QA, LinkedPileNo = r.LinkedPileNo,
+                                }));
+                        }
+
+                        if (CurrentInputModel?.PileLayoutItems != null)
+                            foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
+                    }
+                }
+
+                OnPropertyChanged(nameof(SelectedActiveLoadingType));
+                OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
+                OnPropertyChanged(nameof(GroupSettlementRouteSelector));
+                UpdateCanvas3DAction?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 基礎梁鉛直解析または個別矩形（基礎梁考慮）反復のアクティブケース結果を、
+        /// 既存描画コード (DrawVBBeamForce / DrawVBDeformedElements 等) 用の
+        /// VerticalBeamCaseResult 形式で返す。
+        /// 個別矩形（基礎梁考慮）の CaseRecord が active なら CaseRecord から合成、
+        /// そうでなければ既存 VerticalBeamCaseResults から名前マッチで取得。
+        /// </summary>
+        public FEM.VerticalBeamCaseResult GetActiveVerticalBeamCaseResult()
+        {
+            // 個別矩形（基礎梁考慮）のアクティブケースを優先
+            var pgs = CurrentInputModel?.PileGroupSettlement;
+            if (pgs?.CaseRecords != null
+                && pgs.ActiveCaseIndex >= 0
+                && pgs.ActiveCaseIndex < pgs.CaseRecords.Count
+                && pgs.CaseRecords[pgs.ActiveCaseIndex].IsBeamAware)
+            {
+                var rec = pgs.CaseRecords[pgs.ActiveCaseIndex];
+                var synth = new FEM.VerticalBeamCaseResult
+                {
+                    LoadCaseName = rec.LoadCaseName,
+                    IsConverged = rec.IsConverged,
+                };
+                if (rec.NodeResults != null) synth.NodeResults.AddRange(rec.NodeResults);
+                if (rec.BeamResults != null) synth.BeamResults.AddRange(rec.BeamResults);
+                if (CurrentInputModel?.PileLayoutItems != null)
+                {
+                    foreach (var pile in CurrentInputModel.PileLayoutItems)
+                    {
+                        rec.PileSettlements_mm.TryGetValue(pile.PileNo, out double settlement);
+                        rec.PileReactions_kN.TryGetValue(pile.PileNo, out double reaction);
+                        synth.PileResults.Add(new FEM.VerticalBeamPileResult(
+                            pile.No, pile.X, pile.Y, reaction, reaction, settlement));
+                    }
+                }
+                return synth;
+            }
+
+            // フォールバック: 既存 VerticalBeamCaseResults
+            if (VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0) return null;
+            string selectedName = SelectedLoadCaseName;
+            return VerticalBeamCaseResults.FirstOrDefault(c =>
+                       ExtractVBCaseBaseName(c.LoadCaseName) == selectedName)
+                   ?? VerticalBeamCaseResults[0];
+        }
+
+        /// <summary>VB 解析の LoadCaseName ("1-1: U1" 等) からベース名を抽出。</summary>
+        private static string ExtractVBCaseBaseName(string caseName)
+        {
+            if (string.IsNullOrEmpty(caseName)) return caseName ?? string.Empty;
+            int colonIdx = caseName.IndexOf(": ", StringComparison.Ordinal);
+            string stripped = colonIdx >= 0 ? caseName[(colonIdx + 2)..].Trim() : caseName;
+            int parenIdx = stripped.IndexOf(" (", StringComparison.Ordinal);
+            if (parenIdx > 0) stripped = stripped[..parenIdx].Trim();
+            return stripped;
         }
 
         // 基礎梁鉛直解析結果
@@ -3026,6 +3687,7 @@ namespace PileDesign.ViewModels
 
                     // ステータスバー更新
                     OnPropertyChanged(nameof(AnalysisStatusText));
+                    OnPropertyChanged(nameof(AnalysisStatusItems));
 
                     // docx 出力 CheckBox の表示更新
                     // (実体は保持されているが getter で IsHorizontalAnalysisDone を AND しているため)
@@ -3179,12 +3841,18 @@ namespace PileDesign.ViewModels
             get => _groupPileSettlementXOffset;
             set
             {
+                if (Math.Abs(_groupPileSettlementXOffset - value) < 1e-9) return;
+                if (!ConfirmAnalysisConditionChange("両方", "グリッド X オフセット"))
+                {
+                    OnPropertyChanged(nameof(GroupPileSettlementXOffset));
+                    return;
+                }
                 if (SetProperty(ref _groupPileSettlementXOffset, value))
                 {
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
                     CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
-                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow();
                 }
             }
         }
@@ -3195,12 +3863,18 @@ namespace PileDesign.ViewModels
             get => _groupPileSettlementYOffset;
             set
             {
+                if (Math.Abs(_groupPileSettlementYOffset - value) < 1e-9) return;
+                if (!ConfirmAnalysisConditionChange("両方", "グリッド Y オフセット"))
+                {
+                    OnPropertyChanged(nameof(GroupPileSettlementYOffset));
+                    return;
+                }
                 if (SetProperty(ref _groupPileSettlementYOffset, value))
                 {
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
                     CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
-                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow();
                 }
             }
         }
@@ -3260,15 +3934,20 @@ namespace PileDesign.ViewModels
         public double GroupPileSettlementXSpacing
         {
             get => _groupPileSettlementXSpacing;
-            //set => SetProperty(ref _groupPileSettlementXSpacing, value);
             set
             {
+                if (Math.Abs(_groupPileSettlementXSpacing - value) < 1e-9) return;
+                if (!ConfirmAnalysisConditionChange("両方", "グリッド X 間隔"))
+                {
+                    OnPropertyChanged(nameof(GroupPileSettlementXSpacing));
+                    return;
+                }
                 if (SetProperty(ref _groupPileSettlementXSpacing, value))
                 {
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
                     CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
-                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow();
                 }
             }
         }
@@ -3279,6 +3958,12 @@ namespace PileDesign.ViewModels
             get => _groupPileSettlementYSpacing;
             set
             {
+                if (Math.Abs(_groupPileSettlementYSpacing - value) < 1e-9) return;
+                if (!ConfirmAnalysisConditionChange("両方", "グリッド Y 間隔"))
+                {
+                    OnPropertyChanged(nameof(GroupPileSettlementYSpacing));
+                    return;
+                }
                 if (SetProperty(ref _groupPileSettlementYSpacing, value))
                 {
                     IsGroupPileSettlementAnalysisDone = false;
@@ -3665,13 +4350,33 @@ namespace PileDesign.ViewModels
                 {
                     UpdateSettlementSoilLayer();
                 }
+
+                // LoadingType が外部から変更されたら 2 段 ComboBox プロキシを更新
+                if (e.PropertyName == nameof(PileGroupSettlement.LoadingType))
+                {
+                    OnPropertyChanged(nameof(GroupSettlementBeamSelector));
+                    OnPropertyChanged(nameof(GroupSettlementLoadType));
+                    OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
+                    OnPropertyChanged(nameof(IsManualRectLoadEditingEnabled));
+                }
+
+                // 例題ロード等で外部から荷重面標高が変わったら、TextBox バインド先 (プロキシ) を更新
+                if (e.PropertyName == nameof(PileGroupSettlement.LoadingPlaneAltitudeNonBeam))
+                {
+                    OnPropertyChanged(nameof(LoadingPlaneAltitudeNonBeamProxy));
+                }
+                if (e.PropertyName == nameof(PileGroupSettlement.LoadingPlaneAltitudeBeamAware))
+                {
+                    OnPropertyChanged(nameof(LoadingPlaneAltitudeBeamAwareProxy));
+                }
             };
 
             // コンストラクタ内の適当な位置
             OpenTableWindowCommand = new ToolkitRelayCommand(
                 OpenTableWindow,
                 () => (LatestResultTables != null && LatestResultTables.Count > 0) ||
-                      (VerticalBeamCaseResults != null && VerticalBeamCaseResults.Count > 0));
+                      (VerticalBeamCaseResults != null && VerticalBeamCaseResults.Count > 0) ||
+                      HasGroupSettlementBeamAwareCases);
 
         }
 

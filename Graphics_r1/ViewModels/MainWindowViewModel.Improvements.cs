@@ -113,7 +113,7 @@ namespace PileDesign.ViewModels
         /// Undoスナップショットを安全に保存（最適化版）
         /// ハッシュ比較により重複保存を防止し、パフォーマンスを向上
         /// </summary>
-        public void TrySaveUndoSnapshotSafelyOptimized()
+        public void TrySaveUndoSnapshotSafelyOptimized([System.Runtime.CompilerServices.CallerMemberName] string? description = null)
         {
             try
             {
@@ -140,7 +140,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // スナップショットを保存し、最後のハッシュを更新
-                _undoManager.SaveState(snapshot);
+                _undoManager.SaveState(snapshot, FormatHistoryDescription(description));
                 _lastUndoSnapshotHash = hash;
             }
             catch (Exception ex)

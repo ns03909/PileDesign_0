@@ -89,7 +89,12 @@
                 </Border>
 
                 <!-- タイトルバー (ドラッグハンドル) -->
-                <Grid x:Name="DragHandle" Grid.Row="0" Margin="0,0,0,4" Height="18">
+                <Grid x:Name="DragHandle" Grid.Row="0" Margin="0,0,0,4" Height="18"
+                      Background="Transparent"
+                      Cursor="SizeAll"
+                      MouseLeftButtonDown="DragHandle_MouseLeftButtonDown"
+                      MouseMove="DragHandle_MouseMove"
+                      MouseLeftButtonUp="DragHandle_MouseLeftButtonUp">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>

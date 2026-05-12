@@ -47,11 +47,11 @@ namespace PileDesign.FEM
             {
                 double dD = _curve[1].Settlement_m - _curve[0].Settlement_m;
                 double dF = _curve[1].Force_kN - _curve[0].Force_kN;
-                InitialTangentStiffness = dD > 1e-15 ? dF / dD : 1e6; // kN/m
+                InitialTangentStiffness = dD > 1e-15 ? dF / dD : FemConstants.DefaultVerticalPileStiffness; // kN/m
             }
             else
             {
-                InitialTangentStiffness = 1e6; // デフォルト
+                InitialTangentStiffness = FemConstants.DefaultVerticalPileStiffness; // デフォルト
             }
 
             _minStiffness = Math.Max(InitialTangentStiffness * 0.01, 1.0); // 最低1 kN/m

@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -41,6 +40,16 @@ namespace PileDesign.ViewModels
             _isExampleRunning = false;
         }
 
+        // Backstage (ファイルメニュー) を閉じてメイン画面へ戻す
+        // x:Name="MainBackstage" の Fluent:Backstage を MainWindow から取得して IsOpen=false にする
+        private static void CloseBackstage()
+        {
+            var mw = System.Windows.Application.Current?.MainWindow;
+            if (mw == null) return;
+            var backstage = mw.FindName("MainBackstage") as Fluent.Backstage;
+            if (backstage != null) backstage.IsOpen = false;
+        }
+
         /// <summary>
         /// 杭例題データをJSONから読み込んで適用する共通ヘルパーメソッド
         /// </summary>
@@ -48,14 +57,26 @@ namespace PileDesign.ViewModels
         /// <param name="displayName">表示名（メッセージボックス用）</param>
         private async Task LoadPileExampleAsync(string pileJsonFileName, string displayName)
         {
-            // 砂時計にする（UI スレッドで設定）
+            // 計算例の読み込み確認 (はい=続行 / いいえ=中止)
+            var confirm = MessageService.Show(
+                $"現状の入力内容は削除されます。{displayName}を読み込みますか？",
+                "計算例の読み込み確認",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
+
+            // 砂時計を即座に出す (Backstage 閉じる前に視覚フィードバック)
             Mouse.OverrideCursor = Cursors.Wait;
-            // UI を一度描画させる（カーソル表示のために短時間yield）
-            await Task.Delay(10);
+
+            // Backstage（ファイルメニュー）を閉じてメイン画面へ
+            CloseBackstage();
+
+            // UI を一度描画させる（カーソル表示と Backstage 閉じる動作のため一度 yield）
+            await Task.Yield();
 
             // Undoポイントを追加（バックグラウンドでDeepCopy）
             var undoCopy = await Task.Run(() => CurrentInputModel.DeepCopy());
-            _undoManager.SaveState(undoCopy);
+            _undoManager.SaveState(undoCopy, $"計算例ロード: {displayName}");
 
             // SoilPile再生成通知を抑制（読み込み完了後に一括で行う）
             CurrentInputModel.SuppressNotifications();
@@ -113,6 +134,10 @@ namespace PileDesign.ViewModels
             // 杭例題データを適用
             PileExampleLoader.ApplyToInputModel(CurrentInputModel, pileData, this);
 
+            // 例題 JSON は v1 (= 杭頭 Z) で書かれているため v2 (= 接合節点 Z) にマイグレート。
+            // GenerateSoilPiles より前に実行する (SoilPile 計算は v2 セマンティクスの pile.Z を前提)。
+            CurrentInputModel.MigratePileZSemantics_v1_to_v2();
+
             // 各 PileSection を再計算してプロパティ反映
             foreach (var pb in CurrentInputModel.PileBodies)
             {
@@ -144,7 +169,25 @@ namespace PileDesign.ViewModels
             // 集計値・OTM・重心を更新（バッチ代入ではPropertyChangedが発火しないため）
             UpdateSumAndOTM();
 
-            // 最終描画（UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない）
+            // 群杭荷重「基礎梁:有/無」セレクタなど基礎梁有無に連動する UI を再評価
+            // (例題ロードは PropertyChanged が抑制された経路を通るため明示的に通知)
+            OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
+            OnPropertyChanged(nameof(AvailableLoadingTypeOptionsNonBeam));
+            OnPropertyChanged(nameof(GroupSettlementBeamSelectorOptions));
+            OnPropertyChanged(nameof(GroupSettlementBeamSelector));
+            OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
+            OnPropertyChanged(nameof(GroupSettlementLoadType));
+            OnPropertyChanged(nameof(IsManualRectLoadEditingEnabled));
+            OnPropertyChanged(nameof(GroupSettlementRouteOptions));
+            OnPropertyChanged(nameof(GroupSettlementRouteSelector));
+
+            // 基礎梁考慮 群杭沈下解析リボンボタン等の CanExecute を再評価
+            // (例題ロード経由では FoundationBeamInput_PropertyChanged が購読される前に
+            //  Beams が設定されるため、ここで明示的に通知)
+            OpenVerticalBeamCalculationCommand?.NotifyCanExecuteChanged();
+            OpenGroupSettlementWithBeamWindowCommand?.NotifyCanExecuteChanged();
+
+            // 最終描画
             UpdateWindowImmediate();
 
             // タイトルバーに例題名を表示 (ファイル保存または別ファイル読込でクリアされる)
@@ -153,6 +196,9 @@ namespace PileDesign.ViewModels
 
             // 読み込み完了メッセージ
             ShowToast($"{displayName}を読み込みました。");
+
+            // 既製コンクリート杭ライブラリの整合性チェック (PileExampleLoader 経由でも検証)
+            ShowPrecastPileNameWarningsIfAny(CurrentInputModel);
         }
 
         /// <summary>
@@ -162,14 +208,26 @@ namespace PileDesign.ViewModels
         /// <param name="displayName">表示名（メッセージボックス用）</param>
         private async Task LoadGroupSettlementExampleAsync(string jsonFileName, string displayName)
         {
-            // 砂時計にする（UI スレッドで設定）
+            // 計算例の読み込み確認 (はい=続行 / いいえ=中止)
+            var confirm = MessageService.Show(
+                $"現状の入力内容は削除されます。{displayName}を読み込みますか？",
+                "計算例の読み込み確認",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
+
+            // 砂時計を即座に出す (Backstage 閉じる前に視覚フィードバック)
             Mouse.OverrideCursor = Cursors.Wait;
-            // UI を一度描画させる（カーソル表示のために短時間yield）
-            await Task.Delay(10);
+
+            // Backstage（ファイルメニュー）を閉じてメイン画面へ
+            CloseBackstage();
+
+            // UI を一度描画させる（カーソル表示と Backstage 閉じる動作のため一度 yield）
+            await Task.Yield();
 
             // Undoポイントを追加（バックグラウンドでDeepCopy）
             var undoCopy = await Task.Run(() => CurrentInputModel.DeepCopy());
-            _undoManager.SaveState(undoCopy);
+            _undoManager.SaveState(undoCopy, $"計算例ロード: {displayName}");
 
             // SoilPile再生成通知を抑制（読み込み完了後に一括で行う）
             CurrentInputModel.SuppressNotifications();
@@ -207,6 +265,10 @@ namespace PileDesign.ViewModels
             // 例題データを適用
             GroupSettlementExampleLoader.ApplyToInputModel(CurrentInputModel, data, this);
 
+            // 例題 JSON は v1 (= 杭頭 Z) で書かれているため v2 (= 接合節点 Z) にマイグレート。
+            // GenerateSoilPiles より前に実行する。
+            CurrentInputModel.MigratePileZSemantics_v1_to_v2();
+
             // 各 PileSection を再計算してプロパティ反映
             foreach (var pb in CurrentInputModel.PileBodies)
             {
@@ -242,7 +304,7 @@ namespace PileDesign.ViewModels
             // 集計値・OTM・重心を更新（バッチ代入ではPropertyChangedが発火しないため）
             UpdateSumAndOTM();
 
-            // 最終描画（UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない）
+            // 最終描画
             UpdateWindowImmediate();
 
             // タイトルバーに例題名を表示 (ファイル保存または別ファイル読込でクリアされる)
@@ -251,6 +313,9 @@ namespace PileDesign.ViewModels
 
             // 読み込み完了メッセージ
             ShowToast($"{displayName}を読み込みました。");
+
+            // 既製コンクリート杭ライブラリの整合性チェック (GroupSettlementExampleLoader 経由でも検証)
+            ShowPrecastPileNameWarningsIfAny(CurrentInputModel);
         }
 
         // 設計例集3.1

@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.FEM;
@@ -116,7 +116,7 @@ namespace PileDesign.ViewModels
             // Parallel.ForEach から共有アクセスするため ConcurrentDictionary を使用
             var nmCache = new ConcurrentDictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)>();
 
-            // 全ての解析結果の組み合わせ（LoadCase, LoadCombination, IsLiquefaction）を取得
+            // 全ての解析結果の組合せ（LoadCase, LoadCombination, IsLiquefaction）を取得
             var uniqueCombinations = model.AnalysisStepResults
                 .GroupBy(r => new
                 {
@@ -169,10 +169,112 @@ namespace PileDesign.ViewModels
             else
                 sb.AppendLine($"検定: NG項目 {totalNgCount} 件");
 
+            // ── 個別矩形（基礎梁考慮）反復解析の傾斜角検定 ──
+            int beamAwareNg = 0, beamAwareOk = 0;
+            EvaluateBeamAwareInclination(sb, ref beamAwareOk, ref beamAwareNg);
+
             EvaluationText = sb.ToString();
-            StatusText = totalNgCount == 0
-                ? $"すべてOK (チェック {totalOkCount + totalNgCount} 件)"
-                : $"NG: {totalNgCount} 件 / OK: {totalOkCount} 件";
+            int grandOk = totalOkCount + beamAwareOk;
+            int grandNg = totalNgCount + beamAwareNg;
+            StatusText = grandNg == 0
+                ? $"すべてOK (チェック {grandOk + grandNg} 件)"
+                : $"NG: {grandNg} 件 / OK: {grandOk} 件";
+        }
+
+        /// <summary>
+        /// 個別矩形（基礎梁考慮）反復解析の結果から、各基礎梁の傾斜角を検定する。
+        /// 傾斜角 = (Uz_j - Uz_i) / L、許容値 1/300 (基礎指針) を既定値として比較。
+        /// </summary>
+        private void EvaluateBeamAwareInclination(StringBuilder sb, ref int okCount, ref int ngCount)
+        {
+            var pgs = _mainVm.CurrentInputModel?.PileGroupSettlement;
+            if (pgs?.CaseRecords == null) return;
+            var beamAwareCases = pgs.CaseRecords.Where(r => r.IsBeamAware).ToList();
+            if (beamAwareCases.Count == 0) return;
+
+            var inputModel = _mainVm.CurrentInputModel;
+            if (inputModel?.FoundationBeamInput?.Beams == null
+                || inputModel.FoundationBeamInput.Beams.Count == 0) return;
+
+            const double inclinationLimit = 1.0 / 300.0;
+
+            sb.AppendLine();
+            sb.AppendLine(new string('=', 60));
+            sb.AppendLine("【個別矩形（基礎梁考慮）反復解析 傾斜角検定】");
+            sb.AppendLine($"許容傾斜角: 1/300 = {inclinationLimit:E3} (rad)");
+            sb.AppendLine();
+
+            foreach (var rec in beamAwareCases)
+            {
+                if (rec.NodeResults == null || rec.NodeResults.Count == 0) continue;
+                sb.AppendLine($"--- ケース: {rec.LoadCaseName} ---");
+                int caseOk = 0, caseNg = 0;
+                double maxAbsInclination = 0;
+                string maxBeamName = "";
+
+                var uzByName = rec.NodeResults.ToDictionary(n => n.NodeName, n => n.Uz_mm);
+
+                foreach (var fbBeam in inputModel.FoundationBeamInput.Beams)
+                {
+                    var coordsI = inputModel.GetNodeCoordinates(fbBeam.NodeI_Type, fbBeam.NodeI_Id);
+                    var coordsJ = inputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
+                    if (coordsI == null || coordsJ == null) continue;
+
+                    double dx = coordsJ.Value.X - coordsI.Value.X;
+                    double dy = coordsJ.Value.Y - coordsI.Value.Y;
+                    double L = Math.Sqrt(dx * dx + dy * dy);
+                    if (L < 1e-6) continue;
+
+                    string nameI = ResolveFemNodeName(inputModel, fbBeam.NodeI_Type, fbBeam.NodeI_Id);
+                    string nameJ = ResolveFemNodeName(inputModel, fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
+                    if (string.IsNullOrEmpty(nameI) || string.IsNullOrEmpty(nameJ)) continue;
+                    if (!uzByName.TryGetValue(nameI, out double uzI)) continue;
+                    if (!uzByName.TryGetValue(nameJ, out double uzJ)) continue;
+
+                    double inclination = Math.Abs((uzJ - uzI) * 0.001 / L);
+                    if (inclination > maxAbsInclination)
+                    {
+                        maxAbsInclination = inclination;
+                        maxBeamName = $"FoundationBeam-{inputModel.FoundationBeamInput.GetBeamNo(fbBeam)}";
+                    }
+
+                    bool isOk = inclination < inclinationLimit;
+                    if (isOk) caseOk++; else caseNg++;
+
+                    bool show = (DisplayFilter == 0 && !isOk)
+                              || (DisplayFilter == 1 && isOk)
+                              || (DisplayFilter == 2);
+                    if (show)
+                    {
+                        string status = isOk ? "OK" : "NG";
+                        double inv = inclination > 0 ? 1.0 / inclination : 0;
+                        sb.AppendLine($"  {status} 梁 #{inputModel.FoundationBeamInput.GetBeamNo(fbBeam)}: " +
+                                      $"傾斜角 = {inclination:E3} rad (1/{inv:F0}), L={L:F2}m");
+                    }
+                }
+                sb.AppendLine($"  → ケース合計: OK {caseOk} 件 / NG {caseNg} 件 / 最大傾斜角 = {maxAbsInclination:E3} rad ({maxBeamName})");
+                sb.AppendLine();
+                okCount += caseOk;
+                ngCount += caseNg;
+            }
+        }
+
+        private static string ResolveFemNodeName(InputModel inputModel, NodeReferenceType type, Guid id)
+        {
+            switch (type)
+            {
+                case NodeReferenceType.FoundationNode:
+                    var fnode = inputModel.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n.Id == id);
+                    return fnode != null ? $"FoundationNode-{fnode.No}" : null;
+                case NodeReferenceType.PileLayout:
+                    var pile = inputModel.PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
+                    return pile != null ? $"FoundationNode-P{pile.No}" : null;
+                case NodeReferenceType.GeneralNode:
+                    var node = inputModel.InputNodes?.FirstOrDefault(n => n.UniqueId == id);
+                    return node != null ? $"InputNode-{node.No}" : null;
+                default:
+                    return null;
+            }
         }
 
         /// <summary>
@@ -349,7 +451,7 @@ namespace PileDesign.ViewModels
                     if (showNg)
                     {
                         msg.AppendLine($"  [NG] {limitName}超過（i端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
                         msg.AppendLine($"       M={mI:F1} kNm > {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
                         msg.AppendLine();
                     }
@@ -360,7 +462,7 @@ namespace PileDesign.ViewModels
                     if (showOk)
                     {
                         msg.AppendLine($"  [OK] {limitName}（i端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
                         msg.AppendLine($"       M={mI:F1} kNm ≤ {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
                         msg.AppendLine();
                     }
@@ -373,7 +475,7 @@ namespace PileDesign.ViewModels
                     if (showNg)
                     {
                         msg.AppendLine($"  [NG] {limitName}超過（j端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
                         msg.AppendLine($"       M={mJ:F1} kNm > {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
                         msg.AppendLine();
                     }
@@ -384,7 +486,7 @@ namespace PileDesign.ViewModels
                     if (showOk)
                     {
                         msg.AppendLine($"  [OK] {limitName}（j端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
                         msg.AppendLine($"       M={mJ:F1} kNm ≤ {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
                         msg.AppendLine();
                     }
@@ -455,7 +557,7 @@ namespace PileDesign.ViewModels
                     if (showNg)
                     {
                         msg.AppendLine($"  [NG] θ超過（場所打ちRC杭）: {rs.Name}  杭配置No.{pb}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
                         msg.AppendLine($"       θ={theta:F5} rad > {thetaLimit:F2} rad");
                         msg.AppendLine();
                     }
@@ -466,7 +568,7 @@ namespace PileDesign.ViewModels
                     if (showOk)
                     {
                         msg.AppendLine($"  [OK] θ（場所打ちRC杭）: {rs.Name}  杭配置No.{pb}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
                         msg.AppendLine($"       θ={theta:F5} rad ≤ {thetaLimit:F2} rad");
                         msg.AppendLine();
                     }

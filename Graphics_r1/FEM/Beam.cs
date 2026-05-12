@@ -1,4 +1,4 @@
-﻿
+
 using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Models.InputData;
 using System;
@@ -184,7 +184,7 @@ namespace PileDesign.FEM
                     catch { /* best-effort logging */ }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _combinedCurve = null;
                 // System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, Exception resolving for N={axialN:E}: {ex}");
@@ -551,7 +551,7 @@ namespace PileDesign.FEM
             Vector<double> dispNodeI = NodeI.CumulativeDisp.GetVector(); //double[] dispNodeI = nodeI.OutNode.Disp;
             Vector<double> dispNodeJ = NodeJ.CumulativeDisp.GetVector(); //double[] dispNodeJ = nodeJ.OutNode.Disp;
 
-            // dispNodeIとdispNodeJを組み合わせて2n行のベクトルを作成
+            // dispNodeIとdispNodeJを組合せて2n行のベクトルを作成
             Vector<double> disp = Vector<double>.Build.Dense(dispNodeI.Count + dispNodeJ.Count); //double[] disp = [.. dispNodeI, .. dispNodeJ];
             disp.SetSubVector(0, dispNodeI.Count, dispNodeI);
             disp.SetSubVector(dispNodeI.Count, dispNodeJ.Count, dispNodeJ);
@@ -577,7 +577,7 @@ namespace PileDesign.FEM
             Vector<double> dispNodeI = NodeI.CumulativeDisp.GetVector(); //double[] dispNodeI = nodeI.OutNode.Disp;
             Vector<double> dispNodeJ = NodeJ.CumulativeDisp.GetVector(); //double[] dispNodeJ = nodeJ.OutNode.Disp;
 
-            // dispNodeIとdispNodeJを組み合わせて2n行のベクトルを作成
+            // dispNodeIとdispNodeJを組合せて2n行のベクトルを作成
             Vector<double> disp = Vector<double>.Build.Dense(dispNodeI.Count + dispNodeJ.Count); //double[] disp = [.. dispNodeI, .. dispNodeJ];
             disp.SetSubVector(0, dispNodeI.Count, dispNodeI);
             disp.SetSubVector(dispNodeI.Count, dispNodeJ.Count, dispNodeJ);
@@ -591,29 +591,7 @@ namespace PileDesign.FEM
             // 内力計算
             Vector<double> f = k * d; //double[] f = Utils.MatrixVectorMultiply(k, d);
 
-            // NaN診断: 要素内力のNaN検出
-            bool fHasNaN = false;
-            for (int fi = 0; fi < f.Count; fi++)
-            {
-                if (!double.IsFinite(f[fi])) { fHasNaN = true; break; }
-            }
-            if (fHasNaN)
-            {
-                // 原因を特定: 変位d、剛性k、変換T、節点変位のどれが汚染源か
-                bool dispHasNaN = false, keHasNaN = false;
-                for (int di2 = 0; di2 < d.Count; di2++)
-                    if (!double.IsFinite(d[di2])) { dispHasNaN = true; break; }
-                for (int ki = 0; ki < Math.Min(12, k.RowCount); ki++)
-                    if (!double.IsFinite(k[ki, ki])) { keHasNaN = true; break; }
-
-                /* NaNDiagnostics.LogNaN(
-                    $"Beam '{Name}' force NaN! dispNaN={dispHasNaN}, keNaN={keHasNaN}, " +
-                    $"NodeI='{NodeI?.Name}' NodeJ='{NodeJ?.Name}' " +
-                    $"NodeI.disp=[{NodeI?.CumulativeDisp?.Ux:E3},{NodeI?.CumulativeDisp?.Uy:E3},{NodeI?.CumulativeDisp?.Uz:E3}," +
-                    $"{NodeI?.CumulativeDisp?.Rx:E3},{NodeI?.CumulativeDisp?.Ry:E3},{NodeI?.CumulativeDisp?.Rz:E3}] " +
-                    $"NodeJ.disp=[{NodeJ?.CumulativeDisp?.Ux:E3},{NodeJ?.CumulativeDisp?.Uy:E3},{NodeJ?.CumulativeDisp?.Uz:E3}," +
-                    $"{NodeJ?.CumulativeDisp?.Rx:E3},{NodeJ?.CumulativeDisp?.Ry:E3},{NodeJ?.CumulativeDisp?.Rz:E3}]"); */
-            }
+            // (旧 NaN 診断ブロックは削除済 — 詳細トレースが必要なら NaNDiagnostics.LogNaN を呼び戻す)
 
             // 要素応力を結果用オブジェクトにセット
             CumulativeDisp.SetVector(d);

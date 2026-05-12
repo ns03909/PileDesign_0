@@ -20,6 +20,7 @@ namespace PileDesign.Converters
             "沈下 単杭+群杭",
             "沈下 基礎梁考慮単杭",
             "沈下 基礎梁考慮単杭+群杭",
+            "沈下 個別矩形(基礎梁考慮)",
         };
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

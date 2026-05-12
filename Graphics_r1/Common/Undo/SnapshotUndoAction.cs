@@ -14,8 +14,8 @@ namespace PileDesign.Common.Undo
         public SnapshotUndoAction(string description, IEnumerable<T> oldSnapshot, IEnumerable<T> newSnapshot, Action<IEnumerable<T>> apply)
         {
             Description = description ?? string.Empty;
-            _oldSnapshot = oldSnapshot != null ? new List<T>(oldSnapshot) : new List<T>();
-            _newSnapshot = newSnapshot != null ? new List<T>(newSnapshot) : new List<T>();
+            _oldSnapshot = oldSnapshot != null ? [.. oldSnapshot] : [];
+            _newSnapshot = newSnapshot != null ? [.. newSnapshot] : [];
             _apply = apply ?? throw new ArgumentNullException(nameof(apply));
         }
 

@@ -11,11 +11,11 @@ namespace PileDesign.FEM
     /// AnalysisModelling.csのパターンに準拠した簡易版。
     ///
     /// モデル構成:
-    ///   - 接続節点: 各PileLayoutItemの位置に FoundationNode-P{No}（Uz,Rx,Ry自由）
+    ///   - 接合節点: 各PileLayoutItemの位置に FoundationNode-P{No}（Uz,Rx,Ry自由）
     ///   - 地盤節点: 各杭直下に GroundNode-P{No}（全DOF固定）
     ///   - 基礎梁中間節点: FoundationBeamInput.NodesからFoundationNode-{No}（Uz,Rx,Ry自由）
     ///   - 一般節点: InputNodes(Type==General)からInputNode-{No}（Uz,Rx,Ry自由）
-    ///   - 基礎梁要素: FoundationBeamInput.Beamsから梁要素
+    ///   - 基礎梁: FoundationBeamInput.Beamsから梁要素
     ///   - 杭ばね: HorizontalSoilSpring(ConnectionNode↔GroundNode)、Kzのみ設定
     ///   - 境界条件: 全節点Ux,Uy,Rz固定（鉛直解析のみ）、Uz,Rx,Ry自由
     /// </summary>
@@ -63,8 +63,8 @@ namespace PileDesign.FEM
         {
             AddFoundationBeamNodes();     // 基礎梁中間節点
             AddInputNodes();              // 一般節点（General型）
-            AddConnectionAndGroundNodes(); // 接続節点＋地盤節点＋杭ばね曲線
-            AddFoundationBeams();          // 基礎梁要素
+            AddConnectionAndGroundNodes(); // 接合節点＋地盤節点＋杭ばね曲線
+            AddFoundationBeams();          // 基礎梁
             AddVerticalPileSprings();      // 鉛直杭ばね
         }
 
@@ -109,7 +109,7 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
-        /// 接続節点（FoundationNode-P{No}）＋地盤節点（GroundNode-P{No}）の追加
+        /// 接合節点（FoundationNode-P{No}）＋地盤節点（GroundNode-P{No}）の追加
         /// 同時に杭ばね曲線(SpringCurves)を構築する
         /// </summary>
         private void AddConnectionAndGroundNodes()
@@ -128,11 +128,11 @@ namespace PileDesign.FEM
                 if (pile.UniqueId != Guid.Empty)
                     _pileGuidToFemName[pile.UniqueId] = connName;
 
-                // 接続節点
+                // 接合節点 (v2 セマンティクス: pile.Z はすでに接合節点 Z)
                 if (!Nodes.Any(n => n.Name == connName))
                 {
                     var connNode = new Node();
-                    connNode.SetNodeInfo(connName, pile.X, pile.Y, pile.Z + pile.FoundationBeamDeltaZc);
+                    connNode.SetNodeInfo(connName, pile.X, pile.Y, pile.Z);
                     connNode.SetBoundary(VerticalFreeBoundary);
                     Nodes.Add(connNode);
                     ConnectionNodes[pile.No] = connNode;
@@ -142,9 +142,9 @@ namespace PileDesign.FEM
                     ConnectionNodes[pile.No] = Nodes.First(n => n.Name == connName);
                 }
 
-                // 地盤節点（接続節点と同位置、全固定）
+                // 地盤節点（接合節点と同位置、全固定）
                 var groundNode = new Node();
-                groundNode.SetNodeInfo(groundName, pile.X, pile.Y, pile.Z + pile.FoundationBeamDeltaZc);
+                groundNode.SetNodeInfo(groundName, pile.X, pile.Y, pile.Z);
                 groundNode.SetBoundary(AllFixedBoundary);
                 Nodes.Add(groundNode);
 
@@ -158,7 +158,7 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
-        /// 基礎梁要素の追加（AnalysisModelling.AddFoundationBeams()のパターンに準拠）
+        /// 基礎梁の追加（AnalysisModelling.AddFoundationBeams()のパターンに準拠）
         /// </summary>
         private void AddFoundationBeams()
         {
@@ -167,19 +167,20 @@ namespace PileDesign.FEM
 
             foreach (var fbBeam in _inputModel.FoundationBeamInput.Beams)
             {
-                var nodeI = ResolveFemNode(fbBeam.NodeI_Type, fbBeam.NodeI_Id, fbBeam.NodeI_No);
-                var nodeJ = ResolveFemNode(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id, fbBeam.NodeJ_No);
+                var nodeI = ResolveFemNode(fbBeam.NodeI_Type, fbBeam.NodeI_Id);
+                var nodeJ = ResolveFemNode(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
 
                 if (nodeI == null || nodeJ == null)
                 {
-                    string detail = $"基礎梁要素{fbBeam.No}の節点が見つかりません。\n" +
-                        $"I端: Type={fbBeam.NodeI_Type}, Id={fbBeam.NodeI_Id}, No={fbBeam.NodeI_No} → {(nodeI != null ? nodeI.Name : "未解決")}\n" +
-                        $"J端: Type={fbBeam.NodeJ_Type}, Id={fbBeam.NodeJ_Id}, No={fbBeam.NodeJ_No} → {(nodeJ != null ? nodeJ.Name : "未解決")}";
+                    int beamNo = _inputModel.FoundationBeamInput.GetBeamNo(fbBeam);
+                    string detail = $"基礎梁{beamNo}の節点が見つかりません。\n" +
+                        $"I端: Type={fbBeam.NodeI_Type}, Id={fbBeam.NodeI_Id} → {(nodeI != null ? nodeI.Name : "未解決")}\n" +
+                        $"J端: Type={fbBeam.NodeJ_Type}, Id={fbBeam.NodeJ_Id} → {(nodeJ != null ? nodeJ.Name : "未解決")}";
                     throw new InvalidOperationException(detail);
                 }
 
                 var section = CreateFoundationBeamSection(fbBeam);
-                var beam = new Beam($"FoundationBeam-{fbBeam.No}", section, nodeI, nodeJ, 1.0, 1.0);
+                var beam = new Beam($"FoundationBeam-{_inputModel.FoundationBeamInput.GetBeamNo(fbBeam)}", section, nodeI, nodeJ, 1.0, 1.0);
                 Beams.Add(beam);
             }
         }
@@ -207,7 +208,7 @@ namespace PileDesign.FEM
                 // 初期剛性の設定
                 double kz0 = SpringCurves.TryGetValue(pile.No, out var curve)
                     ? curve.InitialTangentStiffness
-                    : 1e6; // フォールバック
+                    : FemConstants.DefaultVerticalPileStiffness; // フォールバック
 
                 spring.SetKe(0, 0, kz0, 0, 0, 0, true);  // KeTan
                 spring.SetKe(0, 0, kz0, 0, 0, 0, false); // KeSec
@@ -235,10 +236,12 @@ namespace PileDesign.FEM
 
         // ── 節点解決ロジック（AnalysisModelling.csから移植） ──
 
-        private Node? ResolveFemNode(NodeReferenceType type, Guid id, int fallbackNo)
+        private Node? ResolveFemNode(NodeReferenceType type, Guid id)
         {
+            if (id == Guid.Empty) return null;
+
             // 方法1a: 杭参照→辞書から直接引く
-            if (type == NodeReferenceType.PileLayout && id != Guid.Empty &&
+            if (type == NodeReferenceType.PileLayout &&
                 _pileGuidToFemName != null && _pileGuidToFemName.TryGetValue(id, out var dictName))
             {
                 var node = Nodes.FirstOrDefault(n => n.Name == dictName);
@@ -246,41 +249,17 @@ namespace PileDesign.FEM
             }
 
             // 方法1b: Type+GuidからFEM節点名を生成して検索
-            if (id != Guid.Empty)
+            string femName = GetFemNodeName(type, id);
+            if (femName != null)
             {
-                string femName = GetFemNodeName(type, id);
-                if (femName != null)
-                {
-                    var node = Nodes.FirstOrDefault(n => n.Name == femName);
-                    if (node != null) return node;
-                }
+                var node = Nodes.FirstOrDefault(n => n.Name == femName);
+                if (node != null) return node;
             }
 
-            // 方法2: fallbackNoを使って検索
-            if (fallbackNo > 0)
-            {
-                if (type == NodeReferenceType.PileLayout)
-                {
-                    var node = Nodes.FirstOrDefault(n => n.Name == $"FoundationNode-P{fallbackNo}");
-                    if (node != null) return node;
-                }
-                else if (type == NodeReferenceType.GeneralNode)
-                {
-                    var node = Nodes.FirstOrDefault(n => n.Name == $"InputNode-{fallbackNo}");
-                    if (node != null) return node;
-                }
-
-                var fbNode = Nodes.FirstOrDefault(n => n.Name == $"FoundationNode-{fallbackNo}");
-                if (fbNode != null) return fbNode;
-            }
-
-            // 方法3: 座標ベースフォールバック
-            if (id != Guid.Empty)
-            {
-                var coords = _inputModel.GetNodeCoordinates(type, id);
-                if (coords.HasValue)
-                    return FindClosestNode(coords.Value.X, coords.Value.Y, coords.Value.Z);
-            }
+            // 方法2: 座標ベースフォールバック
+            var coords = _inputModel.GetNodeCoordinates(type, id);
+            if (coords.HasValue)
+                return FindClosestNode(coords.Value.X, coords.Value.Y, coords.Value.Z);
 
             return null;
         }
@@ -331,12 +310,14 @@ namespace PileDesign.FEM
 
         // ── 基礎梁断面作成（AnalysisModelling.csから移植） ──
 
-        private Section CreateFoundationBeamSection(FoundationBeamElement fbBeam)
+        private Section CreateFoundationBeamSection(FoundationBeam fbBeam)
         {
             double youngsModulus;
             double poissonRatio;
 
-            var beamMaterial = _inputModel.FoundationBeamInput?.Materials?.FirstOrDefault(m => m.No == fbBeam.MaterialNo);
+            var beamMaterial = fbBeam.MaterialNo >= 1
+                ? _inputModel.FoundationBeamInput?.Materials?.ElementAtOrDefault(fbBeam.MaterialNo - 1)
+                : null;
             if (beamMaterial != null)
             {
                 youngsModulus = beamMaterial.YoungModulus;
@@ -350,7 +331,9 @@ namespace PileDesign.FEM
 
             double area, shearAreaY, shearAreaZ, torsionalMoment, iy, iz;
 
-            var beamSection = _inputModel.FoundationBeamInput?.Sections?.FirstOrDefault(s => s.No == fbBeam.SectionNo);
+            var beamSection = fbBeam.SectionNo >= 1
+                ? _inputModel.FoundationBeamInput?.Sections?.ElementAtOrDefault(fbBeam.SectionNo - 1)
+                : null;
             if (beamSection != null)
             {
                 area = beamSection.Area;

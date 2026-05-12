@@ -15,6 +15,17 @@ namespace PileDesign.Views
         private readonly BeamMaterialWizardViewModel viewModel;
         private readonly ObservableCollection<BeamMaterial> materials;
 
+        // ComboBox 用ラッパー: 既存材料行 (位置 = 1-based No) と末尾の "(New)" 行を 1 つの型で扱う
+        // 地盤ウィンドウ・杭体ウィンドウと同じスタイル: "1", "2", ..., "N+1 (New)"
+        private sealed class MaterialPickerItem
+        {
+            public string Display { get; }
+            public BeamMaterial? Material { get; }
+            public bool IsNew => Material == null;
+            public MaterialPickerItem(string display, BeamMaterial? material) { Display = display; Material = material; }
+            public override string ToString() => Display;
+        }
+
         public BeamMaterialWizardWindow(ObservableCollection<BeamMaterial> materials)
         {
             InitializeComponent();
@@ -23,13 +34,15 @@ namespace PileDesign.Views
 
             this.materials = materials;
 
-            // ComboBoxに「新規」と既存材料Noを設定
-            var items = new List<object> { "新規" };
-            items.AddRange(materials);
+            // 既存材料 (1-based 位置 = No) → 末尾に "(New)" 行
+            var items = new List<MaterialPickerItem>();
+            for (int i = 0; i < materials.Count; i++)
+                items.Add(new MaterialPickerItem($"{i + 1}", materials[i]));
+            items.Add(new MaterialPickerItem($"{materials.Count + 1} (New)", null));
             ComboBoxMaterialNo.ItemsSource = items;
-            ComboBoxMaterialNo.DisplayMemberPath = "No";
+            ComboBoxMaterialNo.DisplayMemberPath = "Display";
 
-            // デフォルトで「新規」を選択
+            // デフォルトで先頭 (=「1」) を選択。既存が無ければ "(New)" のみで自動的に "(New)" が選択される。
             ComboBoxMaterialNo.SelectedIndex = 0;
         }
 
@@ -47,7 +60,9 @@ namespace PileDesign.Views
 
         private void ComboBoxMaterialNo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ComboBoxMaterialNo.SelectedItem is BeamMaterial material)
+            if (ComboBoxMaterialNo.SelectedItem is not MaterialPickerItem picker) return;
+
+            if (picker.Material is BeamMaterial material)
             {
                 // 既存材料が選択された場合、値をViewModelに反映
                 viewModel.Name = material.Name;
@@ -61,7 +76,7 @@ namespace PileDesign.Views
                 double ratio = ecNmm2 / (3.35e4 * gammaRatio * gammaRatio);
                 viewModel.Fc = 60.0 * ratio * ratio * ratio;
             }
-            else if (ComboBoxMaterialNo.SelectedItem is string str && str == "新規")
+            else
             {
                 // 「新規」が選択された場合、デフォルト値を設定
                 viewModel.Name = "C24";
@@ -79,10 +94,10 @@ namespace PileDesign.Views
                 return false;
             }
 
-            // 「新規」または既存材料の場合
-            if (ComboBoxMaterialNo.SelectedItem is BeamMaterial material)
+            // 「新規」または既存材料の場合 (No = コレクション内の 1-based 位置インデックス)
+            if (ComboBoxMaterialNo.SelectedItem is MaterialPickerItem picker && picker.Material is BeamMaterial material)
             {
-                SelectedMaterialNo = material.No;
+                SelectedMaterialNo = materials.IndexOf(material) + 1;
             }
             else
             {
@@ -158,8 +173,11 @@ namespace PileDesign.Views
 
         public void SelectMaterial(BeamMaterial material)
         {
-            // ComboBoxで該当する材料を選択
-            ComboBoxMaterialNo.SelectedItem = material;
+            // ComboBoxで該当する材料を選択 (PickerItem 経由)
+            if (ComboBoxMaterialNo.ItemsSource is IEnumerable<MaterialPickerItem> items)
+            {
+                ComboBoxMaterialNo.SelectedItem = items.FirstOrDefault(it => it.Material == material);
+            }
         }
     }
 }

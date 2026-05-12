@@ -37,7 +37,7 @@
             </StackPanel>
             
             <StackPanel Orientation="Horizontal">
-                <CheckBox x:Name="CheckBoxPileTopLevel" Content="杭頭Z (m)" Width="150" IsChecked="{Binding IsApplicablePileTopLevel}" ToolTip="チェックすると杭頭高さを一括変更します"></CheckBox>
+                <CheckBox x:Name="CheckBoxPileTopLevel" Content="接合節点Z (m)" Width="150" IsChecked="{Binding IsApplicablePileTopLevel}" ToolTip="チェックすると接合節点 (基礎梁レベル) の Z 座標を一括変更します"></CheckBox>
                 <TextBox x:Name="TextBoxPileTopLevel" Text="{Binding PileTopLevel, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxPileTopLevel_TextChanged"></TextBox>

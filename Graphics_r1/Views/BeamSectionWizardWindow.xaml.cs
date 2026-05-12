@@ -15,6 +15,17 @@ namespace PileDesign.Views
         private readonly BeamSectionWizardViewModel viewModel;
         private readonly ObservableCollection<BeamSection> sections;
 
+        // ComboBox 用ラッパー: 既存断面行 (位置 = 1-based No) と末尾の "(New)" 行を 1 つの型で扱う
+        // 地盤ウィンドウ・杭体ウィンドウと同じスタイル: "1", "2", ..., "N+1 (New)"
+        private sealed class SectionPickerItem
+        {
+            public string Display { get; }
+            public BeamSection? Section { get; }
+            public bool IsNew => Section == null;
+            public SectionPickerItem(string display, BeamSection? section) { Display = display; Section = section; }
+            public override string ToString() => Display;
+        }
+
         public BeamSectionWizardWindow(ObservableCollection<BeamSection> sections)
         {
             InitializeComponent();
@@ -23,13 +34,15 @@ namespace PileDesign.Views
 
             this.sections = sections;
 
-            // ComboBoxに「新規」と既存断面Noを設定
-            var items = new List<object> { "新規" };
-            items.AddRange(sections);
+            // 既存断面 (1-based 位置 = No) → 末尾に "(New)" 行
+            var items = new List<SectionPickerItem>();
+            for (int i = 0; i < sections.Count; i++)
+                items.Add(new SectionPickerItem($"{i + 1}", sections[i]));
+            items.Add(new SectionPickerItem($"{sections.Count + 1} (New)", null));
             ComboBoxSectionNo.ItemsSource = items;
-            ComboBoxSectionNo.DisplayMemberPath = "No";
+            ComboBoxSectionNo.DisplayMemberPath = "Display";
 
-            // デフォルトで「新規」を選択
+            // デフォルトで先頭 (=「1」) を選択。既存が無ければ "(New)" のみで自動的に "(New)" が選択される。
             ComboBoxSectionNo.SelectedIndex = 0;
         }
 
@@ -59,7 +72,9 @@ namespace PileDesign.Views
 
         private void ComboBoxSectionNo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ComboBoxSectionNo.SelectedItem is BeamSection section)
+            if (ComboBoxSectionNo.SelectedItem is not SectionPickerItem picker) return;
+
+            if (picker.Section is BeamSection section)
             {
                 // 既存断面が選択された場合、値をViewModelに反映
                 viewModel.Name = section.Name;
@@ -74,7 +89,7 @@ namespace PileDesign.Views
                 viewModel.IyyFactor = section.IyyFactor;
                 viewModel.IzzFactor = section.IzzFactor;
             }
-            else if (ComboBoxSectionNo.SelectedItem is string str && str == "新規")
+            else
             {
                 // 「新規」が選択された場合、デフォルト値を設定
                 viewModel.Name = "500x800";
@@ -97,10 +112,10 @@ namespace PileDesign.Views
                 return false;
             }
 
-            // 「新規」または既存断面の場合
-            if (ComboBoxSectionNo.SelectedItem is BeamSection section)
+            // 「新規」または既存断面の場合 (No = コレクション内の 1-based 位置インデックス)
+            if (ComboBoxSectionNo.SelectedItem is SectionPickerItem picker && picker.Section is BeamSection section)
             {
-                SelectedSectionNo = section.No;
+                SelectedSectionNo = sections.IndexOf(section) + 1;
             }
             else
             {
@@ -183,8 +198,11 @@ namespace PileDesign.Views
 
         public void SelectSection(BeamSection section)
         {
-            // ComboBoxで該当する断面を選択
-            ComboBoxSectionNo.SelectedItem = section;
+            // ComboBoxで該当する断面を選択 (PickerItem 経由)
+            if (ComboBoxSectionNo.ItemsSource is IEnumerable<SectionPickerItem> items)
+            {
+                ComboBoxSectionNo.SelectedItem = items.FirstOrDefault(it => it.Section == section);
+            }
         }
     }
 }

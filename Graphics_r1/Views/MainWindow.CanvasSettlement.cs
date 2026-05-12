@@ -30,7 +30,7 @@ namespace PileDesign.Views
             List<PathFigure> rectangleGeometries = [];
 
             if (viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別十字"
-                || viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別十字（基礎梁考慮）")
+                || viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別十字（基礎梁反力）")
             {
                 if (viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
@@ -47,7 +47,9 @@ namespace PileDesign.Views
                     rectangleGeometries.AddRange(viewModel.CanvasThreeDView.RectsTranformation(rectangles));
                 }
             }
-            else if (viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "任意矩形")
+            else if (viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "任意矩形"
+                  || viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別矩形"
+                  || viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別矩形（基礎梁考慮）")
             {
                 foreach (Models.InputData.RectLoad rectLoad in viewModel.CurrentInputModel.PileGroupSettlement.RectLoads)
                 {
@@ -198,12 +200,49 @@ namespace PileDesign.Views
             if (DataContext is not MainWindowViewModel viewModel) return;
 
             double loadingPlaneAltitude = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+            var settlementLayers = viewModel.CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
 
+            // 1) 層境界線 (荷重面と各層下端) を破線で描画
             AddLineGeometryToPath(new Point3D(0, 0, loadingPlaneAltitude), Canvas3DWidth, viewModel.CanvasGeometry.PathGeoPileSoils);
-
-            foreach (var settlementSoilLayer in viewModel.CurrentInputModel.PileGroupSettlement.SettlementSoilLayers)
+            foreach (var settlementSoilLayer in settlementLayers)
             {
                 AddLineGeometryToPath(new Point3D(0, 0, settlementSoilLayer.BottomAltitude), Canvas3DWidth, viewModel.CanvasGeometry.PathGeoPileSoils);
+            }
+
+            // 2) 層別の塗りつぶし矩形を粒度区分 (GranularityClass) で配色
+            //    粘性土 → ベージュ (palette[0])
+            //    砂質土 → オレンジ (palette[1])
+            //    礫質土 → 緑 (palette[2])
+            //    未指定/その他 → 層インデックスをサイクルし palette[3..5] に割当
+            var fillPaths = viewModel.CanvasGeometry.PathGeoSettlementSoilFills;
+            int unspecifiedCounter = 0;
+            for (int i = 0; i < settlementLayers.Count; i++)
+            {
+                double topAltitude = i == 0 ? loadingPlaneAltitude : settlementLayers[i - 1].BottomAltitude;
+                double bottomAltitude = settlementLayers[i].BottomAltitude;
+                if (bottomAltitude >= topAltitude) continue; // 異常データのスキップ (下端 ≥ 上端 はあり得ない)
+
+                Point topL = viewModel.CanvasThreeDView.Transformation(new Point3D(0, 0, topAltitude));
+                Point btmL = viewModel.CanvasThreeDView.Transformation(new Point3D(0, 0, bottomAltitude));
+
+                var rect = new PathFigure
+                {
+                    StartPoint = new Point(0, topL.Y),
+                    IsClosed = true,
+                };
+                rect.Segments.Add(new LineSegment(new Point(Canvas3DWidth, topL.Y), false));
+                rect.Segments.Add(new LineSegment(new Point(Canvas3DWidth, btmL.Y), false));
+                rect.Segments.Add(new LineSegment(new Point(0, btmL.Y), false));
+
+                int colorIndex = settlementLayers[i].GranularityClass switch
+                {
+                    "粘性土" => 0,
+                    "砂質土" => 1,
+                    "礫質土" => 2,
+                    _ => 3 + (unspecifiedCounter++ % 3) // 未指定は palette 後半 3 色を巡回
+                };
+
+                fillPaths[colorIndex].Figures.Add(rect);
             }
         }
 
@@ -243,7 +282,12 @@ namespace PileDesign.Views
             var items = pileGroupSettlement.SettlementGridData;
 
             if (xs.Count == 0 || ys.Count == 0 || items.Count == 0)
+            {
+                // データが空 (荷重ケース不一致や 1回/反復切替で結果なし) → 既存コンタを消す
+                viewModel.SettlementWorldCache = new PileDesign.ViewModels.SettlementGridRenderCache();
+                viewModel.CanvasGeometry.PathGeoSettlementGrid = new PathGeometry();
                 return;
+            }
 
             // フィンガープリント作成（データ変更検知）
             double minS = items.Min(it => it.Settlement);
@@ -596,10 +640,11 @@ namespace PileDesign.Views
                         Color = b.Color
                     }).ToList();
 
+                string routeLabel = viewModel.IsGroupSettlementActiveCaseBeamAware ? "反復" : "一般";
                 ColorBar.DrawStepColorBar(
                     ColorBarCanvas,
                     cb,
-                    "沈下量",
+                    $"沈下量 ({routeLabel})",
                     "mm",
                     values.Min(),
                     values.Max(),

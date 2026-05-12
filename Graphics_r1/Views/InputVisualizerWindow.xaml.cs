@@ -237,8 +237,11 @@ namespace PileDesign.Views
                 }
                 if (DragHandle != null && IsPointInElement(local, DragHandle))
                 {
+                    // HTCLIENT を返して WPF にイベントを伝え、MouseLeftButtonDown 経由で
+                    // SC_MOVE を明示送出する (WS_EX_NOACTIVATE 下では HTCAPTION 経由の
+                    // 自動ドラッグが機能しないため)。
                     handled = true;
-                    return new IntPtr(HTCAPTION);
+                    return new IntPtr(HTCLIENT);
                 }
             }
             catch
@@ -256,6 +259,59 @@ namespace PileDesign.Views
             var topLeft = el.TranslatePoint(new Point(0, 0), this);
             var bounds = new Rect(topLeft, new Size(el.ActualWidth, el.ActualHeight));
             return bounds.Contains(windowLocalPt);
+        }
+
+        // -- ドラッグハンドル: タイトル ("⋮⋮ INPUT") をドラッグして窓を移動 --
+        // 手動 mouse tracking 方式: CaptureMouse + Left/Top 直接更新で、WS_EX_NOACTIVATE 窓
+        // でも、メインウィンドウ以外がフォーカスを持っているときでも、確実にドラッグできる。
+        private bool _isDragging;
+        private Point _dragOriginScreen;
+        private double _dragOriginLeft;
+        private double _dragOriginTop;
+
+        private void DragHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed) return;
+            try
+            {
+                _dragOriginScreen = PointToScreen(e.GetPosition(this));
+                _dragOriginLeft = Left;
+                _dragOriginTop = Top;
+                _isDragging = true;
+                DragHandle.CaptureMouse();
+                e.Handled = true;
+            }
+            catch { _isDragging = false; }
+        }
+
+        private void DragHandle_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isDragging) return;
+            if (e.LeftButton != MouseButtonState.Pressed)
+            {
+                // ボタン状態がリセットされている (キャプチャ漏れ等) → 中断
+                ReleaseDragCapture();
+                return;
+            }
+            try
+            {
+                var current = PointToScreen(e.GetPosition(this));
+                Left = _dragOriginLeft + (current.X - _dragOriginScreen.X);
+                Top = _dragOriginTop + (current.Y - _dragOriginScreen.Y);
+            }
+            catch { /* PointToScreen 失敗時はスキップ */ }
+        }
+
+        private void DragHandle_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isDragging) ReleaseDragCapture();
+        }
+
+        private void ReleaseDragCapture()
+        {
+            _isDragging = false;
+            if (DragHandle != null && DragHandle.IsMouseCaptured)
+                DragHandle.ReleaseMouseCapture();
         }
 
         // -- 閉じるボタン --

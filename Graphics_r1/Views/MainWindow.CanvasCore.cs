@@ -1,4 +1,4 @@
-﻿using AvalonDock.Layout;
+using AvalonDock.Layout;
 using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -197,7 +197,7 @@ namespace PileDesign.Views
                     // 軽量描画（ラベルなし）
                     UpdateNodes3D();
                     UpdateInputNodes3D(); // 一般節点も描画
-                    UpdateConnectingNodes3D(); // 接続用節点・剛体連結線
+                    UpdateConnectionNodes3D(); // 接合節点・剛体連結線
                     if (viewModel.IsRigidFloorVisible) UpdateRigidFloor3D(); // 代表節点 ↔ 杭頭の緑色連結線
                     if (viewModel.IsFoundationBeamVisible) UpdateFoundationBeams3D(); // 基礎梁・一般梁要素も描画
                     UpdateSelectedNodesAndElements3D(); // 選択要素も描画
@@ -254,7 +254,7 @@ namespace PileDesign.Views
 
                 if (viewModel.IsSettlementLoadVisible) UpdateSettlementLoad3D(); // 荷重面描画の更新
 
-                UpdateConnectingNodes3D(); // 接続用節点・剛体連結線描画の更新
+                UpdateConnectionNodes3D(); // 接合節点・剛体連結線描画の更新
 
                 if (viewModel.IsFoundationBeamVisible) UpdateFoundationBeams3D(); // 基礎梁・一般梁要素描画の更新
 
@@ -463,26 +463,10 @@ namespace PileDesign.Views
             Canvas.SetTop(vpRect, vpTopLeft.Y);
             MinimapCanvas.Children.Add(vpRect);
 
-            // 要素（Elements）を線として描画
-            foreach (var element in viewModel.CurrentInputModel.Elements)
-            {
-                var p0 = ToMinimap(viewModel.CanvasThreeDView.Transformation(element.Nodes[0].Point3D));
-                var p1 = ToMinimap(viewModel.CanvasThreeDView.Transformation(element.Nodes[1].Point3D));
-                var line = new System.Windows.Shapes.Line
-                {
-                    X1 = p0.X, Y1 = p0.Y, X2 = p1.X, Y2 = p1.Y,
-                    Stroke = element.IsSelected ? Brushes.Red : Brushes.Goldenrod,
-                    StrokeThickness = element.IsSelected ? 1.0 : 0.5,
-                    IsHitTestVisible = false
-                };
-                MinimapCanvas.Children.Add(line);
-            }
-
-            // 基礎梁要素を線として描画（Guidベース座標解決）
+            // 基礎梁を線として描画（Guidベース座標解決）
             if (viewModel.IsFoundationBeamVisible && viewModel.CurrentInputModel.FoundationBeamInput?.Beams != null)
             {
                 var fbInput = viewModel.CurrentInputModel.FoundationBeamInput;
-                var nodeDict = fbInput.Nodes.ToDictionary(n => n.No, n => n);
                 foreach (var beam in fbInput.Beams)
                 {
                     if (!beam.IsVisible) continue;
@@ -493,16 +477,12 @@ namespace PileDesign.Views
                         var c = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
                         if (c.HasValue) loc0 = new(c.Value.X, c.Value.Y, c.Value.Z);
                     }
-                    else if (beam.NodeI_No > 0 && nodeDict.TryGetValue(beam.NodeI_No, out var nI))
-                        loc0 = new(nI.X, nI.Y, nI.Z);
 
                     if (beam.NodeJ_Id != Guid.Empty)
                     {
                         var c = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
                         if (c.HasValue) loc1 = new(c.Value.X, c.Value.Y, c.Value.Z);
                     }
-                    else if (beam.NodeJ_No > 0 && nodeDict.TryGetValue(beam.NodeJ_No, out var nJ))
-                        loc1 = new(nJ.X, nJ.Y, nJ.Z);
 
                     if (!loc0.HasValue || !loc1.HasValue) continue;
 
@@ -673,20 +653,6 @@ namespace PileDesign.Views
         }
 
         /// <summary>
-        /// 入力データパネルの表示/非表示トグル
-        /// </summary>
-        private void ToggleInputDataPanel_Click(object sender, RoutedEventArgs e)
-        {
-            if (inputDataAnchorable.IsVisible)
-                inputDataAnchorable.Hide();
-            else
-            {
-                inputDataAnchorable.Show();
-                inputDataAnchorable.IsActive = true;
-            }
-        }
-
-        /// <summary>
         /// プロパティパネルの表示/非表示トグル
         /// </summary>
         private void TogglePropertiesPanel_Click(object sender, RoutedEventArgs e)
@@ -720,8 +686,6 @@ namespace PileDesign.Views
         /// </summary>
         internal void InitializePanelToggleSync()
         {
-            inputDataAnchorable.IsVisibleChanged += (s, e) =>
-                InputDataPanelToggle.IsChecked = inputDataAnchorable.IsVisible;
             propertiesAnchorable.IsVisibleChanged += (s, e) =>
                 PropertiesPanelToggle.IsChecked = propertiesAnchorable.IsVisible;
             minimapAnchorable.IsVisibleChanged += (s, e) =>

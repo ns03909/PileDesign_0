@@ -45,7 +45,9 @@ namespace PileDesign.Models
             {
                 int pileBodyNo = pileLayoutDataItem.PileBodyNo;
                 int groundNo = pileLayoutDataItem.GroundNo;
-                double pileTopAltitude = pileLayoutDataItem.Point3D.Z;
+                // pileTopAltitude は杭頭高さ。v2 セマンティクスでは pile.Z は接合節点 Z なので PileHeadZ を使う。
+                // SoilPile キャッシュ (杭頭基準) との整合のためにも PileHeadZ で揃える。
+                double pileTopAltitude = pileLayoutDataItem.PileHeadZ;
 
                 (int, int, double) groundNoPileBodyNoPileTopAltitude = (groundNo, pileBodyNo, pileTopAltitude);
 

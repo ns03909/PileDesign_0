@@ -4,21 +4,21 @@
   "loadCaseLevel1": {
     "forceActionPointX": 20.0,
     "forceActionPointY": 8.15,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -1.0,
     "upperMassForce": 3092,
     "foundationMassForce": 979
   },
   "loadCaseLevel2": {
     "forceActionPointX": 20.0,
     "forceActionPointY": 8.15,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -1.0,
     "upperMassForce": 5287,
     "foundationMassForce": 3914
   },
   "loadCaseLevel2Alt": {
     "forceActionPointX": 20.0,
     "forceActionPointY": 8.15,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -1.0,
     "upperMassForce": 5658,
     "foundationMassForce": 3914
   },

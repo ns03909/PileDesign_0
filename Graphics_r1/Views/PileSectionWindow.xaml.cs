@@ -340,7 +340,7 @@ namespace PileDesign.Views
                         xs[i] = ds.GetX(i);
                         ys[i] = ds.GetY(i);
                     }
-                    return (xs, ys, legend: scatter.Label ?? "");
+                    return (xs, ys, legend: scatter.LegendText ?? "");
                 })
                 .ToList();
 

@@ -4,14 +4,14 @@
   "loadCaseLevel1": {
     "forceActionPointX": 16.4,
     "forceActionPointY": 12.6,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -0.4,
     "upperMassForce": 4734,
     "foundationMassForce": 1188
   },
   "loadCaseLevel2": {
     "forceActionPointX": 16.4,
     "forceActionPointY": 12.6,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -0.4,
     "upperMassForce": 8285,
     "foundationMassForce": 4751
   },

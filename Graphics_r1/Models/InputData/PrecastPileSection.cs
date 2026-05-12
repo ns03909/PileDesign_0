@@ -1976,7 +1976,6 @@ namespace PileDesign.Models.InputData
             (double MYC, double phiYC) = GetMomentCurvatureForN(Ntarget, "SteelPipeCompressionYield_b");
             (double Mu0, double phiU) = GetUltimateMomentForSpecificN(Ntarget);
 
-            string caseType = "";
             double phiD;
             List<double> phis;
             List<double> Ms;
@@ -1991,7 +1990,6 @@ namespace PileDesign.Models.InputData
 
             if (isAxialYield) // d 軸力のみで鋼管が降伏する場合
             {
-                caseType = "d";
                 // コンクリート圧縮縁がεcuに達するときのMu0とその曲率phiU
                 phiD = phiU;
                 double beta2 = 0.75;
@@ -2000,8 +1998,6 @@ namespace PileDesign.Models.InputData
             }
             else if (phiCr < phiYT && phiYT < phiYC) // a 鋼管が引張降伏する場合
             {
-                caseType = "a";
-
                 // MCr≤0 のとき（引張軸力で既にひび割れ）→ MCr=0, phiCr=0 として扱う
                 if (MCr <= 0 || phiCr <= 0)
                 {
@@ -2048,7 +2044,6 @@ namespace PileDesign.Models.InputData
             }
             else if (phiCr < phiYC && phiYC < phiYT) // b 曲げひび割れ後、鋼管が圧縮降伏する場合
             {
-                caseType = "b";
                 double denom = MYC - MCr;
                 if (Math.Abs(denom) < 1e-6) denom = Math.Sign(denom) * 1e-6;
                 phiD = phiCr + (phiYC - phiCr) * (beta1 * Mu0 - MCr) / denom;
@@ -2092,7 +2087,6 @@ namespace PileDesign.Models.InputData
             }
             else if (phiYC < phiCr && phiYC < phiYT) // c 鋼管が圧縮降伏する場合
             {
-                caseType = "c";
                 double ratioYC = (phiYC > 1e-12) ? MYC / phiYC : 1e6;
                 phiD = beta1 * Mu0 / ratioYC;
                 double beta2 = 0.75;
@@ -2114,7 +2108,6 @@ namespace PileDesign.Models.InputData
             }
             else // ケースa,b,c,dのいずれにも該当しない場合（フォールバック）
             {
-                caseType = "fallback";
                 double EcIe = PrecastConcrete.Ec * Ie;
                 if (EcIe < 1e-6) EcIe = 1e6;
                 phiD = beta1 * Mu0 / EcIe;

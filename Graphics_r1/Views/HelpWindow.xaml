@@ -1,4 +1,4 @@
-﻿<Window x:Class="PileDesign.Views.HelpWindow"
+<Window x:Class="PileDesign.Views.HelpWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -493,7 +493,7 @@
                                 <Paragraph>参照レベル名</Paragraph>
                             </ListItem>
                             <ListItem>
-                                <Paragraph>荷重組み合わせ</Paragraph>
+                                <Paragraph>荷重組合せ</Paragraph>
                             </ListItem>
                         </List>
 
@@ -647,7 +647,7 @@
                         </Paragraph>
                         <List>
                             <ListItem>
-                                <Paragraph>デフォルトの解析ケースに対する荷重組み合わせ（荷重係数）・</Paragraph>
+                                <Paragraph>デフォルトの解析ケースに対する荷重組合せ（荷重係数）・</Paragraph>
                                 <Table>
                                     <Table.Columns>
                                         <TableColumn Width="2*"/>
@@ -705,42 +705,42 @@
                                             </TableCell>
                                             <TableCell>
                                                 <Paragraph TextAlignment="Center" Foreground="White">
-                                                    <Bold>E1-1</Bold>
+                                                    <Bold>1-1</Bold>
                                                 </Paragraph>
                                             </TableCell>
                                             <TableCell>
                                                 <Paragraph TextAlignment="Center" Foreground="White">
-                                                    <Bold>E1-2</Bold>
+                                                    <Bold>1-2</Bold>
                                                 </Paragraph>
                                             </TableCell>
                                             <TableCell>
                                                 <Paragraph TextAlignment="Center" Foreground="White">
-                                                    <Bold>E1-3</Bold>
+                                                    <Bold>1-3</Bold>
                                                 </Paragraph>
                                             </TableCell>
                                             <TableCell>
                                                 <Paragraph TextAlignment="Center" Foreground="White">
-                                                    <Bold>E1-4</Bold>
+                                                    <Bold>1-4</Bold>
                                                 </Paragraph>
                                             </TableCell>
                                             <TableCell>
                                                 <Paragraph TextAlignment="Center" Foreground="White">
-                                                    <Bold>E2-1</Bold>
+                                                    <Bold>2-1</Bold>
                                                 </Paragraph>
                                             </TableCell>
                                             <TableCell>
                                                 <Paragraph TextAlignment="Center" Foreground="White">
-                                                    <Bold>E2-2</Bold>
+                                                    <Bold>2-2</Bold>
                                                 </Paragraph>
                                             </TableCell>
                                             <TableCell>
                                                 <Paragraph TextAlignment="Center" Foreground="White">
-                                                    <Bold>E2-3</Bold>
+                                                    <Bold>2-3</Bold>
                                                 </Paragraph>
                                             </TableCell>
                                             <TableCell>
                                                 <Paragraph TextAlignment="Center" Foreground="White">
-                                                    <Bold>E2-4</Bold>
+                                                    <Bold>2-4</Bold>
                                                 </Paragraph>
                                             </TableCell>
                                         </TableRow>
@@ -802,7 +802,7 @@
 
                                         <TableRow>
                                             <TableCell>
-                                                <Paragraph Foreground="White">VL+VLadd+E1-1</Paragraph>
+                                                <Paragraph Foreground="White">VL+VLadd+1-1</Paragraph>
                                             </TableCell>
 
                                             <TableCell>
@@ -857,7 +857,7 @@
 
                                         <TableRow>
                                             <TableCell>
-                                                <Paragraph Foreground="White">VL+VLadd+E1-2</Paragraph>
+                                                <Paragraph Foreground="White">VL+VLadd+1-2</Paragraph>
                                             </TableCell>
 
                                             <TableCell>
@@ -911,7 +911,7 @@
 
                                         <TableRow>
                                             <TableCell>
-                                                <Paragraph Foreground="White">VL+VLadd+E1-3</Paragraph>
+                                                <Paragraph Foreground="White">VL+VLadd+1-3</Paragraph>
                                             </TableCell>
 
                                             <TableCell>
@@ -965,7 +965,7 @@
 
                                         <TableRow>
                                             <TableCell>
-                                                <Paragraph Foreground="White">VL+VLadd+E1-4</Paragraph>
+                                                <Paragraph Foreground="White">VL+VLadd+1-4</Paragraph>
                                             </TableCell>
 
                                             <TableCell>
@@ -1019,7 +1019,7 @@
 
                                         <TableRow>
                                             <TableCell>
-                                                <Paragraph Foreground="White">VL+VLadd+E2-1</Paragraph>
+                                                <Paragraph Foreground="White">VL+VLadd+2-1</Paragraph>
                                             </TableCell>
 
                                             <TableCell>
@@ -1073,7 +1073,7 @@
 
                                         <TableRow>
                                             <TableCell>
-                                                <Paragraph Foreground="White">VL+VLadd+E2-2</Paragraph>
+                                                <Paragraph Foreground="White">VL+VLadd+2-2</Paragraph>
                                             </TableCell>
 
                                             <TableCell>
@@ -1128,7 +1128,7 @@
 
                                         <TableRow>
                                             <TableCell>
-                                                <Paragraph Foreground="White">VL+VLadd+E2-3</Paragraph>
+                                                <Paragraph Foreground="White">VL+VLadd+2-3</Paragraph>
                                             </TableCell>
 
                                             <TableCell>
@@ -1183,7 +1183,7 @@
 
                                         <TableRow>
                                             <TableCell>
-                                                <Paragraph Foreground="White">VL+VLadd+E2-4</Paragraph>
+                                                <Paragraph Foreground="White">VL+VLadd+2-4</Paragraph>
                                             </TableCell>
 
                                             <TableCell>

@@ -84,6 +84,8 @@ namespace PileDesign.Views
             _undoManager.JumpToIndex(row.Index);
             _vm.ApplyCurrentUndoSnapshot();
         }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
     }
 
     /// <summary>HistoryListBox の DataTemplate バインディング用。</summary>

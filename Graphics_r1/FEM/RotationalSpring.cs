@@ -82,12 +82,10 @@ namespace PileDesign.FEM
             if (Points.Count == 0) return 0.0;
             double t = Math.Abs(theta);
             double result;
-            string region = "";
 
             if (Points.Count == 1)
             {
                 result = SlopeFromOrigin(Points[0]);
-                region = "single_point";
             }
             // 原点からの初期接線剛性: 最初の点が原点(0,0)の場合は次の点との傾きを使用
             else if (t <= Points[0].Theta)
@@ -96,12 +94,10 @@ namespace PileDesign.FEM
                 {
                     // 最初の点が原点の場合、原点と次の点との傾きを返す
                     result = SafeSlope(Points[0], Points[1]);
-                    region = "origin→1";
                 }
                 else
                 {
                     result = SlopeFromOrigin(Points[0]);
-                    region = "slope_from_origin";
                 }
             }
             else if (t >= Points[^1].Theta)
@@ -110,7 +106,6 @@ namespace PileDesign.FEM
                 // 旧: 0 (真のプラトー) だったが、多数の杭頭が同時に plateau に到達する
                 // counter-loading で K 行列特異化 → Newton 方向不定 → α=0.05 limit cycle の主因。
                 result = GetPostYieldSlope();
-                region = "above_last_post_yield_gradient";
             }
             else
             {
@@ -246,7 +241,7 @@ namespace PileDesign.FEM
         public bool TieUz { get; set; } = true;
         public bool TieRz { get; set; } = true;
         [System.Text.Json.Serialization.JsonIgnore]  // JSONから古い値が読み込まれないようにする
-        public double Kbig { get; set; } = 1e8;  // CapNode-PileNode間のペナルティ剛性
+        public double Kbig { get; set; } = FemConstants.KbigRotation;  // CapNode-PileNode間のペナルティ剛性
 
         public RotationalSpringMode Mode { get; set; } = RotationalSpringMode.CombinedXY;
         public RotationalDof Dof { get; set; } = RotationalDof.Rx;

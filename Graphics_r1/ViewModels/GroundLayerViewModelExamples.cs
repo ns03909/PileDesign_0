@@ -32,6 +32,7 @@ namespace PileDesign.ViewModels
             ExampleItems.Add(new ExampleItem("設計例集3.3", Example3_3Command));
             ExampleItems.Add(new ExampleItem("設計例集3.4", Example3_4Command));
             ExampleItems.Add(new ExampleItem("関東支部5.5", ExampleK5_5Command));
+            ExampleItems.Add(new ExampleItem("関東支部7章", ExampleK7Command));
             ExampleItems.Add(new ExampleItem("関東支部8章", ExampleK8Command));
             ExampleItems.Add(new ExampleItem("八重洲二丁目No.1", ExampleYeasu2Command));
         }
@@ -139,6 +140,13 @@ namespace PileDesign.ViewModels
         private void ExampleK5_5()
         {
             LoadExampleFromJson("ExampleK5_5", "関東支部5.5");
+        }
+
+        // 関東支部7章
+        [RelayCommand]
+        private void ExampleK7()
+        {
+            LoadExampleFromJson("ExampleK7", "関東支部7章");
         }
 
         // 関東支部8章

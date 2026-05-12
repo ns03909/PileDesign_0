@@ -338,17 +338,14 @@ namespace PileDesign.Models.InputData
         public List<BeamSectionDto> Sections { get; set; } = [];
 
         [JsonPropertyName("beams")]
-        public List<FoundationBeamElementDto> Beams { get; set; } = [];
+        public List<FoundationBeamDto> Beams { get; set; } = [];
     }
 
     /// <summary>
-    /// 梁材料DTO
+    /// 梁材料DTO — No は廃止 (位置 = ID): JSON 配列の順序がそのまま 1-based No となる
     /// </summary>
     public class BeamMaterialDto
     {
-        [JsonPropertyName("no")]
-        public int No { get; set; }
-
         [JsonPropertyName("name")]
         public string Name { get; set; } = "";
 
@@ -363,13 +360,10 @@ namespace PileDesign.Models.InputData
     }
 
     /// <summary>
-    /// 梁断面DTO
+    /// 梁断面DTO — No は廃止 (位置 = ID)
     /// </summary>
     public class BeamSectionDto
     {
-        [JsonPropertyName("no")]
-        public int No { get; set; }
-
         [JsonPropertyName("name")]
         public string Name { get; set; } = "";
 
@@ -381,13 +375,11 @@ namespace PileDesign.Models.InputData
     }
 
     /// <summary>
-    /// 基礎梁要素DTO
+    /// 基礎梁DTO — 自身の No は廃止 (位置 = ID)。
+    /// MaterialNo / SectionNo は他コレクション (Materials / Sections) への参照 (1-based 位置)
     /// </summary>
-    public class FoundationBeamElementDto
+    public class FoundationBeamDto
     {
-        [JsonPropertyName("no")]
-        public int No { get; set; }
-
         [JsonPropertyName("materialNo")]
         public int MaterialNo { get; set; } = 1;
 

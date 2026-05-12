@@ -1,4 +1,4 @@
-﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Common;
@@ -172,28 +172,49 @@ namespace PileDesign.Output
             if (inputModel.ElementDivision == null)
                 throw new InvalidOperationException("ElementDivision が未設定です。");
 
+            var sw = new System.Diagnostics.Stopwatch();
+            void StartSection() => sw.Restart();
+            void EndSection(string label) { sw.Stop(); Log.Information("[Docx]   {Section}: {Elapsed:N2}s", label, sw.Elapsed.TotalSeconds); }
+
             try
             {
                 using var wordDocument = WordprocessingDocument.Create(fileName, WordprocessingDocumentType.Document);
                 MainDocumentPart mainPart = wordDocument.AddMainDocumentPart();
 
+                StartSection();
+                BuildResultLookupCaches();
+                EndSection("BuildResultLookupCaches");
+
+                StartSection();
                 EnsureHeadingStylesWithNumbering(mainPart);
+                EndSection("EnsureHeadingStylesWithNumbering");
+
                 Document doc = new();
                 Body body = new();
 
                 // モデル図をキャプチャ（UIスレッド上で実行）
+                StartSection();
                 byte[]? modelImageBytes = mainWindowViewModel?.CaptureIsometricModelImageBytes();
+                EndSection("CaptureIsometricModelImage (UI)");
 
+                StartSection();
                 AddFrontMatter(mainPart, body, inputModel, modelImageBytes);
+                EndSection("AddFrontMatter");
+
+                StartSection();
                 AddInputDataSection(mainPart, body, inputModel);
+                EndSection("AddInputDataSection");
 
-
+                StartSection();
                 AddLoadCombinationAndFigureSection(mainPart, body, inputModel);
+                EndSection("AddLoadCombinationAndFigureSection");
 
                 // まとめて追加
+                StartSection();
                 doc.Append(body);
                 mainPart.Document = doc;
                 mainPart.Document.Save();
+                EndSection("Document.Save (zip 書き出し)");
             }
             catch (Exception ex)
             {
@@ -201,7 +222,7 @@ namespace PileDesign.Output
                 throw;
             }
 
-            Log.Debug("Word文書を出力しました。開いて Ctrl+A → F9 でフィールド更新してください。");
+            Log.Debug("Word文書を出力しました。Word で開き、目次上をクリック → F9 でフィールド更新してください。");
         }
 
 
@@ -251,184 +272,198 @@ namespace PileDesign.Output
         // 入力情報・表類
         private void AddInputDataSection(MainDocumentPart mainPart, Body body, InputModel inputModel)
         {
+            var sw = new System.Diagnostics.Stopwatch();
+            void Time(string label, Action a) { sw.Restart(); a(); sw.Stop(); Log.Information("[Docx]     {Section}: {Elapsed:N2}s", label, sw.Elapsed.TotalSeconds); }
+
             AddText(body, $"杭検討プログラム ver {(System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString())}", "center");
             AddText(body, DateTime.Now.ToString("yyyy/MM/dd"), "center");
 
             if (mainWindowViewModel.IncludeFundamental)
             {
-                AddHeader1(body, "基本設定", 1);
-                AddFundamentalTable(body, inputModel.FundamentalInput); // 基本設定テーブル
-                AddLineBreak(body);
+                Time("Fundamental", () => {
+                    AddHeader1(body, "基本設定", 1);
+                    AddFundamentalTable(body, inputModel.FundamentalInput);
+                    AddLineBreak(body);
+                });
             }
 
             if (mainWindowViewModel.IncludeLoadCondition)
             {
-                AddHeader1(body, "荷重条件", 1);
-                AddText(body, "レベル1荷重");
-                AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel1, inputModel.FundamentalInput);
-                AddText(body, "レベル2荷重");
-                AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel2, inputModel.FundamentalInput);
-                AddLineBreak(body);
+                Time("LoadCondition", () => {
+                    AddHeader1(body, "荷重条件", 1);
+                    AddText(body, "レベル1荷重");
+                    AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel1, inputModel.FundamentalInput);
+                    AddText(body, "レベル2荷重");
+                    AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel2, inputModel.FundamentalInput);
+                    AddLineBreak(body);
+                });
             }
 
             if (mainWindowViewModel.IncludePileBodies)
             {
-                AddHeader1(body, "杭体", 1);
-                AddPileBodiesTables(body, inputModel.PileBodies);
-                AddLineBreak(body);
+                Time("PileBodies", () => {
+                    AddHeader1(body, "杭体", 1);
+                    AddPileBodiesTables(body, inputModel.PileBodies);
+                    AddLineBreak(body);
+                });
             }
 
             if (mainWindowViewModel.IncludePileLayoutTable)
             {
-                AddHeader1(body, "杭配置", 1);
-                AddPileLayoutTables(body, inputModel.PileLayoutItems, inputModel.FundamentalInput);
-                AddLineBreak(body);
+                Time("PileLayout", () => {
+                    AddHeader1(body, "杭配置", 1);
+                    AddPileLayoutTables(body, inputModel.PileLayoutItems, inputModel.FundamentalInput);
+                    AddLineBreak(body);
+                });
             }
 
             if (mainWindowViewModel.IncludePileAxialLoad)
             {
-                AddHeader1(body, "杭軸力", 1);
-                AddPileAxialLoadTables(body, inputModel.PileLayoutItems);
-                AddLineBreak(body);
+                Time("PileAxialLoad", () => {
+                    AddHeader1(body, "杭軸力", 1);
+                    AddPileAxialLoadTables(body, inputModel.PileLayoutItems);
+                    AddLineBreak(body);
+                });
             }
 
             if (mainWindowViewModel.IncludeIsFrontPile)
             {
-                AddHeader1(body, "前後方杭", 1);
-                AddIsFrontPileTables(body, inputModel.PileLayoutItems);
-                AddLineBreak(body);
+                Time("IsFrontPile", () => {
+                    AddHeader1(body, "前後方杭", 1);
+                    AddIsFrontPileTables(body, inputModel.PileLayoutItems);
+                    AddLineBreak(body);
+                });
             }
 
             if (mainWindowViewModel.IncludeDesignApproach)
             {
-                AddHeader1(body, "検討方針", 1);
-                AddDesignApproachSection(body, inputModel);
-                AddLineBreak(body);
+                Time("DesignApproach", () => {
+                    AddHeader1(body, "検討方針", 1);
+                    AddDesignApproachSection(body, inputModel);
+                    AddLineBreak(body);
+                });
             }
 
-
-            if (mainWindowViewModel.IncludeGroundInformation) // 地盤
+            if (mainWindowViewModel.IncludeGroundInformation)
             {
-                AddHeader1(body, "地盤", 1);
-                AddGroundInfo(body, inputModel.GroundsInput, inputModel.FundamentalInput);
-                AddLineBreak(body);
+                Time("GroundInformation", () => {
+                    AddHeader1(body, "地盤", 1);
+                    AddGroundInfo(body, inputModel.GroundsInput, inputModel.FundamentalInput);
+                    AddLineBreak(body);
+                });
             }
 
             // 地盤グラフ (N値分布 / Cu / Vs / Es / FL) — 個別チェックされた項目のみ出力
-            AddGroundGraphsSection(mainPart, body);
+            Time("GroundGraphsSection", () => AddGroundGraphsSection(mainPart, body));
 
             // 杭の図・諸元 (杭姿図 / 杭頭諸元 / 軸力制限) — 個別チェックされた項目のみ出力
-            AddPileDiagramsSection(mainPart, body);
+            Time("PileDiagramsSection", () => AddPileDiagramsSection(mainPart, body));
 
             // 解析サマリーレポート (テキスト) — 水平解析完了済かつチェックされた場合のみ
-            AddAnalysisSummaryReportSection(body);
+            Time("AnalysisSummaryReportSection", () => AddAnalysisSummaryReportSection(body));
 
-            if (mainWindowViewModel.IncludeLiquefaction) // 液状化
+            if (mainWindowViewModel.IncludeLiquefaction)
             {
-                // 液状化の検討
-                AddLiquefactionSection(body);
-                AddLineBreak(body);
-            }
-
-            if (mainWindowViewModel.IncludeVertical) // 鉛直解析
-            {
-                if (mainWindowViewModel.IsVerticalAnalysisDone)
-                {
-                    AddHeader1(body, "杭の支持力", 1);
-                    AddPileResistanceDescription(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
-                    AddVerticalResistance(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
+                Time("Liquefaction", () => {
+                    AddLiquefactionSection(body);
                     AddLineBreak(body);
-
-                    // 杭の支持力検討
-                    if (mainWindowViewModel.CalculationReportLevel >= 2)
-                    {
-                        AddSectionVerticalResistance(body);
-                        AddLineBreak(body);
-                    }
-
-                    // 杭の沈下検討
-                    if (mainWindowViewModel.CalculationReportLevel >= 2)
-                    {
-                        AddSectionSettlement(body);
-                        AddLineBreak(body);
-                    }
-                    var soilPiles = inputModel.ElementDivision.SoilPiles;
-                    if (soilPiles is { Count: > 0 })
-                    {
-                        var soilPile = soilPiles[0];
-                        const double pileElevationH = 100;
-
-                        AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "vertical");
-                        AddAutoFigureCaption(body, "沈下解析杭モデル", "図");
-
-                        AddSettlementGraph(mainPart, body);
-                    }
-                }
-                else
-                {
-                    AddText(body, "（鉛直解析が未実施のため、支持力検討は省略されています）", "left");
-                }
+                });
             }
 
-            if (mainWindowViewModel.IncludeHorizontal) // 水平解析
+            if (mainWindowViewModel.IncludeVertical)
             {
-                // 根入部
+                Time("Vertical (支持力+沈下+杭モデル図)", () => {
+                    if (mainWindowViewModel.IsVerticalAnalysisDone)
+                    {
+                        AddHeader1(body, "杭の支持力", 1);
+                        AddPileResistanceDescription(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
+                        AddVerticalResistance(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
+                        AddLineBreak(body);
+
+                        if (mainWindowViewModel.CalculationReportLevel >= 2)
+                        {
+                            AddSectionVerticalResistance(body);
+                            AddLineBreak(body);
+                        }
+
+                        if (mainWindowViewModel.CalculationReportLevel >= 2)
+                        {
+                            AddSectionSettlement(body);
+                            AddLineBreak(body);
+                        }
+                        var soilPiles = inputModel.ElementDivision.SoilPiles;
+                        if (soilPiles is { Count: > 0 })
+                        {
+                            var soilPile = soilPiles[0];
+                            const double pileElevationH = 100;
+
+                            AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "vertical");
+                            AddAutoFigureCaption(body, "沈下解析杭モデル", "図");
+
+                            AddSettlementGraph(mainPart, body);
+                        }
+                    }
+                    else
+                    {
+                        AddText(body, "（鉛直解析が未実施のため、支持力検討は省略されています）", "left");
+                    }
+                });
+            }
+
+            if (mainWindowViewModel.IncludeHorizontal)
+            {
+                var swH = new System.Diagnostics.Stopwatch();
+                void TimeH(string label, Action a) { swH.Restart(); a(); swH.Stop(); Log.Information("[Docx]       [Horizontal] {Section}: {Elapsed:N2}s", label, swH.Elapsed.TotalSeconds); }
+
                 if (inputModel.EmbedmentInput is { EmbedmentLayersCount: > 0 })
                 {
-                    AddHeader1(body, "根入部", 1);
-                    if (mainWindowViewModel.CalculationReportLevel >= 2)
-                    {
-                        AddEmbedment(body, inputModel.EmbedmentInput, inputModel.FundamentalInput);
-                        AddLineBreak(body);
-                    }
+                    TimeH("Embedment (根入部)", () => {
+                        AddHeader1(body, "根入部", 1);
+                        if (mainWindowViewModel.CalculationReportLevel >= 2)
+                        {
+                            AddEmbedment(body, inputModel.EmbedmentInput, inputModel.FundamentalInput);
+                            AddLineBreak(body);
+                        }
+                    });
                 }
-                // 地盤の水平変位
                 if (mainWindowViewModel.CalculationReportLevel >= 2)
                 {
-                    AddGroundDisplacementSection(body);
-                    AddPageBreak(body);
-                }
-                // 杭の水平抵抗
-                if (mainWindowViewModel.CalculationReportLevel >= 2)
-                {
-                    AddSectionHorizontalResistance(body);
-                    AddLineBreak(body);
+                    TimeH("GroundDisplacementSection", () => { AddGroundDisplacementSection(body); AddPageBreak(body); });
+                    TimeH("SectionHorizontalResistance", () => { AddSectionHorizontalResistance(body); AddLineBreak(body); });
                 }
                 AddPageBreak(body);
-                AddHeader1(body, "上部構造、基礎部への作用の組み合わせ", 2);
-                AddLoadCombinationTable(mainPart, body);
+                AddHeader1(body, "上部構造、基礎部への作用の組合せ", 2);
+                TimeH("LoadCombinationTable", () => AddLoadCombinationTable(mainPart, body));
 
-                // 水平解析済みかつ根入れ部（土圧合力ばね）が存在する場合、レベル1／レベル2の反力合計表を追加
                 if (mainWindowViewModel.IsHorizontalAnalysisDone
                     && anaModel?.HorizontalSoilSprings != null
                     && anaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == "根入部節点"))
                 {
-                    AddLineBreak(body);
-                    AddHorizontalReactionSummaryTable(mainPart, body, 1);
-                    AddLineBreak(body);
-                    AddHorizontalReactionSummaryTable(mainPart, body, 2);
+                    TimeH("HorizontalReactionSummaryTable L1", () => { AddLineBreak(body); AddHorizontalReactionSummaryTable(mainPart, body, 1); });
+                    TimeH("HorizontalReactionSummaryTable L2", () => { AddLineBreak(body); AddHorizontalReactionSummaryTable(mainPart, body, 2); });
                 }
 
                 var soilPiles = inputModel.ElementDivision.SoilPiles;
                 if (soilPiles is { Count: > 0 })
                 {
                     var soilPile = soilPiles[0];
-                    const double pileElevationW = 150;
                     const double pileElevationH = 100;
 
-                    AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "horizontal");
-                    AddAutoFigureCaption(body, "水平抵抗解析杭モデル", "図");
+                    TimeH("PileForceDiagram (horizontal)", () => {
+                        AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "horizontal");
+                        AddAutoFigureCaption(body, "水平抵抗解析杭モデル", "図");
+                    });
 
                     if (mainWindowViewModel.IsHorizontalAnalysisDone)
                     {
-                        AddPileForceSummaryTable(mainPart, body);
-                        AddNMinT(mainPart, body);
+                        TimeH("PileForceSummaryTable", () => AddPileForceSummaryTable(mainPart, body));
+                        TimeH("NMinT (N-M 図)", () => AddNMinT(mainPart, body));
                         if (mainWindowViewModel.IncludeHorizontal_QNInT)
-                            AddQNInT(mainPart, body);
+                            TimeH("QNInT (Q-N 図)", () => AddQNInT(mainPart, body));
                         if (mainWindowViewModel.IncludeHorizontal_MPhi)
-                            AddMPhiCurves(mainPart, body);
+                            TimeH("MPhiCurves (M-φ)", () => AddMPhiCurves(mainPart, body));
                         if (mainWindowViewModel.IncludeHorizontal_MTheta)
-                            AddMThetaCurves(mainPart, body);
+                            TimeH("MThetaCurves (M-θ)", () => AddMThetaCurves(mainPart, body));
                     }
                     else
                     {
@@ -436,105 +471,88 @@ namespace PileDesign.Output
                     }
                 }
 
-                // 基礎部材の強度と変形性能
                 if (mainWindowViewModel.CalculationReportLevel >= 2)
                 {
-                    AddSectionMemberCapacities(body);
-                    AddLineBreak(body);
+                    TimeH("SectionMemberCapacities", () => { AddSectionMemberCapacities(body); AddLineBreak(body); });
                 }
-
             }
-            // 全杭の応力ダイアグラム出力（曲げモーメント・せん断力）
             if ((mainWindowViewModel.IncludeHorizontal_Bending || mainWindowViewModel.IncludeHorizontal_Shear)
                 && mainWindowViewModel.IsHorizontalAnalysisDone && anaModel != null)
             {
-                AddAllPileStressDiagrams(mainPart, body,
+                Time("AllPileStressDiagrams (M/Q ダイアグラム)", () => AddAllPileStressDiagrams(mainPart, body,
                     mainWindowViewModel.IncludeHorizontal_Bending,
                     mainWindowViewModel.IncludeHorizontal_Shear,
-                    mainWindowViewModel.IncludeHorizontal_StressLimitState);
+                    mainWindowViewModel.IncludeHorizontal_StressLimitState));
             }
-            if (mainWindowViewModel.IncludePileLocationMap) // 杭配置マップ
-            {
-                double layoutW = 150; double layoutH = 200;
-                AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileBasicMark);
-                AddAutoFigureCaption(body, "杭配置マップ", "図");
-            }
-            if (mainWindowViewModel.IncludePileAxialLoadMap) // 杭軸力マップ
-            {
-                double layoutW = 150; double layoutH = 200;
-                AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileAxialForceMark);
-                AddAutoFigureCaption(body, "杭軸力マップ", "図");
-            }
-            if (mainWindowViewModel.IncludeIsFrontMap)  // 杭前後方杭マップ
-            {
-                double layoutW = 150; double layoutH = 200;
-                AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileIsFront);
-                AddAutoFigureCaption(body, "杭前後方杭マップ", "図");
-            }
-            if (mainWindowViewModel.IncludePileHeadMomentMap)  // 杭頭モーメントマップ
-            {
-                double layoutW = 150; double layoutH = 200;
-                AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileTopBendingMomentMark);
-                AddAutoFigureCaption(body, "杭頭モーメントマップ", "図");
-            }
-            if (mainWindowViewModel.IncludePileHeadShearMap)  // 杭頭せん断力マップ
-            {
-                double layoutW = 150; double layoutH = 200;
-                AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileTopShearForceMark);
-                AddAutoFigureCaption(body, "杭頭せん断力マップ", "図");
-            }
-            // 水平解析 検定（NGのみ）
+            if (mainWindowViewModel.IncludePileLocationMap)
+                Time("PileLocationMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileBasicMark); AddAutoFigureCaption(body, "杭配置マップ", "図"); });
+            if (mainWindowViewModel.IncludePileAxialLoadMap)
+                Time("PileAxialLoadMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileAxialForceMark); AddAutoFigureCaption(body, "杭軸力マップ", "図"); });
+            if (mainWindowViewModel.IncludeIsFrontMap)
+                Time("IsFrontMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileIsFront); AddAutoFigureCaption(body, "杭前後方杭マップ", "図"); });
+            if (mainWindowViewModel.IncludePileHeadMomentMap)
+                Time("PileHeadMomentMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileTopBendingMomentMark); AddAutoFigureCaption(body, "杭頭モーメントマップ", "図"); });
+            if (mainWindowViewModel.IncludePileHeadShearMap)
+                Time("PileHeadShearMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileTopShearForceMark); AddAutoFigureCaption(body, "杭頭せん断力マップ", "図"); });
             if (mainWindowViewModel.IncludeHorizontal_NGReport
                 && mainWindowViewModel.IsHorizontalAnalysisDone
                 && anaModel != null)
             {
-                AddHorizontalEvaluationReport(body, factored: true);
+                Time("HorizontalEvaluationReport (NG)", () => AddHorizontalEvaluationReport(body, factored: true));
             }
-            if (mainWindowViewModel.IncludeSettlement) // 沈下
+            if (mainWindowViewModel.IncludeSettlement)
             {
-                if (mainWindowViewModel.IsVerticalAnalysisDone)
-                {
-                    AddPageBreak(body);
-                    AddHeader1(body, "単杭の沈下", 2);
-                    AddSettlementGraph(mainPart, body);
-                }
-                else
-                {
-                    AddText(body, "（鉛直解析が未実施のため、沈下結果は省略されています）", "left");
-                }
+                Time("Settlement (単杭の沈下)", () => {
+                    if (mainWindowViewModel.IsVerticalAnalysisDone)
+                    {
+                        AddPageBreak(body);
+                        AddHeader1(body, "単杭の沈下", 2);
+                        AddSettlementGraph(mainPart, body);
+                    }
+                    else
+                    {
+                        AddText(body, "（鉛直解析が未実施のため、沈下結果は省略されています）", "left");
+                    }
+                });
             }
-            if (mainWindowViewModel.IncludeLoadSettlementCurve) // 沈下曲線
+            if (mainWindowViewModel.IncludeLoadSettlementCurve)
             {
-                if (mainWindowViewModel.IsVerticalAnalysisDone)
-                {
-                    AddPageBreak(body);
-                    AddHeader1(body, "荷重-沈下曲線", 2);
-                    AddSettlementGraph(mainPart, body);
-                }
-                else
-                {
-                    AddText(body, "（鉛直解析が未実施のため、荷重-沈下曲線は省略されています）", "left");
-                }
-            }
-
-            if (mainWindowViewModel.IncludeGroupPileSettlement) // 群杭沈下
-            {
-                AddGroupPileSettlementContourDiagram(mainPart, body);
-                AddPileSettlementTable(body);
+                Time("LoadSettlementCurve", () => {
+                    if (mainWindowViewModel.IsVerticalAnalysisDone)
+                    {
+                        AddPageBreak(body);
+                        AddHeader1(body, "荷重-沈下曲線", 2);
+                        AddSettlementGraph(mainPart, body);
+                    }
+                    else
+                    {
+                        AddText(body, "（鉛直解析が未実施のため、荷重-沈下曲線は省略されています）", "left");
+                    }
+                });
             }
 
-            if (mainWindowViewModel.IncludeVerticalBeamResults) // 基礎梁考慮鉛直解析結果
+            if (mainWindowViewModel.IncludeGroupPileSettlement)
             {
-                if (mainWindowViewModel.IsVerticalBeamAnalysisDone && mainWindowViewModel.VerticalBeamCaseResults != null)
-                {
-                    AddPageBreak(body);
-                    AddHeader1(body, "基礎梁考慮鉛直解析結果", 2);
-                    AddVerticalBeamResultTables(body);
-                }
-                else
-                {
-                    AddText(body, "（基礎梁考慮鉛直解析が未実施のため、結果は省略されています）", "left");
-                }
+                Time("GroupPileSettlement (コンタ+杭沈下表)", () => {
+                    AddGroupPileSettlementContourDiagram(mainPart, body);
+                    AddPileSettlementTable(body);
+                });
+            }
+
+            if (mainWindowViewModel.IncludeVerticalBeamResults)
+            {
+                Time("VerticalBeamResults", () => {
+                    if (mainWindowViewModel.IsVerticalBeamAnalysisDone && mainWindowViewModel.VerticalBeamCaseResults != null)
+                    {
+                        AddPageBreak(body);
+                        AddHeader1(body, "基礎梁考慮鉛直解析結果", 2);
+                        AddVerticalBeamResultTables(body);
+                    }
+                    else
+                    {
+                        AddText(body, "（基礎梁考慮鉛直解析が未実施のため、結果は省略されています）", "left");
+                    }
+                });
             }
 
             // FT-Pile構法
@@ -599,20 +617,24 @@ namespace PileDesign.Output
             if (body == null) return;
 
             // 目次見出し (3 種類すべて同フォーマット: Bold + 中央 + 14pt)
+            // プレースホルダ案内: 日本語 IME 環境では F9 = 全角英数字変換のため、
+            // Ctrl+A → F9 だと選択テキストが再変換されてしまう。代わりに
+            // 「目次上でクリック → F9」(または右クリック → フィールド更新) を案内する。
+            const string updateHint = "（この行をクリック → F9 で更新 / 右クリック → 「フィールド更新」）";
+
             AppendTocTitle(body, "目次");
-            AddTocField(body, $"TOC \\o \"1-{headingLevels}\" \\h \\z \\u",
-                "（Ctrl+A → F9 で更新）");
+            AddTocField(body, $"TOC \\o \"1-{headingLevels}\" \\h \\z \\u", updateHint);
             AddLineBreak(body);
 
             // 図目次
             AppendTocTitle(body, "図目次");
             // TOC \c の識別子は SEQ 識別子と同じ（Latin）を使う。
-            AddTocField(body, "TOC \\h \\z \\c \"Figure\"", "（Ctrl+A → F9 で更新）");
+            AddTocField(body, "TOC \\h \\z \\c \"Figure\"", updateHint);
             AddLineBreak(body);
 
             // 表目次
             AppendTocTitle(body, "表目次");
-            AddTocField(body, "TOC \\h \\z \\c \"Table\"", "（Ctrl+A → F9 で更新）");
+            AddTocField(body, "TOC \\h \\z \\c \"Table\"", updateHint);
         }
 
         // 目次タイトル段落を統一フォーマットで追加 (Bold + 中央 + 14pt)
@@ -1405,7 +1427,7 @@ namespace PileDesign.Output
                 if (fbInput != null)
                 {
                     AddHeader2(body, "一般梁要素");
-                    AddFoundationBeamInputTables(body, fbInput);
+                    AddFoundationBeamInputTables(body, fbInput, inputModel);
                 }
             }
         }
@@ -1463,7 +1485,7 @@ namespace PileDesign.Output
         }
 
         // 一般梁要素の入力データテーブル群
-        private static void AddFoundationBeamInputTables(Body body, FoundationBeamInput fbInput)
+        private static void AddFoundationBeamInputTables(Body body, FoundationBeamInput fbInput, InputModel inputModel)
         {
             double fs = 8.0;
 
@@ -1483,11 +1505,12 @@ namespace PileDesign.Output
                 );
                 matTable.Append(matHeader);
 
-                foreach (var mat in fbInput.Materials)
+                for (int matIdx = 0; matIdx < fbInput.Materials.Count; matIdx++)
                 {
+                    var mat = fbInput.Materials[matIdx];
                     TableRow row = new();
                     row.Append(
-                        CreateTableCellWithWidth($"{mat.No}", "center", wNo, fs),
+                        CreateTableCellWithWidth($"{matIdx + 1}", "center", wNo, fs),
                         CreateTableCellWithWidth(mat.Name ?? "", "left", wName, fs),
                         CreateTableCellWithWidth($"{mat.YoungModulus:E2}", "right", wE, fs),
                         CreateTableCellWithWidth($"{mat.ShearModulus:E2}", "right", wG, fs),
@@ -1516,11 +1539,12 @@ namespace PileDesign.Output
                 );
                 secTable.Append(secHeader);
 
-                foreach (var sec in fbInput.Sections)
+                for (int secIdx = 0; secIdx < fbInput.Sections.Count; secIdx++)
                 {
+                    var sec = fbInput.Sections[secIdx];
                     TableRow row = new();
                     row.Append(
-                        CreateTableCellWithWidth($"{sec.No}", "center", wNo, fs),
+                        CreateTableCellWithWidth($"{secIdx + 1}", "center", wNo, fs),
                         CreateTableCellWithWidth(sec.Name ?? "", "left", wName, fs),
                         CreateTableCellWithWidth($"{sec.Width:N3}", "right", wB, fs),
                         CreateTableCellWithWidth($"{sec.Height:N3}", "right", wH, fs),
@@ -1549,15 +1573,18 @@ namespace PileDesign.Output
                 );
                 beamTable.Append(beamHeader);
 
-                foreach (var beam in fbInput.Beams)
+                for (int beamIdx = 0; beamIdx < fbInput.Beams.Count; beamIdx++)
                 {
-                    // ノード参照の表示文字列を組み立て
-                    string nodeIStr = GetBeamNodeDisplayString(beam.NodeI_Type, beam.NodeI_No, fbInput);
-                    string nodeJStr = GetBeamNodeDisplayString(beam.NodeJ_Type, beam.NodeJ_No, fbInput);
+                    var beam = fbInput.Beams[beamIdx];
+                    // ノード参照の表示文字列を組み立て (Type+Id から表示 No を解決)
+                    int nodeINo = inputModel?.GetNodeDisplayNo(beam.NodeI_Type, beam.NodeI_Id) ?? 0;
+                    int nodeJNo = inputModel?.GetNodeDisplayNo(beam.NodeJ_Type, beam.NodeJ_Id) ?? 0;
+                    string nodeIStr = GetBeamNodeDisplayString(beam.NodeI_Type, nodeINo, fbInput);
+                    string nodeJStr = GetBeamNodeDisplayString(beam.NodeJ_Type, nodeJNo, fbInput);
 
                     TableRow row = new();
                     row.Append(
-                        CreateTableCellWithWidth($"{beam.No}", "center", wNo, fs),
+                        CreateTableCellWithWidth($"{beamIdx + 1}", "center", wNo, fs),
                         CreateTableCellWithWidth($"{beam.MaterialNo}", "center", wMat, fs),
                         CreateTableCellWithWidth($"{beam.SectionNo}", "center", wSec, fs),
                         CreateTableCellWithWidth(nodeIStr, "left", wNI, fs),
@@ -2093,7 +2120,7 @@ namespace PileDesign.Output
                                         if (beam == null) continue;
 
                                         // GetBeamResult may return null or have null subproperties -> guard
-                                        var beamResult = beam.GetBeamResult(anaModel, loadCase, loadCombination, isLiquefaction);
+                                        var beamResult = GetBeamResultCached(beam, loadCase, loadCombination, isLiquefaction);
                                         var cumForce = beamResult?.CumulativeForce;
                                         if (cumForce == null) continue;
 
@@ -2104,8 +2131,8 @@ namespace PileDesign.Output
                                         double uhI = 0.0, uhJ = 0.0;
                                         try
                                         {
-                                            var nodeIResult = beam.NodeI?.GetNodeResult(anaModel, loadCase, loadCombination, isLiquefaction);
-                                            var nodeJResult = beam.NodeJ?.GetNodeResult(anaModel, loadCase, loadCombination, isLiquefaction);
+                                            var nodeIResult = beam.NodeI is null ? null : GetNodeResultCached(beam.NodeI, loadCase, loadCombination, isLiquefaction);
+                                            var nodeJResult = beam.NodeJ is null ? null : GetNodeResultCached(beam.NodeJ, loadCase, loadCombination, isLiquefaction);
                                             uhI = nodeIResult?.CumulativeDisp?.Uh ?? 0.0;
                                             uhJ = nodeJResult?.CumulativeDisp?.Uh ?? 0.0;
                                         }
@@ -2287,7 +2314,7 @@ namespace PileDesign.Output
                     {
                         if (colIdx == 1)
                         {
-                            var para = GetParagraph("作用の組み合わせ", "center", 8);
+                            var para = GetParagraph("作用の組合せ", "center", 8);
                             SetTableCellWithVerticalAlign(cell, para, "center");
                         }
                         else if (colIdx >= 2 && (colIdx - 2) < loadCasesInput.LoadCombinations.Count)
@@ -2591,7 +2618,7 @@ namespace PileDesign.Output
                     var lc = cases[ci];
                     foreach (var isLiq in liqPatterns)
                     {
-                        int lastStep = anaModel.GetAnalysisLastStep(lc, comb, isLiq);
+                        int lastStep = GetLastStepCached(lc, comb, isLiq);
                         if (lastStep < 0) continue;
                         double sumFx = 0, sumFy = 0;
                         foreach (var spring in springs)
@@ -3118,10 +3145,27 @@ namespace PileDesign.Output
             List<List<double>>? limitYsByPanel = null,
             string? limitLegend = null)
         {
+            byte[]? pngBytes = RenderPileElevResultToPngBytes(
+                xsLists, ysLists, titles, xLabels, yLabels,
+                widthMm, heightMm, limitXsByPanel, limitYsByPanel, limitLegend);
+            if (pngBytes == null || pngBytes.Length == 0) return;
+            WordDrawingBuilder.AddPngBytesToBody(mainPart, body, pngBytes, widthMm, heightMm);
+        }
+
+        // 杭応力ダイアグラム (変位/せん断/曲げ) の Multiplot を PNG バイト列として返す。
+        // Word body を一切触らないため、Parallel.For などで並列実行できる。
+        public static byte[]? RenderPileElevResultToPngBytes(
+            List<List<double>> xsLists, List<List<double>> ysLists,
+            List<string> titles, List<string> xLabels, List<string> yLabels,
+            double widthMm = 150, double heightMm = 150,
+            List<List<double>>? limitXsByPanel = null,
+            List<List<double>>? limitYsByPanel = null,
+            string? limitLegend = null)
+        {
             ScottPlot.Multiplot multiplot = new();
 
             int count = Math.Min(3, Math.Min(xsLists?.Count ?? 0, ysLists?.Count ?? 0));
-            if (count == 0 || xsLists == null || ysLists == null) return;
+            if (count == 0 || xsLists == null || ysLists == null) return null;
             multiplot.AddPlots(count);
 
             List<Plot> plots = [];
@@ -3188,20 +3232,18 @@ namespace PileDesign.Output
             // apply a custom layout
             multiplot.Layout = new ScottPlot.MultiplotLayouts.Columns();
 
-            // 2. 一時画像ファイルとして保存
-            string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".png");
-            //int widthPx = (int)(widthMm / 25.4 * 96 * 2);
             int widthPx = MmToPx(widthMm, Dpi, 2.0);
-            //int heightPx = (int)(heightMm / 25.4 * 96 * 2);
             int heightPx = MmToPx(heightMm, Dpi, 2.0);
-            //wpf.Plot.SavePng(tempFile, widthPx, heightPx);
-            multiplot.SavePng(tempFile, widthPx, heightPx);
-
-            // 3. Word文書のbodyに画像挿入
-            WordDocumentUtils.AddImageToBodyByMm(mainPart, body, tempFile, widthMm, heightMm);
-
-            // 4. 一時ファイル削除
-            if (File.Exists(tempFile)) File.Delete(tempFile);
+            string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".png");
+            try
+            {
+                multiplot.SavePng(tempFile, widthPx, heightPx);
+                return File.ReadAllBytes(tempFile);
+            }
+            finally
+            {
+                if (File.Exists(tempFile)) File.Delete(tempFile);
+            }
         }
 
         // スコットプロット挿入メソッド
@@ -4367,7 +4409,7 @@ diameterSelector,
                     var lc = loadCases[i];
                     if (lc?.IsApplicable != true) continue;
 
-                    var res = beam.GetBeamResult(anaModel, lc, loadCombination, isLiquefaction)?.CumulativeForce;
+                    var res = GetBeamResultCached(beam, lc, loadCombination, isLiquefaction)?.CumulativeForce;
                     if (res == null) continue;
 
                     mark += $"\n{res.Myi:N0}";
@@ -4510,7 +4552,7 @@ diameterSelector,
                         // 液状化あり / なし 両方チェックし、それぞれで最大を取る
                         try
                         {
-                            var resL = beam.GetBeamResult(anaModel, lc, comb, true)?.CumulativeForce;
+                            var resL = GetBeamResultCached(beam, lc, comb, true)?.CumulativeForce;
                             if (resL != null)
                             {
                                 double val = valueSelector(resL);
@@ -4522,7 +4564,7 @@ diameterSelector,
 
                         try
                         {
-                            var resN = beam.GetBeamResult(anaModel, lc, comb, false)?.CumulativeForce;
+                            var resN = GetBeamResultCached(beam, lc, comb, false)?.CumulativeForce;
                             if (resN != null)
                             {
                                 double val = valueSelector(resN);

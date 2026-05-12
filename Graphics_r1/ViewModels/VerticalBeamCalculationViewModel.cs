@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MathNet.Numerics.LinearAlgebra;
 using PileDesign.FEM;
@@ -280,7 +280,7 @@ namespace PileDesign.ViewModels
                 return "杭配置データが定義されていません。";
 
             if (InputModel.FoundationBeamInput?.Beams == null || InputModel.FoundationBeamInput.Beams.Count == 0)
-                return "基礎梁要素が定義されていません。";
+                return "基礎梁が定義されていません。";
 
             foreach (var pile in InputModel.PileLayoutItems)
             {
@@ -478,7 +478,7 @@ namespace PileDesign.ViewModels
         // ══════════════════════════════════════════════════════
 
         /// <summary>
-        /// 各杭の接続節点に増分荷重を設定する。
+        /// 各杭の接合節点に増分荷重を設定する。
         /// getLoad で各杭の荷重を取得し、LoadStepsCount で分割した増分を設定。
         /// 戻り値は合計荷重。
         /// </summary>

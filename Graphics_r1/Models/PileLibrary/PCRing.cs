@@ -156,12 +156,12 @@ namespace PileDesign.Models.PileLibrary
 
                     _PCRings.Add(_PCRing);
                 }
-                catch (CsvHelper.TypeConversion.TypeConverterException ex)
+                catch (CsvHelper.TypeConversion.TypeConverterException)
                 {
                     // 型変換失敗の行はスキップしてデバッグ出力（運用時はログ出力に置き換える）
                     continue;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     continue;
                 }

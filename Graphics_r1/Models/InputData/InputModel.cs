@@ -1,4 +1,4 @@
-﻿using PileDesign.Constants;
+using PileDesign.Constants;
 using Newtonsoft.Json;
 using PileDesign.ViewModels;
 using Serilog;
@@ -92,6 +92,7 @@ namespace PileDesign.Models.InputData
                 if (_pileLayoutItems == value) return;
                 _pileLayoutItems = value;
                 OnPropertyChanged(nameof(PileLayoutItems));  // ← PropertyChanged が発火する
+                RefreshAvailableNodeReferenceOptions();
                 WirePileLayoutItemsHandlers(); // 追加: ハンドラ再配線
             }
         }
@@ -109,7 +110,11 @@ namespace PileDesign.Models.InputData
         public FoundationBeamInput FoundationBeamInput
         {
             get => _foundationBeamInput;
-            set => SetProperty(ref _foundationBeamInput, value);
+            set
+            {
+                if (SetProperty(ref _foundationBeamInput, value))
+                    RefreshAvailableNodeReferenceOptions();
+            }
         }
 
         // 杭軸力モード: 入力値＋応力解析結果を使用するか
@@ -134,7 +139,11 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<InputNode> InputNodes
         {
             get => _inputNodes;
-            set => SetProperty(ref _inputNodes, value);
+            set
+            {
+                if (SetProperty(ref _inputNodes, value))
+                    RefreshAvailableNodeReferenceOptions();
+            }
         }
 
         // クラス内フィールドに追加
@@ -697,15 +706,13 @@ namespace PileDesign.Models.InputData
                 SoilEmbedment = new SoilEmbedment(1, 0.0, [])
             };
             PileGroupSettlement = new PileGroupSettlement();
-            Elements = [];
             GridXItems = [];
             GridYItems = [];
 
-            // 基礎梁入力データの初期化（デフォルト材料・断面を作成）
+            // 基礎梁入力データの初期化（デフォルト材料・断面を作成）— No プロパティは廃止 (位置 = ID)
             FoundationBeamInput = new FoundationBeamInput();
             FoundationBeamInput.Materials.Add(new BeamMaterial
             {
-                No = 1,
                 Name = "C24",
                 YoungModulus = 2.5e7,
                 ShearModulus = 1.04e7,
@@ -713,7 +720,6 @@ namespace PileDesign.Models.InputData
             });
             FoundationBeamInput.Sections.Add(new BeamSection
             {
-                No = 1,
                 Name = "G1",
                 Width = 0.8,
                 Height = 2.0
@@ -732,14 +738,6 @@ namespace PileDesign.Models.InputData
         {
             get => _pileGroupSettlement;
             set => SetProperty(ref _pileGroupSettlement, value);
-        }
-
-        // 要素
-        private ObservableCollection<Element> _elements;
-        public ObservableCollection<Element> Elements
-        {
-            get => _elements;
-            set => SetProperty(ref _elements, value);
         }
 
         // グリッド
@@ -856,11 +854,11 @@ namespace PileDesign.Models.InputData
             {
                 return PileLayoutItems.Sum(item => item.AxialForceVL0);
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException)
             {
                 return 0.0;
             }
-            catch (ArgumentNullException ex)
+            catch (ArgumentNullException)
             {
                 return 0.0;
             }
@@ -873,11 +871,11 @@ namespace PileDesign.Models.InputData
             {
                 return PileLayoutItems.Sum(item => item.AxialForceVLAdditional);
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException)
             {
                 return 0.0;
             }
-            catch (ArgumentNullException ex)
+            catch (ArgumentNullException)
             {
                 return 0.0;
             }
@@ -889,13 +887,14 @@ namespace PileDesign.Models.InputData
             {
                 return GetSumVL() + GetSumVLadd();
             }
-            catch (OverflowException ex)
+            catch (OverflowException)
             {
                 return 0.0;
             }
         }
 
         // VLadd重心を返すメソッド
+        // v2 セマンティクス: item.Z = 接合節点 Z なので、Z 重心は接合節点平均 (荷重作用点としての重心)
         public Point3D GetVLaddGravityCenter()
         {
             double sumW = 0;
@@ -986,11 +985,11 @@ namespace PileDesign.Models.InputData
 
                 return new Point3D(sumX / count, sumY / count, sumZ / count);
             }
-            catch (DivideByZeroException ex)
+            catch (DivideByZeroException)
             {
                 return new Point3D(0, 0, 0);
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException)
             {
                 return new Point3D(0, 0, 0);
             }
@@ -1109,8 +1108,7 @@ namespace PileDesign.Models.InputData
                 // 旧データとの互換性: InputNodesがnullの場合は空のコレクションを作成
                 loaded.InputNodes ??= [];
 
-                // 旧データとの互換性: Element → FoundationBeamElement への自動変換
-                loaded.MigrateElementsToFoundationBeams();
+                // 旧データとの互換性: Element → FoundationBeam への自動変換
 
                 // 旧データとの互換性: Materials/Sections の初期化
                 loaded.EnsureFoundationBeamDefaults();
@@ -1137,8 +1135,7 @@ namespace PileDesign.Models.InputData
                     // 旧データとの互換性: InputNodesがnullの場合は空のコレクションを作成
                     loaded.InputNodes ??= [];
 
-                    // 旧データとの互換性: Element → FoundationBeamElement への自動変換
-                    loaded.MigrateElementsToFoundationBeams();
+                    // 旧データとの互換性: Element → FoundationBeam への自動変換
 
                     // 旧データとの互換性: Materials/Sections の初期化
                     loaded.EnsureFoundationBeamDefaults();
@@ -1190,9 +1187,13 @@ namespace PileDesign.Models.InputData
                 throw new InvalidOperationException("ファイルの内容をデシリアライズできませんでした。");
 
             loaded.InputNodes ??= [];
-            loaded.MigrateElementsToFoundationBeams();
             loaded.EnsureFoundationBeamDefaults();
             loaded.EnsureAnalysisTargetDefaults();
+
+            // PileZ セマンティクス v1 → v2 マイグレーション
+            // LoadHeadless は ProjectData レイヤを経由しないため、InputModel 単独ロード = 常に旧形式とみなす。
+            loaded.MigratePileZSemantics_v1_to_v2();
+
             return loaded;
         }
 
@@ -1204,13 +1205,12 @@ namespace PileDesign.Models.InputData
             // FoundationBeamInputがnullの場合は作成
             FoundationBeamInput ??= new FoundationBeamInput();
 
-            // Materialsが空の場合はデフォルトを追加
+            // Materialsが空の場合はデフォルトを追加 — No プロパティ廃止 (位置 = ID)
             FoundationBeamInput.Materials ??= [];
             if (FoundationBeamInput.Materials.Count == 0)
             {
                 FoundationBeamInput.Materials.Add(new BeamMaterial
                 {
-                    No = 1,
                     Name = "C24",
                     YoungModulus = 2.5e7,
                     ShearModulus = 1.04e7,
@@ -1218,51 +1218,47 @@ namespace PileDesign.Models.InputData
                 });
             }
 
-            // Sectionsが空の場合はデフォルトを追加
+            // Sectionsが空の場合はデフォルトを追加 — No プロパティ廃止 (位置 = ID)
             FoundationBeamInput.Sections ??= [];
             if (FoundationBeamInput.Sections.Count == 0)
             {
                 FoundationBeamInput.Sections.Add(new BeamSection
                 {
-                    No = 1,
                     Name = "G1",
                     Width = 0.8,
                     Height = 2.0
                 });
             }
 
-            // 梁要素で使用されている材料No・断面Noに対応する定義がない場合は追加
+            // 梁要素で参照されている MaterialNo / SectionNo (1-based 位置) に必要な数の
+            // 定義がコレクションにあることを保証 (位置 = ID 管理)
             if (FoundationBeamInput.Beams != null)
             {
-                var existingMatNos = new HashSet<int>(FoundationBeamInput.Materials.Select(m => m.No));
-                var existingSecNos = new HashSet<int>(FoundationBeamInput.Sections.Select(s => s.No));
+                int requiredMatCount = FoundationBeamInput.Beams.Count > 0
+                    ? FoundationBeamInput.Beams.Max(b => b.MaterialNo) : 0;
+                int requiredSecCount = FoundationBeamInput.Beams.Count > 0
+                    ? FoundationBeamInput.Beams.Max(b => b.SectionNo) : 0;
 
-                foreach (var beam in FoundationBeamInput.Beams)
+                while (FoundationBeamInput.Materials.Count < requiredMatCount)
                 {
-                    if (!existingMatNos.Contains(beam.MaterialNo))
+                    FoundationBeamInput.Materials.Add(new BeamMaterial
                     {
-                        FoundationBeamInput.Materials.Add(new BeamMaterial
-                        {
-                            No = beam.MaterialNo,
-                            Name = $"C24(自動)",
-                            YoungModulus = 2.5e7,
-                            ShearModulus = 1.04e7,
-                            PoissonRatio = 0.2
-                        });
-                        existingMatNos.Add(beam.MaterialNo);
-                    }
+                        Name = $"C24(自動)",
+                        YoungModulus = 2.5e7,
+                        ShearModulus = 1.04e7,
+                        PoissonRatio = 0.2
+                    });
+                }
 
-                    if (!existingSecNos.Contains(beam.SectionNo))
+                while (FoundationBeamInput.Sections.Count < requiredSecCount)
+                {
+                    int idx = FoundationBeamInput.Sections.Count + 1;
+                    FoundationBeamInput.Sections.Add(new BeamSection
                     {
-                        FoundationBeamInput.Sections.Add(new BeamSection
-                        {
-                            No = beam.SectionNo,
-                            Name = $"G{beam.SectionNo}(自動)",
-                            Width = 0.8,
-                            Height = 2.0
-                        });
-                        existingSecNos.Add(beam.SectionNo);
-                    }
+                        Name = $"G{idx}(自動)",
+                        Width = 0.8,
+                        Height = 2.0
+                    });
                 }
             }
 
@@ -1296,102 +1292,32 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 旧形式のElementデータをFoundationBeamInputに自動変換する
+        /// PileLayoutDataItem.Z セマンティクスを v1 (= 杭頭節点 Z) から v2 (= 接合節点 Z) へマイグレートする。
+        /// 旧形式: cap_z = pile.Z, joint_z = pile.Z + ΔZc
+        /// 新形式: joint_z = pile.Z, cap_z = pile.Z - ΔZc
+        /// 変換式: new_Z = old_Z + FoundationBeamDeltaZc
         /// </summary>
-        internal void MigrateElementsToFoundationBeams()
+        /// <remarks>
+        /// AttachViewModel 前 (= イベントハンドラ未購読) に呼び出すこと。SoilPile キャッシュ再構築の連鎖を避ける。
+        /// FormatVersion < 2 のロード時に ApplyPostLoadProtocol / LoadHeadless から呼ばれる。
+        /// </remarks>
+        internal void MigratePileZSemantics_v1_to_v2()
         {
-            // 変換条件チェック: Elementsが存在し、FoundationBeamInputが空の場合のみ変換
-            if (Elements == null || Elements.Count == 0) return;
-            if (FoundationBeamInput == null) FoundationBeamInput = new FoundationBeamInput();
-            if (FoundationBeamInput.Nodes.Count > 0 || FoundationBeamInput.Beams.Count > 0) return;
+            if (PileLayoutItems == null) return;
 
-            try
+            int migratedCount = 0;
+            foreach (var pile in PileLayoutItems)
             {
-                var nodeDict = new Dictionary<string, FoundationNode>(); // 座標をキーにノードを管理
-                int nodeCounter = 1;
-
-                // Elementから節点と梁要素を変換
-                foreach (var element in Elements)
-                {
-                    if (element.Nodes == null || element.Nodes.Count < 2) continue;
-
-                    // 始点ノード変換
-                    var startNode = element.Nodes[0];
-                    string startKey = $"{startNode.X:F6},{startNode.Y:F6},{startNode.Z:F6}";
-                    if (!nodeDict.ContainsKey(startKey))
-                    {
-                        var newNode = new FoundationNode
-                        {
-                            No = nodeCounter++,
-                            X = startNode.X,
-                            Y = startNode.Y,
-                            Z = startNode.Z,
-                            Name = $"Node_{startNode.No}"
-                        };
-                        nodeDict[startKey] = newNode;
-                        FoundationBeamInput.Nodes.Add(newNode);
-                    }
-
-                    // 終点ノード変換
-                    var endNode = element.Nodes[1];
-                    string endKey = $"{endNode.X:F6},{endNode.Y:F6},{endNode.Z:F6}";
-                    if (!nodeDict.ContainsKey(endKey))
-                    {
-                        var newNode = new FoundationNode
-                        {
-                            No = nodeCounter++,
-                            X = endNode.X,
-                            Y = endNode.Y,
-                            Z = endNode.Z,
-                            Name = $"Node_{endNode.No}"
-                        };
-                        nodeDict[endKey] = newNode;
-                        FoundationBeamInput.Nodes.Add(newNode);
-                    }
-
-                    // 梁要素変換
-                    var beam = new FoundationBeamElement
-                    {
-                        No = FoundationBeamInput.Beams.Count + 1,
-                        NodeI_No = nodeDict[startKey].No,
-                        NodeJ_No = nodeDict[endKey].No,
-                        MaterialNo = 1,
-                        SectionNo = 1,
-                        Width = 0.5,  // デフォルト値
-                        Height = 0.8, // デフォルト値
-                        SectionName = "Default"
-                    };
-                    FoundationBeamInput.Beams.Add(beam);
-                }
-
-                // 旧データ変換した梁要素は MaterialNo=1 / SectionNo=1 を参照するため、参照先を保証
-                if (FoundationBeamInput.Beams.Count > 0)
-                {
-                    FoundationBeamInput.EnsureDefaultMaterialAndSection();
-                }
-
-                // 変換成功メッセージ
-                if (FoundationBeamInput.Nodes.Count > 0)
-                {
-                    PileDesign.Services.MessageService.Show(
-                        $"旧形式のデータを新しい形式に変換しました。\n" +
-                        $"節点: {FoundationBeamInput.Nodes.Count} 個\n" +
-                        $"梁要素: {FoundationBeamInput.Beams.Count} 個",
-                        "データ変換完了",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Information);
-                }
-
-                // 変換後、Elementsをクリア（ただしコレクション自体は残す）
-                Elements.Clear();
+                if (pile == null) continue;
+                // pile.Z setter 経由で SetProperty が走るが、AttachViewModel 前なら
+                // OnPileLayoutItemPropertyChanged は未購読なので SoilPile キャッシュは触られない。
+                pile.Z += pile.FoundationBeamDeltaZc;
+                migratedCount++;
             }
-            catch (Exception ex)
+
+            if (migratedCount > 0)
             {
-                PileDesign.Services.MessageService.Show(
-                    $"データ変換中にエラーが発生しました: {ex.Message}",
-                    "変換エラー",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Warning);
+                Log.Information("[Migration] PileZSemantics v1->v2 applied to {Count} piles", migratedCount);
             }
         }
 
@@ -1415,7 +1341,7 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// SoilPiles（杭と地盤の組み合わせ）を生成するメソッド
+        /// SoilPiles（杭と地盤の組合せ）を生成するメソッド
         /// GenerateSoilPiles 完了後に一括通知（イベント多発を抑制）
         /// </summary>
         public void GenerateSoilPiles()
@@ -1454,7 +1380,9 @@ namespace PileDesign.Models.InputData
                 {
                     int pileBodyNo = pileLayoutDataItem.PileBodyNo;
                     int groundNo = pileLayoutDataItem.GroundNo;
-                    double pileTopAltitude = pileLayoutDataItem.Point3D.Z;
+                    // pileTopAltitude は杭頭高さ。v2 セマンティクスでは pile.Z は接合節点 Z なので
+                    // PileHeadZ (= pile.Z - ΔZc) を起点にする。
+                    double pileTopAltitude = pileLayoutDataItem.PileHeadZ;
 
                     if (pileBodyNo - 1 < 0 || pileBodyNo - 1 >= PileBodies.Count) continue;
                     if (groundNo - 1 < 0 || groundNo - 1 >= GroundsInput.Count) continue;
@@ -1466,7 +1394,7 @@ namespace PileDesign.Models.InputData
                     // O(1) 重複チェック（座標を離散化してHashSetで判定）
                     long zKey = (long)Math.Round(pileTopAltitude / NumericalConstants.COORDINATE_TOLERANCE);
                     if (!usedCombinations.Add((groundNo, pileBodyNo, zKey)))
-                        continue; // 既に処理済みの組み合わせ
+                        continue; // 既に処理済みの組合せ
 
                     // Z座標リストをList<double>で構築（ObservableCollectionより高速）
                     var zs = new List<double> { pileTopAltitude };
@@ -1592,7 +1520,8 @@ namespace PileDesign.Models.InputData
                 }
                 foreach (PileLayoutDataItem pileLayoutDataItem in PileLayoutItems)
                 {
-                    long pZKey = (long)Math.Round(pileLayoutDataItem.Point3D.Z / NumericalConstants.COORDINATE_TOLERANCE);
+                    // SoilPile.Z は杭頭基準なので、ルックアップキーも PileHeadZ で揃える (v2 セマンティクス)
+                    long pZKey = (long)Math.Round(pileLayoutDataItem.PileHeadZ / NumericalConstants.COORDINATE_TOLERANCE);
                     if (soilPileLookup.TryGetValue((pileLayoutDataItem.GroundNo, pileLayoutDataItem.PileBodyNo, pZKey), out int altNo))
                     {
                         pileLayoutDataItem.SoilPileAltNo = altNo;
@@ -1736,7 +1665,6 @@ namespace PileDesign.Models.InputData
                 copy.FoundationBeamInput = PileDesign.Common.DeepCopyUtil.CloneJson(this.FoundationBeamInput);
                 copy.PileGroupSettlement = PileDesign.Common.DeepCopyUtil.CloneJson(this.PileGroupSettlement);
                 copy.InputNodes = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.InputNodes);
-                copy.Elements = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.Elements);
                 copy.GridXItems = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.GridXItems);
                 copy.GridYItems = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.GridYItems);
                 long tJsonRest = swTotal.ElapsedMilliseconds - tStart - tHand - tQc;
@@ -1868,6 +1796,26 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 節点参照（Type + Guid）から表示用の連番 No を解決します。
+        /// 杭は PileLayoutItems の No、一般節点は InputNodes の No、専用節点は FoundationBeamInput.Nodes の No。
+        /// 見つからない場合は 0。
+        /// </summary>
+        public int GetNodeDisplayNo(NodeReferenceType type, Guid id)
+        {
+            switch (type)
+            {
+                case NodeReferenceType.GeneralNode:
+                    return InputNodes?.FirstOrDefault(n => n.UniqueId == id)?.No ?? 0;
+                case NodeReferenceType.PileLayout:
+                    return PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id)?.No ?? 0;
+                case NodeReferenceType.FoundationNode:
+                    return FoundationBeamInput?.Nodes.FirstOrDefault(n => n.Id == id)?.No ?? 0;
+                default:
+                    return 0;
+            }
+        }
+
+        /// <summary>
         /// 節点参照（Type + Guid）から座標を解決します。
         /// </summary>
         /// <returns>座標が見つかった場合は (X, Y, Z)、見つからない場合は null</returns>
@@ -1883,8 +1831,8 @@ namespace PileDesign.Models.InputData
                     var pile = PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
                     if (pile != null)
                     {
-                        // 杭頭 + FoundationBeamDeltaZc の位置
-                        double z = pile.Z + pile.FoundationBeamDeltaZc;
+                        // 接合節点位置 (v2 セマンティクス: pile.Z は接合節点 Z)
+                        double z = pile.Z;
                         return (pile.X, pile.Y, z);
                     }
                     return null;
@@ -1895,6 +1843,48 @@ namespace PileDesign.Models.InputData
 
                 default:
                     return null;
+            }
+        }
+
+        /// <summary>
+        /// 梁要素 ComboBox 用の全節点候補リスト (杭配置 + 一般節点 + 基礎梁節点)。
+        /// 表示順: P:1..P:N → G:1..G:M → F:1..F:K。
+        /// 安定参照を保つため ObservableCollection で保持し、Refresh で内容を更新する。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ObservableCollection<NodeReferenceOption> AvailableNodeReferenceOptions { get; } = [];
+
+        /// <summary>
+        /// AvailableNodeReferenceOptions を最新の PileLayoutItems / InputNodes / FoundationBeamInput.Nodes から再構築する。
+        /// 既存エントリを再利用できる場合はそのまま (ComboBox の SelectedItem 参照を破壊しない)。
+        /// </summary>
+        public void RefreshAvailableNodeReferenceOptions()
+        {
+            var newList = new System.Collections.Generic.List<NodeReferenceOption>();
+            if (PileLayoutItems != null)
+                foreach (var p in PileLayoutItems)
+                    newList.Add(new NodeReferenceOption { Type = NodeReferenceType.PileLayout, Id = p.UniqueId, Display = $"P:{p.PileNo}" });
+            if (InputNodes != null)
+                foreach (var n in InputNodes)
+                    newList.Add(new NodeReferenceOption { Type = NodeReferenceType.GeneralNode, Id = n.UniqueId, Display = $"G:{n.No}" });
+            if (FoundationBeamInput?.Nodes != null)
+                foreach (var f in FoundationBeamInput.Nodes)
+                    newList.Add(new NodeReferenceOption { Type = NodeReferenceType.FoundationNode, Id = f.Id, Display = $"F:{f.No}" });
+
+            // 差分更新: SelectedItem が指すインスタンスを温存しつつ、追加・削除・並び替えに対応
+            AvailableNodeReferenceOptions.Clear();
+            foreach (var opt in newList) AvailableNodeReferenceOptions.Add(opt);
+
+            // ComboBox の SelectedValue 再マッチングを促す:
+            // 初回レンダリング時に ItemsSource が空でマッチに失敗していた場合、
+            // ItemsSource 更新後に SelectedValue の PropertyChanged を発火させて再評価させる。
+            if (FoundationBeamInput?.Beams != null)
+            {
+                foreach (var beam in FoundationBeamInput.Beams)
+                {
+                    beam.OnPropertyChanged(nameof(FoundationBeam.NodeI_Key));
+                    beam.OnPropertyChanged(nameof(FoundationBeam.NodeJ_Key));
+                }
             }
         }
 

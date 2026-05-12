@@ -4,21 +4,21 @@
   "loadCaseLevel1": {
     "forceActionPointX": 8.0,
     "forceActionPointY": 12.8,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -0.4,
     "upperMassForce": 7559,
     "foundationMassForce": 1005
   },
   "loadCaseLevel2": {
     "forceActionPointX": 8.0,
     "forceActionPointY": 12.8,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -0.4,
     "upperMassForce": 13706,
     "foundationMassForce": 4018
   },
   "loadCaseLevel2Alt": {
     "forceActionPointX": 8.0,
     "forceActionPointY": 12.8,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -0.4,
     "upperMassForce": 17322,
     "foundationMassForce": 4018
   },
@@ -68,7 +68,7 @@
       "pileBodyType": "既製コンクリート杭",
       "pileTopType": "鉄筋定着工法",
       "pileConstructionType": "埋込み杭（プレボーリング杭）",
-      "pileToeDia": 700,
+      "pileToeDia": 1000,
       "tipNonPermability": 0.0,
       "embedmentIntoBearingSoil": 1.0,
       "pileInnerDia": 0.0,

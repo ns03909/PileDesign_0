@@ -6,12 +6,15 @@
                     xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
                     xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
                     xmlns:wpfMath="clr-namespace:WpfMath.Controls;assembly=WpfMath"
+                    xmlns:Fluent="urn:fluent-ribbon"
                     >
 
     <!-- ═══════════════════════ デザイントークン (v29 集約) ═══════════════════════ -->
     <!-- カラー定義: 全画面で参照する基本色。テーマ変更時はここを書き換えれば全反映 -->
     <Color x:Key="PrimaryAccentColor">#62B0E2</Color>           <!-- ライトブルー (見出し / 強調 / 選択) -->
     <Color x:Key="PrimaryAccentDarkColor">#FF62B0E2</Color>     <!-- 同 (アルファ付き) -->
+    <Color x:Key="PrimaryAccentLightColor">#EAF5FB</Color>      <!-- 極薄ティント (ホバー背景, 縞) -->
+    <Color x:Key="PrimaryAccentMediumColor">#C7E1F2</Color>     <!-- 薄ティント (選択背景) -->
     <Color x:Key="ErrorColor">#E53935</Color>                   <!-- 赤 (エラー) -->
     <Color x:Key="WarningColor">#F57C00</Color>                 <!-- 橙 (警告) -->
     <Color x:Key="ReadOnlyColor">#999999</Color>                <!-- ダークグレー (読取専用) -->
@@ -28,6 +31,33 @@
     <!-- ブラシ定義 (Foreground / Background での参照用) -->
     <SolidColorBrush x:Key="PrimaryAccentBrush" Color="{StaticResource PrimaryAccentColor}"/>
     <SolidColorBrush x:Key="PrimaryAccentDarkBrush" Color="{StaticResource PrimaryAccentDarkColor}"/>
+    <SolidColorBrush x:Key="PrimaryAccentLightBrush" Color="{StaticResource PrimaryAccentLightColor}"/>
+    <SolidColorBrush x:Key="PrimaryAccentMediumBrush" Color="{StaticResource PrimaryAccentMediumColor}"/>
+
+    <!-- ─── Fluent.Ribbon Accent override (NikkenSkyBlue 統一) ───
+         Fluent.Ribbon 11 Light.Blue テーマの濃青アクセントを NikkenSkyBlue に置換。
+         キー名は Fluent.Ribbon/Themes/Themes/Theme.Template.xaml (GitHub) を参照。
+         - Highlight / AccentColor 系: 一般ハイライト用
+         - RibbonTabItem.Border: 選択タブの下線色 (= 確認済みで動作)
+         - RibbonTabControl.Content.Border: タブと内容領域の境界線
+         注: RibbonTabItem.Active.Background / Selected.Background は塗りつぶしになるため上書き禁止
+         -->
+    <Color x:Key="Fluent.Ribbon.Colors.HighlightColor">#62B0E2</Color>
+    <Color x:Key="Fluent.Ribbon.Colors.AccentBaseColor">#62B0E2</Color>
+    <Color x:Key="Fluent.Ribbon.Colors.AccentColor">#62B0E2</Color>
+    <SolidColorBrush x:Key="Fluent.Ribbon.Brushes.HighlightBrush" Color="#62B0E2"/>
+    <SolidColorBrush x:Key="Fluent.Ribbon.Brushes.AccentBaseColorBrush" Color="#62B0E2"/>
+    <SolidColorBrush x:Key="Fluent.Ribbon.Brushes.AccentColorBrush" Color="#62B0E2"/>
+    <SolidColorBrush x:Key="Fluent.Ribbon.Brushes.AccentColorBrush80" Color="#CC62B0E2"/>
+    <SolidColorBrush x:Key="Fluent.Ribbon.Brushes.AccentColorBrush60" Color="#9962B0E2"/>
+    <SolidColorBrush x:Key="Fluent.Ribbon.Brushes.AccentColorBrush40" Color="#6662B0E2"/>
+    <SolidColorBrush x:Key="Fluent.Ribbon.Brushes.AccentColorBrush20" Color="#3362B0E2"/>
+
+    <!-- Fluent.Ribbon 11 の正確なキー名 (Theme.Template.xaml 参照、Brush suffix なし)。
+         選択タブの下線は RibbonTabItem.Border または RibbonTabControl.Content.Border で描画される。 -->
+    <SolidColorBrush x:Key="Fluent.Ribbon.Brushes.Highlight" Color="#62B0E2"/>
+    <SolidColorBrush x:Key="Fluent.Ribbon.Brushes.RibbonTabItem.Border" Color="#62B0E2"/>
+    <SolidColorBrush x:Key="Fluent.Ribbon.Brushes.RibbonTabControl.Content.Border" Color="#62B0E2"/>
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
     <SolidColorBrush x:Key="ReadOnlyBrush" Color="{StaticResource ReadOnlyColor}"/>
@@ -479,6 +509,52 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- 粒度区分 (粘性土 / 砂質土 / 礫質土) を選択 ComboBox の文字色で識別するスタイル -->
+    <!-- GroundWindow.xaml で定義済みのものをグローバル化したもの。各 Window から参照可能 -->
+    <Style x:Key="GranularityClassComboBoxStyle" TargetType="ComboBox">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding SelectedValue, RelativeSource={RelativeSource Self}}" Value="粘性土">
+                <Setter Property="Foreground" Value="SaddleBrown"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding SelectedValue, RelativeSource={RelativeSource Self}}" Value="砂質土">
+                <Setter Property="Foreground" Value="SandyBrown"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding SelectedValue, RelativeSource={RelativeSource Self}}" Value="礫質土">
+                <Setter Property="Foreground" Value="DarkGreen"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ═══════════════════════ Fluent.Ribbon カスタムチューニング ═══════════════════════
+         Light.Blue テーマ (App.xaml で読込) をベースに、ブランド色 (NikkenSkyBlue #62B0E2)
+         を活かす微調整を加える。テーマ自体は変えず、暗黙 Style で部分上書きする方針。
+         - RibbonGroupBox.Header: ライト青みの太字 (グループ境界が際立つ)
+         - RibbonTabItem 選択中: NikkenSkyBlue 下線 (アクティブタブが見やすい)
+         - 角丸 / 余白の微調整は控えめに (テーマと整合)
+    -->
+    <Style TargetType="{x:Type Fluent:RibbonGroupBox}">
+        <Setter Property="Foreground" Value="{StaticResource PrimaryAccentDarkBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="BorderBrush" Value="{StaticResource SurfaceBorderBrush}"/>
+    </Style>
+    <!--
+        補足: Fluent:RibbonTabItem の選択時下線は Fluent.Ribbon 内部の ControlTemplate で
+        制御されているため、暗黙 Style での Background 上書きは効かないことが多い。
+        必要に応じてリソース上書き (Fluent:Ribbon.Brushes.*) を試す手があるが、
+        テーマ全体に影響するため今回は範囲を限定し、Foreground / FontWeight 系のみ調整。
+    -->
+    <Style TargetType="{x:Type Fluent:RibbonTabItem}">
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentDarkBrush}"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentDarkBrush}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>

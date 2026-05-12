@@ -1,3 +1,4 @@
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -58,10 +59,24 @@ namespace PileDesign.Services
 
         private static List<HelpSection> LoadSections()
         {
-            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Help", "Help.html");
-            if (!File.Exists(path)) return new List<HelpSection>();
+            // ファイル名は実ディスクに合わせて lowercase で完全一致させる
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Help", "help.html");
+            if (!File.Exists(path))
+            {
+                Log.Warning("[HelpSearch] help.html が見つかりません: {Path}", path);
+                return new List<HelpSection>();
+            }
 
-            var html = File.ReadAllText(path);
+            string html;
+            try
+            {
+                html = File.ReadAllText(path);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[HelpSearch] help.html 読込失敗: {Path}", path);
+                return new List<HelpSection>();
+            }
             var matches = _headingRegex.Matches(html);
             if (matches.Count == 0) return new List<HelpSection>();
 

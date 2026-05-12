@@ -1,4 +1,4 @@
-﻿using PileDesign.Common;
+using PileDesign.Common;
 using PileDesign.Models;
 using PileDesign.ViewModels; // ViewModelのusingを追加
 using System.Collections.Generic;
@@ -47,6 +47,17 @@ namespace PileDesign.Services
         public PathGeometry PathGeoSoilParamFillSand { get; set; } = new() { FillRule = FillRule.Nonzero };
         public PathGeometry PathGeoSoilParamFillGravel { get; set; } = new() { FillRule = FillRule.Nonzero };
 
+        // 群杭沈下用土層 (水平視) の層別塗りつぶし。6 色のパレットを層インデックスでサイクル。
+        public PathGeometry[] PathGeoSettlementSoilFills { get; } =
+        [
+            new() { FillRule = FillRule.Nonzero },
+            new() { FillRule = FillRule.Nonzero },
+            new() { FillRule = FillRule.Nonzero },
+            new() { FillRule = FillRule.Nonzero },
+            new() { FillRule = FillRule.Nonzero },
+            new() { FillRule = FillRule.Nonzero },
+        ];
+
         public PathGeometry PathGeoGroundDisp { get; set; } = new();
         public PathGeometry PathGeoDisp { get; set; } = new();
         public PathGeometry PathGeoAxisX { get; set; } = new();
@@ -86,8 +97,8 @@ namespace PileDesign.Services
         // 基礎梁
         public PathGeometry PathGeoFoundationBeams { get; set; } = new();
         public PathGeometry PathGeoFoundationNodes { get; set; } = new();
-        public PathGeometry PathGeoConnectingNodes { get; set; } = new(); // 接続用節点（杭頭+ΔZc）
-        public PathGeometry PathGeoRigidConnections { get; set; } = new(); // 杭頭と接続用節点を結ぶ剛体連結線
+        public PathGeometry PathGeoConnectionNodes { get; set; } = new(); // 接合節点（杭頭+ΔZc）
+        public PathGeometry PathGeoRigidConnections { get; set; } = new(); // 杭頭と接合節点を結ぶ剛体連結線
         public PathGeometry PathGeoEmbedmentRigidConnections { get; set; } = new(); // 代表節点と土圧合力節点を結ぶ剛体連結線
         public PathGeometry PathGeoInputNodesPile { get; set; } = new(); // 一般節点（Pile型・青）
         public PathGeometry PathGeoInputNodesGeneral { get; set; } = new(); // 一般節点（General型・オレンジ）
@@ -129,6 +140,8 @@ namespace PileDesign.Services
             PathGeoSoilParamFillSand.Figures.Clear();
             PathGeoSoilParamFillGravel.Figures.Clear();
 
+            foreach (var p in PathGeoSettlementSoilFills) p.Figures.Clear();
+
             PathGeoGroundDisp.Figures.Clear();
 
             PathGeoAxisX.Figures.Clear();
@@ -154,7 +167,7 @@ namespace PileDesign.Services
             PathGeoRigidFloor.Figures.Clear();
             PathGeoFoundationBeams.Figures.Clear();
             PathGeoFoundationNodes.Figures.Clear();
-            PathGeoConnectingNodes.Figures.Clear();
+            PathGeoConnectionNodes.Figures.Clear();
             PathGeoRigidConnections.Figures.Clear();
             PathGeoEmbedmentRigidConnections.Figures.Clear();
             PathGeoInputNodesPile.Figures.Clear();
@@ -386,6 +399,28 @@ namespace PileDesign.Services
                 Name = "Node"
             });
 
+            // 群杭沈下用土層 (水平視) の層別塗りつぶし — 線より背面に配置して透ける形にする
+            // パレット: 6 色サイクル (alpha=72 で控えめな半透明)
+            Color[] settlementFillPalette =
+            [
+                Color.FromArgb(72, 210, 180, 140), // light beige (clay)
+                Color.FromArgb(72, 255, 200, 120), // light orange (sand)
+                Color.FromArgb(72, 170, 220, 170), // light green (gravel)
+                Color.FromArgb(72, 170, 200, 230), // light blue
+                Color.FromArgb(72, 220, 180, 220), // light purple
+                Color.FromArgb(72, 240, 230, 160), // light yellow
+            ];
+            for (int i = 0; i < PathGeoSettlementSoilFills.Length; i++)
+            {
+                canvas.Children.Add(new Path()
+                {
+                    Fill = new SolidColorBrush(settlementFillPalette[i]),
+                    Data = PathGeoSettlementSoilFills[i],
+                    Name = "SettlementSoilFill",
+                    IsHitTestVisible = false,
+                });
+            }
+
             // 杭周土層
             canvas.Children.Add(new Path()
             {
@@ -526,7 +561,7 @@ namespace PileDesign.Services
                 Name = "Elements",
             });
 
-            // 基礎梁要素 (基礎梁未定義時に空)
+            // 基礎梁 (基礎梁未定義時に空)
             AddPath(canvas, PathGeoFoundationBeams, Brushes.DarkOrange, 1.0, "FoundationBeam");
 
             // 梁要素断面形状
@@ -537,17 +572,17 @@ namespace PileDesign.Services
             AddPath(canvas, PathGeoFoundationNodes, Brushes.Orange, 0.5,
                 "FoundationNode", fill: Brushes.Orange);
 
-            // 接続用節点（杭頭+ΔZc位置）
+            // 接合節点（杭頭+ΔZc位置）
             canvas.Children.Add(new Path()
             {
                 Stroke = NikkenBrush.Green,
                 Fill = Brushes.White,
                 StrokeThickness = 1.0,
-                Data = PathGeoConnectingNodes,
-                Name = "ConnectingNode"
+                Data = PathGeoConnectionNodes,
+                Name = "ConnectionNode"
             });
 
-            // 杭頭と接続用節点を結ぶ剛体連結線（細い灰色破線）
+            // 杭頭と接合節点を結ぶ剛体連結線（細い灰色破線）
             canvas.Children.Add(new Path()
             {
                 Stroke = Brushes.Gray,

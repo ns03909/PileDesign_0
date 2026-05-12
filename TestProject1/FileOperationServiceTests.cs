@@ -68,7 +68,7 @@ namespace TestProject1
             Assert.IsNotNull(loaded);
             Assert.IsNotNull(loaded.InputModel);
             Assert.IsNotNull(loaded.AnaModel);
-            Assert.AreEqual(1, loaded.FormatVersion);
+            Assert.AreEqual(2, loaded.FormatVersion);  // v2: PileLayoutItems[*].Z = 接合節点 Z (2026-05 改修)
         }
 
         [TestMethod]

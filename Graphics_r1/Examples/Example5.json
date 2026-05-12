@@ -2,16 +2,17 @@
   "displayName": "基礎指針'19 計算例",
   "groundRef": "'19Ex5",
   "groundTopAltitude": 0,
-  "groundWaterGLDepth": -1.5,
+  "groundWaterGLDepth": -6.0,
   "stressGLDepth": 0.0,
   "groundAcceleration1": 2.0,
   "bedrockDensity": 20,
   "bedrockShearWaveVelocity": 400,
   "shallowSoilType": "砂質土",
   "groundLayers": [
-    { "no": 0, "bottomGLDepth": -12.0, "layerThickness": 12.0, "bottomAltitude": -12.0, "name": "砂層A", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 2.0, "cohesive": 0.0, "vs": 90.0, "es": 1400, "isPositiveCircumResistance": false, "isNegativeCircumResistance": false },
-    { "no": 1, "bottomGLDepth": -14.0, "layerThickness": 2.0, "bottomAltitude": -15.0, "name": "粘土層", "granularityClass": "粘性土", "poissonsRatio": 0.4, "density": 16.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 2.0, "cohesive": 30.0, "vs": 90.0, "es": 1400, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
-    { "no": 2, "bottomGLDepth": -17.0, "layerThickness": 3.0, "bottomAltitude": -17.0, "name": "砂層B", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 6.0, "cohesive": 0.0, "vs": 120.0, "es": 4200, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 0, "bottomGLDepth": -12.0, "layerThickness": 12.0, "bottomAltitude": -12.0, "name": "砂層A",   "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue":  2.0, "cohesive":  0.0, "vs":  90.0, "es":  1400, "isPositiveCircumResistance": false, "isNegativeCircumResistance": false },
+    { "no": 1, "bottomGLDepth": -14.0, "layerThickness":  2.0, "bottomAltitude": -15.0, "name": "粘土層",   "granularityClass": "粘性土", "poissonsRatio": 0.4, "density": 16.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue":  2.0, "cohesive": 30.0, "vs":  90.0, "es":  1400, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
+    { "no": 2, "bottomGLDepth": -17.0, "layerThickness":  3.0, "bottomAltitude": -17.0, "name": "砂層B",   "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue":  6.0, "cohesive":  0.0, "vs": 120.0, "es":  4200, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
+    { "no": 3, "bottomGLDepth": -22.0, "layerThickness":  5.0, "bottomAltitude": -22.0, "name": "砂礫層", "granularityClass": "礫質土", "poissonsRatio": 0.3, "density": 20.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 50.0, "cohesive":  0.0, "vs": 400.0, "es": 28000, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
       ],
   "groundMassesData": [
     { "glDepth": -0.8, "nValue": 15.0, "fc": 30.0, "density": 15.0, "vs0": 250.0 },
@@ -31,5 +32,10 @@
     { "glDepth": -14.5, "nValue": 15.0, "fc": 80.0, "density": 16.0, "vs0": 250.0 },
     { "glDepth": -15.5, "nValue": 15.0, "fc": 80.0, "density": 16.0, "vs0": 250.0 },
     { "glDepth": -16.5, "nValue": 15.0, "fc": 80.0, "density": 16.0, "vs0": 250.0 },
+    { "glDepth": -17.5, "nValue": 50.0, "fc":  0.0, "density": 20.0, "vs0": 400.0 },
+    { "glDepth": -18.5, "nValue": 50.0, "fc":  0.0, "density": 20.0, "vs0": 400.0 },
+    { "glDepth": -19.5, "nValue": 50.0, "fc":  0.0, "density": 20.0, "vs0": 400.0 },
+    { "glDepth": -20.5, "nValue": 50.0, "fc":  0.0, "density": 20.0, "vs0": 400.0 },
+    { "glDepth": -21.5, "nValue": 50.0, "fc":  0.0, "density": 20.0, "vs0": 400.0 },
   ]
 }

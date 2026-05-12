@@ -404,6 +404,13 @@ namespace PileDesign.Views
                     Canvas.SetTop(_textLayerImage, 0);
                     Canvas3DLayout.Children.Add(_textLayerImage);
                 }
+                else
+                {
+                    // 既に Children に居る場合、後から追加されたコンタ Path 等の上 (= 最前面) に
+                    // 来るように末尾へ移動。Children.Remove + Add で z-order を更新。
+                    Canvas3DLayout.Children.Remove(_textLayerImage);
+                    Canvas3DLayout.Children.Add(_textLayerImage);
+                }
                 _textLayerImage.Source = renderBitmap;
 
                 _textLayerEmpty = false;
@@ -449,10 +456,12 @@ namespace PileDesign.Views
                 mono[0].DrawPathes(Canvas3DLayout);
             }
 
+            // バブル・矢印 (色付ジオメトリ) を先に描画し、値テキストを後 (= 最前面) に追加する。
+            // 群杭グリッド変位コンタの上に値が隠れないようにするための順序。
+            foreach (var g in colorBaredGeometries) g.DrawPathes(Canvas3DLayout);
+
             if (viewModel.IsResultValueVisible)
                 UpdateValueTexts(points, values, colorBaredGeometries);
-
-            foreach (var g in colorBaredGeometries) g.DrawPathes(Canvas3DLayout);
 
             ColorBar.DrawStepColorBar(
                 ColorBarCanvas,

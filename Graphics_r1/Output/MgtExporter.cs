@@ -11,7 +11,7 @@ namespace PileDesign.Output
     /// <summary>
     /// FEM解析モデルを midas iGen / Gen MGT (テキスト) 形式でエクスポートする。
     /// 非線形地盤ばね（MULTI LINEAR）、慣性力（CONLOAD）、強制変位（SPDISP）、
-    /// 荷重組み合わせ（LOADCOMB, β1/β2/α1）を含む。
+    /// 荷重組合せ（LOADCOMB, β1/β2/α1）を含む。
     /// </summary>
     public partial class MgtExporter
     {

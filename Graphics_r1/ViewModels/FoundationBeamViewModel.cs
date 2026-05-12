@@ -20,9 +20,9 @@ namespace PileDesign.ViewModels
         [ObservableProperty]
         private ObservableCollection<FoundationNode> _nodes = [];
 
-        // 基礎梁要素コレクション
+        // 基礎梁コレクション
         [ObservableProperty]
-        private ObservableCollection<FoundationBeamElement> _beams = [];
+        private ObservableCollection<FoundationBeam> _beams = [];
 
         // 接続モード
         [ObservableProperty]
@@ -33,7 +33,7 @@ namespace PileDesign.ViewModels
         private FoundationNode? _selectedNode;
 
         [ObservableProperty]
-        private FoundationBeamElement? _selectedBeam;
+        private FoundationBeam? _selectedBeam;
 
         // RequestClose イベント
         public event EventHandler? RequestClose;
@@ -128,11 +128,9 @@ namespace PileDesign.ViewModels
 
         private void OnAddBeam()
         {
-            var newBeam = new FoundationBeamElement
+            // No プロパティは廃止 (位置 = ID)
+            var newBeam = new FoundationBeam
             {
-                No = Beams.Count + 1,
-                NodeI_No = 1,
-                NodeJ_No = 2,
                 MaterialNo = 1,
                 SectionNo = 1,
                 SectionName = $"Beam-{Beams.Count + 1}",
@@ -166,10 +164,7 @@ namespace PileDesign.ViewModels
 
         private void RenumberBeams()
         {
-            for (int i = 0; i < Beams.Count; i++)
-            {
-                Beams[i].No = i + 1;
-            }
+            // No-op: FoundationBeam.No は廃止 (位置 = ID)
         }
     }
 }

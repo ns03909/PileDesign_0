@@ -319,7 +319,7 @@ namespace PileDesign.ViewModels
 
             wpf.Plot.Legend.FontName = Fonts.Detect(yLabel);
 
-            double maxN = double.MinValue, minN = double.MaxValue;
+            double minN = double.MaxValue;
             UpdateSeries("(低減前)使用限界", serviceN, serviceM, NikkenSKColor.DeepBlue, isDashed: true);
             UpdateSeries("(低減前)損傷限界", damageN, damageM, NikkenSKColor.Green, isDashed: true);
             UpdateSeries("(低減前)安全限界", ultimateN, ultimateM, NikkenSKColor.PaleRed, isDashed: true);

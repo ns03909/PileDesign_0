@@ -1,4 +1,4 @@
-﻿using PileDesign.Constants;
+using PileDesign.Constants;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,11 +11,30 @@ namespace PileDesign.Models.InputData
 {
     public class PileGroupSettlement : BaseModel
     {
+        // 解析サービスで使用される「現在の」荷重面標高。一回解析 / 反復解析 を実行する直前に
+        // 該当ルートの値 (LoadingPlaneAltitudeNonBeam / LoadingPlaneAltitudeBeamAware) からコピーされる。
+        // UI 表示・TreeView などのレガシー参照とも互換を保つため残す。
         private double _loadingPlaneAltitude;
         public double LoadingPlaneAltitude
         {
             get => _loadingPlaneAltitude;
             set => SetProperty(ref _loadingPlaneAltitude, value);
+        }
+
+        // 一回解析 (基礎梁無し Steinbrenner) 用の荷重面標高。一回解析タブで編集。
+        private double _loadingPlaneAltitudeNonBeam = double.NaN;
+        public double LoadingPlaneAltitudeNonBeam
+        {
+            get => _loadingPlaneAltitudeNonBeam;
+            set => SetProperty(ref _loadingPlaneAltitudeNonBeam, value);
+        }
+
+        // 反復解析 (基礎梁考慮) 用の荷重面標高。反復解析タブで編集。
+        private double _loadingPlaneAltitudeBeamAware = double.NaN;
+        public double LoadingPlaneAltitudeBeamAware
+        {
+            get => _loadingPlaneAltitudeBeamAware;
+            set => SetProperty(ref _loadingPlaneAltitudeBeamAware, value);
         }
 
         // 土層上端 (ボーリング孔口レベル相当)。SettlementSoilLayers の第1層上端として使う
@@ -26,7 +45,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _soilLayersTopAltitude, value);
         }
 
-        public List<string> LoadingTypeOptions { get; set; } = ["任意矩形", "個別十字", "個別十字（基礎梁考慮）", "なし"];
+        public List<string> LoadingTypeOptions { get; set; } = ["任意矩形", "個別矩形", "個別矩形（基礎梁考慮）", "個別十字", "個別十字（基礎梁反力）", "なし"];
 
         private string _loadingType;
         public string LoadingType
@@ -42,6 +61,13 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _rectLoads, value);
         }
 
+        // 一般モード (基礎梁無し) のユーザー入力 RectLoads スナップショット。
+        // 反復ダイアログを開く直前に pgs.RectLoads を保存し、土層沈下 ▼ を 反復 → 一般 に
+        // 切替えた際 (該当 CaseRecord が無い場合) に復元する。
+        // 反復が pgs.RectLoads を収束反力で書き換えても、一般モードに戻るとユーザー入力に戻る。
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ObservableCollection<RectLoad> NonBeamRectLoadsSnapshot { get; set; }
+
         private ObservableCollection<SettlementSoilLayer> _settlementSoilLayers;
         public ObservableCollection<SettlementSoilLayer> SettlementSoilLayers
         {
@@ -50,12 +76,39 @@ namespace PileDesign.Models.InputData
         }
 
 
-        // グリッド
+        // グリッド (現在表示中のケースの沈下量。CaseRecords がある場合は ActiveCase 切替で更新される)
         private ObservableCollection<SettlementGridDataItem> _settlementGridData;
         public ObservableCollection<SettlementGridDataItem> SettlementGridData
         {
             get => _settlementGridData;
             set => SetProperty(ref _settlementGridData, value);
+        }
+
+        // 群杭沈下解析結果 (ケース別)。基礎梁考慮反復・通常 Steinbrenner どちらでも 1+ レコード保存。
+        // 既存単一結果との互換性: 解析実行時は最終的に SettlementGridData / RectLoads / 各杭 GroupPileSettlement
+        // を ActiveCaseIndex のレコードからコピーして反映する。
+        private ObservableCollection<GroupSettlementCaseRecord> _caseRecords = [];
+        public ObservableCollection<GroupSettlementCaseRecord> CaseRecords
+        {
+            get => _caseRecords;
+            set => SetProperty(ref _caseRecords, value ?? []);
+        }
+
+        // 現在表示中のケース index (CaseRecords に対応)。-1 = 未選択 or 単一結果
+        private int _activeCaseIndex = -1;
+        public int ActiveCaseIndex
+        {
+            get => _activeCaseIndex;
+            set => SetProperty(ref _activeCaseIndex, value);
+        }
+
+        // 表示中の LoadingType (CaseRecords を LoadingType で絞り込んで表示するため)。
+        // 入力設定 LoadingType (次回解析で使う) とは独立。空文字 = 未指定 (旧データ互換)。
+        private string _activeLoadingType = "";
+        public string ActiveLoadingType
+        {
+            get => _activeLoadingType;
+            set => SetProperty(ref _activeLoadingType, value ?? "");
         }
 
         // グリッドX
@@ -78,6 +131,8 @@ namespace PileDesign.Models.InputData
         public PileGroupSettlement()
         {
             LoadingPlaneAltitude = -5.0; /// 5m
+            LoadingPlaneAltitudeNonBeam = -5.0;
+            LoadingPlaneAltitudeBeamAware = -5.0;
             SoilLayersTopAltitude = 0.0;
             LoadingType = "任意矩形";
             RectLoads = [];
@@ -394,8 +449,71 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        public double DX => X2 - X1;
-        public double DY => Y2 - Y1;
+        /// <summary>
+        /// 個別矩形 (LoadingType=個別矩形) で杭と紐づける場合の杭番号 (PileLayoutDataItem.PileNo)。
+        /// 0 以下: 紐付けなし (任意矩形 / 個別十字 など)。
+        /// </summary>
+        private int _linkedPileNo;
+        public int LinkedPileNo
+        {
+            get => _linkedPileNo;
+            set => SetProperty(ref _linkedPileNo, value);
+        }
+
+        /// <summary>X 中心 (= (X1+X2)/2)。set すると DX を保ったまま X1/X2 を平行移動する。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double CenterX
+        {
+            get => (X1 + X2) * 0.5;
+            set
+            {
+                double half = DX * 0.5;
+                X1 = value - half;
+                X2 = value + half;
+            }
+        }
+
+        /// <summary>Y 中心 (= (Y1+Y2)/2)。set すると DY を保ったまま Y1/Y2 を平行移動する。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double CenterY
+        {
+            get => (Y1 + Y2) * 0.5;
+            set
+            {
+                double half = DY * 0.5;
+                Y1 = value - half;
+                Y2 = value + half;
+            }
+        }
+
+        /// <summary>幅 DX (= X2 - X1)。set すると中心 (CenterX) を保ったまま X1/X2 を対称に変更。</summary>
+        public double DX
+        {
+            get => X2 - X1;
+            set
+            {
+                if (value <= 0) return;
+                double cx = CenterX;
+                double half = value * 0.5;
+                X1 = cx - half;
+                X2 = cx + half;
+            }
+        }
+
+        /// <summary>奥行 DY (= Y2 - Y1)。set すると中心 (CenterY) を保ったまま Y1/Y2 を対称に変更。</summary>
+        public double DY
+        {
+            get => Y2 - Y1;
+            set
+            {
+                if (value <= 0) return;
+                double cy = CenterY;
+                double half = value * 0.5;
+                Y1 = cy - half;
+                Y2 = cy + half;
+            }
+        }
+
         public double A => DX * DY;
         public double Q => A > 0 ? QA / A : 0;
     }
@@ -438,9 +556,62 @@ namespace PileDesign.Models.InputData
             get => _note;
             set => SetProperty(ref _note, value);
         }
+
+        // 粒度区分 (粘性土 / 砂質土 / 礫質土)。空文字は「未指定」。
+        // メイン画面の沈下土層塗りつぶし色はこの値で決まる。
+        private string _granularityClass = "";
+        public string GranularityClass
+        {
+            get => _granularityClass;
+            set => SetProperty(ref _granularityClass, value ?? "");
+        }
     }
 
 
+
+    /// <summary>
+    /// 群杭沈下解析結果のケース別レコード。
+    /// 通常 (Steinbrenner 単発) は 1 レコード、基礎梁考慮反復は VL/L1/L2 各 1 レコード。
+    /// </summary>
+    public class GroupSettlementCaseRecord : BaseModel
+    {
+        public string LoadCaseName { get; set; } = "";
+
+        /// <summary>このレコードを生成した解析タイプ ("任意矩形" / "個別矩形" / "個別十字" / "個別十字（基礎梁反力）" / "個別矩形（基礎梁考慮）")。空文字 = 旧データ。</summary>
+        public string LoadingType { get; set; } = "";
+
+        /// <summary>true: 個別矩形（基礎梁考慮）反復解析の結果。false: 通常 Steinbrenner 単発。</summary>
+        public bool IsBeamAware { get; set; }
+
+        /// <summary>このケースの (反復後の) 矩形荷重。</summary>
+        public ObservableCollection<RectLoad> RectLoads { get; set; } = [];
+
+        /// <summary>このケースの沈下グリッドデータ (コンタ図描画用)。</summary>
+        public ObservableCollection<SettlementGridDataItem> SettlementGridData { get; set; } = [];
+
+        /// <summary>各杭の沈下量 [mm]。Key = PileLayoutDataItem.PileNo</summary>
+        public Dictionary<int, double> PileSettlements_mm { get; set; } = [];
+
+        // ── 基礎梁考慮の場合のみ ──
+        public bool IsConverged { get; set; }
+        public int IterationCount { get; set; }
+        public double FinalResidual { get; set; }
+
+        /// <summary>各杭の杭反力 Pi [kN]。</summary>
+        public Dictionary<int, double> PileReactions_kN { get; set; } = [];
+
+        /// <summary>各杭の杭頭ばね剛性 ki [kN/m]。</summary>
+        public Dictionary<int, double> SpringStiffness { get; set; } = [];
+
+        /// <summary>節点変位 (基礎梁考慮のみ)。</summary>
+        public List<FEM.VerticalBeamNodeResult> NodeResults { get; set; } = [];
+
+        /// <summary>梁断面力 (基礎梁考慮のみ)。</summary>
+        public List<FEM.VerticalBeamBeamResult> BeamResults { get; set; } = [];
+
+        /// <summary>反復ログ (基礎梁考慮反復のときの履歴。表示は ObservableCollection 化される)。</summary>
+        public List<string> IterationLog { get; set; } = [];
+    }
 
     public class Steinnbrener : BaseModel
     {
@@ -521,7 +692,7 @@ namespace PileDesign.Models.InputData
 
         public static double CalcSettlement(Point point, ObservableCollection<RectLoad> rectLoads, ObservableCollection<SettlementSoilLayer> soilLayers)
         {
-            //'矩形載荷面の隅角部の沈下の組み合わせ
+            //'矩形載荷面の隅角部の沈下の組合せ
             //'B:基礎の短辺長さ　(m)
             //'L:基礎の長辺長さ　(m)
 
@@ -648,8 +819,7 @@ namespace PileDesign.Models.InputData
                     ds = 0;
                 }
 
-                if (double.IsNaN(ds))
-                { int a = 0; }
+                // ds が NaN の場合はそのまま加算 (上流で検出する想定、ここでは検査しない)
 
                 s += ds;
             }

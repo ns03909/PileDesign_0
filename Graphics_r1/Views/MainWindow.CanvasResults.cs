@@ -1,4 +1,4 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
@@ -78,10 +78,11 @@ namespace PileDesign.Views
             var invisibleFBNames = new HashSet<string>();
             if (viewModel.CurrentInputModel?.FoundationBeamInput?.Beams != null)
             {
-                foreach (var fb in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                var beams = viewModel.CurrentInputModel.FoundationBeamInput.Beams;
+                for (int i = 0; i < beams.Count; i++)
                 {
-                    if (!fb.IsVisible)
-                        invisibleFBNames.Add($"FoundationBeam-{fb.No}");
+                    if (!beams[i].IsVisible)
+                        invisibleFBNames.Add($"FoundationBeam-{i + 1}");
                 }
             }
 
@@ -297,12 +298,12 @@ namespace PileDesign.Views
 
                     // 応力表示の有無 (チェック OFF でスキップ):
                     //   - 杭応力非表示: 基礎梁以外 (杭体・RigidLink 含む) を全部スキップ
-                    //   - 基礎梁応力非表示: 基礎梁要素 (FoundationBeam-) を全部スキップ
+                    //   - 基礎梁応力非表示: 基礎梁 (FoundationBeam-) を全部スキップ
                     bool isFoundationBeam = beam.Name.StartsWith("FoundationBeam-");
                     if (!viewModel.IsPileStressVisible && !isFoundationBeam) continue;
                     if (!viewModel.IsFoundationBeamStressVisible && isFoundationBeam) continue;
 
-                    // 接続用節点が非表示でもRigidLinkの応力図は描画する（スキップしない）
+                    // 接合節点が非表示でもRigidLinkの応力図は描画する（スキップしない）
 
                     beamCount++;
                     var beamResult = beam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
@@ -1084,6 +1085,12 @@ namespace PileDesign.Views
                     or "基礎梁考慮沈下" or "基礎梁考慮+群杭沈下"
                     or "基礎梁考慮反力（地盤）" or "基礎梁考慮反力（杭頭集約）"
                     or "基礎梁考慮沈下部材角" or "基礎梁考慮+群杭沈下部材角";
+                // 個別矩形（基礎梁考慮） の CaseRecord も基礎梁変形後形状を描画する
+                if (!isVBContent && viewModel.IsGroupSettlementActiveCaseBeamAware
+                    && effectiveContent is "沈下" or "群杭沈下" or "単杭+群杭沈下")
+                {
+                    isVBContent = true;
+                }
                 bool isSinglePileSettlement =
                     (effectiveContent == "沈下" && viewModel.AnalysisResultSettlementType == "単杭")
                     || effectiveContent is "単杭反力（地盤）" or "単杭反力（杭頭集約）"
@@ -1140,10 +1147,11 @@ namespace PileDesign.Views
                 }
                 if (viewModel.CurrentInputModel?.FoundationBeamInput?.Beams != null)
                 {
-                    foreach (var fb in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                    var beams = viewModel.CurrentInputModel.FoundationBeamInput.Beams;
+                    for (int i = 0; i < beams.Count; i++)
                     {
-                        if (!fb.IsVisible)
-                            invisibleFBNames.Add($"FoundationBeam-{fb.No}");
+                        if (!beams[i].IsVisible)
+                            invisibleFBNames.Add($"FoundationBeam-{i + 1}");
                     }
                 }
             }
@@ -1265,7 +1273,6 @@ namespace PileDesign.Views
                 if (visiblePileNos == null) return true;  // 全杭可視
                 if (node == null) return true;
                 string name = node.Name ?? "";
-                int dashIdx;
                 string prefixCap = "CapNode-";
                 string prefixFn = "FoundationNode-P";
                 if (name.StartsWith(prefixCap, StringComparison.Ordinal))
@@ -1301,7 +1308,8 @@ namespace PileDesign.Views
                 {
                     foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                     {
-                        capNodeToJointZ[$"CapNode-{pile.No}"] = pile.Z + pile.FoundationBeamDeltaZc;
+                        // v2 セマンティクス: pile.Z は接合節点 Z (= JointZ)
+                        capNodeToJointZ[$"CapNode-{pile.No}"] = pile.Z;
                     }
                 }
 
@@ -1435,11 +1443,14 @@ namespace PileDesign.Views
             var fbInput = viewModel.CurrentInputModel?.FoundationBeamInput;
             if (fbInput?.Beams == null || fbInput.Sections == null) return;
 
-            var fbElemDict = new Dictionary<string, FoundationBeamElement>();
-            foreach (var fb in fbInput.Beams)
-                fbElemDict[$"FoundationBeam-{fb.No}"] = fb;
+            var fbElemDict = new Dictionary<string, FoundationBeam>();
+            for (int i = 0; i < fbInput.Beams.Count; i++)
+                fbElemDict[$"FoundationBeam-{i + 1}"] = fbInput.Beams[i];
 
-            var secDict = fbInput.Sections.ToDictionary(s => s.No, s => s);
+            // Section は SectionNo (1-based) → 当該 section のマップ
+            var secDict = new Dictionary<int, BeamSection>();
+            for (int i = 0; i < fbInput.Sections.Count; i++)
+                secDict[i + 1] = fbInput.Sections[i];
 
             bool colorize = nodeToValue != null && colorGeoms != null;
             var defaultPathGeo = new PathGeometry();
@@ -2313,7 +2324,7 @@ namespace PileDesign.Views
             if (anaModel.HorizontalSoilSprings == null || anaModel.HorizontalSoilSprings.Count == 0) return;
             if (Canvas3DLayout == null || ColorBarCanvas == null) return;
 
-            // 選択された荷重ケース・組み合わせを取得
+            // 選択された荷重ケース・組合せを取得
             var selectedLoadCase = LoadCases.GetLoadCase(
                 viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
             var selectedLoadCombination = LoadCombinations.GetLoadCombination(
@@ -2673,7 +2684,7 @@ namespace PileDesign.Views
             string content = viewModel.AnalysisResultContent;
             bool isMoment = content.Contains('M');
 
-            // 選択された荷重ケース・組み合わせ
+            // 選択された荷重ケース・組合せ
             var selectedLoadCase = LoadCases.GetLoadCase(
                 viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
             var selectedLoadCombination = LoadCombinations.GetLoadCombination(
@@ -3481,7 +3492,7 @@ namespace PileDesign.Views
             }
 
             // 最も近い基礎梁を探す
-            FoundationBeamElement closestFb = null;
+            FoundationBeam closestFb = null;
             double closestDist = double.MaxValue;
             const double hitThreshold = 20.0;
             Point closestMid = new();
@@ -3524,7 +3535,8 @@ namespace PileDesign.Views
 
             double angle = (uzI - uzJ) / beamLength;
 
-            string tooltip = $"梁No.{closestFb.No}\n" +
+            int closestFbNo = inputModel.FoundationBeamInput?.GetBeamNo(closestFb) ?? 0;
+            string tooltip = $"梁No.{closestFbNo}\n" +
                              $"部材角: {angle:F6} rad\n" +
                              $"  = 1/{(Math.Abs(angle) > 1e-10 ? $"{1.0 / Math.Abs(angle):F0}" : "∞")}\n" +
                              $"沈下I: {uzI * 1000:F2} mm (杭{pileNoI})\n" +
@@ -3673,12 +3685,9 @@ namespace PileDesign.Views
         {
             if (Canvas3DLayout == null) return;
 
-            var caseResults = viewModel.VerticalBeamCaseResults;
-            if (caseResults == null || caseResults.Count == 0) return;
-            // 選択中の荷重ケースを優先して取得（なければ先頭）
-            string selectedName = viewModel.SelectedLoadCaseName;
-            var caseResult = caseResults.FirstOrDefault(c => ExtractVBCaseBaseName(c.LoadCaseName) == selectedName)
-                             ?? caseResults[0];
+            // VerticalBeamCaseResults または GroupSettlementCaseRecord (基礎梁考慮反復) どちらでも描画可能
+            var caseResult = viewModel.GetActiveVerticalBeamCaseResult();
+            if (caseResult == null) return;
             var nodeResults = caseResult.NodeResults;
             if (nodeResults == null || nodeResults.Count == 0) return;
 
@@ -3724,7 +3733,7 @@ namespace PileDesign.Views
                 return g;
             }
 
-            // 基礎梁要素の変形後形状: I/J 端の (Uz, Rx, Ry) から 3次 Hermite 補間で曲線描画
+            // 基礎梁の変形後形状: I/J 端の (Uz, Rx, Ry) から 3次 Hermite 補間で曲線描画
             if (inputModel.FoundationBeamInput?.Beams != null)
             {
                 foreach (var fbBeam in inputModel.FoundationBeamInput.Beams)
@@ -3775,10 +3784,11 @@ namespace PileDesign.Views
             foreach (var (pile, zs, uzsSpPositiveDown) in perPileDeform)
             {
                 // 接合節点 → 杭頭（剛体リンク部分）の区間を rigid で描く
+                // v2 セマンティクス: pile.Z は接合節点 Z
                 string connName = $"FoundationNode-P{pile.No}";
                 double uzTopVb = nodeDispMap.TryGetValue(connName, out var r) ? r.Uz : 0; // VB 規約: 負=下向き
-                double connectingZ = pile.Z + pile.FoundationBeamDeltaZc;
-                Point3D connPt3D = new(pile.X, pile.Y, connectingZ + uzTopVb * dispScale);
+                double connectionZ = pile.Z;
+                Point3D connPt3D = new(pile.X, pile.Y, connectionZ + uzTopVb * dispScale);
 
                 Point prev2D = viewModel.CanvasThreeDView.Transformation(connPt3D);
                 double prevUzMm = Math.Abs(uzTopVb) * 1000.0;
@@ -3857,7 +3867,7 @@ namespace PileDesign.Views
                 var uzs = new List<double>(pileNodesCount);
                 for (int i = 0; i < pileNodesCount; i++)
                 {
-                    double nodeZ = (i == 0) ? pile.Z : circumVerticals[i - 1].Bottom;
+                    double nodeZ = (i == 0) ? pile.PileHeadZ : circumVerticals[i - 1].Bottom;
                     double uz = dispVector != null ? dispVector[2 * i] : 0; // m, 正=下向き
                     zs.Add(nodeZ);
                     uzs.Add(uz);
@@ -3880,7 +3890,10 @@ namespace PileDesign.Views
             var fbInput = inputModel?.FoundationBeamInput;
             if (fbInput?.Beams == null || fbInput.Sections == null) return;
 
-            var secDict = fbInput.Sections.ToDictionary(s => s.No, s => s);
+            // SectionNo (1-based 位置インデックス) → BeamSection マップ
+            var secDict = new Dictionary<int, BeamSection>();
+            for (int i = 0; i < fbInput.Sections.Count; i++)
+                secDict[i + 1] = fbInput.Sections[i];
             var transform = viewModel.CanvasThreeDView;
             var pathByColor = new Dictionary<Color, PathGeometry>();
 
@@ -4048,7 +4061,7 @@ namespace PileDesign.Views
                 var uzs = new List<double>(pileNodesCount);
                 for (int i = 0; i < pileNodesCount; i++)
                 {
-                    double nodeZ = (i == 0) ? pile.Z : circumVerticals[i - 1].Bottom;
+                    double nodeZ = (i == 0) ? pile.PileHeadZ : circumVerticals[i - 1].Bottom;
                     double uz = dispVector[2 * i]; // m
                     zs.Add(nodeZ);
                     uzs.Add(uz);
@@ -4248,18 +4261,13 @@ namespace PileDesign.Views
 
         /// <summary>
         /// 基礎梁考慮沈下梁応力 / 基礎梁考慮沈下 / 基礎梁考慮反力 を描画
+        /// (個別矩形（基礎梁考慮） の CaseRecord も同じパスで描画される)
         /// </summary>
         private void DrawVerticalBeamResults(MainWindowViewModel viewModel)
         {
             if (Canvas3DLayout == null || ColorBarCanvas == null) return;
-
-            var caseResults = viewModel.VerticalBeamCaseResults;
-            if (caseResults == null || caseResults.Count == 0) return;
-
-            // 選択中の荷重ケース名にマッチする結果を取得（"1-1: U1" 等のデコレーションを剥がしてから比較）
-            string selectedName = viewModel.SelectedLoadCaseName;
-            var caseResult = caseResults.FirstOrDefault(c => ExtractVBCaseBaseName(c.LoadCaseName) == selectedName)
-                             ?? caseResults[0];
+            var caseResult = viewModel.GetActiveVerticalBeamCaseResult();
+            if (caseResult == null) return;
             string format = "{0:N" + viewModel.DecimalPlaces + "}";
             DrawVBBeamForce(viewModel, caseResult, format);
         }
@@ -4326,14 +4334,15 @@ namespace PileDesign.Views
                 if (content == "基礎梁考慮+群杭沈下")
                 {
                     // VBのPileResult沈下量に群杭沈下量を加算した値で杭位置のバブルを追加
+                    // v2 セマンティクス: pile.Z は接合節点 Z
                     foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                     {
                         if (!pile.IsVisible) continue;
                         var pr = caseResult.PileResults?.FirstOrDefault(p => p.PileNo == pile.No);
                         double vbSettlement = pr?.Settlement_mm ?? 0;
                         double combined = Math.Abs(vbSettlement + pile.GroupPileSettlement); // 両方mm
-                        double connectingZ = pile.Z + pile.FoundationBeamDeltaZc;
-                        points.Add(new Point3D(pile.X, pile.Y, connectingZ));
+                        double connectionZ = pile.Z;
+                        points.Add(new Point3D(pile.X, pile.Y, connectionZ));
                         values.Add(combined);
                     }
                 }
@@ -4352,7 +4361,8 @@ namespace PileDesign.Views
                         var pile = viewModel.CurrentInputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
                         if (pile == null || !pile.IsVisible) continue;
 
-                        points.Add(new Point3D(pr.X, pr.Y, pile.Z + pile.FoundationBeamDeltaZc));
+                        // v2 セマンティクス: pile.Z は接合節点 Z
+                        points.Add(new Point3D(pr.X, pr.Y, pile.Z));
                         values.Add(Math.Abs(pr.Reaction_kN));
                     }
                 }
@@ -4459,7 +4469,7 @@ namespace PileDesign.Views
                     int pileNodesCount = circumVerticals.Count + 1;
                     for (int i = 0; i < pileNodesCount; i++)
                     {
-                        double nodeZ = (i == 0) ? pile.Z : circumVerticals[i - 1].Bottom;
+                        double nodeZ = (i == 0) ? pile.PileHeadZ : circumVerticals[i - 1].Bottom;
                         double nodeValue = Math.Abs(reactionVector[2 * i]);
                         points.Add(new Point3D(pile.X, pile.Y, nodeZ));
                         values.Add(nodeValue);
@@ -4618,8 +4628,10 @@ namespace PileDesign.Views
                 var beamNoStr = br.BeamName.Replace("FoundationBeam-", "");
                 if (!int.TryParse(beamNoStr, out int beamNo)) continue;
 
-                var fbBeam = viewModel.CurrentInputModel.FoundationBeamInput?.Beams?
-                    .FirstOrDefault(b => b.No == beamNo);
+                // beamNo (1-based) は Beams コレクション内の位置インデックス + 1
+                var fbBeams = viewModel.CurrentInputModel.FoundationBeamInput?.Beams;
+                var fbBeam = (fbBeams != null && beamNo >= 1 && beamNo <= fbBeams.Count)
+                    ? fbBeams[beamNo - 1] : null;
                 if (fbBeam == null || !fbBeam.IsVisible) continue;
 
                 var coordsI = viewModel.CurrentInputModel.GetNodeCoordinates(fbBeam.NodeI_Type, fbBeam.NodeI_Id);

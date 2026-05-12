@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-2314,-1068)">
+        <g id="TopView" transform="matrix(1,0,0,1,1246,1068)">
+            <rect x="1068" y="0" width="128" height="128" style="fill:none;"/>
+            <g>
+                <g transform="matrix(1.053191,0,0,1.356241,-85.92594,-69.640594)">
+                    <path d="M1156.415,57.848L1201.793,78.193L1156.415,98.537L1111.037,78.193L1156.415,57.848Z" style="fill:rgb(98,176,226);stroke:black;stroke-width:6.86px;"/>
+                </g>
+                <g transform="matrix(0.526595,0.91209,-1.174539,0.678121,590.981418,-1029.982514)">
+                    <path d="M1156.415,57.848L1201.793,78.193L1156.415,98.537L1111.037,78.193L1156.415,57.848Z" style="fill:rgb(255,245,245);fill-opacity:0;stroke:black;stroke-width:6.86px;"/>
+                </g>
+                <g transform="matrix(-0.526595,0.91209,-1.174539,-0.678121,1856.69912,-923.934507)">
+                    <path d="M1156.415,57.848L1201.793,78.193L1156.415,98.537L1111.037,78.193L1156.415,57.848Z" style="fill:rgb(255,239,239);fill-opacity:0;stroke:black;stroke-width:6.86px;"/>
+                </g>
+            </g>
+            <g transform="matrix(1,0,0,1,-16.833348,-30.05047)">
+                <g transform="matrix(75,0,0,75,1208.833348,154.05047)">
+                </g>
+                <text x="1167.433px" y="154.05px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:75px;fill:rgb(50,113,173);">T</text>
+            </g>
+        </g>
+    </g>
+</svg>

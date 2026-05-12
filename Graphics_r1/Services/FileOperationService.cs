@@ -38,6 +38,7 @@ namespace PileDesign.Services
 
             var projectData = new ProjectData
             {
+                FormatVersion = 2,  // v2: PileLayoutItems[*].Z = 接合節点 Z (旧 v1 = 杭頭 Z)
                 InputModel = inputModel,
                 AnaModel = anaModel!,
                 VerticalBeamCaseResults = verticalBeamCaseResults != null
@@ -62,6 +63,7 @@ namespace PileDesign.Services
 
             var projectData = new ProjectData
             {
+                FormatVersion = 2,  // v2: PileLayoutItems[*].Z = 接合節点 Z (旧 v1 = 杭頭 Z)
                 InputModel = inputModel,
                 AnaModel = anaModel!,
                 VerticalBeamCaseResults = verticalBeamCaseResults != null
@@ -209,7 +211,10 @@ namespace PileDesign.Services
                 throw new InvalidOperationException("ファイル形式が不正です。");
 
             // バージョン0はFormatVersionプロパティ追加前の旧ファイル → 互換あり
-            const int currentVersion = 1;
+            // v1: 初期形式
+            // v2: PileLayoutItems[*].Z のセマンティクスを「杭頭節点」→「接合節点」に変更 (2026-05 改修)
+            //     v1 ファイルはロード時に MigratePileZSemantics_v1_to_v2 で内部的に v2 化される
+            const int currentVersion = 2;
             if (projectData.FormatVersion > currentVersion)
             {
                 throw new InvalidOperationException(

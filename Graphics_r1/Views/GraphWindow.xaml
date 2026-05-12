@@ -1,4 +1,4 @@
-﻿<Window x:Class="PileDesign.Views.GraphWindow"
+<Window x:Class="PileDesign.Views.GraphWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -22,6 +22,7 @@
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <conv:LoadCaseNameToColorConverter x:Key="LoadCaseNameToColorConverter"/>
+        <conv:LoadCaseNameToDisplayConverter x:Key="LoadCaseNameToDisplayConverter"/>
         <conv:LoadCaseAnalyzedConverter x:Key="LoadCaseAnalyzedConverter"/>
         <conv:LoadCombinationAnalyzedConverter x:Key="LoadCombinationAnalyzedConverter"/>
         <conv:LiquefactionAnalyzedConverter x:Key="LiquefactionAnalyzedConverter"/>
@@ -100,7 +101,14 @@
                                         </MultiBinding>
                                     </Ellipse.Visibility>
                                 </Ellipse>
-                                <TextBlock Text="{Binding}">
+                                <TextBlock ToolTip="{Binding}">
+                                    <TextBlock.Text>
+                                        <MultiBinding Converter="{StaticResource LoadCaseNameToDisplayConverter}">
+                                            <Binding/>
+                                            <Binding Path="DataContext.InputModel.LoadCasesInput.AllSeismicLoadCases"
+                                                     RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
                                     <TextBlock.Foreground>
                                         <MultiBinding Converter="{StaticResource LoadCaseNameToColorConverter}">
                                             <Binding/>
@@ -116,7 +124,7 @@
             </StackPanel>
 
             <StackPanel Visibility="{Binding IsLoadCombinationOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <TextBlock Text="荷重組み合わせ:" VerticalAlignment="Center"/>
+                <TextBlock Text="荷重組合せ:" VerticalAlignment="Center"/>
                 <ComboBox x:Name="LoadCombinationComboBox"
                 ItemsSource="{Binding LoadCombinationOptions}"
                 SelectedItem="{Binding SelectedLoadCombinationOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">

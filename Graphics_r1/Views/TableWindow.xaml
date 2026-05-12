@@ -30,6 +30,7 @@
 
         </ContextMenu>
         <conv:LoadCaseNameToColorConverter x:Key="LoadCaseNameToColorConverter"/>
+        <conv:LoadCaseNameToDisplayConverter x:Key="LoadCaseNameToDisplayConverter"/>
         <conv:LoadCaseAnalyzedConverter x:Key="LoadCaseAnalyzedConverter"/>
         <conv:LoadCombinationAnalyzedConverter x:Key="LoadCombinationAnalyzedConverter"/>
         <conv:LiquefactionAnalyzedConverter x:Key="LiquefactionAnalyzedConverter"/>
@@ -125,7 +126,14 @@
                                     </MultiBinding>
                                 </Ellipse.Visibility>
                             </Ellipse>
-                            <TextBlock Text="{Binding}">
+                            <TextBlock ToolTip="{Binding}">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{StaticResource LoadCaseNameToDisplayConverter}">
+                                        <Binding/>
+                                        <Binding Path="DataContext.AllSeismicLoadCases"
+                                                 RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
                                 <TextBlock.Foreground>
                                     <MultiBinding Converter="{StaticResource LoadCaseNameToColorConverter}">
                                         <Binding/>

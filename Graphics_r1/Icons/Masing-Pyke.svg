@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-1958,-534)">
+        <rect id="Masing-Pyke" x="1958" y="534" width="128" height="128" style="fill:none;"/>
+        <clipPath id="_clip1">
+            <rect id="Masing-Pyke1" serif:id="Masing-Pyke" x="1958" y="534" width="128" height="128"/>
+        </clipPath>
+        <g clip-path="url(#_clip1)">
+            <g transform="matrix(2.063258,0,0,2.94488,816.214348,-4251.691551)">
+                <rect x="553.39" y="1625.326" width="61.594" height="43.465" style="fill:rgb(98,176,226);"/>
+            </g>
+            <g transform="matrix(0.162354,0,0,0.230069,1977.15523,167.541103)">
+                <rect x="553.39" y="1625.326" width="61.594" height="43.465" style="fill:rgb(216,255,255);"/>
+            </g>
+            <g transform="matrix(0.162354,0,0,0.230069,1960.407533,167.541103)">
+                <rect x="553.39" y="1625.326" width="61.594" height="43.465" style="fill:rgb(216,255,255);"/>
+            </g>
+            <g transform="matrix(0.162354,0,0,0.230069,1943.659836,167.541103)">
+                <rect x="553.39" y="1625.326" width="61.594" height="43.465" style="fill:rgb(216,255,255);"/>
+            </g>
+            <g transform="matrix(1.785889,0,0,2.185653,978.707525,-2993.899379)">
+                <rect x="553.39" y="1625.326" width="61.594" height="43.465" style="fill:rgb(216,255,255);"/>
+            </g>
+            <g transform="matrix(0.803451,0,0,0.803451,398.802992,116.323151)">
+                <g transform="matrix(1,0,0,0.898235,0.750182,77.54803)">
+                    <path d="M1966.302,638.3C1994.919,555.794 2056.732,551.215 2072.758,546.064" style="fill:none;stroke:rgb(98,176,226);stroke-width:10.91px;"/>
+                </g>
+                <g transform="matrix(-1,-0,0,-0.898235,4039.810321,1141.3853)">
+                    <path d="M1966.302,638.3C1994.919,555.794 2056.732,551.215 2072.758,546.064" style="fill:none;stroke:rgb(98,176,226);stroke-width:10.91px;"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -164,7 +164,7 @@ namespace PileDesign.Output
                 writer.WriteLine();
             }
 
-            // === LOADCOMB（荷重組み合わせ） ===
+            // === LOADCOMB（荷重組合せ） ===
             if (analyzedCombos.Count > 0)
             {
                 writer.WriteLine("*LOADCOMB    ; Combinations");

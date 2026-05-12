@@ -55,7 +55,7 @@ namespace PileDesign.Models.InputData
                 SetEpsilonCr();
                 SetAllowableStrain();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Ec = 0.0;
                 Ac = 0.0;
@@ -75,7 +75,7 @@ namespace PileDesign.Models.InputData
                 ServiceLimitStrainT = double.MinValue; // 使用限界引張ひずみ度
                 DamageLimitStrainT = double.MinValue; // 損傷限界引張ひずみ度
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
@@ -309,7 +309,7 @@ namespace PileDesign.Models.InputData
                 }
                 Ag = Number * area;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Ag = 0.0;
             }
@@ -488,7 +488,7 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = damageLimitStressT / Ec;
                 UltimateLimitStrainT = double.MinValue;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
@@ -528,7 +528,7 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = damageLimitStressT / Ec;
                 UltimateLimitStrainT = double.MinValue;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
@@ -583,7 +583,7 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = double.MinValue;
                 UltimateLimitStrainT = double.MinValue;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
@@ -701,7 +701,7 @@ namespace PileDesign.Models.InputData
 
                 SetAllowableStrain();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 F = 0.0;
                 As = 0.0;
@@ -727,7 +727,7 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = Ftdp / SE1; // 損傷限界引張ひずみ度
                 UltimateLimitStrainT = double.MinValue; // 安全限界引張ひずみ度
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
@@ -919,7 +919,7 @@ namespace PileDesign.Models.InputData
                 }
                 return M;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return 0.0;
             }
@@ -976,7 +976,7 @@ namespace PileDesign.Models.InputData
 
                 return (M, curvature);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return (0.0, 0.0);
             }
@@ -1001,7 +1001,7 @@ namespace PileDesign.Models.InputData
                 }
                 return maxCurvature;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return 0.0;
             }
@@ -1045,7 +1045,7 @@ namespace PileDesign.Models.InputData
                 }
                 return epsilonC;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return 0.0;
             }
@@ -1266,7 +1266,7 @@ namespace PileDesign.Models.InputData
                 }
                 return (axialForce, bendingMoment);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return (0.0, 0.0);
             }
@@ -1302,7 +1302,7 @@ namespace PileDesign.Models.InputData
                 }
                 return (axialForce, bendingMoment);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return (0.0, 0.0);
             }

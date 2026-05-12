@@ -1,0 +1,30 @@
+{
+  "displayName": "関東支部7章",
+  "groundRef": "関東支部7章",
+  "groundTopAltitude": 0,
+  "groundWaterGLDepth": -2.5,
+  "stressGLDepth": 0.0,
+  "groundAcceleration1": 2.0,
+  "shallowSoilType": "粘性土",
+  "groundLayers": [
+    { "no": 1, "bottomGLDepth": -9.5, "layerThickness": 9.5, "bottomAltitude": -9.5, "name": "ローム層", "granularityClass": "粘性土", "poissonsRatio": 0.4, "density": 17.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 10.0, "cohesive": 60.0, "vs": 260.0, "es": 8000.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 2, "bottomGLDepth": -10.0, "layerThickness": 0.5, "bottomAltitude": -10.0, "name": "凝灰質粘土", "granularityClass": "粘性土", "poissonsRatio": 0.4, "density": 17.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 10.0, "cohesive": 60.0, "vs": 260.0, "es": 8000.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 3, "bottomGLDepth": -15.0, "layerThickness": 5.0, "bottomAltitude": -15.0, "name": "砂礫", "granularityClass": "礫質土", "poissonsRatio": 0.3, "density": 20.0, "ageCategory": "洪積層", "isEngineeringBedrock": true, "nValue": 50.0, "cohesive": 0.0, "vs": 400.0, "es": 30000.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true }
+  ],
+  "groundMassesData": [
+    { "glDepth": -2.0, "nValue": 1.0, "fc": 70.0, "density": 0.0, "vs0": 260.0 },
+    { "glDepth": -3.0, "nValue": 1.0, "fc": 70.0, "density": 0.0, "vs0": 260.0 },
+    { "glDepth": -4.0, "nValue": 1.0, "fc": 70.0, "density": 0.0, "vs0": 260.0 },
+    { "glDepth": -5.0, "nValue": 1.0, "fc": 70.0, "density": 0.0, "vs0": 260.0 },
+    { "glDepth": -6.0, "nValue": 1.0, "fc": 70.0, "density": 0.0, "vs0": 260.0 },
+    { "glDepth": -7.0, "nValue": 1.0, "fc": 70.0, "density": 0.0, "vs0": 260.0 },
+    { "glDepth": -8.0, "nValue": 1.0, "fc": 70.0, "density": 0.0, "vs0": 260.0 },
+    { "glDepth": -9.0, "nValue": 1.0, "fc": 70.0, "density": 0.0, "vs0": 260.0 },
+    { "glDepth": -10.0, "nValue": 50.0, "fc": 10.0, "density": 0.0, "vs0": 400.0 },
+    { "glDepth": -11.0, "nValue": 50.0, "fc": 10.0, "density": 0.0, "vs0": 400.0 },
+    { "glDepth": -12.0, "nValue": 50.0, "fc": 10.0, "density": 0.0, "vs0": 400.0 },
+    { "glDepth": -13.0, "nValue": 50.0, "fc": 10.0, "density": 0.0, "vs0": 400.0 },
+    { "glDepth": -14.0, "nValue": 50.0, "fc": 10.0, "density": 0.0, "vs0": 400.0 },
+    { "glDepth": -15.0, "nValue": 50.0, "fc": 10.0, "density": 0.0, "vs0": 400.0 }
+  ]
+}

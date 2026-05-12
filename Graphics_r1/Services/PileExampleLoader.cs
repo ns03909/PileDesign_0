@@ -293,8 +293,6 @@ namespace PileDesign.Services
             }
             inputModel.GridYItems = new ObservableCollection<GridDataItem>(gridYList);
 
-            // 旧要素はクリア（後方互換用に読み込まれた場合に備える）
-            inputModel.Elements = new ObservableCollection<Element>();
 
             // FoundationBeamInput 設定（基礎梁入力）
             if (data.FoundationBeamInput != null)
@@ -309,13 +307,12 @@ namespace PileDesign.Services
                     _ => FoundationBeamConnectionMode.RigidBody
                 };
 
-                // 材料（バッチ化）
+                // 材料（バッチ化）— No プロパティは廃止 (位置 = ID)、配列順がそのまま 1-based の番号となる
                 var matList = new List<BeamMaterial>(data.FoundationBeamInput.Materials.Count);
                 foreach (var matDto in data.FoundationBeamInput.Materials)
                 {
                     matList.Add(new BeamMaterial
                     {
-                        No = matDto.No,
                         Name = matDto.Name,
                         YoungModulus = matDto.YoungModulus,
                         ShearModulus = matDto.ShearModulus,
@@ -324,13 +321,12 @@ namespace PileDesign.Services
                 }
                 inputModel.FoundationBeamInput.Materials = new ObservableCollection<BeamMaterial>(matList);
 
-                // 断面（バッチ化）
+                // 断面（バッチ化）— No プロパティは廃止 (位置 = ID)
                 var secList = new List<BeamSection>(data.FoundationBeamInput.Sections.Count);
                 foreach (var secDto in data.FoundationBeamInput.Sections)
                 {
                     var section = new BeamSection
                     {
-                        No = secDto.No,
                         Name = secDto.Name,
                         Width = secDto.Width,
                         Height = secDto.Height
@@ -340,16 +336,15 @@ namespace PileDesign.Services
                 }
                 inputModel.FoundationBeamInput.Sections = new ObservableCollection<BeamSection>(secList);
 
-                // 梁要素（バッチ化 + Dictionary参照解決）
+                // 梁要素（バッチ化 + Dictionary参照解決）— No プロパティは廃止 (位置 = ID)
                 var pileLookup = inputModel.PileLayoutItems.ToDictionary(p => p.PileNo, p => p.UniqueId);
                 var nodeLookup = inputModel.InputNodes.ToDictionary(n => n.No, n => n.UniqueId);
 
-                var beamList = new List<FoundationBeamElement>(data.FoundationBeamInput.Beams.Count);
+                var beamList = new List<FoundationBeam>(data.FoundationBeamInput.Beams.Count);
                 foreach (var beamDto in data.FoundationBeamInput.Beams)
                 {
-                    var beam = new FoundationBeamElement
+                    var beam = new FoundationBeam
                     {
-                        No = beamDto.No,
                         MaterialNo = beamDto.MaterialNo,
                         SectionNo = beamDto.SectionNo
                     };
@@ -368,10 +363,13 @@ namespace PileDesign.Services
 
                     beamList.Add(beam);
                 }
-                inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeamElement>(beamList);
+                inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeam>(beamList);
 
                 // 材料・断面が空のとき、自動生成梁の参照先を保証するためデフォルトエントリを追加
                 inputModel.FoundationBeamInput.EnsureDefaultMaterialAndSection();
+
+                // 梁要素 ComboBox 用の節点候補リストを再構築 (FoundationNode が含まれる場合のため)
+                inputModel.RefreshAvailableNodeReferenceOptions();
             }
             else
             {
@@ -380,7 +378,7 @@ namespace PileDesign.Services
                 {
                     inputModel.FoundationBeamInput.Materials = new ObservableCollection<BeamMaterial>();
                     inputModel.FoundationBeamInput.Sections = new ObservableCollection<BeamSection>();
-                    inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeamElement>();
+                    inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeam>();
                 }
             }
 
@@ -480,8 +478,8 @@ namespace PileDesign.Services
         private static string GetExamplesPath()
         {
             // 実行ファイルのディレクトリからExamplesフォルダを探す
-            var assemblyLocation = Assembly.GetExecutingAssembly().Location;
-            var assemblyDir = Path.GetDirectoryName(assemblyLocation) ?? ".";
+            // 単一ファイル発行 (PublishSingleFile=true) では Assembly.Location が空文字を返すため AppContext.BaseDirectory を使用
+            var assemblyDir = AppContext.BaseDirectory;
             var examplesPath = Path.Combine(assemblyDir, "Examples");
 
             if (Directory.Exists(examplesPath))

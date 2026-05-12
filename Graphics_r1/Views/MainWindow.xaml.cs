@@ -1,4 +1,4 @@
-﻿using AvalonDock.Layout;
+using AvalonDock.Layout;
 using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using PileDesign.Output;
@@ -67,12 +67,7 @@ namespace PileDesign.Views
 
         public double Canvas3DHeight { get; set; }
         public double Canvas3DWidth { get; set; }
-        // ツリーメニュー
-        public ObservableCollection<CTreeViewData> CTreeViewData { get; set; } = [];
-
         public CanvasThreeDView CanvasThreeDViewModel { get; set; }
-
-        private OptionWindow? _optionWindow;
 
         private bool _startupQuickHintShown = false;
         private readonly Services.LayoutService _layoutService = new();
@@ -120,7 +115,6 @@ namespace PileDesign.Views
             // Ctrl+Shift+P でコマンドパレット起動 (C.9)
             PreviewKeyDown += MainWindow_GlobalShortcutPreviewKeyDown;
 
-            viewModel.TreeViewControl = TreeViewControl;
             // ViewModelのActionにUpdateCanvas3Dを設定
             CanvasThreeDViewModel = viewModel.CanvasThreeDView;
             CanvasThreeDViewModel.UpdateCanvas3DAction = UpdateCanvas3D;
@@ -137,9 +131,6 @@ namespace PileDesign.Views
             DataGridPileAxialForce.SelectionChanged += DataGridPileAxialForce_SelectionChanged;
             DataGridIsFrontPile.SelectionChanged += DataGridIsFrontPile_SelectionChanged;
 
-
-            // inputDataAnchorable を ViewModel に渡す
-            viewModel.InputDataAnchorable = inputDataAnchorable;
 
             // Window の KeyDown イベントを設定
             this.KeyDown += MainWindow_KeyDown;
@@ -208,10 +199,6 @@ namespace PileDesign.Views
         {
             UpdateCanvas3D();
             UpdatePerspectiveView();
-            var viewModel = _mainWindowViewModel;
-
-            // ツリービューの更新
-            viewModel.UpdateTreeView();
         }
 
         // トースト通知
@@ -269,10 +256,6 @@ namespace PileDesign.Views
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-
-            var layoutAnchorable = inputDataAnchorable;
-            layoutAnchorable?.ToggleAutoHide();
-
             // 「形状確認ビュー（凍結中）」タブをレイアウトから除去 (HelixViewport3D 機能凍結中のため非表示)
             // 名前付きコントロールはコードビハインドが参照するため、要素自体は XAML に残置している。
             try
@@ -330,8 +313,19 @@ namespace PileDesign.Views
             }
         }
 
+        // cancel-and-reclose パターン: 保存完了後に再度 Close() を呼び戻す際、Window_Closing が
+        // 2 回発火する。2 回目は確認ダイアログを出さず素通りさせるためのフラグ。
+        private bool _isClosingAfterSave;
+
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            if (_isClosingAfterSave)
+            {
+                // 保存完了後の再 Close: レイアウトを保存してそのまま閉じる
+                _layoutService.SaveDockLayout(dockingManager);
+                return;
+            }
+
             // 確認ダイアログを表示
             var result = MessageService.Show(
                 "現在のデータを保存しますか？",
@@ -343,12 +337,23 @@ namespace PileDesign.Views
             switch (result)
             {
                 case MessageBoxResult.Yes:
-                    // 保存して閉じる
+                    // 保存して閉じる: close を一度キャンセルし、Dispatcher で延期して保存処理を実行。
+                    // 注: Window_Closing 内で await SaveInputModelFile() を直接実行すると、
+                    //     内部の SaveFileDialog.ShowDialog() が「Window が閉じている場合は呼べない」
+                    //     例外を出すことがある (e.Cancel=true でも WPF は本ハンドラから抜けるまで
+                    //     キャンセル処理を完了しないため)。Dispatcher.BeginInvoke で次のメッセージ
+                    //     ループに延期することで、ハンドラ完了後の安定した状態で保存を行う。
                     if (DataContext is MainWindowViewModel viewModel)
                     {
-                        viewModel.SaveInputModelFile();
+                        e.Cancel = true;
+                        Dispatcher.BeginInvoke(new Action(async () =>
+                        {
+                            await viewModel.SaveInputModelFile();
+                            _isClosingAfterSave = true;
+                            Close();
+                        }));
                     }
-                    break;
+                    return; // この経路ではレイアウト保存は 2 回目の Closing 発火時に行う
                 case MessageBoxResult.No:
                     // 保存せずに閉じる
                     break;
@@ -410,8 +415,20 @@ namespace PileDesign.Views
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            // MainWindowが閉じられたときにOptionWindowも閉じる
-            _optionWindow?.Close();
+            // 自分以外で開いている全てのウィンドウを閉じる (グラフ・テーブル・ログ等)
+            // Application.Current.Windows をスナップショットしてから順次 Close (列挙中の変更を回避)
+            if (Application.Current != null)
+            {
+                var others = Application.Current.Windows
+                    .OfType<Window>()
+                    .Where(w => !ReferenceEquals(w, this))
+                    .ToList();
+                foreach (var w in others)
+                {
+                    try { w.Close(); }
+                    catch { /* 個別ウィンドウの Close 失敗は無視 (アプリ終了優先) */ }
+                }
+            }
 
             // ViewModel への購読を解除 (メモリリーク防止)
             if (DataContext is MainWindowViewModel vm)
@@ -426,7 +443,6 @@ namespace PileDesign.Views
             SetupDataBindings();
             InitializePanelToggleSync();
             var viewModel = _mainWindowViewModel;
-            viewModel.UpdateTreeView();
 
             // 起動時にアイソメトリックビューを強制設定（Slider初期化で上書きされる場合の対策）
             viewModel.CanvasThreeDView.Tht = -45;
@@ -1010,7 +1026,7 @@ namespace PileDesign.Views
                 viewModel.MouseCoordinateText = $"X={worldPos.X:F3}  Y={worldPos.Y:F3}  Z={worldPos.Z:F3}";
             }
 
-            // 基礎梁要素追加モード: プレビュー線を描画
+            // 基礎梁追加モード: プレビュー線を描画
             if (viewModel.CurrentEditMode == CanvasEditMode.AddElement && viewModel.TempStartNode != null)
             {
                 DrawFoundationBeamPreview(e.GetPosition(Canvas3DLayout));
@@ -2212,7 +2228,6 @@ namespace PileDesign.Views
             // 削除対象の収集
             var pilesToRemove = input.PileLayoutItems.Where(x => x.IsSelected).ToList();
             var inputNodesToRemove = input.InputNodes?.Where(x => x.IsSelected && x.Type == NodeType.General).ToList() ?? [];
-            var elementsToRemove = input.Elements?.Where(x => x.IsSelected).ToList() ?? [];
             var beamsToRemove = input.FoundationBeamInput?.Beams?.Where(x => x.IsSelected).ToList() ?? [];
 
             // 削除対象の一般節点のUniqueIdを収集（接続要素の検索用）
@@ -2220,18 +2235,7 @@ namespace PileDesign.Views
             // 削除対象の杭のUniqueIdも収集
             var deletedPileIds = new HashSet<Guid>(pilesToRemove.Select(p => p.UniqueId));
 
-            // 削除される節点に接続された一般要素を追加
-            if (input.Elements != null && deletedNodeIds.Count > 0)
-            {
-                foreach (var element in input.Elements)
-                {
-                    if (elementsToRemove.Contains(element)) continue;
-                    if (element.Nodes.Any(n => deletedNodeIds.Contains(n.UniqueId)))
-                        elementsToRemove.Add(element);
-                }
-            }
-
-            // 削除される節点/杭に接続された基礎梁要素を追加
+            // 削除される節点/杭に接続された基礎梁を追加
             if (input.FoundationBeamInput?.Beams != null && (deletedNodeIds.Count > 0 || deletedPileIds.Count > 0))
             {
                 foreach (var beam in input.FoundationBeamInput.Beams)
@@ -2256,7 +2260,7 @@ namespace PileDesign.Views
 
             // 削除するものがなければ何もしない
             if (pilesToRemove.Count == 0 && inputNodesToRemove.Count == 0 &&
-                elementsToRemove.Count == 0 && beamsToRemove.Count == 0)
+                beamsToRemove.Count == 0)
                 return;
 
             // Undoスナップショットを保存（削除前の状態）
@@ -2272,12 +2276,6 @@ namespace PileDesign.Views
                     input.InputNodes.Remove(node);
             }
 
-            if (input.Elements != null)
-            {
-                foreach (var element in elementsToRemove)
-                    input.Elements.Remove(element);
-            }
-
             if (input.FoundationBeamInput?.Beams != null)
             {
                 foreach (var beam in beamsToRemove)
@@ -2287,6 +2285,11 @@ namespace PileDesign.Views
             // 杭番号を更新
             if (pilesToRemove.Count > 0)
                 vm.UpdatePileLayoutNo();
+
+            // LoadingRow ベースの行番号は Remove 時に再評価されないため、
+            // 関連 DataGrid を強制リフレッシュして即時再描画する。
+            if (beamsToRemove.Count > 0)
+                DataGridFoundationBeams?.Items.Refresh();
 
             UpdateWindow();
         }
@@ -2411,8 +2414,9 @@ namespace PileDesign.Views
 
             var vm = this.DataContext as PileDesign.ViewModels.MainWindowViewModel;
 
-            // 個別十字系に切り替わった場合は RectLoads を自動生成で置換
-            if (vm != null && (selectedItem == "個別十字" || selectedItem == "個別十字（基礎梁考慮）"))
+            // 個別十字系・個別矩形系に切り替わった場合は RectLoads を自動生成で置換
+            if (vm != null && (selectedItem == "個別十字" || selectedItem == "個別十字（基礎梁反力）"
+                            || selectedItem == "個別矩形" || selectedItem == "個別矩形（基礎梁考慮）"))
             {
                 // 既存の RectLoads (任意矩形等で入力済) があれば、上書き確認ダイアログを表示
                 var existingRectLoads = vm.CurrentInputModel?.PileGroupSettlement?.RectLoads;
@@ -2420,8 +2424,11 @@ namespace PileDesign.Views
                 if (existingCount > 0)
                 {
                     var prevName = _prevLoadingType as string ?? "(以前の荷重タイプ)";
+                    string shapeDesc = (selectedItem == "個別矩形" || selectedItem == "個別矩形（基礎梁考慮）")
+                        ? "杭頭ごとの正方形荷重"
+                        : "杭頭ごとの十字形矩形荷重";
                     var msg = $"現在「{prevName}」で {existingCount} 件の矩形荷重が登録されています。\n\n" +
-                              $"「{selectedItem}」へ切替えると、これらは破棄され、杭頭ごとの十字形矩形荷重で上書きされます。\n\n" +
+                              $"「{selectedItem}」へ切替えると、これらは破棄され、{shapeDesc}で上書きされます。\n\n" +
                               "切替えを続行しますか? (キャンセルで元の荷重タイプに戻ります)";
                     var result = PileDesign.Services.MessageService.Show(
                         msg, "荷重タイプ切替確認",
@@ -2448,6 +2455,24 @@ namespace PileDesign.Views
             // 変更を確定し、前回値を更新
             _prevLoadingType = ComboBoxLoadingType.SelectedItem;
 
+            UpdateWindow();
+        }
+
+        // 群杭沈下解析結果のアクティブケース切替: 選択ケースの SettlementGridData / RectLoads /
+        // 各杭沈下を legacy フィールドへ反映してキャンバスを再描画する。
+        private void ComboBoxGroupSettlementActiveCase_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DataContext is not PileDesign.ViewModels.MainWindowViewModel vm) return;
+            var pgs = vm.CurrentInputModel?.PileGroupSettlement;
+            if (pgs?.CaseRecords == null || pgs.CaseRecords.Count == 0) return;
+            int idx = pgs.ActiveCaseIndex;
+            if (idx < 0 || idx >= pgs.CaseRecords.Count) return;
+
+            PileDesign.ViewModels.GroupSettlementWithBeamCalculationViewModel
+                .ApplyActiveCaseToLegacyFields(pgs, pgs.CaseRecords[idx]);
+
+            // バッジ・キャンバス更新
+            vm.RaisePropertyChanged(nameof(PileDesign.ViewModels.MainWindowViewModel.IsGroupSettlementActiveCaseBeamAware));
             UpdateWindow();
         }
 
@@ -3171,18 +3196,21 @@ namespace PileDesign.Views
 
         private void ButtonGroupPileSettlement_Click(object sender, RoutedEventArgs e)
         {
+            // 入力は主画面の「群杭荷重」タブに集約。基礎梁無し用の「一回解析」サブタブをアクティブ化。
+            // 基礎梁有りの反復解析は別リボンボタン (OpenGroupSettlementWithBeamWindowCommand) から起動。
             ActivateGroupPileLoadTab();
-            MessageService.Show("（初期状態で左側にある）「群杭荷重」タブで「荷重」、「土層」、「グリッド」を設定し、" +
-                "最下段の「群杭沈下解析実行」ボタンを押してください。\n\n" +
-                "群杭沈下解析は「群杭荷重」で行ってください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (TabItemLoadNonBeam != null && GroupPileTabControl != null)
+            {
+                GroupPileTabControl.SelectedItem = TabItemLoadNonBeam;
+            }
         }
 
         private void ActivateGroupPileLoadTab()
         {
-            // "群杭荷重"タブを探してアクティブ化
+            // "土層沈下"タブを探してアクティブ化
             foreach (var doc in dockingManager.Layout.Descendents().OfType<LayoutDocument>())
             {
-                if (doc.Title == "群杭荷重")
+                if (doc.Title == "土層沈下")
                 {
                     doc.IsSelected = true;
                     doc.IsActive = true;
@@ -3416,7 +3444,7 @@ namespace PileDesign.Views
         #region 基礎梁ビジュアル編集 - イベントハンドラ
 
         /// <summary>
-        /// 基礎梁要素追加のプレビュー線を描画
+        /// 基礎梁追加のプレビュー線を描画
         /// </summary>
         private void DrawFoundationBeamPreview(Point mousePos)
         {
@@ -3552,7 +3580,8 @@ namespace PileDesign.Views
                 // スナップした杭が見つかった場合（XY座標が一致）
                 if (dist < 0.01) // 1cm以内なら一致とみなす
                 {
-                    finalZ = pile.Z + pile.FoundationBeamDeltaZc;
+                    // v2 セマンティクス: pile.Z は接合節点 Z (FoundationNode の Z はそのまま)
+                    finalZ = pile.Z;
                     break;
                 }
             }
@@ -3623,10 +3652,10 @@ namespace PileDesign.Views
                 }
             }
 
-            // 既存ノードがない場合、接続用節点をヒットテスト
-            if (hitRef == null && vm.IsConnectingNodeVisible)
+            // 既存ノードがない場合、接合節点をヒットテスト
+            if (hitRef == null && vm.IsConnectionNodeVisible)
             {
-                var hitPile = HitTestConnectingNode(mousePos);
+                var hitPile = HitTestConnectionNode(mousePos);
                 if (hitPile != null)
                 {
                     // 杭配置を直接参照
@@ -3661,17 +3690,13 @@ namespace PileDesign.Views
 
                 var beams = vm.CurrentInputModel.FoundationBeamInput.Beams;
 
-                // デフォルトの材料・断面番号を取得
-                int defaultMaterialNo = 1;
-                int defaultSectionNo = 1;
-                if (vm.CurrentInputModel.FoundationBeamInput.Materials.Count > 0)
-                    defaultMaterialNo = vm.CurrentInputModel.FoundationBeamInput.Materials[0].No;
-                if (vm.CurrentInputModel.FoundationBeamInput.Sections.Count > 0)
-                    defaultSectionNo = vm.CurrentInputModel.FoundationBeamInput.Sections[0].No;
+                // デフォルトの材料・断面番号 (1-based 位置インデックス)
+                int defaultMaterialNo = vm.CurrentInputModel.FoundationBeamInput.Materials.Count > 0 ? 1 : 1;
+                int defaultSectionNo = vm.CurrentInputModel.FoundationBeamInput.Sections.Count > 0 ? 1 : 1;
 
-                var newBeam = new FoundationBeamElement
+                var newBeam = new FoundationBeam
                 {
-                    No = beams.Count + 1,
+                    // No プロパティ廃止 (位置 = ID)
                     // 新方式: Type + Guid で参照
                     NodeI_Type = vm.TempStartNode.Type,
                     NodeI_Id = vm.TempStartNode.Id,
@@ -3680,9 +3705,6 @@ namespace PileDesign.Views
                     // 材料・断面番号
                     MaterialNo = defaultMaterialNo,
                     SectionNo = defaultSectionNo,
-                    // 旧方式（後方互換性）
-                    NodeI_No = 0,
-                    NodeJ_No = 0,
                     SectionName = $"Beam-{beams.Count + 1}",
                     Width = 0.5,
                     Height = 0.8,
@@ -3735,7 +3757,9 @@ namespace PileDesign.Views
             var beams = vm.CurrentInputModel.FoundationBeamInput.Beams;
 
             // 接続されている要素を削除（カスケード削除）
-            var beamsToRemove = beams.Where(b => b.NodeI_No == hitNode.No || b.NodeJ_No == hitNode.No).ToList();
+            var beamsToRemove = beams.Where(b =>
+                (b.NodeI_Type == NodeReferenceType.FoundationNode && b.NodeI_Id == hitNode.Id) ||
+                (b.NodeJ_Type == NodeReferenceType.FoundationNode && b.NodeJ_Id == hitNode.Id)).ToList();
             foreach (var beam in beamsToRemove)
             {
                 beams.Remove(beam);
@@ -3744,14 +3768,11 @@ namespace PileDesign.Views
             // ノードを削除
             nodes.Remove(hitNode);
 
-            // 番号を振り直し
+            // 節点 No は振り直し (FoundationNode.No は廃止対象外)。
+            // 梁要素 No は廃止 (位置 = ID)
             for (int i = 0; i < nodes.Count; i++)
             {
                 nodes[i].No = i + 1;
-            }
-            for (int i = 0; i < beams.Count; i++)
-            {
-                beams[i].No = i + 1;
             }
 
             // Undo登録（今後実装）
@@ -3856,21 +3877,21 @@ namespace PileDesign.Views
         }
 
         /// <summary>
-        /// マウス位置（ピクセル座標）で接続用節点（杭頭+ΔZc）をヒットテスト
+        /// マウス位置（ピクセル座標）で接合節点（杭頭+ΔZc）をヒットテスト
         /// </summary>
         /// <returns>ヒットした杭のPileLayoutDataItem（なければnull）</returns>
-        private PileLayoutDataItem? HitTestConnectingNode(Point mousePos, double hitRadius = 10.0)
+        private PileLayoutDataItem? HitTestConnectionNode(Point mousePos, double hitRadius = 10.0)
         {
             var vm = (MainWindowViewModel)DataContext;
             var piles = vm.CurrentInputModel?.PileLayoutItems;
 
             if (piles == null || piles.Count == 0) return null;
 
-            // 各杭の接続用節点位置でヒットテスト
+            // 各杭の接合節点位置でヒットテスト (v2 セマンティクス: pile.Z は接合節点 Z)
             foreach (var pile in piles)
             {
-                double connectingZ = pile.Z + pile.FoundationBeamDeltaZc;
-                var nodeLoc3D = new Point3D(pile.X, pile.Y, connectingZ);
+                double connectionZ = pile.Z;
+                var nodeLoc3D = new Point3D(pile.X, pile.Y, connectionZ);
                 var screenPos = vm.CanvasThreeDView.Transformation(nodeLoc3D);
 
                 double dx = screenPos.X - mousePos.X;
@@ -3936,6 +3957,13 @@ namespace PileDesign.Views
             if (DataContext is not MainWindowViewModel vm) return;
             var w = new CommandPaletteWindow(vm, this) { Owner = this };
             w.ShowDialog();
+        }
+
+        private void OpenEditHistoryPanel_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not MainWindowViewModel vm) return;
+            var w = new HistoryPanelWindow(vm, vm.UndoManager) { Owner = this };
+            w.Show();
         }
 
         /// <summary>

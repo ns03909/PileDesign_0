@@ -1,6 +1,6 @@
 {
   "displayName": "関東支部 設計例7",
-  "groundExampleName": "ExampleK8",
+  "groundExampleName": "ExampleK7",
   "inertiaPoint": { "x": 13.0, "y": 9.5, "z": 0.75 },
   "loadingPlaneAltitude": -2.0,
   "rectLoads": [
@@ -45,8 +45,8 @@
       "segments": [
         {
           "no": 1,
-          "segmentLength": 5.0,
-          "segmentDepth": 5.0,
+          "segmentLength": 9.5,
+          "segmentDepth": 9.5,
           "pileSectionType": "SC杭",
           "precastPileName": "SC-700-標準-105-12"
         }

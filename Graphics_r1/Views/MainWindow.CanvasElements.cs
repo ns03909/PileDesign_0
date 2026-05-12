@@ -1,4 +1,4 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
@@ -46,11 +46,13 @@ namespace PileDesign.Views
 
             if (!viewModel.IsElementSplit) // 要素未分割の場合
             {
+                // v2 セマンティクス: 杭体描画の起点は杭頭 Z (= pile.Z - ΔZc)
                 pileBodySegments = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileBodySegments;
-                zs.Add(pileLocation.Point3D.Z);
+                double pileTopZ = pileLocation.PileHeadZ;
+                zs.Add(pileTopZ);
                 foreach (var segment in pileBodySegments)
                 {
-                    zs.Add(pileLocation.Point3D.Z - segment.SegmentDepth);
+                    zs.Add(pileTopZ - segment.SegmentDepth);
                 }
             }
 
@@ -286,10 +288,10 @@ namespace PileDesign.Views
 
         // 基礎梁描画の更新
         /// <summary>
-        /// 接続用節点（杭頭+ΔZc位置）と剛体連結線を描画します。
-        /// IsFoundationBeamVisible とは独立して、IsConnectingNodeVisible で制御されます。
+        /// 接合節点（杭頭+ΔZc位置）と剛体連結線を描画します。
+        /// IsFoundationBeamVisible とは独立して、IsConnectionNodeVisible で制御されます。
         /// </summary>
-        private void UpdateConnectingNodes3D()
+        private void UpdateConnectionNodes3D()
         {
             if (Canvas3DLayout == null) return;
             if (DataContext is not MainWindowViewModel viewModel) return;
@@ -298,27 +300,28 @@ namespace PileDesign.Views
             var selectedLC0 = LoadCases.GetLoadCase(
                 viewModel.CurrentInputModel?.LoadCasesInput?.AllLoadCases, viewModel.SelectedLoadCaseName);
             bool isHorizontalLoadCase = selectedLC0 != null && (selectedLC0.Level == 1 || selectedLC0.Level == 2);
-            if (isHorizontalLoadCase && viewModel.IsNodeVisible && viewModel.IsConnectingNodeVisible && viewModel.CurrentInputModel?.PileLayoutItems != null)
+            if (isHorizontalLoadCase && viewModel.IsNodeVisible && viewModel.IsConnectionNodeVisible && viewModel.CurrentInputModel?.PileLayoutItems != null)
             {
                 foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                 {
                     // 非アクティブ杭の接合節点・Rigid link線はスキップ
                     if (!pile.IsVisible) continue;
 
-                    // 各杭の接続用節点位置（杭頭Z + ΔZc）
-                    double connectingZ = pile.Z + pile.FoundationBeamDeltaZc;
-                    Point3D locConnecting = new(pile.X, pile.Y, connectingZ);
-                    Point coordConnecting = viewModel.CanvasThreeDView.Transformation(locConnecting);
+                    // 接合節点位置 (v2 セマンティクス: pile.Z は接合節点 Z)
+                    double connectionZ = pile.Z;
+                    Point3D locConnection = new(pile.X, pile.Y, connectionZ);
+                    Point coordConnection = viewModel.CanvasThreeDView.Transformation(locConnection);
 
-                    // 接続用節点を円として追加（杭節点と同じサイズ）
+                    // 接合節点を円として追加（杭節点と同じサイズ）
                     double radius = actualNodeSize * 0.5;
-                    EllipseGeometry ellipse = new(coordConnecting, radius, radius);
-                    viewModel.CanvasGeometry.PathGeoConnectingNodes.AddGeometry(ellipse);
+                    EllipseGeometry ellipse = new(coordConnection, radius, radius);
+                    viewModel.CanvasGeometry.PathGeoConnectionNodes.AddGeometry(ellipse);
 
-                    // 杭頭から接続用節点への剛体連結線を追加（細い灰色破線）
-                    Point3D locPileTop = new(pile.X, pile.Y, pile.Z);
+                    // 杭頭から接合節点への剛体連結線を追加（細い灰色破線）
+                    // v2 セマンティクス: 杭頭は PileHeadZ (= pile.Z - ΔZc)
+                    Point3D locPileTop = new(pile.X, pile.Y, pile.PileHeadZ);
                     Point coordPileTop = viewModel.CanvasThreeDView.Transformation(locPileTop);
-                    LineGeometry rigidLine = new() { StartPoint = coordPileTop, EndPoint = coordConnecting };
+                    LineGeometry rigidLine = new() { StartPoint = coordPileTop, EndPoint = coordConnection };
                     viewModel.CanvasGeometry.PathGeoRigidConnections.AddGeometry(rigidLine);
                 }
             }
@@ -329,7 +332,7 @@ namespace PileDesign.Views
             if (Canvas3DLayout == null) return;
             if (DataContext is not MainWindowViewModel viewModel) return;
 
-            // 基礎梁要素・節点の描画（FoundationBeamInputが必要）
+            // 基礎梁・節点の描画（FoundationBeamInputが必要）
             if (viewModel.CurrentInputModel?.FoundationBeamInput == null) return;
 
             var fbInput = viewModel.CurrentInputModel.FoundationBeamInput;
@@ -341,15 +344,20 @@ namespace PileDesign.Views
                 fbInput.Beams.Count == 0)
                 return;
 
-            var nodeDict = fbInput.Nodes.ToDictionary(n => n.No, n => n);
+            // ラベル表示用の材料・断面辞書 (1-based 位置インデックスをキーに)
+            var matDict = new Dictionary<int, BeamMaterial>();
+            if (fbInput.Materials != null)
+                for (int mi = 0; mi < fbInput.Materials.Count; mi++)
+                    matDict[mi + 1] = fbInput.Materials[mi];
+            var secDict = new Dictionary<int, BeamSection>();
+            if (fbInput.Sections != null)
+                for (int si = 0; si < fbInput.Sections.Count; si++)
+                    secDict[si + 1] = fbInput.Sections[si];
 
-            // ラベル表示用の材料・断面辞書
-            var matDict = fbInput.Materials?.ToDictionary(m => m.No, m => m);
-            var secDict = fbInput.Sections?.ToDictionary(s => s.No, s => s);
-
-            // 基礎梁要素を描画
-            foreach (var beam in fbInput.Beams)
+            // 基礎梁を描画
+            for (int beamIdx = 0; beamIdx < fbInput.Beams.Count; beamIdx++)
             {
+                var beam = fbInput.Beams[beamIdx];
                 // 非アクティブ梁はスキップ
                 if (!beam.IsVisible) continue;
                 // 選択された梁はUpdateSelectedNodesAndElements3D()で描画するのでスキップ
@@ -366,11 +374,6 @@ namespace PileDesign.Views
                     if (coordsI.HasValue)
                         loc0 = new Point3D(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z);
                 }
-                else if (beam.NodeI_No > 0 && nodeDict.TryGetValue(beam.NodeI_No, out var nodeI))
-                {
-                    // 旧方式（後方互換性）
-                    loc0 = new Point3D(nodeI.X, nodeI.Y, nodeI.Z);
-                }
 
                 // NodeJ の座標を解決
                 if (beam.NodeJ_Id != Guid.Empty)
@@ -378,11 +381,6 @@ namespace PileDesign.Views
                     var coordsJ = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
                     if (coordsJ.HasValue)
                         loc1 = new Point3D(coordsJ.Value.X, coordsJ.Value.Y, coordsJ.Value.Z);
-                }
-                else if (beam.NodeJ_No > 0 && nodeDict.TryGetValue(beam.NodeJ_No, out var nodeJ))
-                {
-                    // 旧方式（後方互換性）
-                    loc1 = new Point3D(nodeJ.X, nodeJ.Y, nodeJ.Z);
                 }
 
                 // 座標が両方とも解決できた場合のみ描画
@@ -408,10 +406,12 @@ namespace PileDesign.Views
                 // 梁断面形状を描画
                 if (viewModel.IsBeamElementSectionVisible)
                 {
-                    var fbSections = fbInput.Sections?.ToDictionary(s => s.No, s => s);
+                    // SectionNo (1-based 位置インデックス) から BeamSection を解決
+                    BeamSection sec = beam.SectionNo >= 1 && beam.SectionNo <= (fbInput.Sections?.Count ?? 0)
+                        ? fbInput.Sections[beam.SectionNo - 1] : null;
                     double bw = beam.Width;
                     double bh = beam.Height;
-                    if (fbSections != null && fbSections.TryGetValue(beam.SectionNo, out var sec))
+                    if (sec != null)
                     {
                         bw = sec.Width;
                         bh = sec.Height;
@@ -419,12 +419,12 @@ namespace PileDesign.Views
                     AddBeamSectionGeometry2D(viewModel, point0, point1, bw, bh, beam.AngleBeta);
                 }
 
-                // 要素番号表示
+                // 要素番号表示 (1-based 位置インデックス)
                 if (viewModel.IsElementNoVisible)
                 {
                     // 梁の中心点に要素番号を表示
                     Point midPoint = new((coord0.X + coord1.X) / 2, (coord0.Y + coord1.Y) / 2);
-                    AddText3D(Brushes.DarkOrange, beam.No.ToString(), midPoint.X, midPoint.Y, "C", "C", 0);
+                    AddText3D(Brushes.DarkOrange, (beamIdx + 1).ToString(), midPoint.X, midPoint.Y, "C", "C", 0);
                 }
 
                 // 梁要素ラベル（材料No, 材料名称, 断面No, 断面名称, β）

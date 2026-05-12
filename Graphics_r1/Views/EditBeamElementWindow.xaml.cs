@@ -27,12 +27,20 @@ namespace PileDesign.Views
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
+            // No プロパティ廃止により、コレクション内位置 (1-based) を計算する
+            int? matNo = viewModel.SelectedMaterial != null && viewModel.Materials != null
+                ? viewModel.Materials.IndexOf(viewModel.SelectedMaterial) + 1
+                : null;
+            int? secNo = viewModel.SelectedSection != null && viewModel.Sections != null
+                ? viewModel.Sections.IndexOf(viewModel.SelectedSection) + 1
+                : null;
+
             Result = new BeamElementEditResult
             {
                 IsApplicableMaterialNo = viewModel.IsApplicableMaterialNo,
-                MaterialNo = viewModel.SelectedMaterial?.No,
+                MaterialNo = matNo,
                 IsApplicableSectionNo = viewModel.IsApplicableSectionNo,
-                SectionNo = viewModel.SelectedSection?.No
+                SectionNo = secNo
             };
 
             DialogResult = true;

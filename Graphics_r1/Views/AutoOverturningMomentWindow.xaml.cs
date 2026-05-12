@@ -77,21 +77,13 @@ namespace PileDesign.Views
 
         private void TextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
+            if (e.Key != System.Windows.Input.Key.Enter) return;
+            if (sender is not System.Windows.Controls.TextBox textBox) return;
 
-            if (e.Key == System.Windows.Input.Key.Enter)
-            {
-                if (sender is System.Windows.Controls.TextBox textBox)
-                {
-                    // Textプロパティのバインディング情報を取得
-                    var binding = BindingOperations.GetBindingExpression(textBox, System.Windows.Controls.TextBox.TextProperty);
-                    if (binding != null)
-                    {
-                        string propertyName = binding.ParentBinding.Path.Path;
-                        viewModel.OnPropertyChanged(propertyName);
-                    }
-                }
-            }
-
+            // Enter キーで Text プロパティのバインドを ViewModel 側に push し、
+            // LostFocus と同じく派生プロパティ (転倒モーメント等) を再計算させる。
+            var binding = BindingOperations.GetBindingExpression(textBox, System.Windows.Controls.TextBox.TextProperty);
+            binding?.UpdateSource();
         }
     }
 }

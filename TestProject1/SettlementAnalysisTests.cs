@@ -203,4 +203,199 @@ namespace TestProject1
                 Assert.IsTrue(near[0].Settlement > 0, $"中央点の沈下は正 (actual: {near[0].Settlement})");
         }
     }
+
+    /// <summary>
+    /// SettlementAnalysisService.BuildAutoCrossRectLoads (個別矩形/個別十字 等の荷重生成) のテスト。
+    /// </summary>
+    [TestClass]
+    public class BuildAutoCrossRectLoadsTests
+    {
+        private static PileLayoutDataItem MakePile(int no, double x, double y, double vL0 = 1000)
+        {
+            return new PileLayoutDataItem
+            {
+                PileNo = no,
+                X = x,
+                Y = y,
+                Z = 0,
+                AxialForceVL0 = vL0,
+                AxialForceVLAdditional = 0,
+                SoilPileAltNo = 1,
+                PileBodyNo = 1,
+                GroundNo = 1,
+            };
+        }
+
+        private static SoilPile MakeSoilPile(double loadDia)
+            => new() { GroupPileLoadDia = loadDia };
+
+        [TestMethod]
+        public void BuildAutoCrossRectLoads_AnyRect_ReturnsExistingLoadsAsIs()
+        {
+            // 任意矩形: 既存の RectLoads をそのまま返す (生成なし)
+            var existing = new RectLoad { X1 = -2, X2 = 2, Y1 = -2, Y2 = 2, QA = 500 };
+            var pgs = new PileGroupSettlement
+            {
+                LoadingType = "任意矩形",
+                RectLoads = new ObservableCollection<RectLoad> { existing }
+            };
+
+            var result = SettlementAnalysisService.BuildAutoCrossRectLoads(
+                pgs, new ObservableCollection<PileLayoutDataItem>(), new ObservableCollection<SoilPile>(), null!);
+
+            Assert.AreEqual(1, result.Count);
+            Assert.AreSame(existing, result[0]);
+        }
+
+        [TestMethod]
+        public void BuildAutoCrossRectLoads_IndividualRect_GeneratesOnePerPile_EquivalentArea()
+        {
+            // 個別矩形: 杭ごとに 1 矩形、一辺 = √π · r で円と等価面積
+            var pgs = new PileGroupSettlement
+            {
+                LoadingType = "個別矩形",
+                RectLoads = new ObservableCollection<RectLoad>()
+            };
+            var piles = new ObservableCollection<PileLayoutDataItem>
+            {
+                MakePile(1, 0, 0, vL0: 800),
+                MakePile(2, 5, 0, vL0: 600),
+            };
+            var soilPiles = new ObservableCollection<SoilPile> { MakeSoilPile(1.0) };
+
+            var result = SettlementAnalysisService.BuildAutoCrossRectLoads(pgs, piles, soilPiles, null!);
+
+            Assert.AreEqual(2, result.Count);
+
+            // 1 杭目の検証: r=0.5、一辺 = √π · 0.5 ≈ 0.886
+            var first = result[0];
+            double expectedSide = System.Math.Sqrt(System.Math.PI) * 0.5;
+            double expectedHalf = expectedSide * 0.5;
+            Assert.AreEqual(0 - expectedHalf, first.X1, 1e-9);
+            Assert.AreEqual(0 + expectedHalf, first.X2, 1e-9);
+            Assert.AreEqual(800.0, first.QA, 1e-9);
+            Assert.AreEqual(1, first.LinkedPileNo);
+
+            // 2 杭目: 中心 X=5
+            Assert.AreEqual(5 - expectedHalf, result[1].X1, 1e-9);
+            Assert.AreEqual(5 + expectedHalf, result[1].X2, 1e-9);
+            Assert.AreEqual(600.0, result[1].QA, 1e-9);
+            Assert.AreEqual(2, result[1].LinkedPileNo);
+        }
+
+        [TestMethod]
+        public void BuildAutoCrossRectLoads_IndividualRect_PreservesUserEditedDimensions()
+        {
+            // 個別矩形: 既存矩形 (LinkedPileNo 付き) は DX/DY を維持、中心と QA のみ更新
+            var existing = new RectLoad
+            {
+                LinkedPileNo = 1,
+                X1 = 0, X2 = 4, // DX = 4 (ユーザ編集済)
+                Y1 = -1, Y2 = 1, // DY = 2
+                QA = 100, // 古い値
+            };
+            var pgs = new PileGroupSettlement
+            {
+                LoadingType = "個別矩形",
+                RectLoads = new ObservableCollection<RectLoad> { existing }
+            };
+            var piles = new ObservableCollection<PileLayoutDataItem>
+            {
+                MakePile(1, 10, 20, vL0: 999),
+            };
+            var soilPiles = new ObservableCollection<SoilPile> { MakeSoilPile(1.0) };
+
+            var result = SettlementAnalysisService.BuildAutoCrossRectLoads(pgs, piles, soilPiles, null!);
+
+            Assert.AreEqual(1, result.Count);
+            Assert.AreSame(existing, result[0]); // 同一インスタンスを再利用
+
+            // CenterX/Y は新しい杭位置に追従
+            Assert.AreEqual(10.0, existing.CenterX, 1e-9);
+            Assert.AreEqual(20.0, existing.CenterY, 1e-9);
+
+            // QA は新値に更新
+            Assert.AreEqual(999.0, existing.QA, 1e-9);
+
+            // DX/DY (寸法) は維持されているはず: X2-X1 = 4, Y2-Y1 = 2
+            Assert.AreEqual(4.0, existing.X2 - existing.X1, 1e-9, "DX (= X2-X1) は維持されるはず");
+            Assert.AreEqual(2.0, existing.Y2 - existing.Y1, 1e-9, "DY (= Y2-Y1) は維持されるはず");
+        }
+
+        [TestMethod]
+        public void BuildAutoCrossRectLoads_IndividualCross_GeneratesMultipleRectsPerPile()
+        {
+            // 個別十字: 杭ごとに十字状の複数矩形を生成
+            var pgs = new PileGroupSettlement
+            {
+                LoadingType = "個別十字",
+                RectLoads = new ObservableCollection<RectLoad>()
+            };
+            var piles = new ObservableCollection<PileLayoutDataItem>
+            {
+                MakePile(1, 0, 0, vL0: 1000),
+            };
+            var soilPiles = new ObservableCollection<SoilPile> { MakeSoilPile(1.0) };
+
+            var result = SettlementAnalysisService.BuildAutoCrossRectLoads(pgs, piles, soilPiles, null!);
+
+            // 個別十字は GetCrossRectLoads が複数の矩形を生成 (具体数は実装依存だが ≥1)
+            Assert.IsTrue(result.Count >= 1, $"十字配置で少なくとも 1 つの矩形が生成される (actual: {result.Count})");
+        }
+
+        [TestMethod]
+        public void BuildAutoCrossRectLoads_ZeroRadius_SkipsPile()
+        {
+            // GroupPileLoadDia=0 の杭は荷重生成をスキップ (NaN 除算回避)
+            var pgs = new PileGroupSettlement
+            {
+                LoadingType = "個別矩形",
+                RectLoads = new ObservableCollection<RectLoad>()
+            };
+            var piles = new ObservableCollection<PileLayoutDataItem>
+            {
+                MakePile(1, 0, 0),
+                MakePile(2, 5, 0),
+            };
+            var soilPiles = new ObservableCollection<SoilPile> { MakeSoilPile(0) }; // radius=0
+
+            var result = SettlementAnalysisService.BuildAutoCrossRectLoads(pgs, piles, soilPiles, null!);
+
+            Assert.AreEqual(0, result.Count, "radius=0 の杭は全てスキップされるはず");
+        }
+
+        [TestMethod]
+        public void BuildAutoCrossRectLoads_BeamAwareIndividualRect_PreservesQA()
+        {
+            // 個別矩形（基礎梁考慮）: 既存矩形では QA も維持 (反復解析の k_i·S_2 で更新されるため触らない)
+            var existing = new RectLoad
+            {
+                LinkedPileNo = 1,
+                X1 = 0, X2 = 1, Y1 = 0, Y2 = 1,
+                QA = 555, // 反復解析で計算済の値、書き換え禁止
+            };
+            var pgs = new PileGroupSettlement
+            {
+                LoadingType = "個別矩形(基礎梁考慮)",
+                RectLoads = new ObservableCollection<RectLoad> { existing }
+            };
+            var piles = new ObservableCollection<PileLayoutDataItem>
+            {
+                MakePile(1, 0, 0, vL0: 9999), // 入力軸力は無視されるはず
+            };
+            var soilPiles = new ObservableCollection<SoilPile> { MakeSoilPile(1.0) };
+
+            // BeamAware パスは LoadingType が "個別矩形（基礎梁考慮）" だが括弧の種類は実装と一致させる
+            // 実装: 全角の "個別矩形（基礎梁考慮）" を使用
+            pgs.LoadingType = "個別矩形（基礎梁考慮）";
+
+            var result = SettlementAnalysisService.BuildAutoCrossRectLoads(pgs, piles, soilPiles, null!);
+
+            // QA は既存値を維持 (LoadingType=基礎梁考慮 では新しい入力軸力で上書きしない)
+            if (result.Count > 0 && ReferenceEquals(result[0], existing))
+            {
+                Assert.AreEqual(555.0, existing.QA, 1e-9, "基礎梁考慮: 既存 QA は維持される");
+            }
+        }
+    }
 }

@@ -4,6 +4,8 @@
     <TargetFramework>net8.0-windows7.0</TargetFramework>
 	<Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
+    <!-- SkiaSharp.Views.WPF は .NETFramework 用 NuGet が .NET 8 互換で動作する (PileDesign.csproj と同方針) -->
+    <NoWarn>NU1701</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

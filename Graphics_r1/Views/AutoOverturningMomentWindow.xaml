@@ -51,13 +51,15 @@
             <StackPanel Orientation="Horizontal">
                 <Label Content="OTM計算用建物重量 (kN)" Width="150" ToolTip="転倒モーメント計算に用いる建物総重量"/>
                 <TextBox Text="{Binding BuildingWeight, StringFormat=N0, UpdateSourceTrigger=LostFocus}" Width="100"
-                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"/>
+                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"
+                         KeyDown="TextBox_KeyDown"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">
                 <Label Content="OTM計算用有効高さ (m)" Width="150" ToolTip="地震力の作用高さ（建物の重心高さ等）"/>
                 <TextBox Text="{Binding EffectiveHeight, StringFormat=N1, UpdateSourceTrigger=LostFocus}" Width="100"
-                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"/>
+                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"
+                         KeyDown="TextBox_KeyDown"/>
             </StackPanel>
         </StackPanel>
 
@@ -67,7 +69,8 @@
                 <StackPanel Orientation="Horizontal">
                     <Label Content="OTM計算用層せん断力係数" Width="150" ToolTip="層せん断力係数 Ci（例: レベル1=0.2, レベル2=1.0）"/>
                     <TextBox Text="{Binding ShearCoefficient1, StringFormat=N3, UpdateSourceTrigger=LostFocus}" Width="100"
-                             Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="2"/>
+                             Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="2"
+                             KeyDown="TextBox_KeyDown"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
@@ -84,7 +87,8 @@
                 <StackPanel Orientation="Horizontal">
                     <Label Content="OTM計算用層せん断力係数" Width="150" ToolTip="層せん断力係数 Ci（例: レベル1=0.2, レベル2=1.0）"/>
                     <TextBox Text="{Binding ShearCoefficient2, StringFormat=N3, UpdateSourceTrigger=LostFocus}" Width="100"
-                             Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="2"/>
+                             Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="2"
+                             KeyDown="TextBox_KeyDown"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
@@ -97,18 +101,18 @@
 
         <StackPanel Grid.Row="2" Grid.Column="0">
             <CheckBox Content="レベル1" IsChecked="{Binding IsApplicableE1, UpdateSourceTrigger=PropertyChanged}"/>
-            <CheckBox Content="E1-1への適用" IsChecked="{Binding IsApplicableE1s[0], UpdateSourceTrigger=PropertyChanged}"/>
-            <CheckBox Content="E1-2への適用" IsChecked="{Binding IsApplicableE1s[1], UpdateSourceTrigger=PropertyChanged}"/>
-            <CheckBox Content="E1-3への適用" IsChecked="{Binding IsApplicableE1s[2], UpdateSourceTrigger=PropertyChanged}"/>
-            <CheckBox Content="E1-4への適用" IsChecked="{Binding IsApplicableE1s[3], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="1-1への適用" IsChecked="{Binding IsApplicableE1s[0], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="1-2への適用" IsChecked="{Binding IsApplicableE1s[1], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="1-3への適用" IsChecked="{Binding IsApplicableE1s[2], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="1-4への適用" IsChecked="{Binding IsApplicableE1s[3], UpdateSourceTrigger=PropertyChanged}"/>
         </StackPanel>
 
         <StackPanel Grid.Row="2" Grid.Column="1">
             <CheckBox Content="レベル2" IsChecked="{Binding IsApplicableE2, UpdateSourceTrigger=PropertyChanged}"/>
-            <CheckBox Content="E2-1への適用" IsChecked="{Binding IsApplicableE2s[0], UpdateSourceTrigger=PropertyChanged}"/>
-            <CheckBox Content="E2-2への適用" IsChecked="{Binding IsApplicableE2s[1], UpdateSourceTrigger=PropertyChanged}"/>
-            <CheckBox Content="E2-3への適用" IsChecked="{Binding IsApplicableE2s[2], UpdateSourceTrigger=PropertyChanged}"/>
-            <CheckBox Content="E2-4への適用" IsChecked="{Binding IsApplicableE2s[3], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="2-1への適用" IsChecked="{Binding IsApplicableE2s[0], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="2-2への適用" IsChecked="{Binding IsApplicableE2s[1], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="2-3への適用" IsChecked="{Binding IsApplicableE2s[2], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="2-4への適用" IsChecked="{Binding IsApplicableE2s[3], UpdateSourceTrigger=PropertyChanged}"/>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0">

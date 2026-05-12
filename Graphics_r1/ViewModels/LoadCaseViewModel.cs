@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
@@ -325,7 +325,7 @@ namespace PileDesign.ViewModels
                 {
                     combinaiton1.Add(loadCombination.Beta1 * loadCase1.UpperMassForce + loadCombination.Beta2 * loadCase1.FoundationMassForce);
                 }
-                // 必要な組み合わせ数に満たない場合は0で埋める（XAMLバインドエラーを回避するため）
+                // 必要な組合せ数に満たない場合は0で埋める（XAMLバインドエラーを回避するため）
                 while (combinaiton1.Count < 4)
                 {
                     combinaiton1.Add(0.0);
@@ -347,7 +347,7 @@ namespace PileDesign.ViewModels
                 {
                     combinaiton2.Add(loadCombination.Beta1 * loadCase2.UpperMassForce + loadCombination.Beta2 * loadCase2.FoundationMassForce);
                 }
-                // 必要な組み合わせ数に満たない場合は0で埋める（XAMLバインドエラーを回避するため）
+                // 必要な組合せ数に満たない場合は0で埋める（XAMLバインドエラーを回避するため）
                 while (combinaiton2.Count < 4)
                 {
                     combinaiton2.Add(0.0);

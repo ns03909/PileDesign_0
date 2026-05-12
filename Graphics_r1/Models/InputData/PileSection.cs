@@ -1,4 +1,4 @@
-﻿using PileDesign.Models.PileLibrary;
+using PileDesign.Models.PileLibrary;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -384,7 +384,7 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// M-φキャッシュ用のキーを生成します。
-        /// 断面の種類と主要パラメータ + 軸力を組み合わせた文字列を返します。
+        /// 断面の種類と主要パラメータ + 軸力を組合せた文字列を返します。
         /// 軸力は1kN単位で丸めてキャッシュヒット率を向上させます。
         /// 注: このメソッドはGetMPhiRelationshipと同じ単位系（kN）を期待
         /// </summary>
@@ -515,7 +515,7 @@ namespace PileDesign.Models.InputData
 
                 return (new List<double>(phis), new List<double>(ms));
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return CreateLinearFallback();
             }
@@ -1072,6 +1072,31 @@ namespace PileDesign.Models.InputData
             OnPropertyChanged(nameof(SelectedPrecastPile));
             OnPropertyChanged(nameof(PileDiameter));
             OnPropertyChanged(nameof(ConcreteOutDia));
+        }
+
+        /// <summary>
+        /// SelectedPrecastPile.Name がライブラリ (PHCs/PRCs/SCs) に存在するかチェックする。副作用なし。
+        /// 名前が未指定、または PileSectionType が既製コンクリート杭以外のときは true を返す (検査対象外)。
+        /// </summary>
+        public bool IsSelectedPrecastPileInLibrary()
+        {
+            string? name = SelectedPrecastPile?.Name;
+            if (string.IsNullOrWhiteSpace(name)) return true;
+
+            List<PrecastPile>? candidates = PileSectionType switch
+            {
+                "PHC杭" => PHCs,
+                "PRC杭" => PRCs,
+                "SC杭" => SCs,
+                _ => null
+            };
+            if (candidates == null) return true; // 既製コンクリート杭以外は対象外
+
+            foreach (var p in candidates)
+            {
+                if (p.Name == name) return true;
+            }
+            return false;
         }
 
         public void RecalculateSelectedPrecastPile()
@@ -1841,7 +1866,7 @@ namespace PileDesign.Models.InputData
                 DamageLimitAxialForceThresholds = [.. abs.DamageLimitAxialForceThresholds];
 
             // 鋼管杭+コンクリート充填鋼管部 は M-N 曲線は SPRC と共有 (上記 section から取得済) するが、
-            // 軸力制限は鉄道構造物等設計標準・強度と変形性能 8 章の SteelPipeSection 系式で上書きする。
+            // 軸力制限は基礎部材の強度と変形性能 2022 の SteelPipeSection 系式で上書きする。
             bool isSteelFilledTube = PileBodyType == "鋼管杭" && PileSectionType == "コンクリート充填鋼管部";
             if (isSteelFilledTube)
             {
@@ -2353,7 +2378,7 @@ namespace PileDesign.Models.InputData
         /// 必要入力が欠落している場合は何もしない。
         /// </summary>
         /// <summary>
-        /// 鋼管杭用の SteelPipeSection (鉄道構造物等設計標準・強度と変形性能 8 章準拠) を構築する。
+        /// 鋼管杭用の SteelPipeSection (基礎部材の強度と変形性能 2022 準拠) を構築する。
         /// PileSectionType="鋼管部" は Fc=0、"コンクリート充填鋼管部" は Fc=ConcreteFc を渡す。
         /// β1=1.0、e=205000 N/mm² 固定。必要入力が欠落していれば null。
         /// </summary>

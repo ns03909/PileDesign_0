@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using PileDesign.Models;
 
 namespace PileDesign.Models.InputData
@@ -8,12 +9,8 @@ namespace PileDesign.Models.InputData
     /// </summary>
     public class BeamMaterial : BaseModel
     {
-        private int _no;
-        public int No
-        {
-            get => _no;
-            set => SetProperty(ref _no, value);
-        }
+        // No プロパティは廃止。番号は所属コレクション内の位置 (1-based) として扱う。
+        // 必要なときは FoundationBeamInput.GetMaterialNo(this) で取得する。
 
         private string _name = "FC30";
         public string Name
@@ -71,12 +68,7 @@ namespace PileDesign.Models.InputData
     /// </summary>
     public class BeamSection : BaseModel
     {
-        private int _no;
-        public int No
-        {
-            get => _no;
-            set => SetProperty(ref _no, value);
-        }
+        // No プロパティは廃止。番号は所属コレクション内の位置 (1-based) として扱う。
 
         private string _name = "";
         public string Name

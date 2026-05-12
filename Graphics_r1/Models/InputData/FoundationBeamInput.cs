@@ -1,5 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.Text.Json.Serialization;
 
 namespace PileDesign.Models.InputData
 {
@@ -19,14 +21,49 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<BeamMaterial> Materials
         {
             get => _materials;
-            set => SetProperty(ref _materials, value);
+            set
+            {
+                if (_materials != null) _materials.CollectionChanged -= OnMaterialsChanged;
+                SetProperty(ref _materials, value);
+                if (_materials != null) _materials.CollectionChanged += OnMaterialsChanged;
+                RefreshMaterialNoOptions();
+            }
         }
 
         private ObservableCollection<BeamSection> _sections = [];
         public ObservableCollection<BeamSection> Sections
         {
             get => _sections;
-            set => SetProperty(ref _sections, value);
+            set
+            {
+                if (_sections != null) _sections.CollectionChanged -= OnSectionsChanged;
+                SetProperty(ref _sections, value);
+                if (_sections != null) _sections.CollectionChanged += OnSectionsChanged;
+                RefreshSectionNoOptions();
+            }
+        }
+
+        // ComboBox 用 No 一覧 (1..Materials.Count / 1..Sections.Count)。
+        // Materials/Sections の追加・削除に追従する。永続化対象外なので JSON は無視。
+        [JsonIgnore]
+        public ObservableCollection<int> MaterialNoOptions { get; } = [];
+
+        [JsonIgnore]
+        public ObservableCollection<int> SectionNoOptions { get; } = [];
+
+        private void OnMaterialsChanged(object? sender, NotifyCollectionChangedEventArgs e) => RefreshMaterialNoOptions();
+        private void OnSectionsChanged(object? sender, NotifyCollectionChangedEventArgs e) => RefreshSectionNoOptions();
+
+        private void RefreshMaterialNoOptions()
+        {
+            MaterialNoOptions.Clear();
+            for (int i = 1; i <= Materials.Count; i++) MaterialNoOptions.Add(i);
+        }
+
+        private void RefreshSectionNoOptions()
+        {
+            SectionNoOptions.Clear();
+            for (int i = 1; i <= Sections.Count; i++) SectionNoOptions.Add(i);
         }
 
         private ObservableCollection<FoundationNode> _nodes = [];
@@ -36,12 +73,17 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _nodes, value);
         }
 
-        private ObservableCollection<FoundationBeamElement> _beams = [];
-        public ObservableCollection<FoundationBeamElement> Beams
+        private ObservableCollection<FoundationBeam> _beams = [];
+        public ObservableCollection<FoundationBeam> Beams
         {
             get => _beams;
             set => SetProperty(ref _beams, value);
         }
+
+        // 位置ベースの No 取得 (1-based)。No プロパティ廃止に伴い、表示・識別用にこちらを使う。
+        public int GetMaterialNo(BeamMaterial m) => m == null ? 0 : Materials.IndexOf(m) + 1;
+        public int GetSectionNo(BeamSection s) => s == null ? 0 : Sections.IndexOf(s) + 1;
+        public int GetBeamNo(FoundationBeam b) => b == null ? 0 : Beams.IndexOf(b) + 1;
 
         /// <summary>
         /// Materials / Sections が空のとき、No.1 のデフォルトエントリを自動追加する。
@@ -55,7 +97,6 @@ namespace PileDesign.Models.InputData
             {
                 Materials.Add(new BeamMaterial
                 {
-                    No = 1,
                     Name = "FC30 (自動)",
                 });
             }
@@ -64,7 +105,6 @@ namespace PileDesign.Models.InputData
             {
                 var section = new BeamSection
                 {
-                    No = 1,
                     Name = "800×2000 (自動)",
                     Width = 0.8,
                     Height = 2.0,
@@ -76,7 +116,7 @@ namespace PileDesign.Models.InputData
 
         public FoundationBeamInput()
         {
-            Materials = [];
+            Materials = [];  // setter が CollectionChanged 購読＋ Options 同期を行う
             Sections = [];
             Nodes = [];
             Beams = [];
@@ -123,6 +163,29 @@ namespace PileDesign.Models.InputData
             Type = type;
             Id = id;
         }
+    }
+
+    /// <summary>
+    /// ComboBox 用の節点参照オプション (Type + Id + 表示用 Display)。
+    /// SelectedValuePath="Key" + SelectedValue で マッチングするため Key プロパティを持つ。
+    /// </summary>
+    public sealed class NodeReferenceOption : IEquatable<NodeReferenceOption>
+    {
+        public NodeReferenceType Type { get; init; }
+        public Guid Id { get; init; }
+        public string Display { get; init; } = "";
+
+        /// <summary>WPF ComboBox SelectedValuePath 用のユニークキー。Type と Id の組合せ。</summary>
+        public string Key => $"{(int)Type}:{Id}";
+
+        public override string ToString() => Display;
+        public bool Equals(NodeReferenceOption? other)
+            => other != null && Type == other.Type && Id == other.Id;
+        public override bool Equals(object? obj) => Equals(obj as NodeReferenceOption);
+        public override int GetHashCode() => System.HashCode.Combine(Type, Id);
+        public static bool operator ==(NodeReferenceOption? a, NodeReferenceOption? b)
+            => a is null ? b is null : a.Equals(b);
+        public static bool operator !=(NodeReferenceOption? a, NodeReferenceOption? b) => !(a == b);
     }
 
     /// <summary>
@@ -191,30 +254,34 @@ namespace PileDesign.Models.InputData
     }
 
     /// <summary>
-    /// 基礎梁要素
+    /// 基礎梁
     /// </summary>
-    public class FoundationBeamElement : BaseModel
+    public class FoundationBeam : BaseModel
     {
-        private int _no;
-        public int No
-        {
-            get => _no;
-            set => SetProperty(ref _no, value);
-        }
+        // No プロパティは廃止。番号は所属コレクション (Beams) 内の位置 (1-based) として扱う。
+        // 必要なときは FoundationBeamInput.GetBeamNo(this) で取得する。
 
         // 節点I参照（新方式）
         private NodeReferenceType _nodeI_Type = NodeReferenceType.FoundationNode;
         public NodeReferenceType NodeI_Type
         {
             get => _nodeI_Type;
-            set => SetProperty(ref _nodeI_Type, value);
+            set
+            {
+                if (SetProperty(ref _nodeI_Type, value))
+                    OnPropertyChanged(nameof(NodeI_Key));
+            }
         }
 
         private Guid _nodeI_Id = Guid.Empty;
         public Guid NodeI_Id
         {
             get => _nodeI_Id;
-            set => SetProperty(ref _nodeI_Id, value);
+            set
+            {
+                if (SetProperty(ref _nodeI_Id, value))
+                    OnPropertyChanged(nameof(NodeI_Key));
+            }
         }
 
         // 節点J参照（新方式）
@@ -222,29 +289,60 @@ namespace PileDesign.Models.InputData
         public NodeReferenceType NodeJ_Type
         {
             get => _nodeJ_Type;
-            set => SetProperty(ref _nodeJ_Type, value);
+            set
+            {
+                if (SetProperty(ref _nodeJ_Type, value))
+                    OnPropertyChanged(nameof(NodeJ_Key));
+            }
         }
 
         private Guid _nodeJ_Id = Guid.Empty;
         public Guid NodeJ_Id
         {
             get => _nodeJ_Id;
-            set => SetProperty(ref _nodeJ_Id, value);
+            set
+            {
+                if (SetProperty(ref _nodeJ_Id, value))
+                    OnPropertyChanged(nameof(NodeJ_Key));
+            }
         }
 
-        // 旧方式（後方互換性のため残す）
-        private int _nodeI_No;
-        public int NodeI_No
+        /// <summary>
+        /// 節点I の ComboBox SelectedValue 用キー (Type + Id の文字列表現)。
+        /// NodeReferenceOption.Key と一致するため、SelectedValuePath="Key" で値ベースのマッチングが可能。
+        /// setter は "{type}:{guid}" を解析して Type / Id を更新する。
+        /// </summary>
+        [JsonIgnore]
+        public string NodeI_Key
         {
-            get => _nodeI_No;
-            set => SetProperty(ref _nodeI_No, value);
+            get => $"{(int)NodeI_Type}:{NodeI_Id}";
+            set
+            {
+                if (string.IsNullOrEmpty(value)) return;
+                int colon = value.IndexOf(':');
+                if (colon <= 0) return;
+                if (!int.TryParse(value.AsSpan(0, colon), out int typeInt)) return;
+                if (!Guid.TryParse(value.AsSpan(colon + 1), out Guid id)) return;
+                NodeI_Type = (NodeReferenceType)typeInt;
+                NodeI_Id = id;
+            }
         }
 
-        private int _nodeJ_No;
-        public int NodeJ_No
+        /// <summary>節点J の ComboBox SelectedValue 用キー (NodeI_Key と同じ仕組み)。</summary>
+        [JsonIgnore]
+        public string NodeJ_Key
         {
-            get => _nodeJ_No;
-            set => SetProperty(ref _nodeJ_No, value);
+            get => $"{(int)NodeJ_Type}:{NodeJ_Id}";
+            set
+            {
+                if (string.IsNullOrEmpty(value)) return;
+                int colon = value.IndexOf(':');
+                if (colon <= 0) return;
+                if (!int.TryParse(value.AsSpan(0, colon), out int typeInt)) return;
+                if (!Guid.TryParse(value.AsSpan(colon + 1), out Guid id)) return;
+                NodeJ_Type = (NodeReferenceType)typeInt;
+                NodeJ_Id = id;
+            }
         }
 
         // 材料・断面参照（新規）

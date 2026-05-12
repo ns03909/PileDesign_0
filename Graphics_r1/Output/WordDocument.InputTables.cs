@@ -709,7 +709,8 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([$"{i}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileLayoutData.Point3D.X:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileLayoutData.Point3D.Y:N3}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{pileLayoutData.Point3D.Z:N3}"], fontSize, "right"));
+                // 表ヘッダ「杭頭 Z」に合わせて杭頭 Z (= pile.Z - ΔZc) を出力 (v2 セマンティクス)
+                dataRow.Append(CreateTableCell([$"{pileLayoutData.PileHeadZ:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileLayoutData.PileBodyNo}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileLayoutData.GroundNo}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileLayoutData.SoilPileAltNo}"], fontSize, "right"));

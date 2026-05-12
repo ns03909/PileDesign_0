@@ -4,14 +4,14 @@
   "loadCaseLevel1": {
     "forceActionPointX": 10.5,
     "forceActionPointY": 9.0,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -1.0,
     "upperMassForce": 2000,
     "foundationMassForce": 800
   },
   "loadCaseLevel2": {
     "forceActionPointX": 10.5,
     "forceActionPointY": 9.0,
-    "forceActionPointZ": -2.0,
+    "forceActionPointZ": -1.0,
     "upperMassForce": 4000,
     "foundationMassForce": 1600
   },
@@ -30,7 +30,7 @@
       "settleAlpha": 0.3,
       "settleN": 2,
       "segments": [
-        { "no": 1, "segmentLength": 14.0, "segmentDepth": 14.0, "pileSectionType": "PHC杭", "precastPileName": "PHC-600-A-80-C" }
+        { "no": 1, "segmentLength": 14.0, "segmentDepth": 14.0, "pileSectionType": "PHC杭", "precastPileName": "PHC-600-標準-80-A" }
       ]
     }
   ],
@@ -61,5 +61,33 @@
     { "name": "Y1", "coord": 0.0,  "spacing": 0.0 },
     { "name": "Y2", "coord": 9.0,  "spacing": 9.0 },
     { "name": "Y3", "coord": 18.0, "spacing": 9.0 }
-  ]
+  ],
+  "foundationBeamInput": {
+    "connectionMode": "RigidFloor",
+    "materials": [
+      { "name": "Fc30", "youngModulus": 26589000, "shearModulus": 11078750, "poissonRatio": 0.20 }
+    ],
+    "sections": [
+      { "name": "FG1", "width": 0.65, "height": 2.00 }
+    ],
+    "beams": [
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 1,  "nodeJ_type": "pile", "nodeJ_no": 5  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 5,  "nodeJ_type": "pile", "nodeJ_no": 9  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 2,  "nodeJ_type": "pile", "nodeJ_no": 6  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 6,  "nodeJ_type": "pile", "nodeJ_no": 10 },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 3,  "nodeJ_type": "pile", "nodeJ_no": 7  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 7,  "nodeJ_type": "pile", "nodeJ_no": 11 },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 4,  "nodeJ_type": "pile", "nodeJ_no": 8  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 8,  "nodeJ_type": "pile", "nodeJ_no": 12 },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 1,  "nodeJ_type": "pile", "nodeJ_no": 2  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 2,  "nodeJ_type": "pile", "nodeJ_no": 3  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 3,  "nodeJ_type": "pile", "nodeJ_no": 4  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 5,  "nodeJ_type": "pile", "nodeJ_no": 6  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 6,  "nodeJ_type": "pile", "nodeJ_no": 7  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 7,  "nodeJ_type": "pile", "nodeJ_no": 8  },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 9,  "nodeJ_type": "pile", "nodeJ_no": 10 },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 10, "nodeJ_type": "pile", "nodeJ_no": 11 },
+      { "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 11, "nodeJ_type": "pile", "nodeJ_no": 12 }
+    ]
+  }
 }

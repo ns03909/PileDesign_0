@@ -73,12 +73,12 @@ namespace PileDesign.Models.PileLibrary
                     };
                     _FTCaps.Add(_FTCap);
                 }
-                catch (CsvHelper.TypeConversion.TypeConverterException ex)
+                catch (CsvHelper.TypeConversion.TypeConverterException)
                 {
                     // 型変換失敗の行はスキップしてデバッグ出力
                     continue;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     continue;
                 }

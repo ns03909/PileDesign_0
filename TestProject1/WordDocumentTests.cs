@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Output;
 using System.Linq;
+using DocxMath = DocumentFormat.OpenXml.Math;
 
 namespace TestProject1
 {
@@ -141,6 +142,162 @@ namespace TestProject1
             // 空文字でも例外にならないこと（Tex は Body を引数に取らないため安全に呼べる）
             var math = WordDocument.Tex("");
             Assert.IsNotNull(math);
+        }
+    }
+
+    /// <summary>
+    /// WordDocument.Math.cs の OpenXML Math 構築ヘルパーのテスト。
+    /// 純粋関数 (テキスト→OpenXML 構造) のため副作用なし。
+    /// </summary>
+    [TestClass]
+    public class WordDocumentMathHelperTests
+    {
+        private static string TextOf(DocxMath.Run run)
+            => string.Concat(run.Descendants<DocxMath.Text>().Select(t => t.Text));
+
+        [TestMethod]
+        public void GetRun_BasicText_HasMathTextChild()
+        {
+            var r = WordDocument.GetRun("xyz");
+            Assert.IsNotNull(r);
+            Assert.AreEqual("xyz", TextOf(r));
+        }
+
+        [TestMethod]
+        public void GetRun_EmptyText_DoesNotThrow()
+        {
+            var r = WordDocument.GetRun("");
+            Assert.IsNotNull(r);
+            Assert.AreEqual("", TextOf(r));
+        }
+
+        [TestMethod]
+        public void GetSuperscript_WrapsBaseAndSuper()
+        {
+            var b = WordDocument.GetRun("x");
+            var s = WordDocument.GetRun("2");
+            var sup = WordDocument.GetSuperscript(b, s);
+            Assert.IsNotNull(sup);
+            // Superscript 要素が子に含まれる
+            var supEl = sup.Descendants<DocxMath.Superscript>().FirstOrDefault();
+            Assert.IsNotNull(supEl, "Superscript 要素が含まれるはず");
+            // Base + SuperArgument の両方を保持
+            Assert.IsNotNull(supEl.GetFirstChild<DocxMath.Base>());
+            Assert.IsNotNull(supEl.GetFirstChild<DocxMath.SuperArgument>());
+        }
+
+        [TestMethod]
+        public void GetSubscript_WrapsBaseAndSub()
+        {
+            var b = WordDocument.GetRun("x");
+            var s = WordDocument.GetRun("i");
+            var sub = WordDocument.GetSubscript(b, s);
+            var subEl = sub.Descendants<DocxMath.Subscript>().FirstOrDefault();
+            Assert.IsNotNull(subEl);
+            Assert.IsNotNull(subEl.GetFirstChild<DocxMath.Base>());
+            Assert.IsNotNull(subEl.GetFirstChild<DocxMath.SubArgument>());
+        }
+
+        [TestMethod]
+        public void GetSubSuperscript_WrapsBaseAndBoth()
+        {
+            var b = WordDocument.GetRun("x");
+            var sub = WordDocument.GetRun("i");
+            var sup = WordDocument.GetRun("2");
+            var ss = WordDocument.GetSubSuperscript(b, sub, sup);
+            var ssEl = ss.Descendants<DocxMath.SubSuperscript>().FirstOrDefault();
+            Assert.IsNotNull(ssEl);
+            Assert.IsNotNull(ssEl.GetFirstChild<DocxMath.Base>());
+            Assert.IsNotNull(ssEl.GetFirstChild<DocxMath.SubArgument>());
+            Assert.IsNotNull(ssEl.GetFirstChild<DocxMath.SuperArgument>());
+        }
+
+        [TestMethod]
+        public void GetFraction_RunOverload_HasNumeratorAndDenominator()
+        {
+            var n = WordDocument.GetRun("a");
+            var d = WordDocument.GetRun("b");
+            var frac = WordDocument.GetFraction(n, d);
+            var fracEl = frac.Descendants<DocxMath.Fraction>().FirstOrDefault();
+            Assert.IsNotNull(fracEl);
+            Assert.IsNotNull(fracEl.GetFirstChild<DocxMath.FractionProperties>());
+            Assert.IsNotNull(fracEl.GetFirstChild<DocxMath.Numerator>());
+            Assert.IsNotNull(fracEl.GetFirstChild<DocxMath.Denominator>());
+        }
+
+        [TestMethod]
+        public void GetFraction_OfficeMathOverload_HasNumeratorAndDenominator()
+        {
+            var n = new DocxMath.OfficeMath(WordDocument.GetRun("a"));
+            var d = new DocxMath.OfficeMath(WordDocument.GetRun("b"));
+            var frac = WordDocument.GetFraction(n, d);
+            Assert.IsInstanceOfType(frac, typeof(DocxMath.OfficeMath));
+            var fracEl = frac.Descendants<DocxMath.Fraction>().FirstOrDefault();
+            Assert.IsNotNull(fracEl);
+        }
+
+        [TestMethod]
+        public void GetRadicalRun_ProducesRadicalElement()
+        {
+            var b = WordDocument.GetRun("2");
+            var rad = WordDocument.GetRadicalRun(b);
+            var radEl = rad.Descendants<DocxMath.Radical>().FirstOrDefault();
+            Assert.IsNotNull(radEl, "Radical 要素 (平方根) を持つ");
+            Assert.IsNotNull(radEl.GetFirstChild<DocxMath.Base>());
+        }
+
+        [TestMethod]
+        public void GetTopBarredRun_ProducesAccentWithMacron()
+        {
+            var b = WordDocument.GetRun("x");
+            var bar = WordDocument.GetTopBarredRun(b);
+            // Accent 要素を持つ (上バー)
+            var accents = bar.Descendants<DocxMath.Accent>().ToList();
+            Assert.IsTrue(accents.Count > 0, "Accent 要素が含まれる");
+            // AccentChar が "¯" (macron, U+00AF)
+            var accentChars = bar.Descendants<DocxMath.AccentChar>().ToList();
+            Assert.IsTrue(accentChars.Count > 0);
+            Assert.AreEqual("¯", accentChars[0].Val?.Value);
+        }
+
+        [TestMethod]
+        public void GetDoubleSubscript_NestsSubscripts()
+        {
+            var b = WordDocument.GetRun("R");
+            var left = WordDocument.GetRun("u");
+            var right = WordDocument.GetRun("max");
+            var ds = WordDocument.GetDoubleSubscript(b, left, right);
+            // ネストされた Subscript が 2 つ存在
+            var subs = ds.Descendants<DocxMath.Subscript>().ToList();
+            Assert.AreEqual(2, subs.Count, "外側と内側の 2 つの Subscript がある");
+        }
+    }
+
+    /// <summary>
+    /// WordDocumentUtils の小規模 static ヘルパーのテスト。
+    /// </summary>
+    [TestClass]
+    public class WordDocumentUtilsTests
+    {
+        [TestMethod]
+        public void GetJustification_LeftMapping()
+        {
+            var v = WordDocumentUtils.GetJustification(WordDocumentUtils.DiagramAlignment.Left);
+            Assert.AreEqual(JustificationValues.Left, v);
+        }
+
+        [TestMethod]
+        public void GetJustification_CenterMapping()
+        {
+            var v = WordDocumentUtils.GetJustification(WordDocumentUtils.DiagramAlignment.Center);
+            Assert.AreEqual(JustificationValues.Center, v);
+        }
+
+        [TestMethod]
+        public void GetJustification_RightMapping()
+        {
+            var v = WordDocumentUtils.GetJustification(WordDocumentUtils.DiagramAlignment.Right);
+            Assert.AreEqual(JustificationValues.Right, v);
         }
     }
 }

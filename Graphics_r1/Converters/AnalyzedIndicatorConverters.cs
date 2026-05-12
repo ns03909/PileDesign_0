@@ -36,7 +36,7 @@ namespace PileDesign.Converters
     }
 
     /// <summary>
-    /// 荷重組み合わせ名が解析済みかどうかを Visibility に変換する。
+    /// 荷重組合せ名が解析済みかどうかを Visibility に変換する。
     /// values[0]: string loadCombinationName (GetName() or Name 形式)
     /// values[1]: string selectedLoadCaseName (省略時 or "All"/"ALL" は全荷重ケース対象)
     /// values[2]: AnaModel currentModel
@@ -50,7 +50,7 @@ namespace PileDesign.Converters
                 values[2] is AnaModel model &&
                 model.AnalysisStepResults != null)
             {
-                // "ALL" / "All" は全荷重組み合わせ対象
+                // "ALL" / "All" は全荷重組合せ対象
                 if (loadCombinationName is "ALL" or "All")
                     return Visibility.Collapsed;
 

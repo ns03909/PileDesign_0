@@ -5,6 +5,7 @@ using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Body = DocumentFormat.OpenXml.Wordprocessing.Body;
 
 using Serilog;
@@ -152,7 +153,7 @@ namespace PileDesign.Output
                                             var beam = pli.Beams[iSeg];
                                             if (beam == null) continue;
 
-                                            var cum = beam.GetBeamResult(anaModel, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
+                                            var cum = GetBeamResultCached(beam, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
                                             if (cum != null)
                                                 maxMomentInPile = Math.Max(maxMomentInPile, cum.MabsMax);
                                         }
@@ -240,8 +241,7 @@ namespace PileDesign.Output
                             double soilUh = 0.0;
                             try
                             {
-                                soilUh = pli.SoilNodes[i]
-                                    .GetNodeResult(anaModel, lc, comb, isLiq)
+                                soilUh = GetNodeResultCached(pli.SoilNodes[i], lc, comb, isLiq)
                                     ?.CumulativeDisp?.Uh ?? 0.0;
                             }
                             catch { soilUh = 0.0; }
@@ -254,7 +254,7 @@ namespace PileDesign.Output
                         // 要素力・変位
                         for (int i = 0; i < pli.Beams.Count; i++)
                         {
-                            var res = pli.Beams[i].GetBeamResult(anaModel, lc, comb, isLiq)?.CumulativeForce;
+                            var res = GetBeamResultCached(pli.Beams[i], lc, comb, isLiq)?.CumulativeForce;
                             moments.Add(res?.Mi ?? 0.0);
                             moments.Add(res?.Mj ?? 0.0);
 
@@ -264,8 +264,8 @@ namespace PileDesign.Output
                             double uhI = 0.0, uhJ = 0.0;
                             try
                             {
-                                uhI = pli.Beams[i].NodeI.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
-                                uhJ = pli.Beams[i].NodeJ.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                                uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                                uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
                             }
                             catch (Exception ex) { Log.Warning(ex, "[WordDoc] NodeResult取得失敗"); }
                             disps.Add(uhI);
@@ -422,7 +422,7 @@ namespace PileDesign.Output
                                             var beam = pli.Beams[iSeg];
                                             if (beam == null) continue;
 
-                                            var cum = beam.GetBeamResult(anaModel, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
+                                            var cum = GetBeamResultCached(beam, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
                                             if (cum != null)
                                                 maxShearInPile = Math.Max(maxShearInPile, cum.FabsMax);
                                         }
@@ -557,11 +557,11 @@ namespace PileDesign.Output
                                         List<double> phis = null;
                                         List<double> moments = null;
 
-                                        int lastStep = anaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                                        int lastStep = GetLastStepCached(loadCase, loadCombination, isLiquefaction);
                                         BeamResult beamResultForCurve = null;
                                         if (lastStep >= 0)
                                         {
-                                            beamResultForCurve = targetBeam.GetBeamResult(anaModel, loadCase, loadCombination, isLiquefaction, lastStep);
+                                            beamResultForCurve = GetBeamResultCached(targetBeam, loadCase, loadCombination, isLiquefaction, lastStep);
 
                                             // 方法0: BeamResult に保存された M-φ 曲線（最優先）
                                             if (beamResultForCurve?.MPhiCurve_Phis != null && beamResultForCurve.MPhiCurve_Phis.Count >= 2)
@@ -725,6 +725,11 @@ namespace PileDesign.Output
                 List<double> thetaResultsLevel2 = [];
                 List<double> momentResultsLevel2 = [];
 
+                // pileBody.GetMThetaRelationship(axialN) は場所打ち RC 杭で
+                // 断面の完全 M-θ 解析を行うため非常に重い。曲線は (pileBody, axialN) に
+                // のみ依存するので、axialN を 10kN 単位でバケット化してキャッシュする。
+                var mThetaInputDefCache = new Dictionary<int, PileDesign.FEM.PileHeadRotationDef>();
+
                 foreach (var (rs, pileLayout) in springsForBody)
                 {
                     foreach (var loadCase in allSeismicLoadCases)
@@ -758,9 +763,13 @@ namespace PileDesign.Output
                                 double[] moments;
                                 string modeTag;
 
-                                PileDesign.FEM.PileHeadRotationDef inputDef = null;
-                                try { inputDef = pileBody.GetMThetaRelationship(axialN); }
-                                catch { /* ignore */ }
+                                int axialNCacheKey = (int)Math.Round(axialN / 10.0);
+                                if (!mThetaInputDefCache.TryGetValue(axialNCacheKey, out var inputDef))
+                                {
+                                    try { inputDef = pileBody.GetMThetaRelationship(axialN); }
+                                    catch { inputDef = null; }
+                                    mThetaInputDefCache[axialNCacheKey] = inputDef;
+                                }
 
                                 if (inputDef?.CurveXY != null)
                                 {
@@ -801,7 +810,7 @@ namespace PileDesign.Output
                                 }
 
                                 // 最終ステップの (θ, M) 散布点
-                                int lastStep = anaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                                int lastStep = GetLastStepCached(loadCase, loadCombination, isLiquefaction);
                                 if (lastStep >= 0)
                                 {
                                     var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
@@ -892,6 +901,10 @@ namespace PileDesign.Output
                 return;
             }
 
+            // すべての (pli, lc, comb, isLiq) を列挙 → 並列で PNG 生成 → 直列で Word body に挿入。
+            // ScottPlot.Multiplot は呼び出しごとに独立インスタンスを作るためスレッド安全。
+            // GetBeamResultCached / GetNodeResultCached は読み取り専用 Dictionary 検索なので並列読込可。
+            var jobs = new List<(PileLayoutDataItem pli, LoadCase lc, LoadCombination comb, bool isLiq)>();
             foreach (var pli in inputModel.PileLayoutItems)
             {
                 if (pli.PileNodes == null || pli.SoilNodes == null || pli.Beams == null) continue;
@@ -901,150 +914,159 @@ namespace PileDesign.Output
                 {
                     foreach (var comb in loadCombinations)
                     {
-                        // 液状化パターン（ユーザー選択に基づく）
                         var liqPatterns = new List<bool>();
-                        if (mainWindowViewModel.IncludeOutputLiquefactionNo)
-                            liqPatterns.Add(false);
-                        if (mainWindowViewModel.IncludeOutputLiquefactionYes)
-                            liqPatterns.Add(true);
+                        if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                        if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
                         if (liqPatterns.Count == 0) continue;
 
                         foreach (bool isLiq in liqPatterns)
-                        {
-                            List<double> moments = [];
-                            List<double> shears = [];
-                            List<double> disps = [];
-                            List<double> zs = [];
-                            List<double> soilDisps = [];
-
-                            bool hasData = false;
-
-                            // Z軸（節点列）と地盤変位
-                            for (int i = 0; i < pli.PileNodes.Count; i++)
-                            {
-                                double z = -pli.Z + pli.PileNodes[i].Coord.Z;
-                                zs.Add(z);
-                                if (i != 0 && i != pli.PileNodes.Count - 1)
-                                    zs.Add(z);
-
-                                double soilUh = 0.0;
-                                try
-                                {
-                                    soilUh = pli.SoilNodes[i]
-                                        .GetNodeResult(anaModel, lc, comb, isLiq)
-                                        ?.CumulativeDisp?.Uh ?? 0.0;
-                                }
-                                catch { soilUh = 0.0; }
-                                soilDisps.Add(soilUh);
-                                if (i != 0 && i != pli.PileNodes.Count - 1)
-                                    soilDisps.Add(soilUh);
-                            }
-
-                            // 要素力・変位
-                            for (int i = 0; i < pli.Beams.Count; i++)
-                            {
-                                var res = pli.Beams[i].GetBeamResult(anaModel, lc, comb, isLiq)?.CumulativeForce;
-                                if (res != null) hasData = true;
-
-                                moments.Add(res?.Mi ?? 0.0);
-                                moments.Add(res?.Mj ?? 0.0);
-
-                                shears.Add(res?.Fi ?? 0.0);
-                                shears.Add(res?.Fj ?? 0.0);
-
-                                double uhI = 0.0, uhJ = 0.0;
-                                try
-                                {
-                                    uhI = pli.Beams[i].NodeI.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
-                                    uhJ = pli.Beams[i].NodeJ.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
-                                }
-                                catch { /* NodeResult取得失敗 */ }
-                                disps.Add(uhI);
-                                disps.Add(uhJ);
-                            }
-
-                            if (!hasData) continue;
-
-                            // ダイアグラム出力（変位・せん断力・曲げモーメントの3列グラフ — GraphWindow と同順）
-                            List<List<double>> xsLists = [];
-                            List<string> titles = [];
-                            List<string> xLabels = [];
-                            List<string> yLabels = [];
-
-                            // 変位は常に含める（先頭）
-                            xsLists.Add(disps);
-                            titles.Add("");
-                            xLabels.Add("変位[m]");
-                            yLabels.Add("Z[m]");
-
-                            if (includeShear)
-                            {
-                                xsLists.Add(shears);
-                                titles.Add("");
-                                xLabels.Add("せん断力[kN]");
-                                yLabels.Add("Z[m]");
-                            }
-                            if (includeBending)
-                            {
-                                xsLists.Add(moments);
-                                titles.Add("");
-                                xLabels.Add("曲げモーメント[kNm]");
-                                yLabels.Add("Z[m]");
-                            }
-                            // 地盤変位（変位パネルに重ねる用）
-                            xsLists.Add(soilDisps);
-                            yLabels.Add("Z[m]");
-
-                            List<List<double>> ysLists = [];
-                            for (int i = 0; i < xsLists.Count; i++)
-                                ysLists.Add(zs);
-
-                            // 限界状態ステップライン (せん断/曲げ パネルにのみ重ねる)
-                            // パネル順は xsLists と整合させる: [変位, (せん断), (曲げ), 地盤変位]
-                            List<List<double>>? limitXsByPanel = null;
-                            List<List<double>>? limitYsByPanel = null;
-                            string? limitLegend = null;
-                            if (includeLimitState)
-                            {
-                                (List<double> shearLimXs, List<double> shearLimZs, List<double> momentLimXs,
-                                 List<double> momentLimZs, string usedLimitName) =
-                                    BuildPileLimitStateStepLines(pli, lc, comb, isLiq);
-                                if (shearLimXs.Count > 0 || momentLimXs.Count > 0)
-                                {
-                                    limitLegend = usedLimitName;
-                                    limitXsByPanel = [];
-                                    limitYsByPanel = [];
-                                    // 変位パネルには出さない (空リスト)
-                                    limitXsByPanel.Add([]);
-                                    limitYsByPanel.Add([]);
-                                    if (includeShear)
-                                    {
-                                        limitXsByPanel.Add(shearLimXs);
-                                        limitYsByPanel.Add(shearLimZs);
-                                    }
-                                    if (includeBending)
-                                    {
-                                        limitXsByPanel.Add(momentLimXs);
-                                        limitYsByPanel.Add(momentLimZs);
-                                    }
-                                }
-                            }
-
-                            AddPileElevResultToBody(
-                                mainPart, body,
-                                xsLists, ysLists,
-                                titles, xLabels, yLabels,
-                                150, 100,
-                                limitXsByPanel, limitYsByPanel, limitLegend);
-
-                            string liqText = isLiq ? "液状化" : "非液状化";
-                            AddAutoFigureCaption(body,
-                                $"杭No.{pli.No} | {lc.LoadName} | {comb.Name} | {liqText}",
-                                "図");
-                        }
+                            jobs.Add((pli, lc, comb, isLiq));
                     }
                 }
             }
+
+            var results = new (byte[]? png, string caption)[jobs.Count];
+            Parallel.For(0, jobs.Count, idx =>
+            {
+                var (pli, lc, comb, isLiq) = jobs[idx];
+                var built = BuildPileStressDiagramPng(pli, lc, comb, isLiq, includeBending, includeShear, includeLimitState);
+                results[idx] = built;
+            });
+
+            foreach (var (png, caption) in results)
+            {
+                if (png == null || png.Length == 0) continue;
+                WordDrawingBuilder.AddPngBytesToBody(mainPart, body, png, 150, 100);
+                AddAutoFigureCaption(body, caption, "図");
+            }
+        }
+
+        // 1 杭 × 1 (loadCase, combination, isLiq) ぶんのデータ収集 + PNG 生成。
+        // GetBeamResultCached / GetNodeResultCached を経由するため、出力中の Dictionary 検索のみで並列実行可。
+        private (byte[]? png, string caption) BuildPileStressDiagramPng(
+            PileLayoutDataItem pli, LoadCase lc, LoadCombination comb, bool isLiq,
+            bool includeBending, bool includeShear, bool includeLimitState)
+        {
+            List<double> moments = [];
+            List<double> shears = [];
+            List<double> disps = [];
+            List<double> zs = [];
+            List<double> soilDisps = [];
+
+            bool hasData = false;
+
+            // Z軸（節点列）と地盤変位
+            for (int i = 0; i < pli.PileNodes.Count; i++)
+            {
+                double z = -pli.Z + pli.PileNodes[i].Coord.Z;
+                zs.Add(z);
+                if (i != 0 && i != pli.PileNodes.Count - 1)
+                    zs.Add(z);
+
+                double soilUh = 0.0;
+                try
+                {
+                    soilUh = GetNodeResultCached(pli.SoilNodes[i], lc, comb, isLiq)
+                        ?.CumulativeDisp?.Uh ?? 0.0;
+                }
+                catch { soilUh = 0.0; }
+                soilDisps.Add(soilUh);
+                if (i != 0 && i != pli.PileNodes.Count - 1)
+                    soilDisps.Add(soilUh);
+            }
+
+            // 要素力・変位
+            for (int i = 0; i < pli.Beams.Count; i++)
+            {
+                var res = GetBeamResultCached(pli.Beams[i], lc, comb, isLiq)?.CumulativeForce;
+                if (res != null) hasData = true;
+
+                moments.Add(res?.Mi ?? 0.0);
+                moments.Add(res?.Mj ?? 0.0);
+
+                shears.Add(res?.Fi ?? 0.0);
+                shears.Add(res?.Fj ?? 0.0);
+
+                double uhI = 0.0, uhJ = 0.0;
+                try
+                {
+                    uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                    uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                }
+                catch { /* NodeResult取得失敗 */ }
+                disps.Add(uhI);
+                disps.Add(uhJ);
+            }
+
+            if (!hasData) return (null, string.Empty);
+
+            // ダイアグラム出力（変位・せん断力・曲げモーメントの3列グラフ — GraphWindow と同順）
+            List<List<double>> xsLists = [];
+            List<string> titles = [];
+            List<string> xLabels = [];
+            List<string> yLabels = [];
+
+            xsLists.Add(disps);
+            titles.Add("");
+            xLabels.Add("変位[m]");
+            yLabels.Add("Z[m]");
+
+            if (includeShear)
+            {
+                xsLists.Add(shears);
+                titles.Add("");
+                xLabels.Add("せん断力[kN]");
+                yLabels.Add("Z[m]");
+            }
+            if (includeBending)
+            {
+                xsLists.Add(moments);
+                titles.Add("");
+                xLabels.Add("曲げモーメント[kNm]");
+                yLabels.Add("Z[m]");
+            }
+            xsLists.Add(soilDisps);
+            yLabels.Add("Z[m]");
+
+            List<List<double>> ysLists = [];
+            for (int i = 0; i < xsLists.Count; i++)
+                ysLists.Add(zs);
+
+            List<List<double>>? limitXsByPanel = null;
+            List<List<double>>? limitYsByPanel = null;
+            string? limitLegend = null;
+            if (includeLimitState)
+            {
+                (List<double> shearLimXs, List<double> shearLimZs, List<double> momentLimXs,
+                 List<double> momentLimZs, string usedLimitName) =
+                    BuildPileLimitStateStepLines(pli, lc, comb, isLiq);
+                if (shearLimXs.Count > 0 || momentLimXs.Count > 0)
+                {
+                    limitLegend = usedLimitName;
+                    limitXsByPanel = [];
+                    limitYsByPanel = [];
+                    limitXsByPanel.Add([]);
+                    limitYsByPanel.Add([]);
+                    if (includeShear)
+                    {
+                        limitXsByPanel.Add(shearLimXs);
+                        limitYsByPanel.Add(shearLimZs);
+                    }
+                    if (includeBending)
+                    {
+                        limitXsByPanel.Add(momentLimXs);
+                        limitYsByPanel.Add(momentLimZs);
+                    }
+                }
+            }
+
+            byte[]? png = RenderPileElevResultToPngBytes(
+                xsLists, ysLists, titles, xLabels, yLabels,
+                150, 100, limitXsByPanel, limitYsByPanel, limitLegend);
+
+            string liqText = isLiq ? "液状化" : "非液状化";
+            string caption = $"杭No.{pli.No} | {lc.LoadName} | {comb.Name} | {liqText}";
+            return (png, caption);
         }
 
         /// <summary>
@@ -1079,7 +1101,7 @@ namespace PileDesign.Output
                 if (beam?.NodeI?.Coord == null || beam?.NodeJ?.Coord == null) continue;
                 if (beam.SegmentIndex is null) continue;
 
-                var result = beam.GetBeamResult(anaModel, lc, comb, isLiq);
+                var result = GetBeamResultCached(beam, lc, comb, isLiq);
                 if (result?.CumulativeForce == null) continue;
 
                 int segIdx = beam.SegmentIndex.Value;
@@ -1208,8 +1230,7 @@ namespace PileDesign.Output
                                     double soilUh = 0.0;
                                     try
                                     {
-                                        soilUh = pli.SoilNodes[i]
-                                            .GetNodeResult(anaModel, lc, comb, isLiq)
+                                        soilUh = GetNodeResultCached(pli.SoilNodes[i], lc, comb, isLiq)
                                             ?.CumulativeDisp?.Uh ?? 0.0;
                                     }
                                     catch { /* ignore */ }
@@ -1219,7 +1240,7 @@ namespace PileDesign.Output
 
                                 for (int i = 0; i < pli.Beams.Count; i++)
                                 {
-                                    var res = pli.Beams[i].GetBeamResult(anaModel, lc, comb, isLiq)?.CumulativeForce;
+                                    var res = GetBeamResultCached(pli.Beams[i], lc, comb, isLiq)?.CumulativeForce;
                                     if (res != null) hasData = true;
                                     moments.Add(res?.Mi ?? 0.0);
                                     moments.Add(res?.Mj ?? 0.0);
@@ -1229,8 +1250,8 @@ namespace PileDesign.Output
                                     double uhI = 0.0, uhJ = 0.0;
                                     try
                                     {
-                                        uhI = pli.Beams[i].NodeI.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
-                                        uhJ = pli.Beams[i].NodeJ.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                                        uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                                        uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
                                     }
                                     catch { /* ignore */ }
                                     disps.Add(uhI);

@@ -70,7 +70,7 @@ namespace PileDesign.ViewModels
                     if (SoilPile != null) SoilPile.Dp = valueInMm;
                     OnPropertyChanged(nameof(SettlePileToeDiaM));
                     DrawShapes();
-                    ExecuteAnalysis();
+                    _ = ExecuteAnalysis();
                 }
             }
         }
@@ -131,7 +131,7 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(UsesPileToeEta));
             OnPropertyChanged(nameof(SettlePileToeDiaM));
             AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
-            ExecuteAnalysis();
+            _ = ExecuteAnalysis();
             DrawShapes();
             // ユーザーが確認したのでランプを点灯
             MarkPileAsAnalyzed(index);
@@ -430,6 +430,40 @@ namespace PileDesign.ViewModels
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
+        // Masing 履歴解析ウィンドウを開く
+        [RelayCommand]
+        private void OpenMasingHysteresis()
+        {
+            if (VerticalLoadTransferMethod == null
+                || VerticalLoadTransferMethod.LoadDisplacements == null
+                || VerticalLoadTransferMethod.LoadDisplacements.Count < 2)
+            {
+                MessageService.ShowWarning("骨格曲線がまだ算出されていません。先に荷重-沈下解析を実行してください。");
+                return;
+            }
+
+            // 初期値は現在選択中の SoilPile の代表軸力 (VL) を常時荷重に設定
+            double initialConst = 0;
+            try
+            {
+                if (InputModel?.PileLayoutItems != null)
+                {
+                    var firstMatch = InputModel.PileLayoutItems
+                        .FirstOrDefault(p => p.SoilPileAltNo == SoilPileNo);
+                    if (firstMatch != null)
+                        initialConst = firstMatch.AxialForceVL0 + firstMatch.AxialForceVLAdditional;
+                }
+            }
+            catch { /* 取得できなければ 0 のまま */ }
+
+            var vm = new MasingHysteresisViewModel(VerticalLoadTransferMethod, initialConst, 0);
+            var win = new MasingHysteresisWindow(vm)
+            {
+                Owner = SettlementWindowInstance
+            };
+            win.Show();
+        }
+
         // 周面抵抗考慮フラグ変更時の支持力再計算
         public void RecalculateResistances()
         {
@@ -724,7 +758,7 @@ namespace PileDesign.ViewModels
                 {
                     PileBody.TipNonPermability = tipNonPermeability;
                     // 閉塞率変更時に解析実行
-                    ExecuteAnalysis();
+                    _ = ExecuteAnalysis();
                     return;
                 }
 
@@ -740,7 +774,7 @@ namespace PileDesign.ViewModels
                     OnPropertyChanged(nameof(SoilPile));
                     DrawShapes();
                     // 支持力の再計算と解析実行
-                    ExecuteAnalysis();
+                    _ = ExecuteAnalysis();
                     return;
                 }
 
@@ -749,7 +783,7 @@ namespace PileDesign.ViewModels
                     // 沈下検討用極限先端支持力度を更新
                     SoilPile.SettleQpu = settleQpu;
                     // 沈下グラフを更新
-                    ExecuteAnalysis();
+                    _ = ExecuteAnalysis();
                     return;
                 }
 
@@ -760,7 +794,7 @@ namespace PileDesign.ViewModels
                     if (SoilPile != null) SoilPile.IsSettlementPresetInitialized = true;
                     // チャート要素更新と解析実行
                     AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
-                    ExecuteAnalysis();
+                    _ = ExecuteAnalysis();
                     return;
                 }
 
@@ -771,7 +805,7 @@ namespace PileDesign.ViewModels
                     if (SoilPile != null) SoilPile.IsSettlementPresetInitialized = true;
                     // チャート要素更新と解析実行
                     AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
-                    ExecuteAnalysis();
+                    _ = ExecuteAnalysis();
                     return;
                 }
 
@@ -801,7 +835,7 @@ namespace PileDesign.ViewModels
                     // パラメータ変更時に自動で解析実行
                     if (parameterChanged)
                     {
-                        ExecuteAnalysis();
+                        _ = ExecuteAnalysis();
                     }
                 }
             }
@@ -866,7 +900,7 @@ namespace PileDesign.ViewModels
             SoilPile.IsSettlementPresetInitialized = true;
             AddComponent(InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha, InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleN);
             // プリセット変更時に自動で解析実行
-            ExecuteAnalysis();
+            _ = ExecuteAnalysis();
         }
 
         /// <summary>

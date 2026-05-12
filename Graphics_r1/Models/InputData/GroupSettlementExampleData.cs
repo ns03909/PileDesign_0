@@ -27,10 +27,22 @@ namespace PileDesign.Models.InputData
         public PointDto? InertiaPoint { get; set; }
 
         /// <summary>
-        /// 載荷面標高
+        /// 載荷面標高 (旧フィールド: 一般/反復共通の初期値)
         /// </summary>
         [JsonPropertyName("loadingPlaneAltitude")]
         public double LoadingPlaneAltitude { get; set; }
+
+        /// <summary>
+        /// 一般解析 (基礎梁無し) 用の載荷面標高 (省略時は loadingPlaneAltitude を使用)
+        /// </summary>
+        [JsonPropertyName("loadingPlaneAltitudeNonBeam")]
+        public double? LoadingPlaneAltitudeNonBeam { get; set; }
+
+        /// <summary>
+        /// 反復解析 (基礎梁考慮) 用の載荷面標高 (省略時は loadingPlaneAltitude を使用)
+        /// </summary>
+        [JsonPropertyName("loadingPlaneAltitudeBeamAware")]
+        public double? LoadingPlaneAltitudeBeamAware { get; set; }
 
         /// <summary>
         /// 矩形荷重リスト
@@ -127,6 +139,10 @@ namespace PileDesign.Models.InputData
 
         [JsonPropertyName("qa")]
         public double QA { get; set; }
+
+        /// <summary>個別矩形 (反復解析でも使用) 用に紐付ける杭番号。0 なら未連結 (任意矩形)。</summary>
+        [JsonPropertyName("linkedPileNo")]
+        public int LinkedPileNo { get; set; }
     }
 
     /// <summary>
@@ -145,6 +161,10 @@ namespace PileDesign.Models.InputData
 
         [JsonPropertyName("thickness")]
         public double Thickness { get; set; }
+
+        /// <summary>粒度区分 (粘性土 / 砂質土 / 礫質土 / 未指定)</summary>
+        [JsonPropertyName("granularityClass")]
+        public string GranularityClass { get; set; } = "";
     }
 
     /// <summary>

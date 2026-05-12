@@ -576,6 +576,17 @@
                                                           DropDownOpened="ComboBox_DropDownOpened"
                                                           SelectionChanged="ComboBox_SelectionChanged"/>
                                             </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="腐食深さ (mm)" Width="100"/>
+                                                <TextBox Text="{Binding PileSection.CorrosionDepth, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:N1}'}"
+                                                         Width="50"
+                                                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"
+                                                         GotFocus="TextBox_GotFocus"
+                                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                         PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                         TextChanged="TextBox_TextChanged"
+                                                         LostFocus="TextBox_LostFocus"/>
+                                            </StackPanel>
                                         </StackPanel>
 
                                     </GroupBox>

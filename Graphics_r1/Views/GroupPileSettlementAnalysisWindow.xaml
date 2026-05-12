@@ -12,7 +12,7 @@
         xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         xmlns:common="clr-namespace:PileDesign.Common"
-        Title="群杭沈下解析" Height="450" Width="800">
+        Title="群杭沈下解析 (基礎梁無し)" Height="600" Width="900">
 
     <Window.DataContext>
         <local:MainWindowViewModel/>
@@ -210,13 +210,15 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
-                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="0"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
+                                    <!-- 土層は主画面の共通入力 (群杭荷重タブ → 土層サブタブ) で編集する。
+                                         ここでは編集 UI を出さない (Row=2 は高さ 0)。 -->
 
                                     <ToolBar Grid.Row="0" Grid.Column="0">
                                         <TextBlock Text="荷重タイプ"/>
-                                        <ComboBox ItemsSource="{Binding AvailableLoadingTypeOptions, UpdateSourceTrigger=LostFocus}"
+                                        <ComboBox ItemsSource="{Binding AvailableLoadingTypeOptionsNonBeam, UpdateSourceTrigger=LostFocus}"
                                                   SelectedItem="{Binding CurrentInputModel.PileGroupSettlement.LoadingType, UpdateSourceTrigger=LostFocus}"
                                                   Width="150"
                                                   SelectionChanged="ComboBoxLoadingType_SelectionChanged"/>
@@ -231,7 +233,7 @@
 
                                     <StackPanel Grid.Row="1" Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType,
                                         Converter={StaticResource VisibilityConverter},
-                                        ConverterParameter='任意矩形,個別十字,個別十字（基礎梁考慮）'}">
+                                        ConverterParameter='任意矩形,個別矩形,個別矩形（基礎梁考慮）,個別十字,個別十字（基礎梁反力）'}">
                                         <StackPanel Orientation="Horizontal">
                                             <Button Content="矩形荷重面追加" Width="100" HorizontalAlignment="Left" Command="{Binding AddRectLoadCommand}"/>
                                             <Button Content="基礎指針'19計算例5" Width="100" HorizontalAlignment="Left" Command="{Binding Example5Command}"/>
@@ -356,8 +358,7 @@
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Width="*" Binding="{Binding DX, StringFormat=N3}"
-                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50"
-                                                                    IsReadOnly="true" Foreground="Gray">
+                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="DX"
@@ -370,8 +371,7 @@
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Width="*" Binding="{Binding DY, StringFormat=N3}"
-                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50"
-                                                                    IsReadOnly="true" Foreground="Gray">
+                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="DY"
@@ -413,7 +413,7 @@
 
                                     <StackPanel Grid.Row="1" Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType,
                                         Converter={StaticResource VisibilityConverter},
-                                        ConverterParameter='個別十字,個別十字（基礎梁考慮）'}">
+                                        ConverterParameter='個別矩形,個別矩形（基礎梁考慮）,個別十字,個別十字（基礎梁反力）'}">
 
                                         <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.ElementDivision.SoilPiles, UpdateSourceTrigger=LostFocus}"
                                             AutoGenerateColumns="False"
@@ -514,7 +514,7 @@
                                         </common:EnhancedDataGrid>
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row=" 2">
+                                    <StackPanel Grid.Row=" 2" Visibility="Collapsed">
 
                                         <Button Content="群杭即時沈下検討用土層追加" Width="200" HorizontalAlignment="Left" Command="{Binding AddSettlementSoilLayerCommand}"/>
 

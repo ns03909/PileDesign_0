@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -33,7 +33,7 @@ namespace PileDesign.Common
             // 縦スクロールバーを常時表示：Auto だとスクロールバー出現時にデータ行幅だけ縮んでヘッダーとずれる
             ScrollViewer.SetVerticalScrollBarVisibility(this, ScrollBarVisibility.Visible);
 
-            // 列仮想化を無効化：FrozenColumnCount との組み合わせで横スクロール時にガタつき・ヘッダー欠けが発生するため
+            // 列仮想化を無効化：FrozenColumnCount との組合せで横スクロール時にガタつき・ヘッダー欠けが発生するため
             EnableColumnVirtualization = false;
 
             // ヘッダー高さを全列の最大に固定（列仮想化ON時の横スクロールでのガタつき防止）

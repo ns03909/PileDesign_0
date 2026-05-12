@@ -21,5 +21,6 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(RedoToolTip));
         OnPropertyChanged(nameof(PileCountText));
         OnPropertyChanged(nameof(AnalysisStatusText));
+        OnPropertyChanged(nameof(AnalysisStatusItems));
     }
 }

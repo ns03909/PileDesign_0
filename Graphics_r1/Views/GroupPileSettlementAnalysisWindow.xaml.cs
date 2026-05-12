@@ -28,8 +28,9 @@ namespace PileDesign.Views
         {
             var comboBox = sender as ComboBox;
             var selectedItem = comboBox?.SelectedItem as string;
-            // 個別十字系に切り替わった場合は RectLoads を自動生成で置換
-            if (selectedItem == "個別十字" || selectedItem == "個別十字（基礎梁考慮）")
+            // 個別十字系・個別矩形系に切り替わった場合は RectLoads を自動生成で置換
+            if (selectedItem == "個別十字" || selectedItem == "個別十字（基礎梁反力）"
+             || selectedItem == "個別矩形" || selectedItem == "個別矩形（基礎梁考慮）")
             {
                 // UpdateSourceTrigger=LostFocus のためモデル側 LoadingType が
                 // まだ古い値の可能性 → 先にソース更新してから再生成

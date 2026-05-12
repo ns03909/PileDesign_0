@@ -1,0 +1,66 @@
+<Window x:Class="PileDesign.Views.MasingHysteresisWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        d:DataContext="{d:DesignInstance Type=local:MasingHysteresisViewModel}"
+        mc:Ignorable="d"
+        Title="Masing 履歴解析 (一定変動軸力)" Height="600" Width="1200">
+
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CloseCommand}"/>
+    </Window.InputBindings>
+
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 入力 -->
+        <Border Grid.Row="0" BorderBrush="LightGray" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="常時荷重" VerticalAlignment="Center"/>
+                <TextBox Width="100" Margin="6,0,0,0" VerticalAlignment="Center"
+                         Text="{Binding ConstantLoad, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
+                         TextAlignment="Right"/>
+                <TextBlock Text="kN" Margin="4,0,16,0" VerticalAlignment="Center"/>
+
+                <TextBlock Text="変動荷重 (±)" VerticalAlignment="Center"/>
+                <TextBox Width="100" Margin="6,0,0,0" VerticalAlignment="Center"
+                         Text="{Binding VariableLoad, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
+                         TextAlignment="Right"/>
+                <TextBlock Text="kN" Margin="4,0,16,0" VerticalAlignment="Center"/>
+
+                <CheckBox Content="Pyke 修正則 (過去最大値で骨格復帰)"
+                          IsChecked="{Binding IsPykeRuleEnabled}"
+                          VerticalAlignment="Center" Margin="8,0,0,0"
+                          ToolTip="ON: Masing-Pyke (地盤工学標準)。OFF: 純 Masing (2× スケールのみ、メモリなし)"/>
+
+                <CheckBox Content="凡例表示" IsChecked="{Binding IsLegendVisible}" VerticalAlignment="Center" Margin="16,0,0,0"/>
+
+                <TextBlock Margin="24,0,0,0" VerticalAlignment="Center" FontStyle="Italic" Foreground="DimGray"
+                           Text="履歴: ① 常時 → ② 常時-変動 → ③ 常時+変動 → ④ 常時-変動 → ⑤ 常時+変動"/>
+            </StackPanel>
+        </Border>
+
+        <!-- グラフ 2 つ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <ScottPlot:WpfPlot x:Name="WpfPlotHead" Grid.Column="0"/>
+            <ScottPlot:WpfPlot x:Name="WpfPlotToe"  Grid.Column="1"/>
+        </Grid>
+
+        <!-- 閉じる -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button Content="閉じる (Esc)" Width="120" Height="28" Command="{Binding CloseCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -104,7 +104,7 @@ WindowStartupLocation="CenterOwner">
                         </common:EnhancedDataGrid>
                     </GroupBox>
 
-                    <GroupBox Header="荷重組み合わせ" Margin="0,0,0,4">
+                    <GroupBox Header="荷重組合せ" Margin="0,0,0,4">
                         <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.LoadCasesInput.LoadCombinations}"
                                   AutoGenerateColumns="False" HeadersVisibility="None" CanUserAddRows="False"
                                   MaxHeight="80" VerticalScrollBarVisibility="Auto">

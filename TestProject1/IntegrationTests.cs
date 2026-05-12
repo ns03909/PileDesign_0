@@ -449,12 +449,15 @@ namespace TestProject1
             }
             inputModel.PileBodies = pileBodies;
 
-            // 杭配置データの構築
+            // 杭配置データの構築 — No / PileNo は AnalysisModelling のガード (item.No == i+1) を満たすため設定必須
             var pileLayoutItems = new ObservableCollection<PileLayoutDataItem>();
-            foreach (var plDto in pileData.PileLayoutItems)
+            for (int i = 0; i < pileData.PileLayoutItems.Count; i++)
             {
+                var plDto = pileData.PileLayoutItems[i];
                 var item = new PileLayoutDataItem
                 {
+                    No = i + 1,
+                    PileNo = i + 1,
                     PileBodyNo = plDto.PileBodyNo > 0 ? plDto.PileBodyNo : 1,
                     GroundNo = plDto.GroundNo > 0 ? plDto.GroundNo : 1,
                     X = plDto.X,

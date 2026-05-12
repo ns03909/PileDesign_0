@@ -126,10 +126,6 @@ namespace PileDesign.Views
                             var upActionProp = mainVm.GetType().GetProperty("UpdateWindowAction", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                             var upAction = upActionProp?.GetValue(mainVm) as Action;
                             upAction?.Invoke();
-
-                            // UpdateTreeView() があれば呼ぶ
-                            var updateTreeMi = mainVm.GetType().GetMethod("UpdateTreeView", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                            updateTreeMi?.Invoke(mainVm, null);
                         }
                     }
                 }

@@ -820,9 +820,21 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <CheckBox Grid.Row="0" Grid.Column="1" Content="凡例表示"
-                                 IsChecked="{Binding IsSettlementLegendVisible}"
-                                 HorizontalAlignment="Right" Margin="0,2,10,2"/>
+                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                                    Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Margin="0,2,16,2" Padding="6,2"
+                                    Command="{Binding OpenMasingHysteresisCommand}"
+                                    ToolTip="単杭骨格曲線を用いた一定変動軸力下の Masing 則履歴グラフ">
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="pack://application:,,,/Icons/Masing-Pyke.png"
+                                           Width="20" Height="20" Margin="0,0,6,0" Stretch="Uniform"/>
+                                    <TextBlock Text="Masing 履歴解析..." VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <CheckBox Content="凡例表示"
+                                     IsChecked="{Binding IsSettlementLegendVisible}"
+                                     VerticalAlignment="Center" Margin="0,2,10,2"/>
+                        </StackPanel>
                         <ScottPlot:WpfPlot  Grid.Row="1" Grid.Column="0" x:Name="wpfPlotSettlement"/>
                         <TextBlock Text="{Binding CrosshairPositionText_PileTopSettlement}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 

@@ -45,7 +45,7 @@ namespace PileDesign.Services
 
         /// <summary>
         /// 群杭沈下解析の条件のみを適用する（PileBodies/PileLayout/FoundationBeam 等は変更しない）。
-        /// 杭例題と組み合わせて読み込む際に使用する。
+        /// 杭例題と組合せて読み込む際に使用する。
         /// 適用対象: LoadingPlaneAltitude / RectLoads / SettlementSoilLayers / SettlementGridData クリア
         /// </summary>
         public static void ApplySettlementConditionsOnly(
@@ -57,8 +57,12 @@ namespace PileDesign.Services
             inputModel.PileGroupSettlement.SettlementGridX = new ObservableCollection<double>();
             inputModel.PileGroupSettlement.SettlementGridY = new ObservableCollection<double>();
 
-            // 載荷面標高
+            // 載荷面標高 (旧: 単一値, 新: per-route で個別指定可能)
             inputModel.PileGroupSettlement.LoadingPlaneAltitude = data.LoadingPlaneAltitude;
+            inputModel.PileGroupSettlement.LoadingPlaneAltitudeNonBeam
+                = data.LoadingPlaneAltitudeNonBeam ?? data.LoadingPlaneAltitude;
+            inputModel.PileGroupSettlement.LoadingPlaneAltitudeBeamAware
+                = data.LoadingPlaneAltitudeBeamAware ?? data.LoadingPlaneAltitude;
 
             // 矩形荷重
             var rectLoadList = new List<RectLoad>(data.RectLoads?.Count ?? 0);
@@ -72,11 +76,20 @@ namespace PileDesign.Services
                         X2 = rectLoadDto.X2,
                         Y1 = rectLoadDto.Y1,
                         Y2 = rectLoadDto.Y2,
-                        QA = rectLoadDto.QA
+                        QA = rectLoadDto.QA,
+                        LinkedPileNo = rectLoadDto.LinkedPileNo
                     });
                 }
             }
             inputModel.PileGroupSettlement.RectLoads = new ObservableCollection<RectLoad>(rectLoadList);
+            // 一般モードのユーザー入力スナップショット: 例題原値で初期化
+            // (反復が pgs.RectLoads を収束反力で上書きしても、一般モード復帰時に原値へ戻せるよう)
+            inputModel.PileGroupSettlement.NonBeamRectLoadsSnapshot = new ObservableCollection<RectLoad>(
+                rectLoadList.Select(r => new RectLoad
+                {
+                    X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
+                    QA = r.QA, LinkedPileNo = r.LinkedPileNo,
+                }));
 
             // 沈下計算用地層
             var soilLayerList = new List<SettlementSoilLayer>(data.SettlementSoilLayers?.Count ?? 0);
@@ -89,7 +102,8 @@ namespace PileDesign.Services
                         BottomAltitude = layerDto.BottomAltitude,
                         Ek = layerDto.Ek,
                         PoissonsRatio = layerDto.PoissonsRatio,
-                        Thickness = layerDto.Thickness
+                        Thickness = layerDto.Thickness,
+                        GranularityClass = layerDto.GranularityClass ?? ""
                     });
                 }
             }
@@ -108,6 +122,10 @@ namespace PileDesign.Services
             inputModel.PileGroupSettlement.SettlementGridData = new ObservableCollection<SettlementGridDataItem>();
             inputModel.PileGroupSettlement.SettlementGridX = new ObservableCollection<double>();
             inputModel.PileGroupSettlement.SettlementGridY = new ObservableCollection<double>();
+            // ケース別レコードもクリア (旧バージョンで作成された一般/反復記録の混入を防止)
+            inputModel.PileGroupSettlement.CaseRecords?.Clear();
+            inputModel.PileGroupSettlement.ActiveCaseIndex = -1;
+            inputModel.PileGroupSettlement.ActiveLoadingType = "";
 
             // 慣性力中心点を設定
             if (data.InertiaPoint != null)
@@ -127,8 +145,12 @@ namespace PileDesign.Services
                 }
             }
 
-            // 載荷面標高を設定
+            // 載荷面標高を設定 (per-route 対応)
             inputModel.PileGroupSettlement.LoadingPlaneAltitude = data.LoadingPlaneAltitude;
+            inputModel.PileGroupSettlement.LoadingPlaneAltitudeNonBeam
+                = data.LoadingPlaneAltitudeNonBeam ?? data.LoadingPlaneAltitude;
+            inputModel.PileGroupSettlement.LoadingPlaneAltitudeBeamAware
+                = data.LoadingPlaneAltitudeBeamAware ?? data.LoadingPlaneAltitude;
 
             // 矩形荷重を設定（バッチ化）
             var rectLoadList = new List<RectLoad>(data.RectLoads.Count);
@@ -140,10 +162,19 @@ namespace PileDesign.Services
                     X2 = rectLoadDto.X2,
                     Y1 = rectLoadDto.Y1,
                     Y2 = rectLoadDto.Y2,
-                    QA = rectLoadDto.QA
+                    QA = rectLoadDto.QA,
+                    LinkedPileNo = rectLoadDto.LinkedPileNo
                 });
             }
             inputModel.PileGroupSettlement.RectLoads = new ObservableCollection<RectLoad>(rectLoadList);
+            // 一般モードのユーザー入力スナップショット: 例題原値で初期化
+            // (反復が pgs.RectLoads を収束反力で上書きしても、一般モード復帰時に原値へ戻せるよう)
+            inputModel.PileGroupSettlement.NonBeamRectLoadsSnapshot = new ObservableCollection<RectLoad>(
+                rectLoadList.Select(r => new RectLoad
+                {
+                    X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
+                    QA = r.QA, LinkedPileNo = r.LinkedPileNo,
+                }));
 
             // 沈下計算用地層を設定（バッチ化）
             var soilLayerList = new List<SettlementSoilLayer>(data.SettlementSoilLayers.Count);
@@ -154,7 +185,8 @@ namespace PileDesign.Services
                     BottomAltitude = layerDto.BottomAltitude,
                     Ek = layerDto.Ek,
                     PoissonsRatio = layerDto.PoissonsRatio,
-                    Thickness = layerDto.Thickness
+                    Thickness = layerDto.Thickness,
+                    GranularityClass = layerDto.GranularityClass ?? ""
                 });
             }
             inputModel.PileGroupSettlement.SettlementSoilLayers = new ObservableCollection<SettlementSoilLayer>(soilLayerList);
@@ -256,8 +288,6 @@ namespace PileDesign.Services
                 inputModel.PileLayoutItems = [];
             }
 
-            // 旧要素はクリア（後方互換用に読み込まれた場合に備える）
-            inputModel.Elements = new ObservableCollection<Element>();
 
             // 一般節点をクリア
             inputModel.InputNodes = new ObservableCollection<InputNode>();
@@ -275,13 +305,12 @@ namespace PileDesign.Services
                     _ => FoundationBeamConnectionMode.RigidBody
                 };
 
-                // 材料（バッチ化）
+                // 材料（バッチ化）— No プロパティは廃止 (位置 = ID)
                 var matList = new List<BeamMaterial>(data.FoundationBeamInput.Materials.Count);
                 foreach (var matDto in data.FoundationBeamInput.Materials)
                 {
                     matList.Add(new BeamMaterial
                     {
-                        No = matDto.No,
                         Name = matDto.Name,
                         YoungModulus = matDto.YoungModulus,
                         ShearModulus = matDto.ShearModulus,
@@ -290,13 +319,12 @@ namespace PileDesign.Services
                 }
                 inputModel.FoundationBeamInput.Materials = new ObservableCollection<BeamMaterial>(matList);
 
-                // 断面（バッチ化）
+                // 断面（バッチ化）— No プロパティは廃止 (位置 = ID)
                 var secList = new List<BeamSection>(data.FoundationBeamInput.Sections.Count);
                 foreach (var secDto in data.FoundationBeamInput.Sections)
                 {
                     var section = new BeamSection
                     {
-                        No = secDto.No,
                         Name = secDto.Name,
                         Width = secDto.Width,
                         Height = secDto.Height
@@ -306,13 +334,12 @@ namespace PileDesign.Services
                 }
                 inputModel.FoundationBeamInput.Sections = new ObservableCollection<BeamSection>(secList);
 
-                // 梁要素（バッチ化）
-                var beamList = new List<FoundationBeamElement>(data.FoundationBeamInput.Beams.Count);
+                // 梁要素（バッチ化）— No プロパティは廃止 (位置 = ID)
+                var beamList = new List<FoundationBeam>(data.FoundationBeamInput.Beams.Count);
                 foreach (var beamDto in data.FoundationBeamInput.Beams)
                 {
-                    var beam = new FoundationBeamElement
+                    var beam = new FoundationBeam
                     {
-                        No = beamDto.No,
                         MaterialNo = beamDto.MaterialNo,
                         SectionNo = beamDto.SectionNo
                     };
@@ -333,7 +360,7 @@ namespace PileDesign.Services
 
                     beamList.Add(beam);
                 }
-                inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeamElement>(beamList);
+                inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeam>(beamList);
 
                 // 材料・断面が空のとき、自動生成梁の参照先を保証するためデフォルトエントリを追加
                 inputModel.FoundationBeamInput.EnsureDefaultMaterialAndSection();
@@ -345,7 +372,7 @@ namespace PileDesign.Services
                 {
                     inputModel.FoundationBeamInput.Materials = new ObservableCollection<BeamMaterial>();
                     inputModel.FoundationBeamInput.Sections = new ObservableCollection<BeamSection>();
-                    inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeamElement>();
+                    inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeam>();
                 }
             }
 
@@ -437,8 +464,8 @@ namespace PileDesign.Services
         private static string GetExamplesPath()
         {
             // 実行ファイルのディレクトリからExamplesフォルダを探す
-            var assemblyLocation = Assembly.GetExecutingAssembly().Location;
-            var assemblyDir = Path.GetDirectoryName(assemblyLocation) ?? ".";
+            // 単一ファイル発行 (PublishSingleFile=true) では Assembly.Location が空文字を返すため AppContext.BaseDirectory を使用
+            var assemblyDir = AppContext.BaseDirectory;
             var examplesPath = Path.Combine(assemblyDir, "Examples");
 
             if (Directory.Exists(examplesPath))

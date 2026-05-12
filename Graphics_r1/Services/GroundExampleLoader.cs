@@ -124,8 +124,8 @@ namespace PileDesign.Services
         private static string GetExamplesPath()
         {
             // 実行ファイルのディレクトリからExamplesフォルダを探す
-            var assemblyLocation = Assembly.GetExecutingAssembly().Location;
-            var assemblyDir = Path.GetDirectoryName(assemblyLocation) ?? ".";
+            // 単一ファイル発行 (PublishSingleFile=true) では Assembly.Location が空文字を返すため AppContext.BaseDirectory を使用
+            var assemblyDir = AppContext.BaseDirectory;
             var examplesPath = Path.Combine(assemblyDir, "Examples");
 
             if (Directory.Exists(examplesPath))

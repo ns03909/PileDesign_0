@@ -105,7 +105,7 @@ namespace PileDesign.Views
             IReadOnlyList<HelpSearchService.SearchResult> results;
             try
             {
-                results = HelpSearchService.Instance.Search(query, maxResults: 6);
+                results = HelpSearchService.Instance.Search(query, maxResults: 20);
             }
             catch (Exception ex)
             {
