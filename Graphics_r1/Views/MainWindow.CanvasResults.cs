@@ -1,4 +1,5 @@
 using MathNet.Numerics.LinearAlgebra;
+using PileDesign.Common;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
@@ -69,6 +70,9 @@ namespace PileDesign.Views
                             foreach (var beam in pile.Beams) visibleBeams.Add(beam);
                             foreach (var node in pile.PileNodes) visibleFemNodes.Add(node);
                             foreach (var spring in pile.HorizontalSoilSprings) visibleSoilSprings.Add(spring);
+                            // 杭Zばね (P-S 非線形ばね) も pile 単位の可視性に従う
+                            if (pile.VerticalNodeSprings != null)
+                                foreach (var spring in pile.VerticalNodeSprings) visibleSoilSprings.Add(spring);
                         }
                     }
                 }
@@ -281,6 +285,18 @@ namespace PileDesign.Views
 
                 ObservableCollection<double> allValues = [];
 
+                // J 端の符号規約:
+                //   FEM の CumulativeForce は「節点に作用する力」規約で、軸力でも I 端と J 端で符号反対。
+                //   ユーザに見せる「要素内力」規約 (I/J 同符号) に変換するには J を反転する。
+                //   これは Fx 軸力・Fy/Fz せん断・Mx/My/Mz モーメント全てに共通。
+                int signJ = -1;
+                // Fx (軸力) のみ: FEM 一般規約「引張正・圧縮負」で表示するため、後段で両端を符号反転する。
+                bool isAxialN = viewModel.AnalysisResultBeamForceType == "Fx";
+
+                // 案 Z モードでは FEM 解析自体に N0 を外力として適用するため、
+                // Fx 表示は FEM が出した値そのまま (N0 加算は不要)。
+                // (旧 Phase Y で使用していた NodalAxialForcesOp 加算ロジックは削除済み)
+
                 int beamCount = 0;
                 int validResultCount = 0;
                 foreach (var beam in anaModel.Beams)
@@ -340,6 +356,14 @@ namespace PileDesign.Views
                         originalForceJ = beamResult.CumulativeForce.GetByIndex(indices[1]);
                     }
 
+                    // Fx (軸力) のみ: FEM 一般規約「引張正・圧縮負」で表示するため両端を符号反転。
+                    // この計算機内部の生 Fxi/Fxj は pile 向きの local X が +Z 方向で、圧縮時に正値を返すため、
+                    // ユーザの「圧縮 = 負値」期待と逆になる。表示直前にここで反転して規約を揃える。
+                    if (isAxialN)
+                    {
+                        originalForceI = -originalForceI;
+                        originalForceJ = -originalForceJ;
+                    }
 
                     double absForceI = Math.Abs(originalForceI);
                     double absForceJ = Math.Abs(originalForceJ);
@@ -353,8 +377,9 @@ namespace PileDesign.Views
                     }
 
                     // ここを絶対値追加から符号付き追加へ変更(カラーバー用ジオメトリ)
+                    // 軸力 Fx は signJ=+1 (I/J 同符号)、その他は signJ=-1 (I/J 逆符号で同方向描画)
                     allValues.Add(originalForceI);
-                    allValues.Add(-originalForceJ);
+                    allValues.Add(signJ * originalForceJ);
 
                     maxAbsValue = Math.Max(maxAbsValue, Math.Max(absForceI, absForceJ));
 
@@ -405,8 +430,8 @@ namespace PileDesign.Views
                 }
 
                 // 「杭MaxMin」モード用の事前計算: 各杭の (max, min) 値の出現位置 (beam, I/J) を特定する。
-                // 表示時の値規約: I 端 = originalForceI, J 端 = -originalForceJ
-                // (line 502 の values リスト [originalForceI, originalForceI, -originalForceJ, -originalForceJ] と整合)
+                // 表示時の値規約: I 端 = originalForceI, J 端 = signJ * originalForceJ
+                // (Fx は signJ=+1、それ以外は signJ=-1)
                 var pileMaxMinShow = new Dictionary<Beam, (bool showI, bool showJ)>();
                 if (viewModel.IsPileMaxMinResultValueVisibleOnly)
                 {
@@ -422,7 +447,7 @@ namespace PileDesign.Views
                         {
                             if (!beamForceMap.TryGetValue(b, out var force)) continue;
                             double valI = force.originalForceI;
-                            double valJ = -force.originalForceJ;
+                            double valJ = signJ * force.originalForceJ;
                             if (double.IsFinite(valI))
                             {
                                 if (valI > maxVal) { maxVal = valI; maxBeam = b; maxIsI = true; }
@@ -528,12 +553,13 @@ namespace PileDesign.Views
                     }
                     else
                     {
-                        // 個別成分（Fx,Fy,Fz,Mx,My,Mz）: 力値の符号でダイアグラムの側を決定
-                        // J端は符号規約（I端とJ端で符号反転）に対応して-forceJで描画
+                        // 個別成分: 力値の符号でダイアグラムの側を決定。J端は signJ で規約に応じて符号調整。
+                        //   Fx (軸力): I/J 同符号 → signJ=+1 (反転なし)
+                        //   Fy,Fz,Mx,My,Mz: I/J 逆符号 → signJ=-1 (反転)
                         nodeJForce3D = new(
-                            nodeJ3D.X + -forceJ * transformedForceDirectionJ[0],
-                            nodeJ3D.Y + -forceJ * transformedForceDirectionJ[1],
-                            nodeJ3D.Z + -forceJ * transformedForceDirectionJ[2]);
+                            nodeJ3D.X + signJ * forceJ * transformedForceDirectionJ[0],
+                            nodeJ3D.Y + signJ * forceJ * transformedForceDirectionJ[1],
+                            nodeJ3D.Z + signJ * forceJ * transformedForceDirectionJ[2]);
                     }
 
                     // 以下、既存の描画コード（投影→色分け→テキスト等）をそのまま使う
@@ -543,7 +569,7 @@ namespace PileDesign.Views
                     Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
 
                     var points = new[] { nodeI2D, nodeIForce2D, nodeJForce2D, nodeJ2D };
-                    List<double> values = [originalForceI, originalForceI, -originalForceJ, -originalForceJ];
+                    List<double> values = [originalForceI, originalForceI, signJ * originalForceJ, signJ * originalForceJ];
                     AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
 
                     // RigidLinkの杭頭側（J端）と接合点側（I端）に境界ラインを追加
@@ -567,7 +593,7 @@ namespace PileDesign.Views
                                     AddText3D(Brushes.Black, string.Format(format, originalForceI),
                                         nodeIForce2D.X, nodeIForce2D.Y, "C", "C", 0.0);
                                 if (show.showJ)
-                                    AddText3D(Brushes.Black, string.Format(format, -originalForceJ),
+                                    AddText3D(Brushes.Black, string.Format(format, signJ * originalForceJ),
                                         nodeJForce2D.X, nodeJForce2D.Y, "C", "C", 0.0);
                             }
                         }
@@ -583,7 +609,7 @@ namespace PileDesign.Views
                         {
                             DrawResultValueTexts(
                             viewModel.IsResultValueVisible, Brushes.Black,
-                            originalForceI, -originalForceJ,
+                            originalForceI, signJ * originalForceJ,
                             nodeIForce2D, nodeJForce2D,
                             nodeJ2D, nodeI2D,
                             format, format, isFoundationBeam);
@@ -642,6 +668,11 @@ namespace PileDesign.Views
                 {
                     case "UH":
                         effectiveVector = Vector<double>.Build.DenseOfArray([1, 1, 0, 0, 0, 0]);
+                        multiplier = 1000;
+                        isThetaLocal = false;
+                        break;
+                    case "U":
+                        effectiveVector = Vector<double>.Build.DenseOfArray([1, 1, 1, 0, 0, 0]);
                         multiplier = 1000;
                         isThetaLocal = false;
                         break;
@@ -1043,6 +1074,13 @@ namespace PileDesign.Views
                     return;
                 DrawHorizontalSoilSpringsResult3D(viewModel, anaModel, hasInvisiblePile ? visibleSoilSprings : null);
             }
+            else if (viewModel.AnalysisResultContent == "地盤反力（分布）")
+            {
+                var anaModel = viewModel.CurrentModel;
+                if (anaModel == null || anaModel.Beams == null)
+                    return;
+                DrawHorizontalSoilReactionDistribution3D(viewModel, anaModel, hasInvisiblePile ? visibleSoilSprings : null);
+            }
             else if (viewModel.AnalysisResultContent == "杭頭Mマップ" ||
                      viewModel.AnalysisResultContent == "杭頭Qマップ")
             {
@@ -1394,6 +1432,7 @@ namespace PileDesign.Views
             switch (viewModel.AnalysisResultNodeDisplacementType)
             {
                 case "UH": effectiveVector = Vector<double>.Build.DenseOfArray([1, 1, 0, 0, 0, 0]); multiplier = 1000; break;
+                case "U": effectiveVector = Vector<double>.Build.DenseOfArray([1, 1, 1, 0, 0, 0]); multiplier = 1000; break;
                 case "UX": effectiveVector = Vector<double>.Build.DenseOfArray([1, 0, 0, 0, 0, 0]); multiplier = 1000; break;
                 case "UY": effectiveVector = Vector<double>.Build.DenseOfArray([0, 1, 0, 0, 0, 0]); multiplier = 1000; break;
                 case "UZ": effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 1, 0, 0, 0]); multiplier = 1000; break;
@@ -2301,7 +2340,9 @@ namespace PileDesign.Views
             if (!isVisible) return;
             if (viewModel.IsMidSpanResultValueVisibleOnly && !isFoundationBeam)
             {
-                double value = (Math.Abs(valueI) + Math.Abs(valueJ)) / 2;
+                // 符号付き平均: 軸力 (Fx) は圧縮負を維持、ほか応力も I/J 同符号ならその符号で表示。
+                // (旧実装は Math.Abs 平均で符号を失っていたが、カラーバー (符号付き) と整合させるため修正)
+                double value = (valueI + valueJ) / 2;
                 AddText3D(solidColorBrush, string.Format(formatI, value),
                     (pointI.X + pointJ.X) / 2, (pointI.Y + pointJ.Y) / 2, "C", "C", 0.0);
             }
@@ -2349,11 +2390,26 @@ namespace PileDesign.Views
             // 選択されたタイプを取得
             string springType = viewModel.AnalysisResultSoilSpringType ?? "RH";
 
+            // AP 非表示時は AP 連結ばね (土圧合力ばね) を全フェーズ (集計/カラーバー/描画) で除外
+            bool apHiddenForCollect = viewModel?.IsActionPointVisible == false;
+            // ばねの可視性判定: 杭関連はピル可視性、根入部関連 (土圧合力ばね) は AP 可視性
+            // ローカル関数化することで 3 箇所のループで共通利用
+            bool IsSpringVisible(HorizontalSoilSpring sp)
+            {
+                if (sp == null) return false;
+                bool isDoatsu = sp.Name != null && sp.Name.StartsWith("土圧合力ばね");
+                if (isDoatsu) return !apHiddenForCollect;
+                // 杭関連: visibleSoilSprings が null (全杭可視) なら全部表示、
+                //         非 null (一部以上の杭が非可視) ならセットに含まれるもののみ表示
+                //         (全杭非表示 → セット空 → false で全部スキップ)
+                return visibleSoilSprings == null || visibleSoilSprings.Contains(sp);
+            }
+
             // 1) 全ばねの値を収集（カラーバー用） — 非アクティブ杭のばねはスキップ
             var allValues = new ObservableCollection<double>();
             foreach (var s in anaModel.HorizontalSoilSprings)
             {
-                if (visibleSoilSprings != null && visibleSoilSprings.Count > 0 && !visibleSoilSprings.Contains(s)) continue;
+                if (!IsSpringVisible(s)) continue;
 
                 try
                 {
@@ -2393,7 +2449,7 @@ namespace PileDesign.Views
             double maxAbsValue = 0;
             foreach (var s in anaModel.HorizontalSoilSprings)
             {
-                if (visibleSoilSprings != null && visibleSoilSprings.Count > 0 && !visibleSoilSprings.Contains(s)) continue;
+                if (!IsSpringVisible(s)) continue;
                 try
                 {
                     var result = FindSpringResult(s);
@@ -2405,11 +2461,21 @@ namespace PileDesign.Views
             }
             double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
 
-            // 3) 各ばねについて、反力の方向と大きさに基づいて矢印を描画
+            // 3) 各ばねについて、反力の方向と大きさに基づいて矢印 or バブルを描画
+            // バブルモード (IsBubbleVisible=true): NodeI 位置に真円 (ビュー方向に依存しない) を描画
+            // 矢印モード (デフォルト): 反力方向に矢印を描画
+            // 両モード同時有効も可 (バブル + 矢印重ね描き)
+            bool useBubble = viewModel?.IsBubbleVisible == true;
+            // デフォルト (両方 OFF) は矢印描画 (従来動作)
+            bool useArrow = viewModel?.IsArrowVisible == true || !useBubble;
+            double bubbleDia = viewModel?.BubbleDia ?? 30.0;
             foreach (var s in anaModel.HorizontalSoilSprings)
             {
-                if (visibleSoilSprings != null && visibleSoilSprings.Count > 0 && !visibleSoilSprings.Contains(s)) continue;
                 if (s?.NodeI == null || s.NodeJ == null) continue;
+                // 可視性フィルタ (集計フェーズと統一):
+                //   杭関連 (杭地盤ばね-* / 杭Zばね-*) は pile 単位の可視性で制御
+                //   根入部関連 (土圧合力ばね) は AP 可視性のみで制御 (pile とは独立)
+                if (!IsSpringVisible(s)) continue;
 
                 try
                 {
@@ -2420,6 +2486,12 @@ namespace PileDesign.Views
                     // 選択されたタイプに応じた値を取得
                     double displayValue = GetSoilSpringValue(s, springType);
                     if (!double.IsFinite(displayValue)) continue; // NaN/Infinity防止
+
+                    // 選択された反力タイプを持たないばねを除外:
+                    // 例) RZ 表示時、水平地盤ばね (杭地盤ばね-*) や土圧合力ばねは Fz=0 のため
+                    //     "0.0" ラベルが杭周りに乱立する。
+                    // 最大絶対値に対して相対 0.1% 未満を「事実上ゼロ」とみなし、矢印もラベルも描画しない。
+                    if (maxAbsValue > 1e-15 && Math.Abs(displayValue) / maxAbsValue < 1.0e-3) continue;
 
                     // CumulativeForce = Ke·disp は「変位状態を保つのに必要な節点等価外力」
                     // ＝ k·(u_pile − u_soil) の符号を持つ。ユーザが期待する「地盤が杭に及ぼす反力」
@@ -2436,12 +2508,15 @@ namespace PileDesign.Views
                         "RY" => new System.Windows.Media.Media3D.Vector3D(0, fy, 0),
                         "RZ" => new System.Windows.Media.Media3D.Vector3D(0, 0, fz),
                         "RH" => new System.Windows.Media.Media3D.Vector3D(fx, fy, 0),  // 水平合反力 (Z 成分は除外、MH と整合)
+                        "R" => new System.Windows.Media.Media3D.Vector3D(fx, fy, fz),  // 3D 合反力
                         _ => new System.Windows.Media.Media3D.Vector3D(fx, fy, 0)
                     };
 
-                    // 表示スケール: 最大反力値で正規化し、比率×ModelExtentを適用
+                    // 表示スケール: 最大反力絶対値で正規化し、比率×ModelExtentを適用
+                    // 符号は forceDirNorm が持つため、長さは絶対値ベース。
+                    // これにより RX/RY/RZ で正負によって矢印が逆向きに描かれる (符号整合)。
                     double arrowLength3D = maxAbsValue > 1e-15
-                        ? displayValue / maxAbsValue * forceScale
+                        ? Math.Abs(displayValue) / maxAbsValue * forceScale
                         : 0;
 
                     // 反力方向を正規化
@@ -2473,6 +2548,29 @@ namespace PileDesign.Views
                                  ?? (colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last() : null);
                     if (picked == null) continue;
 
+                    // ===== バブル描画 (真円、ビュー方向に依存しない) =====
+                    if (useBubble)
+                    {
+                        double bubbleDia2D = maxAbsValue > 1e-15
+                            ? bubbleDia * Math.Abs(displayValue) / maxAbsValue
+                            : 0;
+                        if (bubbleDia2D > 0)
+                        {
+                            // 真円: flattening を掛けず X/Y 同径
+                            var bubble = new EllipseGeometry(head2D, bubbleDia2D * 0.5, bubbleDia2D * 0.5);
+                            picked.PathGeometry.AddGeometry(bubble);
+
+                            if (viewModel.IsResultValueVisible)
+                            {
+                                string fmt = "{0:N" + viewModel.DecimalPlaces + "}";
+                                AddText3D(Brushes.Black, string.Format(fmt, displayValue), head2D.X, head2D.Y, "C", "C", 0);
+                            }
+                        }
+                    }
+
+                    // ===== 矢印描画 =====
+                    if (useArrow)
+                    {
                     // 線分（尾 -> 頭）
                     var line = new LineGeometry(tail2D, head2D);
                     picked.PathGeometry.AddGeometry(line);
@@ -2505,6 +2603,7 @@ namespace PileDesign.Views
                         Point labelPos = tail2D - dirNorm * labelOffset;
                         AddText3D(Brushes.Black, string.Format(fmt, displayValue), labelPos.X, labelPos.Y, "C", "C", 0);
                     }
+                    }
                 }
                 catch
                 {
@@ -2512,8 +2611,8 @@ namespace PileDesign.Views
                 }
             }
 
-            // 3b) 杭先端反力の描画（RH または RZ 選択時）
-            if (springType == "RH" || springType == "RZ")
+            // 3b) 杭先端反力の描画（RH / RZ / R 選択時）
+            if (springType == "RH" || springType == "RZ" || springType == "R")
             {
                 foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                 {
@@ -2527,6 +2626,7 @@ namespace PileDesign.Views
 
                     // RH選択時: 水平成分 sqrt(Fx²+Fy²) のみ描画 (鉛直成分は RZ で別途)
                     // RZ選択時: Fz のみ描画
+                    // R 選択時: 3D 合反力 sqrt(Fx²+Fy²+Fz²) を描画 (RH/RZ の合算と等価)
                     var components = new System.Collections.Generic.List<(double value, System.Windows.Media.Media3D.Vector3D dir)>();
 
                     if (springType == "RH")
@@ -2536,10 +2636,16 @@ namespace PileDesign.Views
                         if (double.IsFinite(tipRH) && tipRH > 1e-15)
                             components.Add((tipRH, new System.Windows.Media.Media3D.Vector3D(tipFx, tipFy, 0)));
                     }
-                    else // RZ
+                    else if (springType == "RZ")
                     {
                         if (double.IsFinite(tipFz) && Math.Abs(tipFz) > 1e-15)
                             components.Add((tipFz, new System.Windows.Media.Media3D.Vector3D(0, 0, tipFz)));
+                    }
+                    else // R
+                    {
+                        double tipR = Math.Sqrt(tipFx * tipFx + tipFy * tipFy + tipFz * tipFz);
+                        if (double.IsFinite(tipR) && tipR > 1e-15)
+                            components.Add((tipR, new System.Windows.Media.Media3D.Vector3D(tipFx, tipFy, tipFz)));
                     }
 
                     foreach (var (tipValue, tipForceDir) in components)
@@ -2551,7 +2657,8 @@ namespace PileDesign.Views
                             ? tipForceDir / tipForceDirLen
                             : new System.Windows.Media.Media3D.Vector3D(0, 0, -1);
 
-                        double tipArrowLen = maxAbsValue > 1e-15 ? tipValue / maxAbsValue * forceScale : 0;
+                        // 符号は tipDirNorm が持つため、長さは絶対値ベース (RZ で正負で向き反転)
+                        double tipArrowLen = maxAbsValue > 1e-15 ? Math.Abs(tipValue) / maxAbsValue * forceScale : 0;
 
                         var tipHead3D = tipNode.Coord;
                         var tipTail3D = new System.Windows.Media.Media3D.Point3D(
@@ -2629,6 +2736,8 @@ namespace PileDesign.Views
             // CumulativeForce = Ke·disp は「変位状態を保つのに必要な節点等価外力」で、
             // ユーザが期待する「地盤が杭に及ぼす反力」（＝杭変位を抑制する向き）とは逆符号。
             // ここでは反力として表示するため符号を反転する。
+            // 案 Z モードでは N0 が FEM 外力として与えられているため、CumulativeForce が既に物理反力を表す。
+            // (旧 Phase Y では PreLoadForce 加算で N0 寄与を補っていたが、案 Z 採用により不要となり削除)
             double fx = -spring.CumulativeForce.GetByIndex(0);
             double fy = -spring.CumulativeForce.GetByIndex(1);
             double fz = -spring.CumulativeForce.GetByIndex(2);
@@ -2642,6 +2751,7 @@ namespace PileDesign.Views
                 "RY" => fy,
                 "RZ" => fz,
                 "RH" => Math.Sqrt(fx * fx + fy * fy),  // 水平合反力 (絶対値、Z 成分は除外、MH と整合)
+                "R" => Math.Sqrt(fx * fx + fy * fy + fz * fz),  // 全合反力 (絶対値、3D)
                 "MX" => mx,
                 "MY" => my,
                 "MZ" => mz,
@@ -2661,12 +2771,232 @@ namespace PileDesign.Views
                 "RY" => "地盤反力RY",
                 "RZ" => "地盤反力RZ",
                 "RH" => "地盤反力RH",
+                "R" => "地盤反力R",
                 "MX" => "地盤反力MX",
                 "MY" => "地盤反力MY",
                 "MZ" => "地盤反力MZ",
                 "MH" => "地盤反力MH",
                 _ => "地盤反力RH"
             };
+        }
+
+        // ========================================
+        // 地盤反力 分布形状描画 (単位長さ当たり kN/m)
+        // ========================================
+
+        /// <summary>
+        /// HorizontalSoilSpring の杭側節点 (NodeI) に対する分担長 (m) を返す。
+        /// 計算法: 当該節点に接続するすべての FEM 梁要素のうち
+        ///   HorizontalSoilReactionItem を持つ梁の <see cref="FEM.Beam"/> 物理長 (NodeI-NodeJ 距離)
+        /// を集計し、各梁の半長 (L/2) を合計する。
+        /// MgtExporter の `(ZTop-ZBtm)*0.5` は単一の反力アイテムに着目しており、要素分割下では
+        /// 元の反力区間長を流用してしまう恐れがあるため、本実装は FEM 上の実梁長 (NodeI.Coord-NodeJ.Coord)
+        /// を直接用いて分担長を計算する。
+        /// </summary>
+        private static double GetSpringTributaryLength(FEM.HorizontalSoilSpring s, FEM.AnaModel anaModel)
+        {
+            return SoilReactionUtil.GetNodeTributaryLength(s?.NodeI, anaModel);
+        }
+
+        /// <summary>
+        /// 地盤反力を「単位長さ当たり (kN/m)」の分布形状として描画する。
+        ///   各杭ごとに以下を行う:
+        ///     1) 杭に紐づく HorizontalSoilSpring を Z 降順 (浅→深) で並べる
+        ///     2) 各ばねの kN/m = 節点反力 / 分担長 を計算
+        ///     3) ばね Z 位置から、選択タイプに応じた水平方向に距離 (kN/m × scale) のオフセット点を作る
+        ///     4) 各ばね位置: 杭軸 → オフセット点 へ短い梯子線
+        ///     5) 隣接ばねのオフセット点同士を結んで分布の外輪郭線を描く
+        /// 並進反力のみ対応 (RH/RX/RY/RZ)。モーメント (MX/MY/MZ/MH) は RH にフォールバック。
+        /// </summary>
+        private void DrawHorizontalSoilReactionDistribution3D(MainWindowViewModel viewModel, FEM.AnaModel anaModel, HashSet<FEM.HorizontalSoilSpring> visibleSoilSprings = null)
+        {
+            if (viewModel == null || anaModel == null) return;
+            if (anaModel.HorizontalSoilSprings == null || anaModel.HorizontalSoilSprings.Count == 0) return;
+            if (Canvas3DLayout == null || ColorBarCanvas == null) return;
+
+            // 選択された荷重ケース・組合せ
+            var selectedLoadCase = LoadCases.GetLoadCase(
+                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+            var selectedLoadCombination = LoadCombinations.GetLoadCombination(
+                viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+
+            FEM.HorizontalSpringResult FindSpringResult(FEM.HorizontalSoilSpring spring)
+            {
+                if (spring.HorizontalSpringResults == null || selectedLoadCase == null || selectedLoadCombination == null)
+                    return null;
+                return spring.HorizontalSpringResults
+                    .Where(r =>
+                        r.LoadCase?.LoadName == selectedLoadCase.LoadName &&
+                        r.LoadCombination?.Name == selectedLoadCombination.Name &&
+                        r.IsLiquefaction == viewModel.IsLiquefaction)
+                    .OrderByDescending(r => r.Step)
+                    .FirstOrDefault();
+            }
+
+            // 並進タイプのみサポート。モーメント系が選択されている場合は RH にフォールバック。
+            string springType = viewModel.AnalysisResultSoilSpringType ?? "RH";
+            if (springType is "MX" or "MY" or "MZ" or "MH") springType = "RH";
+
+            // 1) 全 (杭, ばね) ペアで kN/m を計算し、カラーバー用に集約
+            //    spring → (pile, value_per_m, fxNorm, fyNorm, fzNorm) のリストも構築
+            var perPile = new Dictionary<Models.InputData.PileLayoutDataItem, List<(FEM.HorizontalSoilSpring s, double value, double tributary, double fx, double fy, double fz)>>();
+            var allValues = new ObservableCollection<double>();
+
+            foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+            {
+                if (!pile.IsVisible) continue;
+                if (pile.PileNodes == null) continue;
+                var pileNodeSet = new HashSet<FEM.Node>(pile.PileNodes);
+
+                var pileSprings = anaModel.HorizontalSoilSprings
+                    .Where(s => s != null && s.NodeI != null && pileNodeSet.Contains(s.NodeI))
+                    .Where(s => visibleSoilSprings == null || visibleSoilSprings.Count == 0 || visibleSoilSprings.Contains(s))
+                    .OrderByDescending(s => s.NodeI.Coord.Z)  // 上→下
+                    .ToList();
+                if (pileSprings.Count == 0) continue;
+
+                var list = new List<(FEM.HorizontalSoilSpring, double, double, double, double, double)>();
+                foreach (var s in pileSprings)
+                {
+                    var result = FindSpringResult(s);
+                    if (result?.CumulativeForce == null) continue;
+                    s.CumulativeForce = result.CumulativeForce;
+                    if (result.CumulativeDisp != null) s.CumulativeDisp = result.CumulativeDisp;
+
+                    double tributary = GetSpringTributaryLength(s, anaModel);
+                    if (!(tributary > 1e-9)) continue;
+
+                    // 「地盤が杭に及ぼす反力」の向き (節点等価外力の符号反転)
+                    double fx = -s.CumulativeForce.GetByIndex(0);
+                    double fy = -s.CumulativeForce.GetByIndex(1);
+                    double fz = -s.CumulativeForce.GetByIndex(2);
+
+                    double signed = springType switch
+                    {
+                        "RX" => fx,
+                        "RY" => fy,
+                        "RZ" => fz,
+                        "RH" => Math.Sqrt(fx * fx + fy * fy),  // 水平合反力 (絶対値)
+                        _ => Math.Sqrt(fx * fx + fy * fy),
+                    };
+                    double valuePerM = signed / tributary;  // kN/m
+                    if (!double.IsFinite(valuePerM)) continue;
+
+                    list.Add((s, valuePerM, tributary, fx, fy, fz));
+                    allValues.Add(valuePerM);
+                }
+                if (list.Count > 0) perPile[pile] = list;
+            }
+
+            if (allValues.Count == 0)
+            {
+                ColorBarCanvas.Children.Clear();
+                return;
+            }
+
+            // 2) カラーバー用ジオメトリと正規化
+            var colorBaredGeometries = ColorBarUtils.GetColorBarGeometries(allValues);
+            double maxAbsValue = allValues.Select(v => Math.Abs(v)).Where(double.IsFinite).DefaultIfEmpty(0).Max();
+            double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
+            string unit = "kN/m";
+            string colorBarTitle = GetSoilSpringTypeName(springType) + " (分布)";
+
+            // 3) 各杭ごとに分布外輪を描画
+            foreach (var kv in perPile)
+            {
+                var list = kv.Value;
+                // 各ばね位置に対し、3D オフセット点を作成
+                var outerPoints3D = new List<(System.Windows.Media.Media3D.Point3D baseP, System.Windows.Media.Media3D.Point3D outerP, double value)>();
+
+                foreach (var (s, value, tributary, fx, fy, fz) in list)
+                {
+                    // 反力方向ベクトル (kN/m 値の符号は signed = value × tributary の符号と一致)
+                    var forceDir = springType switch
+                    {
+                        "RX" => new System.Windows.Media.Media3D.Vector3D(fx, 0, 0),
+                        "RY" => new System.Windows.Media.Media3D.Vector3D(0, fy, 0),
+                        "RZ" => new System.Windows.Media.Media3D.Vector3D(0, 0, fz),
+                        "RH" => new System.Windows.Media.Media3D.Vector3D(fx, fy, 0),
+                        _ => new System.Windows.Media.Media3D.Vector3D(fx, fy, 0),
+                    };
+                    double dirLen = forceDir.Length;
+                    var dirNorm = dirLen > 1e-15
+                        ? forceDir / dirLen
+                        : new System.Windows.Media.Media3D.Vector3D(1, 0, 0);
+
+                    // 外側オフセット距離 (3D): 値 × scale / maxAbsValue
+                    double offset = maxAbsValue > 1e-15 ? value / maxAbsValue * forceScale : 0;
+                    var baseP = s.NodeI.Coord;
+                    var outerP = new System.Windows.Media.Media3D.Point3D(
+                        baseP.X + dirNorm.X * offset,
+                        baseP.Y + dirNorm.Y * offset,
+                        baseP.Z + dirNorm.Z * offset);
+                    outerPoints3D.Add((baseP, outerP, value));
+                }
+
+                // 3-a) 各ばね位置: 杭軸 → 外側点 の水平線 (色は値による)
+                foreach (var (baseP, outerP, value) in outerPoints3D)
+                {
+                    Point base2D = viewModel.CanvasThreeDView.Transformation(baseP);
+                    Point outer2D = viewModel.CanvasThreeDView.Transformation(outerP);
+                    if (!double.IsFinite(base2D.X) || !double.IsFinite(outer2D.X)) continue;
+
+                    var picked = ColorBarUtils.PickColorGeometry(value, colorBaredGeometries)
+                                 ?? ColorBarUtils.PickColorGeometryInclusiveTop(value, colorBaredGeometries)
+                                 ?? (colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last() : null);
+                    if (picked == null) continue;
+
+                    picked.PathGeometry.AddGeometry(new LineGeometry(base2D, outer2D));
+
+                    // 値ラベル (オフセット先端付近)
+                    if (viewModel.IsResultValueVisible)
+                    {
+                        string fmt = "{0:N" + viewModel.DecimalPlaces + "}";
+                        Vector dir2D = outer2D - base2D;
+                        double dirLen2D = dir2D.Length;
+                        Vector dirN = dirLen2D > 1e-9 ? dir2D / dirLen2D : new Vector(1, 0);
+                        Point labelPos = outer2D + dirN * 4.0;
+                        AddText3D(Brushes.Black, string.Format(fmt, value), labelPos.X, labelPos.Y, "C", "C", 0);
+                    }
+                }
+
+                // 3-b) 外輪: 隣接ばねの outer 点を線で結ぶ (杭軸沿いに連結して分布形状の縁を作る)
+                for (int i = 0; i + 1 < outerPoints3D.Count; i++)
+                {
+                    var p1 = outerPoints3D[i];
+                    var p2 = outerPoints3D[i + 1];
+                    Point a = viewModel.CanvasThreeDView.Transformation(p1.outerP);
+                    Point b = viewModel.CanvasThreeDView.Transformation(p2.outerP);
+                    if (!double.IsFinite(a.X) || !double.IsFinite(b.X)) continue;
+
+                    // 区間の代表値 = 2 端の平均で色決定
+                    double midValue = 0.5 * (p1.value + p2.value);
+                    var picked = ColorBarUtils.PickColorGeometry(midValue, colorBaredGeometries)
+                                 ?? ColorBarUtils.PickColorGeometryInclusiveTop(midValue, colorBaredGeometries)
+                                 ?? (colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last() : null);
+                    if (picked == null) continue;
+
+                    picked.PathGeometry.AddGeometry(new LineGeometry(a, b));
+                }
+            }
+
+            // 4) Path を Canvas に描画
+            foreach (var geo in colorBaredGeometries)
+            {
+                geo.DrawPathes(Canvas3DLayout);
+            }
+
+            // 5) カラーバー
+            ColorBar.DrawStepColorBar(
+                ColorBarCanvas,
+                colorBaredGeometries,
+                colorBarTitle,
+                unit,
+                allValues.Min(),
+                allValues.Max(),
+                "{0:N" + viewModel.DecimalPlaces + "}",
+                viewModel.LabelSize
+            );
         }
 
         // ========================================
@@ -3284,6 +3614,12 @@ namespace PileDesign.Views
                 case "UH":
                     valueI = Math.Sqrt(ndI.Ux * ndI.Ux + ndI.Uy * ndI.Uy);
                     valueJ = Math.Sqrt(ndJ.Ux * ndJ.Ux + ndJ.Uy * ndJ.Uy);
+                    multiplier = 1000;
+                    unit = "mm";
+                    break;
+                case "U":
+                    valueI = Math.Sqrt(ndI.Ux * ndI.Ux + ndI.Uy * ndI.Uy + ndI.Uz * ndI.Uz);
+                    valueJ = Math.Sqrt(ndJ.Ux * ndJ.Ux + ndJ.Uy * ndJ.Uy + ndJ.Uz * ndJ.Uz);
                     multiplier = 1000;
                     unit = "mm";
                     break;

@@ -39,4 +39,11 @@
     <ProjectReference Include="..\Graphics_r1\PileDesign.csproj" />
   </ItemGroup>
 
+  <!-- 収束リグレッションテストのスナップショット: 出力ディレクトリに同階層構造でコピー -->
+  <ItemGroup>
+    <None Update="ConvergenceRegression\Snapshots\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

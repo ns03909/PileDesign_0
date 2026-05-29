@@ -152,7 +152,7 @@ namespace PileDesign.Common
             Ec = 3.35 * Math.Pow(10, 4) * Math.Pow(Gamma / 24.0, 2) * Math.Pow(Fc / 60.0, 1.0 / 3.0);
         }
 
-        public static double Es => 20_500;
+        public static double Es => 205_000;
 
         // 手動入力フラグと値
         private bool _useManualEI = false;

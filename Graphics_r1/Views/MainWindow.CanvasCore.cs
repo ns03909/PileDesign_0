@@ -219,13 +219,15 @@ namespace PileDesign.Views
 
                 UpdateSelectedNodesAndElements3D(); // 選択節点描画の更新
 
-                if (viewModel.IsEmbedmentBoxVisible)
+                // 根入部は AP (代表節点) と RigidBody[0] で連結しているため、
+                // AP 非表示時は根入部も自動で隠す (連動)。
+                if (viewModel.IsEmbedmentBoxVisible && viewModel.IsActionPointVisible)
                 {
                     UpdateEmbedment3D(); // 根入部描画の更新
                 }
                 else
                 {
-                    // 根入部非表示: 他メソッド(CreateBoxGeometry等)が書き込んだジオメトリをクリア
+                    // 根入部非表示 (個別非表示 or AP 非表示): ジオメトリをクリア
                     viewModel.CanvasGeometry.PathGeoEmbedmenSides.Figures.Clear();
                     viewModel.CanvasGeometry.PathGeoDividedEmbedmenSides.Figures.Clear();
                     viewModel.CanvasGeometry.PathGeoEmbedmentDiagonals.Figures.Clear();

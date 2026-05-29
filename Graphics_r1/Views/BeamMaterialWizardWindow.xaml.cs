@@ -32,6 +32,9 @@ namespace PileDesign.Views
             viewModel = new BeamMaterialWizardViewModel();
             DataContext = viewModel;
 
+            // 初期フォーカスを OK ボタンへ (キーボード操作の目印)
+            this.Loaded += (_, _) => OkButton?.Focus();
+
             this.materials = materials;
 
             // 既存材料 (1-based 位置 = No) → 末尾に "(New)" 行

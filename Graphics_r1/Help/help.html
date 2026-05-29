@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>杭基礎設計支援ツールヘルプ</title>
+    <title>杭基礎検討プログラム　ヘルプ</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" /> 
     <script>
         // @ts-nocheck
@@ -23,8 +23,11 @@
             }
         };
     </script>
-    <!-- MathJax本体の読み込み -->
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- MathJax 本体の読み込み (ローカルバンドル mathjax v3.2.2 — オフライン環境でも数式レンダリング可)
+         file:// 経由で読まれるため、動的ロード版 (tex-mml-chtml.js) では extensions/fonts の追加読込が
+         CORS/security 制約で失敗する。動的ロード不要な full バンドル tex-chtml-full.js を使用する。
+         入力は TeX のみ。MathML 入力は使用していない。 -->
+    <script id="MathJax-script" async src="mathjax/tex-chtml-full.js"></script>
     <style>
         /* =========================
             Layout
@@ -63,6 +66,127 @@
             padding: 20px;
             overflow-y: auto;
             min-width: 0;
+            position: relative;
+        }
+
+        /* =========================
+            Split View: 内部リンク先を画面下半分の固定パネルに表示
+            (main-content の通常スクロールは維持、下半分にオーバーレイ表示)
+        ========================= */
+        .split-toggle {
+            position: fixed;
+            top: 10px;
+            right: 24px;
+            z-index: 100;
+            padding: 6px 12px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #555;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            user-select: none;
+        }
+        .split-toggle:hover {
+            background: #f0f8ff;
+            border-color: #62B0E2;
+        }
+        .split-toggle.active {
+            background: #62B0E2;
+            color: #fff;
+            border-color: #62B0E2;
+        }
+
+        /* 下段オーバーレイパネル (デフォルト非表示) */
+        .split-panel {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: var(--sidebar-offset, 305px);   /* sidebar + resizer の右端 (JS で更新) */
+            right: 0;
+            height: 45vh;
+            background: #fafbfc;
+            border-top: 2px solid #62B0E2;
+            box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.12);
+            z-index: 50;
+            display: none;
+            flex-direction: column;
+        }
+        body.split-mode .split-panel {
+            display: flex;
+        }
+        body.split-mode .main-content {
+            /* リンク先パネルの分だけ下に余白を確保し、メインコンテンツが隠れないようにする */
+            padding-bottom: calc(45vh + 20px);
+        }
+        .split-panel-header {
+            padding: 8px 16px;
+            background: #eef3f7;
+            border-bottom: 1px solid #d0d8df;
+            font-size: 12px;
+            color: #555;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex: 0 0 auto;
+        }
+        .split-panel-header .target-label {
+            font-weight: bold;
+            color: #2C5F8E;
+        }
+        .split-panel-close {
+            background: transparent;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 2px 10px;
+            cursor: pointer;
+            color: #666;
+            font-size: 12px;
+        }
+        .split-panel-close:hover {
+            background: #fff;
+            border-color: #62B0E2;
+            color: #2C5F8E;
+        }
+        .split-panel-body {
+            overflow-y: auto;
+            padding: 16px 24px;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .split-panel-resizer {
+            position: absolute;
+            top: -3px;
+            left: 0;
+            right: 0;
+            height: 6px;
+            cursor: row-resize;
+            background: transparent;
+        }
+        .split-panel-resizer:hover {
+            background: rgba(98, 176, 226, 0.3);
+        }
+        .split-panel-resizer.dragging {
+            background: rgba(98, 176, 226, 0.5);
+        }
+        .split-panel-empty {
+            color: #999;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+        }
+        /* スプリットパネル内のフォーカス対象 (クリックされたリンクの実体) を強調 */
+        .split-panel-body .split-focus-target {
+            background: rgba(255, 235, 130, 0.45);
+            border-left: 4px solid #f0a020;
+            padding-left: 8px;
+            scroll-margin-top: 4px;
+            animation: split-focus-pulse 1.6s ease-out 1;
+        }
+        @keyframes split-focus-pulse {
+            0%   { background: rgba(255, 200, 60, 0.75); }
+            100% { background: rgba(255, 235, 130, 0.45); }
         }
 
         /* =========================
@@ -179,10 +303,18 @@
         }
 
         a {
-            display: block;
-            margin-bottom: 8px;
             color: #0078d7;
             text-decoration: none;
+        }
+        /* TOC / 検索結果サイドバー内のリンクのみブロック表示にする
+           (本文中の <a> は inline のままとし、テーブルセル等で改行が入らないようにする) */
+        .sidebar a {
+            display: block;
+            margin-bottom: 8px;
+        }
+        /* 参考文献カード型リンク (画像+テキストを丸ごと包む <a>) はブロックを維持 */
+        .reference-tile a {
+            display: block;
         }
 
         input[type="text"] {
@@ -773,7 +905,7 @@
 <body>
     <div class="mobile-header">
         <button id="menuToggle" aria-controls="sidebar" aria-expanded="false" title="目次を開く/閉じる">☰ 目次</button>
-        <div class="mobile-title">杭基礎設計支援ツールヘルプ</div>
+        <div class="mobile-title">杭基礎検討プログラム　ヘルプ</div>
     </div>
 
     <div class="sidebar" id="sidebar">
@@ -808,10 +940,26 @@
     <div class="sidebar-resizer" id="sidebarResizer" role="separator" aria-orientation="vertical"
          title="ドラッグで幅を変更"></div>
 
+    <!-- スプリット表示トグル: 内部リンク先を下半分の固定パネルに表示 -->
+    <button type="button" id="splitToggle" class="split-toggle" title="内部リンクを分割表示 (リンクをクリックすると下段パネルに表示)">📑 分割表示</button>
+
+    <!-- 内部リンク先を表示する下段オーバーレイパネル -->
+    <div id="splitPanel" class="split-panel" aria-hidden="true">
+        <div class="split-panel-resizer" id="splitPanelResizer" role="separator" aria-orientation="horizontal" title="ドラッグで高さを変更"></div>
+        <div class="split-panel-header">
+            <span>リンク先: <span class="target-label" id="splitTargetLabel">(リンクをクリックしてください)</span></span>
+            <button type="button" class="split-panel-close" id="splitClose" title="分割表示を終了">✕ 閉じる</button>
+        </div>
+        <div class="split-panel-body" id="splitPanelBody">
+            <div class="split-panel-empty">本文内のリンクをクリックすると、ここにリンク先が表示されます。</div>
+        </div>
+    </div>
+
     <div class="main-content" id="mainText">
 
+
         <section id="section1">
-            <p><strong>基礎杭検討プログラム (基礎地盤研究会)</strong> <span id="app-version" style="color:red; visibility:hidden;">ver</span></p>
+            <p><strong>杭基礎検討プログラム</strong> <span id="app-version" style="color:red; visibility:hidden;">ver</span></p>
         </section>
 
         <section id="section0">
@@ -980,9 +1128,9 @@
                         <span>日本建築学会 関東支部「基礎構造の設計　学びやすい構造設計」<br>（第4版、2023年）</span>
                     </div>
                     <div class="reference-tile">
-                        <a href="http://www.cepia.biz/images/manual_v5.pdf" target="_blank" rel="noopener noreferrer">
-                            <img src="images/manyu5.jpg" alt="キャプテンパイル工法">
-                            <span>キャプテンパイル工法（場所打ち杭用杭頭半固定工法）設計・施工マニュアル<br>(第5版、2021年4月改定)</span>
+                        <a href="http://www.cepia.biz/images/manual_v6.pdf" target="_blank" rel="noopener noreferrer">
+                            <img src="images/CPT_coverPage.png" alt="キャプテンパイル工法">
+                            <span>キャプテンパイル工法（場所打ち杭用杭頭半固定構法）設計・施工マニュアル<br>(第6版、2026年4月改定)</span>
                         </a>
                     </div>
                     <div class="reference-tile">
@@ -1112,6 +1260,61 @@
                 <li>「保存」を押します。</li>
             </ol>
 
+            <h4 id="section-ground-disp-modes">地盤変位タブの 3 モード</h4>
+            <p>
+                「地盤変位」タブ最上段のラジオボタンで、水平解析に使用する地盤変位の与え方を 3 つから選択できます。
+            </p>
+            <table class="table-doc">
+                <thead>
+                    <tr>
+                        <th>モード</th>
+                        <th>挙動</th>
+                        <th>使う場面</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>基礎指針'19 4.5自動計算</strong></td>
+                        <td>「地盤変位算定法」で選択した手法 (a1(b1) / a2(b2) / 応答スペクトル法) で土質点ごとに自動計算した値を使用</td>
+                        <td>標準。基礎指針に基づく標準的な検討</td>
+                    </tr>
+                    <tr>
+                        <td><strong>任意入力</strong></td>
+                        <td>右ペイン「任意地盤変位」タブで入力した標高-変位プロファイル (4 ケース × 標高ごとの変位値) を使用。Excel からのコピー&ペーストや「全ケースにコピー」ボタンで初期値を流し込み、必要に応じて編集可</td>
+                        <td>動的解析結果や地震応答解析の結果を直接適用する場合、観測値を反映する場合など</td>
+                    </tr>
+                    <tr>
+                        <td><strong>考慮しない</strong></td>
+                        <td>水平解析で地盤変位を全層 0 として扱う。杭頭水平力のみで解析</td>
+                        <td>地盤変位の影響を切り分けて確認したい場合のスタディ</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>
+                <strong>「表層の土質」「地盤変位算定法」「工学的基盤」入力欄</strong>は「基礎指針'19 4.5自動計算」を選択している場合のみ表示されます。<br>
+                <strong>「応答スペクトル」タブ</strong>は「基礎指針'19 4.5自動計算」かつ「地盤変位算定法」で「応答スペクトル法」を選んだ場合のみ表示されます。
+            </p>
+
+            <h4>任意地盤変位タブの操作</h4>
+            <p>
+                「任意入力」を選択すると右ペインに「任意地盤変位」タブが自動で前面表示されます。レベル/液状化の 4 ケースを ComboBox で切替え、それぞれ標高Z [m] と変位 [mm] のペアを入力します。
+            </p>
+            <ul>
+                <li><strong>基礎指針'19 4.5 自動計算を全ケースにコピー</strong> ボタンで、自動計算結果 (DmaxU*, DmaxU*+ΣγcyH) を 4 ケース全てへ一括流し込み</li>
+                <li><strong>変位係数スライダー + 適用ボタン</strong>で 0〜2.0 倍の係数を選んで現在ケースの値に乗算。スライダーは適用後 1.0 にリセット (Undo 可)</li>
+                <li><strong>行追加 / 標高整列 / 全削除</strong> 等で行を編集</li>
+                <li><strong>Excel からの貼付け</strong>: 標高(m) と 変位(mm) の 2 列をコピーして Ctrl+V でペースト可</li>
+            </ul>
+
+            <h4>地盤番号の削除</h4>
+            <p>
+                「地盤番号」を削除する際、メイン画面の杭配置で参照されている場合は警告ダイアログが出ます:
+            </p>
+            <ul>
+                <li><strong>削除対象が直接参照されている場合</strong>: 削除を拒否。先に杭配置側で地盤番号を別の値に変更してください。</li>
+                <li><strong>削除対象より大きい番号が参照されている場合</strong>: 削除後にインデックスが 1 つずれるため警告ダイアログを表示。OK で該当杭配置の地盤番号を自動的に 1 つ下げて削除を続行、キャンセルで削除中止。</li>
+            </ul>
+
             <h3><img class="heading-icon" src="icons/PileBodyWindow.svg" alt="">Step 4: 杭体の設定</h3>
             <p class="indent-level-3" style="color:#555; font-size:0.9em;">
                 <em>なぜ必要？</em> 杭の直径、長さ、材質、配筋を定義します。これらの情報から杭の曲げ剛性（EI）や耐力（MN曲線）が自動計算され、解析と断面照査に使われます。
@@ -1124,6 +1327,20 @@
                 <li>このとき、MN曲線、QN曲線などが自動計算されます。</li>
                 <li>「保存」を押します。</li>
             </ol>
+
+            <h4>場所打ち鋼管コンクリート杭 最上段区間の推奨</h4>
+            <p>
+                <strong>場所打ち鋼管コンクリート杭</strong>では、最上段の杭体区間に「鋼管コンクリート部」を選択するのが一般的です。最上段が「鉄筋コンクリート部」になっている杭体がある場合、杭体ウィンドウ保存時または水平解析実行時に確認ダイアログが表示されます (「いいえ」で保存/解析中止、「はい」でそのまま続行)。
+            </p>
+
+            <h4>杭体番号の削除</h4>
+            <p>
+                「杭体番号」を削除する際、メイン画面の杭配置で参照されている場合は警告ダイアログが出ます:
+            </p>
+            <ul>
+                <li><strong>削除対象が直接参照されている場合</strong>: 削除を拒否。先に杭配置側で杭体番号を別の値に変更してください。</li>
+                <li><strong>削除対象より大きい番号が参照されている場合</strong>: 削除後にインデックスが 1 つずれるため警告ダイアログを表示。OK で該当杭配置の杭体番号を自動的に 1 つ下げて削除を続行、キャンセルで削除中止。</li>
+            </ul>
 
             <h3>Step 5: 杭配置の入力</h3>
             <p class="indent-level-3" style="color:#555; font-size:0.9em;">
@@ -1205,13 +1422,13 @@
                     <dt>Excelとの連携</dt>
                     <dd>データグリッドではExcelからのコピー&amp;ペースト（Ctrl+V）が使えます。<br>効率よく入出力ができます。</dd>
                     <dt>グラフデータの活用</dt>
-                    <dd>右クリックメニューからデータのコピーが可能です。</dd>
+                    <dd>グラフの上で、右クリックメニューから数値データのコピーが可能です。</dd>
                     <dt><img class="button-icon" src="icons/ViewCubeVisible.svg" alt="">3Dビューの活用</dt>
                     <dd>右ドラッグでビュー回転、中ボタンドラッグで平行移動ができます。<br>ビューキューブをクリックすると定義されたビュー（平面図、立面図等）に素早く切り替えられます。</dd>
                     <dt><img class="button-icon" src="icons/ElementDivisionWindow.svg" alt="">杭要素分割のコツ</dt>
                     <dd>詳細な結果を得る必要がなければ、1m程度の自動杭要素分割がよいでしょう。</dd>
                     <dt><img class="button-icon" src="icons/LateralLoadAnalysisWindow.svg" alt="">水平解析のコツ</dt>
-                    <dd>杭体非線形の水平解析には時間がかかります。<br>初期段階では、一方向の荷重で検討を進めるとよいでしょう。</dd>
+                    <dd>杭の非線形の水平解析には時間がかかります。<br>初期段階では、一方向の荷重で検討を進めるとよいでしょう。</dd>
                 </dl>
             </section>
         </section>
@@ -1219,6 +1436,47 @@
         <section id="section2">
             <h2>杭モデル</h2>
             <p>１本の杭は、「杭頭」、「杭体」、「杭先端」で構成されます。</p>
+
+            <p>
+                本プログラムで対応する杭体タイプ・杭頭接合タイプ・断面タイプ・杭工法の組合せを以下に示します。
+            </p>
+            <table class="table-doc">
+                <thead>
+                    <tr>
+                        <th>杭体タイプ</th>
+                        <th>杭頭接合タイプ</th>
+                        <th>断面タイプ</th>
+                        <th>杭工法</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>場所打ち鉄筋コンクリート杭</td>
+                        <td>鉄筋定着工法<br>キャプテンパイル工法</td>
+                        <td>鉄筋コンクリート部</td>
+                        <td>場所打ちコンクリート杭</td>
+                    </tr>
+                    <tr>
+                        <td>場所打ち鋼管コンクリート杭</td>
+                        <td>鉄筋定着工法</td>
+                        <td>鋼管コンクリート部<br>鉄筋コンクリート部</td>
+                        <td>場所打ちコンクリート杭</td>
+                    </tr>
+                    <tr>
+                        <td>既製コンクリート杭</td>
+                        <td>鉄筋定着工法<br>定着筋方式<br>埋込み方式<br>F.T.Pile 構法<br>キャプリングパイル工法</td>
+                        <td>PHC 杭<br>PRC 杭<br>SC 杭</td>
+                        <td>埋込み杭 (プレボーリング)<br>埋込み杭 (中掘り)<br>打込み杭</td>
+                    </tr>
+                    <tr>
+                        <td>鋼管杭</td>
+                        <td>鉄筋定着工法<br>キャプリングパイル工法</td>
+                        <td>コンクリート充填鋼管部<br>鋼管部</td>
+                        <td>埋込み杭 (プレボーリング)<br>埋込み杭 (中掘り)<br>回転貫入杭</td>
+                    </tr>
+                </tbody>
+            </table>
+
             <p>
                 「杭頭」工法は杭体の種類に応じて次のように扱います。<br>
                 <strong>場所打ち鉄筋コンクリート杭の鉄筋定着工法</strong>では、軸応力度が
@@ -1227,6 +1485,89 @@
                 <strong>鋼管杭の鉄筋定着工法</strong>では、杭頭接合部の弾性回転剛性 $K_\theta$ を線形ばねとして反映します
                 <span class="xref">（詳細は<a href="#section-steel-pipe-rebar-anchorage">「鋼管杭+鉄筋定着工法 の杭頭工法」</a>節参照）</span>。<br>
                 杭頭半固定工法として、場所打ち鉄筋コンクリート杭では <strong>キャプテンパイル工法</strong>、既製コンクリート杭では <strong>F.T.Pile 構法</strong> または <strong>キャプリングパイル工法</strong> を適用できます。キャプリングパイル工法は鋼管杭にも適用可能です。
+            </p>
+
+            <p>
+                上記の組合せにおいて、<strong>杭体（M-φ）</strong>および<strong>杭頭（M-θ）</strong>で非線形性を考慮する部位を以下にまとめます。
+                杭体の非線形 M-φ 関係および杭頭の非線形 M-θ 関係は、いずれも荷重ケースの「杭の非線形」を ON にした時のみ反映されます（OFF 時は M-φ は線形弾性、M-θ は剛として扱われます）。
+            </p>
+            <table class="table-doc">
+                <thead>
+                    <tr>
+                        <th style="text-align: center">#</th>
+                        <th>杭体タイプ</th>
+                        <th>杭頭接合タイプ</th>
+                        <th>杭体 M-φ 非線形を考慮する部位</th>
+                        <th>杭頭 M-θ の扱い</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="text-align: center">1</td>
+                        <td>場所打ち鉄筋コンクリート杭</td>
+                        <td>鉄筋定着工法</td>
+                        <td>鉄筋コンクリート部</td>
+                        <td>軸応力 $-F_t \le \sigma_0 \le \frac{1}{4}\xi F_c$ で<strong>非線形 M-θ</strong>、範囲外は<strong>剛</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">2</td>
+                        <td>場所打ち鉄筋コンクリート杭</td>
+                        <td>キャプテンパイル工法</td>
+                        <td>鉄筋コンクリート部</td>
+                        <td><strong>非線形 M-θ</strong>（CaptainPile）</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">3</td>
+                        <td>場所打ち鋼管コンクリート杭</td>
+                        <td>鉄筋定着工法</td>
+                        <td>鋼管コンクリート部 + 鉄筋コンクリート部</td>
+                        <td><strong>剛</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">4</td>
+                        <td rowspan="5">既製コンクリート杭</td>
+                        <td>鉄筋定着工法</td>
+                        <td rowspan="5">PHC 杭 / PRC 杭 / SC 杭の各区間</td>
+                        <td><strong>剛</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">5</td>
+                        <td>定着筋方式</td>
+                        <td><strong>剛</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">6</td>
+                        <td>埋込み方式</td>
+                        <td><strong>剛</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">7</td>
+                        <td>F.T.Pile 構法</td>
+                        <td><strong>非線形 M-θ</strong>（FTPile）</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">8</td>
+                        <td>キャプリングパイル工法</td>
+                        <td><strong>非線形 M-θ</strong>（CapringPile）</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">9</td>
+                        <td rowspan="2">鋼管杭</td>
+                        <td>鉄筋定着工法</td>
+                        <td rowspan="2">コンクリート充填鋼管部 + 鋼管部</td>
+                        <td><strong>線形</strong>（接合部弾性回転剛性 $K_\theta$ のみ、降伏後考慮なし）</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center">10</td>
+                        <td>キャプリングパイル工法</td>
+                        <td><strong>非線形 M-θ</strong>（CapringPile）</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>
+                <strong>杭頭 M-θ グラフでの「剛結」ケース</strong>: 解析結果グラフの「杭頭M-θ」表示において、杭頭 M-θ の扱いが「剛」となるケース（上表の #3〜#6）では、回転拘束が無限大に相当するため M-θ 関係そのものが存在しません。曲線は描画されず、グラフ下部に
+                <span style="color:#666; font-size:0.9em;">「杭頭が剛結扱いのため M-θ 関係が存在しない杭があります（M-θ 曲線は描画されません）: 杭 #1 (組合せ表記)」</span>
+                のように該当杭と杭体/杭頭タイプの組合せが説明されます (灰色テキスト)。同じグラフに描画されている他の杭 (非線形 M-θ または線形 $K_\theta$ の杭) と共存します。
             </p>
             <p>
                 「杭体のタイプ」は、<strong>場所打ち鉄筋コンクリート杭</strong>、<strong>場所打ち鋼管コンクリート杭</strong>、<strong>既製コンクリート杭</strong>、<strong>鋼管杭</strong>
@@ -1243,11 +1584,11 @@
             </p>
 
             <p>
-                「杭配置」においては、<strong>「杭頭節点」</strong>と<strong>「接合節点」</strong>が存在します。<br>
+                「杭配置」には、<strong>「杭頭節点」</strong>と<strong>「接合節点」</strong>が存在します。<br>
                 「接合節点」は、杭に基礎梁を「一般梁要素」として連結する場合の節点で、座標(X,Y,Z)に配置されます (Z は基礎梁図心レベル)。<br>
-                「杭頭節点」は、杭頭位置を意味し、座標(X,Y,Z−ΔZc)に配置されます (接合節点から ΔZc 下方)。<br>
-                「接合節点」は、「要素追加」(Alt+1)モードの時、クリックすることで、要素の端点として接合できます。<br>
-                基礎梁の入力は、代表節点と杭頭を剛体連結させる解析を行う場合（基礎指針'19では原則として剛とするとある）は、不要です。<br>
+                「杭頭節点」は、杭頭位置を意味し、座標(X,Y,Z−ΔZc)に配置されます (接合節点から ΔZc 下方)。「杭頭節点」以下の部分が杭体となります。<br>
+                「接合節点」は、「要素追加」(Alt+1)モードの時、クリックすることで、一般梁要素を接合できます。<br>
+                一般梁要素の入力は、代表節点と杭頭を剛体連結させる解析を行う場合（基礎指針'19では原則として剛とするとある）は、不要です。<br>
             </p>
         </section>
 
@@ -1410,11 +1751,35 @@
                 </dl>
             </section>
 
-            <h3 style="font-weight: bold;"><img class="heading-icon" src="icons/ShortcutKeys.svg" alt="">キーボードショートカット</h3>
+            <h3 id="file-open-methods" style="font-weight: bold;">ファイルを開く方法</h3>
+            <p>プロジェクトファイル (推奨拡張子 <code>.pdj</code>、旧形式 <code>.json</code> も読み込み可) は以下のいずれの方法によっても開くことができます:</p>
+            <ol>
+                <li><strong>ファイルメニュー</strong> → 「開く (Ctrl+O)」または「最近使ったファイル」</li>
+                <li><strong>ドラッグ&amp;ドロップ</strong>: エクスプローラから .pdj / .json ファイルをアプリ画面にドロップ</li>
+                <li><strong>コマンドライン引数</strong>: ターミナルから次のように起動
+                    <pre style="background:#f5f5f5; padding:8px; border-left:3px solid #62B0E2;">PileDesign.exe project.pdj
+PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</em></pre>
+                </li>
+                <li><strong>ファイル関連付け (.pdj をダブルクリックで開く)</strong> — 任意設定:
+                    <ul>
+                        <li><strong>推奨</strong>: ファイル(F)メニュー → 「オプション」 → 「.pdj を PileDesign に関連付ける」をクリック (管理者権限不要)。
+                            登録後に開く Windows 設定で .pdj に対して PileDesign を選択すると、ダブルクリックで開けるようになります</li>
+                        <li>手動の場合: エクスプローラで .pdj ファイルを右クリック → 「プログラムから開く」 → 「別のプログラムを選択」 → PileDesign.exe を選択 → 「常にこのアプリを使う」にチェック</li>
+                        <li>新規保存はデフォルトで <code>.pdj</code> (PileDesign Json) になります。旧 <code>.json</code> ファイルは引き続き開けます</li>
+                        <li>関連付け後に PileDesign.exe を別のフォルダに移動 / 上書き更新した場合は、移動先の PileDesign を 1 回起動するだけで関連付けが新しいパスに自動追従します (再関連付け不要)</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <h3 id="shortcuts" style="font-weight: bold;"><img class="heading-icon" src="icons/ShortcutKeys.svg" alt="">キーボードショートカット</h3>
             <p>
                 <strong>Ctrl + /</strong> キーを押すと、ショートカットキー一覧ウィンドウが表示されます。
                 ファイル操作、入力ウィンドウの呼び出し、解析実行、ビュー切替、編集モード切替など、
                 すべてのショートカットキーを確認できます。
+            </p>
+            <p>
+                <strong>ステータスバー右側の <span style="font-size: 14pt;">⌨</span> 「ショートカット (Ctrl+/)」 ボタン</strong> をクリックしても
+                同じウィンドウが表示されます。マウスユーザーは画面右下のヒントから即アクセス可能です。
             </p>
             <p>すべてのショートカットキー（カテゴリ別）：</p>
             <table class="table-doc">
@@ -1430,6 +1795,7 @@
                     <tr><td><img class="button-icon" src="icons/OpenFile.svg" alt="">ファイルを開く</td><td>Ctrl+O</td></tr>
                     <tr><td><img class="button-icon" src="icons/SaveFile.svg" alt="">上書き保存</td><td>Ctrl+S</td></tr>
                     <tr><td><img class="button-icon" src="icons/SaveFileAs.svg" alt="">名前を付けて保存</td><td>Ctrl+Shift+S</td></tr>
+                    <tr><td><img class="button-icon" src="icons/DocxFileOutput.svg" alt="">Docx 計算書出力</td><td>Ctrl+Shift+W</td></tr>
 
                     <tr><td rowspan="7">入力ウィンドウ</td><td><img class="button-icon" src="icons/FundamentalWindow.svg" alt="">基本設定</td><td>Ctrl+E</td></tr>
                     <tr><td><img class="button-icon" src="icons/LoadCaseWindow.svg" alt="">荷重ケース編集</td><td>Ctrl+L</td></tr>
@@ -1470,6 +1836,13 @@
                     <tr><td rowspan="3">ヘルプ</td><td><img class="button-icon" src="icons/Help.svg" alt="">ヘルプ</td><td>F1</td></tr>
                     <tr><td><img class="button-icon" src="icons/QuickHint.svg" alt="">クイックヒント</td><td>Shift+F1</td></tr>
                     <tr><td><img class="button-icon" src="icons/ShortcutKeys.svg" alt="">ショートカットキー一覧</td><td>Ctrl+/</td></tr>
+
+                    <tr><td rowspan="6">ダイアログ共通</td><td>OK / 実行 / 保存 (規定ボタン)</td><td>Enter</td></tr>
+                    <tr><td>キャンセル / 閉じる</td><td>Esc</td></tr>
+                    <tr><td>編集ウィンドウの保存 (バックアップ)</td><td>Ctrl+Enter</td></tr>
+                    <tr><td>ボタン名の下線文字でアクセス</td><td>Alt+(下線文字)</td></tr>
+                    <tr><td>フォーカス移動</td><td>Tab / Shift+Tab</td></tr>
+                    <tr><td>フォーカス中のボタン実行</td><td>Space</td></tr>
                 </tbody>
             </table>
 
@@ -1523,7 +1896,7 @@
                     <pre style="background:#f5f5f5; padding:8px; border-radius:4px; font-size:0.9em;">%LocalAppData%\PileDesign\AutoSave\</pre>
                     （通常: <code>C:\Users\（ユーザー名）\AppData\Local\PileDesign\AutoSave\</code>）
                 </li>
-                <li>ファイル名は <code>（プロジェクト名）_autosave_（日時）.json</code> の形式です。</li>
+                <li>ファイル名は <code>（プロジェクト名）_autosave_（日時）.pdj</code> の形式です (旧形式は .json)。</li>
             </ul>
 
             <h4>起動時の復元ダイアログ</h4>
@@ -1563,10 +1936,12 @@
                 <li>上記の自動保存フォルダをエクスプローラーで開きます。</li>
                 <li>ファイル名に <code>_dismissed_</code> が含まれるファイルが、確認済みの自動保存ファイルです。</li>
                 <li>ファイル名から <code>_dismissed</code> を削除してリネームすると、次回起動時に復元ダイアログが再度表示されます。</li>
-                <li>または、「ファイルを開く」から直接自動保存ファイル（.json）を開くこともできます。</li>
+                <li>または、「ファイルを開く」から直接自動保存ファイル（.pdj / .json）を開くこともできます。</li>
             </ol>
 
             <h3 style="font-weight: bold;">データグリッド(表)操作</h3>
+
+            <h4>クリップボード操作 (コピー・ペースト)</h4>
             <p>
                 データグリッド上の編集可能なセルには、Microsoft Excel Worksheet上の値をコピーした状態で[Ctrl]+[V]を押すことでペーストすることができます。<br>
                 このとき、選択範囲の左上のセルを起点とし、コピーしたセルの行数、列数の範囲にペーストされます。<br>
@@ -1587,9 +1962,85 @@
             </p>
             <p>
                 データグリッド上のデータは、セルを選択して[Ctrl]+[C]を押すことでコピーすることができます。
-                コピー出力は TSV (タブ区切り) でクリップボードに格納される。<br>
+                コピー出力は TSV (タブ区切り) でクリップボードに格納されます。<br>
                 列ヘッダーをクリックすると、その列を基準にデータを昇順・降順でソートできます。
                 ソートはあくまで表示順序の変更であり、データ自体の並びには影響しません。
+            </p>
+
+            <h4>キーボードナビゲーション</h4>
+            <p>
+                データグリッド上でマウスを使わずにアクティブセルを移動・編集・操作するためのキー割り当てです。
+                できるだけ Microsoft Excel Worksheet の挙動と揃えています。
+            </p>
+            <table class="table-doc">
+                <thead>
+                    <tr>
+                        <th style="text-align: center; min-width: 130px">キー</th>
+                        <th>動作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="text-align: center;">[↑] [↓] [←] [→]</td>
+                        <td>アクティブセルを 1 セル分、上 / 下 / 左 / 右に移動。編集中の場合は値を確定してから移動します
+                            (バリデーションエラーが発生した場合は移動せず編集を継続)。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[Shift]+[↑] [↓] [←] [→]</td>
+                        <td>アクティブセルを矢印方向に拡張し、範囲選択を作成します。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[Enter]</td>
+                        <td>編集中なら値を確定して<strong>下のセル</strong>へ移動します。最下行に到達した場合は、
+                            <strong>右隣の列の最上行</strong>へラップします。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[Shift]+[Enter]</td>
+                        <td>[Enter] と逆方向 (上)。最上行に到達した場合は、左隣の列の最下行へラップします。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[Tab]</td>
+                        <td>編集中なら値を確定して<strong>右のセル</strong>へ移動します。最右列に到達した場合は、
+                            <strong>次行の左端</strong>へラップします。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[Shift]+[Tab]</td>
+                        <td>[Tab] と逆方向 (左)。最左列に到達した場合は、前行の右端へラップします。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[F2] / 任意の文字キー</td>
+                        <td>アクティブセルを編集モードにします (編集可能列のみ)。文字キーの場合はその文字も入力されます。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[Space]</td>
+                        <td>アクティブセル内に
+                            <strong>チェックボックス</strong>があればトグル、
+                            <strong>ボタン</strong>があればクリック、
+                            <strong>コンボボックス</strong>があればドロップダウンを開きます。
+                            セルがテキスト編集中の場合は通常のスペース文字として入力されます。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[Esc]</td>
+                        <td>編集中の値を破棄して編集モードを抜けます (WPF 既定動作)。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[Ctrl]+[C]</td>
+                        <td>選択範囲を TSV 形式でコピー (前項参照)。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[Ctrl]+[V]</td>
+                        <td>クリップボードの内容をアクティブセルを起点にペースト (前項参照)。</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">[Ctrl]+[A]</td>
+                        <td>データグリッド上のすべてのセルを選択。</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style="font-size: 0.92em; color: #555;">
+                バリデーションエラー時の挙動: 矢印 / [Enter] / [Tab] による「確定+移動」操作で、
+                入力値がエラーとなる場合は<strong>移動せずに編集状態のまま留まります</strong>。
+                エラーを修正するか、[Esc] で値を破棄してから移動してください。
             </p>
 
             <h4>列ヘッダーの色分け凡例</h4>
@@ -1762,9 +2213,11 @@
                     <tr><td><img class="button-icon" src="icons/NewFile.svg" alt="">新規作成</td><td>Ctrl+N</td><td>現在のデータを破棄し、新規プロジェクトを作成します</td></tr>
                     <tr><td><img class="button-icon" src="icons/OpenFile.svg" alt="">開く</td><td>Ctrl+O</td><td>JSONファイルを開きます。解析結果が含まれている場合は自動復元されます</td></tr>
                     <tr><td><img class="button-icon" src="icons/RecentFiles.svg" alt="">最近使ったファイル</td><td>-</td><td>最近開いたファイルの一覧から選択して開きます</td></tr>
-                    <tr><td><img class="button-icon" src="icons/SaveFile.svg" alt="">上書き保存</td><td>Ctrl+S</td><td>現在のファイルパスに上書き保存します（解析結果も含む）</td></tr>
+                    <tr><td><img class="button-icon" src="icons/SaveFile.svg" alt="">上書き保存</td><td>Ctrl+S</td><td>現在のファイルパスに上書き保存します（既定は入力のみ。解析結果は「オプション」の設定次第）</td></tr>
                     <tr><td><img class="button-icon" src="icons/SaveFileAs.svg" alt="">名前を付けて保存</td><td>Ctrl+Shift+S</td><td>新しいファイル名を指定して保存します</td></tr>
+                    <tr><td><img class="button-icon" src="icons/DocxFileOutput.svg" alt="">Docx 計算書出力</td><td>Ctrl+Shift+W</td><td>計算書出力ウィンドウを開き、含める項目を選択して Word (.docx) ファイルとして出力します</td></tr>
                     <tr><td><img class="button-icon" src="icons/Examples.png" alt="">計算例</td><td>-</td><td>出典別 (建築基礎構造設計指針 2019 / 建築基礎構造設計例集 2024 / 基礎構造の設計 2023（関東支部）) のサンプルプロジェクト一覧から選択してロード</td></tr>
+                    <tr><td><img class="button-icon" src="icons/Display.png" alt="">オプション</td><td>-</td><td>「保存オプション (手動保存・自動保存それぞれに解析結果を含めるか)」と「ファイル関連付け (.pdj を PileDesign に関連付ける)」を設定します</td></tr>
                 </tbody>
             </table>
             <p style="font-size: 0.92em; color: #555;">
@@ -1971,7 +2424,7 @@
 
                 「荷重条件ウィンドウ」には「上部構造・基礎部、地盤の作用の重ね合わせ」タブと「荷重ケース」タブがあります。<br>
 
-                「荷重ケース」タブでは、レベル1、レベル2地震荷重それぞれ4方向のについて、名称、慣性力方向、地盤非線形性、杭体非線形性、慣性力作用中心、上部構造慣性力、基礎部慣性力を定義します。<br>
+                「荷重ケース」タブでは、レベル1、レベル2地震荷重それぞれ4方向のについて、名称、慣性力方向、地盤非線形性、杭の非線形性、慣性力作用中心、上部構造慣性力、基礎部慣性力を定義します。<br>
 
                 共通入力データグリッドで入力して適用ボタンをクリックすると、そのレベルのすべてのケースに入力が適用されます。
             </p>
@@ -2726,12 +3179,12 @@
                     <tr>
                         <td>地盤反力係数低減率</td>
                         <td>$\beta_L$</td>
-                        <td>液状化による地盤反力係数の低減率</td>
+                        <td>液状化による地盤反力係数の低減率。<strong>$F_L \ge 1$（液状化に至らない）のときは $\beta_L = 1.0$ (低減なし)</strong>。$F_L &lt; 1$ のときに基礎指針'19 表4.5.1 ($N_a$ と深さの関数) から線形補間で求める</td>
                     </tr>
                     <tr>
                         <td>繰り返しせん断ひずみ</td>
                         <td>$\gamma_{cy}$</td>
-                        <td>液状化に伴う繰り返しせん断ひずみ</td>
+                        <td>液状化に伴う繰り返しせん断ひずみ。<strong>$F_L \ge 1$ のときは $\gamma_{cy} = 0$</strong>。$F_L &lt; 1$ のときに基礎指針'19 図3.2.6 ($N_a$ と $\tau_d/\sigma_z'$ の関数) から階段状に決定</td>
                     </tr>
                     <tr>
                         <td>液状化水平変位</td>
@@ -2770,6 +3223,36 @@
                     </tr>
                 </tbody>
             </table>
+
+            <h6>$F_L$ と $\beta_L$ / $\gamma_{cy}$ の関係</h6>
+            <p>
+                基礎指針'19 では液状化に伴う地盤反力低減率 $\beta_L$ および繰り返しせん断ひずみ $\gamma_{cy}$ は<strong>液状化が発生した層 ($F_L &lt; 1$)</strong> に対して規定されています。本プログラムでは以下のロジックで $\beta_L$ / $\gamma_{cy}$ を算定します。
+            </p>
+            <table class="table-doc" style="max-width:720px;">
+                <thead>
+                    <tr><th>条件</th><th>$\beta_L$</th><th>$\gamma_{cy}$</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>液状化判定対象外（地下水位より浅い／GL-20m 以深／$F_c &gt; 35\%$）</td>
+                        <td>—</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>液状化判定対象 かつ $F_L \ge 1$（液状化に至らない）</td>
+                        <td>$1.0$（低減なし）</td>
+                        <td>$0$</td>
+                    </tr>
+                    <tr>
+                        <td>液状化判定対象 かつ $F_L &lt; 1$（液状化が発生）</td>
+                        <td>基礎指針'19 表4.5.1（$N_a$ と深さ $z$ の関数）から線形補間</td>
+                        <td>基礎指針'19 図3.2.6（$N_a$ と $\tau_d/\sigma_z'$ の関数）から階段状に決定</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>
+                <strong>注意</strong>: $\beta_L$ / $\gamma_{cy}$ の元テーブル (基礎指針'19 表4.5.1・図3.2.6) 自体は $F_L$ を陽に含みませんが、適用範囲は「液状化発生時」と規定されているため、$F_L \ge 1$ の層では低減なしとして取り扱います。
+            </p>
 
             <h5>グラフ表示（右側パネル）</h5>
             <p>右側パネルのタブで各種グラフを確認できます。グラフ上でマウスカーソルを動かすと、座標値が表示されます。</p>
@@ -2896,49 +3379,10 @@
                 </tbody>
             </table>
 
-            <h6>杭頭編集ウィンドウ</h6>
-            <p>杭頭編集ウィンドウでは以下の項目を設定できます。</p>
-
-            <p><b>パイルキャップ</b></p>
-            <table class="table-doc">
-                <thead>
-                    <tr>
-                        <th>項目</th>
-                        <th>説明</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>F<sub>c</sub> (N/mm²)</td>
-                        <td>パイルキャップの設計基準強度</td>
-                    </tr>
-                    <tr>
-                        <td>γ (kN/m³)</td>
-                        <td>パイルキャップコンクリートの単位体積重量</td>
-                    </tr>
-                    <tr>
-                        <td>E<sub>c</sub> (N/mm²)</td>
-                        <td>パイルキャップのヤング係数（自動計算）</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <p><b>定着筋</b></p>
-            <p>杭頭接合タイプに応じて、以下の工法別の入力が表示されます。</p>
-            <ul>
-                <li><b>キャプテンパイル工法</b>：PCリング、絞り率ν、引張定着筋の有無と配置（正方形/円形配置、配筋径・規格・配置辺長/直径）</li>
-                <li><b>FT-Pile構法</b>：FTキャップの選択、引張定着筋の有無と配置（本数・規格）</li>
-                <li><b>キャプリングパイル工法</b>：PCリング (N / S1 / S2 タイプ × 12 径)、引張定着筋の有無と標準配筋 (3-D19〜5-D38) 選択、鋼種 (SD345 / SD390)。鋼管杭の場合は杭頭部をコンクリート充填鋼管部として合成 EI で評価</li>
-                <li><b>鉄筋（定着筋）</b>：主筋の本数・呼び径、規格（SD295/SD345/SD390/SD490）、重心かぶり厚</li>
-            </ul>
-
-            <p><b>表示タブ</b></p>
-            <ul>
-                <li><b>諸元</b>：杭頭断面の算定された諸元（断面積・断面二次モーメント等）を表形式で確認できます</li>
-                <li><b>上面図</b>：杭頭断面の配筋状況を平面図で確認できます。右クリックで画像コピー・保存が可能です</li>
-                <li><b>MNインタラクション</b>：曲げモーメント-軸力の相互作用図</li>
-                <li><b>θMインタラクション</b>：回転角-曲げモーメントの相互作用図</li>
-            </ul>
+            <p>
+                「杭頭編集」ボタンで開く杭頭編集ウィンドウの詳細は
+                <a href="#section-pile-top-input">「杭頭」入力</a> 節を参照してください。
+            </p>
 
             <h5>杭体区間</h5>
             <p>
@@ -2976,72 +3420,10 @@
                 </tbody>
             </table>
 
-            <h6>杭断面編集ウィンドウ</h6>
-            <p>各区間の断面詳細を設定します。入力項目は杭体タイプにより異なります。</p>
-
-            <p><b>場所打ち鉄筋コンクリート杭</b></p>
-            <table class="table-doc">
-                <thead>
-                    <tr>
-                        <th>項目</th>
-                        <th>説明</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>杭径 (mm)</td>
-                        <td>コンクリート外径</td>
-                    </tr>
-                    <tr>
-                        <td>設計基準強度 F<sub>c</sub> (N/mm²)</td>
-                        <td>コンクリートの設計基準強度</td>
-                    </tr>
-                    <tr>
-                        <td>単位体積重量 γ (kN/m³)</td>
-                        <td>コンクリートの単位体積重量</td>
-                    </tr>
-                    <tr>
-                        <td>施工品質管理係数 ξ</td>
-                        <td>施工品質管理に関する係数</td>
-                    </tr>
-                    <tr>
-                        <td>縦弾性係数 (N/mm²)</td>
-                        <td>コンクリートのヤング係数（自動計算）</td>
-                    </tr>
-                    <tr>
-                        <td>主筋</td>
-                        <td>本数・呼び径（D10〜D41）・規格（SD295/SD345/SD390/SD490）・重心かぶり厚</td>
-                    </tr>
-                    <tr>
-                        <td>せん断補強筋</td>
-                        <td>補強筋径・間隔・規格・重心かぶり厚</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <p><b>場所打ち鋼管コンクリート杭</b></p>
             <p>
-                「部位」コンボボックスで「鋼管コンクリート部」と「鉄筋コンクリート部」を切り替えて入力します。<br>
-                鋼管コンクリート部では、鋼管の外径・管厚・規格・腐食深さに加え、コンクリートおよび主筋の情報を入力します。<br>
-                鉄筋コンクリート部では、場所打ちRC杭と同様の入力を行います。
+                各区間の「杭断面編集」ボタンで開く杭断面編集ウィンドウの詳細は
+                <a href="#section-pile-section-input">「杭断面」入力</a> 節を参照してください。
             </p>
-
-            <p><b>既製コンクリート杭</b></p>
-            <p>断面タイプを以下から選択します。</p>
-            <ul>
-                <li><b>PHC杭</b>：プレストレストコンクリート杭。規格リストから選択します</li>
-                <li><b>PRC杭</b>：プレテンション式遠心力高強度コンクリート杭。規格リストから選択します</li>
-                <li><b>SC杭</b>：外殻鋼管付きコンクリート杭。規格リストから選択し、腐食深さを入力します</li>
-            </ul>
-
-            <p><b>インタラクション図（表示タブ）</b></p>
-            <p>杭断面編集ウィンドウでは以下のインタラクション図を確認できます。</p>
-            <ul>
-                <li><b>N-Qインタラクション</b>：軸力-せん断力の相互作用図</li>
-                <li><b>M-φインタラクション</b>：曲げモーメント-曲率の相互作用図</li>
-                <li><b>M-θインタラクション</b>：曲げモーメント-回転角の相互作用図</li>
-                <li><b>N-Mインタラクション</b>：軸力-曲げモーメントの相互作用図</li>
-            </ul>
 
             <h5>杭先端</h5>
             <p>杭先端の施工条件を設定します。</p>
@@ -3120,6 +3502,132 @@
             </table>
 
 
+            <h4 id="section-pile-top-input" style="font-weight: bold;">「杭頭」入力</h4>
+            <p>
+                「杭体」入力ウィンドウの<strong>杭頭編集</strong>ボタンから開く専用ウィンドウで、杭頭接合部の詳細を設定します。
+                入力項目は選択した杭頭接合タイプ (鉄筋定着工法 / キャプテンパイル / FT-Pile / キャプリング 等) によって動的に変わります。
+            </p>
+
+            <p><b>パイルキャップ</b></p>
+            <table class="table-doc">
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>説明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>F<sub>c</sub> (N/mm²)</td>
+                        <td>パイルキャップの設計基準強度</td>
+                    </tr>
+                    <tr>
+                        <td>γ (kN/m³)</td>
+                        <td>パイルキャップコンクリートの単位体積重量</td>
+                    </tr>
+                    <tr>
+                        <td>E<sub>c</sub> (N/mm²)</td>
+                        <td>パイルキャップのヤング係数（自動計算）</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><b>定着筋</b></p>
+            <p>杭頭接合タイプに応じて、以下の工法別の入力が表示されます。</p>
+            <ul>
+                <li><b>キャプテンパイル工法</b>：PCリング、絞り率ν、引張定着筋の有無と配置（正方形/円形配置、配筋径・規格・配置辺長/直径）</li>
+                <li><b>FT-Pile構法</b>：FTキャップの選択、引張定着筋の有無と配置（本数・規格）</li>
+                <li><b>キャプリングパイル工法</b>：PCリング (N / S1 / S2 タイプ × 12 径)、引張定着筋の有無と標準配筋 (3-D19〜5-D38) 選択、鋼種 (SD345 / SD390)。鋼管杭の場合は杭頭部をコンクリート充填鋼管部として合成 EI で評価</li>
+                <li><b>鉄筋（定着筋）</b>：主筋の本数・呼び径、規格（SD295/SD345/SD390/SD490）、重心かぶり厚</li>
+            </ul>
+
+            <p><b>表示タブ</b></p>
+            <ul>
+                <li><b>諸元</b>：杭頭断面の算定された諸元（断面積・断面二次モーメント等）を表形式で確認できます</li>
+                <li><b>上面図</b>：杭頭断面の配筋状況を平面図で確認できます。右クリックで画像コピー・保存が可能です</li>
+                <li><b>MNインタラクション</b>：曲げモーメント-軸力の相互作用図</li>
+                <li><b>θMインタラクション</b>：回転角-曲げモーメントの相互作用図</li>
+            </ul>
+
+            <h4 id="section-pile-section-input" style="font-weight: bold;">「杭断面」入力</h4>
+            <p>
+                「杭体」入力ウィンドウの各杭体区間にある<strong>杭断面編集</strong>ボタンから開く専用ウィンドウで、区間の断面詳細を設定します。
+                入力項目は杭体タイプにより異なります。
+            </p>
+
+            <p><b>場所打ち鉄筋コンクリート杭</b></p>
+            <table class="table-doc">
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>説明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>杭径 (mm)</td>
+                        <td>コンクリート外径</td>
+                    </tr>
+                    <tr>
+                        <td>設計基準強度 F<sub>c</sub> (N/mm²)</td>
+                        <td>コンクリートの設計基準強度</td>
+                    </tr>
+                    <tr>
+                        <td>単位体積重量 γ (kN/m³)</td>
+                        <td>コンクリートの単位体積重量</td>
+                    </tr>
+                    <tr>
+                        <td>施工品質管理係数 ξ</td>
+                        <td>施工品質管理に関する係数</td>
+                    </tr>
+                    <tr>
+                        <td>縦弾性係数 (N/mm²)</td>
+                        <td>コンクリートのヤング係数（自動計算）</td>
+                    </tr>
+                    <tr>
+                        <td>主筋</td>
+                        <td>本数・呼び径（D10〜D41）・規格（SD295/SD345/SD390/SD490）・重心かぶり厚</td>
+                    </tr>
+                    <tr>
+                        <td>せん断補強筋</td>
+                        <td>補強筋径・間隔・規格・重心かぶり厚</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><b>場所打ち鋼管コンクリート杭</b></p>
+            <p>
+                「部位」コンボボックスで「鋼管コンクリート部」と「鉄筋コンクリート部」を切り替えて入力します。<br>
+                鋼管コンクリート部では、鋼管の外径・管厚・規格・腐食深さに加え、コンクリートおよび主筋の情報を入力します。<br>
+                鉄筋コンクリート部では、場所打ちRC杭と同様の入力を行います。
+            </p>
+
+            <p><b>既製コンクリート杭</b></p>
+            <p>断面タイプを以下から選択します。</p>
+            <ul>
+                <li><b>PHC杭</b>：プレストレストコンクリート杭。規格リストから選択します</li>
+                <li><b>PRC杭</b>：プレテンション式遠心力高強度コンクリート杭。規格リストから選択します</li>
+                <li><b>SC杭</b>：外殻鋼管付きコンクリート杭。規格リストから選択し、腐食深さを入力します</li>
+            </ul>
+
+            <p><b>インタラクション図（表示タブ）</b></p>
+            <p>杭断面編集ウィンドウでは以下のインタラクション図を確認できます。</p>
+            <ul>
+                <li><b>N-Qインタラクション</b>：軸力-せん断力の相互作用図</li>
+                <li><b>M-φインタラクション</b>：曲げモーメント-曲率の相互作用図</li>
+                <li><b>M-θインタラクション</b>：曲げモーメント-回転角の相互作用図</li>
+                <li><b>N-Mインタラクション</b>：軸力-曲げモーメントの相互作用図</li>
+            </ul>
+
+            <h5>諸元テーブルのコピー・エクスポート</h5>
+            <p>
+                杭断面編集ウィンドウおよび杭頭編集ウィンドウの諸元テーブル上で右クリックすると、以下の操作が可能です。
+            </p>
+            <ul>
+                <li><strong>クリップボードにコピー</strong>：テーブル全体をタブ区切りテキストとしてクリップボードにコピーします。Excelに直接貼り付けられます。</li>
+                <li><strong>CSVエクスポート</strong>：テーブルデータをCSVファイルとして保存します。</li>
+            </ul>
+
             <h4 style="font-weight: bold;"><img class="heading-icon" src="icons/AxialForceVeirification.svg" alt="">「軸力確認」</h4>
             <p>
                 各杭配置について、入力された軸力が杭体の適用範囲に収まっているかを確認するウィンドウを開きます。
@@ -3189,7 +3697,7 @@
                 杭要素分割が完了しないと、水平解析・単杭沈下解析を実行することができません。
             </p>
 
-            <h4 style="font-weight: bold;">解析実行グループ</h4>
+            <h5 style="font-weight: bold;">解析実行グループ</h5>
             <p>
                 解析は以下の順序で実行します。各解析ボタンは前提条件が満たされていない場合は無効（グレーアウト）になります。
                 解析完了後、ボタンラベルに完了マークが表示されます。
@@ -3208,9 +3716,59 @@
             <h5>「荷重」タブ</h5>
             <ul>
                 <li><strong>モデル情報</strong>: 節点数、要素数（read-only）</li>
-                <li><strong>設計条件</strong>: 接続方式（剛体連結／剛床連結）、杭軸力（入力値 / 入力値＋応力解析結果）</li>
+                <li><strong>設計条件</strong>:
+                    <ul>
+                        <li><strong>接続方式</strong>: 剛体連結／剛床連結</li>
+                        <li><strong>杭軸力</strong>: 入力値 / 入力値＋応力解析結果 (後述「鉛直方向境界条件」が「P-S 非線形ばね」のときは後者強制)</li>
+                        <li><strong>鉛直方向境界条件</strong>: 杭先端支持 / P-S 非線形ばね (後述)</li>
+                        <li><strong>VL 単独ケースも解析</strong>: P-S 非線形ばね ON のときに有効化されるオプション (後述)</li>
+                    </ul>
+                </li>
                 <li><strong>解析対象</strong>: 液状化の有無、レベル1／レベル2 の解析対象荷重ケースの選択、荷重組合せ（上部構造慣性力 × 基礎部慣性力）。各ケース行の「済」列に既に解析済の場合 ✓ が表示されます</li>
                 <li><strong>荷重ステップ</strong>: レベル1／レベル2 の荷重ステップ数（既定 L1: 2, L2: 8）と、設定された全解析ステップ数 (荷重ケース × 組合せ × 液状化 × ステップ数) の表示</li>
+            </ul>
+
+            <h6>鉛直方向境界条件</h6>
+            <p>
+                水平解析モデルで杭先端 (および杭体軸方向) の鉛直拘束をどう扱うかを切り替えます。
+                建物の鉛直荷重に対する杭の沈下挙動を水平解析にも反映したい場合に <strong>P-S 非線形ばね</strong> モードを使用します。
+            </p>
+            <table class="table-doc">
+                <thead><tr><th style="text-align:center">モード</th><th>挙動</th><th>用途</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <td><strong>杭先端支持 (既定)</strong></td>
+                        <td>杭先端節点の Uz を固定 (Boundary)。杭周面・先端の鉛直抵抗は考慮しない。鉛直荷重 N₀ は M-φ 評価のための軸力情報としてのみ使用。</td>
+                        <td>従来挙動。簡易・短時間。水平挙動が主目的のケース。</td>
+                    </tr>
+                    <tr>
+                        <td><strong>P-S 非線形ばね</strong></td>
+                        <td>沈下解析の物理関数 (τ-s 双線形 + R-S 曲線) を各杭節点の Z ばねに直接適用。杭軸力 N₀ は各杭の接合節点 (CapNode / ConnectionNode) に Fz 外力として段階適用。杭体自重も各節点に分布外力として注入。</td>
+                        <td>鉛直方向の沈下挙動と水平挙動を同時に評価したい場合。沈下解析の事前実行が必要。</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>
+                <strong>制約・注意:</strong>
+            </p>
+            <ul>
+                <li>P-S 非線形ばね モードでは、杭軸力モードは <strong>「入力値＋応力解析結果」</strong> に強制されます (入力値のみは選択不可)。
+                    軸力をすべて外力として与えるため、応力解析結果の Fxi を反映しないと残差が解消されないためです。</li>
+                <li>沈下解析 (F6 単杭沈下) を事前に実行しておく必要があります。沈下解析の節点別 (相対変位, 反力) 履歴が無い場合は自動的に「杭先端支持」にフォールバックします。</li>
+                <li>各杭が同一 SoilPile を参照していれば全杭で同じ P-S ばねが構築されます。複数の SoilPile を使用する場合は、それぞれ沈下解析が必要です。</li>
+            </ul>
+
+            <h6>VL 単独ケースも解析</h6>
+            <p>
+                「鉛直方向境界条件」が <strong>P-S 非線形ばね</strong> のときに有効化されるチェックボックスです。
+                チェックを入れると、通常の地震時ケース (L1/L2) に加えて <strong>「常時 (VL) のみ」</strong> の擬似ケースを 1 件追加実行します。
+            </p>
+            <ul>
+                <li><strong>水平荷重 0、各杭の常時軸力 (AxialForceVL) のみ</strong> を各杭の接合節点に Fz として与える</li>
+                <li>結果は <code>LoadName="VL"</code> として解析結果テーブル / グラフ / 計算書に表示</li>
+                <li>VL は組合せ係数 (α₁/β₁/β₂) や液状化変位に依存しないため、組合せ・液状化ループは 1 回のみ実行 (重複回避)</li>
+                <li>地震時の地盤強制変位 (液状化変位等) は VL ケースには適用されません (常時状態を表すため)</li>
+                <li>沈下解析と同じ N₀ 分布で杭体応力分布を確認したい、あるいは「地震時 (N₀+ΔN) − 常時 (N₀)」の差分を取り出したい場合に使用</li>
             </ul>
 
             <h5>「収束・並列」タブ</h5>
@@ -3263,13 +3821,43 @@
                 並列実行は <strong>ケース単位</strong>（同じケースの中での要素並列ではない）で行われるため、ケース数 ≥ 同時実行ケース数の構成で効果を発揮します。
             </p>
 
-            <h4 style="font-weight: bold;">解析ログの読み方</h4>
+            <h5>偏心率の事前チェック</h5>
+            <p>
+                水平解析実行時に、慣性力中心と杭群中心の偏心が大きい場合は確認ダイアログを表示します。
+                偏心が大きいモデルではねじれモーメントが発生し、収束計算が困難で時間がかかったり局所的に未収束となる場合があります。
+                想定外の偏心 (慣性力作用点の入力ミス等) を事前に検知する目的です。
+            </p>
+            <p>2 種類の杭群中心と慣性力中心の関係をチェック:</p>
+            <ul>
+                <li><strong>VL 軸力分布重心</strong>: 各杭の常時軸力 (圧縮を正) で重み付けした重心。建物自重が杭群に「実効的に乗っている位置」。<br>
+                    $\boldsymbol{r}_{VL} = \dfrac{\sum_i N_{VL,i} \, \boldsymbol{r}_i}{\sum_i N_{VL,i}}$</li>
+                <li><strong>剛心 ($k_{h0}$ 重み付け)</strong>: 各杭の杭頭直下層の基準水平地盤反力係数 $k_{h0}$ で重み付けした重心。水平力に対する杭群の弾性回転中心。<br>
+                    $\boldsymbol{r}_{rg} = \dfrac{\sum_i k_{h0,i} \, \boldsymbol{r}_i}{\sum_i k_{h0,i}}$</li>
+            </ul>
+            <p><strong>偏心率 Re</strong>: 剛心からの偏心距離を弾性半径 $r_e$ で正規化:</p>
+            <p>$r_e = \sqrt{\dfrac{\sum_i k_{h0,i} \, r_i^2}{\sum_i k_{h0,i}}}$（剛心まわりの $k_{h0}$ 重み付け二乗平均半径）</p>
+            <p>
+                $\text{Re}_x = |y_{ap} - y_{rg}| / r_e$ ：X 加力時 (Y 方向偏心がねじれを生む)<br>
+                $\text{Re}_y = |x_{ap} - x_{rg}| / r_e$ ：Y 加力時 (X 方向偏心がねじれを生む)
+            </p>
+            <p>$\max(\text{Re}_x, \text{Re}_y) \ge 0.15$ で警告ダイアログを表示:</p>
+            <ul>
+                <li><strong>中程度</strong> ($0.15 \le \text{Re} &lt; 0.30$): 情報レベル</li>
+                <li><strong>大</strong> ($0.30 \le \text{Re} &lt; 0.45$): 警告レベル</li>
+                <li><strong>極大</strong> ($\text{Re} \ge 0.45$): 警告レベル</li>
+            </ul>
+            <p>
+                ダイアログには両重心の座標 (慣性力中心、剛心、VL 重心) と $\text{Re}_x$ / $\text{Re}_y$ の値が表示されます。
+                「OK」で続行、「キャンセル」でモデル (杭配置 / 慣性力作用点) を見直します。
+            </p>
+
+            <h5 style="font-weight: bold;">解析ログの読み方</h5>
             <p>
                 水平解析の進行中、計算ログ画面に詳細な反復履歴・収束状況・診断情報が出力されます。
                 ここではログの各行・記号の意味を解説します。
             </p>
 
-            <h5>共通プレフィックス</h5>
+            <h6>共通プレフィックス</h6>
             <p>各ログ行は以下のプレフィックスで始まります:</p>
             <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
 [2026/04/27 21:12:58] [L2-1.C1.Liq] iter  1  ω=0.50  ‖R‖²=2.73E-006>1.0E-005  ...
@@ -3281,7 +3869,7 @@
                 <li><strong>ケースタグ</strong>: <code>[L{level}-{loadCaseNo}.C{comboNo}.{Liq|NoLq}]</code> 形式。例: <code>[L2-1.C1.Liq]</code> = レベル2 荷重ケース1 組合せC1 液状化考慮。<code>NoLq</code> は液状化非考慮。タブ「[L2-1.C1.Liq]」を選ぶと該当ケースのログのみ表示できます。</li>
             </ul>
 
-            <h5>反復ログ (1 行形式)</h5>
+            <h6>反復ログ (1 行形式)</h6>
             <p>各 Newton-Raphson 反復で 1 行出力されます。</p>
             <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
 iter  3 [NR]  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4E+15]  k=[2.2E+03,2.6E+05]  ▶CapNode-8:Uy=+4.44E-04
@@ -3307,7 +3895,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 </tbody>
             </table>
 
-            <h5>状態変化ログ (反復間)</h5>
+            <h6>状態変化ログ (反復間)</h6>
             <p>非線形要素の状態が変化したときに出力される情報行です。</p>
             <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
 ▼ M-φ セグメント変化 924 件 (進行:924, 戻り:0): [beam[0]:0→1, beam[1]:0→1, ... 他 919 件] / 分布 [seg0:2688本, seg1:924本]
@@ -3320,11 +3908,11 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>杭頭 Mcr 到達</strong>: 杭頭曲げモーメントがひび割れモーメント Mcr に到達 → 以降 post-crack 曲線 (剛性低下) を使用</li>
             </ul>
 
-            <h5>ステップ収束ログ</h5>
+            <h6>ステップ収束ログ</h6>
             <p>1 つの荷重ステップが収束または未収束で打ち切られた時に出力されます。</p>
             <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
 → Converged in 20 iterations. Residual norm=8.185E-006, max|d|=8.384E-008m
-⏱ total 45.4s | K組立 2226ms×6 | Solve 905ms [Cholesky] (CSC=309 分解=273 代入=55 re=41) | LS 591ms×19 (avg 2.4)
+⏱ total 45.4s ┃ K組立 2226ms×6 ┃ Solve 905ms [Cholesky] (CSC=309 分解=273 代入=55 re=41) ┃ LS 591ms×19 (avg 2.4, max 3) ┃ Plateau-K×2
             </pre>
             <ul>
                 <li><code>Converged in N iterations</code>: 収束まで N 反復要した</li>
@@ -3335,12 +3923,15 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         <li><code>Solve [Cholesky]</code>: 連立方程式求解 (Cholesky / LDL / LU / QR の順にフォールバック)</li>
                         <li><code>CSC / 分解 / 代入</code>: CSC 構築 / Cholesky 分解 / 後退代入の累積時間 (ms)</li>
                         <li><code>re=N</code>: Cholesky 因子の再利用回数 (Modified NR の K 不変期間で発動。値が大きいほど高速化効果あり)</li>
-                        <li><code>LS Xms×N (avg M)</code>: ラインサーチ N 回、平均 M 回のα試行</li>
+                        <li><code>LS Xms×N (avg M, max P)</code>: ラインサーチ N 回、平均 M 回のα試行 / 1 反復での最大試行数 P</li>
+                        <li><code>Plateau-K×N</code>: <strong>周期的 K 再構築</strong>がプラトー検知で N 回発動 (発動時のみ表示)。
+                            Modified NR フェーズで残差低下が一定基準を下回る場合に、K 行列が陳腐化していると判定して強制的に NR 再構築をトリガする機構。
+                            状態変化検知では捕捉できない緩慢な収束を改善する</li>
                     </ul>
                 </li>
             </ul>
 
-            <h5>未収束・再試行ログ</h5>
+            <h6>未収束・再試行ログ</h6>
             <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
 → 未収束: 最大反復回数 50 に到達。残差ノルム=2.341E-002 (許容値=1.000E-005), max|d|=1.234E-005m
 ♻ ケース再試行 (1/3): ステップ数を 8 → 16 に増やして再計算
@@ -3352,20 +3943,24 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><code>⛔ 物理的未収束</code>: 緩和基準が極端 (>10) かつ再試行 1 回以上で改善なし → 耐力超過の可能性ありと判定し再試行を打ち切る</li>
             </ul>
 
-            <h5>診断・警告ログ</h5>
+            <h6>診断・警告ログ</h6>
             <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
 🔄 Aitken 平均化 #1/2 発動: 直近 3 反復の CumulativeDisp 平均で書換 → 残差=1.23E-002
 ⚠ 長期未改善検出: 30反復で最小残差 1.5E-03 が更新されません。収束基準を緩和します (1.00E-05→1.50E-03)
 ⚠ 緩やかな発散検出: 5回連続で残差が増加しています (最小:2.5E-04 → 現在:8.7E-04)
 ⚠ 停滞検出: 7回連続で残差が改善しません。収束基準を緩和します (1.00E-05→2.34E-04)
+⛔ リミットサイクル検知: iter=42, flip#15, max|δu|=8.34E-08m, 残差=2.41E-05 → 早期諦めて retry へ移行
             </pre>
             <ul>
                 <li><strong>🔄 Aitken 平均化</strong>: 支配 DOF が周期反転 (リミットサイクル) を続けた場合、直近反復の累積変位を平均化して周期の中心に「ジャンプ」させる収束加速手法。最大 2 回まで発動</li>
                 <li><strong>⚠ 長期未改善 / 停滞</strong>: 最小残差が更新されない反復数が一定値を超えた → 収束基準を現在の残差水準に合わせて自動緩和 (それでも未収束なら再試行へ)</li>
                 <li><strong>⚠ 緩やかな発散</strong>: 残差が連続的に増加 → ライン探索の自動切替を行う</li>
+                <li><strong>⛔ リミットサイクル検知</strong>: Aitken 平均化を 2 回消費しても収束せず、最大変位増分 max|δu| が極めて小さい (動かない) のに flip 反復が続く場合に発動。
+                    100 反復まで粘らずに早期諦めて retry (ステップ細分化) へ送ることで時短する。
+                    本物理的に解けない問題ではなく、step 幅が大きすぎてMcr境界を行き来する numerical な問題に効く</li>
             </ul>
 
-            <h5>解析サマリーレポート (解析終了時)</h5>
+            <h6>解析サマリーレポート (解析終了時)</h6>
             <p>すべてのケース・ステップが完了すると、テキスト表形式のサマリーレポートが出力されます。</p>
             <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
 ━━━━━━━━━━━━━━━━━━━━  解析サマリーレポート  ━━━━━━━━━━━━━━━━━━━━
@@ -3392,7 +3987,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 サマリーは画面下部の「<strong>サマリーをコピー</strong>」(TSV / Excel 貼付可)・「<strong>サマリーを CSV 出力</strong>」(UTF-8 BOM 付き) ボタンで外部出力できます。
             </p>
 
-            <h5>進捗バー (解析実行中)</h5>
+            <h6>進捗バー (解析実行中)</h6>
             <p>
                 水平解析実行中は、解析ウィンドウ下部に <strong>進捗バー</strong> と「<strong>{完了} / {総数}</strong>」のテキストが表示されます。
                 進捗の粒度は <strong>解析ケース単位</strong> (L1×4 ケース、L2×4 ケース、液状化考慮の有無を加味した総数) で更新され、
@@ -3413,14 +4008,14 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 ウィンドウ内で<strong>新規解析または追加実行を行ったあと</strong>キャンセルした場合のみ「結果を破棄しますか？」の確認が出ます。
             </p>
 
-            <h5>ケース並列化 — 実機パフォーマンス</h5>
+            <h6>ケース並列化 — 実機パフォーマンス</h6>
             <p>
                 並列度を 8 に設定した実機検証では、L2 × 8 ケース + L1 × 8 ケース = <strong>16 ケース</strong> を約 6 秒で完走 (代表モデル、対比逐次実行 ~38 秒)。
                 約 <strong>6.3 倍</strong> の高速化が確認されています。
                 並列度の上限は CPU 物理コア数程度を目安にしてください。それを超える設定はオーバーヘッドのみ増加し、効果は得られません。
             </p>
 
-            <h4 style="font-weight: bold;" id="why-hard">非線形解析の困難さ — 一般的な荷重増分解析との比較</h4>
+            <h5 style="font-weight: bold;" id="why-hard">非線形解析の困難さ — 一般的な荷重増分解析との比較</h5>
             <p>
                 本プログラムの水平解析は、建築・土木の他の非線形 FEM (建物 pushover、フレーム断面解析等) と比べて
                 <strong>収束しにくい部類</strong>に入ります。一般的な解析では数十反復以内で収束するケースが、
@@ -3429,7 +4024,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 参考として、それぞれの要因と対処を以下にまとめます。
             </p>
 
-            <h5 id="why-hard-1">要因 ① 強制変形と力載荷の同時作用</h5>
+            <h6 id="why-hard-1">要因 ① 強制変形と力載荷の同時作用</h6>
             <p>
                 建物 pushover などの一般的な荷重増分解析は、外部から <strong>力 (荷重)</strong> を増分的に与え、
                 それに対する <strong>変位</strong> を出力として得る単方向の問題です。Newton-Raphson (NR) は
@@ -3452,7 +4047,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     細分化の効果が薄いケースが存在</li>
             </ul>
 
-            <h5 id="why-hard-2">要因 ② 桁違いの剛性比 (Stiffness contrast)</h5>
+            <h6 id="why-hard-2">要因 ② 桁違いの剛性比 (Stiffness contrast)</h6>
             <p>
                 FEM の収束性は剛性マトリクス $K$ の <strong>条件数 (condition number)</strong> に強く依存し、
                 条件数が大きいほど数値誤差が増幅されて収束が乱れます。
@@ -3481,7 +4076,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>降伏時の急変</strong>: 地盤ばねが降伏すると剛性が 1/100 になり、$K$ の構成が一気に変化 → 接線剛性が信用できなくなる</li>
             </ul>
 
-            <h5 id="why-hard-3">要因 ③ 多重非線形の同時切替</h5>
+            <h6 id="why-hard-3">要因 ③ 多重非線形の同時切替</h6>
             <p>
                 建物 pushover では非線形要素は通常 1〜2 系統 (柱梁ヒンジまたは材料弾塑性) ですが、
                 本解析では <strong>3 系統の非線形</strong>が同じ反復内で次々と分岐点を超えます:
@@ -3501,7 +4096,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li>セグメントが行ったり来たり (進行/戻り) すると <strong>リミットサイクル</strong>に陥りやすい</li>
             </ul>
 
-            <h5 id="why-hard-4">要因の重畳 — 例題 9 + 基礎梁モデル</h5>
+            <h6 id="why-hard-4">要因の重畳 — 例題 9 + 基礎梁モデル</h6>
             <p>
                 上記 3 要因に加え、<strong>基礎梁を導入</strong>すると:
             </p>
@@ -3516,7 +4111,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 珍しくありません (収束はする)。
             </p>
 
-            <h5 id="why-hard-comparison">比較サマリー — 一般 pushover vs. 本解析</h5>
+            <h6 id="why-hard-comparison">比較サマリー — 一般 pushover vs. 本解析</h6>
             <table class="table-doc">
                 <caption style="text-align: center">難しさの構造的比較</caption>
                 <thead>
@@ -3570,7 +4165,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 </tbody>
             </table>
 
-            <h5 id="why-hard-insights">設計者向けの実用的読み解き</h5>
+            <h6 id="why-hard-insights">設計者向けの実用的読み解き</h6>
             <p>
                 上記の困難さを踏まえ、ログを読み解く際の実用的指針:
             </p>
@@ -3589,7 +4184,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 以下に、本プログラムが上記の困難さに対してどのような収束対策を講じているか、その仕組みを順に解説します。
             </p>
 
-            <h4 style="font-weight: bold;" id="convergence-mechanisms">収束対策の仕組み (詳細)</h4>
+            <h5 style="font-weight: bold;" id="convergence-mechanisms">収束対策の仕組み (詳細)</h5>
             <p>
                 杭基礎の水平解析は、杭体 M-φ 関係・地盤 p-y 関係・杭頭半剛接合 M-θ 関係といった
                 <strong>複数の非線形要素が連成</strong>するため、Newton-Raphson (NR) 法が単純には収束しないケースがあります。
@@ -3597,7 +4192,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 ここでは各機構の役割・トリガ条件・透明性 (どこで何が起きているかをユーザーがログから確認できるか) を解説します。
             </p>
 
-            <h5 id="convergence-flow">1. 全体の流れ — 増分荷重 + 反復 + 再試行</h5>
+            <h6 id="convergence-flow">1. 全体の流れ — 増分荷重 + 反復 + 再試行</h6>
             <p>1 ケースの解析は次の階層構造になっています:</p>
             <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
 ケース (荷重ケース×組合せ×液状化)
@@ -3612,7 +4207,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 試行 #3 (64 ステップ) でも未収束なら諦めて完了 (緩和基準で許容することはあるが、別途明示)。
             </p>
 
-            <h5 id="convergence-relaxation">2. 緩和係数 ω と ライン探索 α</h5>
+            <h6 id="convergence-relaxation">2. 緩和係数 ω と ライン探索 α</h6>
             <p>
                 NR の純粋な更新 $d_{new} = d_{old} + \Delta d$ は強い非線形では発散することがあるため、
                 更新量を抑制する係数を掛けます:
@@ -3626,7 +4221,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 付近に何か問題が起きている兆候です。続く 3, 4, 5 番の検出器が働きます。
             </p>
 
-            <h5 id="convergence-limit-cycle">3. リミットサイクルと Aitken 平均化</h5>
+            <h6 id="convergence-limit-cycle">3. リミットサイクルと Aitken 平均化</h6>
             <p>
                 <strong>リミットサイクル</strong>とは、解が「点 A → 点 B → 点 A → 点 B → …」と振動して
                 どれだけ反復しても残差が減らない現象です。NR の純粋な更新は局所的に最も急峻な方向へ進むため、
@@ -3658,7 +4253,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 すなわち <strong>解析結果をごまかすものではなく、収束への経路を変えるだけ</strong>です。
             </p>
 
-            <h6>Aitken のトリガ条件</h6>
+            <p style="font-weight: bold; margin-top: 10px;">Aitken のトリガ条件</p>
             <p>本プログラムは以下の条件で自動発火します:</p>
             <ul>
                 <li><strong>支配 DOF の符号反転 (flip) を 3 回連続検出</strong>: 各反復で「最大変位を示した DOF」を支配 DOF として記録し、
@@ -3673,7 +4268,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 明示出力されるため、Aitken が働いたかどうかは事後に確認できます。
             </p>
 
-            <h5 id="convergence-trend">4. 退化トレンド検出 (v29, 2026-05-05)</h5>
+            <h6 id="convergence-trend">4. 退化トレンド検出 (v29, 2026-05-05)</h6>
             <p>
                 個々のステップは収束していても、<strong>反復数がステップを追うごとに増え続ける</strong>場合は、
                 解析全体の収束性が悪化しています。早めにステップ数を細分化して再試行した方が
@@ -3693,7 +4288,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 細分化が無効と判断して以降の再試行を抑制 (現ステップ数で完遂)。無限の細分化を防ぎます。
             </p>
 
-            <h5 id="convergence-relaxed-criterion">5. 緩和基準 (relaxed criterion) — 妥協のしくみ (透明性あり)</h5>
+            <h6 id="convergence-relaxed-criterion">5. 緩和基準 (relaxed criterion) — 妥協のしくみ (透明性あり)</h6>
             <p>
                 100 反復に到達しても残差が許容値 (1.0E-6) を切らない場合、ある条件下では
                 <strong>許容値を緩和して収束扱いとする</strong>場合があります。
@@ -3713,7 +4308,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 が即座に区別できます。サマリーレポートの「α許容」列にも反映されます。
             </p>
 
-            <h5 id="convergence-physical">6. 物理的未収束 (耐力超過判定)</h5>
+            <h6 id="convergence-physical">6. 物理的未収束 (耐力超過判定)</h6>
             <p>
                 緩和基準の絶対上限 (1.0E-1) を超え、なおかつ前試行に対し改善がない場合、
                 <strong>そもそも荷重に対する耐力が不足しており、解が存在しない</strong>可能性があります。
@@ -3732,7 +4327,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 対象外とする (荷重低減・断面増等を検討) 必要があります。
             </p>
 
-            <h5 id="convergence-summary-table">7. 収束対策のまとめ表</h5>
+            <h6 id="convergence-summary-table">7. 収束対策のまとめ表</h6>
             <table class="table-doc">
                 <caption style="text-align: center">収束対策の階層と影響範囲</caption>
                 <thead>
@@ -3777,14 +4372,14 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 </tbody>
             </table>
 
-            <h4 style="font-weight: bold;" id="commercial-fea-comparison">汎用 FEA プログラムとの比較</h4>
+            <h5 style="font-weight: bold;" id="commercial-fea-comparison">汎用 FEA プログラムとの比較</h5>
             <p>
                 本プログラムが採用している収束対策は、その大半が <strong>商用汎用 FEA (ABAQUS, NASTRAN, ANSYS, LS-DYNA 等)
                 でも標準的に使われている手法</strong>です。設計者が「特殊・独自の処理だから信頼性が低いのでは」と懸念する必要は
                 ありません。ここでは各機構を商用 FEA の対応機能と並べて整理します。
             </p>
 
-            <h5 id="cf-mapping">機構別の対応表</h5>
+            <h6 id="cf-mapping">機構別の対応表</h6>
             <p>
                 以下は各社の主要オプションを示すもので、細部の動作や既定値は版・ライセンスにより異なります。
                 呼び方や入力カードが異なっても、<strong>基本的なアルゴリズムは共通</strong>です。
@@ -3875,7 +4470,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 </tbody>
             </table>
 
-            <h5 id="cf-standard">共通する標準テクニック</h5>
+            <h6 id="cf-standard">共通する標準テクニック</h6>
             <p>商用 FEA でも教科書 FEM でも標準的に採用されている手法:</p>
             <ul>
                 <li><strong>Newton-Raphson 法 + 緩和 / ライン探索</strong>: 非線形 FEM の根本的な解法。本プログラムの ω/α
@@ -3888,7 +4483,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     ABAQUS や PLAXIS で杭+液状化解析を組んでも収束対策のチューニングが必要になります</li>
             </ul>
 
-            <h5 id="cf-aitken">Aitken 平均化について — やや特殊な手法</h5>
+            <h6 id="cf-aitken">Aitken 平均化について — やや特殊な手法</h6>
             <p>
                 Aitken 加速 (Aitken Δ² 法) は単独 NR 法では商用 FEA に標準実装されておらず、
                 主に以下の領域で使われています:
@@ -3911,7 +4506,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 までに制限しています。
             </p>
 
-            <h5 id="cf-not-implemented">商用 FEA で使えるが本プログラムが未採用の手法</h5>
+            <h6 id="cf-not-implemented">商用 FEA で使えるが本プログラムが未採用の手法</h6>
             <p>
                 以下は商用 FEA に存在するが、本プログラムでは杭基礎の用途上不要と判断して未実装の手法です。
                 必要になった場合に検討する候補としてリストします:
@@ -3930,7 +4525,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     倍増型の離散切替だが、ABAQUS の cut-back は連続調整が可能 (典型 1/4 倍)</li>
             </ul>
 
-            <h5 id="cf-domain-specific">ジオメカ FEA との比較 — 杭基礎特有の困難は普遍的</h5>
+            <h6 id="cf-domain-specific">ジオメカ FEA との比較 — 杭基礎特有の困難は普遍的</h6>
             <p>
                 PLAXIS / FLAC / Z_SOIL 等のジオメカ専用 FEA でも、杭+液状化+地震時応答を扱う際には
                 <strong>本プログラムと同種の収束対策をチューニング</strong>する必要があります:
@@ -3947,7 +4542,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 逆に汎用性 (任意形状・任意材料・任意境界条件) では商用汎用 FEA に及びません。
             </p>
 
-            <h5 id="cf-reliability">解析結果の信頼性についての結論</h5>
+            <h6 id="cf-reliability">解析結果の信頼性についての結論</h6>
             <p>本プログラムが採用している収束対策は:</p>
             <ul>
                 <li><strong>大半が商用 FEA でも標準</strong>: NR 法、緩和係数、ライン探索、ステップ細分化、収束許容調整</li>
@@ -4068,8 +4663,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 VL に戻すと再表示されます。
             </p>
 
-            <h5 style="font-weight: bold;"><img class="heading-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">「土層沈下解析（反復）」</h5>
-            <div class="warning" style="background:#FFFFF4D6; border:1px solid #FFE3B341; padding:8px 12px; margin:8px 0; color:#FF6B4A00;">
+            <h4 style="font-weight: bold;"><img class="heading-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">「土層沈下解析（反復）」</h4>
+            <div class="warning" style="background:#FFFAEB; border:1px solid #E0A030; padding:8px 12px; margin:8px 0; color:#8A4500;">
                 ⚠ <strong>解析（反復）</strong>は、基礎指針'19 図5.3.2 連続梁・格子梁モデルによる沈下量の算定例の方法です。
                 <strong>杭基礎の計算では使いません。</strong>
             </div>
@@ -4077,30 +4672,170 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 左ペインの「土層沈下」タブ → <strong>解析（反復）</strong> サブタブから「<strong>反復解析実行</strong>」ボタンで起動します。
                 基礎梁定義が 1 件以上あるときに有効化されます (リボンのアイコンも同じコマンドを起動)。
             </p>
+
+            <h5 style="font-weight: bold;">アルゴリズム概要</h5>
             <p>
-                <strong>計算方法</strong>: 各杭頭に対して 矩形荷重 (個別矩形) → Steinbrenner で杭位置の沈下 S1 を算出 → ばね剛性 ki = Pi/S1 → 線形ばね基礎梁モデルで Ppi を作用させ S2 を取得 →
-                収束判定 → 次反復の Pi := ki·S2、を繰り返します。
+                <strong>Picard 反復 (固定点反復)</strong> による「Steinbrenner 半無限地盤」と「線形ばね基礎梁モデル」の連成解析です。
+                各杭頭ばねの剛性 $k_i$ と杭頭反力 $P_i$ を交互に更新して整合させます。
             </p>
+
+            <h5 style="font-weight: bold;">収束計算のフロー</h5>
+            <p>下図はメインループの反復構造です。1 反復で Steinbrenner と基礎梁 FEM をそれぞれ 1 回ずつ実行します。</p>
+            <div style="text-align:center; margin:12px 0;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 940" style="max-width:100%; height:auto; font-family: 'MS Gothic', 'Meiryo', sans-serif; font-size:13px;">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#444"/>
+                        </marker>
+                    </defs>
+                    <!-- Start -->
+                    <ellipse cx="360" cy="40" rx="120" ry="26" fill="#E3F2FD" stroke="#1565C0" stroke-width="2"/>
+                    <text x="360" y="46" text-anchor="middle" fill="#1565C0" font-weight="bold">開始</text>
+                    <line x1="360" y1="66" x2="360" y2="96" stroke="#444" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- Step 0: Initial Pi -->
+                    <rect x="180" y="100" width="360" height="56" rx="6" fill="#FFFFFF" stroke="#555" stroke-width="1.5"/>
+                    <text x="360" y="125" text-anchor="middle" font-weight="bold">[0] 初期化</text>
+                    <text x="360" y="146" text-anchor="middle">$P_i^{(0)}$ ← 各杭の柱軸力 $P_{p_i}$、$\text{iter} = 1$</text>
+                    <line x1="360" y1="156" x2="360" y2="186" stroke="#444" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- Step 1: Rect loads -->
+                    <rect x="180" y="190" width="360" height="68" rx="6" fill="#FFFFFF" stroke="#555" stroke-width="1.5"/>
+                    <text x="360" y="215" text-anchor="middle" font-weight="bold">[1] 矩形荷重を生成</text>
+                    <text x="360" y="235" text-anchor="middle">各杭中心に等価正方形 (一辺=$\sqrt{\pi}\,r$)</text>
+                    <text x="360" y="252" text-anchor="middle">荷重密度 $Q_{A,i} = P_i / A_i$、$\text{LinkedPileNo}_i$ 付与</text>
+                    <line x1="360" y1="258" x2="360" y2="288" stroke="#444" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- Step 2: Steinbrenner S1 -->
+                    <rect x="180" y="292" width="360" height="56" rx="6" fill="#FFF8E1" stroke="#F57F17" stroke-width="1.5"/>
+                    <text x="360" y="317" text-anchor="middle" font-weight="bold">[2] Steinbrenner で杭位置の沈下 $S_{1,i}$</text>
+                    <text x="360" y="338" text-anchor="middle">群杭沈下用土層を多層適用 (杭ごとに独立評価)</text>
+                    <line x1="360" y1="348" x2="360" y2="378" stroke="#444" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- Step 3: spring -->
+                    <rect x="180" y="382" width="360" height="56" rx="6" fill="#FFFFFF" stroke="#555" stroke-width="1.5"/>
+                    <text x="360" y="407" text-anchor="middle" font-weight="bold">[3] 杭頭ばね剛性 $k_i$ を更新</text>
+                    <text x="360" y="428" text-anchor="middle">$k_i = P_i / S_{1,i}$、$[k_{\min}, k_{\max}]$ にクランプ</text>
+                    <line x1="360" y1="438" x2="360" y2="468" stroke="#444" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- Step 4: beam model -->
+                    <rect x="180" y="472" width="360" height="72" rx="6" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5"/>
+                    <text x="360" y="497" text-anchor="middle" font-weight="bold">[4] 線形ばね基礎梁モデルで $S_{2,i}$</text>
+                    <text x="360" y="518" text-anchor="middle">各杭頭ばねを $k_i$ で書き換え (SetKe)</text>
+                    <text x="360" y="536" text-anchor="middle">杭頭節点に下向き荷重 $P_{p_i}$ → 線形ソルブ → $S_{2,i}$</text>
+                    <line x1="360" y1="544" x2="360" y2="574" stroke="#444" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- Step 5: residual -->
+                    <rect x="180" y="578" width="360" height="56" rx="6" fill="#FFFFFF" stroke="#555" stroke-width="1.5"/>
+                    <text x="360" y="603" text-anchor="middle" font-weight="bold">[5] 収束判定: 残差</text>
+                    <text x="360" y="624" text-anchor="middle">$\text{residual} = \max_i |S_{2,i} - S_{1,i}| / \max(\max|S_1|, \max|S_2|)$</text>
+                    <line x1="360" y1="634" x2="360" y2="664" stroke="#444" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- Diamond decision -->
+                    <polygon points="360,668 540,742 360,816 180,742" fill="#FFEBEE" stroke="#C62828" stroke-width="2"/>
+                    <text x="360" y="730" text-anchor="middle" font-weight="bold">$\text{residual} &lt; \text{tol}$?</text>
+                    <text x="360" y="754" text-anchor="middle">(tol = 既定 $1.0\times10^{-6}$)</text>
+
+                    <!-- Yes -> converged (right) -->
+                    <line x1="540" y1="742" x2="600" y2="742" stroke="#444" stroke-width="2"/>
+                    <text x="570" y="734" text-anchor="middle" fill="#2E7D32" font-weight="bold">Yes</text>
+                    <line x1="600" y1="742" x2="600" y2="870" stroke="#444" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- No -> update Pi (left, loop back) -->
+                    <line x1="180" y1="742" x2="80" y2="742" stroke="#444" stroke-width="2"/>
+                    <text x="130" y="734" text-anchor="middle" fill="#C62828" font-weight="bold">No</text>
+                    <rect x="20" y="430" width="120" height="68" rx="6" fill="#FFFFFF" stroke="#555" stroke-width="1.5"/>
+                    <text x="80" y="455" text-anchor="middle" font-weight="bold">[6] 次反復</text>
+                    <text x="80" y="475" text-anchor="middle">$P_i \leftarrow k_i \cdot S_{2,i}$</text>
+                    <text x="80" y="492" text-anchor="middle">$\text{iter}\!+\!+$</text>
+                    <line x1="80" y1="742" x2="80" y2="498" stroke="#444" stroke-width="2"/>
+                    <line x1="80" y1="430" x2="80" y2="220" stroke="#444" stroke-width="2"/>
+                    <line x1="80" y1="220" x2="180" y2="220" stroke="#444" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- End (converged) -->
+                    <ellipse cx="600" cy="892" rx="110" ry="26" fill="#E8F5E9" stroke="#2E7D32" stroke-width="2"/>
+                    <text x="600" y="898" text-anchor="middle" fill="#2E7D32" font-weight="bold">収束 (結果保存)</text>
+
+                    <!-- Note: max iter exit -->
+                    <line x1="360" y1="816" x2="360" y2="870" stroke="#888" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowhead)"/>
+                    <text x="380" y="850" text-anchor="start" fill="#888" font-size="11">iter &gt; maxIter で打ち切り</text>
+                    <ellipse cx="360" cy="892" rx="100" ry="22" fill="#F5F5F5" stroke="#888" stroke-width="1.5"/>
+                    <text x="360" y="898" text-anchor="middle" fill="#666">未収束 (警告)</text>
+                </svg>
+            </div>
+
+            <h5 style="font-weight: bold;">各ステップの詳細</h5>
+            <ol>
+                <li>
+                    <strong>[0] 初期化</strong>: 各杭の杭頭反力 $P_i^{(0)}$ を、その杭が支える柱軸力 $P_{p_i}$ (引数 <code>initialPpi</code>) で初期化します。
+                    荷重ケースが <em>VL</em> なら常時軸力、<em>L1-1</em> 等なら該当ケースの杭反力。
+                </li>
+                <li>
+                    <strong>[1] 矩形荷重の生成</strong>: 各杭中心に荷重密度 $Q_{A,i} = P_i / A_i$ の正方形矩形を生成します。
+                    寸法 (一辺の長さ) の決定順:
+                    <ol type="a">
+                        <li>既存 <code>RectLoad</code> に <code>LinkedPileNo</code> が一致するエントリがあれば、その <code>DX</code> / <code>DY</code> を採用 (ユーザー編集の尊重)</li>
+                        <li>なければ <code>SoilPile.GroupPileLoadDia</code> の半径 $r$ から、円と等価面積の正方形 一辺 $= \sqrt{\pi}\,r$ を生成</li>
+                    </ol>
+                </li>
+                <li>
+                    <strong>[2] Steinbrenner で $S_1$</strong>: 群杭沈下用土層 (<code>pgs.SettlementSoilLayers</code>) に対して、
+                    全杭の矩形荷重重ね合わせから各杭中心位置の沈下 $S_{1,i}$ を算出します。多層 Steinbrenner の閉形式解を使用。
+                </li>
+                <li>
+                    <strong>[3] ばね剛性 $k_i = P_i / S_{1,i}$</strong>: 杭頭ばねの実効剛性。
+                    分母 $S_{1,i}$ が極小 (1E-9 未満) の場合や $P_i \le 0$ の場合は $k_{\max}$ に fallback。
+                    最後に $[k_{\min}, k_{\max}]$ にクランプ。既定 $k_{\min} = 1.0\!\times\!10^{3}$, $k_{\max} = 1.0\!\times\!10^{10}$ kN/m。
+                </li>
+                <li>
+                    <strong>[4] 線形ばね基礎梁モデルで $S_2$</strong>:
+                    <code>VerticalBeamModelling</code> を流用し (単杭沈下解析と同じ FEM)、
+                    各杭頭ばねの $K_e$ を <code>SetKe(0, 0, k_i, 0, 0, 0)</code> で直接書き換え。
+                    その上で各杭頭節点に下向き集中荷重 $P_{p_i}$ を作用させて線形連立方程式を 1 回解き、節点変位から $S_{2,i}$ を取得。
+                </li>
+                <li>
+                    <strong>[5] 収束判定</strong>:
+                    $\displaystyle \text{residual} = \frac{\max_i |S_{2,i} - S_{1,i}|}{\max(\max_i |S_{1,i}|,\,\max_i |S_{2,i}|)}$
+                    (沈下スケールで正規化した無限大ノルム)。
+                    既定 $\text{tol} = 1.0\times10^{-6}$、最大反復 100。
+                </li>
+                <li>
+                    <strong>[6] 次反復への更新</strong>: $P_i^{(\text{new})} = k_i \cdot S_{2,i}$ で杭頭反力を更新。
+                    これは「現在の弾性ばねでの基礎梁解析結果と整合する杭反力」を意味し、収束時に $P_i \cdot S_{1} \approx P_i \cdot S_{2}$ が成立。
+                </li>
+            </ol>
+
+            <h5 style="font-weight: bold;">収束時の物理的意味</h5>
             <p>
-                <strong>収束判定</strong>: <code>residual = max|S2 − S1| / max|S|</code> (全杭にわたる無限大ノルム)。
-                デフォルト許容値 <code>1.0E-6</code>、最大反復 <code>100</code>。
-            </p>
-            <p>
-                <strong>結果のコンタ</strong>: 反復計算は各杭頭でのみ収束判定するため、収束後に最終段階の収束矩形荷重 (杭反力 Pi) を入力に再度 Steinbrenner で土層グリッド全体を計算します。
-                コンタ凡例は「<strong>沈下量 (反復)</strong>」と表示されます。
-            </p>
-            <p>
-                <strong>反復ダイアログの表示</strong>:
+                反復が収束した時点で、各杭頭において以下が同時に成立します:
             </p>
             <ul>
-                <li><strong>杭結果テーブル</strong>: 杭No / X / Y / 荷重 Pp [kN] / 基礎反力 [kN] / ばね [kN/m] / <strong>沈下量 [mm]</strong> (最終ステップ S2)</li>
-                <li><strong>合計（平衡確認）</strong>: 荷重合計 ΣPp / 反力合計 ΣPi / 差 (ΣPi − ΣPp)、最大沈下・最小沈下も併記</li>
-                <li><strong>計算ログ</strong>: 各反復の avg S1 / avg S2 / max ΔS / residual を表示</li>
+                <li>Steinbrenner 沈下 $S_{1,i}$ = 基礎梁モデル沈下 $S_{2,i}$ (これが収束条件)</li>
+                <li>杭頭反力 $P_i$ = 基礎梁から受け取る反力 = 矩形荷重として地盤に作用する荷重</li>
+                <li>$P_i / S_i = k_i$ (弾性ばね定義と整合)</li>
+            </ul>
+            <p>
+                つまり、半無限地盤の沈下挙動 (Steinbrenner) と基礎梁の曲げ剛性 (FEM) が整合する杭頭反力 $P_i$ を求めたことになります。
+                単純な弾性床上の梁モデル ($k$ を経験式で与える) と異なり、$k_i$ も自洽的に決定されます。
+            </p>
+
+            <h5 style="font-weight: bold;">結果のコンタ</h5>
+            <p>
+                反復計算は<strong>各杭頭でのみ収束判定</strong>するため、グリッド全体の沈下分布は別途計算します。
+                収束後に最終段階の収束矩形荷重 $P_i$ を入力に再度 Steinbrenner で土層グリッド全体を計算してコンタを描画します。
+                コンタ凡例は「<strong>沈下量 (反復)</strong>」と表示されます。
+            </p>
+
+            <h5 style="font-weight: bold;">反復ダイアログの表示</h5>
+            <ul>
+                <li><strong>杭結果テーブル</strong>: 杭No / X / Y / 荷重 $P_{p_i}$ [kN] / 基礎反力 $P_i$ [kN] / ばね $k_i$ [kN/m] / <strong>沈下量 $S_{2,i}$ [mm]</strong></li>
+                <li><strong>合計（平衡確認）</strong>: 荷重合計 $\Sigma P_p$ / 反力合計 $\Sigma P_i$ / 差 ($\Sigma P_i - \Sigma P_p$)、最大沈下・最小沈下も併記</li>
+                <li><strong>計算ログ</strong>: 各反復の <code>avg S1</code> / <code>avg S2</code> / <code>max ΔS</code> / <code>residual</code> を表示</li>
             </ul>
 
             <h5 style="font-weight: bold;">一般入力の独立保持</h5>
             <p>
-                反復解析が成功すると、<code>pgs.RectLoads</code> は収束反力で書き換えられます。
+                反復解析が成功すると、<code>pgs.RectLoads</code> は収束反力 $P_i$ で書き換えられます。
                 ただし、解析（一般）モードのユーザー入力は内部スナップショットに保存されているため、
                 土層沈下 ▼ を「反復」→「一般」に戻すと <strong>原入力が自動復元</strong> されます。
                 その後「一般解析実行」を押せば、原入力 (例: 計算例5 では 500 / 816 / 1280 kN) で Steinbrenner が回り、反復とは異なる結果が得られます。
@@ -4121,7 +4856,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <strong>トースト通知 + 反復結果の自動破棄</strong> として扱います (「基礎梁の変更により、土層沈下解析（反復）の結果を破棄しました。」)。
             </p>
 
-            <h4 style="font-weight: bold;">ステータスバーの解析状態表示</h4>
+            <h5 style="font-weight: bold;">ステータスバーの解析状態表示</h5>
             <p>
                 画面下部のステータスバーには、<strong>完了した解析項目のみ</strong>「<strong>項目名 ✓</strong>」形式で並びます。
                 未実施項目は表示されず、すべて未実施の場合は「未解析」と表示されます。
@@ -4139,7 +4874,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 同じリボンボタンの大アイコン上のラベルも完了時に「<strong>... ✓</strong>」表記＋同色に切替わります（杭要素分割を含め全 6 項目で統一）。
             </p>
 
-            <h4><img class="heading-icon" src="icons/Play.svg" alt="">解析実行ボタンの前提条件チェック（自動灰色化）</h4>
+            <h5><img class="heading-icon" src="icons/Play.svg" alt="">解析実行ボタンの前提条件チェック（自動灰色化）</h5>
             <p>
                 解析実行系のボタンは、必要な入力や前段の解析が揃っていない場合に自動的に灰色化（非活性化）されます。
                 マウスを重ねると ToolTip で不足項目や前提が表示されるため、何が足りないかを確認できます。
@@ -4358,7 +5093,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <ul>
                 <li><strong>梁応力</strong>: 杭・梁要素のせん断力・曲げモーメント等のダイアグラム表示</li>
                 <li><strong>節点変位</strong>: 杭・地盤節点の変位ダイアグラム表示</li>
-                <li><strong>地盤反力</strong>: 水平地盤ばねの反力を矢印で表示（カラーバー付き）</li>
+                <li><strong>地盤反力（水平）</strong>: 各節点の水平地盤ばねが負担する反力 (kN) を矢印で表示（カラーバー付き）</li>
+                <li><strong>地盤反力（分布）</strong>: 節点反力を分担長で除した「単位長さ当たり反力」 (kN/m) を、グラフウィンドウと同様の分布形状で表示（カラーバー付き、並進反力のみ対応）</li>
                 <li><strong>杭頭Mマップ</strong>: 各杭の杭頭曲げモーメントを矢印で表示（カラーバー付き）</li>
                 <li><strong>杭頭Qマップ</strong>: 各杭の杭頭せん断力を矢印で表示（カラーバー付き）</li>
                 <li><strong>接合点Mマップ</strong>: 基礎梁接合点の曲げモーメントを矢印で表示</li>
@@ -4454,6 +5190,50 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 注: 通常の p-y ばね (水平 2 方向のみの剛性) では $M_X, M_Y, M_Z$ は基本的にゼロです。
                 鉛直 ($R_Z$) や回転モーメント反力 ($M_X, M_Y, M_Z$) が非ゼロとなるのは、回転剛性を持つ
                 ばね (土圧合力ばね・根入部ばね等) の節点に限られます。
+            </p>
+
+            <h5>地盤反力（分布）</h5>
+            <p>
+                節点反力を各節点の<strong>分担長 (m)</strong> で除した「単位長さ当たり反力」 (kN/m) を、
+                グラフウィンドウの「水平地盤反力グラフ」と同様の分布形状でメインビュー上に描画します。
+                解析結果(R) タブ → 「内容」ドロップダウンで <strong>「地盤反力（分布）」</strong> を選択すると有効になります。
+                並進反力 ($R_H$ / $R_X$ / $R_Y$ / $R_Z$) のみ対応し、モーメント成分 ($M_H$ 等) は $R_H$ にフォールバックします。
+            </p>
+            <table class="table-doc">
+                <caption style="text-align: center">分布反力 (kN/m) の計算</caption>
+                <thead>
+                    <tr><th>項目</th><th>計算式</th><th>備考</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>分担長 $L_t$</td>
+                        <td>$L_t = \displaystyle\sum_{\text{接続 FEM 梁}} \dfrac{L_\text{beam}}{2}$</td>
+                        <td>当該節点に接続する全 FEM 梁要素 (要素分割後の細分メッシュ) の物理長 $L_\text{beam} = \|\boldsymbol{r}_J - \boldsymbol{r}_I\|$ の半分を合計。
+                            $\text{HorizontalSoilReactionItem}$ が設定された梁のみを対象とし、根入部 RigidLink 等は除外。</td>
+                    </tr>
+                    <tr>
+                        <td>単位長さ反力 $r$</td>
+                        <td>$r = R / L_t$</td>
+                        <td>$R$ は当該節点の反力 ($R_X$ / $R_Y$ / $R_Z$ / $R_H$)。単位 = kN/m</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style="font-size: 0.95em; color: #555;">
+                <strong>分担長の取り方について</strong>:
+                旧実装 (および <code>MgtExporter</code>) は単一の <code>HorizontalSoilReactionItem.ZTop − ZBtm</code> の半分のみを採用していたため、
+                内部節点で上下 2 本の梁からの寄与が片方しか反映されないという問題がありました。
+                本実装 (<code>Common/SoilReactionUtil.GetNodeTributaryLength</code>) は、節点に接続するすべての FEM 梁要素の物理長を集計して
+                $(L_\text{上} + L_\text{下}) / 2$ を計算しているため、<strong>要素分割実施後も正確</strong>です。
+                Canvas (本機能)・テーブル出力 (<code>SoilSpringForceRow</code> の <code>$F_x$/$L_t$</code> 等)・グラフウィンドウ (水平地盤反力グラフ) の 3 箇所で
+                同じロジックを用いて整合させています (グラフは内部的に分割後の <code>SoilPile.HorizontalSoilReactions</code> を順走査するため、
+                個々のセグメント長は実梁長と等価)。
+            </p>
+            <p style="font-size: 0.95em; color: #555;">
+                描画は、各節点位置で杭軸から外側方向に $r$ に比例した長さの梯子線を引き、
+                同一杭上で隣接ばねの先端を線で結んで分布の外輪を形成します。
+                カラーバーは kN/m 単位で最大/最小を表示します。
+                MGT 出力 (Midas Gen) や p-y 曲線の単位 (kN/m²) とは異なり、ここでは
+                <strong>分担長で除した kN/m 表示</strong> です (杭径 $B$ ではない)。
             </p>
 
             <h5>軸力・荷重</h5>
@@ -4929,6 +5709,160 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 </tbody>
             </table>
 
+            <h4><img class="heading-icon" src="icons/DocxFileOutput.svg" alt="">計算書出力 (Docx 出力)</h4>
+            <p>
+                リボン「ツール」タブ→「計算書」グループ→「<strong>Docx 出力</strong>」ボタンで、
+                計算書出力設定ウィンドウを開き、検討内容を Microsoft Word 形式 (.docx) のレポートとして出力します。
+                解析未完了の項目（水平解析が未実行など）に依存するチェックボックスは自動的に無効化されるため、現状で出力可能なものだけが選択候補となります。
+            </p>
+
+            <h5>ウィンドウ構成</h5>
+            <p>設定ウィンドウは左右 2 カラム構成で、左側で出力対象の荷重ケース・組合せを、右側で出力する章節と図表を選択します。</p>
+
+            <h6>左カラム — 荷重ケース／組合せの絞り込み</h6>
+            <ul>
+                <li><strong>荷重ケース レベル1 / レベル2</strong>:
+                    現在のモデルに登録されている荷重ケースが一覧表示されます。チェックされたケースのみが計算書中の入力データ表・解析結果表に含まれます。</li>
+                <li><strong>荷重組合せ</strong>:
+                    定義済みの荷重組合せから、計算書に含めるものを選択します。</li>
+                <li><strong>液状化</strong>:
+                    「液状化あり」「液状化なし」のいずれを計算書に出力するかを選びます (両方 ON も可)。</li>
+                <li><strong>計算書レベル</strong>:
+                    詳細レベルを選択します。例: 簡易出力にすると要素ごとの応力テーブルは省略し、サマリのみ出力します。</li>
+            </ul>
+
+            <h6>右カラム — 章節・図表の選択</h6>
+            <p>以下のグループ単位で出力項目を ON/OFF できます。チェックすると対応する章 (および図・表) が計算書に追加されます。</p>
+            <ul>
+                <li><strong>入力データ</strong>:
+                    基本設定、荷重条件、杭体諸元、杭配置テーブル、杭軸力、前後方杭設定、検討方針、地盤情報、液状化検討、杭配置図、杭軸力図、前方／後方杭設定図</li>
+                <li><strong>地盤グラフ</strong>:
+                    N 値分布、粘着力 C<sub>u</sub>、S 波速度 V<sub>s</sub>、変形係数 E<sub>s</sub>、液状化安全率 F<sub>L</sub>、任意地盤変位、応答スペクトル</li>
+                <li><strong>杭の図・諸元</strong>:
+                    杭姿図 (杭体ごと、地盤オーバーレイ付き)、杭断面図 (配筋詳細)、杭頭上面図、杭頭諸元テーブル、軸力制限テーブル (N<sub>st</sub>/N<sub>sc</sub>/N<sub>dt</sub>/N<sub>dc</sub>/N<sub>ut</sub>/N<sub>uc</sub>)</li>
+                <li><strong>支持力</strong>: 鉛直支持力検討</li>
+                <li><strong>水平検討</strong>:
+                    水平検討、M-φ／M-θ／N-M／N-Q 関係 (限界状態線重ね描画オプション付き)、応力テーブル (曲げモーメント列／せん断力列／限界状態線)、杭頭 M／杭頭 Q マップ、解析サマリーレポート (収束結果)、検定 NG ケース一覧</li>
+                <li><strong>沈下検討</strong>:
+                    沈下検討、荷重沈下曲線、群杭沈下マップ、基礎梁考慮鉛直解析結果</li>
+            </ul>
+
+            <h5>操作手順</h5>
+            <ol>
+                <li>リボン「ツール」→「Docx 出力」を選択し、設定ウィンドウを開きます。</li>
+                <li>左カラムで対象とする荷重ケース・組合せ・液状化条件を絞り込みます。</li>
+                <li>右カラムで出力したい章節 (チェックボックス) を選択します。前回の出力設定はファイルに保持されません (アプリ起動時にデフォルト値で開きます)。</li>
+                <li>下端の「<strong>計算書作成</strong>」ボタンで保存ダイアログを開き、出力先の .docx ファイル名を指定します。</li>
+                <li>処理進捗ウィンドウが表示され、完了後にメッセージが出ます。</li>
+            </ol>
+
+            <h5>留意事項</h5>
+            <ul>
+                <li>水平解析が完了していない場合は「水平検討」グループの大半が自動で無効化されます。沈下解析未完了時も同様 (「沈下検討」グループ)。</li>
+                <li>画像 (グラフ・配筋図など) は <strong>HiResScale = 2.0</strong> 相当の解像度で埋め込まれており、Word 上で拡大表示しても潰れにくい設定です。</li>
+                <li>キャプション (「図 X-Y」「表 X-Y」) は章・節単位で自動採番されます。</li>
+                <li>多数の杭体・荷重ケース・組合せを ON にすると、生成時間と docx ファイルサイズが急増します。確認用には荷重ケースを 1〜2 個に絞ると高速です。</li>
+            </ul>
+
+            <h4><img class="heading-icon" src="icons/ChangPile.svg" alt="">Chang 計算 (一様地盤中の長い杭の状態計算)</h4>
+            <p>
+                リボン「ツール」タブ→「サブプログラム」グループ→「<strong>Chang</strong>」ボタンで、
+                Chang の式による一様地盤中の長い杭の横抵抗計算を行うサブプログラムウィンドウを開きます。
+                杭の非線形性は非考慮、地盤は変位 1&nbsp;mm 以上で非線形性 H を考慮します (塑性地盤反力 p<sub>y</sub> は非考慮)。
+                計算式の詳細は <span class="xref"><a href="#chang-uniform-ground">第2部 第2章 杭の水平抵抗 — 一様地盤中の杭の横抵抗計算</a></span> を参照してください。
+            </p>
+
+            <h5>ウィンドウ構成</h5>
+            <p>ウィンドウは上部の入力ヘッダ部 (2 セクション) と、下部のドッキング可能な作業領域 (3 タブ + グラフペイン) から成ります。</p>
+
+            <h6>上部ヘッダ</h6>
+            <ul>
+                <li><strong>全体水平力による解析</strong>:
+                    全体水平力 (kN) を入力し「解析実行」ボタンで一括解析します。
+                    複数の杭地盤セット配置がある場合、全体水平力を後述の「分担係数 α<sub>r</sub>」で配分して各杭の解析を行います。</li>
+                <li><strong>全体モデルからの読み込み</strong>:
+                    本体側の解析モデルから荷重条件・上部基礎組合せを選択し、「読み込み」ボタンで Chang 入力に転送します。
+                    「液状化あり」チェックで液状化考慮の地盤定数を読み込みます。
+                    また保存 (📁) / 読込 (📂) ボタンで Chang 入力単独を JSON ファイルに退避・復元できます。</li>
+            </ul>
+
+            <h6>「杭地盤セット定義」タブ</h6>
+            <p>EI と K<sub>H0</sub> の計算式が左側に表示され、右側のテーブルで杭ごとに入力します。</p>
+            <ul>
+                <li><strong>EI</strong>: 鋼板部の <em>E<sub>s</sub> (B<sup>4</sup>-(B-2t<sub>s</sub>)<sup>4</sup>)</em> とコンクリート部の <em>E<sub>c</sub> ((B-2t<sub>s</sub>)<sup>4</sup>-(B-2t)<sup>4</sup>) × π/64</em> の合計</li>
+                <li><strong>E<sub>c</sub></strong>: F<sub>c</sub> ≧ 85 のとき 40,000、それ未満で 33,500&times;(γ<sub>c</sub>/24)<sup>2</sup>&times;(F<sub>c</sub>/60)<sup>−1/3</sup></li>
+                <li><strong>k<sub>h0</sub></strong>: α &middot; ξ &middot; E<sub>0</sub> &middot; (B/B<sub>0</sub>)<sup>−3/4</sup></li>
+                <li>列項目: 外径 B (mm)、中空部チェック、総肉厚 t (mm)、鋼板厚 t<sub>s</sub> (mm)、鋼板ヤング率 E<sub>s</sub> (N/mm<sup>2</sup>、既定 205,000)、コンクリート基準強度 F<sub>c</sub>、コンクリート密度 γ<sub>c</sub>、コンクリートヤング率 E<sub>c</sub>、曲げ剛性 EI (kNm<sup>2</sup>、自動計算または手動上書き)</li>
+            </ul>
+
+            <h6>「杭地盤セット配置」タブ</h6>
+            <p>定義した杭地盤セットを実際の配置 (1 ケース＝1 杭) に展開します。「杭地盤セット配置追加」ボタンで行を追加し、各行で以下を設定します。</p>
+            <ul>
+                <li><strong>使用する杭地盤セット</strong> (定義タブの行への参照)</li>
+                <li><strong>杭頭境界条件</strong>: 自由 / 固定 / 半固定 (α<sub>r</sub>)</li>
+                <li><strong>地盤定数</strong>: 水平地盤反力係数 k<sub>h</sub> (kN/m<sup>3</sup>)、地盤変形係数 E<sub>0</sub>、係数 α・ξ</li>
+                <li><strong>分担水平力</strong>: 各杭が受け持つ水平力 (全体水平力 ÷ 杭本数で配分)</li>
+            </ul>
+
+            <h6>結果表示 — グラフペイン (右側)</h6>
+            <p>解析後、右側ペインに以下のタブが表示されます。横軸が値、縦軸が GL 基準深さ (m、下向き正)。</p>
+            <ul>
+                <li><strong>曲げモーメント</strong> (kNm)</li>
+                <li><strong>せん断力</strong> (kN)</li>
+                <li><strong>変位</strong> (mm)</li>
+            </ul>
+
+            <h5>操作手順</h5>
+            <ol>
+                <li>リボン「ツール」→「Chang」でサブプログラムを起動します。</li>
+                <li>本体側で水平解析を行っている場合: 上部「全体モデルからの読み込み」で荷重条件・組合せを選び「読み込み」をクリックすると、杭地盤セットと配置が自動構成されます。</li>
+                <li>個別入力の場合: 「杭地盤セット定義」タブで杭種を追加し、「杭地盤セット配置」タブで杭ごとの配置・境界条件を設定します。</li>
+                <li>上部「全体水平力 (kN)」に値を入力し、「解析実行」ボタンで計算を実行します。</li>
+                <li>右側のグラフタブで曲げモーメント・せん断力・変位を確認します。</li>
+                <li>必要に応じて 📁 (保存) ボタンで Chang 入力を JSON ファイルに退避できます。</li>
+            </ol>
+
+            <h5>留意事項</h5>
+            <ul>
+                <li>Chang サブプログラムは本体モデルとは独立したスタンドアロン計算で、結果は本体側に書き戻されません。本体側の正式な水平解析は別途実行する必要があります (リボン「解析」タブ)。</li>
+                <li>長い杭の仮定 (βL &geq; 3) が成立しない短い杭では結果が大きく誤差を含みます。短い杭の場合は本体側の FEM 解析を使用してください。</li>
+                <li>地盤は均質 (1 層) と仮定するため、多層地盤を扱う場合は代表値で平均化するか、本体側の解析を使用してください。</li>
+            </ul>
+
+            <h4><img class="heading-icon" src="icons/PileSectionLibrary.svg" alt="">杭断面ライブラリ</h4>
+            <p>
+                リボン「ツール」タブ→「ライブラリ」グループ→「<strong>杭断面ライブラリ</strong>」ボタンで、
+                既製杭の断面性能データベースを参照する読み取り専用ウィンドウを開きます。
+                杭設計時に PHC / PRC / SC / 鋼管杭の標準寸法・許容応力度などを確認する用途に使用します。
+            </p>
+
+            <h5>ウィンドウ構成</h5>
+            <p>ウィンドウ上部にタブが並び、各タブが 1 つの杭種データベース (CSV ファイル) に対応します。</p>
+            <ul>
+                <li><strong>pile_library_PHC.csv</strong>: プレストレストコンクリート (PHC) 杭。径 &times; 厚 &times; 仕様 (A/B/C) ごとの諸元</li>
+                <li><strong>pile_library_PRC.csv</strong>: プレキャスト鉄筋コンクリート (PRC) 杭</li>
+                <li><strong>pile_library_SC.csv</strong>: 鋼管コンクリート (SC) 杭</li>
+                <li><strong>pile_library_SteelPile.csv</strong>: 鋼管杭 (JIS G 3444 など)</li>
+            </ul>
+            <p>
+                データソースは <code>Graphics_r1/Models/PileLibrary/</code> 配下の CSV ファイルです。
+                各タブには CSV のヘッダがそのまま列名として表示され、数値列は右揃えで表示されます。
+            </p>
+
+            <h5>操作</h5>
+            <ul>
+                <li><strong>セル/行の選択</strong>: 通常の DataGrid と同様に、クリック/Ctrl+クリック/Shift+クリックで選択範囲を変えられます。</li>
+                <li><strong>クリップボードへのコピー</strong>: <strong>Ctrl+C</strong> で選択範囲をヘッダ付きでコピーできます (Excel 等に貼り付け可能)。</li>
+                <li><strong>編集不可</strong>: ライブラリは読み取り専用で、編集はできません。仕様変更が必要な場合は CSV ファイルを直接編集してください (アプリ再起動で反映)。</li>
+            </ul>
+
+            <h5>留意事項</h5>
+            <ul>
+                <li>このウィンドウは閲覧専用です。杭体ウィンドウや杭断面ウィンドウなど、実際にモデルへ反映する入力は別途行ってください。</li>
+                <li>ライブラリ CSV は標準的な JIS 製品データを収録していますが、すべてのメーカ製品を網羅しているわけではありません。特殊製品や工法独自の仕様は、メーカ資料を別途参照のうえ手入力してください。</li>
+                <li>ライブラリにない径・仕様の杭を扱う場合、杭体ウィンドウで直接諸元を入力できます。</li>
+            </ul>
+
             <h4>3Dモデルエクスポート</h4>
             <p>
                 リボン「ツール」タブ→「エクスポート」グループから、杭基礎モデルを各種3Dファイル形式でエクスポートできます。
@@ -4937,7 +5871,6 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <h5><img class="heading-icon" src="icons/dxf.png" alt="">DXF（3Dモデル）エクスポート</h5>
             <p>
                 リボン「ツール」タブ→「エクスポート」グループ→「DXF (3D)」ボタンで、杭・基礎梁・通り心・寸法線を含む 3D DXF ファイルを出力します。
-                AutoCADやBricsCADなどのCADソフトで開くことができます。
             </p>
             <ul>
                 <li><strong>杭</strong>: 杭体形状（円筒）、拡底部・拡大根固め部</li>
@@ -5046,7 +5979,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <tr><td><img class="button-icon" src="icons/MiniMapVisible.svg" alt=""></td><td>ミニマップ</td><td>右下ミニマップパネルの表示/非表示</td></tr>
                     <tr><td rowspan="2">3Dビュー</td><td><img class="button-icon" src="icons/ViewCubeVisible.svg" alt=""></td><td>ビューキューブ</td><td>ビューキューブの表示/非表示</td></tr>
                     <tr><td><img class="button-icon" src="icons/ToolVisible.svg" alt=""></td><td>ツール</td><td>右側ツールボタン群の表示/非表示</td></tr>
-                    <tr><td>説明用</td><td>—</td><td>INPUT 表示</td><td>マウス・キーボード入力状態のリアルタイム表示。半透明グラスフィルムのフローティング小ウィンドウとして常時前面に表示され、ドラッグで移動可・本体はクリックスルー（下のキャンバスにクリックが伝わる）。アプリ内のすべてのウィンドウ (水平解析・沈下解析・ダイアログ等) からの入力を自動キャプチャ。プレゼン・操作説明用</td></tr>
+                    <tr><td>説明用</td><td><img class="button-icon" src="icons/Mouse.svg" alt=""></td><td>INPUT 表示</td><td>マウス・キーボード入力状態のリアルタイム表示。半透明グラスフィルムのフローティング小ウィンドウとして常時前面に表示され、ドラッグで移動可・本体はクリックスルー（下のキャンバスにクリックが伝わる）。アプリ内のすべてのウィンドウ (水平解析・沈下解析・ダイアログ等) からの入力を自動キャプチャ。プレゼン・操作説明用</td></tr>
                 </tbody>
             </table>
 
@@ -5152,7 +6085,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h3 id="legacy-pile-tab" style="font-weight: bold;">「杭」</h3>
             <p>
-                左側ペインの「杭」タブをクリックして開くタブパネルで、内容を入力します。
+                データタブの「杭」タブをクリックして開くタブパネルで、内容を入力します。
                 「杭」タブの直下には、「配置」、「軸力」、「前後方杭」タブがあります。
             </p>
             <h4>「配置」</h4>
@@ -5337,22 +6270,22 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     </tr>
                     <tr>
                         <td>方向1</td>
-                        <td>荷重ケース1-1、2-1の場合</td>
+                        <td>荷重ケースL1-1、L2-1の場合</td>
                         <th style="text-align: center">✓</th>
                     </tr>
                     <tr>
                         <td>方向2</td>
-                        <td>荷重ケース1-2、2-2の場合</td>
+                        <td>荷重ケースL1-2、L2-2の場合</td>
                         <th style="text-align: center">✓</th>
                     </tr>
                     <tr>
                         <td>方向3</td>
-                        <td>荷重ケース1-3、2-3の場合</td>
+                        <td>荷重ケースL1-3、L2-3の場合</td>
                         <th style="text-align: center">✓</th>
                     </tr>
                     <tr>
                         <td>方向4</td>
-                        <td>荷重ケース1-4、2-4の場合</td>
+                        <td>荷重ケースL1-4、L2-4の場合</td>
                         <th style="text-align: center">✓</th>
                     </tr>
 
@@ -5449,7 +6382,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h3 id="legacy-general-node-tab" style="font-weight: bold;">「一般節点」</h3>
             <p>
-                左側ペインの「一般節点」タブをクリックして開くタブパネルで、一般節点を管理します。<br>
+                データタブの「一般節点」タブをクリックして開くタブパネルで、一般節点を管理します。<br>
                 一般節点は、杭頭節点以外の位置に梁要素の端点を定義するために使用します。2本の基礎梁の交差点を作るためにもつかわれます。
             </p>
             <p><img class="button-icon" src="icons/AddGeneralNode.svg" alt="">「一般節点追加」ボタンをクリックすると、新しい一般節点が追加されます。</p>
@@ -5508,7 +6441,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h3 id="legacy-beam-element-tab" style="font-weight: bold;">「一般梁要素」</h3>
             <p>
-                左側ペインの「一般梁要素」タブをクリックして開くタブパネルで、梁要素を管理します。<br>
+                データタブの「一般梁要素」タブをクリックして開くタブパネルで、梁要素を管理します。<br>
                 「一般梁要素」タブの直下には、「材料」、「断面」、「梁要素」タブがあります。
             </p>
 
@@ -5762,8 +6695,132 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 該当ケースが無ければコンタは消去されます。
             </p>
 
-            <h4>荷重</h4>
+            <h4>土層</h4>
+            <p>
+                沈下検討用の成層地盤を定義します。群杭検討では、深い範囲の土層データが必要です。<br>
 
+                基礎指針'19、5.3節　沈下、2.沈下計算の対象となる地盤の範囲では、「深部に軟弱な地層がなければ、
+                沈下計算の対象深度は、採荷面から下方に概ね$\sqrt{A}$の2倍の範囲とすればよい」とあります。
+            </p>
+
+            <h5>土層上端 Z（ボーリング孔口レベル）と荷重面 Z の関係</h5>
+            <p>
+                土層タブの先頭で <strong>土層上端 Z</strong>(ボーリング孔口レベル相当) を、解析（一般）/ 解析（反復）の各サブタブで <strong>荷重面 Z</strong> を、それぞれ独立に入力します。
+                データグリッドの各層厚さは「土層上端 Z 基準」で自動算出されます (第 1 層厚さ = 土層上端 Z − 第 1 層下端 Z、以降は前層下端からの差)。
+            </p>
+            <p>
+                各テキストボックスの右側には <strong>標高 (m)</strong>（= Z + 基本設定の Z=0 標高）が編集不可で表示されます。
+                土層データグリッドにも「下端標高」列があります。
+            </p>
+            <p>
+                <strong>解析実行条件</strong>
+            </p>
+            <ul>
+                <li>土層が 1 層以上必要</li>
+                <li>荷重面 Z &gt; 土層上端 Z の場合、エラーメッセージを表示して解析をキャンセル</li>
+                <li>荷重面 Z &lt; 最下層下端 Z の場合、エラーメッセージを表示して解析をキャンセル</li>
+                <li>荷重面 Z が土層上端と最下層下端の間にある場合、荷重面が属する層を荷重面で切り詰めた仮想最上層を作り、その下の層と合わせて多層地盤として解析を実行します（元の土層データは変更されません）</li>
+            </ul>
+            <p>
+                土層下端 Z は降順（深くなる方向）に並ぶ必要があります。下端 Z を編集して上の層と等しいまたは大きい値にした場合、入力エラーで戻されます。
+            </p>
+
+            <h5>登録済み土層のコピー</h5>
+            <p>
+                既に「地盤」入力ウィンドウで登録済みの地盤データから、沈下計算用の土層仮値を一括取り込みできます。
+                コンボボックスで対象の地盤番号を選び、<img class="button-icon" src="icons/CopySoilLayer.svg" alt="">「コピー実行」ボタンをクリックします。
+            </p>
+            <p>
+                取り込まれる項目は以下の通りです:
+            </p>
+            <ul>
+                <li>各層の <strong>下端 Z</strong>（地盤の土層境界 Z をそのまま使用）</li>
+                <li><strong>変形係数 $E_{sk}$</strong>: 地盤層の <em>$E_{s0}$</em>（初期変形係数）の値が代入されます</li>
+                <li>
+                    <strong>ポアソン比 $\nu_{sk}$</strong>: 地盤層の土質分類に応じた仮値が代入されます
+                    <ul>
+                        <li>粘性土: 0.4</li>
+                        <li>砂質土: 0.3</li>
+                        <li>礫質土: 0.3</li>
+                    </ul>
+                </li>
+                <li><strong>備考</strong> 列に「$E_{s0}=\cdots$ / $\nu_s=\cdots$」形式で元値が自動記入されます</li>
+            </ul>
+            <p style="font-size: 0.92em; color: #555;">
+                ※ コピーされる値はあくまで仮値です。沈下計算用の変形係数・ポアソン比は基礎指針'19 p146〜149 等を参照してご確認ください。また、沈下計算に必要な深さまで土層を追加してください。
+            </p>
+
+            <h5>土層の追加・削除</h5>
+            <p><img class="button-icon" src="icons/AddSettlementSoilLayer.svg" alt="">「土層追加」ボタンをクリックすると、データグリッド末尾に新しい土層が 1 行追加されます。下端 Z は前層 (最下層) からデフォルト深さ分だけ深い値で初期化されるため、必要に応じて編集してください。</p>
+            <p><img class="button-icon" src="icons/DeleteAllSettlementSoilLayers.svg" alt="">「全土層削除」ボタンをクリックすると、登録済みの土層をすべて一括削除します。地盤データから再度コピーし直したい場合や、土層構成を最初からやり直したい場合に使用します。</p>
+
+            <table class="table-doc">
+                <caption style="text-align: center">土層沈下用土層入力データグリッド</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">項目</th>
+                        <th style="text-align: center">説明</th>
+                        <th style="text-align: center">編集可否</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>下端 Z (m)</td>
+                        <td>土層下端のローカル Z 座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>下端標高 (m)</td>
+                        <td>下端 Z + Z=0 標高（基本設定）の絶対標高表示</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>厚さ (m)</td>
+                        <td>土層厚さ（土層上端 Z 基準で自動算出）</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>変形係数 Esk (kN/m<sup>2</sup>)</td>
+                        <td>沈下計算用の変形係数。地盤コピー実行時は地盤層の <em>Es0</em>（初期変形係数）が代入されます</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>ポアソン比 ν<sub>sk</sub></td>
+                        <td>土層のポアソン比。地盤コピー実行時は地盤層の <em>νs</em> が代入されます</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>分類</td>
+                        <td>粒度区分 (粘性土 / 砂質土 / 礫質土)。メイン画面の「群杭沈下用土層」(水平視) の塗りつぶし色を決めます。地盤コピー実行時は地盤層の分類が引き継がれます</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>備考</td>
+                        <td>地盤コピー実行時、元地盤層の <em>Es0</em> と <em>νs</em> が「Es0=… / νs=…」形式で自動記入される自由記入欄</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>「分類」列の値はメイン画面ビューでの塗りつぶし色に反映されます (粘性土=ベージュ、砂質土=オレンジ、礫質土=緑、未指定=薄青/紫/黄を順番に巡回)。</p>
+
+            <h4>グリッド</h4>
+            <p>
+                グリッドの各交点で、沈下量を計算します。<br>
+
+                杭配置のうち最小、最大のX座標およびY座標で囲まれる長方形範囲を、それぞれX方向、Y方向に外側に指定した距離オフセットした範囲を対象とし、
+                およそ指定した間隔でグリッドを作成します。<br>
+                間隔は、通り心がある場合は、自動的に通り心を含むように調整されます。
+            </p>
+
+            <h4>解析（一般）</h4>
+            <p>
+                基礎梁を考慮しない通常の Steinbrenner 近似式による土層沈下解析です。
+                サブタブ上部で <strong>荷重面 Z</strong> と <strong>矩形荷重</strong> を入力し、下部の<img class="button-icon" src="icons/Play.svg" alt="">「<strong>一般解析実行</strong>」ボタン (= リボンの「土層沈下解析（一般）」F8 と同等) で実行します。
+                解析完了後、コンタ凡例は「<strong>沈下量 (一般)</strong>」と表示されます。詳細手順は <a href="#section-ribbon-analysis">解析条件/解析メニュー</a> の「土層沈下解析（一般）」を参照。
+            </p>
+
+            <h5>荷重定義</h5>
             <p>矩形荷重を定義します。</p>
             <p>荷重タイプコンボボックスで、<img class="button-icon" src="icons/AnyFormPressure.svg" alt="">「任意矩形」、<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「個別十字」、<img class="button-icon" src="icons/BeamedCrossFormPressure.svg" alt="">「個別十字（基礎梁反力）」のいずれかを選択します。</p>
             <p>
@@ -5927,135 +6984,38 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li>基礎梁考慮鉛直解析の結果をクリアしたり未実行に戻すと、この選択肢は自動的にコンボボックスから消え、選択中だった場合は<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「個別十字」にフォールバックします。</li>
             </ul>
 
-
-
-            <h4>グリッド</h4>
+            <h5>一般解析実行と結果表示</h5>
             <p>
-                グリッドの各交点で、沈下量を計算します。<br>
-
-                杭配置のうち最小、最大のX座標およびY座標で囲まれる長方形範囲を、それぞれX方向、Y方向に外側に指定した距離オフセットした範囲を対象とし、
-                およそ指定した間隔でグリッドを作成します。<br>
-                間隔は、通り心がある場合は、自動的に通り心を含むように調整されます。
+                <img class="button-icon" src="icons/Play.svg" alt="">「<strong>一般解析実行</strong>」ボタン (リボンの <img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">「土層沈下解析（一般）」F8 と同等) で解析を実行します。
+                完了後、コンタ凡例は「<strong>沈下量 (一般)</strong>」と表示され、各杭位置での沈下量はグリッド計算結果テーブルに表示されます。
             </p>
 
-            <h4>土層</h4>
+            <h4>解析（反復）</h4>
+            <div class="warning" style="background:#FFFAEB; border:1px solid #E0A030; padding:8px 12px; margin:8px 0; color:#8A4500;">
+                ⚠ <strong>解析（反復）</strong>は、基礎指針'19 図5.3.2 連続梁・格子梁モデルによる沈下量の算定例の方法です。
+                <strong>杭基礎の計算では使いません。</strong>
+            </div>
             <p>
-                沈下検討用の成層地盤を定義します。群杭検討では、深い範囲の土層データが必要です。<br>
-
-                基礎指針'19、5.3節　沈下、2.沈下計算の対象となる地盤の範囲では、「深部に軟弱な地層がなければ、
-                沈下計算の対象深度は、採荷面から下方に概ね$\sqrt{A}$の2倍の範囲とすればよい」とあります。
-            </p>
-
-            <h5>土層上端 Z（ボーリング孔口レベル）と荷重面 Z の関係</h5>
-            <p>
-                土層タブの先頭で <strong>土層上端 Z</strong>（ボーリング孔口レベル相当）を、荷重タブの先頭で <strong>荷重面 Z</strong> を、それぞれ独立に入力します。
-                データグリッドの各層厚さは「土層上端 Z 基準」で自動算出されます（第 1 層厚さ = 土層上端 Z − 第 1 層下端 Z、以降は前層下端からの差）。
+                基礎梁の剛性を考慮した <strong>反復 Steinbrenner 解析</strong>です。
+                Picard 反復で杭頭ばね剛性 $k_i$ と杭頭反力 $P_i$ を交互に更新し、Steinbrenner 沈下 $S_1$ と基礎梁モデル沈下 $S_2$ が一致する状態に収束させます。
+                基礎梁が 1 件以上定義されているときのみ利用可能です。
             </p>
             <p>
-                各テキストボックスの右側には <strong>標高 (m)</strong>（= Z + 基本設定の Z=0 標高）が編集不可で表示されます。
-                土層データグリッドにも「下端標高」列があります。
+                サブタブ上部で <strong>荷重面 Z</strong> を入力し、下部の<img class="button-icon" src="icons/Play.svg" alt="">「<strong>反復解析実行</strong>」ボタンで起動します
+                (リボンの <img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">「土層沈下解析（反復）」と同等)。
+                解析完了後、コンタ凡例は「<strong>沈下量 (反復)</strong>」と表示されます。
             </p>
             <p>
-                <strong>解析実行条件</strong>
+                アルゴリズムの詳細 (Picard 反復のフローチャート、各ステップ $P_i \to S_1 \to k_i \to S_2 \to P_i$、収束判定式、$k_i$ のクランプ、結果ダイアログの構成、一般入力の独立保持と解析条件変更時の警告) は
+                <a href="#section-ribbon-analysis">解析条件/解析メニュー</a> の「土層沈下解析（反復）」を参照してください。
             </p>
-            <ul>
-                <li>土層が 1 層以上必要</li>
-                <li>荷重面 Z &gt; 土層上端 Z の場合、エラーメッセージを表示して解析をキャンセル</li>
-                <li>荷重面 Z &lt; 最下層下端 Z の場合、エラーメッセージを表示して解析をキャンセル</li>
-                <li>荷重面 Z が土層上端と最下層下端の間にある場合、荷重面が属する層を荷重面で切り詰めた仮想最上層を作り、その下の層と合わせて多層地盤として解析を実行します（元の土層データは変更されません）</li>
-            </ul>
-            <p>
-                土層下端 Z は降順（深くなる方向）に並ぶ必要があります。下端 Z を編集して上の層と等しいまたは大きい値にした場合、入力エラーで戻されます。
-            </p>
-
-            <h5>登録済み土層のコピー</h5>
-            <p>
-                既に「地盤」入力ウィンドウで登録済みの地盤データから、沈下計算用の土層仮値を一括取り込みできます。
-                コンボボックスで対象の地盤番号を選び、<img class="button-icon" src="icons/CopySoilLayer.svg" alt="">「コピー実行」ボタンをクリックします。
-            </p>
-            <p>
-                取り込まれる項目は以下の通りです:
-            </p>
-            <ul>
-                <li>各層の <strong>下端 Z</strong>（地盤の土層境界 Z をそのまま使用）</li>
-                <li><strong>変形係数 $E_{sk}$</strong>: 地盤層の <em>$E_{s0}$</em>（初期変形係数）の値が代入されます</li>
-                <li>
-                    <strong>ポアソン比 $\nu_{sk}$</strong>: 地盤層の土質分類に応じた仮値が代入されます
-                    <ul>
-                        <li>粘性土: 0.4</li>
-                        <li>砂質土: 0.3</li>
-                        <li>礫質土: 0.3</li>
-                    </ul>
-                </li>
-                <li><strong>備考</strong> 列に「$E_{s0}=\cdots$ / $\nu_s=\cdots$」形式で元値が自動記入されます</li>
-            </ul>
-            <p style="font-size: 0.92em; color: #555;">
-                ※ コピーされる値はあくまで仮値です。沈下計算用の変形係数・ポアソン比は基礎指針'19 p146〜149 等を参照してご確認ください。また、沈下計算に必要な深さまで土層を追加してください。
-            </p>
-
-            <h5>土層の追加・削除</h5>
-            <p><img class="button-icon" src="icons/AddSettlementSoilLayer.svg" alt="">「土層追加」ボタンをクリックすると、データグリッド末尾に新しい土層が 1 行追加されます。下端 Z は前層 (最下層) からデフォルト深さ分だけ深い値で初期化されるため、必要に応じて編集してください。</p>
-            <p><img class="button-icon" src="icons/DeleteAllSettlementSoilLayers.svg" alt="">「全土層削除」ボタンをクリックすると、登録済みの土層をすべて一括削除します。地盤データから再度コピーし直したい場合や、土層構成を最初からやり直したい場合に使用します。</p>
-
-            <table class="table-doc">
-                <caption style="text-align: center">土層沈下用土層入力データグリッド</caption>
-                <thead>
-                    <tr>
-                        <th style="text-align: center">項目</th>
-                        <th style="text-align: center">説明</th>
-                        <th style="text-align: center">編集可否</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>下端 Z (m)</td>
-                        <td>土層下端のローカル Z 座標</td>
-                        <th style="text-align: center">✓</th>
-                    </tr>
-                    <tr>
-                        <td>下端標高 (m)</td>
-                        <td>下端 Z + Z=0 標高（基本設定）の絶対標高表示</td>
-                        <td style="text-align: center">✗</td>
-                    </tr>
-                    <tr>
-                        <td>厚さ (m)</td>
-                        <td>土層厚さ（土層上端 Z 基準で自動算出）</td>
-                        <td style="text-align: center">✗</td>
-                    </tr>
-                    <tr>
-                        <td>変形係数 Esk (kN/m<sup>2</sup>)</td>
-                        <td>沈下計算用の変形係数。地盤コピー実行時は地盤層の <em>Es0</em>（初期変形係数）が代入されます</td>
-                        <th style="text-align: center">✓</th>
-                    </tr>
-                    <tr>
-                        <td>ポアソン比 ν<sub>sk</sub></td>
-                        <td>土層のポアソン比。地盤コピー実行時は地盤層の <em>νs</em> が代入されます</td>
-                        <th style="text-align: center">✓</th>
-                    </tr>
-                    <tr>
-                        <td>分類</td>
-                        <td>粒度区分 (粘性土 / 砂質土 / 礫質土)。メイン画面の「群杭沈下用土層」(水平視) の塗りつぶし色を決めます。地盤コピー実行時は地盤層の分類が引き継がれます</td>
-                        <th style="text-align: center">✓</th>
-                    </tr>
-                    <tr>
-                        <td>備考</td>
-                        <td>地盤コピー実行時、元地盤層の <em>Es0</em> と <em>νs</em> が「Es0=… / νs=…」形式で自動記入される自由記入欄</td>
-                        <th style="text-align: center">✓</th>
-                    </tr>
-                </tbody>
-            </table>
-
-            <p>「分類」列の値はメイン画面ビューでの塗りつぶし色に反映されます (粘性土=ベージュ、砂質土=オレンジ、礫質土=緑、未指定=薄青/紫/黄を順番に巡回)。</p>
-
-            <h4>沈下量</h4>
-            <p>計算結果を表形式で表示します。</p>
         </section>
         <section id="new-features">
             <h2>便利な機能</h2>
 
             <h3><img class="heading-icon" src="icons/PropertyVisible.svg" alt="">プロパティパネル</h3>
             <p>
-                画面左側のドッキングパネルに「プロパティ」パネルが表示されます。
+                画面右側のドッキングパネルに「プロパティ」パネルが表示されます。
                 メインビューで杭節点・一般節点・梁要素を選択すると、選択したアイテムのプロパティが一覧表示されます。
             </p>
             <h4>杭を選択した場合</h4>
@@ -6063,8 +7023,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <ul>
                 <li><strong>杭長</strong>: 杭体セグメントの合計長さ</li>
                 <li><strong>軸力 VL</strong>: 常時合計軸力</li>
-                <li><strong>軸力 1-1 ～ 1-4</strong>: レベル1地震時の各ケース軸力</li>
-                <li><strong>軸力 2-1 ～ 2-4</strong>: レベル2地震時の各ケース軸力</li>
+                <li><strong>軸力 L1-1 ～ L1-4</strong>: レベル1地震時の各ケース軸力</li>
+                <li><strong>軸力 L2-1 ～ L2-4</strong>: レベル2地震時の各ケース軸力</li>
             </ul>
             <p>複数の杭を選択した場合、杭長（合計）および軸力（合計）が表示されます。</p>
 
@@ -6105,6 +7065,17 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 これにより、クリック前に選択対象を視覚的に確認できます。
             </p>
 
+            <h3>グラフ上のマーカー近傍ポップアップ</h3>
+            <p>
+                地盤ウィンドウや解析結果グラフウィンドウのプロット上でマウスカーソルをマーカーに近づけると、
+                <strong>最も近いマーカーの詳細</strong>がカーソル右下の小さなポップアップに表示されます。
+            </p>
+            <ul>
+                <li>地盤ウィンドウ: 凡例 (例「L2 液状化」) + X 軸値 (例「地盤変位(mm) = 175.00」) + Y 軸値 (例「GL基準深さ(m) = -10.50」)</li>
+                <li>解析結果グラフ: 荷重ケース・組合せ・液状化・杭番号など詳細属性も表示</li>
+                <li>プロット領域外にカーソルが出ると自動的に閉じます</li>
+            </ul>
+
             <h3>トースト通知</h3>
             <p>
                 ファイル保存、解析完了、エラー発生など、主要な操作の結果がトースト通知（画面右下のポップアップ）で表示されます。
@@ -6134,7 +7105,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>画像を保存...</strong>：グラフ（ScottPlot）の表示内容をPNG画像ファイルとして保存します。</li>
             </ul>
             <p>
-                x2.0を選択すると2倍解像度で出力されるため、報告書への添付に適しています。
+                x2.0を選択すると2倍解像度で出力されます。
             </p>
 
             <h3>諸元テーブルのコピー・エクスポート</h3>
@@ -6172,8 +7143,38 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h3>解析結果の保存と復元</h3>
             <p>
-                ファイル保存（Ctrl+S / Ctrl+Shift+S）を行うと、入力データに加えて以下の解析結果もJSONファイルに保存されます。
+                ファイル保存では、<strong>既定では入力データのみ</strong>を保存します。
+                解析結果まで含めるかどうかは、ファイル(F)メニュー →「オプション」タブの
+                <strong>保存オプション</strong>で、<strong>手動保存</strong>と<strong>自動保存</strong>それぞれ独立に切り替えられます。
             </p>
+            <table class="table-doc">
+                <thead>
+                    <tr>
+                        <th>チェックボックス</th>
+                        <th>対象</th>
+                        <th>ON にしたときの動作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>手動保存に解析結果も含める</strong></td>
+                        <td>Ctrl+S / 名前を付けて保存 (Ctrl+Shift+S)</td>
+                        <td>手動保存時に入力データ + 解析結果を保存します</td>
+                    </tr>
+                    <tr>
+                        <td><strong>自動保存に解析結果も含める</strong></td>
+                        <td>定期的に実行される自動保存</td>
+                        <td>自動保存時に入力データ + 解析結果を保存します</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>
+                いずれも<strong>既定は OFF（入力データのみ・軽量高速、数百 KB 程度）</strong>です。
+                ON にすると入力データに加えて下記の解析結果が保存され、規模により<strong>数十 MB 級</strong>まで肥大し、
+                読み書きに時間がかかる場合があります。手動・自動は完全に独立しているため、
+                「配布用の手動保存は軽量に・作業中の自動保存だけ結果込みで保険をかける」といった使い分けが可能です。
+            </p>
+            <p>解析結果を含めて保存したとき、以下の解析結果が保存されます。</p>
             <ul>
                 <li><strong>杭要素分割データ</strong>: FEMモデルの節点・梁要素・地盤ばね等</li>
                 <li><strong>水平解析結果</strong>: 各荷重ケースの梁応力・節点変位・地盤反力等</li>
@@ -6182,9 +7183,16 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>基礎梁考慮鉛直解析結果</strong>: 杭反力・節点変位・梁応力等</li>
             </ul>
             <p>
-                保存したファイルを再度開くと、解析結果が自動的に復元され、
-                再解析なしに結果の確認・グラフ表示・検定を行うことができます。
-                自動保存ファイルにも解析結果が含まれます。
+                解析結果を含むファイルを再度開くと、解析結果が自動的に復元され、解析実行済みの状態
+                (テーブル出力・グラフ・ログ・検定ボタンが有効) に復帰します。再解析なしに結果の確認・
+                グラフ表示・検定を行えます。
+            </p>
+            <p style="color:#555; font-size:0.9em;">
+                ※ <strong>自動保存</strong>は定期的に繰り返し実行されます。「自動保存に解析結果も含める」を ON にすると、
+                その都度大容量の書込が発生し、ディスク負荷・遅延が大きくなる場合があります。
+                通常は手動保存側のみ ON にして、節目で明示的に解析結果込みの保存を行う運用を推奨します。<br>
+                ※ 解析結果を含む大容量ファイルは、書込中にアプリが異常終了するとファイルが破損するリスク窓が広がります。
+                重要なデータは入力のみの軽量ファイルとしても別途保存しておくことを推奨します。
             </p>
 
             <h3>解析結果の保護</h3>
@@ -6249,11 +7257,11 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 杭間隔比(R/B)と杭本数から自動計算値を <img class="button-icon" src="icons/GroupPileGraph.svg" alt="">「群杭係数グラフ確認」 で確認できますが、適用するには手動での設定が必要です。
             </p>
 
-            <h4>Q: 杭の極限先端支持力度 $q_p$ が想定より小さくなります</h4>
+            <h4>Q: 杭の極限先端支持力度 \(q_p\) が想定より小さくなります</h4>
             <p>
-                <strong>A:</strong> $q_p$ は杭工法と杭先端が属する地層の土質分類によって式が変わります。
-                場所打ちコンクリート杭で先端層が <strong>粘性土</strong> の場合は $q_p = 6 C_u$ となり、N値ではなく <strong>粘着力 $C_u$</strong> で決まります。
-                N値が大きくても $C_u$ が小さければ $q_p$ も小さくなります。<br>
+                <strong>A:</strong> \(q_p\) は杭工法と杭先端が属する地層の土質分類によって式が変わります。
+                場所打ちコンクリート杭で先端層が <strong>粘性土</strong> の場合は \(q_p = 6 C_u\) となり、N 値ではなく <strong>粘着力 \(C_u\)</strong> で決まります。
+                N 値が大きくても \(C_u\) が小さければ \(q_p\) も小さくなります。<br>
                 算定式の一覧と確認ポイントは <span class="xref"><a href="#ultimate-toe-bearing">「極限先端支持力」</a>の項を参照してください</span>。
             </p>
 
@@ -6302,12 +7310,26 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>入力値を確認する</strong>：荷重が杭の支持力を大幅に超えていないか、地盤のN値が極端でないか確認してください。</li>
             </ol>
 
+            <h4>Q: 地盤変位を与えずに水平解析を行うことができますか？</h4>
+            <p>
+                <strong>A:</strong> できます。「地盤」ウィンドウ →「地盤変位」タブ上部の「地盤変位:」で
+                <strong>「考慮しない」</strong>を選択してください。この場合、水平解析では杭周地盤の強制変位を
+                全層 0 として扱い、<strong>杭頭水平力のみ</strong>で解析します。
+            </p>
+            <ul>
+                <li>地盤変位の影響を切り分けて確認したいスタディに有用です（例: 杭頭水平力の寄与のみを把握する）。</li>
+                <li>「考慮しない」を選ぶと、地盤ウィンドウの地盤変位グラフは空 (土層背景のみ) となり、メイン画面の地盤変位表示・docx 計算書の地盤変位グラフも出力されません。</li>
+                <li>地盤変位の与え方は <strong>「基礎指針'19 4.5自動計算」/「任意入力」/「考慮しない」</strong>の 3 モードから選べます。詳細は
+                    <span class="xref"><a href="#section-ground-disp-modes">第3部 Step 3「地盤変位タブの 3 モード」</a></span> を参照してください。</li>
+            </ul>
+
             <h4>Q: 入力を変更したら解析結果が消えてしまいました</h4>
             <p>
                 <strong>A:</strong> 杭配置、地盤条件、杭体仕様など構造モデルに影響する変更を行うと、
                 既存の杭要素分割と解析結果はリセットされます。これは古い条件の結果が新しい条件と整合しないためです。
                 変更前に Ctrl+Z（元に戻す）で復帰できます。
-                なお、変更前にファイル保存していた場合は、ファイルを再度開くことで解析結果を含む状態に復帰できます。
+                なお、<strong>「オプション」タブの保存オプション（手動／自動保存に解析結果も含める）を ON にして</strong>変更前にファイル保存していた場合は、
+                そのファイルを再度開くことで解析結果を含む状態に復帰できます (OFF で保存した場合は入力のみが復帰し、再解析が必要です)。
             </p>
 
             <h4>Q: ファイルを開くとエラーが発生します</h4>
@@ -6324,7 +7346,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
         </section>
         </section>
         <section>
-            <h1>設計検討式・計算理論編</h1>
+            <h1>設計式・計算理論編</h1>
 
             <h2>地盤の液状化</h2>
 
@@ -6562,10 +7584,17 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <h4>加速度応答スペクトル (告示 1457 / 論文式 2)</h4>
             <div class="formula-block">
                 <div class="formula-left">
-                    $$S_{a0}(T,h{=}0.05) = \begin{cases} 3.2 + 30T & (T \le 0.16) \\ 8.0 & (0.16 \le T \le 0.64) \\ 5.12/T & (0.64 \le T) \end{cases} \,[\text{m/s}^2]$$
+                    $$S_{a0}(T,\,h{=}0.05) = \begin{cases}
+                        3.2 + 30 T & (0 < T \le 0.16) \\
+                        8.0 & (0.16 < T \le 0.64) \\
+                        5.12 / T & (0.64 < T)
+                    \end{cases} \quad [\text{m/s}^2]$$
                 </div>
                 <div class="formula-right">論文(2)</div>
             </div>
+            <p>
+                $T$ は周期 [秒]、$h$ は減衰定数 (基準値 0.05)。境界 $T = 0.16, 0.64$ では各区分の値が一致するため、不等号の向きは結果に影響しません。
+            </p>
 
             <h4>減衰補正係数 (論文式 4)</h4>
             <div class="formula-block">
@@ -6607,10 +7636,34 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <h4>周期依存増幅率 Gs(T) (論文式 8) - 4 区分</h4>
             <div class="formula-block">
                 <div class="formula-left">
-                    $$Gs(T) = \begin{cases} Gs_2 \cdot T/(0.8 T_2) & (T \le 0.8 T_2) \\ Gs_2 + (Gs_1 - Gs_2) \cdot \frac{T - 0.8 T_2}{0.8 T_1 - 0.8 T_2} & (0.8 T_2 \le T \le 0.8 T_1) \\ Gs_1 & (0.8 T_1 \le T \le 1.2 T_1) \\ \text{(} T_1\text{に従い 1 へ漸近)} & (1.2 T_1 \le T) \end{cases}$$
+                    $$Gs(T) = \begin{cases}
+                        Gs_2 \cdot \dfrac{T}{0.8 T_2} & (0 < T \le 0.8 T_2) \\[6pt]
+                        Gs_2 + (Gs_1 - Gs_2) \cdot \dfrac{T - 0.8 T_2}{0.8 T_1 - 0.8 T_2} & (0.8 T_2 < T \le 0.8 T_1) \\[6pt]
+                        Gs_1 & (0.8 T_1 < T \le 1.2 T_1) \\[6pt]
+                        Gs_1 + \dfrac{Gs_1 - 1}{\dfrac{1}{1.2 T_1} - \dfrac{1}{10}} \left( \dfrac{1}{T} - \dfrac{1}{1.2 T_1} \right) & (1.2 T_1 < T,\; 1.2 T_1 < 10\,\text{s})
+                    \end{cases}$$
                 </div>
                 <div class="formula-right">論文(8)</div>
             </div>
+
+            <p>各区分の挙動:</p>
+            <ul>
+                <li><strong>短周期側 ($T \le 0.8 T_2$)</strong>: 原点 (0, 0) から $(0.8 T_2,\; Gs_2)$ を $T$ について線形に増加</li>
+                <li><strong>中周期側 ($0.8 T_2 < T \le 0.8 T_1$)</strong>: $(0.8 T_2,\; Gs_2)$ から $(0.8 T_1,\; Gs_1)$ を $T$ について線形に変化</li>
+                <li><strong>ピーク域 ($0.8 T_1 < T \le 1.2 T_1$)</strong>: $Gs(T) = Gs_1$ で一定 (表層卓越周期 $T_1$ 近傍の最大増幅)</li>
+                <li><strong>長周期側 ($1.2 T_1 < T$)</strong>: $1/T$ について線形に減衰。次の 2 点を通る:
+                    <ul>
+                        <li>$T = 1.2 T_1$ で $Gs = Gs_1$</li>
+                        <li>$T = 10$ 秒 で $Gs = 1$</li>
+                    </ul>
+                    $T > 10$ 秒では同じ傾きで延長され、$Gs(T)$ は 1 を下回って漸近的に $Gs_1 - \dfrac{Gs_1 - 1}{1 - 0.12 T_1}$ (常に < 1) に近づく
+                </li>
+            </ul>
+            <p>
+                <strong>特異点回避</strong>: $1.2 T_1 \ge 10$ 秒 ($T_1 \ge 8.33$ 秒、極めて軟弱な深い堆積層) では分母が 0 以下となるため、
+                実装は単純な双曲線 $Gs(T) = 1 + (Gs_1 - 1) \cdot \dfrac{1.2 T_1}{T}$ にフォールバックします
+                (この場合は $T = 1.2 T_1$ で $Gs_1$、$T \to \infty$ で正確に 1)。
+            </p>
 
             <p>地表応答スペクトル: $S_a(T) = Gs(T) \cdot S_{a0}(T)$</p>
 
@@ -6622,16 +7675,16 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             </div>
             <ul class="symbol-list">
                 <li class="symbol-intro">ここに、</li>
-                <li><span class="symbol-label">$\gamma_{0.5}$</span>基準せん断ひずみ ($G/G_0 = 0.5$ となる $\gamma$ )。土質点ごとに入力</li>
-                <li><span class="symbol-label">$h_{max}$</span>履歴減衰の上限 ($\gamma\to\infty$ で漸近)</li>
-                <li><span class="symbol-label">$h_0$</span>材料減衰 (= 0.05 固定)</li>
-                <li><span class="symbol-label">$\gamma$</span>各層の有効せん断ひずみ $= 0.65 \cdot |u_i - u_{i+1}|/H_i$</li>
+                <li><span class="symbol-label">$\gamma_{0.5}$</span>基準せん断ひずみ ($G/G_0 = 0.5$ となる $\gamma$ の値)。土質点ごとに入力</li>
+                <li><span class="symbol-label">$h_{max}$</span>履歴減衰係数の極限値 ($\gamma \to \infty$ で $h \to h_{max}$)</li>
+                <li><span class="symbol-label">$h_0$</span>材料減衰係数 (= 0.05 固定。$\gamma = 0$ で $h = h_0$)</li>
+                <li><span class="symbol-label">$\gamma$</span>各層の有効せん断ひずみ $= 0.65 \cdot |u_i - u_{i+1}| / H_i$ ($u_i$: 第 $i$ 層上面変位、$H_i$: 第 $i$ 層厚)</li>
             </ul>
 
             <p>
-                収束計算は最大反復 20 回 / 相対許容誤差 $10^{-3}$。$G/G_0$ の下限は 0.05 でクランプ。
-                収束後の $T_1$, $T_2$, $\beta$, $\xi_e$, $\alpha_E$, $Gs_1$, $Gs_2$ は
-                応答スペクトル タブのヘッダーに表示される。
+                等価線形化反復: 最大反復 20 回 / 相対許容誤差 $10^{-3}$。$G/G_0$ は下限 0.05 でクランプ。
+                反復収束後の $T_1$, $T_2$, $\beta$, $\xi_e$, $\alpha_E$, $Gs_1$, $Gs_2$ は
+                応答スペクトル タブのヘッダーに表示されます。
             </p>
 
             <h4>UI からの選択方法</h4>
@@ -7371,7 +8424,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         <li><span class="symbol-label">$\beta_1$</span>設計式の信頼性に基づく低減係数で 1.0 とする。</li>
                         <li><span class="symbol-label">$A_s$</span>鋼管の有効断面積（腐食代を控除した外径・板厚で算定）。</li>
                         <li><span class="symbol-label">$\kappa$</span>せん断形状係数で、円管断面では $\kappa = 2.0$ とする。</li>
-                        <li><span class="symbol-label">${}_sf_{ss}$</span>鋼材の長期許容せん断応力度 $= F/(1.5\sqrt{3})$ ($F$ は鋼管の降伏応力度)。</li>
+                        <li><span class="symbol-label">${}_sf_{ss}$</span>鋼材の長期許容せん断応力度 $= F/(1.5\sqrt{3})$ ($F$ は鋼管の設計基準強度)。</li>
                     </ul>
 
 
@@ -7580,7 +8633,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
                     <h4>PHC 杭の換算断面性能</h4>
                     <p>
-                        中空円形断面に PC 鋼材をテンドンとして配置する。コンクリート断面に対し弾性係数比 $n=5$ で換算する。
+                        中空円形断面に PC 鋼材を配置する。コンクリート断面に対し弾性係数比 $n=5$ で換算する。
                     </p>
                     <p>
                         $$
@@ -7768,7 +8821,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
                     <h4>PRC 杭の換算断面性能</h4>
                     <p>
-                        PHC 杭にテンドン $A_p$ に加えて主筋 $A_g$ を考慮する。$n=5$ で換算する。
+                        PHC 杭の PC 鋼材断面積 $A_p$ に加えて主筋断面積 $A_g$ を考慮する。$n=5$ で換算する。
                     </p>
                     <p>
                         $$
@@ -8018,7 +9071,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     </div>
                     <ul class="symbol-list">
                         <li class="symbol-intro">ここに、</li>
-                        <li><span class="symbol-label">$F$</span>鋼管の降伏応力度 [N/mm$^2$]</li>
+                        <li><span class="symbol-label">$F$</span>鋼管の設計基準強度 [N/mm$^2$]</li>
                         <li><span class="symbol-label">$A_{s,\text{pipe}}$</span>鋼管の断面積</li>
                         <li><span class="symbol-label">$\beta_1$</span>$=1.0$</li>
                         <li><span class="symbol-label">$\kappa_S$</span>形状係数 $=2.0$</li>
@@ -8057,7 +9110,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         <li><span class="symbol-label">${}_sQ_{un}$</span>低減前の SC 杭安全限界せん断力 (軸力相互作用 $\sqrt{1-\eta^2}$ を考慮した鋼管断面のせん断耐力)。<strong>鋼管杭と同式</strong>とする。</li>
                         <li><span class="symbol-label">${}_sQ_0$</span>軸力がないときの鋼管断面の安全限界せん断力</li>
                         <li><span class="symbol-label">$\eta$</span>軸力比 $= N/N_y$</li>
-                        <li><span class="symbol-label">$\sigma_y$</span>鋼管の降伏応力度 ($=F$)</li>
+                        <li><span class="symbol-label">$\sigma_y$</span>鋼管の設計基準強度 ($=F$)</li>
                         <li><span class="symbol-label">$N_y$</span>鋼管降伏軸力 (コンクリート寄与なし)</li>
                         <li><span class="symbol-label">$\beta$</span>$\beta_1 \cdot \beta_2 = 1.0$ (SC 杭は両者とも $1.0$)</li>
                     </ul>
@@ -8456,7 +9509,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
                     <h4>使用限界・損傷限界せん断力</h4>
                     <p>
-                        円管のせん断シェイプファクタ κ = 2.0 を用いた塑性せん断耐力ベース。軸力依存なし。
+                        円管のせん断形状係数 κ = 2.0 を用いた塑性せん断耐力ベース。軸力依存なし。
                     </p>
                     <div class="formula-block">
                         <div class="formula-left">
@@ -8740,6 +9793,101 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <p>
                         群杭沈下検討で荷重タイプを <strong>「個別十字」</strong> とした場合、各杭の荷重には VL を用います。
                         <strong>「個別十字（基礎梁反力）」</strong> の場合は、基礎梁考慮鉛直解析（F7）で再分配された杭反力（<code>Reaction_kN</code>）を用います。
+                    </p>
+
+                    <h3 style="font-weight: bold; font-size: 1.2em;">水平解析モードでの鉛直ばね統合 (P-S 非線形ばね)</h3>
+                    <p>
+                        水平解析ウィンドウで「鉛直方向境界条件 = P-S 非線形ばね」を選択した場合、
+                        各杭節点の鉛直ばねは <strong>沈下解析と同じ物理関数</strong> を使って評価します。
+                        従来の (相対変位, 反力) 履歴の線形補間ではなく、現在の相対変位 $s = u_{z,\text{soil}} - u_{z,\text{pile}}$ から直接 $K$ と内力 $F$ を計算します。
+                    </p>
+
+                    <h4>剛性評価関数の共有</h4>
+                    <p>
+                        水平解析の各反復で、杭節点ごとに以下の沈下解析関数を直接呼び出します:
+                    </p>
+                    <table class="table-doc">
+                        <thead><tr><th>用途</th><th>関数 (<code>VerticalLoadTransferMethod</code> の静的メソッド)</th><th>引数</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td>杭周面 接線剛性</td>
+                                <td><code>GetTangentStiffnessPilePerimeter</code></td>
+                                <td>$s$, state ("positive" / "negative"), $\tau_1, \tau_2, S_1, S_2, \psi L/2$</td>
+                            </tr>
+                            <tr>
+                                <td>杭周面 割線剛性</td>
+                                <td><code>GetSecantStiffnessPilePerimeter</code></td>
+                                <td>同上</td>
+                            </tr>
+                            <tr>
+                                <td>杭先端 接線剛性</td>
+                                <td><code>GetTangentStiffnessPileToeFromSettlement</code></td>
+                                <td>$s$, $D_p$, $R_{pu}$, $\alpha$, $n$</td>
+                            </tr>
+                            <tr>
+                                <td>杭先端 割線剛性</td>
+                                <td><code>GetSecantStiffnessPileToeFromSettlement</code></td>
+                                <td>同上</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p>
+                        節点 $i$ の合計 $K_z$ は、沈下解析と同じインデックス規約 ($j = i-1, i$ で杭周面要素、$i = $ 先端なら先端寄与を加算) で合算します。
+                        state は相対変位 $s$ の符号で自動切替 ($s \ge 0$ → "positive", $s &lt; 0$ → "negative")。
+                    </p>
+
+                    <h4>杭体自重の注入</h4>
+                    <p>
+                        沈下解析と物理的に等価にするため、各杭節点に自重 $W_i$ を Fz 外力として注入します。
+                        $W_i$ は沈下解析 <code>SetWeights()</code> と全く同じ計算式 (tributary 重量) で求めます:
+                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$W_0 = w_0 \cdot L_0 / 2$$</p>
+                            <p>$$W_i = w_{i-1} \cdot L_{i-1} / 2 + w_i \cdot L_i / 2 \quad (1 \le i &lt; n)$$</p>
+                            <p>$$W_n = w_{n-1} \cdot L_{n-1} / 2$$</p>
+                        </div>
+                        <div class="formula-right">$w_i$: 杭単位長重量 [kN/m]、$L_i$: 要素長 [m]</div>
+                    </div>
+                    <p>
+                        ステップ毎に $W_i / n_{\text{step}}$ を増分加算し、外力 N₀ と同じ段階適用手順に揃えます。
+                        杭頭節点 (node 0) は Uz が CapNode の slave なので、$W_0$ は CapNode に集約して与えます (剛体連結により物理的に等価)。
+                    </p>
+
+                    <h4>杭軸力 N₀ の与え方</h4>
+                    <p>
+                        ユーザ入力の杭軸力 N₀ は、各杭の <strong>接合節点</strong> (基礎梁設定時は <code>FoundationNode-P{No}</code>、未設定時は <code>CapNode-{No}</code>) に Fz 外力として段階適用します。
+                        これらは RigidBody[0] の直接 slave のため、MapOnGlobalLoad で AP に荷重 + モーメント (arm × Fz の Mx / My) を正しく伝達できます。
+                    </p>
+                    <p>
+                        各杭ごとに独立した N₀ᵢ を与えることで、AP が並進+回転して各杭が arm に応じた異なる Z 変位を持ち、
+                        杭ごとに異なる軸力が FEM Fxᵢ に現れます (前後方杭による軸力差を再現)。
+                    </p>
+
+                    <h4>VL 単独ケースの位置付け</h4>
+                    <p>
+                        「VL 単独ケースも解析」を有効にすると、地震時ケースに加えて常時 (VL) の擬似ケースを 1 件追加実行します。
+                        VL ケースの条件は次の通り:
+                    </p>
+                    <ul>
+                        <li>水平荷重 (上部 / 基礎慣性力) = 0、LoadAngle = 0</li>
+                        <li>各杭頭に AxialForceVL (常時軸力) を Fz として段階適用</li>
+                        <li>杭体自重も常時通り注入</li>
+                        <li>地盤強制変位 (液状化変位等) は <strong>適用しない</strong> (常時状態を表すため)</li>
+                        <li>組合せ係数 (α₁/β₁/β₂) には依存しないため、組合せ・液状化ループは 1 回のみ</li>
+                        <li>非線形フラグ <code>IsPileNonLinear = IsSoilNonLinear = true</code> として、$n_{\text{step}}$ ベースの段階適用を有効化 (1 ステップでの全 N₀ 適用は発散しやすいため)</li>
+                    </ul>
+                    <p>
+                        対称な杭配置 + 対称な作用点では、VL ケースの水平方向反力は理論上 0 になります。
+                        実際の検証 (計算例9) では杭周地盤反力合計と土圧合力ばね反力合計の X/Y 成分がそれぞれ 0.0 kN となり、
+                        Fz 合計は N₀ + 杭体自重 = $44{,}136 + 8{,}618 \approx 52{,}754$ kN として記録されました。
+                    </p>
+
+                    <h4>従来の P-S 補間曲線 (フォールバック)</h4>
+                    <p>
+                        既存の <code>VerticalPileSpringCurve</code> クラス (沈下解析の (相対変位, 反力) 履歴を区分線形補間する近似モデル) も並行で構築・保持されています。
+                        新しい物理モデル (<code>PileVerticalSoilSpringModel</code>) が何らかの理由で初期化に失敗した節点では、自動的に補間曲線にフォールバックします。
+                        既定では物理モデルが優先使用されるため、誤差源 (補間打切り誤差、$K_{\min}$ floor による plateau 補正、履歴外挿の不確実性) は解消されています。
                     </p>
 
                     <h3 style="font-weight: bold; font-size: 1.2em;">鉛直支持力</h3>
@@ -9308,6 +10456,11 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <li><span class="symbol-label">$K_0$</span>[N·mm/rad]</li>
         </ul>
 
+        <figure>
+            <img src="images/FT_初期回転剛性を求める際の仮定.png" alt="F.T.Pile構法 初期回転剛性を求める際の仮定" width="500">
+            <figcaption>F.T.Pile 構法　初期回転剛性を求める際の仮定</figcaption>
+        </figure>
+
         <p>
             $$K_0=\frac{M_a}{\theta_a}$$
         </p>
@@ -9335,6 +10488,11 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
         <p>
             $$M_e=5\times 10^{-4} \times a_g \cdot f_u \cdot D_s + 0.5N \cdot D_S$$
         </p>
+
+        <figure>
+            <img src="images/FT_引抜き対応タイプにおけるMe算定時の鋼棒の応力分布.png" alt="F.T.Pile構法 引抜き対応タイプにおけるMe算定時の鋼棒の応力分布" width="500">
+            <figcaption>F.T.Pile 構法　引抜き対応タイプにおける $M_e$ 算定時の鋼棒の応力分布</figcaption>
+        </figure>
 
         <h4>FT キャップ標準仕様</h4>
         <ul class="symbol-list">
@@ -9385,6 +10543,11 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             杭頭回転特性は、杭頭曲げモーメント$M_p$と回転角$\theta_p$の関係により評価します。
         </p>
 
+        <figure>
+            <img src="images/CPT_杭頭曲げモーメントMpと回転角θpの関係.png" alt="キャプテンパイル工法 杭頭曲げモーメントMpと回転角θpの関係" width="500">
+            <figcaption>キャプテンパイル工法　杭頭曲げモーメント$M_p$と回転角$\theta_p$の関係</figcaption>
+        </figure>
+
         <ul class="symbol-list">
             <li class="symbol-intro">ここに、</li>
             <li><span class="symbol-label">$K_1$</span>杭頭接合部の等価初期回転剛性</li>
@@ -9416,7 +10579,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <li><span class="symbol-label">$K_e$</span>初期回転剛性(kNm/rad)</li>
             <li><span class="symbol-label">$K_p$</span>杭体部分の回転剛性(kNm/rad)</li>
             <li><span class="symbol-label">$E_p$</span>杭体のヤング係数（kN/m<sup>2</sup>）</li>
-            <li><span class="symbol-label">$I_p$</span>杭体の断面二次モーメント、絞り部ありの場合は絞り部径を杭径とみなす(m<sup>4</sup>)$</li>
+            <li><span class="symbol-label">$I_p$</span>杭体の断面二次モーメント、絞り部ありの場合は絞り部径を杭径とみなす(m<sup>4</sup>)</li>
             <li><span class="symbol-label">$H_p$</span>杭体とPCリングの重なり長さ(m)</li>
             <li><span class="symbol-label">$K_c$</span>PCリング内コンクリート回転剛性(kNm/rad)$K_c=\frac{E_c \cdot I_c}{H_c}$</li>
             <li><span class="symbol-label">$E_c$</span>杭体のヤング係数(kN/m<sup>2</sup>)</li>
@@ -9428,6 +10591,10 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <li><span class="symbol-label">$H_b$</span>仮想円柱の高さ($=D/2$)(m)</li>
         </ul>
 
+        <figure>
+            <img src="images/CPT_高さ等に関する符合.png" alt="キャプテンパイル工法 高さ等に関する符合" width="500">
+            <figcaption>キャプテンパイル工法　高さ等に関する符合</figcaption>
+        </figure>
 
         <p>
             離間時モーメント
@@ -9521,6 +10688,67 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
         </p>
             <p>①最外縁の引張定着筋が降伏するとき</p>
             <p>②圧縮縁コンクリートが短期許容圧縮応力度($\frac {2}{3} \cdot \frac{F_c}{\nu^2}$($\nu$: 絞り係数))に達するとき</p>
+
+        <h4>実装上の補正</h4>
+        <p>
+            上記のマニュアル準拠の数式は理論上の定義式です。本プログラムでは、
+            <strong>数値安定性の確保</strong>と <strong>M-θ 曲線の単調増加性 (履歴解析時の収束性) の保証</strong>のため、
+            以下の補正を加えて M-θ 関係点列を構築しています。
+            通常の入力範囲では補正は発動せずマニュアル式と一致しますが、
+            極端な軸力・絞り率・PC リング寸法の組合せにおいて点列が物理的に妥当となるよう作用します。
+        </p>
+
+        <ol>
+            <li>
+                <b>① コンクリート最大強度 $\sigma_{max}$ の上限</b><br>
+                $\nu$ が極めて小さい場合に $F_c/\nu^2$ が発散することを防ぐため、上限を $2F_c$ で抑えます。
+                <p>$$\sigma_{max} = \min\!\left(\frac{F_c}{\nu^2},\ 2F_c\right)$$</p>
+                通常入力範囲 ($\nu \ge 0.7$) では $F_c/\nu^2 \le 2.04F_c$ となり、ほぼ理論式どおり。
+            </li>
+
+            <li>
+                <b>② 圧縮側で離間時モーメント $M_1$ を $M_u$ でクランプ</b><br>
+                高軸力時に算定式 $M_1 = \sigma_0 \cdot Z$ が $M_u$ を上回るケースで、M-θ 点列の M を $M_u$ に丸めます。
+                <p>$$M_{plot}(\theta_1) = \min(M_1,\ M_u)$$</p>
+                M-θ が降伏点で逆戻りするのを防止します。
+            </li>
+
+            <li>
+                <b>③ 2 次回転剛性 $K_2$ の上限を初期剛性 $K_e$ で抑える</b><br>
+                理論式 $K_2 = (M_y - M_1)/(\theta_y - \theta_1)$ が、数値誤差等で $K_e$ を上回るケースを補正します。
+                <p>$$K_2 = \min\!\left(\left|\frac{M_y - M_1}{\theta_y - \theta_1}\right|,\ K_e\right)$$</p>
+                「2 次剛性は初期剛性を超えない」という物理的妥当性を強制。
+            </li>
+
+            <li>
+                <b>④ 終局時回転角 $\theta_{y}'$ を限界回転角 $\theta_u = 0.04$ rad でクランプ</b><br>
+                <p>$$\theta_{y}' = \min\!\left(\theta_1 + \frac{M_u - M_1}{K_2},\ \theta_u\right)$$</p>
+                低剛性ケースで終局回転角が $0.04$ rad を超える場合、(0.04, $M_u$) との重複点となり、降伏前に既に限界回転角に到達するモデルとなります。
+            </li>
+
+            <li>
+                <b>⑤ 退化ケース ($\theta_y \le \theta_1$) の中間点省略</b><br>
+                理論上 $\theta_1 \lt \theta_y$ ですが、数値誤差等で $\theta_y \le \theta_1$ となる退化ケースでは、
+                中間点 ($\theta_{y}'$, $M_u$) を <strong>スキップ</strong>し、(0, 0) — ($\theta_1$, $\min(M_1, M_u)$) — ($\theta_u$, $M_u$) の <strong>3 点折線</strong>として M-θ を構築します。
+            </li>
+
+            <li>
+                <b>⑥ 引張側 ($N \lt 0$) の M-θ モデル</b><br>
+                引張側では離間時モーメント $M_1$ が定義されないため、$M_1 = 0$ かつ $\theta_1 = 0$ として扱い、
+                さらに <strong>$M_y = M_u$ (降伏即終局)</strong> と仮定して、初期回転剛性 $K_2 = M_y / \theta_y$ から
+                $\theta_{y}' = M_u / K_2$ を求めます。M-θ 点列は次の 3 点折線:
+                <p>$$(0,\ 0) \;\to\; (\theta_{y}',\ M_u) \;\to\; (\theta_u,\ M_u)$$</p>
+                ただし $\theta_{y}' \le \theta_u = 0.04$ rad でクランプ (補正④と同様)。
+                引張定着筋を配置しない場合は M-θ 上記の引張側分岐は使用されず、$M_u = 0$ で扱われます。
+            </li>
+        </ol>
+
+        <p style="margin-top:8px;">
+            <b>備考</b>:
+            これらの補正は、マニュアル本体の規定 (例: 補正① の上限 $2F_c$、補正⑥ の引張側 3 点折線) を
+            プログラム実装にあわせて明文化したものと、純粋に数値安定性のために設けたもの (補正②③⑤) が混在します。
+            設計者が手計算で M-θ 関係を再現するとき、上記補正によりプログラム出力と差が生じる可能性がある点に留意してください。
+        </p>
 
         <h4>PC リング標準仕様</h4>
         <p>
@@ -9748,6 +10976,12 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <li><span class="symbol-label">$\theta_y$</span>降伏時回転角 ($= M_u / K_i$) (rad)</li>
             <li><span class="symbol-label">$\theta_u$</span>限界回転角 (= 0.03 rad)</li>
         </ul>
+
+        <figure>
+            <img src="images/CP_杭頭回転ばねモデル.png" alt="キャプリングパイル工法 杭頭回転ばねモデル" width="500">
+            <figcaption>キャプリングパイル工法　杭頭回転ばねモデル</figcaption>
+        </figure>
+
         <p>
             $K_i$ および $M_u$ は、引張定着筋の有無、軸力の方向（圧縮 / 引張）に応じて以下の 3 ケースに場合分けされます。
             なお、軸力 $N$ は <strong>圧縮を正</strong>とします。
@@ -9830,6 +11064,11 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <li><span class="symbol-label">$H_b$</span>仮想円柱の高さ (m)、$H_b = D/2$ とします。</li>
             <li><span class="symbol-label">$D$</span>杭径 (m)</li>
         </ul>
+
+        <figure>
+            <img src="images/CP_初期回転剛性モデル.png" alt="キャプリングパイル工法 初期回転剛性モデル" width="500">
+            <figcaption>キャプリングパイル工法　初期回転剛性モデル</figcaption>
+        </figure>
 
         <h4>引張定着筋関連量</h4>
         <p>
@@ -11033,9 +12272,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <p>M-φ曲線上では:
                     $$EI_{sec} = \frac{M}{\varphi}$$
                     と定義されます。</p>
-                    <p>本プログラムでは、NR法の各反復で内力ベクトル $\mathbf{T}$ を計算する際に割線剛性を使用します。
-                    これにより、接線剛性（$\mathbf{K}_{tan}$の組立）と割線剛性（内力の計算）を
-                    使い分けることで、収束の安定性を高めています。</p>
+                    <p>本プログラムでは、NR法の各反復で内力ベクトル $\mathbf{T}$ を計算する際に割線剛性を使用します。</p>
                 </dd>
 
                 <dt><strong>収束判定</strong></dt>
@@ -11080,8 +12317,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <p>反復を重ねても残差がほとんど改善しない状態（停滞、リミットサイクル）を検出する機能です。</p>
                     <p>具体的には、連続する反復で残差比（今回の残差 / 前回の残差）が0.98以上（2%未満の改善）となる回数を
                     カウントし、15回連続で停滞すると判定します。</p>
-                    <p>停滞が検出されると、収束判定値を $\alpha_{tol} = 10^{-5}$ に緩和して解析を完了させます。
-                    これは「デフォルトの収束条件には至らないが、工学的に許容できる精度の解が得られている」ことを意味します。</p>
+                    <p>停滞が検出されると、収束判定値を $\alpha_{tol} = 10^{-5}$ に緩和して解析を完了させます。</p>
                     <p>停滞の主な原因は、M-φ曲線の折れ点付近での剛性の急変や、
                     複数の非線形要素が同時に状態変化する（ひび割れの進展と地盤ばねの塑性化が連動する）場合です。</p>
                 </dd>
@@ -11120,11 +12356,11 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                             </tr>
                             <tr>
                                 <td>鋼管杭 (鉄筋定着工法)</td>
-                                <td>杭頭接合部の弾性回転剛性 $K_\theta$ を線形ばねとして反映 (<a href="#section-steel-pipe-rebar-anchorage">詳細</a>)</td>
+                                <td>杭頭接合部の弾性回転剛性 $K_\theta$ を線形ばねとして反映 <span style="white-space: nowrap;">(<a href="#section-steel-pipe-rebar-anchorage">詳細</a>)</span></td>
                             </tr>
                             <tr>
                                 <td>キャプテンパイル工法</td>
-                                <td>PC リング・引張定着筋の特性に基づく M-θ 曲線を考慮 (<a href="#section-capring-pile">同種工法</a>)</td>
+                                <td>PC リング・引張定着筋の特性に基づく M-θ 曲線を考慮 <span style="white-space: nowrap;">(<a href="#section-capring-pile">同種工法</a>)</span></td>
                             </tr>
                             <tr>
                                 <td>FT-Pile 構法</td>
@@ -11132,7 +12368,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                             </tr>
                             <tr>
                                 <td>キャプリングパイル工法</td>
-                                <td>PC リング・引張定着筋に基づく完全バイリニア M-θ 曲線 (鋼管杭は杭頭をコンクリート充填鋼管部として合成 EI で評価) (<a href="#section-capring-pile">詳細</a>)</td>
+                                <td>PC リング・引張定着筋に基づく完全バイリニア M-θ 曲線 (鋼管杭は杭頭をコンクリート充填鋼管部として合成 EI で評価) <span style="white-space: nowrap;">(<a href="#section-capring-pile">詳細</a>)</span></td>
                             </tr>
                         </tbody>
                     </table>
@@ -11198,7 +12434,6 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <p><strong>表示と扱い</strong>:</p>
                     <ul>
                         <li>3D ビュー上では杭体応力ダイアグラムと同様に描画されます。リボン「解析結果」タブの「杭応力 非表示」チェックボックスで杭体・他の RigidLink と一括非表示にできます (基礎梁応力ダイアグラムだけを上面図で見るときに有用)。</li>
-                        <li>解析結果テーブル (梁応力) では <code>RigidLink-{杭No}</code> 行として表示されますが、剛性が高いため応力値は実際の杭体応力とは異なる「短絡用ダミー」と捉えてください。</li>
                         <li>計算書 (docx) 出力では杭体応力ダイアグラムと同じ図に重ねて描画されますが、限界状態判定の対象外です。</li>
                     </ul>
                 </dd>
@@ -11238,11 +12473,22 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             const MIN_WIDTH = 150;
             const MAX_WIDTH = 800;
 
+            // スプリットパネル等が参照する `--sidebar-offset` を実際のサイドバー右端に合わせる
+            // (モバイル幅ではサイドバーが off-canvas なので 0 に揃える)
+            function updateSidebarOffset() {
+                const rect = sidebar.getBoundingClientRect();
+                // off-canvas (left:-100%) のときは右端 ≤ 0 になるので 0 に
+                const offset = Math.max(0, rect.right);
+                document.documentElement.style.setProperty('--sidebar-offset', offset + 'px');
+            }
+
             // 起動時に保存値を復元
             const saved = parseInt(localStorage.getItem(STORAGE_KEY) || '', 10);
             if (saved >= MIN_WIDTH && saved <= MAX_WIDTH) {
                 sidebar.style.width = saved + 'px';
             }
+            updateSidebarOffset();
+            window.addEventListener('resize', updateSidebarOffset);
 
             let isDragging = false;
             resizer.addEventListener('mousedown', function (e) {
@@ -11258,6 +12504,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 if (w < MIN_WIDTH) w = MIN_WIDTH;
                 if (w > MAX_WIDTH) w = MAX_WIDTH;
                 sidebar.style.width = w + 'px';
+                updateSidebarOffset();
             });
             document.addEventListener('mouseup', function () {
                 if (!isDragging) return;
@@ -11270,11 +12517,13 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 if (w >= MIN_WIDTH && w <= MAX_WIDTH) {
                     localStorage.setItem(STORAGE_KEY, String(w));
                 }
+                updateSidebarOffset();
             });
             // ダブルクリックで初期幅 (300px) に戻す
             resizer.addEventListener('dblclick', function () {
                 sidebar.style.width = '300px';
                 localStorage.setItem(STORAGE_KEY, '300');
+                updateSidebarOffset();
             });
         })();
 
@@ -11852,7 +13101,159 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             });
         })();
 
+        // =========================
+        // スプリットビュー: 内部リンク (href="#anchor") を画面下半分の固定パネルに表示
+        // 元のコンテンツはそのまま、本文中のリンクをクリックすると下段パネルにリンク先がロード
+        // =========================
+        (function () {
+            const body = document.body;
+            const toggleBtn = document.getElementById('splitToggle');
+            const panel = document.getElementById('splitPanel');
+            const panelBody = document.getElementById('splitPanelBody');
+            const targetLabel = document.getElementById('splitTargetLabel');
+            const closeBtn = document.getElementById('splitClose');
+            const resizer = document.getElementById('splitPanelResizer');
+            const mainText = document.getElementById('mainText');
+            if (!toggleBtn || !panel || !panelBody || !mainText) return;
 
+            const EMPTY_HTML = '<div class="split-panel-empty">本文内のリンクをクリックすると、ここにリンク先が表示されます。</div>';
+
+            function enableSplit() {
+                if (body.classList.contains('split-mode')) return;
+                body.classList.add('split-mode');
+                toggleBtn.classList.add('active');
+                toggleBtn.textContent = '📑 分割表示 ON';
+                panel.setAttribute('aria-hidden', 'false');
+            }
+            function disableSplit() {
+                if (!body.classList.contains('split-mode')) return;
+                body.classList.remove('split-mode');
+                toggleBtn.classList.remove('active');
+                toggleBtn.textContent = '📑 分割表示';
+                panel.setAttribute('aria-hidden', 'true');
+                panelBody.innerHTML = EMPTY_HTML;
+                targetLabel.textContent = '(リンクをクリックしてください)';
+            }
+
+            toggleBtn.addEventListener('click', () => {
+                if (body.classList.contains('split-mode')) disableSplit();
+                else enableSplit();
+            });
+            closeBtn.addEventListener('click', disableSplit);
+
+            // 本文 (mainText) 内の内部リンクをインターセプト → 下段パネルに表示
+            // 分割表示 OFF 時にリンクを押した場合も自動的に分割表示を ON にしてから表示する。
+            mainText.addEventListener('click', (e) => {
+                const a = e.target.closest('a[href^="#"]');
+                if (!a) return;
+                const href = a.getAttribute('href');
+                if (!href || href === '#') return;
+                e.preventDefault();
+                // 分割表示が OFF なら自動的に ON にする
+                if (!body.classList.contains('split-mode')) {
+                    enableSplit();
+                }
+                const id = href.substring(1);
+                const target = document.getElementById(id);
+                if (!target) return;
+                // ターゲットが属するコンテンツ範囲を抽出:
+                //  1) section 内に含まれていれば section をクローン
+                //  2) 見出し (h1-h6) なら、見出し + 次の同位 or 上位見出しまでの兄弟要素群をまとめる
+                //  3) それ以外は、最も近い親見出しをアンカーとして同様に範囲化、なければターゲット自体
+                let contentNode;
+                const enclosingSection = target.closest('section');
+                if (enclosingSection) {
+                    contentNode = enclosingSection.cloneNode(true);
+                    if (enclosingSection.id) contentNode.setAttribute('data-original-id', enclosingSection.id);
+                } else {
+                    let anchor = target;
+                    // ターゲットが見出しでない場合は、直前にある最も近い見出しを探す
+                    if (!/^H[1-6]$/.test(anchor.tagName)) {
+                        let prev = anchor.previousElementSibling;
+                        while (prev && !/^H[1-6]$/.test(prev.tagName)) {
+                            prev = prev.previousElementSibling;
+                        }
+                        if (prev) anchor = prev;
+                    }
+                    if (/^H[1-6]$/.test(anchor.tagName)) {
+                        const level = parseInt(anchor.tagName.charAt(1), 10);
+                        const wrap = document.createElement('div');
+                        wrap.className = 'split-extracted-section';
+                        wrap.appendChild(anchor.cloneNode(true));
+                        let sib = anchor.nextElementSibling;
+                        while (sib) {
+                            if (/^H[1-6]$/.test(sib.tagName)) {
+                                const sibLevel = parseInt(sib.tagName.charAt(1), 10);
+                                if (sibLevel <= level) break;
+                            }
+                            wrap.appendChild(sib.cloneNode(true));
+                            sib = sib.nextElementSibling;
+                        }
+                        if (anchor.id) wrap.setAttribute('data-original-id', anchor.id);
+                        contentNode = wrap;
+                    } else {
+                        contentNode = target.cloneNode(true);
+                    }
+                }
+                // 元 DOM との id 重複を避け、ターゲット要素に focus-mark を付与してスクロール
+                let focusEl = null;
+                contentNode.querySelectorAll('[id]').forEach(el => {
+                    if (el.id === id) {
+                        el.removeAttribute('id');
+                        el.classList.add('split-focus-target');
+                        focusEl = el;
+                    } else {
+                        el.removeAttribute('id');
+                    }
+                });
+                // contentNode 自身がターゲットの場合
+                if (!focusEl && contentNode.getAttribute && contentNode.getAttribute('data-original-id') === id) {
+                    contentNode.classList.add('split-focus-target');
+                    focusEl = contentNode;
+                }
+                panelBody.innerHTML = '';
+                panelBody.appendChild(contentNode);
+                // フォーカス要素にスクロール (なければ先頭)
+                requestAnimationFrame(() => {
+                    if (focusEl && focusEl.scrollIntoView) {
+                        focusEl.scrollIntoView({ block: 'start', behavior: 'auto' });
+                        // パネル上端にすこし余白を残す
+                        panelBody.scrollTop = Math.max(0, panelBody.scrollTop - 8);
+                    } else {
+                        panelBody.scrollTop = 0;
+                    }
+                });
+                const linkText = a.textContent.trim().slice(0, 50) || href;
+                targetLabel.textContent = linkText + '  (' + href + ')';
+
+                if (window.MathJax && window.MathJax.typesetPromise) {
+                    window.MathJax.typesetPromise([panelBody]).catch(() => { });
+                }
+            });
+
+            // 高さリサイズ (ドラッグで panel.height を変更)
+            let dragging = false;
+            resizer.addEventListener('mousedown', (e) => {
+                dragging = true;
+                resizer.classList.add('dragging');
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (!dragging) return;
+                const vh = window.innerHeight;
+                const newHeightPx = vh - e.clientY;
+                const newHeightVh = Math.max(15, Math.min(85, (newHeightPx / vh) * 100));
+                panel.style.height = newHeightVh + 'vh';
+                // メインコンテンツの下余白も追従
+                mainText.style.paddingBottom = `calc(${newHeightVh}vh + 20px)`;
+            });
+            document.addEventListener('mouseup', () => {
+                if (dragging) {
+                    dragging = false;
+                    resizer.classList.remove('dragging');
+                }
+            });
+        })();
     </script>
 </body>
 

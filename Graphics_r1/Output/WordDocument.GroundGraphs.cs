@@ -71,6 +71,15 @@ namespace PileDesign.Output
             {
                 if (ground.GroundMassesData == null || ground.GroundMassesData.Count == 0) return;
 
+                // 「考慮しない」モードの場合: グラフは出力しない
+                if (ground.IsGroundDisplacementIgnored)
+                {
+                    Serilog.Log.Information("[GroundDispGraph] {Label}: 地盤変位『考慮しない』モードのためグラフ出力をスキップ", groundLabel);
+                    return;
+                }
+
+                bool isCustom = ground.CustomDisplacementProfile?.IsEnabled == true;
+
                 // 各 mass の中央深さ
                 double[] depths = new double[ground.GroundMassesData.Count];
                 for (int i = 0; i < ground.GroundMassesData.Count; i++)
@@ -83,11 +92,26 @@ namespace PileDesign.Output
                 var plot = new Plot();
                 DrawSoilLayersOnPlot(plot, ground);
 
-                bool hasAny = AddDispScatter(plot, ground, depths, 0, NikkenSKColor.SkyBlue, "L1");
-                hasAny |= AddDispScatter(plot, ground, depths, 1, NikkenSKColor.DeepBlue, "L2");
+                bool hasAny;
+                if (isCustom)
+                {
+                    // 任意入力モード: CustomDisplacementProfile から L1/L2 (液状化あり/なし) を描画
+                    hasAny  = AddCustomDispScatter(plot, ground, isLiq: false, level: 0, NikkenSKColor.SkyBlue,   "L1 非液状化");
+                    hasAny |= AddCustomDispScatter(plot, ground, isLiq: true,  level: 0, NikkenSKColor.SkyBlue,   "L1 液状化");
+                    hasAny |= AddCustomDispScatter(plot, ground, isLiq: false, level: 1, NikkenSKColor.DeepBlue,  "L2 非液状化");
+                    hasAny |= AddCustomDispScatter(plot, ground, isLiq: true,  level: 1, NikkenSKColor.DeepBlue,  "L2 液状化");
+                }
+                else
+                {
+                    // 自動計算モード: DmaxU* から L1/L2 を描画 (旧挙動)
+                    hasAny  = AddDispScatter(plot, ground, depths, 0, NikkenSKColor.SkyBlue, "L1");
+                    hasAny |= AddDispScatter(plot, ground, depths, 1, NikkenSKColor.DeepBlue, "L2");
+                }
                 if (!hasAny) return;
 
-                string title = $"地盤変位 — {groundLabel}";
+                string title = isCustom
+                    ? $"地盤変位 (任意入力) — {groundLabel}"
+                    : $"地盤変位 — {groundLabel}";
                 plot.Axes.Title.Label.Text = title;
                 plot.Axes.Title.Label.FontName = Fonts.Detect(title);
                 plot.Axes.Bottom.Label.Text = "地盤変位 (mm)";
@@ -99,7 +123,8 @@ namespace PileDesign.Output
                 plot.Axes.AutoScale();
                 plot.Axes.AutoScaleExpandY();
 
-                SavePlotAndAddToBody(mainPart, body, plot, $"任意地盤変位 ({groundLabel})");
+                string captionMode = isCustom ? "任意地盤変位 (任意入力)" : "任意地盤変位";
+                SavePlotAndAddToBody(mainPart, body, plot, $"{captionMode} ({groundLabel})");
             }
             catch (Exception ex)
             {
@@ -120,6 +145,35 @@ namespace PileDesign.Output
                 if (double.IsNaN(v)) continue;
                 xs.Add(v);
                 ys.Add(depths[i]);
+            }
+            if (xs.Count == 0) return false;
+
+            var scatter = plot.Add.Scatter(xs.ToArray(), ys.ToArray());
+            scatter.Color = ScottPlot.Color.FromSKColor(skColor);
+            scatter.LineWidth = 2;
+            scatter.LegendText = legend;
+            return true;
+        }
+
+        // 任意入力モード用: CustomDisplacementProfile から該当ケース (L1/L2 × 液状化あり/なし) のプロファイルを描画。
+        // 値は 標高 Z [m] / 変位 [mm] のプロットを GL基準深さ [m] / 変位 [mm] に変換 (深さ = GroundTopAltitude - Z)。
+        private static bool AddCustomDispScatter(Plot plot, GroundInput ground, bool isLiq, int level, SKColor skColor, string legend)
+        {
+            var custom = ground.CustomDisplacementProfile;
+            if (custom == null) return false;
+            var profile = (level == 0)
+                ? (isLiq ? custom.Level1Liq : custom.Level1NonLiq)
+                : (isLiq ? custom.Level2Liq : custom.Level2NonLiq);
+            if (profile == null || profile.Count == 0) return false;
+
+            double topAlt = ground.GroundTopAltitude;
+            var xs = new List<double>();
+            var ys = new List<double>();
+            foreach (var p in profile)
+            {
+                if (double.IsNaN(p.Displacement)) continue;
+                xs.Add(p.Displacement);
+                ys.Add(topAlt - p.Z); // 標高 Z → GL 基準深さ
             }
             if (xs.Count == 0) return false;
 

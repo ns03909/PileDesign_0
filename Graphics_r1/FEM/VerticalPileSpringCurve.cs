@@ -17,10 +17,10 @@ namespace PileDesign.FEM
         private readonly List<(double Settlement_m, double Force_kN)> _curve;
 
         // 初期接線剛性（最初の区間の勾配）
-        public double InitialTangentStiffness { get; }
+        public double InitialTangentStiffness { get; private set; }
 
         // 最小剛性フロア値（初期剛性の1%）
-        private readonly double _minStiffness;
+        private double _minStiffness;
 
         public VerticalPileSpringCurve(
             ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> loadDisplacements)
@@ -36,10 +36,39 @@ namespace PileDesign.FEM
                 .Select(ld => (Settlement_m: ld.DD0s / 1000.0, Force_kN: ld.PileTopLoad))
                 .ToList();
 
+            FinalizeCurveSetup();
+        }
+
+        /// <summary>
+        /// 節点別 (相対変位 m, 反力 kN) のペアリストから構築するコンストラクタ。
+        /// 杭周面摩擦 / 杭先端反力の深度分布を各節点ごとに個別の非線形ばねに変換する用途。
+        /// </summary>
+        public VerticalPileSpringCurve(IEnumerable<(double Settlement_m, double Force_kN)> points)
+        {
+            if (points == null) throw new ArgumentNullException(nameof(points));
+            _curve = points
+                .Where(p => p.Settlement_m >= 0)
+                .OrderBy(p => p.Settlement_m)
+                .ToList();
+            if (_curve.Count == 0)
+                throw new ArgumentException("点列が空 (圧縮側データなし) です。", nameof(points));
+
+            FinalizeCurveSetup();
+        }
+
+        private void FinalizeCurveSetup()
+        {
             // 0点が無い場合は追加
             if (_curve.Count == 0 || _curve[0].Settlement_m > 1e-12)
             {
                 _curve.Insert(0, (0.0, 0.0));
+            }
+
+            // 重複変位の除去 (補間時のゼロ割回避)
+            for (int i = _curve.Count - 1; i > 0; i--)
+            {
+                if (_curve[i].Settlement_m - _curve[i - 1].Settlement_m < 1e-15)
+                    _curve.RemoveAt(i);
             }
 
             // 初期接線剛性の計算
@@ -53,6 +82,10 @@ namespace PileDesign.FEM
             {
                 InitialTangentStiffness = FemConstants.DefaultVerticalPileStiffness; // デフォルト
             }
+
+            // 初期接線が負/0 のときも下限値で救う (節点別カーブで反力ほぼゼロのケース対応)
+            if (InitialTangentStiffness <= 0)
+                InitialTangentStiffness = FemConstants.DefaultVerticalPileStiffness;
 
             _minStiffness = Math.Max(InitialTangentStiffness * 0.01, 1.0); // 最低1 kN/m
         }

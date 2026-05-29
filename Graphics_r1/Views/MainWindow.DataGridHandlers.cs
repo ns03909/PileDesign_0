@@ -288,7 +288,12 @@ namespace PileDesign.Views
             try
             {
                 if (DataContext is MainWindowViewModel vm)
+                {
+                    // ペースト/Delete クリアは編集サイクルを経由せず CellEditEnding が発火しないため、
+                    // ここで 1 つの Undo スナップショットを保存し、一括で元に戻せるようにする。
+                    vm.SaveUndoState("杭軸力 貼り付け");
                     vm.UpdateSumAndOTM();
+                }
             }
             finally
             {
@@ -296,6 +301,17 @@ namespace PileDesign.Views
                 {
                     System.Windows.Input.Mouse.OverrideCursor = null;
                 }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            }
+        }
+
+        private void DataGridPileLayout_PasteCompleted(object sender, EventArgs e)
+        {
+            // 配置グリッドのペースト/Delete クリアも CellEditEnding を経由しないため、
+            // ここで 1 つの Undo スナップショットを保存する。X/Y/軸力の変更は集計値にも影響する。
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.SaveUndoState("杭配置 貼り付け");
+                vm.UpdateSumAndOTM();
             }
         }
 

@@ -1,0 +1,62 @@
+{
+  "exampleName": "ExampleK8",
+  "exampleDisplayName": "関東支部8章",
+  "schemaVersion": 1,
+  "capturedAt": "2026-05-19",
+  "options": {
+    "level1Steps": 4,
+    "level2Steps": 8,
+    "liquefactionMode": "Yes",
+    "useLineSearch": true,
+    "parallelism": 1
+  },
+  "cases": [
+    {
+      "caseKey": "L1-1.C1.Liq",
+      "level": 1,
+      "loadCaseNo": 1,
+      "combinationNo": 1,
+      "isLiquefaction": true,
+      "converged": true,
+      "totalIterations": 49,
+      "totalSteps": 4,
+      "bisectionRetries": 0,
+      "finalResidual": 3.4104702983521495E-07,
+      "apUx": 0.009444617728752134,
+      "apUy": -0.004837372237920297,
+      "apUz": 7.140411537145059E-05,
+      "apRx": -2.2946398274060847E-20,
+      "apRy": 3.3057460820115832E-06,
+      "apRz": 0.0004479048368444672,
+      "maxAbsHorizDisp": 0.010611360620130725,
+      "maxAbsHorizSpringReaction": 110.96057445332733
+    },
+    {
+      "caseKey": "L2-1.C1.Liq",
+      "level": 2,
+      "loadCaseNo": 1,
+      "combinationNo": 1,
+      "isLiquefaction": true,
+      "converged": true,
+      "totalIterations": 97,
+      "totalSteps": 8,
+      "bisectionRetries": 0,
+      "finalResidual": 9.491318133464977E-07,
+      "apUx": 0.03990080427612388,
+      "apUy": -0.02065345374661806,
+      "apUz": 0.00014295882284901115,
+      "apRx": -5.946861875085972E-20,
+      "apRy": 6.618464020787514E-06,
+      "apRz": 0.0019123568283905348,
+      "maxAbsHorizDisp": 0.044929270342898266,
+      "maxAbsHorizSpringReaction": 173.17860285202406
+    }
+  ],
+  "summary": {
+    "totalCases": 2,
+    "convergedCases": 2,
+    "totalIterations": 146,
+    "totalSteps": 12,
+    "maxResidualOverAllCases": 9.491318133464977E-07
+  }
+}

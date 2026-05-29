@@ -295,19 +295,33 @@
             <TextBlock Text="{Binding CrosshairPositionText3}" Margin="10" FontSize="14" Grid.Column="2"/>
         </Grid>
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding GraphErrorMessage}"
-                   Foreground="Red" Margin="10,2" VerticalAlignment="Center">
-            <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                    <Setter Property="Visibility" Value="Visible"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding GraphErrorMessage}" Value="{x:Null}">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBlock.Style>
-        </TextBlock>
+        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Vertical" Margin="10,2" VerticalAlignment="Center">
+            <TextBlock Text="{Binding GraphErrorMessage}" Foreground="Red" TextWrapping="Wrap">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding GraphErrorMessage}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <!-- 剛結杭の M-θ 表示なし等の説明 (エラーではない情報メッセージ) -->
+            <TextBlock Text="{Binding GraphInfoMessage}" Foreground="#666" FontSize="12" TextWrapping="Wrap">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding GraphInfoMessage}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </StackPanel>
         <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="1" HorizontalAlignment="Right">
             <Button x:Name="ButtonOk" Content="閉じる (Esc)" Height="30" VerticalAlignment="Top"
                     Width="100" Command="{Binding CloseCommand}"/>

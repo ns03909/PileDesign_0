@@ -98,8 +98,12 @@
 
         <StackPanel Orientation="Horizontal"  HorizontalAlignment="Right" Grid.Row="1">
 
-            <Button Content="保存 (Ctrl+Enter)" Width="150" Click="OkButton_Click"/>
-            <Button Content="キャンセル (Esc)" Width="150" Click="CancelButton_Click"/>
+            <Button x:Name="OkButton" Content="保存(_S)" Width="150" Click="OkButton_Click"
+                    IsDefault="True"
+                    ToolTip="変更を保存して閉じます (Enter / Ctrl+Enter / Alt+S)"/>
+            <Button Content="キャンセル(_C)" Width="150" Click="CancelButton_Click"
+                    IsCancel="True"
+                    ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
 
         </StackPanel>
     </Grid>

@@ -16,11 +16,14 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Media3D;
 using MenuItem = System.Windows.Controls.MenuItem;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 using Serilog;
 namespace PileDesign.Views
@@ -114,6 +117,14 @@ namespace PileDesign.Views
             Loaded += MainWindow_Loaded;
             // Ctrl+Shift+P でコマンドパレット起動 (C.9)
             PreviewKeyDown += MainWindow_GlobalShortcutPreviewKeyDown;
+
+            // Backstage (ファイルメニュー) のフェード差し替え: Fluent の既定 200ms より滑らかな
+            //   300ms CubicEase Out をコードビハインドで適用する。
+            //   AreAnimationsEnabled="False" を XAML 側に設定済みのため、ここでカスタム制御。
+            if (MainBackstage != null)
+            {
+                MainBackstage.IsOpenChanged += MainBackstage_IsOpenChanged;
+            }
 
             // ViewModelのActionにUpdateCanvas3Dを設定
             CanvasThreeDViewModel = viewModel.CanvasThreeDView;
@@ -372,11 +383,11 @@ namespace PileDesign.Views
         /// </summary>
         private void Window_DragEnter(object sender, DragEventArgs e)
         {
-            // .jsonファイルのドラッグを受け入れる
+            // .pdj / .json ファイルのドラッグを受け入れる
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-                if (files != null && files.Length > 0 && files[0].EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                if (files != null && files.Length > 0 && IsPileDesignProjectFile(files[0]))
                 {
                     e.Effects = DragDropEffects.Copy;
                 }
@@ -393,24 +404,44 @@ namespace PileDesign.Views
         }
 
         /// <summary>
-        /// ドロップ時の処理
+        /// PileDesign プロジェクトファイル (.pdj 推奨 / .json 旧形式) かを判定する。
+        /// </summary>
+        private static bool IsPileDesignProjectFile(string path) =>
+            path.EndsWith(".pdj", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// ドロップ時の処理: .pdj / .json ファイルを開く。複数ドロップ時は先頭のみ。
+        /// 非対応形式 / 複数 / 空のドロップに対してステータスバーで簡易フィードバック。
         /// </summary>
         private void Window_Drop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            try
             {
+                if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
                 var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-                if (files != null && files.Length > 0)
+                if (files == null || files.Length == 0) return;
+
+                // .pdj / .json 以外を含むなら警告 (先頭が対応形式ならそれだけ採用)
+                if (!IsPileDesignProjectFile(files[0]))
                 {
-                    var filePath = files[0];
-                    if (filePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // ViewModelのOpenFromMruメソッドを使用してファイルを開く
-                        _mainWindowViewModel.OpenFromMru(filePath);
-                    }
+                    _mainWindowViewModel.StatusMessage = "ドロップされたファイルは PileDesign プロジェクト (.pdj / .json) ではありません。";
+                    return;
                 }
+
+                if (files.Length > 1)
+                {
+                    _mainWindowViewModel.StatusMessage = $"複数ファイルが選ばれましたが先頭のみ開きます: {System.IO.Path.GetFileName(files[0])}";
+                }
+
+                // ViewModel の OpenFromMru メソッドを使用してファイルを開く
+                // (post-load protocol で AutoSave / Undo クリア等まで実行される)
+                _mainWindowViewModel.OpenFromMru(files[0]);
             }
-            e.Handled = true;
+            finally
+            {
+                e.Handled = true;
+            }
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -435,6 +466,110 @@ namespace PileDesign.Views
             {
                 vm.PropertyChanged -= VmOnPropertyChanged;
             }
+        }
+
+        // =========================================================================
+        // Backstage (ファイルメニュー) カスタムフェード
+        //   Fluent.Ribbon の既定 200ms フェードを XAML で無効化し、300ms CubicEase Out に置換。
+        //   閉じる時は Back ボタンの PreviewMouseLeftButtonDown を捕捉して
+        //   フェードアウト完了後に IsOpen=false を設定する。
+        // =========================================================================
+        private bool _backstageClosingInProgress;
+        private FrameworkElement _hookedBackButton;
+        private static readonly Duration _backstageFadeDuration = new Duration(System.TimeSpan.FromMilliseconds(300));
+
+        private static IEasingFunction CreateBackstageEase() =>
+            new CubicEase { EasingMode = EasingMode.EaseOut };
+
+        private void MainBackstage_IsOpenChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (MainBackstage == null) return;
+
+            if (MainBackstage.IsOpen)
+            {
+                _backstageClosingInProgress = false;
+                // 視覚ツリー上で Adorner が現れるのを待ってからフェードイン
+                Dispatcher.BeginInvoke(new System.Action(ApplyBackstageFadeIn), DispatcherPriority.Render);
+            }
+        }
+
+        private void ApplyBackstageFadeIn()
+        {
+            var adorner = FindBackstageAdorner();
+            if (adorner == null) return;
+
+            adorner.BeginAnimation(UIElement.OpacityProperty, null);
+            var anim = new DoubleAnimation(0.0, 1.0, _backstageFadeDuration)
+            {
+                EasingFunction = CreateBackstageEase()
+            };
+            adorner.BeginAnimation(UIElement.OpacityProperty, anim);
+
+            // Back ボタンをフックしてフェードアウトを差し込む (Uid は Fluent.Ribbon 内部の定数)
+            var backButton = FindByUid(adorner, "BackstageBackButtonUid") as FrameworkElement;
+            if (backButton != null && backButton != _hookedBackButton)
+            {
+                if (_hookedBackButton != null)
+                    _hookedBackButton.PreviewMouseLeftButtonDown -= BackstageBackButton_PreviewMouseLeftButtonDown;
+                _hookedBackButton = backButton;
+                backButton.PreviewMouseLeftButtonDown += BackstageBackButton_PreviewMouseLeftButtonDown;
+            }
+        }
+
+        private void BackstageBackButton_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (_backstageClosingInProgress) return;
+            if (MainBackstage == null || !MainBackstage.IsOpen) return;
+
+            var adorner = FindBackstageAdorner();
+            if (adorner == null) return;
+
+            _backstageClosingInProgress = true;
+            e.Handled = true; // 既定の閉じる動作を抑止
+
+            var anim = new DoubleAnimation(1.0, 0.0, _backstageFadeDuration)
+            {
+                EasingFunction = CreateBackstageEase()
+            };
+            anim.Completed += (_, _) =>
+            {
+                if (MainBackstage != null) MainBackstage.IsOpen = false;
+                _backstageClosingInProgress = false;
+            };
+            adorner.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+
+        /// <summary>Window の Visual ツリーをたどり、Fluent.BackstageAdorner を探す。</summary>
+        private UIElement FindBackstageAdorner()
+        {
+            return FindVisualDescendant(this, e => e?.GetType().Name == "BackstageAdorner") as UIElement;
+        }
+
+        private static DependencyObject FindVisualDescendant(DependencyObject root, System.Func<DependencyObject, bool> predicate)
+        {
+            if (root == null) return null;
+            if (predicate(root)) return root;
+            int count = VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < count; i++)
+            {
+                var child = VisualTreeHelper.GetChild(root, i);
+                var found = FindVisualDescendant(child, predicate);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        private static DependencyObject FindByUid(DependencyObject root, string uid)
+        {
+            if (root == null) return null;
+            if (root is FrameworkElement fe && fe.Uid == uid) return root;
+            int count = VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < count; i++)
+            {
+                var found = FindByUid(VisualTreeHelper.GetChild(root, i), uid);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -466,6 +601,20 @@ namespace PileDesign.Views
                 parent.SizeChanged += (_, __) => UpdateCanvasRightBlankClip();
 
             UpdateCanvasRightBlankClip(); // 初期適用
+
+            // コマンドライン引数で指定されたファイルを起動時にロード
+            //   PileDesign.exe project.json
+            //   PileDesign.exe --open project.json
+            // App.StartupFilePath は OnStartup で解析済み。
+            if (!string.IsNullOrEmpty(App.StartupFilePath) && System.IO.File.Exists(App.StartupFilePath))
+            {
+                // OpenFromMru は完全な ProjectData ロード + AutoSave + Undo クリア等の post-load 処理を行う
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try { viewModel.OpenFromMruCommand.Execute(App.StartupFilePath); }
+                    catch (Exception ex) { Serilog.Log.Warning(ex, "Startup file load failed: {Path}", App.StartupFilePath); }
+                }), System.Windows.Threading.DispatcherPriority.Loaded);
+            }
 
             // --- 起動時の QuickHintPopup 表示を無効化 ---
             if (false && !_startupQuickHintShown)
@@ -519,7 +668,12 @@ namespace PileDesign.Views
             // --- 追加ここまで ---
 
             // 自動保存ファイルの復元チェック
-            viewModel.CheckAutoSaveRestore();
+            // ダブルクリック等で起動ファイル指定がある場合はスキップ
+            // (ユーザーは明示的に X を開こうとしているのに、別ファイル Y の autosave を提案するのを防ぐ)
+            if (string.IsNullOrEmpty(App.StartupFilePath))
+            {
+                viewModel.CheckAutoSaveRestore();
+            }
 
             // レイアウトを復元
             //_layoutService.RestoreDockLayout(dockingManager);
@@ -2172,49 +2326,36 @@ namespace PileDesign.Views
         }
 
 
-        // 選択された杭配置データを削除するメソッド
-        private void DeleteSelectedPileLayouts()
+        // 選択された杭配置データを削除するメソッド (デッドコード — UI から呼び出されていない)
+        // 接続梁のカスケード削除を持たないため、有効化する場合は DeletePiles (MainWindowViewModel.cs)
+        // のように beam cascade ロジックを追加してから使うこと。
+        //private void DeleteSelectedPileLayouts()
         //{
-        //    var viewModel = _mainWindowViewModel;
-        //    InputModel InputModel = viewModel.CurrentInputModel;
-
-        //    // 削除するアイテムのリストを作成
-        //    var itemsToRemove = viewModel.CurrentInputModel.PileLayoutItems
-        //        .Where(pileLayoutItem => pileLayoutItem.IsSelected)
-        //        .ToList();
-
-        //    // リストを列挙してアイテムを削除
-        //    foreach (var pileLayoutItem in itemsToRemove)
+        //    var vm = _mainWindowViewModel;
+        //    var col = vm.CurrentInputModel.PileLayoutItems;
+        //
+        //    var itemsToRemove = col.Where(x => x.IsSelected).ToList();
+        //    if (itemsToRemove.Count == 0) return;
+        //
+        //    // まとめて1ステップに
+        //    var scope = new PileDesign.Common.Undo.CompositeUndoAction("Delete piles");
+        //    foreach (var item in itemsToRemove)
         //    {
-        //        InputModel.PileLayoutItems.Remove(pileLayoutItem);
+        //        int index = col.IndexOf(item);
+        //        if (index < 0) continue;
+        //        scope.Add(
+        //            PileDesign.Common.Undo.CollectionChangeAction<PileLayoutDataItem>
+        //                .ForRemove(col, item, index)
+        //        );
         //    }
+        //    UndoService.Instance.Push(scope);
+        //
+        //    // 実削除
+        //    foreach (var item in itemsToRemove)
+        //        col.Remove(item);
+        //
+        //    vm.UpdatePileLayoutNo();
         //}
-        {
-            var vm = _mainWindowViewModel;
-            var col = vm.CurrentInputModel.PileLayoutItems;
-
-            var itemsToRemove = col.Where(x => x.IsSelected).ToList();
-            if (itemsToRemove.Count == 0) return;
-
-            // まとめて1ステップに
-            var scope = new PileDesign.Common.Undo.CompositeUndoAction("Delete piles");
-            foreach (var item in itemsToRemove)
-            {
-                int index = col.IndexOf(item);
-                if (index < 0) continue;
-                scope.Add(
-                    PileDesign.Common.Undo.CollectionChangeAction<PileLayoutDataItem>
-                        .ForRemove(col, item, index)
-                );
-            }
-            UndoService.Instance.Push(scope);
-
-            // 実削除
-            foreach (var item in itemsToRemove)
-                col.Remove(item);
-
-            vm.UpdatePileLayoutNo();
-        }
 
         /// <summary>
         /// 選択された杭・節点・要素をまとめて削除（Undo対応）
@@ -3106,6 +3247,13 @@ namespace PileDesign.Views
                 && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             { MainWindowViewModel.OpenShortcutKeysWindow(); }
 
+        }
+
+        // ステータスバーのショートカットヒントクリック → ShortcutKeysWindow を開く
+        // (F1 でも同等の機能だが、マウスユーザー向けに視認可能なボタンとして提供)
+        private void ShortcutHintButton_Click(object sender, RoutedEventArgs e)
+        {
+            MainWindowViewModel.OpenShortcutKeysWindow();
         }
 
         // CSVエクスポートのコンテキストメニュークリックイベントハンドラ

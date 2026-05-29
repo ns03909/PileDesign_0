@@ -18,6 +18,15 @@ using PileDesign.Services;
 
 namespace PileDesign.Models.InputData
 {
+    /// <summary>水平解析の杭先端Zばねに使う P-S 曲線のソース。</summary>
+    public enum PsSpringSourceMode
+    {
+        /// <summary>常時 (LoadDisplacements)</summary>
+        Normal = 0,
+        /// <summary>極限 (LoadDisplacementsLimit)</summary>
+        Ultimate = 1,
+    }
+
     public class InputModel : BaseModel
     {
         private MainWindowViewModel _mainWindowViewModel;
@@ -53,7 +62,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 地盤数リスト（内部 backing field を持ち、クラス内部で更新可能にする）
-        private ObservableCollection<int> _groundsInputCountList = new();
+        private ObservableCollection<int> _groundsInputCountList = [];
         public ObservableCollection<int> GroundsInputCountList
         {
             get => _groundsInputCountList;
@@ -75,7 +84,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭体数リスト（内部 backing field を持ち、クラス内部で更新可能にする）
-        private ObservableCollection<int> _pileBodiesCountList = new();
+        private ObservableCollection<int> _pileBodiesCountList = [];
         public ObservableCollection<int> PileBodiesCountList
         {
             get => _pileBodiesCountList;
@@ -134,6 +143,33 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _isAxialForceVariationMode, value);
         }
 
+        // 水平解析: 杭先端鉛直境界を P-S 非線形ばねに置換するか (true: 沈下解析の LoadDisplacements を流用)
+        // false (既定): 従来通り Uz 固定
+        private bool _usePsSpringAtPileTip = false;
+        public bool UsePsSpringAtPileTip
+        {
+            get => _usePsSpringAtPileTip;
+            set => SetProperty(ref _usePsSpringAtPileTip, value);
+        }
+
+        // P-S 曲線ソース: 常時(LoadDisplacements) / 極限(LoadDisplacementsLimit)
+        private PsSpringSourceMode _psSpringSource = PsSpringSourceMode.Normal;
+        public PsSpringSourceMode PsSpringSource
+        {
+            get => _psSpringSource;
+            set => SetProperty(ref _psSpringSource, value);
+        }
+
+        // VL (常時) 単独ケースの解析実施フラグ (P-S 非線形ばね有効時のみ意味あり)
+        // ON: 水平荷重なし + 各杭頭に AxialForceVL を外力として適用したケースを「VL」として追加解析
+        // OFF: 地震ケースのみ解析 (従来挙動)
+        private bool _isVLAnalysisEnabled = false;
+        public bool IsVLAnalysisEnabled
+        {
+            get => _isVLAnalysisEnabled;
+            set => SetProperty(ref _isVLAnalysisEnabled, value);
+        }
+
         // 一般節点
         private ObservableCollection<InputNode> _inputNodes;
         public ObservableCollection<InputNode> InputNodes
@@ -149,12 +185,19 @@ namespace PileDesign.Models.InputData
         // クラス内フィールドに追加
         [System.Text.Json.Serialization.JsonIgnore]
         private bool _suppressSoilPileNotify;
+        private static readonly Dictionary<(int groundNo, int pileBodyNo, double z), SoilPile> value = [];
 
         // Phase 1: SoilPile キャッシュ最適化 (ランタイム一時データ — シリアライズ対象外)
         [System.Text.Json.Serialization.JsonIgnore]
-        private Dictionary<(int groundNo, int pileBodyNo, double z), SoilPile> _soilPileCache = new();
+        private Dictionary<(int groundNo, int pileBodyNo, double z), SoilPile> _soilPileCache = value;
         [System.Text.Json.Serialization.JsonIgnore]
         private bool _soilPileCacheValid = false;
+        // _soilPileCache / _soilPileCacheValid の同時アクセス保護用 lock。
+        // LookupSoilPile は UI binding / docx 出力 / AutoSave / 解析からも呼ばれうるため、
+        // 複数スレッドからの並行呼出で Dictionary が破損 (ConcurrentOperationsNotSupported) する
+        // 問題を防ぐ。Rebuild は短時間で済むため lock 競合は無視できる。
+        [System.Text.Json.Serialization.JsonIgnore]
+        private readonly object _soilPileCacheLock = new();
 
         // Phase 2: デバウンス (ランタイム制御 — シリアライズ対象外)
         [System.Text.Json.Serialization.JsonIgnore]
@@ -198,21 +241,29 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private void InvalidateSoilPileCache()
         {
-            _soilPileCacheValid = false;
+            lock (_soilPileCacheLock)
+            {
+                _soilPileCacheValid = false;
+            }
         }
 
         /// <summary>
-        /// 必要に応じて SoilPile キャッシュを再構築します。
+        /// 必要に応じて SoilPile キャッシュを再構築します (lock 保護下)。
         /// </summary>
-        private void RebuildSoilPileCacheIfNeeded()
+        private void RebuildSoilPileCacheIfNeeded_NoLock()
         {
             if (_soilPileCacheValid) return;
 
             _soilPileCache.Clear();
             if (ElementDivision?.SoilPiles == null) return;
 
-            foreach (var sp in ElementDivision.SoilPiles)
+            // ObservableCollection の列挙中に別スレッドが SoilPiles を書き換えると
+            // System.InvalidOperationException (collection was modified) が出るため、
+            // スナップショットを取ってから列挙する。
+            var snapshot = ElementDivision.SoilPiles.ToList();
+            foreach (var sp in snapshot)
             {
+                if (sp == null) continue;
                 // 許容差を考慮したキー生成
                 double zKey = Math.Round(sp.Z / NumericalConstants.COORDINATE_TOLERANCE)
                               * NumericalConstants.COORDINATE_TOLERANCE;
@@ -225,16 +276,77 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// SoilPile をキャッシュから高速検索します。
+        /// 複数スレッドからの同時呼出に対して thread-safe。
         /// </summary>
         public SoilPile? LookupSoilPile(int groundNo, int pileBodyNo, double z)
         {
-            RebuildSoilPileCacheIfNeeded();
-
             double zKey = Math.Round(z / NumericalConstants.COORDINATE_TOLERANCE)
                           * NumericalConstants.COORDINATE_TOLERANCE;
             var key = (groundNo, pileBodyNo, zKey);
 
-            return _soilPileCache.TryGetValue(key, out var result) ? result : null;
+            lock (_soilPileCacheLock)
+            {
+                RebuildSoilPileCacheIfNeeded_NoLock();
+                return _soilPileCache.TryGetValue(key, out var result) ? result : null;
+            }
+        }
+
+        /// <summary>
+        /// 杭体 No (1-based) に対する概要文字列を生成する。
+        /// プロパティパネル / DataGrid セル等の ToolTip で「どんな杭体か」を即座に確認するための要約。
+        /// 該当杭体が存在しない場合や情報が不足する場合は空文字を返す。
+        /// </summary>
+        public string GetPileBodySummary(int pileBodyNo)
+        {
+            int idx = pileBodyNo - 1;
+            if (PileBodies == null || idx < 0 || idx >= PileBodies.Count) return string.Empty;
+            var pb = PileBodies[idx];
+            if (pb == null) return string.Empty;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"杭体 No.{pileBodyNo}");
+            if (!string.IsNullOrWhiteSpace(pb.PileBodyRef)) sb.Append($"  {pb.PileBodyRef}");
+            sb.AppendLine();
+            if (!string.IsNullOrWhiteSpace(pb.PileBodyType)) sb.AppendLine($"種類: {pb.PileBodyType}");
+            if (!string.IsNullOrWhiteSpace(pb.PileConstructionType)) sb.AppendLine($"工法: {pb.PileConstructionType}");
+            if (pb.PileBodySegments != null && pb.PileBodySegments.Count > 0)
+            {
+                double totalLength = pb.PileBodySegments.Sum(s => s.SegmentLength);
+                sb.AppendLine($"全長: {totalLength:F2} m  ({pb.PileBodySegments.Count} 区間)");
+                var topSeg = pb.PileBodySegments[0];
+                if (topSeg?.PileSection != null && topSeg.PileSection.PileDiameter > 0)
+                    sb.AppendLine($"杭頭径: {topSeg.PileSection.PileDiameter:F0} mm");
+            }
+            if (pb.PileToeDia > 0) sb.Append($"先端径: {pb.PileToeDia:F0} mm");
+            return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>
+        /// 地盤 No (1-based) に対する概要文字列を生成する。
+        /// </summary>
+        public string GetGroundSummary(int groundNo)
+        {
+            int idx = groundNo - 1;
+            if (GroundsInput == null || idx < 0 || idx >= GroundsInput.Count) return string.Empty;
+            var g = GroundsInput[idx];
+            if (g == null) return string.Empty;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"地盤 No.{groundNo}");
+            if (!string.IsNullOrWhiteSpace(g.GroundRef)) sb.Append($"  {g.GroundRef}");
+            sb.AppendLine();
+            sb.AppendLine($"地表面標高: {g.GroundTopAltitude:F2} m");
+            sb.AppendLine($"地下水位 GL深: {g.GroundWaterGLDepth:F2} m");
+            int layerCount = g.GroundLayers?.Count ?? 0;
+            int massCount = g.GroundMassesData?.Count ?? 0;
+            sb.Append($"土層数: {layerCount}  /  土質点数: {massCount}");
+            if (g.GroundLayers != null && g.GroundLayers.Count > 0)
+            {
+                double bottomDepth = g.GroundLayers.Max(l => -l.BottomAltitude + g.GroundTopAltitude);
+                sb.AppendLine();
+                sb.Append($"最下層 GL深: {bottomDepth:F2} m");
+            }
+            return sb.ToString().TrimEnd();
         }
 
         // Phase 2: デバウンス管理メソッド
@@ -1047,7 +1159,7 @@ namespace PileDesign.Models.InputData
             try
             {
                 if (PileLayoutItems == null || PileLayoutItems.Count == 0)
-                    return new List<double>();
+                    return [];
 
                 double radian = angle * Math.PI / 180;
                 double c = Math.Cos(radian);
@@ -1066,12 +1178,12 @@ namespace PileDesign.Models.InputData
                 if (otm <= 1e-12) // ほぼゼロ
                     return [.. raw.Select(_ => 0.0)];
 
-                return raw.Select(r => r / otm).ToList();
+                return [.. raw.Select(r => r / otm)];
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "[InputModel.GetReactionForUnitMoment] angle={Angle}", angle);
-                return new List<double>();
+                return [];
             }
         }
 
@@ -1802,17 +1914,13 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public int GetNodeDisplayNo(NodeReferenceType type, Guid id)
         {
-            switch (type)
+            return type switch
             {
-                case NodeReferenceType.GeneralNode:
-                    return InputNodes?.FirstOrDefault(n => n.UniqueId == id)?.No ?? 0;
-                case NodeReferenceType.PileLayout:
-                    return PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id)?.No ?? 0;
-                case NodeReferenceType.FoundationNode:
-                    return FoundationBeamInput?.Nodes.FirstOrDefault(n => n.Id == id)?.No ?? 0;
-                default:
-                    return 0;
-            }
+                NodeReferenceType.GeneralNode => InputNodes?.FirstOrDefault(n => n.UniqueId == id)?.No ?? 0,
+                NodeReferenceType.PileLayout => PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id)?.No ?? 0,
+                NodeReferenceType.FoundationNode => FoundationBeamInput?.Nodes.FirstOrDefault(n => n.Id == id)?.No ?? 0,
+                _ => 0,
+            };
         }
 
         /// <summary>

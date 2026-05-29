@@ -25,6 +25,10 @@ namespace PileDesign.Output
         // 内部の Canvas は ShapeDrawer.DrawPileElevation が自動でスケールフィットする。
         private const double PileElevationDocxWidthMm = 100;
         private const double PileElevationDocxHeightMm = 130;
+        // ShapeDrawer.DrawPileElevation は Z 軸ラベルを canvasWidth - textWidth に右詰めで配置するため、
+        // bitmap 右端の anti-aliasing で 1〜2 桁分の数値が欠ける問題がある。
+        // Canvas 自体を右に少し広げてラベル用余白を作る (描画後 PNG の幅も同じ比率で広がる)。
+        private const double PileElevationRightLabelMarginMm = 5;
 
         private void AddPileDiagramsSection(MainDocumentPart mainPart, Body body)
         {
@@ -73,8 +77,9 @@ namespace PileDesign.Output
                 {
                     var pngBytes = RenderPileElevationViaShapeDrawer(soilPile, pileBody);
                     if (pngBytes == null || pngBytes.Length == 0) continue;
+                    // 画像幅 = 杭描画幅 + Z ラベル右マージン
                     WordDrawingBuilder.AddPngBytesToBody(mainPart, body, pngBytes,
-                        PileElevationDocxWidthMm, PileElevationDocxHeightMm);
+                        PileElevationDocxWidthMm + PileElevationRightLabelMarginMm, PileElevationDocxHeightMm);
 
                     string caption = $"杭姿図 — 杭体 {soilPile.PileBodyNo} × 地盤 {soilPile.GroundNo}";
                     AddAutoFigureCaption(body, caption, "図");
@@ -100,7 +105,10 @@ namespace PileDesign.Output
         private byte[] RenderPileElevationViaShapeDrawer(SoilPile soilPile, PileBodyInput pileBody)
         {
             // DIP (デバイス独立ピクセル、96 DPI)
-            double dipW = PileElevationDocxWidthMm * 96.0 / 25.4;
+            // 右側 Z ラベル余白 (PileElevationRightLabelMarginMm) を含めた Canvas 幅で描画。
+            // ShapeDrawer が Canvas.ActualWidth を基準にラベルを右詰めするため、
+            // この余白分だけ右側に空白ができ、ラベルが切れずに収まる。
+            double dipW = (PileElevationDocxWidthMm + PileElevationRightLabelMarginMm) * 96.0 / 25.4;
             double dipH = PileElevationDocxHeightMm * 96.0 / 25.4;
             // 最終 PNG 解像度 (HiResScale 倍密度)
             int pxW = (int)Math.Round(dipW * Layout.HiResScale);

@@ -3,7 +3,8 @@ using System;
 
 namespace PileDesign.FEM
 {
-    // PileDesign.Cli / PileDesign.Mcp (prototype) が SolveDisp を直接呼ぶため public で公開。
+    // public 公開: TestProject1 (SolverRegressionTests / IntegrationTests) が直接 SolveDisp を呼ぶ。
+    // (旧 PileDesign.Cli / PileDesign.Mcp prototype は 2026-05-19 廃止済)
     public class Solver
     {
         // ソルバ（緩和係数対応版）

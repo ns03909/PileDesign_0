@@ -399,7 +399,8 @@ namespace PileDesign.FEM
         }
 
         // sTarget -> Tangent K メソッド
-        private static double GetTangentStiffnessPileToeFromSettlement(
+        // internal 化: 水平解析 (PileVerticalSoilSpringModel) からも呼ぶため
+        internal static double GetTangentStiffnessPileToeFromSettlement(
             double settlement, double dp, double rpu, double alpha, double n)
         {
             double ktan;
@@ -421,7 +422,8 @@ namespace PileDesign.FEM
         }
 
         // sTarget -> Secant K メソッド
-        private static double GetSecantStiffnessPileToeFromSettlement(
+        // internal 化: 水平解析 (PileVerticalSoilSpringModel) からも呼ぶため
+        internal static double GetSecantStiffnessPileToeFromSettlement(
             double settlment, double dp, double rpu, double alpha, double n)
         {
             double ksec;
@@ -475,7 +477,8 @@ namespace PileDesign.FEM
         }
 
         // 杭周面の接線剛性を返すメソッド
-        private static double GetTangentStiffnessPilePerimeter(
+        // internal 化: 水平解析 (PileVerticalSoilSpringModel) からも呼ぶため
+        internal static double GetTangentStiffnessPilePerimeter(
             string state, double s, bool aPC, bool aPT, double tau1, double tau2, double S1, double S2, double psiL)
         {
             //double PI = Math.PI;
@@ -518,7 +521,8 @@ namespace PileDesign.FEM
         }
 
         // 杭周面の割線剛性を返すメソッド
-        private static double GetSecantStiffnessPilePerimeter(
+        // internal 化: 水平解析 (PileVerticalSoilSpringModel) からも呼ぶため
+        internal static double GetSecantStiffnessPilePerimeter(
             string state, double s, bool aPC, bool aPT, double tau1, double tau2, double S1, double S2, double psiL)
         {
             double ksec;

@@ -563,18 +563,27 @@ namespace PileDesign.Models.InputData
         }
 
         // NMキャッシュは使用しない（パラメータ変更の即時反映のため）
+        // [JsonIgnore] 必須: GetNMRaw() で断面計算機 (PileTop の 2 段断面 NM 曲線) を毎回構築する
+        // 重い computed プロパティ。System.Text.Json が保存時に getter を呼ぶと杭体ごとに数百 ms かかる。
+        // 読取専用なので load 時にも復元できない (廃棄値)。PileSection.cs と同じ対策。
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredServiceNMRaw => GetNMRaw(nameof(UnfactoredServiceNM));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredDamageNMRaw => GetNMRaw(nameof(UnfactoredDamageNM));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredUltimateNMRaw => GetNMRaw(nameof(UnfactoredUltimateNM));
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredServiceNM =>
             (GetMultipliedListValues(UnfactoredServiceNMRaw.N, 1e-3),
              GetMultipliedListValues(UnfactoredServiceNMRaw.M, 1e-6));
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredDamageNM =>
             (GetMultipliedListValues(UnfactoredDamageNMRaw.N, 1e-3),
              GetMultipliedListValues(UnfactoredDamageNMRaw.M, 1e-6));
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredUltimateNM =>
             (GetMultipliedListValues(UnfactoredUltimateNMRaw.N, 1e-3),
              GetMultipliedListValues(UnfactoredUltimateNMRaw.M, 1e-6));

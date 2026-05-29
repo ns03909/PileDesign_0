@@ -88,7 +88,7 @@
                             Width="120" Height="32" Margin="0,0,8,0"
                             FontWeight="Bold" Background="{StaticResource PrimaryAccentDarkBrush}" Foreground="White">
                         <Button.Style>
-                            <Style TargetType="Button">
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsAnalysisRunning}" Value="True">
                                         <Setter Property="IsEnabled" Value="False"/>
@@ -289,11 +289,15 @@
         <!-- ═══ 下部ボタン ═══ -->
         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                     Orientation="Horizontal" HorizontalAlignment="Right" Margin="8">
-            <Button Content="保存 (Ctrl+Enter)" Command="{Binding OkCommand}"
+            <Button Content="保存(_S)" Command="{Binding OkCommand}"
                     Width="180" Height="28" Margin="0,4,8,4"
+                    IsDefault="True"
+                    ToolTip="変更を保存して閉じます (Enter / Ctrl+Enter / Alt+S)"
                     Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BoolToVisConverter}}"/>
-            <Button Content="キャンセル (Esc)" Command="{Binding CancelCommand}"
-                    Width="150" Height="28" Margin="0,4,8,4"/>
+            <Button Content="キャンセル(_C)" Command="{Binding CancelCommand}"
+                    Width="150" Height="28" Margin="0,4,8,4"
+                    IsCancel="True"
+                    ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
         </StackPanel>
     </Grid>
 </Window>

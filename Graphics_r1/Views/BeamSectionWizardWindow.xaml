@@ -175,11 +175,12 @@
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="2" Margin="0,8,0,0">
-            <Button Content="適用" Width="80" Click="ApplyButton_Click" Margin="0,0,5,0"
-                    ToolTip="現在の設定を適用して編集を続けます"/>
-            <Button Content="OK" Width="80" Click="OkButton_Click" IsDefault="True" Margin="0,0,5,0"
-                    ToolTip="現在の設定を適用して閉じます"/>
-            <Button Content="キャンセル (Esc)" Width="100" Click="CancelButton_Click" IsCancel="True"/>
+            <Button Content="適用(_A)" Width="80" Click="ApplyButton_Click" Margin="0,0,5,0"
+                    ToolTip="現在の設定を適用して編集を続けます (Alt+A)"/>
+            <Button x:Name="OkButton" Content="OK(_O)" Width="80" Click="OkButton_Click" IsDefault="True" Margin="0,0,5,0"
+                    ToolTip="現在の設定を適用して閉じます (Enter / Alt+O)"/>
+            <Button Content="キャンセル(_C)" Width="100" Click="CancelButton_Click" IsCancel="True"
+                    ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
         </StackPanel>
     </Grid>
 </Window>

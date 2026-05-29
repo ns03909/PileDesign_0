@@ -85,9 +85,16 @@ namespace PileDesign.Views
             double pileToeHeight = pileBody.InsituPileToeHeight / 1000.0;
             double pileToeHeightRatio = pileBody.PrecastConcretePileToeHeightRatio;
 
+            // zToeTop: 杭体の描画下限 (拡底/拡大根固め部の頂点 = 杭体の終わりかつ拡張形状の始まり)
+            //   - 場所打ちコンクリート杭: 拡底円錐+円柱の頂点まで
+            //   - 既製コンクリート杭の埋込み杭: 拡大根固め球根の頂点まで (PileToeDia × PileToeHeightRatio)
+            //   - 回転貫入杭: 拡張形状 (拡底等) が存在しないため、杭体は zs[^1] (真の杭先端) まで描画
+            string _ctypeForToe = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType;
             double zToeTop = pileToeDia <= pileBottomDia ? zs[^1] :
-                (viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType == "場所打ちコンクリート杭"
+                (_ctypeForToe == "場所打ちコンクリート杭"
                 ? zs[^1] + (pileToeDia - pileBottomDia) * 0.5 / Math.Tan(pileToeAngle * Math.PI / 180) + pileToeHeight
+                : _ctypeForToe == "回転貫入杭"
+                ? zs[^1]
                 : zs[^1] + pileToeDia * pileToeHeightRatio);
 
             for (int i = 0; i < zs.Count - 1; i++)
@@ -110,15 +117,25 @@ namespace PileDesign.Views
 
                     AddPileSectionGeometry(point1, point2, pileDia2D, flattening);
 
-                    if (viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType == "場所打ちコンクリート杭")
+                    var ctype = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType;
+                    if (ctype == "場所打ちコンクリート杭")
                     {
                         if (i == zs.Count - 2 && pileToeDia > pileDia)
                         {
                             // 拡底部ジオメトリ
                             AddInsituPileToeGeometry(
                                 pointB, pileToeDia, pileDia, flattening,
-                                viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType, pileBodySegments,
+                                ctype, pileBodySegments,
                                 pileToeAngle, pileToeHeight);
+                        }
+                    }
+                    else if (ctype == "回転貫入杭")
+                    {
+                        if (i == zs.Count - 2 && pileToeDia > pileDia)
+                        {
+                            // 回転貫入杭の螺旋羽根 (羽根径=pileToeDia, ピッチ=Dp/5)
+                            // 杭先端から下方に 1 巻きを描く + 同区間に杭体を延長
+                            AddHelicalBladeToeGeometry(x, y, zs[^1], pileToeDia, pileDia);
                         }
                     }
                     else
@@ -284,6 +301,81 @@ namespace PileDesign.Views
                 );
                 dashedPath.AddGeometry(innerLine);
             }
+        }
+
+        /// <summary>
+        /// 回転貫入杭の螺旋羽根 (1巻き、羽根径Dw、ピッチ=杭径Dp/5) を 3D 透視ビュー上に描画する。
+        /// 螺旋の内外縁を実 3D 座標でサンプリングして投影し、線分連結で描く。
+        /// 視点角度 (Phi) に応じて螺旋が立体的にレンダリングされる。
+        /// </summary>
+        /// <param name="xCenter">杭中心 X (m)</param>
+        /// <param name="yCenter">杭中心 Y (m)</param>
+        /// <param name="zTip">杭先端 Z (m) — 羽根の下端</param>
+        /// <param name="bladeDia">羽根径 Dw (m)</param>
+        /// <param name="pileDia">杭径 Dp (m)</param>
+        private void AddHelicalBladeToeGeometry(
+            double xCenter, double yCenter, double zTip,
+            double bladeDia, double pileDia)
+        {
+            if (DataContext is not MainWindowViewModel viewModel) return;
+
+            var path = viewModel.IsElementSplit
+                ? viewModel.CanvasGeometry.PathGeoPileDividedDias
+                : viewModel.CanvasGeometry.PathGeoPileDias;
+
+            double R = bladeDia * 0.5;
+            double r = pileDia * 0.5;
+            double pitch = pileDia / 5.0;     // 1巻き軸方向長さ
+
+            const int n = 32;                  // 周方向分割数
+
+            // 外周ヘリックス (R) と内周ヘリックス (r) の 3D 点列を 2D に投影し、連続する線分で接続
+            // 注: 軸座標系は +Z = 上向きなので、羽根は zTip → zTip - pitch (下方向) に伸ばす
+            Point projOuterPrev = default;
+            Point projInnerPrev = default;
+            for (int i = 0; i <= n; i++)
+            {
+                double t = (double)i / n;            // 0..1
+                double theta = t * 2.0 * Math.PI;
+                double z = zTip - t * pitch;
+                double cos = Math.Cos(theta);
+                double sin = Math.Sin(theta);
+
+                var p3dOuter = new Point3D(xCenter + R * cos, yCenter + R * sin, z);
+                var p3dInner = new Point3D(xCenter + r * cos, yCenter + r * sin, z);
+                var pOuter = viewModel.CanvasThreeDView.Transformation(p3dOuter);
+                var pInner = viewModel.CanvasThreeDView.Transformation(p3dInner);
+
+                if (i > 0)
+                {
+                    path.AddGeometry(new LineGeometry(projOuterPrev, pOuter));
+                    path.AddGeometry(new LineGeometry(projInnerPrev, pInner));
+                }
+                projOuterPrev = pOuter;
+                projInnerPrev = pInner;
+            }
+
+            // ブレード上下端の半径方向ラインで「リボン」感を補強 (i=0 と i=n で内外を接続)
+            for (int side = 0; side <= 1; side++)
+            {
+                double theta = side == 0 ? 0.0 : 2.0 * Math.PI;
+                double z = zTip - (side == 0 ? 0.0 : pitch);
+                double cos = Math.Cos(theta);
+                double sin = Math.Sin(theta);
+                var pOuter = viewModel.CanvasThreeDView.Transformation(
+                    new Point3D(xCenter + R * cos, yCenter + R * sin, z));
+                var pInner = viewModel.CanvasThreeDView.Transformation(
+                    new Point3D(xCenter + r * cos, yCenter + r * sin, z));
+                path.AddGeometry(new LineGeometry(pInner, pOuter));
+            }
+
+            // 杭体を羽根領域 (zTip → zTip - pitch) まで延長する追加杭体ジオメトリ
+            // (羽根が杭体に巻き付いた状態を可視化)
+            var ptCylTop = viewModel.CanvasThreeDView.Transformation(new Point3D(xCenter, yCenter, zTip));
+            var ptCylBtm = viewModel.CanvasThreeDView.Transformation(new Point3D(xCenter, yCenter, zTip - pitch));
+            double pileDia2D = pileDia * viewModel.CanvasThreeDView.Scale;
+            double flattening = viewModel.CanvasThreeDView.Flattening;
+            AddPileSectionGeometry(ptCylTop, ptCylBtm, pileDia2D, flattening);
         }
 
         // 基礎梁描画の更新

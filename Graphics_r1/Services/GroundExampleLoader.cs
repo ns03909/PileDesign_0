@@ -62,6 +62,10 @@ namespace PileDesign.Services
             if (!string.IsNullOrEmpty(data.CalculationMethod))
                 groundInput.CalculationMethod = data.CalculationMethod;
 
+            // 地盤変位を「考慮しない」モード (例題で明示指定された場合のみ)
+            if (data.IsGroundDisplacementIgnored.HasValue)
+                groundInput.IsGroundDisplacementIgnored = data.IsGroundDisplacementIgnored.Value;
+
             // 地層データを適用
             groundInput.GroundLayers = new ObservableCollection<GroundLayerInput>();
             foreach (var layerDto in data.GroundLayers)

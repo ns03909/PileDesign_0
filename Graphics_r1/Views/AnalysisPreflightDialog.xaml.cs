@@ -13,6 +13,11 @@ namespace PileDesign.Views
         public AnalysisPreflightDialog()
         {
             InitializeComponent();
+
+            // ダイアログ表示直後に「実行」ボタンへフォーカスを移し、
+            // どのキー (Enter) が何を実行するか視覚的に明示する。
+            // Loaded で行うのは XAML 構築直後だと Visual Tree が未完成のため。
+            this.Loaded += (_, _) => OkButton?.Focus();
         }
 
         /// <summary>

@@ -41,8 +41,10 @@
         </StackPanel>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
-            <Button Content="OK" Width="80" Click="OkButton_Click" IsDefault="True" Margin="0,0,5,0"/>
-            <Button Content="キャンセル (Esc)" Width="100" Click="CancelButton_Click" IsCancel="True"/>
+            <Button x:Name="OkButton" Content="OK(_O)" Width="80" Click="OkButton_Click" IsDefault="True" Margin="0,0,5,0"
+                    ToolTip="変更を適用して閉じます (Enter / Alt+O)"/>
+            <Button Content="キャンセル(_C)" Width="100" Click="CancelButton_Click" IsCancel="True"
+                    ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
         </StackPanel>
     </Grid>
 </Window>

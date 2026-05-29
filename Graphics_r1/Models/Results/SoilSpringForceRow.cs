@@ -1,3 +1,4 @@
+using PileDesign.Common;
 using PileDesign.FEM;
 
 namespace PileDesign.Models.Results
@@ -23,17 +24,30 @@ namespace PileDesign.Models.Results
         [ResultColumn("|Fh|(kN)", 30, "N2")] public double FhAbs { get; init; }
         [ResultColumn("|RelUh|(mm)", 31, "N3")] public double RelUhAbs { get; init; }
 
+        // 単位長さ当たり地盤反力 (kN/m) — 分担長は SoilReactionUtil で算出 (FEM 実梁長ベース)
+        [ResultColumn("Lt(m)",       40, "N3")] public double TributaryLength { get; init; }
+        [ResultColumn("Fx/Lt(kN/m)", 41, "N2")] public double FxPerLt { get; init; }
+        [ResultColumn("Fy/Lt(kN/m)", 42, "N2")] public double FyPerLt { get; init; }
+        [ResultColumn("Fz/Lt(kN/m)", 43, "N2")] public double FzPerLt { get; init; }
+        [ResultColumn("|Fh|/Lt(kN/m)", 44, "N2")] public double FhAbsPerLt { get; init; }
+
         public static SoilSpringForceRow From(
             int springIndex,
             int node1Index,
             int node2Index,
             HorizontalSoilSpring spring,
             BeamForce bf,
-            BeamDisp bd)
+            BeamDisp bd,
+            AnaModel anaModel = null)
         {
             double relUx = (bd.Dxi - bd.Dxj) * 1000.0; // m → mm
             double relUy = (bd.Dyi - bd.Dyj) * 1000.0;
             double relUz = (bd.Dzi - bd.Dzj) * 1000.0;
+
+            double tributary = SoilReactionUtil.GetNodeTributaryLength(spring?.NodeI, anaModel);
+            double inv = tributary > 1e-9 ? 1.0 / tributary : 0;
+            double fhAbs = System.Math.Sqrt(bf.Fxi * bf.Fxi + bf.Fyi * bf.Fyi);
+
             return new SoilSpringForceRow
             {
                 SpringIndex = springIndex,
@@ -46,8 +60,13 @@ namespace PileDesign.Models.Results
                 Fx = bf.Fxi,
                 Fy = bf.Fyi,
                 Fz = bf.Fzi,
-                FhAbs = System.Math.Sqrt(bf.Fxi * bf.Fxi + bf.Fyi * bf.Fyi),
+                FhAbs = fhAbs,
                 RelUhAbs = System.Math.Sqrt(relUx * relUx + relUy * relUy),
+                TributaryLength = tributary,
+                FxPerLt = bf.Fxi * inv,
+                FyPerLt = bf.Fyi * inv,
+                FzPerLt = bf.Fzi * inv,
+                FhAbsPerLt = fhAbs * inv,
             };
         }
     }

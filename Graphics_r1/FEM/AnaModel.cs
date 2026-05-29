@@ -57,6 +57,10 @@ namespace PileDesign.FEM
         /// <summary>PileLayoutItem → caseModel 側の Beams リスト</summary>
         public Dictionary<PileLayoutDataItem, List<Beam>> PileBeams { get; } = [];
 
+        /// <summary>PileLayoutItem → caseModel 側の節点別 Z ばね群リスト (空リストの場合あり)。
+        /// UsePsSpringAtPileTip 有効時に各杭節点 Z ばねの case-local 写像を提供。</summary>
+        public Dictionary<PileLayoutDataItem, List<HorizontalSoilSpring>> VerticalNodeSprings { get; } = [];
+
         /// <summary>DoatsuGoryokuBaneItem → caseModel 側の TopHorizontalSoilSpring</summary>
         public Dictionary<DoatsuGoryokuBaneItem, HorizontalSoilSpring> DoatsuTopHorizontalSoilSprings { get; } = [];
 
@@ -1496,6 +1500,15 @@ namespace PileDesign.FEM
                             bList.Add(b != null && beamMap.TryGetValue(b, out var nn) ? nn : b);
                     }
                     snap.PileBeams[pli] = bList;
+
+                    // 節点別 Z ばね群 (UsePsSpringAtPileTip 有効時のみ非空)
+                    var vList = new List<HorizontalSoilSpring>(pli.VerticalNodeSprings?.Count ?? 0);
+                    if (pli.VerticalNodeSprings != null)
+                    {
+                        foreach (var sp in pli.VerticalNodeSprings)
+                            vList.Add(sp != null && hsSpringMap.TryGetValue(sp, out var nn) ? nn : sp);
+                    }
+                    snap.VerticalNodeSprings[pli] = vList;
                 }
             }
             var dgb = _inputModel?.ElementDivision?.DoatsuGoryokuBane;
@@ -1623,6 +1636,14 @@ namespace PileDesign.FEM
             if (CaseLocalState != null && CaseLocalState.PileHorizontalSoilSprings.TryGetValue(item, out var list))
                 return list;
             return item.HorizontalSoilSprings;
+        }
+
+        /// <summary>ケース固有の節点別 Z ばね群を取得 (UsePsSpringAtPileTip OFF 時は空)。</summary>
+        public IList<HorizontalSoilSpring> GetVerticalNodeSprings(PileLayoutDataItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.VerticalNodeSprings.TryGetValue(item, out var list))
+                return list;
+            return item.VerticalNodeSprings;
         }
 
         /// <summary>ケース固有の Beams を取得。</summary>

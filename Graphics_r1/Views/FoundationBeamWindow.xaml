@@ -129,8 +129,10 @@
 
         <!-- OK/Cancel ボタン -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="OK" Width="100" Margin="0,0,10,0" Command="{Binding OkCommand}" IsDefault="True"/>
-            <Button Content="キャンセル" Width="100" Command="{Binding CancelCommand}" IsCancel="True"/>
+            <Button x:Name="OkButton" Content="OK(_O)" Width="100" Margin="0,0,10,0" Command="{Binding OkCommand}" IsDefault="True"
+                    ToolTip="変更を適用して閉じます (Enter / Alt+O)"/>
+            <Button Content="キャンセル(_C)" Width="100" Command="{Binding CancelCommand}" IsCancel="True"
+                    ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
         </StackPanel>
     </Grid>
 </Window>

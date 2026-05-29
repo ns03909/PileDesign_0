@@ -142,6 +142,12 @@ namespace PileDesign.Common
 
                 DrawCylinderToeShape(canvas, canvasWidth, /*canvasHeight,*/ pileLengthFromSegments, ratio, topMargin, bottomSegmentDia, pileToeDiaInMeters, precastConcretePileToeHeightRatio);
             }
+            else if (pileConstructionType == "回転貫入杭" && pileToeDiaInMeters > bottomSegmentDia)
+            {
+                // 回転貫入杭: 1巻きの螺旋羽根 (羽根径=pileToeDia, 羽根ピッチ=杭径Dp/6)
+                DrawHelicalBladeToeShape(canvas, canvasWidth, pileLengthFromSegments, ratio, topMargin,
+                    bottomSegmentDia, pileToeDiaInMeters);
+            }
 
             if (isElementDivision)
             {
@@ -215,6 +221,84 @@ namespace PileDesign.Common
                     pileLength * ratio + topMargin,
                     Brushes.SkyBlue, 2, 1);
             }
+        }
+
+        /// <summary>
+        /// 回転貫入杭の螺旋羽根 (1巻き、羽根ピッチ=杭径Dp/6) を側面投影として描画する。
+        /// 螺旋面 (内径Dp、外径Dw) を側面から見ると、3つのクレセント (右上 / 左中 / 右下) が現れる:
+        ///   right-top    : θ ∈ [0, π/2]      , z ∈ [0, pitch/4]      ← cosθ > 0 ⇒ 右側
+        ///   left-middle  : θ ∈ [π/2, 3π/2]   , z ∈ [pitch/4, 3pitch/4] ← cosθ < 0 ⇒ 左側
+        ///   right-bottom : θ ∈ [3π/2, 2π]    , z ∈ [3pitch/4, pitch] ← cosθ > 0 ⇒ 右側
+        /// </summary>
+        private static void DrawHelicalBladeToeShape(
+            Canvas canvas,
+            double canvasWidth,
+            double pileLength,
+            double ratio,
+            double topMargin,
+            double bottomSegmentDia,    // Dp [m] (杭径 = 最下段杭区間径)
+            double bladeDiaInMeters)    // Dw [m] (羽根径 = PileToeDia)
+        {
+            double Dp = bottomSegmentDia;
+            double Dw = bladeDiaInMeters;
+            if (Dw <= Dp || Dp <= 0) return;
+
+            double R = Dw * 0.5;
+            double r = Dp * 0.5;
+            // 物理ピッチ = 杭径 Dp の 1/5 (1 巻きの軸方向長さ)
+            double pitch = Dp / 5.0;
+
+            double cx = canvasWidth * 0.5;
+            // 羽根は杭先端 (pileLength) から下方に 1 巻き分延ばす
+            double yTop = pileLength * ratio + topMargin;             // 杭先端 = 羽根上端
+            double yBot = (pileLength + pitch) * ratio + topMargin;   // 羽根下端
+
+            // 杭体を羽根領域まで延長 (Dp 幅の矩形を yTop → yBot 区間に重ねる)
+            var pileExt = new Rectangle
+            {
+                Width = Dp * ratio,
+                Height = pitch * ratio,
+                Stroke = Brushes.SkyBlue,
+                Fill = Brushes.White,
+            };
+            Canvas.SetLeft(pileExt, cx - Dp * 0.5 * ratio);
+            Canvas.SetTop(pileExt, yTop);
+            canvas.Children.Add(pileExt);
+
+            const int n = 24;
+            // 杭体と同じ SkyBlue を用い、塗りは半透明で輪郭は実線
+            var skyBlue = Color.FromRgb(135, 206, 235); // SkyBlue
+            var fill = new SolidColorBrush(Color.FromArgb(160, skyBlue.R, skyBlue.G, skyBlue.B));
+            var stroke = Brushes.SkyBlue;
+
+            // クレセント領域を1つ生成 ([thetaStart, thetaEnd] の範囲)
+            void DrawCrescent(double thetaStart, double thetaEnd)
+            {
+                var pts = new PointCollection();
+                // 外側 (R) を thetaStart → thetaEnd
+                for (int i = 0; i <= n; i++)
+                {
+                    double theta = thetaStart + (double)i / n * (thetaEnd - thetaStart);
+                    double zRel = theta / (2.0 * Math.PI);  // 0..1 で 0..pitch をパラメータ化
+                    double y = yTop + zRel * (yBot - yTop);
+                    double xOuter = R * Math.Cos(theta);
+                    pts.Add(new Point(cx + xOuter * ratio, y));
+                }
+                // 内側 (r) を thetaEnd → thetaStart で戻る
+                for (int i = n; i >= 0; i--)
+                {
+                    double theta = thetaStart + (double)i / n * (thetaEnd - thetaStart);
+                    double zRel = theta / (2.0 * Math.PI);
+                    double y = yTop + zRel * (yBot - yTop);
+                    double xInner = r * Math.Cos(theta);
+                    pts.Add(new Point(cx + xInner * ratio, y));
+                }
+                DrawPolygon(canvas, pts, stroke, fill, 1.5);
+            }
+
+            DrawCrescent(0.0,                Math.PI / 2.0);          // right-top
+            DrawCrescent(Math.PI / 2.0,      3.0 * Math.PI / 2.0);    // left-middle
+            DrawCrescent(3.0 * Math.PI / 2.0, 2.0 * Math.PI);          // right-bottom
         }
 
         // 場所打ち拡底杭の描画メソッド

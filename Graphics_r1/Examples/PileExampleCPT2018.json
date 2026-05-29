@@ -1,0 +1,200 @@
+{
+  "displayName": "キャプテンパイル工法 (AIJ2018)",
+  "groundExampleName": "ExampleCPT2018",
+  "loadCaseLevel1": {
+    "forceActionPointX": 12.0,
+    "forceActionPointY": 6.0,
+    "forceActionPointZ": -1.0,
+    "upperMassForce": 6666.6,
+    "foundationMassForce": 4888.8
+  },
+  "loadCaseLevel2": {
+    "forceActionPointX": 12.0,
+    "forceActionPointY": 6.0,
+    "forceActionPointZ": -1.0,
+    "upperMassForce": 10000.0,
+    "foundationMassForce": 7333.3
+  },
+  "loadCaseLevel2Alt": {
+    "forceActionPointX": 12.0,
+    "forceActionPointY": 6.0,
+    "forceActionPointZ": -1.0,
+    "upperMassForce": 10000.0,
+    "foundationMassForce": 7333.3
+  },
+  "pileBodies": [
+    {
+      "pileBodyRef": "(P1)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "キャプテンパイル工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 2400,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 2.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 2400,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        {
+          "no": 1, "segmentLength": 35.0, "segmentDepth": 35.0, "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 2400, "concreteThickness": 1200, "mainBarDr": 2100,
+          "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D32",
+          "concreteFc": 30.0, "concreteGsi": 1.0, "concreteGamma": 23.0,
+          "hoopSize": "D16", "hoopSpacing": 150
+        }
+      ],
+      "captainPile": {
+        "pcRingName": "2400-N",
+        "nu": 1.00,
+        "hasTensionRebars": true,
+        "tensionRebarArrangement": "円形配置",
+        "tensionRebarNumber": 20,
+        "tensionRebarDia": "D41",
+        "tensionRebarGrade": "SD685",
+        "tDorTB": 1900
+      }
+    },
+    {
+      "pileBodyRef": "(P2)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "キャプテンパイル工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 2400,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 2.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 2400,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        {
+          "no": 1, "segmentLength": 35.0, "segmentDepth": 35.0, "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 2400, "concreteThickness": 1200, "mainBarDr": 2100,
+          "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D32",
+          "concreteFc": 30.0, "concreteGsi": 1.0, "concreteGamma": 23.0,
+          "hoopSize": "D16", "hoopSpacing": 150
+        }
+      ],
+      "captainPile": {
+        "pcRingName": "2400-N",
+        "nu": 1.00,
+        "hasTensionRebars": false
+      }
+    },
+    {
+      "pileBodyRef": "(P3)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "キャプテンパイル工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 2400,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 2.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 2400,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        {
+          "no": 1, "segmentLength": 35.0, "segmentDepth": 35.0, "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 2400, "concreteThickness": 1200, "mainBarDr": 2100,
+          "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D32",
+          "concreteFc": 30.0, "concreteGsi": 1.0, "concreteGamma": 23.0,
+          "hoopSize": "D16", "hoopSpacing": 150
+        }
+      ],
+      "captainPile": {
+        "pcRingName": "2400-N",
+        "nu": 1.00,
+        "hasTensionRebars": false
+      }
+    },
+    {
+      "pileBodyRef": "(P4)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "キャプテンパイル工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 2400,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 2.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 2400,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        {
+          "no": 1, "segmentLength": 35.0, "segmentDepth": 35.0, "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 2400, "concreteThickness": 1200, "mainBarDr": 2100,
+          "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D32",
+          "concreteFc": 30.0, "concreteGsi": 1.0, "concreteGamma": 23.0,
+          "hoopSize": "D16", "hoopSpacing": 150
+        }
+      ],
+      "captainPile": {
+        "pcRingName": "2400-N",
+        "nu": 1.00,
+        "hasTensionRebars": false
+      }
+    },
+    {
+      "pileBodyRef": "(P5)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "キャプテンパイル工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 2400,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 2.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 2400,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        {
+          "no": 1, "segmentLength": 35.0, "segmentDepth": 35.0, "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 2400, "concreteThickness": 1200, "mainBarDr": 2100,
+          "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D32",
+          "concreteFc": 30.0, "concreteGsi": 1.0, "concreteGamma": 23.0,
+          "hoopSize": "D16", "hoopSpacing": 150
+        }
+      ],
+      "captainPile": {
+        "pcRingName": "2400-N",
+        "nu": 1.00,
+        "hasTensionRebars": true,
+        "tensionRebarArrangement": "円形配置",
+        "tensionRebarNumber": 20,
+        "tensionRebarDia": "D41",
+        "tensionRebarGrade": "SD685",
+        "tDorTB": 1900
+      }
+    }
+  ],
+  "pileLayoutItems": [
+    { "pileNo":  1, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x":  0.0, "y":  0.0, "z": -1.0, "deltaZc": 1.0, "axialForceVL0":  5546.0, "axialForceLevel1s": [ 5546.0,  5546.0,  5546.0,  5546.0], "axialForceLevel2s": [-5784.8, 17166.0, -5784.8, 17166.0] },
+    { "pileNo":  2, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x":  6.0, "y":  0.0, "z": -1.0, "deltaZc": 1.0, "axialForceVL0":  7437.3, "axialForceLevel1s": [ 7437.3,  7437.3,  7437.3,  7437.3], "axialForceLevel2s": [ 7249.8,  7344.5,  7249.8,  7344.5] },
+    { "pileNo":  3, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0, "y":  0.0, "z": -1.0, "deltaZc": 1.0, "axialForceVL0":  7386.6, "axialForceLevel1s": [ 7386.6,  7386.6,  7386.6,  7386.6], "axialForceLevel2s": [ 7295.8,  7295.8,  7295.8,  7295.8] },
+    { "pileNo":  4, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 18.0, "y":  0.0, "z": -1.0, "deltaZc": 1.0, "axialForceVL0":  7437.3, "axialForceLevel1s": [ 7437.3,  7437.3,  7437.3,  7437.3], "axialForceLevel2s": [ 7344.5,  7249.8,  7344.5,  7249.8] },
+    { "pileNo":  5, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 24.0, "y":  0.0, "z": -1.0, "deltaZc": 1.0, "axialForceVL0":  5546.0, "axialForceLevel1s": [ 5546.0,  5546.0,  5546.0,  5546.0], "axialForceLevel2s": [17166.0, -5784.8, 17166.0, -5784.8] },
+    { "pileNo":  6, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x":  0.0, "y": 12.0, "z": -1.0, "deltaZc": 1.0, "axialForceVL0":  5546.0, "axialForceLevel1s": [ 5546.0,  5546.0,  5546.0,  5546.0], "axialForceLevel2s": [-5784.8, 17166.0, -5784.8, 17166.0] },
+    { "pileNo":  7, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x":  6.0, "y": 12.0, "z": -1.0, "deltaZc": 1.0, "axialForceVL0":  7437.3, "axialForceLevel1s": [ 7437.3,  7437.3,  7437.3,  7437.3], "axialForceLevel2s": [ 7249.8,  7344.5,  7249.8,  7344.5] },
+    { "pileNo":  8, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0, "y": 12.0, "z": -1.0, "deltaZc": 1.0, "axialForceVL0":  7386.6, "axialForceLevel1s": [ 7386.6,  7386.6,  7386.6,  7386.6], "axialForceLevel2s": [ 7295.8,  7295.8,  7295.8,  7295.8] },
+    { "pileNo":  9, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 18.0, "y": 12.0, "z": -1.0, "deltaZc": 1.0, "axialForceVL0":  7437.3, "axialForceLevel1s": [ 7437.3,  7437.3,  7437.3,  7437.3], "axialForceLevel2s": [ 7344.5,  7249.8,  7344.5,  7249.8] },
+    { "pileNo": 10, "pileBodyNo": 5, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 24.0, "y": 12.0, "z": -1.0, "deltaZc": 1.0, "axialForceVL0":  5546.0, "axialForceLevel1s": [ 5546.0,  5546.0,  5546.0,  5546.0], "axialForceLevel2s": [17166.0, -5784.8, 17166.0, -5784.8] }
+  ],
+  "gridXItems": [
+    { "name": "X1", "coord":  0.0, "spacing": 0.0 },
+    { "name": "X2", "coord":  6.0, "spacing": 6.0 },
+    { "name": "X3", "coord": 12.0, "spacing": 6.0 },
+    { "name": "X4", "coord": 18.0, "spacing": 6.0 },
+    { "name": "X5", "coord": 24.0, "spacing": 6.0 }
+  ],
+  "gridYItems": [
+    { "name": "Y1", "coord":  0.0, "spacing":  0.0 },
+    { "name": "Y2", "coord": 12.0, "spacing": 12.0 }
+  ]
+}

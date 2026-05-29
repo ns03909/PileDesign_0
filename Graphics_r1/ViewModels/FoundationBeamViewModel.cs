@@ -2,8 +2,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
 using PileDesign.Models.InputData;
+using PileDesign.Services;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows;
 using System.Windows.Input;
 
 namespace PileDesign.ViewModels
@@ -119,11 +122,41 @@ namespace PileDesign.ViewModels
 
         public void DeleteSelectedNode()
         {
-            if (SelectedNode != null && Nodes.Contains(SelectedNode))
+            if (SelectedNode == null || !Nodes.Contains(SelectedNode)) return;
+
+            // 接続されている一般梁要素を抽出 (NodeI/J_Type=FoundationNode かつ Id が一致するもの)
+            // 杭配置側削除と同じ「カスケード削除」セマンティクスに揃える。
+            var nodeId = SelectedNode.Id;
+            var nodeNo = SelectedNode.No;
+            var connectedBeams = Beams
+                .Where(b => b != null
+                            && ((b.NodeI_Type == NodeReferenceType.FoundationNode && b.NodeI_Id == nodeId)
+                             || (b.NodeJ_Type == NodeReferenceType.FoundationNode && b.NodeJ_Id == nodeId)))
+                .ToList();
+
+            // 接続梁がある場合は同時削除の確認を表示
+            if (connectedBeams.Count > 0)
             {
-                Nodes.Remove(SelectedNode);
-                RenumberNodes();
+                var beamNos = connectedBeams.Select(b => Beams.IndexOf(b) + 1).OrderBy(n => n).ToList();
+                string list = string.Join(", ", beamNos.Take(20).Select(n => $"#{n}"));
+                if (beamNos.Count > 20) list += $" ほか {beamNos.Count - 20} 件";
+                var result = MessageService.Show(
+                    $"一般節点 #{nodeNo} を削除します。\n" +
+                    $"同時に接続された一般梁要素 {beamNos.Count} 本 ({list}) も削除されます。\n" +
+                    $"よろしいですか?",
+                    "削除確認",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (result != MessageBoxResult.Yes) return;
             }
+
+            // 接続梁を先に除去 → 節点を除去 → 番号振り直し
+            foreach (var beam in connectedBeams)
+                Beams.Remove(beam);
+            var removed = SelectedNode;
+            SelectedNode = null;  // 削除済みインスタンス参照が残らないよう先にクリア
+            Nodes.Remove(removed);
+            RenumberNodes();
         }
 
         private void OnAddBeam()

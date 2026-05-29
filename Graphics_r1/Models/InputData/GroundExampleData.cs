@@ -69,6 +69,13 @@ namespace PileDesign.Models.InputData
         public string CalculationMethod { get; set; }
 
         /// <summary>
+        /// 地盤変位を「考慮しない」モード。true の場合、水平解析で地盤強制変位を全層 0 として扱う。
+        /// 未指定 (null) のときは GroundInput の既存値を維持。
+        /// </summary>
+        [JsonPropertyName("isGroundDisplacementIgnored")]
+        public bool? IsGroundDisplacementIgnored { get; set; }
+
+        /// <summary>
         /// 地層データリスト
         /// </summary>
         [JsonPropertyName("groundLayers")]

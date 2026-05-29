@@ -17,6 +17,14 @@ namespace PileDesign.Models.InputData
         [JsonIgnore]
         public InputModel InputModel => _mainWindowViewModel?.CurrentInputModel;
 
+        /// <summary>配置 DataGrid の 杭体番号 ComboBox ホバー用 ToolTip テキスト。</summary>
+        [JsonIgnore]
+        public string PileBodySummary => InputModel?.GetPileBodySummary(PileBodyNo) ?? string.Empty;
+
+        /// <summary>配置 DataGrid の 地盤番号 ComboBox ホバー用 ToolTip テキスト。</summary>
+        [JsonIgnore]
+        public string GroundSummary => InputModel?.GetGroundSummary(GroundNo) ?? string.Empty;
+
         private const double ZMatchTolerance = 1e-6;
 
         [JsonIgnore]
@@ -240,7 +248,12 @@ namespace PileDesign.Models.InputData
                 {
                     if (_axialForceLevel1s != null)
                         _axialForceLevel1s.CollectionChanged += OnAbsoluteL1Changed;
-                    SyncVariationL1FromAbsolute();
+                    // [BUG fix 2026-05-23] setter からの SyncVariation 呼出を _isSyncingAxial で保護する。
+                    // 保護がないと、変動値の per-element 更新 → CollectionChanged → 逆方向 Sync が再帰的に発火し、
+                    // 古い変動値から絶対値を上書き計算するため [0] 以外が破壊される (例題9 JSON [2452,2452,2452,2452] が [2452,0,0,0] になっていた)。
+                    _isSyncingAxial = true;
+                    try { SyncVariationL1FromAbsolute(); }
+                    finally { _isSyncingAxial = false; }
                 }
             }
         }
@@ -258,7 +271,10 @@ namespace PileDesign.Models.InputData
                 {
                     if (_axialForceLevel2s != null)
                         _axialForceLevel2s.CollectionChanged += OnAbsoluteL2Changed;
-                    SyncVariationL2FromAbsolute();
+                    // [BUG fix 2026-05-23] 同上 — L1 と同じ再帰連鎖防止
+                    _isSyncingAxial = true;
+                    try { SyncVariationL2FromAbsolute(); }
+                    finally { _isSyncingAxial = false; }
                 }
             }
         }
@@ -518,6 +534,23 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref horizontalSoilSprings, value);
         }
 
+        // 杭節点別 Z ばね群 (FEM 解析ランタイム状態 — InputModel.UsePsSpringAtPileTip 有効時のみ生成)
+        // 各 PileNode に 1 個ずつ対応。沈下解析の (相対変位, 節点反力) から構築。
+        // 杭先端ばね = VerticalNodeSprings[^1] / 杭頭ばね = VerticalNodeSprings[0]
+        [JsonIgnore]
+        public List<HorizontalSoilSpring> VerticalNodeSprings { get; set; } = [];
+
+        // 上記ばね群の P-S 補間カーブ (反復ごとの K_tan/K_sec 更新に使用) — フォールバック / デバッグ用
+        // VerticalNodeSprings と並走 (同じインデックス)。
+        [JsonIgnore]
+        public List<FEM.VerticalPileSpringCurve> VerticalNodeSpringCurves { get; set; } = [];
+
+        // 沈下解析の物理関数 (τ-s 双線形 + 杭先端 R-S 曲線) を直接呼ぶ剛性モデル群。
+        // VerticalNodeSpringCurves (履歴の線形補間) より精度が高いため、PrepareKmat では優先使用。
+        // VerticalNodeSprings と並走 (同じインデックス)。
+        [JsonIgnore]
+        public List<FEM.PileVerticalSoilSpringModel> VerticalNodeSpringModels { get; set; } = [];
+
         // 解析杭頭回転ばね (FEM 解析ランタイム状態)
         private RotationalSpring pileTopRotationalSpring;
         [JsonIgnore]
@@ -599,7 +632,12 @@ namespace PileDesign.Models.InputData
             {
                 if (e.PropertyName == nameof(Z))
                 {
-                    OnPropertyChanged(nameof(SoilPile));
+                    // 一括ペースト中は SoilPile の同期再評価 (重い CreateTemporarySoilPile) を抑制する。
+                    // ペースト完了後に InputModel 側のデバウンス再生成 (GenerateSoilPiles →
+                    // NotifySoilPileChangedForAll) がキャッシュ再構築済みの状態で 1 回だけ通知するため、
+                    // 表示は正しく更新され、O(N×列数) の劣化だけを回避できる。
+                    if (!Common.EnhancedDataGrid.IsBulkEditing)
+                        OnPropertyChanged(nameof(SoilPile));
                     OnPropertyChanged(nameof(PileHeadZ));
                 }
                 else if (e.PropertyName == nameof(FoundationBeamDeltaZc))

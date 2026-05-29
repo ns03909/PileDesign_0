@@ -31,6 +31,51 @@ namespace PileDesign.Views
             this.Loaded += HorizontalCalculationWindow_Loaded;
             this.Unloaded += HorizontalCalculationWindow_Unloaded;
             this.Closing += HorizontalCalculationWindow_Closing;
+
+            // 左ペインの ScrollViewer の RequestBringIntoView を抑制する。
+            // ScrollViewer は組込クラスハンドラーで RequestBringIntoView を「処理済み」にしてから
+            // 実際にスクロールするため、XAML 属性 (RequestBringIntoView="...") では捕捉できない。
+            // AddHandler(handledEventsToo: true) で処理済みも含めて捕捉し、e.Handled = true で
+            // 後続のスクロール処理 (ある場合) を抑止 + スクロール位置を強制的に左端へ戻す。
+            // CheckBox/RadioButton/TextBox にフォーカスが移った瞬間に WPF が
+            // 「フォーカス要素を可視範囲に入れる」ために横スクロールしてしまい、
+            // 設定パネルが意図せず右端まで飛ぶ問題への対策。
+            // 縦・横ともマウスホイール / スクロールバーでの手動スクロールは引き続き有効。
+            this.Loaded += (_, _) =>
+            {
+                LeftPaneScrollViewerLoad?.AddHandler(
+                    FrameworkElement.RequestBringIntoViewEvent,
+                    new RequestBringIntoViewEventHandler(SuppressRequestBringIntoView),
+                    handledEventsToo: true);
+                LeftPaneScrollViewerConv?.AddHandler(
+                    FrameworkElement.RequestBringIntoViewEvent,
+                    new RequestBringIntoViewEventHandler(SuppressRequestBringIntoView),
+                    handledEventsToo: true);
+            };
+        }
+
+        // 横スクロール飛び防止: 発火時の HorizontalOffset を記録し、e.Handled=true で
+        // ScrollViewer 既定挙動を抑え、念のため非同期で元位置に戻す。
+        private void SuppressRequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+        {
+            if (sender is ScrollViewer sv)
+            {
+                double restoreH = sv.HorizontalOffset;
+                double restoreV = sv.VerticalOffset;
+                e.Handled = true;
+                // レイアウト再計算後にもう一度オフセットを戻す (双方の経路で飛びを抑える)
+                sv.Dispatcher.BeginInvoke(new System.Action(() =>
+                {
+                    if (Math.Abs(sv.HorizontalOffset - restoreH) > 0.5)
+                        sv.ScrollToHorizontalOffset(restoreH);
+                    if (Math.Abs(sv.VerticalOffset - restoreV) > 0.5)
+                        sv.ScrollToVerticalOffset(restoreV);
+                }), System.Windows.Threading.DispatcherPriority.Loaded);
+            }
+            else
+            {
+                e.Handled = true;
+            }
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)

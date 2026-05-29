@@ -22,6 +22,7 @@ namespace PileDesign.Views
             InitializeComponent();
             viewModel = new AutoIsFrontPileViewModel();
             DataContext = viewModel;
+            this.Loaded += (_, _) => OkButton?.Focus();
         }
 
         public class AutoIsFrontEventArgs : EventArgs

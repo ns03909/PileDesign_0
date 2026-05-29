@@ -190,7 +190,15 @@ namespace PileDesign.Views
                         double pileToeDia = InputModel.PileBodies[pileLocation.PileBodyNo - 1].PileToeDia / 1000.0;
                         if (pileToeDia > pileDia)
                         {
-                            AddConeShapePileToe(NikkenBrush.SkyBlue, new Point3D(x, y, z2), pileToeDia, pileDia);
+                            var ctype = InputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType;
+                            if (ctype == "回転貫入杭")
+                            {
+                                AddHelicalBladePileToe(NikkenBrush.SkyBlue, new Point3D(x, y, z2), pileToeDia, pileDia);
+                            }
+                            else
+                            {
+                                AddConeShapePileToe(NikkenBrush.SkyBlue, new Point3D(x, y, z2), pileToeDia, pileDia);
+                            }
                         }
                     }
                 }
@@ -299,6 +307,77 @@ namespace PileDesign.Views
             // 円錐台起点（円柱終点からさらに同方向へ伸ばす）
             Point3D coneOrigin = cylEnd;
             AddCone(brush, coneOrigin, axis, baseDia, topDia, coneHeight);
+        }
+
+        /// <summary>
+        /// 回転貫入杭の螺旋羽根 (1巻き、羽根径Dw、ピッチ=杭径Dp/6) を 3D メッシュとして描画する。
+        /// 内径 r=Dp/2、外径 R=Dw/2 の螺旋面を nSteps 分割の三角形ストリップで構築。
+        /// 両面レンダリングのため front/back 三角形を両方追加。
+        /// </summary>
+        /// <param name="pileBottom">杭先端 (羽根の Z 下端、杭軸の最下点)</param>
+        /// <param name="bladeDia">羽根径 Dw (m)</param>
+        /// <param name="pileDia">杭径 Dp (m)</param>
+        private void AddHelicalBladePileToe(Brush brush, Point3D pileBottom, double bladeDia, double pileDia)
+        {
+            if (!OperatingSystem.IsWindowsVersionAtLeast(7)) return;
+            if (bladeDia <= pileDia || pileDia <= 0) return;
+
+            double R = bladeDia * 0.5;
+            double r = pileDia * 0.5;
+            double pitch = pileDia / 5.0;  // 1巻きの軸方向長さ
+
+            // 杭体を羽根領域まで延長 (pileBottom から -Z 方向に pitch だけ円柱を追加)
+            Point3D bladeBottom = new(pileBottom.X, pileBottom.Y, pileBottom.Z - pitch);
+            AddCylinder(brush, pileBottom, bladeBottom, pileDia);
+
+            const int nSteps = 64;
+            var positions = new Point3DCollection((nSteps + 1) * 2);
+            var triangles = new System.Windows.Media.Int32Collection(nSteps * 12);
+
+            // 螺旋面サンプリング: 各ステップで内側 (r) と外側 (R) の 2 点を生成
+            // 杭先端 (pileBottom.Z) から下方 (-Z) に 1 巻き分巻き下がる
+            for (int i = 0; i <= nSteps; i++)
+            {
+                double t = (double)i / nSteps;
+                double theta = t * 2.0 * Math.PI;
+                double zOff = t * pitch;
+                double cos = Math.Cos(theta);
+                double sin = Math.Sin(theta);
+                positions.Add(new Point3D(
+                    pileBottom.X + r * cos,
+                    pileBottom.Y + r * sin,
+                    pileBottom.Z - zOff));   // inner
+                positions.Add(new Point3D(
+                    pileBottom.X + R * cos,
+                    pileBottom.Y + R * sin,
+                    pileBottom.Z - zOff));   // outer
+            }
+
+            // 三角形ストリップ (両面レンダリング)
+            for (int i = 0; i < nSteps; i++)
+            {
+                int v00 = i * 2;          // inner, current
+                int v01 = i * 2 + 1;      // outer, current
+                int v10 = (i + 1) * 2;    // inner, next
+                int v11 = (i + 1) * 2 + 1;// outer, next
+
+                // 表面 (front)
+                triangles.Add(v00); triangles.Add(v01); triangles.Add(v11);
+                triangles.Add(v00); triangles.Add(v11); triangles.Add(v10);
+                // 裏面 (back, 巻き方向逆)
+                triangles.Add(v00); triangles.Add(v11); triangles.Add(v01);
+                triangles.Add(v00); triangles.Add(v10); triangles.Add(v11);
+            }
+
+            var mesh = new MeshGeometry3D
+            {
+                Positions = positions,
+                TriangleIndices = triangles
+            };
+
+            var material = new DiffuseMaterial(brush);
+            var model = new GeometryModel3D(mesh, material);
+            HelixViewport.Children.Add(new ModelVisual3D { Content = model });
         }
 
         private static System.Numerics.Vector3 ToVector3(Point3D p)

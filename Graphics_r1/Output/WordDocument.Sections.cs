@@ -690,7 +690,7 @@ namespace PileDesign.Output
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\N_{1}"), ": 換算N値"]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\Delta N_{f}"), ": 細粒分含有率", Tex(@"F_{c}"), "に応じた補正", Tex(@"N"), "N値成分"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\Delta N_{f}"), ": 細粒分含有率", Tex(@"F_{c}"), "に応じた補正", Tex(@"N"), "値成分"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\C_{N}"), ": 拘束圧に関する換算係数"]);
 

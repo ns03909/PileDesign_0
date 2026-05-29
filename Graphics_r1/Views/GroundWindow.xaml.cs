@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -48,8 +49,38 @@ namespace PileDesign.Views
                 {
                     // 任意地盤変位タブを前面に表示
                     if (CustomDispTab != null)
+                    {
+                        if (CustomDispTab.IsHidden) CustomDispTab.Show();
                         CustomDispTab.IsSelected = true;
+                    }
                 };
+
+                _viewModel.SetCustomDispTabVisibility = (visible) =>
+                {
+                    if (CustomDispTab == null) return;
+                    if (visible)
+                    {
+                        if (CustomDispTab.IsHidden) CustomDispTab.Show();
+                    }
+                    else
+                    {
+                        if (!CustomDispTab.IsHidden) CustomDispTab.Hide();
+                    }
+                };
+
+                // 初期状態を任意入力モードか否かで設定
+                if (CustomDispTab != null)
+                {
+                    bool isCustomMode = !_viewModel.IsCustomDisplacementDisabled;
+                    if (isCustomMode)
+                    {
+                        if (CustomDispTab.IsHidden) CustomDispTab.Show();
+                    }
+                    else
+                    {
+                        if (!CustomDispTab.IsHidden) CustomDispTab.Hide();
+                    }
+                }
 
                 //_viewModel.RequestClose += (s, e)
                 _viewModel.RequestClose += (s, e2) =>
@@ -136,6 +167,18 @@ namespace PileDesign.Views
                     PlotHelper.AddCsvExportMenu(wpfPlotDisplacement, "地盤変位");
                     PlotHelper.AddCsvExportMenu(wpfPlotFL, "FL値");
                     PlotHelper.AddCsvExportMenu(wpfPlotResponseSpectrum, "加速度応答スペクトル");
+
+                    // マウスホバー詳細ポップアップを各プロットに取り付け
+                    AttachGroundHoverPopup(wpfPlotNValue, "N値", "GL基準深さ(m)", 1, 2);
+                    AttachGroundHoverPopup(wpfPlotCu, "粘着力(kN/m²)", "GL基準深さ(m)", 1, 2);
+                    AttachGroundHoverPopup(wpfPlotVs, "S波速度(m/s)", "GL基準深さ(m)", 1, 2);
+                    AttachGroundHoverPopup(wpfPlotEs, "変形係数 Es(kN/m²)", "GL基準深さ(m)", 0, 2);
+                    AttachGroundHoverPopup(wpfPlotDisplacement, "地盤変位(mm)", "GL基準深さ(m)", 2, 2);
+                    AttachGroundHoverPopup(wpfPlotFL, "FL値", "GL基準深さ(m)", 2, 2);
+                    AttachGroundHoverPopup(wpfPlotResponseSpectrum, "周期 T(s)", "Sa(m/s²)", 3, 2);
+
+                    // 応答スペクトルタブの初期表示判定 (自動計算 + 応答スペクトル法 のときのみ表示)
+                    UpdateSaTabVisibility();
                 }
             }
             catch (Exception ex)
@@ -261,8 +304,46 @@ namespace PileDesign.Views
             }
         }
 
+        // 「基礎指針'19 4.5自動計算」「考慮しない」ラジオ共通 Checked ハンドラ
+        // (任意入力ラジオは別途専用ハンドラあり)
+        private void DispMode_Generic_Checked(object sender, RoutedEventArgs e)
+        {
+            UpdateSaTabVisibility();
+            // 「考慮しない」ラジオは GroundInput.IsGroundDisplacementIgnored へ直接バインドしており、
+            // ViewModel の ScheduleUpdate が走らないので明示的に呼ぶ。
+            // 「自動計算」ラジオは IsAutoDisplacementMode setter 経由で ScheduleUpdate が走るが、
+            // 「考慮しない → 自動計算」の経路でも呼んで安全側にしておく。
+            if (DataContext is GroundLayerViewModel vm)
+            {
+                vm.ScheduleUpdate();
+            }
+        }
+
+        // 応答スペクトルタブの表示/非表示を更新する
+        // 「基礎指針'19 4.5自動計算」モード かつ 算定法が「応答スペクトル法」の時のみ表示
+        private void UpdateSaTabVisibility()
+        {
+            if (SaTab == null) return;
+            if (DataContext is not GroundLayerViewModel vm) return;
+
+            bool isAutoMode = vm.IsAutoDisplacementMode;
+            string method = vm.GroundInput?.CalculationMethod ?? "";
+            bool shouldShow = isAutoMode && method == "応答スペクトル法";
+
+            if (shouldShow)
+            {
+                if (SaTab.IsHidden) SaTab.Show();
+            }
+            else
+            {
+                if (!SaTab.IsHidden) SaTab.Hide();
+            }
+        }
+
         private void GroundComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            // 地盤変位算定法 ComboBox の変更で SaTab 表示判定を更新
+            UpdateSaTabVisibility();
             if (DataContext is GroundLayerViewModel viewModel)
             {
                 if (sender is ComboBox)
@@ -275,6 +356,96 @@ namespace PileDesign.Views
         private void CustomDispCase_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             // ケース切り替え時にDataGridのItemsSourceが更新される（VMのPropertyChanged経由）
+        }
+
+        // 「任意入力」ラジオボタンが選択されたら、右ペインの「任意地盤変位」タブを前面に表示する。
+        // (タブが他のタブ (地盤変位 DmaxU*, 液状化安全率, 応答スペクトル) と同一グループにあるため、
+        //  ラジオを選んだだけでは見えない、というユーザーから報告された問題への対策)
+        private void RadioCustomDisplacement_Checked(object sender, RoutedEventArgs e)
+        {
+            if (CustomDispTab != null)
+            {
+                if (CustomDispTab.IsHidden) CustomDispTab.Show();
+                CustomDispTab.IsSelected = true;
+                CustomDispTab.IsActive = true;
+            }
+            UpdateSaTabVisibility();
+            // 任意入力ラジオは GroundInput.CustomDisplacementProfile.IsEnabled へ直接バインドしており、
+            // ViewModel の ScheduleUpdate が走らないので明示的に呼ぶ (グラフ再描画)
+            if (DataContext is GroundLayerViewModel vm) vm.ScheduleUpdate();
+        }
+
+        // 「任意入力」ラジオから他モード (基礎指針'19 自動計算 / 考慮しない) に切替えた時、
+        // 「任意地盤変位」タブを非表示に戻す。
+        private void RadioCustomDisplacement_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (CustomDispTab != null && !CustomDispTab.IsHidden)
+            {
+                CustomDispTab.Hide();
+            }
+            UpdateSaTabVisibility();
+            if (DataContext is GroundLayerViewModel vm) vm.ScheduleUpdate();
+        }
+
+        // ============== グラフホバー詳細ポップアップ ==============
+        // マウスがマーカー近傍にあるとき、最も近いマーカーの (Legend, X, Y) を
+        // 小さな Popup で表示する。プロット領域外に出たらポップアップを閉じる。
+
+        private void AttachGroundHoverPopup(ScottPlot.WPF.WpfPlot plot,
+            string xLabel, string yLabel, int decimalPlacesX, int decimalPlacesY)
+        {
+            if (plot == null) return;
+            plot.MouseMove += (s, args) => HandleGroundHoverMove(plot, args, xLabel, yLabel, decimalPlacesX, decimalPlacesY);
+            plot.MouseLeave += (s, args) => GroundHoverPopup.IsOpen = false;
+        }
+
+        private void HandleGroundHoverMove(ScottPlot.WPF.WpfPlot plot, MouseEventArgs e,
+            string xLabel, string yLabel, int dpX, int dpY)
+        {
+            var p = e.GetPosition(plot);
+            var mousePixel = new ScottPlot.Pixel(p.X * plot.DisplayScale, p.Y * plot.DisplayScale);
+            var mouseLocation = plot.Plot.GetCoordinates(mousePixel);
+
+            double minDist = double.MaxValue;
+            ScottPlot.DataPoint? nearest = null;
+            ScottPlot.Plottables.Scatter nearestScatter = null;
+
+            foreach (var scatter in plot.Plot.GetPlottables().OfType<ScottPlot.Plottables.Scatter>())
+            {
+                var pt = scatter.Data.GetNearest(mouseLocation, plot.Plot.LastRender);
+                if (!pt.IsReal) continue;
+                double dx = pt.Coordinates.X - mouseLocation.X;
+                double dy = pt.Coordinates.Y - mouseLocation.Y;
+                double dist = Math.Sqrt(dx * dx + dy * dy);
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    nearest = pt;
+                    nearestScatter = scatter;
+                }
+            }
+
+            if (nearest is { IsReal: true })
+            {
+                var c = nearest.Value.Coordinates;
+                string fX = "N" + dpX;
+                string fY = "N" + dpY;
+                var sb = new StringBuilder();
+                string legend = nearestScatter?.LegendText;
+                if (!string.IsNullOrWhiteSpace(legend)) sb.AppendLine(legend);
+                sb.AppendLine($"{xLabel} = {c.X.ToString(fX)}");
+                sb.Append($"{yLabel} = {c.Y.ToString(fY)}");
+
+                var pWin = e.GetPosition(this);
+                GroundHoverText.Text = sb.ToString();
+                GroundHoverPopup.HorizontalOffset = pWin.X + 16;
+                GroundHoverPopup.VerticalOffset = pWin.Y + 16;
+                if (!GroundHoverPopup.IsOpen) GroundHoverPopup.IsOpen = true;
+            }
+            else
+            {
+                GroundHoverPopup.IsOpen = false;
+            }
         }
 
         private void CustomDispAddRow_Click(object sender, RoutedEventArgs e)
@@ -367,6 +538,35 @@ namespace PileDesign.Views
             }
         }
 
+        // 変位係数スケーラー: 現状の Displacement 値にスライダー係数を一括乗算
+        // 適用後はスライダーを 1.0 にリセット (重ね掛けを防ぐ)
+        // Undo (GroundLayerViewModel の Undo スタック) で元に戻せる
+        private void CustomDispApplyScale_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not GroundLayerViewModel vm) return;
+            var profile = vm.SelectedCustomDispProfile;
+            if (profile == null || profile.Count == 0) return;
+
+            double factor = SliderCustomDispScale.Value;
+            // 等倍は何もしない (UI 操作の余計な undo step を作らない)
+            if (Math.Abs(factor - 1.0) < 1e-9) return;
+
+            // Undo 履歴を一意な操作として残す (各 DataItem の値を直接書き換えるため、
+            // 履歴上では「変位係数 N.NN 倍を適用」の 1 ステップとして記録)
+            vm._undoManager?.PushState(vm.GroundsInput?.Select(g => g.DeepCopy()).ToList());
+
+            foreach (var p in profile)
+            {
+                p.Displacement *= factor;
+            }
+
+            // スライダーを 1.0 にリセット (重ね掛け防止 + 視覚的フィードバック)
+            SliderCustomDispScale.Value = 1.0;
+
+            vm.ScheduleUpdate();
+            vm.ValidateCustomDisplacementProfiles();
+        }
+
         // 基礎指針'19 4.5 自動計算結果 (DmaxU* / DmaxU*+ΣγcyH) を、選択中ケースのプロファイルへコピー
         // ケース対応: 0=L1非液状化(DmaxUStar[0]), 1=L1液状化(DmaxUStarSigmaGammaCyH[0]),
         //             2=L2非液状化(DmaxUStar[1]), 3=L2液状化(DmaxUStarSigmaGammaCyH[1])
@@ -443,6 +643,99 @@ namespace PileDesign.Views
 
             string msg = $"{newPoints.Count} 件のデータをコピーしました。";
             if (skipped > 0) msg += $" ({skipped} 件は計算値なしでスキップ)";
+            MessageService.Show(msg, "コピー完了", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        // 基礎指針'19 4.5 自動計算結果を 4 ケース全てに一括コピー
+        // 各ケースの (level, withLiq) 対応:
+        //   0=L1非液状化, 1=L1液状化, 2=L2非液状化, 3=L2液状化
+        private void CustomDispCopyAutoAll_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not GroundLayerViewModel vm) return;
+            var ground = vm.GroundInput;
+            if (ground == null) return;
+            var masses = ground.GroundMassesData;
+            if (masses == null || masses.Count == 0)
+            {
+                MessageService.Show("土質点データが空です。先に「土質点入力」で土質点を入力してください。",
+                    "コピー不可", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var custom = ground.CustomDisplacementProfile;
+            if (custom == null) return;
+
+            // 既存データのケース毎件数を集計し、上書き確認
+            int existingTotal = 0;
+            for (int ci = 0; ci < 4; ci++)
+            {
+                var p = custom.GetProfile(ci);
+                if (p != null) existingTotal += p.Count;
+            }
+            if (existingTotal > 0)
+            {
+                var ans = MessageService.Show(
+                    $"4 ケース合計 {existingTotal} 件のデータが既に入力されています。\n" +
+                    $"全て破棄して自動計算値で置き換えますか?",
+                    "上書き確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (ans != MessageBoxResult.Yes) return;
+            }
+
+            double topAlt = ground.GroundTopAltitude;
+            int totalCopied = 0;
+            int totalSkipped = 0;
+
+            for (int caseIndex = 0; caseIndex < 4; caseIndex++)
+            {
+                int level = caseIndex / 2;            // 0=L1, 1=L2
+                bool withLiq = (caseIndex % 2) == 1;  // 1,3 = 液状化あり
+
+                var newPoints = new List<DisplacementPoint>(masses.Count);
+                for (int i = 0; i < masses.Count; i++)
+                {
+                    var data = masses[i];
+                    double factor = (i == 0) ? 1.0
+                                  : (i == masses.Count - 1) ? 0.0
+                                  : 0.5;
+                    double gLDepth = data.GLDepth + data.Spacing * factor;
+                    double Z = topAlt + gLDepth;
+
+                    var src = withLiq ? data.DmaxUStarSigmaGammaCyH : data.DmaxUStar;
+                    if (src == null || src.Count <= level)
+                    {
+                        totalSkipped++;
+                        continue;
+                    }
+                    double disp = src[level];
+                    if (double.IsNaN(disp))
+                    {
+                        totalSkipped++;
+                        continue;
+                    }
+                    newPoints.Add(new DisplacementPoint(Z, disp));
+                }
+
+                var profile = custom.GetProfile(caseIndex);
+                if (profile != null)
+                {
+                    profile.Clear();
+                    foreach (var p in newPoints) profile.Add(p);
+                    totalCopied += newPoints.Count;
+                }
+            }
+
+            if (totalCopied == 0)
+            {
+                MessageService.Show(
+                    "自動計算値が全て空または NaN でした。「液状化」タブで先に計算を実行してください。",
+                    "コピー不可", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            vm.ScheduleUpdate();
+            vm.ValidateCustomDisplacementProfiles();
+
+            string msg = $"4 ケース合計 {totalCopied} 件のデータをコピーしました。";
+            if (totalSkipped > 0) msg += $" ({totalSkipped} 件は計算値なしでスキップ)";
             MessageService.Show(msg, "コピー完了", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -958,6 +1251,18 @@ namespace PileDesign.Views
                 return;
             }
 
+            // メニューを先に閉じてからダイアログ
+            if (mi.Parent is ContextMenu cm) cm.IsOpen = false;
+
+            var result = MessageBox.Show(
+                this,
+                $"計算例「{exampleItem.Display}」を読み込むと、現在の地盤入力は上書きされます。\n\n続行しますか？\n\n（Undo (Ctrl+Z) で復元可能です）",
+                "計算例の読み込み",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Warning,
+                MessageBoxResult.Cancel);
+            if (result != MessageBoxResult.OK) return;
+
             try
             {
                 // 実行前に undo スタックへ現在状態を保存（既存パターンに合わせる）
@@ -966,10 +1271,10 @@ namespace PileDesign.Views
                 // 実行
                 exampleItem.Command?.Execute(null);
             }
-            finally
+            catch (System.Exception ex)
             {
-                // メニューを閉じる
-                if (mi.Parent is ContextMenu parentCm) parentCm.IsOpen = false;
+                MessageBox.Show(this, "計算例の読み込み中にエラーが発生しました。\n" + ex.Message,
+                    "計算例の読み込み", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

@@ -162,10 +162,14 @@
         </StackPanel>
 
         <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Orientation="Horizontal">
-            <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
-            <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
+            <Button x:Name="ButtonOk" Content="保存(_S)" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
+                    IsDefault="True"
+                    ToolTip="変更を保存して閉じます (Enter / Ctrl+Enter / Alt+S)"/>
+            <Button x:Name="ButtonCancel" Content="キャンセル(_C)" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"
+                    IsCancel="True"
+                    ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
         </StackPanel>
     </Grid>
 </Window>

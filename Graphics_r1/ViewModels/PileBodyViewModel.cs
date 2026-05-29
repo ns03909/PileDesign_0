@@ -7,6 +7,7 @@ using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using PileDesign.Views;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
@@ -148,7 +149,17 @@ namespace PileDesign.ViewModels
 
         private void SetGroundInput()
         {
-            SelectedGroundInput = InputModel.GroundsInput[SelectedGroundNo - 1];
+            // ガード: SelectedGroundNo が範囲外 (例: GroundsInput 1 件しかない計算例で初期値 ≥ 2 になっているケース等) の場合は
+            // 範囲内にクランプして例外を防ぐ
+            if (InputModel?.GroundsInput == null || InputModel.GroundsInput.Count == 0)
+            {
+                SelectedGroundInput = null;
+                return;
+            }
+            int idx = SelectedGroundNo - 1;
+            if (idx < 0) idx = 0;
+            if (idx >= InputModel.GroundsInput.Count) idx = InputModel.GroundsInput.Count - 1;
+            SelectedGroundInput = InputModel.GroundsInput[idx];
         }
 
         private string _selectedPileBodyNoItem;
@@ -294,7 +305,12 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void Undo()
         {
-            _undoManager.Undo();
+            // Redo時に現在のライブ状態を復元できるよう、Undo前に履歴へ追加
+            if (_undoManager.CurrentIndex == _undoManager.History.Count - 1)
+            {
+                _undoManager.SaveState(new ObservableCollection<PileBodyInput>(PileBodies.Select(pb => pb.DeepCopy())));
+            }
+            _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is ObservableCollection<PileBodyInput> state)
             {
                 // 深いコピーで反映
@@ -310,7 +326,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void Redo()
         {
-            _undoManager.Redo();
+            _undoManager.RedoSnapshot();
             if (_undoManager.CurrentState is ObservableCollection<PileBodyInput> state)
             {
                 PileBodies = new ObservableCollection<PileBodyInput>(state.Select(pb => pb.DeepCopy()));
@@ -340,6 +356,47 @@ namespace PileDesign.ViewModels
                 return;
             }
 
+            // 杭配置からの参照チェック (使用中なら削除を拒否)
+            var referencingPiles = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?
+                .Where(p => p != null && p.PileBodyNo == PileBodyNo)
+                .Select(p => p.PileNo)
+                .OrderBy(no => no)
+                .ToList();
+            if (referencingPiles != null && referencingPiles.Count > 0)
+            {
+                string list = string.Join(", ", referencingPiles.Take(20).Select(n => $"#{n}"));
+                if (referencingPiles.Count > 20) list += $" ほか {referencingPiles.Count - 20} 件";
+                MessageService.Show(
+                    $"杭体番号 {PileBodyNo} は杭配置 {list} が参照中のため削除できません。\n" +
+                    $"先に杭配置側で杭体番号を別の値に変更してから削除してください。",
+                    "削除不可",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            // より大きい杭体番号を参照している PileLayoutItem は、削除後にインデックスが
+            // 1 つずれて意味が変わる (旧 #3 → 新 #2)。アラートで通知し、自動リナンバリングする
+            // か削除中止かをユーザーに選択させる。
+            var shiftingPiles = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?
+                .Where(p => p != null && p.PileBodyNo > PileBodyNo)
+                .Select(p => p.PileNo)
+                .OrderBy(no => no)
+                .ToList();
+            if (shiftingPiles != null && shiftingPiles.Count > 0)
+            {
+                string list = string.Join(", ", shiftingPiles.Take(20).Select(n => $"#{n}"));
+                if (shiftingPiles.Count > 20) list += $" ほか {shiftingPiles.Count - 20} 件";
+                var shiftResult = MessageService.Show(
+                    $"杭体番号 {PileBodyNo} を削除すると、より大きい杭体番号を参照している杭配置 {list} の番号が 1 つずれます。\n\n" +
+                    $"・OK: 該当する杭配置の杭体番号を自動的に 1 つ下げて削除します\n" +
+                    $"・キャンセル: 削除を中止します",
+                    "番号シフトの確認",
+                    MessageBoxButton.OKCancel,
+                    MessageBoxImage.Warning);
+                if (shiftResult != MessageBoxResult.OK) return;
+            }
+
             // 確認メッセージ
             var result = MessageService.Show(
                 $"杭体番号 {PileBodyNo} を削除しますか？\n元に戻せません。",
@@ -349,6 +406,17 @@ namespace PileDesign.ViewModels
 
             if (result == MessageBoxResult.Yes)
             {
+                // 後続の PileBodyNo を持つ PileLayoutItem を 1 つ下げる (リナンバリング)
+                var liveItems = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems;
+                if (liveItems != null)
+                {
+                    foreach (var p in liveItems)
+                    {
+                        if (p != null && p.PileBodyNo > PileBodyNo)
+                            p.PileBodyNo -= 1;
+                    }
+                }
+
                 PileBodies.RemoveAt(index);
                 UpdatePileBodiesCountPlusOneList();
 
@@ -407,10 +475,17 @@ namespace PileDesign.ViewModels
             //    pileTopAltitude: PileTopAltitude,
             //    zDataItems: zDataItems
             //);
+            // ガード: SelectedGroundNo が範囲外でも例外を起こさない
+            int sgIdx = SelectedGroundNo - 1;
+            if (InputModel?.GroundsInput == null || InputModel.GroundsInput.Count == 0)
+                return;
+            if (sgIdx < 0) sgIdx = 0;
+            if (sgIdx >= InputModel.GroundsInput.Count) sgIdx = InputModel.GroundsInput.Count - 1;
+
             TemporarySoilPile = new SoilPile()
             {
-                GroundNo = SelectedGroundNo,
-                GroundInput = InputModel.GroundsInput[SelectedGroundNo - 1],
+                GroundNo = sgIdx + 1,
+                GroundInput = InputModel.GroundsInput[sgIdx],
                 PileBodyNo = temporalyPileBodyNo,
                 PileBodyInput = pileBodyCopy,
                 Z = zDataItems[0].Z,
@@ -428,8 +503,48 @@ namespace PileDesign.ViewModels
             if (!_mainWindowViewModel.CheckAndResetElementSplit("杭体"))
                 return; // キャンセル時は処理中断
 
+            // 場所打ち鋼管コンクリート杭の最上段区間が「鉄筋コンクリート部」になっていないかチェック
+            // (通常、最上段は「鋼管コンクリート部」を選択する)
+            var insituSteelPipeIssues = CheckInsituSteelPipeTopSection(PileBodies);
+            if (insituSteelPipeIssues.Count > 0)
+            {
+                string list = string.Join(", ", insituSteelPipeIssues);
+                var result = MessageService.Show(
+                    $"以下の杭体で、最上段区間が「鉄筋コンクリート部」になっています:\n{list}\n\n" +
+                    "場所打ち鋼管コンクリート杭の最上段は通常「鋼管コンクリート部」を選択します。\n" +
+                    "このまま保存しますか？",
+                    "杭断面タイプの確認",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                if (result != MessageBoxResult.Yes) return;
+            }
+
             InputModel.PileBodies = PileBodies;
             RequestClose?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 場所打ち鋼管コンクリート杭の最上段区間が「鉄筋コンクリート部」になっている杭体を抽出する。
+        /// 戻り値: 該当する杭体の表示名リスト (例: ["杭体 1", "杭体 3"])。
+        /// </summary>
+        internal static List<string> CheckInsituSteelPipeTopSection(IEnumerable<PileDesign.Models.InputData.PileBodyInput> pileBodies)
+        {
+            var issues = new List<string>();
+            if (pileBodies == null) return issues;
+            int no = 0;
+            foreach (var pb in pileBodies)
+            {
+                no++;
+                if (pb?.PileBodyType != "場所打ち鋼管コンクリート杭") continue;
+                if (pb.PileBodySegments == null || pb.PileBodySegments.Count == 0) continue;
+                var topSection = pb.PileBodySegments[0]?.PileSection;
+                if (topSection == null) continue;
+                if (topSection.PileSectionType == "鉄筋コンクリート部")
+                {
+                    issues.Add($"杭体 {no}");
+                }
+            }
+            return issues;
         }
 
         [RelayCommand]
@@ -742,9 +857,11 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
-        public static void OnPileConstructionTypeSelectionChanged(object parameter)
+        public void OnPileConstructionTypeSelectionChanged(object parameter)
         {
-
+            // 杭工法変更時に杭姿図キャンバスを再描画
+            // (回転貫入杭の螺旋羽根表示など、杭工法に依存する形状を反映)
+            DrawShapes();
         }
 
         [RelayCommand]
@@ -1092,7 +1209,14 @@ namespace PileDesign.ViewModels
             if (IsGroundLayerOverwrapped)
             {
                 pileTopAltitude = PileTopAltitude;
-                groundInput = InputModel.GroundsInput[SelectedGroundNo - 1];
+                // ガード: SelectedGroundNo が範囲外の場合は安全な値にクランプ
+                if (InputModel?.GroundsInput != null && InputModel.GroundsInput.Count > 0)
+                {
+                    int gIdx = SelectedGroundNo - 1;
+                    if (gIdx < 0) gIdx = 0;
+                    if (gIdx >= InputModel.GroundsInput.Count) gIdx = InputModel.GroundsInput.Count - 1;
+                    groundInput = InputModel.GroundsInput[gIdx];
+                }
             }
 
 

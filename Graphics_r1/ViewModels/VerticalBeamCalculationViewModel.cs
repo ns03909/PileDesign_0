@@ -210,6 +210,10 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private async Task ExecuteAnalysis()
         {
+            // 入力データの整合性ゲート (杭体・地盤・寸法・配筋など)
+            if (!PileDesign.Models.CheckInputData.ValidateForAnalysis(InputModel, "基礎梁考慮鉛直解析"))
+                return;
+
             string error = ValidateInput();
             if (error != null)
             {

@@ -1,9 +1,26 @@
 ﻿using System;
+using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace PileDesign.Models.InputData
 {
-    public class ZDataItem : BaseModel
+    public class ZDataItem : BaseModel, IJsonOnDeserializing, IJsonOnDeserialized
     {
+        // JSON デシリアライズ中は GroundDisp1/2/1L/2L が個別に loaded されるため、
+        // GroundInput / Z setter からの SetSoilDisplacement で loaded 済みの値を破壊しないよう抑止する
+        private bool _suppressChildSync = false;
+
+        // System.Text.Json 用コールバック (本プロジェクトの主デシリアライザ)
+        void IJsonOnDeserializing.OnDeserializing() => _suppressChildSync = true;
+        void IJsonOnDeserialized.OnDeserialized() => _suppressChildSync = false;
+
+        // Newtonsoft.Json 用コールバック (副デシリアライザ経由でロードされる場合に備えて)
+        [OnDeserializing]
+        internal void OnDeserializingHandler(StreamingContext _) => _suppressChildSync = true;
+
+        [OnDeserialized]
+        internal void OnDeserializedHandler(StreamingContext _) => _suppressChildSync = false;
+
         private double _z;
         public double Z
         {
@@ -13,6 +30,7 @@ namespace PileDesign.Models.InputData
                 //if (SetProperty(ref _z, value) && GroundLayerNo != null)
                 if (SetProperty(ref _z, value) && GroundInput != null)
                 {
+                    if (_suppressChildSync) return;
                     SetSoilDisplacement(/*InputModel.Instance*/); // Zが設定されたときにSetSoilDisplacementを呼び出す
                 }
             }
@@ -49,6 +67,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _groundInput, value))
                 {
+                    if (_suppressChildSync) return;
                     SetSoilDisplacement(); // Zが設定されたときにSetSoilDisplacementを呼び出す
                 }
             }
@@ -64,6 +83,17 @@ namespace PileDesign.Models.InputData
         {
             if (GroundInput == null) return;
             GroundInput groundInput = GroundInput;
+
+            // 「地盤変位 考慮しない」モード: 全層の地盤変位を 0 として扱う
+            // (水平解析で杭周地盤の強制変位入力が全くなくなる)
+            if (groundInput.IsGroundDisplacementIgnored)
+            {
+                GroundDisp1 = 0;
+                GroundDisp2 = 0;
+                GroundDisp1L = 0;
+                GroundDisp2L = 0;
+                return;
+            }
 
             // 任意地盤変位プロファイルが有効な場合はそちらを使用
             var custom = groundInput.CustomDisplacementProfile;

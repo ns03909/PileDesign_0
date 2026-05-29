@@ -48,14 +48,16 @@
           <Setter Property="MinWidth" Value="70"/>
         </Style>
 
-        <Style x:Key="FormComboBoxStyle" TargetType="ComboBox">
+        <Style x:Key="FormComboBoxStyle" TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
           <Setter Property="Height" Value="26"/>
           <Setter Property="VerticalContentAlignment" Value="Center"/>
           <Setter Property="Margin" Value="0,0,8,0"/>
           <Setter Property="MinWidth" Value="70"/>
         </Style>
 
-        <Style x:Key="FormButtonStyle" TargetType="Button">
+        <Style x:Key="FormButtonStyle" TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
           <Setter Property="Height" Value="26"/>
           <Setter Property="Padding" Value="8,3"/>
           <Setter Property="Margin" Value="0,0,8,0"/>
@@ -77,7 +79,8 @@
         </Style>
         
         <!-- GranularityClassComboBoxのスタイルを定義 -->
-        <Style x:Key="AgeCategoryComboBoxStyle" TargetType="ComboBox">
+        <Style x:Key="AgeCategoryComboBoxStyle" TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding SelectedItem, RelativeSource={RelativeSource Self}}" Value="沖積層">
                     <Setter Property="Foreground" Value="DarkSlateGray"/>
@@ -116,7 +119,8 @@
         </Style>
 
         <!-- GranularityClassComboBoxのスタイルを定義 -->
-        <Style x:Key="GranularityClassComboBoxStyle" TargetType="ComboBox">
+        <Style x:Key="GranularityClassComboBoxStyle" TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding SelectedValue, RelativeSource={RelativeSource Self}}" Value="粘性土">
                     <Setter Property="Foreground" Value="SaddleBrown"/>
@@ -131,7 +135,8 @@
         </Style>
 
         <!-- ShallowSoilType 用スタイル -->
-        <Style x:Key="ShallowSoilTypeComboBoxStyle" TargetType="ComboBox">
+        <Style x:Key="ShallowSoilTypeComboBoxStyle" TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
             <!--<Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="Padding" Value="4,0,4,0"/>-->
             <Style.Triggers>
@@ -512,7 +517,8 @@
                         ToolTip="地盤番号を選択します。新規は '#(New)' と表示されます。">
                     <!-- 新規項目の色や太字を変えて視認性を向上 -->
                     <ComboBox.ItemContainerStyle>
-                        <Style TargetType="ComboBoxItem">
+                        <Style TargetType="ComboBoxItem"
+                               BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding}" Value="#(New)">
                                     <Setter Property="Foreground" Value="DarkOrange"/>
@@ -808,7 +814,28 @@
                     </TabItem>
                     <TabItem Header="地盤変位">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal">
+                            <!-- 地盤変位モード選択 (基礎指針自動 / 任意入力 / 考慮しない) -->
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                                <TextBlock Text="地盤変位:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <RadioButton Content="基礎指針'19 4.5自動計算" GroupName="DispMode" Margin="0,0,12,0" VerticalAlignment="Center"
+                                             IsChecked="{Binding IsAutoDisplacementMode}"
+                                             Checked="DispMode_Generic_Checked"
+                                             ToolTip="基礎指針2019 4.5節の地盤変位算定法で自動計算された値を使用"/>
+                                <RadioButton x:Name="RadioCustomDisplacement" Content="任意入力" GroupName="DispMode" Margin="0,0,12,0" VerticalAlignment="Center"
+                                             IsChecked="{Binding GroundInput.CustomDisplacementProfile.IsEnabled, Mode=TwoWay}"
+                                             Checked="RadioCustomDisplacement_Checked"
+                                             Unchecked="RadioCustomDisplacement_Unchecked"
+                                             ToolTip="下のテーブルに入力した標高-変位プロファイルを使用&#x0a;Excelからコピーペースト可能（標高(m), 変位(mm)の2列）"/>
+                                <RadioButton Content="考慮しない" GroupName="DispMode" VerticalAlignment="Center"
+                                             IsChecked="{Binding GroundInput.IsGroundDisplacementIgnored, Mode=TwoWay}"
+                                             Checked="DispMode_Generic_Checked"
+                                             ToolTip="水平解析で地盤変位を全層 0 として扱い、杭周地盤の強制変位を無視する&#x0a;グラフ表示も非表示になる"/>
+                            </StackPanel>
+                            <Separator Margin="0,0,0,8"/>
+
+                            <!-- 表層の土質 / 地盤変位算定法 行 (自動計算モード時のみ表示) -->
+                            <StackPanel Orientation="Horizontal"
+                                        Visibility="{Binding IsAutoDisplacementMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <TextBlock Text="表層の土質" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                     Width="150"/>
                                 <ComboBox x:Name="ComboBoxShallowSoilType"
@@ -1075,7 +1102,9 @@
                                     </ComboBox.ToolTip>
                                 </ComboBox>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal">
+                            <!-- 工学的基盤 単位体積重量 / せん断波速度 行 (自動計算モード時のみ表示) -->
+                            <StackPanel Orientation="Horizontal"
+                                        Visibility="{Binding IsAutoDisplacementMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <TextBlock HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                 Width="200"><Run Text="工学的基盤単位体積重量(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                 <TextBox x:Name="TextBoxBedrockDensity"
@@ -1092,19 +1121,8 @@
                   PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
                             </StackPanel>
 
-                            <!-- 任意地盤変位プロファイル入力 -->
-                            <Separator Margin="0,8,0,8"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,4">
-                                <TextBlock Text="地盤変位:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <RadioButton Content="基礎指針'19 4.5自動計算" GroupName="DispMode" Margin="0,0,12,0" VerticalAlignment="Center"
-                                             IsChecked="{Binding IsCustomDisplacementDisabled}"
-                                             ToolTip="基礎指針2019 4.5節の地盤変位算定法で自動計算された値を使用"/>
-                                <RadioButton Content="任意入力" GroupName="DispMode" VerticalAlignment="Center"
-                                             IsChecked="{Binding GroundInput.CustomDisplacementProfile.IsEnabled, Mode=TwoWay}"
-                                             ToolTip="下のテーブルに入力した標高-変位プロファイルを使用&#x0a;Excelからコピーペースト可能（標高(m), 変位(mm)の2列）"/>
-                            </StackPanel>
-
                             <!-- 任意入力のテーブルは右ペインの「任意地盤変位」タブに配置 -->
+                            <!-- (モード選択ラジオは上部に移動) -->
 
                         </StackPanel>
                     </TabItem>
@@ -1620,8 +1638,7 @@
 
                                                 ItemsSource="{Binding GroundInput.GroundLayers}"
                                                 SelectedItem="{Binding SelectedGroundLayerOnDataGrid, Mode=TwoWay}"
-                                                common:DataGridNavigationBehavior.Enable="True"
-                                                LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                                                                LoadingRow="DataGrid_LoadingRow_Numbering"
                                                 CellEditEnding="DataGridGroundLayer_CellEditEnding"
                                                 BeginningEdit="DataGrid_BeginningEdit"
                                                 PreviewKeyDown="DataGrid_PreviewKeyDown"
@@ -2030,8 +2047,7 @@
 
                                             ItemsSource="{Binding GroundInput.GroundMassesData}"
                                             SelectedItem="{Binding SelectedGroundMassOnDataGrid, Mode=TwoWay}"
-                                            common:DataGridNavigationBehavior.Enable="True"
-                                            LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                                                        LoadingRow="DataGrid_LoadingRow_Numbering"
                                               CellEditEnding="DataGridGroundMass_CellEditEnding"
                                             BeginningEdit="DataGrid_BeginningEdit"
                                             PreviewKeyDown="DataGrid_PreviewKeyDown"
@@ -2860,16 +2876,23 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <ComboBox Grid.Row="0" x:Name="CustomDispCaseCombo" Margin="4"
+                                    <!-- 全ケース一括コピーボタン (4 ケース共通の自動計算値を一気に流し込む) -->
+                                    <Button Grid.Row="0" Content="基礎指針'19 4.5 自動計算を全ケースにコピー"
+                                            Margin="4,4,4,2" Padding="8,4" HorizontalAlignment="Stretch"
+                                            Click="CustomDispCopyAutoAll_Click"
+                                            ToolTip="基礎指針2019 4.5節の自動計算結果 (土質点ごとの DmaxU* または DmaxU*+ΣγcyH) を、4 ケース全て (L1 非液状化 / L1 液状化 / L2 非液状化 / L2 液状化) に一括コピーします&#x0a;※既存データはクリアされます"/>
+
+                                    <ComboBox Grid.Row="1" x:Name="CustomDispCaseCombo" Margin="4"
                                               ItemsSource="{Binding CustomDispCaseOptions}"
                                               SelectedIndex="{Binding SelectedCustomDispCaseIndex, Mode=TwoWay}"
                                               SelectionChanged="CustomDispCase_SelectionChanged"/>
 
-                                    <WrapPanel Grid.Row="1" Margin="4,0,4,4">
+                                    <WrapPanel Grid.Row="2" Margin="4,0,4,4">
                                         <Button Content="行追加" Padding="8,2" Margin="0,0,4,2"
                                                 Click="CustomDispAddRow_Click"
                                                 ToolTip="末尾に新しい行を追加"/>
@@ -2884,12 +2907,21 @@
                                                 Click="CustomDispSortAndDedupe_Click"
                                                 ToolTip="標高Zの重複を削除し、上から単調減少するように並び替えます"/>
                                         <Separator Margin="4,0,4,0" Width="1" Background="#CCC"/>
-                                        <Button Content="基礎指針'19 4.5 自動計算をコピー" Padding="8,2" Margin="0,0,4,2"
-                                                Click="CustomDispCopyAuto_Click"
-                                                ToolTip="基礎指針2019 4.5節の自動計算結果 (土質点ごとの DmaxU* または DmaxU*+ΣγcyH) を、選択中のケース (レベル/液状化条件) に合わせて標高Z・変位データグリッドにペーストします&#x0a;※既存データはクリアされます"/>
+                                        <!-- 変位係数スケーラー: スライダーで 0~2.0 倍を選び、適用ボタンで現状の変位値に乗算する -->
+                                        <TextBlock Text="変位係数" VerticalAlignment="Center" Margin="0,0,4,2"/>
+                                        <Slider x:Name="SliderCustomDispScale" Width="120" Minimum="0" Maximum="2" Value="1"
+                                                TickFrequency="0.1" TickPlacement="BottomRight" IsSnapToTickEnabled="False"
+                                                VerticalAlignment="Center" Margin="0,0,4,2"
+                                                ToolTip="現在のケースの変位値に乗ずる係数 (0 ~ 2.0)。「適用」ボタンで反映"/>
+                                        <TextBox x:Name="TextBoxCustomDispScale" Width="50" VerticalAlignment="Center" Margin="0,0,4,2"
+                                                 HorizontalContentAlignment="Right"
+                                                 Text="{Binding ElementName=SliderCustomDispScale, Path=Value, StringFormat=N2, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <Button Content="適用" Padding="8,2" Margin="0,0,4,2"
+                                                Click="CustomDispApplyScale_Click"
+                                                ToolTip="現在表示中のケースの全変位値にスライダー値を乗算します。&#x0a;適用後スライダーは 1.0 にリセット。&#x0a;Undo (Ctrl+Z) で元に戻せます。"/>
                                     </WrapPanel>
 
-                                    <common:EnhancedDataGrid x:Name="DataGridCustomDisplacement" CanUserSortColumns="False" Grid.Row="2"
+                                    <common:EnhancedDataGrid x:Name="DataGridCustomDisplacement" CanUserSortColumns="False" Grid.Row="3"
                                         ItemsSource="{Binding SelectedCustomDispProfile}"
                                         CellEditEnding="CustomDispDataGrid_CellEditEnding"
                                         PasteCompleted="CustomDispDataGrid_PasteCompleted"
@@ -2957,7 +2989,7 @@
                                         </common:EnhancedDataGrid.Columns>
                                     </common:EnhancedDataGrid>
 
-                                    <StackPanel Grid.Row="3" Margin="4,4">
+                                    <StackPanel Grid.Row="4" Margin="4,4">
                                         <TextBlock Foreground="#888" FontSize="11" TextWrapping="Wrap"
                                                    Text="※任意地盤変位を適用するには、「地盤変位」タブ中「地盤変位」で「任意入力」を選択してください。"/>
                                         <TextBlock Foreground="#888" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
@@ -3104,11 +3136,23 @@
 
             <!-- OK / キャンセルボタン (右側) -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
-                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
-                <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
-                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
+                <Button x:Name="ButtonOk" Content="保存(_S)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
+                        IsDefault="True"
+                        ToolTip="変更を保存して閉じます (Enter / Ctrl+Enter / Alt+S)"/>
+                <Button x:Name="ButtonCancel" Content="キャンセル(_C)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"
+                        IsCancel="True"
+                        ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
             </StackPanel>
         </Grid>
+
+        <!-- グラフ上のマーカー近傍にマウスを置いた時、最近接マーカーの詳細を表示するポップアップ -->
+        <Popup x:Name="GroundHoverPopup"
+               Placement="Relative" AllowsTransparency="True" StaysOpen="False">
+            <Border Background="#F8FFFFFF" BorderBrush="#888" BorderThickness="1" Padding="6" CornerRadius="2">
+                <TextBlock x:Name="GroundHoverText" FontSize="11" TextWrapping="Wrap" MaxWidth="320"/>
+            </Border>
+        </Popup>
     </Grid>
 </Window>

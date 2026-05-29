@@ -575,7 +575,7 @@
                                     <DataGridTemplateColumn Width="*">
                                         <DataGridTemplateColumn.Header>
                                             <StackPanel>
-                                                <TextBlock Text="杭体" TextAlignment="Center"/>
+                                                <TextBlock Text="杭" TextAlignment="Center"/>
                                                 <TextBlock Text="非線形性" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridTemplateColumn.Header>
@@ -726,7 +726,7 @@
                                     CellStyle="{StaticResource CustomDataGridCellStyle}"
                                     CellEditEnding="DataGridLoadCasesLevel1_CellEditEnding"
                                     Grid.Row="3" Grid.Column="0"
-                                    common:DataGridNavigationBehavior.Enable="True">
+                                    >
                                 <i:Interaction.Behaviors>
                                     <common:DataGridSingleClickEditBehavior />
                                 </i:Interaction.Behaviors>
@@ -809,7 +809,7 @@
                                     <DataGridCheckBoxColumn Binding="{Binding IsPileNonLinear, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="*">
                                         <DataGridCheckBoxColumn.Header>
                                             <StackPanel>
-                                                <TextBlock Text="杭体" TextAlignment="Center"/>
+                                                <TextBlock Text="杭" TextAlignment="Center"/>
                                                 <TextBlock Text="非線形性" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridCheckBoxColumn.Header>
@@ -1234,7 +1234,7 @@
                                     <DataGridTemplateColumn Width="*">
                                         <DataGridTemplateColumn.Header>
                                             <StackPanel>
-                                                <TextBlock Text="杭体" TextAlignment="Center"/>
+                                                <TextBlock Text="杭" TextAlignment="Center"/>
                                                 <TextBlock Text="非線形性" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridTemplateColumn.Header>
@@ -1386,7 +1386,7 @@
                               LoadingRow="DataGrid_LoadingRow_Numbering"
                               CellStyle="{StaticResource CustomDataGridCellStyle}"
                               CellEditEnding="DataGridLoadCasesLevel2_CellEditEnding" Grid.Row="3" Grid.Column="0"
-                              common:DataGridNavigationBehavior.Enable="True">
+                              >
                                 <i:Interaction.Behaviors>
                                     <common:DataGridSingleClickEditBehavior />
                                 </i:Interaction.Behaviors>
@@ -1468,7 +1468,7 @@
                                     <DataGridCheckBoxColumn Binding="{Binding IsPileNonLinear, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="*">
                                         <DataGridCheckBoxColumn.Header>
                                             <StackPanel>
-                                                <TextBlock Text="杭体" TextAlignment="Center"/>
+                                                <TextBlock Text="杭" TextAlignment="Center"/>
                                                 <TextBlock Text="非線形性" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridCheckBoxColumn.Header>

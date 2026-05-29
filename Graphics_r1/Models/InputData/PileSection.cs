@@ -70,21 +70,30 @@ namespace PileDesign.Models.InputData
 
         // --- NQプロパティ（計算プロパティ） ---
         // NQ Raw（N[N], Q[N]）を取得し、スケーリング後（kN, kN）を返す
+        // [JsonIgnore]: NM 系と同じ理由で、これらも computed プロパティで重い計算をトリガする
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) UnfactoredServiceNQ =>
             _unfactoredServiceNQCache ??= GetNQScaled(nameof(UnfactoredServiceNQ));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) UnfactoredDamageNQ =>
             _unfactoredDamageNQCache ??= GetNQScaled(nameof(UnfactoredDamageNQ));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) UnfactoredUltimateNQ =>
             _unfactoredUltimateNQCache ??= GetNQScaled(nameof(UnfactoredUltimateNQ));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) FactoredServiceNQ =>
             _factoredServiceNQCache ??= GetNQScaled(nameof(FactoredServiceNQ));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) FactoredDamageNQ =>
             _factoredDamageNQCache ??= GetNQScaled(nameof(FactoredDamageNQ));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) FactoredUltimateNQ =>
             _factoredUltimateNQCache ??= GetNQScaled(nameof(FactoredUltimateNQ));
 
         // 後方互換性のためのエイリアス（Dagame -> Damage）
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) UnfactoredDagameNQ => UnfactoredDamageNQ;
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) FactoredDagameNQ => FactoredDamageNQ;
 
         // --- NQキャッシュ ---
@@ -186,46 +195,62 @@ namespace PileDesign.Models.InputData
         public double ShearNMinUltimate { get => _shearNMinUltimate; private set => SetProperty(ref _shearNMinUltimate, value); }
         public double ShearNMaxUltimate { get => _shearNMaxUltimate; private set => SetProperty(ref _shearNMaxUltimate, value); }
 
+        // [JsonIgnore] 必須: これらは GetNMRaw() で重い断面計算をトリガする computed プロパティ。
+        // 保存時に System.Text.Json から getter が呼ばれると 1 杭セクションあたり数秒、
+        // 全杭で 10 秒級のオーバーヘッドになる。読取専用なので load 時にも復元できない (廃棄値)。
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredServiceNMRaw => GetNMRaw(nameof(UnfactoredServiceNM));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredDamageNMRaw => GetNMRaw(nameof(UnfactoredDamageNM));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredUltimateNMRaw => GetNMRaw(nameof(UnfactoredUltimateNM));
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredServiceNMRaw => GetNMRaw(nameof(FactoredServiceNM));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredDamageNMRaw => GetNMRaw(nameof(FactoredDamageNM));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredDamageNMLevel1Raw => GetNMRaw(nameof(FactoredDamageNMLevel1));
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredUltimateNMRaw => GetNMRaw(nameof(FactoredUltimateNM));
 
         // --- 変更: NMプロパティをキャッシュ ---
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredServiceNM =>
             _unfactoredServiceNMCache ??= (
                 GetMultipliedListValues(UnfactoredServiceNMRaw.N, 1e-3),
                 GetMultipliedListValues(UnfactoredServiceNMRaw.M, 1e-6)
             );
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredDamageNM =>
             _unfactoredDamageNMCache ??= (
                 GetMultipliedListValues(UnfactoredDamageNMRaw.N, 1e-3),
                 GetMultipliedListValues(UnfactoredDamageNMRaw.M, 1e-6)
             );
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredUltimateNM =>
             _unfactoredUltimateNMCache ??= (
                 GetMultipliedListValues(UnfactoredUltimateNMRaw.N, 1e-3),
                 GetMultipliedListValues(UnfactoredUltimateNMRaw.M, 1e-6)
             );
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredServiceNM =>
             _factoredServiceNMCache ??= (
                 GetMultipliedListValues(FactoredServiceNMRaw.N, 1e-3),
                 GetMultipliedListValues(FactoredServiceNMRaw.M, 1e-6)
             );
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredDamageNM =>
             _factoredDamageNMCache ??= (
                 GetMultipliedListValues(FactoredDamageNMRaw.N, 1e-3),
                 GetMultipliedListValues(FactoredDamageNMRaw.M, 1e-6)
             );
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredDamageNMLevel1 =>
             _factoredDamageNMLevel1Cache ??= (
                 GetMultipliedListValues(FactoredDamageNMLevel1Raw.N, 1e-3),
@@ -240,6 +265,7 @@ namespace PileDesign.Models.InputData
         public (List<double> N, List<double> M) GetFactoredDamageNM(int level)
             => level == 1 ? FactoredDamageNMLevel1 : FactoredDamageNM;
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredUltimateNM =>
             _factoredUltimateNMCache ??= (
                 GetMultipliedListValues(FactoredUltimateNMRaw.N, 1e-3),
@@ -247,20 +273,24 @@ namespace PileDesign.Models.InputData
             );
 
         // 降伏開始NM（Raw: N[N], M[Nmm]）をキャッシュ付きで返す
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) SteelYieldNMRaw
             => _steelYieldNMRawCache ??= ComputeSteelYieldNMRaw();
 
         // スケーリング後（kN, kNm）
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) SteelYieldNM => (
             GetMultipliedListValues(SteelYieldNMRaw.N, 1e-3),
             GetMultipliedListValues(SteelYieldNMRaw.M, 1e-6)
         );
 
         // 降伏開始NM（Raw: N[N], M[Nmm]）をキャッシュ付きで返す
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) CrackNMRaw
             => _crackNMRawCache ??= ComputeCrackNMRaw();
 
         // スケーリング後（kN, kNm）
+        [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) CrackNM => (
             GetMultipliedListValues(CrackNMRaw.N, 1e-3),
             GetMultipliedListValues(CrackNMRaw.M, 1e-6)
@@ -349,21 +379,22 @@ namespace PileDesign.Models.InputData
             return filteredN.Any() ? filteredN.Min() : 0.0;
         }
 
-        public double UnfactoredServiceNMax => GetFilteredNMax(UnfactoredServiceNM);
-        public double UnfactoredDamageNMax => GetFilteredNMax(UnfactoredDamageNM);
-        public double UnfactoredUltimateNMax => GetFilteredNMax(UnfactoredUltimateNM);
+        // Max/Min 系も NM 曲線にアクセスするため [JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore] public double UnfactoredServiceNMax => GetFilteredNMax(UnfactoredServiceNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double UnfactoredDamageNMax => GetFilteredNMax(UnfactoredDamageNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double UnfactoredUltimateNMax => GetFilteredNMax(UnfactoredUltimateNM);
 
-        public double UnfactoredServiceNMin => GetFilteredNMin(UnfactoredServiceNM);
-        public double UnfactoredDamageNMin => GetFilteredNMin(UnfactoredDamageNM);
-        public double UnfactoredUltimateNMin => GetFilteredNMin(UnfactoredUltimateNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double UnfactoredServiceNMin => GetFilteredNMin(UnfactoredServiceNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double UnfactoredDamageNMin => GetFilteredNMin(UnfactoredDamageNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double UnfactoredUltimateNMin => GetFilteredNMin(UnfactoredUltimateNM);
 
-        public double FactoredServiceNMax => GetFilteredNMax(FactoredServiceNM);
-        public double FactoredDamageNMax => GetFilteredNMax(FactoredDamageNM);
-        public double FactoredUltimateNMax => GetFilteredNMax(FactoredUltimateNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double FactoredServiceNMax => GetFilteredNMax(FactoredServiceNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double FactoredDamageNMax => GetFilteredNMax(FactoredDamageNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double FactoredUltimateNMax => GetFilteredNMax(FactoredUltimateNM);
 
-        public double FactoredServiceNMin => GetFilteredNMin(FactoredServiceNM);
-        public double FactoredDamageNMin => GetFilteredNMin(FactoredDamageNM);
-        public double FactoredUltimateNMin => GetFilteredNMin(FactoredUltimateNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double FactoredServiceNMin => GetFilteredNMin(FactoredServiceNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double FactoredDamageNMin => GetFilteredNMin(FactoredDamageNM);
+        [System.Text.Json.Serialization.JsonIgnore] public double FactoredUltimateNMin => GetFilteredNMin(FactoredUltimateNM);
 
         /// <summary>
         /// PileSection に各断面型の GetMPhiRelationship を仲介するメソッド。

@@ -268,8 +268,7 @@
                                                         BeginningEdit="DataGridZs_BeginningEdit"
                                                         SelectionChanged="DataGridZs_SelectionChanged"
                                                         PreviewMouseDown="DataGrid_PreviewMouseDown"
-                                                        common:DataGridNavigationBehavior.Enable="True"
-                                                        ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                                                                                                ScrollViewer.VerticalScrollBarVisibility="Visible"
                                                         ScrollViewer.HorizontalScrollBarVisibility="Visible"
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridZs_RowEditEnding"
@@ -425,8 +424,7 @@
                                                         PreviewMouseDown="DataGrid_PreviewMouseDown"
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}"
                                                         Grid.Row="2"
-                                                        common:DataGridNavigationBehavior.Enable="True"
-                                                        SelectedCellsChanged="Horizon_SelectedCellsChanged"
+                                                                                                                SelectedCellsChanged="Horizon_SelectedCellsChanged"
                                                         CurrentCellChanged="Horizon_CurrentCellChanged">
 
                                                     <DataGrid.AlternatingRowBackground>
@@ -732,8 +730,7 @@
                                                         PreviewMouseDown="DataGrid_PreviewMouseDown"
                                                         ScrollViewer.VerticalScrollBarVisibility="Visible"
                                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                                        common:DataGridNavigationBehavior.Enable="True"
-                                                        LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                                                                                LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridEmbedmentZs_RowEditEnding"
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}"
                                                         Grid.Row="2">
@@ -875,8 +872,7 @@
                                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridZs_RowEditEnding"
-                                                        common:DataGridNavigationBehavior.Enable="True"
-                                                        CellStyle="{StaticResource CustomDataGridCellStyle}">
+                                                                                                                CellStyle="{StaticResource CustomDataGridCellStyle}">
 
                                                     <DataGrid.AlternatingRowBackground>
                                                         <ImageBrush/>
@@ -1121,11 +1117,15 @@
 
             <!-- OK / キャンセルボタン (右側) -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
+                <Button x:Name="ButtonOk" Content="保存(_S)" HorizontalAlignment="Left"
                         VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
-                        IsEnabled="{Binding AllLampsLit}"/>
-                <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
-                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
+                        IsEnabled="{Binding AllLampsLit}"
+                        IsDefault="True"
+                        ToolTip="変更を保存して閉じます (Enter / Ctrl+Enter / Alt+S)"/>
+                <Button x:Name="ButtonCancel" Content="キャンセル(_C)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"
+                        IsCancel="True"
+                        ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
             </StackPanel>
         </Grid>
 

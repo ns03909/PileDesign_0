@@ -66,7 +66,7 @@
                 <TextBlock Grid.Row="3" Grid.Column="0" Text="逆方向組合せ" Foreground="#555" Margin="0,2"/>
                 <TextBlock Grid.Row="3" Grid.Column="1" x:Name="CounterLoadingText" Margin="0,2"/>
 
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="杭体非線形 ON" Foreground="#555" Margin="0,2"/>
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="杭の非線形 ON" Foreground="#555" Margin="0,2"/>
                 <TextBlock Grid.Row="4" Grid.Column="1" x:Name="NonLinearText" Margin="0,2"/>
 
                 <TextBlock Grid.Row="5" Grid.Column="0" Text="ケース並列度" Foreground="#555" Margin="0,2"/>
@@ -84,13 +84,13 @@
             <CheckBox Grid.Column="0" x:Name="DoNotShowAgainCheckBox"
                       Content="次回から表示しない" Foreground="#888"
                       VerticalAlignment="Center"/>
-            <Button Grid.Column="1" Content="キャンセル" IsCancel="True"
-                    MinWidth="84" Padding="12,6" Margin="0,0,8,0"/>
-            <Button Grid.Column="2" Content="実行" IsDefault="True"
+            <Button Grid.Column="1" x:Name="CancelButton" Content="キャンセル(_C)" IsCancel="True"
+                    Style="{StaticResource DialogCancelButtonStyle}"
+                    ToolTip="Esc / Alt+C / Tab で選択して Space"/>
+            <Button Grid.Column="2" x:Name="OkButton" Content="実行(_E)" IsDefault="True"
                     Click="OkButton_Click"
-                    MinWidth="84" Padding="12,6"
-                    Background="{StaticResource PrimaryAccentBrush}" Foreground="White"
-                    FontWeight="SemiBold"/>
+                    Style="{StaticResource PrimaryDialogButtonStyle}"
+                    ToolTip="Enter / Alt+E / Tab で選択して Space"/>
         </Grid>
     </Grid>
 </Window>

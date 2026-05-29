@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Threading;
 
 namespace PileDesign.Services
@@ -27,6 +28,15 @@ namespace PileDesign.Services
         private InputModel? _currentInputModel;
         private AnaModel? _currentModel;
         private IList<FEM.VerticalBeamCaseResult>? _verticalBeamCaseResults;
+
+        /// <summary>
+        /// 保存時に「現在のライブ状態」(InputModel / AnaModel / VerticalBeamCaseResults) を取得するプロバイダ。
+        /// 設定されていれば Start 時にキャプチャした固定参照より優先される。
+        /// これにより (a) 解析完了後の最新結果、(b) Undo/Redo 後の最新 InputModel、
+        /// (c)「解析結果も保存する」チェックボックスの状態、を保存時点で正しく反映できる。
+        /// (Start 引数の参照は呼び出し時点で固定されるため、解析後に古くなる問題を回避する)
+        /// </summary>
+        public Func<(InputModel? input, AnaModel? ana, IList<FEM.VerticalBeamCaseResult>? vbcr)>? LiveStateProvider { get; set; }
 
         /// <summary>
         /// 自動保存フォルダのパス（AppData/Local/PileDesign/AutoSave/）
@@ -125,16 +135,38 @@ namespace PileDesign.Services
         /// <summary>
         /// タイマーイベント
         /// </summary>
-        private void OnAutoSaveTimer(object? sender, EventArgs e)
+        private async void OnAutoSaveTimer(object? sender, EventArgs e)
         {
-            PerformAutoSave();
+            // バックグラウンドで実行して UI スレッドをブロックしない
+            // (DispatcherTimer.Tick は UI スレッドで発火するため明示的に Task.Run へ逃がす)
+            try
+            {
+                await Task.Run(PerformAutoSave);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "AutoSave timer task failed");
+            }
         }
 
         /// <summary>
         /// 自動保存を実行
         /// </summary>
+        // 保存対象の状態を解決する。LiveStateProvider があればそれを優先 (最新状態 + チェックボックス反映)。
+        // 無ければ Start 時にキャプチャした参照にフォールバック。
+        private (InputModel? input, AnaModel? ana, IList<FEM.VerticalBeamCaseResult>? vbcr) ResolveState()
+        {
+            if (LiveStateProvider != null)
+            {
+                try { return LiveStateProvider(); }
+                catch (Exception ex) { Log.Warning(ex, "AutoSave LiveStateProvider failed; fallback to captured refs"); }
+            }
+            return (_currentInputModel, _currentModel, _verticalBeamCaseResults);
+        }
+
         private void PerformAutoSave()
         {
+            // セッションが開始されていない (Start 前 / Stop 後) 場合は何もしない
             if (_currentInputModel == null)
                 return;
 
@@ -202,10 +234,12 @@ namespace PileDesign.Services
                 ? Path.GetFileNameWithoutExtension(_currentFilePath)
                 : "Untitled";
 
-            var fileName = $"{originalFileName}_{tag}_{timestamp}.json";
+            var fileName = $"{originalFileName}_{tag}_{timestamp}.pdj";
             var filePath = Path.Combine(AutoSaveFolder, fileName);
 
-            _fileOperationService.SaveProjectData(filePath, _currentInputModel!, _currentModel, _verticalBeamCaseResults);
+            // ライブ状態を解決 (LiveStateProvider があれば最新 + 自動保存チェックボックスを反映)
+            var (input, ana, vbcr) = ResolveState();
+            _fileOperationService.SaveProjectData(filePath, input!, ana, vbcr);
             return filePath;
         }
 
@@ -218,7 +252,10 @@ namespace PileDesign.Services
             {
                 var cutoffDate = DateTime.Now.AddDays(-RetentionDays);
                 // 通常の autosave と緊急保存 (emergency) の両方をクリーンアップ対象にする
-                var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, "*_autosave_*.json")
+                // 旧形式 (.json) と新形式 (.pdj) の両方を拾う
+                var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, "*_autosave_*.pdj")
+                    .Concat(Directory.GetFiles(AutoSaveFolder, "*_emergency_*.pdj"))
+                    .Concat(Directory.GetFiles(AutoSaveFolder, "*_autosave_*.json"))
                     .Concat(Directory.GetFiles(AutoSaveFolder, "*_emergency_*.json"));
 
                 foreach (var file in autoSaveFiles)
@@ -245,7 +282,10 @@ namespace PileDesign.Services
         {
             try
             {
-                var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, "*_autosave_*.json")
+                // 旧形式 (.json) と新形式 (.pdj) の両方を拾う
+                var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, "*_autosave_*.pdj")
+                    .Concat(Directory.GetFiles(AutoSaveFolder, "*_emergency_*.pdj"))
+                    .Concat(Directory.GetFiles(AutoSaveFolder, "*_autosave_*.json"))
                     .Concat(Directory.GetFiles(AutoSaveFolder, "*_emergency_*.json"))
                     .Where(f => !f.Contains("_dismissed_"))
                     .ToArray();
@@ -275,8 +315,11 @@ namespace PileDesign.Services
             try
             {
                 var originalFileName = Path.GetFileNameWithoutExtension(filePath);
+                // 旧形式 (.json) と新形式 (.pdj) の両方を拾う
                 var autoSaveFiles = Directory
-                    .GetFiles(AutoSaveFolder, $"{originalFileName}_autosave_*.json")
+                    .GetFiles(AutoSaveFolder, $"{originalFileName}_autosave_*.pdj")
+                    .Concat(Directory.GetFiles(AutoSaveFolder, $"{originalFileName}_emergency_*.pdj"))
+                    .Concat(Directory.GetFiles(AutoSaveFolder, $"{originalFileName}_autosave_*.json"))
                     .Concat(Directory.GetFiles(AutoSaveFolder, $"{originalFileName}_emergency_*.json"));
 
                 return [.. autoSaveFiles

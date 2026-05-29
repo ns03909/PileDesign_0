@@ -192,6 +192,14 @@ WindowStartupLocation="CenterOwner">
                         </StackPanel>
                     </GroupBox>
 
+                    <GroupBox Header="要素分割" Margin="0,0,0,4" Padding="4">
+                        <StackPanel>
+                            <CheckBox Content="要素分割杭姿図 (分割点付き)" IsChecked="{Binding IncludeElementDivisionPileShape, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="水平地盤反力分布グラフ" IsChecked="{Binding IncludeHorizontalSoilReactionGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="土圧合力ばね分布グラフ" IsChecked="{Binding IncludeDoatsuGoryokuBaneGraph, Mode=TwoWay}" Margin="0,2"/>
+                        </StackPanel>
+                    </GroupBox>
+
                     <GroupBox Header="支持力" Margin="0,0,0,4" Padding="4">
                         <CheckBox Content="支持力検討" IsChecked="{Binding IncludeVertical, Mode=TwoWay}"
                                   IsEnabled="{Binding IsVerticalAnalysisDone}"
@@ -249,12 +257,12 @@ WindowStartupLocation="CenterOwner">
 
                     <GroupBox Header="沈下検討" Margin="0,0,0,4" Padding="4">
                         <StackPanel>
-                            <!-- 沈下検討/荷重沈下曲線は支持力検討 (IncludeVertical) の子 -->
-                            <CheckBox Content="沈下検討" IsChecked="{Binding IncludeSettlement, Mode=TwoWay}" Margin="0,2"
+                            <!-- 沈下検討は支持力検討 (IncludeVertical) の子。
+                                 荷重沈下曲線・杭頭/杭先端沈下曲線・杭周面抵抗力グラフ・沈下詳細表は
+                                 すべて「沈下検討」内で出力されます。 -->
+                            <CheckBox Content="沈下検討（荷重-沈下曲線・周面抵抗・沈下表を含む）" IsChecked="{Binding IncludeSettlement, Mode=TwoWay}" Margin="0,2"
                                       IsEnabled="{Binding CanEditVerticalChildren}"
                                       ToolTip="支持力検討 ON かつ 単杭沈下解析完了で編集可"/>
-                            <CheckBox Content="荷重沈下曲線" IsChecked="{Binding IncludeLoadSettlementCurve, Mode=TwoWay}" Margin="0,2"
-                                      IsEnabled="{Binding CanEditVerticalChildren}"/>
                             <!-- 群杭沈下/基礎梁考慮 は独立 (各々の解析完了でガード) -->
                             <CheckBox Content="群杭沈下マップ" IsChecked="{Binding IncludeGroupPileSettlement, Mode=TwoWay}" Margin="0,2"
                                       IsEnabled="{Binding IsGroupPileSettlementAnalysisDone}"/>
@@ -269,9 +277,13 @@ WindowStartupLocation="CenterOwner">
 
         <!-- ボタン行 -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-            <Button Content="計算書作成" Width="100" Click="OkButton_Click" Command="{Binding OutputWordFileCommand}"
-                    Padding="8,4" Margin="0,0,8,0"/>
-            <Button Content="キャンセル (Esc)" Width="120" Click="CancelButton_Click" Padding="8,4"/>
+            <Button x:Name="OkButton" Content="計算書作成(_O)" Width="120" Click="OkButton_Click" Command="{Binding OutputWordFileCommand}"
+                    Padding="8,4" Margin="0,0,8,0"
+                    IsDefault="True"
+                    ToolTip="選択した項目で計算書を出力します (Enter / Alt+O)"/>
+            <Button Content="キャンセル(_C)" Width="120" Click="CancelButton_Click" Padding="8,4"
+                    IsCancel="True"
+                    ToolTip="出力せずに閉じます (Esc / Alt+C)"/>
         </StackPanel>
     </Grid>
 </Window>

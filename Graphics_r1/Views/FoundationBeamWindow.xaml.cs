@@ -15,6 +15,7 @@ namespace PileDesign.Views
         {
             InitializeComponent();
             Loaded += FoundationBeamWindow_Loaded;
+            Loaded += (_, _) => OkButton?.Focus();
         }
 
         private void FoundationBeamWindow_Loaded(object sender, RoutedEventArgs e)

@@ -175,6 +175,18 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _customDisplacementProfile, value);
         }
 
+        /// <summary>
+        /// 地盤変位を「考慮しない」モード。true の場合、水平解析にて地盤変位を全層 0 として扱い、
+        /// 杭周地盤の強制変位入力を無視する。
+        /// グラフは何も描画されない。GroundMassesData の DmaxUStar 等の値は保持される (再計算不要)。
+        /// </summary>
+        private bool _isGroundDisplacementIgnored;
+        public bool IsGroundDisplacementIgnored
+        {
+            get => _isGroundDisplacementIgnored;
+            set => SetProperty(ref _isGroundDisplacementIgnored, value);
+        }
+
         // 内部摩擦角とN値の関係　p30
         public List<string> SelectedInternalFrictionAngleCalcumationMethodOption { get; } =
         [

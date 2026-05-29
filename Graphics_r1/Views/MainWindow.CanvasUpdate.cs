@@ -167,7 +167,8 @@ namespace PileDesign.Views
                 {
                     // 未分割: 埋設領域の中心 (EmbedmentLayer[0] の中心) で地盤土質点列を使用
                     int groundNo = vm.CurrentInputModel.EmbedmentInput.GroundNo;
-                    var masses = vm.CurrentInputModel.GroundsInput[groundNo - 1].GroundMassesData;
+                    var groundInput = vm.CurrentInputModel.GroundsInput[groundNo - 1];
+                    var masses = groundInput.GroundMassesData;
                     if (masses.Count >= 2)
                     {
                         var layer0 = vm.CurrentInputModel.EmbedmentInput.EmbedmentLayers[0];
@@ -181,8 +182,8 @@ namespace PileDesign.Views
 
                             double zI = mI.AltitudeDepth;
                             double zJ = mJ.AltitudeDepth;
-                            double displacementI = GetDispFromGroundMass(mI, level, vm.IsLiquefaction);
-                            double displacementJ = GetDispFromGroundMass(mJ, level, vm.IsLiquefaction);
+                            double displacementI = GetDispFromGroundMass(groundInput, mI, level, vm.IsLiquefaction);
+                            double displacementJ = GetDispFromGroundMass(groundInput, mJ, level, vm.IsLiquefaction);
 
                             DrawGroundDispSegment(vm, comb, cos, sin, x, y, zI, displacementI, zJ, displacementJ, isFirstSegment: j == 0);
                         }
@@ -221,7 +222,8 @@ namespace PileDesign.Views
                 {
                     // 未分割: GroundMassesData 列
                     int groundNo = pile.GroundNo;
-                    var masses = vm.CurrentInputModel.GroundsInput[groundNo - 1].GroundMassesData;
+                    var groundInput2 = vm.CurrentInputModel.GroundsInput[groundNo - 1];
+                    var masses = groundInput2.GroundMassesData;
                     for (int j = 0; j < masses.Count - 1; j++)
                     {
                         var mI = masses[j];
@@ -230,8 +232,8 @@ namespace PileDesign.Views
                         double zI = mI.AltitudeDepth;
                         double zJ = mJ.AltitudeDepth;
 
-                        double displacementI = GetDispFromGroundMass(mI, level, vm.IsLiquefaction);
-                        double displacementJ = GetDispFromGroundMass(mJ, level, vm.IsLiquefaction);
+                        double displacementI = GetDispFromGroundMass(groundInput2, mI, level, vm.IsLiquefaction);
+                        double displacementJ = GetDispFromGroundMass(groundInput2, mJ, level, vm.IsLiquefaction);
 
                         DrawGroundDispSegment(vm, comb, cos, sin, x, y, zI, displacementI, zJ, displacementJ, isFirstSegment: j == 0);
                     }
@@ -271,8 +273,10 @@ namespace PileDesign.Views
             if (vm.IsAnalysisResultVisible
                 && vm.AnalysisResultContent == "節点変位（水平）"
                 && (vm.AnalysisResultNodeDisplacementType == "UH"
+                    || vm.AnalysisResultNodeDisplacementType == "U"
                     || vm.AnalysisResultNodeDisplacementType == "UX"
-                    || vm.AnalysisResultNodeDisplacementType == "UY"))
+                    || vm.AnalysisResultNodeDisplacementType == "UY"
+                    || vm.AnalysisResultNodeDisplacementType == "UZ"))
             {
                 var anaModel = vm.CurrentModel;
                 var selLc = LoadCases.GetLoadCase(vm.CurrentInputModel.LoadCasesInput.AllLoadCases, vm.SelectedLoadCaseName);
@@ -287,8 +291,10 @@ namespace PileDesign.Views
                         double val = vm.AnalysisResultNodeDisplacementType switch
                         {
                             "UH" => Math.Sqrt(d.Ux * d.Ux + d.Uy * d.Uy),
+                            "U" => Math.Sqrt(d.Ux * d.Ux + d.Uy * d.Uy + d.Uz * d.Uz),
                             "UX" => Math.Abs(d.Ux),
                             "UY" => Math.Abs(d.Uy),
+                            "UZ" => Math.Abs(d.Uz),
                             _ => 0.0,
                         };
                         if (double.IsFinite(val) && val > maxM) maxM = val;
@@ -320,11 +326,12 @@ namespace PileDesign.Views
                     {
                         int gIdx = pile.GroundNo - 1;
                         if (gIdx < 0 || gIdx >= vm.CurrentInputModel.GroundsInput.Count) continue;
-                        var masses = vm.CurrentInputModel.GroundsInput[gIdx].GroundMassesData;
+                        var groundForScale = vm.CurrentInputModel.GroundsInput[gIdx];
+                        var masses = groundForScale.GroundMassesData;
                         if (masses == null) continue;
                         foreach (var m in masses)
                         {
-                            double d = Math.Abs(GetDispFromGroundMass(m, level, vm.IsLiquefaction));
+                            double d = Math.Abs(GetDispFromGroundMass(groundForScale, m, level, vm.IsLiquefaction));
                             if (d > maxGroundMm) maxGroundMm = d;
                         }
                     }
@@ -337,16 +344,49 @@ namespace PileDesign.Views
                 _sharedDispScaleMtoModel = vm.DisplacementDiagramRatio * vm.ModelExtent / maxM;
         }
 
+        // 地盤変位モードを反映するヘルパー。GroundInput から
+        //   - IsGroundDisplacementIgnored → 0 を返す
+        //   - CustomDisplacementProfile.IsEnabled → 任意入力プロファイルから補間
+        //   - それ以外 → 従来通り (ZDataItem の cached 値 / GroundMass の DmaxU*)
+        // を選んで返す。これにより、地盤ウィンドウで「任意入力」や「考慮しない」を
+        // 選択した場合にメイン画面の表示にも反映される。
         private static double GetDispFromZDataItem(ZDataItem item, int level, bool isLiquefaction)
         {
+            var ground = item?.GroundInput;
+            if (ground != null)
+            {
+                if (ground.IsGroundDisplacementIgnored) return 0.0;
+                var custom = ground.CustomDisplacementProfile;
+                if (custom != null && custom.IsEnabled)
+                {
+                    var profile = (level == 1)
+                        ? (isLiquefaction ? custom.Level1Liq : custom.Level1NonLiq)
+                        : (isLiquefaction ? custom.Level2Liq : custom.Level2NonLiq);
+                    return custom.Interpolate(profile, item.Z);
+                }
+            }
+            // フォールバック (cached GroundDisp 値)
             if (level == 1)
                 return isLiquefaction ? item.GroundDisp1L : item.GroundDisp1;
             else
                 return isLiquefaction ? item.GroundDisp2L : item.GroundDisp2;
         }
 
-        private static double GetDispFromGroundMass(GroundMassDataInput mass, int level, bool isLiquefaction)
+        private static double GetDispFromGroundMass(GroundInput ground, GroundMassDataInput mass, int level, bool isLiquefaction)
         {
+            if (ground != null)
+            {
+                if (ground.IsGroundDisplacementIgnored) return 0.0;
+                var custom = ground.CustomDisplacementProfile;
+                if (custom != null && custom.IsEnabled)
+                {
+                    var profile = (level == 1)
+                        ? (isLiquefaction ? custom.Level1Liq : custom.Level1NonLiq)
+                        : (isLiquefaction ? custom.Level2Liq : custom.Level2NonLiq);
+                    return custom.Interpolate(profile, mass.AltitudeDepth);
+                }
+            }
+            // フォールバック (基礎指針'19 4.5 自動計算値)
             int idx = level == 1 ? 0 : 1;
             return isLiquefaction ? mass.DmaxUStarSigmaGammaCyH[idx] : mass.DmaxUStar[idx];
         }
@@ -410,15 +450,22 @@ namespace PileDesign.Views
             var quad = new[] { pI0_2D, pI1_2D, pJ1_2D, pJ0_2D };
             AddPolyLineGeometry(quad, vm.CanvasGeometry.PathGeoGroundDisp);
 
-            // 4) 値表示（従来ロジックを踏襲）
+            // 4) 値表示
+            // 線(変位後の四辺形)は ScaleDispMmToModel で comb.Alpha1 を反映しているのに対し、
+            // 値ラベルは「地盤変位 × Alpha1」(=実際に解析へ入力される強制変位) を表示する。
+            // これがないと組合せ変更時に線形状は変わるのに数値は最大値 D のままで動かず、
+            // ユーザーから「組合せを変えても数値が変わらない」と見える。
             if (vm.IsResultValueVisible)
             {
+                double alphaL = comb?.Alpha1 ?? 1.0;
+                double displayIMm = displacementIMm * alphaL;
+                double displayJMm = displacementJMm * alphaL;
                 string format = "{0:N" + vm.DecimalPlaces + "}";
                 if (vm.IsPileTopResultValueVisibleOnly)
                 {
                     if (isFirstSegment)
                     {
-                        AddText3D(Brushes.Brown, string.Format(format, displacementIMm),
+                        AddText3D(Brushes.Brown, string.Format(format, displayIMm),
                             pI1_2D.X, pI1_2D.Y, "C", "C", 0.0);
                     }
                 }
@@ -426,7 +473,7 @@ namespace PileDesign.Views
                 {
                     DrawResultValueTexts(
                         vm.IsResultValueVisible, Brushes.Brown,
-                        displacementIMm, displacementJMm,
+                        displayIMm, displayJMm,
                         pI1_2D, pJ1_2D,
                         pJ0_2D, pI0_2D,
                         format, format);

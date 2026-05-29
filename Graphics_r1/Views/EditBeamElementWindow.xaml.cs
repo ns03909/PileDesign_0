@@ -13,6 +13,7 @@ namespace PileDesign.Views
             InitializeComponent();
             this.viewModel = viewModel;
             DataContext = viewModel;
+            this.Loaded += (_, _) => OkButton?.Focus();
         }
 
         public class BeamElementEditResult

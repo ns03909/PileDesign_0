@@ -309,6 +309,7 @@ namespace PileDesign.Models
             {
                 combined.Add(new PileLibrary.Spec("引張定着筋", "", TensionBar.Name, ""));
                 combined.Add(new PileLibrary.Spec("引張定着筋鋼種", "", TensionBarGrade, ""));
+                combined.Add(new PileLibrary.Spec("引張定着筋断面積", "Ag", $"{GetTensionBarArea():N0}", "mm²"));
                 // EffectiveDc / EffectiveHoopOutDia は 3-D19 + D ≥ 400 の例外ルールを反映
                 bool exceptionApplied = TensionBar.BarNum == 3
                     && string.Equals(TensionBar.BarSize, "D19", StringComparison.OrdinalIgnoreCase)

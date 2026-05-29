@@ -1,0 +1,62 @@
+{
+  "exampleName": "Example3_5",
+  "exampleDisplayName": "設計例集3.5_地盤1",
+  "schemaVersion": 1,
+  "capturedAt": "2026-05-19",
+  "options": {
+    "level1Steps": 4,
+    "level2Steps": 16,
+    "liquefactionMode": "Yes",
+    "useLineSearch": true,
+    "parallelism": 1
+  },
+  "cases": [
+    {
+      "caseKey": "L1-1.C1.Liq",
+      "level": 1,
+      "loadCaseNo": 1,
+      "combinationNo": 1,
+      "isLiquefaction": true,
+      "converged": true,
+      "totalIterations": 22,
+      "totalSteps": 4,
+      "bisectionRetries": 0,
+      "finalResidual": 4.4724218745922486E-07,
+      "apUx": 0.0005959098745738708,
+      "apUy": -0.00029516301496926745,
+      "apUz": 0.00011429957035146237,
+      "apRx": 5.737063576543714E-21,
+      "apRy": 3.5718615734832034E-06,
+      "apRz": 1.8447688435579192E-05,
+      "maxAbsHorizDisp": 0.0006650035969980873,
+      "maxAbsHorizSpringReaction": 118.37381066745142
+    },
+    {
+      "caseKey": "L2-1.C1.Liq",
+      "level": 2,
+      "loadCaseNo": 1,
+      "combinationNo": 1,
+      "isLiquefaction": true,
+      "converged": true,
+      "totalIterations": 113,
+      "totalSteps": 16,
+      "bisectionRetries": 0,
+      "finalResidual": 6.033049791466333E-07,
+      "apUx": 0.0016803468747279456,
+      "apUy": -0.0008587519284127214,
+      "apUz": 0.0002307708356677481,
+      "apRx": 1.039153544852506E-20,
+      "apRy": 7.2115886146171415E-06,
+      "apRz": 5.3671995525795075E-05,
+      "maxAbsHorizDisp": 0.0018870666373926868,
+      "maxAbsHorizSpringReaction": 285.2590664180677
+    }
+  ],
+  "summary": {
+    "totalCases": 2,
+    "convergedCases": 2,
+    "totalIterations": 135,
+    "totalSteps": 20,
+    "maxResidualOverAllCases": 6.033049791466333E-07
+  }
+}

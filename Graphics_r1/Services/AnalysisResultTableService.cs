@@ -206,7 +206,7 @@ namespace PileDesign.Services
                     var result = FindSoilSpringResult(spring);
                     var bf = result?.CumulativeForce ?? spring.CumulativeForce ?? new BeamForce(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                     var bd = result?.CumulativeDisp ?? spring.CumulativeDisp ?? new BeamDisp(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-                    soilSpringRows.Add(SoilSpringForceRow.From(idx + 1, n1, n2, spring, bf, bd));
+                    soilSpringRows.Add(SoilSpringForceRow.From(idx + 1, n1, n2, spring, bf, bd, model));
                 }
 
                 tables.Add(new ResultTable

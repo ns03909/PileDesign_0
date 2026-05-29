@@ -314,6 +314,10 @@ namespace PileDesign.ViewModels
 
         private async Task ExecuteAnalysisAsync()
         {
+            // 入力データの整合性ゲート (杭体・地盤・寸法・配筋など)
+            if (!PileDesign.Models.CheckInputData.ValidateForAnalysis(InputModel, "群杭沈下解析"))
+                return;
+
             string error = ValidateInput();
             if (error != null)
             {

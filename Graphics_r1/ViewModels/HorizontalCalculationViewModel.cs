@@ -71,8 +71,8 @@ namespace PileDesign.ViewModels
 
         // v29 (2026-04-27): 解析終了時にステップ単位の収束状況サマリーを表示するため、
         // 各ステップの結果を蓄積。ConcurrentBag でケース並列実行下でも安全に append。
-        internal enum StepStatus { Converged, Unconverged, PhysicallyUnconverged }
-        internal sealed record StepSummary(
+        public enum StepStatus { Converged, Unconverged, PhysicallyUnconverged }
+        public sealed record StepSummary(
             string CaseTag, int Level, int LoadCaseNo, int ComboNo, bool IsLiquefaction,
             int Step, int NStep, int BisectionAttempt, int Iterations,
             double FinalResidual, double EffectiveAlpha, double MaxDisp,
@@ -83,6 +83,42 @@ namespace PileDesign.ViewModels
             //   合計は Iterations に一致 (Iterations = KRebuildCount + KReuseCount)。
             int KRebuildCount = 0, int KReuseCount = 0);
         private readonly System.Collections.Concurrent.ConcurrentBag<StepSummary> _stepSummaries = new();
+
+        /// <summary>
+        /// テスト用 (収束リグレッションテスト等): ステップ別収束サマリのスナップショット。
+        /// 解析完了後に呼ぶことを想定。ケース順は実行順 (CaseTag でソートして使う)。
+        /// </summary>
+        public System.Collections.Generic.IReadOnlyList<StepSummary> StepSummariesSnapshot()
+            => _stepSummaries.ToArray();
+
+        /// <summary>
+        /// テスト用フラグ: true に設定すると OnExecuteAnalysisCore 内の UI 確認ダイアログ
+        /// (上書き確認 / ステップ数提案 / 杭頭半剛接合確認 / 偏心確認 等) を全てスキップし、
+        /// "デフォルト承認" 動作で進める。本番ビルドでは常に false。
+        /// </summary>
+        public bool BypassUiPromptsForTesting { get; set; } = false;
+
+        /// <summary>
+        /// テストモード時は <paramref name="defaultForTest"/> を返す。本番モードは MessageService.Show をそのまま実行。
+        /// </summary>
+        private System.Windows.MessageBoxResult ConfirmOrDefault(
+            string text, string caption,
+            System.Windows.MessageBoxButton button, System.Windows.MessageBoxImage image,
+            System.Windows.MessageBoxResult defaultForTest)
+        {
+            if (BypassUiPromptsForTesting) return defaultForTest;
+            return PileDesign.Services.MessageService.Show(text, caption, button, image);
+        }
+
+        /// <summary>
+        /// 情報通知の MessageService.Show をテストモード時はスキップ。
+        /// </summary>
+        private void ShowInfoOrSkip(string text, string caption,
+            System.Windows.MessageBoxButton button, System.Windows.MessageBoxImage image)
+        {
+            if (BypassUiPromptsForTesting) return;
+            PileDesign.Services.MessageService.Show(text, caption, button, image);
+        }
 
         private void StartLogTimerIfNeeded()
         {
@@ -233,6 +269,70 @@ namespace PileDesign.ViewModels
                 if (InputModel != null && InputModel.UseAnalysisAxialForce != value)
                 {
                     InputModel.UseAnalysisAxialForce = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // 杭先端 Z 境界: P-S 非線形ばね使用フラグ (InputModel に委譲)
+        public bool UsePsSpringAtPileTip
+        {
+            get => InputModel?.UsePsSpringAtPileTip ?? false;
+            set
+            {
+                if (InputModel != null && InputModel.UsePsSpringAtPileTip != value)
+                {
+                    InputModel.UsePsSpringAtPileTip = value;
+                    OnPropertyChanged();
+                    // P-S 非線形ばね ON 時は、FEM が N0+ΔN を含む軸力を出すため、
+                    // M-φ N 評価には「入力値＋応力解析結果」しか整合しない。
+                    // 自動で UseAnalysisAxialForce を ON にする (OFF 切替時はユーザ任意)。
+                    if (value && !UseAnalysisAxialForce)
+                        UseAnalysisAxialForce = true;
+                    OnPropertyChanged(nameof(CanSelectInputOnlyAxialMode));
+                    // VL 単独ケースの ON/OFF 可否が変わる → TotalCalculationCount の表示も更新
+                    OnPropertyChanged(nameof(TotalCalculationCount));
+                    OnPropertyChanged(nameof(TotalLoadCaseCount));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 「杭軸力: 入力値」を選択可能か (P-S 非線形ばね OFF 時のみ true)。
+        /// P-S 非線形ばね ON 時は強制的に「入力値＋応力解析結果」となる。
+        /// </summary>
+        public bool CanSelectInputOnlyAxialMode => !UsePsSpringAtPileTip;
+
+        /// <summary>
+        /// VL (常時) 単独ケース解析フラグ。P-S 非線形ばね ON 時のみ有効化可能。
+        /// ON: 各杭頭に AxialForceVL を外力として適用した「水平荷重なし」ケースを追加解析。
+        /// 結果は LoadName="VL" として結果ビューアに表示される。
+        /// </summary>
+        public bool IsVLAnalysisEnabled
+        {
+            get => InputModel?.IsVLAnalysisEnabled ?? false;
+            set
+            {
+                if (InputModel != null && InputModel.IsVLAnalysisEnabled != value)
+                {
+                    InputModel.IsVLAnalysisEnabled = value;
+                    OnPropertyChanged();
+                    // VL ケース分のステップ数を加減算するため、表示も更新
+                    OnPropertyChanged(nameof(TotalCalculationCount));
+                    OnPropertyChanged(nameof(TotalLoadCaseCount));
+                }
+            }
+        }
+
+        // P-S 曲線ソース (InputModel に委譲)
+        public PsSpringSourceMode PsSpringSource
+        {
+            get => InputModel?.PsSpringSource ?? PsSpringSourceMode.Normal;
+            set
+            {
+                if (InputModel != null && InputModel.PsSpringSource != value)
+                {
+                    InputModel.PsSpringSource = value;
                     OnPropertyChanged();
                 }
             }
@@ -562,6 +662,14 @@ namespace PileDesign.ViewModels
 
                 // 計算式（基本 + 再試行分）
                 int baseTotal = liquefactionFactor * (level1Count * level1Steps + level2Count * level2Steps) * combinationCount;
+
+                // VL 単独擬似ケース (P-S 非線形ばね有効 + VL 単独解析オプション ON)
+                // 構成: 1 ケース × 1 組合せ (先頭固定) × 液状化 false 固定 (1) × Level1 ステップ数
+                if (InputModel?.UsePsSpringAtPileTip == true && InputModel?.IsVLAnalysisEnabled == true)
+                {
+                    baseTotal += level1Steps;
+                }
+
                 return baseTotal + _bisectionExtraSteps;
             }
         }
@@ -578,7 +686,11 @@ namespace PileDesign.ViewModels
                 int level1Count = InputModel.LoadCasesInput.LoadCasesLevel1?.Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
                 int level2Count = InputModel.LoadCasesInput.LoadCasesLevel2?.Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
                 int combinationCount = InputModel.LoadCasesInput.AllLoadCombinations?.Count(x => x.IsApplicable) ?? 0;
-                return liquefactionFactor * (level1Count + level2Count) * combinationCount;
+                int total = liquefactionFactor * (level1Count + level2Count) * combinationCount;
+                // VL 単独擬似ケース: 1 ケース × 1 組合せ × 液状化 false 固定 → +1
+                if (InputModel?.UsePsSpringAtPileTip == true && InputModel?.IsVLAnalysisEnabled == true)
+                    total += 1;
+                return total;
             }
         }
 
@@ -1451,15 +1563,21 @@ namespace PileDesign.ViewModels
 
         private async Task OnExecuteAnalysisCore(bool additive)
         {
+            // 入力データの整合性ゲート (杭体・地盤・寸法・配筋など)
+            if (!PileDesign.Models.CheckInputData.ValidateForAnalysis(
+                    _mainWindowViewModel.CurrentInputModel, "水平解析"))
+                return;
+
             // 既存の解析結果がある場合は警告 (新規実行のみ。追加実行は既存結果保持が前提なのでスキップ)
             // メイン側 (OK 済み) または、現セッションでロードした「済」結果のいずれかがあれば確認
             bool hasExistingResults = _mainWindowViewModel.IsHorizontalAnalysisDone
                 || (TryGetTargetAnaModel()?.AnalysisStepResults?.Count > 0);
             if (!additive && hasExistingResults)
             {
-                var result = MessageService.Show(
+                var result = ConfirmOrDefault(
                     "既に水平解析の結果が存在します。\n再実行すると既存の結果は上書きされます。\n\n解析を実行しますか？",
-                    "解析結果の上書き確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    "解析結果の上書き確認", MessageBoxButton.YesNo, MessageBoxImage.Question,
+                    MessageBoxResult.Yes);
                 if (result != MessageBoxResult.Yes)
                     return;
             }
@@ -1487,7 +1605,8 @@ namespace PileDesign.ViewModels
                             "が登録されていません。\n\n" +
                             "このまま続行するとデフォルト値（FC30 / 0.8m×2.0m 矩形断面）で解析されます。\n" +
                             "材料・断面を入力してから解析する場合はキャンセルを押してください。";
-                var fbResult = MessageService.Show(fbMsg, "基礎梁 材料・断面 未登録", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+                var fbResult = ConfirmOrDefault(fbMsg, "基礎梁 材料・断面 未登録",
+                    MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.OK);
                 if (fbResult != MessageBoxResult.OK)
                     return;
             }
@@ -1504,13 +1623,38 @@ namespace PileDesign.ViewModels
                     .Distinct();
                 var message = $"以下の荷重ケースで荷重がゼロのため解析をスキップします:\n{string.Join(", ", levelNames)}\n\n" +
                                "荷重ケースウィンドウで上部構造質量荷重または基礎構造質量荷重を設定してください。";
-                MessageService.Show(message, "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowInfoOrSkip(message, "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
 
                 // すべての荷重ケースがゼロの場合は解析を中止
                 if (zeroForceLoadCases.Count == InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases.Count)
                 {
                     return;
                 }
+            }
+
+            // 2026-05-13: 偏心警告
+            //   VL 時の軸力分布重心 (= 建物自重の作用中心) と慣性力中心 (ForceActionPoint) の距離を測り、
+            //   バウンディングボックス対角長に対する比率で評価。
+            //   偏心が大きいと limit cycle 等で収束が困難になるためユーザーに事前警告。
+            //   OK/キャンセルダイアログでユーザーが確認の上で続行できる。
+            if (!CheckEccentricityAndConfirm())
+                return;
+
+            // 場所打ち鋼管コンクリート杭の最上段区間が「鉄筋コンクリート部」になっていないかチェック
+            // (通常、最上段は「鋼管コンクリート部」を選択する)
+            var insituSteelPipeIssues = PileBodyViewModel.CheckInsituSteelPipeTopSection(InputModel.PileBodies);
+            if (insituSteelPipeIssues.Count > 0)
+            {
+                string list = string.Join(", ", insituSteelPipeIssues);
+                var result = ConfirmOrDefault(
+                    $"以下の杭体で、最上段区間が「鉄筋コンクリート部」になっています:\n{list}\n\n" +
+                    "場所打ち鋼管コンクリート杭の最上段は通常「鋼管コンクリート部」を選択します。\n" +
+                    "このまま解析を続行しますか？",
+                    "杭断面タイプの確認",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning,
+                    MessageBoxResult.No);
+                if (result != MessageBoxResult.Yes) return;
             }
 
             // キャプテンパイル工法またはFT-Pile構法を使用している場合のチェック
@@ -1531,11 +1675,13 @@ namespace PileDesign.ViewModels
                         .Select(lc => $"レベル{lc.Level}-{lc.No}")
                         .Distinct();
                     var message = $"杭頭半剛接合（キャプテンパイル工法またはFT-Pile構法）を使用していますが、" +
-                                   $"以下の荷重ケースで「杭体の非線形」が無効になっています:\n{string.Join(", ", levelNames)}\n\n" +
-                                   "半剛接合の効果を考慮するには杭体の非線形を有効にする必要があります。\n" +
-                                   "すべての荷重ケースで杭体の非線形を有効にしますか？";
+                                   $"以下の荷重ケースで「杭の非線形」が無効になっています:\n{string.Join(", ", levelNames)}\n\n" +
+                                   "半剛接合の効果を考慮するには杭の非線形を有効にする必要があります。\n" +
+                                   "すべての荷重ケースで杭の非線形を有効にしますか？";
 
-                    var result = MessageService.Show(message, "杭頭半剛接合の確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    // テスト時は既存設定をそのまま使う (No 既定) ことで、スナップショットの再現性を担保
+                    var result = ConfirmOrDefault(message, "杭頭半剛接合の確認",
+                        MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
 
                     if (result == MessageBoxResult.Yes)
                     {
@@ -1553,7 +1699,7 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // 杭体の非線形が有効で解析ステップ数が少ない場合の警告
+            // 杭の非線形が有効で解析ステップ数が少ない場合の警告
             var nonLinearOnLoadCases = InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases
                 .Where(lc => lc.IsPileNonLinear)
                 .ToList();
@@ -1580,13 +1726,15 @@ namespace PileDesign.ViewModels
 
                 if (needsMoreSteps)
                 {
-                    var message = $"杭体の非線形解析が有効ですが、解析ステップ数が少ない可能性があります。\n\n" +
+                    var message = $"杭の非線形解析が有効ですが、解析ステップ数が少ない可能性があります。\n\n" +
                                    suggestedAction +
                                    "\n収束性や精度を向上させるため、解析ステップ数を増やすことをお勧めします。\n" +
                                    "（推奨: レベル1は4以上、レベル2は16〜32）\n\n" +
                                    "解析ステップ数を変更しますか？";
 
-                    var result = MessageService.Show(message, "解析ステップ数の確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    // テスト時はステップ数を変更しない (既存設定を尊重)
+                    var result = ConfirmOrDefault(message, "解析ステップ数の確認",
+                        MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
 
                     if (result == MessageBoxResult.Yes)
                     {
@@ -1599,7 +1747,7 @@ namespace PileDesign.ViewModels
                         {
                             Level2CalculationStepsCount = 16;
                         }
-                        MessageService.Show($"解析ステップ数を更新しました。\n" +
+                        ShowInfoOrSkip($"解析ステップ数を更新しました。\n" +
                                          $"レベル1: {Level1CalculationStepsCount}\n" +
                                          $"レベル2: {Level2CalculationStepsCount}",
                                          "設定更新", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1635,11 +1783,12 @@ namespace PileDesign.ViewModels
             {
                 if (!ValidateIncrementalCompatibility(out var reason))
                 {
-                    var choice = MessageService.Show(
+                    var choice = ConfirmOrDefault(
                         $"追加実行できません。前回設定と相違があります。\n\n{reason}\n\n" +
                         "「はい」: 既存結果を破棄して新規実行に切替\n" +
                         "「いいえ」: キャンセル",
-                        "互換性チェック失敗", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                        "互換性チェック失敗", MessageBoxButton.YesNo, MessageBoxImage.Warning,
+                        MessageBoxResult.Yes);
                     if (choice != MessageBoxResult.Yes) return;
                     additive = false;
                 }
@@ -1647,7 +1796,7 @@ namespace PileDesign.ViewModels
 
             // プリフライト: ステップ数 / 並列度 / CounterLoading / 推定時間をユーザーに提示し、
             // 実行可否を最終確認する (User 設定で無効化可)。追加実行はスキップ (差分のため意味が薄い)。
-            if (!additive)
+            if (!additive && !BypassUiPromptsForTesting)
             {
                 var summary = BuildPreflightSummary();
                 var owner = Application.Current?.Windows.OfType<System.Windows.Window>().FirstOrDefault(w => w.IsActive)
@@ -1681,17 +1830,20 @@ namespace PileDesign.ViewModels
                 // 計算完了通知（UIスレッドで直接表示）
                 // owner を HorizontalCalculationWindow に明示固定して、解析完了直後にフォーカスが
                 // MainWindow に移っていてもダイアログが水平解析ウィンドウの上に表示されるようにする。
-                var horizontalWindow = System.Windows.Application.Current?.Windows
-                    .Cast<System.Windows.Window>()
-                    .FirstOrDefault(w => ReferenceEquals(w.DataContext, this));
-                if (horizontalWindow != null)
+                if (!BypassUiPromptsForTesting)
                 {
-                    horizontalWindow.Activate();
-                    MessageService.Show(horizontalWindow, "計算が終了しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                else
-                {
-                    MessageService.Show("計算が終了しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                    var horizontalWindow = System.Windows.Application.Current?.Windows
+                        .Cast<System.Windows.Window>()
+                        .FirstOrDefault(w => ReferenceEquals(w.DataContext, this));
+                    if (horizontalWindow != null)
+                    {
+                        horizontalWindow.Activate();
+                        MessageService.Show(horizontalWindow, "計算が終了しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageService.Show("計算が終了しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -2332,6 +2484,205 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>
+        /// 慣性力中心 (荷重ケースの ForceActionPoint) と 2 種類の杭群中心を比較し、
+        /// 偏心率 (BBox 対角長比) が大きい場合はユーザーに警告ダイアログを表示する。
+        ///   1) VL 時の杭軸力分布重心 (= 建物自重の作用中心、質量中心相当)
+        ///   2) 杭頭 kh0 で重み付けした剛心 (= 水平剛性中心)
+        /// 偏心が大きいと limit cycle 等で水平解析の収束が困難になるため事前確認用。
+        /// </summary>
+        /// <returns>true: 解析続行 OK / false: ユーザーがキャンセル選択</returns>
+        private bool CheckEccentricityAndConfirm()
+        {
+            if (InputModel?.PileLayoutItems == null || InputModel.PileLayoutItems.Count == 0)
+                return true;
+
+            var soilPiles = InputModel.ElementDivision?.SoilPiles;
+
+            // 杭群バウンディングボックス & 2 種の重心
+            double sumNX = 0, sumNY = 0, sumN = 0;         // (1) VL 軸力重み
+            double sumKX = 0, sumKY = 0, sumK = 0;         // (2) Kh0 重み (剛心)
+            double sumX = 0, sumY = 0;                      // フォールバック用 幾何重心
+            int count = 0;
+            double minX = double.PositiveInfinity, maxX = double.NegativeInfinity;
+            double minY = double.PositiveInfinity, maxY = double.NegativeInfinity;
+            foreach (var pli in InputModel.PileLayoutItems)
+            {
+                if (pli == null) continue;
+                sumX += pli.X;
+                sumY += pli.Y;
+                count++;
+                minX = Math.Min(minX, pli.X);
+                maxX = Math.Max(maxX, pli.X);
+                minY = Math.Min(minY, pli.Y);
+                maxY = Math.Max(maxY, pli.Y);
+
+                // (1) VL 軸力 (圧縮を正とする)。引張杭 / ゼロは除外して「自重を受ける杭」を抽出
+                double nVL = pli.AxialForceVL0 + pli.AxialForceVLAdditional;
+                if (nVL > 0)
+                {
+                    sumNX += pli.X * nVL;
+                    sumNY += pli.Y * nVL;
+                    sumN += nVL;
+                }
+
+                // (2) 杭頭 kh0 (= SoilPile の最上層 HorizontalSoilReaction.Kh0)
+                if (soilPiles != null)
+                {
+                    int soilIdx = pli.SoilPileAltNo - 1;
+                    if (soilIdx >= 0 && soilIdx < soilPiles.Count)
+                    {
+                        var sp = soilPiles[soilIdx];
+                        if (sp?.HorizontalSoilReactions != null && sp.HorizontalSoilReactions.Count > 0)
+                        {
+                            double kh0 = sp.HorizontalSoilReactions[0].Kh0;
+                            if (kh0 > 0)
+                            {
+                                sumKX += pli.X * kh0;
+                                sumKY += pli.Y * kh0;
+                                sumK += kh0;
+                            }
+                        }
+                    }
+                }
+            }
+            if (count == 0) return true;
+
+            // 重心 (フォールバック付き)
+            double geomCx = sumX / count, geomCy = sumY / count;
+            double vlCx = (sumN > 1e-6) ? sumNX / sumN : geomCx;
+            double vlCy = (sumN > 1e-6) ? sumNY / sumN : geomCy;
+            double rgCx = (sumK > 1e-9) ? sumKX / sumK : geomCx;
+            double rgCy = (sumK > 1e-9) ? sumKY / sumK : geomCy;
+            bool hasRigidity = sumK > 1e-9;
+
+            // 弾性半径 r_e = √(K_R / K_total)
+            //   K_R  = Σ(kh0_i × r_i²)   (r_i: pile_i から剛心までの距離)
+            //   K_total = Σ(kh0_i)        (等方水平剛性仮定)
+            //   → 杭群の kh0 重み付け二乗平均半径 (= 回転剛性 / 並進剛性 の比のルート)
+            //   基準法施行令 82 条の 6 の 偏心率 Re = e / r_e の計算基盤。
+            double rE = double.NaN;
+            if (hasRigidity)
+            {
+                double sumKR2 = 0;
+                foreach (var pli in InputModel.PileLayoutItems)
+                {
+                    if (pli == null) continue;
+                    int soilIdx = pli.SoilPileAltNo - 1;
+                    if (soilPiles == null || soilIdx < 0 || soilIdx >= soilPiles.Count) continue;
+                    var sp = soilPiles[soilIdx];
+                    if (sp?.HorizontalSoilReactions == null || sp.HorizontalSoilReactions.Count == 0) continue;
+                    double kh0 = sp.HorizontalSoilReactions[0].Kh0;
+                    if (kh0 <= 0) continue;
+                    double dx = pli.X - rgCx;
+                    double dy = pli.Y - rgCy;
+                    sumKR2 += kh0 * (dx * dx + dy * dy);
+                }
+                if (sumK > 1e-9 && sumKR2 > 0)
+                {
+                    rE = Math.Sqrt(sumKR2 / sumK);
+                }
+            }
+
+            // 適用対象荷重ケースで偏心率を計測 → 最大値で警告レベル判定
+            //   Re_x = |apY - rgCy| / r_e   (X 方向加力の偏心率: Y 方向偏心がねじり起因)
+            //   Re_y = |apX - rgCx| / r_e   (Y 方向加力の偏心率)
+            //   両者の最大値で評価。基準法閾値: 0.15
+            double maxRe = 0;             // max(Re_x, Re_y)
+            double maxReX = 0, maxReY = 0;
+            double maxEx = 0, maxEy = 0;
+            double maxEVLDist = 0;
+            string worstCaseName = "";
+            double worstApX = 0, worstApY = 0;
+            var targetCases = InputModel.LoadCasesInput?.AnalysisTargetSeismicLoadCases;
+            if (targetCases == null) return true;
+            foreach (var lc in targetCases)
+            {
+                if (lc == null) continue;
+                double apX = lc.ForceActionPointX;
+                double apY = lc.ForceActionPointY;
+
+                // VL 重心からの距離 (参考情報)
+                double dxVL = apX - vlCx, dyVL = apY - vlCy;
+                double eVL = Math.Sqrt(dxVL * dxVL + dyVL * dyVL);
+
+                // 偏心率 Re (剛心ベース、基準法施行令 82 条の 6)
+                double reX = 0, reY = 0;
+                double ex = 0, ey = 0;
+                if (hasRigidity && double.IsFinite(rE) && rE > 1e-9)
+                {
+                    ex = Math.Abs(apX - rgCx);  // X 方向の偏心距離
+                    ey = Math.Abs(apY - rgCy);  // Y 方向の偏心距離
+                    reX = ey / rE;              // X 加力での偏心率 (Y偏心が起因)
+                    reY = ex / rE;              // Y 加力での偏心率 (X偏心が起因)
+                }
+
+                double thisRe = Math.Max(reX, reY);
+                if (thisRe > maxRe)
+                {
+                    maxRe = thisRe;
+                    maxReX = reX;
+                    maxReY = reY;
+                    maxEx = ex;
+                    maxEy = ey;
+                    maxEVLDist = eVL;
+                    worstCaseName = lc.LoadName ?? "";
+                    worstApX = apX;
+                    worstApY = apY;
+                }
+            }
+
+            // 偏心率が剛心計算不可なら警告できない (旧 BBox 比率での簡易判定にフォールバック)
+            if (!hasRigidity || !double.IsFinite(rE) || rE < 1e-9)
+            {
+                double bboxW = maxX - minX;
+                double bboxH = maxY - minY;
+                double lChar = Math.Sqrt(bboxW * bboxW + bboxH * bboxH);
+                if (lChar < 1e-6 || maxEVLDist / lChar < 0.10) return true;
+                string fmsg =
+                    $"慣性力中心が VL 重心から離れています。\n\n" +
+                    $"  偏心量 = {maxEVLDist:F2} m  (代表長 {lChar:F2} m)\n" +
+                    $"  最悪荷重ケース: {worstCaseName}\n\n" +
+                    $"(土層情報未設定のため剛心ベースの偏心率は計算できません)\n\n" +
+                    $"このまま解析を続行しますか？\n" +
+                    $"OK:続行　キャンセル：モデルを見直す";
+                return ConfirmOrDefault(fmsg, "偏心の確認", MessageBoxButton.OKCancel,
+                    MessageBoxImage.Information, MessageBoxResult.OK) == MessageBoxResult.OK;
+            }
+
+            // 偏心率閾値: 0.15 未満は警告なし
+            const double RE_THRESHOLD = 0.15;
+            if (maxRe < RE_THRESHOLD) return true;
+
+            // 警告レベル判定
+            //   Re < 0.15 : 標準範囲 (警告なし)
+            //   Re < 0.30 : 中程度
+            //   Re < 0.45 : 大
+            //   Re ≥ 0.45 : 極大
+            string severity;
+            MessageBoxImage icon;
+            if (maxRe < 0.30) { severity = "中程度"; icon = MessageBoxImage.Information; }
+            else if (maxRe < 0.45) { severity = "大"; icon = MessageBoxImage.Warning; }
+            else { severity = "極大"; icon = MessageBoxImage.Warning; }
+
+            string msg =
+                $"偏心レベル: {severity} (最大 Re = {maxRe:F2})\n" +
+                $"  慣性力中心 = ({worstApX:F2}, {worstApY:F2}) m\n" +
+                $"  剛心       = ({rgCx:F2}, {rgCy:F2}) m  ← kh0 重み付け\n" +
+                $"  VL 重心   = ({vlCx:F2}, {vlCy:F2}) m  (慣性力中心との距離 {maxEVLDist:F2} m)\n\n" +
+                $"  偏心率:\n" +
+                $"    X 加力時 Re_x = {maxReX:F2}  (Y偏心 {maxEy:F2} m / r_e)\n" +
+                $"    Y 加力時 Re_y = {maxReY:F2}  (X偏心 {maxEx:F2} m / r_e)\n\n" +
+                $"大偏心ではねじれモーメントが発生し、水平解析の収束に時間がかかったり\n" +
+                $"局所的に未収束となる可能性があります\n\n" +
+                $"このまま解析を続行しますか？\n" +
+                $"OK:続行　キャンセル：モデルを見直す";
+
+            var result = ConfirmOrDefault(msg, "偏心率の確認",
+                MessageBoxButton.OKCancel, icon, MessageBoxResult.OK);
+            return result == MessageBoxResult.OK;
+        }
+
         // v21 Phase 3 prep: ばね剛性 min/max はインスタンスフィールドを廃し、
         // FindK / PrepareKmat の戻り値（out パラメータ）で局所管理する。
 
@@ -2497,24 +2848,58 @@ namespace PileDesign.ViewModels
 
             try
             {
-            foreach (var loadCaseItem in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
+            // P-S 非線形ばね + VL 単独解析が有効な場合: VL 仮想ケースを先頭に挿入
+            // VL ケース: 水平荷重 0、各杭頭に AxialForceVL を外力として与える
+            // No=1 とするのは iLC=0 で配列アクセスが安全になるため (VL 判定は LoadName で行う)
+            // IsPileNonLinear=true / IsSoilNonLinear=true は、P-S ばねの非線形性に対応するため
+            // Level1CalculationStepsCount に基づく段階適用 (nStep > 1) を有効化する目的。
+            // (configuredNStep の決定で両者が false だと nStep=1 となり 1 ステップで全 N0 適用 → 発散)
+            var casesToRun = new List<LoadCase>();
+            if (InputModel.UsePsSpringAtPileTip && InputModel.IsVLAnalysisEnabled)
+            {
+                casesToRun.Add(new LoadCase
+                {
+                    LoadName = "VL",
+                    No = 1,
+                    Level = 1,
+                    LoadAngle = 0,
+                    UpperMassForce = 0,
+                    FoundationMassForce = 0,
+                    IsPileNonLinear = true,
+                    IsSoilNonLinear = true,
+                });
+            }
+            foreach (var lc in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
+                casesToRun.Add(lc);
+
+            foreach (var loadCaseItem in casesToRun)
             {
                 LoadCase loadCase = loadCaseItem;
                 int iLC = loadCaseItem.No - 1;
                 int level = loadCaseItem.Level;
+                bool isVLCase = loadCase.LoadName == "VL";
 
-                // 荷重がゼロの場合はスキップ
-                if (loadCase.UpperMassForce == 0 && loadCase.FoundationMassForce == 0)
+                // 荷重がゼロの場合はスキップ (VL ケースは水平荷重 0 でも実行)
+                if (!isVLCase && loadCase.UpperMassForce == 0 && loadCase.FoundationMassForce == 0)
                 {
                     await AddLogAsync($"レベル{level}-{iLC + 1}: 荷重がゼロのためスキップ");
                     continue;
                 }
 
-                foreach (var loadCombination in InputModel.LoadCasesInput.AllLoadCombinations)
+                // VL ケースは水平荷重 0 のため、組合せ係数 (β1/β2/α1) は結果に影響しない。
+                // 結果重複を避けるため、VL は組合せ・液状化ループを 1 回のみ実行する。
+                IEnumerable<LoadCombination> combosToRun = isVLCase
+                    ? new[] { InputModel.LoadCasesInput.AllLoadCombinations.FirstOrDefault() }
+                        .Where(c => c != null)
+                    : InputModel.LoadCasesInput.AllLoadCombinations;
+
+                foreach (var loadCombination in combosToRun)
                 {
                     int iLCOM = loadCombination.No - 1;
 
-                    IEnumerable<bool> liquefactionCases = LiquefactionOption switch
+                    IEnumerable<bool> liquefactionCases = isVLCase
+                        ? new[] { false }
+                        : LiquefactionOption switch
                     {
                         LiquefactionOptionType.Both => [true, false],
                         LiquefactionOptionType.Yes => [true],
@@ -2531,7 +2916,7 @@ namespace PileDesign.ViewModels
                                 loadCase.LoadName, loadCombination.Name, isLiquefaction);
                             if (existingKeys.Contains(caseKey))
                             {
-                                await AddLogAsync($"[skip] {BuildCaseTag(level, iLC, iLCOM, isLiquefaction)} は既存結果あり (追加実行モード)");
+                                await AddLogAsync($"[skip] {BuildCaseTag(loadCase, level, iLC, iLCOM, isLiquefaction)} は既存結果あり (追加実行モード)");
                                 continue;
                             }
                         }
@@ -2560,7 +2945,7 @@ namespace PileDesign.ViewModels
                         }
 
                         // E2 (2026-04-23): 並列化後のログ混在対策。反復/収束/プロファイルログの先頭に付与
-                        string caseTag = BuildCaseTag(level, iLC, iLCOM, isLiquefaction);
+                        string caseTag = BuildCaseTag(loadCase, level, iLC, iLCOM, isLiquefaction);
 
                         // 並列モニタ (案 B, 2026-04-24): ケース開始時に Active リストへ追加。
                         // TotalSteps は nStep 確定後 (後続の baseNStep 計算後) に更新される。
@@ -3194,7 +3579,8 @@ namespace PileDesign.ViewModels
                                             if (pli.PileNodes == null || pli.SoilNodes == null) continue;
                                             var reactions = InputModel.ElementDivision?.SoilPiles?[pli.SoilPileAltNo - 1]?.HorizontalSoilReactions;
                                             if (reactions == null) continue;
-                                            bool isFront = pli.IsFrontPiles != null && iLC < pli.IsFrontPiles.Count && pli.IsFrontPiles[iLC];
+                                            // VL ケースは iLC=-1 となるため >=0 チェック必須
+                                            bool isFront = pli.IsFrontPiles != null && iLC >= 0 && iLC < pli.IsFrontPiles.Count && pli.IsFrontPiles[iLC];
                                             // E3b: case-local な PileNodes / SoilNodes を取得
                                             var pliPileNodes = caseModel.GetPileNodes(pli);
                                             var pliSoilNodes = caseModel.GetSoilNodes(pli);
@@ -3473,6 +3859,31 @@ namespace PileDesign.ViewModels
                                     // シーケンスで最小残差が最終値になる。
 
                                     await AddLogAsync($"　　🔄 Aitken 平均化 #{aitkenFiredCount}/{AITKEN_MAX_FIRE} 発動: 直近 {AITKEN_HISTORY} 反復の CumulativeDisp 平均で書換 → 残差={caseModel.NormsROnNormsFint:E2}");
+                                }
+
+                                // 2026-05-13: リミットサイクル早期諦め検知
+                                //   症状: max|δu| が極めて小さい (変位が動かない) のに残差が大きく、DOF flip が繰り返される。
+                                //         典型例は RC 杭頭 Mcr 境界付近の oscillation で、Aitken 平均化でも回復しない。
+                                //   判定: (1) Aitken の最大発動回数を消費済み
+                                //         (2) flipFlopCount が新たに閾値到達 (Aitken 後の再リセットを通過してまだ flip 連続)
+                                //         (3) max|δu| < LIMIT_CYCLE_DU_FLOOR で「動かない」確認
+                                //         (4) iter ≥ LIMIT_CYCLE_MIN_ITER で「十分試した」確認
+                                //   行動: 反復ループを break して NG 扱いにし、retry (細分化) へ送る。
+                                //         100 反復まで粘ってから諦めるよりも 30-50% 時短になる見込み。
+                                const int LIMIT_CYCLE_MIN_ITER = 30;
+                                const int LIMIT_CYCLE_FLIP_TRIGGER = 8;       // Aitken (3) より大きく
+                                const double LIMIT_CYCLE_DU_FLOOR = 1e-7;     // 0.1µm 未満で「動いていない」
+                                if (aitkenFiredCount >= AITKEN_MAX_FIRE
+                                    && flipFlopCount >= LIMIT_CYCLE_FLIP_TRIGGER
+                                    && !double.IsNaN(dispMaxAbs) && Math.Abs(dispMaxAbs) < LIMIT_CYCLE_DU_FLOOR
+                                    && n_iteration >= LIMIT_CYCLE_MIN_ITER
+                                    && caseModel.NormsROnNormsFint >= effectiveAlpha)
+                                {
+                                    await AddLogAsync(
+                                        $"    ⛔ リミットサイクル検知: iter={n_iteration}, flip#{flipFlopCount}, " +
+                                        $"max|δu|={dispMaxAbs:E2}m, 残差={caseModel.NormsROnNormsFint:E2} " +
+                                        $"→ 早期諦めて retry へ移行");
+                                    break;
                                 }
 
                                 // 適応的緩和係数の更新（UseAdaptiveRelaxation=trueの場合のみ）
@@ -4636,12 +5047,49 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 荷重ベクトルの更新メソッド　F = F + dF 
+        // 杭接合節点の解決 (案 Z: P-S 非線形ばねモード時に Z 外力を載せる/累積する節点)
+        // 優先順位: ConnectionNode "FoundationNode-P{No}" (基礎梁設定時) → CapNode "CapNode-{No}" (フォールバック)
+        // SetVectorDF と UpdateF で同じ resolution を使うために共通化。
+        private static FEM.Node ResolvePileJointNodeInModel(AnaModel targetModel, int pileNo)
+        {
+            var conn = targetModel.Nodes.FirstOrDefault(n => n != null && n.Name == $"FoundationNode-P{pileNo}");
+            if (conn != null) return conn;
+            return targetModel.Nodes.FirstOrDefault(n => n != null && n.Name == $"CapNode-{pileNo}");
+        }
+
+        // 荷重ベクトルの更新メソッド　F = F + dF
         private void UpdateF(AnaModel targetModel)
         {
 
             //AnaModel.MapOnVectorF();  // node.load, による F 更新
             targetModel.Nodes[0].UpdateCumulativeLoad(); // (kN) 節点荷重の代表節点へのセット
+
+            // 案 Z (P-S 非線形ばね 有効時): 杭軸力は各杭の接合節点に外力として与えているため、
+            // それらの IncrementalLoad も CumulativeLoad に反映する必要がある。
+            // (これをしないと VectorF が cap Z 荷重を欠落させ、残差計算が破綻して 1e30 を返す)
+            // 杭体自重も各杭節点に分布外力として与えているため、同様に累積反映する。
+            if (InputModel.UsePsSpringAtPileTip && InputModel.PileLayoutItems != null)
+            {
+                foreach (var pli in InputModel.PileLayoutItems)
+                {
+                    var jointNode = ResolvePileJointNodeInModel(targetModel, pli.No);
+                    jointNode?.UpdateCumulativeLoad();
+
+                    // 杭節点自重の累積反映 (SetVectorDF の自重注入と対称)
+                    // k=0 の自重は jointNode に集約済みなので k=0 はスキップ (上の jointNode.UpdateCumulativeLoad で反映済み)
+                    var pileNodesForWeight = targetModel.GetPileNodes(pli);
+                    var modelsForWeight = pli.VerticalNodeSpringModels;
+                    if (pileNodesForWeight == null || modelsForWeight == null) continue;
+                    int nw = Math.Min(pileNodesForWeight.Count, modelsForWeight.Count);
+                    for (int k = 1; k < nw; k++)
+                    {
+                        var pn = pileNodesForWeight[k];
+                        var md = modelsForWeight[k];
+                        if (pn == null || md == null || md.Weight <= 0.0) continue;
+                        pn.UpdateCumulativeLoad();
+                    }
+                }
+            }
 
             targetModel.UpdateVectorF(); // 節点荷重の更新
             targetModel.MapOnVectorF();  // node.load, による F 更新
@@ -4677,12 +5125,23 @@ namespace PileDesign.ViewModels
                 // Fxi: ローカル座標系の軸力（圧縮が負）
                 double fxiAnalysis = topBeam.CumulativeForce.Fxi; // kN（ローカル軸方向）
 
-                // 入力軸力（圧縮が正）に解析結果（圧縮が負）を加算 → 符号反転
-                // AxialForce = 入力値による軸力 + (-Fxi_analysis)
-                // E3b: CaseLocalSnapshot 経由で読書き。主モデルでは pile.AxialForce を直接更新 (従来挙動)、
-                // case-local コピーでは snapshot.AxialForces[pile] を更新。
-                double current = targetModel.GetAxialForce(pile);
-                targetModel.SetAxialForce(pile, current - fxiAnalysis); // 圧縮増 → Fxi負 → -(-) = 加算
+                if (InputModel.UsePsSpringAtPileTip)
+                {
+                    // 案 Z モード: 杭軸力 N0 は SetVectorDF で AP に外力として与えられているため、
+                    // FEM Fxi は (N0 + ΔN_seis) を含む合計軸力を表す (compression negative)。
+                    // 既存式 current - fxiAnalysis は N0 を二重計上するので、直接 -fxiAnalysis を代入。
+                    // 結果: pile.AxialForce = -fxiAnalysis = N0 + ΔN_seis (compression positive) ✓
+                    targetModel.SetAxialForce(pile, -fxiAnalysis);
+                }
+                else
+                {
+                    // 通常モード: 入力軸力（圧縮が正）に解析結果（圧縮が負）を加算 → 符号反転
+                    // AxialForce = 入力値による軸力 + (-Fxi_analysis)
+                    // E3b: CaseLocalSnapshot 経由で読書き。主モデルでは pile.AxialForce を直接更新 (従来挙動)、
+                    // case-local コピーでは snapshot.AxialForces[pile] を更新。
+                    double current = targetModel.GetAxialForce(pile);
+                    targetModel.SetAxialForce(pile, current - fxiAnalysis); // 圧縮増 → Fxi負 → -(-) = 加算
+                }
             }
         }
 
@@ -4891,6 +5350,12 @@ namespace PileDesign.ViewModels
         /// </summary>
         internal static string BuildCaseTag(int level, int iLC, int iLCOM, bool isLiquefaction)
             => $"[L{level}-{iLC + 1}.C{iLCOM + 1}.{(isLiquefaction ? "Liq" : "NoLq")}] ";
+
+        /// <summary>VL 仮想ケース対応のオーバーロード。VL なら [VL.C{iLCOM+1}.NoLq]。</summary>
+        internal static string BuildCaseTag(LoadCase loadCase, int level, int iLC, int iLCOM, bool isLiquefaction)
+            => loadCase != null && loadCase.LoadName == "VL"
+                ? $"[VL.C{iLCOM + 1}] "
+                : BuildCaseTag(level, iLC, iLCOM, isLiquefaction);
 
         /// <summary>
         /// v29 (2026-05-05): 退化トレンド検出 (複合条件版) の結果。
@@ -5803,6 +6268,39 @@ namespace PileDesign.ViewModels
         //   resetCumulative=false: substep モード — IncrementalForcedDisp のみ上書きし、CumulativeForcedDisp は保持 (=チェックポイント復元後の継続実行)
         private void InitializeSoilDisplacementIncrement(AnaModel targetModel, LoadCase loadCase, LoadCombination loadCombination, int level, bool isLiquefaction, double nStep, bool resetCumulative = true)
         {
+            // VL (常時) ケースは地震時の地盤強制変位を一切受けない (鉛直軸力のみ)。
+            // ここで早期 return しないと、液状化「あり」設定で groundDisp1L × cos(LoadAngle) の
+            // X 強制変位が SoilNode に乗り、Chang ばね K_x → 杭周地盤反力に擬似 Fx が発生する。
+            // (例: 計算例9 で 杭周地盤反力合計 Fx=+82.9 kN / 土圧合力ばね反力 Fx=-82.9 kN の循環応力)
+            bool isVLCase = loadCase != null && loadCase.LoadName == "VL";
+            if (isVLCase)
+            {
+                NodeDisp zero = new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+                foreach (var pileLayoutItem in InputModel.PileLayoutItems)
+                {
+                    var soilNodes = targetModel.GetSoilNodes(pileLayoutItem);
+                    foreach (var sn in soilNodes)
+                    {
+                        sn.SetIncrementalForcedDisp(zero);
+                        if (resetCumulative) sn.SetCumulativeForcedDisp(zero);
+                    }
+                }
+                if (InputModel.ElementDivision.DoatsuGoryokuBane != null &&
+                    InputModel.ElementDivision.DoatsuGoryokuBane.Items.Count > 1 &&
+                    InputModel.ElementDivision.SoilEmbedment != null)
+                {
+                    for (int i = 0; i < InputModel.ElementDivision.SoilEmbedment.ZDataItems.Count; i++)
+                    {
+                        var zDataItem = InputModel.ElementDivision.SoilEmbedment.ZDataItems[i];
+                        var soilNode = targetModel.FindNode("根入部地盤節点", null, null, zDataItem.Z);
+                        if (soilNode == null) continue;
+                        soilNode.SetIncrementalForcedDisp(zero);
+                        if (resetCumulative) soilNode.SetCumulativeForcedDisp(zero);
+                    }
+                }
+                return;
+            }
+
             double loadAngle = loadCase.LoadAngle;
             double alpha1 = loadCombination.Alpha1;
             NodeDisp initialCumulativeSoilDisplacement = new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -5874,11 +6372,112 @@ namespace PileDesign.ViewModels
             double y = deltaForce * Math.Sin(loadAngle * Math.PI / 180.0); // y方向の増分荷重 [kN]
 
             targetModel.Nodes[0].SetIncrementalLoad(new(x, y, 0.0, 0.0, 0.0, 0.0)); // 増分荷重ベクトル [kN]
+            // 案 Z (P-S 非線形ばね 有効時): 杭軸力 (ケース別) を各杭の接合節点 Z 方向に下向き外力として段階適用。
+            // 接合節点優先順位:
+            //   1. ConnectionNode "FoundationNode-P{No}" (基礎梁設定時に存在)
+            //   2. CapNode "CapNode-{pile.No}" (フォールバック、基礎梁未設定時)
+            // どちらも RigidBody[0] の直接スレーブとなるため、MapOnGlobalLoad の slave 分岐で
+            // 正しく AP に荷重 + モーメント (arm × Fz の Mx/My 両成分) を伝達できる。
+            // 各杭ごとに独立した N0_i を与えるため、AP が並進+回転して各杭が arm に応じた異なる Z 変位を持ち、
+            // 杭ごとに異なる軸力が FEM Fxi に現れる (前後方杭の差を再現)。
+            if (InputModel.UsePsSpringAtPileTip)
+            {
+                bool isVLCase = loadCase != null && loadCase.LoadName == "VL";
+                foreach (var pli in InputModel.PileLayoutItems)
+                {
+                    double targetN;
+                    if (isVLCase)
+                    {
+                        // VL 単独ケース: 常時軸力 AxialForceVL を使用
+                        targetN = pli.AxialForceVL;
+                    }
+                    else if (level == 1)
+                        targetN = pli.AxialForceLevel1s != null && iLC < pli.AxialForceLevel1s.Count
+                            ? pli.AxialForceLevel1s[iLC] : pli.AxialForceVL;
+                    else
+                        targetN = pli.AxialForceLevel2s != null && iLC < pli.AxialForceLevel2s.Count
+                            ? pli.AxialForceLevel2s[iLC] : pli.AxialForceVL;
+                    if (!double.IsFinite(targetN) || Math.Abs(targetN) < 1e-12) continue;
+
+                    double deltaN_per_step = targetN / nStep;
+                    var jointNode = ResolvePileJointNodeInModel(targetModel, pli.No);
+                    if (jointNode == null) continue;
+
+                    // 既存の IncrementalLoad を保持しつつ Z だけ加算 (圧縮 → -Z 力)
+                    var prev = jointNode.IncrementalLoad ?? new FEM.NodeLoad(0, 0, 0, 0, 0, 0);
+                    jointNode.SetIncrementalLoad(new FEM.NodeLoad(
+                        prev.Fx, prev.Fy, prev.Fz - deltaN_per_step,
+                        prev.Mx, prev.My, prev.Mz));
+                }
+
+                // 杭体自重の注入: 沈下解析 (VerticalLoadTransferMethod.SetWeights / line 996)
+                // と物理的に同一にするため、各杭節点に Weights[k] (kN, 圧縮=正) を Fz=-W として外力に追加。
+                // nStep で均等分割し、ステップごとに加算 (cap N0 と同じ増分手順に揃える)。
+                // PileVerticalSoilSpringModel.Weight に各節点別自重が格納されている。
+                //
+                // 重要 (2026-05-17 修正): 杭頭節点 (k=0) は Uz が CapNode の slave (AnalysisModelling.cs:1327)
+                // で、さらに CapNode は AP の slave。MapOnGlobalLoad の slave 経路は 1 段しか chain 解決
+                // しないため、杭頭節点に直接 Fz を与えると MasterNodes[2].EquationNumber[2] = -1 で
+                // ArgumentOutOfRangeException 発生。k=0 の自重は jointNode (cap/ConnectionNode) に集約する。
+                foreach (var pli in InputModel.PileLayoutItems)
+                {
+                    var pileNodesForWeight = targetModel.GetPileNodes(pli);
+                    var modelsForWeight = pli.VerticalNodeSpringModels;
+                    if (pileNodesForWeight == null || modelsForWeight == null) continue;
+                    int nw = Math.Min(pileNodesForWeight.Count, modelsForWeight.Count);
+                    var jointNodeForWeight = ResolvePileJointNodeInModel(targetModel, pli.No);
+                    for (int k = 0; k < nw; k++)
+                    {
+                        var md = modelsForWeight[k];
+                        if (md == null || md.Weight <= 0.0) continue;
+                        double dWz = md.Weight / nStep; // 1 ステップ当たりの自重増分
+
+                        // k=0 の自重は CapNode (= jointNode) に加算。slave 1 段だけなので安全に AP へ伝達。
+                        FEM.Node target;
+                        if (k == 0)
+                        {
+                            target = jointNodeForWeight;
+                            if (target == null) continue;
+                        }
+                        else
+                        {
+                            target = pileNodesForWeight[k];
+                            if (target == null) continue;
+                        }
+
+                        var prevW = target.IncrementalLoad ?? new FEM.NodeLoad(0, 0, 0, 0, 0, 0);
+                        target.SetIncrementalLoad(new FEM.NodeLoad(
+                            prevW.Fx, prevW.Fy, prevW.Fz - dWz,
+                            prevW.Mx, prevW.My, prevW.Mz));
+                    }
+                }
+            }
             targetModel.MapOnVectorDF();
 
             if (resetCumulative)
             {
                 targetModel.Nodes[0].SetCumulativeLoad(new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)); // 荷重ベクトル [kN]
+                if (InputModel.UsePsSpringAtPileTip)
+                {
+                    foreach (var pli in InputModel.PileLayoutItems)
+                    {
+                        var jointNode = ResolvePileJointNodeInModel(targetModel, pli.No);
+                        jointNode?.SetCumulativeLoad(new FEM.NodeLoad(0, 0, 0, 0, 0, 0));
+
+                        // 杭節点自重もリセット (k=0 は jointNode 側で既にリセット済み)
+                        var pileNodesForWeight = targetModel.GetPileNodes(pli);
+                        var modelsForWeight = pli.VerticalNodeSpringModels;
+                        if (pileNodesForWeight == null || modelsForWeight == null) continue;
+                        int nw = Math.Min(pileNodesForWeight.Count, modelsForWeight.Count);
+                        for (int k = 1; k < nw; k++)
+                        {
+                            var pn = pileNodesForWeight[k];
+                            var md = modelsForWeight[k];
+                            if (pn == null || md == null || md.Weight <= 0.0) continue;
+                            pn.SetCumulativeLoad(new FEM.NodeLoad(0, 0, 0, 0, 0, 0));
+                        }
+                    }
+                }
                 targetModel.MapOnVectorF();
             }
 
@@ -5886,18 +6485,32 @@ namespace PileDesign.ViewModels
             {
                 // E3b: case-local AxialForceIncrement 経由で書込
                 double increment;
-                if (level == 1)
+                bool isVLCase_local = loadCase != null && loadCase.LoadName == "VL";
+                if (isVLCase_local)
                 {
-                    increment = (pileLayoutItem.AxialForceLevel1s[iLC]
-                        - (pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional)) / nStep; // レベル1の杭軸力増分 [kN]
+                    // VL ケース: 地震時軸力増分なし (常時のみ)。SetAxialForceIncrement は 0
+                    increment = 0.0;
+                }
+                else if (level == 1)
+                {
+                    // iLC が有効範囲か確認 (VL ケースで iLC=-1 になる対策)
+                    increment = (pileLayoutItem.AxialForceLevel1s != null && iLC >= 0 && iLC < pileLayoutItem.AxialForceLevel1s.Count
+                        ? pileLayoutItem.AxialForceLevel1s[iLC]
+                        : (pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional))
+                        - (pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional);
+                    increment /= nStep;
                 }
                 else //(level == 2)
                 {
-                    increment = (pileLayoutItem.AxialForceLevel2s[iLC]
-                        - (pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional)) / nStep; // レベル2の杭軸力増分 [kN]
+                    increment = (pileLayoutItem.AxialForceLevel2s != null && iLC >= 0 && iLC < pileLayoutItem.AxialForceLevel2s.Count
+                        ? pileLayoutItem.AxialForceLevel2s[iLC]
+                        : (pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional))
+                        - (pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional);
+                    increment /= nStep;
                 }
                 targetModel.SetAxialForceIncrement(pileLayoutItem, increment);
             }
+
         }
 
         // 地盤変位の更新
@@ -6115,7 +6728,9 @@ namespace PileDesign.ViewModels
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
                 var horizontalReactions = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1].HorizontalSoilReactions;
-                var isFrontPile = pileLayoutItem.IsFrontPiles[iLC];
+                // VL ケースは iLC=-1 となるため安全アクセス
+                var isFrontPile = pileLayoutItem.IsFrontPiles != null && iLC >= 0 && iLC < pileLayoutItem.IsFrontPiles.Count
+                    ? pileLayoutItem.IsFrontPiles[iLC] : false;
 
                 // E3b: case-local な PileNodes / SoilNodes / HorizontalSoilSprings を取得
                 var pileNodes = model.GetPileNodes(pileLayoutItem);
@@ -6193,6 +6808,54 @@ namespace PileDesign.ViewModels
                         spring.SetKe(kSec, kSec, 0, 0, 0, 0, isTan: false);
                         springMin = Math.Min(springMin, kSec);
                         springMax = Math.Max(springMax, kSec);
+                    }
+                }
+
+                // 節点別 Z ばね (UsePsSpringAtPileTip 有効時): 沈下解析の物理関数を直接呼んで K を更新
+                //   優先1: PileVerticalSoilSpringModel — 沈下解析と同じ τ-s + R-S 曲線をリアルタイム評価
+                //   優先2: VerticalPileSpringCurve  — (δ, P) 履歴の線形補間 (フォールバック)
+                // 沈下解析の節点別履歴 (NodeDisplacements/NodeReactions) が無い場合は
+                // AnalysisModelling 側でばねが構築されず、ここでは空コレクションとなる。
+                var vSprings = model.GetVerticalNodeSprings(pileLayoutItem);
+                var vModels = pileLayoutItem.VerticalNodeSpringModels;
+                var vCurves = pileLayoutItem.VerticalNodeSpringCurves;
+                if (vSprings != null && vSprings.Count > 0)
+                {
+                    int nv = vSprings.Count;
+                    if (vModels != null && vModels.Count > 0) nv = Math.Min(nv, vModels.Count);
+                    if (vCurves != null && vCurves.Count > 0) nv = Math.Min(nv, vCurves.Count);
+                    nv = Math.Min(nv, pileNodes.Count);
+                    for (int k = 0; k < nv; k++)
+                    {
+                        var sp = vSprings[k];
+                        if (sp == null) continue;
+                        var pn = pileNodes[k];
+                        var sn = soilNodes[k];
+                        // FEM の相対変位 = pileNode.Uz - soilNode.Uz
+                        // s > 0 = 沈下方向 (FEM の (pile-soil) Uz < 0 のとき s > 0)
+                        double relUz = (double.IsFinite(pn.CumulativeDisp.Uz) ? pn.CumulativeDisp.Uz : 0.0)
+                                     - (double.IsFinite(sn.CumulativeDisp.Uz) ? sn.CumulativeDisp.Uz : 0.0);
+                        double s_rel = -relUz;
+
+                        double kz;
+                        var md = (vModels != null && k < vModels.Count) ? vModels[k] : null;
+                        if (md != null)
+                        {
+                            kz = isTan ? md.GetTangentStiffness(s_rel) : md.GetSecantStiffness(s_rel);
+                            if (!(double.IsFinite(kz) && kz > 0)) kz = md.InitialTangentStiffness;
+                        }
+                        else
+                        {
+                            var cv = (vCurves != null && k < vCurves.Count) ? vCurves[k] : null;
+                            if (cv == null) continue;
+                            kz = isTan ? cv.GetTangentStiffness(s_rel) : cv.GetSecantStiffness(s_rel);
+                            if (!(double.IsFinite(kz) && kz > 0)) kz = Math.Max(cv.InitialTangentStiffness * 0.01, 1.0);
+                        }
+                        kz = SafeK(kz);
+                        if (kz <= 0.0) kz = 1.0;
+                        sp.SetKe(0, 0, kz, 0, 0, 0, isTan);
+                        springMin = Math.Min(springMin, kz);
+                        springMax = Math.Max(springMax, kz);
                     }
                 }
             }

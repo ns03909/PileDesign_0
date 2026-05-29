@@ -24,6 +24,12 @@ namespace PileDesign
         /// </summary>
         public static MainWindowViewModel? CurrentMainViewModel { get; private set; }
 
+        /// <summary>
+        /// コマンドライン引数 `--open &lt;path&gt;` または `&lt;path&gt;` (位置引数) で指定された
+        /// プロジェクトファイルパス。OnStartup でセットされ、MainWindow.Loaded で自動ロードされる。
+        /// </summary>
+        public static string? StartupFilePath { get; private set; }
+
         public App()
         {
             // ロギングを最優先で初期化 (それ自身が失敗しても続行)
@@ -62,6 +68,36 @@ namespace PileDesign
             {
                 base.OnStartup(e);
 
+                // コマンドライン引数の解析:
+                //   PileDesign.exe --open project.pdj
+                //   PileDesign.exe project.pdj            (位置引数、ファイル関連付け用)
+                //   .json (旧形式) も同様に受け付ける
+                StartupFilePath = ParseStartupFilePath(e.Args);
+                if (!string.IsNullOrEmpty(StartupFilePath))
+                {
+                    Log.Information("Startup file requested: {Path}", StartupFilePath);
+                }
+
+                // .pdj 関連付けの自動パス追従:
+                // 既に登録済みで、かつ登録パスが現在の exe と違う場合 (= exe を移動 or 別フォルダに更新)
+                // のみサイレントに再登録する。未登録なら何もしない (勝手な登録は避ける)。
+                try
+                {
+                    if (FileAssociationService.IsRegistered() &&
+                        !FileAssociationService.IsRegisteredPathCurrent())
+                    {
+                        if (FileAssociationService.Register())
+                        {
+                            Log.Information("[FileAssociation] Path auto-refreshed to current exe");
+                        }
+                    }
+                }
+                catch (Exception assocEx)
+                {
+                    // 関連付けの失敗で起動を止めない
+                    Log.Warning(assocEx, "[FileAssociation] Auto-refresh failed (non-fatal)");
+                }
+
                 var mainWindow = new MainWindow();
                 this.MainWindow = mainWindow;
                 mainWindow.Show();
@@ -72,6 +108,33 @@ namespace PileDesign
             {
                 HandleFatalException(ex, source: "OnStartup");
             }
+        }
+
+        /// <summary>
+        /// 起動時引数からファイルパスを抽出する。`--open path` または最初の位置引数を採用。
+        /// 存在しないファイルは null を返す (エラーダイアログは MainWindow 側に任せる)。
+        /// </summary>
+        private static string? ParseStartupFilePath(string[] args)
+        {
+            if (args == null || args.Length == 0) return null;
+
+            for (int i = 0; i < args.Length; i++)
+            {
+                var a = args[i];
+                if (string.Equals(a, "--open", StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(a, "-o", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (i + 1 < args.Length)
+                    {
+                        var p = args[i + 1];
+                        if (File.Exists(p)) return p;
+                    }
+                    continue;
+                }
+                // 位置引数: スイッチ系 (--, -) でない最初の引数がパス
+                if (!a.StartsWith("-") && File.Exists(a)) return a;
+            }
+            return null;
         }
 
         protected override void OnExit(ExitEventArgs e)

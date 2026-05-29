@@ -1,0 +1,64 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main, master, "feature/*"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+# 単一ジョブ。複数ブランチへの push を直列化して CI コストを抑える
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    # WPF (UseWPF=true) のため Windows ランナー必須
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore PileDesign.sln
+
+      - name: Build (Debug)
+        run: dotnet build PileDesign.sln --no-restore --configuration Debug --nologo
+        env:
+          # 警告ベースライン: TreatWarningsAsErrors + 既存除外あり
+          # CI でも同じ厳しさで build
+          DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+      # 通常テスト (収束リグレッション系 + その他 ~800 件)
+      - name: Test (excluding slow)
+        run: |
+          dotnet test TestProject1/TestProject1.csproj `
+            --no-build --configuration Debug `
+            --filter "TestCategory!=Slow" `
+            --logger "trx;LogFileName=test-results.trx" `
+            --logger "console;verbosity=minimal" `
+            --nologo
+        shell: pwsh
+        timeout-minutes: 15
+
+      # 結果をアーティファクトとして残す (失敗時のデバッグ用)
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestProject1/TestResults/*.trx
+          retention-days: 14
+
+      # 収束リグレッションのスナップショット差分があった場合 (UPDATE_SNAPSHOTS なしで失敗)
+      # も上記 test ステップで検出される。差分内容は trx に含まれる。

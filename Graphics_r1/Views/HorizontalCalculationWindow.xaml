@@ -42,6 +42,26 @@
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
         </Style>
 
+        <!-- 読み取り専用 DataGrid 用のセルスタイル: 「編集中」風の青枠を抑止しつつ、
+             アクティブセル (キーボードフォーカス位置) は淡い色でハイライトする。
+             CheckBox 等のフォーカス可能な内部コントロールは引き続きクリック可能。
+             カーソルキーで CurrentCell を移動できるよう Focusable=True (既定) に戻している。 -->
+        <Style x:Key="InertReadOnlyDataGridCellStyle" TargetType="DataGridCell">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#FFE7F2FB"/>
+                    <Setter Property="BorderBrush" Value="#FFB6D6EF"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter Property="Background" Value="#FFCDE4F7"/>
+                    <Setter Property="BorderBrush" Value="#FF6BAEE0"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Style for ComboBox elements to right-align text -->
         <Style x:Key="RightAlignedComboBoxStyle" TargetType="ComboBox">
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
@@ -105,9 +125,15 @@
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="350"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="350" MinWidth="200"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="*" MinWidth="300"/>
         </Grid.ColumnDefinitions>
+
+        <!-- 左ペインと右ペインの仕切り (ドラッグで幅変更可) -->
+        <GridSplitter Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                      Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                      Background="#DDD" ShowsPreview="True" ResizeBehavior="PreviousAndNext"/>
 
         <!-- 上部コントロール (ウィンドウが小さい時は縦スクロール) -->
 
@@ -132,7 +158,8 @@
                  ■ 実行 はタブ外で常時表示 (Grid.Row=1)。-->
             <TabControl Grid.Row="0" Padding="4">
                 <TabItem Header="荷重">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ScrollViewer x:Name="LeftPaneScrollViewerLoad"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                         <StackPanel Orientation="Vertical" Margin="2">
 
             <!-- ========== モデル情報 ========== -->
@@ -197,10 +224,28 @@
                 <TextBlock Text="杭軸力:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
                 <RadioButton Content="入力値" GroupName="AxialForceMode" Margin="0,0,12,0" VerticalAlignment="Center"
                              IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
-                             ToolTip="入力された軸力値のみを使用"/>
+                             IsEnabled="{Binding CanSelectInputOnlyAxialMode}"
+                             ToolTip="入力された軸力値のみを使用 (P-S 非線形ばね有効時は選択不可)"/>
                 <RadioButton Content="入力値＋応力解析結果" GroupName="AxialForceMode" VerticalAlignment="Center"
                              IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay}"
-                             ToolTip="入力軸力に解析で得られた軸力Fxiを加算&#x0a;（各荷重ステップ開始時に更新）"/>
+                             ToolTip="入力軸力に解析で得られた軸力Fxiを加算&#x0a;（各荷重ステップ開始時に更新）&#x0a;P-S 非線形ばね有効時は強制的にこちらが選択される"/>
+            </StackPanel>
+
+            <!-- 鉛直方向境界条件 -->
+            <StackPanel Orientation="Vertical" Margin="0,2">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="鉛直方向境界条件:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
+                    <RadioButton Content="杭先端支持" GroupName="VerticalBC" Margin="0,0,12,0" VerticalAlignment="Center"
+                                 IsChecked="{Binding UsePsSpringAtPileTip, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                                 ToolTip="杭先端の Uz を固定 (従来挙動)。杭周面・先端の鉛直抵抗は考慮しない。"/>
+                    <RadioButton Content="P-S 非線形ばね" GroupName="VerticalBC" VerticalAlignment="Center"
+                                 IsChecked="{Binding UsePsSpringAtPileTip, Mode=TwoWay}"
+                                 ToolTip="沈下解析の P-S 曲線を用いて、杭全節点に非線形 Z ばねを設置 (沈下解析の実行が必要)。&#x0a;杭軸力は各杭の接合節点に外力として適用される。"/>
+                </StackPanel>
+                <CheckBox Content="VL 単独ケースも解析" Margin="100,2,0,0"
+                          IsChecked="{Binding IsVLAnalysisEnabled, Mode=TwoWay}"
+                          IsEnabled="{Binding UsePsSpringAtPileTip}"
+                          ToolTip="P-S 非線形ばね ON 時に追加で「常時 (VL) のみ」のケースを解析。&#x0a;水平荷重なし、各杭頭に AxialForceVL を外力として適用。&#x0a;結果は LoadName=&quot;VL&quot; として結果ビューアに表示される。"/>
             </StackPanel>
 
             <!-- ========== 解析対象 ========== -->
@@ -228,6 +273,7 @@
                       CanUserAddRows="False" CanUserResizeRows="False"
                       IsReadOnly="True"
                       SelectionUnit="FullRow"
+                      CellStyle="{StaticResource InertReadOnlyDataGridCellStyle}"
                       ColumnHeaderStyle="{StaticResource CenteredColumnHeaderStyle}">
                 <DataGrid.ContextMenu>
                     <ContextMenu>
@@ -249,7 +295,7 @@
                 <common:EnhancedDataGrid.Columns>
                     <DataGridTextColumn Header="ケース" Binding="{Binding LoadName}" Width="*" IsReadOnly="True">
                         <DataGridTextColumn.CellStyle>
-                            <Style TargetType="DataGridCell">
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource InertReadOnlyDataGridCellStyle}">
                                 <Setter Property="Foreground" Value="{Binding Level, Converter={StaticResource LoadCaseLevelToColorConverter}}"/>
                             </Style>
                         </DataGridTextColumn.CellStyle>
@@ -309,6 +355,7 @@
                       CanUserAddRows="False" CanUserResizeRows="False"
                       IsReadOnly="True"
                       SelectionUnit="FullRow"
+                      CellStyle="{StaticResource InertReadOnlyDataGridCellStyle}"
                       ColumnHeaderStyle="{StaticResource CenteredColumnHeaderStyle}">
                 <DataGrid.ContextMenu>
                     <ContextMenu>
@@ -330,7 +377,7 @@
                 <common:EnhancedDataGrid.Columns>
                     <DataGridTextColumn Header="ケース" Binding="{Binding LoadName}" Width="*" IsReadOnly="True">
                         <DataGridTextColumn.CellStyle>
-                            <Style TargetType="DataGridCell">
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource InertReadOnlyDataGridCellStyle}">
                                 <Setter Property="Foreground" Value="{Binding Level, Converter={StaticResource LoadCaseLevelToColorConverter}}"/>
                             </Style>
                         </DataGridTextColumn.CellStyle>
@@ -384,9 +431,14 @@
             <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCombinations}" AutoGenerateColumns="False" HeadersVisibility="None"
                       CanUserAddRows="False"
                       IsReadOnly="True"
-                      SelectionUnit="FullRow">
+                      SelectionUnit="FullRow"
+                      HorizontalAlignment="Stretch"
+                      CellStyle="{StaticResource InertReadOnlyDataGridCellStyle}">
                 <common:EnhancedDataGrid.Columns>
-                    <DataGridTextColumn Binding="{Binding Name, Mode=OneWay}" Width="*" Foreground="{StaticResource ReadOnlyBrush}"/>
+                    <!-- MinWidth=220: 親 StackPanel が水平方向に無限大 measure するため、
+                         Width="*" だけでは "残り 0px" となり潰れる。
+                         Name (例: α_L:0.50/β_u:-1.00/β_L:0.50) が読める下限を確保する -->
+                    <DataGridTextColumn Binding="{Binding Name, Mode=OneWay}" Width="*" MinWidth="220" Foreground="{StaticResource ReadOnlyBrush}"/>
                     <DataGridTemplateColumn Width="Auto" CanUserSort="False">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -431,15 +483,19 @@
                 <TextBlock Text="ステップ評価数 (再試行含む)："/>
                 <TextBlock Text="{Binding TotalCalculationCount}" FontWeight="Bold" FontSize="16" HorizontalAlignment="Right"/>
             </DockPanel>
-            <TextBlock Text="荷重ケース × 組合せ × 液状化 × ステップ数 の総和。各ステップで収束計算を行います (失敗ステップ再試行時は加算されます)。"
-                       Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
+            <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap">
+                <Run Text="荷重ケース × 組合せ × 液状化 × ステップ数 の総和。"/><LineBreak/>
+                <Run Text="各ステップで収束計算を行います。"/><LineBreak/>
+                <Run Text="(失敗ステップ再試行時は加算されます)"/>
+            </TextBlock>
 
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
 
                 <TabItem Header="収束・並列">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ScrollViewer x:Name="LeftPaneScrollViewerConv"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                         <StackPanel Orientation="Vertical" Margin="2">
 
             <!-- ========== 収束計算 ========== -->
@@ -539,9 +595,12 @@
             <!-- ========== 実行 ========== -->
             <TextBlock Text="■ 実行" Style="{StaticResource SectionHeader}"/>
 
-            <Button Content="水平解析実行 (F5)" Command="{Binding ExecuteAnalysisCommand}">
+            <Button Content="水平解析実行 (F5)" Command="{Binding ExecuteAnalysisCommand}"
+                    FontWeight="Bold"
+                    Background="{StaticResource PrimaryAccentDarkBrush}"
+                    Foreground="White">
                 <Button.Style>
-                    <Style TargetType="Button">
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding TotalCalculationCount}" Value="0">
                                 <Setter Property="IsEnabled" Value="False"/>
@@ -590,7 +649,7 @@
             </StatusBarItem>
         </StatusBar>
         
-        <Grid Grid.Row="0" Grid.Column="1" Margin="10">
+        <Grid Grid.Row="0" Grid.Column="2" Margin="10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="auto"/>
                 <RowDefinition Height="*"/>
@@ -625,14 +684,19 @@
         </Grid>
 
         <!-- 下部ボタン -->
-        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Right">
+        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Right">
             <!--<Button x:Name="ButtonOk" Content="Ok 解析結果登録" Height="30" Width="200" Command="{Binding OkCommand}"
                     Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             <Button x:Name="ButtonCancel" Content="Cancel" Height="30" Width="100" Command="{Binding CancelCommand}"/>-->
-            <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}" Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-            <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
+            <Button x:Name="ButtonOk" Content="保存(_S)" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
+                    IsDefault="True"
+                    ToolTip="解析結果を保存して閉じます (Enter / Ctrl+Enter / Alt+S)"
+                    Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <Button x:Name="ButtonCancel" Content="キャンセル(_C)" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"
+                    IsCancel="True"
+                    ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
         </StackPanel>
     </Grid>
 </Window>

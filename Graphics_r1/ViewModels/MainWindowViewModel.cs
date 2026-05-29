@@ -425,15 +425,22 @@ namespace PileDesign.ViewModels
             where TViewModel : ObservableObject
             where TWindow : Window, new()
         {
-            // Undo保存は不要（ダイアログに「破棄して閉じる」ボタンがあるため）
-            // DeepCopy が重い（最大 28 秒）ため省略してウィンドウを即座に表示する
-            // (undoDescription はシグネチャ互換のため残置、現状未使用)
-
             // ダイアログを開く
             OpenDialogWindow<TViewModel, TWindow>(this);
 
             // 追加処理の実行
             postDialogAction?.Invoke();
+
+            // ダイアログ閉じた後 (Save or Cancel) に undo state を push して、
+            // メイン画面 Undo でダイアログ前の状態に戻れるようにする。
+            // Cancel の場合は CurrentInputModel が変わっていないため、直前の history entry と
+            // 重複するが副作用は無い (一回 Undo しても画面は変わらないだけ)。
+            // 旧版は DeepCopy が 28s かかったため省略していたが、PileSection の重い computed
+            // プロパティに [JsonIgnore] を付けた後は数百 ms 以下に短縮されており支障なし。
+            if (!string.IsNullOrEmpty(undoDescription))
+            {
+                SaveUndoState(undoDescription);
+            }
         }
 
         /// <summary>
@@ -477,12 +484,35 @@ namespace PileDesign.ViewModels
         }
 
         // JsonSerializerOptions をキャッシュ
+        // WriteIndented=false でシリアライズ時間 約 1/3、ファイルサイズ 約 50% 縮小
+        // (デシリアライズ側はインデント有無に依存しないため、旧 indented ファイルもそのまま読込可能)
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
-            WriteIndented = true,
+            WriteIndented = false,
             ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve,
             NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
         };
+
+        // 解析結果 (AnaModel の節点/梁結果, VerticalBeamCaseResults) を保存に含めるか。
+        // 手動保存・自動保存それぞれで独立に選択できる (オプションタブのチェックボックス)。
+        // 既定はいずれも OFF: 入力のみ保存し軽量・高速。ON にすると結果も保存するがファイルが
+        // 数十 MB 級に肥大する場合があり読み書きに時間がかかる。
+
+        // 手動保存 (Ctrl+S / 名前を付けて保存) に解析結果を含めるか
+        private bool _isSaveAnalysisResultsManual = false;
+        public bool IsSaveAnalysisResultsManual
+        {
+            get => _isSaveAnalysisResultsManual;
+            set => SetProperty(ref _isSaveAnalysisResultsManual, value);
+        }
+
+        // 自動保存に解析結果を含めるか (定期保存のため既定 OFF 推奨。ON だと毎回数秒・大容量書込)
+        private bool _isSaveAnalysisResultsAutoSave = false;
+        public bool IsSaveAnalysisResultsAutoSave
+        {
+            get => _isSaveAnalysisResultsAutoSave;
+            set => SetProperty(ref _isSaveAnalysisResultsAutoSave, value);
+        }
 
         private double _rightBlankWidthPx = 100.0;
         public double RightBlankWidthPx
@@ -580,6 +610,22 @@ namespace PileDesign.ViewModels
                             }
                         }
                     }
+
+                    // LoadCases/LoadCombinations の CollectionChanged も再購読 + コンボボックス再構築。
+                    // LoadCaseWindow.Save / Undo/Redo / ファイルロード で LoadCombinations は新インスタンス
+                    // に置換されるため、コンストラクタ時点の subscription だけだとメイン画面の組合せ
+                    // ComboBox が古い (1 件しか出ない等) 状態のままになる。
+                    if (_currentInputModel?.LoadCasesInput != null)
+                    {
+                        SubscribeLoadCaseApplicabilityChanged();
+                        UpdateLoadCaseOption();
+                        UpdateLoadCombinationOption();
+                    }
+
+                    // 群杭沈下 (PileGroupSettlement) の PropertyChanged も再購読。
+                    // CurrentInputModel 置換でこれも新インスタンスになるため、再アタッチしないと
+                    // 沈下コンターキャッシュ無効化・荷重面標高/LoadingType の UI プロキシ更新が止まる。
+                    SubscribeSettlementChanged();
 
                     // 注: UpdateWindowImmediate() はここでは呼ばない。
                     // 全ての代入元（ファイル読込、Undo/Redo等）がフラグリセット後に
@@ -781,12 +827,21 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DataGridPileAxialForce_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
-            // 反復解析結果が保存されている場合は警告 (杭軸力は反復解析の Pi ソース)
-            if (e.EditAction == DataGridEditAction.Commit
-                && !ConfirmAnalysisConditionChange("反復", "杭軸力編集"))
+            if (e.EditAction == DataGridEditAction.Commit)
             {
-                e.Cancel = true;
-                return;
+                // 反復解析 (土層沈下「反復」ルート) の CaseRecord 確認
+                if (!ConfirmAnalysisConditionChange("反復", "杭軸力編集"))
+                {
+                    e.Cancel = true;
+                    return;
+                }
+                // 水平/単杭/基礎梁考慮鉛直 解析結果も同じ理由で陳腐化するため
+                // 編集確定前にユーザー確認の上クリアする (要素分割は保持)。
+                if (!CheckAndResetAnalysisResultsKeepingSplit("杭軸力編集"))
+                {
+                    e.Cancel = true;
+                    return;
+                }
             }
 
             HandleDataGridCellEditEnding(e);
@@ -2390,28 +2445,37 @@ namespace PileDesign.ViewModels
             ShowToast($"{intersectionCount} 個の交差点で {toRemove.Count} → {toAdd.Count} 要素に分割");
         }
 
-        // 基礎梁節点削除
+        // 基礎梁節点削除 (接続された梁要素もカスケード削除)
         [RelayCommand]
         private void DeleteFoundationNode(FoundationNode node)
         {
             if (CurrentInputModel?.FoundationBeamInput?.Nodes == null) return;
 
-            // 使用中かチェック（この節点を参照する梁要素があるか）
-            bool isUsed = CurrentInputModel.FoundationBeamInput.Beams.Any(b =>
+            // 接続されている梁要素を抽出 (NodeI/J_Type=FoundationNode かつ Id が一致するもの)
+            var beams = CurrentInputModel.FoundationBeamInput.Beams;
+            var connectedBeams = beams.Where(b =>
                 (b.NodeI_Type == NodeReferenceType.FoundationNode && b.NodeI_Id == node.Id) ||
-                (b.NodeJ_Type == NodeReferenceType.FoundationNode && b.NodeJ_Id == node.Id));
+                (b.NodeJ_Type == NodeReferenceType.FoundationNode && b.NodeJ_Id == node.Id)
+            ).ToList();
 
-            if (isUsed)
+            if (connectedBeams.Count > 0)
             {
-                PileDesign.Services.MessageService.Show(
-                    $"節点 {node.No} は梁要素で使用されているため削除できません。\n先に関連する梁要素を削除してください。",
-                    "削除エラー",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Warning);
-                return;
+                var beamNos = connectedBeams.Select(b => beams.IndexOf(b) + 1).OrderBy(n => n).ToList();
+                string list = string.Join(", ", beamNos.Take(20).Select(n => $"#{n}"));
+                if (beamNos.Count > 20) list += $" ほか {beamNos.Count - 20} 件";
+                var result = PileDesign.Services.MessageService.Show(
+                    $"節点 {node.No} を削除します。\n" +
+                    $"同時に接続された一般梁要素 {beamNos.Count} 本 ({list}) も削除されます。\n" +
+                    $"よろしいですか?",
+                    "削除確認",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+                if (result != System.Windows.MessageBoxResult.Yes) return;
             }
 
             TrySaveUndoSnapshotSafely();
+            foreach (var beam in connectedBeams)
+                beams.Remove(beam);
             CurrentInputModel.FoundationBeamInput.Nodes.Remove(node);
             RenumberFoundationNodes();
             RequestUpdateWindow();
@@ -3043,8 +3107,8 @@ namespace PileDesign.ViewModels
         {
             var saveFileDialog = new SaveFileDialog
             {
-                Filter = "JSON Files (*.json)|*.json|All Files (*.*)|*.*",
-                DefaultExt = "json"
+                Filter = "PileDesign プロジェクト (*.pdj)|*.pdj|JSON Files (*.json)|*.json|All Files (*.*)|*.*",
+                DefaultExt = "pdj"
             };
 
             if (saveFileDialog.ShowDialog() == true)
@@ -3054,14 +3118,18 @@ namespace PileDesign.ViewModels
                 try
                 {
                     StatusMessage = "保存中...";
-                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
+                    // 解析結果保存フラグ OFF の場合は AnaModel/VerticalBeamCaseResults を null にして
+                    // 入力のみの軽量ファイルとして保存する
+                    var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
+                    var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
+                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave);
                     ShowToast("保存が完了しました。");
 
                     // MRUに追加
                     _mruService.AddFile(CurrentFilePath);
 
-                    // 自動保存を開始
-                    _autoSaveService.Start(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
+                    // 自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)
+                    _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
                 }
                 catch (Exception ex)
                 {
@@ -3086,7 +3154,9 @@ namespace PileDesign.ViewModels
                 try
                 {
                     StatusMessage = "保存中...";
-                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
+                    var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
+                    var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
+                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave);
                     ShowToast("保存が完了しました。");
                 }
                 catch (Exception ex)
@@ -3210,6 +3280,14 @@ namespace PileDesign.ViewModels
             // 解析結果の復元（projectData=null の場合はフラグのみリセット）
             RestoreAnalysisState(projectData);
 
+            // 水平解析結果を含むファイルをロードした場合、結果テーブル (LatestResultTables) を
+            // AnaModel.AnalysisStepResults から再構築する。これがないと「テーブル出力」「グラフ」等の
+            // 結果系コマンドの CanExecute が false のまま (ボタンが押せない) になる。
+            // (RefreshResultTablesFromLastStep 内で CurrentModel/AnalysisStepResults/HasAnyAnalysisResult を
+            //  チェックし、結果が無ければ LatestResultTables=[] にして安全にスキップする)
+            RefreshResultTablesFromLastStep();
+            RaiseResultCommandsCanExecute();
+
             // 結果タイプ ComboBox / バッジ用プロパティを再評価
             OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
             OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
@@ -3325,7 +3403,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OpenInputModelFileSimple()
         {
-            var ofd = new Microsoft.Win32.OpenFileDialog { Filter = "JSON Files (*.json)|*.json", DefaultExt = "json" };
+            var ofd = new Microsoft.Win32.OpenFileDialog { Filter = "PileDesign プロジェクト (*.pdj;*.json)|*.pdj;*.json|PileDesign プロジェクト (*.pdj)|*.pdj|JSON Files (*.json)|*.json", DefaultExt = "pdj" };
             if (ofd.ShowDialog() != true) return;
             // Undo 保存は安全ヘルパを使用
             TrySaveUndoSnapshotSafely();
@@ -3345,8 +3423,8 @@ namespace PileDesign.ViewModels
         {
             var openFileDialog = new OpenFileDialog
             {
-                Filter = "JSON Files (*.json)|*.json",
-                DefaultExt = "json"
+                Filter = "PileDesign プロジェクト (*.pdj;*.json)|*.pdj;*.json|PileDesign プロジェクト (*.pdj)|*.pdj|JSON Files (*.json)|*.json",
+                DefaultExt = "pdj"
             };
 
             if (openFileDialog.ShowDialog() == true)
@@ -3375,8 +3453,8 @@ namespace PileDesign.ViewModels
                     // MRU に追加
                     _mruService.AddFile(CurrentFilePath);
 
-                    // 自動保存を開始
-                    _autoSaveService.Start(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
+                    // 自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)
+                    _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
                 }
                 catch (Exception ex)
                 {
@@ -3461,10 +3539,17 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OutputWordFile()
         {
+            // ファイル名: (yyMMdd)_(HHmm)_構造計算書_(本体ファイル名).docx
+            // 本体ファイル名がない (未保存) 場合は「Untitled」をフォールバック。
+            string projectBaseName = !string.IsNullOrEmpty(CurrentFilePath)
+                ? System.IO.Path.GetFileNameWithoutExtension(CurrentFilePath)
+                : "Untitled";
+            string defaultDocxName = $"{DateTime.Now:yyMMdd_HHmm}_構造計算書_{projectBaseName}.docx";
+
             Microsoft.Win32.SaveFileDialog saveFileDialog = new()
             {
                 Filter = "Word documents (*.docx)|*.docx|All files (*.*)|*.*",
-                FileName = "document_" + DateTime.Now.ToString("yyMMdd_HHmmss") + ".docx"
+                FileName = defaultDocxName
             };
 
             if (saveFileDialog.ShowDialog() == true)
@@ -4510,151 +4595,8 @@ namespace PileDesign.ViewModels
                 "検証");
         }
 
-        // AI連携: Claude Desktop にMCPサーバーを登録
-        [RelayCommand]
-        public static void RegisterMcpServer()
-        {
-            try
-            {
-                var mcpExePath = System.IO.Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory, "PileDesign.Mcp.exe");
-
-                if (!System.IO.File.Exists(mcpExePath))
-                {
-                    MessageService.Show(
-                        $"PileDesign.Mcp.exe が見つかりません。\n\n" +
-                        $"検索パス: {mcpExePath}\n\n" +
-                        "PileDesign.Mcp.exe をこのプログラムと同じフォルダに配置してください。",
-                        "AI連携設定", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                // Claude Desktop の設定ファイルパスを探索
-                string? configPath = FindClaudeDesktopConfigPath();
-
-                if (configPath == null)
-                {
-                    // 設定ファイルが見つからない場合は手動設定の案内を表示
-                    var jsonSnippet = $@"{{
-  ""mcpServers"": {{
-    ""piledesign"": {{
-      ""command"": ""{mcpExePath.Replace("\\", "\\\\")}""
-    }}
-  }}
-}}";
-                    MessageService.Show(
-                        "Claude Desktop の設定ファイルが見つかりませんでした。\n\n" +
-                        "Claude Desktop をインストール後、設定ファイル\n" +
-                        "(claude_desktop_config.json) に以下を追加してください:\n\n" +
-                        jsonSnippet,
-                        "AI連携設定", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                    // クリップボードにコピー
-                    try { Clipboard.SetText(jsonSnippet); } catch (System.Runtime.InteropServices.ExternalException) { }
-                    return;
-                }
-
-                // 既存の設定を読み込み
-                string existingJson = System.IO.File.Exists(configPath)
-                    ? System.IO.File.ReadAllText(configPath) : "{}";
-
-                var doc = System.Text.Json.JsonDocument.Parse(existingJson);
-                var root = new System.Text.Json.Nodes.JsonObject();
-
-                // 既存のプロパティをコピー
-                foreach (var prop in doc.RootElement.EnumerateObject())
-                {
-                    root[prop.Name] = System.Text.Json.Nodes.JsonNode.Parse(prop.Value.GetRawText());
-                }
-
-                // mcpServers を取得または作成
-                if (root["mcpServers"] is not System.Text.Json.Nodes.JsonObject mcpServers)
-                {
-                    mcpServers = new System.Text.Json.Nodes.JsonObject();
-                    root["mcpServers"] = mcpServers;
-                }
-
-                // 既に登録済みかチェック
-                if (mcpServers.ContainsKey("piledesign"))
-                {
-                    var result = MessageService.Show(
-                        "piledesign は既に登録されています。上書きしますか？",
-                        "AI連携設定", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                    if (result != MessageBoxResult.Yes) return;
-                }
-
-                // piledesign エントリを追加/更新
-                mcpServers["piledesign"] = new System.Text.Json.Nodes.JsonObject
-                {
-                    ["command"] = mcpExePath.Replace("/", "\\"),
-                    ["args"] = new System.Text.Json.Nodes.JsonArray()
-                };
-
-                // 保存
-                var options = new System.Text.Json.JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                };
-                string newJson = root.ToJsonString(options);
-                System.IO.File.WriteAllText(configPath, newJson);
-
-                MessageService.Show(
-                    $"Claude Desktop にAI連携を登録しました。\n\n" +
-                    $"設定ファイル: {configPath}\n" +
-                    $"MCPサーバー: {mcpExePath}\n\n" +
-                    "Claude Desktop を再起動すると有効になります。",
-                    "AI連携設定", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageService.Show($"設定中にエラーが発生しました:\n{ex.Message}",
-                    "AI連携設定", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        /// <summary>
-        /// Claude Desktop の設定ファイルパスを探索する
-        /// </summary>
-        private static string? FindClaudeDesktopConfigPath()
-        {
-            var candidates = new List<string>();
-
-            // Microsoft Store 版
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var packagesDir = System.IO.Path.Combine(localAppData, "Packages");
-            if (System.IO.Directory.Exists(packagesDir))
-            {
-                try
-                {
-                    foreach (var dir in System.IO.Directory.GetDirectories(packagesDir, "Claude_*"))
-                    {
-                        var candidate = System.IO.Path.Combine(dir, "LocalCache", "Roaming", "Claude", "claude_desktop_config.json");
-                        candidates.Add(candidate);
-                    }
-                }
-                catch (Exception ex) { Log.Warning(ex, "[MainVM] Claude設定探索"); }
-            }
-
-            // 通常インストール版
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            candidates.Add(System.IO.Path.Combine(appData, "Claude", "claude_desktop_config.json"));
-
-            // 既存ファイルを優先
-            foreach (var path in candidates)
-            {
-                if (System.IO.File.Exists(path)) return path;
-            }
-
-            // ファイルが存在しない場合、ディレクトリが存在するパスを返す
-            foreach (var path in candidates)
-            {
-                var dir = System.IO.Path.GetDirectoryName(path);
-                if (dir != null && System.IO.Directory.Exists(dir)) return path;
-            }
-
-            return null;
-        }
+        // 2026-05-19: PileDesign.Mcp (prototype) を廃止したため RegisterMcpServer コマンドと
+        // FindClaudeDesktopConfigPath を削除。UI へのバインドも元々存在せず orphan だった。
 
         [RelayCommand]
         public void OnQuickHint()
@@ -4734,6 +4676,37 @@ namespace PileDesign.ViewModels
                     Topmost = true
                 },
                 "ショートカット一覧");
+        }
+
+        /// <summary>
+        /// .pdj 拡張子を現在のユーザーで PileDesign に関連付ける。
+        /// Portable (zip 配布) でも admin 権限不要。HKCU\Software\Classes に書込後、
+        /// Windows の「既定のアプリ」設定ページを開いてユーザーに最終選択を促す。
+        /// </summary>
+        [RelayCommand]
+        public void RegisterPdjAssociation()
+        {
+            var ok = PileDesign.Services.FileAssociationService.Register();
+            if (!ok)
+            {
+                MessageService.Show(
+                    "拡張子 .pdj の関連付け登録に失敗しました。詳細はログを参照してください。",
+                    "関連付け", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var msg =
+                ".pdj ファイルが PileDesign に関連付けられました (現在のユーザー)。\n\n" +
+                "ダブルクリックで PileDesign を既定アプリとして開くには、\n" +
+                "Windows の「既定のアプリ」設定で .pdj に対して PileDesign を選択してください。\n\n" +
+                "今すぐ設定画面を開きますか？";
+
+            var result = MessageService.Show(msg, "関連付け完了",
+                MessageBoxButton.YesNo, MessageBoxImage.Information, MessageBoxResult.Yes);
+            if (result == MessageBoxResult.Yes)
+            {
+                PileDesign.Services.FileAssociationService.OpenDefaultAppsSettings();
+            }
         }
 
         [RelayCommand]
@@ -6935,8 +6908,8 @@ namespace PileDesign.ViewModels
                 // MRU に追加
                 _mruService.AddFile(filePath);
 
-                // 自動保存を開始
-                _autoSaveService.Start(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
+                // 自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)
+                _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
             }
             catch (Exception ex)
             {
@@ -7036,15 +7009,15 @@ namespace PileDesign.ViewModels
                         {
                             originalFileName = originalFileName[..autoSaveIndex];
                             // 元のファイルパスを推測（未保存ならnull）
-                            inferredFilePath = originalFileName != "Untitled" ? originalFileName + ".json" : null;
+                            inferredFilePath = originalFileName != "Untitled" ? originalFileName + ".pdj" : null;
                         }
 
                         ApplyPostLoadProtocol(projectData, inferredFilePath, "自動保存ファイルの復元が完了しました。");
 
-                        // 復元後は自動保存を開始
+                        // 復元後は自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)
                         if (!string.IsNullOrEmpty(CurrentFilePath))
                         {
-                            _autoSaveService.Start(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
+                            _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
                         }
                     }
                 }
@@ -7213,23 +7186,55 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 一般節点を削除
+        /// 一般節点を削除 (接続された一般梁要素もカスケード削除)
         /// </summary>
         [RelayCommand]
         private void DeleteInputNode(InputNode? node)
         {
             if (node == null) return;
 
+            // 接続されている一般梁要素を抽出 (NodeI/J_Type=GeneralNode かつ Id が一致するもの)
+            var beams = CurrentInputModel.FoundationBeamInput?.Beams;
+            var connectedBeams = beams?
+                .Where(b => b != null
+                            && ((b.NodeI_Type == NodeReferenceType.GeneralNode && b.NodeI_Id == node.UniqueId)
+                             || (b.NodeJ_Type == NodeReferenceType.GeneralNode && b.NodeJ_Id == node.UniqueId)))
+                .ToList() ?? new List<FoundationBeam>();
+
+            string confirmMsg;
+            if (connectedBeams.Count > 0)
+            {
+                var beamNos = connectedBeams.Select(b => beams!.IndexOf(b) + 1).OrderBy(n => n).ToList();
+                string list = string.Join(", ", beamNos.Take(20).Select(n => $"#{n}"));
+                if (beamNos.Count > 20) list += $" ほか {beamNos.Count - 20} 件";
+                confirmMsg = $"節点 No.{node.No} を削除します。\n" +
+                             $"同時に接続された一般梁要素 {beamNos.Count} 本 ({list}) も削除されます。\n" +
+                             $"よろしいですか?";
+            }
+            else
+            {
+                confirmMsg = $"節点 No.{node.No} を削除してもよろしいですか？";
+            }
+
             var result = MessageService.Show(
-                $"節点 No.{node.No} を削除してもよろしいですか？",
-                "確認",
+                confirmMsg,
+                connectedBeams.Count > 0 ? "削除確認" : "確認",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Question);
 
             if (result == MessageBoxResult.OK)
             {
-                CurrentInputModel.InputNodes.Remove(node);
+                // Undo スナップショットは「削除前」の状態を保存する必要があるため、
+                // 実際の Remove 操作より先に呼ぶ。
                 SaveUndoState();
+
+                // 接続梁を先に除去 → 節点を除去
+                if (beams != null)
+                {
+                    foreach (var beam in connectedBeams)
+                        beams.Remove(beam);
+                }
+                CurrentInputModel.InputNodes.Remove(node);
                 RequestUpdateWindow();
             }
         }

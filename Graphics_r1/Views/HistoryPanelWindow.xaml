@@ -69,7 +69,8 @@
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" x:Name="HintText" Text="クリックでその状態へジャンプ"
                        Foreground="#888" FontSize="11" VerticalAlignment="Center"/>
-            <Button Grid.Column="2" Content="閉じる" IsCancel="True" Padding="12,4" Click="CloseButton_Click"/>
+            <Button Grid.Column="2" Content="閉じる(_C)" IsCancel="True" Padding="12,4" Click="CloseButton_Click"
+                    ToolTip="ウィンドウを閉じます (Esc / Alt+C)"/>
         </Grid>
     </Grid>
 </Window>

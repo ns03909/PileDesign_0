@@ -7,14 +7,16 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Windows;
 
 using Serilog;
 using PileDesign.Services;
 namespace PileDesign.Models.InputData
 {
-    public class PileBodyInput : BaseModel
+    public class PileBodyInput : BaseModel, IJsonOnDeserializing, IJsonOnDeserialized
     {
         // 静的キャッシュ（CSVデータは一度だけ読み込む）
         private static readonly Lazy<(List<PileTipSettlementPresetParameter> Parameters, List<string> Names)> _cachedPresetParameters
@@ -63,8 +65,22 @@ namespace PileDesign.Models.InputData
             return (parameters, names);
         }
 
-        // 追加: セクション既定値リセット抑止フラグ
-        private bool _suppressSectionReset = false;
+        // 子要素 (PileSection) への自動同期を抑止するフラグ。
+        // - JSON デシリアライズ中: PileBodySegments が PileBodyType より先に loaded されるため、
+        //   ここで子要素を触ると this.PileBodyType=null のまま既定値で上書き破壊してしまう
+        // - DeepCopy 中: 子要素は既に正しい状態にあるため再同期不要
+        private bool _suppressChildSync = false;
+
+        // System.Text.Json 用コールバック (本プロジェクトの主デシリアライザ)
+        void IJsonOnDeserializing.OnDeserializing() => _suppressChildSync = true;
+        void IJsonOnDeserialized.OnDeserialized() => _suppressChildSync = false;
+
+        // Newtonsoft.Json 用コールバック (副デシリアライザ経由でロードされる場合に備えて)
+        [OnDeserializing]
+        internal void OnDeserializingHandler(StreamingContext _) => _suppressChildSync = true;
+
+        [OnDeserialized]
+        internal void OnDeserializedHandler(StreamingContext _) => _suppressChildSync = false;
 
         private ObservableCollection<PileBodySegment> _pileBodySegments;
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
@@ -86,17 +102,12 @@ namespace PileDesign.Models.InputData
                 if (_pileBodySegments != null)
                 {
                     _pileBodySegments.CollectionChanged += PileBodySegments_CollectionChanged;
+
+                    // ロード中/DeepCopy 中は子要素に触らない (購読は維持)
+                    if (_suppressChildSync) return;
+
                     foreach (var seg in _pileBodySegments)
                     {
-                        //if (seg?.PileSection != null)
-                        //{
-                        //    seg.PileSection.PileBodyType = this.PileBodyType;
-                        //    // セクションの既定値を再設定するかは抑止フラグで制御
-                        //    if (!_suppressSectionReset)
-                        //    {
-                        //        seg.PileSection.ResetSectionProperties();
-                        //    }
-                        //}
                         if (seg?.PileSection != null)
                         {
                             // PileBodyTypeがnullや空文字の場合は既定値をセット
@@ -104,11 +115,7 @@ namespace PileDesign.Models.InputData
                                 ? PileBodyTypeOption.FirstOrDefault() ?? "場所打ち鉄筋コンクリート杭"
                                 : this.PileBodyType;
                             seg.PileSection.PileBodyType = safeType;
-
-                            if (!_suppressSectionReset)
-                            {
-                                seg.PileSection.ResetSectionProperties();
-                            }
+                            seg.PileSection.ResetSectionProperties();
                         }
                     }
                 }
@@ -448,16 +455,14 @@ namespace PileDesign.Models.InputData
         {
             try
             {
+                if (_suppressChildSync) return;
                 if (e.NewItems == null) return;
                 foreach (var item in e.NewItems)
                 {
                     if (item is PileBodySegment seg && seg.PileSection != null)
                     {
                         seg.PileSection.PileBodyType = this.PileBodyType;
-                        if (!_suppressSectionReset)
-                        {
-                            seg.PileSection.ResetSectionProperties();
-                        }
+                        seg.PileSection.ResetSectionProperties();
                     }
                 }
             }
@@ -953,11 +958,11 @@ namespace PileDesign.Models.InputData
             {
                 var copy = (PileBodyInput)this.MemberwiseClone();
                 copy.PileBodyType = this.PileBodyType;
-                copy._suppressSectionReset = true;
+                copy._suppressChildSync = true;
                 copy.PileBodySegments = new ObservableCollection<PileBodySegment>(
                     this.PileBodySegments.Select(segment => segment.DeepCopy())
                 );
-                copy._suppressSectionReset = false;
+                copy._suppressChildSync = false;
                 copy.PileTop = this.PileTop?.DeepCopy();
                 if (this.PileTipSettlementPresetParameterNames != null)
                     copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);

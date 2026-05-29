@@ -1,0 +1,62 @@
+{
+  "exampleName": "Example10",
+  "exampleDisplayName": "'19Ex10",
+  "schemaVersion": 1,
+  "capturedAt": "2026-05-19",
+  "options": {
+    "level1Steps": 4,
+    "level2Steps": 16,
+    "liquefactionMode": "Yes",
+    "useLineSearch": true,
+    "parallelism": 1
+  },
+  "cases": [
+    {
+      "caseKey": "L1-1.C1.Liq",
+      "level": 1,
+      "loadCaseNo": 1,
+      "combinationNo": 1,
+      "isLiquefaction": true,
+      "converged": true,
+      "totalIterations": 26,
+      "totalSteps": 4,
+      "bisectionRetries": 0,
+      "finalResidual": 3.0066017625943147E-25,
+      "apUx": 0.001531780737761609,
+      "apUy": -0.0007727973615685278,
+      "apUz": 3.023751516063133E-05,
+      "apRx": 7.259458161604999E-23,
+      "apRy": 9.449223487697291E-07,
+      "apRz": 4.829983509803298E-05,
+      "maxAbsHorizDisp": 0.0017156829516623334,
+      "maxAbsHorizSpringReaction": 88.85438725381046
+    },
+    {
+      "caseKey": "L2-1.C1.Liq",
+      "level": 2,
+      "loadCaseNo": 1,
+      "combinationNo": 1,
+      "isLiquefaction": true,
+      "converged": true,
+      "totalIterations": 344,
+      "totalSteps": 43,
+      "bisectionRetries": 1,
+      "finalResidual": 8.662155376287401E-07,
+      "apUx": 0.004989241708080599,
+      "apUy": -0.0025648261163216577,
+      "apUz": 5.8887175387153545E-05,
+      "apRx": -1.8628005962272155E-20,
+      "apRy": 1.84022423084853E-06,
+      "apRz": 0.00016030163227010206,
+      "maxAbsHorizDisp": 0.0056098900014721,
+      "maxAbsHorizSpringReaction": 166.50972959958514
+    }
+  ],
+  "summary": {
+    "totalCases": 2,
+    "convergedCases": 2,
+    "totalIterations": 370,
+    "totalSteps": 47,
+    "maxResidualOverAllCases": 8.662155376287401E-07
+  }
+}

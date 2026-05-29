@@ -359,6 +359,9 @@ namespace PileDesign.Output
             // 杭の図・諸元 (杭姿図 / 杭頭諸元 / 軸力制限) — 個別チェックされた項目のみ出力
             Time("PileDiagramsSection", () => AddPileDiagramsSection(mainPart, body));
 
+            // 要素分割関連 (要素分割杭姿図 / 水平地盤反力 / 土圧合力ばね) — 個別チェックされた項目のみ出力
+            Time("ElementDivisionSection", () => AddElementDivisionSection(mainPart, body));
+
             // 解析サマリーレポート (テキスト) — 水平解析完了済かつチェックされた場合のみ
             Time("AnalysisSummaryReportSection", () => AddAnalysisSummaryReportSection(body));
 
@@ -515,22 +518,6 @@ namespace PileDesign.Output
                     }
                 });
             }
-            if (mainWindowViewModel.IncludeLoadSettlementCurve)
-            {
-                Time("LoadSettlementCurve", () => {
-                    if (mainWindowViewModel.IsVerticalAnalysisDone)
-                    {
-                        AddPageBreak(body);
-                        AddHeader1(body, "荷重-沈下曲線", 2);
-                        AddSettlementGraph(mainPart, body);
-                    }
-                    else
-                    {
-                        AddText(body, "（鉛直解析が未実施のため、荷重-沈下曲線は省略されています）", "left");
-                    }
-                });
-            }
-
             if (mainWindowViewModel.IncludeGroupPileSettlement)
             {
                 Time("GroupPileSettlement (コンタ+杭沈下表)", () => {
@@ -1310,6 +1297,22 @@ namespace PileDesign.Output
                     if (i < contents.Count - 1)
                         paragraph.Append(new Run(new Break()));
                 }
+            }
+
+            // 空セル対策: Run が 1 つも追加されなかった場合、要求された fontSize の
+            // 空 Run を 1 つ追加する。これがないと Word が文書デフォルトフォントサイズ
+            // (通常 10.5pt) で段落を描画し、空セルを含む行だけ高さが大きくなる。
+            if (!paragraph.Elements<Run>().Any() && !paragraph.Elements<DocumentFormat.OpenXml.Math.OfficeMath>().Any())
+            {
+                var emptyRun = new Run();
+                var emptyRunProps = new RunProperties();
+                int half = (int)Math.Round(fontSize * 2);
+                emptyRunProps.Append(new FontSize { Val = half.ToString() });
+                emptyRunProps.Append(new FontSizeComplexScript { Val = half.ToString() });
+                emptyRunProps.Append(CreateDefaultRunFonts());
+                emptyRun.RunProperties = emptyRunProps;
+                emptyRun.Append(new Text(string.Empty) { Space = SpaceProcessingModeValues.Preserve });
+                paragraph.Append(emptyRun);
             }
 
             cell.Append(paragraph);
@@ -2723,10 +2726,32 @@ namespace PileDesign.Output
             AddPageBreak(body);
             AddHeader1(body, factored ? "水平解析 検定（低減後／NG項目）" : "水平解析 検定（低減前／NG項目）", 2);
 
+            // NG レポートは情報量が多いので、9pt フォントに対し +1pt のみの極小行間 (Exact 10pt) で詰める。
+            // SnapToGrid=false で文書グリッド吸着を無効化し Exact 指定を有効にする。
             var lines = text.Replace("\r\n", "\n").Split('\n');
             foreach (var line in lines)
             {
-                AddText(body, line, "left", 9);
+                var paragraph = new Paragraph();
+                var pPr = new ParagraphProperties();
+                pPr.Append(new SpacingBetweenLines
+                {
+                    Before = "0", After = "0",
+                    Line = "200", LineRule = LineSpacingRuleValues.Exact
+                });
+                pPr.Append(new SnapToGrid { Val = false });
+                pPr.Append(new Justification { Val = JustificationValues.Left });
+                paragraph.Append(pPr);
+
+                var run = new Run();
+                var rPr = new RunProperties();
+                rPr.Append(CreateDefaultRunFonts());
+                rPr.Append(new FontSize { Val = "18" }); // 9pt = 18 (twentieths)
+                rPr.Append(new FontSizeComplexScript { Val = "18" });
+                run.Append(rPr);
+                run.Append(new Text(line) { Space = SpaceProcessingModeValues.Preserve });
+                paragraph.Append(run);
+
+                body.Append(paragraph);
             }
         }
 

@@ -80,7 +80,7 @@ namespace PileDesign.Output
             CreateTableCell(["荷重名"], fontSize, "center"),
             CreateTableCell(["荷重", "角度", "[度]"], fontSize, "center"),
             CreateTableCell(["地盤", "非線形性"], fontSize, "center"),
-            CreateTableCell(["杭体", "非線形性"], fontSize, "center"),
+            CreateTableCell(["杭", "非線形性"], fontSize, "center"),
             CreateTableCell(["慣性力", "位置", "X座標", "[m]"], fontSize, "center"),
             CreateTableCell(["慣性力", "位置", "Y座標", "[m]"], fontSize, "center"),
             CreateTableCell(["慣性力", "位置", "Z", "[m]"], fontSize, "center"),
@@ -354,10 +354,14 @@ namespace PileDesign.Output
                     dataRow.Append(CreateTableCell([$"{groundMass.NL:N2}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.TauLonSigmaZPrime:N3}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.TauDonSigmaZPrime[i]:N3}"], fontSize, "right"));
-                    dataRow.Append(CreateTableCell([$"{groundMass.FL[i]:N2}"], fontSize, "right", bold: true));
-                    dataRow.Append(CreateTableCell([$"{groundMass.BetaL[i]:N2}"], fontSize, "right"));
-                    dataRow.Append(CreateTableCell([$"{groundMass.GammaCy[i]:N2}"], fontSize, "right"));
-                    dataRow.Append(CreateTableCell([$"{groundMass.SigmaGammaCyH[i]:N2}"], fontSize, "right"));
+                    // FL < 1.0 (液状化発生) の行は FL / βL / γcy / ΣγcyH を太字で強調。
+                    // FL ≥ 1.0 または FL=null の場合は通常表示。
+                    bool isLiquefying = groundMass.FL != null && groundMass.FL.Count > i
+                        && groundMass.FL[i].HasValue && groundMass.FL[i].Value < 1.0;
+                    dataRow.Append(CreateTableCell([$"{groundMass.FL[i]:N2}"], fontSize, "right", bold: isLiquefying));
+                    dataRow.Append(CreateTableCell([$"{groundMass.BetaL[i]:N2}"], fontSize, "right", bold: isLiquefying));
+                    dataRow.Append(CreateTableCell([$"{groundMass.GammaCy[i]:N2}"], fontSize, "right", bold: isLiquefying));
+                    dataRow.Append(CreateTableCell([$"{groundMass.SigmaGammaCyH[i]:N2}"], fontSize, "right", bold: isLiquefying));
 
                     table.Append(dataRow);
                 }
@@ -735,14 +739,14 @@ namespace PileDesign.Output
             //headerRow.Append(CreateTableCell("Y","[m]", fontSize, "center"));
             CreateTableCell(["VL", "[kN]"], fontSize, "center"),
             CreateTableCell(["VL<_add>", "[kN]"], fontSize, "center"),
-            CreateTableCell(["1-1", "[kN]"], fontSize, "center"),
-            CreateTableCell(["1-2", "[kN]"], fontSize, "center"),
-            CreateTableCell(["1-3", "[kN]"], fontSize, "center"),
-            CreateTableCell(["1-4", "[kN]"], fontSize, "center"),
-            CreateTableCell(["2-1", "[kN]"], fontSize, "center"),
-            CreateTableCell(["2-2", "[kN]"], fontSize, "center"),
-            CreateTableCell(["2-3", "[kN]"], fontSize, "center"),
-            CreateTableCell(["2-4", "[kN]"], fontSize, "center")
+            CreateTableCell(["L1-1", "[kN]"], fontSize, "center"),
+            CreateTableCell(["L1-2", "[kN]"], fontSize, "center"),
+            CreateTableCell(["L1-3", "[kN]"], fontSize, "center"),
+            CreateTableCell(["L1-4", "[kN]"], fontSize, "center"),
+            CreateTableCell(["L2-1", "[kN]"], fontSize, "center"),
+            CreateTableCell(["L2-2", "[kN]"], fontSize, "center"),
+            CreateTableCell(["L2-3", "[kN]"], fontSize, "center"),
+            CreateTableCell(["L2-4", "[kN]"], fontSize, "center")
             );
 
             table.Append(headerRow);

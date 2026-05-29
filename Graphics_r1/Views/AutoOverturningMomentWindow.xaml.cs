@@ -19,6 +19,7 @@ namespace PileDesign.Views
             InitializeComponent();
             viewModel = new AutoOverturningMomentViewModel(mainWindowViewModel);
             DataContext = viewModel;
+            this.Loaded += (_, _) => OkButton?.Focus();
         }
 
         private void OkButton_Click(object sender, RoutedEventArgs e)

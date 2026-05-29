@@ -162,6 +162,22 @@ namespace PileDesign.Services
                         segment.PileSection.ConcreteGsi = segDto.ConcreteGsi.Value;
                     if (segDto.ConcreteGamma.HasValue)
                         segment.PileSection.ConcreteGamma = segDto.ConcreteGamma.Value;
+                    if (!string.IsNullOrEmpty(segDto.HoopSize))
+                        segment.PileSection.HoopSize = segDto.HoopSize;
+                    if (segDto.HoopSpacing.HasValue)
+                        segment.PileSection.HoopSpacing = segDto.HoopSpacing.Value;
+                }
+
+                // キャプテンパイル工法設定の適用 (PCリング、絞り率、引張定着筋)
+                if (pileBodyDto.CaptainPile != null && pileBodyDto.PileTopType == "キャプテンパイル工法")
+                {
+                    ApplyCaptainPileSettings(pileBody, pileBodyDto.CaptainPile);
+                }
+
+                // キャプリングパイル工法設定の適用 (PCリング、引張定着筋)
+                if (pileBodyDto.CapringPile != null && pileBodyDto.PileTopType == "キャプリングパイル工法")
+                {
+                    ApplyCapringPileSettings(pileBody, pileBodyDto.CapringPile);
                 }
 
                 pileBodyList.Add(pileBody);
@@ -517,6 +533,167 @@ namespace PileDesign.Services
                 dir = dir.Parent;
             }
             return null;
+        }
+
+        /// <summary>
+        /// キャプテンパイル工法の設定を pileBody.PileTop.CaptainPile に適用する。
+        ///   - PCRingName: PCリング名 (例: "2400-N") → CaptainPile.PCRing と SelectedPCRingName を設定
+        ///   - Nu: 絞り率
+        ///   - HasTensionRebars: 引張定着筋有無
+        ///   - TensionRebarArrangement: "正方形配置" / "円形配置"
+        ///   - TensionRebarNumber: 本数
+        ///   - TensionRebarDia: 呼び径 (例: "D38", "D41")
+        ///   - TensionRebarGrade: 規格 (例: "SD390", "SD685")
+        ///   - TDorTB: 配置直径 / 配置辺長 (mm)
+        /// 設定後 CaptainPile.Update() で SetBasicProperties / MN-N インタラクションを再計算する。
+        /// </summary>
+        private static void ApplyCaptainPileSettings(PileBodyInput pileBody, CaptainPileDto dto)
+        {
+            try
+            {
+            var pileTop = pileBody.PileTop;
+            if (pileTop == null) return;
+
+            // CaptainPile 未生成なら作成 (PileCapFc/Ec をパイルキャップから取得)
+            pileTop.CaptainPile ??= new PileDesign.Models.CaptainPile(pileTop.PileCapFc, pileTop.PileCapEc);
+            var cp = pileTop.CaptainPile;
+
+            // PCリング選択 (PCRings リストから名前一致するものを採用)
+            if (!string.IsNullOrEmpty(dto.PCRingName) && cp.PCRings != null)
+            {
+                var target = cp.PCRings.FirstOrDefault(r => r.Name == dto.PCRingName);
+                if (target != null)
+                {
+                    cp.PCRing = target;
+                    cp.SelectedPCRingName = dto.PCRingName;
+                    cp.D = target.D;
+                }
+            }
+
+            // 絞り率
+            if (dto.Nu.HasValue) cp.Nu = dto.Nu.Value;
+
+            // 引張定着筋
+            if (cp.CTPTensionRebars != null)
+            {
+                cp.CTPTensionRebars.HasTensionRebars = dto.HasTensionRebars;
+                if (dto.HasTensionRebars)
+                {
+                    if (!string.IsNullOrEmpty(dto.TensionRebarArrangement))
+                    {
+                        bool isCircle = dto.TensionRebarArrangement == "円形配置";
+                        cp.CTPTensionRebars.IsCircleArrangement = isCircle;
+                        cp.CTPTensionRebars.IsSquareArrangement = !isCircle;
+                    }
+                    if (dto.TensionRebarNumber.HasValue)
+                    {
+                        if (cp.CTPTensionRebars.IsCircleArrangement)
+                            cp.CTPTensionRebars.SelectedBarNumberCircle = dto.TensionRebarNumber.Value;
+                        else
+                            cp.CTPTensionRebars.SelectedBarNumberSquare = dto.TensionRebarNumber.Value;
+                    }
+                    if (!string.IsNullOrEmpty(dto.TensionRebarDia))
+                        cp.CTPTensionRebars.SelectedTensionAnchorDia = dto.TensionRebarDia;
+                    if (!string.IsNullOrEmpty(dto.TensionRebarGrade))
+                        cp.CTPTensionRebars.SelectedTensionAnchorGrade = dto.TensionRebarGrade;
+                    if (dto.TDorTB.HasValue)
+                        cp.CTPTensionRebars.TDorTB = dto.TDorTB.Value;
+                }
+            }
+
+            // 再計算 (CTPConcrete 再構築 + MN-N インタラクション + θ-M 関係)
+            cp.Update();
+
+            // 諸元表示を更新
+            pileTop.SelectedPileTopSpecification = cp.GetCombinedSpecs();
+            }
+            catch (Exception ex)
+            {
+                // CaptainPile 設定の失敗は致命的でない — ユーザーが手動で再設定可能
+                System.Diagnostics.Debug.WriteLine(
+                    $"[PileExampleLoader.ApplyCaptainPileSettings] CaptainPile 設定中にエラー: {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// キャプリングパイル工法の設定を pileBody.PileTop.CapringPile に適用する。
+        ///   - PCRingName: PCリング名 (例: "800N" - CSV 表記、ハイフン無し)
+        ///   - HasTensionBars: 引張定着筋の有無
+        ///   - TensionBarName: 引張定着筋テーブル名
+        /// PileBodyInput.GetMThetaRelationship (line 558〜) の自動初期化ロジックを踏襲。
+        /// 失敗してもロード全体は継続する (CapringPile はその後ユーザーが手動で再設定可能)。
+        /// </summary>
+        private static void ApplyCapringPileSettings(PileBodyInput pileBody, CapringPileDto dto)
+        {
+            try
+            {
+                var pileTop = pileBody.PileTop;
+                if (pileTop == null) return;
+
+                // CapringPile を新規作成 (PileBodyInput.cs:558 のパターン)
+                var cp = new PileDesign.Models.CapringPile(pileTop.PileCapEc)
+                {
+                    PileBodyType = pileBody.PileBodyType,
+                    PileCapFc = pileTop.PileCapFc,
+                    PileCapEc = pileTop.PileCapEc,
+                };
+                cp.LoadPCRingOptions();
+                cp.LoadTensionBarOptions();
+
+                // 最上部杭区間から杭径取得
+                var topSec = pileBody.PileBodySegments?.FirstOrDefault()?.PileSection;
+                if (topSec != null && cp.PCRings != null && cp.PCRings.Count > 0)
+                {
+                    bool isSp = (pileBody.PileBodyType ?? "").Contains("鋼管杭");
+                    double dia = (isSp && topSec.PipeDia > 0) ? topSec.PipeDia : topSec.PileDiameter;
+
+                    // PCリング選択: 指定名 優先、なければ杭径から自動
+                    PileDesign.Models.PileLibrary.CapringPCRing? ring = null;
+                    if (!string.IsNullOrEmpty(dto.PCRingName))
+                    {
+                        ring = cp.PCRings.FirstOrDefault(r => r.Name == dto.PCRingName);
+                    }
+                    if (ring == null && dia > 0)
+                    {
+                        int targetSize = (int)Math.Ceiling(dia / 50.0) * 50;
+                        if (targetSize < 300) targetSize = 300;
+                        if (targetSize > 1200) targetSize = 1200;
+                        ring = cp.PCRings.FirstOrDefault(r => r.Name == $"{targetSize}N")
+                            ?? cp.PCRings.FirstOrDefault(r => (r.Name ?? "").EndsWith("N") && r.D >= dia)
+                            ?? cp.PCRings.FirstOrDefault();
+                    }
+                    if (ring != null)
+                    {
+                        cp.PCRing = ring;
+                        cp.D = ring.D;
+                        cp.SelectedPCRingName = ring.Name ?? "";
+                    }
+                    if (isSp)
+                    {
+                        cp.IsConcreteFilledSteelPipe = true;
+                        cp.SteelPipeWallThickness = topSec.PipeTs;
+                    }
+                }
+
+                // 引張定着筋
+                cp.HasTensionBars = dto.HasTensionBars;
+                if (dto.HasTensionBars && !string.IsNullOrEmpty(dto.TensionBarName)
+                    && cp.TensionBars != null && cp.TensionBars.Any(b => b.Name == dto.TensionBarName))
+                {
+                    cp.SelectedTensionBarName = dto.TensionBarName;
+                }
+
+                cp.Update();
+                pileTop.CapringPile = cp;
+                if (cp.PCRing != null)
+                    pileTop.SelectedPileTopSpecification = cp.GetCombinedSpecs();
+            }
+            catch (Exception ex)
+            {
+                // CapringPile 設定の失敗は致命的でない — ユーザーが手動で再設定可能
+                System.Diagnostics.Debug.WriteLine(
+                    $"[PileExampleLoader.ApplyCapringPileSettings] CapringPile 設定中にエラー: {ex.GetType().Name}: {ex.Message}");
+            }
         }
     }
 }

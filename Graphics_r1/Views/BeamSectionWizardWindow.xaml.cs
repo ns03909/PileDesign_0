@@ -34,6 +34,9 @@ namespace PileDesign.Views
 
             this.sections = sections;
 
+            // 初期フォーカスを OK ボタンへ (キーボード操作の目印)
+            this.Loaded += (_, _) => OkButton?.Focus();
+
             // 既存断面 (1-based 位置 = No) → 末尾に "(New)" 行
             var items = new List<SectionPickerItem>();
             for (int i = 0; i < sections.Count; i++)

@@ -279,6 +279,20 @@ namespace PileDesign.ViewModels
                     //try { DisplayTopSectionPipeDia = PileSection.PipeDia; } catch { DisplayTopSectionPipeDia = 0.0; }
                     //try { DisplayTopSectionPipeTs = PileSection.PipeTs; } catch { DisplayTopSectionPipeTs = 0.0; }
                 }
+                else if (string.Equals(PileBodyType, "場所打ち鉄筋コンクリート杭", StringComparison.Ordinal) && PileSection != null)
+                {
+                    // 場所打ち鉄筋コンクリート杭 (キャプテンパイル工法 等の半固定接合で使用)
+                    // 杭径は最上段の杭径をそのまま表示
+                    double baseDia = 0.0;
+                    try { baseDia = PileSection.PileDiameter; } catch { baseDia = 0.0; }
+                    PileTop.ConcreteOutDia = Math.Round(baseDia, 3);
+
+                    try { PileTop.MainBarCenterCover2 = PileSection.MainBarCenterCover; } catch { PileTop.MainBarCenterCover2 = 0; }
+                    PileTop.MainBarSize2 = string.Empty;
+                    PileTop.MainBarNum2 = 0;
+                    PileTop.MainBarFtr2 = 0;
+                    PileTop.MainBarSpec2 = "SD390";
+                }
                 else if (string.Equals(PileBodyType, "鋼管杭", StringComparison.Ordinal) && PileSection != null)
                 {
                     // 鋼管杭 + 鉄筋定着工法
@@ -328,7 +342,12 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void Undo()
         {
-            _undoManager.Undo();
+            // Redo時に現在のライブ状態を復元できるよう、Undo前に履歴へ追加
+            if (_undoManager.CurrentIndex == _undoManager.History.Count - 1)
+            {
+                _undoManager.SaveState(PileTop.DeepCopy());
+            }
+            _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is PileTop state)
             {
                 PileTop = state.DeepCopy();
@@ -338,7 +357,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void Redo()
         {
-            _undoManager.Redo();
+            _undoManager.RedoSnapshot();
             if (_undoManager.CurrentState is PileTop state)
             {
                 PileTop = state.DeepCopy();
@@ -1302,8 +1321,9 @@ namespace PileDesign.ViewModels
             {
                 return result;
             }
-            // 変換できない場合は例外をスローするか、適切な処理を行う
-            throw new ArgumentException("入力文字列に数字が含まれていません。");
+            // 変換できない場合は 0 を返す (引張定着筋未選択 / PC リング未選択時など、
+            // 空文字や数字を含まない文字列を受け取るケースに対応)
+            return 0;
         }
     }
 }

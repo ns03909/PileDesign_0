@@ -12,6 +12,9 @@ using System.Windows.Data;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Automation;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using PileDesign.Services;
 
 namespace PileDesign.Common
@@ -20,6 +23,15 @@ namespace PileDesign.Common
     {
         /// <summary>ペースト完了時に発火するイベント</summary>
         public event EventHandler PasteCompleted;
+
+        /// <summary>
+        /// 一括ペースト (塗り潰し / 複数セル) の書込ループ実行中だけ true。
+        /// モデル側で「1 件変更ごとに重い派生プロパティを同期再評価する」通知
+        /// (例: PileLayoutDataItem.Z 変更時の SoilPile 再評価) を抑制し、ペースト完了後の
+        /// 1 回の再評価・再生成 (多くはデバウンス) にまとめて O(N×列数) の劣化を防ぐためのヒント。
+        /// ペースト処理は UI スレッド上で逐次実行されるため static で問題ない。
+        /// </summary>
+        public static bool IsBulkEditing { get; private set; }
 
         public EnhancedDataGrid()
         {
@@ -126,7 +138,425 @@ namespace PileDesign.Common
                     return;
                 }
             }
+
+            bool ctrlOrAlt = (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt)) != ModifierKeys.None;
+            bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+
+            // Space: アクティブセル内の CheckBox / Button を起動 (Excel 風)。
+            // 編集中は通常のスペース入力に委ねる。テキストセル等で内部コントロールがない場合は素通し。
+            if (!ctrlOrAlt && !shift && e.Key == Key.Space && !IsEditing())
+            {
+                if (TryInvokeCurrentCellActionable())
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // 矢印キーでアクティブセル (CurrentCell) を移動 (Excel 風)。
+            //  - 編集中なら CommitEdit (バリデーション失敗時はその場に留まる)
+            //  - 読み取り専用や SelectionUnit=FullRow のグリッドでも一律にセル単位移動
+            //  - Shift+矢印 で範囲選択拡張
+            if (!ctrlOrAlt
+                && (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down))
+            {
+                if (IsEditing() && !TryCommitCurrentEdit())
+                {
+                    e.Handled = true;   // バリデーション失敗 → 移動せず編集を継続
+                    return;
+                }
+                if (TryNavigateCurrentCell(e.Key, shift))
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Enter: 編集確定 + 下に移動 (Excel)。最下行なら右列の最上行へ。Shift+Enter は逆方向。
+            if (!ctrlOrAlt && e.Key == Key.Enter)
+            {
+                if (IsEditing() && !TryCommitCurrentEdit())
+                {
+                    e.Handled = true;
+                    return;
+                }
+                if (TryNavigateExcelStyle(vertical: true, reverse: shift))
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Tab: 編集確定 + 右に移動 (Excel)。最右列なら次行の左端へ。Shift+Tab は逆方向。
+            if (!ctrlOrAlt && e.Key == Key.Tab)
+            {
+                if (IsEditing() && !TryCommitCurrentEdit())
+                {
+                    e.Handled = true;
+                    return;
+                }
+                if (TryNavigateExcelStyle(vertical: false, reverse: shift))
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Delete: 選択セルの値をクリア (Excel 風)。編集中は通常の文字削除に委ねる。
+            // クリアできるセルが無ければ素通しして既定動作 (行削除等) を妨げない。
+            if (!ctrlOrAlt && !shift && e.Key == Key.Delete && !IsEditing())
+            {
+                if (TryClearSelectedCells())
+                {
+                    PasteCompleted?.Invoke(this, EventArgs.Empty);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
             base.OnPreviewKeyDown(e);
+        }
+
+        /// <summary>
+        /// 未編集セルで文字キーを打ったとき、WPF 既定では編集モードへ遷移する際に
+        /// 既存値が select-all され 1 打目が消費されてしまう (1 打目が入力として残らない)。
+        /// ここで明示的に編集を開始し、打鍵文字を編集 TextBox に直接流し込むことで
+        /// 「1 打目から入力データとして受け付ける」(Excel 風の上書き入力) を実現する。
+        /// </summary>
+        protected override void OnPreviewTextInput(TextCompositionEventArgs e)
+        {
+            if (TryBeginEditWithFirstChar(e))
+            {
+                e.Handled = true;
+                return;
+            }
+            base.OnPreviewTextInput(e);
+        }
+
+        private bool TryBeginEditWithFirstChar(TextCompositionEventArgs e)
+        {
+            // 既に編集中なら通常入力 (TextBox 側の NumericInput フィルタ等) に委ねる
+            if (IsEditing()) return false;
+            if (string.IsNullOrEmpty(e.Text)) return false;
+
+            char ch = e.Text[0];
+            if (char.IsControl(ch)) return false;   // ESC / Backspace 等は対象外
+
+            if (CurrentCell.Column == null || CurrentCell.Item == null) return false;
+            if (IsReadOnly) return false;
+
+            // テキスト/バインド列のみ対象。CheckBox / ComboBox / Template 列は
+            // それぞれ独自の入力処理 (トグル・型先頭検索等) に任せる。
+            if (CurrentCell.Column is not DataGridBoundColumn col) return false;
+            if (col is DataGridCheckBoxColumn) return false;
+            if (col.IsReadOnly) return false;
+
+            if (!BeginEdit()) return false;
+
+            var cell = TryFindDataGridCell(CurrentCell);
+            var tb = cell != null ? FindVisualChild<TextBox>(cell) : null;
+            if (tb == null) return false;   // 編集要素が TextBox でない → 既定動作にフォールバック
+
+            // BeginEdit 直後は既存値が全選択されている。打鍵文字で置き換える (上書き入力)。
+            tb.Text = e.Text;
+            tb.CaretIndex = tb.Text.Length;
+            tb.Focus();
+            return true;
+        }
+
+        /// <summary>
+        /// 現在編集中のセルを確定する。バリデーション/コンバータエラーが発生した場合は
+        /// CommitEdit が false を返すので、その時点で false を返して呼び出し側に編集継続を指示する。
+        /// </summary>
+        private bool TryCommitCurrentEdit()
+        {
+            try
+            {
+                // セル単位 → 行単位 の順に commit (両方が編集状態に入っていることがあるため)
+                bool cellOk = CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
+                if (!cellOk) return false;
+                bool rowOk = CommitEdit(DataGridEditingUnit.Row, exitEditingMode: false);
+                return rowOk;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Excel ライクなナビゲーション (Enter=下方向 / Tab=右方向)。
+        ///  vertical=true  : 主軸=行方向 (Enter)。端に到達したら次列の先頭にラップ。
+        ///  vertical=false : 主軸=列方向 (Tab)。端に到達したら次行の先頭にラップ。
+        ///  reverse=true で Shift+Enter / Shift+Tab の逆方向。
+        /// </summary>
+        private bool TryNavigateExcelStyle(bool vertical, bool reverse)
+        {
+            if (Items == null || Items.Count == 0) return false;
+            var visibleCols = Columns.Where(c => c.Visibility == Visibility.Visible)
+                                     .OrderBy(c => c.DisplayIndex)
+                                     .ToList();
+            if (visibleCols.Count == 0) return false;
+
+            int rowIdx = 0;
+            int colPos = 0;
+            if (CurrentCell.Item != null && CurrentCell.Column != null)
+            {
+                rowIdx = Math.Max(0, Items.IndexOf(CurrentCell.Item));
+                int idx = visibleCols.FindIndex(c => c.DisplayIndex == CurrentCell.Column.DisplayIndex);
+                if (idx >= 0) colPos = idx;
+            }
+
+            int newRow = rowIdx;
+            int newCol = colPos;
+
+            if (vertical)
+            {
+                if (!reverse)
+                {
+                    // Enter: 下へ。最下行なら右列の最上行へ。
+                    if (rowIdx + 1 < Items.Count) newRow = rowIdx + 1;
+                    else if (colPos + 1 < visibleCols.Count) { newRow = 0; newCol = colPos + 1; }
+                    else return false; // 右下端: これ以上進めない
+                }
+                else
+                {
+                    // Shift+Enter: 上へ。最上行なら左列の最下行へ。
+                    if (rowIdx > 0) newRow = rowIdx - 1;
+                    else if (colPos > 0) { newRow = Items.Count - 1; newCol = colPos - 1; }
+                    else return false;
+                }
+            }
+            else
+            {
+                if (!reverse)
+                {
+                    // Tab: 右へ。最右列なら次行の左端へ。
+                    if (colPos + 1 < visibleCols.Count) newCol = colPos + 1;
+                    else if (rowIdx + 1 < Items.Count) { newCol = 0; newRow = rowIdx + 1; }
+                    else return false;
+                }
+                else
+                {
+                    // Shift+Tab: 左へ。最左列なら前行の右端へ。
+                    if (colPos > 0) newCol = colPos - 1;
+                    else if (rowIdx > 0) { newCol = visibleCols.Count - 1; newRow = rowIdx - 1; }
+                    else return false;
+                }
+            }
+
+            if (newRow == rowIdx && newCol == colPos) return false;
+
+            var newItem = Items[newRow];
+            var newColumn = visibleCols[newCol];
+            var newInfo = new DataGridCellInfo(newItem, newColumn);
+
+            UnselectAllCells();
+            CurrentCell = newInfo;
+            if (SelectionUnit != DataGridSelectionUnit.FullRow)
+            {
+                if (!SelectedCells.Contains(newInfo)) SelectedCells.Add(newInfo);
+            }
+            else
+            {
+                SelectedItem = newItem;
+            }
+
+            ScrollIntoView(newItem, newColumn);
+            var cell = TryFindDataGridCell(newInfo);
+            cell?.Focus();
+            return true;
+        }
+
+        /// <summary>
+        /// 現在のアクティブセル内に CheckBox / Button / ComboBox があれば起動する。
+        /// CheckBox: IsChecked をトグル (Three-state なら null→true→false→null の順)。
+        /// Button:   Click イベントを発火 (Command も実行される)。
+        /// ComboBox: ドロップダウンを開く (IsDropDownOpen = true)。
+        /// </summary>
+        private bool TryInvokeCurrentCellActionable()
+        {
+            if (CurrentCell.Column == null || CurrentCell.Item == null) return false;
+            var cell = TryFindDataGridCell(CurrentCell);
+            if (cell == null) return false;
+
+            var control = FindInteractiveChild(cell);
+            if (control == null) return false;
+            if (!control.IsEnabled) return false;
+
+            if (control is CheckBox cb)
+            {
+                // IsThreeState を考慮した順送り
+                if (cb.IsThreeState)
+                {
+                    cb.IsChecked = cb.IsChecked switch
+                    {
+                        null  => true,
+                        true  => false,
+                        false => null,
+                    };
+                }
+                else
+                {
+                    cb.IsChecked = !(cb.IsChecked ?? false);
+                }
+                return true;
+            }
+
+            if (control is Button btn)
+            {
+                // Automation 経由で Click を起動 (Command バインドも適切に発火する)
+                var peer = new ButtonAutomationPeer(btn);
+                if (peer.GetPattern(PatternInterface.Invoke) is IInvokeProvider invoker)
+                {
+                    invoker.Invoke();
+                    return true;
+                }
+            }
+
+            if (control is ComboBox combo)
+            {
+                // フォーカスを移しておかないと、ドロップダウン内のキー操作 (↑↓Enter で選択確定) が
+                // データグリッド側に渡って意図しない動きになることがある。
+                combo.Focus();
+                combo.IsDropDownOpen = true;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// セル内を Visual Tree でたどり、最初に見つかった IsEnabled な CheckBox / Button / ComboBox を返す。
+        /// 入れ子の StackPanel / Border などは透過してたどる。
+        /// </summary>
+        private static Control FindInteractiveChild(DependencyObject root)
+        {
+            if (root == null) return null;
+            int count = VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < count; i++)
+            {
+                var child = VisualTreeHelper.GetChild(root, i);
+                if (child is CheckBox cb) return cb;
+                if (child is Button btn) return btn;
+                if (child is ComboBox combo) return combo;
+                var deeper = FindInteractiveChild(child);
+                if (deeper != null) return deeper;
+            }
+            return null;
+        }
+
+        private bool IsEditing()
+        {
+            // CurrentCell が編集モードかどうか判定。DataGridCell.IsEditing で確認。
+            if (CurrentCell.Column == null || CurrentCell.Item == null) return false;
+            var cell = TryFindDataGridCell(CurrentCell);
+            return cell != null && cell.IsEditing;
+        }
+
+        /// <summary>
+        /// Items.Refresh() / ICollectionView.Refresh() でセルコンテナが再生成されると、
+        /// キーボードフォーカスが DataGrid の外へ外れ、矢印キーナビゲーション (OnPreviewKeyDown) が
+        /// 効かなくなる (マウスクリックで初めて復帰する)。ペースト直後に対象セルへフォーカスを戻し、
+        /// キーボード操作を継続できるようにする。コンテナ再生成はレイアウト完了後に確定するため
+        /// Dispatcher(Loaded) で遅延実行する。
+        /// </summary>
+        private void RestoreKeyboardFocusAfterRefresh(DataGridCellInfo anchor)
+        {
+            if (anchor.Item == null || anchor.Column == null) return;
+
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    CurrentCell = anchor;
+                    ScrollIntoView(anchor.Item, anchor.Column);
+                    var cell = TryFindDataGridCell(anchor);
+                    if (cell != null)
+                        cell.Focus();
+                    else if (!IsKeyboardFocusWithin)
+                        Focus();   // セルが見つからない場合はグリッド本体へフォーカスを戻す
+                }
+                catch { /* フォーカス復帰の失敗は致命的でないため無視 */ }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private DataGridCell TryFindDataGridCell(DataGridCellInfo info)
+        {
+            if (info.Column == null || info.Item == null) return null;
+            var row = ItemContainerGenerator.ContainerFromItem(info.Item) as DataGridRow;
+            if (row == null) return null;
+            var presenter = FindVisualChild<DataGridCellsPresenter>(row);
+            if (presenter == null) return null;
+            return presenter.ItemContainerGenerator.ContainerFromIndex(info.Column.DisplayIndex) as DataGridCell;
+        }
+
+        /// <summary>
+        /// CurrentCell を矢印キーの方向に 1 つ移動する。
+        /// 表示順 (DisplayIndex) と Items の順序で隣接セルを決定する。
+        /// shift=true の場合は SelectedCells に追加 (Excel 風範囲拡張)。
+        /// </summary>
+        private bool TryNavigateCurrentCell(Key key, bool shift)
+        {
+            if (Items == null || Items.Count == 0) return false;
+            if (Columns == null || Columns.Count == 0) return false;
+
+            // 現在のセル位置を取得 (なければ先頭セルを起点)
+            int rowIdx = -1;
+            int displayIdx = 0;
+            if (CurrentCell.Item != null && CurrentCell.Column != null)
+            {
+                rowIdx = Items.IndexOf(CurrentCell.Item);
+                displayIdx = CurrentCell.Column.DisplayIndex;
+            }
+            if (rowIdx < 0) rowIdx = 0;
+
+            // 表示可能カラムだけ抜き出し
+            var visibleCols = Columns.Where(c => c.Visibility == Visibility.Visible)
+                                     .OrderBy(c => c.DisplayIndex)
+                                     .ToList();
+            if (visibleCols.Count == 0) return false;
+
+            // 現在の表示列ポジションを索引化
+            int curColPos = visibleCols.FindIndex(c => c.DisplayIndex == displayIdx);
+            if (curColPos < 0) curColPos = 0;
+
+            int newRow = rowIdx;
+            int newColPos = curColPos;
+
+            switch (key)
+            {
+                case Key.Left:  newColPos = Math.Max(0, curColPos - 1); break;
+                case Key.Right: newColPos = Math.Min(visibleCols.Count - 1, curColPos + 1); break;
+                case Key.Up:    newRow = Math.Max(0, rowIdx - 1); break;
+                case Key.Down:  newRow = Math.Min(Items.Count - 1, rowIdx + 1); break;
+            }
+
+            // 移動なし (端) なら未処理
+            if (newRow == rowIdx && newColPos == curColPos) return false;
+
+            var newItem = Items[newRow];
+            var newCol = visibleCols[newColPos];
+            var newInfo = new DataGridCellInfo(newItem, newCol);
+
+            // 範囲拡張でない場合は単一選択にクリア
+            if (!shift) UnselectAllCells();
+
+            CurrentCell = newInfo;
+            if (SelectionUnit != DataGridSelectionUnit.FullRow)
+            {
+                if (!SelectedCells.Contains(newInfo)) SelectedCells.Add(newInfo);
+            }
+            else
+            {
+                SelectedItem = newItem;
+            }
+
+            ScrollIntoView(newItem, newCol);
+            // セル DOM が生成済みならフォーカスを移す (FullRow + Focusable=False のセルは無視される)
+            var newCell = TryFindDataGridCell(newInfo);
+            newCell?.Focus();
+            return true;
         }
 
         private bool TryCopyToClipboard()
@@ -510,32 +940,39 @@ namespace PileDesign.Common
                     }
                 }
 
-                // 2) 反映
+                // 2) 反映 (一括書込中は派生プロパティの重い同期再評価を抑制)
                 CommitEdit(DataGridEditingUnit.Cell, true);
                 CommitEdit(DataGridEditingUnit.Row, true);
 
-                for (int r = 0; r < pasteRowCount; r++)
+                IsBulkEditing = true;
+                try
                 {
-                    var item = Items[startRowIndex + r];
-                    for (int c = 0; c < pasteColCount; c++)
+                    for (int r = 0; r < pasteRowCount; r++)
                     {
-                        string cellText = c < rows[r].Length ? rows[r][c] : string.Empty;
+                        var item = Items[startRowIndex + r];
+                        for (int c = 0; c < pasteColCount; c++)
+                        {
+                            string cellText = c < rows[r].Length ? rows[r][c] : string.Empty;
 
-                        var col = displayOrderedCols[startDisplayIndex + c];
-                        TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind);
+                            var col = displayOrderedCols[startDisplayIndex + c];
+                            TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind);
 
-                        object? converted = ConvertValue(cellText, targetType, columnKind);
+                            object? converted = ConvertValue(cellText, targetType, columnKind);
 
-                        if (!TrySetValueByPath(item, path, converted))
-                            return FailFormat(r, c, "値の設定に失敗しました。");
+                            if (!TrySetValueByPath(item, path, converted))
+                                return FailFormat(r, c, "値の設定に失敗しました。");
+                        }
                     }
                 }
+                finally { IsBulkEditing = false; }
 
+                var focusAnchor = CurrentCell;
                 if (ItemsSource is ICollectionView view)
                     view.Refresh();
                 else
                     Items.Refresh();
 
+                RestoreKeyboardFocusAfterRefresh(focusAnchor);
                 return true;
             }
             catch (Exception ex)
@@ -588,20 +1025,27 @@ namespace PileDesign.Common
                     return false;
                 }
 
-                // 2) 反映
-                foreach (var (item, col) in uniqueTargets)
+                // 2) 反映 (一括書込中は派生プロパティの重い同期再評価を抑制)
+                IsBulkEditing = true;
+                try
                 {
-                    if (col.IsReadOnly) continue;
-                    if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind)) continue;
-                    object? converted = ConvertValue(cellText, targetType, columnKind);
-                    TrySetValueByPath(item, path, converted);
+                    foreach (var (item, col) in uniqueTargets)
+                    {
+                        if (col.IsReadOnly) continue;
+                        if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind)) continue;
+                        object? converted = ConvertValue(cellText, targetType, columnKind);
+                        TrySetValueByPath(item, path, converted);
+                    }
                 }
+                finally { IsBulkEditing = false; }
 
+                var focusAnchor = CurrentCell;
                 if (ItemsSource is ICollectionView view)
                     view.Refresh();
                 else
                     Items.Refresh();
 
+                RestoreKeyboardFocusAfterRefresh(focusAnchor);
                 return true;
             }
             catch (Exception ex)
@@ -609,6 +1053,79 @@ namespace PileDesign.Common
                 MessageService.Show(OwnerWindow, $"塗り潰しペースト中にエラーが発生しました。\n{ex.Message}", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 選択セルの値をクリアする (Excel の Delete 相当)。型に応じて null / "" / false / 0 を設定。
+        /// 読み取り専用列・ComboBox 列 (選択値) は対象外。塗り潰しペーストと同様に IsBulkEditing で
+        /// 重い派生通知を抑制し、完了後にフォーカスを戻す。クリアできるセルが 1 つも無ければ false。
+        /// </summary>
+        private bool TryClearSelectedCells()
+        {
+            try
+            {
+                if (SelectedCells == null || SelectedCells.Count == 0) return false;
+
+                var uniqueTargets = new HashSet<(object Item, DataGridColumn Column)>();
+                foreach (var sc in SelectedCells)
+                {
+                    if (sc.Item == null || sc.Column == null) continue;
+                    uniqueTargets.Add((sc.Item, sc.Column));
+                }
+                if (uniqueTargets.Count == 0) return false;
+
+                CommitEdit(DataGridEditingUnit.Cell, true);
+                CommitEdit(DataGridEditingUnit.Row, true);
+
+                bool anyCleared = false;
+                IsBulkEditing = true;
+                try
+                {
+                    foreach (var (item, col) in uniqueTargets)
+                    {
+                        if (col.IsReadOnly) continue;
+                        if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind)) continue;
+                        // ComboBox (選択値/選択アイテム) は null 化で不整合になりやすいためクリア対象外
+                        if (columnKind is ColumnKind.ComboSelectedItem or ColumnKind.ComboSelectedValue) continue;
+                        if (!TryNavigateForSet(item, path, out _, out _, out _)) continue;
+
+                        object? cleared = ClearedValueFor(targetType, columnKind);
+                        if (TrySetValueByPath(item, path, cleared)) anyCleared = true;
+                    }
+                }
+                finally { IsBulkEditing = false; }
+
+                if (!anyCleared) return false;
+
+                var focusAnchor = CurrentCell;
+                if (ItemsSource is ICollectionView view)
+                    view.Refresh();
+                else
+                    Items.Refresh();
+
+                RestoreKeyboardFocusAfterRefresh(focusAnchor);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageService.Show(OwnerWindow, $"セルのクリア中にエラーが発生しました。\n{ex.Message}", "クリアエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        /// <summary>Delete クリア時にセルへ設定する「空」値を型から決定する。</summary>
+        private static object? ClearedValueFor(Type targetType, ColumnKind kind)
+        {
+            var (underlying, isNullable) = UnwrapNullable(targetType);
+            if (kind == ColumnKind.CheckBox || underlying == typeof(bool))
+                return isNullable ? null : false;
+            if (underlying == typeof(string)) return string.Empty;
+            if (isNullable) return null;                       // Nullable<数値> は null へ
+            if (underlying == typeof(int)) return 0;
+            if (underlying == typeof(double)) return 0.0;
+            if (underlying == typeof(decimal)) return 0m;
+            if (underlying.IsValueType) return Activator.CreateInstance(underlying);
+            return null;
         }
 
         private Window? OwnerWindow => Window.GetWindow(this);

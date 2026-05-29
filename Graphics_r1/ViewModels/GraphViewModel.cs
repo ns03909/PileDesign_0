@@ -36,6 +36,15 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _graphErrorMessage, value);
         }
 
+        // 情報メッセージ (エラーではないが、ユーザーに伝えたい説明文。
+        // 例: 剛結杭で M-θ 描画なし、解析未実行ケース など)
+        private string _graphInfoMessage;
+        public string GraphInfoMessage
+        {
+            get => _graphInfoMessage;
+            set => SetProperty(ref _graphInfoMessage, value);
+        }
+
         // RequestCloseイベントの実装
         public event EventHandler RequestClose;
 
@@ -1201,6 +1210,7 @@ namespace PileDesign.ViewModels
             WpfPlot3.Plot.Clear();
 
             GraphErrorMessage = null;
+            GraphInfoMessage = null;
 
             // 限界状態オプションをデフォルトで非表示
             IsLimitStateOptionVisible = false;
@@ -2857,6 +2867,10 @@ namespace PileDesign.ViewModels
             wpfPlot.Plot.Clear();
             _graphHoverMap.Clear();
 
+            // 剛結扱いで M-θ 曲線が描画されない杭をユーザーに通知するためのセット
+            // (杭体タイプ × 杭頭タイプの組合せが剛結となるケース。例: 場所打ち鋼管コンクリート杭 + 鉄筋定着工法)
+            var rigidPileInfos = new HashSet<string>();
+
             foreach (var loadCase in selectedLoadCases)
             {
                 foreach (var loadCombination in selectedCombinations)
@@ -2969,6 +2983,17 @@ namespace PileDesign.ViewModels
                                     var marker = wpfPlot.Plot.Add.Marker(0, 0);
                                     marker.LegendText = rigidLegend;
                                     marker.MarkerSize = 0;
+                                    // 説明用に杭体/杭頭タイプ組合せを蓄積 (Window 下部にまとめて表示)
+                                    if (pileLayout.PileBodyNo > 0 && pileLayout.PileBodyNo <= InputModel.PileBodies.Count)
+                                    {
+                                        var pbody = InputModel.PileBodies[pileLayout.PileBodyNo - 1];
+                                        string combo = $"{pbody.PileBodyType} + {pbody.PileTopType}";
+                                        rigidPileInfos.Add($"杭 #{pileLayout.No} ({combo})");
+                                    }
+                                    else
+                                    {
+                                        rigidPileInfos.Add($"杭 #{pileLayout.No}");
+                                    }
                                     continue;
                                 }
 
@@ -3108,6 +3133,16 @@ namespace PileDesign.ViewModels
             ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "M-θ関係", "θ (rad)", "M (kN·m)", decimalPlacesX: 3);
             wpfPlot.Plot.ShowLegend();
             wpfPlot.Refresh();
+
+            // 剛結杭がある場合は説明文を出力
+            // (場所打ち鋼管コンクリート杭+鉄筋定着工法 等は剛結のため M-θ 関係が存在しない)
+            if (rigidPileInfos.Count > 0)
+            {
+                var sortedInfos = rigidPileInfos.OrderBy(s => s, StringComparer.Ordinal);
+                GraphInfoMessage =
+                    "杭頭が剛結扱いのため M-θ 関係が存在しない杭があります（M-θ 曲線は描画されません）: "
+                    + string.Join(", ", sortedInfos);
+            }
         }
 
         // 水平地盤反力度p-y関係描画（理論P-y曲線 + 最終ステップマーカー）
@@ -3898,6 +3933,12 @@ namespace PileDesign.ViewModels
                                 //   セグメント j の 上半分 [Z_top, Z_mid] = 節点 j の F_below (scaled)
                                 //   セグメント j の 下半分 [Z_mid, Z_btm] = 節点 j+1 の F_above (scaled)
                                 // 各半分の half-tributary area = L/2 × B でスケールして圧力/反力係数に
+                                //
+                                // 補足: ここで使う L = reactions[j].ZTop - reactions[j].ZBtm は
+                                // InputModel.ElementDivision.SoilPiles[].HorizontalSoilReactions が
+                                // 要素分割後の各 FEM 梁ごとに作られている (SoilPile.SetHorizontalSoilReaction)
+                                // ため、FEM 上の実梁長と等価。Canvas 側の SoilReactionUtil (Beam.Length 集計) と
+                                // 同じ「分割後の実長」ベースで計算している。
                                 for (int j = 0; j < reactions.Count; j++)
                                 {
                                     double zTop = reactions[j].ZTop;

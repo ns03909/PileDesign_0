@@ -240,7 +240,12 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void Undo()
         {
-            _undoManager.Undo();
+            // Redo時に現在のライブ状態を復元できるよう、Undo前に履歴へ追加
+            if (_undoManager.CurrentIndex == _undoManager.History.Count - 1)
+            {
+                _undoManager.SaveState(PileSection.DeepCopy());
+            }
+            _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is PileSection state)
             {
                 PileSection = state.DeepCopy();
@@ -250,7 +255,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void Redo()
         {
-            _undoManager.Redo();
+            _undoManager.RedoSnapshot();
             if (_undoManager.CurrentState is PileSection state)
             {
                 PileSection = state.DeepCopy();

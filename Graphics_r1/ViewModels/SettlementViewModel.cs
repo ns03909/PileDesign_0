@@ -385,6 +385,11 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void Undo()
         {
+            // Redo時に現在のライブ状態を復元できるよう、Undo前に履歴へ追加
+            if (_undoManager.CurrentIndex == _undoManager.History.Count - 1)
+            {
+                _undoManager.SaveState(new ObservableCollection<SoilPile>(SoilPiles.Select(p => p.DeepCopy())));
+            }
             _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is ObservableCollection<SoilPile> state)
             {
@@ -475,6 +480,10 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public async Task ExecuteAnalysis()
         {
+            // 入力データの整合性ゲート
+            if (!PileDesign.Models.CheckInputData.ValidateForAnalysis(InputModel, "単杭沈下解析"))
+                return;
+
             try
             {
                 // 砂時計カーソルを表示

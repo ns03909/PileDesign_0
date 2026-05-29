@@ -1,9 +1,12 @@
 using PileDesign.FEM;
 using PileDesign.Models;
 using PileDesign.Models.InputData;
+using Serilog;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
@@ -19,6 +22,14 @@ namespace PileDesign.Services
     public class FileOperationService
     {
         private readonly JsonSerializerOptions _jsonOptions;
+
+        /// <summary>
+        /// 保存前に ValidateFinite (NaN/∞ 検出) を実行するかどうか。
+        /// 既定 false: 6 秒以上のリフレクションコストが惜しく、また AllowNamedFloatingPointLiterals
+        /// により NaN/∞ もそのまま保存できるため事前チェック不要。
+        /// デバッグ目的で値を確認したい場合のみ true にする。
+        /// </summary>
+        public bool ValidateFiniteBeforeSave { get; set; } = false;
 
         public FileOperationService(JsonSerializerOptions jsonOptions)
         {
@@ -46,8 +57,10 @@ namespace PileDesign.Services
                     : null!
             };
 
-            string json = JsonSerializer.Serialize(projectData, _jsonOptions);
-            File.WriteAllText(filePath, json);
+            // string 中間生成を避けて UTF-8 バイト直書き
+            using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+            using var writer = new Utf8JsonWriter(stream);
+            JsonSerializer.Serialize(writer, projectData, _jsonOptions);
         }
 
         /// <summary>
@@ -59,7 +72,7 @@ namespace PileDesign.Services
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
 
-            ValidateFinite(inputModel);
+            var swTotal = Stopwatch.StartNew();
 
             var projectData = new ProjectData
             {
@@ -71,11 +84,44 @@ namespace PileDesign.Services
                     : null!
             };
 
-            await Task.Run(() =>
+            long tValidate = 0;
+            long tSerialize = 0;
+            long fileSize = 0;
+
+            // ValidateFinite はリフレクション全走査で 6 秒以上かかるため既定では実行しない。
+            // NumberHandling=AllowNamedFloatingPointLiterals が設定済みなので NaN/Infinity は
+            // "NaN" 等の文字列としてそのまま保存される (シリアライズが失敗しない)。
+            // 必要なときだけ ValidateFiniteBeforeSave=true で有効化する。
+            await Task.Run(async () =>
             {
-                string json = JsonSerializer.Serialize(projectData, _jsonOptions);
-                File.WriteAllText(filePath, json);
+                if (ValidateFiniteBeforeSave)
+                {
+                    var swVal = Stopwatch.StartNew();
+                    ValidateFinite(inputModel);
+                    swVal.Stop();
+                    tValidate = swVal.ElapsedMilliseconds;
+                }
+
+                var swSer = Stopwatch.StartNew();
+                const int bufferSize = 1024 * 1024;  // 1 MB バッファ (旧 80KB → I/O 回数削減)
+                await using var stream = new FileStream(
+                    filePath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    bufferSize,
+                    FileOptions.Asynchronous | FileOptions.SequentialScan);
+                await JsonSerializer.SerializeAsync(stream, projectData, _jsonOptions);
+                await stream.FlushAsync();
+                fileSize = stream.Length;
+                swSer.Stop();
+                tSerialize = swSer.ElapsedMilliseconds;
             });
+
+            swTotal.Stop();
+            Log.Information(
+                "[Save] total={Total}ms validate={Validate}ms serialize+write={Serialize}ms size={SizeKB:N0}KB path={Path}",
+                swTotal.ElapsedMilliseconds, tValidate, tSerialize, fileSize / 1024, System.IO.Path.GetFileName(filePath));
         }
 
         /// <summary>
@@ -93,6 +139,32 @@ namespace PileDesign.Services
                 throw new InvalidOperationException(
                     $"NaN または無限大の値が含まれているため保存できません。\n該当箇所: {path}\n値を確認してください。");
             }
+        }
+
+        // Type → 走査対象 PropertyInfo 配列のキャッシュ。
+        // 旧版は毎オブジェクトで GetProperties + GetCustomAttribute を呼び、
+        // 数万オブジェクト × 数十プロパティで数百万回のリフレクションが発生していた。
+        private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _validateCache = new();
+
+        private static PropertyInfo[] GetValidateProperties(Type t)
+        {
+            return _validateCache.GetOrAdd(t, type =>
+            {
+                var list = new List<PropertyInfo>();
+                foreach (var p in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    if (p.GetIndexParameters().Length > 0) continue;
+                    if (p.GetCustomAttribute<JsonIgnoreAttribute>() != null) continue;
+                    var pt = p.PropertyType;
+                    // double / double? / 参照型 (PileDesign 名前空間に再帰可能) のみ対象
+                    bool keep =
+                        pt == typeof(double) ||
+                        pt == typeof(double?) ||
+                        (!pt.IsValueType && p.CanRead);
+                    if (keep) list.Add(p);
+                }
+                return list.ToArray();
+            });
         }
 
         private static string? FindNonFiniteDouble(object root, string rootName)
@@ -127,12 +199,8 @@ namespace PileDesign.Services
                 var ns = t.Namespace ?? "";
                 if (!ns.StartsWith("PileDesign", StringComparison.Ordinal)) return null;
 
-                foreach (var p in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                foreach (var p in GetValidateProperties(t))
                 {
-                    if (p.GetIndexParameters().Length > 0) continue;
-                    if (p.GetCustomAttribute<JsonIgnoreAttribute>() != null) continue;
-
-                    var childPath = $"{path}.{p.Name}";
                     var pt = p.PropertyType;
 
                     if (pt == typeof(double))
@@ -146,20 +214,21 @@ namespace PileDesign.Services
                         }
                         catch { continue; }
                         if (!double.IsFinite(v))
-                            return $"{childPath} = {FormatNonFinite(v)}";
+                            return $"{path}.{p.Name} = {FormatNonFinite(v)}";
                     }
                     else if (pt == typeof(double?))
                     {
                         double? v;
                         try { v = (double?)p.GetValue(obj); } catch { continue; }
                         if (v.HasValue && !double.IsFinite(v.Value))
-                            return $"{childPath} = {FormatNonFinite(v.Value)}";
+                            return $"{path}.{p.Name} = {FormatNonFinite(v.Value)}";
                     }
-                    else if (!pt.IsValueType && p.CanRead)
+                    else
                     {
+                        // 参照型 → 再帰
                         object? child;
                         try { child = p.GetValue(obj); } catch { continue; }
-                        var r = Recurse(child, childPath);
+                        var r = Recurse(child, $"{path}.{p.Name}");
                         if (r != null) return r;
                     }
                 }

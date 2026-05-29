@@ -31,6 +31,7 @@ namespace PileDesign.ViewModels
             ExampleItems.Add(new ExampleItem("設計例集3.2", Example3_2Command));
             ExampleItems.Add(new ExampleItem("設計例集3.3", Example3_3Command));
             ExampleItems.Add(new ExampleItem("設計例集3.4", Example3_4Command));
+            ExampleItems.Add(new ExampleItem("設計例集3.8", Example3_8Command));
             ExampleItems.Add(new ExampleItem("関東支部5.5", ExampleK5_5Command));
             ExampleItems.Add(new ExampleItem("関東支部7章", ExampleK7Command));
             ExampleItems.Add(new ExampleItem("関東支部8章", ExampleK8Command));
@@ -133,6 +134,13 @@ namespace PileDesign.ViewModels
         private void Example3_4()
         {
             LoadExampleFromJson("Example3_4", "設計例集3.4");
+        }
+
+        // 設計例集3.8 (代表地盤 = 地盤1)
+        [RelayCommand]
+        private void Example3_8()
+        {
+            LoadExampleFromJson("Example3_8_1", "設計例集3.8");
         }
 
         // 関東支部5.5

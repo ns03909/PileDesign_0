@@ -13,18 +13,17 @@ namespace PileDesign.Models
     // CaptainPileクラス
     public class CaptainPile : BaseModel
     {
-        // 追加: 計算結果のメモ化（epsilon0/curvature を丸めたキー）
-        private readonly ConcurrentDictionary<long, (double N, double M)> _forceMomentCache = new();
+        // 計算結果のメモ化 (epsilon0/curvature を丸めたタプルをキー)
+        // 注: 以前は long(BitConverter.DoubleToInt64Bits(a) ^ (b<<1)) で XOR ハッシュキーを使っていたが、
+        //     異なる (ε₀, φ) ペアが同一キーに衝突し MN 曲線がノコギリ状に乱れる原因となっていた。
+        //     タプル (a, b) をキーにすることで衝突を完全に排除する。
+        private readonly ConcurrentDictionary<(long, long), (double N, double M)> _forceMomentCache = new();
 
-        private static long MakeKey(double epsilon0, double curvature, int roundDigits = 9)
+        private static (long, long) MakeKey(double epsilon0, double curvature, int roundDigits = 9)
         {
-            // 丸めてビット列からキー生成（簡易）
             long a = BitConverter.DoubleToInt64Bits(Math.Round(epsilon0, roundDigits));
             long b = BitConverter.DoubleToInt64Bits(Math.Round(curvature, roundDigits));
-            unchecked
-            {
-                return a ^ (b << 1);
-            }
+            return (a, b);
         }
 
         // Cached wrapper: 既存の GetForceAndMoment(epsilon0, curvature) を内部で呼ぶ
@@ -33,7 +32,7 @@ namespace PileDesign.Models
             var key = MakeKey(epsilon0, curvature);
             return _forceMomentCache.GetOrAdd(key, _ =>
             {
-                var res = GetForceAndMoment(epsilon0, curvature); // 既存の重い実計算（N,M,epsilon0,curvature）を呼ぶ
+                var res = GetForceAndMoment(epsilon0, curvature);
                 return (res.Item1, res.Item2);
             });
         }
@@ -396,6 +395,7 @@ namespace PileDesign.Models
 
                 combined.Add(new PileLibrary.Spec("引張定着筋", "", $"{barNum}-{CTPTensionRebars.SelectedTensionAnchorDia ?? ""}", ""));
                 combined.Add(new PileLibrary.Spec("引張定着筋規格", "", CTPTensionRebars.SelectedTensionAnchorGrade ?? "", ""));
+                combined.Add(new PileLibrary.Spec("引張定着筋断面積", "Ag", $"{CTPTensionRebars.Ag:N0}", "mm²"));
                 if (!string.IsNullOrEmpty(arrangement))
                     combined.Add(new PileLibrary.Spec("引張定着筋配置", "", arrangement, ""));
                 combined.Add(new PileLibrary.Spec(posLabel, "", $"{CTPTensionRebars.TDorTB:N0}", "mm"));

@@ -1,0 +1,43 @@
+{
+  "displayName": "設計例集3.8_地盤3",
+  "groundRef": "設計例集3.8_地盤3",
+  "groundTopAltitude": 0,
+  "groundWaterGLDepth": -35.0,
+  "stressGLDepth": 0.0,
+  "groundAcceleration1": 2.0,
+  "groundLayers": [
+    { "no": 1, "bottomGLDepth":  -6.000, "layerThickness": 6.000, "bottomAltitude":  -6.000, "name": "F",   "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue":  4.0, "cohesive":   0.0, "vs": 150.0, "es":  4900.0, "isPositiveCircumResistance": false, "isNegativeCircumResistance": false },
+    { "no": 2, "bottomGLDepth": -10.250, "layerThickness": 4.250, "bottomAltitude": -10.250, "name": "Ac1", "granularityClass": "粘性土", "poissonsRatio": 0.4, "density": 16.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue":  3.0, "cohesive":  15.0, "vs": 140.0, "es":  1650.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
+    { "no": 3, "bottomGLDepth": -12.750, "layerThickness": 2.500, "bottomAltitude": -12.750, "name": "Asg", "granularityClass": "礫質土", "poissonsRatio": 0.3, "density": 19.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue":  8.0, "cohesive":   0.0, "vs": 220.0, "es": 14700.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
+    { "no": 4, "bottomGLDepth": -15.250, "layerThickness": 2.500, "bottomAltitude": -15.250, "name": "Ds1", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 27.0, "cohesive":   0.0, "vs": 280.0, "es": 22500.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
+    { "no": 5, "bottomGLDepth": -19.000, "layerThickness": 3.750, "bottomAltitude": -19.000, "name": "Ds2", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 33.0, "cohesive":   0.0, "vs": 320.0, "es": 28400.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
+    { "no": 6, "bottomGLDepth": -20.500, "layerThickness": 1.500, "bottomAltitude": -20.500, "name": "Dc1", "granularityClass": "粘性土", "poissonsRatio": 0.4, "density": 17.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 35.0, "cohesive": 525.0, "vs": 310.0, "es": 29500.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
+    { "no": 7, "bottomGLDepth": -25.500, "layerThickness": 5.000, "bottomAltitude": -25.500, "name": "Ds3", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 19.0, "ageCategory": "洪積層", "isEngineeringBedrock": true,  "nValue": 53.0, "cohesive":   0.0, "vs": 410.0, "es": 50400.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  }
+  ],
+  "groundMassesData": [
+    { "glDepth":  -2.5, "h": 1.0, "nValue":  4.0, "fc": 30.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth":  -3.5, "h": 1.0, "nValue":  4.0, "fc": 30.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth":  -4.5, "h": 1.0, "nValue":  4.0, "fc": 30.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth":  -5.5, "h": 1.0, "nValue":  4.0, "fc": 30.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth":  -6.5, "h": 1.0, "nValue":  4.0, "fc": 70.0, "density": 16.0, "vs0": 140.0 },
+    { "glDepth":  -7.5, "h": 1.0, "nValue":  4.0, "fc": 70.0, "density": 16.0, "vs0": 140.0 },
+    { "glDepth":  -8.5, "h": 1.0, "nValue":  2.0, "fc": 70.0, "density": 16.0, "vs0": 140.0 },
+    { "glDepth":  -9.5, "h": 1.0, "nValue":  2.0, "fc": 70.0, "density": 16.0, "vs0": 140.0 },
+    { "glDepth": -10.5, "h": 1.0, "nValue":  2.0, "fc": 20.0, "density": 19.0, "vs0": 220.0 },
+    { "glDepth": -11.5, "h": 1.0, "nValue":  2.0, "fc": 20.0, "density": 19.0, "vs0": 220.0 },
+    { "glDepth": -12.5, "h": 1.0, "nValue": 20.0, "fc": 20.0, "density": 19.0, "vs0": 220.0 },
+    { "glDepth": -13.5, "h": 1.0, "nValue": 20.0, "fc": 30.0, "density": 18.0, "vs0": 280.0 },
+    { "glDepth": -14.5, "h": 1.0, "nValue": 30.0, "fc": 30.0, "density": 18.0, "vs0": 280.0 },
+    { "glDepth": -15.5, "h": 1.0, "nValue": 30.0, "fc": 30.0, "density": 18.0, "vs0": 320.0 },
+    { "glDepth": -16.5, "h": 1.0, "nValue": 30.0, "fc": 30.0, "density": 18.0, "vs0": 320.0 },
+    { "glDepth": -17.5, "h": 1.0, "nValue": 30.0, "fc": 30.0, "density": 18.0, "vs0": 320.0 },
+    { "glDepth": -18.5, "h": 1.0, "nValue": 40.0, "fc": 30.0, "density": 18.0, "vs0": 320.0 },
+    { "glDepth": -19.5, "h": 1.0, "nValue": 30.0, "fc": 70.0, "density": 17.0, "vs0": 310.0 },
+    { "glDepth": -20.5, "h": 1.0, "nValue": 40.0, "fc": 70.0, "density": 17.0, "vs0": 310.0 },
+    { "glDepth": -21.5, "h": 1.0, "nValue": 40.0, "fc": 10.0, "density": 19.0, "vs0": 410.0 },
+    { "glDepth": -22.5, "h": 1.0, "nValue": 60.0, "fc": 10.0, "density": 19.0, "vs0": 410.0 },
+    { "glDepth": -23.5, "h": 1.0, "nValue": 60.0, "fc": 10.0, "density": 19.0, "vs0": 410.0 },
+    { "glDepth": -24.5, "h": 1.0, "nValue": 60.0, "fc": 10.0, "density": 19.0, "vs0": 410.0 },
+    { "glDepth": -25.5, "h": 1.0, "nValue": 60.0, "fc": 10.0, "density": 19.0, "vs0": 410.0 }
+  ]
+}

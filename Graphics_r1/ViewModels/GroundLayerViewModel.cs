@@ -204,6 +204,12 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void Undo()
         {
+            // Redo時に現在のライブ状態を復元できるよう、Undo前に履歴へ追加
+            // (PushState は「編集前」状態を積むパターンのためライブ状態が履歴に無い)
+            if (_undoManager.CurrentIndex == _undoManager.History.Count - 1)
+            {
+                _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
+            }
             _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is IEnumerable<GroundInput> state)
             {
@@ -565,6 +571,47 @@ namespace PileDesign.ViewModels
                 return;
             }
 
+            // 杭配置からの参照チェック (使用中なら削除を拒否)
+            var referencingPiles = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?
+                .Where(p => p != null && p.GroundNo == GroundNo)
+                .Select(p => p.PileNo)
+                .OrderBy(no => no)
+                .ToList();
+            if (referencingPiles != null && referencingPiles.Count > 0)
+            {
+                string list = string.Join(", ", referencingPiles.Take(20).Select(n => $"#{n}"));
+                if (referencingPiles.Count > 20) list += $" ほか {referencingPiles.Count - 20} 件";
+                MessageService.Show(
+                    $"地盤番号 {GroundNo} は杭配置 {list} が参照中のため削除できません。\n" +
+                    $"先に杭配置側で地盤番号を別の値に変更してから削除してください。",
+                    "削除不可",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            // より大きい地盤番号を参照している PileLayoutItem は、削除後にインデックスが
+            // 1 つずれて意味が変わる (旧 #3 → 新 #2)。アラートで通知し、自動リナンバリングする
+            // か削除中止かをユーザーに選択させる。
+            var shiftingPiles = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?
+                .Where(p => p != null && p.GroundNo > GroundNo)
+                .Select(p => p.PileNo)
+                .OrderBy(no => no)
+                .ToList();
+            if (shiftingPiles != null && shiftingPiles.Count > 0)
+            {
+                string list = string.Join(", ", shiftingPiles.Take(20).Select(n => $"#{n}"));
+                if (shiftingPiles.Count > 20) list += $" ほか {shiftingPiles.Count - 20} 件";
+                var shiftResult = MessageService.Show(
+                    $"地盤番号 {GroundNo} を削除すると、より大きい地盤番号を参照している杭配置 {list} の番号が 1 つずれます。\n\n" +
+                    $"・OK: 該当する杭配置の地盤番号を自動的に 1 つ下げて削除します\n" +
+                    $"・キャンセル: 削除を中止します",
+                    "番号シフトの確認",
+                    MessageBoxButton.OKCancel,
+                    MessageBoxImage.Warning);
+                if (shiftResult != MessageBoxResult.OK) return;
+            }
+
             // 確認メッセージ
             var result = MessageService.Show(
                 $"地盤番号 {GroundNo} を削除しますか？\n元に戻せません。",
@@ -576,6 +623,17 @@ namespace PileDesign.ViewModels
             {
                 // 変更前の状態を保存
                 _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
+
+                // 後続の GroundNo を持つ PileLayoutItem を 1 つ下げる (リナンバリング)
+                var liveItems = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems;
+                if (liveItems != null)
+                {
+                    foreach (var p in liveItems)
+                    {
+                        if (p != null && p.GroundNo > GroundNo)
+                            p.GroundNo -= 1;
+                    }
+                }
 
                 GroundsInput.RemoveAt(index);
                 UpdateGroundsCountPlusOneList();
@@ -732,6 +790,11 @@ namespace PileDesign.ViewModels
                     scatter.LegendText = label;
                     scatter.MarkerSize = 5;
                 }
+            }
+            else if (GroundInput.IsGroundDisplacementIgnored)
+            {
+                // 「考慮しない」モード: 地盤変位は全層 0 として扱うため、グラフには何も描画しない
+                // (空のグラフを表示。凡例も非表示)
             }
             else if (GroundInput.GroundLayers.Count != 0)
             {
@@ -2536,9 +2599,21 @@ namespace PileDesign.ViewModels
                 {
                     if (groundMassData.IsLiquefactionLayer)
                     {
-                        groundMassData.GammaCy[levelIndex]
-                            = Liquefaction.CalculateGammaCy(
-                                groundMassData.NL.GetValueOrDefault(), groundMassData.TauDonSigmaZPrime[levelIndex].GetValueOrDefault());
+                        // 基礎指針 2019: FL ≥ 1.0 (液状化に至らない) のときは γcy = 0
+                        // テーブル (Na, τd/σz') からの読取りは「液状化発生時 (FL<1)」の規定。
+                        double? fl = groundMassData.FL != null && groundMassData.FL.Count > levelIndex
+                            ? groundMassData.FL[levelIndex]
+                            : null;
+                        if (fl.HasValue && fl.Value >= 1.0)
+                        {
+                            groundMassData.GammaCy[levelIndex] = 0.0;
+                        }
+                        else
+                        {
+                            groundMassData.GammaCy[levelIndex]
+                                = Liquefaction.CalculateGammaCy(
+                                    groundMassData.NL.GetValueOrDefault(), groundMassData.TauDonSigmaZPrime[levelIndex].GetValueOrDefault());
+                        }
                     }
                     else
                     {
@@ -2579,7 +2654,19 @@ namespace PileDesign.ViewModels
                 {
                     if (groundMassData.IsLiquefactionLayer)
                     {
-                        groundMassData.BetaL[levelIndex] = Liquefaction.CalculateBetaL(groundMassData.GLDepth, groundMassData.NL.GetValueOrDefault());
+                        // 基礎指針 2019: FL ≥ 1.0 (液状化に至らない) のときは βL = 1.0 (低減なし)
+                        // テーブル (Na, z) からの読取りは「液状化発生時 (FL<1)」の規定。
+                        double? fl = groundMassData.FL != null && groundMassData.FL.Count > levelIndex
+                            ? groundMassData.FL[levelIndex]
+                            : null;
+                        if (fl.HasValue && fl.Value >= 1.0)
+                        {
+                            groundMassData.BetaL[levelIndex] = 1.0;
+                        }
+                        else
+                        {
+                            groundMassData.BetaL[levelIndex] = Liquefaction.CalculateBetaL(groundMassData.GLDepth, groundMassData.NL.GetValueOrDefault());
+                        }
                     }
                     else
                     {
@@ -3076,9 +3163,70 @@ namespace PileDesign.ViewModels
                     // 任意入力モードON時に「任意地盤変位」タブを前面に表示
                     if (!value)
                         ActivateCustomDispTab?.Invoke();
+                    // 任意入力モード時のみタブ表示
+                    SetCustomDispTabVisibility?.Invoke(!value);
                 }
             }
         }
+
+        /// <summary>
+        /// 「基礎指針'19 4.5自動計算」ラジオボタン用プロパティ。
+        /// 3 つの地盤変位モード (自動計算 / 任意入力 / 考慮しない) を排他制御するため、
+        /// 「任意入力 OFF かつ 考慮しない OFF」の場合に自動計算モードとなる。
+        /// </summary>
+        public bool IsAutoDisplacementMode
+        {
+            get => !(GroundInput?.CustomDisplacementProfile?.IsEnabled ?? false)
+                && !(GroundInput?.IsGroundDisplacementIgnored ?? false);
+            set
+            {
+                if (GroundInput == null) return;
+                if (value)
+                {
+                    // 自動計算を選択 → 他の 2 モードを OFF
+                    if (GroundInput.CustomDisplacementProfile != null)
+                        GroundInput.CustomDisplacementProfile.IsEnabled = false;
+                    GroundInput.IsGroundDisplacementIgnored = false;
+                }
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsCustomDisplacementDisabled));
+                OnPropertyChanged(nameof(IsGroundDisplacementIgnoredProxy));
+                ScheduleUpdate();
+                // 自動計算モードでは任意地盤変位タブを非表示
+                SetCustomDispTabVisibility?.Invoke(false);
+            }
+        }
+
+        /// <summary>
+        /// 「考慮しない」ラジオボタンの ON/OFF。
+        /// ON 時は他のモードを OFF にし、グラフ描画と水平解析で地盤変位を 0 として扱う。
+        /// (XAML からは直接 GroundInput.IsGroundDisplacementIgnored を Two-way 連動するが、
+        ///  排他制御の副作用を起こすための proxy として用意。)
+        /// </summary>
+        public bool IsGroundDisplacementIgnoredProxy
+        {
+            get => GroundInput?.IsGroundDisplacementIgnored ?? false;
+            set
+            {
+                if (GroundInput == null) return;
+                GroundInput.IsGroundDisplacementIgnored = value;
+                if (value)
+                {
+                    if (GroundInput.CustomDisplacementProfile != null)
+                        GroundInput.CustomDisplacementProfile.IsEnabled = false;
+                }
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsCustomDisplacementDisabled));
+                OnPropertyChanged(nameof(IsAutoDisplacementMode));
+                ScheduleUpdate();
+                // 考慮しないモードでは任意地盤変位タブを非表示
+                SetCustomDispTabVisibility?.Invoke(false);
+            }
+        }
+
+        /// <summary>任意地盤変位タブの表示/非表示を切り替えるコールバック (Window から設定)。
+        /// 任意入力モードのときのみタブを表示する。</summary>
+        public Action<bool> SetCustomDispTabVisibility { get; set; }
 
         /// <summary>任意地盤変位タブを前面に表示するコールバック（Windowから設定）</summary>
         public Action ActivateCustomDispTab { get; set; }

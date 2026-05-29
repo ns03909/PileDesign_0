@@ -27,13 +27,18 @@ namespace PileDesign.ViewModels
         PropertyInputType inputType = PropertyInputType.ReadOnly,
         Action<PropertyPanelItem, string>? commitAction = null,
         IReadOnlyList<string>? options = null,
-        string nameColor = null) : INotifyPropertyChanged
+        string nameColor = null,
+        string description = null) : INotifyPropertyChanged
     {
         public string Name { get; } = name;
         public string Unit { get; } = unit;
         public string NameColor { get; } = nameColor;
         public PropertyInputType InputType { get; } = inputType;
         public IReadOnlyList<string>? Options { get; } = options;
+
+        /// <summary>項目ホバー時にツールチップとして表示する概要 (任意)。空ならツールチップなし。</summary>
+        public string Description { get; } = description;
+        public bool HasDescription => !string.IsNullOrEmpty(Description);
 
         /// <summary>Unit が非空かを返す (XAML の Unit ラベル可視性制御に使用)</summary>
         public bool HasUnit => !string.IsNullOrEmpty(Unit);
@@ -414,11 +419,13 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("杭体No", $"{pile.PileBodyNo}", "",
                 PropertyInputType.ComboBox,
                 MakeIntCommit(() => pile.PileBodyNo, v => pile.PileBodyNo = v),
-                pileBodyOptions));
+                pileBodyOptions,
+                description: CurrentInputModel.GetPileBodySummary(pile.PileBodyNo)));
             SelectedItemProperties.Add(new("地盤No", $"{pile.GroundNo}", "",
                 PropertyInputType.ComboBox,
                 MakeIntCommit(() => pile.GroundNo, v => pile.GroundNo = v),
-                groundOptions));
+                groundOptions,
+                description: CurrentInputModel.GetGroundSummary(pile.GroundNo)));
 
             var pileLen = CalcPileLength(pile);
             if (pileLen.HasValue)
@@ -597,6 +604,12 @@ namespace PileDesign.ViewModels
 
             // 杭体No（ComboBox: 同一値なら選択可、様々なら空欄）
             var commonPileBodyNo = piles.Select(p => p.PileBodyNo).Distinct().ToList();
+            // 同一値ならその杭体のサマリーをツールチップに、混在なら使用中の杭体 No 一覧を簡潔に
+            string pileBodyDesc;
+            if (commonPileBodyNo.Count == 1)
+                pileBodyDesc = CurrentInputModel.GetPileBodySummary(commonPileBodyNo[0]);
+            else
+                pileBodyDesc = $"選択杭で混在: 杭体 No.{string.Join(", No.", commonPileBodyNo.OrderBy(n => n))}";
             SelectedItemProperties.Add(new("杭体No",
                 commonPileBodyNo.Count == 1 ? commonPileBodyNo[0].ToString() : "",
                 "", PropertyInputType.ComboBox,
@@ -607,10 +620,16 @@ namespace PileDesign.ViewModels
                     SaveUndoState();
                     foreach (var p in piles) p.PileBodyNo = newVal;
                     RequestUpdateWindow();
-                }, pileBodyOptions));
+                }, pileBodyOptions,
+                description: pileBodyDesc));
 
             // 地盤No（ComboBox）
             var commonGroundNo = piles.Select(p => p.GroundNo).Distinct().ToList();
+            string groundDesc;
+            if (commonGroundNo.Count == 1)
+                groundDesc = CurrentInputModel.GetGroundSummary(commonGroundNo[0]);
+            else
+                groundDesc = $"選択杭で混在: 地盤 No.{string.Join(", No.", commonGroundNo.OrderBy(n => n))}";
             SelectedItemProperties.Add(new("地盤No",
                 commonGroundNo.Count == 1 ? commonGroundNo[0].ToString() : "",
                 "", PropertyInputType.ComboBox,
@@ -621,7 +640,8 @@ namespace PileDesign.ViewModels
                     SaveUndoState();
                     foreach (var p in piles) p.GroundNo = newVal;
                     RequestUpdateWindow();
-                }, groundOptions));
+                }, groundOptions,
+                description: groundDesc));
 
             // 群杭係数 ξ
             SelectedItemProperties.Add(new("群杭係数 ξ",
@@ -1469,6 +1489,7 @@ namespace PileDesign.ViewModels
 
         private ObservableCollection<string> _analysisResultNodeDisplacementOption = [
             "UH",
+            "U",
             "θH",
             "UX",
             "UY",
@@ -1496,6 +1517,7 @@ namespace PileDesign.ViewModels
 
         private ObservableCollection<string> _analysisSoilSpringOption = [
             "RH",
+            "R",
             "MH",
             "RX",
             "RY",
@@ -3646,6 +3668,7 @@ namespace PileDesign.ViewModels
                     const string beamForceLabel = "梁応力（水平）";
                     const string nodeDisplacementLabel = "節点変位（水平）";
                     const string nodeSoilSpringLabel = "地盤反力（水平）";
+                    const string nodeSoilSpringDistLabel = "地盤反力（分布）";
                     const string pileHeadMLabel = "杭頭Mマップ";
                     const string pileHeadQLabel = "杭頭Qマップ";
                     const string connectionMLabel = "接合点Mマップ";
@@ -3659,6 +3682,8 @@ namespace PileDesign.ViewModels
                             AnalysisResultContentOption.Add(nodeDisplacementLabel);
                         if (!AnalysisResultContentOption.Contains(nodeSoilSpringLabel))
                             AnalysisResultContentOption.Add(nodeSoilSpringLabel);
+                        if (!AnalysisResultContentOption.Contains(nodeSoilSpringDistLabel))
+                            AnalysisResultContentOption.Add(nodeSoilSpringDistLabel);
                         if (!AnalysisResultContentOption.Contains(pileHeadMLabel))
                             AnalysisResultContentOption.Add(pileHeadMLabel);
                         if (!AnalysisResultContentOption.Contains(pileHeadQLabel))
@@ -3674,6 +3699,7 @@ namespace PileDesign.ViewModels
                         AnalysisResultContentOption.Remove(beamForceLabel);
                         AnalysisResultContentOption.Remove(nodeDisplacementLabel);
                         AnalysisResultContentOption.Remove(nodeSoilSpringLabel);
+                        AnalysisResultContentOption.Remove(nodeSoilSpringDistLabel);
                         AnalysisResultContentOption.Remove(pileHeadMLabel);
                         AnalysisResultContentOption.Remove(pileHeadQLabel);
                         AnalysisResultContentOption.Remove(connectionMLabel);
@@ -4066,7 +4092,6 @@ namespace PileDesign.ViewModels
         private void NotifyVerticalChildrenChanged()
         {
             OnPropertyChanged(nameof(IncludeSettlement));
-            OnPropertyChanged(nameof(IncludeLoadSettlementCurve));
             OnPropertyChanged(nameof(CanEditVerticalChildren));
         }
 
@@ -4148,12 +4173,6 @@ namespace PileDesign.ViewModels
             get => _includeSettlement && _includeVertical && IsVerticalAnalysisDone;
             set { if (_includeSettlement != value) { _includeSettlement = value; OnPropertyChanged(); } }
         }
-        private bool _includeLoadSettlementCurve = false;
-        public bool IncludeLoadSettlementCurve
-        {
-            get => _includeLoadSettlementCurve && _includeVertical && IsVerticalAnalysisDone;
-            set { if (_includeLoadSettlementCurve != value) { _includeLoadSettlementCurve = value; OnPropertyChanged(); } }
-        }
 
         private bool _includeGroupPileSettlement = false;
         public bool IncludeGroupPileSettlement
@@ -4185,6 +4204,11 @@ namespace PileDesign.ViewModels
         // Phase 2: 中優先項目 (3 件)
         [ObservableProperty] private bool includeGroundDisplacementGraph = false;  // 任意地盤変位グラフ
         [ObservableProperty] private bool includeResponseSpectrumGraph = false;    // 応答スペクトルグラフ
+
+        // Phase 3: 要素分割関連 (3 件)
+        [ObservableProperty] private bool includeElementDivisionPileShape = false;       // 要素分割杭姿図 (分割点マーク付き)
+        [ObservableProperty] private bool includeHorizontalSoilReactionGraph = false;    // 水平地盤反力分布グラフ
+        [ObservableProperty] private bool includeDoatsuGoryokuBaneGraph = false;         // 土圧合力ばね分布グラフ
         private bool _includeAnalysisSummaryReport = false;
         public bool IncludeAnalysisSummaryReport
         {
@@ -4289,6 +4313,14 @@ namespace PileDesign.ViewModels
             _autoSaveService = new AutoSaveService(_fileOperationService);
             _mruService = new MruService();
 
+            // 自動保存が保存時に参照する「ライブ状態」を提供する。
+            // Start 時の固定参照ではなく毎回ここで現在値を返すことで、解析完了後・Undo/Redo 後の
+            // 最新状態と「自動保存に解析結果を含める」チェックボックスを保存時点で正しく反映する。
+            _autoSaveService.LiveStateProvider = () => (
+                CurrentInputModel,
+                IsSaveAnalysisResultsAutoSave ? CurrentModel : null,
+                IsSaveAnalysisResultsAutoSave ? VerticalBeamCaseResults : null);
+
             // 自動保存イベントの購読
             _autoSaveService.AutoSaveCompleted += OnAutoSaveCompleted;
 
@@ -4326,50 +4358,10 @@ namespace PileDesign.ViewModels
             // 初期化処理
             StatusMessage = "準備完了";
 
-            // 沈下コンター図のキャッシュを無効化
-            CurrentInputModel.PropertyChanged += (sender, e) =>
-            {
-                if (e.PropertyName == nameof(CurrentInputModel.PileGroupSettlement))
-                {
-                    IsSettlementGridCacheValid = false;
-                }
-            };
-
-            // 沈下コンター図のキャッシュを無効化
-            CurrentInputModel.PileGroupSettlement.PropertyChanged += (sender, e) =>
-            {
-                if (e.PropertyName == nameof(PileGroupSettlement.SettlementGridX) ||
-                    e.PropertyName == nameof(PileGroupSettlement.SettlementGridY) ||
-                    e.PropertyName == nameof(PileGroupSettlement.SettlementGridData))
-                {
-                    IsSettlementGridCacheValid = false;
-                }
-
-                // 土層上端 が変わったら 各層の Thickness を再計算
-                if (e.PropertyName == nameof(PileGroupSettlement.SoilLayersTopAltitude))
-                {
-                    UpdateSettlementSoilLayer();
-                }
-
-                // LoadingType が外部から変更されたら 2 段 ComboBox プロキシを更新
-                if (e.PropertyName == nameof(PileGroupSettlement.LoadingType))
-                {
-                    OnPropertyChanged(nameof(GroupSettlementBeamSelector));
-                    OnPropertyChanged(nameof(GroupSettlementLoadType));
-                    OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
-                    OnPropertyChanged(nameof(IsManualRectLoadEditingEnabled));
-                }
-
-                // 例題ロード等で外部から荷重面標高が変わったら、TextBox バインド先 (プロキシ) を更新
-                if (e.PropertyName == nameof(PileGroupSettlement.LoadingPlaneAltitudeNonBeam))
-                {
-                    OnPropertyChanged(nameof(LoadingPlaneAltitudeNonBeamProxy));
-                }
-                if (e.PropertyName == nameof(PileGroupSettlement.LoadingPlaneAltitudeBeamAware))
-                {
-                    OnPropertyChanged(nameof(LoadingPlaneAltitudeBeamAwareProxy));
-                }
-            };
+            // 沈下コンター図キャッシュ無効化・群杭沈下 UI プロキシ更新の購読をセットアップ。
+            // CurrentInputModel / PileGroupSettlement はファイルロード/Undo/Redo で新インスタンスに
+            // 置換されるため、named handler を使って setter から再アタッチできるようにする。
+            SubscribeSettlementChanged();
 
             // コンストラクタ内の適当な位置
             OpenTableWindowCommand = new ToolkitRelayCommand(
@@ -4438,6 +4430,18 @@ namespace PileDesign.ViewModels
                 loadCombinationNames.Add(loadCombination.GetName());
             }
             LoadCombinationNameOption = loadCombinationNames;
+
+            // 現在の選択値が新オプションに存在しなければ先頭にフォールバック。
+            // (factor 変更/Undo/Redo 等で組合せ名が変わった後にコンボボックスが空表示になるのを防ぐ)
+            if (loadCombinationNames.Count == 0)
+            {
+                SelectedLoadCombinationName = null;
+            }
+            else if (string.IsNullOrEmpty(SelectedLoadCombinationName)
+                     || !loadCombinationNames.Contains(SelectedLoadCombinationName))
+            {
+                SelectedLoadCombinationName = loadCombinationNames[0];
+            }
         }
 
         // DataGridSelectionコピーメソッド
@@ -4491,7 +4495,84 @@ namespace PileDesign.ViewModels
         }
 
 
+        // ===== 群杭沈下 (PileGroupSettlement) 関連の PropertyChanged 購読 =====
+        // CurrentInputModel / PileGroupSettlement はファイルロード/Undo/Redo で新インスタンスに置換される。
+        // 匿名ラムダだと初期インスタンスにピン留めされ再アタッチできないため named handler 化し、
+        // CurrentInputModel setter から SubscribeSettlementChanged() を呼んで再購読する。
+        private System.ComponentModel.PropertyChangedEventHandler _inputModelSettlementCacheHandler;
+        private System.ComponentModel.PropertyChangedEventHandler _pileGroupSettlementHandler;
+
+        private void SubscribeSettlementChanged()
+        {
+            if (CurrentInputModel == null) return;
+
+            // InputModel 自体の PropertyChanged: PileGroupSettlement プロパティが別インスタンスに
+            // 差し替わった場合にキャッシュ無効化 + 新インスタンスへ再購読
+            _inputModelSettlementCacheHandler ??= (sender, e) =>
+            {
+                if (e.PropertyName == nameof(InputModel.PileGroupSettlement))
+                {
+                    IsSettlementGridCacheValid = false;
+                    ResubscribePileGroupSettlement();
+                }
+            };
+            CurrentInputModel.PropertyChanged -= _inputModelSettlementCacheHandler;
+            CurrentInputModel.PropertyChanged += _inputModelSettlementCacheHandler;
+
+            ResubscribePileGroupSettlement();
+        }
+
+        private void ResubscribePileGroupSettlement()
+        {
+            var pgs = CurrentInputModel?.PileGroupSettlement;
+            if (pgs == null) return;
+
+            _pileGroupSettlementHandler ??= (sender, e) =>
+            {
+                if (e.PropertyName == nameof(PileGroupSettlement.SettlementGridX) ||
+                    e.PropertyName == nameof(PileGroupSettlement.SettlementGridY) ||
+                    e.PropertyName == nameof(PileGroupSettlement.SettlementGridData))
+                {
+                    IsSettlementGridCacheValid = false;
+                }
+
+                // 土層上端 が変わったら 各層の Thickness を再計算
+                if (e.PropertyName == nameof(PileGroupSettlement.SoilLayersTopAltitude))
+                {
+                    UpdateSettlementSoilLayer();
+                }
+
+                // LoadingType が外部から変更されたら 2 段 ComboBox プロキシを更新
+                if (e.PropertyName == nameof(PileGroupSettlement.LoadingType))
+                {
+                    OnPropertyChanged(nameof(GroupSettlementBeamSelector));
+                    OnPropertyChanged(nameof(GroupSettlementLoadType));
+                    OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
+                    OnPropertyChanged(nameof(IsManualRectLoadEditingEnabled));
+                }
+
+                // 例題ロード等で外部から荷重面標高が変わったら、TextBox バインド先 (プロキシ) を更新
+                if (e.PropertyName == nameof(PileGroupSettlement.LoadingPlaneAltitudeNonBeam))
+                {
+                    OnPropertyChanged(nameof(LoadingPlaneAltitudeNonBeamProxy));
+                }
+                if (e.PropertyName == nameof(PileGroupSettlement.LoadingPlaneAltitudeBeamAware))
+                {
+                    OnPropertyChanged(nameof(LoadingPlaneAltitudeBeamAwareProxy));
+                }
+            };
+            pgs.PropertyChanged -= _pileGroupSettlementHandler;
+            pgs.PropertyChanged += _pileGroupSettlementHandler;
+        }
+
         // 追加: IsApplicable 変更監視の購読セットアップ
+        // 重複登録防止のため、ハンドラを named field に置き換え -= でクリーン後に += する。
+        // CurrentInputModel 置換 (Undo/Redo / ファイルロード / LoadCaseWindow.Save) 時にも
+        // 同じハンドラを再アタッチできるようにする。
+        private NotifyCollectionChangedEventHandler _loadCasesLevel1ChangedHandler;
+        private NotifyCollectionChangedEventHandler _loadCasesLevel2ChangedHandler;
+        private NotifyCollectionChangedEventHandler _loadCombinationsChangedHandler;
+
         private void SubscribeLoadCaseApplicabilityChanged()
         {
             var lci = CurrentInputModel.LoadCasesInput;
@@ -4501,15 +4582,25 @@ namespace PileDesign.ViewModels
             {
                 if (cases == null) return;
                 foreach (var lc in cases)
+                {
+                    lc.PropertyChanged -= LoadCase_PropertyChanged_ForOption;
                     lc.PropertyChanged += LoadCase_PropertyChanged_ForOption;
+                }
             }
 
             attach(lci.LoadCasesLevel1);
             attach(lci.LoadCasesLevel2);
-            // attach(lci.AllLoadCombinations); // ← これが型不一致。不要なので削除
 
-            // コレクションへの追加にも追随
-            lci.LoadCasesLevel1.CollectionChanged += (s, e) =>
+            // 旧購読を解除 (古い CurrentInputModel の collection は別インスタンスなので無害だが、
+            // 同一インスタンスで複数回呼ばれた場合の重複発火を防ぐ)
+            if (_loadCasesLevel1ChangedHandler != null)
+                lci.LoadCasesLevel1.CollectionChanged -= _loadCasesLevel1ChangedHandler;
+            if (_loadCasesLevel2ChangedHandler != null)
+                lci.LoadCasesLevel2.CollectionChanged -= _loadCasesLevel2ChangedHandler;
+            if (_loadCombinationsChangedHandler != null)
+                lci.LoadCombinations.CollectionChanged -= _loadCombinationsChangedHandler;
+
+            _loadCasesLevel1ChangedHandler = (s, e) =>
             {
                 if (e.NewItems != null)
                     foreach (LoadCase lc in e.NewItems)
@@ -4519,7 +4610,7 @@ namespace PileDesign.ViewModels
                         lc.PropertyChanged -= LoadCase_PropertyChanged_ForOption;
                 UpdateLoadCaseOption();
             };
-            lci.LoadCasesLevel2.CollectionChanged += (s, e) =>
+            _loadCasesLevel2ChangedHandler = (s, e) =>
             {
                 if (e.NewItems != null)
                     foreach (LoadCase lc in e.NewItems)
@@ -4529,11 +4620,15 @@ namespace PileDesign.ViewModels
                         lc.PropertyChanged -= LoadCase_PropertyChanged_ForOption;
                 UpdateLoadCaseOption();
             };
-            lci.LoadCombinations.CollectionChanged += (s, e) =>
+            _loadCombinationsChangedHandler = (s, e) =>
             {
                 // 組合せが UI に影響する場合に再構築
                 UpdateLoadCombinationOption();
             };
+
+            lci.LoadCasesLevel1.CollectionChanged += _loadCasesLevel1ChangedHandler;
+            lci.LoadCasesLevel2.CollectionChanged += _loadCasesLevel2ChangedHandler;
+            lci.LoadCombinations.CollectionChanged += _loadCombinationsChangedHandler;
         }
 
         // 追加: IsApplicable 変更時にオプション更新
@@ -4563,6 +4658,17 @@ namespace PileDesign.ViewModels
             // IsApplicable 無視して全件表示したいなら上の Where を外す
 
             LoadCaseNameOption = loadCaseNames;
+
+            // 現在の選択値が新オプションに存在しなければ先頭にフォールバック
+            if (loadCaseNames.Count == 0)
+            {
+                SelectedLoadCaseName = null;
+            }
+            else if (string.IsNullOrEmpty(SelectedLoadCaseName)
+                     || !loadCaseNames.Contains(SelectedLoadCaseName))
+            {
+                SelectedLoadCaseName = loadCaseNames[0];
+            }
         }
     }
 }

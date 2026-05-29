@@ -154,6 +154,11 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void Undo()
         {
+            // Redo時に現在のライブ状態を復元できるよう、Undo前に履歴へ追加
+            if (_undoManager.CurrentIndex == _undoManager.History.Count - 1)
+            {
+                PushUndoState();
+            }
             _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is LoadCaseState state)
             {

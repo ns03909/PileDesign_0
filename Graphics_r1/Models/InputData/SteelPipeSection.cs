@@ -519,7 +519,7 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 使用限界せん断力。Qs = β1 × sfs × sAp / κ
         /// sfs = F / (1.5 √3) (Mises 流降伏剪応力 / 安全率 1.5)
-        /// κ = 2.0 (薄肉円管のせん断シェイプファクタ)
+        /// κ = 2.0 (薄肉円管のせん断形状係数)
         /// 軸力依存なし。
         /// </summary>
         internal double GetServiceLimitShear()

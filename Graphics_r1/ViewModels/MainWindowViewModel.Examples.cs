@@ -401,6 +401,22 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 設計例集3.8
+        [RelayCommand]
+        private async Task Example3_8()
+        {
+            if (!TryStartExample(nameof(Example3_8))) return;
+            try
+            {
+                await LoadPileExampleAsync("PileExample3_8", "設計例集3.8");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                EndExample(nameof(Example3_8));
+            }
+        }
+
         // 関東支部 計算例8
         [RelayCommand]
         private async Task ExampleK8()
@@ -415,6 +431,54 @@ namespace PileDesign.ViewModels
                 // 砂時計を戻す
                 Mouse.OverrideCursor = null;
                 EndExample(nameof(ExampleK8));
+            }
+        }
+
+        // キャプテンパイル工法 (AIJ2018 学術講演梗概集)
+        [RelayCommand]
+        private async Task ExampleCPT2018()
+        {
+            if (!TryStartExample(nameof(ExampleCPT2018))) return;
+            try
+            {
+                await LoadPileExampleAsync("PileExampleCPT2018", "キャプテンパイル工法 (AIJ2018)");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                EndExample(nameof(ExampleCPT2018));
+            }
+        }
+
+        // キャプリングパイル工法設計例3.7.1 杭頭に引張力が生じない場合
+        [RelayCommand]
+        private async Task ExampleCAP3_7()
+        {
+            if (!TryStartExample(nameof(ExampleCAP3_7))) return;
+            try
+            {
+                await LoadPileExampleAsync("PileExampleCAP3_7", "キャプリングパイル工法設計例3.7.1 杭頭に引張力が生じない場合");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                EndExample(nameof(ExampleCAP3_7));
+            }
+        }
+
+        // キャプリングパイル工法設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)
+        [RelayCommand]
+        private async Task ExampleCAP3_7_3()
+        {
+            if (!TryStartExample(nameof(ExampleCAP3_7_3))) return;
+            try
+            {
+                await LoadPileExampleAsync("PileExampleCAP3_7_3", "キャプリングパイル工法設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                EndExample(nameof(ExampleCAP3_7_3));
             }
         }
 

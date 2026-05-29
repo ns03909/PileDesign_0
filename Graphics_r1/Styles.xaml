@@ -169,6 +169,62 @@
         </Style.Triggers>
     </Style>
 
+    <!-- ========== ダイアログボタン共通スタイル ==========
+         OK / 実行 / 保存 / キャンセル / 閉じる の見た目とキーボード操作を統一する。
+         今日 (2026-05-18〜19) のダイアログ統一作業を再利用可能なリソース化。
+
+         使い方:
+           <Button Content="保存(_S)" Style="{StaticResource PrimaryDialogButtonStyle}"
+                   IsDefault="True" Click="OkButton_Click"/>
+           <Button Content="キャンセル(_C)" Style="{StaticResource DialogCancelButtonStyle}"
+                   IsCancel="True" Click="CancelButton_Click"/>
+
+         注意:
+           - x:Name="OkButton" を付けて Loaded で OkButton.Focus() すれば初期フォーカスも設定可
+           - IsDefault / IsCancel は WPF 標準機能なのでスタイルでは触らない
+    -->
+    <Style x:Key="PrimaryDialogButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="MinWidth" Value="100"/>
+        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="Padding" Value="12,4"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource PrimaryAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <Style x:Key="DialogSecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="MinWidth" Value="100"/>
+        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="Padding" Value="12,4"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+    </Style>
+
+    <Style x:Key="DialogCancelButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="MinWidth" Value="100"/>
+        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="Padding" Value="12,4"/>
+    </Style>
+
+    <!-- DataGridComboBoxColumn 用 CellStyle:
+         デフォルトは IsSelected=True → IsEditing=True を強制するため、ComboBox 列では
+         EditingElement (空のドロップダウン) に切り替わり選択値が見えなくなる。
+         このスタイルは IsEditing 強制をスキップし、選択時は背景+文字色で視認性を維持する。
+         DataGridComboBoxColumn.CellStyle に明示適用すること。 -->
+    <Style x:Key="ComboBoxDataGridCellStyle" TargetType="DataGridCell">
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource ControlHoverBackground}"/>
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
+                <Setter Property="Foreground" Value="White"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- DataGrid 既定: 行交互背景 (zebra) と選択モード等の共通設定。
          AlternatingRowBackground は SubtleBackgroundBrush (#FAFAFA) で控えめに。
          <DataGrid.AlternatingRowBackground><ImageBrush/></DataGrid.AlternatingRowBackground>
@@ -412,10 +468,14 @@
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlHoverBackground}"/>
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ControlBorderHoverBrush}"/>
                         </Trigger>
+                        <!-- IsChecked: 藄ティント背景 + アクセント枠 + アクセント太字
+                             以前は PrimaryAccentBrush 全面塗りだったが視覚的に主張しすぎる問題があり、
+                             境界線と文字色でアクセント、背景は極薄ティントに変更 (2026-05-19) -->
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimaryAccentLightBrush}"/>
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryAccentBrush}"/>
-                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlDisabledBackground}"/>
@@ -513,7 +573,8 @@
 
     <!-- 粒度区分 (粘性土 / 砂質土 / 礫質土) を選択 ComboBox の文字色で識別するスタイル -->
     <!-- GroundWindow.xaml で定義済みのものをグローバル化したもの。各 Window から参照可能 -->
-    <Style x:Key="GranularityClassComboBoxStyle" TargetType="ComboBox">
+    <Style x:Key="GranularityClassComboBoxStyle" TargetType="ComboBox"
+           BasedOn="{StaticResource {x:Type ComboBox}}">
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedValue, RelativeSource={RelativeSource Self}}" Value="粘性土">
                 <Setter Property="Foreground" Value="SaddleBrown"/>
@@ -557,4 +618,151 @@
         </Style.Triggers>
     </Style>
 
+    <!-- ═══════════════════════ ComboBox フラット白スタイル ═══════════════════════
+         WPF 標準 (Aero) の ComboBox は灰色グラデーションだが、Fluent.Ribbon の
+         メニュー側 ComboBox は白フラット。本スタイルは両者の見た目を「白フラット」
+         に統一する。implicit (キー無し) で全 ComboBox に適用。
+         keyed style (GranularityClassComboBoxStyle 等) は BasedOn でこのスタイルを継承。
+    -->
+    <Style TargetType="{x:Type ComboBox}">
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource SurfaceBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="6,2"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="MinHeight" Value="22"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ComboBox}">
+                    <Grid>
+                        <ToggleButton x:Name="ToggleButton"
+                                      Background="{TemplateBinding Background}"
+                                      BorderBrush="{TemplateBinding BorderBrush}"
+                                      BorderThickness="{TemplateBinding BorderThickness}"
+                                      Focusable="False"
+                                      ClickMode="Press"
+                                      IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="bg"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            SnapsToDevicePixels="True">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="16"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Path Grid.Column="1"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Data="M 0 0 L 4 4 L 8 0 Z"
+                                                  Fill="#555555"
+                                                  Stretch="None"/>
+                                        </Grid>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bg" Property="BorderBrush" Value="{StaticResource PrimaryAccentBrush}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="bg" Property="BorderBrush" Value="{StaticResource PrimaryAccentBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <ContentPresenter x:Name="ContentSite"
+                                          Content="{TemplateBinding SelectionBoxItem}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                          Margin="6,2,20,2"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          IsHitTestVisible="False"
+                                          SnapsToDevicePixels="True"/>
+                        <TextBox x:Name="PART_EditableTextBox"
+                                 Margin="6,2,20,2"
+                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                 Background="Transparent"
+                                 Foreground="{TemplateBinding Foreground}"
+                                 BorderThickness="0"
+                                 Visibility="Collapsed"
+                                 IsReadOnly="{TemplateBinding IsReadOnly}"
+                                 Focusable="True"/>
+                        <Popup x:Name="PART_Popup"
+                               Placement="Bottom"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               AllowsTransparency="True"
+                               Focusable="False"
+                               PopupAnimation="Slide">
+                            <Border Background="White"
+                                    BorderBrush="{StaticResource SurfaceBorderBrush}"
+                                    BorderThickness="1"
+                                    MinWidth="{TemplateBinding ActualWidth}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                    SnapsToDevicePixels="True">
+                                <ScrollViewer SnapsToDevicePixels="True"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Auto">
+                                    <!-- ItemsPresenter は GroupStyle (CollectionViewSource.GroupDescriptions) を
+                                         尊重して項目をレンダリングする。StackPanel IsItemsHost ではグループが
+                                         展開されず先頭グループの先頭要素しか表示されない問題があった。 -->
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"
+                                                    SnapsToDevicePixels="True"/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="ContentSite" Property="Visibility" Value="Hidden"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource ReadOnlyBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- (Button implicit スタイルは Styles.xaml:341 で既に定義済み — 重複削除) -->
+
+    <!-- ComboBox の項目スタイル (ホバー: 極薄ライトブルー、選択: 薄ライトブルー) -->
+    <Style TargetType="{x:Type ComboBoxItem}">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="6,3"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+                    <Border x:Name="bg"
+                            Background="{TemplateBinding Background}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="bg" Property="Background" Value="{StaticResource PrimaryAccentLightBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="bg" Property="Background" Value="{StaticResource PrimaryAccentMediumBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

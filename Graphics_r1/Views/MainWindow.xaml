@@ -30,8 +30,16 @@
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewInputModelFileCommand}" />
+        <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenInputModelFileCommand}" />
         <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveInputModelFileCommand}" />
         <KeyBinding Key="S" Modifiers="Control+Shift" Command="{Binding SaveInputModelFileAsCommand}" />
+        <KeyBinding Key="W" Modifiers="Control+Shift" Command="{Binding OpenDocxOutputWindowCommand}" />
+        <!-- F4: 杭要素分割。フォーカスが Ribbon ComboBox 等にあると WPF ComboBox 自身が F4 を
+             ドロップダウン開閉に消費するため、KeyDown ハンドラだけではファイル開いた直後等に
+             効かない。Window.InputBindings ならフォーカス位置に関わらず発火する。 -->
+        <KeyBinding Key="F4" Command="{Binding OpenElementDivisionWindowAsyncCommand}" />
+        <KeyBinding Key="F5" Command="{Binding OpenLateralLoadAnalysisWindowAsyncCommand}" />
     </Window.InputBindings>
 
     <Window.DataContext>
@@ -133,12 +141,14 @@
         </Style>
 
         <!-- Style for ComboBox elements to right-align text -->
-        <Style x:Key="RightAlignedComboBoxStyle" TargetType="ComboBox">
+        <Style x:Key="RightAlignedComboBoxStyle" TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
         </Style>
 
         <!-- Style for ComboBox items to right-align text -->
-        <Style x:Key="RightAlignedComboBoxItemStyle" TargetType="ComboBoxItem">
+        <Style x:Key="RightAlignedComboBoxItemStyle" TargetType="ComboBoxItem"
+               BasedOn="{StaticResource {x:Type ComboBoxItem}}">
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
         </Style>
 
@@ -777,8 +787,12 @@
 
             <!-- Backstage (旧 RibbonApplicationMenu の置換、Office 365 風の全画面メニュー) -->
             <Fluent:Ribbon.Menu>
-                <Fluent:Backstage x:Name="MainBackstage" Header="ファイル" KeyTip="F">
-                    <Fluent:BackstageTabControl>
+                <Fluent:Backstage x:Name="MainBackstage" Header="ファイル(F)" KeyTip="F"
+                                  AreAnimationsEnabled="False">
+                    <Fluent:BackstageTabControl UseLayoutRounding="True"
+                                                SnapsToDevicePixels="True"
+                                                TextOptions.TextFormattingMode="Display"
+                                                RenderOptions.BitmapScalingMode="HighQuality">
                         <Fluent:BackstageTabControl.Resources>
                             <!-- BackstageTabItem は Style 経由で IconSize=Large を一括指定。
                                  Fluent:Button 側は Style が効かないため属性で個別指定する。 -->
@@ -788,14 +802,14 @@
                         </Fluent:BackstageTabControl.Resources>
 
                         <!-- 新規 -->
-                        <Fluent:Button Header="新規" Command="{Binding NewInputModelFileCommand}"
+                        <Fluent:Button Header="新規 (Ctrl+N)" Command="{Binding NewInputModelFileCommand}"
                                        Icon="pack://application:,,,/Icons/NewFile.png"
                                        LargeIcon="pack://application:,,,/Icons/NewFile.png"
                                        Fluent:RibbonProperties.IconSize="Large"
                                        KeyTip="N"/>
 
                         <!-- 開く -->
-                        <Fluent:Button Header="開く" Command="{Binding OpenInputModelFileCommand}"
+                        <Fluent:Button Header="開く (Ctrl+O)" Command="{Binding OpenInputModelFileCommand}"
                                        Icon="pack://application:,,,/Icons/OpenFile.png"
                                        LargeIcon="pack://application:,,,/Icons/OpenFile.png"
                                        Fluent:RibbonProperties.IconSize="Large"
@@ -830,14 +844,14 @@
                         <Fluent:SeparatorTabItem/>
 
                         <!-- 上書き保存 -->
-                        <Fluent:Button Header="上書き保存" Command="{Binding SaveInputModelFileCommand}"
+                        <Fluent:Button Header="上書き保存 (Ctrl+S)" Command="{Binding SaveInputModelFileCommand}"
                                        Icon="pack://application:,,,/Icons/SaveFile.png"
                                        LargeIcon="pack://application:,,,/Icons/SaveFile.png"
                                        Fluent:RibbonProperties.IconSize="Large"
                                        KeyTip="S"/>
 
                         <!-- 名前を付けて保存 -->
-                        <Fluent:Button Header="名前を付けて保存" Command="{Binding SaveInputModelFileAsCommand}"
+                        <Fluent:Button Header="名前を付けて保存 (Ctrl+Shift+S)" Command="{Binding SaveInputModelFileAsCommand}"
                                        Icon="pack://application:,,,/Icons/SaveFileAs.png"
                                        LargeIcon="pack://application:,,,/Icons/SaveFileAs.png"
                                        Fluent:RibbonProperties.IconSize="Large"
@@ -866,34 +880,38 @@
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example9Command}"
                                                 ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗">
-                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例9　地下室下の杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例9　地下室の影響を考慮した杭の地震時水平抵抗" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example10Command}"
                                                 ToolTip="基礎指針'19 計算例10 場所打ち鉄筋コンクリート杭φ1500 L=37.5m">
-                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例10　場所打ちRC杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例10　液状化の可能性がある場所打ち杭の水平抵抗" VerticalAlignment="Center"/></StackPanel></Button>
 
                                         <!-- 設計例集 -->
                                         <TextBlock Text="建築基礎構造設計例集 2024" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_1Command}"
                                                 ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.1　非液状化地盤に建つ建物のPHC杭基礎">
-                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.1　SC杭, PRC杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.1　非液状化地盤に建つ建物のPRC杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_2Command}"
                                                 ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.2　砂地盤に建つ建物のPHC節杭基礎">
-                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.2　PHC杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.2　砂地盤に建つ建物のPHC節杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_3Command}"
                                                 ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.3　粘性土地盤に建つ免振建物の場所打ち鉄筋コンクリート杭基礎">
-                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.3　場所打ち杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.3　粘性土地盤に建つ免震建物の場所打ち鉄筋コンクリート杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_4Command}"
                                                 ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎">
-                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.4　SC杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_5Command}"
                                                 ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.5　鋼管杭基礎">
-                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.5　鋼管杭" VerticalAlignment="Center"/></StackPanel></Button>
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.5　液状化の可能性がある地盤に建つ建物の鋼管杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example3_8Command}"
+                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.8　場所打ち鋼管コンクリート杭基礎 (9 杭体 / 9 地盤 / 42 本杭)">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.8　支持層が傾斜した地盤に建つ建物の場所打ち鋼管コンクリート杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
 
                                         <!-- 関東支部 -->
                                         <TextBlock Text="基礎構造の設計 2023（関東支部）" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
@@ -905,8 +923,68 @@
                                                 Command="{Binding ExampleK8Command}"
                                                 ToolTip="日本建築学会　関東支部　基礎構造の設計 2023　学びやすい構造設計 計算例8（杭基礎）を実行">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/332-8002.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="8. 杭基礎の設計例 (関東支部 計算例8)" VerticalAlignment="Center"/></StackPanel></Button>
+
+                                        <!-- キャプテンパイル工法計算例 -->
+                                        <TextBlock Text="キャプテンパイル工法 計算例" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding ExampleCPT2018Command}"
+                                                ToolTip="日本建築学会 学術講演梗概集 2018 年 9 月 応答変位法による杭頭半固定杭の杭体応力に関するケーススタディ&#x0a;(キャプテンパイル工法 / 場所打ち D=2100mm / 10 本杭)">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="応答変位法による杭頭半固定杭の杭体応力 (AIJ 2018)" VerticalAlignment="Center"/></StackPanel></Button>
+
+                                        <!-- キャプリングパイル工法計算例 -->
+                                        <TextBlock Text="キャプリングパイル工法 計算例" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding ExampleCAP3_7Command}"
+                                                ToolTip="キャプリングパイル工法設計例3.7.1 杭頭に引張力が生じない場合&#x0a;(既製コンクリート杭 PHC-800 / 12 本杭 / 砂質土地盤 N=10)">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="設計例3.7.1 杭頭に引張力が生じない場合" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding ExampleCAP3_7_3Command}"
+                                                ToolTip="キャプリングパイル工法設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)&#x0a;(既製コンクリート杭 PHC-800-B / 引張定着筋 3-D19 SD390 / 12 本杭 / 4 層砂質土+礫質土地盤)">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)" VerticalAlignment="Center"/></StackPanel></Button>
                                     </StackPanel>
                                 </ScrollViewer>
+                            </Border>
+                        </Fluent:BackstageTabItem>
+
+                        <Fluent:SeparatorTabItem/>
+
+                        <!-- オプション: ファイル関連付け等の環境設定 -->
+                        <Fluent:BackstageTabItem Header="オプション" KeyTip="T"
+                                                 Icon="pack://application:,,,/Icons/Display.png">
+                            <Border Padding="20">
+                                <StackPanel MaxWidth="700" HorizontalAlignment="Left">
+                                    <TextBlock Text="オプション" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
+
+                                    <!-- 保存オプション -->
+                                    <TextBlock Text="保存オプション" FontSize="14" FontWeight="Bold"
+                                               Foreground="#3271AD" Margin="0,8,0,4"/>
+                                    <CheckBox Content="手動保存に解析結果も含める (Ctrl+S / 名前を付けて保存)"
+                                              IsChecked="{Binding IsSaveAnalysisResultsManual, Mode=TwoWay}"
+                                              Margin="0,4,0,4" VerticalAlignment="Center"/>
+                                    <CheckBox Content="自動保存に解析結果も含める"
+                                              IsChecked="{Binding IsSaveAnalysisResultsAutoSave, Mode=TwoWay}"
+                                              Margin="0,4,0,4" VerticalAlignment="Center"/>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,12" Foreground="#444">
+                                        <Run Text="ON にすると水平解析・鉛直解析の結果 (節点/梁の変位・応力) もファイルに保存します。再計算が不要になる反面、ファイルが数十 MB 級に肥大し読み書きが遅くなる場合があります。"/>
+                                        <LineBreak/>
+                                        <Run Text="OFF (既定) は入力データのみを保存します。自動保存は定期実行されるため、ON にすると数秒の書込が繰り返し発生する点にご注意ください。"/>
+                                    </TextBlock>
+
+                                    <TextBlock Text="ファイル関連付け" FontSize="14" FontWeight="Bold"
+                                               Foreground="#3271AD" Margin="0,8,0,4"/>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,8" Foreground="#444">
+                                        <Run Text=".pdj 拡張子 (PileDesign プロジェクト) を、現在のユーザーで PileDesign に関連付けます。"/>
+                                        <LineBreak/>
+                                        <Run Text="管理者権限は不要です。Portable 配布 (zip 展開) の場合でも実行できます。"/>
+                                        <LineBreak/>
+                                        <Run Text="ダブルクリックで PileDesign を既定アプリとして開くには、Windows 10/11 の仕様により、"/>
+                                        <Run Text="登録後に表示される「既定のアプリ」設定で .pdj に対して PileDesign を選択する必要があります。"/>
+                                    </TextBlock>
+                                    <Button Content=".pdj を PileDesign に関連付ける"
+                                            Command="{Binding RegisterPdjAssociationCommand}"
+                                            Padding="14,6" HorizontalAlignment="Left"
+                                            FontWeight="SemiBold" Margin="0,4,0,0"/>
+                                </StackPanel>
                             </Border>
                         </Fluent:BackstageTabItem>
                     </Fluent:BackstageTabControl>
@@ -1764,6 +1842,13 @@
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
+                                            <Condition Binding="{Binding AnalysisResultContent}" Value="地盤反力（分布）"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Fluent:ComboBox.Style>
@@ -1790,11 +1875,12 @@
                             <MultiBinding Converter="{StaticResource AnyBoolConverter}">
                                 <Binding Path="IsVerticalAnalysisDone"/>
                                 <Binding Path="IsGroupPileSettlementAnalysisDone"/>
+                                <Binding Path="IsHorizontalAnalysisDone"/>
                             </MultiBinding>
                         </Fluent:SplitButton.IsEnabled>
                         <Fluent:SplitButton.ToolTip>
                             <Fluent:ScreenTip Title="バブル表示"
-                                              Text="沈下解析結果の表示時に、各杭位置に沈下量に比例した円（バブル）をカラーコードで描画します。平面ビューでの表示に適しています。"/>
+                                              Text="解析結果の表示時に、各位置に値に比例した円（バブル）をカラーコードで描画します。&#x0a;・沈下解析: 各杭位置に沈下量バブル&#x0a;・水平解析の地盤反力 (RZ など): 各杭節点に反力バブル&#x0a;ビュー方向に依存せず真円で表示されるため、3D ビューでも読み取りやすいです。"/>
                         </Fluent:SplitButton.ToolTip>
                         <StackPanel Orientation="Horizontal" Margin="4">
                             <TextBlock Text="径" VerticalAlignment="Center" Margin="0,0,4,0"/>
@@ -2038,7 +2124,7 @@
             <Fluent:RibbonTabItem Header="ツール(T)" KeyTip="T">
                 <Fluent:RibbonGroupBox Header="計算書" ToolTip="計算書">
                     <Fluent:Button Header="Docx 出力"
-                        ToolTip="計算書を Word (.docx) ファイルとして出力"
+                        ToolTip="計算書を Word (.docx) ファイルとして出力 (Ctrl+Shift+W)"
                         Command="{Binding OpenDocxOutputWindowCommand}"
                         LargeIcon="pack://application:,,,/Icons/DocxFileOutput.png"
                         Icon="pack://application:,,,/Icons/DocxFileOutput.png"/>
@@ -2273,8 +2359,7 @@
                                               LoadingRow="DataGridInputNodes_LoadingRow_Numbering"
                                               CellEditEnding="DataGridInputNodes_CellEditEnding"
                                               BeginningEdit="DataGridInputNodes_BeginningEdit"
-                                              common:DataGridNavigationBehavior.Enable="True"
-                                              EnableRowVirtualization="True"
+                                                                                            EnableRowVirtualization="True"
                                               EnableColumnVirtualization="False"
                                               VirtualizingPanel.IsVirtualizing="True"
                                               VirtualizingPanel.VirtualizationMode="Recycling"
@@ -2386,7 +2471,7 @@
                                                 LoadingRow="DataGrid_LoadingRow_Numbering"
                                                 CellEditEnding="DataGridBeamMaterialsOrSections_CellEditEnding"
                                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                                common:DataGridNavigationBehavior.Enable="True">
+                                                >
 
                                             <DataGrid.ContextMenu>
                                                 <StaticResource ResourceKey="CommonDataGridContextMenu"/>
@@ -2489,8 +2574,7 @@
                                                 LoadingRow="DataGrid_LoadingRow_Numbering"
                                                 CellEditEnding="DataGridBeamMaterialsOrSections_CellEditEnding"
                                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                                common:DataGridNavigationBehavior.Enable="True"
-                                                HorizontalScrollBarVisibility="Auto"
+                                                                                                HorizontalScrollBarVisibility="Auto"
                                                 VerticalScrollBarVisibility="Auto">
 
                                             <DataGrid.ContextMenu>
@@ -2717,7 +2801,7 @@
                                                 VirtualizingPanel.VirtualizationMode="Recycling"
                                                 ScrollViewer.CanContentScroll="True"
                                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                                common:DataGridNavigationBehavior.Enable="True">
+                                                >
 
                                             <DataGrid.ContextMenu>
                                                 <StaticResource ResourceKey="CommonDataGridContextMenu"/>
@@ -2972,7 +3056,7 @@
                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                     CellEditEnding="DataGridPileLayout_CellEditEnding"
                                                     BeginningEdit="DataGridPileLayout_BeginningEdit"
-                                                    common:DataGridNavigationBehavior.Enable="True"
+                                                    PasteCompleted="DataGridPileLayout_PasteCompleted"
                                                     EnableRowVirtualization="True"
                                                     EnableColumnVirtualization="False"
                                                     VirtualizingPanel.IsVirtualizing="True"
@@ -3082,47 +3166,50 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridComboBoxColumn Width="*" x:Name="ColumnPileBodyNo" SelectedItemBinding="{Binding PileBodyNo}" MinWidth="50">
-                                                        <DataGridComboBoxColumn.ElementStyle>
-                                                            <Style TargetType="ComboBox">
-                                                                <Setter Property="ItemsSource" Value="{Binding DataContext.CurrentInputModel.PileBodiesCountList, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                                                <Setter Property="HorizontalContentAlignment" Value="Right"/>
-                                                            </Style>
-                                                        </DataGridComboBoxColumn.ElementStyle>
-                                                        <DataGridComboBoxColumn.EditingElementStyle>
-                                                            <Style TargetType="ComboBox">
-                                                                <Setter Property="ItemsSource" Value="{Binding DataContext.CurrentInputModel.PileBodiesCountList, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                                                <Setter Property="HorizontalContentAlignment" Value="Right"/>
-                                                            </Style>
-                                                        </DataGridComboBoxColumn.EditingElementStyle>
-                                                        <DataGridComboBoxColumn.Header>
+                                                    <!-- 杭体番号: 常時 ComboBox 表示 (DataGridTemplateColumn パターン)
+                                                         旧 DataGridComboBoxColumn は IsSelected 時に EditingElement へ切替って空に見える問題があった -->
+                                                    <DataGridTemplateColumn Width="*" x:Name="ColumnPileBodyNo" MinWidth="50"
+                                                                            CellStyle="{StaticResource ComboBoxDataGridCellStyle}">
+                                                        <DataGridTemplateColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="杭体" TextAlignment="Center"/>
                                                                 <TextBlock Text="番号" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                             </StackPanel>
-                                                        </DataGridComboBoxColumn.Header>
-                                                    </DataGridComboBoxColumn>
+                                                        </DataGridTemplateColumn.Header>
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <ComboBox SelectedItem="{Binding PileBodyNo, UpdateSourceTrigger=PropertyChanged}"
+                                                                          ItemsSource="{Binding DataContext.CurrentInputModel.PileBodiesCountList, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                          HorizontalContentAlignment="Right"
+                                                                          BorderThickness="0" Background="Transparent"
+                                                                          ToolTip="{Binding PileBodySummary}"
+                                                                          ToolTipService.InitialShowDelay="500"
+                                                                          ToolTipService.ShowDuration="20000"/>
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
 
-                                                    <DataGridComboBoxColumn Width="*" x:Name="ColumnGroundNo" SelectedItemBinding="{Binding GroundNo}" MinWidth="50">
-                                                        <DataGridComboBoxColumn.ElementStyle>
-                                                            <Style TargetType="ComboBox">
-                                                                <Setter Property="ItemsSource" Value="{Binding DataContext.CurrentInputModel.GroundsInputCountList, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                                                <Setter Property="HorizontalContentAlignment" Value="Right"/>
-                                                            </Style>
-                                                        </DataGridComboBoxColumn.ElementStyle>
-                                                        <DataGridComboBoxColumn.EditingElementStyle>
-                                                            <Style TargetType="ComboBox">
-                                                                <Setter Property="ItemsSource" Value="{Binding DataContext.CurrentInputModel.GroundsInputCountList, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                                                <Setter Property="HorizontalContentAlignment" Value="Right"/>
-                                                            </Style>
-                                                        </DataGridComboBoxColumn.EditingElementStyle>
-                                                        <DataGridComboBoxColumn.Header>
+                                                    <!-- 地盤番号: 常時 ComboBox 表示 (同上) -->
+                                                    <DataGridTemplateColumn Width="*" x:Name="ColumnGroundNo" MinWidth="50"
+                                                                            CellStyle="{StaticResource ComboBoxDataGridCellStyle}">
+                                                        <DataGridTemplateColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="地盤" TextAlignment="Center"/>
                                                                 <TextBlock Text="番号" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                             </StackPanel>
-                                                        </DataGridComboBoxColumn.Header>
-                                                    </DataGridComboBoxColumn>
+                                                        </DataGridTemplateColumn.Header>
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <ComboBox SelectedItem="{Binding GroundNo, UpdateSourceTrigger=PropertyChanged}"
+                                                                          ItemsSource="{Binding DataContext.CurrentInputModel.GroundsInputCountList, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                          HorizontalContentAlignment="Right"
+                                                                          BorderThickness="0" Background="Transparent"
+                                                                          ToolTip="{Binding GroundSummary}"
+                                                                          ToolTipService.InitialShowDelay="500"
+                                                                          ToolTipService.ShowDuration="20000"/>
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
 
                                                     <DataGridTextColumn Binding="{Binding SoilPileAltNo, StringFormat=N0}" Width="*"
                                                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
@@ -3505,8 +3592,7 @@
                                                     AutoGeneratingColumn="DataGridPileLayout_AutoGeneratingColumn"
                                                     CellEditEnding="DataGridPileAxialForce_CellEditEnding"
                                                     PasteCompleted="DataGridPileAxialForce_PasteCompleted"
-                                                    common:DataGridNavigationBehavior.Enable="True"
-                                                    EnableRowVirtualization="True"
+                                                                                                        EnableRowVirtualization="True"
                                                     EnableColumnVirtualization="False"
                                                     VirtualizingPanel.IsVirtualizing="True"
                                                     VirtualizingPanel.VirtualizationMode="Recycling"
@@ -6065,12 +6151,35 @@
                                                                      ToolTip="一般 / 反復 解析の切替 (荷重描画 + 解析結果 共通)"
                                                                      Margin="0,4,0,0"/>
 
-                                                    <!-- 解析結果表示トグル -->
-                                                    <ToggleButton x:Name= "ButtonAnalysisResult" Grid.Row="4" Content="杭・梁要素 解析結果"
-                                                          ToolTip="解析結果の表示/非表示"
+                                                    <!-- 解析結果表示トグル (Primary Action: アクセント色で目立たせる) -->
+                                                    <ToggleButton x:Name= "ButtonAnalysisResult" Grid.Row="4"
+                                                          Content="杭・梁要素 解析結果"
+                                                          ToolTip="解析結果の表示/非表示 (主要操作)"
                                                           IsChecked="{Binding IsAnalysisResultVisible}"
                                                           IsEnabled="{Binding HasAnyAnalysisResult}"
-                                                          Margin="0,4,0,0"/>
+                                                          Margin="0,6,0,0"
+                                                          Height="30"
+                                                          Padding="8,0"
+                                                          FontWeight="SemiBold"
+                                                          FontSize="12"
+                                                          BorderThickness="1.5"
+                                                          BorderBrush="{StaticResource PrimaryAccentBrush}"
+                                                          Foreground="{StaticResource PrimaryAccentBrush}"
+                                                          HorizontalContentAlignment="Center"
+                                                          VerticalContentAlignment="Center">
+                                                        <ToggleButton.Style>
+                                                            <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+                                                                <Style.Triggers>
+                                                                    <!-- 無効時: 薄くする (チェック時の見た目はグローバル ToggleButton Style に委譲) -->
+                                                                    <Trigger Property="IsEnabled" Value="False">
+                                                                        <Setter Property="Opacity" Value="0.45"/>
+                                                                        <Setter Property="BorderBrush" Value="{StaticResource SurfaceBorderBrush}"/>
+                                                                        <Setter Property="Foreground" Value="{StaticResource SurfaceBorderBrush}"/>
+                                                                    </Trigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ToggleButton.Style>
+                                                    </ToggleButton>
 
                                                     <!-- 解析結果内容選択 -->
                                                     <StackPanel Grid.Row="5" Orientation="Vertical" Margin="0,4,0,0"
@@ -6230,31 +6339,51 @@
                                             <TextBlock Text="{Binding SelectedItemHeader}"
                                                        FontWeight="SemiBold" FontSize="13"
                                                        Foreground="#333"/>
-                                            <!-- サブ行: 杭選択時のみ。軸力モード (絶対/変動) と複数選択時の合計/各値 を一列に並べる -->
+                                            <!-- サブ行: 杭選択時のみ。軸力モード (絶対/変動) と複数選択時の合計/各値 を、
+                                                 それぞれ角丸ボーダーで囲んでグループであることを視覚化する。 -->
                                             <StackPanel Orientation="Horizontal"
-                                                        Margin="0,2,0,0"
+                                                        Margin="0,4,0,0"
                                                         Visibility="{Binding IsAnyPileSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <!-- 軸力モード: 絶対 / 変動 (軸力タブと IsAxialForceVariationMode を共有) -->
-                                                <RadioButton Content="絶対" FontSize="11" Padding="3,1"
-                                                             GroupName="AxialModePanel"
-                                                             IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
-                                                             ToolTip="絶対モード: 軸力 1-1 等に絶対値 (VL+地震時) を表示・編集"/>
-                                                <RadioButton Content="変動" FontSize="11" Padding="3,1" Margin="3,0,0,0"
-                                                             GroupName="AxialModePanel"
-                                                             IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay}"
-                                                             ToolTip="変動モード: ΔN 1-1 等に変動値 (= 絶対 − VL) を表示・編集"/>
+                                                <Border BorderBrush="{StaticResource SurfaceBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Padding="4,2"
+                                                        Background="White">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <RadioButton Content="絶対" FontSize="11" Padding="3,1"
+                                                                     VerticalAlignment="Center"
+                                                                     GroupName="AxialModePanel"
+                                                                     IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                                                                     ToolTip="絶対モード: 軸力 1-1 等に絶対値 (VL+地震時) を表示・編集"/>
+                                                        <RadioButton Content="変動" FontSize="11" Padding="3,1" Margin="6,0,0,0"
+                                                                     VerticalAlignment="Center"
+                                                                     GroupName="AxialModePanel"
+                                                                     IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay}"
+                                                                     ToolTip="変動モード: ΔN 1-1 等に変動値 (= 絶対 − VL) を表示・編集"/>
+                                                    </StackPanel>
+                                                </Border>
                                                 <!-- 複数選択時のみ表示する合計/各値 -->
-                                                <StackPanel Orientation="Horizontal" Margin="10,0,0,0"
-                                                            Visibility="{Binding IsMultipleSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <RadioButton Content="合計" FontSize="11" Padding="3,1"
-                                                                 GroupName="PropDisplayMode"
-                                                                 IsChecked="{Binding PropertyDisplayIsTotal, Mode=TwoWay}"
-                                                                 ToolTip="複数杭の合計値を表示"/>
-                                                    <RadioButton Content="各値" FontSize="11" Padding="3,1" Margin="3,0,0,0"
-                                                                 GroupName="PropDisplayMode"
-                                                                 IsChecked="{Binding PropertyDisplayIsTotal, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
-                                                                 ToolTip="各杭の値 (異なれば (various)) を表示"/>
-                                                </StackPanel>
+                                                <Border BorderBrush="{StaticResource SurfaceBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Padding="4,2"
+                                                        Margin="6,0,0,0"
+                                                        Background="White"
+                                                        Visibility="{Binding IsMultipleSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <RadioButton Content="合計" FontSize="11" Padding="3,1"
+                                                                     VerticalAlignment="Center"
+                                                                     GroupName="PropDisplayMode"
+                                                                     IsChecked="{Binding PropertyDisplayIsTotal, Mode=TwoWay}"
+                                                                     ToolTip="複数杭の合計値を表示"/>
+                                                        <RadioButton Content="各値" FontSize="11" Padding="3,1" Margin="6,0,0,0"
+                                                                     VerticalAlignment="Center"
+                                                                     GroupName="PropDisplayMode"
+                                                                     IsChecked="{Binding PropertyDisplayIsTotal, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                                                                     ToolTip="各杭の値 (異なれば (various)) を表示"/>
+                                                    </StackPanel>
+                                                </Border>
                                             </StackPanel>
                                         </StackPanel>
                                     </Border>
@@ -6269,8 +6398,13 @@
                                                       Margin="0">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Padding="8,4" BorderBrush="{StaticResource SurfaceBorderBrush}" BorderThickness="0,0,0,1">
-                                                        <Grid>
+                                                    <Border Padding="8,4" BorderBrush="{StaticResource SurfaceBorderBrush}" BorderThickness="0,0,0,1"
+                                                            Background="Transparent"
+                                                            ToolTip="{Binding Description}"
+                                                            ToolTipService.IsEnabled="{Binding HasDescription}"
+                                                            ToolTipService.InitialShowDelay="500"
+                                                            ToolTipService.ShowDuration="20000">
+                                                        <Grid Background="Transparent">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="Auto" MinWidth="70"/>
                                                                 <ColumnDefinition Width="*"/>
@@ -6366,9 +6500,13 @@
                                                                       ItemsSource="{Binding Options}"
                                                                       FontSize="12" VerticalAlignment="Center"
                                                                       HorizontalContentAlignment="Right"
-                                                                      BorderThickness="0,0,0,1" BorderBrush="{StaticResource PrimaryAccentBrush}">
+                                                                      BorderThickness="0,0,0,1" BorderBrush="{StaticResource PrimaryAccentBrush}"
+                                                                      ToolTip="{Binding Description}"
+                                                                      ToolTipService.IsEnabled="{Binding HasDescription}"
+                                                                      ToolTipService.InitialShowDelay="500"
+                                                                      ToolTipService.ShowDuration="20000">
                                                                 <ComboBox.Style>
-                                                                    <Style TargetType="ComboBox">
+                                                                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
                                                                         <Setter Property="Visibility" Value="Collapsed"/>
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding InputType}" Value="ComboBox">
@@ -6490,6 +6628,20 @@
                 <TextBlock Text="{Binding ZoomText}" Foreground="Gray" Margin="0,0,0,0"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
+
+                <!-- ショートカット一覧ヒント (パワーユーザー機能の発見性向上, Ctrl+/ でショートカットキー一覧) -->
+                <Button Click="ShortcutHintButton_Click"
+                        Background="Transparent" BorderThickness="0"
+                        Padding="6,2" Margin="4,0,4,0"
+                        VerticalAlignment="Center"
+                        ToolTip="クリックまたは Ctrl+/ でショートカットキー一覧を表示 (F1 はヘルプ)">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#x2328;" Foreground="#666" FontSize="14"
+                                   VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBlock Text="ショートカット (Ctrl+/)" Foreground="#666" FontSize="11"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
                 <!-- 入力ビジュアライザーはフロートウィンドウ (InputVisualizerWindow) に移動 -->
 

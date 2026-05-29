@@ -1,3 +1,4 @@
+using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using Serilog;
@@ -359,6 +360,130 @@ namespace PileDesign.FEM
             public List<Beam> Beams { get; } = [];
             public List<HorizontalSoilSpring> HorizontalSoilSprings { get; } = [];
             public RotationalSpring? RotationalSpring { get; set; }
+            // 節点別 Z ばね (UsePsSpringAtPileTip ON 時に各杭節点ごとに 1 個)
+            // PileNodes と同じ長さ・同じインデックス。先端ばね = VerticalNodeSprings[^1]。
+            public List<HorizontalSoilSpring> VerticalNodeSprings { get; } = [];
+            public List<FEM.VerticalPileSpringCurve> VerticalNodeSpringCurves { get; } = [];
+            // 沈下解析の物理関数を直接呼ぶ剛性モデル (PrepareKmat で優先使用)
+            public List<FEM.PileVerticalSoilSpringModel> VerticalNodeSpringModels { get; } = [];
+        }
+
+        // 各杭節点に Z 非線形ばねを設置するか判定
+        // 条件: UsePsSpringAtPileTip が ON、かつ沈下解析の節点別履歴 (NodeDisplacements/NodeReactions) が存在
+        private bool ShouldApplyVerticalSpringsToPile(Models.InputData.SoilPile soilPile)
+        {
+            if (!_inputModel.UsePsSpringAtPileTip) return false;
+            if (soilPile == null) return false;
+            if (soilPile.NodeDisplacements == null || soilPile.NodeReactions == null) return false;
+            if (soilPile.NodeDisplacements.Count == 0 || soilPile.NodeReactions.Count == 0) return false;
+            return true;
+        }
+
+        // 沈下解析の節点別 (相対変位, 反力) 履歴から、杭の各節点に非線形 Z ばねを構築する。
+        // NodeDisplacements[step] / NodeReactions[step] は paired DOF ベクトル (長さ 2*pileNodesCount):
+        //   index 2k: 杭側、index 2k+1: 地盤側
+        //   相対変位 = NodeDisplacements[step][2k] - NodeDisplacements[step][2k+1]
+        //   節点反力 = NodeReactions[step][2k] (kN, 圧縮正)
+        //
+        // 案 Z モード: 杭軸力 N0 は SetVectorDF で各杭の接合節点に外力として与えられるため、
+        // ここでは PreLoad / 操作点シフトは設定しない。FEM ソルバが自然に δ_op を見つける。
+        private void BuildVerticalNodeSprings(
+            PileLayoutDataItem pile,
+            Models.InputData.SoilPile soilPile,
+            PileProcessingResult result)
+        {
+            var disps = soilPile.NodeDisplacements;
+            var reacts = soilPile.NodeReactions;
+            int steps = Math.Min(disps.Count, reacts.Count);
+            if (steps < 2) throw new InvalidOperationException("沈下解析の履歴ステップが不足 (< 2)。");
+
+            int pileNodeCount = result.PileNodes.Count;
+            int vecLen = disps[0].Count;
+            int analysisNodeCount = vecLen / 2; // 沈下解析側の節点数
+
+            // 沈下解析側の節点数と AnalysisModelling 側の杭節点数が一致しない場合がある
+            // (要素分割の違い等)。最小本数で対応付けする (先頭から順番に)。
+            int mapCount = Math.Min(pileNodeCount, analysisNodeCount);
+
+            // 杭節点別自重 [kN] を沈下解析 SetWeights() と同一ロジックで事前計算。
+            // 0番目: pcv[0].W × pcv[0].L × 0.5
+            // 中間 : pcv[k-1].W × pcv[k-1].L × 0.5 + pcv[k].W × pcv[k].L × 0.5
+            // 先端 : pcv[count-1].W × pcv[count-1].L × 0.5
+            var pcvList = soilPile.PileCircumVerticals;
+            int pcvCount = pcvList?.Count ?? 0;
+            var weights = new List<double>(mapCount);
+            for (int k = 0; k < mapCount; k++)
+            {
+                double w = 0.0;
+                if (pcvCount > 0)
+                {
+                    if (k == 0)
+                        w = pcvList[0].PileBodySegment.PileSection.W * pcvList[0].L * 0.5;
+                    else if (k < pcvCount)
+                        w = pcvList[k - 1].PileBodySegment.PileSection.W * pcvList[k - 1].L * 0.5
+                          + pcvList[k].PileBodySegment.PileSection.W * pcvList[k].L * 0.5;
+                    else // k == pcvCount (= 先端)
+                        w = pcvList[pcvCount - 1].PileBodySegment.PileSection.W * pcvList[pcvCount - 1].L * 0.5;
+                }
+                weights.Add(w);
+            }
+
+            // 杭先端パラメータ (PileVerticalSoilSpringModel 先端ノード用)
+            double dp = soilPile.Dp / 1000.0; // m
+            double rpu = soilPile.SettleRpu;  // kN
+            double alpha = _inputModel.PileBodies.Count > 0 ? _inputModel.PileBodies[^1].SettleAlpha : 0.3;
+            double n = _inputModel.PileBodies.Count > 0 ? _inputModel.PileBodies[^1].SettleN : 2.0;
+
+            for (int k = 0; k < mapCount; k++)
+            {
+                // 節点 k の (相対変位 m, 反力 kN) ペアをステップ全件抽出 (フォールバック curve 用)
+                var points = new List<(double Settlement_m, double Force_kN)>(steps);
+                for (int s = 0; s < steps; s++)
+                {
+                    if (disps[s] == null || reacts[s] == null) continue;
+                    if (disps[s].Count <= 2 * k + 1) continue;
+                    if (reacts[s].Count <= 2 * k) continue;
+                    double sett = disps[s][2 * k] - disps[s][2 * k + 1];
+                    double frc = reacts[s][2 * k];
+                    points.Add((sett, frc));
+                }
+                if (points.Count < 2)
+                {
+                    if (k == pileNodeCount - 1)
+                        result.PileNodes[k].SetBoundary(PileTipBoundary);
+                    continue;
+                }
+
+                FEM.VerticalPileSpringCurve curve;
+                try
+                {
+                    curve = new FEM.VerticalPileSpringCurve(points);
+                }
+                catch
+                {
+                    if (k == pileNodeCount - 1)
+                        result.PileNodes[k].SetBoundary(PileTipBoundary);
+                    continue;
+                }
+
+                // 物理モデル (沈下解析と同じ τ-s + R-S 曲線をリアルタイム評価)
+                bool isToe = (k == mapCount - 1);
+                var model = new FEM.PileVerticalSoilSpringModel(
+                    pcvList, k, isToe, dp, rpu, alpha, n, weights[k]);
+
+                var sp = new HorizontalSoilSpring($"杭Zばね-{pile.No}-{k}", result.PileNodes[k], result.SoilNodes[k]);
+
+                // 初期 K は物理モデルの s=+0 接線 (= 線形弾性域の K)
+                // N0 は SetVectorDF で外力として与えられるため、ソルバが δ_op を自然に求める
+                double kz0 = model.InitialTangentStiffness;
+                if (!(double.IsFinite(kz0) && kz0 > 0)) kz0 = curve.InitialTangentStiffness;
+                sp.SetKe(0, 0, kz0, 0, 0, 0, true);
+                sp.SetKe(0, 0, kz0, 0, 0, 0, false);
+
+                result.VerticalNodeSprings.Add(sp);
+                result.VerticalNodeSpringCurves.Add(curve);
+                result.VerticalNodeSpringModels.Add(model);
+            }
         }
 
         // 単一杭を処理（スレッドセーフ）
@@ -472,7 +597,11 @@ namespace PileDesign.FEM
                     if (beam.SegmentIndex == 0)
                         beam.IsPileHeadElement = true;
                     result.Beams.Add(beam);
-                    pileNode.SetBoundary(PileTipBoundary);
+
+                    // 杭先端 Z 境界: P-S 非線形ばねが本ループ末尾で各節点に追加される場合は
+                    // 杭先端ノードも Uz 自由 (ばねが支持) とする。それ以外は従来の Uz 固定。
+                    if (!ShouldApplyVerticalSpringsToPile(soilPile))
+                        pileNode.SetBoundary(PileTipBoundary);
                 }
 
                 // Soil Node
@@ -485,6 +614,26 @@ namespace PileDesign.FEM
                 // 水平土ばね
                 var hspring = new HorizontalSoilSpring($"杭地盤ばね-{pile.No}-{i}", pileNode, soilNode);
                 result.HorizontalSoilSprings.Add(hspring);
+            }
+
+            // 全節点 Z ばね (沈下解析の節点別 (相対変位, 反力) 履歴から各節点ごとに非線形ばねを構築)
+            if (ShouldApplyVerticalSpringsToPile(soilPile))
+            {
+                try
+                {
+                    BuildVerticalNodeSprings(pile, soilPile, result);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex,
+                        "[AnalysisModelling] Pile-{PileNo}: 節点別Zばね構築に失敗。先端 Uz 固定にフォールバック。",
+                        pile.No);
+                    // フォールバック: 先端ノードに Uz 固定を適用 (上のループでスキップしたため再適用)
+                    if (result.PileNodes.Count > 0)
+                        result.PileNodes[^1].SetBoundary(PileTipBoundary);
+                    result.VerticalNodeSprings.Clear();
+                    result.VerticalNodeSpringCurves.Clear();
+                }
             }
 
             return result;
@@ -554,6 +703,25 @@ namespace PileDesign.FEM
                 {
                     HorizontalSoilSprings.Add(hspring);
                     pile.HorizontalSoilSprings.Add(hspring);
+                }
+
+                // 節点別 Z ばね: master の HorizontalSoilSprings には追加して K 組立対象にする一方、
+                // pile.HorizontalSoilSprings (= 各杭の水平ばね loop) には入れない。
+                // (水平ばね K 更新 loop が Z を 0 で上書きしないようにするため)
+                pile.VerticalNodeSprings.Clear();
+                pile.VerticalNodeSpringCurves.Clear();
+                pile.VerticalNodeSpringModels.Clear();
+                if (result.VerticalNodeSprings.Count > 0)
+                {
+                    foreach (var vs in result.VerticalNodeSprings)
+                    {
+                        HorizontalSoilSprings.Add(vs);
+                        pile.VerticalNodeSprings.Add(vs);
+                    }
+                    foreach (var cv in result.VerticalNodeSpringCurves)
+                        pile.VerticalNodeSpringCurves.Add(cv);
+                    foreach (var md in result.VerticalNodeSpringModels)
+                        pile.VerticalNodeSpringModels.Add(md);
                 }
             }
         }

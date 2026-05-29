@@ -34,7 +34,8 @@ namespace PileDesign.Views
                 if (groundIndex < 0 || groundIndex >= viewModel.CurrentInputModel.GroundsInput.Count)
                     continue; // またはエラー通知
 
-                // 地盤dia
+                // 地盤dia: PileToeDia × 2 を土層柱径とする
+                // (拡底杭・拡大根固め杭・回転貫入杭いずれも、杭先端域の地盤撹乱範囲を 2×PileToeDia で可視化)
                 double soilDia;
                 if (viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileToeDia == 0)
                 {

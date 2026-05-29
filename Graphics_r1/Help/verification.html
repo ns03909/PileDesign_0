@@ -342,7 +342,8 @@
             margin-right: 8px;
         }
 
-        .popup-close {
+        .popup-close,
+        .popup-maximize {
             background: none;
             border: none;
             color: white;
@@ -352,7 +353,12 @@
             padding: 0 6px;
             border-radius: 2px;
         }
-        .popup-close:hover {
+        .popup-maximize {
+            font-size: 14px;
+            margin-right: 2px;
+        }
+        .popup-close:hover,
+        .popup-maximize:hover {
             background: rgba(255, 255, 255, 0.25);
         }
 
@@ -4415,11 +4421,16 @@
                 const titleEl = document.createElement('span');
                 titleEl.className = 'popup-title';
                 titleEl.textContent = title || '図';
+                const maxBtn = document.createElement('button');
+                maxBtn.className = 'popup-maximize';
+                maxBtn.title = '最大化';
+                maxBtn.textContent = '⛶';
                 const closeBtn = document.createElement('button');
                 closeBtn.className = 'popup-close';
                 closeBtn.title = '閉じる';
                 closeBtn.textContent = '×';
                 header.appendChild(titleEl);
+                header.appendChild(maxBtn);
                 header.appendChild(closeBtn);
 
                 const body = document.createElement('div');
@@ -4484,6 +4495,45 @@
                     body.scrollTop = ratioY * img.offsetHeight - clientY;
                 }, { passive: false });
 
+                // 最大化トグル (画面いっぱいに展開 / 元のサイズへ復元)
+                let savedRect = null;
+                maxBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (savedRect === null) {
+                        savedRect = {
+                            left: popup.style.left,
+                            top: popup.style.top,
+                            width: popup.style.width,
+                            height: popup.style.height,
+                            maxWidth: popup.style.maxWidth,
+                            maxHeight: popup.style.maxHeight,
+                        };
+                        popup.style.left = '0px';
+                        popup.style.top = '0px';
+                        popup.style.width = '100vw';
+                        popup.style.height = '100vh';
+                        popup.style.maxWidth = '100vw';
+                        popup.style.maxHeight = '100vh';
+                        maxBtn.textContent = '❐';
+                        maxBtn.title = '元のサイズに戻す';
+                    } else {
+                        popup.style.left = savedRect.left;
+                        popup.style.top = savedRect.top;
+                        popup.style.width = savedRect.width;
+                        popup.style.height = savedRect.height;
+                        popup.style.maxWidth = savedRect.maxWidth;
+                        popup.style.maxHeight = savedRect.maxHeight;
+                        savedRect = null;
+                        maxBtn.textContent = '⛶';
+                        maxBtn.title = '最大化';
+                    }
+                });
+                // ヘッダのダブルクリックでも最大化トグル (Windows のウィンドウ慣用に合わせる)
+                header.addEventListener('dblclick', (e) => {
+                    if (e.target === closeBtn || e.target === maxBtn) return;
+                    maxBtn.click();
+                });
+
                 // 閉じる
                 closeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -4499,7 +4549,7 @@
                 let dragging = false;
                 let startX = 0, startY = 0, startLeft = 0, startTop = 0;
                 header.addEventListener('mousedown', (e) => {
-                    if (e.target === closeBtn) return;
+                    if (e.target === closeBtn || e.target === maxBtn) return;
                     dragging = true;
                     startX = e.clientX;
                     startY = e.clientY;

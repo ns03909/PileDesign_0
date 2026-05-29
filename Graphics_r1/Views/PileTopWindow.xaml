@@ -54,6 +54,7 @@
                     <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable x:Name="InputTab" Title="入力" CanClose="False" CanHide="False">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                 <StackPanel Grid.Column="0">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="杭頭タイプ" Width="100"/>
@@ -670,6 +671,7 @@
                                         </StackPanel>
                                     </GroupBox>
                                 </StackPanel>
+                                </ScrollViewer>
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutDocumentPane>
                         <avalonDock:LayoutDocumentPane>
@@ -679,7 +681,7 @@
                                           ItemsSource="{Binding PileTop.SelectedPileTopSpecification}"
                                           AutoGenerateColumns="False"
                                           CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                          common:DataGridNavigationBehavior.Enable="True">
+                                          >
 
                                     <DataGrid.ContextMenu>
                                         <ContextMenu Opened="ContextMenu_Opened">
@@ -792,10 +794,14 @@
 
             <!-- OK / キャンセルボタン (右側) -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
-                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
-                <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
-                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
+                <Button x:Name="ButtonOk" Content="保存(_S)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
+                        IsDefault="True"
+                        ToolTip="変更を保存して閉じます (Enter / Ctrl+Enter / Alt+S)"/>
+                <Button x:Name="ButtonCancel" Content="キャンセル(_C)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"
+                        IsCancel="True"
+                        ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
             </StackPanel>
         </Grid>
     </Grid>

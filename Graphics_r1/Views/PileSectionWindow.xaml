@@ -636,7 +636,7 @@
                                                   ItemsSource="{Binding PileSection.SelectedPileSectionSpecification}"
                                                   AutoGenerateColumns="False"
                                                   CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                                  common:DataGridNavigationBehavior.Enable="True">
+                                                  >
 
                                             <DataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
@@ -1289,15 +1289,19 @@
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button x:Name="ButtonOk"
-                        Content="保存 (Ctrl+Enter)"
+                        Content="保存(_S)"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center" Height="30" Width="150"
-                        Command="{Binding OkCommand}" />
+                        Command="{Binding OkCommand}"
+                        IsDefault="True"
+                        ToolTip="変更を保存して閉じます (Enter / Ctrl+Enter / Alt+S)" />
                 <Button x:Name="ButtonCancel"
-                        Content="キャンセル (Esc)"
+                        Content="キャンセル(_C)"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center" Height="30" Width="150"
-                        Command="{Binding CancelCommand}" />
+                        Command="{Binding CancelCommand}"
+                        IsCancel="True"
+                        ToolTip="変更を破棄して閉じます (Esc / Alt+C)" />
             </StackPanel>
         </Grid>
     </Grid>

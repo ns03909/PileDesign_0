@@ -4,12 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace PileDesign.Models.InputData
 {
     // SoilPileクラス
-    public class SoilPile : BaseModel
+    public class SoilPile : BaseModel, IJsonOnDeserializing, IJsonOnDeserialized
     {
         public int No { get; set; }
         //private readonly InputModel inputModel = InputModel.Instance;
@@ -55,6 +56,22 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _pileBottomAltitude, value);
         }
 
+        // 子要素 (ZDataItems) への自動同期 (SetSoilDisplacement) を抑止するフラグ。
+        // JSON デシリアライズ中は GroundInput や ZDataItem.GroundDisp* が個別に loaded されるため、
+        // ここで再計算すると loaded 済みの GroundDisp* を破壊する可能性がある。
+        private bool _suppressChildSync = false;
+
+        // System.Text.Json 用コールバック (本プロジェクトの主デシリアライザ)
+        void IJsonOnDeserializing.OnDeserializing() => _suppressChildSync = true;
+        void IJsonOnDeserialized.OnDeserialized() => _suppressChildSync = false;
+
+        // Newtonsoft.Json 用コールバック (副デシリアライザ経由でロードされる場合に備えて)
+        [OnDeserializing]
+        internal void OnDeserializingHandler(StreamingContext _) => _suppressChildSync = true;
+
+        [OnDeserialized]
+        internal void OnDeserializedHandler(StreamingContext _) => _suppressChildSync = false;
+
         // 節点 (ZDataItems.Z: Z)
         private ObservableCollection<PileZDataItem> _zDataItems;
         public ObservableCollection<PileZDataItem> ZDataItems
@@ -64,6 +81,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _zDataItems, value))
                 {
+                    if (_suppressChildSync) return;
                     foreach (var zDataItem in _zDataItems)
                     {
                         zDataItem.SetSoilDisplacement(/*InputModel.Instance*/);
@@ -314,13 +332,18 @@ namespace PileDesign.Models.InputData
             return 0;
         }
 
+        // [JsonIgnore]: LoadDisplacements を補間する computed プロパティ。保存対象ではない
+        // (ElementDivision.SoilPiles 経由でシリアライズされるため明示的に除外)
         /// <summary>使用限界支持力 R_SLS 時の杭頭沈下量 [mm]</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double SettlementAtR_SLS => InterpolateD0sForLoadMagnitude(R_SLS);
 
         /// <summary>損傷限界支持力 R_DLS 時の杭頭沈下量 [mm]</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double SettlementAtR_DLS => InterpolateD0sForLoadMagnitude(R_DLS);
 
         /// <summary>終局限界支持力 R_ULS 時の杭頭沈下量 [mm]</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double SettlementAtR_ULS => InterpolateD0sForLoadMagnitude(R_ULS);
 
         public double R_SLS => (1.0 / 3.0) * Ru;

@@ -119,6 +119,77 @@ namespace PileDesign.Models.InputData
 
         [JsonPropertyName("segments")]
         public List<PileBodySegmentDto> Segments { get; set; } = [];
+
+        /// <summary>
+        /// キャプテンパイル工法の設定 (pileTopType = "キャプテンパイル工法" のみ有効)。
+        /// null の場合はデフォルト値が使用される。
+        /// </summary>
+        [JsonPropertyName("captainPile")]
+        public CaptainPileDto? CaptainPile { get; set; }
+
+        /// <summary>
+        /// キャプリングパイル工法の設定 (pileTopType = "キャプリングパイル工法" のみ有効)。
+        /// null の場合はデフォルト値が使用される。
+        /// </summary>
+        [JsonPropertyName("capringPile")]
+        public CapringPileDto? CapringPile { get; set; }
+    }
+
+    /// <summary>
+    /// キャプリングパイル工法 (PCリング + 引張定着筋) の設定 DTO。
+    /// </summary>
+    public class CapringPileDto
+    {
+        /// <summary>PCリング名 (例: "800-N", "800-S1")</summary>
+        [JsonPropertyName("pcRingName")]
+        public string? PCRingName { get; set; }
+
+        /// <summary>引張定着筋を配置するか</summary>
+        [JsonPropertyName("hasTensionBars")]
+        public bool HasTensionBars { get; set; } = false;
+
+        /// <summary>引張定着筋テーブルから選択する配筋名 (例: "4-D25-SD345" など。
+        /// CapringTensionBar テーブル定義に依存)。</summary>
+        [JsonPropertyName("tensionBarName")]
+        public string? TensionBarName { get; set; }
+    }
+
+    /// <summary>
+    /// キャプテンパイル工法 (PCリング + 引張定着筋) の設定 DTO。
+    /// </summary>
+    public class CaptainPileDto
+    {
+        /// <summary>PCリング名 (例: "2400-N", "2400-S1")</summary>
+        [JsonPropertyName("pcRingName")]
+        public string? PCRingName { get; set; }
+
+        /// <summary>絞り率 ν (例: 1.00, 0.85, 0.70)</summary>
+        [JsonPropertyName("nu")]
+        public double? Nu { get; set; }
+
+        /// <summary>引張定着筋を配置するか</summary>
+        [JsonPropertyName("hasTensionRebars")]
+        public bool HasTensionRebars { get; set; } = false;
+
+        /// <summary>引張定着筋配置 ("正方形配置" or "円形配置")</summary>
+        [JsonPropertyName("tensionRebarArrangement")]
+        public string? TensionRebarArrangement { get; set; }
+
+        /// <summary>引張定着筋の本数</summary>
+        [JsonPropertyName("tensionRebarNumber")]
+        public int? TensionRebarNumber { get; set; }
+
+        /// <summary>引張定着筋の呼び径 (例: "D38", "D41")</summary>
+        [JsonPropertyName("tensionRebarDia")]
+        public string? TensionRebarDia { get; set; }
+
+        /// <summary>引張定着筋の規格 (例: "SD390", "SD490", "SD685")</summary>
+        [JsonPropertyName("tensionRebarGrade")]
+        public string? TensionRebarGrade { get; set; }
+
+        /// <summary>配置直径 tD (円形配置) または 配置辺長 tB (正方形配置) (mm)</summary>
+        [JsonPropertyName("tDorTB")]
+        public double? TDorTB { get; set; }
     }
 
     /// <summary>
@@ -171,6 +242,12 @@ namespace PileDesign.Models.InputData
 
         [JsonPropertyName("concreteGamma")]
         public double? ConcreteGamma { get; set; }
+
+        [JsonPropertyName("hoopSize")]
+        public string? HoopSize { get; set; }
+
+        [JsonPropertyName("hoopSpacing")]
+        public double? HoopSpacing { get; set; }
     }
 
     /// <summary>

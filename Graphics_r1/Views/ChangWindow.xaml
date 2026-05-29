@@ -242,8 +242,7 @@
                                                                  LoadingRow="DataGrid_LoadingRow"
                                                                  Grid.Row="1"
                                                                  PreparingCellForEdit="DataGrid_PreparingCellForEdit"
-                                                                 common:DataGridNavigationBehavior.Enable="True"
-                                                                    CellEditEnding="DataGrid_CellEditEnding">
+                                                                                                                                     CellEditEnding="DataGrid_CellEditEnding">
                                             <DataGrid.AlternatingRowBackground>
                                                 <ImageBrush/>
                                             </DataGrid.AlternatingRowBackground>
@@ -412,6 +411,7 @@
                                                             <ComboBox SelectedItem="{Binding PileTopType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                     HorizontalAlignment="Stretch" MinWidth="80">
                                                                 <ComboBoxItem Content="キャプテンパイル工法"/>
+                                                                <ComboBoxItem Content="キャプリングパイル工法"/>
                                                                 <ComboBoxItem Content="FT-Pile構法"/>
                                                                 <ComboBoxItem Content="杭頭固定"/>
                                                             </ComboBox>
@@ -472,6 +472,62 @@
                                                                         </DataTemplate>
                                                                     </ComboBox.ItemTemplate>
                                                                 </ComboBox>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- キャプリング PCリング -->
+                                                <DataGridTemplateColumn Header="キャプリング&#x0a;PCリング" Width="120">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプリングパイル工法'}">
+                                                                <TextBlock Text="{Binding DataContext.PileTop.CapringPile.SelectedPCRingName, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                           HorizontalAlignment="Right"/>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプリングパイル工法'}">
+                                                                <ComboBox Width="100"
+                                                                      HorizontalContentAlignment="Right"
+                                                                      ItemsSource="{Binding DataContext.PileTop.CapringPile.PCRingOption, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                      SelectedItem="{Binding DataContext.PileTop.CapringPile.SelectedPCRingName, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                      DropDownOpened="ComboBox_DropDownOpened"/>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- キャプリング 引張定着筋 -->
+                                                <DataGridTemplateColumn Header="キャプリング&#x0a;引張定着筋" Width="140">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプリングパイル工法'}">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <CheckBox IsChecked="{Binding DataContext.PileTop.CapringPile.HasTensionBars, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                                                              IsEnabled="False"
+                                                                              VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                                    <TextBlock Text="{Binding DataContext.PileTop.CapringPile.TensionBar.BarSize, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=-}"
+                                                                               VerticalAlignment="Center" Foreground="Gray"/>
+                                                                </StackPanel>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプリングパイル工法'}">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <CheckBox IsChecked="{Binding DataContext.PileTop.CapringPile.HasTensionBars, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                              VerticalAlignment="Center" Margin="0,0,4,0"
+                                                                              ToolTip="引張定着筋の有無"/>
+                                                                    <ComboBox Width="80"
+                                                                          ItemsSource="{Binding DataContext.PileTop.CapringPile.TensionBarOption, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                          SelectedItem="{Binding DataContext.PileTop.CapringPile.TensionBar.BarSize, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                          IsEnabled="{Binding DataContext.PileTop.CapringPile.HasTensionBars, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                          DropDownOpened="ComboBox_DropDownOpened"/>
+                                                                </StackPanel>
                                                             </ContentControl>
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellEditingTemplate>
@@ -645,8 +701,7 @@
                                                                  LoadingRow="DataGrid_LoadingRow"
                                                                  Grid.Row="1"
                                                                  PreparingCellForEdit="DataGrid_PreparingCellForEdit"
-                                                                CellEditEnding="DataGrid_CellEditEnding"
-                                                                 common:DataGridNavigationBehavior.Enable="True">
+                                                                CellEditEnding="DataGrid_CellEditEnding">
                                             <DataGrid.AlternatingRowBackground>
                                                 <ImageBrush/>
                                             </DataGrid.AlternatingRowBackground>
