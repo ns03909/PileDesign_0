@@ -189,7 +189,7 @@ namespace PileDesign.Views
                 sb.AppendLine(string.Join("\t", rowValues));
             }
 
-            Clipboard.SetText(sb.ToString());
+            Common.ClipboardHelper.TrySetText(sb.ToString());
         }
 
         private void ExportCsvFromContextMenu_Click(object sender, RoutedEventArgs e)

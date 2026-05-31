@@ -243,8 +243,12 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _settleQpu, value);
         }
 
+        // 沈下検討用先端面積 m2 (沈下検討用杭先端径 Dp[mm] 基準)。
+        // 支持力検討の Ap は構造先端径 D[m] 基準で別物。Dp は mm 保持のため /1000 で m 換算する。
+        public double SettleAp => Math.PI * Math.Pow(Dp / 1000.0, 2) * 0.25;
+
         // 沈下検討用極限先端支持力（沈下計算で使用）
-        public double SettleRpu => SettleQpu * Ap;
+        public double SettleRpu => SettleQpu * SettleAp;
 
         // 杭工法
         private string _pileConstructionType;
@@ -274,7 +278,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _d, value);
         }
 
-        // 杭先端径 m
+        // 沈下検討用杭先端径 mm (PileBodyInput.SettlePileToeDia と同期。FEM 側は /1000 で m 換算)
         private double _dp;
         public double Dp
         {

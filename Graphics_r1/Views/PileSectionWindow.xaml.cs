@@ -317,7 +317,7 @@ namespace PileDesign.Views
                 sb.AppendLine();
             }
 
-            Clipboard.SetText(sb.ToString());
+            Common.ClipboardHelper.TrySetText(sb.ToString());
         }
 
         // 散布図

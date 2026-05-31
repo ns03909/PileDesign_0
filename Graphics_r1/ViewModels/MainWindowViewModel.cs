@@ -3033,9 +3033,11 @@ namespace PileDesign.ViewModels
             if (loadingType != "個別矩形（基礎梁考慮）")
             {
                 UpsertNonBeamAwareCaseRecord(loadingType, result.SettlementGridData);
-                // 一般解析は VL ケース 1 件のみ保存。現在の SelectedLoadCaseName が VL 以外なら
-                // コンタを消去して、荷重ケース VL+E1 等で VL の結果が誤って表示されないようにする。
-                SyncGroupSettlementActiveCaseFromLoadCase(SelectedLoadCaseName);
+                // 一般解析は VL ケース 1 件のみ保存するため、解析直後は表示荷重ケースを VL に切替えて
+                // 結果コンタを表示する。setter 経由で ActiveCase 同期 + 再描画が走るが、既に VL を
+                // 選択中の場合は setter が発火しないため、明示的にも同期しておく。
+                SelectedLoadCaseName = "VL";
+                SyncGroupSettlementActiveCaseFromLoadCase("VL");
             }
 
             ShowToast("スタインブレナーの近似式による解析が終了しました。");
@@ -6626,7 +6628,7 @@ namespace PileDesign.ViewModels
                 var dataObject = new DataObject();
                 dataObject.SetData("PNG", pngStream, false);
                 dataObject.SetData(DataFormats.Dib, new System.IO.MemoryStream(dibBytes), false);
-                System.Windows.Clipboard.SetDataObject(dataObject, true);
+                Common.ClipboardHelper.TrySetDataObject(dataObject, true);
 
                 StatusMessage = $"画像をクリップボードにコピーしました ({width}x{height})";
             }

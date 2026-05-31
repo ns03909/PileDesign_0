@@ -312,5 +312,11 @@ namespace PileDesign.Views
             _paneMaximizer.Register("Shape",  ShapeTab,  ButtonMaximizeShape,  "杭姿図");
             _paneMaximizer.Register("Result", ResultTab, ButtonMaximizeResult, "地盤描画");
         }
+
+        // 杭姿図キャンバスの右クリック「画像コピー」
+        private void CanvasImageCopy_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            PileDesign.Common.ClipboardHelper.TrySetCanvasImage(Canvas);
+        }
     }
 }

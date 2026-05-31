@@ -92,7 +92,7 @@ namespace PileDesign.Output
                 }
             }
 
-            Clipboard.SetText(sb.ToString());
+            Common.ClipboardHelper.TrySetText(sb.ToString());
         }
 
         // データグリッドのデータをCSVファイルにエクスポートするメソッド

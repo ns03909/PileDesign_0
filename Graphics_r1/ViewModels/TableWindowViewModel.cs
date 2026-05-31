@@ -256,7 +256,7 @@ namespace PileDesign.ViewModels
                     sb.AppendLine(string.Join("\t", values));
                 }
 
-                Clipboard.SetText(sb.ToString());
+                Common.ClipboardHelper.TrySetText(sb.ToString());
             }
             catch (Exception ex)
             {

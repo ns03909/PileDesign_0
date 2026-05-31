@@ -593,7 +593,13 @@
                     <avalonDock:LayoutDocumentPaneGroup x:Name="PileShapeImagePaneGroup" DockWidth="0.25*">
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable x:Name="ShapeTab" Title="杭姿図" CanClose="False" CanHide="False">
-                                <Canvas x:Name="Canvas"/>
+                                <Canvas x:Name="Canvas">
+                                    <Canvas.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="画像コピー" Click="CanvasImageCopy_Click"/>
+                                        </ContextMenu>
+                                    </Canvas.ContextMenu>
+                                </Canvas>
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutDocumentPane>
                     </avalonDock:LayoutDocumentPaneGroup>

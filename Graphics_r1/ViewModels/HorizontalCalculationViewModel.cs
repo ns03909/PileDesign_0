@@ -1290,6 +1290,13 @@ namespace PileDesign.ViewModels
                 vm.CurrentModel = this.CurrentModel; // AnaModels[0]など
                 vm.IsHorizontalAnalysisDone = this.CurrentModel != null;
                 vm.RefreshResultTablesFromLastStep(); // 追加
+
+                // 解析した 1 つ目の荷重ケースをメイン画面で選択状態にする
+                // (既定の "VL" は地震時水平解析の対象ではないため、結果表示が空にならないよう切替える)
+                var firstAnalyzedCase = this.CurrentModel?.AnalysisStepResults?
+                    .FirstOrDefault()?.LoadCase?.LoadName;
+                if (!string.IsNullOrEmpty(firstAnalyzedCase))
+                    vm.SelectedLoadCaseName = firstAnalyzedCase;
             }
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
@@ -5727,7 +5734,7 @@ namespace PileDesign.ViewModels
                 MessageService.Show("サマリーデータがありません。先に解析を実行してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
-            try { System.Windows.Clipboard.SetText(text); }
+            try { Common.ClipboardHelper.TrySetText(text); }
             catch (Exception ex)
             {
                 MessageService.Show($"クリップボードへのコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);

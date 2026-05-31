@@ -640,18 +640,7 @@ namespace PileDesign.Common
                 }
 
                 // クリップボードアクセスはリトライ（他アプリのロック対策）
-                for (int retry = 0; retry < 3; retry++)
-                {
-                    try
-                    {
-                        Clipboard.SetText(sb.ToString());
-                        return true;
-                    }
-                    catch (System.Runtime.InteropServices.ExternalException)
-                    {
-                        System.Threading.Thread.Sleep(50);
-                    }
-                }
+                ClipboardHelper.TrySetText(sb.ToString());
                 return true;
             }
             catch

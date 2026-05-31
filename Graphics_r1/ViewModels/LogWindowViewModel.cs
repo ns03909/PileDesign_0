@@ -208,7 +208,7 @@ namespace PileDesign.ViewModels
                 first = false;
             }
             if (sb.Length == 0) return;
-            Clipboard.SetText(sb.ToString());
+            Common.ClipboardHelper.TrySetText(sb.ToString());
             StatusText = selectedCount > 0
                 ? $"{selectedCount} 行をクリップボードにコピーしました"
                 : "ログをクリップボードにコピーしました";
@@ -229,7 +229,7 @@ namespace PileDesign.ViewModels
                 sb.Append(s);
                 first = false;
             }
-            Clipboard.SetText(sb.ToString());
+            Common.ClipboardHelper.TrySetText(sb.ToString());
             StatusText = $"全 {LogLines.Count} 行をクリップボードにコピーしました";
         }
 

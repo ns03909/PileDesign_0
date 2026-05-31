@@ -886,7 +886,7 @@ namespace PileDesign.ViewModels
             var dataObject = new DataObject();
             dataObject.SetData("PNG", pngStream, false);
             dataObject.SetData(DataFormats.Dib, new System.IO.MemoryStream(dibBytes), false);
-            Clipboard.SetDataObject(dataObject, true);
+            Common.ClipboardHelper.TrySetDataObject(dataObject, true);
         }
 
         // スケール取得メソッド

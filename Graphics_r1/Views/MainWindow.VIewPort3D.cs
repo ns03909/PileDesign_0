@@ -765,7 +765,7 @@ namespace PileDesign.Views
                 var dataObject = new DataObject();
                 dataObject.SetData("PNG", pngStream, false);
                 dataObject.SetData(DataFormats.Dib, new System.IO.MemoryStream(dibBytes), false);
-                Clipboard.SetDataObject(dataObject, true);
+                Common.ClipboardHelper.TrySetDataObject(dataObject, true);
 
                 MessageService.Show($"画像をクリップボードにコピーしました ({width}x{height})", "コピー", MessageBoxButton.OK, MessageBoxImage.Information);
             }

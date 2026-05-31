@@ -1351,6 +1351,13 @@ namespace PileDesign.ViewModels
                         IsResultValueVisible = true;
                     }
 
+                    // 各種マップ（杭頭M/Q・接合点M/Q）は平面分布が見やすいようトップビュー（XY平面）に切替える
+                    if (value == "杭頭Mマップ" || value == "杭頭Qマップ"
+                        || value == "接合点Mマップ" || value == "接合点Qマップ")
+                    {
+                        ViewXYPlane();
+                    }
+
                     // 沈下系コンテンツ選択時も値表示をON
                     if (value == "沈下量" || value == "沈下部材角"
                         || value == "沈下反力（地盤）" || value == "沈下反力（杭頭集約）"
@@ -4469,7 +4476,7 @@ namespace PileDesign.ViewModels
                 sb.AppendLine(string.Join("\t", rowValues));
             }
 
-            Clipboard.SetText(sb.ToString());
+            Common.ClipboardHelper.TrySetText(sb.ToString());
         }
 
         //

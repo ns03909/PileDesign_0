@@ -295,6 +295,12 @@ namespace PileDesign.Views
             }
         }
 
+        // 杭姿図キャンバスの右クリック「画像コピー」
+        private void CanvasImageCopy_Click(object sender, RoutedEventArgs e)
+        {
+            PileDesign.Common.ClipboardHelper.TrySetCanvasImage(Canvas);
+        }
+
         //private void TextBoxSettleAlpha_TextChanged(object sender, TextChangedEventArgs e)
         //{
         //    if (DataContext is SettlementViewModel viewModel)

@@ -550,7 +550,13 @@
             </Grid>
             </ScrollViewer>
 
-            <Canvas x:Name="Canvas"  Grid.Row="0" Grid.Column="2" Width="Auto" Height="Auto" Background="AliceBlue"/>
+            <Canvas x:Name="Canvas"  Grid.Row="0" Grid.Column="2" Width="Auto" Height="Auto" Background="AliceBlue">
+                <Canvas.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="画像コピー" Click="CanvasImageCopy_Click"/>
+                    </ContextMenu>
+                </Canvas.ContextMenu>
+            </Canvas>
 
             <!-- 右側のプロット -->
             <TabControl x:Name="ResultTabControl" Grid.Row="0" Grid.Column="4"

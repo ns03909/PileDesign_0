@@ -1232,7 +1232,7 @@ namespace PileDesign.ViewModels
                 sb.AppendLine(string.Join("\t", rowValues));
             }
 
-            Clipboard.SetText(sb.ToString());
+            Common.ClipboardHelper.TrySetText(sb.ToString());
         }
     }
 }

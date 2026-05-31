@@ -3202,6 +3202,7 @@ namespace PileDesign.Views
 
                 Beam targetBeam = null;
                 Node targetNode = null;
+                bool usedRigidLink = false;
 
                 // まずRigidLinkビームを探す
                 var rigidLink = rigidLinkBeams.FirstOrDefault(b =>
@@ -3210,10 +3211,12 @@ namespace PileDesign.Views
                 {
                     targetBeam = rigidLink;
                     targetNode = rigidLink.NodeI; // ConnectionNode
+                    usedRigidLink = true;
                 }
                 else
                 {
-                    // RigidLinkがない場合（ΔZc≈0）: 杭頭ビームのI端を使用
+                    // RigidLinkが無い場合（基礎梁未設定 / ΔZc≈0）: 杭頭ビームのI端力を取得し、
+                    // 接合点標高（杭頭 + ΔZc）へ剛オフセット移送して接合点の応力として表示する。
                     var pileTopBeam = pile.Beams?.FirstOrDefault(b => b.IsPileHeadElement);
                     if (pileTopBeam != null)
                     {
@@ -3233,14 +3236,29 @@ namespace PileDesign.Views
                 var T = targetBeam.GetCachedCoordTransform();
                 var f_global = T.Transpose() * f_local;
 
+                // 描画位置: RigidLink があれば接合点節点、無ければ杭頭節点を ΔZc 上（接合点標高）へ移動。
+                Point3D drawLoc = targetNode.Coord;
+                double dZc = pile.FoundationBeamDeltaZc;
+                if (!usedRigidLink && dZc != 0)
+                    drawLoc = new Point3D(targetNode.Coord.X, targetNode.Coord.Y, targetNode.Coord.Z + dZc);
+
                 double vx, vy;
                 if (isMoment)
                 {
                     vx = f_global[3]; // Mxi_global
                     vy = f_global[4]; // Myi_global
+                    // RigidLink が無い場合は剛オフセット移送で接合点モーメントへ補正する。
+                    // M_C = M_H + (H − C) × F,  (H − C) = (0,0,−ΔZc)
+                    //   → Mx_C = Mx_H + ΔZc·Fy,  My_C = My_H − ΔZc·Fx
+                    if (!usedRigidLink)
+                    {
+                        vx += dZc * f_global[1]; // + ΔZc·Fy
+                        vy -= dZc * f_global[0]; // − ΔZc·Fx
+                    }
                 }
                 else
                 {
+                    // せん断力は剛オフセット間（荷重なし）で連続のため、接合点でも杭頭と同一。
                     vx = f_global[0]; // Fxi_global
                     vy = f_global[1]; // Fyi_global
                 }
@@ -3248,7 +3266,7 @@ namespace PileDesign.Views
                 double mag = Math.Sqrt(vx * vx + vy * vy);
                 if (!double.IsFinite(mag)) continue;
 
-                entries.Add((targetNode.Coord, vx, vy, mag));
+                entries.Add((drawLoc, vx, vy, mag));
             }
 
             if (entries.Count == 0) { ColorBarCanvas.Children.Clear(); return; }

@@ -2016,12 +2016,27 @@ namespace PileDesign.ViewModels
             Update(); // グラフを更新
         }
 
+        // 土質点データの N 値に、その点が属する土層の N 値を代入する (層 → 点)
         [RelayCommand]
         private void OnApplyGroundLayerNValue()
         {
             // 変更前の状態を保存
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
+            foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
+            {
+                foreach (GroundLayerInput groundLayerDataItem in GroundInput.GroundLayers)
+                {
+                    double topAltitude = groundLayerDataItem.BottomAltitude + groundLayerDataItem.LayerThickness;
+                    if (topAltitude > groundMassData.AltitudeDepth &&
+                        groundMassData.AltitudeDepth >= groundLayerDataItem.BottomAltitude)
+                    {
+                        groundMassData.NValue = groundLayerDataItem.NValue;
+                        break; // 最初に該当した土層を採用
+                    }
+                }
+            }
+            Update(); // グラフを更新
         }
 
 

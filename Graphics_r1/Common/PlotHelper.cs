@@ -317,7 +317,7 @@ namespace PileDesign.Common
                 var dataObject = new DataObject();
                 dataObject.SetData("PNG", pngStream, false);
                 dataObject.SetData(DataFormats.Dib, new MemoryStream(dibBytes), false);
-                Clipboard.SetDataObject(dataObject, true);
+                ClipboardHelper.TrySetDataObject(dataObject, true);
             }
             catch (Exception ex)
             {
@@ -440,18 +440,7 @@ namespace PileDesign.Common
             try
             {
                 string tsv = BuildCsvString(plot, "\t");
-                for (int retry = 0; retry < 3; retry++)
-                {
-                    try
-                    {
-                        Clipboard.SetText(tsv);
-                        return;
-                    }
-                    catch (System.Runtime.InteropServices.ExternalException)
-                    {
-                        System.Threading.Thread.Sleep(50);
-                    }
-                }
+                ClipboardHelper.TrySetText(tsv);
             }
             catch (Exception ex)
             {
