@@ -2801,7 +2801,11 @@
 
                                     <ToolBar Grid.Row="0">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="内容" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"/>
+                                            <TextBlock Text="表示" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <CheckBox Content="土層の平均N値" IsChecked="{Binding IsLayerNValueGraphVisible, Mode=TwoWay}"
+                                                      VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                            <CheckBox Content="土質点のN値" IsChecked="{Binding IsMassPointNValueGraphVisible, Mode=TwoWay}"
+                                                      VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </ToolBar>
 

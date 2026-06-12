@@ -611,7 +611,7 @@
                                                         <StackPanel>
                                                             <TextBlock Text="変形係数"   TextAlignment="Center" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="Esk" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
+                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>

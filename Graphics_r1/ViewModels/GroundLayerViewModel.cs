@@ -297,6 +297,21 @@ namespace PileDesign.ViewModels
         public LayoutAnchorable DefTab { get; set; }
         public LayoutAnchorable FsTab { get; set; }
 
+        // N値分布グラフ — 表示系列の切替 (どちらも既定 ON)
+        private bool _isLayerNValueGraphVisible = true;
+        public bool IsLayerNValueGraphVisible
+        {
+            get => _isLayerNValueGraphVisible;
+            set { if (SetProperty(ref _isLayerNValueGraphVisible, value)) DrawNValueGraph(); }
+        }
+
+        private bool _isMassPointNValueGraphVisible = true;
+        public bool IsMassPointNValueGraphVisible
+        {
+            get => _isMassPointNValueGraphVisible;
+            set { if (SetProperty(ref _isMassPointNValueGraphVisible, value)) DrawNValueGraph(); }
+        }
+
         public string[] AgeCategoryOption { get; } = ["沖積層", "洪積層"];
 
         public string[] ShallowSoilTypeOption { get; } =
@@ -1191,30 +1206,58 @@ namespace PileDesign.ViewModels
         }
 
         // N値グラフ描画メソッド
+        // IsLayerNValueGraphVisible: 土層の平均N値（階段グラフ + 矩形）
+        // IsMassPointNValueGraphVisible: 土質点のN値（折れ線 + 値ラベル）
         private void DrawNValueGraph()
         {
             if (GroundWindowInstance == null) return;
-            if (GroundInput?.GroundMassesData == null) return;
-
-            List<double> ns = [];
-            List<double> _bottomGLDepths = [];
-            for (int i = 0; i < GroundInput.GroundMassesData.Count; i++)
-            {
-                ns.Add(GroundInput.GroundMassesData[i].NValue);
-                _bottomGLDepths.Add(GroundInput.GroundMassesData[i].GLDepth);
-            }
+            if (GroundInput == null) return;
 
             var wpfNValue = GroundWindowInstance.wpfPlotNValue;
             wpfNValue.Plot.Clear();
             DrawSoilLayer(wpfNValue);
 
-            var scatter = wpfNValue.Plot.Add.Scatter(ns, _bottomGLDepths);
-            scatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
-            scatter.LineWidth = 2;
+            double xMaxN = 60.0; // 値ラベル配置の上限基準
 
-            double xMaxN = ns.Count > 0 ? ns.Max() : 60.0;
-            for (int i = 0; i < _bottomGLDepths.Count; i++)
-                PlotHelper.AddText(wpfNValue.Plot, $"{ns[i]:N0}", ns[i], _bottomGLDepths[i], xMaxN);
+            // 土層の平均N値（階段グラフ + 半透明矩形）
+            if (IsLayerNValueGraphVisible && GroundInput.GroundLayers != null && GroundInput.GroundLayers.Count > 0)
+            {
+                var layerNs = GroundInput.GroundLayers.Select(l => l.NValue).ToList();
+                var layerBottomDepths = GroundInput.GroundLayers.Select(l => l.BottomGLDepth).ToList();
+                (var steppedX, var steppedY) = GetSteppedData(layerNs, layerBottomDepths);
+                if (steppedX.Count > 0)
+                {
+                    var layerScatter = wpfNValue.Plot.Add.Scatter(steppedX.ToArray(), steppedY.ToArray());
+                    layerScatter.Color = Color.FromSKColor(NikkenSKColor.LineOrange);
+                    layerScatter.LineWidth = 2;
+                    foreach (var coord in GetRectangleGeometry(layerNs, layerBottomDepths))
+                    {
+                        var rect = wpfNValue.Plot.Add.Rectangle(coord);
+                        rect.FillColor = new(255, 165, 0, 48); // 半透明オレンジ
+                        rect.LineColor = Color.FromSKColor(NikkenSKColor.LineOrange);
+                        rect.LineWidth = 1;
+                    }
+                    xMaxN = Math.Max(xMaxN, steppedX.Max());
+                }
+            }
+
+            // 土質点のN値（折れ線 + 値ラベル）
+            if (IsMassPointNValueGraphVisible && GroundInput.GroundMassesData != null && GroundInput.GroundMassesData.Count > 0)
+            {
+                List<double> ns = [];
+                List<double> depths = [];
+                for (int i = 0; i < GroundInput.GroundMassesData.Count; i++)
+                {
+                    ns.Add(GroundInput.GroundMassesData[i].NValue);
+                    depths.Add(GroundInput.GroundMassesData[i].GLDepth);
+                }
+                var scatter = wpfNValue.Plot.Add.Scatter(ns, depths);
+                scatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
+                scatter.LineWidth = 2;
+                if (ns.Count > 0) xMaxN = Math.Max(xMaxN, ns.Max());
+                for (int i = 0; i < depths.Count; i++)
+                    PlotHelper.AddText(wpfNValue.Plot, $"{ns[i]:N0}", ns[i], depths[i], xMaxN);
+            }
 
             string title = "N値分布";
             wpfNValue.Plot.Axes.Title.Label.Text = title;

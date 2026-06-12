@@ -254,6 +254,8 @@ namespace PileDesign.Views
 
                 if (viewModel.IsEsVisible) UpdateGroundLayerValue3D("Es", 10000, 50000); // Es描画の更新
 
+                if (viewModel.IsLayerNValueVisible) UpdateGroundLayerValue3D("NValue", 5, 60); // 平均N値描画の更新
+
                 if (viewModel.IsSettlementLoadVisible) UpdateSettlementLoad3D(); // 荷重面描画の更新
 
                 UpdateConnectionNodes3D(); // 接合節点・剛体連結線描画の更新

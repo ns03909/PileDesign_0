@@ -2548,6 +2548,7 @@ namespace PileDesign.ViewModels
             "粘着力",
             "Vs",
             "Es",
+            "平均N値",
         ];
 
         private string _selectedSoilParamDisplay = "粘着力";
@@ -2568,6 +2569,7 @@ namespace PileDesign.ViewModels
             IsCohesiveVisible = false;
             IsVsVisible = false;
             IsEsVisible = false;
+            IsLayerNValueVisible = false;
 
             if (!IsSoilLayerParamDisplayEnabled) return;
 
@@ -2585,6 +2587,9 @@ namespace PileDesign.ViewModels
                 case "Es":
                     IsEsVisible = true;
                     break;
+                case "平均N値":
+                    IsLayerNValueVisible = true;
+                    break;
             }
 
             // 画面更新が必要な場合
@@ -2594,13 +2599,14 @@ namespace PileDesign.ViewModels
         // 既存フラグから初期値を推定（任意）
         public void InitializeSoilParamDisplayFromLegacyFlags()
         {
-            if (IsDensityVisible || IsCohesiveVisible || IsVsVisible || IsEsVisible)
+            if (IsDensityVisible || IsCohesiveVisible || IsVsVisible || IsEsVisible || IsLayerNValueVisible)
             {
                 IsSoilLayerParamDisplayEnabled = true;
                 if (IsDensityVisible) SelectedSoilParamDisplay = "密度";
                 else if (IsCohesiveVisible) SelectedSoilParamDisplay = "粘着力";
                 else if (IsVsVisible) SelectedSoilParamDisplay = "Vs";
                 else if (IsEsVisible) SelectedSoilParamDisplay = "Es";
+                else if (IsLayerNValueVisible) SelectedSoilParamDisplay = "平均N値";
             }
             else
             {
@@ -2663,6 +2669,20 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _isEsVisible, value))
                 {
                     RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                }
+            }
+        }
+
+        // 平均N値描画 (土層の代表 N 値)
+        private bool _isLayerNValueVisible = false;
+        public bool IsLayerNValueVisible
+        {
+            get => _isLayerNValueVisible;
+            set
+            {
+                if (SetProperty(ref _isLayerNValueVisible, value))
+                {
+                    RequestUpdateWindow();
                 }
             }
         }

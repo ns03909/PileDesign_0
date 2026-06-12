@@ -277,7 +277,12 @@ namespace PileDesign.Views
                     var top2D = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, zTop));
                     var btm2D = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, zBtm));
 
-                    double value = (type == "density") ? layer.Density : (type == "cohesive") ? layer.Cohesive : (type == "Vs") ? layer.Vs : (type == "Es") ? layer.Es : layer.Es;
+                    double value = (type == "density") ? layer.Density
+                                 : (type == "cohesive") ? layer.Cohesive
+                                 : (type == "Vs") ? layer.Vs
+                                 : (type == "Es") ? layer.Es
+                                 : (type == "NValue") ? layer.NValue
+                                 : layer.Es;
                     double xShift = ComputeGridShift(value, gridMax, vm.CanvasThreeDView);
 
                     // 四角形ポリゴン（上端→上端+dx→下端+dx→下端）

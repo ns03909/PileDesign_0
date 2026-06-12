@@ -1284,7 +1284,7 @@
                         <!-- 2 行目: 土層 / 土層パラメータ -->
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                             <Fluent:ToggleButton Header="土層"
-                                                 ToolTip="土層パラメータ（密度・粘着力・Vs・Es）の表示／非表示"
+                                                 ToolTip="土層パラメータ（密度・粘着力・Vs・Es・平均N値）の表示／非表示"
                                                  IsChecked="{Binding IsSoilLayerParamDisplayEnabled}"
                                                  Icon="pack://application:,,,/Icons/GroundLayerParametersVisible.png"
                                                  SizeDefinition="Small, Small, Small"/>
@@ -4938,7 +4938,7 @@
                                                                     <StackPanel>
                                                                         <TextBlock Text="変形係数"   TextAlignment="Center" HorizontalAlignment="Center"/>
                                                                         <TextBlock Text="Esk" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
+                                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                     </StackPanel>
                                                                 </DataGridTextColumn.Header>
                                                             </DataGridTextColumn>
