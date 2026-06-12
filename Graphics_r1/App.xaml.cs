@@ -148,30 +148,88 @@ namespace PileDesign
 
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            // IME/TextStore 関連の COMException は無視して続行 (HResult 0x80040206)
-            if (e.Exception is System.Runtime.InteropServices.COMException comEx
-                && comEx.HResult == unchecked((int)0x80040206))
+            if (IsBenignSuppressible(e.Exception, out string? reason))
             {
-                Log.Debug("Suppressed benign IME COMException (0x80040206)");
+                Log.Debug("Suppressed benign exception ({Reason}): {Type} HResult=0x{HR:X8}",
+                    reason, e.Exception.GetType().Name,
+                    e.Exception is System.Runtime.InteropServices.COMException c ? c.HResult : 0);
                 e.Handled = true;
                 return;
             }
 
-            HandleFatalException(e.Exception, source: "DispatcherUnhandledException");
+            // UI スレッドの未捕捉例外: アプリ状態は破損していない可能性があるため、続行可で扱う。
+            HandleFatalException(e.Exception, source: "DispatcherUnhandledException", canContinue: true);
             e.Handled = true;
         }
 
         private void AppDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             var ex = e.ExceptionObject as Exception ?? new Exception($"Non-Exception throw: {e.ExceptionObject}");
-            HandleFatalException(ex, source: "AppDomain.UnhandledException");
+            if (IsBenignSuppressible(ex, out string? reason))
+            {
+                Log.Debug("Suppressed benign AppDomain exception ({Reason}): {Type}", reason, ex.GetType().Name);
+                return;
+            }
+            // AppDomain は CLR がプロセスを落とす経路なので続行不可。
+            HandleFatalException(ex, source: "AppDomain.UnhandledException", canContinue: false);
             // IsTerminating の場合は CLR が直後にプロセスを落とすので Environment.Exit は不要
         }
 
         private void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
         {
-            HandleFatalException(e.Exception, source: "TaskScheduler.UnobservedTaskException");
+            // AggregateException の中身が全て良性なら握りつぶす
+            bool allBenign = true;
+            string? firstReason = null;
+            foreach (var inner in e.Exception.Flatten().InnerExceptions)
+            {
+                if (!IsBenignSuppressible(inner, out string? r))
+                {
+                    allBenign = false;
+                    break;
+                }
+                firstReason ??= r;
+            }
+            if (allBenign)
+            {
+                Log.Debug("Suppressed benign unobserved task exception ({Reason})", firstReason ?? "unknown");
+                e.SetObserved();
+                return;
+            }
+
+            HandleFatalException(e.Exception, source: "TaskScheduler.UnobservedTaskException", canContinue: false);
             e.SetObserved(); // CLR にプロセスを落とさせない
+        }
+
+        /// <summary>
+        /// アプリの動作に支障のない既知の良性例外なら true。
+        /// 該当しない例外はログ Fatal + 致命的処理へ進める。
+        /// </summary>
+        private static bool IsBenignSuppressible(Exception ex, out string? reason)
+        {
+            reason = null;
+            if (ex == null) return false;
+
+            // COMException: IME/TextStore / WebView2 シャットダウン時の中断系
+            if (ex is System.Runtime.InteropServices.COMException com)
+            {
+                int hr = com.HResult;
+                switch (unchecked((uint)hr))
+                {
+                    case 0x80040206: reason = "TS_E_NOLOCK (IME)";       return true;
+                    case 0x80040207: reason = "TS_E_NOSELECTION (IME)";  return true;
+                    case 0x80004004: reason = "E_ABORT (WebView2 等)";   return true;
+                }
+            }
+
+            // ユーザー/シャットダウン要因のキャンセル例外は無害。
+            // 通常はキャンセル元で観測されるべきだが、observation 漏れで globalに来てもアプリは落とさない。
+            if (ex is OperationCanceledException)
+            {
+                reason = "OperationCanceled (タスクキャンセル)";
+                return true;
+            }
+
+            return false;
         }
 
         // --- 致命的例外の共通処理 ---------------------------------------------
@@ -182,11 +240,15 @@ namespace PileDesign
         /// 全ハンドラから集約される致命的例外処理:
         ///   1) ログに Fatal で記録
         ///   2) 緊急 AutoSave を試行 (作業中データの退避)
-        ///   3) ユーザーに退避先とログ場所を含むダイアログを表示
-        ///   4) ログをフラッシュしてプロセス終了
+        ///   3) クラッシュレポート zip を作成
+        ///   4) ユーザーに退避先/レポート/ログ場所を含むダイアログを表示
+        ///   5) canContinue=true かつユーザーが続行を選んだ場合のみ続行、それ以外は終了
         /// 多重呼び出し防止のためフラグでガードする。
         /// </summary>
-        private void HandleFatalException(Exception ex, string source)
+        /// <param name="canContinue">UI スレッド未捕捉のように、アプリ状態が破損していない見込みがあり、
+        /// ユーザーに続行を提示してよい場合に true。AppDomain / 未観測 Task のように
+        /// CLR がプロセスを落とす経路、または状態不明な経路では false。</param>
+        private void HandleFatalException(Exception ex, string source, bool canContinue = false)
         {
             if (_handlingFatal)
             {
@@ -231,23 +293,56 @@ namespace PileDesign
                     ? "クラッシュレポート: (作成に失敗)"
                     : $"クラッシュレポート (開発元への共有用):\n  {crashReportPath}";
 
+                string title;
+                string actionPrompt;
+                if (canContinue)
+                {
+                    title = "予期しないエラー (続行可能)";
+                    actionPrompt =
+                        "「はい」を押すと自己責任で続行します（アプリ状態が破損している可能性があります。\n" +
+                        "速やかに作業内容を別名保存して再起動することを推奨します）。\n" +
+                        "「いいえ」を押すとアプリを終了します。\n" +
+                        "ログ・クラッシュレポートは上記の場所に保存済みです。";
+                }
+                else
+                {
+                    title = "致命的エラー";
+                    actionPrompt =
+                        "「はい」を押すとクラッシュレポートのフォルダを開きます。\n" +
+                        "次回起動時に「最近開いたファイル」または上記の自動保存ファイルから復元できます。";
+                }
+
                 var msg =
-                    "予期しないエラーが発生しました。アプリケーションを終了します。\n" +
+                    (canContinue
+                        ? "予期しないエラーが発生しました。続行を試みるかアプリを終了するか選択してください。\n"
+                        : "予期しないエラーが発生しました。アプリケーションを終了します。\n") +
                     "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
                     $"エラー: {ex.GetType().Name}\n" +
                     $"内容: {ex.Message}\n\n" +
                     $"作業中のデータを退避しました:\n  {emergencySavePath}\n\n" +
                     $"{reportLine}\n\n" +
                     $"ログ: {AppLog.LogDirectory}\n\n" +
-                    "「はい」を押すとクラッシュレポートのフォルダを開きます。\n" +
-                    "次回起動時に「最近開いたファイル」または上記の自動保存ファイルから復元できます。";
+                    actionPrompt;
 
-                var result = MessageService.Show(msg, "致命的エラー",
+                var result = MessageService.Show(msg, title,
                     MessageBoxButton.YesNo, MessageBoxImage.Error, MessageBoxResult.No);
 
-                if (result == MessageBoxResult.Yes && !string.IsNullOrEmpty(crashReportPath))
+                if (canContinue)
                 {
-                    CrashReporter.TryOpenInExplorer(crashReportPath);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        Log.Warning("User chose to CONTINUE after fatal exception from {Source}", source);
+                        _handlingFatal = false; // 次の例外を再度処理できるよう解除
+                        return;                  // 終了せず続行
+                    }
+                    // else: そのまま終了処理へ
+                }
+                else
+                {
+                    if (result == MessageBoxResult.Yes && !string.IsNullOrEmpty(crashReportPath))
+                    {
+                        CrashReporter.TryOpenInExplorer(crashReportPath);
+                    }
                 }
             }
             catch

@@ -1997,8 +1997,8 @@ namespace PileDesign.Views
         {
             if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
             {
-                // Ctrl + Shift + A が押されたときの処理: 全選択
-                SelectAllNodes();
+                // Ctrl + Shift + A が押されたときの処理: すべてアクティブ
+                ShowAllNodes();
                 e.Handled = true;
             }
             else if (e.Key == Key.T && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
@@ -2034,11 +2034,11 @@ namespace PileDesign.Views
             }
             else if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                // DataGrid内にフォーカスがある場合は標準のCtrl+A（全選択）を優先
+                // DataGrid内にフォーカスがある場合は標準のCtrl+A（セル全選択）を優先
                 if (IsFocusInDataGrid()) return;
 
-                // Ctrl + A が押されたときの処理
-                ShowAllNodes();
+                // Ctrl + A が押されたときの処理: すべて選択（節点）
+                SelectAllNodes();
                 e.Handled = true;
             }
             else if (

@@ -4560,7 +4560,7 @@ namespace PileDesign.ViewModels
         public static void OpenHelpWindow()
         {
             OpenOnSeparateUiThread(_helpWindowHost,
-                () => new HelpWindow { Topmost = true },
+                () => new HelpWindow(),
                 "ヘルプ");
         }
 
@@ -4571,7 +4571,7 @@ namespace PileDesign.ViewModels
         public static void OpenHelpWindowAt(string? anchor, string? scrollToTitle)
         {
             OpenOnSeparateUiThread(_helpWindowHost,
-                () => new HelpWindow(anchor, scrollToTitle) { Topmost = true },
+                () => new HelpWindow(anchor, scrollToTitle),
                 "ヘルプ",
                 existing =>
                 {

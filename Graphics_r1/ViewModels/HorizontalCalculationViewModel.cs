@@ -1558,6 +1558,8 @@ namespace PileDesign.ViewModels
                 ? $"L1={level1Count} / L2={level2Count} (液状化: あり/なし両方)"
                 : $"L1={level1Count} / L2={level2Count}";
 
+            var inputWarnings = PileDesign.Models.CheckInputData.CollectInputWarnings(InputModel);
+
             return new Views.AnalysisPreflightSummary(
                 AnalysisName: "水平解析",
                 TotalSteps: totalSteps,
@@ -1565,7 +1567,8 @@ namespace PileDesign.ViewModels
                 CombinationCount: combinationCount,
                 CounterLoadingCount: counterLoadingCount,
                 NonLinearLoadCaseCount: nonLinearCases,
-                MaxParallelism: parallelism);
+                MaxParallelism: parallelism,
+                InputWarnings: inputWarnings);
         }
 
         private async Task OnExecuteAnalysisCore(bool additive)

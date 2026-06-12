@@ -1334,14 +1334,14 @@
 
                 <!-- 選択・表示 (Small icons のみ) -->
                 <Fluent:RibbonGroupBox Header="選択・表示" ToolTip="選択・表示" Icon="pack://application:,,,/Icons/ActiveAll.png">
-                    <Fluent:Button ToolTip="すべて選択 (Ctrl + Shift + A)"
+                    <Fluent:Button ToolTip="すべて選択 (Ctrl + A)"
                              Click="SelectAllNodesButton_Click"
                              Icon="pack://application:,,,/Icons/SelectAll.png" SizeDefinition="Small, Small, Small"/>
                     <Fluent:Button ToolTip="全選択解除 (Esc)"
                              Click="DeselectAllNodesButton_Click"
                              Icon="pack://application:,,,/Icons/DeselectAll.png" SizeDefinition="Small, Small, Small"/>
                     <Separator/>
-                    <Fluent:Button ToolTip="すべてアクティブ (Ctrl + A)"
+                    <Fluent:Button ToolTip="すべてアクティブ (Ctrl + Shift + A)"
                              Click="ShowAllNodesButton_Click"
                              Icon="pack://application:,,,/Icons/ActiveAll.png" SizeDefinition="Small, Small, Small"/>
                     <Fluent:Button ToolTip="選択のみアクティブ (F2)"
@@ -5904,7 +5904,7 @@
                                                     <Button Grid.Row="1" Grid.Column="0"
                                                         Padding="0"
                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="すべてアクティブ (Ctrl + A)"
+                                                        Tag="すべてアクティブ (Ctrl + Shift + A)"
                                                         Click="ShowAllNodesButton_Click">
                                                         <svgc:SvgViewbox Source="/Icons/ActiveAll.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
@@ -5934,7 +5934,7 @@
                                                     <Button Grid.Row="2" Grid.Column="0"
                                                         Padding="0"
                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="すべて選択 (Ctrl + Shift + A)"
+                                                        Tag="すべて選択 (Ctrl + A)"
                                                         Click="SelectAllNodesButton_Click">
                                                         <svgc:SvgViewbox Source="/Icons/SelectAll.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>

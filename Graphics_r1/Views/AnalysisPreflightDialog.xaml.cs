@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 
 namespace PileDesign.Views
@@ -47,6 +48,14 @@ namespace PileDesign.Views
                     : "逐次実行" },
             };
 
+            // 入力警告（注意レベル）があればハイライト枠で表示
+            if (summary.InputWarnings != null && summary.InputWarnings.Count > 0)
+            {
+                dlg.WarningHeader.Text = $"入力に注意点があります ({summary.InputWarnings.Count} 件)";
+                dlg.WarningList.ItemsSource = summary.InputWarnings;
+                dlg.WarningBox.Visibility = Visibility.Visible;
+            }
+
             var result = dlg.ShowDialog();
             if (result != true)
                 return false;
@@ -76,5 +85,6 @@ namespace PileDesign.Views
         int CombinationCount,
         int CounterLoadingCount,
         int NonLinearLoadCaseCount,
-        int MaxParallelism);
+        int MaxParallelism,
+        IReadOnlyList<string>? InputWarnings = null);
 }

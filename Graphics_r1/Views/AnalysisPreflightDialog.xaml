@@ -23,6 +23,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ヘッダー -->
@@ -72,6 +73,33 @@
                 <TextBlock Grid.Row="5" Grid.Column="0" Text="ケース並列度" Foreground="#555" Margin="0,2"/>
                 <TextBlock Grid.Row="5" Grid.Column="1" x:Name="ParallelismText" Margin="0,2"/>
             </Grid>
+        </Border>
+
+        <!-- 入力警告（注意レベル、ある場合のみ表示） -->
+        <Border Grid.Row="3" x:Name="WarningBox" Visibility="Collapsed"
+                Background="#FFFBEA" BorderBrush="#E0B400" BorderThickness="1"
+                CornerRadius="4" Padding="14,10" Margin="0,12,0,0">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="&#x26A0;" Foreground="#B07A00" FontSize="16" FontWeight="Bold"
+                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="WarningHeader" Text="入力に注意点があります"
+                               FontWeight="SemiBold" Foreground="#8A6200"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <ItemsControl x:Name="WarningList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="0,1">
+                                <TextBlock Text="&#x2022;" Foreground="#8A6200" Margin="0,0,6,0"/>
+                                <TextBlock Text="{Binding}" Foreground="#5C4500" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="このまま実行することもできますが、必要に応じて入力を見直してください。"
+                           Foreground="#8A6200" FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
         </Border>
 
         <!-- フッター -->

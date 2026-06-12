@@ -41,10 +41,10 @@ namespace PileDesign.Views
                 // 編集
                 new("編集", "元に戻す", "Ctrl + Z"),
                 new("編集", "やり直し", "Ctrl + Y"),
-                new("編集", "すべて選択", "Ctrl + Shift + A"),
+                new("編集", "すべて選択", "Ctrl + A"),
                 new("編集", "全選択解除", "Esc"),
                 new("編集", "選択した節点の削除", "Delete"),
-                new("編集", "すべてアクティブ", "Ctrl + A"),
+                new("編集", "すべてアクティブ", "Ctrl + Shift + A"),
                 new("編集", "アクティブ", "F2"),
                 new("編集", "非アクティブ", "Shift + F2"),
 

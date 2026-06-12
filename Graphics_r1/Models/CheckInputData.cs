@@ -1,4 +1,6 @@
 ﻿using PileDesign.Models.InputData;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows;
 using PileDesign.Services;
@@ -8,6 +10,51 @@ namespace PileDesign.Models
 {
     class CheckInputData
     {
+        /// <summary>
+        /// 解析実行は止めないがユーザーに確認させたい「注意レベル」の入力警告を収集する。
+        /// プリフライトダイアログから呼び出され、サマリと並んで表示される。
+        /// ・ΔZc &lt;= 0 (接合点が杭頭より下または同位置 = ジオメトリ異常)
+        /// ・地盤側の既存 ValidateForAnalysis 由来の注意 (Es=0 / 粘性土で Cu=0 / 深度順序逆 / 土質点 N=0 等)
+        /// </summary>
+        public static List<string> CollectInputWarnings(InputModel inputModel)
+        {
+            var warnings = new List<string>();
+            if (inputModel == null) return warnings;
+
+            // 各杭の ΔZc (接合点 − 杭頭オフセット)
+            if (inputModel.PileLayoutItems != null)
+            {
+                for (int i = 0; i < inputModel.PileLayoutItems.Count; i++)
+                {
+                    var p = inputModel.PileLayoutItems[i];
+                    if (p == null) continue;
+                    if (p.FoundationBeamDeltaZc <= 0)
+                        warnings.Add($"杭 No.{p.No}: 接合-杭頭 ΔZc = {p.FoundationBeamDeltaZc:N3} (>0 で接合点が杭頭の上に来るのが正常)。");
+                }
+            }
+
+            // 各地盤の既存検証 (Es=0 / 粘性土 Cu=0 / 層・土質点深度順序逆 / N=0)
+            if (inputModel.GroundsInput != null)
+            {
+                for (int i = 0; i < inputModel.GroundsInput.Count; i++)
+                {
+                    var gi = inputModel.GroundsInput[i];
+                    if (gi == null) continue;
+                    if (!gi.ValidateForAnalysis(out string msg))
+                    {
+                        foreach (var raw in (msg ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            var t = raw.TrimStart('-', ' ', '\t');
+                            if (!string.IsNullOrWhiteSpace(t))
+                                warnings.Add($"地盤 {i + 1}: {t.Trim()}");
+                        }
+                    }
+                }
+            }
+
+            return warnings;
+        }
+
         /// <summary>
         /// 解析実行ゲート: 入力データの整合性を検証する。
         ///   - エラー検出時: エラー内容とともに警告ダイアログを表示し false を返す (解析中止)
