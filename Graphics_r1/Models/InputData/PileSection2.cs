@@ -279,10 +279,12 @@ namespace PileDesign.Models.InputData
         // 限界ひずみ度を計算するメソッド
         internal void SetAllowableStrain()
         {
+            // 損傷限界（短期許容）・使用限界（長期）は 1.1F 完全バイリニア型オプションによらず
+            // 基準降伏点 σy を用いる（1.1F は安全限界＝バイリニア/終局のみに適用）。
             double serviceLimitStressC = 195.0;  // 使用限界圧縮応力度 鋼管コンクリート杭では(2/3)RSigmaY
-            double damageLimitStressC = RSigmaY; // 損傷限界圧縮応力度
+            double damageLimitStressC = BaseSigmaY; // 損傷限界圧縮応力度 = σy（1.1F 非適用）
             double serviceLimitStressT = -195.0; // 使用限界圧縮応力度 鋼管コンクリート杭では-(2/3)RSigmaY
-            double damageLimitStressT = -RSigmaY; // 損傷限界圧縮応力度
+            double damageLimitStressT = -BaseSigmaY; // 損傷限界引張応力度 = -σy（1.1F 非適用）
 
             ServiceLimitStrainC = serviceLimitStressC / Er; // 使用限界圧縮ひずみ度
             DamageLimitStrainC = damageLimitStressC / Er; // 損傷限界圧縮ひずみ度
@@ -303,11 +305,13 @@ namespace PileDesign.Models.InputData
             ["SD685"] = 685.0
         };
 
+        // 基準降伏点 σy（規格値）。損傷限界・使用限界はこの値を用いる（1.1F オプション非適用）。
+        private double BaseSigmaY => GradeYieldStrengths.GetValueOrDefault(Grade, 295.0);
+
         internal void SetRSigmaY()
         {
-            double baseSigmaY = GradeYieldStrengths.GetValueOrDefault(Grade, 295.0);
-            // 1.1F 完全バイリニア型オプション時は降伏応力度を 1.1×σy に引き上げる。
-            RSigmaY = YieldAt11F ? 1.1 * baseSigmaY : baseSigmaY;
+            // 1.1F 完全バイリニア型オプション時は降伏応力度を 1.1×σy に引き上げる（安全限界にのみ効く）。
+            RSigmaY = YieldAt11F ? 1.1 * BaseSigmaY : BaseSigmaY;
         }
         private static readonly Dictionary<string, double> BarAreas = new()
         {
