@@ -7,9 +7,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PileDesign.Services;
 
@@ -18,6 +21,47 @@ namespace PileDesign.Common
 {
     public static class PlotHelper
     {
+        // 各 WpfPlot に紐づくカーソル座標ポップアップ (標準の数値表示)。
+        // 全プロット共通の WpfPlot_MouseMove から呼ばれ、グラフ下テキストに加えて
+        // カーソル近傍に座標をポップアップ表示する。
+        private static readonly ConditionalWeakTable<WpfPlot, Popup> _readoutPopups = new();
+
+        private static void ShowReadout(WpfPlot plot, System.Windows.Point posInPlot, string text)
+        {
+            if (!_readoutPopups.TryGetValue(plot, out var popup))
+            {
+                var tb = new TextBlock { FontSize = 12, Foreground = Brushes.Black };
+                var border = new Border
+                {
+                    Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0xF0, 0xFF, 0xFF, 0xE0)),
+                    BorderBrush = Brushes.Gray,
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(6, 3, 6, 3),
+                    Child = tb
+                };
+                popup = new Popup
+                {
+                    Placement = PlacementMode.Relative,
+                    PlacementTarget = plot,
+                    AllowsTransparency = true,
+                    IsHitTestVisible = false,
+                    Child = border
+                };
+                _readoutPopups.Add(plot, popup);
+                plot.MouseLeave += (s, e) => HideReadout(plot);
+            }
+            ((TextBlock)((Border)popup.Child).Child).Text = text;
+            popup.HorizontalOffset = posInPlot.X + 16;
+            popup.VerticalOffset = posInPlot.Y + 16;
+            if (!popup.IsOpen) popup.IsOpen = true;
+        }
+
+        private static void HideReadout(WpfPlot plot)
+        {
+            if (_readoutPopups.TryGetValue(plot, out var popup))
+                popup.IsOpen = false;
+        }
+
         public static Crosshair InitCrosshair(WpfPlot wpfPlot, ScottPlot.Color? markerColor = null)
         {
             // 既存のクロスヘアを削除（重複防止）
@@ -86,26 +130,26 @@ namespace PileDesign.Common
                     wpfPlot.Refresh();
 
                     // Legend取得
-                    //string legend = "";
-                    //if (nearestScatter is ILegendItem legendItem)
                     string legend = nearestScatter?.LegendText ?? "";
+                    string sx = nearest.Value.Coordinates.X.ToString(formatX);
+                    string sy = nearest.Value.Coordinates.Y.ToString(formatY);
 
-                    // DataContextのプロパティに座標＋Legendをセット
+                    // DataContextのプロパティに座標＋Legendをセット (従来のグラフ下テキスト用)
                     var dc = wpfPlot.DataContext;
                     var prop = dc?.GetType().GetProperty(positionPropertyName);
+                    prop?.SetValue(dc, $"{legend} || {xAxis}={sx}, {yAxis}={sy}");
 
-                    //prop?.SetValue(dc, $"{xAxis}={nearest.Value.Coordinates.X:0.###}, {yAxis}={nearest.Value.Coordinates.Y:0.###}");
-
-                    prop?.SetValue(dc,
-                   $"{legend} || " +
-                   $"{xAxis}={nearest.Value.Coordinates.X.ToString(formatX)}, " +
-                   $"{yAxis}={nearest.Value.Coordinates.Y.ToString(formatY)}");
-
+                    // 標準: カーソル近傍にポップアップで座標を表示
+                    string popupText = string.IsNullOrEmpty(legend)
+                        ? $"{xAxis}={sx}\n{yAxis}={sy}"
+                        : $"{legend}\n{xAxis}={sx}\n{yAxis}={sy}";
+                    ShowReadout(wpfPlot, p, popupText);
                 }
                 else if (crosshair.IsVisible)
                 {
                     crosshair.IsVisible = false;
                     wpfPlot.Refresh();
+                    HideReadout(wpfPlot);
                 }
             }
         }
@@ -165,17 +209,22 @@ namespace PileDesign.Common
                     crosshair.Position = nearest.Value;
                     wpfPlot.Refresh();
 
+                    string sx = nearest.Value.X.ToString(formatX);
+                    string sy = nearest.Value.Y.ToString(formatY);
+
                     // DataContextのプロパティに座標をセット
                     var dc = wpfPlot.DataContext;
                     var prop = dc?.GetType().GetProperty(positionPropertyName);
-                    prop?.SetValue(dc,
-                        $"{xAxis}={nearest.Value.X.ToString(formatX)}, " +
-                        $"{yAxis}={nearest.Value.Y.ToString(formatY)}");
+                    prop?.SetValue(dc, $"{xAxis}={sx}, {yAxis}={sy}");
+
+                    // 標準: カーソル近傍にポップアップで座標を表示
+                    ShowReadout(wpfPlot, p, $"{xAxis}={sx}\n{yAxis}={sy}");
                 }
                 else if (crosshair.IsVisible)
                 {
                     crosshair.IsVisible = false;
                     wpfPlot.Refresh();
+                    HideReadout(wpfPlot);
                 }
             }
         }

@@ -24,9 +24,15 @@ namespace PileDesign.Models.InputData
         public List<double> ServiceLimitShearAxialForceThresholds { get; private set; }
 
         // コンストラクタ
+        // applyBodyMaterialOptions: 杭体断面のみ true。鉄筋 1.1F 完全バイリニア型オプションを適用する。
+        //   杭頭接合部（PileTop の定着筋断面）などは false を渡してオプション対象外とする。
         internal InsituReinforcedConcreteSection(
-            InsituConcrete insituConcrete, MainBars mainBars)
+            InsituConcrete insituConcrete, MainBars mainBars, bool applyBodyMaterialOptions = true)
         {
+            // 鉄筋 1.1F 完全バイリニア型オプション（降伏応力度 σy → 1.1σy）を適用（限界ひずみ再計算より前）
+            if (applyBodyMaterialOptions)
+                mainBars.YieldAt11F = ConcreteModelOptions.RebarYieldAt11F;
+
             PileDia = insituConcrete.DO;
             MainBarArea = mainBars.Ag; //mainBarArea;
             MainBarPCD = mainBars.PCD;  //mainBarPcd;
@@ -786,6 +792,37 @@ namespace PileDesign.Models.InputData
             N = result1.Item1 + result2.Item1 - result3.Item1;
             M = result1.Item2 + result2.Item2 - result3.Item2;
             return (N, M);
+        }
+
+        /// <summary>
+        /// 指定した圧縮縁ひずみ εc と曲率 φ に対する断面のひずみ度・応力度分布を返す。
+        /// コンクリート(実心)＋主筋(リング)。ultimate=true でバイリニア、false で線形。
+        /// </summary>
+        internal override SectionStrainStressProfile GetStrainStressProfile(
+            double epsilonC, double curvature, bool ultimate, int division = 200)
+        {
+            double r = PileDia * 0.5;
+            double epsilon0 = epsilonC - r * curvature;
+            string type = ultimate ? "bilinear" : "linear";
+
+            var profile = new SectionStrainStressProfile { Radius = r };
+            profile.Materials.Add(BuildSolidProfile(SectionMaterialKind.Concrete, "コンクリート",
+                InsituConcrete, type, epsilon0, curvature, r, 0.0, 0.0, division));
+            profile.Materials.Add(BuildRingProfile(SectionMaterialKind.MainBar, "主筋",
+                MainBars, type, epsilon0, curvature, MainBarPCD * 0.5, 0.0, division));
+
+            profile.CompressionEdgeStrain = epsilon0 + curvature * r;
+            profile.TensionEdgeStrain = epsilon0 - curvature * r;
+            return profile;
+        }
+
+        // N-M グラフは「ひび割れ開始」「引張鉄筋降伏開始」も描くため、その曲線も対象に加える。
+        internal override IEnumerable<(string Name, (List<double> N, List<double> M, List<double> Eps, List<double> Phi) Curve, bool Ultimate)> GetProfileSourceCurves()
+        {
+            foreach (var c in base.GetProfileSourceCurves())
+                yield return c;
+            yield return ("ひび割れ開始", GetCrackMNInteraction(), false);
+            yield return ("引張鉄筋降伏開始", GetSteelYieldMNInteraction(), true);
         }
     }
 

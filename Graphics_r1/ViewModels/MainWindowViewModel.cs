@@ -3195,6 +3195,9 @@ namespace PileDesign.ViewModels
             CurrentFilePath = null;
             LoadedExampleName = null;  // 新規作成時はタイトルバーを [新規] に戻す
 
+            // バイリニアコンクリート・オプションを既定 (false) へ戻し、キャッシュを破棄
+            ApplyConcreteModelOptions();
+
             // ここで初期状態をUndoスタックに積む
             SaveUndoState();
 
@@ -3229,6 +3232,37 @@ namespace PileDesign.ViewModels
         /// <param name="projectData">ProjectData 由来ロードの場合は非 null。InputModel 単体ロードの場合は null。</param>
         /// <param name="filePath">UI 表示用ファイルパス。Untitled/未確定の場合は null 可。</param>
         /// <param name="successMessage">読込成功時にトースト表示するメッセージ。</param>
+        /// <summary>
+        /// 基本設定のバイリニアコンクリート・オプション（引張無視 / 圧縮 0.85·Gsi·Fc）を
+        /// 静的な <see cref="Models.InputData.ConcreteModelOptions"/> へ同期し、影響する全キャッシュを破棄する。
+        ///
+        /// これらのオプションは安全限界 NM 曲線だけでなく M-φ（→ 非線形 FEM 解析）にも効くため、
+        /// 値を反映するには M-φ 静的キャッシュと各断面の NM/降伏/ひび割れキャッシュの両方をクリアする必要がある。
+        /// モデル読込・新規作成・例題読込・基本設定での変更時に呼ぶ。
+        /// </summary>
+        public void ApplyConcreteModelOptions()
+        {
+            var f = CurrentInputModel?.FundamentalInput;
+            Models.InputData.ConcreteModelOptions.IgnoreTensileStrength = f?.IgnoreConcreteTensileStrength ?? false;
+            Models.InputData.ConcreteModelOptions.UseReducedCompression = f?.UseReducedConcreteCompressiveStrength ?? false;
+            Models.InputData.ConcreteModelOptions.RebarYieldAt11F = f?.RebarYieldAt11F ?? false;
+            Models.InputData.ConcreteModelOptions.SteelPipeYieldAt11F = f?.SteelPipeYieldAt11F ?? false;
+
+            // M-φ 静的キャッシュ（全断面共有）
+            PileSection.ClearMphiCache();
+
+            // 各断面インスタンスの NM/降伏/ひび割れキャッシュ
+            if (CurrentInputModel?.PileBodies != null)
+            {
+                foreach (var pb in CurrentInputModel.PileBodies)
+                {
+                    if (pb?.PileBodySegments == null) continue;
+                    foreach (var seg in pb.PileBodySegments)
+                        seg?.PileSection?.InvalidateComputedCaches();
+                }
+            }
+        }
+
         private void ApplyPostLoadProtocol(Models.ProjectData? projectData, string? filePath, string successMessage)
         {
             // ObservableCollection 変換（idempotent なので既に ObservableCollection なら維持）
@@ -3263,7 +3297,8 @@ namespace PileDesign.ViewModels
 
             // ComboBox 用カウントリスト再構築・M-φ キャッシュクリア
             CurrentInputModel.UpdateCountLists();
-            PileSection.ClearMphiCache();
+            // バイリニアコンクリート・オプションを同期し M-φ/NM キャッシュを破棄
+            ApplyConcreteModelOptions();
 
             // 杭配置番号の同期（PileNo が未設定の旧ファイルに備える）
             UpdatePileLayoutNo();

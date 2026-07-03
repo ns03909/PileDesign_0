@@ -2082,6 +2082,86 @@ namespace PileDesign.ViewModels
             Update(); // グラフを更新
         }
 
+        // 各土質点の「下端深度GL」を、当該行と次行の NPT 深度 (GLDepth、負方向=深さ) の平均深度に設定する。
+        // 最下行は土層入力の最下層の BottomGLDepth (正の深さ) を採用する。
+        // 内部的には新しい下端深度差から H を計算し、Update() で連動を更新する。
+        [RelayCommand]
+        private void OnApplyNptDepthToLayerBottomDepth()
+        {
+            // 変更前の状態を保存
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
+
+            var masses = GroundInput?.GroundMassesData;
+            var layers = GroundInput?.GroundLayers;
+            if (masses == null || masses.Count == 0) return;
+            if (layers == null || layers.Count == 0) return;
+
+            int n = masses.Count;
+            var newDepths = new double[n];
+
+            // i 行と i+1 行の NPT 深度の平均 (標高ベース=負方向のまま平均)
+            for (int i = 0; i < n - 1; i++)
+            {
+                newDepths[i] = (masses[i].GLDepth + masses[i + 1].GLDepth) / 2.0;
+            }
+            // 最下行 = 最下層 BottomGLDepth を負方向に直して採用
+            newDepths[n - 1] = -layers[layers.Count - 1].BottomGLDepth;
+
+            // 連続する下端深度差から H を導出して反映 (標高ベース: H = prev − current)
+            // H が 0 / 負になっても下端深度GL は上書きし、整合性は順序エラー (赤セル) で示す。
+            // (打ち切ると以降の行の変換が前行の影響で連鎖的にキャンセルされてしまうため)
+            double prev = 0.0;
+            for (int i = 0; i < n; i++)
+            {
+                masses[i].H = prev - newDepths[i];
+                masses[i].LayerBottomDepth = newDepths[i];
+                prev = newDepths[i];
+            }
+
+            Update(); // RecalculateH で LayerBottomZ / LayerBottomDepth を確定し、グラフ更新
+            ValidateGroundMassDepthOrders(); // 各セルと上下行の順序関係をチェックして赤セル表示を更新
+        }
+
+        // 土質点の参考NPT深度GL (GLDepth) と 下端深度GL (LayerBottomDepth) について、
+        // 各行が上下隣接行と比べて単調減少（標高ベースで下方=より負）になっているかをチェックし、
+        // 列別エラーフラグ (IsErrorGLDepth / IsErrorLayerBottomDepth) を設定する。
+        public void ValidateGroundMassDepthOrders()
+        {
+            var masses = GroundInput?.GroundMassesData;
+            if (masses == null) return;
+            int count = masses.Count;
+            for (int i = 0; i < count; i++)
+            {
+                var m = masses[i];
+                m.IsErrorGLDepth = HasOrderError(masses, i, x => x.GLDepth);
+                m.IsErrorLayerBottomDepth = HasOrderError(masses, i, x => x.LayerBottomDepth);
+                m.IsError = m.IsErrorGLDepth || m.IsErrorLayerBottomDepth;
+            }
+        }
+
+        private static bool HasOrderError(
+            System.Collections.Generic.IList<GroundMassDataInput> masses, int i,
+            System.Func<GroundMassDataInput, double?> getValue)
+        {
+            double? v = getValue(masses[i]);
+            if (!v.HasValue || double.IsNaN(v.Value)) return false;
+            double value = v.Value;
+            int count = masses.Count;
+
+            if (i == 0 && value >= 0) return true;
+            if (i > 0)
+            {
+                double? above = getValue(masses[i - 1]);
+                if (above.HasValue && !double.IsNaN(above.Value) && above.Value <= value) return true;
+            }
+            if (i < count - 1)
+            {
+                double? below = getValue(masses[i + 1]);
+                if (below.HasValue && !double.IsNaN(below.Value) && value <= below.Value) return true;
+            }
+            return false;
+        }
+
 
         // Viewを閉じるためのメソッド
         [RelayCommand]
@@ -2387,6 +2467,7 @@ namespace PileDesign.ViewModels
             }
 
             // 層下面Z = GroundTopAltitude から H を上から累積して算出
+            // 下端深度GL (LayerBottomDepth) = LayerBottomZ − GroundTopAltitude (標高ベース、下方=負)
             double bottomZ = GroundInput.GroundTopAltitude;
             for (int i = 0; i < count; i++)
             {
@@ -2395,10 +2476,12 @@ namespace PileDesign.ViewModels
                 {
                     bottomZ -= current.H.Value;
                     current.LayerBottomZ = bottomZ;
+                    current.LayerBottomDepth = bottomZ - GroundInput.GroundTopAltitude;
                 }
                 else
                 {
                     current.LayerBottomZ = null;
+                    current.LayerBottomDepth = null;
                 }
             }
         }
@@ -2734,25 +2817,77 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>
+        /// 土質点の代表土層 (LayerNo / Name) を再計算する。
+        /// 土質点は深さ区間 [GLDepth - H, GLDepth] を占め、各土層 i は
+        /// 深さ区間 [layers[i-1].BottomGLDepth, layers[i].BottomGLDepth] (i=0 は 0 起点)。
+        /// 区間の重なり長 (overlap) が最大の土層を代表とし、同値で複数候補があるときは
+        /// 最も深い (リスト後方の) 土層を選ぶ。
+        /// H が null / 0 のときや、点が全層と重ならないときは、
+        /// 単一深さ GLDepth を含む土層を代表とし、境界上で複数候補があれば深い方を選ぶ。
+        /// </summary>
         internal void RecalculateName()
         {
-            var masses = GroundInput.GroundMassesData;
-            var layers = GroundInput.GroundLayers;
+            var masses = GroundInput?.GroundMassesData;
+            var layers = GroundInput?.GroundLayers;
+            if (masses == null) return;
+            if (layers == null || layers.Count == 0)
+            {
+                foreach (var m in masses) { m.LayerNo = null; m.Name = ""; }
+                return;
+            }
 
+            // GLDepth / BottomGLDepth は標高ベース (地表 = 0、下方ほど負) の値。
+            // 土質点の区間: [GLDepth, GLDepth + H] = [下端 (より負), 上端 (より 0 寄り)]
+            // 土層 i の区間: [layers[i].BottomGLDepth, (i==0 ? 0 : layers[i-1].BottomGLDepth)]
+            //                = [下端 (より負), 上端 (より 0 寄り)]
             foreach (var m in masses)
             {
-                bool found = false;
-                foreach (var l in layers)
+                double h = m.H ?? 0.0;
+                double pointLow = m.GLDepth;        // 深い側 (より負)
+                double pointHigh = m.GLDepth + h;   // 浅い側 (より 0 寄り)
+
+                // 1) 重なり長が最大の土層を選ぶ (同値なら後方=深い側を優先)
+                int? bestIdx = null;
+                double bestOverlap = 0.0;
+                for (int i = 0; i < layers.Count; i++)
                 {
-                    if (m.GLDepth >= l.BottomGLDepth)
+                    double layerHigh = (i == 0) ? 0.0 : layers[i - 1].BottomGLDepth; // 浅い側
+                    double layerLow = layers[i].BottomGLDepth;                       // 深い側
+                    double overlap = Math.Max(0.0,
+                        Math.Min(pointHigh, layerHigh) - Math.Max(pointLow, layerLow));
+                    if (overlap > bestOverlap || (bestIdx.HasValue && overlap == bestOverlap))
                     {
-                        m.LayerNo = layers.IndexOf(l) + 1;
-                        m.Name = l.Name;
-                        found = true;
-                        break;
+                        bestOverlap = overlap;
+                        bestIdx = i; // リスト後方ほど深いので、同値時はここで上書きされ深い側が残る
                     }
                 }
-                if (!found)
+
+                if (bestIdx.HasValue && bestOverlap > 0)
+                {
+                    m.LayerNo = bestIdx.Value + 1;
+                    m.Name = layers[bestIdx.Value].Name;
+                    continue;
+                }
+
+                // 2) 重なり 0 のフォールバック: 単一深さ GLDepth を含む土層 (境界上は深い方を採用)
+                int? containingIdx = null;
+                for (int i = 0; i < layers.Count; i++)
+                {
+                    double layerHigh = (i == 0) ? 0.0 : layers[i - 1].BottomGLDepth;
+                    double layerLow = layers[i].BottomGLDepth;
+                    if (m.GLDepth >= layerLow && m.GLDepth <= layerHigh)
+                    {
+                        containingIdx = i; // 後勝ち→深い側を採用
+                    }
+                }
+
+                if (containingIdx.HasValue)
+                {
+                    m.LayerNo = containingIdx.Value + 1;
+                    m.Name = layers[containingIdx.Value].Name;
+                }
+                else
                 {
                     m.LayerNo = null;
                     m.Name = "";

@@ -21,15 +21,23 @@ namespace PileDesign.Models.InputData
 
         protected override double CompressionEdgePosition => -(PileDia / 2 - PipeT);
 
-        public double Ae { get; private set; }
+        public double Ae { get; private set; }      // 換算断面積 = Ac + (nr-1)·Ag + ns·AMinus（軸力・曲げ・ひび割れ共通）
         public double Ze { get; private set; }
         public double Ie { get; private set; }
         public double Ft { get; private set; }
 
         // コンストラクタ
+        // isInsituSteelPipeConcretePile: 場所打ち鋼管コンクリート杭のとき true（既定）。
+        //   鋼管 1.1F 完全バイリニア型オプションはこの杭種のみ適用する（鋼管杭では false を渡す）。
         internal InsituSteelPipeReinforcedConcreteSection(
-            InsituSteelPipe insituSteelPipe, InsituConcrete insituConcrete, MainBars mainBars)
+            InsituSteelPipe insituSteelPipe, InsituConcrete insituConcrete, MainBars mainBars,
+            bool isInsituSteelPipeConcretePile = true)
         {
+            // 鉄筋 1.1F 完全バイリニア型オプション（限界ひずみ再計算より前に適用）
+            mainBars.YieldAt11F = ConcreteModelOptions.RebarYieldAt11F;
+            // 鋼管 1.1F 完全バイリニア型オプション（場所打ち鋼管コンクリート杭のみ）
+            insituSteelPipe.PerfectBilinear11F = ConcreteModelOptions.SteelPipeYieldAt11F && isInsituSteelPipeConcretePile;
+
             InsituSteelPipe = insituSteelPipe;
             InsituConcrete = insituConcrete;
             MainBars = mainBars;
@@ -81,18 +89,13 @@ namespace PileDesign.Models.InputData
             DamageLimitBetaL1 = [1.0];  // L1: 同値（β2=1.0 の規定）
 
             // 安全限界軸力閾値
-            // 換算断面積 Aₑ = Aᴄ + n×Aₛ(鋼管) + n×Aᵣ(主筋)
-            // n = Eₛ/Eᴄ（ヤング係数比）
-            double concreteDiaForArea = PileDia - 2 * PipeT;
-            double Ac_area = Math.PI * Math.Pow(concreteDiaForArea, 2) / 4.0; // コンクリート断面積
-            double As_pipe = insituSteelPipe.AMinus; // 鋼管断面積（腐食考慮後）
-            double Ar_bar = mainBars.Ag; // 主筋断面積
-            double n_ratio = insituSteelPipe.SE1 / insituConcrete.Ec; // ヤング係数比 Es/Ec
-            double Ae_equiv = Ac_area + n_ratio * As_pipe + n_ratio * Ar_bar; // 換算断面積
-
+            // 圧縮側制限値 = σ0 × 換算断面積 Ae   （σ0 = 0.4·ξ·Fc, ξ = Gsi）
+            // Ae = InsituConcrete.Ac(コンクリート総断面) + (nr−1)·Ag(主筋) + ns·AMinus(腐食後鋼管)
+            //   = Ac_net + nr·Ag + ns·AMinus   （文献「コンクリート純断面 + n×鋼管 + n×鉄筋」と一致）
+            //   nr = Er/Ec, ns = Es/Ec。SetZeFtIe() 算定のフィールド値を用いる（N-Q 相関 NMax と統一）。
             UltimateLimitAxialForceThresholds = [
                 -0.2 * (mainBars.RSigmaY * mainBars.Ag + insituSteelPipe.Fcy * insituSteelPipe.AMinus),
-                0.4 * insituConcrete.Gsi * insituConcrete.Fc * Ae_equiv
+                0.4 * insituConcrete.Gsi * insituConcrete.Fc * Ae
             ];
 
             // 安全限界曲げモーメント低減率
@@ -489,6 +492,30 @@ namespace PileDesign.Models.InputData
             N = result0.Item1 + result1.Item1 + result2.Item1 - result3.Item1;
             M = result0.Item2 + result1.Item2 + result2.Item2 - result3.Item2;
             return (N, M);
+        }
+
+        // 場所打ち鋼管コンクリート(SPRC): コンクリート(実心)＋鋼管＋主筋。
+        // 力・モーメント計算と同様にプレストレスひずみは加味しない (epsilon0 のみ)。
+        internal override SectionStrainStressProfile GetStrainStressProfile(
+            double epsilonC, double curvature, bool ultimate, int division = 200)
+        {
+            double epsilon0 = epsilonC - (PileDia * 0.5 - PipeT) * curvature;
+            string type = ultimate ? "bilinear" : "linear";
+            double rConc = (PileDia - 2 * PipeT) * 0.5;
+            double rPipe = (PileDia - PipeT) * 0.5;
+            double rOuter = PileDia * 0.5;
+
+            var p = new SectionStrainStressProfile { Radius = rOuter };
+            p.Materials.Add(BuildSolidProfile(SectionMaterialKind.Concrete, "コンクリート",
+                InsituConcrete, type, epsilon0, curvature, rConc, 0.0, 0.0, division));
+            p.Materials.Add(BuildRingProfile(SectionMaterialKind.SteelPipe, "鋼管",
+                InsituSteelPipe, type, epsilon0, curvature, rPipe, 0.0, division));
+            if (MainBarArea > 0)
+                p.Materials.Add(BuildRingProfile(SectionMaterialKind.MainBar, "主筋",
+                    MainBars, type, epsilon0, curvature, MainBarPCD * 0.5, 0.0, division));
+            p.CompressionEdgeStrain = epsilon0 + curvature * rOuter;
+            p.TensionEdgeStrain = epsilon0 - curvature * rOuter;
+            return p;
         }
     }
 }

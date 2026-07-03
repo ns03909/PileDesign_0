@@ -6,7 +6,7 @@ namespace PileDesign.Models.InputData
 {
     public class GroundMassDataInput : BaseDataItem
     {
-        // 入力データのエラーチェック
+        // 入力データのエラーチェック (行レベル、互換性のため残置)
         private bool _isError;
         public bool IsError
         {
@@ -19,6 +19,22 @@ namespace PileDesign.Models.InputData
                     OnPropertyChanged(nameof(IsError));
                 }
             }
+        }
+
+        // 参考NPT深度GL (GLDepth 列) の順序エラー
+        private bool _isErrorGLDepth;
+        public bool IsErrorGLDepth
+        {
+            get => _isErrorGLDepth;
+            set => SetProperty(ref _isErrorGLDepth, value);
+        }
+
+        // 下端深度GL (LayerBottomDepth 列) の順序エラー
+        private bool _isErrorLayerBottomDepth;
+        public bool IsErrorLayerBottomDepth
+        {
+            get => _isErrorLayerBottomDepth;
+            set => SetProperty(ref _isErrorLayerBottomDepth, value);
         }
 
         // 番号
@@ -319,6 +335,14 @@ namespace PileDesign.Models.InputData
         {
             get => _layerBottomZ;
             set => SetProperty(ref _layerBottomZ, value);
+        }
+
+        // 層下面深度（GroundTopAltitude を基準とした下向き正の深さ。入力可。H と LayerBottomZ と同期）
+        private double? _layerBottomDepth;
+        public double? LayerBottomDepth
+        {
+            get => _layerBottomDepth;
+            set => SetProperty(ref _layerBottomDepth, value);
         }
 
         // 水平変位

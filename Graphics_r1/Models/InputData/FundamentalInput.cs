@@ -47,7 +47,39 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _seismicGrade, value);
         }
 
-        // 
+        // バイリニア型コンクリートの引張側の降伏応力度を 0 とする（コンクリート引張を無視）
+        private bool _ignoreConcreteTensileStrength;
+        public bool IgnoreConcreteTensileStrength
+        {
+            get => _ignoreConcreteTensileStrength;
+            set => SetProperty(ref _ignoreConcreteTensileStrength, value);
+        }
+
+        // バイリニア型コンクリートの圧縮側の降伏応力度を 0.85·Gsi·Fc とする（既定の Gsi·Fc から低減）
+        private bool _useReducedConcreteCompressiveStrength;
+        public bool UseReducedConcreteCompressiveStrength
+        {
+            get => _useReducedConcreteCompressiveStrength;
+            set => SetProperty(ref _useReducedConcreteCompressiveStrength, value);
+        }
+
+        // 鉄筋（場所打ち RC / 場所打ち鋼管コンクリート杭）を 1.1×F で降伏する完全バイリニア型とする
+        private bool _rebarYieldAt11F;
+        public bool RebarYieldAt11F
+        {
+            get => _rebarYieldAt11F;
+            set => SetProperty(ref _rebarYieldAt11F, value);
+        }
+
+        // 鋼管（場所打ち鋼管コンクリート杭）を 1.1×F で降伏する完全バイリニア型とする
+        private bool _steelPipeYieldAt11F;
+        public bool SteelPipeYieldAt11F
+        {
+            get => _steelPipeYieldAt11F;
+            set => SetProperty(ref _steelPipeYieldAt11F, value);
+        }
+
+        //
         private double _x0;
         public double X0
         {

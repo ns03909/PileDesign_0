@@ -644,7 +644,8 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([$"{pileBodySegment.SegmentDepth:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileBodySegment.SegmentLength:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileBodySegment.PileSection.PileSectionType}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{pileBodySegment.PileSection.PileDiameter:N0}"], fontSize, "right"));
+                // 杭径は腐食代を見込まない公称外径で表示（鋼管系の有効径 PileDiameter ではなく NominalPileDiameter）
+                dataRow.Append(CreateTableCell([$"{pileBodySegment.PileSection.NominalPileDiameter:N0}"], fontSize, "right"));
 
                 table.Append(dataRow);
             }
@@ -676,7 +677,8 @@ namespace PileDesign.Output
 
                 TableRow dataRow2 = new();
                 dataRow2.Append(CreateTableCell(["杭径"], fontSize, "left"));
-                dataRow2.Append(CreateTableCell([pileBodySegment.PileSection.PileDiameter.ToString()], fontSize, "left"));
+                // 杭径は腐食代を見込まない公称外径で表示
+                dataRow2.Append(CreateTableCell([pileBodySegment.PileSection.NominalPileDiameter.ToString()], fontSize, "left"));
 
                 table.Append(dataRow2);
 

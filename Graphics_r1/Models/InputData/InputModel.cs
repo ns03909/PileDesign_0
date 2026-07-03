@@ -1472,14 +1472,21 @@ namespace PileDesign.Models.InputData
                 // GenerateSoilPiles は元々 SoilPile を新規構築するためデフォルト 0 になり、
                 // 個別十字荷重 編集が消える問題を回避する。
                 var preservedGroupPileLoadDia = new Dictionary<(int groundNo, int pileBodyNo, long zKey), double>();
+                // ユーザーが手入力した kh0 の土層ごとオーバーライドも再生成後に維持する。
+                var preservedKh0Overrides = new Dictionary<(int groundNo, int pileBodyNo, long zKey), List<Kh0LayerOverride>>();
                 if (ElementDivision?.SoilPiles != null)
                 {
                     foreach (var oldSp in ElementDivision.SoilPiles)
                     {
+                        long zk = (long)Math.Round(oldSp.Z / NumericalConstants.COORDINATE_TOLERANCE);
                         if (oldSp.GroupPileLoadDia > 0.0)
                         {
-                            long zk = (long)Math.Round(oldSp.Z / NumericalConstants.COORDINATE_TOLERANCE);
                             preservedGroupPileLoadDia[(oldSp.GroundNo, oldSp.PileBodyNo, zk)] = oldSp.GroupPileLoadDia;
+                        }
+                        if (oldSp.Kh0LayerOverrides != null && oldSp.Kh0LayerOverrides.Count > 0)
+                        {
+                            preservedKh0Overrides[(oldSp.GroundNo, oldSp.PileBodyNo, zk)] =
+                                oldSp.Kh0LayerOverrides.Select(o => o.DeepCopy()).ToList();
                         }
                     }
                 }
@@ -1609,6 +1616,12 @@ namespace PileDesign.Models.InputData
                     if (preservedGroupPileLoadDia.TryGetValue((groundNo, pileBodyNo, restoreKey), out double dia))
                     {
                         sp.GroupPileLoadDia = dia;
+                    }
+
+                    // kh0 の土層ごとオーバーライドを復元（UpdateProperties→SetHorizontalSoilReaction より前に設定）
+                    if (preservedKh0Overrides.TryGetValue((groundNo, pileBodyNo, restoreKey), out var kh0Ovs))
+                    {
+                        sp.Kh0LayerOverrides = new ObservableCollection<Kh0LayerOverride>(kh0Ovs);
                     }
 
                     // 追加: R_* 等の特性を再計算

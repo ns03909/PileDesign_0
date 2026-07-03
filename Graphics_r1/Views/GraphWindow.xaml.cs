@@ -55,6 +55,9 @@ namespace PileDesign.Views
                     AttachHoverDetails(wpfPlot1);
                     AttachHoverDetails(wpfPlot2);
                     AttachHoverDetails(wpfPlot3);
+
+                    // NMINT グラフのクリックで断面ひずみ・応力プロファイルをポップアップ表示
+                    wpfPlot.MouseLeftButtonDown += SinglePlot_MouseLeftButtonDown;
                 }
             };
 
@@ -74,6 +77,22 @@ namespace PileDesign.Views
                     vm.SelectedGraphOption = GraphComboBox.SelectedItem as string;
                 }
             };
+        }
+
+        // NMINT グラフのクリック点 (N kN, M kNm) から、選択中杭区間の断面ひずみ・応力プロファイルを表示
+        private void SinglePlot_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                if (DataContext is not GraphViewModel vm) return;
+                var pileSection = vm.GetSelectedNmintPileSection();
+                if (pileSection == null) return;
+                var p = e.GetPosition(wpfPlot);
+                var pixel = new ScottPlot.Pixel(p.X * wpfPlot.DisplayScale, p.Y * wpfPlot.DisplayScale);
+                var coord = wpfPlot.Plot.GetCoordinates(pixel);
+                StrainStressProfileService.ShowAtClick(this, pileSection, coord.X, coord.Y);
+            }
+            catch { /* クリック座標取得失敗時は無視 */ }
         }
 
         /// <summary>

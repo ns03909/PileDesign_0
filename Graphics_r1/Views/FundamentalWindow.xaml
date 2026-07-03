@@ -7,7 +7,7 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         d:DataContext="{d:DesignInstance Type=local:FundamentalViewModel}"
         mc:Ignorable="d"
-        Title="基本設定" Height="300" Width="400">
+        Title="基本設定" Height="620" Width="440">
     
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
@@ -158,6 +158,74 @@
                     <TextBlock Text="安全限界状態を超えない" HorizontalAlignment="Center"/>
                 </Border>
             </Grid>
+
+            <!-- 場所打ちコンクリート系 杭のバイリニア型コンクリートのモデル化オプション -->
+            <GroupBox Header="バイリニア型コンクリートのモデル化" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+                    <CheckBox Content="引張側の降伏応力度を 0 とする（引張を無視）"
+                              IsChecked="{Binding IgnoreConcreteTensileStrength}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ち RC 系杭のバイリニア型コンクリートで、引張側のひび割れ強度を無視します（σ=0）。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <CheckBox Content="圧縮側の降伏応力度を 0.85·Gsi·Fc とする"
+                              IsChecked="{Binding UseReducedConcreteCompressiveStrength}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>圧縮側の折れ点応力度を、既定の Gsi·Fc から 0.85·Gsi·Fc に低減します。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
+                               Text="※ 変更すると M-φ が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- 鉄筋・鋼管の 1.1F 完全バイリニア型オプション -->
+            <GroupBox Header="鉄筋・鋼管のモデル化" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+                    <CheckBox Content="鉄筋を 1.1×F で降伏する完全バイリニア型とする"
+                              IsChecked="{Binding RebarYieldAt11F}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ち RC 杭・場所打ち鋼管コンクリート杭の鉄筋について、降伏応力度を σy から 1.1×σy に引き上げます（完全バイリニア型）。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <CheckBox Content="鋼管を 1.1×F で降伏する完全バイリニア型とする"
+                              IsChecked="{Binding SteelPipeYieldAt11F}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ち鋼管コンクリート杭の鋼管について、ひずみ硬化・破断を廃し ±1.1×F で頭打ちの完全バイリニア型とします。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます（鋼管杭は対象外）。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
+                               Text="※ 変更すると M-φ が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。"/>
+                </StackPanel>
+            </GroupBox>
 
         </StackPanel>
 

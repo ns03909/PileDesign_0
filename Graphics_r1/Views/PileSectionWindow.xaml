@@ -796,8 +796,8 @@
 
                                                 <TextBlock Text="安全限界" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenPaleRedBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="2" Grid.Column="1"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N=-0.2(ᵣσᵧ·Aᵣ+f"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·Aₛ)"/></TextBlock>
-                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N=-0.2("/><Run Text="r" BaselineAlignment="Subscript" FontSize="9"/><Run Text="σ"/><Run Text="y" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·A"/><Run Text="r" BaselineAlignment="Subscript" FontSize="9"/><Run Text="+f"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·A"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text=")"/></TextBlock>
+                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
                                             </Grid>
                                         </StackPanel>
 
@@ -1189,7 +1189,6 @@
                                             <RadioButton Content="1" GroupName="SeismicLevel" IsChecked="{Binding IsSeismicLevel1, Mode=TwoWay}" Margin="0,0,6,0"/>
                                             <RadioButton Content="2" GroupName="SeismicLevel" IsChecked="{Binding IsSeismicLevel2, Mode=TwoWay}"/>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding CrosshairPositionText_MN}" Margin="10,0,0,0" FontSize="14"/>
                                     </StackPanel>
 
                                 </Grid>
@@ -1203,7 +1202,6 @@
                                     </Grid.RowDefinitions>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotMphi" Grid.Row="0"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_Mphi}" Margin="10" FontSize="14" Grid.Row="1"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -1216,7 +1214,6 @@
                                     </Grid.RowDefinitions>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotMtheta" Grid.Row="0"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_Mtheta}" Margin="10" FontSize="14" Grid.Row="1"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -1246,12 +1243,11 @@
                                                  PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                  TextChanged="TextBox_TextChanged"
                                                  LostFocus="TextBox_LostFocus"/>
-                                        <TextBlock Text="{Binding CrosshairPositionText_NQ}" Margin="10,0,0,0" FontSize="14"/>
                                     </StackPanel>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
-                            
+
                         </avalonDock:LayoutDocumentPane>
 
                     </avalonDock:LayoutDocumentPaneGroup>

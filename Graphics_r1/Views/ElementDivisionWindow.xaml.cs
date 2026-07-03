@@ -389,6 +389,30 @@ namespace PileDesign.Views
             e.Row.Header = (e.Row.GetIndex() + 1).ToString();
         }
 
+        // horizon の CellEditEnding（基準水平地盤反力係数 kh0 の手入力を土層単位で適用）
+        private void Horizon_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (e.EditAction != DataGridEditAction.Commit) return;
+            if (DataContext is not ElementDivisionViewModel vm) return;
+            if (e.Row?.Item is not HorizontalSoilReactionItem item) return;
+
+            // 編集列が kh0 列（Binding パスが "Kh0"）のときのみ処理
+            if (e.Column is not DataGridTextColumn col
+                || col.Binding is not System.Windows.Data.Binding b
+                || b.Path?.Path != nameof(HorizontalSoilReactionItem.Kh0))
+                return;
+
+            if (e.EditingElement is not TextBox tb) return;
+            if (!double.TryParse(tb.Text,
+                    System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.CurrentCulture, out double val))
+                return;
+
+            // CellEditEnding 中に ItemsSource を再構築すると例外になるため、確定後に遅延実行する
+            Dispatcher.BeginInvoke(new Action(() => vm.ApplyKh0Edit(item, val)),
+                System.Windows.Threading.DispatcherPriority.Background);
+        }
+
         // horizon の SelectedCellsChanged（セル選択 → VM へ反映）
         private void Horizon_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
         {

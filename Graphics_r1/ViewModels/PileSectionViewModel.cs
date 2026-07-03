@@ -949,6 +949,15 @@ namespace PileDesign.ViewModels
             return result;
         }
 
+        // ===== 杭断面 ひずみ度・応力度分布グラフ =====
+        // N-M 曲線上でクリックされた (N,M) に最も近い曲線上の点の (εc, φ) を、
+        // 共有サービス StrainStressProfileService 経由でプロファイル表示する (全杭種対応)。
+        public void ShowStrainStressAtMNPoint(double clickN_kN, double clickM_kNm)
+        {
+            if (PileSectionWindowInstance == null || PileSection == null) return;
+            StrainStressProfileService.ShowAtClick(PileSectionWindowInstance, PileSection, clickN_kN, clickM_kNm);
+        }
+
         public void ChartUpdate()
         {
             //スペックのセット

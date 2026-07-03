@@ -337,6 +337,20 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 現在 NMINT グラフで選択中の杭区間の PileSection を返す (NMINT でない/未選択なら null)。
+        /// 解析結果グラフからの断面ひずみ・応力プロファイル表示に用いる。
+        /// </summary>
+        public PileSection? GetSelectedNmintPileSection()
+        {
+            if (SelectedGraphOption == null || !SelectedGraphOption.StartsWith("NMINT")) return null;
+            var pileBody = InputModel?.GetPileBodyByPileBodyRef(SelectedPileBodyRef);
+            if (pileBody?.PileBodySegments == null ||
+                SelectedPileSegmentNo < 1 || SelectedPileSegmentNo > pileBody.PileBodySegments.Count)
+                return null;
+            return pileBody.PileBodySegments[SelectedPileSegmentNo - 1].PileSection;
+        }
+
+        /// <summary>
         /// 現在のグラフ種別に合わせて PileSegmentOptions を再構築する。
         /// p-y 以外（NMINT/QNINT/M-φ/EI-φ 等）は入力杭体セグメント数を、
         /// p-y は杭要素分割後の HorizontalSoilReactions 数を使う。

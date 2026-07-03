@@ -125,6 +125,95 @@ namespace PileDesign.ViewModels
             InputModel.FundamentalInput.SeismicGrade = value;
         }
 
+        // バイリニア型コンクリートの引張側降伏応力度を 0 とする
+        [ObservableProperty]
+        private bool _ignoreConcreteTensileStrength;
+
+        // バイリニア型コンクリートの圧縮側降伏応力度を 0.85·Gsi·Fc とする
+        [ObservableProperty]
+        private bool _useReducedConcreteCompressiveStrength;
+
+        // 確認ダイアログのキャンセルで値を戻す間、再入を抑制するフラグ
+        private bool _suppressConcreteOptionConfirm;
+
+        partial void OnIgnoreConcreteTensileStrengthChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.IgnoreConcreteTensileStrength,
+                v => InputModel.FundamentalInput.IgnoreConcreteTensileStrength = v,
+                v => IgnoreConcreteTensileStrength = v,
+                "コンクリート引張無視の変更");
+        }
+
+        partial void OnUseReducedConcreteCompressiveStrengthChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength,
+                v => InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength = v,
+                v => UseReducedConcreteCompressiveStrength = v,
+                "コンクリート圧縮低減の変更");
+        }
+
+        // 鉄筋を 1.1×F で降伏する完全バイリニア型とする
+        [ObservableProperty]
+        private bool _rebarYieldAt11F;
+
+        partial void OnRebarYieldAt11FChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.RebarYieldAt11F,
+                v => InputModel.FundamentalInput.RebarYieldAt11F = v,
+                v => RebarYieldAt11F = v,
+                "鉄筋1.1F完全バイリニアの変更");
+        }
+
+        // 鋼管を 1.1×F で降伏する完全バイリニア型とする
+        [ObservableProperty]
+        private bool _steelPipeYieldAt11F;
+
+        partial void OnSteelPipeYieldAt11FChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.SteelPipeYieldAt11F,
+                v => InputModel.FundamentalInput.SteelPipeYieldAt11F = v,
+                v => SteelPipeYieldAt11F = v,
+                "鋼管1.1F完全バイリニアの変更");
+        }
+
+        /// <summary>
+        /// バイリニアコンクリート・オプションの変更を処理する共通ハンドラ。
+        /// これらは M-φ（→ 非線形 FEM 解析）に影響するため、解析結果があれば確認のうえリセットする
+        /// （杭要素分割＝メッシュは材料変更では不変のため保持）。確認キャンセル時はチェックを元に戻す。
+        /// </summary>
+        private void HandleConcreteOptionChanged(
+            bool value, Func<bool> getter, Action<bool> setModel, Action<bool> setVm, string reason)
+        {
+            if (_suppressConcreteOptionConfirm) return;
+
+            bool oldValue = getter();
+            if (oldValue == value) return;
+
+            if (!_mainWindowViewModel.CheckAndResetAnalysisResultsKeepingSplit(reason))
+            {
+                _suppressConcreteOptionConfirm = true;
+                try { setVm(oldValue); }
+                finally { _suppressConcreteOptionConfirm = false; }
+                return;
+            }
+
+            _undoManager.PushAction(
+                () => { setModel(oldValue); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                () => { setModel(value); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                reason);
+
+            setModel(value);
+            _mainWindowViewModel.ApplyConcreteModelOptions();
+        }
+
         [ObservableProperty]
         private Point3D _point3D0;
 
@@ -159,6 +248,10 @@ namespace PileDesign.ViewModels
             ProjectName = InputModel.FundamentalInput.ProjectName;
             Point3D0 = InputModel.FundamentalInput.Point3D0;
             SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
+            IgnoreConcreteTensileStrength = InputModel.FundamentalInput.IgnoreConcreteTensileStrength;
+            UseReducedConcreteCompressiveStrength = InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength;
+            RebarYieldAt11F = InputModel.FundamentalInput.RebarYieldAt11F;
+            SteelPipeYieldAt11F = InputModel.FundamentalInput.SteelPipeYieldAt11F;
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
 
@@ -184,6 +277,8 @@ namespace PileDesign.ViewModels
         {
             // プロパティを元に戻す処理
             InputModel.FundamentalInput = PrevFundamentalInput.ShallowCopy();
+            // 復元した基本設定の値で静的オプションを再同期（解析結果は既に確認のうえ削除済み）
+            _mainWindowViewModel.ApplyConcreteModelOptions();
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
@@ -205,6 +300,18 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.SeismicGrade):
                     SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
+                    break;
+                case nameof(FundamentalInput.IgnoreConcreteTensileStrength):
+                    IgnoreConcreteTensileStrength = InputModel.FundamentalInput.IgnoreConcreteTensileStrength;
+                    break;
+                case nameof(FundamentalInput.UseReducedConcreteCompressiveStrength):
+                    UseReducedConcreteCompressiveStrength = InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength;
+                    break;
+                case nameof(FundamentalInput.RebarYieldAt11F):
+                    RebarYieldAt11F = InputModel.FundamentalInput.RebarYieldAt11F;
+                    break;
+                case nameof(FundamentalInput.SteelPipeYieldAt11F):
+                    SteelPipeYieldAt11F = InputModel.FundamentalInput.SteelPipeYieldAt11F;
                     break;
             }
         }

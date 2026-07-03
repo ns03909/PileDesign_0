@@ -581,11 +581,9 @@
 
                         <TextBlock Text="杭先端沈下" FontWeight="Bold" Grid.Row="0" Grid.Column="0"/>
                         <ScottPlot:WpfPlot x:Name="wpfPlotPileToe" Grid.Row="1" Grid.Column="0" />
-                        <TextBlock Text="{Binding CrosshairPositionText_PileToe}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 
                         <TextBlock Text="土層の杭周面抵抗力" FontWeight="Bold" Grid.Row="0" Grid.Column="1" />
                         <ScottPlot:WpfPlot x:Name="wpfPlotCircum" Grid.Row="1" Grid.Column="1" />
-                        <TextBlock Text="{Binding CrosshairPositionText_PileCircumstance}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
 
                         <common:EnhancedDataGrid x:Name="DataGridCircum" CanUserSortColumns="False"
                             Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
@@ -841,11 +839,9 @@
                                      VerticalAlignment="Center" Margin="0,2,10,2"/>
                         </StackPanel>
                         <ScottPlot:WpfPlot  Grid.Row="1" Grid.Column="0" x:Name="wpfPlotSettlement"/>
-                        <TextBlock Text="{Binding CrosshairPositionText_PileTopSettlement}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 
                         <!--<TextBlock Grid.Row="0" Grid.Column="1" Text="杭先端沈下曲線" FontWeight="Bold"/>-->
                         <ScottPlot:WpfPlot Grid.Row="1" Grid.Column="1" x:Name="wpfPlotSettlementToe"/>
-                        <TextBlock Text="{Binding CrosshairPositionText_PileToeSettlement}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
 
                         <common:EnhancedDataGrid x:Name="DataGridLoadDisplacement"
                                    ItemsSource="{Binding VerticalLoadTransferMethod.LoadDisplacements}"

@@ -100,7 +100,6 @@
 
         <ScottPlot:WpfPlot x:Name="wpfPlot" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"/>
 
-        <TextBlock Text="{Binding CrosshairPositionText}" Margin="10" FontSize="14" Grid.Row="2"  Grid.Column="0"/>
         <StackPanel Grid.Row="2" Grid.Column="1"  HorizontalAlignment="Right" VerticalAlignment="Bottom">
             <Button Content="上記杭間隔比のモデル全杭への適用" Command="{Binding ApplyPileDistanceFactorToModelsAllPilesCommand}"/>
             <Button Content="上記群杭係数のモデル全杭への適用" Command="{Binding ApplyPileGroupFactorToModelsAllPilesCommand}"/>

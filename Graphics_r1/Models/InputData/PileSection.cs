@@ -123,6 +123,13 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 断面パラメータ変更時にすべてのキャッシュを一括で無効化します。
         /// </summary>
+        /// <summary>
+        /// この断面の NM / 降伏 / ひび割れキャッシュを外部から無効化します。
+        /// コンクリートのモデル化オプション (ConcreteModelOptions) 変更時など、
+        /// 断面プロパティ自体は変わらないが計算結果が変わるケースで使用します。
+        /// </summary>
+        public void InvalidateComputedCaches() => InvalidateAllCaches();
+
         private void InvalidateAllCaches()
         {
             InvalidateNMCache();
@@ -425,8 +432,12 @@ namespace PileDesign.Models.InputData
             // 注: axialNはkN単位を期待（GetMPhiRelationshipの入力と同じ）
             long axialNRounded = (long)Math.Round(axialN);
 
+            // バイリニアコンクリートのモデル化オプション（引張無視・圧縮低減）を含める。
+            // オプションが変わると M-φ も変わるため、キャッシュ衝突を防ぐ。
+            string cmo = ConcreteModelOptions.Signature();
+
             // 断面タイプに応じて関連パラメータを含める
-            return (PileBodyType, PileSectionType) switch
+            string key = (PileBodyType, PileSectionType) switch
             {
                 // 場所打ちRC杭
                 ("場所打ち鉄筋コンクリート杭", _) =>
@@ -455,6 +466,8 @@ namespace PileDesign.Models.InputData
                 // 鋼管杭（未対応）
                 _ => $"OTHER|{PileBodyType}|{PileSectionType}|N={axialNRounded}"
             };
+
+            return $"{key}|{cmo}";
         }
 
         // デバッグ用: GetMPhiRelationship呼び出し回数
@@ -794,6 +807,22 @@ namespace PileDesign.Models.InputData
                 }
             }
         }
+
+        /// <summary>
+        /// 表示用の杭径（腐食代を見込まない公称外径）[mm]。
+        /// 解析で使う <see cref="PileDiameter"/> は鋼管系では腐食代を控除した有効径
+        /// (PipeDia − 2×CorrosionDepth) だが、計算書の「杭径」表示では腐食前の
+        /// 公称外径（鋼管外径 = PipeDia）を用いる。
+        /// 鋼管を外面に持たない断面（場所打ち RC / 鉄筋コンクリート部 / PHC・PRC・SC）は
+        /// PileDiameter が既に公称外径なのでそのまま返す。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double NominalPileDiameter => (PileBodyType, PileSectionType) switch
+        {
+            ("場所打ち鋼管コンクリート杭", "鋼管コンクリート部") => PipeDia,
+            ("鋼管杭", _) => PipeDia,
+            _ => PileDiameter
+        };
 
         // コンクリート外径
         private double _concreteOutDia = 1200.0;
@@ -1619,7 +1648,8 @@ namespace PileDesign.Models.InputData
         public double W => ((MainBarAg + TendonAp + PipeAs) * 78.5 + (Ac - (MainBarAg + TendonAp)) * ConcreteGamma) * Math.Pow(10, -6);
 
         // 軸剛性 (kN)
-        public double EA => (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp) * 0.001;
+        // 合成断面: コンクリート + 主筋 + PC鋼材 + 鋼管（Es·As）。鋼管を持たない断面では PipeAs=0 のため影響なし。
+        public double EA => (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAs) * 0.001;
 
         // 曲げ剛性 (kNm2)
         // 鉄筋の換算断面二次モーメント項は MainBarAg（鉄筋断面積）を使用
@@ -1628,6 +1658,32 @@ namespace PileDesign.Models.InputData
         public double EI => (ConcreteE * (Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 64.0
             + 0.5 * (MainBarEr / ConcreteE - 1) * MainBarAg * Math.Pow((ConcreteOutDia - 2 * MainBarCenterCover), 2) / 4.0)
             + PipeEs * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 64.0) * Math.Pow(10, -9);
+
+        // ===== 腐食代考慮の断面諸量（諸元の「両方記載」表示専用） =====
+        // 腐食モデル: 鋼管外径を 2×腐食代 だけ縮小、管厚を腐食代だけ減じ、内径（コンクリート外径）は不変。
+        // （解析用の PipeAs/A0/W/EA/EI は公称寸法のまま。ここは表示比較用）
+        private double CorrodedPipeOuterDiaDisp => PipeDia - 2.0 * CorrosionDepth;
+        private double PipeInnerDiaDisp => PipeDia - 2.0 * PipeTs; // = コンクリート外径（腐食で不変）
+
+        // 腐食考慮 鋼管断面積 (mm2)
+        public double PipeAsCorroded =>
+            Math.PI / 4.0 * (Math.Pow(CorrodedPipeOuterDiaDisp, 2) - Math.Pow(PipeInnerDiaDisp, 2));
+
+        // 腐食考慮 杭全断面積 (mm2)
+        public double A0Corroded => Ac + MainBarAg + TendonAp + PipeAsCorroded;
+
+        // 腐食考慮 杭単位長さ重量 (kN/m)
+        public double WCorroded =>
+            ((MainBarAg + TendonAp + PipeAsCorroded) * 78.5 + (Ac - (MainBarAg + TendonAp)) * ConcreteGamma) * Math.Pow(10, -6);
+
+        // 腐食考慮 軸剛性 (kN)
+        public double EACorroded =>
+            (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAsCorroded) * 0.001;
+
+        // 腐食考慮 曲げ剛性 (kNm2) — 鋼管項のみ腐食後外径で置換
+        public double EICorroded => (ConcreteE * (Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 64.0
+            + 0.5 * (MainBarEr / ConcreteE - 1) * MainBarAg * Math.Pow((ConcreteOutDia - 2 * MainBarCenterCover), 2) / 4.0)
+            + PipeEs * Math.PI * (Math.Pow(CorrodedPipeOuterDiaDisp, 4) - Math.Pow(PipeInnerDiaDisp, 4)) / 64.0) * Math.Pow(10, -9);
 
         // ねじり剛性 (kNm2)
         // ※ コンクリート断面は中空断面として計算
@@ -1686,6 +1742,8 @@ namespace PileDesign.Models.InputData
 
                 SelectedPileSectionSpecification.Add(
                     new Spec("鋼管厚", "Ts", $"{PipeTs:N0}", "mm", notePipeTs));
+                SelectedPileSectionSpecification.Add(
+                    new Spec("腐食代", "", $"{CorrosionDepth:N1}", "mm"));
                 string noteDonTs =
                     (PileSectionType == "鋼管コンクリート部" && PipeDia / PipeTs > 125) ? "([強度と変形性能]4.1,3)125より大" :
                     (PileSectionType == "鋼管杭" && PipeDia / PipeTs > 100) ? "([強度と変形性能]8.1.4(2))100より大" : "";
@@ -1693,7 +1751,9 @@ namespace PileDesign.Models.InputData
                 SelectedPileSectionSpecification.Add(
                     new Spec("鋼管径厚比", "Tc/Ts", pipeDiaTsValue, "", noteDonTs));
                 SelectedPileSectionSpecification.Add(
-                    new Spec("鋼管断面積", "As", $"{PipeAs:N0}", "mm2"));
+                    new Spec("鋼管断面積(腐食非考慮)", "As", $"{PipeAs:N0}", "mm2"));
+                SelectedPileSectionSpecification.Add(
+                    new Spec("鋼管断面積(腐食考慮)", "As'", $"{PipeAsCorroded:N0}", "mm2"));
                 SelectedPileSectionSpecification.Add(
                     new Spec("鋼管規格", "", PipeGrade, ""));
                 SelectedPileSectionSpecification.Add(
@@ -1803,19 +1863,25 @@ namespace PileDesign.Models.InputData
 
             //new Spec("PCリング定着筋呼び径", "", BarSize, ""),
 
-            SelectedPileSectionSpecification.Add(
-               new Spec("杭の全断面積", "A0", $"{A0:N0}", "mm2"));
+            // 鋼管を持つ断面（鋼管コンクリート部/SC杭/鋼管杭）では腐食考慮/非考慮の両方を記載する。
+            bool hasPipe = PipeAs > 0;
+            void AddCorrodible(string name, string sym, string unit, string fmt, double nominal, double corroded)
+            {
+                if (hasPipe)
+                {
+                    SelectedPileSectionSpecification.Add(new Spec($"{name}(腐食非考慮)", sym, nominal.ToString(fmt), unit));
+                    SelectedPileSectionSpecification.Add(new Spec($"{name}(腐食考慮)", sym + "'", corroded.ToString(fmt), unit));
+                }
+                else
+                {
+                    SelectedPileSectionSpecification.Add(new Spec(name, sym, nominal.ToString(fmt), unit));
+                }
+            }
 
-            //SelectedPileSectionSpecification.Add(
-            //    new Spec("杭等価断面積", "Ae", $"{Ae:N0}", "mm2"));
-            //SelectedPileSectionSpecification.Add(
-            //    new Spec("杭等価断面係数", "Ze", $"{Ze:N0}", "mm3"));
-            SelectedPileSectionSpecification.Add(
-                new Spec("杭の単位長さ重量", "W", $"{W:N2}", "kN/m"));
-            SelectedPileSectionSpecification.Add(
-                new Spec("杭の弾性軸剛性", "EA", $"{EA:N0}", "kN"));
-            SelectedPileSectionSpecification.Add(
-                new Spec("杭の弾性曲げ剛性", "EI", $"{EI:N0}", "kNm2"));
+            AddCorrodible("杭の全断面積", "A0", "mm2", "N0", A0, A0Corroded);
+            AddCorrodible("杭の単位長さ重量", "W", "kN/m", "N2", W, WCorroded);
+            AddCorrodible("杭の弾性軸剛性", "EA", "kN", "N0", EA, EACorroded);
+            AddCorrodible("杭の弾性曲げ剛性", "EI", "kNm2", "N0", EI, EICorroded);
             //new Spec("PCリングスパイラル巻数", "", SpiralNum.ToString(), "")
             //return specs;
         }
@@ -2755,7 +2821,7 @@ namespace PileDesign.Models.InputData
         /// 現在の断面パラメータに基づいて断面計算オブジェクトを生成します。
         /// </summary>
         /// <returns>断面計算オブジェクト。生成できない場合は null。</returns>
-        private IPileSectionCalculation? CreateSectionCalculator()
+        internal IPileSectionCalculation? CreateSectionCalculator()
         {
             return (PileBodyType, PileSectionType) switch
             {
@@ -2807,7 +2873,9 @@ namespace PileDesign.Models.InputData
                     new InsituSteelPipeReinforcedConcreteSection(
                         new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth),
                         new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
-                        new MainBars(MainBarDr, 0, MainBarSpec, MainBarSize)),
+                        new MainBars(MainBarDr, 0, MainBarSpec, MainBarSize),
+                        // 鋼管杭は鋼管 1.1F 完全バイリニア型オプションの対象外
+                        isInsituSteelPipeConcretePile: false),
 
                 // 鋼管杭 - 鋼管部 / 旧サブ名 (純粋な鋼管区間 → 既存挙動に合わせ M-φ は null)
                 ("鋼管杭", _) => null,

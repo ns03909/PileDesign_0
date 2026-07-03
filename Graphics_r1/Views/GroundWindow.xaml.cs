@@ -922,9 +922,116 @@ namespace PileDesign.Views
         private void DataGridGroundLayer_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
             => DataGrid_CellEditEnding<GroundLayerInput>(sender, e, "BottomGLDepth");
 
-        // GroundMass 用: GLDepth 列
+        // GroundMass 用: GLDepth / LayerBottomDepth を入力列とし、両方の順序エラーをチェック。
+        // LayerBottomDepth 編集時は H に逆算して同期させる。
         private void DataGridGroundMass_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
-            => DataGrid_CellEditEnding<GroundMassDataInput>(sender, e, "GLDepth");
+        {
+            if (e.EditAction != DataGridEditAction.Commit) return;
+            if (_isCellEditEndingInProgress) return;
+            _isCellEditEndingInProgress = true;
+
+            try
+            {
+                // 編集中 TextBox のバインディングをソースへ確定
+                if (e.EditingElement is TextBox tb)
+                {
+                    var be = BindingOperations.GetBindingExpression(tb, TextBox.TextProperty);
+                    be?.UpdateSource();
+                }
+
+                if (sender is not DataGrid dg) return;
+
+                // LayerBottomDepth 列編集時の H 逆算 + 下流行 (i+1) の H 調整で下流の下端深度を保持
+                if (e.Column is DataGridBoundColumn col && col.Binding is Binding binding
+                    && binding.Path?.Path == "LayerBottomDepth"
+                    && e.Row.Item is GroundMassDataInput row
+                    && DataContext is GroundLayerViewModel vm
+                    && vm.GroundInput?.GroundMassesData is { } masses
+                    && row.LayerBottomDepth.HasValue)
+                {
+                    int idx = dg.Items.IndexOf(e.Row.Item);
+                    if (idx >= 0)
+                    {
+                        double newD = row.LayerBottomDepth.Value;
+
+                        // 当該行 H[i] = prev − newD (標高ベース)
+                        double prevDepth = (idx == 0) ? 0.0 : (masses[idx - 1].LayerBottomDepth ?? 0.0);
+                        double newHi = prevDepth - newD;
+                        if (newHi > 0) row.H = newHi;
+
+                        // 下流の最初の行 H[i+1] を再計算して oldLayerBottomDepth[i+1] を保持
+                        if (idx + 1 < masses.Count)
+                        {
+                            var next = masses[idx + 1];
+                            if (next.LayerBottomDepth.HasValue)
+                            {
+                                double newHnext = newD - next.LayerBottomDepth.Value;
+                                if (newHnext > 0) next.H = newHnext;
+                            }
+                        }
+                    }
+                }
+
+                // GLDepth と LayerBottomDepth の順序エラーチェック (各列で個別にフラグ設定 → 該当セルのみ赤)
+                int count = dg.Items.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    if (dg.Items[i] is not GroundMassDataInput rowItem) continue;
+                    rowItem.IsErrorGLDepth = CheckDepthOrderError(dg, i, "GLDepth");
+                    rowItem.IsErrorLayerBottomDepth = CheckDepthOrderError(dg, i, "LayerBottomDepth");
+                    rowItem.IsError = rowItem.IsErrorGLDepth || rowItem.IsErrorLayerBottomDepth;
+                }
+
+                _pendingUpdate = true;
+                SchedulePendingUpdate();
+            }
+            finally
+            {
+                Dispatcher.BeginInvoke(new System.Action(() =>
+                {
+                    _isCellEditEndingInProgress = false;
+                }), DispatcherPriority.Background);
+            }
+        }
+
+        // ペースト完了後: 両列の順序エラーを全行で再評価 (ペースト範囲の直下行も含む) + 連動更新
+        private void DataGridGroundMass_PasteCompleted(object sender, EventArgs e)
+        {
+            if (sender is not DataGrid dg) return;
+
+            int count = dg.Items.Count;
+            for (int i = 0; i < count; i++)
+            {
+                if (dg.Items[i] is not GroundMassDataInput rowItem) continue;
+                rowItem.IsErrorGLDepth = CheckDepthOrderError(dg, i, "GLDepth");
+                rowItem.IsErrorLayerBottomDepth = CheckDepthOrderError(dg, i, "LayerBottomDepth");
+                rowItem.IsError = rowItem.IsErrorGLDepth || rowItem.IsErrorLayerBottomDepth;
+            }
+
+            // ペーストで GLDepth / H 等が変わったので、Update() で LayerBottomZ / LayerBottomDepth 等を再計算
+            if (DataContext is GroundLayerViewModel vm) vm.Update();
+        }
+
+        // 上の行と同じまたは大きい値 (= 下方への単調減少が崩れた) ならエラー
+        private static bool CheckDepthOrderError(DataGrid dg, int i, string propertyName)
+        {
+            if (dg.Items[i] is not GroundMassDataInput) return false;
+            double value = GetDepthValue(dg.Items[i], propertyName);
+            if (double.IsNaN(value)) return false; // 空セル等はエラー扱いしない
+            if (i == 0 && value >= 0) return true;
+            if (i > 0 && dg.Items[i - 1] is GroundMassDataInput above)
+            {
+                double aboveVal = GetDepthValue(above, propertyName);
+                if (!double.IsNaN(aboveVal) && aboveVal <= value) return true;
+            }
+            int count = dg.Items.Count;
+            if (i < count - 1 && dg.Items[i + 1] is GroundMassDataInput below)
+            {
+                double belowVal = GetDepthValue(below, propertyName);
+                if (!double.IsNaN(belowVal) && value <= belowVal) return true;
+            }
+            return false;
+        }
 
 
         // 型ごとに値取得

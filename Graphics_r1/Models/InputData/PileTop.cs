@@ -222,7 +222,8 @@ namespace PileDesign.Models.InputData
             //    + 定着筋 MainBars1 のみ (杭体主筋 MainBars2 は接合部の付着定着と無関係)
             var insituConcrete = new InsituConcrete(ConcreteOutDia, 1.0, PileCapFc);
             var anchorBars = new MainBars(effectiveDr1, MainBarNum1, MainBarSpec1, MainBarSize1);
-            var jointSection = new InsituReinforcedConcreteSection(insituConcrete, anchorBars);
+            // 杭頭接合部（定着筋）は杭体の鉄筋 1.1F オプションの対象外
+            var jointSection = new InsituReinforcedConcreteSection(insituConcrete, anchorBars, applyBodyMaterialOptions: false);
 
             // 2. 引張側最外縁定着筋が降伏するときの (rMty, rφty)
             //    GetSteelYieldMoment は (M[N·mm], curvature[1/mm]), Ntarget は [N]

@@ -57,10 +57,13 @@ namespace PileDesign.Services
                     : null!
             };
 
-            // string 中間生成を避けて UTF-8 バイト直書き
+            // string 中間生成を避けて UTF-8 バイト直書き。
+            // Stream オーバーロードは _jsonOptions の全設定 (WriteIndented / Encoder 等) を尊重し、
+            // 内部で UTF-8 を直接書き出すため SaveProjectDataAsync と出力が一致する。
+            // (旧実装は new Utf8JsonWriter(stream) を JsonWriterOptions 無しで生成しており
+            //  WriteIndented が効かず常にコンパクト出力になっていた)
             using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
-            using var writer = new Utf8JsonWriter(stream);
-            JsonSerializer.Serialize(writer, projectData, _jsonOptions);
+            JsonSerializer.Serialize(stream, projectData, _jsonOptions);
         }
 
         /// <summary>

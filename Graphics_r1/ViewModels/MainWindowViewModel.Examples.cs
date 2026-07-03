@@ -157,6 +157,9 @@ namespace PileDesign.ViewModels
             // 杭体数リストを更新（UIのコンボボックス用）
             CurrentInputModel.UpdateCountLists();
 
+            // バイリニアコンクリート・オプションを同期し M-φ/NM キャッシュを破棄
+            ApplyConcreteModelOptions();
+
             // SoilPile を一括再生成（SuppressNotifications で抑制していた分）
             CurrentInputModel.GenerateSoilPiles();
 
@@ -289,6 +292,9 @@ namespace PileDesign.ViewModels
             CurrentInputModel.UpdateCountLists();
 
             UpdatePileLayoutNo();
+
+            // バイリニアコンクリート・オプションを同期し M-φ/NM キャッシュを破棄
+            ApplyConcreteModelOptions();
 
             // SoilPile を一括再生成（SuppressNotifications で抑制していた分）
             CurrentInputModel.GenerateSoilPiles();
