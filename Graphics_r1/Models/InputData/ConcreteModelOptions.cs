@@ -18,13 +18,13 @@ namespace PileDesign.Models.InputData
     /// </summary>
     internal static class ConcreteModelOptions
     {
-        /// <summary>圧縮側折れ点応力度の低減係数（0.85·Gsi·Fc）。</summary>
+        /// <summary>圧縮側折れ点応力度の低減係数（0.85·Fc）。</summary>
         public const double CompressionReductionFactor = 0.85;
 
         /// <summary>引張側の降伏応力度を 0 とする（コンクリートの引張負担を無視する）。</summary>
         public static bool IgnoreTensileStrength { get; set; }
 
-        /// <summary>圧縮側の折れ点応力度を 0.85·Gsi·Fc とする（既定の Gsi·Fc から低減）。</summary>
+        /// <summary>圧縮側の折れ点応力度を 0.85·Fc とする（既定の Gsi·Fc に代えて、Gsi を乗じない）。</summary>
         public static bool UseReducedCompression { get; set; }
 
         /// <summary>
@@ -40,11 +40,18 @@ namespace PileDesign.Models.InputData
         public static bool SteelPipeYieldAt11F { get; set; }
 
         /// <summary>
+        /// コンクリートのヤング係数 Ec の算定で ξ(=Gsi) を 1.0 として計算する
+        /// （強度側 Gsi·Fc 等には従来どおり実際の ξ を用いる）。
+        /// </summary>
+        public static bool UseUnitGsiForConcreteE { get; set; }
+
+        /// <summary>
         /// キャッシュキー用シグネチャ。オプションが変わるとキー文字列が変わり、
         /// M-φ キャッシュやひずみ応力プロファイルキャッシュが正しく再計算される。
         /// </summary>
         public static string Signature()
             => $"CMO:T{(IgnoreTensileStrength ? 1 : 0)}C{(UseReducedCompression ? 1 : 0)}" +
-               $"R{(RebarYieldAt11F ? 1 : 0)}P{(SteelPipeYieldAt11F ? 1 : 0)}";
+               $"R{(RebarYieldAt11F ? 1 : 0)}P{(SteelPipeYieldAt11F ? 1 : 0)}" +
+               $"E{(UseUnitGsiForConcreteE ? 1 : 0)}";
     }
 }

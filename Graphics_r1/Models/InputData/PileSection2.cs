@@ -127,7 +127,9 @@ namespace PileDesign.Models.InputData
             {
                 gamma = GetDensity(Fc);
             }
-            return 3.35 * Math.Pow(10, 4) * Math.Pow(gamma / 24, 2) * Math.Pow(Gsi * Fc / 60, 1.0 / 3.0);
+            // Ec 算定用 ξ: オプション時は 1.0（強度側 Gsi·Fc 等は実 Gsi のまま）
+            double gsiForEc = ConcreteModelOptions.UseUnitGsiForConcreteE ? 1.0 : Gsi;
+            return 3.35 * Math.Pow(10, 4) * Math.Pow(gamma / 24, 2) * Math.Pow(gsiForEc * Fc / 60, 1.0 / 3.0);
         }
 
         internal void SetEpsilonCr()
@@ -163,10 +165,10 @@ namespace PileDesign.Models.InputData
                 // 引張無視オプション時は 0 とし、引張域 (epsilon<0) は常に σ=0 とする。
                 double tensionMinStrain = ConcreteModelOptions.IgnoreTensileStrength ? 0.0 : -EpsilonCr_bilinear;
 
-                // 圧縮側折れ点応力度: 既定 Gsi·Fc、低減オプション時は 0.85·Gsi·Fc。
-                double compressionPlateau = BearingFactor * Gsi * Fc;
-                if (ConcreteModelOptions.UseReducedCompression)
-                    compressionPlateau *= ConcreteModelOptions.CompressionReductionFactor;
+                // 圧縮側折れ点応力度: 既定 Gsi·Fc、低減オプション時は 0.85·Fc（Gsi は乗じない）。
+                double compressionPlateau = ConcreteModelOptions.UseReducedCompression
+                    ? BearingFactor * ConcreteModelOptions.CompressionReductionFactor * Fc
+                    : BearingFactor * Gsi * Fc;
 
                 if (tensionMinStrain <= epsilon && epsilon <= 0.003)
                 {

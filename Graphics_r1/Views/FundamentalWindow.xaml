@@ -7,7 +7,7 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         d:DataContext="{d:DesignInstance Type=local:FundamentalViewModel}"
         mc:Ignorable="d"
-        Title="基本設定" Height="620" Width="440">
+        Title="基本設定" Height="670" Width="440">
     
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
@@ -159,9 +159,24 @@
                 </Border>
             </Grid>
 
-            <!-- 場所打ちコンクリート系 杭のバイリニア型コンクリートのモデル化オプション -->
-            <GroupBox Header="バイリニア型コンクリートのモデル化" Margin="0,6,0,0">
+            <!-- 場所打ちコンクリート系 杭のコンクリートのモデル化オプション -->
+            <GroupBox Header="コンクリートのモデル化" Margin="0,6,0,0">
                 <StackPanel Margin="6,4,6,4">
+                    <CheckBox Content="ヤング係数 Ec の算定で ξ=1.0 とする"
+                              IsChecked="{Binding UseUnitGsiForConcreteE}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>コンクリートのヤング係数 Ec の算定式で ξ(=施工品質管理係数 Gsi) を 1.0 として計算します。</Run>
+                                    <LineBreak/>
+                                    <Run>ξ を 1 以外にしても Ec は ξ=1.0 で算定されます（強度側 Gsi·Fc 等には実際の ξ を使用）。</Run>
+                                    <LineBreak/>
+                                    <Run>Ec は M-φ・NM 曲線・EA/EI・諸元表示に影響します。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
                     <CheckBox Content="引張側の降伏応力度を 0 とする（引張を無視）"
                               IsChecked="{Binding IgnoreConcreteTensileStrength}"
                               Margin="0,2,0,2">
@@ -175,13 +190,13 @@
                             </ToolTip>
                         </CheckBox.ToolTip>
                     </CheckBox>
-                    <CheckBox Content="圧縮側の降伏応力度を 0.85·Gsi·Fc とする"
+                    <CheckBox Content="圧縮側の降伏応力度を 0.85·Fc とする"
                               IsChecked="{Binding UseReducedConcreteCompressiveStrength}"
                               Margin="0,2,0,2">
                         <CheckBox.ToolTip>
                             <ToolTip>
                                 <TextBlock>
-                                    <Run>圧縮側の折れ点応力度を、既定の Gsi·Fc から 0.85·Gsi·Fc に低減します。</Run>
+                                    <Run>圧縮側の折れ点応力度を、既定の Gsi·Fc に代えて 0.85·Fc とします（Gsi は乗じません）。</Run>
                                     <LineBreak/>
                                     <Run>安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。</Run>
                                 </TextBlock>

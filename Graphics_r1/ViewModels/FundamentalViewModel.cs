@@ -184,6 +184,20 @@ namespace PileDesign.ViewModels
                 "鋼管1.1F完全バイリニアの変更");
         }
 
+        // コンクリートのヤング係数 Ec の算定で ξ=1.0 とする
+        [ObservableProperty]
+        private bool _useUnitGsiForConcreteE;
+
+        partial void OnUseUnitGsiForConcreteEChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseUnitGsiForConcreteE,
+                v => InputModel.FundamentalInput.UseUnitGsiForConcreteE = v,
+                v => UseUnitGsiForConcreteE = v,
+                "コンクリートEc算定のξ=1.0オプション変更");
+        }
+
         /// <summary>
         /// バイリニアコンクリート・オプションの変更を処理する共通ハンドラ。
         /// これらは M-φ（→ 非線形 FEM 解析）に影響するため、解析結果があれば確認のうえリセットする
@@ -252,6 +266,7 @@ namespace PileDesign.ViewModels
             UseReducedConcreteCompressiveStrength = InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength;
             RebarYieldAt11F = InputModel.FundamentalInput.RebarYieldAt11F;
             SteelPipeYieldAt11F = InputModel.FundamentalInput.SteelPipeYieldAt11F;
+            UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
 
@@ -312,6 +327,9 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.SteelPipeYieldAt11F):
                     SteelPipeYieldAt11F = InputModel.FundamentalInput.SteelPipeYieldAt11F;
+                    break;
+                case nameof(FundamentalInput.UseUnitGsiForConcreteE):
+                    UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
                     break;
             }
         }

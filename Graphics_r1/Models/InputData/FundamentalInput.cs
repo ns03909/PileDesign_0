@@ -79,6 +79,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _steelPipeYieldAt11F, value);
         }
 
+        // コンクリートのヤング係数 Ec の算定で ξ(=Gsi) を 1.0 として計算する
+        private bool _useUnitGsiForConcreteE;
+        public bool UseUnitGsiForConcreteE
+        {
+            get => _useUnitGsiForConcreteE;
+            set => SetProperty(ref _useUnitGsiForConcreteE, value);
+        }
+
         //
         private double _x0;
         public double X0

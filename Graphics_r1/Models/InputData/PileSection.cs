@@ -1083,7 +1083,9 @@ namespace PileDesign.Models.InputData
         // コンクリートのヤング係数の計算メソッド
         public void RecalculateConcreteE()
         {
-            ConcreteE = 3.35 * Math.Pow(10, 4) * Math.Pow(ConcreteGamma / 24.0, 2.0) * Math.Pow(ConcreteGsi * ConcreteFc / 60.0, 1.0 / 3.0);
+            // Ec 算定用 ξ: オプション時は 1.0（強度側 Gsi·Fc 等は実 Gsi のまま）
+            double gsiForEc = ConcreteModelOptions.UseUnitGsiForConcreteE ? 1.0 : ConcreteGsi;
+            ConcreteE = 3.35 * Math.Pow(10, 4) * Math.Pow(ConcreteGamma / 24.0, 2.0) * Math.Pow(gsiForEc * ConcreteFc / 60.0, 1.0 / 3.0);
         }
 
         // コンクリートプレストレス N/mm2

@@ -3247,6 +3247,7 @@ namespace PileDesign.ViewModels
             Models.InputData.ConcreteModelOptions.UseReducedCompression = f?.UseReducedConcreteCompressiveStrength ?? false;
             Models.InputData.ConcreteModelOptions.RebarYieldAt11F = f?.RebarYieldAt11F ?? false;
             Models.InputData.ConcreteModelOptions.SteelPipeYieldAt11F = f?.SteelPipeYieldAt11F ?? false;
+            Models.InputData.ConcreteModelOptions.UseUnitGsiForConcreteE = f?.UseUnitGsiForConcreteE ?? false;
 
             // M-φ 静的キャッシュ（全断面共有）
             PileSection.ClearMphiCache();
@@ -3258,7 +3259,18 @@ namespace PileDesign.ViewModels
                 {
                     if (pb?.PileBodySegments == null) continue;
                     foreach (var seg in pb.PileBodySegments)
-                        seg?.PileSection?.InvalidateComputedCaches();
+                    {
+                        var sec = seg?.PileSection;
+                        if (sec == null) continue;
+                        sec.InvalidateComputedCaches();
+                        // ξ→Ec オプションは PileSection.ConcreteE（諸元表示・EA/EI）にも効くため、
+                        // 場所打ち系（既製杭以外＝式ベース Ec）で再計算し諸元も更新する。
+                        if (sec.PileBodyType != "既製コンクリート杭")
+                        {
+                            sec.RecalculateConcreteE();
+                            sec.SetSpecs();
+                        }
+                    }
                 }
             }
         }
