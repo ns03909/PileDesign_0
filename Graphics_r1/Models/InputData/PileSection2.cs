@@ -281,12 +281,16 @@ namespace PileDesign.Models.InputData
         // 限界ひずみ度を計算するメソッド
         internal void SetAllowableStrain()
         {
-            // 損傷限界（短期許容）・使用限界（長期）は 1.1F 完全バイリニア型オプションによらず
+            // 損傷限界（短期許容）・使用限界（長期許容）は 1.1F 完全バイリニア型オプションによらず
             // 基準降伏点 σy を用いる（1.1F は安全限界＝バイリニア/終局のみに適用）。
-            double serviceLimitStressC = 195.0;  // 使用限界圧縮応力度 鋼管コンクリート杭では(2/3)RSigmaY
-            double damageLimitStressC = BaseSigmaY; // 損傷限界圧縮応力度 = σy（1.1F 非適用）
-            double serviceLimitStressT = -195.0; // 使用限界圧縮応力度 鋼管コンクリート杭では-(2/3)RSigmaY
-            double damageLimitStressT = -BaseSigmaY; // 損傷限界引張応力度 = -σy（1.1F 非適用）
+            // 使用限界＝長期許容引張応力度は RC 規準に従い min(σy/1.5, 径による上限)。
+            // 異形鉄筋の上限は D≤25mm で 215、D>25mm で 195 N/mm²。
+            double longTermCap = BarDiameter > 25.0 ? 195.0 : 215.0;
+            double serviceLimitStress = Math.Min(BaseSigmaY / 1.5, longTermCap);
+            double serviceLimitStressC = serviceLimitStress;  // 使用限界圧縮応力度
+            double damageLimitStressC = BaseSigmaY;           // 損傷限界圧縮応力度 = σy（短期許容）
+            double serviceLimitStressT = -serviceLimitStress; // 使用限界引張応力度
+            double damageLimitStressT = -BaseSigmaY;          // 損傷限界引張応力度 = -σy
 
             ServiceLimitStrainC = serviceLimitStressC / Er; // 使用限界圧縮ひずみ度
             DamageLimitStrainC = damageLimitStressC / Er; // 損傷限界圧縮ひずみ度
@@ -309,6 +313,11 @@ namespace PileDesign.Models.InputData
 
         // 基準降伏点 σy（規格値）。損傷限界・使用限界はこの値を用いる（1.1F オプション非適用）。
         private double BaseSigmaY => GradeYieldStrengths.GetValueOrDefault(Grade, 295.0);
+
+        // 主筋の呼び径 [mm]（"D25" → 25）。使用限界（長期許容）の径による上限（215/195）判定に用いる。
+        private double BarDiameter =>
+            (!string.IsNullOrEmpty(BarSize) && BarSize.Length > 1 && double.TryParse(BarSize.Substring(1), out double d))
+                ? d : 25.0;
 
         internal void SetRSigmaY()
         {
