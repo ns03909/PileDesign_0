@@ -62,6 +62,14 @@ namespace PileDesign.Models.InputData
         public static bool UseNotification1113Shear { get; set; }
 
         /// <summary>
+        /// 場所打ち鉄筋コンクリート杭の安全限界曲げ強度の算定で、コンクリートの応力ひずみ関係を
+        /// バイリニアに代えて e関数法で設定する（RC基礎構造部材の耐震設計指針(案) 5.4.1 準拠）。
+        /// 圧縮限界ひずみ εcu=0.003・圧縮材料強度 ξFc は共通。安全限界 NM 曲線および
+        /// M-φ 端点 Mu0（→ 解析）に影響するため、変更時は解析結果をリセットする。
+        /// </summary>
+        public static bool UseInsituUltimateEFunction { get; set; }
+
+        /// <summary>
         /// 告示1113(第8) の長期許容応力度の区分（圧縮・せん断で共用）。
         /// 圧縮 1: Fc/4、2: min(Fc/4.5, 6.0)（短期 2 倍）。
         /// せん断 1: Fc/40、2: Fc/45 とアーチ項 (3/4)(0.49+Fc/100) の小さい方（短期 1.5 倍）。
@@ -101,6 +109,7 @@ namespace PileDesign.Models.InputData
                $"R{(RebarYieldAt11F ? 1 : 0)}P{(SteelPipeYieldAt11F ? 1 : 0)}" +
                $"E{(UseUnitGsiForConcreteE ? 1 : 0)}" +
                $"K{(UseNotification1113Compression ? Notification1113CompressionCase : 0)}" +
-               $"Q{(UseNotification1113Shear ? Notification1113CompressionCase : 0)}";
+               $"Q{(UseNotification1113Shear ? Notification1113CompressionCase : 0)}" +
+               $"U{(UseInsituUltimateEFunction ? 1 : 0)}";
     }
 }

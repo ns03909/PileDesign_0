@@ -95,6 +95,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _useNotification1113Compression, value);
         }
 
+        // 場所打ちRC杭の安全限界曲げ強度をe関数法で算定する（指針(案)5.4.1準拠。検定の耐力側のみ）
+        private bool _useInsituUltimateEFunction;
+        public bool UseInsituUltimateEFunction
+        {
+            get => _useInsituUltimateEFunction;
+            set => SetProperty(ref _useInsituUltimateEFunction, value);
+        }
+
         // 場所打ちRC杭のコンクリート許容せん断応力度を告示1113(第8)による
         private bool _useNotification1113Shear;
         public bool UseNotification1113Shear

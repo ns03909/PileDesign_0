@@ -697,38 +697,40 @@ namespace PileDesign.Models.InputData
         }
 
         // ある軸力時のM-φ関係を得るメソッド（IPileSectionCalculationインターフェース実装）
+        // 解析用のため、e関数オプション時でも全区間（MCr・MY・Mu0）をバイリニアで算定し、
+        // M-φ が単調（β1·Mu0 ≥ MY）＝正勾配ばねとなることを保証する（FEM 収束のため）。
         public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double Ntarget)
         {
-            (double MCr, double phiCr) = GetCrackMoment(Ntarget, false);
-            (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
-            (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
-
-            //if (MCr > MY)
-            //{
-            //    phiCr *= MY / MCr;
-            //    MCr = MY; // MCr = MYにする。
-            //}
-
-            double ag = Math.PI * PileDia * PileDia / 4.0;
-            double beta1 = (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc) ? 0.95 : 0.80;
-            double phiC = GetPhiC(phiCr, MCr, phiY, MY, Mu0, beta1);
-            List<double> phis;
-            List<double> Ms;
-
-            if (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc)
+            bool prevForceBilinear = _forceBilinearUltimate;
+            _forceBilinearUltimate = true;
+            try
             {
-                phis = [0.0, phiCr, phiY, phiC];
-                Ms = [0.0, MCr, MY, beta1 * Mu0];
-            }
-            else
-            {
-                double beta2 = 0.65;
-                double phiCshort = phiCr + (phiC - phiCr) * (beta1 * beta2 * Mu0 - MCr) / (beta1 * Mu0 - MCr);
-                phis = [0.0, phiCr, phiCshort];
-                Ms = [0.0, MCr, beta1 * beta2 * Mu0];
-            }
+                (double MCr, double phiCr) = GetCrackMoment(Ntarget, false);
+                (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
+                (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
 
-            return (phis, Ms);
+                double ag = Math.PI * PileDia * PileDia / 4.0;
+                double beta1 = (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc) ? 0.95 : 0.80;
+                double phiC = GetPhiC(phiCr, MCr, phiY, MY, Mu0, beta1);
+                List<double> phis;
+                List<double> Ms;
+
+                if (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc)
+                {
+                    phis = [0.0, phiCr, phiY, phiC];
+                    Ms = [0.0, MCr, MY, beta1 * Mu0];
+                }
+                else
+                {
+                    double beta2 = 0.65;
+                    double phiCshort = phiCr + (phiC - phiCr) * (beta1 * beta2 * Mu0 - MCr) / (beta1 * Mu0 - MCr);
+                    phis = [0.0, phiCr, phiCshort];
+                    Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                }
+
+                return (phis, Ms);
+            }
+            finally { _forceBilinearUltimate = prevForceBilinear; }
         }
 
         //// ある軸力時のM-θ関係を得るメソッド
@@ -736,6 +738,10 @@ namespace PileDesign.Models.InputData
         /// 極小値(1e-8)により初期勾配 Mcr/1e-8 ≈ 実質剛体
         internal (List<double>, List<double>) GetMThetaRelationship(double Ntarget, double alpha = 32)
         {
+            bool prevForceBilinear = _forceBilinearUltimate;
+            _forceBilinearUltimate = true;   // 解析用のため常にバイリニア
+            try
+            {
             double beta1 = 0.95;
             (double MCr, double _) = GetCrackMoment(Ntarget, false);
             (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
@@ -759,6 +765,8 @@ namespace PileDesign.Models.InputData
             List<double> Ms = [0.0, MCr, MY, beta1 * Mu0];
 
             return (thetas, Ms);
+            }
+            finally { _forceBilinearUltimate = prevForceBilinear; }
         }
 
         public static double ExtractBarSizeNumber(string barSize)
@@ -803,11 +811,20 @@ namespace PileDesign.Models.InputData
             return (N, M, epsilonC);
         }
 
+        // 解析用 M-φ / M-θ の端点 Mu0 を求める間だけ true にして、e関数オプション時でも
+        // バイリニアで算定させるガード。e関数の軟化(ε>εM)で β1·Mu0 < MY となり M-φ が非単調
+        // （負勾配ばね）になって FEM が収束不能になるのを防ぐため、解析側は常にバイリニア。
+        // NM 曲線（検定の耐力側）は本フラグを立てないので、オプション時は e関数（指針準拠）。
+        private bool _forceBilinearUltimate;
+
         // 軸力、安全限界曲げモーメント取得メソッド
         internal override (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature)
         {
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
-            string type = "bilinear";
+            // 指針(案) 5.4.1 準拠オプション時はコンクリートを e関数法、既定はバイリニア。
+            // ただし解析 M-φ 端点算定中（_forceBilinearUltimate）は収束のため常にバイリニア。
+            string type = (ConcreteModelOptions.UseInsituUltimateEFunction && !_forceBilinearUltimate)
+                ? "eFunction" : "bilinear";
             double N, M;
             var result1 = CircularSolidSectionConcrete.GetForceAndMoment(type, InsituConcrete, epsilon0, curvature);
             var result2 = CircularPipeSectionMainbars.GetForceAndMoment(type, MainBars, epsilon0, curvature);

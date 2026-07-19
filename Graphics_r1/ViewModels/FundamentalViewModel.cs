@@ -231,6 +231,20 @@ namespace PileDesign.ViewModels
         // 告示1113(第8) の区分 ComboBox を有効化するか（圧縮・せん断いずれかON）
         public bool Notification1113CaseEnabled => UseNotification1113Compression || UseNotification1113Shear;
 
+        // 場所打ちRC杭の安全限界曲げをe関数法で算定（指針(案)5.4.1。検定の耐力側のみ、解析M-φは常にバイリニア）
+        [ObservableProperty]
+        private bool _useInsituUltimateEFunction;
+
+        partial void OnUseInsituUltimateEFunctionChanged(bool value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseInsituUltimateEFunction,
+                v => InputModel.FundamentalInput.UseInsituUltimateEFunction = v,
+                v => UseInsituUltimateEFunction = v,
+                "安全限界曲げをe関数法(指針準拠) へ変更");
+        }
+
         // 告示1113(第8) 長期許容圧縮の区分（1: Fc/4、2: min(Fc/4.5, 6)）
         [ObservableProperty]
         private int _notification1113CompressionCase = 1;
@@ -361,6 +375,7 @@ namespace PileDesign.ViewModels
             UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
             UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
             UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
+            UseInsituUltimateEFunction = InputModel.FundamentalInput.UseInsituUltimateEFunction;
             Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
@@ -431,6 +446,9 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.UseNotification1113Shear):
                     UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
+                    break;
+                case nameof(FundamentalInput.UseInsituUltimateEFunction):
+                    UseInsituUltimateEFunction = InputModel.FundamentalInput.UseInsituUltimateEFunction;
                     break;
                 case nameof(FundamentalInput.Notification1113CompressionCase):
                     Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
