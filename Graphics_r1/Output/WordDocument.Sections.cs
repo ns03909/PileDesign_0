@@ -369,7 +369,7 @@ namespace PileDesign.Output
                     Q_{s} = \beta_{1}\cdot \frac{2}{3}\cdot
                     \frac{0.065k_{c}\left(49.0+\xi F_{c}\right)}
                     {\dfrac{M}{Qd}+1.7}
-                    \left(1+\frac{\sigma_{o}}{14.7}\right)bj
+                    \left(1+\frac{\sigma_{0}}{14.7}\right)bj
                     ");
 
                 AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の損傷限界せん断力Qd"));
@@ -377,7 +377,7 @@ namespace PileDesign.Output
                     Q_{d} = \beta_{1}\cdot
                     \frac{0.065k_{c}\left(49.0+\xi F_{c}\right)}
                     {\dfrac{M}{Qd}+1.7}
-                    \left(1+\frac{\sigma_{o}}{14.7}\right)bj
+                    \left(1+\frac{\sigma_{0}}{14.7}\right)bj
                     ");
             }
 
@@ -388,7 +388,7 @@ namespace PileDesign.Output
                 \left\{
                 \frac{0.053p_{t}^{0.23}\left(18+\xi F_{c}\right)}
                 {\dfrac{M}{Qd}+0.12}
-                +0.85\sqrt{p_{w}\cdot\sigma_{wy}}+0.1\sigma_{o}\right\}
+                +0.85\sqrt{p_{w}\cdot\sigma_{wy}}+0.1\sigma_{0}\right\}
                 bj
                 ");
 

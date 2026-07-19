@@ -141,7 +141,7 @@ namespace PileDesign.Output
 
             AddInlineMathParagraph(body, [Tex(@"\theta_{f} = \frac{M_{max} - M_{c}}{K_{0}}")]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\\theta_{f}"), ": 基準回転角[rad]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\theta_{f}"), ": 基準回転角[rad]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"M_{max}"), ": 最大曲げモーメント(kN・m)"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"M_{c}"), ": 浮き上がりモーメント[kNm]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{0}"), ": 初期回転剛性(kN・m/rad)"]);
@@ -325,7 +325,7 @@ namespace PileDesign.Output
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\varepsilon \le 0"), ": ", Tex(@"\sigma = 0")]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition,
                 [Tex(@"0 < \varepsilon \le \varepsilon_{B}"), ": ",
-                Tex(@"\sigma = 6.75\left{ e^{-0.812\frac{\varepsilon}{\varepsilon_{0}}} - e^{-1.218\frac{\varepsilon}{\varepsilon_{0}}} \right}, \sigma_{max}")]);
+                Tex(@"\sigma = 6.75\left\{ e^{-0.812\frac{\varepsilon}{\varepsilon_{0}}} - e^{-1.218\frac{\varepsilon}{\varepsilon_{0}}} \right\}\,\sigma_{max}")]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\varepsilon_{B} < \varepsilon"), ": ", Tex(@"\sigma = \sigma_{max}")]);
 
             AddInlineMathParagraph(body, ["ここに、"]);

@@ -115,7 +115,7 @@ namespace PileDesign.Output
                                     momentResultsVL.Add(0.0);
                                 }
                             }
-                            catch { /* ignore */ }
+                            catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
 
                             foreach (var loadCase in allSeismicLoadCases)
                             {
@@ -386,7 +386,7 @@ namespace PileDesign.Output
                                     shearResultsVL.Add(0.0);
                                 }
                             }
-                            catch { /* ignore */ }
+                            catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
 
                             foreach (var loadCase in allSeismicLoadCases)
                             {
@@ -549,7 +549,7 @@ namespace PileDesign.Output
                                             double nSeis = pli.GetSeismicAxialForce(loadCase.No, loadCase.Level);
                                             if (double.IsFinite(nSeis) && nSeis != 0.0) axialN = nSeis;
                                         }
-                                        catch { /* ignore */ }
+                                        catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
                                         if (axialN == 0.0 && double.IsFinite(pli.AxialForce))
                                             axialN = pli.AxialForce;
 
@@ -598,7 +598,7 @@ namespace PileDesign.Output
                                                         moments = mPhi.Moments;
                                                     }
                                                 }
-                                                catch { /* ignore */ }
+                                                catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
                                             }
                                         }
 
@@ -750,7 +750,7 @@ namespace PileDesign.Output
                                     double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
                                     if (double.IsFinite(nSeis) && nSeis != 0.0) axialN = nSeis;
                                 }
-                                catch { /* ignore */ }
+                                catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
                                 if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
                                     axialN = pileLayout.AxialForce;
 
@@ -1233,7 +1233,7 @@ namespace PileDesign.Output
                                         soilUh = GetNodeResultCached(pli.SoilNodes[i], lc, comb, isLiq)
                                             ?.CumulativeDisp?.Uh ?? 0.0;
                                     }
-                                    catch { /* ignore */ }
+                                    catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
                                     soilDisps.Add(soilUh);
                                     if (i != 0 && i != pli.PileNodes.Count - 1) soilDisps.Add(soilUh);
                                 }
@@ -1253,7 +1253,7 @@ namespace PileDesign.Output
                                         uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
                                         uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
                                     }
-                                    catch { /* ignore */ }
+                                    catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
                                     disps.Add(uhI);
                                     disps.Add(uhJ);
                                 }

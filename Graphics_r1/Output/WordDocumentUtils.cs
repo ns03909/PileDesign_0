@@ -48,6 +48,7 @@ namespace PileDesign.Output
             {
                 if (!File.Exists(imagePath))
                 {
+                    Serilog.Log.Warning("[WordDocumentUtils] 画像ファイルが見つかりません（図をスキップ）: {ImagePath}", imagePath);
                     PileDesign.Services.MessageService.Show($"画像ファイルが見つかりません: {imagePath}");
                     return;
                 }
@@ -119,6 +120,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[WordDocumentUtils] 画像挿入に失敗（図をスキップ）: {ImagePath}", imagePath);
                 PileDesign.Services.MessageService.Show($"画像挿入時にエラー: {ex}");
             }
         }
