@@ -393,7 +393,7 @@ namespace PileDesign.ViewModels
                 double[] xs = [.. ns.Select(x => x * 1e-3)]; // N -> kN
                 double[] ys = [.. qs.Select(q => q * 1e-3)]; // Q -> kN
                 var scatter = wpf.Plot.Add.Scatter(xs, ys);
-                scatter.LegendText = legend;
+                scatter.LegendText = ConcreteModelOptions.MapLimitStateText(legend);
                 if (color.HasValue) scatter.Color = ScottPlot.Color.FromSKColor(color.Value);
                 scatter.LineWidth = (float)lineWidth;
                 scatter.MarkerSize = 0;
@@ -933,7 +933,7 @@ namespace PileDesign.ViewModels
                 scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
             scatter.MarkerSize = 0;
             scatter.MarkerShape = ScottPlot.MarkerShape.None;
-            scatter.LegendText = title;
+            scatter.LegendText = ConcreteModelOptions.MapLimitStateText(title);
 
             wpf.Plot.Legend.FontName = Fonts.Detect(title);
         }

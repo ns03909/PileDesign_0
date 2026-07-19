@@ -60,22 +60,22 @@ namespace PileDesign.Output
                         var nmUDmg = pileSection.UnfactoredDamageNM;
                         lineListsX.Add(ToList(nmUDmg.N));
                         lineListsY.Add(ToList(nmUDmg.M));
-                        lineListsLegend.Add("低減前損傷限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前損傷限界"));
 
                         var nmFDmg = pileSection.FactoredDamageNM;
                         lineListsX.Add(ToList(nmFDmg.N));
                         lineListsY.Add(ToList(nmFDmg.M));
-                        lineListsLegend.Add("低減後損傷限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後損傷限界"));
 
                         var nmUSvc = pileSection.UnfactoredServiceNM;
                         lineListsX.Add(ToList(nmUSvc.N));
                         lineListsY.Add(ToList(nmUSvc.M));
-                        lineListsLegend.Add("低減前使用限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前使用限界"));
 
                         var nmFSvc = pileSection.FactoredServiceNM;
                         lineListsX.Add(ToList(nmFSvc.N));
                         lineListsY.Add(ToList(nmFSvc.M));
-                        lineListsLegend.Add("低減後使用限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後使用限界"));
                     }
                     catch (Exception ex)
                     {
@@ -331,22 +331,22 @@ namespace PileDesign.Output
                         var nqUDmg = pileSection.UnfactoredDamageNQ;
                         lineListsX.Add(ToList(nqUDmg.N));
                         lineListsY.Add(ToList(nqUDmg.Q));
-                        lineListsLegend.Add("低減前損傷限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前損傷限界"));
 
                         var nqFDmg = pileSection.FactoredDamageNQ;
                         lineListsX.Add(ToList(nqFDmg.N));
                         lineListsY.Add(ToList(nqFDmg.Q));
-                        lineListsLegend.Add("低減後損傷限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後損傷限界"));
 
                         var nqUSvc = pileSection.UnfactoredServiceNQ;
                         lineListsX.Add(ToList(nqUSvc.N));
                         lineListsY.Add(ToList(nqUSvc.Q));
-                        lineListsLegend.Add("低減前使用限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前使用限界"));
 
                         var nqFSvc = pileSection.FactoredServiceNQ;
                         lineListsX.Add(ToList(nqFSvc.N));
                         lineListsY.Add(ToList(nqFSvc.Q));
-                        lineListsLegend.Add("低減後使用限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後使用限界"));
                     }
                     catch (Exception ex)
                     {
@@ -1091,7 +1091,7 @@ namespace PileDesign.Output
 
             string seismicGrade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
             bool useDamage = lc.Level == 1 || (lc.Level == 2 && seismicGrade == "S");
-            string limitName = useDamage ? "損傷限界 (低減後)" : "安全限界 (低減後)";
+            string limitName = ConcreteModelOptions.MapLimitStateText(useDamage ? "損傷限界 (低減後)" : "安全限界 (低減後)");
 
             var soilPile = pli.SoilPile;
             if (soilPile?.PileBodySegments == null) return (shearXs, shearZs, momentXs, momentZs, limitName);

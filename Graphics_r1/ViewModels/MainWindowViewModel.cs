@@ -5759,12 +5759,12 @@ namespace PileDesign.ViewModels
                     if (nMax < force)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n 使用限界軸力適用範囲Max{nMax:N0}kN < {force:N0}kN\n";
+                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {ConcreteModelOptions.MapLimitStateText("使用限界")}軸力適用範囲Max{nMax:N0}kN < {force:N0}kN\n";
                     }
                     if (force < nMin)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {force:N0}kN < 使用限界軸力適用範囲Min{nMin:N0}kN\n";
+                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {force:N0}kN < {ConcreteModelOptions.MapLimitStateText("使用限界")}軸力適用範囲Min{nMin:N0}kN\n";
                     }
                 }
             }

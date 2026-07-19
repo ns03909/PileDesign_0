@@ -450,8 +450,8 @@ namespace PileDesign.Output
                 for (int i = 0; i < values.Count; i++)
                 {
                     var row = new TableRow();
-                    row.Append(CreateTableCellWithWidth(limitName, "left", widths[0]));
-                    row.Append(CreateTableCellWithWidth(GetAxialLimitMeaning(pileBodyType, pileSectionType, isUltimate, i), "left", widths[1]));
+                    row.Append(CreateTableCellWithWidth(ConcreteModelOptions.MapLimitStateText(limitName), "left", widths[0]));
+                    row.Append(CreateTableCellWithWidth(ConcreteModelOptions.MapLimitStateText(GetAxialLimitMeaning(pileBodyType, pileSectionType, isUltimate, i)), "left", widths[1]));
                     // 内部単位 N → kN 表示 (×0.001)
                     string val = (values[i] * 0.001).ToString("N0");
                     row.Append(CreateTableCellWithWidth(val, "right", widths[2]));

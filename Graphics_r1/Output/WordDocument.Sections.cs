@@ -36,11 +36,11 @@ namespace PileDesign.Output
             //AddEquation_Rfc(body);
             AddEq(body, @"R_{fc} = \tau_{fc} L_{c} \psi");
 
-            AddText(body, "使用限界支持力", "left");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("使用限界支持力"), "left");
             //AddEquation_Rd_SLS(body);
             AddEq(body, @"R_{d} = \phi_{R} R_{u} = \frac{1}{3} R_{u}");
 
-            AddText(body, "損傷限界支持力", "left");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("損傷限界支持力"), "left");
             //AddEquation_Rd_DLS(body);
             AddEq(body, @"R_{d} = \phi_{R} R_{u} = \frac{1}{1.5} R_{u}");
 
@@ -70,11 +70,11 @@ namespace PileDesign.Output
             //AddEquation_TauCti(body);
             AddEq(body, @"\tau_{cti} = \frac{4}{5}\tau_{ci}");
 
-            AddText(body, "使用限界引抜力", "left");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("使用限界引抜力"), "left");
             //AddEquation_Rdt_SLS(body);
             AddEq(body, @"R_{d} = \phi_{R} R_{TU} = \frac{1}{3} R_{TU} = \frac{1}{3}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + \frac{1}{3}W");
 
-            AddText(body, "損傷限界引抜力", "left");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("損傷限界引抜力"), "left");
             //AddEquation_Rdt_DLS(body);
             AddEq(body, @"R_{d} = \phi_{R} R_{TY} = \frac{1}{3} R_{TY} = \frac{2}{9}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + \frac{1}{3}W");
 
@@ -334,11 +334,11 @@ namespace PileDesign.Output
             //AddEquation_ConcreteEc(body);
             AddEq(body, @"E_{c} = 3.35\times 10^{4} \left(\frac{\gamma}{24}\right)^{2} \left(\frac{\zeta\cdot F_{c}}{60}\right)^{\frac{1}{3}}");
 
-            AddText(body, "場所打ち鉄筋コンクリート杭の使用限界曲げモーメントMs");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の使用限界曲げモーメントMs"));
             //AddEquation_InsituReinforcedPileMs(body);
             AddEq(body, @"M_{s} = \beta_{1}\cdot \min\left(M_{s1},M_{s2},M_{s3}\right)");
 
-            AddText(body, "場所打ち鉄筋コンクリート杭の損傷限界曲げモーメントMd");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の損傷限界曲げモーメントMd"));
             //AddEquation_InsituReinforcedPileMd(body);
             AddEq(body, @"M_{d} = \beta_{1}\cdot \min\left(M_{d1},M_{d2},M_{d3}\right)");
 
@@ -346,7 +346,7 @@ namespace PileDesign.Output
             //AddEquation_InsituReinforcedPileMu(body);
             AddEq(body, @"M_{u} = \beta_{1}\cdot \beta_{2}\cdot M_{u0}");
 
-            AddText(body, "場所打ち鉄筋コンクリート杭の使用限界せん断力Qs");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の使用限界せん断力Qs"));
             //AddEquation_InsituReinforcedPileQs(body);
             AddEq(body, @"
                 Q_{s} = \beta_{1}\cdot \frac{2}{3}\cdot
@@ -355,7 +355,7 @@ namespace PileDesign.Output
                 \left(1+\frac{\sigma_{o}}{14.7}bj\right)
                 ");
 
-            AddText(body, "場所打ち鉄筋コンクリート杭の損傷限界せん断力Qd");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の損傷限界せん断力Qd"));
             //AddEquation_InsituReinforcedPileQd(body);
             AddEq(body, @"
                 Q_{d} = \beta_{1}\cdot
@@ -375,11 +375,11 @@ namespace PileDesign.Output
                 bj
                 ");
 
-            AddText(body, "場所打ち鋼管コンクリート杭の使用限界曲げモーメントMs");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鋼管コンクリート杭の使用限界曲げモーメントMs"));
             //AddEquation_InsituSteelReinforcedPileMs(body);
             AddEq(body, @"M_{s} = \beta_{1}\cdot \min\left(M_{s1},M_{s2},M_{s3},M_{s4},M_{s5}\right)");
 
-            AddText(body, "場所打ち鋼管コンクリート杭の損傷限界曲げモーメントMd");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鋼管コンクリート杭の損傷限界曲げモーメントMd"));
             //AddEquation_InsituSteelReinforcedPileMd(body);
             AddEq(body, @"M_{d} = \beta_{1}\cdot \min\left(M_{d1},M_{d2},M_{d3},M_{d4},M_{d5}\right)");
 
@@ -389,11 +389,11 @@ namespace PileDesign.Output
             AddEq(body, @"M_{u} = \beta_{1}\cdot \beta_{2}\cdot M_{u0}");
 
 
-            AddText(body, "場所打ち鋼管コンクリート杭の使用限界せん断力Qs");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鋼管コンクリート杭の使用限界せん断力Qs"));
             //AddEquation_InsituSteelReinforcedPileQs(body);
             AddEq(body, @"Q_{s} = \beta_{1}\frac{A_{s}}{\kappa}f_{s,ss}");
 
-            AddText(body, "場所打ち鋼管コンクリート杭の損傷限界せん断力Qd");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鋼管コンクリート杭の損傷限界せん断力Qd"));
             //AddEquation_InsituSteelReinforcedPileQd(body);
             AddEq(body, @"Q_{d} = \beta_{1}\frac{A_{s}}{\kappa}f_{s,sd}");
 

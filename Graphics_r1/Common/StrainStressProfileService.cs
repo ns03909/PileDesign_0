@@ -72,7 +72,7 @@ namespace PileDesign.Common
             var profile = section.GetStrainStressProfile(bestEps, bestPhi, bestUlt);
             if (profile.Materials.Count == 0) return;
 
-            string header = $"{bestName}  N={bestN:N0} kN  M={bestM:N0} kNm  εc={bestEps:0.000E+0}  φ={bestPhi:0.000E+0} /mm";
+            string header = $"{PileDesign.Models.InputData.ConcreteModelOptions.MapLimitStateText(bestName)}  N={bestN:N0} kN  M={bestM:N0} kNm  εc={bestEps:0.000E+0}  φ={bestPhi:0.000E+0} /mm";
 
             EnsureWindow(owner);
             _window!.HeaderText.Text = header;

@@ -60,6 +60,30 @@ namespace PileDesign.Models.InputData
         public static int Notification1113CompressionCase { get; set; } = 1;
 
         /// <summary>
+        /// 解説書準拠（告示1113 圧縮）オプションが有効なとき、限界状態の表示名を
+        /// 許容応力度設計の用語（長期許容 / 短期許容）で表示するかどうか。
+        /// 使用限界⇔長期許容、損傷限界⇔短期許容 の呼称は本フラグに追随する。
+        /// </summary>
+        public static bool UseAllowableStressLabels => UseNotification1113Compression;
+
+        /// <summary>使用限界の表示名（オプションON時は「長期許容」）。</summary>
+        public static string ServiceLimitLabel => UseAllowableStressLabels ? "長期許容" : "使用限界";
+
+        /// <summary>損傷限界の表示名（オプションON時は「短期許容」）。</summary>
+        public static string DamageLimitLabel => UseAllowableStressLabels ? "短期許容" : "損傷限界";
+
+        /// <summary>
+        /// 表示文字列中の「使用限界」「損傷限界」を、オプションON時に
+        /// 「長期許容」「短期許容」へ置換する。UI・グラフ凡例・計算書の表示専用。
+        /// 内部キー・プロパティ名には使用しないこと。
+        /// </summary>
+        public static string MapLimitStateText(string text)
+        {
+            if (!UseAllowableStressLabels || string.IsNullOrEmpty(text)) return text;
+            return text.Replace("使用限界", "長期許容").Replace("損傷限界", "短期許容");
+        }
+
+        /// <summary>
         /// キャッシュキー用シグネチャ。オプションが変わるとキー文字列が変わり、
         /// M-φ キャッシュやひずみ応力プロファイルキャッシュが正しく再計算される。
         /// </summary>

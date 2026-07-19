@@ -870,7 +870,7 @@ namespace PileDesign.Output
         private static void AddPileResistanceDescription(Body body, ObservableCollection<SoilPile> soilPiles, FundamentalInput fundamentalInput)
         {
             AddHeader1(body, "杭支持力の検討", 3);
-            AddText(body, "杭支持力の検討では、杭の押込側と引抜側の使用限界、損傷限界、終局限界を計算し、表にまとめます。");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("杭支持力の検討では、杭の押込側と引抜側の使用限界、損傷限界、終局限界を計算し、表にまとめます。"));
             AddText(body, "以下に杭支持力一覧表を示します。");
 
             AddText(body, "【先端支持力】");
