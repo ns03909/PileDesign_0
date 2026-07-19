@@ -492,8 +492,8 @@ namespace PileDesign.Output
                     // 同一 (LC, Comb, Liq, 軸力) 相当のキーで重複曲線を間引く
                     List<List<double>> lineListsX = [];
                     List<List<double>> lineListsY = [];
-                    List<string> lineListsLegend = [];
                     var seenCurveKeys = new HashSet<string>();
+                    double mphiNMin = double.MaxValue, mphiNMax = double.MinValue; // キャプション用の軸力範囲
 
                     // 散布点: 最終ステップの (φ, M)
                     List<double> phiResultsLevel1 = [];
@@ -611,8 +611,9 @@ namespace PileDesign.Output
                                         {
                                             lineListsX.Add(phis);
                                             lineListsY.Add(moments);
-                                            string liqTag = isLiquefaction ? "液状化" : "非液状化";
-                                            lineListsLegend.Add($"{loadCase.LoadName}|Comb{loadCombination.No}|{liqTag}|N≈{axialN:F0}kN");
+                                            // 曲線ごとの凡例は判読不能になるため出さない（軸力範囲をキャプションに記載）。
+                                            if (axialN < mphiNMin) mphiNMin = axialN;
+                                            if (axialN > mphiNMax) mphiNMax = axialN;
                                         }
 
                                         // 最終ステップの (φ, M) 散布点
@@ -658,15 +659,18 @@ namespace PileDesign.Output
                     List<List<double>> ysScatter = [momentResultsLevel2, momentResultsLevel1];
                     List<string> scatterLegends = ["レベル2", "レベル1"];
 
+                    // 曲線凡例は空にし、散布点「レベル1/レベル2」だけの凡例を表示する
                     AddNMinTScottPlotGraphToBody(
                         mainPart, body,
-                        lineListsX, lineListsY, lineListsLegend,
+                        lineListsX, lineListsY, [],
                         xsScatter, ysScatter, scatterLegends,
                         "", "曲率φ[rad/m]", "曲げモーメント[kNm]",
-                        150, 150, showLegend: false);
+                        150, 150);
 
+                    string nRange = mphiNMin <= mphiNMax
+                        ? $"（曲線 {lineListsX.Count} 本、軸力 N≈{mphiNMin:N0}〜{mphiNMax:N0}kN）" : string.Empty;
                     AddAutoFigureCaption(body,
-                        $"M-φ関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
+                        $"M-φ関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}{nRange}",
                         "図");
                 }
             }
@@ -717,8 +721,8 @@ namespace PileDesign.Output
 
                 List<List<double>> lineListsX = [];
                 List<List<double>> lineListsY = [];
-                List<string> lineListsLegend = [];
                 var seenMThetaKeys = new HashSet<string>();
+                double mthetaNMin = double.MaxValue, mthetaNMax = double.MinValue; // キャプション用の軸力範囲
 
                 List<double> thetaResultsLevel1 = [];
                 List<double> momentResultsLevel1 = [];
@@ -805,8 +809,9 @@ namespace PileDesign.Output
                                 {
                                     lineListsX.Add(thetas.ToList());
                                     lineListsY.Add(moments.ToList());
-                                    string liqTag = isLiquefaction ? "液状化" : "非液状化";
-                                    lineListsLegend.Add($"{loadCase.LoadName}|Comb{loadCombination.No}|{liqTag}|Mode:{modeTag}|N≈{axialN:F0}kN");
+                                    // 曲線ごとの凡例は判読不能になるため出さない（軸力範囲をキャプションに記載）。
+                                    if (axialN < mthetaNMin) mthetaNMin = axialN;
+                                    if (axialN > mthetaNMax) mthetaNMax = axialN;
                                 }
 
                                 // 最終ステップの (θ, M) 散布点
@@ -864,15 +869,18 @@ namespace PileDesign.Output
                 List<List<double>> ysScatter = [momentResultsLevel2, momentResultsLevel1];
                 List<string> scatterLegends = ["レベル2", "レベル1"];
 
+                // 曲線凡例は空にし、散布点「レベル1/レベル2」だけの凡例を表示する
                 AddNMinTScottPlotGraphToBody(
                     mainPart, body,
-                    lineListsX, lineListsY, lineListsLegend,
+                    lineListsX, lineListsY, [],
                     xsScatter, ysScatter, scatterLegends,
                     "", "回転角θ[rad]", "曲げモーメント[kNm]",
                     150, 150);
 
+                string nRangeTheta = mthetaNMin <= mthetaNMax
+                    ? $"（曲線 {lineListsX.Count} 本、軸力 N≈{mthetaNMin:N0}〜{mthetaNMax:N0}kN）" : string.Empty;
                 AddAutoFigureCaption(body,
-                    $"M-θ関係　杭体符号:{pileBody.PileBodyRef}",
+                    $"M-θ関係　杭体符号:{pileBody.PileBodyRef}{nRangeTheta}",
                     "図");
             }
         }
