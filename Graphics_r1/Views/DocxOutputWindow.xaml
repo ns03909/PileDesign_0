@@ -275,15 +275,25 @@ WindowStartupLocation="CenterOwner">
             </ScrollViewer>
         </Grid>
 
-        <!-- ボタン行 -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-            <Button x:Name="OkButton" Content="計算書作成(_O)" Width="120" Click="OkButton_Click" Command="{Binding OutputWordFileCommand}"
-                    Padding="8,4" Margin="0,0,8,0"
-                    IsDefault="True"
-                    ToolTip="選択した項目で計算書を出力します (Enter / Alt+O)"/>
-            <Button Content="キャンセル(_C)" Width="120" Click="CancelButton_Click" Padding="8,4"
-                    IsCancel="True"
-                    ToolTip="出力せずに閉じます (Esc / Alt+C)"/>
-        </StackPanel>
+        <!-- ボタン行: 左に一括選択、右に作成/キャンセル -->
+        <Grid Grid.Row="1" Margin="0,8,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="全選択" Width="90" Command="{Binding SelectAllDocxSectionsCommand}"
+                        Padding="8,4" Margin="0,0,8,0"
+                        ToolTip="出力項目・荷重ケースをすべて選択します（解析が未完了の項目は無効のまま）"/>
+                <Button Content="全解除" Width="90" Command="{Binding DeselectAllDocxSectionsCommand}"
+                        Padding="8,4"
+                        ToolTip="出力項目・荷重ケースをすべて解除します"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="OkButton" Content="計算書作成(_O)" Width="120" Click="OkButton_Click"
+                        Padding="8,4" Margin="0,0,8,0"
+                        IsDefault="True"
+                        ToolTip="選択した項目で計算書を出力します (Enter / Alt+O)"/>
+                <Button Content="キャンセル(_C)" Width="120" Click="CancelButton_Click" Padding="8,4"
+                        IsCancel="True"
+                        ToolTip="出力せずに閉じます (Esc / Alt+C)"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

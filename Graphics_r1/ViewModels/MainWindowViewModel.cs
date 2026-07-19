@@ -3588,7 +3588,63 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 出力内容セクション（Include* の bool プロパティ）と荷重ケースを一括で選択/解除する。
+        [RelayCommand]
+        private void SelectAllDocxSections() => SetAllDocxSections(true);
+
+        [RelayCommand]
+        private void DeselectAllDocxSections() => SetAllDocxSections(false);
+
+        private void SetAllDocxSections(bool value)
+        {
+            // Include* の bool プロパティを反射で一括設定。解析未完了で無効な項目は
+            // getter 側でゲートされるため、値の設定自体は安全（表示は解析状態に追随）。
+            foreach (var p in GetType().GetProperties(
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+            {
+                if (p.PropertyType == typeof(bool) && p.CanRead && p.CanWrite
+                    && p.GetSetMethod() != null
+                    && p.Name.StartsWith("Include", StringComparison.Ordinal))
+                {
+                    try { p.SetValue(this, value); }
+                    catch (Exception ex) { Serilog.Log.Debug(ex, "[Docx] 出力項目の一括設定に失敗: {Prop}", p.Name); }
+                }
+            }
+            // 荷重ケース・組合せも一括
+            var lci = CurrentInputModel?.LoadCasesInput;
+            if (lci != null)
+            {
+                foreach (var c in lci.LoadCasesLevel1) c.IsApplicableForDocxDisplay = value;
+                foreach (var c in lci.LoadCasesLevel2) c.IsApplicableForDocxDisplay = value;
+                foreach (var c in lci.LoadCombinations) c.IsApplicableForDocxDisplay = value;
+            }
+        }
+
+        // 出力前チェック: 荷重ケース未選択 / 液状化未選択 なら警告して続行可否を確認する。
+        // OK ボタン（code-behind）から呼び、No のときはウィンドウを閉じずに戻す。
+        public bool ValidateDocxSelectionOrConfirm()
+        {
+            var lci = CurrentInputModel?.LoadCasesInput;
+            bool anyCase = lci != null && (
+                lci.LoadCasesLevel1.Any(c => c.IsApplicableForDocxDisplay) ||
+                lci.LoadCasesLevel2.Any(c => c.IsApplicableForDocxDisplay) ||
+                lci.LoadCombinations.Any(c => c.IsApplicableForDocxDisplay));
+            bool anyLiq = IncludeOutputLiquefactionYes || IncludeOutputLiquefactionNo;
+
+            var missing = new List<string>();
+            if (!anyCase) missing.Add("・荷重ケース／組合せが 1 つも選択されていません");
+            if (!anyLiq) missing.Add("・液状化（あり／なし）が選択されていません");
+            if (missing.Count == 0) return true;
+
+            var result = MessageService.Show(
+                "次の項目が未選択です。解析結果が計算書に出力されない可能性があります。\n\n"
+                + string.Join("\n", missing) + "\n\nこのまま計算書を作成しますか？",
+                "計算書出力の確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            return result == MessageBoxResult.Yes;
+        }
+
         // Word ファイルに保存するメソッド
+        // 出力前チェック（未選択の確認）は OK ボタン（DocxOutputWindow.OkButton_Click）で行う。
         [RelayCommand]
         public void OutputWordFile()
         {
