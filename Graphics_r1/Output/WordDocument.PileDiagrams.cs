@@ -562,7 +562,7 @@ namespace PileDesign.Output
                     {
                         0 => "引張側ひび割れ限界 ((4-σE)·Ae)",
                         1 => "弾性限界 ((10-σE)·Ae)",
-                        2 => $"圧壊限界 ({(pileSectionType == "PRC杭" ? "60" : "65")}σE·Ae)",
+                        2 => $"圧壊限界 (({(pileSectionType == "PRC杭" ? "60" : "65")}-σE)·Ae)",
                         _ => $"[{index}]"
                     };
                 }

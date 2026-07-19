@@ -297,8 +297,8 @@ namespace PileDesign.Output
 
                 table0.Append(new TableRow(
                     CreateTableCell(["地表面加速度"], fontSize, "center"),
-                    CreateTableCell([i == 0 ?$"{groundInput.GroundAcceleration1:F1}[m/s]" :
-                                             $"{groundInput.GroundAcceleration2:F1}[m/s]"], fontSize, "right")
+                    CreateTableCell([i == 0 ?$"{groundInput.GroundAcceleration1:F1}[m/s²]" :
+                                             $"{groundInput.GroundAcceleration2:F1}[m/s²]"], fontSize, "right")
                 ));
 
                 body.Append(table0);

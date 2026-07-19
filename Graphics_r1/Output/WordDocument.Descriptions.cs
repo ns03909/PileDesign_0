@@ -35,7 +35,7 @@ namespace PileDesign.Output
             AddHeader1(body, "許容回転角の設定", 2);
             //AddText(body, "許容回転角の設定");
             AddText(body, "杭頭接合部の許容回転角$\\theta_{a}$は，パイルキャップにひび割れが発生する回転角$\\theta_{ac}$以下かつ，" +
-                "引抜き対応タイプにおいては引抜き抵抗用鋼棒が短期許容応力に達する回転角$\theta_{as}$以下とし，次式によって定める。 ");
+                "引抜き対応タイプにおいては引抜き抵抗用鋼棒が短期許容応力に達する回転角$\\theta_{as}$以下とし，次式によって定める。 ");
 
             AddInlineMathParagraph(body, [Tex(@"\theta_{a} = \min\left(\theta_{ac},\theta_{as}\right)")]);
             AddInlineMathParagraph(body, [Tex(@"\theta_{ac} = 0.03 - 0.05 + \frac{\sigma_{nc}}{\phi_{c}\cdot F_{c}}")]);
@@ -354,7 +354,7 @@ namespace PileDesign.Output
             AddHeader1(body, "降伏時回転角", 4);
             //AddInlineMathParagraph(body, ["d. 降伏時回転角", mathThetau()]);
 
-            AddInlineMathParagraph(body, ["断面解析における曲率から降伏時回転角", Tex(@"\theta_{u}"), "への換算は、杭体のヒンジ領域を杭径部とし、ヒンジ領域では一定の曲率であると仮定した下式で評価する。"]);
+            AddInlineMathParagraph(body, ["断面解析における曲率から降伏時回転角", Tex(@"\theta_{y}"), "への換算は、杭体のヒンジ領域を杭径部とし、ヒンジ領域では一定の曲率であると仮定した下式で評価する。"]);
 
             static DocumentFormat.OpenXml.Math.OfficeMath mathPhiy() =>
                 Tex(@"\phi_{y}");
