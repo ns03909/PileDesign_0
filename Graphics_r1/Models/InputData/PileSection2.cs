@@ -55,8 +55,9 @@ namespace PileDesign.Models.InputData
                 SetEpsilonCr();
                 SetAllowableStrain();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[InsituConcrete] 初期化に失敗（Ec/Ac/SigmaCr=0 にフォールバック）: DO={DO}, Gsi={Gsi}, Fc={Fc}", DO, Gsi, Fc);
                 Ec = 0.0;
                 Ac = 0.0;
                 SigmaCr = 0.0;
@@ -90,8 +91,9 @@ namespace PileDesign.Models.InputData
                 ServiceLimitStrainT = double.MinValue; // 使用限界引張ひずみ度（コンクリート引張は無視）
                 DamageLimitStrainT = double.MinValue; // 損傷限界引張ひずみ度
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -578,8 +580,9 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = damageLimitStressT / Ec;
                 UltimateLimitStrainT = double.MinValue;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -618,8 +621,9 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = damageLimitStressT / Ec;
                 UltimateLimitStrainT = double.MinValue;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -673,8 +677,9 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = double.MinValue;
                 UltimateLimitStrainT = double.MinValue;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -817,8 +822,9 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = Ftdp / SE1; // 損傷限界引張ひずみ度
                 UltimateLimitStrainT = double.MinValue; // 安全限界引張ひずみ度
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -1118,8 +1124,9 @@ namespace PileDesign.Models.InputData
                 }
                 return M;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[GetAllowableMomentForSpecificN] 算定に失敗（M=0 にフォールバック）: limitStateNo={LimitStateNo}, NTarget={NTarget}", limitStateNo, NTarget);
                 return 0.0;
             }
         }
@@ -1175,8 +1182,9 @@ namespace PileDesign.Models.InputData
 
                 return (M, curvature);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[GetUltimateMomentForSpecificN] 算定に失敗（0 にフォールバック）: NTarget={NTarget}", NTarget);
                 return (0.0, 0.0);
             }
         }

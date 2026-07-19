@@ -496,7 +496,7 @@ namespace PileDesign.Models.InputData
                 }
                 return (bestM, bestCurvature);
             }
-            catch { return (0.0, 0.0); }
+            catch (Exception ex) { Serilog.Log.Warning(ex, "[SPRC.GetUltimateMomentForSpecificN] 算定に失敗（0 にフォールバック）: NTarget={NTarget}", NTarget); return (0.0, 0.0); }
         }
 
         // 使用/損傷限界は基底クラスのGetAllowableMNInteractionを使用
