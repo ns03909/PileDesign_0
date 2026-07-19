@@ -181,10 +181,38 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private double GetUltimateLimitShear(double n)
         {
-            double beta1 = 1.0;
-            double beta2 = 1.0;
             double ts = InsituSteelPipe.TMinus;
             double d = InsituSteelPipe.OutDiaMinus;
+
+            if (ConcreteModelOptions.UseInsituUltimateEFunction)
+            {
+                // 指針(案): Qu = sQ0·√(1-η²)·(scMu/sMu)
+                //   sQ0  = 2·t·(D-t)·sσy/√3        （鋼管の純せん断終局。t,D は腐食考慮値）
+                //   η    = N/sNcu, sNcu = sσy·sA    （sA=腐食考慮鋼管有効断面 AMinus）
+                //   sMu  = sMu0·cos(πη/2)           （鋼管単独の終局曲げ強度）
+                //   sMu0 = Zp·sσy, Zp=(4/3)(R³-(R-t)³)（R=鋼管外半径）
+                //   scMu = 合成断面の終局曲げ強度   （同一軸力 N での GetUltimateMomentForSpecificN）
+                double sSigmaY = InsituSteelPipe.SSigmaY;           // = 1.1F（材料強度）
+                double sA = InsituSteelPipe.AMinus;                 // 腐食考慮鋼管有効断面積
+                double sNcu = sSigmaY * sA;
+                double eta = sNcu > 1e-9 ? n / sNcu : 0.0;
+                eta = Math.Max(-0.999, Math.Min(0.999, eta));       // √(1-η²)・cos の破綻防止
+
+                double R = d * 0.5;
+                double Zp = 4.0 / 3.0 * (Math.Pow(R, 3) - Math.Pow(R - ts, 3));
+                double sMu0 = Zp * sSigmaY;
+                double sMu = sMu0 * Math.Cos(Math.PI * eta / 2.0);
+                double sQ0 = 2.0 * ts * (d - ts) * sSigmaY / Math.Sqrt(3.0);
+                double scMu = GetUltimateMomentForSpecificN(n).Item1;
+
+                double pipeShear = sQ0 * Math.Sqrt(Math.Max(0.0, 1.0 - eta * eta));
+                // sMu≈0（純軸圧で鋼管曲げ耐力消失）や scMu 取得失敗時は鋼管単独せん断にフォールバック
+                if (sMu <= 1e-6 || scMu <= 1e-6) return pipeShear;
+                return pipeShear * (scMu / sMu);
+            }
+
+            double beta1 = 1.0;
+            double beta2 = 1.0;
             double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.PI * Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
             double fcy = 1.1 * InsituSteelPipe.F;
             double ns;

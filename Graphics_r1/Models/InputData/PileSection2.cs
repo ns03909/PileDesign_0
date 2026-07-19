@@ -337,7 +337,10 @@ namespace PileDesign.Models.InputData
         internal void SetRSigmaY()
         {
             // 1.1F 完全バイリニア型オプション時は降伏応力度を 1.1×σy に引き上げる（安全限界にのみ効く）。
-            RSigmaY = YieldAt11F ? 1.1 * BaseSigmaY : BaseSigmaY;
+            // ただし RC基礎構造部材の耐震設計指針(案) に従い、SD490 は 1.1 倍の対象外（規格降伏点のまま）。
+            // 主筋（せん断補強以外）は圧縮・引張とも 1.1 倍可のため、SD490 以外は ±1.1σy とする。
+            bool apply11F = YieldAt11F && Grade != "SD490";
+            RSigmaY = apply11F ? 1.1 * BaseSigmaY : BaseSigmaY;
         }
         private static readonly Dictionary<string, double> BarAreas = new()
         {
