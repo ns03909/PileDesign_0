@@ -696,6 +696,8 @@ namespace PileDesign.Models.InputData
             double a1 = phiY - phiCr;
             double a2 = beta1 * Mu0 - Mcr;
             double a3 = (My - Mcr);
+            // My≈Mcr（低鉄筋比・高軸力）でのゼロ除算→Inf を防ぐ。分母が微小なら降伏点曲率で代替。
+            if (Math.Abs(a3) < 1e-9) return phiY;
             double phiC = phiCr + (phiY - phiCr) * (beta1 * Mu0 - Mcr) / (My - Mcr);
             return phiC;
         }

@@ -177,7 +177,7 @@ namespace PileDesign.Models.InputData
             double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
             double kappa = 2.0;
             double sfsd = InsituSteelPipe.F / Math.Sqrt(3);
-            return beta1 * area / kappa * sfsd;
+            return beta * area / kappa * sfsd;   // level 別の beta を反映（従来 beta1 固定で level 引数が無効だった）
         }
 
         /// <summary>
@@ -217,7 +217,7 @@ namespace PileDesign.Models.InputData
 
             double beta1 = 1.0;
             double beta2 = 1.0;
-            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.PI * Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
+            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
             double fcy = 1.1 * InsituSteelPipe.F;
             double ns;
             if (n >= 0)
@@ -308,6 +308,8 @@ namespace PileDesign.Models.InputData
         // ひび割れモーメント、ひび割れ曲率を返すメソッド
         internal (double, double) GetCrackMoment(double Ntarget)
         {
+            // 退化断面（Ae/Ec/Ie=0）でのゼロ除算→Inf/NaN の M-φ 伝播を防ぐ（RC 版と同様のガード）。
+            if (Ae <= 0.0 || InsituConcrete.Ec <= 0.0 || Ie <= 0.0) return (0.0, 0.0);
             double sigma0e = Ntarget / Ae;
             double Mcr = Ze * (Ft + sigma0e);
             double phiCr = Mcr / InsituConcrete.Ec / Ie;

@@ -704,7 +704,7 @@ namespace PileDesign.Models.InputData
         {
             if (_fpy == 0.0) { Fpy = 1226.0; }
             else { Fpy = _fpy; }
-            if (_fpu == 0.0) { Fpy = 1418.0; }
+            if (_fpu == 0.0) { Fpu = 1418.0; }
             else { Fpu = _fpu; }
 
             PCD = _PCD;
@@ -1102,13 +1102,19 @@ namespace PileDesign.Models.InputData
 
                 if (axialForceCurvatureMax < NTarget) { isCompressionSide = true; } else { isCompressionSide = false; }
 
-                while (Math.Abs(N - NTarget) > 0.1) // 0.1N 以上の差がある場合
+                // 反復上限とゼロ除算ガードのみ追加（dN/dφ≈0 で curvature が Inf/NaN になり
+                // 無限ループ・ハングするのを防ぐ）。割線ステップ自体は従来どおりで収束解を保持する。
+                int maxIter = 50;
+                int iter = 0;
+                while (Math.Abs(N - NTarget) > 0.1 && iter < maxIter) // 0.1N 以上の差がある場合
                 {
                     N1 = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature + deltaCurvature).Item1;
+                    if (Math.Abs(N1 - N) < 1e-8) break;                 // ゼロ除算防止
                     curvature = deltaCurvature / (N1 - N) * (NTarget - N) + curvature;
                     (double, double, double) forceAndMoment = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature);
                     N = forceAndMoment.Item1;
                     M = forceAndMoment.Item2;
+                    iter++;
                 }
                 return M;
             }

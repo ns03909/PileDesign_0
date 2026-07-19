@@ -133,6 +133,7 @@ namespace PileDesign.Models.InputData
         private void InvalidateAllCaches()
         {
             InvalidateNMCache();
+            InvalidateNQCache();
             InvalidateSteelYieldCache();
             InvalidateCrackCache();
         }
@@ -145,6 +146,16 @@ namespace PileDesign.Models.InputData
             _factoredDamageNMCache = null;
             _factoredDamageNMLevel1Cache = null;
             _factoredUltimateNMCache = null;
+        }
+        // せん断 (N-Q) キャッシュ無効化。告示せん断オプション等の変更を反映するため NM と同時に破棄する。
+        private void InvalidateNQCache()
+        {
+            _unfactoredServiceNQCache = null;
+            _unfactoredDamageNQCache = null;
+            _unfactoredUltimateNQCache = null;
+            _factoredServiceNQCache = null;
+            _factoredDamageNQCache = null;
+            _factoredUltimateNQCache = null;
         }
 
         // 追加: 降伏開始NMのキャッシュ
