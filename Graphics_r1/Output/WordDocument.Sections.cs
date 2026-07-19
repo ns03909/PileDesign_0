@@ -334,6 +334,11 @@ namespace PileDesign.Output
             //AddEquation_ConcreteEc(body);
             AddEq(body, @"E_{c} = 3.35\times 10^{4} \left(\frac{\gamma}{24}\right)^{2} \left(\frac{\zeta\cdot F_{c}}{60}\right)^{\frac{1}{3}}");
 
+            // 圧縮: 基本設定「場所打ち杭の許容圧縮応力度を告示1113(第8)による」ON時は、使用/損傷限界の
+            // 許容圧縮応力度を告示（長期・短期）で評価する旨を注記（Ms/Md の Msi/Mdi に反映される）。
+            if (ConcreteModelOptions.UseNotification1113Compression)
+                AddText(body, "※ 使用限界・損傷限界の許容圧縮応力度は告示 平13国交告第1113号(第8) による（使用限界=長期、損傷限界=短期）。");
+
             AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の使用限界曲げモーメントMs"));
             //AddEquation_InsituReinforcedPileMs(body);
             AddEq(body, @"M_{s} = \beta_{1}\cdot \min\left(M_{s1},M_{s2},M_{s3}\right)");
@@ -346,23 +351,35 @@ namespace PileDesign.Output
             //AddEquation_InsituReinforcedPileMu(body);
             AddEq(body, @"M_{u} = \beta_{1}\cdot \beta_{2}\cdot M_{u0}");
 
-            AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の使用限界せん断力Qs"));
-            //AddEquation_InsituReinforcedPileQs(body);
-            AddEq(body, @"
-                Q_{s} = \beta_{1}\cdot \frac{2}{3}\cdot
-                \frac{0.065k_{c}\left(49.0+\xi F_{c}\right)}
-                {\dfrac{M}{Qd}+1.7}
-                \left(1+\frac{\sigma_{o}}{14.7}\right)bj
-                ");
+            // せん断: 基本設定「場所打ちRC杭の許容せん断応力度を告示1113(第8)による」ON時は
+            // 告示の許容せん断力 Q=fs·b·j（使用限界=長期、損傷限界=短期=長期×1.5）。既定は基礎部材式。
+            if (ConcreteModelOptions.UseNotification1113Shear)
+            {
+                AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の使用限界せん断力Qs（告示1113(第8) 長期）"));
+                AddEq(body, @"Q_{s} = f_{s,L}\,b\,j,\quad
+                    f_{s,L} = \min\left(\frac{F_{c}}{40}\ (\text{区分2は}\frac{F_{c}}{45}),\ \frac{3}{4}\left(0.49+\frac{F_{c}}{100}\right)\right)");
 
-            AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の損傷限界せん断力Qd"));
-            //AddEquation_InsituReinforcedPileQd(body);
-            AddEq(body, @"
-                Q_{d} = \beta_{1}\cdot
-                \frac{0.065k_{c}\left(49.0+\xi F_{c}\right)}
-                {\dfrac{M}{Qd}+1.7}
-                \left(1+\frac{\sigma_{o}}{14.7}\right)bj
-                ");
+                AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の損傷限界せん断力Qd（告示1113(第8) 短期）"));
+                AddEq(body, @"Q_{d} = 1.5\,f_{s,L}\,b\,j");
+            }
+            else
+            {
+                AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の使用限界せん断力Qs"));
+                AddEq(body, @"
+                    Q_{s} = \beta_{1}\cdot \frac{2}{3}\cdot
+                    \frac{0.065k_{c}\left(49.0+\xi F_{c}\right)}
+                    {\dfrac{M}{Qd}+1.7}
+                    \left(1+\frac{\sigma_{o}}{14.7}\right)bj
+                    ");
+
+                AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の損傷限界せん断力Qd"));
+                AddEq(body, @"
+                    Q_{d} = \beta_{1}\cdot
+                    \frac{0.065k_{c}\left(49.0+\xi F_{c}\right)}
+                    {\dfrac{M}{Qd}+1.7}
+                    \left(1+\frac{\sigma_{o}}{14.7}\right)bj
+                    ");
+            }
 
             AddText(body, "場所打ち鉄筋コンクリート杭の安全限界せん断力Qu");
             //AddEquation_InsituReinforcedPileQu(body);
@@ -399,12 +416,22 @@ namespace PileDesign.Output
 
             AddText(body, "場所打ち鋼管コンクリート杭の安全限界せん断力Qu");
             //AddEquation_InsituSteelReinforcedPileQu(body);
-            AddEq(body, @"
-                Q_{u} = \beta_{1}\beta_{2}
-                \frac{2}{3}\pi t_{s}(D - t_{s})
-                \frac{2}{3}\frac{f_{cy}}{\sqrt{3}}
-                \sqrt{1 - p^{2}}
-            ");
+            // 基本設定「安全限界を耐震設計指針(案)で算定する」ON時は指針式（合成断面の曲げ寄与を考慮）。
+            if (ConcreteModelOptions.UseInsituUltimateEFunction)
+            {
+                AddEq(body, @"Q_{u} = sQ_{0}\sqrt{1-\eta^{2}}\,\frac{{}_{sc}M_{u}}{{}_{s}M_{u}},\quad
+                    sQ_{0} = \frac{2\,t_{s}(D - t_{s})\,{}_{s}\sigma_{y}}{\sqrt{3}},\quad
+                    \eta = \frac{N}{{}_{s}\sigma_{y}\,{}_{s}A}");
+            }
+            else
+            {
+                AddEq(body, @"
+                    Q_{u} = \beta_{1}\beta_{2}
+                    \frac{2}{3}\pi t_{s}(D - t_{s})
+                    \frac{f_{cy}}{\sqrt{3}}
+                    \sqrt{1 - p^{2}}
+                ");
+            }
 
             // 場所打ち系の安全限界曲げに用いるコンクリートの応力ひずみ関係。
             // 既定はバイリニア型。基本設定「安全限界を耐震設計指針(案)で算定する」ONのときのみ e関数法。
