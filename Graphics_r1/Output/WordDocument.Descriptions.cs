@@ -38,7 +38,7 @@ namespace PileDesign.Output
                 "引抜き対応タイプにおいては引抜き抵抗用鋼棒が短期許容応力に達する回転角$\\theta_{as}$以下とし，次式によって定める。 ");
 
             AddInlineMathParagraph(body, [Tex(@"\theta_{a} = \min\left(\theta_{ac},\theta_{as}\right)")]);
-            AddInlineMathParagraph(body, [Tex(@"\theta_{ac} = 0.03 - 0.05 + \frac{\sigma_{nc}}{\phi_{c}\cdot F_{c}}")]);
+            AddInlineMathParagraph(body, [Tex(@"\theta_{ac} = 0.03 - 0.05\frac{\sigma_{nc}}{\phi_{c}\cdot F_{c}}")]);
             AddInlineMathParagraph(body, [Tex(@"\theta_{as} = \frac{\delta_{a}}{D_{s}}")]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\theta_{a}"), ": 許容回転角[rad]"]);

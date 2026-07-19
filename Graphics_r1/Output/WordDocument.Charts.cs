@@ -1442,9 +1442,9 @@ namespace PileDesign.Output
                 AddScottPlotGraphWithMultipleDataToBody(
                     mainPart, body,
                     xsLists, ysLists, legends,
-                    "", "相対変位[mm]", "周面抵抗力[kN/m]",
+                    "", "相対変位[mm]", "周面抵抗力度[kN/m²]",
                     150, 150);
-                AddAutoFigureCaption(body, $"{caption}：杭周面抵抗力-変位関係", "図");
+                AddAutoFigureCaption(body, $"{caption}：杭周面抵抗力度-変位関係", "図");
             }
         }
     }

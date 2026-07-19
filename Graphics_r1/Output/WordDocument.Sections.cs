@@ -406,14 +406,24 @@ namespace PileDesign.Output
                 \sqrt{1 - p^{2}}
             ");
 
-            AddText(body, "e関数法");
-            //AddEquation_EFunction(body);
-            AddEq(body, @"
-                \frac{\sigma}{\xi\cdot F_{c}} = 6.75 \left\{
-                  e^{-0.812\left(\frac{\varepsilon}{\varepsilon_{m}}\right)}
-                  - e^{-1.218\left(\frac{\varepsilon}{\varepsilon_{m}}\right)}
-                \right\}
-            ");
+            // 場所打ち系の安全限界曲げに用いるコンクリートの応力ひずみ関係。
+            // 既定はバイリニア型。基本設定「安全限界を耐震設計指針(案)で算定する」ONのときのみ e関数法。
+            if (ConcreteModelOptions.UseInsituUltimateEFunction)
+            {
+                AddText(body, "コンクリートの応力ひずみ関係（e関数法、耐震設計指針(案)5.4.1 準拠）");
+                AddEq(body, @"
+                    \frac{\sigma}{\xi\cdot F_{c}} = 6.75 \left\{
+                      e^{-0.812\left(\frac{\varepsilon}{\varepsilon_{m}}\right)}
+                      - e^{-1.218\left(\frac{\varepsilon}{\varepsilon_{m}}\right)}
+                    \right\}
+                ");
+            }
+            else
+            {
+                string plateau = ConcreteModelOptions.UseReducedCompression ? @"0.85 F_{c}" : @"\xi F_{c}";
+                AddText(body, "コンクリートの応力ひずみ関係（バイリニア型）");
+                AddEq(body, $@"\sigma = \min\left(E_{{c}}\varepsilon,\ {plateau}\right)\quad(0 \le \varepsilon \le \varepsilon_{{cu}})");
+            }
         }
 
         // 荷重条件の表を追加するメソッド
