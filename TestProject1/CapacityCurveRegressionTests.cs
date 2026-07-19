@@ -1,4 +1,5 @@
 using PileDesign.Models.InputData;
+using PileDesign.Models.PileLibrary;
 using PileDesign.Services;
 using System.Collections.Generic;
 
@@ -142,6 +143,64 @@ namespace TestProject1
             Assert.IsTrue(variation > 0.01,
                 $"SPRC安全限界せん断が軸力にほぼ依存していない（variation={variation:P2}）。" +
                 "GetUltimateLimitShear のせん断面積式（A2）を確認。");
+        }
+
+        // ===== 既製杭（PrecastPileSection: PHC / SC）=====
+        // ライブラリ CSV (pile_library_*.csv) から製品を選んで断面を構築する。
+        private static PileSection CreatePrecastSection(string sectionType, List<PrecastPile> lib, string preferDiameter)
+        {
+            var product = lib.Find(p => p.Name != null && p.Name.Contains(preferDiameter)) ?? lib[0];
+            var s = new PileSection
+            {
+                PileBodyType = "既製コンクリート杭",
+                PileSectionType = sectionType,
+            };
+            s.SetSelectedPrecastPileByName(product.Name);   // D/t/Fc/テンドン等をライブラリから転写
+            return s;
+        }
+
+        [TestMethod]
+        public void Precast_Phc_NMCurves_FiniteAndOrdered()
+        {
+            if (PileSection.PHCs == null || PileSection.PHCs.Count == 0)
+            {
+                Assert.Inconclusive("PHC ライブラリ (pile_library_PHC.csv) が読めないためスキップ");
+                return;
+            }
+            ResetOptions();
+            var s = CreatePrecastSection("PHC杭", PileSection.PHCs, "-500-");
+
+            var svc = s.UnfactoredServiceNM;
+            var dmg = s.UnfactoredDamageNM;
+            var ult = s.UnfactoredUltimateNM;
+            AssertAllFinite(svc.M, "PHC使用限界NM.M");
+            AssertAllFinite(dmg.M, "PHC損傷限界NM.M");
+            AssertAllFinite(ult.M, "PHC安全限界NM.M");
+
+            double mSvc = MaxAbs(svc.M), mDmg = MaxAbs(dmg.M), mUlt = MaxAbs(ult.M);
+            Assert.IsTrue(mSvc > 0 && mDmg > 0 && mUlt > 0, $"PHC耐力ゼロ svc={mSvc:F0} dmg={mDmg:F0} ult={mUlt:F0}");
+            Assert.IsTrue(mDmg >= mSvc * 0.999, $"PHC 損傷限界 < 使用限界 (dmg={mDmg:F0} < svc={mSvc:F0})");
+            Assert.IsTrue(mUlt >= mDmg * 0.999, $"PHC 安全限界 < 損傷限界 (ult={mUlt:F0} < dmg={mDmg:F0})");
+        }
+
+        [TestMethod]
+        public void Precast_Sc_Curves_Finite()
+        {
+            if (PileSection.SCs == null || PileSection.SCs.Count == 0)
+            {
+                Assert.Inconclusive("SC ライブラリ (pile_library_SC.csv) が読めないためスキップ");
+                return;
+            }
+            ResetOptions();
+            var s = CreatePrecastSection("SC杭", PileSection.SCs, "-500-");
+
+            var ult = s.UnfactoredUltimateNM;
+            var nq = s.UnfactoredUltimateNQ;
+            AssertAllFinite(ult.M, "SC安全限界NM.M");
+            AssertAllFinite(ult.N, "SC安全限界NM.N");
+            AssertAllFinite(nq.Q, "SC安全限界NQ.Q");
+            Assert.IsTrue(MaxAbs(ult.M) > 0, "SC安全限界曲げ耐力ゼロ");
+            Assert.IsTrue(MaxAbs(nq.Q) > 0, "SC安全限界せん断耐力ゼロ");
         }
 
         // ===== 群杭効率係数 =====
