@@ -93,16 +93,10 @@ namespace PileDesign.Models.InputData
             // Ae = InsituConcrete.Ac(コンクリート総断面) + (nr−1)·Ag(主筋) + ns·AMinus(腐食後鋼管)
             //   = Ac_net + nr·Ag + ns·AMinus   （文献「コンクリート純断面 + n×鋼管 + n×鉄筋」と一致）
             //   nr = Er/Ec, ns = Es/Ec。SetZeFtIe() 算定のフィールド値を用いる（N-Q 相関 NMax と統一）。
-            // 指針(案) 準拠オプション時は σ0 の適用範囲を -0.07ξFc〜0.15ξFc（換算断面 Ae で除した平均軸応力）に限定。
-            UltimateLimitAxialForceThresholds = ConcreteModelOptions.UseInsituUltimateEFunction
-                ? [
-                    -0.07 * insituConcrete.Gsi * insituConcrete.Fc * Ae,
-                    0.15 * insituConcrete.Gsi * insituConcrete.Fc * Ae
-                ]
-                : [
-                    -0.2 * (mainBars.RSigmaY * mainBars.Ag + insituSteelPipe.Fcy * insituSteelPipe.AMinus),
-                    0.4 * insituConcrete.Gsi * insituConcrete.Fc * Ae
-                ];
+            UltimateLimitAxialForceThresholds = [
+                -0.2 * (mainBars.RSigmaY * mainBars.Ag + insituSteelPipe.Fcy * insituSteelPipe.AMinus),
+                0.4 * insituConcrete.Gsi * insituConcrete.Fc * Ae
+            ];
 
             // 安全限界曲げモーメント低減率
             UltimateLimitBeta = [0.0, 1.0, 0.0];
@@ -134,7 +128,11 @@ namespace PileDesign.Models.InputData
             FactoredDamageNMLevel1 = FactoredDamageNM;
 
             // 低減後安全限界NMインタラクション
-            FactoredUltimateNM = GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
+            // 指針(案) 準拠オプション時は安全限界曲げ強度をそのまま採用し、低減・軸力制限を課さない
+            // （低減後＝低減前の全体を描く＝1本の滑らかな耐力包絡線）。既定は基礎部材の低減率・軸力制限を適用。
+            FactoredUltimateNM = ConcreteModelOptions.UseInsituUltimateEFunction
+                ? UnfactoredUltimateNM
+                : GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
 
             // 低減前使用限界NMインタラクション
             UnfactoredServiceNQ = GetServiceLimitQNInteraction();
@@ -281,13 +279,8 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            // 指針(案) 準拠オプション時は σ0 適用範囲を -0.07ξFc〜0.15ξFc に限定（安全限界 NM と統一）。
-            double NMin = ConcreteModelOptions.UseInsituUltimateEFunction
-                ? -0.07 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae
-                : -0.2 * (MainBars.RSigmaY * MainBars.Ag + InsituSteelPipe.Fcy * InsituSteelPipe.AMinus);
-            double NMax = ConcreteModelOptions.UseInsituUltimateEFunction
-                ? 0.15 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae
-                : 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMin = -0.2 * (MainBars.RSigmaY * MainBars.Ag + InsituSteelPipe.Fcy * InsituSteelPipe.AMinus);
+            double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
