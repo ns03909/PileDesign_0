@@ -46,12 +46,27 @@ namespace PileDesign.Models.InputData
         public static bool UseUnitGsiForConcreteE { get; set; }
 
         /// <summary>
+        /// 場所打ち系コンクリートの使用限界・損傷限界の許容圧縮応力度を、
+        /// 基礎部材の (1/3)ξFc・(2/3)ξFc に代えて、告示 平13国交告第1113号(第8) の
+        /// 長期・短期許容圧縮応力度で算定する（使用限界=長期、損傷限界=短期）。
+        /// せん断・安全限界・M-φ・解析には影響しない（使用/損傷限界 NM のみ）。
+        /// </summary>
+        public static bool UseNotification1113Compression { get; set; }
+
+        /// <summary>
+        /// 告示1113(第8) の長期許容圧縮応力度の区分。
+        /// 1: Fc/4、2: min(Fc/4.5, 6.0)。短期はいずれも長期の 2 倍。
+        /// </summary>
+        public static int Notification1113CompressionCase { get; set; } = 1;
+
+        /// <summary>
         /// キャッシュキー用シグネチャ。オプションが変わるとキー文字列が変わり、
         /// M-φ キャッシュやひずみ応力プロファイルキャッシュが正しく再計算される。
         /// </summary>
         public static string Signature()
             => $"CMO:T{(IgnoreTensileStrength ? 1 : 0)}C{(UseReducedCompression ? 1 : 0)}" +
                $"R{(RebarYieldAt11F ? 1 : 0)}P{(SteelPipeYieldAt11F ? 1 : 0)}" +
-               $"E{(UseUnitGsiForConcreteE ? 1 : 0)}";
+               $"E{(UseUnitGsiForConcreteE ? 1 : 0)}" +
+               $"K{(UseNotification1113Compression ? Notification1113CompressionCase : 0)}";
     }
 }

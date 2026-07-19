@@ -68,11 +68,26 @@ namespace PileDesign.Models.InputData
         {
             try
             {
-                double serviceLimitStressC = 1.0 / 3.0 * Gsi * Fc; // 使用限界圧縮応力度
-                double damageLimitStressC = 2.0 / 3.0 * Gsi * Fc;// 損傷限界圧縮応力度
+                double serviceLimitStressC; // 使用限界圧縮応力度（長期許容相当）
+                double damageLimitStressC;  // 損傷限界圧縮応力度（短期許容相当）
+                if (ConcreteModelOptions.UseNotification1113Compression)
+                {
+                    // 告示 平13国交告第1113号(第8): 長期許容圧縮 = [1] Fc/4 または [2] min(Fc/4.5, 6.0)、短期 = 2×長期。
+                    double longTerm = ConcreteModelOptions.Notification1113CompressionCase == 2
+                        ? Math.Min(Fc / 4.5, 6.0)
+                        : Fc / 4.0;
+                    serviceLimitStressC = longTerm;
+                    damageLimitStressC = 2.0 * longTerm;
+                }
+                else
+                {
+                    // 基礎部材の強度と変形性能: 使用限界 (1/3)ξFc、損傷限界 (2/3)ξFc。
+                    serviceLimitStressC = 1.0 / 3.0 * Gsi * Fc;
+                    damageLimitStressC = 2.0 / 3.0 * Gsi * Fc;
+                }
                 ServiceLimitStrainC = serviceLimitStressC / Ec; // 使用限界圧縮ひずみ度
                 DamageLimitStrainC = damageLimitStressC / Ec; // 損傷限界圧縮ひずみ度
-                ServiceLimitStrainT = double.MinValue; // 使用限界引張ひずみ度
+                ServiceLimitStrainT = double.MinValue; // 使用限界引張ひずみ度（コンクリート引張は無視）
                 DamageLimitStrainT = double.MinValue; // 損傷限界引張ひずみ度
             }
             catch (Exception)

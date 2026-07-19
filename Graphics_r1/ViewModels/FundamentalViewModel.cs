@@ -198,6 +198,41 @@ namespace PileDesign.ViewModels
                 "コンクリートEc算定のξ=1.0オプション変更");
         }
 
+        // 場所打ち系コンクリートの許容圧縮を告示1113(第8)による（使用限界=長期・損傷限界=短期）
+        [ObservableProperty]
+        private bool _useNotification1113Compression;
+
+        partial void OnUseNotification1113CompressionChanged(bool value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseNotification1113Compression,
+                v => InputModel.FundamentalInput.UseNotification1113Compression = v,
+                v => UseNotification1113Compression = v,
+                "許容圧縮を告示1113(第8)による へ変更");
+        }
+
+        // 告示1113(第8) 長期許容圧縮の区分（1: Fc/4、2: min(Fc/4.5, 6)）
+        [ObservableProperty]
+        private int _notification1113CompressionCase = 1;
+
+        partial void OnNotification1113CompressionCaseChanged(int value)
+        {
+            HandleCapacityOnlyCaseChanged(
+                value,
+                () => InputModel.FundamentalInput.Notification1113CompressionCase,
+                v => InputModel.FundamentalInput.Notification1113CompressionCase = v,
+                v => Notification1113CompressionCase = v);
+        }
+
+        // 告示1113(第8) 圧縮の区分 ComboBox 用（値=区分番号、表示=式）
+        public sealed record Notification1113CaseItem(int Value, string Display);
+        public Notification1113CaseItem[] Notification1113CompressionCaseOptions { get; } =
+        [
+            new Notification1113CaseItem(1, "[1] Fc/4"),
+            new Notification1113CaseItem(2, "[2] min(Fc/4.5, 6)"),
+        ];
+
         /// <summary>
         /// バイリニアコンクリート・オプションの変更を処理する共通ハンドラ。
         /// これらは M-φ（→ 非線形 FEM 解析）に影響するため、解析結果があれば確認のうえリセットする
@@ -223,6 +258,44 @@ namespace PileDesign.ViewModels
                 () => { setModel(oldValue); _mainWindowViewModel.ApplyConcreteModelOptions(); },
                 () => { setModel(value); _mainWindowViewModel.ApplyConcreteModelOptions(); },
                 reason);
+
+            setModel(value);
+            _mainWindowViewModel.ApplyConcreteModelOptions();
+        }
+
+        /// <summary>
+        /// 検定の耐力側（使用/損傷限界 NM）のみに効くオプション用ハンドラ。
+        /// 解析（M-φ・変形・応力）・安全限界には影響しないため、解析結果は削除せず保持する
+        /// （確認ダイアログ無し）。キャッシュ破棄は ApplyConcreteModelOptions が行う。
+        /// </summary>
+        private void HandleCapacityOnlyOptionChanged(
+            bool value, Func<bool> getter, Action<bool> setModel, Action<bool> setVm, string reason)
+        {
+            if (_suppressConcreteOptionConfirm) return;
+            bool oldValue = getter();
+            if (oldValue == value) return;
+
+            _undoManager.PushAction(
+                () => { setModel(oldValue); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                () => { setModel(value); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                reason);
+
+            setModel(value);
+            _mainWindowViewModel.ApplyConcreteModelOptions();
+        }
+
+        // 区分(int)用の capacity-only ハンドラ（解析結果は保持）
+        private void HandleCapacityOnlyCaseChanged(
+            int value, Func<int> getter, Action<int> setModel, Action<int> setVm)
+        {
+            if (_suppressConcreteOptionConfirm) return;
+            int oldValue = getter();
+            if (oldValue == value) return;
+
+            _undoManager.PushAction(
+                () => { setModel(oldValue); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                () => { setModel(value); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                "告示1113(第8) 圧縮区分の変更");
 
             setModel(value);
             _mainWindowViewModel.ApplyConcreteModelOptions();
@@ -267,6 +340,8 @@ namespace PileDesign.ViewModels
             RebarYieldAt11F = InputModel.FundamentalInput.RebarYieldAt11F;
             SteelPipeYieldAt11F = InputModel.FundamentalInput.SteelPipeYieldAt11F;
             UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
+            UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
+            Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
 
@@ -330,6 +405,12 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.UseUnitGsiForConcreteE):
                     UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
+                    break;
+                case nameof(FundamentalInput.UseNotification1113Compression):
+                    UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
+                    break;
+                case nameof(FundamentalInput.Notification1113CompressionCase):
+                    Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
                     break;
             }
         }

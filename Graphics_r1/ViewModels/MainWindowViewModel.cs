@@ -3248,6 +3248,8 @@ namespace PileDesign.ViewModels
             Models.InputData.ConcreteModelOptions.RebarYieldAt11F = f?.RebarYieldAt11F ?? false;
             Models.InputData.ConcreteModelOptions.SteelPipeYieldAt11F = f?.SteelPipeYieldAt11F ?? false;
             Models.InputData.ConcreteModelOptions.UseUnitGsiForConcreteE = f?.UseUnitGsiForConcreteE ?? false;
+            Models.InputData.ConcreteModelOptions.UseNotification1113Compression = f?.UseNotification1113Compression ?? false;
+            Models.InputData.ConcreteModelOptions.Notification1113CompressionCase = f?.Notification1113CompressionCase ?? 1;
 
             // M-φ 静的キャッシュ（全断面共有）
             PileSection.ClearMphiCache();

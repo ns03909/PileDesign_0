@@ -87,6 +87,22 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _useUnitGsiForConcreteE, value);
         }
 
+        // 場所打ち系コンクリートの使用限界・損傷限界の許容圧縮応力度を告示1113(第8)による
+        private bool _useNotification1113Compression;
+        public bool UseNotification1113Compression
+        {
+            get => _useNotification1113Compression;
+            set => SetProperty(ref _useNotification1113Compression, value);
+        }
+
+        // 告示1113(第8) 長期許容圧縮応力度の区分（1: Fc/4、2: min(Fc/4.5, 6)）
+        private int _notification1113CompressionCase = 1;
+        public int Notification1113CompressionCase
+        {
+            get => _notification1113CompressionCase;
+            set => SetProperty(ref _notification1113CompressionCase, value);
+        }
+
         //
         private double _x0;
         public double X0
