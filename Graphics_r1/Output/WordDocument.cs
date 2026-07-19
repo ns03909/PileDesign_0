@@ -422,11 +422,10 @@ namespace PileDesign.Output
                 {
                     TimeH("Embedment (根入部)", () => {
                         AddHeader1(body, "根入部", 1);
-                        if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
-                        {
-                            AddEmbedment(body, inputModel.EmbedmentInput, inputModel.FundamentalInput);
-                            AddLineBreak(body);
-                        }
+                        // 根入れ層の入力データ表（数式説明ではない）のため、計算書レベルによらず出力する。
+                        // 旧実装は 詳細(>=2) ゲート内にあり、簡易では空の「根入部」見出しだけが残っていた。
+                        AddEmbedment(body, inputModel.EmbedmentInput, inputModel.FundamentalInput);
+                        AddLineBreak(body);
                     });
                 }
                 if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
