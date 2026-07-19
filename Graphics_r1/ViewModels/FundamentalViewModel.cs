@@ -211,6 +211,7 @@ namespace PileDesign.ViewModels
                 v => UseNotification1113Compression = v,
                 "許容圧縮を告示1113(第8)による へ変更");
             OnPropertyChanged(nameof(Notification1113CaseEnabled));
+            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
         }
 
         // 場所打ちRC杭のコンクリート許容せん断を告示1113(第8)による（使用限界=長期・損傷限界=短期）
@@ -226,10 +227,16 @@ namespace PileDesign.ViewModels
                 v => UseNotification1113Shear = v,
                 "許容せん断を告示1113(第8)による へ変更");
             OnPropertyChanged(nameof(Notification1113CaseEnabled));
+            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
         }
 
         // 告示1113(第8) の区分 ComboBox を有効化するか（圧縮・せん断いずれかON）
         public bool Notification1113CaseEnabled => UseNotification1113Compression || UseNotification1113Shear;
+
+        // 指針安全限界オプションと競合する材料オプション（圧縮 0.85Fc・鋼管 1.1F）を有効化するか。
+        // 指針安全限界ON時はグレーアウトして併用を防ぐ（0.85Fc は解析 M-φ と、鋼管 1.1F は指針の
+        // 鋼管トリリニアと競合するため）。
+        public bool ConflictingMaterialOptionsEnabled => !UseInsituUltimateEFunction;
 
         // 場所打ちRC杭の安全限界曲げをe関数法で算定（指針(案)5.4.1。検定の耐力側のみ、解析M-φは常にバイリニア）
         [ObservableProperty]
@@ -243,6 +250,54 @@ namespace PileDesign.ViewModels
                 v => InputModel.FundamentalInput.UseInsituUltimateEFunction = v,
                 v => UseInsituUltimateEFunction = v,
                 "安全限界曲げをe関数法(指針準拠) へ変更");
+            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
+            OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
+        }
+
+        /// <summary>
+        /// 2025年版「建築物の構造関係技術基準解説書」付録1-3 準拠のマスタースイッチ。
+        /// 「場所打ち杭の許容圧縮を告示1113(第8)による」「場所打ちRC杭の許容せん断を告示1113(第8)による」
+        /// 「安全限界を耐震設計指針(案)で算定する」の 3 項目を一括で ON/OFF する。
+        /// get は 3 項目すべて ON のとき true（個別に切替えると自動で追随）。
+        /// </summary>
+        public bool UseGuideline2025Appendix13
+        {
+            get => UseNotification1113Compression && UseNotification1113Shear && UseInsituUltimateEFunction;
+            set
+            {
+                bool oc = UseNotification1113Compression;
+                bool os = UseNotification1113Shear;
+                bool ou = UseInsituUltimateEFunction;
+                if (oc == value && os == value && ou == value) return;
+
+                _undoManager.PushAction(
+                    () => ApplyGuideline2025(oc, os, ou),
+                    () => ApplyGuideline2025(value, value, value),
+                    "2025解説書 付録1-3 準拠オプション一括切替");
+                ApplyGuideline2025(value, value, value);
+            }
+        }
+
+        // 3 項目を一括設定（個別ハンドラを抑制し、キャッシュ破棄＋通知は 1 回にまとめる）
+        private void ApplyGuideline2025(bool compression, bool shear, bool ultimate)
+        {
+            bool prev = _suppressConcreteOptionConfirm;
+            _suppressConcreteOptionConfirm = true;
+            try
+            {
+                UseNotification1113Compression = compression;   // VM 更新（個別ハンドラは抑制で早期 return）
+                UseNotification1113Shear = shear;
+                UseInsituUltimateEFunction = ultimate;
+                InputModel.FundamentalInput.UseNotification1113Compression = compression;
+                InputModel.FundamentalInput.UseNotification1113Shear = shear;
+                InputModel.FundamentalInput.UseInsituUltimateEFunction = ultimate;
+            }
+            finally { _suppressConcreteOptionConfirm = prev; }
+
+            _mainWindowViewModel.ApplyConcreteModelOptions();
+            OnPropertyChanged(nameof(Notification1113CaseEnabled));
+            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
+            OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
         }
 
         // 告示1113(第8) 長期許容圧縮の区分（1: Fc/4、2: min(Fc/4.5, 6)）

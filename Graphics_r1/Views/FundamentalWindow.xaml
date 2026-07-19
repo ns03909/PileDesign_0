@@ -192,6 +192,7 @@
                     </CheckBox>
                     <CheckBox Content="圧縮側の降伏応力度を 0.85·Fc とする"
                               IsChecked="{Binding UseReducedConcreteCompressiveStrength}"
+                              IsEnabled="{Binding ConflictingMaterialOptionsEnabled}"
                               Margin="0,2,0,2">
                         <CheckBox.ToolTip>
                             <ToolTip>
@@ -207,9 +208,29 @@
                                Text="※ 変更すると M-φ が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。"/>
 
                     <Separator Margin="0,6,0,4"/>
+                    <CheckBox IsChecked="{Binding UseGuideline2025Appendix13}"
+                              FontWeight="Bold" Margin="0,2,0,2">
+                        <CheckBox.Content>
+                            <TextBlock TextWrapping="Wrap"
+                                       Text="2025年版 建築物の構造関係技術基準解説書 付録1-3 コンクリート系くい体の許容耐力、終局強度の例に従う"/>
+                        </CheckBox.Content>
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>下記 3 項目を一括で ON/OFF します（個別に切替えると本チェックは自動追随）。</Run>
+                                    <LineBreak/>
+                                    <Run>・場所打ち杭の許容圧縮応力度を告示1113(第8)による</Run>
+                                    <LineBreak/>
+                                    <Run>・場所打ちRC杭の許容せん断応力度を告示1113(第8)による</Run>
+                                    <LineBreak/>
+                                    <Run>・安全限界を耐震設計指針(案)で算定する</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
                     <CheckBox Content="場所打ち杭の許容圧縮応力度を告示1113(第8)による（使用限界=長期・損傷限界=短期）"
                               IsChecked="{Binding UseNotification1113Compression}"
-                              Margin="0,2,0,2">
+                              Margin="16,2,0,2">
                         <CheckBox.ToolTip>
                             <ToolTip>
                                 <TextBlock>
@@ -223,7 +244,7 @@
                     </CheckBox>
                     <CheckBox Content="場所打ちRC杭の許容せん断応力度を告示1113(第8)による（使用限界=長期・損傷限界=短期）"
                               IsChecked="{Binding UseNotification1113Shear}"
-                              Margin="0,2,0,2">
+                              Margin="16,2,0,2">
                         <CheckBox.ToolTip>
                             <ToolTip>
                                 <TextBlock>
@@ -253,7 +274,7 @@
                     <Separator Margin="0,6,0,4"/>
                     <CheckBox Content="安全限界を耐震設計指針(案)で算定する（場所打ちRC杭／鋼管巻き杭、指針(案)5.4.1）"
                               IsChecked="{Binding UseInsituUltimateEFunction}"
-                              Margin="0,2,0,2">
+                              Margin="16,2,0,2">
                         <CheckBox.ToolTip>
                             <ToolTip>
                                 <TextBlock>
@@ -293,6 +314,7 @@
                     </CheckBox>
                     <CheckBox Content="鋼管を 1.1×F で降伏する完全バイリニア型とする"
                               IsChecked="{Binding SteelPipeYieldAt11F}"
+                              IsEnabled="{Binding ConflictingMaterialOptionsEnabled}"
                               Margin="0,2,0,2">
                         <CheckBox.ToolTip>
                             <ToolTip>

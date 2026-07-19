@@ -462,16 +462,10 @@ namespace PileDesign.Models.InputData
         // ひずみ度から応力を計算するメソッド
         internal override double GetStress(string type, double epsilon)
         {
-            // 完全バイリニア型オプション: 弾性 → ±SSigmaY(=1.1F) で頭打ち（ひずみ硬化・破断なし）
-            if (PerfectBilinear11F)
-            {
-                if (epsilon > SEpsilonY) { return SSigmaY; }
-                else if (epsilon < -SEpsilonY) { return -SSigmaY; }
-                else { return epsilon * SE1; }
-            }
-
             // 指針(案) 準拠の安全限界トリリニア: 圧縮側は 0.85×引張強さで頭打ち、引張側は引張強さで頭打ち。
             // 折れ点=材料強度 sσy(=1.1F)、第2勾配 SE2。圧縮限界ひずみ = (0.85·SSigmaU−SSigmaY)/SE2 + SEpsilonY。
+            // 注: 鋼管 1.1F オプション(PerfectBilinear11F)より優先する。安全限界を指針で算定する場合は
+            // 本トリリニアが正となるため（UI でも 1.1F 鋼管はグレーアウトして併用を防ぐ）。
             if (type == "guidelineUltimate")
             {
                 double compCap = 0.85 * SSigmaU;                                  // sσcu = 0.85·sσtb
@@ -481,6 +475,14 @@ namespace PileDesign.Models.InputData
                 else if (epsilon < -SEpsilonU) { return -SSigmaU; }                // 引張プラトー -SSigmaU
                 else if (epsilon < -SEpsilonY) { return -SSigmaY + SE2 * (epsilon + SEpsilonY); } // 引張硬化
                 else { return epsilon * SE1; }                                     // 弾性
+            }
+
+            // 完全バイリニア型オプション: 弾性 → ±SSigmaY(=1.1F) で頭打ち（ひずみ硬化・破断なし）
+            if (PerfectBilinear11F)
+            {
+                if (epsilon > SEpsilonY) { return SSigmaY; }
+                else if (epsilon < -SEpsilonY) { return -SSigmaY; }
+                else { return epsilon * SE1; }
             }
 
             if (SEpsilonU < epsilon) { return SSigmaU; }
