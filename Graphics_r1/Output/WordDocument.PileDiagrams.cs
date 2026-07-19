@@ -34,28 +34,28 @@ namespace PileDesign.Output
         {
             if (inputModel?.PileBodies == null || mainWindowViewModel == null) return;
 
-            bool any = mainWindowViewModel.IncludePileElevation
-                    || mainWindowViewModel.IncludePileSectionDiagram
-                    || mainWindowViewModel.IncludePileTopView
-                    || mainWindowViewModel.IncludePileTopSpecs
-                    || mainWindowViewModel.IncludeAxialLimitTable;
+            bool any = mainWindowViewModel.DocxOutput.IncludePileElevation
+                    || mainWindowViewModel.DocxOutput.IncludePileSectionDiagram
+                    || mainWindowViewModel.DocxOutput.IncludePileTopView
+                    || mainWindowViewModel.DocxOutput.IncludePileTopSpecs
+                    || mainWindowViewModel.DocxOutput.IncludeAxialLimitTable;
             if (!any) return;
 
             AddHeader1(body, "杭の図・諸元", 1);
 
-            if (mainWindowViewModel.IncludePileElevation)
+            if (mainWindowViewModel.DocxOutput.IncludePileElevation)
                 AddPileElevationDiagrams(mainPart, body);
 
-            if (mainWindowViewModel.IncludePileSectionDiagram)
+            if (mainWindowViewModel.DocxOutput.IncludePileSectionDiagram)
                 AddPileSectionDiagrams(mainPart, body);
 
-            if (mainWindowViewModel.IncludePileTopView)
+            if (mainWindowViewModel.DocxOutput.IncludePileTopView)
                 AddPileTopViewDiagrams(mainPart, body);
 
-            if (mainWindowViewModel.IncludePileTopSpecs)
+            if (mainWindowViewModel.DocxOutput.IncludePileTopSpecs)
                 AddPileTopSpecsTables(body);
 
-            if (mainWindowViewModel.IncludeAxialLimitTable)
+            if (mainWindowViewModel.DocxOutput.IncludeAxialLimitTable)
                 AddAxialLimitTables(body);
         }
 

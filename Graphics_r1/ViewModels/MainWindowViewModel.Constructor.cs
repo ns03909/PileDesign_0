@@ -2987,8 +2987,7 @@ namespace PileDesign.ViewModels
                 OnPropertyChanged(nameof(AnalysisStatusItems));
 
                 // docx 出力 CheckBox の表示更新
-                OnPropertyChanged(nameof(IncludeVertical));
-                NotifyVerticalChildrenChanged();
+                DocxOutput.OnVerticalAnalysisDoneChanged();
 
                 Both(); // 単杭+群杭 の表示制御
                 UpdateSettlementCategories();
@@ -3086,7 +3085,7 @@ namespace PileDesign.ViewModels
                     UpdateSettlementCategories();
 
                     // docx 出力 CheckBox の表示更新
-                    OnPropertyChanged(nameof(IncludeGroupPileSettlement));
+                    DocxOutput.OnGroupPileSettlementAnalysisDoneChanged();
                 }
             }
         }
@@ -3126,7 +3125,7 @@ namespace PileDesign.ViewModels
                     UpdateSettlementCategories();
 
                     // docx 出力 CheckBox の表示更新
-                    OnPropertyChanged(nameof(IncludeVerticalBeamResults));
+                    DocxOutput.OnVerticalBeamAnalysisDoneChanged();
                 }
             }
         }
@@ -3744,8 +3743,7 @@ namespace PileDesign.ViewModels
 
                     // docx 出力 CheckBox の表示更新
                     // (実体は保持されているが getter で IsHorizontalAnalysisDone を AND しているため)
-                    OnPropertyChanged(nameof(IncludeHorizontal));
-                    NotifyHorizontalChildrenChanged();
+                    DocxOutput.OnHorizontalAnalysisDoneChanged();
                 }
             }
         }
@@ -4058,8 +4056,10 @@ namespace PileDesign.ViewModels
 
         public MainCanvasGeometry CanvasGeometry { get; }
 
-        // docx 出力設定（計算書レベル・Include* フラグ・液状化出力・まとめ方）は
-        // MainWindowViewModel.DocxOutput.cs に分離した。
+        // docx 出力設定（計算書レベル・Include* フラグ・液状化出力・まとめ方・一括選択・出力前検証）は
+        // 専用 ViewModel (DocxOutputViewModel) に分離した。遅延生成で ctor 順序に依存しない。
+        private DocxOutputViewModel _docxOutput;
+        public DocxOutputViewModel DocxOutput => _docxOutput ??= new DocxOutputViewModel(this);
 
 
         // コンストラクタ //

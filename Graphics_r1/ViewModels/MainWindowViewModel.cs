@@ -3823,10 +3823,10 @@ namespace PileDesign.ViewModels
                 foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel1) lc.IsAnalyzed = false;
                 foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel2) lc.IsAnalyzed = false;
                 foreach (var comb in CurrentInputModel.LoadCasesInput.LoadCombinations) comb.IsAnalyzed = false;
-                IsLiquefactionYesAnalyzed = false;
-                IsLiquefactionNoAnalyzed = false;
-                IncludeOutputLiquefactionYes = false;
-                IncludeOutputLiquefactionNo = false;
+                DocxOutput.IsLiquefactionYesAnalyzed = false;
+                DocxOutput.IsLiquefactionNoAnalyzed = false;
+                DocxOutput.IncludeOutputLiquefactionYes = false;
+                DocxOutput.IncludeOutputLiquefactionNo = false;
                 return;
             }
 
@@ -3847,10 +3847,10 @@ namespace PileDesign.ViewModels
                 comb.IsAnalyzed = analyzedCombNames.Contains(comb.Name);
 
             // 液状化条件
-            IsLiquefactionYesAnalyzed = results.Any(r => r.IsLiquefaction);
-            IsLiquefactionNoAnalyzed = results.Any(r => !r.IsLiquefaction);
-            IncludeOutputLiquefactionYes = IsLiquefactionYesAnalyzed;
-            IncludeOutputLiquefactionNo = IsLiquefactionNoAnalyzed;
+            DocxOutput.IsLiquefactionYesAnalyzed = results.Any(r => r.IsLiquefaction);
+            DocxOutput.IsLiquefactionNoAnalyzed = results.Any(r => !r.IsLiquefaction);
+            DocxOutput.IncludeOutputLiquefactionYes = DocxOutput.IsLiquefactionYesAnalyzed;
+            DocxOutput.IncludeOutputLiquefactionNo = DocxOutput.IsLiquefactionNoAnalyzed;
         }
 
         // オプション表示メソッド

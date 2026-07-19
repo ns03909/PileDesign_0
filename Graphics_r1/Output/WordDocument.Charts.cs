@@ -126,8 +126,8 @@ namespace PileDesign.Output
                                 {
                                     // 液状化パターン（ユーザー選択に基づく）
                                     var liqPatternsNM = new List<bool>();
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatternsNM.Add(true);
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatternsNM.Add(false);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatternsNM.Add(true);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatternsNM.Add(false);
 
                                     foreach (var isLiquefaction in liqPatternsNM)
                                     {
@@ -396,8 +396,8 @@ namespace PileDesign.Output
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
                                     var liqPatterns = new List<bool>();
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
 
                                     foreach (var isLiquefaction in liqPatterns)
                                     {
@@ -537,8 +537,8 @@ namespace PileDesign.Output
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
                                     var liqPatterns = new List<bool>();
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
 
                                     foreach (var isLiquefaction in liqPatterns)
                                     {
@@ -739,8 +739,8 @@ namespace PileDesign.Output
                         foreach (var loadCombination in allLoadCombinations)
                         {
                             var liqPatterns = new List<bool>();
-                            if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
-                            if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                            if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                            if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
 
                             foreach (var isLiquefaction in liqPatterns)
                             {
@@ -879,7 +879,7 @@ namespace PileDesign.Output
 
         /// <summary>
         /// 全杭×全解析荷重ケースの曲げモーメント・せん断力・変位ダイアグラムを出力
-        /// mainWindowViewModel.GroupPileStressBySoilPile でグループ化の有無を切替。
+        /// mainWindowViewModel.DocxOutput.GroupPileStressBySoilPile でグループ化の有無を切替。
         /// </summary>
         private void AddAllPileStressDiagrams(MainDocumentPart mainPart, Body body,
             bool includeBending, bool includeShear, bool includeLimitState = false)
@@ -894,7 +894,7 @@ namespace PileDesign.Output
             AddPageBreak(body);
             AddHeader1(body, "杭の変位・応力ダイアグラム", 2);
 
-            if (mainWindowViewModel.GroupPileStressBySoilPile)
+            if (mainWindowViewModel.DocxOutput.GroupPileStressBySoilPile)
             {
                 // グループ化版は限界状態の重ね描きに非対応 (杭ごとに異なる断面/軸力で意味が薄いため省略)
                 AddAllPileStressDiagramsGrouped(mainPart, body, includeBending, includeShear, loadCases, loadCombinations);
@@ -915,8 +915,8 @@ namespace PileDesign.Output
                     foreach (var comb in loadCombinations)
                     {
                         var liqPatterns = new List<bool>();
-                        if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
-                        if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                        if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                        if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
                         if (liqPatterns.Count == 0) continue;
 
                         foreach (bool isLiq in liqPatterns)
@@ -1201,8 +1201,8 @@ namespace PileDesign.Output
                     foreach (var comb in loadCombinations)
                     {
                         var liqPatterns = new List<bool>();
-                        if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
-                        if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                        if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                        if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
                         if (liqPatterns.Count == 0) continue;
 
                         foreach (bool isLiq in liqPatterns)

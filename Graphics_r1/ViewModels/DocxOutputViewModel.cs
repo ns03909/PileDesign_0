@@ -9,14 +9,23 @@ using System.Windows;
 namespace PileDesign.ViewModels
 {
     /// <summary>
-    /// 計算書 (docx) 出力の設定を担う partial。
+    /// 計算書 (docx) 出力設定の専用 ViewModel。
     /// DocxOutputWindow のチェックボックス（出力セクションの Include* フラグ・計算書レベル・
-    /// 液状化出力・杭応力のまとめ方）と、一括選択/解除・出力前検証をここに集約する。
-    /// 実際の Word 生成は Output/WordDocument.*（OutputWordFile コマンドは MainWindowViewModel.cs）。
+    /// 液状化出力・杭応力のまとめ方）と、一括選択/解除・出力前検証を担う。
+    /// MainWindowViewModel.DocxOutput として公開され、解析完了状態（IsXxxAnalysisDone）と
+    /// 荷重ケース（CurrentInputModel.LoadCasesInput）は親 (_main) を参照する。
+    /// 実際の Word 生成は Output/WordDocument.*（OutputWordFile コマンドは MainWindowViewModel）。
     /// これらのフラグはプロジェクトファイルには保存されない（セッション限り）。
     /// </summary>
-    public partial class MainWindowViewModel : ObservableObject
+    public partial class DocxOutputViewModel : ObservableObject
     {
+        private readonly MainWindowViewModel _main;
+
+        public DocxOutputViewModel(MainWindowViewModel main)
+        {
+            _main = main ?? throw new ArgumentNullException(nameof(main));
+        }
+
         [ObservableProperty] private int calculationReportLevel = 1;
         [ObservableProperty] private bool includeGroundInformation = true;
         [ObservableProperty] private bool includeLiquefaction = false;
@@ -28,7 +37,7 @@ namespace PileDesign.ViewModels
         private bool _includeHorizontal = true;
         public bool IncludeHorizontal
         {
-            get => _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set
             {
                 if (_includeHorizontal != value)
@@ -42,7 +51,7 @@ namespace PileDesign.ViewModels
         private bool _includeVertical = true;
         public bool IncludeVertical
         {
-            get => _includeVertical && IsVerticalAnalysisDone;
+            get => _includeVertical && _main.IsVerticalAnalysisDone;
             set
             {
                 if (_includeVertical != value)
@@ -55,8 +64,25 @@ namespace PileDesign.ViewModels
         }
 
         // 子 CheckBox の IsEnabled バインド用 — 親 ON かつ 解析完了 の時のみ編集可
-        public bool CanEditHorizontalChildren => _includeHorizontal && IsHorizontalAnalysisDone;
-        public bool CanEditVerticalChildren => _includeVertical && IsVerticalAnalysisDone;
+        public bool CanEditHorizontalChildren => _includeHorizontal && _main.IsHorizontalAnalysisDone;
+        public bool CanEditVerticalChildren => _includeVertical && _main.IsVerticalAnalysisDone;
+
+        // ===== 解析完了状態の変更を親 (MainWindowViewModel) から通知するフック =====
+        // IsXxxAnalysisDone の setter から呼ばれ、ゲート付き getter を持つプロパティの再評価を促す。
+        internal void OnHorizontalAnalysisDoneChanged()
+        {
+            OnPropertyChanged(nameof(IncludeHorizontal));
+            NotifyHorizontalChildrenChanged();
+        }
+        internal void OnVerticalAnalysisDoneChanged()
+        {
+            OnPropertyChanged(nameof(IncludeVertical));
+            NotifyVerticalChildrenChanged();
+        }
+        internal void OnGroupPileSettlementAnalysisDoneChanged()
+            => OnPropertyChanged(nameof(IncludeGroupPileSettlement));
+        internal void OnVerticalBeamAnalysisDoneChanged()
+            => OnPropertyChanged(nameof(IncludeVerticalBeamResults));
 
         private void NotifyHorizontalChildrenChanged()
         {
@@ -83,43 +109,43 @@ namespace PileDesign.ViewModels
         private bool _includeHorizontal_Bending = true;
         public bool IncludeHorizontal_Bending
         {
-            get => _includeHorizontal_Bending && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includeHorizontal_Bending && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeHorizontal_Bending != value) { _includeHorizontal_Bending = value; OnPropertyChanged(); } }
         }
         private bool _includeHorizontal_Shear = true;
         public bool IncludeHorizontal_Shear
         {
-            get => _includeHorizontal_Shear && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includeHorizontal_Shear && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeHorizontal_Shear != value) { _includeHorizontal_Shear = value; OnPropertyChanged(); } }
         }
         private bool _includeHorizontal_NMinT = true;
         public bool IncludeHorizontal_NMinT
         {
-            get => _includeHorizontal_NMinT && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includeHorizontal_NMinT && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeHorizontal_NMinT != value) { _includeHorizontal_NMinT = value; OnPropertyChanged(); } }
         }
         private bool _includeHorizontal_QNInT = true;
         public bool IncludeHorizontal_QNInT
         {
-            get => _includeHorizontal_QNInT && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includeHorizontal_QNInT && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeHorizontal_QNInT != value) { _includeHorizontal_QNInT = value; OnPropertyChanged(); } }
         }
         private bool _includeHorizontal_MPhi = true;
         public bool IncludeHorizontal_MPhi
         {
-            get => _includeHorizontal_MPhi && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includeHorizontal_MPhi && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeHorizontal_MPhi != value) { _includeHorizontal_MPhi = value; OnPropertyChanged(); } }
         }
         private bool _includeHorizontal_MTheta = true;
         public bool IncludeHorizontal_MTheta
         {
-            get => _includeHorizontal_MTheta && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includeHorizontal_MTheta && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeHorizontal_MTheta != value) { _includeHorizontal_MTheta = value; OnPropertyChanged(); } }
         }
         private bool _includeHorizontal_NGReport = true;
         public bool IncludeHorizontal_NGReport
         {
-            get => _includeHorizontal_NGReport && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includeHorizontal_NGReport && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeHorizontal_NGReport != value) { _includeHorizontal_NGReport = value; OnPropertyChanged(); } }
         }
         // 杭変位・応力ダイアグラムへの限界状態線重ね描き (default ON)
@@ -130,7 +156,7 @@ namespace PileDesign.ViewModels
         private bool _includeHorizontal_StressLimitState = true;
         public bool IncludeHorizontal_StressLimitState
         {
-            get => _includeHorizontal_StressLimitState && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includeHorizontal_StressLimitState && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeHorizontal_StressLimitState != value) { _includeHorizontal_StressLimitState = value; OnPropertyChanged(); } }
         }
 
@@ -141,33 +167,33 @@ namespace PileDesign.ViewModels
         private bool _includePileHeadMomentMap = false;
         public bool IncludePileHeadMomentMap
         {
-            get => _includePileHeadMomentMap && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includePileHeadMomentMap && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includePileHeadMomentMap != value) { _includePileHeadMomentMap = value; OnPropertyChanged(); } }
         }
         private bool _includePileHeadShearMap = false;
         public bool IncludePileHeadShearMap
         {
-            get => _includePileHeadShearMap && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includePileHeadShearMap && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includePileHeadShearMap != value) { _includePileHeadShearMap = value; OnPropertyChanged(); } }
         }
         // 沈下系: 親 (IncludeVertical) + 解析完了 でガード
         private bool _includeSettlement = true;
         public bool IncludeSettlement
         {
-            get => _includeSettlement && _includeVertical && IsVerticalAnalysisDone;
+            get => _includeSettlement && _includeVertical && _main.IsVerticalAnalysisDone;
             set { if (_includeSettlement != value) { _includeSettlement = value; OnPropertyChanged(); } }
         }
 
         private bool _includeGroupPileSettlement = false;
         public bool IncludeGroupPileSettlement
         {
-            get => _includeGroupPileSettlement && IsGroupPileSettlementAnalysisDone;
+            get => _includeGroupPileSettlement && _main.IsGroupPileSettlementAnalysisDone;
             set { if (_includeGroupPileSettlement != value) { _includeGroupPileSettlement = value; OnPropertyChanged(); } }
         }
         private bool _includeVerticalBeamResults = false;
         public bool IncludeVerticalBeamResults
         {
-            get => _includeVerticalBeamResults && IsVerticalBeamAnalysisDone;
+            get => _includeVerticalBeamResults && _main.IsVerticalBeamAnalysisDone;
             set { if (_includeVerticalBeamResults != value) { _includeVerticalBeamResults = value; OnPropertyChanged(); } }
         }
 
@@ -185,7 +211,7 @@ namespace PileDesign.ViewModels
         [ObservableProperty] private bool includeAxialLimitTable = false;     // 軸力制限テーブル
         [ObservableProperty] private bool includePileTopSpecs = false;        // 杭頭諸元テーブル
 
-        // Phase 2: 中優先項目 (3 件)
+        // Phase 2: 中優先項目
         [ObservableProperty] private bool includeGroundDisplacementGraph = false;  // 任意地盤変位グラフ
         [ObservableProperty] private bool includeResponseSpectrumGraph = false;    // 応答スペクトルグラフ
 
@@ -196,7 +222,7 @@ namespace PileDesign.ViewModels
         private bool _includeAnalysisSummaryReport = false;
         public bool IncludeAnalysisSummaryReport
         {
-            get => _includeAnalysisSummaryReport && _includeHorizontal && IsHorizontalAnalysisDone;
+            get => _includeAnalysisSummaryReport && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeAnalysisSummaryReport != value) { _includeAnalysisSummaryReport = value; OnPropertyChanged(); } }
         }
 
@@ -248,7 +274,7 @@ namespace PileDesign.ViewModels
                 }
             }
             // 荷重ケース・組合せも一括
-            var lci = CurrentInputModel?.LoadCasesInput;
+            var lci = _main.CurrentInputModel?.LoadCasesInput;
             if (lci != null)
             {
                 foreach (var c in lci.LoadCasesLevel1) c.IsApplicableForDocxDisplay = value;
@@ -261,7 +287,7 @@ namespace PileDesign.ViewModels
         // OK ボタン（code-behind）から呼び、No のときはウィンドウを閉じずに戻す。
         public bool ValidateDocxSelectionOrConfirm()
         {
-            var lci = CurrentInputModel?.LoadCasesInput;
+            var lci = _main.CurrentInputModel?.LoadCasesInput;
             bool anyCase = lci != null && (
                 lci.LoadCasesLevel1.Any(c => c.IsApplicableForDocxDisplay) ||
                 lci.LoadCasesLevel2.Any(c => c.IsApplicableForDocxDisplay) ||

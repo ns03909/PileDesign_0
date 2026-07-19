@@ -278,7 +278,7 @@ namespace PileDesign.Output
             AddText(body, $"杭検討プログラム ver {(System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString())}", "center");
             AddText(body, DateTime.Now.ToString("yyyy/MM/dd"), "center");
 
-            if (mainWindowViewModel.IncludeFundamental)
+            if (mainWindowViewModel.DocxOutput.IncludeFundamental)
             {
                 Time("Fundamental", () => {
                     AddHeader1(body, "基本設定", 1);
@@ -287,7 +287,7 @@ namespace PileDesign.Output
                 });
             }
 
-            if (mainWindowViewModel.IncludeLoadCondition)
+            if (mainWindowViewModel.DocxOutput.IncludeLoadCondition)
             {
                 Time("LoadCondition", () => {
                     AddHeader1(body, "荷重条件", 1);
@@ -299,7 +299,7 @@ namespace PileDesign.Output
                 });
             }
 
-            if (mainWindowViewModel.IncludePileBodies)
+            if (mainWindowViewModel.DocxOutput.IncludePileBodies)
             {
                 Time("PileBodies", () => {
                     AddHeader1(body, "杭体", 1);
@@ -308,7 +308,7 @@ namespace PileDesign.Output
                 });
             }
 
-            if (mainWindowViewModel.IncludePileLayoutTable)
+            if (mainWindowViewModel.DocxOutput.IncludePileLayoutTable)
             {
                 Time("PileLayout", () => {
                     AddHeader1(body, "杭配置", 1);
@@ -317,7 +317,7 @@ namespace PileDesign.Output
                 });
             }
 
-            if (mainWindowViewModel.IncludePileAxialLoad)
+            if (mainWindowViewModel.DocxOutput.IncludePileAxialLoad)
             {
                 Time("PileAxialLoad", () => {
                     AddHeader1(body, "杭軸力", 1);
@@ -326,7 +326,7 @@ namespace PileDesign.Output
                 });
             }
 
-            if (mainWindowViewModel.IncludeIsFrontPile)
+            if (mainWindowViewModel.DocxOutput.IncludeIsFrontPile)
             {
                 Time("IsFrontPile", () => {
                     AddHeader1(body, "前後方杭", 1);
@@ -335,7 +335,7 @@ namespace PileDesign.Output
                 });
             }
 
-            if (mainWindowViewModel.IncludeDesignApproach)
+            if (mainWindowViewModel.DocxOutput.IncludeDesignApproach)
             {
                 Time("DesignApproach", () => {
                     AddHeader1(body, "検討方針", 1);
@@ -344,7 +344,7 @@ namespace PileDesign.Output
                 });
             }
 
-            if (mainWindowViewModel.IncludeGroundInformation)
+            if (mainWindowViewModel.DocxOutput.IncludeGroundInformation)
             {
                 Time("GroundInformation", () => {
                     AddHeader1(body, "地盤", 1);
@@ -365,7 +365,7 @@ namespace PileDesign.Output
             // 解析サマリーレポート (テキスト) — 水平解析完了済かつチェックされた場合のみ
             Time("AnalysisSummaryReportSection", () => AddAnalysisSummaryReportSection(body));
 
-            if (mainWindowViewModel.IncludeLiquefaction)
+            if (mainWindowViewModel.DocxOutput.IncludeLiquefaction)
             {
                 Time("Liquefaction", () => {
                     AddLiquefactionSection(body);
@@ -373,7 +373,7 @@ namespace PileDesign.Output
                 });
             }
 
-            if (mainWindowViewModel.IncludeVertical)
+            if (mainWindowViewModel.DocxOutput.IncludeVertical)
             {
                 Time("Vertical (支持力+沈下+杭モデル図)", () => {
                     if (mainWindowViewModel.IsVerticalAnalysisDone)
@@ -383,13 +383,13 @@ namespace PileDesign.Output
                         AddVerticalResistance(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
                         AddLineBreak(body);
 
-                        if (mainWindowViewModel.CalculationReportLevel >= 2)
+                        if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
                         {
                             AddSectionVerticalResistance(body);
                             AddLineBreak(body);
                         }
 
-                        if (mainWindowViewModel.CalculationReportLevel >= 2)
+                        if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
                         {
                             AddSectionSettlement(body);
                             AddLineBreak(body);
@@ -413,7 +413,7 @@ namespace PileDesign.Output
                 });
             }
 
-            if (mainWindowViewModel.IncludeHorizontal)
+            if (mainWindowViewModel.DocxOutput.IncludeHorizontal)
             {
                 var swH = new System.Diagnostics.Stopwatch();
                 void TimeH(string label, Action a) { swH.Restart(); a(); swH.Stop(); Log.Information("[Docx]       [Horizontal] {Section}: {Elapsed:N2}s", label, swH.Elapsed.TotalSeconds); }
@@ -422,14 +422,14 @@ namespace PileDesign.Output
                 {
                     TimeH("Embedment (根入部)", () => {
                         AddHeader1(body, "根入部", 1);
-                        if (mainWindowViewModel.CalculationReportLevel >= 2)
+                        if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
                         {
                             AddEmbedment(body, inputModel.EmbedmentInput, inputModel.FundamentalInput);
                             AddLineBreak(body);
                         }
                     });
                 }
-                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
                 {
                     TimeH("GroundDisplacementSection", () => { AddGroundDisplacementSection(body); AddPageBreak(body); });
                     TimeH("SectionHorizontalResistance", () => { AddSectionHorizontalResistance(body); AddLineBreak(body); });
@@ -461,11 +461,11 @@ namespace PileDesign.Output
                     {
                         TimeH("PileForceSummaryTable", () => AddPileForceSummaryTable(mainPart, body));
                         TimeH("NMinT (N-M 図)", () => AddNMinT(mainPart, body));
-                        if (mainWindowViewModel.IncludeHorizontal_QNInT)
+                        if (mainWindowViewModel.DocxOutput.IncludeHorizontal_QNInT)
                             TimeH("QNInT (Q-N 図)", () => AddQNInT(mainPart, body));
-                        if (mainWindowViewModel.IncludeHorizontal_MPhi)
+                        if (mainWindowViewModel.DocxOutput.IncludeHorizontal_MPhi)
                             TimeH("MPhiCurves (M-φ)", () => AddMPhiCurves(mainPart, body));
-                        if (mainWindowViewModel.IncludeHorizontal_MTheta)
+                        if (mainWindowViewModel.DocxOutput.IncludeHorizontal_MTheta)
                             TimeH("MThetaCurves (M-θ)", () => AddMThetaCurves(mainPart, body));
                     }
                     else
@@ -474,36 +474,36 @@ namespace PileDesign.Output
                     }
                 }
 
-                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
                 {
                     TimeH("SectionMemberCapacities", () => { AddSectionMemberCapacities(body); AddLineBreak(body); });
                 }
             }
-            if ((mainWindowViewModel.IncludeHorizontal_Bending || mainWindowViewModel.IncludeHorizontal_Shear)
+            if ((mainWindowViewModel.DocxOutput.IncludeHorizontal_Bending || mainWindowViewModel.DocxOutput.IncludeHorizontal_Shear)
                 && mainWindowViewModel.IsHorizontalAnalysisDone && anaModel != null)
             {
                 Time("AllPileStressDiagrams (M/Q ダイアグラム)", () => AddAllPileStressDiagrams(mainPart, body,
-                    mainWindowViewModel.IncludeHorizontal_Bending,
-                    mainWindowViewModel.IncludeHorizontal_Shear,
-                    mainWindowViewModel.IncludeHorizontal_StressLimitState));
+                    mainWindowViewModel.DocxOutput.IncludeHorizontal_Bending,
+                    mainWindowViewModel.DocxOutput.IncludeHorizontal_Shear,
+                    mainWindowViewModel.DocxOutput.IncludeHorizontal_StressLimitState));
             }
-            if (mainWindowViewModel.IncludePileLocationMap)
+            if (mainWindowViewModel.DocxOutput.IncludePileLocationMap)
                 Time("PileLocationMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileBasicMark); AddAutoFigureCaption(body, "杭配置マップ", "図"); });
-            if (mainWindowViewModel.IncludePileAxialLoadMap)
+            if (mainWindowViewModel.DocxOutput.IncludePileAxialLoadMap)
                 Time("PileAxialLoadMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileAxialForceMark); AddAutoFigureCaption(body, "杭軸力マップ", "図"); });
-            if (mainWindowViewModel.IncludeIsFrontMap)
+            if (mainWindowViewModel.DocxOutput.IncludeIsFrontMap)
                 Time("IsFrontMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileIsFront); AddAutoFigureCaption(body, "杭前後方杭マップ", "図"); });
-            if (mainWindowViewModel.IncludePileHeadMomentMap)
+            if (mainWindowViewModel.DocxOutput.IncludePileHeadMomentMap)
                 Time("PileHeadMomentMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileTopBendingMomentMark); AddAutoFigureCaption(body, "杭頭モーメントマップ", "図"); });
-            if (mainWindowViewModel.IncludePileHeadShearMap)
+            if (mainWindowViewModel.DocxOutput.IncludePileHeadShearMap)
                 Time("PileHeadShearMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileTopShearForceMark); AddAutoFigureCaption(body, "杭頭せん断力マップ", "図"); });
-            if (mainWindowViewModel.IncludeHorizontal_NGReport
+            if (mainWindowViewModel.DocxOutput.IncludeHorizontal_NGReport
                 && mainWindowViewModel.IsHorizontalAnalysisDone
                 && anaModel != null)
             {
                 Time("HorizontalEvaluationReport (NG)", () => AddHorizontalEvaluationReport(body, factored: true));
             }
-            if (mainWindowViewModel.IncludeSettlement)
+            if (mainWindowViewModel.DocxOutput.IncludeSettlement)
             {
                 Time("Settlement (単杭の沈下)", () => {
                     if (mainWindowViewModel.IsVerticalAnalysisDone)
@@ -518,7 +518,7 @@ namespace PileDesign.Output
                     }
                 });
             }
-            if (mainWindowViewModel.IncludeGroupPileSettlement)
+            if (mainWindowViewModel.DocxOutput.IncludeGroupPileSettlement)
             {
                 Time("GroupPileSettlement (コンタ+杭沈下表)", () => {
                     AddGroupPileSettlementContourDiagram(mainPart, body);
@@ -526,7 +526,7 @@ namespace PileDesign.Output
                 });
             }
 
-            if (mainWindowViewModel.IncludeVerticalBeamResults)
+            if (mainWindowViewModel.DocxOutput.IncludeVerticalBeamResults)
             {
                 Time("VerticalBeamResults", () => {
                     if (mainWindowViewModel.IsVerticalBeamAnalysisDone && mainWindowViewModel.VerticalBeamCaseResults != null)
@@ -545,7 +545,7 @@ namespace PileDesign.Output
             // FT-Pile構法
             if (HasFTPile())
             {
-                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
                 {
                     AddDescriptionFTPile(body);
                     AddLineBreak(body);
@@ -555,7 +555,7 @@ namespace PileDesign.Output
             // キャプテンパイル工法
             if (HasCaptainPile())
             {
-                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
                 {
                     AddDescriptionCaptainPile(body);
                     AddLineBreak(body);
@@ -565,7 +565,7 @@ namespace PileDesign.Output
             // キャプリングパイル工法
             if (HasCapringPile())
             {
-                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
                 {
                     AddDescriptionCapringPile(body);
                     AddLineBreak(body);
@@ -2097,8 +2097,8 @@ namespace PileDesign.Output
                             {
                                 // 液状化パターン（ユーザー選択に基づく）
                                 var liqPatterns2 = new List<bool>();
-                                if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns2.Add(true);
-                                if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns2.Add(false);
+                                if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns2.Add(true);
+                                if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns2.Add(false);
 
                                 foreach (var isLiquefaction in liqPatterns2)
                                 {
@@ -2602,8 +2602,8 @@ namespace PileDesign.Output
             int combCount = loadCasesInput.LoadCombinations.Count;
 
             var liqPatterns = new List<bool>();
-            if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
-            if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+            if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+            if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
             if (liqPatterns.Count == 0) liqPatterns.Add(true);
 
             var dgbSprings = anaModel.HorizontalSoilSprings?
