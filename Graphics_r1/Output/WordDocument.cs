@@ -541,34 +541,25 @@ namespace PileDesign.Output
                 });
             }
 
-            // FT-Pile構法
+            // 杭頭工法の説明（FT-Pile / キャプテンパイル / キャプリングパイル）
+            // 数式を含むが、設計クライテリア（許容回転角 θa・θu 等）や適用範囲を含むため、
+            // 計算書レベルによらず常に出力する（旧実装は 詳細(>=2) のみだった）。
             if (HasFTPile())
             {
-                if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
-                {
-                    AddDescriptionFTPile(body);
-                    AddLineBreak(body);
-                }
+                AddDescriptionFTPile(body);
+                AddLineBreak(body);
             }
 
-            // キャプテンパイル工法
             if (HasCaptainPile())
             {
-                if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
-                {
-                    AddDescriptionCaptainPile(body);
-                    AddLineBreak(body);
-                }
+                AddDescriptionCaptainPile(body);
+                AddLineBreak(body);
             }
 
-            // キャプリングパイル工法
             if (HasCapringPile())
             {
-                if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
-                {
-                    AddDescriptionCapringPile(body);
-                    AddLineBreak(body);
-                }
+                AddDescriptionCapringPile(body);
+                AddLineBreak(body);
             }
         }
 
