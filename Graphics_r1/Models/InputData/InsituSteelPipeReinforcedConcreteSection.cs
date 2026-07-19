@@ -93,10 +93,16 @@ namespace PileDesign.Models.InputData
             // Ae = InsituConcrete.Ac(コンクリート総断面) + (nr−1)·Ag(主筋) + ns·AMinus(腐食後鋼管)
             //   = Ac_net + nr·Ag + ns·AMinus   （文献「コンクリート純断面 + n×鋼管 + n×鉄筋」と一致）
             //   nr = Er/Ec, ns = Es/Ec。SetZeFtIe() 算定のフィールド値を用いる（N-Q 相関 NMax と統一）。
-            UltimateLimitAxialForceThresholds = [
-                -0.2 * (mainBars.RSigmaY * mainBars.Ag + insituSteelPipe.Fcy * insituSteelPipe.AMinus),
-                0.4 * insituConcrete.Gsi * insituConcrete.Fc * Ae
-            ];
+            // 指針(案) 準拠オプション時は σ0 の適用範囲を -0.07ξFc〜0.15ξFc（換算断面 Ae で除した平均軸応力）に限定。
+            UltimateLimitAxialForceThresholds = ConcreteModelOptions.UseInsituUltimateEFunction
+                ? [
+                    -0.07 * insituConcrete.Gsi * insituConcrete.Fc * Ae,
+                    0.15 * insituConcrete.Gsi * insituConcrete.Fc * Ae
+                ]
+                : [
+                    -0.2 * (mainBars.RSigmaY * mainBars.Ag + insituSteelPipe.Fcy * insituSteelPipe.AMinus),
+                    0.4 * insituConcrete.Gsi * insituConcrete.Fc * Ae
+                ];
 
             // 安全限界曲げモーメント低減率
             UltimateLimitBeta = [0.0, 1.0, 0.0];
@@ -275,8 +281,13 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = -0.2 * (MainBars.RSigmaY * MainBars.Ag + InsituSteelPipe.Fcy * InsituSteelPipe.AMinus);
-            double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            // 指針(案) 準拠オプション時は σ0 適用範囲を -0.07ξFc〜0.15ξFc に限定（安全限界 NM と統一）。
+            double NMin = ConcreteModelOptions.UseInsituUltimateEFunction
+                ? -0.07 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae
+                : -0.2 * (MainBars.RSigmaY * MainBars.Ag + InsituSteelPipe.Fcy * InsituSteelPipe.AMinus);
+            double NMax = ConcreteModelOptions.UseInsituUltimateEFunction
+                ? 0.15 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae
+                : 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
@@ -363,8 +374,14 @@ namespace PileDesign.Models.InputData
         }
 
         // ある軸力時のM-φ関係を得るメソッド（内部実装）
+        // 解析用のため、指針オプション時でも全区間をバイリニアで算定し、M-φ の単調性
+        // （β1·Mu0 が MY を大きく下回らない＝正勾配ばね）を保って FEM 収束を確保する。
         internal (List<double>, List<double>) GetMPhiRelationshipInternal(double Ntarget, double beta1 = 1.0)
         {
+            bool prevForceBilinear = _forceBilinearUltimate;
+            _forceBilinearUltimate = true;
+            try
+            {
             (double MCr, double phiCr) = GetCrackMoment(Ntarget);
             (double MY, double phiY) = GetYieldMoment(Ntarget);
             (double Mu0, double phiU) = GetUltimateMomentForSpecificN(Ntarget);
@@ -392,6 +409,8 @@ namespace PileDesign.Models.InputData
             }
 
             return (phis, Ms);
+            }
+            finally { _forceBilinearUltimate = prevForceBilinear; }
         }
 
         // 杭中間部用M-φ関係（終局曲率をひび割れ後勾配の延長で算出）
@@ -506,16 +525,26 @@ namespace PileDesign.Models.InputData
             return (N, M, epsilonC);
         }
 
+        // 解析用 M-φ/M-θ 端点 Mu0 の算定中だけ true にして、指針オプション時でも
+        // バイリニアで算定させるガード（e関数/0.85上限の軟化で M-φ 非単調＝負勾配ばねとなり
+        // FEM 収束不能になるのを防ぐ。安全限界 NM 曲線＝検定の耐力側は本フラグを立てない）。
+        private bool _forceBilinearUltimate;
+
         // 安全限界軸力、曲げモーメント取得メソッド
         internal override (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature)
         {
             double epsilon0 = epsilonC - (PileDia * 0.5 - PipeT) * curvature;
             double N, M;
-            string type = "bilinear";
-            var result0 = CircularPipeSectionSteelPipe.GetForceAndMoment(type, InsituSteelPipe, epsilon0, curvature);
-            var result1 = CircularSolidSectionConcrete.GetForceAndMoment(type, InsituConcrete, epsilon0, curvature);
-            var result2 = CircularPipeSectionMainbars.GetForceAndMoment(type, MainBars, epsilon0, curvature);
-            var result3 = CircularPipeSectionMainbars.GetForceAndMoment(type, InsituConcrete, epsilon0, curvature);
+            // 指針(案) 準拠オプション時（かつ解析隔離中でない）: 鋼管=0.85×引張強さ上限トリリニア、
+            // 鋼管内コンクリート=e関数法、主筋=バイリニア。既定は全材料バイリニア。
+            bool guideline = ConcreteModelOptions.UseInsituUltimateEFunction && !_forceBilinearUltimate;
+            string typePipe = guideline ? "guidelineUltimate" : "bilinear";
+            string typeConc = guideline ? "eFunction" : "bilinear";
+            string typeRebar = "bilinear";
+            var result0 = CircularPipeSectionSteelPipe.GetForceAndMoment(typePipe, InsituSteelPipe, epsilon0, curvature);
+            var result1 = CircularSolidSectionConcrete.GetForceAndMoment(typeConc, InsituConcrete, epsilon0, curvature);
+            var result2 = CircularPipeSectionMainbars.GetForceAndMoment(typeRebar, MainBars, epsilon0, curvature);
+            var result3 = CircularPipeSectionMainbars.GetForceAndMoment(typeConc, InsituConcrete, epsilon0, curvature);
 
             N = result0.Item1 + result1.Item1 + result2.Item1 - result3.Item1;
             M = result0.Item2 + result1.Item2 + result2.Item2 - result3.Item2;

@@ -470,6 +470,19 @@ namespace PileDesign.Models.InputData
                 else { return epsilon * SE1; }
             }
 
+            // 指針(案) 準拠の安全限界トリリニア: 圧縮側は 0.85×引張強さで頭打ち、引張側は引張強さで頭打ち。
+            // 折れ点=材料強度 sσy(=1.1F)、第2勾配 SE2。圧縮限界ひずみ = (0.85·SSigmaU−SSigmaY)/SE2 + SEpsilonY。
+            if (type == "guidelineUltimate")
+            {
+                double compCap = 0.85 * SSigmaU;                                  // sσcu = 0.85·sσtb
+                double epsCompCap = (compCap - SSigmaY) / SE2 + SEpsilonY;         // sεcu
+                if (epsilon > epsCompCap) { return compCap; }                      // 圧縮プラトー 0.85·SSigmaU
+                else if (epsilon > SEpsilonY) { return SSigmaY + SE2 * (epsilon - SEpsilonY); } // 圧縮硬化
+                else if (epsilon < -SEpsilonU) { return -SSigmaU; }                // 引張プラトー -SSigmaU
+                else if (epsilon < -SEpsilonY) { return -SSigmaY + SE2 * (epsilon + SEpsilonY); } // 引張硬化
+                else { return epsilon * SE1; }                                     // 弾性
+            }
+
             if (SEpsilonU < epsilon) { return SSigmaU; }
             else if (SEpsilonY < epsilon) { return SSigmaY + SE2 * (epsilon - SEpsilonY); }
             else if (epsilon < -SEpsilonU) { return -SSigmaU; }

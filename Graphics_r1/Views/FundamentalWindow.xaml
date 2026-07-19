@@ -251,23 +251,25 @@
                                Text="※ 使用/損傷限界のみ変更（検定の耐力側）。解析結果は保持されます。"/>
 
                     <Separator Margin="0,6,0,4"/>
-                    <CheckBox Content="場所打ちRC杭の安全限界曲げ強度を e関数法で算定する（指針(案)5.4.1）"
+                    <CheckBox Content="安全限界を耐震設計指針(案)で算定する（場所打ちRC杭／鋼管巻き杭、指針(案)5.4.1）"
                               IsChecked="{Binding UseInsituUltimateEFunction}"
                               Margin="0,2,0,2">
                         <CheckBox.ToolTip>
                             <ToolTip>
                                 <TextBlock>
-                                    <Run>場所打ち鉄筋コンクリート杭の安全限界曲げ強度（安全限界 NM 曲線）を、コンクリートの応力ひずみ関係に</Run>
-                                    <Run>e関数法を用いて算定します（RC基礎構造部材の耐震設計指針(案) 5.4.1、εcu=0.003・圧縮材料強度 ξFc）。</Run>
+                                    <Run>RC基礎構造部材の耐震設計指針(案) 5.4.1 に従い安全限界曲げ強度（安全限界 NM 曲線）等を算定します（既定はバイリニア近似）。</Run>
                                     <LineBreak/>
-                                    <Run>安全限界 NM 曲線（検定の耐力側）のみに効きます。解析用 M-φ/M-θ は収束のため常にバイリニアで算定するため、</Run>
-                                    <Run>解析結果・使用/損傷限界・せん断には影響せず、解析結果は保持されます。</Run>
+                                    <Run>・場所打ちRC杭: コンクリートを e関数法（εcu=0.003・圧縮材料強度 ξFc）。</Run>
+                                    <LineBreak/>
+                                    <Run>・場所打ち鋼管コンクリート杭: 鋼管内コンクリート=e関数法、鋼管=圧縮側 0.85×引張強さ・引張側 引張強さで頭打ちのトリリニア、主筋=バイリニア。σ0 範囲を -0.07ξFc〜0.15ξFc に限定。せん断終局 Qu=sQ0·√(1-η²)·(scMu/sMu)。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界の耐力側（NM・せん断 QN）のみに効きます。解析用 M-φ/M-θ は収束のため常にバイリニアで算定するため、解析結果・使用/損傷限界には影響せず、解析結果は保持されます。</Run>
                                 </TextBlock>
                             </ToolTip>
                         </CheckBox.ToolTip>
                     </CheckBox>
                     <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,2,0,0"
-                               Text="※ 安全限界NM曲線（検定の耐力側）のみ。解析M-φはバイリニア維持で解析結果は保持されます。"/>
+                               Text="※ 安全限界の耐力側（NM曲線・せん断QN）のみ。解析M-φはバイリニア維持で解析結果は保持されます。"/>
                 </StackPanel>
             </GroupBox>
 
