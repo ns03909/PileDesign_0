@@ -8503,11 +8503,11 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
                     <ul class="symbol-list">
                         <li class="symbol-intro">記号</li>
-                        <li><span class="symbol-label">$M_{u0}$</span>低減前の安全限界曲げモーメント。圧縮縁ひずみ度 $\varepsilon_{cu}$ をパラメータとし、コンクリートをバイリニア（弾完全塑性、圧縮応力度を $\xi \cdot F_c$ で上限クランプ）、主筋をバイリニアでモデル化した断面解析により、目標軸力 $N$ に対応する曲げモーメントを Newton-Raphson 法で算定する。（e 関数法は $\varepsilon \approx \varepsilon_M$ 以降の軟化枝で収束が不安定となるため採用していない。）</li>
-                        <li><span class="symbol-label">$\beta_1$</span>設計式の信頼性に基づく低減係数で 0.8 とする。</li>
+                        <li><span class="symbol-label">$M_{u0}$</span>低減前の安全限界曲げモーメント。圧縮縁ひずみ度 $\varepsilon_{cu}$ をパラメータとし、コンクリートをバイリニア（弾完全塑性、圧縮応力度を $\xi \cdot F_c$ で上限クランプ）、主筋をバイリニアでモデル化した断面解析により、目標軸力 $N$ に対応する曲げモーメントを Newton-Raphson 法で算定する。（<strong>既定では</strong> e 関数法は $\varepsilon \approx \varepsilon_M$ 以降の軟化枝で収束が不安定となるため採用しないが、基本設定「安全限界を耐震設計指針(案)で算定する」ON時は安全限界 NM 曲線のみ e 関数法で算定する。解析用 M-φ は収束のため常にバイリニア。）</li>
+                        <li><span class="symbol-label">$\beta_1$</span>変形性能に基づく低減係数で、$\sigma_0 \leq (1/3)\,\xi F_c$ のときは 0.95、それ以外のときは 0.80 とする（解説表2.6）。</li>
                         <li>
                             <span class="symbol-label">$\beta_2$</span>軸応力度に応じた低減係数で、
-                            $\sigma_0 \leq (1/3)\,\xi F_c$ のときは 0.75、それ以外のときは 0.65 とする。
+                            $\sigma_0 \leq (1/3)\,\xi F_c$ のときは 1.0、それ以外のときは 0.65 とする（解説表2.7 曲げ）。
                         </li>
                     </ul>
 
@@ -8808,8 +8808,9 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         <li class="symbol-intro">記号</li>
                         <li>
                             <span class="symbol-label">$M_{u0}$</span>コンクリートの圧縮縁が圧縮限界ひずみ $\varepsilon_{cu} = 0.003$ に達したときの曲げモーメント。
-                            鋼管・鉄筋・コンクリートをそれぞれ非線形応力-ひずみ関係（コンクリートはバイリニア＝弾完全塑性で圧縮応力度に上限を設ける）でモデル化し、
+                            鋼管・鉄筋・コンクリートをそれぞれ非線形応力-ひずみ関係（<strong>既定では</strong>コンクリートはバイリニア＝弾完全塑性で圧縮応力度に上限を設ける）でモデル化し、
                             目標軸力 $N$ に対応する曲げモーメントを Newton-Raphson 法で算定する。
+                            基本設定「安全限界を耐震設計指針(案)で算定する」ON時は、安全限界 NM 曲線のみ、鋼管内コンクリートを e 関数法、鋼管を圧縮側 0.85×引張強さ・引張側 引張強さで頭打ちのトリリニアとして算定する（解析用 M-φ は常にバイリニア）。
                         </li>
                         <li><span class="symbol-label">$\beta_1, \beta_2$</span>SC 系断面に対し $\beta_1=\beta_2=1.0$ とする (レベル 1・レベル 2 同値)。</li>
                     </ul>
