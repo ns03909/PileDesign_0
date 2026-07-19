@@ -95,7 +95,15 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _useNotification1113Compression, value);
         }
 
-        // 告示1113(第8) 長期許容圧縮応力度の区分（1: Fc/4、2: min(Fc/4.5, 6)）
+        // 場所打ちRC杭のコンクリート許容せん断応力度を告示1113(第8)による
+        private bool _useNotification1113Shear;
+        public bool UseNotification1113Shear
+        {
+            get => _useNotification1113Shear;
+            set => SetProperty(ref _useNotification1113Shear, value);
+        }
+
+        // 告示1113(第8) 長期許容応力度の区分（圧縮・せん断で共用。圧縮 1: Fc/4、2: min(Fc/4.5, 6)／せん断 1: Fc/40、2: Fc/45）
         private int _notification1113CompressionCase = 1;
         public int Notification1113CompressionCase
         {

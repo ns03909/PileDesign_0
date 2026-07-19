@@ -7,7 +7,7 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         d:DataContext="{d:DesignInstance Type=local:FundamentalViewModel}"
         mc:Ignorable="d"
-        Title="基本設定" Height="780" Width="460">
+        Title="基本設定" Height="820" Width="480">
     
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
@@ -221,13 +221,31 @@
                             </ToolTip>
                         </CheckBox.ToolTip>
                     </CheckBox>
+                    <CheckBox Content="場所打ちRC杭の許容せん断応力度を告示1113(第8)による（使用限界=長期・損傷限界=短期）"
+                              IsChecked="{Binding UseNotification1113Shear}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ち鉄筋コンクリート杭のコンクリート許容せん断応力度を、基礎部材（アーチ・トラス式）に代えて、</Run>
+                                    <Run>告示 平13国交告第1113号(第8) の長期・短期許容せん断応力度 fs で算定します（許容せん断力 Q = fs·b·j、軸力・M/(Q·d) 非依存）。</Run>
+                                    <LineBreak/>
+                                    <Run>長期 fs = min(Fc/40 ［区分2 は Fc/45］, (3/4)(0.49+Fc/100))、短期 = その 1.5 倍。使用限界=長期・損傷限界=短期。</Run>
+                                    <LineBreak/>
+                                    <Run>使用限界・損傷限界の Q-N 曲線（検定の耐力側）のみに効き、解析・安全限界・M-φ には影響しません。</Run>
+                                    <LineBreak/>
+                                    <Run>※ 場所打ち鋼管コンクリート杭のせん断は鋼管が負担するため対象外です。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
                     <StackPanel Orientation="Horizontal" Margin="20,0,0,2"
-                                IsEnabled="{Binding UseNotification1113Compression}">
-                        <TextBlock Text="長期許容圧縮の区分：" VerticalAlignment="Center"/>
+                                IsEnabled="{Binding Notification1113CaseEnabled}">
+                        <TextBlock Text="長期許容の区分（圧縮・せん断）：" VerticalAlignment="Center"/>
                         <ComboBox ItemsSource="{Binding Notification1113CompressionCaseOptions}"
                                   DisplayMemberPath="Display" SelectedValuePath="Value"
                                   SelectedValue="{Binding Notification1113CompressionCase}"
-                                  Width="170" HorizontalContentAlignment="Left"/>
+                                  Width="240" HorizontalContentAlignment="Left"/>
                     </StackPanel>
                     <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,2,0,0"
                                Text="※ 使用/損傷限界のみ変更（検定の耐力側）。解析結果は保持されます。"/>

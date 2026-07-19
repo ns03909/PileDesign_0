@@ -54,8 +54,17 @@ namespace PileDesign.Models.InputData
         public static bool UseNotification1113Compression { get; set; }
 
         /// <summary>
-        /// 告示1113(第8) の長期許容圧縮応力度の区分。
-        /// 1: Fc/4、2: min(Fc/4.5, 6.0)。短期はいずれも長期の 2 倍。
+        /// 場所打ち鉄筋コンクリート杭のコンクリート許容せん断応力度を、
+        /// 基礎部材（アーチ・トラス式）に代えて、告示 平13国交告第1113号(第8) の
+        /// 長期・短期許容せん断応力度で算定する（使用限界=長期、損傷限界=短期=長期×1.5）。
+        /// 許容せん断力 Q = fs·b·j（軸力・M/(Q·d) 非依存）。安全限界・M-φ・解析には影響しない。
+        /// </summary>
+        public static bool UseNotification1113Shear { get; set; }
+
+        /// <summary>
+        /// 告示1113(第8) の長期許容応力度の区分（圧縮・せん断で共用）。
+        /// 圧縮 1: Fc/4、2: min(Fc/4.5, 6.0)（短期 2 倍）。
+        /// せん断 1: Fc/40、2: Fc/45 とアーチ項 (3/4)(0.49+Fc/100) の小さい方（短期 1.5 倍）。
         /// </summary>
         public static int Notification1113CompressionCase { get; set; } = 1;
 
@@ -64,7 +73,7 @@ namespace PileDesign.Models.InputData
         /// 許容応力度設計の用語（長期許容 / 短期許容）で表示するかどうか。
         /// 使用限界⇔長期許容、損傷限界⇔短期許容 の呼称は本フラグに追随する。
         /// </summary>
-        public static bool UseAllowableStressLabels => UseNotification1113Compression;
+        public static bool UseAllowableStressLabels => UseNotification1113Compression || UseNotification1113Shear;
 
         /// <summary>使用限界の表示名（オプションON時は「長期許容」）。</summary>
         public static string ServiceLimitLabel => UseAllowableStressLabels ? "長期許容" : "使用限界";
@@ -91,6 +100,7 @@ namespace PileDesign.Models.InputData
             => $"CMO:T{(IgnoreTensileStrength ? 1 : 0)}C{(UseReducedCompression ? 1 : 0)}" +
                $"R{(RebarYieldAt11F ? 1 : 0)}P{(SteelPipeYieldAt11F ? 1 : 0)}" +
                $"E{(UseUnitGsiForConcreteE ? 1 : 0)}" +
-               $"K{(UseNotification1113Compression ? Notification1113CompressionCase : 0)}";
+               $"K{(UseNotification1113Compression ? Notification1113CompressionCase : 0)}" +
+               $"Q{(UseNotification1113Shear ? Notification1113CompressionCase : 0)}";
     }
 }

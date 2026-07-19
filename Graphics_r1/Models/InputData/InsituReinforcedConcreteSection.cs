@@ -165,7 +165,25 @@ namespace PileDesign.Models.InputData
             double b = Math.PI * PileDia / 4.0;
             double d = 0.9 * PileDia;
             double j = 7.0 / 8.0 * d;
+            if (ConcreteModelOptions.UseNotification1113Shear)
+            {
+                // 告示1113(第8): 使用限界=長期許容せん断応力度 fs。許容せん断力 Q = fs·b·j
+                // （軸力・M/(Q·d) 非依存、低減係数を乗じないため 低減前/低減後 は同値）。
+                return GetNotification1113LongTermShearStress() * b * j;
+            }
             return (isFactored ? beta1 : 1.0) * 2.0 / 3.0 * 0.065 * kc * (49.0 + InsituConcrete.Gsi * InsituConcrete.Fc) / (MonQd + 1.7) * (1 + sigma0 / 14.7) * b * j;
+        }
+
+        /// <summary>
+        /// 告示 平13国交告第1113号(第8) の場所打ちコンクリート長期許容せん断応力度 fs（N/mm²）。
+        /// fs = min( Fc/40 ［区分2 は Fc/45］, (3/4)(0.49 + Fc/100) )。短期はこの 1.5 倍。
+        /// </summary>
+        private double GetNotification1113LongTermShearStress()
+        {
+            double Fc = InsituConcrete.Fc;
+            double baseTerm = ConcreteModelOptions.Notification1113CompressionCase == 2 ? Fc / 45.0 : Fc / 40.0;
+            double archTerm = 0.75 * (0.49 + Fc / 100.0);
+            return Math.Min(baseTerm, archTerm);
         }
 
         /// <summary>
@@ -180,6 +198,12 @@ namespace PileDesign.Models.InputData
             double b = Math.PI * PileDia / 4.0;
             double d = 0.9 * PileDia;
             double j = 7.0 / 8.0 * d;
+            if (ConcreteModelOptions.UseNotification1113Shear)
+            {
+                // 告示1113(第8): 損傷限界=短期許容せん断応力度 = 長期の 1.5 倍。Q = fs_短期·b·j
+                // （レベル・軸力・M/(Q·d) 非依存、低減係数なし）。
+                return 1.5 * GetNotification1113LongTermShearStress() * b * j;
+            }
             return (isFactored ? beta : 1.0) * 0.065 * kc * (49.0 + InsituConcrete.Gsi * InsituConcrete.Fc) / (MonQd + 1.7) * (1 + sigma0 / 14.7) * b * j;
         }
 

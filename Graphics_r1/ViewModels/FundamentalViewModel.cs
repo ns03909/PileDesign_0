@@ -210,7 +210,26 @@ namespace PileDesign.ViewModels
                 v => InputModel.FundamentalInput.UseNotification1113Compression = v,
                 v => UseNotification1113Compression = v,
                 "許容圧縮を告示1113(第8)による へ変更");
+            OnPropertyChanged(nameof(Notification1113CaseEnabled));
         }
+
+        // 場所打ちRC杭のコンクリート許容せん断を告示1113(第8)による（使用限界=長期・損傷限界=短期）
+        [ObservableProperty]
+        private bool _useNotification1113Shear;
+
+        partial void OnUseNotification1113ShearChanged(bool value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseNotification1113Shear,
+                v => InputModel.FundamentalInput.UseNotification1113Shear = v,
+                v => UseNotification1113Shear = v,
+                "許容せん断を告示1113(第8)による へ変更");
+            OnPropertyChanged(nameof(Notification1113CaseEnabled));
+        }
+
+        // 告示1113(第8) の区分 ComboBox を有効化するか（圧縮・せん断いずれかON）
+        public bool Notification1113CaseEnabled => UseNotification1113Compression || UseNotification1113Shear;
 
         // 告示1113(第8) 長期許容圧縮の区分（1: Fc/4、2: min(Fc/4.5, 6)）
         [ObservableProperty]
@@ -229,8 +248,8 @@ namespace PileDesign.ViewModels
         public sealed record Notification1113CaseItem(int Value, string Display);
         public Notification1113CaseItem[] Notification1113CompressionCaseOptions { get; } =
         [
-            new Notification1113CaseItem(1, "[1] Fc/4"),
-            new Notification1113CaseItem(2, "[2] min(Fc/4.5, 6)"),
+            new Notification1113CaseItem(1, "[1] 圧縮 Fc/4・せん断 Fc/40"),
+            new Notification1113CaseItem(2, "[2] 圧縮 min(Fc/4.5, 6)・せん断 Fc/45"),
         ];
 
         /// <summary>
@@ -341,6 +360,7 @@ namespace PileDesign.ViewModels
             SteelPipeYieldAt11F = InputModel.FundamentalInput.SteelPipeYieldAt11F;
             UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
             UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
+            UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
             Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
@@ -408,6 +428,9 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.UseNotification1113Compression):
                     UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
+                    break;
+                case nameof(FundamentalInput.UseNotification1113Shear):
+                    UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
                     break;
                 case nameof(FundamentalInput.Notification1113CompressionCase):
                     Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
