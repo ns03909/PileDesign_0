@@ -3195,6 +3195,9 @@ namespace PileDesign.ViewModels
             CurrentFilePath = null;
             LoadedExampleName = null;  // 新規作成時はタイトルバーを [新規] に戻す
 
+            // バイリニアコンクリート・オプションを既定 (false) へ戻し、キャッシュを破棄
+            ApplyConcreteModelOptions();
+
             // ここで初期状態をUndoスタックに積む
             SaveUndoState();
 
@@ -3229,6 +3232,53 @@ namespace PileDesign.ViewModels
         /// <param name="projectData">ProjectData 由来ロードの場合は非 null。InputModel 単体ロードの場合は null。</param>
         /// <param name="filePath">UI 表示用ファイルパス。Untitled/未確定の場合は null 可。</param>
         /// <param name="successMessage">読込成功時にトースト表示するメッセージ。</param>
+        /// <summary>
+        /// 基本設定のバイリニアコンクリート・オプション（引張無視 / 圧縮 0.85·Gsi·Fc）を
+        /// 静的な <see cref="Models.InputData.ConcreteModelOptions"/> へ同期し、影響する全キャッシュを破棄する。
+        ///
+        /// これらのオプションは安全限界 NM 曲線だけでなく M-φ（→ 非線形 FEM 解析）にも効くため、
+        /// 値を反映するには M-φ 静的キャッシュと各断面の NM/降伏/ひび割れキャッシュの両方をクリアする必要がある。
+        /// モデル読込・新規作成・例題読込・基本設定での変更時に呼ぶ。
+        /// </summary>
+        public void ApplyConcreteModelOptions()
+        {
+            var f = CurrentInputModel?.FundamentalInput;
+            Models.InputData.ConcreteModelOptions.IgnoreTensileStrength = f?.IgnoreConcreteTensileStrength ?? false;
+            Models.InputData.ConcreteModelOptions.UseReducedCompression = f?.UseReducedConcreteCompressiveStrength ?? false;
+            Models.InputData.ConcreteModelOptions.RebarYieldAt11F = f?.RebarYieldAt11F ?? false;
+            Models.InputData.ConcreteModelOptions.SteelPipeYieldAt11F = f?.SteelPipeYieldAt11F ?? false;
+            Models.InputData.ConcreteModelOptions.UseUnitGsiForConcreteE = f?.UseUnitGsiForConcreteE ?? false;
+            Models.InputData.ConcreteModelOptions.UseNotification1113Compression = f?.UseNotification1113Compression ?? false;
+            Models.InputData.ConcreteModelOptions.UseNotification1113Shear = f?.UseNotification1113Shear ?? false;
+            Models.InputData.ConcreteModelOptions.UseInsituUltimateEFunction = f?.UseInsituUltimateEFunction ?? false;
+            Models.InputData.ConcreteModelOptions.Notification1113CompressionCase = f?.Notification1113CompressionCase ?? 1;
+
+            // M-φ 静的キャッシュ（全断面共有）
+            PileSection.ClearMphiCache();
+
+            // 各断面インスタンスの NM/降伏/ひび割れキャッシュ
+            if (CurrentInputModel?.PileBodies != null)
+            {
+                foreach (var pb in CurrentInputModel.PileBodies)
+                {
+                    if (pb?.PileBodySegments == null) continue;
+                    foreach (var seg in pb.PileBodySegments)
+                    {
+                        var sec = seg?.PileSection;
+                        if (sec == null) continue;
+                        sec.InvalidateComputedCaches();
+                        // ξ→Ec オプションは PileSection.ConcreteE（諸元表示・EA/EI）にも効くため、
+                        // 場所打ち系（既製杭以外＝式ベース Ec）で再計算し諸元も更新する。
+                        if (sec.PileBodyType != "既製コンクリート杭")
+                        {
+                            sec.RecalculateConcreteE();
+                            sec.SetSpecs();
+                        }
+                    }
+                }
+            }
+        }
+
         private void ApplyPostLoadProtocol(Models.ProjectData? projectData, string? filePath, string successMessage)
         {
             // ObservableCollection 変換（idempotent なので既に ObservableCollection なら維持）
@@ -3263,7 +3313,8 @@ namespace PileDesign.ViewModels
 
             // ComboBox 用カウントリスト再構築・M-φ キャッシュクリア
             CurrentInputModel.UpdateCountLists();
-            PileSection.ClearMphiCache();
+            // バイリニアコンクリート・オプションを同期し M-φ/NM キャッシュを破棄
+            ApplyConcreteModelOptions();
 
             // 杭配置番号の同期（PileNo が未設定の旧ファイルに備える）
             UpdatePileLayoutNo();
@@ -3537,7 +3588,11 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // docx 出力設定（Include* フラグ・一括選択/解除・出力前検証）は
+        // MainWindowViewModel.DocxOutput.cs に分離した。
+
         // Word ファイルに保存するメソッド
+        // 出力前チェック（未選択の確認）は OK ボタン（DocxOutputWindow.OkButton_Click）で行う。
         [RelayCommand]
         public void OutputWordFile()
         {
@@ -3768,10 +3823,10 @@ namespace PileDesign.ViewModels
                 foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel1) lc.IsAnalyzed = false;
                 foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel2) lc.IsAnalyzed = false;
                 foreach (var comb in CurrentInputModel.LoadCasesInput.LoadCombinations) comb.IsAnalyzed = false;
-                IsLiquefactionYesAnalyzed = false;
-                IsLiquefactionNoAnalyzed = false;
-                IncludeOutputLiquefactionYes = false;
-                IncludeOutputLiquefactionNo = false;
+                DocxOutput.IsLiquefactionYesAnalyzed = false;
+                DocxOutput.IsLiquefactionNoAnalyzed = false;
+                DocxOutput.IncludeOutputLiquefactionYes = false;
+                DocxOutput.IncludeOutputLiquefactionNo = false;
                 return;
             }
 
@@ -3792,10 +3847,10 @@ namespace PileDesign.ViewModels
                 comb.IsAnalyzed = analyzedCombNames.Contains(comb.Name);
 
             // 液状化条件
-            IsLiquefactionYesAnalyzed = results.Any(r => r.IsLiquefaction);
-            IsLiquefactionNoAnalyzed = results.Any(r => !r.IsLiquefaction);
-            IncludeOutputLiquefactionYes = IsLiquefactionYesAnalyzed;
-            IncludeOutputLiquefactionNo = IsLiquefactionNoAnalyzed;
+            DocxOutput.IsLiquefactionYesAnalyzed = results.Any(r => r.IsLiquefaction);
+            DocxOutput.IsLiquefactionNoAnalyzed = results.Any(r => !r.IsLiquefaction);
+            DocxOutput.IncludeOutputLiquefactionYes = DocxOutput.IsLiquefactionYesAnalyzed;
+            DocxOutput.IncludeOutputLiquefactionNo = DocxOutput.IsLiquefactionNoAnalyzed;
         }
 
         // オプション表示メソッド
@@ -5710,12 +5765,12 @@ namespace PileDesign.ViewModels
                     if (nMax < force)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n 使用限界軸力適用範囲Max{nMax:N0}kN < {force:N0}kN\n";
+                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {ConcreteModelOptions.MapLimitStateText("使用限界")}軸力適用範囲Max{nMax:N0}kN < {force:N0}kN\n";
                     }
                     if (force < nMin)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {force:N0}kN < 使用限界軸力適用範囲Min{nMin:N0}kN\n";
+                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {force:N0}kN < {ConcreteModelOptions.MapLimitStateText("使用限界")}軸力適用範囲Min{nMin:N0}kN\n";
                     }
                 }
             }

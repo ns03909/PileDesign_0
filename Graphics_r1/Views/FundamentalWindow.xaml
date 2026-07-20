@@ -7,7 +7,7 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         d:DataContext="{d:DesignInstance Type=local:FundamentalViewModel}"
         mc:Ignorable="d"
-        Title="基本設定" Height="300" Width="400">
+        Title="基本設定" Height="880" Width="480">
     
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
@@ -158,6 +158,178 @@
                     <TextBlock Text="安全限界状態を超えない" HorizontalAlignment="Center"/>
                 </Border>
             </Grid>
+
+            <!-- 場所打ちコンクリート系 杭のコンクリートのモデル化オプション -->
+            <GroupBox Header="コンクリートのモデル化" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+                    <CheckBox Content="ヤング係数 Ec の算定で ξ=1.0 とする"
+                              IsChecked="{Binding UseUnitGsiForConcreteE}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>コンクリートのヤング係数 Ec の算定式で ξ(=施工品質管理係数 Gsi) を 1.0 として計算します。</Run>
+                                    <LineBreak/>
+                                    <Run>ξ を 1 以外にしても Ec は ξ=1.0 で算定されます（強度側 Gsi·Fc 等には実際の ξ を使用）。</Run>
+                                    <LineBreak/>
+                                    <Run>Ec は M-φ・NM 曲線・EA/EI・諸元表示に影響します。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <CheckBox Content="引張側の降伏応力度を 0 とする（引張を無視）"
+                              IsChecked="{Binding IgnoreConcreteTensileStrength}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ち RC 系杭のバイリニア型コンクリートで、引張側のひび割れ強度を無視します（σ=0）。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <CheckBox Content="圧縮側の降伏応力度を 0.85·Fc とする"
+                              IsChecked="{Binding UseReducedConcreteCompressiveStrength}"
+                              IsEnabled="{Binding ConflictingMaterialOptionsEnabled}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>圧縮側の折れ点応力度を、既定の Gsi·Fc に代えて 0.85·Fc とします（Gsi は乗じません）。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
+                               Text="※ 変更すると M-φ が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。"/>
+
+                    <Separator Margin="0,6,0,4"/>
+                    <CheckBox IsChecked="{Binding UseGuideline2025Appendix13}"
+                              FontWeight="Bold" Margin="0,2,0,2">
+                        <CheckBox.Content>
+                            <TextBlock TextWrapping="Wrap"
+                                       Text="2025年版 建築物の構造関係技術基準解説書 付録1-3 コンクリート系くい体の許容耐力、終局強度の例に従う"/>
+                        </CheckBox.Content>
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>下記 3 項目を一括で ON/OFF します（個別に切替えると本チェックは自動追随）。</Run>
+                                    <LineBreak/>
+                                    <Run>・場所打ち杭の許容圧縮応力度を告示1113(第8)による</Run>
+                                    <LineBreak/>
+                                    <Run>・場所打ちRC杭の許容せん断応力度を告示1113(第8)による</Run>
+                                    <LineBreak/>
+                                    <Run>・安全限界を耐震設計指針(案)で算定する</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <CheckBox Content="場所打ち杭の許容圧縮応力度を告示1113(第8)による（使用限界=長期・損傷限界=短期）"
+                              IsChecked="{Binding UseNotification1113Compression}"
+                              Margin="16,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ち系杭コンクリートの使用限界・損傷限界の許容圧縮応力度を、基礎部材の (1/3)ξFc・(2/3)ξFc に代えて、</Run>
+                                    <Run>告示 平13国交告第1113号(第8) の長期・短期許容圧縮応力度で算定します。</Run>
+                                    <LineBreak/>
+                                    <Run>使用限界・損傷限界の NM 曲線（検定の耐力側）のみに効き、解析・安全限界・せん断には影響しません。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <CheckBox Content="場所打ちRC杭の許容せん断応力度を告示1113(第8)による（使用限界=長期・損傷限界=短期）"
+                              IsChecked="{Binding UseNotification1113Shear}"
+                              Margin="16,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ち鉄筋コンクリート杭のコンクリート許容せん断応力度を、基礎部材（アーチ・トラス式）に代えて、</Run>
+                                    <Run>告示 平13国交告第1113号(第8) の長期・短期許容せん断応力度 fs で算定します（許容せん断力 Q = fs·b·j、軸力・M/(Q·d) 非依存）。</Run>
+                                    <LineBreak/>
+                                    <Run>長期 fs = min(Fc/40 ［区分2 は Fc/45］, (3/4)(0.49+Fc/100))、短期 = その 1.5 倍。使用限界=長期・損傷限界=短期。</Run>
+                                    <LineBreak/>
+                                    <Run>使用限界・損傷限界の Q-N 曲線（検定の耐力側）のみに効き、解析・安全限界・M-φ には影響しません。</Run>
+                                    <LineBreak/>
+                                    <Run>※ 場所打ち鋼管コンクリート杭のせん断は鋼管が負担するため対象外です。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <StackPanel Orientation="Horizontal" Margin="20,0,0,2"
+                                IsEnabled="{Binding Notification1113CaseEnabled}">
+                        <TextBlock Text="長期許容の区分（圧縮・せん断）：" VerticalAlignment="Center"/>
+                        <ComboBox ItemsSource="{Binding Notification1113CompressionCaseOptions}"
+                                  DisplayMemberPath="Display" SelectedValuePath="Value"
+                                  SelectedValue="{Binding Notification1113CompressionCase}"
+                                  Width="240" HorizontalContentAlignment="Left"/>
+                    </StackPanel>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,2,0,0"
+                               Text="※ 使用/損傷限界のみ変更（検定の耐力側）。解析結果は保持されます。"/>
+
+                    <Separator Margin="0,6,0,4"/>
+                    <CheckBox Content="安全限界を耐震設計指針(案)で算定する（場所打ちRC杭／鋼管巻き杭、指針(案)5.4.1）"
+                              IsChecked="{Binding UseInsituUltimateEFunction}"
+                              Margin="16,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>RC基礎構造部材の耐震設計指針(案) 5.4.1 に従い安全限界曲げ強度（安全限界 NM 曲線）等を算定します（既定はバイリニア近似）。</Run>
+                                    <LineBreak/>
+                                    <Run>・場所打ちRC杭: コンクリートを e関数法（εcu=0.003・圧縮材料強度 ξFc）。</Run>
+                                    <LineBreak/>
+                                    <Run>・場所打ち鋼管コンクリート杭: 鋼管内コンクリート=e関数法、鋼管=圧縮側 0.85×引張強さ・引張側 引張強さで頭打ちのトリリニア、主筋=バイリニア。せん断終局 Qu=sQ0·√(1-η²)·(scMu/sMu)。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界NM曲線は低減(β)・軸力制限を課さず1本の耐力包絡線として描きます（低減後=低減前）。σ0=-0.07ξFc〜0.15ξFc は適用範囲の目安（曲線は切りません）。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界の耐力側（NM・せん断 QN）のみに効きます。解析用 M-φ/M-θ は収束のため常にバイリニアで算定するため、解析結果・使用/損傷限界には影響せず、解析結果は保持されます。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,2,0,0"
+                               Text="※ 安全限界の耐力側（NM曲線・せん断QN）のみ。解析M-φはバイリニア維持で解析結果は保持されます。"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- 鉄筋・鋼管の 1.1F 完全バイリニア型オプション -->
+            <GroupBox Header="鉄筋・鋼管のモデル化" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+                    <CheckBox Content="鉄筋を 1.1×F で降伏する完全バイリニア型とする"
+                              IsChecked="{Binding RebarYieldAt11F}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ち RC 杭・場所打ち鋼管コンクリート杭の鉄筋について、降伏応力度を σy から 1.1×σy に引き上げます（完全バイリニア型）。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <CheckBox Content="鋼管を 1.1×F で降伏する完全バイリニア型とする"
+                              IsChecked="{Binding SteelPipeYieldAt11F}"
+                              IsEnabled="{Binding ConflictingMaterialOptionsEnabled}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ち鋼管コンクリート杭の鋼管について、ひずみ硬化・破断を廃し ±1.1×F で頭打ちの完全バイリニア型とします。</Run>
+                                    <LineBreak/>
+                                    <Run>安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます（鋼管杭は対象外）。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
+                               Text="※ 変更すると M-φ が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。"/>
+                </StackPanel>
+            </GroupBox>
 
         </StackPanel>
 

@@ -55,8 +55,9 @@ namespace PileDesign.Models.InputData
                 SetEpsilonCr();
                 SetAllowableStrain();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[InsituConcrete] 初期化に失敗（Ec/Ac/SigmaCr=0 にフォールバック）: DO={DO}, Gsi={Gsi}, Fc={Fc}", DO, Gsi, Fc);
                 Ec = 0.0;
                 Ac = 0.0;
                 SigmaCr = 0.0;
@@ -68,15 +69,31 @@ namespace PileDesign.Models.InputData
         {
             try
             {
-                double serviceLimitStressC = 1.0 / 3.0 * Gsi * Fc; // 使用限界圧縮応力度
-                double damageLimitStressC = 2.0 / 3.0 * Gsi * Fc;// 損傷限界圧縮応力度
+                double serviceLimitStressC; // 使用限界圧縮応力度（長期許容相当）
+                double damageLimitStressC;  // 損傷限界圧縮応力度（短期許容相当）
+                if (ConcreteModelOptions.UseNotification1113Compression)
+                {
+                    // 告示 平13国交告第1113号(第8): 長期許容圧縮 = [1] Fc/4 または [2] min(Fc/4.5, 6.0)、短期 = 2×長期。
+                    double longTerm = ConcreteModelOptions.Notification1113CompressionCase == 2
+                        ? Math.Min(Fc / 4.5, 6.0)
+                        : Fc / 4.0;
+                    serviceLimitStressC = longTerm;
+                    damageLimitStressC = 2.0 * longTerm;
+                }
+                else
+                {
+                    // 基礎部材の強度と変形性能: 使用限界 (1/3)ξFc、損傷限界 (2/3)ξFc。
+                    serviceLimitStressC = 1.0 / 3.0 * Gsi * Fc;
+                    damageLimitStressC = 2.0 / 3.0 * Gsi * Fc;
+                }
                 ServiceLimitStrainC = serviceLimitStressC / Ec; // 使用限界圧縮ひずみ度
                 DamageLimitStrainC = damageLimitStressC / Ec; // 損傷限界圧縮ひずみ度
-                ServiceLimitStrainT = double.MinValue; // 使用限界引張ひずみ度
+                ServiceLimitStrainT = double.MinValue; // 使用限界引張ひずみ度（コンクリート引張は無視）
                 DamageLimitStrainT = double.MinValue; // 損傷限界引張ひずみ度
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -127,7 +144,9 @@ namespace PileDesign.Models.InputData
             {
                 gamma = GetDensity(Fc);
             }
-            return 3.35 * Math.Pow(10, 4) * Math.Pow(gamma / 24, 2) * Math.Pow(Gsi * Fc / 60, 1.0 / 3.0);
+            // Ec 算定用 ξ: オプション時は 1.0（強度側 Gsi·Fc 等は実 Gsi のまま）
+            double gsiForEc = ConcreteModelOptions.UseUnitGsiForConcreteE ? 1.0 : Gsi;
+            return 3.35 * Math.Pow(10, 4) * Math.Pow(gamma / 24, 2) * Math.Pow(gsiForEc * Fc / 60, 1.0 / 3.0);
         }
 
         internal void SetEpsilonCr()
@@ -159,9 +178,18 @@ namespace PileDesign.Models.InputData
             }
             else // (type == "bilinear")
             {
-                if (-EpsilonCr_bilinear <= epsilon && epsilon <= 0.003)
+                // 引張側下限ひずみ: 既定はひび割れひずみ -EpsilonCr_bilinear（それまでは弾性で引張負担）。
+                // 引張無視オプション時は 0 とし、引張域 (epsilon<0) は常に σ=0 とする。
+                double tensionMinStrain = ConcreteModelOptions.IgnoreTensileStrength ? 0.0 : -EpsilonCr_bilinear;
+
+                // 圧縮側折れ点応力度: 既定 Gsi·Fc、低減オプション時は 0.85·Fc（Gsi は乗じない）。
+                double compressionPlateau = ConcreteModelOptions.UseReducedCompression
+                    ? BearingFactor * ConcreteModelOptions.CompressionReductionFactor * Fc
+                    : BearingFactor * Gsi * Fc;
+
+                if (tensionMinStrain <= epsilon && epsilon <= 0.003)
                 {
-                    return Math.Min(Ec * epsilon, BearingFactor * Gsi * Fc);
+                    return Math.Min(Ec * epsilon, compressionPlateau);
                 }
                 else
                 { return 0.0; }
@@ -232,6 +260,22 @@ namespace PileDesign.Models.InputData
         public double EpsilonE { get; private set; }
         public double EpsilonSi { get; set; }
 
+        // 1.1×F（= 1.1×σy）で降伏する完全バイリニア型オプション（場所打ち RC / 場所打ち鋼管コンクリート杭）。
+        // 断面コンストラクタで ConcreteModelOptions.RebarYieldAt11F から転写する。
+        // setter で降伏応力度 RSigmaY と RSigmaY 依存の限界ひずみを再計算する。
+        private bool _yieldAt11F;
+        public bool YieldAt11F
+        {
+            get => _yieldAt11F;
+            set
+            {
+                if (_yieldAt11F == value) return;
+                _yieldAt11F = value;
+                SetRSigmaY();
+                SetAllowableStrain();
+            }
+        }
+
         // コンストラクタ
         internal MainBars(double pcd, int number, string grade, string barSize)
         {
@@ -254,10 +298,16 @@ namespace PileDesign.Models.InputData
         // 限界ひずみ度を計算するメソッド
         internal void SetAllowableStrain()
         {
-            double serviceLimitStressC = 195.0;  // 使用限界圧縮応力度 鋼管コンクリート杭では(2/3)RSigmaY
-            double damageLimitStressC = RSigmaY; // 損傷限界圧縮応力度
-            double serviceLimitStressT = -195.0; // 使用限界圧縮応力度 鋼管コンクリート杭では-(2/3)RSigmaY
-            double damageLimitStressT = -RSigmaY; // 損傷限界圧縮応力度
+            // 損傷限界（短期許容）・使用限界（長期許容）は 1.1F 完全バイリニア型オプションによらず
+            // 基準降伏点 σy を用いる（1.1F は安全限界＝バイリニア/終局のみに適用）。
+            // 使用限界＝長期許容引張応力度は RC 規準に従い min(σy/1.5, 径による上限)。
+            // 異形鉄筋の上限は D≤25mm で 215、D>25mm で 195 N/mm²。
+            double longTermCap = BarDiameter > 25.0 ? 195.0 : 215.0;
+            double serviceLimitStress = Math.Min(BaseSigmaY / 1.5, longTermCap);
+            double serviceLimitStressC = serviceLimitStress;  // 使用限界圧縮応力度
+            double damageLimitStressC = BaseSigmaY;           // 損傷限界圧縮応力度 = σy（短期許容）
+            double serviceLimitStressT = -serviceLimitStress; // 使用限界引張応力度
+            double damageLimitStressT = -BaseSigmaY;          // 損傷限界引張応力度 = -σy
 
             ServiceLimitStrainC = serviceLimitStressC / Er; // 使用限界圧縮ひずみ度
             DamageLimitStrainC = damageLimitStressC / Er; // 損傷限界圧縮ひずみ度
@@ -278,9 +328,21 @@ namespace PileDesign.Models.InputData
             ["SD685"] = 685.0
         };
 
+        // 基準降伏点 σy（規格値）。損傷限界・使用限界はこの値を用いる（1.1F オプション非適用）。
+        private double BaseSigmaY => GradeYieldStrengths.GetValueOrDefault(Grade, 295.0);
+
+        // 主筋の呼び径 [mm]（"D25" → 25）。使用限界（長期許容）の径による上限（215/195）判定に用いる。
+        private double BarDiameter =>
+            (!string.IsNullOrEmpty(BarSize) && BarSize.Length > 1 && double.TryParse(BarSize.Substring(1), out double d))
+                ? d : 25.0;
+
         internal void SetRSigmaY()
         {
-            RSigmaY = GradeYieldStrengths.GetValueOrDefault(Grade, 295.0);
+            // 1.1F 完全バイリニア型オプション時は降伏応力度を 1.1×σy に引き上げる（安全限界にのみ効く）。
+            // ただし RC基礎構造部材の耐震設計指針(案) に従い、SD490 は 1.1 倍の対象外（規格降伏点のまま）。
+            // 主筋（せん断補強以外）は圧縮・引張とも 1.1 倍可のため、SD490 以外は ±1.1σy とする。
+            bool apply11F = YieldAt11F && Grade != "SD490";
+            RSigmaY = apply11F ? 1.1 * BaseSigmaY : BaseSigmaY;
         }
         private static readonly Dictionary<string, double> BarAreas = new()
         {
@@ -345,7 +407,9 @@ namespace PileDesign.Models.InputData
         public string Grade { get; }
         public double OutDia { get; }
         public double T { get; }
-        public double TMinus => T - 1.0;
+        // 有効板厚: コンストラクタで既に「公称板厚 − 腐食代」を反映済みのため、
+        // ここでは追加の減厚を行わない（板厚の負の許容差 1mm は控除しない方針）。
+        public double TMinus => T;
         public double SSigmaU { get; private set; }
         public double F { get; private set; }
         public double Fcy => 1.1 * F;
@@ -357,6 +421,11 @@ namespace PileDesign.Models.InputData
         public double SE1 { get; private set; } = 205000.0;
         public double SE2 { get; private set; } = 205000.0 / 30.0;
         public double IMinus => Math.PI * (Math.Pow(OutDiaMinus, 4) - Math.Pow(OutDiaMinus - 2 * TMinus, 4)) / 64.0;
+
+        // 1.1×F で降伏する完全バイリニア型オプション（場所打ち鋼管コンクリート杭のみ）。
+        // 断面コンストラクタで ConcreteModelOptions.SteelPipeYieldAt11F から転写する。
+        // true のとき GetStress はひずみ硬化(SE2)・破断応力(SSigmaU)を廃し ±SSigmaY(=1.1F) で頭打ちにする。
+        public bool PerfectBilinear11F { get; set; }
 
         // コンストラクタ
         public InsituSteelPipe(string _Grade, double _OutDia, double _T, double _corrosionDepth)
@@ -395,6 +464,29 @@ namespace PileDesign.Models.InputData
         // ひずみ度から応力を計算するメソッド
         internal override double GetStress(string type, double epsilon)
         {
+            // 指針(案) 準拠の安全限界トリリニア: 圧縮側は 0.85×引張強さで頭打ち、引張側は引張強さで頭打ち。
+            // 折れ点=材料強度 sσy(=1.1F)、第2勾配 SE2。圧縮限界ひずみ = (0.85·SSigmaU−SSigmaY)/SE2 + SEpsilonY。
+            // 注: 鋼管 1.1F オプション(PerfectBilinear11F)より優先する。安全限界を指針で算定する場合は
+            // 本トリリニアが正となるため（UI でも 1.1F 鋼管はグレーアウトして併用を防ぐ）。
+            if (type == "guidelineUltimate")
+            {
+                double compCap = 0.85 * SSigmaU;                                  // sσcu = 0.85·sσtb
+                double epsCompCap = (compCap - SSigmaY) / SE2 + SEpsilonY;         // sεcu
+                if (epsilon > epsCompCap) { return compCap; }                      // 圧縮プラトー 0.85·SSigmaU
+                else if (epsilon > SEpsilonY) { return SSigmaY + SE2 * (epsilon - SEpsilonY); } // 圧縮硬化
+                else if (epsilon < -SEpsilonU) { return -SSigmaU; }                // 引張プラトー -SSigmaU
+                else if (epsilon < -SEpsilonY) { return -SSigmaY + SE2 * (epsilon + SEpsilonY); } // 引張硬化
+                else { return epsilon * SE1; }                                     // 弾性
+            }
+
+            // 完全バイリニア型オプション: 弾性 → ±SSigmaY(=1.1F) で頭打ち（ひずみ硬化・破断なし）
+            if (PerfectBilinear11F)
+            {
+                if (epsilon > SEpsilonY) { return SSigmaY; }
+                else if (epsilon < -SEpsilonY) { return -SSigmaY; }
+                else { return epsilon * SE1; }
+            }
+
             if (SEpsilonU < epsilon) { return SSigmaU; }
             else if (SEpsilonY < epsilon) { return SSigmaY + SE2 * (epsilon - SEpsilonY); }
             else if (epsilon < -SEpsilonU) { return -SSigmaU; }
@@ -488,8 +580,9 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = damageLimitStressT / Ec;
                 UltimateLimitStrainT = double.MinValue;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -528,8 +621,9 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = damageLimitStressT / Ec;
                 UltimateLimitStrainT = double.MinValue;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -583,8 +677,9 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = double.MinValue;
                 UltimateLimitStrainT = double.MinValue;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -614,7 +709,7 @@ namespace PileDesign.Models.InputData
         {
             if (_fpy == 0.0) { Fpy = 1226.0; }
             else { Fpy = _fpy; }
-            if (_fpu == 0.0) { Fpy = 1418.0; }
+            if (_fpu == 0.0) { Fpu = 1418.0; }
             else { Fpu = _fpu; }
 
             PCD = _PCD;
@@ -727,8 +822,9 @@ namespace PileDesign.Models.InputData
                 DamageLimitStrainT = Ftdp / SE1; // 損傷限界引張ひずみ度
                 UltimateLimitStrainT = double.MinValue; // 安全限界引張ひずみ度
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -750,6 +846,32 @@ namespace PileDesign.Models.InputData
     /// <summary>
     /// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// </summary>
+    // 断面プロファイルの材料種別 (描画色分け用)
+    internal enum SectionMaterialKind { Concrete, MainBar, Tendon, SteelPipe }
+
+    // 1 材料分のひずみ度・応力度プロファイル (z 配列ごとの ε, σ)。
+    // 中空部などデータの無い区間は ε,σ に double.NaN を入れて線を分断する。
+    internal class MaterialProfile
+    {
+        public SectionMaterialKind Kind { get; set; }
+        public string Name { get; set; } = "";
+        public List<double> Z { get; } = new();       // 断面高さ z [mm]
+        public List<double> Strain { get; } = new();   // 断面の平面保持ひずみ ε [-]
+        public List<double> Stress { get; } = new();   // 材料応力度 σ [N/mm2]
+    }
+
+    /// <summary>
+    /// 杭断面のひずみ度・応力度分布 (描画用)。各材料を 1 本の MaterialProfile として持つ。
+    /// z は断面高さ [mm]（圧縮縁 z=-Radius、引張縁 z=+Radius、平面保持で ε(z)=ε0-φz）。
+    /// </summary>
+    internal class SectionStrainStressProfile
+    {
+        public double Radius { get; set; }                       // 断面外縁半径 [mm]
+        public List<MaterialProfile> Materials { get; } = new();
+        public double CompressionEdgeStrain { get; set; }        // 圧縮縁ひずみ (z=-Radius)
+        public double TensionEdgeStrain { get; set; }            // 引張縁ひずみ (z=+Radius)
+    }
+
     // 杭断面抽象クラス
     internal abstract class AbstractPileSection : IPileSectionCalculation
     {
@@ -831,6 +953,83 @@ namespace PileDesign.Models.InputData
         {
         }
 
+        // ===== 断面ひずみ度・応力度プロファイル (N-M 曲線クリック→断面応答表示用) =====
+
+        /// <summary>
+        /// 指定した圧縮縁ひずみ εc と曲率 φ に対する断面のひずみ度・応力度分布を返す。
+        /// 既定は空。各杭種でオーバーライドして材料層を構築する。
+        /// </summary>
+        internal virtual SectionStrainStressProfile GetStrainStressProfile(
+            double epsilonC, double curvature, bool ultimate, int division = 200)
+            => new();
+
+        /// <summary>
+        /// N-M グラフに描かれる各曲線を (名称, (N[N],M[Nmm],εc,φ[1/mm]), 安全限界系か) で列挙する。
+        /// 既定は低減前/後の使用・損傷・安全限界。ひび割れ開始・主筋降伏開始を持つ杭種はオーバーライドで追加。
+        /// </summary>
+        internal virtual IEnumerable<(string Name, (List<double> N, List<double> M, List<double> Eps, List<double> Phi) Curve, bool Ultimate)> GetProfileSourceCurves()
+        {
+            yield return ("(低減前)使用限界", UnfactoredServiceNM, false);
+            yield return ("(低減前)損傷限界", UnfactoredDamageNM, false);
+            yield return ("(低減前)安全限界", UnfactoredUltimateNM, true);
+            yield return ("(低減後)使用限界", FactoredServiceNM, false);
+            yield return ("(低減後)損傷限界", FactoredDamageNM, false);
+            yield return ("(低減後)損傷限界(L1)", FactoredDamageNMLevel1, false);
+            yield return ("(低減後)安全限界", FactoredUltimateNM, true);
+        }
+
+        /// <summary>
+        /// 弾性換算断面の (コンクリートEc, 換算断面二次モーメントIe, 換算断面積Ae, 外縁半径ROuter) を返す。
+        /// NM曲線が εc/φ を保持しない杭種(既製杭の使用・損傷限界=許容応力度式)で、
+        /// クリック点 (N,M) から線形の (εc,φ) を復元するのに用いる。既定は (0,0,0,0)。
+        /// </summary>
+        internal virtual (double Ec, double Ie, double Ae, double ROuter) GetElasticSectionProps()
+            => (0.0, 0.0, 0.0, 0.0);
+
+        // 実心/中空円板の材料プロファイル。rInner>0 のとき |z|&lt;rInner を中空(NaN)とする。
+        // 表示ひずみは断面の平面保持ひずみ ε(z)=ε0-φz、応力は材料全ひずみ (ε(z)+prestrain) から算定。
+        protected static MaterialProfile BuildSolidProfile(
+            SectionMaterialKind kind, string name, Material mat, string type,
+            double epsilon0, double curvature, double rOuter, double rInner, double prestrain, int division)
+        {
+            var mp = new MaterialProfile { Kind = kind, Name = name };
+            double tol = Math.Max(1e-9, rInner * 1e-6);
+            for (int i = 0; i <= division; i++)
+            {
+                double z = -rOuter + 2.0 * rOuter * i / division;
+                double epsGeom = epsilon0 - curvature * z;
+                mp.Z.Add(z);
+                if (rInner <= 0.0 || Math.Abs(z) >= rInner - tol)
+                {
+                    mp.Strain.Add(epsGeom);
+                    mp.Stress.Add(mat.GetStress(type, epsGeom + prestrain));
+                }
+                else
+                {
+                    mp.Strain.Add(double.NaN);
+                    mp.Stress.Add(double.NaN);
+                }
+            }
+            return mp;
+        }
+
+        // リング材料 (主筋/PC鋼材/鋼管) の材料プロファイル。z=±ringRadius を連続サンプリング。
+        protected static MaterialProfile BuildRingProfile(
+            SectionMaterialKind kind, string name, Material mat, string type,
+            double epsilon0, double curvature, double ringRadius, double prestrain, int division)
+        {
+            var mp = new MaterialProfile { Kind = kind, Name = name };
+            for (int i = 0; i <= division; i++)
+            {
+                double z = -ringRadius + 2.0 * ringRadius * i / division;
+                double epsGeom = epsilon0 - curvature * z;
+                mp.Z.Add(z);
+                mp.Strain.Add(epsGeom);
+                mp.Stress.Add(mat.GetStress(type, epsGeom + prestrain));
+            }
+            return mp;
+        }
+
         // 損傷限界曲げモーメント閾値を返すメソッド
         internal List<double> GetDamageLimitBendingMomentThresholds()
         {
@@ -909,18 +1108,25 @@ namespace PileDesign.Models.InputData
 
                 if (axialForceCurvatureMax < NTarget) { isCompressionSide = true; } else { isCompressionSide = false; }
 
-                while (Math.Abs(N - NTarget) > 0.1) // 0.1N 以上の差がある場合
+                // 反復上限とゼロ除算ガードのみ追加（dN/dφ≈0 で curvature が Inf/NaN になり
+                // 無限ループ・ハングするのを防ぐ）。割線ステップ自体は従来どおりで収束解を保持する。
+                int maxIter = 50;
+                int iter = 0;
+                while (Math.Abs(N - NTarget) > 0.1 && iter < maxIter) // 0.1N 以上の差がある場合
                 {
                     N1 = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature + deltaCurvature).Item1;
+                    if (Math.Abs(N1 - N) < 1e-8) break;                 // ゼロ除算防止
                     curvature = deltaCurvature / (N1 - N) * (NTarget - N) + curvature;
                     (double, double, double) forceAndMoment = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature);
                     N = forceAndMoment.Item1;
                     M = forceAndMoment.Item2;
+                    iter++;
                 }
                 return M;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[GetAllowableMomentForSpecificN] 算定に失敗（M=0 にフォールバック）: limitStateNo={LimitStateNo}, NTarget={NTarget}", limitStateNo, NTarget);
                 return 0.0;
             }
         }
@@ -976,8 +1182,9 @@ namespace PileDesign.Models.InputData
 
                 return (M, curvature);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Serilog.Log.Warning(ex, "[GetUltimateMomentForSpecificN] 算定に失敗（0 にフォールバック）: NTarget={NTarget}", NTarget);
                 return (0.0, 0.0);
             }
         }
@@ -1242,27 +1449,51 @@ namespace PileDesign.Models.InputData
         }
 
         // 軸力、曲げモーメント取得メソッド
+        //
+        // 各短冊の幾何量（面積・断面一次モーメント）を解析的に厳密計算する補正版。
+        // 弦長 w(z)=2√(R²-z²) は縁 z=±R で接線が垂直（√特異性）となるため、
+        // 「幅(中点)×dz」の中点則では分割を増やしても面積が真円 πR² に収束しにくい（誤差 O(n^-1.5)、端の短冊が支配的）。
+        // そこで短冊 [z1,z2] ごとに
+        //   面積          A = ∫ 2√(R²-z²) dz
+        //   断面一次モーメント Q = ∫ 2z√(R²-z²) dz
+        // を閉形式で評価する。これにより ΣA は任意の分割数で厳密に πR² となり、
+        // モーメントの幾何重み付けも厳密になる。応力は各短冊の図心 z̄ = Q/A で評価し、
+        // 残る近似は「短冊内で応力一定」のみ（縁の特異性を持たないため速やかに収束する）。
         internal (double, double) GetForceAndMoment(string type, Material material, double epsilon0, double curvature, int division = 200)
         {
             try
             {
-                double z;
+                double r = Dia * 0.5;
                 double dz = Dia / division;
-                double epsilon;
-                double sigma;
-                double width;
 
                 double axialForce = 0.0;
                 double bendingMoment = 0.0;
 
+                // 望遠鏡和: 各短冊の境界での不定積分値を 1 回ずつ評価して差分をとる。
+                double prevArea = AreaAntiderivative(-r, r);
+                double prevMoment = FirstMomentAntiderivative(-r, r);
+
                 for (int i = 0; i < division; i++)
                 {
-                    z = -Dia * 0.5 + (0.5 + i) * dz;
-                    width = 2.0 * Math.Sqrt(Math.Pow(Dia * 0.5, 2) - Math.Pow(z, 2));
-                    epsilon = epsilon0 - curvature * z;
-                    sigma = material.GetStress(type, epsilon);
-                    axialForce += width * sigma * dz;
-                    bendingMoment += width * sigma * dz * -z;
+                    // 端の丸め誤差を避けるため最終短冊上端は厳密に +r とする。
+                    double z2 = (i == division - 1) ? r : -r + (i + 1) * dz;
+                    double curArea = AreaAntiderivative(z2, r);
+                    double curMoment = FirstMomentAntiderivative(z2, r);
+
+                    double area = curArea - prevArea;            // 短冊の面積 (>0)
+                    double firstMoment = curMoment - prevMoment; // 短冊の断面一次モーメント Q
+
+                    prevArea = curArea;
+                    prevMoment = curMoment;
+
+                    if (area <= 0.0) continue; // 退化短冊の保護
+
+                    double zBar = firstMoment / area;            // 図心
+                    double epsilon = epsilon0 - curvature * zBar;
+                    double sigma = material.GetStress(type, epsilon);
+
+                    axialForce += sigma * area;
+                    bendingMoment += -sigma * firstMoment;       // M = ∫ -z·σ·w dz = -σ·Q
                 }
                 return (axialForce, bendingMoment);
             }
@@ -1270,6 +1501,21 @@ namespace PileDesign.Models.InputData
             {
                 return (0.0, 0.0);
             }
+        }
+
+        // 面積の不定積分: ∫ 2√(r²-z²) dz = z√(r²-z²) + r²·asin(z/r)
+        private static double AreaAntiderivative(double z, double r)
+        {
+            double t = Math.Max(0.0, r * r - z * z);
+            double ratio = Math.Clamp(z / r, -1.0, 1.0);
+            return z * Math.Sqrt(t) + r * r * Math.Asin(ratio);
+        }
+
+        // 断面一次モーメントの不定積分: ∫ 2z√(r²-z²) dz = -(2/3)(r²-z²)^{3/2}
+        private static double FirstMomentAntiderivative(double z, double r)
+        {
+            double t = Math.Max(0.0, r * r - z * z);
+            return -(2.0 / 3.0) * Math.Pow(t, 1.5);
         }
     }
 

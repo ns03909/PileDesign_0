@@ -393,7 +393,7 @@ namespace PileDesign.ViewModels
                 double[] xs = [.. ns.Select(x => x * 1e-3)]; // N -> kN
                 double[] ys = [.. qs.Select(q => q * 1e-3)]; // Q -> kN
                 var scatter = wpf.Plot.Add.Scatter(xs, ys);
-                scatter.LegendText = legend;
+                scatter.LegendText = ConcreteModelOptions.MapLimitStateText(legend);
                 if (color.HasValue) scatter.Color = ScottPlot.Color.FromSKColor(color.Value);
                 scatter.LineWidth = (float)lineWidth;
                 scatter.MarkerSize = 0;
@@ -933,7 +933,7 @@ namespace PileDesign.ViewModels
                 scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
             scatter.MarkerSize = 0;
             scatter.MarkerShape = ScottPlot.MarkerShape.None;
-            scatter.LegendText = title;
+            scatter.LegendText = ConcreteModelOptions.MapLimitStateText(title);
 
             wpf.Plot.Legend.FontName = Fonts.Detect(title);
         }
@@ -947,6 +947,15 @@ namespace PileDesign.ViewModels
                 result.Add(originalList[i] * multiplier);
             }
             return result;
+        }
+
+        // ===== 杭断面 ひずみ度・応力度分布グラフ =====
+        // N-M 曲線上でクリックされた (N,M) に最も近い曲線上の点の (εc, φ) を、
+        // 共有サービス StrainStressProfileService 経由でプロファイル表示する (全杭種対応)。
+        public void ShowStrainStressAtMNPoint(double clickN_kN, double clickM_kNm)
+        {
+            if (PileSectionWindowInstance == null || PileSection == null) return;
+            StrainStressProfileService.ShowAtClick(PileSectionWindowInstance, PileSection, clickN_kN, clickM_kNm);
         }
 
         public void ChartUpdate()

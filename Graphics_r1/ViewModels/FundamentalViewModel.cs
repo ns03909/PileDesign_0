@@ -125,6 +125,270 @@ namespace PileDesign.ViewModels
             InputModel.FundamentalInput.SeismicGrade = value;
         }
 
+        // バイリニア型コンクリートの引張側降伏応力度を 0 とする
+        [ObservableProperty]
+        private bool _ignoreConcreteTensileStrength;
+
+        // バイリニア型コンクリートの圧縮側降伏応力度を 0.85·Gsi·Fc とする
+        [ObservableProperty]
+        private bool _useReducedConcreteCompressiveStrength;
+
+        // 確認ダイアログのキャンセルで値を戻す間、再入を抑制するフラグ
+        private bool _suppressConcreteOptionConfirm;
+
+        partial void OnIgnoreConcreteTensileStrengthChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.IgnoreConcreteTensileStrength,
+                v => InputModel.FundamentalInput.IgnoreConcreteTensileStrength = v,
+                v => IgnoreConcreteTensileStrength = v,
+                "コンクリート引張無視の変更");
+        }
+
+        partial void OnUseReducedConcreteCompressiveStrengthChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength,
+                v => InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength = v,
+                v => UseReducedConcreteCompressiveStrength = v,
+                "コンクリート圧縮低減の変更");
+        }
+
+        // 鉄筋を 1.1×F で降伏する完全バイリニア型とする
+        [ObservableProperty]
+        private bool _rebarYieldAt11F;
+
+        partial void OnRebarYieldAt11FChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.RebarYieldAt11F,
+                v => InputModel.FundamentalInput.RebarYieldAt11F = v,
+                v => RebarYieldAt11F = v,
+                "鉄筋1.1F完全バイリニアの変更");
+        }
+
+        // 鋼管を 1.1×F で降伏する完全バイリニア型とする
+        [ObservableProperty]
+        private bool _steelPipeYieldAt11F;
+
+        partial void OnSteelPipeYieldAt11FChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.SteelPipeYieldAt11F,
+                v => InputModel.FundamentalInput.SteelPipeYieldAt11F = v,
+                v => SteelPipeYieldAt11F = v,
+                "鋼管1.1F完全バイリニアの変更");
+        }
+
+        // コンクリートのヤング係数 Ec の算定で ξ=1.0 とする
+        [ObservableProperty]
+        private bool _useUnitGsiForConcreteE;
+
+        partial void OnUseUnitGsiForConcreteEChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseUnitGsiForConcreteE,
+                v => InputModel.FundamentalInput.UseUnitGsiForConcreteE = v,
+                v => UseUnitGsiForConcreteE = v,
+                "コンクリートEc算定のξ=1.0オプション変更");
+        }
+
+        // 場所打ち系コンクリートの許容圧縮を告示1113(第8)による（使用限界=長期・損傷限界=短期）
+        [ObservableProperty]
+        private bool _useNotification1113Compression;
+
+        partial void OnUseNotification1113CompressionChanged(bool value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseNotification1113Compression,
+                v => InputModel.FundamentalInput.UseNotification1113Compression = v,
+                v => UseNotification1113Compression = v,
+                "許容圧縮を告示1113(第8)による へ変更");
+            OnPropertyChanged(nameof(Notification1113CaseEnabled));
+            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
+        }
+
+        // 場所打ちRC杭のコンクリート許容せん断を告示1113(第8)による（使用限界=長期・損傷限界=短期）
+        [ObservableProperty]
+        private bool _useNotification1113Shear;
+
+        partial void OnUseNotification1113ShearChanged(bool value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseNotification1113Shear,
+                v => InputModel.FundamentalInput.UseNotification1113Shear = v,
+                v => UseNotification1113Shear = v,
+                "許容せん断を告示1113(第8)による へ変更");
+            OnPropertyChanged(nameof(Notification1113CaseEnabled));
+            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
+        }
+
+        // 告示1113(第8) の区分 ComboBox を有効化するか（圧縮・せん断いずれかON）
+        public bool Notification1113CaseEnabled => UseNotification1113Compression || UseNotification1113Shear;
+
+        // 指針安全限界オプションと競合する材料オプション（圧縮 0.85Fc・鋼管 1.1F）を有効化するか。
+        // 指針安全限界ON時はグレーアウトして併用を防ぐ（0.85Fc は解析 M-φ と、鋼管 1.1F は指針の
+        // 鋼管トリリニアと競合するため）。
+        public bool ConflictingMaterialOptionsEnabled => !UseInsituUltimateEFunction;
+
+        // 場所打ちRC杭の安全限界曲げをe関数法で算定（指針(案)5.4.1。検定の耐力側のみ、解析M-φは常にバイリニア）
+        [ObservableProperty]
+        private bool _useInsituUltimateEFunction;
+
+        partial void OnUseInsituUltimateEFunctionChanged(bool value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseInsituUltimateEFunction,
+                v => InputModel.FundamentalInput.UseInsituUltimateEFunction = v,
+                v => UseInsituUltimateEFunction = v,
+                "安全限界曲げをe関数法(指針準拠) へ変更");
+            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
+            OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
+        }
+
+        /// <summary>
+        /// 2025年版「建築物の構造関係技術基準解説書」付録1-3 準拠のマスタースイッチ。
+        /// 「場所打ち杭の許容圧縮を告示1113(第8)による」「場所打ちRC杭の許容せん断を告示1113(第8)による」
+        /// 「安全限界を耐震設計指針(案)で算定する」の 3 項目を一括で ON/OFF する。
+        /// get は 3 項目すべて ON のとき true（個別に切替えると自動で追随）。
+        /// </summary>
+        public bool UseGuideline2025Appendix13
+        {
+            get => UseNotification1113Compression && UseNotification1113Shear && UseInsituUltimateEFunction;
+            set
+            {
+                bool oc = UseNotification1113Compression;
+                bool os = UseNotification1113Shear;
+                bool ou = UseInsituUltimateEFunction;
+                if (oc == value && os == value && ou == value) return;
+
+                _undoManager.PushAction(
+                    () => ApplyGuideline2025(oc, os, ou),
+                    () => ApplyGuideline2025(value, value, value),
+                    "2025解説書 付録1-3 準拠オプション一括切替");
+                ApplyGuideline2025(value, value, value);
+            }
+        }
+
+        // 3 項目を一括設定（個別ハンドラを抑制し、キャッシュ破棄＋通知は 1 回にまとめる）
+        private void ApplyGuideline2025(bool compression, bool shear, bool ultimate)
+        {
+            bool prev = _suppressConcreteOptionConfirm;
+            _suppressConcreteOptionConfirm = true;
+            try
+            {
+                UseNotification1113Compression = compression;   // VM 更新（個別ハンドラは抑制で早期 return）
+                UseNotification1113Shear = shear;
+                UseInsituUltimateEFunction = ultimate;
+                InputModel.FundamentalInput.UseNotification1113Compression = compression;
+                InputModel.FundamentalInput.UseNotification1113Shear = shear;
+                InputModel.FundamentalInput.UseInsituUltimateEFunction = ultimate;
+            }
+            finally { _suppressConcreteOptionConfirm = prev; }
+
+            _mainWindowViewModel.ApplyConcreteModelOptions();
+            OnPropertyChanged(nameof(Notification1113CaseEnabled));
+            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
+            OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
+        }
+
+        // 告示1113(第8) 長期許容圧縮の区分（1: Fc/4、2: min(Fc/4.5, 6)）
+        [ObservableProperty]
+        private int _notification1113CompressionCase = 1;
+
+        partial void OnNotification1113CompressionCaseChanged(int value)
+        {
+            HandleCapacityOnlyCaseChanged(
+                value,
+                () => InputModel.FundamentalInput.Notification1113CompressionCase,
+                v => InputModel.FundamentalInput.Notification1113CompressionCase = v,
+                v => Notification1113CompressionCase = v);
+        }
+
+        // 告示1113(第8) 圧縮の区分 ComboBox 用（値=区分番号、表示=式）
+        public sealed record Notification1113CaseItem(int Value, string Display);
+        public Notification1113CaseItem[] Notification1113CompressionCaseOptions { get; } =
+        [
+            new Notification1113CaseItem(1, "[1] 圧縮 Fc/4・せん断 Fc/40"),
+            new Notification1113CaseItem(2, "[2] 圧縮 min(Fc/4.5, 6)・せん断 Fc/45"),
+        ];
+
+        /// <summary>
+        /// バイリニアコンクリート・オプションの変更を処理する共通ハンドラ。
+        /// これらは M-φ（→ 非線形 FEM 解析）に影響するため、解析結果があれば確認のうえリセットする
+        /// （杭要素分割＝メッシュは材料変更では不変のため保持）。確認キャンセル時はチェックを元に戻す。
+        /// </summary>
+        private void HandleConcreteOptionChanged(
+            bool value, Func<bool> getter, Action<bool> setModel, Action<bool> setVm, string reason)
+        {
+            if (_suppressConcreteOptionConfirm) return;
+
+            bool oldValue = getter();
+            if (oldValue == value) return;
+
+            if (!_mainWindowViewModel.CheckAndResetAnalysisResultsKeepingSplit(reason))
+            {
+                _suppressConcreteOptionConfirm = true;
+                try { setVm(oldValue); }
+                finally { _suppressConcreteOptionConfirm = false; }
+                return;
+            }
+
+            _undoManager.PushAction(
+                () => { setModel(oldValue); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                () => { setModel(value); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                reason);
+
+            setModel(value);
+            _mainWindowViewModel.ApplyConcreteModelOptions();
+        }
+
+        /// <summary>
+        /// 検定の耐力側（使用/損傷限界 NM）のみに効くオプション用ハンドラ。
+        /// 解析（M-φ・変形・応力）・安全限界には影響しないため、解析結果は削除せず保持する
+        /// （確認ダイアログ無し）。キャッシュ破棄は ApplyConcreteModelOptions が行う。
+        /// </summary>
+        private void HandleCapacityOnlyOptionChanged(
+            bool value, Func<bool> getter, Action<bool> setModel, Action<bool> setVm, string reason)
+        {
+            if (_suppressConcreteOptionConfirm) return;
+            bool oldValue = getter();
+            if (oldValue == value) return;
+
+            _undoManager.PushAction(
+                () => { setModel(oldValue); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                () => { setModel(value); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                reason);
+
+            setModel(value);
+            _mainWindowViewModel.ApplyConcreteModelOptions();
+        }
+
+        // 区分(int)用の capacity-only ハンドラ（解析結果は保持）
+        private void HandleCapacityOnlyCaseChanged(
+            int value, Func<int> getter, Action<int> setModel, Action<int> setVm)
+        {
+            if (_suppressConcreteOptionConfirm) return;
+            int oldValue = getter();
+            if (oldValue == value) return;
+
+            _undoManager.PushAction(
+                () => { setModel(oldValue); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                () => { setModel(value); _mainWindowViewModel.ApplyConcreteModelOptions(); },
+                "告示1113(第8) 圧縮区分の変更");
+
+            setModel(value);
+            _mainWindowViewModel.ApplyConcreteModelOptions();
+        }
+
         [ObservableProperty]
         private Point3D _point3D0;
 
@@ -159,6 +423,15 @@ namespace PileDesign.ViewModels
             ProjectName = InputModel.FundamentalInput.ProjectName;
             Point3D0 = InputModel.FundamentalInput.Point3D0;
             SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
+            IgnoreConcreteTensileStrength = InputModel.FundamentalInput.IgnoreConcreteTensileStrength;
+            UseReducedConcreteCompressiveStrength = InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength;
+            RebarYieldAt11F = InputModel.FundamentalInput.RebarYieldAt11F;
+            SteelPipeYieldAt11F = InputModel.FundamentalInput.SteelPipeYieldAt11F;
+            UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
+            UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
+            UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
+            UseInsituUltimateEFunction = InputModel.FundamentalInput.UseInsituUltimateEFunction;
+            Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
 
@@ -184,6 +457,8 @@ namespace PileDesign.ViewModels
         {
             // プロパティを元に戻す処理
             InputModel.FundamentalInput = PrevFundamentalInput.ShallowCopy();
+            // 復元した基本設定の値で静的オプションを再同期（解析結果は既に確認のうえ削除済み）
+            _mainWindowViewModel.ApplyConcreteModelOptions();
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
@@ -205,6 +480,33 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.SeismicGrade):
                     SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
+                    break;
+                case nameof(FundamentalInput.IgnoreConcreteTensileStrength):
+                    IgnoreConcreteTensileStrength = InputModel.FundamentalInput.IgnoreConcreteTensileStrength;
+                    break;
+                case nameof(FundamentalInput.UseReducedConcreteCompressiveStrength):
+                    UseReducedConcreteCompressiveStrength = InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength;
+                    break;
+                case nameof(FundamentalInput.RebarYieldAt11F):
+                    RebarYieldAt11F = InputModel.FundamentalInput.RebarYieldAt11F;
+                    break;
+                case nameof(FundamentalInput.SteelPipeYieldAt11F):
+                    SteelPipeYieldAt11F = InputModel.FundamentalInput.SteelPipeYieldAt11F;
+                    break;
+                case nameof(FundamentalInput.UseUnitGsiForConcreteE):
+                    UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
+                    break;
+                case nameof(FundamentalInput.UseNotification1113Compression):
+                    UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
+                    break;
+                case nameof(FundamentalInput.UseNotification1113Shear):
+                    UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
+                    break;
+                case nameof(FundamentalInput.UseInsituUltimateEFunction):
+                    UseInsituUltimateEFunction = InputModel.FundamentalInput.UseInsituUltimateEFunction;
+                    break;
+                case nameof(FundamentalInput.Notification1113CompressionCase):
+                    Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
                     break;
             }
         }

@@ -2987,8 +2987,7 @@ namespace PileDesign.ViewModels
                 OnPropertyChanged(nameof(AnalysisStatusItems));
 
                 // docx 出力 CheckBox の表示更新
-                OnPropertyChanged(nameof(IncludeVertical));
-                NotifyVerticalChildrenChanged();
+                DocxOutput.OnVerticalAnalysisDoneChanged();
 
                 Both(); // 単杭+群杭 の表示制御
                 UpdateSettlementCategories();
@@ -3086,7 +3085,7 @@ namespace PileDesign.ViewModels
                     UpdateSettlementCategories();
 
                     // docx 出力 CheckBox の表示更新
-                    OnPropertyChanged(nameof(IncludeGroupPileSettlement));
+                    DocxOutput.OnGroupPileSettlementAnalysisDoneChanged();
                 }
             }
         }
@@ -3126,7 +3125,7 @@ namespace PileDesign.ViewModels
                     UpdateSettlementCategories();
 
                     // docx 出力 CheckBox の表示更新
-                    OnPropertyChanged(nameof(IncludeVerticalBeamResults));
+                    DocxOutput.OnVerticalBeamAnalysisDoneChanged();
                 }
             }
         }
@@ -3744,8 +3743,7 @@ namespace PileDesign.ViewModels
 
                     // docx 出力 CheckBox の表示更新
                     // (実体は保持されているが getter で IsHorizontalAnalysisDone を AND しているため)
-                    OnPropertyChanged(nameof(IncludeHorizontal));
-                    NotifyHorizontalChildrenChanged();
+                    DocxOutput.OnHorizontalAnalysisDoneChanged();
                 }
             }
         }
@@ -4058,215 +4056,11 @@ namespace PileDesign.ViewModels
 
         public MainCanvasGeometry CanvasGeometry { get; }
 
-        // MainWindowViewModel の partial 部分に追加
+        // docx 出力設定（計算書レベル・Include* フラグ・液状化出力・まとめ方・一括選択・出力前検証）は
+        // 専用 ViewModel (DocxOutputViewModel) に分離した。遅延生成で ctor 順序に依存しない。
+        private DocxOutputViewModel _docxOutput;
+        public DocxOutputViewModel DocxOutput => _docxOutput ??= new DocxOutputViewModel(this);
 
-        [ObservableProperty] private int calculationReportLevel = 1;
-        [ObservableProperty] private bool includeGroundInformation = true;
-        [ObservableProperty] private bool includeLiquefaction = false;
-        // 解析未完了 OR 親 OFF 時は getter で false を返す → CheckBox が「未チェック+灰色」表示になり
-        // 「チェック付き+灰色」の違和感を解消。実体 (_includeXxx) は保持されるので解析後/親 ON 時に
-        // 自動的に元の意図 (true/false) が復活する。
-        // 親 (IncludeHorizontal/IncludeVertical) の setter で全子の OnPropertyChanged を発火させ、
-        // 子の IsEnabled は CanEditHorizontalChildren / CanEditVerticalChildren にバインドする。
-        private bool _includeHorizontal = true;
-        public bool IncludeHorizontal
-        {
-            get => _includeHorizontal && IsHorizontalAnalysisDone;
-            set
-            {
-                if (_includeHorizontal != value)
-                {
-                    _includeHorizontal = value;
-                    OnPropertyChanged();
-                    NotifyHorizontalChildrenChanged();
-                }
-            }
-        }
-        private bool _includeVertical = true;
-        public bool IncludeVertical
-        {
-            get => _includeVertical && IsVerticalAnalysisDone;
-            set
-            {
-                if (_includeVertical != value)
-                {
-                    _includeVertical = value;
-                    OnPropertyChanged();
-                    NotifyVerticalChildrenChanged();
-                }
-            }
-        }
-
-        // 子 CheckBox の IsEnabled バインド用 — 親 ON かつ 解析完了 の時のみ編集可
-        public bool CanEditHorizontalChildren => _includeHorizontal && IsHorizontalAnalysisDone;
-        public bool CanEditVerticalChildren => _includeVertical && IsVerticalAnalysisDone;
-
-        private void NotifyHorizontalChildrenChanged()
-        {
-            OnPropertyChanged(nameof(IncludeHorizontal_Bending));
-            OnPropertyChanged(nameof(IncludeHorizontal_Shear));
-            OnPropertyChanged(nameof(IncludeHorizontal_NMinT));
-            OnPropertyChanged(nameof(IncludeHorizontal_QNInT));
-            OnPropertyChanged(nameof(IncludeHorizontal_MPhi));
-            OnPropertyChanged(nameof(IncludeHorizontal_MTheta));
-            OnPropertyChanged(nameof(IncludeHorizontal_NGReport));
-            OnPropertyChanged(nameof(IncludeHorizontal_StressLimitState));
-            OnPropertyChanged(nameof(IncludeAnalysisSummaryReport));
-            OnPropertyChanged(nameof(IncludePileHeadMomentMap));
-            OnPropertyChanged(nameof(IncludePileHeadShearMap));
-            OnPropertyChanged(nameof(CanEditHorizontalChildren));
-        }
-        private void NotifyVerticalChildrenChanged()
-        {
-            OnPropertyChanged(nameof(IncludeSettlement));
-            OnPropertyChanged(nameof(CanEditVerticalChildren));
-        }
-
-        // 水平検討の子フラグ — 親 (_includeHorizontal) が true かつ 解析完了 の時のみ display=true
-        private bool _includeHorizontal_Bending = true;
-        public bool IncludeHorizontal_Bending
-        {
-            get => _includeHorizontal_Bending && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includeHorizontal_Bending != value) { _includeHorizontal_Bending = value; OnPropertyChanged(); } }
-        }
-        private bool _includeHorizontal_Shear = true;
-        public bool IncludeHorizontal_Shear
-        {
-            get => _includeHorizontal_Shear && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includeHorizontal_Shear != value) { _includeHorizontal_Shear = value; OnPropertyChanged(); } }
-        }
-        private bool _includeHorizontal_NMinT = true;
-        public bool IncludeHorizontal_NMinT
-        {
-            get => _includeHorizontal_NMinT && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includeHorizontal_NMinT != value) { _includeHorizontal_NMinT = value; OnPropertyChanged(); } }
-        }
-        private bool _includeHorizontal_QNInT = true;
-        public bool IncludeHorizontal_QNInT
-        {
-            get => _includeHorizontal_QNInT && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includeHorizontal_QNInT != value) { _includeHorizontal_QNInT = value; OnPropertyChanged(); } }
-        }
-        private bool _includeHorizontal_MPhi = true;
-        public bool IncludeHorizontal_MPhi
-        {
-            get => _includeHorizontal_MPhi && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includeHorizontal_MPhi != value) { _includeHorizontal_MPhi = value; OnPropertyChanged(); } }
-        }
-        private bool _includeHorizontal_MTheta = true;
-        public bool IncludeHorizontal_MTheta
-        {
-            get => _includeHorizontal_MTheta && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includeHorizontal_MTheta != value) { _includeHorizontal_MTheta = value; OnPropertyChanged(); } }
-        }
-        private bool _includeHorizontal_NGReport = true;
-        public bool IncludeHorizontal_NGReport
-        {
-            get => _includeHorizontal_NGReport && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includeHorizontal_NGReport != value) { _includeHorizontal_NGReport = value; OnPropertyChanged(); } }
-        }
-        // 杭変位・応力ダイアグラムへの限界状態線重ね描き (default ON)
-        // - レベル1 → 損傷限界
-        // - レベル2 + 耐震グレード S → 損傷限界
-        // - レベル2 + 耐震グレード A → 安全限界
-        // 親 (曲げモーメント検討/せん断力検討 = IncludeHorizontal_Bending/Shear) のいずれかが ON のとき意味あり
-        private bool _includeHorizontal_StressLimitState = true;
-        public bool IncludeHorizontal_StressLimitState
-        {
-            get => _includeHorizontal_StressLimitState && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includeHorizontal_StressLimitState != value) { _includeHorizontal_StressLimitState = value; OnPropertyChanged(); } }
-        }
-
-        [ObservableProperty] private bool includePileLocationMap = false;
-        [ObservableProperty] private bool includePileAxialLoadMap = false;
-        [ObservableProperty] private bool includeIsFrontMap = false;
-        // 杭頭M/Qマップは XAML 上「水平検討」GroupBox 内の子。親 + 解析完了 でガード
-        private bool _includePileHeadMomentMap = false;
-        public bool IncludePileHeadMomentMap
-        {
-            get => _includePileHeadMomentMap && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includePileHeadMomentMap != value) { _includePileHeadMomentMap = value; OnPropertyChanged(); } }
-        }
-        private bool _includePileHeadShearMap = false;
-        public bool IncludePileHeadShearMap
-        {
-            get => _includePileHeadShearMap && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includePileHeadShearMap != value) { _includePileHeadShearMap = value; OnPropertyChanged(); } }
-        }
-        // 沈下系: 親 (IncludeVertical) + 解析完了 でガード
-        private bool _includeSettlement = true;
-        public bool IncludeSettlement
-        {
-            get => _includeSettlement && _includeVertical && IsVerticalAnalysisDone;
-            set { if (_includeSettlement != value) { _includeSettlement = value; OnPropertyChanged(); } }
-        }
-
-        private bool _includeGroupPileSettlement = false;
-        public bool IncludeGroupPileSettlement
-        {
-            get => _includeGroupPileSettlement && IsGroupPileSettlementAnalysisDone;
-            set { if (_includeGroupPileSettlement != value) { _includeGroupPileSettlement = value; OnPropertyChanged(); } }
-        }
-        private bool _includeVerticalBeamResults = false;
-        public bool IncludeVerticalBeamResults
-        {
-            get => _includeVerticalBeamResults && IsVerticalBeamAnalysisDone;
-            set { if (_includeVerticalBeamResults != value) { _includeVerticalBeamResults = value; OnPropertyChanged(); } }
-        }
-
-        // Phase 1: 地盤グラフ (5 件) — DocxOutputWindow チェックで個別 ON/OFF
-        [ObservableProperty] private bool includeNValueGraph = false;
-        [ObservableProperty] private bool includeCuGraph = false;
-        [ObservableProperty] private bool includeVsGraph = false;
-        [ObservableProperty] private bool includeEsGraph = false;
-        [ObservableProperty] private bool includeFLGraph = false;
-
-        // Phase 1: 杭関連の図/表 (5 件)
-        [ObservableProperty] private bool includePileElevation = false;       // 杭姿図 (杭体ごと)
-        [ObservableProperty] private bool includePileSectionDiagram = false;  // 杭断面図 (杭断面ごと)
-        [ObservableProperty] private bool includePileTopView = false;         // 杭頭上面図
-        [ObservableProperty] private bool includeAxialLimitTable = false;     // 軸力制限テーブル
-        [ObservableProperty] private bool includePileTopSpecs = false;        // 杭頭諸元テーブル
-
-        // Phase 2: 中優先項目 (3 件)
-        [ObservableProperty] private bool includeGroundDisplacementGraph = false;  // 任意地盤変位グラフ
-        [ObservableProperty] private bool includeResponseSpectrumGraph = false;    // 応答スペクトルグラフ
-
-        // Phase 3: 要素分割関連 (3 件)
-        [ObservableProperty] private bool includeElementDivisionPileShape = false;       // 要素分割杭姿図 (分割点マーク付き)
-        [ObservableProperty] private bool includeHorizontalSoilReactionGraph = false;    // 水平地盤反力分布グラフ
-        [ObservableProperty] private bool includeDoatsuGoryokuBaneGraph = false;         // 土圧合力ばね分布グラフ
-        private bool _includeAnalysisSummaryReport = false;
-        public bool IncludeAnalysisSummaryReport
-        {
-            get => _includeAnalysisSummaryReport && _includeHorizontal && IsHorizontalAnalysisDone;
-            set { if (_includeAnalysisSummaryReport != value) { _includeAnalysisSummaryReport = value; OnPropertyChanged(); } }
-        }
-
-        // 入力データ基本セクション (7 件) — これまで無条件出力だったものを CheckBox 制御化。
-        // 既存ユーザの体感を変えないため初期値は true (出力する)。
-        [ObservableProperty] private bool includeFundamental = true;       // 基本設定
-        [ObservableProperty] private bool includeLoadCondition = true;     // 荷重条件
-        [ObservableProperty] private bool includePileBodies = true;        // 杭体 (杭体明細表を含む)
-        [ObservableProperty] private bool includePileLayoutTable = true;   // 杭配置
-        [ObservableProperty] private bool includePileAxialLoad = true;     // 杭軸力
-        [ObservableProperty] private bool includeIsFrontPile = true;       // 前後方杭
-        [ObservableProperty] private bool includeDesignApproach = true;    // 検討方針 (杭頭接続仮定を含む)
-
-        // 水平解析完了時に HorizontalCalculationViewModel が cache する解析サマリーテキスト
-        // (docx 出力で先頭の "━━━ 解析サマリーレポート ━━━" ブロックを再利用するため)
-        public string LastAnalysisSummaryText { get; set; }
-
-        // 液状化有無の出力オプション
-        [ObservableProperty] private bool includeOutputLiquefactionYes = true;
-        [ObservableProperty] private bool includeOutputLiquefactionNo = true;
-
-        // 杭変位応力ダイアグラムのグループ化
-        // false: 杭ごとに個別の図（既定・従来動作）
-        // true: 杭地盤セット（ElementDivision.SoilPiles）ごとに 1 図にまとめ、同一セット内の杭は系列オーバーレイ
-        [ObservableProperty] private bool groupPileStressBySoilPile = false;
-        [ObservableProperty] private bool isLiquefactionYesAnalyzed = false;
-        [ObservableProperty] private bool isLiquefactionNoAnalyzed = false;
 
         // コンストラクタ //
         /// <summary>

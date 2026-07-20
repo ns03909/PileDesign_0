@@ -32,20 +32,20 @@ namespace PileDesign.Output
         {
             if (inputModel?.ElementDivision == null || mainWindowViewModel == null) return;
 
-            bool any = mainWindowViewModel.IncludeElementDivisionPileShape
-                    || mainWindowViewModel.IncludeHorizontalSoilReactionGraph
-                    || mainWindowViewModel.IncludeDoatsuGoryokuBaneGraph;
+            bool any = mainWindowViewModel.DocxOutput.IncludeElementDivisionPileShape
+                    || mainWindowViewModel.DocxOutput.IncludeHorizontalSoilReactionGraph
+                    || mainWindowViewModel.DocxOutput.IncludeDoatsuGoryokuBaneGraph;
             if (!any) return;
 
             AddHeader1(body, "要素分割", 1);
 
-            if (mainWindowViewModel.IncludeElementDivisionPileShape)
+            if (mainWindowViewModel.DocxOutput.IncludeElementDivisionPileShape)
                 AddElementDivisionPileShapes(mainPart, body);
 
-            if (mainWindowViewModel.IncludeHorizontalSoilReactionGraph)
+            if (mainWindowViewModel.DocxOutput.IncludeHorizontalSoilReactionGraph)
                 AddHorizontalSoilReactionGraphs(mainPart, body);
 
-            if (mainWindowViewModel.IncludeDoatsuGoryokuBaneGraph)
+            if (mainWindowViewModel.DocxOutput.IncludeDoatsuGoryokuBaneGraph)
                 AddDoatsuGoryokuBaneGraph(mainPart, body);
         }
 

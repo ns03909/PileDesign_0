@@ -25,13 +25,13 @@ namespace PileDesign.Output
         {
             if (inputModel?.GroundsInput == null || mainWindowViewModel == null) return;
 
-            bool any = mainWindowViewModel.IncludeNValueGraph
-                    || mainWindowViewModel.IncludeCuGraph
-                    || mainWindowViewModel.IncludeVsGraph
-                    || mainWindowViewModel.IncludeEsGraph
-                    || mainWindowViewModel.IncludeFLGraph
-                    || mainWindowViewModel.IncludeGroundDisplacementGraph
-                    || mainWindowViewModel.IncludeResponseSpectrumGraph;
+            bool any = mainWindowViewModel.DocxOutput.IncludeNValueGraph
+                    || mainWindowViewModel.DocxOutput.IncludeCuGraph
+                    || mainWindowViewModel.DocxOutput.IncludeVsGraph
+                    || mainWindowViewModel.DocxOutput.IncludeEsGraph
+                    || mainWindowViewModel.DocxOutput.IncludeFLGraph
+                    || mainWindowViewModel.DocxOutput.IncludeGroundDisplacementGraph
+                    || mainWindowViewModel.DocxOutput.IncludeResponseSpectrumGraph;
             if (!any) return;
 
             AddHeader1(body, "地盤グラフ", 1);
@@ -46,19 +46,19 @@ namespace PileDesign.Output
                     ? $"地盤 {gIdx + 1}: {ground.GroundRef}"
                     : $"地盤 {gIdx + 1}";
 
-                if (mainWindowViewModel.IncludeNValueGraph)
+                if (mainWindowViewModel.DocxOutput.IncludeNValueGraph)
                     AddGroundGraph(mainPart, body, ground, GroundGraphType.NValue, $"N値分布 ({groundLabel})", groundLabel);
-                if (mainWindowViewModel.IncludeCuGraph)
+                if (mainWindowViewModel.DocxOutput.IncludeCuGraph)
                     AddGroundGraph(mainPart, body, ground, GroundGraphType.Cu, $"粘着力 Cu 分布 ({groundLabel})", groundLabel);
-                if (mainWindowViewModel.IncludeVsGraph)
+                if (mainWindowViewModel.DocxOutput.IncludeVsGraph)
                     AddGroundGraph(mainPart, body, ground, GroundGraphType.Vs, $"S波速度 Vs 分布 ({groundLabel})", groundLabel);
-                if (mainWindowViewModel.IncludeEsGraph)
+                if (mainWindowViewModel.DocxOutput.IncludeEsGraph)
                     AddGroundGraph(mainPart, body, ground, GroundGraphType.Es, $"変形係数 Es 分布 ({groundLabel})", groundLabel);
-                if (mainWindowViewModel.IncludeFLGraph)
+                if (mainWindowViewModel.DocxOutput.IncludeFLGraph)
                     AddGroundGraph(mainPart, body, ground, GroundGraphType.FL, $"液状化安全率 FL 分布 ({groundLabel})", groundLabel);
-                if (mainWindowViewModel.IncludeGroundDisplacementGraph)
+                if (mainWindowViewModel.DocxOutput.IncludeGroundDisplacementGraph)
                     AddGroundDisplacementGraph(mainPart, body, ground, groundLabel);
-                if (mainWindowViewModel.IncludeResponseSpectrumGraph)
+                if (mainWindowViewModel.DocxOutput.IncludeResponseSpectrumGraph)
                     AddResponseSpectrumGraph(mainPart, body, ground, groundLabel);
             }
         }

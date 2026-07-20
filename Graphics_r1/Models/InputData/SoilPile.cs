@@ -122,6 +122,55 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _horizontalSoilReactions, value);
         }
 
+        // 基準水平地盤反力係数 kh0 の土層ごと手入力オーバーライド（土層名 → 値）。
+        // 空 = 全土層で自動計算。SetHorizontalSoilReaction() で該当土層の要素に適用される。
+        private ObservableCollection<Kh0LayerOverride> _kh0LayerOverrides = [];
+        public ObservableCollection<Kh0LayerOverride> Kh0LayerOverrides
+        {
+            get => _kh0LayerOverrides;
+            set => SetProperty(ref _kh0LayerOverrides, value);
+        }
+
+        /// <summary>指定土層名の kh0 手入力オーバーライドを返す（未設定なら null）。</summary>
+        public double? GetKh0Override(string layerName)
+        {
+            if (string.IsNullOrEmpty(layerName) || Kh0LayerOverrides == null) return null;
+            foreach (var o in Kh0LayerOverrides)
+                if (o.LayerName == layerName) return o.Kh0;
+            return null;
+        }
+
+        /// <summary>指定土層名に kh0 手入力オーバーライドを設定し、水平地盤反力を再構築する。</summary>
+        public void SetKh0Override(string layerName, double value)
+        {
+            if (string.IsNullOrEmpty(layerName)) return;
+            Kh0LayerOverrides ??= [];
+            var existing = Kh0LayerOverrides.FirstOrDefault(o => o.LayerName == layerName);
+            if (existing != null) existing.Kh0 = value;
+            else Kh0LayerOverrides.Add(new Kh0LayerOverride { LayerName = layerName, Kh0 = value });
+            RebuildHorizontalSoilReactions();
+        }
+
+        /// <summary>指定土層名の kh0 手入力オーバーライドを解除し（自動計算に戻す）、再構築する。</summary>
+        public void ClearKh0Override(string layerName)
+        {
+            if (Kh0LayerOverrides == null) return;
+            var existing = Kh0LayerOverrides.FirstOrDefault(o => o.LayerName == layerName);
+            if (existing != null) Kh0LayerOverrides.Remove(existing);
+            RebuildHorizontalSoilReactions();
+        }
+
+        /// <summary>全土層の kh0 手入力オーバーライドを解除し（自動計算に戻す）、再構築する。</summary>
+        public void ClearAllKh0Overrides()
+        {
+            if (Kh0LayerOverrides == null || Kh0LayerOverrides.Count == 0) return;
+            Kh0LayerOverrides.Clear();
+            RebuildHorizontalSoilReactions();
+        }
+
+        /// <summary>水平地盤反力（HorizontalSoilReactions）を再構築する公開メソッド。</summary>
+        public void RebuildHorizontalSoilReactions() => SetHorizontalSoilReaction();
+
         // 杭周鉛直力
         public ObservableCollection<PileCircumVertical> PileCircumVerticals { get; set; }
 
@@ -992,6 +1041,14 @@ namespace PileDesign.Models.InputData
                 zDataTop, zDataBtm,
                 xi, rOnB, nValue, phi, cohesive, stressTop, stressBtm);
 
+                // 土層ごとの kh0 手入力オーバーライドがあれば適用（自動計算値を上書き）
+                double? kh0Override = GetKh0Override(name);
+                if (kh0Override.HasValue)
+                {
+                    horizontalSoilReactionItem.Kh0 = kh0Override.Value;
+                    horizontalSoilReactionItem.IsKh0Manual = true;
+                }
+
                 HorizontalSoilReactions.Add(horizontalSoilReactionItem);
             }
         }
@@ -1068,6 +1125,8 @@ namespace PileDesign.Models.InputData
                     (this.PileCircumVerticals.Select(pileCircumVertical => pileCircumVertical.DeepCopy()));
                 copy.HorizontalSoilReactions = new ObservableCollection<HorizontalSoilReactionItem>
                     (this.HorizontalSoilReactions.Select(horizontalSoilReaction => horizontalSoilReaction.DeepCopy()));
+                copy.Kh0LayerOverrides = new ObservableCollection<Kh0LayerOverride>
+                    (this.Kh0LayerOverrides.Select(o => o.DeepCopy()));
             }
             ;
             return copy;

@@ -27,6 +27,7 @@
         <conv:LoadCombinationAnalyzedConverter x:Key="LoadCombinationAnalyzedConverter"/>
         <conv:LiquefactionAnalyzedConverter x:Key="LiquefactionAnalyzedConverter"/>
         <conv:GraphCategoryConverter x:Key="GraphCategoryConverter"/>
+        <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
     </Window.Resources>
 
     <Grid>
@@ -218,7 +219,13 @@
 
             <StackPanel Visibility="{Binding IsLimitStateOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="限界状態:" VerticalAlignment="Center"/>
-                <ComboBox ItemsSource="{Binding LimitStateOptions}" SelectedItem="{Binding SelectedLimitState}"/>
+                <ComboBox ItemsSource="{Binding LimitStateOptions}" SelectedItem="{Binding SelectedLimitState}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
 
             <StackPanel Visibility="{Binding IsSeismicGradeOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -268,9 +275,6 @@
             </Border>
         </Popup>
 
-        <TextBlock Text="{Binding CrosshairPositionText}" Grid.Row="1" Grid.Column="0" Margin="10" FontSize="14"
-                   Visibility="{Binding IsSingleGraphVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
         <Grid Grid.Row="0" Grid.Column="0"
                 Visibility="{Binding IsMultiGraphVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid.ColumnDefinitions>
@@ -290,9 +294,6 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding CrosshairPositionText1}" Margin="10" FontSize="14" Grid.Column="0"/>
-            <TextBlock Text="{Binding CrosshairPositionText2}" Margin="10" FontSize="14" Grid.Column="1"/>
-            <TextBlock Text="{Binding CrosshairPositionText3}" Margin="10" FontSize="14" Grid.Column="2"/>
         </Grid>
 
         <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Vertical" Margin="10,2" VerticalAlignment="Center">

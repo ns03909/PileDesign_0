@@ -60,22 +60,22 @@ namespace PileDesign.Output
                         var nmUDmg = pileSection.UnfactoredDamageNM;
                         lineListsX.Add(ToList(nmUDmg.N));
                         lineListsY.Add(ToList(nmUDmg.M));
-                        lineListsLegend.Add("低減前損傷限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前損傷限界"));
 
                         var nmFDmg = pileSection.FactoredDamageNM;
                         lineListsX.Add(ToList(nmFDmg.N));
                         lineListsY.Add(ToList(nmFDmg.M));
-                        lineListsLegend.Add("低減後損傷限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後損傷限界"));
 
                         var nmUSvc = pileSection.UnfactoredServiceNM;
                         lineListsX.Add(ToList(nmUSvc.N));
                         lineListsY.Add(ToList(nmUSvc.M));
-                        lineListsLegend.Add("低減前使用限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前使用限界"));
 
                         var nmFSvc = pileSection.FactoredServiceNM;
                         lineListsX.Add(ToList(nmFSvc.N));
                         lineListsY.Add(ToList(nmFSvc.M));
-                        lineListsLegend.Add("低減後使用限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後使用限界"));
                     }
                     catch (Exception ex)
                     {
@@ -115,7 +115,7 @@ namespace PileDesign.Output
                                     momentResultsVL.Add(0.0);
                                 }
                             }
-                            catch { /* ignore */ }
+                            catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
 
                             foreach (var loadCase in allSeismicLoadCases)
                             {
@@ -126,8 +126,8 @@ namespace PileDesign.Output
                                 {
                                     // 液状化パターン（ユーザー選択に基づく）
                                     var liqPatternsNM = new List<bool>();
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatternsNM.Add(true);
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatternsNM.Add(false);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatternsNM.Add(true);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatternsNM.Add(false);
 
                                     foreach (var isLiquefaction in liqPatternsNM)
                                     {
@@ -331,22 +331,22 @@ namespace PileDesign.Output
                         var nqUDmg = pileSection.UnfactoredDamageNQ;
                         lineListsX.Add(ToList(nqUDmg.N));
                         lineListsY.Add(ToList(nqUDmg.Q));
-                        lineListsLegend.Add("低減前損傷限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前損傷限界"));
 
                         var nqFDmg = pileSection.FactoredDamageNQ;
                         lineListsX.Add(ToList(nqFDmg.N));
                         lineListsY.Add(ToList(nqFDmg.Q));
-                        lineListsLegend.Add("低減後損傷限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後損傷限界"));
 
                         var nqUSvc = pileSection.UnfactoredServiceNQ;
                         lineListsX.Add(ToList(nqUSvc.N));
                         lineListsY.Add(ToList(nqUSvc.Q));
-                        lineListsLegend.Add("低減前使用限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前使用限界"));
 
                         var nqFSvc = pileSection.FactoredServiceNQ;
                         lineListsX.Add(ToList(nqFSvc.N));
                         lineListsY.Add(ToList(nqFSvc.Q));
-                        lineListsLegend.Add("低減後使用限界");
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後使用限界"));
                     }
                     catch (Exception ex)
                     {
@@ -386,7 +386,7 @@ namespace PileDesign.Output
                                     shearResultsVL.Add(0.0);
                                 }
                             }
-                            catch { /* ignore */ }
+                            catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
 
                             foreach (var loadCase in allSeismicLoadCases)
                             {
@@ -396,8 +396,8 @@ namespace PileDesign.Output
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
                                     var liqPatterns = new List<bool>();
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
 
                                     foreach (var isLiquefaction in liqPatterns)
                                     {
@@ -492,8 +492,8 @@ namespace PileDesign.Output
                     // 同一 (LC, Comb, Liq, 軸力) 相当のキーで重複曲線を間引く
                     List<List<double>> lineListsX = [];
                     List<List<double>> lineListsY = [];
-                    List<string> lineListsLegend = [];
                     var seenCurveKeys = new HashSet<string>();
+                    double mphiNMin = double.MaxValue, mphiNMax = double.MinValue; // キャプション用の軸力範囲
 
                     // 散布点: 最終ステップの (φ, M)
                     List<double> phiResultsLevel1 = [];
@@ -537,8 +537,8 @@ namespace PileDesign.Output
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
                                     var liqPatterns = new List<bool>();
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
-                                    if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                                    if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
 
                                     foreach (var isLiquefaction in liqPatterns)
                                     {
@@ -549,7 +549,7 @@ namespace PileDesign.Output
                                             double nSeis = pli.GetSeismicAxialForce(loadCase.No, loadCase.Level);
                                             if (double.IsFinite(nSeis) && nSeis != 0.0) axialN = nSeis;
                                         }
-                                        catch { /* ignore */ }
+                                        catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
                                         if (axialN == 0.0 && double.IsFinite(pli.AxialForce))
                                             axialN = pli.AxialForce;
 
@@ -598,7 +598,7 @@ namespace PileDesign.Output
                                                         moments = mPhi.Moments;
                                                     }
                                                 }
-                                                catch { /* ignore */ }
+                                                catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
                                             }
                                         }
 
@@ -611,8 +611,9 @@ namespace PileDesign.Output
                                         {
                                             lineListsX.Add(phis);
                                             lineListsY.Add(moments);
-                                            string liqTag = isLiquefaction ? "液状化" : "非液状化";
-                                            lineListsLegend.Add($"{loadCase.LoadName}|Comb{loadCombination.No}|{liqTag}|N≈{axialN:F0}kN");
+                                            // 曲線ごとの凡例は判読不能になるため出さない（軸力範囲をキャプションに記載）。
+                                            if (axialN < mphiNMin) mphiNMin = axialN;
+                                            if (axialN > mphiNMax) mphiNMax = axialN;
                                         }
 
                                         // 最終ステップの (φ, M) 散布点
@@ -658,15 +659,18 @@ namespace PileDesign.Output
                     List<List<double>> ysScatter = [momentResultsLevel2, momentResultsLevel1];
                     List<string> scatterLegends = ["レベル2", "レベル1"];
 
+                    // 曲線凡例は空にし、散布点「レベル1/レベル2」だけの凡例を表示する
                     AddNMinTScottPlotGraphToBody(
                         mainPart, body,
-                        lineListsX, lineListsY, lineListsLegend,
+                        lineListsX, lineListsY, [],
                         xsScatter, ysScatter, scatterLegends,
                         "", "曲率φ[rad/m]", "曲げモーメント[kNm]",
-                        150, 150, showLegend: false);
+                        150, 150);
 
+                    string nRange = mphiNMin <= mphiNMax
+                        ? $"（曲線 {lineListsX.Count} 本、軸力 N≈{mphiNMin:N0}〜{mphiNMax:N0}kN）" : string.Empty;
                     AddAutoFigureCaption(body,
-                        $"M-φ関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
+                        $"M-φ関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}{nRange}",
                         "図");
                 }
             }
@@ -717,8 +721,8 @@ namespace PileDesign.Output
 
                 List<List<double>> lineListsX = [];
                 List<List<double>> lineListsY = [];
-                List<string> lineListsLegend = [];
                 var seenMThetaKeys = new HashSet<string>();
+                double mthetaNMin = double.MaxValue, mthetaNMax = double.MinValue; // キャプション用の軸力範囲
 
                 List<double> thetaResultsLevel1 = [];
                 List<double> momentResultsLevel1 = [];
@@ -739,8 +743,8 @@ namespace PileDesign.Output
                         foreach (var loadCombination in allLoadCombinations)
                         {
                             var liqPatterns = new List<bool>();
-                            if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
-                            if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                            if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                            if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
 
                             foreach (var isLiquefaction in liqPatterns)
                             {
@@ -750,7 +754,7 @@ namespace PileDesign.Output
                                     double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
                                     if (double.IsFinite(nSeis) && nSeis != 0.0) axialN = nSeis;
                                 }
-                                catch { /* ignore */ }
+                                catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
                                 if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
                                     axialN = pileLayout.AxialForce;
 
@@ -805,8 +809,9 @@ namespace PileDesign.Output
                                 {
                                     lineListsX.Add(thetas.ToList());
                                     lineListsY.Add(moments.ToList());
-                                    string liqTag = isLiquefaction ? "液状化" : "非液状化";
-                                    lineListsLegend.Add($"{loadCase.LoadName}|Comb{loadCombination.No}|{liqTag}|Mode:{modeTag}|N≈{axialN:F0}kN");
+                                    // 曲線ごとの凡例は判読不能になるため出さない（軸力範囲をキャプションに記載）。
+                                    if (axialN < mthetaNMin) mthetaNMin = axialN;
+                                    if (axialN > mthetaNMax) mthetaNMax = axialN;
                                 }
 
                                 // 最終ステップの (θ, M) 散布点
@@ -864,22 +869,25 @@ namespace PileDesign.Output
                 List<List<double>> ysScatter = [momentResultsLevel2, momentResultsLevel1];
                 List<string> scatterLegends = ["レベル2", "レベル1"];
 
+                // 曲線凡例は空にし、散布点「レベル1/レベル2」だけの凡例を表示する
                 AddNMinTScottPlotGraphToBody(
                     mainPart, body,
-                    lineListsX, lineListsY, lineListsLegend,
+                    lineListsX, lineListsY, [],
                     xsScatter, ysScatter, scatterLegends,
                     "", "回転角θ[rad]", "曲げモーメント[kNm]",
                     150, 150);
 
+                string nRangeTheta = mthetaNMin <= mthetaNMax
+                    ? $"（曲線 {lineListsX.Count} 本、軸力 N≈{mthetaNMin:N0}〜{mthetaNMax:N0}kN）" : string.Empty;
                 AddAutoFigureCaption(body,
-                    $"M-θ関係　杭体符号:{pileBody.PileBodyRef}",
+                    $"M-θ関係　杭体符号:{pileBody.PileBodyRef}{nRangeTheta}",
                     "図");
             }
         }
 
         /// <summary>
         /// 全杭×全解析荷重ケースの曲げモーメント・せん断力・変位ダイアグラムを出力
-        /// mainWindowViewModel.GroupPileStressBySoilPile でグループ化の有無を切替。
+        /// mainWindowViewModel.DocxOutput.GroupPileStressBySoilPile でグループ化の有無を切替。
         /// </summary>
         private void AddAllPileStressDiagrams(MainDocumentPart mainPart, Body body,
             bool includeBending, bool includeShear, bool includeLimitState = false)
@@ -894,7 +902,7 @@ namespace PileDesign.Output
             AddPageBreak(body);
             AddHeader1(body, "杭の変位・応力ダイアグラム", 2);
 
-            if (mainWindowViewModel.GroupPileStressBySoilPile)
+            if (mainWindowViewModel.DocxOutput.GroupPileStressBySoilPile)
             {
                 // グループ化版は限界状態の重ね描きに非対応 (杭ごとに異なる断面/軸力で意味が薄いため省略)
                 AddAllPileStressDiagramsGrouped(mainPart, body, includeBending, includeShear, loadCases, loadCombinations);
@@ -915,8 +923,8 @@ namespace PileDesign.Output
                     foreach (var comb in loadCombinations)
                     {
                         var liqPatterns = new List<bool>();
-                        if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
-                        if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                        if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                        if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
                         if (liqPatterns.Count == 0) continue;
 
                         foreach (bool isLiq in liqPatterns)
@@ -1091,7 +1099,7 @@ namespace PileDesign.Output
 
             string seismicGrade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
             bool useDamage = lc.Level == 1 || (lc.Level == 2 && seismicGrade == "S");
-            string limitName = useDamage ? "損傷限界 (低減後)" : "安全限界 (低減後)";
+            string limitName = ConcreteModelOptions.MapLimitStateText(useDamage ? "損傷限界 (低減後)" : "安全限界 (低減後)");
 
             var soilPile = pli.SoilPile;
             if (soilPile?.PileBodySegments == null) return (shearXs, shearZs, momentXs, momentZs, limitName);
@@ -1201,8 +1209,8 @@ namespace PileDesign.Output
                     foreach (var comb in loadCombinations)
                     {
                         var liqPatterns = new List<bool>();
-                        if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
-                        if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                        if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                        if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
                         if (liqPatterns.Count == 0) continue;
 
                         foreach (bool isLiq in liqPatterns)
@@ -1233,7 +1241,7 @@ namespace PileDesign.Output
                                         soilUh = GetNodeResultCached(pli.SoilNodes[i], lc, comb, isLiq)
                                             ?.CumulativeDisp?.Uh ?? 0.0;
                                     }
-                                    catch { /* ignore */ }
+                                    catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
                                     soilDisps.Add(soilUh);
                                     if (i != 0 && i != pli.PileNodes.Count - 1) soilDisps.Add(soilUh);
                                 }
@@ -1253,7 +1261,7 @@ namespace PileDesign.Output
                                         uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
                                         uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
                                     }
-                                    catch { /* ignore */ }
+                                    catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
                                     disps.Add(uhI);
                                     disps.Add(uhJ);
                                 }
@@ -1442,9 +1450,9 @@ namespace PileDesign.Output
                 AddScottPlotGraphWithMultipleDataToBody(
                     mainPart, body,
                     xsLists, ysLists, legends,
-                    "", "相対変位[mm]", "周面抵抗力[kN/m]",
+                    "", "相対変位[mm]", "周面抵抗力度[kN/m²]",
                     150, 150);
-                AddAutoFigureCaption(body, $"{caption}：杭周面抵抗力-変位関係", "図");
+                AddAutoFigureCaption(body, $"{caption}：杭周面抵抗力度-変位関係", "図");
             }
         }
     }

@@ -25,7 +25,8 @@ namespace PileDesign.Models.InputData
         public double PyRearBtm { get; set; } // 塑性地盤反力
 
         public double E0 { get; set; }
-        public double Kh0 { get; set; } // 基準水平地盤反力係数
+        public double Kh0 { get; set; } // 基準水平地盤反力係数（自動計算値、または手入力オーバーライド値）
+        public bool IsKh0Manual { get; set; } // Kh0 が手入力オーバーライドか（表示・判定用）
         public double Gamma { get; set; }
 
 
@@ -86,7 +87,8 @@ namespace PileDesign.Models.InputData
                 PyFrontBtm = this.PyFrontBtm,
                 PyRearTop = this.PyRearTop,
                 PyRearBtm = this.PyRearBtm,
-                Kh0 = this.Kh0
+                Kh0 = this.Kh0,
+                IsKh0Manual = this.IsKh0Manual
             };
         }
 
@@ -293,5 +295,19 @@ namespace PileDesign.Models.InputData
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// 基準水平地盤反力係数 kh0 の土層ごとの手入力オーバーライド。
+    /// SoilPile（土層-杭セット）に保持され、指定土層内の全要素の kh0 を手入力値で固定する。
+    /// 未登録の土層は自動計算値を用いる。
+    /// </summary>
+    public class Kh0LayerOverride
+    {
+        public string LayerName { get; set; }
+        public double Kh0 { get; set; }
+
+        public Kh0LayerOverride DeepCopy()
+            => new() { LayerName = this.LayerName, Kh0 = this.Kh0 };
     }
 }

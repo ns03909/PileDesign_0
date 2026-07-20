@@ -469,7 +469,7 @@ namespace PileDesign.ViewModels
                 double[] xs = [.. nList.Select(x => x /** 1e-3*/)];      // N -> kN
                 double[] ys = [.. mList.Select(m => m /** 1e-6*/)];      // Nmm/N*m -> kNm（既存実装に合わせる）
                 var scatter = wpf.Plot.Add.Scatter(xs, ys);
-                scatter.LegendText = legend;
+                scatter.LegendText = ConcreteModelOptions.MapLimitStateText(legend);
                 scatter.LineWidth = (float)lineWidth;
                 scatter.MarkerSize = 0;
                 if (dashed)

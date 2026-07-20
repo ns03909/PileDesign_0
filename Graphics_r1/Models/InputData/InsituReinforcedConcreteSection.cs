@@ -24,9 +24,15 @@ namespace PileDesign.Models.InputData
         public List<double> ServiceLimitShearAxialForceThresholds { get; private set; }
 
         // コンストラクタ
+        // applyBodyMaterialOptions: 杭体断面のみ true。鉄筋 1.1F 完全バイリニア型オプションを適用する。
+        //   杭頭接合部（PileTop の定着筋断面）などは false を渡してオプション対象外とする。
         internal InsituReinforcedConcreteSection(
-            InsituConcrete insituConcrete, MainBars mainBars)
+            InsituConcrete insituConcrete, MainBars mainBars, bool applyBodyMaterialOptions = true)
         {
+            // 鉄筋 1.1F 完全バイリニア型オプション（降伏応力度 σy → 1.1σy）を適用（限界ひずみ再計算より前）
+            if (applyBodyMaterialOptions)
+                mainBars.YieldAt11F = ConcreteModelOptions.RebarYieldAt11F;
+
             PileDia = insituConcrete.DO;
             MainBarArea = mainBars.Ag; //mainBarArea;
             MainBarPCD = mainBars.PCD;  //mainBarPcd;
@@ -122,7 +128,11 @@ namespace PileDesign.Models.InputData
             FactoredDamageNMLevel1 = GetFactoredMNInteraction(UnfactoredDamageNM, (DamageLimitAxialForceThresholds, DamageLimitBendingMomentThresholds), DamageLimitBetaL1);
 
             // 低減後安全限界NMインタラクション
-            FactoredUltimateNM = GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
+            // 指針(案) 準拠オプション時は安全限界曲げ強度をそのまま採用し、低減・軸力制限を課さない
+            // （低減後＝低減前の全体を描く）。既定は基礎部材の低減率(β1/β1β2)・軸力制限を適用。
+            FactoredUltimateNM = ConcreteModelOptions.UseInsituUltimateEFunction
+                ? UnfactoredUltimateNM
+                : GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
 
             // 低減前使用限界NQインタラクション
             UnfactoredServiceNQ = GetServiceLimitQNInteraction(3.0, false);
@@ -159,7 +169,25 @@ namespace PileDesign.Models.InputData
             double b = Math.PI * PileDia / 4.0;
             double d = 0.9 * PileDia;
             double j = 7.0 / 8.0 * d;
+            if (ConcreteModelOptions.UseNotification1113Shear)
+            {
+                // 告示1113(第8): 使用限界=長期許容せん断応力度 fs。許容せん断力 Q = fs·b·j
+                // （軸力・M/(Q·d) 非依存、低減係数を乗じないため 低減前/低減後 は同値）。
+                return GetNotification1113LongTermShearStress() * b * j;
+            }
             return (isFactored ? beta1 : 1.0) * 2.0 / 3.0 * 0.065 * kc * (49.0 + InsituConcrete.Gsi * InsituConcrete.Fc) / (MonQd + 1.7) * (1 + sigma0 / 14.7) * b * j;
+        }
+
+        /// <summary>
+        /// 告示 平13国交告第1113号(第8) の場所打ちコンクリート長期許容せん断応力度 fs（N/mm²）。
+        /// fs = min( Fc/40 ［区分2 は Fc/45］, (3/4)(0.49 + Fc/100) )。短期はこの 1.5 倍。
+        /// </summary>
+        private double GetNotification1113LongTermShearStress()
+        {
+            double Fc = InsituConcrete.Fc;
+            double baseTerm = ConcreteModelOptions.Notification1113CompressionCase == 2 ? Fc / 45.0 : Fc / 40.0;
+            double archTerm = 0.75 * (0.49 + Fc / 100.0);
+            return Math.Min(baseTerm, archTerm);
         }
 
         /// <summary>
@@ -174,6 +202,12 @@ namespace PileDesign.Models.InputData
             double b = Math.PI * PileDia / 4.0;
             double d = 0.9 * PileDia;
             double j = 7.0 / 8.0 * d;
+            if (ConcreteModelOptions.UseNotification1113Shear)
+            {
+                // 告示1113(第8): 損傷限界=短期許容せん断応力度 = 長期の 1.5 倍。Q = fs_短期·b·j
+                // （レベル・軸力・M/(Q·d) 非依存、低減係数なし）。
+                return 1.5 * GetNotification1113LongTermShearStress() * b * j;
+            }
             return (isFactored ? beta : 1.0) * 0.065 * kc * (49.0 + InsituConcrete.Gsi * InsituConcrete.Fc) / (MonQd + 1.7) * (1 + sigma0 / 14.7) * b * j;
         }
 
@@ -662,43 +696,47 @@ namespace PileDesign.Models.InputData
             double a1 = phiY - phiCr;
             double a2 = beta1 * Mu0 - Mcr;
             double a3 = (My - Mcr);
+            // My≈Mcr（低鉄筋比・高軸力）でのゼロ除算→Inf を防ぐ。分母が微小なら降伏点曲率で代替。
+            if (Math.Abs(a3) < 1e-9) return phiY;
             double phiC = phiCr + (phiY - phiCr) * (beta1 * Mu0 - Mcr) / (My - Mcr);
             return phiC;
         }
 
         // ある軸力時のM-φ関係を得るメソッド（IPileSectionCalculationインターフェース実装）
+        // 解析用のため、e関数オプション時でも全区間（MCr・MY・Mu0）をバイリニアで算定し、
+        // M-φ が単調（β1·Mu0 ≥ MY）＝正勾配ばねとなることを保証する（FEM 収束のため）。
         public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double Ntarget)
         {
-            (double MCr, double phiCr) = GetCrackMoment(Ntarget, false);
-            (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
-            (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
-
-            //if (MCr > MY)
-            //{
-            //    phiCr *= MY / MCr;
-            //    MCr = MY; // MCr = MYにする。
-            //}
-
-            double ag = Math.PI * PileDia * PileDia / 4.0;
-            double beta1 = (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc) ? 0.95 : 0.80;
-            double phiC = GetPhiC(phiCr, MCr, phiY, MY, Mu0, beta1);
-            List<double> phis;
-            List<double> Ms;
-
-            if (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc)
+            bool prevForceBilinear = _forceBilinearUltimate;
+            _forceBilinearUltimate = true;
+            try
             {
-                phis = [0.0, phiCr, phiY, phiC];
-                Ms = [0.0, MCr, MY, beta1 * Mu0];
-            }
-            else
-            {
-                double beta2 = 0.65;
-                double phiCshort = phiCr + (phiC - phiCr) * (beta1 * beta2 * Mu0 - MCr) / (beta1 * Mu0 - MCr);
-                phis = [0.0, phiCr, phiCshort];
-                Ms = [0.0, MCr, beta1 * beta2 * Mu0];
-            }
+                (double MCr, double phiCr) = GetCrackMoment(Ntarget, false);
+                (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
+                (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
 
-            return (phis, Ms);
+                double ag = Math.PI * PileDia * PileDia / 4.0;
+                double beta1 = (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc) ? 0.95 : 0.80;
+                double phiC = GetPhiC(phiCr, MCr, phiY, MY, Mu0, beta1);
+                List<double> phis;
+                List<double> Ms;
+
+                if (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc)
+                {
+                    phis = [0.0, phiCr, phiY, phiC];
+                    Ms = [0.0, MCr, MY, beta1 * Mu0];
+                }
+                else
+                {
+                    double beta2 = 0.65;
+                    double phiCshort = phiCr + (phiC - phiCr) * (beta1 * beta2 * Mu0 - MCr) / (beta1 * Mu0 - MCr);
+                    phis = [0.0, phiCr, phiCshort];
+                    Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                }
+
+                return (phis, Ms);
+            }
+            finally { _forceBilinearUltimate = prevForceBilinear; }
         }
 
         //// ある軸力時のM-θ関係を得るメソッド
@@ -706,6 +744,10 @@ namespace PileDesign.Models.InputData
         /// 極小値(1e-8)により初期勾配 Mcr/1e-8 ≈ 実質剛体
         internal (List<double>, List<double>) GetMThetaRelationship(double Ntarget, double alpha = 32)
         {
+            bool prevForceBilinear = _forceBilinearUltimate;
+            _forceBilinearUltimate = true;   // 解析用のため常にバイリニア
+            try
+            {
             double beta1 = 0.95;
             (double MCr, double _) = GetCrackMoment(Ntarget, false);
             (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
@@ -729,6 +771,8 @@ namespace PileDesign.Models.InputData
             List<double> Ms = [0.0, MCr, MY, beta1 * Mu0];
 
             return (thetas, Ms);
+            }
+            finally { _forceBilinearUltimate = prevForceBilinear; }
         }
 
         public static double ExtractBarSizeNumber(string barSize)
@@ -773,11 +817,20 @@ namespace PileDesign.Models.InputData
             return (N, M, epsilonC);
         }
 
+        // 解析用 M-φ / M-θ の端点 Mu0 を求める間だけ true にして、e関数オプション時でも
+        // バイリニアで算定させるガード。e関数の軟化(ε>εM)で β1·Mu0 < MY となり M-φ が非単調
+        // （負勾配ばね）になって FEM が収束不能になるのを防ぐため、解析側は常にバイリニア。
+        // NM 曲線（検定の耐力側）は本フラグを立てないので、オプション時は e関数（指針準拠）。
+        private bool _forceBilinearUltimate;
+
         // 軸力、安全限界曲げモーメント取得メソッド
         internal override (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature)
         {
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
-            string type = "bilinear";
+            // 指針(案) 5.4.1 準拠オプション時はコンクリートを e関数法、既定はバイリニア。
+            // ただし解析 M-φ 端点算定中（_forceBilinearUltimate）は収束のため常にバイリニア。
+            string type = (ConcreteModelOptions.UseInsituUltimateEFunction && !_forceBilinearUltimate)
+                ? "eFunction" : "bilinear";
             double N, M;
             var result1 = CircularSolidSectionConcrete.GetForceAndMoment(type, InsituConcrete, epsilon0, curvature);
             var result2 = CircularPipeSectionMainbars.GetForceAndMoment(type, MainBars, epsilon0, curvature);
@@ -786,6 +839,37 @@ namespace PileDesign.Models.InputData
             N = result1.Item1 + result2.Item1 - result3.Item1;
             M = result1.Item2 + result2.Item2 - result3.Item2;
             return (N, M);
+        }
+
+        /// <summary>
+        /// 指定した圧縮縁ひずみ εc と曲率 φ に対する断面のひずみ度・応力度分布を返す。
+        /// コンクリート(実心)＋主筋(リング)。ultimate=true でバイリニア、false で線形。
+        /// </summary>
+        internal override SectionStrainStressProfile GetStrainStressProfile(
+            double epsilonC, double curvature, bool ultimate, int division = 200)
+        {
+            double r = PileDia * 0.5;
+            double epsilon0 = epsilonC - r * curvature;
+            string type = ultimate ? "bilinear" : "linear";
+
+            var profile = new SectionStrainStressProfile { Radius = r };
+            profile.Materials.Add(BuildSolidProfile(SectionMaterialKind.Concrete, "コンクリート",
+                InsituConcrete, type, epsilon0, curvature, r, 0.0, 0.0, division));
+            profile.Materials.Add(BuildRingProfile(SectionMaterialKind.MainBar, "主筋",
+                MainBars, type, epsilon0, curvature, MainBarPCD * 0.5, 0.0, division));
+
+            profile.CompressionEdgeStrain = epsilon0 + curvature * r;
+            profile.TensionEdgeStrain = epsilon0 - curvature * r;
+            return profile;
+        }
+
+        // N-M グラフは「ひび割れ開始」「引張鉄筋降伏開始」も描くため、その曲線も対象に加える。
+        internal override IEnumerable<(string Name, (List<double> N, List<double> M, List<double> Eps, List<double> Phi) Curve, bool Ultimate)> GetProfileSourceCurves()
+        {
+            foreach (var c in base.GetProfileSourceCurves())
+                yield return c;
+            yield return ("ひび割れ開始", GetCrackMNInteraction(), false);
+            yield return ("引張鉄筋降伏開始", GetSteelYieldMNInteraction(), true);
         }
     }
 

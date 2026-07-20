@@ -30,6 +30,7 @@
     <Window.Resources>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
         <conv:MultiplyConverter x:Key="MultiplyConverter"/>
+        <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
 
         <!-- DataGridCellのスタイルを定義 -->
         <!--<Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
@@ -691,15 +692,15 @@
                                             <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
                                             <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Right" FontWeight="SemiBold"/>
 
-                                            <TextBlock Text="損傷限界" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                             <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
                                             <TextBlock Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σ"/><Run Text="0" BaselineAlignment="Subscript" FontSize="9"/><Run Text="=-0.05ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                             <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="損傷限界" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                             <TextBlock Grid.Row="2" Grid.Column="1"><Run Text="β"/><Run Text="2" BaselineAlignment="Subscript" FontSize="9"/><Run Text="閾値"/></TextBlock>
                                             <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σ"/><Run Text="0" BaselineAlignment="Subscript" FontSize="9"/><Run Text="=(1/3)ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                             <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                             <TextBlock Text="圧縮側制限値" Grid.Row="3" Grid.Column="1"/>
                                             <TextBlock Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σ"/><Run Text="0" BaselineAlignment="Subscript" FontSize="9"/><Run Text="=0.4ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                             <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[2], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
@@ -742,15 +743,15 @@
                                                 <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
                                                 <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Right" FontWeight="SemiBold"/>
 
-                                                <TextBlock Text="損傷限界" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σₑ=-0.05ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="損傷限界" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="1"><Run Text="β"/><Run Text="2" BaselineAlignment="Subscript" FontSize="9"/><Run Text="閾値"/></TextBlock>
                                                 <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σₑ=(1/3)ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[2], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="3" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σₑ=0.4ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[3], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
@@ -796,8 +797,8 @@
 
                                                 <TextBlock Text="安全限界" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenPaleRedBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="2" Grid.Column="1"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N=-0.2(ᵣσᵧ·Aᵣ+f"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·Aₛ)"/></TextBlock>
-                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N=-0.2("/><Run Text="r" BaselineAlignment="Subscript" FontSize="9"/><Run Text="σ"/><Run Text="y" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·A"/><Run Text="r" BaselineAlignment="Subscript" FontSize="9"/><Run Text="+f"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·A"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text=")"/></TextBlock>
+                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
                                             </Grid>
                                         </StackPanel>
 
@@ -826,24 +827,24 @@
                                                 <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
                                                 <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Right" FontWeight="SemiBold"/>
 
-                                                <TextBlock Text="使用限界" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
                                                 <TextBlock Text="σₑ=(4-σₑ)" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.ServiceLimitNMin, StringFormat=N0, FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="使用限界" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="2" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σₑ=(F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text="/3.5-σₑ)"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ServiceLimitNMax, StringFormat=N0, FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
 
-                                                <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="3" Grid.Column="1"/>
                                                 <TextBlock Text="σₑ=(4-σₑ)" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="損傷限界" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Grid.Row="4" Grid.Column="1"><Run Text="β"/><Run Text="2" BaselineAlignment="Subscript" FontSize="9"/><Run Text="閾値"/></TextBlock>
                                                 <TextBlock Text="σₑ=(10-σₑ)" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="損傷限界" Grid.Row="5" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="5" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="5" Grid.Column="1"/>
                                                 <TextBlock Text="σₑ=(35-σₑ)" Grid.Row="5" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[2], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="5" Grid.Column="3" HorizontalAlignment="Right"/>
@@ -876,20 +877,20 @@
                                                 <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
                                                 <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Right" FontWeight="SemiBold"/>
 
-                                                <TextBlock Text="使用限界" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
                                                 <TextBlock Text="σₑ=(4-σₑ)" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.ShearNMinService, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="使用限界" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="2" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σₑ=(F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text="/3.5-σₑ)"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ShearNMaxService, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
 
-                                                <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="3" Grid.Column="1"/>
                                                 <TextBlock Text="σₑ=(4-σₑ)" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.ShearNMinDamage, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="損傷限界" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="4" Grid.Column="1"/>
                                                 <TextBlock Text="σₑ=(45-σₑ)" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.ShearNMaxDamage, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right"/>
@@ -924,24 +925,24 @@
                                                 <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
                                                 <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Right" FontWeight="SemiBold"/>
 
-                                                <TextBlock Text="使用限界" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
                                                 <TextBlock Text="σₑ=(4-σₑ)" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.ServiceLimitNMin, StringFormat=N0, FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="使用限界" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="2" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σₑ=(F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text="/3.5-σₑ)"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ServiceLimitNMax, StringFormat=N0, FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
 
-                                                <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="3" Grid.Column="1"/>
                                                 <TextBlock Text="σₑ=(4-σₑ)" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="損傷限界" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Grid.Row="4" Grid.Column="1"><Run Text="β"/><Run Text="2" BaselineAlignment="Subscript" FontSize="9"/><Run Text="閾値"/></TextBlock>
                                                 <TextBlock Text="σₑ=(10-σₑ)" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="損傷限界" Grid.Row="5" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="5" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="5" Grid.Column="1"/>
                                                 <TextBlock Text="σₑ=(35-σₑ)" Grid.Row="5" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[2], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="5" Grid.Column="3" HorizontalAlignment="Right"/>
@@ -974,20 +975,20 @@
                                                 <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
                                                 <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Right" FontWeight="SemiBold"/>
 
-                                                <TextBlock Text="使用限界" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σ"/><Run Text="ce" BaselineAlignment="Subscript" FontSize="9"/><Run Text="=(0-σ₀ₑ)"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ShearNMinService, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="使用限界" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="2" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σ"/><Run Text="ce" BaselineAlignment="Subscript" FontSize="9"/><Run Text="=(f"/><Run Text="cs" BaselineAlignment="Subscript" FontSize="9"/><Run Text="-σ₀ₑ)"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ShearNMaxService, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
 
-                                                <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="3" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σ"/><Run Text="ce" BaselineAlignment="Subscript" FontSize="9"/><Run Text="=(0-σ₀ₑ)"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ShearNMinDamage, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="損傷限界" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="4" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σ"/><Run Text="ce" BaselineAlignment="Subscript" FontSize="9"/><Run Text="=(50-σ₀ₑ)"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ShearNMaxDamage, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right"/>
@@ -1077,20 +1078,20 @@
                                                 <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
                                                 <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Right" FontWeight="SemiBold"/>
 
-                                                <TextBlock Text="使用限界" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N"/><Run Text="st" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" =-β₁·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="f"/><Run Text="t" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="A"/><Run Text="p" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ServiceLimitNMin, StringFormat=N0, FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="使用限界" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="2" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N"/><Run Text="sc" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" =β₁·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="f"/><Run Text="c1" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="A"/><Run Text="p" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ServiceLimitNMax, StringFormat=N0, FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
 
-                                                <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="3" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N"/><Run Text="dt" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" =-β₁·1.5·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="f"/><Run Text="t" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="A"/><Run Text="p" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="損傷限界" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="4" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N"/><Run Text="dc" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" =β₁·(1.5·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="f"/><Run Text="c1" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="A"/><Run Text="p" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" + "/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text="σ"/><Run Text="ck" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·A"/><Run Text="ir" BaselineAlignment="Subscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right"/>
@@ -1124,20 +1125,20 @@
                                                 <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
                                                 <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Right" FontWeight="SemiBold"/>
 
-                                                <TextBlock Text="使用限界" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N"/><Run Text="st" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" =-β₁·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="f"/><Run Text="t" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="A"/><Run Text="p" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ServiceLimitNMin, StringFormat=N0, FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="使用限界" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界, FallbackValue=使用限界}" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource NikkenDeepBlueBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="2" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N"/><Run Text="sc" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" =β₁·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="f"/><Run Text="c1" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="A"/><Run Text="p" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ServiceLimitNMax, StringFormat=N0, FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
 
-                                                <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="3" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="3" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N"/><Run Text="dt" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" =-β₁·1.5·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="f"/><Run Text="t" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="A"/><Run Text="p" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
-                                                <TextBlock Text="損傷限界" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界, FallbackValue=損傷限界}" Grid.Row="4" Grid.Column="0" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="4" Grid.Column="1"/>
                                                 <TextBlock Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"><Run Text="N"/><Run Text="dc" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" =β₁·1.5·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="f"/><Run Text="c1" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·"/><Run Text="s" BaselineAlignment="Subscript" FontSize="9"/><Run Text="A"/><Run Text="p" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right"/>
@@ -1189,7 +1190,6 @@
                                             <RadioButton Content="1" GroupName="SeismicLevel" IsChecked="{Binding IsSeismicLevel1, Mode=TwoWay}" Margin="0,0,6,0"/>
                                             <RadioButton Content="2" GroupName="SeismicLevel" IsChecked="{Binding IsSeismicLevel2, Mode=TwoWay}"/>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding CrosshairPositionText_MN}" Margin="10,0,0,0" FontSize="14"/>
                                     </StackPanel>
 
                                 </Grid>
@@ -1203,7 +1203,6 @@
                                     </Grid.RowDefinitions>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotMphi" Grid.Row="0"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_Mphi}" Margin="10" FontSize="14" Grid.Row="1"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -1216,7 +1215,6 @@
                                     </Grid.RowDefinitions>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotMtheta" Grid.Row="0"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_Mtheta}" Margin="10" FontSize="14" Grid.Row="1"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -1246,12 +1244,11 @@
                                                  PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                  TextChanged="TextBox_TextChanged"
                                                  LostFocus="TextBox_LostFocus"/>
-                                        <TextBlock Text="{Binding CrosshairPositionText_NQ}" Margin="10,0,0,0" FontSize="14"/>
                                     </StackPanel>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
-                            
+
                         </avalonDock:LayoutDocumentPane>
 
                     </avalonDock:LayoutDocumentPaneGroup>

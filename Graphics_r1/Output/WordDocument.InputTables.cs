@@ -16,6 +16,14 @@ namespace PileDesign.Output
     // Word 表として出力する partial。
     internal partial class WordDocument
     {
+        // 液状化判定リスト（FL/βL/γcy 等）が null や長さ不足でもセルを "-" にして、
+        // 表全体が例外で欠落しないよう安全に取得するヘルパー。
+        private static string SafeListCell(IReadOnlyList<double?> list, int idx, string fmt)
+            => (list != null && idx >= 0 && idx < list.Count && list[idx].HasValue)
+                ? list[idx]!.Value.ToString(fmt) : "-";
+        private static string SafeListCell(IReadOnlyList<double> list, int idx, string fmt)
+            => (list != null && idx >= 0 && idx < list.Count) ? list[idx].ToString(fmt) : "-";
+
         // 基本設定の表を追加するメソッド
         public static void AddFundamentalTable(Body body, FundamentalInput fundamentalInput)
         {
@@ -297,8 +305,8 @@ namespace PileDesign.Output
 
                 table0.Append(new TableRow(
                     CreateTableCell(["地表面加速度"], fontSize, "center"),
-                    CreateTableCell([i == 0 ?$"{groundInput.GroundAcceleration1:F1}[m/s]" :
-                                             $"{groundInput.GroundAcceleration2:F1}[m/s]"], fontSize, "right")
+                    CreateTableCell([i == 0 ?$"{groundInput.GroundAcceleration1:F1}[m/s²]" :
+                                             $"{groundInput.GroundAcceleration2:F1}[m/s²]"], fontSize, "right")
                 ));
 
                 body.Append(table0);
@@ -353,15 +361,15 @@ namespace PileDesign.Output
                     dataRow.Append(CreateTableCell([$"{groundMass.DeltaNf:N2}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.NL:N2}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.TauLonSigmaZPrime:N3}"], fontSize, "right"));
-                    dataRow.Append(CreateTableCell([$"{groundMass.TauDonSigmaZPrime[i]:N3}"], fontSize, "right"));
+                    dataRow.Append(CreateTableCell([SafeListCell(groundMass.TauDonSigmaZPrime, i, "N3")], fontSize, "right"));
                     // FL < 1.0 (液状化発生) の行は FL / βL / γcy / ΣγcyH を太字で強調。
                     // FL ≥ 1.0 または FL=null の場合は通常表示。
                     bool isLiquefying = groundMass.FL != null && groundMass.FL.Count > i
-                        && groundMass.FL[i].HasValue && groundMass.FL[i].Value < 1.0;
-                    dataRow.Append(CreateTableCell([$"{groundMass.FL[i]:N2}"], fontSize, "right", bold: isLiquefying));
-                    dataRow.Append(CreateTableCell([$"{groundMass.BetaL[i]:N2}"], fontSize, "right", bold: isLiquefying));
-                    dataRow.Append(CreateTableCell([$"{groundMass.GammaCy[i]:N2}"], fontSize, "right", bold: isLiquefying));
-                    dataRow.Append(CreateTableCell([$"{groundMass.SigmaGammaCyH[i]:N2}"], fontSize, "right", bold: isLiquefying));
+                        && groundMass.FL[i].HasValue && groundMass.FL[i]!.Value < 1.0;
+                    dataRow.Append(CreateTableCell([SafeListCell(groundMass.FL, i, "N2")], fontSize, "right", bold: isLiquefying));
+                    dataRow.Append(CreateTableCell([SafeListCell(groundMass.BetaL, i, "N2")], fontSize, "right", bold: isLiquefying));
+                    dataRow.Append(CreateTableCell([SafeListCell(groundMass.GammaCy, i, "N2")], fontSize, "right", bold: isLiquefying));
+                    dataRow.Append(CreateTableCell([SafeListCell(groundMass.SigmaGammaCyH, i, "N2")], fontSize, "right", bold: isLiquefying));
 
                     table.Append(dataRow);
                 }
@@ -644,7 +652,8 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([$"{pileBodySegment.SegmentDepth:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileBodySegment.SegmentLength:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileBodySegment.PileSection.PileSectionType}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{pileBodySegment.PileSection.PileDiameter:N0}"], fontSize, "right"));
+                // 杭径は腐食代を見込まない公称外径で表示（鋼管系の有効径 PileDiameter ではなく NominalPileDiameter）
+                dataRow.Append(CreateTableCell([$"{pileBodySegment.PileSection.NominalPileDiameter:N0}"], fontSize, "right"));
 
                 table.Append(dataRow);
             }
@@ -676,7 +685,8 @@ namespace PileDesign.Output
 
                 TableRow dataRow2 = new();
                 dataRow2.Append(CreateTableCell(["杭径"], fontSize, "left"));
-                dataRow2.Append(CreateTableCell([pileBodySegment.PileSection.PileDiameter.ToString()], fontSize, "left"));
+                // 杭径は腐食代を見込まない公称外径で表示
+                dataRow2.Append(CreateTableCell([pileBodySegment.PileSection.NominalPileDiameter.ToString()], fontSize, "left"));
 
                 table.Append(dataRow2);
 
@@ -868,7 +878,7 @@ namespace PileDesign.Output
         private static void AddPileResistanceDescription(Body body, ObservableCollection<SoilPile> soilPiles, FundamentalInput fundamentalInput)
         {
             AddHeader1(body, "杭支持力の検討", 3);
-            AddText(body, "杭支持力の検討では、杭の押込側と引抜側の使用限界、損傷限界、終局限界を計算し、表にまとめます。");
+            AddText(body, ConcreteModelOptions.MapLimitStateText("杭支持力の検討では、杭の押込側と引抜側の使用限界、損傷限界、終局限界を計算し、表にまとめます。"));
             AddText(body, "以下に杭支持力一覧表を示します。");
 
             AddText(body, "【先端支持力】");
@@ -966,7 +976,8 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBodyNo}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.GroundNo}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileConstructionType}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileBodySegments[0].PileSection?.PileDiameter ?? 0:N0}"], fontSize, "right"));
+                // 杭頭径も腐食代を見込まない公称外径で表示（区間表・杭体表と統一）
+                dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileBodySegments[0].PileSection?.NominalPileDiameter ?? 0:N0}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileToeDia:N0}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{fundamentalInput.ToAbsolute(soilPile.PileBottomAltitude):N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBottomAltitude:N3}"], fontSize, "right"));

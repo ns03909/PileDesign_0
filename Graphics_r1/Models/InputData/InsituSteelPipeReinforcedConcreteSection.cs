@@ -21,15 +21,23 @@ namespace PileDesign.Models.InputData
 
         protected override double CompressionEdgePosition => -(PileDia / 2 - PipeT);
 
-        public double Ae { get; private set; }
+        public double Ae { get; private set; }      // 換算断面積 = Ac + (nr-1)·Ag + ns·AMinus（軸力・曲げ・ひび割れ共通）
         public double Ze { get; private set; }
         public double Ie { get; private set; }
         public double Ft { get; private set; }
 
         // コンストラクタ
+        // isInsituSteelPipeConcretePile: 場所打ち鋼管コンクリート杭のとき true（既定）。
+        //   鋼管 1.1F 完全バイリニア型オプションはこの杭種のみ適用する（鋼管杭では false を渡す）。
         internal InsituSteelPipeReinforcedConcreteSection(
-            InsituSteelPipe insituSteelPipe, InsituConcrete insituConcrete, MainBars mainBars)
+            InsituSteelPipe insituSteelPipe, InsituConcrete insituConcrete, MainBars mainBars,
+            bool isInsituSteelPipeConcretePile = true)
         {
+            // 鉄筋 1.1F 完全バイリニア型オプション（限界ひずみ再計算より前に適用）
+            mainBars.YieldAt11F = ConcreteModelOptions.RebarYieldAt11F;
+            // 鋼管 1.1F 完全バイリニア型オプション（場所打ち鋼管コンクリート杭のみ）
+            insituSteelPipe.PerfectBilinear11F = ConcreteModelOptions.SteelPipeYieldAt11F && isInsituSteelPipeConcretePile;
+
             InsituSteelPipe = insituSteelPipe;
             InsituConcrete = insituConcrete;
             MainBars = mainBars;
@@ -81,18 +89,13 @@ namespace PileDesign.Models.InputData
             DamageLimitBetaL1 = [1.0];  // L1: 同値（β2=1.0 の規定）
 
             // 安全限界軸力閾値
-            // 換算断面積 Aₑ = Aᴄ + n×Aₛ(鋼管) + n×Aᵣ(主筋)
-            // n = Eₛ/Eᴄ（ヤング係数比）
-            double concreteDiaForArea = PileDia - 2 * PipeT;
-            double Ac_area = Math.PI * Math.Pow(concreteDiaForArea, 2) / 4.0; // コンクリート断面積
-            double As_pipe = insituSteelPipe.AMinus; // 鋼管断面積（腐食考慮後）
-            double Ar_bar = mainBars.Ag; // 主筋断面積
-            double n_ratio = insituSteelPipe.SE1 / insituConcrete.Ec; // ヤング係数比 Es/Ec
-            double Ae_equiv = Ac_area + n_ratio * As_pipe + n_ratio * Ar_bar; // 換算断面積
-
+            // 圧縮側制限値 = σ0 × 換算断面積 Ae   （σ0 = 0.4·ξ·Fc, ξ = Gsi）
+            // Ae = InsituConcrete.Ac(コンクリート総断面) + (nr−1)·Ag(主筋) + ns·AMinus(腐食後鋼管)
+            //   = Ac_net + nr·Ag + ns·AMinus   （文献「コンクリート純断面 + n×鋼管 + n×鉄筋」と一致）
+            //   nr = Er/Ec, ns = Es/Ec。SetZeFtIe() 算定のフィールド値を用いる（N-Q 相関 NMax と統一）。
             UltimateLimitAxialForceThresholds = [
                 -0.2 * (mainBars.RSigmaY * mainBars.Ag + insituSteelPipe.Fcy * insituSteelPipe.AMinus),
-                0.4 * insituConcrete.Gsi * insituConcrete.Fc * Ae_equiv
+                0.4 * insituConcrete.Gsi * insituConcrete.Fc * Ae
             ];
 
             // 安全限界曲げモーメント低減率
@@ -125,7 +128,11 @@ namespace PileDesign.Models.InputData
             FactoredDamageNMLevel1 = FactoredDamageNM;
 
             // 低減後安全限界NMインタラクション
-            FactoredUltimateNM = GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
+            // 指針(案) 準拠オプション時は安全限界曲げ強度をそのまま採用し、低減・軸力制限を課さない
+            // （低減後＝低減前の全体を描く＝1本の滑らかな耐力包絡線）。既定は基礎部材の低減率・軸力制限を適用。
+            FactoredUltimateNM = ConcreteModelOptions.UseInsituUltimateEFunction
+                ? UnfactoredUltimateNM
+                : GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
 
             // 低減前使用限界NMインタラクション
             UnfactoredServiceNQ = GetServiceLimitQNInteraction();
@@ -170,7 +177,7 @@ namespace PileDesign.Models.InputData
             double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
             double kappa = 2.0;
             double sfsd = InsituSteelPipe.F / Math.Sqrt(3);
-            return beta1 * area / kappa * sfsd;
+            return beta * area / kappa * sfsd;   // level 別の beta を反映（従来 beta1 固定で level 引数が無効だった）
         }
 
         /// <summary>
@@ -178,11 +185,39 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private double GetUltimateLimitShear(double n)
         {
-            double beta1 = 1.0;
-            double beta2 = 1.0;
             double ts = InsituSteelPipe.TMinus;
             double d = InsituSteelPipe.OutDiaMinus;
-            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.PI * Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
+
+            if (ConcreteModelOptions.UseInsituUltimateEFunction)
+            {
+                // 指針(案): Qu = sQ0·√(1-η²)·(scMu/sMu)
+                //   sQ0  = 2·t·(D-t)·sσy/√3        （鋼管の純せん断終局。t,D は腐食考慮値）
+                //   η    = N/sNcu, sNcu = sσy·sA    （sA=腐食考慮鋼管有効断面 AMinus）
+                //   sMu  = sMu0·cos(πη/2)           （鋼管単独の終局曲げ強度）
+                //   sMu0 = Zp·sσy, Zp=(4/3)(R³-(R-t)³)（R=鋼管外半径）
+                //   scMu = 合成断面の終局曲げ強度   （同一軸力 N での GetUltimateMomentForSpecificN）
+                double sSigmaY = InsituSteelPipe.SSigmaY;           // = 1.1F（材料強度）
+                double sA = InsituSteelPipe.AMinus;                 // 腐食考慮鋼管有効断面積
+                double sNcu = sSigmaY * sA;
+                double eta = sNcu > 1e-9 ? n / sNcu : 0.0;
+                eta = Math.Max(-0.999, Math.Min(0.999, eta));       // √(1-η²)・cos の破綻防止
+
+                double R = d * 0.5;
+                double Zp = 4.0 / 3.0 * (Math.Pow(R, 3) - Math.Pow(R - ts, 3));
+                double sMu0 = Zp * sSigmaY;
+                double sMu = sMu0 * Math.Cos(Math.PI * eta / 2.0);
+                double sQ0 = 2.0 * ts * (d - ts) * sSigmaY / Math.Sqrt(3.0);
+                double scMu = GetUltimateMomentForSpecificN(n).Item1;
+
+                double pipeShear = sQ0 * Math.Sqrt(Math.Max(0.0, 1.0 - eta * eta));
+                // sMu≈0（純軸圧で鋼管曲げ耐力消失）や scMu 取得失敗時は鋼管単独せん断にフォールバック
+                if (sMu <= 1e-6 || scMu <= 1e-6) return pipeShear;
+                return pipeShear * (scMu / sMu);
+            }
+
+            double beta1 = 1.0;
+            double beta2 = 1.0;
+            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
             double fcy = 1.1 * InsituSteelPipe.F;
             double ns;
             if (n >= 0)
@@ -273,6 +308,8 @@ namespace PileDesign.Models.InputData
         // ひび割れモーメント、ひび割れ曲率を返すメソッド
         internal (double, double) GetCrackMoment(double Ntarget)
         {
+            // 退化断面（Ae/Ec/Ie=0）でのゼロ除算→Inf/NaN の M-φ 伝播を防ぐ（RC 版と同様のガード）。
+            if (Ae <= 0.0 || InsituConcrete.Ec <= 0.0 || Ie <= 0.0) return (0.0, 0.0);
             double sigma0e = Ntarget / Ae;
             double Mcr = Ze * (Ft + sigma0e);
             double phiCr = Mcr / InsituConcrete.Ec / Ie;
@@ -332,8 +369,14 @@ namespace PileDesign.Models.InputData
         }
 
         // ある軸力時のM-φ関係を得るメソッド（内部実装）
+        // 解析用のため、指針オプション時でも全区間をバイリニアで算定し、M-φ の単調性
+        // （β1·Mu0 が MY を大きく下回らない＝正勾配ばね）を保って FEM 収束を確保する。
         internal (List<double>, List<double>) GetMPhiRelationshipInternal(double Ntarget, double beta1 = 1.0)
         {
+            bool prevForceBilinear = _forceBilinearUltimate;
+            _forceBilinearUltimate = true;
+            try
+            {
             (double MCr, double phiCr) = GetCrackMoment(Ntarget);
             (double MY, double phiY) = GetYieldMoment(Ntarget);
             (double Mu0, double phiU) = GetUltimateMomentForSpecificN(Ntarget);
@@ -361,6 +404,8 @@ namespace PileDesign.Models.InputData
             }
 
             return (phis, Ms);
+            }
+            finally { _forceBilinearUltimate = prevForceBilinear; }
         }
 
         // 杭中間部用M-φ関係（終局曲率をひび割れ後勾配の延長で算出）
@@ -451,7 +496,7 @@ namespace PileDesign.Models.InputData
                 }
                 return (bestM, bestCurvature);
             }
-            catch { return (0.0, 0.0); }
+            catch (Exception ex) { Serilog.Log.Warning(ex, "[SPRC.GetUltimateMomentForSpecificN] 算定に失敗（0 にフォールバック）: NTarget={NTarget}", NTarget); return (0.0, 0.0); }
         }
 
         // 使用/損傷限界は基底クラスのGetAllowableMNInteractionを使用
@@ -475,20 +520,54 @@ namespace PileDesign.Models.InputData
             return (N, M, epsilonC);
         }
 
+        // 解析用 M-φ/M-θ 端点 Mu0 の算定中だけ true にして、指針オプション時でも
+        // バイリニアで算定させるガード（e関数/0.85上限の軟化で M-φ 非単調＝負勾配ばねとなり
+        // FEM 収束不能になるのを防ぐ。安全限界 NM 曲線＝検定の耐力側は本フラグを立てない）。
+        private bool _forceBilinearUltimate;
+
         // 安全限界軸力、曲げモーメント取得メソッド
         internal override (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature)
         {
             double epsilon0 = epsilonC - (PileDia * 0.5 - PipeT) * curvature;
             double N, M;
-            string type = "bilinear";
-            var result0 = CircularPipeSectionSteelPipe.GetForceAndMoment(type, InsituSteelPipe, epsilon0, curvature);
-            var result1 = CircularSolidSectionConcrete.GetForceAndMoment(type, InsituConcrete, epsilon0, curvature);
-            var result2 = CircularPipeSectionMainbars.GetForceAndMoment(type, MainBars, epsilon0, curvature);
-            var result3 = CircularPipeSectionMainbars.GetForceAndMoment(type, InsituConcrete, epsilon0, curvature);
+            // 指針(案) 準拠オプション時（かつ解析隔離中でない）: 鋼管=0.85×引張強さ上限トリリニア、
+            // 鋼管内コンクリート=e関数法、主筋=バイリニア。既定は全材料バイリニア。
+            bool guideline = ConcreteModelOptions.UseInsituUltimateEFunction && !_forceBilinearUltimate;
+            string typePipe = guideline ? "guidelineUltimate" : "bilinear";
+            string typeConc = guideline ? "eFunction" : "bilinear";
+            string typeRebar = "bilinear";
+            var result0 = CircularPipeSectionSteelPipe.GetForceAndMoment(typePipe, InsituSteelPipe, epsilon0, curvature);
+            var result1 = CircularSolidSectionConcrete.GetForceAndMoment(typeConc, InsituConcrete, epsilon0, curvature);
+            var result2 = CircularPipeSectionMainbars.GetForceAndMoment(typeRebar, MainBars, epsilon0, curvature);
+            var result3 = CircularPipeSectionMainbars.GetForceAndMoment(typeConc, InsituConcrete, epsilon0, curvature);
 
             N = result0.Item1 + result1.Item1 + result2.Item1 - result3.Item1;
             M = result0.Item2 + result1.Item2 + result2.Item2 - result3.Item2;
             return (N, M);
+        }
+
+        // 場所打ち鋼管コンクリート(SPRC): コンクリート(実心)＋鋼管＋主筋。
+        // 力・モーメント計算と同様にプレストレスひずみは加味しない (epsilon0 のみ)。
+        internal override SectionStrainStressProfile GetStrainStressProfile(
+            double epsilonC, double curvature, bool ultimate, int division = 200)
+        {
+            double epsilon0 = epsilonC - (PileDia * 0.5 - PipeT) * curvature;
+            string type = ultimate ? "bilinear" : "linear";
+            double rConc = (PileDia - 2 * PipeT) * 0.5;
+            double rPipe = (PileDia - PipeT) * 0.5;
+            double rOuter = PileDia * 0.5;
+
+            var p = new SectionStrainStressProfile { Radius = rOuter };
+            p.Materials.Add(BuildSolidProfile(SectionMaterialKind.Concrete, "コンクリート",
+                InsituConcrete, type, epsilon0, curvature, rConc, 0.0, 0.0, division));
+            p.Materials.Add(BuildRingProfile(SectionMaterialKind.SteelPipe, "鋼管",
+                InsituSteelPipe, type, epsilon0, curvature, rPipe, 0.0, division));
+            if (MainBarArea > 0)
+                p.Materials.Add(BuildRingProfile(SectionMaterialKind.MainBar, "主筋",
+                    MainBars, type, epsilon0, curvature, MainBarPCD * 0.5, 0.0, division));
+            p.CompressionEdgeStrain = epsilon0 + curvature * rOuter;
+            p.TensionEdgeStrain = epsilon0 - curvature * rOuter;
+            return p;
         }
     }
 }

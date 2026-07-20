@@ -95,6 +95,7 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <conv:BoolToBrushConverter x:Key="BoolToBrushConverter" />
         <conv:ZElevationConverter x:Key="ZElevationConverter"/>
+        <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
 
         <ContextMenu x:Key="CommonDataGridContextMenu" Opened="ContextMenu_Opened">
             <MenuItem Click="ExportCsvFromContextMenu_Click">
@@ -474,7 +475,7 @@
 
 
                 <TextBlock Grid.Row="26" Grid.Column="0"
-                            Text="損傷限界引抜力" Foreground="{StaticResource DamageLimitBrush}"/>
+                            Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界引抜力, FallbackValue=損傷限界引抜力}" Foreground="{StaticResource DamageLimitBrush}"/>
                 <controls:FormulaControl Grid.Row="26" Grid.Column="1" Formula="R_{t,DL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource DamageLimitBrush}"/>
                 <TextBox Grid.Row="26" Grid.Column="2"
                              Text="{Binding SoilPile.Rt_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
@@ -484,7 +485,7 @@
                             Text="kN" Foreground="{StaticResource DamageLimitBrush}"/>
 
                 <TextBlock Grid.Row="27" Grid.Column="0"
-                            Text="使用限界引抜力" Foreground="{StaticResource ServiceLimitBrush}"/>
+                            Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界引抜力, FallbackValue=使用限界引抜力}" Foreground="{StaticResource ServiceLimitBrush}"/>
                 <controls:FormulaControl Grid.Row="27" Grid.Column="1" Formula="R_{t,SL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource ServiceLimitBrush}"/>
                 <TextBox Grid.Row="27" Grid.Column="2"
                              Text="{Binding SoilPile.Rt_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
@@ -494,7 +495,7 @@
                             Text="kN" Foreground="{StaticResource ServiceLimitBrush}"/>
 
 
-                <TextBlock Grid.Row="28" Grid.Column="0" Text="使用限界支持力" Foreground="{StaticResource ServiceLimitBrush}"/>
+                <TextBlock Grid.Row="28" Grid.Column="0" Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界支持力, FallbackValue=使用限界支持力}" Foreground="{StaticResource ServiceLimitBrush}"/>
                 <controls:FormulaControl Grid.Row="28" Grid.Column="1" Formula="R_{SL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource ServiceLimitBrush}"/>
                 <TextBox Grid.Row="28" Grid.Column="2"
                              Text="{Binding SoilPile.R_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
@@ -503,7 +504,7 @@
                 <TextBlock Grid.Row="28" Grid.Column="3" Text="kN" Foreground="{StaticResource ServiceLimitBrush}"/>
 
 
-                <TextBlock Grid.Row="29" Grid.Column="0" Text="損傷限界支持力" Foreground="{StaticResource DamageLimitBrush}"/>
+                <TextBlock Grid.Row="29" Grid.Column="0" Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界支持力, FallbackValue=損傷限界支持力}" Foreground="{StaticResource DamageLimitBrush}"/>
                 <controls:FormulaControl Grid.Row="29" Grid.Column="1" Formula="R_{DL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource DamageLimitBrush}"/>
                 <TextBox Grid.Row="29" Grid.Column="2"
                              Text="{Binding SoilPile.R_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
@@ -521,7 +522,7 @@
                 <TextBlock Grid.Row="30" Grid.Column="3" Text="kN" Foreground="{StaticResource UltimateLimitBrush}"/>
 
                 <!-- 使用限界支持力時杭頭沈下量 -->
-                <TextBlock Grid.Row="31" Grid.Column="0" Grid.ColumnSpan="2" Text="使用限界支持力時杭頭沈下量" Foreground="{StaticResource ServiceLimitBrush}"/>
+                <TextBlock Grid.Row="31" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界支持力時杭頭沈下量, FallbackValue=使用限界支持力時杭頭沈下量}" Foreground="{StaticResource ServiceLimitBrush}"/>
                 <TextBox Grid.Row="31" Grid.Column="2"
                              Text="{Binding SoilPile.SettlementAtR_SLS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
                         Foreground="{StaticResource ServiceLimitBrush}"
@@ -529,7 +530,7 @@
                 <TextBlock Grid.Row="31" Grid.Column="3" Text="mm" Foreground="{StaticResource ServiceLimitBrush}"/>
 
                 <!-- 損傷限界支持力時杭頭沈下量 -->
-                <TextBlock Grid.Row="32" Grid.Column="0" Grid.ColumnSpan="2" Text="損傷限界支持力時杭頭沈下量" Foreground="{StaticResource DamageLimitBrush}"/>
+                <TextBlock Grid.Row="32" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界支持力時杭頭沈下量, FallbackValue=損傷限界支持力時杭頭沈下量}" Foreground="{StaticResource DamageLimitBrush}"/>
                 <TextBox Grid.Row="32" Grid.Column="2"
                              Text="{Binding SoilPile.SettlementAtR_DLS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
                         Foreground="{StaticResource DamageLimitBrush}"
@@ -581,11 +582,9 @@
 
                         <TextBlock Text="杭先端沈下" FontWeight="Bold" Grid.Row="0" Grid.Column="0"/>
                         <ScottPlot:WpfPlot x:Name="wpfPlotPileToe" Grid.Row="1" Grid.Column="0" />
-                        <TextBlock Text="{Binding CrosshairPositionText_PileToe}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 
                         <TextBlock Text="土層の杭周面抵抗力" FontWeight="Bold" Grid.Row="0" Grid.Column="1" />
                         <ScottPlot:WpfPlot x:Name="wpfPlotCircum" Grid.Row="1" Grid.Column="1" />
-                        <TextBlock Text="{Binding CrosshairPositionText_PileCircumstance}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
 
                         <common:EnhancedDataGrid x:Name="DataGridCircum" CanUserSortColumns="False"
                             Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
@@ -841,11 +840,9 @@
                                      VerticalAlignment="Center" Margin="0,2,10,2"/>
                         </StackPanel>
                         <ScottPlot:WpfPlot  Grid.Row="1" Grid.Column="0" x:Name="wpfPlotSettlement"/>
-                        <TextBlock Text="{Binding CrosshairPositionText_PileTopSettlement}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 
                         <!--<TextBlock Grid.Row="0" Grid.Column="1" Text="杭先端沈下曲線" FontWeight="Bold"/>-->
                         <ScottPlot:WpfPlot Grid.Row="1" Grid.Column="1" x:Name="wpfPlotSettlementToe"/>
-                        <TextBlock Text="{Binding CrosshairPositionText_PileToeSettlement}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
 
                         <common:EnhancedDataGrid x:Name="DataGridLoadDisplacement"
                                    ItemsSource="{Binding VerticalLoadTransferMethod.LoadDisplacements}"

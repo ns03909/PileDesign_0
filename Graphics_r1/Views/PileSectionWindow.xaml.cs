@@ -81,6 +81,22 @@ namespace PileDesign.Views
             PlotHelper.AddCsvExportMenu(wpfPlotMphi, "Mφ曲線");
             PlotHelper.AddCsvExportMenu(wpfPlotMtheta, "Mθ曲線");
             PlotHelper.AddCsvExportMenu(wpfPlotNQ, "NQ曲線");
+
+            // N-M 曲線上のクリックで、その点 (εc, φ) の断面ひずみ度・応力度分布を描画
+            wpfPlotMN.MouseLeftButtonDown += PlotMN_MouseLeftButtonDown;
+        }
+
+        // N-M グラフのクリック位置 (N kN, M kNm) を ViewModel に渡し、ひずみ・応力分布を更新する
+        private void PlotMN_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                var p = e.GetPosition(wpfPlotMN);
+                var pixel = new ScottPlot.Pixel(p.X * wpfPlotMN.DisplayScale, p.Y * wpfPlotMN.DisplayScale);
+                var coord = wpfPlotMN.Plot.GetCoordinates(pixel);
+                _viewModel.ShowStrainStressAtMNPoint(coord.X, coord.Y);
+            }
+            catch { /* クリック座標の取得失敗時は無視 */ }
         }
 
 

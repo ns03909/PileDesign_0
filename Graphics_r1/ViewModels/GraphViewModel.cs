@@ -337,6 +337,20 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 現在 NMINT グラフで選択中の杭区間の PileSection を返す (NMINT でない/未選択なら null)。
+        /// 解析結果グラフからの断面ひずみ・応力プロファイル表示に用いる。
+        /// </summary>
+        public PileSection? GetSelectedNmintPileSection()
+        {
+            if (SelectedGraphOption == null || !SelectedGraphOption.StartsWith("NMINT")) return null;
+            var pileBody = InputModel?.GetPileBodyByPileBodyRef(SelectedPileBodyRef);
+            if (pileBody?.PileBodySegments == null ||
+                SelectedPileSegmentNo < 1 || SelectedPileSegmentNo > pileBody.PileBodySegments.Count)
+                return null;
+            return pileBody.PileBodySegments[SelectedPileSegmentNo - 1].PileSection;
+        }
+
+        /// <summary>
         /// 現在のグラフ種別に合わせて PileSegmentOptions を再構築する。
         /// p-y 以外（NMINT/QNINT/M-φ/EI-φ 等）は入力杭体セグメント数を、
         /// p-y は杭要素分割後の HorizontalSoilReactions 数を使う。
@@ -1555,7 +1569,7 @@ namespace PileDesign.ViewModels
 
                 bool isGradeA = SelectedSeismicGrade == "A";
                 int damageLevel = isGradeA ? 1 : 2;
-                string damageLabel = isGradeA ? "レベル1 損傷限界" : "レベル2 損傷限界";
+                string damageLabel = ConcreteModelOptions.MapLimitStateText(isGradeA ? "レベル1 損傷限界" : "レベル2 損傷限界");
 
                 var (factoredDmgN, factoredDmgM) = pileSection.GetFactoredDamageNM(damageLevel);
                 if (factoredDmgN?.Count > 0 && factoredDmgM?.Count > 0)
@@ -1766,7 +1780,7 @@ namespace PileDesign.ViewModels
                 {
                     var s = WpfPlot.Plot.Add.ScatterLine(
                         pileTop.UnfactoredServiceNM.N.ToArray(), pileTop.UnfactoredServiceNM.M.ToArray());
-                    s.LegendText = "使用限界";
+                    s.LegendText = ConcreteModelOptions.MapLimitStateText("使用限界");
                     serviceColor = s.LineStyle.Color;
                 }
 
@@ -1775,7 +1789,7 @@ namespace PileDesign.ViewModels
                 {
                     var s = WpfPlot.Plot.Add.ScatterLine(
                         pileTop.UnfactoredDamageNM.N.ToArray(), pileTop.UnfactoredDamageNM.M.ToArray());
-                    s.LegendText = "損傷限界";
+                    s.LegendText = ConcreteModelOptions.MapLimitStateText("損傷限界");
                 }
 
                 // 安全限界
@@ -1905,7 +1919,7 @@ namespace PileDesign.ViewModels
                 // 性能グレードに応じた限界曲線の選択（NMINT と同じ規則）
                 bool isGradeAQ = SelectedSeismicGrade == "A";
                 int qDamageLevel = isGradeAQ ? 1 : 2;
-                string qDamageLabel = isGradeAQ ? "レベル1 損傷限界" : "レベル2 損傷限界";
+                string qDamageLabel = ConcreteModelOptions.MapLimitStateText(isGradeAQ ? "レベル1 損傷限界" : "レベル2 損傷限界");
 
                 // 損傷限界はレベル別に再計算
                 var qnCurves = pileSection.ComputeQNForMonQd(MonQd, damageLevel: qDamageLevel);

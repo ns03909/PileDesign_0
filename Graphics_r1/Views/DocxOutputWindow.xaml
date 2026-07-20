@@ -130,19 +130,19 @@ WindowStartupLocation="CenterOwner">
 
                     <GroupBox Header="液状化" Margin="0,0,0,4" Padding="4">
                         <StackPanel Orientation="Horizontal">
-                            <CheckBox Content="液状化あり" IsChecked="{Binding IncludeOutputLiquefactionYes, Mode=TwoWay}"
-                                      IsEnabled="{Binding IsLiquefactionYesAnalyzed}" Margin="0,0,15,0"/>
-                            <CheckBox Content="液状化なし" IsChecked="{Binding IncludeOutputLiquefactionNo, Mode=TwoWay}"
-                                      IsEnabled="{Binding IsLiquefactionNoAnalyzed}"/>
+                            <CheckBox Content="液状化あり" IsChecked="{Binding DocxOutput.IncludeOutputLiquefactionYes, Mode=TwoWay}"
+                                      IsEnabled="{Binding DocxOutput.IsLiquefactionYesAnalyzed}" Margin="0,0,15,0"/>
+                            <CheckBox Content="液状化なし" IsChecked="{Binding DocxOutput.IncludeOutputLiquefactionNo, Mode=TwoWay}"
+                                      IsEnabled="{Binding DocxOutput.IsLiquefactionNoAnalyzed}"/>
                         </StackPanel>
                     </GroupBox>
 
                     <GroupBox Header="計算書レベル" Margin="0,0,0,4" Padding="4">
                         <StackPanel>
                             <RadioButton Content="簡易（数式説明なし）" GroupName="CalculationReportLevel"
-                                         IsChecked="{Binding CalculationReportLevel, Converter={StaticResource IntEqualsConverter}, ConverterParameter=1, Mode=TwoWay}" />
+                                         IsChecked="{Binding DocxOutput.CalculationReportLevel, Converter={StaticResource IntEqualsConverter}, ConverterParameter=1, Mode=TwoWay}" />
                             <RadioButton Content="詳細（数式説明あり）" GroupName="CalculationReportLevel" Margin="0,2,0,0"
-                                         IsChecked="{Binding CalculationReportLevel, Converter={StaticResource IntEqualsConverter}, ConverterParameter=2, Mode=TwoWay}" />
+                                         IsChecked="{Binding DocxOutput.CalculationReportLevel, Converter={StaticResource IntEqualsConverter}, ConverterParameter=2, Mode=TwoWay}" />
                         </StackPanel>
                     </GroupBox>
 
@@ -155,53 +155,53 @@ WindowStartupLocation="CenterOwner">
 
                     <GroupBox Header="入力データ" Margin="0,0,0,4" Padding="4">
                         <StackPanel>
-                            <CheckBox Content="基本設定" IsChecked="{Binding IncludeFundamental, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="荷重条件" IsChecked="{Binding IncludeLoadCondition, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="杭体 (杭体明細表を含む)" IsChecked="{Binding IncludePileBodies, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="杭配置 (テーブル)" IsChecked="{Binding IncludePileLayoutTable, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="杭軸力" IsChecked="{Binding IncludePileAxialLoad, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="前後方杭" IsChecked="{Binding IncludeIsFrontPile, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="検討方針 (杭頭接続仮定を含む)" IsChecked="{Binding IncludeDesignApproach, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="地盤情報" IsChecked="{Binding IncludeGroundInformation, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="液状化検討" IsChecked="{Binding IncludeLiquefaction, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="杭配置図" IsChecked="{Binding IncludepileLocationMap, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="杭軸力図" IsChecked="{Binding IncludePileAxialLoadMap, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="前方杭・後方杭設定図" IsChecked="{Binding IncludeIsFrontMap, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="基本設定" IsChecked="{Binding DocxOutput.IncludeFundamental, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="荷重条件" IsChecked="{Binding DocxOutput.IncludeLoadCondition, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭体 (杭体明細表を含む)" IsChecked="{Binding DocxOutput.IncludePileBodies, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭配置 (テーブル)" IsChecked="{Binding DocxOutput.IncludePileLayoutTable, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭軸力" IsChecked="{Binding DocxOutput.IncludePileAxialLoad, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="前後方杭" IsChecked="{Binding DocxOutput.IncludeIsFrontPile, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="検討方針 (杭頭接続仮定を含む)" IsChecked="{Binding DocxOutput.IncludeDesignApproach, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="地盤情報" IsChecked="{Binding DocxOutput.IncludeGroundInformation, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="液状化検討" IsChecked="{Binding DocxOutput.IncludeLiquefaction, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭配置図" IsChecked="{Binding DocxOutput.IncludePileLocationMap, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭軸力図" IsChecked="{Binding DocxOutput.IncludePileAxialLoadMap, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="前方杭・後方杭設定図" IsChecked="{Binding DocxOutput.IncludeIsFrontMap, Mode=TwoWay}" Margin="0,2"/>
                         </StackPanel>
                     </GroupBox>
 
                     <GroupBox Header="地盤グラフ" Margin="0,0,0,4" Padding="4">
                         <StackPanel>
-                            <CheckBox Content="N値分布グラフ" IsChecked="{Binding IncludeNValueGraph, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="粘着力 Cu グラフ" IsChecked="{Binding IncludeCuGraph, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="S波速度 Vs グラフ" IsChecked="{Binding IncludeVsGraph, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="変形係数 Es グラフ" IsChecked="{Binding IncludeEsGraph, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="液状化安全率 FL グラフ" IsChecked="{Binding IncludeFLGraph, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="任意地盤変位グラフ" IsChecked="{Binding IncludeGroundDisplacementGraph, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="応答スペクトルグラフ" IsChecked="{Binding IncludeResponseSpectrumGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="N値分布グラフ" IsChecked="{Binding DocxOutput.IncludeNValueGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="粘着力 Cu グラフ" IsChecked="{Binding DocxOutput.IncludeCuGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="S波速度 Vs グラフ" IsChecked="{Binding DocxOutput.IncludeVsGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="変形係数 Es グラフ" IsChecked="{Binding DocxOutput.IncludeEsGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="液状化安全率 FL グラフ" IsChecked="{Binding DocxOutput.IncludeFLGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="任意地盤変位グラフ" IsChecked="{Binding DocxOutput.IncludeGroundDisplacementGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="応答スペクトルグラフ" IsChecked="{Binding DocxOutput.IncludeResponseSpectrumGraph, Mode=TwoWay}" Margin="0,2"/>
                         </StackPanel>
                     </GroupBox>
 
                     <GroupBox Header="杭の図・諸元" Margin="0,0,0,4" Padding="4">
                         <StackPanel>
-                            <CheckBox Content="杭姿図 (杭体ごと)" IsChecked="{Binding IncludePileElevation, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="杭断面図 (配筋詳細)" IsChecked="{Binding IncludePileSectionDiagram, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="杭頭上面図" IsChecked="{Binding IncludePileTopView, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="杭頭諸元テーブル" IsChecked="{Binding IncludePileTopSpecs, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="軸力制限テーブル" IsChecked="{Binding IncludeAxialLimitTable, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭姿図 (杭体ごと)" IsChecked="{Binding DocxOutput.IncludePileElevation, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭断面図 (配筋詳細)" IsChecked="{Binding DocxOutput.IncludePileSectionDiagram, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭頭上面図" IsChecked="{Binding DocxOutput.IncludePileTopView, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭頭諸元テーブル" IsChecked="{Binding DocxOutput.IncludePileTopSpecs, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="軸力制限テーブル" IsChecked="{Binding DocxOutput.IncludeAxialLimitTable, Mode=TwoWay}" Margin="0,2"/>
                         </StackPanel>
                     </GroupBox>
 
                     <GroupBox Header="要素分割" Margin="0,0,0,4" Padding="4">
                         <StackPanel>
-                            <CheckBox Content="要素分割杭姿図 (分割点付き)" IsChecked="{Binding IncludeElementDivisionPileShape, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="水平地盤反力分布グラフ" IsChecked="{Binding IncludeHorizontalSoilReactionGraph, Mode=TwoWay}" Margin="0,2"/>
-                            <CheckBox Content="土圧合力ばね分布グラフ" IsChecked="{Binding IncludeDoatsuGoryokuBaneGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="要素分割杭姿図 (分割点付き)" IsChecked="{Binding DocxOutput.IncludeElementDivisionPileShape, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="水平地盤反力分布グラフ" IsChecked="{Binding DocxOutput.IncludeHorizontalSoilReactionGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="土圧合力ばね分布グラフ" IsChecked="{Binding DocxOutput.IncludeDoatsuGoryokuBaneGraph, Mode=TwoWay}" Margin="0,2"/>
                         </StackPanel>
                     </GroupBox>
 
                     <GroupBox Header="支持力" Margin="0,0,0,4" Padding="4">
-                        <CheckBox Content="支持力検討" IsChecked="{Binding IncludeVertical, Mode=TwoWay}"
+                        <CheckBox Content="支持力検討" IsChecked="{Binding DocxOutput.IncludeVertical, Mode=TwoWay}"
                                   IsEnabled="{Binding IsVerticalAnalysisDone}"
                                   ToolTip="単杭沈下解析が未完了の場合は灰色"/>
                     </GroupBox>
@@ -209,49 +209,49 @@ WindowStartupLocation="CenterOwner">
                     <GroupBox Header="水平検討" Margin="0,0,0,4" Padding="4">
                         <StackPanel>
                             <!-- 親: 解析未完了時に灰色 (子は親+解析の AND で IsEnabled 制御) -->
-                            <CheckBox Content="水平検討" IsChecked="{Binding IncludeHorizontal, Mode=TwoWay}" Margin="0,2"
+                            <CheckBox Content="水平検討" IsChecked="{Binding DocxOutput.IncludeHorizontal, Mode=TwoWay}" Margin="0,2"
                                       IsEnabled="{Binding IsHorizontalAnalysisDone}"/>
                             <!-- 表示順 (ユーザー指定):
                                  M-φ → M-θ → N-M → N-Q → 杭の変位・応力ダイアグラム
                                  → 杭頭Mマップ → 杭頭Qマップ → 解析サマリーレポート → 検定結果 -->
-                            <CheckBox Content="M-φ関係" IsChecked="{Binding IncludeHorizontal_MPhi, Mode=TwoWay}" Margin="15,2,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
-                            <CheckBox Content="M-θ関係" IsChecked="{Binding IncludeHorizontal_MTheta, Mode=TwoWay}" Margin="15,2,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
-                            <CheckBox Content="N-M関係" IsChecked="{Binding IncludeHorizontal_NMinT, Mode=TwoWay}" Margin="15,2,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
-                            <CheckBox Content="N-Q関係" IsChecked="{Binding IncludeHorizontal_QNInT, Mode=TwoWay}" Margin="15,2,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
+                            <CheckBox Content="M-φ関係" IsChecked="{Binding DocxOutput.IncludeHorizontal_MPhi, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
+                            <CheckBox Content="M-θ関係" IsChecked="{Binding DocxOutput.IncludeHorizontal_MTheta, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
+                            <CheckBox Content="N-M関係" IsChecked="{Binding DocxOutput.IncludeHorizontal_NMinT, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
+                            <CheckBox Content="N-Q関係" IsChecked="{Binding DocxOutput.IncludeHorizontal_QNInT, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
                             <!-- 杭の変位・応力ダイアグラム (3 連グラフ: 変位 / せん断力 / 曲げモーメント) -->
                             <!-- 変位列は常に出力。せん断/曲げ列の有無を以下 2 個で個別 ON/OFF -->
                             <TextBlock Text="杭の変位・応力ダイアグラム" Margin="15,6,0,2"
                                        FontWeight="SemiBold" Foreground="#444"/>
-                            <CheckBox Content="└ 曲げモーメント列を含める" IsChecked="{Binding IncludeHorizontal_Bending, Mode=TwoWay}" Margin="30,2,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"
+                            <CheckBox Content="└ 曲げモーメント列を含める" IsChecked="{Binding DocxOutput.IncludeHorizontal_Bending, Mode=TwoWay}" Margin="30,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"
                                       ToolTip="3 連グラフの 3 列目 (曲げモーメント) を出力するか"/>
-                            <CheckBox Content="└ せん断力列を含める" IsChecked="{Binding IncludeHorizontal_Shear, Mode=TwoWay}" Margin="30,2,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"
+                            <CheckBox Content="└ せん断力列を含める" IsChecked="{Binding DocxOutput.IncludeHorizontal_Shear, Mode=TwoWay}" Margin="30,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"
                                       ToolTip="3 連グラフの 2 列目 (せん断力) を出力するか"/>
-                            <CheckBox Content="└ 限界状態線を重ねて描画" IsChecked="{Binding IncludeHorizontal_StressLimitState, Mode=TwoWay}"
+                            <CheckBox Content="└ 限界状態線を重ねて描画" IsChecked="{Binding DocxOutput.IncludeHorizontal_StressLimitState, Mode=TwoWay}"
                                       Margin="30,2,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"
                                       ToolTip="レベル1→損傷限界、レベル2+グレードS→損傷限界、レベル2+グレードA→安全限界 (低減後値) を自動選択"/>
-                            <StackPanel Margin="30,0,0,2" IsEnabled="{Binding CanEditHorizontalChildren}">
+                            <StackPanel Margin="30,0,0,2" IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}">
                                 <TextBlock Text="└ まとめ方" FontSize="11" Foreground="#555"/>
                                 <RadioButton Content="杭ごとに個別" GroupName="PileStressGrouping" Margin="15,2,0,0"
-                                             IsChecked="{Binding GroupPileStressBySoilPile, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"/>
+                                             IsChecked="{Binding DocxOutput.GroupPileStressBySoilPile, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"/>
                                 <RadioButton Content="杭地盤セットごとにまとめる" GroupName="PileStressGrouping" Margin="15,2,0,0"
-                                             IsChecked="{Binding GroupPileStressBySoilPile, Mode=TwoWay}"/>
+                                             IsChecked="{Binding DocxOutput.GroupPileStressBySoilPile, Mode=TwoWay}"/>
                             </StackPanel>
 
-                            <CheckBox Content="杭頭Mマップ" IsChecked="{Binding IncludePileHeadMomentMap, Mode=TwoWay}" Margin="15,6,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
-                            <CheckBox Content="杭頭Qマップ" IsChecked="{Binding IncludePileHeadShearMap, Mode=TwoWay}" Margin="15,2,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
-                            <CheckBox Content="解析サマリーレポート" IsChecked="{Binding IncludeAnalysisSummaryReport, Mode=TwoWay}" Margin="15,2,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
-                            <CheckBox Content="検定結果（NGのみ）" IsChecked="{Binding IncludeHorizontal_NGReport, Mode=TwoWay}" Margin="15,2,0,2"
-                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
+                            <CheckBox Content="杭頭Mマップ" IsChecked="{Binding DocxOutput.IncludePileHeadMomentMap, Mode=TwoWay}" Margin="15,6,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
+                            <CheckBox Content="杭頭Qマップ" IsChecked="{Binding DocxOutput.IncludePileHeadShearMap, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
+                            <CheckBox Content="解析サマリーレポート" IsChecked="{Binding DocxOutput.IncludeAnalysisSummaryReport, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
+                            <CheckBox Content="検定結果（NGのみ）" IsChecked="{Binding DocxOutput.IncludeHorizontal_NGReport, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
                         </StackPanel>
                     </GroupBox>
 
@@ -260,13 +260,13 @@ WindowStartupLocation="CenterOwner">
                             <!-- 沈下検討は支持力検討 (IncludeVertical) の子。
                                  荷重沈下曲線・杭頭/杭先端沈下曲線・杭周面抵抗力グラフ・沈下詳細表は
                                  すべて「沈下検討」内で出力されます。 -->
-                            <CheckBox Content="沈下検討（荷重-沈下曲線・周面抵抗・沈下表を含む）" IsChecked="{Binding IncludeSettlement, Mode=TwoWay}" Margin="0,2"
-                                      IsEnabled="{Binding CanEditVerticalChildren}"
+                            <CheckBox Content="沈下検討（荷重-沈下曲線・周面抵抗・沈下表を含む）" IsChecked="{Binding DocxOutput.IncludeSettlement, Mode=TwoWay}" Margin="0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditVerticalChildren}"
                                       ToolTip="支持力検討 ON かつ 単杭沈下解析完了で編集可"/>
                             <!-- 群杭沈下/基礎梁考慮 は独立 (各々の解析完了でガード) -->
-                            <CheckBox Content="群杭沈下マップ" IsChecked="{Binding IncludeGroupPileSettlement, Mode=TwoWay}" Margin="0,2"
+                            <CheckBox Content="群杭沈下マップ" IsChecked="{Binding DocxOutput.IncludeGroupPileSettlement, Mode=TwoWay}" Margin="0,2"
                                       IsEnabled="{Binding IsGroupPileSettlementAnalysisDone}"/>
-                            <CheckBox Content="基礎梁考慮鉛直解析結果" IsChecked="{Binding IncludeVerticalBeamResults, Mode=TwoWay}" Margin="0,2"
+                            <CheckBox Content="基礎梁考慮鉛直解析結果" IsChecked="{Binding DocxOutput.IncludeVerticalBeamResults, Mode=TwoWay}" Margin="0,2"
                                       IsEnabled="{Binding IsVerticalBeamAnalysisDone}"/>
                         </StackPanel>
                     </GroupBox>
@@ -275,15 +275,25 @@ WindowStartupLocation="CenterOwner">
             </ScrollViewer>
         </Grid>
 
-        <!-- ボタン行 -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-            <Button x:Name="OkButton" Content="計算書作成(_O)" Width="120" Click="OkButton_Click" Command="{Binding OutputWordFileCommand}"
-                    Padding="8,4" Margin="0,0,8,0"
-                    IsDefault="True"
-                    ToolTip="選択した項目で計算書を出力します (Enter / Alt+O)"/>
-            <Button Content="キャンセル(_C)" Width="120" Click="CancelButton_Click" Padding="8,4"
-                    IsCancel="True"
-                    ToolTip="出力せずに閉じます (Esc / Alt+C)"/>
-        </StackPanel>
+        <!-- ボタン行: 左に一括選択、右に作成/キャンセル -->
+        <Grid Grid.Row="1" Margin="0,8,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="全選択" Width="90" Command="{Binding DocxOutput.SelectAllDocxSectionsCommand}"
+                        Padding="8,4" Margin="0,0,8,0"
+                        ToolTip="出力項目・荷重ケースをすべて選択します（解析が未完了の項目は無効のまま）"/>
+                <Button Content="全解除" Width="90" Command="{Binding DocxOutput.DeselectAllDocxSectionsCommand}"
+                        Padding="8,4"
+                        ToolTip="出力項目・荷重ケースをすべて解除します"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="OkButton" Content="計算書作成(_O)" Width="120" Click="OkButton_Click"
+                        Padding="8,4" Margin="0,0,8,0"
+                        IsDefault="True"
+                        ToolTip="選択した項目で計算書を出力します (Enter / Alt+O)"/>
+                <Button Content="キャンセル(_C)" Width="120" Click="CancelButton_Click" Padding="8,4"
+                        IsCancel="True"
+                        ToolTip="出力せずに閉じます (Esc / Alt+C)"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

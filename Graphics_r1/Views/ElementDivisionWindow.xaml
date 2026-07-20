@@ -424,8 +424,18 @@
                                                         PreviewMouseDown="DataGrid_PreviewMouseDown"
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}"
                                                         Grid.Row="2"
+                                                        CellEditEnding="Horizon_CellEditEnding"
                                                                                                                 SelectedCellsChanged="Horizon_SelectedCellsChanged"
                                                         CurrentCellChanged="Horizon_CurrentCellChanged">
+
+                                                    <DataGrid.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="選択した土層のkh0を自動計算に戻す"
+                                                                      Command="{Binding PlacementTarget.DataContext.ResetKh0ForSelectedLayerCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                            <MenuItem Header="全土層のkh0を自動計算に戻す"
+                                                                      Command="{Binding PlacementTarget.DataContext.ResetAllKh0Command, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                        </ContextMenu>
+                                                    </DataGrid.ContextMenu>
 
                                                     <DataGrid.AlternatingRowBackground>
                                                         <ImageBrush/>
@@ -546,13 +556,25 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding Kh0, StringFormat=N0, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
+                                                        <DataGridTextColumn Binding="{Binding Kh0, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                                                Width="auto">
+                                                            <!-- 手入力オーバーライド時は強調表示（アクセント色・太字） -->
+                                                            <DataGridTextColumn.ElementStyle>
+                                                                <Style TargetType="TextBlock" BasedOn="{StaticResource RightAlignTextBlockStyle}">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsKh0Manual}" Value="True">
+                                                                            <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}"/>
+                                                                            <Setter Property="FontWeight" Value="Bold"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </DataGridTextColumn.ElementStyle>
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="基準水平地盤" TextAlignment="Center"/>
                                                                     <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="反力係数k"/><Run Text="h0" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                                     <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
+                                                                    <TextBlock Text="(手入力可)" TextAlignment="Center" HorizontalAlignment="Center" FontSize="9" Foreground="Gray"/>
                                                                 </StackPanel>
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
@@ -621,8 +643,6 @@
                                                     </Grid.ColumnDefinitions>
 
                                                     <ScottPlot:WpfPlot x:Name="wpfPlotKh0" Grid.Row="0" Grid.Column="0"/>
-                                                    <TextBlock Text="{Binding CrosshairPositionText_kh0}" 
-                                                            Margin="10" FontSize="14" Grid.Row="1" Grid.Column="0"/>
                                                 </Grid>
                                             </TabItem>
 
@@ -639,11 +659,7 @@
                                                     </Grid.ColumnDefinitions>
 
                                                     <ScottPlot:WpfPlot x:Name="wpfPlotPFront" Grid.Column="0"/>
-                                                    <TextBlock Text="{Binding CrosshairPositionText_Front}" 
-                                                            Margin="10" FontSize="14" Grid.Row="1" Grid.Column="0"/>
                                                     <ScottPlot:WpfPlot x:Name="wpfPlotPRear" Grid.Column="1"/>
-                                                    <TextBlock Text="{Binding CrosshairPositionText_Rear}" 
-                                                            Margin="10" FontSize="14" Grid.Row="1" Grid.Column="1"/>
                                                 </Grid>
                                             </TabItem>
                                         </TabControl>
@@ -1063,7 +1079,6 @@
                                                     </Grid.RowDefinitions>
 
                                                     <ScottPlot:WpfPlot x:Name="wpfPlotPpPo" Grid.Row="0" Grid.Column="0"/>
-                                                    <TextBlock Text="{Binding CrosshairPositionText_SoilPressureProfile}" Margin="10" FontSize="14" Grid.Row="1" Grid.Column="0"/>
                                                 </Grid>
                                             </TabItem>
                                             <TabItem Header="土圧合力">
@@ -1078,9 +1093,7 @@
                                                     </Grid.RowDefinitions>
 
                                                     <ScottPlot:WpfPlot x:Name="wpfPlotDGBperM" Grid.Row="0" Grid.Column="0"/>
-                                                    <TextBlock Text="{Binding CrosshairPositionText_DGperM}" Margin="10" FontSize="14" Grid.Row="1" Grid.Column="0"/>
                                                     <ScottPlot:WpfPlot x:Name="wpfPlotDGB" Grid.Row="0" Grid.Column="1"/>
-                                                    <TextBlock Text="{Binding CrosshairPositionText_DG}" Margin="10" FontSize="14" Grid.Row="1" Grid.Column="1"/>
                                                 </Grid>
                                             </TabItem>
                                         </TabControl>

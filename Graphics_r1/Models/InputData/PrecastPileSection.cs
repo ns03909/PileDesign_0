@@ -84,6 +84,11 @@ namespace PileDesign.Models.InputData
             Fcd = Fc * 2.0 / 3.5;
         }
 
+        // 既製杭の使用・損傷限界NMは許容応力度式ベースで εc/φ を持たないため、
+        // クリック点 (N,M) から線形 (εc,φ) を復元するための弾性換算断面諸量を返す。
+        internal override (double Ec, double Ie, double Ae, double ROuter) GetElasticSectionProps()
+            => (PrecastConcrete?.Ec ?? 0.0, Ie, Ae, Ro);
+
         // 限界モーメント取得メソッド
         internal double GetServiceLimitMoment(double beta, double Sigma0E)
         {
@@ -837,6 +842,25 @@ namespace PileDesign.Models.InputData
 
 
         }
+
+        // PHC: コンクリート(中空)＋PC鋼材。プレストレスひずみを加味。
+        internal override SectionStrainStressProfile GetStrainStressProfile(
+            double epsilonC, double curvature, bool ultimate, int division = 200)
+        {
+            double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
+            string type = ultimate ? "bilinear" : "linear";
+            double pc = (Prestrains != null && Prestrains.Count > 0) ? Prestrains[0] : 0.0;
+            double pt = (Prestrains != null && Prestrains.Count > 1) ? Prestrains[1] : 0.0;
+
+            var p = new SectionStrainStressProfile { Radius = Ro };
+            p.Materials.Add(BuildSolidProfile(SectionMaterialKind.Concrete, "コンクリート",
+                PrecastConcrete, type, epsilon0, curvature, Ro, Ri, pc, division));
+            p.Materials.Add(BuildRingProfile(SectionMaterialKind.Tendon, "PC鋼材",
+                Tendons, type, epsilon0, curvature, Rp, pt, division));
+            p.CompressionEdgeStrain = epsilon0 + curvature * Ro;
+            p.TensionEdgeStrain = epsilon0 - curvature * Ro;
+            return p;
+        }
     }
 
     // PRCSection杭クラス ////////////////////////////////////////////////////////////////////////////////////////////
@@ -1564,6 +1588,25 @@ namespace PileDesign.Models.InputData
             N = result1.Item1 - result2.Item1 + result3.Item1 - result4.Item1 + result5.Item1 - result6.Item1;
             M = result1.Item2 - result2.Item2 + result3.Item2 - result4.Item2 + result5.Item2 - result6.Item2;
             return (N, M);
+        }
+
+        // PRC: コンクリート(中空)＋主筋＋PC鋼材。各材料のプレストレスひずみを加味。
+        internal override SectionStrainStressProfile GetStrainStressProfile(
+            double epsilonC, double curvature, bool ultimate, int division = 200)
+        {
+            double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
+            string type = ultimate ? "bilinear" : "linear";
+
+            var p = new SectionStrainStressProfile { Radius = Ro };
+            p.Materials.Add(BuildSolidProfile(SectionMaterialKind.Concrete, "コンクリート",
+                PrecastConcrete, type, epsilon0, curvature, Ro, Ri, PrecastConcrete.Prestrain, division));
+            p.Materials.Add(BuildRingProfile(SectionMaterialKind.MainBar, "主筋",
+                MainBars, type, epsilon0, curvature, Rg, MainBars.Prestrain, division));
+            p.Materials.Add(BuildRingProfile(SectionMaterialKind.Tendon, "PC鋼材",
+                Tendons, type, epsilon0, curvature, Rp, Tendons.Prestrain, division));
+            p.CompressionEdgeStrain = epsilon0 + curvature * Ro;
+            p.TensionEdgeStrain = epsilon0 - curvature * Ro;
+            return p;
         }
     }
 
@@ -2338,6 +2381,25 @@ namespace PileDesign.Models.InputData
             N = result1.Item1 - result2.Item1 + result3.Item1;
             M = result1.Item2 - result2.Item2 + result3.Item2;
             return (N, M);
+        }
+
+        // SC: コンクリート(中空)＋鋼管(外殻)。終局も線形 (SC は bilinear を使わない)。
+        internal override SectionStrainStressProfile GetStrainStressProfile(
+            double epsilonC, double curvature, bool ultimate, int division = 200)
+        {
+            double epsilon0 = epsilonC - Ro * curvature;
+            const string type = "linear";  // SC は終局含め線形
+            double rPipe = (PositionTs != null && PositionTs.Count > 1) ? PositionTs[1] : Ro;
+            double rOuter = Math.Max(Ro, rPipe);
+
+            var p = new SectionStrainStressProfile { Radius = rOuter };
+            p.Materials.Add(BuildSolidProfile(SectionMaterialKind.Concrete, "コンクリート",
+                PrecastConcrete, type, epsilon0, curvature, Ro, Ri, 0.0, division));
+            p.Materials.Add(BuildRingProfile(SectionMaterialKind.SteelPipe, "鋼管",
+                PrecastSteelPipe, type, epsilon0, curvature, rPipe, 0.0, division));
+            p.CompressionEdgeStrain = epsilon0 + curvature * rOuter;
+            p.TensionEdgeStrain = epsilon0 - curvature * rOuter;
+            return p;
         }
 
         // 安全限界MN インタラクション取得メソッド

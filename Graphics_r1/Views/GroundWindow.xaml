@@ -192,6 +192,24 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="ErrorCellStyleGLDepth" TargetType="DataGridCell" BasedOn="{StaticResource CustomDataGridCellStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsErrorGLDepth}" Value="True">
+                    <Setter Property="Background" Value="Red"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ErrorCellStyleLayerBottomDepth" TargetType="DataGridCell" BasedOn="{StaticResource CustomDataGridCellStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsErrorLayerBottomDepth}" Value="True">
+                    <Setter Property="Background" Value="Red"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="GridCellBorderStyle" TargetType="Border">
             <Setter Property="BorderBrush" Value="DarkGray"/>
             <Setter Property="BorderThickness" Value="0.5"/>
@@ -2027,6 +2045,8 @@
                                                 <Button Content="今井・殿内式によるVs算定" Command="{Binding CalculateImaiVsCommand}"/>
                                                 <Button Content="土層の代表細粒分含有率の適用" Command="{Binding ApplyTypicalFcCommand}"/>
                                                 <Button Content="土層のN値の適用" Command="{Binding ApplyGroundLayerNValueCommand}"/>
+                                                <Button Content="NPT深度→下端深度GL" Command="{Binding ApplyNptDepthToLayerBottomDepthCommand}"
+                                                        ToolTip="各土質点の「下端深度GL」を、当該行と次行のNPT深度の平均深度に設定します。最下行は土層入力の最下層下端深度GLとなります。"/>
                                             </StackPanel>
                                             <!--</Expander>-->
                                         </ToolBar>
@@ -2049,6 +2069,7 @@
                                             SelectedItem="{Binding SelectedGroundMassOnDataGrid, Mode=TwoWay}"
                                                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                               CellEditEnding="DataGridGroundMass_CellEditEnding"
+                                              PasteCompleted="DataGridGroundMass_PasteCompleted"
                                             BeginningEdit="DataGrid_BeginningEdit"
                                             PreviewKeyDown="DataGrid_PreviewKeyDown"
                                               Grid.Row="1"
@@ -2088,8 +2109,99 @@
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
 
-                                            <DataGridTextColumn Binding="{Binding H, StringFormat='{}{0:0.000}'}"
+                                            <DataGridTextColumn Binding="{Binding GLDepth, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
+                                                                CellStyle="{StaticResource ErrorCellStyleGLDepth}"
+                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="参考" TextAlignment="Center"/>
+                                                        <TextBlock Text="NPT" TextAlignment="Center"/>
+                                                        <TextBlock Text="深度" TextAlignment="Center"/>
+                                                        <TextBlock Text="GL" TextAlignment="Center"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn Binding="{Binding Spacing, StringFormat='{}{0:0.000}'}"
+                                                    ElementStyle="{StaticResource RightAlignTextBlockStyle}"
+                                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="参考" TextAlignment="Center"/>
+                                                        <TextBlock Text="NPT" TextAlignment="Center"/>
+                                                        <TextBlock Text="間隔" TextAlignment="Center"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
+                                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                <DataGridTextColumn.Binding>
+                                                    <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
+                                                        <Binding Path="AltitudeDepth"/>
+                                                        <Binding Path="DataContext.InputModel.FundamentalInput.ReferenceAltitude" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                    </MultiBinding>
+                                                </DataGridTextColumn.Binding>
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="参考" TextAlignment="Center"/>
+                                                        <TextBlock Text="NPT" TextAlignment="Center"/>
+                                                        <TextBlock Text="標高" TextAlignment="Center"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn Binding="{Binding AltitudeDepth, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
+                                                        IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
+                                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="参考" TextAlignment="Center"/>
+                                                        <TextBlock Text="NPT" TextAlignment="Center"/>
+                                                        <TextBlock Text="Z" TextAlignment="Center"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn Binding="{Binding NValue, StringFormat='{}{0:0.0}'}">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource RightAlignTextBlockStyle}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding NValue}" Value="0">
+                                                                <Setter Property="Foreground" Value="Red"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding NValue}" Value="{x:Static sys:Double.NegativeInfinity}">
+                                                                <Setter Property="Foreground" Value="Red"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="N値" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn Binding="{Binding LayerBottomDepth, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
+                                                    CellStyle="{StaticResource ErrorCellStyleLayerBottomDepth}"
                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="下端" TextAlignment="Center"/>
+                                                        <TextBlock Text="深度GL" TextAlignment="Center"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn Binding="{Binding H, StringFormat='{}{0:0.000}'}"
+                                                    ElementStyle="{StaticResource RightAlignTextBlockStyle}"
+                                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="層厚" TextAlignment="Center"/>
@@ -2109,7 +2221,7 @@
                                                 </DataGridTextColumn.Binding>
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
-                                                        <TextBlock Text="層下面" TextAlignment="Center"/>
+                                                        <TextBlock Text="下端" TextAlignment="Center"/>
                                                         <TextBlock Text="標高" TextAlignment="Center"/>
                                                         <TextBlock Text="(m)" TextAlignment="Center"/>
                                                     </StackPanel>
@@ -2121,7 +2233,7 @@
                                                     IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
-                                                        <TextBlock Text="層下面" TextAlignment="Center"/>
+                                                        <TextBlock Text="下端" TextAlignment="Center"/>
                                                         <TextBlock Text="Z" TextAlignment="Center"/>
                                                         <TextBlock Text="(m)" TextAlignment="Center"/>
                                                     </StackPanel>
@@ -2186,84 +2298,6 @@
                                                     <StackPanel>
                                                         <TextBlock Text="年代" TextAlignment="Center"/>
                                                         <TextBlock Text="分類" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                    </StackPanel>
-                                                </DataGridTextColumn.Header>
-                                            </DataGridTextColumn>
-
-                                            <DataGridTextColumn Binding="{Binding Spacing, StringFormat='{}{0:0.000}'}"
-                                                    ElementStyle="{StaticResource RightAlignTextBlockStyle}"
-                                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
-                                                <DataGridTextColumn.Header>
-                                                    <StackPanel>
-                                                        <TextBlock Text="参考" TextAlignment="Center"/>
-                                                        <TextBlock Text="NPT" TextAlignment="Center"/>
-                                                        <TextBlock Text="間隔" TextAlignment="Center"/>
-                                                        <TextBlock Text="(m)" TextAlignment="Center"/>
-                                                    </StackPanel>
-                                                </DataGridTextColumn.Header>
-                                            </DataGridTextColumn>
-
-                                            <DataGridTextColumn Binding="{Binding GLDepth, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
-                                                                CellStyle="{StaticResource ErrorCellStyle}"
-                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
-                                                <DataGridTextColumn.Header>
-                                                    <StackPanel>
-                                                        <TextBlock Text="参考" TextAlignment="Center"/>
-                                                        <TextBlock Text="NPT" TextAlignment="Center"/>
-                                                        <TextBlock Text="深度" TextAlignment="Center"/>
-                                                        <TextBlock Text="GL" TextAlignment="Center"/>
-                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                    </StackPanel>
-                                                </DataGridTextColumn.Header>
-                                            </DataGridTextColumn>
-
-                                            <DataGridTextColumn IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}">
-                                                <DataGridTextColumn.Binding>
-                                                    <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
-                                                        <Binding Path="AltitudeDepth"/>
-                                                        <Binding Path="DataContext.InputModel.FundamentalInput.ReferenceAltitude" RelativeSource="{RelativeSource AncestorType=Window}"/>
-                                                    </MultiBinding>
-                                                </DataGridTextColumn.Binding>
-                                                <DataGridTextColumn.Header>
-                                                    <StackPanel>
-                                                        <TextBlock Text="参考" TextAlignment="Center"/>
-                                                        <TextBlock Text="NPT" TextAlignment="Center"/>
-                                                        <TextBlock Text="標高" TextAlignment="Center"/>
-                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                    </StackPanel>
-                                                </DataGridTextColumn.Header>
-                                            </DataGridTextColumn>
-
-                                            <DataGridTextColumn Binding="{Binding AltitudeDepth, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
-                                                        IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}">
-                                                <DataGridTextColumn.Header>
-                                                    <StackPanel>
-                                                        <TextBlock Text="参考" TextAlignment="Center"/>
-                                                        <TextBlock Text="NPT" TextAlignment="Center"/>
-                                                        <TextBlock Text="Z" TextAlignment="Center"/>
-                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                    </StackPanel>
-                                                </DataGridTextColumn.Header>
-                                            </DataGridTextColumn>
-                                            
-                                            <DataGridTextColumn Binding="{Binding NValue, StringFormat='{}{0:0.0}'}">
-                                                <DataGridTextColumn.ElementStyle>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource RightAlignTextBlockStyle}">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding NValue}" Value="0">
-                                                                <Setter Property="Foreground" Value="Red"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding NValue}" Value="{x:Static sys:Double.NegativeInfinity}">
-                                                                <Setter Property="Foreground" Value="Red"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </DataGridTextColumn.ElementStyle>
-                                                <DataGridTextColumn.Header>
-                                                    <StackPanel>
-                                                        <TextBlock Text="N値" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2810,7 +2844,6 @@
                                     </ToolBar>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotNValue" Grid.Row="1"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_NValue}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -2830,7 +2863,6 @@
                                     </ToolBar>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotCu" Grid.Row="1"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_Cu}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -2850,7 +2882,6 @@
                                     </ToolBar>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotVs" Grid.Row="1"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_Vs}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -2870,7 +2901,6 @@
                                     </ToolBar>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotEs" Grid.Row="1"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_Es}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -3031,7 +3061,6 @@
                                     </ToolBar>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotDisplacement" Grid.Row="1"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_Disp}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -3056,7 +3085,6 @@
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotFL" Grid.Row="1"/>
 
-                                    <TextBlock Text="{Binding CrosshairPositionText_FL}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
 
@@ -3109,7 +3137,6 @@
                                     </StackPanel>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotResponseSpectrum" Grid.Row="1"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_Sa}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutDocumentPane>

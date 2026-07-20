@@ -984,7 +984,6 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <ScottPlot:WpfPlot x:Name="wpfPlotM" Margin="0,6,0,0" Grid.Row="0"/>
-                                        <TextBlock Text="{Binding CrosshairPositionText_M}" Margin="4" FontSize="12" Grid.Row="1"/>
                                     </Grid>
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -1004,7 +1003,6 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <ScottPlot:WpfPlot x:Name="wpfPlotQ" Margin="0,6,0,0" Grid.Row="0"/>
-                                        <TextBlock Text="{Binding CrosshairPositionText_Q}" Margin="4" FontSize="12" Grid.Row="1"/>
                                     </Grid>
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -1024,7 +1022,6 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <ScottPlot:WpfPlot x:Name="wpfPlotD" Margin="0,6,0,0" Grid.Row="0"/>
-                                        <TextBlock Text="{Binding CrosshairPositionText_D}" Margin="4" FontSize="12" Grid.Row="1"/>
                                     </Grid>
                                 </Grid>
                             </avalonDock:LayoutAnchorable>

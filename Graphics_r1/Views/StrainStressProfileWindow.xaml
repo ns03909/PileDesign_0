@@ -1,0 +1,22 @@
+<Window x:Class="PileDesign.Views.StrainStressProfileWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+        Title="断面 ひずみ度・応力度分布" Height="620" Width="1040"
+        WindowStartupLocation="CenterOwner">
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock x:Name="HeaderText" Grid.Row="0" Margin="10,8" FontSize="14" TextWrapping="Wrap"/>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ScottPlot:WpfPlot x:Name="wpfPlotStrain" Grid.Column="0"/>
+            <ScottPlot:WpfPlot x:Name="wpfPlotStress" Grid.Column="1"/>
+        </Grid>
+    </Grid>
+</Window>

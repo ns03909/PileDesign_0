@@ -720,9 +720,62 @@ namespace PileDesign.ViewModels
                 name, soilType, gamma, b, e0,
                 zDataTop, zDataBtm,
                 xi, rOnB, nValue, phi, cohesive, stressTop, stressBtm);
+
+                // 土層ごとの kh0 手入力オーバーライドがあれば適用（自動計算値を上書き）
+                double? kh0Override = SoilPiles[SelectedSoilPileNo - 1].GetKh0Override(name);
+                if (kh0Override.HasValue)
+                {
+                    horizontalSoilReactionItem.Kh0 = kh0Override.Value;
+                    horizontalSoilReactionItem.IsKh0Manual = true;
+                }
+
                 SelectedHorizontalSoilReactions.Add(horizontalSoilReactionItem);
             }
             DrawHorizontalSoilReacitonGraph();
+        }
+
+        /// <summary>
+        /// 水平地盤反力グリッドで kh0 セルが編集されたときに呼ぶ。編集行の土層に対して
+        /// 手入力オーバーライドを設定し（土層単位＝同一土層の全要素に適用）、
+        /// 該当土層-杭セットの水平地盤反力を再構築して表示・グラフを更新する。
+        /// </summary>
+        public void ApplyKh0Edit(HorizontalSoilReactionItem editedItem, double newValue)
+        {
+            if (editedItem == null) return;
+            if (SoilPiles == null || SelectedSoilPileNo < 1 || SelectedSoilPileNo > SoilPiles.Count) return;
+            if (string.IsNullOrEmpty(editedItem.Name)) return;
+            if (!double.IsFinite(newValue) || newValue <= 0) { SetHorizontalSoilReaction(); return; }
+
+            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+
+            // モデル側（解析が参照する SoilPile.HorizontalSoilReactions）を再構築
+            SoilPiles[SelectedSoilPileNo - 1].SetKh0Override(editedItem.Name, newValue);
+            // 表示側を再構築
+            SetHorizontalSoilReaction();
+        }
+
+        /// <summary>選択中の土層（グリッド選択行）の kh0 を自動計算に戻す。</summary>
+        [RelayCommand]
+        private void ResetKh0ForSelectedLayer()
+        {
+            if (SelectedLayeronDataGrid == null) return;
+            if (SoilPiles == null || SelectedSoilPileNo < 1 || SelectedSoilPileNo > SoilPiles.Count) return;
+            if (string.IsNullOrEmpty(SelectedLayeronDataGrid.Name)) return;
+
+            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+            SoilPiles[SelectedSoilPileNo - 1].ClearKh0Override(SelectedLayeronDataGrid.Name);
+            SetHorizontalSoilReaction();
+        }
+
+        /// <summary>この土層-杭セットの全土層の kh0 を自動計算に戻す。</summary>
+        [RelayCommand]
+        private void ResetAllKh0()
+        {
+            if (SoilPiles == null || SelectedSoilPileNo < 1 || SelectedSoilPileNo > SoilPiles.Count) return;
+
+            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+            SoilPiles[SelectedSoilPileNo - 1].ClearAllKh0Overrides();
+            SetHorizontalSoilReaction();
         }
 
         // 土圧合力ばねのセットメソッド

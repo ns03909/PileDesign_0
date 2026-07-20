@@ -35,6 +35,7 @@
         <conv:HeightToMaxHeightConverter x:Key="HeightToMaxHeightConverter" />
         <conv:IntToZeroBasedIndexConverter x:Key="IntToZeroBasedIndexConverter"/>
         <conv:PileToeDiameterLabelConverter x:Key="PileToeDiameterLabelConverter"/>
+        <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
 
 
         <!-- 共通フォームスタイル（Window.Resources に追加） -->
@@ -879,7 +880,7 @@
                         <TextBlock Grid.Row="25" Grid.Column="3" Text="kN" Foreground="{StaticResource UltimateLimitBrush}"/>
 
 
-                        <TextBlock Grid.Row="26" Grid.Column="0" Text="損傷限界引抜力" Foreground="{StaticResource DamageLimitBrush}"/>
+                        <TextBlock Grid.Row="26" Grid.Column="0" Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界引抜力, FallbackValue=損傷限界引抜力}" Foreground="{StaticResource DamageLimitBrush}"/>
                         <controls:FormulaControl Grid.Row="26" Grid.Column="1" Formula="R_{t,DL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource DamageLimitBrush}"/>
                         <TextBox Grid.Row="26" Grid.Column="2"
                              Text="{Binding TemporarySoilPile.Rt_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
@@ -887,7 +888,7 @@
                         <TextBlock Grid.Row="26" Grid.Column="3" Text="kN" Foreground="{StaticResource DamageLimitBrush}"/>
 
 
-                        <TextBlock Grid.Row="27" Grid.Column="0" Text="使用限界引抜力" Foreground="{StaticResource ServiceLimitBrush}"/>
+                        <TextBlock Grid.Row="27" Grid.Column="0" Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界引抜力, FallbackValue=使用限界引抜力}" Foreground="{StaticResource ServiceLimitBrush}"/>
                         <controls:FormulaControl Grid.Row="27" Grid.Column="1" Formula="R_{t,SL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource ServiceLimitBrush}"/>
                         <TextBox Grid.Row="27" Grid.Column="2"
                              Text="{Binding TemporarySoilPile.Rt_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
@@ -895,7 +896,7 @@
                         <TextBlock Grid.Row="27" Grid.Column="3" Text="kN" Foreground="{StaticResource ServiceLimitBrush}"/>
 
 
-                        <TextBlock Grid.Row="28" Grid.Column="0" Text="使用限界支持力" Foreground="{StaticResource ServiceLimitBrush}"/>
+                        <TextBlock Grid.Row="28" Grid.Column="0" Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界支持力, FallbackValue=使用限界支持力}" Foreground="{StaticResource ServiceLimitBrush}"/>
                         <controls:FormulaControl Grid.Row="28" Grid.Column="1" Formula="R_{SL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource ServiceLimitBrush}"/>
                         <TextBox Grid.Row="28" Grid.Column="2"
                              Text="{Binding TemporarySoilPile.R_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
@@ -903,7 +904,7 @@
                         <TextBlock Grid.Row="28" Grid.Column="3" Text="kN" Foreground="{StaticResource ServiceLimitBrush}"/>
 
 
-                        <TextBlock Grid.Row="29" Grid.Column="0" Text="損傷限界支持力" Foreground="{StaticResource DamageLimitBrush}"/>
+                        <TextBlock Grid.Row="29" Grid.Column="0" Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界支持力, FallbackValue=損傷限界支持力}" Foreground="{StaticResource DamageLimitBrush}"/>
                         <controls:FormulaControl Grid.Row="29" Grid.Column="1" Formula="R_{DL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource DamageLimitBrush}"/>
                         <TextBox Grid.Row="29" Grid.Column="2"
                              Text="{Binding TemporarySoilPile.R_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"

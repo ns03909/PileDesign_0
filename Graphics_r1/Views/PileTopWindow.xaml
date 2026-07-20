@@ -741,7 +741,6 @@
                                         <RowDefinition Height="auto"/>
                                     </Grid.RowDefinitions>
                                     <ScottPlot:WpfPlot x:Name="wpfPlotMN" Grid.Row="0"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_MN}" Margin="10" FontSize="14" Grid.Row="1"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
@@ -760,7 +759,6 @@
                                         <RowDefinition Height="auto"/>
                                     </Grid.RowDefinitions>
                                     <ScottPlot:WpfPlot x:Name="wpfPlotThetaM" Grid.Row="0"/>
-                                    <TextBlock Text="{Binding CrosshairPositionText_ThetaM}" Margin="10" FontSize="14" Grid.Row="1"/>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>

@@ -5785,7 +5785,7 @@ namespace PileDesign.ViewModels
 
             // テキスト全体を 1 度ビルド → ログとキャッシュに出す (docx 出力用)
             string summaryText = BuildStepSummaryReportText(snapshot);
-            _mainWindowViewModel.LastAnalysisSummaryText = summaryText;
+            _mainWindowViewModel.DocxOutput.LastAnalysisSummaryText = summaryText;
             foreach (var line in summaryText.Split('\n'))
             {
                 // BuildStepSummaryReportText は \r\n を出さない前提

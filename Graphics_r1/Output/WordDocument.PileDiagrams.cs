@@ -34,28 +34,28 @@ namespace PileDesign.Output
         {
             if (inputModel?.PileBodies == null || mainWindowViewModel == null) return;
 
-            bool any = mainWindowViewModel.IncludePileElevation
-                    || mainWindowViewModel.IncludePileSectionDiagram
-                    || mainWindowViewModel.IncludePileTopView
-                    || mainWindowViewModel.IncludePileTopSpecs
-                    || mainWindowViewModel.IncludeAxialLimitTable;
+            bool any = mainWindowViewModel.DocxOutput.IncludePileElevation
+                    || mainWindowViewModel.DocxOutput.IncludePileSectionDiagram
+                    || mainWindowViewModel.DocxOutput.IncludePileTopView
+                    || mainWindowViewModel.DocxOutput.IncludePileTopSpecs
+                    || mainWindowViewModel.DocxOutput.IncludeAxialLimitTable;
             if (!any) return;
 
             AddHeader1(body, "杭の図・諸元", 1);
 
-            if (mainWindowViewModel.IncludePileElevation)
+            if (mainWindowViewModel.DocxOutput.IncludePileElevation)
                 AddPileElevationDiagrams(mainPart, body);
 
-            if (mainWindowViewModel.IncludePileSectionDiagram)
+            if (mainWindowViewModel.DocxOutput.IncludePileSectionDiagram)
                 AddPileSectionDiagrams(mainPart, body);
 
-            if (mainWindowViewModel.IncludePileTopView)
+            if (mainWindowViewModel.DocxOutput.IncludePileTopView)
                 AddPileTopViewDiagrams(mainPart, body);
 
-            if (mainWindowViewModel.IncludePileTopSpecs)
+            if (mainWindowViewModel.DocxOutput.IncludePileTopSpecs)
                 AddPileTopSpecsTables(body);
 
-            if (mainWindowViewModel.IncludeAxialLimitTable)
+            if (mainWindowViewModel.DocxOutput.IncludeAxialLimitTable)
                 AddAxialLimitTables(body);
         }
 
@@ -450,8 +450,8 @@ namespace PileDesign.Output
                 for (int i = 0; i < values.Count; i++)
                 {
                     var row = new TableRow();
-                    row.Append(CreateTableCellWithWidth(limitName, "left", widths[0]));
-                    row.Append(CreateTableCellWithWidth(GetAxialLimitMeaning(pileBodyType, pileSectionType, isUltimate, i), "left", widths[1]));
+                    row.Append(CreateTableCellWithWidth(ConcreteModelOptions.MapLimitStateText(limitName), "left", widths[0]));
+                    row.Append(CreateTableCellWithWidth(ConcreteModelOptions.MapLimitStateText(GetAxialLimitMeaning(pileBodyType, pileSectionType, isUltimate, i)), "left", widths[1]));
                     // 内部単位 N → kN 表示 (×0.001)
                     string val = (values[i] * 0.001).ToString("N0");
                     row.Append(CreateTableCellWithWidth(val, "right", widths[2]));
@@ -562,7 +562,7 @@ namespace PileDesign.Output
                     {
                         0 => "引張側ひび割れ限界 ((4-σE)·Ae)",
                         1 => "弾性限界 ((10-σE)·Ae)",
-                        2 => $"圧壊限界 ({(pileSectionType == "PRC杭" ? "60" : "65")}σE·Ae)",
+                        2 => $"圧壊限界 (({(pileSectionType == "PRC杭" ? "60" : "65")}-σE)·Ae)",
                         _ => $"[{index}]"
                     };
                 }
