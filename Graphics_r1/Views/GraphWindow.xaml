@@ -234,11 +234,11 @@
                     <RadioButton GroupName="SeismicGrade" Content="グレードA"
                                  IsChecked="{Binding IsSeismicGradeA, Mode=TwoWay}"
                                  Margin="0,0,8,0" VerticalAlignment="Center"
-                                 ToolTip="レベル1: 損傷限界 / レベル2: 安全限界"/>
+                                 ToolTip="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=レベル1: 損傷限界 / レベル2: 安全限界, FallbackValue=レベル1: 損傷限界 / レベル2: 安全限界}"/>
                     <RadioButton GroupName="SeismicGrade" Content="グレードS"
                                  IsChecked="{Binding IsSeismicGradeS, Mode=TwoWay}"
                                  VerticalAlignment="Center"
-                                 ToolTip="レベル1: 損傷限界 / レベル2: 損傷限界（安全限界曲線なし）"/>
+                                 ToolTip="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=レベル1: 損傷限界 / レベル2: 損傷限界（安全限界曲線なし）, FallbackValue=レベル1: 損傷限界 / レベル2: 損傷限界（安全限界曲線なし）}"/>
                 </StackPanel>
             </StackPanel>
 

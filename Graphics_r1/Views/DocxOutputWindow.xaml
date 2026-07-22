@@ -26,6 +26,7 @@ WindowStartupLocation="CenterOwner">
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <conv:BooleanNegationConverter x:Key="BooleanNegationConverter" />
         <conv:IntEqualsConverter x:Key="IntEqualsConverter"/>
+        <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
         <conv:LoadCaseLevelToColorConverter x:Key="LoadCaseLevelToColorConverter"/>
         <Style x:Key="SvgIconStyle" TargetType="svgc:SvgViewbox">
             <Setter Property="Width" Value="16"/>
@@ -235,7 +236,7 @@ WindowStartupLocation="CenterOwner">
                             <CheckBox Content="└ 限界状態線を重ねて描画" IsChecked="{Binding DocxOutput.IncludeHorizontal_StressLimitState, Mode=TwoWay}"
                                       Margin="30,2,0,2"
                                       IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"
-                                      ToolTip="レベル1→損傷限界、レベル2+グレードS→損傷限界、レベル2+グレードA→安全限界 (低減後値) を自動選択"/>
+                                      ToolTip="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=レベル1→損傷限界、レベル2+グレードS→損傷限界、レベル2+グレードA→安全限界 (低減後値) を自動選択, FallbackValue=レベル1→損傷限界、レベル2+グレードS→損傷限界、レベル2+グレードA→安全限界 (低減後値) を自動選択}"/>
                             <StackPanel Margin="30,0,0,2" IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}">
                                 <TextBlock Text="└ まとめ方" FontSize="11" Foreground="#555"/>
                                 <RadioButton Content="杭ごとに個別" GroupName="PileStressGrouping" Margin="15,2,0,0"
