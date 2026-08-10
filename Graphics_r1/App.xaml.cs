@@ -229,6 +229,21 @@ namespace PileDesign
                 return true;
             }
 
+            // WPF 既知バグ (dotnet/wpf#4786): UI オートメーション（ナレーター・タッチキーボード等）が
+            // ウィンドウ名を取得する最中にタイトル文字列が変化すると、WindowAutomationPeer.GetNameCore の
+            // GetWindowText がバッファ競合で Win32Exception
+            // （「システム コールに渡されるデータ領域が小さすぎます」ERROR_INSUFFICIENT_BUFFER）を投げる。
+            // 単なる読み取り競合でアプリ状態には影響しないため抑制する。
+            // （MainWindow には AutomationProperties.Name を設定して発生源自体も塞いでいるが、
+            //   他ウィンドウ・他 UIA 経路の保険として残す）
+            if (ex is System.ComponentModel.Win32Exception
+                && ex.StackTrace is string st
+                && st.Contains("System.Windows.Automation.Peers"))
+            {
+                reason = "UIA GetNameCore タイトル競合 (WPF 既知バグ dotnet/wpf#4786)";
+                return true;
+            }
+
             return false;
         }
 

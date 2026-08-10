@@ -24,6 +24,7 @@
         DragEnter="Window_DragEnter"
         Drop="Window_Drop"
         Title="{Binding WindowTitle}" Height="800" Width="1200" WindowState="Maximized"
+        AutomationProperties.Name="杭基礎検討プログラム"
         x:Name="MainWin"
         >
 
