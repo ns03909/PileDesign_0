@@ -3251,6 +3251,7 @@ namespace PileDesign.ViewModels
             Models.InputData.ConcreteModelOptions.UseNotification1113Compression = f?.UseNotification1113Compression ?? false;
             Models.InputData.ConcreteModelOptions.UseNotification1113Shear = f?.UseNotification1113Shear ?? false;
             Models.InputData.ConcreteModelOptions.UseInsituUltimateEFunction = f?.UseInsituUltimateEFunction ?? false;
+            Models.InputData.ConcreteModelOptions.UseFiberMPhi = f?.UseFiberMPhi ?? false;
             Models.InputData.ConcreteModelOptions.Notification1113CompressionCase = f?.Notification1113CompressionCase ?? 1;
 
             // M-φ 静的キャッシュ（全断面共有）

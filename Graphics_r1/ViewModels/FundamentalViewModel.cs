@@ -300,6 +300,20 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
         }
 
+        // 場所打ちRC杭の解析用 M-φ をファイバーモデルで算定する（解析に影響 → 変更時は解析結果リセット）
+        [ObservableProperty]
+        private bool _useFiberMPhi;
+
+        partial void OnUseFiberMPhiChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseFiberMPhi,
+                v => InputModel.FundamentalInput.UseFiberMPhi = v,
+                v => UseFiberMPhi = v,
+                "M-φをファイバーモデルで算定 へ変更");
+        }
+
         // 告示1113(第8) 長期許容圧縮の区分（1: Fc/4、2: min(Fc/4.5, 6)）
         [ObservableProperty]
         private int _notification1113CompressionCase = 1;
@@ -431,6 +445,7 @@ namespace PileDesign.ViewModels
             UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
             UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
             UseInsituUltimateEFunction = InputModel.FundamentalInput.UseInsituUltimateEFunction;
+            UseFiberMPhi = InputModel.FundamentalInput.UseFiberMPhi;
             Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;

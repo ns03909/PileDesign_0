@@ -331,6 +331,35 @@
                 </StackPanel>
             </GroupBox>
 
+            <!-- 解析用 M-φ 関係の算定方式 -->
+            <GroupBox Header="M-φ関係の算定" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+                    <CheckBox Content="M-φ関係をファイバーモデルで算定する（場所打ちRC杭のみ）"
+                              IsChecked="{Binding UseFiberMPhi}"
+                              Margin="0,2,0,2">
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ち鉄筋コンクリート杭の解析用 M-φ 関係を、「基礎部材の強度と変形性能」のポリリニア（Mcr-My-β1·Mu0 折線）に代えて、</Run>
+                                    <LineBreak/>
+                                    <Run>ファイバーモデル（断面分割積分。各曲率で軸力つり合いを解き M を直接積分）で算定します。</Run>
+                                    <LineBreak/>
+                                    <Run>指針の低減係数 β1・β2 は乗じない「素の」断面応答です（終局側はポリリニアより大きくなります）。</Run>
+                                    <LineBreak/>
+                                    <Run>掃引終点は安全限界（圧縮縁ひずみ 0.003）。材料構成則は解析用と同じバイリニアです。</Run>
+                                    <LineBreak/>
+                                    <Run>FEM で負勾配ばねとならないよう、曲線は単調非減少化（最小勾配床付き）して使用します。</Run>
+                                    <LineBreak/>
+                                    <Run>※ 場所打ち鋼管コンクリート杭（RC部含む）・既製杭・鋼管杭は対象外（従来ポリリニア）。M-θ（杭頭回転ばね）も従来どおりです。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
+                               Text="※ 変更すると M-φ が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。"/>
+                </StackPanel>
+            </GroupBox>
+
         </StackPanel>
 
         <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Orientation="Horizontal">

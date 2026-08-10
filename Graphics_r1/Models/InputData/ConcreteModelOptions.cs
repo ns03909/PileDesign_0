@@ -70,6 +70,16 @@ namespace PileDesign.Models.InputData
         public static bool UseInsituUltimateEFunction { get; set; }
 
         /// <summary>
+        /// 場所打ち鉄筋コンクリート杭の解析用 M-φ 関係を、指針ポリリニア（Mcr-My-β1·Mu0 折線）に
+        /// 代えてファイバーモデル（断面分割積分、各曲率で軸力つり合いを解く）で算定する。
+        /// β1・β2 の指針低減係数は乗じない「素の」断面応答となる。FEM で負勾配ばねとならないよう
+        /// 単調非減少化＋最小勾配床の後処理を施した曲線を用いる。
+        /// M-φ（→ 非線形 FEM 解析）に影響するため、変更時は解析結果をリセットする。
+        /// 場所打ち鋼管コンクリート杭（RC部含む）・既製杭・鋼管杭は対象外（従来ポリリニア）。
+        /// </summary>
+        public static bool UseFiberMPhi { get; set; }
+
+        /// <summary>
         /// 告示1113(第8) の長期許容応力度の区分（圧縮・せん断で共用）。
         /// 圧縮 1: Fc/4、2: min(Fc/4.5, 6.0)（短期 2 倍）。
         /// せん断 1: Fc/40、2: Fc/45 とアーチ項 (3/4)(0.49+Fc/100) の小さい方（短期 1.5 倍）。
@@ -110,6 +120,7 @@ namespace PileDesign.Models.InputData
                $"E{(UseUnitGsiForConcreteE ? 1 : 0)}" +
                $"K{(UseNotification1113Compression ? Notification1113CompressionCase : 0)}" +
                $"Q{(UseNotification1113Shear ? Notification1113CompressionCase : 0)}" +
-               $"U{(UseInsituUltimateEFunction ? 1 : 0)}";
+               $"U{(UseInsituUltimateEFunction ? 1 : 0)}" +
+               $"F{(UseFiberMPhi ? 1 : 0)}";
     }
 }

@@ -451,6 +451,20 @@ namespace PileDesign.Output
                 AddText(body, "コンクリートの応力ひずみ関係（バイリニア型）");
                 AddEq(body, $@"\sigma = \min\left(E_{{c}}\varepsilon,\ {plateau}\right)\quad(0 \le \varepsilon \le \varepsilon_{{cu}})");
             }
+
+            // 解析用 M-φ の算定方式（基本設定「M-φ関係をファイバーモデルで算定する」ON時のみ明記）
+            if (ConcreteModelOptions.UseFiberMPhi)
+            {
+                AddText(body, "場所打ち鉄筋コンクリート杭の解析用 M-φ 関係（ファイバーモデル）");
+                AddText(body,
+                    "解析用 M-φ 関係は、指針の折線（Mcr-My-β1・Mu0）に代えて、断面の平面保持を仮定した" +
+                    "ファイバーモデル（断面分割積分）により算定する。各曲率 φ に対し軸力つり合いを満たす" +
+                    "断面ひずみ状態を解き、曲げモーメント M を断面積分で直接求める" +
+                    "（掃引終点は圧縮縁ひずみ εcu = 0.003。低減係数 β1・β2 は乗じない。" +
+                    "曲線は解析の安定のため単調非減少化して用いる）。");
+                AddEq(body, @"N = \int_{A} \sigma\left(\varepsilon_{0}-\phi\,z\right)dA,\quad
+                    M = -\int_{A} \sigma\left(\varepsilon_{0}-\phi\,z\right)z\,dA");
+            }
         }
 
         // 荷重条件の表を追加するメソッド

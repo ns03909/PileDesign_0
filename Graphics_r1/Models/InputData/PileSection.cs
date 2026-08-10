@@ -545,7 +545,20 @@ namespace PileDesign.Models.InputData
                 }
                 else
                 {
-                    (phisRaw, msRaw) = section.GetMPhiRelationship(axialN_inN);
+                    // ファイバーモデル M-φ オプション（場所打ちRC杭のみ。SPRC の RC 部は対象外）。
+                    // 解けない場合（軸力が耐力範囲外等）は従来ポリリニアへフォールバック。
+                    if (ConcreteModelOptions.UseFiberMPhi
+                        && PileBodyType == "場所打ち鉄筋コンクリート杭"
+                        && section is InsituReinforcedConcreteSection rcFiberSection
+                        && rcFiberSection.GetMPhiRelationshipFiber(axialN_inN) is { } fiber)
+                    {
+                        // FEM ばねとして負勾配・零勾配とならないよう単調化＋最小勾配床
+                        (phisRaw, msRaw) = MakeMonotonicForAnalysis(fiber.Phis, fiber.Moments);
+                    }
+                    else
+                    {
+                        (phisRaw, msRaw) = section.GetMPhiRelationship(axialN_inN);
+                    }
                 }
 
                 // 結果が不正な場合もフォールバック
@@ -574,6 +587,34 @@ namespace PileDesign.Models.InputData
             {
                 return CreateLinearFallback();
             }
+        }
+
+        /// <summary>
+        /// ファイバーモデル M-φ（生曲線）を解析用に単調非減少化する。
+        /// ひび割れ直後の局所的な M 低下（コンクリート引張脱落）や終局近傍のプラトーが
+        /// FEM の負勾配・零勾配ばね（→ Newton 収束不能）とならないよう、各セグメントに
+        /// 最小勾配床を与える。床は「最大 M 点の割線剛性 × 1%」とし、
+        /// MomentCurvatureCurve の post-yield 外挿床（降伏時割線 × 1%）と同方針で整合させる。
+        /// 単位は入力のまま（φ [1/mm], M [N·mm]）。
+        /// </summary>
+        private static (List<double> Phis, List<double> Moments) MakeMonotonicForAnalysis(
+            List<double> phis, List<double> ms)
+        {
+            // 最大 M 点の割線剛性から最小勾配床を決める
+            double mMax = 0.0, phiAtMax = 0.0;
+            for (int i = 0; i < ms.Count; i++)
+            {
+                if (ms[i] > mMax) { mMax = ms[i]; phiAtMax = phis[i]; }
+            }
+            double minSlope = phiAtMax > 0.0 ? 0.01 * (mMax / phiAtMax) : 0.0;
+
+            var outMs = new List<double>(ms);
+            for (int i = 1; i < outMs.Count; i++)
+            {
+                double floor = outMs[i - 1] + minSlope * (phis[i] - phis[i - 1]);
+                if (outMs[i] < floor) outMs[i] = floor;
+            }
+            return (phis, outMs);
         }
 
         /// <summary>

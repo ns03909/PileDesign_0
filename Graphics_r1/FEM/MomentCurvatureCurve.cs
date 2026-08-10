@@ -32,6 +32,11 @@ namespace PileDesign.FEM
         // （降伏後剛性低下）を反映させ、Newton 反復のチャタリングを防ぐ。
         private readonly bool _isOneSided;
 
+        // 各セグメントの傾き（コンストラクタで事前計算）。
+        // EvaluateTangent は NR 反復で梁ごとに毎回呼ばれるため、呼び出し毎の配列確保・再計算を避ける。
+        // ファイバーモデル M-φ オプションで点数が 4 → 50 程度に増えても評価コストが増えないようにする。
+        private readonly double[] _slopes = [];
+
         public MomentCurvatureCurve() { }
 
         public MomentCurvatureCurve(IEnumerable<(double phi, double moment)> points)
@@ -73,6 +78,17 @@ namespace PileDesign.FEM
 
             // 全点が φ ≥ -ε なら片側定義とみなす
             _isOneSided = Points.All(p => p.Phi >= -eps);
+
+            // セグメント傾きの事前計算（EvaluateTangent 用）
+            if (Points.Count >= 2)
+            {
+                _slopes = new double[Points.Count - 1];
+                for (int i = 0; i < Points.Count - 1; i++)
+                {
+                    double denom = Points[i + 1].Phi - Points[i].Phi;
+                    _slopes[i] = Math.Abs(denom) <= 1e-15 ? 0.0 : (Points[i + 1].Moment - Points[i].Moment) / denom;
+                }
+            }
         }
 
         public double EvaluateMoment(double phi)
@@ -155,30 +171,20 @@ namespace PileDesign.FEM
             // 奇関数 M(−φ)=−M(φ) の微分は偶関数 → 接線剛性は |φ| 依存で OK。
             double lookup = (_isOneSided && phi < 0.0) ? -phi : phi;
 
-            // 各セグメントの傾きを事前計算
-            var slopes = new double[Points.Count - 1];
-            for (int i = 0; i < Points.Count - 1; i++)
-            {
-                var (p0, m0) = Points[i];
-                var (p1, m1) = Points[i + 1];
-                double denom = p1 - p0;
-                slopes[i] = Math.Abs(denom) <= 1e-15 ? 0.0 : (m1 - m0) / denom;
-            }
-
-            // 区分定数: M(φ) が区分線形なので dM/dφ はセグメントの傾き（定数）。
+            // 区分定数: M(φ) が区分線形なので dM/dφ はセグメントの傾き（定数、コンストラクタで事前計算）。
             // ブレンドすると EvaluateMoment（ブレンドなし）と不整合になり
             // K_tan ≠ dF/dd → Newton-Raphson 収束停滞の原因になる。
             for (int i = 0; i < Points.Count - 1; i++)
             {
                 if (lookup >= Points[i].Phi && lookup <= Points[i + 1].Phi)
-                    return slopes[i];
+                    return _slopes[i];
             }
 
             // 範囲外の場合は端部の傾きを使用
             // post-yield (lookup > Points[^1].Phi): 自然な最終セグメント勾配と「降伏時割線×1%」の大きい方。
             // EvaluateMomentCore の post-yield 外挿と整合させ K_tan = dM/dφ を保つ。
-            if (lookup < Points[0].Phi) return slopes[0];
-            return Math.Max(slopes[^1], GetPostYieldSlopeFloor());
+            if (lookup < Points[0].Phi) return _slopes[0];
+            return Math.Max(_slopes[^1], GetPostYieldSlopeFloor());
         }
 
         // 割線剛性: M/φ（内力計算用）

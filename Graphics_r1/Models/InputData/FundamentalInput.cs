@@ -103,6 +103,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _useInsituUltimateEFunction, value);
         }
 
+        // 場所打ちRC杭の解析用 M-φ 関係をファイバーモデル（断面分割積分）で算定する
+        private bool _useFiberMPhi;
+        public bool UseFiberMPhi
+        {
+            get => _useFiberMPhi;
+            set => SetProperty(ref _useFiberMPhi, value);
+        }
+
         // 場所打ちRC杭のコンクリート許容せん断応力度を告示1113(第8)による
         private bool _useNotification1113Shear;
         public bool UseNotification1113Shear
