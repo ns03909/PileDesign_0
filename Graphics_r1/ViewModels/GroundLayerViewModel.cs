@@ -3090,7 +3090,7 @@ namespace PileDesign.ViewModels
                         }
                         continue; // 次レベルへ
                     }
-                    System.Diagnostics.Debug.WriteLine($"[ResponseSpectrum] Level {levelIndex + 1} 計算失敗。a2(b2) にフォールバック。");
+                    Serilog.Log.Debug($"[ResponseSpectrum] Level {levelIndex + 1} 計算失敗。a2(b2) にフォールバック。");
                 }
 
                 // 表層の土質の動的変形特性から決まる定数

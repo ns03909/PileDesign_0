@@ -2110,11 +2110,11 @@ namespace PileDesign.ViewModels
                 _graphHoverMap.Clear();
 
                 try { DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "UH", "mm"); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Disp] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"変位グラフ描画エラー: {ex.Message}"; }
+                catch (Exception ex) { Serilog.Log.Debug($"[杭変位応力/Disp] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"変位グラフ描画エラー: {ex.Message}"; }
                 try { DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "F", "kN"); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Force] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"せん断力グラフ描画エラー: {ex.Message}"; }
+                catch (Exception ex) { Serilog.Log.Debug($"[杭変位応力/Force] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"せん断力グラフ描画エラー: {ex.Message}"; }
                 try { DrawPileForce(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "M", "kNm"); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Moment] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"曲げモーメントグラフ描画エラー: {ex.Message}"; }
+                catch (Exception ex) { Serilog.Log.Debug($"[杭変位応力/Moment] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"曲げモーメントグラフ描画エラー: {ex.Message}"; }
 
             }
             else if (SelectedGraphOption == "荷重沈下曲線")
@@ -2610,7 +2610,7 @@ namespace PileDesign.ViewModels
                                     }
                                     catch (Exception ex)
                                     {
-                                        System.Diagnostics.Debug.WriteLine($"[GraphViewModel] M-φ fallback 取得失敗: {ex.GetType().Name}: {ex.Message}");
+                                        Serilog.Log.Debug($"[GraphViewModel] M-φ fallback 取得失敗: {ex.GetType().Name}: {ex.Message}");
                                     }
                                 }
                             }

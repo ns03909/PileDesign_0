@@ -290,7 +290,7 @@ namespace PileDesign.Models
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[CapringPile] PCRing CSV 読込失敗: {ex.GetType().Name}: {ex.Message}");
+                Serilog.Log.Debug($"[CapringPile] PCRing CSV 読込失敗: {ex.GetType().Name}: {ex.Message}");
             }
         }
 
@@ -338,7 +338,7 @@ namespace PileDesign.Models
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[CapringPile] TensionBar CSV 読込失敗: {ex.GetType().Name}: {ex.Message}");
+                Serilog.Log.Debug($"[CapringPile] TensionBar CSV 読込失敗: {ex.GetType().Name}: {ex.Message}");
             }
         }
 

@@ -38,7 +38,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PileSection] 杭ライブラリ読込失敗 ({fileName}): {ex.Message}");
+                Serilog.Log.Debug($"[PileSection] 杭ライブラリ読込失敗 ({fileName}): {ex.Message}");
                 return [];
             }
         }
@@ -53,7 +53,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PileSection] 鋼管杭ライブラリ読込失敗 ({fileName}): {ex.Message}");
+                Serilog.Log.Debug($"[PileSection] 鋼管杭ライブラリ読込失敗 ({fileName}): {ex.Message}");
                 return [];
             }
         }
@@ -386,9 +386,11 @@ namespace PileDesign.Models.InputData
         /// M-φキャッシュ用のキーを生成します。
         /// 断面の種類と主要パラメータ + 軸力を組合せた文字列を返します。
         /// 軸力は1kN単位で丸めてキャッシュヒット率を向上させます。
-        /// 注: このメソッドはGetMPhiRelationshipと同じ単位系（kN）を期待
+        /// 注: このメソッドはGetMPhiRelationshipと同じ単位系（kN）を期待。
+        /// internal はテスト用（MphiCacheKeyTests が「諸元 1 個の変更→キー変化」を検証し、
+        /// 断面プロパティ追加時のキー更新漏れ＝キャッシュ衝突を検出する）。
         /// </summary>
-        private string GetMPhiCacheKey(double axialN)
+        internal string GetMPhiCacheKey(double axialN)
         {
             // 軸力を1kN単位で丸める（同程度の軸力では同じ曲線とみなす）
             // 注: axialNはkN単位を期待（GetMPhiRelationshipの入力と同じ）
@@ -501,7 +503,7 @@ namespace PileDesign.Models.InputData
                             }
                             catch (Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine(
+                                Serilog.Log.Debug(
                                     $"[GetMPhiRelationship] SteelPipeSection.GetMPhiRelationshipMiddle 例外: {ex.Message}");
                             }
                         }
@@ -1261,7 +1263,7 @@ namespace PileDesign.Models.InputData
             if (!isFound)
             {
                 // 一致するものが見つからなかった場合の処理
-                System.Diagnostics.Debug.WriteLine($"Error: SelectedPrecastPile.Name '{SelectedPrecastPile.Name}' not found in precastPiles.");
+                Serilog.Log.Debug($"Error: SelectedPrecastPile.Name '{SelectedPrecastPile.Name}' not found in precastPiles.");
                 // 必要に応じてデフォルト値を設定するなどの処理を追加
             }
         }

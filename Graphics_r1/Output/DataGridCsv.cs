@@ -167,7 +167,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[DataGridCsv] Binding '{path}' eval failed: {ex.GetType().Name}: {ex.Message}");
+                Serilog.Log.Debug($"[DataGridCsv] Binding '{path}' eval failed: {ex.GetType().Name}: {ex.Message}");
                 return string.Empty;
             }
         }
@@ -195,7 +195,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[DataGridCsv] MultiBinding converter '{multi.Converter?.GetType().Name ?? "<null>"}' failed: {ex.GetType().Name}: {ex.Message}");
+                Serilog.Log.Debug($"[DataGridCsv] MultiBinding converter '{multi.Converter?.GetType().Name ?? "<null>"}' failed: {ex.GetType().Name}: {ex.Message}");
             }
             return string.Empty;
         }
@@ -215,7 +215,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[DataGridCsv] Path '{path}' resolve failed: {ex.GetType().Name}: {ex.Message}");
+                Serilog.Log.Debug($"[DataGridCsv] Path '{path}' resolve failed: {ex.GetType().Name}: {ex.Message}");
                 return null;
             }
         }

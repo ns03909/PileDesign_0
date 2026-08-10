@@ -65,7 +65,7 @@ namespace PileDesign.FEM
             if (pList.Count != mList.Count || pList.Count < 2) { _combinedCurve = null; return; }
 
             // デバッグ: 入力値を出力（単位変換なし：入力はFEM単位系を期待）
-            // System.Diagnostics.Debug.WriteLine($"[DEBUG] SetResolvedCombinedMPhi: Beam={Name}, Points={pList.Count}, " +
+            // Serilog.Log.Debug($"[DEBUG] SetResolvedCombinedMPhi: Beam={Name}, Points={pList.Count}, " +
             //     $"phi[0]={pList[0]:E6} [1/m], phi[last]={pList[^1]:E6} [1/m], M[0]={mList[0]:F1} [kNm], M[last]={mList[^1]:F1} [kNm]");
 
             // フィルタ: 有限値のみ
@@ -133,7 +133,7 @@ namespace PileDesign.FEM
             {
                 var first = cleanPts.First();
                 var last = cleanPts.Last();
-                // System.Diagnostics.Debug.WriteLine($"[v2] SetResolvedCombinedMPhi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}, InitialCurveTangent={InitialCurveTangent:E6}");
+                // Serilog.Log.Debug($"[v2] SetResolvedCombinedMPhi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}, InitialCurveTangent={InitialCurveTangent:E6}");
             }
             catch (Exception ex) { Log.Warning(ex, "SetResolvedCombinedMPhi"); }
         }
@@ -145,7 +145,7 @@ namespace PileDesign.FEM
             if (MPhi_ByN == null)
             {
                 _combinedCurve = null;
-                // System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, MPhi_ByN=null");
+                // Serilog.Log.Debug($"ResolveMPhiForAxial: Beam={Name}, MPhi_ByN=null");
                 return;
             }
 
@@ -155,7 +155,7 @@ namespace PileDesign.FEM
                 _combinedCurve = resolved;
                 if (resolved == null)
                 {
-                    // System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, resolved=null for N={axialN:E}");
+                    // Serilog.Log.Debug($"ResolveMPhiForAxial: Beam={Name}, resolved=null for N={axialN:E}");
                 }
                 else
                 {
@@ -177,7 +177,7 @@ namespace PileDesign.FEM
                                 int cnt = list.Count;
                                 var first5 = string.Join(", ", list.Take(5).Select(t => $"{t.Phi:E6}/{t.Moment:E6}"));
                                 var last = list.Last();
-                                // System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, Points={cnt}, first5=[{first5}], last={last.Phi:E6}/{last.Moment:E6}");
+                                // Serilog.Log.Debug($"ResolveMPhiForAxial: Beam={Name}, Points={cnt}, first5=[{first5}], last={last.Phi:E6}/{last.Moment:E6}");
                             }
                         }
                     }
@@ -187,7 +187,7 @@ namespace PileDesign.FEM
             catch (Exception)
             {
                 _combinedCurve = null;
-                // System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, Exception resolving for N={axialN:E}: {ex}");
+                // Serilog.Log.Debug($"ResolveMPhiForAxial: Beam={Name}, Exception resolving for N={axialN:E}: {ex}");
             }
         }
 

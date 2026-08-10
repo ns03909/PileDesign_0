@@ -41,8 +41,8 @@ namespace PileDesign.Models.PileLibrary
                 {
                     // フィールドの読み取りに失敗した場合の処理
                     // 例外を適切にハンドリングする
-                    System.Diagnostics.Debug.WriteLine("CSVファイルの形式が正しくありません。");
-                    System.Diagnostics.Debug.WriteLine(ex.Message);
+                    Serilog.Log.Debug("CSVファイルの形式が正しくありません。");
+                    Serilog.Log.Debug(ex.Message);
                 }
             }
             return _captainPileTensionBarPCDs;

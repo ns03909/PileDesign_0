@@ -348,7 +348,7 @@ namespace PileDesign.Models.InputData
             // 収束しなかった場合は最後の計算値を返す（警告のみ）
             if (iter >= maxIter)
             {
-                System.Diagnostics.Debug.WriteLine(
+                Serilog.Log.Debug(
                     $"[GetYieldMoment] WARNING: NR法が{maxIter}回で収束しませんでした。" +
                     $" Ntarget={Ntarget:E3}, Nnext={Nnext:E3}, curvature={curvature:E6}");
             }
@@ -459,7 +459,7 @@ namespace PileDesign.Models.InputData
         {
             try
             {
-                double epsilonC = 0.003;
+                double epsilonC = PileDesign.Constants.SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN;
                 List<double> Ns = UnfactoredUltimateNM.Item1;
                 List<double> Ms = UnfactoredUltimateNM.Item2;
                 List<double> curvatureList = UnfactoredUltimateNM.Item4;
@@ -481,7 +481,7 @@ namespace PileDesign.Models.InputData
 
                     for (int iter = 0; iter < 50; iter++)
                     {
-                        if (Math.Abs(N - NTarget) <= 0.1) break;
+                        if (Math.Abs(N - NTarget) <= PileDesign.Constants.SectionSolverTolerances.ULTIMATE_AXIAL_RESIDUAL_N) break;
                         double N1 = GetUltimateForceAndMoment(epsilonC, curvature + deltaCurvature).Item1;
                         double deltaN = N1 - N;
                         if (Math.Abs(deltaN) < 1e-8) break;

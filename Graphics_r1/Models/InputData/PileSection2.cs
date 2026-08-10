@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.PileLibrary;
+﻿using PileDesign.Constants;
+using PileDesign.Models.PileLibrary;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -168,7 +169,7 @@ namespace PileDesign.Models.InputData
             }
             else if (type == "eFunction")
             {
-                if (-EpsilonCr_eFunction <= epsilon && epsilon <= 0.003)
+                if (-EpsilonCr_eFunction <= epsilon && epsilon <= SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN)
                 {
                     epsilon = Math.Min(epsilon, EpsilonCu);
                     return 6.75 * (Math.Exp(-0.812 * epsilon / EpsilonM) - Math.Exp(-1.218 * epsilon / EpsilonM)) * Gsi * Fc;
@@ -187,7 +188,7 @@ namespace PileDesign.Models.InputData
                     ? BearingFactor * ConcreteModelOptions.CompressionReductionFactor * Fc
                     : BearingFactor * Gsi * Fc;
 
-                if (tensionMinStrain <= epsilon && epsilon <= 0.003)
+                if (tensionMinStrain <= epsilon && epsilon <= SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN)
                 {
                     return Math.Min(Ec * epsilon, compressionPlateau);
                 }
@@ -240,7 +241,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PileSection2.GetEFuncEpsilon] sigma={sigma}, EpsilonM={EpsilonM}, Ec={Ec}, Fc={Fc}: {ex.GetType().Name}: {ex.Message}");
+                Serilog.Log.Debug($"[PileSection2.GetEFuncEpsilon] sigma={sigma}, EpsilonM={EpsilonM}, Ec={Ec}, Fc={Fc}: {ex.GetType().Name}: {ex.Message}");
                 return 0.0;
             }
         }
@@ -367,7 +368,7 @@ namespace PileDesign.Models.InputData
                 if (!BarAreas.TryGetValue(BarSize, out double area))
                 {
                     area = 0.0;
-                    System.Diagnostics.Debug.WriteLine($"Warning: Invalid BarSize '{BarSize}' detected.");
+                    Serilog.Log.Debug($"Warning: Invalid BarSize '{BarSize}' detected.");
                 }
                 Ag = Number * area;
             }
@@ -1114,7 +1115,7 @@ namespace PileDesign.Models.InputData
                 // 無限ループ・ハングするのを防ぐ）。割線ステップ自体は従来どおりで収束解を保持する。
                 int maxIter = 50;
                 int iter = 0;
-                while (Math.Abs(N - NTarget) > 0.1 && iter < maxIter) // 0.1N 以上の差がある場合
+                while (Math.Abs(N - NTarget) > SectionSolverTolerances.ULTIMATE_AXIAL_RESIDUAL_N && iter < maxIter) // 0.1N 以上の差がある場合
                 {
                     N1 = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature + deltaCurvature).Item1;
                     if (Math.Abs(N1 - N) < 1e-8) break;                 // ゼロ除算防止
@@ -1140,7 +1141,7 @@ namespace PileDesign.Models.InputData
             {
                 double N = 0.0; double N1;
                 double M = 0.0;
-                double epsilonC = 0.003;
+                double epsilonC = SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN;
                 double curvature = 1.0 * Math.Pow(10, -6);
                 double deltaCurvature = curvature / 500.0;
 
@@ -1166,7 +1167,7 @@ namespace PileDesign.Models.InputData
 
                 int maxIter = 50;
                 int iter = 0;
-                while (Math.Abs(N - NTarget) > 0.1 && iter < maxIter)
+                while (Math.Abs(N - NTarget) > SectionSolverTolerances.ULTIMATE_AXIAL_RESIDUAL_N && iter < maxIter)
                 {
                     N1 = GetUltimateForceAndMoment(epsilonC, curvature + deltaCurvature).Item1;
                     double deltaN = N1 - N;
@@ -1207,10 +1208,10 @@ namespace PileDesign.Models.InputData
             => GetUltimateMomentForSpecificN(Ntarget);
 
         /// <summary>
-        /// ファイバー掃引で圧縮縁ひずみ εc を探索する上限。既定はコンクリート安全限界圧縮ひずみ 0.003
-        /// （InsituConcrete.GetStress は ε&gt;0.003 で σ=0 に脱落し N(εc) が非単調になるため超えない）。
+        /// ファイバー掃引で圧縮縁ひずみ εc を探索する上限。既定はコンクリート安全限界圧縮ひずみ εcu=0.003
+        /// （InsituConcrete.GetStress は ε&gt;εcu で σ=0 に脱落し N(εc) が非単調になるため超えない）。
         /// </summary>
-        internal virtual double FiberSweepEdgeStrainMax => 0.003;
+        internal virtual double FiberSweepEdgeStrainMax => SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN;
 
         /// <summary>
         /// ファイバーモデル（断面分割積分）による M-φ 関係。
@@ -1282,7 +1283,9 @@ namespace PileDesign.Models.InputData
         {
             const double epsLo = -0.05;
             double epsHi = FiberSweepEdgeStrainMax;
-            double tolN = Math.Max(100.0, Math.Abs(Ntarget) * 1e-6); // [N]（M への影響は無視できる規模）
+            // [N]（M への影響は無視できる規模）
+            double tolN = Math.Max(SectionSolverTolerances.FIBER_AXIAL_ABS_N,
+                                   Math.Abs(Ntarget) * SectionSolverTolerances.FIBER_AXIAL_REL);
 
             double x = Math.Clamp(epsC, epsLo, epsHi);
 

@@ -75,39 +75,39 @@ namespace PileDesign.FEM
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             PreallocateCollections();
-            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] PreallocateCollections: {sw.ElapsedMilliseconds}ms");
+            // Serilog.Log.Debug($"[AnalysisModelling] PreallocateCollections: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             AddActionPointNode();
-            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddActionPointNode: {sw.ElapsedMilliseconds}ms");
+            // Serilog.Log.Debug($"[AnalysisModelling] AddActionPointNode: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             AddInputNodes();               // InputNode（General型）を追加
-            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddInputNodes: {sw.ElapsedMilliseconds}ms");
+            // Serilog.Log.Debug($"[AnalysisModelling] AddInputNodes: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             AddDoatsuGoryokuBane();
-            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddDoatsuGoryokuBane: {sw.ElapsedMilliseconds}ms");
+            // Serilog.Log.Debug($"[AnalysisModelling] AddDoatsuGoryokuBane: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             AddPileOptimized();            // ← pile.No を 1-based に振り直す
-            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddPileOptimized: {sw.ElapsedMilliseconds}ms (Piles={InputModel.PileLayoutItems?.Count ?? 0})");
+            // Serilog.Log.Debug($"[AnalysisModelling] AddPileOptimized: {sw.ElapsedMilliseconds}ms (Piles={InputModel.PileLayoutItems?.Count ?? 0})");
 
             sw.Restart();
             AddFoundationBeamNodes();      // 基礎梁節点を追加（pile.No 確定後）
-            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddFoundationBeamNodes: {sw.ElapsedMilliseconds}ms");
+            // Serilog.Log.Debug($"[AnalysisModelling] AddFoundationBeamNodes: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             AddFoundationBeams();          // 基礎梁を追加
-            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddFoundationBeams: {sw.ElapsedMilliseconds}ms");
+            // Serilog.Log.Debug($"[AnalysisModelling] AddFoundationBeams: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             ConnectCapsToFoundation();     // CapNode と基礎梁節点を接続
-            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] ConnectCapsToFoundation: {sw.ElapsedMilliseconds}ms");
+            // Serilog.Log.Debug($"[AnalysisModelling] ConnectCapsToFoundation: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             ValidateFemModel();            // FEMモデルの安定性チェック
-            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] ValidateFemModel: {sw.ElapsedMilliseconds}ms");
+            // Serilog.Log.Debug($"[AnalysisModelling] ValidateFemModel: {sw.ElapsedMilliseconds}ms");
         }
 
         // 最適化: リストの事前割り当て
@@ -1296,7 +1296,7 @@ namespace PileDesign.FEM
             log.AppendLine($"RigidBodies[0]: master={RigidBodies[0].MasterNode?.Name}, slaves=[{string.Join(", ", RigidBodies[0].SlaveNodes.Select(n => n.Name))}]");
 
             log.AppendLine("=== 診断終了 ===");
-            // System.Diagnostics.Debug.WriteLine(log.ToString());
+            // Serilog.Log.Debug(log.ToString());
 
             // RigidBodies[0]の関係を再設定（EmbedmentNode等の既存slave用）
             foreach (var rb in RigidBodies)

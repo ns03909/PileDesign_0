@@ -260,7 +260,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[TableWindow.Copy] クリップボードコピー失敗: {ex.GetType().Name}: {ex.Message}");
+                Serilog.Log.Debug($"[TableWindow.Copy] クリップボードコピー失敗: {ex.GetType().Name}: {ex.Message}");
             }
         }
     }

@@ -39,20 +39,20 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception inner)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[HorizontalCalcVM init] UseManaged も失敗: {inner.GetType().Name}: {inner.Message}");
+                    Serilog.Log.Debug($"[HorizontalCalcVM init] UseManaged も失敗: {inner.GetType().Name}: {inner.Message}");
                 }
             }
             catch (Exception ex)
             {
                 // 想定外の例外も捕捉して管理実装にフォールバック
-                System.Diagnostics.Debug.WriteLine($"[HorizontalCalcVM init] 想定外 ({ex.GetType().Name}: {ex.Message}) → UseManaged フォールバック");
+                Serilog.Log.Debug($"[HorizontalCalcVM init] 想定外 ({ex.GetType().Name}: {ex.Message}) → UseManaged フォールバック");
                 try
                 {
                     Control.UseManaged();
                 }
                 catch (Exception inner)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[HorizontalCalcVM init] UseManaged も失敗: {inner.GetType().Name}: {inner.Message}");
+                    Serilog.Log.Debug($"[HorizontalCalcVM init] UseManaged も失敗: {inner.GetType().Name}: {inner.Message}");
                 }
             }
 
@@ -992,7 +992,7 @@ namespace PileDesign.ViewModels
                         errorMessage = ex.Message;
                     }
                 });
-                // System.Diagnostics.Debug.WriteLine($"[InitializeModelAsync] AnalysisModelling total: {swTotal.ElapsedMilliseconds}ms");
+                // Serilog.Log.Debug($"[InitializeModelAsync] AnalysisModelling total: {swTotal.ElapsedMilliseconds}ms");
 
                 if (errorMessage != null || modelling == null)
                 {
@@ -2179,7 +2179,7 @@ namespace PileDesign.ViewModels
                 var pileBody = InputModel.PileBodies[pb - 1];
                 var def = pileBody.GetMThetaRelationship(axialN);
 
-                // System.Diagnostics.Debug.WriteLine(
+                // Serilog.Log.Debug(
                 //     $"[SetupMTheta] {spring.Name}: IsPileNonLinear={loadCase.IsPileNonLinear}, " +
                 //     $"def.Mode={def.Mode}, axialN={axialN:F1}kN");
 
@@ -2232,7 +2232,7 @@ namespace PileDesign.ViewModels
                         {
                             spring.KthetaXY = KMin;
                         }
-                        // System.Diagnostics.Debug.WriteLine(
+                        // Serilog.Log.Debug(
                         //     $"[SetupMTheta] {spring.Name}: → CombinedXY, CurveXY={(spring.CurveXY != null ? $"{spring.CurveXY.Points.Count}pts" : "null")}, " +
                         //     $"KthetaXY={spring.KthetaXY:E3}");
                         break;
@@ -4081,7 +4081,7 @@ namespace PileDesign.ViewModels
                             if (step == 0 || step == nStep - 1)
                             {
                                 var actionPt = caseModel.Nodes[0];
-                                // System.Diagnostics.Debug.WriteLine(
+                                // Serilog.Log.Debug(
                                 //     $"[Step{step}] ActionPoint Ux={actionPt.CumulativeDisp?.Ux:E3} Rx={actionPt.CumulativeDisp?.Rx:E3} Ry={actionPt.CumulativeDisp?.Ry:E3}");
                                 foreach (var pile in InputModel.PileLayoutItems.Take(2))
                                 {
@@ -4092,7 +4092,7 @@ namespace PileDesign.ViewModels
                                     double pileRx = pileHead?.CumulativeDisp?.Rx ?? 0;
                                     double kRx = rxy?.KeTan?[3, 3] ?? -1;
                                     double springMx = rxy?.CumulativeForce?.Mxi ?? 0;
-                                    // System.Diagnostics.Debug.WriteLine(
+                                    // Serilog.Log.Debug(
                                     //     $"[Step{step}] Pile{pile.No} " +
                                     //     $"CapRx={capRx:E3} PileRx={pileRx:E3} dRx={pileRx - capRx:E3} " +
                                     //     $"kRx={kRx:E3} CurveXY={(rxy?.CurveXY != null ? $"{rxy.CurveXY.Points.Count}pts" : "null")} " +
@@ -5066,7 +5066,7 @@ namespace PileDesign.ViewModels
                 }
 
                 log.AppendLine("=== K対角 診断終了 ===");
-                // System.Diagnostics.Debug.WriteLine(log.ToString());
+                // Serilog.Log.Debug(log.ToString());
             }
 
             if (double.IsInfinity(min)) min = double.NaN;

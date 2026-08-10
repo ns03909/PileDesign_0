@@ -600,7 +600,7 @@ namespace PileDesign.Models.InputData
                     PileTop.CapringPile = newCp;
                     if (newCp.PCRing != null)
                         PileTop.SelectedPileTopSpecification = newCp.GetCombinedSpecs();
-                    System.Diagnostics.Debug.WriteLine(
+                    Serilog.Log.Debug(
                         $"[GetMThetaRelationship] CapringPile 自動初期化: D={newCp.D:F0}, Ke={newCp.Ke:E3}, IsCFSP={newCp.IsConcreteFilledSteelPipe}");
                 }
 
@@ -663,7 +663,7 @@ namespace PileDesign.Models.InputData
                             double? ktheta = this.PileTop.GetSteelPilePileHeadJointKtheta(axialN);
                             if (ktheta.HasValue && ktheta.Value > 0.0 && double.IsFinite(ktheta.Value))
                             {
-                                System.Diagnostics.Debug.WriteLine(
+                                Serilog.Log.Debug(
                                     $"[GetMThetaRelationship] 鋼管杭+鉄筋定着工法: " +
                                     $"axialN={axialN:F1} kN, Kθ={ktheta.Value:E3} kN·m/rad");
                                 return PileHeadRotationDef.CombinedLinear(ktheta.Value);
@@ -671,11 +671,11 @@ namespace PileDesign.Models.InputData
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine(
+                            Serilog.Log.Debug(
                                 $"[GetMThetaRelationship] 鋼管杭+鉄筋定着工法 例外: {ex.Message}");
                         }
                     }
-                    System.Diagnostics.Debug.WriteLine(
+                    Serilog.Log.Debug(
                         $"[GetMThetaRelationship] 鋼管杭+鉄筋定着工法 フォールバック → Rigid()");
                     return PileHeadRotationDef.Rigid();
                 }
@@ -690,7 +690,7 @@ namespace PileDesign.Models.InputData
                         // M-θ を考慮する。範囲外 (強引張 or 高圧縮) は杭頭を剛結として検討。
                         if (!pileSection.IsWithinMThetaValidAxialRange(axialN))
                         {
-                            System.Diagnostics.Debug.WriteLine(
+                            Serilog.Log.Debug(
                                 $"[GetMThetaRelationship] 場所打ちRC杭: N={axialN:F1} kN 軸力範囲外 " +
                                 $"(σ0 ∉ [-Ft, ξFc/4]) → Rigid()");
                             return PileHeadRotationDef.Rigid();
@@ -711,7 +711,7 @@ namespace PileDesign.Models.InputData
                                 // null の場合は Mode 切替無効 (従来挙動)。
                                 double? mcrKNm = pileSection.GetPileHeadMcrInKNm(axialN);
 
-                                System.Diagnostics.Debug.WriteLine(
+                                Serilog.Log.Debug(
                                     $"[GetMThetaRelationship] 場所打ちRC杭: points={pts.Count}, " +
                                     $"θ=[{string.Join(",", thetas.Select(t => t.ToString("E3")))}], " +
                                     $"M=[{string.Join(",", ms.Select(m => m.ToString("F1")))}], " +
@@ -721,12 +721,12 @@ namespace PileDesign.Models.InputData
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine(
+                            Serilog.Log.Debug(
                                 $"[GetMThetaRelationship] 場所打ちRC杭 例外: {ex.Message}");
                         }
                     }
 
-                    System.Diagnostics.Debug.WriteLine(
+                    Serilog.Log.Debug(
                         $"[GetMThetaRelationship] 場所打ちRC杭 フォールバック → Rigid()");
                     return PileHeadRotationDef.Rigid();
                 }
@@ -739,7 +739,7 @@ namespace PileDesign.Models.InputData
             var pileTop = this.PileTop as object;
             if (pileTop == null)
             {
-                System.Diagnostics.Debug.WriteLine(
+                Serilog.Log.Debug(
                     $"[GetMThetaRelationship] PileTop=null → Rigid() (フォールバック)");
                 return PileHeadRotationDef.Rigid();
             }
@@ -777,7 +777,7 @@ namespace PileDesign.Models.InputData
             if (kx.HasValue || ky.HasValue) return PileHeadRotationDef.Separate(null, null, kx, ky);
 
             // データ無し → 安全側として剛結（M-θデータなしの場合はモーメントを完全伝達）
-            System.Diagnostics.Debug.WriteLine(
+            Serilog.Log.Debug(
                 $"[GetMThetaRelationship] M-θデータ取得不可 (PileTopType='{pileTopType}', PileBodyType='{pileBodyType}') → Rigid() (フォールバック)");
             return PileHeadRotationDef.Rigid();
         }

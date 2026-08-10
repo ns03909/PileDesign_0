@@ -292,7 +292,7 @@ namespace PileDesign.Models.InputData
         {
             double epsY = MainBars.RSigmaY / MainBars.Er; // 正: 降伏ひずみ
             double lever = (PileDia * 0.5 + MainBars.PCD * 0.5);
-            double epsilonC = 0.003;                      // 終局側の代表圧縮縁ひずみ
+            double epsilonC = PileDesign.Constants.SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN; // 終局側の代表圧縮縁ひずみ εcu
             double phi = (epsilonC + epsY) / Math.Max(lever, 1e-9); // φ = (εc + εy)/lever
             var (N, M) = GetUltimateForceAndMoment(epsilonC, phi);
             return (N, M, epsilonC, phi);
@@ -451,7 +451,8 @@ namespace PileDesign.Models.InputData
 
                 // 収束条件
                 const int maxIter = 60;
-                double tolN = Math.Max(1.0, 1e-3 * Math.Abs(Ntarget)); // N
+                double tolN = Math.Max(PileDesign.Constants.SectionSolverTolerances.CRACK_AXIAL_ABS_N,
+                                       PileDesign.Constants.SectionSolverTolerances.CRACK_AXIAL_REL * Math.Abs(Ntarget)); // N
                 const double tolPhiRel = 1e-6;
 
                 double phi = phi0;

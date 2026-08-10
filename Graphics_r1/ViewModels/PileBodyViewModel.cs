@@ -272,7 +272,7 @@ namespace PileDesign.ViewModels
 
 
             // 例: PileBodyViewModel コンストラクタ末尾など
-            foreach (var s in PileBodyInput.PileBodyTypeOption) //Debug.WriteLine("  >" + s);
+            foreach (var s in PileBodyInput.PileBodyTypeOption) //Serilog.Log.Debug("  >" + s);
 
             // デバッグ：InputModel と ViewModel の PileBodyType を確認
             if (InputModel?.PileBodies != null)

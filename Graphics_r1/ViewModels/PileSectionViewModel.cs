@@ -231,7 +231,7 @@ namespace PileDesign.ViewModels
             PileSegmentNo = segmentNo;
             PileSection = pileSection;
 
-            System.Diagnostics.Debug.WriteLine($"Constructor: {PileSection.SelectedPrecastPile?.Name}");
+            Serilog.Log.Debug($"Constructor: {PileSection.SelectedPrecastPile?.Name}");
 
             PrevPileSection = pileSection.DeepCopy(); // ShallowCopyメソッドを使用して値渡し
 
@@ -971,7 +971,7 @@ namespace PileDesign.ViewModels
         {
             if (PileSection.MainBarDr <= 0 || PileSection.MainBarNum <= 0 || PileSection.MainBarSize == null)
             {
-                System.Diagnostics.Debug.WriteLine("Invalid MainBars properties. Skipping graph generation.");
+                Serilog.Log.Debug("Invalid MainBars properties. Skipping graph generation.");
                 return;
             }
 
@@ -1200,7 +1200,7 @@ namespace PileDesign.ViewModels
             {
                 if (PileSection.MainBarDr <= 0 || PileSection.MainBarNum <= 0 || PileSection.PileDiameter <= 0)
                 {
-                    System.Diagnostics.Debug.WriteLine("ChartUpdate skipped due to incomplete PileSection properties.");
+                    Serilog.Log.Debug("ChartUpdate skipped due to incomplete PileSection properties.");
                     return;
                 }
 

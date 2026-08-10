@@ -78,7 +78,7 @@ namespace PileDesign.Models.PileLibrary
                 else
                 {
                     // ヘッダ行や不正行はログに出すが処理は継続
-                    System.Diagnostics.Debug.WriteLine($"Skipping invalid CSV line in '{filePath}': \"{s0}\", \"{s1}\"");
+                    Serilog.Log.Debug($"Skipping invalid CSV line in '{filePath}': \"{s0}\", \"{s1}\"");
                 }
             }
 

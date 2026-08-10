@@ -160,6 +160,43 @@ public static class AnalysisConstants
 }
 
 /// <summary>
+/// 断面ソルバ（終局曲げ・ひび割れ・ファイバー掃引）の軸力残差の収束許容値。
+///
+/// 歴史的にソルバごとに値が 3 桁異なる（0.1 N / max(1, 1e-3·|N|) / max(100, 1e-6·|N|)）。
+/// 挙動保存のため現状値を名前付きで固定した。真の統一（絶対+相対の共通ポリシー）は
+/// 収束リグレッション・耐力曲線スナップショットへの影響評価とセットで行うこと。
+/// </summary>
+public static class SectionSolverTolerances
+{
+    /// <summary>終局曲げソルバの軸力残差許容 [N]（GetUltimateMomentForSpecificN 系）</summary>
+    public const double ULTIMATE_AXIAL_RESIDUAL_N = 0.1;
+
+    /// <summary>ひび割れモーメントソルバの軸力残差許容: max(CRACK_AXIAL_ABS_N, CRACK_AXIAL_REL·|N|) [N]</summary>
+    public const double CRACK_AXIAL_ABS_N = 1.0;
+
+    /// <summary>ひび割れモーメントソルバの軸力残差の相対許容</summary>
+    public const double CRACK_AXIAL_REL = 1e-3;
+
+    /// <summary>ファイバー M-φ 掃引の軸力つり合い許容: max(FIBER_AXIAL_ABS_N, FIBER_AXIAL_REL·|N|) [N]</summary>
+    public const double FIBER_AXIAL_ABS_N = 100.0;
+
+    /// <summary>ファイバー M-φ 掃引の軸力つり合いの相対許容</summary>
+    public const double FIBER_AXIAL_REL = 1e-6;
+}
+
+/// <summary>
+/// 「基礎部材の強度と変形性能」（日本建築学会、第1版 2022年）由来の断面設計定数
+/// </summary>
+public static class SectionDesignConstants
+{
+    /// <summary>
+    /// コンクリートの終局（安全限界）圧縮縁ひずみ εcu = 0.003。
+    /// 安全限界曲げの算定・バイリニア/e関数構成則の有効範囲上限・ファイバー掃引の εc 上限に共通。
+    /// </summary>
+    public const double ULTIMATE_COMPRESSIVE_STRAIN = 0.003;
+}
+
+/// <summary>
 /// UI表示関連定数
 /// </summary>
 public static class UIConstants

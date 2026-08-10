@@ -611,7 +611,7 @@ namespace PileDesign.Services
             catch (Exception ex)
             {
                 // CaptainPile 設定の失敗は致命的でない — ユーザーが手動で再設定可能
-                System.Diagnostics.Debug.WriteLine(
+                Serilog.Log.Debug(
                     $"[PileExampleLoader.ApplyCaptainPileSettings] CaptainPile 設定中にエラー: {ex.GetType().Name}: {ex.Message}");
             }
         }
@@ -692,7 +692,7 @@ namespace PileDesign.Services
             catch (Exception ex)
             {
                 // CapringPile 設定の失敗は致命的でない — ユーザーが手動で再設定可能
-                System.Diagnostics.Debug.WriteLine(
+                Serilog.Log.Debug(
                     $"[PileExampleLoader.ApplyCapringPileSettings] CapringPile 設定中にエラー: {ex.GetType().Name}: {ex.Message}");
             }
         }

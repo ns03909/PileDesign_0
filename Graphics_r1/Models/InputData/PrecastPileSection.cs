@@ -1572,7 +1572,7 @@ namespace PileDesign.Models.InputData
                 CircularSolidSectionConcreteIn = new CircularSolidSection(precastConcrete?.DI ?? 0.0);
                 CircularPipeSectionSteelPipe = null;
 
-                System.Diagnostics.Debug.WriteLine("SCSection: PrecastSteelPipe.T is zero or PrecastSteelPipe is null. SCSection initialization skipped.");
+                Serilog.Log.Debug("SCSection: PrecastSteelPipe.T is zero or PrecastSteelPipe is null. SCSection initialization skipped.");
                 return;
             }
 

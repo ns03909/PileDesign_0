@@ -371,7 +371,7 @@ namespace PileDesign.Views
                     // NaN/Infinity防止: 不正な値を持つビームはスキップ（maxAbsValue汚染を防止）
                     if (!double.IsFinite(originalForceI) || !double.IsFinite(originalForceJ))
                     {
-                        System.Diagnostics.Debug.WriteLine(
+                        Serilog.Log.Debug(
                             $"[CanvasResults] WARNING: NaN/Inf beam force skipped: {beam.Name} I={originalForceI} J={originalForceJ}");
                         continue;
                     }
@@ -4813,7 +4813,7 @@ namespace PileDesign.Views
                     var reactionVector = soilPile.GetFullReactionForLoad(forceOpt.Value);
                     if (reactionVector == null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[SinglePile-PerNode] reactionVector null for pile={pile.No}, force={forceOpt.Value}");
+                        Serilog.Log.Debug($"[SinglePile-PerNode] reactionVector null for pile={pile.No}, force={forceOpt.Value}");
                         continue;
                     }
 
@@ -4852,25 +4852,25 @@ namespace PileDesign.Views
             bool isDisplacement)
         {
             var pileResults = caseResult.PileResults;
-            if (pileResults == null) { System.Diagnostics.Debug.WriteLine("[VB-PerNode] pileResults is null"); return; }
+            if (pileResults == null) { Serilog.Log.Debug("[VB-PerNode] pileResults is null"); return; }
 
             var inputModel = viewModel.CurrentInputModel;
             var soilPiles = inputModel?.ElementDivision?.SoilPiles;
-            if (soilPiles == null || soilPiles.Count == 0) { System.Diagnostics.Debug.WriteLine("[VB-PerNode] soilPiles null or empty"); return; }
+            if (soilPiles == null || soilPiles.Count == 0) { Serilog.Log.Debug("[VB-PerNode] soilPiles null or empty"); return; }
 
-            System.Diagnostics.Debug.WriteLine($"[VB-PerNode] soilPiles.Count={soilPiles.Count}, pileResults.Count={pileResults.Count}");
+            Serilog.Log.Debug($"[VB-PerNode] soilPiles.Count={soilPiles.Count}, pileResults.Count={pileResults.Count}");
 
             foreach (var pr in pileResults)
             {
                 var pile = inputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
-                if (pile == null || !pile.IsVisible) { System.Diagnostics.Debug.WriteLine($"[VB-PerNode] pile not found or invisible: PileNo={pr.PileNo}"); continue; }
+                if (pile == null || !pile.IsVisible) { Serilog.Log.Debug($"[VB-PerNode] pile not found or invisible: PileNo={pr.PileNo}"); continue; }
 
                 // SoilPileの取得
                 int soilPileIdx = pile.SoilPileAltNo - 1;
-                if (soilPileIdx < 0 || soilPileIdx >= soilPiles.Count) { System.Diagnostics.Debug.WriteLine($"[VB-PerNode] soilPileIdx out of range: {soilPileIdx}"); continue; }
+                if (soilPileIdx < 0 || soilPileIdx >= soilPiles.Count) { Serilog.Log.Debug($"[VB-PerNode] soilPileIdx out of range: {soilPileIdx}"); continue; }
                 var soilPile = soilPiles[soilPileIdx];
 
-                System.Diagnostics.Debug.WriteLine($"[VB-PerNode] pile={pile.No}, soilPileIdx={soilPileIdx}, " +
+                Serilog.Log.Debug($"[VB-PerNode] pile={pile.No}, soilPileIdx={soilPileIdx}, " +
                     $"NodeDisplacements={soilPile.NodeDisplacements?.Count}, " +
                     $"LoadDisplacements={soilPile.LoadDisplacements?.Count}, " +
                     $"CircumVerticals={soilPile.PileCircumVerticals?.Count}");
@@ -4878,7 +4878,7 @@ namespace PileDesign.Views
                 // VB解析の杭頭反力に対応する全節点ベクトルを取得
                 double pileTopForce = pr.Reaction_kN;
                 var dispVector = soilPile.GetFullDisplacementForLoad(pileTopForce);
-                if (dispVector == null) { System.Diagnostics.Debug.WriteLine($"[VB-PerNode] dispVector is null for force={pileTopForce}"); continue; }
+                if (dispVector == null) { Serilog.Log.Debug($"[VB-PerNode] dispVector is null for force={pileTopForce}"); continue; }
 
                 // 反力表示時は節点反力ベクトル（地盤から杭への力）も取得
                 MathNet.Numerics.LinearAlgebra.Vector<double>? reactionVector = null;
@@ -4887,7 +4887,7 @@ namespace PileDesign.Views
                     reactionVector = soilPile.GetFullReactionForLoad(pileTopForce);
                     if (reactionVector == null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[VB-PerNode] reactionVector is null for force={pileTopForce} — 再解析が必要な可能性");
+                        Serilog.Log.Debug($"[VB-PerNode] reactionVector is null for force={pileTopForce} — 再解析が必要な可能性");
                         continue;
                     }
                 }

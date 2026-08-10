@@ -201,7 +201,7 @@ namespace PileDesign.FEM
             if (CountFree > MaxReasonableDofs)
             {
                 // 重大な入力/設定ミスの可能性。詳細を出力して例外にする。
-                System.Diagnostics.Debug.WriteLine($"[ERROR] CountFree is very large: {CountFree}. Aborting to avoid OOM.");
+                Serilog.Log.Debug($"[ERROR] CountFree is very large: {CountFree}. Aborting to avoid OOM.");
                 throw new InvalidOperationException($"自由度が大きすぎます: {CountFree}. 入力データ／境界条件を確認してください。");
             }
 
@@ -340,7 +340,7 @@ namespace PileDesign.FEM
             {
                 var inOrder = new HashSet<Node>(topoOrder);
                 var missing = Nodes.Where(n => !inOrder.Contains(n)).Select(n => n.Name);
-                System.Diagnostics.Debug.WriteLine(
+                Serilog.Log.Debug(
                     $"[WARNING] Master-Slave 循環検出: {string.Join(", ", missing)}");
                 // 循環ノードも処理するためリストに追加
                 foreach (var node in Nodes)
@@ -1170,7 +1170,7 @@ namespace PileDesign.FEM
                 }
 
                 log.AppendLine("=== FindR 診断終了 ===");
-                System.Diagnostics.Debug.WriteLine(log.ToString());
+                Serilog.Log.Debug(log.ToString());
             }
         }
 

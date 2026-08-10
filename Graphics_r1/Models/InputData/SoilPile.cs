@@ -944,7 +944,7 @@ namespace PileDesign.Models.InputData
                     if (closest?.PileSection != null)
                     {
                         b = closest.PileSection.PileDiameter / 1000.0;
-                        System.Diagnostics.Debug.WriteLine(
+                        Serilog.Log.Debug(
                             $"[SetHorizontalSoilReaction] WARNING: 要素{i}(Z={zDataTop:F3}~{zDataBtm:F3})の杭区間マッチなし→最近接区間(b={b:F4}m)を使用");
                     }
                 }
@@ -996,7 +996,7 @@ namespace PileDesign.Models.InputData
                             e0 = gl.Es;
                             name = gl.Name;
                             groundFound = true;
-                            System.Diagnostics.Debug.WriteLine(
+                            Serilog.Log.Debug(
                                 $"[SetHorizontalSoilReaction] WARNING: 要素{i}(Z={zDataTop:F3}~{zDataBtm:F3})のSoilPile.GroundLayersマッチなし→入力地盤層'{name}'(top={top:F3},btm={bottom:F3})を使用");
                             break;
                         }
@@ -1030,7 +1030,7 @@ namespace PileDesign.Models.InputData
                         soilType = closest.GranularityClass;
                         e0 = closest.Es;
                         name = closest.Name;
-                        System.Diagnostics.Debug.WriteLine(
+                        Serilog.Log.Debug(
                             $"[SetHorizontalSoilReaction] WARNING: 要素{i}(Z={zDataTop:F3}~{zDataBtm:F3})の地盤層マッチなし→最近接地盤層'{name}'を使用");
                     }
                 }
