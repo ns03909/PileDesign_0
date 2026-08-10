@@ -250,36 +250,35 @@ namespace PileDesign.ViewModels
                 v => InputModel.FundamentalInput.UseInsituUltimateEFunction = v,
                 v => UseInsituUltimateEFunction = v,
                 "安全限界曲げをe関数法(指針準拠) へ変更");
-            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
             OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
         }
 
         /// <summary>
-        /// 2025年版「建築物の構造関係技術基準解説書」付録1-3 準拠のマスタースイッチ。
+        /// 2025年版「建築物の構造関係技術基準解説書」付録1-3 の許容耐力に従うマスタースイッチ
+        /// （申請実務では必ずチェックを入れる想定）。
         /// 「場所打ち杭の許容圧縮を告示1113(第8)による」「場所打ちRC杭の許容せん断を告示1113(第8)による」
-        /// 「安全限界を耐震設計指針(案)で算定する」の 3 項目を一括で ON/OFF する。
-        /// get は 3 項目すべて ON のとき true（個別に切替えると自動で追随）。
+        /// の 2 項目を一括で ON/OFF する。安全限界（終局強度）の算定方式は含まない（個別に選択）。
+        /// get は 2 項目とも ON のとき true（個別に切替えると自動で追随）。
         /// </summary>
         public bool UseGuideline2025Appendix13
         {
-            get => UseNotification1113Compression && UseNotification1113Shear && UseInsituUltimateEFunction;
+            get => UseNotification1113Compression && UseNotification1113Shear;
             set
             {
                 bool oc = UseNotification1113Compression;
                 bool os = UseNotification1113Shear;
-                bool ou = UseInsituUltimateEFunction;
-                if (oc == value && os == value && ou == value) return;
+                if (oc == value && os == value) return;
 
                 _undoManager.PushAction(
-                    () => ApplyGuideline2025(oc, os, ou),
-                    () => ApplyGuideline2025(value, value, value),
-                    "2025解説書 付録1-3 準拠オプション一括切替");
-                ApplyGuideline2025(value, value, value);
+                    () => ApplyGuideline2025(oc, os),
+                    () => ApplyGuideline2025(value, value),
+                    "2025解説書 付録1-3 許容耐力オプション一括切替");
+                ApplyGuideline2025(value, value);
             }
         }
 
-        // 3 項目を一括設定（個別ハンドラを抑制し、キャッシュ破棄＋通知は 1 回にまとめる）
-        private void ApplyGuideline2025(bool compression, bool shear, bool ultimate)
+        // 2 項目を一括設定（個別ハンドラを抑制し、キャッシュ破棄＋通知は 1 回にまとめる）
+        private void ApplyGuideline2025(bool compression, bool shear)
         {
             bool prev = _suppressConcreteOptionConfirm;
             _suppressConcreteOptionConfirm = true;
@@ -287,17 +286,14 @@ namespace PileDesign.ViewModels
             {
                 UseNotification1113Compression = compression;   // VM 更新（個別ハンドラは抑制で早期 return）
                 UseNotification1113Shear = shear;
-                UseInsituUltimateEFunction = ultimate;
                 InputModel.FundamentalInput.UseNotification1113Compression = compression;
                 InputModel.FundamentalInput.UseNotification1113Shear = shear;
-                InputModel.FundamentalInput.UseInsituUltimateEFunction = ultimate;
             }
             finally { _suppressConcreteOptionConfirm = prev; }
 
             _mainWindowViewModel.ApplyConcreteModelOptions();
             OnPropertyChanged(nameof(Notification1113CaseEnabled));
             OnPropertyChanged(nameof(UseGuideline2025Appendix13));
-            OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
         }
 
         // 場所打ちRC杭の解析用 M-φ をファイバーモデルで算定する（解析に影響 → 変更時は解析結果リセット）

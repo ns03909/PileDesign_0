@@ -263,7 +263,7 @@
                             <StackPanel>
                                 <TextBlock Text="ξ·Fc とする（「基礎部材の強度と変形性能」）"/>
                                 <TextBlock FontSize="11" Foreground="#666666" TextWrapping="Wrap"
-                                           Text="σ = min(Ec·ε, ξ·Fc)（0 ≤ ε ≤ 0.003）"/>
+                                           Text="σ = Ec·ε を ξ·Fc で頭打ち（0 ≤ ε ≤ 0.003）"/>
                             </StackPanel>
                         </RadioButton>
                         <RadioButton GroupName="OptConcreteCompression" Margin="12,1,0,1"
@@ -280,7 +280,7 @@
                             <StackPanel>
                                 <TextBlock Text="0.85·Fc とする（ξ は乗じない）"/>
                                 <TextBlock FontSize="11" Foreground="#666666" TextWrapping="Wrap"
-                                           Text="σ = min(Ec·ε, 0.85·Fc)（0 ≤ ε ≤ 0.003）"/>
+                                           Text="σ = Ec·ε を 0.85·Fc で頭打ち（0 ≤ ε ≤ 0.003）"/>
                             </StackPanel>
                         </RadioButton>
                     </StackPanel>
@@ -297,18 +297,20 @@
                               FontWeight="Bold" Margin="0,2,0,2">
                         <CheckBox.Content>
                             <TextBlock TextWrapping="Wrap"
-                                       Text="2025年版 建築物の構造関係技術基準解説書 付録1-3 コンクリート系くい体の許容耐力、終局強度の例に従う"/>
+                                       Text="2025年版 建築物の構造関係技術基準解説書 付録1-3 コンクリート系くい体の許容耐力に従う（申請実務では必ずチェックを入れる）"/>
                         </CheckBox.Content>
                         <CheckBox.ToolTip>
                             <ToolTip>
                                 <TextBlock>
-                                    <Run>下記 3 項目を一括で切り替えます（ON = 告示1113／指針(案) 側、OFF = 基礎部材の強度と変形性能 側。個別に切替えると本チェックは自動追随します）。</Run>
+                                    <Run>下記 2 項目を一括で切り替えます（ON = 告示1113(第8) 側、OFF = 基礎部材の強度と変形性能 側。個別に切替えると本チェックは自動追随します）。</Run>
                                     <LineBreak/>
                                     <Run>・場所打ち杭の許容圧縮応力度 → 告示1113(第8)</Run>
                                     <LineBreak/>
                                     <Run>・場所打ちRC杭の許容せん断 → 告示1113(第8)</Run>
                                     <LineBreak/>
-                                    <Run>・安全限界の耐力 → RC基礎構造部材の耐震設計指針(案)</Run>
+                                    <Run>安全限界（終局強度）の算定方式は含みません（下の「安全限界の耐力」で個別に選択）。</Run>
+                                    <LineBreak/>
+                                    <Run>2025年版 解説書は許容応力度について告示1113(第8)によることとしているため、申請実務では本チェックを入れる想定です。</Run>
                                 </TextBlock>
                             </ToolTip>
                         </CheckBox.ToolTip>
@@ -410,9 +412,9 @@
                                  IsChecked="{Binding UseInsituUltimateEFunction, Converter={StaticResource InverseBoolConverter}}"
                                  ToolTip="安全限界曲げ強度をバイリニア型コンクリート（εcu=0.003）で算定し、低減係数 β1・β2 と軸力適用範囲を適用します。">
                         <StackPanel>
-                            <TextBlock Text="コンクリートをバイリニア近似で算定する（「基礎部材の強度と変形性能」）"/>
+                            <TextBlock Text="コンクリートをバイリニア近似で算定する"/>
                             <TextBlock FontSize="11" Foreground="#666666" TextWrapping="Wrap"
-                                       Text="σ = min(Ec·ε, ξ·Fc)、εcu = 0.003（β₁・β₂ 低減・軸力適用範囲あり）"/>
+                                       Text="σ = Ec·ε を ξ·Fc で頭打ち、εcu = 0.003（β₁・β₂ 低減・軸力適用範囲あり）"/>
                         </StackPanel>
                     </RadioButton>
                     <RadioButton GroupName="OptUltimateCode" Margin="12,1,0,1"
@@ -525,7 +527,7 @@
                 <StackPanel Margin="6,4,6,4">
 
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="解析用 M-φ 関係（場所打ちRC杭）" FontWeight="SemiBold"/>
+                        <TextBlock Text="解析用 M-φ 関係（コンクリート系杭）" FontWeight="SemiBold"/>
                         <TextBlock Margin="8,0,0,0" FontSize="11" VerticalAlignment="Center">
                             <Hyperlink Tag="fiber-mphi-option" Click="HelpLink_Click" ToolTip="ヘルプの詳細説明を開く">ヘルプ</Hyperlink>
                         </TextBlock>
@@ -534,9 +536,9 @@
                                  IsChecked="{Binding UseFiberMPhi, Converter={StaticResource InverseBoolConverter}}"
                                  ToolTip="ひび割れ (Mcr)・主筋降伏 (My)・安全限界 (β1·Mu0) を折れ点とする折線で解析用 M-φ を与えます（強度と変形性能 3.10〜3.12）。">
                         <StackPanel>
-                            <TextBlock Text="Mcr-My-β1·Mu0 のポリリニアで算定する（「基礎部材の強度と変形性能」）"/>
+                            <TextBlock Text="杭種ごとのポリリニアで算定する（「基礎部材の強度と変形性能」）"/>
                             <TextBlock FontSize="11" Foreground="#666666" TextWrapping="Wrap"
-                                       Text="折線 (0,0)-(φcr, Mcr)-(φy, My)-(φc, β₁·Mu0)（高軸力時は β₂=0.65 併用の3点折線）"/>
+                                       Text="場所打ちRC: 折線 (0,0)-(φcr, Mcr)-(φy, My)-(φc, β₁·Mu0) 等、杭種ごとの折線（β₁・β₂ 低減込み）"/>
                         </StackPanel>
                     </RadioButton>
                     <RadioButton GroupName="OptMPhi" Margin="12,1,0,1"
@@ -544,24 +546,26 @@
                         <RadioButton.ToolTip>
                             <ToolTip>
                                 <TextBlock>
-                                    <Run>場所打ち鉄筋コンクリート杭の解析用 M-φ 関係を、「基礎部材の強度と変形性能」のポリリニア（Mcr-My-β1·Mu0 折線）に代えて、</Run>
+                                    <Run>コンクリート系杭の解析用 M-φ 関係を、「基礎部材の強度と変形性能」のポリリニア（折線）に代えて、</Run>
                                     <LineBreak/>
                                     <Run>ファイバーモデル（断面分割積分。各曲率で軸力つり合いを解き M を直接積分）で算定します。</Run>
                                     <LineBreak/>
+                                    <Run>対象: 場所打ちRC杭・場所打ち鋼管コンクリート杭（RC部・鋼管コンクリート部）・PHC/PRC/SC杭・コンクリート充填鋼管部。</Run>
+                                    <LineBreak/>
                                     <Run>指針の低減係数 β1・β2 は乗じない「素の」断面応答です（終局側はポリリニアより大きくなります）。</Run>
                                     <LineBreak/>
-                                    <Run>掃引終点は安全限界（圧縮縁ひずみ 0.003）。材料構成則は解析用と同じバイリニアです。</Run>
+                                    <Run>掃引終点は各杭種の終局状態（場所打ち系: 圧縮縁ひずみ 0.003、PHC/PRC: コンクリート圧壊 εcu）。材料構成則は解析用と同じバイリニアです。</Run>
                                     <LineBreak/>
                                     <Run>FEM で負勾配ばねとならないよう、曲線は単調非減少化（最小勾配床付き）して使用します。</Run>
                                     <LineBreak/>
-                                    <Run>※ 場所打ち鋼管コンクリート杭（RC部含む）・既製杭・鋼管杭は対象外（従来ポリリニア）。M-θ（杭頭回転ばね）も従来どおりです。</Run>
+                                    <Run>※ 鋼管杭の鋼管部は対象外（既に厳密な折線）。M-θ（杭頭回転ばね）も従来どおりです。</Run>
                                 </TextBlock>
                             </ToolTip>
                         </RadioButton.ToolTip>
                         <StackPanel>
                             <TextBlock Text="ファイバーモデルで算定する（断面分割積分）"/>
                             <TextBlock FontSize="11" Foreground="#666666" TextWrapping="Wrap"
-                                       Text="各 φ で N = ∫σ(ε₀−φ·z)dA = N₀ を解き、M = −∫σ·z dA（約50点、β₁·β₂ 低減なし）"/>
+                                       Text="各 φ で N = ∫σ(ε₀−φ·z)dA = N₀ を解き、M = −∫σ·z dA（約50点、β₁·β₂ 低減なし。鋼管杭の鋼管部を除く全コンクリート系杭）"/>
                         </StackPanel>
                     </RadioButton>
                     <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"

@@ -474,8 +474,10 @@ namespace PileDesign.Models.InputData
                 ("既製コンクリート杭", "SC杭") =>
                     $"SC|{PileDiameter}|{PipeTs}|{ConcreteThickness}|{ConcreteFc}|{PipeGrade}|{PipeDia}|{CorrosionDepth}|N={axialNRounded}",
 
-                // 鋼管杭（未対応）
-                _ => $"OTHER|{PileBodyType}|{PileSectionType}|N={axialNRounded}"
+                // その他（鋼管杭の鋼管部、コンクリート充填鋼管部など）。
+                // 充填鋼管部はファイバー M-φ の対象となり得るため、断面諸元をキーに含めて
+                // 異なる断面同士のキャッシュ衝突を防ぐ。
+                _ => $"OTHER|{PileBodyType}|{PileSectionType}|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}"
             };
 
             return $"{key}|{cmo}";
@@ -545,12 +547,14 @@ namespace PileDesign.Models.InputData
                 }
                 else
                 {
-                    // ファイバーモデル M-φ オプション（場所打ちRC杭のみ。SPRC の RC 部は対象外）。
+                    // ファイバーモデル M-φ オプション。
+                    // 対応断面: 場所打ちRC / 場所打ち鋼管コンクリート（RC部・鋼管コンクリート部）/
+                    //           PHC / PRC / SC / コンクリート充填鋼管部（すべて AbstractPileSection 系）。
+                    // 鋼管杭の鋼管部は SteelPipeSection（別系統、section == null パス）のため対象外。
                     // 解けない場合（軸力が耐力範囲外等）は従来ポリリニアへフォールバック。
                     if (ConcreteModelOptions.UseFiberMPhi
-                        && PileBodyType == "場所打ち鉄筋コンクリート杭"
-                        && section is InsituReinforcedConcreteSection rcFiberSection
-                        && rcFiberSection.GetMPhiRelationshipFiber(axialN_inN) is { } fiber)
+                        && section is AbstractPileSection fiberSection
+                        && fiberSection.GetMPhiRelationshipFiber(axialN_inN) is { } fiber)
                     {
                         // FEM ばねとして負勾配・零勾配とならないよう単調化＋最小勾配床
                         (phisRaw, msRaw) = MakeMonotonicForAnalysis(fiber.Phis, fiber.Moments);

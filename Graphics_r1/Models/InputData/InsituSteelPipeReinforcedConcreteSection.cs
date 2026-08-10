@@ -520,10 +520,8 @@ namespace PileDesign.Models.InputData
             return (N, M, epsilonC);
         }
 
-        // 解析用 M-φ/M-θ 端点 Mu0 の算定中だけ true にして、指針オプション時でも
-        // バイリニアで算定させるガード（e関数/0.85上限の軟化で M-φ 非単調＝負勾配ばねとなり
-        // FEM 収束不能になるのを防ぐ。安全限界 NM 曲線＝検定の耐力側は本フラグを立てない）。
-        private bool _forceBilinearUltimate;
+        // 解析用 M-φ/M-θ 端点算定・ファイバー掃引用のバイリニア固定ガード _forceBilinearUltimate は
+        // AbstractPileSection の protected フィールドを使用。
 
         // 安全限界軸力、曲げモーメント取得メソッド
         internal override (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature)

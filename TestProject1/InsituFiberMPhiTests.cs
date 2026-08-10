@@ -295,32 +295,154 @@ namespace TestProject1
             }
         }
 
+        // ───────────── 第3段: 他杭種展開（SPRC / PHC / PRC / SC、鋼管杭は対象外） ─────────────
+
+        // 各杭種の代表 PileSection を生成
+        private static PileSection CreateSprcPileSection(string sectionType) => new()
+        {
+            PileBodyType = "場所打ち鋼管コンクリート杭",
+            PileSectionType = sectionType, // "鉄筋コンクリート部" or "鋼管コンクリート部"
+            PipeGrade = "SKK400",
+            PipeDia = 1000.0,
+            PipeTs = 12.0,
+            CorrosionDepth = 1.0,
+            ConcreteOutDia = 1000.0,
+            ConcreteGsi = 1.0,
+            ConcreteFc = 27.0,
+            MainBarNum = 20,
+            MainBarSize = "D25",
+            MainBarSpec = "SD390",
+            MainBarDr = 800.0,
+            HoopSize = "D13",
+            HoopSpacing = 150.0,
+            HoopSpec = "SD295",
+            HoopCenterCover = 150.0,
+            PileDiameter = 1000.0,
+        };
+
+        private static PileSection CreatePhcPileSection() => new()
+        {
+            PileBodyType = "既製コンクリート杭",
+            PileSectionType = "PHC杭",
+            PileDiameter = 600.0,
+            ConcreteThickness = 90.0,
+            ConcreteFc = 85.0,
+            TendonDp = 520.0,
+            TendonAp = 560.0,
+            TendonSigmaPy = 1226.0,
+            TendonSigmaPu = 1418.0,
+            Prestress = 4.0,
+        };
+
+        private static PileSection CreatePrcPileSection() => new()
+        {
+            PileBodyType = "既製コンクリート杭",
+            PileSectionType = "PRC杭",
+            PileDiameter = 600.0,
+            ConcreteThickness = 90.0,
+            ConcreteFc = 85.0,
+            MainBarNum = 8,
+            MainBarSize = "D13",
+            MainBarSpec = "SD345",
+            MainBarDr = 520.0,
+            TendonDp = 520.0,
+            TendonAp = 560.0,
+            TendonSigmaPy = 1226.0,
+            TendonSigmaPu = 1418.0,
+            Prestress = 4.0,
+        };
+
+        private static PileSection CreateScPileSection() => new()
+        {
+            PileBodyType = "既製コンクリート杭",
+            PileSectionType = "SC杭",
+            PileDiameter = 600.0,
+            PipeGrade = "SKK490",
+            PipeDia = 600.0,
+            PipeTs = 9.0,
+            CorrosionDepth = 0.0,
+            ConcreteThickness = 90.0,
+            ConcreteFc = 105.0,
+        };
+
         /// <summary>
-        /// オプション ON でも対象外の杭種（場所打ち鋼管コンクリート杭の RC 部）は従来ポリリニアのまま。
+        /// 第3段: SPRC（RC部・鋼管コンクリート部）/ PHC / PRC / SC もオプション ON で
+        /// ファイバー曲線（多点・φ 昇順・M 単調増加・(0,0) 始点）に切り替わり、
+        /// 最大 M がポリリニア最大 M の [0.9, 3.5] 倍の範囲に収まる（β 低減分だけ大きい想定）。
         /// </summary>
         [TestMethod]
-        public void FiberOption_SprcRcSection_Unaffected()
+        public void FiberOption_OtherPileTypes_SwitchToFiberCurve()
         {
-            var makeSprcRc = () =>
+            (string name, Func<PileSection> make, double nkN)[] cases =
+            [
+                ("SPRC-RC部", () => CreateSprcPileSection("鉄筋コンクリート部"), 1500.0),
+                ("SPRC-鋼管コンクリート部", () => CreateSprcPileSection("鋼管コンクリート部"), 1500.0),
+                ("PHC", CreatePhcPileSection, 500.0),
+                ("PRC", CreatePrcPileSection, 500.0),
+                ("SC", CreateScPileSection, 800.0),
+            ];
+
+            foreach (var (name, make, nkN) in cases)
             {
-                var s = CreatePileSection();
-                s.PileBodyType = "場所打ち鋼管コンクリート杭";
-                s.PileSectionType = "鉄筋コンクリート部";
-                return s;
+                ResetOptions();
+                var poly = make().GetMPhiRelationship(nkN);
+                Assert.IsTrue(poly.Phis.Count >= 2, $"{name}: OFF 時ポリリニアが不正 ({poly.Phis.Count} 点)");
+
+                ConcreteModelOptions.UseFiberMPhi = true;
+                var fiber = make().GetMPhiRelationship(nkN);
+
+                Assert.IsTrue(fiber.Phis.Count >= 20,
+                    $"{name}: ON 時の点数が少なすぎる（ファイバー曲線になっていない）: {fiber.Phis.Count}");
+                Assert.AreEqual(0.0, fiber.Phis[0], 1e-30, $"{name}: 始点 φ が 0 でない");
+                Assert.AreEqual(0.0, fiber.Moments[0], 1e-30, $"{name}: 始点 M が 0 でない");
+
+                for (int i = 1; i < fiber.Phis.Count; i++)
+                {
+                    Assert.IsTrue(fiber.Phis[i] > fiber.Phis[i - 1], $"{name}: φ が昇順でない (i={i})");
+                    Assert.IsTrue(fiber.Moments[i] > fiber.Moments[i - 1],
+                        $"{name}: M が単調増加でない（負勾配/零勾配ばね）(i={i})");
+                    Assert.IsTrue(double.IsFinite(fiber.Moments[i]), $"{name}: M が非有限 (i={i})");
+                }
+
+                double maxPoly = 0, maxFiber = 0;
+                foreach (double m in poly.Moments) if (m > maxPoly) maxPoly = m;
+                foreach (double m in fiber.Moments) if (m > maxFiber) maxFiber = m;
+                Assert.IsTrue(maxPoly > 0, $"{name}: ポリリニア最大 M が非正");
+                double ratio = maxFiber / maxPoly;
+                Assert.IsTrue(ratio >= 0.9 && ratio <= 3.5,
+                    $"{name}: ファイバー/ポリリニア最大 M 比が想定外: {ratio:F3} (fiber={maxFiber:E3}, poly={maxPoly:E3})");
+            }
+        }
+
+        /// <summary>
+        /// 鋼管杭（鋼管部）は SteelPipeSection（別系統）のため、オプション ON でも従来どおり不変。
+        /// </summary>
+        [TestMethod]
+        public void FiberOption_SteelPipeSection_Unaffected()
+        {
+            var makeSteelPipe = () => new PileSection
+            {
+                PileBodyType = "鋼管杭",
+                PileSectionType = "鋼管部",
+                PipeGrade = "SKK400",
+                PipeDia = 800.0,
+                PipeTs = 12.0,
+                CorrosionDepth = 1.0,
+                PileDiameter = 800.0,
             };
 
             ResetOptions();
-            var off = makeSprcRc().GetMPhiRelationship(1000.0);
+            var off = makeSteelPipe().GetMPhiRelationship(1000.0);
 
             ConcreteModelOptions.UseFiberMPhi = true;
-            var on = makeSprcRc().GetMPhiRelationship(1000.0);
+            var on = makeSteelPipe().GetMPhiRelationship(1000.0);
 
-            Assert.AreEqual(off.Phis.Count, on.Phis.Count, "SPRC RC部の点数が ON/OFF で不一致（対象外のはず）");
+            Assert.AreEqual(off.Phis.Count, on.Phis.Count, "鋼管杭の点数が ON/OFF で不一致（対象外のはず）");
             for (int i = 0; i < off.Phis.Count; i++)
             {
                 Assert.AreEqual(off.Moments[i], on.Moments[i],
                     System.Math.Max(1e-6, System.Math.Abs(off.Moments[i]) * 1e-9),
-                    $"SPRC RC部の M が ON/OFF で不一致 (i={i})");
+                    $"鋼管杭の M が ON/OFF で不一致 (i={i})");
             }
         }
 

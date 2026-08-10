@@ -781,20 +781,24 @@ namespace PileDesign.ViewModels
             wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Mtheta", "θ(rad)", "M(kNm)", 1, 1);
         }
 
-        // M-φ グラフにファイバーモデル曲線（破線）を重ね描きするか（場所打ちRC断面のみ）
+        // M-φ グラフにファイバーモデル曲線（破線）を重ね描きするか（ファイバー対応断面のみ）
         [ObservableProperty]
         private bool _showFiberMPhiOverlay;
 
         // ファイバー重ね描きトグル時に M-φ のみ再描画するため、最後に描画した軸力範囲(kN)を記憶
+        // （場所打ちRC系の軽量再描画用。他杭種は ChartUpdate で再描画）
         private double? _lastMPhiNMin;
         private double? _lastMPhiNMax;
         private int _lastMPhiNDiv = 10;
 
-        // ファイバー重ね描きチェックボックスの表示可否（場所打ちRC断面のみ）
+        // ファイバー重ね描きチェックボックスの表示可否。
+        // 対象: 場所打ちRC / 場所打ち鋼管コンクリート / 既製コンクリート杭 (PHC/PRC/SC)。
+        // 鋼管杭は SteelPipeSection（別系統、M-φ が既に厳密な折線）のため対象外。
         public bool IsFiberMPhiOverlayAvailable =>
             PileSection != null &&
             (PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-             (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鉄筋コンクリート部"));
+             PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" ||
+             PileSection.PileBodyType == "既製コンクリート杭");
 
         partial void OnShowFiberMPhiOverlayChanged(bool value)
         {
@@ -802,12 +806,24 @@ namespace PileDesign.ViewModels
             {
                 if (PileSection == null || PileSectionWindowInstance == null) return;
                 if (!IsFiberMPhiOverlayAvailable) return;
-                if (_lastMPhiNMin is not double nMin || _lastMPhiNMax is not double nMax) return;
 
-                Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                bool isInsituRc =
+                    PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
+                    (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鉄筋コンクリート部");
+
+                if (isInsituRc && _lastMPhiNMin is double nMin && _lastMPhiNMax is double nMax)
                 {
-                    DrawInsituReinforcedConcretePile_MPhiMThetaGraph(nMin, nMax, _lastMPhiNDiv);
-                }));
+                    // 場所打ちRC系は M-φ グラフのみ軽量再描画
+                    Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                    {
+                        DrawInsituReinforcedConcretePile_MPhiMThetaGraph(nMin, nMax, _lastMPhiNDiv);
+                    }));
+                }
+                else
+                {
+                    // その他の対応杭種は全体再描画（SeismicLevel 変更時と同方針）
+                    Application.Current?.Dispatcher?.BeginInvoke(new Action(() => ChartUpdate()));
+                }
             }
             catch (Exception ex)
             {
@@ -879,8 +895,9 @@ namespace PileDesign.ViewModels
                 return null;
             }
 
-            // M-φ（杭頭部 + 杭中間部(破線)）
-            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n), BuildMiddlePhis, "杭中間部");
+            // M-φ（杭頭部 + 杭中間部(破線)。オプション時はファイバーモデル曲線も重ね描き）
+            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n), BuildMiddlePhis, "杭中間部",
+                getFiberOverlay: ShowFiberMPhiOverlay ? (n => section.GetMPhiRelationshipFiber(n)) : null);
 
             // M-θ は未定義メッセージ。鋼管杭+コンクリート充填鋼管部 は M-θ が杭頭部側 (PileTop) で
             // Kθ 線形ばねとして定義されるため、その旨を表示する。
@@ -938,8 +955,9 @@ namespace PileDesign.ViewModels
 
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
-            // M-φ（beta1 はデフォルト利用）
-            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n));
+            // M-φ（beta1 はデフォルト利用。オプション時はファイバーモデル曲線も重ね描き）
+            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n),
+                getFiberOverlay: ShowFiberMPhiOverlay ? (n => section.GetMPhiRelationshipFiber(n)) : null);
 
             // M-θ は未定義メッセージ
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
@@ -962,7 +980,8 @@ namespace PileDesign.ViewModels
 
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
-            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n));
+            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n),
+                getFiberOverlay: ShowFiberMPhiOverlay ? (n => section.GetMPhiRelationshipFiber(n)) : null);
 
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
                 notDefinedMessageIfNull: "PRC杭の曲げモーメント-回転角関係の定義はありません");
@@ -977,7 +996,8 @@ namespace PileDesign.ViewModels
 
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
-            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n));
+            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n),
+                getFiberOverlay: ShowFiberMPhiOverlay ? (n => section.GetMPhiRelationshipFiber(n)) : null);
 
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
                 notDefinedMessageIfNull: "SC杭の曲げモーメント-回転角関係の定義はありません");

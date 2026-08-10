@@ -70,12 +70,14 @@ namespace PileDesign.Models.InputData
         public static bool UseInsituUltimateEFunction { get; set; }
 
         /// <summary>
-        /// 場所打ち鉄筋コンクリート杭の解析用 M-φ 関係を、指針ポリリニア（Mcr-My-β1·Mu0 折線）に
+        /// コンクリート系杭の解析用 M-φ 関係を、指針ポリリニア（Mcr-My-β1·Mu0 等の折線）に
         /// 代えてファイバーモデル（断面分割積分、各曲率で軸力つり合いを解く）で算定する。
+        /// 対象: 場所打ちRC / 場所打ち鋼管コンクリート（RC部・鋼管コンクリート部）/ PHC / PRC / SC /
+        /// コンクリート充填鋼管部（AbstractPileSection 系すべて）。鋼管杭の鋼管部は
+        /// SteelPipeSection（別系統、M-φ が既に厳密）のため対象外。
         /// β1・β2 の指針低減係数は乗じない「素の」断面応答となる。FEM で負勾配ばねとならないよう
         /// 単調非減少化＋最小勾配床の後処理を施した曲線を用いる。
         /// M-φ（→ 非線形 FEM 解析）に影響するため、変更時は解析結果をリセットする。
-        /// 場所打ち鋼管コンクリート杭（RC部含む）・既製杭・鋼管杭は対象外（従来ポリリニア）。
         /// </summary>
         public static bool UseFiberMPhi { get; set; }
 

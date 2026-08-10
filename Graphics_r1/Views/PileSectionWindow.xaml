@@ -1210,7 +1210,7 @@
                                         <CheckBox Content="ファイバーモデル比較（破線）"
                                                   IsChecked="{Binding ShowFiberMPhiOverlay, Mode=TwoWay}"
                                                   VerticalAlignment="Center"
-                                                  ToolTip="ファイバーモデル（断面分割積分）による M-φ を破線で重ね描きします（場所打ちRC断面のみ）。&#x0a;各曲率で軸力つり合いを解いた断面応答そのもので、指針の β1・β2 低減は乗じていません。"/>
+                                                  ToolTip="ファイバーモデル（断面分割積分）による M-φ を破線で重ね描きします（コンクリート系断面。鋼管杭の鋼管部を除く）。&#x0a;各曲率で軸力つり合いを解いた断面応答そのもので、指針の β1・β2 低減は乗じていません。"/>
                                     </StackPanel>
 
                                 </Grid>

@@ -2047,8 +2047,11 @@ namespace PileDesign.ViewModels
                 }
 
                 // 場所打ち鋼管コンクリート杭: 杭頭部と杭中間部で異なるM-φを適用
+                // （中間部はひび割れ後勾配の延長で終局曲率を再定義するポリリニア固有の補正のため、
+                //   ファイバー M-φ オプション ON 時は補正せず共通経路＝ファイバー曲線を用いる）
                 (IList<double> Phis, IList<double> Moments)? curve;
                 if (!beam.IsPileTop
+                    && !Models.InputData.ConcreteModelOptions.UseFiberMPhi
                     && section.PileBodyType == "場所打ち鋼管コンクリート杭"
                     && section.PileSectionType == "鋼管コンクリート部")
                 {
@@ -4914,8 +4917,10 @@ namespace PileDesign.ViewModels
                     if (section == null) continue;
 
                     // 場所打ち鋼管コンクリート杭: 杭頭部と杭中間部で異なるM-φを適用
+                    // （ファイバー M-φ オプション ON 時は共通経路＝ファイバー曲線。初期セットアップ側と同方針）
                     (IList<double> Phis, IList<double> Moments)? curve;
                     if (!beam.IsPileTop
+                        && !Models.InputData.ConcreteModelOptions.UseFiberMPhi
                         && section.PileBodyType == "場所打ち鋼管コンクリート杭"
                         && section.PileSectionType == "鋼管コンクリート部")
                     {

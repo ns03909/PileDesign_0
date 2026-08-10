@@ -670,6 +670,18 @@ namespace PileDesign.Models.InputData
             return (N, M);
         }
 
+        /// <summary>
+        /// ファイバー M-φ の掃引終点: コンクリート圧壊状態（PHC 杭の終局定義、εcu 基準）。
+        /// 解けない場合は基底の安全限界ソルバ（εc=0.003）にフォールバック。
+        /// </summary>
+        internal override (double Mu0, double PhiU) GetFiberSweepEndPoint(double Ntarget)
+        {
+            (double m, double phi) = GetMomentCurvatureForN(Ntarget, "ConcreteCompressiveFailure");
+            if (double.IsFinite(m) && m > 0.0 && double.IsFinite(phi) && phi > 0.0)
+                return (m, phi);
+            return base.GetFiberSweepEndPoint(Ntarget);
+        }
+
         // 軸力、曲げモーメント取得メソッド
         internal override (double, double, double) GetAllowableForceAndMoment(
             int limitStateNo, bool isCompressionSide, double curvature)
@@ -1347,6 +1359,18 @@ namespace PileDesign.Models.InputData
         //    }
         //    return (Mnext, curvature);
         //}
+        /// <summary>
+        /// ファイバー M-φ の掃引終点: コンクリート圧壊状態（PRC 杭の終局定義、εcu 基準）。
+        /// 解けない場合は基底の安全限界ソルバ（εc=0.003）にフォールバック。
+        /// </summary>
+        internal override (double Mu0, double PhiU) GetFiberSweepEndPoint(double Ntarget)
+        {
+            (double m, double phi) = GetMomentCurvatureForN(Ntarget, "ConcreteCompressiveFailure");
+            if (double.IsFinite(m) && m > 0.0 && double.IsFinite(phi) && phi > 0.0)
+                return (m, phi);
+            return base.GetFiberSweepEndPoint(Ntarget);
+        }
+
         internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)///////////////////////////
         {
             double Nnext = double.MaxValue;
