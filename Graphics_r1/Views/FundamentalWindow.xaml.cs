@@ -34,6 +34,14 @@ namespace PileDesign.Views
             this.Close();
         }
 
+        // モデル化オプション各項目の「ヘルプ」リンク: help.html の該当アンカーへスクロールして開く。
+        // Hyperlink.Tag にアンカー id（help.html 側の id 属性）を指定する。
+        private void HelpLink_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Documents.Hyperlink link && link.Tag is string anchor)
+                MainWindowViewModel.OpenHelpWindowAt(anchor, null);
+        }
+
         private static void RestorePreviousPropertyValues(FundamentalViewModel viewModel)
         {
             // 全てのプロパティを前回の値に戻す
