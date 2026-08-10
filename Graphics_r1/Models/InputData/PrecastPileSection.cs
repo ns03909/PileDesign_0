@@ -2453,6 +2453,13 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// SC杭用: 特定の軸力時の安全限界曲げモーメントを返す
         /// εcu を N/N0 に応じて 0.003〜0.004 に反復更新する（GetUltimateMNInteraction と整合）
+        ///
+        /// 注意: 本メソッドは <c>override</c> ではなく <c>new</c>（シャドーイング）。
+        /// SC 型の変数からの直接呼び出し（GetMPhiRelationshipInternal 等）はこの実装が使われるが、
+        /// 基底 AbstractPileSection 経由の仮想呼び出し（安全限界閾値の算定・ファイバー M-φ の
+        /// 掃引終点 GetFiberSweepEndPoint 既定実装）は基底の εc=0.003 固定版が使われる。
+        /// override に変えると SC の安全限界閾値・ファイバー終点の数値が変わるため、
+        /// 変更する場合は耐力曲線回帰テストへの影響評価とセットで行うこと（2026-08-10 記録）。
         /// </summary>
         internal new (double, double) GetUltimateMomentForSpecificN(double NTarget)
         {

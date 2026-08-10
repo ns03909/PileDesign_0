@@ -546,6 +546,15 @@ namespace PileDesign.Models.InputData
                 lock (_mPhiCacheLock)
                 {
                     _mPhiCacheMissCount++;
+                    // エントリ数上限: 諸元×軸力(1kN 丸め)×オプションでキーが増え続けるため、
+                    // 長時間セッションでの無制限成長を防ぐ。上限到達時は全クリア
+                    // （LRU 管理は不要 — 再計算は数 ms、通常の解析 1 回で使うキーは数百程度）。
+                    const int MaxCacheEntries = 10_000;
+                    if (_mphiCache.Count >= MaxCacheEntries)
+                    {
+                        Serilog.Log.Debug("[MphiCache] エントリ数が上限 {Max} に達したため全クリア", MaxCacheEntries);
+                        _mphiCache.Clear();
+                    }
                     if (!_mphiCache.ContainsKey(cacheKey))
                     {
                         _mphiCache[cacheKey] = (phis, ms);

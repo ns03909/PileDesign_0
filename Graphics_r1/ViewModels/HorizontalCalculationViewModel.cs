@@ -2065,30 +2065,8 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                // 場所打ち鋼管コンクリート杭: 杭頭部と杭中間部で異なるM-φを適用
-                // （中間部はひび割れ後勾配の延長で終局曲率を再定義するポリリニア固有の補正のため、
-                //   ファイバー M-φ オプション ON 時は補正せず共通経路＝ファイバー曲線を用いる）
-                (IList<double> Phis, IList<double> Moments)? curve;
-                if (!beam.IsPileTop
-                    && !Models.InputData.ConcreteModelOptions.UseFiberMPhi
-                    && section.PileBodyType == PileTypeNames.InsituSteelPipeConcrete
-                    && section.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
-                {
-                    var sprcSection = new InsituSteelPipeReinforcedConcreteSection(
-                        new InsituSteelPipe(section.PipeGrade, section.PipeDia, section.PipeTs, section.CorrosionDepth),
-                        new InsituConcrete(section.ConcreteOutDia, section.ConcreteGsi, section.ConcreteFc),
-                        new MainBars(section.MainBarDr, section.MainBarNum, section.MainBarSpec, section.MainBarSize));
-                    // 単位変換: kN → N（断面計算はN単位を期待）
-                    var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN * UnitConversion.KN_TO_N);
-                    // 単位変換: φ [1/mm] → [1/m], M [N·mm] → [kN·m]
-                    var phisConverted = middle.Phis.Select(p => p * UnitConversion.PER_MM_TO_PER_M).ToList();
-                    var msConverted = middle.Moments.Select(m => m * UnitConversion.NMM_TO_KNM).ToList();
-                    curve = ((IList<double>)phisConverted, (IList<double>)msConverted);
-                }
-                else
-                {
-                    curve = TryCallMPhiRelationship(section, axialN_kN);
-                }
+                // M-φ 曲線の解決（場所打ち鋼管コンクリート杭の杭中間部特別扱いを含む共通ロジック）
+                var curve = Services.MphiCurveResolver.Resolve(section, axialN_kN, beam.IsPileTop);
 
                 if (curve is null)
                 {
@@ -2102,27 +2080,7 @@ namespace PileDesign.ViewModels
 
         }
 
-        // M-φ関係の解決。
-        // PileSection.GetMPhiRelationship を直接呼ぶ（φ [rad/m], M [kNm] へ変換済みの折線／ファイバー曲線）。
-        // 旧実装はリフレクションで任意型を探索していたが、呼び出し元の section は常に PileSection のため
-        // 型付き呼び出しに置換（速度・型安全性・例外の可視化）。
-        // 点数 2 未満・φ/M の個数不一致は null（呼び出し側でスキップ）。
-        private static (IList<double> Phis, IList<double> Moments)? TryCallMPhiRelationship(PileSection pileSection, double axialN)
-        {
-            if (pileSection == null) return null;
-            try
-            {
-                var (phis, moments) = pileSection.GetMPhiRelationship(axialN);
-                if (phis == null || moments == null || phis.Count < 2 || phis.Count != moments.Count)
-                    return null;
-                return (phis, moments);
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "[TryCallMPhiRelationship] M-φ の解決に失敗 (axialN={AxialN} kN)", axialN);
-                return null;
-            }
-        }
+        // M-φ 曲線の解決は Services.MphiCurveResolver に集約（初期セットアップ／ステップ毎再解決で共用）。
 
         // 荷重ケース用の M-θ（非線形ON/OFFに応じて線形Kを必ず設定、曲線はON時のみ使用）
         private void SetupNonlinearMThetaForLoadCase(AnaModel model, LoadCase loadCase)
@@ -4738,27 +4696,8 @@ namespace PileDesign.ViewModels
                     var section = soilPile.PileBodySegments[seg].PileSection;
                     if (section == null) continue;
 
-                    // 場所打ち鋼管コンクリート杭: 杭頭部と杭中間部で異なるM-φを適用
-                    // （ファイバー M-φ オプション ON 時は共通経路＝ファイバー曲線。初期セットアップ側と同方針）
-                    (IList<double> Phis, IList<double> Moments)? curve;
-                    if (!beam.IsPileTop
-                        && !Models.InputData.ConcreteModelOptions.UseFiberMPhi
-                        && section.PileBodyType == PileTypeNames.InsituSteelPipeConcrete
-                        && section.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
-                    {
-                        var sprcSection = new InsituSteelPipeReinforcedConcreteSection(
-                            new InsituSteelPipe(section.PipeGrade, section.PipeDia, section.PipeTs, section.CorrosionDepth),
-                            new InsituConcrete(section.ConcreteOutDia, section.ConcreteGsi, section.ConcreteFc),
-                            new MainBars(section.MainBarDr, section.MainBarNum, section.MainBarSpec, section.MainBarSize));
-                        var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN * UnitConversion.KN_TO_N);
-                        var phisConverted = middle.Phis.Select(p => p * UnitConversion.PER_MM_TO_PER_M).ToList();
-                        var msConverted = middle.Moments.Select(m => m * UnitConversion.NMM_TO_KNM).ToList();
-                        curve = ((IList<double>)phisConverted, (IList<double>)msConverted);
-                    }
-                    else
-                    {
-                        curve = TryCallMPhiRelationship(section, axialN_kN);
-                    }
+                    // M-φ 曲線の解決（初期セットアップと同じ共通ロジック。null なら前回曲線を維持）
+                    var curve = Services.MphiCurveResolver.Resolve(section, axialN_kN, beam.IsPileTop);
 
                     if (curve is null) continue;
                     beam.SetResolvedCombinedMPhi(curve.Value.Phis, curve.Value.Moments);
