@@ -31,6 +31,7 @@
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
         <conv:MultiplyConverter x:Key="MultiplyConverter"/>
         <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
 
         <!-- DataGridCellのスタイルを定義 -->
         <!--<Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
@@ -1203,6 +1204,14 @@
                                     </Grid.RowDefinitions>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotMphi" Grid.Row="0"/>
+
+                                    <StackPanel Orientation="Horizontal" Grid.Row="1" HorizontalAlignment="Left" Margin="10,0,0,5"
+                                                Visibility="{Binding IsFiberMPhiOverlayAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <CheckBox Content="ファイバーモデル比較（破線）"
+                                                  IsChecked="{Binding ShowFiberMPhiOverlay, Mode=TwoWay}"
+                                                  VerticalAlignment="Center"
+                                                  ToolTip="ファイバーモデル（断面分割積分）による M-φ を破線で重ね描きします（場所打ちRC断面のみ）。&#x0a;各曲率で軸力つり合いを解いた断面応答そのもので、指針の β1・β2 低減は乗じていません。"/>
+                                    </StackPanel>
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>

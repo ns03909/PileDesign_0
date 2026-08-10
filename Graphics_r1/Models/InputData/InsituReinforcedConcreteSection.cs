@@ -739,6 +739,125 @@ namespace PileDesign.Models.InputData
             finally { _forceBilinearUltimate = prevForceBilinear; }
         }
 
+        /// <summary>
+        /// ファイバーモデル（断面分割積分）による M-φ 関係。
+        /// 指針ポリリニア（Mcr-My-β1·Mu0 折線、GetMPhiRelationship）の代替として、
+        /// 各曲率 φ で軸力つり合い N(εc, φ) = Ntarget を満たす断面ひずみ状態を解き、
+        /// M を断面積分で直接求める。
+        ///
+        /// - 材料構成則は解析用 M-φ と同じバイリニア（e関数オプション時も軟化を持ち込まない
+        ///   よう _forceBilinearUltimate ガードで常にバイリニア）。
+        /// - 掃引終点は安全限界状態（圧縮縁ひずみ εc = 0.003、GetUltimateMomentForSpecificN と同一）。
+        /// - β1・β2 等の指針低減係数は乗じない「素の」断面応答である点に注意。
+        /// - ひび割れ直後にコンクリート引張負担の脱落で M が局所的に微減し得る（生曲線のまま返す。
+        ///   FEM ばねとして使う場合は呼び出し側で単調化が必要）。
+        ///
+        /// 単位: Ntarget [N], φ [1/mm], M [N·mm]（GetMPhiRelationship と同一）。
+        /// 軸力が耐力範囲外などで解けない場合は null。
+        /// </summary>
+        internal (List<double> Phis, List<double> Moments)? GetMPhiRelationshipFiber(double Ntarget, int numPoints = 50)
+        {
+            bool prevForceBilinear = _forceBilinearUltimate;
+            _forceBilinearUltimate = true;
+            try
+            {
+                // 掃引終点 φu: εc = 0.003（安全限界）かつ N = Ntarget の状態（既存ソルバを流用）
+                (double mu0, double phiU) = GetUltimateMomentForSpecificN(Ntarget);
+                if (!double.IsFinite(phiU) || phiU <= 1e-12 || !double.IsFinite(mu0) || mu0 <= 0.0)
+                    return null;
+
+                var phis = new List<double>(numPoints + 1) { 0.0 };
+                var ms = new List<double>(numPoints + 1) { 0.0 };
+
+                // 圧縮縁ひずみの初期推定: 一様圧縮の弾性解（φ→0 極限）
+                double ag = Math.PI * PileDia * PileDia / 4.0;
+                double ea = InsituConcrete.Ec * ag + MainBars.Er * MainBars.Ag;
+                double epsC = ea > 0.0 ? Ntarget / ea : 0.0;
+
+                for (int i = 1; i <= numPoints; i++)
+                {
+                    // ひび割れ・降伏の折れ点が低 φ 側に集まるため 1.5 乗スペーシングで低 φ 側を密にする
+                    double t = (double)i / numPoints;
+                    double phi = phiU * Math.Pow(t, 1.5);
+
+                    // 前点の εc をウォームスタートに軸力つり合いを解く（解けない φ はスキップ）
+                    if (!SolveFiberAxialEquilibrium(Ntarget, phi, ref epsC))
+                        continue;
+
+                    (_, double m) = GetUltimateForceAndMoment(epsC, phi);
+                    if (!double.IsFinite(m)) continue;
+                    phis.Add(phi);
+                    ms.Add(m);
+                }
+
+                // 実質的に曲線を成さない場合は失敗扱い
+                return phis.Count >= 5 ? (phis, ms) : null;
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Warning(ex, "[GetMPhiRelationshipFiber] 算定に失敗（null にフォールバック）: Ntarget={Ntarget}", Ntarget);
+                return null;
+            }
+            finally { _forceBilinearUltimate = prevForceBilinear; }
+        }
+
+        /// <summary>
+        /// 与曲率 φ の下で軸力つり合い N(εc, φ) = Ntarget を満たす圧縮縁ひずみ εc を解く。
+        /// Newton 法（数値微分、ウォームスタート）＋失敗時は二分法フォールバック。
+        /// 探索範囲は εc ∈ [-0.05, +0.003]（深い引張状態〜コンクリート安全限界圧縮ひずみ）。
+        /// バイリニアコンクリートのひび割れ脱落（引張弾性→σ=0 の不連続）で N(εc) に
+        /// 微小な非単調が生じ得るため、Newton が停滞したら二分法に切り替える。
+        /// </summary>
+        private bool SolveFiberAxialEquilibrium(double Ntarget, double phi, ref double epsC)
+        {
+            const double epsLo = -0.05;
+            const double epsHi = 0.003; // コンクリート GetStress の有効上限（安全限界圧縮ひずみ）
+            double tolN = Math.Max(100.0, Math.Abs(Ntarget) * 1e-6); // [N]（M への影響は無視できる規模）
+
+            double x = Math.Clamp(epsC, epsLo, epsHi);
+
+            for (int iter = 0; iter < 40; iter++)
+            {
+                double f = GetUltimateForceAndMoment(x, phi).Item1 - Ntarget;
+                if (Math.Abs(f) < tolN) { epsC = x; return true; }
+
+                const double dEps = 1e-7;
+                double f2 = GetUltimateForceAndMoment(x + dEps, phi).Item1 - Ntarget;
+                double dfdx = (f2 - f) / dEps;
+                // dN/dεc は概ね EA (~1e10 N) オーダー。実質ゼロ・負勾配（ひび割れ不連続）なら二分法へ
+                if (dfdx < 1e-3) break;
+
+                double step = f / dfdx;
+                double maxStep = 0.5 * (epsHi - epsLo);
+                if (Math.Abs(step) > maxStep) step = Math.Sign(step) * maxStep;
+
+                double xNext = Math.Clamp(x - step, epsLo, epsHi);
+                if (Math.Abs(xNext - x) < 1e-12) break; // クランプ端で停滞 → 二分法へ
+                x = xNext;
+            }
+
+            // 二分法フォールバック（N(εc) は大局的に単調増加）
+            double fLo = GetUltimateForceAndMoment(epsLo, phi).Item1 - Ntarget;
+            double fHi = GetUltimateForceAndMoment(epsHi, phi).Item1 - Ntarget;
+            // 境界そのものが解（掃引終点 φu では εc=0.003 ちょうどが解）の場合を先に許容
+            if (Math.Abs(fHi) < tolN) { epsC = epsHi; return true; }
+            if (Math.Abs(fLo) < tolN) { epsC = epsLo; return true; }
+            if (fLo > 0.0 || fHi < 0.0) return false; // ブラケット不能（軸力がこの φ で釣り合わない）
+
+            double lo = epsLo, hi = epsHi;
+            for (int iter = 0; iter < 80; iter++)
+            {
+                double mid = 0.5 * (lo + hi);
+                double fMid = GetUltimateForceAndMoment(mid, phi).Item1 - Ntarget;
+                if (Math.Abs(fMid) < tolN) { epsC = mid; return true; }
+                if (fMid < 0.0) lo = mid; else hi = mid;
+            }
+            // 80 回二分後は区間幅 ~1e-26。ひび割れ不連続をまたぐ場合のみ残差が tolN を超え得るが、
+            // その残差は短冊 1 枚分のひび割れ荷重程度で M への影響は無視できるため収束扱いとする。
+            epsC = 0.5 * (lo + hi);
+            return true;
+        }
+
         //// ある軸力時のM-θ関係を得るメソッド
         /// 4点折線: [0, 極小値, θy, θu]
         /// 極小値(1e-8)により初期勾配 Mcr/1e-8 ≈ 実質剛体

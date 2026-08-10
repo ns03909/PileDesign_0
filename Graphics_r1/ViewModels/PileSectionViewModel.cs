@@ -620,7 +620,8 @@ namespace PileDesign.ViewModels
             IEnumerable<double> nTargets,
             Func<double, (List<double> phis, List<double> Ms)> getMPhi,
             Func<List<double>, List<double>, List<double>?>? buildMiddlePhis = null,
-            string? middleLegendPrefix = null)
+            string? middleLegendPrefix = null,
+            Func<double, (List<double> phis, List<double> Ms)?>? getFiberOverlay = null)
         {
             var wpf = PileSectionWindowInstance?.wpfPlotMphi;
             if (wpf is null) return;
@@ -632,6 +633,7 @@ namespace PileDesign.ViewModels
             string legendProbe = (middleLegendPrefix ?? "M-φ関係") + " φ";
             wpf.Plot.Legend.FontName = Fonts.Detect(legendProbe);
 
+            bool fiberLegendShown = false;
             foreach (var n in nTargets)
             {
                 var (phis, Ms) = getMPhi(n);
@@ -662,6 +664,26 @@ namespace PileDesign.ViewModels
                         scatterMiddle.LineWidth = 2;
                         scatterMiddle.Color = scatter.Color;
                         scatterMiddle.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+                    }
+                }
+
+                // ファイバーモデル M-φ の重ね描き（同色破線）。凡例は先頭の 1 本のみに付ける（凡例爆発防止）
+                if (getFiberOverlay != null)
+                {
+                    (List<double> phis, List<double> Ms)? fiber = null;
+                    try { fiber = getFiberOverlay(n); }
+                    catch { /* 安全側で無視（重ね描きのみの機能のため） */ }
+
+                    if (fiber is { } fc && fc.phis.Count > 1 && fc.phis.Count == fc.Ms.Count)
+                    {
+                        var scatterFiber = wpf.Plot.Add.Scatter(
+                            fc.phis.ToArray(), fc.Ms.Select(m => m * 1e-6).ToArray());
+                        scatterFiber.LineWidth = 1.5f;
+                        scatterFiber.Color = scatter.Color;
+                        scatterFiber.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+                        scatterFiber.MarkerShape = ScottPlot.MarkerShape.None;
+                        scatterFiber.LegendText = fiberLegendShown ? string.Empty : "ファイバーモデル（破線）";
+                        fiberLegendShown = true;
                     }
                 }
             }
@@ -759,9 +781,48 @@ namespace PileDesign.ViewModels
             wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Mtheta", "θ(rad)", "M(kNm)", 1, 1);
         }
 
+        // M-φ グラフにファイバーモデル曲線（破線）を重ね描きするか（場所打ちRC断面のみ）
+        [ObservableProperty]
+        private bool _showFiberMPhiOverlay;
+
+        // ファイバー重ね描きトグル時に M-φ のみ再描画するため、最後に描画した軸力範囲(kN)を記憶
+        private double? _lastMPhiNMin;
+        private double? _lastMPhiNMax;
+        private int _lastMPhiNDiv = 10;
+
+        // ファイバー重ね描きチェックボックスの表示可否（場所打ちRC断面のみ）
+        public bool IsFiberMPhiOverlayAvailable =>
+            PileSection != null &&
+            (PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
+             (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鉄筋コンクリート部"));
+
+        partial void OnShowFiberMPhiOverlayChanged(bool value)
+        {
+            try
+            {
+                if (PileSection == null || PileSectionWindowInstance == null) return;
+                if (!IsFiberMPhiOverlayAvailable) return;
+                if (_lastMPhiNMin is not double nMin || _lastMPhiNMax is not double nMax) return;
+
+                Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                {
+                    DrawInsituReinforcedConcretePile_MPhiMThetaGraph(nMin, nMax, _lastMPhiNDiv);
+                }));
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "ShowFiberMPhiOverlay change: failed to refresh M-φ plot");
+            }
+        }
+
         // 場所打ち鉄筋コンクリート杭
         public void DrawInsituReinforcedConcretePile_MPhiMThetaGraph(double NMin, double NMax, int nDiv)
         {
+            // ファイバー重ね描きトグル時の再描画用に軸力範囲(kN)を記憶（単位変換前に保存）
+            _lastMPhiNMin = NMin;
+            _lastMPhiNMax = NMax;
+            _lastMPhiNDiv = nDiv;
+
             var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
             var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
             var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
@@ -771,8 +832,9 @@ namespace PileDesign.ViewModels
             NMax *= 1000;
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
-            // M-φ: 場所打ちRC
-            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n));
+            // M-φ: 場所打ちRC（オプション時はファイバーモデル曲線を破線で重ね描き）
+            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n),
+                getFiberOverlay: ShowFiberMPhiOverlay ? (n => section.GetMPhiRelationshipFiber(n)) : null);
 
             // M-θ: 場所打ちRC（安全側にラムダで明示）
             PlotMThetaCurves(
@@ -962,6 +1024,10 @@ namespace PileDesign.ViewModels
         {
             //スペックのセット
             PileSection.SetSpecs();
+
+            // 杭種変更でファイバー重ね描きチェックボックスの表示可否が変わり得るため通知
+            OnPropertyChanged(nameof(IsFiberMPhiOverlayAvailable));
+
             List<double> ns;
 
             if (PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
