@@ -9,7 +9,9 @@
         xmlns:ctrl="clr-namespace:PileDesign.Views.Controls"
         d:DataContext="{d:DesignInstance Type=local:FundamentalViewModel}"
         mc:Ignorable="d"
-        Title="基本設定" Height="920" Width="560">
+        Title="基本設定" Height="700" Width="560"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
+        WindowStartupLocation="CenterScreen">
     
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />

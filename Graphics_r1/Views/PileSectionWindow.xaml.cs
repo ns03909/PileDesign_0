@@ -245,9 +245,31 @@ namespace PileDesign.Views
         }
 
 
+        // 既製コンクリート杭断面タイプ (PHC杭/PRC杭/SC杭) 切替時:
+        // 旧選択名は新ライブラリに存在しないため、同径の杭を既定選択して断面欄の空欄化を防ぐ
+        // （フォールバック選択は PileSection.RecalculateSelectedPrecastPile 側で処理）。
         private void ComboBoxPrecastConcretePileType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!IsLoaded) return; // ウィンドウ初期化中の発火はスキップ（Loaded で同期済み）
+            if (DataContext is not PileSectionViewModel viewModel) return;
+            var section = viewModel.PileSection;
+            if (section == null) return;
+            if (section.PileSectionType != PileTypeNames.Phc
+                && section.PileSectionType != PileTypeNames.Prc
+                && section.PileSectionType != PileTypeNames.Sc) return;
 
+            section.RecalculateSelectedPrecastPile();
+
+            // 表示中のタイプ別 ComboBox の SelectedItem を同期（PileSectionWindow_Loaded と同じ方式）
+            if (section.PileSectionType == PileTypeNames.Phc)
+                ComboBoxPHCPileType.SelectedItem = section.SelectedPrecastPile.Name;
+            else if (section.PileSectionType == PileTypeNames.Prc)
+                ComboBoxPRCPileType.SelectedItem = section.SelectedPrecastPile.Name;
+            else
+                ComboBoxSCPileType.SelectedItem = section.SelectedPrecastPile.Name;
+
+            viewModel.RedrawShapes();
+            viewModel.ChartUpdate();
         }
 
 

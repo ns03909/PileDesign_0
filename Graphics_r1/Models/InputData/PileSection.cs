@@ -1269,11 +1269,27 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            if (!isFound)
+            if (!isFound && precastPiles.Count > 0)
             {
-                // 一致するものが見つからなかった場合の処理
+                // 断面タイプ切替（PHC⇔PRC⇔SC）などで旧選択名が新ライブラリに存在しない場合:
+                // 旧選択と同径（同径が無ければ最も近い径）の杭を既定選択し、断面欄が空欄のまま
+                // 旧タイプの諸元で計算が続くのを防ぐ。同径内はライブラリ順（No 昇順）の先頭を採る。
+                double prevDia = SelectedPrecastPile?.PileDiameter ?? 0.0;
+                PrecastPile fallback = precastPiles
+                    .OrderBy(p => Math.Abs(p.PileDiameter - prevDia))
+                    .ThenBy(p => p.No)
+                    .First();
+
+                Serilog.Log.Debug(
+                    "[RecalculateSelectedPrecastPile] '{Old}' は {Type} ライブラリに存在しないため同径の '{New}' を既定選択",
+                    SelectedPrecastPile?.Name, PileSectionType, fallback.Name);
+
+                SelectedPrecastPile = new PrecastPile { Name = fallback.Name };
+                RecalculateSelectedPrecastPile(); // 名前一致で全諸元を反映（必ず isFound になるため再帰は 1 回）
+            }
+            else if (!isFound)
+            {
                 Serilog.Log.Debug($"Error: SelectedPrecastPile.Name '{SelectedPrecastPile.Name}' not found in precastPiles.");
-                // 必要に応じてデフォルト値を設定するなどの処理を追加
             }
         }
 
