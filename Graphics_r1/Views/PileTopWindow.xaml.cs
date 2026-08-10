@@ -1,4 +1,5 @@
-﻿using PileDesign.Common;
+﻿using PileDesign.Constants;
+using PileDesign.Common;
 using PileDesign.Models.InputData;
 using PileDesign.Models.PileLibrary;
 using PileDesign.ViewModels;
@@ -592,7 +593,7 @@ namespace PileDesign.Views
 
             // 鋼管杭は腐食代考慮前の鋼管外径 (PipeDia) を、それ以外は PileDiameter を使う
             string pileBodyType = viewModel.PileBodyType ?? "";
-            bool isSteelPipe = pileBodyType.Contains("鋼管杭");
+            bool isSteelPipe = pileBodyType.Contains(PileTypeNames.SteelPipe);
             double pileDia = (isSteelPipe && pileSection.PipeDia > 0) ? pileSection.PipeDia : pileSection.PileDiameter;
             if (pileDia <= 0) return;
 

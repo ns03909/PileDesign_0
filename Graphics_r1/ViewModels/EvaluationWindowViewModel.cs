@@ -1,3 +1,4 @@
+using PileDesign.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -535,7 +536,7 @@ namespace PileDesign.ViewModels
 
                 var section = soilPile.PileBodySegments[0].PileSection;
                 if (section == null) { perItem[idx] = (0, 0, ""); return; }
-                if (section.PileBodyType != "場所打ち鉄筋コンクリート杭") { perItem[idx] = (0, 0, ""); return; }
+                if (section.PileBodyType != PileTypeNames.InsituRc) { perItem[idx] = (0, 0, ""); return; }
 
                 // RotationalSpringResultを検索
                 var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>

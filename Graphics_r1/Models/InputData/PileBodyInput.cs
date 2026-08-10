@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using PileDesign.Constants;
+using Newtonsoft.Json;
 using PileDesign.FEM;
 using System;
 using System.Collections.Generic;
@@ -112,7 +113,7 @@ namespace PileDesign.Models.InputData
                         {
                             // PileBodyTypeがnullや空文字の場合は既定値をセット
                             var safeType = string.IsNullOrWhiteSpace(this.PileBodyType)
-                                ? PileBodyTypeOption.FirstOrDefault() ?? "場所打ち鉄筋コンクリート杭"
+                                ? PileBodyTypeOption.FirstOrDefault() ?? PileTypeNames.InsituRc
                                 : this.PileBodyType;
                             seg.PileSection.PileBodyType = safeType;
                             seg.PileSection.ResetSectionProperties();
@@ -157,10 +158,10 @@ namespace PileDesign.Models.InputData
 
         public static ObservableCollection<string> PileBodyTypeOption { get; } =
         [
-            "場所打ち鉄筋コンクリート杭",
-            "場所打ち鋼管コンクリート杭",
-            "既製コンクリート杭",
-            "鋼管杭"
+            PileTypeNames.InsituRc,
+            PileTypeNames.InsituSteelPipeConcrete,
+            PileTypeNames.PrecastConcrete,
+            PileTypeNames.SteelPipe
         ];
 
         private string _pileConstructionType;
@@ -572,7 +573,7 @@ namespace PileDesign.Models.InputData
                     var topSec = PileBodySegments?.FirstOrDefault()?.PileSection;
                     if (topSec != null)
                     {
-                        bool isSp = (pileBodyType ?? "").Contains("鋼管杭");
+                        bool isSp = (pileBodyType ?? "").Contains(PileTypeNames.SteelPipe);
                         double dia = (isSp && topSec.PipeDia > 0) ? topSec.PipeDia : topSec.PileDiameter;
                         if (dia > 0)
                         {
@@ -644,8 +645,8 @@ namespace PileDesign.Models.InputData
                 // 場所打ち鋼管コンクリート杭 / 既製コンクリート杭 → 完全剛
                 // (杭頭部 RC 円形 NM は PileTop 側 (PileTop.GetNMRaw) で 2 段断面評価。
                 //  回転ばね M-θ は剛で良い)
-                if (pileBodyType.Contains("場所打ち鋼管コンクリート杭")
-                    || pileBodyType.Contains("既製コンクリート杭"))
+                if (pileBodyType.Contains(PileTypeNames.InsituSteelPipeConcrete)
+                    || pileBodyType.Contains(PileTypeNames.PrecastConcrete))
                 {
                     return PileHeadRotationDef.Rigid();
                 }
@@ -653,7 +654,7 @@ namespace PileDesign.Models.InputData
                 // 鋼管杭 + 鉄筋定着工法 → 接合部の弾性回転剛性 Kθ を線形ばねとして反映
                 // (PileTop.GetSteelPilePileHeadJointKtheta で算定。降伏後挙動は考慮しない
                 //  純粋な線形ばね = 折線でない。必須入力欠落時は Rigid フォールバック)
-                if (pileBodyType.Contains("鋼管杭"))
+                if (pileBodyType.Contains(PileTypeNames.SteelPipe))
                 {
                     if (this.PileTop != null)
                     {
@@ -680,7 +681,7 @@ namespace PileDesign.Models.InputData
                 }
 
                 // 場所打ち鉄筋コンクリート杭 → InsituReinforcedConcreteSection.GetMThetaRelationship() を直接呼ぶ
-                if (pileBodyType.Contains("場所打ち鉄筋コンクリート杭"))
+                if (pileBodyType.Contains(PileTypeNames.InsituRc))
                 {
                     var pileSection = PileBodySegments?.FirstOrDefault()?.PileSection;
                     if (pileSection != null)

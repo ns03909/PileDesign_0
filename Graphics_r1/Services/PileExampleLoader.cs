@@ -1,3 +1,4 @@
+using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
@@ -129,7 +130,7 @@ namespace PileDesign.Services
                     // 既製杭 / 鋼管杭ライブラリ選択
                     if (!string.IsNullOrEmpty(segDto.PrecastPileName))
                     {
-                        if (segment.PileSection.PileBodyType == "鋼管杭")
+                        if (segment.PileSection.PileBodyType == PileTypeNames.SteelPipe)
                         {
                             // 鋼管杭ライブラリ (例: "800x17") → SelectedSteelPipePileName セッターが
                             // PipeDia / PipeTs を library から復元する
@@ -644,7 +645,7 @@ namespace PileDesign.Services
                 var topSec = pileBody.PileBodySegments?.FirstOrDefault()?.PileSection;
                 if (topSec != null && cp.PCRings != null && cp.PCRings.Count > 0)
                 {
-                    bool isSp = (pileBody.PileBodyType ?? "").Contains("鋼管杭");
+                    bool isSp = (pileBody.PileBodyType ?? "").Contains(PileTypeNames.SteelPipe);
                     double dia = (isSp && topSec.PipeDia > 0) ? topSec.PipeDia : topSec.PileDiameter;
 
                     // PCリング選択: 指定名 優先、なければ杭径から自動

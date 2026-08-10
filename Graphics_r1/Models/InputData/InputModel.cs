@@ -1525,12 +1525,12 @@ namespace PileDesign.Models.InputData
 
                     // 場所打ち鋼管コンクリート杭の場合、杭頭から0.5Dの位置に分割点を追加
                     // （杭頭部と杭中間部で異なるM-φ関係を適用するため）
-                    if (PileBodies[pileBodyNo - 1].PileBodyType == "場所打ち鋼管コンクリート杭")
+                    if (PileBodies[pileBodyNo - 1].PileBodyType == PileTypeNames.InsituSteelPipeConcrete)
                     {
                         // 杭頭区間（鋼管コンクリート部）の杭径を取得
                         var topSection = pileBodySegments
                             .Select(s => s.PileSection)
-                            .FirstOrDefault(s => s?.PileSectionType == "鋼管コンクリート部");
+                            .FirstOrDefault(s => s?.PileSectionType == PileTypeNames.SteelPipeConcreteSection);
                         double pileDia_m = (topSection?.PileDiameter ?? pileBodySegments[0].PileSection?.PileDiameter ?? 0) / 1000.0;
                         if (pileDia_m > 0)
                         {
@@ -1546,11 +1546,11 @@ namespace PileDesign.Models.InputData
 
                     // 鋼管杭 + 鉄筋定着工法 の場合、杭頭から D (杭径) の位置に分割点を追加
                     // (杭頭部=コンクリート充填鋼管部 ≒ 杭径分の長さ、それ以下=鋼管部 として M-φ 切替)
-                    if (PileBodies[pileBodyNo - 1].PileBodyType == "鋼管杭")
+                    if (PileBodies[pileBodyNo - 1].PileBodyType == PileTypeNames.SteelPipe)
                     {
                         var topSection = pileBodySegments
                             .Select(s => s.PileSection)
-                            .FirstOrDefault(s => s?.PileSectionType == "コンクリート充填鋼管部");
+                            .FirstOrDefault(s => s?.PileSectionType == PileTypeNames.CftSection);
                         double pileDia_m = (topSection?.PileDiameter ?? pileBodySegments[0].PileSection?.PileDiameter ?? 0) / 1000.0;
                         if (pileDia_m > 0)
                         {

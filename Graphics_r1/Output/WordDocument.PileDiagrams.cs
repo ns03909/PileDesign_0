@@ -1,3 +1,4 @@
+using PileDesign.Constants;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Common;
@@ -478,8 +479,8 @@ namespace PileDesign.Output
         private static string GetAxialLimitMeaning(string pileBodyType, string pileSectionType, bool isUltimate, int index)
         {
             // 場所打ち RC 系: 場所打ち鉄筋コンクリート杭, 場所打ち鋼管コンクリート杭(鉄筋コンクリート部)
-            bool isInsituRcLike = pileBodyType == "場所打ち鉄筋コンクリート杭"
-                || (pileBodyType == "場所打ち鋼管コンクリート杭" && pileSectionType == "鉄筋コンクリート部");
+            bool isInsituRcLike = pileBodyType == PileTypeNames.InsituRc
+                || (pileBodyType == PileTypeNames.InsituSteelPipeConcrete && pileSectionType == PileTypeNames.RcSection);
 
             if (isInsituRcLike)
             {
@@ -504,7 +505,7 @@ namespace PileDesign.Output
             }
 
             // 場所打ち鋼管コンクリート杭(鋼管コンクリート部) 安全限界
-            if (pileBodyType == "場所打ち鋼管コンクリート杭" && pileSectionType == "鋼管コンクリート部" && isUltimate)
+            if (pileBodyType == PileTypeNames.InsituSteelPipeConcrete && pileSectionType == PileTypeNames.SteelPipeConcreteSection && isUltimate)
             {
                 return index switch
                 {
@@ -515,7 +516,7 @@ namespace PileDesign.Output
             }
 
             // 鋼管杭 (鋼管部 / コンクリート充填鋼管部)
-            if (pileBodyType == "鋼管杭")
+            if (pileBodyType == PileTypeNames.SteelPipe)
             {
                 if (isUltimate)
                 {
@@ -536,7 +537,7 @@ namespace PileDesign.Output
 
             // 既製コンクリート杭 (PHC / PRC / SC)
             // SC杭 (4 entries): [0]曲げ引張、[1]曲げ圧縮、[2]せん断引張、[3]せん断圧縮
-            if (pileSectionType == "SC杭")
+            if (pileSectionType == PileTypeNames.Sc)
             {
                 return index switch
                 {
@@ -552,17 +553,17 @@ namespace PileDesign.Output
             // 損傷限界: [0]ひび割れ限界 (4-σE)Ae、[1]弾性限界 (10-σE)Ae、[2]圧壊限界 (35-σE)Ae
             // 安全限界 PHC: [0](4-σE)Ae、[1](10-σE)Ae、[2]圧壊限界 (65-σE)Ae
             // 安全限界 PRC: [0]主筋・テンドン破断限界、[1](10-σE)Ae、[2]圧壊限界 (60-σE)Ae
-            if (pileSectionType == "PHC杭" || pileSectionType == "PRC杭")
+            if (pileSectionType == PileTypeNames.Phc || pileSectionType == PileTypeNames.Prc)
             {
                 if (isUltimate)
                 {
-                    if (pileSectionType == "PRC杭" && index == 0)
+                    if (pileSectionType == PileTypeNames.Prc && index == 0)
                         return "主筋・テンドン破断限界 (-0.27(Ag·rσy + Ap·fpy))";
                     return index switch
                     {
                         0 => "引張側ひび割れ限界 ((4-σE)·Ae)",
                         1 => "弾性限界 ((10-σE)·Ae)",
-                        2 => $"圧壊限界 (({(pileSectionType == "PRC杭" ? "60" : "65")}-σE)·Ae)",
+                        2 => $"圧壊限界 (({(pileSectionType == PileTypeNames.Prc ? "60" : "65")}-σE)·Ae)",
                         _ => $"[{index}]"
                     };
                 }

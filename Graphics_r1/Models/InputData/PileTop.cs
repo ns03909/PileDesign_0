@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.PileLibrary;
+﻿using PileDesign.Constants;
+using PileDesign.Models.PileLibrary;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -274,7 +275,7 @@ namespace PileDesign.Models.InputData
 
             // 鋼管 (鋼管杭・場所打ち鋼管コンクリート杭の場合のみ)
             bool hasPipe = pileSection != null
-                && (pileBodyType == "鋼管杭" || pileBodyType == "場所打ち鋼管コンクリート杭")
+                && (pileBodyType == PileTypeNames.SteelPipe || pileBodyType == PileTypeNames.InsituSteelPipeConcrete)
                 && pileSection.PipeDia > 0.0;
             if (hasPipe)
             {
@@ -310,7 +311,7 @@ namespace PileDesign.Models.InputData
             }
 
             // 鋼管杭 + 鉄筋定着工法 専用: 付着長さ・補正係数・弾性回転剛性 Kθ(N=0)
-            if (pileBodyType == "鋼管杭")
+            if (pileBodyType == PileTypeNames.SteelPipe)
             {
                 var c = GetSteelPilePileHeadJointConstants();
                 if (c != null)
@@ -611,7 +612,7 @@ namespace PileDesign.Models.InputData
         private (List<double> N, List<double> M) GetNMRaw(string propertyName)
         {
             // 2 段鉄筋 (杭体主筋 MainBars2 + 定着筋 MainBars1) を持つ円形 RC 断面で評価する。
-            // 旧実装は判定が "場所打ち鉄筋コンクリート杭" になっていたが、これは 1 段断面で
+            // 旧実装は判定が PileTypeNames.InsituRc になっていたが、これは 1 段断面で
             // 定着筋入力 UI も持たない (PileTopWindow.xaml も MainBars2 入力を表示しない)。
             // InsituSteelPipeReinforcedConcreteTopSection は本来「場所打ち鋼管コンクリート杭 +
             // 鉄筋定着工法」の杭頭部 (主筋 + 定着筋 2 段) 用のクラスなので判定をそちらへ修正。
@@ -619,7 +620,7 @@ namespace PileDesign.Models.InputData
             // 鋼管杭 + 鉄筋定着工法 も同じ 2 段断面で扱う (場所打ち鋼管コンクリート杭と同じ思想)。
             // 唯一の差分: ConcreteOutDia (= 下層 RC 径) が公式から自動算定される点。
             // (公式は SteelPipePileLowerRcDiameter() を参照)
-            if (PileBodyType == "場所打ち鋼管コンクリート杭" || PileBodyType == "鋼管杭")
+            if (PileBodyType == PileTypeNames.InsituSteelPipeConcrete || PileBodyType == PileTypeNames.SteelPipe)
             {
                 double pileCapGsi = 1.0;
                 var insituConcrete = new InsituConcrete(ConcreteOutDia, pileCapGsi, PileCapFc);
@@ -627,7 +628,7 @@ namespace PileDesign.Models.InputData
                 var mainBars2 = new MainBars(MainBarDr2, MainBarNum2, MainBarSpec2, MainBarSize2);
                 // 鋼管杭の定着部は安全限界曲げモーメント低減率 β1 = 0.9 (一律) で評価
                 // (場所打ち鋼管コンクリート杭は従来挙動: 低 N で 0.95 / 高 N で 0.80)
-                double? beta1Override = PileBodyType == "鋼管杭" ? 0.9 : (double?)null;
+                double? beta1Override = PileBodyType == PileTypeNames.SteelPipe ? 0.9 : (double?)null;
                 var pileTop = new InsituSteelPipeReinforcedConcreteTopSection(
                     insituConcrete, mainBars1, mainBars2, beta1Override);
 
@@ -648,7 +649,7 @@ namespace PileDesign.Models.InputData
 
                 return (n, m);
             }
-            else // (PileBodyType == "既製コンクリート杭" || || )
+            else // (PileBodyType == PileTypeNames.PrecastConcrete || || )
             {
                 double pileCapGsi = 1.0;
                 var insituConcrete = new InsituConcrete(ConcreteOutDia, pileCapGsi, PileCapFc);

@@ -523,14 +523,14 @@ namespace PileDesign.FEM
             if (soilPile.PileBodySegments.Count > 0)
             {
                 var firstSection = soilPile.PileBodySegments[0].PileSection;
-                if (firstSection?.PileBodyType == "場所打ち鋼管コンクリート杭"
-                    && firstSection.PileSectionType == "鋼管コンクリート部")
+                if (firstSection?.PileBodyType == PileTypeNames.InsituSteelPipeConcrete
+                    && firstSection.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
                 {
                     double pileDia_m = firstSection.PileDiameter / 1000.0;
                     pileTopZoneBottom = z0 - 0.5 * pileDia_m;
                 }
-                else if (firstSection?.PileBodyType == "鋼管杭"
-                    && firstSection.PileSectionType == "コンクリート充填鋼管部")
+                else if (firstSection?.PileBodyType == PileTypeNames.SteelPipe
+                    && firstSection.PileSectionType == PileTypeNames.CftSection)
                 {
                     double pileDia_m = firstSection.PileDiameter / 1000.0;
                     pileTopZoneBottom = z0 - pileDia_m;

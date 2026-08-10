@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.InputData;
+﻿using PileDesign.Constants;
+using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -137,8 +138,8 @@ namespace PileDesign.Models
 
                     // 場所打ち系 (PileBodyType=場所打ち鉄筋コンクリート杭 / 場所打ち鋼管コンクリート杭+鉄筋コンクリート部)
                     bool isInsituRC =
-                        sec.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-                        (sec.PileBodyType == "場所打ち鋼管コンクリート杭" && sec.PileSectionType == "鉄筋コンクリート部");
+                        sec.PileBodyType == PileTypeNames.InsituRc ||
+                        (sec.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && sec.PileSectionType == PileTypeNames.RcSection);
 
                     if (isInsituRC)
                     {
@@ -153,8 +154,8 @@ namespace PileDesign.Models
                     }
 
                     if (sec.ConcreteFc <= 0
-                        && sec.PileBodyType != "鋼管杭"  // 純鋼管杭は Fc 不要
-                        && !(sec.PileBodyType == "場所打ち鋼管コンクリート杭" && sec.PileSectionType == "鋼管部"))
+                        && sec.PileBodyType != PileTypeNames.SteelPipe  // 純鋼管杭は Fc 不要
+                        && !(sec.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && sec.PileSectionType == PileTypeNames.SteelPipeSection))
                     {
                         message += $"杭体{pbNo} 区間{segNo}: コンクリート設計基準強度 Fc が 0 以下です ({sec.ConcreteFc}).\n";
                     }

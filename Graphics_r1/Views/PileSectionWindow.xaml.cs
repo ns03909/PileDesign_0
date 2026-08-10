@@ -1,4 +1,5 @@
-﻿using PileDesign.Common;
+﻿using PileDesign.Constants;
+using PileDesign.Common;
 using PileDesign.Models.InputData;
 using PileDesign.Output;
 using PileDesign.ViewModels;
@@ -174,17 +175,17 @@ namespace PileDesign.Views
 
         private void SetComboBoxSelectedItem()
         {
-            if (_viewModel.PileSection.PileSectionType == "PHC杭")
+            if (_viewModel.PileSection.PileSectionType == PileTypeNames.Phc)
             {
                 ComboBoxPHCPileType.ItemsSource = PileSection.PHCOption;
                 ComboBoxPHCPileType.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
             }
-            else if (_viewModel.PileSection.PileSectionType == "PRC杭")
+            else if (_viewModel.PileSection.PileSectionType == PileTypeNames.Prc)
             {
                 ComboBoxPRCPileType.ItemsSource = PileSection.PRCOption;
                 ComboBoxPRCPileType.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
             }
-            else if (_viewModel.PileSection.PileSectionType == "SC杭")
+            else if (_viewModel.PileSection.PileSectionType == PileTypeNames.Sc)
             {
                 ComboBoxSCPileType.ItemsSource = PileSection.SCOption;
                 ComboBoxSCPileType.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
@@ -255,7 +256,7 @@ namespace PileDesign.Views
             PileSectionViewModel viewModel = (PileSectionViewModel)DataContext;
             viewModel.PileSection.RecalculateSelectedPrecastPile();
 
-            if (viewModel.PileSection.PileSectionType == "鋼管杭")
+            if (viewModel.PileSection.PileSectionType == PileTypeNames.SteelPipe)
             {
                 viewModel.PileSection.SelectedSteelPipe = viewModel.PileSection.SteelPipePileSectionTypeOption[0];
             }

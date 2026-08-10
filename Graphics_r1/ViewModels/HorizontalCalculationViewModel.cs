@@ -1,3 +1,4 @@
+using PileDesign.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MathNet.Numerics;
@@ -2070,18 +2071,18 @@ namespace PileDesign.ViewModels
                 (IList<double> Phis, IList<double> Moments)? curve;
                 if (!beam.IsPileTop
                     && !Models.InputData.ConcreteModelOptions.UseFiberMPhi
-                    && section.PileBodyType == "場所打ち鋼管コンクリート杭"
-                    && section.PileSectionType == "鋼管コンクリート部")
+                    && section.PileBodyType == PileTypeNames.InsituSteelPipeConcrete
+                    && section.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
                 {
                     var sprcSection = new InsituSteelPipeReinforcedConcreteSection(
                         new InsituSteelPipe(section.PipeGrade, section.PipeDia, section.PipeTs, section.CorrosionDepth),
                         new InsituConcrete(section.ConcreteOutDia, section.ConcreteGsi, section.ConcreteFc),
                         new MainBars(section.MainBarDr, section.MainBarNum, section.MainBarSpec, section.MainBarSize));
                     // 単位変換: kN → N（断面計算はN単位を期待）
-                    var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN * 1000.0);
+                    var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN * UnitConversion.KN_TO_N);
                     // 単位変換: φ [1/mm] → [1/m], M [N·mm] → [kN·m]
-                    var phisConverted = middle.Phis.Select(p => p * 1000.0).ToList();
-                    var msConverted = middle.Moments.Select(m => m * 1e-6).ToList();
+                    var phisConverted = middle.Phis.Select(p => p * UnitConversion.PER_MM_TO_PER_M).ToList();
+                    var msConverted = middle.Moments.Select(m => m * UnitConversion.NMM_TO_KNM).ToList();
                     curve = ((IList<double>)phisConverted, (IList<double>)msConverted);
                 }
                 else
@@ -4742,16 +4743,16 @@ namespace PileDesign.ViewModels
                     (IList<double> Phis, IList<double> Moments)? curve;
                     if (!beam.IsPileTop
                         && !Models.InputData.ConcreteModelOptions.UseFiberMPhi
-                        && section.PileBodyType == "場所打ち鋼管コンクリート杭"
-                        && section.PileSectionType == "鋼管コンクリート部")
+                        && section.PileBodyType == PileTypeNames.InsituSteelPipeConcrete
+                        && section.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
                     {
                         var sprcSection = new InsituSteelPipeReinforcedConcreteSection(
                             new InsituSteelPipe(section.PipeGrade, section.PipeDia, section.PipeTs, section.CorrosionDepth),
                             new InsituConcrete(section.ConcreteOutDia, section.ConcreteGsi, section.ConcreteFc),
                             new MainBars(section.MainBarDr, section.MainBarNum, section.MainBarSpec, section.MainBarSize));
-                        var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN * 1000.0);
-                        var phisConverted = middle.Phis.Select(p => p * 1000.0).ToList();
-                        var msConverted = middle.Moments.Select(m => m * 1e-6).ToList();
+                        var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN * UnitConversion.KN_TO_N);
+                        var phisConverted = middle.Phis.Select(p => p * UnitConversion.PER_MM_TO_PER_M).ToList();
+                        var msConverted = middle.Moments.Select(m => m * UnitConversion.NMM_TO_KNM).ToList();
                         curve = ((IList<double>)phisConverted, (IList<double>)msConverted);
                     }
                     else

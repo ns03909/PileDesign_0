@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using PileDesign.Constants;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
@@ -124,7 +125,7 @@ namespace PileDesign.ViewModels
                 if (PileSection == null) return string.Empty;
                 // 鋼管杭は腐食代考慮前の鋼管外径 (PipeDia) と比較する。
                 // PileSection.PileDiameter は腐食代考慮後の有効径 (断面計算用) のため、PCリング選定の整合性比較には不適切。
-                bool isSteelPipe = PileBodyType?.Contains("鋼管杭") ?? false;
+                bool isSteelPipe = PileBodyType?.Contains(PileTypeNames.SteelPipe) ?? false;
                 double actualDia = (isSteelPipe && PileSection.PipeDia > 0) ? PileSection.PipeDia : PileSection.PileDiameter;
                 if (actualDia <= 0) return string.Empty;
                 const double tol = 1.0;
@@ -238,7 +239,7 @@ namespace PileDesign.ViewModels
             try
             {
                 // 対象施工タイプであり、PileSection が渡されている場合のみ処理
-                if (string.Equals(PileBodyType, "場所打ち鋼管コンクリート杭", StringComparison.Ordinal) && PileSection != null)
+                if (string.Equals(PileBodyType, PileTypeNames.InsituSteelPipeConcrete, StringComparison.Ordinal) && PileSection != null)
                 {
                     // 杭径（表示は最上段の杭径 + 200mm）
                     double baseDia = 0.0;
@@ -257,7 +258,7 @@ namespace PileDesign.ViewModels
                     try { DisplayTopSectionPipeDia = PileSection.PipeDia; } catch { DisplayTopSectionPipeDia = 0.0; }
                     try { DisplayTopSectionPipeTs = PileSection.PipeTs; } catch { DisplayTopSectionPipeTs = 0.0; }
                 }
-                else if (string.Equals(PileBodyType, "既製コンクリート杭", StringComparison.Ordinal) && PileSection != null)
+                else if (string.Equals(PileBodyType, PileTypeNames.PrecastConcrete, StringComparison.Ordinal) && PileSection != null)
                 {
                     // 杭径（表示は最上段の杭径 + 200mm）
                     double baseDia = 0.0;
@@ -279,7 +280,7 @@ namespace PileDesign.ViewModels
                     //try { DisplayTopSectionPipeDia = PileSection.PipeDia; } catch { DisplayTopSectionPipeDia = 0.0; }
                     //try { DisplayTopSectionPipeTs = PileSection.PipeTs; } catch { DisplayTopSectionPipeTs = 0.0; }
                 }
-                else if (string.Equals(PileBodyType, "場所打ち鉄筋コンクリート杭", StringComparison.Ordinal) && PileSection != null)
+                else if (string.Equals(PileBodyType, PileTypeNames.InsituRc, StringComparison.Ordinal) && PileSection != null)
                 {
                     // 場所打ち鉄筋コンクリート杭 (キャプテンパイル工法 等の半固定接合で使用)
                     // 杭径は最上段の杭径をそのまま表示
@@ -293,7 +294,7 @@ namespace PileDesign.ViewModels
                     PileTop.MainBarFtr2 = 0;
                     PileTop.MainBarSpec2 = "SD390";
                 }
-                else if (string.Equals(PileBodyType, "鋼管杭", StringComparison.Ordinal) && PileSection != null)
+                else if (string.Equals(PileBodyType, PileTypeNames.SteelPipe, StringComparison.Ordinal) && PileSection != null)
                 {
                     // 鋼管杭 + 鉄筋定着工法
                     // 杭径 (= 下層 RC 径) は SteelPipePileLowerRcDiameter 公式で自動算定
@@ -585,7 +586,7 @@ namespace PileDesign.ViewModels
             wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect("M (kNm)");
 
             // 鋼管杭以外 (場所打ち鋼管コンクリート杭/既製コンクリート杭) は剛接合のため曲線なし
-            if (!string.Equals(PileBodyType, "鋼管杭", StringComparison.Ordinal))
+            if (!string.Equals(PileBodyType, PileTypeNames.SteelPipe, StringComparison.Ordinal))
             {
                 wpf.Plot.Axes.AutoScale();
                 wpf.Refresh();
@@ -1012,8 +1013,8 @@ namespace PileDesign.ViewModels
                 var ring = PileTop.CapringPile.PCRing;
 
                 // 杭体描画 — 杭種に応じてコンクリート内径・鋼管内径も描画
-                bool isSteelPipe = PileBodyType?.Contains("鋼管杭") ?? false;
-                bool isPrecastConcrete = PileBodyType?.Contains("既製コンクリート杭") ?? false;
+                bool isSteelPipe = PileBodyType?.Contains(PileTypeNames.SteelPipe) ?? false;
+                bool isPrecastConcrete = PileBodyType?.Contains(PileTypeNames.PrecastConcrete) ?? false;
                 double pileOuterDia = ring.D;
 
                 if (isSteelPipe)
@@ -1076,8 +1077,8 @@ namespace PileDesign.ViewModels
 
             else if (PileTopType == "鉄筋定着工法")
             {
-                if (string.Equals(PileBodyType, "場所打ち鋼管コンクリート杭", StringComparison.Ordinal)
-                    || string.Equals(PileBodyType, "鋼管杭", StringComparison.Ordinal))
+                if (string.Equals(PileBodyType, PileTypeNames.InsituSteelPipeConcrete, StringComparison.Ordinal)
+                    || string.Equals(PileBodyType, PileTypeNames.SteelPipe, StringComparison.Ordinal))
                 {
                     if (PileSection != null)
                     {
@@ -1107,7 +1108,7 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                else if (string.Equals(PileBodyType, "既製コンクリート杭", StringComparison.Ordinal))
+                else if (string.Equals(PileBodyType, PileTypeNames.PrecastConcrete, StringComparison.Ordinal))
                 {
                     if (PileSection != null)
                     {

@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using PileDesign.Constants;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
@@ -125,34 +126,34 @@ namespace PileDesign.ViewModels
         {
             if (PileSection == null) return;
 
-            if (PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-                (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鉄筋コンクリート部"))
+            if (PileSection.PileBodyType == PileTypeNames.InsituRc ||
+                (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.RcSection))
             {
                 DrawInsituReinforcedConcretePile_NQ(NMin, NMax, nDiv);
             }
-            else if (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鋼管コンクリート部")
+            else if (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
             {
                 DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, nDiv);
             }
-            else if (PileSection.PileBodyType == "鋼管杭" && PileSection.PileSectionType == "コンクリート充填鋼管部")
+            else if (PileSection.PileBodyType == PileTypeNames.SteelPipe && PileSection.PileSectionType == PileTypeNames.CftSection)
             {
                 // 鋼管杭+コンクリート充填鋼管部 は SPRC の鋼管コンクリート部 と同じ計算で描画
                 DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, nDiv);
             }
-            else if (PileSection.PileBodyType == "鋼管杭" && PileSection.PileSectionType == "鋼管部")
+            else if (PileSection.PileBodyType == PileTypeNames.SteelPipe && PileSection.PileSectionType == PileTypeNames.SteelPipeSection)
             {
                 // 鋼管杭 (鋼管部、純鋼管区間) は SteelPipeSection の Middle ヘルパーで直接描画
                 DrawSteelPipePileMiddle_NQ(nDiv);
             }
-            else if (PileSection.PileSectionType == "PHC杭")
+            else if (PileSection.PileSectionType == PileTypeNames.Phc)
             {
                 DrawPHC_NQ(NMin, NMax, nDiv);
             }
-            else if (PileSection.PileSectionType == "PRC杭")
+            else if (PileSection.PileSectionType == PileTypeNames.Prc)
             {
                 DrawPRC_NQ(NMin, NMax, nDiv);
             }
-            else if (PileSection.PileSectionType == "SC杭")
+            else if (PileSection.PileSectionType == PileTypeNames.Sc)
             {
                 if (PileSection.PipeTs > 0)
                     DrawSC_NQ(NMin, NMax, nDiv);
@@ -538,7 +539,7 @@ namespace PileDesign.ViewModels
         // CorrosionDepth は既に PileDiameter / CorrodedPipeTs で控除済み。
         private SteelPipeSection? CreateSteelPipeSectionMiddle()
         {
-            if (PileSection == null || PileSection.PileBodyType != "鋼管杭") return null;
+            if (PileSection == null || PileSection.PileBodyType != PileTypeNames.SteelPipe) return null;
             if (PileSection.PileDiameter <= 0 || PileSection.CorrodedPipeTs <= 0) return null;
 
             var (sigmaU, f) = SteelPipeGrades.GetProperties(PileSection.PipeGrade ?? "SKK400");
@@ -640,11 +641,11 @@ namespace PileDesign.ViewModels
                 if (phis is null || Ms is null || phis.Count == 0 || Ms.Count == 0) continue;
 
                 // 単位変換: M [Nmm] -> [kNm]
-                var Ms_kNm = Ms.Select(m => m * 1e-6).ToArray();
+                var Ms_kNm = Ms.Select(m => m * UnitConversion.NMM_TO_KNM).ToArray();
                 var phis_1_m = phis.ToArray();
 
                 var scatter = wpf.Plot.Add.Scatter(phis_1_m, Ms_kNm);
-                scatter.LegendText = $"N={(n * 0.001):N0}kN";
+                scatter.LegendText = $"N={(n * UnitConversion.N_TO_KN):N0}kN";
                 scatter.LineWidth = 2;
 
                 // 中間部（破線）を描く場合
@@ -660,7 +661,7 @@ namespace PileDesign.ViewModels
                     if (phisMiddle != null && phisMiddle.Count > 0)
                     {
                         var scatterMiddle = wpf.Plot.Add.Scatter(phisMiddle.ToArray(), Ms_kNm);
-                        scatterMiddle.LegendText = $"{(middleLegendPrefix ?? "中間部")} N={(n * 0.001):N0}kN";
+                        scatterMiddle.LegendText = $"{(middleLegendPrefix ?? "中間部")} N={(n * UnitConversion.N_TO_KN):N0}kN";
                         scatterMiddle.LineWidth = 2;
                         scatterMiddle.Color = scatter.Color;
                         scatterMiddle.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
@@ -677,7 +678,7 @@ namespace PileDesign.ViewModels
                     if (fiber is { } fc && fc.phis.Count > 1 && fc.phis.Count == fc.Ms.Count)
                     {
                         var scatterFiber = wpf.Plot.Add.Scatter(
-                            fc.phis.ToArray(), fc.Ms.Select(m => m * 1e-6).ToArray());
+                            fc.phis.ToArray(), fc.Ms.Select(m => m * UnitConversion.NMM_TO_KNM).ToArray());
                         scatterFiber.LineWidth = 1.5f;
                         scatterFiber.Color = scatter.Color;
                         scatterFiber.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
@@ -749,11 +750,11 @@ namespace PileDesign.ViewModels
                 var (thetas, Ms) = getMTheta(n);
                 if (thetas is null || Ms is null || thetas.Count == 0 || Ms.Count == 0) continue;
 
-                var Ms_kNm = Ms.Select(m => m * 1e-6).ToArray();
+                var Ms_kNm = Ms.Select(m => m * UnitConversion.NMM_TO_KNM).ToArray();
                 var thetasArr = thetas.ToArray();
 
                 var scatter = wpf.Plot.Add.Scatter(thetasArr, Ms_kNm);
-                scatter.LegendText = $"N={(n * 0.001):N0}kN";
+                scatter.LegendText = $"N={(n * UnitConversion.N_TO_KN):N0}kN";
                 scatter.LineWidth = 2;
             }
 
@@ -797,9 +798,9 @@ namespace PileDesign.ViewModels
         // 鋼管杭は SteelPipeSection（別系統、M-φ が既に厳密な折線）のため対象外。
         public bool IsFiberMPhiOverlayAvailable =>
             PileSection != null &&
-            (PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-             PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" ||
-             PileSection.PileBodyType == "既製コンクリート杭");
+            (PileSection.PileBodyType == PileTypeNames.InsituRc ||
+             PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete ||
+             PileSection.PileBodyType == PileTypeNames.PrecastConcrete);
 
         partial void OnShowFiberMPhiOverlayChanged(bool value)
         {
@@ -809,8 +810,8 @@ namespace PileDesign.ViewModels
                 if (!IsFiberMPhiOverlayAvailable) return;
 
                 bool isInsituRc =
-                    PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-                    (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鉄筋コンクリート部");
+                    PileSection.PileBodyType == PileTypeNames.InsituRc ||
+                    (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.RcSection);
 
                 if (isInsituRc && _lastMPhiNMin is double nMin && _lastMPhiNMax is double nMax)
                 {
@@ -845,8 +846,8 @@ namespace PileDesign.ViewModels
             var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
 
             // kN -> N
-            NMin *= 1000;
-            NMax *= 1000;
+            NMin *= UnitConversion.KN_TO_N;
+            NMax *= UnitConversion.KN_TO_N;
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
             // M-φ: 場所打ちRC（オプション時はファイバーモデル曲線を破線で重ね描き）
@@ -902,7 +903,7 @@ namespace PileDesign.ViewModels
 
             // M-θ は未定義メッセージ。鋼管杭+コンクリート充填鋼管部 は M-θ が杭頭部側 (PileTop) で
             // Kθ 線形ばねとして定義されるため、その旨を表示する。
-            string mThetaMessage = PileSection?.PileBodyType == "鋼管杭"
+            string mThetaMessage = PileSection?.PileBodyType == PileTypeNames.SteelPipe
                 ? "鋼管杭の曲げモーメント-回転角関係は、杭頭部で定義されます"
                 : "場所打ち鋼管コンクリート杭の曲げモーメント-回転角関係の定義はありません";
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
@@ -932,8 +933,8 @@ namespace PileDesign.ViewModels
         // CreateSteelPipeSectionMiddle と異なり Fc を渡す (杭頭部 Md/Mu 計算に必要)。
         private SteelPipeSection? CreateSteelPipeSectionHead()
         {
-            if (PileSection == null || PileSection.PileBodyType != "鋼管杭") return null;
-            if (PileSection.PileSectionType != "コンクリート充填鋼管部") return null;
+            if (PileSection == null || PileSection.PileBodyType != PileTypeNames.SteelPipe) return null;
+            if (PileSection.PileSectionType != PileTypeNames.CftSection) return null;
             if (PileSection.PileDiameter <= 0 || PileSection.CorrodedPipeTs <= 0) return null;
 
             var (sigmaU, f) = SteelPipeGrades.GetProperties(PileSection.PipeGrade ?? "SKK400");
@@ -1051,8 +1052,8 @@ namespace PileDesign.ViewModels
 
             List<double> ns;
 
-            if (PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-                (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鉄筋コンクリート部"))
+            if (PileSection.PileBodyType == PileTypeNames.InsituRc ||
+                (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.RcSection))
             {
                 var (serviceN, serviceM) = PileSection.UnfactoredServiceNM;
                 var (damageN, damageM) = PileSection.UnfactoredDamageNM;
@@ -1143,8 +1144,8 @@ namespace PileDesign.ViewModels
             if (ns == null || ns.Count == 0)
                 ns = PileSection.UltimateLimitAxialForceThresholds;
 
-            if (PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-                (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鉄筋コンクリート部"))
+            if (PileSection.PileBodyType == PileTypeNames.InsituRc ||
+                (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.RcSection))
             {
                 // M-φグラフの描画
                 double NMin = ns[0];
@@ -1154,7 +1155,7 @@ namespace PileDesign.ViewModels
                 DrawInsituReinforcedConcretePile_NQ(NMin, NMax, 10);
             }
 
-            else if (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鋼管コンクリート部")
+            else if (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
             {
                 // M-φグラフの描画
                 double NMin = ns[0]; // kN -> N
@@ -1164,7 +1165,7 @@ namespace PileDesign.ViewModels
                 DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, 10);
             }
 
-            else if (PileSection.PileBodyType == "鋼管杭" && PileSection.PileSectionType == "コンクリート充填鋼管部")
+            else if (PileSection.PileBodyType == PileTypeNames.SteelPipe && PileSection.PileSectionType == PileTypeNames.CftSection)
             {
                 // 鋼管杭+コンクリート充填鋼管部 は接合部 (杭頭) のみに存在する部位なので、
                 // 杭中間部 (破線) 曲線は描かない。SPRC のように杭全長に存在する部位ではない。
@@ -1175,7 +1176,7 @@ namespace PileDesign.ViewModels
                 DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, 10);
             }
 
-            else if (PileSection.PileBodyType == "鋼管杭" && PileSection.PileSectionType == "鋼管部")
+            else if (PileSection.PileBodyType == PileTypeNames.SteelPipe && PileSection.PileSectionType == PileTypeNames.SteelPipeSection)
             {
                 // 鋼管杭 (鋼管部、純鋼管区間) は SteelPipeSection の Middle ヘルパーで直接描画。
                 // UltimateLimitAxialForceThresholds は CreateSectionCalculator が null を返すため
@@ -1184,7 +1185,7 @@ namespace PileDesign.ViewModels
                 DrawSteelPipePileMiddle_NQ(10);
             }
 
-            else if (PileSection.PileSectionType == "PHC杭")
+            else if (PileSection.PileSectionType == PileTypeNames.Phc)
             {
                 // M-φグラフの描画
                 double NMin = ns[0]; // kN -> N
@@ -1195,7 +1196,7 @@ namespace PileDesign.ViewModels
             }
 
 
-            else if (PileSection.PileSectionType == "PRC杭")
+            else if (PileSection.PileSectionType == PileTypeNames.Prc)
             {
                 if (PileSection.MainBarDr <= 0 || PileSection.MainBarNum <= 0 || PileSection.PileDiameter <= 0)
                 {
@@ -1211,7 +1212,7 @@ namespace PileDesign.ViewModels
                 DrawPRC_NQ(NMin, NMax, 10);
             }
 
-            else if (PileSection.PileSectionType == "SC杭")
+            else if (PileSection.PileSectionType == PileTypeNames.Sc)
             {
                 if (PileSection.PipeTs > 0)
                 {
@@ -1285,8 +1286,8 @@ namespace PileDesign.ViewModels
             DrawGauge();
 
 
-            if (PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-                (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鉄筋コンクリート部"))
+            if (PileSection.PileBodyType == PileTypeNames.InsituRc ||
+                (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.RcSection))
             {
                 double concreteOutDia = PileSection.ConcreteOutDia;
                 DrawDonut("concrete", concreteOutDia, 0.0);
@@ -1299,7 +1300,7 @@ namespace PileDesign.ViewModels
                 double inDia = outDia - 2 * hoopsize;
                 DrawDonut("hoop", outDia, inDia);
             }
-            else if (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鋼管コンクリート部")
+            else if (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
             {
                 double concreteOutDia = PileSection.ConcreteOutDia;
                 double outdia = PileSection.PipeDia;
@@ -1313,7 +1314,7 @@ namespace PileDesign.ViewModels
                 double pcd = concreteOutDia - PileSection.MainBarCenterCover * 2.0;
                 DrawMainBars(number, dia, pcd);
             }
-            else if (PileSection.PileSectionType == "PHC杭")
+            else if (PileSection.PileSectionType == PileTypeNames.Phc)
             {
                 double outdia = PileSection.ConcreteOutDia;
                 double india = PileSection.ConcreteOutDia - 2 * PileSection.ConcreteThickness;
@@ -1321,7 +1322,7 @@ namespace PileDesign.ViewModels
                 double tendonPCD = PileSection.TendonDp;
                 DrawTendons(tendonPCD);
             }
-            else if (PileSection.PileSectionType == "PRC杭")
+            else if (PileSection.PileSectionType == PileTypeNames.Prc)
             {
                 double outdia = PileSection.ConcreteOutDia;
                 double india = PileSection.ConcreteOutDia - 2 * PileSection.ConcreteThickness;
@@ -1333,7 +1334,7 @@ namespace PileDesign.ViewModels
                 double tendonPCD = PileSection.TendonDp;
                 DrawTendons(tendonPCD);
             }
-            else if (PileSection.PileSectionType == "SC杭")
+            else if (PileSection.PileSectionType == PileTypeNames.Sc)
             {
                 double outdia = PileSection.PipeDia;
                 double india = PileSection.PipeDia - 2 * PileSection.PipeTs;
@@ -1342,7 +1343,7 @@ namespace PileDesign.ViewModels
                 double concreteIndia = concreteOutDia - 2 * PileSection.ConcreteThickness;
                 DrawDonut("concrete", concreteOutDia, concreteIndia);
             }
-            else if (PileSection.PileBodyType == "鋼管杭")
+            else if (PileSection.PileBodyType == PileTypeNames.SteelPipe)
             {
                 double outdia = PileSection.PipeDia;
                 double india = PileSection.PipeDia - 2 * PileSection.PipeTs;

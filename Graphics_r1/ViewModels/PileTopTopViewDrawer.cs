@@ -1,4 +1,5 @@
-﻿using PileDesign.Common;
+﻿using PileDesign.Constants;
+using PileDesign.Common;
 using System;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -122,8 +123,8 @@ namespace PileDesign.ViewModels
                     var ring = ViewModel.PileTop.CapringPile.PCRing;
 
                     // 杭体描画 — 杭種に応じてコンクリート内径・鋼管内径も描画
-                    bool isSteelPipe = ViewModel.PileBodyType?.Contains("鋼管杭") ?? false;
-                    bool isPrecastConcrete = ViewModel.PileBodyType?.Contains("既製コンクリート杭") ?? false;
+                    bool isSteelPipe = ViewModel.PileBodyType?.Contains(PileTypeNames.SteelPipe) ?? false;
+                    bool isPrecastConcrete = ViewModel.PileBodyType?.Contains(PileTypeNames.PrecastConcrete) ?? false;
                     double pileOuterDia = ring.D;
 
                     if (isSteelPipe)

@@ -1,3 +1,4 @@
+using PileDesign.Constants;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -85,7 +86,7 @@ namespace PileDesign.Models.InputData
         public string PileBodyRef { get; set; } = "";
 
         [JsonPropertyName("pileBodyType")]
-        public string PileBodyType { get; set; } = "既製コンクリート杭";
+        public string PileBodyType { get; set; } = PileTypeNames.PrecastConcrete;
 
         [JsonPropertyName("pileTopType")]
         public string PileTopType { get; set; } = "鉄筋定着工法";

@@ -1,3 +1,4 @@
+using PileDesign.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -188,13 +189,13 @@ namespace PileDesign.Output
 
                 // 場所打ち杭の拡底部（円柱+円錐台）
                 if (toeDia > lastDia && lastDia > 0 &&
-                    (body.PileBodyType == "場所打ち鉄筋コンクリート杭" || body.PileBodyType == "場所打ち鋼管コンクリート杭"))
+                    (body.PileBodyType == PileTypeNames.InsituRc || body.PileBodyType == PileTypeNames.InsituSteelPipeConcrete))
                 {
                     AddPileToe(file, layerIdx, x, y, pileBottomZ, toeDia, lastDia);
                 }
 
                 // 既製コンクリート杭の拡大根固め部（円筒）
-                if (toeDia > lastDia && body.PileBodyType == "既製コンクリート杭")
+                if (toeDia > lastDia && body.PileBodyType == PileTypeNames.PrecastConcrete)
                 {
                     double toeHeight = toeDia * body.PrecastConcretePileToeHeightRatio;
                     double toeBottomZ = pileBottomZ - toeHeight;

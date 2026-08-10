@@ -1,4 +1,5 @@
-﻿using PileDesign.Common;
+﻿using PileDesign.Constants;
+using PileDesign.Common;
 using PileDesign.ViewModels;
 using System;
 using System.Text.RegularExpressions;
@@ -41,8 +42,8 @@ namespace PileDesign.Models
             DrawGauge();
 
 
-            if (ViewModel.PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-                ViewModel.PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && ViewModel.PileSection.PileSectionType == "鉄筋コンクリート部")
+            if (ViewModel.PileSection.PileBodyType == PileTypeNames.InsituRc ||
+                ViewModel.PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && ViewModel.PileSection.PileSectionType == PileTypeNames.RcSection)
             {
                 double concreteOutDia = ViewModel.PileSection.ConcreteOutDia;
                 DrawDonut("concrete", concreteOutDia, 0.0);
@@ -55,7 +56,7 @@ namespace PileDesign.Models
                 double inDia = outDia - 2 * hoopsize;
                 DrawDonut("hoop", outDia, inDia);
             }
-            else if (ViewModel.PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && ViewModel.PileSection.PileSectionType == "鋼管コンクリート部")
+            else if (ViewModel.PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && ViewModel.PileSection.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
             {
                 double concreteOutDia = ViewModel.PileSection.ConcreteOutDia;
                 double outdia = ViewModel.PileSection.PipeDia;
@@ -69,7 +70,7 @@ namespace PileDesign.Models
                 double pcd = concreteOutDia - ViewModel.PileSection.MainBarCenterCover * 2.0;
                 DrawMainBars(number, dia, pcd);
             }
-            else if (ViewModel.PileSection.PileSectionType == "PHC杭")
+            else if (ViewModel.PileSection.PileSectionType == PileTypeNames.Phc)
             {
                 double outdia = ViewModel.PileSection.ConcreteOutDia;
                 double india = ViewModel.PileSection.ConcreteOutDia - 2 * ViewModel.PileSection.ConcreteThickness;
@@ -77,7 +78,7 @@ namespace PileDesign.Models
                 double tendonPCD = ViewModel.PileSection.TendonDp;
                 DrawTendons(tendonPCD);
             }
-            else if (ViewModel.PileSection.PileSectionType == "PRC杭")
+            else if (ViewModel.PileSection.PileSectionType == PileTypeNames.Prc)
             {
                 double outdia = ViewModel.PileSection.ConcreteOutDia;
                 double india = ViewModel.PileSection.ConcreteOutDia - 2 * ViewModel.PileSection.ConcreteThickness;
@@ -90,7 +91,7 @@ namespace PileDesign.Models
                 double tendonPCD = ViewModel.PileSection.TendonDp;
                 DrawTendons(tendonPCD);
             }
-            else if (ViewModel.PileSection.PileSectionType == "SC杭")
+            else if (ViewModel.PileSection.PileSectionType == PileTypeNames.Sc)
             {
                 double outdia = ViewModel.PileSection.PipeDia;
                 double india = ViewModel.PileSection.PipeDia - 2 * ViewModel.PileSection.PipeTs;
@@ -99,7 +100,7 @@ namespace PileDesign.Models
                 double concreteIndia = concreteOutDia - 2 * ViewModel.PileSection.ConcreteThickness;
                 DrawDonut("concrete", concreteOutDia, concreteIndia);
             }
-            else if (ViewModel.PileSection.PileBodyType == "鋼管杭")
+            else if (ViewModel.PileSection.PileBodyType == PileTypeNames.SteelPipe)
             {
                 double outdia = ViewModel.PileSection.PipeDia;
                 double india = ViewModel.PileSection.PipeDia - 2 * ViewModel.PileSection.PipeTs;

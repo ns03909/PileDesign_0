@@ -1,4 +1,5 @@
-﻿//using System.Windows.Forms.DataVisualization.Charting;
+﻿using PileDesign.Constants;
+//using System.Windows.Forms.DataVisualization.Charting;
 //using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -290,7 +291,7 @@ namespace PileDesign.ViewModels
                 // 安全措置：もし null/空 の要素があれば既定値で埋める（UIが空になるのを防ぐ）
                 var defaultType = PileBodyInput.PileBodyTypeOption != null && PileBodyInput.PileBodyTypeOption.Count > 0
                     ? PileBodyInput.PileBodyTypeOption[0]
-                    : "場所打ち鉄筋コンクリート杭";
+                    : PileTypeNames.InsituRc;
 
                 foreach (var pb in PileBodies)
                 {
@@ -535,11 +536,11 @@ namespace PileDesign.ViewModels
             foreach (var pb in pileBodies)
             {
                 no++;
-                if (pb?.PileBodyType != "場所打ち鋼管コンクリート杭") continue;
+                if (pb?.PileBodyType != PileTypeNames.InsituSteelPipeConcrete) continue;
                 if (pb.PileBodySegments == null || pb.PileBodySegments.Count == 0) continue;
                 var topSection = pb.PileBodySegments[0]?.PileSection;
                 if (topSection == null) continue;
-                if (topSection.PileSectionType == "鉄筋コンクリート部")
+                if (topSection.PileSectionType == PileTypeNames.RcSection)
                 {
                     issues.Add($"杭体 {no}");
                 }
@@ -671,10 +672,10 @@ namespace PileDesign.ViewModels
         {
             var allowedTypes = new[]
             {
-                "場所打ち鉄筋コンクリート杭",
-                "場所打ち鋼管コンクリート杭",
-                "既製コンクリート杭",
-                "鋼管杭"
+                PileTypeNames.InsituRc,
+                PileTypeNames.InsituSteelPipeConcrete,
+                PileTypeNames.PrecastConcrete,
+                PileTypeNames.SteelPipe
             };
 
             var pileBody = PileBodies[PileBodyNo - 1];
@@ -771,7 +772,7 @@ namespace PileDesign.ViewModels
         private void RecalculateTipNonPermability(object parameter)
         {
             // PileBodyTypeプロパティが存在するかどうかを確認する
-            if (PileBodies[PileBodyNo - 1].PileBodyType == "既製コンクリート杭" &&
+            if (PileBodies[PileBodyNo - 1].PileBodyType == PileTypeNames.PrecastConcrete &&
                 PileBodies[PileBodyNo - 1].PileConstructionType == "打込み杭")
             {
                 if (PileBodies[PileBodyNo - 1].PileTipStyle == "閉端杭")
@@ -794,7 +795,7 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
-            if (PileBodies[PileBodyNo - 1].PileBodyType == "鋼管杭" &&
+            if (PileBodies[PileBodyNo - 1].PileBodyType == PileTypeNames.SteelPipe &&
                 PileBodies[PileBodyNo - 1].PileConstructionType == "回転貫入杭")
             {
                 if (PileBodies[PileBodyNo - 1].PileTipStyle == "閉端杭")
@@ -911,19 +912,19 @@ namespace PileDesign.ViewModels
         {
             switch (PileBodies[PileBodyNo - 1].PileBodyType)
             {
-                case "場所打ち鉄筋コンクリート杭":
+                case PileTypeNames.InsituRc:
                     UpdatePileOptions(PileBodyInput.InsituReinforcedConcretePileTopTypeOption,
                         PileBodyInput.InsituPileConstructionTypeOption);
                     break;
-                case "場所打ち鋼管コンクリート杭":
+                case PileTypeNames.InsituSteelPipeConcrete:
                     UpdatePileOptions(PileBodyInput.InsituSteelPipedConcretePileTopTypeOption,
                         PileBodyInput.InsituPileConstructionTypeOption);
                     break;
-                case "既製コンクリート杭":
+                case PileTypeNames.PrecastConcrete:
                     UpdatePileOptions(PileBodyInput.PrecastConcretePileTopTypeOption,
                         PileBodyInput.PrecastPileConstructionTypeOption);
                     break;
-                case "鋼管杭":
+                case PileTypeNames.SteelPipe:
                     UpdatePileOptions(PileBodyInput.SteelPileTopTypeOption,
                         PileBodyInput.SteelPileConstructionTypeOption);
                     break;
@@ -939,10 +940,10 @@ namespace PileDesign.ViewModels
             var body = PileBodies[PileBodyNo - 1];
             var correctOption = body.PileBodyType switch
             {
-                "場所打ち鉄筋コンクリート杭" => PileBodyInput.InsituReinforcedConcretePileTopTypeOption,
-                "場所打ち鋼管コンクリート杭" => PileBodyInput.InsituSteelPipedConcretePileTopTypeOption,
-                "既製コンクリート杭" => PileBodyInput.PrecastConcretePileTopTypeOption,
-                "鋼管杭" => PileBodyInput.SteelPileTopTypeOption,
+                PileTypeNames.InsituRc => PileBodyInput.InsituReinforcedConcretePileTopTypeOption,
+                PileTypeNames.InsituSteelPipeConcrete => PileBodyInput.InsituSteelPipedConcretePileTopTypeOption,
+                PileTypeNames.PrecastConcrete => PileBodyInput.PrecastConcretePileTopTypeOption,
+                PileTypeNames.SteelPipe => PileBodyInput.SteelPileTopTypeOption,
                 _ => PileBodyInput.InsituReinforcedConcretePileTopTypeOption
             };
 
@@ -957,9 +958,9 @@ namespace PileDesign.ViewModels
             // 施工法オプションも同期
             var correctConstruction = body.PileBodyType switch
             {
-                "場所打ち鉄筋コンクリート杭" or "場所打ち鋼管コンクリート杭" => PileBodyInput.InsituPileConstructionTypeOption,
-                "既製コンクリート杭" => PileBodyInput.PrecastPileConstructionTypeOption,
-                "鋼管杭" => PileBodyInput.SteelPileConstructionTypeOption,
+                PileTypeNames.InsituRc or PileTypeNames.InsituSteelPipeConcrete => PileBodyInput.InsituPileConstructionTypeOption,
+                PileTypeNames.PrecastConcrete => PileBodyInput.PrecastPileConstructionTypeOption,
+                PileTypeNames.SteelPipe => PileBodyInput.SteelPileConstructionTypeOption,
                 _ => PileBodyInput.InsituPileConstructionTypeOption
             };
 

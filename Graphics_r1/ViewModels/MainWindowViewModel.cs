@@ -3270,7 +3270,7 @@ namespace PileDesign.ViewModels
                         sec.InvalidateComputedCaches();
                         // ξ→Ec オプションは PileSection.ConcreteE（諸元表示・EA/EI）にも効くため、
                         // 場所打ち系（既製杭以外＝式ベース Ec）で再計算し諸元も更新する。
-                        if (sec.PileBodyType != "既製コンクリート杭")
+                        if (sec.PileBodyType != PileTypeNames.PrecastConcrete)
                         {
                             sec.RecalculateConcreteE();
                             sec.SetSpecs();
@@ -3388,7 +3388,7 @@ namespace PileDesign.ViewModels
             for (int i = 0; i < model.PileBodies.Count; i++)
             {
                 var pb = model.PileBodies[i];
-                if (pb?.PileBodyType != "既製コンクリート杭") continue; // 既製のみ対象
+                if (pb?.PileBodyType != PileTypeNames.PrecastConcrete) continue; // 既製のみ対象
                 if (pb.PileBodySegments == null) continue;
 
                 for (int j = 0; j < pb.PileBodySegments.Count; j++)

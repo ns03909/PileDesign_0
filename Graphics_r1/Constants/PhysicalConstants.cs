@@ -51,6 +51,21 @@ public static class UnitConversion
 
     /// <summary>ニュートンからキロニュートンへの変換係数 (1N = 0.001kN)</summary>
     public const double N_TO_KN = 0.001;
+
+    // ─── M-φ パイプライン用（断面計算 [N, mm] ⇔ FEM/表示 [kN, m]）───
+    // 過去に kN/N 混同で M-φ が 1/1000 になる実バグがあった系統。変換は必ず本定数を使うこと。
+
+    /// <summary>曲げモーメント N·mm → kN·m (×1e-6)</summary>
+    public const double NMM_TO_KNM = 1e-6;
+
+    /// <summary>曲げモーメント kN·m → N·mm (×1e6)</summary>
+    public const double KNM_TO_NMM = 1e6;
+
+    /// <summary>曲率 1/mm → 1/m (=rad/m, ×1000)</summary>
+    public const double PER_MM_TO_PER_M = 1000.0;
+
+    /// <summary>曲率 1/m → 1/mm (×0.001)</summary>
+    public const double PER_M_TO_PER_MM = 0.001;
 }
 
 /// <summary>
