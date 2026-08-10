@@ -514,10 +514,10 @@ namespace PileDesign.Models.InputData
 
             double N, M;
 
-            var result0 = CircularPipeSectionSteelPipe.GetForceAndMoment("linear", InsituSteelPipe, epsilon0, curvature);
-            var result1 = CircularSolidSectionConcrete.GetForceAndMoment("linear", InsituConcrete, epsilon0, curvature);
-            var result2 = CircularPipeSectionMainbars.GetForceAndMoment("linear", MainBars, epsilon0, curvature);
-            var result3 = CircularPipeSectionMainbars.GetForceAndMoment("linear", InsituConcrete, epsilon0, curvature);
+            var result0 = CircularPipeSectionSteelPipe.GetForceAndMoment(MaterialLaw.Linear, InsituSteelPipe, epsilon0, curvature);
+            var result1 = CircularSolidSectionConcrete.GetForceAndMoment(MaterialLaw.Linear, InsituConcrete, epsilon0, curvature);
+            var result2 = CircularPipeSectionMainbars.GetForceAndMoment(MaterialLaw.Linear, MainBars, epsilon0, curvature);
+            var result3 = CircularPipeSectionMainbars.GetForceAndMoment(MaterialLaw.Linear, InsituConcrete, epsilon0, curvature);
 
             N = result0.Item1 + result1.Item1 + result2.Item1 - result3.Item1;
             M = result0.Item2 + result1.Item2 + result2.Item2 - result3.Item2;
@@ -535,9 +535,9 @@ namespace PileDesign.Models.InputData
             // 指針(案) 準拠オプション時（かつ解析隔離中でない）: 鋼管=0.85×引張強さ上限トリリニア、
             // 鋼管内コンクリート=e関数法、主筋=バイリニア。既定は全材料バイリニア。
             bool guideline = ConcreteModelOptions.UseInsituUltimateEFunction && !_forceBilinearUltimate;
-            string typePipe = guideline ? "guidelineUltimate" : "bilinear";
-            string typeConc = guideline ? "eFunction" : "bilinear";
-            string typeRebar = "bilinear";
+            MaterialLaw typePipe = guideline ? MaterialLaw.GuidelineUltimate : MaterialLaw.Bilinear;
+            MaterialLaw typeConc = guideline ? MaterialLaw.EFunction : MaterialLaw.Bilinear;
+            MaterialLaw typeRebar = MaterialLaw.Bilinear;
             var result0 = CircularPipeSectionSteelPipe.GetForceAndMoment(typePipe, InsituSteelPipe, epsilon0, curvature);
             var result1 = CircularSolidSectionConcrete.GetForceAndMoment(typeConc, InsituConcrete, epsilon0, curvature);
             var result2 = CircularPipeSectionMainbars.GetForceAndMoment(typeRebar, MainBars, epsilon0, curvature);
@@ -554,7 +554,7 @@ namespace PileDesign.Models.InputData
             double epsilonC, double curvature, bool ultimate, int division = 200)
         {
             double epsilon0 = epsilonC - (PileDia * 0.5 - PipeT) * curvature;
-            string type = ultimate ? "bilinear" : "linear";
+            MaterialLaw type = ultimate ? MaterialLaw.Bilinear : MaterialLaw.Linear;
             double rConc = (PileDia - 2 * PipeT) * 0.5;
             double rPipe = (PileDia - PipeT) * 0.5;
             double rOuter = PileDia * 0.5;

@@ -6,6 +6,26 @@ using System.Linq;
 
 namespace PileDesign.Models.InputData
 {
+    /// <summary>
+    /// 材料構成則（応力ひずみ関係）の種別。
+    /// 従来は "linear" / "bilinear" 等の文字列セレクタで、typo が実行時まで検出できなかったため
+    /// enum 化した（2026-08）。各材料の <see cref="Material.GetStress"/> が解釈する。
+    /// </summary>
+    internal enum MaterialLaw
+    {
+        /// <summary>線形弾性（使用・損傷限界＝許容応力度系の断面解析）</summary>
+        Linear,
+
+        /// <summary>バイリニア（弾完全塑性。安全限界・解析用 M-φ の既定）</summary>
+        Bilinear,
+
+        /// <summary>e関数法（RC基礎構造部材の耐震設計指針(案) 5.4.1。コンクリートの安全限界 NM 曲線用）</summary>
+        EFunction,
+
+        /// <summary>指針(案)準拠の鋼管トリリニア（圧縮側 0.85×引張強さ・引張側 引張強さで頭打ち）</summary>
+        GuidelineUltimate,
+    }
+
     // 材料の基底クラス
     internal abstract class Material
     {
@@ -19,7 +39,7 @@ namespace PileDesign.Models.InputData
         public double DamageLimitStrainT { get; protected set; }
         public double UltimateLimitStrainT { get; protected set; }
 
-        internal abstract double GetStress(string type, double epsilon);
+        internal abstract double GetStress(MaterialLaw type, double epsilon);
     }
 
     // 現地打ちコンクリートクラス
@@ -157,9 +177,9 @@ namespace PileDesign.Models.InputData
         }
 
         // ひずみ度から応力を計算するメソッド// ひずみ度から応力を計算するメソッド 使用限界、損傷限界用
-        internal override double GetStress(string type, double epsilon)
+        internal override double GetStress(MaterialLaw type, double epsilon)
         {
-            if (type == "linear")
+            if (type == MaterialLaw.Linear)
             {
                 //if (epsilon > -EpsilonCr_linear) { return Ec * epsilon; } // 引張側を無視した線形弾性
                 if (epsilon > 0) { return Math.Min(Ec * epsilon, BearingFactor * Gsi * Fc); } // 引張側を無視した線形弾性（支圧Fc上限）
@@ -167,7 +187,7 @@ namespace PileDesign.Models.InputData
                 else
                 { return 0.0; }
             }
-            else if (type == "eFunction")
+            else if (type == MaterialLaw.EFunction)
             {
                 if (-EpsilonCr_eFunction <= epsilon && epsilon <= SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN)
                 {
@@ -177,7 +197,7 @@ namespace PileDesign.Models.InputData
                 else
                 { return 0.0; }
             }
-            else // (type == "bilinear")
+            else // (type == MaterialLaw.Bilinear)
             {
                 // 引張側下限ひずみ: 既定はひび割れひずみ -EpsilonCr_bilinear（それまでは弾性で引張負担）。
                 // 引張無視オプション時は 0 とし、引張域 (epsilon<0) は常に σ=0 とする。
@@ -380,7 +400,7 @@ namespace PileDesign.Models.InputData
         }
 
         // ひずみ度から応力を計算するメソッド
-        internal override double GetStress(string type, double epsilon)
+        internal override double GetStress(MaterialLaw type, double epsilon)
         {
             if (RSigmaY / Er < epsilon + EpsilonSi) { return RSigmaY; }
             else if (epsilon + EpsilonSi < -RSigmaY / Er) { return -RSigmaY; }
@@ -464,13 +484,13 @@ namespace PileDesign.Models.InputData
         }
 
         // ひずみ度から応力を計算するメソッド
-        internal override double GetStress(string type, double epsilon)
+        internal override double GetStress(MaterialLaw type, double epsilon)
         {
             // 指針(案) 準拠の安全限界トリリニア: 圧縮側は 0.85×引張強さで頭打ち、引張側は引張強さで頭打ち。
             // 折れ点=材料強度 sσy(=1.1F)、第2勾配 SE2。圧縮限界ひずみ = (0.85·SSigmaU−SSigmaY)/SE2 + SEpsilonY。
             // 注: 鋼管 1.1F オプション(PerfectBilinear11F)より優先する。安全限界を指針で算定する場合は
             // 本トリリニアが正となるため（UI でも 1.1F 鋼管はグレーアウトして併用を防ぐ）。
-            if (type == "guidelineUltimate")
+            if (type == MaterialLaw.GuidelineUltimate)
             {
                 double compCap = 0.85 * SSigmaU;                                  // sσcu = 0.85·sσtb
                 double epsCompCap = (compCap - SSigmaY) / SE2 + SEpsilonY;         // sεcu
@@ -536,7 +556,7 @@ namespace PileDesign.Models.InputData
         }
 
         // ひずみ度から応力を計算するメソッド
-        internal override double GetStress(string type, double epsilon)
+        internal override double GetStress(MaterialLaw type, double epsilon)
         {
             // 算術式のみで例外は発生しない。以前の try/catch (Exception ex) は無意味だったため削除。
             if (EpsilonCy <= EpsilonE + epsilon) // && (EpsilonE + epsilon) <= EpsilonCu) // 降伏域
@@ -736,7 +756,7 @@ namespace PileDesign.Models.InputData
         }
 
         // ひずみ度から応力を計算するメソッド
-        internal override double GetStress(string type, double epsilon)
+        internal override double GetStress(MaterialLaw type, double epsilon)
         {
             if (0 < EpsilonPi + epsilon) { return 0.0; } // 圧縮の場合
             else if (-EpsilonPy < EpsilonPi + epsilon) // 第一勾配
@@ -838,7 +858,7 @@ namespace PileDesign.Models.InputData
         }
 
         // ひずみ度から応力を計算するメソッド
-        internal override double GetStress(string type, double epsilon)
+        internal override double GetStress(MaterialLaw type, double epsilon)
         {
             if (EpsilonY < epsilon) { return Fys; }
             else if (epsilon < -EpsilonY) { return -Fys; }
@@ -992,7 +1012,7 @@ namespace PileDesign.Models.InputData
         // 実心/中空円板の材料プロファイル。rInner>0 のとき |z|&lt;rInner を中空(NaN)とする。
         // 表示ひずみは断面の平面保持ひずみ ε(z)=ε0-φz、応力は材料全ひずみ (ε(z)+prestrain) から算定。
         protected static MaterialProfile BuildSolidProfile(
-            SectionMaterialKind kind, string name, Material mat, string type,
+            SectionMaterialKind kind, string name, Material mat, MaterialLaw type,
             double epsilon0, double curvature, double rOuter, double rInner, double prestrain, int division)
         {
             var mp = new MaterialProfile { Kind = kind, Name = name };
@@ -1018,7 +1038,7 @@ namespace PileDesign.Models.InputData
 
         // リング材料 (主筋/PC鋼材/鋼管) の材料プロファイル。z=±ringRadius を連続サンプリング。
         protected static MaterialProfile BuildRingProfile(
-            SectionMaterialKind kind, string name, Material mat, string type,
+            SectionMaterialKind kind, string name, Material mat, MaterialLaw type,
             double epsilon0, double curvature, double ringRadius, double prestrain, int division)
         {
             var mp = new MaterialProfile { Kind = kind, Name = name };
@@ -1603,7 +1623,7 @@ namespace PileDesign.Models.InputData
         // を閉形式で評価する。これにより ΣA は任意の分割数で厳密に πR² となり、
         // モーメントの幾何重み付けも厳密になる。応力は各短冊の図心 z̄ = Q/A で評価し、
         // 残る近似は「短冊内で応力一定」のみ（縁の特異性を持たないため速やかに収束する）。
-        internal (double, double) GetForceAndMoment(string type, Material material, double epsilon0, double curvature, int division = 200)
+        internal (double, double) GetForceAndMoment(MaterialLaw type, Material material, double epsilon0, double curvature, int division = 200)
         {
             try
             {
@@ -1671,7 +1691,7 @@ namespace PileDesign.Models.InputData
         private double T { get; } = t;
 
         // 軸力、曲げモーメント取得メソッド
-        internal (double, double) GetForceAndMoment(string type, Material material, double epsilon0, double curvature, int division = 200)
+        internal (double, double) GetForceAndMoment(MaterialLaw type, Material material, double epsilon0, double curvature, int division = 200)
         {
             try
             {

@@ -810,7 +810,7 @@ namespace PileDesign.Models.InputData
         {
             double epsilonC = GetAllowableCompressionEdgeStrain(limitStateNo, isCompressionSide, curvature);
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
-            string type = "linear";
+            MaterialLaw type = MaterialLaw.Linear;
             double N, M;
             var result1 = CircularSolidSectionConcrete.GetForceAndMoment(type, InsituConcrete, epsilon0, curvature);
             var result2 = CircularPipeSectionMainbars.GetForceAndMoment(type, MainBars, epsilon0, curvature);
@@ -830,8 +830,8 @@ namespace PileDesign.Models.InputData
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
             // 指針(案) 5.4.1 準拠オプション時はコンクリートを e関数法、既定はバイリニア。
             // ただし解析 M-φ 端点算定中（_forceBilinearUltimate）は収束のため常にバイリニア。
-            string type = (ConcreteModelOptions.UseInsituUltimateEFunction && !_forceBilinearUltimate)
-                ? "eFunction" : "bilinear";
+            MaterialLaw type = (ConcreteModelOptions.UseInsituUltimateEFunction && !_forceBilinearUltimate)
+                ? MaterialLaw.EFunction : MaterialLaw.Bilinear;
             double N, M;
             var result1 = CircularSolidSectionConcrete.GetForceAndMoment(type, InsituConcrete, epsilon0, curvature);
             var result2 = CircularPipeSectionMainbars.GetForceAndMoment(type, MainBars, epsilon0, curvature);
@@ -851,7 +851,7 @@ namespace PileDesign.Models.InputData
         {
             double r = PileDia * 0.5;
             double epsilon0 = epsilonC - r * curvature;
-            string type = ultimate ? "bilinear" : "linear";
+            MaterialLaw type = ultimate ? MaterialLaw.Bilinear : MaterialLaw.Linear;
 
             var profile = new SectionStrainStressProfile { Radius = r };
             profile.Materials.Add(BuildSolidProfile(SectionMaterialKind.Concrete, "コンクリート",

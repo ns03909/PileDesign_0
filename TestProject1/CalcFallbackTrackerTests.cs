@@ -43,7 +43,7 @@ namespace TestProject1
             var section = new CircularSolidSection(1000.0);
 
             // material = null で内部の GetStress が NullReferenceException → catch → (0,0) 代替
-            var (n, m) = section.GetForceAndMoment("bilinear", null, 0.001, 1e-6);
+            var (n, m) = section.GetForceAndMoment(MaterialLaw.Bilinear, null, 0.001, 1e-6);
 
             Assert.AreEqual(0.0, n, 1e-12, "フォールバック時は N=0");
             Assert.AreEqual(0.0, m, 1e-12, "フォールバック時は M=0");

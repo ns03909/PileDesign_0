@@ -641,7 +641,7 @@ namespace PileDesign.Models.InputData
         {
             double epsilonC = GetAllowableCompressionEdgeStrain(limitStateNo, isCompressionSide, curvature);
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
-            string type = "linear";
+            MaterialLaw type = MaterialLaw.Linear;
             double N, M;
             var result1 = CircularSolidSectionConcrete.GetForceAndMoment(type, InsituConcrete, epsilon0, curvature);
             var result2 = CircularPipeSectionMainbars.GetForceAndMoment(type, MainBars, epsilon0, curvature);
@@ -656,7 +656,7 @@ namespace PileDesign.Models.InputData
         internal override (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature)
         {
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
-            string type = "bilinear";
+            MaterialLaw type = MaterialLaw.Bilinear;
             double N, M;
             var result1 = CircularSolidSectionConcrete.GetForceAndMoment(type, InsituConcrete, epsilon0, curvature);
             var result2 = CircularPipeSectionMainbars.GetForceAndMoment(type, MainBars, epsilon0, curvature);

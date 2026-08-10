@@ -640,7 +640,7 @@ namespace PileDesign.Models.InputData
         {
             double epsilonC = GetAllowableCompressionEdgeStrain(limitStateNo, isCompressionSide, curvature);
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
-            string type = "linear";
+            MaterialLaw type = MaterialLaw.Linear;
             double N, M;
             var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(type, PrecastConcrete, epsilon0 + Prestrains[0], curvature);
             var result2 = CircularSolidSectionConcreteIn.GetForceAndMoment(type, PrecastConcrete, epsilon0 + Prestrains[0], curvature);
@@ -794,7 +794,7 @@ namespace PileDesign.Models.InputData
         {
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
             double N, M;
-            string type = "bilinear";
+            MaterialLaw type = MaterialLaw.Bilinear;
             var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(type, PrecastConcrete, epsilon0 + Prestrains[0], curvature);
             var result2 = CircularSolidSectionConcreteIn.GetForceAndMoment(type, PrecastConcrete, epsilon0 + Prestrains[0], curvature);
             var result3 = CircularPipeSectionTendons.GetForceAndMoment(type, Tendons, epsilon0 + Prestrains[1], curvature);
@@ -812,7 +812,7 @@ namespace PileDesign.Models.InputData
             double epsilonC, double curvature, bool ultimate, int division = 200)
         {
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
-            string type = ultimate ? "bilinear" : "linear";
+            MaterialLaw type = ultimate ? MaterialLaw.Bilinear : MaterialLaw.Linear;
             double pc = (Prestrains != null && Prestrains.Count > 0) ? Prestrains[0] : 0.0;
             double pt = (Prestrains != null && Prestrains.Count > 1) ? Prestrains[1] : 0.0;
 
@@ -1476,7 +1476,7 @@ namespace PileDesign.Models.InputData
         {
             double epsilonC = GetAllowableCompressionEdgeStrain(limitStateNo, isCompressionSide, curvature);
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
-            string type = "linear";
+            MaterialLaw type = MaterialLaw.Linear;
             double N, M;
             var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(type, PrecastConcrete, epsilon0 + PrecastConcrete.Prestrain, curvature);
             var result2 = CircularSolidSectionConcreteIn.GetForceAndMoment(type, PrecastConcrete, epsilon0 + PrecastConcrete.Prestrain, curvature);
@@ -1494,7 +1494,7 @@ namespace PileDesign.Models.InputData
         internal override (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature)
         {
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
-            string type = "bilinear";
+            MaterialLaw type = MaterialLaw.Bilinear;
             double N, M;
             var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(type, PrecastConcrete, epsilon0 + PrecastConcrete.Prestrain, curvature);
             var result2 = CircularSolidSectionConcreteIn.GetForceAndMoment(type, PrecastConcrete, epsilon0 + PrecastConcrete.Prestrain, curvature);
@@ -1513,7 +1513,7 @@ namespace PileDesign.Models.InputData
             double epsilonC, double curvature, bool ultimate, int division = 200)
         {
             double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
-            string type = ultimate ? "bilinear" : "linear";
+            MaterialLaw type = ultimate ? MaterialLaw.Bilinear : MaterialLaw.Linear;
 
             var p = new SectionStrainStressProfile { Radius = Ro };
             p.Materials.Add(BuildSolidProfile(SectionMaterialKind.Concrete, "コンクリート",
@@ -2277,7 +2277,7 @@ namespace PileDesign.Models.InputData
         {
             double epsilonC = GetAllowableCompressionEdgeStrain(limitStateNo, isCompressionSide, curvature);
             double epsilon0 = epsilonC - Ro * curvature;
-            string type = "linear";
+            MaterialLaw type = MaterialLaw.Linear;
             double N, M;
             var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(type, PrecastConcrete, epsilon0, curvature);
             var result2 = CircularSolidSectionConcreteIn.GetForceAndMoment(type, PrecastConcrete, epsilon0, curvature);
@@ -2292,7 +2292,7 @@ namespace PileDesign.Models.InputData
         internal override (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature)
         {
             double epsilon0 = epsilonC - Ro * curvature;
-            string type = "linear";
+            MaterialLaw type = MaterialLaw.Linear;
             double N, M;
             var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(type, PrecastConcrete, epsilon0, curvature);
             var result2 = CircularSolidSectionConcreteIn.GetForceAndMoment(type, PrecastConcrete, epsilon0, curvature);
@@ -2308,7 +2308,7 @@ namespace PileDesign.Models.InputData
             double epsilonC, double curvature, bool ultimate, int division = 200)
         {
             double epsilon0 = epsilonC - Ro * curvature;
-            const string type = "linear";  // SC は終局含め線形
+            const MaterialLaw type = MaterialLaw.Linear;  // SC は終局含め線形
             double rPipe = (PositionTs != null && PositionTs.Count > 1) ? PositionTs[1] : Ro;
             double rOuter = Math.Max(Ro, rPipe);
 
