@@ -57,7 +57,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[InsituConcrete] 初期化に失敗（Ec/Ac/SigmaCr=0 にフォールバック）: DO={DO}, Gsi={Gsi}, Fc={Fc}", DO, Gsi, Fc);
+                PileDesign.Common.CalcFallbackTracker.Report("コンクリート諸元の初期化（Ec等→0）", ex, $"DO={DO}, Gsi={Gsi}, Fc={Fc}");
                 Ec = 0.0;
                 Ac = 0.0;
                 SigmaCr = 0.0;
@@ -93,7 +93,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
+                PileDesign.Common.CalcFallbackTracker.Report("限界ひずみの算定（→0）", ex);
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -371,8 +371,9 @@ namespace PileDesign.Models.InputData
                 }
                 Ag = Number * area;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                PileDesign.Common.CalcFallbackTracker.Report("主筋断面積の算定（→0）", ex, $"BarSize={BarSize}, Number={Number}");
                 Ag = 0.0;
             }
         }
@@ -582,7 +583,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
+                PileDesign.Common.CalcFallbackTracker.Report("限界ひずみの算定（→0）", ex);
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -623,7 +624,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
+                PileDesign.Common.CalcFallbackTracker.Report("限界ひずみの算定（→0）", ex);
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -679,7 +680,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
+                PileDesign.Common.CalcFallbackTracker.Report("限界ひずみの算定（→0）", ex);
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -796,8 +797,9 @@ namespace PileDesign.Models.InputData
 
                 SetAllowableStrain();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                PileDesign.Common.CalcFallbackTracker.Report("鋼管諸元の算定（→0）", ex, $"Grade={Grade}, OutDia={OutDia}, T={T}");
                 F = 0.0;
                 As = 0.0;
                 Ftsp = 0.0;
@@ -824,7 +826,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[Material.SetAllowableStrain] 限界ひずみの算定に失敗（すべて 0 にフォールバック）");
+                PileDesign.Common.CalcFallbackTracker.Report("限界ひずみの算定（→0）", ex);
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -1126,7 +1128,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[GetAllowableMomentForSpecificN] 算定に失敗（M=0 にフォールバック）: limitStateNo={LimitStateNo}, NTarget={NTarget}", limitStateNo, NTarget);
+                PileDesign.Common.CalcFallbackTracker.Report("許容曲げモーメントの算定（→0）", ex, $"limitStateNo={limitStateNo}, NTarget={NTarget:F0}");
                 return 0.0;
             }
         }
@@ -1184,7 +1186,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[GetUltimateMomentForSpecificN] 算定に失敗（0 にフォールバック）: NTarget={NTarget}", NTarget);
+                PileDesign.Common.CalcFallbackTracker.Report("安全限界曲げモーメントの算定（→0）", ex, $"NTarget={NTarget:F0}");
                 return (0.0, 0.0);
             }
         }
@@ -1263,7 +1265,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[GetMPhiRelationshipFiber] 算定に失敗（null にフォールバック）: Ntarget={Ntarget}", Ntarget);
+                PileDesign.Common.CalcFallbackTracker.Report("ファイバー M-φ の算定（→ポリリニアで代替）", ex, $"Ntarget={Ntarget:F0}");
                 return null;
             }
             finally { _forceBilinearUltimate = prevForceBilinear; }
@@ -1345,8 +1347,9 @@ namespace PileDesign.Models.InputData
                 }
                 return maxCurvature;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                PileDesign.Common.CalcFallbackTracker.Report("最大許容曲率の算定（→0）", ex);
                 return 0.0;
             }
         }
@@ -1389,8 +1392,9 @@ namespace PileDesign.Models.InputData
                 }
                 return epsilonC;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                PileDesign.Common.CalcFallbackTracker.Report("圧縮縁ひずみの算定（→0）", ex);
                 return 0.0;
             }
         }
@@ -1634,8 +1638,9 @@ namespace PileDesign.Models.InputData
                 }
                 return (axialForce, bendingMoment);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                PileDesign.Common.CalcFallbackTracker.Report("断面積分（N・M→0）", ex, $"実心円 D={Dia}");
                 return (0.0, 0.0);
             }
         }
@@ -1685,8 +1690,9 @@ namespace PileDesign.Models.InputData
                 }
                 return (axialForce, bendingMoment);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                PileDesign.Common.CalcFallbackTracker.Report("断面積分（N・M→0）", ex, $"円環 D={Dia}, t={T}");
                 return (0.0, 0.0);
             }
         }

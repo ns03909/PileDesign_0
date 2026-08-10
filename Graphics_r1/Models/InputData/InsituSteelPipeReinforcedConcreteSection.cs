@@ -496,7 +496,11 @@ namespace PileDesign.Models.InputData
                 }
                 return (bestM, bestCurvature);
             }
-            catch (Exception ex) { Serilog.Log.Warning(ex, "[SPRC.GetUltimateMomentForSpecificN] 算定に失敗（0 にフォールバック）: NTarget={NTarget}", NTarget); return (0.0, 0.0); }
+            catch (Exception ex)
+            {
+                PileDesign.Common.CalcFallbackTracker.Report("安全限界曲げモーメントの算定（→0）", ex, $"場所打ち鋼管コンクリート杭, NTarget={NTarget:F0}");
+                return (0.0, 0.0);
+            }
         }
 
         // 使用/損傷限界は基底クラスのGetAllowableMNInteractionを使用

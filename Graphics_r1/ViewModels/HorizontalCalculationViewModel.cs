@@ -1820,6 +1820,9 @@ namespace PileDesign.ViewModels
             if (!additive) IsAnalysisExecuted = false;
             _cancellationTokenSource = new CancellationTokenSource();
 
+            // 断面計算フォールバック（計算失敗→既定値代替）の区間集計を開始
+            PileDesign.Common.CalcFallbackTracker.Reset();
+
             // ボタン押下直後にログを表示
             await AddLogAsync(additive ? "追加実行: 計算モデル作成開始" : "計算モデル作成開始");
 
@@ -1837,22 +1840,37 @@ namespace PileDesign.ViewModels
                 IsAnalysisExecuted = true; // 解析実行済みフラグをセット
                 _hasUnsavedAnalysisChange = true; // 新規解析の結果を保持。キャンセル時の確認対象
 
+                // 断面計算フォールバック（計算失敗→既定値代替）が発生していれば可視化する。
+                // 耐力 0 や線形 M-φ での代替が検定・グラフへ静かに流れるのを防ぐ。
+                long fallbackCount = PileDesign.Common.CalcFallbackTracker.TotalCount;
+                string doneMessage = "計算が終了しました。";
+                if (fallbackCount > 0)
+                {
+                    string fallbackSummary = PileDesign.Common.CalcFallbackTracker.BuildSummary();
+                    doneMessage += $"\n\n⚠ 断面計算などで {fallbackCount} 件のフォールバック（計算失敗→既定値での代替）が発生しました。\n"
+                        + fallbackSummary
+                        + "\n\n該当箇所の耐力・M-φ が 0 または線形弾性で代替されている可能性があります。"
+                        + "\n入力諸元とログ（詳細は log ファイル）を確認してください。";
+                    await AddLogAsync($"⚠ 計算フォールバック {fallbackCount} 件:\n{fallbackSummary}");
+                }
+
                 // 計算完了通知（UIスレッドで直接表示）
                 // owner を HorizontalCalculationWindow に明示固定して、解析完了直後にフォーカスが
                 // MainWindow に移っていてもダイアログが水平解析ウィンドウの上に表示されるようにする。
                 if (!BypassUiPromptsForTesting)
                 {
+                    var doneIcon = fallbackCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information;
                     var horizontalWindow = System.Windows.Application.Current?.Windows
                         .Cast<System.Windows.Window>()
                         .FirstOrDefault(w => ReferenceEquals(w.DataContext, this));
                     if (horizontalWindow != null)
                     {
                         horizontalWindow.Activate();
-                        MessageService.Show(horizontalWindow, "計算が終了しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                        MessageService.Show(horizontalWindow, doneMessage, "完了", MessageBoxButton.OK, doneIcon);
                     }
                     else
                     {
-                        MessageService.Show("計算が終了しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                        MessageService.Show(doneMessage, "完了", MessageBoxButton.OK, doneIcon);
                     }
                 }
             }

@@ -2553,8 +2553,9 @@ namespace PileDesign.Models.InputData
 
                 return (M, curvature);
             }
-            catch
+            catch (Exception ex)
             {
+                PileDesign.Common.CalcFallbackTracker.Report("安全限界曲げモーメントの算定（→0）", ex, $"SC杭, NTarget={NTarget:F0}");
                 return (0.0, 0.0);
             }
         }

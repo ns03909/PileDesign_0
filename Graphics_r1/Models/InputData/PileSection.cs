@@ -676,6 +676,11 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private (List<double> Phis, List<double> Moments) CreateLinearFallback()
         {
+            // M-φ が算定できなかった場合の線形弾性代替（GetMPhiRelationship の失敗パスからのみ呼ばれる）。
+            // 非線形性が失われたまま解析が継続するため、フォールバックとして必ず記録する。
+            PileDesign.Common.CalcFallbackTracker.Report("M-φ の算定（→線形弾性で代替）",
+                detail: $"PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
+
             const double phiSample = 1e-6; // [1/m]
             return (
                 new List<double> { 0.0, phiSample },
@@ -2237,8 +2242,10 @@ namespace PileDesign.Models.InputData
                     Scale(d.GetUltimateQNInteraction(monQd, true))
                 );
             }
-            catch
+            catch (Exception ex)
             {
+                PileDesign.Common.CalcFallbackTracker.Report("Q-N 曲線の算定（→空）", ex,
+                    $"PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
                 return default;
             }
         }
