@@ -46,7 +46,7 @@ namespace PileDesign.Models.InputData
     internal class InsituConcrete : Material
     {
         public double DO { get; }
-        public string Type { get; }
+        public string Type { get; } = "普通"; // コンクリート種別（初期化失敗時も非 null を保証）
         public double Gsi { get; }
         public double BearingFactor { get; private set; } = 1.0;
         public double Fc { get; }

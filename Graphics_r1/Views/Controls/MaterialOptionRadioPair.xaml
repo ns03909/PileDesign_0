@@ -1,0 +1,58 @@
+<UserControl x:Class="PileDesign.Views.Controls.MaterialOptionRadioPair"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:PileDesign.Converters"
+             x:Name="Root">
+    <UserControl.Resources>
+        <conv:InverseBooleanConverter x:Key="InverseBool"/>
+
+        <!-- 式サブテキスト: 未指定なら行ごと折りたたむ -->
+        <Style x:Key="FormulaTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#666666"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+                <Trigger Property="Text" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <!-- 見出し + ヘルプリンク（無効化グループの影響を受けない） -->
+        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+            <TextBlock Text="{Binding Header, ElementName=Root}" FontWeight="SemiBold"/>
+            <TextBlock Margin="8,0,0,0" FontSize="11" VerticalAlignment="Center">
+                <Hyperlink Click="HelpLink_Click" ToolTip="ヘルプの詳細説明を開く">ヘルプ</Hyperlink>
+            </TextBlock>
+        </StackPanel>
+
+        <StackPanel IsEnabled="{Binding AreRadiosEnabled, ElementName=Root}">
+            <!-- 既定（基礎部材の強度と変形性能）側 -->
+            <RadioButton GroupName="{Binding GroupName, ElementName=Root}" Margin="12,1,0,1"
+                         IsChecked="{Binding IsAlternativeSelected, ElementName=Root, Converter={StaticResource InverseBool}}"
+                         ToolTip="{Binding DefaultToolTip, ElementName=Root}">
+                <StackPanel>
+                    <TextBlock Text="{Binding DefaultText, ElementName=Root}" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource FormulaTextStyle}"
+                               Text="{Binding DefaultFormula, ElementName=Root}"/>
+                </StackPanel>
+            </RadioButton>
+
+            <!-- 代替オプション側 -->
+            <RadioButton GroupName="{Binding GroupName, ElementName=Root}" Margin="12,1,0,1"
+                         IsChecked="{Binding IsAlternativeSelected, ElementName=Root}"
+                         ToolTip="{Binding AlternativeToolTip, ElementName=Root}">
+                <StackPanel>
+                    <TextBlock Text="{Binding AlternativeText, ElementName=Root}" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource FormulaTextStyle}"
+                               Text="{Binding AlternativeFormula, ElementName=Root}"/>
+                </StackPanel>
+            </RadioButton>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

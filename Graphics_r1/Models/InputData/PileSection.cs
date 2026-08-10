@@ -479,8 +479,8 @@ namespace PileDesign.Models.InputData
                 // 単位変換: 軸力 kN → N
                 double axialN_inN = axialN * UnitConversion.KN_TO_N;
 
-                List<double> phisRaw = null;
-                List<double> msRaw = null;
+                List<double>? phisRaw = null;
+                List<double>? msRaw = null;
 
                 // 断面が生成できない場合は、鋼管杭+鋼管部のケースを SteelPipeSection で代替する
                 // (CreateSectionCalculator が (PileTypeNames.SteelPipe, _) で null を返すため)
@@ -790,7 +790,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        private string _selectedSteelPipe;
+        private string _selectedSteelPipe = string.Empty;
         public string SelectedSteelPipe
         {
             get => _selectedSteelPipe;
@@ -1278,7 +1278,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 選択したS杭
-        private string _selectedSteelPipePileName;
+        private string _selectedSteelPipePileName = string.Empty;
         public string SelectedSteelPipePileName
         {
             get => _selectedSteelPipePileName;
@@ -1735,7 +1735,7 @@ namespace PileDesign.Models.InputData
             return e / (2 * (1 + nu));
         }
 
-        private ObservableCollection<Spec> _selectedPileSectionSpecification;
+        private ObservableCollection<Spec>? _selectedPileSectionSpecification;
         public ObservableCollection<Spec> SelectedPileSectionSpecification
         {
             //get => _selectedPileSectionSpecification;

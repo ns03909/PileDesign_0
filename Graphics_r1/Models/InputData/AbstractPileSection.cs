@@ -17,18 +17,18 @@ namespace PileDesign.Models.InputData
         public double AxialForceCurvatureMaxDamageLimit { get; protected set; }
         public double AxialForceCurvatureMaxUltimateLimit { get; protected set; }
 
-        public List<double> Prestrains { get; protected set; }
+        public List<double> Prestrains { get; protected set; } = [];
 
-        public List<double> ServiceLimitStrainCs { get; protected set; }
-        public List<double> DamageLimitStrainCs { get; protected set; }
-        public List<double> UltimateLimitStrainCs { get; protected set; }
-        public List<double> PositionCs { get; protected set; }
+        public List<double> ServiceLimitStrainCs { get; protected set; } = [];
+        public List<double> DamageLimitStrainCs { get; protected set; } = [];
+        public List<double> UltimateLimitStrainCs { get; protected set; } = [];
+        public List<double> PositionCs { get; protected set; } = [];
 
-        public List<double> ServiceLimitStrainTs { get; protected set; }
-        public List<double> DamageLimitStrainTs { get; protected set; }
-        public List<double> UltimateLimitStrainTs { get; protected set; }
+        public List<double> ServiceLimitStrainTs { get; protected set; } = [];
+        public List<double> DamageLimitStrainTs { get; protected set; } = [];
+        public List<double> UltimateLimitStrainTs { get; protected set; } = [];
 
-        public List<double> PositionTs { get; protected set; }
+        public List<double> PositionTs { get; protected set; } = [];
 
         public double PileDia { get; protected set; }
 
@@ -37,18 +37,18 @@ namespace PileDesign.Models.InputData
         /// </summary>
         protected virtual double CompressionEdgePosition => -PileDia / 2;
 
-        public List<double> ServiceLimitAxialForceThresholds { get; protected set; }
-        public List<double> ServiceLimitBendingMomentThresholds { get; protected set; }
-        public List<double> ServiceLimitBeta { get; protected set; }
+        public List<double> ServiceLimitAxialForceThresholds { get; protected set; } = [];
+        public List<double> ServiceLimitBendingMomentThresholds { get; protected set; } = [];
+        public List<double> ServiceLimitBeta { get; protected set; } = [];
 
-        public List<double> DamageLimitAxialForceThresholds { get; protected set; }
-        public List<double> DamageLimitBendingMomentThresholds { get; protected set; }
-        public List<double> DamageLimitBeta { get; protected set; }  // レベル2（β1×β2）
-        public List<double> DamageLimitBetaL1 { get; protected set; }  // レベル1（β2=1.0、β1のみ）
+        public List<double> DamageLimitAxialForceThresholds { get; protected set; } = [];
+        public List<double> DamageLimitBendingMomentThresholds { get; protected set; } = [];
+        public List<double> DamageLimitBeta { get; protected set; } = [];  // レベル2（β1×β2）
+        public List<double> DamageLimitBetaL1 { get; protected set; } = [];  // レベル1（β2=1.0、β1のみ）
 
-        public List<double> UltimateLimitAxialForceThresholds { get; protected set; }
-        public List<double> UltimateLimitBendingMomentThresholds { get; protected set; }
-        public List<double> UltimateLimitBeta { get; protected set; }
+        public List<double> UltimateLimitAxialForceThresholds { get; protected set; } = [];
+        public List<double> UltimateLimitBendingMomentThresholds { get; protected set; } = [];
+        public List<double> UltimateLimitBeta { get; protected set; } = [];
 
         public int DivisionNum { get; protected set; } = 100;
         public double DeltaCurvature { get; protected set; }

@@ -33,7 +33,7 @@ namespace PileDesign.Models.InputData
 
         public new double CurvatureMaxUltimateLimit { get; private set; }
 
-        public List<double> ServiceLimitShearAxialForceThresholds { get; private set; }
+        public List<double> ServiceLimitShearAxialForceThresholds { get; private set; } = [];
 
         /// <summary>
         /// 安全限界曲げモーメントの低減率 β1 (M-φ / M-θ で Mu0 に乗じる)。

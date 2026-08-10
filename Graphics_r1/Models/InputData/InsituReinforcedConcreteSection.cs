@@ -21,7 +21,7 @@ namespace PileDesign.Models.InputData
         public double Ie { get; private set; }
         public double Ft { get; private set; }
 
-        public List<double> ServiceLimitShearAxialForceThresholds { get; private set; }
+        public List<double> ServiceLimitShearAxialForceThresholds { get; private set; } = [];
 
         // コンストラクタ
         // applyBodyMaterialOptions: 杭体断面のみ true。鉄筋 1.1F 完全バイリニア型オプションを適用する。

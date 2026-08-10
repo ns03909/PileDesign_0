@@ -15,6 +15,118 @@ namespace PileDesign.Models.InputData
     // 既製コンクリート杭断面抽象クラス /////////////////////////////////////////
     internal abstract class PrecastPileSection : AbstractPileSection
     {
+        /// <summary>
+        /// 「状態条件付き断面の軸力 N(φ)=Ntarget」を満たす (M, φ) を差分 Newton 反復で解く共通ドライバ。
+        /// PHC / PRC の GetMomentCurvatureForN に重複していた同一骨格を統合した
+        /// （SC は事前スキャン＋ブラケット方式で別実装のため対象外）。
+        ///
+        /// 2 つのフラグは旧実装間の微差を挙動保存で再現するためのもの:
+        ///  - clampCurvatureUpperInNewtonStep: Newton ステップ後にも φ ≤ 0.1 の上限を課す（PRC 旧挙動。
+        ///    PHC は勾配消失フォールバック時のみ上限を課していた）
+        ///  - fallbackSignFromBestN: 勾配消失時の前進符号として、残差が非有限のとき最良解 bestN を
+        ///    第 2 候補に使う（PHC 旧挙動。PRC は常に +1 へフォールバック）
+        ///
+        /// 収束判定は |N−Ntarget| ≤ 0.1 [N]（SectionSolverTolerances.ULTIMATE_AXIAL_RESIDUAL_N 相当）。
+        /// 収束しない場合は例外を投げず最良近似 (bestM, bestCurv) を返す。
+        /// </summary>
+        private protected static (double M, double Curvature) SolveMomentCurvatureForAxial(
+            double Ntarget,
+            Func<double, (double N, double M)> eval,
+            double initialCurvature,
+            bool clampCurvatureUpperInNewtonStep,
+            bool fallbackSignFromBestN)
+        {
+            double Nnext = double.MaxValue;
+            double Mnext = double.MaxValue;
+            double Nnext1;
+            double curvature = initialCurvature;
+            double deltaCurvature = Math.Max(1e-12, curvature / 100.0);
+            const int maxIter = 200;
+
+            // 最良解を記憶
+            double bestDiff = double.MaxValue;
+            double bestN = Nnext;
+            double bestM = Mnext;
+            double bestCurv = curvature;
+
+            for (int iter = 0; iter < maxIter; iter++)
+            {
+                // 1) N(φ), M(φ) の評価
+                (Nnext, Mnext) = eval(curvature);
+                (Nnext1, _) = eval(curvature + deltaCurvature);
+
+                // 非有限値は安全に小さい前進で回避
+                if (!double.IsFinite(Nnext) || !double.IsFinite(Mnext) || !double.IsFinite(Nnext1))
+                {
+                    curvature = Math.Max(curvature * 0.5, 1e-6);
+                    deltaCurvature = Math.Max(Math.Abs(curvature) * 1e-4, 1e-12);
+                    continue;
+                }
+
+                double diff = Math.Abs(Ntarget - Nnext);
+                if (diff < bestDiff)
+                {
+                    bestDiff = diff;
+                    bestN = Nnext;
+                    bestM = Mnext;
+                    bestCurv = curvature;
+                }
+
+                // 目標に十分近ければ成功とみなす
+                if (diff <= PileDesign.Constants.SectionSolverTolerances.ULTIMATE_AXIAL_RESIDUAL_N)
+                    return (Mnext, curvature);
+
+                double deltaN = Nnext1 - Nnext;
+
+                // 2) 微分が小さい/NaN のときのフォールバック（差分を強めて安全側に前進）
+                if (double.IsNaN(deltaN) || Math.Abs(deltaN) < 1e-12)
+                {
+                    deltaCurvature = Math.Min(
+                        Math.Max(deltaCurvature * 10.0, 1e-12),
+                        Math.Max(Math.Abs(curvature) * 0.5, 1e-6));
+
+                    // 安全な符号判定（NaN を直接 Math.Sign に渡さない）
+                    double d = Ntarget - Nnext;
+                    double sign = 1.0;
+                    if (double.IsFinite(d) && d != 0.0)
+                        sign = Math.Sign(d);
+                    else if (fallbackSignFromBestN && double.IsFinite(Ntarget) && double.IsFinite(bestN))
+                        sign = Math.Sign(Ntarget - bestN);
+
+                    double fallbackStep = sign * Math.Max(Math.Abs(curvature) * 1e-3, 1e-6);
+                    curvature = Math.Max(curvature + fallbackStep, 0.0);
+                    // 発散防止の上限
+                    curvature = Math.Min(curvature, 1e-1);
+                    continue;
+                }
+
+                // 3) Newton 風ステップ
+                double step = deltaCurvature / deltaN * (Ntarget - Nnext);
+
+                // ステップ幅制限（安全側）
+                double maxStep = Math.Max(Math.Abs(curvature) * 0.5, 1e-6);
+                if ((clampCurvatureUpperInNewtonStep && !double.IsFinite(step)) || Math.Abs(step) > maxStep)
+                    step = Math.Sign(step) * maxStep;
+
+                curvature += step;
+
+                // 数値破綻検出
+                if (!double.IsFinite(curvature))
+                    break;
+
+                // 曲率は負にならないようにする
+                curvature = Math.Max(curvature, 0.0);
+                if (clampCurvatureUpperInNewtonStep)
+                    curvature = Math.Min(curvature, 1e-1); // 過大曲率の暴走抑制（PRC 旧挙動）
+
+                // 適応的に deltaCurvature を更新
+                deltaCurvature = Math.Max(Math.Abs(curvature) * 1e-4, 1e-12);
+            }
+
+            // 収束しなかった場合は例外を投げずに最良近似を返す
+            return (bestM, bestCurv);
+        }
+
         //public double PileDia { get; protected set; }
         public double Ro { get; protected set; } // 外半径
         public double Ri { get; protected set; } // 内半径
@@ -49,10 +161,12 @@ namespace PileDesign.Models.InputData
         public double EpsilonCu { get; protected set; }
         public double EpsilonPu { get; protected set; }
 
-        public PrecastConcrete PrecastConcrete { get; protected set; }
-        public Tendons Tendons { get; protected set; }
-        public MainBars MainBars { get; protected set; }
-        public PrecastSteelPipe PrecastSteelPipe { get; protected set; }
+        // 派生クラスのコンストラクタで杭種に応じて設定される（PHC は MainBars/PrecastSteelPipe が、
+        // SC は Tendons/MainBars が未設定＝null のまま。参照側は杭種で分岐済みの前提）。
+        public PrecastConcrete PrecastConcrete { get; protected set; } = null!;
+        public Tendons Tendons { get; protected set; } = null!;
+        public MainBars MainBars { get; protected set; } = null!;
+        public PrecastSteelPipe PrecastSteelPipe { get; protected set; } = null!;
 
         // 使用限界軸力制限値（直接計算式、kN単位）
         public double ServiceLimitNMin => (4.0 - SigmaE) * Ae * 1e-3;
@@ -135,7 +249,8 @@ namespace PileDesign.Models.InputData
         public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
         public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
         public CircularPipeSection CircularPipeSectionTendons { get; private set; }
-        public CircularPipeSection CircularPipeSectionConcrete { get; private set; }
+        // 一部の初期化パス（早期リターン）では未設定のまま（参照側は正常初期化済みの前提）
+        public CircularPipeSection CircularPipeSectionConcrete { get; private set; } = null!;
 
         // コンストラクタ
         internal PHCSection(PrecastPHCConcrete precastConcrete, Tendons tendons, double prestress)
@@ -496,108 +611,18 @@ namespace PileDesign.Models.InputData
 
         // 指定状態となる (M, φ) を軸力条件 N(φ)=Ntarget の Newton 反復で解く。
         // type: "TendonYield"=最外縁 PC 鋼材の引張降伏 / "ConcreteCompressiveFailure"=コンクリート圧壊 (εcu)
+        // 反復本体は共通ドライバ SolveMomentCurvatureForAxial（フラグは PHC 旧挙動を再現）。
         internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)
         {
-            double Nnext = double.MaxValue;
-            double Mnext = double.MaxValue;
-            double Nnext1;
+            Func<double, (double N, double M)> eval = type == "TendonYield"
+                ? GetYieldForceAndMoment
+                : GetCompressiveFailureForceAndMoment;
+
             // 初期曲率（0以上に保つ）
-            double curvature = Math.Max(1e-12, Tendons.EpsilonPy / (PileDia * 0.5 + Tendons.PCD * 0.5));
-            double deltaCurvature = Math.Max(1e-12, curvature / 100.0);
-            int maxIter = 200;
-            int iter = 0;
+            double initialCurvature = Math.Max(1e-12, Tendons.EpsilonPy / (PileDia * 0.5 + Tendons.PCD * 0.5));
 
-            // 最良解を記憶
-            double bestDiff = double.MaxValue;
-            double bestN = Nnext;
-            double bestM = Mnext;
-            double bestCurv = curvature;
-
-            for (iter = 0; iter < maxIter; iter++)
-            {
-                if (type == "TendonYield")
-                {
-                    (Nnext, Mnext) = GetYieldForceAndMoment(curvature);
-                    (Nnext1, _) = GetYieldForceAndMoment(curvature + deltaCurvature);
-                }
-                else // ConcreteCompressiveFailure
-                {
-                    (Nnext, Mnext) = GetCompressiveFailureForceAndMoment(curvature);
-                    (Nnext1, _) = GetCompressiveFailureForceAndMoment(curvature + deltaCurvature);
-                }
-
-                // 非有限値は安全に小さい前進で回避
-                if (!double.IsFinite(Nnext) || !double.IsFinite(Mnext) || !double.IsFinite(Nnext1))
-                {
-                    curvature = Math.Max(curvature * 0.5, 1e-6);
-                    deltaCurvature = Math.Max(Math.Abs(curvature) * 1e-4, 1e-12);
-                    continue;
-                }
-
-                double diff = Math.Abs(Ntarget - Nnext);
-                if (diff < bestDiff)
-                {
-                    bestDiff = diff;
-                    bestN = Nnext;
-                    bestM = Mnext;
-                    bestCurv = curvature;
-                }
-
-                // 目標に十分近ければ成功とみなす
-                if (diff <= 0.1)
-                {
-                    return (Mnext, curvature);
-                }
-
-                double deltaN = Nnext1 - Nnext;
-
-                // deltaN が小さすぎる／NaN の場合はデルタ・ステップを変えてフォールバック
-                if (double.IsNaN(deltaN) || Math.Abs(deltaN) < 1e-12)
-                {
-                    // 少し大きめの差分で再試行する
-                    deltaCurvature = Math.Min(Math.Max(deltaCurvature * 10.0, 1e-12), Math.Max(Math.Abs(curvature) * 0.5, 1e-6));
-
-                    // 安全な符号判定（NaN を直接 Math.Sign に渡さない）
-                    double d = Ntarget - Nnext;
-                    double sign = 1.0;
-                    if (double.IsFinite(d) && d != 0.0)
-                        sign = Math.Sign(d);
-                    else if (double.IsFinite(Ntarget) && double.IsFinite(bestN))
-                        sign = Math.Sign(Ntarget - bestN);
-                    else
-                        sign = 1.0;
-
-                    double fallbackStep = sign * Math.Max(Math.Abs(curvature) * 1e-3, 1e-6);
-                    curvature += fallbackStep;
-                    curvature = Math.Max(curvature, 0.0);
-                    // 発散防止の上限
-                    curvature = Math.Min(curvature, 1e-1);
-                    continue;
-                }
-
-                // Newton風のステップ
-                double step = deltaCurvature / deltaN * (Ntarget - Nnext);
-
-                // ステップ幅制限（安全側）
-                double maxStep = Math.Max(Math.Abs(curvature) * 0.5, 1e-6);
-                if (Math.Abs(step) > maxStep)
-                    step = Math.Sign(step) * maxStep;
-
-                curvature += step;
-
-                // 数値が壊れたら安全に抜ける
-                if (double.IsNaN(curvature) || double.IsInfinity(curvature))
-                    break;
-
-                // 曲率は負にならないようにする（設計上許容されるなら調整）
-                curvature = Math.Max(curvature, 0.0);
-
-                // 適応的に deltaCurvature を更新
-                deltaCurvature = Math.Max(Math.Abs(curvature) * 1e-4, 1e-12);
-            }
-
-            // 収束しなかった場合は例外を投げずに最良近似を返す（デバッグ出力）
-            return (bestM, bestCurv);
+            return SolveMomentCurvatureForAxial(Ntarget, eval, initialCurvature,
+                clampCurvatureUpperInNewtonStep: false, fallbackSignFromBestN: true);
         }
 
         // 最外縁のPC鋼材が引張降伏するときのN、Mを返すメソッド
@@ -1265,117 +1290,24 @@ namespace PileDesign.Models.InputData
         // 指定状態となる (M, φ) を軸力条件 N(φ)=Ntarget の Newton 反復で解く。
         // type: "RebarTensionYield"=鉄筋引張降伏 / "ReBarCompressionYield"=鉄筋圧縮降伏 /
         //       "ConcreteCompressiveFailure"=コンクリート圧壊 (εcu) / その他="TendonTensileFailure"=PC鋼材引張破断
+        // 反復本体は共通ドライバ SolveMomentCurvatureForAxial（フラグは PRC 旧挙動を再現）。
         internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)
         {
-            double Nnext = double.MaxValue;
-            double Mnext = double.MaxValue;
-            double Nnext1;
+            Func<double, (double N, double M)> eval = type switch
+            {
+                "RebarTensionYield" => GetMainBarTensionYieldForceAndMoment,
+                "ReBarCompressionYield" => GetMainBarCompressionYieldForceAndMoment,
+                "ConcreteCompressiveFailure" => GetConcreteCompressiveFailureForceAndMoment,
+                _ => GetTendonTensileFailureForceAndMoment, // "TendonTensileFailure"
+            };
 
             // 初期曲率（ゼロ・非有限回避）
             double denom = (PileDia * 0.5 + Math.Max(1e-12, MainBars.PCD * 0.5));
             double cur0 = (MainBars.Er > 0 && denom > 0) ? MainBars.RSigmaY / MainBars.Er / denom : double.NaN;
-            double curvature = (double.IsFinite(cur0) && cur0 > 0) ? cur0 : 1e-4; // 安全な初期値
-            double deltaCurvature = Math.Max(1e-12, curvature / 100.0);
-            int maxIter = 200;
+            double initialCurvature = (double.IsFinite(cur0) && cur0 > 0) ? cur0 : 1e-4; // 安全な初期値
 
-            // 最良解を記憶
-            double bestDiff = double.MaxValue;
-            double bestN = Nnext;
-            double bestM = Mnext;
-            double bestCurv = curvature;
-
-            for (int iter = 0; iter < maxIter; iter++)
-            {
-                // 1) N(φ), M(φ) の評価
-                if (type == "RebarTensionYield")
-                {
-                    (Nnext, Mnext) = GetMainBarTensionYieldForceAndMoment(curvature);
-                    (Nnext1, _) = GetMainBarTensionYieldForceAndMoment(curvature + deltaCurvature);
-                }
-                else if (type == "ReBarCompressionYield")
-                {
-                    (Nnext, Mnext) = GetMainBarCompressionYieldForceAndMoment(curvature);
-                    (Nnext1, _) = GetMainBarCompressionYieldForceAndMoment(curvature + deltaCurvature);
-                }
-                else if (type == "ConcreteCompressiveFailure")
-                {
-                    (Nnext, Mnext) = GetConcreteCompressiveFailureForceAndMoment(curvature);
-                    (Nnext1, _) = GetConcreteCompressiveFailureForceAndMoment(curvature + deltaCurvature);
-                }
-                else // "TendonTensileFailure"
-                {
-                    (Nnext, Mnext) = GetTendonTensileFailureForceAndMoment(curvature);
-                    (Nnext1, _) = GetTendonTensileFailureForceAndMoment(curvature + deltaCurvature);
-                }
-
-                // 非有限値の早期対処（安全側で小さく前進）
-                if (!double.IsFinite(Nnext) || !double.IsFinite(Mnext) || !double.IsFinite(Nnext1))
-                {
-                    curvature = Math.Max(curvature * 0.5, 1e-6);
-                    deltaCurvature = Math.Max(Math.Abs(curvature) * 1e-4, 1e-12);
-                    continue;
-                }
-
-                double diff = Math.Abs(Ntarget - Nnext);
-                if (diff < bestDiff)
-                {
-                    bestDiff = diff;
-                    bestN = Nnext;
-                    bestM = Mnext;
-                    bestCurv = curvature;
-                }
-
-                // 目標に十分近い
-                if (diff <= 0.1)
-                    return (Mnext, curvature);
-
-                double deltaN = Nnext1 - Nnext;
-
-                // 2) 微分が小さい/NaN のときのフォールバック
-                if (double.IsNaN(deltaN) || Math.Abs(deltaN) < 1e-12)
-                {
-                    // 差分を強める
-                    deltaCurvature = Math.Min(
-                        Math.Max(deltaCurvature * 10.0, 1e-12),
-                        Math.Max(Math.Abs(curvature) * 0.5, 1e-6));
-
-                    // 安全側の前進。符号取得に NaN を使わない
-                    double sign = 1.0;
-                    double d = Ntarget - Nnext;
-                    if (double.IsFinite(d) && d != 0.0) sign = Math.Sign(d);
-
-                    double fallbackStep = sign * Math.Max(Math.Abs(curvature) * 1e-3, 1e-6);
-                    curvature = Math.Max(curvature + fallbackStep, 0.0);
-                    // 上限（発散防止）
-                    curvature = Math.Min(curvature, 1e-1);
-                    continue;
-                }
-
-                // 3) Newton 風ステップ
-                double step = deltaCurvature / deltaN * (Ntarget - Nnext);
-
-                // ステップ幅制限（安全側）
-                double maxStep = Math.Max(Math.Abs(curvature) * 0.5, 1e-6);
-                if (!double.IsFinite(step) || Math.Abs(step) > maxStep)
-                    step = Math.Sign(step) * maxStep;
-
-                curvature += step;
-
-                // 数値破綻検出
-                if (!double.IsFinite(curvature))
-                    break;
-
-                // 曲率は負にしない
-                curvature = Math.Max(curvature, 0.0);
-                // 上限（過大曲率の暴走抑制）
-                curvature = Math.Min(curvature, 1e-1);
-
-                // 適応的に deltaCurvature を更新
-                deltaCurvature = Math.Max(Math.Abs(curvature) * 1e-4, 1e-12);
-            }
-
-            // 収束しなかった場合は最良近似を返す
-            return (bestM, bestCurv);
+            return SolveMomentCurvatureForAxial(Ntarget, eval, initialCurvature,
+                clampCurvatureUpperInNewtonStep: true, fallbackSignFromBestN: false);
         }
 
         // 鉄筋が引張降伏するときのN、Mを返すメソッド
@@ -1570,7 +1502,9 @@ namespace PileDesign.Models.InputData
                 // 最低限の断面オブジェクトは作っておく（他コードの呼び出しに備える）
                 CircularSolidSectionConcreteOut = new CircularSolidSection(precastConcrete?.DO ?? 0.0);
                 CircularSolidSectionConcreteIn = new CircularSolidSection(precastConcrete?.DI ?? 0.0);
-                CircularPipeSectionSteelPipe = null;
+                // 板厚 0 の円環＝力・モーメント寄与が厳密に 0 の中立オブジェクト
+                // （旧実装は null 代入で、後段から参照されると NullReferenceException になっていた）
+                CircularPipeSectionSteelPipe = new CircularPipeSection(precastConcrete?.DO ?? 1.0, 0.0);
 
                 Serilog.Log.Debug("SCSection: PrecastSteelPipe.T is zero or PrecastSteelPipe is null. SCSection initialization skipped.");
                 return;

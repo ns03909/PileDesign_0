@@ -32,15 +32,23 @@ namespace TestProject1
             string root = FindSolutionRoot();
             string helpHtml = File.ReadAllText(Path.Combine(root, "Graphics_r1", "Help", "help.html"));
 
-            // XAML から HelpLink_Click 付き Hyperlink の Tag（アンカー名）を収集
-            // 注: Tag と Click が同一行にある前提（現状の記法）。別行に分かれた場合は検出対象から
-            //     外れるが、下の「1 つ以上存在」検査で検査自体の消失は検出できる。
+            // XAML からヘルプアンカー参照を収集（2 記法に対応）:
+            //  (a) MaterialOptionRadioPair の HelpAnchor="..." 属性
+            //  (b) 生の Hyperlink Tag="..." + HelpLink_Click（同一行にある前提）
+            // 記法が変わって両方 0 件になった場合は下の「1 つ以上存在」検査で検出できる。
             var anchors = new List<(string File, string Anchor)>();
             foreach (string xaml in Directory.EnumerateFiles(
-                         Path.Combine(root, "Graphics_r1", "Views"), "*.xaml"))
+                         Path.Combine(root, "Graphics_r1", "Views"), "*.xaml", SearchOption.AllDirectories))
             {
                 foreach (string line in File.ReadLines(xaml))
                 {
+                    var ha = Regex.Match(line, "HelpAnchor=\"([^\"]+)\"");
+                    if (ha.Success)
+                    {
+                        anchors.Add((Path.GetFileName(xaml), ha.Groups[1].Value));
+                        continue;
+                    }
+
                     if (!line.Contains("HelpLink_Click")) continue;
                     var m = Regex.Match(line, "Tag=\"([^\"]+)\"");
                     if (m.Success)
