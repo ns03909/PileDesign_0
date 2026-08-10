@@ -2081,225 +2081,28 @@ namespace PileDesign.ViewModels
                 successCount++;
             }
 
-            // キャッシュ統計を出力
-            var (hits, misses, cacheSize) = PileSection.GetMphiCacheStats();
         }
 
-        // M-φ関係
-        private static (IList<double> Phis, IList<double> Moments)? TryCallMPhiRelationship(object pileSection, double axialN)
+        // M-φ関係の解決。
+        // PileSection.GetMPhiRelationship を直接呼ぶ（φ [rad/m], M [kNm] へ変換済みの折線／ファイバー曲線）。
+        // 旧実装はリフレクションで任意型を探索していたが、呼び出し元の section は常に PileSection のため
+        // 型付き呼び出しに置換（速度・型安全性・例外の可視化）。
+        // 点数 2 未満・φ/M の個数不一致は null（呼び出し側でスキップ）。
+        private static (IList<double> Phis, IList<double> Moments)? TryCallMPhiRelationship(PileSection pileSection, double axialN)
         {
-            if (pileSection == null)
-            {
-                return null;
-            }
-
-            var t = pileSection.GetType();
-            var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
-            // 候補名（大小両対応）
-            string[] candidateNames = ["GetMPhiRelationship", "GetMPhiRelationship"];
-
-            // すべての候補を列挙し、(double) または (double,double) のものを優先選択
-            MethodInfo? methodInfo = null;
-            string foundName = "<none>";
-
-            var methods = t.GetMethods(flags)
-                           .Where(m => candidateNames.Contains(m.Name))
-                           .ToArray();
-
-            // 優先順位: (double) → (double,double) → それ以外の最初
-            methodInfo = methods.FirstOrDefault(m =>
-            {
-                var ps = m.GetParameters();
-                return ps.Length == 1 && ps[0].ParameterType == typeof(double);
-            })
-            ?? methods.FirstOrDefault(m =>
-            {
-                var ps = m.GetParameters();
-                return ps.Length == 2 && ps.All(p => p.ParameterType == typeof(double));
-            })
-            ?? methods.FirstOrDefault();
-
-            if (methodInfo == null)
-                return null;
-
-            foundName = methodInfo.Name;
-
-            // 呼び出し
-            object? ret;
+            if (pileSection == null) return null;
             try
             {
-                ret = methodInfo.GetParameters().Length switch
-                {
-                    1 => methodInfo.Invoke(pileSection, [axialN]),
-                    2 => methodInfo.Invoke(pileSection, [axialN, 1.0]),
-                    _ => methodInfo.Invoke(pileSection, [axialN])
-                };
+                var (phis, moments) = pileSection.GetMPhiRelationship(axialN);
+                if (phis == null || moments == null || phis.Count < 2 || phis.Count != moments.Count)
+                    return null;
+                return (phis, moments);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Log.Warning(ex, "[TryCallMPhiRelationship] M-φ の解決に失敗 (axialN={AxialN} kN)", axialN);
                 return null;
             }
-
-            if (ret == null) return null;
-
-            var rtype = ret.GetType();
-
-            // 1) Tuple-like: Item1/Item2 (ValueTupleはフィールド、Tupleはプロパティ)
-            var itm1Prop = rtype.GetProperty("Item1");
-            var itm2Prop = rtype.GetProperty("Item2");
-            var itm1Field = rtype.GetField("Item1");
-            var itm2Field = rtype.GetField("Item2");
-
-            bool hasProperty = itm1Prop != null && itm2Prop != null;
-            bool hasField = itm1Field != null && itm2Field != null;
-
-
-            if (hasProperty || hasField)
-            {
-                try
-                {
-                    object? v1, v2;
-                    if (hasField)
-                    {
-                        // ValueTuple: フィールドとして取得
-                        v1 = itm1Field!.GetValue(ret);
-                        v2 = itm2Field!.GetValue(ret);
-                    }
-                    else
-                    {
-                        // Tuple: プロパティとして取得
-                        v1 = itm1Prop!.GetValue(ret);
-                        v2 = itm2Prop!.GetValue(ret);
-                    }
-
-                    // List<double> を直接処理（最優先）
-                    if (v1 is List<double> concreteList1 && v2 is List<double> concreteList2)
-                    {
-                        if (concreteList1.Count >= 2 && concreteList1.Count == concreteList2.Count)
-                        {
-                            return (concreteList1, concreteList2);
-                        }
-                    }
-
-                    // IList<double> を試す
-                    if (v1 is IList<double> list1 && v2 is IList<double> list2)
-                    {
-                        if (list1.Count >= 2 && list1.Count == list2.Count)
-                        {
-                            return (list1.ToList(), list2.ToList());
-                        }
-                    }
-
-                    // IEnumerable<double> を試す
-                    if (v1 is IEnumerable<double> enum1 && v2 is IEnumerable<double> enum2)
-                    {
-                        var phis2 = enum1.ToList();
-                        var ms2 = enum2.ToList();
-                        if (phis2.Count >= 2 && phis2.Count == ms2.Count)
-                        {
-                            return (phis2, ms2);
-                        }
-                    }
-
-                    // IEnumerable経由のフォールバック
-                    if (v1 is System.Collections.IEnumerable e1 && v2 is System.Collections.IEnumerable e2)
-                    {
-                        var phis = new List<double>();
-                        var ms = new List<double>();
-                        foreach (var item in e1)
-                        {
-                            if (item is double d) phis.Add(d);
-                            else if (item is IConvertible c) phis.Add(Convert.ToDouble(c));
-                        }
-                        foreach (var item in e2)
-                        {
-                            if (item is double d) ms.Add(d);
-                            else if (item is IConvertible c) ms.Add(Convert.ToDouble(c));
-                        }
-                        if (phis.Count >= 2 && phis.Count == ms.Count)
-                        {
-                            return (phis, ms);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[ExtractMPhiCurve] List プロパティ抽出失敗: {ex.GetType().Name}: {ex.Message}");
-                }
-            }
-
-            // 2) Points プロパティ（MomentCurvatureCurve等）
-            var pointsProp = rtype.GetProperty("Points") ?? rtype.GetProperty("points");
-            if (pointsProp != null)
-            {
-                try
-                {
-                    if (pointsProp.GetValue(ret) is System.Collections.IEnumerable ptsObj)
-                    {
-                        var phis = new List<double>();
-                        var ms = new List<double>();
-                        foreach (var p in ptsObj)
-                        {
-                            if (p == null) continue;
-                            var ptType = p.GetType();
-                            var propPhi = ptType.GetProperty("Phi") ?? ptType.GetProperty("phi") ?? ptType.GetProperty("Item1");
-                            var propMoment = ptType.GetProperty("Moment") ?? ptType.GetProperty("moment") ?? ptType.GetProperty("Item2");
-                            if (propPhi?.GetValue(p) is IConvertible pvc && propMoment?.GetValue(p) is IConvertible mvc)
-                            {
-                                phis.Add(Convert.ToDouble(pvc));
-                                ms.Add(Convert.ToDouble(mvc));
-                                continue;
-                            }
-                            var f1 = ptType.GetField("Item1")?.GetValue(p);
-                            var f2 = ptType.GetField("Item2")?.GetValue(p);
-                            if (f1 is IConvertible fc1 && f2 is IConvertible fc2)
-                            {
-                                phis.Add(Convert.ToDouble(fc1));
-                                ms.Add(Convert.ToDouble(fc2));
-                                continue;
-                            }
-                        }
-                        if (phis.Count >= 2 && phis.Count == ms.Count) return (phis, ms);
-                    }
-                }
-                catch { /* fallthrough */ }
-            }
-
-            // 3) 列挙 of ペア
-            if (ret is System.Collections.IEnumerable retSeq)
-            {
-                try
-                {
-                    var phis = new List<double>();
-                    var ms = new List<double>();
-                    foreach (var item in retSeq)
-                    {
-                        if (item == null) continue;
-                        var itType = item.GetType();
-                        var f1 = itType.GetProperty("Item1")?.GetValue(item) ?? itType.GetField("Item1")?.GetValue(item);
-                        var f2 = itType.GetProperty("Item2")?.GetValue(item) ?? itType.GetField("Item2")?.GetValue(item);
-                        if (f1 is IConvertible c1 && f2 is IConvertible c2)
-                        {
-                            phis.Add(Convert.ToDouble(c1));
-                            ms.Add(Convert.ToDouble(c2));
-                            continue;
-                        }
-                        var propPhi = itType.GetProperty("Phi") ?? itType.GetProperty("phi") ?? itType.GetProperty("X");
-                        var propMoment = itType.GetProperty("Moment") ?? itType.GetProperty("moment") ?? itType.GetProperty("Y");
-                        if (propPhi?.GetValue(item) is IConvertible pvc && propMoment?.GetValue(item) is IConvertible mvc)
-                        {
-                            phis.Add(Convert.ToDouble(pvc));
-                            ms.Add(Convert.ToDouble(mvc));
-                            continue;
-                        }
-                    }
-                    if (phis.Count >= 2 && phis.Count == ms.Count) return (phis, ms);
-                }
-                catch { /* fallthrough */ }
-            }
-
-            return null;
         }
 
         // 荷重ケース用の M-θ（非線形ON/OFFに応じて線形Kを必ず設定、曲線はON時のみ使用）

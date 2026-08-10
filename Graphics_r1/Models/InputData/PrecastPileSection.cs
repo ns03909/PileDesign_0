@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -494,56 +494,8 @@ namespace PileDesign.Models.InputData
             return (Mcr, phiCr);
         }
 
-        // 最外縁のPC鋼材が引張降伏するときの曲げモーメント、曲率を返すメソッド
-        //internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)
-        //{
-        //    double Nnext = double.MaxValue;
-        //    double Mnext = double.MaxValue;
-        //    double Nnext1;
-        //    double curvature = Tendons.EpsilonPy / (PileDia * 0.5 + Tendons.PCD * 0.5);
-        //    double deltaCurvature = curvature / 100.0;
-        //    int maxIter = 50;
-        //    int iter = 0;
-
-        //    while (Math.Abs(Ntarget - Nnext) > 0.1 && iter < maxIter)
-        //    {
-        //        if (type == "TendonYield")
-        //        {
-        //            (Nnext, Mnext) = GetYieldForceAndMoment(curvature);
-        //            (Nnext1, _) = GetYieldForceAndMoment(curvature + deltaCurvature);
-        //        }
-        //        else // (type == "ConcreteCompressiveFailure")
-        //        {
-        //            (Nnext, Mnext) = GetCompressiveFailureForceAndMoment(curvature);
-        //            (Nnext1, _) = GetCompressiveFailureForceAndMoment(curvature + deltaCurvature);
-        //        }
-
-        //        double deltaN = Nnext1 - Nnext;
-        //        if (Math.Abs(deltaN) < 1e-8 || double.IsNaN(deltaN))
-        //            break; // 収束不能・異常値
-
-        //        double step = deltaCurvature / deltaN * (Ntarget - Nnext);
-
-        //        // ステップ幅制限
-        //        if (Math.Abs(step) > Math.Abs(curvature) * 0.5)
-        //            step = Math.Sign(step) * Math.Abs(curvature) * 0.5;
-
-        //        curvature += step;
-
-        //        // NaNチェック
-        //        if (double.IsNaN(curvature) || double.IsNaN(Nnext) || double.IsNaN(Mnext))
-        //            break;
-
-        //        iter++;
-        //    }
-        //    // 収束しなかった場合の対策
-        //    if (iter >= maxIter)
-        //    {
-        //        // 必要なら例外や警告
-        //        throw new InvalidOperationException("Newton-Raphson法が収束しませんでした。");
-        //    }
-        //    return (Mnext, curvature);
-        //}
+        // 指定状態となる (M, φ) を軸力条件 N(φ)=Ntarget の Newton 反復で解く。
+        // type: "TendonYield"=最外縁 PC 鋼材の引張降伏 / "ConcreteCompressiveFailure"=コンクリート圧壊 (εcu)
         internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)
         {
             double Nnext = double.MaxValue;
@@ -664,7 +616,7 @@ namespace PileDesign.Models.InputData
         {
             double epsilonC = PrecastConcrete.EpsilonCu - Prestrains[0];
 
-            // 最外縁のPC鋼材が引張降伏
+            // コンクリート圧縮縁が終局ひずみ εcu に達する状態
             double N, M;
             (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
             return (N, M);
@@ -1298,67 +1250,6 @@ namespace PileDesign.Models.InputData
             return (Mcr, phiCr);
         }
 
-        // 最外縁のPC鋼材が引張降伏するときの曲げモーメント、曲率を返すメソッド
-        //internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)///////////////////////////
-        //{
-        //    double Nnext = double.MaxValue;
-        //    double Mnext = double.MaxValue;
-        //    double Nnext1;
-        //    double curvature = MainBars.RSigmaY / MainBars.Er / (PileDia * 0.5 + MainBars.PCD * 0.5);
-        //    double deltaCurvature = curvature / 100.0;
-        //    int maxIter = 100;
-        //    int iter = 0;
-
-        //    while (Math.Abs(Ntarget - Nnext) > 0.1 && iter < maxIter)
-        //    {
-        //        if (type == "RebarTensionYield")
-        //        {
-        //            (Nnext, Mnext) = GetMainBarTensionYieldForceAndMoment(curvature);
-        //            (Nnext1, _) = GetMainBarTensionYieldForceAndMoment(curvature + deltaCurvature);
-        //        }
-
-        //        else if (type == "MainBarCompressionYield")
-        //        {
-        //            (Nnext, Mnext) = GetMainBarCompressionYieldForceAndMoment(curvature);
-        //            (Nnext1, _) = GetMainBarCompressionYieldForceAndMoment(curvature + deltaCurvature);
-        //        }
-        //        else if (type == "ConcreteCompressiveFailure")
-        //        {
-        //            (Nnext, Mnext) = GetConcreteCompressiveFailureForceAndMoment(curvature);
-        //            (Nnext1, _) = GetConcreteCompressiveFailureForceAndMoment(curvature + deltaCurvature);
-        //        }
-        //        else // (type == "TendonTensileFailure")
-        //        {
-        //            (Nnext, Mnext) = GetTendonTensileFailureForceAndMoment(curvature);
-        //            (Nnext1, _) = GetTendonTensileFailureForceAndMoment(curvature + deltaCurvature);
-        //        }
-
-        //        double deltaN = Nnext1 - Nnext;
-        //        if (Math.Abs(deltaN) < 1e-8 || double.IsNaN(deltaN))
-        //            break; // 収束不能・異常値
-
-        //        double step = deltaCurvature / deltaN * (Ntarget - Nnext);
-
-        //        // ステップ幅制限
-        //        if (Math.Abs(step) > Math.Abs(curvature) * 0.5)
-        //            step = Math.Sign(step) * Math.Abs(curvature) * 0.5;
-
-        //        curvature += step;
-
-        //        // NaNチェック
-        //        if (double.IsNaN(curvature) || double.IsNaN(Nnext) || double.IsNaN(Mnext))
-        //            break;
-
-        //        iter++;
-        //    }
-        //    // 収束しなかった場合の対策
-        //    if (iter >= maxIter)
-        //    {
-        //        // 必要なら例外や警告
-        //        throw new InvalidOperationException("Newton-Raphson法が収束しませんでした。");
-        //    }
-        //    return (Mnext, curvature);
-        //}
         /// <summary>
         /// ファイバー M-φ の掃引終点: コンクリート圧壊状態（PRC 杭の終局定義、εcu 基準）。
         /// 解けない場合は基底の安全限界ソルバ（εc=0.003）にフォールバック。
@@ -1371,7 +1262,10 @@ namespace PileDesign.Models.InputData
             return base.GetFiberSweepEndPoint(Ntarget);
         }
 
-        internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)///////////////////////////
+        // 指定状態となる (M, φ) を軸力条件 N(φ)=Ntarget の Newton 反復で解く。
+        // type: "RebarTensionYield"=鉄筋引張降伏 / "ReBarCompressionYield"=鉄筋圧縮降伏 /
+        //       "ConcreteCompressiveFailure"=コンクリート圧壊 (εcu) / その他="TendonTensileFailure"=PC鋼材引張破断
+        internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)
         {
             double Nnext = double.MaxValue;
             double Mnext = double.MaxValue;
@@ -2202,6 +2096,8 @@ namespace PileDesign.Models.InputData
             return (Mcr, phiCr);
         }
 
+        // 指定状態となる (M, φ) を軸力条件 N(φ)=Ntarget で解く（事前スキャンでブラケット後に反復）。
+        // type: "SteelPipeTensionYield"=鋼管引張降伏 / "SteelPipeCompressionYield_b/_c/_d"=鋼管圧縮降伏の各ケース
         internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)
         {
             // 1. 評価用ローカル関数（N(φ), M(φ) を返す）

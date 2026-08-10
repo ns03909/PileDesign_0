@@ -764,7 +764,9 @@ namespace PileDesign.Models
         internal void SetBasicProperties(PCRing _pcring, double pileCapEc)
         {
             PCRing = _pcring;
-            Ep = 40_000; // kui ni change
+            // 杭体コンクリートのヤング係数。既製コンクリート杭の Ec=40,000 N/mm2 固定
+            // （杭種ごとの実ヤング係数への置換は未対応。旧メモ "kui ni change" の意図と推定）
+            Ep = 40_000;
             Ip = Math.PI * Math.Pow(Nu * PCRing.D, 4) / 64.0;
             if (PCRing.D < 2100)
             { Hp = 90.0; }

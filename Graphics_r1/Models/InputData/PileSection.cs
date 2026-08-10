@@ -343,39 +343,6 @@ namespace PileDesign.Models.InputData
 
             return (new List<double>(), new List<double>());
         }
-        //private (List<double> N, List<double> M) ComputeSteelYieldNMRaw()
-        //{
-        //    bool isTargetRC =
-        //        PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-        //        (PileBodyType == "場所打ち鋼管コンクリート杭" && PileSectionType == "鉄筋コンクリート部");
-
-        //    if (!isTargetRC)
-        //        return (new List<double>(), new List<double>());
-
-        //    var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-        //    var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-        //    var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-
-        //    var (ns, ms, _, _) = section.GetSteelYieldMNInteraction();
-        //    return (ns, ms);
-        //}
-
-        //private (List<double> N, List<double> M) ComputeCrackNMRaw()
-        //{
-        //    bool isTargetRC =
-        //        PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-        //        (PileBodyType == "場所打ち鋼管コンクリート杭" && PileSectionType == "鉄筋コンクリート部");
-
-        //    if (!isTargetRC)
-        //        return (new List<double>(), new List<double>());
-
-        //    var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-        //    var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-        //    var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-
-        //    var (ns, ms, _, _) = section.GetCrackMNInteraction(false); // 非線形
-        //    return (ns, ms);
-        //}
 
         private static double GetFilteredNMax((List<double> N, List<double> M) nmData)
         {
@@ -413,23 +380,6 @@ namespace PileDesign.Models.InputData
         [System.Text.Json.Serialization.JsonIgnore] public double FactoredServiceNMin => GetFilteredNMin(FactoredServiceNM);
         [System.Text.Json.Serialization.JsonIgnore] public double FactoredDamageNMin => GetFilteredNMin(FactoredDamageNM);
         [System.Text.Json.Serialization.JsonIgnore] public double FactoredUltimateNMin => GetFilteredNMin(FactoredUltimateNM);
-
-        /// <summary>
-        /// PileSection に各断面型の GetMPhiRelationship を仲介するメソッド。
-        /// 
-        /// 単位系変換の説明:
-        /// - 呼び出し側（FEM解析）の入力:
-        ///   axialN (軸力): [kN]
-        /// - 断面計算側（InsituReinforcedConcreteSection等）の期待入力/出力:
-        ///   axialN: [N]
-        ///   φ (曲率): [1/mm]
-        ///   M (曲げモーメント): [N·mm]
-        /// - FEM解析側（MomentCurvatureCurve）の期待値:
-        ///   φ: [1/m] = [rad/m]
-        ///   M: [kNm]
-        /// </summary>
-        public (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
-            => GetMPhiRelationship(axialN, 1.0);
 
         /// <summary>
         /// M-φキャッシュ用のキーを生成します。
@@ -486,7 +436,21 @@ namespace PileDesign.Models.InputData
         // デバッグ用: GetMPhiRelationship呼び出し回数
         private static int _getMphiCallCount = 0;
 
-        public (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN, double _)
+        /// <summary>
+        /// PileSection に各断面型の GetMPhiRelationship を仲介するメソッド。
+        ///
+        /// 単位系変換の説明:
+        /// - 呼び出し側（FEM解析）の入力:
+        ///   axialN (軸力): [kN]
+        /// - 断面計算側（InsituReinforcedConcreteSection等）の期待入力/出力:
+        ///   axialN: [N]
+        ///   φ (曲率): [1/mm]
+        ///   M (曲げモーメント): [N·mm]
+        /// - FEM解析側（MomentCurvatureCurve）の期待値:
+        ///   φ: [1/m] = [rad/m]
+        ///   M: [kNm]
+        /// </summary>
+        public (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
         {
             _getMphiCallCount++;
 
@@ -2278,150 +2242,6 @@ namespace PileDesign.Models.InputData
                 return default;
             }
         }
-
-        //private (List<double> N, List<double> M) GetNMRaw(string propertyName)
-        //{
-        //    if (PileBodyType == "場所打ち鉄筋コンクリート杭")
-        //    {
-        //        var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-        //        var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-        //        var pileSection = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-
-        //        //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-        //        UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-
-        //        (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-        //        {
-        //            "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-        //            "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-        //            "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-        //            "FactoredServiceNM" => pileSection.FactoredServiceNM,
-        //            "FactoredDamageNM" => pileSection.FactoredDamageNM,
-        //            "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-        //            _ => ([], [], [], [])
-        //        };
-
-        //        return (n, m);
-        //    }
-        //    else if (PileBodyType == "場所打ち鋼管コンクリート杭")
-        //    {
-        //        if (PileSectionType == "鉄筋コンクリート部")
-        //        {
-        //            var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-        //            var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-        //            var pileSection = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-
-        //            //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-        //            UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-        //            (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-        //            {
-        //                "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-        //                "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-        //                "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-        //                "FactoredServiceNM" => pileSection.FactoredServiceNM,
-        //                "FactoredDamageNM" => pileSection.FactoredDamageNM,
-        //                "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-        //                _ => ([], [], [], [])
-        //            };
-
-        //            return (n, m);
-        //        }
-        //        else if (PileSectionType == "鋼管コンクリート部")
-        //        {
-        //            var insituSteelPipe = new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
-        //            var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-        //            var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-        //            var pileSection = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
-
-        //            //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-        //            UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-        //            (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-        //            {
-        //                "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-        //                "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-        //                "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-        //                "FactoredServiceNM" => pileSection.FactoredServiceNM,
-        //                "FactoredDamageNM" => pileSection.FactoredDamageNM,
-        //                "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-        //                _ => ([], [], [], [])
-        //            };
-
-        //            return (n, m);
-        //        }
-        //    }
-        //    else if (PileBodyType == "既製コンクリート杭" && PileSectionType == "PHC杭" && TendonAp > 0 && PileDiameter != 2 * ConcreteThickness)
-        //    {
-        //        var precastConcrete = new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
-        //        var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
-        //        var pileSection = new PHCSection(precastConcrete, tendons, Prestress);
-
-        //        //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-        //        UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-        //        (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-        //        {
-        //            "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-        //            "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-        //            "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-        //            "FactoredServiceNM" => pileSection.FactoredServiceNM,
-        //            "FactoredDamageNM" => pileSection.FactoredDamageNM,
-        //            "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-        //            _ => ([], [], [], [])
-        //        };
-
-        //        return (n, m);
-        //    }
-        //    else if (PileBodyType == "既製コンクリート杭" && PileSectionType == "PRC杭" && TendonAp > 0 && PileDiameter != 2 * ConcreteThickness)
-        //    {
-        //        var precastConcrete = new PrecastPRCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
-        //        var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-        //        var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
-        //        var pileSection = new PRCSection(precastConcrete, mainBars, tendons, Prestress);
-
-        //        //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-        //        UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-        //        (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-        //        {
-        //            "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-        //            "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-        //            "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-        //            "FactoredServiceNM" => pileSection.FactoredServiceNM,
-        //            "FactoredDamageNM" => pileSection.FactoredDamageNM,
-        //            "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-        //            _ => ([], [], [], [])
-        //        };
-
-        //        return (n, m);
-        //    }
-        //    else if (PileBodyType == "既製コンクリート杭" && PileSectionType == "SC杭" && PileDiameter != 2 * ConcreteThickness)
-        //    {
-        //        var precastConcrete = new PrecastSCConcrete(PileDiameter - 2 * PipeTs, PileDiameter - 2 * PipeTs - 2 * ConcreteThickness, ConcreteFc);
-        //        var steelPipe = new PrecastSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
-        //        var pileSection = new SCSection(precastConcrete, steelPipe);
-
-        //        //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-        //        UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-        //        (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-        //        {
-        //            "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-        //            "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-        //            "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-        //            "FactoredServiceNM" => pileSection.FactoredServiceNM,
-        //            "FactoredDamageNM" => pileSection.FactoredDamageNM,
-        //            "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-        //            _ => ([], [], [], [])
-        //        };
-
-        //        return (n, m);
-        //    }
-
-        //    return ([], []);
-        //}
 
         // 浅いコピーを作成するメソッド
         public PileSection ShallowCopy()

@@ -710,7 +710,8 @@ namespace PileDesign.ViewModels
 
             // クロスヘアの初期化
             MyCrosshair_Mphi = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Mphi", "φ(1/m)", "M(kNm)", 1, 1);
+            // 軸ラベルと同じ単位（φ [1/mm]）で表示する（旧表記 "φ(1/m)" は誤り）
+            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Mphi", "φ(1/mm)", "M(kNm)", 1, 1);
         }
 
         // 共通: M-θ 曲線を描画するヘルパー（未定義メッセージにも対応）
