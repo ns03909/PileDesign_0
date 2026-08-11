@@ -42,14 +42,20 @@ namespace PileDesign.ViewModels
         {
             try
             {
+                // StackOverflow 等のプロセス即死時に到達位置を特定するためのブレッドクラム
+                // (File シンクはイベント毎フラッシュなので直前の行までは必ず残る)
+                Log.Information("[Docx] 出力設定ウィンドウ: 解析済みフラグ更新開始");
+
                 // 水平解析済みの荷重ケース・荷重組合せ・液状化条件を判定
                 UpdateDocxOutputAnalyzedFlags();
 
+                Log.Information("[Docx] 出力設定ウィンドウ: 生成・表示");
                 var dockxOutputOptionWindow = new DocxOutputWindow(this)
                 {
                     Owner = System.Windows.Application.Current?.MainWindow,
                 };
                 dockxOutputOptionWindow.ShowDialog();
+                Log.Information("[Docx] 出力設定ウィンドウ: クローズ");
             }
             catch (Exception ex)
             {

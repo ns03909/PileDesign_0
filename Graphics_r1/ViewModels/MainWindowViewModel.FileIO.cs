@@ -543,6 +543,7 @@ namespace PileDesign.ViewModels
                 FileName = defaultDocxName
             };
 
+            Serilog.Log.Information("[Docx] 保存ダイアログ表示");
             if (saveFileDialog.ShowDialog() == true)
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
