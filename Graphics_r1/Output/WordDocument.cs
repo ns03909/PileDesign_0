@@ -444,6 +444,13 @@ namespace PileDesign.Output
                 AddPageBreak(body);
                 // H1 に昇格 (旧: H2 で直前の無関係な H1 の子として番号付けされていた)
                 AddHeader1(body, "上部構造、基礎部への作用の組合せ", 1);
+                AddText(body, "水平解析では、地盤変位と慣性力の同時作用を以下の係数の組で定義し、組合せごとに解析する。");
+                AddSymbolDescriptionWithTab(body, symbolDescTabPosition,
+                    [Tex(@"\alpha_{L}"), ": 地盤の水平変位に乗じる係数（αL 倍した地盤変位を地盤ばね外端に強制変位として与える）"]);
+                AddSymbolDescriptionWithTab(body, symbolDescTabPosition,
+                    [Tex(@"\beta_{U}"), ": 上部構造慣性力 ", Tex(@"\P_{s}"), " に乗じる係数"]);
+                AddSymbolDescriptionWithTab(body, symbolDescTabPosition,
+                    [Tex(@"\beta_{L}"), ": 基礎部慣性力 ", Tex(@"\P_{f}"), " に乗じる係数（杭頭位置に ", Tex(@"\beta_{U} P_{s} + \beta_{L} P_{f}"), " の水平力を作用させる）"]);
                 TimeH("LoadCombinationTable", () => AddLoadCombinationTable(mainPart, body));
 
                 if (mainWindowViewModel.IsHorizontalAnalysisDone

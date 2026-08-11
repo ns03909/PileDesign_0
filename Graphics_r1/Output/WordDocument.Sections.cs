@@ -82,6 +82,19 @@ namespace PileDesign.Output
             //AddEquation_Rdt_ULS(body);
             AddEq(body, @"R_{d} = \phi_{R} R_{TR} = R_{TR} = \frac{1}{1.2}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + W");
 
+            // 記号定義 (この節だけ記号説明がなかったため追加。static メソッドのためタブ位置は定数)
+            const double tab = 15; // mm (symbolDescTabPosition と同値)
+            AddText(body, "記号");
+            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\R_{u}"), ": 極限鉛直支持力 [kN]"]);
+            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\R_{p}"), ": 極限先端支持力 [kN]、", Tex(@"\q_{p}"), ": 極限先端支持力度 [kN/m<^2>]、", Tex(@"\A"), ": 杭先端の断面積 [m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\R_{f}"), ": 極限周面支持力 [kN]（砂質土 ", Tex(@"\R_{fs}"), " と粘性土 ", Tex(@"\R_{fc}"), " の和）"]);
+            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\tau_{fs}, \tau_{fc}"), ": 砂質土・粘性土の最大周面抵抗力度 [kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\L_{s}, \L_{c}"), ": 砂質土・粘性土部分の杭長 [m]、", Tex(@"\psi"), ": 杭の周長 [m]"]);
+            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\phi_{R}"),
+                ConcreteModelOptions.MapLimitStateText(": 抵抗係数（使用限界 1/3、損傷限界 1/1.5、終局限界 1/1）")]);
+            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\R_{TU}, \R_{TR}, \R_{TY}"), ": 最大・残留・降伏引抜き抵抗力 [kN]"]);
+            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\tau_{sti}, \tau_{cti}"), ": 砂質土・粘性土の引抜き時最大周面抵抗力度 [kN/m<^2>]（押込み時の 2/3・4/5）"]);
+            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\L_{si}, \L_{ci}"), ": 各土層（砂質土・粘性土）の杭長 [m]、", Tex(@"W"), ": 杭の自重 [kN]"]);
         }
 
         // 沈下量の節
@@ -330,6 +343,14 @@ namespace PileDesign.Output
         {
             AddHeader1(body, "基礎部材の強度と変形性能");
 
+            AddText(body, ConcreteModelOptions.MapLimitStateText(
+                "杭体の曲げ・せん断耐力は、日本建築学会「基礎部材の強度と変形性能」（第1版、2022年）に基づき、" +
+                "使用限界・損傷限界・安全限界の 3 つの限界状態について算定する。" +
+                "式中の ξ は施工品質管理係数、Fc はコンクリートの設計基準強度 [N/mm²]、" +
+                "σ0 は軸方向応力度、β1・β2 は同書 解説表2.6・2.7 の低減係数（下表）である。"));
+
+            AddBetaFactorTables(body);
+
             AddText(body, "コンクリートのヤング係数");
             // 基本設定「Ec の算定で ξ=1.0」ON 時は σB = Fc で算定される（強度側には実際の ξ を使用）。
             if (ConcreteModelOptions.UseUnitGsiForConcreteE)
@@ -511,6 +532,86 @@ namespace PileDesign.Output
                     "Mu0 は安全限界曲げモーメントで、対応する曲率は断面曲げ解析により定める。" +
                     "解析（FEM）で負勾配のばねとならないよう、曲線は単調非減少化して用いる。");
             }
+        }
+
+        /// <summary>
+        /// 低減係数 β1・β2 の一覧表（「基礎部材の強度と変形性能」解説表2.6・2.7）。
+        /// 耐力式に β1・β2 が現れるのに定義がなかったため追加。
+        /// </summary>
+        internal static void AddBetaFactorTables(Body body)
+        {
+            AddIntroText(body, ConcreteModelOptions.MapLimitStateText(
+                "レベル1地震時の損傷限界検定では β2 を乗じない（β2 = 1.0 と扱う）。" +
+                "レベル2地震時の損傷限界検定では β2 を乗じる。" +
+                "使用限界・安全限界は β1×β2 を用いる（レベル差なし）。"));
+
+            const double fs = 8;
+
+            AddText(body, "低減係数 β1（解説表2.6）", "left", 9);
+            int w0 = 2800, w1 = 1200, w2 = 2000;
+            Table t1 = CreateTableWithBordersAndWidths(w0, w1, w2, w2, w2);
+            t1.Append(CreateHeaderRow(
+                CreateTableCellWithWidth("杭種別", "center", w0, fs),
+                CreateTableCellWithWidth("応力", "center", w1, fs),
+                CreateTableCellWithWidth(ConcreteModelOptions.MapLimitStateText("使用限界"), "center", w2, fs),
+                CreateTableCellWithWidth(ConcreteModelOptions.MapLimitStateText("損傷限界"), "center", w2, fs),
+                CreateTableCellWithWidth("安全限界", "center", w2, fs)));
+            (string Type, string Force, string S, string D, string U)[] beta1Rows =
+            [
+                ("場所打ち鉄筋コンクリート杭", "曲げ", "1.0", "1.0", "σ0≤(1/3)ξFc: 0.95\nσ0>(1/3)ξFc: 0.8"),
+                ("場所打ち鉄筋コンクリート杭", "せん断", "0.9", "0.9", "0.8"),
+                ("場所打ち鋼管コンクリート杭", "曲げ", "1.0", "1.0", "1.0"),
+                ("場所打ち鋼管コンクリート杭", "せん断", "1.0", "1.0", "1.0"),
+                ("PHC杭", "曲げ", "0.9", "1.0", "0.8"),
+                ("PHC杭", "せん断", "1.0", "1.0", "1.0"),
+                ("PRC杭", "曲げ", "0.8", "0.8", "0.8"),
+                ("PRC杭", "せん断", "1.0", "1.0", "1.0"),
+                ("SC杭", "曲げ", "1.0", "1.0", "1.0"),
+                ("SC杭", "せん断", "1.0", "1.0", "1.0"),
+            ];
+            foreach (var r in beta1Rows)
+            {
+                TableRow row = new();
+                row.Append(CreateTableCellWithWidth(r.Type, "left", w0, fs));
+                row.Append(CreateTableCellWithWidth(r.Force, "center", w1, fs));
+                row.Append(CreateTableCellWithWidth(r.S, "center", w2, fs));
+                row.Append(CreateTableCellWithWidth(r.D, "center", w2, fs));
+                row.Append(CreateTableCellWithWidth(r.U, "center", w2, fs));
+                t1.Append(row);
+            }
+            body.Append(t1);
+
+            AddText(body, "低減係数 β2（解説表2.7）", "left", 9);
+            int v0 = 2800, v1 = 1200, v2 = 6000;
+            Table t2 = CreateTableWithBordersAndWidths(v0, v1, v2);
+            t2.Append(CreateHeaderRow(
+                CreateTableCellWithWidth("杭種別", "center", v0, fs),
+                CreateTableCellWithWidth("応力", "center", v1, fs),
+                CreateTableCellWithWidth("β2", "center", v2, fs)));
+            (string Type, string Force, string B2)[] beta2Rows =
+            [
+                ("場所打ち鉄筋コンクリート杭", "曲げ", "σ0≤(1/3)ξFc: 1.0、σ0>(1/3)ξFc: 0.65"),
+                ("場所打ち鉄筋コンクリート杭", "せん断", "σ0≤(1/3)ξFc: 0.75、σ0>(1/3)ξFc: 0.65"),
+                ("場所打ち鋼管コンクリート杭", "曲げ", "1.0"),
+                ("場所打ち鋼管コンクリート杭", "せん断", "1.0"),
+                ("PHC杭", "曲げ", "σe+σ0e≤10 N/mm²: 0.75、σe+σ0e>10 N/mm²: 0.65"),
+                ("PHC杭", "せん断", "0.65"),
+                ("PRC杭", "曲げ", "σe+σ0e≤10 N/mm²: 0.75、σe+σ0e>10 N/mm²: 0.65"),
+                ("PRC杭", "せん断", "0.65"),
+                ("SC杭", "曲げ", "1.0"),
+                ("SC杭", "せん断", "1.0"),
+            ];
+            foreach (var r in beta2Rows)
+            {
+                TableRow row = new();
+                row.Append(CreateTableCellWithWidth(r.Type, "left", v0, fs));
+                row.Append(CreateTableCellWithWidth(r.Force, "center", v1, fs));
+                row.Append(CreateTableCellWithWidth(r.B2, "left", v2, fs));
+                t2.Append(row);
+            }
+            body.Append(t2);
+
+            AddText(body, "出典: 日本建築学会「基礎部材の強度と変形性能」（第1版、2022年）解説表2.6・2.7", "left", 8);
         }
 
         // 荷重条件の表を追加するメソッド

@@ -739,6 +739,12 @@ namespace PileDesign.Output
         // 杭軸力の表を追加するメソッド
         public static void AddPileAxialLoadTables(Body body, ObservableCollection<PileLayoutDataItem> pileLayoutItems)
         {
+            AddIntroText(body,
+                "本表は各杭の杭頭に作用する鉛直軸力の入力値を示す（圧縮を正、単位 kN）。" +
+                "VL は長期（常時）軸力、VL_add は追加軸力で、長期の検討には VL + VL_add を用いる。" +
+                "L1-1〜L1-4 はレベル1地震時、L2-1〜L2-4 はレベル2地震時の、" +
+                "各加力方向（方向1〜4）における杭軸力である。");
+
             double fontSize = 8;
             Table table = CreateTableWithBorders();
 
@@ -790,6 +796,12 @@ namespace PileDesign.Output
         // 前後方杭の表を追加するメソッド
         public static void AddIsFrontPileTables(Body body, ObservableCollection<PileLayoutDataItem> pileLayoutItems)
         {
+            AddIntroText(body,
+                "加力方向に対して前面側に位置する杭を前方杭（前）、その背後に位置する杭を後方杭（後）とし、" +
+                "加力方向（方向1〜4）ごとに設定する。この区分は群杭の塑性水平地盤反力 py の係数 κ・μ・λ の" +
+                "選択に用いられ、後方杭には前方杭より小さい κ（杭間隔比 R/B と内部摩擦角 φ に依存）が適用される" +
+                "（詳細は「杭の水平抵抗」章）。");
+
             double fontSize = 8;
             Table table = CreateTableWithBorders();
 

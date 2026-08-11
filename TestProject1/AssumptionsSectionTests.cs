@@ -185,6 +185,20 @@ namespace TestProject1
         }
 
         [TestMethod]
+        public void MemberCapacities_IncludesBetaFactorTables()
+        {
+            using var _ = OptionsScope.AllDefaults();
+
+            string text = RenderMemberCapacitiesText();
+
+            Assert.IsTrue(text.Contains("解説表2.6"), "β1 一覧表（解説表2.6）が必要");
+            Assert.IsTrue(text.Contains("解説表2.7"), "β2 一覧表（解説表2.7）が必要");
+            Assert.IsTrue(text.Contains("レベル1地震時の損傷限界検定では β2 を乗じない"),
+                "レベル別の β2 適用ルールの説明が必要");
+            Assert.IsTrue(text.Contains("PRC杭"), "杭種別の低減係数の値が表に含まれるはず");
+        }
+
+        [TestMethod]
         public void AddAssumptionTable_ProducesValidOpenXml()
         {
             using var _ = OptionsScope.AllDefaults();

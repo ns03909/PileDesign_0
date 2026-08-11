@@ -210,6 +210,12 @@ namespace PileDesign.Output
             return runs;
         }
 
+        /// <summary>
+        /// 表・図の前置き説明文（本文よりやや小さめ）。初見の読者向けに
+        /// 「この表・図が何を示すか」「記号の意味」を 1〜3 行で説明する用途。
+        /// </summary>
+        public static void AddIntroText(Body body, string text) => AddText(body, text, "left", 9.5);
+
         // テキストを追加するメソッド
         public static void AddText(Body body, string textContent, string alignment = "left", double fontSize = 10.5)
         {

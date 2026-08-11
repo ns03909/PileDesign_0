@@ -424,6 +424,11 @@ namespace PileDesign.Output
         // 杭検討結果まとめ表を追加
         private void AddPileForceSummaryTable(MainDocumentPart mainDocumentPart, Body body)
         {
+            AddIntroText(body,
+                "杭体・杭区間ごとに、選択した全杭・全荷重ケース・全荷重組合せ（液状化の有無を含む）にわたる" +
+                "応答の最大値をレベル別にまとめる。Dmax は最大水平変位、Qmax・Mmax はせん断力・曲げモーメントの" +
+                "絶対値最大、N_Max・N_Min は軸力の最大値・最小値（圧縮を正）である。");
+
             List<string> selectedPileBodies = [];
             List<int> selectedSegment = [];
             List<double> selectedSegmentTop = [];
