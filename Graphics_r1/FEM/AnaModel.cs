@@ -96,6 +96,13 @@ namespace PileDesign.FEM
         /// </summary>
         public AnalysisRunSnapshot? LastRunConfig { get; set; } = null;
 
+        /// <summary>
+        /// 解析実行時点の材料モデル化オプション (ConcreteModelOptions.Signature())。
+        /// docx 出力時に現在値と照合し、不一致なら「オプションが解析後に変更された」警告を計算書に出す。
+        /// 旧 JSON との後方互換のため null 許容 (null = 記録なし、照合しない)。
+        /// </summary>
+        public string? ConcreteOptionsSignature { get; set; } = null;
+
         public int CountFree { get; set; }
         public int CountFix { get; set; }
 

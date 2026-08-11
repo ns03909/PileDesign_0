@@ -163,6 +163,7 @@ WindowStartupLocation="CenterOwner">
                             <CheckBox Content="杭軸力" IsChecked="{Binding DocxOutput.IncludePileAxialLoad, Mode=TwoWay}" Margin="0,2"/>
                             <CheckBox Content="前後方杭" IsChecked="{Binding DocxOutput.IncludeIsFrontPile, Mode=TwoWay}" Margin="0,2"/>
                             <CheckBox Content="検討方針 (杭頭接続仮定を含む)" IsChecked="{Binding DocxOutput.IncludeDesignApproach, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="計算条件・仮定 (材料モデル化オプション等)" IsChecked="{Binding DocxOutput.IncludeAssumptions, Mode=TwoWay}" Margin="0,2"/>
                             <CheckBox Content="地盤情報" IsChecked="{Binding DocxOutput.IncludeGroundInformation, Mode=TwoWay}" Margin="0,2"/>
                             <CheckBox Content="液状化検討" IsChecked="{Binding DocxOutput.IncludeLiquefaction, Mode=TwoWay}" Margin="0,2"/>
                             <CheckBox Content="杭配置図" IsChecked="{Binding DocxOutput.IncludePileLocationMap, Mode=TwoWay}" Margin="0,2"/>

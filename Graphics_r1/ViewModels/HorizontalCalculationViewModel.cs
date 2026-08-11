@@ -1111,6 +1111,9 @@ namespace PileDesign.ViewModels
             // LastRunConfig 転写 (互換性検証で参照される)
             editModel.LastRunConfig = mainModel.LastRunConfig;
 
+            // 転写した結果は main 側の解析実行時オプションによるもの → 記録も一緒に転写
+            editModel.ConcreteOptionsSignature = mainModel.ConcreteOptionsSignature;
+
             // 各要素の結果も転写 (個別グラフ・テーブル表示の整合性のため)
             // 件数チェック後なのでインデックスで対応
             for (int i = 0; i < editModel.Nodes.Count && i < mainModel.Nodes.Count; i++)
@@ -1840,6 +1843,10 @@ namespace PileDesign.ViewModels
 
                 IsAnalysisExecuted = true; // 解析実行済みフラグをセット
                 _hasUnsavedAnalysisChange = true; // 新規解析の結果を保持。キャンセル時の確認対象
+
+                // 解析実行時点の材料モデル化オプションを記録 (docx 出力時の照合用)
+                if (AnaModels.Count > 0)
+                    AnaModels[^1].ConcreteOptionsSignature = ConcreteModelOptions.Signature();
 
                 // 断面計算フォールバック（計算失敗→既定値代替）が発生していれば可視化する。
                 // 耐力 0 や線形 M-φ での代替が検定・グラフへ静かに流れるのを防ぐ。

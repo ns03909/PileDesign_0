@@ -344,6 +344,13 @@ namespace PileDesign.Output
                 });
             }
 
+            // 計算条件・仮定 — 材料モデル化オプション等の仮定を明記。
+            // 計算書レベル（簡易/詳細）に依らず出力する（仮定の記載は計算書の必須情報）。
+            if (mainWindowViewModel.DocxOutput.IncludeAssumptions)
+            {
+                Time("Assumptions", () => AddCalculationAssumptionsSection(body, inputModel));
+            }
+
             if (mainWindowViewModel.DocxOutput.IncludeGroundInformation)
             {
                 Time("GroundInformation", () => {

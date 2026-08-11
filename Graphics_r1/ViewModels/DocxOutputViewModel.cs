@@ -235,6 +235,7 @@ namespace PileDesign.ViewModels
         [ObservableProperty] private bool includePileAxialLoad = true;     // 杭軸力
         [ObservableProperty] private bool includeIsFrontPile = true;       // 前後方杭
         [ObservableProperty] private bool includeDesignApproach = true;    // 検討方針 (杭頭接続仮定を含む)
+        [ObservableProperty] private bool includeAssumptions = true;       // 計算条件・仮定 (材料モデル化オプション等。レベル非依存)
 
         // 水平解析完了時に HorizontalCalculationViewModel が cache する解析サマリーテキスト
         // (docx 出力で先頭の "━━━ 解析サマリーレポート ━━━" ブロックを再利用するため)

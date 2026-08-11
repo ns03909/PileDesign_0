@@ -253,19 +253,21 @@ namespace PileDesign.Output
         private static Table CreateTableWithBorders()
         {
             Table table = new();
+            // OpenXML スキーマ (CT_TblPr / CT_TblBorders) の子要素順序に従う:
+            // tblW → tblBorders → tblLayout、罫線は top → left → bottom → right → insideH → insideV
             TableProperties props = new(
                 // 表の幅を100%（紙面いっぱい）に設定
                 new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct },
-                // 列幅を内容に応じて自動調整
-                new TableLayout { Type = TableLayoutValues.Autofit },
                 new TableBorders(
                     new TopBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
-                    new BottomBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new LeftBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
+                    new BottomBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new RightBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new InsideHorizontalBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new InsideVerticalBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 }
-                )
+                ),
+                // 列幅を内容に応じて自動調整
+                new TableLayout { Type = TableLayoutValues.Autofit }
             );
             table.AppendChild(props);
             return table;
@@ -275,13 +277,14 @@ namespace PileDesign.Output
         // 列幅の比率を維持しながら、表は紙面幅いっぱいに設定
         {
             Table table = new();
+            // 罫線は OpenXML スキーマ順 (top → left → bottom → right → insideH → insideV)
             TableProperties props = new(
                 // 表の幅を100%（紙面いっぱい）に設定
                 new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct },
                 new TableBorders(
                     new TopBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
-                    new BottomBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new LeftBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
+                    new BottomBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new RightBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new InsideHorizontalBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new InsideVerticalBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 }
@@ -303,15 +306,16 @@ namespace PileDesign.Output
         private static TableCell CreateTableCellWithWidth(string text, string alignment = "left", int width = 0, double fontSize = 8)
         {
             TableCell tableCell = new();
+            // OpenXML スキーマ (CT_TcPr) の子要素順序: tcW → … → vAlign
             TableCellProperties tableCellProperties = new();
-            TableCellVerticalAlignment tableCellVerticalAlignment = new() { Val = TableVerticalAlignmentValues.Center };
-            tableCellProperties.Append(tableCellVerticalAlignment);
-
             if (width > 0)
             {
                 TableCellWidth tableCellWidth = new() { Type = TableWidthUnitValues.Dxa, Width = width.ToString() };
                 tableCellProperties.Append(tableCellWidth);
             }
+
+            TableCellVerticalAlignment tableCellVerticalAlignment = new() { Val = TableVerticalAlignmentValues.Center };
+            tableCellProperties.Append(tableCellVerticalAlignment);
 
             Paragraph paragraph = new()
             {
@@ -356,15 +360,16 @@ namespace PileDesign.Output
         private static TableRow CreateHeaderRow(params TableCell[] cells)
         {
             TableRow headerRow = new();
+
+            // ヘッダー行として設定 (OpenXML スキーマ上 trPr は行の先頭要素)
+            TableRowProperties rowProperties = new();
+            rowProperties.Append(new TableHeader());
+            headerRow.Append(rowProperties);
+
             foreach (var cell in cells)
             {
                 headerRow.Append(cell);
             }
-
-            // ヘッダー行として設定
-            TableRowProperties rowProperties = new();
-            rowProperties.Append(new TableHeader());
-            headerRow.Append(rowProperties);
 
             return headerRow;
         }
