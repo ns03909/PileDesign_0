@@ -4,7 +4,9 @@
              xmlns:conv="clr-namespace:PileDesign.Converters"
              x:Name="Root">
     <UserControl.Resources>
-        <conv:InverseBooleanConverter x:Key="InverseBool"/>
+        <!-- InverseBool の TwoWay ペアはアンチェック時にも逆値を書き戻し、ウィンドウ再表示時に
+             無限ループ → StackOverflow の危険があるため BoolEquals (チェック時のみ書く) に統一 -->
+        <conv:BoolEqualsConverter x:Key="BoolEquals"/>
 
         <!-- 式サブテキスト: 未指定なら行ごと折りたたむ -->
         <Style x:Key="FormulaTextStyle" TargetType="TextBlock">
@@ -34,7 +36,7 @@
         <StackPanel IsEnabled="{Binding AreRadiosEnabled, ElementName=Root}">
             <!-- 既定（基礎部材の強度と変形性能）側 -->
             <RadioButton GroupName="{Binding GroupName, ElementName=Root}" Margin="12,1,0,1"
-                         IsChecked="{Binding IsAlternativeSelected, ElementName=Root, Converter={StaticResource InverseBool}}"
+                         IsChecked="{Binding IsAlternativeSelected, ElementName=Root, Converter={StaticResource BoolEquals}, ConverterParameter=False}"
                          ToolTip="{Binding DefaultToolTip, ElementName=Root}">
                 <StackPanel>
                     <TextBlock Text="{Binding DefaultText, ElementName=Root}" TextWrapping="Wrap"/>
@@ -45,7 +47,7 @@
 
             <!-- 代替オプション側 -->
             <RadioButton GroupName="{Binding GroupName, ElementName=Root}" Margin="12,1,0,1"
-                         IsChecked="{Binding IsAlternativeSelected, ElementName=Root}"
+                         IsChecked="{Binding IsAlternativeSelected, ElementName=Root, Converter={StaticResource BoolEquals}, ConverterParameter=True}"
                          ToolTip="{Binding AlternativeToolTip, ElementName=Root}">
                 <StackPanel>
                     <TextBlock Text="{Binding AlternativeText, ElementName=Root}" TextWrapping="Wrap"/>

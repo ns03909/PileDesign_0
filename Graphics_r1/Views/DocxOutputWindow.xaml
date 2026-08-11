@@ -26,6 +26,7 @@ WindowStartupLocation="CenterOwner">
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <conv:BooleanNegationConverter x:Key="BooleanNegationConverter" />
         <conv:IntEqualsConverter x:Key="IntEqualsConverter"/>
+        <conv:BoolEqualsConverter x:Key="BoolEqualsConverter"/>
         <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
         <conv:LoadCaseLevelToColorConverter x:Key="LoadCaseLevelToColorConverter"/>
         <Style x:Key="SvgIconStyle" TargetType="svgc:SvgViewbox">
@@ -240,10 +241,13 @@ WindowStartupLocation="CenterOwner">
                                       ToolTip="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=レベル1→損傷限界、レベル2+グレードS→損傷限界、レベル2+グレードA→安全限界 (低減後値) を自動選択, FallbackValue=レベル1→損傷限界、レベル2+グレードS→損傷限界、レベル2+グレードA→安全限界 (低減後値) を自動選択}"/>
                             <StackPanel Margin="30,0,0,2" IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}">
                                 <TextBlock Text="└ まとめ方" FontSize="11" Foreground="#555"/>
+                                <!-- 正負 2 つの TwoWay ライター (BooleanNegation) はウィンドウ再表示時に
+                                     GroupName static テーブル経由で相互解除の無限ループ → StackOverflow を
+                                     起こすため、「チェック時のみ書く」BoolEqualsConverter に統一 (2026-08-11) -->
                                 <RadioButton Content="杭ごとに個別" GroupName="PileStressGrouping" Margin="15,2,0,0"
-                                             IsChecked="{Binding DocxOutput.GroupPileStressBySoilPile, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"/>
+                                             IsChecked="{Binding DocxOutput.GroupPileStressBySoilPile, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=False}"/>
                                 <RadioButton Content="杭地盤セットごとにまとめる" GroupName="PileStressGrouping" Margin="15,2,0,0"
-                                             IsChecked="{Binding DocxOutput.GroupPileStressBySoilPile, Mode=TwoWay}"/>
+                                             IsChecked="{Binding DocxOutput.GroupPileStressBySoilPile, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=True}"/>
                             </StackPanel>
 
                             <CheckBox Content="杭頭Mマップ" IsChecked="{Binding DocxOutput.IncludePileHeadMomentMap, Mode=TwoWay}" Margin="15,6,0,2"

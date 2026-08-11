@@ -107,6 +107,7 @@
 
         <conv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
         <conv:BooleanNegationConverter x:Key="BooleanNegationConverter"/>
+        <conv:BoolEqualsConverter x:Key="BoolEqualsConverter"/>
         <conv:LoadCaseLevelToColorConverter x:Key="LoadCaseLevelToColorConverter"/>
         <conv:CompletedCaseToCheckMarkConverter x:Key="CompletedCaseToCheckMarkConverter"/>
 
@@ -223,11 +224,11 @@
             <StackPanel Orientation="Horizontal" Margin="0,2">
                 <TextBlock Text="杭軸力:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
                 <RadioButton Content="入力値" GroupName="AxialForceMode" Margin="0,0,12,0" VerticalAlignment="Center"
-                             IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                             IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=False}"
                              IsEnabled="{Binding CanSelectInputOnlyAxialMode}"
                              ToolTip="入力された軸力値のみを使用 (P-S 非線形ばね有効時は選択不可)"/>
                 <RadioButton Content="入力値＋応力解析結果" GroupName="AxialForceMode" VerticalAlignment="Center"
-                             IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay}"
+                             IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=True}"
                              ToolTip="入力軸力に解析で得られた軸力Fxiを加算&#x0a;（各荷重ステップ開始時に更新）&#x0a;P-S 非線形ばね有効時は強制的にこちらが選択される"/>
             </StackPanel>
 
@@ -236,10 +237,10 @@
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="鉛直方向境界条件:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
                     <RadioButton Content="杭先端支持" GroupName="VerticalBC" Margin="0,0,12,0" VerticalAlignment="Center"
-                                 IsChecked="{Binding UsePsSpringAtPileTip, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                                 IsChecked="{Binding UsePsSpringAtPileTip, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=False}"
                                  ToolTip="杭先端の Uz を固定 (従来挙動)。杭周面・先端の鉛直抵抗は考慮しない。"/>
                     <RadioButton Content="P-S 非線形ばね" GroupName="VerticalBC" VerticalAlignment="Center"
-                                 IsChecked="{Binding UsePsSpringAtPileTip, Mode=TwoWay}"
+                                 IsChecked="{Binding UsePsSpringAtPileTip, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=True}"
                                  ToolTip="沈下解析の P-S 曲線を用いて、杭全節点に非線形 Z ばねを設置 (沈下解析の実行が必要)。&#x0a;杭軸力は各杭の接合節点に外力として適用される。"/>
                 </StackPanel>
                 <CheckBox Content="VL 単独ケースも解析" Margin="100,2,0,0"
@@ -507,10 +508,10 @@
                 <StackPanel Orientation="Horizontal" Margin="0,2">
                     <TextBlock Text="NR法:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
                     <RadioButton Content="Full NR" GroupName="NRMethod" Margin="0,0,12,0" VerticalAlignment="Center"
-                                 IsChecked="{Binding UseModifiedNewtonRaphson, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                                 IsChecked="{Binding UseModifiedNewtonRaphson, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=False}"
                                  ToolTip="Full Newton-Raphson法&#x0a;反復中も接線剛性を更新（高速だが不安定な場合あり）"/>
                     <RadioButton Content="Full→Modified NR" GroupName="NRMethod" VerticalAlignment="Center"
-                                 IsChecked="{Binding UseModifiedNewtonRaphson, Mode=TwoWay}"
+                                 IsChecked="{Binding UseModifiedNewtonRaphson, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=True}"
                                  ToolTip="最初の N 回を Full NR で実行し、以降は Modified NR（K行列再利用）に移行&#x0a;Full NR の回数は下の「Full NR初期反復」で設定"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,2"
