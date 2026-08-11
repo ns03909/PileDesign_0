@@ -252,9 +252,21 @@ namespace PileDesign.Models.InputData
             List<double> qs = [];
             double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            // β2 は σ0=(1/3)ξFc で 0.75→0.65 に切り替わる (レベル2 のみ β2 を乗じる)。
+            // 閾値をまたぐ区間では同一 N の 2 点 (切替前値・切替後値) を挿入し、
+            // 低減後曲線の段差を斜めでなく垂直に描く (NM 曲線の複製点方式と同じ)。
+            double nThreshold = 1.0 / 3.0 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            bool hasBetaStep = isFactored && level == 2;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
+                if (hasBetaStep && ns.Count > 0 && ns[^1] < nThreshold && n > nThreshold)
+                {
+                    ns.Add(nThreshold);
+                    qs.Add(GetDamageLimitShear(MonQd, nThreshold / Ae, level, isFactored));                    // σ0 ≤ 閾値側 (β2=0.75)
+                    ns.Add(nThreshold);
+                    qs.Add(GetDamageLimitShear(MonQd, Math.BitIncrement(nThreshold / Ae), level, isFactored)); // σ0 > 閾値側 (β2=0.65)
+                }
                 double q = GetDamageLimitShear(MonQd, n / Ae, level, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -273,9 +285,20 @@ namespace PileDesign.Models.InputData
             double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             double pg = MainBarArea / InsituConcrete.Ac;
             double pt = 100 * pg / 4.0;
+            // β2 は σ0=(1/3)ξFc で 0.75→0.65 に切り替わる。閾値をまたぐ区間では
+            // 同一 N の 2 点 (切替前値・切替後値) を挿入し、低減後曲線の段差を
+            // 斜めでなく垂直に描く (NM 曲線の複製点方式と同じ)。
+            double nThreshold = 1.0 / 3.0 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
+                if (isFactored && ns.Count > 0 && ns[^1] < nThreshold && n > nThreshold)
+                {
+                    ns.Add(nThreshold);
+                    qs.Add(GetUltimateLimitShear(MonQd, nThreshold / Ae, pt, pw, sigmaWy, isFactored));                    // σ0 ≤ 閾値側 (β2=0.75)
+                    ns.Add(nThreshold);
+                    qs.Add(GetUltimateLimitShear(MonQd, Math.BitIncrement(nThreshold / Ae), pt, pw, sigmaWy, isFactored)); // σ0 > 閾値側 (β2=0.65)
+                }
                 double q = GetUltimateLimitShear(MonQd, n / Ae, pt, pw, sigmaWy, isFactored);
                 ns.Add(n);
                 qs.Add(q);

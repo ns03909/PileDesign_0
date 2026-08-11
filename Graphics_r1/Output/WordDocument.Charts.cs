@@ -830,18 +830,43 @@ namespace PileDesign.Output
                                         double dRy = rsResult.CumulativeDisp.Ryj - rsResult.CumulativeDisp.Ryi;
                                         double dRz = rsResult.CumulativeDisp.Rzj - rsResult.CumulativeDisp.Rzi;
 
-                                        double thetaFinal = rs.Mode == RotationalSpringMode.CombinedXY
-                                            ? Math.Sqrt(dRx * dRx + dRy * dRy)
-                                            : (rs.Dof == RotationalDof.Rx ? Math.Abs(dRx)
+                                        double thetaFinal;
+                                        double mFinal;
+                                        if (rs.Mode == RotationalSpringMode.CombinedXY)
+                                        {
+                                            // v28 方向ロック + ヒステリシス下では、最終状態のベクトルノルム
+                                            // (|Δθ|, |M|) は単調載荷曲線上に乗らない (回転方向がロック方向から
+                                            // ずれるため |Δθ| > θ_proj となり、点が曲線の右下に外れる)。
+                                            // アプリ内グラフ (GraphViewModel.CurveGraphs) と同じく、
+                                            // ピーク履歴値 (ThetaProjMax, curve(ThetaProjMax)) をプロットする。
+                                            string snapKey = RotationalSpring.MakeCaseKey(
+                                                loadCase.LoadName, loadCombination.No, isLiquefaction);
+                                            var peakCurve = rs.CaseMThetaSnapshots.TryGetValue(snapKey, out var snap)
+                                                && snap.CurveXY != null ? snap.CurveXY : rs.CurveXY;
+                                            if (rsResult.HasCracked
+                                                && rsResult.CrackNx.HasValue && rsResult.CrackNy.HasValue
+                                                && rsResult.ThetaProjMax > 0.0
+                                                && peakCurve != null)
+                                            {
+                                                thetaFinal = rsResult.ThetaProjMax;
+                                                mFinal = Math.Abs(peakCurve.EvaluateMoment(thetaFinal));
+                                            }
+                                            else
+                                            {
+                                                thetaFinal = Math.Sqrt(dRx * dRx + dRy * dRy);
+                                                mFinal = Math.Sqrt(rsResult.CumulativeForce.Mxi * rsResult.CumulativeForce.Mxi +
+                                                                   rsResult.CumulativeForce.Myi * rsResult.CumulativeForce.Myi);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            thetaFinal = rs.Dof == RotationalDof.Rx ? Math.Abs(dRx)
                                                 : rs.Dof == RotationalDof.Ry ? Math.Abs(dRy)
-                                                : Math.Abs(dRz));
-
-                                        double mFinal = rs.Mode == RotationalSpringMode.CombinedXY
-                                            ? Math.Sqrt(rsResult.CumulativeForce.Mxi * rsResult.CumulativeForce.Mxi +
-                                                         rsResult.CumulativeForce.Myi * rsResult.CumulativeForce.Myi)
-                                            : (rs.Dof == RotationalDof.Rx ? Math.Abs(rsResult.CumulativeForce.Mxi)
+                                                : Math.Abs(dRz);
+                                            mFinal = rs.Dof == RotationalDof.Rx ? Math.Abs(rsResult.CumulativeForce.Mxi)
                                                 : rs.Dof == RotationalDof.Ry ? Math.Abs(rsResult.CumulativeForce.Myi)
-                                                : Math.Abs(rsResult.CumulativeForce.Mzi));
+                                                : Math.Abs(rsResult.CumulativeForce.Mzi);
+                                        }
 
                                         if (double.IsFinite(thetaFinal) && double.IsFinite(mFinal) && thetaFinal > 0)
                                         {
