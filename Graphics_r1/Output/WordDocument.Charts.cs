@@ -900,7 +900,8 @@ namespace PileDesign.Output
             if (loadCombinations == null || loadCombinations.Count == 0) return;
 
             AddPageBreak(body);
-            AddHeader1(body, "杭の変位・応力ダイアグラム", 2);
+            // H1 に昇格 (旧: H2 で親 H1 がなく、直前の無関係な H1 の子として番号付けされていた)
+            AddHeader1(body, "杭の変位・応力ダイアグラム", 1);
 
             if (mainWindowViewModel.DocxOutput.GroupPileStressBySoilPile)
             {

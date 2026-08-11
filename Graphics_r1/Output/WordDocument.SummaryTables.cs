@@ -34,6 +34,10 @@ namespace PileDesign.Output
         // 杭明細を追加
         private void AddPileDescription(MainDocumentPart mainDocumentPart, Body body)
         {
+            // 見出しなしで文書最末尾に表だけが出現していたため H1 を付与
+            AddPageBreak(body);
+            AddHeader1(body, "杭体明細", 1);
+
             List<string> selectedPileBodies = [];
             List<int> selectedSegment = [];
             List<double> selectedSegmentTop = [];
@@ -1144,7 +1148,8 @@ namespace PileDesign.Output
             if (string.IsNullOrWhiteSpace(text)) return;
 
             AddPageBreak(body);
-            AddHeader1(body, factored ? "水平解析 検定（低減後／NG項目）" : "水平解析 検定（低減前／NG項目）", 2);
+            // H1 に昇格 (旧: H2 で親 H1 がなく、直前の無関係な H1 の子として番号付けされていた)
+            AddHeader1(body, factored ? "水平解析 検定（低減後／NG項目）" : "水平解析 検定（低減前／NG項目）", 1);
 
             // NG レポートは情報量が多いので、9pt フォントに対し +1pt のみの極小行間 (Exact 10pt) で詰める。
             // SnapToGrid=false で文書グリッド吸着を無効化し Exact 指定を有効にする。

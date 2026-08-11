@@ -410,7 +410,8 @@ namespace PileDesign.Output
                             AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "vertical");
                             AddAutoFigureCaption(body, "沈下解析杭モデル", "図");
 
-                            AddSettlementGraph(mainPart, body);
+                            // 沈下グラフは「単杭の沈下」節 (IncludeSettlement) で出力する。
+                            // 旧実装はここでも AddSettlementGraph を呼び、同じ図表が二重出力されていた。
                         }
                     }
                     else
@@ -441,13 +442,16 @@ namespace PileDesign.Output
                     TimeH("SectionHorizontalResistance", () => { AddSectionHorizontalResistance(body); AddLineBreak(body); });
                 }
                 AddPageBreak(body);
-                AddHeader1(body, "上部構造、基礎部への作用の組合せ", 2);
+                // H1 に昇格 (旧: H2 で直前の無関係な H1 の子として番号付けされていた)
+                AddHeader1(body, "上部構造、基礎部への作用の組合せ", 1);
                 TimeH("LoadCombinationTable", () => AddLoadCombinationTable(mainPart, body));
 
                 if (mainWindowViewModel.IsHorizontalAnalysisDone
                     && anaModel?.HorizontalSoilSprings != null
                     && anaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == "根入部節点"))
                 {
+                    // 見出しなしで表だけが並んでいたため H2 を付与
+                    AddHeader2(body, "根入部反力の合計");
                     TimeH("HorizontalReactionSummaryTable L1", () => { AddLineBreak(body); AddHorizontalReactionSummaryTable(mainPart, body, 1); });
                     TimeH("HorizontalReactionSummaryTable L2", () => { AddLineBreak(body); AddHorizontalReactionSummaryTable(mainPart, body, 2); });
                 }
@@ -466,7 +470,8 @@ namespace PileDesign.Output
                     if (mainWindowViewModel.IsHorizontalAnalysisDone)
                     {
                         TimeH("PileForceSummaryTable", () => AddPileForceSummaryTable(mainPart, body));
-                        TimeH("NMinT (N-M 図)", () => AddNMinT(mainPart, body));
+                        if (mainWindowViewModel.DocxOutput.IncludeHorizontal_NMinT)
+                            TimeH("NMinT (N-M 図)", () => AddNMinT(mainPart, body));
                         if (mainWindowViewModel.DocxOutput.IncludeHorizontal_QNInT)
                             TimeH("QNInT (Q-N 図)", () => AddQNInT(mainPart, body));
                         if (mainWindowViewModel.DocxOutput.IncludeHorizontal_MPhi)
@@ -493,6 +498,16 @@ namespace PileDesign.Output
                     mainWindowViewModel.DocxOutput.IncludeHorizontal_Shear,
                     mainWindowViewModel.DocxOutput.IncludeHorizontal_StressLimitState));
             }
+            // 杭伏図マップ群 — 見出しなしで図が唐突に並んでいたため、いずれかが ON のとき H1 を付与
+            if (mainWindowViewModel.DocxOutput.IncludePileLocationMap
+                || mainWindowViewModel.DocxOutput.IncludePileAxialLoadMap
+                || mainWindowViewModel.DocxOutput.IncludeIsFrontMap
+                || mainWindowViewModel.DocxOutput.IncludePileHeadMomentMap
+                || mainWindowViewModel.DocxOutput.IncludePileHeadShearMap)
+            {
+                AddPageBreak(body);
+                AddHeader1(body, "杭配置・応力マップ", 1);
+            }
             if (mainWindowViewModel.DocxOutput.IncludePileLocationMap)
                 Time("PileLocationMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileBasicMark); AddAutoFigureCaption(body, "杭配置マップ", "図"); });
             if (mainWindowViewModel.DocxOutput.IncludePileAxialLoadMap)
@@ -515,7 +530,7 @@ namespace PileDesign.Output
                     if (mainWindowViewModel.IsVerticalAnalysisDone)
                     {
                         AddPageBreak(body);
-                        AddHeader1(body, "単杭の沈下", 2);
+                        AddHeader1(body, "単杭の沈下", 1);
                         AddSettlementGraph(mainPart, body);
                     }
                     else
@@ -527,6 +542,9 @@ namespace PileDesign.Output
             if (mainWindowViewModel.DocxOutput.IncludeGroupPileSettlement)
             {
                 Time("GroupPileSettlement (コンタ+杭沈下表)", () => {
+                    // 見出しなしで直前セクションに紛れ込んでいたため H1 を付与
+                    AddPageBreak(body);
+                    AddHeader1(body, "群杭の沈下", 1);
                     AddGroupPileSettlementContourDiagram(mainPart, body);
                     AddPileSettlementTable(body);
                 });
@@ -538,7 +556,7 @@ namespace PileDesign.Output
                     if (mainWindowViewModel.IsVerticalBeamAnalysisDone && mainWindowViewModel.VerticalBeamCaseResults != null)
                     {
                         AddPageBreak(body);
-                        AddHeader1(body, "基礎梁考慮鉛直解析結果", 2);
+                        AddHeader1(body, "基礎梁考慮鉛直解析結果", 1);
                         AddVerticalBeamResultTables(body);
                     }
                     else
