@@ -5,137 +5,374 @@ PileDesign 杭基礎検討プログラムの変更履歴。
 形式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に準拠し、
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従う。
 
-## [Unreleased] — 2026-05-17 〜 2026-05-19 セッション
+- バージョン番号は 1.0.0 (2026-03-18) から開始。1.0.6 / 1.0.7 / 1.0.9 / 1.0.10 は欠番（スキップ）。
+- 各バージョンの全コミットは `git log <前バンプ>..<バンプ>` で参照可能（各項目の `hash` が手掛かり）。
+- 本ファイルは 2026-08-11 に git 履歴から 1.0.0 まで遡って再構成した。以後はバージョン更新時に追記する。
 
-### 🔧 解析・FEM (Analysis / FEM)
+## [Unreleased]
 
-- **VL 単独ケースで X 反力が出る問題** を修正
-  - 液状化「あり」設定で `groundDisp1L` の強制変位が VL にも適用され、Chang ばねを介して
-    擬似的な X 方向反力が発生していた
-  - `InitializeSoilDisplacementIncrement` で VL ケースを早期 return するよう修正
-- **P-S 非線形ばねを沈下解析と同じ物理関数で評価** するように刷新
-  - 従来の (δ, P) 履歴の線形補間 (`VerticalPileSpringCurve`) に加え、
-    沈下解析 `VerticalLoadTransferMethod` の物理関数 (`GetTangentStiffnessPilePerimeter` /
-    `GetTangentStiffnessPileToeFromSettlement` 等) を直接呼ぶ新クラス
-    [`PileVerticalSoilSpringModel`](Graphics_r1/FEM/PileVerticalSoilSpringModel.cs) を導入
-  - 杭体自重を各杭節点に Fz として注入 (沈下解析 `SetWeights()` と同じ式)
-  - 杭頭節点 (k=0) の Uz は CapNode の slave、その自重は jointNode に集約することで
-    `MapOnGlobalLoad` の 1 段 slave 解決制約を回避
-- **計算例9 を X 軸対称化** (杭群重心と AP X 座標の 5mm ずれを 0 に補正)
-  - 杭 X 座標: 0.6 / 7.375 / **14.725** / **22.075** / **29.425** / **36.200** (中点 18.400)
-  - AP X 座標: 18.43 → **18.400**
-- **キャプリング工法 2 例題 (3.7.1, 3.7.3) の地盤データに**
-  `isGroundDisplacementIgnored: true` を追加。`GroundExampleLoader.ApplyToGroundInput` で
-  地盤変位「考慮しない」モードを反映するように拡張
-- **代表節点 (AP) 非表示時に根入部関連の表示も連動して隠す** ように修正
-  (3D ボックス / 土圧合力ばね反力)
-- **CheckSoilEmbedment の null ガード追加** (`EmbedmentInput == null` 時に
-  NRE が出るバグの修正)
+### 🐛 修正
 
-### 🎨 UI / UX
+- **2 回目の docx 出力ボタンで StackOverflowException**（プロセス即死）を根本修正 (`62bead3`)
+  - RadioButton ペアの「正値 TwoWay + 反転 TwoWay」2 ライター構成が、GroupName の static
+    管理と共有 VM + ウィンドウ再生成の組合せで相互解除の無限ループを起こしていた
+  - BoolEqualsConverter 新設（チェック時のみ書き戻し、アンチェックは Binding.DoNothing）に統一。
+    基本設定 9 ペア・解析実行ウィンドウ 3 ペアの同型潜在危険も予防修正
+- **docx M-θ 図のマーカーが曲線に乗らない問題** を修正 (`5ae9b4b`)
+  - 方向ロック + ヒステリシス下ではベクトルノルム (|Δθ|, |M|) は単調載荷曲線に乗らない。
+    アプリ内グラフと同じ「ピーク投影値 (ThetaProjMax, curve(ThetaProjMax))」方式に統一
+- **Q-N 図の低減後曲線が β2 切替閾値 (σ0=(1/3)ξFc) で斜めに落ちる問題** を修正 (`5ae9b4b`)
+  - 閾値 N に切替前後の複製 2 点を挿入し垂直な段差として描画（アプリ画面・docx 両方に反映）
 
-- **キーボード操作の全 18 ウィンドウ統一** (Enter / Esc / Alt+X / Tab / Space)
-  - モーダルダイアログ: `IsDefault`/`IsCancel` + アクセスキー `(_O)`/`(_C)`/`(_S)` + 初期フォーカス
-  - エディタウィンドウ: Enter (IsDefault) + Ctrl+Enter (既存) + Alt+S の三系統
-  - 共通スタイル [Styles.xaml](Graphics_r1/Styles.xaml#L170-L205) として再利用化
-    (`PrimaryDialogButtonStyle`, `DialogCancelButtonStyle`, `DialogSecondaryButtonStyle`)
-- **ファイルメニューに Ctrl+N / Ctrl+O / Ctrl+S / Ctrl+Shift+S ショートカット** 追加
-  - ボタンラベルに `(Ctrl+N)` 等を明示
-  - ファイル メニュー名を `ファイル(F)` に統一 (他リボンタブと整合)
-- **ステータスバー右側に「⌨ ショートカット (Ctrl+/)」ボタン** 追加
-  - クリック / Ctrl+/ で `ShortcutKeysWindow` を起動
-  - パワーユーザー機能 (Ctrl+Shift+P コマンドパレット等) の発見性向上
-- **「杭・梁要素 解析結果」トグルボタンを目立たせ** (アクセント色枠 + 太字 + SemiBold)
-  - 周囲コントロールと整合した高さ 30 / FontSize 12
-- **解析結果 RZ ダイアグラムをバブル表示**
-  - `IsBubbleVisible` ON 時、ビュー方向に依存しない真円バブルとして RZ 反力を表示
-  - 3D 回転しても読みやすい
-- **配置 DataGrid の ComboBox 選択時に値が消える問題** を修正
-  - 暗黙の `DataGridCell` スタイル `IsSelected → IsEditing=True` が原因
-  - `DataGridTemplateColumn` + 常時 ComboBox 表示に置換 (杭体番号 / 地盤番号)
-- **配置 DataGrid で全杭非表示時に反力結果が表示される問題** を修正
-  - `visibleSoilSprings.Count > 0` のガードが空セットを「フィルタ無効」と誤判定していた
-  - 杭関連ばね / 根入部ばね を別ロジックで判定するヘルパー化
-- **水平解析ウィンドウの「VL 単独ケースも解析」チェックでスクロール飛び** 問題を修正
-  - `RequestBringIntoView` を `AddHandler(handledEventsToo: true)` で抑制 + オフセット復元
-- **ステップ数表示のずれ** (10/8 → 10/10) を修正
-  - `TotalCalculationCount` / `TotalLoadCaseCount` に VL 擬似ケース分を加算
-- **AnalysisPreflightDialog にアクセスキー + 初期フォーカス** 追加
-- **DocxOutputWindow / GroupSettlementWithBeamWindow / MoveCopyWindow** 等のボタン整理
-- **「外力・反力サマリー」の細部修正** (土圧合力ばね反力の集計、対称性)
+## [1.0.18-beta] — 2026-08-11
 
-### ➕ 新機能 (Features)
+### ➕ 新機能
 
-- **コマンドライン引数によるファイル起動** (B2)
-  ```
-  PileDesign.exe project.json
-  PileDesign.exe --open project.json    # -o でも可
-  ```
-- **ドラッグ&ドロップ対応** (B3) — エクスプローラから .json をドロップしてプロジェクト読込
-  - 複数ファイル / 非対応形式時はステータスバーで通知
-- **ヘルプに「ファイルを開く方法」セクション** 追加 (D&D / CLI / 関連付け手順)
+- **2025年版 構造関係技術基準解説書 付録1-3 準拠オプション**: 告示1113(第8) の許容圧縮・
+  許容せん断への切替、安全限界曲げ/せん断を耐震設計指針(案)5.4.1 準拠に（場所打ちRC=e関数法、
+  鋼管巻き=鋼管トリリニア+指針せん断式）。マスターチェック・競合グレーアウト・
+  限界状態呼称の長期/短期許容切替を含む (`a779aa4`, `7bab9c1`, `d768aaf`, `89de396`)
+- **材料モデル化オプション基盤 (ConcreteModelOptions)**: Ec 算定 ξ=1.0、圧縮 0.85Fc、
+  鉄筋/鋼管 1.1F バイリニア等を基本設定から選択。kh0 の土層単位手入力オーバーライド、
+  諸元表の腐食考慮/非考慮併記、EA への鋼管項 (Es·As) 追加も同梱 (`a779aa4`)
+- **ファイバーモデル M-φ** を 3 段階で導入: 比較表示 → 解析用オプション → 全コンクリート系杭
+  （場所打ちRC/場所打ち鋼管コンクリート/PHC/PRC/SC/充填鋼管部）へ拡大 (`4437cb2`, `309a5f9`, `abac988`)
+- **docx 計算書の説明充実 Phase1〜4**: 「計算条件・仮定」章の新設（単位系・符号規約・
+  材料オプション選択状態表・解析時オプションとの不一致警告、計算書レベル非依存で常時出力）、
+  「基礎部材の強度と変形性能」節の記載誤り是正、見出し構造・重複出力の整理、
+  導入文・記号定義・β1β2 一覧表の追加 (`c3c4177`, `29a942f`, `0c35b73`, `86e1b6d`)
+- **サイレント計算フォールバックの可視化 (CalcFallbackTracker)**: 例外→既定値 0 や線形 M-φ
+  代替を発生源別にカウントし、水平解析完了ダイアログに警告表示 (`c202690`)
 
-### 🧪 テスト・品質 (Tests / Quality)
+### 🎨 UI・UX
 
-- **収束リグレッションテスト基盤** を新規構築 ([TestProject1/ConvergenceRegression/](TestProject1/ConvergenceRegression/))
-  - 本番 `HorizontalCalculationViewModel` を `BypassUiPromptsForTesting=true` で headless 実行
-  - 4 例題 (Example9 / Example3_5 / Example10 / ExampleK8) で per-case 反復数 / 収束フラグ /
-    残差 / 物理量 (AP 変位 + 最大反力) をスナップショット化
-  - 退化判定: 反復数 +20 or ×1.50 / 物理量 ±5%
-  - `UPDATE_SNAPSHOTS=1` 環境変数で 5 回実行 max を採用しスナップショット再生成
-- **並列実行決定性テスト** — MDOP=1/2/4 で per-case 反復数完全一致を検証 (Example9 + K8)
-- **`PileVerticalSoilSpringModel` ユニットテスト** (16 件) — τ-s / R-S 物理関数の正定値性 /
-  状態遷移 / 割線=接線関係
-- **`VLPseudoCaseTests` (8 件)** — VL 機能の有効化条件 / TotalCalculationCount 加算 /
-  setter 通知
-- **`LoadCasesInputExtraTests` (10 件) + `ElementDivisionExtraTests` (6 件)** —
-  派生 collection の filter 仕様
-- **`HelpCoverageTests` (3 件)** — XAML 主要ラベル (リボンタブ + ウィンドウ Title +
-  最近追加機能) が help.html に記載されているかを自動検査
-- **`SaveLoadRoundTripTests` 拡充** (4 → 14 例題 + 新規 schema フィールド)
-- **GitHub Actions CI** ([.github/workflows/build-test.yml](.github/workflows/build-test.yml))
-  - push / PR / 手動実行で build + 全テスト (~800 件) 自動実行
-  - 失敗時 trx を 14 日間アーティファクト保持
-  - concurrency 制御でコスト節約
+- 基本設定を「基礎部材の強度と変形性能 vs 代替」の既定/代替ラジオペア（全 9 項目）に再設計。
+  具体式併記・項目別ヘルプリンク付き。MaterialOptionRadioPair コントロールに
+  テンプレート化 (`5ba658b`, `e1461cc`)
+- M-φ/M-θ グラフの凡例爆発を解消（曲線凡例廃止、軸力範囲はキャプションへ）(`4059cba`)
+- 計算書出力ウィンドウに全選択/全解除ボタンと出力前検証を追加 (`25004d3`)
+- 基本設定ウィンドウの縦サイズをノートPCに適合、既製杭断面タイプ切替時に同径断面を
+  既定選択（旧タイプ諸元のまま計算が続く問題の修正）(`8efe2bd`)
 
-### 🗑️ 削除 (Removed)
+### 🐛 修正
 
-- **`PileDesignCore/` プロトタイプ削除** (100 .cs files、.sln 未登録の古いフォーク)
-- **`PileDesign.Cli/` プロトタイプ削除** (5 .cs files、HeadlessAnalysisRunner は
-  TestProject1 の `HeadlessHorizontalRunner` で代替)
-- **`PileDesign.Mcp/` プロトタイプ削除** (6 .cs files、UI 未バインドの orphan)
-- **`MainWindowViewModel.RegisterMcpServerCommand`** + `FindClaudeDesktopConfigPath` 削除
-  (UI 未バインド)
+- 計算層の正確性バグ修正: 割線反復の無限ループ防止、場所打ち鋼管コンクリート杭 安全限界
+  せん断の面積式誤り（非安全側）、せん断オプション変更が反映されない N-Q キャッシュ破棄漏れ、
+  Tendons の Fpu 誤代入ほか (`0c96c31`)
+- UI オートメーション（ナレーター等）とタイトル変更の競合による Win32Exception クラッシュを
+  修正（WPF 既知バグ dotnet/wpf#4786 対策）(`8698e60`)
+- docx 出力の全面点検: 数式・単位・記号の表記ゆれ、杭頭径、材料オプションの式への連動、
+  計算書レベル仕分け誤分類、杭配置図バインディング (`fc6cd79`, `63dac58`, `0b5914e`, `243d32d`)
 
-### 📈 統計
+### 🏗️ 内部構造
 
-| 項目 | Before | After | Δ |
-|---|---|---|---|
-| テスト数 | 752 | **827** | +75 |
-| .cs ファイル数 | ~700 | ~590 | -111 (prototype 削除) |
-| TestProject1 サイズ (.cs) | 33 | **37** | +4 |
-| プロジェクト | 5 (内 3 が orphan) | **3** (Graphics_r1, TestProject1, BenchmarkSuite1) | クリーン化 |
+- God class の partial 物理分割（挙動不変）: PileSection2 / HorizontalCalculationViewModel
+  (6,843→3,014行+4) / MainWindowViewModel (7,641→4,090行+4) / WordDocument (5,908→1,674行+4) /
+  MainWindow.CanvasResults / GraphViewModel / DocxOutputViewModel (`17966dd`, `ca68a1e`, `c900a58`, `243d32d`)
+- 全体コードレビュー対応: 杭種マジック文字列の定数化、MaterialLaw enum 化、収束許容値・
+  指針定数の named constant 化、M-φ 単位変換の一元化、計算コアの nullable 警告解消、
+  ログ統一 (`13270a4`, `d5e400c`, `e7c5a15`, `7797455`, `4403b89`)
+- PHC/PRC の M-φ Newton 反復を共通ドライバに統合、MphiCurveResolver 新設、
+  M-φ キャッシュ上限追加 (`e1461cc`, `17966dd`)
+- TargetFramework を net8.0-windows10.0.19041.0 に変更、NuGet 更新
+  (SkiaSharp 3→4 ほか) (`6de1f60`, `eb4e710`)
 
-### 📚 ドキュメント (Docs)
+### 🧪 テスト
 
-- **CHANGELOG.md 新規作成** (本ファイル)
-- **help.html 更新**
-  - 「ファイルを開く方法」セクション (D&D / CLI / 関連付け手順)
-  - ダイアログ共通操作 6 行追加 (Enter / Esc / Alt / Tab / Space)
-  - ショートカット一覧にステータスバーボタンの説明追記
-- **[TestProject1/ConvergenceRegression/README.md](TestProject1/ConvergenceRegression/README.md)**
-  新規追加 (収束リグレッションテストの使い方)
+- 文献検証テスト第1弾（基礎指針'19 計算例1/2）、耐力算定回帰テスト、グラフ描画・
+  docx 2回連続生成スモークテスト (`68b58f5`, `3aa388f`, `a7ff3a9`, `54c6c85`)
 
----
+### 📚 ドキュメント
 
-## 過去のリリース (git log より)
+- Help「設計実務上の扱いについて」節新設（告示1113(第8) との差異注記）、
+  β1/β2・e関数法記述の整合修正 (`6b97436`, `3abb6be`)
 
-`git log` で参照可能。代表的なマイルストーン:
+## [1.0.17-beta] — 2026-07-06
 
-- `7b8bd2f` 水平解析 76% 高速化 / docx 出力 5× 高速化
-- `83f07f1` UI 全面リニューアル: Fluent.Ribbon 移行
-- `12cacee` 水平解析強化 + Undo DeepCopy 8-9× 高速化
-- `47838d2` キャプリングパイル工法を実装
-- `e6cb4f5` 鋼管杭+鉄筋定着工法
-- `2711581` v22-v26 非線形収束修正の最小再現テスト 6 件追加
-- `5728626` E.18 結果ダッシュボード + C.9 コマンドパレット
+### ➕ 新機能
+
+- コンクリートのヤング係数 Ec 算定で ξ(=Gsi)=1.0 とするオプションを追加
+  （強度側は実 Gsi のまま、Ec の算定式のみ）(`eb98306`)
+
+### 🔧 解析・FEM
+
+- 圧縮側折れ点の低減オプションを 0.85·Gsi·Fc → 0.85·Fc に変更（Gsi は乗じない）(`eb98306`)
+
+## [1.0.16-beta] — 2026-07-03
+
+### 🐛 修正
+
+- 鉄筋 1.1F 完全バイリニア型オプションを安全限界のみに限定（損傷限界・使用限界は
+  基準 σy を維持。例: SD490 損傷限界 490N/mm² のまま、安全限界のみ 539N/mm²）(`e3720d4`)
+
+## [1.0.15-beta] — 2026-07-03
+
+### ➕ 新機能
+
+- 基本設定に材料モデル化オプション追加（安全限界 NM と M-φ→解析の両方に適用）:
+  バイリニアコンクリートの引張 0 / 圧縮低減、鉄筋・鋼管の 1.1F 完全バイリニア (`dabd9e1`)
+- 杭要素分割: 基準水平地盤反力係数 kh0 の土層単位手入力オーバーライド
+  （右クリックで自動計算に戻す）(`dabd9e1`)
+
+### 🔧 解析・FEM
+
+- 場所打ち鋼管コンクリート杭 圧縮側軸力制限 σ0e=0.4ξFc の換算断面積を文献整合の
+  Ae = Ac + (n−1)Ag + nAs に統一、鋼管板厚の負許容差 1mm を廃止し腐食のみに (`dabd9e1`)
+
+### 🎨 UI・UX
+
+- 杭断面諸元: 鋼管系 As/A0/W/EA/EI を腐食考慮・非考慮の 2 行表示、腐食代行を追加。
+  EA に鋼管項 Es·As を追加（鉛直解析に影響）。計算書杭径を公称外径表示に修正 (`dabd9e1`)
+
+## [1.0.14-beta] — 2026-06-12
+
+### 🎨 UI・UX
+
+- ヘルプウィンドウの Topmost を撤去（他アプリ操作を阻害しない）(`d374f9a`)
+- Ctrl+A（すべて選択）と Ctrl+Shift+A（すべてアクティブ）をスワップ (`d374f9a`)
+
+### 🛡️ 安定化
+
+- グローバル未捕捉例外ハンドラ強化: UI スレッド例外で続行/終了を選択可能に、
+  良性例外フィルタ拡充（IME/WebView2/キャンセル）(`d374f9a`)
+- 解析前プリフライトに入力警告セクション追加（ΔZc≤0、Es=0/Cu=0/N=0 等を黄色枠表示）(`d374f9a`)
+
+## [1.0.13-beta] — 2026-06-12
+
+### 🎨 UI・UX
+
+- 地盤ウィンドウ N 値分布グラフに表示系列切替（土層平均 N 値の階段グラフ / 土質点 N 値の折れ線）(`eac76bd`)
+- リボン「土層」に「平均N値」3D 表示オプション追加 (`eac76bd`)
+
+### 🐛 修正
+
+- 変形係数 Esk 列ヘッダーの単位誤り（kN/m³ → kN/m²）を修正 (`eac76bd`)
+
+## [1.0.12-beta] — 2026-06-02
+
+### 🎨 UI・UX
+
+- クリップボード操作の安全化: リトライ付き ClipboardHelper に全 SetText/SetDataObject を統一
+  （CLIPBRD_E_CANT_OPEN 対策）(`747e244`)
+- 杭姿図の右クリック「画像コピー」追加（PileBodyWindow / SettlementWindow）(`747e244`)
+- 解析後の表示改善: 沈下解析完了時に VL ケースへ自動切替、水平解析 OK 時に解析済み先頭
+  ケースを選択、マップ選択時にトップビューへ自動切替 (`747e244`)
+
+### 🐛 修正
+
+- 接合点 M/Q マップ: 基礎梁未設定時に杭頭 i 端力を接合点標高へ剛オフセット移送
+  （Mx_C = Mx_H + ΔZc·Fy 等、力学整合）(`747e244`)
+- SoilPile.SettleRpu を Dp 基準に変更（支持力検討 Rpu は D 基準のまま）(`747e244`)
+
+## [1.0.11-beta] — 2026-05-29
+
+2026-05-17〜19 セッションの成果を含む（詳細は旧 CHANGELOG 記載分を集約）。
+
+### 🔧 解析・FEM
+
+- VL 単独ケースで X 反力が出る問題を修正（強制変位の VL 適用を早期 return）
+- P-S 非線形ばねを沈下解析と同じ物理関数で評価する PileVerticalSoilSpringModel を導入、
+  杭体自重の Fz 注入を含む
+- 計算例9 を X 軸対称化、キャプリング 2 例題に地盤変位「考慮しない」を反映
+
+### 🎨 UI・UX
+
+- キーボード操作の全 18 ウィンドウ統一（Enter/Esc/Alt+X/Tab/Space、共通ボタンスタイル化）
+- ファイルメニューに Ctrl+N/O/S/Shift+S、ステータスバーに「⌨ ショートカット」ボタン
+- EnhancedDataGrid: 未編集セルの 1 打目入力、ペースト後フォーカス復帰、一括ペースト高速化
+  （IsBulkEditing）、Delete クリア、一括 Undo (`6ef2fdf`)
+- 解析結果 RZ ダイアグラムのバブル表示、配置 DataGrid の ComboBox 値消失/全杭非表示時の
+  反力表示問題を修正
+
+### ➕ 新機能
+
+- コマンドライン引数によるファイル起動（`PileDesign.exe project.json` / `--open`）
+- エクスプローラからの .json ドラッグ&ドロップ読込
+- 保存オプション: 手動保存・自動保存それぞれで解析結果を含めるか独立選択 (`6ef2fdf`)
+
+### 🧪 テスト
+
+- 収束リグレッションテスト基盤（4 例題スナップショット、退化判定付き）、並列実行決定性テスト
+- GitHub Actions CI（push/PR で build + 全テスト自動実行）
+
+### 🗑️ 削除
+
+- PileDesignCore / PileDesign.Cli / PileDesign.Mcp プロトタイプ削除（.sln 未登録の古いフォーク、
+  計 111 ファイル）
+
+## [1.0.8-beta] — 2026-05-13
+
+### ➕ 新機能
+
+- **キャプリングパイル工法**（既製コンクリート杭/鋼管杭の杭頭半剛接合）を実装:
+  PC リング・引張定着筋ライブラリ、バイリニア M-θ (θu=0.03rad) (`47838d2`, `b44775c`)
+- **鋼管杭 + 鉄筋定着工法**を実装: コンクリート充填鋼管部/鋼管部サブ分類、2 段 RC 断面
+  NM 評価、接合部弾性回転剛性 Kθ (`e6cb4f5`, `88a3efd`)
+- 結果ダッシュボード + コマンドパレット (Ctrl+Shift+P) (`5728626`)
+- 編集履歴パネル + 解析実行前提条件チェック + DataGrid セル編集の Undo 記録 (`d70ef4f`, `26e63df`)
+- ヘルプチャット（help.html の bigram 検索）(`47838d2`)
+
+### ⚡ 性能
+
+- 水平解析 76% 高速化: 周期的 K 再構築（MNR プラトー検知）でベンチマーク 2448s→588s (`7b8bd2f`)
+- docx 出力 5× 高速化（13s→2.6s）: 結果検索の Dictionary キャッシュ + PNG 並列生成 (`7b8bd2f`)
+- Undo DeepCopy 8-9× 高速化（220ms→25ms）: デバウンス + QuickClone (`12cacee`)
+- 発行構成を x86→x64 に変更（大規模モデルの OutOfMemoryException 対策）(`7b8bd2f`)
+
+### 🎨 UI・UX
+
+- **UI 全面リニューアル**: Fluent.Ribbon 移行、Backstage ファイルメニュー（計算例 11 例題）、
+  AvalonDock テーマ統一、アイコン 158 点を SVG から再生成 (`83f07f1`, `bfc3540`)
+- 軸力タブに「絶対 ⇔ 変動」モード切替 + L1/L2±VL 一括変換 (`12cacee`, `7b8bd2f`)
+- 杭姿図に qu (=2Cu) 階段グラフ・土層 N 値階段図 (`83f07f1`, `dd95217`)
+
+### 🐛 修正
+
+- M-φ 軸力の単位バグ（1/1000 過小評価）+ 単位回帰テスト、M-θ をケース別スナップショット化し
+  軸力源を地震時軸力に統一 (`c738eb4`, `41357b6`)
+- 引張軸力時の杭頭軸剛性解放を case-local model に適用 (`12cacee`)
+
+### 🧪 テスト
+
+- キャプリング単体テスト 30 件ほか (`a41c074`)
+
+### 📚 ドキュメント
+
+- 計算例の軸力データを文献値に整備、help.html にキャプリング・F.T.Pile・鉄筋定着の各章 (`83f07f1`, `47838d2`)
+
+## [1.0.5-beta] — 2026-05-01
+
+### 🔧 解析・FEM
+
+- 非線形収束整合性修正 v22〜v24: 土圧合力の共有ばね K 上書きバグ、降伏境界接線の連続化、
+  杭地盤ばね 2D Jacobian、合成 M-φ 対角ブレンド、2 ステップ予測器 (`f92e9a2`)
+- 収束改善 v25〜v28: 勾配情報付き line search、適応的初期 nStep、杭頭 M-θ
+  方向ロック + ヒステリシスで 25 反復周期リミットサイクルを解決 (`3d42089`)
+- 水平解析の堅牢性: 杭頭 kh=0 の三段階フォールバック、状態変化検知による K 強制再構築 (`1e38da1`)
+- 地盤水平変位の第 3 算定法「**応答スペクトル法**」追加（MDOF 固有値解析 +
+  Hardin-Drnevich 等価線形化、周期依存 Gs(T)）(`3807165`)
+- 杭セクション損傷限界の L1/L2 分離 + 性能グレード A/S 切替 (`0146a2b`)
+- Z 座標と絶対標高の分離設計（入力・解析は Z、docx は標高表示）(`78a5b15`)
+- 群杭沈下拡張: 仮想最上層処理、Gs0/Es0/νs 列、PL 値自動計算 (`c2ca6ba`)
+
+### ⚡ 性能
+
+- 水平解析の**荷重ケース並列化** (E1〜E3c): AnaModel DeepCopy + case-local 隔離 +
+  結果マージ、MDOP 既定 16 (`eedf2e7`, `2376fbe`)
+- K 組立の並列化、ソルバーの Cholesky→LDL→LU→QR 段階フォールバック、
+  Modified NR + Cholesky 因子キャッシュ (`7d74274`, `b8faa83`)
+
+### 🎨 UI・UX
+
+- 水平解析ウィンドウ刷新: 並列モニタ、ケース別ログタブ、解析サマリーレポート (`80a1c47`, `34a1963`)
+- ログウィンドウの仮想化 + 部分コピー、GraphWindow 強化（土層背景色・純理論値モード等）(`f0e74b7`, `fcab338`)
+- EnhancedDataGrid 改善: コピー TSV の行番号除去、塗り潰しペースト、
+  12 インチ画面対応 (`26dc50d`, `9b2158f`, `db59463`)
+
+### 🐛 修正
+
+- 未捕捉例外ハンドラ + 緊急 AutoSave + Serilog 構造化ログ導入 (`1c421ec`, `9e31a32`)
+- MainWindow の PropertyChanged 購読解除漏れ（メモリリーク）修正 (`e9aa05a`)
+
+### 🧪 テスト
+
+- FsCheck プロパティベーステスト導入、v22〜v26 収束修正の最小再現テスト、
+  機能テスト計 300+ 件 (`22b66dd`, `2711581`, `ae0267c`)
+
+## [1.0.4-beta] — 2026-04-21
+
+### 🎨 UI・UX
+
+- 解析結果キャンバス描画の拡充（値表示・カテゴリ別コンバータ・梁 IJ 入替）(`120d64d`)
+
+### 🐛 修正
+
+- 「杭頭」値表示フィルタのバグ修正（IsPileTop と IsPileHeadElement の分離）(`001650a`)
+
+### 🧪 テスト
+
+- ViewModel を [ObservableProperty] source generator に段階移行（Phase A〜F、18 ファイル）(`58a083d`)
+
+### 📚 ドキュメント
+
+- 文献検証ページ verification.html を大幅拡充（基礎指針 2019 図表画像を多数追加）(`120d64d`)
+
+## [1.0.3-beta] — 2026-04-18
+
+### 🐛 修正
+
+- ScottPlot グラフコピーの BitmapMetadata 例外、DataGrid 仮想化対応コピー、
+  変形後形状の剛体放射線描画を修正 (`6073c80`)
+
+### 🏗️ 内部構造
+
+- 大規模リファクタ: WordDocument（7,755→5,504 行）・MgtExporter の分割、DeepCopyUtil 新設、
+  Dof 列挙子による型安全化、保存プロトコルの ApplyPostLoadProtocol 集約、
+  テスト 96 件追加（160→275）(`7df47d7`)
+
+## [1.0.2-beta] — 2026-04-13
+
+### ➕ 新機能
+
+- 解析結果を含むファイル保存/復元に対応（読込時 ComboBox 空白バグも修正）(`41d97e4`)
+- 沈下量の値表示（ON/OFF・小数桁）、沈下曲線の凡例切替、解析結果タブのテキストサイズ調整 (`41d97e4`)
+
+### 📚 ドキュメント
+
+- docx に基礎梁考慮鉛直解析結果テーブルを追加 (`41d97e4`)
+
+## [1.0.1-beta] — 2026-04-09
+
+### 🎨 UI・UX
+
+- UI スレッドブロッキング解消: 解析の async/await 化、MessageService 新設、
+  成功系メッセージの Toast 化 (`a16c70a`)
+- WelcomeDialog のスプラッシュ化、節点/杭の整列・ソートボタン、
+  解析結果キャンバスの Hermite 曲線描画 (`939a402`, `4c864fd`, `9c881b6`)
+
+### ➕ 新機能
+
+- MGT エクスポートを MIDAS iGen v9.4.5 準拠に (`314b276`)
+- 2D 伏図 DXF / 3D DXF・3dm エクスポート追加 (`9c7a31a`, `399687e`, `066fcfd`)
+
+### 🐛 修正
+
+- 要素分割済み状態の保護（編集時の確認ダイアログ）(`723be01`)
+
+### 📚 ドキュメント
+
+- Word 計算書出力を大幅拡充、help.html 拡充 (`c27aaad`)
+
+## [1.0.0-beta] — 2026-04-06
+
+Beta 公開準備。
+
+### 🔧 解析・FEM
+
+- 杭断面計算の広範改善: MN 曲線・M-φ・既製杭定着部・軸力制限、SKK490 基準強度修正
+  (325→315)、数値積分分割数 100→200 (`2dda0aa`)
+- 場所打ち鋼管コンクリート杭の水平解析・M-φ 単位変換・要素分割のバグ修正 (`4454209`)
+- NR 収束性改善（長時間反復時の基準自動緩和）、杭頭モーメント不連続の根本修正
+  （ペナルティ結合化）(`ffb34a9`, `0d12157`)
+- EffectiveDepth を 0.8D → 基礎指針準拠の 0.9D に修正 (`5269504`)
+
+### 🎨 UI・UX
+
+- p-y グラフ・土圧合力ばねグラフを新規追加、解析結果テーブルに地盤反力・M-φ・M-θ (`60f2920`, `de116d0`)
+
+### 🛡️ 安定化
+
+- データ保護強化: 読込後 Undo クリア、JSON エラーの日本語表示、FormatVersion による
+  上位バージョン拒否、入力バリデーション (`61e341f`)
+
+## [1.0.0] — 2026-03-18
+
+初期開発期（2025-11-08 の初回コミットから約 4 か月・60 commits）の総括。
+
+### ➕ この時点までに実装された機能
+
+- 杭基礎検討 WPF アプリの基盤: 杭配置・杭断面・地盤・荷重ケース入力、2D/3D キャンバス表示
+- 鉛直・水平 FEM 解析エンジンと解析結果の図化・テーブル表示
+- 基礎梁モデル化（Phase 1〜4）: データモデル → 偏心接合含むモデル化 → 入力 UI →
+  3D/2D 可視化、基礎梁節点の自動割当 (`4546b4f`〜`8bd41aa`)
+- Undo 機構の統一化 (`d3947c6`)、ズーム操作の軽量描画化 (`23e9284`)
