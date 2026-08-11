@@ -325,14 +325,22 @@ namespace PileDesign.Output
             AddInlineMathParagraph(body, [Tex(@"\K_{p} = \tan^{2}\left(45^{\circ} + \frac{\phi}{2}\right)")]);
         }
 
-        // 部材の性能
-        private static void AddSectionMemberCapacities(Body body)
+        // 部材の性能 (internal: オプション分岐の出力内容をテストで検証するため)
+        internal static void AddSectionMemberCapacities(Body body)
         {
             AddHeader1(body, "基礎部材の強度と変形性能");
 
             AddText(body, "コンクリートのヤング係数");
-            //AddEquation_ConcreteEc(body);
-            AddEq(body, @"E_{c} = 3.35\times 10^{4} \left(\frac{\gamma}{24}\right)^{2} \left(\frac{\zeta\cdot F_{c}}{60}\right)^{\frac{1}{3}}");
+            // 基本設定「Ec の算定で ξ=1.0」ON 時は σB = Fc で算定される（強度側には実際の ξ を使用）。
+            if (ConcreteModelOptions.UseUnitGsiForConcreteE)
+            {
+                AddEq(body, @"E_{c} = 3.35\times 10^{4} \left(\frac{\gamma}{24}\right)^{2} \left(\frac{F_{c}}{60}\right)^{\frac{1}{3}}");
+                AddText(body, "※ Ec の算定では ξ = 1.0 とする（基本設定）。強度側（ξ·Fc 等）には実際の ξ を用いる。");
+            }
+            else
+            {
+                AddEq(body, @"E_{c} = 3.35\times 10^{4} \left(\frac{\gamma}{24}\right)^{2} \left(\frac{\xi\cdot F_{c}}{60}\right)^{\frac{1}{3}}");
+            }
 
             // 圧縮: 基本設定「場所打ち杭の許容圧縮応力度を告示1113(第8)による」ON時は、使用/損傷限界の
             // 許容圧縮応力度を告示（長期・短期）で評価する旨を注記（Ms/Md の Msi/Mdi に反映される）。
@@ -347,17 +355,33 @@ namespace PileDesign.Output
             //AddEquation_InsituReinforcedPileMd(body);
             AddEq(body, @"M_{d} = \beta_{1}\cdot \min\left(M_{d1},M_{d2},M_{d3}\right)");
 
-            AddText(body, "場所打ち鉄筋コンクリート杭の安全限界曲げモーメントMu");
-            //AddEquation_InsituReinforcedPileMu(body);
-            AddEq(body, @"M_{u} = \beta_{1}\cdot \beta_{2}\cdot M_{u0}");
+            // e関数法 ON 時は断面解析値をそのまま用い、β1・β2 低減および軸力適用範囲の制限は課さない
+            // (InsituReinforcedConcreteSection: FactoredUltimateNM = UnfactoredUltimateNM)
+            if (ConcreteModelOptions.UseInsituUltimateEFunction)
+            {
+                AddText(body, "場所打ち鉄筋コンクリート杭の安全限界曲げモーメントMu（e関数法、耐震設計指針(案)5.4.1 準拠）");
+                AddEq(body, @"M_{u} = M_{u0}");
+                AddText(body, "※ e関数法による断面解析値をそのまま用い、低減係数 β1・β2 および軸力適用範囲の制限は課さない。");
+            }
+            else
+            {
+                AddText(body, "場所打ち鉄筋コンクリート杭の安全限界曲げモーメントMu");
+                AddEq(body, @"M_{u} = \beta_{1}\cdot \beta_{2}\cdot M_{u0}");
+            }
 
             // せん断: 基本設定「場所打ちRC杭の許容せん断応力度を告示1113(第8)による」ON時は
             // 告示の許容せん断力 Q=fs·b·j（使用限界=長期、損傷限界=短期=長期×1.5）。既定は基礎部材式。
             if (ConcreteModelOptions.UseNotification1113Shear)
             {
-                AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の使用限界せん断力Qs（告示1113(第8) 長期）"));
-                AddEq(body, @"Q_{s} = f_{s,L}\,b\,j,\quad
-                    f_{s,L} = \min\left(\frac{F_{c}}{40}\ (\text{区分2は}\frac{F_{c}}{45}),\ \frac{3}{4}\left(0.49+\frac{F_{c}}{100}\right)\right)");
+                // 選択された区分の式のみを出力する (区分1: Fc/40、区分2: Fc/45。いずれもアーチ項と比較)
+                bool isCase2 = ConcreteModelOptions.Notification1113CompressionCase == 2;
+                string caseLabel = isCase2 ? "区分2" : "区分1";
+                string fsBase = isCase2 ? @"\frac{F_{c}}{45}" : @"\frac{F_{c}}{40}";
+
+                AddText(body, ConcreteModelOptions.MapLimitStateText(
+                    $"場所打ち鉄筋コンクリート杭の使用限界せん断力Qs（告示1113(第8) 長期・{caseLabel}を適用）"));
+                AddEq(body, $@"Q_{{s}} = f_{{s,L}}\,b\,j,\quad
+                    f_{{s,L}} = \min\left({fsBase},\ \frac{{3}}{{4}}\left(0.49+\frac{{F_{{c}}}}{{100}}\right)\right)");
 
                 AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の損傷限界せん断力Qd（告示1113(第8) 短期）"));
                 AddEq(body, @"Q_{d} = 1.5\,f_{s,L}\,b\,j");
@@ -401,9 +425,17 @@ namespace PileDesign.Output
             AddEq(body, @"M_{d} = \beta_{1}\cdot \min\left(M_{d1},M_{d2},M_{d3},M_{d4},M_{d5}\right)");
 
 
-            AddText(body, "場所打ち鋼管コンクリート杭の安全限界曲げモーメントMu");
-            //AddEquation_InsituSteelReinforcedPileMu(body);
-            AddEq(body, @"M_{u} = \beta_{1}\cdot \beta_{2}\cdot M_{u0}");
+            // 場所打ちRC杭と同様、e関数法 ON 時は β1・β2 低減・軸力制限を課さない
+            if (ConcreteModelOptions.UseInsituUltimateEFunction)
+            {
+                AddText(body, "場所打ち鋼管コンクリート杭の安全限界曲げモーメントMu（e関数法、耐震設計指針(案)5.4.1 準拠・低減なし）");
+                AddEq(body, @"M_{u} = M_{u0}");
+            }
+            else
+            {
+                AddText(body, "場所打ち鋼管コンクリート杭の安全限界曲げモーメントMu");
+                AddEq(body, @"M_{u} = \beta_{1}\cdot \beta_{2}\cdot M_{u0}");
+            }
 
 
             AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鋼管コンクリート杭の使用限界せん断力Qs"));
@@ -466,6 +498,18 @@ namespace PileDesign.Output
                     "鋼管杭の鋼管部は対象外で従来の折線による）。");
                 AddEq(body, @"N = \int_{A} \sigma\left(\varepsilon_{0}-\phi\,z\right)dA,\quad
                     M = -\int_{A} \sigma\left(\varepsilon_{0}-\phi\,z\right)z\,dA");
+            }
+            else
+            {
+                // 既定 (指針ポリリニア) 時にも M-φ の作り方を明記する (ファイバー ON 時のみ説明が
+                // 付く非対称の解消)
+                AddText(body, "コンクリート系杭の解析用 M-φ 関係（指針ポリリニア）");
+                AddText(body,
+                    "解析用 M-φ 関係は、(0, 0)-(φcr, Mcr)-(φy, My)-(φc, β1・Mu0) 等を結ぶ折線で" +
+                    "モデル化する（「基礎部材の強度と変形性能」。折線構成は杭種による）。" +
+                    "Mcr は曲げひび割れモーメント、My は主筋（鋼材）降伏時モーメント、" +
+                    "Mu0 は安全限界曲げモーメントで、対応する曲率は断面曲げ解析により定める。" +
+                    "解析（FEM）で負勾配のばねとならないよう、曲線は単調非減少化して用いる。");
             }
         }
 

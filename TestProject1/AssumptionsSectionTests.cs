@@ -127,6 +127,63 @@ namespace TestProject1
             Assert.AreEqual("自動算定", kh0Row.Value, "既定モデルでは kh0 手入力なしのはず");
         }
 
+        // ===== Phase 2 回帰: 「基礎部材の強度と変形性能」節のオプション分岐 =====
+
+        private static string RenderMemberCapacitiesText()
+        {
+            var body = new Body();
+            WordDocument.AddSectionMemberCapacities(body);
+            return body.InnerText;
+        }
+
+        [TestMethod]
+        public void MemberCapacities_UnitGsiForEc_ShowsNoteAndDropsXiFromEcFormula()
+        {
+            using var _ = OptionsScope.AllDefaults();
+            ConcreteModelOptions.UseUnitGsiForConcreteE = true;
+
+            string text = RenderMemberCapacitiesText();
+
+            Assert.IsTrue(text.Contains("Ec の算定では ξ = 1.0"), "ξ=1.0 の注記が出力されるはず");
+            Assert.IsFalse(text.Contains("ζ"), "旧ハードコードの ζ が残ってはいけない");
+        }
+
+        [TestMethod]
+        public void MemberCapacities_Notification1113ShearCase2_ShowsOnlySelectedCase()
+        {
+            using var _ = OptionsScope.AllDefaults();
+            ConcreteModelOptions.UseNotification1113Shear = true;
+            ConcreteModelOptions.Notification1113CompressionCase = 2;
+
+            string text = RenderMemberCapacitiesText();
+
+            Assert.IsTrue(text.Contains("区分2を適用"), "適用区分の明記が必要");
+            Assert.IsFalse(text.Contains("区分2は"), "旧・両区分併記の文字列が残ってはいけない");
+        }
+
+        [TestMethod]
+        public void MemberCapacities_EFunction_ShowsUnreducedMuWithoutBetaFormula()
+        {
+            using var _ = OptionsScope.AllDefaults();
+            ConcreteModelOptions.UseInsituUltimateEFunction = true;
+
+            string text = RenderMemberCapacitiesText();
+
+            Assert.IsTrue(text.Contains("軸力適用範囲の制限は課さない"), "低減なしの注記が必要");
+            Assert.IsTrue(text.Contains("e関数法"), "e関数法の明記が必要");
+        }
+
+        [TestMethod]
+        public void MemberCapacities_Default_ExplainsPolylineMphi()
+        {
+            using var _ = OptionsScope.AllDefaults();
+
+            string text = RenderMemberCapacitiesText();
+
+            Assert.IsTrue(text.Contains("指針ポリリニア"), "既定でも M-φ の作り方の説明が必要");
+            Assert.IsTrue(text.Contains("単調非減少化"), "単調非減少化の後処理の明記が必要");
+        }
+
         [TestMethod]
         public void AddAssumptionTable_ProducesValidOpenXml()
         {
