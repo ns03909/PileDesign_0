@@ -1,15 +1,40 @@
-﻿using System.Windows.Input;
+﻿using System.Text.Json.Serialization;
+using System.Windows.Input;
 using System.Windows.Media.Media3D;
 
 namespace PileDesign.Models.InputData
 {
     public class LoadCaseCommon : BaseModel
     {
-        private bool _isSoilNonLinear;
+        private SoilNonlinearityMode _soilNonlinearityMode = SoilNonlinearityMode.KhReductionWithPy;
+        /// <summary>「適用」ボタンで全荷重ケースへ一括設定する地盤非線形性の段階。</summary>
+        public SoilNonlinearityMode SoilNonlinearityMode
+        {
+            get => _soilNonlinearityMode;
+            set
+            {
+                if (SetProperty(ref _soilNonlinearityMode, value))
+                    OnPropertyChanged(nameof(IsSoilNonLinear));
+            }
+        }
+
+        /// <summary>旧 API 互換。<see cref="LoadCase.IsSoilNonLinear"/> と同じマッピング。</summary>
+        [JsonIgnore]
         public bool IsSoilNonLinear
         {
-            get => _isSoilNonLinear;
-            set => SetProperty(ref _isSoilNonLinear, value);
+            get => _soilNonlinearityMode.IsNonLinear();
+            set => SoilNonlinearityMode = value
+                ? SoilNonlinearityMode.KhReductionWithPy
+                : SoilNonlinearityMode.Linear;
+        }
+
+        /// <summary>旧 JSON 読込用シム (<see cref="LoadCase.LegacyIsSoilNonLinear"/> と同じ役割)。</summary>
+        [JsonPropertyName("IsSoilNonLinear")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? LegacyIsSoilNonLinear
+        {
+            get => null;
+            set { if (value.HasValue) IsSoilNonLinear = value.Value; }
         }
 
         private bool _isPileNonLinear;
@@ -61,7 +86,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _forceActionPoint, value);
         }
 
-        public ICommand LoadCase1CommonIsSoilNonLinearCommand { get; }
+        public ICommand LoadCase1CommonSoilNonlinearityModeCommand { get; }
         public ICommand LoadCase1CommonIsPileNonLinearCommand { get; }
         public ICommand LoadCase1CommonForceActionPointXCommand { get; }
         public ICommand LoadCase1CommonForceActionPointYCommand { get; }
@@ -69,7 +94,7 @@ namespace PileDesign.Models.InputData
         public ICommand LoadCase1CommonUpperMassForceCommand { get; }
         public ICommand LoadCase1CommonFoundationMassForceCommand { get; }
 
-        public ICommand LoadCase2CommonIsSoilNonLinearCommand { get; }
+        public ICommand LoadCase2CommonSoilNonlinearityModeCommand { get; }
         public ICommand LoadCase2CommonIsPileNonLinearCommand { get; }
         public ICommand LoadCase2CommonForceActionPointXCommand { get; }
         public ICommand LoadCase2CommonForceActionPointYCommand { get; }
@@ -79,11 +104,11 @@ namespace PileDesign.Models.InputData
 
         // コンストラクタ
         public LoadCaseCommon
-            (bool isSoilNonLinear, bool isPileNonLinear,
+            (SoilNonlinearityMode soilNonlinearityMode, bool isPileNonLinear,
                          double upperMassForce, double foundationMassForce,
                          double forceActionPointX, double forceActionPointY, double forceActionPointAltitude)
         {
-            IsSoilNonLinear = isSoilNonLinear;
+            SoilNonlinearityMode = soilNonlinearityMode;
             IsPileNonLinear = isPileNonLinear;
             UpperMassForce = upperMassForce;
             FoundationMassForce = foundationMassForce;

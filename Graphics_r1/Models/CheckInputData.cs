@@ -53,6 +53,19 @@ namespace PileDesign.Models
                 }
             }
 
+            // Smart-MAGNUM 工法の適用範囲 (ωs / ωp / LL / 掘削径 / N値 / qu / 杭径)。
+            // 範囲外でもクランプ後の値で計算は続けるため、エラーではなく警告として出す。
+            var soilPiles = inputModel.ElementDivision?.SoilPiles;
+            if (soilPiles != null)
+            {
+                foreach (var soilPile in soilPiles)
+                {
+                    if (soilPile == null) continue;
+                    foreach (var w in soilPile.ValidateSmartMagnumRange())
+                        warnings.Add($"Smart-MAGNUM {w}");
+                }
+            }
+
             return warnings;
         }
 
@@ -135,6 +148,22 @@ namespace PileDesign.Models
                         message += $"杭体{pbNo} 区間{segNo}: 区間長が 0 以下です ({seg.SegmentLength}).\n";
 
                     if (sec == null) continue;
+
+                    // 節杭 は上杭に継手で接合される下杭として使うため、最上段区間では使えない。
+                    // 断面タイプの選択肢からは除外しているが、上の区間を後から削除すると
+                    // 節杭の区間が最上段になりうるので、ここでも検出する。
+                    if (segNo == 1 && sec.IsNodularPile)
+                    {
+                        message += $"杭体{pbNo} 区間{segNo}: {sec.PileSectionType} は最上段の区間には使用できません " +
+                                   $"(上杭に継手で接合する下杭として使用してください).\n";
+                    }
+
+                    // 節杭 の拡頭径が直上区間の径と合っていない場合も知らせる
+                    if (sec.IsNodularPile && !string.IsNullOrEmpty(sec.NodularHeadNote)
+                        && sec.NodularHeadNote.Contains("一致する拡頭径がありません"))
+                    {
+                        message += $"杭体{pbNo} 区間{segNo}: {sec.NodularHeadNote}.\n";
+                    }
 
                     // 場所打ち系 (PileBodyType=場所打ち鉄筋コンクリート杭 / 場所打ち鋼管コンクリート杭+鉄筋コンクリート部)
                     bool isInsituRC =

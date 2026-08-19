@@ -1,4 +1,5 @@
 ﻿
+using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
@@ -32,7 +33,11 @@ namespace PileDesign.Common
             bool showGroundDisplacement = false,
             int seismicLevelIndex = 0,
             bool displacementWithLiquefaction = false,
-            bool showUnconfinedCompressiveStrength = false)
+            bool showUnconfinedCompressiveStrength = false,
+            // Smart-MAGNUM 工法の掘削形状。既定 0 は「指定なし」で、他工法の描画には影響しない。
+            double smartMagnumLL = 0,
+            double smartMagnumDes = 0,
+            double smartMagnumWingLength = 0)
 
         {
             if (canvas == null || canvas.ActualWidth == 0 || canvas.ActualHeight == 0) return;
@@ -70,14 +75,27 @@ namespace PileDesign.Common
                 }
             }
 
+            bool isSmartMagnum = pileConstructionType == PileConstructionTypeNames.SmartMagnum;
+
+            // Smart-MAGNUM の杭下拡大根固め部は杭先端より下に LL だけ伸びるので、その分を描画範囲に含める
+            if (isSmartMagnum && smartMagnumLL > 0) pileDepth += smartMagnumLL;
+
             // 総描画範囲 = 地表面から杭下端まで + 上下マージン（メートル単位で2m + 2m）
             double totalDisplayLength = abovePileTop + pileDepth + 4.0; // 4mは上下マージン分
             if (totalDisplayLength <= 0) totalDisplayLength = pileLengthFromSegments + 4.0;
 
             // 縦横それぞれのratioを計算し、小さい方を採用
             double pileToeDiaInMeters = pileToeDia / 1000.0;
+            double smartMagnumDesInMeters = smartMagnumDes / 1000.0;
+
+            // Smart-MAGNUM は杭周面部の掘削径 Des が根固め部径 Den より大きい場合があるので、
+            // 横スケールは両者の大きい方に合わせないと拡翼掘削部が画面からはみ出す。
+            double widestShapeDia = isSmartMagnum
+                ? Math.Max(pileToeDiaInMeters, smartMagnumDesInMeters)
+                : pileToeDiaInMeters;
+
             double ratioHeight = canvasHeight / totalDisplayLength;
-            double ratioWidth = (canvasWidth - 20) / pileToeDiaInMeters; // 横は20px余裕
+            double ratioWidth = (canvasWidth - 20) / widestShapeDia; // 横は20px余裕
             double ratio = Math.Min(ratioHeight, ratioWidth);
 
             // ratioが小さすぎる場合の最小値を設定
@@ -113,6 +131,12 @@ namespace PileDesign.Common
                         canvasWidth * 0.5, (segmentDepth - segmentLength) * ratio + topMargin,
                         Brushes.SkyBlue, 0, 1);
                 }
+                else if (segment.PileSection?.IsNodularPile == true)
+                {
+                    // 節杭: 節を含む外形で描く
+                    DrawNodularSegmentOutline(canvas, canvasWidth, segment.PileSection,
+                                              segmentDepth, segmentLength, ratio, topMargin);
+                }
                 else // 杭径が一般の場合
                 {
                     var rectangle = new Rectangle
@@ -131,7 +155,15 @@ namespace PileDesign.Common
             var lastSegment = pileBodySegments[^1];
             double bottomSegmentDia = lastSegment.PileSection?.PileDiameter / 1000.0 ?? 0.0;
 
-            if (pileConstructionType == "場所打ちコンクリート杭" && pileToeDiaInMeters > bottomSegmentDia)
+            if (isSmartMagnum)
+            {
+                // Smart-MAGNUM: 根固め部は杭先端の 2m 上から杭先端の LL 下まで。
+                // 他工法の「杭先端を下端として上方へ 径×比」とは形が違うため専用に描く。
+                DrawSmartMagnumToeShape(canvas, canvasWidth, pileLengthFromSegments, ratio, topMargin,
+                    bottomSegmentDia, pileToeDiaInMeters, smartMagnumLL,
+                    smartMagnumDesInMeters, smartMagnumWingLength);
+            }
+            else if (pileConstructionType == "場所打ちコンクリート杭" && pileToeDiaInMeters > bottomSegmentDia)
             {
                 double angle = 90 - insituPileToeAngle;
                 double pileToeElevation = insituPileToeHeight / 1000;
@@ -183,6 +215,82 @@ namespace PileDesign.Common
                 Canvas.SetLeft(highlightRect, canvasWidth * 0.5 - highlightWidth / 2);
                 Canvas.SetTop(highlightRect, y1);
                 canvas.Children.Add(highlightRect);
+            }
+        }
+
+        /// <summary>
+        /// Smart-MAGNUM 工法の掘削形状を描く。
+        ///
+        /// カタログ p.5 の模式図に従い
+        ///   根固め部     : 径 Den、杭先端の <see cref="SmartMagnumBulbTopAboveToe"/> 上端 〜 杭先端の LL 下端
+        ///   拡翼掘削部   : 径 Des、杭下拡大根固め部の下端を起点に上方へ「拡翼掘削部長さ」
+        /// を描き、根固め部を貫通する杭体を破線で表現する。
+        ///
+        /// 既存の <see cref="DrawCylinderToeShape"/> は「杭先端を下端として上方へ 径×比」なので流用できない。
+        /// </summary>
+        private const double SmartMagnumBulbTopAboveToe = 2.0;
+
+        private static void DrawSmartMagnumToeShape(
+            Canvas canvas,
+            double canvasWidth,
+            double pileLength,
+            double ratio,
+            double topMargin,
+            double bottomSegmentDia,
+            double denInMeters,
+            double ll,
+            double desInMeters,
+            double wingLength)
+        {
+            double cx = canvasWidth * 0.5;
+            double toeY = pileLength * ratio + topMargin;
+
+            // 拡翼掘削部（背面に薄く敷く）: 杭下拡大根固め部の下端から上方へ wingLength
+            if (desInMeters > 0 && wingLength > 0)
+            {
+                double wingBottomY = (pileLength + ll) * ratio + topMargin;
+                double wingTopY = (pileLength + ll - wingLength) * ratio + topMargin;
+                var wing = new Rectangle
+                {
+                    Width = desInMeters * ratio,
+                    Height = Math.Max(wingBottomY - wingTopY, 0),
+                    Stroke = Brushes.LightSkyBlue,
+                    StrokeThickness = 1,
+                    Fill = new SolidColorBrush(Color.FromArgb(30, 135, 206, 250)),
+                };
+                Canvas.SetLeft(wing, cx - desInMeters * 0.5 * ratio);
+                Canvas.SetTop(wing, wingTopY);
+                canvas.Children.Add(wing);
+            }
+
+            // 根固め部: 杭先端の 2m 上 〜 杭先端の LL 下
+            double bulbTopY = (pileLength - SmartMagnumBulbTopAboveToe) * ratio + topMargin;
+            double bulbBottomY = (pileLength + ll) * ratio + topMargin;
+            var points = new PointCollection
+            {
+                new Point(cx - denInMeters * 0.5 * ratio, bulbTopY),
+                new Point(cx - denInMeters * 0.5 * ratio, bulbBottomY),
+                new Point(cx + denInMeters * 0.5 * ratio, bulbBottomY),
+                new Point(cx + denInMeters * 0.5 * ratio, bulbTopY),
+                new Point(cx - denInMeters * 0.5 * ratio, bulbTopY),
+            };
+            DrawPolygon(canvas, points, Brushes.SkyBlue, Brushes.White, 1);
+
+            // 根固め部に埋まる杭体（破線の側線 + 杭先端位置の底面線）。
+            // 節杭の DrawNodeDetailLines と同じく、縮小表示で潰れる場合は省略する。
+            if (Math.Abs(toeY - bulbTopY) >= MinNodeDetailSpacingPx)
+            {
+                for (int i = -1; i < 2; i += 2)
+                {
+                    DrawLine(canvas,
+                        cx + bottomSegmentDia * 0.5 * ratio * i, bulbTopY,
+                        cx + bottomSegmentDia * 0.5 * ratio * i, toeY,
+                        Brushes.SkyBlue, 2, 1);
+                }
+                DrawLine(canvas,
+                    cx - bottomSegmentDia * 0.5 * ratio, toeY,
+                    cx + bottomSegmentDia * 0.5 * ratio, toeY,
+                    Brushes.SkyBlue, 2, 1);
             }
         }
 
@@ -1037,6 +1145,77 @@ namespace PileDesign.Common
             };
             canvas.Children.Add(polygon);
         }
+
+        /// <summary>
+        /// 節杭 の区間を、節を含む外形（軸部 ⇔ 節部をテーパーでつなぐ）で描く。
+        ///
+        /// 形状の根拠: 節部径 Do・軸部径 D はカタログ値、テーパーは姿図実測で厳密に 45°
+        /// （軸方向長 = (Do−D)/2）。節部の平坦長のみカタログに寸法記入が無く、
+        /// 姿図実測でテーパーと等長としている（<see cref="PileSection.NodeFlatLength"/>）。
+        /// 節の位置（ピッチ・杭頭/杭先端オフセット）は姿図の寸法記入値。
+        /// 図示専用で、断面耐力・自重・支持力の計算には一切使わない。
+        /// </summary>
+        private static void DrawNodularSegmentOutline(
+            Canvas canvas, double canvasWidth, PileSection section,
+            double segmentDepth, double segmentLength, double ratio, double topMargin)
+        {
+            double cx = canvasWidth * 0.5;
+            double yTop = (segmentDepth - segmentLength) * ratio + topMargin;
+
+            var outline = section.NodularOutline(segmentLength);
+            if (outline.Count == 0) return;
+
+            // 左辺を上から下へ (半径は中心からの距離)
+            var leftEdge = new List<Point>(outline.Count);
+            foreach (var (depth, radius) in outline)
+                leftEdge.Add(new Point(cx - radius / 1000.0 * ratio, yTop + depth * ratio));
+
+            // 右辺は左辺の鏡像を下から上へ
+            var points = new PointCollection(leftEdge);
+            for (int i = leftEdge.Count - 1; i >= 0; i--)
+                points.Add(new Point(2.0 * cx - leftEdge[i].X, leftEdge[i].Y));
+
+            canvas.Children.Add(new Polygon
+            {
+                Points = points,
+                Stroke = Brushes.SkyBlue,
+                Fill = Brushes.White,
+                StrokeThickness = 1,
+            });
+
+            DrawNodeDetailLines(canvas, section, outline, cx, yTop, ratio);
+        }
+
+        /// <summary>
+        /// 節の折れ位置（立上り開始・節部上端・節部下端・立上り終了の 4 本）に細い横線を引く。
+        ///
+        /// 節 1 個の軸方向全長は 3×(Do−D)/2 しかないため、縮小表示では 4 本が数 px に潰れて
+        /// 図が汚くなる。線の間隔が読める大きさ (<see cref="MinNodeDetailSpacingPx"/>) を
+        /// 確保できるときだけ描き、それ未満では外形のみとする。
+        /// </summary>
+        private static void DrawNodeDetailLines(
+            Canvas canvas, PileSection section,
+            IReadOnlyList<(double Depth, double Radius)> outline,
+            double cx, double yTop, double ratio)
+        {
+            double spacingPx = section.NodeTaperLength / 1000.0 * ratio;
+            if (spacingPx < MinNodeDetailSpacingPx) return;
+
+            double bottomDepth = outline[^1].Depth;
+            foreach (var (depth, radius) in outline)
+            {
+                // 区間の上端・下端は外形の線と重なるので描かない
+                if (depth <= 1e-9 || depth >= bottomDepth - 1e-9) continue;
+
+                double halfWidth = radius / 1000.0 * ratio;
+                double y = yTop + depth * ratio;
+                DrawLine(canvas, cx - halfWidth, y, cx + halfWidth, y,
+                         Brushes.LightSkyBlue, 0, 0.5);
+            }
+        }
+
+        /// <summary>節の横線を描くのに必要な、線どうしの最小間隔 [px]。</summary>
+        private const double MinNodeDetailSpacingPx = 3.0;
 
         private static void DrawLine(
             Canvas canvas, double x1, double y1, double x2, double y2,

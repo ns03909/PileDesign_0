@@ -445,9 +445,9 @@ namespace PileDesign.ViewModels
                                     //   上方寄与: k > 0 かつ セグメント k-1 が存在
                                     //   下方寄与: k が最終節点でない (k < nSprings - 1) かつ セグメント k が存在
                                     if (k > 0 && (k - 1) < reactions.Count)
-                                        fAboveTh = Math.Abs(reactions[k - 1].GetSoilReaction(y, isTop: false, isFront));
+                                        fAboveTh = Math.Abs(reactions[k - 1].GetSoilReaction(y, isTop: false, isFront, loadCase.SoilNonlinearityMode));
                                     if (k < nSprings - 1 && k < reactions.Count)
-                                        fBelowTh = Math.Abs(reactions[k].GetSoilReaction(y, isTop: true, isFront));
+                                        fBelowTh = Math.Abs(reactions[k].GetSoilReaction(y, isTop: true, isFront, loadCase.SoilNonlinearityMode));
 
                                     // 純理論モード時は scale=1 (FEM スケールなし、理論値そのまま)
                                     double sum = fAboveTh + fBelowTh;

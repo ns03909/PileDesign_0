@@ -24,6 +24,8 @@ namespace PileDesign.Views
                 var files = new[]
                 {
                     "pile_library_PHC.csv",
+                    "pile_library_NodularPile.csv",
+                    "pile_library_NodularPile_head.csv",
                     "pile_library_PRC.csv",
                     "pile_library_SC.csv",
                     "pile_library_SteelPile.csv"

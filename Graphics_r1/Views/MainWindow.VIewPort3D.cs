@@ -1,4 +1,5 @@
 ﻿using HelixToolkit.Wpf; // ConverterExtensions のため追加
+using PileDesign.Constants;
 using PileDesign.Common;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
@@ -187,10 +188,22 @@ namespace PileDesign.Views
 
                     if (i == pileBodySegments.Count - 1)
                     {
-                        double pileToeDia = InputModel.PileBodies[pileLocation.PileBodyNo - 1].PileToeDia / 1000.0;
-                        if (pileToeDia > pileDia)
+                        var pileBodyForToe = InputModel.PileBodies[pileLocation.PileBodyNo - 1];
+                        double pileToeDia = pileBodyForToe.PileToeDia / 1000.0;
+                        var ctype = pileBodyForToe.PileConstructionType;
+                        bool isSmartMagnum = PileConstructionTypeNames.IsSmartMagnum(ctype);
+
+                        if (isSmartMagnum)
                         {
-                            var ctype = InputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType;
+                            // Smart-MAGNUM の根固め部は円柱で、杭先端の 2m 上から杭先端の LL 下まで。
+                            // 拡底コーンではないので専用に描く。
+                            double belowToe = pileBodyForToe.SmartMagnumLL;
+                            var bulbBottom = new Point3D(x, y, z2 - belowToe);
+                            var bulbTop = new Point3D(x, y, z2 + Models.InputData.SoilPile.SmartMagnumBulbTopAboveToe);
+                            AddCylinder(NikkenBrush.SkyBlue, bulbBottom, bulbTop, pileToeDia);
+                        }
+                        else if (pileToeDia > pileDia)
+                        {
                             if (ctype == "回転貫入杭")
                             {
                                 AddHelicalBladePileToe(NikkenBrush.SkyBlue, new Point3D(x, y, z2), pileToeDia, pileDia);

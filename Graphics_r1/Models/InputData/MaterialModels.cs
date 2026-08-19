@@ -1,4 +1,4 @@
-using PileDesign.Constants;
+﻿using PileDesign.Constants;
 using PileDesign.Models.PileLibrary;
 using System;
 using System.Collections.Generic;
@@ -351,6 +351,10 @@ namespace PileDesign.Models.InputData
 
         // 基準降伏点 σy（規格値）。損傷限界・使用限界はこの値を用いる（1.1F オプション非適用）。
         private double BaseSigmaY => GradeYieldStrengths.GetValueOrDefault(Grade, 295.0);
+
+        /// <summary>鉄筋規格名から規格降伏点 [N/mm²] を返す（諸元表の規格不一致チェック用）。</summary>
+        public static double GradeYieldStrength(string grade) =>
+            GradeYieldStrengths.GetValueOrDefault(grade ?? "", 295.0);
 
         // 主筋の呼び径 [mm]（"D25" → 25）。使用限界（長期許容）の径による上限（215/195）判定に用いる。
         private double BarDiameter =>

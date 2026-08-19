@@ -143,6 +143,38 @@ namespace TestProject1
                 ("Prestress", s => s.Prestress = 8.0));
         }
 
+        private static PileSection MakePhcNodular()
+        {
+            var s = MakePhc();
+            s.PileSectionType = "PHC節杭";
+            return s;
+        }
+
+        [TestMethod]
+        public void CacheKey_PhcNodular()
+        {
+            AssertKeyReflectsParameters("PHC節杭", MakePhcNodular,
+                ("PileDiameter", s => s.PileDiameter = 700.0),
+                ("ConcreteThickness", s => s.ConcreteThickness = 100.0),
+                ("ConcreteFc", s => s.ConcreteFc = 105.0),
+                ("TendonDp", s => s.TendonDp = 540.0),
+                ("TendonAp", s => s.TendonAp = 700.0),
+                ("TendonSigmaPy", s => s.TendonSigmaPy = 1275.0),
+                ("TendonSigmaPu", s => s.TendonSigmaPu = 1470.0),
+                ("Prestress", s => s.Prestress = 8.0));
+        }
+
+        [TestMethod]
+        public void CacheKey_PhcAndPhcNodular_DoNotCollide()
+        {
+            // 断面諸元が同一でもキーは別。落とすと片方のキャッシュがもう片方に返る
+            string keyPhc = MakePhc().GetMPhiCacheKey(1000.0);
+            string keyNodular = MakePhcNodular().GetMPhiCacheKey(1000.0);
+
+            Assert.AreNotEqual(keyPhc, keyNodular);
+            Assert.IsFalse(keyNodular.StartsWith("OTHER|"), "PHC節杭 がキー未登録で OTHER| に落ちている");
+        }
+
         private static PileSection MakeSc() => new()
         {
             PileBodyType = "既製コンクリート杭",

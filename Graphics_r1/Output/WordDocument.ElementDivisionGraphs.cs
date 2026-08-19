@@ -117,7 +117,10 @@ namespace PileDesign.Output
                 pileTopAltitude: soilPile.Z,
                 groundInput: soilPile.GroundInput,
                 isElementDivision: true,
-                zs: zs);
+                zs: zs,
+                smartMagnumLL: pileBody.SmartMagnumLL,
+                smartMagnumDes: pileBody.SmartMagnumDes,
+                smartMagnumWingLength: pileBody.SmartMagnumWingLength);
 
             canvas.Measure(new Size(dipW, dipH));
             canvas.Arrange(new Rect(0, 0, dipW, dipH));

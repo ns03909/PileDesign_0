@@ -442,12 +442,12 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
-        private void LoadCase1CommonIsSoilNonLinear()
+        private void LoadCase1CommonSoilNonlinearityMode()
         {
             ApplyCommonProperty(
                 LoadCasesLevel1,
-                common => common.IsSoilNonLinear,
-                (loadCase, value) => loadCase.IsSoilNonLinear = value
+                common => common.SoilNonlinearityMode,
+                (loadCase, value) => loadCase.SoilNonlinearityMode = value
             );
         }
 
@@ -512,12 +512,12 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
-        private void LoadCase2CommonIsSoilNonLinear()
+        private void LoadCase2CommonSoilNonlinearityMode()
         {
             ApplyCommonProperty(
                 LoadCasesLevel2,
-                common => common.IsSoilNonLinear,
-                (loadCase, value) => loadCase.IsSoilNonLinear = value
+                common => common.SoilNonlinearityMode,
+                (loadCase, value) => loadCase.SoilNonlinearityMode = value
             );
         }
 

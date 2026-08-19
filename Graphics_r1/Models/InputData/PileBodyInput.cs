@@ -141,11 +141,39 @@ namespace PileDesign.Models.InputData
                         PileBodySegments[i].SegmentDepth += PileBodySegments[j].SegmentLength;
                     }
                 }
+
+                UpdateNodularPileHeads();
             }
             catch (Exception ex)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageService.Show($"杭区間情報の更新中にエラーが発生しました。\n{ex.Message}", "区間更新エラー", MessageBoxButton.OK, MessageBoxImage.Error));
+            }
+        }
+
+        /// <summary>
+        /// 節杭 の杭頭タイプ（標準 / 拡頭中間径 / 拡頭）を、直上の杭区間の径から自動決定する。
+        ///
+        /// 継手で接合する以上、節杭の杭頭径は直上区間の径と一致していなければならない。
+        /// 区間構成や断面が変わるたびに呼ぶ必要があるため、区間更新の一部として実行する。
+        /// </summary>
+        public void UpdateNodularPileHeads()
+        {
+            if (PileBodySegments == null) return;
+
+            for (int i = 0; i < PileBodySegments.Count; ++i)
+            {
+                var section = PileBodySegments[i].PileSection;
+                if (section == null) continue;
+
+                // 最上段では節杭を選べないようにする (断面タイプの選択肢から除外される)
+                section.IsTopSegment = i == 0;
+
+                double? diameterAbove = i > 0
+                    ? PileBodySegments[i - 1].PileSection?.PileDiameter
+                    : null;
+
+                section.ResolveNodularHead(diameterAbove);
             }
         }
 
@@ -180,20 +208,24 @@ namespace PileDesign.Models.InputData
         }
 
         public static ObservableCollection<string> InsituPileConstructionTypeOption { get; } =
-        ["場所打ちコンクリート杭"];
+        [PileConstructionTypeNames.Insitu];
 
+        // Smart-MAGNUM はジャパンパイルの工法で、本プログラムでは
+        // 「ジャパンパイルの既製コンクリート杭」に限って適用する。
+        // カタログの適用杭種には鋼管杭も含まれるが、鋼管杭では選べないようにしている。
         public static ObservableCollection<string> PrecastPileConstructionTypeOption { get; } =
         [
-            "埋込み杭（プレボーリング）",
-            "埋込み杭（中掘り）",
-            "打込み杭"
+            PileConstructionTypeNames.Preboring,
+            PileConstructionTypeNames.Chubori,
+            PileConstructionTypeNames.Driven,
+            PileConstructionTypeNames.SmartMagnum
         ];
 
         public static ObservableCollection<string> SteelPileConstructionTypeOption { get; } =
         [
-            "埋込み杭（プレボーリング）",
-            "埋込み杭（中掘り）",
-            "回転貫入杭"
+            PileConstructionTypeNames.Preboring,
+            PileConstructionTypeNames.Chubori,
+            PileConstructionTypeNames.Rotary
         ];
 
         // 杭頭タイプ
@@ -281,6 +313,57 @@ namespace PileDesign.Models.InputData
             {
                 if (!double.IsFinite(value)) return;
                 SetProperty(ref _insituPileToeAngle, value);
+            }
+        }
+
+        // ─── Smart-MAGNUM 工法（ジャパンパイル）専用入力 ───
+        // 拡大根固め部径 Den は既存の PileToeDia を流用する（埋込み杭では UI ラベルが既に
+        // 「根固め部径d」で、姿図の横スケールと 3D の地盤柱径もこれを見ているため）。
+        // 節部径 Don / Dos は入力せず杭区間の断面（節杭なら節部径、それ以外は公称外径）から導出する。
+
+        // 周面強化型か（false = 標準型）。周面摩擦力係数 β・γ が切り替わる。
+        private bool _smartMagnumIsReinforcedCircum;
+        public bool SmartMagnumIsReinforcedCircum
+        {
+            get => _smartMagnumIsReinforcedCircum;
+            set => SetProperty(ref _smartMagnumIsReinforcedCircum, value);
+        }
+
+        // 杭下拡大根固め部長さ LL (m)。杭先端から下方への長さ。適用範囲 0〜2m。
+        private double _smartMagnumLL = 1.0;
+        public double SmartMagnumLL
+        {
+            get => _smartMagnumLL;
+            set
+            {
+                if (!double.IsFinite(value)) return;
+                SetProperty(ref _smartMagnumLL, value);
+            }
+        }
+
+        // 杭周面部の掘削径 Des (mm)。0 は「拡大掘削なし」を意味し、拡大比 ωs = 1.0 となる。
+        private double _smartMagnumDes;
+        public double SmartMagnumDes
+        {
+            get => _smartMagnumDes;
+            set
+            {
+                if (!double.IsFinite(value)) return;
+                SetProperty(ref _smartMagnumDes, value);
+            }
+        }
+
+        // 拡翼掘削部長さ (m)。カタログの計算例と同じく杭下拡大根固め部長さ LL を含む長さで、
+        // 杭下拡大根固め部の下端（杭先端から下方 LL）を起点に上方へ測る。
+        // この範囲に入る杭区間だけ周面摩擦に ωs が掛かり、範囲外は ωs = 1.0 とする。
+        private double _smartMagnumWingLength;
+        public double SmartMagnumWingLength
+        {
+            get => _smartMagnumWingLength;
+            set
+            {
+                if (!double.IsFinite(value)) return;
+                SetProperty(ref _smartMagnumWingLength, value);
             }
         }
 

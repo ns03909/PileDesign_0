@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -1765,12 +1765,391 @@
                 「杭体」は、単数または複数の <strong>杭体（断面）区間</strong>を有します。<br>
                 杭体区間の杭断面タイプは、杭体タイプごとに、以下の選択肢から選択します。<br>
                 場所打ち鋼管コンクリート杭：<strong>鋼管コンクリート部</strong>、<strong>鉄筋コンクリート部</strong><br>
-                既製コンクリート杭：<strong>PHC杭</strong>、<strong>PRC杭</strong>、<strong>SC杭</strong><br>
+                既製コンクリート杭：<strong>PHC杭</strong>、<strong>PHC節杭</strong>、<strong>PRC杭</strong>、<strong>PRC節杭</strong>、<strong>PRC節杭(PHC部)</strong>、<strong>BF.S頭部軸部</strong>、<strong>BF.S先端軸部</strong>、<strong>SC杭</strong><br>
                 鋼管杭：<strong>コンクリート充填鋼管部</strong>（鉄筋定着工法の最上部杭区間）、<strong>鋼管部</strong>
+            </p>
+            <p>
+                断面タイプは<strong>杭体区間ごと</strong>に選べるため、「下杭のみ PHC節杭、上杭はストレートの PHC杭」
+                といった使い分けも表現できます
+                （詳細は <span class="xref"><a href="#section-mshi105">メーカー製品ライブラリ (PHC)</a></span>、
+                <span class="xref"><a href="#section-hisc105">同 (SC)</a></span>、
+                <span class="xref"><a href="#section-dam105">同 (PRC)</a></span>、
+                <span class="xref"><a href="#section-nodular-pile">PHC節杭</a></span>、
+                <span class="xref"><a href="#section-nodular-prc-pile">PRC節杭</a></span>、
+                <span class="xref"><a href="#section-bfs-pile">BF.S パイル</a></span> を参照）。
             </p>
             <p>
                 最下段の杭区間よりも大きな杭先端径を入力した場合、場所打ちコンクリート杭では <strong>拡底杭</strong>、既製コンクリート杭では
                 <strong>拡大根固め杭</strong> を仮定します。
+            </p>
+
+            <h5 id="section-mshi105">メーカー製品ライブラリ（三谷セキサン MS-hi105）</h5>
+            <p>
+                断面タイプ <strong>「PHC杭」</strong>の製品一覧には、JIS A 5373 に基づく汎用ライブラリに加えて
+                三谷セキサン <strong>MS-hi105 パイル</strong>（F<sub>c</sub>=105N/mm² のストレート PHC 杭）を収録しています。
+                製品名は <code>MS-hi105-（杭径）-（肉厚仕様）-（種類）</code> の形式です
+                （例: <code>MS-hi105-400-標準型-A</code>）。全 94 品目で、
+                杭径 φ300〜φ1200 × 肉厚仕様 標準型／厚型／特厚型 × 種類 A／B／B2／C／C2 です。
+            </p>
+            <p>
+                ストレート杭なので断面の扱いは汎用の PHC 杭とまったく同じです
+                （節杭のように形状・自重が変わるものだけ別の断面タイプにしています）。
+                同じ ComboBox に並ぶので、製品名で選び分けてください。
+            </p>
+            <p>
+                汎用ライブラリの置き換えではなく<strong>追加</strong>です。主な違いは次のとおりです。
+            </p>
+            <table>
+                <caption style="text-align: center">JIS 汎用ライブラリとの違い（φ400 の例）</caption>
+                <tr><th style="width:34%;">項目</th><th style="width:33%;">JIS 汎用</th><th>MS-hi105</th></tr>
+                <tr><td>肉厚仕様</td><td>標準 65 / 特厚 80 の 2 段階</td>
+                    <td><strong>標準型 65 / 厚型 80 / 特厚型 95 の 3 段階</strong></td></tr>
+                <tr><td>PC 鋼棒の配筋径 PCD</td><td>330 mm</td><td>335 mm</td></tr>
+                <tr><td>A 種の PC 鋼棒断面積（標準）</td><td>385 mm²</td><td>400 mm²</td></tr>
+                <tr><td>肉厚を増やしたときの σ<sub>ce</sub></td><td>4.0 → 3.4 に低下</td>
+                    <td>厚型のみ低下し、<strong>特厚型は 4.0 に戻る</strong></td></tr>
+            </table>
+            <p>
+                なお、このカタログは PC 鋼棒の配筋径 PCD を印字していないため、
+                換算断面 2 次モーメント I<sub>e</sub> から逆算した値を用いています。
+                逆算値が杭径ごとに 1 つに定まり 5mm 刻みになること、およびカタログの破壊モーメント
+                M<sub>u</sub> と本プログラムの計算値が全 94 品目で揃うことを確認しています。
+            </p>
+
+            <h5 id="section-dam105">メーカー製品ライブラリ（三谷セキサン DAM105）</h5>
+            <p>
+                断面タイプ <strong>「PRC杭」</strong>の製品一覧にも、JIS 汎用ライブラリに加えて
+                三谷セキサン <strong>DAM105 パイル</strong>（F<sub>c</sub>=105N/mm² の PRC 杭）を収録しています。
+                製品名は <code>DAM105-（杭径）-（肉厚仕様）-（種類）</code> の形式です
+                （例: <code>DAM105-600-標準型-A-D19</code>）。全 218 品目で、
+                杭径 φ300〜φ1500 × 肉厚仕様 標準型／厚型／特厚型 × 種類 A-D13〜A-D35 です。
+                <strong>種類は主筋径そのもの</strong>を表します。
+            </p>
+            <p>
+                汎用ライブラリの置き換えではなく<strong>追加</strong>です。杭径が φ1500 まで、
+                主筋が D35 まであること、肉厚仕様を持つことが主な違いです。
+                PC 鋼棒・異形鉄筋ともヤング係数 200,000 N/mm²（SD345）です。
+            </p>
+
+            <h6>せん断耐力について</h6>
+            <p>
+                カタログの設計せん断耐力は、<strong>シアスパン比 a=1.0 のときの参考値</strong>として
+                記載されているものです（カタログ注記）。実際の設計で用いる値は別途計算式によるため、
+                <strong>本プログラムはこの値を設計値として取り込んでいません</strong>。
+                せん断の検討には本プログラムの計算値をご使用ください。
+            </p>
+
+            <h6>鉄筋規格の選択にご注意ください</h6>
+            <p>
+                製品を選び直しても<strong>鉄筋規格は切り替わりません</strong>
+                （主筋の本数・径・配筋径だけが転記されます）。
+                DAM105 の主筋は <strong>SD345</strong> なので、断面ウィンドウの鉄筋規格が
+                SD345 になっていることをご確認ください
+                （既定は SD390 です）。食い違っている場合は<strong>諸元表の「鉄筋規格」欄に注記</strong>が出ます。
+            </p>
+
+            <h6>配筋径について</h6>
+            <p>
+                このカタログは PC 鋼棒・主筋の配筋径を印字していないため、
+                換算断面 2 次モーメント I<sub>e</sub> から逆算した値を用いています。
+                PC 鋼棒と主筋は別々の円周にあり、主筋の円は鉄筋径が太いほど内側へ寄るので、
+                同じ断面の種類（主筋径）違いを使って両者を分離しています。
+                逆算した配筋径から I<sub>e</sub> を組み直すとカタログ値に戻ることを確認しています。
+            </p>
+
+            <h5 id="section-hisc105">メーカー製品ライブラリ（三谷セキサン Hi-SC105）</h5>
+            <p>
+                断面タイプ <strong>「SC杭」</strong>の製品一覧にも、JIS 汎用ライブラリに加えて
+                三谷セキサン <strong>Hi-SC105 パイル</strong>（F<sub>c</sub>=105N/mm² の外殻鋼管付コンクリート杭）を
+                収録しています。製品名は <code>Hi-SC105-（杭径）-（肉厚仕様）-（肉厚）-（鋼管厚）</code> の形式です
+                （例: <code>Hi-SC105-800-標準型-110-16</code>）。全 579 品目で、
+                杭径 φ400〜φ1500 × 肉厚仕様 標準型／厚型／特厚型 ×
+                <strong>鋼管厚 6〜25mm を 1mm 刻み</strong>です。
+            </p>
+            <p>
+                汎用ライブラリの置き換えではなく<strong>追加</strong>です。鋼管厚が 1mm 刻みで選べること、
+                杭径が φ1500 まであること、鋼管のヤング係数が 205,000 N/mm²（SKK490／STK490、降伏点 325N/mm²）
+                であることが主な違いです。
+            </p>
+            <p>
+                なお肉厚 T は<strong>鋼管とコンクリートを合わせた全肉厚</strong>で、
+                コンクリート厚は T − t<sub>s</sub> になります（カタログの表記と同じ）。
+            </p>
+
+            <h6>鋼管規格の選択にご注意ください</h6>
+            <p>
+                製品を選び直しても<strong>鋼管規格は切り替わりません</strong>（杭径と鋼管厚だけが転記されます）。
+                Hi-SC105 は SKK490／STK490 なので、断面ウィンドウの鋼管規格が
+                <strong>SKK490</strong> になっていることをご確認ください。
+                明らかに食い違っている場合（SKK400 のままなど）は<strong>諸元表の「鋼管規格」欄に注記</strong>が出ます。
+            </p>
+
+            <h6>腐食代について</h6>
+            <p>
+                本プログラムは腐食を製品ではなく<strong>腐食代のパラメータ</strong>として扱うため、
+                製品ライブラリには腐食代 0mm の値を収録しています。腐食を見込む場合は
+                断面ウィンドウで腐食代を入力してください。
+                なおこのカタログは腐食代 1mm の性能表も掲載しており、
+                本プログラムが腐食代 1mm で算定する鋼管断面積・曲げ剛性がその表と一致することを確認しています。
+            </p>
+
+            <h5 id="section-nodular-pile">PHC節杭</h5>
+            <p>
+                軸部に一定ピッチで節を設けた既製コンクリート杭です。断面タイプで
+                <strong>「PHC節杭」</strong>を選ぶと、収録済みの製品ライブラリから呼び名を選択できます。
+                収録内容はジャパンパイル <strong>JP-NPH85／JP-NPH105／JP-NPH123 パイル</strong>
+                （プレストレスト高強度コンクリート節杭）の全 292 品目で、
+                呼び名 17 種 × コンクリート設計基準強度 3 種 × 種類（A／AH／A2／A2H／B／BH／C／CH）です。
+                製品名は <code>NPH-（節部径）-（軸部径）-（厚さ仕様）-（Fc）-（種類）</code> の形式で表示されます
+                （例: <code>NPH-440-300-標準-85-A</code>）。
+            </p>
+
+            <h6>杭頭タイプは自動判定（最上段区間では使用不可）</h6>
+            <p>
+                PHC節杭 は継手を介して上杭に接合する<strong>下杭</strong>として用いるため、
+                <strong>最上段の杭体区間では選択できません</strong>（断面タイプの選択肢から除外されます）。
+                上の区間を後から削除して節杭が最上段になった場合は、入力チェックで検出します。
+            </p>
+            <p>
+                杭頭タイプ（標準タイプ / 拡頭中間径タイプ / 拡頭タイプ）は、
+                <strong>直上の杭区間の径に合わせて自動で決まります</strong>。継手で接合する以上、
+                節杭の杭頭径は直上区間の径と一致していなければならないためです。
+            </p>
+            <table>
+                <caption style="text-align: center">杭頭タイプの自動判定</caption>
+                <tr><th style="width:34%;">直上区間の径</th><th style="width:30%;">杭頭タイプ</th><th>拡頭部径 D<sub>t</sub></th></tr>
+                <tr><td>軸部径 D と同じ</td><td>標準タイプ</td><td>―（拡頭なし）</td></tr>
+                <tr><td>D &lt; 径 &lt; 節部径 D<sub>o</sub> で、カタログに一致する D<sub>t</sub> がある</td>
+                    <td>拡頭中間径タイプ</td><td>その D<sub>t</sub></td></tr>
+                <tr><td>節部径 D<sub>o</sub> と同じ</td><td>拡頭タイプ</td><td>D<sub>t</sub> = D<sub>o</sub></td></tr>
+                <tr><td>一致する D<sub>t</sub> がカタログに無い</td>
+                    <td>標準タイプ（暫定）</td><td>―（入力チェックで警告）</td></tr>
+            </table>
+            <p>
+                拡頭部長さ L<sub>t</sub> はカタログ全行で 600 mm で、これは標準タイプの
+                「区間上端〜第 1 節中心 600 mm」と同値です。したがって
+                <strong>杭頭タイプによって節の位置は変わりません</strong>。
+                拡頭部と第 1 節が重なる範囲は大きい方の径で描きます。
+                HS タイプ（標準 HS / 拡頭 HS）は未対応です。
+            </p>
+
+            <h6>断面耐力はストレート PHC 杭と同一</h6>
+            <p>
+                カタログに記載された断面諸数値（断面積 A<sub>o</sub>、換算断面積 A<sub>e</sub>、
+                断面 2 次モーメント I<sub>o</sub>、換算断面 2 次モーメント I<sub>e</sub>、換算断面係数 Z<sub>e</sub>）は
+                <strong>すべて軸部の中空円形断面</strong>から算定されており、節部は断面性能に寄与しません。
+                本プログラムでも収録した全 292 行について
+                $A_o = \frac{\pi}{4}(D^2 - d_i^2)$、$I_o = \frac{\pi}{64}(D^4 - d_i^4)$、
+                $A_e = A_o + (n-1)A_p$、$I_e = I_o + (n-1)A_p (\text{PCD}/2)^2 / 2$ との一致を確認しています
+                （最大相対差 0.09%。$d_i = D - 2t$、$n = E_p/E_c$）。
+            </p>
+            <p>
+                したがって <strong>N-M 曲線・N-Q 曲線・M-φ 関係・軸剛性 EA・曲げ剛性 EI は、
+                軸部諸元が同じストレート PHC 杭と完全に一致します</strong>。
+                節部径は断面耐力に一切影響しません。
+            </p>
+
+            <h6>自重はカタログ標準質量による</h6>
+            <p>
+                節杭の単位長さ重量には、カタログの<strong>標準質量</strong>［t/m］をそのまま用います。
+                節部の体積を形状から積分してもカタログ質量は再現できないため
+                （既製杭の単位体積重量 γ<sub>c</sub> = 26 kN/m³ で相対差 RMS 3.4%・最大 7.0%。
+                密度と節長さを自由に振った最良フィットでも RMS 1.5% 止まりで、
+                そのときの密度は 27.4 kN/m³ とコンクリートとして非現実的。継手金物等を含むためと考えられます）、
+                メーカー公称値が唯一正確な出所です。
+            </p>
+            <p>
+                この結果、<strong>基本設定のコンクリート単位体積重量 γ<sub>c</sub> は PHC節杭 の自重には適用されません</strong>。
+                自重は引抜き支持力の控除、鉛直（沈下）解析の荷重、水平解析の節点自重に用いられます。
+            </p>
+
+            <h6>支持力の周面抵抗について</h6>
+            <p>
+                <strong>基礎指針'19 の一般式による工法では、周面抵抗は軸部径で算定しており、
+                節による抵抗の増大は考慮していません（安全側の評価）。</strong>
+                節を考慮した周面抵抗は高支持力杭工法ごとの評定式によるもので
+                （例: 砂質地盤の周面摩擦力係数 β が「標準型 節杭」と「周面強化型 節杭」で異なる）、
+                工法を選ばずに一般化できないためです。
+                断面ウィンドウと計算書にも同旨を明記しています。
+            </p>
+            <p>
+                <strong>工法別評定式に対応した工法では、節部径が支持力算定に直接使われます。</strong>
+                現在対応しているのは <a href="#section-smart-magnum">Smart-MAGNUM 工法</a> で、
+                周長 ψ を節部径基準とし、先端面積 A<sub>p</sub> も節部径 D<sub>on</sub> から求めます。
+                節部径は断面ライブラリ（JP-NPH / JP-NPRC / BF.S など）から自動的に取り込まれるため、
+                製品を選択すれば追加入力は不要です。
+            </p>
+
+            <h6>図面表示</h6>
+            <p>
+                杭体ウィンドウの杭姿図とメインウィンドウの 3D 表示に、節の形状を描きます。
+                形状は次の寸法で決まります。
+            </p>
+            <table>
+                <caption style="text-align: center">節の図示に用いる寸法</caption>
+                <tr><th style="width:26%;">項目</th><th style="width:30%;">値</th><th>出所</th></tr>
+                <tr><td>節部径 D<sub>o</sub> / 軸部径 D</td><td>製品ごと</td><td>カタログ記載値</td></tr>
+                <tr><td>節の半径方向高さ</td><td>(D<sub>o</sub> − D)/2</td><td>上記から確定</td></tr>
+                <tr><td>テーパー軸方向長さ</td><td>(D<sub>o</sub> − D)/2（45°）</td><td>カタログ姿図の実測（厳密に 45°）</td></tr>
+                <tr><td>節部（平坦部）長さ</td><td>(D<sub>o</sub> − D)/2</td><td><strong>カタログ姿図の実測（推定値）</strong></td></tr>
+                <tr><td>節ピッチ</td><td>1 000 mm</td><td>カタログ姿図の寸法記入値</td></tr>
+                <tr><td>区間上端〜第 1 節中心</td><td>600 mm</td><td>カタログ姿図の寸法記入値</td></tr>
+                <tr><td>最終節中心〜区間下端</td><td>400 mm</td><td>カタログ姿図の寸法記入値</td></tr>
+            </table>
+            <p>
+                杭長 L［m］に対して節は L 個となり、カタログの「杭長は 1m ピッチで 4〜15m」と整合します
+                （600 + (L−1)×1000 + 400 = 1000L）。
+            </p>
+            <p>
+                このうち<strong>節部（平坦部）の長さだけはカタログに寸法記入が無く、姿図からの実測に基づく推定値</strong>です
+                （実測ではテーパー軸方向長さと等長）。<strong>図示専用であり、断面耐力・自重・支持力の計算には
+                一切使用していません</strong>。正確な形状が必要な場合はメーカーにご確認ください。
+            </p>
+
+            <h6>カタログ記載の誤植について</h6>
+            <p>
+                収録時の検算により、カタログ側の誤植を 1 件検出しています。
+                <strong>φ700-600 および φ800-600 の F<sub>c</sub>=123・AH 種の換算断面係数 Z<sub>e</sub></strong> が、
+                直上の A 種と同じ 16 430×10³ mm³ で印字されていますが、
+                同じ行の I<sub>e</sub> = 543 400×10⁴ mm⁴ から Z<sub>e</sub> = I<sub>e</sub>/(D/2) = 18 113×10³ mm³ が正しい値です
+                （F<sub>c</sub>=105 の対応行も 18 130×10³）。
+                本プログラムでは印字値を記録として残したうえで、計算には正しい値を用いています。
+            </p>
+
+            <h5 id="section-nodular-prc-pile">PRC節杭（PRC部 / PHC部）</h5>
+            <p>
+                PC鋼棒に加えて<strong>異形棒鋼（主筋）</strong>を配した節杭です。断面タイプで
+                <strong>「PRC節杭」</strong>または<strong>「PRC節杭(PHC部)」</strong>を選ぶと、
+                収録済みの製品ライブラリから呼び名を選択できます。
+                収録内容はジャパンパイル <strong>JP-NPRC105 パイル</strong>
+                （プレストレスト鉄筋高強度コンクリート節杭）の全 232 品目で、
+                呼び名 17 種 × 種類（Ⅰ〜Ⅷ。軸部径 700〜1100mm のⅠ種・Ⅱ種は ⅠA／ⅠB／ⅡA／ⅡB に細分）です。
+                製品名は <code>NPRC-（節部径）-（軸部径）-（厚さ仕様）-（Fc）-（種類）</code> の形式で表示されます
+                （例: <code>NPRC-440-300-標準-105-Ⅰ</code>）。
+            </p>
+
+            <h6>1 本の杭が 2 断面から成るため断面タイプも 2 つ</h6>
+            <p>
+                PRC節杭 は<strong>杭頭側が PRC部（PC鋼棒 + 異形棒鋼）、それより下が PHC部（PC鋼棒のみ）</strong>
+                という 2 断面構成の製品です。カタログも 2 断面それぞれの断面性能・耐力を別々に規定しています。
+                本プログラムでは、場所打ち鋼管コンクリート杭の「鋼管コンクリート部 / 鉄筋コンクリート部」と同じ思想で、
+                <strong>杭体区間ごとに PRC部 と PHC部 を選び分けます</strong>。
+                PHC部 の製品名には <code>-PHC部</code> が付きます。
+            </p>
+            <p>
+                同じ製品であれば軸部径・肉厚・節形状・標準質量は 2 断面で共通です。異なるのは
+                異形棒鋼の有無、有効プレストレス量 σ<sub>ce</sub>、および断面耐力です。
+            </p>
+
+            <h6>断面耐力はストレート杭と同一</h6>
+            <p>
+                PHC節杭 と同じく、カタログの断面諸数値は<strong>すべて軸部の中空円形断面</strong>から算定されています。
+                ただし PRC節杭 は PC鋼棒（E<sub>p</sub> = 200 000 N/mm²）と
+                異形棒鋼 SD345（E<sub>r</sub> = <strong>205 000 N/mm²</strong>）でヤング係数が異なるため、
+                換算比が 2 つになります。収録した全 232 行について次式との一致を確認しています
+                （最大相対差 0.13%。$n_p = E_p/E_c = 5.0$、$n_r = E_r/E_c = 5.125$）。
+            </p>
+            <p>
+                $A_e = A_o + (n_p-1)A_p + (n_r-1)A_g$、
+                $I_e = I_o + (n_p-1)A_p(\text{PCD}/2)^2/2 + (n_r-1)A_g(\text{主筋 PCD}/2)^2/2$。
+                PHC部 は異形棒鋼を持たないので $(n_r-1)$ の項が落ちるだけです。
+            </p>
+            <p>
+                したがって <strong>PRC部 の断面耐力はストレート PRC杭 と、PHC部 は ストレート PHC杭 と
+                完全に一致します</strong>。節部径は断面耐力に一切影響しません。
+            </p>
+
+            <h6>自重・節形状・杭頭タイプ</h6>
+            <p>
+                いずれも <span class="xref"><a href="#section-nodular-pile">PHC節杭</a></span> と同じ扱いです
+                （自重はカタログ標準質量、節ピッチ 1 000 mm・区間上端 600 mm・区間下端 400 mm、
+                テーパー 45°、周面抵抗は軸部径で算定）。
+                杭頭タイプの自動判定に使う拡頭形状一覧は <strong>NPRC 専用のもの</strong>を参照します
+                （呼び名が同じでも用意されている拡頭径 D<sub>t</sub> が NPH と異なるため）。
+            </p>
+
+            <h6>カタログ記載の誤植について</h6>
+            <p>
+                収録時の検算により、カタログ側の誤植を 1 件検出しています。
+                <strong>軸部径 φ700（肉厚 t = 100 mm）の全 18 行の断面 1 次モーメント S<sub>o</sub></strong> が
+                18 617×10³ mm³ と印字されていますが、中空円形断面から
+                S<sub>o</sub> = (D³ − d<sub>i</sub>³)/12 = 18 167×10³ mm³ が正しい値です（桁の入れ替わり）。
+                同じ φ700 でも t = 120 mm の行は正しく印字されています。
+                本プログラムでは印字値を記録として残したうえで、計算には正しい値を用いています。
+            </p>
+
+            <h5 id="section-bfs-pile">BF.S パイル（頭部軸部 / 先端軸部）</h5>
+            <p>
+                <strong>頭部厚型節付き杭</strong>です。断面タイプで
+                <strong>「BF.S頭部軸部」</strong>または<strong>「BF.S先端軸部」</strong>を選ぶと、
+                収録済みの製品ライブラリから呼び名を選択できます。
+                収録内容は三谷セキサン <strong>BF.S105／BF.S123 パイル</strong>の全 54 品目で、
+                呼び名 9 種 × コンクリート設計基準強度 2 種 × 種類（A2／B2／C2）です。
+                製品名は <code>BF.S-（呼び名）-（Fc）-（種類）</code> の形式で表示されます
+                （例: <code>BF.S-400-3045-105-A2</code>）。
+            </p>
+
+            <h6>1 本の杭が外径の違う 2 つの軸部から成る</h6>
+            <p>
+                この製品は<strong>頭部軸部（D<sub>T</sub>／T<sub>T</sub>）と先端軸部（D<sub>0</sub>／T）で
+                外径も肉厚も異なります</strong>。内径は両軸部で完全に一致しており
+                （D<sub>T</sub> − 2T<sub>T</sub> = D<sub>0</sub> − 2T）、頭部だけが外側に厚くなっています。
+                PC 鋼棒は本数・断面積・配筋径とも両軸部で共通です。
+                本プログラムでは、杭体区間ごとに頭部軸部と先端軸部を選び分けます。
+            </p>
+            <p>
+                節はどちらの軸部にも付きますが、<strong>節部径 D<sub>1</sub> は共通</strong>なので、
+                節の出寸法（半径方向の高さ）は軸部径の細い先端軸部の方が大きくなります。
+            </p>
+
+            <h6>カタログに記載が無い量の扱い（重要）</h6>
+            <p>
+                このカタログの<strong>標準性能表は頭部軸部の値のみ</strong>を載せています（表の注記）。
+                そのため次の 2 点を本プログラム側で補っています。
+            </p>
+            <table>
+                <caption style="text-align: center">カタログに記載が無く、取り込み時に補った量</caption>
+                <tr><th style="width:24%;">項目</th><th style="width:36%;">求め方</th><th>妥当性の裏付け</th></tr>
+                <tr><td>配筋径 PCD</td>
+                    <td>頭部軸部の I<sub>e</sub> から逆算</td>
+                    <td>同じ呼び名なら F<sub>c</sub>・種類によらず一致し、5mm 刻みの値になる</td></tr>
+                <tr><td>先端軸部の断面諸元・σ<sub>ce</sub></td>
+                    <td>有効プレストレス力 σ<sub>ce</sub>·A<sub>e</sub> は両軸部で共通として算定</td>
+                    <td>算定した σ<sub>ce</sub> が JIS A 5373 の A／B／C 種の規定値
+                        （4／8／10 N/mm²）に ±5% で一致する</td></tr>
+            </table>
+            <p>
+                2 つ目が 1 つ目の<strong>独立した検算</strong>になっています。
+                どちらかが誤っていれば、先端軸部の σ<sub>ce</sub> は JIS の規定値から外れます。
+            </p>
+            <p>
+                <strong>先端軸部の耐力（M<sub>cr</sub>／M<sub>u</sub>／Q<sub>as</sub> 等）はカタログに存在しない</strong>ため、
+                本プログラムの断面計算（PC 鋼棒のみの中空断面＝PHC 杭と同じ計算）の結果を
+                そのまま設計値として用います。
+                その妥当性の根拠として、<strong>頭部軸部では同じ計算値がカタログの M<sub>u</sub> と
+                全 27 製品で +2〜7% に収まる</strong>ことを確認しています（計算値の方がやや大きい）。
+            </p>
+
+            <h6>自重はコンクリート単位体積重量による</h6>
+            <p>
+                <strong>このカタログには標準質量表がありません。</strong>
+                そのため自重は基本設定のコンクリート単位体積重量 γ<sub>c</sub> と軸部断面から算定します
+                （<strong>節の分は計上されません</strong>）。
+                カタログ標準質量を用いる節杭（PHC節杭／PRC節杭）とは扱いが異なる点にご注意ください。
+            </p>
+
+            <h6>節の寸法はカタログ記載値</h6>
+            <p>
+                節杭（JP-NPH／JP-NPRC）と違い、<strong>節部の長さがカタログ標準構造図に寸法記入されています</strong>
+                （テーパー 25mm・節部 75mm、φ800-7090〜φ1200-110130 は 50mm・100mm）。
+                テーパーは 45°（軸方向長さ = 半径方向の高さ）で、節部長さは (D<sub>1</sub> − D<sub>0</sub>)/2 に一致します。
+                節ピッチ 1000mm・最終節中心〜杭先端 500mm も寸法記入値です
+                （杭頭〜第 1 節中心のみ記入が無く、杭長が 1m 単位であることから 500mm を導出値として用いています）。
+            </p>
+            <p>
+                なお頭部軸部そのものが太いため、<strong>「拡頭」の設定はありません</strong>。
+                杭頭タイプは常に標準タイプになります。
+                周面抵抗を軸部径で算定する（節の効果は未考慮＝安全側）点は節杭と同じです。
             </p>
 
             <p>
@@ -2403,7 +2782,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     <tr><td><img class="button-icon" src="icons/NewFile.svg" alt="">新規作成</td><td>Ctrl+N</td><td>現在のデータを破棄し、新規プロジェクトを作成します</td></tr>
                     <tr><td><img class="button-icon" src="icons/OpenFile.svg" alt="">開く</td><td>Ctrl+O</td><td>JSONファイルを開きます。解析結果が含まれている場合は自動復元されます</td></tr>
                     <tr><td><img class="button-icon" src="icons/RecentFiles.svg" alt="">最近使ったファイル</td><td>-</td><td>最近開いたファイルの一覧から選択して開きます</td></tr>
-                    <tr><td><img class="button-icon" src="icons/SaveFile.svg" alt="">上書き保存</td><td>Ctrl+S</td><td>現在のファイルパスに上書き保存します（既定は入力のみ。解析結果は「オプション」の設定次第）</td></tr>
+                    <tr><td><img class="button-icon" src="icons/SaveFile.svg" alt="">上書き保存</td><td>Ctrl+S</td><td>現在のファイルパスに上書き保存します（既定は解析結果込み。「オプション」で入力のみに切り替え可）</td></tr>
                     <tr><td><img class="button-icon" src="icons/SaveFileAs.svg" alt="">名前を付けて保存</td><td>Ctrl+Shift+S</td><td>新しいファイル名を指定して保存します</td></tr>
                     <tr><td><img class="button-icon" src="icons/DocxFileOutput.svg" alt="">Docx 計算書出力</td><td>Ctrl+Shift+W</td><td>計算書出力ウィンドウを開き、含める項目を選択して Word (.docx) ファイルとして出力します</td></tr>
                     <tr><td><img class="button-icon" src="icons/Examples.png" alt="">計算例</td><td>-</td><td>出典別 (建築基礎構造設計指針 2019 / 建築基礎構造設計例集 2024 / 基礎構造の設計 2023（関東支部）) のサンプルプロジェクト一覧から選択してロード</td></tr>
@@ -2699,6 +3078,10 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 「荷重条件ウィンドウ」には「上部構造・基礎部、地盤の作用の重ね合わせ」タブと「荷重ケース」タブがあります。<br>
 
                 「荷重ケース」タブでは、レベル1、レベル2地震荷重それぞれ4方向のについて、名称、慣性力方向、地盤非線形性、杭の非線形性、慣性力作用中心、上部構造慣性力、基礎部慣性力を定義します。<br>
+
+                「地盤 非線形性」は<strong>「線形 (k<sub>h0</sub> 固定)」「k<sub>h</sub> 低減のみ」「k<sub>h</sub> 低減 + p<sub>y</sub> 頭打ち」の 3 段階</strong>から選択します
+                (既定は基礎指針'19 準拠の「k<sub>h</sub> 低減 + p<sub>y</sub> 頭打ち」)。各段階の意味は
+                <span class="xref"><a href="#soil-nonlinearity-mode">第2部 第2章 杭の水平抵抗 — 地盤非線形性の考慮段階</a></span> を参照してください。<br>
 
                 共通入力データグリッドで入力して適用ボタンをクリックすると、そのレベルのすべてのケースに入力が適用されます。
             </p>
@@ -3713,7 +4096,8 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                         <td>杭工法</td>
                         <td>
                             以下から選択します。<br>
-                            「場所打ちコンクリート杭」「埋込み杭（プレボーリング）」「埋込み杭（中掘り）」「打込み杭」「回転貫入杭」
+                            「場所打ちコンクリート杭」「埋込み杭（プレボーリング）」「埋込み杭（中掘り）」「打込み杭」「回転貫入杭」<br>
+                            「埋込み杭（Smart-MAGNUM）」（ジャパンパイルの既製コンクリート杭のみ。<a href="#section-smart-magnum">専用節</a>を参照）
                         </td>
                     </tr>
                     <tr>
@@ -7432,8 +7816,9 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h3>解析結果の保存と復元</h3>
             <p>
-                ファイル保存では、<strong>既定では入力データのみ</strong>を保存します。
-                解析結果まで含めるかどうかは、ファイル(F)メニュー →「オプション」タブの
+                手動保存では、<strong>既定で解析結果も含めて</strong>保存します。ファイルを開き直したときに
+                再計算なしで前回の結果を確認できるようにするためです。
+                解析結果を含めるかどうかは、ファイル(F)メニュー →「オプション」タブの
                 <strong>保存オプション</strong>で、<strong>手動保存</strong>と<strong>自動保存</strong>それぞれ独立に切り替えられます。
             </p>
             <table class="table-doc">
@@ -7458,11 +7843,26 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 </tbody>
             </table>
             <p>
-                いずれも<strong>既定は OFF（入力データのみ・軽量高速、数百 KB 程度）</strong>です。
-                ON にすると入力データに加えて下記の解析結果が保存され、規模により<strong>数十 MB 級</strong>まで肥大し、
-                読み書きに時間がかかる場合があります。手動・自動は完全に独立しているため、
-                「配布用の手動保存は軽量に・作業中の自動保存だけ結果込みで保険をかける」といった使い分けが可能です。
+                <strong>手動保存は既定 ON、自動保存は既定 OFF</strong> です。
+                自動保存は定期的に繰り返し実行されるため、結果込みにすると数十 MB の書込が何度も発生することから
+                既定を分けています。
+                OFF にすると入力データのみ（軽量高速、数百 KB 程度）になります。結果を含めると規模により
+                <strong>数十 MB 級</strong>まで肥大し、読み書きに時間がかかる場合があります。
+                手動・自動は完全に独立しているため、「配布用の手動保存は軽量に・作業中の自動保存だけ結果込みで保険をかける」
+                といった使い分けも可能です。
             </p>
+            <div class="note">
+                <p>
+                    このチェックの状態は<strong>アプリの設定として保存され、次回起動時にも引き継がれます</strong>
+                    （保存先は <code>LocalAppData</code> の <code>PileDesign\user_settings.json</code>）。
+                    プロジェクトファイルではなく、この PC のこのユーザーに紐づく設定です。
+                </p>
+                <p>
+                    なお<strong>単杭沈下・土層沈下の結果は入力データの一部</strong>として保持されるため、
+                    このチェックに関わらず常に保存されます。チェックで切り替わるのは
+                    <strong>杭要素分割データ・水平解析結果・基礎梁考慮鉛直解析結果</strong>です。
+                </p>
+            </div>
             <p>解析結果を含めて保存したとき、以下の解析結果が保存されます。</p>
             <ul>
                 <li><strong>杭要素分割データ</strong>: FEMモデルの節点・梁要素・地盤ばね等</li>
@@ -7479,7 +7879,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <p style="color:#555; font-size:0.9em;">
                 ※ <strong>自動保存</strong>は定期的に繰り返し実行されます。「自動保存に解析結果も含める」を ON にすると、
                 その都度大容量の書込が発生し、ディスク負荷・遅延が大きくなる場合があります。
-                通常は手動保存側のみ ON にして、節目で明示的に解析結果込みの保存を行う運用を推奨します。<br>
+                通常は既定どおり手動保存側のみ ON にして、節目で明示的に解析結果込みの保存を行う運用を推奨します。<br>
                 ※ 解析結果を含む大容量ファイルは、書込中にアプリが異常終了するとファイルが破損するリスク窓が広がります。
                 重要なデータは入力のみの軽量ファイルとしても別途保存しておくことを推奨します。
             </p>
@@ -8175,6 +8575,288 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$p_y$</span>塑性水平地盤反力度</li>
                 </ul>
+
+                <h4 id="soil-nonlinearity-mode">地盤非線形性の考慮段階 (3 段階)</h4>
+
+                <h5>2 つの非線形要因</h5>
+                <p>
+                    上記の p-y 関係には、性質の異なる非線形要因が 2 つ含まれています。
+                </p>
+                <ol>
+                    <li>
+                        <strong>$k_h$ の相対変位依存低減</strong> (式(6.6.10)(6.6.11))
+                        — 地盤のひずみが大きくなるほど見かけの剛性が下がる効果。
+                        $k_h \propto y^{-1/2}$ で連続的に軟化し、<em>反力の上限は与えません</em>。
+                    </li>
+                    <li>
+                        <strong>塑性水平地盤反力度 $p_y$ による頭打ち</strong> (式(6.6.9))
+                        — 地盤が受働破壊に達して、それ以上の反力を負担できなくなる効果。
+                        反力に<em>上限を与える</em>非線形性です。
+                    </li>
+                </ol>
+                <p>
+                    この 2 つは独立に ON/OFF できるため、本プログラムでは<strong>荷重ケースごと</strong>に
+                    「どこまで考慮するか」を 3 段階から選択します。設定箇所は
+                    「荷重条件」ウィンドウ →「荷重ケース」タブの<strong>「地盤 非線形性」</strong>列です
+                    (共通入力行で選んで「適用」を押すと、そのレベルの全ケースに一括反映されます)。
+                </p>
+
+                <h5>各段階の定義</h5>
+                <table>
+                    <caption style="text-align: center">地盤非線形性の 3 段階</caption>
+                    <tr>
+                        <th style="width:22%;">選択</th>
+                        <th style="width:14%;">$k_h$ 低減</th>
+                        <th style="width:14%;">$p_y$ 頭打ち</th>
+                        <th>$p$–$y$ 関係</th>
+                    </tr>
+                    <tr>
+                        <td><strong>線形 (k<sub>h0</sub> 固定)</strong></td>
+                        <td>なし</td>
+                        <td>なし</td>
+                        <td>$p = k_{h0}\,y$ (原点を通る直線)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>k<sub>h</sub> 低減のみ</strong></td>
+                        <td>あり</td>
+                        <td>なし</td>
+                        <td>
+                            $p = 3.16\,k_{h0}\,y \quad (|y| \le 0.1 y_0)$<br>
+                            $p = k_{h0}\sqrt{y_0\,|y|} \quad (|y| &gt; 0.1 y_0)$
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>k<sub>h</sub> 低減 + p<sub>y</sub> 頭打ち</strong><br>(既定)</td>
+                        <td>あり</td>
+                        <td>あり</td>
+                        <td>上記に $p \le p_y$ を課したもの</td>
+                    </tr>
+                </table>
+                <p>
+                    ここで $y_0 = 1\,\mathrm{cm}$ は基準水平変位です。
+                    $|y| \le 0.1 y_0 = 1\,\mathrm{mm}$ の微小変位域で $k_h = 3.16 k_{h0}$ 一定となるのは、
+                    式(6.6.11) の $k_{h0}/\sqrt{y/y_0}$ が $y \to 0$ で発散するのを避けるための
+                    基礎指針'19 の規定 (式(6.6.10)) によるもので、
+                    「$k_h$ 低減」を選んだ 2 つのモードに共通して適用されます
+                    ($3.16 \fallingdotseq 0.1^{-1/2}$)。
+                </p>
+
+                <h5>3 段階の p-y 曲線の比較</h5>
+                <p>
+                    下図は $k_{h0} = 3{,}000\ \mathrm{kN/m^3}$、$p_y = 60\ \mathrm{kN/m^2}$ の例です
+                    (このとき降伏変位 $y_y = (p_y/k_{h0})^2/y_0 = 40\ \mathrm{mm}$)。
+                </p>
+                <div style="text-align:center; margin:12px 0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" style="max-width:100%; height:auto; font-family: 'MS Gothic', 'Meiryo', sans-serif; font-size:12px;">
+                        <!-- グリッド -->
+                        <line x1="70" y1="240" x2="600" y2="240" stroke="#E0E0E0" stroke-width="1"/>
+                        <line x1="70" y1="140" x2="600" y2="140" stroke="#E0E0E0" stroke-width="1"/>
+                        <line x1="70" y1="40"  x2="600" y2="40"  stroke="#E0E0E0" stroke-width="1"/>
+
+                        <!-- 降伏変位 yy = 40mm / 基準変位 y0 = 10mm -->
+                        <line x1="123" y1="40" x2="123" y2="340" stroke="#9E9E9E" stroke-width="1" stroke-dasharray="3,3"/>
+                        <text x="126" y="54" fill="#616161">y<tspan dy="3" font-size="9">0</tspan><tspan dy="-3"> = 10 mm (基準変位)</tspan></text>
+                        <line x1="282" y1="40" x2="282" y2="340" stroke="#9E9E9E" stroke-width="1" stroke-dasharray="3,3"/>
+                        <text x="285" y="76" fill="#616161">y<tspan dy="3" font-size="9">y</tspan><tspan dy="-3"> = 40 mm (降伏変位)</tspan></text>
+                        <!-- py 水平線 -->
+                        <line x1="70" y1="220" x2="600" y2="220" stroke="#9E9E9E" stroke-width="1" stroke-dasharray="3,3"/>
+                        <text x="604" y="224" fill="#616161">p<tspan dy="3" font-size="9">y</tspan></text>
+
+                        <!-- 軸 -->
+                        <line x1="70" y1="340" x2="610" y2="340" stroke="#444" stroke-width="1.5"/>
+                        <line x1="70" y1="340" x2="70"  y2="30"  stroke="#444" stroke-width="1.5"/>
+                        <!-- x 目盛 -->
+                        <text x="70"  y="358" text-anchor="middle" fill="#444">0</text>
+                        <text x="176" y="358" text-anchor="middle" fill="#444">20</text>
+                        <text x="282" y="358" text-anchor="middle" fill="#444">40</text>
+                        <text x="388" y="358" text-anchor="middle" fill="#444">60</text>
+                        <text x="494" y="358" text-anchor="middle" fill="#444">80</text>
+                        <text x="600" y="358" text-anchor="middle" fill="#444">100</text>
+                        <text x="340" y="378" text-anchor="middle" fill="#444">相対変位 y (mm)</text>
+                        <!-- y 目盛 -->
+                        <text x="62" y="344" text-anchor="end" fill="#444">0</text>
+                        <text x="62" y="244" text-anchor="end" fill="#444">50</text>
+                        <text x="62" y="144" text-anchor="end" fill="#444">100</text>
+                        <text x="62" y="44"  text-anchor="end" fill="#444">150</text>
+                        <text x="20" y="190" text-anchor="middle" fill="#444" transform="rotate(-90 20 190)">地盤反力度 p (kN/m²)</text>
+
+                        <!-- 線形 (kh0 固定) -->
+                        <line x1="70" y1="340" x2="335" y2="40" stroke="#C62828" stroke-width="2.5"/>
+                        <!-- kh 低減のみ -->
+                        <polyline fill="none" stroke="#1565C0" stroke-width="2.5"
+                            points="70,340 75.3,321 80.6,313 96.5,298 123,280 176,255 229,236 282,220 335,206 388,193 441,181 494,170 547,160 600,150"/>
+                        <!-- kh 低減 + py 頭打ち -->
+                        <polyline fill="none" stroke="#2E7D32" stroke-width="3.5" stroke-dasharray="8,4"
+                            points="70,340 75.3,321 80.6,313 96.5,298 123,280 176,255 229,236 282,220 600,220"/>
+
+                        <!-- 一致点マーカー (y = y0) -->
+                        <circle cx="123" cy="280" r="4" fill="#FFFFFF" stroke="#444" stroke-width="1.5"/>
+
+                        <!-- 凡例 (曲線と重ならない右下の余白に配置) -->
+                        <rect x="352" y="252" width="240" height="76" rx="4" fill="#FFFFFF" fill-opacity="0.9" stroke="#BDBDBD" stroke-width="1"/>
+                        <line x1="362" y1="272" x2="394" y2="272" stroke="#C62828" stroke-width="2.5"/>
+                        <text x="402" y="276" fill="#333">線形 (k<tspan dy="3" font-size="9">h0</tspan><tspan dy="-3"> 固定)</tspan></text>
+                        <line x1="362" y1="294" x2="394" y2="294" stroke="#1565C0" stroke-width="2.5"/>
+                        <text x="402" y="298" fill="#333">k<tspan dy="3" font-size="9">h</tspan><tspan dy="-3"> 低減のみ</tspan></text>
+                        <line x1="362" y1="316" x2="394" y2="316" stroke="#2E7D32" stroke-width="3.5" stroke-dasharray="8,4"/>
+                        <text x="402" y="320" fill="#333">k<tspan dy="3" font-size="9">h</tspan><tspan dy="-3"> 低減 + p</tspan><tspan dy="3" font-size="9">y</tspan><tspan dy="-3"> 頭打ち</tspan></text>
+                    </svg>
+                </div>
+                <p>
+                    図から読み取れる関係は次のとおりです。
+                </p>
+                <ul>
+                    <li>
+                        <strong>「線形」と「$k_h$ 低減のみ」は $y = y_0 = 1\,\mathrm{cm}$ で交わります</strong> (図の白丸)。
+                        $k_{h0}$ が「$y = y_0$ における水平地盤反力係数」として定義されているためです。
+                        $y &lt; 1\,\mathrm{cm}$ では「$k_h$ 低減のみ」の方が硬く (最大 $3.16$ 倍)、
+                        $y &gt; 1\,\mathrm{cm}$ では「線形」の方が硬くなります。
+                    </li>
+                    <li>
+                        <strong>「$k_h$ 低減のみ」と「$k_h$ 低減 + $p_y$ 頭打ち」は $y &lt; y_y$ で完全に一致します。</strong>
+                        両者の差は降伏変位 $y_y$ を超えてから初めて現れます。
+                        逆にいえば、解析結果の相対変位が全深さで $y_y$ 未満に収まっていれば、
+                        この 2 つのモードは同じ結果になります。
+                    </li>
+                    <li>
+                        3 モードの反力の大小関係は変位域によって入れ替わるため、
+                        「線形が常に安全側/危険側」とは言えません。
+                    </li>
+                </ul>
+
+                <h5>どの段階を選ぶか</h5>
+                <table>
+                    <caption style="text-align: center">選択の目安</caption>
+                    <tr>
+                        <th style="width:26%;">選択</th>
+                        <th>想定する使い方</th>
+                    </tr>
+                    <tr>
+                        <td><strong>線形 (k<sub>h0</sub> 固定)</strong></td>
+                        <td>
+                            弾性解として杭の応力分布・剛性分担を確認したい場合。
+                            手計算 (Chang の式など) や他ソフトの弾性解との照合、
+                            非線形解析が収束しないときの切り分け (モデル自体の妥当性確認) に有効です。
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>k<sub>h</sub> 低減のみ</strong></td>
+                        <td>
+                            変位依存の剛性低下だけを評価したい場合。
+                            地盤反力に上限を設けないため、$p_y$ の設定 ($\kappa$, $K_P$, $\sigma_z'$ 等) が
+                            結果に与える影響を分離して確認したいときに使います。
+                            <span class="xref"><a href="#chang-uniform-ground">Chang 計算 (一様地盤中の杭)</a></span>
+                            のサブプログラムもこの段階に相当します。
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>k<sub>h</sub> 低減 + p<sub>y</sub> 頭打ち</strong></td>
+                        <td>
+                            <strong>基礎指針'19 に準拠した通常の設計計算</strong>。既定値であり、
+                            特段の理由がない限りこれを使用してください。
+                        </td>
+                    </tr>
+                </table>
+
+                <h5>解析の進め方への影響</h5>
+                <p>
+                    選択した段階は、地盤ばね剛性の評価式だけでなく、解析の進め方にも影響します。
+                </p>
+                <ul>
+                    <li>
+                        <strong>「線形」かつ杭非線形性も考慮しない</strong>荷重ケースは、
+                        荷重を <strong>1 ステップ</strong>で全載荷します (増分解析が不要なため)。
+                    </li>
+                    <li>
+                        <strong>「$k_h$ 低減のみ」「$k_h$ 低減 + $p_y$ 頭打ち」</strong>のケースは、
+                        「解析条件」で設定した<strong>レベル1/レベル2 の計算ステップ数</strong>に従って
+                        段階的に載荷し、各ステップで Newton-Raphson 反復を行います。
+                        逆方向組合せ (counter-loading) が検出された場合はステップ数が自動的に増やされます。
+                    </li>
+                    <li>
+                        いずれの段階でも、地盤ばねの剛性は<strong>相対変位 (杭節点変位 − 地盤節点変位)</strong> の
+                        大きさ $|y| = \sqrt{y_x^2 + y_y^2}$ に対して評価され、反力は変位方向に働きます。
+                    </li>
+                </ul>
+
+                <h5>p<sub>y</sub> = 0 となる深さの扱い</h5>
+                <p>
+                    有効上載圧 $\sigma_z' = 0$ 等により $p_y = 0$ となる深さ (地表付近の砂質土など) は、
+                    「その深さには水平抵抗が存在しない」というモデル上の判定として扱い、
+                    <strong>3 つの段階すべてで地盤反力・地盤ばね剛性をゼロ</strong>とします。
+                    「線形」を選んだ場合でも、この深さに剛性が現れることはありません
+                    (段階を変えると抵抗の有無が変わってしまうのを避けるためです)。
+                    杭全体でゼロになる極端な配置に対する代用処理は、前節
+                    「地盤ばね剛性ゼロ時の代用処理」を参照してください。
+                </p>
+
+                <h5>降伏後の微小勾配について</h5>
+                <p>
+                    「$p_y$ 頭打ち」を数値解析上で厳密な水平線 ($dp/dy = 0$) にすると、
+                    降伏した地盤ばねが接線剛性マトリクスに何も寄与しなくなり、
+                    多数のばねが同時に降伏した際に連立方程式が解けなくなることがあります。
+                    このため降伏後の接線には、<strong>降伏境界における接線の $0.2\%$</strong> という
+                    微小な正勾配を残しています。$p$ が $p_y$ を上回る量は次式で表されます。
+                </p>
+                <div class="formula-block">
+                    <div class="formula-left">
+                        $$p = p_y + 0.002\,k_t\,(|y| - y_y), \qquad
+                          k_t = \left.\frac{dp}{d|y|}\right|_{|y|=y_y} = \frac{k_{h0}^{\,2}\,y_0}{2\,p_y}$$
+                    </div>
+                </div>
+                <div class="formula-block">
+                    <div class="formula-left">
+                        $$\frac{\Delta p}{p_y} = 0.002 \times \frac{|y|/y_y - 1}{2}$$
+                    </div>
+                </div>
+                <table>
+                    <caption style="text-align: center">降伏後の $p_y$ 超過量</caption>
+                    <tr>
+                        <th>相対変位</th>
+                        <th>$y_y$</th>
+                        <th>$2 y_y$</th>
+                        <th>$5 y_y$</th>
+                        <th>$10 y_y$</th>
+                    </tr>
+                    <tr>
+                        <td>$p_y$ 超過量 $\Delta p / p_y$</td>
+                        <td>0.0%</td>
+                        <td>0.1%</td>
+                        <td>0.4%</td>
+                        <td>0.9%</td>
+                    </tr>
+                </table>
+                <p>
+                    実務上は「$p_y$ で頭打ち」とみなして差し支えない大きさです。
+                    上図の緑破線が水平に見えるのも、この勾配が図示できないほど小さいためです。
+                </p>
+                <p>
+                    さらに、降伏境界の前後 ($|y|/y_y \in [1,\ 1.5]$) では接線剛性を
+                    smoothstep 関数で滑らかに接続しています。
+                    これがないと、降伏点を行き来するばねの接線剛性が反復のたびに数百倍変動し、
+                    Newton-Raphson 法のライン探索が停滞する原因になります
+                    (詳細は
+                    <span class="xref"><a href="#convergence-mechanisms">収束対策の仕組み (詳細)</a></span>
+                    を参照)。
+                    なお、この接線の平滑化は Newton 方向 (収束経路) にのみ影響し、
+                    つり合いの判定に使う内力 $F_{int} = K_{sec}\,y$ は上式どおり厳密に評価されるため、
+                    <strong>収束後の解に近似は入りません</strong>。
+                </p>
+
+                <h5>表示・出力との一致</h5>
+                <p>
+                    上記の p-y 関係は、以下のすべてで<strong>同一の式</strong>から計算しています。
+                    グラフ上の曲線と解析に使われた p-y 関係は厳密に一致します。
+                </p>
+                <ul>
+                    <li><strong>解析</strong> (地盤ばねの割線剛性・接線剛性)</li>
+                    <li><strong>「水平地盤反力度 p-y」グラフ</strong> — 選択した荷重ケースの段階で理論曲線を描画します。
+                        段階の異なるケースを同時に選択した場合は、段階ごとに曲線を描き分け、凡例に段階名を付記します。</li>
+                    <li><strong>杭要素分割ウィンドウの p-y グラフ</strong>・<strong>MGT (Midas Gen) 出力</strong> —
+                        荷重ケースに紐づかない表示・出力のため、常に「$k_h$ 低減 + $p_y$ 頭打ち」の曲線を用います。</li>
+                    <li><strong>計算書 (docx)</strong> — 荷重条件表の「地盤 非線形性」列に段階名を出力し、表下に凡例を付記します。</li>
+                </ul>
+
 
                 <div class="formula-block">
                     <div class="formula-left">
@@ -10293,7 +10975,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         <li>杭体自重も常時通り注入</li>
                         <li>地盤強制変位 (液状化変位等) は <strong>適用しない</strong> (常時状態を表すため)</li>
                         <li>組合せ係数 (α₁/β₁/β₂) には依存しないため、組合せ・液状化ループは 1 回のみ</li>
-                        <li>非線形フラグ <code>IsPileNonLinear = IsSoilNonLinear = true</code> として、$n_{\text{step}}$ ベースの段階適用を有効化 (1 ステップでの全 N₀ 適用は発散しやすいため)</li>
+                        <li>非線形設定は <code>IsPileNonLinear = true</code>、地盤は「$k_h$ 低減 + $p_y$ 頭打ち」として、$n_{\text{step}}$ ベースの段階適用を有効化 (1 ステップでの全 N₀ 適用は発散しやすいため)</li>
                     </ul>
                     <p>
                         対称な杭配置 + 対称な作用点では、VL ケースの水平方向反力は理論上 0 になります。
@@ -10348,6 +11030,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                             <tr><td>埋込み杭 (中掘り杭)</td><td>$150 \bar{N}$</td><td>$6 C_u$</td><td>9,000 kN/m²</td></tr>
                             <tr><td>回転貫入杭</td><td>$150 \eta \bar{N}$</td><td>$150 \eta \bar{N}$</td><td>$9{,}000 \eta$ kN/m²</td></tr>
                             <tr><td>打込み杭</td><td>$3 \eta \bar{N}$ ※</td><td>$3 \eta \bar{N}$ ※</td><td>18,000 kN/m²</td></tr>
+                            <tr><td>埋込み杭 (Smart-MAGNUM)</td><td colspan="2">$\alpha \bar{N}$ （<a href="#section-smart-magnum">専用節</a>を参照）</td><td>—</td></tr>
                         </tbody>
                     </table>
                     <p style="font-size: 0.95em;">
@@ -10394,6 +11077,117 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
                 </section>
 
+
+
+                    <h3 id="section-smart-magnum" style="font-weight: bold; font-size: 1.2em;">Smart-MAGNUM 工法（プレボーリング拡大根固め工法）</h3>
+                    <p>
+                        ジャパンパイルの Smart-MAGNUM 工法です。大臣認定 TACP-0625（砂質地盤）/ 0626（礫質地盤）/ 0627（粘土質地盤）、
+                        引抜き抵抗は GBRC 性能証明第 20-21 号に基づきます。
+                        算定式・記号の定義・適用範囲・計算例は
+                        <a href="https://www.japanpile.co.jp/method/pdf/smart-magnum.pdf" target="_blank" rel="noopener">工法カタログ (PDF)</a> を参照してください。杭工法で「埋込み杭（Smart-MAGNUM）」を選択すると、
+                        支持力の算定が基礎指針'19 の一般式から本工法の評定式に切り替わります。
+                    </p>
+
+                    <h4>選択の方法と適用対象</h4>
+                    <p>
+                        リボンの「解析条件/解析(S)」タブ →「解析条件設定」グループ →「杭体」ボタンで<strong>杭体ウィンドウ</strong>を開き、
+                        「杭先端」グループの<strong>「杭工法」</strong>で <code>埋込み杭（Smart-MAGNUM）</code> を選びます。
+                        続けて同じグループの「拡大根固め部径Den」「杭下拡大根固め部長さLL」「杭周面部の掘削径Des」
+                        「拡翼掘削部長さ」「周面強化型」を入力します。杭工法は<strong>杭体ごと</strong>の設定です。
+                    </p>
+                    <div class="note">
+                        <p>
+                            <strong>適用はジャパンパイルの既製コンクリート杭に限ります。</strong>
+                            本工法はジャパンパイルの工法のため、杭体タイプが「既製コンクリート杭」のときだけ
+                            杭工法の選択肢に現れます（カタログの適用杭種には鋼管杭も含まれますが、本プログラムでは対象外としています）。
+                            杭区間に他メーカーの製品（三谷セキサンの BF.S / MS-hi105 / Hi-SC105 / DAM105）が使われている場合は、
+                            解析前の警告で通知します。メーカーを問わない JIS 規格品（PHC- / CPRC- / SC-）は適用対象として扱います。
+                        </p>
+                    </div>
+
+                    <h4>算定式</h4>
+                    <p>押込み支持力（長期）:</p>
+                    $$R_a = \frac{1}{3}\left\{ \alpha N A_p + (\beta N_s L_s + \gamma q_u L_c)\psi \right\}, \qquad R_a' = 2 R_a$$
+                    <p>引抜き抵抗力:</p>
+                    $${}_t R_u = (0.8\,\beta N_s L_s + 0.9\,\gamma q_u L_c)\,\psi, \qquad {}_t R_a = \frac{{}_t R_u}{3}, \qquad {}_t R_a' = \frac{2\,{}_t R_u}{3}$$
+                    <p>
+                        長期 $R_u/3$・短期 $2R_u/3$ は本プログラムの使用限界 $R_u/3$・損傷限界 $R_u/1.5$ と一致するため、
+                        限界状態の扱いは他工法と共通です。引抜き側は他工法と同じく杭自重を控除しています（カタログは自重に言及していないため安全側）。
+                    </p>
+
+                    <h4>先端支持力係数 $\alpha$</h4>
+                    $$\alpha_{\text{砂質・礫質}} = 240\,\omega_p^{1.5} + 45(2 + LL')\,\omega_p, \qquad
+                      \alpha_{\text{粘土質}} = 210\,\omega_p^{1.25} + 45(2 + LL')\,\omega_p$$
+                    <ul>
+                        <li>$\omega_p = D_{en}/D_{sn}$: 根固め部の拡大比（適用範囲 $1.00 \le \omega_p \le 2.00$）</li>
+                        <li>$D_{en}$: 拡大根固め部径。入力の「拡大根固め部径Den」欄です</li>
+                        <li>$D_{sn} = D_{on} + 0.05$: 根固め部の基準掘削径。ただし $D_{on} = 0.44$ m のときは $D_{sn} = 0.50$ m</li>
+                        <li>$D_{on}$: 根固め部に位置する節杭の節部径。<strong>杭体最下段区間の断面から自動導出</strong>します（節杭なら節部径、ストレート杭なら公称外径）</li>
+                        <li>$LL$: 杭下拡大根固め部長さ（適用範囲 0〜2 m）。$LL' = 0\,(LL \le 0.5)$、$LL' = LL\,(0.5 &lt; LL \le 2)$</li>
+                        <li>$A_p = \pi D_{on}^2/4$: <strong>節部径基準</strong>の先端面積。姿図やN値範囲に使う根固め部径 $D_{en}$ 基準の面積とは別物です</li>
+                    </ul>
+
+                    <h4>杭先端平均N値</h4>
+                    $$N_{\text{砂質・礫質}} = \frac{N_U + 3N_L}{4}, \qquad N_{\text{粘土質}} = \frac{N_U + 2N_L}{3}$$
+                    <p>
+                        $N_U$ は杭先端から<strong>上方 2 m</strong>、$N_L$ は杭先端から<strong>下方 $LL + D_{en} + D_{on}$</strong> の平均N値です
+                        （他工法の「杭先端 ± D の単純平均」とは範囲・重みとも異なります）。個々のN値は 100 で頭打ちにし、平均は 60 でクランプします。
+                    </p>
+
+                    <h4>周面摩擦力係数 $\beta$・$\gamma$</h4>
+                    <table>
+                        <thead>
+                            <tr><th>地盤</th><th>杭形状</th><th>標準型</th><th>周面強化型</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td rowspan="2">砂質・礫質</td><td>ストレート杭</td><td>$\beta = 5.0$</td><td>$\beta = 8.0$</td></tr>
+                            <tr><td>節杭</td><td>$\beta N_s = (30 + 5.5 N_s)\,\omega_s$</td><td>$\beta = 9.5\,\omega_s$</td></tr>
+                            <tr><td rowspan="2">粘土質</td><td>ストレート杭</td><td>$\gamma = 0.7$</td><td>$\gamma = 0.9$</td></tr>
+                            <tr><td>節杭</td><td>$\gamma q_u = (20 + 0.5 q_u)\,\omega_s$</td><td>$\gamma = 1.0\,\omega_s$</td></tr>
+                        </tbody>
+                    </table>
+                    <ul>
+                        <li>$\omega_s = D_{es}/D_{ss}$: 杭周面部の拡大比。$D_{ss} = D_{os} + 0.05$（$D_{os} = 0.44$ m のときは 0.50 m）</li>
+                        <li>$\omega_s$ は<strong>節杭の区間にのみ</strong>適用されます（拡大比が節部径 $D_{os}$ を基準に定義されているため）。
+                            さらに「拡翼掘削部長さ」で指定した範囲に掛かる区間だけが対象で、範囲外は $\omega_s = 1.00$ とします</li>
+                        <li>周長は $\psi = \pi D$ で、<strong>節杭では節部径</strong>、ストレート杭では軸部径を用います
+                            （他工法は節を考慮せず軸部径固定＝安全側）</li>
+                    </ul>
+
+                    <div class="note">
+                        <p>
+                            <strong>一軸圧縮強度 $q_u$ の扱い</strong>: 本プログラムの地盤入力は粘着力 $C_u$ を保持しているため、
+                            $q_u = 2 C_u$ として換算しています。個々の値はカタログの規定に従い 16 未満を 0、535 超を 535 に丸めます。
+                        </p>
+                    </div>
+
+                    <h4>形状と算定範囲</h4>
+                    <ul>
+                        <li>根固め部の上端は<strong>杭先端より 2 m 上</strong>、杭下拡大根固め部は<strong>杭先端より $LL$ 下</strong>まで</li>
+                        <li>周面摩擦の算定範囲の下端（先端支持力評価位置）は<strong>杭先端より 0.4 m 上</strong>で、
+                            これより下の区間長は周面抵抗から除外します（区間をまたぐ場合は長さで按分）</li>
+                        <li>杭姿図・3D 表示・DXF/3dm 出力・計算書の姿図は、いずれもこの形状で描画されます</li>
+                    </ul>
+
+                    <h4>沈下曲線での扱い</h4>
+                    <p>
+                        カタログには荷重-沈下関係の規定がありません（大臣認定は支持力のみで、載荷試験の実施記録はあるものの設計用の曲線は非掲載）。
+                        そのため曲線形状 $S_p = 0.1 D_p \{\alpha (R_p/R_{pu}) + (1-\alpha)(R_p/R_{pu})^n\}$ と
+                        パラメータ $\alpha$・$n$ は基礎指針の値をそのまま用い、
+                        <strong>極限先端支持力 $R_{pu}$ には Smart-MAGNUM の極限先端支持力そのもの</strong>を使います。
+                        曲線の変位スケール $0.1 D_p$ の $D_p$ には、球根が地盤を支える実態に合わせて拡大根固め部径 $D_{en}$ を用います。
+                        周面側の $\tau$-$s$ ばねは支持力と同じ $\tau_2$・$\tau_T$・$\psi$ を共有するため、
+                        0.4 m の除外・節部径周長・引抜き係数がそのまま沈下解析と水平解析の鉛直ばねにも反映されます。
+                    </p>
+
+                    <h4>適用範囲</h4>
+                    <p>次の範囲を外れると解析前の警告に表示されます（計算はクランプ後の値で続行します）。</p>
+                    <ul>
+                        <li>拡大比 $\omega_s$・$\omega_p$: 1.00〜2.00 / 杭下拡大根固め部長さ $LL$: 0〜2 m、かつ $LL \le 3.1 D_{en}$</li>
+                        <li>掘削径 $D_{en}$・$D_{es}$: 2.5 m 以下 / 節部径: φ400〜φ1300、ストレート杭径: φ300〜φ1200</li>
+                        <li>杭先端平均N値: 砂質・礫質 2〜60、粘土質 0〜60 / 周面の $N_s$: 1〜30 / $q_u$: 10〜200</li>
+                        <li>液状化のおそれのある地盤は周面摩擦の対象外です（該当層は周面抵抗のチェックを外してください）</li>
+                    </ul>
 
                 <h4>使用限界状態</h4>
 

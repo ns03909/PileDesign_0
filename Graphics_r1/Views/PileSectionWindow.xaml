@@ -86,7 +86,7 @@
                                         <TextBlock Text="既製コンクリート杭断面タイプ" HorizontalAlignment="Left" VerticalAlignment="Top" Width="150"/>
                                         <ComboBox SelectedItem="{Binding PileSection.PileSectionType, UpdateSourceTrigger=PropertyChanged}"
                                             ItemsSource="{Binding PileSection.PreCastConcretePileSectionTypeOption}"
-                                                  Height="25" VerticalAlignment="Top" Width="100"
+                                                  Height="25" VerticalAlignment="Top" Width="130"
                                                   DropDownOpened="ComboBox_DropDownOpened"
                                                   SelectionChanged="ComboBoxPrecastConcretePileType_SelectionChanged"/>
 
@@ -101,11 +101,96 @@
                                                        SelectionChanged="ComboBox_PileSectionSelectionChanged"/>
                                         </StackPanel>
 
+                                        <!-- 節杭の製品選択。断面耐力は軸部基準でストレート杭と同一なので、
+                                             断面まわりの入力欄は PHC杭 / PRC杭 と共通。
+                                             節部径・標準質量の表示は 3 タイプ共通なので下の 1 枚にまとめている。 -->
+                                        <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileSectionType,
+                                            Converter={StaticResource VisibilityConverter},
+                                            ConverterParameter='PHC節杭'}">
+
+                                            <ComboBox x:Name="ComboBoxNodularPileType"
+                                                      SelectedItem="{Binding PileSection.SelectedPrecastPile.Name, UpdateSourceTrigger=PropertyChanged}"
+                                                      ItemsSource="{Binding PileSection.NodularPileOption}" Width="200"
+                                                      DropDownOpened="ComboBox_DropDownOpened"
+                                                       SelectionChanged="ComboBox_PileSectionSelectionChanged"/>
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileSectionType,
+                                            Converter={StaticResource VisibilityConverter},
+                                            ConverterParameter='PRC節杭'}">
+
+                                            <ComboBox x:Name="ComboBoxNodularPrcPileType"
+                                                      SelectedItem="{Binding PileSection.SelectedPrecastPile.Name, UpdateSourceTrigger=PropertyChanged}"
+                                                      ItemsSource="{Binding PileSection.NodularPrcOption}" Width="200"
+                                                      DropDownOpened="ComboBox_DropDownOpened"
+                                                       SelectionChanged="ComboBox_PileSectionSelectionChanged"/>
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileSectionType,
+                                            Converter={StaticResource VisibilityConverter},
+                                            ConverterParameter='PRC節杭(PHC部)'}">
+
+                                            <ComboBox x:Name="ComboBoxNodularPrcPhcPartPileType"
+                                                      SelectedItem="{Binding PileSection.SelectedPrecastPile.Name, UpdateSourceTrigger=PropertyChanged}"
+                                                      ItemsSource="{Binding PileSection.NodularPrcPhcPartOption}" Width="240"
+                                                      DropDownOpened="ComboBox_DropDownOpened"
+                                                       SelectionChanged="ComboBox_PileSectionSelectionChanged"/>
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileSectionType,
+                                            Converter={StaticResource VisibilityConverter},
+                                            ConverterParameter='BF.S頭部軸部'}">
+
+                                            <ComboBox x:Name="ComboBoxBfsHeadPileType"
+                                                      SelectedItem="{Binding PileSection.SelectedPrecastPile.Name, UpdateSourceTrigger=PropertyChanged}"
+                                                      ItemsSource="{Binding PileSection.BfsHeadOption}" Width="200"
+                                                      DropDownOpened="ComboBox_DropDownOpened"
+                                                       SelectionChanged="ComboBox_PileSectionSelectionChanged"/>
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileSectionType,
+                                            Converter={StaticResource VisibilityConverter},
+                                            ConverterParameter='BF.S先端軸部'}">
+
+                                            <ComboBox x:Name="ComboBoxBfsTipPileType"
+                                                      SelectedItem="{Binding PileSection.SelectedPrecastPile.Name, UpdateSourceTrigger=PropertyChanged}"
+                                                      ItemsSource="{Binding PileSection.BfsTipOption}" Width="240"
+                                                      DropDownOpened="ComboBox_DropDownOpened"
+                                                       SelectionChanged="ComboBox_PileSectionSelectionChanged"/>
+                                        </StackPanel>
+
+                                        <!-- 節杭固有の諸元 (節部径・標準質量)。3 タイプ共通。 -->
+                                        <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileSectionType,
+                                            Converter={StaticResource VisibilityConverter},
+                                            ConverterParameter='PHC節杭,PRC節杭,PRC節杭(PHC部),BF.S頭部軸部,BF.S先端軸部'}">
+
+                                            <TextBlock Text="節部径 Do (mm)" Width="100" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                            <TextBox Text="{Binding PileSection.NodeDiameter, Mode=OneWay, StringFormat='{}{0:N0}'}"
+                                                     Width="60" IsReadOnly="True" Foreground="Gray" VerticalAlignment="Center"/>
+                                            <!-- 標準質量はカタログに質量表がある製品だけ。BF.S は質量表が無く γc による -->
+                                            <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileSectionType,
+                                                Converter={StaticResource VisibilityConverter},
+                                                ConverterParameter='PHC節杭,PRC節杭,PRC節杭(PHC部)'}">
+                                                <TextBlock Text="標準質量 (t/m)" Width="90" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                                <TextBox Text="{Binding PileSection.CatalogMassPerM, Mode=OneWay, StringFormat='{}{0:N3}'}"
+                                                         Width="60" IsReadOnly="True" Foreground="Gray" VerticalAlignment="Center"
+                                                         ToolTip="自重はこのカタログ標準質量から求めます。基本設定のコンクリート単位体積重量 γc は節杭には適用されません。"/>
+                                            </StackPanel>
+                                            <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Foreground="#B25000"
+                                                       Visibility="{Binding PileSection.PileSectionType,
+                                                           Converter={StaticResource VisibilityConverter},
+                                                           ConverterParameter='BF.S頭部軸部,BF.S先端軸部'}"
+                                                       Text="※ カタログに標準質量表が無いため自重は γc × 軸部断面 (節の分は未計上)"/>
+                                            <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Foreground="#B25000"
+                                                       Text="※ 支持力の周面抵抗は軸部径で算定 (節の効果は未考慮)"
+                                                       ToolTip="節を考慮した周面抵抗は高支持力杭工法ごとの評定式によります。現在は未対応のため、軸部径による安全側の評価となります。"/>
+                                        </StackPanel>
+
                                         <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileSectionType,
                                             Converter={StaticResource VisibilityConverter},
                                             ConverterParameter='PRC杭'}">
 
-                                            <ComboBox x:Name="ComboBoxPRCPileType" 
+                                            <ComboBox x:Name="ComboBoxPRCPileType"
                                                       SelectedItem="{Binding PileSection.SelectedPrecastPile.Name, UpdateSourceTrigger=PropertyChanged}"
                                                       ItemsSource="{Binding PileSection.PRCOption}" Width="150"
                                                       DropDownOpened="ComboBox_DropDownOpened"
@@ -810,9 +895,10 @@
                                         Converter={StaticResource VisibilityConverter},
                                         ConverterParameter='既製コンクリート杭'}">
 
+                                        <!-- 軸力制限は断面耐力の話なので PHC節杭 も PHC杭 と同じ内容を表示する -->
                                         <StackPanel Visibility="{Binding PileSection.PileSectionType,
                                             Converter={StaticResource VisibilityConverter},
-                                            ConverterParameter='PHC杭'}" Margin="0,4">
+                                            ConverterParameter='PHC杭,PHC節杭'}" Margin="0,4">
 
                                             <!-- 曲げの軸力制限 -->
                                             <TextBlock Text="【曲げの軸力制限】" FontWeight="SemiBold" Margin="0,4,0,4"/>

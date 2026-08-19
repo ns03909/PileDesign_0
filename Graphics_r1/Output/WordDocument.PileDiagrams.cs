@@ -137,7 +137,10 @@ namespace PileDesign.Output
                 pileBody.PileConstructionType,
                 pileTopAltitude: soilPile.Z,
                 groundInput: soilPile.GroundInput,
-                isElementDivision: false);
+                isElementDivision: false,
+                smartMagnumLL: pileBody.SmartMagnumLL,
+                smartMagnumDes: pileBody.SmartMagnumDes,
+                smartMagnumWingLength: pileBody.SmartMagnumWingLength);
 
             // 子要素追加後に再レイアウト
             canvas.Measure(new Size(dipW, dipH));
@@ -549,21 +552,24 @@ namespace PileDesign.Output
                 };
             }
 
-            // PHC杭 / PRC杭 (3 entries):
+            // PHC杭系 / PRC杭系 (3 entries):
             // 損傷限界: [0]ひび割れ限界 (4-σE)Ae、[1]弾性限界 (10-σE)Ae、[2]圧壊限界 (35-σE)Ae
             // 安全限界 PHC: [0](4-σE)Ae、[1](10-σE)Ae、[2]圧壊限界 (65-σE)Ae
             // 安全限界 PRC: [0]主筋・テンドン破断限界、[1](10-σE)Ae、[2]圧壊限界 (60-σE)Ae
-            if (pileSectionType == PileTypeNames.Phc || pileSectionType == PileTypeNames.Prc)
+            // ※ 節杭は断面耐力が軸部基準でストレート杭と同一のため同じ扱い
+            //    (PHC節杭・PRC節杭(PHC部) → PHC杭 / PRC節杭 → PRC杭)
+            bool isPrcLike = PileTypeNames.IsPrcLikeSection(pileSectionType);
+            if (PileTypeNames.IsPhcLikeSection(pileSectionType) || isPrcLike)
             {
                 if (isUltimate)
                 {
-                    if (pileSectionType == PileTypeNames.Prc && index == 0)
+                    if (isPrcLike && index == 0)
                         return "主筋・テンドン破断限界 (-0.27(Ag·rσy + Ap·fpy))";
                     return index switch
                     {
                         0 => "引張側ひび割れ限界 ((4-σE)·Ae)",
                         1 => "弾性限界 ((10-σE)·Ae)",
-                        2 => $"圧壊限界 (({(pileSectionType == PileTypeNames.Prc ? "60" : "65")}-σE)·Ae)",
+                        2 => $"圧壊限界 (({(isPrcLike ? "60" : "65")}-σE)·Ae)",
                         _ => $"[{index}]"
                     };
                 }

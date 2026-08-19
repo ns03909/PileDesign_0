@@ -194,8 +194,15 @@ namespace PileDesign.Output
                     AddPileToe(file, layerIdx, x, y, pileBottomZ, toeDia, lastDia);
                 }
 
+                // Smart-MAGNUM の根固め部（円筒: 外径=Den, 杭先端の 2m 上 〜 杭先端の LL 下）
+                if (PileConstructionTypeNames.IsSmartMagnum(body.PileConstructionType))
+                {
+                    double bulbTopZ = pileBottomZ + Models.InputData.SoilPile.SmartMagnumBulbTopAboveToe;
+                    double bulbBottomZ = pileBottomZ - body.SmartMagnumLL;
+                    AddCylinder(file, layerIdx, x, y, bulbTopZ, bulbBottomZ, toeDia);
+                }
                 // 既製コンクリート杭の拡大根固め部（円筒）
-                if (toeDia > lastDia && body.PileBodyType == PileTypeNames.PrecastConcrete)
+                else if (toeDia > lastDia && body.PileBodyType == PileTypeNames.PrecastConcrete)
                 {
                     double toeHeight = toeDia * body.PrecastConcretePileToeHeightRatio;
                     double toeBottomZ = pileBottomZ - toeHeight;

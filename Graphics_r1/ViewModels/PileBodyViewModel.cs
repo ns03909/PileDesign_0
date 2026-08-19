@@ -1234,7 +1234,10 @@ namespace PileDesign.ViewModels
                 showLiquefactionFL: IsLiquefactionFLVisible,
                 showGroundDisplacement: IsGroundDisplacementVisible,
                 seismicLevelIndex: SelectedSeismicLevelIndex,
-                displacementWithLiquefaction: IsDisplacementWithLiquefaction);
+                displacementWithLiquefaction: IsDisplacementWithLiquefaction,
+                smartMagnumLL: PileBodies[PileBodyNo - 1].SmartMagnumLL,
+                smartMagnumDes: PileBodies[PileBodyNo - 1].SmartMagnumDes,
+                smartMagnumWingLength: PileBodies[PileBodyNo - 1].SmartMagnumWingLength);
         }
     }
 }

@@ -172,7 +172,7 @@ namespace TestProject1
         {
             var lc = new LoadCase(null!, isApplicable: true, level: 2, no: 5,
                 loadName: "U3", loadAngle: 45.0,
-                isSoilNonLinear: true, isPileNonLinear: false,
+                soilNonlinearityMode: SoilNonlinearityMode.KhReduction, isPileNonLinear: false,
                 upperMassForce: 1200, foundationMassForce: 800,
                 forceActionPointX: 0.5, forceActionPointY: 1.5, forceActionPointAltitude: 2.5);
 
@@ -181,7 +181,8 @@ namespace TestProject1
             Assert.AreEqual(5, lc.No);
             Assert.AreEqual("U3", lc.LoadName);
             Assert.AreEqual(45.0, lc.LoadAngle);
-            Assert.IsTrue(lc.IsSoilNonLinear);
+            Assert.AreEqual(SoilNonlinearityMode.KhReduction, lc.SoilNonlinearityMode);
+            Assert.IsTrue(lc.IsSoilNonLinear); // 旧 API: Linear 以外なら true
             Assert.IsFalse(lc.IsPileNonLinear);
             Assert.AreEqual(1200, lc.UpperMassForce);
             Assert.AreEqual(800, lc.FoundationMassForce);
@@ -521,8 +522,8 @@ namespace TestProject1
                     new(3, 1.0, 0.0, 0.0),
                     new(4, 1.0, 0.0, 0.0)
                 ],
-                LoadCaseLevel1Common = new LoadCaseCommon(true, false, 1000, 800, 0, 0, 1),
-                LoadCaseLevel2Common = new LoadCaseCommon(true, true, 2000, 1600, 0, 0, 1),
+                LoadCaseLevel1Common = new LoadCaseCommon(SoilNonlinearityMode.KhReductionWithPy, false, 1000, 800, 0, 0, 1),
+                LoadCaseLevel2Common = new LoadCaseCommon(SoilNonlinearityMode.KhReductionWithPy, true, 2000, 1600, 0, 0, 1),
                 LoadCasesLevel1 = [new LoadCase { LoadName = "L1-A", Level = 1 }],
                 LoadCasesLevel2 = [new LoadCase { LoadName = "L2-A", Level = 2 }],
             };

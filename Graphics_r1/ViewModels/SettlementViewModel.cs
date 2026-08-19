@@ -922,7 +922,7 @@ namespace PileDesign.ViewModels
                 return null;
 
             // 場所打ちコンクリート杭（杭体種別が 鉄筋 / 鋼管 のいずれでも PileConstructionType は同値）
-            if (pileConstructionType == "場所打ちコンクリート杭")
+            if (pileConstructionType == Constants.PileConstructionTypeNames.Insitu)
             {
                 return pileToeGranularityClass switch
                 {
@@ -934,9 +934,10 @@ namespace PileDesign.ViewModels
             }
 
             // 埋込み杭（プレボーリング）— 表記揺れを含めて判定
-            if (pileConstructionType == "埋込み杭（プレボーリング）"
-                || pileConstructionType == "埋込み杭（プレボーリング杭）"
-                || pileConstructionType == "埋込み杭（プレポーリング）")
+            // Smart-MAGNUM もプレボーリング系の施工なので、沈下曲線の α・n は既製コンクリート杭の
+            // プリセットを既定とする（カタログに荷重-沈下関係の規定が無いため、曲線形状は基礎指針に従う）。
+            if (Constants.PileConstructionTypeNames.IsPreboring(pileConstructionType)
+                || Constants.PileConstructionTypeNames.IsSmartMagnum(pileConstructionType))
             {
                 return pileToeGranularityClass switch
                 {
@@ -1204,7 +1205,10 @@ namespace PileDesign.ViewModels
                 showGroundDisplacement: false,
                 seismicLevelIndex: 0,
                 displacementWithLiquefaction: false,
-                showUnconfinedCompressiveStrength: true);
+                showUnconfinedCompressiveStrength: true,
+                smartMagnumLL: PileBody.SmartMagnumLL,
+                smartMagnumDes: PileBody.SmartMagnumDes,
+                smartMagnumWingLength: PileBody.SmartMagnumWingLength);
         }
 
         // DataGridSelectionコピーメソッド

@@ -92,24 +92,32 @@ namespace PileDesign.Models.InputData
             };
         }
 
+        // 各メソッドの py 引数 / mode 引数について:
+        //   mode = Linear           → py も kh 低減も使わない (kh = kh0 固定)
+        //   mode = KhReduction      → kh 低減のみ。py は無視 (頭打ちなし)
+        //   mode = KhReductionWithPy→ kh 低減 + py 頭打ち (従来の非線形)
+
         // 反力を返すメソッド (kN)
-        public double GetSoilReaction(double y, bool isTop, bool isFront)
+        public double GetSoilReaction(double y, bool isTop, bool isFront,
+            SoilNonlinearityMode mode = SoilNonlinearityMode.KhReductionWithPy)
         {
             double py = isFront ? (isTop ? PyFrontTop : PyFrontBtm) : (isTop ? PyRearTop : PyRearBtm);
-            return GetP(y, py) * B * (ZTop - ZBtm) * 0.5;
+            return GetP(y, py, mode) * B * (ZTop - ZBtm) * 0.5;
         }
 
         //  接線剛性を返すメソッド (kN/m)
-        public double GetSoilTangentReactionCoefficient(double y, bool isTop, bool isFront)
+        public double GetSoilTangentReactionCoefficient(double y, bool isTop, bool isFront,
+            SoilNonlinearityMode mode = SoilNonlinearityMode.KhReductionWithPy)
         {
             double py = isFront ? (isTop ? PyFrontTop : PyFrontBtm) : (isTop ? PyRearTop : PyRearBtm);
-            return GetkhTan(Kh0, y, py) * B * (ZTop - ZBtm) * 0.5;
+            return GetkhTan(Kh0, y, py, mode) * B * (ZTop - ZBtm) * 0.5;
         }
 
-        public double GetSoilSecantReactionCoefficient(double y, bool isTop, bool isFront)
+        public double GetSoilSecantReactionCoefficient(double y, bool isTop, bool isFront,
+            SoilNonlinearityMode mode = SoilNonlinearityMode.KhReductionWithPy)
         {
             double py = isFront ? (isTop ? PyFrontTop : PyFrontBtm) : (isTop ? PyRearTop : PyRearBtm);
-            return GetKh(Kh0, y, py) * B * (ZTop - ZBtm) * 0.5;
+            return GetKh(Kh0, y, py, mode) * B * (ZTop - ZBtm) * 0.5;
         }
 
         /// <summary>
@@ -117,53 +125,85 @@ namespace PileDesign.Models.InputData
         /// 降伏判定式: kh0 × √y0 / √|y| × |y| ≥ py   (弾性 sqrt 領域で p が py に到達)
         /// = kh0 × √(y0 × |y|) ≥ py
         /// = |y| ≥ (py / kh0)² / y0  (= yy)
+        /// py 頭打ちを行わないモード (Linear / KhReduction) では常に false。
         /// </summary>
-        public bool IsYieldedAtY(double y, bool isTop, bool isFront)
+        public bool IsYieldedAtY(double y, bool isTop, bool isFront,
+            SoilNonlinearityMode mode = SoilNonlinearityMode.KhReductionWithPy)
         {
+            if (mode != SoilNonlinearityMode.KhReductionWithPy) return false;
             double py = isFront ? (isTop ? PyFrontTop : PyFrontBtm) : (isTop ? PyRearTop : PyRearBtm);
             if (py <= 0 || Kh0 <= 0) return false;
-            const double y0 = 0.01;
-            double yy = Math.Pow(py / Kh0, 2) / y0;
+            double yy = GetYieldDisplacement(Kh0, py);
             return Math.Abs(y) >= yy;
         }
 
-        // 降伏後接線剛性の比率（v22 修正）
-        // 旧値 `0.001 × py / yy` は降伏境界の解析接線に対し 約 1/500 と極端に小さく、
-        // NR 反復で「降伏 ↔ 弾性」を行き来する springs があると K 行列の値が毎反復で
-        // 500× も変動し、ラインサーチが α=0.5 に張り付いて収束停滞の主因になっていた。
-        // 新値は「降伏境界の解析接線の 2%」。GetKh/GetkhTan の両方で同じ gradient を使うので
-        // 力 F_int = K_sec × |y| と接線 K_tan の整合性（K_tan = dF/d|y|）は完全に保たれる。
-        // 降伏後の p は平坦ではなく僅かに増加する形となるが、|y|=2×yy で p は 1% 程度しか
-        // 増えず物理的に妥当な範囲に収まる。
-        private const double PostYieldTangentRatio = 0.02;
+        /// <summary>基準変位 y0 = 1cm。kh0 は「y = y0 における水平地盤反力係数」として定義される。</summary>
+        public const double Y0 = 0.01; // m
+
+        /// <summary>弾性域 (|y| ≤ 0.1·y0 = 1mm) の kh 倍率。= (0.1)^(-1/2) を丸めた基準指針の値。</summary>
+        private const double ElasticKhFactor = 3.16;
+
+        // ── 降伏後接線剛性の比率 ─────────────────────────────────────────────
+        // 「p は py で頭打ち」が本来の意図だが、K_tan を厳密に 0 にすると降伏したばねが
+        // K 行列に何も寄与せず特異化しうるため、微小な正勾配を残している。
+        //
+        // 経緯:
+        //   v22 以前: 0.002 (= 降伏境界接線の 1/500)。降伏 ↔ 弾性を往復するばねがあると
+        //             K_tan が毎反復 500× 変動し、ラインサーチが α=0.5 に張り付いて収束停滞。
+        //   v22     : 0.02 (2%) へ引上げて安定化。ただし |y| = 2·yy で p が py を 1% 超過。
+        //   現行    : 0.002 (0.2%) へ戻し、代わりに降伏境界での K_tan 不連続を
+        //             YieldTangentBlendEnd の smoothstep で解消して v22 の停滞要因を除去。
+        //             p の py 超過量は Δp/py = ratio × (|y|/yy − 1)/2 なので、
+        //             |y| = 2·yy で 0.1%、|y| = 10·yy でも 0.9% に収まる。
+        private const double PostYieldTangentRatio = 0.002;
+
+        // 降伏境界 |y| = yy における K_tan の落差 (1 → PostYieldTangentRatio, 500×) を
+        // smoothstep でならす区間の終端 (|y|/yy)。
+        // 区間内では K_tan が d(K_sec×|y|)/d|y| より「硬め」にずれるが、Newton 方向が
+        // 過小ステップ側 (安全側) に振れるだけで、内力 F_int = K_sec × |y| の厳密性は保たれる。
+        // これは弾性↔sqrt 境界の ElasticSqrtBlend* (v23 A-2) と同じ考え方。
+        private const double YieldTangentBlendEnd = 1.5; // |y|/yy
 
         // 降伏境界 |y|=yy における解析接線（pre-yield 式の d(p)/d|y|）
         // p_pre = kh0 × √(y0 × |y|), dp/d|y| = kh0 × √y0 / (2 × √|y|)
         // |y|=yy のとき √yy = py/(kh0×√y0) なので、
         // dp/d|y|(yy) = kh0 × √y0 × kh0 × √y0 / (2 × py) = kh0² × y0 / (2 × py)
         private static double YieldBoundaryTangent(double kh0, double py)
-            => kh0 * kh0 * 0.01 / (2.0 * py); // y0 = 0.01 固定
+            => kh0 * kh0 * Y0 / (2.0 * py);
 
-        // 水平地盤反力係数khを返すメソッド (kN/m3)
-        private static double GetKh(double kh0, double y, double py)
+        /// <summary>降伏変位 yy: sqrt 域で p が py に達する変位。yy = (py/kh0)² / y0</summary>
+        private static double GetYieldDisplacement(double kh0, double py)
+            => Math.Pow(py / kh0, 2) / Y0;
+
+        // 水平地盤反力係数khを返すメソッド (kN/m3) — 割線剛性 (p = kh × |y|)
+        //
+        // py ≤ 0 (砂質土で有効上載圧 σz' = 0 となる地表付近など) は全モード共通で反力なしとする。
+        // 「その深さには水平抵抗が存在しない」というモデル上の判定であり、モードを変えても
+        // 抵抗が現れないようにするため Linear / KhReduction でも同じ扱いにしている。
+        private static double GetKh(double kh0, double y, double py, SoilNonlinearityMode mode)
         {
-            if (py == 0) return 0;
+            if (py <= 0) return 0;
+            if (mode == SoilNonlinearityMode.Linear) return kh0;
 
-            double y0 = 0.01; // m, 1cm
-            if (Math.Abs(y) / y0 <= 0.1)
+            double absY = Math.Abs(y);
+            if (absY / Y0 <= ElasticSqrtBlendStart)
             {
-                return 3.16 * kh0;
+                return ElasticKhFactor * kh0;
             }
-            else if (kh0 / Math.Sqrt(Math.Abs(y) / y0) * Math.Abs(y) < py)
+
+            double khSqrt = kh0 / Math.Sqrt(absY / Y0);
+            if (mode == SoilNonlinearityMode.KhReduction) return khSqrt;
+
+            if (khSqrt * absY < py)
             {
-                return kh0 / Math.Sqrt(Math.Abs(y) / y0);
+                return khSqrt;
             }
             else
             {
-                double yy = Math.Pow(py / kh0, 2) / y0;
+                double yy = GetYieldDisplacement(kh0, py);
                 double gradient = PostYieldTangentRatio * YieldBoundaryTangent(kh0, py);
-                double p = gradient * (Math.Abs(y) - yy) + py;
-                return p / Math.Abs(y);
+                double p = gradient * (absY - yy) + py;
+                return p / absY;
             }
         }
 
@@ -176,21 +216,22 @@ namespace PileDesign.Models.InputData
         private const double ElasticSqrtBlendEnd = 0.20;   // |y|/y0
 
         // 水平地盤反力の接線剛性を返すメソッド (kN/m3)
-        public static double GetkhTan(double kh0, double y, double py)
+        public static double GetkhTan(double kh0, double y, double py,
+            SoilNonlinearityMode mode = SoilNonlinearityMode.KhReductionWithPy)
         {
-            double y0 = 0.01; // m, 1cm
+            if (py <= 0) return 0;
+            if (mode == SoilNonlinearityMode.Linear) return kh0;
 
-            if (py == 0) return 0;
             double absY = Math.Abs(y);
-            double yRatio = absY / y0;
+            double yRatio = absY / Y0;
 
             if (yRatio <= ElasticSqrtBlendStart)
             {
-                return 3.16 * kh0;
+                return ElasticKhFactor * kh0;
             }
 
             // sqrt 領域の解析接線
-            double sqrtTangent = Math.Sqrt(y0) / 2.0 * kh0 / Math.Sqrt(absY);
+            double sqrtTangent = Math.Sqrt(Y0) / 2.0 * kh0 / Math.Sqrt(absY);
 
             // v23 (A-2) 境界ブレンド: |y|/y0 ∈ [0.10, 0.20] で弾性 → sqrt に滑らかに遷移
             if (yRatio < ElasticSqrtBlendEnd)
@@ -198,9 +239,12 @@ namespace PileDesign.Models.InputData
                 double t = (yRatio - ElasticSqrtBlendStart) / (ElasticSqrtBlendEnd - ElasticSqrtBlendStart);
                 // smoothstep: 3t² − 2t³ (両端で微分係数ゼロ、C¹ 連続)
                 double s = t * t * (3.0 - 2.0 * t);
-                double elasticTangent = 3.16 * kh0;
+                double elasticTangent = ElasticKhFactor * kh0;
                 return (1.0 - s) * elasticTangent + s * sqrtTangent;
             }
+
+            // py 頭打ちを行わないモードは sqrt 領域の接線をそのまま使う
+            if (mode == SoilNonlinearityMode.KhReduction) return sqrtTangent;
 
             // 通常 sqrt 領域（降伏未到達）
             if (kh0 / Math.Sqrt(yRatio) * absY < py)
@@ -208,24 +252,34 @@ namespace PileDesign.Models.InputData
                 return sqrtTangent;
             }
 
-            // 降伏後は降伏境界接線の PostYieldTangentRatio 倍を一定値として採用
-            return PostYieldTangentRatio * YieldBoundaryTangent(kh0, py);
+            // 降伏後は降伏境界接線の PostYieldTangentRatio 倍。
+            // ただし降伏直後 (|y|/yy ∈ [1, YieldTangentBlendEnd]) は smoothstep で
+            // 落差をならし、降伏境界を跨ぐばねの K_tan チャタリングを防ぐ。
+            double yieldTangent = YieldBoundaryTangent(kh0, py);
+            double postYieldTangent = PostYieldTangentRatio * yieldTangent;
+            double yyTan = GetYieldDisplacement(kh0, py);
+            if (absY < YieldTangentBlendEnd * yyTan)
+            {
+                double t = (absY / yyTan - 1.0) / (YieldTangentBlendEnd - 1.0);
+                double s = t * t * (3.0 - 2.0 * t);
+                return (1.0 - s) * yieldTangent + s * postYieldTangent;
+            }
+            return postYieldTangent;
         }
 
         // 反力pを返すメソッド (kN/m2)
-        // v25: 対称性バグ修正。旧実装 `Math.Min(Kh*y, py)` は y>0 側のみ py で clamp され、
-        // y<0 側は clamp されず負方向に無制限に伸びていた（v22 で GetKh の plateau が
-        // `py/|y|` → `(gradient*(|y|-yy)+py)/|y|` に変わり post-yield creep が生じた副作用）。
-        // 現在は `sign(y) × min(Kh(|y|) × |y|, py)` で両側対称に clamp する。
-        // ※ 表示専用（グラフ / MGT エクスポート / 杭要素分割ダイアログ）。
-        //    FEM 本体は `GetSoilSecantReactionCoefficient` / `GetSoilTangentReactionCoefficient`
-        //    経由で |y| 対称、post-yield creep を許容する（本メソッドと意図的に挙動が異なる）
-        public double GetP(double y, double py)
+        //
+        // 表示 (グラフ / MGT エクスポート / 杭要素分割ダイアログ) と FEM 本体が
+        // 厳密に同じ曲線になるよう、GetKh をそのまま用いる。
+        // 旧実装は `sign(y) × min(Kh(|y|)×|y|, py)` とハードクランプしていたため、
+        // 降伏後に表示 (完全に平坦) と FEM (PostYieldTangentRatio の微小勾配) が食い違っていた。
+        // 現在は両者とも「py + gradient×(|y|−yy)」で一致する。
+        public double GetP(double y, double py, SoilNonlinearityMode mode = SoilNonlinearityMode.KhReductionWithPy)
         {
-            if (y == 0 || py == 0) return 0;
+            if (y == 0 || py <= 0) return 0;
             double sign = y > 0 ? 1.0 : -1.0;
             double absY = Math.Abs(y);
-            return sign * Math.Min(GetKh(Kh0, absY, py) * absY, py);
+            return sign * GetKh(Kh0, absY, py, mode) * absY;
         }
 
         // 基準水平地盤反力係数kh0を返すメソッド (kN/m3)

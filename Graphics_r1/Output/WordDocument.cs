@@ -390,6 +390,9 @@ namespace PileDesign.Output
                         AddVerticalResistance(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
                         AddLineBreak(body);
 
+                        // Smart-MAGNUM 工法の杭がある場合のみ算定根拠表を追加
+                        AddSmartMagnumBasisTable(body, inputModel.ElementDivision.SoilPiles);
+
                         if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
                         {
                             AddSectionVerticalResistance(body);

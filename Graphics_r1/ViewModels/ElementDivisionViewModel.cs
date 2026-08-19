@@ -1982,7 +1982,10 @@ namespace PileDesign.ViewModels
                 groundInput,
                 true,
                 zs,
-                selectedZ);
+                selectedZ,
+                smartMagnumLL: InputModel.PileBodies[PileBodyNo - 1].SmartMagnumLL,
+                smartMagnumDes: InputModel.PileBodies[PileBodyNo - 1].SmartMagnumDes,
+                smartMagnumWingLength: InputModel.PileBodies[PileBodyNo - 1].SmartMagnumWingLength);
 
             // 現在表示した土層-杭セットのランプを点灯
             MarkPileAsShown(SelectedSoilPileNo - 1);

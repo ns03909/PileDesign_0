@@ -246,6 +246,11 @@ namespace PileDesign.ViewModels
         private readonly AutoSaveService _autoSaveService;
         private readonly MruService _mruService;
 
+        // アプリ全体のユーザー設定 (LocalAppData の PileDesign フォルダ内 user_settings.json)。
+        // 下の保存オプションのプロパティが getter/setter で直接読み書きするため、
+        // コンストラクタを待たずフィールド初期化子で生成する。
+        private readonly UserSettingsService _userSettingsService = new();
+
         private System.Windows.Threading.DispatcherTimer? _generateSoilPilesDebounceTimer;
         private bool _soilPilesGenerationPending = false;
 
@@ -495,23 +500,39 @@ namespace PileDesign.ViewModels
 
         // 解析結果 (AnaModel の節点/梁結果, VerticalBeamCaseResults) を保存に含めるか。
         // 手動保存・自動保存それぞれで独立に選択できる (オプションタブのチェックボックス)。
-        // 既定はいずれも OFF: 入力のみ保存し軽量・高速。ON にすると結果も保存するがファイルが
-        // 数十 MB 級に肥大する場合があり読み書きに時間がかかる。
+        //
+        // 手動保存は既定 ON: 開き直したときに再計算なしで前回結果を確認できるのを標準とする。
+        // 自動保存は既定 OFF: 定期実行なので ON だと数十 MB の書込が繰り返し発生する。
+        // どちらもファイルが肥大する場合があるため OFF に切り替えられる。
+
+        // 値はユーザー設定ファイルに永続化する (起動のたびに OFF へ戻らない)。
+        // バッキングフィールドを置かず UserSettings を直接読み書きするのは、
+        // 「画面の状態」と「保存された設定」の二重管理でずれるのを防ぐため。
 
         // 手動保存 (Ctrl+S / 名前を付けて保存) に解析結果を含めるか
-        private bool _isSaveAnalysisResultsManual = false;
         public bool IsSaveAnalysisResultsManual
         {
-            get => _isSaveAnalysisResultsManual;
-            set => SetProperty(ref _isSaveAnalysisResultsManual, value);
+            get => _userSettingsService.Settings.IsSaveAnalysisResultsManual;
+            set
+            {
+                if (_userSettingsService.Settings.IsSaveAnalysisResultsManual == value) return;
+                _userSettingsService.Settings.IsSaveAnalysisResultsManual = value;
+                _userSettingsService.Save();
+                OnPropertyChanged();
+            }
         }
 
         // 自動保存に解析結果を含めるか (定期保存のため既定 OFF 推奨。ON だと毎回数秒・大容量書込)
-        private bool _isSaveAnalysisResultsAutoSave = false;
         public bool IsSaveAnalysisResultsAutoSave
         {
-            get => _isSaveAnalysisResultsAutoSave;
-            set => SetProperty(ref _isSaveAnalysisResultsAutoSave, value);
+            get => _userSettingsService.Settings.IsSaveAnalysisResultsAutoSave;
+            set
+            {
+                if (_userSettingsService.Settings.IsSaveAnalysisResultsAutoSave == value) return;
+                _userSettingsService.Settings.IsSaveAnalysisResultsAutoSave = value;
+                _userSettingsService.Save();
+                OnPropertyChanged();
+            }
         }
 
         private double _rightBlankWidthPx = 100.0;

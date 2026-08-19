@@ -70,7 +70,11 @@ namespace PileDesign.Models
                 double pcd = concreteOutDia - ViewModel.PileSection.MainBarCenterCover * 2.0;
                 DrawMainBars(number, dia, pcd);
             }
-            else if (ViewModel.PileSection.PileSectionType == PileTypeNames.Phc)
+            // 節杭の断面は軸部そのものなので、PHC節杭 / PRC節杭(PHC部) は PHC杭 と同一
+            // (ドーナツ + PC鋼棒)。
+            // ※ このメソッドは docx 出力用。画面用の同一ロジックが
+            //    PileSectionViewModel.RedrawShapes() にあり、片方だけ直すと描画が食い違う。
+            else if (PileTypeNames.IsPhcLikeSection(ViewModel.PileSection.PileSectionType))
             {
                 double outdia = ViewModel.PileSection.ConcreteOutDia;
                 double india = ViewModel.PileSection.ConcreteOutDia - 2 * ViewModel.PileSection.ConcreteThickness;
@@ -78,7 +82,7 @@ namespace PileDesign.Models
                 double tendonPCD = ViewModel.PileSection.TendonDp;
                 DrawTendons(tendonPCD);
             }
-            else if (ViewModel.PileSection.PileSectionType == PileTypeNames.Prc)
+            else if (PileTypeNames.IsPrcLikeSection(ViewModel.PileSection.PileSectionType))
             {
                 double outdia = ViewModel.PileSection.ConcreteOutDia;
                 double india = ViewModel.PileSection.ConcreteOutDia - 2 * ViewModel.PileSection.ConcreteThickness;

@@ -67,29 +67,44 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _tauT, value);
         }
 
+        // 周長の算定に節部径を使うか。
+        // 既定 false = 軸部径基準（基礎指針'19 の一般式。節による周面抵抗の増加は安全側に無視する）。
+        // 節を考慮する工法別評定式（Smart-MAGNUM では ψ = π×節部径 Dos）でのみ true にする。
+        public bool UseNodeDiameterForCircumference { get; set; }
+
+        // 周面抵抗を算定しない区間長 m。
+        // Smart-MAGNUM は「先端支持力評価位置＝杭先端の 0.4m 上」より下を周面摩擦算定範囲から外すため、
+        // その境界をまたぐ区間ではここに除外分が入る。既定 0 = 全長を有効とする（既存工法の挙動）。
+        public double ExcludedLength { get; set; }
+
         // 杭径 m
-        public double D => PileBodySegment.PileSection.PileDiameter / 1000.0;
+        public double D => UseNodeDiameterForCircumference && PileBodySegment.PileSection.IsNodularPile
+            ? PileBodySegment.PileSection.NodeDiameter / 1000.0
+            : PileBodySegment.PileSection.PileDiameter / 1000.0;
 
         // 区間長 m
         public double L => Top - Bottom;
+
+        // 周面抵抗の有効区間長 m（自重の算定などには物理長 L の方を使うこと）
+        public double EffectiveL => Math.Max(L - ExcludedLength, 0);
 
         // 周長 m
         public double Psi => Math.PI * D;
 
         // 杭周面積 m2
-        public double PsiL => Psi * L;
+        public double PsiL => Psi * EffectiveL;
 
         // 極限周面抵抗 kN
-        public double Rf => Tau2 * L * Psi;
+        public double Rf => Tau2 * EffectiveL * Psi;
 
         // 最大引き抜き抵抗力 kN
-        public double Rtu => TauT * L * Psi;
+        public double Rtu => TauT * EffectiveL * Psi;
 
         // 残留引抜き抵抗力 kN
-        public double Rtr => (1.0 / 1.2) * TauT * L * Psi;
+        public double Rtr => (1.0 / 1.2) * TauT * EffectiveL * Psi;
 
         // 降伏引抜き抵抗力 kN
-        public double Rty => (2.0 / 3.0) * TauT * L * Psi;
+        public double Rty => (2.0 / 3.0) * TauT * EffectiveL * Psi;
 
         public PileCircumVertical DeepCopy()
         {
@@ -106,7 +121,10 @@ namespace PileDesign.Models.InputData
                 TauT = this.TauT,
 
                 IsPositiveCircumResistance = this.IsPositiveCircumResistance,
-                IsNegativeCircumResistance = this.IsNegativeCircumResistance
+                IsNegativeCircumResistance = this.IsNegativeCircumResistance,
+
+                UseNodeDiameterForCircumference = this.UseNodeDiameterForCircumference,
+                ExcludedLength = this.ExcludedLength
             };
         }
     }

@@ -1,6 +1,9 @@
 ﻿using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
+using Serilog;
+using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
@@ -12,6 +15,24 @@ namespace PileDesign.Views
     public partial class PileBodyWindow : Window
     {
         private readonly PileBodyViewModel _viewModel;
+
+        /// <summary>
+        /// 工法カタログ等の外部リンクを既定のブラウザで開く。
+        /// UseShellExecute = true が無いと .NET Core 系では URL を直接起動できない。
+        /// </summary>
+        private void Hyperlink_RequestNavigate(
+            object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[PileBodyWindow] 外部リンクを開けませんでした: {Uri}", e.Uri);
+            }
+            e.Handled = true;
+        }
         private bool _isLoaded = false; // フラグを追加
         private bool _isClosingHandled = false;
         // 既存のMainWindowViewModelを受け取るコンストラクタは削除せず、追加する

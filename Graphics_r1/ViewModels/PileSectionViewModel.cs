@@ -1,4 +1,4 @@
-using PileDesign.Constants;
+﻿using PileDesign.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -145,11 +145,12 @@ namespace PileDesign.ViewModels
                 // 鋼管杭 (鋼管部、純鋼管区間) は SteelPipeSection の Middle ヘルパーで直接描画
                 DrawSteelPipePileMiddle_NQ(nDiv);
             }
-            else if (PileSection.PileSectionType == PileTypeNames.Phc)
+            // PHC節杭 の断面耐力は軸部基準で PHC杭 と同一
+            else if (PileTypeNames.IsPhcLikeSection(PileSection.PileSectionType))
             {
                 DrawPHC_NQ(NMin, NMax, nDiv);
             }
-            else if (PileSection.PileSectionType == PileTypeNames.Prc)
+            else if (PileTypeNames.IsPrcLikeSection(PileSection.PileSectionType))
             {
                 DrawPRC_NQ(NMin, NMax, nDiv);
             }
@@ -1185,7 +1186,8 @@ namespace PileDesign.ViewModels
                 DrawSteelPipePileMiddle_NQ(10);
             }
 
-            else if (PileSection.PileSectionType == PileTypeNames.Phc)
+            // PHC節杭 の断面耐力は軸部基準で PHC杭 と同一
+            else if (PileTypeNames.IsPhcLikeSection(PileSection.PileSectionType))
             {
                 // M-φグラフの描画
                 double NMin = ns[0]; // kN -> N
@@ -1196,7 +1198,7 @@ namespace PileDesign.ViewModels
             }
 
 
-            else if (PileSection.PileSectionType == PileTypeNames.Prc)
+            else if (PileTypeNames.IsPrcLikeSection(PileSection.PileSectionType))
             {
                 if (PileSection.MainBarDr <= 0 || PileSection.MainBarNum <= 0 || PileSection.PileDiameter <= 0)
                 {
@@ -1314,7 +1316,10 @@ namespace PileDesign.ViewModels
                 double pcd = concreteOutDia - PileSection.MainBarCenterCover * 2.0;
                 DrawMainBars(number, dia, pcd);
             }
-            else if (PileSection.PileSectionType == PileTypeNames.Phc)
+            // PHC節杭 の断面は軸部そのものなので PHC杭 と同一 (ドーナツ + PC鋼棒)。
+            // ※ このメソッドは画面用。docx 出力用の同一ロジックが
+            //    ShapeDrawer.RedrawShapes() にあり、片方だけ直すと描画が食い違う。
+            else if (PileTypeNames.IsPhcLikeSection(PileSection.PileSectionType))
             {
                 double outdia = PileSection.ConcreteOutDia;
                 double india = PileSection.ConcreteOutDia - 2 * PileSection.ConcreteThickness;
@@ -1322,7 +1327,7 @@ namespace PileDesign.ViewModels
                 double tendonPCD = PileSection.TendonDp;
                 DrawTendons(tendonPCD);
             }
-            else if (PileSection.PileSectionType == PileTypeNames.Prc)
+            else if (PileTypeNames.IsPrcLikeSection(PileSection.PileSectionType))
             {
                 double outdia = PileSection.ConcreteOutDia;
                 double india = PileSection.ConcreteOutDia - 2 * PileSection.ConcreteThickness;

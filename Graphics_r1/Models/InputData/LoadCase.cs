@@ -114,11 +114,46 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _loadAngle, value);
         }
 
-        private bool _isSoilNonLinear;
+        private SoilNonlinearityMode _soilNonlinearityMode = SoilNonlinearityMode.KhReductionWithPy;
+        /// <summary>
+        /// 水平地盤ばね (p-y) の非線形性の考慮段階。
+        /// 旧 <c>IsSoilNonLinear</c> (bool) を 3 段階に拡張したもの。
+        /// </summary>
+        public SoilNonlinearityMode SoilNonlinearityMode
+        {
+            get => _soilNonlinearityMode;
+            set
+            {
+                if (SetProperty(ref _soilNonlinearityMode, value))
+                    OnPropertyChanged(nameof(IsSoilNonLinear));
+            }
+        }
+
+        /// <summary>
+        /// 旧 API 互換: 地盤非線形を考慮するか (= <see cref="SoilNonlinearityMode"/> が Linear 以外)。
+        /// setter は true → kh 低減 + py 頭打ち、false → 線形 にマップする。
+        /// 保存 JSON には出さない (旧ファイル読込専用のシムは <see cref="LegacyIsSoilNonLinear"/>)。
+        /// </summary>
+        [JsonIgnore]
         public bool IsSoilNonLinear
         {
-            get => _isSoilNonLinear;
-            set => SetProperty(ref _isSoilNonLinear, value);
+            get => _soilNonlinearityMode.IsNonLinear();
+            set => SoilNonlinearityMode = value
+                ? SoilNonlinearityMode.KhReductionWithPy
+                : SoilNonlinearityMode.Linear;
+        }
+
+        /// <summary>
+        /// 旧 JSON (地盤非線形が bool だった版) 読込用シム。
+        /// getter は常に null を返すため、新しい保存ファイルには書き出されない
+        /// (新ファイルは <see cref="SoilNonlinearityMode"/> のみを持つ)。
+        /// </summary>
+        [JsonPropertyName("IsSoilNonLinear")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? LegacyIsSoilNonLinear
+        {
+            get => null;
+            set { if (value.HasValue) IsSoilNonLinear = value.Value; }
         }
 
         private bool _isPileNonLinear;
@@ -197,7 +232,7 @@ namespace PileDesign.Models.InputData
         public LoadCase(
             MainWindowViewModel mainWindowViewModel,
             bool isApplicable, int level, int no, string loadName, double loadAngle,
-            bool isSoilNonLinear, bool isPileNonLinear,
+            SoilNonlinearityMode soilNonlinearityMode, bool isPileNonLinear,
             double upperMassForce, double foundationMassForce,
             double forceActionPointX, double forceActionPointY, double forceActionPointAltitude)
         {
@@ -207,7 +242,7 @@ namespace PileDesign.Models.InputData
             No = no;
             LoadName = loadName;
             LoadAngle = loadAngle;
-            IsSoilNonLinear = isSoilNonLinear;
+            SoilNonlinearityMode = soilNonlinearityMode;
             IsPileNonLinear = isPileNonLinear;
             UpperMassForce = upperMassForce;
             FoundationMassForce = foundationMassForce;

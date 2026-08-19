@@ -1,4 +1,5 @@
 using MathNet.Numerics.LinearAlgebra;
+using PileDesign.Constants;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
@@ -89,12 +90,16 @@ namespace PileDesign.Views
             //   - 場所打ちコンクリート杭: 拡底円錐+円柱の頂点まで
             //   - 既製コンクリート杭の埋込み杭: 拡大根固め球根の頂点まで (PileToeDia × PileToeHeightRatio)
             //   - 回転貫入杭: 拡張形状 (拡底等) が存在しないため、杭体は zs[^1] (真の杭先端) まで描画
+            //   - Smart-MAGNUM: 根固め部上端は杭先端の 2m 上で固定 (根固め部径×高さ径比ではない)
             string _ctypeForToe = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType;
-            double zToeTop = pileToeDia <= pileBottomDia ? zs[^1] :
+            bool _isSmartMagnum = PileConstructionTypeNames.IsSmartMagnum(_ctypeForToe);
+            double zToeTop = pileToeDia <= pileBottomDia && !_isSmartMagnum ? zs[^1] :
                 (_ctypeForToe == "場所打ちコンクリート杭"
                 ? zs[^1] + (pileToeDia - pileBottomDia) * 0.5 / Math.Tan(pileToeAngle * Math.PI / 180) + pileToeHeight
                 : _ctypeForToe == "回転貫入杭"
                 ? zs[^1]
+                : _isSmartMagnum
+                ? zs[^1] + SoilPile.SmartMagnumBulbTopAboveToe
                 : zs[^1] + pileToeDia * pileToeHeightRatio);
 
             for (int i = 0; i < zs.Count - 1; i++)
@@ -116,6 +121,8 @@ namespace PileDesign.Views
                     double flattening = viewModel.CanvasThreeDView.Flattening;
 
                     AddPileSectionGeometry(point1, point2, pileDia2D, flattening);
+                    AddNodularPilePositionGeometry(
+                        x, y, z1, zs[i + 1], zToeTop, pileBodySegments[i], pileDia2D, flattening);
 
                     var ctype = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType;
                     if (ctype == "場所打ちコンクリート杭")
@@ -140,11 +147,19 @@ namespace PileDesign.Views
                     }
                     else
                     {
-                        if (i == zs.Count - 2 && pileToeDia > pileDia)
+                        if (i == zs.Count - 2 && (pileToeDia > pileDia || _isSmartMagnum))
                         {
-                            string pileConstructionType = "aaa";
-                            // 先端球根ジオメトリ
-                            AddConcretePrecastPileToeGeometry(pointB, pileToeDia, pileDia, flattening, pileConstructionType, pileBodySegments);
+                            // 先端球根ジオメトリ。
+                            // Smart-MAGNUM は「杭先端の 2m 上 〜 杭先端の LL 下」、
+                            // 他の埋込み杭は「杭先端を下端として上方へ 根固め部径×高さ径比」。
+                            double bulbBelowToe = _isSmartMagnum
+                                ? viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].SmartMagnumLL
+                                : 0.0;
+                            double bulbHeight = _isSmartMagnum
+                                ? SoilPile.SmartMagnumBulbTopAboveToe + bulbBelowToe
+                                : pileToeDia * pileToeHeightRatio;
+                            AddConcretePrecastPileToeGeometry(
+                                pointB, pileToeDia, pileDia, flattening, bulbHeight, bulbBelowToe);
                         }
                     }
 
@@ -208,6 +223,68 @@ namespace PileDesign.Views
         }
 
 
+        /// <summary>
+        /// PHC節杭 の節を、節部の円（Do）とテーパーの稜線で描く。
+        ///
+        /// 形状の根拠: Do・D はカタログ値、テーパーは姿図実測で厳密に 45°（軸方向長 = (Do−D)/2）。
+        /// 節部の平坦長のみカタログに寸法記入が無く、姿図実測でテーパーと等長としている。
+        /// 図示専用で、断面耐力・自重・支持力の計算には使わない。
+        /// 拡大根固め等で杭体の描画下限が切り上がる場合 (zToeTop) は、その範囲内の節のみ描く。
+        /// </summary>
+        private void AddNodularPilePositionGeometry(
+            double x, double y, double zSegmentTop, double zSegmentBottom, double zToeTop,
+            PileBodySegment segment, double pileDia2D, double flattening)
+        {
+            if (DataContext is not MainWindowViewModel viewModel) return;
+
+            var section = segment?.PileSection;
+            if (section == null || !section.IsNodularPile) return;
+
+            double segmentLength = zSegmentTop - zSegmentBottom; // Z 上向き正なので上端 - 下端
+            if (segmentLength <= 0) return;
+
+            var outline = section.NodularOutline(segmentLength);
+            if (outline.Count == 0) return;
+
+            // 節の稜線は杭体輪郭より細い線の専用パスへ入れる
+            var path = viewModel.IsElementSplit
+                ? viewModel.CanvasGeometry.PathGeoPileDividedNodeDetails
+                : viewModel.CanvasGeometry.PathGeoPileNodeDetails;
+
+            // 断面径 [mm] → 画面上の直径。既存の pileDia2D と同じ縮尺に揃える。
+            double scale2D = section.PileDiameter > 0 ? pileDia2D / section.PileDiameter : 0.0;
+            if (scale2D <= 0) return;
+
+            Point? prevLeft = null, prevRight = null;
+
+            foreach (var (depth, radius) in outline)
+            {
+                double z = zSegmentTop - depth;
+                if (z < zToeTop || z > zSegmentTop || z < zSegmentBottom)
+                {
+                    prevLeft = prevRight = null;   // 描画範囲外は稜線を途切れさせる
+                    continue;
+                }
+
+                var center = viewModel.CanvasThreeDView.Transformation(new Point3D(x, y, z));
+                double r2D = radius * scale2D;
+
+                // 節の立上り開始・終了位置 (軸部径) と節部・拡頭部 (最大径) の
+                // どちらにも水平断面円を描く。形状の折れ位置がすべて見えるようにする。
+                path.AddGeometry(new EllipseGeometry(center, r2D, r2D * flattening));
+
+                var left = new Point(center.X - r2D, center.Y);
+                var right = new Point(center.X + r2D, center.Y);
+                if (prevLeft.HasValue)
+                {
+                    path.AddGeometry(new LineGeometry(prevLeft.Value, left));
+                    path.AddGeometry(new LineGeometry(prevRight!.Value, right));
+                }
+                prevLeft = left;
+                prevRight = right;
+            }
+        }
+
         // 杭先端ジオメトリの追加メソッド
         private void AddInsituPileToeGeometry(
             Point pointBtm, double pileToeDia, double pileDia, double flattening, string pileConstructionType, ObservableCollection<PileBodySegment> pileBodySegments,
@@ -252,7 +329,9 @@ namespace PileDesign.Views
 
 
         // 杭先端ジオメトリの追加メソッド
-        private void AddConcretePrecastPileToeGeometry(Point pointBtm, double pileToeDia, double pileDia, double flattening, string pileConstructionType, ObservableCollection<PileBodySegment> pileBodySegments)
+        /// <param name="bulbHeight">根固め部の全高 (m)。工法ごとの規定に従って呼び出し側が決める。</param>
+        /// <param name="bulbBelowToe">根固め部が杭先端より下に張り出す長さ (m)。Smart-MAGNUM の LL。</param>
+        private void AddConcretePrecastPileToeGeometry(Point pointBtm, double pileToeDia, double pileDia, double flattening, double bulbHeight, double bulbBelowToe)
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
 
@@ -266,26 +345,29 @@ namespace PileDesign.Views
             double pileToeDia2D = pileToeDia * viewModel.CanvasThreeDView.Scale;
             double pileDia2D = pileDia * viewModel.CanvasThreeDView.Scale;
             double phiRad = Math.Abs(viewModel.CanvasThreeDView.Phi) * Math.PI / 180.0;
-            double height = pileToeDia * 2.0;
-            double factoredHeight2D = Math.Cos(phiRad) * height * viewModel.CanvasThreeDView.Scale;
+            double factoredHeight2D = Math.Cos(phiRad) * bulbHeight * viewModel.CanvasThreeDView.Scale;
+
+            // 杭先端より下に張り出す分だけ根固め部の底面を下げる (2D では Y が増える向き)
+            double below2D = Math.Cos(phiRad) * bulbBelowToe * viewModel.CanvasThreeDView.Scale;
+            var bulbBtm = new Point(pointBtm.X, pointBtm.Y + below2D);
 
             // 拡大根固め部の外形（実線）
-            var ellipseBtm = new EllipseGeometry(pointBtm, pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening);
-            var ellipseTop = new EllipseGeometry(new Point(pointBtm.X, pointBtm.Y - factoredHeight2D), pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening);
+            var ellipseBtm = new EllipseGeometry(bulbBtm, pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening);
+            var ellipseTop = new EllipseGeometry(new Point(bulbBtm.X, bulbBtm.Y - factoredHeight2D), pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening);
             path.AddGeometry(ellipseBtm);
             path.AddGeometry(ellipseTop);
 
             for (int j = -1; j <= 1; j += 2)
             {
                 var lineGeometry = new LineGeometry(
-                    new Point(pointBtm.X + pileToeDia2D * 0.5 * j, pointBtm.Y - factoredHeight2D),
-                    new Point(pointBtm.X + pileToeDia2D * 0.5 * j, pointBtm.Y)
+                    new Point(bulbBtm.X + pileToeDia2D * 0.5 * j, bulbBtm.Y - factoredHeight2D),
+                    new Point(bulbBtm.X + pileToeDia2D * 0.5 * j, bulbBtm.Y)
                 );
                 path.AddGeometry(lineGeometry);
             }
 
             // 根固め部内部の杭体（破線）: 杭径の楕円と側線
-            var ellipseCore = new EllipseGeometry(new Point(pointBtm.X, pointBtm.Y - factoredHeight2D), pileDia2D * 0.5, pileDia2D * 0.5 * flattening);
+            var ellipseCore = new EllipseGeometry(new Point(bulbBtm.X, bulbBtm.Y - factoredHeight2D), pileDia2D * 0.5, pileDia2D * 0.5 * flattening);
             dashedPath.AddGeometry(ellipseCore);
 
             // 杭体の底面楕円（根固め底面位置）
@@ -296,8 +378,8 @@ namespace PileDesign.Views
             for (int j = -1; j <= 1; j += 2)
             {
                 var innerLine = new LineGeometry(
-                    new Point(pointBtm.X + pileDia2D * 0.5 * j, pointBtm.Y - factoredHeight2D),
-                    new Point(pointBtm.X + pileDia2D * 0.5 * j, pointBtm.Y)
+                    new Point(bulbBtm.X + pileDia2D * 0.5 * j, bulbBtm.Y - factoredHeight2D),
+                    new Point(bulbBtm.X + pileDia2D * 0.5 * j, pointBtm.Y)
                 );
                 dashedPath.AddGeometry(innerLine);
             }

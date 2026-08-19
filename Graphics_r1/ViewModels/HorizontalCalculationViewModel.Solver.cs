@@ -849,6 +849,9 @@ namespace PileDesign.ViewModels
             // この真の Jacobian を使うことで Newton 方向が改善し α=1.0 に近い収束を期待できる。
             // 割線剛性（isTan=false）側は F_int = K_sec(|u|) × u（等方）で正しく力を表現するため
             // 従来通り対角で OK（secant × disp がそのまま force を返す性質を維持）。
+            // 地盤 (p-y) 非線形モードはケース単位。caseModel に設定済みの値を使う。
+            var soilMode = model.SoilNonlinearityMode;
+
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
                 var horizontalReactions = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1].HorizontalSoilReactions;
@@ -878,14 +881,14 @@ namespace PileDesign.ViewModels
                     if (i > 0 && i - 1 < reactionCount)
                     {
                         bool isTop = false;
-                        kTan += horizontalReactions[i - 1].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile);
-                        kSec += horizontalReactions[i - 1].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile);
+                        kTan += horizontalReactions[i - 1].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile, soilMode);
+                        kSec += horizontalReactions[i - 1].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile, soilMode);
                     }
                     if (i < pileNodes.Count - 1 && i < reactionCount)
                     {
                         bool isTop = true;
-                        kTan += horizontalReactions[i].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile);
-                        kSec += horizontalReactions[i].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile);
+                        kTan += horizontalReactions[i].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile, soilMode);
+                        kSec += horizontalReactions[i].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile, soilMode);
                     }
 
                     kTan = SafeK(kTan);

@@ -959,16 +959,22 @@
                                     <!-- 保存オプション -->
                                     <TextBlock Text="保存オプション" FontSize="14" FontWeight="Bold"
                                                Foreground="#3271AD" Margin="0,8,0,4"/>
-                                    <CheckBox Content="手動保存に解析結果も含める (Ctrl+S / 名前を付けて保存)"
+                                    <CheckBox Content="手動保存に解析結果も含める (Ctrl+S / 名前を付けて保存)　※既定 ON"
                                               IsChecked="{Binding IsSaveAnalysisResultsManual, Mode=TwoWay}"
                                               Margin="0,4,0,4" VerticalAlignment="Center"/>
-                                    <CheckBox Content="自動保存に解析結果も含める"
+                                    <CheckBox Content="自動保存に解析結果も含める　※既定 OFF"
                                               IsChecked="{Binding IsSaveAnalysisResultsAutoSave, Mode=TwoWay}"
                                               Margin="0,4,0,4" VerticalAlignment="Center"/>
                                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,12" Foreground="#444">
-                                        <Run Text="ON にすると水平解析・鉛直解析の結果 (節点/梁の変位・応力) もファイルに保存します。再計算が不要になる反面、ファイルが数十 MB 級に肥大し読み書きが遅くなる場合があります。"/>
+                                        <Run Text="ON にすると水平解析・基礎梁考慮鉛直解析の結果 (節点/梁の変位・応力) もファイルに保存します。ファイルを開き直したときに再計算なしで前回結果を確認できます。"/>
                                         <LineBreak/>
-                                        <Run Text="OFF (既定) は入力データのみを保存します。自動保存は定期実行されるため、ON にすると数秒の書込が繰り返し発生する点にご注意ください。"/>
+                                        <Run Text="手動保存は既定 ON です。結果が不要でファイルを軽くしたい場合は OFF にしてください (入力データのみを保存します)。結果を含めるとファイルが数十 MB 級に肥大し、読み書きが遅くなる場合があります。"/>
+                                        <LineBreak/>
+                                        <Run Text="自動保存は定期実行されるため既定 OFF です。ON にすると数秒の書込が繰り返し発生する点にご注意ください。"/>
+                                        <LineBreak/>
+                                        <Run Text="なお、単杭沈下・群杭沈下の結果は入力データの一部として、このチェックに関わらず常に保存されます。"/>
+                                        <LineBreak/>
+                                        <Run Text="このチェックの状態は保存され、次回起動時にも引き継がれます。" FontWeight="Bold"/>
                                     </TextBlock>
 
                                     <TextBlock Text="ファイル関連付け" FontSize="14" FontWeight="Bold"

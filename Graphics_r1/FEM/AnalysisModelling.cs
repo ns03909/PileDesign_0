@@ -431,8 +431,12 @@ namespace PileDesign.FEM
             // 杭先端パラメータ (PileVerticalSoilSpringModel 先端ノード用)
             double dp = soilPile.Dp / 1000.0; // m
             double rpu = soilPile.SettleRpu;  // kN
-            double alpha = _inputModel.PileBodies.Count > 0 ? _inputModel.PileBodies[^1].SettleAlpha : 0.3;
-            double n = _inputModel.PileBodies.Count > 0 ? _inputModel.PileBodies[^1].SettleN : 2.0;
+            // 先端沈下曲線パラメータは、この SoilPile が属する杭体のものを使う。
+            // 直上の dp (= soilPile.Dp) / rpu と同じ杭体でなければ整合しない。
+            // (旧実装は _inputModel.PileBodies[^1] と最終要素固定で、杭体が複数あると
+            //  別の杭体の α・n が使われていた)
+            double alpha = soilPile.PileBodyInput?.SettleAlpha ?? 0.3;
+            double n = soilPile.PileBodyInput?.SettleN ?? 2.0;
 
             for (int k = 0; k < mapCount; k++)
             {

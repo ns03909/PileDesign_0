@@ -208,7 +208,7 @@ namespace PileDesign.ViewModels
                     UpperMassForce = 0,
                     FoundationMassForce = 0,
                     IsPileNonLinear = true,
-                    IsSoilNonLinear = true,
+                    SoilNonlinearityMode = SoilNonlinearityMode.KhReductionWithPy,
                 });
             }
             foreach (var lc in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
@@ -329,6 +329,9 @@ namespace PileDesign.ViewModels
                             caseModel = targetModel.DeepCopy();
                         }
 
+                        // 地盤 (p-y) 非線形モードはケース単位の設定。PrepareKmat が caseModel から読む。
+                        caseModel.SoilNonlinearityMode = loadCase.SoilNonlinearityMode;
+
                         // ── 軸剛性 0 (Uz 解放): 引張定着筋なし半剛接合 (キャプテン/F.T.Pile/キャプリング) で
                         //    入力軸力が引張となる杭について、case-local モデルの杭頭 Uz master-slave を
                         //    解放する。「軸剛性 0、曲げ剛性 0」(Mu=0 と併用) でピン接合的挙動を実現する。
@@ -363,14 +366,15 @@ namespace PileDesign.ViewModels
                         // 仕組み:
                         //   - Forward (βU × βL ≥ 0): configured nStep で開始、retry 最大 3
                         //   - CounterLoading (βU × βL < 0): 基本 ×2 (min 12) で開始、retry 最大 2
-                        int configuredNStep = (!loadCase.IsSoilNonLinear && !loadCase.IsPileNonLinear) ? 1 :
+                        bool isSoilNonLinear = loadCase.SoilNonlinearityMode.IsNonLinear();
+                        int configuredNStep = (!isSoilNonLinear && !loadCase.IsPileNonLinear) ? 1 :
                             loadCase.Level == 1 ? Level1CalculationStepsCount :
                             loadCase.Level == 2 ? Level2CalculationStepsCount :
                             1;
                         var loadDirection = ClassifyLoadCombinationDirection(loadCase, loadCombination, isLiquefaction);
                         int baseNStep = configuredNStep;
                         int MAX_STEP_BISECTIONS = 3;
-                        if (loadCase.IsSoilNonLinear || loadCase.IsPileNonLinear)
+                        if (isSoilNonLinear || loadCase.IsPileNonLinear)
                         {
                             // 非線形ケースのみ事前検出を適用
                             switch (loadDirection)
@@ -934,12 +938,12 @@ namespace PileDesign.ViewModels
                                                 var rel = pn.CumulativeDisp - sn.CumulativeDisp;
                                                 double abs = Math.Sqrt(rel.Ux * rel.Ux + rel.Uy * rel.Uy);
                                                 // i-1 (bottom side) と i (top side) の 2 層
-                                                if (i > 0 && i - 1 < reactions.Count && reactions[i - 1].IsYieldedAtY(abs, isTop: false, isFront))
+                                                if (i > 0 && i - 1 < reactions.Count && reactions[i - 1].IsYieldedAtY(abs, isTop: false, isFront, loadCase.SoilNonlinearityMode))
                                                 {
                                                     string key = $"{pli.No}-{i}-btm";
                                                     currentYieldedSoilSprings.Add(key);
                                                 }
-                                                if (i < reactions.Count && reactions[i].IsYieldedAtY(abs, isTop: true, isFront))
+                                                if (i < reactions.Count && reactions[i].IsYieldedAtY(abs, isTop: true, isFront, loadCase.SoilNonlinearityMode))
                                                 {
                                                     string key = $"{pli.No}-{i}-top";
                                                     currentYieldedSoilSprings.Add(key);

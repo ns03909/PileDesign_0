@@ -3,6 +3,7 @@
 ## General Guidelines
 - First general instruction
 - Second general instruction
+- Avoid breaking changes; prioritize compatibility.
 
 ## DataGrid Configuration
 - Keep DataGrid in cell-selection mode.

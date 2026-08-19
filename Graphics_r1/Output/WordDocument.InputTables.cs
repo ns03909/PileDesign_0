@@ -1,4 +1,5 @@
 using DocumentFormat.OpenXml;
+using System.Linq;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -106,7 +107,7 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([no.ToString()], fontSize, "right"));
                 dataRow.Append(CreateTableCell([loadCase.LoadName], fontSize, "left"));
                 dataRow.Append(CreateTableCell([loadCase.LoadAngle.ToString()], fontSize, "right"));
-                dataRow.Append(CreateTableCell([BoolMark(loadCase.IsSoilNonLinear)], fontSize, "center"));
+                dataRow.Append(CreateTableCell([SoilNonlinearityModes.ToShortText(loadCase.SoilNonlinearityMode)], fontSize, "center"));
                 dataRow.Append(CreateTableCell([BoolMark(loadCase.IsPileNonLinear)], fontSize, "center"));
 
                 // 位置X/Y/Z（[m]）
@@ -122,6 +123,15 @@ namespace PileDesign.Output
             }
 
             body.Append(table);
+
+            // 「地盤 非線形性」列の凡例（3 段階の意味）
+            AddText(body,
+                $"※ 地盤非線形性 … 「{SoilNonlinearityModes.ToShortText(SoilNonlinearityMode.Linear)}」: " +
+                "水平地盤反力係数を基準値 kh0（相対変位 y0 = 1cm における値）で一定とする。 " +
+                $"「{SoilNonlinearityModes.ToShortText(SoilNonlinearityMode.KhReduction)}」: " +
+                "kh = kh0/√(|y|/y0) の変位依存低減を考慮する（塑性地盤反力 py による頭打ちは行わない）。 " +
+                $"「{SoilNonlinearityModes.ToShortText(SoilNonlinearityMode.KhReductionWithPy)}」: " +
+                "上記に加え地盤反力 p を塑性地盤反力 py で頭打ちとする。");
         }
 
         //
@@ -1000,6 +1010,64 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([$"{soilPile.Rt_DLS:N1}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.Rt_ULS:N1}"], fontSize, "right"));
                 table.Append(dataRow);
+            }
+            body.Append(table);
+        }
+
+        /// <summary>
+        /// Smart-MAGNUM 工法の支持力算定根拠表。該当する杭が無ければ何も出力しない。
+        /// 列の並びはカタログ p.10 の計算例と照合しやすい順にしている。
+        /// </summary>
+        public static void AddSmartMagnumBasisTable(Body body, ObservableCollection<SoilPile> soilPiles)
+        {
+            var targets = soilPiles?.Where(sp => sp.IsSmartMagnum).ToList();
+            if (targets == null || targets.Count == 0) return;
+
+            AddHeader2(body, "Smart-MAGNUM 工法 支持力算定根拠", 1);
+            AddText(body,
+                "先端支持力は Rp = α・N・Ap（Ap は根固め部に位置する節杭の節部径 Don による面積）、"
+                + "周面抵抗は砂質・礫質地盤で β・Ns、粘土質地盤で γ・qu により算定しています。"
+                + "一軸圧縮強度 qu は入力の粘着力 Cu から qu = 2Cu として換算しています。"
+                + "周面摩擦の算定範囲は杭先端より 0.4m 上（先端支持力評価位置）までです。");
+
+            double fontSize = 8;
+            Table table = CreateTableWithBordersAndWidths(GetEqualColumnWidths(13));
+
+            table.Append(CreateHeaderRow(
+                CreateTableCell(["No"], fontSize, "center"),
+                CreateTableCell(["杭体", "番号"], fontSize, "center"),
+                CreateTableCell(["地盤", "番号"], fontSize, "center"),
+                CreateTableCell(["周面", "タイプ"], fontSize, "center"),
+                CreateTableCell(["節部径", "D_{on}", "[m]"], fontSize, "center"),
+                CreateTableCell(["基準", "掘削径", "D_{sn}", "[m]"], fontSize, "center"),
+                CreateTableCell(["拡大根", "固め部径", "D_{en}", "[m]"], fontSize, "center"),
+                CreateTableCell(["拡大比", "ω_p"], fontSize, "center"),
+                CreateTableCell(["LL", "[m]"], fontSize, "center"),
+                CreateTableCell(["先端支持", "力係数", "α"], fontSize, "center"),
+                CreateTableCell(["N_U", "/ N_L"], fontSize, "center"),
+                CreateTableCell(["杭先端", "平均N値", "N"], fontSize, "center"),
+                CreateTableCell(["節部有効", "断面積", "A_p [m²]"], fontSize, "center")));
+
+            int i = 0;
+            foreach (var sp in targets)
+            {
+                i += 1;
+                TableRow row = new();
+                row.Append(CreateTableCell([$"{i}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.PileBodyNo}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.GroundNo}"], fontSize, "right"));
+                row.Append(CreateTableCell(
+                    [sp.PileBodyInput.SmartMagnumIsReinforcedCircum ? "周面強化型" : "標準型"], fontSize, "center"));
+                row.Append(CreateTableCell([$"{sp.SmartMagnumDon:N3}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.SmartMagnumDsn:N3}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.SmartMagnumDen:N3}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.SmartMagnumOmegaP:N2}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.SmartMagnumLL:N2}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.SmartMagnumAlphaValue:N0}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.SmartMagnumNu:N1} / {sp.SmartMagnumNl:N1}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.PileToeNValue:N1}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.SmartMagnumAp:N3}"], fontSize, "right"));
+                table.Append(row);
             }
             body.Append(table);
         }

@@ -46,7 +46,17 @@
       "Bash(/c/Users/keisu/AppData/Local/Programs/Python/Python310/python.exe /tmp/transform_verification.py \"/c/Users/keisu/source/repos/PileDesign_0/Graphics_r1/Help/verification.html\")",
       "Bash(pdftotext -enc UTF-8 -layout \"C:/Users/keisu/source/repos/PileDesign_0/Graphics_r1/Sources/32_107_表層地盤による地震動増幅率評価法に関する研究.pdf\" /tmp/paper.txt)",
       "WebFetch(domain:capia.biz)",
-      "WebFetch(domain:www.cepia.biz)"
+      "WebFetch(domain:www.cepia.biz)",
+      "PowerShell(dotnet build Graphics_r1\\\\PileDesign.csproj -v q --nologo 2>$null | Select-Object -Last 4; \"exit=$LASTEXITCODE\")",
+      "PowerShell(dotnet test TestProject1\\\\TestProject1.csproj --nologo -v q --filter \"FullyQualifiedName~AssumptionsSectionTests\" 2>$null | Select-Object -Last 4; \"exit=$LASTEXITCODE\")",
+      "PowerShell(dotnet test TestProject1\\\\TestProject1.csproj --nologo -v q --filter \"FullyQualifiedName~AssumptionsSectionTests\" 2>$null | Select-Object -Last 3; \"exit=$LASTEXITCODE\")",
+      "PowerShell(dotnet test TestProject1\\\\TestProject1.csproj --nologo -v q 2>$null | Select-Object -Last 3; \"exit=$LASTEXITCODE\")",
+      "PowerShell(dotnet build Graphics_r1\\\\PileDesign.csproj -v q --nologo 2>$null | Select-Object -Last 3; \"exit=$LASTEXITCODE\"; if \\($LASTEXITCODE -eq 0\\) { dotnet test TestProject1\\\\TestProject1.csproj --nologo -v q 2>$null | Select-Object -Last 2; \"test exit=$LASTEXITCODE\" })",
+      "PowerShell($lines = [System.IO.File]::ReadAllLines\\(\"Graphics_r1\\\\Help\\\\help.html\"\\); for \\($i=8285; $i -le 8452; $i++\\) { $t = $lines[$i-1].Trim\\(\\); if \\($t -ne \"\"\\) { \"{0,5}: {1}\" -f $i, $t } })",
+      "PowerShell(dotnet build Graphics_r1\\\\PileDesign.csproj -v q --nologo 2>$null | Select-Object -Last 3; \"exit=$LASTEXITCODE\")",
+      "PowerShell(dotnet test TestProject1\\\\TestProject1.csproj --nologo -v q 2>$null | Select-Object -Last 2; \"exit=$LASTEXITCODE\")",
+      "PowerShell($log = Join-Path $env:LOCALAPPDATA \"PileDesign\\\\Logs\\\\PileDesign-$\\(Get-Date -Format yyyyMMdd\\).log\"; if \\(Test-Path $log\\) { \"size: $\\(\\(Get-Item $log\\).Length\\)\"; Get-Content $log -Tail 60 } else { \"not found: $log\"; Get-ChildItem \\(Join-Path $env:LOCALAPPDATA \"PileDesign\\\\Logs\"\\) | Select-Object -Last 5 })",
+      "PowerShell(git log --format=\"%h %ad %s\" --date=short 6ef2fdf..85cf5a7; \"---\"; git show -s --format=%B \\(git log --format=%h 6ef2fdf..85cf5a7 | Select-Object -Last 1\\))"
     ],
     "additionalDirectories": [
       "c:\\Users\\keisu\\source\\repos\\PileDesign_0",

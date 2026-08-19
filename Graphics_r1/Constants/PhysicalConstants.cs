@@ -66,6 +66,13 @@ public static class UnitConversion
 
     /// <summary>曲率 1/m → 1/mm (×0.001)</summary>
     public const double PER_M_TO_PER_MM = 0.001;
+
+    /// <summary>
+    /// 質量 t → 力 kN の変換係数（標準重力加速度 9.80665 m/s²）。
+    /// メーカーカタログが質量 [t/m] で与えられる製品（PHC節杭の標準質量など）を
+    /// 自重 [kN/m] に直すのに使う。
+    /// </summary>
+    public const double TON_TO_KN = 9.80665;
 }
 
 /// <summary>

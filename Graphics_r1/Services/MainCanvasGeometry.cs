@@ -29,6 +29,10 @@ namespace PileDesign.Services
 
         public PathGeometry PathGeoPileDias { get; set; } = new();
         public PathGeometry PathGeoPileDividedDias { get; set; } = new();
+        // PHC節杭 / PRC節杭 の節の稜線 (立上り開始・終了位置の楕円など)。
+        // 杭体の輪郭より細い線で描くため別パスに分けている。
+        public PathGeometry PathGeoPileNodeDetails { get; set; } = new();
+        public PathGeometry PathGeoPileDividedNodeDetails { get; set; } = new();
         public PathGeometry PathGeoPileToeInnerDashed { get; set; } = new(); // 根固め部内部の杭体（破線）
         public PathGeometry PathGeoPileToeInnerDashedDivided { get; set; } = new(); // 根固め部内部の杭体（破線・杭要素分割後）
 
@@ -123,6 +127,8 @@ namespace PileDesign.Services
             PathGeoPileDividedElems.Figures.Clear();
 
             PathGeoPileDias.Figures.Clear();
+            PathGeoPileNodeDetails.Figures.Clear();
+            PathGeoPileDividedNodeDetails.Figures.Clear();
             PathGeoPileDividedDias.Figures.Clear();
             PathGeoPileToeInnerDashed.Figures.Clear();
             PathGeoPileToeInnerDashedDivided.Figures.Clear();
@@ -376,6 +382,22 @@ namespace PileDesign.Services
                 Stroke = Brushes.SkyBlue,
                 StrokeThickness = pileStrokeThickness,
                 Data = PathGeoPileDividedDias,
+                Name = "Node"
+            });
+
+            // 節杭の節の稜線 (杭体輪郭より細い線)
+            canvas.Children.Add(new Path()
+            {
+                Stroke = Brushes.Orange,
+                StrokeThickness = pileStrokeThickness * 0.5,
+                Data = PathGeoPileNodeDetails,
+                Name = "Node"
+            });
+            canvas.Children.Add(new Path()
+            {
+                Stroke = Brushes.SkyBlue,
+                StrokeThickness = pileStrokeThickness * 0.5,
+                Data = PathGeoPileDividedNodeDetails,
                 Name = "Node"
             });
 

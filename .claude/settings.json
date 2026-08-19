@@ -9,7 +9,10 @@
       "Bash(awk 'NR==6957,NR==7430 {if \\(/-->/\\) {print NR\": \"$0; exit}}' Graphics_r1/Help/help.html)",
       "Bash(awk ' *)",
       "Bash(awk 'NR>=6171 && NR<=6900 && /<h[123]>/ {print NR\": \"$0}' Graphics_r1/Help/help.html)",
-      "Bash(awk 'NR>=6900 && NR<=8000 && /<h[123]>/ {print NR\": \"$0}' Graphics_r1/Help/help.html)"
+      "Bash(awk 'NR>=6900 && NR<=8000 && /<h[123]>/ {print NR\": \"$0}' Graphics_r1/Help/help.html)",
+      "PowerShell($log = Join-Path $env:LOCALAPPDATA \"PileDesign\\\\Logs\\\\PileDesign-$\\(Get-Date -Format yyyyMMdd\\).log\"; Get-Content $log -Tail 40 -Encoding UTF8)",
+      "PowerShell(dotnet tool install -g dotnet-dump 2>&1)",
+      "PowerShell($exe = \"C:\\\\Users\\\\keisu\\\\source\\\\repos\\\\PileDesign_0\\\\Graphics_r1\\\\bin\\\\Debug\\\\net8.0-windows10.0.19041.0\\\\PileDesign.exe\"; Start-Process -FilePath $exe -RedirectStandardError \"C:\\\\tmp\\\\PileDesign_stderr.txt\" -RedirectStandardOutput \"C:\\\\tmp\\\\PileDesign_stdout.txt\" -WorkingDirectory \\(Split-Path $exe\\); Start-Sleep -Seconds 3; Get-Process PileDesign -ErrorAction SilentlyContinue | Select-Object Id, MainWindowTitle)"
     ],
     "additionalDirectories": [
       "\\tmp"

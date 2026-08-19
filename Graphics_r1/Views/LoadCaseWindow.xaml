@@ -10,6 +10,7 @@
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:conv="clr-namespace:PileDesign.Converters"
+        xmlns:models="clr-namespace:PileDesign.Models.InputData"
         xmlns:controls="clr-namespace:WpfMath.Controls;assembly=WpfMath"
         d:DataContext="{d:DesignInstance Type=local:LoadCaseViewModel}"
         mc:Ignorable="d"
@@ -35,6 +36,21 @@
         <conv:DoubleEqualsToVisibilityConverter x:Key="DoubleEqualsToVisibilityConverter"/>
         <conv:DoubleNotEqualsToVisibilityConverter x:Key="DoubleNotEqualsToVisibilityConverter"/>
         <conv:LoadCaseLevelToColorConverter x:Key="LoadCaseLevelToColorConverter"/>
+        <conv:SoilNonlinearityModeToTextConverter x:Key="SoilNonlinearityModeToTextConverter"/>
+
+        <!-- 地盤非線形性 ComboBox: 3 段階 (線形 / kh 低減のみ / kh 低減 + py 頭打ち) 共通スタイル -->
+        <Style x:Key="SoilNonlinearityModeComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="ItemsSource" Value="{Binding Source={x:Static models:SoilNonlinearityModes.All}}"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="ItemTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Converter={StaticResource SoilNonlinearityModeToTextConverter}}"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <!-- FormulaControlに適用するスタイルを定義 -->
         <Style x:Key="FormulaControlStyle" TargetType="controls:FormulaControl">
@@ -552,7 +568,7 @@
                                         </DataGridTextColumn.CellStyle>
                                     </DataGridTextColumn>
 
-                                    <DataGridTemplateColumn Width="*">
+                                    <DataGridTemplateColumn Width="*" MinWidth="150">
                                         <DataGridTemplateColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="地盤" TextAlignment="Center"/>
@@ -562,10 +578,10 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel>
-                                                    <CheckBox IsChecked="{Binding IsSoilNonLinear, UpdateSourceTrigger=PropertyChanged}"
-                                                        HorizontalAlignment="Center" Height="18"/>
-                                                    <Button x:Name="CommonLoadCase1IsSoilNonLinearButton" Content="適用"
-                                                        Command="{Binding DataContext.LoadCase1CommonIsSoilNonLinearCommand, 
+                                                    <ComboBox Style="{StaticResource SoilNonlinearityModeComboBoxStyle}"
+                                                        SelectedItem="{Binding SoilNonlinearityMode, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <Button x:Name="CommonLoadCase1SoilNonlinearityModeButton" Content="適用"
+                                                        Command="{Binding DataContext.LoadCase1CommonSoilNonlinearityModeCommand,
                                                         RelativeSource={RelativeSource AncestorType=Window}}"/>
                                                 </StackPanel>
                                             </DataTemplate>
@@ -797,14 +813,20 @@
                                         </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
 
-                                    <DataGridCheckBoxColumn Binding="{Binding IsSoilNonLinear, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="*">
-                                        <DataGridCheckBoxColumn.Header>
+                                    <DataGridTemplateColumn Width="*" MinWidth="150" SortMemberPath="SoilNonlinearityMode">
+                                        <DataGridTemplateColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="地盤" TextAlignment="Center"/>
                                                 <TextBlock Text="非線形性" TextAlignment="Center"/>
                                             </StackPanel>
-                                        </DataGridCheckBoxColumn.Header>
-                                    </DataGridCheckBoxColumn>
+                                        </DataGridTemplateColumn.Header>
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ComboBox Style="{StaticResource SoilNonlinearityModeComboBoxStyle}"
+                                                    SelectedItem="{Binding SoilNonlinearityMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
 
                                     <DataGridCheckBoxColumn Binding="{Binding IsPileNonLinear, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="*">
                                         <DataGridCheckBoxColumn.Header>
@@ -1212,7 +1234,7 @@
                                         </DataGridTextColumn.CellStyle>
                                     </DataGridTextColumn>
 
-                                    <DataGridTemplateColumn Width="*">
+                                    <DataGridTemplateColumn Width="*" MinWidth="150">
                                         <DataGridTemplateColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="地盤" TextAlignment="Center"/>
@@ -1222,9 +1244,10 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel>
-                                                    <CheckBox IsChecked="{Binding IsSoilNonLinear, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" Height="18"/>
-                                                    <Button x:Name="CommonLoadCase2IsSoilNonLinearButton" Content="適用"
-                                                        Command="{Binding DataContext.LoadCase2CommonIsSoilNonLinearCommand, 
+                                                    <ComboBox Style="{StaticResource SoilNonlinearityModeComboBoxStyle}"
+                                                        SelectedItem="{Binding SoilNonlinearityMode, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <Button x:Name="CommonLoadCase2SoilNonlinearityModeButton" Content="適用"
+                                                        Command="{Binding DataContext.LoadCase2CommonSoilNonlinearityModeCommand,
                                                         RelativeSource={RelativeSource AncestorType=Window}}"/>
                                                 </StackPanel>
                                             </DataTemplate>
@@ -1456,14 +1479,20 @@
                                         </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
 
-                                    <DataGridCheckBoxColumn Binding="{Binding IsSoilNonLinear, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="*">
-                                        <DataGridCheckBoxColumn.Header>
+                                    <DataGridTemplateColumn Width="*" MinWidth="150" SortMemberPath="SoilNonlinearityMode">
+                                        <DataGridTemplateColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="地盤" TextAlignment="Center"/>
                                                 <TextBlock Text="非線形性" TextAlignment="Center"/>
                                             </StackPanel>
-                                        </DataGridCheckBoxColumn.Header>
-                                    </DataGridCheckBoxColumn>
+                                        </DataGridTemplateColumn.Header>
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ComboBox Style="{StaticResource SoilNonlinearityModeComboBoxStyle}"
+                                                    SelectedItem="{Binding SoilNonlinearityMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
 
                                     <DataGridCheckBoxColumn Binding="{Binding IsPileNonLinear, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="*">
                                         <DataGridCheckBoxColumn.Header>

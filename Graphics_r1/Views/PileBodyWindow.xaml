@@ -401,6 +401,7 @@
                                     <TextBlock>
                                         <Run>場所打ちコンクリート杭：先端径</Run><LineBreak/>
                                         <Run>埋込み杭：根固め部径</Run><LineBreak/>
+                                        <Run>埋込み杭（Smart-MAGNUM）：拡大根固め部径 Den</Run><LineBreak/>
                                         <Run>回転貫入杭：羽根径</Run><LineBreak/>
                                         <Run>打込み杭：軸径</Run>
                                     </TextBlock>
@@ -461,6 +462,113 @@
                                 </Binding>
                             </TextBox.Text>
                         </TextBox>
+                    </StackPanel>
+
+                    <!-- Smart-MAGNUM 工法（ジャパンパイル）専用入力。
+                         拡大根固め部径 Den は上の「拡大根固め部径Den (mm)」欄（PileToeDia）を使う。
+                         節部径 Don / Dos は杭区間の断面から自動導出するため入力欄を設けていない。 -->
+                    <StackPanel Visibility="{Binding PileBody.PileConstructionType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='埋込み杭（Smart-MAGNUM）'}">
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="杭下拡大根固め部長さLL (m)" Width="200"/>
+                            <TextBox Width="100" HorizontalContentAlignment="Right"
+                                     PreviewKeyDown="TextBox_PreviewKeyDown"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                                <TextBox.Text>
+                                    <Binding Path="PileBody.SmartMagnumLL" UpdateSourceTrigger="LostFocus"
+                                             ValidatesOnDataErrors="True" StringFormat="N2">
+                                        <Binding.ValidationRules>
+                                            <common:RangeValidationRule Min="0" Max="2" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run>杭先端から下方への拡大根固め部の長さ。適用範囲 0〜2m。</Run><LineBreak/>
+                                            <Run>先端支持力係数 α の LL' は LL ≤ 0.5m のとき 0 になります。</Run>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="杭周面部の掘削径Des (mm)" Width="200"/>
+                            <TextBox Width="100" HorizontalContentAlignment="Right"
+                                     PreviewKeyDown="TextBox_PreviewKeyDown"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                                <TextBox.Text>
+                                    <Binding Path="PileBody.SmartMagnumDes" UpdateSourceTrigger="LostFocus"
+                                             ValidatesOnDataErrors="True" StringFormat="N1">
+                                        <Binding.ValidationRules>
+                                            <common:RangeValidationRule Min="0" Max="2500" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run>拡翼掘削部の掘削径。0 は拡大掘削なし（拡大比 ωs = 1.00）を意味します。</Run><LineBreak/>
+                                            <Run>拡大比 ωs = Des / Dss は節杭の区間にのみ効きます。</Run>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="拡翼掘削部長さ (m)" Width="200"/>
+                            <TextBox Width="100" HorizontalContentAlignment="Right"
+                                     PreviewKeyDown="TextBox_PreviewKeyDown"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                                <TextBox.Text>
+                                    <Binding Path="PileBody.SmartMagnumWingLength" UpdateSourceTrigger="LostFocus"
+                                             ValidatesOnDataErrors="True" StringFormat="N2">
+                                        <Binding.ValidationRules>
+                                            <common:RangeValidationRule Min="0" Max="70" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run>杭下拡大根固め部長さ LL を含む長さで、杭下拡大根固め部の下端から上方へ測ります。</Run><LineBreak/>
+                                            <Run>この範囲に掛かる杭区間の周面摩擦にのみ拡大比 ωs が適用されます。</Run>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="周面強化型" Width="200"/>
+                            <CheckBox IsChecked="{Binding PileBody.SmartMagnumIsReinforcedCircum}"
+                                      VerticalAlignment="Center">
+                                <CheckBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run>チェックなし＝標準型、チェックあり＝周面強化型。</Run><LineBreak/>
+                                            <Run>周面摩擦力係数 β（砂質・礫質）と γ（粘土質）が切り替わります。</Run>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </CheckBox.ToolTip>
+                            </CheckBox>
+                        </StackPanel>
+
+                        <!-- 記号の定義・適用範囲・計算例は工法カタログ (ジャパンパイル) を参照 -->
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Width="200"/>
+                            <TextBlock VerticalAlignment="Center">
+                                <Hyperlink NavigateUri="https://www.japanpile.co.jp/method/pdf/smart-magnum.pdf"
+                                           RequestNavigate="Hyperlink_RequestNavigate"
+                                           ToolTip="ジャパンパイルの Smart-MAGNUM 工法カタログ (PDF) を既定のブラウザで開きます">
+                                    <Run Text="工法カタログ (PDF) を開く"/>
+                                </Hyperlink>
+                            </TextBlock>
+                        </StackPanel>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileBodyType,

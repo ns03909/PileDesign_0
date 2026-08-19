@@ -6,6 +6,7 @@ using PileDesign.ViewModels;
 using ScottPlot.Plottables;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -173,24 +174,31 @@ namespace PileDesign.Views
 
         private PaneFloatMaximizer? _paneMaximizer;
 
+        /// <summary>
+        /// 断面タイプに対応する製品 ComboBox を返す。対応が無い断面タイプでは null。
+        /// 分岐を 1 箇所にまとめ、断面タイプを増やしたときの追随漏れを防ぐ。
+        /// </summary>
+        private (ComboBox Box, ObservableCollection<string> Items)? GetPrecastPileComboBox(string pileSectionType)
+            => pileSectionType switch
+            {
+                PileTypeNames.Phc => (ComboBoxPHCPileType, PileSection.PHCOption),
+                PileTypeNames.PhcNodular => (ComboBoxNodularPileType, PileSection.NodularPileOption),
+                PileTypeNames.PrcNodular => (ComboBoxNodularPrcPileType, PileSection.NodularPrcOption),
+                PileTypeNames.PrcNodularPhcPart => (ComboBoxNodularPrcPhcPartPileType, PileSection.NodularPrcPhcPartOption),
+                PileTypeNames.BfsHead => (ComboBoxBfsHeadPileType, PileSection.BfsHeadOption),
+                PileTypeNames.BfsTip => (ComboBoxBfsTipPileType, PileSection.BfsTipOption),
+                PileTypeNames.Prc => (ComboBoxPRCPileType, PileSection.PRCOption),
+                PileTypeNames.Sc => (ComboBoxSCPileType, PileSection.SCOption),
+                _ => null
+            };
+
         private void SetComboBoxSelectedItem()
         {
-            if (_viewModel.PileSection.PileSectionType == PileTypeNames.Phc)
-            {
-                ComboBoxPHCPileType.ItemsSource = PileSection.PHCOption;
-                ComboBoxPHCPileType.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
-            }
-            else if (_viewModel.PileSection.PileSectionType == PileTypeNames.Prc)
-            {
-                ComboBoxPRCPileType.ItemsSource = PileSection.PRCOption;
-                ComboBoxPRCPileType.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
-            }
-            else if (_viewModel.PileSection.PileSectionType == PileTypeNames.Sc)
-            {
-                ComboBoxSCPileType.ItemsSource = PileSection.SCOption;
-                ComboBoxSCPileType.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
-            }
+            var target = GetPrecastPileComboBox(_viewModel.PileSection.PileSectionType);
+            if (target == null) return;
 
+            target.Value.Box.ItemsSource = target.Value.Items;
+            target.Value.Box.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
         }
 
         // キャンバスのサイズが変更されたときに描画を行うメソッド
@@ -254,19 +262,16 @@ namespace PileDesign.Views
             if (DataContext is not PileSectionViewModel viewModel) return;
             var section = viewModel.PileSection;
             if (section == null) return;
-            if (section.PileSectionType != PileTypeNames.Phc
-                && section.PileSectionType != PileTypeNames.Prc
-                && section.PileSectionType != PileTypeNames.Sc) return;
+            // 対応する製品 ComboBox が無い断面タイプ (鋼管部など) は対象外。
+            // 旧実装は最後の else で無条件に SC の ComboBox を触っており、
+            // 断面タイプを増やすと誤った ComboBox に書き込む構造だった。
+            var target = GetPrecastPileComboBox(section.PileSectionType);
+            if (target == null) return;
 
             section.RecalculateSelectedPrecastPile();
 
             // 表示中のタイプ別 ComboBox の SelectedItem を同期（PileSectionWindow_Loaded と同じ方式）
-            if (section.PileSectionType == PileTypeNames.Phc)
-                ComboBoxPHCPileType.SelectedItem = section.SelectedPrecastPile.Name;
-            else if (section.PileSectionType == PileTypeNames.Prc)
-                ComboBoxPRCPileType.SelectedItem = section.SelectedPrecastPile.Name;
-            else
-                ComboBoxSCPileType.SelectedItem = section.SelectedPrecastPile.Name;
+            target.Value.Box.SelectedItem = section.SelectedPrecastPile.Name;
 
             viewModel.RedrawShapes();
             viewModel.ChartUpdate();

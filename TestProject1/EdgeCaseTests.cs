@@ -734,9 +734,17 @@ namespace TestProject1
 
             Assert.AreEqual(-pPos, pNeg, 1e-9,
                 $"GetP は奇関数であるべき: p({yPos})={pPos}, p({yNeg})={pNeg}");
-            // 両側とも py 以下に clamp されているはず
-            Assert.IsTrue(Math.Abs(pPos) <= py + 1e-9, $"|p(+y)| が py={py} を超過: {pPos}");
-            Assert.IsTrue(Math.Abs(pNeg) <= py + 1e-9, $"|p(-y)| が py={py} を超過: {pNeg}");
+
+            // GetP は FEM 本体 (GetKh) と同じ式を返すため、降伏後は完全に平坦ではなく
+            // PostYieldTangentRatio (= 0.002) の微小勾配で py を僅かに上回る。
+            // 超過量の理論値: Δp/py = ratio × (|y|/yy − 1) / 2  → |y|=5yy で 0.4%
+            const double postYieldRatio = 0.002;
+            double expectedExcess = py * postYieldRatio * (5.0 - 1.0) / 2.0;
+            Assert.AreEqual(py + expectedExcess, Math.Abs(pPos), py * 1e-6,
+                $"降伏後 p は py + 微小勾配分になるはず (py={py})");
+            Assert.AreEqual(py + expectedExcess, Math.Abs(pNeg), py * 1e-6);
+            // 実務上は「py で頭打ち」とみなせる範囲 (1% 未満) に収まること
+            Assert.IsTrue(Math.Abs(pPos) <= py * 1.01, $"|p(+y)| の py 超過が 1% を超えた: {pPos} vs py={py}");
         }
 
         [TestMethod]

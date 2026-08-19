@@ -1,4 +1,5 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
+using PileDesign.Constants;
 using PileDesign.FEM;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,8 @@ using System.Text.Json.Serialization;
 namespace PileDesign.Models.InputData
 {
     // SoilPileクラス
-    public class SoilPile : BaseModel, IJsonOnDeserializing, IJsonOnDeserialized
+    // Smart-MAGNUM 工法の支持力算定は SoilPile.SmartMagnum.cs に分離している。
+    public partial class SoilPile : BaseModel, IJsonOnDeserializing, IJsonOnDeserialized
     {
         public int No { get; set; }
         //private readonly InputModel inputModel = InputModel.Instance;
@@ -203,6 +205,10 @@ namespace PileDesign.Models.InputData
             //}
             get
             {
+                // Smart-MAGNUM は Nu（上方2m）と Nl（下方 LL+Den+Don）の重み付き平均で、
+                // 単純平均ではないため別経路で算定する。
+                if (IsSmartMagnum) return SmartMagnumPileToeNValue;
+
                 var groundMassesData = GroundInput.GroundMassesData;
                 var relevantMasses = groundMassesData
                     .Where(data => data.AltitudeDepth <= PileToeNValueAverageRangeUpperAltitude &&
@@ -249,15 +255,21 @@ namespace PileDesign.Models.InputData
 
 
         // 杭先端N値平均範囲上端
+        // Smart-MAGNUM は Nu の範囲（杭先端から上方 2m）。一般式は杭先端 +D。
         public double PileToeNValueAverageRangeUpperAltitude
         {
-            get => PileBottomAltitude + D;
+            get => IsSmartMagnum
+                ? PileBottomAltitude + SmartMagnumNuRangeAboveToe
+                : PileBottomAltitude + D;
         }
 
         // 杭先端N値平均範囲下端
+        // Smart-MAGNUM は Nl の範囲（杭先端から下方 LL+Den+Don）。一般式は杭先端 -D。
         public double PileToeNValueAverageRangeLowerAltitude
         {
-            get => PileBottomAltitude - D;
+            get => IsSmartMagnum
+                ? PileBottomAltitude - (SmartMagnumLL + SmartMagnumDen + SmartMagnumDon)
+                : PileBottomAltitude - D;
         }
 
         // 杭先端粘着力
@@ -335,11 +347,16 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _dp, value);
         }
 
-        // 杭先端面積 m2
+        // 杭先端面積 m2（構造先端径 D = 杭先端径/根固め部径 基準）
         public double Ap => Math.PI * Math.Pow(D, 2) * 0.25;
 
+        // 先端支持力の算定に使う面積 m2。
+        // Smart-MAGNUM は「根固め部に位置する節杭の節部有効断面積 Ap = π·Don²/4」であり、
+        // 姿図・N値範囲に使う根固め部径 Den 基準の Ap とは別物。
+        public double ApBearing => IsSmartMagnum ? SmartMagnumAp : Ap;
+
         // 極限先端支持力 kN
-        public double Rpu => Qpu * Ap;
+        public double Rpu => Qpu * ApBearing;
 
         // 極限周面抵抗力 kN
         private double _rfu;
@@ -754,35 +771,39 @@ namespace PileDesign.Models.InputData
 
             Qpu = PileConstructionType switch
             {
-                "場所打ちコンクリート杭" => PileToeGranularityClass switch
+                // Smart-MAGNUM: Rp = α·N·Ap（Ap は節部径 Don 基準）なので、
+                // 支持力度としては α·N を持たせる。面積側は ApBearing が Don 基準に切り替わる。
+                PileConstructionTypeNames.SmartMagnum =>
+                    SmartMagnumAlphaValue * SmartMagnumPileToeNValue,
+                PileConstructionTypeNames.Insitu => PileToeGranularityClass switch
                 {
                     "砂質土" => Math.Min(120 * PileToeNValue, 7500),
                     "礫質土" => Math.Min(120 * PileToeNValue, 7500),
                     "粘性土" => Math.Min(6 * PileToeCohesive, 7500),
                     _ => Qpu
                 },
-                "埋込み杭（プレボーリング）" or "埋込み杭（プレボーリング杭）" or "埋込み杭（プレポーリング）" => PileToeGranularityClass switch
+                _ when PileConstructionTypeNames.IsPreboring(PileConstructionType) => PileToeGranularityClass switch
                 {
                     "砂質土" => Math.Min(150 * PileToeNValue, 9000),
                     "礫質土" => Math.Min(150 * PileToeNValue, 9000),
                     "粘性土" => Math.Min(150 * PileToeNValue, 9000),
                     _ => Qpu
                 },
-                "埋込み杭（中掘り）" => PileToeGranularityClass switch
+                PileConstructionTypeNames.Chubori => PileToeGranularityClass switch
                 {
                     "砂質土" => Math.Min(150 * PileToeNValue, 9000),
                     "礫質土" => Math.Min(150 * PileToeNValue, 9000),
                     "粘性土" => Math.Min(6 * PileToeCohesive, 9000),
                     _ => Qpu
                 },
-                "回転貫入杭" => PileToeGranularityClass switch
+                PileConstructionTypeNames.Rotary => PileToeGranularityClass switch
                 {
                     "砂質土" => Math.Min(150 * PileToeEta * PileToeNValue, 9000 * PileToeEta),
                     "礫質土" => Math.Min(150 * PileToeEta * PileToeNValue, 9000 * PileToeEta),
                     "粘性土" => Math.Min(150 * PileToeEta * PileToeNValue, 9000 * PileToeEta),
                     _ => Qpu
                 },
-                "打込み杭" => PileToeGranularityClass switch
+                PileConstructionTypeNames.Driven => PileToeGranularityClass switch
                 {
                     "砂質土" => Math.Min(3 * PileToeEta * PileToeNValue, 18000),
                     "礫質土" => Math.Min(3 * PileToeEta * PileToeNValue, 18000),
@@ -792,14 +813,50 @@ namespace PileDesign.Models.InputData
                 _ => Qpu
             };
 
-            // 沈下検討用極限先端支持力度をデフォルトで極限先端支持力度と同じ値に設定
-            SettleQpu = Qpu;
+            if (IsSmartMagnum)
+            {
+                // 沈下曲線の極限先端支持力には Smart-MAGNUM の極限先端支持力そのものを使う。
+                // 曲線の変位スケール 0.1·Dp には球根が地盤を支える実態に合わせて根固め部径 Den を
+                // 使うため、Dp 基準の面積 SettleAp で逆算し SettleRpu == Rpu を厳密に成立させる。
+                // （α·N をそのまま Den 面積に掛けると球根径基準で過大評価になる）
+                Dp = PileBodyInput.PileToeDia;
+                PileBodyInput.SettlePileToeDia = Dp; // 沈下ウィンドウの表示と一致させる
+                SettleQpu = SettleAp > 0 ? Rpu / SettleAp : 0;
+            }
+            else
+            {
+                // 沈下検討用極限先端支持力度をデフォルトで極限先端支持力度と同じ値に設定
+                SettleQpu = Qpu;
+            }
         }
 
         // 杭周面抵抗プロパティの更新メソッド
         private void UpdatePileCircumVerticalProperties()
         {
             if (PileCircumVerticals == null) return;
+
+            if (IsSmartMagnum)
+            {
+                // τ2 / τT は工法別評定式で決まる。τ1 / S1 / S2 はカタログに規定が無いため
+                // 土質別の既存値をそのまま使う（下のループで設定される）。
+                ApplySmartMagnumCircumProperties();
+                ApplySmartMagnumCircumExclusion();
+
+                foreach (var pcv in PileCircumVerticals)
+                {
+                    (pcv.Tau1, pcv.S1, pcv.S2) = pcv.GroundLayer.GranularityClass switch
+                    {
+                        "砂質土" => (0.8 * pcv.Tau2, 5.0, 20.0),
+                        "礫質土" => (0.7 * pcv.Tau2, 10.0, 30.0),
+                        "粘性土" => (0.8 * pcv.Tau2, 3.0, 10.0),
+                        _ => (pcv.Tau1, pcv.S1, pcv.S2)
+                    };
+                }
+                return;
+            }
+
+            ResetCircumOverrides();
+
             foreach (var pileCircumVertical in PileCircumVerticals)
             {
                 var granularityClass = pileCircumVertical.GroundLayer.GranularityClass;
@@ -808,35 +865,35 @@ namespace PileDesign.Models.InputData
 
                 pileCircumVertical.Tau2 = PileConstructionType switch
                 {
-                    "場所打ちコンクリート杭" => granularityClass switch
+                    PileConstructionTypeNames.Insitu => granularityClass switch
                     {
                         "砂質土" => Math.Min(3.3 * nValue, 165),
                         "礫質土" => Math.Min(3.3 * nValue, 165),
                         "粘性土" => Math.Min(cohesive, 100),
                         _ => pileCircumVertical.Tau2
                     },
-                    "埋込み杭（プレボーリング）" or "埋込み杭（プレボーリング杭）" or "埋込み杭（プレポーリング）" => granularityClass switch
+                    _ when PileConstructionTypeNames.IsPreboring(PileConstructionType) => granularityClass switch
                     {
                         "砂質土" => Math.Min(2.5 * nValue, 125),
                         "礫質土" => Math.Min(2.5 * nValue, 125),
                         "粘性土" => Math.Min(cohesive, 125),
                         _ => pileCircumVertical.Tau2
                     },
-                    "埋込み杭（中掘り）" => granularityClass switch
+                    PileConstructionTypeNames.Chubori => granularityClass switch
                     {
                         "砂質土" => Math.Min(1.5 * nValue, 75),
                         "礫質土" => Math.Min(1.5 * nValue, 75),
                         "粘性土" => Math.Min(0.4 * cohesive, 50),
                         _ => pileCircumVertical.Tau2
                     },
-                    "回転貫入杭" => granularityClass switch
+                    PileConstructionTypeNames.Rotary => granularityClass switch
                     {
                         "砂質土" => Math.Min(2.0 * nValue, 100),
                         "礫質土" => Math.Min(2.0 * nValue, 100),
                         "粘性土" => Math.Min(0.5 * cohesive, 62.5),
                         _ => pileCircumVertical.Tau2
                     },
-                    "打込み杭" => granularityClass switch
+                    PileConstructionTypeNames.Driven => granularityClass switch
                     {
                         "砂質土" => Math.Min(2.0 * nValue, 100),
                         "礫質土" => Math.Min(2.0 * nValue, 100),

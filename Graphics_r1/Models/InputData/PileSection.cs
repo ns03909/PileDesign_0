@@ -1,4 +1,4 @@
-using PileDesign.Constants;
+﻿using PileDesign.Constants;
 using PileDesign.Models.PileLibrary;
 using System;
 using System.Collections.Generic;
@@ -13,10 +13,31 @@ namespace PileDesign.Models.InputData
     public class PileSection : BaseModel
     {
         // 静的キャッシュ（CSVデータは一度だけ読み込む）
-        private static readonly Lazy<List<PrecastPile>> _cachedPHCs = new(() => LoadPrecastPilesFromCsv("pile_library_PHC.csv"));
-        private static readonly Lazy<List<PrecastPile>> _cachedPRCs = new(() => LoadPrecastPilesFromCsv("pile_library_PRC.csv"));
-        private static readonly Lazy<List<PrecastPile>> _cachedSCs = new(() => LoadPrecastPilesFromCsv("pile_library_SC.csv"));
+        // PHC杭 は JIS 汎用ライブラリに加え、メーカー製品ライブラリを連結する。
+        // ストレート杭は断面の挙動が PHC杭 と完全に同じなので、断面タイプを増やさず
+        // 同じ製品一覧に並べる (節杭のように形状・自重が違うものだけ断面タイプを分ける)。
+        private static readonly Lazy<List<PrecastPile>> _cachedPHCs = new(() =>
+            [.. LoadPrecastPilesFromCsv("pile_library_PHC.csv"),
+             .. LoadPrecastPilesFromCsv("pile_library_PHC_MSHI105.csv")]);
+        // PRC杭 も PHC杭 / SC杭 と同様、JIS 汎用ライブラリにメーカー製品ライブラリを連結する。
+        private static readonly Lazy<List<PrecastPile>> _cachedPRCs = new(() =>
+            [.. LoadPrecastPilesFromCsv("pile_library_PRC.csv"),
+             .. LoadPrecastPilesFromCsv("pile_library_PRC_DAM105.csv")]);
+        // SC杭 も PHC杭 と同様、JIS 汎用ライブラリにメーカー製品ライブラリを連結する。
+        private static readonly Lazy<List<PrecastPile>> _cachedSCs = new(() =>
+            [.. LoadPrecastPilesFromCsv("pile_library_SC.csv"),
+             .. LoadPrecastPilesFromCsv("pile_library_SC_HISC105.csv")]);
         private static readonly Lazy<List<SteelPipePile>> _cachedSteelPipePiles = new(() => LoadSteelPipePilesFromCsv("pile_library_SteelPile.csv"));
+        // 節杭は Do/質量など既製杭 DTO に無い列を持つため専用ローダーで読み、
+        // 断面転記の直前に PrecastPile へ詰め替える (NodularPile.ToPrecastPile)。
+        private static readonly Lazy<List<NodularPile>> _cachedNodularPiles = new(LoadNodularPiles);
+        private static readonly Lazy<List<NodularPileHead>> _cachedNodularPileHeads = new(LoadNodularPileHeads);
+        // PRC節杭は 1 製品が PRC部 / PHC部 の 2 断面を持つので、同じライブラリから
+        // 詰め替え先を 2 系統作る (ToPrecastPile(phcPart:) の引数だけが違う)。
+        private static readonly Lazy<List<NodularPrcPile>> _cachedNodularPrcPiles = new(LoadNodularPrcPiles);
+        private static readonly Lazy<List<NodularPrcPileHead>> _cachedNodularPrcPileHeads = new(LoadNodularPrcPileHeads);
+        // BF.S は 1 製品が頭部軸部 / 先端軸部 の 2 断面を持つ (外径・肉厚が違う)。
+        private static readonly Lazy<List<BfsPile>> _cachedBfsPiles = new(LoadBfsPiles);
 
         // オプションリストも静的キャッシュ（一度だけ構築）
         private static readonly Lazy<ObservableCollection<string>> _cachedPHCOption = new(() =>
@@ -27,6 +48,27 @@ namespace PileDesign.Models.InputData
             new ObservableCollection<string>(_cachedSCs.Value.Select(p => p.Name)));
         private static readonly Lazy<ObservableCollection<string>> _cachedSteelPipeOption = new(() =>
             new ObservableCollection<string>(_cachedSteelPipePiles.Value.Select(p => $"{p.Diameter}x{p.Thickness}")));
+        private static readonly Lazy<ObservableCollection<string>> _cachedNodularPileOption = new(() =>
+            new ObservableCollection<string>(_cachedNodularPiles.Value.Select(p => p.DisplayName)));
+        private static readonly Lazy<ObservableCollection<string>> _cachedNodularPrcOption = new(() =>
+            new ObservableCollection<string>(_cachedNodularPrcPiles.Value.Select(p => p.DisplayName)));
+        private static readonly Lazy<ObservableCollection<string>> _cachedNodularPrcPhcPartOption = new(() =>
+            new ObservableCollection<string>(_cachedNodularPrcPiles.Value.Select(p => p.PhcPartDisplayName)));
+        private static readonly Lazy<ObservableCollection<string>> _cachedBfsHeadOption = new(() =>
+            new ObservableCollection<string>(_cachedBfsPiles.Value.Select(p => p.DisplayName)));
+        private static readonly Lazy<ObservableCollection<string>> _cachedBfsTipOption = new(() =>
+            new ObservableCollection<string>(_cachedBfsPiles.Value.Select(p => p.TipDisplayName)));
+        // 既製杭と同じ転記処理に載せるための詰め替え済みリスト (毎回変換しないようキャッシュ)
+        private static readonly Lazy<List<PrecastPile>> _cachedNodularAsPrecast = new(() =>
+            [.. _cachedNodularPiles.Value.Select(p => p.ToPrecastPile())]);
+        private static readonly Lazy<List<PrecastPile>> _cachedNodularPrcAsPrecast = new(() =>
+            [.. _cachedNodularPrcPiles.Value.Select(p => p.ToPrecastPile())]);
+        private static readonly Lazy<List<PrecastPile>> _cachedNodularPrcPhcPartAsPrecast = new(() =>
+            [.. _cachedNodularPrcPiles.Value.Select(p => p.ToPrecastPile(phcPart: true))]);
+        private static readonly Lazy<List<PrecastPile>> _cachedBfsHeadAsPrecast = new(() =>
+            [.. _cachedBfsPiles.Value.Select(p => p.ToPrecastPile())]);
+        private static readonly Lazy<List<PrecastPile>> _cachedBfsTipAsPrecast = new(() =>
+            [.. _cachedBfsPiles.Value.Select(p => p.ToPrecastPile(tipPart: true))]);
 
         private static List<PrecastPile> LoadPrecastPilesFromCsv(string fileName)
         {
@@ -39,6 +81,71 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 Serilog.Log.Debug($"[PileSection] 杭ライブラリ読込失敗 ({fileName}): {ex.Message}");
+                return [];
+            }
+        }
+
+        private static List<NodularPile> LoadNodularPiles()
+        {
+            try
+            {
+                return NodularPileLoader.LoadDefault() ?? [];
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Debug($"[PileSection] 節杭ライブラリ読込失敗: {ex.Message}");
+                return [];
+            }
+        }
+
+        private static List<NodularPileHead> LoadNodularPileHeads()
+        {
+            try
+            {
+                return NodularPileLoader.LoadDefaultHeads() ?? [];
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Debug($"[PileSection] 節杭拡頭形状ライブラリ読込失敗: {ex.Message}");
+                return [];
+            }
+        }
+
+        private static List<NodularPrcPile> LoadNodularPrcPiles()
+        {
+            try
+            {
+                return NodularPrcPileLoader.LoadDefault() ?? [];
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Debug($"[PileSection] PRC節杭ライブラリ読込失敗: {ex.Message}");
+                return [];
+            }
+        }
+
+        private static List<NodularPrcPileHead> LoadNodularPrcPileHeads()
+        {
+            try
+            {
+                return NodularPrcPileLoader.LoadDefaultHeads() ?? [];
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Debug($"[PileSection] PRC節杭拡頭形状ライブラリ読込失敗: {ex.Message}");
+                return [];
+            }
+        }
+
+        private static List<BfsPile> LoadBfsPiles()
+        {
+            try
+            {
+                return BfsPileLoader.LoadDefault() ?? [];
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Debug($"[PileSection] BF.S パイルライブラリ読込失敗: {ex.Message}");
                 return [];
             }
         }
@@ -419,9 +526,30 @@ namespace PileDesign.Models.InputData
                 (PileTypeNames.PrecastConcrete, PileTypeNames.Phc) =>
                     $"PHC|{PileDiameter}|{ConcreteThickness}|{ConcreteFc}|{TendonDp}|{TendonAp}|{TendonSigmaPy}|{TendonSigmaPu}|{Prestress}|N={axialNRounded}",
 
+                // PHC節杭。断面耐力は軸部基準で PHC杭 と同一だが、キーは別プレフィクスにして
+                // 「どちらの断面のキャッシュか」を追えるようにする (値が同じでも衝突はしない)。
+                (PileTypeNames.PrecastConcrete, PileTypeNames.PhcNodular) =>
+                    $"NPH|{PileDiameter}|{ConcreteThickness}|{ConcreteFc}|{TendonDp}|{TendonAp}|{TendonSigmaPy}|{TendonSigmaPu}|{Prestress}|N={axialNRounded}",
+
+                // PRC節杭 (PHC部)。断面耐力は PHC杭 と同一だが、キーは別プレフィクスにする。
+                (PileTypeNames.PrecastConcrete, PileTypeNames.PrcNodularPhcPart) =>
+                    $"NPRC-PHC|{PileDiameter}|{ConcreteThickness}|{ConcreteFc}|{TendonDp}|{TendonAp}|{TendonSigmaPy}|{TendonSigmaPu}|{Prestress}|N={axialNRounded}",
+
+                // BF.S (頭部厚型節付き杭)。断面耐力は PHC杭 と同一だが、
+                // 頭部軸部と先端軸部で外径・肉厚・σce が違うのでキーも分ける。
+                (PileTypeNames.PrecastConcrete, PileTypeNames.BfsHead) =>
+                    $"BFS-HEAD|{PileDiameter}|{ConcreteThickness}|{ConcreteFc}|{TendonDp}|{TendonAp}|{TendonSigmaPy}|{TendonSigmaPu}|{Prestress}|N={axialNRounded}",
+
+                (PileTypeNames.PrecastConcrete, PileTypeNames.BfsTip) =>
+                    $"BFS-TIP|{PileDiameter}|{ConcreteThickness}|{ConcreteFc}|{TendonDp}|{TendonAp}|{TendonSigmaPy}|{TendonSigmaPu}|{Prestress}|N={axialNRounded}",
+
                 // PRC杭
                 (PileTypeNames.PrecastConcrete, PileTypeNames.Prc) =>
                     $"PRC|{PileDiameter}|{ConcreteThickness}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|{TendonDp}|{TendonAp}|{TendonSigmaPy}|{TendonSigmaPu}|{Prestress}|N={axialNRounded}",
+
+                // PRC節杭 (PRC部)。断面耐力は PRC杭 と同一だが、キーは別プレフィクスにする。
+                (PileTypeNames.PrecastConcrete, PileTypeNames.PrcNodular) =>
+                    $"NPRC|{PileDiameter}|{ConcreteThickness}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|{TendonDp}|{TendonAp}|{TendonSigmaPy}|{TendonSigmaPu}|{Prestress}|N={axialNRounded}",
 
                 // SC杭
                 (PileTypeNames.PrecastConcrete, PileTypeNames.Sc) =>
@@ -749,9 +877,19 @@ namespace PileDesign.Models.InputData
                     PileTypeNames.PrecastConcrete,
                     PileTypeNames.SteelPipe
                 };
-                var safeValue = string.IsNullOrWhiteSpace(value) || !validTypes.Contains(value)
+                bool isUnknown = !string.IsNullOrWhiteSpace(value) && !validTypes.Contains(value);
+                var safeValue = string.IsNullOrWhiteSpace(value) || isUnknown
                     ? validTypes[0]
                     : value;
+
+                // PileSectionType 側と同じ理由 (無言のデータ破損を避ける) でログに残す
+                if (isUnknown)
+                {
+                    Serilog.Log.Warning(
+                        "[PileSection] 未知の杭体タイプ '{Unknown}' を '{Fallback}' に差し替えました。" +
+                        "杭種を追加した場合は PileSection.PileBodyType の validTypes への登録漏れを確認してください。",
+                        value, safeValue);
+                }
 
                 if (SetProperty(ref _pileBodyType, safeValue))
                 {
@@ -772,15 +910,32 @@ namespace PileDesign.Models.InputData
                     PileTypeNames.RcSection,
                     PileTypeNames.SteelPipeConcreteSection,
                     PileTypeNames.Phc,
+                    PileTypeNames.PhcNodular,
                     PileTypeNames.Prc,
+                    PileTypeNames.PrcNodular,
+                    PileTypeNames.PrcNodularPhcPart,
+                    PileTypeNames.BfsHead,
+                    PileTypeNames.BfsTip,
                     PileTypeNames.Sc,
                     PileTypeNames.SteelPipe,      // 旧互換 (鋼管杭 を細分化する前のサブタイプ名)
                     PileTypeNames.SteelPipeSection,
                     PileTypeNames.CftSection,
                 };
-                var safeValue = string.IsNullOrWhiteSpace(value) || !validTypes.Contains(value)
+                bool isUnknown = !string.IsNullOrWhiteSpace(value) && !validTypes.Contains(value);
+                var safeValue = string.IsNullOrWhiteSpace(value) || isUnknown
                     ? validTypes[0]
                     : value;
+
+                // 未知の断面タイプを黙って RcSection に差し替えると、断面耐力が別物になったまま
+                // 解析が通ってしまう (新しい断面タイプの登録漏れが「無言のデータ破損」になる)。
+                // 互換のためフォールバック自体は残すが、必ず記録に残す。
+                if (isUnknown)
+                {
+                    Serilog.Log.Warning(
+                        "[PileSection] 未知の断面タイプ '{Unknown}' を '{Fallback}' に差し替えました。" +
+                        "断面タイプを追加した場合は PileSection.PileSectionType の validTypes への登録漏れを確認してください。",
+                        value, safeValue);
+                }
 
                 if (SetProperty(ref _pileSectionType, safeValue))
                 {
@@ -810,12 +965,45 @@ namespace PileDesign.Models.InputData
             PileTypeNames.RcSection,
         ];
 
-        public string[] PreCastConcretePileSectionTypeOption { get; } =
-        [
-            PileTypeNames.Phc,
-            PileTypeNames.Prc,
-            PileTypeNames.Sc
-        ];
+        private bool _isTopSegment;
+        /// <summary>
+        /// この断面が杭体の最上段区間か。<see cref="PileBodyInput.PileBodySegmentsUpdate"/> が設定する。
+        /// PHC節杭 は杭頭で継手を介して上杭に接合される下杭として使うため、
+        /// 最上段区間では選択できないようにするのに使う。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsTopSegment
+        {
+            get => _isTopSegment;
+            set
+            {
+                if (SetProperty(ref _isTopSegment, value))
+                    OnPropertyChanged(nameof(PreCastConcretePileSectionTypeOption));
+            }
+        }
+
+        /// <summary>
+        /// 既製コンクリート杭の断面タイプ選択肢。
+        /// 最上段区間では節杭を除外する（節杭は上杭に継ぐ下杭として使う）。
+        /// </summary>
+        public string[] PreCastConcretePileSectionTypeOption => IsTopSegment
+            ?
+            [
+                PileTypeNames.Phc,
+                PileTypeNames.Prc,
+                PileTypeNames.Sc
+            ]
+            :
+            [
+                PileTypeNames.Phc,
+                PileTypeNames.PhcNodular,
+                PileTypeNames.Prc,
+                PileTypeNames.PrcNodular,
+                PileTypeNames.PrcNodularPhcPart,
+                PileTypeNames.BfsHead,
+                PileTypeNames.BfsTip,
+                PileTypeNames.Sc
+            ];
 
         // 鋼管杭の部位
         // 場所打ち鋼管コンクリート杭の PileTypeNames.SteelPipeConcreteSection/PileTypeNames.RcSection と同じ思想で、
@@ -860,6 +1048,370 @@ namespace PileDesign.Models.InputData
             (PileTypeNames.SteelPipe, _) => PipeDia,
             _ => PileDiameter
         };
+
+        // ───── PHC節杭 固有の諸元 ─────
+        // 断面耐力は軸部基準でストレート PHC 杭と同一なので、これらは断面計算には一切使わない。
+        // 断面タイプが PHC節杭 でないときは 0。
+
+        private double _nodeDiameter;
+        /// <summary>
+        /// 節部径 Do [mm]（PHC節杭のみ。それ以外は 0）。
+        /// 現状は表示・計算書用で、支持力の周面抵抗は軸部径 <see cref="PileDiameter"/> で算定している
+        /// （節の効果は未考慮＝安全側）。工法別の支持力式を実装する際にここを使う。
+        /// </summary>
+        public double NodeDiameter
+        {
+            get => _nodeDiameter;
+            set => SetProperty(ref _nodeDiameter, value);
+        }
+
+        private double _catalogMassPerM;
+        /// <summary>
+        /// カタログ標準質量 [t/m]（PHC節杭のみ。それ以外は 0）。
+        /// 節杭の自重 <see cref="W"/> はこの値から求める。節部体積を幾何的に積分しても
+        /// カタログ質量は再現できない（最良フィットでも RMS 3.1%・最大 6.1% 相違）ため、
+        /// メーカー公称値を唯一の出所とする。
+        /// </summary>
+        public double CatalogMassPerM
+        {
+            get => _catalogMassPerM;
+            set => SetProperty(ref _catalogMassPerM, value);
+        }
+
+        private double _nodePitch;
+        /// <summary>節ピッチ（節中心間距離）[mm]（PHC節杭のみ。それ以外は 0）。カタログ姿図の寸法記入値。</summary>
+        public double NodePitch
+        {
+            get => _nodePitch;
+            set => SetProperty(ref _nodePitch, value);
+        }
+
+        private double _nodeHeadOffset;
+        /// <summary>杭頭から第 1 節中心までの距離 [mm]（PHC節杭のみ）。カタログ姿図の寸法記入値。</summary>
+        public double NodeHeadOffset
+        {
+            get => _nodeHeadOffset;
+            set => SetProperty(ref _nodeHeadOffset, value);
+        }
+
+        private double _nodeToeOffset;
+        /// <summary>杭先端から最終節中心までの距離 [mm]（PHC節杭のみ）。カタログ姿図の寸法記入値。</summary>
+        public double NodeToeOffset
+        {
+            get => _nodeToeOffset;
+            set => SetProperty(ref _nodeToeOffset, value);
+        }
+
+        /// <summary>
+        /// この断面が節杭か (PHC節杭 / PRC節杭 / PRC節杭(PHC部))。
+        /// 節杭固有の諸元・姿図・杭頭タイプ判定はすべてこの判定で分岐する。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsNodularPile => PileTypeNames.IsNodularSection(PileSectionType);
+
+        private double _nodeHeadDiameter;
+        /// <summary>
+        /// 拡頭部径 Dt [mm]（PHC節杭で拡頭タイプのときのみ。標準タイプ・節杭以外は 0）。
+        /// 直上の杭区間の径から自動で決まる（<see cref="ResolveNodularHead"/>）。
+        /// </summary>
+        public double NodeHeadDiameter
+        {
+            get => _nodeHeadDiameter;
+            set => SetProperty(ref _nodeHeadDiameter, value);
+        }
+
+        private double _nodeHeadLength;
+        /// <summary>拡頭部長さ Lt [mm]（カタログ全行で 600mm）。標準タイプ・節杭以外は 0。</summary>
+        public double NodeHeadLength
+        {
+            get => _nodeHeadLength;
+            set => SetProperty(ref _nodeHeadLength, value);
+        }
+
+        private string _nodularHeadType = NodularHeadTypes.Standard;
+        /// <summary>PHC節杭 の杭頭タイプ（標準タイプ / 拡頭中間径タイプ / 拡頭タイプ）。</summary>
+        public string NodularHeadType
+        {
+            get => _nodularHeadType;
+            set => SetProperty(ref _nodularHeadType, value);
+        }
+
+        private string _nodularHeadNote = string.Empty;
+        /// <summary>杭頭タイプの自動判定の根拠・注意（諸元表に出す）。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string NodularHeadNote
+        {
+            get => _nodularHeadNote;
+            set => SetProperty(ref _nodularHeadNote, value);
+        }
+
+        /// <summary>PHC節杭 の杭頭タイプ名。</summary>
+        public static class NodularHeadTypes
+        {
+            public const string Standard = "標準タイプ";
+            public const string IntermediateHead = "拡頭中間径タイプ";
+            public const string EnlargedHead = "拡頭タイプ";
+        }
+
+        /// <summary>
+        /// 直上の杭区間の径に合わせて PHC節杭 の杭頭タイプ（標準／拡頭中間径／拡頭）を決める。
+        ///
+        /// 継手で接合する以上、杭頭径は直上の区間の径と一致していなければならないので、
+        /// カタログの拡頭形状一覧から Dt が一致する製品を選ぶ。一致するものが無ければ
+        /// 標準タイプのままとし、その旨を <see cref="NodularHeadNote"/> に残す。
+        /// </summary>
+        /// <param name="diameterAbove">直上の杭区間の杭径 [mm]。最上段の区間なら null。</param>
+        public void ResolveNodularHead(double? diameterAbove)
+        {
+            if (!IsNodularPile)
+            {
+                NodeHeadDiameter = 0.0;
+                NodeHeadLength = 0.0;
+                NodularHeadType = NodularHeadTypes.Standard;
+                NodularHeadNote = string.Empty;
+                return;
+            }
+
+            // BF.S は頭部軸部そのものが太いので「拡頭」という設定を持たない。
+            if (PileSectionType is PileTypeNames.BfsHead or PileTypeNames.BfsTip)
+            {
+                NodeHeadDiameter = 0.0;
+                NodeHeadLength = 0.0;
+                NodularHeadType = NodularHeadTypes.Standard;
+                NodularHeadNote = "頭部軸部と先端軸部で外径が変わる製品のため、拡頭の設定はありません";
+                return;
+            }
+
+            const double tol = 0.5; // mm
+
+            // 最上段、または直上が軸部径と同じなら拡頭不要
+            if (diameterAbove is not double above || above <= PileDiameter + tol)
+            {
+                NodeHeadDiameter = 0.0;
+                NodeHeadLength = 0.0;
+                NodularHeadType = NodularHeadTypes.Standard;
+                NodularHeadNote = diameterAbove == null
+                    ? "最上段の区間のため標準タイプ"
+                    : "直上区間が軸部径と同径のため標準タイプ";
+                return;
+            }
+
+            var heads = CurrentNodularHeads();
+            int idx = heads.FindIndex(h => Math.Abs(h.Dt - above) <= tol);
+
+            if (idx < 0)
+            {
+                var available = heads.Select(h => $"{h.Dt:N0}").ToList();
+                NodeHeadDiameter = 0.0;
+                NodeHeadLength = 0.0;
+                NodularHeadType = NodularHeadTypes.Standard;
+                NodularHeadNote = available.Count > 0
+                    ? $"直上区間の径 {above:N0}mm に一致する拡頭径がありません (選択可: {string.Join(" / ", available)}mm)。標準タイプとして扱います"
+                    : $"この呼び名には拡頭タイプの設定がありません。標準タイプとして扱います";
+                return;
+            }
+
+            var match = heads[idx];
+            NodeHeadDiameter = match.Dt;
+            NodeHeadLength = match.Lt;
+            NodularHeadType = match.IsIntermediate
+                ? NodularHeadTypes.IntermediateHead
+                : NodularHeadTypes.EnlargedHead;
+            NodularHeadNote = $"直上区間の径 {above:N0}mm に合わせて自動選択";
+        }
+
+        /// <summary>
+        /// 選択中の節杭製品に対応する拡頭形状の一覧。
+        /// NPH と NPRC で DTO が別なので、ここで共通の形に畳んでから判定に使う。
+        /// </summary>
+        private List<(double Dt, double Lt, bool IsIntermediate)> CurrentNodularHeads()
+        {
+            string name = NodularProductName();
+            if (string.IsNullOrEmpty(name)) return [];
+
+            return PileSectionType == PileTypeNames.PhcNodular
+                ? [.. NodularPileHeads.Where(h => h.Name == name)
+                                      .Select(h => (h.Dt, h.Lt, h.IsIntermediateHead))]
+                : [.. NodularPrcPileHeads.Where(h => h.Name == name)
+                                         .Select(h => (h.Dt, h.Lt, h.IsIntermediateHead))];
+        }
+
+        /// <summary>選択中の節杭製品の呼び名 (例: 440-300)。節杭でなければ空。</summary>
+        private string NodularProductName()
+        {
+            if (!IsNodularPile) return string.Empty;
+            string? name = SelectedPrecastPile?.Name;
+            return PileSectionType == PileTypeNames.PhcNodular
+                ? NodularPiles.FirstOrDefault(p => p.DisplayName == name)?.Name ?? string.Empty
+                : FindNodularPrcProduct(name)?.Name ?? string.Empty;
+        }
+
+        /// <summary>
+        /// 節の半径方向の高さ [mm]（＝ (Do − D)/2）。PHC節杭 以外は 0。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double NodeRadialRise => IsNodularPile && NodeDiameter > PileDiameter
+            ? (NodeDiameter - PileDiameter) * 0.5
+            : 0.0;
+
+        /// <summary>
+        /// 節テーパーの軸方向長さ [mm]。カタログ姿図でテーパーは厳密に 45°（軸方向長 = 半径方向高さ）
+        /// なので、Do と D から一意に決まる。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double NodeTaperLength => NodeRadialRise;
+
+        private double _catalogNodeFlatLength;
+        /// <summary>
+        /// 製品カタログに寸法記入がある場合の節部（平坦部）長さ [mm]。0 なら記入が無い。
+        /// BF.S は寸法記入があり、節杭 (JP-NPH / JP-NPRC) は無い。
+        /// </summary>
+        public double CatalogNodeFlatLength
+        {
+            get => _catalogNodeFlatLength;
+            set => SetProperty(ref _catalogNodeFlatLength, value);
+        }
+
+        /// <summary>
+        /// 節部（最大径が一定の区間）の軸方向長さ [mm]。
+        /// カタログに寸法記入がある製品 (BF.S) はその値、
+        /// <b>記入が無い製品 (JP-NPH / JP-NPRC) は姿図の実測値（テーパー軸長と等長）に基づく推定値。</b>
+        /// 図示専用で、断面耐力・自重・支持力には一切使わない。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double NodeFlatLength =>
+            CatalogNodeFlatLength > 0 ? CatalogNodeFlatLength : NodeRadialRise;
+
+        /// <summary>節 1 個の軸方向全長 [mm]（テーパー + 節部 + テーパー）。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double NodeTotalLength => 2.0 * NodeTaperLength + NodeFlatLength;
+
+        /// <summary>
+        /// 節中心からの相対位置で、節の外形を「(軸方向オフセット [mm], 半径 [mm])」の列として返す
+        /// （上から下へ）。姿図・3D 表示が同じ形状を描くための唯一の定義。
+        /// PHC節杭 以外や寸法が揃わない場合は空。
+        /// </summary>
+        public IReadOnlyList<(double OffsetFromCenter, double Radius)> NodeProfile()
+        {
+            if (!IsNodularPile || NodeRadialRise <= 0) return [];
+
+            double rShaft = PileDiameter * 0.5;
+            double rNode = NodeDiameter * 0.5;
+            double halfFlat = NodeFlatLength * 0.5;
+            double halfTotal = halfFlat + NodeTaperLength;
+
+            // 上のテーパー始点 → 節部上端 → 節部下端 → 下のテーパー終点
+            return
+            [
+                (+halfTotal, rShaft),
+                (+halfFlat, rNode),
+                (-halfFlat, rNode),
+                (-halfTotal, rShaft),
+            ];
+        }
+
+        /// <summary>
+        /// PHC節杭 の区間外形を「(区間上端からの深さ [m], 半径 [mm])」の折れ線として上から順に返す。
+        /// 姿図・3D 表示が同じ形状を描くための唯一の定義。
+        ///
+        /// 拡頭タイプでは上端から <see cref="NodeHeadLength"/> までが拡頭部径 Dt になる。
+        /// 拡頭部と第 1 節は重なる（Lt = 杭頭〜第 1 節中心 = 600mm）ので、重なる範囲は
+        /// 大きい方の径を採る。
+        /// </summary>
+        public IReadOnlyList<(double Depth, double Radius)> NodularOutline(double segmentLengthM)
+        {
+            if (!IsNodularPile || segmentLengthM <= 0) return [];
+
+            double rShaft = PileDiameter * 0.5;
+            var pts = new List<(double Depth, double Radius)>();
+
+            // 拡頭部 (上端から Lt)
+            bool hasHead = NodeHeadDiameter > PileDiameter && NodeHeadLength > 0;
+            double headBottom = hasHead ? NodeHeadLength / 1000.0 : 0.0;
+            if (hasHead)
+            {
+                double rHead = NodeHeadDiameter * 0.5;
+                pts.Add((0.0, rHead));
+                pts.Add((headBottom, rHead));
+            }
+            else
+            {
+                pts.Add((0.0, rShaft));
+            }
+
+            // 節
+            foreach (double centerDepth in NodeCenterDepthsFromSegmentTop(segmentLengthM))
+            {
+                foreach (var (offset, radius) in NodeProfile())
+                {
+                    // offset は節中心から上が正 → 深さは中心深さ − offset
+                    double depth = centerDepth - offset / 1000.0;
+                    if (depth < 0 || depth > segmentLengthM) continue;
+                    // 拡頭部の範囲内は拡頭部径と比べて大きい方を採る
+                    double r = hasHead && depth <= headBottom
+                        ? Math.Max(radius, NodeHeadDiameter * 0.5)
+                        : radius;
+                    pts.Add((depth, r));
+                }
+            }
+
+            pts.Add((segmentLengthM, rShaft));
+
+            // 深さ順に整列し、拡頭部内で潰れた重複点を除く
+            var ordered = pts.OrderBy(p => p.Depth).ToList();
+            var result = new List<(double Depth, double Radius)>(ordered.Count);
+            foreach (var p in ordered)
+            {
+                if (result.Count > 0
+                    && Math.Abs(result[^1].Depth - p.Depth) < 1e-9
+                    && Math.Abs(result[^1].Radius - p.Radius) < 1e-9)
+                    continue;
+                result.Add(p);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 杭区間の上端から測った節中心位置 [m] を上から順に返す。
+        /// PHC節杭 以外、または寸法が未設定なら空。
+        ///
+        /// 節杭は 1 本の製品が 1 区間に対応する前提で、区間上端から <see cref="NodeHeadOffset"/>、
+        /// 以降 <see cref="NodePitch"/> ごとに節が並び、最終節は区間下端から
+        /// <see cref="NodeToeOffset"/> 上方に来る（カタログの杭長 4〜15m・1m ピッチと整合する）。
+        ///
+        /// <b>節の形状（節部長さ・テーパー長）はカタログに寸法記入が無く再現できないため、
+        /// ここで返すのは位置だけである。</b>
+        /// </summary>
+        public IEnumerable<double> NodeCenterDepthsFromSegmentTop(double segmentLengthM)
+        {
+            if (!IsNodularPile || NodePitch <= 0 || segmentLengthM <= 0) yield break;
+
+            const double tol = 1.0e-9;
+            double pitch = NodePitch / 1000.0;
+            double last = segmentLengthM - NodeToeOffset / 1000.0;
+
+            for (double z = NodeHeadOffset / 1000.0; z <= last + tol; z += pitch)
+            {
+                if (z < -tol || z > segmentLengthM + tol) continue;
+                yield return z;
+            }
+        }
+
+        /// <summary>
+        /// PC鋼材とプレストレスを持つ既製杭断面 (PHC杭 / PHC節杭 / PRC杭) か。
+        /// 断面タイプの直積判定が各所に散らばると追加漏れが起きるため、意味のある単位で名前を付ける。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsPrestressedPrecastSection =>
+            PileSectionType is PileTypeNames.Phc or PileTypeNames.PhcNodular or PileTypeNames.Prc;
+
+        /// <summary>中空円形の既製コンクリート杭断面 (PHC杭 / PHC節杭 / PRC杭 / SC杭) か。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsHollowPrecastSection =>
+            PileSectionType is PileTypeNames.Phc or PileTypeNames.PhcNodular
+                            or PileTypeNames.Prc or PileTypeNames.PrcNodular
+                            or PileTypeNames.PrcNodularPhcPart or PileTypeNames.Sc
+                            or PileTypeNames.BfsHead or PileTypeNames.BfsTip;
 
         // コンクリート外径
         private double _concreteOutDia = 1200.0;
@@ -1174,7 +1726,25 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// SelectedPrecastPile.Name がライブラリ (PHCs/PRCs/SCs) に存在するかチェックする。副作用なし。
+        /// 断面タイプに対応する既製杭ライブラリを返す。既製コンクリート杭以外は null。
+        /// 節杭は専用 DTO を PrecastPile へ詰め替えたキャッシュを返すため、
+        /// 呼び出し側は PHC/PRC/SC と同じ扱いができる。
+        /// </summary>
+        private static List<PrecastPile>? GetPrecastLibrary(string pileSectionType) => pileSectionType switch
+        {
+            PileTypeNames.Phc => PHCs,
+            PileTypeNames.Prc => PRCs,
+            PileTypeNames.Sc => SCs,
+            PileTypeNames.PhcNodular => _cachedNodularAsPrecast.Value,
+            PileTypeNames.PrcNodular => _cachedNodularPrcAsPrecast.Value,
+            PileTypeNames.PrcNodularPhcPart => _cachedNodularPrcPhcPartAsPrecast.Value,
+            PileTypeNames.BfsHead => _cachedBfsHeadAsPrecast.Value,
+            PileTypeNames.BfsTip => _cachedBfsTipAsPrecast.Value,
+            _ => null
+        };
+
+        /// <summary>
+        /// SelectedPrecastPile.Name がライブラリ (PHCs/PRCs/SCs/節杭) に存在するかチェックする。副作用なし。
         /// 名前が未指定、または PileSectionType が既製コンクリート杭以外のときは true を返す (検査対象外)。
         /// </summary>
         public bool IsSelectedPrecastPileInLibrary()
@@ -1182,13 +1752,7 @@ namespace PileDesign.Models.InputData
             string? name = SelectedPrecastPile?.Name;
             if (string.IsNullOrWhiteSpace(name)) return true;
 
-            List<PrecastPile>? candidates = PileSectionType switch
-            {
-                PileTypeNames.Phc => PHCs,
-                PileTypeNames.Prc => PRCs,
-                PileTypeNames.Sc => SCs,
-                _ => null
-            };
+            List<PrecastPile>? candidates = GetPrecastLibrary(PileSectionType);
             if (candidates == null) return true; // 既製コンクリート杭以外は対象外
 
             foreach (var p in candidates)
@@ -1198,12 +1762,67 @@ namespace PileDesign.Models.InputData
             return false;
         }
 
+        /// <summary>
+        /// 節杭固有の諸元 (節部径・カタログ標準質量・姿図寸法) を製品ライブラリから転記する。
+        /// これらは <see cref="PrecastPile"/> に載らないので断面転記とは別経路になる。
+        /// 断面タイプが節杭でない間は 0 のままにして、参照されても影響が出ないようにする。
+        /// </summary>
+        private void ApplyNodularProductGeometry()
+        {
+            string? name = SelectedPrecastPile?.Name;
+            double do_ = 0.0, mass = 0.0, pitch = 0.0, head = 0.0, toe = 0.0, flat = 0.0;
+
+            if (PileSectionType == PileTypeNames.PhcNodular)
+            {
+                var p = NodularPiles.FirstOrDefault(x => x.DisplayName == name);
+                if (p != null)
+                    (do_, mass, pitch, head, toe) = (p.Do, p.MassPerM, p.NodePitch, p.HeadOffset, p.ToeOffset);
+            }
+            else if (PileSectionType is PileTypeNames.BfsHead or PileTypeNames.BfsTip)
+            {
+                // 頭部軸部 / 先端軸部 は同じ製品の別部位。節部径・節寸法は共通で、
+                // 軸部径だけが違う (= 節の出寸法が部位によって変わる)。
+                // このカタログには標準質量表が無いので自重は軸部体積から求まる (節の分は未計上)。
+                var p = FindBfsProduct(name);
+                if (p != null)
+                    (do_, pitch, head, toe, flat) =
+                        (p.NodeDia, p.NodePitch, p.HeadOffset, p.ToeOffset, p.NodeFlatLength);
+            }
+            else if (PileTypeNames.IsNodularSection(PileSectionType))
+            {
+                // PRC部 / PHC部 は同じ製品の別断面なので、形状はどちらも製品行そのもの
+                var p = FindNodularPrcProduct(name);
+                if (p != null)
+                    (do_, mass, pitch, head, toe) = (p.Do, p.MassPerM, p.NodePitch, p.HeadOffset, p.ToeOffset);
+            }
+
+            NodeDiameter = do_;
+            CatalogMassPerM = mass;
+            NodePitch = pitch;
+            NodeHeadOffset = head;
+            NodeToeOffset = toe;
+            CatalogNodeFlatLength = flat;
+        }
+
+        /// <summary>表示名 (頭部軸部 / 先端軸部 のどちらでも) から BF.S の製品行を引く。</summary>
+        private static BfsPile? FindBfsProduct(string? displayName) =>
+            string.IsNullOrEmpty(displayName)
+                ? null
+                : BfsPiles.FirstOrDefault(
+                    p => p.DisplayName == displayName || p.TipDisplayName == displayName);
+
+        /// <summary>表示名 (PRC部 / PHC部 のどちらでも) から PRC節杭 の製品行を引く。</summary>
+        private static NodularPrcPile? FindNodularPrcProduct(string? displayName) =>
+            string.IsNullOrEmpty(displayName)
+                ? null
+                : NodularPrcPiles.FirstOrDefault(
+                    p => p.DisplayName == displayName || p.PhcPartDisplayName == displayName);
+
         public void RecalculateSelectedPrecastPile()
         {
-            List<PrecastPile> precastPiles = [];
-            if (PileSectionType == PileTypeNames.Phc) { precastPiles = PHCs; }
-            else if (PileSectionType == PileTypeNames.Prc) { precastPiles = PRCs; }
-            else if (PileSectionType == PileTypeNames.Sc) { precastPiles = SCs; }
+            List<PrecastPile> precastPiles = GetPrecastLibrary(PileSectionType) ?? [];
+
+            ApplyNodularProductGeometry();
 
             bool isFound = false;
 
@@ -1397,6 +2016,26 @@ namespace PileDesign.Models.InputData
 
         // 鋼管（静的キャッシュを参照）
         public static ObservableCollection<string> SteelPipeOption => _cachedSteelPipeOption.Value;
+
+        // PHC節杭（静的キャッシュを参照）
+        public static ObservableCollection<string> NodularPileOption => _cachedNodularPileOption.Value;
+        public static List<NodularPile> NodularPiles => _cachedNodularPiles.Value;
+        /// <summary>拡頭中間径タイプ / 拡頭タイプ の形状一覧（呼び名 × 拡頭径 Dt）。</summary>
+        public static List<NodularPileHead> NodularPileHeads => _cachedNodularPileHeads.Value;
+
+        /// <summary>PRC節杭 (PRC部) の製品選択肢。</summary>
+        public static ObservableCollection<string> NodularPrcOption => _cachedNodularPrcOption.Value;
+        /// <summary>PRC節杭 (PHC部) の製品選択肢。</summary>
+        public static ObservableCollection<string> NodularPrcPhcPartOption => _cachedNodularPrcPhcPartOption.Value;
+        public static List<NodularPrcPile> NodularPrcPiles => _cachedNodularPrcPiles.Value;
+        /// <summary>PRC節杭 の拡頭中間径タイプ / 拡頭タイプ の形状一覧。</summary>
+        public static List<NodularPrcPileHead> NodularPrcPileHeads => _cachedNodularPrcPileHeads.Value;
+
+        /// <summary>BF.S (頭部厚型節付き杭) 頭部軸部 の製品選択肢。</summary>
+        public static ObservableCollection<string> BfsHeadOption => _cachedBfsHeadOption.Value;
+        /// <summary>BF.S (頭部厚型節付き杭) 先端軸部 の製品選択肢。</summary>
+        public static ObservableCollection<string> BfsTipOption => _cachedBfsTipOption.Value;
+        public static List<BfsPile> BfsPiles => _cachedBfsPiles.Value;
 
 
         // 鉄筋径
@@ -1700,7 +2339,15 @@ namespace PileDesign.Models.InputData
         public double Ac => (ConcreteOutDia - ConcreteThickness) * Math.PI * ConcreteThickness - MainBarAg - TendonAp;
 
         // 杭単位長さ重量 (kN/m)
-        public double W => ((MainBarAg + TendonAp + PipeAs) * 78.5 + (Ac - (MainBarAg + TendonAp)) * ConcreteGamma) * Math.Pow(10, -6);
+        //
+        // PHC節杭 はカタログ標準質量をそのまま用いる。節部の体積を推定形状から積分しても
+        // カタログ質量は再現できない（既製杭の ConcreteGamma = 26 kN/m³ で RMS 3.4%・最大 7.0% 相違。
+        // 密度と節長さを自由に振った最良フィットでも RMS 1.5% 止まりで、しかもその γ は 27.4 kN/m³ と
+        // コンクリートとして非現実的。継手金物等を含むためと推定）。メーカー公称値が唯一正確な出所。
+        // この結果、基本設定のコンクリート単位体積重量 ConcreteGamma は節杭の自重に効かない。
+        public double W => IsNodularPile && CatalogMassPerM > 0
+            ? CatalogMassPerM * UnitConversion.TON_TO_KN   // t/m -> kN/m
+            : ((MainBarAg + TendonAp + PipeAs) * 78.5 + (Ac - (MainBarAg + TendonAp)) * ConcreteGamma) * Math.Pow(10, -6);
 
         // 軸剛性 (kN)
         // 合成断面: コンクリート + 主筋 + PC鋼材 + 鋼管（Es·As）。鋼管を持たない断面では PipeAs=0 のため影響なし。
@@ -1809,8 +2456,23 @@ namespace PileDesign.Models.InputData
                     new Spec("鋼管断面積(腐食非考慮)", "As", $"{PipeAs:N0}", "mm2"));
                 SelectedPileSectionSpecification.Add(
                     new Spec("鋼管断面積(腐食考慮)", "As'", $"{PipeAsCorroded:N0}", "mm2"));
+                // 製品ライブラリの選択では鋼管規格は切り替わらない (杭径・鋼管厚だけ転記される)。
+                // メーカー製品は規格が決まっているので、選択中の規格と食い違っていたら諸元表で知らせる。
+                // 製品ライブラリの降伏点 (メーカー公称) と、鋼管規格の基準強度 F は別の量なので
+                // (SKK490 なら降伏点 325 / F=315 のように少し差がある) わずかな差では知らせない。
+                // 規格の選び間違い (SKK490 の製品に SKK400 を選ぶ等) だけを拾う。
+                string noteGrade = "";
+                double productF = SelectedPrecastPile?.Fts ?? 0.0;
+                if (productF > 0)
+                {
+                    double gradeF = SteelPipeGrades.GetProperties(PipeGrade ?? "SKK400").F;
+                    if (gradeF < productF * 0.95)
+                        noteGrade = $"製品ライブラリの鋼管降伏点 {productF:N0} N/mm² に対し、" +
+                                    $"選択中の鋼管規格 {PipeGrade} の基準強度は {gradeF:N0} N/mm² です。" +
+                                    "製品選択では鋼管規格は切り替わりません。規格の選択をご確認ください";
+                }
                 SelectedPileSectionSpecification.Add(
-                    new Spec("鋼管規格", "", PipeGrade, ""));
+                    new Spec("鋼管規格", "", PipeGrade, "", noteGrade));
                 SelectedPileSectionSpecification.Add(
                     new Spec("鋼管ヤング係数", "Es", $"{PipeEs:N0}", "N/mm2"));
             }
@@ -1819,9 +2481,34 @@ namespace PileDesign.Models.InputData
                 SelectedPileSectionSpecification.Add(
                     new Spec("コンクリート外径", "Dc", $"{ConcreteOutDia:N0}", "mm"));
 
-            if (PileSectionType == PileTypeNames.Phc || PileSectionType == PileTypeNames.Prc || PileSectionType == PileTypeNames.Sc)
+            if (IsHollowPrecastSection)
                 SelectedPileSectionSpecification.Add(
                     new Spec("コンクリート肉厚", "Dt", $"{ConcreteThickness:N0}", "mm"));
+
+            // 節杭 固有: 節部径とカタログ標準質量、および周面抵抗の扱いの明示
+            if (IsNodularPile)
+            {
+                SelectedPileSectionSpecification.Add(
+                    new Spec("節部径", "Do", $"{NodeDiameter:N0}", "mm",
+                        "支持力の周面抵抗は軸部径で算定 (節の効果は未考慮)"));
+                if (CatalogMassPerM > 0)
+                    SelectedPileSectionSpecification.Add(
+                        new Spec("カタログ標準質量", "m", $"{CatalogMassPerM:N3}", "t/m",
+                            "自重はこの値による (コンクリート単位体積重量 γc は不適用)"));
+                else
+                    SelectedPileSectionSpecification.Add(
+                        new Spec("自重の算定", "", "軸部断面 × γc", "",
+                            "カタログに標準質量表が無いため軸部体積による (節の分は未計上)"));
+                SelectedPileSectionSpecification.Add(
+                    new Spec("杭頭タイプ", "", NodularHeadType, "", NodularHeadNote));
+                if (NodeHeadDiameter > 0)
+                {
+                    SelectedPileSectionSpecification.Add(
+                        new Spec("拡頭部径", "Dt", $"{NodeHeadDiameter:N0}", "mm"));
+                    SelectedPileSectionSpecification.Add(
+                        new Spec("拡頭部長さ", "Lt", $"{NodeHeadLength:N0}", "mm"));
+                }
+            }
 
             if (PileSectionType != PileTypeNames.SteelPipe)
             {
@@ -1847,13 +2534,13 @@ namespace PileDesign.Models.InputData
                     new Spec("コンクリート施工品質管理係数", "ξ", $"{ConcreteGsi:N2}", ""));
             }
 
-            if (PileSectionType == PileTypeNames.Phc || PileSectionType == PileTypeNames.Prc)
+            if (IsPrestressedPrecastSection)
             {
                 SelectedPileSectionSpecification.Add(
                     new Spec("コンクリートプレストレス", "σe", $"{Prestress:N1}", "N/mm2"));
             }
 
-            if (PileSectionType == PileTypeNames.Phc || PileSectionType == PileTypeNames.Prc)
+            if (IsPrestressedPrecastSection)
             {
                 SelectedPileSectionSpecification.Add(
                     new Spec("PC鋼材断面積", "Ap", $"{TendonAp:N0}", "mm2"));
@@ -1871,8 +2558,21 @@ namespace PileDesign.Models.InputData
             {
                 SelectedPileSectionSpecification.Add(
                     new Spec("鉄筋数-呼び径", "", MainBarNum.ToString() + "-" + MainBarSize, ""));
+                // 鋼管規格と同じく、製品ライブラリの選択では鉄筋規格は切り替わらない
+                // (本数・径・配筋径だけが転記される)。メーカー製品は規格が決まっているので、
+                // 選択中の規格の降伏点と食い違っていたら諸元表で知らせる。
+                string noteBarSpec = "";
+                double productFtr = SelectedPrecastPile?.Ftr ?? 0.0;
+                if (productFtr > 0)
+                {
+                    double specFy = MainBars.GradeYieldStrength(MainBarSpec);
+                    if (Math.Abs(specFy - productFtr) > 1.0)
+                        noteBarSpec = $"製品ライブラリの主筋降伏点は {productFtr:N0} N/mm² です" +
+                                      $"(選択中の {MainBarSpec} は {specFy:N0} N/mm²)。" +
+                                      "製品選択では鉄筋規格は切り替わりません。規格の選択をご確認ください";
+                }
                 SelectedPileSectionSpecification.Add(
-                    new Spec("鉄筋規格", "", $"{MainBarSpec}", ""));
+                    new Spec("鉄筋規格", "", $"{MainBarSpec}", "", noteBarSpec));
                 SelectedPileSectionSpecification.Add(
                     new Spec("鉄筋断面積", "Ag", $"{MainBarAg:N0}", "mm2"));
                 string notePg =
@@ -2761,6 +3461,40 @@ namespace PileDesign.Models.InputData
                 (PileTypeNames.PrecastConcrete, PileTypeNames.Phc) when TendonAp > 0 && PileDiameter != 2 * ConcreteThickness =>
                     new PHCSection(
                         new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc),
+                        new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu),
+                        Prestress),
+
+                // PHC節杭
+                // カタログの断面性能はすべて軸部の中空円形断面基準なので、断面耐力の計算は
+                // PHC杭 と完全に同一。専用クラスは作らず PHCSection をそのまま使う。
+                // (節部径 NodeDiameter は断面耐力には一切効かない)
+                (PileTypeNames.PrecastConcrete, PileTypeNames.PhcNodular) when TendonAp > 0 && PileDiameter != 2 * ConcreteThickness =>
+                    new PHCSection(
+                        new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc),
+                        new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu),
+                        Prestress),
+
+                // PRC節杭 (PHC部)。異形棒鋼を持たない区間なので PHC杭 と同一。
+                (PileTypeNames.PrecastConcrete, PileTypeNames.PrcNodularPhcPart) when TendonAp > 0 && PileDiameter != 2 * ConcreteThickness =>
+                    new PHCSection(
+                        new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc),
+                        new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu),
+                        Prestress),
+
+                // BF.S (頭部厚型節付き杭)。PC 鋼棒のみの中空断面なので PHC杭 と同一。
+                // 先端軸部はカタログに耐力の記載が無く、ここで計算した値がそのまま設計値になる。
+                (PileTypeNames.PrecastConcrete, PileTypeNames.BfsHead or PileTypeNames.BfsTip)
+                        when TendonAp > 0 && PileDiameter != 2 * ConcreteThickness =>
+                    new PHCSection(
+                        new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc),
+                        new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu),
+                        Prestress),
+
+                // PRC節杭 (PRC部)。断面性能は軸部基準なので PRC杭 と同一。
+                (PileTypeNames.PrecastConcrete, PileTypeNames.PrcNodular) when TendonAp > 0 && PileDiameter != 2 * ConcreteThickness =>
+                    new PRCSection(
+                        new PrecastPRCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc),
+                        new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize),
                         new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu),
                         Prestress),
 

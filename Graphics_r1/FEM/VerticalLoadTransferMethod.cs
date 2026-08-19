@@ -38,6 +38,13 @@ namespace PileDesign.FEM
         private readonly int pileNodesCount;
         private readonly int nodesCount;
 
+        // 杭先端 Rp-Sp 曲線のパラメータ。解析対象の SoilPile が属する杭体の値を使う。
+        // 同じ式に渡す dp (= soilPile.Dp) / rpu (= soilPile.SettleRpu) も同じ杭体由来なので、
+        // ここだけ別の杭体を見ると先端沈下曲線が整合しない。
+        // (旧実装は InputModel.PileBodies[^1] と最終要素固定で、杭体が複数あると誤った値を使っていた)
+        private double SettleAlpha => soilPile.PileBodyInput?.SettleAlpha ?? 0.3;
+        private double SettleN => soilPile.PileBodyInput?.SettleN ?? 2.0;
+
         private Vector<double> VectorX;   // 杭体節点の鉛直変位
         private readonly Vector<double> VectorRz;  // 杭体節点の鉛直反力
 
@@ -226,17 +233,23 @@ namespace PileDesign.FEM
             foreach (var pileCircumVertical in soilPile.PileCircumVerticals)
             {
                 PileWeight += pileCircumVertical.PileBodySegment.PileSection.W * pileCircumVertical.L;
-                if (pileCircumVertical.GroundLayer.IsPositiveCircumResistance)
+
+                // 杭周長は PileCircumVertical.Psi (= π×杭径) が唯一の定義。
+                // ここで π×D をインライン再計算していると、周長の定義を変えたとき
+                // (節杭の節部径や工法別の有効周長など) この荷重ステップ幅だけ旧式で残る。
+                // 値は従来と同一。
+                // 周面抵抗の考慮有無は PileCircumVertical 側 (杭区間ごとの値) を見る。
+                // 生成時は土層の値のコピーだが、沈下ウィンドウのチェックボックスが編集するのは
+                // こちらであり、支持力表 (SoilPile.CalculateResistances) もこちらを見ている。
+                // 土層側 (GroundLayer) を見ると、同じチェックボックス操作で支持力表だけが反応して
+                // 沈下解析が無反応、という食い違いになる。
+                if (pileCircumVertical.IsPositiveCircumResistance)
                 {
-                    FricpMax += pileCircumVertical.Tau2 * Math.PI
-                        * pileCircumVertical.PileBodySegment.PileSection.PileDiameter / 1000.0
-                        * pileCircumVertical.L;
+                    FricpMax += pileCircumVertical.Tau2 * pileCircumVertical.Psi * pileCircumVertical.L;
                 }
-                if (pileCircumVertical.GroundLayer.IsNegativeCircumResistance)
+                if (pileCircumVertical.IsNegativeCircumResistance)
                 {
-                    FricmMax += pileCircumVertical.TauT * Math.PI
-                        * pileCircumVertical.PileBodySegment.PileSection.PileDiameter / 1000.0
-                        * pileCircumVertical.L;
+                    FricmMax += pileCircumVertical.TauT * pileCircumVertical.Psi * pileCircumVertical.L;
                 }
             }
         }
@@ -255,8 +268,8 @@ namespace PileDesign.FEM
                     if (j == -1 || j == pileNodesCount - 1)
                     { continue; }
                     double s = xs[2 * i] - xs[2 * i + 1]; // 相対変位
-                    bool aPC = soilPile.PileCircumVerticals[j].GroundLayer.IsPositiveCircumResistance;
-                    bool aPT = soilPile.PileCircumVerticals[j].GroundLayer.IsNegativeCircumResistance;
+                    bool aPC = soilPile.PileCircumVerticals[j].IsPositiveCircumResistance;
+                    bool aPT = soilPile.PileCircumVerticals[j].IsNegativeCircumResistance;
                     double tau1 = soilPile.PileCircumVerticals[j].Tau1; // kN/m2
                     double tau2 = soilPile.PileCircumVerticals[j].Tau2; // kN/m2
                     double S1 = soilPile.PileCircumVerticals[j].S1 / 1000.0; // m
@@ -271,8 +284,8 @@ namespace PileDesign.FEM
                     double s = xs[2 * i] - xs[2 * i + 1]; // 相対変位
                     double dp = soilPile.Dp / 1000.0; //m
                     double rpu = soilPile.SettleRpu;
-                    double alpha = InputModel.PileBodies[^1].SettleAlpha;
-                    double n = InputModel.PileBodies[^1].SettleN;
+                    double alpha = SettleAlpha;
+                    double n = SettleN;
 
                     stiffness += GetTangentStiffnessPileToeFromSettlement(s, dp, rpu, alpha, n);
                 }
@@ -305,8 +318,8 @@ namespace PileDesign.FEM
                     if (j == -1 || j == pileNodesCount - 1)
                     { continue; }
                     double s = xs[2 * i] - xs[2 * i + 1]; // 相対変位
-                    bool aPC = soilPile.PileCircumVerticals[j].GroundLayer.IsPositiveCircumResistance;
-                    bool aPT = soilPile.PileCircumVerticals[j].GroundLayer.IsNegativeCircumResistance;
+                    bool aPC = soilPile.PileCircumVerticals[j].IsPositiveCircumResistance;
+                    bool aPT = soilPile.PileCircumVerticals[j].IsNegativeCircumResistance;
                     double tau1 = soilPile.PileCircumVerticals[j].Tau1; // kN/m2
                     double tau2 = soilPile.PileCircumVerticals[j].Tau2; // kN/m2
                     double S1 = soilPile.PileCircumVerticals[j].S1 / 1000.0; // m
@@ -321,8 +334,8 @@ namespace PileDesign.FEM
                     double settlement = xs[2 * i] - xs[2 * i + 1]; // 相対変位
                     double dp = soilPile.Dp / 1000.0; //m
                     double rpu = soilPile.SettleRpu; // kN
-                    double alpha = InputModel.PileBodies[^1].SettleAlpha;
-                    double n = InputModel.PileBodies[^1].SettleN;
+                    double alpha = SettleAlpha;
+                    double n = SettleN;
 
                     soilReaction += GetSecantStiffnessPileToeFromSettlement(settlement, dp, rpu, alpha, n) * settlement;
                 }
@@ -343,8 +356,8 @@ namespace PileDesign.FEM
                     if (j == -1 || j == pileNodesCount - 1)
                     { continue; }
                     double s = xs[2 * i] - xs[2 * i + 1]; // 相対変位
-                    bool aPC = soilPile.PileCircumVerticals[j].GroundLayer.IsPositiveCircumResistance;
-                    bool aPT = soilPile.PileCircumVerticals[j].GroundLayer.IsNegativeCircumResistance;
+                    bool aPC = soilPile.PileCircumVerticals[j].IsPositiveCircumResistance;
+                    bool aPT = soilPile.PileCircumVerticals[j].IsNegativeCircumResistance;
                     double tau1 = soilPile.PileCircumVerticals[j].Tau1; // kN/m2
                     double tau2 = soilPile.PileCircumVerticals[j].Tau2; // kN/m2
                     double S1 = soilPile.PileCircumVerticals[j].S1 / 1000.0; // m
@@ -360,8 +373,8 @@ namespace PileDesign.FEM
                     double settlment = xs[2 * i] - xs[2 * i + 1]; // 相対変位
                     double dp = soilPile.Dp / 1000.0; // m
                     double rpu = soilPile.SettleRpu; // kN
-                    double alpha = InputModel.PileBodies[^1].SettleAlpha;
-                    double n = InputModel.PileBodies[^1].SettleN;
+                    double alpha = SettleAlpha;
+                    double n = SettleN;
 
                     stiffness += GetSecantStiffnessPileToeFromSettlement(settlment, dp, rpu, alpha, n);
                 }
@@ -765,8 +778,8 @@ namespace PileDesign.FEM
                 double settlement = VectorX[^2];
                 double dp = soilPile.Dp / 1000.0;
                 double rpu = soilPile.SettleRpu;
-                double alpha = InputModel.PileBodies[^1].SettleAlpha;
-                double n = InputModel.PileBodies[^1].SettleN;
+                double alpha = SettleAlpha;
+                double n = SettleN;
                 double rzToe = GetRp(settlement, dp, rpu, alpha, n);
 
                 // 収束後の VectorX から節点反力を組み立てて VectorRz に格納
@@ -855,8 +868,8 @@ namespace PileDesign.FEM
                 double settlement = VectorX[^2];
                 double dp = soilPile.Dp / 1000.0;
                 double rpu = soilPile.SettleRpu;
-                double alpha = InputModel.PileBodies[^1].SettleAlpha;
-                double n = InputModel.PileBodies[^1].SettleN;
+                double alpha = SettleAlpha;
+                double n = SettleN;
                 double rzToe = GetRp(settlement, dp, rpu, alpha, n);
 
                 // 収束後の VectorX から節点反力を組み立てて VectorRz に格納
@@ -939,8 +952,8 @@ namespace PileDesign.FEM
                 // 先端抵抗力を計算
                 double settlement = VectorX[^2];
                 double rpu = soilPile.SettleRpu;
-                double alpha = InputModel.PileBodies[^1].SettleAlpha;
-                double n = InputModel.PileBodies[^1].SettleN;
+                double alpha = SettleAlpha;
+                double n = SettleN;
                 double rzToe = GetRp(settlement, dp, rpu, alpha, n);
 
                 // 限界状態フラグの更新

@@ -81,6 +81,15 @@ namespace PileDesign.FEM
         [JsonIgnore]
         public CaseLocalSnapshot? CaseLocalState { get; private set; }
 
+        /// <summary>
+        /// このモデルで解析中の荷重ケースの地盤 (p-y) 非線形モード。
+        /// PrepareKmat が水平地盤ばねの剛性を評価する際に参照する。
+        /// ケース並列時は caseModel (DeepCopy 済) ごとに設定されるため、排他制御は不要。
+        /// 解析結果ではなく実行時の設定なので JSON には保存しない。
+        /// </summary>
+        [JsonIgnore]
+        public SoilNonlinearityMode SoilNonlinearityMode { get; set; } = SoilNonlinearityMode.KhReductionWithPy;
+
         public List<Node> Nodes { get; set; }
         public List<Beam> Beams { get; set; }
         public List<DummyBeam> DummyBeams { get; set; }
@@ -1539,6 +1548,7 @@ namespace PileDesign.FEM
                 }
             }
             copy.CaseLocalState = snap;
+            copy.SoilNonlinearityMode = this.SoilNonlinearityMode;
 
             return copy;
         }

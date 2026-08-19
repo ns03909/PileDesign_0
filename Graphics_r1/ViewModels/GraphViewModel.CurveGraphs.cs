@@ -926,6 +926,11 @@ namespace PileDesign.ViewModels
             bool isAllSegments = SelectedPileSegmentOption == "All";
             int singleSegIdx = SelectedPileSegmentNo - 1; // 0-based（All以外）
 
+            // 理論 P-y 曲線は荷重ケースの地盤非線形モードごとに形が変わるため、
+            // 選択ケースに含まれるモードの種類だけ曲線を描く（通常は全ケース同一で 1 本）。
+            var curveModes = selectedLoadCases.Select(lc => lc.SoilNonlinearityMode).Distinct().ToList();
+            if (curveModes.Count == 0) curveModes.Add(SoilNonlinearityMode.KhReductionWithPy);
+
             double maxMarkerDisp = 0;
 
             foreach (var pileLayout in targetPiles)
@@ -966,20 +971,26 @@ namespace PileDesign.ViewModels
                     $"杭径 B: {reaction.B * 1000.0:F0} mm\n" +
                     $"N 値: {reaction.NValue:F1}";
 
-                // Top曲線
                 var xsT = yValues.Select(y => y * 1000.0).ToArray();
-                var ysT = yValues.Select(y => reaction.GetP(y, pyTop)).ToArray();
-                var curveT = wpfPlot.Plot.Add.ScatterLine(xsT, ysT);
-                curveT.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Top";
-                _graphHoverMap[curveT] = pyDetails;
+                foreach (var curveMode in curveModes)
+                {
+                    // モードが 1 種類のときは従来通り凡例を簡潔に保つ
+                    string modeSuffix = curveModes.Count > 1
+                        ? $"|{SoilNonlinearityModes.ToShortText(curveMode)}" : "";
 
-                // Btm曲線
-                var xsB = xsT; // 同じX値
-                var ysB = yValues.Select(y => reaction.GetP(y, pyBtm)).ToArray();
-                var curveB = wpfPlot.Plot.Add.ScatterLine(xsB, ysB);
-                curveB.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Btm";
-                curveB.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
-                _graphHoverMap[curveB] = pyDetails;
+                    // Top曲線
+                    var ysT = yValues.Select(y => reaction.GetP(y, pyTop, curveMode)).ToArray();
+                    var curveT = wpfPlot.Plot.Add.ScatterLine(xsT, ysT);
+                    curveT.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Top{modeSuffix}";
+                    _graphHoverMap[curveT] = pyDetails;
+
+                    // Btm曲線（X値は同じ）
+                    var ysB = yValues.Select(y => reaction.GetP(y, pyBtm, curveMode)).ToArray();
+                    var curveB = wpfPlot.Plot.Add.ScatterLine(xsT, ysB);
+                    curveB.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Btm{modeSuffix}";
+                    curveB.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+                    _graphHoverMap[curveB] = pyDetails;
+                }
 
                 // 最終ステップのマーカーを描画（i端・j端）
                 // X軸: 解析結果の相対変位、Y軸: 理論P-y曲線上の値（必ず曲線上に乗る）
@@ -1021,7 +1032,7 @@ namespace PileDesign.ViewModels
                                 double relDispMm = relDisp * 1000.0;
 
                                 // Y軸は理論値（P-y曲線上の値）
-                                double pTheory = reaction.GetP(relDisp, py);
+                                double pTheory = reaction.GetP(relDisp, py, loadCase.SoilNonlinearityMode);
 
                                 string legend = $"LC:{loadCase.LoadName}|LIQ:{isLiquefaction}|P{pileLayout.No}|{endLabel}";
 
