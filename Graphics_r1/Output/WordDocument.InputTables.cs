@@ -1071,5 +1071,67 @@ namespace PileDesign.Output
             }
             body.Append(table);
         }
+
+        /// <summary>
+        /// Hybrid ニーディング工法の支持力算定根拠表。該当する杭が無ければ何も出力しない。
+        /// 列の並びはカタログ p.3-4 / p.7-8 と照合しやすい順にしている。
+        /// </summary>
+        public static void AddHybridKneadingBasisTable(Body body, ObservableCollection<SoilPile> soilPiles)
+        {
+            var targets = soilPiles?.Where(sp => sp.IsHybridKneading).ToList();
+            if (targets == null || targets.Count == 0) return;
+
+            AddHeader2(body, "Hybrid ニーディング工法 支持力算定根拠", 1);
+            AddText(body,
+                "先端支持力は Rp = α・N・Ap（Ap は節杭の節部径 D1 による面積）、"
+                + "周面抵抗は砂質・礫質地盤で β・Ns、粘土質地盤で γ・qu により算定しています。"
+                + "先端支持力係数は α = 200e(e+0.2)（砂質・礫質地盤）、α = 200e²（粘土質地盤）です。"
+                + "一軸圧縮強度 qu は入力の粘着力 Cu から qu = 2Cu として換算しています。"
+                + "周面摩擦の算定範囲は先端支持力算定位置（杭先端より杭下長 Lu 上）までです。"
+                + "引抜きには先端項 κ・N・Ap があり、設計拡径比 e が 1.3 以下または軸部を拡大掘削する場合は κ = 0 とします。");
+
+            double fontSize = 8;
+            Table table = CreateTableWithBordersAndWidths(GetEqualColumnWidths(13));
+
+            table.Append(CreateHeaderRow(
+                CreateTableCell(["No"], fontSize, "center"),
+                CreateTableCell(["杭体", "番号"], fontSize, "center"),
+                CreateTableCell(["地盤", "番号"], fontSize, "center"),
+                CreateTableCell(["周面", "タイプ"], fontSize, "center"),
+                CreateTableCell(["節部径", "D_1", "[m]"], fontSize, "center"),
+                CreateTableCell(["設計", "拡径比", "e"], fontSize, "center"),
+                CreateTableCell(["根固め", "部径", "D_3 [m]"], fontSize, "center"),
+                CreateTableCell(["設計掘", "削径比", "e_s"], fontSize, "center"),
+                CreateTableCell(["杭下長", "L_u [m]"], fontSize, "center"),
+                CreateTableCell(["先端支持", "力係数", "α"], fontSize, "center"),
+                CreateTableCell(["杭先端", "平均N値", "N"], fontSize, "center"),
+                CreateTableCell(["先端有効", "断面積", "A_p [m²]"], fontSize, "center"),
+                CreateTableCell(["引抜き", "先端係数", "κ"], fontSize, "center")));
+
+            int i = 0;
+            foreach (var sp in targets)
+            {
+                i += 1;
+                TableRow row = new();
+                row.Append(CreateTableCell([$"{i}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.PileBodyNo}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.GroundNo}"], fontSize, "right"));
+                row.Append(CreateTableCell(
+                    [sp.PileBodyInput.HybridIsFrictionEnhanced ? "摩擦強化型" : "標準型"], fontSize, "center"));
+                row.Append(CreateTableCell([$"{sp.HybridD1:N3}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.HybridE:N1}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.HybridD3:N3}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.HybridEs:N1}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.HybridLu:N2}"], fontSize, "right"));
+                row.Append(CreateTableCell(
+                    [$"{SoilPile.HybridAlpha(sp.HybridE, sp.PileToeGranularityClass == "粘性土"):N0}"],
+                    fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.PileToeNValue:N1}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.HybridAp:N3}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{sp.HybridKappaValue:N0}"], fontSize, "right"));
+                table.Append(row);
+            }
+            body.Append(table);
+        }
     }
 }

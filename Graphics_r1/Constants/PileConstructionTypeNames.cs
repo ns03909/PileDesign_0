@@ -51,6 +51,20 @@ public static class PileConstructionTypeNames
     /// </summary>
     public const string SmartMagnum = "埋込み杭（Smart-MAGNUM）";
 
+    /// <summary>
+    /// Hybrid ニーディング工法（三谷セキサン、プレボーリング拡大根固め工法）。
+    ///
+    /// 大臣認定 TACP-0586（砂）/ 0587（礫）/ 0588（粘土）、
+    /// 引抜きは（一財）日本建築センター評定 BCJ評定-FD0421-03（砂）/ FD0422-03（礫）。
+    ///
+    /// 押込みの式の形は <see cref="SmartMagnum"/> と同じ
+    /// <c>Ra = 1/3{α·N·Ap + (β·Ns·Ls + γ·qu·Lc)·ψ}</c> だが、
+    /// α が設計拡径比 e だけで決まる点、周面係数が設計掘削径比 es で割増される点、
+    /// 引抜きに先端項 <c>κ·N·Ap</c> がある点が異なる。
+    /// 算定は <c>SoilPile.HybridKneading.cs</c> に集約している。
+    /// </summary>
+    public const string HybridKneading = "埋込み杭（Hybridニーディング）";
+
     // ─── グループ判定 ───
 
     /// <summary>
@@ -65,10 +79,20 @@ public static class PileConstructionTypeNames
     public static bool IsSmartMagnum(string? constructionType) =>
         constructionType == SmartMagnum;
 
+    /// <summary>Hybrid ニーディング工法か。</summary>
+    public static bool IsHybridKneading(string? constructionType) =>
+        constructionType == HybridKneading;
+
+    /// <summary>
+    /// メーカー別の高支持力杭工法か（支持力式が基礎指針の一般式ではなく評定式になる工法）。
+    /// </summary>
+    public static bool IsHighCapacityMethod(string? constructionType) =>
+        IsSmartMagnum(constructionType) || IsHybridKneading(constructionType);
+
     /// <summary>
     /// 杭先端に拡大根固め部（ソイルセメント球根）を持つ工法か。
     /// 姿図・3D の先端形状分岐で使う。
     /// </summary>
     public static bool HasEnlargedBulb(string? constructionType) =>
-        IsPreboring(constructionType) || constructionType == Chubori || IsSmartMagnum(constructionType);
+        IsPreboring(constructionType) || constructionType == Chubori || IsHighCapacityMethod(constructionType);
 }

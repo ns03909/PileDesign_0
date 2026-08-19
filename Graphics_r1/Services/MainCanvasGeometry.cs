@@ -29,6 +29,30 @@ namespace PileDesign.Services
 
         public PathGeometry PathGeoPileDias { get; set; } = new();
         public PathGeometry PathGeoPileDividedDias { get; set; } = new();
+
+        // 杭体・先端形状の塗り (輪郭より先に描いて背面に回す)。
+        // 要素ごとに「上端の楕円 + 下端の楕円 + その間の四角形」を同じ巻き方向で足し、
+        // FillRule.Nonzero で和集合として塗る。こうすると視線方向によらず
+        // 円筒のシルエットになる (真上から見ると 2 つの楕円の和で円板になる)。
+        //
+        // 図形どうしは重なるが、1 つの Path にまとめて 1 回のブラシで塗るため
+        // 半透明でも重なりが濃くならない (Path 単位で 1 度だけ合成されるため)。
+        public PathGeometry PathGeoPileFill { get; set; } = new() { FillRule = FillRule.Nonzero };
+        public PathGeometry PathGeoPileDividedFill { get; set; } = new() { FillRule = FillRule.Nonzero };
+
+        /// <summary>要素分割前の杭体の塗り (輪郭の Orange に合わせた薄い橙)。</summary>
+        private static readonly Brush PileFillBeforeSplit = FrozenBrush(Color.FromArgb(38, 255, 165, 0));
+
+        /// <summary>要素分割後の杭体の塗り (輪郭の SkyBlue に合わせた薄い青)。</summary>
+        private static readonly Brush PileFillAfterSplit = FrozenBrush(Color.FromArgb(38, 135, 206, 235));
+
+        // static な Brush は必ず Freeze する (凍結しないと生成したスレッドに縛られる)
+        private static SolidColorBrush FrozenBrush(Color color)
+        {
+            var brush = new SolidColorBrush(color);
+            brush.Freeze();
+            return brush;
+        }
         // PHC節杭 / PRC節杭 の節の稜線 (立上り開始・終了位置の楕円など)。
         // 杭体の輪郭より細い線で描くため別パスに分けている。
         public PathGeometry PathGeoPileNodeDetails { get; set; } = new();
@@ -127,6 +151,8 @@ namespace PileDesign.Services
             PathGeoPileDividedElems.Figures.Clear();
 
             PathGeoPileDias.Figures.Clear();
+            PathGeoPileFill.Figures.Clear();
+            PathGeoPileDividedFill.Figures.Clear();
             PathGeoPileNodeDetails.Figures.Clear();
             PathGeoPileDividedNodeDetails.Figures.Clear();
             PathGeoPileDividedDias.Figures.Clear();
@@ -366,6 +392,20 @@ namespace PileDesign.Services
                 "EmbedmentDiagonal", dashArray: new DoubleCollection { 4, 2 });
             AddPath(canvas, PathGeoDividedEmbedmentDiagonals, NikkenBrush.SkyBlue, 0.5,
                 "EmbedmentDiagonal", dashArray: new DoubleCollection { 4, 2 });
+
+            // 杭体の塗り (輪郭より先に描いて背面に回す)
+            canvas.Children.Add(new Path()
+            {
+                Fill = PileFillBeforeSplit,
+                Data = PathGeoPileFill,
+                Name = "Node"
+            });
+            canvas.Children.Add(new Path()
+            {
+                Fill = PileFillAfterSplit,
+                Data = PathGeoPileDividedFill,
+                Name = "Node"
+            });
 
             // 杭径
             canvas.Children.Add(new Path()

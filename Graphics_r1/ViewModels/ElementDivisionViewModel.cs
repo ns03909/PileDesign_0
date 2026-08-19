@@ -1985,7 +1985,10 @@ namespace PileDesign.ViewModels
                 selectedZ,
                 smartMagnumLL: InputModel.PileBodies[PileBodyNo - 1].SmartMagnumLL,
                 smartMagnumDes: InputModel.PileBodies[PileBodyNo - 1].SmartMagnumDes,
-                smartMagnumWingLength: InputModel.PileBodies[PileBodyNo - 1].SmartMagnumWingLength);
+                smartMagnumWingLength: InputModel.PileBodies[PileBodyNo - 1].SmartMagnumWingLength,
+                hybridE: InputModel.PileBodies[PileBodyNo - 1].HybridExpansionRatio,
+                hybridEs: InputModel.PileBodies[PileBodyNo - 1].HybridExcavationRatio,
+                hybridLu: InputModel.PileBodies[PileBodyNo - 1].HybridPileBelowLength);
 
             // 現在表示した土層-杭セットのランプを点灯
             MarkPileAsShown(SelectedSoilPileNo - 1);

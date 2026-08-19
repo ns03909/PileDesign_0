@@ -1904,11 +1904,12 @@
                 （例: <code>NPH-440-300-標準-85-A</code>）。
             </p>
 
-            <h6>杭頭タイプは自動判定（最上段区間では使用不可）</h6>
+            <h6>杭頭タイプは自動判定</h6>
             <p>
-                PHC節杭 は継手を介して上杭に接合する<strong>下杭</strong>として用いるため、
-                <strong>最上段の杭体区間では選択できません</strong>（断面タイプの選択肢から除外されます）。
-                上の区間を後から削除して節杭が最上段になった場合は、入力チェックで検出します。
+                PHC節杭 は継手して上杭に接合する<strong>下杭</strong>として用いるのが一般的です。
+                ただし Smart-MAGNUM / Hybrid ニーディングのように<strong>先端が節杭である前提の工法</strong>を
+                1 区間だけでモデル化することもあるため、断面タイプの選択自体は制限していません。
+                最上段の区間に節杭がある場合は、入力チェックで注意を表示します。
             </p>
             <p>
                 杭頭タイプ（標準タイプ / 拡頭中間径タイプ / 拡頭タイプ）は、
@@ -1974,7 +1975,8 @@
             </p>
             <p>
                 <strong>工法別評定式に対応した工法では、節部径が支持力算定に直接使われます。</strong>
-                現在対応しているのは <a href="#section-smart-magnum">Smart-MAGNUM 工法</a> で、
+                現在対応しているのは <a href="#section-smart-magnum">Smart-MAGNUM 工法</a> と
+                <a href="#section-hybrid-kneading">Hybrid ニーディング工法</a> で、
                 周長 ψ を節部径基準とし、先端面積 A<sub>p</sub> も節部径 D<sub>on</sub> から求めます。
                 節部径は断面ライブラリ（JP-NPH / JP-NPRC / BF.S など）から自動的に取り込まれるため、
                 製品を選択すれば追加入力は不要です。
@@ -4097,7 +4099,8 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                         <td>
                             以下から選択します。<br>
                             「場所打ちコンクリート杭」「埋込み杭（プレボーリング）」「埋込み杭（中掘り）」「打込み杭」「回転貫入杭」<br>
-                            「埋込み杭（Smart-MAGNUM）」（ジャパンパイルの既製コンクリート杭のみ。<a href="#section-smart-magnum">専用節</a>を参照）
+                            「埋込み杭（Smart-MAGNUM）」（ジャパンパイルの既製コンクリート杭のみ。<a href="#section-smart-magnum">専用節</a>を参照）、
+                            「埋込み杭（Hybridニーディング）」（三谷セキサンの既製コンクリート杭のみ。<a href="#section-hybrid-kneading">専用節</a>を参照）
                         </td>
                     </tr>
                     <tr>
@@ -11031,6 +11034,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                             <tr><td>回転貫入杭</td><td>$150 \eta \bar{N}$</td><td>$150 \eta \bar{N}$</td><td>$9{,}000 \eta$ kN/m²</td></tr>
                             <tr><td>打込み杭</td><td>$3 \eta \bar{N}$ ※</td><td>$3 \eta \bar{N}$ ※</td><td>18,000 kN/m²</td></tr>
                             <tr><td>埋込み杭 (Smart-MAGNUM)</td><td colspan="2">$\alpha \bar{N}$ （<a href="#section-smart-magnum">専用節</a>を参照）</td><td>—</td></tr>
+                            <tr><td>埋込み杭 (Hybridニーディング)</td><td colspan="2">$\alpha \bar{N}$ （<a href="#section-hybrid-kneading">専用節</a>を参照）</td><td>—</td></tr>
                         </tbody>
                     </table>
                     <p style="font-size: 0.95em;">
@@ -11187,6 +11191,101 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         <li>掘削径 $D_{en}$・$D_{es}$: 2.5 m 以下 / 節部径: φ400〜φ1300、ストレート杭径: φ300〜φ1200</li>
                         <li>杭先端平均N値: 砂質・礫質 2〜60、粘土質 0〜60 / 周面の $N_s$: 1〜30 / $q_u$: 10〜200</li>
                         <li>液状化のおそれのある地盤は周面摩擦の対象外です（該当層は周面抵抗のチェックを外してください）</li>
+                    </ul>
+
+                    <h3 id="section-hybrid-kneading" style="font-weight: bold; font-size: 1.2em;">Hybrid ニーディング工法（プレボーリング拡大根固め工法）</h3>
+                    <p>
+                        三谷セキサンの Hybrid ニーディング工法です。大臣認定 TACP-0586（砂）/ 0587（礫）/ 0588（粘土）、
+                        引抜き抵抗は（一財）日本建築センター評定 BCJ評定-FD0421-03（砂）/ FD0422-03（礫）に基づきます。
+                        算定式・記号の定義・適用範囲は
+                        <a href="https://www.m-sekisan.co.jp/download/pdf/cat_HybridKneading.pdf" target="_blank" rel="noopener">工法カタログ (PDF)</a>
+                        を参照してください。
+                    </p>
+
+                    <h4>選択の方法と適用対象</h4>
+                    <p>
+                        リボンの「解析条件/解析(S)」タブ →「解析条件設定」グループ →「杭体」ボタンで<strong>杭体ウィンドウ</strong>を開き、
+                        「杭先端」グループの<strong>「杭工法」</strong>で <code>埋込み杭（Hybridニーディング）</code> を選びます。
+                        続けて「設計拡径比 e」「設計掘削径比 es」「杭下長 Lu」「摩擦強化型」を入力します。
+                    </p>
+                    <div class="note">
+                        <p>
+                            <strong>適用は三谷セキサンの既製コンクリート杭に限ります。</strong>
+                            杭体タイプが「既製コンクリート杭」のときだけ杭工法の選択肢に現れ、
+                            杭区間にジャパンパイルの製品（JP-NPH / JP-NPRC）が使われている場合は解析前の警告で通知します。
+                            メーカーを問わない JIS 規格品（PHC- / CPRC- / SC-）は適用対象として扱います。
+                        </p>
+                        <p>
+                            <strong>根固め部径 D3 は入力しません。</strong>設計拡径比 e と節部径 D1 から
+                            $D_3 = e \cdot D_1$ として自動的に決まり、杭先端径の欄に導出値が表示されます。
+                        </p>
+                    </div>
+
+                    <h4>押込み方向</h4>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$R_a = \frac{1}{3} \left\{ \alpha N A_p + (\beta N_s L_s + \gamma q_u L_c) \psi \right\}$$</p>
+                        </div>
+                        <div class="formula-right">短期は長期の 2 倍</div>
+                    </div>
+                    <ul>
+                        <li>$\alpha = 200 e (e + 0.2)$（砂質・礫質地盤）、$\alpha = 200 e^2$（粘土質地盤）</li>
+                        <li>$A_p = \pi D_1^2 / 4$（$D_1$ は<strong>節杭の節部径</strong>。根固め部径 $D_3$ ではありません）</li>
+                        <li>$N$: 先端支持力算定位置より下方 $1 D_1$、上方は根固め部上端（$e \le 1.6$ で 2 m、$e \ge 1.7$ で 3 m）までの平均N値。
+                            $5 \le N \le 60$（個々のN値は 100 以下）で、$N &lt; 5$ のときは $\alpha = 0$</li>
+                        <li>$\psi = \pi D$（ストレート形状の範囲は軸部径 $D_0$、節付き形状の範囲は節部径 $D_1$）</li>
+                    </ul>
+                    <table class="table-doc">
+                        <thead>
+                            <tr><th>地盤</th><th>形状</th><th>標準型</th><th>摩擦強化型</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td rowspan="2">砂質</td><td>ストレート</td><td colspan="2">$\beta = 4.4$</td></tr>
+                            <tr><td>節付き</td><td>$\beta N_s = 5.0 N_s + 20$</td><td>$\beta N_s = (5.0 N_s + 30) e_s$</td></tr>
+                            <tr><td rowspan="2">粘土質</td><td>ストレート</td><td colspan="2">$\gamma = 0.7$</td></tr>
+                            <tr><td>節付き</td><td>$\gamma q_u = 0.7 q_u + 20$</td><td>$\gamma q_u = (0.7 q_u + 20) e_s$</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h4>引抜き方向</h4>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$tR_a = \frac{2}{3} \left\{ \kappa N A_p + (\lambda N_s L_s + \mu q_u L_c) \psi \right\} + W_s$$</p>
+                        </div>
+                        <div class="formula-right">短期許容</div>
+                    </div>
+                    <ul>
+                        <li>$\kappa = 157$。ただし<strong>設計拡径比 $e$ が 1.3 以下</strong>、または<strong>軸部を拡大掘削する場合</strong>（$e_s &gt; 1.0$）は $\kappa = 0$</li>
+                        <li>引抜き用の $N$ は先端支持力算定位置から上方 $4 D_1$ の区間の平均</li>
+                        <li>$\lambda$: ストレート 3.74 / 節付き $\lambda N_s = 4.25 N_s + 17$</li>
+                        <li>$\mu$: ストレート 0.59 / 節付き $\mu q_u = 0.63 q_u + 18$（引抜きは標準型・摩擦強化型を区別しません）</li>
+                    </ul>
+                    <p>
+                        <strong>他工法との違い</strong>: 本工法の引抜き抵抗には先端項 $\kappa N A_p$ があります。
+                        基礎指針の一般式や Smart-MAGNUM は周面抵抗のみで、先端項を持ちません。
+                    </p>
+
+                    <h4>形状と算定範囲</h4>
+                    <ul>
+                        <li>根固め部: 径 $D_3 = e D_1$、先端支持力算定位置の 2 m（$e \ge 1.7$ なら 3 m）上から杭先端まで</li>
+                        <li>杭周固定部: 径 $e_s D_1$、杭全長</li>
+                        <li>先端支持力算定位置は杭先端より<strong>杭下長 $L_u$</strong> だけ上で、それより下は杭周面摩擦の対象外です。
+                            $L_u$ はカタログが「節部径・拡径比によって異なります」として値を公表していないため<strong>入力</strong>としています</li>
+                    </ul>
+
+                    <h4>沈下曲線での扱い</h4>
+                    <p>
+                        Smart-MAGNUM と同じく、荷重-沈下関係はカタログに規定が無いため、曲線形状と $\alpha$・$n$ は基礎指針の値を据え置き、
+                        <strong>極限先端支持力に本工法の値をそのまま使います</strong>。変位スケール $0.1 D_p$ の $D_p$ には根固め部径 $D_3$ を用います。
+                    </p>
+
+                    <h4>適用範囲</h4>
+                    <p>次の範囲を外れると解析前の警告に表示されます（計算はクランプ後の値で続行します）。</p>
+                    <ul>
+                        <li>設計拡径比 $e$: 1.0〜2.0（0.1 刻み）/ 設計掘削径比 $e_s$: 1.0〜2.0（$e \ge 1.7$ のときは 1.0〜1.6）、かつ $e_s \le e$</li>
+                        <li>節部径 $D_1$: φ450〜φ1300（粘土質地盤は φ450〜φ1200）</li>
+                        <li>杭先端平均N値: 5〜60（$N &lt; 5$ で $\alpha = 0$）/ 周面の $N_s$: 30 以下 / $q_u$: 40〜200</li>
+                        <li>最大施工深さ: 砂質 70 m、礫質 76 m、粘土質 61 m / 最小施工深さ（引抜き）: 6 m かつ $10 D_1$</li>
                     </ul>
 
                 <h4>使用限界状態</h4>

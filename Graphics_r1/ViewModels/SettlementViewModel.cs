@@ -1208,7 +1208,10 @@ namespace PileDesign.ViewModels
                 showUnconfinedCompressiveStrength: true,
                 smartMagnumLL: PileBody.SmartMagnumLL,
                 smartMagnumDes: PileBody.SmartMagnumDes,
-                smartMagnumWingLength: PileBody.SmartMagnumWingLength);
+                smartMagnumWingLength: PileBody.SmartMagnumWingLength,
+                hybridE: PileBody.HybridExpansionRatio,
+                hybridEs: PileBody.HybridExcavationRatio,
+                hybridLu: PileBody.HybridPileBelowLength);
         }
 
         // DataGridSelectionコピーメソッド

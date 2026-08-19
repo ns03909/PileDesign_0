@@ -1251,6 +1251,7 @@
                     <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable x:Name="SectionViewTab" Title="断面図" CanClose="False" CanHide="False">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Canvas x:Name="Canvas" Height="300" Width="300" Background="Transparent" Opacity="0.5" MouseRightButtonDown="Canvas_MouseRightButtonDown">
                                         <Canvas.ContextMenu>
                                             <ContextMenu>
@@ -1259,6 +1260,14 @@
                                             </ContextMenu>
                                         </Canvas.ContextMenu>
                                     </Canvas>
+
+                                    <!-- 節杭の節部側面図。断面図のキャンバスは円がほぼ埋めていて
+                                         余白が無いので、隣に専用のキャンバスを置く。
+                                         節杭以外では畳んで場所を取らない。 -->
+                                    <Canvas x:Name="NodeSideViewCanvas" Height="300" Width="170"
+                                            Background="Transparent" Opacity="0.5"
+                                            Visibility="{Binding NodeSideViewVisibility}"/>
+                                </StackPanel>
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutDocumentPane>
                         <avalonDock:LayoutDocumentPane>

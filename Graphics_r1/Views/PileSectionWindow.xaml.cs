@@ -207,6 +207,7 @@ namespace PileDesign.Views
             // Canvasのサイズが変更された後にViewModelに設定し、描画を行う
             // Cnavasの定義は、Windows_Loaded、Canvas_Loadedではうまくいかない。なぜかCanvas.ActualHeight、ActualWidthが0となり計算が収束しない。
             _viewModel.Canvas = Canvas;
+            _viewModel.NodeSideViewCanvas = NodeSideViewCanvas;
             _viewModel.RedrawShapes();
 
         }

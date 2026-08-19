@@ -899,6 +899,19 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 杭体タイプに対する断面タイプの既定値。
+        /// 未知の断面タイプを差し替えるときの行き先で、常に <c>鉄筋コンクリート部</c> に落とすと
+        /// 既製コンクリート杭や鋼管杭が場所打ち RC 断面に化けてしまう。
+        /// </summary>
+        private string DefaultSectionTypeForBodyType => PileBodyType switch
+        {
+            PileTypeNames.PrecastConcrete => PileTypeNames.Phc,
+            PileTypeNames.SteelPipe => PileTypeNames.SteelPipeSection,
+            PileTypeNames.InsituSteelPipeConcrete => PileTypeNames.SteelPipeConcreteSection,
+            _ => PileTypeNames.RcSection,
+        };
+
         private string _pileSectionType = PileTypeNames.RcSection;
         public string PileSectionType
         {
@@ -921,12 +934,16 @@ namespace PileDesign.Models.InputData
                     PileTypeNames.SteelPipeSection,
                     PileTypeNames.CftSection,
                 };
-                bool isUnknown = !string.IsNullOrWhiteSpace(value) && !validTypes.Contains(value);
-                var safeValue = string.IsNullOrWhiteSpace(value) || isUnknown
-                    ? validTypes[0]
-                    : value;
+                // null / 空の書き戻しは無視して現在値を保つ。
+                // ComboBox の ItemsSource から現在値が外れると SelectedItem が null になり、
+                // TwoWay バインドがその null を書き戻してくる。これを既定値に落とすと
+                // ユーザーが何も操作していないのに断面タイプが差し替わってしまう。
+                if (string.IsNullOrWhiteSpace(value)) return;
 
-                // 未知の断面タイプを黙って RcSection に差し替えると、断面耐力が別物になったまま
+                bool isUnknown = !validTypes.Contains(value);
+                var safeValue = isUnknown ? DefaultSectionTypeForBodyType : value;
+
+                // 未知の断面タイプを黙って差し替えると、断面耐力が別物になったまま
                 // 解析が通ってしまう (新しい断面タイプの登録漏れが「無言のデータ破損」になる)。
                 // 互換のためフォールバック自体は残すが、必ず記録に残す。
                 if (isUnknown)
@@ -983,27 +1000,30 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 既製コンクリート杭の断面タイプ選択肢。
-        /// 最上段区間では節杭を除外する（節杭は上杭に継ぐ下杭として使う）。
+        /// 既製コンクリート杭の断面タイプ選択肢。区間の位置によらず全種類を出す。
+        ///
+        /// 以前は「節杭は上杭に継ぐ下杭として使う」という運用から最上段区間で節杭を除外していたが、
+        /// 次の 2 点からやめた。
+        /// <list type="bullet">
+        /// <item>除外の判定に使う <see cref="IsTopSegment"/> は区間更新が走るまで false のままで、
+        ///       同じ状態でも「初回は選べるが開き直すと消える」という不安定な挙動になっていた</item>
+        /// <item>Smart-MAGNUM / Hybrid ニーディングは先端が節杭である前提の工法で、
+        ///       1 区間だけでモデル化したい場合に節杭が選べなくなってしまう</item>
+        /// </list>
+        /// 「最上段に節杭が来ている」こと自体は施工上の注意なので、入力チェックの警告で知らせる
+        /// （<c>CheckInputData.CheckPileBodyGeometry</c>）。
         /// </summary>
-        public string[] PreCastConcretePileSectionTypeOption => IsTopSegment
-            ?
-            [
-                PileTypeNames.Phc,
-                PileTypeNames.Prc,
-                PileTypeNames.Sc
-            ]
-            :
-            [
-                PileTypeNames.Phc,
-                PileTypeNames.PhcNodular,
-                PileTypeNames.Prc,
-                PileTypeNames.PrcNodular,
-                PileTypeNames.PrcNodularPhcPart,
-                PileTypeNames.BfsHead,
-                PileTypeNames.BfsTip,
-                PileTypeNames.Sc
-            ];
+        public string[] PreCastConcretePileSectionTypeOption =>
+        [
+            PileTypeNames.Phc,
+            PileTypeNames.PhcNodular,
+            PileTypeNames.Prc,
+            PileTypeNames.PrcNodular,
+            PileTypeNames.PrcNodularPhcPart,
+            PileTypeNames.BfsHead,
+            PileTypeNames.BfsTip,
+            PileTypeNames.Sc
+        ];
 
         // 鋼管杭の部位
         // 場所打ち鋼管コンクリート杭の PileTypeNames.SteelPipeConcreteSection/PileTypeNames.RcSection と同じ思想で、
@@ -2421,10 +2441,27 @@ namespace PileDesign.Models.InputData
             MainBarAg = MainBarNum * GetBarArea(MainBarSize);
         }
 
+        /// <summary>
+        /// 断面タイプの補足（メーカー・製品系列と、断面耐力の算定がどの杭に準じるか）。
+        /// 「BF.S先端軸部」のような製品名だけの断面タイプは、それが PHC節杭 であることが
+        /// 名前から読み取れないため、諸元表の備考で補う。
+        /// </summary>
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string SectionTypeNote => PileSectionType switch
+        {
+            PileTypeNames.PhcNodular => "ジャパンパイル JP-NPH パイル (PHC節杭)。断面耐力は PHC杭 と同一",
+            PileTypeNames.PrcNodular => "ジャパンパイル JP-NPRC パイル (PRC節杭)。断面耐力は PRC杭 と同一",
+            PileTypeNames.PrcNodularPhcPart => "ジャパンパイル JP-NPRC パイルの PHC部 (PRC節杭)。断面耐力は PHC杭 と同一",
+            PileTypeNames.BfsHead => "三谷セキサン BF.S パイル (PHC節杭) の頭部軸部。断面耐力は PHC杭 と同一",
+            PileTypeNames.BfsTip => "三谷セキサン BF.S パイル (PHC節杭) の先端軸部。節はこちらに付く。断面耐力は PHC杭 と同一",
+            _ => "",
+        };
+
         public void SetSpecs()
         {
             SelectedPileSectionSpecification = [
-                new Spec("杭断面タイプ", "", PileSectionType, ""),
+                new Spec("杭断面タイプ", "", PileSectionType, "", SectionTypeNote),
                 new Spec("杭径", "D", $"{PileDiameter:N0}", "mm")];
 
             if (PileSectionType == PileTypeNames.SteelPipeConcreteSection || PileSectionType == PileTypeNames.Sc || PileSectionType == PileTypeNames.SteelPipe)

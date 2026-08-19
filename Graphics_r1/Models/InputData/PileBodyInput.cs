@@ -143,6 +143,10 @@ namespace PileDesign.Models.InputData
                 }
 
                 UpdateNodularPileHeads();
+
+                // 最下段区間の断面が変わると Hybrid ニーディングの節部径 D1 が変わり、
+                // 根固め部径 D3 = e·D1 も変わる
+                UpdateHybridDerivedDiameter();
             }
             catch (Exception ex)
             {
@@ -196,7 +200,10 @@ namespace PileDesign.Models.InputData
         public string PileConstructionType
         {
             get => _pileConstructionType;
-            set => SetProperty(ref _pileConstructionType, value);
+            set
+            {
+                if (SetProperty(ref _pileConstructionType, value)) UpdateHybridDerivedDiameter();
+            }
         }
 
         // 施工タイプオプション
@@ -210,15 +217,17 @@ namespace PileDesign.Models.InputData
         public static ObservableCollection<string> InsituPileConstructionTypeOption { get; } =
         [PileConstructionTypeNames.Insitu];
 
-        // Smart-MAGNUM はジャパンパイルの工法で、本プログラムでは
-        // 「ジャパンパイルの既製コンクリート杭」に限って適用する。
-        // カタログの適用杭種には鋼管杭も含まれるが、鋼管杭では選べないようにしている。
+        // メーカー別の高支持力杭工法は、そのメーカーの既製コンクリート杭に限って適用する。
+        //   Smart-MAGNUM     … ジャパンパイル
+        //   Hybridニーディング … 三谷セキサン
+        // Smart-MAGNUM のカタログは適用杭種に鋼管杭も挙げているが、鋼管杭では選べないようにしている。
         public static ObservableCollection<string> PrecastPileConstructionTypeOption { get; } =
         [
             PileConstructionTypeNames.Preboring,
             PileConstructionTypeNames.Chubori,
             PileConstructionTypeNames.Driven,
-            PileConstructionTypeNames.SmartMagnum
+            PileConstructionTypeNames.SmartMagnum,
+            PileConstructionTypeNames.HybridKneading
         ];
 
         public static ObservableCollection<string> SteelPileConstructionTypeOption { get; } =
@@ -364,6 +373,100 @@ namespace PileDesign.Models.InputData
             {
                 if (!double.IsFinite(value)) return;
                 SetProperty(ref _smartMagnumWingLength, value);
+            }
+        }
+
+        // ─── Hybrid ニーディング工法（三谷セキサン）専用入力 ───
+        // 根固め部径 D3 は設計拡径比 e と節部径 D1 から D3 = e·D1 と決まるため入力しない
+        // （UpdatePileProperties が PileToeDia に導出値を書き戻し、姿図・3D・地盤柱がそれに従う）。
+
+        // 設計拡径比 e（根固め部径の節部径に対する比）。1.0〜2.0 の 0.1 刻み。
+        private double _hybridExpansionRatio = 1.5;
+        public double HybridExpansionRatio
+        {
+            get => _hybridExpansionRatio;
+            set
+            {
+                if (!double.IsFinite(value)) return;
+                if (SetProperty(ref _hybridExpansionRatio, value)) UpdateHybridDerivedDiameter();
+            }
+        }
+
+        /// <summary>
+        /// 節杭の節部径 D1 [mm]。杭体最下段区間の断面から導出する
+        /// （節杭は節部径、ストレート杭は公称外径）。Hybrid ニーディングの
+        /// 先端有効断面積 Ap = π·D1²/4、根固め部径 D3 = e·D1、杭周固定部の掘削径 es·D1 の基準になる。
+        /// </summary>
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double HybridD1
+        {
+            get
+            {
+                var section = PileBodySegments is { Count: > 0 } ? PileBodySegments[^1].PileSection : null;
+                if (section == null) return 0;
+                return section.IsNodularPile ? section.NodeDiameter : section.NominalPileDiameter;
+            }
+        }
+
+        /// <summary>根固め部径 D3 = e·D1 [mm]（導出値）。</summary>
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double HybridD3 => HybridExpansionRatio * HybridD1;
+
+        /// <summary>
+        /// Hybrid ニーディングの導出値（根固め部径 D3）を <see cref="PileToeDia"/> に反映する。
+        ///
+        /// 姿図・3D・地盤柱・CAD 出力はいずれも PileToeDia を見るため、ここで書き戻して
+        /// 下流の消費側に工法分岐を持ち込まない。設計拡径比や杭区間の断面が変わった時点で
+        /// 即座に反映されないと、杭体ウィンドウの表示が古い径のまま残ってしまう
+        /// （解析側では SoilPile.UpdatePileProperties でも同じ書き戻しを行う）。
+        /// </summary>
+        public void UpdateHybridDerivedDiameter()
+        {
+            OnPropertyChanged(nameof(HybridD1));
+            OnPropertyChanged(nameof(HybridD3));
+
+            if (!PileConstructionTypeNames.IsHybridKneading(PileConstructionType)) return;
+
+            double d3 = HybridD3;
+            if (d3 > 0) PileToeDia = d3;
+        }
+
+        // 設計掘削径比 es（杭周固定部の掘削径の節部径に対する比）。
+        // e ≤ 1.6 のとき 1.0〜2.0、e ≥ 1.7 のとき 1.0〜1.6。かつ es ≤ e。
+        private double _hybridExcavationRatio = 1.0;
+        public double HybridExcavationRatio
+        {
+            get => _hybridExcavationRatio;
+            set
+            {
+                if (!double.IsFinite(value)) return;
+                SetProperty(ref _hybridExcavationRatio, value);
+            }
+        }
+
+        // 摩擦強化型か（false = 標準型）。節杭区間の周面摩擦力係数 β・γ が切り替わる。
+        // カタログでは標準型と摩擦強化型の併用はしない。
+        private bool _hybridIsFrictionEnhanced;
+        public bool HybridIsFrictionEnhanced
+        {
+            get => _hybridIsFrictionEnhanced;
+            set => SetProperty(ref _hybridIsFrictionEnhanced, value);
+        }
+
+        // 杭下長 Lu (m)。先端支持力算定位置から杭先端までの長さで、
+        // この区間は杭周面摩擦力の対象外になる。
+        // カタログは「節部径・拡径比によって異なります。詳細についてはお問い合わせください」
+        // として値を公表していないため入力とする。
+        private double _hybridPileBelowLength;
+        public double HybridPileBelowLength
+        {
+            get => _hybridPileBelowLength;
+            set
+            {
+                if (!double.IsFinite(value)) return;
+                SetProperty(ref _hybridPileBelowLength, value);
             }
         }
 

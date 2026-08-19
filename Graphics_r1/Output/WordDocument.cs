@@ -392,6 +392,7 @@ namespace PileDesign.Output
 
                         // Smart-MAGNUM 工法の杭がある場合のみ算定根拠表を追加
                         AddSmartMagnumBasisTable(body, inputModel.ElementDivision.SoilPiles);
+                        AddHybridKneadingBasisTable(body, inputModel.ElementDivision.SoilPiles);
 
                         if (mainWindowViewModel.DocxOutput.CalculationReportLevel >= 2)
                         {

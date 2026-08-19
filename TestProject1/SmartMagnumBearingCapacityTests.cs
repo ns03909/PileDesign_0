@@ -447,12 +447,12 @@ namespace TestProject1
             // ジャパンパイルの節杭 (JP-NPH / JP-NPRC)
             var nph = MakeNodularSection(1100, 1200);
             nph.SelectedPrecastPile.Name = "NPH-1200-1100-標準-85-A";
-            Assert.IsTrue(SoilPile.IsJapanPileSection(nph, out _));
+            Assert.IsTrue(PileMakers.IsUsableBy(nph, PileMakers.JapanPile, out _));
 
             // メーカー中立の JIS 規格品は適用対象として扱う
             var jis = MakeStraightSection(1000);
             jis.SelectedPrecastPile.Name = "PHC-1000-標準-80-A";
-            Assert.IsTrue(SoilPile.IsJapanPileSection(jis, out _));
+            Assert.IsTrue(PileMakers.IsUsableBy(jis, PileMakers.JapanPile, out _));
         }
 
         [DataTestMethod]
@@ -464,7 +464,7 @@ namespace TestProject1
             var section = MakeStraightSection(1000);
             section.SelectedPrecastPile.Name = productName;
 
-            Assert.IsFalse(SoilPile.IsJapanPileSection(section, out string maker),
+            Assert.IsFalse(PileMakers.IsUsableBy(section, PileMakers.JapanPile, out string? maker),
                 $"{productName} が適用対象と判定されている");
             Assert.AreEqual("三谷セキサン", maker);
         }
@@ -480,7 +480,7 @@ namespace TestProject1
                     PileBodyType = PileTypeNames.PrecastConcrete,
                     PileSectionType = sectionType,
                 };
-                Assert.IsFalse(SoilPile.IsJapanPileSection(section, out string maker), sectionType);
+                Assert.IsFalse(PileMakers.IsUsableBy(section, PileMakers.JapanPile, out string? maker), sectionType);
                 Assert.AreEqual("三谷セキサン", maker);
             }
         }

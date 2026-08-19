@@ -25,7 +25,8 @@ namespace PileDesign.Models
             double canvasWidth = Canvas.ActualWidth;
             double canvasHeight = Canvas.ActualHeight;
             canvasHeight = Math.Max(canvasHeight, 100.0); /// 仮
-            double baseDimension = Math.Max(ViewModel.PileSection.PileDiameter + 150.0, 1200.0);
+            // 節杭では節部径が軸部径より大きいので、節部径の円が切れないよう基準寸法に含める
+            double baseDimension = NodularSectionDrawing.BaseDimension(ViewModel.PileSection);
             return Math.Min(canvasWidth, canvasHeight) / baseDimension;
         }
 
@@ -40,6 +41,10 @@ namespace PileDesign.Models
             Scale = GetScale();
             Canvas.Children.Clear();
             DrawGauge();
+
+            // 節杭は断面（軸部の切り口）だけでは節が分からないので、節部径の円を描き足す。
+            // 節部側面図は専用キャンバスが要るため、画面側 (PileSectionViewModel) のみで描く。
+            NodularSectionDrawing.DrawNodeDiameterCircle(Canvas, ViewModel.PileSection, Scale);
 
 
             if (ViewModel.PileSection.PileBodyType == PileTypeNames.InsituRc ||
@@ -164,29 +169,22 @@ namespace PileDesign.Models
             EllipseGeometry innerCircle = new(new Point(Canvas.ActualWidth * 0.5, Canvas.ActualHeight * 0.5), india * 0.5 * Scale, india * 0.5 * Scale);
             geometry.AddGeometry(outerCircle);
             geometry.AddGeometry(innerCircle);
-            Path donutPath = new();
-            if (type == "concrete")
+            // 外径と内径の 2 つの楕円を既定の FillRule.EvenOdd で塗ると、
+            // 内径側が抜けてちょうどドーナツ (中空断面) になる。
+            Path donutPath = new()
             {
-                donutPath.Stroke = NikkenBrush.SkyBlue; // 線の色
-                //donutPath.Fill = Brushes.NavajoWhite;
-                donutPath.StrokeThickness = 1;
-                donutPath.Data = geometry;
-            }
-            if (type == "steelPipe")
-            {
-                donutPath.Stroke = NikkenBrush.SkyBlue; // 線の色
-                //donutPath.Fill = Brushes.WhiteSmoke;
-                donutPath.StrokeThickness = 1;
-                donutPath.Data = geometry;
-            }
+                Stroke = NikkenBrush.SkyBlue, // 線の色
+                StrokeThickness = 1,
+                Data = geometry,
+                // 帯筋 (hoop) は配筋を示す線なので塗らない
+                Fill = type switch
+                {
+                    "concrete" => NikkenBrush.PileConcreteFill,
+                    "steelPipe" => NikkenBrush.PileSteelFill,
+                    _ => null,
+                },
+            };
 
-            if (type == "hoop")
-            {
-                donutPath.Stroke = NikkenBrush.SkyBlue;
-                //donutPath.Fill = Brushes.AntiqueWhite;
-                donutPath.StrokeThickness = 1;
-                donutPath.Data = geometry;
-            }
             Canvas.Children.Add(donutPath); // Canvasに追加
         }
 

@@ -53,7 +53,7 @@ namespace PileDesign.Models
                 }
             }
 
-            // Smart-MAGNUM 工法の適用範囲 (ωs / ωp / LL / 掘削径 / N値 / qu / 杭径)。
+            // メーカー別の高支持力杭工法の適用範囲。
             // 範囲外でもクランプ後の値で計算は続けるため、エラーではなく警告として出す。
             var soilPiles = inputModel.ElementDivision?.SoilPiles;
             if (soilPiles != null)
@@ -63,6 +63,8 @@ namespace PileDesign.Models
                     if (soilPile == null) continue;
                     foreach (var w in soilPile.ValidateSmartMagnumRange())
                         warnings.Add($"Smart-MAGNUM {w}");
+                    foreach (var w in soilPile.ValidateHybridKneadingRange())
+                        warnings.Add($"Hybridニーディング {w}");
                 }
             }
 
@@ -149,13 +151,14 @@ namespace PileDesign.Models
 
                     if (sec == null) continue;
 
-                    // 節杭 は上杭に継手で接合される下杭として使うため、最上段区間では使えない。
-                    // 断面タイプの選択肢からは除外しているが、上の区間を後から削除すると
-                    // 節杭の区間が最上段になりうるので、ここでも検出する。
+                    // 節杭 は上杭に継手で接合される下杭として使うのが一般的なので、
+                    // 最上段区間に来ている場合は知らせる。
+                    // ただし Smart-MAGNUM / Hybrid ニーディングのように先端が節杭である前提の工法を
+                    // 1 区間でモデル化することはありうるため、禁止ではなく注意にとどめる。
                     if (segNo == 1 && sec.IsNodularPile)
                     {
-                        message += $"杭体{pbNo} 区間{segNo}: {sec.PileSectionType} は最上段の区間には使用できません " +
-                                   $"(上杭に継手で接合する下杭として使用してください).\n";
+                        message += $"杭体{pbNo} 区間{segNo}: {sec.PileSectionType} が最上段の区間にあります " +
+                                   $"(節杭は上杭に継手で接合する下杭として使うのが一般的です).\n";
                     }
 
                     // 節杭 の拡頭径が直上区間の径と合っていない場合も知らせる

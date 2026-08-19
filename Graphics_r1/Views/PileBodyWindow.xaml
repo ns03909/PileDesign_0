@@ -372,6 +372,20 @@
                                  PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                  PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
 
+                            <!-- Hybridニーディングの根固め部径 D3 は e×D1 の導出値なので手入力させない -->
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PileBody.PileConstructionType}"
+                                                     Value="埋込み杭（Hybridニーディング）">
+                                            <Setter Property="IsReadOnly" Value="True"/>
+                                            <Setter Property="Background" Value="#F0F0F0"/>
+                                            <Setter Property="Foreground" Value="#555555"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+
                             <TextBox.Text>
                                 <Binding Path="PileBody.PileToeDia" UpdateSourceTrigger="LostFocus" 
                                          ValidatesOnDataErrors="True" StringFormat="N1">
@@ -565,6 +579,132 @@
                                 <Hyperlink NavigateUri="https://www.japanpile.co.jp/method/pdf/smart-magnum.pdf"
                                            RequestNavigate="Hyperlink_RequestNavigate"
                                            ToolTip="ジャパンパイルの Smart-MAGNUM 工法カタログ (PDF) を既定のブラウザで開きます">
+                                    <Run Text="工法カタログ (PDF) を開く"/>
+                                </Hyperlink>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Hybridニーディング工法（三谷セキサン）専用入力。
+                         根固め部径 D3 は設計拡径比 e と節部径 D1 から D3 = e·D1 と決まるため、
+                         上の径の欄は導出値の表示になる。 -->
+                    <StackPanel Visibility="{Binding PileBody.PileConstructionType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='埋込み杭（Hybridニーディング）'}">
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="節部径 D1 (mm)" Width="200"/>
+                            <TextBlock Text="{Binding PileBody.HybridD1, StringFormat=N1}"
+                                       Width="100" TextAlignment="Right" VerticalAlignment="Center"
+                                       Foreground="#555555">
+                                <TextBlock.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run Text="杭体最下段の区間の断面から自動的に決まります"/><LineBreak/>
+                                            <Run Text="(節杭は節部径、ストレート杭は公称外径)。"/><LineBreak/>
+                                            <Run Text="先端有効断面積 Ap = π·D1²/4、根固め部径 D3 = e·D1、"/><LineBreak/>
+                                            <Run Text="杭周固定部の掘削径 es·D1 の基準になります。"/>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBlock.ToolTip>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="設計拡径比 e" Width="200"/>
+                            <TextBox Width="100" HorizontalContentAlignment="Right"
+                                     PreviewKeyDown="TextBox_PreviewKeyDown"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                                <TextBox.Text>
+                                    <Binding Path="PileBody.HybridExpansionRatio" UpdateSourceTrigger="LostFocus"
+                                             ValidatesOnDataErrors="True" StringFormat="N1">
+                                        <Binding.ValidationRules>
+                                            <common:RangeValidationRule Min="1.0" Max="2.0" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run Text="根固め部径 D3 の節部径 D1 に対する比。1.0〜2.0 の 0.1 刻み。"/><LineBreak/>
+                                            <Run Text="先端支持力係数 α を決めます (砂質・礫質 200e(e+0.2) / 粘土質 200e²)。"/>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="設計掘削径比 es" Width="200"/>
+                            <TextBox Width="100" HorizontalContentAlignment="Right"
+                                     PreviewKeyDown="TextBox_PreviewKeyDown"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                                <TextBox.Text>
+                                    <Binding Path="PileBody.HybridExcavationRatio" UpdateSourceTrigger="LostFocus"
+                                             ValidatesOnDataErrors="True" StringFormat="N1">
+                                        <Binding.ValidationRules>
+                                            <common:RangeValidationRule Min="1.0" Max="2.0" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run Text="杭周固定部の掘削径の節部径 D1 に対する比。1.0 は軸部を拡大掘削しないことを意味します。"/><LineBreak/>
+                                            <Run Text="適用範囲は 1.0〜2.0 (e が 1.7 以上のときは 1.0〜1.6)、かつ es ≦ e。"/><LineBreak/>
+                                            <Run Text="摩擦強化型のときだけ節杭区間の周面摩擦力係数に掛かります。"/>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="杭下長 Lu (m)" Width="200"/>
+                            <TextBox Width="100" HorizontalContentAlignment="Right"
+                                     PreviewKeyDown="TextBox_PreviewKeyDown"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                                <TextBox.Text>
+                                    <Binding Path="PileBody.HybridPileBelowLength" UpdateSourceTrigger="LostFocus"
+                                             ValidatesOnDataErrors="True" StringFormat="N2">
+                                        <Binding.ValidationRules>
+                                            <common:RangeValidationRule Min="0" Max="5" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run Text="先端支持力算定位置から杭先端までの長さ。この区間は杭周面摩擦力の対象外になります。"/><LineBreak/>
+                                            <Run Text="カタログは節部径・拡径比によって異なるとして値を公表していないため入力としています。"/>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="摩擦強化型" Width="200"/>
+                            <CheckBox IsChecked="{Binding PileBody.HybridIsFrictionEnhanced}"
+                                      VerticalAlignment="Center">
+                                <CheckBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run Text="チェックなし＝標準型、チェックあり＝摩擦強化型。"/><LineBreak/>
+                                            <Run Text="節杭区間の周面摩擦力係数 β・γ が切り替わり、設計掘削径比 es が掛かります。"/><LineBreak/>
+                                            <Run Text="カタログでは標準型と摩擦強化型の併用はしません。"/>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </CheckBox.ToolTip>
+                            </CheckBox>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Width="200"/>
+                            <TextBlock VerticalAlignment="Center">
+                                <Hyperlink NavigateUri="https://www.m-sekisan.co.jp/download/pdf/cat_HybridKneading.pdf"
+                                           RequestNavigate="Hyperlink_RequestNavigate"
+                                           ToolTip="三谷セキサンの Hybrid ニーディング工法カタログ (PDF) を既定のブラウザで開きます">
                                     <Run Text="工法カタログ (PDF) を開く"/>
                                 </Hyperlink>
                             </TextBlock>

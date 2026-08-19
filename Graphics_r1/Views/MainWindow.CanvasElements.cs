@@ -91,15 +91,26 @@ namespace PileDesign.Views
             //   - 既製コンクリート杭の埋込み杭: 拡大根固め球根の頂点まで (PileToeDia × PileToeHeightRatio)
             //   - 回転貫入杭: 拡張形状 (拡底等) が存在しないため、杭体は zs[^1] (真の杭先端) まで描画
             //   - Smart-MAGNUM: 根固め部上端は杭先端の 2m 上で固定 (根固め部径×高さ径比ではない)
-            string _ctypeForToe = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType;
+            var _bodyForToe = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1];
+            string _ctypeForToe = _bodyForToe.PileConstructionType;
             bool _isSmartMagnum = PileConstructionTypeNames.IsSmartMagnum(_ctypeForToe);
-            double zToeTop = pileToeDia <= pileBottomDia && !_isSmartMagnum ? zs[^1] :
+            bool _isHybrid = PileConstructionTypeNames.IsHybridKneading(_ctypeForToe);
+
+            // Hybrid ニーディングの根固め部上端は「先端支持力算定位置 (杭先端の Lu 上) の
+            // さらに 2m (設計拡径比 e が 1.7 以上なら 3m) 上」。
+            double _hybridBulbHeight = _isHybrid
+                ? _bodyForToe.HybridPileBelowLength + (_bodyForToe.HybridExpansionRatio >= 1.7 ? 3.0 : 2.0)
+                : 0.0;
+
+            double zToeTop = pileToeDia <= pileBottomDia && !_isSmartMagnum && !_isHybrid ? zs[^1] :
                 (_ctypeForToe == "場所打ちコンクリート杭"
                 ? zs[^1] + (pileToeDia - pileBottomDia) * 0.5 / Math.Tan(pileToeAngle * Math.PI / 180) + pileToeHeight
                 : _ctypeForToe == "回転貫入杭"
                 ? zs[^1]
                 : _isSmartMagnum
                 ? zs[^1] + SoilPile.SmartMagnumBulbTopAboveToe
+                : _isHybrid
+                ? zs[^1] + _hybridBulbHeight
                 : zs[^1] + pileToeDia * pileToeHeightRatio);
 
             for (int i = 0; i < zs.Count - 1; i++)
@@ -147,16 +158,17 @@ namespace PileDesign.Views
                     }
                     else
                     {
-                        if (i == zs.Count - 2 && (pileToeDia > pileDia || _isSmartMagnum))
+                        if (i == zs.Count - 2 && (pileToeDia > pileDia || _isSmartMagnum || _isHybrid))
                         {
                             // 先端球根ジオメトリ。
                             // Smart-MAGNUM は「杭先端の 2m 上 〜 杭先端の LL 下」、
+                            // Hybrid ニーディングは「杭先端の (Lu + 2m または 3m) 上 〜 杭先端」、
                             // 他の埋込み杭は「杭先端を下端として上方へ 根固め部径×高さ径比」。
-                            double bulbBelowToe = _isSmartMagnum
-                                ? viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].SmartMagnumLL
-                                : 0.0;
+                            double bulbBelowToe = _isSmartMagnum ? _bodyForToe.SmartMagnumLL : 0.0;
                             double bulbHeight = _isSmartMagnum
                                 ? SoilPile.SmartMagnumBulbTopAboveToe + bulbBelowToe
+                                : _isHybrid
+                                ? _hybridBulbHeight
                                 : pileToeDia * pileToeHeightRatio;
                             AddConcretePrecastPileToeGeometry(
                                 pointB, pileToeDia, pileDia, flattening, bulbHeight, bulbBelowToe);
@@ -200,6 +212,72 @@ namespace PileDesign.Views
         }
 
         // 杭断面ジオメトリの追加メソッド
+        /// <summary>
+        /// 擬似 3D の円筒・円錐台のシルエットを塗りパスに積む。
+        ///
+        /// 「上端の楕円 + 下端の楕円 + その間をつなぐ四角形」を<b>すべて同じ巻き方向</b>で足し、
+        /// <see cref="FillRule.Nonzero"/> の和集合として塗る。3 つの和がちょうど円筒のシルエットになる
+        /// （楕円のうち四角形からはみ出す部分＝上面と底面のふくらみだけが効く）。
+        ///
+        /// 上下を弧で分けて 1 枚の帯にする方法だと、分割位置を常に水平に取るため
+        /// <b>真上から見たときに破綻する</b>（杭軸の投影が潰れて帯の面積が消え、塗り残しが出る）。
+        /// 和集合なら視線方向に依存しない。
+        ///
+        /// 図形どうしは隣の要素と重なるが、1 つの Path にまとめて 1 回のブラシで塗るので
+        /// 半透明でも重なりが濃くならない。
+        /// </summary>
+        private static void AddPileFillBand(
+            PathGeometry fillPath,
+            Point top, double topRadiusX, double topRadiusY,
+            Point bottom, double bottomRadiusX, double bottomRadiusY)
+        {
+            if (fillPath == null) return;
+            if (!(topRadiusX > 0) || !(bottomRadiusX > 0)) return;
+            if (!double.IsFinite(top.X) || !double.IsFinite(top.Y)) return;
+            if (!double.IsFinite(bottom.X) || !double.IsFinite(bottom.Y)) return;
+
+            AddEllipseFigure(fillPath, top, topRadiusX, topRadiusY);
+            AddEllipseFigure(fillPath, bottom, bottomRadiusX, bottomRadiusY);
+
+            // 側面の四角形。楕円と同じ時計回りに並べる (Nonzero で和集合にするため)
+            var side = new PathFigure
+            {
+                StartPoint = new Point(top.X - topRadiusX, top.Y),
+                IsClosed = true,
+                IsFilled = true,
+            };
+            side.Segments.Add(new LineSegment(new Point(top.X + topRadiusX, top.Y), false));
+            side.Segments.Add(new LineSegment(new Point(bottom.X + bottomRadiusX, bottom.Y), false));
+            side.Segments.Add(new LineSegment(new Point(bottom.X - bottomRadiusX, bottom.Y), false));
+            fillPath.Figures.Add(side);
+        }
+
+        /// <summary>楕円を時計回りの閉じた図形として塗りパスに足す。</summary>
+        private static void AddEllipseFigure(PathGeometry fillPath, Point center, double radiusX, double radiusY)
+        {
+            double ry = Math.Max(radiusY, 0.01);
+            var figure = new PathFigure
+            {
+                StartPoint = new Point(center.X - radiusX, center.Y),
+                IsClosed = true,
+                IsFilled = true,
+            };
+            // 左 → 右 (上半分) → 左 (下半分)。どちらも時計回り
+            figure.Segments.Add(new ArcSegment(
+                new Point(center.X + radiusX, center.Y),
+                new Size(radiusX, ry), 0, false, SweepDirection.Clockwise, false));
+            figure.Segments.Add(new ArcSegment(
+                new Point(center.X - radiusX, center.Y),
+                new Size(radiusX, ry), 0, false, SweepDirection.Clockwise, false));
+            fillPath.Figures.Add(figure);
+        }
+
+        /// <summary>現在の表示状態に対応する杭体の塗りパス。</summary>
+        private PathGeometry CurrentPileFillPath =>
+            DataContext is not MainWindowViewModel vm ? null
+            : vm.IsElementSplit ? vm.CanvasGeometry.PathGeoPileDividedFill
+            : vm.CanvasGeometry.PathGeoPileFill;
+
         private void AddPileSectionGeometry(Point point1, Point point2, double pileDia2D, double flattening)
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
@@ -220,6 +298,10 @@ namespace PileDesign.Views
                 );
                 path.AddGeometry(lineGeometry);
             }
+
+            AddPileFillBand(CurrentPileFillPath,
+                point1, pileDia2D * 0.5, pileDia2D * 0.5 * flattening,
+                point2, pileDia2D * 0.5, pileDia2D * 0.5 * flattening);
         }
 
 
@@ -251,37 +333,69 @@ namespace PileDesign.Views
                 ? viewModel.CanvasGeometry.PathGeoPileDividedNodeDetails
                 : viewModel.CanvasGeometry.PathGeoPileNodeDetails;
 
+            // 根固め部に埋まる範囲 (zToeTop より下) の節は、根固め部内部の杭体と同じ破線で描く。
+            // 埋まっていて直接は見えないが、節が根固め部のどこに位置するかは支持力の前提なので示す。
+            var innerPath = viewModel.IsElementSplit
+                ? viewModel.CanvasGeometry.PathGeoPileToeInnerDashedDivided
+                : viewModel.CanvasGeometry.PathGeoPileToeInnerDashed;
+
             // 断面径 [mm] → 画面上の直径。既存の pileDia2D と同じ縮尺に揃える。
             double scale2D = section.PileDiameter > 0 ? pileDia2D / section.PileDiameter : 0.0;
             if (scale2D <= 0) return;
 
             Point? prevLeft = null, prevRight = null;
 
+            // 節のふくらみの塗り。軸部径の帯からはみ出す分をここで足す。
+            // 塗りは 1 つの Path に和集合として積むので、軸部の帯と重なっても濃くならない。
+            var fillPath = CurrentPileFillPath;
+            Point? prevCenter = null;
+            double prevR2D = 0;
+
+            bool prevIsInner = false;
+
             foreach (var (depth, radius) in outline)
             {
                 double z = zSegmentTop - depth;
-                if (z < zToeTop || z > zSegmentTop || z < zSegmentBottom)
+                if (z > zSegmentTop || z < zSegmentBottom)
                 {
-                    prevLeft = prevRight = null;   // 描画範囲外は稜線を途切れさせる
+                    prevLeft = prevRight = null;   // 区間外は稜線を途切れさせる
+                    prevCenter = null;
                     continue;
                 }
+
+                // 根固め部に埋まる節は破線側へ
+                bool isInner = z < zToeTop;
+                var targetPath = isInner ? innerPath : path;
 
                 var center = viewModel.CanvasThreeDView.Transformation(new Point3D(x, y, z));
                 double r2D = radius * scale2D;
 
                 // 節の立上り開始・終了位置 (軸部径) と節部・拡頭部 (最大径) の
                 // どちらにも水平断面円を描く。形状の折れ位置がすべて見えるようにする。
-                path.AddGeometry(new EllipseGeometry(center, r2D, r2D * flattening));
+                targetPath.AddGeometry(new EllipseGeometry(center, r2D, r2D * flattening));
+
+                // 塗りは見えている範囲だけ。根固め部の中は根固め部自身の塗りで覆われている
+                if (prevCenter.HasValue && !isInner && !prevIsInner)
+                {
+                    AddPileFillBand(fillPath,
+                        prevCenter.Value, prevR2D, prevR2D * flattening,
+                        center, r2D, r2D * flattening);
+                }
+                prevCenter = center;
+                prevR2D = r2D;
 
                 var left = new Point(center.X - r2D, center.Y);
                 var right = new Point(center.X + r2D, center.Y);
                 if (prevLeft.HasValue)
                 {
-                    path.AddGeometry(new LineGeometry(prevLeft.Value, left));
-                    path.AddGeometry(new LineGeometry(prevRight!.Value, right));
+                    // 境界をまたぐ稜線は破線側に寄せて、実線が根固め部へはみ出さないようにする
+                    var ridgePath = isInner || prevIsInner ? innerPath : path;
+                    ridgePath.AddGeometry(new LineGeometry(prevLeft.Value, left));
+                    ridgePath.AddGeometry(new LineGeometry(prevRight!.Value, right));
                 }
                 prevLeft = left;
                 prevRight = right;
+                prevIsInner = isInner;
             }
         }
 
@@ -325,6 +439,18 @@ namespace PileDesign.Views
                 Point end = new(pointBtm.X + sign * pileToeDia2D * 0.5, pointBtm.Y - factoredToeCylinderHeight2D);
                 AddLineGeometry(start, end, path);
             }
+
+            // 拡底部の塗り。円錐台 (軸部径 → 拡底径) と、その下の円柱の 2 つに分けて積む。
+            var coneTop = new Point(pointBtm.X, pointBtm.Y - factoredConeHeight2D - factoredToeCylinderHeight2D);
+            var coneBtm = new Point(pointBtm.X, pointBtm.Y - factoredToeCylinderHeight2D);
+
+            AddPileFillBand(CurrentPileFillPath,
+                coneTop, pileDia2D * 0.5, pileDia2D * 0.5 * flattening,
+                coneBtm, pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening);
+
+            AddPileFillBand(CurrentPileFillPath,
+                coneBtm, pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening,
+                pointBtm, pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening);
         }
 
 
@@ -365,6 +491,11 @@ namespace PileDesign.Views
                 );
                 path.AddGeometry(lineGeometry);
             }
+
+            // 根固め部の塗り
+            AddPileFillBand(CurrentPileFillPath,
+                new Point(bulbBtm.X, bulbBtm.Y - factoredHeight2D), pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening,
+                bulbBtm, pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening);
 
             // 根固め部内部の杭体（破線）: 杭径の楕円と側線
             var ellipseCore = new EllipseGeometry(new Point(bulbBtm.X, bulbBtm.Y - factoredHeight2D), pileDia2D * 0.5, pileDia2D * 0.5 * flattening);

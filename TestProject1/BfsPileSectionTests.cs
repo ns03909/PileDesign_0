@@ -64,15 +64,16 @@ namespace TestProject1
         }
 
         [TestMethod]
-        public void BothSectionTypes_AreOfferedExceptOnTopSegment()
+        public void BothSectionTypes_AreOfferedRegardlessOfSegmentPosition()
         {
-            var s = new PileSection { IsTopSegment = false };
-            CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.BfsHead);
-            CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.BfsTip);
-
-            s.IsTopSegment = true;
-            CollectionAssert.DoesNotContain(s.PreCastConcretePileSectionTypeOption, PileTypeNames.BfsHead);
-            CollectionAssert.DoesNotContain(s.PreCastConcretePileSectionTypeOption, PileTypeNames.BfsTip);
+            // 区間の位置で選択肢を変えると、同じ状態でも「初回は選べるが開き直すと消える」
+            // という不安定な挙動になっていたため、位置による除外はしない
+            foreach (bool isTop in new[] { false, true })
+            {
+                var s = new PileSection { IsTopSegment = isTop };
+                CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.BfsHead, $"IsTopSegment={isTop}");
+                CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.BfsTip, $"IsTopSegment={isTop}");
+            }
         }
 
         [TestMethod]

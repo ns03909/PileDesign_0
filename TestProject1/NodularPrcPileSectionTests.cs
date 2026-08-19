@@ -82,16 +82,14 @@ namespace TestProject1
         }
 
         [TestMethod]
-        public void BothSectionTypes_AreOfferedExceptOnTopSegment()
+        public void BothSectionTypes_AreOfferedRegardlessOfSegmentPosition()
         {
-            var s = new PileSection { IsTopSegment = false };
-            CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.PrcNodular);
-            CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.PrcNodularPhcPart);
-
-            // 節杭は上杭に継ぐ下杭として使うので最上段では選べない
-            s.IsTopSegment = true;
-            CollectionAssert.DoesNotContain(s.PreCastConcretePileSectionTypeOption, PileTypeNames.PrcNodular);
-            CollectionAssert.DoesNotContain(s.PreCastConcretePileSectionTypeOption, PileTypeNames.PrcNodularPhcPart);
+            foreach (bool isTop in new[] { false, true })
+            {
+                var s = new PileSection { IsTopSegment = isTop };
+                CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.PrcNodular, $"IsTopSegment={isTop}");
+                CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.PrcNodularPhcPart, $"IsTopSegment={isTop}");
+            }
         }
 
         [TestMethod]

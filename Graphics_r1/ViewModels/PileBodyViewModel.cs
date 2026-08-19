@@ -700,6 +700,12 @@ namespace PileDesign.ViewModels
             {
                 seg.PileSection.OnPropertyChanged(nameof(seg.PileSection.PileDescription));
             }
+
+            // 最下段区間の断面が変わると Hybrid ニーディングの節部径 D1 が変わるので作り直す。
+            // 断面ウィンドウの編集中は断面タイプが一時的に既定値へ戻ることがあり、
+            // その途中の値のまま表示が固まらないよう、確定後にここで必ず再評価する。
+            PileBody.UpdateHybridDerivedDiameter();
+
             DrawShapes();
             UpdateTemporarySoilPile();
         }
@@ -1237,7 +1243,10 @@ namespace PileDesign.ViewModels
                 displacementWithLiquefaction: IsDisplacementWithLiquefaction,
                 smartMagnumLL: PileBodies[PileBodyNo - 1].SmartMagnumLL,
                 smartMagnumDes: PileBodies[PileBodyNo - 1].SmartMagnumDes,
-                smartMagnumWingLength: PileBodies[PileBodyNo - 1].SmartMagnumWingLength);
+                smartMagnumWingLength: PileBodies[PileBodyNo - 1].SmartMagnumWingLength,
+                hybridE: PileBodies[PileBodyNo - 1].HybridExpansionRatio,
+                hybridEs: PileBodies[PileBodyNo - 1].HybridExcavationRatio,
+                hybridLu: PileBodies[PileBodyNo - 1].HybridPileBelowLength);
         }
     }
 }

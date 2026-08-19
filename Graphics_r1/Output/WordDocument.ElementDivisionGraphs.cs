@@ -120,7 +120,10 @@ namespace PileDesign.Output
                 zs: zs,
                 smartMagnumLL: pileBody.SmartMagnumLL,
                 smartMagnumDes: pileBody.SmartMagnumDes,
-                smartMagnumWingLength: pileBody.SmartMagnumWingLength);
+                smartMagnumWingLength: pileBody.SmartMagnumWingLength,
+                hybridE: pileBody.HybridExpansionRatio,
+                hybridEs: pileBody.HybridExcavationRatio,
+                hybridLu: pileBody.HybridPileBelowLength);
 
             canvas.Measure(new Size(dipW, dipH));
             canvas.Arrange(new Rect(0, 0, dipW, dipH));

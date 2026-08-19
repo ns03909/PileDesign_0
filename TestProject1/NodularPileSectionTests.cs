@@ -337,22 +337,24 @@ namespace TestProject1
             Assert.AreEqual(0, s.NodeCenterDepthsFromSegmentTop(0.5).Count());
         }
 
-        // ── 最上段区間では使えない ─────────────────────────────
+        // ── 最上段区間の扱い ───────────────────────────────────
 
+        /// <summary>
+        /// 節杭は「上杭に継ぐ下杭」として使うのが一般的だが、選択肢からの除外はしない。
+        /// 除外の判定に使う IsTopSegment は区間更新が走るまで false のままで、
+        /// 同じ状態でも「初回は選べるが開き直すと消える」不安定な挙動になっていたため。
+        /// Smart-MAGNUM / Hybrid ニーディングを 1 区間でモデル化する場合にも節杭が要る。
+        /// 最上段に節杭が来ていることは入力チェックの警告で知らせる。
+        /// </summary>
         [TestMethod]
-        public void TopSegment_DoesNotOfferNodularSectionType()
+        public void NodularSectionType_IsOfferedRegardlessOfSegmentPosition()
         {
-            var s = new PileSection { PileBodyType = PileTypeNames.PrecastConcrete, IsTopSegment = true };
-            CollectionAssert.DoesNotContain(s.PreCastConcretePileSectionTypeOption, PileTypeNames.PhcNodular,
-                "PHC節杭 は上杭に継ぐ下杭なので最上段では選べない");
-            CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.Phc);
-        }
-
-        [TestMethod]
-        public void NonTopSegment_OffersNodularSectionType()
-        {
-            var s = new PileSection { PileBodyType = PileTypeNames.PrecastConcrete, IsTopSegment = false };
-            CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.PhcNodular);
+            foreach (bool isTop in new[] { false, true })
+            {
+                var s = new PileSection { PileBodyType = PileTypeNames.PrecastConcrete, IsTopSegment = isTop };
+                CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.PhcNodular, $"IsTopSegment={isTop}");
+                CollectionAssert.Contains(s.PreCastConcretePileSectionTypeOption, PileTypeNames.Phc, $"IsTopSegment={isTop}");
+            }
         }
 
         [TestMethod]

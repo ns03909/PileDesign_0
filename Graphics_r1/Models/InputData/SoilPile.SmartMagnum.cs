@@ -60,50 +60,6 @@ namespace PileDesign.Models.InputData
         private static bool IsCohesive(string granularityClass) => granularityClass == "粘性土";
 
         /// <summary>
-        /// Smart-MAGNUM の適用対象外である、他メーカーの既製杭製品の名称接頭辞。
-        ///
-        /// 本工法はジャパンパイルの工法なので、適用はジャパンパイルの既製コンクリート杭に限る。
-        /// 節杭ライブラリ（JP-NPH / JP-NPRC）は Maker 列がジャパンパイルなので断面タイプで判別できるが、
-        /// PHC / PRC / SC の一般リストには他メーカーの製品を追記しているため名称で見分ける。
-        /// JIS 規格品（PHC- / CPRC- / SC-）はメーカー中立なので適用対象として扱う。
-        /// </summary>
-        private static readonly (string Prefix, string Maker)[] NonJapanPileProductPrefixes =
-        [
-            ("MS-hi105", "三谷セキサン"),
-            ("Hi-SC105", "三谷セキサン"),
-            ("DAM105", "三谷セキサン"),
-            ("BF.S", "三谷セキサン"),
-        ];
-
-        /// <summary>
-        /// 断面がジャパンパイル製（＝ Smart-MAGNUM の適用対象）とみなせるか。
-        /// 判別できた他メーカー製品のみ false を返し、メーカー中立の JIS 規格品は true とする。
-        /// </summary>
-        internal static bool IsJapanPileSection(PileSection section, out string maker)
-        {
-            maker = "ジャパンパイル";
-            if (section == null) return true;
-
-            // 三谷セキサンの BF.S は専用の断面タイプを持つ
-            if (section.PileSectionType is PileTypeNames.BfsHead or PileTypeNames.BfsTip)
-            {
-                maker = "三谷セキサン";
-                return false;
-            }
-
-            string name = section.SelectedPrecastPile?.Name ?? string.Empty;
-            foreach (var (prefix, m) in NonJapanPileProductPrefixes)
-            {
-                if (name.StartsWith(prefix, StringComparison.Ordinal))
-                {
-                    maker = m;
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        /// <summary>
         /// 周面摩擦・先端支持力の算定に使う杭径 (m)。
         /// 節杭は節部径、ストレート杭は公称外径（腐食代控除前）を使う。
         /// 解析用の <c>PileSection.PileDiameter</c> は鋼管系で腐食代控除後の有効径になるため、
@@ -400,7 +356,7 @@ namespace PileDesign.Models.InputData
             {
                 foreach (var segment in PileBodySegments)
                 {
-                    if (IsJapanPileSection(segment?.PileSection, out string maker)) continue;
+                    if (PileMakers.IsUsableBy(segment?.PileSection, PileMakers.JapanPile, out string? maker)) continue;
                     yield return $"{label}: {maker}の製品が使われています。"
                         + "Smart-MAGNUM 工法はジャパンパイルの既製コンクリート杭にのみ適用できます。";
                     break;

@@ -64,6 +64,18 @@ namespace PileDesign.ViewModels
         private readonly PileSection PrevPileSection;
 
         public Canvas Canvas { get; set; }
+
+        /// <summary>
+        /// 節部側面図を描くキャンバス。断面図のキャンバス (300×300 固定) は円がほぼ埋めていて
+        /// 余白が無いため、側面図はその隣に置いた専用キャンバスに描く。
+        /// </summary>
+        public Canvas NodeSideViewCanvas { get; set; }
+
+        /// <summary>節部側面図の表示。節杭以外では畳んで場所を取らない。</summary>
+        public System.Windows.Visibility NodeSideViewVisibility =>
+            PileSection != null && PileSection.IsNodularPile && PileSection.NodeDiameter > PileSection.PileDiameter
+                ? System.Windows.Visibility.Visible
+                : System.Windows.Visibility.Collapsed;
         private PathGeometry DrawingGeometry = new();
         private double Scale;
 
@@ -1269,7 +1281,8 @@ namespace PileDesign.ViewModels
             double canvasWidth = Canvas.ActualWidth;
             double canvasHeight = Canvas.ActualHeight;
             canvasHeight = Math.Max(canvasHeight, 100.0); /// 仮
-            double baseDimension = Math.Max(PileSection.PileDiameter + 150.0, 1200.0);
+            // 節杭では節部径が軸部径より大きいので、節部径の円が切れないよう基準寸法に含める
+            double baseDimension = NodularSectionDrawing.BaseDimension(PileSection);
             return Math.Min(canvasWidth, canvasHeight) / baseDimension;
         }
 
@@ -1286,6 +1299,13 @@ namespace PileDesign.ViewModels
             Canvas.Children.Clear();
 
             DrawGauge();
+
+            // 節杭は断面（軸部の切り口）だけでは節が分からないので、節部径の円を描き足す
+            NodularSectionDrawing.DrawNodeDiameterCircle(Canvas, PileSection, Scale);
+
+            // 節の形とピッチは軸方向にしか現れないため、隣の専用キャンバスに側面図を描く
+            NodularSectionDrawing.DrawNodeSideView(NodeSideViewCanvas, PileSection);
+            OnPropertyChanged(nameof(NodeSideViewVisibility));
 
 
             if (PileSection.PileBodyType == PileTypeNames.InsituRc ||
@@ -1409,29 +1429,21 @@ namespace PileDesign.ViewModels
             EllipseGeometry innerCircle = new(new Point(Canvas.ActualWidth * 0.5, Canvas.ActualHeight * 0.5), india * 0.5 * Scale, india * 0.5 * Scale);
             geometry.AddGeometry(outerCircle);
             geometry.AddGeometry(innerCircle);
-            Path donutPath = new();
-            if (type == "concrete")
+            // 外径と内径の 2 つの楕円を既定の FillRule.EvenOdd で塗ると、
+            // 内径側が抜けてちょうどドーナツ (中空断面) になる。
+            Path donutPath = new()
             {
-                donutPath.Stroke = NikkenBrush.SkyBlue; // 線の色
-                //donutPath.Fill = Brushes.NavajoWhite;
-                donutPath.StrokeThickness = 1;
-                donutPath.Data = geometry;
-            }
-            if (type == "steelPipe")
-            {
-                donutPath.Stroke = NikkenBrush.SkyBlue; // 線の色
-                //donutPath.Fill = Brushes.WhiteSmoke;
-                donutPath.StrokeThickness = 1;
-                donutPath.Data = geometry;
-            }
-
-            if (type == "hoop")
-            {
-                donutPath.Stroke = NikkenBrush.SkyBlue;
-                //donutPath.Fill = Brushes.AntiqueWhite;
-                donutPath.StrokeThickness = 1;
-                donutPath.Data = geometry;
-            }
+                Stroke = NikkenBrush.SkyBlue, // 線の色
+                StrokeThickness = 1,
+                Data = geometry,
+                // 帯筋 (hoop) は配筋を示す線なので塗らない。塗るとコンクリートを覆ってしまう。
+                Fill = type switch
+                {
+                    "concrete" => NikkenBrush.PileConcreteFill,
+                    "steelPipe" => NikkenBrush.PileSteelFill,
+                    _ => null,
+                },
+            };
             Canvas.Children.Add(donutPath); // Canvasに追加
         }
 

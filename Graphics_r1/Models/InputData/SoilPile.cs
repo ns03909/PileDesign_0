@@ -208,6 +208,7 @@ namespace PileDesign.Models.InputData
                 // Smart-MAGNUM は Nu（上方2m）と Nl（下方 LL+Den+Don）の重み付き平均で、
                 // 単純平均ではないため別経路で算定する。
                 if (IsSmartMagnum) return SmartMagnumPileToeNValue;
+                if (IsHybridKneading) return HybridToeNValue;
 
                 var groundMassesData = GroundInput.GroundMassesData;
                 var relevantMasses = groundMassesData
@@ -258,18 +259,18 @@ namespace PileDesign.Models.InputData
         // Smart-MAGNUM は Nu の範囲（杭先端から上方 2m）。一般式は杭先端 +D。
         public double PileToeNValueAverageRangeUpperAltitude
         {
-            get => IsSmartMagnum
-                ? PileBottomAltitude + SmartMagnumNuRangeAboveToe
-                : PileBottomAltitude + D;
+            get => IsSmartMagnum ? PileBottomAltitude + SmartMagnumNuRangeAboveToe
+                 : IsHybridKneading ? HybridToeEvaluationAltitude + HybridBulbTopAboveEvaluation
+                 : PileBottomAltitude + D;
         }
 
         // 杭先端N値平均範囲下端
         // Smart-MAGNUM は Nl の範囲（杭先端から下方 LL+Den+Don）。一般式は杭先端 -D。
         public double PileToeNValueAverageRangeLowerAltitude
         {
-            get => IsSmartMagnum
-                ? PileBottomAltitude - (SmartMagnumLL + SmartMagnumDen + SmartMagnumDon)
-                : PileBottomAltitude - D;
+            get => IsSmartMagnum ? PileBottomAltitude - (SmartMagnumLL + SmartMagnumDen + SmartMagnumDon)
+                 : IsHybridKneading ? HybridToeEvaluationAltitude - HybridD1
+                 : PileBottomAltitude - D;
         }
 
         // 杭先端粘着力
@@ -353,7 +354,9 @@ namespace PileDesign.Models.InputData
         // 先端支持力の算定に使う面積 m2。
         // Smart-MAGNUM は「根固め部に位置する節杭の節部有効断面積 Ap = π·Don²/4」であり、
         // 姿図・N値範囲に使う根固め部径 Den 基準の Ap とは別物。
-        public double ApBearing => IsSmartMagnum ? SmartMagnumAp : Ap;
+        public double ApBearing =>
+            IsSmartMagnum ? SmartMagnumAp :
+            IsHybridKneading ? HybridAp : Ap;
 
         // 極限先端支持力 kN
         public double Rpu => Qpu * ApBearing;
@@ -757,6 +760,13 @@ namespace PileDesign.Models.InputData
             var selectedPileBody = PileBodyInput;
             PileConstructionType = selectedPileBody.PileConstructionType;
             PileToeEta = selectedPileBody.TipNonPermability;
+
+            // Hybrid ニーディングの根固め部径 D3 は設計拡径比 e と節部径 D1 から決まる導出値。
+            // 姿図・3D・地盤柱・CAD 出力はいずれも PileToeDia を見るため、ここで書き戻して
+            // 下流の消費側に分岐を持ち込まないようにする。
+            if (IsHybridKneading && HybridD3 > 0)
+                selectedPileBody.PileToeDia = HybridD3 * 1000.0;
+
             D = selectedPileBody.PileToeDia / 1000.0; // mm -> m 
         }
 
@@ -775,6 +785,9 @@ namespace PileDesign.Models.InputData
                 // 支持力度としては α·N を持たせる。面積側は ApBearing が Don 基準に切り替わる。
                 PileConstructionTypeNames.SmartMagnum =>
                     SmartMagnumAlphaValue * SmartMagnumPileToeNValue,
+                // Hybrid ニーディング: Rp = α·N·Ap（Ap は節部径 D1 基準）。
+                // N が 5 未満のとき α = 0 とする規定は HybridQpu 側で処理している。
+                PileConstructionTypeNames.HybridKneading => HybridQpu,
                 PileConstructionTypeNames.Insitu => PileToeGranularityClass switch
                 {
                     "砂質土" => Math.Min(120 * PileToeNValue, 7500),
@@ -813,9 +826,9 @@ namespace PileDesign.Models.InputData
                 _ => Qpu
             };
 
-            if (IsSmartMagnum)
+            if (IsSmartMagnum || IsHybridKneading)
             {
-                // 沈下曲線の極限先端支持力には Smart-MAGNUM の極限先端支持力そのものを使う。
+                // 沈下曲線の極限先端支持力には工法の極限先端支持力そのものを使う。
                 // 曲線の変位スケール 0.1·Dp には球根が地盤を支える実態に合わせて根固め部径 Den を
                 // 使うため、Dp 基準の面積 SettleAp で逆算し SettleRpu == Rpu を厳密に成立させる。
                 // （α·N をそのまま Den 面積に掛けると球根径基準で過大評価になる）
@@ -835,12 +848,20 @@ namespace PileDesign.Models.InputData
         {
             if (PileCircumVerticals == null) return;
 
-            if (IsSmartMagnum)
+            if (IsSmartMagnum || IsHybridKneading)
             {
                 // τ2 / τT は工法別評定式で決まる。τ1 / S1 / S2 はカタログに規定が無いため
                 // 土質別の既存値をそのまま使う（下のループで設定される）。
-                ApplySmartMagnumCircumProperties();
-                ApplySmartMagnumCircumExclusion();
+                if (IsSmartMagnum)
+                {
+                    ApplySmartMagnumCircumProperties();
+                    ApplySmartMagnumCircumExclusion();
+                }
+                else
+                {
+                    ApplyHybridCircumProperties();
+                    ApplyHybridCircumExclusion();
+                }
 
                 foreach (var pcv in PileCircumVerticals)
                 {
@@ -927,6 +948,16 @@ namespace PileDesign.Models.InputData
             Rtu = PileCircumVerticals.Where(pcv => pcv.IsNegativeCircumResistance).Sum(pcv => pcv.Rtu);
             Rtr = PileCircumVerticals.Where(pcv => pcv.IsNegativeCircumResistance).Sum(pcv => pcv.Rtr);
             Rty = PileCircumVerticals.Where(pcv => pcv.IsNegativeCircumResistance).Sum(pcv => pcv.Rty);
+
+            // Hybrid ニーディングは引抜きにも先端項 κ·N·Ap がある (tRa = 2/3{κNAp + 周面} + Ws)。
+            // 引抜き抵抗は負値で保持する規約なので、抵抗を増やす向きは減算になる。
+            if (IsHybridKneading)
+            {
+                double toe = HybridUpliftToeResistance;
+                Rtu -= toe;
+                Rty -= (2.0 / 3.0) * toe;
+                Rtr -= (1.0 / 1.2) * toe;
+            }
 
             double w = PileCircumVerticals.Sum(pcv => pcv.PileBodySegment.PileSection.W * pcv.L);
 

@@ -32,6 +32,17 @@ namespace PileDesign.Common
         public static readonly SolidColorBrush Yellow = Freeze(new(NikkenWindowsMediaColors.Yellow));
         public static readonly SolidColorBrush Green = Freeze(new(NikkenWindowsMediaColors.Green));
 
+        // ── 杭の塗り ──
+        // 輪郭の SkyBlue に馴染む薄い青。杭姿図・断面図・節部側面図で共通に使い、
+        // 図によって杭の見え方が変わらないようにする。
+        // 背面の地盤や目盛を透かさないよう不透明にしている。
+
+        /// <summary>コンクリート断面の塗り。</summary>
+        public static readonly SolidColorBrush PileConcreteFill = Freeze(new(Color.FromRgb(0xEF, 0xF7, 0xFC)));
+
+        /// <summary>鋼管断面の塗り。コンクリートと見分けられるよう一段濃くしている。</summary>
+        public static readonly SolidColorBrush PileSteelFill = Freeze(new(Color.FromRgb(0xD8, 0xE7, 0xF3)));
+
         private static SolidColorBrush Freeze(SolidColorBrush brush) { brush.Freeze(); return brush; }
     }
 
