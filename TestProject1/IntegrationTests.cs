@@ -476,6 +476,17 @@ namespace TestProject1
                     X = plDto.X,
                     Y = plDto.Y,
                     Z = plDto.Z != 0 ? plDto.Z : groundInput.GroundTopAltitude,
+                    // 軸力は実機の PileExampleLoader と同じ形で写す。
+                    // これを忘れると全杭の軸力が 0 になり、M-φ が N=0 でしか作られない
+                    // (Example10 の 1200φ では Mcr が常時軸力時の 40% にしかならず、
+                    //  軸力依存の退化を一切検出できないまま解析テストが通ってしまう)。
+                    AxialForceVL0 = plDto.AxialForceVL0,
+                    AxialForceLevel1s = plDto.AxialForceLevel1s?.Length >= 4
+                        ? new ObservableCollection<double>(plDto.AxialForceLevel1s)
+                        : new ObservableCollection<double>([0.0, 0.0, 0.0, 0.0]),
+                    AxialForceLevel2s = plDto.AxialForceLevel2s?.Length >= 4
+                        ? new ObservableCollection<double>(plDto.AxialForceLevel2s)
+                        : new ObservableCollection<double>([0.0, 0.0, 0.0, 0.0]),
                 };
                 pileLayoutItems.Add(item);
             }
