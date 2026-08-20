@@ -406,6 +406,19 @@ namespace TestProject1
             if (groundInput == null)
                 return (null, "Ground deserialization failed");
 
+            // 例題 JSON は土質点を GL からの深さ (GLDepth) で持ち、標高 (AltitudeDepth) は保存しない。
+            // 実機では GroundExampleLoader が標高へ換算するが、ここは JSON を直接読むので自前で行う。
+            // これを忘れると全土質点の標高が 0 になり、杭先端 N 値が常に 0 になる
+            // (= 先端支持力が 0 のままテストが通ってしまう)。
+            if (groundInput.GroundMassesData != null)
+            {
+                foreach (var mass in groundInput.GroundMassesData)
+                {
+                    if (mass == null) continue;
+                    mass.AltitudeDepth = mass.GLDepth + groundInput.GroundTopAltitude;
+                }
+            }
+
             // 杭データ読み込み
             var pilePath = Path.Combine(examplesDir, $"{pileExampleName}.json");
             if (!File.Exists(pilePath))

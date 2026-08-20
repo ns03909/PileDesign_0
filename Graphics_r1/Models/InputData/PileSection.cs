@@ -2373,12 +2373,47 @@ namespace PileDesign.Models.InputData
         // 合成断面: コンクリート + 主筋 + PC鋼材 + 鋼管（Es·As）。鋼管を持たない断面では PipeAs=0 のため影響なし。
         public double EA => (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAs) * 0.001;
 
+        // ───── 換算断面二次モーメント（曲げ剛性 EI の中身）─────
+        //
+        // Ie = I + (1/2)(np - 1)·Ap·(Dp/2)^2 + (1/2)(nr - 1)·Ag·(Dr/2)^2   [+ 鋼管項]
+        //   np = Ep/Ec (PC鋼棒)   nr = Er/Ec (異形棒鋼)
+        //
+        // 鋼材ごとに配置円 (PCD) も換算比も分けている。JP-NPRC の PRC節杭は 232 行すべてで
+        // PC鋼棒の PCD と異形棒鋼の PCD が異なり、分離するとカタログ Ie と最大 0.046% 一致するのに対し、
+        // PC鋼棒の PCD で一括すると 1.41% ずれる。
+        // 「基礎部材の強度と変形性能」の (Ap+Ag)·rp^2 は PCD が近いことを前提にした簡略式。
+
+        /// <summary>コンクリート中空断面の断面二次モーメント (mm4)。</summary>
+        private double ConcreteI =>
+            Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 64.0;
+
+        /// <summary>
+        /// PC鋼棒の換算断面二次モーメント項 (mm4)。<c>(1/2)(np - 1)·Ap·(Dp/2)^2</c>。
+        /// EA には <c>Ep·Ap</c> が入っているのに EI にはこの項が無く、
+        /// カタログの換算断面二次モーメント Ie より PHC系で最大 5.9%、
+        /// PRC節杭で最大 29.5% 小さくなっていた (2026-08-20 修正)。
+        /// </summary>
+        private double TendonIEquivalent =>
+            ConcreteE > 0 && TendonAp > 0 && TendonDp > 0 && TendonEp > 0
+                ? 0.5 * (TendonEp / ConcreteE - 1) * TendonAp * Math.Pow(TendonDp, 2) / 4.0
+                : 0.0;
+
+        /// <summary>
+        /// 異形棒鋼の換算断面二次モーメント項 (mm4)。<c>(1/2)(nr - 1)·Ag·(Dr/2)^2</c>。
+        /// <c>ConcreteOutDia - 2·MainBarCenterCover</c> は鉄筋配置直径 <see cref="MainBarDr"/> と一致する
+        /// (製品ライブラリ適用時に <c>MainBarCenterCover = (ConcreteOutDia - MainBarDr)/2</c> と設定するため)。
+        /// </summary>
+        private double MainBarIEquivalent =>
+            ConcreteE > 0 && MainBarAg > 0 && MainBarEr > 0
+                ? 0.5 * (MainBarEr / ConcreteE - 1) * MainBarAg
+                  * Math.Pow(ConcreteOutDia - 2 * MainBarCenterCover, 2) / 4.0
+                : 0.0;
+
         // 曲げ剛性 (kNm2)
-        // 鉄筋の換算断面二次モーメント項は MainBarAg（鉄筋断面積）を使用
-        // ※ A0（全断面積）を使用すると過大評価になるので注意
+        // ※ 換算項の断面積は MainBarAg / TendonAp（鋼材断面積）を使用。
+        //    A0（全断面積）を使用すると過大評価になるので注意
         // ※ コンクリート断面は中空断面（ConcreteOutDia - 2*ConcreteThickness = 内径）として計算
-        public double EI => (ConcreteE * (Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 64.0
-            + 0.5 * (MainBarEr / ConcreteE - 1) * MainBarAg * Math.Pow((ConcreteOutDia - 2 * MainBarCenterCover), 2) / 4.0)
+        public double EI => (ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent)
             + PipeEs * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 64.0) * Math.Pow(10, -9);
 
         // ===== 腐食代考慮の断面諸量（諸元の「両方記載」表示専用） =====
@@ -2403,8 +2438,7 @@ namespace PileDesign.Models.InputData
             (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAsCorroded) * 0.001;
 
         // 腐食考慮 曲げ剛性 (kNm2) — 鋼管項のみ腐食後外径で置換
-        public double EICorroded => (ConcreteE * (Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 64.0
-            + 0.5 * (MainBarEr / ConcreteE - 1) * MainBarAg * Math.Pow((ConcreteOutDia - 2 * MainBarCenterCover), 2) / 4.0)
+        public double EICorroded => (ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent)
             + PipeEs * Math.PI * (Math.Pow(CorrodedPipeOuterDiaDisp, 4) - Math.Pow(PipeInnerDiaDisp, 4)) / 64.0) * Math.Pow(10, -9);
 
         // ねじり剛性 (kNm2)
