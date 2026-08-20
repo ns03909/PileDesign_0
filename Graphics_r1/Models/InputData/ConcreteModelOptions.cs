@@ -24,6 +24,32 @@ namespace PileDesign.Models.InputData
         /// <summary>引張側の降伏応力度を 0 とする（コンクリートの引張負担を無視する）。</summary>
         public static bool IgnoreTensileStrength { get; set; }
 
+        /// <summary>
+        /// 鋼材のヤング係数に「基礎部材の強度と変形性能」の値を用いる
+        /// （既定 false = 製品カタログの値をそのまま使う）。
+        ///
+        /// カタログ値はメーカーで食い違っており、異形棒鋼は 200,000（JIS・三谷セキサン）と
+        /// 205,000（ジャパンパイル）、鋼管は 200,000（JIS）と 205,000（三谷 Hi-SC105）に割れる。
+        /// カタログに拠らず指針で統一して検討したい場合にこちらへ切り替える。
+        ///
+        /// 既製杭は指針が E ではなく<b>ヤング係数比 n = 5 そのもの</b>を規定しているため、
+        /// E ではなく n を固定する（<see cref="GuideModularRatioForPrecast"/>）。
+        /// EI・EA だけでなく N-M 曲線・M-φ まで一貫して効かせるため、
+        /// 製品を断面へ反映する時点で E を差し替える方式を採る。
+        /// </summary>
+        public static bool UseGuideYoungsModulus { get; set; }
+
+        /// <summary>
+        /// 基礎部材の強度と変形性能が規定する既製杭のヤング係数比 n（PC鋼材・鉄筋とも 5 で固定）。
+        /// </summary>
+        public const double GuideModularRatioForPrecast = 5.0;
+
+        /// <summary>
+        /// 基礎部材の強度と変形性能が規定する鋼材のヤング係数 (N/mm²)。
+        /// 場所打ち系の鉄筋・鋼管と、SC杭の鋼管に適用する。
+        /// </summary>
+        public const double GuideSteelYoungsModulus = 205000.0;
+
         /// <summary>圧縮側の折れ点応力度を 0.85·Fc とする（既定の Gsi·Fc に代えて、Gsi を乗じない）。</summary>
         public static bool UseReducedCompression { get; set; }
 

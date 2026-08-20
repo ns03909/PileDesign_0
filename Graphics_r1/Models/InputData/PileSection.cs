@@ -1903,6 +1903,8 @@ namespace PileDesign.Models.InputData
                     PipeEs = pipe.Es;
                     HoopPsSigmay = pipe.PsSigmaY;
 
+                    ApplyGuideYoungsModulusIfEnabled();
+
                     isFound = true;
                     break;
                 }
@@ -2372,6 +2374,37 @@ namespace PileDesign.Models.InputData
         // 軸剛性 (kN)
         // 合成断面: コンクリート + 主筋 + PC鋼材 + 鋼管（Es·As）。鋼管を持たない断面では PipeAs=0 のため影響なし。
         public double EA => (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAs) * 0.001;
+
+        /// <summary>
+        /// 「基礎部材の強度と変形性能」のヤング係数を使う設定のとき、
+        /// 製品カタログから読み込んだ鋼材のヤング係数を指針の値に差し替える。
+        ///
+        /// カタログ値はメーカーで食い違う（異形棒鋼 200,000 / 205,000、鋼管 200,000 / 205,000）。
+        /// 差し替えは<b>製品を断面へ反映した直後の 1 箇所</b>で行う。こうすると
+        /// EI・EA だけでなく N-M 曲線・M-φ まで同じ E で一貫する。
+        ///
+        /// 既製杭は指針が E ではなく<b>ヤング係数比 n = 5</b> を規定しているため、
+        /// E = n·Ec として与える。Ec が 40,000 以外（Fc 105 級など）でも n が 5 に保たれる。
+        /// 鋼管は E = 205,000 の直接指定。
+        /// </summary>
+        private void ApplyGuideYoungsModulusIfEnabled()
+        {
+            if (!ConcreteModelOptions.UseGuideYoungsModulus) return;
+            if (ConcreteE <= 0) return;
+
+            if (PileTypeNames.IsPhcLikeSection(PileSectionType) || PileTypeNames.IsPrcLikeSection(PileSectionType))
+            {
+                // PHC杭・PRC杭 (節杭を含む): PC鋼材・鉄筋とも n = 5 固定
+                double e = ConcreteModelOptions.GuideModularRatioForPrecast * ConcreteE;
+                if (TendonAp > 0) TendonEp = e;
+                if (MainBarAg > 0) MainBarEr = e;
+            }
+            else if (PileSectionType == PileTypeNames.Sc)
+            {
+                // SC杭の鋼管
+                PipeEs = ConcreteModelOptions.GuideSteelYoungsModulus;
+            }
+        }
 
         // ───── 換算断面二次モーメント（曲げ剛性 EI の中身）─────
         //

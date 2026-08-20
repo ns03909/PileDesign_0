@@ -178,6 +178,21 @@
                 </TextBlock>
             </Border>
 
+            <!-- 鋼材のヤング係数の出所（製品カタログ / 基礎部材の強度と変形性能） -->
+            <GroupBox Header="鋼材のヤング係数" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+                    <ctrl:MaterialOptionRadioPair
+                        Header="PC鋼材・鉄筋・鋼管のヤング係数の出所" HelpAnchor="fund-opt-steel-e" GroupName="OptSteelE"
+                        IsAlternativeSelected="{Binding UseGuideYoungsModulus, Mode=TwoWay}"
+                        DefaultText="製品カタログの値を用いる"
+                        DefaultFormula="Ec / Ep / Er / Es は選択した製品の値"
+                        DefaultToolTip="製品ライブラリに収録したメーカー公称値をそのまま使います。&#x0a;メーカーで食い違いがあり、異形棒鋼は 200,000 (JIS・三谷セキサン) と 205,000 (ジャパンパイル)、&#x0a;鋼管は 200,000 (JIS) と 205,000 (三谷 Hi-SC105) に割れます。"
+                        AlternativeText="「基礎部材の強度と変形性能」の値を用いる"
+                        AlternativeFormula="既製杭 n = 5 固定 / 場所打ち系の鉄筋・鋼管と SC杭の鋼管 E = 205,000 N/mm²"
+                        AlternativeToolTip="カタログに拠らず指針の値で統一します。&#x0a;既製杭 (PHC・PRC・節杭) は指針が E ではなくヤング係数比 n = 5 を規定しているため、&#x0a;E = 5·Ec として与えます (Ec が 40,000 以外でも n が 5 に保たれます)。&#x0a;EA・EI だけでなく N-M 曲線・M-φ にも一貫して効きます。"/>
+                </StackPanel>
+            </GroupBox>
+
             <!-- 場所打ちコンクリート系 杭のコンクリートのモデル化オプション -->
             <GroupBox Header="コンクリートのモデル化" Margin="0,6,0,0">
                 <StackPanel Margin="6,4,6,4">

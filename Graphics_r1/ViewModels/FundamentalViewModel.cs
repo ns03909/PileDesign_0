@@ -198,6 +198,21 @@ namespace PileDesign.ViewModels
                 "コンクリートEc算定のξ=1.0オプション変更");
         }
 
+        // 鋼材のヤング係数に「基礎部材の強度と変形性能」の値を用いる
+        // (既定 false = 製品カタログの値。カタログはメーカーで 200,000 / 205,000 に割れる)
+        [ObservableProperty]
+        private bool _useGuideYoungsModulus;
+
+        partial void OnUseGuideYoungsModulusChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseGuideYoungsModulus,
+                v => InputModel.FundamentalInput.UseGuideYoungsModulus = v,
+                v => UseGuideYoungsModulus = v,
+                "鋼材ヤング係数の出所変更");
+        }
+
         // 場所打ち系コンクリートの許容圧縮を告示1113(第8)による（使用限界=長期・損傷限界=短期）
         [ObservableProperty]
         private bool _useNotification1113Compression;
@@ -438,6 +453,7 @@ namespace PileDesign.ViewModels
             RebarYieldAt11F = InputModel.FundamentalInput.RebarYieldAt11F;
             SteelPipeYieldAt11F = InputModel.FundamentalInput.SteelPipeYieldAt11F;
             UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
+            UseGuideYoungsModulus = InputModel.FundamentalInput.UseGuideYoungsModulus;
             UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
             UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
             UseInsituUltimateEFunction = InputModel.FundamentalInput.UseInsituUltimateEFunction;
@@ -506,6 +522,9 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.UseUnitGsiForConcreteE):
                     UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
+                    break;
+                case nameof(FundamentalInput.UseGuideYoungsModulus):
+                    UseGuideYoungsModulus = InputModel.FundamentalInput.UseGuideYoungsModulus;
                     break;
                 case nameof(FundamentalInput.UseNotification1113Compression):
                     UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;

@@ -11083,6 +11083,84 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
 
 
+                    <h3 id="fund-opt-steel-e" style="font-weight: bold; font-size: 1.2em;">鋼材のヤング係数と換算断面二次モーメント</h3>
+                    <p>
+                        杭材のヤング係数は<strong>出所によって値が違います</strong>。曲げ剛性 $EI$・軸剛性 $EA$ に直接効き、
+                        $EI$ は水平解析の梁要素剛性になるため、どちらを使うかで変位・断面力が変わります。
+                        基本設定の「鋼材のヤング係数」で切り替えられます。
+                    </p>
+
+                    <h4>換算断面二次モーメント</h4>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$I_e = I + \frac{1}{2}(n_p - 1) A_p \left(\frac{D_p}{2}\right)^2
+                                        + \frac{1}{2}(n_r - 1) A_g \left(\frac{D_r}{2}\right)^2$$</p>
+                        </div>
+                        <div class="formula-right">$n_p = E_p/E_c$、$n_r = E_r/E_c$</div>
+                    </div>
+                    <p>
+                        $A_p$・$D_p$ は PC鋼材の断面積と配置円直径、$A_g$・$D_r$ は異形棒鋼のそれです。
+                        <strong>鋼材ごとに配置円も換算比も分けています</strong>。ジャパンパイル JP-NPRC の PRC節杭は
+                        232 行すべてで PC鋼材と異形棒鋼の配置円が異なり、分離するとカタログの $I_e$ と最大 0.046% で一致するのに対し、
+                        PC鋼材の配置円で一括すると 1.41% ずれます。
+                        「基礎部材の強度と変形性能」の $(A_p + A_g)\,r_p^2$ は、配置円が近いことを前提にした簡略式です。
+                    </p>
+                    <div class="note">
+                        <p>
+                            2026-08-20 の修正前は $EI$ に <strong>PC鋼材の換算項が入っていませんでした</strong>
+                            （$EA$ には $E_p A_p$ が入っていました）。このため $EI$ がカタログの $I_e$ より小さく、
+                            PHC系で最大 5.9%、PRC節杭で最大 29.5% 過小でした。SC杭と場所打ち系は PC鋼材が無いため影響ありません。
+                        </p>
+                    </div>
+
+                    <h4>製品カタログの値（既定）</h4>
+                    <p>選択した製品の値をそのまま使います。メーカーで食い違いがあります。</p>
+                    <table class="table-doc">
+                        <thead>
+                            <tr><th>出所</th><th>$E_c$</th><th>$E_p$（PC鋼材）</th><th>$E_r$（異形棒鋼）</th><th>$E_s$（鋼管）</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>JIS 汎用 PHC</td><td>40,000 / 42,000</td><td>200,000</td><td>—</td><td>—</td></tr>
+                            <tr><td>JIS 汎用 PRC</td><td>40,000</td><td>200,000</td><td>200,000</td><td>—</td></tr>
+                            <tr><td>JIS 汎用 SC</td><td>40,000</td><td>—</td><td>—</td><td>200,000</td></tr>
+                            <tr><td>ジャパンパイル JP-NPH</td><td>40,000</td><td>200,000</td><td>—</td><td>—</td></tr>
+                            <tr><td>ジャパンパイル JP-NPRC</td><td>40,000</td><td>200,000</td><td><strong>205,000</strong></td><td>—</td></tr>
+                            <tr><td>三谷セキサン MS-hi105 / DAM105</td><td>40,000</td><td>200,000</td><td>200,000</td><td>—</td></tr>
+                            <tr><td>三谷セキサン Hi-SC105</td><td>40,000</td><td>—</td><td>—</td><td><strong>205,000</strong></td></tr>
+                            <tr><td>三谷セキサン BF.S</td><td>40,000</td><td>200,000</td><td>—</td><td>—</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h4>基礎部材の強度と変形性能の値</h4>
+                    <p>カタログに拠らず指針の値で統一します。</p>
+                    <table class="table-doc">
+                        <thead>
+                            <tr><th>対象</th><th>規定</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>PHC杭の PC鋼材</td><td>ヤング係数比 $n = 5$ 固定（$E_c = 40{,}000$）</td></tr>
+                            <tr><td>PRC杭の PC鋼材</td><td>ヤング係数比 $n = 5$ 固定（$E_c = 40{,}000$）</td></tr>
+                            <tr><td>PRC杭の鉄筋</td><td>ヤング係数比 $n = 5$ 固定（$E_c = 40{,}000$）</td></tr>
+                            <tr><td>SC杭の鋼管</td><td>$E = 205{,}000$ N/mm²</td></tr>
+                            <tr><td>場所打ち鉄筋コンクリート杭の鉄筋</td><td>$E = 205{,}000$ N/mm²</td></tr>
+                            <tr><td>場所打ち鋼管コンクリート杭の鉄筋</td><td>$E = 205{,}000$ N/mm²</td></tr>
+                            <tr><td>場所打ち鋼管コンクリート杭の鋼管</td><td>$E = 205{,}000$ N/mm²</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="note">
+                        <p>
+                            既製杭は指針が $E$ ではなく<strong>ヤング係数比 $n$ そのもの</strong>を規定しています。
+                            本プログラムでは $E = n \cdot E_c$ として与えるため、$E_c$ が 40,000 以外（Fc 105 級など）でも
+                            $n$ は 5 に保たれます。$I_e$ の式は $(n-1)$ を使うので、
+                            $n$ を $E_p/E_c$ で計算するか 5 に固定するかで結果が変わります。
+                        </p>
+                        <p>
+                            差し替えは製品を断面に反映する時点で行うため、$EA$・$EI$ だけでなく
+                            <strong>N-M 曲線・M-φ にも一貫して効きます</strong>。切り替えると解析結果が変わるので、
+                            変更後は再解析してください。
+                        </p>
+                    </div>
+
                     <h3 id="section-smart-magnum" style="font-weight: bold; font-size: 1.2em;">Smart-MAGNUM 工法（プレボーリング拡大根固め工法）</h3>
                     <p>
                         ジャパンパイルの Smart-MAGNUM 工法です。大臣認定 TACP-0625（砂質地盤）/ 0626（礫質地盤）/ 0627（粘土質地盤）、

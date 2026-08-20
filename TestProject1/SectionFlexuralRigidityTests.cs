@@ -153,6 +153,56 @@ namespace TestProject1
                 $"EI から逆算した Ie がカタログ値と {worst:P2} ずれている (最悪: {worstName})");
         }
 
+        // ── ヤング係数の出所オプション ────────────────────────────
+
+        /// <summary>
+        /// 「基礎部材の強度と変形性能」を選ぶと、既製杭は E ではなく
+        /// ヤング係数比 n = 5 が固定される。Ec が 40,000 以外でも n が 5 に保たれること。
+        /// </summary>
+        [TestMethod]
+        public void GuideYoungsModulus_FixesTheModularRatioForPrecastPiles()
+        {
+            var product = PileSection.NodularPiles.First(p => p.Ie > 0);
+
+            try
+            {
+                ConcreteModelOptions.UseGuideYoungsModulus = true;
+
+                var s = new PileSection
+                {
+                    PileBodyType = PileTypeNames.PrecastConcrete,
+                    PileSectionType = PileTypeNames.PhcNodular,
+                };
+                s.SelectedPrecastPile.Name = product.DisplayName;
+                s.RecalculateSelectedPrecastPile();
+
+                Assert.AreEqual(ConcreteModelOptions.GuideModularRatioForPrecast,
+                    s.TendonEp / s.ConcreteE, 1e-9,
+                    "既製杭の PC鋼材のヤング係数比が n = 5 に固定されていない");
+            }
+            finally
+            {
+                ConcreteModelOptions.UseGuideYoungsModulus = false;
+            }
+        }
+
+        [TestMethod]
+        public void CatalogueYoungsModulus_IsTheDefault()
+        {
+            var product = PileSection.NodularPiles.First(p => p.Ep > 0);
+
+            var s = new PileSection
+            {
+                PileBodyType = PileTypeNames.PrecastConcrete,
+                PileSectionType = PileTypeNames.PhcNodular,
+            };
+            s.SelectedPrecastPile.Name = product.DisplayName;
+            s.RecalculateSelectedPrecastPile();
+
+            Assert.IsFalse(ConcreteModelOptions.UseGuideYoungsModulus, "既定はカタログ値であること");
+            Assert.AreEqual(product.Ep, s.TendonEp, 1e-9, "カタログの Ep がそのまま入っていない");
+        }
+
         // ── ヘルパー ──────────────────────────────────────────────
 
         // PHC杭・SC杭には異形棒鋼が無い。PileSection の既定値には主筋が入っているので、

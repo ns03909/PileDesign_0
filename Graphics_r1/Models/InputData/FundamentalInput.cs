@@ -79,6 +79,15 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _steelPipeYieldAt11F, value);
         }
 
+        // 鋼材のヤング係数に「基礎部材の強度と変形性能」の値を用いる
+        // (既定 false = 製品カタログの値。カタログはメーカーで 200,000 / 205,000 に割れる)
+        private bool _useGuideYoungsModulus;
+        public bool UseGuideYoungsModulus
+        {
+            get => _useGuideYoungsModulus;
+            set => SetProperty(ref _useGuideYoungsModulus, value);
+        }
+
         // コンクリートのヤング係数 Ec の算定で ξ(=Gsi) を 1.0 として計算する
         private bool _useUnitGsiForConcreteE;
         public bool UseUnitGsiForConcreteE

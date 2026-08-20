@@ -181,6 +181,7 @@ namespace PileDesign.ViewModels
             Models.InputData.ConcreteModelOptions.RebarYieldAt11F = f?.RebarYieldAt11F ?? false;
             Models.InputData.ConcreteModelOptions.SteelPipeYieldAt11F = f?.SteelPipeYieldAt11F ?? false;
             Models.InputData.ConcreteModelOptions.UseUnitGsiForConcreteE = f?.UseUnitGsiForConcreteE ?? false;
+            Models.InputData.ConcreteModelOptions.UseGuideYoungsModulus = f?.UseGuideYoungsModulus ?? false;
             Models.InputData.ConcreteModelOptions.UseNotification1113Compression = f?.UseNotification1113Compression ?? false;
             Models.InputData.ConcreteModelOptions.UseNotification1113Shear = f?.UseNotification1113Shear ?? false;
             Models.InputData.ConcreteModelOptions.UseInsituUltimateEFunction = f?.UseInsituUltimateEFunction ?? false;
