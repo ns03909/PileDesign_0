@@ -87,5 +87,90 @@ namespace TestProject1
                     $"[{exampleName} MDOP={dop}] {act.CaseKey}: ステップ数不一致 baseline={bas.TotalSteps}, MDOP{dop}={act.TotalSteps}");
             }
         }
+
+        /// <summary>
+        /// 同一入力・同一オプションで 2 回続けて解析し、結果がビット単位で一致することを検証する。
+        ///
+        /// 2026-08-21 の回帰: AnaModel.MapOnKmat が beam の要素剛性を ConcurrentBag に集めた
+        /// thread-local COO リストから加算しており、beam のスレッド割り当てと bag の列挙順が
+        /// 実行ごとに変わるため、重複 (row,col) の浮動小数加算順が変わっていた。
+        /// K の ULP レベルの揺れが非線形 NR の line search / bisection の分岐を変え、
+        /// Example10 / L2-1.C1.Liq では反復数 175 ⇄ 353、代表変位が 3% 振れていた。
+        ///
+        /// 反復数だけでなく物理量まで完全一致 (AreEqual on double) を要求する。
+        /// 許容差を置くと、まさにこの種の「わずかに揺れる」欠陥を見逃すため。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("Example9", "PileExample9", 4, 8)]
+        [DataRow("ExampleK8", "PileExampleK8", 4, 8)]
+        public void RepeatedRunsAreBitIdentical(
+            string groundName, string pileName, int level1Steps, int level2Steps)
+        {
+            ConvergenceSnapshot Run()
+            {
+                var opts = new HeadlessHorizontalRunner.RunOptions
+                {
+                    Level1Steps = level1Steps,
+                    Level2Steps = level2Steps,
+                    LiquefactionMode = PileDesign.ViewModels.HorizontalCalculationViewModel.LiquefactionOptionType.Yes,
+                    UseLineSearch = true,
+                    Parallelism = 1,
+                    ForceNonLinear = true,
+                };
+                return HeadlessHorizontalRunner.RunExample(groundName, pileName, opts);
+            }
+
+            ConvergenceSnapshot first, second;
+            try
+            {
+                first = Run();
+                second = Run();
+            }
+            catch (System.InvalidOperationException ex) when (ex.Message.Contains("例題ロード失敗"))
+            {
+                Assert.Inconclusive($"例題ファイルなし: {ex.Message}");
+                return;
+            }
+
+            Assert.AreEqual(first.Cases.Count, second.Cases.Count,
+                $"[{groundName}] ケース数が 2 回の実行で異なる");
+
+            var firstByKey = first.Cases.ToDictionary(c => c.CaseKey);
+            foreach (var act in second.Cases)
+            {
+                Assert.IsTrue(firstByKey.TryGetValue(act.CaseKey, out var exp),
+                    $"[{groundName}] {act.CaseKey} が 1 回目に存在しない");
+
+                Assert.AreEqual(exp.Converged, act.Converged,
+                    $"[{groundName}] {act.CaseKey}: 収束フラグが再実行で変わった");
+                Assert.AreEqual(exp.TotalIterations, act.TotalIterations,
+                    $"[{groundName}] {act.CaseKey}: 反復数が再実行で変わった " +
+                    $"{exp.TotalIterations} → {act.TotalIterations} (解析が非決定的)");
+                Assert.AreEqual(exp.TotalSteps, act.TotalSteps,
+                    $"[{groundName}] {act.CaseKey}: ステップ数が再実行で変わった");
+
+                AssertBitIdentical(groundName, act.CaseKey, "AP.Ux", exp.ApUx, act.ApUx);
+                AssertBitIdentical(groundName, act.CaseKey, "AP.Uy", exp.ApUy, act.ApUy);
+                AssertBitIdentical(groundName, act.CaseKey, "AP.Uz", exp.ApUz, act.ApUz);
+                AssertBitIdentical(groundName, act.CaseKey, "AP.Rx", exp.ApRx, act.ApRx);
+                AssertBitIdentical(groundName, act.CaseKey, "AP.Ry", exp.ApRy, act.ApRy);
+                AssertBitIdentical(groundName, act.CaseKey, "AP.Rz", exp.ApRz, act.ApRz);
+                AssertBitIdentical(groundName, act.CaseKey, "MaxAbsHorizDisp",
+                    exp.MaxAbsHorizDisp, act.MaxAbsHorizDisp);
+                AssertBitIdentical(groundName, act.CaseKey, "MaxAbsHorizSpringReaction",
+                    exp.MaxAbsHorizSpringReaction, act.MaxAbsHorizSpringReaction);
+            }
+        }
+
+        private static void AssertBitIdentical(
+            string exampleName, string caseKey, string label, double expected, double actual)
+        {
+            // -0.0 と +0.0、NaN 同士も区別せず「同じビット列か」で見る
+            if (System.BitConverter.DoubleToInt64Bits(expected) == System.BitConverter.DoubleToInt64Bits(actual))
+                return;
+
+            Assert.Fail($"[{exampleName}] {caseKey}: {label} が再実行でビット一致しない " +
+                        $"{expected:R} → {actual:R} (組立順など実行ごとに変わる要素の混入を疑う)");
+        }
     }
 }

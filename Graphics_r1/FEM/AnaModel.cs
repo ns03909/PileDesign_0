@@ -459,38 +459,55 @@ namespace PileDesign.FEM
         }
 
         //  全体剛性マトリクスの作成
-        // v28 F-old (2026-04-23): Beams の Ke 計算 + 全体座標変換 + COO 分配を Parallel.ForEach 化。
+        // v28 F-old (2026-04-23): Beams の Ke 計算 + 全体座標変換 + COO 分配を並列化。
         //   要素ごとの SetKe / TransElemStiffToGlobal / AppendStiffnessToCoo は相互独立
         //   (各 beam は自身の KeTan/KeSec のみ mutate、ResolvedDofMap は read-only)。
-        //   ThreadLocal で COO 三つ組を蓄積し、最後に SparseOfIndexed で一括構築する。
+        //   COO 三つ組を蓄積し、最後に SparseOfIndexed で一括構築する。
         //   MathNet Sparse の indexed += は O(log nnz) で遅いため、COO 一括構築が 3〜10 倍速い。
         //   Springs (HorizontalSoilSpring / RotationalSpring / PenaltySpring) は数が少なく、
         //   Ke は PrepareKmat で既にセット済みのため serial loop で COO 追加。
+        //
+        // 2026-08-21 決定性修正: 以前は Parallel.ForEach + ThreadLocal リストを
+        //   ConcurrentBag に集めていた。beam のスレッドへの割り当ても bag の列挙順も
+        //   実行ごとに変わるため、重複 (row,col) の加算順が変わり K が ULP レベルで揺れていた。
+        //   非線形 NR ではこの揺れが line search / bisection の分岐を変え、同じ入力でも
+        //   反復数が 175 ⇄ 353、代表変位が 3% 変わる (Example10 / L2-1.C1.Liq で実測)。
+        //   → beam を「固定長の連番チャンク」に切り、チャンク番号順に連結することで
+        //     加算順を beam のインデックス順に固定した (= 逐次実行とビット一致)。
+        //     チャンク幅に依らず連結結果は同じ順序になるため、コア数が違っても結果は同じ。
         private void MapOnKmat(bool isTan)
         {
             // K の数値が変わるので Cholesky 因子キャッシュを無効化。
             // (本メソッドが呼ばれない反復では cache.TryReuse() がヒットして CSC 構築 + 分解をスキップ)
             if (isTan) SolverCache.Invalidate();
 
-            // Phase 1: Beams を並列組立 (thread-local COO → 集約)
-            var cooBags = new System.Collections.Concurrent.ConcurrentBag<List<(int r, int c, double v)>>();
+            // Phase 1: Beams を並列組立 (チャンク単位の COO リスト → チャンク番号順に集約)
+            List<(int r, int c, double v)>[] beamCooChunks = [];
 
             if (Beams != null && Beams.Count > 0)
             {
-                int threadInitial = Math.Max(256, Beams.Count * 144 / Math.Max(1, Environment.ProcessorCount));
+                int beamCount = Beams.Count;
+                // 1 スレッドあたり数チャンクになる幅にして負荷を均す。
+                // 連結順はチャンク番号順 = beam のインデックス順なので、幅を変えても結果は変わらない。
+                int workers = Math.Max(1, Environment.ProcessorCount);
+                int chunkSize = Math.Max(1, (beamCount + workers * 4 - 1) / (workers * 4));
+                int chunkCount = (beamCount + chunkSize - 1) / chunkSize;
+                beamCooChunks = new List<(int r, int c, double v)>[chunkCount];
 
-                System.Threading.Tasks.Parallel.ForEach(
-                    Beams,
-                    () => new List<(int r, int c, double v)>(threadInitial),
-                    (beam, _, local) =>
+                System.Threading.Tasks.Parallel.For(0, chunkCount, ci =>
+                {
+                    int lo = ci * chunkSize;
+                    int hi = Math.Min(beamCount, lo + chunkSize);
+                    var local = new List<(int r, int c, double v)>((hi - lo) * 144 + 16);
+                    for (int bi = lo; bi < hi; bi++)
                     {
+                        var beam = Beams[bi];
                         beam.SetKe(isTan);
                         var tkt = beam.TransElemStiffToGlobal(isTan);
                         Utils.AppendStiffnessToCoo(local, tkt, true, true, beam.NodeI, beam.NodeJ);
-                        return local;
-                    },
-                    local => cooBags.Add(local)
-                );
+                    }
+                    beamCooChunks[ci] = local;
+                });
             }
 
             // Phase 2: Springs を serial で COO 追加 (Ke は PrepareKmat で設定済み)
@@ -533,7 +550,7 @@ namespace PileDesign.FEM
             // MathNet 5.0.0 の SparseOfIndexed は重複 index を SUM せず最初の値を採用する仕様のため、
             // Dictionary で (row,col) ごとに加算してから 1 エントリ/キーで構築する。
             int totalCount = serialCoo.Count;
-            foreach (var list in cooBags) totalCount += list.Count;
+            foreach (var list in beamCooChunks) totalCount += list?.Count ?? 0;
 
             var aggregated = new Dictionary<(int r, int c), double>(totalCount);
 
@@ -543,10 +560,15 @@ namespace PileDesign.FEM
                 aggregated[key] = aggregated.TryGetValue(key, out double existing) ? existing + v : v;
             }
 
+            // 加算順を固定する (springs → beams をインデックス順)。順序が変わると
+            // 重複エントリの浮動小数加算結果が ULP レベルで変わり、NR の経路が変わる。
             foreach (var (r, c, v) in serialCoo) Accumulate(r, c, v);
-            foreach (var list in cooBags)
+            foreach (var list in beamCooChunks)
+            {
+                if (list == null) continue;
                 foreach (var (r, c, v) in list)
                     Accumulate(r, c, v);
+            }
 
             Matrix<double> matrixKAA;
             if (aggregated.Count == 0)
