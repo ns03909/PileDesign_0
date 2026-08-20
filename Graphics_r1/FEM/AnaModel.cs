@@ -36,6 +36,9 @@ namespace PileDesign.FEM
         /// <summary>PileLayoutItem → 現在の AxialForceIncrement (ケース毎に計算)</summary>
         public Dictionary<PileLayoutDataItem, double> AxialForceIncrements { get; } = [];
 
+        /// <summary>PileLayoutItem → 直近ステップで AxialForce に適用済みの解析軸力 Fxi (ケース毎)</summary>
+        public Dictionary<PileLayoutDataItem, double> AppliedAnalysisAxialForces { get; } = [];
+
         /// <summary>DoatsuGoryokuBaneItem → caseModel 側の TopSoilNode</summary>
         public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuTopSoilNodes { get; } = [];
 
@@ -1256,6 +1259,8 @@ namespace PileDesign.FEM
             {
                 double baselineAxial = pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional; // レベル1の杭軸力増分
                 SetAxialForce(pileLayoutItem, baselineAxial);
+                // ケース開始時点では解析軸力はまだ適用されていない
+                SetAppliedAnalysisAxialForce(pileLayoutItem, 0.0);
             }
         }
 
@@ -1513,6 +1518,7 @@ namespace PileDesign.FEM
 
                     snap.AxialForces[pli] = pli.AxialForce;
                     snap.AxialForceIncrements[pli] = pli.AxialForceIncrement;
+                    snap.AppliedAnalysisAxialForces[pli] = 0.0;
 
                     // PileTopRotationalSpring
                     if (pli.PileTopRotationalSpring != null
@@ -1627,6 +1633,23 @@ namespace PileDesign.FEM
                 CaseLocalState.AxialForceIncrements[item] = value;
             else
                 item.AxialForceIncrement = value;
+        }
+
+        /// <summary>直近ステップで AxialForce に適用済みの解析軸力 Fxi を取得 (ケース固有)。</summary>
+        public double GetAppliedAnalysisAxialForce(PileLayoutDataItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.AppliedAnalysisAxialForces.TryGetValue(item, out var v))
+                return v;
+            return item.AppliedAnalysisAxialForce;
+        }
+
+        /// <summary>直近ステップで AxialForce に適用済みの解析軸力 Fxi を設定 (ケース固有)。</summary>
+        public void SetAppliedAnalysisAxialForce(PileLayoutDataItem item, double value)
+        {
+            if (CaseLocalState != null)
+                CaseLocalState.AppliedAnalysisAxialForces[item] = value;
+            else
+                item.AppliedAnalysisAxialForce = value;
         }
 
         /// <summary>DoatsuGoryokuBane Item の TopSoilNode を取得 (case-local 対応)。</summary>

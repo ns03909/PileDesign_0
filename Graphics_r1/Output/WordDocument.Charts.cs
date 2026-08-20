@@ -1143,7 +1143,10 @@ namespace PileDesign.Output
                 var pileSection = soilPile.PileBodySegments[segIdx].PileSection;
                 if (pileSection == null) continue;
 
-                double axialN = (result.CumulativeForce.Fxi + result.CumulativeForce.Fxj) / 2.0;
+                // 限界状態は設計軸力 (ケース別の入力地震時軸力) で評価する。
+                // 以前は要素端力の平均 (Fxi + Fxj)/2 を使っていたが、梁要素の端力は軸方向で
+                // 逆対称 (Fxj = -Fxi) なので恒等的に 0 になり、常に N=0 の耐力を出力していた。
+                double axialN = pli.GetDesignAxialForce(lc.No, lc.Level);
 
                 // モーメント限界
                 var (nMs, mVals) = useDamage

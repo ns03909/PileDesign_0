@@ -2494,7 +2494,8 @@ namespace PileDesign.ViewModels
         /// 入力値＋応力解析結果モード: 各杭の杭頭Beam要素のFxi（解析結果）を入力軸力に加算する
         /// 入力値は圧縮が正、解析値Fxiは圧縮が負なので、符号を反転して加算
         /// </summary>
-        private void UpdateAxialForceFromAnalysis(AnaModel targetModel)
+        // internal はテスト用 (AxialForceSourceAuditTests が「解析軸力を毎ステップ累積しない」ことを検証)
+        internal void UpdateAxialForceFromAnalysis(AnaModel targetModel)
         {
             if (targetModel.Beams == null || InputModel.PileLayoutItems == null) return;
 
@@ -2524,11 +2525,19 @@ namespace PileDesign.ViewModels
                 {
                     // 通常モード: 入力軸力（圧縮が正）に解析結果（圧縮が負）を加算 → 符号反転
                     // AxialForce = 入力値による軸力 + (-Fxi_analysis)
+                    //
+                    // Fxi は「そのステップまでの累積軸力」であって増分ではない。単純に毎ステップ
+                    // 引くと過去ステップ分の Fxi が積み上がり、解析軸力の寄与が約 (nStep+1)/2 倍に
+                    // 膨らむ (2026-08-21 修正。Example10 L1 4 ステップで 17.0 → 33.9 と 2 倍を実測)。
+                    // そこで前ステップで適用済みの分を打ち消してから今ステップの値を適用する。
                     // E3b: CaseLocalSnapshot 経由で読書き。主モデルでは pile.AxialForce を直接更新 (従来挙動)、
                     // case-local コピーでは snapshot.AxialForces[pile] を更新。
                     double current = targetModel.GetAxialForce(pile);
-                    targetModel.SetAxialForce(pile, current - fxiAnalysis); // 圧縮増 → Fxi負 → -(-) = 加算
+                    double appliedPrev = targetModel.GetAppliedAnalysisAxialForce(pile);
+                    targetModel.SetAxialForce(pile, current + appliedPrev - fxiAnalysis); // 圧縮増 → Fxi負 → -(-) = 加算
                 }
+
+                targetModel.SetAppliedAnalysisAxialForce(pile, fxiAnalysis);
             }
         }
 

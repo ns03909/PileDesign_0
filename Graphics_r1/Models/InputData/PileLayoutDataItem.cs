@@ -585,6 +585,18 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _axialForceIncrement, value);
         }
 
+        // 「入力値＋応力解析結果」モードで、直近のステップに適用済みの解析軸力 Fxi [kN]。
+        // AxialForce に足し込んだ分を次のステップで打ち消すために保持する (解析中のみ有効な一時値)。
+        // これが無いと累積の Fxi を毎ステップ足し続け、解析軸力の寄与が
+        // 約 (nStep+1)/2 倍に膨らむ。
+        private double _appliedAnalysisAxialForce;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double AppliedAnalysisAxialForce
+        {
+            get => _appliedAnalysisAxialForce;
+            set => SetProperty(ref _appliedAnalysisAxialForce, value);
+        }
+
         // コンストラクタ初期化
         public PileLayoutDataItem()
         {
@@ -727,20 +739,52 @@ namespace PileDesign.Models.InputData
 
         }
 
+        /// <summary>
+        /// ケース別の入力地震時軸力 [kN] を返す。<paramref name="loadCaseNo"/> は 1 始まり。
+        ///
+        /// 注: 境界チェックは「実際に索引するコレクション」に対して行うこと。
+        /// 以前は level==2 でも AxialForceLevel1s.Count を見ており、
+        /// 2 つのコレクションの長さが違うと意図した ArgumentOutOfRangeException ではなく
+        /// インデクサ側の例外になっていた。呼び出し側 (M-φ / M-θ セットアップ) は例外を
+        /// catch して重力ベースへ黙って落とすため、軸力が変わったことに気付けない。
+        /// また loadCaseNo == 0 は索引 -1 になるので下限は &lt;= 0 で弾く。
+        /// </summary>
         public double GetSeismicAxialForce(int loadCaseNo, int level)
         {
             if (level == 1)
             {
-                if (loadCaseNo < 0 || AxialForceLevel1s.Count < loadCaseNo)
+                if (loadCaseNo <= 0 || AxialForceLevel1s == null || AxialForceLevel1s.Count < loadCaseNo)
                     throw new ArgumentOutOfRangeException(nameof(loadCaseNo), "Invalid load case index for Level 1.");
                 return AxialForceLevel1s[loadCaseNo - 1];
             }
             else // level == 2
             {
-                if (loadCaseNo < 0 || AxialForceLevel1s.Count < loadCaseNo)
+                if (loadCaseNo <= 0 || AxialForceLevel2s == null || AxialForceLevel2s.Count < loadCaseNo)
                     throw new ArgumentOutOfRangeException(nameof(loadCaseNo), "Invalid load case index for Level 2.");
                 return AxialForceLevel2s[loadCaseNo - 1];
             }
+        }
+
+        /// <summary>
+        /// 断面耐力の照査・限界線表示に用いる設計軸力 [kN]。
+        /// ケース別の入力地震時軸力を優先し、未入力 (0) / 範囲外なら常時軸力 <see cref="AxialForceVL"/>。
+        ///
+        /// 限界状態の M / Q は軸力に強く依存するため、ここを取り違えると表示・計算書の
+        /// 限界線が実際の耐力とずれる (2026-08-21 まで、FEM の要素端力の平均 = 恒等的に 0 を
+        /// 使っていた。場所打ちRC 1200φ で安全 M が 39% 過小、鋼管の充填鋼管部では 61% 過大)。
+        /// </summary>
+        public double GetDesignAxialForce(int loadCaseNo, int level)
+        {
+            try
+            {
+                double n = GetSeismicAxialForce(loadCaseNo, level);
+                if (double.IsFinite(n) && n != 0.0) return n;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // 範囲外は常時軸力へフォールバック
+            }
+            return AxialForceVL;
         }
 
 

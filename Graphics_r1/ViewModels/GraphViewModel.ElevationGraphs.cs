@@ -143,8 +143,13 @@ namespace PileDesign.ViewModels
                                     var result = beam.GetBeamResult(AnaModel, loadCase, loadCombination, isLiquefaction);
                                     if (result?.CumulativeForce == null) continue;
 
-                                    // 軸力を取得（要素中央の平均軸力、X方向が軸方向）
-                                    double axialForceN = (result.CumulativeForce.Fxi + result.CumulativeForce.Fxj) / 2.0;
+                                    // 限界状態は設計軸力 (ケース別の入力地震時軸力) で評価する。
+                                    // 以前は要素端力の平均 (Fxi + Fxj)/2 を使っていたが、梁要素の端力は
+                                    // 軸方向で逆対称 (Fxj = -Fxi) なので恒等的に 0 になり、常に N=0 の
+                                    // 耐力で限界線を描いていた。断面照査 (EvaluationWindowViewModel) と
+                                    // 同じ軸力を使い、グラフと判定が食い違わないようにする。
+                                    double axialForceN = pileLayoutDataItem.GetDesignAxialForce(
+                                        loadCase.No, loadCase.Level);
 
                                     // 杭断面を取得（SoilPile.PileBodySegmentsを使用）
                                     int segmentIndex = beam.SegmentIndex ?? 0;

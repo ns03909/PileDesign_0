@@ -414,15 +414,9 @@ namespace PileDesign.ViewModels
                 {
                     int lcNo = stepResult.LoadCase?.No ?? 0;
                     int level = stepResult.LoadCase?.Level ?? 1;
-                    try
-                    {
-                        axialN_kN = pileItem.GetSeismicAxialForce(lcNo, level);
-                    }
-                    catch
-                    {
-                        // インデックス範囲外の場合はAxialForceVL(常時)をフォールバック
-                        axialN_kN = pileItem.AxialForceVL;
-                    }
+                    // 地震時軸力優先・未入力 (0) / 範囲外は常時軸力。
+                    // グラフ・計算書の限界線と同じ軸力を使う (食い違うと判定が一致しない)。
+                    axialN_kN = pileItem.GetDesignAxialForce(lcNo, level);
                 }
 
                 // NM相関曲線をキャッシュから取得 (ConcurrentDictionary、初回のみ計算)
