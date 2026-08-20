@@ -188,33 +188,52 @@ namespace PileDesign.Views
 
                     if (i == pileBodySegments.Count - 1)
                     {
-                        var pileBodyForToe = InputModel.PileBodies[pileLocation.PileBodyNo - 1];
-                        double pileToeDia = pileBodyForToe.PileToeDia / 1000.0;
-                        var ctype = pileBodyForToe.PileConstructionType;
-                        bool isSmartMagnum = PileConstructionTypeNames.IsSmartMagnum(ctype);
-
-                        if (isSmartMagnum)
-                        {
-                            // Smart-MAGNUM の根固め部は円柱で、杭先端の 2m 上から杭先端の LL 下まで。
-                            // 拡底コーンではないので専用に描く。
-                            double belowToe = pileBodyForToe.SmartMagnumLL;
-                            var bulbBottom = new Point3D(x, y, z2 - belowToe);
-                            var bulbTop = new Point3D(x, y, z2 + Models.InputData.SoilPile.SmartMagnumBulbTopAboveToe);
-                            AddCylinder(NikkenBrush.SkyBlue, bulbBottom, bulbTop, pileToeDia);
-                        }
-                        else if (pileToeDia > pileDia)
-                        {
-                            if (ctype == "回転貫入杭")
-                            {
-                                AddHelicalBladePileToe(NikkenBrush.SkyBlue, new Point3D(x, y, z2), pileToeDia, pileDia);
-                            }
-                            else
-                            {
-                                AddConeShapePileToe(NikkenBrush.SkyBlue, new Point3D(x, y, z2), pileToeDia, pileDia);
-                            }
-                        }
+                        AddPileToeGeometry3D(pileLocation, x, y, z2, pileDia);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// 杭先端の拡張形状 (拡底部 / 拡大根固め部 / 螺旋羽根) を 3D メッシュで描く。
+        ///
+        /// 工法ごとに形が違う。以前は拡大根固め杭まで拡底コーンとして描いており、
+        /// 杭姿図 (円柱) と食い違っていた。また拡底部の立上り・角度もハードコードで、
+        /// 入力値が反映されていなかった。ここで杭姿図・擬似 3D と同じ形に揃える。
+        ///
+        ///   場所打ちコンクリート杭   : 円柱 (立上り) + 円錐台 (側面角度)。いずれも入力値による
+        ///   埋込み杭 (プレボーリング / 中掘り) : 円柱。杭先端を下端に 根固め部径 × 高さ径比
+        ///   Smart-MAGNUM             : 円柱。杭先端の 2m 上 〜 杭先端の LL 下
+        ///   Hybrid ニーディング       : 円柱。杭先端の (Lu + 2m または 3m) 上 〜 杭先端
+        ///   回転貫入杭               : 螺旋羽根
+        /// </summary>
+        private void AddPileToeGeometry3D(
+            Models.InputData.PileLayoutDataItem pileLocation, double x, double y, double zToe, double pileDia)
+        {
+            var body = InputModel.PileBodies[pileLocation.PileBodyNo - 1];
+            double pileToeDia = body.PileToeDia / 1000.0;
+            string ctype = body.PileConstructionType;
+
+            if (PileToeShape.HasBulb(body, pileDia))
+            {
+                // 拡大根固め (ソイルセメント球根) は円柱。上端・下端は工法で決まる
+                var (topZ, bottomZ) = PileToeShape.BulbRange(body, zToe);
+                AddCylinder(NikkenBrush.SkyBlue,
+                    new Point3D(x, y, bottomZ), new Point3D(x, y, topZ), pileToeDia);
+                return;
+            }
+
+            if (pileToeDia <= pileDia) return;   // 拡張形状なし
+
+            if (ctype == PileConstructionTypeNames.Rotary)
+            {
+                AddHelicalBladePileToe(NikkenBrush.SkyBlue, new Point3D(x, y, zToe), pileToeDia, pileDia);
+            }
+            else if (ctype == PileConstructionTypeNames.Insitu)
+            {
+                AddConeShapePileToe(NikkenBrush.SkyBlue, new Point3D(x, y, zToe), pileToeDia, pileDia,
+                    cylHeight: body.InsituPileToeHeight / 1000.0,
+                    toeAngleDeg: body.InsituPileToeAngle);
             }
         }
 
@@ -304,6 +323,7 @@ namespace PileDesign.Views
             double baseDia,
             double topDia,
             double cylHeight = 0.3,
+            double toeAngleDeg = 12.0,
             bool isDownward = false)
         {
             // 向き決定 (Z: 上向き / -Z: 下向き)
@@ -314,8 +334,9 @@ namespace PileDesign.Views
             Point3D cylEnd = new(pileBottom.X, pileBottom.Y, pileBottom.Z + sign * cylHeight);
             AddCylinder(brush, pileBottom, cylEnd, baseDia);
 
-            // 円錐台高さ (拡底杭の側面角度 12° 仮定)
-            double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(12 * Math.PI / 180.0);
+            // 円錐台高さ。側面角度は鉛直からの傾きで、杭姿図の tan(90° − 角度) と等価
+            double angle = toeAngleDeg > 0 ? toeAngleDeg : 12.0;
+            double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(angle * Math.PI / 180.0);
 
             // 円錐台起点（円柱終点からさらに同方向へ伸ばす）
             Point3D coneOrigin = cylEnd;

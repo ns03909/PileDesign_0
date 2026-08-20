@@ -1,3 +1,4 @@
+using PileDesign.Common;
 using PileDesign.Constants;
 using System;
 using System.Collections.Generic;
@@ -98,26 +99,22 @@ namespace PileDesign.Output
                 double pileBottomZ = z - segments[^1].SegmentDepth;
                 double toeDia = body.PileToeDia / 1000.0;
 
-                // 場所打ち杭の拡底部（円柱+円錐台）
+                // 場所打ち杭の拡底部（円柱+円錐台）。立上り・側面角度は入力値による
                 if (toeDia > lastDia && lastDia > 0 &&
                     (body.PileBodyType == PileTypeNames.InsituRc || body.PileBodyType == PileTypeNames.InsituSteelPipeConcrete))
                 {
-                    AddPileToeFaces(doc, layer, x, y, pileBottomZ, toeDia, lastDia);
+                    AddPileToeFaces(doc, layer, x, y, pileBottomZ, toeDia, lastDia,
+                        body.InsituPileToeHeight / 1000.0, body.InsituPileToeAngle);
                 }
 
-                // Smart-MAGNUM の根固め部（円筒: 外径=Den, 杭先端の 2m 上 〜 杭先端の LL 下）
-                if (PileConstructionTypeNames.IsSmartMagnum(body.PileConstructionType))
+                // 杭先端の拡大根固め部（円筒）。上端・下端は工法で決まる。
+                // 杭姿図・3D 表示と同じく、球根は杭先端を下端として上方へ伸ばす
+                // （杭体の最下部が球根に埋まる表現）。Smart-MAGNUM だけは杭下拡大根固め部が
+                // 杭先端より下に LL だけ出る。
+                if (PileToeShape.HasBulb(body, lastDia))
                 {
-                    double bulbTopZ = pileBottomZ + Models.InputData.SoilPile.SmartMagnumBulbTopAboveToe;
-                    double bulbBottomZ = pileBottomZ - body.SmartMagnumLL;
+                    var (bulbTopZ, bulbBottomZ) = PileToeShape.BulbRange(body, pileBottomZ);
                     AddCylinderFaces(doc, layer, x, y, bulbTopZ, bulbBottomZ, toeDia * 0.5, CylinderSegments);
-                }
-                // 既製コンクリート杭の拡大根固め部（円筒: 外径=PileToeDia, 高さ=PileToeDia×HeightRatio）
-                else if (toeDia > lastDia && body.PileBodyType == PileTypeNames.PrecastConcrete)
-                {
-                    double toeHeight = toeDia * body.PrecastConcretePileToeHeightRatio;
-                    double toeBottomZ = pileBottomZ - toeHeight;
-                    AddCylinderFaces(doc, layer, x, y, pileBottomZ, toeBottomZ, toeDia * 0.5, CylinderSegments);
                 }
             }
         }
@@ -179,16 +176,18 @@ namespace PileDesign.Output
             }
         }
 
-        /// <summary>拡底部: 円柱(0.3m) + 円錐台</summary>
+        /// <summary>拡底部: 円柱(立上り) + 円錐台(側面角度)</summary>
         private static void AddPileToeFaces(CadDocument doc, Layer layer,
-            double x, double y, double pileBottomZ, double baseDia, double topDia)
+            double x, double y, double pileBottomZ, double baseDia, double topDia,
+            double cylHeight, double toeAngleDeg)
         {
-            double cylHeight = 0.3;
+            if (!(cylHeight > 0)) cylHeight = 0.3;
             double cylBottomZ = pileBottomZ - cylHeight;
             AddCylinderFaces(doc, layer, x, y, pileBottomZ, cylBottomZ, baseDia * 0.5, CylinderSegments);
 
             // 円錐台
-            double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(12.0 * Math.PI / 180.0);
+            double toeAngle = toeAngleDeg > 0 ? toeAngleDeg : 12.0;
+            double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(toeAngle * Math.PI / 180.0);
             if (coneHeight < 1e-9) return;
 
             double coneTopZ = cylBottomZ;
