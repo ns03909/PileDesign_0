@@ -150,8 +150,37 @@ namespace PileDesign.ViewModels
 
         // M-φ 曲線の解決は Services.MphiCurveResolver に集約（初期セットアップ／ステップ毎再解決で共用）。
 
-        // 荷重ケース用の M-θ（非線形ON/OFFに応じて線形Kを必ず設定、曲線はON時のみ使用）
-        private void SetupNonlinearMThetaForLoadCase(AnaModel model, LoadCase loadCase)
+        /// <summary>
+        /// 荷重ケース用の M-θ セットアップ（ケース開始時）。
+        /// 非線形 ON/OFF に応じて線形 K を必ず設定し、曲線は ON 時のみ使用する。
+        /// クラック履歴をリセットし、曲線は入力の地震時軸力で構築する
+        /// （直後の SnapshotMThetaToOriginalSprings がこの構成を表示用に記録するため、
+        ///  画面・計算書には設計軸力ベースの M-θ が出る。解析中の曲線は
+        ///  <see cref="UpdateMThetaByCurrentAxialForLoadCase"/> がステップ毎に作り直す）。
+        /// </summary>
+        // internal はテスト用 (MThetaAxialForceTests)
+        internal void SetupNonlinearMThetaForLoadCase(AnaModel model, LoadCase loadCase)
+            => ApplyMThetaForLoadCase(model, loadCase, resetCrackState: true, useSeismicAxialForce: true);
+
+        /// <summary>
+        /// 現ステップの軸力で杭頭 M-θ を作り直す（ステップ毎、M-φ の再解決と対）。
+        ///
+        /// 杭軸力は解析中に動く。SetVectorDF が設定した
+        /// <c>AxialForceIncrement = (N_seis − VL)/nStep</c> を UpdateF が毎ステップ加算するので、
+        /// <c>model.GetAxialForce(pile)</c> は VL から入力地震時軸力までの荷重ステップ比例のランプになる。
+        /// 杭体の M-φ はこれに追随していたが、杭頭 M-θ はケース開始時の 1 回きりで満載時の
+        /// 地震時軸力に固定されており、序盤のステップで杭体と杭頭が別の軸力の断面として振る舞っていた
+        /// (2026-08-21 修正。Example10 の杭頭で step 1 の Mcr を 864 → 715 と 17% 過小に見ていた)。
+        ///
+        /// クラック履歴 (HasCrackedXY / CrackNx,Ny / ThetaProjMax) は保持する。
+        /// ここでリセットすると毎ステップ未クラックに戻り、ヒステリシスが成立しない。
+        /// </summary>
+        // internal はテスト用 (MThetaAxialForceTests)
+        internal void UpdateMThetaByCurrentAxialForLoadCase(AnaModel model, LoadCase loadCase)
+            => ApplyMThetaForLoadCase(model, loadCase, resetCrackState: false, useSeismicAxialForce: false);
+
+        private void ApplyMThetaForLoadCase(
+            AnaModel model, LoadCase loadCase, bool resetCrackState, bool useSeismicAxialForce)
         {
             if (model?.RotationalSprings == null || model.RotationalSprings.Count == 0) return;
 
@@ -161,7 +190,7 @@ namespace PileDesign.ViewModels
             foreach (var spring in model.RotationalSprings)
             {
                 // v28: 各ケースの setup 時にクラック履歴をリセット (ケース間独立)
-                spring.ResetCrackState();
+                if (resetCrackState) spring.ResetCrackState();
 
                 int pb = (spring.PileBodyNo is int v && v > 0) ? v : 1;
                 if (pb <= 0 || pb > InputModel.PileBodies.Count) continue;
@@ -182,19 +211,23 @@ namespace PileDesign.ViewModels
                         var pile = InputModel.PileLayoutItems?.FirstOrDefault(p => p.No == pileNo);
                         if (pile != null)
                         {
-                            try
+                            if (useSeismicAxialForce)
                             {
-                                double nSeis = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-                                if (double.IsFinite(nSeis) && nSeis != 0.0)
-                                    axialN = nSeis;
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Warning(ex, "[SetupMTheta] GetSeismicAxialForce(loadCaseNo={No}, level={Lv}) failed, fallback to gravity baseline.",
-                                    loadCase.No, loadCase.Level);
+                                try
+                                {
+                                    double nSeis = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                    if (double.IsFinite(nSeis) && nSeis != 0.0)
+                                        axialN = nSeis;
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Warning(ex, "[SetupMTheta] GetSeismicAxialForce(loadCaseNo={No}, level={Lv}) failed, fallback to gravity baseline.",
+                                        loadCase.No, loadCase.Level);
+                                }
                             }
                             if (axialN == 0.0)
                             {
+                                // ステップ毎の再解決はこちら。荷重ステップ比例のランプ (VL → 地震時軸力)。
                                 // E3b: case-local AxialForce 経由 (主モデルでは pile.AxialForce と同値)
                                 axialN = model.GetAxialForce(pile); // kN
                             }
@@ -203,7 +236,12 @@ namespace PileDesign.ViewModels
                 }
 
                 var pileBody = InputModel.PileBodies[pb - 1];
-                var def = pileBody.GetMThetaRelationship(axialN);
+                // ステップ毎に呼ぶため、(杭体, 軸力) でキャッシュする。
+                // 軸力は 1kN に丸め、キーと計算の両方で同じ丸め値を使う
+                // (丸めた値をキーにしながら生の値で計算すると、同じキーに入る曲線が
+                //  「最初にそのキーを作った軸力」次第で変わり結果が実行履歴に依存する)。
+                axialN = QuantizeAxialNForMTheta(axialN);
+                var def = GetMThetaRelationshipCached(pb, pileBody, axialN);
 
                 // Serilog.Log.Debug(
                 //     $"[SetupMTheta] {spring.Name}: IsPileNonLinear={loadCase.IsPileNonLinear}, " +
@@ -238,7 +276,8 @@ namespace PileDesign.ViewModels
                         // v28: Mcr 同期 Mode 切替 (ヒステリシス付き) 用。場所打ち RC 杭のみ非 null。
                         spring.McrXY = def.McrXY;
                         // 状態はケース開始時にリセットするため念のためクリア
-                        spring.ResetCrackState();
+                        // (ステップ毎の再解決では履歴を保持する — ここで消すとヒステリシスが壊れる)
+                        if (resetCrackState) spring.ResetCrackState();
                         // sec 側の代替として KThetaXY を設定（優先順位: def.KThetaXY → Mcr 有りなら KBig → 曲線の初期接線 → KMin）
                         if (def.KthetaXY.HasValue && def.KthetaXY.Value > 0.0)
                         {
@@ -307,6 +346,27 @@ namespace PileDesign.ViewModels
                     var pts = spring.CurveXY.Points;
                 }
             }
+        }
+
+        // 杭頭 M-θ 曲線のキャッシュ。場所打ち RC 杭では断面の完全 M-θ 解析が走って重く、
+        // ステップ毎 × 全ばね で呼ぶため (杭体No, 軸力[kN]) で再利用する。
+        // 解析 1 回ごとに ClearMThetaCurveCache() でクリアする
+        // (ConcreteModelOptions など曲線に効く設定が実行間で変わり得るため)。
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<(int PileBodyNo, long AxialN), FEM.PileHeadRotationDef>
+            _mThetaCurveCache = new();
+
+        internal void ClearMThetaCurveCache() => _mThetaCurveCache.Clear();
+
+        /// <summary>M-θ キャッシュで用いる軸力の量子化 [kN]。キーと計算で同じ値を使うこと。</summary>
+        private static double QuantizeAxialNForMTheta(double axialN)
+            => double.IsFinite(axialN) ? Math.Round(axialN) : axialN;
+
+        private FEM.PileHeadRotationDef GetMThetaRelationshipCached(
+            int pileBodyNo, PileBodyInput pileBody, double axialN)
+        {
+            if (!double.IsFinite(axialN)) return pileBody.GetMThetaRelationship(axialN);
+            return _mThetaCurveCache.GetOrAdd(
+                (pileBodyNo, (long)axialN), _ => pileBody.GetMThetaRelationship(axialN));
         }
 
         /// <summary>

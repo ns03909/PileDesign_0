@@ -38,25 +38,25 @@
       "combinationNo": 1,
       "isLiquefaction": true,
       "converged": true,
-      "totalIterations": 80,
+      "totalIterations": 82,
       "totalSteps": 16,
       "bisectionRetries": 0,
-      "finalResidual": 2.975908117549829E-07,
-      "apUx": 0.003924503552343801,
-      "apUy": -0.0020021687479258366,
-      "apUz": 6.48960338629328E-05,
-      "apRx": -3.279201859891844E-09,
-      "apRy": 2.0247218563567584E-06,
-      "apRz": 0.0001248821810383552,
-      "maxAbsHorizDisp": 0.004405724438447101,
-      "maxAbsHorizSpringReaction": 163.35607331119726
+      "finalResidual": 1.6158448716596763E-07,
+      "apUx": 0.003924464666407986,
+      "apUy": -0.002002141004680099,
+      "apUz": 6.489607998603317E-05,
+      "apRx": -3.274687588365531E-09,
+      "apRy": 2.0247278119751704E-06,
+      "apRz": 0.00012488079743405914,
+      "maxAbsHorizDisp": 0.004405677192045075,
+      "maxAbsHorizSpringReaction": 163.35521900380013
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 97,
+    "totalIterations": 99,
     "totalSteps": 20,
-    "maxResidualOverAllCases": 2.975908117549829E-07
+    "maxResidualOverAllCases": 1.6158448716596763E-07
   }
 }

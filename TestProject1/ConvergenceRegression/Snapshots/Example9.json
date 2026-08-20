@@ -41,7 +41,7 @@
       "totalIterations": 38,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 5.683275028930581E-07,
+      "finalResidual": 2.4587768773599605E-08,
       "apUx": 0.002706170285281371,
       "apUy": -0.0015777058850204547,
       "apUz": 9.896379603032282E-05,
@@ -57,6 +57,6 @@
     "convergedCases": 2,
     "totalIterations": 53,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 5.683275028930581E-07
+    "maxResidualOverAllCases": 2.4587768773599605E-08
   }
 }

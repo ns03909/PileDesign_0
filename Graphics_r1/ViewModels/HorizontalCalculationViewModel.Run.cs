@@ -90,6 +90,7 @@ namespace PileDesign.ViewModels
 
             // v29: 経過/残り時間表示用に開始時刻記録 + 1 秒タイマーで定期更新
             _analysisStartUtc = DateTime.UtcNow;
+            ClearMThetaCurveCache();   // 実行間で材料オプション等が変わり得るため毎回捨てる
             StartElapsedTimer();
 
             // 並列モニタ (案 B): 新解析のたびに Active/Completed をリセット
@@ -606,10 +607,14 @@ namespace PileDesign.ViewModels
                             // 軸力が引張になった杭を NG としてログに残す (杭ごとに 1 ケース内 1 回のみ)
                             await LogTensionForSemiRigidPilesAsync(caseModel, caseTag, step + 1, nStep, loggedNgTensionPileNos);
 
-                            // 現ステップ軸力での M–φ 再解決は、杭非線形ONのときのみ
+                            // 現ステップ軸力での M–φ / M–θ 再解決は、杭非線形ONのときのみ。
+                            // 杭軸力は荷重ステップに比例して動くので、杭体 (M-φ) と杭頭 (M-θ) の
+                            // 両方を同じ軸力で作り直す。片方だけ固定すると、序盤のステップで
+                            // 杭体と杭頭が別の軸力の断面として振る舞う。
                             if (loadCase.IsPileNonLinear)
                             {
                                 SetupMPhiByCurrentAxialForMiddleBeam(caseModel);
+                                UpdateMThetaByCurrentAxialForLoadCase(caseModel, loadCase);
                             }
 
                             caseModel.SetR();
