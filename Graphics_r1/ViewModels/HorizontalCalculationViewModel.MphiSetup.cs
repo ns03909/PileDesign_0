@@ -104,10 +104,34 @@ namespace PileDesign.ViewModels
                     continue;
                 }
 
-                // 軸力を取得（PileLayoutItem から。優先順位は ResolveMPhiAxialForce に集約）
-                double axialN_kN = pileByPileBodyNo.TryGetValue(pb, out var pile)
-                    ? ResolveMPhiAxialForce(model, pile, loadCase)
-                    : 0.0;
+                // 軸力を取得（PileLayoutItemから）
+                // 注: pile.AxialForce / model.GetAxialForce は kN 単位で格納されている
+                //     (UI 入力 (kN), SetAxialForce コメント [kN], AxialForceLevel{1,2}s [kN] と整合)。
+                //     PileSection.GetMPhiRelationship は kN を期待 (内部で *1000 して N に変換)。
+                //     旧実装は誤って /1000.0 で「N→kN 変換」していたため、軸力が 1/1000 で
+                //     M-φ が 24% 程度過小評価される単位バグがあった (検証テスト: PileSectionMPhiUnitTests)。
+                // 初期セットアップではケース固有の入力軸力 (AxialForceLevel{1,2}s) を優先。
+                // (per-step の SetupMPhiByCurrentAxialForMiddleBeam がステップごとに再解決するため、
+                //  ここでの値は step 0 の K 行列構築時に効く)
+                double axialN_kN = 0.0;
+                if (pileByPileBodyNo.TryGetValue(pb, out var pile))
+                {
+                    try
+                    {
+                        double nSeis = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                        if (double.IsFinite(nSeis) && nSeis != 0.0)
+                            axialN_kN = nSeis;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "[SetupMPhi] GetSeismicAxialForce(loadCaseNo={No}, level={Lv}) failed, fallback to gravity baseline.",
+                            loadCase.No, loadCase.Level);
+                    }
+                    if (axialN_kN == 0.0)
+                    {
+                        axialN_kN = model.GetAxialForce(pile); // kN フォールバック (重力ベース)
+                    }
+                }
 
                 // M-φ 曲線の解決（場所打ち鋼管コンクリート杭の杭中間部特別扱いを含む共通ロジック）
                 var curve = Services.MphiCurveResolver.Resolve(section, axialN_kN, beam.IsPileTop);
@@ -125,49 +149,6 @@ namespace PileDesign.ViewModels
         }
 
         // M-φ 曲線の解決は Services.MphiCurveResolver に集約（初期セットアップ／ステップ毎再解決で共用）。
-
-        /// <summary>
-        /// M-φ を構築する軸力 [kN] を決める。初期セットアップとステップ毎再解決で共用する。
-        ///
-        /// 優先順位は M-θ (<see cref="SetupNonlinearMThetaForLoadCase"/>) と同じ:
-        ///   「入力値」モード         … ケース別の入力地震時軸力 (AxialForceLevel{1,2}s) を優先し、
-        ///                              未入力 (0) なら重力ベース (model.GetAxialForce) にフォールバック
-        ///   「入力値＋応力解析結果」 … model.GetAxialForce をそのまま使う。
-        ///                              この値は UpdateAxialForceFromAnalysis が解析 Fxi を加算したもので
-        ///                              既に地震時の軸力変動を含むため、入力の地震時軸力を重ねると二重計上になる
-        ///
-        /// 2026-08-21 まではステップ毎再解決だけが常に model.GetAxialForce (= 常時 VL) を見ており、
-        /// 「入力値」モードでは入力した地震時軸力が M-φ に一切反映されていなかった
-        /// (初期セットアップが入れた曲線は step 0 の先頭で上書きされる)。
-        /// 1200φ・Fc27・16-D29 の断面では、変動下限の杭で Mcr を 22% 過大、上限の杭で 17% 過小に評価していた。
-        ///
-        /// 単位: kN。pile.AxialForce / model.GetAxialForce / AxialForceLevel{1,2}s いずれも kN で、
-        /// PileSection.GetMPhiRelationship も kN を期待する (内部で *1000 して N に変換)。
-        /// 旧実装は誤って /1000.0 していたため M-φ が 24% 程度過小評価される単位バグがあった
-        /// (検証テスト: PileSectionMPhiUnitTests)。
-        /// </summary>
-        // internal はテスト用 (MPhiAxialForceSourceTests が「入力値モードでは地震時軸力を使う」ことを検証)
-        internal double ResolveMPhiAxialForce(AnaModel model, PileLayoutDataItem pile, LoadCase loadCase)
-        {
-            if (pile == null) return 0.0;
-
-            if (!UseAnalysisAxialForce)
-            {
-                try
-                {
-                    double nSeis = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-                    if (double.IsFinite(nSeis) && nSeis != 0.0)
-                        return nSeis;
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning(ex, "[SetupMPhi] GetSeismicAxialForce(loadCaseNo={No}, level={Lv}) failed, fallback to gravity baseline.",
-                        loadCase.No, loadCase.Level);
-                }
-            }
-
-            return model.GetAxialForce(pile); // kN (重力ベース / 解析モードでは解析 Fxi 加算後の現在軸力)
-        }
 
         // 荷重ケース用の M-θ（非線形ON/OFFに応じて線形Kを必ず設定、曲線はON時のみ使用）
         private void SetupNonlinearMThetaForLoadCase(AnaModel model, LoadCase loadCase)
@@ -518,9 +499,9 @@ namespace PileDesign.ViewModels
         //}
 
         // 現ステップの「各杭の軸力」を用いて、対応する全梁の M–φ（合成）を解決してセット
-        private void SetupMPhiByCurrentAxialForMiddleBeam(AnaModel model, LoadCase loadCase)
+        private void SetupMPhiByCurrentAxialForMiddleBeam(AnaModel model)
         {
-            if (model == null || loadCase == null) return;
+            if (model == null) return;
 
             // SoilPileをPileBodyNoでキャッシュ（初期M-φ設定と同じマッチ済みセグメントを使用）
             var soilPileByPileBodyNo = new Dictionary<int, SoilPile>();
@@ -534,8 +515,28 @@ namespace PileDesign.ViewModels
 
             foreach (var pile in InputModel.PileLayoutItems)
             {
-                // 現ステップの軸力 [kN]（優先順位は初期セットアップと共通）
-                double axialN_kN = ResolveMPhiAxialForce(model, pile, loadCase);
+                // 現ステップの軸力 [kN]。
+                //
+                // ここは「常時軸力 VL 固定」ではない。SetVectorDF が
+                //     AxialForceIncrement = (地震時軸力 - VL) / nStep
+                // をケース開始時に設定し、UpdateF が毎ステップ加算するため、
+                // model.GetAxialForce(pile) は荷重ステップに比例したランプになる:
+                //     step k (0 始まり) では VL + (k+1)(N_seis - VL)/nStep
+                //     → 最終ステップでちょうど入力の地震時軸力に一致する。
+                // (実測 Example10 L2 / 16 step: 3461.6 → ... → 2465.0、VL=3528・N_seis=2465)
+                // つまり入力した地震時軸力は反映済みで、しかも荷重レベルと整合している。
+                // 「入力値＋応力解析結果」モードではさらに UpdateAxialForceFromAnalysis が
+                // 解析 Fxi を上乗せした現在軸力になる。
+                //
+                // 2026-08-21: これを「VL 固定」と読み違えて常に N_seis を使う変更を入れたが、
+                // 荷重レベルと軸力が不整合になるため revert した。M-θ 側はケース内 N_seis 固定
+                // なので揃っていないが、揃えるなら M-θ をランプ化する方向。
+                //
+                // 単位: pile.AxialForce / model.GetAxialForce は kN (UI 入力, SetAxialForce コメント,
+                // AxialForceLevel{1,2}s 全て kN)。PileSection.GetMPhiRelationship も kN を期待。
+                // 旧実装は誤って /1000.0 で「N→kN 変換」していたため、軸力が 1/1000 で
+                // M-φ が 24% 程度過小評価される単位バグがあった (検証: PileSectionMPhiUnitTests)。
+                double axialN_kN = model.GetAxialForce(pile);
 
                 int pb = pile.PileBodyNo;
                 if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) continue;

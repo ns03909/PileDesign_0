@@ -609,7 +609,7 @@ namespace PileDesign.ViewModels
                             // 現ステップ軸力での M–φ 再解決は、杭非線形ONのときのみ
                             if (loadCase.IsPileNonLinear)
                             {
-                                SetupMPhiByCurrentAxialForMiddleBeam(caseModel, loadCase);
+                                SetupMPhiByCurrentAxialForMiddleBeam(caseModel);
                             }
 
                             caseModel.SetR();

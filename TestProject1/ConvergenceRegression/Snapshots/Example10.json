@@ -21,15 +21,15 @@
       "totalIterations": 17,
       "totalSteps": 4,
       "bisectionRetries": 0,
-      "finalResidual": 1.5287629765979511E-09,
-      "apUx": 0.001526328927595008,
+      "finalResidual": 1.528762978153276E-09,
+      "apUx": 0.0015263289275950075,
       "apUy": -0.0007696931212075859,
-      "apUz": 3.0285082742867248E-05,
-      "apRx": -3.865244257671757E-23,
+      "apUz": 3.028508274286724E-05,
+      "apRx": 1.062808901673574E-22,
       "apRy": 9.464088357146013E-07,
-      "apRz": 4.8105820075474136E-05,
-      "maxAbsHorizDisp": 0.0017094172972237066,
-      "maxAbsHorizSpringReaction": 89.45519113289299
+      "apRz": 4.810582007547413E-05,
+      "maxAbsHorizDisp": 0.0017094172972237063,
+      "maxAbsHorizSpringReaction": 89.45519113289296
     },
     {
       "caseKey": "L2-1.C1.Liq",
@@ -41,15 +41,15 @@
       "totalIterations": 80,
       "totalSteps": 16,
       "bisectionRetries": 0,
-      "finalResidual": 1.528762975086231E-09,
-      "apUx": 0.003924503552343793,
-      "apUy": -0.0020021687479258314,
+      "finalResidual": 2.975908117549829E-07,
+      "apUx": 0.003924503552343801,
+      "apUy": -0.0020021687479258366,
       "apUz": 6.48960338629328E-05,
-      "apRx": -3.2792018598910306E-09,
-      "apRy": 2.024721856356758E-06,
-      "apRz": 0.0001248821810383549,
-      "maxAbsHorizDisp": 0.004405724438447092,
-      "maxAbsHorizSpringReaction": 163.3560733111971
+      "apRx": -3.279201859891844E-09,
+      "apRy": 2.0247218563567584E-06,
+      "apRz": 0.0001248821810383552,
+      "maxAbsHorizDisp": 0.004405724438447101,
+      "maxAbsHorizSpringReaction": 163.35607331119726
     }
   ],
   "summary": {
@@ -57,6 +57,6 @@
     "convergedCases": 2,
     "totalIterations": 97,
     "totalSteps": 20,
-    "maxResidualOverAllCases": 1.5287629765979511E-09
+    "maxResidualOverAllCases": 2.975908117549829E-07
   }
 }
