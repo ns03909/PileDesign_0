@@ -1,3 +1,4 @@
+using PileDesign.Models.InputData;
 using System;
 using System.IO;
 using System.Linq;
@@ -47,6 +48,37 @@ namespace TestProject1
         // スナップショット更新モード判定
         private static bool IsUpdateMode =>
             Environment.GetEnvironmentVariable("UPDATE_SNAPSHOTS") == "1";
+
+        /// <summary>
+        /// 静的状態を既定へ戻してから走らせる。
+        ///
+        /// <see cref="ConcreteModelOptions"/> のフラグと M-φ の静的キャッシュはプロセス全体で共有される。
+        /// 他のテストが書き換えたまま残ると材料モデルが変わり、反復数が大きく動く
+        /// （「単体では通るが全体実行だと稀に落ちる」という形で現れる）。
+        /// このテストは反復数そのものを固定するため、入口で必ず既知の状態に揃える。
+        /// </summary>
+        [TestInitialize]
+        public void ResetSharedState()
+        {
+            ConcreteModelOptions.IgnoreTensileStrength = false;
+            ConcreteModelOptions.UseReducedCompression = false;
+            ConcreteModelOptions.RebarYieldAt11F = false;
+            ConcreteModelOptions.SteelPipeYieldAt11F = false;
+            ConcreteModelOptions.UseUnitGsiForConcreteE = false;
+            ConcreteModelOptions.UseGuideYoungsModulus = false;
+            ConcreteModelOptions.UseNotification1113Compression = false;
+            ConcreteModelOptions.UseNotification1113Shear = false;
+            ConcreteModelOptions.UseInsituUltimateEFunction = false;
+            ConcreteModelOptions.UseFiberMPhi = false;
+            ConcreteModelOptions.Notification1113CompressionCase = 1;
+
+            // M-φ の静的キャッシュはここでは<b>クリアしない</b>。
+            // キャッシュキーに ConcreteModelOptions.Signature() が入っているので
+            // オプション違いの取り違えは起きない。一方でクリアすると Example10 の
+            // 反復数が 181 → 353 に増えることを確認しており、キャッシュの温冷が
+            // 収束経路を変えている。スナップショットは温状態で採っているため、
+            // ここでクリアすると本来見たい退化ではない差で落ちる。
+        }
 
         [DataTestMethod]
         [DataRow("Example9", "PileExample9", 4, 8)]      // 基礎指針'19 計算例9: 場所打ちRC + 18杭

@@ -99,18 +99,16 @@ namespace TestProject1
         }
 
         [TestMethod]
-        public void PreExistingDuplicatesInTheJisLibrary_AreUnchanged()
+        public void TheJisLibraryHasNoDuplicateProducts()
         {
-            // 既存の pile_library_SC.csv には元から完全重複行が 5 組ある
-            // (No. だけ違い、D/t/Fc/ts も名前も同一)。今回の追加とは無関係だが、
-            // 増えていないことをここで見張っておく。整理する場合は本テストも更新すること。
+            // pile_library_SC.csv には元から完全重複行が 5 組あった
+            // (No. だけ違い、D/t/Fc/ts も名前も同一)。同じ名前が選択肢に 2 回並び、
+            // どちらを選んでも同じ断面という紛らわしい状態だったので後発の 5 行を削除した。
+            // 再発すると選択肢が重複するのでここで見張る。
             var dup = _all.Where(p => !p.Name.StartsWith(Prefix, StringComparison.Ordinal))
                           .GroupBy(p => p.Name).Where(g => g.Count() > 1)
                           .Select(g => g.Key).OrderBy(n => n).ToList();
-            CollectionAssert.AreEqual(
-                new[] { "SC-500-標準-105-14", "SC-500-標準-105-16",
-                        "SC-600-標準-105-14", "SC-600-標準-105-16", "SC-600-標準-105-19" },
-                dup);
+            Assert.AreEqual(0, dup.Count, "重複製品: " + string.Join(", ", dup));
         }
 
         [TestMethod]

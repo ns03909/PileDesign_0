@@ -149,6 +149,7 @@ namespace PileDesign.Models.InputData
                $"K{(UseNotification1113Compression ? Notification1113CompressionCase : 0)}" +
                $"Q{(UseNotification1113Shear ? Notification1113CompressionCase : 0)}" +
                $"U{(UseInsituUltimateEFunction ? 1 : 0)}" +
-               $"F{(UseFiberMPhi ? 1 : 0)}";
+               $"F{(UseFiberMPhi ? 1 : 0)}" +
+               $"Y{(UseGuideYoungsModulus ? 1 : 0)}";
     }
 }
