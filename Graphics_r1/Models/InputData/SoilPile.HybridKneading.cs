@@ -62,14 +62,17 @@ namespace PileDesign.Models.InputData
                 ? NodeOrShaftDiameterM(PileBodySegments[^1].PileSection)
                 : 0;
 
-        /// <summary>設計拡径比 e。適用範囲 1.0〜2.0 にクランプする。</summary>
+        /// <summary>
+        /// 設計拡径比 e = 根固め部径 D3 / 節部径 D1。適用範囲 1.0〜2.0 にクランプする。
+        /// </summary>
         [JsonIgnore]
         public double HybridE =>
             Math.Clamp(PileBodyInput?.HybridExpansionRatio ?? HybridRatioMin, HybridRatioMin, HybridRatioMax);
 
         /// <summary>
-        /// 設計掘削径比 es。適用範囲は 1.0〜2.0（e が 1.7 以上のときは 1.0〜1.6）で、
-        /// さらに es ≦ e という制約がある。
+        /// 設計掘削径比 es = 掘削径 / 節部径 D1。
+        /// 適用範囲は 1.0〜2.0（e が 1.7 以上のときは 1.0〜1.6）で、さらに es ≦ e という制約がある。
+        /// es が 1.0 を超えることは<b>軸部を拡大掘削している</b>ことを意味する。
         /// </summary>
         [JsonIgnore]
         public double HybridEs
@@ -92,7 +95,14 @@ namespace PileDesign.Models.InputData
         [JsonIgnore]
         public double HybridCircumFixDia => HybridEs * HybridD1;
 
-        /// <summary>杭下長 Lu (m)。先端支持力算定位置から杭先端までの長さ。</summary>
+        /// <summary>
+        /// 杭下長 Lu (m)。先端支持力算定位置から杭先端までの長さ。
+        ///
+        /// カタログは「節部径・拡径比によって異なります。詳細についてはお問い合わせください」として
+        /// 値を公表していないため<b>入力値をそのまま使う</b>。
+        /// 既定値から自動で決めると、図と計算の双方（周面摩擦の有効長・先端平均N値の基準位置）が
+        /// 黙って動いてしまうため、推定値で補うことはしない。
+        /// </summary>
         [JsonIgnore]
         public double HybridLu => Math.Max(PileBodyInput?.HybridPileBelowLength ?? 0, 0);
 
@@ -159,7 +169,7 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 引抜き方向の先端支持力係数 κ。カタログは
         /// 「設計拡径比 e が 1.3 以下の場合」「軸部を拡大掘削する場合」を κ = 0 としている。
-        /// 後者は本プログラムでは es が 1.0 を超える状態とみなす。
+        /// 後者は<b>設計掘削径比 es が 1.0 を超える状態</b>（＝軸部を基準掘削径より大きく掘る）を指す。
         /// </summary>
         [JsonIgnore]
         public double HybridKappaValue =>

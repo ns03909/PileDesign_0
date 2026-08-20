@@ -195,7 +195,26 @@ namespace TestProject1
                 "短期側の先端項が 2/3 になっていない");
         }
 
-        // ── 7. 周面: 節部径周長 と 杭下長の除外 ────────────────────
+        // ── 7. 杭下長 Lu ────────────────────────────────────────
+
+        /// <summary>
+        /// 杭下長 Lu はカタログが値を公表していないため入力値をそのまま使う。
+        /// 推定値で補うと、周面摩擦の有効長と先端平均N値の基準位置が黙って動いてしまう。
+        /// </summary>
+        [TestMethod]
+        public void PileBelowLength_UsesTheInputAsIs()
+        {
+            var entered = BuildPile(e: 1.5, es: 1.0, lu: 0.5);
+            Assert.AreEqual(0.5, entered.HybridLu, 1e-9, "入力した Lu が使われていない");
+            Assert.AreEqual(entered.PileBottomAltitude + 0.5, entered.HybridToeEvaluationAltitude, 1e-9);
+
+            var blank = BuildPile(e: 1.5, es: 1.0, lu: 0.0);
+            Assert.AreEqual(0.0, blank.HybridLu, 1e-9, "未入力の Lu が勝手に補われている");
+            Assert.AreEqual(blank.PileBottomAltitude, blank.HybridToeEvaluationAltitude, 1e-9,
+                "Lu = 0 なら先端支持力算定位置は杭先端と同じ");
+        }
+
+        // ── 8. 周面: 節部径周長 と 杭下長の除外 ────────────────────
 
         [TestMethod]
         public void SkinFriction_ExcludesThePileBelowLength()
@@ -215,7 +234,7 @@ namespace TestProject1
                 Assert.IsTrue(pcv.UseNodeDiameterForCircumference, "ψ = π·D1 になっていない");
         }
 
-        // ── 8. 沈下との整合 ──────────────────────────────────────
+        // ── 9. 沈下との整合 ──────────────────────────────────────
 
         [TestMethod]
         public void SettlementUsesTheMethodUltimateToeBearing()
@@ -227,7 +246,7 @@ namespace TestProject1
             Assert.AreEqual(1800.0, pile.Dp, 1e-6, "沈下曲線の先端径に根固め部径 D3 を使う");
         }
 
-        // ── 9. 適用範囲チェック ──────────────────────────────────
+        // ── 10. 適用範囲チェック ─────────────────────────────────
 
         [TestMethod]
         public void RangeCheck_PassesForATypicalDesign()
