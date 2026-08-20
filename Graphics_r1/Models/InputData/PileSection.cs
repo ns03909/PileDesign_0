@@ -227,6 +227,7 @@ namespace PileDesign.Models.InputData
         private static readonly object _mPhiCacheLock = new();
         private static int _mPhiCacheHitCount = 0;
         private static int _mPhiCacheMissCount = 0;
+        private static bool _mPhiCacheLimitLogged = false;
 
         /// <summary>
         /// 断面パラメータ変更時にすべてのキャッシュを一括で無効化します。
@@ -497,11 +498,23 @@ namespace PileDesign.Models.InputData
         /// internal はテスト用（MphiCacheKeyTests が「諸元 1 個の変更→キー変化」を検証し、
         /// 断面プロパティ追加時のキー更新漏れ＝キャッシュ衝突を検出する）。
         /// </summary>
+        /// <summary>
+        /// M-φ キャッシュで用いる軸力の量子化 [kN]。
+        ///
+        /// キャッシュキーは軸力を 1kN 単位に丸める。<b>曲線もこの丸めた軸力で計算する</b>こと。
+        /// 丸めた値をキーにしながら生の軸力で計算すると、同じキーに対して
+        /// 「最初にそのキーを作った軸力」の曲線が入るため、キャッシュの履歴で結果が変わる
+        /// （＝ 実行順やキャッシュの温冷で非線形解析の収束経路が変わる）。
+        /// キーと値で同じ軸力を使うことで、キャッシュが純粋な関数のキャッシュになる。
+        /// </summary>
+        internal static double QuantizeAxialNForMPhi(double axialN)
+            => double.IsFinite(axialN) ? Math.Round(axialN) : axialN;
+
         internal string GetMPhiCacheKey(double axialN)
         {
             // 軸力を1kN単位で丸める（同程度の軸力では同じ曲線とみなす）
             // 注: axialNはkN単位を期待（GetMPhiRelationshipの入力と同じ）
-            long axialNRounded = (long)Math.Round(axialN);
+            long axialNRounded = (long)QuantizeAxialNForMPhi(axialN);
 
             // バイリニアコンクリートのモデル化オプション（引張無視・圧縮低減）を含める。
             // オプションが変わると M-φ も変わるため、キャッシュ衝突を防ぐ。
@@ -584,6 +597,12 @@ namespace PileDesign.Models.InputData
         public (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
         {
             _getMphiCallCount++;
+
+            // キャッシュキーと同じ量子化を計算にも適用する。
+            // ここで揃えないと、同じキーに入る曲線が「最初にそのキーを作った軸力」次第で変わり、
+            // キャッシュの履歴（実行順・温冷・上限到達による全クリア）で
+            // 非線形解析の収束経路が変わってしまう。
+            axialN = QuantizeAxialNForMPhi(axialN);
 
             // キャッシュキーを生成
             string cacheKey = GetMPhiCacheKey(axialN);
@@ -677,13 +696,20 @@ namespace PileDesign.Models.InputData
                     // エントリ数上限: 諸元×軸力(1kN 丸め)×オプションでキーが増え続けるため、
                     // 長時間セッションでの無制限成長を防ぐ。上限到達時は全クリア
                     // （LRU 管理は不要 — 再計算は数 ms、通常の解析 1 回で使うキーは数百程度）。
+                    // 上限に達したら「以後は積まない」だけにする。
+                    // 以前は全クリアしていたが、いつクリアされるかが実行履歴で変わり、
+                    // 同じ解析でもキャッシュヒットの当たり外れが変わっていた。
+                    // 値はキーの純粋な関数なので、積まない分は再計算されるだけで結果は変わらない。
                     const int MaxCacheEntries = 10_000;
-                    if (_mphiCache.Count >= MaxCacheEntries)
+                    bool hasRoom = _mphiCache.Count < MaxCacheEntries;
+                    if (!hasRoom && !_mPhiCacheLimitLogged)
                     {
-                        Serilog.Log.Debug("[MphiCache] エントリ数が上限 {Max} に達したため全クリア", MaxCacheEntries);
-                        _mphiCache.Clear();
+                        _mPhiCacheLimitLogged = true;
+                        Serilog.Log.Debug(
+                            "[MphiCache] エントリ数が上限 {Max} に達したため、以後は新規エントリを保持しません",
+                            MaxCacheEntries);
                     }
-                    if (!_mphiCache.ContainsKey(cacheKey))
+                    if (hasRoom && !_mphiCache.ContainsKey(cacheKey))
                     {
                         _mphiCache[cacheKey] = (phis, ms);
                     }
@@ -806,6 +832,7 @@ namespace PileDesign.Models.InputData
             lock (_mPhiCacheLock)
             {
                 _mphiCache.Clear();
+                _mPhiCacheLimitLogged = false;
                 _mPhiCacheHitCount = 0;
                 _mPhiCacheMissCount = 0;
             }
