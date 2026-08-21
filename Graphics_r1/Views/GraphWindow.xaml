@@ -1,4 +1,4 @@
-<Window x:Class="PileDesign.Views.GraphWindow"
+﻿<Window x:Class="PileDesign.Views.GraphWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -27,6 +27,7 @@
         <conv:LoadCombinationAnalyzedConverter x:Key="LoadCombinationAnalyzedConverter"/>
         <conv:LiquefactionAnalyzedConverter x:Key="LiquefactionAnalyzedConverter"/>
         <conv:GraphCategoryConverter x:Key="GraphCategoryConverter"/>
+        <conv:BoolEqualsConverter x:Key="BoolEqualsConverter"/>
         <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
     </Window.Resources>
 
@@ -77,6 +78,25 @@
                     </GroupStyle>
                 </ComboBox.GroupStyle>
             </ComboBox>
+
+            <!-- 断面性状グラフ (N-M 相関 / M-φ) の基準。
+                 既定は「解析時の入力」= 曲線と解析結果の点が同じ断面で整合する。
+                 「現在の入力」に切替えると編集中の断面で曲線を描き、
+                 重ねられなくなる解析結果の点は非表示にする。解析結果は破棄されない。 -->
+            <StackPanel Margin="0,6,0,0"
+                        Visibility="{Binding IsGraphBasisOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="断面の基準:" VerticalAlignment="Center"/>
+                <RadioButton Content="解析時の入力" GroupName="GraphInputBasis" Margin="4,2,0,0"
+                             IsChecked="{Binding UseCurrentInputForCurves, Mode=TwoWay,
+                                         Converter={StaticResource BoolEqualsConverter}, ConverterParameter=False}"
+                             ToolTip="解析した断面で曲線を描き、解析結果の点を重ねます"/>
+                <RadioButton Content="現在の入力" GroupName="GraphInputBasis" Margin="4,2,0,0"
+                             IsChecked="{Binding UseCurrentInputForCurves, Mode=TwoWay,
+                                         Converter={StaticResource BoolEqualsConverter}, ConverterParameter=True}"
+                             ToolTip="編集中の断面で曲線を描きます&#x0a;（曲線と断面が食い違うため解析結果の点は表示しません）"/>
+                <TextBlock Text="{Binding GraphBasisNoteText}" Foreground="DarkOrange"
+                           TextWrapping="Wrap" Margin="4,2,0,0"/>
+            </StackPanel>
 
             <StackPanel Visibility="{Binding IsLoadCaseOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="荷重ケース:" VerticalAlignment="Center"/>

@@ -286,9 +286,13 @@ namespace PileDesign.ViewModels
                     {
                         foreach (var isLiquefaction in SelectedLiquefactionCases)
                         {
-                            // 解析未実行の (LoadCase, LoadCombination, Liquefaction) はこの組合せ全てスキップ
-                            int lastStepForSet = model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
-                            if (lastStepForSet < 0) continue;
+                            // 解析未実行の (LoadCase, LoadCombination, Liquefaction) はこの組合せ全てスキップ。
+                            // ただし「現在の入力」基準では解析に紐付かないので、この足切りをしない
+                            // (曲線は下の 方法2 で現在の断面から作る)。
+                            int lastStepForSet = model != null
+                                ? model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction)
+                                : -1;
+                            if (lastStepForSet < 0 && ShowAnalysisOverlay) continue;
 
                             // 軸力推定
                             double axialN = 0.0;
@@ -318,7 +322,8 @@ namespace PileDesign.ViewModels
                             // 解析結果からM-φ曲線を取得（解析で実際に使用したもの）
                             int lastStep = lastStepForSet;
                             BeamResult beamResultForCurve = null;
-                            if (lastStep >= 0)
+                            // 「現在の入力」基準では解析が使った曲線ではなく、現在の断面から作り直す
+                            if (lastStep >= 0 && ShowAnalysisOverlay)
                             {
                                 beamResultForCurve = targetBeam.GetBeamResult(model, loadCase, loadCombination, isLiquefaction, lastStep);
 
@@ -332,7 +337,8 @@ namespace PileDesign.ViewModels
                             }
 
                             // 方法1: 解析時に解決済みのキャッシュ曲線を使用（BeamResultに保存されていない場合）
-                            if ((phis == null || phis.Count < 2) && targetBeam.ResolvedCombinedCurve?.Points != null)
+                            if ((phis == null || phis.Count < 2) && ShowAnalysisOverlay
+                                && targetBeam.ResolvedCombinedCurve?.Points != null)
                             {
                                 var cachedCurve = targetBeam.ResolvedCombinedCurve;
                                 if (cachedCurve.Points.Count >= 2)
@@ -343,7 +349,7 @@ namespace PileDesign.ViewModels
                                 }
                             }
 
-                            // 方法2: フォールバック - PileSectionから新規取得（解析結果がない場合のみ）
+                            // 方法2: PileSection から新規取得（解析結果が無い場合、および「現在の入力」基準）
                             if ((phis == null || phis.Count < 2) && targetBeam.SegmentIndex is int fallbackSeg
                                 && soilPile != null && fallbackSeg >= 0 && fallbackSeg < soilPile.PileBodySegments.Count)
                             {

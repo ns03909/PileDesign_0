@@ -22,10 +22,67 @@ namespace PileDesign.ViewModels
         private readonly UndoManager _undoManager = new();
 
         private readonly MainWindowViewModel _mainWindowViewModel;
-        // 結果ウィンドウは「解析を実行した時点の入力」を見る。
-        // 現在の入力を混ぜると、変位は解析時・断面は編集後という読み手が区別できない図になる。
-        // 解析結果が無いときは現在の入力にフォールバックする。
-        public InputModel InputModel => _mainWindowViewModel.ResultInputModel;
+
+        /// <summary>
+        /// グラフが基準にする入力。
+        ///
+        /// 既定は「解析を実行した時点の入力」。現在の入力を混ぜると、
+        /// 変位は解析時・断面は編集後という読み手が区別できない図になるため。
+        /// 断面性状グラフ (N-M 相関・M-φ・M-θ) に限り「現在の入力」へ切替できる。
+        /// その場合、重ねられなくなる解析結果の点は描かない
+        /// (<see cref="ShowAnalysisOverlay"/> が false になる)。
+        /// </summary>
+        public InputModel InputModel => UseCurrentInputForCurves
+            ? _mainWindowViewModel.CurrentInputModel
+            : _mainWindowViewModel.ResultInputModel;
+
+        private bool _useCurrentInputForCurves;
+
+        /// <summary>断面性状グラフを「現在の入力」で描くか（既定 false = 解析時の入力）。</summary>
+        public bool UseCurrentInputForCurves
+        {
+            get => _useCurrentInputForCurves;
+            set
+            {
+                if (SetProperty(ref _useCurrentInputForCurves, value))
+                {
+                    OnPropertyChanged(nameof(ShowAnalysisOverlay));
+                    OnPropertyChanged(nameof(GraphBasisNoteText));
+                    UpdateGraph();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 断面性状グラフに解析結果を重ねてよいか。
+        /// 「現在の入力」基準では、曲線と結果の点で断面が食い違うので重ねない。
+        /// </summary>
+        public bool ShowAnalysisOverlay => !UseCurrentInputForCurves;
+
+        /// <summary>「現在の入力」基準のときにグラフへ添える注記。</summary>
+        public string GraphBasisNoteText => UseCurrentInputForCurves
+            ? "現在の入力の断面（解析結果は非表示）"
+            : string.Empty;
+
+        private bool _isGraphBasisOptionVisible;
+
+        /// <summary>基準の切替 UI を出すか（断面性状グラフ かつ 解析結果を保持しているときのみ）。</summary>
+        public bool IsGraphBasisOptionVisible
+        {
+            get => _isGraphBasisOptionVisible;
+            set => SetProperty(ref _isGraphBasisOptionVisible, value);
+        }
+
+        /// <summary>
+        /// 断面性状グラフ（曲線が入力の断面から決まり、解析結果を重ねて描くもの）か。
+        ///
+        /// 杭頭 M-θ 系は対象外。曲線が「解析時に杭頭ばねへ設定された構成」そのもので、
+        /// 現在の入力から作り直す経路が無いため（断面から引き直すには別途 M-θ の再計算が要る）。
+        /// </summary>
+        private static bool IsSectionPropertyGraph(string? option) =>
+            option != null &&
+            (option.StartsWith("NMINT") || option.StartsWith("QNINT") || option == "定着部NMINT"
+             || option == "杭体M-φ" || option == "杭体EI-φ");
 
         public bool IsHorizontalAnalysisDone { get; set; }
         public bool IsVerticalAnalysisDone { get; set; }
@@ -64,6 +121,20 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _selectedGraphOption, value))
                 {
+                    // 基準の切替は断面性状グラフ かつ 解析結果を保持しているときだけ意味がある。
+                    // 対象外のグラフへ移ったら「解析時の入力」へ戻す
+                    // (結果グラフを現在の入力で描くと混在表示になるため)。
+                    bool basisApplies = IsSectionPropertyGraph(value)
+                                        && _mainWindowViewModel?.HasAnalysisResultSet == true;
+                    IsGraphBasisOptionVisible = basisApplies;
+                    if (!basisApplies && UseCurrentInputForCurves)
+                    {
+                        _useCurrentInputForCurves = false;
+                        OnPropertyChanged(nameof(UseCurrentInputForCurves));
+                        OnPropertyChanged(nameof(ShowAnalysisOverlay));
+                        OnPropertyChanged(nameof(GraphBasisNoteText));
+                    }
+
                     // パネル切替（単一⇔3分割）を先に通知
                     OnPropertyChanged(nameof(IsMultiGraphVisible));
                     OnPropertyChanged(nameof(IsSingleGraphVisible));
@@ -1117,7 +1188,8 @@ namespace PileDesign.ViewModels
 
                     // 全杭分のデータを 2 系列（Level1/Level2）にまとめて一度だけ描画
                     // レベル1: NikkenGreen, レベル2: NikkenPaleRed
-                    if (axialForceResultsLevel1.Count > 0)
+                    // 「現在の入力」基準では曲線と結果の点で断面が食い違うため、点は描かない
+                    if (axialForceResultsLevel1.Count > 0 && ShowAnalysisOverlay)
                     {
                         var scatterResultLevel1 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel1.ToArray(), [.. momentResultsLevel1]);
                         scatterResultLevel1.LegendText = "レベル1地震時";
@@ -1125,7 +1197,7 @@ namespace PileDesign.ViewModels
                         scatterResultLevel1.MarkerStyle.FillColor = damageColor;       // NikkenGreen
                         scatterResultLevel1.MarkerStyle.OutlineColor = damageColor;
                     }
-                    if (axialForceResultsLevel2.Count > 0)
+                    if (axialForceResultsLevel2.Count > 0 && ShowAnalysisOverlay)
                     {
                         var scatterResultLevel2 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel2.ToArray(), [.. momentResultsLevel2]);
                         scatterResultLevel2.LegendText = "レベル2地震時";
@@ -1247,13 +1319,13 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                if (axialForceResultsL1.Count > 0)
+                if (axialForceResultsL1.Count > 0 && ShowAnalysisOverlay)
                 {
                     var sc = WpfPlot.Plot.Add.Scatter(axialForceResultsL1.ToArray(), momentResultsL1.ToArray());
                     sc.LegendText = "レベル1地震時";
                     sc.LineStyle.Width = 0;
                 }
-                if (axialForceResultsL2.Count > 0)
+                if (axialForceResultsL2.Count > 0 && ShowAnalysisOverlay)
                 {
                     var sc = WpfPlot.Plot.Add.Scatter(axialForceResultsL2.ToArray(), momentResultsL2.ToArray());
                     sc.LegendText = "レベル2地震時";
@@ -1455,7 +1527,7 @@ namespace PileDesign.ViewModels
 
                     // 全杭分のデータを 2 系列（Level1/Level2）にまとめて一度だけ描画
                     // レベル1: NikkenGreen, レベル2: NikkenPaleRed
-                    if (axialForceResultsLevel1Q.Count > 0)
+                    if (axialForceResultsLevel1Q.Count > 0 && ShowAnalysisOverlay)
                     {
                         var scatterLevel1 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel1Q.ToArray(), [.. shearResultsLevel1]);
                         scatterLevel1.LegendText = "レベル1地震時";
@@ -1463,7 +1535,7 @@ namespace PileDesign.ViewModels
                         scatterLevel1.MarkerStyle.FillColor = qnDamageColor;
                         scatterLevel1.MarkerStyle.OutlineColor = qnDamageColor;
                     }
-                    if (axialForceResultsLevel2Q.Count > 0)
+                    if (axialForceResultsLevel2Q.Count > 0 && ShowAnalysisOverlay)
                     {
                         var scatterLevel2 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel2Q.ToArray(), [.. shearResultsLevel2]);
                         scatterLevel2.LegendText = "レベル2地震時";
