@@ -194,6 +194,46 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 実際の保存/読込サービス経由でも杭要素分割の状態が往復すること。
+        /// (ProjectData の往復だけでなく、引数の受け渡しまで含めて確認する)
+        /// </summary>
+        [TestMethod]
+        public void ElementSplitState_SurvivesSaveLoadThroughService()
+        {
+            var input = LoadExample();
+            if (input == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            var modelling = new AnalysisModelling(input);
+            var ana = new AnaModel(
+                input, modelling.Nodes, modelling.Beams, modelling.DummyBeams,
+                modelling.RigidBodies, modelling.HorizontalSoilSprings, modelling.RotationalSprings);
+
+            // 実機と同じシリアライザ設定
+            var service = new PileDesign.Services.FileOperationService(new JsonSerializerOptions
+            {
+                WriteIndented = false,
+                ReferenceHandler = ReferenceHandler.Preserve,
+                NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+            });
+            string path = Path.Combine(Path.GetTempPath(), $"pd_split_{Guid.NewGuid():N}.pdj");
+            try
+            {
+                // 解析結果は保持しつつ、杭要素分割は取り消した状態を保存する
+                service.SaveProjectData(path, input, ana, null, input, DateTime.Now, null, isElementSplit: false);
+
+                var loaded = service.LoadProjectData(path);
+                Assert.IsNotNull(loaded, "読み込めていない");
+                Assert.IsNotNull(loaded!.AnaModel, "解析結果が保存されていない (前提の確認)");
+                Assert.AreEqual(false, loaded.IsElementSplit,
+                    "杭要素分割の取り消しが保存されていない (開き直すと分割済みに戻り杭が青くなる)");
+            }
+            finally
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
+
+        /// <summary>
         /// 逆シリアライズ後の AnaModel は入力への参照を失う (getter のみのため)。
         /// RebindInputModel で張り直せること。
         /// </summary>
