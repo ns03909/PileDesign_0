@@ -41,7 +41,8 @@ namespace PileDesign.Services
         /// </summary>
         public void SaveProjectData(string filePath, InputModel inputModel, AnaModel? anaModel,
             IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
-            InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null)
+            InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
+            PileFemLinkTable? pileFemLinks = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -59,6 +60,7 @@ namespace PileDesign.Services
                 // 解析結果を保存しないときはスナップショットも不要
                 ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
                 ResultCapturedAt = anaModel != null ? resultCapturedAt : null,
+                PileFemLinks = anaModel != null ? pileFemLinks : null,
             };
 
             // string 中間生成を避けて UTF-8 バイト直書き。
@@ -75,7 +77,8 @@ namespace PileDesign.Services
         /// </summary>
         public async Task SaveProjectDataAsync(string filePath, InputModel inputModel, AnaModel? anaModel,
             IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
-            InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null)
+            InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
+            PileFemLinkTable? pileFemLinks = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -93,6 +96,7 @@ namespace PileDesign.Services
                 // 解析結果を保存しないときはスナップショットも不要
                 ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
                 ResultCapturedAt = anaModel != null ? resultCapturedAt : null,
+                PileFemLinks = anaModel != null ? pileFemLinks : null,
             };
 
             long tValidate = 0;

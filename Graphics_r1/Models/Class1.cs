@@ -38,6 +38,17 @@ namespace PileDesign.Models
         /// <summary>解析を実行した時刻（表示用）。</summary>
         public DateTime? ResultCapturedAt { get; set; }
 
+        /// <summary>
+        /// 杭 → FEM 要素 (梁・節点・地盤ばね・杭頭回転ばね) の対応表。
+        ///
+        /// これらの関連は解析ランタイム状態として [JsonIgnore] であり、
+        /// FEM モデルを組むとき (AnalysisModelling) にしか設定されない。
+        /// 表が無いと、解析結果を含むファイルを開き直しても杭から要素を辿れず、
+        /// M-φ グラフや限界線など「杭ごとに結果を引く」表示が空になる。
+        /// 省略可能なので旧ファイルは null（従来どおりの挙動）。
+        /// </summary>
+        public PileFemLinkTable? PileFemLinks { get; set; }
+
         // 保存メソッド
         public static void SaveProject(string filePath, InputModel inputModel, AnaModel anaModel)
         {

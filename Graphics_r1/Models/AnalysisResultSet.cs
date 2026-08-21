@@ -102,6 +102,9 @@ namespace PileDesign.Models
                 // JSON に載らない表示用の揮発状態を引き継ぐ（ばねはインデックス整合）
                 CopyVolatileDisplayState(anaModel, set.AnaModel);
 
+                // 杭 → FEM 要素の関連も JSON に載らないので張り直す
+                RelinkPileFemAssociations(liveInput, anaModel, set.InputSnapshot, set.AnaModel);
+
                 return set;
             }
             catch (Exception ex)
@@ -109,6 +112,80 @@ namespace PileDesign.Models
                 Log.Warning(ex, "[AnalysisResultSet] 解析結果のスナップショット作成に失敗しました");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// 杭 (<see cref="PileLayoutDataItem"/>) から FEM 要素への関連を複製側へ張り直す。
+        ///
+        /// <c>Beams</c> / <c>PileNodes</c> / <c>SoilNodes</c> / <c>HorizontalSoilSprings</c> /
+        /// <c>PileTopRotationalSpring</c> はいずれも [JsonIgnore]（解析ランタイム状態）なので、
+        /// JSON 往復では失われる。結果表示はここを辿って断面力や M-φ を引くため、
+        /// 張り直さないと「解析時の入力」基準のグラフが軒並み空になる。
+        ///
+        /// 元モデルと複製はリストの順序が保たれるので、元の要素 → インデックス →
+        /// 複製の同インデックス、で対応付けできる。
+        /// </summary>
+        private static void RelinkPileFemAssociations(
+            InputModel? liveInput, AnaModel? liveModel,
+            InputModel? snapshotInput, AnaModel? snapshotModel)
+        {
+            if (liveInput?.PileLayoutItems == null || snapshotInput?.PileLayoutItems == null) return;
+            if (liveModel == null || snapshotModel == null) return;
+
+            var nodeIndex = BuildIndex(liveModel.Nodes);
+            var beamIndex = BuildIndex(liveModel.Beams);
+            var springIndex = BuildIndex(liveModel.HorizontalSoilSprings);
+            var rotIndex = BuildIndex(liveModel.RotationalSprings);
+
+            int n = Math.Min(liveInput.PileLayoutItems.Count, snapshotInput.PileLayoutItems.Count);
+            for (int i = 0; i < n; i++)
+            {
+                var src = liveInput.PileLayoutItems[i];
+                var dst = snapshotInput.PileLayoutItems[i];
+                if (src == null || dst == null) continue;
+
+                dst.PileNodes = MapCollection(src.PileNodes, nodeIndex, snapshotModel.Nodes);
+                dst.SoilNodes = MapCollection(src.SoilNodes, nodeIndex, snapshotModel.Nodes);
+                dst.Beams = MapCollection(src.Beams, beamIndex, snapshotModel.Beams);
+                dst.HorizontalSoilSprings =
+                    MapCollection(src.HorizontalSoilSprings, springIndex, snapshotModel.HorizontalSoilSprings);
+
+                dst.PileTopRotationalSpring = src.PileTopRotationalSpring != null
+                    && rotIndex.TryGetValue(src.PileTopRotationalSpring, out int ri)
+                    && snapshotModel.RotationalSprings != null
+                    && ri < snapshotModel.RotationalSprings.Count
+                        ? snapshotModel.RotationalSprings[ri]
+                        : null;
+            }
+        }
+
+        /// <summary>参照 → インデックスの対応表を作る（参照一致で引く）。</summary>
+        private static Dictionary<T, int> BuildIndex<T>(IList<T>? source) where T : class
+        {
+            var map = new Dictionary<T, int>(ReferenceEqualityComparer.Instance as IEqualityComparer<T>
+                                             ?? EqualityComparer<T>.Default);
+            if (source == null) return map;
+            for (int i = 0; i < source.Count; i++)
+            {
+                var item = source[i];
+                if (item != null) map[item] = i;
+            }
+            return map;
+        }
+
+        /// <summary>元コレクションの各要素を、複製側の同インデックスの要素へ置き換える。</summary>
+        private static System.Collections.ObjectModel.ObservableCollection<T> MapCollection<T>(
+            IEnumerable<T>? source, Dictionary<T, int> index, IList<T>? destination) where T : class
+        {
+            var result = new System.Collections.ObjectModel.ObservableCollection<T>();
+            if (source == null || destination == null) return result;
+
+            foreach (var item in source)
+            {
+                if (item != null && index.TryGetValue(item, out int i) && i < destination.Count)
+                    result.Add(destination[i]);
+            }
+            return result;
         }
 
         /// <summary>

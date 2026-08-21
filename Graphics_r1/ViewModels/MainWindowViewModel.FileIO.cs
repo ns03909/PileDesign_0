@@ -58,7 +58,8 @@ namespace PileDesign.ViewModels
                     var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
                     var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
                     await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
-                        CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt);
+                        CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
+                        Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel));
                     ShowToast("保存が完了しました。");
 
                     // MRUに追加
@@ -93,7 +94,8 @@ namespace PileDesign.ViewModels
                     var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
                     var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
                     await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
-                        CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt);
+                        CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
+                        Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel));
                     ShowToast("保存が完了しました。");
                 }
                 catch (Exception ex)
@@ -564,6 +566,10 @@ namespace PileDesign.ViewModels
 
             // AnaModel.InputModel は getter のみで JSON から復元されないため張り直す
             projectData.AnaModel?.RebindInputModel(snapshot);
+
+            // 杭 → FEM 要素の関連も [JsonIgnore] で落ちるので、保存した対応表から張り直す。
+            // これが無いと杭ごとに結果を引く表示 (M-φ グラフ・限界線など) が空になる。
+            Models.PileFemLinkTable.Apply(projectData.PileFemLinks, snapshot, projectData.AnaModel);
 
             var set = new Models.AnalysisResultSet
             {
