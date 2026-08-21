@@ -1293,6 +1293,9 @@ namespace PileDesign.ViewModels
             {
                 vm.CurrentModel = this.CurrentModel; // AnaModels[0]など
                 vm.IsHorizontalAnalysisDone = this.CurrentModel != null;
+                // 入力ごと複製して切り離す。以降 vm.CurrentModel は複製を指し、
+                // 入力を編集しても結果は影響を受けない。
+                vm.CaptureAnalysisResultSet();
                 vm.RefreshResultTablesFromLastStep(); // 追加
 
                 // 解析した 1 つ目の荷重ケースをメイン画面で選択状態にする

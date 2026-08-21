@@ -56,7 +56,7 @@ namespace PileDesign.Views
                 : 0;
             if (dispScale == 0) return;
 
-            var inputModel = viewModel.CurrentInputModel;
+            var inputModel = viewModel.ResultInputModel;
 
             // 沈下量の大きさで色分け: 全節点の |Uz| [mm] からカラーバーを生成（バブルと同じ Rainbow）
             // colorizeBySettlement=false の場合はグレーバイアスのダミー colorGeoms にフォールバック
@@ -192,7 +192,7 @@ namespace PileDesign.Views
                 double dispScale)
         {
             var result = new List<(PileLayoutDataItem, List<double>, List<double>)>();
-            var inputModel = viewModel.CurrentInputModel;
+            var inputModel = viewModel.ResultInputModel;
             var soilPiles = inputModel?.ElementDivision?.SoilPiles;
             if (soilPiles == null || soilPiles.Count == 0) return result;
 
@@ -235,7 +235,7 @@ namespace PileDesign.Views
             double dispScale,
             List<ColorBaredGeometry> colorGeoms)
         {
-            var inputModel = viewModel.CurrentInputModel;
+            var inputModel = viewModel.ResultInputModel;
             var fbInput = inputModel?.FoundationBeamInput;
             if (fbInput?.Beams == null || fbInput.Sections == null) return;
 
@@ -315,7 +315,7 @@ namespace PileDesign.Views
         {
             if (perPileDeform.Count == 0) return;
 
-            var inputModel = viewModel.CurrentInputModel;
+            var inputModel = viewModel.ResultInputModel;
             var soilPiles = inputModel?.ElementDivision?.SoilPiles;
             if (soilPiles == null) return;
 
@@ -381,7 +381,7 @@ namespace PileDesign.Views
         private void DrawSinglePileDeformedElements(MainWindowViewModel viewModel, bool colorizeBySettlement = true)
         {
             if (Canvas3DLayout == null) return;
-            var inputModel = viewModel.CurrentInputModel;
+            var inputModel = viewModel.ResultInputModel;
             if (inputModel == null) return;
             var soilPiles = inputModel.ElementDivision?.SoilPiles;
             if (soilPiles == null || soilPiles.Count == 0) return;
@@ -507,7 +507,7 @@ namespace PileDesign.Views
             double dispScale,
             List<ColorBaredGeometry> colorGeoms)
         {
-            var inputModel = viewModel.CurrentInputModel;
+            var inputModel = viewModel.ResultInputModel;
             var soilPiles = inputModel?.ElementDivision?.SoilPiles;
             if (soilPiles == null || soilPiles.Count == 0) return;
 
@@ -666,13 +666,13 @@ namespace PileDesign.Views
                 unit = "mm";
 
                 // 杭位置の沈下量（LoadingPlaneAltitudeで統一、単杭沈下と同じ高さ）
-                double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                double loadingPlaneAlt = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
                 var pileResults = caseResult.PileResults;
                 if (pileResults != null)
                 {
                     foreach (var pr in pileResults)
                     {
-                        var pile = viewModel.CurrentInputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
+                        var pile = viewModel.ResultInputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
                         if (pile == null || !pile.IsVisible) continue;
                         points.Add(new Point3D(pr.X, pr.Y, loadingPlaneAlt));
                         values.Add(Math.Abs(pr.Settlement_mm));
@@ -684,7 +684,7 @@ namespace PileDesign.Views
                 {
                     // VBのPileResult沈下量に群杭沈下量を加算した値で杭位置のバブルを追加
                     // v2 セマンティクス: pile.Z は接合節点 Z
-                    foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                    foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         if (!pile.IsVisible) continue;
                         var pr = caseResult.PileResults?.FirstOrDefault(p => p.PileNo == pile.No);
@@ -707,7 +707,7 @@ namespace PileDesign.Views
                 {
                     foreach (var pr in pileResults)
                     {
-                        var pile = viewModel.CurrentInputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
+                        var pile = viewModel.ResultInputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
                         if (pile == null || !pile.IsVisible) continue;
 
                         // v2 セマンティクス: pile.Z は接合節点 Z
@@ -746,7 +746,7 @@ namespace PileDesign.Views
             if (caseName == "VL")
                 return pile.AxialForceVL0 + pile.AxialForceVLAdditional;
 
-            var lcs = vm.CurrentInputModel?.LoadCasesInput;
+            var lcs = vm.ResultInputModel?.LoadCasesInput;
             if (lcs == null) return null;
 
             for (int i = 0; i < lcs.LoadCasesLevel1.Count; i++)
@@ -765,7 +765,7 @@ namespace PileDesign.Views
         /// </summary>
         private void PrepareSinglePileReactionPending(MainWindowViewModel viewModel)
         {
-            var inputModel = viewModel.CurrentInputModel;
+            var inputModel = viewModel.ResultInputModel;
             if (inputModel == null) return;
 
             string content = viewModel.EffectiveSettlementContent;
@@ -849,7 +849,7 @@ namespace PileDesign.Views
             var pileResults = caseResult.PileResults;
             if (pileResults == null) { Serilog.Log.Debug("[VB-PerNode] pileResults is null"); return; }
 
-            var inputModel = viewModel.CurrentInputModel;
+            var inputModel = viewModel.ResultInputModel;
             var soilPiles = inputModel?.ElementDivision?.SoilPiles;
             if (soilPiles == null || soilPiles.Count == 0) { Serilog.Log.Debug("[VB-PerNode] soilPiles null or empty"); return; }
 
@@ -978,13 +978,13 @@ namespace PileDesign.Views
                 if (!int.TryParse(beamNoStr, out int beamNo)) continue;
 
                 // beamNo (1-based) は Beams コレクション内の位置インデックス + 1
-                var fbBeams = viewModel.CurrentInputModel.FoundationBeamInput?.Beams;
+                var fbBeams = viewModel.ResultInputModel.FoundationBeamInput?.Beams;
                 var fbBeam = (fbBeams != null && beamNo >= 1 && beamNo <= fbBeams.Count)
                     ? fbBeams[beamNo - 1] : null;
                 if (fbBeam == null || !fbBeam.IsVisible) continue;
 
-                var coordsI = viewModel.CurrentInputModel.GetNodeCoordinates(fbBeam.NodeI_Type, fbBeam.NodeI_Id);
-                var coordsJ = viewModel.CurrentInputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
+                var coordsI = viewModel.ResultInputModel.GetNodeCoordinates(fbBeam.NodeI_Type, fbBeam.NodeI_Id);
+                var coordsJ = viewModel.ResultInputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
                 if (coordsI == null || coordsJ == null) continue;
 
                 Point3D nodeI3D = new(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z);

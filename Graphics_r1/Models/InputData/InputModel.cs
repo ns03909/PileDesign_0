@@ -701,6 +701,7 @@ namespace PileDesign.Models.InputData
                 foreach (var item in PileLayoutItems)
                 {
                     item.SetMainWindowViewModel(mainWindowViewModel);
+                    item.SetOwner(this);   // VM 経由で「現在の入力」に化けないよう親を固定
                 }
             }
 
@@ -773,6 +774,7 @@ namespace PileDesign.Models.InputData
                 foreach (var item in PileLayoutItems)
                 {
                     item.SetMainWindowViewModel(mainWindowViewModel);
+                    item.SetOwner(this);   // VM 経由で「現在の入力」に化けないよう親を固定
                 }
             }
 

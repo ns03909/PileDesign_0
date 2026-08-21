@@ -29,32 +29,32 @@ namespace PileDesign.Views
 
             List<PathFigure> rectangleGeometries = [];
 
-            if (viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別十字"
-                || viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別十字（基礎梁反力）")
+            if (viewModel.ResultInputModel.PileGroupSettlement.LoadingType == "個別十字"
+                || viewModel.ResultInputModel.PileGroupSettlement.LoadingType == "個別十字（基礎梁反力）")
             {
-                if (viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
+                if (viewModel.ResultInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
                     //MessageService.Show("個別十字荷重を作成するには地盤杭セットが作られている必要があります。キャンセルします。");
                     return;
                 }
 
-                foreach (PileLayoutDataItem pileLayout in viewModel.CurrentInputModel.PileLayoutItems)
+                foreach (PileLayoutDataItem pileLayout in viewModel.ResultInputModel.PileLayoutItems)
                 {
-                    Point3D loc1 = new(pileLayout.Point3D.X, pileLayout.Point3D.Y, viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude);
-                    double radius = viewModel.CurrentInputModel.ElementDivision.SoilPiles[pileLayout.SoilPileAltNo - 1].GroupPileLoadDia * 0.5;
+                    Point3D loc1 = new(pileLayout.Point3D.X, pileLayout.Point3D.Y, viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude);
+                    double radius = viewModel.ResultInputModel.ElementDivision.SoilPiles[pileLayout.SoilPileAltNo - 1].GroupPileLoadDia * 0.5;
 
                     List<(Point3D, Point3D)> rectangles = PileGroupSettlement.GetFiveRectsPoints(loc1, radius);
                     rectangleGeometries.AddRange(viewModel.CanvasThreeDView.RectsTranformation(rectangles));
                 }
             }
-            else if (viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "任意矩形"
-                  || viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別矩形"
-                  || viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別矩形（基礎梁考慮）")
+            else if (viewModel.ResultInputModel.PileGroupSettlement.LoadingType == "任意矩形"
+                  || viewModel.ResultInputModel.PileGroupSettlement.LoadingType == "個別矩形"
+                  || viewModel.ResultInputModel.PileGroupSettlement.LoadingType == "個別矩形（基礎梁考慮）")
             {
-                foreach (Models.InputData.RectLoad rectLoad in viewModel.CurrentInputModel.PileGroupSettlement.RectLoads)
+                foreach (Models.InputData.RectLoad rectLoad in viewModel.ResultInputModel.PileGroupSettlement.RectLoads)
                 {
-                    Point3D loc1 = new(rectLoad.X1, rectLoad.Y1, viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude);
-                    Point3D loc3 = new(rectLoad.X2, rectLoad.Y2, viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude);
+                    Point3D loc1 = new(rectLoad.X1, rectLoad.Y1, viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude);
+                    Point3D loc3 = new(rectLoad.X2, rectLoad.Y2, viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude);
 
                     List<(Point3D, Point3D)> rectangles = [(loc1, loc3)];
                     rectangleGeometries.AddRange(viewModel.CanvasThreeDView.RectsTranformation(rectangles));
@@ -77,8 +77,8 @@ namespace PileDesign.Views
         {
             if (Canvas3DLayout == null) return;
             if (DataContext is not MainWindowViewModel viewModel) return;
-            if (viewModel.CurrentInputModel == null) return;
-            if (viewModel.CurrentInputModel.PileGroupSettlement == null) return;
+            if (viewModel.ResultInputModel == null) return;
+            if (viewModel.ResultInputModel.PileGroupSettlement == null) return;
 
             double xmin = viewModel.GroupPileSettlementXMin;
             double xmax = viewModel.GroupPileSettlementXMax;
@@ -90,13 +90,13 @@ namespace PileDesign.Views
             double ySpacing = viewModel.GroupPileSettlementYSpacing;
 
             ObservableCollection<double> xs = PileGroupSettlement.GetCoord(
-                xmin, xmax, xOffset, xSpacing, viewModel.CurrentInputModel.GridXItems
+                xmin, xmax, xOffset, xSpacing, viewModel.ResultInputModel.GridXItems
                 );
             ObservableCollection<double> ys = PileGroupSettlement.GetCoord(
-                ymin, ymax, yOffset, ySpacing, viewModel.CurrentInputModel.GridYItems
+                ymin, ymax, yOffset, ySpacing, viewModel.ResultInputModel.GridYItems
                 );
 
-            double z = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+            double z = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
             // draw grid
             foreach (var y0 in ys)
@@ -120,7 +120,7 @@ namespace PileDesign.Views
             }
 
             // 土層
-            foreach (var soilLayer in viewModel.CurrentInputModel.PileGroupSettlement.SettlementSoilLayers)
+            foreach (var soilLayer in viewModel.ResultInputModel.PileGroupSettlement.SettlementSoilLayers)
             {
                 double bottomLevel = soilLayer.BottomAltitude;
                 double topLevel = bottomLevel + soilLayer.Thickness;
@@ -172,9 +172,9 @@ namespace PileDesign.Views
 
             if (selectedLoadCase.Level == 1)
             {
-                for (int index = 0; index < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1.Count; index++)
+                for (int index = 0; index < viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1.Count; index++)
                 {
-                    if (selectedLoadCase.LoadName == viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[index].LoadName)
+                    if (selectedLoadCase.LoadName == viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1[index].LoadName)
                     {
                         return -pileLocation.AxialForceLevel1s[index];
                     }
@@ -183,9 +183,9 @@ namespace PileDesign.Views
             }
             else if (selectedLoadCase.Level == 2)
             {
-                for (int index = 0; index < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Count; index++)
+                for (int index = 0; index < viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2.Count; index++)
                 {
-                    if (selectedLoadCase.LoadName == viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[index].LoadName)
+                    if (selectedLoadCase.LoadName == viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2[index].LoadName)
                     {
                         return -pileLocation.AxialForceLevel2s[index];
                     }
@@ -199,8 +199,8 @@ namespace PileDesign.Views
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
 
-            double loadingPlaneAltitude = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
-            var settlementLayers = viewModel.CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
+            double loadingPlaneAltitude = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+            var settlementLayers = viewModel.ResultInputModel.PileGroupSettlement.SettlementSoilLayers;
 
             // 1) 層境界線 (荷重面と各層下端) を破線で描画
             AddLineGeometryToPath(new Point3D(0, 0, loadingPlaneAltitude), Canvas3DWidth, viewModel.CanvasGeometry.PathGeoPileSoils);
@@ -267,16 +267,16 @@ namespace PileDesign.Views
             if (DataContext is not MainWindowViewModel viewModel) return;
 
             // 必要なデータが存在しない場合は終了
-            if (viewModel.CurrentInputModel == null ||
-                viewModel.CurrentInputModel.PileGroupSettlement == null) return;
+            if (viewModel.ResultInputModel == null ||
+                viewModel.ResultInputModel.PileGroupSettlement == null) return;
 
-            var pileGroupSettlement = viewModel.CurrentInputModel.PileGroupSettlement;
+            var pileGroupSettlement = viewModel.ResultInputModel.PileGroupSettlement;
             if (pileGroupSettlement.SettlementGridX == null ||
                 pileGroupSettlement.SettlementGridY == null ||
                 pileGroupSettlement.SettlementGridData == null)
                 return;
 
-            double z = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+            double z = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
             var xs = pileGroupSettlement.SettlementGridX;
             var ys = pileGroupSettlement.SettlementGridY;
             var items = pileGroupSettlement.SettlementGridData;
@@ -691,7 +691,7 @@ namespace PileDesign.Views
             }
 
             // 沈下データが存在するか確認
-            var pileGroupSettlement = viewModel.CurrentInputModel?.PileGroupSettlement;
+            var pileGroupSettlement = viewModel.ResultInputModel?.PileGroupSettlement;
             if (pileGroupSettlement?.SettlementGridData == null ||
                 pileGroupSettlement.SettlementGridData.Count == 0 ||
                 pileGroupSettlement.SettlementGridX == null ||

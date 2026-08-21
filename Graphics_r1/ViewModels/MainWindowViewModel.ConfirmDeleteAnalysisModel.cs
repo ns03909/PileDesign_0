@@ -61,91 +61,88 @@ namespace PileDesign.ViewModels
             return true;
         }
 
-        // 置換: 解析結果の削除確認（以前の実装と同等の動作をヘルパ経由で）
+        /// <summary>
+        /// 入力を変更するコマンドの入口で呼ぶ。
+        ///
+        /// 解析結果は<b>破棄しない</b>。実務では結果を横目に見ながら入力を変えていくため、
+        /// 少しでも触ると結果が消える運用は成り立たない。解析完了時に入力ごと複製して
+        /// 切り離してあるので、入力を編集しても結果表示は解析時のままで整合が崩れない。
+        /// 代わりに「入力が変更された = 再解析が必要」であることを記録する。
+        ///
+        /// 杭要素分割は解析結果ではなく入力側の状態なので、従来どおり確認のうえ無効化する。
+        /// </summary>
         private bool CheckAndResetAnalysisResults()
         {
-            bool hasBeamAware = HasGroupSettlementBeamAwareCases;
-            if (IsHorizontalAnalysisDone || IsVerticalAnalysisDone || hasBeamAware)
-            {
-                string parts = "杭要素分割内容、水平解析結果、単杭沈下解析結果";
-                if (hasBeamAware) parts += "、土層沈下解析（反復）結果";
-                string msg = parts + "が削除されます。続けますか？";
-                return ConfirmDeleteAnalysisModel(message: msg, caption: "確認", icon: MessageBoxImage.Warning, resetModel: true);
-            }
+            MarkInputChangedSinceAnalysis();
+
             if (IsElementSplit)
             {
-                string msg = "杭要素分割内容が削除されます。続けますか？";
-                return ConfirmDeleteAnalysisModel(message: msg, caption: "確認", icon: MessageBoxImage.Warning, resetModel: true);
+                return ConfirmResetElementSplitOnly("杭要素分割内容が削除されます。続けますか？");
             }
             return true; // 操作を続ける
         }
 
         /// <summary>
-        /// 基本設定の Z=0 標高など、ジオメトリに影響する変更時に呼ぶ。
-        /// 解析結果と杭要素分割の両方がキャンセル対象。
-        /// 解析結果も杭要素分割も無ければダイアログなしで true。
+        /// 杭要素分割のみを確認のうえ無効化する（解析結果には触れない）。
+        /// 併せて、杭配置や基礎梁の変更で無効になる土層沈下（反復）の CaseRecord も破棄する。
+        /// これらは InputModel 側に持つ「入力に紐づく結果」なので、現在の入力からは消すが、
+        /// 解析結果セットのスナップショットには残るため結果表示は保たれる。
         /// </summary>
-        public bool ConfirmResetAllForGeometryChange(string reason)
+        private bool ConfirmResetElementSplitOnly(string message)
         {
-            bool hasResults = IsHorizontalAnalysisDone || IsVerticalAnalysisDone
-                              || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone
-                              || HasGroupSettlementBeamAwareCases;
-            if (!hasResults && !IsElementSplit) return true;
+            var result = MessageService.Show(message, "確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes) return false;
 
-            string msg = $"{reason}により、";
-            if (hasResults && IsElementSplit) msg += "解析結果と杭要素分割が";
-            else if (hasResults) msg += "解析結果が";
-            else msg += "杭要素分割が";
-            msg += "キャンセルされます。\nよろしいですか？";
+            IsElementSplit = false;
+            ClearGroupSettlementCaseRecords();
+            UpdateWindowImmediate();
+            return true;
+        }
 
-            return ConfirmDeleteAnalysisModel(message: msg, caption: "確認", icon: MessageBoxImage.Warning, resetModel: true);
+        /// <summary>土層沈下（反復）の CaseRecord を現在の入力から破棄する。</summary>
+        private void ClearGroupSettlementCaseRecords()
+        {
+            var pgs = CurrentInputModel?.PileGroupSettlement;
+            if (pgs?.CaseRecords == null || pgs.CaseRecords.Count == 0) return;
+
+            pgs.CaseRecords.Clear();
+            pgs.ActiveCaseIndex = -1;
+            pgs.SettlementGridData = [];
+            if (CurrentInputModel?.PileLayoutItems != null)
+                foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
+            OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
+            OnPropertyChanged(nameof(HasGroupSettlementBeamAwareCases));
+            OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
+            OnPropertyChanged(nameof(AvailableActiveLoadingTypes));
+            OnPropertyChanged(nameof(GroupSettlementRouteOptions));
+            OnPropertyChanged(nameof(GroupSettlementRouteSelector));
         }
 
         /// <summary>
-        /// 荷重条件など、ジオメトリを変更しない編集で呼ぶ確認ヘルパ。
-        /// 解析結果のみリセットし、杭要素分割 (IsElementSplit) は保持する。
-        /// 解析結果がなければダイアログを出さず true を返す (編集続行)。
+        /// 基本設定の Z=0 標高など、ジオメトリに影響する変更時に呼ぶ。
+        /// 解析結果は破棄せず、杭要素分割のみキャンセル対象。
+        /// 杭要素分割が無ければダイアログなしで true。
+        /// </summary>
+        public bool ConfirmResetAllForGeometryChange(string reason)
+        {
+            // 解析結果は破棄しない (CheckAndResetAnalysisResults と同じ方針)。
+            MarkInputChangedSinceAnalysis();
+            if (!IsElementSplit) return true;
+
+            return ConfirmResetElementSplitOnly(
+                $"{reason}により、杭要素分割がキャンセルされます。\nよろしいですか？");
+        }
+
+        /// <summary>
+        /// 荷重条件など、ジオメトリを変更しない編集で呼ぶヘルパ。
+        ///
+        /// 解析結果は<b>破棄しない</b>。荷重条件のように頻繁に触る入力でダイアログを出すと
+        /// 「結果を見ながら条件を変える」使い方ができなくなる。解析完了時に入力ごと複製して
+        /// 切り離してあるので、編集しても結果表示は解析時のまま整合する。
         /// </summary>
         public bool CheckAndResetAnalysisResultsKeepingSplit(string text)
         {
-            bool hasResults = IsHorizontalAnalysisDone || IsVerticalAnalysisDone
-                              || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone
-                              || HasGroupSettlementBeamAwareCases;
-            if (!hasResults) return true;
-
-            MessageBoxResult result = MessageService.Show(
-                $"{text}を確定するには、既存の解析結果を削除する必要があります。\nよろしいですか。\n（杭要素分割は保持されます）",
-                "確認",
-                MessageBoxButton.OKCancel,
-                MessageBoxImage.Warning);
-            if (result == MessageBoxResult.Cancel) return false;
-
-            // 解析結果のみリセット、IsElementSplit は保持
-            IsHorizontalAnalysisDone = false;
-            IsVerticalAnalysisDone = false;
-            IsGroupPileSettlementAnalysisDone = false;
-            IsVerticalBeamAnalysisDone = false;
-            IsAnalysisResultVisible = false;
-            CurrentModel = null;
-
-            // 土層沈下 (反復) の CaseRecord も破棄
-            var pgs = CurrentInputModel?.PileGroupSettlement;
-            if (pgs?.CaseRecords != null && pgs.CaseRecords.Count > 0)
-            {
-                pgs.CaseRecords.Clear();
-                pgs.ActiveCaseIndex = -1;
-                pgs.SettlementGridData = [];
-                if (CurrentInputModel?.PileLayoutItems != null)
-                    foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
-                OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
-                OnPropertyChanged(nameof(HasGroupSettlementBeamAwareCases));
-                OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
-                OnPropertyChanged(nameof(AvailableActiveLoadingTypes));
-                OnPropertyChanged(nameof(GroupSettlementRouteOptions));
-                OnPropertyChanged(nameof(GroupSettlementRouteSelector));
-            }
-
-            UpdateWindowImmediate();
+            MarkInputChangedSinceAnalysis();
             return true;
         }
 

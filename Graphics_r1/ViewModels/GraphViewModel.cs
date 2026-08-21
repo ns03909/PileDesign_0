@@ -22,7 +22,10 @@ namespace PileDesign.ViewModels
         private readonly UndoManager _undoManager = new();
 
         private readonly MainWindowViewModel _mainWindowViewModel;
-        public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
+        // 結果ウィンドウは「解析を実行した時点の入力」を見る。
+        // 現在の入力を混ぜると、変位は解析時・断面は編集後という読み手が区別できない図になる。
+        // 解析結果が無いときは現在の入力にフォールバックする。
+        public InputModel InputModel => _mainWindowViewModel.ResultInputModel;
 
         public bool IsHorizontalAnalysisDone { get; set; }
         public bool IsVerticalAnalysisDone { get; set; }

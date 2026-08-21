@@ -1,4 +1,4 @@
-<Fluent:RibbonWindow x:Class="PileDesign.Views.MainWindow"
+﻿<Fluent:RibbonWindow x:Class="PileDesign.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -6593,6 +6593,21 @@
                 <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusMessageColor}" Margin="0,0,16,0"/>
                 <TextBlock Text="{Binding SelectionCountText}" Foreground="{StaticResource NikkenPaleRedBrush}" Margin="0,0,16,0"/>
                 <TextBlock Text="{Binding PileCountText}" Foreground="DarkBlue" Margin="0,0,16,0"/>
+                <!-- 解析結果セットの状態: 入力を変更しても結果は破棄されないので、
+                     表示中の結果がいつの入力によるものかを常に示す -->
+                <TextBlock Text="{Binding ResultSetStatusText}" Margin="0,0,16,0" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="DarkGreen"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding InputChangedSinceAnalysis}" Value="True">
+                                    <Setter Property="Foreground" Value="DarkOrange"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
                 <!-- 解析項目別ステータス: リボンの ✓ 色と統一 (Success=緑/Info=青/Warning=橙) -->
                 <ItemsControl ItemsSource="{Binding AnalysisStatusItems}" Margin="0,0,16,0"
                               ToolTip="{Binding AnalysisStatusText}">

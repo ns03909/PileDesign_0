@@ -13,9 +13,19 @@ namespace PileDesign.Models.InputData
     {
         private MainWindowViewModel _mainWindowViewModel;
 
+        // この杭が属する InputModel。InputModel.AttachViewModel が設定する。
+        // 解析結果のスナップショット (解析時の入力の複製) に属する杭が、
+        // VM 経由で「現在の入力」を見てしまわないようにするための明示的な親参照。
+        // これが無いと、入力を編集した瞬間にスナップショット側の SoilPile / PileSection まで
+        // 現在の値に化け、結果図と断面が食い違う。
+        private InputModel? _owner;
+
         // [JsonIgnore]: InputModel への back-reference は循環参照を生むため JSON シリアライズ対象外
         [JsonIgnore]
-        public InputModel InputModel => _mainWindowViewModel?.CurrentInputModel;
+        public InputModel InputModel => _owner ?? _mainWindowViewModel?.CurrentInputModel;
+
+        /// <summary>属する InputModel を明示的に設定する (スナップショットとの取り違え防止)。</summary>
+        internal void SetOwner(InputModel? owner) => _owner = owner;
 
         /// <summary>配置 DataGrid の 杭体番号 ComboBox ホバー用 ToolTip テキスト。</summary>
         [JsonIgnore]

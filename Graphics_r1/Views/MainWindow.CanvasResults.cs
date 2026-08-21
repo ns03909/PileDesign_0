@@ -22,11 +22,11 @@ namespace PileDesign.Views
     {
  
         private static IEnumerable<LoadCase> GetSelectedLoadCases(MainWindowViewModel vm)
-            => vm.CurrentInputModel.LoadCasesInput.AllSeismicLoadCases
+            => vm.ResultInputModel.LoadCasesInput.AllSeismicLoadCases
                .Where(lc => vm.LoadCaseNameOption.Contains(lc.LoadName));
 
         private static IEnumerable<LoadCombination> GetSelectedLoadCombinations(MainWindowViewModel vm)
-            => vm.CurrentInputModel.LoadCasesInput.LoadCombinations
+            => vm.ResultInputModel.LoadCasesInput.LoadCombinations
                .Where(c => vm.LoadCombinationNameOption.Contains(c.GetName()));
 
 
@@ -50,10 +50,10 @@ namespace PileDesign.Views
             HashSet<Node> visibleFemNodes = null;
             HashSet<HorizontalSoilSpring> visibleSoilSprings = null;
             bool hasInvisiblePile = false;
-            if (viewModel.CurrentInputModel?.PileLayoutItems != null)
+            if (viewModel.ResultInputModel?.PileLayoutItems != null)
             {
                 // まず非表示杭があるかだけ確認（全杭可視ならセット構築を省略）
-                foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                 {
                     if (!pile.IsVisible) { hasInvisiblePile = true; break; }
                 }
@@ -63,7 +63,7 @@ namespace PileDesign.Views
                     visibleBeams = new HashSet<Beam>();
                     visibleFemNodes = new HashSet<Node>();
                     visibleSoilSprings = new HashSet<HorizontalSoilSpring>();
-                    foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                    foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         if (pile.IsVisible)
                         {
@@ -80,9 +80,9 @@ namespace PileDesign.Views
 
             // 非アクティブ基礎梁のFEM梁名セットを構築（応力図非表示用）
             var invisibleFBNames = new HashSet<string>();
-            if (viewModel.CurrentInputModel?.FoundationBeamInput?.Beams != null)
+            if (viewModel.ResultInputModel?.FoundationBeamInput?.Beams != null)
             {
-                var beams = viewModel.CurrentInputModel.FoundationBeamInput.Beams;
+                var beams = viewModel.ResultInputModel.FoundationBeamInput.Beams;
                 for (int i = 0; i < beams.Count; i++)
                 {
                     if (!beams[i].IsVisible)
@@ -105,8 +105,8 @@ namespace PileDesign.Views
 
                 if (viewModel.AnalysisResultSettlementType == "単杭")
                 {
-                    double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
-                    foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
+                    double loadingPlaneAlt = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                    foreach (PileLayoutDataItem pileLocation in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         if (viewModel.SelectedLoadCaseName == "VL")
                         {
@@ -116,18 +116,18 @@ namespace PileDesign.Views
                         }
                         else
                         {
-                            for (int i = 0; i < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1.Count; i++)
+                            for (int i = 0; i < viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1.Count; i++)
                             {
-                                LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
+                                LoadCase loadCase = viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
                                     values.Add(pileLocation.SinglePileSettlementLevel1s[i] * 1000); // m → mm
                                     points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
-                            for (int i = 0; i < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
+                            for (int i = 0; i < viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
                             {
-                                LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i];
+                                LoadCase loadCase = viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
                                     values.Add(pileLocation.SinglePileSettlementLevel2s[i] * 1000); // m → mm
@@ -142,8 +142,8 @@ namespace PileDesign.Views
                     // 群杭沈下は VL 荷重ケースでのみ意味を持つため、他のケースでは表示しない
                     if (viewModel.SelectedLoadCaseName == "VL")
                     {
-                        double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
-                        foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
+                        double loadingPlaneAlt = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                        foreach (PileLayoutDataItem pileLocation in viewModel.ResultInputModel.PileLayoutItems)
                         {
                             points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                             values.Add(pileLocation.GroupPileSettlement); // mmのまま
@@ -152,8 +152,8 @@ namespace PileDesign.Views
                 }
                 else if (viewModel.AnalysisResultSettlementType == "単杭+群杭")
                 {
-                    double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
-                    foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
+                    double loadingPlaneAlt = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                    foreach (PileLayoutDataItem pileLocation in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         if (viewModel.SelectedLoadCaseName == "VL")
                         {
@@ -162,18 +162,18 @@ namespace PileDesign.Views
                         }
                         else
                         {
-                            for (int i = 0; i < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1.Count; i++)
+                            for (int i = 0; i < viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1.Count; i++)
                             {
-                                LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
+                                LoadCase loadCase = viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
                                     values.Add(pileLocation.SinglePileSettlementLevel1s[i] * 1000 + pileLocation.GroupPileSettlement); // m→mm + mm
                                     points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
-                            for (int i = 0; i < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
+                            for (int i = 0; i < viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
                             {
-                                LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i];
+                                LoadCase loadCase = viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
                                     values.Add(pileLocation.SinglePileSettlementLevel2s[i] * 1000 + pileLocation.GroupPileSettlement); // m→mm + mm
@@ -264,14 +264,14 @@ namespace PileDesign.Views
                 }
 
                 var selectedLoadCase = LoadCases.GetLoadCase(
-                    viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+                    viewModel.ResultInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
                 if (selectedLoadCase == null)
                 {
                     return;
                 }
 
                 var selectedLoadCombination = LoadCombinations.GetLoadCombination(
-                    viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+                    viewModel.ResultInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
                 if (selectedLoadCombination == null)
                 {
                     return;
@@ -436,7 +436,7 @@ namespace PileDesign.Views
                 if (viewModel.IsPileMaxMinResultValueVisibleOnly)
                 {
                     var beamForceMap = beamResults.ToDictionary(t => t.beam, t => (t.originalForceI, t.originalForceJ));
-                    foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                    foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         var pileBeams = anaModel.GetPileBeams(pile);
                         if (pileBeams == null || pileBeams.Count == 0) continue;
@@ -723,9 +723,9 @@ namespace PileDesign.Views
 
                 // 選択ケース/組合せ（既存）
                 var selectedLoadCase = LoadCases.GetLoadCase(
-                    viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+                    viewModel.ResultInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
                 var selectedLoadCombination = LoadCombinations.GetLoadCombination(
-                    viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+                    viewModel.ResultInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
                 if (selectedLoadCase == null || selectedLoadCombination == null) return;
 
                 // 1) 全節点（Dummy含むBeams端点）を一意に取り、必要な「表示値」を収集する
@@ -807,7 +807,7 @@ namespace PileDesign.Views
                     // DummyBeams（根入れ部）描画 — 非アクティブ杭が存在する場合はスキップ。
                     // 杭変位非表示モードでは丸ごとスキップ (根入れ部は杭側の表現)。
                     if (!hasInvisiblePile && viewModel.IsPileDisplacementVisible
-                        && viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane != null && anaModel?.DummyBeams != null)
+                        && viewModel.ResultInputModel.ElementDivision.DoatsuGoryokuBane != null && anaModel?.DummyBeams != null)
                     {
                         foreach (var dummyBeam in anaModel.DummyBeams)
                         {

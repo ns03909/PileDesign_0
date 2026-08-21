@@ -78,7 +78,7 @@ namespace PileDesign.ViewModels
             sb.AppendLine();
 
             var model = _mainVm.CurrentModel;
-            var inputModel = _mainVm.CurrentInputModel;
+            var inputModel = _mainVm.ResultInputModel;
             if (model == null || inputModel == null)
             {
                 sb.AppendLine("解析結果がありません。水平解析を実行してください。");
@@ -188,12 +188,12 @@ namespace PileDesign.ViewModels
         /// </summary>
         private void EvaluateBeamAwareInclination(StringBuilder sb, ref int okCount, ref int ngCount)
         {
-            var pgs = _mainVm.CurrentInputModel?.PileGroupSettlement;
+            var pgs = _mainVm.ResultInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords == null) return;
             var beamAwareCases = pgs.CaseRecords.Where(r => r.IsBeamAware).ToList();
             if (beamAwareCases.Count == 0) return;
 
-            var inputModel = _mainVm.CurrentInputModel;
+            var inputModel = _mainVm.ResultInputModel;
             if (inputModel?.FoundationBeamInput?.Beams == null
                 || inputModel.FoundationBeamInput.Beams.Count == 0) return;
 

@@ -235,6 +235,7 @@ namespace PileDesign.ViewModels
                 });
                 IsAnalysisExecuted = true;
                 _mainWindowViewModel.IsVerticalBeamAnalysisDone = true;
+                _mainWindowViewModel.CaptureAnalysisResultSet();
 
                 if (CaseResults.Count > 0)
                 {
