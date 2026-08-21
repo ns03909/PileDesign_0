@@ -1,4 +1,4 @@
-using PileDesign.FEM;
+﻿using PileDesign.FEM;
 using PileDesign.Models;
 using PileDesign.Models.InputData;
 using Serilog;
@@ -40,7 +40,8 @@ namespace PileDesign.Services
         /// ProjectData を JSON ファイルに保存
         /// </summary>
         public void SaveProjectData(string filePath, InputModel inputModel, AnaModel? anaModel,
-            IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null)
+            IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
+            InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -54,7 +55,10 @@ namespace PileDesign.Services
                 AnaModel = anaModel!,
                 VerticalBeamCaseResults = verticalBeamCaseResults != null
                     ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
-                    : null!
+                    : null!,
+                // 解析結果を保存しないときはスナップショットも不要
+                ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
+                ResultCapturedAt = anaModel != null ? resultCapturedAt : null,
             };
 
             // string 中間生成を避けて UTF-8 バイト直書き。
@@ -70,7 +74,8 @@ namespace PileDesign.Services
         /// ProjectData を JSON ファイルに非同期保存（UIスレッドをブロックしない）
         /// </summary>
         public async Task SaveProjectDataAsync(string filePath, InputModel inputModel, AnaModel? anaModel,
-            IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null)
+            IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
+            InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -84,7 +89,10 @@ namespace PileDesign.Services
                 AnaModel = anaModel!,
                 VerticalBeamCaseResults = verticalBeamCaseResults != null
                     ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
-                    : null!
+                    : null!,
+                // 解析結果を保存しないときはスナップショットも不要
+                ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
+                ResultCapturedAt = anaModel != null ? resultCapturedAt : null,
             };
 
             long tValidate = 0;

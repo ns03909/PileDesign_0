@@ -73,8 +73,20 @@ namespace PileDesign.FEM
 
     public class AnaModel
     {
-        private readonly InputModel _inputModel;
+        private InputModel _inputModel;
         public InputModel InputModel => _inputModel;
+
+        /// <summary>
+        /// 逆シリアライズ後に入力への参照を張り直す。
+        ///
+        /// <see cref="InputModel"/> は getter のみなので JSON からは復元されない
+        /// （書き出しはされるが読み込みで捨てられ、ロード直後は null になる）。
+        /// 解析結果セットを復元するときに、結果と整合する入力スナップショットを結び付ける。
+        /// </summary>
+        public void RebindInputModel(InputModel inputModel)
+        {
+            if (inputModel != null) _inputModel = inputModel;
+        }
 
         /// <summary>
         /// E3a: case-local 状態のスナップショット。主モデルでは null、DeepCopy の戻り値では非 null。

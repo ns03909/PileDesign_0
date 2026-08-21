@@ -113,6 +113,16 @@ namespace PileDesign.ViewModels
             InputChangedSinceAnalysis = false;
         }
 
+        /// <summary>
+        /// ファイルから復元した結果セットを設定する。
+        /// 保存時点で入力が編集済みだった場合は「変更あり」の状態も引き継ぐ。
+        /// </summary>
+        internal void SetRestoredResultSet(AnalysisResultSet? set, bool changedSinceAnalysis)
+        {
+            CurrentResultSet = set;
+            InputChangedSinceAnalysis = set != null && changedSinceAnalysis;
+        }
+
         /// <summary>解析結果を明示的に破棄する（メニュー等から呼ぶ）。</summary>
         [RelayCommand]
         public void DiscardAnalysisResults()

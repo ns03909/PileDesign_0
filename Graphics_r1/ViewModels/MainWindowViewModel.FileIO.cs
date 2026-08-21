@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
@@ -57,7 +57,8 @@ namespace PileDesign.ViewModels
                     // 入力のみの軽量ファイルとして保存する
                     var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
                     var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
-                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave);
+                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
+                        CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt);
                     ShowToast("保存が完了しました。");
 
                     // MRUに追加
@@ -91,7 +92,8 @@ namespace PileDesign.ViewModels
                     StatusMessage = "保存中...";
                     var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
                     var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
-                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave);
+                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
+                        CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt);
                     ShowToast("保存が完了しました。");
                 }
                 catch (Exception ex)
@@ -521,6 +523,63 @@ namespace PileDesign.ViewModels
                 VerticalBeamCaseResults = new ObservableCollection<FEM.VerticalBeamCaseResult>(projectData.VerticalBeamCaseResults);
                 IsVerticalBeamAnalysisDone = true;
             }
+
+            RestoreAnalysisResultSet(projectData);
+        }
+
+        /// <summary>
+        /// 解析結果セット（結果 + 解析時の入力）をファイルから復元する。
+        ///
+        /// 保存側は現在の入力とは別に「解析を実行した時点の入力」を持たせている。
+        /// これを復元しないと、編集途中で保存したファイルを開き直したときに
+        /// 結果が現在の入力を基準に描かれ、混在表示に戻ってしまう。
+        /// 旧ファイル（スナップショットなし）は現在の入力で代用する（従来と同じ挙動）。
+        /// </summary>
+        private void RestoreAnalysisResultSet(Models.ProjectData projectData)
+        {
+            bool hasResults = IsHorizontalAnalysisDone || IsVerticalAnalysisDone
+                              || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone;
+            if (!hasResults && projectData.AnaModel == null)
+            {
+                SetRestoredResultSet(null, changedSinceAnalysis: false);
+                return;
+            }
+
+            var snapshot = projectData.ResultInputSnapshot;
+            bool snapshotIsSeparate = snapshot != null && !ReferenceEquals(snapshot, CurrentInputModel);
+
+            if (snapshot == null)
+            {
+                // 旧ファイル / スナップショット無し: 現在の入力が解析時の入力でもある
+                snapshot = CurrentInputModel;
+            }
+            else if (snapshotIsSeparate)
+            {
+                // スナップショット側もデシリアライズ直後なので、現在の入力と同じ整備をしておく
+                _fileOperationService.ConvertToObservableCollections(snapshot);
+                snapshot.RefreshAvailableNodeReferenceOptions();
+                snapshot.AttachViewModel(this);
+                snapshot.UpdateCountLists();
+            }
+
+            // AnaModel.InputModel は getter のみで JSON から復元されないため張り直す
+            projectData.AnaModel?.RebindInputModel(snapshot);
+
+            var set = new Models.AnalysisResultSet
+            {
+                InputSnapshot = snapshot,
+                AnaModel = projectData.AnaModel,
+                VerticalBeamCaseResults = projectData.VerticalBeamCaseResults,
+                CapturedAt = projectData.ResultCapturedAt ?? DateTime.Now,
+                HasHorizontal = IsHorizontalAnalysisDone,
+                HasVertical = IsVerticalAnalysisDone,
+                HasGroupPileSettlement = IsGroupPileSettlementAnalysisDone,
+                HasVerticalBeam = IsVerticalBeamAnalysisDone,
+                IsElementSplit = IsElementSplit,
+            };
+
+            // 保存時点で入力が編集済みだった場合のみ、スナップショットが現在の入力と別物になる
+            SetRestoredResultSet(set, changedSinceAnalysis: snapshotIsSeparate);
         }
 
         // docx 出力設定（Include* フラグ・一括選択/解除・出力前検証）は

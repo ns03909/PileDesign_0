@@ -1,5 +1,6 @@
 ﻿using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -19,6 +20,23 @@ namespace PileDesign.Models
 
         /// <summary>基礎梁鉛直解析結果</summary>
         public List<VerticalBeamCaseResult> VerticalBeamCaseResults { get; set; }
+
+        /// <summary>
+        /// 解析結果と整合する「解析を実行した時点の入力」。
+        ///
+        /// <see cref="InputModel"/> は現在編集中の入力で、解析後に編集していれば結果とは一致しない。
+        /// 結果表示はこちらを基準にする。解析結果が無いファイル・旧ファイルでは null
+        /// （読込側は <see cref="InputModel"/> にフォールバックする）。
+        ///
+        /// 省略可能なプロパティなので FormatVersion は上げていない
+        /// （System.Text.Json は欠落プロパティを既定値で埋める）。
+        /// なお <see cref="AnaModel"/> が同じ入力を参照しているため、
+        /// ReferenceHandler.Preserve のもとでは実体は 1 つで $ref になり、増えるのは参照 1 個分。
+        /// </summary>
+        public InputModel? ResultInputSnapshot { get; set; }
+
+        /// <summary>解析を実行した時刻（表示用）。</summary>
+        public DateTime? ResultCapturedAt { get; set; }
 
         // 保存メソッド
         public static void SaveProject(string filePath, InputModel inputModel, AnaModel anaModel)
