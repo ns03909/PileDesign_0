@@ -124,6 +124,48 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// ダミー梁を含む解析結果が往復できること。
+        ///
+        /// DummyBeam は get のみ + 引数付きコンストラクタだったため、System.Text.Json が
+        /// コンストラクタ経由で復元しようとし、ReferenceHandler.Preserve の $ref を
+        /// コンストラクタ引数へ渡せずに
+        /// 「Reference metadata is not supported when deserializing constructor parameters」
+        /// で落ちていた。節点は他要素と共有される = 2 個目以降は必ず $ref になるので、
+        /// この形のクラスがグラフに混ざると保存ファイルが開けなくなる。
+        /// </summary>
+        [TestMethod]
+        public void DummyBeams_SurviveRoundTrip_WithSharedNodeReferences()
+        {
+            var input = LoadExample();
+            if (input == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            var modelling = new AnalysisModelling(input);
+            var ana = new AnaModel(
+                input, modelling.Nodes, modelling.Beams, modelling.DummyBeams,
+                modelling.RigidBodies, modelling.HorizontalSoilSprings, modelling.RotationalSprings);
+
+            // 節点を共有するダミー梁を必ず 1 本は入れる ($ref が発生する状況を作る)
+            Assert.IsTrue(ana.Nodes.Count >= 2, "節点が足りない");
+            ana.DummyBeams ??= [];
+            ana.DummyBeams.Add(new DummyBeam("dummy-test", ana.Nodes[0], ana.Nodes[1]) { Length = 1.5 });
+
+            var loaded = RoundTrip(new ProjectData
+            {
+                FormatVersion = 2, InputModel = input, AnaModel = ana, ResultInputSnapshot = input,
+            });
+
+            var db = loaded.AnaModel.DummyBeams.LastOrDefault(d => d.Name == "dummy-test");
+            Assert.IsNotNull(db, "ダミー梁が復元されていない");
+            Assert.IsNotNull(db!.NodeI, "ダミー梁の NodeI が復元されていない ($ref が捨てられている)");
+            Assert.IsNotNull(db.NodeJ, "ダミー梁の NodeJ が復元されていない");
+            Assert.AreEqual(1.5, db.Length, 1e-9);
+
+            // 共有参照が保たれ、コピー内の節点と同一インスタンスであること
+            Assert.AreSame(loaded.AnaModel.Nodes[0], db.NodeI, "節点の共有参照が保たれていない");
+            Assert.AreSame(loaded.AnaModel.Nodes[1], db.NodeJ, "節点の共有参照が保たれていない");
+        }
+
+        /// <summary>
         /// 逆シリアライズ後の AnaModel は入力への参照を失う (getter のみのため)。
         /// RebindInputModel で張り直せること。
         /// </summary>

@@ -27,6 +27,16 @@ PileDesign 杭基礎検討プログラムの変更履歴。
 
 ### 修正
 
+- **ダミー梁を含むモデルで、解析結果を含む JSON の読込が失敗していたのを修正**。
+  `DummyBeam` が get のみのプロパティ + 引数付きコンストラクタだったため、
+  System.Text.Json がコンストラクタ経由で復元しようとし、`ReferenceHandler.Preserve` の
+  `$ref` をコンストラクタ引数へ渡せずに
+  「Reference metadata is not supported when deserializing constructor parameters」で
+  例外になっていた。節点は他要素と共有される（＝ 2 個目以降は必ず `$ref` になる）ため、
+  ダミー梁があるモデルでは必ず起きる。`Beam` と同じく既定コンストラクタ + setter の形に揃えた。
+  この不具合は解析結果セット導入前から保存ファイルの読込に存在していたが、
+  解析完了時のスナップショット作成でも同じ経路を通るため顕在化した
+
 - **逆シリアライズ後の `AnaModel` が入力への参照を失っていた**のを修正。
   `AnaModel.InputModel` は getter のみで、JSON へ書き出されはするが読込時に捨てられ、
   ロード直後は null だった。`RebindInputModel` で張り直せるようにし、
