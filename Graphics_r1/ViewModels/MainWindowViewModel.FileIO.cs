@@ -59,7 +59,8 @@ namespace PileDesign.ViewModels
                     var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
                     await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
                         CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
-                        Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel));
+                        Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
+                        IsElementSplit);
                     ShowToast("保存が完了しました。");
 
                     // MRUに追加
@@ -95,7 +96,8 @@ namespace PileDesign.ViewModels
                     var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
                     await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
                         CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
-                        Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel));
+                        Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
+                        IsElementSplit);
                     ShowToast("保存が完了しました。");
                 }
                 catch (Exception ex)
@@ -484,9 +486,16 @@ namespace PileDesign.ViewModels
             var anaModel = CurrentModel;
             var soilPiles = CurrentInputModel?.ElementDivision?.SoilPiles;
 
-            // 杭要素分割済み判定: AnaModelにノードが存在する
-            if (anaModel?.Nodes != null && anaModel.Nodes.Count > 0)
+            // 杭要素分割済みかどうかは保存値を優先する。
+            // AnaModel の有無から推定すると、解析結果を保持したまま分割だけ取り消した状態が
+            // 復元できない (開き直すと分割済みに戻り、メイン画面の杭が「分割後」の色になる)。
+            if (projectData.IsElementSplit.HasValue)
             {
+                IsElementSplit = projectData.IsElementSplit.Value;
+            }
+            else if (anaModel?.Nodes != null && anaModel.Nodes.Count > 0)
+            {
+                // 旧ファイル: 保存値が無いので従来どおり推定する
                 IsElementSplit = true;
             }
 

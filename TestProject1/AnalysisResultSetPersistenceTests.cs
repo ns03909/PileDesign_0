@@ -166,6 +166,34 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 杭要素分割の状態が保存・復元されること。
+        ///
+        /// 以前は読込時に「AnaModel に節点があるか」で推定していた。解析結果を保持したまま
+        /// 分割だけ取り消せるようになった今、その推定では分割を取り消した状態が復元できず、
+        /// 開き直すと分割済みに戻ってメイン画面の杭が「分割後」の色 (青) で描かれてしまう。
+        /// </summary>
+        [TestMethod]
+        public void ElementSplitState_SurvivesRoundTrip()
+        {
+            var input = LoadExample();
+            if (input == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            foreach (bool split in new[] { true, false })
+            {
+                var loaded = RoundTrip(new ProjectData
+                {
+                    FormatVersion = 2, InputModel = input, IsElementSplit = split,
+                });
+                Assert.AreEqual(split, loaded.IsElementSplit,
+                    $"杭要素分割の状態 ({split}) が往復で保たれていない");
+            }
+
+            // 旧ファイル相当: 値が無ければ null（読込側で従来どおり推定する）
+            var legacy = RoundTrip(new ProjectData { FormatVersion = 2, InputModel = input });
+            Assert.IsNull(legacy.IsElementSplit, "旧ファイル相当で null にならない");
+        }
+
+        /// <summary>
         /// 逆シリアライズ後の AnaModel は入力への参照を失う (getter のみのため)。
         /// RebindInputModel で張り直せること。
         /// </summary>

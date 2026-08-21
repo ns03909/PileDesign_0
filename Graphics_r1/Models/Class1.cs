@@ -49,6 +49,17 @@ namespace PileDesign.Models
         /// </summary>
         public PileFemLinkTable? PileFemLinks { get; set; }
 
+        /// <summary>
+        /// 杭要素分割済みかどうか（保存時点の状態）。
+        ///
+        /// 以前は読込時に「AnaModel に節点があるか」で推定していたが、解析結果を保持したまま
+        /// 杭要素分割だけを取り消せるようになったため、この推定は成り立たない
+        /// （分割を取り消しても結果の AnaModel は残るので、開き直すと分割済みに戻ってしまい、
+        ///  メイン画面の杭が「分割後」の色で描かれる）。状態そのものを保存する。
+        /// 省略可能なので旧ファイルは null → 従来どおり推定する。
+        /// </summary>
+        public bool? IsElementSplit { get; set; }
+
         // 保存メソッド
         public static void SaveProject(string filePath, InputModel inputModel, AnaModel anaModel)
         {
