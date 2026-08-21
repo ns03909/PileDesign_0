@@ -124,6 +124,56 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 「解析結果の入力」と「スナップショット」が同じ実体のとき、往復で参照が解決できること。
+        ///
+        /// ReferenceHandler.Preserve では実体は「最初の出現」に書かれる。ProjectData の
+        /// プロパティ順では AnaModel が ResultInputSnapshot より先なので、入力の実体は
+        /// AnaModel.InputModel に載り、ResultInputSnapshot は $ref になる。
+        /// AnaModel.InputModel が getter のみだと読込時に読み飛ばされて $id が登録されず、
+        /// 後続の $ref が「Reference 'nnnn' was not found」で失敗する
+        /// （実機で保存ファイルが開けなくなった）。
+        /// </summary>
+        [TestMethod]
+        public void SnapshotSharedWithAnaModel_ResolvesReferencesOnLoad()
+        {
+            var live = LoadExample();
+            if (live == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            var snapshot = LoadExample()!;
+
+            var modelling = new AnalysisModelling(snapshot);
+            var ana = new AnaModel(
+                snapshot, modelling.Nodes, modelling.Beams, modelling.DummyBeams,
+                modelling.RigidBodies, modelling.HorizontalSoilSprings, modelling.RotationalSprings);
+            Assert.AreSame(snapshot, ana.InputModel, "前提: AnaModel は入力を参照する");
+
+            var saved = new ProjectData
+            {
+                FormatVersion = 2,
+                InputModel = live,              // 現在の入力（別実体）
+                AnaModel = ana,                 // ここに解析時入力の実体が載る
+                ResultInputSnapshot = snapshot, // こちらは $ref になる
+            };
+
+            ProjectData loaded;
+            try
+            {
+                loaded = RoundTrip(saved);
+            }
+            catch (JsonException ex)
+            {
+                Assert.Fail($"参照が解決できず読込に失敗した: {ex.Message}");
+                return;
+            }
+
+            Assert.IsNotNull(loaded.ResultInputSnapshot, "スナップショットが復元されていない");
+            Assert.IsNotNull(loaded.AnaModel.InputModel, "AnaModel の入力が復元されていない");
+            Assert.AreSame(loaded.AnaModel.InputModel, loaded.ResultInputSnapshot,
+                "同じ実体だったものが復元後に別インスタンスになっている");
+            Assert.AreNotSame(loaded.InputModel, loaded.ResultInputSnapshot,
+                "現在の入力とスナップショットが潰れている");
+        }
+
+        /// <summary>
         /// ダミー梁を含む解析結果が往復できること。
         ///
         /// DummyBeam は get のみ + 引数付きコンストラクタだったため、System.Text.Json が
@@ -234,8 +284,11 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 逆シリアライズ後の AnaModel は入力への参照を失う (getter のみのため)。
-        /// RebindInputModel で張り直せること。
+        /// AnaModel の入力への参照が往復で保たれること、および明示的に張り直せること。
+        ///
+        /// 以前は getter のみで復元されず (ロード直後は null)、さらに $id が登録されないために
+        /// 後続の $ref が解決できなかった。[JsonInclude] + private setter で復元するようにした。
+        /// RebindInputModel は、旧ファイルなど参照が欠けている場合に結果セットの復元で使う。
         /// </summary>
         [TestMethod]
         public void AnaModel_InputModelReference_CanBeRebound()
@@ -254,12 +307,13 @@ namespace TestProject1
                 FormatVersion = 2, InputModel = snapshot, AnaModel = ana, ResultInputSnapshot = snapshot,
             });
 
-            Assert.IsNull(loaded.AnaModel.InputModel,
-                "getter のみのプロパティが復元されている（前提が変わったらこのテストを見直す）");
+            Assert.IsNotNull(loaded.AnaModel.InputModel,
+                "AnaModel の入力が往復で失われている（$ref の解決も壊れる）");
 
-            loaded.AnaModel.RebindInputModel(loaded.ResultInputSnapshot!);
-            Assert.AreSame(loaded.ResultInputSnapshot, loaded.AnaModel.InputModel,
-                "入力への参照を張り直せていない");
+            // 別の入力を明示的に結び付け直せること
+            var other = LoadExample()!;
+            loaded.AnaModel.RebindInputModel(other);
+            Assert.AreSame(other, loaded.AnaModel.InputModel, "入力への参照を張り直せていない");
         }
     }
 }

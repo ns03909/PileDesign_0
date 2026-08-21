@@ -74,14 +74,27 @@ namespace PileDesign.FEM
     public class AnaModel
     {
         private InputModel _inputModel;
-        public InputModel InputModel => _inputModel;
 
         /// <summary>
-        /// 逆シリアライズ後に入力への参照を張り直す。
+        /// この解析モデルが対象とする入力。
         ///
-        /// <see cref="InputModel"/> は getter のみなので JSON からは復元されない
-        /// （書き出しはされるが読み込みで捨てられ、ロード直後は null になる）。
-        /// 解析結果セットを復元するときに、結果と整合する入力スナップショットを結び付ける。
+        /// <b>[JsonInclude] + private setter にしてあるのは、逆シリアライズさせるためであって
+        /// 単なる書式の好みではない。</b> getter のみだと System.Text.Json は読込時にこの
+        /// プロパティを読み飛ばし、そこに書かれていた <c>$id</c> を登録しない。
+        /// ReferenceHandler.Preserve では「最初の出現」に実体が書かれるため、
+        /// 入力の実体がここに載ったファイルは、後続の
+        /// <c>ProjectData.ResultInputSnapshot</c> などの <c>$ref</c> が解決できず
+        /// 「Reference 'nnnn' was not found」で読込に失敗する。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonInclude]
+        public InputModel InputModel
+        {
+            get => _inputModel;
+            private set => _inputModel = value;
+        }
+
+        /// <summary>
+        /// 入力への参照を明示的に張り直す（解析結果セットの復元時など）。
         /// </summary>
         public void RebindInputModel(InputModel inputModel)
         {
