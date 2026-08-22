@@ -1532,21 +1532,25 @@
 
             <Fluent:RibbonTabItem Header="解析条件/解析(S)" KeyTip="S">
                 <Fluent:RibbonGroupBox Header="解析条件設定" ToolTip="解析条件設定">
+                    <!-- ツールチップの Step 番号はヘルプ「クイックスタートガイド」に合わせる。
+                         リボン・クイックヒント・ヘルプで手順が食い違わないようにするため。 -->
                     <Fluent:Button x:Name="ButtonFundamental"
                          Header="基本 設定"
-                         ToolTip="基本設定 (Ctrl+E)"
+                         ToolTip="基本設定 (Ctrl+E)&#x0A;Z=0 の標高や材料モデルなど、プロジェクト全体に効く設定です。"
                          Command="{Binding OpenFundamentalWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/FundamentalWindow.png"
                          Icon="pack://application:,,,/Icons/FundamentalWindow.png"/>
 
                     <Fluent:Button x:Name="RibbonButtonLoadCase"
                          Header="荷重"
+                         ToolTip="Step 2: 荷重条件の設定&#x0A;地震時に建物から杭基礎に伝わる慣性力の大きさと作用位置を決めます。"
                          Command="{Binding OpenLoadCaseWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/LoadCaseWindow.png"
                          Icon="pack://application:,,,/Icons/LoadCaseWindow.png"/>
 
                     <Fluent:Button x:Name="RibbonButtonGround"
                          Header="地盤"
+                         ToolTip="Step 3: 地盤条件の設定&#x0A;土層・N 値・地盤変位など、杭を支える地盤側の条件を決めます。"
                          PreviewMouseDown="ButtonGround_PreviewMouseDown"
                          Command="{Binding OpenGroundWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/GroundWindow.png"
@@ -1554,6 +1558,7 @@
 
                     <Fluent:Button x:Name="RibbonButtonPileBody"
                          Header="杭体"
+                         ToolTip="Step 4: 杭体の設定&#x0A;杭種・杭径・区間ごとの断面を決めます。"
                          PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
                          Command="{Binding OpenPileBodyWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/PileBodyWindow.png"
@@ -1561,13 +1566,14 @@
 
                     <Fluent:Button x:Name="RibbonButtonAxialForceCheck"
                          Header="軸力 確認"
+                         ToolTip="Step 6 の確認: 杭軸力&#x0A;「杭」→「軸力」タブで入力した各杭の軸力を一覧で見直します。"
                          PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
                          Command="{Binding AxialForceCheckCommand}"
                          LargeIcon="pack://application:,,,/Icons/AxialForceVeirification.png"
                          Icon="pack://application:,,,/Icons/AxialForceVeirification.png"/>
 
                     <Fluent:Button x:Name="RibbonButtonExecuteAnalyse"
-                             ToolTip="杭要素分割 (F4)"
+                             ToolTip="Step 7: 杭要素分割 (F4)&#x0A;杭を解析用の要素に分け、地盤ばねを割り当てます。水平解析と沈下解析の前提です。"
                              Command="{Binding OpenElementDivisionWindowCommand}">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
@@ -1593,6 +1599,7 @@
                     <!-- 有効/無効はコマンドの CanExecute (杭要素分割済みか) に任せる。
                          IsEnabled を別途書くと、ボタンとキーボードで条件が二重管理になる。 -->
                     <Fluent:Button x:Name="RibbonButtonLateralLoadAnalysisSettlement"
+                         ToolTip="Step 8: 水平解析の実行 (F5)&#x0A;杭要素分割が済んでいると押せます。"
                          Command="{Binding OpenLateralLoadAnalysisWindowCommand}">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
@@ -3020,7 +3027,7 @@
                                                         StaysOpen="False"
                                                        AllowsTransparency="True"
                                                        PopupAnimation="Fade">
-                                                    <views:QuickHintBubble HintText="①「杭配置追加」ボタンで杭を追加" />
+                                                    <views:QuickHintBubble HintText="Step 5 杭配置：「杭配置追加」ボタンで杭を追加" />
                                                 </Popup>
 
                                                 <Popup x:Name="QuickHintPopup2"
@@ -3030,7 +3037,7 @@
                                                         StaysOpen="False"
                                                        AllowsTransparency="True"
                                                        PopupAnimation="Fade">
-                                                    <views:QuickHintBubble HintText="②右クリックメニューから「コピー/移動」で杭位置を移動"/>
+                                                    <views:QuickHintBubble HintText="Step 5 杭配置：右クリックメニューの「コピー/移動」で杭位置を移動"/>
                                                 </Popup>
 
                                                 <Popup x:Name="QuickHintPopup0"
@@ -3041,7 +3048,7 @@
                                                         AllowsTransparency="True"
                                                        PopupAnimation="Fade"
                                                        >
-                                                    <views:QuickHintBubble HintText="最短の実行手順　（ヘルプ／クイックヒント ※Shift+F1）" FontSize="42"
+                                                    <views:QuickHintBubble HintText="最短の実行手順　（番号はヘルプ「クイックスタートガイド」の Step と同じ ／ Shift+F1 で開閉）" FontSize="30"
                                                     FontWeight="Bold"/>
                                                 </Popup>
 
@@ -3052,7 +3059,7 @@
                                                         StaysOpen="False"
                                                         AllowsTransparency="True"
                                                        PopupAnimation="Fade">
-                                                    <views:QuickHintBubble HintText="③「軸力」タブのテーブルで各荷重時の杭軸力を入力" />
+                                                    <views:QuickHintBubble HintText="Step 6 杭軸力：「軸力」タブのテーブルで各荷重時の杭軸力を入力" />
                                                 </Popup>
 
                                                 <Popup x:Name="QuickHintPopup3"
@@ -3062,7 +3069,7 @@
                                                         StaysOpen="False"
                                                         AllowsTransparency="True"
                                                        PopupAnimation="Fade">
-                                                    <views:QuickHintBubble HintText="④基本情報；⑤慣性力設定；⑥地盤設定；⑦杭体設定；⑧軸力チェック；⑨杭要素分割&#x0A;⑩水平解析；⑪単杭沈下解析；⑫群杭沈下解析" />
+                                                    <views:QuickHintBubble HintText="この行のボタンで左から順に進みます&#x0A;　基本設定 → Step 2 荷重条件 → Step 3 地盤条件 → Step 4 杭体 → 軸力確認&#x0A;　Step 7 杭要素分割 (F4) → Step 8 水平解析 (F5)&#x0A;　沈下を見る場合：単杭沈下解析 (F6) ／ 群杭沈下解析 (F8)" />
                                                 </Popup>
 
                                                 <Popup x:Name="QuickHintPopup10"
@@ -3072,7 +3079,7 @@
                                                         StaysOpen="False"
                                                        AllowsTransparency="True"
                                                        PopupAnimation="Fade">
-                                                    <views:QuickHintBubble HintText="⑬結果確認" />
+                                                    <views:QuickHintBubble HintText="解析後：ここで結果を確認します（グラフ・テーブル・計算書）" />
                                                 </Popup>
 
                                             </StackPanel>

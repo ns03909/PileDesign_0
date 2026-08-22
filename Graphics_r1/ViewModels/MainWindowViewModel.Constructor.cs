@@ -791,13 +791,23 @@ namespace PileDesign.ViewModels
             ? $"×{CanvasThreeDView.Scale:F1}"
             : "";
 
-        // 解析状態表示 (旧式: 1 行プレーンテキスト。後方互換 + ツールチップ等に利用可)
+        // 解析状態表示 (1 行プレーンテキスト。ステータスバーのツールチップに使う)
         public string AnalysisStatusText
         {
             get
             {
                 var items = AnalysisStatusItems;
-                return items.Count > 0 ? string.Join(" | ", items.Select(s => s.Text)) : "未解析";
+                if (items.Count == 0) return "未解析";
+
+                // ✓ の付いていない項目 = これから行うもの。何をすればよいかを添える。
+                var pending = items.Where(s => !s.Text.EndsWith(" ✓", System.StringComparison.Ordinal))
+                                   .Select(s => s.Text)
+                                   .ToList();
+
+                string line = string.Join(" | ", items.Select(s => s.Text));
+                return pending.Count == 0
+                    ? line
+                    : line + "\n\n灰色の項目はまだ実行していません: " + string.Join("、", pending);
             }
         }
 
@@ -812,10 +822,18 @@ namespace PileDesign.ViewModels
             get
             {
                 var items = new List<AnalysisStatusItem>();
-                if (IsElementSplit)
-                    items.Add(new() { Text = "杭要素分割 ✓", Color = "SkyBlue" });
-                if (IsHorizontalAnalysisDone)
-                    items.Add(new() { Text = "水平解析 ✓", Color = "Success" });
+
+                // 必ず通る 2 段は、未完了でも灰色で先に並べる。
+                // 完了したものだけを出していると「次に何をすればよいか」が読み取れない。
+                // (Color が既知の値でなければテンプレート側の既定色 = 灰色になる)
+                items.Add(IsElementSplit
+                    ? new() { Text = "杭要素分割 ✓", Color = "SkyBlue" }
+                    : new() { Text = "杭要素分割", Color = "Inactive" });
+                items.Add(IsHorizontalAnalysisDone
+                    ? new() { Text = "水平解析 ✓", Color = "Success" }
+                    : new() { Text = "水平解析", Color = "Inactive" });
+
+                // 沈下系は必須ではないので、実行したものだけを出す。
                 if (IsVerticalAnalysisDone)
                     items.Add(new() { Text = "単杭沈下解析 ✓", Color = "Info" });
                 if (IsVerticalBeamAnalysisDone)

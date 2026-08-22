@@ -638,7 +638,12 @@ namespace PileDesign.ViewModels
                     Serilog.Log.Information("[Docx] 完了: {Elapsed:N1} 秒, ファイル: {File}",
                         sw.Elapsed.TotalSeconds, System.IO.Path.GetFileName(saveFileDialog.FileName));
 
-                    ShowToast($"docxファイル作成完了 ({sw.Elapsed.TotalSeconds:N1}秒)。Wordで開き、目次上をクリック→F9 でフィールドを更新してください。");
+                    ShowToast($"計算書を作成しました ({sw.Elapsed.TotalSeconds:N1}秒)");
+
+                    // 「目次を F9 で更新」は出力後に必ず要る手順なので、
+                    // 数秒で消える Toast だけに載せず、ステータスバーにも残す。
+                    StatusMessage = $"計算書を作成しました: {saveFileDialog.FileName}"
+                                  + "　／　Word で開き、目次の上をクリック → F9 でフィールドを更新してください";
 
                     // 作成したdocxファイルを自動的に開く
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -678,7 +683,9 @@ namespace PileDesign.ViewModels
                 {
                     var exporter = new Output.Rhino3dmExporter(CurrentInputModel);
                     exporter.Export(saveFileDialog.FileName);
-                    ShowToast($"3dmファイルを作成しました。\n{saveFileDialog.FileName}");
+                    ShowToast($"3dm ファイルを作成しました");
+                    // 出力先は後から参照したくなるのでステータスバーにも残す
+                    StatusMessage = $"3dm ファイルを作成しました: {saveFileDialog.FileName}";
                 }
                 catch (Exception ex)
                 {
@@ -704,7 +711,9 @@ namespace PileDesign.ViewModels
                 {
                     var exporter = new Output.DxfExporter(CurrentInputModel);
                     exporter.Export(saveFileDialog.FileName);
-                    ShowToast($"DXFファイルを作成しました。\n{saveFileDialog.FileName}");
+                    ShowToast($"DXF ファイルを作成しました");
+                    // 出力先は後から参照したくなるのでステータスバーにも残す
+                    StatusMessage = $"DXF ファイルを作成しました: {saveFileDialog.FileName}";
                 }
                 catch (Exception ex)
                 {
@@ -729,7 +738,9 @@ namespace PileDesign.ViewModels
                 {
                     var exporter = new Output.DxfPlanExporter(CurrentInputModel);
                     exporter.Export(saveFileDialog.FileName);
-                    ShowToast($"伏図DXFファイルを作成しました。\n{saveFileDialog.FileName}");
+                    ShowToast($"伏図 DXF ファイルを作成しました");
+                    // 出力先は後から参照したくなるのでステータスバーにも残す
+                    StatusMessage = $"伏図 DXF ファイルを作成しました: {saveFileDialog.FileName}";
                 }
                 catch (Exception ex)
                 {
@@ -772,7 +783,9 @@ namespace PileDesign.ViewModels
                     var exportModel = BuildExportModelFromCurrentInput();
                     var exporter = new Output.MgtExporter(exportModel);
                     exporter.Export(saveFileDialog.FileName);
-                    ShowToast($"MGTファイルを作成しました。\n{saveFileDialog.FileName}");
+                    ShowToast($"MGT ファイルを作成しました");
+                    // 出力先は後から参照したくなるのでステータスバーにも残す
+                    StatusMessage = $"MGT ファイルを作成しました: {saveFileDialog.FileName}";
                 }
                 catch (Exception ex)
                 {
