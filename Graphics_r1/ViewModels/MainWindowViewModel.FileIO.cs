@@ -465,7 +465,8 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// ファイル読込時に解析結果の状態を復元する
         /// </summary>
-        private void RestoreAnalysisState(Models.ProjectData? projectData)
+        // internal はテスト用 (ElementSplitRestoreTests)
+        internal void RestoreAnalysisState(Models.ProjectData? projectData)
         {
             // まずすべてリセット
             IsElementSplit = false;
