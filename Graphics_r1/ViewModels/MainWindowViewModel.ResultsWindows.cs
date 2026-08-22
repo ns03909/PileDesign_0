@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
@@ -258,9 +258,9 @@ namespace PileDesign.ViewModels
                 {
                     allTables.AddRange(BuildVerticalBeamResultTables());
                 }
-                // 土層沈下解析（反復）の結果テーブル
+                // 群杭沈下解析（反復）の結果テーブル
                 allTables.AddRange(BuildGroupSettlementBeamAwareTables());
-                // 土層沈下解析（一般）の結果テーブル
+                // 群杭沈下解析（一般）の結果テーブル
                 allTables.AddRange(BuildGroupSettlementNonBeamAwareTables());
                 vm.LoadTables(allTables);
 
@@ -362,7 +362,7 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 土層沈下解析（反復）(個別矩形（基礎梁考慮）反復) の結果テーブルを生成。
+        /// 群杭沈下解析（反復）(個別矩形（基礎梁考慮）反復) の結果テーブルを生成。
         /// 杭結果 / 節点変位 / 梁応力 / 土層グリッド変位 を全ケース分。
         /// </summary>
         private List<ResultTable> BuildGroupSettlementBeamAwareTables()
@@ -371,8 +371,8 @@ namespace PileDesign.ViewModels
             var pgs = CurrentInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords == null) return tables;
 
-            const string category = "土層沈下解析（反復）";
-            const string prefix = "土層沈下解析（反復）";
+            const string category = "群杭沈下解析（反復）";
+            const string prefix = "群杭沈下解析（反復）";
 
             foreach (var rec in pgs.CaseRecords.Where(r => r.IsBeamAware))
             {
@@ -477,7 +477,7 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 土層沈下解析（一般）(個別矩形（基礎梁考慮）以外) の結果テーブルを生成。
+        /// 群杭沈下解析（一般）(個別矩形（基礎梁考慮）以外) の結果テーブルを生成。
         /// 杭結果 / 節点変位 / 土層グリッド変位 を全ケース分。
         /// 一般解析は梁解析を行わないため、節点変位は杭頭沈下のみを示す簡易表となる。
         /// </summary>
@@ -487,8 +487,8 @@ namespace PileDesign.ViewModels
             var pgs = CurrentInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords == null) return tables;
 
-            const string category = "土層沈下解析（一般）";
-            const string prefix = "土層沈下解析（一般）";
+            const string category = "群杭沈下解析（一般）";
+            const string prefix = "群杭沈下解析（一般）";
 
             foreach (var rec in pgs.CaseRecords.Where(r => !r.IsBeamAware))
             {
@@ -603,7 +603,7 @@ namespace PileDesign.ViewModels
             };
         }
 
-        /// <summary>テーブル出力用の杭結果行 (土層沈下解析（反復）)。</summary>
+        /// <summary>テーブル出力用の杭結果行 (群杭沈下解析（反復）)。</summary>
         public class BeamAwarePileResultRow
         {
             public int PileNo { get; set; }
@@ -614,7 +614,7 @@ namespace PileDesign.ViewModels
             public double SpringStiffness_kN_per_m { get; set; }
         }
 
-        /// <summary>テーブル出力用の杭結果行 (土層沈下解析（一般）)。</summary>
+        /// <summary>テーブル出力用の杭結果行 (群杭沈下解析（一般）)。</summary>
         public class NonBeamAwarePileResultRow
         {
             public int PileNo { get; set; }
@@ -624,7 +624,7 @@ namespace PileDesign.ViewModels
             public double Settlement_mm { get; set; }
         }
 
-        /// <summary>テーブル出力用の節点行 (土層沈下解析（一般）: 杭頭のみ Uz)。</summary>
+        /// <summary>テーブル出力用の節点行 (群杭沈下解析（一般）: 杭頭のみ Uz)。</summary>
         public class NonBeamAwareNodeRow
         {
             public string NodeName { get; set; } = "";
@@ -677,7 +677,7 @@ namespace PileDesign.ViewModels
             {
                 foreach (var rec in pgs.CaseRecords.Where(r => r.IsBeamAware && r.IterationLog?.Count > 0))
                 {
-                    logSources[$"土層沈下解析（反復） [{rec.LoadCaseName}]"] = rec.IterationLog;
+                    logSources[$"群杭沈下解析（反復） [{rec.LoadCaseName}]"] = rec.IterationLog;
                 }
             }
 

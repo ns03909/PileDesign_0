@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MathNet.Numerics.LinearAlgebra;
 using PileDesign.FEM;
@@ -320,7 +320,7 @@ namespace PileDesign.ViewModels
 
         private async Task RunAsync(CancellationToken token)
         {
-            await AddLogAsync("基礎梁鉛直解析を開始します...");
+            await AddLogAsync("単杭沈下解析（基礎梁考慮）を開始します...");
 
             // モデル構築
             await AddLogAsync("FEMモデルを構築中...");
@@ -475,7 +475,7 @@ namespace PileDesign.ViewModels
 
             CurrentProgress = 100;
             StatusText = "解析完了";
-            await AddLogAsync("\n基礎梁鉛直解析が完了しました。");
+            await AddLogAsync("\n単杭沈下解析（基礎梁考慮）が完了しました。");
         }
 
         // ══════════════════════════════════════════════════════

@@ -1,11 +1,11 @@
-<Window x:Class="PileDesign.Views.GroupSettlementWithBeamWindow"
+﻿<Window x:Class="PileDesign.Views.GroupSettlementWithBeamWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:common="clr-namespace:PileDesign.Common"
         mc:Ignorable="d"
-        Title="基礎梁考慮 群杭沈下解析 (反復)" Height="700" Width="1100"
+        Title="群杭沈下解析（基礎梁考慮・反復）" Height="700" Width="1100"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
 

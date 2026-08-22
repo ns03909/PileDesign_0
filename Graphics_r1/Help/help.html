@@ -2379,10 +2379,10 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     <tr><td><img class="button-icon" src="icons/ElementDivisionWindow.svg" alt="">杭要素分割</td><td>F4 / Ctrl+D</td></tr>
 
                     <tr><td rowspan="5">解析</td><td><img class="button-icon" src="icons/LateralLoadAnalysisWindow.svg" alt="">水平解析</td><td>F5</td></tr>
-                    <tr><td><img class="button-icon" src="icons/SettlementWindow.svg" alt="">荷重沈下関係解析（単杭沈下）</td><td>F6</td></tr>
-                    <tr><td><img class="button-icon" src="icons/SettlementWithBeamWindow.svg" alt="">基礎梁考慮沈下解析</td><td>F7</td></tr>
-                    <tr><td><img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">土層沈下解析（一般）</td><td>F8</td></tr>
-                    <tr><td><img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">土層沈下解析（反復）</td><td>(リボン / サブタブから起動)</td></tr>
+                    <tr><td><img class="button-icon" src="icons/SettlementWindow.svg" alt="">単杭沈下解析</td><td>F6</td></tr>
+                    <tr><td><img class="button-icon" src="icons/SettlementWithBeamWindow.svg" alt="">単杭沈下解析（基礎梁考慮）</td><td>F7</td></tr>
+                    <tr><td><img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">群杭沈下解析（一般）</td><td>F8</td></tr>
+                    <tr><td><img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">群杭沈下解析（反復）</td><td>(リボン / サブタブから起動)</td></tr>
 
                     <tr><td rowspan="8">編集</td><td><img class="button-icon" src="icons/Undo.svg" alt="">元に戻す（Undo）</td><td>Ctrl+Z</td></tr>
                     <tr><td>やり直し（Redo）</td><td>Ctrl+Y</td></tr>
@@ -2700,8 +2700,8 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     リボンの解析ボタンと同じ色分け:
                     <span style="color:#62B0E2; font-weight:bold;">スカイブルー</span> = 杭要素分割、
                     <span style="color:#2E7D32; font-weight:bold;">緑</span> = 水平解析、
-                    <span style="color:#1565C0; font-weight:bold;">青</span> = 荷重沈下関係解析 / 基礎梁考慮沈下解析、
-                    <span style="color:#E65100; font-weight:bold;">橙</span> = 土層沈下解析（一般 / 反復）。
+                    <span style="color:#1565C0; font-weight:bold;">青</span> = 単杭沈下解析 / 単杭沈下解析（基礎梁考慮）、
+                    <span style="color:#E65100; font-weight:bold;">橙</span> = 群杭沈下解析（一般 / 反復）。
                     未実施項目は表示されず、すべて未実施なら「未解析」と表示されます。
                 </li>
             </ul>
@@ -2742,7 +2742,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                         <td><strong>解析条件/解析(S)</strong></td>
                         <td>S</td>
                         <td>解析条件 (基本設定・荷重・地盤・杭体・軸力確認) の入力 + 解析の実行</td>
-                        <td>解析条件設定 / 水平解析 / 単杭沈下解析 / 土層沈下解析</td>
+                        <td>解析条件設定 / 水平解析 / 単杭沈下解析 / 群杭沈下解析</td>
                     </tr>
                     <tr>
                         <td><strong>解析結果(R)</strong></td>
@@ -5224,9 +5224,9 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 どの FEA でも同じ問題は同様に難しく、収束対策の組合せ方が違うだけです。
             </p>
 
-            <h4 style="font-weight: bold;"><img class="heading-icon" src="icons/SettlementWindow.svg" alt="">「荷重沈下関係解析（単杭沈下）」（F6）</h4>
+            <h4 id="section-settlement-single" style="font-weight: bold;"><img class="heading-icon" src="icons/SettlementWindow.svg" alt="">「単杭沈下解析」（F6）</h4>
             <p>
-                杭要素分割済みの場合に有効になります。荷重沈下関係解析ウィンドウ（単杭沈下）を開きます。
+                杭要素分割済みの場合に有効になります。単杭沈下解析ウィンドウ（単杭沈下）を開きます。
             </p>
             <p>
                 各杭（土層-杭セット）について、荷重伝達法による荷重-沈下関係を計算します。
@@ -5282,7 +5282,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             </table>
             <p>解析完了後: ボタンラベルに「<span style="color:#1565C0; font-weight:bold;">✓</span>」（青色）が表示されます。</p>
 
-            <h4 style="font-weight: bold;"><img class="heading-icon" src="icons/SettlementWithBeamWindow.svg" alt="">「基礎梁考慮沈下解析」（F7）</h4>
+            <h4 id="section-settlement-single-beam" style="font-weight: bold;"><img class="heading-icon" src="icons/SettlementWithBeamWindow.svg" alt="">「単杭沈下解析（基礎梁考慮）」（F7）</h4>
             <p>
                 単杭沈下解析済みかつ基礎梁が定義されている場合に有効になります。
                 基礎梁考慮鉛直解析ウィンドウを開きます。
@@ -5300,13 +5300,13 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             </ul>
             <p>解析完了後: ボタンラベルに「<span style="color:#1565C0; font-weight:bold;">✓</span>」（青色）が表示されます。</p>
 
-            <h4 style="font-weight: bold;"><img class="heading-icon" src="icons/GroupPileSettlement.svg" alt="">「土層沈下解析（一般）」（F8）</h4>
+            <h4 id="section-settlement-group" style="font-weight: bold;"><img class="heading-icon" src="icons/GroupPileSettlement.svg" alt="">「群杭沈下解析（一般）」（F8）</h4>
             <p>
-                左ペインの「土層沈下」タブ → <strong>解析（一般）</strong> サブタブで定義した矩形荷重・土層データに基づき、
-                Steinbrennerの近似解による土層沈下量を計算します。
+                左ペインの「群杭沈下」タブ → <strong>解析（一般）</strong> サブタブで定義した矩形荷重・土層データに基づき、
+                Steinbrennerの近似解による群杭沈下量を計算します。
             </p>
             <p>
-                事前に「土層沈下」タブの「土層」「グリッド」「解析（一般）」を設定しておく必要があります。
+                事前に「群杭沈下」タブの「土層」「グリッド」「解析（一般）」を設定しておく必要があります。
                 <img class="button-icon" src="icons/CreateAutoUniformlyDistributedLoad.svg" alt="">「建物下面全体矩形荷重自動生成」ボタンを使うと、杭配置の外周から指定距離のマージンをとった矩形荷重面が自動生成され、
                 全杭のVL軸力合計が荷重値として設定されます。
             </p>
@@ -5331,13 +5331,13 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 VL に戻すと再表示されます。
             </p>
 
-            <h4 style="font-weight: bold;"><img class="heading-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">「土層沈下解析（反復）」</h4>
+            <h4 id="section-settlement-group-beam" style="font-weight: bold;"><img class="heading-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">「群杭沈下解析（基礎梁考慮・反復）」</h4>
             <div class="warning" style="background:#FFFAEB; border:1px solid #E0A030; padding:8px 12px; margin:8px 0; color:#8A4500;">
                 ⚠ <strong>解析（反復）</strong>は、基礎指針'19 図5.3.2 連続梁・格子梁モデルによる沈下量の算定例の方法です。
                 <strong>杭基礎の計算では使いません。</strong>
             </div>
             <p>
-                左ペインの「土層沈下」タブ → <strong>解析（反復）</strong> サブタブから「<strong>反復解析実行</strong>」ボタンで起動します。
+                左ペインの「群杭沈下」タブ → <strong>解析（反復）</strong> サブタブから「<strong>反復解析実行</strong>」ボタンで起動します。
                 基礎梁定義が 1 件以上あるときに有効化されます (リボンのアイコンも同じコマンドを起動)。
             </p>
 
@@ -5505,13 +5505,13 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <p>
                 反復解析が成功すると、<code>pgs.RectLoads</code> は収束反力 $P_i$ で書き換えられます。
                 ただし、解析（一般）モードのユーザー入力は内部スナップショットに保存されているため、
-                土層沈下 ▼ を「反復」→「一般」に戻すと <strong>原入力が自動復元</strong> されます。
+                群杭沈下 ▼ を「反復」→「一般」に戻すと <strong>原入力が自動復元</strong> されます。
                 その後「一般解析実行」を押せば、原入力 (例: 計算例5 では 500 / 816 / 1280 kN) で Steinbrenner が回り、反復とは異なる結果が得られます。
             </p>
 
             <h5 style="font-weight: bold;">解析条件変更時の警告</h5>
             <p>
-                土層沈下解析の結果が保存されている状態で、関連する前提条件 (荷重面 Z、矩形荷重、土層、グリッド X/Y オフセット・間隔) を変更しようとすると、
+                群杭沈下解析の結果が保存されている状態で、関連する前提条件 (荷重面 Z、矩形荷重、土層、グリッド X/Y オフセット・間隔) を変更しようとすると、
                 以下の確認ダイアログが表示されます:
             </p>
             <pre style="background:#F5F5F5; padding:8px; border:1px solid #CCC;">土層解析結果が保存されています。
@@ -5521,7 +5521,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <p>
                 OK で結果を破棄して変更を反映、キャンセルで巻き戻し。
                 杭配置・杭軸力・基礎梁の編集 (β / 寸法 / 節点参照 など) は、頻繁に発火するためダイアログではなく
-                <strong>トースト通知 + 反復結果の自動破棄</strong> として扱います (「基礎梁の変更により、土層沈下解析（反復）の結果を破棄しました。」)。
+                <strong>トースト通知 + 反復結果の自動破棄</strong> として扱います (「基礎梁の変更により、群杭沈下解析（反復）の結果を破棄しました。」)。
             </p>
 
             <h5 style="font-weight: bold;">ステータスバーの解析状態表示</h5>
@@ -5533,10 +5533,10 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <ul>
                 <li><img class="button-icon" src="icons/ElementDivisionWindowDone.svg" alt=""><span style="color:#62B0E2; font-weight:bold;">「杭要素分割 ✓」</span>: 杭要素分割が完了 (スカイブルー / NikkenSkyBlue)</li>
                 <li><img class="button-icon" src="icons/LateralLoadAnalysisWindowDone.svg" alt=""><span style="color:#2E7D32; font-weight:bold;">「水平解析 ✓」</span>: 水平解析が完了 (緑)</li>
-                <li><img class="button-icon" src="icons/SettlementWindowDone.svg" alt=""><span style="color:#1565C0; font-weight:bold;">「荷重沈下関係解析 ✓」</span>: 単杭沈下 (荷重-沈下関係) 解析が完了 (青)</li>
-                <li><img class="button-icon" src="icons/SettlementWithBeamWindowDone.svg" alt=""><span style="color:#1565C0; font-weight:bold;">「基礎梁考慮沈下解析 ✓」</span>: 基礎梁考慮鉛直解析が完了 (青)</li>
-                <li><img class="button-icon" src="icons/GroupPileSettlementDone.svg" alt=""><span style="color:#E65100; font-weight:bold;">「土層沈下（一般） ✓」</span>: 土層沈下解析（一般 = 通常 Steinbrenner）に該当ケースが保存済み (橙)</li>
-                <li><img class="button-icon" src="icons/GroupPileSettlementWithBeamWindowDone.svg" alt=""><span style="color:#E65100; font-weight:bold;">「土層沈下（反復） ✓」</span>: 土層沈下解析（反復 = 基礎梁考慮反復 Steinbrenner）に該当ケースが保存済み (橙)</li>
+                <li><img class="button-icon" src="icons/SettlementWindowDone.svg" alt=""><span style="color:#1565C0; font-weight:bold;">「単杭沈下解析 ✓」</span>: 単杭沈下 (荷重-沈下関係) 解析が完了 (青)</li>
+                <li><img class="button-icon" src="icons/SettlementWithBeamWindowDone.svg" alt=""><span style="color:#1565C0; font-weight:bold;">「単杭沈下解析（基礎梁考慮） ✓」</span>: 基礎梁考慮鉛直解析が完了 (青)</li>
+                <li><img class="button-icon" src="icons/GroupPileSettlementDone.svg" alt=""><span style="color:#E65100; font-weight:bold;">「群杭沈下解析（一般） ✓」</span>: 群杭沈下解析（一般 = 通常 Steinbrenner）に該当ケースが保存済み (橙)</li>
+                <li><img class="button-icon" src="icons/GroupPileSettlementWithBeamWindowDone.svg" alt=""><span style="color:#E65100; font-weight:bold;">「群杭沈下解析（反復） ✓」</span>: 群杭沈下解析（反復 = 基礎梁考慮反復 Steinbrenner）に該当ケースが保存済み (橙)</li>
             </ul>
             <p>
                 同じリボンボタンの大アイコン上のラベルも完了時に「<strong>... ✓</strong>」表記＋同色に切替わります（杭要素分割を含め全 6 項目で統一）。
@@ -5549,12 +5549,12 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             </p>
             <ul>
                 <li><img class="button-icon" src="icons/LateralLoadAnalysisWindow.svg" alt=""><strong>水平解析の解析実行</strong>（水平解析ウィンドウ内、F9）：杭配置・解析対象荷重ケース・適用される荷重組合せのいずれかが未設定／0 件の場合は灰色化。</li>
-                <li><img class="button-icon" src="icons/SettlementWindow.svg" alt=""><strong>荷重沈下関係解析（単杭沈下）</strong>（F6）：杭要素分割が完了しているときのみ活性化。</li>
-                <li><img class="button-icon" src="icons/SettlementWithBeamWindow.svg" alt=""><strong>基礎梁考慮沈下解析</strong>（F7）：杭配置 ＋ 基礎梁定義 ＋ 単杭沈下解析の完了をすべて満たした場合のみ活性化。</li>
+                <li><img class="button-icon" src="icons/SettlementWindow.svg" alt=""><strong>単杭沈下解析</strong>（F6）：杭要素分割が完了しているときのみ活性化。</li>
+                <li><img class="button-icon" src="icons/SettlementWithBeamWindow.svg" alt=""><strong>単杭沈下解析（基礎梁考慮）</strong>（F7）：杭配置 ＋ 基礎梁定義 ＋ 単杭沈下解析の完了をすべて満たした場合のみ活性化。</li>
             </ul>
             <p>
-                なお、リボンの「水平解析（F5）」「土層沈下解析（一般）（F8）」ボタン自体には事前条件による灰色化は設けていません。
-                <img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">「土層沈下解析（反復）」は <strong>基礎梁が 1 件以上定義されているとき</strong> のみ活性化されます。
+                なお、リボンの「水平解析（F5）」「群杭沈下解析（一般）（F8）」ボタン自体には事前条件による灰色化は設けていません。
+                <img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">「群杭沈下解析（反復）」は <strong>基礎梁が 1 件以上定義されているとき</strong> のみ活性化されます。
                 ウィンドウを開いた後の解析実行ボタン側、または解析実行時のバリデーションメッセージで不足項目が示されます。
             </p>
 
@@ -5569,16 +5569,16 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <tbody>
                     <tr><td rowspan="3">解析結果表示</td><td><img class="button-icon" src="icons/AnalysisResultVisilbe.svg" alt=""></td><td>杭・梁要素</td><td>解析結果ダイアグラムの表示/非表示</td></tr>
                     <tr><td><img class="button-icon" src="icons/AnalysisResult.svg" alt=""></td><td>内容</td><td>梁応力/節点変位/地盤反力/杭頭M・Qマップ/沈下量等の切替</td></tr>
-                    <tr><td><img class="button-icon" src="icons/GroupPileContorVisible.svg" alt=""></td><td>群杭グリッド変位</td><td>土層沈下グリッドの変形表示。<strong>土層沈下解析（一般 または 反復）が完了している場合のみ有効</strong></td></tr>
+                    <tr><td><img class="button-icon" src="icons/GroupPileContorVisible.svg" alt=""></td><td>群杭グリッド変位</td><td>群杭沈下グリッドの変形表示。<strong>群杭沈下解析（一般 または 反復）が完了している場合のみ有効</strong></td></tr>
                     <tr><td rowspan="5">値表示</td><td>—</td><td>値表示</td><td>ダイアグラム上の数値の表示/非表示</td></tr>
                     <tr><td>—</td><td>要素中間</td><td>要素中間位置のみ値を表示</td></tr>
                     <tr><td>—</td><td>杭頭</td><td>杭頭位置のみ値を表示</td></tr>
                     <tr><td><img class="button-icon" src="icons/AdjustTextPositions.svg" alt=""></td><td>位置</td><td>テキスト表示位置の調整スライダー</td></tr>
                     <tr><td><img class="button-icon" src="icons/DecimalPoint.svg" alt=""></td><td>小数</td><td>小数点以下桁数（0〜5）の調整スライダー</td></tr>
                     <tr><td>ダイアグラムスケール</td><td>—</td><td>応力/変位</td><td>ダイアグラム表示サイズの調整スライダー</td></tr>
-                    <tr><td>バブル</td><td><img class="button-icon" src="icons/BubbleVisible.svg" alt=""></td><td>バブル表示</td><td>沈下量のバブルチャート表示と直径調整。<strong>単杭沈下／基礎梁考慮沈下／土層沈下のいずれかの解析が完了している場合のみ有効</strong></td></tr>
-                    <tr><td>矢印</td><td><img class="button-icon" src="icons/ArrowVisible.svg" alt=""></td><td>矢印表示</td><td>沈下量の矢印表示とサイズ調整。<strong>単杭沈下／基礎梁考慮沈下／土層沈下のいずれかの解析が完了している場合のみ有効</strong></td></tr>
-                    <tr><td>変形後</td><td><img class="button-icon" src="icons/DeformedElementVisible.svg" alt=""></td><td>変形後形状</td><td>水平解析結果の変形後形状を描画。<strong>水平解析／単杭沈下／土層沈下のいずれかの解析が完了している場合のみ有効</strong></td></tr>
+                    <tr><td>バブル</td><td><img class="button-icon" src="icons/BubbleVisible.svg" alt=""></td><td>バブル表示</td><td>沈下量のバブルチャート表示と直径調整。<strong>単杭沈下／単杭沈下（基礎梁考慮）／群杭沈下のいずれかの解析が完了している場合のみ有効</strong></td></tr>
+                    <tr><td>矢印</td><td><img class="button-icon" src="icons/ArrowVisible.svg" alt=""></td><td>矢印表示</td><td>沈下量の矢印表示とサイズ調整。<strong>単杭沈下／単杭沈下（基礎梁考慮）／群杭沈下のいずれかの解析が完了している場合のみ有効</strong></td></tr>
+                    <tr><td>変形後</td><td><img class="button-icon" src="icons/DeformedElementVisible.svg" alt=""></td><td>変形後形状</td><td>水平解析結果の変形後形状を描画。<strong>水平解析／単杭沈下／群杭沈下のいずれかの解析が完了している場合のみ有効</strong></td></tr>
                     <tr><td rowspan="2">グラフ・テーブル</td><td><img class="button-icon" src="icons/Graph.svg" alt=""></td><td>グラフ出力</td><td>グラフウィンドウを開く (反復解析だけが完了している状態でも有効)</td></tr>
                     <tr><td><img class="button-icon" src="icons/Table.svg" alt=""></td><td>テーブル出力</td><td>テーブルウィンドウを開く (反復解析だけが完了している状態でも有効)</td></tr>
                     <tr><td>ログ</td><td><img class="button-icon" src="icons/Log.svg" alt=""></td><td>ログ表示</td><td>解析ログウィンドウを開く</td></tr>
@@ -6265,7 +6265,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         <td>ラジオボタンで表示するチェック結果をフィルタリングできます</td>
                     </tr>
                     <tr>
-                        <td>Export to File</td>
+                        <td>ファイルに出力</td>
                         <td>評価結果をテキストファイルとして保存します</td>
                     </tr>
                 </tbody>
@@ -6330,21 +6330,21 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h4><img class="heading-icon" src="icons/GroupPileContorVisible.svg" alt="">沈下コンター表示</h4>
             <p>
-                土層沈下解析（一般 / 反復）後、メインビューの「グリッド変位表示」チェックボックスをONにすると、
+                群杭沈下解析（一般 / 反復）後、メインビューの「グリッド変位表示」チェックボックスをONにすると、
                 沈下量のコンター図が表示されます。
                 マウスカーソル位置の沈下量がツールチップで表示されます。
             </p>
             <p>
                 <strong>カラーバーの凡例</strong>: 表示中の結果が一般か反復かを「<strong>沈下量 (一般)</strong>」/「<strong>沈下量 (反復)</strong>」で表示します。
-                土層沈下 ▼ コンボボックスで切替えるとラベルとコンタが同時に切替わります。
+                群杭沈下 ▼ コンボボックスで切替えるとラベルとコンタが同時に切替わります。
             </p>
 
-            <h4>解析結果テーブル — 土層沈下系のカテゴリ</h4>
+            <h4>解析結果テーブル — 群杭沈下系のカテゴリ</h4>
             <p>
-                テーブル出力ウィンドウのテーブル一覧には、土層沈下解析の結果が以下のカテゴリで表示されます:
+                テーブル出力ウィンドウのテーブル一覧には、群杭沈下解析の結果が以下のカテゴリで表示されます:
             </p>
             <ul>
-                <li><strong>土層沈下解析（反復）</strong> (旧名「基礎梁考慮スタインブレナー」)
+                <li><strong>群杭沈下解析（反復）</strong> (旧名「基礎梁考慮スタインブレナー」)
                     <ul>
                         <li>杭結果 — 杭No / X / Y / 基礎反力 / 沈下量 / ばね</li>
                         <li>節点変位 — 全節点の X / Y / Z / Uz / Rx / Ry</li>
@@ -6352,7 +6352,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         <li>土層グリッド変位 — グリッド点 X / Y / 沈下量 (mm)</li>
                     </ul>
                 </li>
-                <li><strong>土層沈下解析（一般）</strong>
+                <li><strong>群杭沈下解析（一般）</strong>
                     <ul>
                         <li>杭結果 — 杭No / X / Y / 荷重 / 沈下量</li>
                         <li>節点変位 — 杭頭節点 (Pile-N) の X / Y / Z / Uz (一般は梁解析を行わないため簡易表)</li>
@@ -6361,7 +6361,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 </li>
             </ul>
             <p>
-                各テーブルは <code>[液状化] / カテゴリ 種別 / LoadCaseName</code> の形式で表示されます (例: <code>[無] / 土層沈下解析（反復） 杭結果 / 矩形荷重 (VL)</code>)。
+                各テーブルは <code>[液状化] / カテゴリ 種別 / LoadCaseName</code> の形式で表示されます (例: <code>[無] / 群杭沈下解析（反復） 杭結果 / 矩形荷重 (VL)</code>)。
                 <strong>テーブル出力 / グラフ出力ボタン</strong>は、反復解析だけが完了している状態でも有効化されます。
             </p>
 
@@ -6664,7 +6664,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <h4>パネルグループ</h4>
             <p>画面左側・右側のパネル群の表示/非表示を個別に切り替えます。</p>
             <ul>
-                <li><img class="button-icon" src="icons/DataTabVisible.svg" alt=""><strong>データタブ</strong>: 画面左側のデータタブパネル（一般節点・梁要素・杭・根入部・通り心・土層沈下）の表示/非表示を切り替えます。
+                <li><img class="button-icon" src="icons/DataTabVisible.svg" alt=""><strong>データタブ</strong>: 画面左側のデータタブパネル（一般節点・梁要素・杭・根入部・通り心・群杭沈下）の表示/非表示を切り替えます。
                     非表示にすると、メインビューの描画領域が広がります。</li>
                 <li><img class="button-icon" src="icons/PropertyVisible.svg" alt=""><strong>プロパティ</strong>: 画面右上のプロパティパネルの表示/非表示を切り替えます。
                     杭や梁要素を選択すると、そのアイテムの詳細情報（座標、材料、断面、解析結果など）が表示されます。</li>
@@ -6757,7 +6757,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <tr><td><strong>杭</strong></td><td>杭配置 (X/Y/Z/杭体参照)、軸力、前後方杭、杭間隔比等を入力</td></tr>
                     <tr><td><strong>根入部</strong></td><td>地下躯体 (根入部) の形状・支圧抵抗・摩擦抵抗を入力</td></tr>
                     <tr><td><strong>通り心</strong></td><td>X/Y 通り心の追加・編集</td></tr>
-                    <tr><td><strong>土層沈下</strong></td><td>土層沈下解析 (一般 / 反復) の入力 (土層・グリッド・荷重・解析実行)</td></tr>
+                    <tr><td><strong>群杭沈下</strong></td><td>群杭沈下解析 (一般 / 反復) の入力 (土層・グリッド・荷重・解析実行)</td></tr>
                 </tbody>
             </table>
 
@@ -7349,18 +7349,18 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 </tbody>
             </table>
 
-            <h3 id="legacy-settlement-tab" style="font-weight: bold;">「土層沈下」</h3>
+            <h3 id="legacy-settlement-tab" style="font-weight: bold;">「群杭沈下」</h3>
             <p>
                 基礎指針'19、5.3節　沈下、1.沈下量の検討、(3)即時沈下量の算定、(ⅲ)多層地盤の場合　に従い、<br>
                 スタインブレナー近似式による沈下計算のための条件を入力します。
             </p>
             <p>
-                「土層沈下」タブは、以下のサブタブから構成されます:
+                「群杭沈下」タブは、以下のサブタブから構成されます:
             </p>
             <ul>
                 <li><strong>土層</strong>: 沈下計算用の成層地盤を入力</li>
                 <li><strong>グリッド</strong>: 沈下量を計算するグリッド点の範囲・間隔を設定</li>
-                <li><strong>解析（一般）</strong>: 通常 Steinbrenner による土層沈下解析の入力 + 「<strong>一般解析実行</strong>」ボタン</li>
+                <li><strong>解析（一般）</strong>: 通常 Steinbrenner による群杭沈下解析の入力 + 「<strong>一般解析実行</strong>」ボタン</li>
                 <li><strong>解析（反復）</strong>: 基礎梁を考慮した反復 Steinbrenner 解析 + 「<strong>反復解析実行</strong>」ボタン (基礎梁が必要)</li>
             </ul>
             <p>
@@ -7368,7 +7368,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 標高 (m) 表示は基本設定の Z=0 標高との和として自動計算されます。
             </p>
             <p>
-                リボンとパネル右側の「<strong>土層沈下 ▼</strong>」コンボボックスで「一般 / 反復」を切替えると、
+                リボンとパネル右側の「<strong>群杭沈下 ▼</strong>」コンボボックスで「一般 / 反復」を切替えると、
                 該当する CaseRecord (解析結果) が表示されます。
                 該当ケースが無ければコンタは消去されます。
             </p>
@@ -7433,7 +7433,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <p><img class="button-icon" src="icons/DeleteAllSettlementSoilLayers.svg" alt="">「全土層削除」ボタンをクリックすると、登録済みの土層をすべて一括削除します。地盤データから再度コピーし直したい場合や、土層構成を最初からやり直したい場合に使用します。</p>
 
             <table class="table-doc">
-                <caption style="text-align: center">土層沈下用土層入力データグリッド</caption>
+                <caption style="text-align: center">群杭沈下用土層入力データグリッド</caption>
                 <thead>
                     <tr>
                         <th style="text-align: center">項目</th>
@@ -7493,9 +7493,9 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h4>解析（一般）</h4>
             <p>
-                基礎梁を考慮しない通常の Steinbrenner 近似式による土層沈下解析です。
-                サブタブ上部で <strong>荷重面 Z</strong> と <strong>矩形荷重</strong> を入力し、下部の<img class="button-icon" src="icons/Play.svg" alt="">「<strong>一般解析実行</strong>」ボタン (= リボンの「土層沈下解析（一般）」F8 と同等) で実行します。
-                解析完了後、コンタ凡例は「<strong>沈下量 (一般)</strong>」と表示されます。詳細手順は <a href="#section-ribbon-analysis">解析条件/解析メニュー</a> の「土層沈下解析（一般）」を参照。
+                基礎梁を考慮しない通常の Steinbrenner 近似式による群杭沈下解析です。
+                サブタブ上部で <strong>荷重面 Z</strong> と <strong>矩形荷重</strong> を入力し、下部の<img class="button-icon" src="icons/Play.svg" alt="">「<strong>一般解析実行</strong>」ボタン (= リボンの「群杭沈下解析（一般）」F8 と同等) で実行します。
+                解析完了後、コンタ凡例は「<strong>沈下量 (一般)</strong>」と表示されます。詳細手順は <a href="#section-ribbon-analysis">解析条件/解析メニュー</a> の「群杭沈下解析（一般）」を参照。
             </p>
 
             <h5>荷重定義</h5>
@@ -7664,7 +7664,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h5>一般解析実行と結果表示</h5>
             <p>
-                <img class="button-icon" src="icons/Play.svg" alt="">「<strong>一般解析実行</strong>」ボタン (リボンの <img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">「土層沈下解析（一般）」F8 と同等) で解析を実行します。
+                <img class="button-icon" src="icons/Play.svg" alt="">「<strong>一般解析実行</strong>」ボタン (リボンの <img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">「群杭沈下解析（一般）」F8 と同等) で解析を実行します。
                 完了後、コンタ凡例は「<strong>沈下量 (一般)</strong>」と表示され、各杭位置での沈下量はグリッド計算結果テーブルに表示されます。
             </p>
 
@@ -7680,12 +7680,12 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             </p>
             <p>
                 サブタブ上部で <strong>荷重面 Z</strong> を入力し、下部の<img class="button-icon" src="icons/Play.svg" alt="">「<strong>反復解析実行</strong>」ボタンで起動します
-                (リボンの <img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">「土層沈下解析（反復）」と同等)。
+                (リボンの <img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">「群杭沈下解析（反復）」と同等)。
                 解析完了後、コンタ凡例は「<strong>沈下量 (反復)</strong>」と表示されます。
             </p>
             <p>
                 アルゴリズムの詳細 (Picard 反復のフローチャート、各ステップ $P_i \to S_1 \to k_i \to S_2 \to P_i$、収束判定式、$k_i$ のクランプ、結果ダイアログの構成、一般入力の独立保持と解析条件変更時の警告) は
-                <a href="#section-ribbon-analysis">解析条件/解析メニュー</a> の「土層沈下解析（反復）」を参照してください。
+                <a href="#section-ribbon-analysis">解析条件/解析メニュー</a> の「群杭沈下解析（反復）」を参照してください。
             </p>
         </section>
         <section id="new-features">
@@ -7863,7 +7863,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     プロジェクトファイルではなく、この PC のこのユーザーに紐づく設定です。
                 </p>
                 <p>
-                    なお<strong>単杭沈下・土層沈下の結果は入力データの一部</strong>として保持されるため、
+                    なお<strong>単杭沈下・群杭沈下の結果は入力データの一部</strong>として保持されるため、
                     このチェックに関わらず常に保存されます。チェックで切り替わるのは
                     <strong>杭要素分割データ・水平解析結果・基礎梁考慮鉛直解析結果</strong>です。
                 </p>
@@ -7873,7 +7873,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>杭要素分割データ</strong>: FEMモデルの節点・梁要素・地盤ばね等</li>
                 <li><strong>水平解析結果</strong>: 各荷重ケースの梁応力・節点変位・地盤反力等</li>
                 <li><strong>単杭沈下解析結果</strong>: 各杭の荷重-沈下関係</li>
-                <li><strong>土層沈下解析結果（一般 / 反復）</strong>: 土層沈下グリッドデータ + 各杭頭沈下量 + 反復のとき梁節点変位/梁応力 (CaseRecord として複数ケース保存)</li>
+                <li><strong>群杭沈下解析結果（一般 / 反復）</strong>: 群杭沈下グリッドデータ + 各杭頭沈下量 + 反復のとき梁節点変位/梁応力 (CaseRecord として複数ケース保存)</li>
                 <li><strong>基礎梁考慮鉛直解析結果</strong>: 杭反力・節点変位・梁応力等</li>
             </ul>
             <p>
@@ -7891,7 +7891,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h3>解析結果の保護</h3>
             <p>
-                水平解析・単杭沈下解析・土層沈下解析（一般 / 反復）・基礎梁考慮鉛直解析の実行後にモデルを変更する操作（杭の追加・削除、梁要素の生成・分割、節点の追加・変換、群杭係数の再計算など）を行うと、
+                水平解析・単杭沈下解析・群杭沈下解析（一般 / 反復）・基礎梁考慮鉛直解析の実行後にモデルを変更する操作（杭の追加・削除、梁要素の生成・分割、節点の追加・変換、群杭係数の再計算など）を行うと、
                 「解析結果が削除されます。続けますか？」という確認ダイアログが表示されます。
             </p>
             <ul>

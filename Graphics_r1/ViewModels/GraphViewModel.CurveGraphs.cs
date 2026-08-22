@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
@@ -681,7 +681,7 @@ namespace PileDesign.ViewModels
                             }
 
                             if (pileLayout == null) continue;
-                            if (SelectedPileOption != "All" && !targetPileNos.Contains(pileLayout.No)) continue;
+                            if (SelectedPileOption != UiText.All && !targetPileNos.Contains(pileLayout.No)) continue;
 
                             // 軸力推定
                             double axialN = 0.0;
@@ -929,7 +929,7 @@ namespace PileDesign.ViewModels
             var targetPiles = GetSelectedPileLayouts();
             var selectedLoadCases = GetSelectedLoadCases();
             var selectedCombinations = GetSelectedLoadCombinations();
-            bool isAllSegments = SelectedPileSegmentOption == "All";
+            bool isAllSegments = SelectedPileSegmentOption == UiText.All;
             int singleSegIdx = SelectedPileSegmentNo - 1; // 0-based（All以外）
 
             // 理論 P-y 曲線は荷重ケースの地盤非線形モードごとに形が変わるため、

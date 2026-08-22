@@ -12,7 +12,7 @@
         xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         xmlns:common="clr-namespace:PileDesign.Common"
-        Title="群杭沈下解析 (基礎梁無し)" Height="600" Width="900">
+        Title="群杭沈下解析（一般）" Height="600" Width="900">
 
     <Window.DataContext>
         <local:MainWindowViewModel/>

@@ -37,7 +37,7 @@
                          IsChecked="{Binding DisplayFilter, Converter={StaticResource IntEqualsConverter}, ConverterParameter=2}"
                          VerticalAlignment="Center" Margin="5,0"/>
             <Separator/>
-            <Button Content="Export to File" Command="{Binding ExportCommand}" Padding="10,2"/>
+            <Button Content="ファイルに出力" Command="{Binding ExportCommand}" Padding="10,2"/>
         </ToolBar>
 
         <!-- Evaluation Content -->

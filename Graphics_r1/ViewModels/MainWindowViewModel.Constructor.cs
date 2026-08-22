@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -805,7 +805,7 @@ namespace PileDesign.ViewModels
         /// ステータスバー表示用: 解析項目ごとの実施状態 + 色種別。
         /// 色種別 (Color フィールド) は "Success" / "Info" / "Warning" / "Inactive" のいずれか。
         /// XAML 側で DynamicResource (StatusSuccessBrush / StatusInfoBrush / StatusWarningDarkBrush) と紐付ける。
-        /// リボンボタンの ✓ 色と統一: 杭要素分割・水平解析=Success、荷重沈下・梁鉛直=Info、土層沈下=Warning。
+        /// リボンボタンの ✓ 色と統一: 杭要素分割・水平解析=Success、単杭沈下=Info、群杭沈下=Warning。
         /// </summary>
         public List<AnalysisStatusItem> AnalysisStatusItems
         {
@@ -817,15 +817,15 @@ namespace PileDesign.ViewModels
                 if (IsHorizontalAnalysisDone)
                     items.Add(new() { Text = "水平解析 ✓", Color = "Success" });
                 if (IsVerticalAnalysisDone)
-                    items.Add(new() { Text = "荷重沈下関係解析 ✓", Color = "Info" });
+                    items.Add(new() { Text = "単杭沈下解析 ✓", Color = "Info" });
                 if (IsVerticalBeamAnalysisDone)
-                    items.Add(new() { Text = "基礎梁考慮沈下解析 ✓", Color = "Info" });
+                    items.Add(new() { Text = "単杭沈下解析（基礎梁考慮） ✓", Color = "Info" });
 
                 var pgs = CurrentInputModel?.PileGroupSettlement;
                 if (pgs?.CaseRecords?.Any(r => !r.IsBeamAware) == true)
-                    items.Add(new() { Text = "土層沈下（一般） ✓", Color = "Warning" });
+                    items.Add(new() { Text = "群杭沈下解析（一般） ✓", Color = "Warning" });
                 if (pgs?.CaseRecords?.Any(r => r.IsBeamAware) == true)
-                    items.Add(new() { Text = "土層沈下（反復） ✓", Color = "Warning" });
+                    items.Add(new() { Text = "群杭沈下解析（反復） ✓", Color = "Warning" });
                 return items;
             }
         }
@@ -2286,7 +2286,7 @@ namespace PileDesign.ViewModels
             {
                 if (value && !IsVerticalAnalysisDone && !IsHorizontalAnalysisDone && !IsGroupPileSettlementAnalysisDone && !IsVerticalBeamAnalysisDone)
                 {
-                    MessageService.Show("水平解析、単杭解析、群杭解析、基礎梁鉛直解析のいずれかを実行後でないと解析結果表示はできません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageService.Show("水平解析、単杭沈下解析、群杭沈下解析、単杭沈下解析（基礎梁考慮）のいずれかを実行後でないと解析結果表示はできません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                     SetProperty(ref _isAnalysisResultVisible, false); // 明示的に戻す
                     return;
                 }
@@ -3502,14 +3502,14 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 土層沈下「一般 / 反復」切替 ComboBox 用 (表示メニュー荷重ケースグループ + 右ペイン用)。
+        /// 群杭沈下「一般 / 反復」切替 ComboBox 用 (表示メニュー荷重ケースグループ + 右ペイン用)。
         /// 解析有無に関わらず両方の選択肢を常に表示 (荷重描画ルートの切替にも使うため)。
         /// </summary>
         public ObservableCollection<string> GroupSettlementRouteOptions { get; }
             = ["一般", "反復"];
 
         /// <summary>
-        /// 土層沈下「一般 / 反復」切替の SelectedItem。内部 ActiveLoadingType と双方向マッピング。
+        /// 群杭沈下「一般 / 反復」切替の SelectedItem。内部 ActiveLoadingType と双方向マッピング。
         /// "個別矩形（基礎梁考慮）" → "反復"、それ以外 (基礎梁無し系) → "一般"。
         /// </summary>
         public string GroupSettlementRouteSelector

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -21,7 +21,7 @@ namespace PileDesign.Converters
                 values[1] is AnaModel model &&
                 model.AnalysisStepResults != null)
             {
-                if (loadCaseName is "ALL" or "All")
+                if (PileDesign.Common.UiText.IsAll(loadCaseName))
                     return Visibility.Collapsed;
 
                 bool isAnalyzed = model.AnalysisStepResults
@@ -38,7 +38,7 @@ namespace PileDesign.Converters
     /// <summary>
     /// 荷重組合せ名が解析済みかどうかを Visibility に変換する。
     /// values[0]: string loadCombinationName (GetName() or Name 形式)
-    /// values[1]: string selectedLoadCaseName (省略時 or "All"/"ALL" は全荷重ケース対象)
+    /// values[1]: string selectedLoadCaseName (省略時 or「すべて」は全荷重ケース対象)
     /// values[2]: AnaModel currentModel
     /// </summary>
     public class LoadCombinationAnalyzedConverter : IMultiValueConverter
@@ -50,13 +50,13 @@ namespace PileDesign.Converters
                 values[2] is AnaModel model &&
                 model.AnalysisStepResults != null)
             {
-                // "ALL" / "All" は全荷重組合せ対象
-                if (loadCombinationName is "ALL" or "All")
+                // 「すべて」は全荷重組合せ対象
+                if (PileDesign.Common.UiText.IsAll(loadCombinationName))
                     return Visibility.Collapsed;
 
                 string? selectedLoadCase = values[1] as string;
                 bool filterByLoadCase = !string.IsNullOrEmpty(selectedLoadCase) &&
-                                        selectedLoadCase != "ALL" && selectedLoadCase != "All";
+                                        !PileDesign.Common.UiText.IsAll(selectedLoadCase);
 
                 bool isAnalyzed = model.AnalysisStepResults
                     .Any(r => (!filterByLoadCase || r.LoadCase?.LoadName == selectedLoadCase) &&
@@ -131,8 +131,8 @@ namespace PileDesign.Converters
                 values[1] is AnaModel model &&
                 model.AnalysisStepResults != null)
             {
-                // "ALL" は常にインジケータ非表示
-                if (liqLabel is "ALL" or "All")
+                // 「すべて」は常にインジケータ非表示
+                if (PileDesign.Common.UiText.IsAll(liqLabel))
                     return Visibility.Collapsed;
 
                 bool targetIsLiq = liqLabel.Contains("考慮") || liqLabel == "有" ||

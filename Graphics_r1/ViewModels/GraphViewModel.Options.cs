@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
@@ -77,18 +77,18 @@ namespace PileDesign.ViewModels
             if (count <= 0) return;
             if (PileSegmentOptions != null && PileSegmentOptions.Count == count + 1) return;
 
-            var opts = new ObservableCollection<string> { "All" };
+            var opts = new ObservableCollection<string> { UiText.All };
             foreach (int i in Enumerable.Range(1, count)) opts.Add(i.ToString());
             PileSegmentOptions = opts;
             if (!opts.Contains(SelectedPileSegmentOption))
-                SelectedPileSegmentOption = "All";
+                SelectedPileSegmentOption = UiText.All;
         }
 
         private void UpdatePileSegmentDetails()
         {
             if (SelectedGraphOption != "水平地盤反力度p-y"
                 || string.IsNullOrEmpty(SelectedPileSegmentOption)
-                || SelectedPileSegmentOption == "All"
+                || SelectedPileSegmentOption == UiText.All
                 || !int.TryParse(SelectedPileSegmentOption, out int oneBased))
             {
                 SelectedPileSegmentDetails = string.Empty;
@@ -560,7 +560,7 @@ namespace PileDesign.ViewModels
         private ObservableCollection<LoadCase> GetSelectedLoadCases()
         {
             ObservableCollection<LoadCase> selectedLoadCases = [];
-            if (SelectedLoadCaseOption == "All")
+            if (SelectedLoadCaseOption == UiText.All)
             {
                 selectedLoadCases = InputModel.LoadCasesInput.AllSeismicLoadCases;
             }
@@ -595,7 +595,7 @@ namespace PileDesign.ViewModels
         private ObservableCollection<LoadCombination> GetSelectedLoadCombinations()
         {
             ObservableCollection<LoadCombination> selectedLoadCombinations = [];
-            if (SelectedLoadCombinationOption == "All")
+            if (SelectedLoadCombinationOption == UiText.All)
             {
                 selectedLoadCombinations = InputModel.LoadCasesInput.LoadCombinations;
             }
@@ -616,7 +616,7 @@ namespace PileDesign.ViewModels
         private ObservableCollection<PileLayoutDataItem> GetSelectedPileLayouts()
         {
             ObservableCollection<PileLayoutDataItem> selectedPileLayouts = [];
-            if (SelectedPileOption == "All")
+            if (SelectedPileOption == UiText.All)
             {
                 selectedPileLayouts = InputModel.PileLayoutItems;
             }

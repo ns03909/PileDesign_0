@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
@@ -855,7 +855,7 @@ namespace PileDesign.ViewModels
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
-                // 反復解析 (土層沈下「反復」ルート) の CaseRecord 確認
+                // 反復解析 (群杭沈下「反復」ルート) の CaseRecord 確認
                 if (!ConfirmAnalysisConditionChange("反復", "杭軸力編集"))
                 {
                     e.Cancel = true;
@@ -1790,7 +1790,7 @@ namespace PileDesign.ViewModels
             //  ダイアログでなくトーストで通知)
             if (HasGroupSettlementBeamAwareCases)
             {
-                InvalidateBeamAwareResultsSilently("基礎梁の変更により、土層沈下解析（反復）の結果を破棄しました。");
+                InvalidateBeamAwareResultsSilently("基礎梁の変更により、群杭沈下解析（反復）の結果を破棄しました。");
             }
         }
 
@@ -1811,7 +1811,7 @@ namespace PileDesign.ViewModels
 
             if (HasGroupSettlementBeamAwareCases)
             {
-                InvalidateBeamAwareResultsSilently("基礎梁の変更により、土層沈下解析（反復）の結果を破棄しました。");
+                InvalidateBeamAwareResultsSilently("基礎梁の変更により、群杭沈下解析（反復）の結果を破棄しました。");
             }
         }
 

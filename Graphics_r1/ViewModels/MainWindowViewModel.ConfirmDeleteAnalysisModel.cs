@@ -35,7 +35,7 @@ namespace PileDesign.ViewModels
                 IsVerticalBeamAnalysisDone = false;
                 IsAnalysisResultVisible = false;
 
-                // 土層沈下 (反復) の CaseRecord も破棄 (杭配置/軸力/基礎梁の変更で結果無効化のため)
+                // 群杭沈下 (反復) の CaseRecord も破棄 (杭配置/軸力/基礎梁の変更で結果無効化のため)
                 var pgs = CurrentInputModel?.PileGroupSettlement;
                 if (pgs?.CaseRecords != null && pgs.CaseRecords.Count > 0)
                 {

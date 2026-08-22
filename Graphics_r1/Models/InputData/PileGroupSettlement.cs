@@ -1,4 +1,4 @@
-using PileDesign.Constants;
+﻿using PileDesign.Constants;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -62,7 +62,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 一般モード (基礎梁無し) のユーザー入力 RectLoads スナップショット。
-        // 反復ダイアログを開く直前に pgs.RectLoads を保存し、土層沈下 ▼ を 反復 → 一般 に
+        // 反復ダイアログを開く直前に pgs.RectLoads を保存し、群杭沈下 ▼ を 反復 → 一般 に
         // 切替えた際 (該当 CaseRecord が無い場合) に復元する。
         // 反復が pgs.RectLoads を収束反力で書き換えても、一般モードに戻るとユーザー入力に戻る。
         [System.Text.Json.Serialization.JsonIgnore]

@@ -317,10 +317,10 @@ namespace PileDesign.ViewModels
                     UpdateGraph();
                     var pileBody = InputModel.GetPileBodyByPileBodyRef(_selectedPileBodyRef);
                     int segmentsCount = pileBody?.PileBodySegments?.Count ?? 0;
-                    var options = new ObservableCollection<string> { "All" };
+                    var options = new ObservableCollection<string> { UiText.All };
                     foreach (int i in Enumerable.Range(1, segmentsCount)) options.Add(i.ToString());
                     PileSegmentOptions = options;
-                    SelectedPileSegmentOption = "All";
+                    SelectedPileSegmentOption = UiText.All;
                 }
             }
         }
@@ -353,7 +353,7 @@ namespace PileDesign.ViewModels
         }
 
 
-        private string _selectedPileSegmentOption = "All";
+        private string _selectedPileSegmentOption = UiText.All;
         public string SelectedPileSegmentOption
         {
             get => _selectedPileSegmentOption;
@@ -367,11 +367,11 @@ namespace PileDesign.ViewModels
             }
         }
 
-        /// <summary>選択中の杭区間番号（0-based）。"All" の場合は -1 を返す。</summary>
+        /// <summary>選択中の杭区間番号（0-based）。UiText.All の場合は -1 を返す。</summary>
         public int SelectedPileSegmentNo
         {
             get => int.TryParse(_selectedPileSegmentOption, out int n) ? n : 0;
-            set => SelectedPileSegmentOption = value <= 0 ? "All" : value.ToString();
+            set => SelectedPileSegmentOption = value <= 0 ? UiText.All : value.ToString();
         }
 
         // p-y グラフ時は「杭要素番号」、他（杭体区間を指す場合）は「杭区間番号」
@@ -406,21 +406,21 @@ namespace PileDesign.ViewModels
             IsVerticalBeamAnalysisDone = _mainWindowViewModel.IsVerticalBeamAnalysisDone;
 
             // フィルタ: 全部 / レベル絞り込み / 個別ケース
-            LoadCaseOptions = ["All", LoadCaseFilterLevel1, LoadCaseFilterLevel2];
+            LoadCaseOptions = [UiText.All, LoadCaseFilterLevel1, LoadCaseFilterLevel2];
             foreach (LoadCase loadCase in InputModel.LoadCasesInput.AllLoadCases)
             {
                 LoadCaseOptions.Add(loadCase.LoadName);
             }
             SelectedLoadCaseOption = LoadCaseOptions[0]; // 初期値
 
-            LoadCombinationOptions = ["All"];
+            LoadCombinationOptions = [UiText.All];
             foreach (LoadCombination loadCombination in InputModel.LoadCasesInput.LoadCombinations)
             {
                 LoadCombinationOptions.Add(loadCombination.GetName());
             }
             SelectedLoadCombinationOption = LoadCombinationOptions[0]; // 初期値
 
-            PileOptions = ["All"];
+            PileOptions = [UiText.All];
             foreach (PileLayoutDataItem pile in InputModel.PileLayoutItems)
             {
                 PileOptions.Add($"{pile.No}" + "X:" + pile.X + "Y:" + pile.Y + "Z:" + pile.Z);
@@ -701,7 +701,7 @@ namespace PileDesign.ViewModels
                 IsLiquefactionOptionVisible = true;
                 IsGridOptionVisible = false;
 
-                SelectedPileOption = "All";
+                SelectedPileOption = UiText.All;
 
                 if (SelectedLoadCaseOption == "VL0" || SelectedLoadCaseOption == "VLadd" || SelectedLoadCaseOption == "VL")
                 {
@@ -798,7 +798,7 @@ namespace PileDesign.ViewModels
                 IsLiquefactionOptionVisible = true;
                 IsGridOptionVisible = false;
 
-                SelectedPileOption = "All";
+                SelectedPileOption = UiText.All;
 
                 // 杭地盤ばねと土圧合力ばねを分類
                 var pileSoilSprings = AnaModel.HorizontalSoilSprings

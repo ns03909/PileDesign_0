@@ -1,4 +1,4 @@
-using AvalonDock.Layout;
+﻿using AvalonDock.Layout;
 using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using PileDesign.Output;
@@ -3345,10 +3345,10 @@ namespace PileDesign.Views
 
         private void ActivateGroupPileLoadTab()
         {
-            // "土層沈下"タブを探してアクティブ化
+            // "群杭沈下"タブを探してアクティブ化
             foreach (var doc in dockingManager.Layout.Descendents().OfType<LayoutDocument>())
             {
-                if (doc.Title == "土層沈下")
+                if (doc.Title == "群杭沈下")
                 {
                     doc.IsSelected = true;
                     doc.IsActive = true;

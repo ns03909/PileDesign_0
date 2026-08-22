@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using PileDesign.Common;
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
 using System;
@@ -43,22 +44,22 @@ namespace PileDesign.ViewModels
         public ObservableCollection<string> LiquefactionFilterOptions { get; } = [];
 
         [ObservableProperty]
-        private string _selectedTableCategoryFilter = "ALL";
+        private string _selectedTableCategoryFilter = UiText.All;
 
         partial void OnSelectedTableCategoryFilterChanged(string value) => ApplyFilters();
 
         [ObservableProperty]
-        private string _selectedLoadCaseFilter = "ALL";
+        private string _selectedLoadCaseFilter = UiText.All;
 
         partial void OnSelectedLoadCaseFilterChanged(string value) => ApplyFilters();
 
         [ObservableProperty]
-        private string _selectedLoadCombinationFilter = "ALL";
+        private string _selectedLoadCombinationFilter = UiText.All;
 
         partial void OnSelectedLoadCombinationFilterChanged(string value) => ApplyFilters();
 
         [ObservableProperty]
-        private string _selectedLiquefactionFilter = "ALL";
+        private string _selectedLiquefactionFilter = UiText.All;
 
         partial void OnSelectedLiquefactionFilterChanged(string value) => ApplyFilters();
 
@@ -89,7 +90,7 @@ namespace PileDesign.ViewModels
         {
             // テーブル種別フィルタ: カテゴリ（水平／沈下）
             TableCategoryFilterOptions.Clear();
-            TableCategoryFilterOptions.Add("ALL");
+            TableCategoryFilterOptions.Add(UiText.All);
             var distinctCategories = AllTables
                 .Select(t => Converters.TableCategoryConverter.CategoryOf(t))
                 .Distinct()
@@ -99,7 +100,7 @@ namespace PileDesign.ViewModels
                 TableCategoryFilterOptions.Add(c);
 
             LoadCaseFilterOptions.Clear();
-            LoadCaseFilterOptions.Add("ALL");
+            LoadCaseFilterOptions.Add(UiText.All);
             // レベル一括絞り込み: AllSeismicLoadCases がセットされていて対応ケースが存在する時のみ追加
             bool hasL1 = AllSeismicLoadCases?.Any(lc => lc.Level == 1) == true;
             bool hasL2 = AllSeismicLoadCases?.Any(lc => lc.Level == 2) == true;
@@ -109,19 +110,19 @@ namespace PileDesign.ViewModels
                 LoadCaseFilterOptions.Add(name);
 
             LoadCombinationFilterOptions.Clear();
-            LoadCombinationFilterOptions.Add("ALL");
+            LoadCombinationFilterOptions.Add(UiText.All);
             foreach (var name in AllTables.Select(t => t.LoadCombinationName).Where(s => !string.IsNullOrEmpty(s)).Distinct())
                 LoadCombinationFilterOptions.Add(name);
 
             LiquefactionFilterOptions.Clear();
-            LiquefactionFilterOptions.Add("ALL");
+            LiquefactionFilterOptions.Add(UiText.All);
             LiquefactionFilterOptions.Add("有");
             LiquefactionFilterOptions.Add("無");
 
-            SelectedTableCategoryFilter = "ALL";
-            SelectedLoadCaseFilter = "ALL";
-            SelectedLoadCombinationFilter = "ALL";
-            SelectedLiquefactionFilter = "ALL";
+            SelectedTableCategoryFilter = UiText.All;
+            SelectedLoadCaseFilter = UiText.All;
+            SelectedLoadCombinationFilter = UiText.All;
+            SelectedLiquefactionFilter = UiText.All;
         }
 
         private void ApplyFilters()
@@ -140,13 +141,13 @@ namespace PileDesign.ViewModels
 
             FilteredTables.Clear();
             var filtered = AllTables.Where(t =>
-                (SelectedTableCategoryFilter == "ALL" ||
+                (SelectedTableCategoryFilter == UiText.All ||
                  Converters.TableCategoryConverter.CategoryOf(t) == SelectedTableCategoryFilter) &&
-                (SelectedLoadCaseFilter == "ALL"
+                (SelectedLoadCaseFilter == UiText.All
                     || (levelCaseNames != null && levelCaseNames.Contains(t.LoadCaseName))
                     || t.LoadCaseName == SelectedLoadCaseFilter) &&
-                (SelectedLoadCombinationFilter == "ALL" || t.LoadCombinationName == SelectedLoadCombinationFilter) &&
-                (SelectedLiquefactionFilter == "ALL" ||
+                (SelectedLoadCombinationFilter == UiText.All || t.LoadCombinationName == SelectedLoadCombinationFilter) &&
+                (SelectedLiquefactionFilter == UiText.All ||
                  (SelectedLiquefactionFilter == "有" ? t.IsLiquefaction : !t.IsLiquefaction))
             ).ToList();
 

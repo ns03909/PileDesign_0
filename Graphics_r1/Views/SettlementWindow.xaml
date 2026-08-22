@@ -14,7 +14,7 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:controls="clr-namespace:WpfMath.Controls;assembly=WpfMath"
         xmlns:models="clr-namespace:PileDesign.Models"
-        Title="単杭沈下" Height="600" Width="800"
+        Title="単杭沈下解析" Height="600" Width="800"
         PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.InputBindings>
@@ -545,9 +545,6 @@
                         HorizontalContentAlignment="Right"/>
                 <TextBlock Grid.Row="33" Grid.Column="3" Text="mm" Foreground="{StaticResource UltimateLimitBrush}"/>
 
-                <!--<Button Grid.Row="31" Grid.Column="0" Grid.ColumnSpan="4"
-                         Content="杭の荷重沈下関係解析実行" Command="{Binding ExecuteAnalysisCommand}"/>-->
-
             </Grid>
             </ScrollViewer>
 
@@ -811,7 +808,7 @@
                     </Grid>
                 </TabItem>
 
-                <TabItem Header="杭の荷重沈下解析結果　沈下曲線">
+                <TabItem Header="単杭沈下解析結果　荷重-沈下曲線">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="auto"/>
