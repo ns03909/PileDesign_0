@@ -738,13 +738,22 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // midas Gen MGT ファイルにエクスポートするメソッド
+        /// <summary>
+        /// midas Gen MGT ファイルにエクスポートする。
+        ///
+        /// 出力するモデルは<b>現在の入力から組み直す</b>。
+        /// <see cref="CurrentModel"/> は解析を実行した時点のスナップショットなので、
+        /// そのまま出すと入力を編集したあとに画面と違う形状が出てしまう。
+        /// 前提は「水平解析が実行済み」ではなく「杭要素分割が実行済み」
+        /// （分割が無いと FEM モデルを組めない）。
+        /// </summary>
         [RelayCommand]
         public void ExportMgtFile()
         {
-            if (CurrentModel == null)
+            var soilPiles = CurrentInputModel?.ElementDivision?.SoilPiles;
+            if (CurrentInputModel == null || soilPiles == null || soilPiles.Count == 0)
             {
-                MessageService.Show("水平解析が実行されていません。\n解析モデルをエクスポートするには、先に水平解析を実行してください。",
+                MessageService.Show("杭要素分割が実行されていません。\n解析モデルをエクスポートするには、先に杭要素分割を実行してください。",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -760,7 +769,8 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
-                    var exporter = new Output.MgtExporter(CurrentModel);
+                    var exportModel = BuildExportModelFromCurrentInput();
+                    var exporter = new Output.MgtExporter(exportModel);
                     exporter.Export(saveFileDialog.FileName);
                     ShowToast($"MGTファイルを作成しました。\n{saveFileDialog.FileName}");
                 }
@@ -769,6 +779,31 @@ namespace PileDesign.ViewModels
                     MessageService.Show($"MGT出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+        }
+
+        /// <summary>
+        /// 現在の入力から FEM モデルを組み直す（エクスポート用）。
+        ///
+        /// 解析結果は載せないが、Y 方向解析の有無だけは出力内容に影響するため、
+        /// 解析済みならその情報を引き継ぐ（MgtExporter は AnalysisStepResults の
+        /// LoadCase.LoadAngle からしか参照しない）。
+        /// </summary>
+        // internal はテスト用 (SettlementDiscardAndExportTests)
+        internal FEM.AnaModel BuildExportModelFromCurrentInput()
+        {
+            var modelling = new FEM.AnalysisModelling(CurrentInputModel);
+            var model = new FEM.AnaModel(
+                CurrentInputModel, modelling.Nodes, modelling.Beams, modelling.DummyBeams,
+                modelling.RigidBodies, modelling.HorizontalSoilSprings, modelling.RotationalSprings);
+
+            var analyzed = CurrentModel?.AnalysisStepResults;
+            if (analyzed != null && analyzed.Count > 0)
+            {
+                model.AnalysisStepResults.Clear();
+                foreach (var r in analyzed) model.AnalysisStepResults.Add(r);
+            }
+
+            return model;
         }
 
         // プロパティのコピー

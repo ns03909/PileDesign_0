@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.Input;
+using System.Collections.Generic;
 using System.Windows;
 using PileDesign.Services;
 
@@ -79,38 +80,80 @@ namespace PileDesign.ViewModels
         private bool CheckAndResetAnalysisResults()
         {
             MarkInputChangedSinceAnalysis();
-
-            if (IsElementSplit)
-            {
-                return ConfirmResetElementSplitOnly("杭要素分割内容が削除されます。続けますか？");
-            }
-            return true; // 操作を続ける
+            return ConfirmDiscardInvalidatedByInputChange(includeElementSplit: true);
         }
 
         /// <summary>
-        /// 杭要素分割のみを確認のうえ無効化する（解析結果には触れない）。
-        /// 併せて、杭配置や基礎梁の変更で無効になる土層沈下（反復）の CaseRecord も破棄する。
-        /// これらは InputModel 側に持つ「入力に紐づく結果」なので、現在の入力からは消すが、
-        /// 解析結果セットのスナップショットには残るため結果表示は保たれる。
+        /// 入力変更で無効になるものを 1 回のダイアログで確認し、破棄する。
+        ///
+        /// <b>水平解析の結果は破棄しない。</b>解析完了時に入力ごと複製して切り離してあるので、
+        /// 入力を編集しても結果表示は解析時のまま整合する。
+        ///
+        /// 一方、次の 2 つは入力側の状態なので従来どおり破棄する。
+        /// <list type="bullet">
+        /// <item>杭要素分割 — ジオメトリが変われば分割は無効</item>
+        /// <item>沈下解析の結果 — <see cref="PileGroupSettlement"/> の CaseRecords /
+        ///   SettlementGridData や各杭の GroupPileSettlement のように<b>入力モデルの中に</b>
+        ///   格納されており、解析結果セットで切り離せない。残すと杭配置グリッドなど入力系の表示に
+        ///   古い値がそのまま出て、しかも傾斜角検定の可否判定にも使われる</item>
+        /// </list>
+        /// 破棄するものが無ければダイアログを出さずに true を返す
+        /// （沈下解析を使っていない場合や、既に分割を取り消してある場合は何も出ない）。
         /// </summary>
-        private bool ConfirmResetElementSplitOnly(string message)
+        /// <param name="includeElementSplit">杭要素分割も対象にするか（ジオメトリを変える編集で true）。</param>
+        /// <param name="reason">「〜により、」として文頭に付ける理由（省略可）。</param>
+        private bool ConfirmDiscardInvalidatedByInputChange(bool includeElementSplit, string? reason = null)
         {
-            var result = MessageService.Show(message, "確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            bool discardSplit = includeElementSplit && IsElementSplit;
+            bool discardSettlement = HasSettlementResults();
+
+            if (!discardSplit && !discardSettlement) return true;
+
+            var parts = new List<string>();
+            if (discardSettlement) parts.Add("沈下解析結果");
+            if (discardSplit) parts.Add("杭要素分割");
+
+            string msg = (string.IsNullOrEmpty(reason) ? string.Empty : $"{reason}により、")
+                       + string.Join("と", parts)
+                       + "が削除されます。続けますか？\n（水平解析の結果は保持されます）";
+
+            var result = MessageService.Show(msg, "確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes) return false;
 
-            IsElementSplit = false;
-            ClearGroupSettlementCaseRecords();
+            if (discardSplit) IsElementSplit = false;
+            if (discardSettlement) ClearSettlementResults();
+
             UpdateWindowImmediate();
             return true;
         }
 
-        /// <summary>土層沈下（反復）の CaseRecord を現在の入力から破棄する。</summary>
-        private void ClearGroupSettlementCaseRecords()
+        // テスト用フック (内部ロジックをそのまま検証する)
+        internal bool HasSettlementResultsForTest() => HasSettlementResults();
+        internal void ClearSettlementResultsForTest() => ClearSettlementResults();
+
+        /// <summary>破棄対象になる沈下解析の結果を持っているか。</summary>
+        private bool HasSettlementResults()
         {
             var pgs = CurrentInputModel?.PileGroupSettlement;
-            if (pgs?.CaseRecords == null || pgs.CaseRecords.Count == 0) return;
+            return (pgs?.CaseRecords?.Count ?? 0) > 0
+                || (pgs?.SettlementGridData?.Count ?? 0) > 0
+                || IsVerticalAnalysisDone
+                || IsGroupPileSettlementAnalysisDone;
+        }
 
-            pgs.CaseRecords.Clear();
+        /// <summary>
+        /// 沈下解析の結果を現在の入力から破棄する。
+        /// これらは入力モデルの中に格納されているため、解析結果セットでは切り離せない。
+        /// </summary>
+        private void ClearSettlementResults()
+        {
+            IsVerticalAnalysisDone = false;
+            IsGroupPileSettlementAnalysisDone = false;
+
+            var pgs = CurrentInputModel?.PileGroupSettlement;
+            if (pgs == null) return;
+
+            pgs.CaseRecords?.Clear();
             pgs.ActiveCaseIndex = -1;
             pgs.SettlementGridData = [];
             if (CurrentInputModel?.PileLayoutItems != null)
@@ -130,12 +173,9 @@ namespace PileDesign.ViewModels
         /// </summary>
         public bool ConfirmResetAllForGeometryChange(string reason)
         {
-            // 解析結果は破棄しない (CheckAndResetAnalysisResults と同じ方針)。
+            // 水平解析の結果は破棄しない (CheckAndResetAnalysisResults と同じ方針)。
             MarkInputChangedSinceAnalysis();
-            if (!IsElementSplit) return true;
-
-            return ConfirmResetElementSplitOnly(
-                $"{reason}により、杭要素分割がキャンセルされます。\nよろしいですか？");
+            return ConfirmDiscardInvalidatedByInputChange(includeElementSplit: true, reason: reason);
         }
 
         /// <summary>
@@ -148,7 +188,9 @@ namespace PileDesign.ViewModels
         public bool CheckAndResetAnalysisResultsKeepingSplit(string text)
         {
             MarkInputChangedSinceAnalysis();
-            return true;
+            // 杭要素分割は保持する。沈下解析の結果は入力の中にあるので従来どおり破棄する
+            // (沈下解析を使っていなければダイアログは出ない)。
+            return ConfirmDiscardInvalidatedByInputChange(includeElementSplit: false, reason: text);
         }
 
         /// <summary>
