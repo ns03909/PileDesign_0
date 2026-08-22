@@ -184,7 +184,8 @@ namespace PileDesign.Views
             catch (Exception ex)
             {
                 Log.Warning(ex, "[GroundWindow_ContentRendered]");
-                MessageService.Show($"地盤ウィンドウの初期化でエラーが発生しました: {ex.Message}",
+                Serilog.Log.Error(ex, "地盤ウィンドウ の初期化に失敗");
+                MessageService.Show(PileDesign.Services.GuardMessages.WindowOpenFailed("地盤ウィンドウ"),
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -1159,7 +1160,9 @@ namespace PileDesign.Views
                 else
                 {
                     // キャストに失敗した場合はエラーを処理するか、適切な処理を行う
-                    MessageService.Show("選択されたアイテムの型が正しくありません。");
+                    // ここに来るのは実装の不具合。利用者に内部の型の話をしても操作は決まらないので、
+                // ダイアログは出さずログに残す。
+                Serilog.Log.Warning("選択項目の型が想定と異なるため処理をスキップしました");
                 }
                 DataGridGroundMass.Items.Refresh();
             }
@@ -1179,7 +1182,9 @@ namespace PileDesign.Views
                 else
                 {
                     // キャストに失敗した場合はエラーを処理するか、適切な処理を行う
-                    MessageService.Show("選択されたアイテムの型が正しくありません。");
+                    // ここに来るのは実装の不具合。利用者に内部の型の話をしても操作は決まらないので、
+                // ダイアログは出さずログに残す。
+                Serilog.Log.Warning("選択項目の型が想定と異なるため処理をスキップしました");
                 }
                 DataGridGroundLayer.Items.Refresh();
                 viewModel.Update();

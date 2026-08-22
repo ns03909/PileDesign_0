@@ -2836,27 +2836,6 @@ namespace PileDesign.Views
                 MessageService.Show("削除対象のアイテムが正しく取得できませんでした。");
             }
         }
-        //{
-        //    var viewModel = DataContext as MainWindowViewModel;
-        //    InputModel InputModel = viewModel.CurrentInputModel;
-
-        //    if (DataGridPileLayout.SelectedItem != null)
-        //    {
-        //        // 選択されたアイテムが正しい型であることを確認する
-        //        if (DataGridPileLayout.SelectedItem is PileLayoutDataItem selectedItem)
-        //        {
-        //            InputModel.PileLayoutItems.Remove(selectedItem);
-        //            //NumberingNewPileNumber(false);
-        //            viewModel.UpdatePileLayoutNo();
-        //            UpdateWindow();
-        //        }
-        //        else
-        //        {
-        //            // キャストに失敗した場合はエラーを処理するか、適切な処理を行う
-        //            MessageService.Show("選択されたアイテムの型が正しくありません。");
-        //        }
-        //    }
-        //}
 
 
         private void DataGridPileLayout_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)

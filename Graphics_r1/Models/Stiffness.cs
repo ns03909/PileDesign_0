@@ -22,7 +22,7 @@ namespace PileDesign.Models
         {
             if (forces.Count != displacements.Count)
             {
-                MessageService.Show("ForcesとDisplacementsの数が異なります。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("荷重の個数と変位の個数が一致していません。\n同じ数だけ入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -44,7 +44,8 @@ namespace PileDesign.Models
         {
             if (tangentStiffnesses.Count != displacements.Count + 1)
             {
-                MessageService.Show("tangentStiffnessesの数がDisplacementsの数+1ではありません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("接線剛性の個数が、変位の個数 + 1 になっていません。\n変位が n 点なら接線剛性は n + 1 点必要です (両端の外側の勾配を含むため)。",
+                    "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             TangentStiffnesses = tangentStiffnesses;

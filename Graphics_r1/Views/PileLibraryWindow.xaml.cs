@@ -34,7 +34,7 @@ namespace PileDesign.Views
                 var baseDir = FindGraphicsR1Folder(AppDomain.CurrentDomain.BaseDirectory);
                 if (baseDir == null)
                 {
-                    MessageService.Show(this, "プロジェクト内の Graphics_r1 フォルダが見つかりません。CSV ファイルを自動検出できません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageService.Show(this, "杭ライブラリのデータフォルダが見つかりません。\nインストール先のファイルが不足している可能性があります。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 

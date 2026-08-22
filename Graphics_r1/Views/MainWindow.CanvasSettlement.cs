@@ -34,7 +34,10 @@ namespace PileDesign.Views
             {
                 if (viewModel.ResultInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
-                    //MessageService.Show("個別十字荷重を作成するには地盤杭セットが作られている必要があります。キャンセルします。");
+                    // 杭要素分割がまだなら荷重形状を描けない。
+                    // ここは再描画のたびに通るため、ダイアログを出すと連続表示になって操作できなくなる
+                    // (以前あったメッセージが無効化されていたのはそのため)。
+                    // 解析を実行しようとした時点で、実行ボタン側が理由を示す。
                     return;
                 }
 

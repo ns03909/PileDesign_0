@@ -71,7 +71,8 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show($"エラーが発生しました: {ex.Message}");
+                Serilog.Log.Error(ex, "杭断面ウィンドウの初期化に失敗");
+                MessageService.Show(PileDesign.Services.GuardMessages.WindowOpenFailed("杭断面ウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
             // コンストラクタ末尾の登録を修正

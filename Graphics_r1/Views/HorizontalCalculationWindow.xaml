@@ -1,4 +1,4 @@
-<Window x:Class="PileDesign.Views.HorizontalCalculationWindow"
+﻿<Window x:Class="PileDesign.Views.HorizontalCalculationWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ctrl="clr-namespace:PileDesign.Views.Controls"
@@ -597,20 +597,16 @@
             <!-- ========== 実行 ========== -->
             <TextBlock Text="■ 実行" Style="{StaticResource SectionHeader}"/>
 
+            <!-- 有効/無効はコマンドの CanExecute に任せる (計算 0 件の条件もそちらに含めた)。
+                 灰色のときは「なぜ押せないか」がツールチップで読める。
+                 ToolTipService.ShowOnDisabled=True が無いと、まさに読みたい
+                 無効時にツールチップが出ない。 -->
             <Button Content="水平解析実行 (F5)" Command="{Binding ExecuteAnalysisCommand}"
                     FontWeight="Bold"
                     Background="{StaticResource PrimaryAccentDarkBrush}"
-                    Foreground="White">
-                <Button.Style>
-                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding TotalCalculationCount}" Value="0">
-                                <Setter Property="IsEnabled" Value="False"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
+                    Foreground="White"
+                    ToolTip="{Binding ExecuteAnalysisToolTip}"
+                    ToolTipService.ShowOnDisabled="True"/>
 
             <Button Content="追加実行 (Ctrl+F5)" Command="{Binding ExecuteAdditiveAnalysisCommand}"
                     Margin="0,4,0,0"

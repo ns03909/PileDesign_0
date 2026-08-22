@@ -2209,7 +2209,7 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel == null || CurrentInputModel.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                MessageService.Show("杭配置が存在しません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show(GuardMessages.NoPileLayout, "確認", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -2421,7 +2421,7 @@ namespace PileDesign.ViewModels
             {
                 if (CurrentInputModel.ElementDivision.SoilPiles == null || CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
-                    MessageService.Show("杭配置が存在しません。");
+                    MessageService.Show(GuardMessages.NoPileLayout);
                     return;
                 }
                 else
@@ -2451,7 +2451,7 @@ namespace PileDesign.ViewModels
             {
                 if (CurrentInputModel.ElementDivision.SoilPiles == null || CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
-                    MessageService.Show("杭配置が存在しません。");
+                    MessageService.Show(GuardMessages.NoPileLayout);
                     return;
                 }
                 else
@@ -2485,7 +2485,8 @@ namespace PileDesign.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            MessageService.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                            Serilog.Log.Error(ex, "ダイアログの表示に失敗");
+                            MessageService.Show(GuardMessages.WindowOpenFailed("ウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                         finally
                         {
@@ -2612,7 +2613,7 @@ namespace PileDesign.ViewModels
             // バリデーション
             if (CurrentInputModel.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                MessageService.Show("杭配置が定義されていません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show(GuardMessages.NoPileLayout, "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -2675,7 +2676,8 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Serilog.Log.Error(ex, "ダイアログの表示に失敗");
+                            MessageService.Show(GuardMessages.WindowOpenFailed("ウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -2684,7 +2686,7 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                PileDesign.Services.MessageService.Show("杭配置が存在しません。");
+                PileDesign.Services.MessageService.Show(GuardMessages.NoPileLayout);
                 return false;
             }
             return true;

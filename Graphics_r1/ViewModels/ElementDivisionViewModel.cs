@@ -907,7 +907,10 @@ namespace PileDesign.ViewModels
 
             if (x1.Count == 0)
             {
-                //MessageService.Show("水平地盤反力データが存在しません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                // データが無ければグラフを空のままにする。
+                // ここは再描画のたびに通るため、ダイアログを出すと連続表示になって操作できなくなる
+                // (以前あったメッセージが無効化されていたのはそのため)。
+                // 「水平地盤反力が無い」ことは杭要素分割のランプ表示で分かる。
                 return;
             }
 

@@ -59,7 +59,8 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.Show($"計算書出力ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Serilog.Log.Error(ex, "計算書出力ウィンドウ の表示に失敗", "計算書出力ウィンドウ");
+                MessageService.Show(GuardMessages.WindowOpenFailed("計算書出力ウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -123,7 +124,8 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.Show($"オプションウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Serilog.Log.Error(ex, "オプションウィンドウ の表示に失敗", "オプションウィンドウ");
+                MessageService.Show(GuardMessages.WindowOpenFailed("オプションウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -163,7 +165,8 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.Show($"グラフウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Serilog.Log.Error(ex, "グラフウィンドウ の表示に失敗", "グラフウィンドウ");
+                MessageService.Show(GuardMessages.WindowOpenFailed("グラフウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         private bool CanOpenGraphWindow() => HasAnyAnalysisResult;
@@ -269,7 +272,8 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.Show($"テーブルウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Serilog.Log.Error(ex, "テーブルウィンドウ の表示に失敗", "テーブルウィンドウ");
+                MessageService.Show(GuardMessages.WindowOpenFailed("テーブルウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

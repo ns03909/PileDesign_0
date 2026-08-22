@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
@@ -100,7 +100,8 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.Show($"{errorPrefix}ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Serilog.Log.Error(ex, "{Window} ウィンドウの表示に失敗", errorPrefix);
+                MessageService.Show(GuardMessages.WindowOpenFailed($"{errorPrefix}ウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -199,7 +200,8 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Serilog.Log.Error(ex, "Chang 計算ウィンドウの表示に失敗");
+                MessageService.Show(GuardMessages.WindowOpenFailed("Chang 計算ウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
             // 変更後（以下の箇所で適用）

@@ -120,8 +120,13 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
+                // 図 1 枚の失敗で計算書全体を止めない。詳細はログに残す
+                // (以前は例外オブジェクト全体をスタックトレース込みでダイアログに出していた)。
                 Serilog.Log.Warning(ex, "[WordDocumentUtils] 画像挿入に失敗（図をスキップ）: {ImagePath}", imagePath);
-                PileDesign.Services.MessageService.Show($"画像挿入時にエラー: {ex}");
+                PileDesign.Services.MessageService.Show(
+                    "図の挿入に失敗したため、その図を省いて出力を続けます。\n"
+                    + $"詳細はログ ({PileDesign.Common.Logging.AppLog.LogDirectory}) を確認してください。",
+                    "計算書出力", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
             }
         }
 

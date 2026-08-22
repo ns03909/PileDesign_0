@@ -770,7 +770,9 @@ namespace PileDesign.ViewModels
             }
             else
             {
-                MessageService.Show("選択されたアイテムの型が正しくありません。");
+                // ここに来るのは実装の不具合。利用者に内部の型の話をしても操作は決まらないので、
+                // ダイアログは出さずログに残す。
+                Serilog.Log.Warning("選択項目の型が想定と異なるため処理をスキップしました");
             }
         }
 
@@ -893,7 +895,9 @@ namespace PileDesign.ViewModels
             }
             else
             {
-                MessageService.Show("選択されたアイテムの型が正しくありません。");
+                // ここに来るのは実装の不具合。利用者に内部の型の話をしても操作は決まらないので、
+                // ダイアログは出さずログに残す。
+                Serilog.Log.Warning("選択項目の型が想定と異なるため処理をスキップしました");
             }
         }
 
@@ -909,7 +913,9 @@ namespace PileDesign.ViewModels
             }
             else
             {
-                MessageService.Show("選択されたアイテムの型が正しくありません。");
+                // ここに来るのは実装の不具合。利用者に内部の型の話をしても操作は決まらないので、
+                // ダイアログは出さずログに残す。
+                Serilog.Log.Warning("選択項目の型が想定と異なるため処理をスキップしました");
             }
         }
 

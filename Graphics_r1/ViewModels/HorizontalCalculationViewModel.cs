@@ -1,4 +1,4 @@
-using PileDesign.Constants;
+﻿using PileDesign.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MathNet.Numerics;
@@ -190,6 +190,7 @@ namespace PileDesign.ViewModels
                 SetProperty(ref _level1CalculationStepsCount, value);
                 OnPropertyChanged(nameof(TotalCalculationCount));
                 ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+                NotifyExecuteAnalysisToolTipChanged();
             }
         }
 
@@ -203,6 +204,7 @@ namespace PileDesign.ViewModels
                 SetProperty(ref _level2CalculationStepsCount, value);
                 OnPropertyChanged(nameof(TotalCalculationCount));
                 ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+                NotifyExecuteAnalysisToolTipChanged();
             }
         }
 
@@ -217,6 +219,7 @@ namespace PileDesign.ViewModels
             {
                 SetProperty(ref _relaxationFactor, Math.Clamp(value, 0.1, 1.0));
                 ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+                NotifyExecuteAnalysisToolTipChanged();
             }
         }
 
@@ -250,6 +253,7 @@ namespace PileDesign.ViewModels
             {
                 SetProperty(ref _fullNRIterations, Math.Clamp(value, 1, 99));
                 ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+                NotifyExecuteAnalysisToolTipChanged();
             }
         }
 
@@ -443,6 +447,7 @@ namespace PileDesign.ViewModels
                 SetProperty(ref _maxCaseDegreeOfParallelism,
                     Math.Clamp(value, 1, Environment.ProcessorCount));
                 ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+                NotifyExecuteAnalysisToolTipChanged();
             }
         }
 
@@ -624,6 +629,13 @@ namespace PileDesign.ViewModels
         /// (旧実装は TotalCalculationCount と ProgressText だけ発火しており、
         /// 並列モニタが直接バインドしている EffectiveProgressTotal が更新されなかった)
         /// </summary>
+        /// <summary>実行ボタンのツールチップ (実行できない理由) の再評価を促す。</summary>
+        private void NotifyExecuteAnalysisToolTipChanged()
+        {
+            OnPropertyChanged(nameof(ExecuteAnalysisDisabledReason));
+            OnPropertyChanged(nameof(ExecuteAnalysisToolTip));
+        }
+
         private void NotifyProgressPropertiesChanged()
         {
             OnPropertyChanged(nameof(TotalCalculationCount));
@@ -706,6 +718,7 @@ namespace PileDesign.ViewModels
                 ResumeAnalysisCommand.NotifyCanExecuteChanged();
                 CancelAnalysisCommand.NotifyCanExecuteChanged();
                 ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+                NotifyExecuteAnalysisToolTipChanged();
                 ExecuteAdditiveAnalysisCommand?.NotifyCanExecuteChanged();
             }
         }
@@ -906,6 +919,7 @@ namespace PileDesign.ViewModels
                     void OnApplicabilityChanged()
                     {
                         ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+                NotifyExecuteAnalysisToolTipChanged();
                         OnPropertyChanged(nameof(TotalCalculationCount));
                         OnPropertyChanged(nameof(TotalLoadCaseCount));
                         OnPropertyChanged(nameof(TotalPlannedCaseCount));
@@ -1490,34 +1504,85 @@ namespace PileDesign.ViewModels
         /// </summary>
         private bool CanExecuteAnalysis()
         {
-            string DisableReason()
+            var blocker = DescribeAnalysisBlocker();
+            if (blocker != null)
             {
-                if (IsAnalysisRunning) return "IsAnalysisRunning=true (前回解析が完了/キャンセルしないまま固着の可能性)";
-                if (Level1CalculationStepsCount < 1 || Level1CalculationStepsCount > 256) return $"Level1CalculationStepsCount={Level1CalculationStepsCount} (1-256 範囲外)";
-                if (Level2CalculationStepsCount < 1 || Level2CalculationStepsCount > 256) return $"Level2CalculationStepsCount={Level2CalculationStepsCount} (1-256 範囲外)";
-                if (MaxCaseDegreeOfParallelism < 1) return $"MaxCaseDegreeOfParallelism={MaxCaseDegreeOfParallelism} (<1)";
-                if (FullNRIterations < 0) return $"FullNRIterations={FullNRIterations} (<0)";
-                if (RelaxationFactor <= 0 || RelaxationFactor > 1) return $"RelaxationFactor={RelaxationFactor} (0<x≤1 範囲外)";
-                if (InputModel == null) return "InputModel == null";
-                if ((InputModel.PileLayoutItems?.Count ?? 0) == 0) return "PileLayoutItems が空";
-                int activeCases = (InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases?.Count ?? 0);
-                if (activeCases == 0) return "AnalysisTargetSeismicLoadCases が 0 件 (荷重ケースの IsAnalysisTarget=true を確認)";
-                int activeCombinations = InputModel.LoadCasesInput.AllLoadCombinations?.Count(c => c.IsApplicable) ?? 0;
-                if (activeCombinations == 0) return "AllLoadCombinations の IsApplicable=true が 0 件";
-                return null;
-            }
-
-            var reason = DisableReason();
-            if (reason != null)
-            {
-                // 診断ログ — F9 が灰色のままになる原因を即座に追跡できるよう毎回出力
+                // 診断ログ — 実行ボタンが灰色のままになる原因を即座に追跡できるよう毎回出力
                 // Warning レベルで出力 (Info より確実にログに残る + filter で見つけやすい)
-                Serilog.Log.Warning("[F9 disabled] {Reason}", reason);
+                Serilog.Log.Warning("[水平解析 disabled] {Reason}", blocker.Value.Detail);
                 return false;
             }
             // 活性時も 1 度ログを出して、CanExecute が確実に呼ばれていることを確認できるように
-            Serilog.Log.Information("[F9 enabled] CanExecuteAnalysis returned true");
+            Serilog.Log.Information("[水平解析 enabled] CanExecuteAnalysis returned true");
             return true;
+        }
+
+        /// <summary>
+        /// 水平解析を実行できない理由 (利用者向けの言葉)。実行できるときは null。
+        /// 実行ボタンのツールチップにそのまま出す。
+        ///
+        /// 以前は理由を組み立てていながら出力先が Serilog だけで、
+        /// 画面には灰色のボタンしか見えなかった。
+        /// </summary>
+        public string? ExecuteAnalysisDisabledReason => DescribeAnalysisBlocker()?.User;
+
+        /// <summary>実行ボタンのツールチップ。実行できるときは操作の説明を出す。</summary>
+        public string ExecuteAnalysisToolTip =>
+            ExecuteAnalysisDisabledReason ?? "選択した荷重ケース・荷重組合せについて水平解析を実行します (F5)。";
+
+        /// <summary>
+        /// 実行を止めている条件を 1 つ返す。User は画面に出す文、Detail はログ用。
+        ///
+        /// User には内部の識別子 (PileLayoutItems・IsAnalysisTarget など) を出さず、
+        /// 「どこで何をすれば直るか」を書くこと。
+        /// </summary>
+        private (string User, string Detail)? DescribeAnalysisBlocker()
+        {
+            if (IsAnalysisRunning)
+                return ("解析を実行中です。完了するかキャンセルするまで待ってください。",
+                        "IsAnalysisRunning=true (前回解析が完了/キャンセルしないまま固着の可能性)");
+
+            if (Level1CalculationStepsCount < 1 || Level1CalculationStepsCount > 256)
+                return ($"レベル1 の計算ステップ数を 1〜256 にしてください (現在 {Level1CalculationStepsCount})。",
+                        $"Level1CalculationStepsCount={Level1CalculationStepsCount} (1-256 範囲外)");
+
+            if (Level2CalculationStepsCount < 1 || Level2CalculationStepsCount > 256)
+                return ($"レベル2 の計算ステップ数を 1〜256 にしてください (現在 {Level2CalculationStepsCount})。",
+                        $"Level2CalculationStepsCount={Level2CalculationStepsCount} (1-256 範囲外)");
+
+            if (MaxCaseDegreeOfParallelism < 1)
+                return ($"ケース並列数を 1 以上にしてください (現在 {MaxCaseDegreeOfParallelism})。",
+                        $"MaxCaseDegreeOfParallelism={MaxCaseDegreeOfParallelism} (<1)");
+
+            if (FullNRIterations < 0)
+                return ($"完全 Newton-Raphson の反復回数を 0 以上にしてください (現在 {FullNRIterations})。",
+                        $"FullNRIterations={FullNRIterations} (<0)");
+
+            if (RelaxationFactor <= 0 || RelaxationFactor > 1)
+                return ($"緩和係数を 0 より大きく 1 以下にしてください (現在 {RelaxationFactor})。",
+                        $"RelaxationFactor={RelaxationFactor} (0<x≤1 範囲外)");
+
+            if (InputModel == null)
+                return ("入力データが読み込まれていません。",
+                        "InputModel == null");
+
+            if ((InputModel.PileLayoutItems?.Count ?? 0) == 0)
+                return ("杭が 1 本も配置されていません。メイン画面の「杭」タブで杭を追加してください。",
+                        "PileLayoutItems が空");
+
+            if ((InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases?.Count ?? 0) == 0)
+                return ("解析対象の荷重ケースが 1 件もありません。荷重条件ウィンドウで「解析対象」にチェックを入れてください。",
+                        "AnalysisTargetSeismicLoadCases が 0 件 (荷重ケースの IsAnalysisTarget=true を確認)");
+
+            if ((InputModel.LoadCasesInput.AllLoadCombinations?.Count(c => c.IsApplicable) ?? 0) == 0)
+                return ("適用する荷重組合せが 1 件もありません。荷重条件ウィンドウで「適用」にチェックを入れてください。",
+                        "AllLoadCombinations の IsApplicable=true が 0 件");
+
+            if (TotalCalculationCount == 0)
+                return ("解析する計算が 1 件もありません。荷重が 0 のケースだけが選ばれていないか確認してください。",
+                        "TotalCalculationCount == 0");
+
+            return null;
         }
 
         /// <summary>追加実行 (段階追加再解析)。既存結果を保持し、未計算ケースのみ実行。</summary>

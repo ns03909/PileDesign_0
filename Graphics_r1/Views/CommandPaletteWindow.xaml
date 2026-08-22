@@ -56,6 +56,14 @@
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Padding" Value="8,4"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Style.Triggers>
+                            <!-- 今は実行できないコマンドは淡色にする。
+                                 選択自体は許す (Enter を押すと理由が読める)。 -->
+                            <DataTrigger Binding="{Binding CanRun}" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                                <Setter Property="ToolTip" Value="今は実行できません (前提となる操作が未完了です)"/>
+                            </DataTrigger>
+                        </Style.Triggers>
                     </Style>
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>

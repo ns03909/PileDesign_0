@@ -51,7 +51,8 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show($"Chang 初期化中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Serilog.Log.Error(ex, "Chang 計算ウィンドウの初期化に失敗");
+                MessageService.Show(PileDesign.Services.GuardMessages.WindowOpenFailed("Chang 計算ウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -271,7 +272,7 @@ namespace PileDesign.Views
         {
             if (DataContext is not ChangViewModel vm)
             {
-                MessageService.Show(this, "ViewModel が設定されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(this, "ウィンドウの準備が完了していないため実行できません。\nウィンドウを開き直してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -350,7 +351,7 @@ namespace PileDesign.Views
         {
             if (DataContext is not ChangViewModel vm)
             {
-                MessageService.Show(this, "ViewModel が設定されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(this, "ウィンドウの準備が完了していないため実行できません。\nウィンドウを開き直してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 

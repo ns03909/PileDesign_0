@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
@@ -1134,8 +1134,23 @@ namespace PileDesign.ViewModels
         {
             if (!CheckAndResetAnalysisResults()) return;
 
-            if (CurrentInputModel.PileLayoutItems.Count == 0 || CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count == 0)
+            if (CurrentInputModel.PileLayoutItems.Count == 0)
+            {
+                MessageService.Show(
+                    "杭が 1 本も配置されていないため、根入部の平面を自動調整できません。\n" +
+                    "メイン画面の「杭」タブで杭を追加してください。",
+                    "根入部の自動調整", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
+            }
+
+            if (CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count == 0)
+            {
+                MessageService.Show(
+                    "根入部の層が 1 つも定義されていないため、平面を自動調整できません。\n" +
+                    "メイン画面の「根入部」タブで層を追加してください。",
+                    "根入部の自動調整", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
 
             // BoundingBoxCalculator を使用して境界を計算
             var boundingBox = BoundingBoxCalculator.Calculate(
@@ -1163,7 +1178,7 @@ namespace PileDesign.ViewModels
 
             if (CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                MessageService.Show("杭配置データがありません。");
+                MessageService.Show(GuardMessages.NoPileLayout);
                 return;
             }
 
@@ -1261,7 +1276,7 @@ namespace PileDesign.ViewModels
                 var piles = CurrentInputModel.PileLayoutItems;
                 if (piles == null || piles.Count == 0)
                 {
-                    MessageService.Show("杭が配置されていません。\n杭タブで杭を追加してください。",
+                    MessageService.Show(GuardMessages.NoPileLayout,
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -1285,7 +1300,7 @@ namespace PileDesign.ViewModels
                 var piles = CurrentInputModel.PileLayoutItems;
                 if (piles == null || piles.Count == 0)
                 {
-                    MessageService.Show("杭が配置されていません。\n杭タブで杭を追加してください。",
+                    MessageService.Show(GuardMessages.NoPileLayout,
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -1296,7 +1311,7 @@ namespace PileDesign.ViewModels
                 var piles = CurrentInputModel.PileLayoutItems;
                 if (piles == null || piles.Count == 0)
                 {
-                    MessageService.Show("杭が配置されていません。\n杭タブで杭を追加してください。",
+                    MessageService.Show(GuardMessages.NoPileLayout,
                         "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }

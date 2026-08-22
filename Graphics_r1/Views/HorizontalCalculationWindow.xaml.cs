@@ -404,7 +404,8 @@ namespace PileDesign.Views
             catch (Exception ex)
             {
                 Log.Warning(ex, "[HorizontalCalculationWindow_Loaded]");
-                MessageService.Show($"水平解析ウィンドウの初期化でエラーが発生しました: {ex.Message}",
+                Serilog.Log.Error(ex, "水平解析ウィンドウ の初期化に失敗");
+                MessageService.Show(PileDesign.Services.GuardMessages.WindowOpenFailed("水平解析ウィンドウ"),
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
