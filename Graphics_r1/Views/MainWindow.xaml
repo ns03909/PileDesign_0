@@ -61,6 +61,14 @@
         <conv:SubscriptConverter x:Key="SubscriptConverter" />
         <conv:LoadCaseNameInSeismicCasesToVisibilityConverter x:Key="LoadCaseNameInSeismicCasesToVisibilityConverter"/>
         <conv:AnalysisResultContentEqualsToVisibilityConverter x:Key="AnalysisResultContentEqualsToVisibilityConverter"/>
+        <conv:ResultSymbolDescriptionConverter x:Key="ResultSymbolDescription"/>
+
+        <!-- 解析結果の選択肢は表示幅の都合で記号だけになっているので、
+             一覧の各項目に意味をツールチップで出す。 -->
+        <Style x:Key="ResultSymbolItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="ToolTip"
+                    Value="{Binding Converter={StaticResource ResultSymbolDescription}}"/>
+        </Style>
         <conv:AnalysisContentCategoryConverter x:Key="AnalysisContentCategoryConverter"/>
         <conv:MidSpanAndPileTopVisibilityConverter x:Key="MidSpanAndPileTopVisibilityConverter"/>
         <conv:ResultValueAndMidSpanAndPileTopVisibilityConverter x:Key="ResultValueAndMidSpanAndPileTopVisibilityConverter"/>
@@ -1786,7 +1794,8 @@
                     <!-- 梁応力 / 沈下応力 -->
                     <Fluent:ComboBox Header="梁応力" Width="100"
                           ItemsSource="{Binding AnalysisResultBeamForceOption}"
-                          SelectedItem="{Binding AnalysisResultBeamForceType}">
+                          SelectedItem="{Binding AnalysisResultBeamForceType}"
+                          ItemContainerStyle="{StaticResource ResultSymbolItemStyle}">
                         <Fluent:ComboBox.Style>
                             <Style TargetType="ComboBox">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -1818,7 +1827,8 @@
                     <!-- 節点変位 -->
                     <Fluent:ComboBox Header="節点変位" Width="100"
                           ItemsSource="{Binding AnalysisResultNodeDisplacementOption}"
-                          SelectedItem="{Binding AnalysisResultNodeDisplacementType}">
+                          SelectedItem="{Binding AnalysisResultNodeDisplacementType}"
+                          ItemContainerStyle="{StaticResource ResultSymbolItemStyle}">
                         <Fluent:ComboBox.Style>
                             <Style TargetType="ComboBox">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -1843,7 +1853,8 @@
                     <!-- 地盤反力 -->
                     <Fluent:ComboBox Header="地盤反力" Width="100"
                           ItemsSource="{Binding AnalysisResultSoilSpringOption}"
-                          SelectedItem="{Binding AnalysisResultSoilSpringType}">
+                          SelectedItem="{Binding AnalysisResultSoilSpringType}"
+                          ItemContainerStyle="{StaticResource ResultSymbolItemStyle}">
                         <Fluent:ComboBox.Style>
                             <Style TargetType="ComboBox">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -6232,6 +6243,7 @@
                                                         <Fluent:ComboBox Header="梁応力"
                                                               ItemsSource="{Binding AnalysisResultBeamForceOption}"
                                                               SelectedItem="{Binding AnalysisResultBeamForceType}"
+                                                              ItemContainerStyle="{StaticResource ResultSymbolItemStyle}"
                                                               Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=梁応力（水平）|沈下応力}">
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">
@@ -6244,6 +6256,7 @@
                                                         <Fluent:ComboBox Header="節点変位" 
                                                               ItemsSource="{Binding AnalysisResultNodeDisplacementOption}"
                                                               SelectedItem="{Binding AnalysisResultNodeDisplacementType}"
+                                                              ItemContainerStyle="{StaticResource ResultSymbolItemStyle}"
                                                               Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=節点変位（水平）}">
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">
@@ -6256,6 +6269,7 @@
                                                         <Fluent:ComboBox Header="地盤反力"
                                                               ItemsSource="{Binding AnalysisResultSoilSpringOption}"
                                                               SelectedItem="{Binding AnalysisResultSoilSpringType}"
+                                                              ItemContainerStyle="{StaticResource ResultSymbolItemStyle}"
                                                               Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=地盤反力（水平）}">
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">

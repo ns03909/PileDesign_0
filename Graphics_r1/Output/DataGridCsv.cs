@@ -40,12 +40,7 @@ namespace PileDesign.Output
             // ヘッダー行を追加
             var headers = dataGrid.Columns.Select(column =>
             {
-                if (column.Header is StackPanel stackPanel)
-                {
-                    var textBlocks = stackPanel.Children.OfType<TextBlock>().Select(tb => tb.Text);
-                    return string.Join(" ", textBlocks);
-                }
-                return column.Header?.ToString()?.Trim() ?? "";
+                return PileDesign.Common.DataGridHeaderText.From(column);
             }).ToArray();
             sb.AppendLine(string.Join(",", headers));
 
@@ -73,12 +68,7 @@ namespace PileDesign.Output
             // ヘッダー行
             var headers = dataGrid.Columns.Select(column =>
             {
-                if (column.Header is StackPanel stackPanel)
-                {
-                    var textBlocks = stackPanel.Children.OfType<TextBlock>().Select(tb => tb.Text);
-                    return string.Join(" ", textBlocks);
-                }
-                return column.Header?.ToString()?.Trim() ?? "";
+                return PileDesign.Common.DataGridHeaderText.From(column);
             }).ToArray();
             sb.AppendLine(string.Join("\t", headers));
 

@@ -100,7 +100,7 @@ namespace PileDesign.Services
                     columnSettings.Add(new DataGridColumnSetting
                     {
                         Index = i,
-                        Header = column.Header?.ToString() ?? "",
+                        Header = PileDesign.Common.DataGridHeaderText.From(column),
                         Width = column.Width.Value,
                         DisplayIndex = column.DisplayIndex
                     });

@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
@@ -886,7 +886,7 @@ namespace PileDesign.ViewModels
                             // ホバー共通情報
                             string hoverHeader = $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}°\n"
                                 + $"組合せ: cmb{loadCombination.No} "
-                                + $"(α={loadCombination.Alpha1:F2}/β₁={loadCombination.Beta1:F2}/β₂={loadCombination.Beta2:F2})\n"
+                                + $"(αL={loadCombination.Alpha1:F2}/βU={loadCombination.Beta1:F2}/βL={loadCombination.Beta2:F2})\n"
                                 + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}\n"
                                 + $"ステップ数: {lastStep}";
 
@@ -1748,7 +1748,7 @@ namespace PileDesign.ViewModels
             // 同名ケース（LoadAngle 違い）を区別するため角度を付記
             // LoadCombination は No 以外にも α₁/β₁/β₂ で同定されるため組合せ係数も付記して一意化
             return $"{loadCase.LoadName}@{loadCase.LoadAngle:F0}°|cmb{loadCombination.No}"
-                 + $"(α={loadCombination.Alpha1:F2}/β₁={loadCombination.Beta1:F2}/β₂={loadCombination.Beta2:F2})"
+                 + $"(αL={loadCombination.Alpha1:F2}/βU={loadCombination.Beta1:F2}/βL={loadCombination.Beta2:F2})"
                  + $"|LIQ:{isLiquefaction}";
         }
 

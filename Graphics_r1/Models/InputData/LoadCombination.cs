@@ -3,6 +3,18 @@ using System.ComponentModel;
 
 namespace PileDesign.Models.InputData
 {
+    /// <summary>
+    /// 荷重組合せ 1 通り分の係数。
+    ///
+    /// プロパティ名と画面・計算書の記号の対応 (名前からは読み取れないので注意):
+    ///   Alpha1 = αL … 杭曲げモーメント最大時の地盤変位 / 地盤変位の最大値
+    ///   Beta1  = βU … 杭曲げモーメント最大時の上部構造慣性力 / その最大値
+    ///   Beta2  = βL … 杭曲げモーメント最大時の基礎部慣性力 / その最大値
+    ///
+    /// 杭体応力の低減係数 β₁ / β₂ (基礎指針) とは別の量。
+    /// 表示で β₁ / β₂ を使うとそちらと見分けがつかないので、
+    /// 画面・グラフ・計算書のいずれも αL / βU / βL で統一する。
+    /// </summary>
     public class LoadCombination(int no, double alpha1, double beta1, double beta2) : INotifyPropertyChanged
     {
         private bool _isApplicable = true;

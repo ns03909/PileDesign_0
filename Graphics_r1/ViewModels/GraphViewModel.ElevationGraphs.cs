@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
@@ -123,7 +123,7 @@ namespace PileDesign.ViewModels
                             _graphHoverMap[scatter] =
                                 $"杭: #{pileLayoutDataItem.PileNo} (X={pileLayoutDataItem.X:N2}, Y={pileLayoutDataItem.Y:N2})\n"
                                 + $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}°\n"
-                                + $"組合せ: cmb{loadCombination.No} (α={loadCombination.Alpha1:F2}/β₁={loadCombination.Beta1:F2}/β₂={loadCombination.Beta2:F2})\n"
+                                + $"組合せ: cmb{loadCombination.No} (αL={loadCombination.Alpha1:F2}/βU={loadCombination.Beta1:F2}/βL={loadCombination.Beta2:F2})\n"
                                 + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}\n"
                                 + $"系列: {forceType} ({unit})\n"
                                 + $"最大絶対値: {absMax:N2} {unit}\n"
@@ -323,7 +323,7 @@ namespace PileDesign.ViewModels
                             // ホバーポップアップ用詳細
                             string hoverHeader = $"杭: #{pileLayoutDataItem.PileNo} (X={pileLayoutDataItem.X:N2}, Y={pileLayoutDataItem.Y:N2})\n"
                                 + $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}°\n"
-                                + $"組合せ: cmb{loadCombination.No} (α={loadCombination.Alpha1:F2}/β₁={loadCombination.Beta1:F2}/β₂={loadCombination.Beta2:F2})\n"
+                                + $"組合せ: cmb{loadCombination.No} (αL={loadCombination.Alpha1:F2}/βU={loadCombination.Beta1:F2}/βL={loadCombination.Beta2:F2})\n"
                                 + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}";
                             double pileMax = pileDisps.Count > 0 ? pileDisps.Max(Math.Abs) : 0;
                             double soilMax = soilDisps.Count > 0 ? soilDisps.Max(Math.Abs) : 0;
@@ -576,7 +576,7 @@ namespace PileDesign.ViewModels
                                 _graphHoverMap[scatter] =
                                     $"杭: #{pileLayoutDataItem.PileNo} (X={pileLayoutDataItem.X:N2}, Y={pileLayoutDataItem.Y:N2})\n"
                                     + $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}°\n"
-                                    + $"組合せ: cmb{loadCombination.No} (α={loadCombination.Alpha1:F2}/β₁={loadCombination.Beta1:F2}/β₂={loadCombination.Beta2:F2})\n"
+                                    + $"組合せ: cmb{loadCombination.No} (αL={loadCombination.Alpha1:F2}/βU={loadCombination.Beta1:F2}/βL={loadCombination.Beta2:F2})\n"
                                     + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}\n"
                                     + $"系列: {seriesLabel} ({unit})\n"
                                     + $"最大絶対値: {absMax:N2} {unit}\n"

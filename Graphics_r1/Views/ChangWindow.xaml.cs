@@ -216,7 +216,7 @@ namespace PileDesign.Views
                 var sb = new StringBuilder();
 
                 // ヘッダ
-                var headers = cols.Select(c => (c.Header?.ToString() ?? "").Replace("\"", "\"\""));
+                var headers = cols.Select(c => PileDesign.Common.DataGridHeaderText.From(c).Replace("\"", "\"\""));
                 sb.AppendLine(string.Join(",", headers.Select(h => h.Contains(',') || h.Contains('"') ? $"\"{h}\"" : h)));
 
                 // 行（Items を使う：ItemsSource が null の場合も安全）

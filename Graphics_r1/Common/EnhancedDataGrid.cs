@@ -649,24 +649,8 @@ namespace PileDesign.Common
             }
         }
 
-        /// <summary>
-        /// 列ヘッダーからテキストを取得します（StackPanel内のTextBlockを連結）。
-        /// </summary>
-        private static string GetColumnHeaderText(DataGridColumn column)
-        {
-            if (column.Header is string s) return s;
-            if (column.Header is StackPanel panel)
-            {
-                var parts = new List<string>();
-                foreach (var child in panel.Children)
-                {
-                    if (child is System.Windows.Controls.TextBlock tb && !string.IsNullOrEmpty(tb.Text))
-                        parts.Add(tb.Text);
-                }
-                return string.Join(" ", parts);
-            }
-            return column.Header?.ToString() ?? string.Empty;
-        }
+        /// <summary>列ヘッダーの表示文字列を取得します。</summary>
+        private static string GetColumnHeaderText(DataGridColumn column) => DataGridHeaderText.From(column);
 
         private static string GetCellText(object item, DataGridColumn column)
         {
