@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -78,13 +78,72 @@ namespace PileDesign.Common
             DataObject.RemovePastingHandler(tb, OnPasting);
             tb.LostFocus -= OnLostFocus;
 
+            tb.Loaded -= OnLoaded;
+
             if ((NumericInputMode)e.NewValue != NumericInputMode.None)
             {
                 tb.PreviewTextInput += OnPreviewTextInput;
                 DataObject.AddPastingHandler(tb, OnPasting);
                 tb.LostFocus += OnLostFocus;
+
+                // 入力範囲の案内は Loaded で行う。
+                // Min / Max は XAML の属性順で Mode より後に来るので、
+                // ここで読むとまだ null のことがある。
+                tb.Loaded += OnLoaded;
             }
         }
+
+        private static void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox tb) ApplyRangeToolTip(tb);
+        }
+
+        /// <summary>
+        /// 入力範囲をツールチップに出す。
+        ///
+        /// Min / Max は 82 箇所で指定されているが画面には出ておらず、
+        /// 範囲外を入れてクランプされて初めて制限に気付く状態だった。
+        ///
+        /// 既存のツールチップがある場合:
+        ///   ・単純な文字列なら範囲を 1 行追記する
+        ///   ・それ以外 (TextBlock / Grid などのリッチな内容) は触らない
+        /// </summary>
+        private static void ApplyRangeToolTip(TextBox tb)
+        {
+            string? range = DescribeRange(GetMin(tb), GetMax(tb));
+            if (range == null) return;
+
+            switch (tb.ToolTip)
+            {
+                case null:
+                    tb.ToolTip = range;
+                    break;
+
+                case string existing:
+                    if (!existing.Contains(range, StringComparison.Ordinal))
+                        tb.ToolTip = existing + Environment.NewLine + range;
+                    break;
+
+                    // リッチなツールチップは構造を崩さないよう触らない
+            }
+        }
+
+        /// <summary>入力範囲の説明。Min / Max どちらも無ければ null。</summary>
+        internal static string? DescribeRange(object? min, object? max)
+        {
+            double? lo = ResolveBound(min);
+            double? hi = ResolveBound(max);
+
+            if (lo.HasValue && hi.HasValue) return $"入力範囲: {Format(lo.Value)} 〜 {Format(hi.Value)}";
+            if (lo.HasValue) return $"入力範囲: {Format(lo.Value)} 以上";
+            if (hi.HasValue) return $"入力範囲: {Format(hi.Value)} 以下";
+            return null;
+        }
+
+        private static string Format(double v) =>
+            v == Math.Floor(v) && Math.Abs(v) < 1e15
+                ? ((long)v).ToString(CultureInfo.InvariantCulture)
+                : v.ToString("G6", CultureInfo.InvariantCulture);
 
         private static void OnPreviewTextInput(object sender, TextCompositionEventArgs e)
         {
