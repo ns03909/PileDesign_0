@@ -1857,18 +1857,14 @@ namespace PileDesign.ViewModels
                 if (AnaModels.Count > 0)
                     AnaModels[^1].ConcreteOptionsSignature = ConcreteModelOptions.Signature();
 
-                // 断面計算フォールバック（計算失敗→既定値代替）が発生していれば可視化する。
-                // 耐力 0 や線形 M-φ での代替が検定・グラフへ静かに流れるのを防ぐ。
+                // 断面計算が既定値で代替された件数は、解析ログとログファイルにだけ残す。
+                // 完了ダイアログには出さない (実装都合の用語で、読んでも次の操作が決まらないため)。
                 long fallbackCount = PileDesign.Common.CalcFallbackTracker.TotalCount;
                 string doneMessage = "計算が終了しました。";
                 if (fallbackCount > 0)
                 {
                     string fallbackSummary = PileDesign.Common.CalcFallbackTracker.BuildSummary();
-                    doneMessage += $"\n\n⚠ 断面計算などで {fallbackCount} 件のフォールバック（計算失敗→既定値での代替）が発生しました。\n"
-                        + fallbackSummary
-                        + "\n\n該当箇所の耐力・M-φ が 0 または線形弾性で代替されている可能性があります。"
-                        + "\n入力諸元とログ（詳細は log ファイル）を確認してください。";
-                    await AddLogAsync($"⚠ 計算フォールバック {fallbackCount} 件:\n{fallbackSummary}");
+                    await AddLogAsync($"断面計算を既定値で代替した箇所: {fallbackCount} 件\n{fallbackSummary}");
                 }
 
                 // 計算完了通知（UIスレッドで直接表示）
@@ -1876,7 +1872,7 @@ namespace PileDesign.ViewModels
                 // MainWindow に移っていてもダイアログが水平解析ウィンドウの上に表示されるようにする。
                 if (!BypassUiPromptsForTesting)
                 {
-                    var doneIcon = fallbackCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information;
+                    var doneIcon = MessageBoxImage.Information;
                     var horizontalWindow = System.Windows.Application.Current?.Windows
                         .Cast<System.Windows.Window>()
                         .FirstOrDefault(w => ReferenceEquals(w.DataContext, this));

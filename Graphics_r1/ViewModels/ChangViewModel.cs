@@ -507,7 +507,7 @@ namespace PileDesign.ViewModels
             var input = _inputModel;
             if (input == null)
             {
-                MessageService.Show("InputModel が見つかりません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show("入力データが読み込まれていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -633,7 +633,7 @@ namespace PileDesign.ViewModels
 
             RefreshPlots();
 
-            MessageService.Show("InputModel を適用しました。\n" +
+            MessageService.Show("入力データに反映しました。\n" +
                 (selectedLC != null && selectedComb != null
                     ? $"選択荷重: {selectedLC.LoadName} / 組合せ: {selectedComb.GetName()}\n全体水平力 (X 方向): {TotalHorizontalLoad:N0} kN\n"
                     : "荷重ケース／組合せが未選択のため水平力の設定は行っていません。\n") +

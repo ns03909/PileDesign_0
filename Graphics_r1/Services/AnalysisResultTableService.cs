@@ -8,6 +8,23 @@ namespace PileDesign.Services
 {
     public sealed class AnalysisResultTableService
     {
+        /// <summary>
+        /// 杭頭回転ばねの扱いを利用者向けの表記に直す。
+        ///
+        /// 内部のセットアップ経路 (<c>CombinedXY(12pts, Mcr=715, axialN=2465kN)</c> や
+        /// <c>Rigid(def.Mode=Rigid, PileTop='...')</c> など) は実装都合の文字列で、
+        /// 読んでも次の操作が決まらないので表には出さない (詳細は解析ログに残る)。
+        /// </summary>
+        private static string ToPileHeadStatusText(string? setupReason, bool isFallbackCurve)
+        {
+            if (isFallbackCurve) return "線形ばね";
+            if (string.IsNullOrEmpty(setupReason)) return "";
+            if (setupReason.StartsWith("Rigid", System.StringComparison.Ordinal)) return "剛";
+            if (setupReason.StartsWith("CombinedXY", System.StringComparison.Ordinal)
+                || setupReason.StartsWith("Separate", System.StringComparison.Ordinal)) return "M-θ曲線";
+            return "";
+        }
+
         public IReadOnlyList<ResultTable> BuildTables(
             AnaModel model,
             LoadCase? loadCase,
@@ -415,15 +432,11 @@ namespace PileDesign.Services
                     for (int j = 0; j < thetas.Count; j++)
                     {
                         double kth = CalcSegmentSlope(thetas, moms, j);
-                        // PointIndex=1 (先頭行) には経路情報を出す。フォールバック時は K·θ線形外挿、
-                        // それ以外はスナップショットが記録した SetupReason をそのまま表示。
-                        // snapReason が空なら旧経路 (rs.LastSetupReason) で補完。
-                        string reasonText = !string.IsNullOrEmpty(snapReason) ? snapReason : (rs.LastSetupReason ?? "?");
-                        string headerStatus = j == 0
-                            ? (isFallbackCurve
-                                ? $"K·θ線形外挿 [{reasonText}]"
-                                : reasonText)
-                            : "";
+                        // PointIndex=1 (先頭行) にだけ、杭頭がどう扱われたかを出す。
+                        // 内部のセットアップ経路そのままではなく利用者向けの表記に直す
+                        // (詳細な経路はログに残る)。
+                        string reasonText = !string.IsNullOrEmpty(snapReason) ? snapReason : (rs.LastSetupReason ?? "");
+                        string headerStatus = j == 0 ? ToPileHeadStatusText(reasonText, isFallbackCurve) : "";
                         mthetaRows.Add(new MThetaCurveRow
                         {
                             SpringIndex = idx + 1,
