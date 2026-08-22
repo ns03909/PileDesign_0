@@ -1098,8 +1098,14 @@ namespace PileDesign.ViewModels
             if (mainModel == null) return;
             if (mainModel.AnalysisStepResults == null || mainModel.AnalysisStepResults.Count == 0) return;
 
-            // 構造一致チェック (件数のみ。InputModel が変わっていれば既存の
-            // CheckAndResetAnalysisResults が main 側結果を破棄しているはず)
+            // 解析後に入力が編集されていれば転写しない。
+            // 既存結果は解析時の入力に対するもので、現在の入力に対しては無効。
+            // 転写すると「済」列が既に解析済みと主張し、追加実行で新旧の結果が混ざる。
+            // (以前は入力変更時に結果を破棄していたのでこの判定は不要だったが、
+            //  結果を保持するようになったため明示的に見る必要がある)
+            if (_mainWindowViewModel?.InputChangedSinceAnalysis == true) return;
+
+            // 構造一致チェック (件数のみ)
             if (mainModel.Nodes?.Count != editModel.Nodes?.Count) return;
             if (mainModel.Beams?.Count != editModel.Beams?.Count) return;
 

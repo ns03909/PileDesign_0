@@ -54,6 +54,11 @@ namespace PileDesign.ViewModels
                 // AnaModel の破棄
                 CurrentModel = null;
 
+                // 解析結果セット (解析時の入力スナップショット) も破棄する。
+                // これを残すと ResultInputModel が解析時の入力を返し続け、
+                // 結果を消したのにステータスバーやグラフの基準切替が残る。
+                ClearAnalysisResultSetState();
+
                 // 表示の更新
                 UpdateWindowImmediate();
             }

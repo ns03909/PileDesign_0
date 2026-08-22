@@ -123,13 +123,23 @@ namespace PileDesign.ViewModels
             InputChangedSinceAnalysis = set != null && changedSinceAnalysis;
         }
 
+        /// <summary>
+        /// 結果セットと陳腐化の記録だけを破棄する。
+        /// 解析結果を消すすべての経路から呼ぶこと。残すと ResultInputModel が
+        /// 解析時の入力を返し続け、消したはずの結果の痕跡が表示に残る。
+        /// </summary>
+        internal void ClearAnalysisResultSetState()
+        {
+            CurrentResultSet = null;
+            InputChangedSinceAnalysis = false;
+        }
+
         /// <summary>解析結果を明示的に破棄する（メニュー等から呼ぶ）。</summary>
         [RelayCommand]
         public void DiscardAnalysisResults()
         {
-            CurrentResultSet = null;
+            ClearAnalysisResultSetState();
             CurrentModel = null;
-            InputChangedSinceAnalysis = false;
             IsHorizontalAnalysisDone = false;
             IsVerticalAnalysisDone = false;
             IsGroupPileSettlementAnalysisDone = false;
