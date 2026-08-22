@@ -2947,6 +2947,11 @@ namespace PileDesign.ViewModels
                     // ステータスバー更新
                     OnPropertyChanged(nameof(AnalysisStatusText));
                     OnPropertyChanged(nameof(AnalysisStatusItems));
+
+                    // 水平解析 (F5) と単杭沈下解析 (F6) は杭要素分割が前提。
+                    // ボタンもキーボードもこのコマンドの CanExecute で同時に有効/無効が切り替わる。
+                    OpenLateralLoadAnalysisWindowCommand.NotifyCanExecuteChanged();
+                    OpenSettlementWindowCommand.NotifyCanExecuteChanged();
                 }
             }
         }

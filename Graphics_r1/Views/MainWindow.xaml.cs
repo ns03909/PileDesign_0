@@ -3188,32 +3188,10 @@ namespace PileDesign.Views
                 viewModel?.OpenPileBodyWindow();
                 e.Handled = true;
             }
-            // 杭要素分割
-            else if (e.Key == Key.D && Keyboard.Modifiers == ModifierKeys.Control)
-            {
-                _ = viewModel?.OpenElementDivisionWindowAsync();
-                e.Handled = true;
-            }
-            // 杭要素分割（F4）
-            else if (e.Key == Key.F4 && Keyboard.Modifiers == ModifierKeys.None)
-            {
-                _ = viewModel?.OpenElementDivisionWindowAsync();
-                e.Handled = true;
-            }
-
-            // 水平解析
-            else if (e.Key == Key.F5)
-            {
-                _ = viewModel?.OpenLateralLoadAnalysisWindowAsync();
-                e.Handled = true;
-            }
-
-            // 単杭沈下
-            else if (e.Key == Key.F6)
-            {
-                viewModel?.OpenSettlementWindow();
-                e.Handled = true;
-            }
+            // 杭要素分割 (Ctrl+D / F4)・水平解析 (F5)・単杭沈下 (F6) は Window.InputBindings で処理する。
+            // ここで VM のメソッドを直接呼ぶと、コマンドの CanExecute (杭要素分割済みか) を
+            // 迂回してしまい、「ボタンは灰色なのにキーでは実行できて、直後にダイアログで叱られる」
+            // 状態になる。
 
             // 基礎梁考慮沈下解析
             else if (e.Key == Key.F7)

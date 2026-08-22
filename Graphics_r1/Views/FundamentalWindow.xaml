@@ -342,7 +342,7 @@
                 <StackPanel Margin="6,4,6,4">
 
                     <ctrl:MaterialOptionRadioPair
-                        Header="解析用 M-φ 関係（コンクリート系杭）" HelpAnchor="fiber-mphi-option" GroupName="OptMPhi"
+                        Header="解析用 M-φ 関係（コンクリート系杭）" HelpAnchor="fund-opt-fiber-mphi" GroupName="OptMPhi"
                         IsAlternativeSelected="{Binding UseFiberMPhi, Mode=TwoWay}"
                         DefaultText="杭種ごとのポリリニアで算定する（「基礎部材の強度と変形性能」）"
                         DefaultFormula="場所打ちRC: 折線 (0,0)-(φcr, Mcr)-(φy, My)-(φc, β₁·Mu0) 等、杭種ごとの折線（β₁・β₂ 低減込み）"

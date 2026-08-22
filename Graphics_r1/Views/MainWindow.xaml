@@ -36,11 +36,17 @@
         <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveInputModelFileCommand}" />
         <KeyBinding Key="S" Modifiers="Control+Shift" Command="{Binding SaveInputModelFileAsCommand}" />
         <KeyBinding Key="W" Modifiers="Control+Shift" Command="{Binding OpenDocxOutputWindowCommand}" />
-        <!-- F4: 杭要素分割。フォーカスが Ribbon ComboBox 等にあると WPF ComboBox 自身が F4 を
+        <!-- 杭要素分割 / 水平解析。フォーカスが Ribbon ComboBox 等にあると WPF ComboBox 自身が F4 を
              ドロップダウン開閉に消費するため、KeyDown ハンドラだけではファイル開いた直後等に
-             効かない。Window.InputBindings ならフォーカス位置に関わらず発火する。 -->
-        <KeyBinding Key="F4" Command="{Binding OpenElementDivisionWindowAsyncCommand}" />
-        <KeyBinding Key="F5" Command="{Binding OpenLateralLoadAnalysisWindowAsyncCommand}" />
+             効かない。Window.InputBindings ならフォーカス位置に関わらず発火する。
+             コマンド名は MVVM Toolkit が生成するもの (Async を除いた名前)。
+             ここを間違えるとバインドが無言で失敗し、キーだけ効かなくなる。
+             また、コマンド経由にすることでボタンと同じ IsEnabled 判定が効く
+             (KeyDown から VM のメソッドを直接呼ぶと判定を迂回してしまう)。 -->
+        <KeyBinding Key="D" Modifiers="Control" Command="{Binding OpenElementDivisionWindowCommand}" />
+        <KeyBinding Key="F4" Command="{Binding OpenElementDivisionWindowCommand}" />
+        <KeyBinding Key="F5" Command="{Binding OpenLateralLoadAnalysisWindowCommand}" />
+        <KeyBinding Key="F6" Command="{Binding OpenSettlementWindowCommand}" />
     </Window.InputBindings>
 
     <Window.DataContext>
@@ -1576,9 +1582,10 @@
                 </Fluent:RibbonGroupBox>
 
                 <Fluent:RibbonGroupBox Header="水平解析" ToolTip="水平解析">
+                    <!-- 有効/無効はコマンドの CanExecute (杭要素分割済みか) に任せる。
+                         IsEnabled を別途書くと、ボタンとキーボードで条件が二重管理になる。 -->
                     <Fluent:Button x:Name="RibbonButtonLateralLoadAnalysisSettlement"
-                         Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
-                         IsEnabled="{Binding IsElementSplit}">
+                         Command="{Binding OpenLateralLoadAnalysisWindowCommand}">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <Setter Property="Header" Value="水平解析"/>
@@ -1601,8 +1608,7 @@
                     <Fluent:Button x:Name="RibbonButtonSettlement"
                          PreviewMouseDown="ButtonButtonSettlement_PreviewMouseDown"
                          Command="{Binding OpenSettlementWindowCommand}"
-                         ToolTip="各杭の荷重-沈下関係を計算します。杭要素分割が前提です。"
-                         IsEnabled="{Binding IsElementSplit}">
+                         ToolTip="各杭の荷重-沈下関係を計算します。杭要素分割が前提です。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <Setter Property="Header" Value="荷重沈下 関係解析"/>
@@ -2996,7 +3002,7 @@
                                                         StaysOpen="False"
                                                        AllowsTransparency="True"
                                                        PopupAnimation="Fade">
-                                                    <views:QuickHintBubble HintText="①[杭配置追加」ボタンで杭を追加" />
+                                                    <views:QuickHintBubble HintText="①「杭配置追加」ボタンで杭を追加" />
                                                 </Popup>
 
                                                 <Popup x:Name="QuickHintPopup2"
@@ -6029,15 +6035,13 @@
                                                     <Button Grid.Row="1" Grid.Column="1"
                                                         Padding="0"
                                                         Style="{StaticResource LateralLoadAnalysisButtonStyle}"
-                                                        Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
-                                                        IsEnabled="{Binding IsElementSplit}"/>
+                                                        Command="{Binding OpenLateralLoadAnalysisWindowCommand}"/>
 
                                                     <!-- 行1: 単杭沈下解析（状態でアイコン切替） -->
                                                     <Button Grid.Row="1" Grid.Column="2"
                                                         Padding="0"
                                                         Style="{StaticResource SettlementAnalysisButtonStyle}"
-                                                        Command="{Binding OpenSettlementWindowCommand}"
-                                                        IsEnabled="{Binding IsElementSplit}"/>
+                                                        Command="{Binding OpenSettlementWindowCommand}"/>
 
                                                     <!-- 行1: 基礎梁考慮沈下解析 -->
                                                     <Button Grid.Row="1" Grid.Column="3"

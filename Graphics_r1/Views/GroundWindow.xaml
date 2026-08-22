@@ -719,7 +719,7 @@
                     <TabItem Header="液状化">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="レベル1荷重検討用地表面加速度(m/s)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="レベル1荷重検討用地表面加速度(m/s²)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                        Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration1" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
                                          Text="{Binding GroundInput.GroundAcceleration1, StringFormat='{}{0:0.000}'}"
@@ -752,7 +752,7 @@
                                 </TextBox>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="レベル2荷重検討用地表面加速度(m/s)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="レベル2荷重検討用地表面加速度(m/s²)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                     Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration2" HorizontalAlignment="Left" Height="25"
                                          VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
@@ -1275,7 +1275,7 @@
                     <GroupBox Header="液状化" Grid.Column="1">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="レベル1荷重検討用地表面加速度(m/s)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="レベル1荷重検討用地表面加速度(m/s²)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                        Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration1" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
                                          Text="{Binding GroundInput.GroundAcceleration1, StringFormat='{}{0:0.000}'}"
@@ -1283,7 +1283,7 @@
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="レベル2荷重検討用地表面加速度(m/s)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="レベル2荷重検討用地表面加速度(m/s²)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                     Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration2" HorizontalAlignment="Left" Height="25"
                                          VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
@@ -1612,8 +1612,9 @@
                                                 Command="{Binding DeleteAllGroundLayersCommand}">
                                                 <Button.ToolTip>
                                                     <TextBlock>
-                                                        <Run Text="選択した土層の直下に新たな土層を追加します。"/><LineBreak/>
-                                                        <Run Text="未選択時には最下層の下に新たな土層を追加します。"/>
+                                                        <Run Text="この地盤の土層をすべて削除します。"/><LineBreak/>
+                                                        <Run Text="土質点データは削除されません。"/><LineBreak/>
+                                                        <Run Text="元に戻す (Ctrl+Z) で戻せます。"/>
                                                     </TextBlock>
                                                 </Button.ToolTip>
                                             </Button>
@@ -1898,7 +1899,9 @@
                                                         <StackPanel>
                                                             <TextBlock Text="変形" TextAlignment="Center"/>
                                                             <TextBlock Text="係数" TextAlignment="Center"/>
-                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
+                                                            <!-- 応力の次元なので kN/m^2。計算書 (WordDocument.GroundGraphs.cs) も
+                                                                 "Es (kN/m²)" で出力しており、E0 = 700N の式も kN/m^2 基準。 -->
+                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -2308,7 +2311,7 @@
                                                     <StackPanel>
                                                         <TextBlock Text="質点" TextAlignment="Center"/>
                                                         <TextBlock Text="質量" TextAlignment="Center"/>
-                                                        <TextBlock Text="(ton/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(t/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>

@@ -2410,7 +2410,11 @@ namespace PileDesign.ViewModels
         }
 
         // 沈下ウィンドウを開くメソッド
-        [RelayCommand]
+        // 杭要素分割が前提。CanExecute に持たせることで、ボタン・キーボード (F6)・
+        // コマンドパレットのどこから呼んでも同じ条件になる。
+        private bool CanOpenSettlementWindow() => IsElementSplit;
+
+        [RelayCommand(CanExecute = nameof(CanOpenSettlementWindow))]
         public void OpenSettlementWindow()
         {
             if (IsPreparedForAnalysis())
@@ -2430,8 +2434,17 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>
+        /// 水平解析ウィンドウを開けるか。杭要素分割が済んでいることが前提。
+        ///
+        /// この判定をコマンド側に持たせることで、リボンのボタンもキーボード (F5) も
+        /// 同じ条件で無効になる。以前はボタンにだけ IsEnabled を掛けていたため、
+        /// キーからは実行できてしまい、直後に「杭要素分割を行ってください。」と叱られていた。
+        /// </summary>
+        private bool CanOpenLateralLoadAnalysisWindow() => IsElementSplit;
+
         // 水平荷重解析ウィンドウを開くメソッド
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanOpenLateralLoadAnalysisWindow))]
         public async Task OpenLateralLoadAnalysisWindowAsync()
         {
             if (IsPreparedForAnalysis())
