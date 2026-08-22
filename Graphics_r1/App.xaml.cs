@@ -103,10 +103,59 @@ namespace PileDesign
                 mainWindow.Show();
 
                 Log.Information("MainWindow shown");
+
+                // 起動時の案内。ファイルを指定して起動した場合 (関連付けからのダブルクリック等) は
+                // やりたいことが決まっているので邪魔をしない。
+                if (string.IsNullOrEmpty(StartupFilePath))
+                {
+                    TryShowWelcomeDialog(mainWindow);
+                }
             }
             catch (Exception ex)
             {
                 HandleFatalException(ex, source: "OnStartup");
+            }
+        }
+
+        /// <summary>
+        /// 起動時の案内ダイアログを表示し、選ばれた入口へ送る。
+        /// 「次回から表示しない」を選ぶと <c>Settings.ShowWelcomeDialog</c> が false になり、
+        /// 以後は出ない (リボンのヘルプタブから同じ入口に行ける)。
+        ///
+        /// 案内の失敗で起動を止めない。ログだけ残して通常の空プロジェクトで続行する。
+        /// </summary>
+        private static void TryShowWelcomeDialog(MainWindow mainWindow)
+        {
+            try
+            {
+                // App は Application を継承しており、素の Properties は Application.Properties を指す。
+                // 設定は PileDesign.Properties なので完全修飾する。
+                if (!PileDesign.Properties.Settings.Default.ShowWelcomeDialog) return;
+
+                var dialog = new WelcomeDialog { Owner = mainWindow };
+                dialog.ShowDialog();
+
+                switch (dialog.Result)
+                {
+                    case WelcomeDialogResult.OpenExisting:
+                        (mainWindow.DataContext as MainWindowViewModel)?
+                            .OpenInputModelFileCommand.Execute(null);
+                        break;
+
+                    case WelcomeDialogResult.OpenSample:
+                        mainWindow.ShowExamplesBackstage();
+                        break;
+
+                    case WelcomeDialogResult.ShowQuickStart:
+                        MainWindowViewModel.OpenHelpWindowAt("quickstart", "クイックスタートガイド");
+                        break;
+
+                    // NewProject / None: 起動直後の空プロジェクトのまま何もしない
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Welcome dialog failed (non-fatal)");
             }
         }
 

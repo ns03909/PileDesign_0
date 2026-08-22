@@ -6,9 +6,22 @@ namespace PileDesign.Views
 {
     public partial class WelcomeDialog : Window
     {
+        /// <summary>
+        /// 選択結果。<see cref="WelcomeDialogResult.None"/> は閉じるだけで何も選ばなかった場合。
+        /// </summary>
+        public WelcomeDialogResult Result => ViewModel.Result;
+
+        public WelcomeDialogViewModel ViewModel { get; }
+
         public WelcomeDialog()
         {
             InitializeComponent();
+
+            // DataContext は XAML で設定していないので、ここで必ず入れる。
+            // (未設定だと {Binding NewProjectCommand} 等が無言で効かず、ボタンが反応しない)
+            ViewModel = new WelcomeDialogViewModel();
+            DataContext = ViewModel;
+
             Loaded += WelcomeDialog_Loaded;
         }
 

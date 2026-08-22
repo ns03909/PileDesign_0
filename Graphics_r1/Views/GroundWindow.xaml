@@ -1,6 +1,7 @@
 ﻿<Window x:Class="PileDesign.Views.GroundWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctrl="clr-namespace:PileDesign.Views.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
@@ -3170,6 +3171,10 @@
 
             <!-- OK / キャンセルボタン (右側) -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <!-- このウィンドウの説明への入口 -->
+                <ctrl:HelpLinkButton Anchor="section-ground-input" ScrollToTitle="「地盤」入力"
+                                     Text="このウィンドウのヘルプ" Margin="0,0,16,0"
+                                     VerticalAlignment="Center"/>
                 <Button x:Name="ButtonOk" Content="保存(_S)" HorizontalAlignment="Left"
                         VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
                         IsDefault="True"

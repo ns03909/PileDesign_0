@@ -49,6 +49,17 @@ namespace TestProject1
                         continue;
                     }
 
+                    // (c) HelpLinkButton の Anchor="..." 属性
+                    if (line.Contains("HelpLinkButton"))
+                    {
+                        var hb = Regex.Match(line, "\\bAnchor=\"([^\"]+)\"");
+                        if (hb.Success)
+                        {
+                            anchors.Add((Path.GetFileName(xaml), hb.Groups[1].Value));
+                            continue;
+                        }
+                    }
+
                     if (!line.Contains("HelpLink_Click")) continue;
                     var m = Regex.Match(line, "Tag=\"([^\"]+)\"");
                     if (m.Success)

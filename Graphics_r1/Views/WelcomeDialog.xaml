@@ -98,6 +98,16 @@
                                 Command="{Binding OpenExistingCommand}"
                                 Style="{StaticResource LinkButtonStyle}"
                                 HorizontalAlignment="Center"/>
+                        <Button Content="計算例を開く"
+                                Command="{Binding OpenSampleCommand}"
+                                ToolTip="基礎指針'19 の計算例などを読み込みます。"
+                                Style="{StaticResource LinkButtonStyle}"
+                                HorizontalAlignment="Center"/>
+                        <Button Content="使い方をみる"
+                                Command="{Binding ShowQuickStartCommand}"
+                                ToolTip="ヘルプのクイックスタートガイドを開きます。"
+                                Style="{StaticResource LinkButtonStyle}"
+                                HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- Row 1: セパレータ -->

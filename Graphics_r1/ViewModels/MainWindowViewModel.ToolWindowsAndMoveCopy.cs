@@ -128,6 +128,16 @@ namespace PileDesign.ViewModels
                 });
         }
 
+        /// <summary>
+        /// ヘルプの「クイックスタートガイド」を開く。
+        /// ヘルプは 1 万行を超えるため、先頭から読ませずに入門の章へ直接送る。
+        /// </summary>
+        [RelayCommand]
+        public static void OpenQuickStartHelp()
+        {
+            OpenHelpWindowAt("quickstart", "クイックスタートガイド");
+        }
+
         [RelayCommand]
         public static void OpenHelpChatWindow()
         {

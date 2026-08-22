@@ -9,7 +9,8 @@ namespace PileDesign.ViewModels
         None,
         NewProject,
         OpenExisting,
-        OpenSample
+        OpenSample,
+        ShowQuickStart
     }
 
     public partial class WelcomeDialogViewModel : ObservableObject
@@ -46,6 +47,14 @@ namespace PileDesign.ViewModels
         private void OpenSample()
         {
             Result = WelcomeDialogResult.OpenSample;
+            SavePreference();
+            RequestClose?.Invoke(this, EventArgs.Empty);
+        }
+
+        [RelayCommand]
+        private void ShowQuickStart()
+        {
+            Result = WelcomeDialogResult.ShowQuickStart;
             SavePreference();
             RequestClose?.Invoke(this, EventArgs.Empty);
         }

@@ -1,6 +1,7 @@
 <Window x:Class="PileDesign.Views.HorizontalCalculationWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctrl="clr-namespace:PileDesign.Views.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
@@ -686,9 +687,10 @@
 
         <!-- 下部ボタン -->
         <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Right">
-            <!--<Button x:Name="ButtonOk" Content="Ok 解析結果登録" Height="30" Width="200" Command="{Binding OkCommand}"
-                    Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-            <Button x:Name="ButtonCancel" Content="Cancel" Height="30" Width="100" Command="{Binding CancelCommand}"/>-->
+            <!-- このウィンドウの説明への入口 -->
+            <ctrl:HelpLinkButton Anchor="section-lateral-analysis" ScrollToTitle="「水平解析」（F5）"
+                                 Text="このウィンドウのヘルプ" Margin="0,0,16,0"
+                                 VerticalAlignment="Center"/>
             <Button x:Name="ButtonOk" Content="保存(_S)" HorizontalAlignment="Left"
                     VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
                     IsDefault="True"

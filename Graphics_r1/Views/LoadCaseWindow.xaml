@@ -2,6 +2,7 @@
         x:Name="RootWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctrl="clr-namespace:PileDesign.Views.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
@@ -1836,6 +1837,10 @@
 
         <Grid Grid.Row="2" Margin="0,4,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <!-- このウィンドウの説明への入口 -->
+                <ctrl:HelpLinkButton Anchor="section-loadcase-input" ScrollToTitle="「荷重条件」入力"
+                                     Text="このウィンドウのヘルプ" Margin="0,0,16,0"
+                                     VerticalAlignment="Center"/>
                 <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
                         VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
                 <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"

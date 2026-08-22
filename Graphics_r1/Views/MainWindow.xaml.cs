@@ -46,6 +46,18 @@ namespace PileDesign.Views
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        /// <summary>
+        /// Backstage を開き「計算例」タブを選択する。
+        /// 起動時の案内ダイアログで「計算例を開く」を選んだときの遷移先。
+        /// </summary>
+        public void ShowExamplesBackstage()
+        {
+            if (BackstageExamplesTab == null || MainBackstage == null) return;
+
+            BackstageExamplesTab.IsSelected = true;
+            MainBackstage.IsOpen = true;
+        }
+
         //public MainCanvasGeometry MainCanvasGeometry { get; set; } = new();
         public List<TextBlockInfo> TextBlockInfos { get; set; } = [];
 

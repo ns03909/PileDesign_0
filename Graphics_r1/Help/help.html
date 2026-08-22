@@ -1370,7 +1370,9 @@
         </section>
 
         <section id="quickstart">
-            <h2 id="quickstart">クイックスタートガイド</h2>
+            <!-- id は section 側だけに持たせる (h2 にも同じ id があると重複になり、
+                 getElementById がどちらを返すか実装依存になる) -->
+            <h2>クイックスタートガイド</h2>
             <p>
                 本プログラムを初めて使用する方向けに、基本的な操作の流れを説明します。<br>
                 下図の順序で入力・解析を進めてください。
@@ -3073,7 +3075,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     変更すると既存の解析結果は確認のうえ削除されます（杭要素分割は保持）。</li>
             </ul>
 
-            <h4 style="font-weight: bold;"><img class="heading-icon" src="icons/LoadCaseWindow.svg" alt="">「荷重条件」入力</h4>
+            <h4 id="section-loadcase-input" style="font-weight: bold;"><img class="heading-icon" src="icons/LoadCaseWindow.svg" alt="">「荷重条件」入力</h4>
             <p>
                 メニューバー直下の<img class="button-icon" src="icons/LoadCaseWindow.svg" alt="">「荷重条件」ボタンをクリックして開く「荷重条件ウィンドウ」で、内容を入力します。<br>
 
@@ -3961,7 +3963,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             <!-- ========================================
                  「杭体」入力
                  ======================================== -->
-            <h4 style="font-weight: bold;"><img class="heading-icon" src="icons/PileBodyWindow.svg" alt="">「杭体」入力</h4>
+            <h4 id="section-pile-body-input" style="font-weight: bold;"><img class="heading-icon" src="icons/PileBodyWindow.svg" alt="">「杭体」入力</h4>
             <p>
                 メニューバー直下の<img class="button-icon" src="icons/PileBodyWindow.svg" alt="">「杭体」ボタンをクリックして開く「杭体入力ウィンドウ」で、杭体の諸元を入力します。<br>
                 本ウィンドウでは、杭頭・杭体区間（断面）・杭先端の各部位を定義します。
@@ -4304,7 +4306,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 解析前にこのチェックを行うことで、不適切な入力による解析エラーを防止できます。
             </p>
 
-            <h4 style="font-weight: bold;"><img class="heading-icon" src="icons/ElementDivisionWindow.svg" alt="">「杭要素分割」（F4）</h4>
+            <h4 id="section-element-division" style="font-weight: bold;"><img class="heading-icon" src="icons/ElementDivisionWindow.svg" alt="">「杭要素分割」（F4）</h4>
             <p>杭要素分割ウィンドウを開きます。ショートカットキー F4 でも開くことができます。</p>
             <p>杭要素分割ウィンドウを開くには、以下の条件を満たす必要があります:</p>
             <ul>
@@ -4369,7 +4371,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 解析完了後、ボタンラベルに完了マークが表示されます。
             </p>
 
-            <h4 style="font-weight: bold;"><img class="heading-icon" src="icons/LateralLoadAnalysisWindow.svg" alt="">「水平解析」（F5）</h4>
+            <h4 id="section-lateral-analysis" style="font-weight: bold;"><img class="heading-icon" src="icons/LateralLoadAnalysisWindow.svg" alt="">「水平解析」（F5）</h4>
             <p>
                 杭要素分割済みの場合に有効になります。水平解析ウィンドウを開き、
                 荷重増分法＋ニュートン・ラフソン法による非線形水平解析を実行します。

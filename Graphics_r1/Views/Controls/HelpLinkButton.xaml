@@ -1,0 +1,12 @@
+<UserControl x:Class="PileDesign.Views.Controls.HelpLinkButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Name="Root">
+    <TextBlock VerticalAlignment="Center" FontSize="11">
+        <Hyperlink Click="HelpLink_Click"
+                   ToolTip="{Binding LinkToolTip, ElementName=Root}"><Run Text="{Binding Text, ElementName=Root, Mode=OneWay}"/></Hyperlink>
+    </TextBlock>
+</UserControl>
