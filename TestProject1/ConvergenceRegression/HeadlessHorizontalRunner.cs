@@ -42,6 +42,32 @@ namespace TestProject1.ConvergenceRegression
         public static ConvergenceSnapshot RunExample(
             string groundExampleName, string pileExampleName, RunOptions options)
         {
+            var (_, hcvm) = Run(groundExampleName, pileExampleName, options);
+
+            // ステップサマリ + 物理量 → スナップショット組立
+            return AggregateSnapshot(hcvm, groundExampleName, options);
+        }
+
+        /// <summary>
+        /// 例題をロードして水平解析を実行し、解析後の <see cref="MainWindowViewModel"/> を返す。
+        ///
+        /// 検定テキストのように「解析後の VM 全体」を入力とする検査で使う。
+        /// 実機と同じく解析結果を main 側へ移し、解析済みフラグも立てる。
+        /// </summary>
+        public static MainWindowViewModel RunExampleForViewModel(
+            string groundExampleName, string pileExampleName, RunOptions options)
+        {
+            var (mainVm, hcvm) = Run(groundExampleName, pileExampleName, options);
+
+            mainVm.CurrentModel = hcvm.CurrentModel;
+            mainVm.IsHorizontalAnalysisDone = hcvm.CurrentModel != null;
+            return mainVm;
+        }
+
+        /// <summary>例題ロード → VM 構築 → 解析実行までの共通部分。</summary>
+        private static (MainWindowViewModel MainVm, HorizontalCalculationViewModel Hcvm) Run(
+            string groundExampleName, string pileExampleName, RunOptions options)
+        {
             // 1. InputModel 構築 (IntegrationTests と同じビルダーを再利用)
             var (inputModel, error) = TestProject1.IntegrationTests.BuildExampleInputModel(
                 groundExampleName, pileExampleName);
@@ -90,8 +116,7 @@ namespace TestProject1.ConvergenceRegression
             if (hcvm.IsAnalysisRunning)
                 throw new TimeoutException($"水平解析が 10 分以内に完了しませんでした: {groundExampleName}+{pileExampleName}");
 
-            // 5. ステップサマリ + 物理量 → スナップショット組立
-            return AggregateSnapshot(hcvm, groundExampleName, options);
+            return (mainVm, hcvm);
         }
 
         /// <summary>
