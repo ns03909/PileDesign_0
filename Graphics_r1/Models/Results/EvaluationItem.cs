@@ -91,6 +91,9 @@ namespace PileDesign.Models.Results
         /// </summary>
         public double Ratio => Limit > 0 ? Response / Limit : double.NaN;
 
+        /// <summary>一覧に出す判定の文字列。</summary>
+        public string StatusLabel => IsOk ? "OK" : "NG";
+
         /// <summary>画面で対象を特定するための文字列。例:「杭配置No.7 / 要素3 / i端」</summary>
         public string TargetDescription
         {

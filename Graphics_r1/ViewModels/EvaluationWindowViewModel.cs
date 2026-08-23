@@ -47,6 +47,24 @@ namespace PileDesign.ViewModels
         [ObservableProperty]
         private EvaluationResult _result = new([]);
 
+        /// <summary>
+        /// 一覧に出す項目。表示フィルタ適用済みで、<b>検定比の降順</b>。
+        /// 一番厳しいところが先頭に来る。
+        /// </summary>
+        [ObservableProperty]
+        private IReadOnlyList<EvaluationItem> _displayItems = [];
+
+        /// <summary>
+        /// 要約行。支配ケース (検定比が最大の項目) を 1 行で示す。
+        /// 「NG が 3 件」だけでは、どこをどれだけ直せばよいか分からないため。
+        /// </summary>
+        [ObservableProperty]
+        private string _summaryText = "「低減前水平解析」または「低減後水平解析」ボタンを押してください。";
+
+        /// <summary>NG が 1 件以上あるか (要約行の色分け用)。</summary>
+        [ObservableProperty]
+        private bool _hasNg;
+
         public EvaluationWindowViewModel(MainWindowViewModel mainVm)
         {
             _mainVm = mainVm;
@@ -92,6 +110,9 @@ namespace PileDesign.ViewModels
                 sb.AppendLine("解析結果がありません。水平解析を実行してください。");
                 EvaluationText = sb.ToString();
                 StatusText = "解析結果なし";
+                Result = new EvaluationResult([]);
+                UpdateSummaryAndList();
+                SummaryText = "解析結果がありません。水平解析を実行してください。";
                 return;
             }
 
@@ -199,6 +220,30 @@ namespace PileDesign.ViewModels
             StatusText = grandNg == 0
                 ? $"すべてOK (チェック {grandOk + grandNg} 件)"
                 : $"NG: {grandNg} 件 / OK: {grandOk} 件";
+
+            UpdateSummaryAndList();
+        }
+
+        /// <summary>一覧と要約行を <see cref="Result"/> から作り直す。</summary>
+        private void UpdateSummaryAndList()
+        {
+            DisplayItems = Result.ByRatioDescending
+                .Where(i => EvaluationResult.PassesFilter(i, DisplayFilter))
+                .ToList();
+
+            HasNg = Result.NgCount > 0;
+
+            var governing = Result.Governing;
+            if (governing == null)
+            {
+                SummaryText = "検定対象がありません。";
+                return;
+            }
+
+            // 支配ケース = 一番厳しいところ。NG が無くても余裕の度合いが分かる。
+            SummaryText =
+                $"最大検定比 {governing.Ratio:F2}　／　{governing.Category}　／　" +
+                $"{governing.TargetDescription}　／　{governing.ConditionDescription}";
         }
 
         /// <summary>
