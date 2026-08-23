@@ -78,6 +78,28 @@ namespace PileDesign.ViewModels
         /// 履歴ラベルに使う。可能なら明示的に日本語の説明を渡してください
         /// (例: SaveUndoState("杭追加"))。
         /// </summary>
+        /// <summary>
+        /// 読み込み・新規作成のあと、まだ一度も編集していないか。
+        /// <see cref="SaveUndoState"/> が全編集の集約点なので、そこで false になる。
+        /// </summary>
+        private bool _isProjectUntouched = true;
+
+        /// <summary>
+        /// 今の入力を捨てても失うものが無いか。
+        ///
+        /// 「現状の入力内容は削除されます」の確認は、これが false のときだけ出す。
+        /// 起動直後や計算例を読み込んだ直後にも出していると、
+        /// 内容を確かめずに「はい」を押すだけの確認になり、
+        /// 本当に失うものがあるときにも読まれなくなる。
+        /// </summary>
+        public bool CanDiscardInputWithoutLoss => _isProjectUntouched && !HasAnyAnalysisResult;
+
+        /// <summary>
+        /// 読み込み・新規作成・計算例ロードの直後に呼ぶ。
+        /// 「この入力は捨てても失うものが無い」状態に戻す。
+        /// </summary>
+        public void MarkProjectUntouched() => _isProjectUntouched = true;
+
         public void SaveUndoState([System.Runtime.CompilerServices.CallerMemberName] string? description = null)
         {
             // 直接呼出は「大規模操作」を意味するため、進行中のデバウンスセッションを終了させる
@@ -89,6 +111,9 @@ namespace PileDesign.ViewModels
             {
                 _undoManager.SaveState(copy, FormatHistoryDescription(description));
                 RaiseUndoStateChanged();
+
+                // 編集が入ったので、以降は破棄の確認を出す。
+                _isProjectUntouched = false;
 
                 // 入力が編集された = 表示中の解析結果は現在の入力と一致しない。
                 // 結果は破棄しない (解析時の入力ごと切り離してあるため表示は整合している)。

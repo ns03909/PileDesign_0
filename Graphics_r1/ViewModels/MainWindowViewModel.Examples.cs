@@ -57,13 +57,17 @@ namespace PileDesign.ViewModels
         /// <param name="displayName">表示名（メッセージボックス用）</param>
         private async Task LoadPileExampleAsync(string pileJsonFileName, string displayName)
         {
-            // 計算例の読み込み確認 (はい=続行 / いいえ=中止)
-            var confirm = MessageService.Show(
-                $"現状の入力内容は削除されます。{displayName}を読み込みますか？",
-                "計算例の読み込み確認",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-            if (confirm != MessageBoxResult.Yes) return;
+            // 読み込みの確認は、失うものがあるときだけ出す。
+            // 起動直後や計算例を読み込んだ直後は、捨てて困る入力が無い。
+            if (!CanDiscardInputWithoutLoss)
+            {
+                var confirm = MessageService.Show(
+                    $"現状の入力内容は削除されます。{displayName}を読み込みますか？",
+                    "計算例の読み込み確認",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (confirm != MessageBoxResult.Yes) return;
+            }
 
             // 砂時計を即座に出す (Backstage 閉じる前に視覚フィードバック)
             Mouse.OverrideCursor = Cursors.Wait;
@@ -202,6 +206,10 @@ namespace PileDesign.ViewModels
 
             // 既製コンクリート杭ライブラリの整合性チェック (PileExampleLoader 経由でも検証)
             ShowPrecastPileNameWarningsIfAny(CurrentInputModel);
+
+            // 読み込んだ直後は「まだ何も編集していない」。
+            // 続けて別の計算例を読むときに、無意味な確認を出さないため。
+            MarkProjectUntouched();
         }
 
         /// <summary>
@@ -211,13 +219,17 @@ namespace PileDesign.ViewModels
         /// <param name="displayName">表示名（メッセージボックス用）</param>
         private async Task LoadGroupSettlementExampleAsync(string jsonFileName, string displayName)
         {
-            // 計算例の読み込み確認 (はい=続行 / いいえ=中止)
-            var confirm = MessageService.Show(
-                $"現状の入力内容は削除されます。{displayName}を読み込みますか？",
-                "計算例の読み込み確認",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-            if (confirm != MessageBoxResult.Yes) return;
+            // 読み込みの確認は、失うものがあるときだけ出す。
+            // 起動直後や計算例を読み込んだ直後は、捨てて困る入力が無い。
+            if (!CanDiscardInputWithoutLoss)
+            {
+                var confirm = MessageService.Show(
+                    $"現状の入力内容は削除されます。{displayName}を読み込みますか？",
+                    "計算例の読み込み確認",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (confirm != MessageBoxResult.Yes) return;
+            }
 
             // 砂時計を即座に出す (Backstage 閉じる前に視覚フィードバック)
             Mouse.OverrideCursor = Cursors.Wait;
@@ -322,6 +334,10 @@ namespace PileDesign.ViewModels
 
             // 既製コンクリート杭ライブラリの整合性チェック (GroupSettlementExampleLoader 経由でも検証)
             ShowPrecastPileNameWarningsIfAny(CurrentInputModel);
+
+            // 読み込んだ直後は「まだ何も編集していない」。
+            // 続けて別の計算例を読むときに、無意味な確認を出さないため。
+            MarkProjectUntouched();
         }
 
         // 設計例集3.1

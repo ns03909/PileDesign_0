@@ -130,6 +130,7 @@ namespace PileDesign.ViewModels
             _autoSaveService.Stop();
 
             CurrentInputModel.Reset();
+            MarkProjectUntouched();
             this.CurrentModel = null; // AnaModelもリセット
             CurrentFilePath = null;
             LoadedExampleName = null;  // 新規作成時はタイトルバーを [新規] に戻す
@@ -306,6 +307,10 @@ namespace PileDesign.ViewModels
             // Undo 履歴をクリアして読込状態を初期状態として保存
             _undoManager.Clear();
             SaveUndoState();
+
+            // 読み込んだ直後は「まだ何も編集していない」。
+            // (直前の SaveUndoState で編集扱いになるため、その後に戻す)
+            MarkProjectUntouched();
 
             // 最終描画＆通知
             UpdateWindowImmediate();
