@@ -27,6 +27,21 @@ namespace PileDesign.Models.Results
         public string LiquefactionLabel => IsLiquefaction ? "有" : "無";
 
         /// <summary>
+        /// 行だけ差し替えた複製。条件フィルタで行を絞った表を作るのに使う。
+        /// </summary>
+        public ResultTable WithRows(IReadOnlyList<object> rows) => new()
+        {
+            Name = Name,
+            Category = Category,
+            Columns = Columns,
+            Rows = rows,
+            LoadCaseName = LoadCaseName,
+            LoadCombinationName = LoadCombinationName,
+            IsLiquefaction = IsLiquefaction,
+            SpansAllConditions = SpansAllConditions,
+        };
+
+        /// <summary>
         /// ListBox表示用の名前（液状化状態を含む）
         /// 液状化状態を先頭に表示して、切れても区別できるようにする
         /// </summary>

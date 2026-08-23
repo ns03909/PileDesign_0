@@ -140,27 +140,82 @@ namespace PileDesign.ViewModels
             }
 
             FilteredTables.Clear();
-            var filtered = AllTables.Where(t =>
-                (SelectedTableCategoryFilter == UiText.All ||
-                 Converters.TableCategoryConverter.CategoryOf(t) == SelectedTableCategoryFilter) &&
-                // 全条件をまたぐ表 (検定結果) は、条件で絞り込んでも残す。
-                // 中身の行に条件の列があるので、そちらで見分けられる。
-                (t.SpansAllConditions || (
-                    (SelectedLoadCaseFilter == UiText.All
-                        || (levelCaseNames != null && levelCaseNames.Contains(t.LoadCaseName))
-                        || t.LoadCaseName == SelectedLoadCaseFilter) &&
-                    (SelectedLoadCombinationFilter == UiText.All || t.LoadCombinationName == SelectedLoadCombinationFilter) &&
-                    (SelectedLiquefactionFilter == UiText.All ||
-                     (SelectedLiquefactionFilter == "有" ? t.IsLiquefaction : !t.IsLiquefaction))))
-            ).ToList();
 
-            foreach (var t in filtered)
+            foreach (var t in AllTables)
             {
+                if (SelectedTableCategoryFilter != UiText.All
+                    && Converters.TableCategoryConverter.CategoryOf(t) != SelectedTableCategoryFilter)
+                    continue;
+
+                if (t.SpansAllConditions)
+                {
+                    // 荷重条件をまたぐ表 (検定結果) は、表そのものが条件を持たない。
+                    // 表を素通しにすると、解析していない条件で絞ったときにも
+                    // 表が残り「その条件の結果がある」と読めてしまうため、
+                    // 条件のフィルタは行に対して掛け、残る行が無ければ表ごと出さない。
+                    var rows = t.Rows.Where(RowMatchesConditionFilters).ToList();
+                    if (rows.Count == 0) continue;
+
+                    FilteredTables.Add(rows.Count == t.Rows.Count ? t : t.WithRows(rows));
+                    continue;
+                }
+
+                if (!TableMatchesConditionFilters(t, levelCaseNames)) continue;
                 FilteredTables.Add(t);
             }
 
             if (!FilteredTables.Contains(SelectedTable))
                 SelectedTable = FilteredTables.FirstOrDefault();
+        }
+
+        /// <summary>表 1 枚が 1 つの荷重条件に対応する場合の絞り込み判定。</summary>
+        private bool TableMatchesConditionFilters(ResultTable t, HashSet<string>? levelCaseNames) =>
+            (SelectedLoadCaseFilter == UiText.All
+                || (levelCaseNames != null && levelCaseNames.Contains(t.LoadCaseName))
+                || t.LoadCaseName == SelectedLoadCaseFilter)
+            && (SelectedLoadCombinationFilter == UiText.All || t.LoadCombinationName == SelectedLoadCombinationFilter)
+            && (SelectedLiquefactionFilter == UiText.All
+                || (SelectedLiquefactionFilter == "有" ? t.IsLiquefaction : !t.IsLiquefaction));
+
+        /// <summary>
+        /// またぐ表の行 1 件の絞り込み判定。
+        /// 条件を名乗れない行 (IHasLoadCondition を実装しない) は、
+        /// 条件で絞り込んでいる間は出さない (条件が合うと言い切れないため)。
+        /// </summary>
+        private bool RowMatchesConditionFilters(object row)
+        {
+            bool filtering = SelectedLoadCaseFilter != UiText.All
+                          || SelectedLoadCombinationFilter != UiText.All
+                          || SelectedLiquefactionFilter != UiText.All;
+            if (!filtering) return true;
+
+            if (row is not IHasLoadCondition c) return false;
+
+            if (SelectedLoadCaseFilter != UiText.All)
+            {
+                // レベル絞り込み時は該当ケース名の集合で判定する
+                if (SelectedLoadCaseFilter == LoadCaseFilterLevel1 || SelectedLoadCaseFilter == LoadCaseFilterLevel2)
+                {
+                    int targetLevel = SelectedLoadCaseFilter == LoadCaseFilterLevel1 ? 1 : 2;
+                    var names = AllSeismicLoadCases?
+                        .Where(lc => lc.Level == targetLevel)
+                        .Select(lc => lc.LoadName) ?? [];
+                    if (!names.Contains(c.LoadCaseName)) return false;
+                }
+                else if (c.LoadCaseName != SelectedLoadCaseFilter) return false;
+            }
+
+            if (SelectedLoadCombinationFilter != UiText.All
+                && c.LoadCombinationName != SelectedLoadCombinationFilter) return false;
+
+            if (SelectedLiquefactionFilter != UiText.All)
+            {
+                // 液状化の概念が無い行 (基礎梁の傾斜角) は、有/無 どちらでも対象外
+                if (c.IsLiquefaction is not bool liq) return false;
+                if (liq != (SelectedLiquefactionFilter == "有")) return false;
+            }
+
+            return true;
         }
 
         private void ExportCsv()

@@ -27,7 +27,7 @@ namespace PileDesign.Models.Results
     /// 従来の出力と 1 文字も変えないため、書式の再現に要る素材
     /// (<see cref="LimitName"/> や <see cref="EndLabel"/> など) も持たせている。
     /// </summary>
-    public sealed record EvaluationItem
+    public sealed record EvaluationItem : IHasLoadCondition
     {
         public EvaluationKind Kind { get; init; }
 
@@ -58,9 +58,16 @@ namespace PileDesign.Models.Results
         [ResultColumn("荷重組合せ", 5, tooltip: "この検定を行った荷重組合せ (αL / βU / βL)")]
         public string LoadCombinationName { get; init; } = "";
 
-        /// <summary>「液状化有」「液状化無」。</summary>
+        /// <summary>
+        /// 液状化を考慮したケースか。液状化の概念が無い検定 (基礎梁の傾斜角) では null。
+        /// 条件フィルタで行を絞るのに使う。
+        /// </summary>
+        public bool? IsLiquefaction { get; init; }
+
+        /// <summary>「液状化有」「液状化無」。概念が無い検定では空。</summary>
         [ResultColumn("液状化", 6, tooltip: "液状化を考慮したケースか")]
-        public string LiquefactionLabel { get; init; } = "";
+        public string LiquefactionLabel =>
+            IsLiquefaction is bool b ? (b ? "液状化有" : "液状化無") : "";
 
         /// <summary>応答値 (解析から得た値)。</summary>
         [ResultColumn("応答値", 10, "N3", "解析から得た値。単位は「単位」列を参照")]

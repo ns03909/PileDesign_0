@@ -57,28 +57,96 @@ namespace TestProject1
             Assert.AreEqual("水平解析結果", TableCategoryConverter.CategoryOf(NormalTable()));
         }
 
+        private static EvaluationItem Item(string loadCase, bool? liquefaction) => new()
+        {
+            Kind = EvaluationKind.PileHeadRotation,
+            LoadCaseName = loadCase,
+            LoadCombinationName = "cmb1",
+            IsLiquefaction = liquefaction,
+            Response = 0.017,
+            Limit = 0.010,
+            IsOk = false,
+        };
+
+        private static ResultTable EvaluationTableWith(params EvaluationItem[] items) => new()
+        {
+            Name = "検定結果（低減前水平解析）",
+            Category = "検定",
+            SpansAllConditions = true,
+            Columns = ResultColumnReflectionCache.GetColumns(typeof(EvaluationItem)),
+            Rows = items,
+        };
+
         /// <summary>
-        /// 荷重条件で絞り込んでも、全条件をまたぐ表は残ること。
-        /// 落としてしまうと「液状化有で絞ったら検定が消えた」になる。
+        /// またぐ表は、条件のフィルタで<b>行が絞られる</b>こと。
+        ///
+        /// 表ごと素通しにすると、解析していない条件で絞ったときにも表が残り、
+        /// 「その条件の結果がある」と読めてしまう。
+        /// 実際に「液状化なしの検討はしていないのに結果が出ている」と受け取られた。
         /// </summary>
         [TestMethod]
-        public void SpanningTable_SurvivesConditionFilters()
+        public void SpanningTable_FiltersItsRowsByCondition()
         {
             var vm = new TableWindowViewModel();
-            vm.LoadTables([EvaluationTable(), NormalTable()]);
+            vm.LoadTables([EvaluationTableWith(Item("U1", true), Item("U1", true))]);
 
-            Assert.AreEqual(2, vm.FilteredTables.Count, "絞り込み前は 2 枚");
+            Assert.AreEqual(1, vm.FilteredTables.Count, "絞り込み前は表が出る");
+            Assert.AreEqual(2, vm.FilteredTables[0].Rows.Count);
 
-            vm.SelectedLiquefactionFilter = "無";   // 通常表 (液状化有) は落ちる
-            Assert.IsTrue(vm.FilteredTables.Any(t => t.SpansAllConditions),
-                "液状化で絞ったら検定の表が消えた");
-            Assert.IsFalse(vm.FilteredTables.Any(t => !t.SpansAllConditions),
-                "条件の合わない通常表が残っている");
+            // 液状化「無」で絞る = 解析していない条件 → 表ごと消える
+            vm.SelectedLiquefactionFilter = "無";
+            Assert.AreEqual(0, vm.FilteredTables.Count,
+                "解析していない条件で絞ったのに検定の表が残っている");
 
-            vm.SelectedLiquefactionFilter = PileDesign.Common.UiText.All;
-            vm.SelectedLoadCaseFilter = "存在しないケース";
-            Assert.IsTrue(vm.FilteredTables.Any(t => t.SpansAllConditions),
-                "荷重ケースで絞ったら検定の表が消えた");
+            // 液状化「有」なら出る
+            vm.SelectedLiquefactionFilter = "有";
+            Assert.AreEqual(1, vm.FilteredTables.Count);
+            Assert.AreEqual(2, vm.FilteredTables[0].Rows.Count);
+        }
+
+        /// <summary>条件が混在する表では、合う行だけが残ること。</summary>
+        [TestMethod]
+        public void SpanningTable_KeepsOnlyTheMatchingRows()
+        {
+            var vm = new TableWindowViewModel();
+            vm.LoadTables([EvaluationTableWith(
+                Item("U1", true), Item("U2", true), Item("U1", false))]);
+
+            vm.SelectedLoadCaseFilter = "U1";
+            Assert.AreEqual(1, vm.FilteredTables.Count);
+            Assert.AreEqual(2, vm.FilteredTables[0].Rows.Count, "U1 の 2 行だけが残る");
+
+            vm.SelectedLiquefactionFilter = "有";
+            Assert.AreEqual(1, vm.FilteredTables[0].Rows.Count, "U1 かつ 液状化有 の 1 行");
+        }
+
+        /// <summary>
+        /// 液状化の概念が無い行 (基礎梁の傾斜角) は、液状化で絞ると有/無どちらでも出ないこと。
+        /// 「無」に出すと液状化を考慮しない検討をしたように読める。
+        /// </summary>
+        [TestMethod]
+        public void RowsWithoutLiquefactionConcept_AppearInNeither()
+        {
+            var vm = new TableWindowViewModel();
+            vm.LoadTables([EvaluationTableWith(Item("反復ケース", null))]);
+
+            Assert.AreEqual(1, vm.FilteredTables.Count, "絞り込み前は出る");
+
+            vm.SelectedLiquefactionFilter = "無";
+            Assert.AreEqual(0, vm.FilteredTables.Count, "液状化無に混ざっている");
+
+            vm.SelectedLiquefactionFilter = "有";
+            Assert.AreEqual(0, vm.FilteredTables.Count, "液状化有に混ざっている");
+        }
+
+        /// <summary>液状化の概念が無い検定では、ラベルを空にすること。</summary>
+        [TestMethod]
+        public void LiquefactionLabel_IsEmptyWhenNotApplicable()
+        {
+            Assert.AreEqual("液状化有", Item("U1", true).LiquefactionLabel);
+            Assert.AreEqual("液状化無", Item("U1", false).LiquefactionLabel);
+            Assert.AreEqual("", Item("反復ケース", null).LiquefactionLabel,
+                "液状化の概念が無い検定に「液状化無」と出してはいけない");
         }
 
         /// <summary>

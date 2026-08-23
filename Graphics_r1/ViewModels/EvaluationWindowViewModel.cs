@@ -331,6 +331,7 @@ namespace PileDesign.ViewModels
                         TargetName = $"FoundationBeam-{beamNo}",
                         FoundationBeamNo = beamNo,
                         LoadCaseName = rec.LoadCaseName ?? "",
+                        // 反復沈下解析には液状化の区別が無い (null のまま)
                         Response = inclination,
                         Limit = inclinationLimit,
                         Unit = "rad",
@@ -417,17 +418,16 @@ namespace PileDesign.ViewModels
             {
                 string lcName = stepResult.LoadCase?.LoadName ?? "?";
                 string combName = stepResult.LoadCombination?.Name ?? "?";
-                string liqLabel = stepResult.IsLiquefaction ? "液状化有" : "液状化無";
 
                 // M-φ チェック: 損傷限界
                 items.AddRange(CheckMPhiLimitForBeams(model, soilPileByPileBodyNo,
                     pileByPileBodyNo, nmCache,
                     stepResult, factored, isDamageLimit: true,
-                    lcName, combName, liqLabel));
+                    lcName, combName));
 
                 // θ チェック: 場所打ちRC杭で 1/100rad
                 items.AddRange(CheckThetaLimit(model, soilPileByPileBodyNo,
-                    stepResult, lcName, combName, liqLabel));
+                    stepResult, lcName, combName));
             }
 
             return items;
@@ -451,15 +451,14 @@ namespace PileDesign.ViewModels
             {
                 string lcName = stepResult.LoadCase?.LoadName ?? "?";
                 string combName = stepResult.LoadCombination?.Name ?? "?";
-                string liqLabel = stepResult.IsLiquefaction ? "液状化有" : "液状化無";
 
                 items.AddRange(CheckMPhiLimitForBeams(model, soilPileByPileBodyNo,
                     pileByPileBodyNo, nmCache,
                     stepResult, factored, isDamageLimit,
-                    lcName, combName, liqLabel));
+                    lcName, combName));
 
                 items.AddRange(CheckThetaLimit(model, soilPileByPileBodyNo,
-                    stepResult, lcName, combName, liqLabel));
+                    stepResult, lcName, combName));
             }
 
             return items;
@@ -474,7 +473,7 @@ namespace PileDesign.ViewModels
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
             ConcurrentDictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
             AnalysisStepResult stepResult, bool factored, bool isDamageLimit,
-            string lcName, string combName, string liqLabel)
+            string lcName, string combName)
         {
             string limitName = isDamageLimit ? "損傷限界" : "安全限界";
             int level = stepResult.LoadCase?.Level ?? 1;
@@ -560,7 +559,7 @@ namespace PileDesign.ViewModels
                     SegmentIndex = seg,
                     LoadCaseName = lcName,
                     LoadCombinationName = combName,
-                    LiquefactionLabel = liqLabel,
+                    IsLiquefaction = stepResult.IsLiquefaction,
                     Response = response,
                     Limit = limit,
                     Unit = "kN·m",
@@ -584,7 +583,7 @@ namespace PileDesign.ViewModels
         private List<EvaluationItem> CheckThetaLimit(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             AnalysisStepResult stepResult,
-            string lcName, string combName, string liqLabel)
+            string lcName, string combName)
         {
             const double thetaLimit = 1.0 / 100.0; // 1/100 rad
             int level = stepResult.LoadCase?.Level ?? 1;
@@ -632,7 +631,7 @@ namespace PileDesign.ViewModels
                     PileBodyNo = pb,
                     LoadCaseName = lcName,
                     LoadCombinationName = combName,
-                    LiquefactionLabel = liqLabel,
+                    IsLiquefaction = stepResult.IsLiquefaction,
                     Response = theta,
                     Limit = thetaLimit,
                     Unit = "rad",
