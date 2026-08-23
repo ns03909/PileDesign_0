@@ -99,7 +99,7 @@ namespace PileDesign.Views
                     (function(targetId, targetTitle) {
                         var prefixRegex = /^(?:第\d+部\s*|第\d+章\s*|\d+(?:\.\d+)+\s+)/;
                         var attempts = 0;
-                        var maxAttempts = 60; // 最大 6 秒 (100ms × 60)
+                        var maxAttempts = 150; // 最大 約 6 秒 (20ms × 50 + 100ms × 100)
 
                         function scrollNow() {
                             var found = null;
@@ -143,8 +143,12 @@ namespace PileDesign.Views
                             return false;
                         }
 
-                        // numberHeadings 完了の判定: 最初の h3 が数字prefix or h2 が '第N章' prefix を持つか
+                        // 見出し番号付けが済んだか。
+                        // help.html 側は「番号付け → 目的位置へスクロール → (1 フレーム後) 目次生成」
+                        // の順で走るため、この判定が真になった時点で本文は既に目的の位置にある。
+                        // ここでの scrollNow() は位置の取り直しと黄色いハイライトが目的。
                         function isNumberingDone() {
+                            if (window.__helpReady) return true;
                             var firstH3 = document.querySelector('#mainText h3');
                             if (firstH3) {
                                 return /^\d+\.\d+/.test(firstH3.textContent.trim()) ||
@@ -159,7 +163,8 @@ namespace PileDesign.Views
                             if (document.readyState !== 'loading' && isNumberingDone()) {
                                 scrollNow();
                             } else if (attempts < maxAttempts) {
-                                setTimeout(tryOnce, 100);
+                                // 最初の 1 秒は細かく見る (準備が整った直後に動きたい)
+                                setTimeout(tryOnce, attempts < 50 ? 20 : 100);
                             } else {
                                 // タイムアウト - ベストエフォートでスクロール
                                 scrollNow();

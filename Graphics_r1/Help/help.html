@@ -8061,7 +8061,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
 
         <section id="release-notes">
-            <h2 id="h-更新履歴">更新履歴</h2>
+            <h2 id="h-プログラム更新履歴概要">プログラム更新履歴概要</h2>
             <p>
                 お使いのバージョンは、リボンの「ヘルプ」タブ →
                 <img class="button-icon" src="icons/Help.svg" alt="">「バージョン情報」で確認できます。
@@ -8203,9 +8203,9 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 </tbody>
             </table>
 
-            <h3 id="h-更新履歴について">更新履歴について</h3>
+            <h3 id="h-この一覧について">この一覧について</h3>
             <p>
-                ここには利用に関わる変更を載せています。
+                ここには利用に関わる変更の<strong>概要</strong>を載せています。
                 内部の作り替えや、画面・計算に影響しない修正は省いています。
             </p>
         </section>
@@ -14467,11 +14467,50 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             });
         }
 
+        /// URL の #アンカー へスクロールする。
+        /// 本文がスクロールするのは window ではなく .main-content (overflow-y:auto) なので、
+        /// scrollIntoView で祖先のスクロール位置を動かす。
+        function scrollToHash() {
+            if (!location.hash) return false;
+            var id = location.hash.slice(1);
+            var el = document.getElementById(id) || document.getElementById(decodeURIComponent(id));
+            if (!el) return false;
+            el.scrollIntoView({ behavior: 'auto', block: 'start' });
+            return true;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            // 本文の高さを変える処理を先に済ませてから位置を決める。
+            // (目次の生成は 570 見出し分の DOM を作るため重いが、書き込み先は
+            //  サイドバーなので本文のレイアウトには影響しない)
             numberHeadings();
-            generateAutoTOC();
             wrapTablesForScroll();
+
+            // 目的の位置へ先に移動する。ここを目次生成より後にすると、
+            // その間ずっと先頭が表示されたままになる。
+            scrollToHash();
+
+            // 1 フレーム描画させてから、重い目次生成に入る。
+            requestAnimationFrame(() => {
+                generateAutoTOC();
+                // 他の DOMContentLoaded 処理 (コードブロックの字下げ調整など) で
+                // 本文の高さが変わっているので取り直す。
+                scrollToHash();
+                window.__helpReady = true;
+            });
         });
+
+        // 画像の読み込みでも本文の高さは動くので、読み込み完了時にもう一度合わせる。
+        // ただし利用者が既に動かしていたら邪魔をしない。
+        (function () {
+            var userMoved = false;
+            ['wheel', 'keydown', 'mousedown', 'touchstart'].forEach(function (ev) {
+                window.addEventListener(ev, function () { userMoved = true; }, { once: true, passive: true });
+            });
+            window.addEventListener('load', function () {
+                if (!userMoved) scrollToHash();
+            });
+        })();
 
         function indentHeadingsAndParagraphs() {
             const main = document.getElementById('mainText');

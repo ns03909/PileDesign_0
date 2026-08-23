@@ -236,7 +236,7 @@ namespace PileDesign.Views
                 vm.OpenHelpWindowCommand);
             Add(list, "クイックスタートを開く", "入力から解析までの流れ", null, "quickstart 入門 使い方 はじめて",
                 vm.OpenQuickStartHelpCommand);
-            Add(list, "バージョン情報", "バージョンと更新履歴を確認", null, "version about バージョン 更新履歴 リリースノート",
+            Add(list, "バージョン情報", "バージョンとプログラム更新履歴概要を確認", null, "version about バージョン 更新履歴 リリースノート",
                 vm.OpenAboutWindowCommand);
 
             // ── Undo / Redo ───────────────────────────────────────────

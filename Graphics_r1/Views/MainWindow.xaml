@@ -2332,7 +2332,7 @@
                                  />
                     <Fluent:Button x:Name="RibbonButtonAbout"
                                  Header="バージョン 情報"
-                                 ToolTip="お使いのバージョンと更新履歴を確認します。"
+                                 ToolTip="お使いのバージョンと、プログラム更新履歴概要を確認します。"
                                  Command="{Binding OpenAboutWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/cover.png"
                                  Icon="pack://application:,,,/Icons/cover.png"

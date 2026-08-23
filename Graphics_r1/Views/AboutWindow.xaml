@@ -72,7 +72,7 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
                 <Button x:Name="ButtonReleaseNotes" Content="更新履歴を見る(_H)"
                         Height="30" MinWidth="140" Margin="0,0,8,0"
-                        ToolTip="ヘルプの「更新履歴」を開きます。"
+                        ToolTip="ヘルプの「プログラム更新履歴概要」を開きます。"
                         Click="ButtonReleaseNotes_Click"/>
                 <Button x:Name="ButtonOpenLogFolder" Content="ログの場所を開く(_L)"
                         Height="30" MinWidth="140" Margin="0,0,8,0"

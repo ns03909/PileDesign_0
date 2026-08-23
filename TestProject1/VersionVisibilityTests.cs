@@ -56,8 +56,8 @@ namespace TestProject1
             Assert.AreNotEqual("不明", version, "アプリのバージョンを取得できません");
 
             string help = HelpHtml();
-            int start = help.IndexOf("id=\"h-更新履歴\"", StringComparison.Ordinal);
-            Assert.IsTrue(start >= 0, "ヘルプに「更新履歴」の章がありません");
+            int start = help.IndexOf($"id=\"{PileDesign.Views.AboutWindow.ReleaseNotesAnchor}\"", StringComparison.Ordinal);
+            Assert.IsTrue(start >= 0, "ヘルプに「プログラム更新履歴概要」の章がありません");
 
             // 更新履歴の章の中だけを見る (次の h1 まで)
             int end = help.IndexOf("<h1", start, StringComparison.Ordinal);
@@ -66,7 +66,7 @@ namespace TestProject1
 
             StringAssert.Contains(chapter, version,
                 $"バージョン {version} が更新履歴に載っていません。"
-                + "バージョンを上げたら、ヘルプの「更新履歴」にもその版を追記してください。");
+                + "バージョンを上げたら、ヘルプの「プログラム更新履歴概要」にもその版を追記してください。");
         }
 
         /// <summary>

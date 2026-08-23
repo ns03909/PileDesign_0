@@ -13,14 +13,14 @@ namespace PileDesign.Views
     ///
     /// 「今どの版を使っているか」と「何が変わったか」を利用者が自分で確かめられるようにする。
     /// バージョンはウィンドウタイトル・起動画面・ヘルプの右上にも出ているが、
-    /// 更新履歴への入口はここだけ。
+    /// 「プログラム更新履歴概要」への入口はここだけ。
     ///
     /// ログと自動保存の場所も併せて出す。不具合の連絡時にほぼ必ず要るため。
     /// </summary>
     public partial class AboutWindow : Window
     {
-        /// <summary>ヘルプの「更新履歴」章のアンカー (HelpAnchorTests が実在を検査する)。</summary>
-        public const string ReleaseNotesAnchor = "h-更新履歴";
+        /// <summary>ヘルプの「プログラム更新履歴概要」章のアンカー。実在は VersionVisibilityTests が検査する。</summary>
+        public const string ReleaseNotesAnchor = "h-プログラム更新履歴概要";
 
         public AboutWindow()
         {
@@ -67,7 +67,7 @@ namespace PileDesign.Views
 
         private void ButtonReleaseNotes_Click(object sender, RoutedEventArgs e)
         {
-            MainWindowViewModel.OpenHelpWindowAt(ReleaseNotesAnchor, "更新履歴");
+            MainWindowViewModel.OpenHelpWindowAt(ReleaseNotesAnchor, "プログラム更新履歴概要");
         }
 
         private void ButtonOpenLogFolder_Click(object sender, RoutedEventArgs e)
