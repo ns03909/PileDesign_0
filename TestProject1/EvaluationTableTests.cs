@@ -82,6 +82,39 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 全条件をまたぐ表では、荷重条件のメタ列 (荷重条件 / 荷重組合せ / 液状化) を出さないこと。
+        ///
+        /// 表そのものは荷重条件を持たないため、出すと既定値の「液状化 = 無」が並び、
+        /// <b>液状化を考慮しないケースの結果があるように読めてしまう</b>。
+        /// 実際に「液状化なしの検討はしていないのに結果が出ている」と受け取られた。
+        /// 画面 (TableWindow.RebuildColumns) と CSV 出力の両方で外す必要がある。
+        /// </summary>
+        [TestMethod]
+        public void SpanningTable_DoesNotGetConditionMetaColumns()
+        {
+            var spanning = EvaluationTable();
+            var normal = NormalTable();
+
+            // 表そのものは荷重条件を持たない = 既定値のまま
+            Assert.AreEqual("", spanning.LoadCaseName);
+            Assert.AreEqual("", spanning.LoadCombinationName);
+            Assert.IsFalse(spanning.IsLiquefaction);
+            Assert.AreEqual("無", spanning.LiquefactionLabel,
+                "既定値は「無」。これをそのまま列に出すと誤解される");
+
+            // メタ列を出すかどうかはこのフラグだけで決まる
+            Assert.IsTrue(spanning.SpansAllConditions, "検定の表はまたぐ表");
+            Assert.IsFalse(normal.SpansAllConditions, "通常の表は 1 条件に対応する");
+
+            // 条件は行ごとの列で分かる (メタ列が無くても情報は失われない)
+            var headers = ResultColumnReflectionCache.GetColumns(typeof(EvaluationItem))
+                .Select(c => c.Header).ToList();
+            CollectionAssert.Contains(headers, "荷重ケース");
+            CollectionAssert.Contains(headers, "荷重組合せ");
+            CollectionAssert.Contains(headers, "液状化");
+        }
+
+        /// <summary>
         /// 検定の列がテーブル用に定義されていること。
         /// 検定比が先頭に来ないと、並べ替えずに支配ケースを見つけられない。
         /// </summary>

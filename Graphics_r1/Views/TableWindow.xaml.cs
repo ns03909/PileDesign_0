@@ -45,36 +45,13 @@ namespace PileDesign.Views
             if (vm.SelectedTable == null) return;
 
             // メタ列（DataGrid の DataContext を起点に SelectedTable を参照）
-            ResultGrid.Columns.Add(new DataGridTextColumn
-            {
-                Header = "荷重条件",
-                Binding = new Binding("DataContext.SelectedTable.LoadCaseName")
-                {
-                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
-                },
-                IsReadOnly = true
-            });
-
-            ResultGrid.Columns.Add(new DataGridTextColumn
-            {
-                Header = "荷重組合せ",
-                Binding = new Binding("DataContext.SelectedTable.LoadCombinationName")
-                {
-                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
-                },
-                IsReadOnly = true
-            });
-
-            ResultGrid.Columns.Add(new DataGridTextColumn
-            {
-                Header = "液状化",
-                Binding = new Binding("DataContext.SelectedTable.LiquefactionLabel")
-                {
-                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1),
-                    Mode = BindingMode.OneWay
-                },
-                IsReadOnly = true
-            });
+            //
+            // 全条件をまたぐ表 (検定結果) には出さない。
+            // 表そのものは荷重条件を持たないため、既定値が出て
+            // 「液状化 = 無」= 液状化を考慮しないケースの結果、と読めてしまう。
+            // またぐ表は行ごとに荷重ケース・組合せ・液状化の列を持っている。
+            if (!vm.SelectedTable.SpansAllConditions)
+                AddConditionMetaColumns();
 
             // 動的列
             foreach (var col in vm.SelectedTable.Columns)
@@ -105,6 +82,44 @@ namespace PileDesign.Views
 
                 ResultGrid.Columns.Add(column);
             }
+        }
+
+        /// <summary>
+        /// 荷重条件のメタ列 3 つ (荷重条件 / 荷重組合せ / 液状化)。
+        /// 表 1 枚が 1 つの荷重条件に対応する場合だけ意味を持つ。
+        /// </summary>
+        private void AddConditionMetaColumns()
+        {
+            ResultGrid.Columns.Add(new DataGridTextColumn
+            {
+                Header = "荷重条件",
+                Binding = new Binding("DataContext.SelectedTable.LoadCaseName")
+                {
+                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
+                },
+                IsReadOnly = true
+            });
+
+            ResultGrid.Columns.Add(new DataGridTextColumn
+            {
+                Header = "荷重組合せ",
+                Binding = new Binding("DataContext.SelectedTable.LoadCombinationName")
+                {
+                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
+                },
+                IsReadOnly = true
+            });
+
+            ResultGrid.Columns.Add(new DataGridTextColumn
+            {
+                Header = "液状化",
+                Binding = new Binding("DataContext.SelectedTable.LiquefactionLabel")
+                {
+                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1),
+                    Mode = BindingMode.OneWay
+                },
+                IsReadOnly = true
+            });
         }
 
         private static readonly Style _rightAlignTextStyle = BuildRightAlignStyle();

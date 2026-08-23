@@ -175,8 +175,14 @@ namespace PileDesign.ViewModels
 
             using var writer = new StreamWriter(dlg.FileName, false, Encoding.UTF8);
 
+            // 荷重条件のメタ列は、表 1 枚が 1 つの荷重条件に対応する場合だけ出す。
+            // 全条件をまたぐ表 (検定結果) では表そのものが荷重条件を持たず、
+            // 既定値の「液状化 = 無」が出て「液状化を考慮しないケースの結果」と
+            // 読めてしまう。またぐ表は行ごとに条件の列を持っている。
+            bool withMeta = !SelectedTable.SpansAllConditions;
+
             // ヘッダ
-            var metaHeaders = new[] { "荷重条件", "荷重組合せ", "液状化" };
+            var metaHeaders = withMeta ? new[] { "荷重条件", "荷重組合せ", "液状化" } : [];
             writer.WriteLine(string.Join(",",
                 metaHeaders.Concat(SelectedTable.Columns.Select(c => Escape(c.Header)))));
 
@@ -184,12 +190,14 @@ namespace PileDesign.ViewModels
 
             foreach (var row in SelectedTable.Rows)
             {
-                var metaValues = new[]
-                {
-                    Escape(SelectedTable.LoadCaseName),
-                    Escape(SelectedTable.LoadCombinationName),
-                    Escape(SelectedTable.LiquefactionLabel)
-                };
+                var metaValues = withMeta
+                    ? new[]
+                    {
+                        Escape(SelectedTable.LoadCaseName),
+                        Escape(SelectedTable.LoadCombinationName),
+                        Escape(SelectedTable.LiquefactionLabel)
+                    }
+                    : [];
 
                 var valuePart = SelectedTable.Columns.Select(c =>
                 {
