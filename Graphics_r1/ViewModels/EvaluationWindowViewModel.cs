@@ -1,9 +1,10 @@
-using PileDesign.Constants;
+﻿using PileDesign.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -38,6 +39,13 @@ namespace PileDesign.ViewModels
         }
 
         private bool? _lastFactored;
+
+        /// <summary>
+        /// 直近の検定結果 (構造化)。テキストはここから組み立てる。
+        /// 画面の要約行・一覧もこれを見る。
+        /// </summary>
+        [ObservableProperty]
+        private EvaluationResult _result = new([]);
 
         public EvaluationWindowViewModel(MainWindowViewModel mainVm)
         {
@@ -128,22 +136,30 @@ namespace PileDesign.ViewModels
                 .Select(g => g.OrderByDescending(r => r.Step).First())
                 .ToList();
 
-            int totalNgCount = 0;
-            int totalOkCount = 0;
-
             // レベル1 / レベル2 に分けて評価
             var level1Results = uniqueCombinations.Where(r => r.LoadCase?.Level == 1).ToList();
             var level2Results = uniqueCombinations.Where(r => r.LoadCase?.Level == 2).ToList();
 
+            // ── 検定を実行して項目を集める (テキストはこの後で組む) ──
+            var level1Items = level1Results.Count > 0
+                ? EvaluateLevel1(model, soilPileByPileBodyNo, pileByPileBodyNo, nmCache, level1Results, factored)
+                : [];
+            var level2Items = level2Results.Count > 0
+                ? EvaluateLevel2(model, soilPileByPileBodyNo, pileByPileBodyNo, nmCache, level2Results, factored, seismicGrade)
+                : [];
+            var inclinationItems = EvaluateBeamAwareInclination();
+
+            int totalNgCount = level1Items.Count(i => !i.IsOk) + level2Items.Count(i => !i.IsOk);
+            int totalOkCount = level1Items.Count(i => i.IsOk) + level2Items.Count(i => i.IsOk);
+
+            // ── テキスト組立 ──
             if (level1Results.Count > 0)
             {
                 sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 sb.AppendLine("■ レベル1地震動");
                 sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 sb.AppendLine();
-                var (ng, ok) = EvaluateLevel1(sb, model, soilPileByPileBodyNo, pileByPileBodyNo, nmCache, level1Results, factored);
-                totalNgCount += ng;
-                totalOkCount += ok;
+                AppendLevelSection(sb, level1Items);
             }
 
             if (level2Results.Count > 0)
@@ -152,9 +168,7 @@ namespace PileDesign.ViewModels
                 sb.AppendLine($"■ レベル2地震動（耐震グレード{seismicGrade}）");
                 sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 sb.AppendLine();
-                var (ng, ok) = EvaluateLevel2(sb, model, soilPileByPileBodyNo, pileByPileBodyNo, nmCache, level2Results, factored, seismicGrade);
-                totalNgCount += ng;
-                totalOkCount += ok;
+                AppendLevelSection(sb, level2Items);
             }
 
             if (level1Results.Count == 0 && level2Results.Count == 0)
@@ -171,47 +185,64 @@ namespace PileDesign.ViewModels
                 sb.AppendLine($"検定: NG項目 {totalNgCount} 件");
 
             // ── 個別矩形（基礎梁考慮）反復解析の傾斜角検定 ──
-            int beamAwareNg = 0, beamAwareOk = 0;
-            EvaluateBeamAwareInclination(sb, ref beamAwareOk, ref beamAwareNg);
+            AppendInclinationSection(sb, inclinationItems);
+
+            var all = new List<EvaluationItem>(level1Items.Count + level2Items.Count + inclinationItems.Count);
+            all.AddRange(level1Items);
+            all.AddRange(level2Items);
+            all.AddRange(inclinationItems);
+            Result = new EvaluationResult(all);
 
             EvaluationText = sb.ToString();
-            int grandOk = totalOkCount + beamAwareOk;
-            int grandNg = totalNgCount + beamAwareNg;
+            int grandOk = Result.OkCount;
+            int grandNg = Result.NgCount;
             StatusText = grandNg == 0
                 ? $"すべてOK (チェック {grandOk + grandNg} 件)"
                 : $"NG: {grandNg} 件 / OK: {grandOk} 件";
         }
 
         /// <summary>
+        /// レベル別セクションの本文。表示フィルタはここで掛ける
+        /// (件数の集計は常に全項目が対象なので、集計後に絞る)。
+        /// </summary>
+        private void AppendLevelSection(StringBuilder sb, List<EvaluationItem> items)
+        {
+            foreach (var item in items)
+            {
+                if (EvaluationResult.PassesFilter(item, DisplayFilter))
+                    EvaluationTextFormatter.AppendItem(sb, item);
+            }
+
+            int ng = items.Count(i => !i.IsOk);
+            if (items.Count == 0)
+                sb.AppendLine("  → チェック対象なし");
+            else if (ng == 0)
+                sb.AppendLine("  → NG項目なし");
+            sb.AppendLine();
+        }
+
+        /// <summary>
         /// 個別矩形（基礎梁考慮）反復解析の結果から、各基礎梁の傾斜角を検定する。
         /// 傾斜角 = (Uz_j - Uz_i) / L、許容値 1/300 (基礎指針) を既定値として比較。
         /// </summary>
-        private void EvaluateBeamAwareInclination(StringBuilder sb, ref int okCount, ref int ngCount)
+        private List<EvaluationItem> EvaluateBeamAwareInclination()
         {
+            var items = new List<EvaluationItem>();
+
             var pgs = _mainVm.ResultInputModel?.PileGroupSettlement;
-            if (pgs?.CaseRecords == null) return;
+            if (pgs?.CaseRecords == null) return items;
             var beamAwareCases = pgs.CaseRecords.Where(r => r.IsBeamAware).ToList();
-            if (beamAwareCases.Count == 0) return;
+            if (beamAwareCases.Count == 0) return items;
 
             var inputModel = _mainVm.ResultInputModel;
             if (inputModel?.FoundationBeamInput?.Beams == null
-                || inputModel.FoundationBeamInput.Beams.Count == 0) return;
+                || inputModel.FoundationBeamInput.Beams.Count == 0) return items;
 
             const double inclinationLimit = 1.0 / 300.0;
-
-            sb.AppendLine();
-            sb.AppendLine(new string('=', 60));
-            sb.AppendLine("【個別矩形（基礎梁考慮）反復解析 傾斜角検定】");
-            sb.AppendLine($"許容傾斜角: 1/300 = {inclinationLimit:E3} (rad)");
-            sb.AppendLine();
 
             foreach (var rec in beamAwareCases)
             {
                 if (rec.NodeResults == null || rec.NodeResults.Count == 0) continue;
-                sb.AppendLine($"--- ケース: {rec.LoadCaseName} ---");
-                int caseOk = 0, caseNg = 0;
-                double maxAbsInclination = 0;
-                string maxBeamName = "";
 
                 var uzByName = rec.NodeResults.ToDictionary(n => n.NodeName, n => n.Uz_mm);
 
@@ -233,30 +264,64 @@ namespace PileDesign.ViewModels
                     if (!uzByName.TryGetValue(nameJ, out double uzJ)) continue;
 
                     double inclination = Math.Abs((uzJ - uzI) * 0.001 / L);
-                    if (inclination > maxAbsInclination)
-                    {
-                        maxAbsInclination = inclination;
-                        maxBeamName = $"FoundationBeam-{inputModel.FoundationBeamInput.GetBeamNo(fbBeam)}";
-                    }
+                    int beamNo = inputModel.FoundationBeamInput.GetBeamNo(fbBeam);
 
-                    bool isOk = inclination < inclinationLimit;
-                    if (isOk) caseOk++; else caseNg++;
-
-                    bool show = (DisplayFilter == 0 && !isOk)
-                              || (DisplayFilter == 1 && isOk)
-                              || (DisplayFilter == 2);
-                    if (show)
+                    items.Add(new EvaluationItem
                     {
-                        string status = isOk ? "OK" : "NG";
-                        double inv = inclination > 0 ? 1.0 / inclination : 0;
-                        sb.AppendLine($"  {status} 梁 #{inputModel.FoundationBeamInput.GetBeamNo(fbBeam)}: " +
-                                      $"傾斜角 = {inclination:E3} rad (1/{inv:F0}), L={L:F2}m");
-                    }
+                        Kind = EvaluationKind.FoundationBeamInclination,
+                        Level = 0,   // 水平解析の地震動レベルとは別軸
+                        Category = "基礎梁の傾斜角",
+                        TargetName = $"FoundationBeam-{beamNo}",
+                        FoundationBeamNo = beamNo,
+                        LoadCaseName = rec.LoadCaseName ?? "",
+                        Response = inclination,
+                        Limit = inclinationLimit,
+                        Unit = "rad",
+                        BeamLength = L,
+                        // 判定は従来どおり「限界未満なら OK」(ちょうど等しいと NG)
+                        IsOk = inclination < inclinationLimit,
+                    });
                 }
-                sb.AppendLine($"  → ケース合計: OK {caseOk} 件 / NG {caseNg} 件 / 最大傾斜角 = {maxAbsInclination:E3} rad ({maxBeamName})");
+            }
+
+            return items;
+        }
+
+        /// <summary>
+        /// 傾斜角検定の本文。ケースごとにまとめ、末尾に合計と最大傾斜角を出す。
+        /// 最大傾斜角は<b>表示フィルタに関係なく</b>そのケースの全項目から求める
+        /// (従来の実装と同じ)。
+        /// </summary>
+        private void AppendInclinationSection(StringBuilder sb, List<EvaluationItem> items)
+        {
+            if (items.Count == 0) return;
+
+            const double inclinationLimit = 1.0 / 300.0;
+
+            sb.AppendLine();
+            sb.AppendLine(new string('=', 60));
+            sb.AppendLine("【個別矩形（基礎梁考慮）反復解析 傾斜角検定】");
+            sb.AppendLine($"許容傾斜角: 1/300 = {inclinationLimit:E3} (rad)");
+            sb.AppendLine();
+
+            foreach (var caseGroup in items.GroupBy(i => i.LoadCaseName))
+            {
+                sb.AppendLine($"--- ケース: {caseGroup.Key} ---");
+
+                var caseItems = caseGroup.ToList();
+                foreach (var item in caseItems)
+                {
+                    if (EvaluationResult.PassesFilter(item, DisplayFilter))
+                        EvaluationTextFormatter.AppendItem(sb, item);
+                }
+
+                int caseOk = caseItems.Count(i => i.IsOk);
+                int caseNg = caseItems.Count - caseOk;
+                var worst = caseItems.OrderByDescending(i => i.Response).First();
+                string maxBeamName = worst.Response > 0 ? worst.TargetName : "";
+
+                sb.AppendLine($"  → ケース合計: OK {caseOk} 件 / NG {caseNg} 件 / 最大傾斜角 = {worst.Response:E3} rad ({maxBeamName})");
                 sb.AppendLine();
-                okCount += caseOk;
-                ngCount += caseNg;
             }
         }
 
@@ -283,13 +348,13 @@ namespace PileDesign.ViewModels
         /// - i端もしくはj端がM-φ関係が損傷限界状態を超える場合
         /// - 場所打ち鉄筋コンクリート杭で、θが1/100radを超える場合
         /// </summary>
-        private (int ng, int ok) EvaluateLevel1(StringBuilder sb, AnaModel model,
+        private List<EvaluationItem> EvaluateLevel1(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
             ConcurrentDictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
             List<AnalysisStepResult> results, bool factored)
         {
-            int ngCount = 0, okCount = 0;
+            var items = new List<EvaluationItem>();
 
             foreach (var stepResult in results)
             {
@@ -298,26 +363,17 @@ namespace PileDesign.ViewModels
                 string liqLabel = stepResult.IsLiquefaction ? "液状化有" : "液状化無";
 
                 // M-φ チェック: 損傷限界
-                var (ng1, ok1) = CheckMPhiLimitForBeams(sb, model, soilPileByPileBodyNo,
+                items.AddRange(CheckMPhiLimitForBeams(model, soilPileByPileBodyNo,
                     pileByPileBodyNo, nmCache,
                     stepResult, factored, isDamageLimit: true,
-                    lcName, combName, liqLabel);
-                ngCount += ng1;
-                okCount += ok1;
+                    lcName, combName, liqLabel));
 
                 // θ チェック: 場所打ちRC杭で 1/100rad
-                var (ng2, ok2) = CheckThetaLimit(sb, model, soilPileByPileBodyNo,
-                    stepResult, lcName, combName, liqLabel);
-                ngCount += ng2;
-                okCount += ok2;
+                items.AddRange(CheckThetaLimit(model, soilPileByPileBodyNo,
+                    stepResult, lcName, combName, liqLabel));
             }
 
-            if (ngCount == 0 && okCount == 0)
-                sb.AppendLine("  → チェック対象なし");
-            else if (ngCount == 0)
-                sb.AppendLine("  → NG項目なし");
-            sb.AppendLine();
-            return (ngCount, okCount);
+            return items;
         }
 
         /// <summary>
@@ -325,13 +381,13 @@ namespace PileDesign.ViewModels
         /// 耐震グレードA: 安全限界 / 耐震グレードS: 損傷限界
         /// + 場所打ち鉄筋コンクリート杭で、θが1/100radを超える場合
         /// </summary>
-        private (int ng, int ok) EvaluateLevel2(StringBuilder sb, AnaModel model,
+        private List<EvaluationItem> EvaluateLevel2(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
             ConcurrentDictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
             List<AnalysisStepResult> results, bool factored, string seismicGrade)
         {
-            int ngCount = 0, okCount = 0;
+            var items = new List<EvaluationItem>();
             bool isDamageLimit = seismicGrade == "S"; // S→損傷限界、A→安全限界
 
             foreach (var stepResult in results)
@@ -340,34 +396,23 @@ namespace PileDesign.ViewModels
                 string combName = stepResult.LoadCombination?.Name ?? "?";
                 string liqLabel = stepResult.IsLiquefaction ? "液状化有" : "液状化無";
 
-                // M-φ チェック
-                var (ng1, ok1) = CheckMPhiLimitForBeams(sb, model, soilPileByPileBodyNo,
+                items.AddRange(CheckMPhiLimitForBeams(model, soilPileByPileBodyNo,
                     pileByPileBodyNo, nmCache,
                     stepResult, factored, isDamageLimit,
-                    lcName, combName, liqLabel);
-                ngCount += ng1;
-                okCount += ok1;
+                    lcName, combName, liqLabel));
 
-                // θ チェック
-                var (ng2, ok2) = CheckThetaLimit(sb, model, soilPileByPileBodyNo,
-                    stepResult, lcName, combName, liqLabel);
-                ngCount += ng2;
-                okCount += ok2;
+                items.AddRange(CheckThetaLimit(model, soilPileByPileBodyNo,
+                    stepResult, lcName, combName, liqLabel));
             }
 
-            if (ngCount == 0 && okCount == 0)
-                sb.AppendLine("  → チェック対象なし");
-            else if (ngCount == 0)
-                sb.AppendLine("  → NG項目なし");
-            sb.AppendLine();
-            return (ngCount, okCount);
+            return items;
         }
 
         /// <summary>
         /// 各梁要素のi端・j端のモーメントが限界状態のNM相関曲線を超えるかチェック
         /// 軸力は荷重ケースに応じたユーザー入力値（AxialForceLevel1s/AxialForceLevel2s）を使用
         /// </summary>
-        private (int ng, int ok) CheckMPhiLimitForBeams(StringBuilder sb, AnaModel model,
+        private List<EvaluationItem> CheckMPhiLimitForBeams(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
             ConcurrentDictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
@@ -375,22 +420,21 @@ namespace PileDesign.ViewModels
             string lcName, string combName, string liqLabel)
         {
             string limitName = isDamageLimit ? "損傷限界" : "安全限界";
-            bool showNg = DisplayFilter == 0 || DisplayFilter == 2;
-            bool showOk = DisplayFilter == 1 || DisplayFilter == 2;
+            int level = stepResult.LoadCase?.Level ?? 1;
 
-            // Beam ごとに独立。並列で (ngLocal, okLocal, message) を produce、最後に順序通り集約
+            // Beam ごとに独立。並列で項目を produce し、最後に添字順に連結する
+            // (順序を添字で固定しているので、並列でも項目の並びは決定的)。
             var beamsArr = model.Beams.ToArray();
-            var perBeamResults = new (int ng, int ok, string text)[beamsArr.Length];
+            var perBeamResults = new List<EvaluationItem>[beamsArr.Length];
 
             Parallel.For(0, beamsArr.Length, idx =>
             {
                 var beam = beamsArr[idx];
-                int ngL = 0, okL = 0;
-                var msg = new StringBuilder();
+                var found = new List<EvaluationItem>(2);
 
                 if (beam.PileBodyNo is not int pb || beam.SegmentIndex is not int seg)
                 {
-                    perBeamResults[idx] = (0, 0, ""); return;
+                    perBeamResults[idx] = found; return;
                 }
 
                 // BeamResultを検索
@@ -400,13 +444,13 @@ namespace PileDesign.ViewModels
                     (stepResult.LoadCase == null || r.LoadCase?.LoadName == stepResult.LoadCase.LoadName) &&
                     (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
 
-                if (result?.CumulativeForce == null) { perBeamResults[idx] = (0, 0, ""); return; }
+                if (result?.CumulativeForce == null) { perBeamResults[idx] = found; return; }
 
                 // SoilPileからPileSectionを取得
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) { perBeamResults[idx] = (0, 0, ""); return; }
-                if (soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count) { perBeamResults[idx] = (0, 0, ""); return; }
+                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) { perBeamResults[idx] = found; return; }
+                if (soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count) { perBeamResults[idx] = found; return; }
                 var section = soilPile.PileBodySegments[seg].PileSection;
-                if (section == null) { perBeamResults[idx] = (0, 0, ""); return; }
+                if (section == null) { perBeamResults[idx] = found; return; }
 
                 // 軸力: 荷重ケースに応じたユーザー入力値 (kN)
                 double axialN_kN = 0.0;
@@ -423,11 +467,11 @@ namespace PileDesign.ViewModels
                 int loadCaseLevel = stepResult.LoadCase?.Level ?? 1;
                 var cacheKey = (pb, seg, factored, isDamageLimit, loadCaseLevel);
                 var nmCurve = nmCache.GetOrAdd(cacheKey, _ => GetNMCurve(section, factored, isDamageLimit, loadCaseLevel));
-                if (nmCurve.Ns == null || nmCurve.Ms == null || nmCurve.Ns.Count < 2) { perBeamResults[idx] = (0, 0, ""); return; }
+                if (nmCurve.Ns == null || nmCurve.Ms == null || nmCurve.Ns.Count < 2) { perBeamResults[idx] = found; return; }
 
                 // NM相関曲線から許容モーメントを補間
                 double allowableM = InterpolateAllowableMoment(nmCurve.Ns, nmCurve.Ms, axialN_kN);
-                if (allowableM <= 0) { perBeamResults[idx] = (0, 0, ""); return; }
+                if (allowableM <= 0) { perBeamResults[idx] = found; return; }
 
                 // i端モーメント |M| = √(Myi² + Mzi²)
                 double mI = Math.Sqrt(
@@ -439,98 +483,73 @@ namespace PileDesign.ViewModels
                     result.CumulativeForce.Myj * result.CumulativeForce.Myj +
                     result.CumulativeForce.Mzj * result.CumulativeForce.Mzj);
 
-                // i端チェック
-                if (mI > allowableM)
-                {
-                    ngL++;
-                    if (showNg)
-                    {
-                        msg.AppendLine($"  [NG] {limitName}超過（i端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
-                        msg.AppendLine($"       M={mI:F1} kNm > {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
-                        msg.AppendLine();
-                    }
-                }
-                else
-                {
-                    okL++;
-                    if (showOk)
-                    {
-                        msg.AppendLine($"  [OK] {limitName}（i端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
-                        msg.AppendLine($"       M={mI:F1} kNm ≤ {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
-                        msg.AppendLine();
-                    }
-                }
+                // i端チェック (判定は従来どおり「超えたら NG」)
+                found.Add(MakeMomentItem(mI, allowableM, "i端"));
 
                 // j端チェック
-                if (mJ > allowableM)
+                found.Add(MakeMomentItem(mJ, allowableM, "j端"));
+
+                perBeamResults[idx] = found;
+
+                EvaluationItem MakeMomentItem(double response, double limit, string end) => new()
                 {
-                    ngL++;
-                    if (showNg)
-                    {
-                        msg.AppendLine($"  [NG] {limitName}超過（j端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
-                        msg.AppendLine($"       M={mJ:F1} kNm > {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
-                        msg.AppendLine();
-                    }
-                }
-                else
-                {
-                    okL++;
-                    if (showOk)
-                    {
-                        msg.AppendLine($"  [OK] {limitName}（j端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
-                        msg.AppendLine($"       M={mJ:F1} kNm ≤ {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
-                        msg.AppendLine();
-                    }
-                }
-                perBeamResults[idx] = (ngL, okL, msg.ToString());
+                    Kind = EvaluationKind.PileSectionMoment,
+                    Level = level,
+                    Category = $"杭体曲げ ({limitName})",
+                    LimitName = limitName,
+                    TargetName = beam.Name,
+                    EndLabel = end,
+                    PileBodyNo = pb,
+                    SegmentIndex = seg,
+                    LoadCaseName = lcName,
+                    LoadCombinationName = combName,
+                    LiquefactionLabel = liqLabel,
+                    Response = response,
+                    Limit = limit,
+                    Unit = "kN·m",
+                    AxialForce = axialN_kN,
+                    IsOk = !(response > limit),
+                };
             });
 
-            // 順序通り集約
-            int ngCount = 0, okCount = 0;
+            // 添字順に連結 (並列実行でも並びは変わらない)
+            var items = new List<EvaluationItem>();
             for (int i = 0; i < perBeamResults.Length; i++)
             {
-                ngCount += perBeamResults[i].ng;
-                okCount += perBeamResults[i].ok;
-                if (perBeamResults[i].text.Length > 0) sb.Append(perBeamResults[i].text);
+                if (perBeamResults[i] != null) items.AddRange(perBeamResults[i]);
             }
-            return (ngCount, okCount);
+            return items;
         }
 
         /// <summary>
         /// 場所打ち鉄筋コンクリート杭の回転角θが1/100 radを超えるかチェック
         /// </summary>
-        private (int ng, int ok) CheckThetaLimit(StringBuilder sb, AnaModel model,
+        private List<EvaluationItem> CheckThetaLimit(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             AnalysisStepResult stepResult,
             string lcName, string combName, string liqLabel)
         {
             const double thetaLimit = 1.0 / 100.0; // 1/100 rad
-            bool showNg = DisplayFilter == 0 || DisplayFilter == 2;
-            bool showOk = DisplayFilter == 1 || DisplayFilter == 2;
+            int level = stepResult.LoadCase?.Level ?? 1;
 
             var rsArr = model.RotationalSprings.ToArray();
-            var perItem = new (int ng, int ok, string text)[rsArr.Length];
+            var perItem = new List<EvaluationItem>[rsArr.Length];
 
             Parallel.For(0, rsArr.Length, idx =>
             {
                 var rs = rsArr[idx];
-                int ngL = 0, okL = 0;
-                var msg = new StringBuilder();
+                var found = new List<EvaluationItem>(1);
 
                 // 場所打ちRC杭かどうかを判定
                 int pb = (rs.PileBodyNo is int v && v > 0) ? v : 0;
-                if (pb <= 0) { perItem[idx] = (0, 0, ""); return; }
+                if (pb <= 0) { perItem[idx] = found; return; }
 
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) { perItem[idx] = (0, 0, ""); return; }
-                if (soilPile.PileBodySegments == null || soilPile.PileBodySegments.Count == 0) { perItem[idx] = (0, 0, ""); return; }
+                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) { perItem[idx] = found; return; }
+                if (soilPile.PileBodySegments == null || soilPile.PileBodySegments.Count == 0) { perItem[idx] = found; return; }
 
                 var section = soilPile.PileBodySegments[0].PileSection;
-                if (section == null) { perItem[idx] = (0, 0, ""); return; }
-                if (section.PileBodyType != PileTypeNames.InsituRc) { perItem[idx] = (0, 0, ""); return; }
+                if (section == null) { perItem[idx] = found; return; }
+                if (section.PileBodyType != PileTypeNames.InsituRc) { perItem[idx] = found; return; }
 
                 // RotationalSpringResultを検索
                 var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
@@ -539,46 +558,38 @@ namespace PileDesign.ViewModels
                     (stepResult.LoadCase == null || r.LoadCase?.LoadName == stepResult.LoadCase.LoadName) &&
                     (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
 
-                if (rsResult?.CumulativeDisp == null) { perItem[idx] = (0, 0, ""); return; }
+                if (rsResult?.CumulativeDisp == null) { perItem[idx] = found; return; }
 
                 // CombinedXY: θ = √(dRx² + dRy²)
                 double dRx = rsResult.CumulativeDisp.Rxi - rsResult.CumulativeDisp.Rxj;
                 double dRy = rsResult.CumulativeDisp.Ryi - rsResult.CumulativeDisp.Ryj;
                 double theta = Math.Sqrt(dRx * dRx + dRy * dRy);
 
-                if (theta > thetaLimit)
+                // 判定は従来どおり「超えたら NG」
+                found.Add(new EvaluationItem
                 {
-                    ngL++;
-                    if (showNg)
-                    {
-                        msg.AppendLine($"  [NG] θ超過（場所打ちRC杭）: {rs.Name}  杭配置No.{pb}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
-                        msg.AppendLine($"       θ={theta:F5} rad > {thetaLimit:F2} rad");
-                        msg.AppendLine();
-                    }
-                }
-                else
-                {
-                    okL++;
-                    if (showOk)
-                    {
-                        msg.AppendLine($"  [OK] θ（場所打ちRC杭）: {rs.Name}  杭配置No.{pb}");
-                        msg.AppendLine($"       荷重ケース: {lcName} / 組合せ: {combName} / {liqLabel}");
-                        msg.AppendLine($"       θ={theta:F5} rad ≤ {thetaLimit:F2} rad");
-                        msg.AppendLine();
-                    }
-                }
-                perItem[idx] = (ngL, okL, msg.ToString());
+                    Kind = EvaluationKind.PileHeadRotation,
+                    Level = level,
+                    Category = "杭頭回転角 (場所打ちRC杭)",
+                    TargetName = rs.Name,
+                    PileBodyNo = pb,
+                    LoadCaseName = lcName,
+                    LoadCombinationName = combName,
+                    LiquefactionLabel = liqLabel,
+                    Response = theta,
+                    Limit = thetaLimit,
+                    Unit = "rad",
+                    IsOk = !(theta > thetaLimit),
+                });
+                perItem[idx] = found;
             });
 
-            int ngCount = 0, okCount = 0;
+            var items = new List<EvaluationItem>();
             for (int i = 0; i < perItem.Length; i++)
             {
-                ngCount += perItem[i].ng;
-                okCount += perItem[i].ok;
-                if (perItem[i].text.Length > 0) sb.Append(perItem[i].text);
+                if (perItem[i] != null) items.AddRange(perItem[i]);
             }
-            return (ngCount, okCount);
+            return items;
         }
 
         /// <summary>
