@@ -62,6 +62,7 @@ namespace PileDesign.ViewModels
                         Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
                         IsElementSplit);
                     ShowToast("保存が完了しました。");
+                    MarkWorkSaved();
 
                     // MRUに追加
                     _mruService.AddFile(CurrentFilePath);
@@ -99,6 +100,7 @@ namespace PileDesign.ViewModels
                         Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
                         IsElementSplit);
                     ShowToast("保存が完了しました。");
+                    MarkWorkSaved();
                 }
                 catch (Exception ex)
                 {
@@ -115,22 +117,26 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void NewInputModelFile()
         {
-            var result = MessageService.Show(
-                "現在のデータを保存しますか？",
-                "確認",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question);
+            // 保存していない作業が無ければ確認しない (起動直後に新規作成した場合など)
+            if (HasUnsavedWork)
+            {
+                var result = MessageService.Show(
+                    "現在のデータを保存しますか？",
+                    "確認",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question);
 
-            if (result == MessageBoxResult.Cancel)
-                return;
-            else if (result == MessageBoxResult.Yes)
-                _ = SaveInputModelFile();
+                if (result == MessageBoxResult.Cancel)
+                    return;
+                else if (result == MessageBoxResult.Yes)
+                    _ = SaveInputModelFile();
+            }
 
             // 自動保存を停止
             _autoSaveService.Stop();
 
             CurrentInputModel.Reset();
-            MarkProjectUntouched();
+            MarkWorkSaved();
             this.CurrentModel = null; // AnaModelもリセット
             CurrentFilePath = null;
             LoadedExampleName = null;  // 新規作成時はタイトルバーを [新規] に戻す
@@ -308,9 +314,9 @@ namespace PileDesign.ViewModels
             _undoManager.Clear();
             SaveUndoState();
 
-            // 読み込んだ直後は「まだ何も編集していない」。
+            // 読み込んだ直後は保存していない作業は無い。
             // (直前の SaveUndoState で編集扱いになるため、その後に戻す)
-            MarkProjectUntouched();
+            MarkWorkSaved();
 
             // 最終描画＆通知
             UpdateWindowImmediate();

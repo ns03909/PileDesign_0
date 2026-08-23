@@ -877,6 +877,10 @@ namespace PileDesign.ViewModels
         public void SetLatestAnalysisCompleted()
         {
             LastAnalysisTime = DateTime.Now;
+
+            // 解析には時間がかかる。入力を編集していなくても、
+            // 結果を保存せずに閉じようとしたら確認する。
+            _hasUnsavedWork = true;
         }
 
         // 直近の自動保存状態表示 (ステータスバー用)。OnAutoSaveCompleted から更新。
@@ -3081,6 +3085,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isGroupPileSettlementAnalysisDone, value))
                 {
+                    if (value) SetLatestAnalysisCompleted();
                     OnPropertyChanged(nameof(HasAnyAnalysisResult));
 
                     const string settlementLabel = "沈下量";

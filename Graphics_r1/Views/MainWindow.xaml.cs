@@ -349,6 +349,14 @@ namespace PileDesign.Views
                 return;
             }
 
+            // 保存していない作業が無ければ確認せずに閉じる。
+            // (起動して何もしなかった / 保存した直後 / 読み込んだだけ)
+            if (DataContext is MainWindowViewModel vm && !vm.HasUnsavedWork)
+            {
+                _layoutService.SaveDockLayout(dockingManager);
+                return;
+            }
+
             // 確認ダイアログを表示
             var result = MessageService.Show(
                 "現在のデータを保存しますか？",

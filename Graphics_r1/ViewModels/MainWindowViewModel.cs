@@ -78,27 +78,26 @@ namespace PileDesign.ViewModels
         /// 履歴ラベルに使う。可能なら明示的に日本語の説明を渡してください
         /// (例: SaveUndoState("杭追加"))。
         /// </summary>
-        /// <summary>
-        /// 読み込み・新規作成のあと、まだ一度も編集していないか。
-        /// <see cref="SaveUndoState"/> が全編集の集約点なので、そこで false になる。
-        /// </summary>
-        private bool _isProjectUntouched = true;
+        private bool _hasUnsavedWork;
 
         /// <summary>
-        /// 今の入力を捨てても失うものが無いか。
+        /// 保存していない作業があるか。true になるのは次の 2 つ。
+        ///   ・入力を編集した     (<see cref="SaveUndoState"/> が全編集の集約点)
+        ///   ・解析が完了した     (<see cref="SetLatestAnalysisCompleted"/>)
+        /// 保存・読み込み・新規作成・計算例ロードの直後は false に戻る。
         ///
-        /// 「現状の入力内容は削除されます」の確認は、これが false のときだけ出す。
-        /// 起動直後や計算例を読み込んだ直後にも出していると、
-        /// 内容を確かめずに「はい」を押すだけの確認になり、
+        /// 「現状の入力内容は削除されます」「現在のデータを保存しますか？」の確認は、
+        /// これが true のときだけ出す。失うものが無いのに出す確認は、
+        /// 内容を確かめずに押すだけのものになり、
         /// 本当に失うものがあるときにも読まれなくなる。
         /// </summary>
-        public bool CanDiscardInputWithoutLoss => _isProjectUntouched && !HasAnyAnalysisResult;
+        public bool HasUnsavedWork => _hasUnsavedWork;
 
         /// <summary>
-        /// 読み込み・新規作成・計算例ロードの直後に呼ぶ。
-        /// 「この入力は捨てても失うものが無い」状態に戻す。
+        /// 保存・読み込み・新規作成・計算例ロードの直後に呼ぶ。
+        /// 「今この状態を捨てても失うものが無い」に戻す。
         /// </summary>
-        public void MarkProjectUntouched() => _isProjectUntouched = true;
+        public void MarkWorkSaved() => _hasUnsavedWork = false;
 
         public void SaveUndoState([System.Runtime.CompilerServices.CallerMemberName] string? description = null)
         {
@@ -112,8 +111,8 @@ namespace PileDesign.ViewModels
                 _undoManager.SaveState(copy, FormatHistoryDescription(description));
                 RaiseUndoStateChanged();
 
-                // 編集が入ったので、以降は破棄の確認を出す。
-                _isProjectUntouched = false;
+                // 編集が入ったので、以降は破棄・保存の確認を出す。
+                _hasUnsavedWork = true;
 
                 // 入力が編集された = 表示中の解析結果は現在の入力と一致しない。
                 // 結果は破棄しない (解析時の入力ごと切り離してあるため表示は整合している)。

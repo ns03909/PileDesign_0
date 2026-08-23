@@ -58,8 +58,8 @@ namespace PileDesign.ViewModels
         private async Task LoadPileExampleAsync(string pileJsonFileName, string displayName)
         {
             // 読み込みの確認は、失うものがあるときだけ出す。
-            // 起動直後や計算例を読み込んだ直後は、捨てて困る入力が無い。
-            if (!CanDiscardInputWithoutLoss)
+            // 起動直後や計算例を読み込んだ直後は、捨てて困るものが無い。
+            if (HasUnsavedWork)
             {
                 var confirm = MessageService.Show(
                     $"現状の入力内容は削除されます。{displayName}を読み込みますか？",
@@ -207,9 +207,9 @@ namespace PileDesign.ViewModels
             // 既製コンクリート杭ライブラリの整合性チェック (PileExampleLoader 経由でも検証)
             ShowPrecastPileNameWarningsIfAny(CurrentInputModel);
 
-            // 読み込んだ直後は「まだ何も編集していない」。
+            // 読み込んだ直後は保存していない作業は無い。
             // 続けて別の計算例を読むときに、無意味な確認を出さないため。
-            MarkProjectUntouched();
+            MarkWorkSaved();
         }
 
         /// <summary>
@@ -220,8 +220,8 @@ namespace PileDesign.ViewModels
         private async Task LoadGroupSettlementExampleAsync(string jsonFileName, string displayName)
         {
             // 読み込みの確認は、失うものがあるときだけ出す。
-            // 起動直後や計算例を読み込んだ直後は、捨てて困る入力が無い。
-            if (!CanDiscardInputWithoutLoss)
+            // 起動直後や計算例を読み込んだ直後は、捨てて困るものが無い。
+            if (HasUnsavedWork)
             {
                 var confirm = MessageService.Show(
                     $"現状の入力内容は削除されます。{displayName}を読み込みますか？",
@@ -335,9 +335,9 @@ namespace PileDesign.ViewModels
             // 既製コンクリート杭ライブラリの整合性チェック (GroupSettlementExampleLoader 経由でも検証)
             ShowPrecastPileNameWarningsIfAny(CurrentInputModel);
 
-            // 読み込んだ直後は「まだ何も編集していない」。
+            // 読み込んだ直後は保存していない作業は無い。
             // 続けて別の計算例を読むときに、無意味な確認を出さないため。
-            MarkProjectUntouched();
+            MarkWorkSaved();
         }
 
         // 設計例集3.1
