@@ -143,12 +143,15 @@ namespace PileDesign.ViewModels
             var filtered = AllTables.Where(t =>
                 (SelectedTableCategoryFilter == UiText.All ||
                  Converters.TableCategoryConverter.CategoryOf(t) == SelectedTableCategoryFilter) &&
-                (SelectedLoadCaseFilter == UiText.All
-                    || (levelCaseNames != null && levelCaseNames.Contains(t.LoadCaseName))
-                    || t.LoadCaseName == SelectedLoadCaseFilter) &&
-                (SelectedLoadCombinationFilter == UiText.All || t.LoadCombinationName == SelectedLoadCombinationFilter) &&
-                (SelectedLiquefactionFilter == UiText.All ||
-                 (SelectedLiquefactionFilter == "有" ? t.IsLiquefaction : !t.IsLiquefaction))
+                // 全条件をまたぐ表 (検定結果) は、条件で絞り込んでも残す。
+                // 中身の行に条件の列があるので、そちらで見分けられる。
+                (t.SpansAllConditions || (
+                    (SelectedLoadCaseFilter == UiText.All
+                        || (levelCaseNames != null && levelCaseNames.Contains(t.LoadCaseName))
+                        || t.LoadCaseName == SelectedLoadCaseFilter) &&
+                    (SelectedLoadCombinationFilter == UiText.All || t.LoadCombinationName == SelectedLoadCombinationFilter) &&
+                    (SelectedLiquefactionFilter == UiText.All ||
+                     (SelectedLiquefactionFilter == "有" ? t.IsLiquefaction : !t.IsLiquefaction))))
             ).ToList();
 
             foreach (var t in filtered)

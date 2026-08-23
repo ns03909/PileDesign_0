@@ -265,6 +265,8 @@ namespace PileDesign.ViewModels
                 allTables.AddRange(BuildGroupSettlementBeamAwareTables());
                 // 群杭沈下解析（一般）の結果テーブル
                 allTables.AddRange(BuildGroupSettlementNonBeamAwareTables());
+                // 検定結果 (検定比の降順)
+                allTables.AddRange(BuildEvaluationTables());
                 vm.LoadTables(allTables);
 
                 var w = new Views.TableWindow { DataContext = vm };
@@ -275,6 +277,52 @@ namespace PileDesign.ViewModels
                 Serilog.Log.Error(ex, "テーブルウィンドウ の表示に失敗", "テーブルウィンドウ");
                 MessageService.Show(GuardMessages.WindowOpenFailed("テーブルウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// 検定結果を結果テーブルとして生成する (低減前 / 低減後 の 2 枚)。
+        ///
+        /// 結果を確認しに来た人が最初に開くのはこのテーブルウィンドウなので、
+        /// 検定比もここから見られるようにする
+        /// (検定ウィンドウを開いてボタンを押さないと分からない状態だった)。
+        ///
+        /// 荷重ケース・組合せ・液状化をまたいで 1 枚にまとめる。
+        /// 支配ケースを探すには、全条件を検定比の降順で並べたものが要るため。
+        /// </summary>
+        private List<ResultTable> BuildEvaluationTables()
+        {
+            var tables = new List<ResultTable>();
+            if (CurrentModel == null || !IsHorizontalAnalysisDone) return tables;
+
+            var columns = ResultColumnReflectionCache.GetColumns(typeof(EvaluationItem));
+
+            foreach (var (factored, label) in new[] { (false, "低減前"), (true, "低減後") })
+            {
+                EvaluationResult result;
+                try
+                {
+                    result = EvaluationWindowViewModel.BuildEvaluationResult(this, factored);
+                }
+                catch (Exception ex)
+                {
+                    // 検定が組めなくても他の結果テーブルは出す
+                    Serilog.Log.Warning(ex, "[検定テーブル] 生成に失敗 ({Label})", label);
+                    continue;
+                }
+
+                if (result.IsEmpty) continue;
+
+                tables.Add(new ResultTable
+                {
+                    Name = $"検定結果（{label}水平解析）",
+                    Category = "検定",
+                    Columns = columns,
+                    Rows = result.ByRatioDescending.Cast<object>().ToList(),
+                    SpansAllConditions = true,
+                });
+            }
+
+            return tables;
         }
 
         /// <summary>

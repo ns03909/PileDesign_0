@@ -93,6 +93,18 @@ namespace PileDesign.ViewModels
             return vm.EvaluationText;
         }
 
+        /// <summary>
+        /// UI を介さず検定結果 (構造化) を取得する。
+        /// 解析結果テーブルに検定を並べるために使う。
+        /// 表示フィルタは掛けない (全項目を返す)。
+        /// </summary>
+        public static EvaluationResult BuildEvaluationResult(MainWindowViewModel mainVm, bool factored)
+        {
+            var vm = new EvaluationWindowViewModel(mainVm) { DisplayFilter = 2 };
+            vm.RunEvaluation(factored);
+            return vm.Result;
+        }
+
         private void RunEvaluation(bool factored)
         {
             _lastFactored = factored;

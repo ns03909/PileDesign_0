@@ -15,6 +15,15 @@ namespace PileDesign.Models.Results
         public string LoadCombinationName { get; init; } = "";
         public bool IsLiquefaction { get; init; }
 
+        /// <summary>
+        /// 1 つの荷重条件ではなく<b>全条件をまたぐ</b>表か。
+        ///
+        /// 検定結果のように、荷重ケース・組合せ・液状化を横断して 1 枚にまとめる表がこれ。
+        /// 名前に液状化の有無を出さず、条件のフィルタでも絞り込みの対象外にする
+        /// (条件は表の中の列で区別できる)。
+        /// </summary>
+        public bool SpansAllConditions { get; init; }
+
         public string LiquefactionLabel => IsLiquefaction ? "有" : "無";
 
         /// <summary>
@@ -25,6 +34,9 @@ namespace PileDesign.Models.Results
         {
             get
             {
+                // 全条件をまたぐ表は液状化の有無を持たないので、名前だけにする
+                if (SpansAllConditions) return Name;
+
                 // 液状化状態を先頭に表示（ListBoxで切れても区別できるように）
                 var parts = new List<string> { $"[{LiquefactionLabel}]", Name };
                 if (!string.IsNullOrEmpty(LoadCaseName))

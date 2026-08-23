@@ -35,6 +35,7 @@ namespace PileDesign.Models.Results
         public int Level { get; init; }
 
         /// <summary>画面の一覧に出す分類名。例:「杭体曲げ (安全限界)」</summary>
+        [ResultColumn("検定項目", 2, tooltip: "何を照査しているか")]
         public string Category { get; init; } = "";
 
         /// <summary>限界状態の名称 (「損傷限界」「安全限界」)。テキスト再現に使う。</summary>
@@ -51,22 +52,30 @@ namespace PileDesign.Models.Results
         /// <summary>杭体区間の番号。区間の区別が無い検定では null。</summary>
         public int? SegmentIndex { get; init; }
 
+        [ResultColumn("荷重ケース", 4, tooltip: "この検定を行った荷重ケース")]
         public string LoadCaseName { get; init; } = "";
+
+        [ResultColumn("荷重組合せ", 5, tooltip: "この検定を行った荷重組合せ (αL / βU / βL)")]
         public string LoadCombinationName { get; init; } = "";
 
         /// <summary>「液状化有」「液状化無」。</summary>
+        [ResultColumn("液状化", 6, tooltip: "液状化を考慮したケースか")]
         public string LiquefactionLabel { get; init; } = "";
 
         /// <summary>応答値 (解析から得た値)。</summary>
+        [ResultColumn("応答値", 10, "N3", "解析から得た値。単位は「単位」列を参照")]
         public double Response { get; init; }
 
         /// <summary>限界値 (これを超えると NG)。</summary>
+        [ResultColumn("限界値", 11, "N3", "この値を超えると NG。単位は「単位」列を参照")]
         public double Limit { get; init; }
 
         /// <summary>応答値・限界値の単位。「kN·m」「rad」など。</summary>
+        [ResultColumn("単位", 12, tooltip: "応答値・限界値の単位")]
         public string Unit { get; init; } = "";
 
         /// <summary>限界値の前提となった軸力 (kN)。N-M 系のみ。</summary>
+        [ResultColumn("軸力(kN)", 13, "N1", "限界値の前提となった軸力。杭体曲げのみ (圧縮が正)")]
         public double? AxialForce { get; init; }
 
         /// <summary>基礎梁の長さ (m)。傾斜角のみ。</summary>
@@ -89,12 +98,15 @@ namespace PileDesign.Models.Results
         /// 検定比 = 応答値 / 限界値。1 を超えるほど厳しい。
         /// 限界値が 0 以下の項目は検定対象から外しているので、分母は 0 にならない。
         /// </summary>
+        [ResultColumn("検定比", 0, "N2", "応答値 ÷ 限界値。1 を超えると NG")]
         public double Ratio => Limit > 0 ? Response / Limit : double.NaN;
 
         /// <summary>一覧に出す判定の文字列。</summary>
+        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG")]
         public string StatusLabel => IsOk ? "OK" : "NG";
 
         /// <summary>画面で対象を特定するための文字列。例:「杭配置No.7 / 要素3 / i端」</summary>
+        [ResultColumn("対象", 3, tooltip: "どの杭のどこか (杭配置番号 / 杭体区間 / 端部)")]
         public string TargetDescription
         {
             get
