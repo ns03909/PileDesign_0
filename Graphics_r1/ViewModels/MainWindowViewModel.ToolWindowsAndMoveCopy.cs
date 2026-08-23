@@ -139,6 +139,18 @@ namespace PileDesign.ViewModels
             OpenHelpWindowAt("quickstart", "クイックスタートガイド");
         }
 
+        /// <summary>
+        /// バージョン情報。バージョンと更新履歴を利用者が自分で確かめられるようにする。
+        /// </summary>
+        [RelayCommand]
+        public static void OpenAboutWindow()
+        {
+            var owner = System.Windows.Application.Current?.MainWindow;
+            var window = new AboutWindow();
+            if (owner != null && !ReferenceEquals(owner, window)) window.Owner = owner;
+            window.ShowDialog();
+        }
+
         [RelayCommand]
         public static void OpenHelpChatWindow()
         {

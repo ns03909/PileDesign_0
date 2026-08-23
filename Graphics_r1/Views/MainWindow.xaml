@@ -2330,6 +2330,13 @@
                                  LargeIcon="pack://application:,,,/Icons/ShortcutKeys.png"
                                  Icon="pack://application:,,,/Icons/ShortcutKeys.png"
                                  />
+                    <Fluent:Button x:Name="RibbonButtonAbout"
+                                 Header="バージョン 情報"
+                                 ToolTip="お使いのバージョンと更新履歴を確認します。"
+                                 Command="{Binding OpenAboutWindowCommand}"
+                                 LargeIcon="pack://application:,,,/Icons/cover.png"
+                                 Icon="pack://application:,,,/Icons/cover.png"
+                                 KeyTip="V"/>
                     <Fluent:Button Header="検証"
                                  ToolTip="設計例によるプログラムの検証"
                                  Command="{Binding OpenVerificationWindowCommand}"

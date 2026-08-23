@@ -234,6 +234,10 @@ namespace PileDesign.Views
                 vm.OpenShortcutKeysWindowCommand);
             Add(list, "ヘルプを開く", "アプリのヘルプ HTML", null, "help ヘルプ",
                 vm.OpenHelpWindowCommand);
+            Add(list, "クイックスタートを開く", "入力から解析までの流れ", null, "quickstart 入門 使い方 はじめて",
+                vm.OpenQuickStartHelpCommand);
+            Add(list, "バージョン情報", "バージョンと更新履歴を確認", null, "version about バージョン 更新履歴 リリースノート",
+                vm.OpenAboutWindowCommand);
 
             // ── Undo / Redo ───────────────────────────────────────────
             Add(list, "元に戻す", "直前の編集を取り消し", "Ctrl+Z", "undo 元 戻す",
