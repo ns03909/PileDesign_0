@@ -2072,11 +2072,10 @@ namespace PileDesign.ViewModels
             }
             // 沈下応力 が 解析結果 内容オプションに現れるよう再評価
             UpdateSettlementCategoriesPublic();
-            // ログ・テーブル・グラフ・検定ウィンドウのコマンド有効状態を更新
+            // ログ・テーブル・グラフのコマンド有効状態を更新
             (OpenLogWindowCommand as CommunityToolkit.Mvvm.Input.IRelayCommand)?.NotifyCanExecuteChanged();
             (OpenTableWindowCommand as ToolkitRelayCommand)?.NotifyCanExecuteChanged();
             (OpenGraphWindowCommand as ToolkitRelayCommand)?.NotifyCanExecuteChanged();
-            (OpenEvaluationWindowCommand as CommunityToolkit.Mvvm.Input.IRelayCommand)?.NotifyCanExecuteChanged();
         }
 
         /// <summary>

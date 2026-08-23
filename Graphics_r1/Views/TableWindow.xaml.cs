@@ -76,8 +76,9 @@ namespace PileDesign.Views
                     IsReadOnly = true
                 };
 
-                // 数値型の列は右揃えにする
-                if (IsNumericType(col.Property.PropertyType))
+                // 数値型の列は右揃えにする。
+                // 行ごとに桁数を変えるため文字列へ整形した列は RightAlign で指定する。
+                if (IsNumericType(col.Property.PropertyType) || col.RightAlign)
                     column.ElementStyle = _rightAlignTextStyle;
 
                 ResultGrid.Columns.Add(column);

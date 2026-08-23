@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace PileDesign.Models.Results
 {
@@ -70,12 +71,32 @@ namespace PileDesign.Models.Results
             IsLiquefaction is bool b ? (b ? "液状化有" : "液状化無") : "";
 
         /// <summary>応答値 (解析から得た値)。</summary>
-        [ResultColumn("応答値", 10, "N3", "解析から得た値。単位は「単位」列を参照")]
         public double Response { get; init; }
 
         /// <summary>限界値 (これを超えると NG)。</summary>
-        [ResultColumn("限界値", 11, "N3", "この値を超えると NG。単位は「単位」列を参照")]
         public double Limit { get; init; }
+
+        /// <summary>
+        /// 応答値・限界値の表示桁数。量によって適切な桁が違うので、
+        /// 列ごとに固定するのではなく行ごとに決める。
+        ///   モーメント・せん断力 (kN·m, kN) … 小数 1 桁
+        ///   杭頭回転角 (rad)                  … 小数 3 桁 (限界 0.010 と比べられる桁)
+        ///   基礎梁の傾斜角 (rad)              … 小数 5 桁
+        ///     限界 1/300 = 0.00333 なので、3 桁だと限界と応答が同じ 0.003 に潰れる
+        /// </summary>
+        public string ValueFormat => Kind switch
+        {
+            EvaluationKind.PileSectionMoment => "N1",
+            EvaluationKind.PileHeadRotation => "N3",
+            EvaluationKind.FoundationBeamInclination => "N5",
+            _ => "N3",
+        };
+
+        [ResultColumn("応答値", 10, tooltip: "解析から得た値。単位は「単位」列を参照", rightAlign: true)]
+        public string ResponseText => Response.ToString(ValueFormat, CultureInfo.InvariantCulture);
+
+        [ResultColumn("限界値", 11, tooltip: "この値を超えると NG。単位は「単位」列を参照", rightAlign: true)]
+        public string LimitText => Limit.ToString(ValueFormat, CultureInfo.InvariantCulture);
 
         /// <summary>応答値・限界値の単位。「kN·m」「rad」など。</summary>
         [ResultColumn("単位", 12, tooltip: "応答値・限界値の単位")]

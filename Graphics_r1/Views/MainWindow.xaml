@@ -2010,14 +2010,6 @@
                              Icon="pack://application:,,,/Icons/Log.png"/>
                 </Fluent:RibbonGroupBox>
 
-                <Fluent:RibbonGroupBox Header="検定" ToolTip="検定">
-                    <Fluent:Button Header="検定"
-                             ToolTip="解析結果の検定ウィンドウを開きます。"
-                             Command="{Binding OpenEvaluationWindowCommand}"
-                             LargeIcon="pack://application:,,,/Icons/Check.png"
-                             Icon="pack://application:,,,/Icons/Check.png"/>
-                </Fluent:RibbonGroupBox>
-
                 <!-- 値表示・テキスト 統合グループ（右端、ダイアグラムスケールは別出） -->
                 <Fluent:RibbonGroupBox Header="テキスト・値表示"
                                     ToolTip="テキスト・値表示"

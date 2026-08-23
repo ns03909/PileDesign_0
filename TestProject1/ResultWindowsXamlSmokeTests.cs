@@ -52,24 +52,7 @@ namespace TestProject1
             });
         }
 
-        /// <summary>
-        /// 検定ウィンドウ (要約行 + 検定比の一覧を追加した)。
-        /// StatusSuccessBrush / ErrorBrush / ControlBorderBrush と
-        /// EnhancedDataGrid の列定義がパースできること。
-        /// </summary>
-        [TestMethod]
-        public void EvaluationWindow_XamlParses_WithoutException()
-        {
-            AssertWindowParses("EvaluationWindow", () =>
-            {
-                var mainVm = new PileDesign.ViewModels.MainWindowViewModel();
-                return new PileDesign.Views.EvaluationWindow
-                {
-                    // 解析結果が無い状態でも開けること (実機でも起こり得る)
-                    DataContext = new PileDesign.ViewModels.EvaluationWindowViewModel(mainVm),
-                };
-            });
-        }
+        // 検定ウィンドウは廃止した (検定は解析結果テーブルから見る)。
 
         // MainWindow は他のテストが別 STA スレッドで作った WPF の静的オブジェクトに触れてしまい、
         // 「呼び出しスレッドはこのオブジェクトにアクセスできません」で落ちるためここでは対象外。

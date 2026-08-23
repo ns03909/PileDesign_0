@@ -17,80 +17,44 @@ using PileDesign.Services;
 
 namespace PileDesign.ViewModels
 {
-    public partial class EvaluationWindowViewModel : ObservableObject
+    /// <summary>
+    /// 解析結果の検定。
+    ///
+    /// 出力は 2 つ。
+    ///   ・<see cref="BuildEvaluationResult"/>  構造化した結果 (解析結果テーブル用)
+    ///   ・<see cref="BuildEvaluationText"/>    テキスト (計算書用)
+    /// テキストは構造化した結果から組み立てる。
+    ///
+    /// かつては専用の検定ウィンドウの ViewModel だったが、
+    /// 検定は解析結果テーブルから見るようにしたのでウィンドウは廃止した。
+    /// </summary>
+    public sealed class EvaluationService
     {
         private readonly MainWindowViewModel _mainVm;
 
-        [ObservableProperty]
-        private string _evaluationText = "「低減前水平解析」または「低減後水平解析」ボタンを押してください。";
+        /// <summary>組み立てたテキスト。</summary>
+        private string EvaluationText { get; set; } = "";
 
-        [ObservableProperty]
-        private string _statusText = "Ready";
+        /// <summary>表示フィルタ: 0=NGのみ, 1=OKのみ, 2=OK/NG両方。テキストの絞り込みに使う。</summary>
+        private int DisplayFilter { get; init; }
 
-        // 表示フィルタ: 0=NGのみ, 1=OKのみ, 2=OK/NG両方
-        [ObservableProperty]
-        private int _displayFilter = 0;
+        /// <summary>直近の検定結果 (構造化)。</summary>
+        private EvaluationResult Result { get; set; } = new([]);
 
-        partial void OnDisplayFilterChanged(int value)
-        {
-            // フィルタ変更時に前回の評価結果を再表示
-            if (_lastFactored.HasValue)
-                RunEvaluation(_lastFactored.Value);
-        }
-
-        private bool? _lastFactored;
-
-        /// <summary>
-        /// 直近の検定結果 (構造化)。テキストはここから組み立てる。
-        /// 画面の要約行・一覧もこれを見る。
-        /// </summary>
-        [ObservableProperty]
-        private EvaluationResult _result = new([]);
-
-        /// <summary>
-        /// 一覧に出す項目。表示フィルタ適用済みで、<b>検定比の降順</b>。
-        /// 一番厳しいところが先頭に来る。
-        /// </summary>
-        [ObservableProperty]
-        private IReadOnlyList<EvaluationItem> _displayItems = [];
-
-        /// <summary>
-        /// 要約行。支配ケース (検定比が最大の項目) を 1 行で示す。
-        /// 「NG が 3 件」だけでは、どこをどれだけ直せばよいか分からないため。
-        /// </summary>
-        [ObservableProperty]
-        private string _summaryText = "「低減前水平解析」または「低減後水平解析」ボタンを押してください。";
-
-        /// <summary>NG が 1 件以上あるか (要約行の色分け用)。</summary>
-        [ObservableProperty]
-        private bool _hasNg;
-
-        public EvaluationWindowViewModel(MainWindowViewModel mainVm)
+        private EvaluationService(MainWindowViewModel mainVm)
         {
             _mainVm = mainVm;
         }
 
-        [RelayCommand]
-        private void EvaluateUnfactored()
-        {
-            RunEvaluation(factored: false);
-        }
-
-        [RelayCommand]
-        private void EvaluateFactored()
-        {
-            RunEvaluation(factored: true);
-        }
-
         /// <summary>
-        /// UI を介さず検定テキストを取得する（DOCX 出力などから利用）。
+        /// 検定テキストを取得する (計算書から利用)。
         /// </summary>
         /// <param name="displayFilter">0=NGのみ, 1=OKのみ, 2=両方</param>
         public static string BuildEvaluationText(MainWindowViewModel mainVm, bool factored, int displayFilter)
         {
-            var vm = new EvaluationWindowViewModel(mainVm) { DisplayFilter = displayFilter };
-            vm.RunEvaluation(factored);
-            return vm.EvaluationText;
+            var service = new EvaluationService(mainVm) { DisplayFilter = displayFilter };
+            service.RunEvaluation(factored);
+            return service.EvaluationText;
         }
 
         /// <summary>
@@ -100,15 +64,13 @@ namespace PileDesign.ViewModels
         /// </summary>
         public static EvaluationResult BuildEvaluationResult(MainWindowViewModel mainVm, bool factored)
         {
-            var vm = new EvaluationWindowViewModel(mainVm) { DisplayFilter = 2 };
-            vm.RunEvaluation(factored);
-            return vm.Result;
+            var service = new EvaluationService(mainVm) { DisplayFilter = 2 };
+            service.RunEvaluation(factored);
+            return service.Result;
         }
 
         private void RunEvaluation(bool factored)
         {
-            _lastFactored = factored;
-
             var sb = new StringBuilder();
             string header = factored ? "【低減後水平解析 検定】" : "【低減前水平解析 検定】";
             sb.AppendLine(header);
@@ -121,10 +83,7 @@ namespace PileDesign.ViewModels
             {
                 sb.AppendLine("解析結果がありません。水平解析を実行してください。");
                 EvaluationText = sb.ToString();
-                StatusText = "解析結果なし";
                 Result = new EvaluationResult([]);
-                UpdateSummaryAndList();
-                SummaryText = "解析結果がありません。水平解析を実行してください。";
                 return;
             }
 
@@ -227,35 +186,6 @@ namespace PileDesign.ViewModels
             Result = new EvaluationResult(all);
 
             EvaluationText = sb.ToString();
-            int grandOk = Result.OkCount;
-            int grandNg = Result.NgCount;
-            StatusText = grandNg == 0
-                ? $"すべてOK (チェック {grandOk + grandNg} 件)"
-                : $"NG: {grandNg} 件 / OK: {grandOk} 件";
-
-            UpdateSummaryAndList();
-        }
-
-        /// <summary>一覧と要約行を <see cref="Result"/> から作り直す。</summary>
-        private void UpdateSummaryAndList()
-        {
-            DisplayItems = Result.ByRatioDescending
-                .Where(i => EvaluationResult.PassesFilter(i, DisplayFilter))
-                .ToList();
-
-            HasNg = Result.NgCount > 0;
-
-            var governing = Result.Governing;
-            if (governing == null)
-            {
-                SummaryText = "検定対象がありません。";
-                return;
-            }
-
-            // 支配ケース = 一番厳しいところ。NG が無くても余裕の度合いが分かる。
-            SummaryText =
-                $"最大検定比 {governing.Ratio:F2}　／　{governing.Category}　／　" +
-                $"{governing.TargetDescription}　／　{governing.ConditionDescription}";
         }
 
         /// <summary>
@@ -707,30 +637,6 @@ namespace PileDesign.ViewModels
             }
 
             return maxM;
-        }
-
-        [RelayCommand]
-        private void Export()
-        {
-            try
-            {
-                var dialog = new SaveFileDialog
-                {
-                    Filter = "Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
-                    DefaultExt = ".txt",
-                    FileName = $"Evaluation_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
-                };
-
-                if (dialog.ShowDialog() == true)
-                {
-                    File.WriteAllText(dialog.FileName, EvaluationText, Encoding.UTF8);
-                    StatusText = $"出力完了: {Path.GetFileName(dialog.FileName)}";
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageService.Show($"出力エラー:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
         }
     }
 }

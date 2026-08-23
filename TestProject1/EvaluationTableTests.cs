@@ -183,6 +183,60 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 応答値・限界値の桁数が量ごとに変わること。
+        /// 列ごとに固定すると、モーメント (千の位) と回転角 (小数 3 桁) が
+        /// 同じ表に並ぶため、どちらかが読めなくなる。
+        /// </summary>
+        [TestMethod]
+        public void ValueDigits_DependOnTheQuantity()
+        {
+            var moment = new EvaluationItem
+            {
+                Kind = EvaluationKind.PileSectionMoment,
+                Response = 1741.346, Limit = 1969.026,
+            };
+            Assert.AreEqual("1,741.3", moment.ResponseText, "モーメントは小数 1 桁");
+            Assert.AreEqual("1,969.0", moment.LimitText);
+
+            var rotation = new EvaluationItem
+            {
+                Kind = EvaluationKind.PileHeadRotation,
+                Response = 0.016974, Limit = 0.01,
+            };
+            Assert.AreEqual("0.017", rotation.ResponseText, "回転角は小数 3 桁");
+            Assert.AreEqual("0.010", rotation.LimitText);
+
+            // 傾斜角は限界 1/300 = 0.00333。3 桁だと応答も限界も 0.003 に潰れる
+            var inclination = new EvaluationItem
+            {
+                Kind = EvaluationKind.FoundationBeamInclination,
+                Response = 0.0025, Limit = 1.0 / 300.0,
+            };
+            Assert.AreEqual("0.00250", inclination.ResponseText);
+            Assert.AreEqual("0.00333", inclination.LimitText);
+            Assert.AreNotEqual(inclination.ResponseText, inclination.LimitText,
+                "傾斜角で応答と限界が同じ表示に潰れている");
+        }
+
+        /// <summary>
+        /// 桁数を行ごとに変えるため応答値・限界値は文字列の列になる。
+        /// 数値として読めるよう右寄せの指定が要る。
+        /// </summary>
+        [TestMethod]
+        public void FormattedValueColumns_AreRightAligned()
+        {
+            var columns = ResultColumnReflectionCache.GetColumns(typeof(EvaluationItem));
+
+            foreach (string header in new[] { "応答値", "限界値" })
+            {
+                var col = columns.First(c => c.Header == header);
+                Assert.AreEqual(typeof(string), col.Property.PropertyType,
+                    $"{header} は桁数を行ごとに変えるため文字列");
+                Assert.IsTrue(col.RightAlign, $"{header} が右寄せになっていない");
+            }
+        }
+
+        /// <summary>
         /// 検定の列がテーブル用に定義されていること。
         /// 検定比が先頭に来ないと、並べ替えずに支配ケースを見つけられない。
         /// </summary>

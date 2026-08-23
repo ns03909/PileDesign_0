@@ -142,7 +142,6 @@ namespace PileDesign.ViewModels
             if (OpenTableWindowCommand is ToolkitRelayCommand tc) tc.NotifyCanExecuteChanged();
             OpenGraphWindowCommand?.NotifyCanExecuteChanged();
             OpenLogWindowCommand?.NotifyCanExecuteChanged();
-            OpenEvaluationWindowCommand?.NotifyCanExecuteChanged();
         }
 
         [RelayCommand(CanExecute = nameof(CanOpenGraphWindow))]
@@ -301,7 +300,7 @@ namespace PileDesign.ViewModels
                 EvaluationResult result;
                 try
                 {
-                    result = EvaluationWindowViewModel.BuildEvaluationResult(this, factored);
+                    result = EvaluationService.BuildEvaluationResult(this, factored);
                 }
                 catch (Exception ex)
                 {
@@ -744,32 +743,6 @@ namespace PileDesign.ViewModels
             if (VerticalBeamAnalysisLogs.Count > 0) return true;
             var pgs = CurrentInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords?.Any(r => r.IsBeamAware && r.IterationLog?.Count > 0) == true) return true;
-            return false;
-        }
-
-        private Views.EvaluationWindow? _evaluationWindow;
-
-        [RelayCommand(CanExecute = nameof(CanOpenEvaluationWindow))]
-        private void OpenEvaluationWindow()
-        {
-            if (_evaluationWindow is { IsVisible: true })
-            {
-                _evaluationWindow.Activate();
-                return;
-            }
-
-            var vm = new EvaluationWindowViewModel(this);
-            _evaluationWindow = new Views.EvaluationWindow { DataContext = vm, Topmost = true };
-            _evaluationWindow.Closed += (_, _) => _evaluationWindow = null;
-            _evaluationWindow.Show();
-        }
-
-        private bool CanOpenEvaluationWindow()
-        {
-            if (IsHorizontalAnalysisDone && CurrentModel != null) return true;
-            // 個別矩形（基礎梁考慮）反復解析の結果でも 傾斜角検定 を許可
-            var pgs = CurrentInputModel?.PileGroupSettlement;
-            if (pgs?.CaseRecords?.Any(r => r.IsBeamAware) == true) return true;
             return false;
         }
 

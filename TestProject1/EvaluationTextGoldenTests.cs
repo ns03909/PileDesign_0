@@ -104,7 +104,7 @@ namespace TestProject1
                 return;
             }
 
-            string actual = EvaluationWindowViewModel.BuildEvaluationText(mainVm, factored, displayFilter);
+            string actual = EvaluationService.BuildEvaluationText(mainVm, factored, displayFilter);
 
             string name = $"{GroundExample}_{(factored ? "factored" : "unfactored")}_filter{displayFilter}.txt";
             string path = Path.Combine(GoldenDir, name);
@@ -161,7 +161,7 @@ namespace TestProject1
                 return;
             }
 
-            string text = EvaluationWindowViewModel.BuildEvaluationText(mainVm, factored: false, displayFilter: 2);
+            string text = EvaluationService.BuildEvaluationText(mainVm, factored: false, displayFilter: 2);
 
             Assert.IsTrue(text.Length > 500, $"検定テキストが短すぎます ({text.Length} 文字)。解析が空振りしている可能性があります。");
             StringAssert.Contains(text, "検定", "検定テキストになっていない");

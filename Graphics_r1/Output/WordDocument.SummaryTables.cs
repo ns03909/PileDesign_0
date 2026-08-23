@@ -1143,7 +1143,7 @@ namespace PileDesign.Output
             string text;
             try
             {
-                text = ViewModels.EvaluationWindowViewModel.BuildEvaluationText(mainWindowViewModel, factored, displayFilter: 0);
+                text = ViewModels.EvaluationService.BuildEvaluationText(mainWindowViewModel, factored, displayFilter: 0);
             }
             catch (Exception ex)
             {

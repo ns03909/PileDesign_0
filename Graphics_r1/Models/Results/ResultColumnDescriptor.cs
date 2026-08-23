@@ -9,5 +9,6 @@ namespace PileDesign.Models.Results
         public PropertyInfo Property { get; init; } = null!;
         public string? Format { get; init; }
         public string? Tooltip { get; init; }
+        public bool RightAlign { get; init; }
     }
 }
