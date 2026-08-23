@@ -99,6 +99,20 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void MarkWorkSaved() => _hasUnsavedWork = false;
 
+        /// <summary>
+        /// 編集された<b>かもしれない</b>ことを記録する。
+        ///
+        /// 入力ウィンドウ (基本設定・荷重・地盤・杭体・基礎梁・杭要素分割) は自前の Undo を持ち、
+        /// 共有の <see cref="CurrentInputModel"/> を直接書き換えるため、
+        /// <see cref="SaveUndoState"/> を通らない。変更の有無を確実に知る手立てが無いので、
+        /// これらを開いたら編集されたものとして扱う。
+        ///
+        /// キャンセルで閉じても確認が出るが、
+        /// 「編集したのに確認が出ない」でデータを失うよりはよい。
+        /// <b>編集できるウィンドウを追加したら、ここを呼ぶこと。</b>
+        /// </summary>
+        public void MarkPossiblyEdited() => _hasUnsavedWork = true;
+
         public void SaveUndoState([System.Runtime.CompilerServices.CallerMemberName] string? description = null)
         {
             // 直接呼出は「大規模操作」を意味するため、進行中のデバウンスセッションを終了させる
@@ -461,6 +475,8 @@ namespace PileDesign.ViewModels
         {
             // ダイアログを開く
             OpenDialogWindow<TViewModel, TWindow>(this);
+
+            MarkPossiblyEdited();
 
             // 追加処理の実行
             postDialogAction?.Invoke();
@@ -2314,6 +2330,9 @@ namespace PileDesign.ViewModels
                     // ウィンドウを即座に表示（重い初期化はContentRenderedイベントで実行）
                     var window = new ElementDivisionWindow(this);
                     window.ShowDialog();
+
+                    MarkPossiblyEdited();
+
                     if (undoCopy != null)
                     {
                         _undoManager.SaveState(undoCopy, "杭要素分割");

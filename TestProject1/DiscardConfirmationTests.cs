@@ -76,6 +76,25 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// 入力ウィンドウを開いたら、編集されたものとして扱うこと。
+        ///
+        /// 地盤・杭体・荷重などのウィンドウは自前の Undo を持ち、共有の入力モデルを
+        /// 直接書き換えるため、SaveUndoState を通らない。ここを取りこぼすと
+        /// 「編集したのに確認が出ない」でデータを失う。
+        /// </summary>
+        [TestMethod]
+        public void OpeningAnEditingWindow_CountsAsPossiblyEdited()
+        {
+            var vm = new MainWindowViewModel();
+            Assert.IsFalse(vm.HasUnsavedWork);
+
+            vm.MarkPossiblyEdited();
+
+            Assert.IsTrue(vm.HasUnsavedWork,
+                "入力ウィンドウを開いたのに、確認が出ない判定になっている");
+        }
+
         [TestMethod]
         public void AfterMarkingSaved_NeedsNoConfirmationAgain()
         {
