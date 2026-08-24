@@ -14,6 +14,18 @@ namespace PileDesign.Models.Results
 
         /// <summary>基礎梁の傾斜角。応答 = |ΔUz|/L、限界 = 1/300。</summary>
         FoundationBeamInclination,
+
+        /// <summary>
+        /// 杭の押込み支持力。応答 = 設計軸力 (圧縮)、限界 = 限界状態に応じた支持力。
+        /// </summary>
+        PileBearingCompression,
+
+        /// <summary>
+        /// 杭の引抜き抵抗。応答 = 設計軸力 (引張)、限界 = 限界状態に応じた引抜き抵抗力。
+        /// どちらも大きさ (絶対値) で持つ。内部の符号 (圧縮正・引抜き負) のまま表に出すと
+        /// 「−1200 が −1500 を超えたか」を読むことになり分かりにくい。
+        /// </summary>
+        PileUpliftResistance,
     }
 
     /// <summary>
@@ -89,6 +101,8 @@ namespace PileDesign.Models.Results
             EvaluationKind.PileSectionMoment => "N1",
             EvaluationKind.PileHeadRotation => "N3",
             EvaluationKind.FoundationBeamInclination => "N5",
+            EvaluationKind.PileBearingCompression => "N1",
+            EvaluationKind.PileUpliftResistance => "N1",
             _ => "N3",
         };
 
@@ -141,6 +155,10 @@ namespace PileDesign.Models.Results
             {
                 if (Kind == EvaluationKind.FoundationBeamInclination)
                     return FoundationBeamNo is int no ? $"基礎梁 #{no}" : TargetName;
+
+                // 支持力は杭 1 本に対する検定なので、区間や端部の区別は無い
+                if (Kind is EvaluationKind.PileBearingCompression or EvaluationKind.PileUpliftResistance)
+                    return $"杭No.{PileBodyNo}";
 
                 string s = $"杭配置No.{PileBodyNo}";
                 if (SegmentIndex is int seg) s += $" / 要素{seg}";

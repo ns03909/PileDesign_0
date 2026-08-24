@@ -291,9 +291,11 @@ namespace PileDesign.ViewModels
         private List<ResultTable> BuildEvaluationTables()
         {
             var tables = new List<ResultTable>();
-            if (CurrentModel == null || !IsHorizontalAnalysisDone) return tables;
-
             var columns = ResultColumnReflectionCache.GetColumns(typeof(EvaluationItem));
+
+            AddBearingTable(tables, columns);
+
+            if (CurrentModel == null || !IsHorizontalAnalysisDone) return tables;
 
             foreach (var (factored, label) in new[] { (false, "低減前"), (true, "低減後") })
             {
@@ -322,6 +324,39 @@ namespace PileDesign.ViewModels
             }
 
             return tables;
+        }
+
+        /// <summary>
+        /// 杭の鉛直支持力の検定を 1 枚の表にする。
+        ///
+        /// 水平解析の検定 (低減前 / 低減後) とは別の表にしてある。
+        /// 支持力は応答値が入力した杭軸力、限界値が地盤と杭体で決まるため
+        /// 低減の有無で変わらず、2 枚に載せると同じ行が重複して支配ケースを読み違える。
+        /// 同じ理由で水平解析が済んでいなくても (杭要素分割だけで) 出せる。
+        /// </summary>
+        private void AddBearingTable(List<ResultTable> tables, ResultColumnDescriptor[] columns)
+        {
+            try
+            {
+                var inputModel = ResultInputModel ?? CurrentInputModel;
+                string seismicGrade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
+                var result = new EvaluationResult(PileBearingEvaluator.Evaluate(inputModel, seismicGrade));
+                if (result.IsEmpty) return;
+
+                tables.Add(new ResultTable
+                {
+                    Name = "検定結果（杭の鉛直支持力）",
+                    Category = "検定",
+                    Columns = columns,
+                    Rows = result.ByRatioDescending.Cast<object>().ToList(),
+                    SpansAllConditions = true,
+                });
+            }
+            catch (Exception ex)
+            {
+                // 支持力が組めなくても他の結果テーブルは出す
+                Serilog.Log.Warning(ex, "[検定テーブル] 支持力の生成に失敗");
+            }
         }
 
         /// <summary>
