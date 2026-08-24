@@ -1,4 +1,3 @@
-using AvalonDock;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,13 +11,17 @@ namespace PileDesign.Services
     /// ウィンドウレイアウト管理サービス
     ///
     /// 機能:
-    /// - AvalonDockレイアウトの保存/復元
     /// - DataGrid列設定（幅、並び順）の保存/復元
     /// - ウィンドウサイズ・位置の保存/復元
+    ///
+    /// AvalonDock のドッキングレイアウトの保存/復元は持たない。
+    /// 復元は呼び出し側でコメントアウトされていて到達不能な状態が続いており、
+    /// 保存だけが誰も読まないファイルを書いていた。
+    /// AvalonDock 5.0.0 で XmlLayoutSerializer が削除された機に整理した
+    /// (必要になったら DockingManager の DtoMapper で作り直す)。
     /// </summary>
     public class LayoutService
     {
-        private readonly string _layoutFilePath;
         private readonly string _dataGridSettingsFilePath;
 
         public LayoutService()
@@ -28,54 +31,9 @@ namespace PileDesign.Services
             var appFolder = Path.Combine(appDataPath, "PileDesign");
             Directory.CreateDirectory(appFolder);
 
-            _layoutFilePath = Path.Combine(appFolder, "layout.xml");
             _dataGridSettingsFilePath = Path.Combine(appFolder, "datagrid_settings.json");
         }
 
-        /// <summary>
-        /// AvalonDockレイアウトを保存
-        /// </summary>
-        /// <param name="dockingManager">DockingManager</param>
-        public void SaveDockLayout(DockingManager dockingManager)
-        {
-            if (dockingManager == null)
-                return;
-
-            try
-            {
-                // AvalonDockのレイアウトをXMLで保存
-                var layoutSerializer = new AvalonDock.Layout.Serialization.XmlLayoutSerializer(dockingManager);
-                using var writer = new StreamWriter(_layoutFilePath);
-                layoutSerializer.Serialize(writer);
-            }
-            catch
-            {
-                // 保存失敗は無視
-            }
-        }
-
-        /// <summary>
-        /// AvalonDockレイアウトを復元
-        /// </summary>
-        /// <param name="dockingManager">DockingManager</param>
-        /// <returns>復元に成功した場合true</returns>
-        public bool RestoreDockLayout(DockingManager dockingManager)
-        {
-            if (dockingManager == null || !File.Exists(_layoutFilePath))
-                return false;
-
-            try
-            {
-                var layoutSerializer = new AvalonDock.Layout.Serialization.XmlLayoutSerializer(dockingManager);
-                using var reader = new StreamReader(_layoutFilePath);
-                layoutSerializer.Deserialize(reader);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
 
         /// <summary>
         /// DataGrid列設定を保存
@@ -204,9 +162,6 @@ namespace PileDesign.Services
         {
             try
             {
-                if (File.Exists(_layoutFilePath))
-                    File.Delete(_layoutFilePath);
-
                 if (File.Exists(_dataGridSettingsFilePath))
                     File.Delete(_dataGridSettingsFilePath);
             }

@@ -344,18 +344,14 @@ namespace PileDesign.Views
         {
             if (_isClosingAfterSave)
             {
-                // 保存完了後の再 Close: レイアウトを保存してそのまま閉じる
-                _layoutService.SaveDockLayout(dockingManager);
+                // 保存完了後の再 Close: そのまま閉じる
                 return;
             }
 
             // 保存していない作業が無ければ確認せずに閉じる。
             // (起動して何もしなかった / 保存した直後 / 読み込んだだけ)
             if (DataContext is MainWindowViewModel vm && !vm.HasUnsavedWork)
-            {
-                _layoutService.SaveDockLayout(dockingManager);
                 return;
-            }
 
             // 確認ダイアログを表示
             var result = MessageService.Show(
@@ -384,18 +380,15 @@ namespace PileDesign.Views
                             Close();
                         }));
                     }
-                    return; // この経路ではレイアウト保存は 2 回目の Closing 発火時に行う
+                    return; // 実際に閉じるのは保存後の 2 回目の Closing
                 case MessageBoxResult.No:
                     // 保存せずに閉じる
                     break;
                 case MessageBoxResult.Cancel:
                     // 閉じるのをキャンセル
                     e.Cancel = true;
-                    return; // レイアウト保存しない
+                    return;
             }
-
-            // レイアウトを保存（キャンセル時以外）
-            _layoutService.SaveDockLayout(dockingManager);
         }
 
         /// <summary>
@@ -695,8 +688,6 @@ namespace PileDesign.Views
                 viewModel.CheckAutoSaveRestore();
             }
 
-            // レイアウトを復元
-            //_layoutService.RestoreDockLayout(dockingManager);
         }
 
         private void ColorBarCanvas_SizeChanged(object sender, SizeChangedEventArgs e)

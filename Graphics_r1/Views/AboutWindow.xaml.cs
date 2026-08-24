@@ -2,7 +2,6 @@ using PileDesign.Common.Logging;
 using PileDesign.ViewModels;
 using System;
 using System.IO;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 
@@ -42,18 +41,23 @@ namespace PileDesign.Views
         /// <summary>
         /// ビルド日。実行ファイルの更新日時を使う。
         /// 決定的ビルドではアセンブリに日付が埋まらないため、これが最も確実な手掛かりになる。
+        ///
+        /// 場所の取得に <c>Assembly.Location</c> は使えない。
+        /// 単一ファイル発行では常に空文字を返すため、アナライザ (IL3000) が咎める。
+        /// <c>AppContext.BaseDirectory</c> は単一ファイルでも展開先を指す。
         /// </summary>
         private static string DescribeBuildDate()
         {
             try
             {
-                string path = Assembly.GetEntryAssembly()?.Location ?? "";
-                if (string.IsNullOrEmpty(path) || !File.Exists(path))
-                    path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PileDesign.exe");
-
-                return File.Exists(path)
-                    ? File.GetLastWriteTime(path).ToString("yyyy-MM-dd")
-                    : "(不明)";
+                string dir = AppContext.BaseDirectory;
+                foreach (string name in new[] { "PileDesign.exe", "PileDesign.dll" })
+                {
+                    string path = Path.Combine(dir, name);
+                    if (File.Exists(path))
+                        return File.GetLastWriteTime(path).ToString("yyyy-MM-dd");
+                }
+                return "(不明)";
             }
             catch
             {
