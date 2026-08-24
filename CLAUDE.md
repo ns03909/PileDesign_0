@@ -20,6 +20,29 @@ dotnet test  TestProject1/TestProject1.csproj --no-build
   失敗しますが、これは `error CS` の grep に引っかかりません。
 - テストは失敗 0 を維持します。件数が減っていたら、消したテストがないか確認を。
 
+## ビルドとテストで守れない領域
+
+**単一ファイル発行 (publish) でしか出ない解析があります。**
+配布は `PublishSingleFile` + `SelfContained` で、`IL3000` 系
+（`Assembly.Location` は単一ファイルでは常に空文字）などは
+publish のときだけ検査されます。`TreatWarningsAsErrors` が有効なので
+**警告ではなくエラー**になり、publish だけが落ちます。
+
+次のような変更をしたら publish も通してください。
+
+- 実行ファイルやアセンブリの場所を扱う
+  （`Assembly.Location` は使わず `AppContext.BaseDirectory`）
+- リフレクション・動的読み込み
+- NuGet パッケージの更新
+
+```
+dotnet publish Graphics_r1/PileDesign.csproj -p:PublishProfile=FolderProfile
+```
+
+なお **AvalonDock は net8.0 向けアセットを持たず**、.NET Framework 4.8 向けが
+互換フォールバックで使われています（`NU1701`。許容設定に入れてあります）。
+更新したらドッキング操作を実機で確認してください。
+
 ## 触ったら足すテスト
 
 このリポジトリでは「ビルドは通るが実行時に静かに壊れる」種類の不具合が
