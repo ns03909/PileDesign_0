@@ -1839,7 +1839,7 @@ namespace PileDesign.ViewModels
                 if (rec?.SettlementGridData != null && rec.SettlementGridData.Count > 0)
                     return rec.SettlementGridData;
             }
-            return InputModel.PileGroupSettlement.SettlementGridData ?? [];
+            return InputModel.PileGroupSettlement.ActiveSettlementGridData;
         }
 
         /// <summary>

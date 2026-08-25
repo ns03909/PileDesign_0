@@ -2113,7 +2113,33 @@ namespace PileDesign.ViewModels
             if (double.IsNaN(pgs.LoadingPlaneAltitudeBeamAware))
                 pgs.LoadingPlaneAltitudeBeamAware = pgs.LoadingPlaneAltitude;
 
+            // (5) CaseRecords を持たない旧ファイル: 複製しか残っていないので、そこから 1 件復元する。
+            //     表示系は ActiveRecord を読むようになったため、これが無いと旧ファイルの
+            //     沈下コンタが出なくなる。
+            if ((pgs.CaseRecords == null || pgs.CaseRecords.Count == 0)
+                && (pgs.SettlementGridData?.Count ?? 0) > 0)
+            {
+                pgs.CaseRecords =
+                [
+                    new GroupSettlementCaseRecord
+                    {
+                        LoadCaseName = "VL",
+                        LoadingType = string.IsNullOrEmpty(pgs.LoadingType) ? "任意矩形" : pgs.LoadingType,
+                        IsBeamAware = false,
+                        IsConverged = true,
+                        RectLoads = new ObservableCollection<RectLoad>(pgs.RectLoads ?? []),
+                        SettlementGridData =
+                            new ObservableCollection<SettlementGridDataItem>(pgs.SettlementGridData),
+                    }
+                ];
+                pgs.ActiveCaseIndex = 0;
+            }
+
             if (pgs.CaseRecords == null || pgs.CaseRecords.Count == 0) return;
+
+            // 表示するケースが決まっていない旧ファイルは先頭を選ぶ
+            if (pgs.ActiveCaseIndex < 0 || pgs.ActiveCaseIndex >= pgs.CaseRecords.Count)
+                pgs.ActiveCaseIndex = 0;
 
             string fallback = string.IsNullOrEmpty(pgs.LoadingType) ? "任意矩形" : pgs.LoadingType;
             foreach (var rec in pgs.CaseRecords)

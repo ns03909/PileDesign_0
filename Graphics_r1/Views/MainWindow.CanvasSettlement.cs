@@ -275,14 +275,14 @@ namespace PileDesign.Views
 
             var pileGroupSettlement = viewModel.ResultInputModel.PileGroupSettlement;
             if (pileGroupSettlement.SettlementGridX == null ||
-                pileGroupSettlement.SettlementGridY == null ||
-                pileGroupSettlement.SettlementGridData == null)
+                pileGroupSettlement.SettlementGridY == null)
                 return;
 
             double z = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
             var xs = pileGroupSettlement.SettlementGridX;
             var ys = pileGroupSettlement.SettlementGridY;
-            var items = pileGroupSettlement.SettlementGridData;
+            // 表示中のケースの結果を読む (複製の SettlementGridData ではなく)
+            var items = pileGroupSettlement.ActiveSettlementGridData;
 
             if (xs.Count == 0 || ys.Count == 0 || items.Count == 0)
             {
@@ -695,8 +695,8 @@ namespace PileDesign.Views
 
             // 沈下データが存在するか確認
             var pileGroupSettlement = viewModel.ResultInputModel?.PileGroupSettlement;
-            if (pileGroupSettlement?.SettlementGridData == null ||
-                pileGroupSettlement.SettlementGridData.Count == 0 ||
+            if (pileGroupSettlement == null ||
+                pileGroupSettlement.ActiveSettlementGridData.Count == 0 ||
                 pileGroupSettlement.SettlementGridX == null ||
                 pileGroupSettlement.SettlementGridY == null)
             {
@@ -749,7 +749,7 @@ namespace PileDesign.Views
         {
             var xs = pileGroupSettlement.SettlementGridX;
             var ys = pileGroupSettlement.SettlementGridY;
-            var items = pileGroupSettlement.SettlementGridData;
+            var items = pileGroupSettlement.ActiveSettlementGridData;
 
             // x, yを含むセルを探す
             int ix = -1, iy = -1;

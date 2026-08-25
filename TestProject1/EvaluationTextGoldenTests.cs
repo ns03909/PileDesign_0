@@ -56,7 +56,28 @@ namespace TestProject1
         private static readonly System.Collections.Generic.Dictionary<string, MainWindowViewModel?> _analyzed = new();
         private static readonly System.Collections.Generic.Dictionary<string, string> _loadError = new();
 
+        /// <summary>
+        /// 解析済みの ViewModel を返す。<b>返す前に材料オプションをこのモデルのものへ戻す。</b>
+        ///
+        /// コンクリートのモデル化オプション (<c>ConcreteModelOptions</c>) と M-φ キャッシュは
+        /// <b>プロセス全体で共有される static</b>。他のテストが ViewModel を作って
+        /// <c>ApplyConcreteModelOptions</c> を呼ぶと (新規作成・ファイル読込の経路が呼ぶ)、
+        /// この static が別のモデルの設定に書き換わる。検定テキストは呼ばれた時点の
+        /// 限界曲線で組み立てるので、解析が済んでいても出力が変わりうる。
+        ///
+        /// ※ <c>("Example3_5", factored: true, filter: 2)</c> の間欠的な失敗の原因は<b>これではない</b>。
+        ///    鋼管杭の例題なのでコンクリートのオプションは効かず、全オプションを個別に立てても
+        ///    テキストが変わらないことを確認済み (テキストの組み立て自体も決定的)。原因は未特定。
+        /// </summary>
         private static MainWindowViewModel? GetAnalyzedViewModel(string ground)
+        {
+            var vm = GetOrRunAnalysis(ground);
+            // 静的オプションをこの例題のものへ戻してから使う
+            vm?.ApplyConcreteModelOptions();
+            return vm;
+        }
+
+        private static MainWindowViewModel? GetOrRunAnalysis(string ground)
         {
             if (_analyzed.TryGetValue(ground, out var cached)) return cached;
             if (_loadError.ContainsKey(ground)) return null;

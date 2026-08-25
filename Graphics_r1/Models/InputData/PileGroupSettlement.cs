@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Media.Media3D;
 
@@ -76,13 +77,42 @@ namespace PileDesign.Models.InputData
         }
 
 
-        // グリッド (現在表示中のケースの沈下量。CaseRecords がある場合は ActiveCase 切替で更新される)
+        /// <summary>
+        /// 表示中のケースの沈下グリッド。<b>保存ファイルの互換のために残している複製</b>で、
+        /// 正は <see cref="ActiveRecord"/> の側。<b>表示系はここを読まないこと</b>
+        /// (<see cref="ActiveSettlementGridData"/> を使う)。
+        ///
+        /// この複製は消せない。<c>CaseRecords[].SettlementGridData</c> は同じ要素インスタンスを
+        /// 指しており、<c>ReferenceHandler.Preserve</c> では要素の <c>$id</c> がこちら側に付き、
+        /// レコード側は <c>$ref</c> になる。このプロパティを外すと
+        /// <b>既存の保存ファイルが「Reference '6' was not found」で一切開けなくなる</b>。
+        /// 外すには先に要素の共有をやめる必要がある (SettlementMirrorTests に実証を残した)。
+        /// </summary>
         private ObservableCollection<SettlementGridDataItem> _settlementGridData;
         public ObservableCollection<SettlementGridDataItem> SettlementGridData
         {
             get => _settlementGridData;
             set => SetProperty(ref _settlementGridData, value);
         }
+
+        /// <summary>表示中のケースの結果。未解析・該当なしは null。</summary>
+        [JsonIgnore]
+        public GroupSettlementCaseRecord? ActiveRecord =>
+            CaseRecords != null && ActiveCaseIndex >= 0 && ActiveCaseIndex < CaseRecords.Count
+                ? CaseRecords[ActiveCaseIndex]
+                : null;
+
+        /// <summary>
+        /// 表示中のケースの沈下グリッド。<b>表示系はこちらを読む。</b>
+        ///
+        /// 複製 (<see cref="SettlementGridData"/>) を読むと、複製の同期を忘れた経路で
+        /// 「アクティブケースと画面がずれる」種類の食い違いが出る。
+        /// </summary>
+        [JsonIgnore]
+        public ObservableCollection<SettlementGridDataItem> ActiveSettlementGridData =>
+            ActiveRecord?.SettlementGridData ?? _emptyGrid;
+
+        private readonly ObservableCollection<SettlementGridDataItem> _emptyGrid = [];
 
         // 群杭沈下解析結果 (ケース別)。基礎梁考慮反復・通常 Steinbrenner どちらでも 1+ レコード保存。
         // 既存単一結果との互換性: 解析実行時は最終的に SettlementGridData / RectLoads / 各杭 GroupPileSettlement

@@ -545,9 +545,12 @@ namespace PileDesign.ViewModels
                     IsVerticalAnalysisDone = true;
             }
 
-            // 群杭沈下解析済み判定: SettlementGridDataが存在する
+            // 群杭沈下解析済み判定: ケースの結果があるか。
+            // 複製 (SettlementGridData) しか持たない旧ファイルもあるので、そちらも見る。
             var settlement = CurrentInputModel?.PileGroupSettlement;
-            if (settlement?.SettlementGridData != null && settlement.SettlementGridData.Count > 0)
+            if (settlement != null
+                && ((settlement.CaseRecords?.Count ?? 0) > 0
+                    || (settlement.SettlementGridData?.Count ?? 0) > 0))
             {
                 IsGroupPileSettlementAnalysisDone = true;
             }
