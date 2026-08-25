@@ -2394,9 +2394,14 @@ namespace PileDesign.Models.InputData
         // 密度と節長さを自由に振った最良フィットでも RMS 1.5% 止まりで、しかもその γ は 27.4 kN/m³ と
         // コンクリートとして非現実的。継手金物等を含むためと推定）。メーカー公称値が唯一正確な出所。
         // この結果、基本設定のコンクリート単位体積重量 ConcreteGamma は節杭の自重に効かない。
+        //
+        // ※ コンクリートの断面積は Ac をそのまま使う。Ac は定義の時点で
+        //   主筋・テンドンを控除済みなので、ここで再度引くと鋼材ぶんを二重に控除して
+        //   自重が過小になる (PHC で 0.5〜1.1%、PRC で 1.4〜5.5%)。
+        //   押込み側は軸力の過小評価 = 危険側、引抜き側は抵抗の過小評価 = 安全側だった。
         public double W => IsNodularPile && CatalogMassPerM > 0
             ? CatalogMassPerM * UnitConversion.TON_TO_KN   // t/m -> kN/m
-            : ((MainBarAg + TendonAp + PipeAs) * 78.5 + (Ac - (MainBarAg + TendonAp)) * ConcreteGamma) * Math.Pow(10, -6);
+            : ((MainBarAg + TendonAp + PipeAs) * 78.5 + Ac * ConcreteGamma) * Math.Pow(10, -6);
 
         // 軸剛性 (kN)
         // 合成断面: コンクリート + 主筋 + PC鋼材 + 鋼管（Es·As）。鋼管を持たない断面では PipeAs=0 のため影響なし。
@@ -2491,7 +2496,7 @@ namespace PileDesign.Models.InputData
 
         // 腐食考慮 杭単位長さ重量 (kN/m)
         public double WCorroded =>
-            ((MainBarAg + TendonAp + PipeAsCorroded) * 78.5 + (Ac - (MainBarAg + TendonAp)) * ConcreteGamma) * Math.Pow(10, -6);
+            ((MainBarAg + TendonAp + PipeAsCorroded) * 78.5 + Ac * ConcreteGamma) * Math.Pow(10, -6);
 
         // 腐食考慮 軸剛性 (kN)
         public double EACorroded =>
@@ -2503,8 +2508,11 @@ namespace PileDesign.Models.InputData
 
         // ねじり剛性 (kNm2)
         // ※ コンクリート断面は中空断面として計算
-        public double GJ => (GetG(ConcreteE, 0.2) * Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 64.0 +
-            GetG(PipeEs, 0.3) * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 64.0) * Math.Pow(10, -9);
+        // ねじり剛性 (kNm2)
+        // 円形断面のねじり定数は断面二次極モーメント J = Ip = π(D^4 - d^4)/32。
+        // 曲げの断面二次モーメント I = π(D^4 - d^4)/64 を使っていたため 2 倍過小だった。
+        public double GJ => (GetG(ConcreteE, 0.2) * Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 32.0 +
+            GetG(PipeEs, 0.3) * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 32.0) * Math.Pow(10, -9);
 
         // せん断剛性
         private static double GetG(double e, double nu)
