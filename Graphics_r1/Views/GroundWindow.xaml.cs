@@ -1292,22 +1292,9 @@ namespace PileDesign.Views
                 }
                 e.Handled = true;
             }
-            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Z)
-            {
-                if (DataContext is GroundLayerViewModel viewModel)
-                {
-                    viewModel.UndoCommand.Execute(null);
-                    e.Handled = true;
-                }
-            }
-            else if (e.Key == Key.Y)
-            {
-                if (DataContext is GroundLayerViewModel viewModel)
-                {
-                    viewModel.RedoCommand.Execute(null);
-                    e.Handled = true;
-                }
-            }
+            // Ctrl+Z / Ctrl+Y はここでは扱わない。OnPreviewKeyDown 側の実装が唯一の窓口。
+            // 二重に持っていたせいで、こちらの Redo だけ修飾キーの判定が抜け、
+            // 文字入力中の y / Y が Redo に化けて入力も握り潰されていた。
         }
 
         private void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
