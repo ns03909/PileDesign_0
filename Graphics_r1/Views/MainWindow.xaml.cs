@@ -3160,19 +3160,12 @@ namespace PileDesign.Views
                 viewModel?.OpenPileBodyWindow();
                 e.Handled = true;
             }
-            // 杭要素分割 (Ctrl+D / F4)・水平解析 (F5)・単杭沈下 (F6) は Window.InputBindings で処理する。
-            // ここで VM のメソッドを直接呼ぶと、コマンドの CanExecute (杭要素分割済みか) を
-            // 迂回してしまい、「ボタンは灰色なのにキーでは実行できて、直後にダイアログで叱られる」
-            // 状態になる。
+            // 杭要素分割 (Ctrl+D / F4)・水平解析 (F5)・単杭沈下 (F6)・基礎梁考慮沈下 (F7) は
+            // Window.InputBindings で処理する。ここで VM のメソッドやコマンドを直接呼ぶと
+            // CanExecute を迂回してしまい、「ボタンは灰色なのにキーでは実行できて、
+            // 直後にダイアログで叱られる」状態になる (Execute は CanExecute を見ない)。
 
-            // 基礎梁考慮沈下解析
-            else if (e.Key == Key.F7)
-            {
-                viewModel?.OpenVerticalBeamCalculationCommand.Execute(null);
-                e.Handled = true;
-            }
-
-            // 群杭沈下解析
+            // 群杭沈下タブへ移動 (解析の実行ではないので CanExecute は要らない)
             else if (e.Key == Key.F8)
             {
                 ButtonGroupPileSettlement_Click(null, null);

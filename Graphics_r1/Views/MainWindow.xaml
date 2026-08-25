@@ -47,6 +47,7 @@
         <KeyBinding Key="F4" Command="{Binding OpenElementDivisionWindowCommand}" />
         <KeyBinding Key="F5" Command="{Binding OpenLateralLoadAnalysisWindowCommand}" />
         <KeyBinding Key="F6" Command="{Binding OpenSettlementWindowCommand}" />
+        <KeyBinding Key="F7" Command="{Binding OpenVerticalBeamCalculationCommand}" />
     </Window.InputBindings>
 
     <Window.DataContext>
@@ -5566,7 +5567,8 @@
                                                 <!-- 一回解析実行ボタン -->
                                                 <Button Grid.Row="3" Width="240" HorizontalAlignment="Left" Margin="0,8,0,0"
                                                         Command="{Binding PileGroupSettlementAnalysisCommand}"
-                                                        ToolTip="基礎梁を考慮しない単発のスタインブレナー解析を実行します。">
+                                                        ToolTipService.ShowOnDisabled="True"
+                                                        ToolTip="{Binding GroupSettlementAnalysisToolTip}">
                                                     <StackPanel Orientation="Horizontal">
                                                         <svgc:SvgViewbox Source="/Icons/GroupPileSettlement.svg"
                                                                          Style="{StaticResource SvgIconStyle24}" Margin="0,0,6,0"/>
@@ -6080,7 +6082,9 @@
                                                     <Button Grid.Row="1" Grid.Column="4"
                                                         Padding="0"
                                                         Style="{StaticResource GroupPileSettlementButtonStyle}"
-                                                        Command="{Binding PileGroupSettlementAnalysisCommand}"/>
+                                                        Command="{Binding PileGroupSettlementAnalysisCommand}"
+                                                        ToolTipService.ShowOnDisabled="True"
+                                                        ToolTip="{Binding GroupSettlementAnalysisToolTip}"/>
                                                 </Grid>
                                             </Border>
 

@@ -4138,8 +4138,22 @@ namespace PileDesign.ViewModels
         // クロススレッドで AnalysisResultContentOption を変更したときに CollectionView が例外を出すのを防ぐための同期ロック
         private readonly object _analysisResultContentOptionLock = new();
 
+        /// <summary>
+        /// 群杭沈下解析ボタンの可否を UI 操作のたびに問い直すためのハンドラ。
+        ///
+        /// 判定材料 (荷重タイプ・矩形荷重・杭の軸力・土層・荷重面 Z) が多く、
+        /// すべての変更に通知を張ると必ずどれか漏れ、<b>押せるはずのボタンが灰色のまま</b>になる。
+        /// WPF の <c>CommandManager.RequerySuggested</c> はフォーカス移動やクリックのたびに
+        /// 発火するので、これに任せるほうが取りこぼしが無い。
+        /// 弱参照で保持されるため、ハンドラはフィールドに置いて回収されないようにする。
+        /// </summary>
+        private readonly EventHandler _requeryGroupSettlement;
+
         public MainWindowViewModel()
         {
+            _requeryGroupSettlement = (_, _) => PileGroupSettlementAnalysisCommand.NotifyCanExecuteChanged();
+            System.Windows.Input.CommandManager.RequerySuggested += _requeryGroupSettlement;
+
             // WPF にクロススレッド変更の同期化を許可（Add/Remove が背景スレッドから来ても UI スレッドへ安全にマーシャル）
             System.Windows.Data.BindingOperations.EnableCollectionSynchronization(
                 _analysisResultContentOption, _analysisResultContentOptionLock);

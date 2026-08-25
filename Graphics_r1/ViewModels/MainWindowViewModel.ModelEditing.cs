@@ -1246,97 +1246,98 @@ namespace PileDesign.ViewModels
 
 
         // 群杭沈下解析の実行メソッド
-        [RelayCommand]
+        /// <summary>
+        /// 群杭沈下解析 (一般解析) を実行できない理由。実行できるなら null。
+        ///
+        /// 以前は実行してから 6 種類のダイアログで叱っていた。押す前に分かるようにするため、
+        /// 判定をここ 1 か所に集め、<see cref="PileGroupSettlementAnalysisCommand"/> の
+        /// CanExecute とボタンの ToolTip の両方から使う。
+        /// </summary>
+        public string? GroupSettlementAnalysisDisabledReason => DescribeGroupSettlementBlocker();
+
+        /// <summary>群杭沈下解析ボタンの説明。実行できないときはその理由を出す。</summary>
+        public string GroupSettlementAnalysisToolTip =>
+            DescribeGroupSettlementBlocker()
+            ?? "基礎梁を考慮しない単発のスタインブレナー解析を実行します。";
+
+        private bool CanPileGroupSettlementAnalysis() => DescribeGroupSettlementBlocker() == null;
+
+        /// <summary>
+        /// 実行を妨げているものを 1 つ返す (利用者向けの文面)。無ければ null。
+        /// 荷重タイプごとに必要な入力が違うので、まず荷重タイプで分岐する。
+        /// </summary>
+        private string? DescribeGroupSettlementBlocker()
+        {
+            var pgs = CurrentInputModel?.PileGroupSettlement;
+            if (pgs == null) return "群杭沈下解析の入力がありません。";
+
+            var piles = CurrentInputModel?.PileLayoutItems;
+            var rectLoads = pgs.RectLoads;
+
+            switch (pgs.LoadingType)
+            {
+                case "任意矩形":
+                    if (rectLoads == null || rectLoads.Count == 0)
+                        return "群杭荷重（矩形荷重）が定義されていません。\n荷重タブで矩形荷重を追加してください。";
+                    if (rectLoads.All(r => r.QA == 0))
+                        return "値が0の群杭荷重（矩形荷重）しか定義されていません。\n荷重タブで荷重値を設定してください。";
+                    break;
+
+                case "個別十字":
+                case "個別矩形":
+                    // 杭位置と軸力から矩形荷重を自動生成するため、杭が必要
+                    if (piles == null || piles.Count == 0)
+                        return GuardMessages.NoPileLayout;
+                    if (piles.All(p => (p.AxialForceVL0 + p.AxialForceVLAdditional) == 0))
+                        return "全ての杭の軸力（VL0+VLadd）が0です。\n杭タブで軸力を設定してください。";
+                    break;
+
+                case "個別十字（基礎梁反力）":
+                    if (!IsVerticalBeamAnalysisDone || VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0)
+                        return "基礎梁考慮鉛直解析が実行されていません。\n先に基礎梁考慮鉛直解析を実行してください。";
+                    if (piles == null || piles.Count == 0)
+                        return GuardMessages.NoPileLayout;
+                    break;
+
+                case "個別矩形（基礎梁考慮）":
+                    if (piles == null || piles.Count == 0)
+                        return GuardMessages.NoPileLayout;
+                    if (CurrentInputModel?.FoundationBeamInput?.Beams is not { Count: > 0 })
+                        return "基礎梁が定義されていません。\n基礎梁を入力してください。";
+                    if (rectLoads == null || rectLoads.Count == 0 || rectLoads.All(r => r.QA == 0))
+                        return "矩形荷重が定義されていません (または全て 0)。\n荷重面等価径を入力すると自動生成されます。";
+                    break;
+
+                default:
+                    return "荷重タイプが設定されていません。\n荷重タブで荷重タイプを選択してください。";
+            }
+
+            if (pgs.SettlementSoilLayers == null || pgs.SettlementSoilLayers.Count == 0)
+                return "群杭沈下解析用の土層が1層以上必要です。\n土層タブで土層を追加してください。";
+
+            // 荷重面が土層の範囲に入っていること
+            double topAlt = pgs.SoilLayersTopAltitude;
+            double loadAlt = pgs.LoadingPlaneAltitude;
+            double bottomAlt = pgs.SettlementSoilLayers[^1].BottomAltitude;
+            if (loadAlt > topAlt + NumericalConstants.NEAR_ZERO_EPSILON)
+                return $"荷重面 Z ({loadAlt:N3} m) が土層上端 Z ({topAlt:N3} m) より高くなっています。\n荷重面を土層上端以下に設定してください。";
+            if (loadAlt < bottomAlt - NumericalConstants.NEAR_ZERO_EPSILON)
+                return $"荷重面 Z ({loadAlt:N3} m) が最下層下端 Z ({bottomAlt:N3} m) より低くなっています。\n荷重面を最下層下端以上に設定してください。";
+
+            return null;
+        }
+
+        [RelayCommand(CanExecute = nameof(CanPileGroupSettlementAnalysis))]
         private void PileGroupSettlementAnalysis()
         {
-            // 荷重タイプ別の事前チェック
-            var loadingType = CurrentInputModel.PileGroupSettlement.LoadingType;
-            if (loadingType == "任意矩形")
+            // CanExecute で弾いているが、コマンドを直接 Execute された場合の最後の砦。
+            if (DescribeGroupSettlementBlocker() is { } blocker)
             {
-                // 群杭荷重（矩形荷重）が定義されているかチェック
-                var rectLoads = CurrentInputModel.PileGroupSettlement.RectLoads;
-                if (rectLoads == null || rectLoads.Count == 0)
-                {
-                    MessageService.Show("群杭荷重（矩形荷重）が定義されていません。\n荷重タブで矩形荷重を追加してください。",
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                // 荷重値が全て0かチェック
-                if (rectLoads.All(r => r.QA == 0))
-                {
-                    MessageService.Show("値が0の群杭荷重（矩形荷重）しか定義されていません。\n荷重タブで荷重値を設定してください。",
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-            }
-            else if (loadingType == "個別十字" || loadingType == "個別矩形")
-            {
-                // 個別十字・個別矩形は杭位置と軸力から矩形荷重を自動生成するため、杭が必要
-                var piles = CurrentInputModel.PileLayoutItems;
-                if (piles == null || piles.Count == 0)
-                {
-                    MessageService.Show(GuardMessages.NoPileLayout,
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                if (piles.All(p => (p.AxialForceVL0 + p.AxialForceVLAdditional) == 0))
-                {
-                    MessageService.Show("全ての杭の軸力（VL0+VLadd）が0です。\n杭タブで軸力を設定してください。",
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-            }
-            else if (loadingType == "個別十字（基礎梁反力）")
-            {
-                if (!IsVerticalBeamAnalysisDone || VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0)
-                {
-                    MessageService.Show("基礎梁考慮鉛直解析が実行されていません。\n先に基礎梁考慮鉛直解析を実行してください。",
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                var piles = CurrentInputModel.PileLayoutItems;
-                if (piles == null || piles.Count == 0)
-                {
-                    MessageService.Show(GuardMessages.NoPileLayout,
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-            }
-            else if (loadingType == "個別矩形（基礎梁考慮）")
-            {
-                // 個別矩形（基礎梁考慮）は基礎梁が必須 (将来の反復ばね解析用)
-                var piles = CurrentInputModel.PileLayoutItems;
-                if (piles == null || piles.Count == 0)
-                {
-                    MessageService.Show(GuardMessages.NoPileLayout,
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-                var beams = CurrentInputModel.FoundationBeamInput?.Beams;
-                if (beams == null || beams.Count == 0)
-                {
-                    MessageService.Show("基礎梁が定義されていません。\n基礎梁を入力してください。",
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-                var rectLoads = CurrentInputModel.PileGroupSettlement.RectLoads;
-                if (rectLoads == null || rectLoads.Count == 0 || rectLoads.All(r => r.QA == 0))
-                {
-                    MessageService.Show("矩形荷重が定義されていません (または全て 0)。\n荷重面等価径を入力すると自動生成されます。",
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-            }
-            else
-            {
-                // "なし" またはその他
-                MessageService.Show("荷重タイプが設定されていません。\n荷重タブで荷重タイプを選択してください。",
-                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.Show(blocker, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
+
+            var loadingType = CurrentInputModel.PileGroupSettlement.LoadingType;
 
             // 荷重面位置と土層プロファイルの整合性チェック
             var pgs = CurrentInputModel.PileGroupSettlement;
@@ -1366,22 +1367,6 @@ namespace PileDesign.ViewModels
                         X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
                         QA = r.QA, LinkedPileNo = r.LinkedPileNo,
                     }));
-            }
-
-            double topAlt = pgs.SoilLayersTopAltitude;
-            double loadAlt = pgs.LoadingPlaneAltitude;
-            double bottomAlt = pgs.SettlementSoilLayers[^1].BottomAltitude;
-            if (loadAlt > topAlt + NumericalConstants.NEAR_ZERO_EPSILON)
-            {
-                MessageService.Show($"荷重面 Z ({loadAlt:N3} m) が土層上端 Z ({topAlt:N3} m) より高くなっています。\n荷重面を土層上端以下に設定してください。",
-                    "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-            if (loadAlt < bottomAlt - NumericalConstants.NEAR_ZERO_EPSILON)
-            {
-                MessageService.Show($"荷重面 Z ({loadAlt:N3} m) が最下層下端 Z ({bottomAlt:N3} m) より低くなっています。\n荷重面を最下層下端以上に設定してください。",
-                    "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
             }
 
             // 個別矩形（基礎梁考慮）は反復解析ウィンドウで実行 → 確定後に Steinbrenner グリッドコンタを更新
