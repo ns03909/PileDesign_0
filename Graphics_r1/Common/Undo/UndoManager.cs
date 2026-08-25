@@ -251,8 +251,8 @@ public sealed class UndoManager
     }
 }
 
-// 手軽に使える共有インスタンス
-public static class UndoService
-{
-    public static readonly UndoManager Instance = new();
-}
+// プロセス全体で共有する静的インスタンス (UndoService) は置かない。
+// 「手軽に使える」ため複数のウィンドウが同じスタックに積み、
+// 消費するのは 1 つのウィンドウだけ、という状態になっていた
+// (メイン画面のセル編集が ChangWindow の Ctrl+Z で巻き戻る)。
+// Undo スタックは、それを消費する ViewModel が 1 本ずつ持つこと。

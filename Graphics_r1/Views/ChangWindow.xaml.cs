@@ -510,7 +510,7 @@ namespace PileDesign.Views
             }
         }
 
-        // CellEditEnding で差分があれば UndoService に積む
+        // CellEditEnding で差分があればこのウィンドウの Undo スタックに積む
         private void DataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             var item = e.Row.Item;
@@ -531,7 +531,8 @@ namespace PileDesign.Views
                     if (!Equals(oldVal, currentVal))
                     {
                         var act = new PropertyChangeAction(item, propName, oldVal, currentVal);
-                        UndoService.Instance.Push(act);
+                        if (DataContext is PileDesign.ViewModels.ChangViewModel vm)
+                            vm.UndoStack.Push(act);
                     }
                     _cellEditOldValues.Remove((item, propName));
                 }), System.Windows.Threading.DispatcherPriority.Background);
@@ -545,13 +546,13 @@ namespace PileDesign.Views
             {
                 if (e.Key == System.Windows.Input.Key.Z)
                 {
-                    UndoService.Instance.Undo();
+                    (DataContext as PileDesign.ViewModels.ChangViewModel)?.UndoStack.Undo();
                     if (DataContext is PileDesign.ViewModels.ChangViewModel vm) vm.RefreshPlots();
                     e.Handled = true;
                 }
                 else if (e.Key == System.Windows.Input.Key.Y)
                 {
-                    UndoService.Instance.Redo();
+                    (DataContext as PileDesign.ViewModels.ChangViewModel)?.UndoStack.Redo();
                     if (DataContext is PileDesign.ViewModels.ChangViewModel vm) vm.RefreshPlots();
                     e.Handled = true;
                 }

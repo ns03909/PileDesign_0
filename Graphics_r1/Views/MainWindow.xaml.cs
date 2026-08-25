@@ -2359,7 +2359,6 @@ namespace PileDesign.Views
         //                .ForRemove(col, item, index)
         //        );
         //    }
-        //    UndoService.Instance.Push(scope);
         //
         //    // 実削除
         //    foreach (var item in itemsToRemove)
@@ -2791,11 +2790,11 @@ namespace PileDesign.Views
                 int index = col.IndexOf(selectedItem);
                 if (index < 0) return;
 
-                // Undo: Remove の逆操作を保持
-                UndoService.Instance.Push(
-                    PileDesign.Common.Undo.CollectionChangeAction<PileLayoutDataItem>
-                        .ForRemove(col, selectedItem, index, "Delete pile")
-                );
+                // Undo は VM のスナップショット履歴に積む。
+                // ここは UndoService (ChangWindow 専用の別スタック) に積んでいたため、
+                // メイン画面の Ctrl+Z では戻せず、ChangWindow の Ctrl+Z で戻ってしまっていた。
+                // 大規模操作なので変更前に 1 段保存する (杭の追加・分割等と同じ扱い)。
+                viewModel.SaveUndoState("杭配置 削除");
 
                 col.RemoveAt(index);
                 viewModel.UpdatePileLayoutNo();
@@ -2821,11 +2820,8 @@ namespace PileDesign.Views
                 int index = col.IndexOf(selectedItem);
                 if (index < 0) return;
 
-                // Undo: Remove の逆操作を保持
-                UndoService.Instance.Push(
-                    PileDesign.Common.Undo.CollectionChangeAction<InputNode>
-                        .ForRemove(col, selectedItem, index, "Delete input node")
-                );
+                // Undo は VM のスナップショット履歴に積む (杭配置の削除と同じ理由)。
+                viewModel.SaveUndoState("節点 削除");
 
                 col.RemoveAt(index);
                 UpdateWindow();
@@ -3027,21 +3023,6 @@ namespace PileDesign.Views
             var path = GetBindingPath(e.Column);
             if (string.IsNullOrEmpty(path)) return;
             var item = e.Row.Item;
-
-            // Commit後の新値をリフレッシュして取得
-            Dispatcher.BeginInvoke(() =>
-            {
-                var key = (item, path);
-                _dgOldValues.TryGetValue(key, out var oldVal);
-                var (ok2, newVal) = TryGetPropertyValue(item, path);
-                _dgOldValues.Remove(key);
-
-                if (!ok2) return;
-                if (Equals(oldVal, newVal)) return;
-
-                // Undo登録
-                UndoService.Instance.Push(new PropertyChangeAction<object?>(item, path, oldVal, newVal, $"Edit {path}"));
-            }, System.Windows.Threading.DispatcherPriority.Background);
 
             var viewModel = DataContext as MainWindowViewModel;
             viewModel?.DataGridInputNodes_OnCellEditEndingCommand.Execute(e);
@@ -3493,9 +3474,6 @@ namespace PileDesign.Views
 
                 if (!ok2) return;
                 if (Equals(oldVal, newVal)) return;
-
-                // 型合わせ（double/nullable等はPropertyChangeAction<object>で十分）
-                UndoService.Instance.Push(new PropertyChangeAction<object?>(item, path, oldVal, newVal, $"Edit {path}"));
 
                 if (DataContext is MainWindowViewModel vm)
                     vm.RequestUpdateWindow();

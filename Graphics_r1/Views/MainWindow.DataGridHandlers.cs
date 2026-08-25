@@ -57,19 +57,6 @@ namespace PileDesign.Views
             if (string.IsNullOrEmpty(path)) return;
             var item = e.Row.Item;
 
-            Dispatcher.BeginInvoke(() =>
-            {
-                var key = (item, path);
-                _dgOldValues.TryGetValue(key, out var oldVal);
-                var (ok2, newVal) = TryGetPropertyValue(item, path);
-                _dgOldValues.Remove(key);
-
-                if (!ok2) return;
-                if (Equals(oldVal, newVal)) return;
-
-                UndoService.Instance.Push(new PropertyChangeAction<object?>(item, path, oldVal, newVal, $"Edit {path}"));
-            }, System.Windows.Threading.DispatcherPriority.Background);
-
             var viewModel = DataContext as MainWindowViewModel;
             viewModel?.DataGridEmbedment_OnCellEditEndingCommand.Execute(e);
         }
@@ -82,6 +69,9 @@ namespace PileDesign.Views
             if (string.IsNullOrEmpty(path)) return;
             var item = e.Row.Item;
 
+            // 編集前後の値を突き合わせて「実際に変わったか」を見る。
+            // Undo は VM 側のスナップショット履歴 (SaveUndoStateDebounced) が持つので、
+            // ここで拾うのは根入部形状の表示切替のためだけ。
             Dispatcher.BeginInvoke(() =>
             {
                 var key = (item, path);
@@ -92,9 +82,7 @@ namespace PileDesign.Views
                 if (!ok2) return;
                 if (Equals(oldVal, newVal)) return;
 
-                UndoService.Instance.Push(new PropertyChangeAction<object?>(item, path, oldVal, newVal, $"Edit {path}"));
-
-                // ここで根入部形状表示を有効化（値が実際に変わったときのみ）
+                // 値が実際に変わったときのみ根入部形状表示を有効化
                 if (DataContext is MainWindowViewModel vm2)
                     vm2.IsEmbedmentBoxVisible = true;
 
@@ -117,19 +105,6 @@ namespace PileDesign.Views
             var path = GetBindingPath(e.Column);
             if (string.IsNullOrEmpty(path)) return;
             var item = e.Row.Item;
-
-            Dispatcher.BeginInvoke(() =>
-            {
-                var key = (item, path);
-                _dgOldValues.TryGetValue(key, out var oldVal);
-                var (ok2, newVal) = TryGetPropertyValue(item, path);
-                _dgOldValues.Remove(key);
-
-                if (!ok2) return;
-                if (Equals(oldVal, newVal)) return;
-
-                UndoService.Instance.Push(new PropertyChangeAction<object?>(item, path, oldVal, newVal, $"Edit {path}"));
-            }, System.Windows.Threading.DispatcherPriority.Background);
 
             if (e.Column is DataGridTextColumn textColumn)
             {
@@ -201,7 +176,7 @@ namespace PileDesign.Views
             if (string.IsNullOrEmpty(path)) return;
             var item = e.Row.Item;
 
-            // 杭本数が多い場合 (例: 108 杭) に変更確定 (UndoService.Push, OnCellEditEndingCommand,
+            // 杭本数が多い場合 (例: 108 杭) に変更確定 (OnCellEditEndingCommand,
             // UpdateSumAndOTM, 変動↔絶対 同期) で時間が掛かるため、砂時計カーソルを表示。
             // リセットは Background 優先度のディスパッチが完了した後 (ApplicationIdle) に実行。
             System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
@@ -209,19 +184,6 @@ namespace PileDesign.Views
             {
                 System.Windows.Input.Mouse.OverrideCursor = null;
             }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-
-            Dispatcher.BeginInvoke(() =>
-            {
-                var key = (item, path);
-                _dgOldValues.TryGetValue(key, out var oldVal);
-                var (ok2, newVal) = TryGetPropertyValue(item, path);
-                _dgOldValues.Remove(key);
-
-                if (!ok2) return;
-                if (Equals(oldVal, newVal)) return;
-
-                UndoService.Instance.Push(new PropertyChangeAction<object?>(item, path, oldVal, newVal, $"Edit {path}"));
-            }, System.Windows.Threading.DispatcherPriority.Background);
 
             if (sender is not DataGrid dataGrid || dataGrid.SelectedCells.Count == 0) return;
 
@@ -323,19 +285,6 @@ namespace PileDesign.Views
             if (string.IsNullOrEmpty(path)) return;
             var item = e.Row.Item;
 
-            Dispatcher.BeginInvoke(() =>
-            {
-                var key = (item, path);
-                _dgOldValues.TryGetValue(key, out var oldVal);
-                var (ok2, newVal) = TryGetPropertyValue(item, path);
-                _dgOldValues.Remove(key);
-
-                if (!ok2) return;
-                if (Equals(oldVal, newVal)) return;
-
-                UndoService.Instance.Push(new PropertyChangeAction<object?>(item, path, oldVal, newVal, $"Edit {path}"));
-            }, System.Windows.Threading.DispatcherPriority.Background);
-
             var viewModel = DataContext as MainWindowViewModel;
             viewModel?.DataGridPileLayout_OnCellEditEndingCommand.Execute(e);
         }
@@ -379,19 +328,6 @@ namespace PileDesign.Views
             var path = GetBindingPath(e.Column);
             if (string.IsNullOrEmpty(path)) return;
             var item = e.Row.Item;
-
-            Dispatcher.BeginInvoke(() =>
-            {
-                var key = (item, path);
-                _dgOldValues.TryGetValue(key, out var oldVal);
-                var (ok2, newVal) = TryGetPropertyValue(item, path);
-                _dgOldValues.Remove(key);
-
-                if (!ok2) return;
-                if (Equals(oldVal, newVal)) return;
-
-                UndoService.Instance.Push(new PropertyChangeAction<object?>(item, path, oldVal, newVal, $"Edit {path}"));
-            }, System.Windows.Threading.DispatcherPriority.Background);
 
             if (sender is not DataGrid dataGrid || dataGrid.SelectedCells.Count == 0) return;
 

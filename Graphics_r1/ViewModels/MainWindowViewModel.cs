@@ -468,7 +468,13 @@ namespace PileDesign.ViewModels
         /// <typeparam name="TViewModel">ViewModelの型</typeparam>
         /// <typeparam name="TWindow">Windowの型</typeparam>
         /// <param name="postDialogAction">ダイアログ終了後のカスタム処理（オプション）</param>
-        /// <param name="undoDescription">未使用 (互換のため残置)。ダイアログ系ウィンドウは独自 Undo を持つため main 履歴には記録しない。</param>
+        /// <param name="undoDescription">
+        /// メイン画面の Undo 履歴に残す説明。渡すと、ダイアログを閉じたあとに 1 段積む。
+        /// 省略すると<b>そのダイアログの編集はメイン画面の Ctrl+Z で戻せない</b>ので、
+        /// 入力を編集するウィンドウでは必ず渡すこと (現在は 5 つとも渡している)。
+        /// ※ 以前はここに「未使用」と書いてあったが、DeepCopy の高速化 (2026-05-25) で
+        ///    Undo の記録が復活しており、実装と正反対になっていた。
+        /// </param>
         private void OpenDialogWindowWithUndo<TViewModel, TWindow>(Action postDialogAction = null, string? undoDescription = null)
             where TViewModel : ObservableObject
             where TWindow : Window, new()

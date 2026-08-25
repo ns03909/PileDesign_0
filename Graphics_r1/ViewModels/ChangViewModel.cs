@@ -414,11 +414,22 @@ namespace PileDesign.ViewModels
             }
         }
 
-        [RelayCommand]
-        private void Undo() => UndoService.Instance.Undo();
+        /// <summary>
+        /// このウィンドウ専用の Undo スタック。
+        ///
+        /// 以前はプロセス全体で 1 本の静的インスタンス (UndoService.Instance) を使っていた。
+        /// メイン画面の DataGrid 編集もそこに積まれる一方、消費するのはこのウィンドウだけだったため、
+        /// <b>ここで Ctrl+Z を押すとメイン画面のセル編集が巻き戻る</b>状態だった。
+        /// メイン画面の Undo は ViewModel のスナップショット履歴が持つので、
+        /// こちらはウィンドウごとに閉じたスタックにする。
+        /// </summary>
+        public UndoManager UndoStack { get; } = new();
 
         [RelayCommand]
-        private void Redo() => UndoService.Instance.Redo();
+        private void Undo() => UndoStack.Undo();
+
+        [RelayCommand]
+        private void Redo() => UndoStack.Redo();
 
         [RelayCommand]
         private void DeleteChang(Chang? item)
@@ -428,7 +439,7 @@ namespace PileDesign.ViewModels
 
             var action = new CollectionRemoveAction<Chang>(Changs, item);
             action.Redo();
-            UndoService.Instance.Push(action);
+            UndoStack.Push(action);
         }
 
         [RelayCommand]
@@ -439,7 +450,7 @@ namespace PileDesign.ViewModels
 
             var action = new CollectionRemoveAction<ChangSoilPile>(ChangSoilPiles, item);
             action.Redo();
-            UndoService.Instance.Push(action);
+            UndoStack.Push(action);
             UpdateChangSoilPileIndices();
         }
 
@@ -463,7 +474,7 @@ namespace PileDesign.ViewModels
 
             var action = new CollectionAddAction<Chang>(Changs, newChang);
             action.Redo(); // 実行
-            UndoService.Instance.Push(action);
+            UndoStack.Push(action);
         }
 
         [RelayCommand]
@@ -472,7 +483,7 @@ namespace PileDesign.ViewModels
             var newChangSoilPile = new ChangSoilPile();
             var action = new CollectionAddAction<ChangSoilPile>(ChangSoilPiles, newChangSoilPile);
             action.Redo();
-            UndoService.Instance.Push(action);
+            UndoStack.Push(action);
             UpdateChangSoilPileIndices(); // インデックス更新
         }
 
