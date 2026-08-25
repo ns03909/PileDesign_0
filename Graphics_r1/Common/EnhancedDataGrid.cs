@@ -950,7 +950,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                MessageService.Show(OwnerWindow, $"貼り付け中にエラーが発生しました。\n{ex.Message}", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError(OwnerWindow, "貼り付け中にエラーが発生しました。", ex, "貼り付けエラー");
                 return false;
             }
         }
@@ -1023,7 +1023,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                MessageService.Show(OwnerWindow, $"塗り潰しペースト中にエラーが発生しました。\n{ex.Message}", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError(OwnerWindow, "塗り潰しペースト中にエラーが発生しました。", ex, "貼り付けエラー");
                 return false;
             }
         }
@@ -1081,7 +1081,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                MessageService.Show(OwnerWindow, $"セルのクリア中にエラーが発生しました。\n{ex.Message}", "クリアエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError(OwnerWindow, "セルのクリア中にエラーが発生しました。", ex, "クリアエラー");
                 return false;
             }
         }

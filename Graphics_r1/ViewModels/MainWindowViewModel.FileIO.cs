@@ -72,7 +72,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.Show($"保存に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"保存に失敗しました。", ex, "エラー");
                 }
                 finally
                 {
@@ -104,7 +104,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.Show($"保存に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"保存に失敗しました。", ex, "エラー");
                 }
                 finally
                 {
@@ -412,7 +412,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.Show($"ファイル読込中にエラーが発生しました。\n{ex.Message}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"ファイル読込中にエラーが発生しました。", ex, "読込エラー");
                 return false;
             }
         }
@@ -700,7 +700,7 @@ namespace PileDesign.ViewModels
                 {
                     sw.Stop();
                     Serilog.Log.Warning(ex, "[Docx] 失敗 ({Elapsed:N1}秒経過時点)", sw.Elapsed.TotalSeconds);
-                    MessageService.Show($"Word出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"Word出力に失敗しました。", ex, "エラー");
                 }
                 finally
                 {
@@ -733,7 +733,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.Show($"3dm出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"3dm出力に失敗しました。", ex, "エラー");
                 }
             }
         }
@@ -761,7 +761,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.Show($"DXF出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"DXF出力に失敗しました。", ex, "エラー");
                 }
             }
         }
@@ -788,7 +788,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.Show($"伏図DXF出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"伏図DXF出力に失敗しました。", ex, "エラー");
                 }
             }
         }
@@ -833,7 +833,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.Show($"MGT出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"MGT出力に失敗しました。", ex, "エラー");
                 }
             }
         }

@@ -22,7 +22,7 @@ namespace PileDesign.Views
             if (!File.Exists(filePath))
             {
                 Log.Warning("[VerificationWindow] verification.html が見つかりません: {Path}", filePath);
-                MessageBox.Show($"検証ファイルが見つかりません。\n{filePath}",
+                Services.MessageService.Show($"検証ファイルが見つかりません。\n{filePath}",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

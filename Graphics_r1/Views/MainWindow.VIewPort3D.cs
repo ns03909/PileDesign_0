@@ -805,7 +805,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show($"画像のコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"画像のコピーに失敗しました", ex, "エラー");
             }
         }
 

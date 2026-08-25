@@ -129,8 +129,7 @@ namespace PileDesign.Views
             catch (Exception ex)
             {
                 Log.Warning(ex, "[HorizontalCalculationWindow_Closing]");
-                MessageService.Show($"ウィンドウ終了処理でエラーが発生しました: {ex.Message}",
-                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"ウィンドウ終了処理でエラーが発生しました", ex, "エラー");
             }
         }
 

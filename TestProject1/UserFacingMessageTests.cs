@@ -29,6 +29,17 @@ namespace TestProject1
             throw new FileNotFoundException("ソリューションルートが見つかりません");
         }
 
+        /// <summary>MessageService を通さない生の MessageBox.Show 呼び出し。</summary>
+        /// <summary>
+        /// 例外の文言 (<c>ex.Message</c>) の参照。
+        /// 「MessageService」に含まれる ".Message" と区別するため語境界で見る。
+        /// </summary>
+        private static readonly Regex ExceptionMessage =
+            new(@"\w+\.Message\b", RegexOptions.Compiled);
+
+        private static readonly Regex RawMessageBox =
+            new(@"(?<!Service\.)(?<!\w)MessageBox\.Show\(", RegexOptions.Compiled);
+
         private static IEnumerable<(string File, int Line, string Text)> SourceLines()
         {
             string root = FindSolutionRoot();
@@ -141,5 +152,54 @@ namespace TestProject1
                 Assert.IsTrue(text.Contains('\n'), $"{name}: 現象と対処が 1 行にまとまっている");
             }
         }
+
+        /// <summary>
+        /// 例外を画面に出すときは <c>MessageService.ShowError</c> を通すこと。
+        ///
+        /// README の約束は「詳細は Serilog に残し、画面には要約とログの場所を出す」。
+        /// 実際には例外の文言を直接ダイアログに流す書き方が 60 箇所以上あり、
+        /// そのほとんどが<b>ログに残していなかった</b>。利用者から不具合を知らされても
+        /// 手掛かりが何も残っていない状態だった。
+        ///
+        /// <c>{ex}</c> を禁じる検査とは別で、こちらは「ログに残ったか」を担保する
+        /// (ShowError の中で Serilog に送っている)。
+        /// </summary>
+        [TestMethod]
+        public void ExceptionsShownToUsersGoThroughShowError()
+        {
+            var hits = SourceLines()
+                .Where(l => l.File != "MessageService.cs")
+                .Where(l => l.Text.Contains("MessageService.Show(", StringComparison.Ordinal)
+                         || RawMessageBox.IsMatch(l.Text))
+                .Where(l => ExceptionMessage.IsMatch(l.Text))
+                .Select(l => $"{l.File}:{l.Line}  {l.Text.Trim()}")
+                .ToList();
+
+            Assert.AreEqual(0, hits.Count,
+                "例外の文言を直接ダイアログに出しています。MessageService.ShowError を使ってください "
+                + "(要約 + 例外の文 + ログの場所を出し、Serilog にも残します):\n  "
+                + string.Join("\n  ", hits));
+        }
+
+        /// <summary>
+        /// 生の <c>MessageBox.Show</c> を使わないこと。
+        /// オーナーウィンドウが付かず、別ウィンドウの背面に隠れることがある。
+        /// </summary>
+        [TestMethod]
+        public void DialogsGoThroughMessageService()
+        {
+            // 起動直後 (まだウィンドウが無い) に出す WebView2 Runtime の案内だけは対象外。
+            var allowed = new[] { "WebView2RuntimeChecker.cs", "MessageService.cs" };
+            var hits = SourceLines()
+                .Where(l => !allowed.Contains(l.File))
+                .Where(l => RawMessageBox.IsMatch(l.Text))
+                .Select(l => $"{l.File}:{l.Line}  {l.Text.Trim()}")
+                .ToList();
+
+            Assert.AreEqual(0, hits.Count,
+                "MessageBox.Show を直接呼んでいます。MessageService を使ってください:\n  "
+                + string.Join("\n  ", hits));
+        }
+
     }
 }

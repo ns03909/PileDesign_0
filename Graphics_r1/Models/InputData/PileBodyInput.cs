@@ -151,7 +151,7 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
-                    MessageService.Show($"杭区間情報の更新中にエラーが発生しました。\n{ex.Message}", "区間更新エラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                    MessageService.ShowError($"杭区間情報の更新中にエラーが発生しました。", ex, "区間更新エラー"));
             }
         }
 
@@ -600,7 +600,7 @@ namespace PileDesign.Models.InputData
                 catch (Exception ex)
                 {
                     Application.Current?.Dispatcher.Invoke(() =>
-                        MessageService.Show($"杭体タイプ設定中にエラーが発生しました。\n{ex.Message}", "プロパティエラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                        MessageService.ShowError($"杭体タイプ設定中にエラーが発生しました。", ex, "プロパティエラー"));
                 }
             }
         }
@@ -656,7 +656,7 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
-                    MessageService.Show($"杭区間コレクション変更時にエラーが発生しました。\n{ex.Message}", "コレクションエラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                    MessageService.ShowError($"杭区間コレクション変更時にエラーが発生しました。", ex, "コレクションエラー"));
             }
         }
 

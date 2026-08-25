@@ -1353,7 +1353,7 @@ namespace PileDesign.Views
             // メニューを先に閉じてからダイアログ
             if (mi.Parent is ContextMenu cm) cm.IsOpen = false;
 
-            var result = MessageBox.Show(
+            var result = MessageService.Show(
                 this,
                 $"計算例「{exampleItem.Display}」を読み込むと、現在の地盤入力は上書きされます。\n\n続行しますか？\n\n（Undo (Ctrl+Z) で復元可能です）",
                 "計算例の読み込み",
@@ -1372,8 +1372,7 @@ namespace PileDesign.Views
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show(this, "計算例の読み込み中にエラーが発生しました。\n" + ex.Message,
-                    "計算例の読み込み", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError(this, "計算例の読み込み中にエラーが発生しました。", ex, "計算例の読み込み");
             }
         }
 

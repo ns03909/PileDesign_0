@@ -380,8 +380,7 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 AddLog($"[ERROR] 解析中に例外: {ex.Message}");
-                MessageService.Show($"解析エラー:\n{ex.Message}", "エラー",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"解析エラー", ex, "エラー");
                 StatusText = "エラー";
             }
             finally

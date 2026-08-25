@@ -98,7 +98,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show(this, $"ライブラリの読み込みに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError(this, "杭ライブラリの読み込みに失敗しました。", ex);
             }
         }
 
@@ -117,7 +117,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show($"フォルダ探索中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"フォルダ探索中にエラーが発生しました。", ex, "エラー");
                 return null;
             }
         }
@@ -147,7 +147,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show($"CSV読込中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"CSV読込中にエラーが発生しました。", ex, "エラー");
                 // エラー時は空のDataTableを返す
             }
             return dt;

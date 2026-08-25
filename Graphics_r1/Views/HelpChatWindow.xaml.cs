@@ -242,8 +242,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show("ヘルプを開けませんでした: " + ex.Message, "エラー",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.ShowError("ヘルプを開けませんでした。", ex);
             }
         }
 

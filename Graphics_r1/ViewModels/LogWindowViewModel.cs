@@ -253,11 +253,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.Show(
-                    $"Error exporting log:\n{ex.Message}",
-                    "Export Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                MessageService.ShowError($"Error exporting log", ex, "Export Error");
                 StatusText = "Export failed";
             }
         }

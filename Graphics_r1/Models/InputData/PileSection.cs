@@ -1557,7 +1557,7 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
-                    MessageService.Show($"杭径再計算中にエラーが発生しました。\n{ex.Message}", "杭径再計算エラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                    MessageService.ShowError($"杭径再計算中にエラーが発生しました。", ex, "杭径再計算エラー"));
             }
         }
 
@@ -1634,7 +1634,7 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
-                    MessageService.Show($"断面プロパティのリセット中にエラーが発生しました。\n{ex.Message}", "断面リセットエラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                    MessageService.ShowError($"断面プロパティのリセット中にエラーが発生しました。", ex, "断面リセットエラー"));
             }
         }
 

@@ -128,7 +128,7 @@ namespace PileDesign.ViewModels
             try { Common.ClipboardHelper.TrySetText(text); }
             catch (Exception ex)
             {
-                MessageService.Show($"クリップボードへのコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"クリップボードへのコピーに失敗しました", ex, "エラー");
                 return;
             }
             StatusMessage = $"サマリー {_stepSummaries.Count} 行をクリップボードにコピーしました";
@@ -158,7 +158,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.Show($"CSV 保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"CSV 保存に失敗しました", ex, "エラー");
             }
         }
 

@@ -233,7 +233,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                PileDesign.Services.MessageService.Show($"杭ライブラリ表示に失敗しました: {ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                PileDesign.Services.MessageService.ShowError("杭ライブラリを表示できませんでした。", ex);
             }
         }
 
@@ -353,7 +353,7 @@ namespace PileDesign.ViewModels
             {
                 // 例外発生時もカーソルをリセット
                 Mouse.OverrideCursor = null;
-                MessageService.Show($"杭の移動・複製中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"杭の移動・複製中にエラーが発生しました。", ex, "エラー");
             }
         }
 

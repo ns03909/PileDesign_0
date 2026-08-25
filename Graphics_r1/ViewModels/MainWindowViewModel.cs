@@ -3156,7 +3156,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    PileDesign.Services.MessageService.Show($"画像の保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    PileDesign.Services.MessageService.ShowError($"画像の保存に失敗しました", ex, "エラー");
                 }
             }
         }
@@ -3227,7 +3227,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                PileDesign.Services.MessageService.Show($"画像のコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                PileDesign.Services.MessageService.ShowError($"画像のコピーに失敗しました", ex, "エラー");
             }
         }
 
@@ -3618,7 +3618,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.Show($"自動保存ファイルの復元に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"自動保存ファイルの復元に失敗しました。", ex, "エラー");
                 }
             }
 

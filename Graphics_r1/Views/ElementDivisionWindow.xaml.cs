@@ -105,7 +105,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show(ex.Message, "初期化エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError("杭要素分割ウィンドウを開けませんでした。", ex, "初期化エラー");
                 Close();
                 return;
             }

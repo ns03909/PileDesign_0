@@ -28,7 +28,7 @@ namespace PileDesign.Views
             if (!File.Exists(_baseFilePath))
             {
                 Log.Warning("[HelpWindow] help.html が見つかりません: {Path}", _baseFilePath);
-                MessageBox.Show($"ヘルプファイルが見つかりません。\n{_baseFilePath}\n\nアプリケーションが正しく配置されていない可能性があります。",
+                Services.MessageService.Show($"ヘルプファイルが見つかりません。\n{_baseFilePath}\n\nアプリケーションが正しく配置されていない可能性があります。",
                     "ヘルプエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

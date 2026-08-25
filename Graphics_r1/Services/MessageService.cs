@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 
 namespace PileDesign.Services
@@ -35,6 +36,37 @@ namespace PileDesign.Services
                 }
                 return active ?? app.MainWindow;
             }
+        }
+
+        /// <summary>
+        /// 例外を伴うエラーを伝える。<b>例外を画面に出すときは必ずこれを通すこと。</b>
+        ///
+        /// README の約束は「詳細は Serilog に残し、画面には要約とログの場所を出す」。
+        /// 実際には例外の文言を画面に出すだけでログに残していない箇所が大半で、
+        /// 利用者が問い合わせても手掛かりが残っていない状態だった。
+        ///
+        /// 画面に出すのは要約と <c>ex.Message</c> まで。例外オブジェクトそのもの
+        /// (型名・スタックトレース) は出さず、ログに送る。
+        /// </summary>
+        /// <param name="summary">何ができなかったか。利用者向けの文で書く。</param>
+        /// <param name="ex">記録する例外。</param>
+        /// <param name="caption">ダイアログのタイトル。</param>
+        public static void ShowError(string summary, Exception ex, string caption = "エラー")
+        {
+            Serilog.Log.Error(ex, "[{Caption}] {Summary}", caption, summary);
+
+            Show($"{summary}\n{ex.Message}\n\n詳細はログに記録しています（ヘルプ タブ → バージョン情報 → ログフォルダを開く）。",
+                 caption, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        /// <summary>オーナーウィンドウを指定する <see cref="ShowError(string, Exception, string)"/>。</summary>
+        public static void ShowError(Window owner, string summary, Exception ex, string caption = "エラー")
+        {
+            Serilog.Log.Error(ex, "[{Caption}] {Summary}", caption, summary);
+
+            MessageBox.Show(owner,
+                $"{summary}\n{ex.Message}\n\n詳細はログに記録しています（ヘルプ タブ → バージョン情報 → ログフォルダを開く）。",
+                caption, MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         // === System.Windows.MessageBox.Show と同シグネチャの Show() overload群 ===

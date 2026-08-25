@@ -370,8 +370,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                MessageService.Show($"画像のコピーに失敗しました:\n{ex.Message}", "エラー",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"画像のコピーに失敗しました", ex, "エラー");
             }
         }
 
@@ -396,8 +395,7 @@ namespace PileDesign.Common
                 }
                 catch (Exception ex)
                 {
-                    MessageService.Show($"画像の保存に失敗しました:\n{ex.Message}", "エラー",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"画像の保存に失敗しました", ex, "エラー");
                 }
             }
         }
@@ -493,8 +491,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                MessageService.Show($"クリップボードへのコピーに失敗しました:\n{ex.Message}",
-                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"クリップボードへのコピーに失敗しました", ex, "エラー");
             }
         }
 
@@ -519,8 +516,7 @@ namespace PileDesign.Common
                 }
                 catch (Exception ex)
                 {
-                    MessageService.Show($"CSVの保存に失敗しました:\n{ex.Message}",
-                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"CSVの保存に失敗しました", ex, "エラー");
                 }
             }
         }

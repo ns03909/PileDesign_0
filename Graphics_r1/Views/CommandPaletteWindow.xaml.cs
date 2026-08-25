@@ -146,8 +146,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show($"コマンド実行に失敗しました:\n{ex.Message}", "コマンドパレット",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError($"コマンド実行に失敗しました", ex, "コマンドパレット");
             }
         }
     }

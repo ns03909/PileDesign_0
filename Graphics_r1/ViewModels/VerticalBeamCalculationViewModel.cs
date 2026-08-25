@@ -254,8 +254,7 @@ namespace PileDesign.ViewModels
                 await AddLogAsync($"解析中にエラーが発生しました: {ex.Message}");
                 Application.Current?.Dispatcher.Invoke(() =>
                 {
-                    MessageService.Show($"解析エラー:\n{ex.Message}", "エラー",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"解析エラー", ex, "エラー");
                 });
             }
             finally

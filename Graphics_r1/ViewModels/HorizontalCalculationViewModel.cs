@@ -1403,7 +1403,7 @@ namespace PileDesign.ViewModels
             }
             catch (InvalidOperationException ex)
             {
-                MessageService.Show(ex.Message, "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError("解析モデルを作成できませんでした。", ex, "モデル作成エラー");
                 return false;
             }
 
@@ -1969,7 +1969,7 @@ namespace PileDesign.ViewModels
                 Application.Current?.Dispatcher.Invoke(() =>
                 {
                     _mainWindowViewModel.SetLatestAnalysisLogs(CalculationLog);
-                    MessageService.Show($"解析中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageService.ShowError($"解析中にエラーが発生しました", ex, "エラー");
                 });
 
                 IsAnalysisExecuted = false;

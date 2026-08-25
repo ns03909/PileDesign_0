@@ -264,7 +264,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show(this, $"CSV 出力に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError(this, "CSV 出力に失敗しました。", ex);
             }
         }
         // Save / Load ハンドラ（JSON）
@@ -343,7 +343,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show(this, $"保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError(this, "保存に失敗しました。", ex);
             }
         }
 
@@ -487,7 +487,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.Show(this, $"読み込みに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageService.ShowError(this, "読み込みに失敗しました。", ex);
             }
         }
 
