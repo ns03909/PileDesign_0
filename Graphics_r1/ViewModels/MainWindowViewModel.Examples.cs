@@ -87,13 +87,7 @@ namespace PileDesign.ViewModels
 
             // 新規作成状態にリセット（UI更新はデータ読み込み後にまとめて実行）
             CurrentFilePath = null;
-            IsElementSplit = false;
-            IsHorizontalAnalysisDone = false;
-            IsVerticalAnalysisDone = false;
-            IsGroupPileSettlementAnalysisDone = false;
-            IsVerticalBeamAnalysisDone = false;
-            IsAnalysisResultVisible = false;
-            CurrentModel = null;
+            ClearAllAnalysisState(includeElementSplit: true);
 
             // JSON読み込み＋地盤データ準備をバックグラウンドで実行（UIバインド済みコレクションには触れない）
             var (pileData, groundInputCopies) = await Task.Run(() =>
@@ -248,10 +242,8 @@ namespace PileDesign.ViewModels
             CurrentInputModel.SuppressNotifications();
 
             // 杭要素分割・解析状態をリセット
-            IsElementSplit = false;
-            IsHorizontalAnalysisDone = false;
-            IsVerticalAnalysisDone = false;
-            IsVerticalBeamAnalysisDone = false;
+            // (以前はここでフラグを 4 つ消すだけで、群杭沈下の結果と結果セットが残っていた)
+            ClearAllAnalysisState(includeElementSplit: true);
 
             // JSON読み込み＋地盤データ準備をバックグラウンドで実行（UIバインド済みコレクションには触れない）
             var (data, groundInputCopy) = await Task.Run(() =>

@@ -93,6 +93,24 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel == null) return;
 
+            // 水平解析の結果が前回のスナップショットのままで、そのあと入力が編集されている場合は
+            // 取り直さない。取り直すと「編集後の入力」と「解析時の結果」が 1 組に組み直され、
+            // 変位は解析時・断面は編集後という混在に戻ってしまう。この仕組みが防ぐはずのものそのもの。
+            //
+            // 沈下だけ再実行したときにこれが起きていた。沈下の結果は入力モデルの中にあり、
+            // 表示も現在の入力を見るので、取り直さなくても沈下の結果は出る。
+            // 併せて「入力が変更された」の記録も残るので、陳腐化した水平解析結果の警告が消えない。
+            bool horizontalIsStillTheCapturedOne =
+                _currentResultSet?.AnaModel != null
+                && ReferenceEquals(CurrentModel, _currentResultSet.AnaModel);
+
+            if (InputChangedSinceAnalysis && horizontalIsStillTheCapturedOne)
+            {
+                Serilog.Log.Information(
+                    "[結果セット] 入力が編集済みのためスナップショットは取り直さない (水平解析結果は解析時のまま)");
+                return;
+            }
+
             var set = AnalysisResultSet.Capture(
                 CurrentInputModel,
                 CurrentModel,
@@ -134,17 +152,47 @@ namespace PileDesign.ViewModels
             InputChangedSinceAnalysis = false;
         }
 
-        /// <summary>解析結果を明示的に破棄する（メニュー等から呼ぶ）。</summary>
-        [RelayCommand]
-        public void DiscardAnalysisResults()
+        /// <summary>
+        /// 解析に由来する状態をすべて捨てる。<b>解析結果を無効にするすべての経路から呼ぶこと。</b>
+        ///
+        /// 捨てるものが 3 か所に分かれている。
+        /// <list type="bullet">
+        /// <item>VM のフラグ (<see cref="IsHorizontalAnalysisDone"/> ほか) と <see cref="CurrentModel"/></item>
+        /// <item>解析結果セット (入力スナップショット + AnaModel)</item>
+        /// <item><b>入力モデルの中に格納された沈下の結果</b>
+        ///   (<c>PileGroupSettlement</c> の CaseRecords / SettlementGridData、各杭の GroupPileSettlement)</item>
+        /// </list>
+        /// 1 か所でも漏らすと「消したはずの結果が残る」。経路ごとに部分集合しか消していなかったため、
+        /// 新規作成や計算例の読み込みでは前のモデルの結果セットが残り、
+        /// 破棄したはずの沈下結果は保存 → 再読込で復活していた
+        /// (解析済みかどうかは入力モデル内のデータから推定するため)。
+        /// </summary>
+        /// <param name="includeElementSplit">
+        /// 杭要素分割も取り消すか。分割は解析結果ではなく入力側の状態なので、呼び出し側が決める。
+        /// </param>
+        internal void ClearAllAnalysisState(bool includeElementSplit)
         {
-            ClearAnalysisResultSetState();
-            CurrentModel = null;
+            if (includeElementSplit) IsElementSplit = false;
+
             IsHorizontalAnalysisDone = false;
             IsVerticalAnalysisDone = false;
             IsGroupPileSettlementAnalysisDone = false;
             IsVerticalBeamAnalysisDone = false;
             IsAnalysisResultVisible = false;
+
+            VerticalBeamCaseResults = null;
+            CurrentModel = null;
+
+            ClearAnalysisResultSetState();
+            ClearSettlementResults();
+        }
+
+        /// <summary>解析結果を明示的に破棄する（メニュー等から呼ぶ）。</summary>
+        [RelayCommand]
+        public void DiscardAnalysisResults()
+        {
+            // 杭要素分割は入力側の状態なので残す (従来の挙動)。
+            ClearAllAnalysisState(includeElementSplit: false);
             UpdateWindowImmediate();
         }
     }

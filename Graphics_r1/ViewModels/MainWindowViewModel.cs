@@ -952,10 +952,9 @@ namespace PileDesign.ViewModels
                     return false;
                 else
                 {
-                    IsElementSplit = false;
-                    IsVerticalAnalysisDone = false;
-                    IsHorizontalAnalysisDone = false;
-                    IsVerticalBeamAnalysisDone = false;
+                    // 群杭沈下・結果セット・入力モデル内の沈下結果まで含めて捨てる。
+                    // フラグ 4 つだけ消していた頃は、消えたはずの結果が残っていた。
+                    ClearAllAnalysisState(includeElementSplit: true);
                     // 変更後（以下の箇所で適用）
                     RequestUpdateWindow();
                 }

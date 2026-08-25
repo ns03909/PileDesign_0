@@ -27,40 +27,9 @@ namespace PileDesign.ViewModels
 
             if (resetModel)
             {
-                // 解析関連フラグをリセット
-                IsElementSplit = false;
-                IsHorizontalAnalysisDone = false;
-                IsVerticalAnalysisDone = false;
-                IsGroupPileSettlementAnalysisDone = false;
-                IsVerticalBeamAnalysisDone = false;
-                IsAnalysisResultVisible = false;
-
-                // 群杭沈下 (反復) の CaseRecord も破棄 (杭配置/軸力/基礎梁の変更で結果無効化のため)
-                var pgs = CurrentInputModel?.PileGroupSettlement;
-                if (pgs?.CaseRecords != null && pgs.CaseRecords.Count > 0)
-                {
-                    pgs.CaseRecords.Clear();
-                    pgs.ActiveCaseIndex = -1;
-                    pgs.SettlementGridData = [];
-                    if (CurrentInputModel?.PileLayoutItems != null)
-                        foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
-                    OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
-                    OnPropertyChanged(nameof(HasGroupSettlementBeamAwareCases));
-                    OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
-                    OnPropertyChanged(nameof(AvailableActiveLoadingTypes));
-                    OnPropertyChanged(nameof(GroupSettlementRouteOptions));
-                    OnPropertyChanged(nameof(GroupSettlementRouteSelector));
-                }
-
-                // AnaModel の破棄
-                CurrentModel = null;
-
-                // 解析結果セット (解析時の入力スナップショット) も破棄する。
-                // これを残すと ResultInputModel が解析時の入力を返し続け、
-                // 結果を消したのにステータスバーやグラフの基準切替が残る。
-                ClearAnalysisResultSetState();
-
-                // 表示の更新
+                // 解析に由来する状態は 1 か所にまとめてある。
+                // ここで個別に消していた頃は、経路ごとに消し漏らしが出ていた。
+                ClearAllAnalysisState(includeElementSplit: true);
                 UpdateWindowImmediate();
             }
 
@@ -199,17 +168,14 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void ResetAnalysisResultsSilently()
         {
-            if (!IsHorizontalAnalysisDone && !IsVerticalAnalysisDone && !IsGroupPileSettlementAnalysisDone && !IsVerticalBeamAnalysisDone)
+            // フラグが全部 false でも、結果セットや入力モデル内の沈下結果が残っていることがある
+            // (フラグだけ消す経路が過去にあったため)。残っていたら消す。
+            if (!IsHorizontalAnalysisDone && !IsVerticalAnalysisDone
+                && !IsGroupPileSettlementAnalysisDone && !IsVerticalBeamAnalysisDone
+                && !HasAnalysisResultSet && !HasSettlementResults())
                 return;
 
-            IsElementSplit = false;
-            IsHorizontalAnalysisDone = false;
-            IsVerticalAnalysisDone = false;
-            IsGroupPileSettlementAnalysisDone = false;
-            IsVerticalBeamAnalysisDone = false;
-            IsAnalysisResultVisible = false;
-            CurrentModel = null;
-
+            ClearAllAnalysisState(includeElementSplit: true);
             UpdateWindowImmediate();
         }
 

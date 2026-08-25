@@ -131,8 +131,58 @@ namespace TestProject1
             StringAssert.Contains(vm.ResultSetStatusText, "再解析",
                 "変更後の状態表示に再解析の案内が無い");
 
+            // 再解析 = 新しい AnaModel が入ってから取り直す。
+            // (Capture は CurrentModel が前回と同じインスタンスかどうかで
+            //  「本当に解析し直したのか」を見分ける)
+            vm.CurrentModel = NewAnaModel(vm);
             vm.CaptureAnalysisResultSet();
             Assert.IsFalse(vm.InputChangedSinceAnalysis, "再解析でフラグが戻っていない");
+        }
+
+        /// <summary>
+        /// 入力を編集したあと<b>沈下だけ</b>再実行しても、スナップショットを取り直さないこと。
+        ///
+        /// 取り直すと「編集後の入力」と「解析時の水平解析結果」が 1 組に組み直され、
+        /// 変位は解析時・断面は編集後という混在に戻る。この仕組みが防ぐはずのものそのもの。
+        /// 併せて「入力が変更された」の記録も消え、陳腐化した水平解析結果の警告が出なくなっていた。
+        ///
+        /// 沈下の結果は入力モデルの中にあり、表示も現在の入力を見るので、
+        /// 取り直さなくても沈下の結果は出る。
+        /// </summary>
+        [TestMethod]
+        public void SettlementOnlyRun_DoesNotRepairTheSnapshotWithEditedInput()
+        {
+            var built = Build();
+            if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            var (vm, input) = built.Value;
+
+            vm.CaptureAnalysisResultSet();
+            var snapshotAfterAnalysis = vm.ResultInputModel;
+
+            // 解析後に入力を編集
+            double before = vm.ResultInputModel.PileLayoutItems[0].AxialForceVL0;
+            input.PileLayoutItems[0].AxialForceVL0 = before + 1000.0;
+            vm.MarkInputChangedSinceAnalysis();
+
+            // 沈下だけ再実行 (水平解析は走っていないので CurrentModel は同じインスタンスのまま)
+            vm.CaptureAnalysisResultSet();
+
+            Assert.AreSame(snapshotAfterAnalysis, vm.ResultInputModel,
+                "編集後の入力でスナップショットが組み直されている");
+            Assert.AreEqual(before, vm.ResultInputModel.PileLayoutItems[0].AxialForceVL0, 1e-9,
+                "スナップショットに編集後の値が入っている");
+            Assert.IsTrue(vm.InputChangedSinceAnalysis,
+                "陳腐化した水平解析結果の警告が消えている");
+        }
+
+        /// <summary>解析し直したときと同じく、別インスタンスの AnaModel を作る。</summary>
+        private static AnaModel NewAnaModel(MainWindowViewModel vm)
+        {
+            var input = vm.CurrentInputModel;
+            var modelling = new AnalysisModelling(input);
+            return new AnaModel(
+                input, modelling.Nodes, modelling.Beams, modelling.DummyBeams,
+                modelling.RigidBodies, modelling.HorizontalSoilSprings, modelling.RotationalSprings);
         }
 
         [TestMethod]

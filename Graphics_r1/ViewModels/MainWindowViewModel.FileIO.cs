@@ -144,7 +144,12 @@ namespace PileDesign.ViewModels
 
             CurrentInputModel.Reset();
             MarkWorkSaved();
-            this.CurrentModel = null; // AnaModelもリセット
+
+            // 解析に由来する状態をすべて捨てる。CurrentModel だけ null にしていた頃は、
+            // 解析済みフラグと結果セットが残り、新規作成したのに前のモデルの結果が
+            // グラフ・結果テーブル・ステータスバーに出ていた。
+            ClearAllAnalysisState(includeElementSplit: true);
+
             CurrentFilePath = null;
             LoadedExampleName = null;  // 新規作成時はタイトルバーを [新規] に戻す
 
