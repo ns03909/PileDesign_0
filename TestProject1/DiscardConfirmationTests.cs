@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.ViewModels;
+using System.Threading.Tasks;
 
 namespace TestProject1
 {
@@ -14,6 +15,27 @@ namespace TestProject1
     [TestClass]
     public class DiscardConfirmationTests
     {
+        /// <summary>
+        /// 「はい」で保存したあとに初期化する経路が、<b>保存の完了を待てる</b>形であること。
+        ///
+        /// 保存は同一インスタンスを Task.Run で直列化するため、await せずに
+        /// <c>CurrentInputModel.Reset()</c> へ進むと、空になったモデルがそのまま
+        /// 上書き保存され得る。実際に <c>_ = SaveInputModelFile();</c> と書かれており、
+        /// この経路だけがアプリ終了時 (正しく await している) と食い違っていた。
+        ///
+        /// 戻り値を void に戻すと await できなくなるので、型で縛る。
+        /// </summary>
+        [TestMethod]
+        public void NewFile_CanAwaitTheSaveBeforeResetting()
+        {
+            var method = typeof(MainWindowViewModel).GetMethod(nameof(MainWindowViewModel.NewInputModelFile));
+
+            Assert.IsNotNull(method, "NewInputModelFile が見つからない");
+            Assert.AreEqual(typeof(Task), method.ReturnType,
+                "NewInputModelFile が void に戻っている。保存の完了を待てず、"
+                + "空のモデルで上書き保存され得る");
+        }
+
         [TestMethod]
         public void FreshlyStarted_NeedsNoConfirmation()
         {

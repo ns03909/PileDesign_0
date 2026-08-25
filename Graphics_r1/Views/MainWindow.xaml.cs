@@ -3114,7 +3114,8 @@ namespace PileDesign.Views
             // ファイルを開く
             if (e.Key == Key.N && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                viewModel?.NewInputModelFile();
+                // 保存 → Reset の順序はメソッド内で await して守られている。
+                _ = viewModel?.NewInputModelFile();
                 e.Handled = true;
             }
 

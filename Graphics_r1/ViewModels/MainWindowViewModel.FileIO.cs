@@ -114,8 +114,15 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>
+        /// 入力を初期化して新規作成する。
+        ///
+        /// 「保存しますか？」に「はい」と答えたときは、<b>保存の完了を待ってから</b>
+        /// Reset する。await せずに Reset すると、保存処理が同一インスタンスを
+        /// Task.Run で直列化するため、空になったモデルがそのまま上書き保存され得た。
+        /// </summary>
         [RelayCommand]
-        public void NewInputModelFile()
+        public async Task NewInputModelFile()
         {
             // 保存していない作業が無ければ確認しない (起動直後に新規作成した場合など)
             if (HasUnsavedWork)
@@ -129,7 +136,7 @@ namespace PileDesign.ViewModels
                 if (result == MessageBoxResult.Cancel)
                     return;
                 else if (result == MessageBoxResult.Yes)
-                    _ = SaveInputModelFile();
+                    await SaveInputModelFile();
             }
 
             // 自動保存を停止
