@@ -344,7 +344,15 @@ namespace PileDesign.FEM
             return soilReactions;
         }
 
-        // 地盤の割線剛性取得メソッド
+        /// <summary>
+        /// 地盤の割線剛性。変位制御法 (K_sec·x = F を繰り返し解く) が使う。
+        ///
+        /// <b>周面・先端とも割線でなければならない。</b>
+        /// 内力の評価 (<see cref="GetSoilReactionVector"/>) が割線剛性 × 変位なので、
+        /// ここに接線剛性を混ぜると K_sec·x = R(x) が成り立たず、
+        /// 反復が収束しても釣り合い R(x) = F を満たさない解に落ち着く。
+        /// 実際に周面だけ接線を足しており、非線形域の荷重-変位曲線がずれていた。
+        /// </summary>
         public List<double> GetSecantSoilStiffness(string state, Vector<double> xs)
         {
             List<double> secantStiffnesses = [];
@@ -364,8 +372,10 @@ namespace PileDesign.FEM
                     double S2 = soilPile.PileCircumVerticals[j].S2 / 1000.0; // m
                     double psiL = soilPile.PileCircumVerticals[j].PsiL * 0.5; // m2
 
-                    double ktan = GetTangentStiffnessPilePerimeter(state, s, aPC, aPT, tau1, tau2, S1, S2, psiL);
-                    stiffness += ktan;
+                    // 割線剛性を使う。接線剛性を混ぜると K_sec·x = R(x) が崩れ、
+                    // 収束しても釣り合い (GetSoilReactionVector = 割線 × 変位) を満たさない。
+                    double ksec = GetSecantStiffnessPilePerimeter(state, s, aPC, aPT, tau1, tau2, S1, S2, psiL);
+                    stiffness += ksec;
                 }
 
                 if (i == pileNodesCount - 1) // 杭先端抵抗
