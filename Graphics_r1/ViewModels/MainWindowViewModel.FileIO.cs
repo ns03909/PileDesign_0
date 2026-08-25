@@ -637,6 +637,24 @@ namespace PileDesign.ViewModels
                 FileName = defaultDocxName
             };
 
+            // 計算書は「解析を実行した時点の入力」で作る。結果と整合するのはそれだけで、
+            // 現在の入力を混ぜると諸元表と解析結果の前提が食い違う (画面はスナップショットを見ている)。
+            // 編集していると期待とずれるので、先に断ってから出す。
+            if (InputChangedSinceAnalysis)
+            {
+                var answer = MessageService.Show(
+                    "解析のあとに入力が編集されています。\n\n" +
+                    "計算書は解析結果と整合させるため、" +
+                    "解析を実行した時点の入力で作成します。\n" +
+                    "編集後の入力で作成するには、再解析してください。\n\n" +
+                    "このまま作成しますか？",
+                    "確認",
+                    MessageBoxButton.OKCancel,
+                    MessageBoxImage.Information);
+
+                if (answer != MessageBoxResult.OK) return;
+            }
+
             Serilog.Log.Information("[Docx] 保存ダイアログ表示");
             if (saveFileDialog.ShowDialog() == true)
             {
@@ -649,8 +667,11 @@ namespace PileDesign.ViewModels
                     StatusMessage = "計算書作成中... (大規模モデルでは数十秒〜数分かかる場合があります)";
                     Serilog.Log.Information("[Docx] 開始: {File}", System.IO.Path.GetFileName(saveFileDialog.FileName));
 
-                    var doc = new Output.WordDocument(CurrentInputModel, CurrentModel, this);
-                    doc.CreateWordDocument(CurrentInputModel, saveFileDialog.FileName);
+                    // CurrentModel は CaptureAnalysisResultSet で既にスナップショット側を指している。
+                    // 入力もそちらに合わせないと「変位は解析時・断面は編集後」の計算書になる。
+                    var inputForReport = ResultInputModel;
+                    var doc = new Output.WordDocument(inputForReport, CurrentModel, this);
+                    doc.CreateWordDocument(inputForReport, saveFileDialog.FileName);
 
                     sw.Stop();
                     Serilog.Log.Information("[Docx] 完了: {Elapsed:N1} 秒, ファイル: {File}",
