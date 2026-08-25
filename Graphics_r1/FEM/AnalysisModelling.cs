@@ -739,7 +739,9 @@ namespace PileDesign.FEM
             foreach (var inputNode in InputModel.InputNodes)
             {
                 // General型のみFEM.Nodeとして追加（Pile型は杭生成で処理済み）
-                if (inputNode.Type == NodeType.General && inputNode.IsVisible)
+                // ※ IsVisible で絞らないこと。表示専用のフラグであり、これを見ると
+                //    「非表示にした節点が解析モデルから消える」= 画面の見た目で結果が変わる。
+                if (inputNode.Type == NodeType.General)
                 {
                     var node = new Node();
                     node.SetNodeInfo($"InputNode-{inputNode.No}", inputNode.X, inputNode.Y, inputNode.Z);
