@@ -567,12 +567,12 @@ namespace PileDesign.Output
                     if (mainWindowViewModel.IsVerticalBeamAnalysisDone && mainWindowViewModel.VerticalBeamCaseResults != null)
                     {
                         AddPageBreak(body);
-                        AddHeader1(body, "基礎梁考慮鉛直解析結果", 1);
+                        AddHeader1(body, "単杭沈下解析（基礎梁考慮）結果", 1);
                         AddVerticalBeamResultTables(body);
                     }
                     else
                     {
-                        AddText(body, "（基礎梁考慮鉛直解析が未実施のため、結果は省略されています）", "left");
+                        AddText(body, "（単杭沈下解析（基礎梁考慮）が未実施のため、結果は省略されています）", "left");
                     }
                 });
             }

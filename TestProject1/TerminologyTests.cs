@@ -26,6 +26,8 @@ namespace TestProject1
             ("土層沈下",             "群杭沈下"),
             ("荷重沈下関係解析",     "単杭沈下解析"),
             ("基礎梁考慮沈下解析",   "単杭沈下解析（基礎梁考慮）"),
+            // 同じ解析に 3 つ目の呼び名が付いていた。計算書の見出しにも出ていた
+            ("基礎梁考慮鉛直解析",   "単杭沈下解析（基礎梁考慮）"),
             ("Export to File",       "ファイルに出力"),
         };
 
@@ -40,9 +42,14 @@ namespace TestProject1
             throw new FileNotFoundException("ソリューションルートが見つかりません");
         }
 
-        /// <summary>XAML の表示文字列になる属性 (Header / Content / Title / ToolTip / Text)</summary>
+        /// <summary>
+        /// XAML の表示文字列になる属性。
+        ///
+        /// <c>Tag</c> も含める。ツールチップの本文を Tag に置いてスタイル側で表示する書き方があり、
+        /// ここを見ていなかったため、リボンの説明に引退した呼び名が残っていた。
+        /// </summary>
         private static readonly Regex DisplayAttribute =
-            new("(?:Header|Content|Title|ToolTip|Text)=\"([^\"]*)\"", RegexOptions.Compiled);
+            new("(?:Header|Content|Title|ToolTip|Text|Tag)=\"([^\"]*)\"", RegexOptions.Compiled);
 
         [TestMethod]
         public void RetiredTerms_DoNotAppearInXamlDisplayStrings()
@@ -103,6 +110,54 @@ namespace TestProject1
             Assert.IsTrue(PileDesign.Common.UiText.IsAll("ALL"));
             Assert.IsFalse(PileDesign.Common.UiText.IsAll("レベル1"));
             Assert.IsFalse(PileDesign.Common.UiText.IsAll(null));
+        }
+
+        /// <summary>
+        /// C# の文字列リテラルにも引退した呼び名を残さないこと。
+        ///
+        /// 画面に出る文字列は XAML だけではない。ショートカット一覧・ダイアログの文面・
+        /// 計算書 (docx) の見出しはコードの文字列で書かれており、
+        /// XAML と help.html しか見ていなかったため<b>同じ機能に 3 つの呼び名</b>が並んでいた
+        /// (「基礎梁考慮鉛直解析」は計算書の章題にまで出ていた)。
+        ///
+        /// コメントとログの書式は対象外。利用者の目に触れない。
+        /// </summary>
+        [TestMethod]
+        public void RetiredTerms_DoNotAppearInCSharpStringLiterals()
+        {
+            string root = FindSolutionRoot();
+            var literal = new Regex("\"([^\"]*)\"", RegexOptions.Compiled);
+            var logCall = new Regex(@"Log\.(Information|Debug|Warning|Error|Verbose|Fatal)", RegexOptions.Compiled);
+            var hits = new List<string>();
+
+            foreach (string cs in Directory.EnumerateFiles(
+                         Path.Combine(root, "Graphics_r1"), "*.cs", SearchOption.AllDirectories))
+            {
+                if (cs.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")) continue;
+
+                int lineNo = 0;
+                foreach (string raw in File.ReadLines(cs))
+                {
+                    lineNo++;
+
+                    int comment = raw.IndexOf("//", StringComparison.Ordinal);
+                    string line = comment >= 0 ? raw[..comment] : raw;
+                    if (logCall.IsMatch(line)) continue;
+
+                    foreach (Match m in literal.Matches(line))
+                    {
+                        string text = m.Groups[1].Value;
+                        foreach (var (retired, use) in RetiredNames)
+                        {
+                            if (text.Contains(retired, StringComparison.Ordinal))
+                                hits.Add($"{Path.GetFileName(cs)}:{lineNo}  {text}  → 「{use}」を使う");
+                        }
+                    }
+                }
+            }
+
+            Assert.AreEqual(0, hits.Count,
+                "引退した呼び名がコードの文字列に残っています:\n  " + string.Join("\n  ", hits));
         }
     }
 }

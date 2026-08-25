@@ -814,7 +814,7 @@ diameterSelector,
                 if (caseResult.PileResults != null && caseResult.PileResults.Count > 0)
                 {
                     AddLineBreak(body);
-                    AddAutoFigureCaption(body, $"基礎梁考慮鉛直解析 杭反力・沈下量（{caseResult.LoadCaseName}）", "表");
+                    AddAutoFigureCaption(body, $"単杭沈下解析（基礎梁考慮） 杭反力・沈下量（{caseResult.LoadCaseName}）", "表");
 
                     Table pileTable = CreateTableWithBorders();
                     TableRow pileHeader = CreateHeaderRow(
@@ -845,7 +845,7 @@ diameterSelector,
                 if (caseResult.BeamResults != null && caseResult.BeamResults.Count > 0)
                 {
                     AddLineBreak(body);
-                    AddAutoFigureCaption(body, $"基礎梁考慮鉛直解析 梁応力（{caseResult.LoadCaseName}）", "表");
+                    AddAutoFigureCaption(body, $"単杭沈下解析（基礎梁考慮） 梁応力（{caseResult.LoadCaseName}）", "表");
 
                     Table beamTable = CreateTableWithBorders();
                     TableRow beamHeader = CreateHeaderRow(

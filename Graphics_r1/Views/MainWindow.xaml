@@ -728,7 +728,7 @@
                                      Style="{StaticResource SvgIconStyle24}"/>
                 </Setter.Value>
             </Setter>
-            <Setter Property="Tag" Value="荷重沈下関係解析 (F6)"/>
+            <Setter Property="Tag" Value="単杭沈下解析 (F6)"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="True">
                     <Setter Property="Content">
@@ -737,7 +737,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="荷重沈下関係解析 ✓ (F6)"/>
+                    <Setter Property="Tag" Value="単杭沈下解析 ✓ (F6)"/>
                     <Setter Property="Foreground" Value="{StaticResource StatusInfoBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -981,7 +981,7 @@
                                               IsChecked="{Binding IsSaveAnalysisResultsAutoSave, Mode=TwoWay}"
                                               Margin="0,4,0,4" VerticalAlignment="Center"/>
                                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,12" Foreground="#444">
-                                        <Run Text="ON にすると水平解析・基礎梁考慮鉛直解析の結果 (節点/梁の変位・応力) もファイルに保存します。ファイルを開き直したときに再計算なしで前回結果を確認できます。"/>
+                                        <Run Text="ON にすると水平解析・単杭沈下解析（基礎梁考慮）の結果 (節点/梁の変位・応力) もファイルに保存します。ファイルを開き直したときに再計算なしで前回結果を確認できます。"/>
                                         <LineBreak/>
                                         <Run Text="手動保存は既定 ON です。結果が不要でファイルを軽くしたい場合は OFF にしてください (入力データのみを保存します)。結果を含めるとファイルが数十 MB 級に肥大し、読み書きが遅くなる場合があります。"/>
                                         <LineBreak/>
@@ -6069,11 +6069,11 @@
                                                         Style="{StaticResource SettlementAnalysisButtonStyle}"
                                                         Command="{Binding OpenSettlementWindowCommand}"/>
 
-                                                    <!-- 行1: 基礎梁考慮沈下解析 -->
+                                                    <!-- 行1: 単杭沈下解析（基礎梁考慮） -->
                                                     <Button Grid.Row="1" Grid.Column="3"
                                                         Padding="0"
                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="基礎梁の剛性を考慮した沈下解析です。基礎梁を含むモデルで荷重沈下関係解析を実行したときに押下可能となります。"
+                                                        Tag="基礎梁の剛性を考慮した沈下解析です。基礎梁を含むモデルで単杭沈下解析を実行したときに押下可能となります。"
                                                         Command="{Binding OpenVerticalBeamCalculationCommand}">
                                                         <svgc:SvgViewbox Source="/Icons/SettlementWithBeamWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>

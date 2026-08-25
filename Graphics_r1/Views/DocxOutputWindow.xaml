@@ -272,7 +272,7 @@ WindowStartupLocation="CenterOwner">
                             <!-- 群杭沈下/基礎梁考慮 は独立 (各々の解析完了でガード) -->
                             <CheckBox Content="群杭沈下マップ" IsChecked="{Binding DocxOutput.IncludeGroupPileSettlement, Mode=TwoWay}" Margin="0,2"
                                       IsEnabled="{Binding IsGroupPileSettlementAnalysisDone}"/>
-                            <CheckBox Content="基礎梁考慮鉛直解析結果" IsChecked="{Binding DocxOutput.IncludeVerticalBeamResults, Mode=TwoWay}" Margin="0,2"
+                            <CheckBox Content="単杭沈下解析（基礎梁考慮）結果" IsChecked="{Binding DocxOutput.IncludeVerticalBeamResults, Mode=TwoWay}" Margin="0,2"
                                       IsEnabled="{Binding IsVerticalBeamAnalysisDone}"/>
                         </StackPanel>
                     </GroupBox>

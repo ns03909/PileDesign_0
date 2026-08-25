@@ -1294,7 +1294,7 @@ namespace PileDesign.ViewModels
 
                 case "個別十字（基礎梁反力）":
                     if (!IsVerticalBeamAnalysisDone || VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0)
-                        return "基礎梁考慮鉛直解析が実行されていません。\n先に基礎梁考慮鉛直解析を実行してください。";
+                        return "単杭沈下解析（基礎梁考慮）が実行されていません。\n先に単杭沈下解析（基礎梁考慮）を実行してください。";
                     if (piles == null || piles.Count == 0)
                         return GuardMessages.NoPileLayout;
                     break;

@@ -2691,7 +2691,7 @@ namespace PileDesign.ViewModels
             if (anyMissing)
             {
                 MessageService.Show("単杭沈下解析が未実行の杭があります。\n\n" +
-                    "基礎梁考慮沈下解析には、各杭の荷重-沈下関係（単杭沈下解析の結果）が必要です。\n" +
+                    "単杭沈下解析（基礎梁考慮）には、各杭の荷重-沈下関係（単杭沈下解析の結果）が必要です。\n" +
                     "先に「単杭沈下解析」を実行してください。\n\n" +
                     "※群杭沈下解析とは別の解析です。",
                     "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);

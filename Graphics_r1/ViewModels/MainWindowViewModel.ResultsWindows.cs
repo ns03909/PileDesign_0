@@ -212,7 +212,7 @@ namespace PileDesign.ViewModels
             if (VerticalBeamAnalysisLogs.Count > 0)
             {
                 if (LatestAnalysisLogs.Count > 0) LatestAnalysisLogs.Add("");
-                LatestAnalysisLogs.Add("=== 基礎梁考慮沈下解析 ===");
+                LatestAnalysisLogs.Add("=== 単杭沈下解析（基礎梁考慮） ===");
                 foreach (var log in VerticalBeamAnalysisLogs)
                     LatestAnalysisLogs.Add(log);
             }
@@ -755,7 +755,7 @@ namespace PileDesign.ViewModels
                 }
             }
             if (VerticalBeamAnalysisLogs.Count > 0)
-                logSources["基礎梁考慮沈下解析"] = VerticalBeamAnalysisLogs;
+                logSources["単杭沈下解析（基礎梁考慮）"] = VerticalBeamAnalysisLogs;
 
             // 個別矩形（基礎梁考慮）反復解析の永続化ログ
             var pgs = CurrentInputModel?.PileGroupSettlement;

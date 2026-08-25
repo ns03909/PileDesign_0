@@ -160,10 +160,10 @@
                     </StackPanel>
                 </Border>
 
-                <!-- ▍基礎梁考慮鉛直解析 -->
+                <!-- ▍単杭沈下解析（基礎梁考慮） -->
                 <Border Style="{StaticResource DashCardStyle}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource DashSectionTitleStyle}" Text="基礎梁考慮鉛直解析"/>
+                        <TextBlock Style="{StaticResource DashSectionTitleStyle}" Text="単杭沈下解析（基礎梁考慮）"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="120"/>

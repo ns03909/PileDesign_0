@@ -4899,7 +4899,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             <p>矩形荷重を定義します。</p>
             <p>荷重タイプコンボボックスで、<img class="button-icon" src="icons/AnyFormPressure.svg" alt="">「任意矩形」、<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「個別十字」、<img class="button-icon" src="icons/BeamedCrossFormPressure.svg" alt="">「個別十字（基礎梁反力）」のいずれかを選択します。</p>
             <p>
-                <img class="button-icon" src="icons/BeamedCrossFormPressure.svg" alt="">「個別十字（基礎梁反力）」は、<strong>基礎梁考慮鉛直解析</strong>（F7）が実行済みの場合にのみ選択肢に表示されます。
+                <img class="button-icon" src="icons/BeamedCrossFormPressure.svg" alt="">「個別十字（基礎梁反力）」は、<strong>単杭沈下解析（基礎梁考慮）</strong>（F7）が実行済みの場合にのみ選択肢に表示されます。
             </p>
             <p><img class="button-icon" src="icons/AddRectLoad.svg" alt="">「矩形荷重面追加」ボタンをクリックすると、矩形荷重面を 1 件追加します。荷重タイプが「任意矩形」のときに使用し、追加された行に X1, Y1, X2, Y2 と荷重強度を入力します。荷重タイプが「個別十字」「個別十字（基礎梁反力）」のときは杭配置から自動生成される矩形が使用されるため、手動追加は通常不要です。</p>
             <p><img class="button-icon" src="icons/CreateAutoUniformlyDistributedLoad.svg" alt="">「建物下面全体矩形荷重自動生成」ボタンをクリックすると、すべての杭配置点を内包する最小外接矩形からマージンを取った矩形荷重面を自動生成し、荷重タイプを「任意矩形」に切り替えて 1 件のみのデータグリッドに置き換えます。基礎指針'19 6.3 節「等価荷重面法」による即時沈下計算で建物範囲全体に分布荷重を与えたい場合の初期入力に便利です。</p>
@@ -5048,15 +5048,15 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
 
             <h5><img class="heading-icon" src="icons/BeamedCrossFormPressure.svg" alt="">個別十字（基礎梁反力）</h5>
             <p>
-                「個別十字（基礎梁反力）」タイプは、<strong>基礎梁考慮鉛直解析が実行済み</strong>の場合にのみ利用可能な荷重タイプです。<br>
-                「個別十字」と同様に杭ごとに 5 矩形を自動生成しますが、<strong>荷重の値には基礎梁考慮鉛直解析の VL ケース杭反力（Reaction_kN）を使用</strong>します。<br>
+                「個別十字（基礎梁反力）」タイプは、<strong>単杭沈下解析（基礎梁考慮）が実行済み</strong>の場合にのみ利用可能な荷重タイプです。<br>
+                「個別十字」と同様に杭ごとに 5 矩形を自動生成しますが、<strong>荷重の値には単杭沈下解析（基礎梁考慮）の VL ケース杭反力（Reaction_kN）を使用</strong>します。<br>
                 基礎梁との連成によって再分配された杭反力を沈下計算に反映できます。
             </p>
             <p>動作上の注意:</p>
             <ul>
                 <li>VL ケースは LoadCaseName が <code>VL</code> で始まる結果（例: "VL", "VL (常時+追加)" 等）の先頭を使用します。</li>
                 <li><img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「個別十字」と同様、矩形荷重データグリッドを編集すると自動的に<img class="button-icon" src="icons/AnyFormPressure.svg" alt="">「任意矩形」に切り替わります。</li>
-                <li>基礎梁考慮鉛直解析の結果をクリアしたり未実行に戻すと、この選択肢は自動的にコンボボックスから消え、選択中だった場合は<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「個別十字」にフォールバックします。</li>
+                <li>単杭沈下解析（基礎梁考慮）の結果をクリアしたり未実行に戻すと、この選択肢は自動的にコンボボックスから消え、選択中だった場合は<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「個別十字」にフォールバックします。</li>
             </ul>
 
             <h5>一般解析実行と結果表示</h5>
@@ -6070,7 +6070,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <h3 id="section-settlement-single-beam" style="font-weight: bold;"><img class="heading-icon" src="icons/SettlementWithBeamWindow.svg" alt="">「単杭沈下解析（基礎梁考慮）」（F7）</h3>
             <p>
                 単杭沈下解析済みかつ基礎梁が定義されている場合に有効になります。
-                基礎梁考慮鉛直解析ウィンドウを開きます。
+                単杭沈下解析（基礎梁考慮）ウィンドウを開きます。
             </p>
             <p>
                 基礎梁の曲げ剛性と各杭の非線形鉛直ばね（単杭沈下解析の荷重-沈下関係）を連成させた
@@ -6319,7 +6319,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><img class="button-icon" src="icons/ElementDivisionWindowDone.svg" alt=""><span style="color:#62B0E2; font-weight:bold;">「杭要素分割 ✓」</span>: 杭要素分割が完了 (スカイブルー / NikkenSkyBlue)</li>
                 <li><img class="button-icon" src="icons/LateralLoadAnalysisWindowDone.svg" alt=""><span style="color:#2E7D32; font-weight:bold;">「水平解析 ✓」</span>: 水平解析が完了 (緑)</li>
                 <li><img class="button-icon" src="icons/SettlementWindowDone.svg" alt=""><span style="color:#1565C0; font-weight:bold;">「単杭沈下解析 ✓」</span>: 単杭沈下 (荷重-沈下関係) 解析が完了 (青)</li>
-                <li><img class="button-icon" src="icons/SettlementWithBeamWindowDone.svg" alt=""><span style="color:#1565C0; font-weight:bold;">「単杭沈下解析（基礎梁考慮） ✓」</span>: 基礎梁考慮鉛直解析が完了 (青)</li>
+                <li><img class="button-icon" src="icons/SettlementWithBeamWindowDone.svg" alt=""><span style="color:#1565C0; font-weight:bold;">「単杭沈下解析（基礎梁考慮） ✓」</span>: 単杭沈下解析（基礎梁考慮）が完了 (青)</li>
                 <li><img class="button-icon" src="icons/GroupPileSettlementDone.svg" alt=""><span style="color:#E65100; font-weight:bold;">「群杭沈下解析（一般） ✓」</span>: 群杭沈下解析（一般 = 通常 Steinbrenner）に該当ケースが保存済み (橙)</li>
                 <li><img class="button-icon" src="icons/GroupPileSettlementWithBeamWindowDone.svg" alt=""><span style="color:#E65100; font-weight:bold;">「群杭沈下解析（反復） ✓」</span>: 群杭沈下解析（反復 = 基礎梁考慮反復 Steinbrenner）に該当ケースが保存済み (橙)</li>
             </ul>
@@ -6508,7 +6508,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <img class="button-icon" src="icons/SettlementWindow.svg" alt="">沈下検討 /
                     <img class="button-icon" src="icons/Graph.svg" alt="">荷重沈下曲線 /
                     <img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">群杭沈下マップ /
-                    <img class="button-icon" src="icons/SettlementWithBeamWindow.svg" alt="">基礎梁考慮鉛直解析結果。</li>
+                    <img class="button-icon" src="icons/SettlementWithBeamWindow.svg" alt="">単杭沈下解析（基礎梁考慮）結果。</li>
             </ul>
             <p>
                 <strong>M-&phi;／M-&theta; 曲線の凡例</strong>: 同一 (荷重ケース, 組合せ, 液状化, 軸力[10 kN 丸め])
@@ -6556,8 +6556,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>沈下量</strong>: 単杭沈下・群杭沈下・基礎梁考慮沈下の沈下量をバブル/矢印/値で表示（カラーバー付き）。<br>
                     「群杭」モードの結果は長期荷重（VL）でのみ算定されるため、他の荷重ケース（L1-1, L2-1 等）を選択した場合は表示されません。</li>
                 <li><strong>沈下部材角</strong>: 基礎梁の沈下による部材角を表示</li>
-                <li><strong>沈下反力</strong>: 基礎梁考慮鉛直解析による杭反力を表示</li>
-                <li><strong>沈下応力</strong>: 基礎梁考慮鉛直解析による梁応力を表示</li>
+                <li><strong>沈下反力</strong>: 単杭沈下解析（基礎梁考慮）による杭反力を表示</li>
+                <li><strong>沈下応力</strong>: 単杭沈下解析（基礎梁考慮）による梁応力を表示</li>
             </ul>
             <p>
                 杭頭Mマップ・杭頭Qマップを選択すると、応力ダイアグラムスケールが自動的に0.1に設定され、
@@ -7257,7 +7257,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>水平検討</strong>:
                     水平検討、M-φ／M-θ／N-M／N-Q 関係 (限界状態線重ね描画オプション付き)、応力テーブル (曲げモーメント列／せん断力列／限界状態線)、杭頭 M／杭頭 Q マップ、解析サマリーレポート (収束結果)、検定 NG ケース一覧</li>
                 <li><strong>沈下検討</strong>:
-                    沈下検討、荷重沈下曲線、群杭沈下マップ、基礎梁考慮鉛直解析結果</li>
+                    沈下検討、荷重沈下曲線、群杭沈下マップ、単杭沈下解析（基礎梁考慮）結果</li>
             </ul>
 
             <h5>操作手順</h5>
@@ -7747,7 +7747,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <p>
                     なお<strong>単杭沈下・群杭沈下の結果は入力データの一部</strong>として保持されるため、
                     このチェックに関わらず常に保存されます。チェックで切り替わるのは
-                    <strong>杭要素分割データ・水平解析結果・基礎梁考慮鉛直解析結果</strong>です。
+                    <strong>杭要素分割データ・水平解析結果・単杭沈下解析（基礎梁考慮）結果</strong>です。
                 </p>
             </div>
             <p>解析結果を含めて保存したとき、以下の解析結果が保存されます。</p>
@@ -7756,7 +7756,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>水平解析結果</strong>: 各荷重ケースの梁応力・節点変位・地盤反力等</li>
                 <li><strong>単杭沈下解析結果</strong>: 各杭の荷重-沈下関係</li>
                 <li><strong>群杭沈下解析結果（一般 / 反復）</strong>: 群杭沈下グリッドデータ + 各杭頭沈下量 + 反復のとき梁節点変位/梁応力 (CaseRecord として複数ケース保存)</li>
-                <li><strong>基礎梁考慮鉛直解析結果</strong>: 杭反力・節点変位・梁応力等</li>
+                <li><strong>単杭沈下解析（基礎梁考慮）結果</strong>: 杭反力・節点変位・梁応力等</li>
             </ul>
             <p>
                 解析結果を含むファイルを再度開くと、解析結果が自動的に復元され、解析実行済みの状態
@@ -7773,7 +7773,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h3 id="h-解析結果の保護">解析結果の保護</h3>
             <p>
-                水平解析・単杭沈下解析・群杭沈下解析（一般 / 反復）・基礎梁考慮鉛直解析の実行後にモデルを変更する操作（杭の追加・削除、梁要素の生成・分割、節点の追加・変換、群杭係数の再計算など）を行うと、
+                水平解析・単杭沈下解析・群杭沈下解析（一般 / 反復）・単杭沈下解析（基礎梁考慮）の実行後にモデルを変更する操作（杭の追加・削除、梁要素の生成・分割、節点の追加・変換、群杭係数の再計算など）を行うと、
                 「解析結果が削除されます。続けますか？」という確認ダイアログが表示されます。
             </p>
             <ul>
@@ -11135,7 +11135,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <h4>群杭沈下検討への反映</h4>
                     <p>
                         群杭沈下検討で荷重タイプを <strong>「個別十字」</strong> とした場合、各杭の荷重には VL を用います。
-                        <strong>「個別十字（基礎梁反力）」</strong> の場合は、基礎梁考慮鉛直解析（F7）で再分配された杭反力（<code>Reaction_kN</code>）を用います。
+                        <strong>「個別十字（基礎梁反力）」</strong> の場合は、単杭沈下解析（基礎梁考慮）（F7）で再分配された杭反力（<code>Reaction_kN</code>）を用います。
                     </p>
 
                     <h3 id="h-水平解析モードでの鉛直ばね統合-P-S-非線形ばね" style="font-weight: bold; font-size: 1.2em;">水平解析モードでの鉛直ばね統合 (P-S 非線形ばね)</h3>
@@ -13044,7 +13044,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 </li>
                 <li>
                     <strong>解析結果の出力</strong>: 当該ケースの解析結果として、解放杭の杭頭軸力は $0$ となります (上部構造から伝達されないため)。
-                    沈下解析・基礎梁考慮鉛直解析の結果には影響しません (これらは別解析で軸力モードを使用しないため)。
+                    沈下解析・単杭沈下解析（基礎梁考慮）の結果には影響しません (これらは別解析で軸力モードを使用しないため)。
                 </li>
                 <li>
                     <strong>該当しない杭</strong>: 引張定着筋ありの場合、または鋼管杭でも引張定着筋を併用する場合は、本処置は適用されません。M-θ 関係 (ケース②/③) のみで引張軸力を扱います。
@@ -14022,7 +14022,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <dd>
                     <p>フーチングや基礎スラブによって結ばれた杭頭群を、水平面内では相対変位が生じない<strong>剛な板（剛床）</strong>として扱う仮定です。</p>
                     <p>この仮定により、同じ剛床に属する杭頭節点の面内自由度（水平並進 $U_x, U_y$ と面内回転 $R_z$）は、剛床代表節点（本プログラムでは慣性力作用点 ActionPoint）の並進・回転で一意に決まり、節点間の相対運動は持ちません。</p>
-                    <p>本プログラムでは、基礎梁考慮鉛直解析における杭頭の連結モードとして次の2種類を選択できます:</p>
+                    <p>本プログラムでは、単杭沈下解析（基礎梁考慮）における杭頭の連結モードとして次の2種類を選択できます:</p>
                     <ul>
                         <li><strong>剛体連結（RigidBody）</strong>: 慣性力作用点をマスター節点として、全 ConnectionNode を 6 自由度すべてで <strong>master-slave 拘束</strong>（完全剛体）。基礎梁の曲げ変形は考慮されません。</li>
                         <li><strong>剛床連結（RigidFloor）</strong>: 慣性力作用点をマスター節点として、各 ConnectionNode を <strong>面内 3 自由度（$U_x$, $U_y$, $R_z$）のみ</strong> master-slave 拘束。$U_z$, $R_x$, $R_y$ は自由にして基礎梁の曲げ変形・各杭の独立沈下を許容します。拘束の実装は両モードとも<strong>直接 master-slave 法</strong>（自由度縮退）で、剛床拘束自体にペナルティ法は用いていません。</li>
