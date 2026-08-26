@@ -1186,7 +1186,8 @@ namespace PileDesign.ViewModels
             }
 
             pgs.ActiveCaseIndex = idx;
-            GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(pgs, pgs.CaseRecords[idx]);
+            GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(
+                pgs, pgs.CaseRecords[idx], CurrentInputModel?.PileLayoutItems);
             OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
         }
 
@@ -3609,7 +3610,8 @@ namespace PileDesign.ViewModels
                     if (idx >= 0)
                     {
                         pgs.ActiveCaseIndex = idx;
-                        GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(pgs, pgs.CaseRecords[idx]);
+                        GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(
+                pgs, pgs.CaseRecords[idx], CurrentInputModel?.PileLayoutItems);
                     }
                     else
                     {

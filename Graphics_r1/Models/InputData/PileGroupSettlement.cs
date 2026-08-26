@@ -544,6 +544,18 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 値だけの複製を作る。
+        ///
+        /// 矩形荷重は<b>入力</b>なので、ケースの結果と同じインスタンスを共有していると
+        /// 画面で荷重を編集したときに、保存済みの結果の中身まで書き換わってしまう。
+        /// </summary>
+        public RectLoad Clone() => new()
+        {
+            X1 = X1, X2 = X2, Y1 = Y1, Y2 = Y2,
+            QA = QA, LinkedPileNo = LinkedPileNo,
+        };
+
         public double A => DX * DY;
         public double Q => A > 0 ? QA / A : 0;
     }

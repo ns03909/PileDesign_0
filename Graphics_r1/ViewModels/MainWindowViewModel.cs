@@ -2127,9 +2127,8 @@ namespace PileDesign.ViewModels
                         LoadingType = string.IsNullOrEmpty(pgs.LoadingType) ? "任意矩形" : pgs.LoadingType,
                         IsBeamAware = false,
                         IsConverged = true,
-                        RectLoads = new ObservableCollection<RectLoad>(pgs.RectLoads ?? []),
-                        SettlementGridData =
-                            new ObservableCollection<SettlementGridDataItem>(pgs.SettlementGridData),
+                        RectLoads = [.. (pgs.RectLoads ?? []).Select(r => r.Clone())],
+                        SettlementGridData = [.. pgs.SettlementGridData.Select(g => g.Clone())],
                     }
                 ];
                 pgs.ActiveCaseIndex = 0;
@@ -2187,7 +2186,8 @@ namespace PileDesign.ViewModels
                         X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
                         QA = r.QA, LinkedPileNo = r.LinkedPileNo,
                     }) ?? []),
-                SettlementGridData = new ObservableCollection<SettlementGridDataItem>(gridData ?? []),
+                // 要素まで複製する (表示用の複製と同じインスタンスを共有しない)
+                SettlementGridData = [.. (gridData ?? []).Select(g => g.Clone())],
                 PileSettlements_mm = CurrentInputModel.PileLayoutItems?
                     .ToDictionary(p => p.PileNo, p => p.GroupPileSettlement) ?? [],
             };

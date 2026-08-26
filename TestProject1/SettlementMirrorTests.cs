@@ -20,7 +20,7 @@ namespace TestProject1
     ///
     /// 表示系はレコード側 (<c>ActiveSettlementGridData</c>) を読むように寄せた。
     /// <b>複製そのものはまだ消せない</b> — 理由は
-    /// <see cref="RemovingTheMirrorWouldBreakExistingFiles"/> に実証してある。
+    /// <see cref="SharedElements_MakeTheMirrorImpossibleToRemove"/> に実証してある。
     /// </summary>
     [TestClass]
     public class SettlementMirrorTests
@@ -89,7 +89,8 @@ namespace TestProject1
         // ── なぜ複製を消せないか ───────────────────────────
 
         /// <summary>
-        /// <b>複製を外すと既存の保存ファイルが開けなくなる。</b>
+        /// <b>要素を共有している保存ファイルは、複製を外すと開けなくなる。</b>
+        /// (2026-08-26 より前に保存されたファイルがこれに当たる)
         ///
         /// レコード側のグリッドは<b>同じ要素インスタンス</b>を指している
         /// (<c>new ObservableCollection&lt;&gt;(gridData)</c> はリストだけを複製する)。
@@ -100,7 +101,7 @@ namespace TestProject1
         /// 複製を消すには、先に<b>要素の共有をやめる</b>必要がある。
         /// </summary>
         [TestMethod]
-        public void RemovingTheMirrorWouldBreakExistingFiles()
+        public void SharedElements_MakeTheMirrorImpossibleToRemove()
         {
             var shared = Grid(1.0, 2.0);
             var pgs = new PileGroupSettlement
@@ -141,5 +142,118 @@ namespace TestProject1
             StringAssert.Contains(ex.Message, "Reference",
                 $"想定と違う失敗: {ex.Message}");
         }
+
+        // ── 新しく作るときは共有しない ─────────────────────
+
+        /// <summary>
+        /// <b>いま作られるモデルは、複製とケースで要素を共有しないこと。</b>
+        ///
+        /// これが成り立って初めて、複製 (<c>SettlementGridData</c>) を
+        /// 「読み込めるが書き出さない」形にして撤去できる。
+        /// 共有が残っていると、保存ファイルの中でケース側が複製側を <c>$ref</c> で参照し、
+        /// 複製を外した瞬間にそのファイルが開けなくなる。
+        /// </summary>
+        [TestMethod]
+        public void NewlyBuiltRecords_DoNotShareElementsWithTheMirror()
+        {
+            var pgs = BuildAsTheAppDoes();
+
+            var mirrorGrid = pgs.SettlementGridData;
+            var recordGrid = pgs.CaseRecords[0].SettlementGridData;
+
+            Assert.AreEqual(mirrorGrid.Count, recordGrid.Count, "件数が違う");
+            Assert.IsTrue(mirrorGrid.Count > 0, "前提が崩れている (空では検査にならない)");
+
+            for (int i = 0; i < mirrorGrid.Count; i++)
+            {
+                Assert.AreNotSame(mirrorGrid[i], recordGrid[i],
+                    $"グリッド {i} 番の要素を共有している");
+                Assert.AreEqual(mirrorGrid[i].Settlement, recordGrid[i].Settlement, 1e-12,
+                    "複製したのに値が違う");
+            }
+
+            for (int i = 0; i < pgs.RectLoads.Count; i++)
+            {
+                Assert.AreNotSame(pgs.RectLoads[i], pgs.CaseRecords[0].RectLoads[i],
+                    $"矩形荷重 {i} 番を共有している (画面で編集すると保存済みの結果が変わる)");
+            }
+        }
+
+        /// <summary>
+        /// 共有をやめた結果、<b>複製を外しても読める</b>ようになったこと。
+        /// 撤去 (第 2 段の最後) の前提がこれ。
+        /// </summary>
+        [TestMethod]
+        public void WithoutSharing_TheMirrorCanBeRemoved()
+        {
+            var pgs = BuildAsTheAppDoes();
+
+            var options = new JsonSerializerOptions
+            {
+                ReferenceHandler = ReferenceHandler.Preserve,
+                WriteIndented = true,
+            };
+            string json = JsonSerializer.Serialize(pgs, options);
+
+            int mirror = json.IndexOf("\"SettlementGridData\"", StringComparison.Ordinal);
+            int records = json.IndexOf("\"CaseRecords\"", StringComparison.Ordinal);
+            Assert.IsTrue(mirror >= 0 && records > mirror, "前提が崩れている (プロパティの順序)");
+
+            string withoutMirror = json.Remove(mirror, records - mirror);
+            var restored = JsonSerializer.Deserialize<PileGroupSettlement>(withoutMirror, options);
+
+            Assert.IsNotNull(restored);
+            Assert.AreEqual(1, restored!.CaseRecords.Count, "ケースが復元できていない");
+            Assert.AreEqual(pgs.CaseRecords[0].SettlementGridData.Count,
+                            restored.CaseRecords[0].SettlementGridData.Count,
+                            "ケースの結果が復元できていない");
+        }
+
+        /// <summary>
+        /// 矩形荷重を画面で編集しても、保存済みのケースの中身が変わらないこと。
+        /// 共有していた頃は、入力を直すと過去の結果まで書き換わっていた。
+        /// </summary>
+        [TestMethod]
+        public void EditingTheInputDoesNotAlterAStoredCase()
+        {
+            var pgs = BuildAsTheAppDoes();
+            double before = pgs.CaseRecords[0].RectLoads[0].QA;
+
+            pgs.RectLoads[0].QA = before + 100.0;
+
+            Assert.AreEqual(before, pgs.CaseRecords[0].RectLoads[0].QA, 1e-12,
+                "入力を編集したら保存済みのケースの荷重まで変わった");
+        }
+
+        /// <summary>
+        /// アプリと同じ経路で「ケースの結果 → 表示用の複製」を作る。
+        ///
+        /// 同期は本番の <c>ApplyActiveCaseToLegacyFields</c> をそのまま呼ぶ。
+        /// ここで組み立て方を書き写すと、本番が共有に戻っても検査が素通りしてしまう。
+        /// </summary>
+        private static PileGroupSettlement BuildAsTheAppDoes()
+        {
+            var record = new GroupSettlementCaseRecord
+            {
+                LoadCaseName = "VL",
+                LoadingType = "任意矩形",
+                RectLoads = [new RectLoad { X1 = 0, X2 = 2, Y1 = 0, Y2 = 2, QA = 100 }],
+                SettlementGridData = Grid(1.0, 2.0, 3.0),
+            };
+
+            var pgs = new PileGroupSettlement
+            {
+                LoadingType = "任意矩形",
+                CaseRecords = [record],
+                ActiveCaseIndex = 0,
+            };
+
+            // 本番の同期処理 (ケース → 表示用の複製)
+            PileDesign.ViewModels.GroupSettlementWithBeamCalculationViewModel
+                .ApplyActiveCaseToLegacyFields(pgs, record);
+
+            return pgs;
+        }
+
     }
 }

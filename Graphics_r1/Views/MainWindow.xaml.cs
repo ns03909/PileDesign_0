@@ -2620,7 +2620,7 @@ namespace PileDesign.Views
             if (idx < 0 || idx >= pgs.CaseRecords.Count) return;
 
             PileDesign.ViewModels.GroupSettlementWithBeamCalculationViewModel
-                .ApplyActiveCaseToLegacyFields(pgs, pgs.CaseRecords[idx]);
+                .ApplyActiveCaseToLegacyFields(pgs, pgs.CaseRecords[idx], vm.CurrentInputModel?.PileLayoutItems);
 
             // バッジ・キャンバス更新
             vm.RaisePropertyChanged(nameof(PileDesign.ViewModels.MainWindowViewModel.IsGroupSettlementActiveCaseBeamAware));

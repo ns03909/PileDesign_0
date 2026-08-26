@@ -64,7 +64,7 @@ namespace PileDesign.ViewModels
                     IsConverged = rec.IsConverged,
                     IterationCount = rec.IterationCount,
                     FinalResidual = rec.FinalResidual,
-                    ConvergedRectLoads = new ObservableCollection<RectLoad>(rec.RectLoads),
+                    ConvergedRectLoads = [.. rec.RectLoads.Select(r => r.Clone())],
                     NodeResults = new ObservableCollection<FEM.VerticalBeamNodeResult>(rec.NodeResults ?? []),
                     BeamResults = new ObservableCollection<FEM.VerticalBeamBeamResult>(rec.BeamResults ?? []),
                     IterationLog = new List<string>(rec.IterationLog ?? []),
@@ -132,7 +132,7 @@ namespace PileDesign.ViewModels
                         IsConverged = cr.IsConverged,
                         IterationCount = cr.IterationCount,
                         FinalResidual = cr.FinalResidual,
-                        RectLoads = new ObservableCollection<RectLoad>(cr.ConvergedRectLoads),
+                        RectLoads = [.. cr.ConvergedRectLoads.Select(r => r.Clone())],
                         NodeResults = new List<FEM.VerticalBeamNodeResult>(cr.NodeResults),
                         BeamResults = new List<FEM.VerticalBeamBeamResult>(cr.BeamResults),
                         IterationLog = new List<string>(cr.IterationLog ?? []),
@@ -173,7 +173,7 @@ namespace PileDesign.ViewModels
                              InputModel.GridYItems);
 
                 // ActiveCase の RectLoads / SettlementGridData / 各杭沈下を legacy フィールドへ反映
-                ApplyActiveCaseToLegacyFields(pgs, activeRec);
+                ApplyActiveCaseToLegacyFields(pgs, activeRec, InputModel?.PileLayoutItems);
             }
             IsSaved = true;
             RequestClose?.Invoke(this, EventArgs.Empty);
@@ -181,24 +181,30 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// 指定ケースの沈下 / 矩形荷重を pgs.SettlementGridData / RectLoads / pile.GroupPileSettlement へコピー。
-        /// Phase C-2 で荷重ケース ComboBox 連動に切替える際もこの関数を再利用する。
+        ///
+        /// 杭は引数で受け取る。以前は <c>Application.Current.MainWindow.DataContext</c> から
+        /// ViewModel を辿っていたが、モデルを同期するだけの処理が実行中のウィンドウに依存するうえ、
+        /// <c>MainWindow</c> は UI スレッドの持ち物なので<b>別スレッドから呼ぶと例外になる</b>
+        /// (テストからも呼べない)。呼び出し側はいずれも入力モデルを持っている。
         /// </summary>
-        public static void ApplyActiveCaseToLegacyFields(PileGroupSettlement pgs, GroupSettlementCaseRecord record)
+        public static void ApplyActiveCaseToLegacyFields(
+            PileGroupSettlement pgs,
+            GroupSettlementCaseRecord record,
+            IEnumerable<PileLayoutDataItem>? piles = null)
         {
             if (pgs == null || record == null) return;
-            pgs.RectLoads = new ObservableCollection<RectLoad>(record.RectLoads);
-            pgs.SettlementGridData = new ObservableCollection<SettlementGridDataItem>(record.SettlementGridData);
+            // 要素まで複製する。同じインスタンスを共有すると
+            //  ・画面で矩形荷重を編集したときに保存済みのケースの中身まで変わる
+            //  ・保存時に片方が $id・もう片方が $ref になり、表示用の複製を将来外せなくなる
+            pgs.RectLoads = [.. record.RectLoads.Select(r => r.Clone())];
+            pgs.SettlementGridData = [.. record.SettlementGridData.Select(g => g.Clone())];
 
             // 杭ごとの沈下量
-            if (System.Windows.Application.Current?.MainWindow?.DataContext
-                    is MainWindowViewModel mvm
-                && mvm.CurrentInputModel?.PileLayoutItems is { } piles)
+            if (piles == null) return;
+            foreach (var pile in piles)
             {
-                foreach (var pile in piles)
-                {
-                    if (record.PileSettlements_mm.TryGetValue(pile.PileNo, out double s))
-                        pile.GroupPileSettlement = s;
-                }
+                if (record.PileSettlements_mm.TryGetValue(pile.PileNo, out double s))
+                    pile.GroupPileSettlement = s;
             }
         }
 
@@ -490,7 +496,7 @@ namespace PileDesign.ViewModels
                 IsConverged = sr.Converged,
                 IterationCount = sr.IterationCount,
                 FinalResidual = sr.FinalResidual,
-                ConvergedRectLoads = new ObservableCollection<RectLoad>(sr.ConvergedRectLoads),
+                ConvergedRectLoads = [.. sr.ConvergedRectLoads.Select(r => r.Clone())],
                 NodeResults = new ObservableCollection<FEM.VerticalBeamNodeResult>(sr.NodeResults),
                 BeamResults = new ObservableCollection<FEM.VerticalBeamBeamResult>(sr.BeamResults),
                 IterationLog = new List<string>(sr.Log),
