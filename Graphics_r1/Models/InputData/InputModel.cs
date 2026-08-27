@@ -1241,6 +1241,8 @@ namespace PileDesign.Models.InputData
                     {
                         PreserveReferencesHandling = PreserveReferencesHandling.All,
                         TypeNameHandling = TypeNameHandling.Auto,
+                        // 復元してよい型をこのアプリの型に限る (細工したファイル対策)
+                        SerializationBinder = Common.TrustedTypeBinder.Instance,
                         Formatting = Formatting.Indented,
                     };
                     var loaded = JsonConvert.DeserializeObject<InputModel>(json, settings)
@@ -1292,6 +1294,8 @@ namespace PileDesign.Models.InputData
                 {
                     PreserveReferencesHandling = PreserveReferencesHandling.All,
                     TypeNameHandling = TypeNameHandling.Auto,
+                    // 復元してよい型をこのアプリの型に限る (細工したファイル対策)
+                    SerializationBinder = Common.TrustedTypeBinder.Instance,
                     Formatting = Formatting.Indented,
                 };
                 loaded = JsonConvert.DeserializeObject<InputModel>(json, settings);
