@@ -9,7 +9,6 @@
         xmlns:conv="clr-namespace:PileDesign.Converters" d:DataContext="{d:DesignInstance Type=local:GraphViewModel}"
         mc:Ignorable="d"
         Title="解析結果グラフ" Height="450" Width="800"
-        PreviewKeyDown="GroundWindow_PreviewKeyDown"
         common:EscapeKeyBehavior.Enable="True"
         >
 

@@ -150,16 +150,5 @@ namespace PileDesign.Views
             }
         }
 
-        private void GroundWindow_PreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Z)
-            {
-                if (DataContext is GroundLayerViewModel viewModel)
-                {
-                    viewModel.UndoCommand.Execute(null);
-                    e.Handled = true;
-                }
-            }
-        }
     }
 }
