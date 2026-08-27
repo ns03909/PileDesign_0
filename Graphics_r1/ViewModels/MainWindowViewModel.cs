@@ -2167,7 +2167,8 @@ namespace PileDesign.ViewModels
         /// 単杭沈下・矩形荷重・グリッドコンタを 1 レコードにまとめ、ActiveLoadingType を更新する。
         /// </summary>
         private void UpsertNonBeamAwareCaseRecord(string loadingType,
-            ObservableCollection<SettlementGridDataItem> gridData)
+            ObservableCollection<SettlementGridDataItem> gridData,
+            Dictionary<int, double> pileSettlementsMm)
         {
             var pgs = CurrentInputModel?.PileGroupSettlement;
             if (pgs == null) return;
@@ -2188,8 +2189,9 @@ namespace PileDesign.ViewModels
                     }) ?? []),
                 // 要素まで複製する (表示用の複製と同じインスタンスを共有しない)
                 SettlementGridData = [.. (gridData ?? []).Select(g => g.Clone())],
-                PileSettlements_mm = CurrentInputModel.PileLayoutItems?
-                    .ToDictionary(p => p.PileNo, p => p.GroupPileSettlement) ?? [],
+                // 解析が返した値をそのまま持つ。以前は各杭の複製から拾い直しており、
+                // 結果の正が入力側にある状態だった。
+                PileSettlements_mm = new Dictionary<int, double>(pileSettlementsMm ?? []),
             };
 
             // 2 スロットモデル: 基礎梁無しスロットの既存 record (= IsBeamAware=false) を全削除し、

@@ -782,7 +782,7 @@ diameterSelector,
             {
                 no++;
                 double singleSettle = pli.SinglePileSettlementVL;
-                double groupSettle = pli.GroupPileSettlement;
+                double groupSettle = inputModel.PileGroupSettlement.SettlementOf(pli.PileNo);
                 double totalSettle = singleSettle + groupSettle;
 
                 TableRow dataRow = new();

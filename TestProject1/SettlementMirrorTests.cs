@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace TestProject1
 {
@@ -84,6 +85,93 @@ namespace TestProject1
             Assert.AreEqual(0, pgs.ActiveSettlementGridData.Count);
 
             Assert.AreEqual(0, new PileGroupSettlement().ActiveSettlementGridData.Count);
+        }
+
+        // ── 各杭の沈下量も同じ ─────────────────────────────
+
+        /// <summary>
+        /// 杭ごとの沈下量も、表示中のケースから引くこと。
+        /// <c>PileLayoutDataItem.GroupPileSettlement</c> は同じ値の複製。
+        /// </summary>
+        [TestMethod]
+        public void PileSettlement_ComesFromTheSelectedCase()
+        {
+            var pgs = new PileGroupSettlement
+            {
+                CaseRecords =
+                [
+                    new GroupSettlementCaseRecord
+                    {
+                        LoadCaseName = "VL",
+                        PileSettlements_mm = new Dictionary<int, double> { [1] = 12.5, [2] = 7.5 },
+                    },
+                    new GroupSettlementCaseRecord
+                    {
+                        LoadCaseName = "U1",
+                        PileSettlements_mm = new Dictionary<int, double> { [1] = 20.0, [2] = 10.0 },
+                    },
+                ],
+                ActiveCaseIndex = 0,
+            };
+
+            Assert.AreEqual(12.5, pgs.SettlementOf(1), 1e-12);
+            Assert.AreEqual(7.5, pgs.SettlementOf(2), 1e-12);
+
+            pgs.ActiveCaseIndex = 1;
+            Assert.AreEqual(20.0, pgs.SettlementOf(1), 1e-12);
+
+            Assert.AreEqual(0.0, pgs.SettlementOf(99), 1e-12, "知らない杭は 0");
+            pgs.ActiveCaseIndex = -1;
+            Assert.AreEqual(0.0, pgs.SettlementOf(1), 1e-12, "未選択は 0");
+        }
+
+        /// <summary>
+        /// 表示系が杭の複製 <c>GroupPileSettlement</c> を読んでいないこと。
+        ///
+        /// 読み手が残っていると、ケースを切り替えたのに古い沈下量が出る。
+        /// 書き込み (解析・同期・クリア) と <c>DeepCopy</c> は複製がある限り必要なので対象外。
+        /// </summary>
+        [TestMethod]
+        public void NothingReadsThePileSettlementMirror()
+        {
+            var dir = new DirectoryInfo(Path.GetDirectoryName(typeof(SettlementMirrorTests).Assembly.Location)!);
+            string? root = null;
+            for (; dir != null; dir = dir.Parent)
+            {
+                if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
+                {
+                    root = dir.FullName;
+                    break;
+                }
+            }
+            Assert.IsNotNull(root, "ソリューションルートが見つかりません");
+
+            var readers = new List<string>();
+            foreach (string cs in Directory.EnumerateFiles(
+                         Path.Combine(root!, "Graphics_r1"), "*.cs", SearchOption.AllDirectories))
+            {
+                if (cs.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")) continue;
+                if (Path.GetFileName(cs) == "PileLayoutDataItem.cs") continue;   // 定義と DeepCopy
+
+                var lines = File.ReadAllLines(cs);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    int comment = lines[i].IndexOf("//", StringComparison.Ordinal);
+                    string code = comment >= 0 ? lines[i][..comment] : lines[i];
+                    // 「GroupPileSettlementXOffset」等の別プロパティと区別するため語境界で見る
+                    if (!Regex.IsMatch(code, @"\.GroupPileSettlement\b")) continue;
+
+                    // 書き込みは可 (複製がある限り更新は要る)
+                    if (Regex.IsMatch(code, @"\.GroupPileSettlement\s*=[^=]"))
+                        continue;
+
+                    readers.Add($"{Path.GetFileName(cs)}:{i + 1}  {code.Trim()}");
+                }
+            }
+
+            Assert.AreEqual(0, readers.Count,
+                "杭の複製を読んでいます。PileGroupSettlement.SettlementOf(pileNo) を使ってください:\n  "
+                + string.Join("\n  ", readers));
         }
 
         // ── なぜ複製を消せないか ───────────────────────────

@@ -105,7 +105,8 @@ namespace PileDesign.Views
 
                 if (viewModel.AnalysisResultSettlementType == "単杭")
                 {
-                    double loadingPlaneAlt = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                    var pgs = viewModel.ResultInputModel.PileGroupSettlement;
+                    double loadingPlaneAlt = pgs.LoadingPlaneAltitude;
                     foreach (PileLayoutDataItem pileLocation in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         if (viewModel.SelectedLoadCaseName == "VL")
@@ -142,22 +143,24 @@ namespace PileDesign.Views
                     // 群杭沈下は VL 荷重ケースでのみ意味を持つため、他のケースでは表示しない
                     if (viewModel.SelectedLoadCaseName == "VL")
                     {
-                        double loadingPlaneAlt = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                        var pgs = viewModel.ResultInputModel.PileGroupSettlement;
+                        double loadingPlaneAlt = pgs.LoadingPlaneAltitude;
                         foreach (PileLayoutDataItem pileLocation in viewModel.ResultInputModel.PileLayoutItems)
                         {
                             points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
-                            values.Add(pileLocation.GroupPileSettlement); // mmのまま
+                            values.Add(pgs.SettlementOf(pileLocation.PileNo)); // mmのまま
                         }
                     }
                 }
                 else if (viewModel.AnalysisResultSettlementType == "単杭+群杭")
                 {
-                    double loadingPlaneAlt = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                    var pgs = viewModel.ResultInputModel.PileGroupSettlement;
+                    double loadingPlaneAlt = pgs.LoadingPlaneAltitude;
                     foreach (PileLayoutDataItem pileLocation in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         if (viewModel.SelectedLoadCaseName == "VL")
                         {
-                            values.Add(pileLocation.SinglePileSettlementVL * 1000 + pileLocation.GroupPileSettlement); // m→mm + mm
+                            values.Add(pileLocation.SinglePileSettlementVL * 1000 + pgs.SettlementOf(pileLocation.PileNo)); // m→mm + mm
                             points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                         }
                         else
@@ -167,7 +170,7 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pileLocation.SinglePileSettlementLevel1s[i] * 1000 + pileLocation.GroupPileSettlement); // m→mm + mm
+                                    values.Add(pileLocation.SinglePileSettlementLevel1s[i] * 1000 + pgs.SettlementOf(pileLocation.PileNo)); // m→mm + mm
                                     points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
@@ -176,7 +179,7 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pileLocation.SinglePileSettlementLevel2s[i] * 1000 + pileLocation.GroupPileSettlement); // m→mm + mm
+                                    values.Add(pileLocation.SinglePileSettlementLevel2s[i] * 1000 + pgs.SettlementOf(pileLocation.PileNo)); // m→mm + mm
                                     points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }

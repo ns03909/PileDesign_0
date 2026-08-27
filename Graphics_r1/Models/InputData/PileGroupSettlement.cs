@@ -114,6 +114,19 @@ namespace PileDesign.Models.InputData
 
         private readonly ObservableCollection<SettlementGridDataItem> _emptyGrid = [];
 
+        /// <summary>
+        /// 表示中のケースにおける杭 <paramref name="pileNo"/> の沈下量 [mm]。
+        /// 未解析・該当なしは 0。
+        ///
+        /// 各杭の <c>PileLayoutDataItem.GroupPileSettlement</c> は、これと同じ値を
+        /// 入力側に持たせた複製。表示系はこちらを読むこと
+        /// (複製の同期を忘れた経路で画面がずれるのを断つため)。
+        /// </summary>
+        public double SettlementOf(int pileNo) =>
+            ActiveRecord != null && ActiveRecord.PileSettlements_mm.TryGetValue(pileNo, out double s)
+                ? s
+                : 0.0;
+
         // 群杭沈下解析結果 (ケース別)。基礎梁考慮反復・通常 Steinbrenner どちらでも 1+ レコード保存。
         // 既存単一結果との互換性: 解析実行時は最終的に SettlementGridData / RectLoads / 各杭 GroupPileSettlement
         // を ActiveCaseIndex のレコードからコピーして反映する。

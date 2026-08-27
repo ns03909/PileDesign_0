@@ -448,6 +448,7 @@ namespace PileDesign.Views
 
             // 沈下マップ構築（DrawBeamMemberAngleと同じロジック、全て m 単位）
             var settlementMap = new Dictionary<int, double>();
+            var pgs = inputModel.PileGroupSettlement;
             if (content is "基礎梁考慮沈下部材角" or "基礎梁考慮+群杭沈下部材角")
             {
                 var vbResults = viewModel.VerticalBeamCaseResults;
@@ -457,17 +458,17 @@ namespace PileDesign.Views
                 if (content == "基礎梁考慮+群杭沈下部材角")
                     foreach (var pile in inputModel.PileLayoutItems)
                         if (settlementMap.ContainsKey(pile.No))
-                            settlementMap[pile.No] += pile.GroupPileSettlement / 1000.0;
+                            settlementMap[pile.No] += pgs.SettlementOf(pile.PileNo) / 1000.0;
             }
             else if (content == "群杭沈下部材角")
             {
                 foreach (var pile in inputModel.PileLayoutItems)
-                    settlementMap[pile.No] = pile.GroupPileSettlement / 1000.0;
+                    settlementMap[pile.No] = pgs.SettlementOf(pile.PileNo) / 1000.0;
             }
             else if (content == "単杭+群杭沈下部材角")
             {
                 foreach (var pile in inputModel.PileLayoutItems)
-                    settlementMap[pile.No] = pile.SinglePileSettlementVL + pile.GroupPileSettlement / 1000.0;
+                    settlementMap[pile.No] = pile.SinglePileSettlementVL + pgs.SettlementOf(pile.PileNo) / 1000.0;
             }
             else
             {
@@ -549,7 +550,8 @@ namespace PileDesign.Views
             string content = viewModel.EffectiveSettlementContent;
 
             // 杭位置 → 沈下量マップを構築（単位: m）
-            var settlementMap = new Dictionary<int, double>(); // PileNo → settlement(m)
+            var settlementMap = new Dictionary<int, double>();
+            var pgs = inputModel.PileGroupSettlement; // PileNo → settlement(m)
 
             // 沈下量マップ構築（全て m 単位に統一）
             // SinglePileSettlementVL: m, GroupPileSettlement: mm, VB Settlement_mm: mm
@@ -565,18 +567,18 @@ namespace PileDesign.Views
                 {
                     foreach (var pile in inputModel.PileLayoutItems)
                         if (settlementMap.ContainsKey(pile.No))
-                            settlementMap[pile.No] += pile.GroupPileSettlement / 1000.0; // mm→m
+                            settlementMap[pile.No] += pgs.SettlementOf(pile.PileNo) / 1000.0; // mm→m
                 }
             }
             else if (content == "群杭沈下部材角")
             {
                 foreach (var pile in inputModel.PileLayoutItems)
-                    settlementMap[pile.No] = pile.GroupPileSettlement / 1000.0; // mm→m
+                    settlementMap[pile.No] = pgs.SettlementOf(pile.PileNo) / 1000.0; // mm→m
             }
             else if (content == "単杭+群杭沈下部材角")
             {
                 foreach (var pile in inputModel.PileLayoutItems)
-                    settlementMap[pile.No] = pile.SinglePileSettlementVL + pile.GroupPileSettlement / 1000.0; // m + mm→m
+                    settlementMap[pile.No] = pile.SinglePileSettlementVL + pgs.SettlementOf(pile.PileNo) / 1000.0; // m + mm→m
             }
             else // 単杭沈下部材角
             {

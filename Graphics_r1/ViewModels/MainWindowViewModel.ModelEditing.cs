@@ -1406,7 +1406,7 @@ namespace PileDesign.ViewModels
             // (個別矩形（基礎梁考慮）は OpenGroupSettlementWithBeamWindow 側で既に保存済み)
             if (loadingType != "個別矩形（基礎梁考慮）")
             {
-                UpsertNonBeamAwareCaseRecord(loadingType, result.SettlementGridData);
+                UpsertNonBeamAwareCaseRecord(loadingType, result.SettlementGridData, result.PileSettlements_mm);
                 // 一般解析は VL ケース 1 件のみ保存するため、解析直後は表示荷重ケースを VL に切替えて
                 // 結果コンタを表示する。setter 経由で ActiveCase 同期 + 再描画が走るが、既に VL を
                 // 選択中の場合は setter が発火しないため、明示的にも同期しておく。

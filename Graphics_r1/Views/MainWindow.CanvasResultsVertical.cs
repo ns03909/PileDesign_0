@@ -689,7 +689,8 @@ namespace PileDesign.Views
                         if (!pile.IsVisible) continue;
                         var pr = caseResult.PileResults?.FirstOrDefault(p => p.PileNo == pile.No);
                         double vbSettlement = pr?.Settlement_mm ?? 0;
-                        double combined = Math.Abs(vbSettlement + pile.GroupPileSettlement); // 両方mm
+                        double combined = Math.Abs(vbSettlement
+                            + viewModel.ResultInputModel.PileGroupSettlement.SettlementOf(pile.PileNo)); // 両方mm
                         double connectionZ = pile.Z;
                         points.Add(new Point3D(pile.X, pile.Y, connectionZ));
                         values.Add(combined);

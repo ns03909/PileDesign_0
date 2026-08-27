@@ -53,7 +53,7 @@ namespace PileDesign.ViewModels
                         }
                         else // if (SelectedGraphOption == "沈下 単杭+群杭")
                         {
-                            ys.Add(pile.SinglePileSettlementVL * 1000 + pile.GroupPileSettlement); // m→mm + mm
+                            ys.Add(pile.SinglePileSettlementVL * 1000 + GroupSettlementOf(pile)); // m→mm + mm
                         }
 
                     }
@@ -70,7 +70,7 @@ namespace PileDesign.ViewModels
                                 }
                                 else // if (SelectedGraphOption == "沈下 単杭+群杭")
                                 {
-                                    ys.Add(pile.SinglePileSettlementLevel1s[i] * 1000 + pile.GroupPileSettlement); // m→mm + mm
+                                    ys.Add(pile.SinglePileSettlementLevel1s[i] * 1000 + GroupSettlementOf(pile)); // m→mm + mm
                                     break;
                                 }
                             }
@@ -86,7 +86,7 @@ namespace PileDesign.ViewModels
                                 }
                                 else // if (SelectedGraphOption == "沈下 単杭+群杭")
                                 {
-                                    ys.Add(pile.SinglePileSettlementLevel2s[i] * 1000 + pile.GroupPileSettlement); // m→mm + mm
+                                    ys.Add(pile.SinglePileSettlementLevel2s[i] * 1000 + GroupSettlementOf(pile)); // m→mm + mm
                                     break;
                                 }
                             }
@@ -95,14 +95,14 @@ namespace PileDesign.ViewModels
                 }
                 else if (SelectedGraphOption == "沈下 群杭")
                 {
-                    ys.Add(pile.GroupPileSettlement);
+                    ys.Add(GroupSettlementOf(pile));
                 }
                 else if (SelectedGraphOption == "沈下 基礎梁考慮単杭" ||
                          SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭")
                 {
                     double vbSettle = GetVBSettlement(pile.No, SelectedLoadCaseOption);
                     if (SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭")
-                        vbSettle += pile.GroupPileSettlement;
+                        vbSettle += GroupSettlementOf(pile);
                     ys.Add(vbSettle);
                 }
                 else if (SelectedGraphOption == "沈下 個別矩形(基礎梁考慮)")
@@ -288,5 +288,13 @@ namespace PileDesign.ViewModels
 
             ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "荷重沈下曲線", "沈下量 (mm)", "荷重 (kN)");
         }
+
+        /// <summary>
+        /// 表示中のケースにおける、その杭の群杭沈下量 [mm]。
+        /// 入力側の複製 (<c>PileLayoutDataItem.GroupPileSettlement</c>) ではなく
+        /// ケースの結果を読む。
+        /// </summary>
+        private double GroupSettlementOf(PileDesign.Models.InputData.PileLayoutDataItem pile) =>
+            InputModel?.PileGroupSettlement?.SettlementOf(pile.PileNo) ?? 0.0;
     }
 }

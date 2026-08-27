@@ -23,6 +23,14 @@ namespace PileDesign.Services
             public bool Success { get; set; }
             public string ErrorMessage { get; set; }
             public ObservableCollection<SettlementGridDataItem> SettlementGridData { get; set; }
+
+            /// <summary>
+            /// 各杭の沈下量 [mm]。Key = <c>PileLayoutDataItem.PileNo</c>。
+            ///
+            /// 以前は各杭の <c>GroupPileSettlement</c> に書き込むだけで、ケースの記録は
+            /// そこから拾い直していた。結果の正が入力側にある状態だったので、ここで返す。
+            /// </summary>
+            public Dictionary<int, double> PileSettlements_mm { get; set; } = [];
         }
 
         /// <summary>
@@ -83,7 +91,7 @@ namespace PileDesign.Services
                 pileGroupSettlement.SettlementSoilLayers);
 
             // 各杭位置での沈下量を計算
-            CalculatePileSettlements(pileLayoutItems, rectLoads, effectiveLayers);
+            var pileSettlements = CalculatePileSettlements(pileLayoutItems, rectLoads, effectiveLayers);
 
             // グリッドの設定
             pileGroupSettlement.SetGridX(xMin, xMax, xOffset, xSpacing, gridXItems);
@@ -99,7 +107,8 @@ namespace PileDesign.Services
             return new SettlementAnalysisResult
             {
                 Success = true,
-                SettlementGridData = settlementGridData
+                SettlementGridData = settlementGridData,
+                PileSettlements_mm = pileSettlements
             };
         }
 
@@ -280,7 +289,7 @@ namespace PileDesign.Services
         /// <summary>
         /// 各杭位置での沈下量を計算 (杭ごと独立 — 並列化)
         /// </summary>
-        private void CalculatePileSettlements(
+        private Dictionary<int, double> CalculatePileSettlements(
             ObservableCollection<PileLayoutDataItem> pileLayoutItems,
             ObservableCollection<RectLoad> rectLoads,
             ObservableCollection<SettlementSoilLayer> settlementSoilLayers)
@@ -296,10 +305,14 @@ namespace PileDesign.Services
                 settlementsMm[i] = Steinnbrener.CalcSettlement(point, rectLoads, settlementSoilLayers) * 1000;
             });
 
+            var byPileNo = new Dictionary<int, double>(n);
             for (int i = 0; i < n; i++)
             {
+                // 入力側の複製にも書く (表示系は既にケースの記録を読むが、複製はまだ残っている)
                 pilesArr[i].GroupPileSettlement = settlementsMm[i];
+                byPileNo[pilesArr[i].PileNo] = settlementsMm[i];
             }
+            return byPileNo;
         }
 
         /// <summary>
