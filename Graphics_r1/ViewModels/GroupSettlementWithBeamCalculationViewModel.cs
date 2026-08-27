@@ -180,7 +180,7 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 指定ケースの沈下 / 矩形荷重を pgs.SettlementGridData / RectLoads / pile.GroupPileSettlement へコピー。
+        /// 指定ケースの沈下量を pgs.SettlementGridData / pile.GroupPileSettlement へコピーする。
         ///
         /// 杭は引数で受け取る。以前は <c>Application.Current.MainWindow.DataContext</c> から
         /// ViewModel を辿っていたが、モデルを同期するだけの処理が実行中のウィンドウに依存するうえ、
@@ -193,10 +193,11 @@ namespace PileDesign.ViewModels
             IEnumerable<PileLayoutDataItem>? piles = null)
         {
             if (pgs == null || record == null) return;
-            // 要素まで複製する。同じインスタンスを共有すると
-            //  ・画面で矩形荷重を編集したときに保存済みのケースの中身まで変わる
-            //  ・保存時に片方が $id・もう片方が $ref になり、表示用の複製を将来外せなくなる
-            pgs.RectLoads = [.. record.RectLoads.Select(r => r.Clone())];
+            // pgs.RectLoads は利用者の入力なので上書きしない。
+            // 収束後の荷重を見せたい場面は pgs.ActiveRectLoads (= このケースの荷重) を読む。
+            //
+            // 要素まで複製する。同じインスタンスを共有すると、保存時に片方が $id・
+            // もう片方が $ref になり、表示用の複製を将来外せなくなる。
             pgs.SettlementGridData = [.. record.SettlementGridData.Select(g => g.Clone())];
 
             // 杭ごとの沈下量

@@ -8,10 +8,15 @@ using System.Text.Json;
 namespace TestProject1
 {
     /// <summary>
-    /// 一般モード入力スナップショット (PileGroupSettlement.NonBeamRectLoadsSnapshot) と
-    /// 例題ロード時の初期化、ApplyActiveCaseToLegacyFields によるケース切替の独立性をテスト。
-    /// 反復解析が pgs.RectLoads を収束反力で書き換えても、一般モードに戻ると原入力が復元される
-    /// 仕様 (Phase 1: 一般入力の独立保持) の回帰防止を目的とする。
+    /// 矩形荷重 (<c>PileGroupSettlement.RectLoads</c>) は<b>利用者の入力</b>であり、
+    /// 解析結果で書き換えないこと。
+    ///
+    /// 以前は反復解析 (基礎梁考慮) の収束荷重を入力へ書き戻しており、
+    /// 元へ戻すための退避フィールド <c>NonBeamRectLoadsSnapshot</c> と、
+    /// 「一般モードへ切替えたら復元する」処理が要る状態だった。
+    /// 上書きをやめたので、退避も復元も不要になっている。
+    /// 収束後の荷重を見せたい場面は <c>ActiveRectLoads</c> (= 表示中のケースの荷重) を読む。
+
     /// </summary>
     [TestClass]
     public class GroupSettlementSnapshotTests
@@ -33,57 +38,6 @@ namespace TestProject1
             return col;
         }
 
-        // ── PileGroupSettlement.NonBeamRectLoadsSnapshot 基本動作 ──
-
-        [TestMethod]
-        public void Snapshot_DefaultIsNull()
-        {
-            var pgs = new PileGroupSettlement();
-            Assert.IsNull(pgs.NonBeamRectLoadsSnapshot,
-                "新規 PileGroupSettlement の snapshot は null であること");
-        }
-
-        [TestMethod]
-        public void Snapshot_AssignAndRetain()
-        {
-            var pgs = new PileGroupSettlement();
-            var snap = MakeRectLoads((500, 1), (816, 2), (1280, 3));
-            pgs.NonBeamRectLoadsSnapshot = snap;
-
-            Assert.IsNotNull(pgs.NonBeamRectLoadsSnapshot);
-            Assert.AreEqual(3, pgs.NonBeamRectLoadsSnapshot.Count);
-            Assert.AreEqual(500.0, pgs.NonBeamRectLoadsSnapshot[0].QA);
-            Assert.AreEqual(1280.0, pgs.NonBeamRectLoadsSnapshot[2].QA);
-        }
-
-        [TestMethod]
-        public void Snapshot_NotSerializedByJson()
-        {
-            // [JsonIgnore] によりシリアライズ対象外であることを保証 (セッション内のみの状態)
-            var pgs = new PileGroupSettlement();
-            pgs.RectLoads = MakeRectLoads((500, 1));
-            pgs.NonBeamRectLoadsSnapshot = MakeRectLoads((999, 99));
-
-            string json = JsonSerializer.Serialize(pgs);
-            StringAssert.DoesNotMatch(json, new System.Text.RegularExpressions.Regex("NonBeamRectLoadsSnapshot|nonBeamRectLoadsSnapshot"),
-                "JsonIgnore のため snapshot プロパティはシリアライズされない");
-        }
-
-        [TestMethod]
-        public void Snapshot_DeserializedAsNull()
-        {
-            var pgs = new PileGroupSettlement();
-            pgs.NonBeamRectLoadsSnapshot = MakeRectLoads((500, 1));
-            string json = JsonSerializer.Serialize(pgs);
-
-            var restored = JsonSerializer.Deserialize<PileGroupSettlement>(json);
-            Assert.IsNotNull(restored);
-            Assert.IsNull(restored.NonBeamRectLoadsSnapshot,
-                "シリアライズ往復で snapshot は永続化されないため null になる");
-        }
-
-        // ── ApplySettlementConditionsOnly: 例題条件のみ適用 (snapshot 初期化) ──
-
         private static GroupSettlementExampleData MakeExampleData()
         {
             return new GroupSettlementExampleData
@@ -104,143 +58,56 @@ namespace TestProject1
             };
         }
 
+        // ── 入力は結果で書き換わらない ──────────────────────
+
+        /// <summary>例題を読み込んだら、矩形荷重は例題の原値であること。</summary>
         [TestMethod]
-        public void ApplySettlementConditionsOnly_InitializesSnapshotWithOriginalQA()
+        public void ExampleLoad_KeepsTheOriginalLoads()
         {
             var input = new InputModel { PileGroupSettlement = new PileGroupSettlement() };
-            var data = MakeExampleData();
 
-            GroupSettlementExampleLoader.ApplySettlementConditionsOnly(input, data);
+            GroupSettlementExampleLoader.ApplySettlementConditionsOnly(input, MakeExampleData());
 
-            var snap = input.PileGroupSettlement.NonBeamRectLoadsSnapshot;
-            Assert.IsNotNull(snap, "例題ロード後 snapshot が null でないこと");
-            Assert.AreEqual(3, snap.Count);
             CollectionAssert.AreEqual(
                 new[] { 500.0, 816.0, 1280.0 },
-                snap.Select(r => r.QA).ToList(),
-                "snapshot の QA は JSON 原入力と一致");
+                input.PileGroupSettlement.RectLoads.Select(r => r.QA).ToList());
         }
 
+        /// <summary>
+        /// 反復解析のケースを表示に切り替えても、入力の矩形荷重が収束荷重で
+        /// 書き換わらないこと。<b>退避も復元も要らない</b>のはこれが成り立つため。
+        /// </summary>
         [TestMethod]
-        public void ApplySettlementConditionsOnly_SnapshotIsIndependentOfRectLoads()
-        {
-            // 反復解析が pgs.RectLoads を書き換えても snapshot は変わらない (= deep copy)
-            var input = new InputModel { PileGroupSettlement = new PileGroupSettlement() };
-            var data = MakeExampleData();
-
-            GroupSettlementExampleLoader.ApplySettlementConditionsOnly(input, data);
-
-            // pgs.RectLoads を反復後の値で書き換え (シミュレーション)
-            input.PileGroupSettlement.RectLoads = MakeRectLoads((586, 1), (825, 2), (1097, 6));
-
-            var snap = input.PileGroupSettlement.NonBeamRectLoadsSnapshot;
-            Assert.IsNotNull(snap);
-            CollectionAssert.AreEqual(
-                new[] { 500.0, 816.0, 1280.0 },
-                snap.Select(r => r.QA).ToList(),
-                "pgs.RectLoads を変更しても snapshot は不変 (独立コピー)");
-        }
-
-        [TestMethod]
-        public void ApplySettlementConditionsOnly_SnapshotPreservesLinkedPileNo()
+        public void ShowingAnIteratedCase_LeavesTheInputLoadsAlone()
         {
             var input = new InputModel { PileGroupSettlement = new PileGroupSettlement() };
-            var data = MakeExampleData();
-
-            GroupSettlementExampleLoader.ApplySettlementConditionsOnly(input, data);
-
-            var snap = input.PileGroupSettlement.NonBeamRectLoadsSnapshot;
-            Assert.IsNotNull(snap);
-            CollectionAssert.AreEqual(
-                new[] { 1, 2, 6 },
-                snap.Select(r => r.LinkedPileNo).ToList(),
-                "snapshot は LinkedPileNo も保持");
-        }
-
-        [TestMethod]
-        public void ApplySettlementConditionsOnly_SnapshotPreservesGeometry()
-        {
-            var input = new InputModel { PileGroupSettlement = new PileGroupSettlement() };
-            var data = MakeExampleData();
-
-            GroupSettlementExampleLoader.ApplySettlementConditionsOnly(input, data);
-
-            var snap = input.PileGroupSettlement.NonBeamRectLoadsSnapshot;
-            Assert.IsNotNull(snap);
-            // 1 番目: x=[-1.25, 1.25], y=[-1.25, 1.25]
-            Assert.AreEqual(-1.25, snap[0].X1, 1e-9);
-            Assert.AreEqual(1.25, snap[0].X2, 1e-9);
-            Assert.AreEqual(-1.25, snap[0].Y1, 1e-9);
-            Assert.AreEqual(1.25, snap[0].Y2, 1e-9);
-        }
-
-        // ── スナップショット復元シナリオ (反復後の一般モード復帰) ──
-
-        [TestMethod]
-        public void RestoreFromSnapshot_RecoversOriginalRectLoadsAfterIteration()
-        {
-            // ユーザーフローの統合再現:
-            // 1. 例題ロード: pgs.RectLoads = original, snapshot = original
-            // 2. 反復解析実行: pgs.RectLoads = converged (snapshot は不変)
-            // 3. 一般モードに切替: snapshot から RectLoads を復元
-            var input = new InputModel { PileGroupSettlement = new PileGroupSettlement() };
-            var data = MakeExampleData();
-
-            // Phase 1: 例題ロード
-            GroupSettlementExampleLoader.ApplySettlementConditionsOnly(input, data);
+            GroupSettlementExampleLoader.ApplySettlementConditionsOnly(input, MakeExampleData());
             var pgs = input.PileGroupSettlement;
-            CollectionAssert.AreEqual(
-                new[] { 500.0, 816.0, 1280.0 },
-                pgs.RectLoads.Select(r => r.QA).ToList());
 
-            // Phase 2: 反復が pgs.RectLoads を収束反力で上書き (シミュレーション)
-            pgs.RectLoads = MakeRectLoads((586, 1), (825, 2), (1097, 6));
-            CollectionAssert.AreEqual(
-                new[] { 586.0, 825.0, 1097.0 },
-                pgs.RectLoads.Select(r => r.QA).ToList(),
-                "Phase 2: 反復後は収束反力");
-
-            // Phase 3: 一般モード復帰 = snapshot から RectLoads を復元
-            // (SelectedActiveLoadingType setter / PileGroupSettlementAnalysis の復元コードと同等の処理)
-            Assert.IsNotNull(pgs.NonBeamRectLoadsSnapshot);
-            pgs.RectLoads = new ObservableCollection<RectLoad>(
-                pgs.NonBeamRectLoadsSnapshot.Select(r => new RectLoad
-                {
-                    X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
-                    QA = r.QA, LinkedPileNo = r.LinkedPileNo,
-                }));
-
-            CollectionAssert.AreEqual(
-                new[] { 500.0, 816.0, 1280.0 },
-                pgs.RectLoads.Select(r => r.QA).ToList(),
-                "Phase 3: 一般モードでは原入力 (500/816/1280) に戻ること");
-        }
-
-        // ── ApplyActiveCaseToLegacyFields: ケース切替の独立性 ──
-
-        [TestMethod]
-        public void ApplyActiveCaseToLegacyFields_CopiesRectLoadsAsIndependentCollection()
-        {
-            var pgs = new PileGroupSettlement();
-            var record = new GroupSettlementCaseRecord
+            var converged = new GroupSettlementCaseRecord
             {
                 LoadCaseName = "VL",
                 LoadingType = "個別矩形（基礎梁考慮）",
                 IsBeamAware = true,
                 RectLoads = MakeRectLoads((586, 1), (825, 2), (1097, 6)),
             };
+            pgs.CaseRecords = [converged];
+            pgs.ActiveCaseIndex = 0;
 
-            GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(pgs, record);
+            GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(pgs, converged);
+
+            CollectionAssert.AreEqual(
+                new[] { 500.0, 816.0, 1280.0 },
+                pgs.RectLoads.Select(r => r.QA).ToList(),
+                "入力の矩形荷重が収束荷重で上書きされている");
 
             CollectionAssert.AreEqual(
                 new[] { 586.0, 825.0, 1097.0 },
-                pgs.RectLoads.Select(r => r.QA).ToList(),
-                "record の RectLoads が pgs.RectLoads にコピーされる");
-
-            // 独立コレクション: pgs を変更しても record は不変
-            pgs.RectLoads.Add(new RectLoad { QA = 9999 });
-            Assert.AreEqual(3, record.RectLoads.Count, "record.RectLoads の長さは独立");
+                pgs.ActiveRectLoads.Select(r => r.QA).ToList(),
+                "収束後の荷重はケースから引けること");
         }
+
+        // ── ApplyActiveCaseToLegacyFields: ケース切替の独立性 ──
 
         [TestMethod]
         public void ApplyActiveCaseToLegacyFields_CopiesSettlementGridData()

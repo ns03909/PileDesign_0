@@ -63,12 +63,6 @@ namespace PileDesign.Models.InputData
         }
 
         // 一般モード (基礎梁無し) のユーザー入力 RectLoads スナップショット。
-        // 反復ダイアログを開く直前に pgs.RectLoads を保存し、群杭沈下 ▼ を 反復 → 一般 に
-        // 切替えた際 (該当 CaseRecord が無い場合) に復元する。
-        // 反復が pgs.RectLoads を収束反力で書き換えても、一般モードに戻るとユーザー入力に戻る。
-        [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<RectLoad> NonBeamRectLoadsSnapshot { get; set; }
-
         private ObservableCollection<SettlementSoilLayer> _settlementSoilLayers;
         public ObservableCollection<SettlementSoilLayer> SettlementSoilLayers
         {
@@ -113,6 +107,17 @@ namespace PileDesign.Models.InputData
             ActiveRecord?.SettlementGridData ?? _emptyGrid;
 
         private readonly ObservableCollection<SettlementGridDataItem> _emptyGrid = [];
+
+        /// <summary>
+        /// 表示中のケースの矩形荷重。ケースが無ければ<b>入力そのもの</b>を返す。
+        ///
+        /// 反復解析 (基礎梁考慮) は収束後の荷重を持つので、結果として見せたい場面はこちら。
+        /// <see cref="RectLoads"/> は<b>利用者の入力</b>で、結果で上書きしてはいけない。
+        /// 以前は上書きしていたため、入力の控えを別に持つ必要があった
+        /// (実行時だけの退避フィールド。上書きをやめたので削除した)。
+        /// </summary>
+        [JsonIgnore]
+        public ObservableCollection<RectLoad> ActiveRectLoads => ActiveRecord?.RectLoads ?? RectLoads;
 
         /// <summary>
         /// 表示中のケースにおける杭 <paramref name="pileNo"/> の沈下量 [mm]。

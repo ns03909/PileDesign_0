@@ -82,15 +82,6 @@ namespace PileDesign.Services
                 }
             }
             inputModel.PileGroupSettlement.RectLoads = new ObservableCollection<RectLoad>(rectLoadList);
-            // 一般モードのユーザー入力スナップショット: 例題原値で初期化
-            // (反復が pgs.RectLoads を収束反力で上書きしても、一般モード復帰時に原値へ戻せるよう)
-            inputModel.PileGroupSettlement.NonBeamRectLoadsSnapshot = new ObservableCollection<RectLoad>(
-                rectLoadList.Select(r => new RectLoad
-                {
-                    X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
-                    QA = r.QA, LinkedPileNo = r.LinkedPileNo,
-                }));
-
             // 沈下計算用地層
             var soilLayerList = new List<SettlementSoilLayer>(data.SettlementSoilLayers?.Count ?? 0);
             if (data.SettlementSoilLayers != null)
@@ -167,15 +158,6 @@ namespace PileDesign.Services
                 });
             }
             inputModel.PileGroupSettlement.RectLoads = new ObservableCollection<RectLoad>(rectLoadList);
-            // 一般モードのユーザー入力スナップショット: 例題原値で初期化
-            // (反復が pgs.RectLoads を収束反力で上書きしても、一般モード復帰時に原値へ戻せるよう)
-            inputModel.PileGroupSettlement.NonBeamRectLoadsSnapshot = new ObservableCollection<RectLoad>(
-                rectLoadList.Select(r => new RectLoad
-                {
-                    X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
-                    QA = r.QA, LinkedPileNo = r.LinkedPileNo,
-                }));
-
             // 沈下計算用地層を設定（バッチ化）
             var soilLayerList = new List<SettlementSoilLayer>(data.SettlementSoilLayers.Count);
             foreach (var layerDto in data.SettlementSoilLayers)

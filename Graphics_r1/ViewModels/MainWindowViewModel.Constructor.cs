@@ -3579,20 +3579,7 @@ namespace PileDesign.ViewModels
                 if (pgs == null) return;
                 if (pgs.ActiveLoadingType == value) return;
 
-                // 遷移前に: 一般 → 反復 への切替なら、現在の pgs.RectLoads を 一般入力スナップショットへ保存。
-                // (反復で書き換わる前のユーザー入力を一般モードに戻る際に復元するため)
-                bool wasNonBeam = pgs.ActiveLoadingType != "個別矩形（基礎梁考慮）";
-                bool willBeBeam = value == "個別矩形（基礎梁考慮）";
-                if (wasNonBeam && willBeBeam && pgs.RectLoads != null && pgs.RectLoads.Count > 0)
-                {
-                    pgs.NonBeamRectLoadsSnapshot = new System.Collections.ObjectModel.ObservableCollection<Models.InputData.RectLoad>(
-                        pgs.RectLoads.Select(r => new Models.InputData.RectLoad
-                        {
-                            X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
-                            QA = r.QA, LinkedPileNo = r.LinkedPileNo,
-                        }));
-                }
-
+                // 反復解析は pgs.RectLoads を上書きしないので、入力を退避する必要は無い。
                 pgs.ActiveLoadingType = value ?? "";
 
                 // ルート別 LoadingPlaneAltitude を Canvas 表示用 (legacy) に同期
@@ -3617,20 +3604,6 @@ namespace PileDesign.ViewModels
                     {
                         pgs.ActiveCaseIndex = -1;
                         pgs.SettlementGridData = [];
-
-                        // 一般モードに切替えた場合、反復前にスナップショットした RectLoads を復元
-                        // (反復で書き換えられた収束反力ではなく、ユーザーの原入力に戻す)
-                        if (!newIsBeamAware
-                            && pgs.NonBeamRectLoadsSnapshot != null
-                            && pgs.NonBeamRectLoadsSnapshot.Count > 0)
-                        {
-                            pgs.RectLoads = new System.Collections.ObjectModel.ObservableCollection<Models.InputData.RectLoad>(
-                                pgs.NonBeamRectLoadsSnapshot.Select(r => new Models.InputData.RectLoad
-                                {
-                                    X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
-                                    QA = r.QA, LinkedPileNo = r.LinkedPileNo,
-                                }));
-                        }
 
                         if (CurrentInputModel?.PileLayoutItems != null)
                             foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;

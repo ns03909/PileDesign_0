@@ -1353,22 +1353,6 @@ namespace PileDesign.ViewModels
             if (loadingTypeNow != "個別矩形（基礎梁考慮）" && !double.IsNaN(pgs.LoadingPlaneAltitudeNonBeam))
                 pgs.LoadingPlaneAltitude = pgs.LoadingPlaneAltitudeNonBeam;
 
-            // 一般解析実行時に pgs.RectLoads が反復で書き換えられた状態 (= 現在 反復モード) なら、
-            // ユーザー入力スナップショットから 一般入力を復元してから Steinbrenner を回す。
-            // (反復後に直接「一般解析実行」を押した場合に、収束反力で一般を再計算してしまう問題への対策)
-            if (loadingType != "個別矩形（基礎梁考慮）"
-                && pgs.ActiveLoadingType == "個別矩形（基礎梁考慮）"
-                && pgs.NonBeamRectLoadsSnapshot != null
-                && pgs.NonBeamRectLoadsSnapshot.Count > 0)
-            {
-                pgs.RectLoads = new System.Collections.ObjectModel.ObservableCollection<Models.InputData.RectLoad>(
-                    pgs.NonBeamRectLoadsSnapshot.Select(r => new Models.InputData.RectLoad
-                    {
-                        X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
-                        QA = r.QA, LinkedPileNo = r.LinkedPileNo,
-                    }));
-            }
-
             // 個別矩形（基礎梁考慮）は反復解析ウィンドウで実行 → 確定後に Steinbrenner グリッドコンタを更新
             if (loadingType == "個別矩形（基礎梁考慮）")
             {

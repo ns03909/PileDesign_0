@@ -54,7 +54,8 @@ namespace PileDesign.Views
                   || viewModel.ResultInputModel.PileGroupSettlement.LoadingType == "個別矩形"
                   || viewModel.ResultInputModel.PileGroupSettlement.LoadingType == "個別矩形（基礎梁考慮）")
             {
-                foreach (Models.InputData.RectLoad rectLoad in viewModel.ResultInputModel.PileGroupSettlement.RectLoads)
+                // 解析済みならそのケースの荷重 (反復なら収束後)、未解析なら入力を描く
+                foreach (Models.InputData.RectLoad rectLoad in viewModel.ResultInputModel.PileGroupSettlement.ActiveRectLoads)
                 {
                     Point3D loc1 = new(rectLoad.X1, rectLoad.Y1, viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude);
                     Point3D loc3 = new(rectLoad.X2, rectLoad.Y2, viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude);

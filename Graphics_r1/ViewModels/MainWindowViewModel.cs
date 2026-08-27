@@ -2029,23 +2029,6 @@ namespace PileDesign.ViewModels
             if (pgs != null && !double.IsNaN(pgs.LoadingPlaneAltitudeBeamAware))
                 pgs.LoadingPlaneAltitude = pgs.LoadingPlaneAltitudeBeamAware;
 
-            // 一般モード (反復以外) で表示中の RectLoads をスナップショット。
-            // 反復解析後に pgs.RectLoads は収束反力で上書きされるため、
-            // 一般モードに戻った際に復元できるよう事前に保存する。
-            // 既に反復モードを表示中だった場合 (再実行) はスナップショットを更新しない (既存スナップが原入力)。
-            if (pgs != null
-                && pgs.ActiveLoadingType != "個別矩形（基礎梁考慮）"
-                && pgs.RectLoads != null
-                && pgs.RectLoads.Count > 0)
-            {
-                pgs.NonBeamRectLoadsSnapshot = new System.Collections.ObjectModel.ObservableCollection<Models.InputData.RectLoad>(
-                    pgs.RectLoads.Select(r => new Models.InputData.RectLoad
-                    {
-                        X1 = r.X1, X2 = r.X2, Y1 = r.Y1, Y2 = r.Y2,
-                        QA = r.QA, LinkedPileNo = r.LinkedPileNo,
-                    }));
-            }
-
             var vm = new GroupSettlementWithBeamCalculationViewModel(this);
             var win = new GroupSettlementWithBeamWindow
             {

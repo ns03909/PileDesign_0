@@ -174,6 +174,83 @@ namespace TestProject1
                 + string.Join("\n  ", readers));
         }
 
+        // ── 矩形荷重は入力。結果で上書きしない ─────────────
+
+        /// <summary>
+        /// ケースを表示に切り替えても、<b>利用者が入力した矩形荷重は書き換わらない</b>こと。
+        ///
+        /// 反復解析 (基礎梁考慮) は収束後の荷重をケースに持つ。以前はそれを
+        /// <c>pgs.RectLoads</c> — 入力そのもの — へ書き戻していたため、
+        /// 画面の入力表が収束反力に変わってしまい、元に戻すための退避フィールド
+        /// (<c>NonBeamRectLoadsSnapshot</c>) を別に持つ羽目になっていた。
+        /// </summary>
+        [TestMethod]
+        public void ShowingACaseDoesNotOverwriteTheInputLoads()
+        {
+            var input = new RectLoad { X1 = 0, X2 = 2, Y1 = 0, Y2 = 2, QA = 100 };
+            var converged = new RectLoad { X1 = 0, X2 = 2, Y1 = 0, Y2 = 2, QA = 250 };
+
+            var record = new GroupSettlementCaseRecord
+            {
+                LoadCaseName = "VL",
+                LoadingType = "個別矩形（基礎梁考慮）",
+                IsBeamAware = true,
+                RectLoads = [converged],
+                SettlementGridData = Grid(1.0),
+            };
+            var pgs = new PileGroupSettlement
+            {
+                RectLoads = [input],
+                CaseRecords = [record],
+                ActiveCaseIndex = 0,
+            };
+
+            PileDesign.ViewModels.GroupSettlementWithBeamCalculationViewModel
+                .ApplyActiveCaseToLegacyFields(pgs, record);
+
+            Assert.AreEqual(1, pgs.RectLoads.Count);
+            Assert.AreEqual(100.0, pgs.RectLoads[0].QA, 1e-12,
+                "入力の矩形荷重が収束後の値で上書きされている");
+            Assert.AreSame(input, pgs.RectLoads[0], "入力のインスタンスが差し替えられている");
+        }
+
+        /// <summary>
+        /// 結果として見せたい場面 (収束後の荷重) は、ケースから引けること。
+        /// 未解析なら入力をそのまま返す。
+        /// </summary>
+        [TestMethod]
+        public void ActiveLoads_AreTheCaseLoadsWhenAnalyzed()
+        {
+            var input = new RectLoad { X1 = 0, X2 = 2, Y1 = 0, Y2 = 2, QA = 100 };
+            var pgs = new PileGroupSettlement { RectLoads = [input] };
+
+            Assert.AreSame(pgs.RectLoads, pgs.ActiveRectLoads, "未解析なら入力を返すこと");
+
+            pgs.CaseRecords =
+            [
+                new GroupSettlementCaseRecord
+                {
+                    LoadCaseName = "VL",
+                    RectLoads = [new RectLoad { X1 = 0, X2 = 2, Y1 = 0, Y2 = 2, QA = 250 }],
+                }
+            ];
+            pgs.ActiveCaseIndex = 0;
+
+            Assert.AreEqual(250.0, pgs.ActiveRectLoads[0].QA, 1e-12,
+                "解析済みならケースの荷重 (反復なら収束後) を返すこと");
+        }
+
+        private static string? FindSolutionRootOrNull()
+        {
+            var dir = new DirectoryInfo(Path.GetDirectoryName(typeof(SettlementMirrorTests).Assembly.Location)!);
+            for (; dir != null; dir = dir.Parent)
+            {
+                if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
+                    return dir.FullName;
+            }
+            return null;
+        }
+
         // ── なぜ複製を消せないか ───────────────────────────
 
         /// <summary>
@@ -332,6 +409,8 @@ namespace TestProject1
             var pgs = new PileGroupSettlement
             {
                 LoadingType = "任意矩形",
+                // 利用者の入力。ケースの荷重とは別インスタンス
+                RectLoads = [.. record.RectLoads.Select(r => r.Clone())],
                 CaseRecords = [record],
                 ActiveCaseIndex = 0,
             };
