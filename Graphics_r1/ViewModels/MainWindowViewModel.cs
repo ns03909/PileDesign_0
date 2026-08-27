@@ -649,17 +649,39 @@ namespace PileDesign.ViewModels
             get => _currentInputModel;
             set
             {
+                // 差し替え前のモデルから購読を外す。外さないと、捨てたはずのモデルの編集で
+                // 集計が走り続け、そのモデルも解放されない。
+                var previous = _currentInputModel;
+
                 // SetProperty は ObservableObject のユーティリティ（CommunityToolkit）
                 if (SetProperty(ref _currentInputModel, value))
                 {
+                    if (previous?.PileLayoutItems is { } previousPiles)
+                    {
+                        previousPiles.CollectionChanged -= PileLayoutItems_CollectionChanged;
+                        foreach (var pile in previousPiles)
+                            pile.PropertyChanged -= PileLayoutItem_PropertyChanged;
+                    }
+
                     // VM 再アタッチなどはここで一度だけ行う
                     _currentInputModel?.AttachViewModel(this);
 
                     // PileLayoutItems の CollectionChanged を再購読
-                    if (_currentInputModel?.PileLayoutItems != null)
+                    if (_currentInputModel?.PileLayoutItems is { } piles)
                     {
-                        _currentInputModel.PileLayoutItems.CollectionChanged -= PileLayoutItems_CollectionChanged;
-                        _currentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
+                        piles.CollectionChanged -= PileLayoutItems_CollectionChanged;
+                        piles.CollectionChanged += PileLayoutItems_CollectionChanged;
+
+                        // 既存の杭の PropertyChanged も購読する。
+                        // 杭ごとの購読は「コレクションに追加されたとき」にしか張られないので、
+                        // ファイル読込や Undo でコレクションごと差し替わると、
+                        // 中身が入った状態で購読の無い杭が残る。そうなると軸力や座標を編集しても
+                        // ΣVL・転倒モーメントの表示が古いままになる (基礎梁は同じ理由で下に張り直している)。
+                        foreach (var pile in piles)
+                        {
+                            pile.PropertyChanged -= PileLayoutItem_PropertyChanged;
+                            pile.PropertyChanged += PileLayoutItem_PropertyChanged;
+                        }
                     }
 
                     // 基礎梁の CollectionChanged 再購読 → 基礎梁考慮沈下解析ボタンの活性化条件再評価
