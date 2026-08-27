@@ -69,8 +69,44 @@ namespace PileDesign.Services
             // 内部で UTF-8 を直接書き出すため SaveProjectDataAsync と出力が一致する。
             // (旧実装は new Utf8JsonWriter(stream) を JsonWriterOptions 無しで生成しており
             //  WriteIndented が効かず常にコンパクト出力になっていた)
-            using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
-            JsonSerializer.Serialize(stream, projectData, _jsonOptions);
+            WriteAtomically(filePath, stream => JsonSerializer.Serialize(stream, projectData, _jsonOptions));
+        }
+
+        /// <summary>
+        /// 一時ファイルへ書いてから差し替える。
+        ///
+        /// 保存先へ直接書くと、途中で落ちた場合に<b>切り株のファイルが残る</b>。
+        /// 自動保存では、その切り株が復元候補として拾われてしまう。
+        /// 同じフォルダの一時ファイルに書き切ってから <see cref="File.Move(string, string, bool)"/> で
+        /// 置き換えれば、保存先は「前の内容」か「新しい内容」のどちらかになる。
+        /// </summary>
+        private static void WriteAtomically(string filePath, Action<Stream> write)
+        {
+            string tempPath = filePath + ".saving";
+            try
+            {
+                using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    write(stream);
+                }
+                File.Move(tempPath, filePath, overwrite: true);
+            }
+            catch
+            {
+                TryDelete(tempPath);
+                throw;
+            }
+        }
+
+        /// <summary>一時ファイルの後始末。消せなくても保存の失敗として扱わない。</summary>
+        private static void TryDelete(string path)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
         /// <summary>
@@ -121,16 +157,31 @@ namespace PileDesign.Services
 
                 var swSer = Stopwatch.StartNew();
                 const int bufferSize = 1024 * 1024;  // 1 MB バッファ (旧 80KB → I/O 回数削減)
-                await using var stream = new FileStream(
-                    filePath,
-                    FileMode.Create,
-                    FileAccess.Write,
-                    FileShare.None,
-                    bufferSize,
-                    FileOptions.Asynchronous | FileOptions.SequentialScan);
-                await JsonSerializer.SerializeAsync(stream, projectData, _jsonOptions);
-                await stream.FlushAsync();
-                fileSize = stream.Length;
+
+                // 一時ファイルへ書き切ってから差し替える (WriteAtomically と同じ理由)
+                string tempPath = filePath + ".saving";
+                try
+                {
+                    await using (var stream = new FileStream(
+                        tempPath,
+                        FileMode.Create,
+                        FileAccess.Write,
+                        FileShare.None,
+                        bufferSize,
+                        FileOptions.Asynchronous | FileOptions.SequentialScan))
+                    {
+                        await JsonSerializer.SerializeAsync(stream, projectData, _jsonOptions);
+                        await stream.FlushAsync();
+                        fileSize = stream.Length;
+                    }
+                    File.Move(tempPath, filePath, overwrite: true);
+                }
+                catch
+                {
+                    TryDelete(tempPath);
+                    throw;
+                }
+
                 swSer.Stop();
                 tSerialize = swSer.ElapsedMilliseconds;
             });
