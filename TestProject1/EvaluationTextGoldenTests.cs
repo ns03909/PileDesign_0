@@ -156,12 +156,27 @@ namespace TestProject1
                 int i = 0;
                 while (i < e.Length && i < a.Length && e[i] == a[i]) i++;
 
+                // 実際の出力をファイルに残す。この食い違いは間欠的にしか出ないため、
+                // 落ちた瞬間の全文が無いと後から追えない (golden との diff を取るのに使う)。
+                string actualPath = Path.Combine(GoldenDir, name + ".actual.txt");
+                try
+                {
+                    Directory.CreateDirectory(GoldenDir);
+                    File.WriteAllText(actualPath, actual);
+                }
+                catch (IOException)
+                {
+                    actualPath = "(保存できませんでした)";
+                }
+
                 Assert.Fail(
                     $"検定テキストが変わりました ({name})\n" +
                     $"  食い違い: {i + 1} 行目\n" +
                     $"  期待: {(i < e.Length ? e[i] : "(行なし)")}\n" +
                     $"  実際: {(i < a.Length ? a[i] : "(行なし)")}\n" +
-                    $"  行数: 期待 {e.Length} / 実際 {a.Length}");
+                    $"  行数: 期待 {e.Length} / 実際 {a.Length}\n" +
+                    $"  前後: {string.Join(" / ", a.Skip(Math.Max(0, i - 2)).Take(5))}\n" +
+                    $"  実際の全文: {actualPath}");
             }
         }
 

@@ -1,0 +1,2 @@
+# golden との食い違いが出たときに残す実際の出力
+GoldenFiles/**/*.actual.txt
