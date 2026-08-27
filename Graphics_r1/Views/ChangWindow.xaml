@@ -31,10 +31,6 @@
         </Style>
 
         <!-- 表示用: TextBlock を右寄せ -->
-        <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="TextAlignment" Value="Right"/>
-        </Style>
 
 
         <!-- 編集用: TextBox を右寄せ -->
@@ -75,10 +71,6 @@
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        </Style>
-        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">

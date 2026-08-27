@@ -33,15 +33,7 @@
         <FrameworkElement x:Key="ProxyElement" DataContext="{Binding ElementName=MainWin, Path=DataContext}"/>
 
         <!-- 共通のスタイルを定義 -->
-        <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="TextAlignment" Value="Right"/>
-        </Style>
 
-        <Style x:Key="RightAlignedDataCellStyle" TargetType="DataGridCell">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
 
         <!-- 読み取り専用 DataGrid 用のセルスタイル: 「編集中」風の青枠を抑止しつつ、
              アクティブセル (キーボードフォーカス位置) は淡い色でハイライトする。
@@ -64,14 +56,8 @@
         </Style>
 
         <!-- Style for ComboBox elements to right-align text -->
-        <Style x:Key="RightAlignedComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
 
         <!-- Style for ComboBox items to right-align text -->
-        <Style x:Key="RightAlignedComboBoxItemStyle" TargetType="ComboBoxItem">
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
 
         <!-- 共通のスタイル定義 -->
         <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
@@ -84,9 +70,6 @@
             <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
         </Style>
         
-        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
-        </Style>
         
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>

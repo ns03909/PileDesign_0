@@ -135,10 +135,6 @@
         </ContextMenu>
 
         <!-- 共通のスタイルを定義 -->
-        <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="TextAlignment" Value="Right"/>
-        </Style>
 
         <Style x:Key="ReadOnlyRightAlignedTextBlockStyle" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Right"/>
@@ -151,22 +147,10 @@
             <Setter Property="TextAlignment" Value="Center"/>
         </Style>
 
-        <Style x:Key="RightAlignedDataCellStyle" TargetType="DataGridCell">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
 
         <!-- Style for ComboBox elements to right-align text -->
-        <Style x:Key="RightAlignedComboBoxStyle" TargetType="ComboBox"
-               BasedOn="{StaticResource {x:Type ComboBox}}">
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
 
         <!-- Style for ComboBox items to right-align text -->
-        <Style x:Key="RightAlignedComboBoxItemStyle" TargetType="ComboBoxItem"
-               BasedOn="{StaticResource {x:Type ComboBoxItem}}">
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
 
         <Style x:Key="OpenElementDivisionWindowButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Black"/>
@@ -325,9 +309,6 @@
              BasedOn で Styles.xaml の暗黙 DataGridColumnHeader Style (FontWeight=SemiBold) を継承 -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
-        </Style>
-        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
         </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>

@@ -150,9 +150,6 @@
             </Style.Triggers>
         </Style>
         
-        <Style x:Key="RightAlignTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="TextAlignment" Value="Right"/>
-        </Style>
 
         <!-- 共通のスタイル定義 -->
         <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
@@ -163,9 +160,6 @@
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
-        </Style>
-        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
         </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>

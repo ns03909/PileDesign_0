@@ -59,15 +59,7 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
-        <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="TextAlignment" Value="Right"/>
-        </Style>
 
-        <Style x:Key="RightAlignedDataCellStyle" TargetType="DataGridCell">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
 
         <Style x:Key="RightAlignedGreyTextBlockStyle" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Right"/>

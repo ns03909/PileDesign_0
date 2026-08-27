@@ -52,30 +52,16 @@
                       CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
 
-        <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="TextAlignment" Value="Right"/>
-        </Style>
 
         <Style x:Key="CenterAlignedTextBlockStyle" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="TextAlignment" Value="Center"/>
         </Style>
 
-        <Style x:Key="RightAlignedDataCellStyle" TargetType="DataGridCell">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
 
         <!-- Style for ComboBox elements to right-align text -->
-        <Style x:Key="RightAlignedComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
 
         <!-- Style for ComboBox items to right-align text -->
-        <Style x:Key="RightAlignedComboBoxItemStyle" TargetType="ComboBoxItem">
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
 
         <Style x:Key="OpenElementDivisionWindowButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Black"/>

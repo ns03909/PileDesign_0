@@ -11,10 +11,6 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
-        <Style x:Key="RightAlignedCell" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="Margin" Value="4,0"/>
-        </Style>
     </Window.Resources>
 
     <Grid>

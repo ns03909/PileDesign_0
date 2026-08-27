@@ -765,4 +765,47 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <!-- ═══════════════ 右寄せ・見出し (各ウィンドウの重複を集約) ═══════════════ -->
+    <!--
+        以前は同じスタイルが画面ごとに書かれており、YellowHeaderStyle は 6 箇所で
+        既に中身が食い違っていた。直したつもりが一部の画面に効かない状態だったので、
+        ここに 1 つずつ置く。
+
+        右寄せの 2 系統は名前が似ているが別物なので、統合せずに両方置く。
+          ・RightAlignedTextBlockStyle … 枠内で右に寄せる  (HorizontalAlignment + TextAlignment)
+          ・RightAlignTextBlockStyle   … 文字だけ右に寄せる (TextAlignment のみ)
+        枠いっぱいに広がるセルでは前者、幅が内容に追従する場所では後者、という使い分け。
+    -->
+
+    <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+    </Style>
+
+    <Style x:Key="RightAlignTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="TextAlignment" Value="Right"/>
+    </Style>
+
+    <!-- 杭要素分割の表だけは縦中央にも寄せる (行の高さが内容でばらつくため) -->
+    <Style x:Key="RightAlignCenteredTextBlockStyle" TargetType="TextBlock"
+           BasedOn="{StaticResource RightAlignTextBlockStyle}">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="RightAlignedCell" TargetType="TextBlock">
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="4,0"/>
+    </Style>
+
+    <Style x:Key="RightAlignedDataCellStyle" TargetType="DataGridCell">
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+    </Style>
+
+    <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
+        <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
 </ResourceDictionary>

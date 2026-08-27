@@ -69,18 +69,10 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="RightAlignTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="TextAlignment" Value="Right"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
 
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        </Style>
-        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
@@ -302,7 +294,7 @@
                                                         </DataGridTemplateColumn>
 
                                                         <DataGridTextColumn x:Name="Z" Binding="{Binding Z, StringFormat='{}{0:0.00}', UpdateSourceTrigger=LostFocus}"
-                                                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                        ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="Z" TextAlignment="Center"/>
@@ -312,7 +304,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding IsChangeable, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                        ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="変更" TextAlignment="Center"/>
@@ -322,7 +314,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding GroundDisp1, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                        ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="地盤" TextAlignment="Center"/>
@@ -332,7 +324,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
                                                         <DataGridTextColumn Binding="{Binding GroundDisp2, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
+                                                                        ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="地盤" TextAlignment="Center"/>
@@ -343,7 +335,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding GroundDisp1L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                    ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                    ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="液状化" TextAlignment="Center"/>
@@ -355,7 +347,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding GroundDisp2L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                    ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
+                                                                    ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="液状化" TextAlignment="Center"/>
@@ -474,7 +466,7 @@
                                                         </DataGridTemplateColumn>
 
                                                         <DataGridTextColumn Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="土質" TextAlignment="Center"/>
@@ -494,7 +486,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding Gamma, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="単位体積" TextAlignment="Center"/>
@@ -505,7 +497,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding NValue, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="N値" TextAlignment="Center"/>
@@ -515,7 +507,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding Phi, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="摩擦角" TextAlignment="Center"/>
@@ -525,7 +517,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding Cu, StringFormat=N2, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="粘着力" TextAlignment="Center"/>
@@ -536,7 +528,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding E0, StringFormat=N0, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="変形係数" TextAlignment="Center"/>
@@ -547,7 +539,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding B, StringFormat=N2, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="杭径" TextAlignment="Center"/>
@@ -561,7 +553,7 @@
                                                                 Width="auto">
                                                             <!-- 手入力オーバーライド時は強調表示（アクセント色・太字） -->
                                                             <DataGridTextColumn.ElementStyle>
-                                                                <Style TargetType="TextBlock" BasedOn="{StaticResource RightAlignTextBlockStyle}">
+                                                                <Style TargetType="TextBlock" BasedOn="{StaticResource RightAlignCenteredTextBlockStyle}">
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding IsKh0Manual}" Value="True">
                                                                             <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}"/>
@@ -781,7 +773,7 @@
                                                         </DataGridTemplateColumn>
 
                                                         <DataGridTextColumn Binding="{Binding Z, StringFormat='{}{0:0.00}', UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="Z" TextAlignment="Center"/>
@@ -791,7 +783,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding IsChangeable, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="変更" TextAlignment="Center"/>
@@ -801,7 +793,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding GroundDisp1, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="地盤" TextAlignment="Center"/>
@@ -812,7 +804,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding GroundDisp2, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="地盤" TextAlignment="Center"/>
@@ -823,7 +815,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding GroundDisp1L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="液状化" TextAlignment="Center"/>
@@ -835,7 +827,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding GroundDisp2L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="液状化" TextAlignment="Center"/>
@@ -928,7 +920,7 @@
 
                                                         <!-- Name表示 -->
                                                         <DataGridTextColumn Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="土質" TextAlignment="Center"/>
@@ -939,7 +931,7 @@
 
                                                         <!-- Gamma表示 -->
                                                         <DataGridTextColumn Binding="{Binding Gamma, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="75">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="75">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="単位体積" TextAlignment="Center"/>
@@ -951,7 +943,7 @@
 
                                                         <!-- Phi表示 -->
                                                         <DataGridTextColumn Binding="{Binding Phi, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="摩擦角" TextAlignment="Center"/>
@@ -962,7 +954,7 @@
 
                                                         <!-- C表示 -->
                                                         <DataGridTextColumn Binding="{Binding C, StringFormat=N2, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="粘着力" TextAlignment="Center"/>
@@ -994,7 +986,7 @@
 
                                                         <!-- K0 -->
                                                         <DataGridTextColumn Binding="{Binding K0, StringFormat=N3, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="75">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="75">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="静止土圧" TextAlignment="Center"/>
@@ -1006,7 +998,7 @@
 
                                                         <!-- Kp -->
                                                         <DataGridTextColumn Binding="{Binding Kp, StringFormat=N3, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="75">
+                                                                ElementStyle="{StaticResource RightAlignCenteredTextBlockStyle}" Width="75">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="受働土圧" TextAlignment="Center"/>

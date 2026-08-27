@@ -23,9 +23,6 @@
                 <x:Type TypeName="models:FoundationBeamConnectionMode"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
-        <Style x:Key="RightAlignTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="TextAlignment" Value="Right"/>
-        </Style>
     </Window.Resources>
 
     <Grid Margin="10">

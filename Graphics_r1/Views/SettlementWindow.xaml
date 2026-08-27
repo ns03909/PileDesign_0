@@ -39,11 +39,6 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
-        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenYellowBrush}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -76,9 +71,6 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
-        <Style x:Key="RightAlignTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="TextAlignment" Value="Right"/>
-        </Style>
 
         <!-- 共通のスタイル定義 -->
         <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
