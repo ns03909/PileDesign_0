@@ -612,21 +612,40 @@ namespace PileDesign.FEM
                 }
                 else // slaveの場合
                 {
+                    // master 側の DOF が拘束されていると方程式番号は負になる。
+                    // その DOF に対応する式は行列に無いので、荷重は支点反力になり、
+                    // ここでは捨ててよい (slave でない側の e_num >= 0 判定と同じ扱い)。
+                    // 守っていないと負の添字でベクトルを引き、
+                    // ArgumentOutOfRangeException になる。
+                    // 「基礎のねじれを拘束」で代表節点の Rz を固定し、剛床連結で
+                    // その代表節点を master に持つ接合節点へ荷重が載ると、ここに来る。
+                    // 剛性行列の組立 (MapOnGlobalStiffness) は同じ判定を持っていた。
                     int e_num = MasterNodes[index].EquationNumber[index];
-                    loadVector[e_num] += load.GetByIndex(index);
+                    if (e_num >= 0)
+                    {
+                        loadVector[e_num] += load.GetByIndex(index);
+                    }
                     if (0 <= index && index <= 2 /*&& Boundary.BoundaryList[index] == BoundaryType.Slave*/)
                     {
                         int ia = (index + 4) % 3 + 3;
                         if (MasterNodes[ia] != null)
                         {
-                            float ia_arm = +GetSlaveArm((index + 2) % 3);
-                            loadVector[MasterNodes[index].EquationNumber[ia]] += load.GetByIndex(index) * ia_arm;
+                            int eq_ia = MasterNodes[index].EquationNumber[ia];
+                            if (eq_ia >= 0)
+                            {
+                                float ia_arm = +GetSlaveArm((index + 2) % 3);
+                                loadVector[eq_ia] += load.GetByIndex(index) * ia_arm;
+                            }
                         }
                         int ib = (index + 5) % 3 + 3;
                         if (MasterNodes[ib] != null)
                         {
-                            float ib_arm = -GetSlaveArm((index + 1) % 3);
-                            loadVector[MasterNodes[index].EquationNumber[ib]] += load.GetByIndex(index) * ib_arm;
+                            int eq_ib = MasterNodes[index].EquationNumber[ib];
+                            if (eq_ib >= 0)
+                            {
+                                float ib_arm = -GetSlaveArm((index + 1) % 3);
+                                loadVector[eq_ib] += load.GetByIndex(index) * ib_arm;
+                            }
                         }
                     }
                 }
