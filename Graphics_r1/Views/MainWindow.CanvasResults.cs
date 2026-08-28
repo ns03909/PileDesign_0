@@ -987,9 +987,19 @@ namespace PileDesign.Views
                         // 「全部ゼロ」なのか「描けていない」のか画面から区別できない。
                         // 基礎のねじれを拘束すると θZ は全節点で厳密にゼロになるので、
                         // これは異常ではなく起こりうる結果。そう言い切る。
-                        AddText3D(Brushes.Gray,
-                            $"{viewModel.AnalysisResultNodeDisplacementType} はすべて 0 です",
-                            Canvas3DWidth / 2, Canvas3DHeight / 2, "C", "C", 0.0);
+                        // 位置はキャンバス実寸から取る。Canvas3DWidth は別経路で更新される
+                        // キャッシュなので、まだ入っていないと画面外へ出る。
+                        // 中央に置くとモデルの線に紛れるため、上端に寄せる。
+                        double noteWidth = Canvas3DLayout?.ActualWidth ?? 0;
+                        if (noteWidth <= 0) noteWidth = Canvas3DWidth;
+                        Serilog.Log.Debug("[結果表示] {Type} が全節点でゼロのため注記を出す (幅 {W})",
+                            viewModel.AnalysisResultNodeDisplacementType, noteWidth);
+                        if (noteWidth > 0)
+                        {
+                            AddText3D(Brushes.DimGray,
+                                $"{viewModel.AnalysisResultNodeDisplacementType} はすべて 0 です",
+                                noteWidth / 2, 24.0, "C", "T", 0.0);
+                        }
                         return;
                     }
 
