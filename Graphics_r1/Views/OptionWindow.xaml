@@ -23,10 +23,6 @@
         <conv:BooleanNegationConverter x:Key="BooleanNegationConverter" />
 
         <!-- SvgViewboxコントロール用のスタイルを定義 -->
-        <Style x:Key="SvgIconStyle" TargetType="svgc:SvgViewbox">
-            <Setter Property="Width" Value="16"/>
-            <Setter Property="Height" Value="16"/>
-        </Style>
     </Window.Resources>
 
     <Grid>

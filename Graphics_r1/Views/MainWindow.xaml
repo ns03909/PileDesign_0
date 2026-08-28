@@ -142,109 +142,19 @@
             <Setter Property="Foreground" Value="Gray"/>
         </Style>
 
-        <Style x:Key="CenterAlignedTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="TextAlignment" Value="Center"/>
-        </Style>
 
 
         <!-- Style for ComboBox elements to right-align text -->
 
         <!-- Style for ComboBox items to right-align text -->
 
-        <Style x:Key="OpenElementDivisionWindowButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Black"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsElementSplit}" Value="True">
-                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-
-                </DataTrigger>
-                <DataTrigger Binding="{Binding IsElementSplit}" Value="False">
-                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
 
         <!-- Style for VerticalAnalyseButtonStyle -->
-        <Style x:Key="VerticalAnalyseButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Black"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsElementSplit}" Value="False">
-                    <Setter Property="Background" Value="LightGray"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding IsElementSplit}" Value="True"/>
-                        <Condition Binding="{Binding IsVerticalAnalysisDone}" Value="False"/>
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </MultiDataTrigger>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding IsElementSplit}" Value="True"/>
-                        <Condition Binding="{Binding IsVerticalAnalysisDone}" Value="True"/>
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </MultiDataTrigger>
-            </Style.Triggers>
-        </Style>
 
         <!-- Style for HorizontalAnalyseButtonStyle -->
-        <Style x:Key="HorizontalAnalyseButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Black"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsElementSplit}" Value="False">
-                    <Setter Property="Background" Value="LightGray"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding IsElementSplit}" Value="True"/>
-                        <Condition Binding="{Binding IsHorizontalAnalysisDone}" Value="False"/>
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </MultiDataTrigger>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding IsElementSplit}" Value="True"/>
-                        <Condition Binding="{Binding IsHorizontalAnalysisDone}" Value="True"/>
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </MultiDataTrigger>
-            </Style.Triggers>
-        </Style>
 
-        <Style x:Key="OpenGroupPileSettlementWindowButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Black"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
-                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-
-                </DataTrigger>
-                <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="False">
-                    <Setter Property="Background" Value="{StaticResource NikkenYellowBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
 
         <!-- Imageコントロール用のスタイルを定義 -->
-        <Style x:Key="IconImageStyle" TargetType="Image">
-            <Setter Property="Width" Value="16px"/>
-            <Setter Property="Height" Value="16px"/>
-        </Style>
 
         <!-- SvgViewboxコントロール用のスタイルを定義
              SvgViewbox 自身の IsEnabled が False のとき (UIElement.IsEnabled は親から自動継承されるため、
@@ -279,19 +189,6 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="SvgIconStyle32" TargetType="svgc:SvgViewbox">
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="StretchDirection" Value="DownOnly"/>
-            <Setter Property="ClipToBounds" Value="True"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Style.Triggers>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.35"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
 
         <!-- ToolTipのスタイルを定義 -->
         <Style TargetType="ToolTip" x:Key="DeepBlueToolTipStyle">
@@ -314,9 +211,6 @@
             <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
         </Style>
         <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
-        </Style>
-        <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
 

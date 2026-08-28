@@ -34,55 +34,31 @@ namespace TestProject1
         /// <summary>既に重複している名前。<b>増やさないための一覧</b>で、直したらここから消すこと。</summary>
         private static readonly HashSet<string> KnownDuplicates =
         [
-            "CenterAlignedTextBlockStyle",
-            "CrimsonHeaderStyle",
             "CustomDataGridCellStyle",
-            "DataGridCellStyle",
             "DeepBlueHeaderStyle",
-            "FormButtonStyle",
-            "FormComboBoxStyle",
             "FormLabelStyle",
-            "FormTextBoxStyle",
             "FormulaControlStyle",
-            "GranularityClassComboBoxStyle",
             "GranularityClassTextBlockStyle",
-            "GrayCheckBoxStyle",
-            "GreenHeaderStyle",
-            "HorizontalAnalyseButtonStyle",
-            "IconImageStyle",
-            "OpenElementDivisionWindowButtonStyle",
-            "OpenGroupPileSettlementWindowButtonStyle",
-            "PaleRedHeaderStyle",
-            "SmallRightMargin",
-            "SvgIconStyle",
             "SvgIconStyle16",
-            "SvgIconStyle24",
-            "VerticalAnalyseButtonStyle",
-            "VerticalSeparatorStyle"
+            "SvgIconStyle24"
         ];
 
-        /// <summary>既に使われていない名前。<b>増やさないための一覧</b>で、消したらここから外すこと。</summary>
+        /// <summary>
+        /// まだ使われていない名前。<b>増やさないための一覧</b>。
+        ///
+        /// 残っている 7 件はいずれも <c>Styles.xaml</c> にあり、
+        /// 画面側の色・サイズ直書きを寄せるために<b>用意してある</b>もの。
+        /// 消すのではなく、直書きを見つけたらそちらへ寄せて、この一覧から外す。
+        /// </summary>
         private static readonly HashSet<string> KnownUnused =
         [
-            "SectionSubHeaderStyle",
-            "MutedTextStyle",
-            "ErrorTextStyle",
-            "WarningTextStyle",
             "DialogSecondaryButtonStyle",
+            "ErrorTextStyle",
             "FadeInBorderStyle",
+            "MutedTextStyle",
+            "SectionSubHeaderStyle",
             "SignedIntegerTextBoxStyle",
-            "CrimsonHeaderStyle",
-            "AnalysisRequiredCheckBox",
-            "SmallRightMargin",
-            "DataGridCellStyle",
-            "OpenElementDivisionWindowButtonStyle",
-            "VerticalAnalyseButtonStyle",
-            "HorizontalAnalyseButtonStyle",
-            "OpenGroupPileSettlementWindowButtonStyle",
-            "IconImageStyle",
-            "BoldLargeParagraphStyle",
-            "BoldMiddleParagraphStyle",
-            "SvgIconStyle32"
+            "WarningTextStyle"
         ];
 
         private static readonly Regex StyleKey =

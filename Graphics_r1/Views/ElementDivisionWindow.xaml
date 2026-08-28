@@ -51,40 +51,11 @@
         </Style>
         
         <!--CheckBoxのスタイル定義-->
-        <Style x:Key="GrayCheckBoxStyle" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="Gray"/>
-            <Style.Triggers>
-                <Trigger Property="IsChecked" Value="True">
-                    <Setter Property="Foreground" Value="Gray"/>
-                    <Setter Property="HorizontalAlignment" Value="Center"/>
-                </Trigger>
-                <Trigger Property="IsChecked" Value="False">
-                    <Setter Property="Foreground" Value="Gray"/>
-                    <Setter Property="HorizontalAlignment" Value="Center"/>
-                </Trigger>
-                <Trigger Property="IsChecked" Value="{x:Null}">
-                    <Setter Property="Foreground" Value="Gray"/>
-                    <Setter Property="HorizontalAlignment" Value="Center"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
 
 
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
-        <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        </Style>
-        <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        </Style>
-        <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 

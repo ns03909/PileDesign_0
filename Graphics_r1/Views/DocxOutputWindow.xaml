@@ -29,15 +29,8 @@ WindowStartupLocation="CenterOwner">
         <conv:BoolEqualsConverter x:Key="BoolEqualsConverter"/>
         <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
         <conv:LoadCaseLevelToColorConverter x:Key="LoadCaseLevelToColorConverter"/>
-        <Style x:Key="SvgIconStyle" TargetType="svgc:SvgViewbox">
-            <Setter Property="Width" Value="16"/>
-            <Setter Property="Height" Value="16"/>
-        </Style>
 
         <!-- 解析未完了時に無効化するCheckBoxスタイル -->
-        <Style x:Key="AnalysisRequiredCheckBox" TargetType="CheckBox">
-            <Setter Property="Margin" Value="0,2"/>
-        </Style>
     </Window.Resources>
 
     <Grid Margin="10">

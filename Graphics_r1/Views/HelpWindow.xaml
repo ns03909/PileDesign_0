@@ -26,16 +26,8 @@
         </Style>
 
         <!-- Paragraphに適用するスタイルを定義 -->
-        <Style x:Key="BoldLargeParagraphStyle" TargetType="Paragraph">
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="14"/>
-        </Style>
 
         <!-- Paragraphに適用するスタイルを定義 -->
-        <Style x:Key="BoldMiddleParagraphStyle" TargetType="Paragraph">
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="12"/>
-        </Style>
 
         <!-- FormulaControlに適用するスタイルを定義 -->
         <Style x:Key="FormulaControlStyle" TargetType="controls:FormulaControl">

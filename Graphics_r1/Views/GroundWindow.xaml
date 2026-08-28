@@ -42,20 +42,7 @@
           <Setter Property="Margin" Value="0,0,8,0"/>
         </Style>
 
-        <Style x:Key="FormTextBoxStyle" TargetType="TextBox">
-          <Setter Property="Height" Value="26"/>
-          <Setter Property="VerticalContentAlignment" Value="Center"/>
-          <Setter Property="Margin" Value="0,0,8,0"/>
-          <Setter Property="MinWidth" Value="70"/>
-        </Style>
 
-        <Style x:Key="FormComboBoxStyle" TargetType="ComboBox"
-               BasedOn="{StaticResource {x:Type ComboBox}}">
-          <Setter Property="Height" Value="26"/>
-          <Setter Property="VerticalContentAlignment" Value="Center"/>
-          <Setter Property="Margin" Value="0,0,8,0"/>
-          <Setter Property="MinWidth" Value="70"/>
-        </Style>
 
         <Style x:Key="FormButtonStyle" TargetType="Button"
                BasedOn="{StaticResource {x:Type Button}}">
@@ -66,18 +53,8 @@
         </Style>
 
         <!-- 追加: セパレータ用スタイル（Window.Resources 内） -->
-        <Style x:Key="VerticalSeparatorStyle" TargetType="Border">
-            <Setter Property="Width" Value="1"/>
-            <Setter Property="Margin" Value="8,0"/>
-            <Setter Property="Background" Value="#DDDDDD"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Height" Value="28"/>
-        </Style>
 
         <!-- 小さな横間隔を統一するための簡易スタイル -->
-        <Style x:Key="SmallRightMargin" TargetType="FrameworkElement">
-            <Setter Property="Margin" Value="0,0,6,0"/>
-        </Style>
         
         <!-- GranularityClassComboBoxのスタイルを定義 -->
         <Style x:Key="AgeCategoryComboBoxStyle" TargetType="ComboBox"
@@ -120,20 +97,6 @@
         </Style>
 
         <!-- GranularityClassComboBoxのスタイルを定義 -->
-        <Style x:Key="GranularityClassComboBoxStyle" TargetType="ComboBox"
-               BasedOn="{StaticResource {x:Type ComboBox}}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding SelectedValue, RelativeSource={RelativeSource Self}}" Value="粘性土">
-                    <Setter Property="Foreground" Value="SaddleBrown"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding SelectedValue, RelativeSource={RelativeSource Self}}" Value="砂質土">
-                    <Setter Property="Foreground" Value="SandyBrown"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding SelectedValue, RelativeSource={RelativeSource Self}}" Value="礫質土">
-                    <Setter Property="Foreground" Value="DarkGreen"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
 
         <!-- ShallowSoilType 用スタイル -->
         <Style x:Key="ShallowSoilTypeComboBoxStyle" TargetType="ComboBox"
@@ -152,23 +115,10 @@
         
 
         <!-- 共通のスタイル定義 -->
-        <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
 
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
-        <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
-        </Style>
         <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
-        </Style>
-        <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
-        </Style>
-        <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
 
         <Style x:Key="GrayCheckBoxStyle" TargetType="CheckBox">

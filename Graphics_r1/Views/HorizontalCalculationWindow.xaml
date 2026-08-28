@@ -60,28 +60,12 @@
         <!-- Style for ComboBox items to right-align text -->
 
         <!-- 共通のスタイル定義 -->
-        <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
         
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
-        <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
-        </Style>
         
         
-        <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
-        </Style>
         
-        <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
-        </Style>
         
-        <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
-        </Style>
 
         <!-- 読み取り専用数値列の共通スタイル（灰色・右寄せ） -->
         <Style x:Key="ReadOnlyNumericCellStyle" TargetType="TextBlock">

@@ -114,6 +114,14 @@
         <Setter Property="Padding" Value="0,0,0,2"/>
     </Style>
 
+    <!--
+        ここから下の一部 (SectionSubHeaderStyle / MutedTextStyle / ErrorTextStyle /
+        WarningTextStyle / DialogSecondaryButtonStyle / FadeInBorderStyle /
+        SignedIntegerTextBoxStyle) は、用意してあるが<b>まだどこからも使われていない</b>。
+        画面側が色やサイズを直書きしたままなので、その置き換え先として残している。
+        消すのではなく、直書きを見つけたらここへ寄せること。
+        XamlStyleDuplicationTests の一覧にも同じ理由で載せてある。
+    -->
     <Style x:Key="SectionSubHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource SectionHeaderStyle}">
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="FontWeight" Value="Normal"/>
@@ -808,4 +816,34 @@
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
+
+    <!-- ═══════ 画面ごとに重複していたスタイル (2026-08-28 集約) ═══════ -->
+    <!--
+        既に Styles.xaml にあったもの (SvgIconStyle / GranularityClassComboBoxStyle) は
+        位置を動かしていない。ResourceDictionary 内の StaticResource は
+        <b>書かれた順にしか解決できない</b>ため、既存の定義を末尾へ移すと
+        それを BasedOn で参照している手前のスタイルが壊れる (実際に壊した)。
+    -->
+
+    <Style x:Key="CenterAlignedTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="FormComboBoxStyle" TargetType="ComboBox"
+           BasedOn="{StaticResource {x:Type ComboBox}}">
+        <Setter Property="Height" Value="26"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="MinWidth" Value="70"/>
+    </Style>
+
+    <Style x:Key="VerticalSeparatorStyle" TargetType="Border">
+        <Setter Property="Width" Value="1"/>
+        <Setter Property="Margin" Value="8,0"/>
+        <Setter Property="Background" Value="#DDDDDD"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Height" Value="28"/>
+    </Style>
+
 </ResourceDictionary>
