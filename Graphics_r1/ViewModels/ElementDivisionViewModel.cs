@@ -485,7 +485,9 @@ namespace PileDesign.ViewModels
                 ? new ObservableCollection<int>(elementDivision.SoilPileNumberOption.ToList())
                 : new ObservableCollection<int>();
 
-            DoatsuGoryokuBane = elementDivision?.DoatsuGoryokuBane;
+            // 複製する。共有したままだと土圧合力ばねの編集が入力モデルへ直に入り、
+            // キャンセルで閉じても戻らない (他の項目は複製なので戻る)。
+            DoatsuGoryokuBane = elementDivision?.DoatsuGoryokuBane?.DeepCopy();
 
             UpdateZsCollection();
 
@@ -562,6 +564,16 @@ namespace PileDesign.ViewModels
         }
 
         // 土層-杭セットのランプを点灯
+        /// <summary>
+        /// 全セットを確認済み (ランプ点灯) にする。保存済みの分割を開いたときに呼ぶ。
+        /// </summary>
+        public void MarkAllSetsAsReviewed()
+        {
+            foreach (var lamp in SoilPileLampStates) lamp.IsOn = true;
+            foreach (var lamp in EmbedmentLampStates) lamp.IsOn = true;
+            OnPropertyChanged(nameof(AllLampsLit));
+        }
+
         private void MarkPileAsShown(int pileIndex)
         {
             if (pileIndex < 0 || SoilPileLampStates == null || pileIndex >= SoilPileLampStates.Count) return;
@@ -1794,7 +1806,7 @@ namespace PileDesign.ViewModels
         {
             // 入力の書き換えはここから始まる。無効になるもの (沈下解析結果など) の確認も
             // ウィンドウを開くときではなく<b>ここ</b>で行う。
-            // 開くだけなら入力は変わらない (保存しなければ Closing で元に戻す) ので、
+            // 開くだけなら入力は変わらない (編集はすべて複製に対して行う) ので、
             // 「見るだけ」で結果を失う旨を聞かれるのはおかしい。
             // 断られたら閉じない。閉じるとこのウィンドウでの編集がすべて消える。
             if (!_mainWindowViewModel.ConfirmSaveElementDivision()) return;

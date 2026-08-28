@@ -21,13 +21,11 @@ namespace PileDesign.Views
         private bool _isLoaded = false; // フラグを追加
         private bool _isClosingHandled = false;
         private bool _wasElementSplitBeforeOpen; // ウィンドウを開く前のIsElementSplit状態
-        private List<SoilPile>? _savedSoilPiles; // キャンセル時に復元するための分割前データ
-        private SoilEmbedment? _savedSoilEmbedment; // キャンセル時に復元するための根入れ前データ
 
         /// <summary>
         /// 「保存」で閉じたか。閉じたあとに読む。
         ///
-        /// 見るだけで閉じた場合は入力を触っていない (Closing で分割前の状態に戻している) ので、
+        /// 見るだけで閉じた場合は入力を触っていない (編集はすべて複製に対して行う) ので、
         /// 呼び出し側は編集済みの印も Undo の記録も残してはいけない。
         /// </summary>
         public bool IsSaved => _viewModel?.IsOkPressed == true;
@@ -40,25 +38,6 @@ namespace PileDesign.Views
 
             Loaded += ElementDivisionWindow_Loaded;
             ContentRendered += ElementDivisionWindow_ContentRendered;
-            Closing += ElementDivisionWindow_Closing;
-        }
-
-        private void ElementDivisionWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
-        {
-            // OKボタンが押されずに閉じられた場合（Escape, ×ボタン, キャンセル）、
-            // ウィンドウを開く前のIsElementSplit状態と分割データを復元する
-            if (_viewModel != null && !_viewModel.IsOkPressed && _wasElementSplitBeforeOpen)
-            {
-                // 分割データを復元（GenerateSoilPilesImmediate()で最小分割に上書きされたため）
-                var ed = _mainWindowViewModel.CurrentInputModel?.ElementDivision;
-                if (ed != null && _savedSoilPiles != null)
-                {
-                    ed.SoilPiles = new ObservableCollection<SoilPile>(_savedSoilPiles);
-                    ed.SoilEmbedment = _savedSoilEmbedment;
-                }
-
-                _mainWindowViewModel.IsElementSplit = true;
-            }
         }
 
         /// <summary>
@@ -74,22 +53,21 @@ namespace PileDesign.Views
                 await System.Threading.Tasks.Task.Yield();
 
                 // Step 1: SoilPiles/SoilEmbedmentデータ生成（UIスレッド：ObservableCollection操作を含むため）
-                // 杭体・地盤変更後も正しく地層境界節点を再生成するため、IsElementSplitを一時解除
                 _wasElementSplitBeforeOpen = _mainWindowViewModel.IsElementSplit;
 
-                // キャンセル時に復元するため、再生成前の分割データを保存
-                if (_wasElementSplitBeforeOpen)
+                // 分割済みなら再生成しない。保存されている分割をそのまま開く。
+                //
+                // 再生成は「杭体・地盤を変えたあとも地層境界節点を作り直す」ためのもので、
+                // ジオメトリを変える編集では IsElementSplit が落ちる (分割は無効になる) から、
+                // ここに来て true ということは<b>保存されている分割が今の形状に対して有効</b>。
+                // それを最小分割で上書きすると、解析に使った各要素の水平ばねを見に来ただけの人が
+                // 別物を見せられることになる。
+                if (!_wasElementSplitBeforeOpen)
                 {
-                    var ed = _mainWindowViewModel.CurrentInputModel.ElementDivision;
-                    var srcPiles = ed?.SoilPiles?.ToList() ?? new List<SoilPile>();
-                    var srcEmbed = ed?.SoilEmbedment;
-                    _savedSoilPiles = srcPiles.Select(sp => sp.DeepCopy()).ToList();
-                    _savedSoilEmbedment = srcEmbed?.DeepCopy();
+                    _mainWindowViewModel.IsElementSplit = false;
+                    _mainWindowViewModel.GenerateSoilPilesImmediate();
+                    _mainWindowViewModel.CurrentInputModel.GenerateSoilEmbedment();
                 }
-
-                _mainWindowViewModel.IsElementSplit = false;
-                _mainWindowViewModel.GenerateSoilPilesImmediate();
-                _mainWindowViewModel.CurrentInputModel.GenerateSoilEmbedment();
 
                 // Step 2: DeepCopyをバックグラウンドスレッドで実行（純粋な計算のため安全）
                 var elementDivision = _mainWindowViewModel.CurrentInputModel.ElementDivision;
@@ -110,6 +88,12 @@ namespace PileDesign.Views
 
                 // UI初期化
                 InitializeViewModelAndUI();
+
+                // 分割済みを開いたときは全セット確認済みとして扱う。
+                // ランプは「再生成された分割を 1 セットずつ目視した」ことを表す印なので、
+                // 保存済みのものを開いた場合に消灯から始めると、見るだけのつもりでも
+                // 全セットを巡らないと保存できない。
+                if (_wasElementSplitBeforeOpen) _viewModel?.MarkAllSetsAsReviewed();
             }
             catch (Exception ex)
             {

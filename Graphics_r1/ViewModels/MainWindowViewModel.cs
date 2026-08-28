@@ -2350,7 +2350,7 @@ namespace PileDesign.ViewModels
                 if (IsPreparedForAnalysis())
                 {
                     // ここでは確認を出さない。開くだけなら入力は変わらず
-                    // (保存せずに閉じればウィンドウ側が分割前の状態へ戻す)、
+                    // (編集はすべて複製に対して行い、保存で初めて書き戻す)、
                     // 分割の中身を見たいだけのときに結果の破棄を聞かれてしまう。
                     // 確認は ElementDivisionViewModel の「保存」で出す。
 

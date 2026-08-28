@@ -56,10 +56,17 @@ namespace PileDesign.ViewModels
         /// 杭要素分割ウィンドウの「保存」で呼ぶ。
         ///
         /// 確認を<b>開くときではなく保存するとき</b>に出すためのもの。開くだけなら入力は
-        /// 変わらない (保存せず閉じればウィンドウ側が分割前の状態へ戻す) ので、
-        /// 中を見たいだけの人に結果の破棄を聞くことになっていた。
+        /// 変わらない (編集はすべて複製に対して行う) ので、中を見たいだけの人に結果の破棄を聞くことになっていた。
+        ///
+        /// 杭要素分割は破棄の対象に含めない。ここで保存される分割そのものが
+        /// 画面に出ているもので、捨てられるわけではない。
+        /// 「杭要素分割が削除されます」と出すと、分割を保存する操作の説明として食い違う。
         /// </summary>
-        public bool ConfirmSaveElementDivision() => CheckAndResetAnalysisResults();
+        public bool ConfirmSaveElementDivision()
+        {
+            MarkInputChangedSinceAnalysis();
+            return ConfirmDiscardInvalidatedByInputChange(includeElementSplit: false);
+        }
 
         /// <summary>
         /// 入力変更で無効になるものを 1 回のダイアログで確認し、破棄する。
