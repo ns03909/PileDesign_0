@@ -1,4 +1,4 @@
-using MathNet.Numerics.LinearAlgebra;
+﻿using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Common;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -981,7 +981,17 @@ namespace PileDesign.Views
 
                     // 最大回転角で正規化し、ModelExtentに対する相対サイズで楕円を描く
                     double maxRotValue = allValues.Count > 0 ? allValues.Max() : 0;
-                    if (maxRotValue <= 1e-15) return; // 回転角がすべてゼロなら何も描かない
+                    if (maxRotValue <= 1e-15)
+                    {
+                        // ゼロの回転に楕円は描けない。ただし黙って抜けると白紙になり、
+                        // 「全部ゼロ」なのか「描けていない」のか画面から区別できない。
+                        // 基礎のねじれを拘束すると θZ は全節点で厳密にゼロになるので、
+                        // これは異常ではなく起こりうる結果。そう言い切る。
+                        AddText3D(Brushes.Gray,
+                            $"{viewModel.AnalysisResultNodeDisplacementType} はすべて 0 です",
+                            Canvas3DWidth / 2, Canvas3DHeight / 2, "C", "C", 0.0);
+                        return;
+                    }
 
                     // 最大楕円径をModelExtentの一定割合とする（変位スケールスライダーで調整可能）
                     double maxEllipseDiameter = viewModel.ModelExtent * viewModel.CanvasThreeDView.Scale * 0.15 * viewModel.DisplacementDiagramRatio;
