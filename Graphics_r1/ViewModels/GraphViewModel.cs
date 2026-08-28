@@ -314,13 +314,22 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _selectedPileBodyRef, value))
                 {
-                    UpdateGraph();
                     var pileBody = InputModel.GetPileBodyByPileBodyRef(_selectedPileBodyRef);
                     int segmentsCount = pileBody?.PileBodySegments?.Count ?? 0;
                     var options = new ObservableCollection<string> { UiText.All };
                     foreach (int i in Enumerable.Range(1, segmentsCount)) options.Add(i.ToString());
                     PileSegmentOptions = options;
-                    SelectedPileSegmentOption = UiText.All;
+
+                    // 具体的な区間が要るグラフ (NMINT / QNINT) では「すべて」に戻さない。
+                    // 戻すと区間が決まらず、軸だけ描いて終わる = 杭体を変えても絵が出ない。
+                    // それ以外は従来どおり「すべて」へ戻す。
+                    SelectedPileSegmentOption = RequiresConcretePileSegment
+                        ? ResolvePileSegmentOption(options)
+                        : UiText.All;
+
+                    // 選択肢も選択値も変わらなかった場合 (区間数が同じで同じ区間を選び直した等)
+                    // 上の 2 つの setter は発火しないので、ここで必ず 1 回描き直す。
+                    UpdateGraph();
                 }
             }
         }
@@ -367,11 +376,50 @@ namespace PileDesign.ViewModels
             }
         }
 
-        /// <summary>選択中の杭区間番号（0-based）。UiText.All の場合は -1 を返す。</summary>
+        /// <summary>
+        /// 選択中の杭区間番号（1 始まり）。<see cref="UiText.All"/>（すべて）のときは 0。
+        /// </summary>
         public int SelectedPileSegmentNo
         {
             get => int.TryParse(_selectedPileSegmentOption, out int n) ? n : 0;
             set => SelectedPileSegmentOption = value <= 0 ? UiText.All : value.ToString();
+        }
+
+        /// <summary>
+        /// 表示中のグラフが「具体的な杭区間」を必要とするか。
+        ///
+        /// NMINT / QNINT は 1 区間ぶんの断面から限界曲線を作るため、区間が「すべて」だと
+        /// 描くものが決まらず、軸だけ描いて終わる。
+        /// p-y / M-φ / EI-φ は「すべて」を全区間の重ね描きとして扱えるので対象外。
+        /// 「定着部NMINT」は杭区間を使わない (IsPileSegmentOptionVisible = false) ので、
+        /// 前方一致では拾われない点に注意。
+        /// </summary>
+        internal bool RequiresConcretePileSegment =>
+            SelectedGraphOption != null
+            && (SelectedGraphOption.StartsWith("NMINT", StringComparison.Ordinal)
+                || SelectedGraphOption.StartsWith("QNINT", StringComparison.Ordinal));
+
+        /// <summary>
+        /// 杭区間の選択肢が入れ替わったときに、選び直す値を決める。
+        ///
+        /// 直前の番号が新しい選択肢にもあれば維持する。無ければ、
+        /// 具体的な区間が要るグラフでは先頭の区間、そうでなければ「すべて」。
+        /// </summary>
+        internal string ResolvePileSegmentOption(ObservableCollection<string> options)
+        {
+            if (options == null || options.Count == 0) return UiText.All;
+
+            bool needsConcrete = RequiresConcretePileSegment;
+            string current = _selectedPileSegmentOption;
+
+            // いまの選択がそのまま使えるなら維持する。
+            // ただし具体的な区間が要るグラフで「すべて」のままは使えない。
+            if (options.Contains(current) && !(needsConcrete && current == UiText.All))
+                return current;
+
+            return needsConcrete
+                ? options.FirstOrDefault(o => o != UiText.All) ?? UiText.All
+                : UiText.All;
         }
 
         // p-y グラフ時は「杭要素番号」、他（杭体区間を指す場合）は「杭区間番号」

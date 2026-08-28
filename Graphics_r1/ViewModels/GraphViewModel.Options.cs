@@ -75,13 +75,21 @@ namespace PileDesign.ViewModels
             }
 
             if (count <= 0) return;
-            if (PileSegmentOptions != null && PileSegmentOptions.Count == count + 1) return;
 
-            var opts = new ObservableCollection<string> { UiText.All };
-            foreach (int i in Enumerable.Range(1, count)) opts.Add(i.ToString());
-            PileSegmentOptions = opts;
-            if (!opts.Contains(SelectedPileSegmentOption))
-                SelectedPileSegmentOption = UiText.All;
+            // 選択肢が同じでも、選択値は見直す。
+            // グラフ種別を p-y (「すべて」可) から NMINT (「すべて」不可) へ切替えたときは
+            // 選択肢の数が変わらないことがあり、ここで抜けると区間が「すべて」のまま残って
+            // NMINT が空になる。
+            if (PileSegmentOptions == null || PileSegmentOptions.Count != count + 1)
+            {
+                var opts = new ObservableCollection<string> { UiText.All };
+                foreach (int i in Enumerable.Range(1, count)) opts.Add(i.ToString());
+                PileSegmentOptions = opts;
+            }
+
+            string resolved = ResolvePileSegmentOption(PileSegmentOptions);
+            if (resolved != SelectedPileSegmentOption)
+                SelectedPileSegmentOption = resolved;
         }
 
         private void UpdatePileSegmentDetails()
