@@ -326,12 +326,16 @@ namespace PileDesign.ViewModels
             OpenGroupSettlementWithBeamWindowCommand?.NotifyCanExecuteChanged();
 
             // Undo 履歴をクリアして読込状態を初期状態として保存
+            // SaveUndoState は全編集の集約点なので、解析後に編集した記録も立ってしまう。
+            // ファイルから復元した値を控えておき、あとで戻す。
+            bool changedSinceAnalysisOnLoad = InputChangedSinceAnalysis;
             _undoManager.Clear();
             SaveUndoState();
 
             // 読み込んだ直後は保存していない作業は無い。
             // (直前の SaveUndoState で編集扱いになるため、その後に戻す)
             MarkWorkSaved();
+            RestoreInputChangedSinceAnalysis(changedSinceAnalysisOnLoad);
 
             // 最終描画＆通知
             UpdateWindowImmediate();

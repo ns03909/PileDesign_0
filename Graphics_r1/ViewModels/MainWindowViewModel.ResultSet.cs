@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Models;
@@ -73,6 +73,16 @@ namespace PileDesign.ViewModels
                     : $"解析結果: {stamp} 実行";
             }
         }
+
+        /// <summary>
+        /// 読込の仕上げで、ファイルから復元した「編集された」記録へ戻す。
+        ///
+        /// 読込の最後に <c>SaveUndoState</c> を呼んで初期状態を積むが、あれは
+        /// <b>全編集の集約点</b>なので <see cref="MarkInputChangedSinceAnalysis"/> も走る。
+        /// 何も触っていないのに編集扱いになり、計算書を出すたびに確認が出ていた。
+        /// <c>MarkWorkSaved</c> と同じ役目。
+        /// </summary>
+        internal void RestoreInputChangedSinceAnalysis(bool changed) => InputChangedSinceAnalysis = changed;
 
         /// <summary>
         /// 入力が編集されたことを記録する。結果は破棄しない。

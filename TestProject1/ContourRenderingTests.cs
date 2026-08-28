@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Output;
 using System.Collections.Generic;
 using System.IO;
@@ -102,6 +102,45 @@ namespace TestProject1
 
             StringAssert.Contains(code, "projectData.InputChangedSinceAnalysis ?? snapshotIsSeparate",
                 "保存された編集状態を使っていません (参照の同一性だけで判定していないか)");
+        }
+
+        /// <summary>
+        /// 読込の仕上げの <c>SaveUndoState</c> のあとに、復元した値へ戻していること。
+        ///
+        /// <c>SaveUndoState</c> は全編集の集約点なので、そこで
+        /// <c>MarkInputChangedSinceAnalysis</c> も走る。戻さないと、開いただけで
+        /// 編集扱いになり、ファイルに記録した値が無意味になる。
+        /// </summary>
+        [TestMethod]
+        public void TheLoadPathRestoresTheFlagAfterSavingTheInitialUndoState()
+        {
+            var dir = new DirectoryInfo(Path.GetDirectoryName(typeof(ContourRenderingTests).Assembly.Location)!);
+            string? root = null;
+            for (; dir != null; dir = dir.Parent)
+            {
+                if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
+                {
+                    root = dir.FullName;
+                    break;
+                }
+            }
+            Assert.IsNotNull(root);
+
+            string code = File.ReadAllText(
+                Path.Combine(root!, "Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs"));
+
+            int captured = code.IndexOf("bool changedSinceAnalysisOnLoad = InputChangedSinceAnalysis;",
+                System.StringComparison.Ordinal);
+            // ファイル内には別の SaveUndoState もあるので、控えた行より後ろを探す
+            int undo = captured < 0 ? -1
+                : code.IndexOf("SaveUndoState();", captured, System.StringComparison.Ordinal);
+            int restored = code.IndexOf("RestoreInputChangedSinceAnalysis(changedSinceAnalysisOnLoad);",
+                System.StringComparison.Ordinal);
+
+            Assert.IsTrue(captured >= 0, "読込前の値を控えていません");
+            Assert.IsTrue(restored >= 0, "読込後に値を戻していません");
+            Assert.IsTrue(captured < undo && undo < restored,
+                "控える → SaveUndoState → 戻す の順になっていません");
         }
     }
 }
