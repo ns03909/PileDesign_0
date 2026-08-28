@@ -36,7 +36,6 @@ namespace TestProject1
         [
             "CustomDataGridCellStyle",
             "DeepBlueHeaderStyle",
-            "FormLabelStyle",
             "FormulaControlStyle",
             "GranularityClassTextBlockStyle",
             "SvgIconStyle16",
@@ -55,6 +54,7 @@ namespace TestProject1
             "DialogSecondaryButtonStyle",
             "ErrorTextStyle",
             "FadeInBorderStyle",
+            "FormLabelStyle",
             "MutedTextStyle",
             "SectionSubHeaderStyle",
             "SignedIntegerTextBoxStyle",

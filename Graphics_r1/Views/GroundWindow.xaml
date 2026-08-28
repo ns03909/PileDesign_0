@@ -32,7 +32,12 @@
         <conv:ZElevationConverter x:Key="ZElevationConverter"/>
 
         <!-- 共通フォームスタイル（Window.Resources に追加） -->
-        <Style x:Key="FormLabelStyle" TargetType="TextBlock">
+        <!--
+            共有の FormLabelStyle (Styles.xaml) とは別物。
+            あちらは余白だけの素のラベル、こちらは色を敷いた見出し風のラベル。
+            同じ名前だとこの画面だけ共有側が隠れ、共有側を直しても効かないので名前を分けた。
+        -->
+        <Style x:Key="GroundFormLabelStyle" TargetType="TextBlock">
           <Setter Property="Width" Value="100"/>
           <Setter Property="VerticalAlignment" Value="Center"/>
           <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
@@ -467,7 +472,7 @@
                     <!-- 計算例ボタン（右端） -->
                 </Grid.ColumnDefinitions>
                 
-                <!--<TextBlock Grid.Column="0" Text="地盤番号" Style="{StaticResource FormLabelStyle}"/>-->
+                <!--<TextBlock Grid.Column="0" Text="地盤番号" Style="{StaticResource GroundFormLabelStyle}"/>-->
                 <!-- Label を使うと Alt+アクセスや Target による関連付けができる -->
                 <Label Grid.Column="0" Target="{Binding ElementName=ComboBoxGroundNo}"
                         Content="_地盤番号"  VerticalAlignment="Center"/>
@@ -495,7 +500,7 @@
                 <!-- セパレータ -->
                 <Border Grid.Column="2" Style="{StaticResource VerticalSeparatorStyle}"/>
 
-                <!--<TextBlock Text="地盤符号"  Style="{StaticResource FormLabelStyle}"/>-->
+                <!--<TextBlock Text="地盤符号"  Style="{StaticResource GroundFormLabelStyle}"/>-->
                 <Label Grid.Column="3" Target="{Binding ElementName=TextBoxGroundRef}"
                         Content="_地盤符号"  VerticalAlignment="Center"/>
                 <TextBox Grid.Column="4" x:Name="TextBoxGroundRef" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center"
