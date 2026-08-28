@@ -1855,7 +1855,8 @@ namespace PileDesign.ViewModels
                     soilEmbedmentZs.Add(new EmbedmentZDataItem
                     {
                         Z = SoilEmbedment.ZDataItems[j].Z,
-                        IsChangeable = false,
+                        // 杭側と同じ理由で、保存されている値を引き継ぐ
+                        IsChangeable = SoilEmbedment.ZDataItems[j].IsChangeable,
                         //GroundLayerNo = SoilEmbedment.GroundNo,
                         GroundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1],
                         GroundDisp1 = SoilEmbedment.ZDataItems[j].GroundDisp1, // レベル1地盤変位
@@ -1903,7 +1904,11 @@ namespace PileDesign.ViewModels
                     zs.Add(new PileZDataItem
                     {
                         Z = SoilPiles[i].ZDataItems[j].Z,
-                        IsChangeable = false,
+                        // 保存されている値を引き継ぐ。false 固定にすると、自動分割で足した節点まで
+                        // 「動かせない」扱いになり、削除も Z の編集もできなくなる。
+                        // 開くたびに最小分割へ作り直していた頃は、どの節点も元から false だったので
+                        // 影響が出なかった。
+                        IsChangeable = SoilPiles[i].ZDataItems[j].IsChangeable,
                         //GroundLayerNo = PileGroundNo,
                         GroundInput = SoilPiles[i].ZDataItems[j].GroundInput,
                         GroundDisp1 = SoilPiles[i].ZDataItems[j].GroundDisp1, // レベル1地盤変位
