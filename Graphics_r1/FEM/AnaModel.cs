@@ -172,6 +172,14 @@ namespace PileDesign.FEM
         public List<bool> VectorDOFForcedDisp { get; private set; } = [];
 
         [JsonIgnore]
+        /// <summary>
+        /// 収束判定に使う残差。<b>‖R‖² / ‖F‖² (二乗の比)</b> であることに注意。
+        ///
+        /// 既定の許容値 1e-6 は<b>力の比では 1e-3</b> にあたる。
+        /// 「100 万分の 1 まで釣り合っている」と読むと桁を 3 つ読み違える。
+        /// 沈下解析 (VerticalLoadTransferMethod) は二乗しない比を使っており、
+        /// 同じ名前でも意味が違う (README の「暗黙の前提」参照)。
+        /// </summary>
         public double NormsROnNormsFint { get; private set; }
 
         // 安定性チェック用: ゼロ/負の対角成分を持つ自由度のリスト

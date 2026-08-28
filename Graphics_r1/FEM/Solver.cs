@@ -51,17 +51,30 @@ namespace PileDesign.FEM
                 incrementalDispVector = incrementalDispVector * relaxationFactor;
             }
 
-            // NaN/Infinity 検出: ソルバ出力にNaNが含まれる場合はゼロにクランプ
-            // （特異行列や数値不安定時に発生しうる）
-            bool hasNaN = false; // NaNDiagnostics.CheckVector(incrementalDispVector, "incrementalDispVector (post-solve)", anaModel);
-            if (hasNaN)
+            // ソルバ出力に NaN / ∞ が出ていないかを見る (特異行列や数値不安定で起こりうる)。
+            //
+            // 以前はここで NaN 成分を 0 にクランプしていた… ように見えるコードが残っていたが、
+            // 判定が `bool hasNaN = false;` で固定されており<b>一度も動いていなかった</b>。
+            // クランプを生き返らせると、特異なステップを黙って「0 変位」として通してしまい、
+            // 収束したように見えて釣り合っていない解になる。そちらの方が危ない。
+            //
+            // そこで数値は触らず、記録だけ残す。NaN はこの先の反復に伝播して発散として現れるので、
+            // 利用者には従来どおり未収束として伝わる。ログにはその起点が残る。
+            // NaNDiagnostics.CheckVector は DOF 名の解決まで行い反復ごとには重いので、
+            // ここでは見つけたときだけ詳細を作る。
+            for (int idx = 0; idx < incrementalDispVector.Count; idx++)
             {
-                // NaN成分をゼロにクランプ
-                for (int idx = 0; idx < incrementalDispVector.Count; idx++)
-                {
-                    if (!double.IsFinite(incrementalDispVector[idx]))
-                        incrementalDispVector[idx] = 0.0;
-                }
+                if (double.IsFinite(incrementalDispVector[idx])) continue;
+
+                int bad = 0;
+                for (int j = 0; j < incrementalDispVector.Count; j++)
+                    if (!double.IsFinite(incrementalDispVector[j])) bad++;
+
+                Serilog.Log.Warning(
+                    "[Solver] 変位増分に NaN/∞ が出ました ({Bad}/{Total} 自由度、最初は eq={First})。"
+                    + "以降の反復は発散します。",
+                    bad, incrementalDispVector.Count, idx);
+                break;
             }
 
             // 変位増分制限（発散防止のためのライン検索簡易版）

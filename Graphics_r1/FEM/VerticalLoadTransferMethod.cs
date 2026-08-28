@@ -780,6 +780,8 @@ namespace PileDesign.FEM
                 if (!converged)
                 {
                     // 収束しなかった場合は警告をトレースに出力し、計算は継続
+                    // 残差は二乗しない比。水平解析 (AnaModel.NormsROnNormsFint) は
+                    // 二乗の比なので、同じ数字でも意味が違う (README の「暗黙の前提」参照)。
                     double norm = VectorR.L2Norm() / VectorF.L2Norm();
                     System.Diagnostics.Trace.TraceWarning(
                         $"初期状態の収束計算が完了しませんでした。残差ノルム: {norm:E3}。計算結果の精度が低下する可能性があります。");
