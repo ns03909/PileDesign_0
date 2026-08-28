@@ -320,94 +320,7 @@
             <Setter Property="Foreground" Value="{StaticResource NikkenPaleRedBrush}"/>
         </Style>
 
-        <!--RibbonToggleButton 用: 大アイコン ToolTip スタイル-->
-        <Style x:Key="LargeIconToolTipRibbonToggleButtonStyle" TargetType="Fluent:ToggleButton">
-            <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
-            <Setter Property="ToolTip">
-                <Setter.Value>
-                    <ToolTip Placement="Mouse" HasDropShadow="True">
-                        <StackPanel Orientation="Horizontal" Margin="6">
-                            <!--LargeImageSource -> SmallImageSource を優先-->
-                            <Image Width="48" Height="48" Stretch="Uniform">
-                                <Image.Source>
-                                    <PriorityBinding>
-                                        <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                        <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                    </PriorityBinding>
-                                </Image.Source>
-                            </Image>
 
-                            <!--フォールバック: PlacementTarget.Content が SvgViewbox / Image のとき複製して表示-->
-                            <ContentPresenter Content="{Binding PlacementTarget.Content, RelativeSource={RelativeSource AncestorType=ToolTip}}">
-                                <ContentPresenter.ContentTemplate>
-                                    <DataTemplate>
-                                        <ContentControl>
-                                            <ContentControl.Resources>
-                                                <DataTemplate DataType="{x:Type svgc:SvgViewbox}">
-                                                    <svgc:SvgViewbox Source="{Binding Source}" Width="48" Height="48" Stretch="Uniform"/>
-                                                </DataTemplate>
-                                                <DataTemplate DataType="{x:Type Image}">
-                                                    <Image Source="{Binding Source}" Width="48" Height="48" Stretch="Uniform"/>
-                                                </DataTemplate>
-                                                <DataTemplate DataType="{x:Type sys:String}">
-                                                    <TextBlock Text="{Binding}" FontSize="14" VerticalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </ContentControl.Resources>
-                                            <ContentControl Content="{Binding}"/>
-                                        </ContentControl>
-                                    </DataTemplate>
-                                </ContentPresenter.ContentTemplate>
-                            </ContentPresenter>
-
-                            <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
-                                 Margin="12,0,0,0"
-                                 VerticalAlignment="Center"
-                                 TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </ToolTip>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!--RibbonButton 用: 大アイコンToolTip スタイル（LargeImageSource を優先し、なければ SmallImageSource。さらに Content が Svg の場合も対応）-->
-        <Style x:Key="LargeIconToolTipRibbonButtonStyle" TargetType="Fluent:Button">
-            <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
-            <Setter Property="ToolTip">
-                <Setter.Value>
-                    <ToolTip Placement="Mouse" HasDropShadow="True">
-                        <StackPanel Orientation="Horizontal" Margin="6">
-                            <!--まずは Ribbon の Large/SmallImageSource を優先-->
-                            <Image Width="48" Height="48" Stretch="Uniform">
-                                <Image.Source>
-                                    <PriorityBinding>
-                                        <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                        <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                        <!--最後に PlacementTarget.Content が Svg/Image の場合をフォールバックで試す-->
-                                    </PriorityBinding>
-                                </Image.Source>
-                            </Image>
-
-                            <!--フォールバック：もし PlacementTarget.Content が SvgViewbox の場合は再描画-->
-                            <ContentControl Visibility="Collapsed" x:Name="__SvgFallback">
-                                <ContentControl.Content>
-                                    <Binding RelativeSource="{RelativeSource AncestorType=ToolTip}" Path="PlacementTarget.Content"/>
-                                </ContentControl.Content>
-                                <ContentControl.ContentTemplate>
-                                    <DataTemplate>
-                                        <svgc:SvgViewbox Source="{Binding Path=Source}" Width="48" Height="48" Stretch="Uniform"/>
-                                    </DataTemplate>
-                                </ContentControl.ContentTemplate>
-                            </ContentControl>
-
-                            <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
-                                 Margin="12,0,0,0"
-                                 VerticalAlignment="Center"
-                                 TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </ToolTip>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <!-- 大アイコンToolTip汎用スタイル
              BasedOn で Styles.xaml 側の暗黙 Button Style (フラット見た目) を継承し、
@@ -772,11 +685,11 @@
 
             <!-- QuickAccessToolBar (タイトルバー上の Undo/Redo 等) -->
             <Fluent:Ribbon.ToolBarItems>
-                <Fluent:Button ToolTip="{Binding UndoToolTip}"
+                <Fluent:Button ToolTipService.ShowOnDisabled="True" ToolTip="{Binding UndoToolTip}"
                                Command="{Binding UndoCommand}"
                                Icon="pack://application:,,,/Icons/Undo.png"
                                Size="Small"/>
-                <Fluent:Button ToolTip="{Binding RedoToolTip}"
+                <Fluent:Button ToolTipService.ShowOnDisabled="True" ToolTip="{Binding RedoToolTip}"
                                Command="{Binding RedoCommand}"
                                Icon="pack://application:,,,/Icons/Redo.png"
                                Size="Small"/>
@@ -1363,18 +1276,23 @@
                 <Fluent:RibbonGroupBox Header="ビュー切替" ToolTip="ビュー切替" Icon="pack://application:,,,/Icons/ZoomFit.png">
                     <Fluent:Button Header="ズームフィット" Command="{Binding ZoomFitCommand}"
                                          Icon="pack://application:,,,/Icons/ZoomFit.png"
+                                         ToolTipService.ShowOnDisabled="True"
                                          ToolTip="ズームフィット (ctrl + 0)" SizeDefinition="Small, Small, Small"/>
                     <Fluent:Button Header="平面" Command="{Binding ViewXYPlaneCommand}"
                                          Icon="pack://application:,,,/Icons/TopView.png"
+                                         ToolTipService.ShowOnDisabled="True"
                                          ToolTip="平面 (Ctrl + Shift + T)" SizeDefinition="Small, Small, Small"/>
                     <Fluent:Button Header="正面" Command="{Binding ViewXZPlaneCommand}"
                                          Icon="pack://application:,,,/Icons/FrontView.png"
+                                         ToolTipService.ShowOnDisabled="True"
                                          ToolTip="正面 (Ctrl + Shift + F)" SizeDefinition="Small, Small, Small"/>
                     <Fluent:Button Header="右面" Command="{Binding ViewYZPlaneCommand}"
                                          Icon="pack://application:,,,/Icons/RightView.png"
+                                         ToolTipService.ShowOnDisabled="True"
                                          ToolTip="右面 (Ctrl + Shift + R)" SizeDefinition="Small, Small, Small"/>
                     <Fluent:Button Header="アイソメ" Command="{Binding ViewIsometricCommand}"
                                          Icon="pack://application:,,,/Icons/IsometricView.png"
+                                         ToolTipService.ShowOnDisabled="True"
                                          ToolTip="アイソメ (Ctrl + Shift + I)" SizeDefinition="Small, Small, Small"/>
                 </Fluent:RibbonGroupBox>
 
@@ -1518,6 +1436,7 @@
                          リボン・クイックヒント・ヘルプで手順が食い違わないようにするため。 -->
                     <Fluent:Button x:Name="ButtonFundamental"
                          Header="基本 設定"
+                         ToolTipService.ShowOnDisabled="True"
                          ToolTip="基本設定 (Ctrl+E)&#x0A;Z=0 の標高や材料モデルなど、プロジェクト全体に効く設定です。"
                          Command="{Binding OpenFundamentalWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/FundamentalWindow.png"
@@ -1525,6 +1444,7 @@
 
                     <Fluent:Button x:Name="RibbonButtonLoadCase"
                          Header="荷重"
+                         ToolTipService.ShowOnDisabled="True"
                          ToolTip="Step 2: 荷重条件の設定&#x0A;地震時に建物から杭基礎に伝わる慣性力の大きさと作用位置を決めます。"
                          Command="{Binding OpenLoadCaseWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/LoadCaseWindow.png"
@@ -1532,6 +1452,7 @@
 
                     <Fluent:Button x:Name="RibbonButtonGround"
                          Header="地盤"
+                         ToolTipService.ShowOnDisabled="True"
                          ToolTip="Step 3: 地盤条件の設定&#x0A;土層・N 値・地盤変位など、杭を支える地盤側の条件を決めます。"
                          PreviewMouseDown="ButtonGround_PreviewMouseDown"
                          Command="{Binding OpenGroundWindowCommand}"
@@ -1540,6 +1461,7 @@
 
                     <Fluent:Button x:Name="RibbonButtonPileBody"
                          Header="杭体"
+                         ToolTipService.ShowOnDisabled="True"
                          ToolTip="Step 4: 杭体の設定&#x0A;杭種・杭径・区間ごとの断面を決めます。"
                          PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
                          Command="{Binding OpenPileBodyWindowCommand}"
@@ -1548,6 +1470,7 @@
 
                     <Fluent:Button x:Name="RibbonButtonAxialForceCheck"
                          Header="軸力 確認"
+                         ToolTipService.ShowOnDisabled="True"
                          ToolTip="Step 6 の確認: 杭軸力&#x0A;「杭」→「軸力」タブで入力した各杭の軸力を一覧で見直します。"
                          PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
                          Command="{Binding AxialForceCheckCommand}"
@@ -1555,6 +1478,7 @@
                          Icon="pack://application:,,,/Icons/AxialForceVeirification.png"/>
 
                     <Fluent:Button x:Name="RibbonButtonExecuteAnalyse"
+                             ToolTipService.ShowOnDisabled="True"
                              ToolTip="Step 7: 杭要素分割 (F4)&#x0A;杭を解析用の要素に分け、地盤ばねを割り当てます。水平解析と沈下解析の前提です。"
                              Command="{Binding OpenElementDivisionWindowCommand}">
                         <Fluent:Button.Style>
@@ -1581,6 +1505,7 @@
                     <!-- 有効/無効はコマンドの CanExecute (杭要素分割済みか) に任せる。
                          IsEnabled を別途書くと、ボタンとキーボードで条件が二重管理になる。 -->
                     <Fluent:Button x:Name="RibbonButtonLateralLoadAnalysisSettlement"
+                         ToolTipService.ShowOnDisabled="True"
                          ToolTip="Step 8: 水平解析の実行 (F5)&#x0A;杭要素分割が済んでいると押せます。"
                          Command="{Binding OpenLateralLoadAnalysisWindowCommand}">
                         <Fluent:Button.Style>
@@ -1605,6 +1530,7 @@
                     <Fluent:Button x:Name="RibbonButtonSettlement"
                          PreviewMouseDown="ButtonButtonSettlement_PreviewMouseDown"
                          Command="{Binding OpenSettlementWindowCommand}"
+                         ToolTipService.ShowOnDisabled="True"
                          ToolTip="各杭の荷重-沈下関係を計算します。杭要素分割が前提です。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
@@ -1973,11 +1899,13 @@
 
                 <Fluent:RibbonGroupBox Header="グラフ・テーブル" ToolTip="グラフ・テーブル">
                     <Fluent:Button Header="グラフ 出力"
+                             ToolTipService.ShowOnDisabled="True"
                              ToolTip="杭変位応力グラフ・沈下曲線などの結果グラフウィンドウを開きます。"
                              Command="{Binding OpenGraphWindowCommand}"
                              LargeIcon="pack://application:,,,/Icons/Graph.png"
                              Icon="pack://application:,,,/Icons/Graph.png"/>
                     <Fluent:Button Header="テーブル 出力"
+                             ToolTipService.ShowOnDisabled="True"
                              ToolTip="解析結果をテーブル形式で表示します。"
                              Command="{Binding OpenTableWindowCommand}"
                              LargeIcon="pack://application:,,,/Icons/Table.png"
@@ -1986,6 +1914,7 @@
 
                 <Fluent:RibbonGroupBox Header="ログ" ToolTip="ログ">
                     <Fluent:Button Header="ログ 表示"
+                             ToolTipService.ShowOnDisabled="True"
                              ToolTip="解析ログウィンドウを開きます。"
                              Command="{Binding OpenLogWindowCommand}"
                              LargeIcon="pack://application:,,,/Icons/Log.png"
@@ -2129,6 +2058,7 @@
             <Fluent:RibbonTabItem Header="ツール(T)" KeyTip="T">
                 <Fluent:RibbonGroupBox Header="計算書" ToolTip="計算書">
                     <Fluent:Button Header="Docx 出力"
+                        ToolTipService.ShowOnDisabled="True"
                         ToolTip="計算書を Word (.docx) ファイルとして出力 (Ctrl+Shift+W)"
                         Command="{Binding OpenDocxOutputWindowCommand}"
                         LargeIcon="pack://application:,,,/Icons/DocxFileOutput.png"
@@ -2138,21 +2068,25 @@
 
                 <Fluent:RibbonGroupBox Header="エクスポート" ToolTip="エクスポート">
                     <Fluent:Button Header="3dm 出力"
+                        ToolTipService.ShowOnDisabled="True"
                         ToolTip="杭・根入れ部・基礎梁の3Dモデルを Rhino 3D (.3dm) ファイルにエクスポート"
                         Command="{Binding Export3dmFileCommand}"
                         LargeIcon="pack://application:,,,/Icons/rhino8-.png"
                         Icon="pack://application:,,,/Icons/rhino8-.png"/>
                     <Fluent:Button Header="DXF (3D)"
+                        ToolTipService.ShowOnDisabled="True"
                         ToolTip="杭・根入れ部・基礎梁の3Dモデルを DXF ファイルにエクスポート"
                         Command="{Binding ExportDxfFileCommand}"
                         LargeIcon="pack://application:,,,/Icons/dxf.png"
                         Icon="pack://application:,,,/Icons/dxf.png"/>
                     <Fluent:Button Header="DXF (伏図)"
+                        ToolTipService.ShowOnDisabled="True"
                         ToolTip="杭伏図（通り心・寸法・杭位置・基礎梁）を2D DXFファイルにエクスポート"
                         Command="{Binding ExportDxfPlanFileCommand}"
                         LargeIcon="pack://application:,,,/Icons/dxf.png"
                         Icon="pack://application:,,,/Icons/dxf.png"/>
                     <Fluent:Button Header="MGT 出力"
+                        ToolTipService.ShowOnDisabled="True"
                         ToolTip="FEM解析モデルを midas iGen / Gen MGT テキスト形式でエクスポート（非線形地盤ばね・慣性力・強制変位・荷重組合せを含む）"
                         Command="{Binding ExportMgtFileCommand}"
                         LargeIcon="pack://application:,,,/Icons/mgtFile.png"
@@ -2160,7 +2094,7 @@
                 </Fluent:RibbonGroupBox>
 
                 <Fluent:RibbonGroupBox Header="ライブラリ" ToolTip="ライブラリ">
-                    <Fluent:Button Header="杭断面 ライブラリ" ToolTip="杭ライブラリを確認"
+                    <Fluent:Button Header="杭断面 ライブラリ" ToolTipService.ShowOnDisabled="True" ToolTip="杭ライブラリを確認"
                         Command="{Binding OpenPileSectionLibraryWindowCommand}"
                         LargeIcon="pack://application:,,,/Icons/PileSectionLibrary.png"
                         Icon="pack://application:,,,/Icons/PileSectionLibrary.png"/>
@@ -2168,24 +2102,28 @@
 
                 <Fluent:RibbonGroupBox Header="画像" ToolTip="画像">
                     <Fluent:Button Header="画像コピー (x1.0)"
+                             ToolTipService.ShowOnDisabled="True"
                              ToolTip="現在の画面を画像としてクリップボードにコピー（等倍）"
                              Command="{Binding ImageCopyCommand}"
                              LargeIcon="pack://application:,,,/Icons/CopyPicture1.png"
                              Icon="pack://application:,,,/Icons/CopyPicture1.png"
                              CommandParameter="1.0"/>
                     <Fluent:Button Header="画像コピー (x2.0)"
+                             ToolTipService.ShowOnDisabled="True"
                              ToolTip="現在の画面を画像としてクリップボードにコピー（2倍解像度）"
                              Command="{Binding ImageCopyCommand}"
                              LargeIcon="pack://application:,,,/Icons/CopyPicture2.png"
                              Icon="pack://application:,,,/Icons/CopyPicture2.png"
                              CommandParameter="2.0"/>
                     <Fluent:Button Header="画像保存 (x1.0)"
+                             ToolTipService.ShowOnDisabled="True"
                              ToolTip="現在の画面を画像ファイルとして保存（等倍）"
                              Command="{Binding ImageSaveCommand}"
                              LargeIcon="pack://application:,,,/Icons/SavePicture1.png"
                              Icon="pack://application:,,,/Icons/SavePicture1.png"
                              CommandParameter="1.0"/>
                     <Fluent:Button Header="画像保存 (x2.0)"
+                             ToolTipService.ShowOnDisabled="True"
                              ToolTip="現在の画面を画像ファイルとして保存（2倍解像度）"
                              Command="{Binding ImageSaveCommand}"
                              LargeIcon="pack://application:,,,/Icons/SavePicture2.png"
@@ -2194,7 +2132,7 @@
                 </Fluent:RibbonGroupBox>
 
                 <Fluent:RibbonGroupBox Header="サブプログラム" ToolTip="サブプログラム">
-                    <Fluent:Button Header="Chang" ToolTip="Chang"
+                    <Fluent:Button Header="Chang" ToolTipService.ShowOnDisabled="True" ToolTip="Chang"
                         Command="{Binding OpenChangWindowCommand}"
                         LargeIcon="pack://application:,,,/Icons/ChangPile.png"
                         Icon="pack://application:,,,/Icons/ChangPile.png"/>
@@ -2271,6 +2209,7 @@
                 <Fluent:RibbonGroupBox Header="ヘルプ" ToolTip="ヘルプ">
                     <Fluent:Button x:Name="RibbonButtonQuickStart"
                                  Header="クイック スタート"
+                                 ToolTipService.ShowOnDisabled="True"
                                  ToolTip="入力から解析までの流れを、順を追って説明します。はじめての方はここから。"
                                  Command="{Binding OpenQuickStartHelpCommand}"
                                  LargeIcon="pack://application:,,,/Icons/Help.png"
@@ -2278,12 +2217,14 @@
                                  KeyTip="K"/>
                     <Fluent:Button x:Name="RibbonButtonHelp"
                                  Header="ヘルプ"
+                                         ToolTipService.ShowOnDisabled="True"
                                          ToolTip="ヘルプ (F1)"
                                  Command="{Binding OpenHelpWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/Help.png"
                                  Icon="pack://application:,,,/Icons/Help.png"/>
                     <Fluent:Button x:Name="RibbonButtonHelpChat"
                                  Header="ヘルプ チャット"
+                                 ToolTipService.ShowOnDisabled="True"
                                  ToolTip="質問入力でヘルプを検索"
                                  Command="{Binding OpenHelpChatWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/HelpChat.png"
@@ -2299,6 +2240,7 @@
                                    KeyTip="Q"/>
                     <Fluent:Button x:Name="RibbonButtonShortcutKeys"
                                  Header="ショート カット"
+                                 ToolTipService.ShowOnDisabled="True"
                                  ToolTip="ショートカット (Ctrl + /)"
                                  Command="{Binding OpenShortcutKeysWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/ShortcutKeys.png"
@@ -2306,12 +2248,14 @@
                                  />
                     <Fluent:Button x:Name="RibbonButtonAbout"
                                  Header="バージョン 情報"
+                                 ToolTipService.ShowOnDisabled="True"
                                  ToolTip="お使いのバージョンと、プログラム更新履歴概要を確認します。"
                                  Command="{Binding OpenAboutWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/cover.png"
                                  Icon="pack://application:,,,/Icons/cover.png"
                                  KeyTip="V"/>
                     <Fluent:Button Header="検証"
+                                 ToolTipService.ShowOnDisabled="True"
                                  ToolTip="設計例によるプログラムの検証"
                                  Command="{Binding OpenVerificationWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/Verification.png"

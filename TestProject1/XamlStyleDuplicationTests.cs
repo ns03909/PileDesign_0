@@ -82,9 +82,7 @@ namespace TestProject1
             "IconImageStyle",
             "BoldLargeParagraphStyle",
             "BoldMiddleParagraphStyle",
-            "SvgIconStyle32",
-            "LargeIconToolTipRibbonToggleButtonStyle",
-            "LargeIconToolTipRibbonButtonStyle"
+            "SvgIconStyle32"
         ];
 
         private static readonly Regex StyleKey =
