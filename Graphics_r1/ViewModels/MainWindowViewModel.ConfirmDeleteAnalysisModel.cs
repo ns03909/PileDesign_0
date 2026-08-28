@@ -58,14 +58,39 @@ namespace PileDesign.ViewModels
         /// 確認を<b>開くときではなく保存するとき</b>に出すためのもの。開くだけなら入力は
         /// 変わらない (編集はすべて複製に対して行う) ので、中を見たいだけの人に結果の破棄を聞くことになっていた。
         ///
-        /// 杭要素分割は破棄の対象に含めない。ここで保存される分割そのものが
-        /// 画面に出ているもので、捨てられるわけではない。
-        /// 「杭要素分割が削除されます」と出すと、分割を保存する操作の説明として食い違う。
+        /// 杭要素分割そのものは破棄の対象ではない。ここで保存される分割が画面に出ている
+        /// もので、捨てられるわけではないため、文面にも出さない。
+        ///
+        /// 水平解析の結果は残る (解析時の入力ごと切り離してある) が、分割が変われば
+        /// 再解析が要る。<b>何も消えなくても、影響があるなら知らせる</b>。
+        /// 分割の中身が実際に変わったかは見ていない。見落として黙るより、
+        /// 保存を押したときに毎回知らせるほうが安全側。
         /// </summary>
         public bool ConfirmSaveElementDivision()
         {
+            bool discardSettlement = HasSettlementResults();
+            bool horizontalGoesStale = IsHorizontalAnalysisDone || HasAnalysisResultSet;
+
+            // 影響を受ける結果が無ければ黙って通す
+            if (discardSettlement || horizontalGoesStale)
+            {
+                var parts = new List<string>();
+                if (discardSettlement) parts.Add("・沈下解析の結果は削除されます");
+                if (horizontalGoesStale) parts.Add("・水平解析の結果は残りますが、再解析が必要になります");
+
+                string msg = "杭要素分割を保存すると、解析結果に次の影響があります。\n\n"
+                           + string.Join("\n", parts)
+                           + "\n\n保存しますか？";
+
+                var result = MessageService.Show(msg, "確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (result != MessageBoxResult.Yes) return false;
+
+                if (discardSettlement) ClearSettlementResults();
+            }
+
             MarkInputChangedSinceAnalysis();
-            return ConfirmDiscardInvalidatedByInputChange(includeElementSplit: false);
+            UpdateWindowImmediate();
+            return true;
         }
 
         /// <summary>
