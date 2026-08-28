@@ -48,9 +48,9 @@ namespace PileDesign.Views
                 invisibleFBNames = new HashSet<string>();
                 hasInvisiblePile = false;
 
-                if (viewModel.CurrentInputModel?.PileLayoutItems != null)
+                if (viewModel.ResultInputModel?.PileLayoutItems != null)
                 {
-                    foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                    foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         if (pile.IsVisible)
                             foreach (var beam in pile.Beams) visibleBeams.Add(beam);
@@ -58,9 +58,9 @@ namespace PileDesign.Views
                             hasInvisiblePile = true;
                     }
                 }
-                if (viewModel.CurrentInputModel?.FoundationBeamInput?.Beams != null)
+                if (viewModel.ResultInputModel?.FoundationBeamInput?.Beams != null)
                 {
-                    var beams = viewModel.CurrentInputModel.FoundationBeamInput.Beams;
+                    var beams = viewModel.ResultInputModel.FoundationBeamInput.Beams;
                     for (int i = 0; i < beams.Count; i++)
                     {
                         if (!beams[i].IsVisible)
@@ -70,9 +70,9 @@ namespace PileDesign.Views
             }
 
             var lc = LoadCases.GetLoadCase(
-                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+                viewModel.ResultInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
             var lcomb = LoadCombinations.GetLoadCombination(
-                viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+                viewModel.ResultInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
             if (lc == null || lcomb == null) return;
 
             double maxDisp = 0;
@@ -171,10 +171,10 @@ namespace PileDesign.Views
             // 表示対象杭の杭番号セットを構築 (hasInvisiblePile 時のみ。RotationalSpring と RigidBody の
              // 杭連結フィルタに使用 — 非表示杭の代表節点〜接合節点〜杭頭リンクを描かないため)
             HashSet<int> visiblePileNos = null;
-            if (hasInvisiblePile && viewModel.CurrentInputModel?.PileLayoutItems != null)
+            if (hasInvisiblePile && viewModel.ResultInputModel?.PileLayoutItems != null)
             {
                 visiblePileNos = new HashSet<int>();
-                foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                 {
                     if (pile.IsVisible) visiblePileNos.Add(pile.No);
                 }
@@ -217,9 +217,9 @@ namespace PileDesign.Views
             if (anaModel.RigidBodies != null)
             {
                 var capNodeToJointZ = new Dictionary<string, double>();
-                if (viewModel.CurrentInputModel?.PileLayoutItems != null)
+                if (viewModel.ResultInputModel?.PileLayoutItems != null)
                 {
-                    foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                    foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         // v2 セマンティクス: pile.Z は接合節点 Z (= JointZ)
                         capNodeToJointZ[$"CapNode-{pile.No}"] = pile.Z;
@@ -278,7 +278,7 @@ namespace PileDesign.Views
             }
 
             // 変形後杭体形状の描画
-            if (viewModel.IsPileSectionVisible && viewModel.CurrentInputModel?.PileLayoutItems != null)
+            if (viewModel.IsPileSectionVisible && viewModel.ResultInputModel?.PileLayoutItems != null)
             {
                 DrawDeformedPileSections(viewModel, anaModel, selectedLoadCase, selectedLoadCombination,
                     dispScale, hasInvisiblePile, brush, nodeToValue, deformColorGeoms);
@@ -354,7 +354,7 @@ namespace PileDesign.Views
             Dictionary<Node, double>? nodeToValue = null,
             List<ColorBaredGeometry>? colorGeoms = null)
         {
-            var fbInput = viewModel.CurrentInputModel?.FoundationBeamInput;
+            var fbInput = viewModel.ResultInputModel?.FoundationBeamInput;
             if (fbInput?.Beams == null || fbInput.Sections == null) return;
 
             var fbElemDict = new Dictionary<string, FoundationBeam>();
@@ -530,7 +530,7 @@ namespace PileDesign.Views
             double flattening = viewModel.CanvasThreeDView.Flattening;
             double scale = viewModel.CanvasThreeDView.Scale;
 
-            foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+            foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
             {
                 if (!pile.IsVisible) continue;
                 if (pile.PileNodes == null || pile.PileNodes.Count < 2) continue;
@@ -542,9 +542,9 @@ namespace PileDesign.Views
                 // 杭要素分割後のセグメント情報を取得（SoilPile経由）
                 ObservableCollection<PileBodySegment> soilPileSegments = null;
                 if (pile.SoilPileAltNo > 0 &&
-                    pile.SoilPileAltNo <= viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count)
+                    pile.SoilPileAltNo <= viewModel.ResultInputModel.ElementDivision.SoilPiles.Count)
                 {
-                    soilPileSegments = viewModel.CurrentInputModel.ElementDivision
+                    soilPileSegments = viewModel.ResultInputModel.ElementDivision
                         .SoilPiles[pile.SoilPileAltNo - 1].PileBodySegments;
                 }
 

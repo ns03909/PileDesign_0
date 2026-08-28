@@ -149,6 +149,10 @@ namespace PileDesign.Models
                 dst.Beams = MapCollection(src.Beams, beamIndex, snapshotModel.Beams);
                 dst.HorizontalSoilSprings =
                     MapCollection(src.HorizontalSoilSprings, springIndex, snapshotModel.HorizontalSoilSprings);
+                // 杭Zばね (P-S 非線形ばね) も張り直す。ここが抜けていると、杭を一部だけ
+                // 表示したときに杭Zばねの反力が消える (可視セットに入らないため)。
+                dst.VerticalNodeSprings =
+                    [.. MapCollection(src.VerticalNodeSprings, springIndex, snapshotModel.HorizontalSoilSprings)];
 
                 dst.PileTopRotationalSpring = src.PileTopRotationalSpring != null
                     && rotIndex.TryGetValue(src.PileTopRotationalSpring, out int ri)

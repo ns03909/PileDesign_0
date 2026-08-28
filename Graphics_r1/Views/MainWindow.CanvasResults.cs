@@ -63,10 +63,12 @@ namespace PileDesign.Views
                     visibleBeams = new HashSet<Beam>();
                     visibleFemNodes = new HashSet<Node>();
                     visibleSoilSprings = new HashSet<HorizontalSoilSpring>();
+                    int visiblePileCount = 0;
                     foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         if (pile.IsVisible)
                         {
+                            visiblePileCount++;
                             foreach (var beam in pile.Beams) visibleBeams.Add(beam);
                             foreach (var node in pile.PileNodes) visibleFemNodes.Add(node);
                             foreach (var spring in pile.HorizontalSoilSprings) visibleSoilSprings.Add(spring);
@@ -74,6 +76,25 @@ namespace PileDesign.Views
                             if (pile.VerticalNodeSprings != null)
                                 foreach (var spring in pile.VerticalNodeSprings) visibleSoilSprings.Add(spring);
                         }
+                    }
+
+                    // 表示する杭はあるのに、その杭と FEM の対応付けが 1 件も無い場合
+                    // (対応表を持たない旧ファイル、対応付けの復元に失敗した等)。
+                    // このまま絞り込むと、表示中の杭のぶんまで含めて結果が丸ごと消え、
+                    // 利用者には「一部だけ表示すると結果が出ない」としか見えない。
+                    // 絞り込めないものは絞り込まず、代わりにログへ残す。
+                    if (visiblePileCount > 0
+                        && visibleBeams.Count == 0
+                        && visibleFemNodes.Count == 0
+                        && visibleSoilSprings.Count == 0)
+                    {
+                        Serilog.Log.Warning(
+                            "[結果表示] 表示中の杭 {Count} 本と解析結果の対応付けが取れないため、"
+                            + "杭ごとの絞り込みをやめて全体を描画します。", visiblePileCount);
+                        visibleBeams = null;
+                        visibleFemNodes = null;
+                        visibleSoilSprings = null;
+                        hasInvisiblePile = false;
                     }
                 }
             }

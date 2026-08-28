@@ -58,9 +58,9 @@ namespace PileDesign.Views
 
             // 選択ケース/組合せを取得
             var selectedLoadCase = LoadCases.GetLoadCase(
-                viewModel.CurrentInputModel?.LoadCasesInput?.AllLoadCases, viewModel.SelectedLoadCaseName);
+                viewModel.ResultInputModel?.LoadCasesInput?.AllLoadCases, viewModel.SelectedLoadCaseName);
             var selectedLoadCombination = LoadCombinations.GetLoadCombination(
-                viewModel.CurrentInputModel?.LoadCasesInput?.LoadCombinations, viewModel.SelectedLoadCombinationName);
+                viewModel.ResultInputModel?.LoadCasesInput?.LoadCombinations, viewModel.SelectedLoadCombinationName);
             if (selectedLoadCase == null || selectedLoadCombination == null)
             {
                 HideBeamResultTooltip();
@@ -440,7 +440,7 @@ namespace PileDesign.Views
         /// </summary>
         private void UpdateMemberAngleTooltip(MainWindowViewModel viewModel, Point mousePos)
         {
-            var inputModel = viewModel.CurrentInputModel;
+            var inputModel = viewModel.ResultInputModel;
             var fbBeams = inputModel?.FoundationBeamInput?.Beams;
             if (fbBeams == null || fbBeams.Count == 0) { HideBeamResultTooltip(); return; }
 
@@ -543,7 +543,7 @@ namespace PileDesign.Views
         {
             if (Canvas3DLayout == null || ColorBarCanvas == null) return;
 
-            var inputModel = viewModel.CurrentInputModel;
+            var inputModel = viewModel.ResultInputModel;
             var fbBeams = inputModel?.FoundationBeamInput?.Beams;
             if (fbBeams == null || fbBeams.Count == 0) return;
 

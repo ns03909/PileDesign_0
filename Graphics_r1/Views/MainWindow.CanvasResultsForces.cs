@@ -226,9 +226,9 @@ namespace PileDesign.Views
 
             // 選択された荷重ケース・組合せを取得
             var selectedLoadCase = LoadCases.GetLoadCase(
-                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+                viewModel.ResultInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
             var selectedLoadCombination = LoadCombinations.GetLoadCombination(
-                viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+                viewModel.ResultInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
 
             // 荷重ケースに対応する結果を検索するヘルパー
             // 重要: FirstOrDefault で先頭ステップを拾うと途中段階の小さい値になるため、
@@ -258,9 +258,10 @@ namespace PileDesign.Views
                 if (sp == null) return false;
                 bool isDoatsu = sp.Name != null && sp.Name.StartsWith("土圧合力ばね");
                 if (isDoatsu) return !apHiddenForCollect;
-                // 杭関連: visibleSoilSprings が null (全杭可視) なら全部表示、
-                //         非 null (一部以上の杭が非可視) ならセットに含まれるもののみ表示
-                //         (全杭非表示 → セット空 → false で全部スキップ)
+                // 杭関連: visibleSoilSprings が null (全杭可視、または対応付けが取れず
+                //         絞り込みを諦めた場合) なら全部表示。
+                //         非 null ならセットに含まれるもののみ表示
+                //         (全杭非表示 → セット空 → false で全部スキップ。これは意図どおり)
                 return visibleSoilSprings == null || visibleSoilSprings.Contains(sp);
             }
 
@@ -473,7 +474,7 @@ namespace PileDesign.Views
             // 3b) 杭先端反力の描画（RH / RZ / R 選択時）
             if (springType == "RH" || springType == "RZ" || springType == "R")
             {
-                foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                 {
                     if (!pile.IsVisible) continue;
                     var tipNode = pile.PileNodes?.LastOrDefault();
@@ -675,9 +676,9 @@ namespace PileDesign.Views
 
             // 選択された荷重ケース・組合せ
             var selectedLoadCase = LoadCases.GetLoadCase(
-                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+                viewModel.ResultInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
             var selectedLoadCombination = LoadCombinations.GetLoadCombination(
-                viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+                viewModel.ResultInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
 
             FEM.HorizontalSpringResult FindSpringResult(FEM.HorizontalSoilSpring spring)
             {
@@ -701,7 +702,7 @@ namespace PileDesign.Views
             var perPile = new Dictionary<Models.InputData.PileLayoutDataItem, List<(FEM.HorizontalSoilSpring s, double value, double tributary, double fx, double fy, double fz)>>();
             var allValues = new ObservableCollection<double>();
 
-            foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+            foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
             {
                 if (!pile.IsVisible) continue;
                 if (pile.PileNodes == null) continue;
@@ -875,9 +876,9 @@ namespace PileDesign.Views
 
             // 選択された荷重ケース・組合せ
             var selectedLoadCase = LoadCases.GetLoadCase(
-                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+                viewModel.ResultInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
             var selectedLoadCombination = LoadCombinations.GetLoadCombination(
-                viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+                viewModel.ResultInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
 
             var entries = new System.Collections.Generic.List<(Point3D location, double valueX, double valueY, double valueMag)>();
 
@@ -885,7 +886,7 @@ namespace PileDesign.Views
             var pileTopBeams = anaModel.Beams?.Where(b => b.IsPileHeadElement).ToList()
                                ?? new System.Collections.Generic.List<FEM.Beam>();
 
-            foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+            foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
             {
                 if (!pile.IsVisible) continue;
 
@@ -1044,9 +1045,9 @@ namespace PileDesign.Views
             bool isMoment = content.Contains('M');
 
             var selectedLoadCase = LoadCases.GetLoadCase(
-                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+                viewModel.ResultInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
             var selectedLoadCombination = LoadCombinations.GetLoadCombination(
-                viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+                viewModel.ResultInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
             if (selectedLoadCase == null || selectedLoadCombination == null) return;
 
             var entries = new System.Collections.Generic.List<(Point3D location, double valueX, double valueY, double valueMag)>();
@@ -1055,7 +1056,7 @@ namespace PileDesign.Views
             var rigidLinkBeams = anaModel.Beams?.Where(b => b.Name.StartsWith("RigidLink-")).ToList()
                                  ?? new System.Collections.Generic.List<FEM.Beam>();
 
-            foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+            foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
             {
                 if (!pile.IsVisible) continue;
 

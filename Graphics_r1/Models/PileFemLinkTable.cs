@@ -11,7 +11,7 @@ namespace PileDesign.Models
     /// 杭 → FEM 要素の対応をインデックスで保存するための表。
     ///
     /// <see cref="PileLayoutDataItem"/> の Beams / PileNodes / SoilNodes /
-    /// HorizontalSoilSprings / PileTopRotationalSpring は解析ランタイム状態として
+    /// HorizontalSoilSprings / VerticalNodeSprings / PileTopRotationalSpring は解析ランタイム状態として
     /// [JsonIgnore] になっており、ファイルには残らない。これらは
     /// <see cref="AnalysisModelling"/> が FEM モデルを組むときにだけ設定されるため、
     /// 解析結果を含むファイルを開き直しても杭からは要素を辿れず、
@@ -48,6 +48,9 @@ namespace PileDesign.Models
                     PileNodeIndices = ToIndices(pile.PileNodes, nodeIndex),
                     SoilNodeIndices = ToIndices(pile.SoilNodes, nodeIndex),
                     HorizontalSoilSpringIndices = ToIndices(pile.HorizontalSoilSprings, springIndex),
+                    // 杭Zばね (P-S 非線形ばね)。AnaModel では HorizontalSoilSprings に
+                    // 登録されているので、索引は水平ばねと同じものを使う。
+                    VerticalNodeSpringIndices = ToIndices(pile.VerticalNodeSprings, springIndex),
                     RotationalSpringIndex = pile.PileTopRotationalSpring != null
                         && rotIndex.TryGetValue(pile.PileTopRotationalSpring, out int ri) ? ri : -1,
                 });
@@ -78,6 +81,8 @@ namespace PileDesign.Models
                 pile.Beams = FromIndices(link.BeamIndices, model.Beams);
                 pile.HorizontalSoilSprings =
                     FromIndices(link.HorizontalSoilSpringIndices, model.HorizontalSoilSprings);
+                pile.VerticalNodeSprings =
+                    [.. FromIndices(link.VerticalNodeSpringIndices, model.HorizontalSoilSprings)];
 
                 pile.PileTopRotationalSpring =
                     link.RotationalSpringIndex >= 0
@@ -127,6 +132,9 @@ namespace PileDesign.Models
         public List<int> PileNodeIndices { get; set; } = [];
         public List<int> SoilNodeIndices { get; set; } = [];
         public List<int> HorizontalSoilSpringIndices { get; set; } = [];
+
+        /// <summary>杭Zばね (P-S 非線形ばね)。索引は水平ばねと同じ AnaModel.HorizontalSoilSprings。</summary>
+        public List<int> VerticalNodeSpringIndices { get; set; } = [];
 
         /// <summary>杭頭回転ばねのインデックス。無ければ -1。</summary>
         public int RotationalSpringIndex { get; set; } = -1;
