@@ -138,8 +138,9 @@ namespace PileDesign.Views
 
         private void HelpButton_Click(object sender, RoutedEventArgs e)
         {
-            var help = new HelpWindow("chang-uniform-ground") { Owner = this };
-            help.ShowDialog();
+            // 共通の開き口を通す。ここだけ ShowDialog にすると、
+            // このウィンドウを見ながらヘルプを読めない (他は別 UI スレッドのモードレス)。
+            ViewModels.MainWindowViewModel.OpenHelpWindowAt("chang-uniform-ground", null);
         }
 
         private void Changs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
