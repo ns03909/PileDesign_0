@@ -86,5 +86,30 @@ namespace TestProject1
             Assert.IsTrue(checkedLoops >= 3,
                 $"検査できた杭ループが {checkedLoops} 個です (N-M / Q-N / M-φ の 3 個以上のはず)");
         }
+
+        /// <summary>
+        /// N-M 図の横軸は、画面の MNINT と同じく「解析軸力を使う」を反映すること。
+        ///
+        /// 反映していないと、同じ断面の同じ図なのに画面と計算書で点が横にずれる。
+        /// Q-N 図は画面側も反映していないので対象外 (揃えるならまず画面の方針を決める)。
+        /// </summary>
+        [TestMethod]
+        public void NmChart_UsesTheAnalysisAxialForceOptionLikeTheScreen()
+        {
+            string root = FindSolutionRoot();
+            string docx = File.ReadAllText(Path.Combine(root, "Graphics_r1", "Output", "WordDocument.Charts.cs"));
+            string screen = File.ReadAllText(Path.Combine(root, "Graphics_r1", "ViewModels", "GraphViewModel.cs"));
+
+            // 画面側の式。これが変わったら計算書側も見直す必要がある
+            StringAssert.Contains(screen, "UseAnalysisAxialForce",
+                "画面の軸力オプションが見つかりません (名前が変わった可能性)");
+            StringAssert.Contains(screen, "axialForce - analysisFxi",
+                "画面の軸力の求め方が変わっています");
+
+            StringAssert.Contains(docx, "inputModel.UseAnalysisAxialForce",
+                "計算書の N-M 図が「解析軸力を使う」を見ていません");
+            StringAssert.Contains(docx, "axialForce - analysisFxi",
+                "計算書の N-M 図の軸力が画面と同じ式になっていません");
+        }
     }
 }

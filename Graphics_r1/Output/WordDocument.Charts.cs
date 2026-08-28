@@ -147,6 +147,7 @@ namespace PileDesign.Output
 
                                         // この区間Noに一致するビーム群の中から、当該ケースの最大曲げを抽出
                                         double maxMomentInPile = double.MinValue;
+                                        double analysisFxi = 0; // 解析で出た軸力
                                         for (int iSeg = 0; iSeg < soilPileForItem.PileBodySegments.Count; iSeg++)
                                         {
                                             var segI = soilPileForItem.PileBodySegments[iSeg];
@@ -158,7 +159,10 @@ namespace PileDesign.Output
 
                                             var cum = GetBeamResultCached(beam, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
                                             if (cum != null)
+                                            {
                                                 maxMomentInPile = Math.Max(maxMomentInPile, cum.MabsMax);
+                                                analysisFxi = cum.Fxi;
+                                            }
                                         }
 
                                         // 解析結果が見つからなかった場合は散布点を追加しない
@@ -166,14 +170,21 @@ namespace PileDesign.Output
                                         //  X 軸上に貼り付いて誤解を招くため)
                                         if (maxMomentInPile == double.MinValue) continue;
 
+                                        // 「解析軸力を使う」を画面の MNINT と同じ扱いにする。
+                                        // Fxi は圧縮が負なので符号を反転して足す。
+                                        // 反映しないと、同じ図なのに画面と計算書で点が横にずれる。
+                                        double plotAxialForce = inputModel.UseAnalysisAxialForce
+                                            ? axialForce - analysisFxi
+                                            : axialForce;
+
                                         if (loadCase.Level == 1)
                                         {
-                                            axialForceResultsLevel1.Add(axialForce);
+                                            axialForceResultsLevel1.Add(plotAxialForce);
                                             momentResultsLevel1.Add(maxMomentInPile);
                                         }
                                         else if (loadCase.Level == 2)
                                         {
-                                            axialForceResultsLevel2.Add(axialForce);
+                                            axialForceResultsLevel2.Add(plotAxialForce);
                                             momentResultsLevel2.Add(maxMomentInPile);
                                         }
 
