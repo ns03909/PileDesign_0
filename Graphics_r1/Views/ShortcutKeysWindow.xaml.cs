@@ -22,6 +22,7 @@ namespace PileDesign.Views
                 new("ファイル", "開く", "Ctrl + O"),
                 new("ファイル", "保存", "Ctrl + S"),
                 new("ファイル", "名前を付けて保存", "Ctrl + Shift + S"),
+                new("ファイル", "計算書 (Word) の出力", "Ctrl + Shift + W"),
 
                 // 入力ウィンドウ
                 new("入力ウィンドウ", "基本設定", "Ctrl + E"),
@@ -67,6 +68,7 @@ namespace PileDesign.Views
                 new("ヘルプ", "ヘルプ", "F1"),
                 new("ヘルプ", "クイックヒント", "Shift + F1"),
                 new("ヘルプ", "ショートカット一覧", "Ctrl + /"),
+                new("ヘルプ", "コマンドパレット", "Ctrl + Shift + P"),
             };
 
             var view = CollectionViewSource.GetDefaultView(items);
