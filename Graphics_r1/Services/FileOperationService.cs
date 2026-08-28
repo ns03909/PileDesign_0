@@ -42,7 +42,8 @@ namespace PileDesign.Services
         public void SaveProjectData(string filePath, InputModel inputModel, AnaModel? anaModel,
             IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
-            PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null)
+            PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
+            bool inputChangedSinceAnalysis = false)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -60,6 +61,7 @@ namespace PileDesign.Services
                 // 解析結果を保存しないときはスナップショットも不要
                 ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
                 ResultCapturedAt = anaModel != null ? resultCapturedAt : null,
+                InputChangedSinceAnalysis = anaModel != null ? inputChangedSinceAnalysis : null,
                 PileFemLinks = anaModel != null ? pileFemLinks : null,
                 IsElementSplit = isElementSplit,
             };
@@ -115,7 +117,8 @@ namespace PileDesign.Services
         public async Task SaveProjectDataAsync(string filePath, InputModel inputModel, AnaModel? anaModel,
             IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
-            PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null)
+            PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
+            bool inputChangedSinceAnalysis = false)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -133,6 +136,7 @@ namespace PileDesign.Services
                 // 解析結果を保存しないときはスナップショットも不要
                 ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
                 ResultCapturedAt = anaModel != null ? resultCapturedAt : null,
+                InputChangedSinceAnalysis = anaModel != null ? inputChangedSinceAnalysis : null,
                 PileFemLinks = anaModel != null ? pileFemLinks : null,
                 IsElementSplit = isElementSplit,
             };

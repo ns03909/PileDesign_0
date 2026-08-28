@@ -60,7 +60,8 @@ namespace PileDesign.ViewModels
                     await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
                         CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
                         Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
-                        IsElementSplit);
+                        IsElementSplit,
+                        InputChangedSinceAnalysis);
                     ShowToast("保存が完了しました。");
                     MarkWorkSaved();
 
@@ -98,7 +99,8 @@ namespace PileDesign.ViewModels
                     await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
                         CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
                         Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
-                        IsElementSplit);
+                        IsElementSplit,
+                        InputChangedSinceAnalysis);
                     ShowToast("保存が完了しました。");
                     MarkWorkSaved();
                 }
@@ -620,8 +622,12 @@ namespace PileDesign.ViewModels
                 IsElementSplit = IsElementSplit,
             };
 
-            // 保存時点で入力が編集済みだった場合のみ、スナップショットが現在の入力と別物になる
-            SetRestoredResultSet(set, changedSinceAnalysis: snapshotIsSeparate);
+            // 保存された値をそのまま使う。旧ファイルには無いので、その場合だけ
+            // 従来の判定 (スナップショットが別インスタンスか) に落とす。
+            // この判定は「常に true」になる誤りだったが、旧ファイルでは
+            // 編集済みを見落とすより出しすぎる側に倒しておく。
+            SetRestoredResultSet(set,
+                changedSinceAnalysis: projectData.InputChangedSinceAnalysis ?? snapshotIsSeparate);
         }
 
         // docx 出力設定（Include* フラグ・一括選択/解除・出力前検証）は
