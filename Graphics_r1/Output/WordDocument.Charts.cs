@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml.Packaging;
+﻿using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -104,16 +104,19 @@ namespace PileDesign.Output
                         {
                             if (pli == null) continue;
 
-                            // 常時（VL）は同一杭体のみ採用。モーメントは 0 扱い
+                            // この杭体に属する杭だけを対象にする。図の見出しは
+                            // 「杭体符号 | 杭区間番号」で 1 つの断面を指しているので、
+                            // 他の杭体の結果まで載せると、この断面の検討として読み違える。
+                            // 常時 (VL) は元から絞っていたが、地震時は絞っていなかった。
+                            int pbIdx = pli.PileBodyNo - 1;
+                            if (pbIdx < 0 || pbIdx >= inputModel.PileBodies.Count
+                                || inputModel.PileBodies[pbIdx] != pileBody) continue;
+
+                            // 常時（VL）はモーメントを 0 扱い
                             try
                             {
-                                int pbIdx = pli.PileBodyNo - 1;
-                                if (pbIdx >= 0 && pbIdx < inputModel.PileBodies.Count &&
-                                    inputModel.PileBodies[pbIdx] == pileBody)
-                                {
-                                    axialForceResultsVL.Add(pli.AxialForceVL0 + pli.AxialForceVLAdditional);
-                                    momentResultsVL.Add(0.0);
-                                }
+                                axialForceResultsVL.Add(pli.AxialForceVL0 + pli.AxialForceVLAdditional);
+                                momentResultsVL.Add(0.0);
                             }
                             catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
 
@@ -375,16 +378,19 @@ namespace PileDesign.Output
                         {
                             if (pli == null) continue;
 
-                            // 常時（VL）は同一杭体のみ採用。せん断力は 0 扱い
+                            // この杭体に属する杭だけを対象にする。図の見出しは
+                            // 「杭体符号 | 杭区間番号」で 1 つの断面を指しているので、
+                            // 他の杭体の結果まで載せると、この断面の検討として読み違える。
+                            // 常時 (VL) は元から絞っていたが、地震時は絞っていなかった。
+                            int pbIdx = pli.PileBodyNo - 1;
+                            if (pbIdx < 0 || pbIdx >= inputModel.PileBodies.Count
+                                || inputModel.PileBodies[pbIdx] != pileBody) continue;
+
+                            // 常時（VL）はせん断力を 0 扱い
                             try
                             {
-                                int pbIdx = pli.PileBodyNo - 1;
-                                if (pbIdx >= 0 && pbIdx < inputModel.PileBodies.Count &&
-                                    inputModel.PileBodies[pbIdx] == pileBody)
-                                {
-                                    axialForceResultsVL.Add(pli.AxialForceVL0 + pli.AxialForceVLAdditional);
-                                    shearResultsVL.Add(0.0);
-                                }
+                                axialForceResultsVL.Add(pli.AxialForceVL0 + pli.AxialForceVLAdditional);
+                                shearResultsVL.Add(0.0);
                             }
                             catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
 
