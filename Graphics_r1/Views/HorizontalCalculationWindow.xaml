@@ -217,6 +217,11 @@
                           ToolTip="P-S 非線形ばね ON 時に追加で「常時 (VL) のみ」のケースを解析。&#x0a;水平荷重なし、各杭頭に AxialForceVL を外力として適用。&#x0a;結果は LoadName=&quot;VL&quot; として結果ビューアに表示される。"/>
             </StackPanel>
 
+            <!-- 基礎のねじれ -->
+            <CheckBox Content="基礎のねじれを考慮しない" Margin="0,4,0,0"
+                      IsChecked="{Binding IgnoreFoundationTorsion, Mode=TwoWay}"
+                      ToolTip="慣性力作用点 (基礎の代表節点) の Z 軸まわり回転を拘束します。&#x0a;基礎がねじれなくなるため、杭頭の水平変位が全杭で揃います。&#x0a;OFF (既定) では、偏心と杭剛性の非対称からねじれが生じます。&#x0a;※ 杭配置が 1 列の場合は元から拘束されるため、ON/OFF で結果は変わりません。"/>
+
             <!-- ========== 解析対象 ========== -->
             <TextBlock Text="■ 解析対象" Style="{StaticResource SectionHeader}"/>
 

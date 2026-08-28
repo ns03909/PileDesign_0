@@ -280,6 +280,26 @@ namespace PileDesign.ViewModels
         }
 
         // 杭先端 Z 境界: P-S 非線形ばね使用フラグ (InputModel に委譲)
+        /// <summary>
+        /// 基礎のねじれ (Z 軸まわりの回転) を考慮しないか。
+        ///
+        /// ON にすると代表節点 (ActionPoint) の Rz を拘束するので、剛体で繋がった
+        /// 杭頭はねじれ成分を持たなくなり、水平変位が全杭で揃う。
+        /// 既定は OFF (従来どおり偏心と杭剛性の非対称からねじれが生じる)。
+        /// </summary>
+        public bool IgnoreFoundationTorsion
+        {
+            get => InputModel?.IgnoreFoundationTorsion ?? false;
+            set
+            {
+                if (InputModel != null && InputModel.IgnoreFoundationTorsion != value)
+                {
+                    InputModel.IgnoreFoundationTorsion = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public bool UsePsSpringAtPileTip
         {
             get => InputModel?.UsePsSpringAtPileTip ?? false;
@@ -2970,6 +2990,7 @@ namespace PileDesign.ViewModels
                 RelaxationFactor = RelaxationFactor,
                 UseAnalysisAxialForce = UseAnalysisAxialForce,
                 ConnectionMode = ConnectionMode.ToString(),
+                IgnoreFoundationTorsion = IgnoreFoundationTorsion,
                 ExecutedCaseKeys = new List<FEM.AnalysisRunSnapshot.CaseKey>(),
                 InputModelHash = null  // Phase 1 は null 許容、Phase 2 で SHA256 等
             };
@@ -3014,7 +3035,7 @@ namespace PileDesign.ViewModels
         /// 差分があれば false + 理由を out で返す。
         /// 規則:
         ///   - 解析パラメータ (ステップ数, NR モード, Full NR 反復, 反復なし簡易, ライン
-        ///     サーチ, 緩和係数, 杭軸力モード, 接続方式) は完全一致が必要
+        ///     サーチ, 緩和係数, 杭軸力モード, 接続方式, 基礎のねじれ考慮) は完全一致が必要
         ///   - 液状化選択は前回をカバーするスーパーセットなら可 (Both は Yes/None を内包)
         ///   - InputModelHash は Phase 1 では null 許容、未来拡張用
         /// </summary>
@@ -3048,6 +3069,8 @@ namespace PileDesign.ViewModels
                 diffs.Add($"杭軸力モード切替 ({prev.UseAnalysisAxialForce}→{UseAnalysisAxialForce})");
             if (prev.ConnectionMode != ConnectionMode.ToString())
                 diffs.Add($"接続方式 {prev.ConnectionMode}→{ConnectionMode}");
+            if (prev.IgnoreFoundationTorsion != IgnoreFoundationTorsion)
+                diffs.Add($"基礎のねじれ考慮 切替 ({prev.IgnoreFoundationTorsion}→{IgnoreFoundationTorsion})");
 
             // 液状化スーパーセットチェック
             if (!IsLiqSuperset(LiquefactionOption, prev.LiquefactionOption))

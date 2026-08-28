@@ -170,6 +170,17 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _isVLAnalysisEnabled, value);
         }
 
+        // 水平解析: 基礎のねじれ (Z 軸まわりの回転) を考慮しないか
+        // true: 代表節点 (ActionPoint) の Rz を拘束する。剛体で繋がった杭頭は
+        //       ねじれ成分を持たなくなり、水平変位が全杭で揃う。
+        // false (既定): 従来通り。偏心と杭剛性の非対称からねじれが生じる。
+        private bool _ignoreFoundationTorsion = false;
+        public bool IgnoreFoundationTorsion
+        {
+            get => _ignoreFoundationTorsion;
+            set => SetProperty(ref _ignoreFoundationTorsion, value);
+        }
+
         // 一般節点
         private ObservableCollection<InputNode> _inputNodes;
         public ObservableCollection<InputNode> InputNodes
