@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Common;
@@ -715,7 +715,9 @@ diameterSelector,
             try
             {
                 var pgs = inputModel?.PileGroupSettlement;
-                var settlementData = pgs?.SettlementGridData;
+                // 表示中のケースから読む。複製 (SettlementGridData) を読むと、
+                // ケースを切り替えたのに計算書だけ古い図が出る。
+                var settlementData = pgs?.ActiveSettlementGridData;
                 if (settlementData == null || settlementData.Count == 0)
                     return;
 

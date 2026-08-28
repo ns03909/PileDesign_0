@@ -260,7 +260,8 @@ namespace PileDesign.ViewModels
 
             // CaseRecord.LoadingType の旧データ互換マイグレーション
             // 旧ファイルでは LoadingType フィールドが空文字 → IsBeamAware から推定して補完
-            MigrateCaseRecordLoadingType(CurrentInputModel.PileGroupSettlement);
+            PileDesign.Services.LegacySettlementMigration.Apply(
+                CurrentInputModel.PileGroupSettlement, CurrentInputModel.PileLayoutItems);
 
             // 梁要素 ComboBox 用の節点候補リストを再構築 (deserialize 直後は空のため)
             CurrentInputModel.RefreshAvailableNodeReferenceOptions();
@@ -546,11 +547,10 @@ namespace PileDesign.ViewModels
             }
 
             // 群杭沈下解析済み判定: ケースの結果があるか。
-            // 複製 (SettlementGridData) しか持たない旧ファイルもあるので、そちらも見る。
+            // 複製しか持たない旧ファイルも、この時点では
+            // MigrateCaseRecordLoadingType が記録を建て終えている。
             var settlement = CurrentInputModel?.PileGroupSettlement;
-            if (settlement != null
-                && ((settlement.CaseRecords?.Count ?? 0) > 0
-                    || (settlement.SettlementGridData?.Count ?? 0) > 0))
+            if (settlement != null && (settlement.CaseRecords?.Count ?? 0) > 0)
             {
                 IsGroupPileSettlementAnalysisDone = true;
             }

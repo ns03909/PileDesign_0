@@ -144,9 +144,10 @@ namespace PileDesign.ViewModels
         /// <summary>破棄対象になる沈下解析の結果を持っているか。</summary>
         private bool HasSettlementResults()
         {
+            // 複製 (SettlementGridData) は見ない。読込時のマイグレーションで
+            // 旧ファイルからも記録が建つので、記録だけ見れば足りる。
             var pgs = CurrentInputModel?.PileGroupSettlement;
             return (pgs?.CaseRecords?.Count ?? 0) > 0
-                || (pgs?.SettlementGridData?.Count ?? 0) > 0
                 || IsVerticalAnalysisDone
                 || IsGroupPileSettlementAnalysisDone;
         }

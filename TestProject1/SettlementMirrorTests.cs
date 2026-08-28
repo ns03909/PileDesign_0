@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
@@ -152,6 +152,7 @@ namespace TestProject1
             {
                 if (cs.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")) continue;
                 if (Path.GetFileName(cs) == "PileLayoutDataItem.cs") continue;   // 定義と DeepCopy
+                if (Path.GetFileName(cs) == "LegacySettlementMigration.cs") continue; // 旧ファイルの移行
 
                 var lines = File.ReadAllLines(cs);
                 for (int i = 0; i < lines.Length; i++)
@@ -173,6 +174,66 @@ namespace TestProject1
                 "杭の複製を読んでいます。PileGroupSettlement.SettlementOf(pileNo) を使ってください:\n  "
                 + string.Join("\n  ", readers));
         }
+
+        /// <summary>
+        /// 表示系がコンタの複製 <c>PileGroupSettlement.SettlementGridData</c> を読んでいないこと。
+        ///
+        /// 読み手が残っていると、ケースを切り替えたのにそこだけ古い図が出る。
+        /// 実際、計算書のコンタ図だけが複製を読んでおり、画面と食い違う余地があった。
+        ///
+        /// 書き込み (解析・同期・クリア) と、読込時のコレクション変換・旧ファイルの移行は
+        /// 複製がある限り必要なので対象外。
+        /// </summary>
+        [TestMethod]
+        public void NothingReadsTheGridMirror()
+        {
+            var dir = new DirectoryInfo(Path.GetDirectoryName(typeof(SettlementMirrorTests).Assembly.Location)!);
+            string? root = null;
+            for (; dir != null; dir = dir.Parent)
+            {
+                if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
+                {
+                    root = dir.FullName;
+                    break;
+                }
+            }
+            Assert.IsNotNull(root, "ソリューションルートが見つかりません");
+
+            var readers = new List<string>();
+            foreach (string cs in Directory.EnumerateFiles(
+                         Path.Combine(root!, "Graphics_r1"), "*.cs", SearchOption.AllDirectories))
+            {
+                if (cs.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")) continue;
+                if (Path.GetFileName(cs) == "PileGroupSettlement.cs") continue;        // 定義と ActiveSettlementGridData
+                if (Path.GetFileName(cs) == "FileOperationService.cs") continue;       // 読込時のコレクション変換
+                if (Path.GetFileName(cs) == "LegacySettlementMigration.cs") continue;  // 旧ファイルの移行
+
+                var lines = File.ReadAllLines(cs);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    int comment = lines[i].IndexOf("//", StringComparison.Ordinal);
+                    string code = comment >= 0 ? lines[i][..comment] : lines[i];
+
+                    // record.SettlementGridData (記録側) が正しい読み手なので、複製側だけを見る
+                    if (!Regex.IsMatch(code, MIRROR_READ)) continue;
+
+                    // 書き込みは可
+                    if (Regex.IsMatch(code, WRITE)) continue;
+
+                    // nameof はプロパティ名の参照で、中身は読んでいない
+                    if (code.Contains("nameof(", StringComparison.Ordinal)) continue;
+
+                    readers.Add($"{Path.GetFileName(cs)}:{i + 1}  {code.Trim()}");
+                }
+            }
+
+            Assert.AreEqual(0, readers.Count,
+                "コンタの複製を読んでいます。PileGroupSettlement.ActiveSettlementGridData を使ってください:\n  "
+                + string.Join("\n  ", readers));
+        }
+
+        private const string MIRROR_READ = @"(pgs|settlement|PileGroupSettlement)\??\.SettlementGridData\b";
+        private const string WRITE = @"\.SettlementGridData\s*=[^=]";
 
         // ── 矩形荷重は入力。結果で上書きしない ─────────────
 

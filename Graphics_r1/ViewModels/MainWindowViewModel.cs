@@ -1489,7 +1489,9 @@ namespace PileDesign.ViewModels
             // 解析に用いるグリッドデータをクリア
             try
             {
-                settlement.SettlementGridData?.Clear();
+                // Clear() は複製の中身を読む。空を代入すれば読まずに済む
+                // (この複製はいずれ「読み込めるが書き出さない」形にする)。
+                settlement.SettlementGridData = [];
                 settlement.SettlementGridX?.Clear();
                 settlement.SettlementGridY?.Clear();
             }
@@ -2096,76 +2098,6 @@ namespace PileDesign.ViewModels
             => (CurrentInputModel?.FoundationBeamInput?.Beams?.Count ?? 0) > 0;
 
         /// <summary>
-        /// 旧ファイル互換マイグレーション:
-        /// (1) "個別十字（基礎梁考慮）" → "個別十字（基礎梁反力）" の名称変更
-        /// (2) CaseRecord.LoadingType が空文字のレコードを IsBeamAware から推定して補完
-        /// (3) ActiveLoadingType が空ならアクティブレコード or 先頭レコードから推定
-        /// (4) LoadingPlaneAltitudeNonBeam / BeamAware が NaN (新フィールド未設定) なら旧 LoadingPlaneAltitude をコピー
-        /// </summary>
-        private static void MigrateCaseRecordLoadingType(PileGroupSettlement pgs)
-        {
-            if (pgs == null) return;
-
-            // (1) 名称変更マイグレーション
-            const string oldName = "個別十字（基礎梁考慮）";
-            const string newName = "個別十字（基礎梁反力）";
-            if (pgs.LoadingType == oldName) pgs.LoadingType = newName;
-            if (pgs.ActiveLoadingType == oldName) pgs.ActiveLoadingType = newName;
-
-            // (4) 荷重面標高の per-route フィールド初期化 (旧データ互換)
-            if (double.IsNaN(pgs.LoadingPlaneAltitudeNonBeam))
-                pgs.LoadingPlaneAltitudeNonBeam = pgs.LoadingPlaneAltitude;
-            if (double.IsNaN(pgs.LoadingPlaneAltitudeBeamAware))
-                pgs.LoadingPlaneAltitudeBeamAware = pgs.LoadingPlaneAltitude;
-
-            // (5) CaseRecords を持たない旧ファイル: 複製しか残っていないので、そこから 1 件復元する。
-            //     表示系は ActiveRecord を読むようになったため、これが無いと旧ファイルの
-            //     沈下コンタが出なくなる。
-            if ((pgs.CaseRecords == null || pgs.CaseRecords.Count == 0)
-                && (pgs.SettlementGridData?.Count ?? 0) > 0)
-            {
-                pgs.CaseRecords =
-                [
-                    new GroupSettlementCaseRecord
-                    {
-                        LoadCaseName = "VL",
-                        LoadingType = string.IsNullOrEmpty(pgs.LoadingType) ? "任意矩形" : pgs.LoadingType,
-                        IsBeamAware = false,
-                        IsConverged = true,
-                        RectLoads = [.. (pgs.RectLoads ?? []).Select(r => r.Clone())],
-                        SettlementGridData = [.. pgs.SettlementGridData.Select(g => g.Clone())],
-                    }
-                ];
-                pgs.ActiveCaseIndex = 0;
-            }
-
-            if (pgs.CaseRecords == null || pgs.CaseRecords.Count == 0) return;
-
-            // 表示するケースが決まっていない旧ファイルは先頭を選ぶ
-            if (pgs.ActiveCaseIndex < 0 || pgs.ActiveCaseIndex >= pgs.CaseRecords.Count)
-                pgs.ActiveCaseIndex = 0;
-
-            string fallback = string.IsNullOrEmpty(pgs.LoadingType) ? "任意矩形" : pgs.LoadingType;
-            foreach (var rec in pgs.CaseRecords)
-            {
-                if (rec.LoadingType == oldName) rec.LoadingType = newName;
-                if (string.IsNullOrEmpty(rec.LoadingType))
-                {
-                    rec.LoadingType = rec.IsBeamAware ? "個別矩形（基礎梁考慮）" : fallback;
-                }
-            }
-
-            // (3) ActiveLoadingType の推定
-            if (string.IsNullOrEmpty(pgs.ActiveLoadingType))
-            {
-                int idx = pgs.ActiveCaseIndex;
-                if (idx >= 0 && idx < pgs.CaseRecords.Count)
-                    pgs.ActiveLoadingType = pgs.CaseRecords[idx].LoadingType;
-                else
-                    pgs.ActiveLoadingType = pgs.CaseRecords[0].LoadingType;
-            }
-        }
-
         /// <summary>
         /// 基礎梁考慮以外の解析タイプの結果を CaseRecord として永続化する。
         /// 同じ LoadingType の既存レコードは置換、他タイプのレコードは保持。
