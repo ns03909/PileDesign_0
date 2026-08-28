@@ -24,10 +24,46 @@ namespace PileDesign.FEM
         public string SetupReason { get; init; } = "";
     }
 
+    /// <summary>M-θ 曲線の 1 点。保存できる形にするために要る。</summary>
+    public sealed class MomentRotationPoint
+    {
+        public double Theta { get; set; }
+        public double Moment { get; set; }
+    }
+
     // M-θ曲線（タプル名の有無に依存しない実装）
     public sealed class MomentRotationCurve
     {
+        /// <summary>
+        /// 曲線の点。<b>そのままでは保存できない</b>ので <see cref="CurvePoints"/> 経由で読み書きする。
+        ///
+        /// 要素が ValueTuple で、その中身はプロパティではなく<b>フィールド</b>。
+        /// System.Text.Json は既定でフィールドを直列化しないため、保存すると
+        /// <c>[{}, {}]</c> という空オブジェクトの羅列になり、読み戻すと点が 1 つも復元されない。
+        /// 例外も警告も出ず、開き直した解析結果の杭頭回転ばねが黙って空になる。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<(double Theta, double Moment)> Points { get; } = [];
+
+        /// <summary>
+        /// 保存用の点列。<see cref="Points"/> と中身は同じで、こちらはプロパティなので保存できる。
+        /// </summary>
+        public List<MomentRotationPoint> CurvePoints
+        {
+            get
+            {
+                var list = new List<MomentRotationPoint>(Points.Count);
+                foreach (var (t, m) in Points) list.Add(new MomentRotationPoint { Theta = t, Moment = m });
+                return list;
+            }
+            set
+            {
+                Points.Clear();
+                if (value == null) return;
+                foreach (var p in value) Points.Add((p.Theta, p.Moment));
+                Points.Sort((a, b) => a.Theta.CompareTo(b.Theta));
+            }
+        }
 
         public MomentRotationCurve() { }
         public MomentRotationCurve(IEnumerable<(double theta, double moment)> points)
