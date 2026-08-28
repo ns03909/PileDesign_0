@@ -1057,6 +1057,24 @@ namespace PileDesign.Output
         /// <summary>
         /// 沈下コンター図をPNG出力（双線形補間ヒートマップ＋杭位置マーカー）
         /// </summary>
+        /// <summary>
+        /// 昇順の格子座標 <paramref name="grid"/> の中で、<paramref name="v"/> を含むセルの
+        /// 左 (下) 側の索引を返す。格子の外は -1。
+        /// </summary>
+        internal static int FindCell(List<double> grid, double v)
+        {
+            if (grid == null || grid.Count < 2) return -1;
+            if (v < grid[0] || v > grid[^1]) return -1;
+
+            int lo = 0, hi = grid.Count - 1;
+            while (hi - lo > 1)
+            {
+                int mid = (lo + hi) / 2;
+                if (grid[mid] <= v) lo = mid; else hi = mid;
+            }
+            return lo;
+        }
+
         public static byte[] RenderSettlementContourDiagram(
             IEnumerable<SettlementGridDataItem> gridData,
             List<double>? gridXs = null,
@@ -1099,7 +1117,11 @@ namespace PileDesign.Output
                 }
 
                 // マージン設定（右側にカラーバー用スペース）
-                double marginLeft = 10, marginRight = 80, marginTop = 10, marginBottom = 10;
+                // キャンバスは scale 倍の画素で作る。ここを 1 倍のまま書くと、
+                // 図全体を紙のサイズへ縮めたときに余白・カラーバー・文字だけが
+                // 1/scale に縮み、文字が読めなくなる。
+                double marginLeft = 10 * scale, marginRight = 80 * scale,
+                       marginTop = 10 * scale, marginBottom = 10 * scale;
                 double plotW = widthPx - marginLeft - marginRight;
                 double plotH = heightPx - marginTop - marginBottom;
 
@@ -1122,51 +1144,75 @@ namespace PileDesign.Output
                     // 背景
                     dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, widthPx, heightPx));
 
-                    // セルごとに双線形補間でヒートマップ描画
-                    int subDiv = 4; // セル内の分割数（高品質化）
-                    for (int ix = 0; ix < xs.Count - 1; ix++)
+                    // 画素ごとに双線形補間して 1 枚の画像として描く。
+                    //
+                    // 以前はセルを 4x4 の<b>単色の小矩形</b>で塗っていた。1 区画あたり 16 色しか
+                    // 使えないので、格子が粗い方向 (たいてい Y) に段差が出て縞に見えていた。
+                    // 分割数を増やすと矩形の数が跳ね上がるため、画素単位で塗る。
+                    int fieldW = Math.Max(1, (int)Math.Ceiling(dataW * scaleF));
+                    int fieldH = Math.Max(1, (int)Math.Ceiling(dataH * scaleF));
+
+                    // 画素 → 格子セルの索引と補間係数を、行と列で 1 回ずつ求めておく
+                    var colCell = new int[fieldW];
+                    var colT = new double[fieldW];
+                    for (int px = 0; px < fieldW; px++)
                     {
-                        for (int iy = 0; iy < ys.Count - 1; iy++)
+                        double wx = minX + (px + 0.5) / scaleF;
+                        int ix = FindCell(xs, wx);
+                        colCell[px] = ix;
+                        colT[px] = ix < 0 ? 0 : (wx - xs[ix]) / (xs[ix + 1] - xs[ix]);
+                    }
+                    var rowCell = new int[fieldH];
+                    var rowT = new double[fieldH];
+                    for (int py = 0; py < fieldH; py++)
+                    {
+                        double wy = maxY - (py + 0.5) / scaleF;   // 画像は上が maxY
+                        int iy = FindCell(ys, wy);
+                        rowCell[py] = iy;
+                        rowT[py] = iy < 0 ? 0 : (wy - ys[iy]) / (ys[iy + 1] - ys[iy]);
+                    }
+
+                    var pixels = new byte[fieldW * fieldH * 4];   // BGRA
+                    for (int py = 0; py < fieldH; py++)
+                    {
+                        int iy = rowCell[py];
+                        if (iy < 0) continue;                     // 格子の外は透明のまま
+                        double ty = rowT[py];
+                        int rowHead = py * fieldW * 4;
+
+                        for (int px = 0; px < fieldW; px++)
                         {
+                            int ix = colCell[px];
+                            if (ix < 0) continue;
+
                             double? v00 = grid[ix, iy];
                             double? v10 = grid[ix + 1, iy];
                             double? v01 = grid[ix, iy + 1];
                             double? v11 = grid[ix + 1, iy + 1];
                             if (v00 == null || v10 == null || v01 == null || v11 == null) continue;
 
-                            double cellLeft = ToPxX(xs[ix]);
-                            double cellRight = ToPxX(xs[ix + 1]);
-                            double cellTop = ToPxY(ys[iy + 1]);
-                            double cellBottom = ToPxY(ys[iy]);
+                            double tx = colT[px];
+                            double val = (1 - tx) * (1 - ty) * v00.Value
+                                       + tx * (1 - ty) * v10.Value
+                                       + (1 - tx) * ty * v01.Value
+                                       + tx * ty * v11.Value;
 
-                            double subW = (cellRight - cellLeft) / subDiv;
-                            double subH = (cellBottom - cellTop) / subDiv;
+                            double ratio = maxS > minS ? (val - minS) / (maxS - minS) : 0.5;
+                            var color = DrawingHelper.GetRainbowColor(ratio);
 
-                            for (int si = 0; si < subDiv; si++)
-                            {
-                                for (int sj = 0; sj < subDiv; sj++)
-                                {
-                                    double tx = (si + 0.5) / subDiv;
-                                    double ty = (sj + 0.5) / subDiv;
-
-                                    // 双線形補間
-                                    double val = (1 - tx) * (1 - ty) * v00.Value
-                                               + tx * (1 - ty) * v10.Value
-                                               + (1 - tx) * ty * v01.Value
-                                               + tx * ty * v11.Value;
-
-                                    double ratio = maxS > minS ? (val - minS) / (maxS - minS) : 0.5;
-                                    var color = DrawingHelper.GetRainbowColor(ratio);
-                                    var brush = new SolidColorBrush(color);
-                                    brush.Freeze();
-
-                                    double rx = cellLeft + si * subW;
-                                    double ry = cellTop + sj * subH;
-                                    dc.DrawRectangle(brush, null, new Rect(rx, ry, subW + 0.5, subH + 0.5));
-                                }
-                            }
+                            int o = rowHead + px * 4;
+                            pixels[o + 0] = color.B;
+                            pixels[o + 1] = color.G;
+                            pixels[o + 2] = color.R;
+                            pixels[o + 3] = 255;
                         }
                     }
+
+                    var field = BitmapSource.Create(
+                        fieldW, fieldH, 96, 96, PixelFormats.Bgra32, null, pixels, fieldW * 4);
+                    field.Freeze();
+                    dc.DrawImage(field, new Rect(
+                        ToPxX(minX), ToPxY(maxY), dataW * scaleF, dataH * scaleF));
 
                     // 杭位置マーカー
                     if (pilePositions != null)
@@ -1183,11 +1229,12 @@ namespace PileDesign.Output
 
                     // カラーバー描画
                     var colorBands = GenerateColorBands(minS, maxS, colorBandCount);
-                    double barX = widthPx - marginRight + 10;
-                    double barY = marginTop + 10;
-                    double barW = 15;
-                    double barCellH = Math.Min(15.0, (heightPx - 2 * marginTop - 40) / (colorBandCount + 1));
-                    var thinPen = new Pen(Brushes.Black, 0.5);
+                    double barX = widthPx - marginRight + 10 * scale;
+                    double barY = marginTop + 10 * scale;
+                    double barW = 15 * scale;
+                    double barCellH = Math.Min(15.0 * scale,
+                        (heightPx - 2 * marginTop - 40 * scale) / (colorBandCount + 1));
+                    var thinPen = new Pen(Brushes.Black, 0.5 * scale);
 
                     for (int i = colorBands.Count - 1; i >= 0; i--)
                     {
@@ -1202,10 +1249,10 @@ namespace PileDesign.Output
                             System.Globalization.CultureInfo.CurrentCulture,
                             FlowDirection.LeftToRight,
                             new Typeface("Meiryo"),
-                            Math.Max(8.0, 8.0 * scale * 0.5),
+                            10.0 * scale,
                             Brushes.Black,
                             1.0);
-                        dc.DrawText(ft, new Point(barX + barW + 3, barY + drawIdx * barCellH + (barCellH - ft.Height) * 0.5));
+                        dc.DrawText(ft, new Point(barX + barW + 3 * scale, barY + drawIdx * barCellH + (barCellH - ft.Height) * 0.5));
                     }
 
                     // カラーバーのタイトル
@@ -1214,20 +1261,20 @@ namespace PileDesign.Output
                         System.Globalization.CultureInfo.CurrentCulture,
                         FlowDirection.LeftToRight,
                         new Typeface("Meiryo"),
-                        Math.Max(9.0, 9.0 * scale * 0.5),
+                        11.0 * scale,
                         Brushes.Black,
                         1.0);
-                    dc.DrawText(titleFt, new Point(barX, barY - titleFt.Height - 2));
+                    dc.DrawText(titleFt, new Point(barX, barY - titleFt.Height - 2 * scale));
 
                     var unitFt = new FormattedText(
                         "(mm)",
                         System.Globalization.CultureInfo.CurrentCulture,
                         FlowDirection.LeftToRight,
                         new Typeface("Meiryo"),
-                        Math.Max(8.0, 8.0 * scale * 0.5),
+                        10.0 * scale,
                         Brushes.Black,
                         1.0);
-                    dc.DrawText(unitFt, new Point(barX, barY + colorBands.Count * barCellH + 2));
+                    dc.DrawText(unitFt, new Point(barX, barY + colorBands.Count * barCellH + 2 * scale));
                 }
 
                 return RenderDrawingVisualToPng(dv, widthPx, heightPx);
