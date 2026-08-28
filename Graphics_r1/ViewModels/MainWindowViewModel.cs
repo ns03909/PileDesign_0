@@ -2349,8 +2349,10 @@ namespace PileDesign.ViewModels
             {
                 if (IsPreparedForAnalysis())
                 {
-                    // 解析結果が存在する場合、削除確認ダイアログを表示
-                    if (!CheckAndResetAnalysisResults()) return;
+                    // ここでは確認を出さない。開くだけなら入力は変わらず
+                    // (保存せずに閉じればウィンドウ側が分割前の状態へ戻す)、
+                    // 分割の中身を見たいだけのときに結果の破棄を聞かれてしまう。
+                    // 確認は ElementDivisionViewModel の「保存」で出す。
 
                     // 杭下端より下方に土層・土質点が存在するかチェック
                     var validationError = ValidatePileAndGroundDepth();
@@ -2368,12 +2370,18 @@ namespace PileDesign.ViewModels
                     var window = new ElementDivisionWindow(this);
                     window.ShowDialog();
 
-                    MarkPossiblyEdited();
-
-                    if (undoCopy != null)
+                    // 保存せずに閉じたときは入力を触っていないので、
+                    // 編集済みの印も Undo の記録も残さない。残すと「見ただけ」で
+                    // 保存を促され、Undo 履歴にも空の 1 手が積まれる。
+                    if (window.IsSaved)
                     {
-                        _undoManager.SaveState(undoCopy, "杭要素分割");
-                        RaiseUndoStateChanged();
+                        MarkPossiblyEdited();
+
+                        if (undoCopy != null)
+                        {
+                            _undoManager.SaveState(undoCopy, "杭要素分割");
+                            RaiseUndoStateChanged();
+                        }
                     }
 
                     UpdateWindowImmediate();

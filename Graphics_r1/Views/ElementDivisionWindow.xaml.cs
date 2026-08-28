@@ -24,6 +24,14 @@ namespace PileDesign.Views
         private List<SoilPile>? _savedSoilPiles; // キャンセル時に復元するための分割前データ
         private SoilEmbedment? _savedSoilEmbedment; // キャンセル時に復元するための根入れ前データ
 
+        /// <summary>
+        /// 「保存」で閉じたか。閉じたあとに読む。
+        ///
+        /// 見るだけで閉じた場合は入力を触っていない (Closing で分割前の状態に戻している) ので、
+        /// 呼び出し側は編集済みの印も Undo の記録も残してはいけない。
+        /// </summary>
+        public bool IsSaved => _viewModel?.IsOkPressed == true;
+
         public ElementDivisionWindow(MainWindowViewModel mainWindowViewModel)
         {
             InitializeComponent();

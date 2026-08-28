@@ -1792,6 +1792,13 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnOk()
         {
+            // 入力の書き換えはここから始まる。無効になるもの (沈下解析結果など) の確認も
+            // ウィンドウを開くときではなく<b>ここ</b>で行う。
+            // 開くだけなら入力は変わらない (保存しなければ Closing で元に戻す) ので、
+            // 「見るだけ」で結果を失う旨を聞かれるのはおかしい。
+            // 断られたら閉じない。閉じるとこのウィンドウでの編集がすべて消える。
+            if (!_mainWindowViewModel.ConfirmSaveElementDivision()) return;
+
             // 現在選択中の杭のデータを保存（OKボタン押下前に確実に反映）
             if (SelectedSoilPileNo > 0 && SelectedSoilPileNo <= SoilPiles.Count)
             {
