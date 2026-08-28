@@ -3905,7 +3905,6 @@ namespace PileDesign.ViewModels
                 {
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
-                    CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
                     RequestUpdateWindow();
                 }
             }
@@ -3927,7 +3926,6 @@ namespace PileDesign.ViewModels
                 {
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
-                    CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
                     RequestUpdateWindow();
                 }
             }
@@ -4000,7 +3998,6 @@ namespace PileDesign.ViewModels
                 {
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
-                    CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
                     RequestUpdateWindow();
                 }
             }
@@ -4022,7 +4019,6 @@ namespace PileDesign.ViewModels
                 {
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
-                    CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
                     RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }

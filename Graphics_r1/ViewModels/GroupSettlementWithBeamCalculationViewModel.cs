@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
 using PileDesign.Models.InputData;
@@ -196,9 +196,9 @@ namespace PileDesign.ViewModels
             // pgs.RectLoads は利用者の入力なので上書きしない。
             // 収束後の荷重を見せたい場面は pgs.ActiveRectLoads (= このケースの荷重) を読む。
             //
-            // 要素まで複製する。同じインスタンスを共有すると、保存時に片方が $id・
-            // もう片方が $ref になり、表示用の複製を将来外せなくなる。
-            pgs.SettlementGridData = [.. record.SettlementGridData.Select(g => g.Clone())];
+            // コンタの複製 (pgs.SettlementGridData) には書かない。読み手はもう居らず、
+            // 書くと保存ファイルに複製が復活してケース側の要素が $ref になる。
+            // 空のまま残すことで、新しく保存するファイルからは中身が消える。
 
             // 杭ごとの沈下量
             if (piles == null) return;

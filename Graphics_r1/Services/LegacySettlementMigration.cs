@@ -43,7 +43,7 @@ namespace PileDesign.Services
             //     表示系は ActiveRecord を読むようになったため、これが無いと旧ファイルの
             //     沈下コンタが出なくなる。
             if ((pgs.CaseRecords == null || pgs.CaseRecords.Count == 0)
-                && (pgs.SettlementGridData?.Count ?? 0) > 0)
+                && (pgs.LegacySettlementGridData?.Count ?? 0) > 0)
             {
                 pgs.CaseRecords =
                 [
@@ -54,7 +54,7 @@ namespace PileDesign.Services
                         IsBeamAware = false,
                         IsConverged = true,
                         RectLoads = [.. (pgs.RectLoads ?? []).Select(r => r.Clone())],
-                        SettlementGridData = [.. pgs.SettlementGridData.Select(g => g.Clone())],
+                        SettlementGridData = [.. pgs.LegacySettlementGridData.Select(g => g.Clone())],
                         // 杭ごとの沈下量も複製から拾う。これが無いと SettlementOf() が
                         // 常に 0 を返し、旧ファイルでは杭配置グリッドの沈下量が空になる。
                         PileSettlements_mm = piles?

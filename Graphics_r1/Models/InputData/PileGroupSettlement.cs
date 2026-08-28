@@ -72,15 +72,22 @@ namespace PileDesign.Models.InputData
 
 
         /// <summary>
-        /// 表示中のケースの沈下グリッド。<b>保存ファイルの互換のために残している複製</b>で、
-        /// 正は <see cref="ActiveRecord"/> の側。<b>表示系はここを読まないこと</b>
-        /// (<see cref="ActiveSettlementGridData"/> を使う)。
+        /// 旧ファイルの沈下グリッド。<b>もう中身を持たない。</b>
         ///
-        /// この複製は消せない。<c>CaseRecords[].SettlementGridData</c> は同じ要素インスタンスを
-        /// 指しており、<c>ReferenceHandler.Preserve</c> では要素の <c>$id</c> がこちら側に付き、
-        /// レコード側は <c>$ref</c> になる。このプロパティを外すと
-        /// <b>既存の保存ファイルが「Reference '6' was not found」で一切開けなくなる</b>。
-        /// 外すには先に要素の共有をやめる必要がある (SettlementMirrorTests に実証を残した)。
+        /// 正は <see cref="ActiveRecord"/> の側で、表示・計算書は
+        /// <see cref="ActiveSettlementGridData"/> を読む。ここは<b>旧ファイルを開くため</b>だけに残す。
+        ///
+        /// プロパティごと外せないのは、<c>ReferenceHandler.Preserve</c> の古い保存ファイルで
+        /// 要素の <c>$id</c> がこちら側に付き、ケース側が <c>$ref</c> で参照しているため。
+        /// 外すと <c>$id</c> が登録されず「Reference '6' was not found」で開けなくなる。
+        /// System.Text.Json では「読めるが書き出さない」プロパティは作れないので
+        /// (セッターのみ・internal ゲッターのいずれも<b>逆直列化されない</b>ことを確認済み)、
+        /// <b>結果を入れないこと</b>で保存ファイルから中身を消している。
+        ///
+        /// したがって<b>ここへ結果を書かないこと</b>。書くと保存ファイルに複製が復活し、
+        /// ケース側の要素が <c>$ref</c> になって、将来この複製を撤去できなくなる。
+        /// 中身が要るのは読込時の変換と旧ファイルの移行だけで、
+        /// <see cref="LegacySettlementGridData"/> から読む。
         /// </summary>
         private ObservableCollection<SettlementGridDataItem> _settlementGridData;
         public ObservableCollection<SettlementGridDataItem> SettlementGridData
@@ -88,6 +95,13 @@ namespace PileDesign.Models.InputData
             get => _settlementGridData;
             set => SetProperty(ref _settlementGridData, value);
         }
+
+        /// <summary>
+        /// 読み込んだ旧ファイルの沈下グリッド。読込時の変換と移行だけが使う。
+        /// 表示・計算・計算書はここを見ないこと。
+        /// </summary>
+        [JsonIgnore]
+        internal ObservableCollection<SettlementGridDataItem> LegacySettlementGridData => _settlementGridData;
 
         /// <summary>表示中のケースの結果。未解析・該当なしは null。</summary>
         [JsonIgnore]
@@ -238,42 +252,6 @@ namespace PileDesign.Models.InputData
 
             return trimmed;
         }
-
-        // SettlementGridDataから特定のXまたはYのデータを返す
-        public ObservableCollection<SettlementGridDataItem> GetSpecificSettlementDataItems(double position, double angle)
-        {
-            ObservableCollection<SettlementGridDataItem> specificSettlementDataItems = [];
-            foreach (var settlementDataItem in SettlementGridData)
-            {
-                if (angle == 0) // grid X
-                {
-                    if (Math.Abs(settlementDataItem.X - position) < 1e-5)
-                    {
-                        specificSettlementDataItems.Add(settlementDataItem);
-                        continue;
-                    }
-                }
-                else if (angle == 90) // grid Y
-                {
-                    if (Math.Abs(settlementDataItem.Y - position) < 1e-5)
-                    {
-                        specificSettlementDataItems.Add(settlementDataItem);
-                        continue;
-                    }
-                }
-            }
-            return specificSettlementDataItems;
-        }
-
-        // GridDataSettlementの値を0にするメソッド
-        public void RemoveGridDataSettlement()
-        {
-            foreach (var settlementGridDataItem in SettlementGridData)
-            {
-                settlementGridDataItem.Settlement = 0;
-            }
-        }
-
 
         //
         public void SetGridX(double xmin, double xmax, double xOffset, double xSpacing, ObservableCollection<GridDataItem> gridItems)

@@ -1500,15 +1500,6 @@ namespace PileDesign.ViewModels
                 // 念のため例外は無視（コレクションが null の可能性など）
             }
 
-            // モデル側のグリッドデータ削除用メソッドがあれば呼ぶ
-            try
-            {
-                settlement.RemoveGridDataSettlement();
-            }
-            catch
-            {
-                // 実装がない場合や例外は無視
-            }
 
             // 解析フラグと表示フラグをリセット
             IsGroupPileSettlementAnalysisDone = false;

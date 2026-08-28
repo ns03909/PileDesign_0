@@ -396,8 +396,9 @@ namespace PileDesign.Services
                     EnsureObservableCollection(inputModel.PileGroupSettlement.SettlementGridX);
                 inputModel.PileGroupSettlement.SettlementGridY =
                     EnsureObservableCollection(inputModel.PileGroupSettlement.SettlementGridY);
+                // 読み込み専用の複製。旧ファイルを開くためだけに残してある
                 inputModel.PileGroupSettlement.SettlementGridData =
-                    EnsureObservableCollection(inputModel.PileGroupSettlement.SettlementGridData);
+                    EnsureObservableCollection(inputModel.PileGroupSettlement.LegacySettlementGridData);
             }
 
             // トップレベルのコレクション変換

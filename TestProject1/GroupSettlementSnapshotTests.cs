@@ -1,4 +1,4 @@
-using PileDesign.Models.InputData;
+﻿using PileDesign.Models.InputData;
 using PileDesign.Services;
 using PileDesign.ViewModels;
 using System.Collections.ObjectModel;
@@ -109,8 +109,14 @@ namespace TestProject1
 
         // ── ApplyActiveCaseToLegacyFields: ケース切替の独立性 ──
 
+        /// <summary>
+        /// ケース切替でコンタの複製へ書き戻さないこと。
+        ///
+        /// 書き戻すと保存ファイルに複製が復活し、ケース側の要素が <c>$ref</c> になる。
+        /// 表示・計算書はケース記録 (<c>ActiveSettlementGridData</c>) から読む。
+        /// </summary>
         [TestMethod]
-        public void ApplyActiveCaseToLegacyFields_CopiesSettlementGridData()
+        public void ApplyActiveCaseToLegacyFields_DoesNotWriteBackTheGridMirror()
         {
             var pgs = new PileGroupSettlement();
             var record = new GroupSettlementCaseRecord
@@ -124,13 +130,35 @@ namespace TestProject1
                     new SettlementGridDataItem { X = 0, Y = 1, Settlement = 11.0 },
                 ],
             };
+            pgs.CaseRecords = [record];
+            pgs.ActiveCaseIndex = 0;
 
             GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(pgs, record);
 
-            Assert.AreEqual(3, pgs.SettlementGridData.Count);
+            Assert.AreEqual(0, pgs.LegacySettlementGridData?.Count ?? 0,
+                "コンタの複製へ書き戻しています");
+
+            // 表示はケースから引ける
             CollectionAssert.AreEqual(
                 new[] { 5.0, 8.0, 11.0 },
-                pgs.SettlementGridData.Select(g => g.Settlement).ToList());
+                pgs.ActiveSettlementGridData.Select(g => g.Settlement).ToList());
+        }
+
+        /// <summary>杭ごとの沈下量の複製は、まだ同期していること。</summary>
+        [TestMethod]
+        public void ApplyActiveCaseToLegacyFields_StillSyncsPileSettlements()
+        {
+            var pgs = new PileGroupSettlement();
+            var record = new GroupSettlementCaseRecord
+            {
+                LoadCaseName = "VL",
+                PileSettlements_mm = new Dictionary<int, double> { [1] = 4.25 },
+            };
+            var pile = new PileLayoutDataItem { PileNo = 1 };
+
+            GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(pgs, record, [pile]);
+
+            Assert.AreEqual(4.25, pile.GroupPileSettlement, 1e-12);
         }
 
         [TestMethod]

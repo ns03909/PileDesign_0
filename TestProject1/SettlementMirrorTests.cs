@@ -312,92 +312,82 @@ namespace TestProject1
             return null;
         }
 
-        // ── なぜ複製を消せないか ───────────────────────────
+        // ── 旧ファイルはいまも開ける ───────────────────────
 
         /// <summary>
-        /// <b>要素を共有している保存ファイルは、複製を外すと開けなくなる。</b>
+        /// <b>要素を共有している保存ファイル</b>が、いまも開けること。
         /// (2026-08-26 より前に保存されたファイルがこれに当たる)
         ///
-        /// レコード側のグリッドは<b>同じ要素インスタンス</b>を指している
+        /// 当時はレコード側のグリッドが<b>同じ要素インスタンス</b>を指していた
         /// (<c>new ObservableCollection&lt;&gt;(gridData)</c> はリストだけを複製する)。
-        /// <c>ReferenceHandler.Preserve</c> では先に現れた複製の側に要素の <c>$id</c> が付き、
-        /// レコード側は <c>$ref</c> になる。複製を <c>[JsonIgnore]</c> にすると
-        /// <c>$id</c> が登録されず、<c>$ref</c> の解決に失敗する。
-        ///
-        /// 複製を消すには、先に<b>要素の共有をやめる</b>必要がある。
+        /// <c>ReferenceHandler.Preserve</c> では先に現れる複製の側に要素の <c>$id</c> が付き、
+        /// レコード側は <c>$ref</c> になる。複製の<b>セッター</b>を残しているのはこのためで、
+        /// 消すと <c>$id</c> が登録されず「Reference が見つからない」で開けなくなる。
         /// </summary>
         [TestMethod]
-        public void SharedElements_MakeTheMirrorImpossibleToRemove()
+        public void AnOldFileWithSharedElementsStillLoads()
         {
-            var shared = Grid(1.0, 2.0);
-            var pgs = new PileGroupSettlement
-            {
-                SettlementGridData = shared,
-                CaseRecords =
-                [
-                    new GroupSettlementCaseRecord
-                    {
-                        LoadCaseName = "VL",
-                        // 実装と同じ: リストは新規、要素は同一インスタンス
-                        SettlementGridData = new ObservableCollection<SettlementGridDataItem>(shared),
-                    }
-                ],
-                ActiveCaseIndex = 0,
-            };
+            // 当時の保存形。複製が $id を持ち、ケース側は $ref で参照する
+            string oldJson = """
+                {
+                  "$id": "1",
+                  "SettlementGridData": {
+                    "$id": "2",
+                    "$values": [
+                      { "$id": "3", "X": 0, "Y": 0, "Settlement": 1.0 },
+                      { "$id": "4", "X": 1, "Y": 0, "Settlement": 2.0 }
+                    ]
+                  },
+                  "CaseRecords": {
+                    "$id": "5",
+                    "$values": [
+                      {
+                        "$id": "6",
+                        "LoadCaseName": "VL",
+                        "SettlementGridData": {
+                          "$id": "7",
+                          "$values": [ { "$ref": "3" }, { "$ref": "4" } ]
+                        }
+                      }
+                    ]
+                  },
+                  "ActiveCaseIndex": 0
+                }
+                """;
 
-            var options = new JsonSerializerOptions
-            {
-                ReferenceHandler = ReferenceHandler.Preserve,
-                WriteIndented = true,
-            };
-            string json = JsonSerializer.Serialize(pgs, options);
+            var options = new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.Preserve };
+            var pgs = JsonSerializer.Deserialize<PileGroupSettlement>(oldJson, options);
 
-            StringAssert.Contains(json, "$ref",
-                "要素が共有されていない。共有が解けたなら複製を外せる (このテストごと見直すこと)");
-
-            // 複製のプロパティを取り除いた JSON = 複製を [JsonIgnore] にした場合
-            int mirror = json.IndexOf("\"SettlementGridData\"", StringComparison.Ordinal);
-            int records = json.IndexOf("\"CaseRecords\"", StringComparison.Ordinal);
-            Assert.IsTrue(mirror >= 0 && records > mirror, "前提が崩れている (プロパティの順序)");
-            string withoutMirror = json.Remove(mirror, records - mirror);
-
-            var ex = Assert.ThrowsException<JsonException>(
-                () => JsonSerializer.Deserialize<PileGroupSettlement>(withoutMirror, options),
-                "複製を外しても読めてしまう。共有が解けたなら複製を外せる");
-
-            StringAssert.Contains(ex.Message, "Reference",
-                $"想定と違う失敗: {ex.Message}");
+            Assert.IsNotNull(pgs);
+            Assert.AreEqual(1, pgs!.CaseRecords.Count);
+            Assert.AreEqual(2, pgs.ActiveSettlementGridData.Count, "$ref が解決できていない");
+            Assert.AreEqual(2.0, pgs.ActiveSettlementGridData[1].Settlement, 1e-12);
         }
 
-        // ── 新しく作るときは共有しない ─────────────────────
+        // ── 新しく作るときは複製に入れない ─────────────────
 
         /// <summary>
-        /// <b>いま作られるモデルは、複製とケースで要素を共有しないこと。</b>
+        /// <b>いま作られるモデルは、コンタの複製に結果を入れないこと。</b>
         ///
-        /// これが成り立って初めて、複製 (<c>SettlementGridData</c>) を
-        /// 「読み込めるが書き出さない」形にして撤去できる。
-        /// 共有が残っていると、保存ファイルの中でケース側が複製側を <c>$ref</c> で参照し、
-        /// 複製を外した瞬間にそのファイルが開けなくなる。
+        /// 入れると保存ファイルに複製が復活し、ケース側の要素が <c>$ref</c> になる。
+        /// そうなると、あとで複製を撤去した瞬間にそのファイルが開けなくなる。
+        /// 結果はケース記録が持ち、表示は <c>ActiveSettlementGridData</c> から読む。
         /// </summary>
         [TestMethod]
-        public void NewlyBuiltRecords_DoNotShareElementsWithTheMirror()
+        public void NewlyBuiltRecords_LeaveTheMirrorEmpty()
         {
             var pgs = BuildAsTheAppDoes();
 
-            var mirrorGrid = pgs.SettlementGridData;
-            var recordGrid = pgs.CaseRecords[0].SettlementGridData;
+            Assert.IsTrue(pgs.CaseRecords[0].SettlementGridData.Count > 0,
+                "前提が崩れている (ケースに結果が入っていない)");
+            Assert.AreEqual(0, pgs.LegacySettlementGridData?.Count ?? 0,
+                "コンタの複製に結果が入っています");
 
-            Assert.AreEqual(mirrorGrid.Count, recordGrid.Count, "件数が違う");
-            Assert.IsTrue(mirrorGrid.Count > 0, "前提が崩れている (空では検査にならない)");
+            // 表示はケースから引けること
+            Assert.AreEqual(pgs.CaseRecords[0].SettlementGridData.Count,
+                            pgs.ActiveSettlementGridData.Count);
 
-            for (int i = 0; i < mirrorGrid.Count; i++)
-            {
-                Assert.AreNotSame(mirrorGrid[i], recordGrid[i],
-                    $"グリッド {i} 番の要素を共有している");
-                Assert.AreEqual(mirrorGrid[i].Settlement, recordGrid[i].Settlement, 1e-12,
-                    "複製したのに値が違う");
-            }
-
+            // 矩形荷重は入力なので、ケースと実体を分けたままであること
             for (int i = 0; i < pgs.RectLoads.Count; i++)
             {
                 Assert.AreNotSame(pgs.RectLoads[i], pgs.CaseRecords[0].RectLoads[i],
@@ -406,11 +396,15 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 共有をやめた結果、<b>複製を外しても読める</b>ようになったこと。
-        /// 撤去 (第 2 段の最後) の前提がこれ。
+        /// いま保存するファイルの複製が<b>空</b>であること。
+        ///
+        /// System.Text.Json では「読めるが書き出さない」プロパティは作れないので、
+        /// プロパティは残したまま<b>結果を入れない</b>ことで中身を消している。
+        /// 同期を戻すと複製に要素が入り、ケース側がそれを <c>$ref</c> で参照する形に戻る。
+        /// そうなると、あとで複製を撤去した瞬間に、いま作ったファイルまで開けなくなる。
         /// </summary>
         [TestMethod]
-        public void WithoutSharing_TheMirrorCanBeRemoved()
+        public void FilesSavedNowDoNotContainTheMirror()
         {
             var pgs = BuildAsTheAppDoes();
 
@@ -421,13 +415,17 @@ namespace TestProject1
             };
             string json = JsonSerializer.Serialize(pgs, options);
 
-            int mirror = json.IndexOf("\"SettlementGridData\"", StringComparison.Ordinal);
-            int records = json.IndexOf("\"CaseRecords\"", StringComparison.Ordinal);
-            Assert.IsTrue(mirror >= 0 && records > mirror, "前提が崩れている (プロパティの順序)");
+            Assert.AreEqual(0, pgs.LegacySettlementGridData?.Count ?? 0,
+                "複製に結果が入っています (同期を戻していないか)");
 
-            string withoutMirror = json.Remove(mirror, records - mirror);
-            var restored = JsonSerializer.Deserialize<PileGroupSettlement>(withoutMirror, options);
+            // 複製のプロパティ自体は残る (旧ファイルを開くために外せない)。
+            // 中身が空なら $id を持つ要素が増えず、ケース側が $ref になることもない。
+            StringAssert.DoesNotMatch(json,
+                new System.Text.RegularExpressions.Regex(@"\$ref"),
+                "保存ファイルに $ref が出ています (複製とケースで要素を共有している)");
 
+            // 書き出していなくても、ケースは往復できること
+            var restored = JsonSerializer.Deserialize<PileGroupSettlement>(json, options);
             Assert.IsNotNull(restored);
             Assert.AreEqual(1, restored!.CaseRecords.Count, "ケースが復元できていない");
             Assert.AreEqual(pgs.CaseRecords[0].SettlementGridData.Count,
@@ -457,6 +455,39 @@ namespace TestProject1
         /// 同期は本番の <c>ApplyActiveCaseToLegacyFields</c> をそのまま呼ぶ。
         /// ここで組み立て方を書き写すと、本番が共有に戻っても検査が素通りしてしまう。
         /// </summary>
+        // ── 保存に出さない / 旧ファイルは開ける ───────────
+
+        /// <summary>
+        /// 複製しか持たない旧ファイルは、これまでどおり開けること。
+        ///
+        /// System.Text.Json はゲッターの無いプロパティを直列化しないが、逆直列化はする。
+        /// これが崩れると旧ファイルの沈下結果が丸ごと失われる。
+        /// </summary>
+        [TestMethod]
+        public void AnOldFileWithOnlyTheMirrorStillLoads()
+        {
+            string oldJson = """
+                {
+                  "$id": "1",
+                  "SettlementGridData": {
+                    "$id": "2",
+                    "$values": [
+                      { "$id": "3", "X": 0, "Y": 0, "Settlement": 4.5 },
+                      { "$id": "4", "X": 1, "Y": 0, "Settlement": 6.5 }
+                    ]
+                  }
+                }
+                """;
+
+            var options = new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.Preserve };
+            var pgs = JsonSerializer.Deserialize<PileGroupSettlement>(oldJson, options);
+
+            Assert.IsNotNull(pgs);
+            Assert.AreEqual(2, pgs!.LegacySettlementGridData?.Count ?? 0,
+                "旧ファイルの複製が読み込めていません (セッターを消していないか)");
+            Assert.AreEqual(6.5, pgs.LegacySettlementGridData![1].Settlement, 1e-12);
+        }
+
         private static PileGroupSettlement BuildAsTheAppDoes()
         {
             var record = new GroupSettlementCaseRecord

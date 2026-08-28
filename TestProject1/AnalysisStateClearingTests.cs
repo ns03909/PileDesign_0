@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
@@ -95,7 +95,15 @@ namespace TestProject1
 
             // 群杭沈下の結果は入力モデルの中に入る
             inputModel.PileGroupSettlement ??= new PileGroupSettlement();
-            inputModel.PileGroupSettlement.SettlementGridData = [new() { X = 0, Y = 0, Settlement = 12.3 }];
+            inputModel.PileGroupSettlement.CaseRecords =
+            [
+                new PileDesign.Models.InputData.GroupSettlementCaseRecord
+                {
+                    LoadCaseName = "VL",
+                    SettlementGridData = [new() { X = 0, Y = 0, Settlement = 12.3 }],
+                }
+            ];
+            inputModel.PileGroupSettlement.ActiveCaseIndex = 0;
             inputModel.PileLayoutItems[0].GroupPileSettlement = 12.3;
 
             return vm;
@@ -105,7 +113,7 @@ namespace TestProject1
         /// 解析結果を破棄したら、<b>入力モデルの中の沈下結果まで</b>消えること。
         ///
         /// 残すと、保存 → 再読込で「群杭沈下解析済み」が復活する。
-        /// 読込時の解析済み判定は SettlementGridData の有無から推定しているため。
+        /// 読込時の解析済み判定はケース記録の有無から推定しているため。
         /// </summary>
         [TestMethod]
         public void Discard_AlsoClearsTheSettlementResultsInsideTheInputModel()
@@ -114,7 +122,7 @@ namespace TestProject1
             if (vm == null) { Assert.Inconclusive("例題ファイルなし"); return; }
             var input = vm.CurrentInputModel!;
 
-            Assert.AreEqual(1, input.PileGroupSettlement.SettlementGridData.Count, "前提が崩れている");
+            Assert.AreEqual(1, input.PileGroupSettlement.ActiveSettlementGridData.Count, "前提が崩れている");
 
             vm.DiscardAnalysisResults();
 
@@ -123,8 +131,10 @@ namespace TestProject1
             Assert.IsFalse(vm.IsHorizontalAnalysisDone);
             Assert.IsFalse(vm.IsGroupPileSettlementAnalysisDone);
 
-            Assert.AreEqual(0, input.PileGroupSettlement.SettlementGridData.Count,
+            Assert.AreEqual(0, input.PileGroupSettlement.ActiveSettlementGridData.Count,
                 "入力モデル内の沈下結果が残っている (保存→再読込で解析済みが復活する)");
+            Assert.AreEqual(0, input.PileGroupSettlement.CaseRecords.Count,
+                "ケースの記録が残っている");
             Assert.AreEqual(0.0, input.PileLayoutItems[0].GroupPileSettlement, 1e-9,
                 "杭の沈下量が残っている");
         }
