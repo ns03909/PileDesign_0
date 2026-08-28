@@ -4,10 +4,41 @@ using System.Linq;
 
 namespace PileDesign.FEM
 {
+    /// <summary>M-φ 曲線の 1 点。保存できる形にするために要る。</summary>
+    public sealed class MomentCurvaturePoint
+    {
+        public double Phi { get; set; }
+        public double Moment { get; set; }
+    }
+
     // φ[rad/m] - M[kNm] 曲線（昇順点列、線形補間）
     public sealed class MomentCurvatureCurve
     {
+        /// <summary>
+        /// 曲線の点。<b>そのままでは保存できない</b>ので <see cref="CurvePoints"/> 経由で読み書きする。
+        /// 理由は <see cref="MomentRotationCurve.Points"/> と同じ
+        /// (ValueTuple の中身はフィールドで、既定では直列化されない)。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<(double Phi, double Moment)> Points { get; } = new();
+
+        /// <summary>保存用の点列。<see cref="Points"/> と中身は同じ。</summary>
+        public List<MomentCurvaturePoint> CurvePoints
+        {
+            get
+            {
+                var list = new List<MomentCurvaturePoint>(Points.Count);
+                foreach (var (phi, m) in Points) list.Add(new MomentCurvaturePoint { Phi = phi, Moment = m });
+                return list;
+            }
+            set
+            {
+                Points.Clear();
+                if (value == null) return;
+                foreach (var p in value) Points.Add((p.Phi, p.Moment));
+                Points.Sort((a, b) => a.Phi.CompareTo(b.Phi));
+            }
+        }
 
         // 2026-05-06: post-yield (φ > φ_last) で K_tan が 0 または微小になり Newton 方向が不定に
         // なる問題対策。降伏時割線剛性 (= M_last / φ_last) の 1% を post-yield 接線勾配の下限とする。

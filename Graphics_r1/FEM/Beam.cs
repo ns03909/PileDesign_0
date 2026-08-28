@@ -49,6 +49,12 @@ namespace PileDesign.FEM
         public double InitialCurveTangent { get; private set; }
 
         // 解決済みの合成M-φ曲線を取得（グラフ表示用）
+        //
+        // get のみなので保存はされても復元されない。放っておくと
+        //  ・保存ファイルに書き出されるのに読み戻せない (曲線が黙って消える)
+        //  ・Preserve では $id がここに付き、他所から $ref されると読込に失敗する
+        // 元は SetCombinedCurve で作り直せるキャッシュなので、保存の対象から外す。
+        [JsonIgnore]
         public MomentCurvatureCurve? ResolvedCombinedCurve => _combinedCurve;
 
         // 追加: PileSection.GetMPhiRelationship で得た曲線（合成）を直接設定
