@@ -1545,6 +1545,7 @@ namespace PileDesign.ViewModels
                                     if (lastStep < 0) continue;
 
                                     double shear = double.MinValue;
+                                    double analysisFxi = 0; // 解析結果の軸力
 
                                     bool isAllSegsQ = SelectedPileSegmentNo <= 0;
                                     var soilPile = InputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
@@ -1560,19 +1561,26 @@ namespace PileDesign.ViewModels
                                                 if (beamResult?.CumulativeForce != null)
                                                 {
                                                     shear = Math.Max(shear, beamResult.CumulativeForce.FabsMax);
+                                                    analysisFxi = beamResult.CumulativeForce.Fxi;
                                                 }
                                             }
                                         }
                                     }
 
+                                    // 横軸は NMINT と同じ扱いにする。同じ杭・同じケースなのに
+                                    // 図によって軸力が違うと、2 つの図を並べて読めない。
+                                    double plotAxialForceQ = InputModel.UseAnalysisAxialForce
+                                        ? axialForce - analysisFxi
+                                        : axialForce;
+
                                     if (loadCase.Level == 1)
                                     {
-                                        axialForceResultsLevel1Q.Add(axialForce);
+                                        axialForceResultsLevel1Q.Add(plotAxialForceQ);
                                         shearResultsLevel1.Add(shear);
                                     }
                                     else if (loadCase.Level == 2)
                                     {
-                                        axialForceResultsLevel2Q.Add(axialForce);
+                                        axialForceResultsLevel2Q.Add(plotAxialForceQ);
                                         shearResultsLevel2.Add(shear);
                                     }
                                 }

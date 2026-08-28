@@ -430,6 +430,7 @@ namespace PileDesign.Output
 
                                         // この区間Noに一致するビーム群の中から、当該ケースの最大せん断力を抽出
                                         double maxShearInPile = double.MinValue;
+                                        double analysisFxi = 0; // 解析で出た軸力
                                         for (int iSeg = 0; iSeg < soilPileForItem.PileBodySegments.Count; iSeg++)
                                         {
                                             var segI = soilPileForItem.PileBodySegments[iSeg];
@@ -441,21 +442,29 @@ namespace PileDesign.Output
 
                                             var cum = GetBeamResultCached(beam, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
                                             if (cum != null)
+                                            {
                                                 maxShearInPile = Math.Max(maxShearInPile, cum.FabsMax);
+                                                analysisFxi = cum.Fxi;
+                                            }
                                         }
 
                                         // 解析結果なし (該当ケース未解析) → 散布点をスキップして
                                         // X 軸上の Q=0 ゴーストマーカーを防ぐ
                                         if (maxShearInPile == double.MinValue) continue;
 
+                                        // 横軸は N-M 図と同じ扱いにする (画面の QNINT も同じ)
+                                        double plotAxialForce = inputModel.UseAnalysisAxialForce
+                                            ? axialForce - analysisFxi
+                                            : axialForce;
+
                                         if (loadCase.Level == 1)
                                         {
-                                            axialForceResultsLevel1.Add(axialForce);
+                                            axialForceResultsLevel1.Add(plotAxialForce);
                                             shearResultsLevel1.Add(maxShearInPile);
                                         }
                                         else if (loadCase.Level == 2)
                                         {
-                                            axialForceResultsLevel2.Add(axialForce);
+                                            axialForceResultsLevel2.Add(plotAxialForce);
                                             shearResultsLevel2.Add(maxShearInPile);
                                         }
                                     }

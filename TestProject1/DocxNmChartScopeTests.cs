@@ -88,28 +88,35 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// N-M 図の横軸は、画面の MNINT と同じく「解析軸力を使う」を反映すること。
+        /// 地震時の散布点の横軸は、N-M 図も Q-N 図も、画面と同じく
+        /// 「解析軸力を使う」を反映すること。
         ///
-        /// 反映していないと、同じ断面の同じ図なのに画面と計算書で点が横にずれる。
-        /// Q-N 図は画面側も反映していないので対象外 (揃えるならまず画面の方針を決める)。
+        /// 反映していないと、同じ杭・同じケースなのに図によって軸力が違い、
+        /// 画面と計算書、N-M と Q-N を並べて読めない。
         /// </summary>
         [TestMethod]
-        public void NmChart_UsesTheAnalysisAxialForceOptionLikeTheScreen()
+        public void SeismicScatter_UsesTheAnalysisAxialForceOptionLikeTheScreen()
         {
             string root = FindSolutionRoot();
-            string docx = File.ReadAllText(Path.Combine(root, "Graphics_r1", "Output", "WordDocument.Charts.cs"));
+            string docxPath = Path.Combine(root, "Graphics_r1", "Output", "WordDocument.Charts.cs");
+            string docx = File.ReadAllText(docxPath);
             string screen = File.ReadAllText(Path.Combine(root, "Graphics_r1", "ViewModels", "GraphViewModel.cs"));
 
             // 画面側の式。これが変わったら計算書側も見直す必要がある
             StringAssert.Contains(screen, "UseAnalysisAxialForce",
                 "画面の軸力オプションが見つかりません (名前が変わった可能性)");
-            StringAssert.Contains(screen, "axialForce - analysisFxi",
-                "画面の軸力の求め方が変わっています");
+            Assert.IsTrue(Regex.Matches(screen, Regex.Escape("axialForce - analysisFxi")).Count >= 3,
+                "画面で解析軸力を反映していない図があります (NMINT / QNINT / 杭頭)");
 
-            StringAssert.Contains(docx, "inputModel.UseAnalysisAxialForce",
-                "計算書の N-M 図が「解析軸力を使う」を見ていません");
-            StringAssert.Contains(docx, "axialForce - analysisFxi",
-                "計算書の N-M 図の軸力が画面と同じ式になっていません");
+            Assert.AreEqual(2, Regex.Matches(docx, Regex.Escape("inputModel.UseAnalysisAxialForce")).Count,
+                "計算書で解析軸力を反映していない図があります (N-M と Q-N の 2 つのはず)");
+
+            // 生の axialForce を直接積んでいる箇所が残っていないこと
+            foreach (Match m in Regex.Matches(docx, @"axialForceResultsLevel[12]\.Add\(([^)]*)\);"))
+            {
+                Assert.AreEqual("plotAxialForce", m.Groups[1].Value.Trim(),
+                    $"{docxPath}: 地震時の軸力に {m.Groups[1].Value.Trim()} を直接使っています");
+            }
         }
     }
 }
