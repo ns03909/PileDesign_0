@@ -158,9 +158,11 @@ namespace PileDesign.Output
                                             if (beam == null) continue;
 
                                             var cum = GetBeamResultCached(beam, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
-                                            if (cum != null)
+                                            if (cum != null && cum.MabsMax > maxMomentInPile)
                                             {
-                                                maxMomentInPile = Math.Max(maxMomentInPile, cum.MabsMax);
+                                                // 最大を更新したときだけ軸力も取る (画面と同じ規則)。
+                                                // 別々に取ると、別の要素の M と N が 1 つの点になる。
+                                                maxMomentInPile = cum.MabsMax;
                                                 analysisFxi = cum.Fxi;
                                             }
                                         }
@@ -441,9 +443,11 @@ namespace PileDesign.Output
                                             if (beam == null) continue;
 
                                             var cum = GetBeamResultCached(beam, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
-                                            if (cum != null)
+                                            if (cum != null && cum.FabsMax > maxShearInPile)
                                             {
-                                                maxShearInPile = Math.Max(maxShearInPile, cum.FabsMax);
+                                                // 最大を更新したときだけ軸力も取る (画面と同じ規則)。
+                                                // 別々に取ると、別の要素の Q と N が 1 つの点になる。
+                                                maxShearInPile = cum.FabsMax;
                                                 analysisFxi = cum.Fxi;
                                             }
                                         }

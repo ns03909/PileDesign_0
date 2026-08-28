@@ -1225,9 +1225,13 @@ namespace PileDesign.ViewModels
                                             {
                                                 var beamResult = pileLayoutDataItem.Beams[i]?.GetBeamResult(
                                                     AnaModel, loadCase, loadCombination, isLiquefaction);
-                                                if (beamResult?.CumulativeForce != null)
+                                                if (beamResult?.CumulativeForce != null
+                                                    && beamResult.CumulativeForce.MabsMax > moment)
                                                 {
-                                                    moment = Math.Max(moment, beamResult.CumulativeForce.MabsMax);
+                                                    // 最大を更新したときだけ軸力も取る。
+                                                    // 別々に取ると、3 本目の要素の M と 7 本目の要素の N が
+                                                    // 1 つの点になりうる。断面の検討として組にならない。
+                                                    moment = beamResult.CumulativeForce.MabsMax;
                                                     analysisFxi = beamResult.CumulativeForce.Fxi;
                                                 }
                                             }
@@ -1558,9 +1562,13 @@ namespace PileDesign.ViewModels
                                             {
                                                 var beamResult = pileLayoutDataItem.Beams[i]?.GetBeamResult(
                                                     AnaModel, loadCase, loadCombination, isLiquefaction);
-                                                if (beamResult?.CumulativeForce != null)
+                                                if (beamResult?.CumulativeForce != null
+                                                    && beamResult.CumulativeForce.FabsMax > shear)
                                                 {
-                                                    shear = Math.Max(shear, beamResult.CumulativeForce.FabsMax);
+                                                    // 最大を更新したときだけ軸力も取る。
+                                                    // 別々に取ると、3 本目の要素の Q と 7 本目の要素の N が
+                                                    // 1 つの点になりうる。断面の検討として組にならない。
+                                                    shear = beamResult.CumulativeForce.FabsMax;
                                                     analysisFxi = beamResult.CumulativeForce.Fxi;
                                                 }
                                             }
