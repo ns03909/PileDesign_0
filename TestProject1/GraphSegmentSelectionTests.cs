@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Common;
 using PileDesign.ViewModels;
 using System.Collections.ObjectModel;
@@ -86,6 +86,58 @@ namespace TestProject1
             vm.SelectedGraphOption = "定着部NMINT";
 
             Assert.IsFalse(vm.RequiresConcretePileSegment);
+        }
+
+        // ── 選択肢そのもの ─────────────────────────────────
+
+        /// <summary>
+        /// NMINT / QNINT の一覧には「すべて」を入れないこと。
+        /// 入れると選べてしまい、選んだ瞬間に軸だけの空グラフになる。
+        /// </summary>
+        [TestMethod]
+        public void ForNmint_AllIsNotEvenOffered()
+        {
+            var vm = Build();
+            if (vm == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            foreach (string needs in new[] { "NMINT", "QNINT" })
+            {
+                vm.SelectedGraphOption = needs;
+                var opts = vm.BuildPileSegmentOptions(3);
+
+                CollectionAssert.DoesNotContain(opts, UiText.All, $"{needs} に「すべて」が出ている");
+                CollectionAssert.AreEqual(new[] { "1", "2", "3" }, opts);
+            }
+        }
+
+        /// <summary>「すべて」を描けるグラフでは従来どおり先頭に置くこと。</summary>
+        [TestMethod]
+        public void ForOtherGraphs_AllIsStillOffered()
+        {
+            var vm = Build();
+            if (vm == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            vm.SelectedGraphOption = "水平地盤反力度p-y";
+
+            CollectionAssert.AreEqual(new[] { UiText.All, "1", "2" }, vm.BuildPileSegmentOptions(2));
+        }
+
+        /// <summary>
+        /// p-y → NMINT と切替えたとき、区間数が同じでも一覧から「すべて」が消えること。
+        /// 数だけ見て抜けると「すべて」が残る。
+        /// </summary>
+        [TestMethod]
+        public void SwitchingToNmintDropsAllFromTheList()
+        {
+            var vm = Build();
+            if (vm == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            vm.SelectedGraphOption = "水平地盤反力度p-y";
+            vm.SelectedGraphOption = "NMINT";
+
+            CollectionAssert.DoesNotContain(vm.PileSegmentOptions, UiText.All,
+                "NMINT へ切替えても一覧に「すべて」が残っている");
+            Assert.AreNotEqual(UiText.All, vm.SelectedPileSegmentOption);
         }
 
         // ── 選び直しの規則 ─────────────────────────────────

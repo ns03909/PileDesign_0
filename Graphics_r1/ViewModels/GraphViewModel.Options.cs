@@ -77,14 +77,15 @@ namespace PileDesign.ViewModels
             if (count <= 0) return;
 
             // 選択肢が同じでも、選択値は見直す。
-            // グラフ種別を p-y (「すべて」可) から NMINT (「すべて」不可) へ切替えたときは
-            // 選択肢の数が変わらないことがあり、ここで抜けると区間が「すべて」のまま残って
-            // NMINT が空になる。
-            if (PileSegmentOptions == null || PileSegmentOptions.Count != count + 1)
+            // グラフ種別を p-y (「すべて」あり) から NMINT (「すべて」なし) へ切替えたときは
+            // 区間数が同じでも一覧の中身が変わるので、数だけでなく<b>先頭が「すべて」かどうか</b>も
+            // 見る。ここで抜けると NMINT の一覧に「すべて」が残り、選ぶと空グラフになる。
+            var wanted = BuildPileSegmentOptions(count);
+            if (PileSegmentOptions == null
+                || PileSegmentOptions.Count != wanted.Count
+                || (PileSegmentOptions.Count > 0 && PileSegmentOptions[0] != wanted[0]))
             {
-                var opts = new ObservableCollection<string> { UiText.All };
-                foreach (int i in Enumerable.Range(1, count)) opts.Add(i.ToString());
-                PileSegmentOptions = opts;
+                PileSegmentOptions = wanted;
             }
 
             string resolved = ResolvePileSegmentOption(PileSegmentOptions);

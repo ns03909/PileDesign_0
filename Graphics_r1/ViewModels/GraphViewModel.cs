@@ -141,6 +141,13 @@ namespace PileDesign.ViewModels
                     OnPropertyChanged(nameof(PileSegmentLabel));
                     OnPropertyChanged(nameof(IsDistributedModeOptionVisible));
                     OnPropertyChanged(nameof(IsPureTheoreticalOptionVisible));
+
+                    // 杭区間の一覧はグラフ種別で中身が変わる (NMINT / QNINT には「すべて」を
+                    // 入れない)。描画側の分岐でも呼んでいるが、描画は結果が無い等の理由で
+                    // 途中で戻ることがあり、そのときドロップダウンが前の種別のまま残る。
+                    // 一覧の整合は描画の成否と切り離してここで取る。
+                    EnsurePileSegmentOptionsForCurrentGraph();
+
                     UpdateGraph();
                     UpdatePileSegmentDetails();
                 }
@@ -316,8 +323,7 @@ namespace PileDesign.ViewModels
                 {
                     var pileBody = InputModel.GetPileBodyByPileBodyRef(_selectedPileBodyRef);
                     int segmentsCount = pileBody?.PileBodySegments?.Count ?? 0;
-                    var options = new ObservableCollection<string> { UiText.All };
-                    foreach (int i in Enumerable.Range(1, segmentsCount)) options.Add(i.ToString());
+                    var options = BuildPileSegmentOptions(segmentsCount);
                     PileSegmentOptions = options;
 
                     // 具体的な区間が要るグラフ (NMINT / QNINT) では「すべて」に戻さない。
@@ -398,6 +404,21 @@ namespace PileDesign.ViewModels
             SelectedGraphOption != null
             && (SelectedGraphOption.StartsWith("NMINT", StringComparison.Ordinal)
                 || SelectedGraphOption.StartsWith("QNINT", StringComparison.Ordinal));
+
+        /// <summary>
+        /// 杭区間の選択肢を組み立てる。
+        ///
+        /// 「すべて」は<b>それを描けるグラフにだけ</b>入れる。
+        /// NMINT / QNINT は 1 区間ぶんの断面から限界曲線を作るので「すべて」では描くものが
+        /// 決まらず、選ばれると軸だけの空グラフになる。選ばせない形にしておく。
+        /// </summary>
+        internal ObservableCollection<string> BuildPileSegmentOptions(int count)
+        {
+            var options = new ObservableCollection<string>();
+            if (!RequiresConcretePileSegment) options.Add(UiText.All);
+            foreach (int i in Enumerable.Range(1, count)) options.Add(i.ToString());
+            return options;
+        }
 
         /// <summary>
         /// 杭区間の選択肢が入れ替わったときに、選び直す値を決める。
