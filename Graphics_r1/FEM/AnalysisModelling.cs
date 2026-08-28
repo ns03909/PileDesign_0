@@ -1,4 +1,4 @@
-using MathNet.Numerics.LinearAlgebra;
+﻿using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using Serilog;
@@ -187,16 +187,16 @@ namespace PileDesign.FEM
             double yMin = InputModel.PileLayoutItems.Min(p => p.Y);
 
             // 杭配置がX、Y方向いずれかにスタンスがない場合、回転拘束をする
-            // (この場合 Rz は元から拘束されるので、ねじれ考慮の有無で結果は変わらない)
+            // (この場合 Rz は元から拘束されるので、ねじれ拘束の有無で結果は変わらない)
             if (xMax - xMin < 1e-6 || yMax - yMin < 1e-6)
                 return new Boundary(false, false, false, true, true, true);
 
             // 杭配置がX、Y方向ともにスタンスがある場合、拘束しない。
-            // ただし「基礎のねじれを考慮しない」が選ばれていれば Rz だけ拘束する。
+            // ただし「基礎のねじれを拘束」が選ばれていれば Rz だけ拘束する。
             // 境界条件は方程式番号による縮約なので、Rz の式が剛性行列から消え、
             // ねじれが厳密にゼロになる。剛体の cross-term (Ux += -Rz·ΔY 等) も
             // master の Rz が消えることで自動的に落ち、杭頭の水平変位が揃う。
-            bool fixRz = InputModel.IgnoreFoundationTorsion;
+            bool fixRz = InputModel.RestrainFoundationTorsion;
             return new Boundary(false, false, false, false, false, fixRz);
         }
 

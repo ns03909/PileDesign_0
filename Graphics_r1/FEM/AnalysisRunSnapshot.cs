@@ -23,7 +23,7 @@ namespace PileDesign.FEM
         public string ConnectionMode { get; set; } = "RigidBody";
 
         /// <summary>基礎のねじれ (代表節点の Rz) を拘束したか。境界条件が変わるので追加実行はできない。</summary>
-        public bool IgnoreFoundationTorsion { get; set; }
+        public bool RestrainFoundationTorsion { get; set; }
 
         // 実行済みケース集合 (積集合判定用)
         public List<CaseKey> ExecutedCaseKeys { get; set; } = new();

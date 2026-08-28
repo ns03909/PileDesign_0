@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml.Wordprocessing;
+﻿using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using System.Collections.Generic;
@@ -174,11 +174,11 @@ namespace PileDesign.Output
                     ? "全杭頭を代表点に対して全 6 自由度で剛体拘束する（詳細は「検討方針」章）"
                     : "水平変位と鉛直軸回転のみ剛体拘束し、鉛直・回転は基礎梁が負担する（詳細は「検討方針」章）"));
 
-            // 既定 (考慮する) のときは行を出さない。仮定一覧が長くなるうえ、
+            // 既定 (拘束しない) のときは行を出さない。仮定一覧が長くなるうえ、
             // 「従来どおり」を毎回書いても読み手の判断材料にならない。
-            if (inputModel?.IgnoreFoundationTorsion == true)
+            if (inputModel?.RestrainFoundationTorsion == true)
             {
-                rows.Add(("基礎のねじれ", "考慮しない",
+                rows.Add(("基礎のねじれ", "拘束する",
                     "代表点の鉛直軸回りの回転を拘束する。基礎はねじれず、杭頭の水平変位は全杭で等しくなる"));
             }
 

@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Linq;
 namespace TestProject1
 {
     /// <summary>
-    /// 「基礎のねじれを考慮しない」オプション。
+    /// 「基礎のねじれを拘束」オプション。
     ///
     /// 慣性力作用点 (基礎の代表節点) の Z 軸まわり回転を拘束する。
     /// 境界条件は方程式番号による縮約なので、Rz の式が剛性行列から消え、
@@ -29,7 +29,7 @@ namespace TestProject1
         [TestMethod]
         public void DefaultIsOff()
         {
-            Assert.IsFalse(new InputModel().IgnoreFoundationTorsion,
+            Assert.IsFalse(new InputModel().RestrainFoundationTorsion,
                 "既定で ON になっていると、既存モデルの結果が黙って変わる");
         }
 
@@ -61,7 +61,7 @@ namespace TestProject1
             if (input == null) { Assert.Inconclusive("例題ファイルなし"); return; }
             if (IsSingleRow(input)) { Assert.Inconclusive("1 列配置の例題では元から拘束される"); return; }
 
-            input.IgnoreFoundationTorsion = true;
+            input.RestrainFoundationTorsion = true;
             var ap = ActionPointOf(input);
 
             Assert.IsTrue(ap.Boundary.Rz, "Z 軸まわりが拘束されていない");
@@ -102,10 +102,10 @@ namespace TestProject1
             // 全杭を Y=0 の 1 列に寄せる
             foreach (var pile in input.PileLayoutItems) pile.Y = 0.0;
 
-            input.IgnoreFoundationTorsion = false;
+            input.RestrainFoundationTorsion = false;
             Assert.IsTrue(ActionPointOf(input).Boundary.Rz, "1 列配置では元から拘束されるはず");
 
-            input.IgnoreFoundationTorsion = true;
+            input.RestrainFoundationTorsion = true;
             Assert.IsTrue(ActionPointOf(input).Boundary.Rz);
         }
 
@@ -119,7 +119,7 @@ namespace TestProject1
         /// <summary>組み上げた FEM モデルの自由度数。</summary>
         private static int FreeDofCount(InputModel input, bool ignoreTorsion)
         {
-            input.IgnoreFoundationTorsion = ignoreTorsion;
+            input.RestrainFoundationTorsion = ignoreTorsion;
             var modelling = new AnalysisModelling(input);
             var ana = new AnaModel(
                 input, modelling.Nodes, modelling.Beams, modelling.DummyBeams,
