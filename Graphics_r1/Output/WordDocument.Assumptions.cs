@@ -24,7 +24,7 @@ namespace PileDesign.Output
             string currentSignature = ConcreteModelOptions.Signature();
             if (anaModel?.ConcreteOptionsSignature is string recorded && recorded != currentSignature)
             {
-                AddText(body,
+                AddTableNote(body,
                     "※ 注意: 材料モデル化オプションが水平解析の実行後に変更されています。" +
                     "本計算書の解析結果は変更前のオプションによるものです。再解析のうえ出力し直してください。");
             }

@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Common;
@@ -38,6 +38,10 @@ namespace PileDesign.Output
         {
             // ドキュメント全体の標準フォント
             public const string FontName = "ＭＳ ゴシック";
+
+            // 表・図の下に置く注記。本文より控えめにする
+            public const string NoteFontName = "游明朝";
+            public const double NoteFontSize = 9.0;
 
             // 段落/番号付きアウトライン（EnsureHeadingStylesWithNumbering 等）
             public const int OutlineIndentStepTwips = 420;
@@ -134,29 +138,40 @@ namespace PileDesign.Output
         }
 
         /// <summary>標準フォントの RunFonts を生成</summary>
-        private static RunFonts CreateDefaultRunFonts() => new()
+        private static RunFonts CreateDefaultRunFonts() => CreateRunFonts(null);
+
+        /// <summary>
+        /// RunFonts を生成する。<paramref name="fontName"/> が null なら文書の標準フォント。
+        /// 注記だけ書体を変えるなど、一部の段落を別書体にするために使う。
+        /// </summary>
+        private static RunFonts CreateRunFonts(string? fontName)
         {
-            Ascii = Layout.FontName,
-            HighAnsi = Layout.FontName,
-            EastAsia = Layout.FontName,
-            ComplexScript = Layout.FontName
-        };
+            string name = string.IsNullOrEmpty(fontName) ? Layout.FontName : fontName!;
+            return new RunFonts
+            {
+                Ascii = name,
+                HighAnsi = name,
+                EastAsia = name,
+                ComplexScript = name
+            };
+        }
 
         private static readonly Regex InlineMathRx = new(@"\$(.+?)\$", RegexOptions.Singleline | RegexOptions.Compiled);
 
-        private static IEnumerable<OpenXmlElement> BuildInlineMixedRuns(string text, double fontSize)
+        private static IEnumerable<OpenXmlElement> BuildInlineMixedRuns(
+            string text, double fontSize, string? fontName = null)
         {
             int last = 0;
             foreach (Match m in InlineMathRx.Matches(text))
             {
                 if (m.Index > last)
-                    foreach (var r in ConvertStringToRunsWithSuperSub(text[last..m.Index], fontSize))
+                    foreach (var r in ConvertStringToRunsWithSuperSub(text[last..m.Index], fontSize, fontName))
                         yield return r;
                 yield return ParseTeXToOfficeMath(m.Groups[1].Value);
                 last = m.Index + m.Length;
             }
             if (last < text.Length)
-                foreach (var r in ConvertStringToRunsWithSuperSub(text[last..], fontSize))
+                foreach (var r in ConvertStringToRunsWithSuperSub(text[last..], fontSize, fontName))
                     yield return r;
         }
 

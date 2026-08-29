@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using System.Linq;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.FEM;
@@ -125,7 +125,7 @@ namespace PileDesign.Output
             body.Append(table);
 
             // 「地盤 非線形性」列の凡例（3 段階の意味）
-            AddText(body,
+            AddTableNote(body,
                 $"※ 地盤非線形性 … 「{SoilNonlinearityModes.ToShortText(SoilNonlinearityMode.Linear)}」: " +
                 "水平地盤反力係数を基準値 kh0（相対変位 y0 = 1cm における値）で一定とする。 " +
                 $"「{SoilNonlinearityModes.ToShortText(SoilNonlinearityMode.KhReduction)}」: " +

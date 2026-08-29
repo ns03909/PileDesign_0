@@ -356,7 +356,7 @@ namespace PileDesign.Output
             if (ConcreteModelOptions.UseUnitGsiForConcreteE)
             {
                 AddEq(body, @"E_{c} = 3.35\times 10^{4} \left(\frac{\gamma}{24}\right)^{2} \left(\frac{F_{c}}{60}\right)^{\frac{1}{3}}");
-                AddText(body, "※ Ec の算定では ξ = 1.0 とする（基本設定）。強度側（ξ·Fc 等）には実際の ξ を用いる。");
+                AddTableNote(body, "※ Ec の算定では ξ = 1.0 とする（基本設定）。強度側（ξ·Fc 等）には実際の ξ を用いる。");
             }
             else
             {
@@ -366,7 +366,7 @@ namespace PileDesign.Output
             // 圧縮: 基本設定「場所打ち杭の許容圧縮応力度を告示1113(第8)による」ON時は、使用/損傷限界の
             // 許容圧縮応力度を告示（長期・短期）で評価する旨を注記（Ms/Md の Msi/Mdi に反映される）。
             if (ConcreteModelOptions.UseNotification1113Compression)
-                AddText(body, "※ 使用限界・損傷限界の許容圧縮応力度は告示 平13国交告第1113号(第8) による（使用限界=長期、損傷限界=短期）。");
+                AddTableNote(body, "※ 使用限界・損傷限界の許容圧縮応力度は告示 平13国交告第1113号(第8) による（使用限界=長期、損傷限界=短期）。");
 
             AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の使用限界曲げモーメントMs"));
             //AddEquation_InsituReinforcedPileMs(body);
@@ -382,7 +382,7 @@ namespace PileDesign.Output
             {
                 AddText(body, "場所打ち鉄筋コンクリート杭の安全限界曲げモーメントMu（e関数法、耐震設計指針(案)5.4.1 準拠）");
                 AddEq(body, @"M_{u} = M_{u0}");
-                AddText(body, "※ e関数法による断面解析値をそのまま用い、低減係数 β1・β2 および軸力適用範囲の制限は課さない。");
+                AddTableNote(body, "※ e関数法による断面解析値をそのまま用い、低減係数 β1・β2 および軸力適用範囲の制限は課さない。");
             }
             else
             {

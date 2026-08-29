@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Common;
@@ -146,7 +146,8 @@ namespace PileDesign.Output
         // サポートする記法:
         //   <^...> または ^{...} : 上付き文字
         //   <_...> または _{...} : 下付き文字
-        public static List<Run> ConvertStringToRunsWithSuperSub(string text, double fontSize = 10.5)
+        public static List<Run> ConvertStringToRunsWithSuperSub(
+            string text, double fontSize = 10.5, string? fontName = null)
         {
             var runs = new List<Run>();
             int pos = 0;
@@ -162,7 +163,7 @@ namespace PileDesign.Output
                 {
                     string normalText = text[pos..match.Index];
                     runs.Add(new Run(
-                        new RunProperties { FontSize = new FontSize { Val = (fontSize * 2).ToString() }, RunFonts = CreateDefaultRunFonts() },
+                        new RunProperties { FontSize = new FontSize { Val = (fontSize * 2).ToString() }, RunFonts = CreateRunFonts(fontName) },
                         new Text(normalText)
                     ));
                 }
@@ -174,7 +175,7 @@ namespace PileDesign.Output
                         new RunProperties
                         {
                             FontSize = new FontSize { Val = (fontSize * 2).ToString() },
-                            RunFonts = CreateDefaultRunFonts(),
+                            RunFonts = CreateRunFonts(fontName),
                             VerticalTextAlignment = new VerticalTextAlignment { Val = VerticalPositionValues.Superscript }
                         },
                         new Text(superText)
@@ -187,7 +188,7 @@ namespace PileDesign.Output
                         new RunProperties
                         {
                             FontSize = new FontSize { Val = (fontSize * 2).ToString() },
-                            RunFonts = CreateDefaultRunFonts(),
+                            RunFonts = CreateRunFonts(fontName),
                             VerticalTextAlignment = new VerticalTextAlignment { Val = VerticalPositionValues.Subscript }
                         },
                         new Text(subText)
@@ -202,7 +203,7 @@ namespace PileDesign.Output
             {
                 string normalText = text[pos..];
                 runs.Add(new Run(
-                    new RunProperties { FontSize = new FontSize { Val = (fontSize * 2).ToString() }, RunFonts = CreateDefaultRunFonts() },
+                    new RunProperties { FontSize = new FontSize { Val = (fontSize * 2).ToString() }, RunFonts = CreateRunFonts(fontName) },
                     new Text(normalText)
                 ));
             }
@@ -216,8 +217,16 @@ namespace PileDesign.Output
         /// </summary>
         public static void AddIntroText(Body body, string text) => AddText(body, text, "left", 9.5);
 
+        /// <summary>
+        /// 表・図の下に置く注記（「※ …」）。本文より小さく、明朝で組む。
+        /// 本文はゴシックなので、書体を変えることで<b>本文ではなく直前の表への注</b>だと分かる。
+        /// </summary>
+        public static void AddTableNote(Body body, string text) =>
+            AddText(body, text, "left", Layout.NoteFontSize, Layout.NoteFontName);
+
         // テキストを追加するメソッド
-        public static void AddText(Body body, string textContent, string alignment = "left", double fontSize = 10.5)
+        public static void AddText(Body body, string textContent, string alignment = "left",
+            double fontSize = 10.5, string? fontName = null)
         {
             if (body == null) return;
 
@@ -244,7 +253,7 @@ namespace PileDesign.Output
             string[] lines = textContent.Replace("\r\n", "\n").Split('\n');
             for (int i = 0; i < lines.Length; i++)
             {
-                foreach (var element in BuildInlineMixedRuns(lines[i], fontSize))
+                foreach (var element in BuildInlineMixedRuns(lines[i], fontSize, fontName))
                     paragraph.Append(element);
 
                 if (i < lines.Length - 1)
