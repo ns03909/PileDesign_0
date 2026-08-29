@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Common;
@@ -1174,7 +1174,8 @@ namespace PileDesign.Output
 
                 var run = new Run();
                 var rPr = new RunProperties();
-                rPr.Append(CreateDefaultRunFonts());
+                // 桁を揃えて読ませる固定行なので、本文が明朝でもここは等幅を保つ
+                rPr.Append(CreateRunFonts(Layout.TableFontName));
                 rPr.Append(new FontSize { Val = "18" }); // 9pt = 18 (twentieths)
                 rPr.Append(new FontSizeComplexScript { Val = "18" });
                 run.Append(rPr);

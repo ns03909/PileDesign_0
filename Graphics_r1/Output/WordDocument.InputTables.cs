@@ -556,7 +556,8 @@ namespace PileDesign.Output
             // 杭体No.のヘッダー
             var headerPara = new Paragraph();
             headerPara.Append(new Run(
-                new RunProperties { Bold = new Bold(), FontSize = new FontSize { Val = "18" }, RunFonts = CreateDefaultRunFonts() },
+                new RunProperties { Bold = new Bold(), FontSize = new FontSize { Val = "18" },
+                    RunFonts = CreateRunFonts(Layout.HeadingFontName) },
                 new Text($"杭体No.{pileBodyNo}") { Space = SpaceProcessingModeValues.Preserve }));
             body.Append(headerPara);
 

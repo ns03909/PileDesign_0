@@ -80,7 +80,7 @@ namespace PileDesign.Output
 
             if (text.Length != 0)
             {
-                foreach (var e in BuildInlineMixedRuns(text, fontSize))
+                foreach (var e in BuildInlineMixedRuns(text, fontSize, Layout.HeadingFontName))
                     paragraph.Append(e);
             }
 
@@ -107,7 +107,7 @@ namespace PileDesign.Output
 
             if (text.Length != 0)
             {
-                foreach (var e in BuildInlineMixedRuns(text, fontSize))
+                foreach (var e in BuildInlineMixedRuns(text, fontSize, Layout.HeadingFontName))
                     paragraph.Append(e);
             }
 
@@ -134,7 +134,7 @@ namespace PileDesign.Output
 
             if (text.Length != 0)
             {
-                foreach (var e in BuildInlineMixedRuns(text, fontSize))
+                foreach (var e in BuildInlineMixedRuns(text, fontSize, Layout.HeadingFontName))
                     paragraph.Append(e);
             }
 

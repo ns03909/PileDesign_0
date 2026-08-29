@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -55,22 +55,58 @@ namespace TestProject1
                 "表下の注記が AddTableNote を通っていません:\n  " + string.Join("\n  ", violations));
         }
 
-        /// <summary>注記は本文より小さく、書体も本文と変えること。</summary>
+        /// <summary>
+        /// 役割ごとに書体を分けていること。
+        ///
+        /// ・本文と見出し … 別書体 (階層が一目で分かる)
+        /// ・本文と注記 … 別書体 (本文の続きと読み違えない)
+        /// ・表 … <b>等幅</b>。プロポーショナル書体にすると数表の桁が揃わない
+        /// </summary>
         [TestMethod]
-        public void TheNoteStyle_IsSmallerAndADifferentFace()
+        public void TheFontsAreSplitByRole()
         {
             string code = File.ReadAllText(
                 Path.Combine(FindSolutionRoot(), "Graphics_r1", "Output", "WordDocument.cs"));
 
-            var body = Regex.Match(code, @"public const string FontName = ""(?<v>[^""]+)""");
-            var noteFace = Regex.Match(code, @"public const string NoteFontName = ""(?<v>[^""]+)""");
-            var noteSize = Regex.Match(code, @"public const double NoteFontSize = (?<v>[\d.]+)");
+            string Face(string name)
+            {
+                var m = Regex.Match(code, $@"public const string {name} = ""(?<v>[^""]+)""");
+                Assert.IsTrue(m.Success, $"{name} が見つかりません");
+                return m.Groups["v"].Value;
+            }
 
-            Assert.IsTrue(body.Success && noteFace.Success && noteSize.Success, "定数が見つかりません");
-            Assert.AreNotEqual(body.Groups["v"].Value, noteFace.Groups["v"].Value,
-                "注記が本文と同じ書体になっています");
-            Assert.IsTrue(double.Parse(noteSize.Groups["v"].Value) < 10.5,
+            string body = Face("FontName");
+            string heading = Face("HeadingFontName");
+            string table = Face("TableFontName");
+            string note = Face("NoteFontName");
+
+            Assert.AreNotEqual(body, heading, "見出しが本文と同じ書体です");
+            Assert.AreNotEqual(body, note, "注記が本文と同じ書体です");
+
+            // 等幅であること。和文の等幅は「Ｐ」が付かない方 (ＭＳ Ｐゴシックは
+            // プロポーショナル)。ここを取り違えると数表の桁が崩れる
+            Assert.IsFalse(table.Contains('Ｐ'), $"表の書体 {table} がプロポーショナルです");
+            CollectionAssert.Contains(
+                new[] { "ＭＳ ゴシック", "ＭＳ 明朝", "Consolas" }, table,
+                $"表の書体 {table} が等幅として確認できません");
+
+            var noteSize = Regex.Match(code, @"public const double NoteFontSize = (?<v>[\d.]+)");
+            Assert.IsTrue(noteSize.Success && double.Parse(noteSize.Groups["v"].Value) < 10.5,
                 "注記が本文より小さくなっていません");
+        }
+
+        /// <summary>
+        /// 桁を揃えて読ませる固定行 (検定結果テキスト) が等幅のままであること。
+        /// 本文を明朝にしたときに巻き込まれると、そこだけ桁が崩れる。
+        /// </summary>
+        [TestMethod]
+        public void TheFixedPitchReport_KeepsTheMonospaceFace()
+        {
+            string code = File.ReadAllText(
+                Path.Combine(FindSolutionRoot(), "Graphics_r1", "Output", "WordDocument.SummaryTables.cs"));
+
+            StringAssert.Contains(code, "CreateRunFonts(Layout.TableFontName)",
+                "検定結果テキストが等幅を指定していません");
         }
     }
 }

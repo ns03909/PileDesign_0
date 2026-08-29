@@ -36,11 +36,20 @@ namespace PileDesign.Output
 
         private static class Layout
         {
-            // ドキュメント全体の標準フォント
-            public const string FontName = "ＭＳ ゴシック";
+            // 本文。数行以上の説明文は明朝が読みやすい
+            public const string FontName = "游明朝";
 
-            // 表・図の下に置く注記。本文より控えめにする
-            public const string NoteFontName = "游明朝";
+            // 見出し。本文と書体を変えることで階層が一目で分かる
+            public const string HeadingFontName = "游ゴシック Medium";
+
+            // 表の中身と、桁を揃えたい固定行のテキスト。
+            // 「ＭＳ ゴシック」は等幅 (プロポーショナルは「ＭＳ Ｐゴシック」)。
+            // 半角数字が固定ピッチなので、数表の桁がそのまま揃う。
+            public const string TableFontName = "ＭＳ ゴシック";
+
+            // 表・図の下に置く注記。本文 (明朝) と書体を変えて、
+            // 本文の続きではなく直前の表への注だと分かるようにする
+            public const string NoteFontName = "游ゴシック";
             public const double NoteFontSize = 9.0;
 
             // 段落/番号付きアウトライン（EnsureHeadingStylesWithNumbering 等）
@@ -671,7 +680,8 @@ namespace PileDesign.Output
             var para = new Paragraph(
                 new ParagraphProperties(new Justification { Val = JustificationValues.Center }),
                 new Run(
-                    new RunProperties(new FontSize { Val = (14 * 2).ToString() }, CreateDefaultRunFonts(), new Bold()),
+                    new RunProperties(new FontSize { Val = (14 * 2).ToString() },
+                        CreateRunFonts(Layout.HeadingFontName), new Bold()),
                     new Text(title))
             );
             body.Append(para);
@@ -1012,8 +1022,8 @@ namespace PileDesign.Output
                 });
             }
 
-            // 共通 RunProperties
-            var commonRunProps = new RunProperties(CreateDefaultRunFonts());
+            // 共通 RunProperties (見出しは本文と書体を変える)
+            var commonRunProps = new RunProperties(CreateRunFonts(Layout.HeadingFontName));
 
             // Heading1～Heading6 スタイル
             for (int h = 1; h <= 6; h++)

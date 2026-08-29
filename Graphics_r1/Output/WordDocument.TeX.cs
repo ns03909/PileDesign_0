@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Common;
@@ -633,7 +633,7 @@ namespace PileDesign.Output
                     switch (item)
                     {
                         case string s:
-                            foreach (var e in BuildInlineMixedRuns(s, fontSize))
+                            foreach (var e in BuildInlineMixedRuns(s, fontSize, Layout.TableFontName))
                             {
                                 if (bold && e is Run r) { r.RunProperties ??= new RunProperties(); r.RunProperties.Bold ??= new Bold(); }
                                 paragraph.Append(e);
@@ -656,7 +656,7 @@ namespace PileDesign.Output
                             var txt = item.ToString();
                             if (!string.IsNullOrEmpty(txt))
                             {
-                                foreach (var e in BuildInlineMixedRuns(txt, fontSize))
+                                foreach (var e in BuildInlineMixedRuns(txt, fontSize, Layout.TableFontName))
                                 {
                                     if (bold && e is Run r2) { r2.RunProperties ??= new RunProperties(); r2.RunProperties.Bold ??= new Bold(); }
                                     paragraph.Append(e);
