@@ -100,12 +100,19 @@ namespace PileDesign.Output
         // 沈下量の節
         private void AddSectionSettlement(Body body)
         {
-            AddHeader1(body, "杭の沈下検討");
+            AddHeader1(body, "杭の沈下検討", 1);
 
+            // 群杭の沈下を検討していない計算書に、群杭の算定方針と式だけが載っていた。
+            // 出力する結果に対応する式だけを載せる。ゲートは結果側と同じ
+            // IncludeGroupPileSettlement (群杭沈下解析が未実施なら常に false)。
+            bool includeGroup = mainWindowViewModel.DocxOutput.IncludeGroupPileSettlement;
 
-            AddInlineMathParagraph(body, ["杭の沈下は、「基礎指針'19」6.3節による。" +
-                "単杭の沈下量は、同節の荷重伝達解析モデルにより求め、" +
-                "群杭の沈下量は、等価荷重面を用いたスタインブレナーの近似解（「基礎指針'19」5.3節）を用いて求める。"]);
+            AddInlineMathParagraph(body, [includeGroup
+                ? "杭の沈下は、「基礎指針'19」6.3節による。" +
+                  "単杭の沈下量は、同節の荷重伝達解析モデルにより求め、" +
+                  "群杭の沈下量は、等価荷重面を用いたスタインブレナーの近似解（「基礎指針'19」5.3節）を用いて求める。"
+                : "杭の沈下は、「基礎指針'19」6.3節による。" +
+                  "単杭の沈下量は、同節の荷重伝達解析モデルにより求める。"]);
 
             AddText(body, "単杭の先端抵抗-沈下量関係");
             //AddEquation_PileSettlement(body);
@@ -122,6 +129,10 @@ namespace PileDesign.Output
             AddText(body, "単杭の周面抵抗力度-沈下量関係");
 
             AddTrilinearCircumResistanceTable(body);
+
+            // ここから下は群杭 (等価荷重面 + スタインブレナー) の式。
+            // 群杭の沈下を出力しない計算書では、対応する結果が無いので載せない。
+            if (!includeGroup) return;
 
             AddText(body, "スタインブレナーの解による成層多層地盤の即時沈下量");
             //AddEquation_SettlementDeltaSE(body);
@@ -158,7 +169,7 @@ namespace PileDesign.Output
         // 水平抵抗の節
         private void AddSectionHorizontalResistance(Body body)
         {
-            AddHeader1(body, "杭の水平抵抗");
+            AddHeader1(body, "杭の水平抵抗", 1);
 
             AddInlineMathParagraph(body, ["杭の水平抵抗は、「基礎指針'19」6.6節による。"]);
 
@@ -341,7 +352,7 @@ namespace PileDesign.Output
         // 部材の性能 (internal: オプション分岐の出力内容をテストで検証するため)
         internal static void AddSectionMemberCapacities(Body body)
         {
-            AddHeader1(body, "基礎部材の強度と変形性能");
+            AddHeader1(body, "基礎部材の強度と変形性能", 1);
 
             AddText(body, ConcreteModelOptions.MapLimitStateText(
                 "杭体の曲げ・せん断耐力は、日本建築学会「基礎部材の強度と変形性能」（第1版、2022年）に基づき、" +
@@ -356,7 +367,7 @@ namespace PileDesign.Output
             if (ConcreteModelOptions.UseUnitGsiForConcreteE)
             {
                 AddEq(body, @"E_{c} = 3.35\times 10^{4} \left(\frac{\gamma}{24}\right)^{2} \left(\frac{F_{c}}{60}\right)^{\frac{1}{3}}");
-                AddTableNote(body, "※ Ec の算定では ξ = 1.0 とする（基本設定）。強度側（ξ·Fc 等）には実際の ξ を用いる。");
+                AddTableNote(body, "※ Ec の算定では ξ = 1.0 とする。強度側（ξ·Fc 等）には実際の ξ を用いる。");
             }
             else
             {
@@ -666,7 +677,7 @@ namespace PileDesign.Output
         // 地盤変位の節
         private void AddGroundDisplacementSection(Body body)
         {
-            AddHeader1(body, "地盤の水平変位");
+            AddHeader1(body, "地盤の水平変位", 1);
 
             //static DocumentFormat.OpenXml.Math.OfficeMath mathDmaxA2Eq() =>
             //    Tex(@"\D_{max} = C_{1}\left(\alpha^{2}-1\right)f_{A}\sum {H_{i}}");
@@ -786,7 +797,7 @@ namespace PileDesign.Output
         // 液状化の節
         private void AddLiquefactionSection(Body body)
         {
-            AddHeader1(body, "液状化の検討");
+            AddHeader1(body, "液状化の検討", 1);
 
             //static DocumentFormat.OpenXml.Math.OfficeMath mathTauDonSigmaZPrimeEq() =>
             //    Tex(@"\frac{\tau_{d}}{\sigma_{z}'} = r_{n}\frac{\alpha_{max}}{g}\frac{\sigma_{z}}{\sigma_{z}'}r_{d}");

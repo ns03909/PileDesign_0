@@ -17,68 +17,198 @@ using Path = System.IO.Path;
 using Serilog;
 namespace PileDesign.Output
 {
+    /// <summary>
+    /// 図の中に焼き込む文字と線の見た目。
+    /// <see cref="DiagramRenderer"/> からは WordDocument.Layout が見えないので値で受け取る。
+    /// 大きさは<b>すべて pt</b>。px で渡すと画像だけが倍密度になり、紙面で文字だけが極小になる。
+    /// </summary>
+    internal readonly record struct PileDiagramStyle(
+        string FontName,
+        double FontSizePt,
+        double SmallFontSizePt,
+        double LineWidthThickPt,
+        double LineWidthThinPt,
+        int SpringZigzagMaxCount,
+        double MinSpringLengthPx);
+
     internal static class DiagramRenderer
     {
         private const double InchPerMm = 1.0 / 25.4;
         private const double DefaultDpi = 96.0;
 
+        // 解析杭モデル図の横方向の帯 (画像幅に対する割合)。
+        // 左から 土層諸元 / 深度目盛 / 杭とばね / N値柱状図。
+        private const double BandLayerInfoLeft = 0.02;
+        private const double BandLayerInfoRight = 0.30;
+        private const double BandDepthAxisLeft = 0.32;
+        private const double BandDepthAxisRight = 0.35;
+        private const double BandPileLeft = 0.35;
+        private const double BandPileRight = 0.72;
+        private const double BandNChartLeft = 0.75;
+        private const double BandNChartRight = 0.95;
+
         private static int MmToPx(double mm, double dpi = DefaultDpi, double scale = 1.0)
             => (int)Math.Round(mm * dpi * scale * InchPerMm);
 
         /// <summary>
-        /// 土質ごとの背景色 (地盤ウィンドウと同じ配色、半透明)。
-        ///   粘性土: 薄茶 (210,180,140,64)
-        ///   砂質土: 薄橙 (255,165,  0,64)
-        ///   礫質土: 薄緑 (144,238,144,64)
-        ///   その他: 薄灰 (200,200,200,32)
+        /// N値柱状図の軸の上限。データが 60 を超えたら 10 刻みで伸ばす。
+        /// 60 固定にしていたため、支持層の N 値が図の外へはみ出していた。
         /// </summary>
-        private static Brush GetSoilTypeBackgroundBrush(string? granularityClass) => granularityClass switch
+        internal static double NAxisMax(double dataMaxN)
         {
-            "粘性土" => new SolidColorBrush(Color.FromArgb(64, 210, 180, 140)),
-            "砂質土" => new SolidColorBrush(Color.FromArgb(64, 255, 165, 0)),
-            "礫質土" => new SolidColorBrush(Color.FromArgb(64, 144, 238, 144)),
-            _ => new SolidColorBrush(Color.FromArgb(32, 200, 200, 200)),
-        };
+            if (double.IsNaN(dataMaxN) || dataMaxN < 0) dataMaxN = 0;
+            return Math.Clamp(Math.Ceiling(Math.Max(60.0, dataMaxN) / 10.0) * 10.0, 60.0, 300.0);
+        }
+
+        /// <summary>N値柱状図の目盛の刻み。軸が伸びたら刻みも粗くしてラベルの重なりを防ぐ。</summary>
+        internal static double NAxisStep(double maxN)
+            => maxN <= 60.0 ? 10.0 : maxN <= 120.0 ? 20.0 : 50.0;
 
         /// <summary>
-        /// ピクセル空間上で土層ごとに薄い背景を描画する。
-        /// ToImagePoint は (worldX, worldY=altitude) を受けるラムダ。
+        /// 土層情報帯の層番号に使う丸数字。
+        /// 丸数字は ⑳ (U+2473) までしかないので、21 以上は括弧書きにする。
         /// </summary>
+        internal static string CircledNumber(int no)
+        {
+            if (no <= 0) return string.Empty;
+            if (no <= 20) return ((char)('①' + (no - 1))).ToString();
+            return $"({no})";
+        }
+
+        /// <summary>
+        /// その土層の帯に何行書けるか。薄い層は 3 行 → 2 行 → 1 行 と落とし、
+        /// 1 行も入らなければ 0 を返す (呼び出し側で引き出し線に逃がす)。
+        /// </summary>
+        /// <param name="bandHeightPx">その層が占める帯の高さ</param>
+        /// <param name="lineHeightPx">通常の書体の行高</param>
+        /// <param name="smallLineHeightPx">小さい書体の行高</param>
+        internal static int LayerInfoLineCount(double bandHeightPx, double lineHeightPx, double smallLineHeightPx)
+        {
+            if (bandHeightPx >= 3 * lineHeightPx + 4) return 3;
+            if (bandHeightPx >= 2 * lineHeightPx + 4) return 2;
+            if (bandHeightPx >= lineHeightPx + 2) return 1;
+            if (bandHeightPx >= smallLineHeightPx) return 1;   // 小さい書体で 1 行
+            return 0;
+        }
+
+        /// <summary>
+        /// 土層情報帯に書く文字列。行数が減ったときに落とす順は 下端深度・Cu → γ。
+        /// Cu は粘性土以外では 0 なので、値が無ければ行数によらず項ごと省く。
+        /// </summary>
+        internal static string[] LayerInfoLines(
+            int no, string? name, double thickness, double bottomDepth,
+            double density, double nValue, double cohesive, int lineCount)
+        {
+            if (lineCount <= 0) return [];
+
+            string head = $"{CircledNumber(no)} {name}".Trim();
+            if (lineCount == 1) return [$"{head}  t={thickness:0.00}  N={nValue:0}"];
+            if (lineCount == 2) return [head, $"t={thickness:0.00}  γ={density:0.0}  N={nValue:0}"];
+
+            string third = $"γ={density:0.0}  N={nValue:0}";
+            if (cohesive > 0) third += $"  Cu={cohesive:0}";
+            return [head, $"t={thickness:0.00}  GL-{bottomDepth:0.00}", third];
+        }
+
+        /// <summary>
+        /// 引き出し線の逃がし先。希望位置から上下に探し、遠すぎる (maxDistance を超える)
+        /// なら諦める。遠くへ逃がすと引き出し線どうしが交差して却って読めなくなる。
+        /// </summary>
+        private static int FindFreeSlot(bool[] used, int want, int maxDistance)
+        {
+            if (used.Length == 0) return -1;
+            want = Math.Clamp(want, 0, used.Length - 1);
+            for (int d = 0; d <= maxDistance; d++)
+            {
+                if (want - d >= 0 && !used[want - d]) return want - d;
+                if (want + d < used.Length && !used[want + d]) return want + d;
+            }
+            return -1;
+        }
+
+        /// <summary>a → b をジグザグ (ばね記号) で結ぶ。</summary>
+        private static void DrawZigzag(DrawingContext dc, Point a, Point b, int zigCount, double amplitudePx, Pen pen)
+        {
+            double dx = b.X - a.X;
+            double dy = b.Y - a.Y;
+            double length = Math.Sqrt(dx * dx + dy * dy);
+            if (zigCount < 1 || length < 1.0)
+            {
+                dc.DrawLine(pen, a, b);
+                return;
+            }
+
+            double ux = dx / length;
+            double uy = dy / length;
+            double nx = -uy;
+            double ny = ux;
+            double step = length / zigCount;
+
+            var pts = new List<Point> { a };
+            for (int i = 1; i < zigCount; i++)
+            {
+                double t = i * step;
+                double off = (i % 2) == 0 ? -amplitudePx : amplitudePx;
+                pts.Add(new Point(a.X + ux * t + nx * off, a.Y + uy * t + ny * off));
+            }
+            pts.Add(b);
+
+            for (int i = 0; i < pts.Count - 1; i++)
+                dc.DrawLine(pen, pts[i], pts[i + 1]);
+        }
+
+        /// <summary>
+        /// 土質ごとの色 (地盤ウィンドウと同じ配色)。不透明度は用途ごとに呼び出し側で決める。
+        ///   粘性土: 薄茶 (210,180,140)
+        ///   砂質土: 薄橙 (255,165,  0)
+        ///   礫質土: 薄緑 (144,238,144)
+        ///   その他: 薄灰 (200,200,200)
+        /// </summary>
+        private static Color GetSoilTypeColor(string? granularityClass, byte alpha) => granularityClass switch
+        {
+            "粘性土" => Color.FromArgb(alpha, 210, 180, 140),
+            "砂質土" => Color.FromArgb(alpha, 255, 165, 0),
+            "礫質土" => Color.FromArgb(alpha, 144, 238, 144),
+            _ => Color.FromArgb((byte)(alpha / 2), 200, 200, 200),
+        };
+
+        /// <summary>土質ごとの背景色 (半透明)。</summary>
+        private static Brush GetSoilTypeBackgroundBrush(string? granularityClass)
+            => new SolidColorBrush(GetSoilTypeColor(granularityClass, 64));
+
+        /// <summary>
+        /// 土層ごとに薄い背景帯を塗る。
+        /// 1 層目の上端は<b>地表面標高</b>であって杭頭標高ではない。
+        /// 杭頭が地表と一致しないモデルで色帯が層境界からずれていたため、ここを取り違えないこと。
+        /// </summary>
+        /// <param name="yOf">標高 (m) → 画像 Y (px) の変換</param>
         private static void DrawSoilLayerBackground(
             DrawingContext dc,
-            SoilPile soilPile,
-            int widthPx,
-            int heightPx,
-            double scalePxPerM,
-            Func<double, double, Point> ToImagePoint)
+            GroundInput? ground,
+            double x0,
+            double x1,
+            Func<double, double> yOf,
+            double clipTop,
+            double clipBottom,
+            byte alpha = 64)
         {
-            var groundLayers = soilPile?.GroundInput?.GroundLayers;
+            var groundLayers = ground?.GroundLayers;
             if (groundLayers == null || groundLayers.Count == 0) return;
 
-            double soilPileZ = soilPile!.Z;
-            double originYPx = ToImagePoint(0, 0).Y;
-
-            for (int i = 0; i < groundLayers.Count; i++)
+            double topAlt = ground!.GroundTopAltitude;
+            foreach (var layer in groundLayers)
             {
-                var layer = groundLayers[i];
-                // 各層の上端/下端 altitude (Z, m 単位)。BottomAltitude が存在するので TopAltitude は前層から取る
-                double topAlt = (i == 0)
-                    ? soilPileZ // 0 depth at pile top
-                    : groundLayers[i - 1].BottomAltitude;
                 double btmAlt = layer.BottomAltitude;
-                // Altitude 差を px に: ToImagePoint は World(y=Altitude) を描画座標に変換する
-                // y_top_altitude は上にあるので画像上での Y は小さくなる
-                double yTopPx = -(topAlt - soilPileZ) * scalePxPerM + originYPx;
-                double yBtmPx = -(btmAlt - soilPileZ) * scalePxPerM + originYPx;
-                double top = Math.Min(yTopPx, yBtmPx);
-                double btm = Math.Max(yTopPx, yBtmPx);
-                // 画像範囲と交差部分のみ描画
-                double visTop = Math.Max(0, top);
-                double visBtm = Math.Min(heightPx, btm);
-                if (visBtm <= visTop) continue;
+                double yTopPx = yOf(topAlt);
+                double yBtmPx = yOf(btmAlt);
+                topAlt = btmAlt;
 
-                var brush = GetSoilTypeBackgroundBrush(layer.GranularityClass);
-                dc.DrawRectangle(brush, null, new Rect(0, visTop, widthPx, visBtm - visTop));
+                double top = Math.Max(clipTop, Math.Min(yTopPx, yBtmPx));
+                double btm = Math.Min(clipBottom, Math.Max(yTopPx, yBtmPx));
+                if (btm <= top) continue;
+
+                var brush = new SolidColorBrush(GetSoilTypeColor(layer.GranularityClass, alpha));
+                dc.DrawRectangle(brush, null, new Rect(x0, top, x1 - x0, btm - top));
             }
         }
 
@@ -228,381 +358,497 @@ namespace PileDesign.Output
         //    }
         //}
 
-        // 既存ファイルの DiagramRenderer クラス内に以下のメソッドを追加してください。
+        /// <summary>
+        /// 計算書の「沈下解析杭モデル」「水平抵抗解析杭モデル」の図。
+        /// 横は左から 土層諸元 / 深度目盛 / 杭とばね / N値柱状図 の 4 帯に分ける。
+        /// 縦は標高 (m) → 画像 Y (px) の変換を <c>YOf</c> ひとつに集約する。
+        /// 変換式を各所に散らすと、地表面と杭頭がずれたモデルで土層と杭の位置関係が壊れる。
+        /// 横方向は模式図で、杭径を読める太さまで誇張している (縮尺は縦方向のみ)。
+        /// </summary>
         public static byte[] RenderPileForceElevationPngBytes(
-                    PileDesign.Models.InputData.SoilPile soilPile,
-                    string springType,
-                    double widthMm = 150,
-                    double heightMm = 100,
-                    double dpi = DefaultDpi,
-                    double scale = 1.0)
+            SoilPile soilPile,
+            string springType,
+            PileDiagramStyle style,
+            double widthMm,
+            double heightMm,
+            double dpi = DefaultDpi,
+            double scale = 1.0)
         {
             ArgumentNullException.ThrowIfNull(soilPile);
-            Func<byte[]> renderAction = () =>
-            {
-                var segments = soilPile.PileBodySegments != null
-                    ? [.. soilPile.PileBodySegments]
-                    : new List<PileDesign.Models.InputData.PileBodySegment>();
-                if (segments.Count == 0)
-                {
-                    int wpx0 = MmToPx(widthMm, dpi, scale);
-                    int hpx0 = MmToPx(heightMm, dpi, scale);
-                    var dv0 = new DrawingVisual();
-                    using (var dc0 = dv0.RenderOpen())
-                    {
-                        dc0.DrawRectangle(Brushes.White, null, new Rect(0, 0, wpx0, hpx0));
-                        var ft = new FormattedText(
-                            "No data",
-                            System.Globalization.CultureInfo.CurrentCulture,
-                            FlowDirection.LeftToRight,
-                            new Typeface("Meiryo"),
-                            12,
-                            Brushes.Gray,
-                            1.0);
-                        dc0.DrawText(ft, new Point(4, 4));
-                    }
-                    var bmp0 = new RenderTargetBitmap(MmToPx(widthMm, dpi, scale), MmToPx(heightMm, dpi, scale), 96, 96, PixelFormats.Pbgra32);
-                    bmp0.Render(dv0);
-                    var enc0 = new PngBitmapEncoder();
-                    enc0.Frames.Add(BitmapFrame.Create(bmp0));
-                    using var ms0 = new MemoryStream();
-                    enc0.Save(ms0);
-                    return ms0.ToArray();
-                }
 
+            byte[] Render()
+            {
                 int widthPx = MmToPx(widthMm, dpi, scale);
                 int heightPx = MmToPx(heightMm, dpi, scale);
 
-                double maxSegDiaMm = segments.Max(s => (double)(s?.PileSection?.PileDiameter ?? 0));
-                double maxSegDia = Math.Max(1.0, maxSegDiaMm) * 0.001; // m
+                // 画像は倍密度 (scale) で描く。文字も同じ倍率で拡大しないと、
+                // 線だけが太く文字だけが極小の図になる。em サイズを px で直書きしないこと。
+                double PtToPx(double pt) => pt * dpi * scale / 72.0;
 
-                double pileDepth = segments[^1].SegmentDepth; // m
-
-                const double topMargin = 1.0;
-                const double btmMargin = 5.0;
-                const double horMargin = 1.0;
-
-                double minX = -maxSegDia * 0.5, maxX = maxSegDia * 0.5;
-                double minY = -pileDepth, maxY = 0;
-                double midX = (maxX + minX) * 0.5;
-                double midY = (topMargin - maxY + minY - btmMargin) * 0.5;
-
-                double scalePxPerM = Math.Min(
-                    widthPx / (maxX - minX + 2 * horMargin),
-                    heightPx / (maxY - minY + topMargin + btmMargin)
-                );
-
-                Point ToImagePoint(double x, double y) =>
-                    new(widthPx * 0.5 + (x - midX) * scalePxPerM,
-                        heightPx * 0.5 - (y - midY) * scalePxPerM);
-
-                // local helper: draw zigzag polyline between a -> b
-                void DrawZigzag(DrawingContext dc, Point a, Point b, int zigCount, double amplitudePx, Pen pen)
+                var segments = soilPile.PileBodySegments is { } sourceSegments
+                    ? sourceSegments.Where(s => s != null).ToList()
+                    : new List<PileBodySegment>();
+                if (segments.Count == 0)
                 {
-                    if (zigCount < 1)
-                    {
-                        dc.DrawLine(pen, a, b);
-                        return;
-                    }
-                    double dx = b.X - a.X;
-                    double dy = b.Y - a.Y;
-                    double length = Math.Sqrt(dx * dx + dy * dy);
-                    if (length < 1.0)
-                    {
-                        dc.DrawLine(pen, a, b);
-                        return;
-                    }
-                    double ux = dx / length;
-                    double uy = dy / length;
-                    double nx = -uy;
-                    double ny = ux;
-                    double step = length / zigCount;
-
-                    var pts = new List<Point> { a };
-                    for (int i = 1; i < zigCount; i++)
-                    {
-                        double t = i * step;
-                        double bx = a.X + ux * t;
-                        double by = a.Y + uy * t;
-                        double off = ((i % 2) == 0) ? -amplitudePx : amplitudePx;
-                        pts.Add(new Point(bx + nx * off, by + ny * off));
-                    }
-                    pts.Add(b);
-
-                    for (int i = 0; i < pts.Count - 1; i++)
-                        dc.DrawLine(pen, pts[i], pts[i + 1]);
+                    return RenderEmptyDiagram(
+                        widthPx, heightPx, "杭のデータがありません",
+                        PtToPx(style.FontSizePt), style.FontName);
                 }
+
+                var ground = soilPile.GroundInput;
+                var layers = ground?.GroundLayers;
+
+                double pileHeadAlt = soilPile.Z;                // 杭頭標高 (m)
+                double pileDepth = segments[^1].SegmentDepth;   // 杭頭からの杭長 (m)
+                double maxSegDiaM =
+                    Math.Max(1.0, segments.Max(s => (double)(s.PileSection?.PileDiameter ?? 0))) * 0.001;
+
+                // ---- 縦: 標高 (m) → 画像 Y (px) --------------------------------------
+                double topAlt = ground != null ? Math.Max(pileHeadAlt, ground.GroundTopAltitude) : pileHeadAlt;
+                double botAlt = pileHeadAlt - pileDepth;
+                if (layers is { Count: > 0 }) botAlt = Math.Min(botAlt, layers[^1].BottomAltitude);
+                if (topAlt - botAlt < 1e-6) topAlt = botAlt + 1.0;
+
+                double topPadPx = PtToPx(style.FontSizePt) * 2.8;       // N値柱状図の見出し 2 行分
+                double botPadPx = PtToPx(style.SmallFontSizePt) * 2.8;  // 凡例の分
+                double scaleYPxPerM = (heightPx - topPadPx - botPadPx) / (topAlt - botAlt);
+                double YOf(double alt) => topPadPx + (topAlt - alt) * scaleYPxPerM;
+                double plotTopPx = topPadPx;
+                double plotBottomPx = heightPx - botPadPx;
+
+                // ---- 横: 帯の割り付け ------------------------------------------------
+                double layerInfoL = widthPx * BandLayerInfoLeft;
+                double layerInfoR = widthPx * BandLayerInfoRight;
+                double depthAxisL = widthPx * BandDepthAxisLeft;
+                double depthAxisR = widthPx * BandDepthAxisRight;
+                double pileBandL = widthPx * BandPileLeft;
+                double pileBandR = widthPx * BandPileRight;
+                double nChartL = widthPx * BandNChartLeft;
+                double nChartR = widthPx * BandNChartRight;
+
+                bool isVertical = string.Equals(springType, "vertical", StringComparison.OrdinalIgnoreCase);
+
+                // 等方スケールだと杭径 1.2m が紙面 6mm にしかならず、節点もばねも潰れる。
+                // 横だけ 0.06W〜0.16W にクランプして誇張する (縮尺は縦方向のみ)。
+                double pileDrawWidthPx = Math.Clamp(maxSegDiaM * scaleYPxPerM, widthPx * 0.06, widthPx * 0.16);
+                double halfWidthPx = pileDrawWidthPx * 0.5;
+                double pileCenterX = isVertical
+                    ? (pileBandL + pileBandR) * 0.5   // 両側に対称にばねを出す
+                    : pileBandR - halfWidthPx;        // 左に地盤変位のファンを置く
+
+                double thick = Math.Max(1.0, PtToPx(style.LineWidthThickPt));
+                double thin = Math.Max(1.0, PtToPx(style.LineWidthThinPt));
+                double nodeRadius = Math.Max(2.0, PtToPx(style.FontSizePt) * 0.18);
+
+                FormattedText Text(string s, double pt, Brush brush) => new FormattedText(
+                    s,
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    new Typeface(style.FontName),
+                    PtToPx(pt),
+                    brush,
+                    1.0);
 
                 var dv = new DrawingVisual();
                 using (var dc = dv.RenderOpen())
                 {
-                    // constants
-                    double lineWidthThick = Math.Max(1.5, 1.5 * scale);
-                    double lineWidthThin = Math.Max(1.0, 1.0 * scale);
-                    double nodeRadius = Math.Max(2.0, 2.0 * scale);
-
-                    // background
                     dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, widthPx, heightPx));
 
-                    // 土層背景色 (地盤ウィンドウと同じ配色): 薄茶/薄橙/薄緑/薄灰の半透明で塗る
-                    DrawSoilLayerBackground(dc, soilPile, widthPx, heightPx, scalePxPerM, ToImagePoint);
+                    // --- 1. 土層の背景色 (地盤ウィンドウと同じ配色) ---
+                    DrawSoilLayerBackground(dc, ground, 0, widthPx, YOf, plotTopPx, plotBottomPx);
 
-                    // draw pile segments (rectangles) and keep min/max Y px for center line
+                    // --- 2. 土層の境界線。杭とばねの上を横切らないよう杭バンドで分断する ---
+                    if (layers != null)
+                    {
+                        var layerPen = new Pen(Brushes.Gray, thin);
+                        // 杭に触れないよう、杭の実際の左右端で切って少し空ける
+                        double gapL = Math.Min(pileBandL, pileCenterX - halfWidthPx) - PtToPx(2);
+                        double gapR = Math.Max(pileBandR, pileCenterX + halfWidthPx) + PtToPx(2);
+                        foreach (var layer in layers)
+                        {
+                            double y = YOf(layer.BottomAltitude);
+                            if (y < plotTopPx - 1 || y > plotBottomPx + 1) continue;
+                            dc.DrawLine(layerPen, new Point(layerInfoL, y), new Point(gapL, y));
+                            dc.DrawLine(layerPen, new Point(gapR, y), new Point(nChartR, y));
+                        }
+                    }
+
+                    // --- 3. 深度目盛・地表面線・地下水位線 ---
+                    // 旧実装には目盛も地表面線も無く、層境界線がどの深さなのか図から読めなかった
+                    double surfaceAlt = ground?.GroundTopAltitude ?? pileHeadAlt;
+                    {
+                        double depthRange = topAlt - botAlt;
+                        double depthUnit = depthRange <= 20 ? 2.0 : depthRange <= 50 ? 5.0 : 10.0;
+                        var tickPen = new Pen(Brushes.DimGray, thin);
+                        foreach (double d in GetMultiplesInRange(0, surfaceAlt - botAlt, depthUnit))
+                        {
+                            double y = YOf(surfaceAlt - d);
+                            if (y < plotTopPx || y > plotBottomPx) continue;
+                            dc.DrawLine(tickPen, new Point(depthAxisL, y), new Point(depthAxisR, y));
+                            var ft = Text(d <= 0 ? "GL±0" : $"GL-{d:0}", style.SmallFontSizePt, Brushes.DimGray);
+                            dc.DrawText(ft, new Point(depthAxisR - ft.Width, y - ft.Height));
+                        }
+                    }
+
+                    if (ground != null)
+                    {
+                        double ys = YOf(surfaceAlt);
+                        if (ys >= plotTopPx - 1 && ys <= plotBottomPx + 1)
+                        {
+                            dc.DrawLine(new Pen(Brushes.Black, thick), new Point(layerInfoL, ys), new Point(nChartR, ys));
+                            // 地表面であることを示すハッチ (目盛の側だけに引いて図を煩くしない)
+                            double hatch = PtToPx(3);
+                            var hatchPen = new Pen(Brushes.Black, thin);
+                            for (double x = layerInfoL + hatch; x < depthAxisR; x += hatch * 1.8)
+                                dc.DrawLine(hatchPen, new Point(x, ys), new Point(x - hatch * 0.7, ys + hatch));
+                        }
+
+                        double yw = YOf(ground.GroundWaterTableAltitude);
+                        if (yw > plotTopPx && yw < plotBottomPx)
+                        {
+                            var waterPen = new Pen(Brushes.SteelBlue, thin) { DashStyle = new DashStyle([6, 3], 0) };
+                            dc.DrawLine(waterPen, new Point(layerInfoL, yw), new Point(nChartR, yw));
+                            var ftw = Text("▽GWL", style.SmallFontSizePt, Brushes.SteelBlue);
+                            dc.DrawText(ftw, new Point(depthAxisR + PtToPx(2), yw - ftw.Height));
+                        }
+                    }
+
+                    // --- 4. 土層情報帯 (層番号・土層名・層厚・下端深度・γ・N値・Cu) ---
+                    if (layers is { Count: > 0 })
+                    {
+                        double lineH = PtToPx(style.FontSizePt) * 1.25;
+                        double smallLineH = PtToPx(style.SmallFontSizePt) * 1.25;
+                        double bandW = layerInfoR - layerInfoL;
+                        var infoBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
+                        var leaderPen = new Pen(Brushes.Gray, Math.Max(0.5, thin * 0.6));
+
+                        // 薄い層の逃がし先。行高ピッチのスロット列とみなして先着順に埋める
+                        int slotCount = Math.Max(1, (int)((plotBottomPx - plotTopPx) / smallLineH));
+                        var slotUsed = new bool[slotCount];
+
+                        FormattedText InfoText(string s, double pt)
+                        {
+                            var ft = Text(s, pt, infoBrush);
+                            ft.MaxTextWidth = bandW;
+                            ft.MaxLineCount = 1;
+                            ft.Trimming = TextTrimming.CharacterEllipsis;
+                            return ft;
+                        }
+
+                        double layerTopAlt = ground!.GroundTopAltitude;
+                        foreach (var layer in layers)
+                        {
+                            double yTop = YOf(layerTopAlt);
+                            double yBtm = YOf(layer.BottomAltitude);
+                            layerTopAlt = layer.BottomAltitude;
+                            if (yBtm <= plotTopPx || yTop >= plotBottomPx) continue;
+
+                            double visTop = Math.Max(plotTopPx, yTop);
+                            double visBtm = Math.Min(plotBottomPx, yBtm);
+                            double h = visBtm - visTop;
+                            int lineCount = LayerInfoLineCount(h, lineH, smallLineH);
+                            bool small = lineCount == 1 && h < lineH + 2;
+
+                            var lines = LayerInfoLines(
+                                layer.No, layer.Name, layer.LayerThickness, layer.BottomGLDepth,
+                                layer.Density, layer.NValue, layer.Cohesive, Math.Max(1, lineCount));
+
+                            if (lineCount >= 1)
+                            {
+                                double pt = small ? style.SmallFontSizePt : style.FontSizePt;
+                                double rowH = small ? smallLineH : lineH;
+                                double y = visTop + (h - rowH * lines.Length) * 0.5;
+                                foreach (var line in lines)
+                                {
+                                    dc.DrawText(InfoText(line, pt), new Point(layerInfoL, y));
+                                    y += rowH;
+                                }
+                                continue;
+                            }
+
+                            // 1 行も入らない薄い層は、近くの空きスロットへ引き出す
+                            double yMid = (visTop + visBtm) * 0.5;
+                            int want = (int)((yMid - plotTopPx) / smallLineH);
+                            int slot = FindFreeSlot(slotUsed, want, 3);
+                            if (slot < 0)
+                            {
+                                // 逃がし先が無ければ層番号だけ帯の右端に出す (諸元は土層表を参照)
+                                var ftNo = Text(CircledNumber(layer.No), style.SmallFontSizePt, infoBrush);
+                                dc.DrawText(ftNo, new Point(layerInfoR - ftNo.Width, yMid - ftNo.Height * 0.5));
+                                continue;
+                            }
+
+                            slotUsed[slot] = true;
+                            double slotY = plotTopPx + (slot + 0.5) * smallLineH;
+                            var ftSlot = InfoText(lines[0], style.SmallFontSizePt);
+                            dc.DrawText(ftSlot, new Point(layerInfoL, slotY - ftSlot.Height * 0.5));
+
+                            double leaderX0 = layerInfoL + Math.Min(ftSlot.Width, bandW) + PtToPx(1);
+                            double leaderX1 = layerInfoR;
+                            if (leaderX1 > leaderX0)
+                            {
+                                double mid = (leaderX0 + leaderX1) * 0.5;
+                                dc.DrawLine(leaderPen, new Point(leaderX0, slotY), new Point(mid, slotY));
+                                dc.DrawLine(leaderPen, new Point(mid, slotY), new Point(leaderX1, yMid));
+                            }
+                        }
+                    }
+
+                    // --- 5. N値柱状図 ---
+                    var masses = ground?.GroundMassesData;
+                    {
+                        double dataMaxN = 0;
+                        if (masses != null)
+                            foreach (var m in masses) dataMaxN = Math.Max(dataMaxN, m.NValue);
+                        if (layers != null)
+                            foreach (var l in layers) dataMaxN = Math.Max(dataMaxN, l.NValue);
+
+                        double maxN = NAxisMax(dataMaxN);
+                        double nStep = NAxisStep(maxN);
+                        double XOfN(double n) => nChartL + Math.Clamp(n, 0, maxN) / maxN * (nChartR - nChartL);
+
+                        // 目盛線とラベル。旧実装は N=0〜60 の 7 本を間隔 28px に詰め込んでおり、
+                        // 見出しが互いに重なって読めなかった。重なるものは間引く (両端は必ず出す)。
+                        var gridPen = new Pen(Brushes.LightGray, thin) { DashStyle = new DashStyle([4, 2], 0) };
+                        var ticks = GetMultiplesInRange(0, maxN, nStep);
+                        double tickLabelTop = plotTopPx - PtToPx(style.SmallFontSizePt) * 1.3;
+                        double lastRight = double.NegativeInfinity;
+                        for (int i = 0; i < ticks.Count; i++)
+                        {
+                            double x = XOfN(ticks[i]);
+                            dc.DrawLine(gridPen, new Point(x, plotTopPx), new Point(x, plotBottomPx));
+
+                            var ft = Text($"{ticks[i]:N0}", style.SmallFontSizePt, Brushes.Black);
+                            double left = x - ft.Width * 0.5;
+                            bool isEnd = i == 0 || i == ticks.Count - 1;
+                            if (!isEnd && left < lastRight + PtToPx(2)) continue;
+                            dc.DrawText(ft, new Point(left, tickLabelTop));
+                            lastRight = left + ft.Width;
+                        }
+
+                        var nTitle = Text("N値", style.FontSizePt, Brushes.Black);
+                        dc.DrawText(nTitle, new Point(
+                            (nChartL + nChartR) * 0.5 - nTitle.Width * 0.5,
+                            tickLabelTop - nTitle.Height));
+
+                        // 層の代表 N の階段図。数値は左の土層情報帯に出すので、ここでは形だけ薄く重ねる
+                        if (layers is { Count: > 0 })
+                        {
+                            var stepPen = new Pen(new SolidColorBrush(Color.FromArgb(150, 70, 130, 180)), thin);
+                            double stepTopAlt = ground!.GroundTopAltitude;
+                            double? prevX = null;
+                            foreach (var layer in layers)
+                            {
+                                double x = XOfN(layer.NValue);
+                                double y0 = YOf(stepTopAlt);
+                                double y1 = YOf(layer.BottomAltitude);
+                                stepTopAlt = layer.BottomAltitude;
+                                if (y1 <= plotTopPx || y0 >= plotBottomPx) continue;
+
+                                double cy0 = Math.Max(plotTopPx, y0);
+                                double cy1 = Math.Min(plotBottomPx, y1);
+                                if (prevX.HasValue)
+                                    dc.DrawLine(stepPen, new Point(prevX.Value, cy0), new Point(x, cy0));
+                                dc.DrawLine(stepPen, new Point(x, cy0), new Point(x, cy1));
+                                prevX = x;
+                            }
+                        }
+
+                        if (masses is { Count: > 0 })
+                        {
+                            var pts = new List<Point>(masses.Count);
+                            foreach (var m in masses) pts.Add(new Point(XOfN(m.NValue), YOf(m.AltitudeDepth)));
+
+                            var polyPen = new Pen(Brushes.Black, thin);
+                            for (int i = 0; i + 1 < pts.Count; i++)
+                                dc.DrawLine(polyPen, pts[i], pts[i + 1]);
+
+                            // 数値は重なる分を間引く。旧実装は全質点に印字していて、
+                            // 同じ値が縦に密集して読めなかった。
+                            double markerR = Math.Max(1.5, nodeRadius * 0.75);
+                            double lastBottom = double.NegativeInfinity;
+                            for (int i = 0; i < pts.Count; i++)
+                            {
+                                dc.DrawEllipse(Brushes.White, new Pen(Brushes.Black, thin), pts[i], markerR, markerR);
+
+                                var ft = Text($"{masses[i].NValue:N0}", style.SmallFontSizePt, Brushes.Black);
+                                // 上端は軸の目盛ラベルと重なるので、そこまでで止める
+                                double top = Math.Max(plotTopPx, pts[i].Y - ft.Height * 0.5);
+                                if (top < lastBottom) continue;
+                                // 軸を振り切った点は右端でクランプしているので、その旨を示す
+                                string mark = masses[i].NValue > maxN ? "▶" : "";
+                                var label = mark.Length > 0
+                                    ? Text($"{mark}{masses[i].NValue:N0}", style.SmallFontSizePt, Brushes.Black)
+                                    : ft;
+                                dc.DrawText(label, new Point(pts[i].X + markerR + PtToPx(1.5), top));
+                                lastBottom = top + label.Height;
+                            }
+                        }
+                    }
+
+                    // --- 6. 杭体。各セグメントの径は最大径に対する比で描く ---
                     double topMostPx = double.MaxValue;
                     double bottomMostPx = double.MinValue;
                     foreach (var seg in segments)
                     {
-                        if (seg == null) continue;
-                        double dia = (seg.PileSection?.PileDiameter ?? 0) * 0.001; // m
-                        double topY = -(seg.SegmentDepth - seg.SegmentLength);
-                        double bottomY = -seg.SegmentDepth;
-                        var topLeft = ToImagePoint(midX - dia * 0.5, topY);
-                        double dx = Math.Max(1, dia * scalePxPerM);
-                        double dy = Math.Max(1, seg.SegmentLength * scalePxPerM);
-
-                        dc.DrawRectangle(null, new Pen(Brushes.SteelBlue, lineWidthThin), new Rect(topLeft.X, topLeft.Y, dx, dy));
-
-                        // update extents for centerline
-                        topMostPx = Math.Min(topMostPx, topLeft.Y);
-                        bottomMostPx = Math.Max(bottomMostPx, topLeft.Y + dy);
+                        double diaM = (seg.PileSection?.PileDiameter ?? 0) * 0.001;
+                        double w = Math.Max(2.0, pileDrawWidthPx * (diaM / maxSegDiaM));
+                        double y0 = YOf(pileHeadAlt - (seg.SegmentDepth - seg.SegmentLength));
+                        double y1 = YOf(pileHeadAlt - seg.SegmentDepth);
+                        dc.DrawRectangle(null, new Pen(Brushes.SteelBlue, thin),
+                            new Rect(pileCenterX - w * 0.5, y0, w, Math.Max(1.0, y1 - y0)));
+                        topMostPx = Math.Min(topMostPx, y0);
+                        bottomMostPx = Math.Max(bottomMostPx, y1);
                     }
 
-                    // draw center axis line and upper node at segment tops
-                    if (topMostPx < double.MaxValue && bottomMostPx > double.MinValue)
+                    var axisPen = new Pen(Brushes.Black, thick);
+                    dc.DrawLine(axisPen, new Point(pileCenterX, topMostPx), new Point(pileCenterX, bottomMostPx));
+                    foreach (var seg in segments)
                     {
-                        double centerXpx = widthPx * 0.5;
-                        dc.DrawLine(new Pen(Brushes.Black, lineWidthThick), new Point(centerXpx, topMostPx), new Point(centerXpx, bottomMostPx));
-                        // draw small circles at each segment top (node)
-                        foreach (var seg in segments)
-                        {
-                            double topY = -(seg.SegmentDepth - seg.SegmentLength);
-                            var upperNode = ToImagePoint(0, topY);
-                            dc.DrawEllipse(Brushes.White, new Pen(Brushes.Black, lineWidthThick), upperNode, nodeRadius, nodeRadius);
-                        }
+                        double y = YOf(pileHeadAlt - (seg.SegmentDepth - seg.SegmentLength));
+                        dc.DrawEllipse(Brushes.White, axisPen, new Point(pileCenterX, y), nodeRadius, nodeRadius);
                     }
+                    dc.DrawEllipse(Brushes.White, axisPen,
+                        new Point(pileCenterX, YOf(pileHeadAlt - pileDepth)), nodeRadius, nodeRadius);
 
-                    // toe node
-                    var toeNode = ToImagePoint(0, -pileDepth);
-                    dc.DrawEllipse(Brushes.White, new Pen(Brushes.Black, lineWidthThick), toeNode, nodeRadius, nodeRadius);
-
-                    // ground layers
-                    var groundLayers = soilPile.GroundInput?.GroundLayers;
-                    if (groundLayers != null)
-                    {
-                        foreach (var layer in groundLayers)
-                        {
-                            double yPx = -(layer.BottomAltitude - soilPile.Z) * scalePxPerM + ToImagePoint(0, 0).Y;
-                            if (yPx >= -1 && yPx <= heightPx + 1)
-                                dc.DrawLine(new Pen(Brushes.Gray, lineWidthThin), new Point(0, yPx), new Point(widthPx, yPx));
-                        }
-                    }
-
-                    var masses = soilPile.GroundInput?.GroundMassesData;
-                    if (masses != null && masses.Count > 0)
-                    {
-                        double leftX = widthPx * 0.75, rightX = widthPx * 0.90;
-                        double maxN = 60;
-                        double nScale = (rightX - leftX) / maxN;
-
-                        // determine vertical extents for the N-grid lines (use pile extents if available)
-                        double topLineY = (topMostPx < double.MaxValue) ? Math.Max(4.0, topMostPx - 8.0) : 8.0;
-                        //double bottomLineY = (bottomMostPx > double.MinValue) ? Math.Min(heightPx - 8.0, bottomMostPx + 8.0) : heightPx - 8.0;
-                        double bottomLineY = heightPx - 4.0;
-                        // draw vertical reference lines for N = 0,10,..,60 and top labels
-                        var gridPen = new Pen(Brushes.LightGray, Math.Max(1.0, lineWidthThin)) { DashStyle = new DashStyle(new double[] { 4, 2 }, 0) };
-                        for (int v = 0; v <= 60; v += 10)
-                        {
-                            double x = leftX + v * nScale;
-                            dc.DrawLine(gridPen, new Point(x, topLineY), new Point(x, bottomLineY));
-
-                            // label at the top of each vertical line
-                            var ftLabel = new FormattedText(
-                                $"N={v}",
-                                System.Globalization.CultureInfo.CurrentCulture,
-                                FlowDirection.LeftToRight,
-                                new Typeface("Meiryo"),
-                                10,
-                                Brushes.Black,
-                                1.0);
-                            var labelPos = new Point(x - ftLabel.Width / 2.0, topLineY - ftLabel.Height - 4);
-                            dc.DrawText(ftLabel, labelPos);
-                        }
-
-                        // plot N points, polyline and numeric labels to the right of each point
-                        var nPts = new List<Point>();
-                        foreach (var m in masses)
-                        {
-                            double depth = m.AltitudeDepth - soilPile.Z;
-                            var pt = new Point(leftX + m.NValue * nScale, -depth * scalePxPerM + ToImagePoint(0, 0).Y);
-                            nPts.Add(pt);
-
-                            // marker
-                            dc.DrawEllipse(Brushes.White, new Pen(Brushes.Black, lineWidthThin), pt, 3, 3);
-
-                            // numeric label to the right of the point
-                            var ftVal = new FormattedText(
-                                $"{m.NValue:N0}",
-                                System.Globalization.CultureInfo.CurrentCulture,
-                                FlowDirection.LeftToRight,
-                                new Typeface("Meiryo"),
-                                9,
-                                Brushes.Black,
-                                1.0);
-                            var valPos = new Point(pt.X + 6, pt.Y - ftVal.Height / 2.0);
-                            dc.DrawText(ftVal, valPos);
-                        }
-
-                        // connect points with polyline
-                        if (nPts.Count > 1)
-                        {
-                            var polyPen = new Pen(Brushes.Black, lineWidthThin);
-                            for (int i = 0; i < nPts.Count - 1; i++)
-                                dc.DrawLine(polyPen, nPts[i], nPts[i + 1]);
-                        }
-                    }
-
-                    // displacement / springs
+                    // --- 7. 地盤ばね / 地盤変位 ---
+                    double dispAmpMm = 0;   // 凡例に実寸を出すため外に持つ
                     var zItems = soilPile.ZDataItems;
-                    if (zItems != null && zItems.Count > 0)
+                    if (zItems is { Count: > 0 })
                     {
-                        // compute pile visual half width in px (use last segment diameters where available)
-                        double lastDia = (segments.LastOrDefault()?.PileSection?.PileDiameter ?? 0) * 0.001;
-                        double halfWidthPx = Math.Max(4.0, 0.5 * lastDia * scalePxPerM);
-                        double pileCenterX = widthPx * 0.5;
-                        // horizontal branch: replace existing code with this
-                        if (string.Equals(springType, "horizontal", StringComparison.OrdinalIgnoreCase))
-                        {
-                            double dispBaseX = pileCenterX - 2.0 * scalePxPerM;
+                        var springPen = new Pen(Brushes.DarkGray, thin);
 
-                            // collect all displacement values (mm)
-                            var allDispMm = new List<double>();
+                        // 隣り合うばねが融合しないよう、山の高さは節点間隔でも抑える
+                        double nodePitchPx = double.MaxValue;
+                        for (int i = 1; i < zItems.Count; i++)
+                            nodePitchPx = Math.Min(nodePitchPx, Math.Abs(YOf(zItems[i].Z) - YOf(zItems[i - 1].Z)));
+                        if (double.IsInfinity(nodePitchPx) || nodePitchPx <= 0)
+                            nodePitchPx = PtToPx(style.FontSizePt);
+
+                        // ばね記号は山の「ピッチ」を一定に保ち、長いばねほど山数を増やす。
+                        // 山数を固定にすると、長いばねで 1 山が横に伸びて引き伸ばした線に見える。
+                        (double Amp, int Count) Zig(double lengthPx, double ampLimitPx)
+                        {
+                            double len = Math.Abs(lengthPx);
+                            double amp = Math.Max(2.0, Math.Min(ampLimitPx, len * 0.25));
+                            double pitch = Math.Max(4.0, amp * 2.0);   // 山の傾きが 45 度前後になる
+                            int count = (int)Math.Clamp(Math.Round(len / pitch), 2, style.SpringZigzagMaxCount);
+                            return (amp, count);
+                        }
+
+                        if (isVertical)
+                        {
+                            // 下向きに伸ばすので、次の節点に届かない長さ (節点間隔の半分) までにする
+                            double springLengthPx = Math.Max(style.MinSpringLengthPx * scale, 0.5 * nodePitchPx);
+                            var (zigAmp, zigCount) = Zig(springLengthPx, halfWidthPx * 0.5);
+                            double xLeft = pileCenterX - halfWidthPx;
+                            double xRight = pileCenterX + halfWidthPx;
                             foreach (var z in zItems)
                             {
-                                allDispMm.Add(z.GroundDisp1);
-                                allDispMm.Add(z.GroundDisp2);
-                                allDispMm.Add(z.GroundDisp1L);
-                                allDispMm.Add(z.GroundDisp2L);
+                                double y = YOf(z.Z);
+                                dc.DrawLine(axisPen, new Point(xLeft, y), new Point(pileCenterX - nodeRadius, y));
+                                dc.DrawLine(axisPen, new Point(pileCenterX + nodeRadius, y), new Point(xRight, y));
+                                DrawZigzag(dc, new Point(xLeft, y), new Point(xLeft, y + springLengthPx), zigCount, zigAmp, springPen);
+                                DrawZigzag(dc, new Point(xRight, y), new Point(xRight, y + springLengthPx), zigCount, zigAmp, springPen);
+                            }
+                            double toeY = YOf(zItems[^1].Z);
+                            DrawZigzag(dc, new Point(pileCenterX, toeY),
+                                new Point(pileCenterX, toeY + springLengthPx), zigCount, zigAmp, springPen);
+                        }
+                        else
+                        {
+                            // 地盤変位。旧実装は最大変位を常に「0.5m 相当の px」へ正規化するだけで
+                            // 実寸が読めず、しかも求めた表示幅を使わないままだった。
+                            // ここでは 0 の位置を固定し、正負を左右に振る。
+                            double ampMm = 0;
+                            foreach (var z in zItems)
+                            {
+                                ampMm = Math.Max(ampMm, Math.Abs(z.GroundDisp1));
+                                ampMm = Math.Max(ampMm, Math.Abs(z.GroundDisp2));
+                                ampMm = Math.Max(ampMm, Math.Abs(z.GroundDisp1L));
+                                ampMm = Math.Max(ampMm, Math.Abs(z.GroundDisp2L));
+                            }
+                            dispAmpMm = ampMm;
+                            double dispRightX = pileCenterX - halfWidthPx - PtToPx(2);
+                            double dispZeroX = (pileBandL + dispRightX) * 0.5;
+                            double dispHalfSpan = (dispRightX - pileBandL) * 0.45;
+                            double XOfDisp(double mm) =>
+                                dispZeroX + (ampMm > 1e-9 ? mm / ampMm : 0.0) * dispHalfSpan;
+
+                            // ばねは節点ごとに 1 本だけ。4 本の変位曲線それぞれに引くと
+                            // 同じ高さに 4 重に重なり、図が網目に潰れる
+                            double markerR = Math.Max(1.5, nodeRadius * 0.7);
+                            foreach (var z in zItems)
+                            {
+                                // 杭から最も遠い (＝図の左端側の) 変位点にばねの外端を合わせる
+                                double outer = Math.Min(
+                                    Math.Min(z.GroundDisp1, z.GroundDisp2),
+                                    Math.Min(z.GroundDisp1L, z.GroundDisp2L));
+                                double y = YOf(z.Z);
+                                var start = new Point(XOfDisp(outer), y);
+                                var (zigAmp, zigCount) = Zig(
+                                    pileCenterX - start.X,
+                                    Math.Min(halfWidthPx * 0.35, nodePitchPx * 0.35));
+                                DrawZigzag(dc, start, new Point(pileCenterX, y), zigCount, zigAmp, springPen);
                             }
 
-                            // find maximum displacement (mm) among all (fallback to refMm)
-                            double maxDispMm = allDispMm.Count > 0 ? allDispMm.Max() : 0;
-
-                            // target: map maxDeltaMm -> -1500 mm (display units)
-                            double scaleDisplayPtOnMm = Math.Abs(maxDispMm) > 1e-9 ? (scalePxPerM * 0.500 / maxDispMm) : 1.0;
-
-                            // available pixel width to represent absolute 1500 mm
-                            double availableWidth = Math.Max(10.0, (pileCenterX - dispBaseX - halfWidthPx - 8.0));
-                            double pxPerDisplayMm = availableWidth / 1500.0; // 1500 mm maps to availableWidth px
-
-                            Pen khakiPen = new(Brushes.Khaki, Math.Max(1.0, lineWidthThick));
-                            Pen darkKhakiPen = new(Brushes.DarkKhaki, Math.Max(1.0, lineWidthThick));
-                            Pen slatePen = new(Brushes.SlateBlue, Math.Max(1.0, lineWidthThick));
-                            Pen darkSlatePen = new(Brushes.DarkSlateGray, Math.Max(1.0, lineWidthThick));
-
-                            // 杭頭標高を取得（絶対標高→相対深度変換用）
-                            double pileHeadZ = soilPile.Z;
-
-                            void DrawDisp(Func<PileDesign.Models.InputData.PileZDataItem, double> sel, Pen pen)
+                            void DrawDisp(Func<PileZDataItem, double> sel, Brush brush)
                             {
-                                var pts = new List<Point>();
-                                foreach (var z in zItems)
-                                {
-                                    double valMm = sel(z);
-                                    double displayMm = valMm * scaleDisplayPtOnMm; // 1500
-                                    double xPx = dispBaseX + displayMm;
-                                    // z.Z（絶対標高）を杭頭からの相対深度に変換
-                                    var p = new Point(xPx, ToImagePoint(0, z.Z - pileHeadZ).Y);
-                                    pts.Add(p);
-                                }
+                                var pts = new List<Point>(zItems.Count);
+                                foreach (var z in zItems) pts.Add(new Point(XOfDisp(sel(z)), YOf(z.Z)));
 
-                                // draw points and connecting lines
-                                for (int i = 0; i < pts.Count; i++)
-                                {
-                                    dc.DrawEllipse(Brushes.White, new Pen(Brushes.Black, lineWidthThin), pts[i], nodeRadius, nodeRadius);
-                                    if (i < pts.Count - 1)
-                                        dc.DrawLine(pen, pts[i], pts[i + 1]);
-                                }
+                                var pen = new Pen(brush, thick);
+                                for (int i = 0; i + 1 < pts.Count; i++)
+                                    dc.DrawLine(pen, pts[i], pts[i + 1]);
 
-                                // draw zigzag springs from each disp point to pile center
-                                double zigAmp = Math.Max(4.0, halfWidthPx * 0.3);
-                                int zigCount = 8;
                                 foreach (var p in pts)
-                                {
-                                    var target = new Point(pileCenterX, p.Y);
-                                    DrawZigzag(dc, p, target, zigCount, zigAmp, new Pen(Brushes.DarkGray, Math.Max(1.0, lineWidthThin)));
-                                }
+                                    dc.DrawEllipse(Brushes.White, new Pen(Brushes.Black, thin), p, markerR, markerR);
                             }
 
-                            DrawDisp(z => z.GroundDisp1, khakiPen);
-                            DrawDisp(z => z.GroundDisp2, darkKhakiPen);
-                            DrawDisp(z => z.GroundDisp1L, slatePen);
-                            DrawDisp(z => z.GroundDisp2L, darkSlatePen);
+                            DrawDisp(z => z.GroundDisp1, Brushes.Khaki);
+                            DrawDisp(z => z.GroundDisp2, Brushes.DarkKhaki);
+                            DrawDisp(z => z.GroundDisp1L, Brushes.SlateBlue);
+                            DrawDisp(z => z.GroundDisp2L, Brushes.DarkSlateGray);
                         }
+                    }
 
-                        else if (string.Equals(springType, "vertical", StringComparison.OrdinalIgnoreCase))
+                    // --- 8. 凡例 ---
+                    {
+                        double legendPt = style.SmallFontSizePt;
+                        double swatch = PtToPx(legendPt) * 0.8;
+                        double lx = layerInfoL;
+                        double ly = plotBottomPx + PtToPx(legendPt) * 1.2;
+
+                        void LegendText(string s)
                         {
-                            double xCenter = pileCenterX;
-                            double xLeft = xCenter - halfWidthPx;
-                            double xRight = xCenter + halfWidthPx;
-                            double springLengthPx = Math.Max(8.0, 0.2 * scalePxPerM); // px
-                            double zigAmp = Math.Max(4.0, halfWidthPx * 0.25);
-                            int zigCount = 8;
-                            Pen thinBlack = new(Brushes.Black, Math.Max(1.0, lineWidthThick));
-                            Pen springPen = new(Brushes.DarkGray, Math.Max(1.0, lineWidthThin));
-
-                            // 杭頭標高を取得（絶対標高→相対深度変換用）
-                            double pileHeadZ = soilPile.Z;
-
-                            foreach (var z in zItems)
-                            {
-                                // z.Z（絶対標高）を杭頭からの相対深度に変換
-                                double yPx = ToImagePoint(0, z.Z - pileHeadZ).Y;
-                                // draw horizontal short bar representing spring attachment
-                                dc.DrawLine(thinBlack, new Point(xLeft, yPx), new Point(xCenter - nodeRadius, yPx));
-                                dc.DrawLine(thinBlack, new Point(xCenter + nodeRadius, yPx), new Point(xRight, yPx));
-                                // left zigzag downward
-                                var leftStart = new Point(xLeft, yPx);
-                                var leftEnd = new Point(xLeft, yPx + springLengthPx);
-                                DrawZigzag(dc, leftStart, leftEnd, zigCount, zigAmp, springPen);
-                                // right zigzag downward
-                                var rightStart = new Point(xRight, yPx);
-                                var rightEnd = new Point(xRight, yPx + springLengthPx);
-                                DrawZigzag(dc, rightStart, rightEnd, zigCount, zigAmp, springPen);
-                            }
-                            // bottom spring from toe to deeper ground (small representation)
-                            var bottomY = ToImagePoint(0, zItems[^1].Z - pileHeadZ).Y;
-                            DrawZigzag(dc, new Point(xCenter, bottomY), new Point(xCenter, bottomY + springLengthPx), zigCount, zigAmp, springPen);
+                            var ft = Text(s, legendPt, Brushes.Black);
+                            dc.DrawText(ft, new Point(lx, ly - ft.Height * 0.5));
+                            lx += ft.Width + PtToPx(4);
                         }
+
+                        void LegendSoil(string granularityClass)
+                        {
+                            dc.DrawRectangle(
+                                new SolidColorBrush(GetSoilTypeColor(granularityClass, 128)),
+                                new Pen(Brushes.Gray, Math.Max(0.5, thin * 0.6)),
+                                new Rect(lx, ly - swatch * 0.5, swatch, swatch));
+                            lx += swatch + PtToPx(1);
+                            LegendText(granularityClass);
+                        }
+
+                        LegendSoil("粘性土");
+                        LegendSoil("砂質土");
+                        LegendSoil("礫質土");
+                        LegendText(isVertical ? "○ 節点   ⌇ 鉛直地盤ばね" : "○ 節点   ⌇ 水平地盤ばね");
+                        if (!isVertical && dispAmpMm > 0)
+                            LegendText($"地盤変位 δmax = {dispAmpMm:N1} mm");
                     }
                 }
 
-                // RenderTargetBitmap (dpi fixed to 96 for stable Word insertion)
-                var bmp = new RenderTargetBitmap(widthPx, heightPx, 96, 96, PixelFormats.Pbgra32);
-                bmp.Render(dv);
-
-                var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(bmp));
-                using var ms = new MemoryStream();
-                encoder.Save(ms);
-                return ms.ToArray();
-            };
-
-            try
-            {
-                if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
-                {
-                    return (byte[])Application.Current.Dispatcher.Invoke(renderAction);
-                }
-                else
-                {
-                    return renderAction();
-                }
+                return RenderDrawingVisualToPng(dv, widthPx, heightPx);
             }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "RenderPileForceElevationPngBytes error");
-                return Array.Empty<byte>();
-            }
+
+            return ExecuteOnUIThread(Render);
         }
 
 
@@ -947,13 +1193,7 @@ namespace PileDesign.Output
             foreach (var layer in ground.GroundLayers)
             {
                 double btmAlt = layer.BottomAltitude;
-                var color = layer.GranularityClass switch
-                {
-                    "粘性土" => Color.FromArgb(64, 210, 180, 140),
-                    "砂質土" => Color.FromArgb(64, 255, 165, 0),
-                    "礫質土" => Color.FromArgb(64, 144, 238, 144),
-                    _ => Color.FromArgb(32, 200, 200, 200),
-                };
+                var color = GetSoilTypeColor(layer.GranularityClass, 64);
                 var style = DrawingStyle.Filled(color, null, 0);
                 // 4 角形 (minX, btmAlt) → (maxX, btmAlt) → (maxX, topAlt) → (minX, topAlt)
                 //   _transform.Transform(Point3D) で 3D → 2D ピクセルに射影
@@ -1308,7 +1548,7 @@ namespace PileDesign.Output
         /// <summary>
         /// 空の図を生成
         /// </summary>
-        private static byte[] RenderEmptyDiagram(int widthPx, int heightPx, string message)
+        private static byte[] RenderEmptyDiagram(int widthPx, int heightPx, string message, double emSizePx = 12, string fontName = "Meiryo")
         {
             var dv = new DrawingVisual();
             using (var dc = dv.RenderOpen())
@@ -1318,8 +1558,8 @@ namespace PileDesign.Output
                     message,
                     System.Globalization.CultureInfo.CurrentCulture,
                     FlowDirection.LeftToRight,
-                    new Typeface("Meiryo"),
-                    12,
+                    new Typeface(fontName),
+                    emSizePx,
                     Brushes.Gray,
                     1.0);
                 dc.DrawText(ft, new Point(widthPx / 2 - ft.Width / 2, heightPx / 2 - ft.Height / 2));
@@ -1349,9 +1589,18 @@ namespace PileDesign.Output
         {
             try
             {
-                if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
+                var dispatcher = Application.Current?.Dispatcher;
+
+                // 投げ先は「生きていて、まだ終了処理に入っていない」Dispatcher に限る。
+                // 終了済みスレッドの Dispatcher に Invoke すると応答が返らず、
+                // 例外にもならないまま永久に待ち続ける。
+                if (dispatcher != null
+                    && !dispatcher.CheckAccess()
+                    && dispatcher.Thread.IsAlive
+                    && !dispatcher.HasShutdownStarted
+                    && !dispatcher.HasShutdownFinished)
                 {
-                    return (byte[])Application.Current.Dispatcher.Invoke(action);
+                    return (byte[])dispatcher.Invoke(action);
                 }
                 return action();
             }

@@ -52,6 +52,16 @@ namespace PileDesign.Output
             public const string NoteFontName = "游ゴシック";
             public const double NoteFontSize = 9.0;
 
+            // 図の中に焼き込む文字。本文 (明朝) は小さくすると潰れるのでゴシックにする。
+            // pt で持ち、描画側で倍密度 (HiResScale) に追従させること。
+            // px 直書きにすると画像だけが倍密度になり、紙面で文字だけが極小になる。
+            public const string DiagramFontName = "游ゴシック";
+            public const double DiagramFontSizePt = 8.0;
+            public const double DiagramSmallFontSizePt = 7.0;
+            // 図の線も pt で持つ。px 直書きだと文字と太さの釣り合いが倍密度でずれる
+            public const double DiagramLineWidthThickPt = 1.2;
+            public const double DiagramLineWidthThinPt = 0.7;
+
             // 段落/番号付きアウトライン（EnsureHeadingStylesWithNumbering 等）
             public const int OutlineIndentStepTwips = 420;
             public const int HangingIndentTwips = 420;
@@ -63,7 +73,9 @@ namespace PileDesign.Output
             public const double LayoutDiagramWidthMm = 150;
             public const double LayoutDiagramHeightMm = 200;
             public const double PileElevationWidthMm = 150;
-            public const double PileElevationHeightMm = 100;
+            // 解析杭モデル図。左に土層諸元、中に杭とばね、右に N 値柱状図を並べるため
+            // ほぼ 1 ページ 1 図の高さを取る (旧 100mm では杭長 30m で 1m あたり 2.5mm しかなかった)
+            public const double PileElevationHeightMm = 190;
 
             // 描画/画像出力
             public const double BaseDpi = 96.0;
@@ -79,8 +91,10 @@ namespace PileDesign.Output
             public const double EpsSmall = 1e-8;
             public const double DispSmallThreshold = 0.001;
 
-            // スプリング/ジグザグ
-            public const int SpringZigzagCount = 6;
+            // スプリング/ジグザグ。
+            // 山数は長さから決める (ピッチ一定)。固定本数にすると長いばねで 1 山が伸びきって見える。
+            // ここで持つのは詰まりすぎを防ぐ上限だけ。
+            public const int SpringZigzagMaxCount = 24;
             public const double SpringZigzagSegment = 18.0;
 
             // キャプション等
@@ -233,6 +247,9 @@ namespace PileDesign.Output
                 AddLoadCombinationAndFigureSection(mainPart, body, inputModel);
                 EndSection("AddLoadCombinationAndFigureSection");
 
+                // 表の行がページ境界で上下に割れないようにする（全表に一括で適用）
+                PreventTableRowsFromSplittingAcrossPages(body);
+
                 // まとめて追加
                 StartSection();
                 doc.Append(body);
@@ -306,6 +323,7 @@ namespace PileDesign.Output
             {
                 Time("Fundamental", () => {
                     AddHeader1(body, "基本設定", 1);
+                    AddTableCaption(body, "基本設定");
                     AddFundamentalTable(body, inputModel.FundamentalInput);
                     AddLineBreak(body);
                 });
@@ -316,8 +334,10 @@ namespace PileDesign.Output
                 Time("LoadCondition", () => {
                     AddHeader1(body, "荷重条件", 1);
                     AddText(body, "レベル1荷重");
+                    AddTableCaption(body, "荷重ケース（レベル1地震）");
                     AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel1, inputModel.FundamentalInput);
                     AddText(body, "レベル2荷重");
+                    AddTableCaption(body, "荷重ケース（レベル2地震）");
                     AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel2, inputModel.FundamentalInput);
                     AddLineBreak(body);
                 });
@@ -336,6 +356,7 @@ namespace PileDesign.Output
             {
                 Time("PileLayout", () => {
                     AddHeader1(body, "杭配置", 1);
+                    AddTableCaption(body, "杭配置");
                     AddPileLayoutTables(body, inputModel.PileLayoutItems, inputModel.FundamentalInput);
                     AddLineBreak(body);
                 });
@@ -345,6 +366,7 @@ namespace PileDesign.Output
             {
                 Time("PileAxialLoad", () => {
                     AddHeader1(body, "杭軸力", 1);
+                    AddTableCaption(body, "杭軸力");
                     AddPileAxialLoadTables(body, inputModel.PileLayoutItems);
                     AddLineBreak(body);
                 });
@@ -354,6 +376,7 @@ namespace PileDesign.Output
             {
                 Time("IsFrontPile", () => {
                     AddHeader1(body, "前後方杭", 1);
+                    AddTableCaption(body, "前後方杭の指定");
                     AddIsFrontPileTables(body, inputModel.PileLayoutItems);
                     AddLineBreak(body);
                 });
@@ -411,6 +434,7 @@ namespace PileDesign.Output
                     {
                         AddHeader1(body, "杭の支持力", 1);
                         AddPileResistanceDescription(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
+                        AddTableCaption(body, "杭の鉛直支持力");
                         AddVerticalResistance(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
                         AddLineBreak(body);
 
@@ -429,14 +453,19 @@ namespace PileDesign.Output
                             AddSectionSettlement(body);
                             AddLineBreak(body);
                         }
-                        var soilPiles = inputModel.ElementDivision.SoilPiles;
-                        if (soilPiles is { Count: > 0 })
+                        // 支持力の表は全 SoilPile を出すので、図も全数出す
+                        // (先頭 1 本だけだと、杭体や地盤が複数あるモデルで表と図が食い違う)
+                        foreach (var soilPile in inputModel.ElementDivision.SoilPiles ?? [])
                         {
-                            var soilPile = soilPiles[0];
-                            const double pileElevationH = 100;
-
-                            AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "vertical");
-                            AddAutoFigureCaption(body, "沈下解析杭モデル", "図");
+                            // 図がほぼ 1 ページ分の高さなので、途中で切れないよう改ページしてから置く
+                            AddPageBreak(body);
+                            AddPileForceDiagramByMm(mainPart, body,
+                                widthMm: Layout.PileElevationWidthMm,
+                                heightMm: Layout.PileElevationHeightMm, soilPile, "vertical");
+                            AddAutoFigureCaption(body, $"沈下解析杭モデル{DescribeSoilPile(soilPile)}", "図");
+                            AddTableNote(body, "※ 図中の土層諸元は抜粋です。薄い層は表示を省いています。全層の値は「地盤情報」の土層表を参照してください。横方向は模式図で、縮尺は縦方向のみです。");
+                            // 注記の下に次章が食い込むので、ここで切る。図・キャプション・注記で 1 ページ
+                            AddPageBreak(body);
 
                             // 沈下グラフは「単杭の沈下」節 (IncludeSettlement) で出力する。
                             // 旧実装はここでも AddSettlementGraph を呼び、同じ図表が二重出力されていた。
@@ -460,6 +489,7 @@ namespace PileDesign.Output
                         AddHeader1(body, "根入部", 1);
                         // 根入れ層の入力データ表（数式説明ではない）のため、計算書レベルによらず出力する。
                         // 旧実装は 詳細(>=2) ゲート内にあり、簡易では空の「根入部」見出しだけが残っていた。
+                        AddTableCaption(body, "根入部の土層");
                         AddEmbedment(body, inputModel.EmbedmentInput, inputModel.FundamentalInput);
                         AddLineBreak(body);
                     });
@@ -479,7 +509,10 @@ namespace PileDesign.Output
                     [Tex(@"\beta_{U}"), ": 上部構造慣性力 ", Tex(@"\P_{s}"), " に乗じる係数"]);
                 AddSymbolDescriptionWithTab(body, symbolDescTabPosition,
                     [Tex(@"\beta_{L}"), ": 基礎部慣性力 ", Tex(@"\P_{f}"), " に乗じる係数（杭頭位置に ", Tex(@"\beta_{U} P_{s} + \beta_{L} P_{f}"), " の水平力を作用させる）"]);
-                TimeH("LoadCombinationTable", () => AddLoadCombinationTable(mainPart, body));
+                TimeH("LoadCombinationTable", () => {
+                    AddTableCaption(body, "作用の組合せ");
+                    AddLoadCombinationTable(mainPart, body);
+                });
 
                 if (mainWindowViewModel.IsHorizontalAnalysisDone
                     && anaModel?.HorizontalSoilSprings != null
@@ -487,19 +520,27 @@ namespace PileDesign.Output
                 {
                     // 見出しなしで表だけが並んでいたため H2 を付与
                     AddHeader2(body, "根入部反力の合計");
-                    TimeH("HorizontalReactionSummaryTable L1", () => { AddLineBreak(body); AddHorizontalReactionSummaryTable(mainPart, body, 1); });
-                    TimeH("HorizontalReactionSummaryTable L2", () => { AddLineBreak(body); AddHorizontalReactionSummaryTable(mainPart, body, 2); });
+                    TimeH("HorizontalReactionSummaryTable L1", () => { AddLineBreak(body); AddTableCaption(body, "根入部反力の合計（レベル1地震）"); AddHorizontalReactionSummaryTable(mainPart, body, 1); });
+                    TimeH("HorizontalReactionSummaryTable L2", () => { AddLineBreak(body); AddTableCaption(body, "根入部反力の合計（レベル2地震）"); AddHorizontalReactionSummaryTable(mainPart, body, 2); });
                 }
 
                 var soilPiles = inputModel.ElementDivision.SoilPiles;
                 if (soilPiles is { Count: > 0 })
                 {
-                    var soilPile = soilPiles[0];
-                    const double pileElevationH = 100;
-
                     TimeH("PileForceDiagram (horizontal)", () => {
-                        AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "horizontal");
-                        AddAutoFigureCaption(body, "水平抵抗解析杭モデル", "図");
+                        // 先頭 1 本だけだと、杭体や地盤が複数あるモデルで表と図が食い違う
+                        foreach (var soilPile in soilPiles)
+                        {
+                            // 図がほぼ 1 ページ分の高さなので、途中で切れないよう改ページしてから置く
+                            AddPageBreak(body);
+                            AddPileForceDiagramByMm(mainPart, body,
+                                widthMm: Layout.PileElevationWidthMm,
+                                heightMm: Layout.PileElevationHeightMm, soilPile, "horizontal");
+                            AddAutoFigureCaption(body, $"水平抵抗解析杭モデル{DescribeSoilPile(soilPile)}", "図");
+                            AddTableNote(body, "※ 図中の土層諸元は抜粋です。薄い層は表示を省いています。全層の値は「地盤情報」の土層表を参照してください。横方向は模式図で、縮尺は縦方向のみです。");
+                            // 注記の下に次章が食い込むので、ここで切る。図・キャプション・注記で 1 ページ
+                            AddPageBreak(body);
+                        }
                     });
 
                     if (mainWindowViewModel.IsHorizontalAnalysisDone)
@@ -1192,6 +1233,31 @@ namespace PileDesign.Output
 
 
         // 図表番号付きタイトルの挿入メソッド
+        /// <summary>
+        /// 表題（「表 n  …」）を出す。<b>表の直前</b>に置くこと（図は図の後、表は表の前）。
+        /// 表を作る処理は static が多く、番号を数える _tableCounter はインスタンス側にあるので、
+        /// 章を組み立てるインスタンスメソッドから呼ぶ。
+        /// </summary>
+        private void AddTableCaption(Body body, string title) => AddAutoFigureCaption(body, title, "表");
+
+        /// <summary>
+        /// 図のキャプションに付ける杭の識別。杭が 1 本しかないモデルでは何も付けない
+        /// (「沈下解析杭モデル」のままにする)。
+        /// </summary>
+        private string DescribeSoilPile(PileDesign.Models.InputData.SoilPile soilPile)
+        {
+            var soilPiles = inputModel?.ElementDivision?.SoilPiles;
+            if (soilPiles == null || soilPiles.Count <= 1) return string.Empty;
+
+            string ground = soilPile?.GroundInput?.GroundRef;
+            string pileBody = soilPile?.PileBodyInput?.PileBodyRef;
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(ground)) parts.Add($"地盤 {ground}");
+            if (!string.IsNullOrWhiteSpace(pileBody)) parts.Add($"杭体 {pileBody}");
+            if (parts.Count == 0) parts.Add($"No.{soilPile?.No}");
+            return $"（{string.Join(" / ", parts)}）";
+        }
+
         public void AddAutoFigureCaption(Body body, string captionText, string label = "図", double fontSize = 10.5)
         {
             // コード側で番号をインクリメント（SEQ の F9 更新に依存しない）

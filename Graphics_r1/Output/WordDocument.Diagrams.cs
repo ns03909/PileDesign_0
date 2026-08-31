@@ -636,7 +636,19 @@ namespace PileDesign.Output
         {
             try
             {
-                var pngBytes = DiagramRenderer.RenderPileForceElevationPngBytes(soilPile, springType, widthMm, heightMm, dpi: Layout.BaseDpi, scale: Layout.HiResScale);
+                // 図中の書体・線の太さは Layout の規約から渡す。DiagramRenderer 側で
+                // px を直書きすると、倍密度 (HiResScale) の画像に極小の文字が焼き込まれる。
+                var style = new PileDiagramStyle(
+                    Layout.DiagramFontName,
+                    Layout.DiagramFontSizePt,
+                    Layout.DiagramSmallFontSizePt,
+                    Layout.DiagramLineWidthThickPt,
+                    Layout.DiagramLineWidthThinPt,
+                    Layout.SpringZigzagMaxCount,
+                    Layout.MinSpringLengthPx);
+                var pngBytes = DiagramRenderer.RenderPileForceElevationPngBytes(
+                    soilPile, springType, style, widthMm, heightMm,
+                    dpi: Layout.BaseDpi, scale: Layout.HiResScale);
                 if (pngBytes != null && pngBytes.Length > 0)
                     WordDrawingBuilder.AddPngBytesToBody(mainDocumentPart, body, pngBytes, widthMm, heightMm);
             }

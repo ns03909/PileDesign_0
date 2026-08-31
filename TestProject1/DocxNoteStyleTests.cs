@@ -96,17 +96,21 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 桁を揃えて読ませる固定行 (検定結果テキスト) が等幅のままであること。
-        /// 本文を明朝にしたときに巻き込まれると、そこだけ桁が崩れる。
+        /// 数表の中身が等幅のままであること。本文を明朝にしたときに巻き込まれると、
+        /// そこだけ桁が崩れる。
+        ///
+        /// 以前は検定結果を「桁を揃えた固定行テキスト」として貼っており、
+        /// SummaryTables.cs の等幅指定を見ていた。検定結果は Word の表に置き換えたので、
+        /// 桁揃えを担っているのは表セルの書体になった。
         /// </summary>
         [TestMethod]
-        public void TheFixedPitchReport_KeepsTheMonospaceFace()
+        public void TheTableContents_KeepTheMonospaceFace()
         {
             string code = File.ReadAllText(
-                Path.Combine(FindSolutionRoot(), "Graphics_r1", "Output", "WordDocument.SummaryTables.cs"));
+                Path.Combine(FindSolutionRoot(), "Graphics_r1", "Output", "WordDocument.TeX.cs"));
 
-            StringAssert.Contains(code, "CreateRunFonts(Layout.TableFontName)",
-                "検定結果テキストが等幅を指定していません");
+            StringAssert.Contains(code, "Layout.TableFontName",
+                "表の中身が等幅を指定していません");
         }
     }
 }

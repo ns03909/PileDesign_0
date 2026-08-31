@@ -18,7 +18,7 @@ namespace PileDesign.Output
             AddHeader1(body, "計算条件・仮定", 1);
             AddText(body,
                 "本章では、本計算書の解析および断面検定に用いた計算条件・仮定を一覧する。" +
-                "材料のモデル化は基本設定画面の選択に従い、以下の各表の「選択」欄が本計算に適用された条件である。");
+                "各表に示す条件が、本計算に適用したものである。");
 
             // 解析実行時とオプションが食い違っている場合の警告（旧ファイル等で記録がない場合は照合しない）
             string currentSignature = ConcreteModelOptions.Signature();
@@ -33,16 +33,56 @@ namespace PileDesign.Output
             AddUnitAndSignConventionText(body, inputModel.FundamentalInput);
 
             AddHeader2(body, "材料モデル化の選択");
+            // 計算書は「この計算で何を採ったか」を述べる文書なので、
+            // 「既定は」「代替を選択できる」「基本設定画面」のような操作の説明は書かない。
             AddText(body,
-                "既定は日本建築学会「基礎部材の強度と変形性能」（2022）に基づく。" +
-                "項目ごとに告示 平13国交告第1113号(第8)・RC基礎構造部材の耐震設計指針(案)・" +
-                "ファイバーモデル等の代替を選択できる（基本設定画面）。", fontSize: 9);
+                "杭体の材料モデル化は、日本建築学会「基礎部材の強度と変形性能」（第1版、2022年）による。" +
+                "項目により、告示 平13国交告第1113号(第8)、" +
+                "日本建築学会「鉄筋コンクリート基礎構造部材の耐震設計指針（案）・同解説」（2017）" +
+                "またはファイバーモデルを用いる。", fontSize: 9);
             AddAssumptionTable(body, "項目", "選択", "内容", BuildMaterialOptionRows());
 
             AddHeader2(body, "設計条件");
             AddAssumptionTable(body, "項目", "設定", "内容", BuildDesignConditionRows(inputModel));
+            WarnIfAnalysisConditionsChanged(body, inputModel);
 
             AddLineBreak(body);
+        }
+
+        /// <summary>
+        /// 解析を実行したときの条件と、いま計算書に書いている条件が食い違っていないか照合する。
+        ///
+        /// 「設計条件」の表は<b>現在の入力</b>を読む。一方、解析条件のいくつか
+        /// (接続方式・基礎のねじれ拘束・杭軸力モード) は切り替えても解析結果が破棄されないので、
+        /// 「解析 → 設定変更 → 計算書出力」の順に操作すると、
+        /// 解析に使った条件と計算書の記載がずれる。材料モデル化オプションには
+        /// 同じ照合が既にある (ConcreteOptionsSignature)。
+        /// </summary>
+        private void WarnIfAnalysisConditionsChanged(Body body, InputModel inputModel)
+        {
+            var runConfig = anaModel?.LastRunConfig;
+            if (runConfig == null) return;   // 旧いファイル等で記録がない場合は照合しない
+
+            var diffs = new List<string>();
+
+            if (runConfig.RestrainFoundationTorsion != (inputModel?.RestrainFoundationTorsion ?? false))
+            {
+                diffs.Add($"基礎のねじれ拘束（解析時: {(runConfig.RestrainFoundationTorsion ? "拘束する" : "拘束しない")}）");
+            }
+
+            string currentMode = (inputModel?.FoundationBeamInput?.ConnectionMode
+                                  ?? FoundationBeamConnectionMode.RigidBody).ToString();
+            if (!string.IsNullOrEmpty(runConfig.ConnectionMode) && runConfig.ConnectionMode != currentMode)
+            {
+                diffs.Add($"杭頭の接続仮定（解析時: {runConfig.ConnectionMode}）");
+            }
+
+            if (diffs.Count == 0) return;
+
+            AddTableNote(body,
+                "※ 注意: 次の条件が水平解析の実行後に変更されています。"
+                + "本計算書の解析結果は変更前の条件によるものです。再解析のうえ出力し直してください — "
+                + string.Join("、", diffs));
         }
 
         /// <summary>単位系・符号規約の宣言文。</summary>

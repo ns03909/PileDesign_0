@@ -1140,52 +1140,76 @@ namespace PileDesign.Output
         {
             if (mainWindowViewModel == null) return;
 
-            string text;
+            // 画面の検定テキスト (罫線を並べた等幅の固定行) をそのまま貼るのをやめ、
+            // 構造化した結果から Word の表として組む。テキスト側は画面と golden が使うので触らない。
+            Models.Results.EvaluationResult result;
             try
             {
-                text = ViewModels.EvaluationService.BuildEvaluationText(mainWindowViewModel, factored, displayFilter: 0);
+                result = ViewModels.EvaluationService.BuildEvaluationResult(mainWindowViewModel, factored);
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[DOCX] 検定テキスト生成失敗");
+                Log.Warning(ex, "[DOCX] 検定結果の生成に失敗");
                 return;
             }
-            if (string.IsNullOrWhiteSpace(text)) return;
+            if (result == null || result.IsEmpty) return;
 
             AddPageBreak(body);
             // H1 に昇格 (旧: H2 で親 H1 がなく、直前の無関係な H1 の子として番号付けされていた)
-            AddHeader1(body, factored ? "水平解析 検定（低減後／NG項目）" : "水平解析 検定（低減前／NG項目）", 1);
+            AddHeader1(body, factored ? "水平解析 検定（低減後）" : "水平解析 検定（低減前）", 1);
 
-            // NG レポートは情報量が多いので、9pt フォントに対し +1pt のみの極小行間 (Exact 10pt) で詰める。
-            // SnapToGrid=false で文書グリッド吸着を無効化し Exact 指定を有効にする。
-            var lines = text.Replace("\r\n", "\n").Split('\n');
-            foreach (var line in lines)
+            string grade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
+            string governing = result.Governing is { } g
+                ? $"　支配ケース: {g.Category} {g.TargetName}{g.EndLabel}（{g.LoadCaseName} {g.LoadCombinationName}）"
+                : string.Empty;
+            AddText(body,
+                $"耐震性能グレード {grade}。検定項目 {result.Items.Count} 件（OK {result.OkCount} 件 / NG {result.NgCount} 件）。"
+                + (result.MaxRatio is { } r ? $" 最大検定比 {r:F2}。{governing}" : string.Empty));
+
+            if (result.NgCount == 0)
             {
-                var paragraph = new Paragraph();
-                var pPr = new ParagraphProperties();
-                pPr.Append(new SpacingBetweenLines
-                {
-                    Before = "0", After = "0",
-                    Line = "200", LineRule = LineSpacingRuleValues.Exact
-                });
-                pPr.Append(new SnapToGrid { Val = false });
-                pPr.Append(new Justification { Val = JustificationValues.Left });
-                paragraph.Append(pPr);
-
-                var run = new Run();
-                var rPr = new RunProperties();
-                // 桁を揃えて読ませる固定行なので、本文が明朝でもここは等幅を保つ
-                rPr.Append(CreateRunFonts(Layout.TableFontName));
-                rPr.Append(new FontSize { Val = "18" }); // 9pt = 18 (twentieths)
-                rPr.Append(new FontSizeComplexScript { Val = "18" });
-                run.Append(rPr);
-                run.Append(new Text(line) { Space = SpaceProcessingModeValues.Preserve });
-                paragraph.Append(run);
-
-                body.Append(paragraph);
+                AddText(body, "すべての検定項目が限界値を下回っている（NG 項目なし）。");
+                return;
             }
-        }
 
+            AddTableCaption(body, factored ? "検定 NG 項目（低減後）" : "検定 NG 項目（低減前）");
+
+            const double fontSize = 8.0;
+            var table = CreateTableWithBorders();
+            table.Append(CreateHeaderRow(
+                CreateTableCell(["検定項目"], fontSize, "center"),
+                CreateTableCell(["対象"], fontSize, "center"),
+                CreateTableCell(["レベル"], fontSize, "center"),
+                CreateTableCell(["荷重ケース"], fontSize, "center"),
+                CreateTableCell(["組合せ"], fontSize, "center"),
+                CreateTableCell(["応答"], fontSize, "center"),
+                CreateTableCell(["限界"], fontSize, "center"),
+                CreateTableCell(["単位"], fontSize, "center"),
+                CreateTableCell(["検定比"], fontSize, "center")));
+
+            // 検定比の大きい順。どこが一番危ないかを上から読めるようにする
+            foreach (var item in result.ByRatioDescending.Where(i => !i.IsOk))
+            {
+                string target = $"{item.TargetName}{item.EndLabel}";
+                string liq = item.LiquefactionLabel;
+                string load = string.IsNullOrEmpty(liq) ? item.LoadCaseName : $"{item.LoadCaseName}（{liq}）";
+
+                var row = new TableRow();
+                row.Append(CreateTableCell([item.Category], fontSize, "left"));
+                row.Append(CreateTableCell([target], fontSize, "left"));
+                row.Append(CreateTableCell([item.Level > 0 ? $"L{item.Level}" : "-"], fontSize, "center"));
+                row.Append(CreateTableCell([load], fontSize, "left"));
+                row.Append(CreateTableCell([item.LoadCombinationName], fontSize, "left"));
+                row.Append(CreateTableCell([item.ResponseText], fontSize, "right"));
+                row.Append(CreateTableCell([item.LimitText], fontSize, "right"));
+                row.Append(CreateTableCell([item.Unit], fontSize, "center"));
+                row.Append(CreateTableCell([item.Ratio is { } ratio ? $"{ratio:F2}" : "-"], fontSize, "right"));
+                table.Append(row);
+            }
+
+            body.Append(table);
+            AddTableNote(body, "※ 検定比 = 応答値 / 限界値。1.00 を超えるものを NG として挙げている。");
+        }
 
     }
 }

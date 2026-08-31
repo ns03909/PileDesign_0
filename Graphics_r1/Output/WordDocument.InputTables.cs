@@ -135,7 +135,7 @@ namespace PileDesign.Output
         }
 
         //
-        public static void AddGroundInfo(Body body, ObservableCollection<GroundInput> grounds, FundamentalInput fundamentalInput)
+        public void AddGroundInfo(Body body, ObservableCollection<GroundInput> grounds, FundamentalInput fundamentalInput)
         {
             double fontSize = 8.0;
             if (grounds == null || grounds.Count == 0) return;
@@ -144,6 +144,7 @@ namespace PileDesign.Output
                 GroundInput ground = grounds[i];
                 AddHeader1(body, $"地盤情報 {i + 1}: {ground.GroundRef}", 2);
 
+                AddTableCaption(body, $"地盤 {ground.GroundRef} の基準レベル");
 
                 Table table = CreateTableWithBorders();
 
@@ -190,10 +191,12 @@ namespace PileDesign.Output
 
                 body.Append(new Paragraph());
 
+                AddTableCaption(body, $"地盤 {ground.GroundRef} の土層");
                 AddGroundLayerTable(body, ground.GroundLayers, fundamentalInput);
 
                 body.Append(new Paragraph());
 
+                AddTableCaption(body, $"地盤 {ground.GroundRef} の土質点");
                 AddGroundMassTable(body, ground.GroundMassesData, fundamentalInput);
 
                 body.Append(new Paragraph());
@@ -221,6 +224,8 @@ namespace PileDesign.Output
             CreateTableCell(["下端", "Z", "[m]"], fontSize, "center"),
             CreateTableCell(["土層", "分類"], fontSize, "center"),
             CreateTableCell(["単位", "体積", "重量", "[kN/m<^3>]"], fontSize, "center"),
+            CreateTableCell(["N値"], fontSize, "center"),
+            CreateTableCell(["粘着力", "Cu", "[kN/m<^2>]"], fontSize, "center"),
             CreateTableCell(["年代", "分類"], fontSize, "center"),
             CreateTableCell(["押込側", "周面", "抵抗"], fontSize, "center"),
             CreateTableCell(["引抜側", "周面", "抵抗"], fontSize, "center"),
@@ -242,6 +247,10 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([$"{groundLayer.BottomAltitude:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundLayer.GranularityClass}"], fontSize, "center"));
                 dataRow.Append(CreateTableCell([$"{groundLayer.Density:N1}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([$"{groundLayer.NValue:N1}"], fontSize, "right"));
+                // 粘着力は粘性土以外では 0。0.0 と書くと「測ってこの値」に見えるので "-" にする
+                dataRow.Append(CreateTableCell(
+                    [groundLayer.Cohesive > 0 ? $"{groundLayer.Cohesive:N1}" : "-"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundLayer.AgeCategory}"], fontSize, "center"));
                 dataRow.Append(CreateTableCell([BoolMark(groundLayer.IsPositiveCircumResistance)], fontSize, "center"));
                 dataRow.Append(CreateTableCell([BoolMark(groundLayer.IsNegativeCircumResistance)], fontSize, "center"));
@@ -300,17 +309,20 @@ namespace PileDesign.Output
         }
 
         // 液状化情報
-        public static void AddLiquefactionInfo(Body body, GroundInput groundInput)
+        public void AddLiquefactionInfo(Body body, GroundInput groundInput)
         {
             double fontSize = 8.0;
             ObservableCollection<GroundMassDataInput> groundMasses = groundInput.GroundMassesData;
 
-            AddHeader1(body, "液状化の検討", 3);
+            // 算定式の説明は「液状化の検討」章 (WordDocument.Sections.cs)。
+            // 目次で同名が 2 つ並ばないよう、こちらは判定結果と名乗る。
+            AddHeader1(body, "液状化の判定結果", 3);
 
             for (int i = 0; i < 2; i++)
             {
                 AddText(body, $"液状化レベル{i + 1}(L{i + 1})");
 
+                AddTableCaption(body, $"液状化の判定条件（L{i + 1}）");
                 Table table0 = CreateTableWithBorders();
 
                 table0.Append(new TableRow(
@@ -322,6 +334,7 @@ namespace PileDesign.Output
                 body.Append(table0);
                 body.Append(new Paragraph());
 
+                AddTableCaption(body, $"液状化の判定結果（L{i + 1}）");
                 Table table = CreateTableWithBorders();
 
                 // 1行目: 表題
@@ -389,13 +402,14 @@ namespace PileDesign.Output
         }
 
         // 地盤変位
-        public static void AddGroundDisplacementInfo(Body body, GroundInput groundInput)
+        public void AddGroundDisplacementInfo(Body body, GroundInput groundInput)
         {
             double fontSize = 8.0;
             ObservableCollection<GroundMassDataInput> groundMasses = groundInput.GroundMassesData;
 
             AddHeader1(body, "地盤変位の検討", 3);
 
+            AddTableCaption(body, "地盤変位の算定条件");
             Table table0 = CreateTableWithBorders();
 
             table0.Append(
@@ -424,6 +438,7 @@ namespace PileDesign.Output
             if (groundInput.CalculationMethod == "応答スペクトル法")
             {
                 AddText(body, "応答スペクトル法 固有値解析結果 (収束後)");
+                AddTableCaption(body, "応答スペクトル法 固有値解析結果（収束後）");
                 Table tableRsSummary = CreateTableWithBorders();
                 tableRsSummary.Append(new TableRow(
                     CreateTableCell([""], fontSize, "center"),
@@ -450,6 +465,7 @@ namespace PileDesign.Output
                 body.Append(new Paragraph());
 
                 AddText(body, "土質点別 Hardin-Drnevich パラメータ");
+                AddTableCaption(body, "土質点別 Hardin-Drnevich パラメータ");
                 Table tableHd = CreateTableWithBorders();
                 tableHd.Append(CreateHeaderRow(
                     CreateTableCell(["深度", "[m]"], fontSize, "center"),
@@ -474,6 +490,7 @@ namespace PileDesign.Output
                 AddText(body, $"レベル{i + 1}地震");
 
 
+                AddTableCaption(body, $"地盤変位（レベル{i + 1}地震）");
                 Table table = CreateTableWithBorders();
 
                 // 1行目: 表題
@@ -538,7 +555,7 @@ namespace PileDesign.Output
         }
 
         // 杭体の表を追加するメソッド
-        public static void AddPileBodiesTables(Body body, ObservableCollection<PileBodyInput> pileBodies)
+        public void AddPileBodiesTables(Body body, ObservableCollection<PileBodyInput> pileBodies)
         {
             int pileBodyNo = 0;
             foreach (PileBodyInput pileBodyInput in pileBodies)
@@ -549,7 +566,7 @@ namespace PileDesign.Output
         }
 
         // 杭体の詳細情報を含む表を追加するメソッド
-        public static void AddPileBodyDetailedTable(Body body, PileBodyInput pileBodyInput, int pileBodyNo)
+        public void AddPileBodyDetailedTable(Body body, PileBodyInput pileBodyInput, int pileBodyNo)
         {
             double fontSize = 8;
 
@@ -573,6 +590,7 @@ namespace PileDesign.Output
             }
 
             // 杭体基本情報テーブル（杭体符号、杭体タイプ、杭頭接合タイプ、杭工法、杭先端径）
+            AddTableCaption(body, $"杭体No.{pileBodyNo} の諸元");
             Table infoTable = CreateTableWithBorders();
 
             TableRow refRow = new();
@@ -606,6 +624,7 @@ namespace PileDesign.Output
             AddText(body, "杭体区間", "left", 9);
 
             // 杭体区間テーブル
+            AddTableCaption(body, $"杭体No.{pileBodyNo} の区間");
             AddPileBodySegmentTable(body, pileBodyInput);
 
             // 杭体間のスペース

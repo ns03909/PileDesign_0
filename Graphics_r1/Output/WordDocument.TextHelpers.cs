@@ -263,6 +263,35 @@ namespace PileDesign.Output
             body.Append(paragraph);
         }
 
+        /// <summary>
+        /// すべての表の行に「行の途中で改ページしない」(cantSplit) を設定する。
+        ///
+        /// Word の既定は行を分割できるため、ページ末尾に来た行が上下に割れ、
+        /// 前のページに空のセルだけが残ることがある。
+        /// 行を作る箇所が多数に散っているので、組み上がった本文に対して一度だけ通す。
+        /// （1 行だけで 1 ページに収まらない場合は、Word がこの指定を無視して分割する）
+        /// </summary>
+        internal static void PreventTableRowsFromSplittingAcrossPages(Body body)
+        {
+            foreach (var row in body.Descendants<TableRow>())
+            {
+                var rowProperties = row.GetFirstChild<TableRowProperties>();
+                if (rowProperties == null)
+                {
+                    // OpenXML スキーマ上 trPr は行の先頭要素
+                    rowProperties = new TableRowProperties();
+                    row.PrependChild(rowProperties);
+                }
+                if (rowProperties.Elements<CantSplit>().Any()) continue;
+
+                // CT_TrPr の並びは cantSplit → trHeight → tblHeader
+                var successor = rowProperties.ChildElements
+                    .FirstOrDefault(e => e is TableRowHeight or TableHeader);
+                if (successor == null) rowProperties.Append(new CantSplit());
+                else rowProperties.InsertBefore(new CantSplit(), successor);
+            }
+        }
+
         // テーブルに枠線を追加するメソッド
         // 表は紙面幅いっぱい（100%）に設定し、列幅は内容に応じて自動調整
         private static Table CreateTableWithBorders()
