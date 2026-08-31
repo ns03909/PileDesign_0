@@ -1,4 +1,4 @@
-using MathNet.Numerics.LinearAlgebra;
+﻿using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Common;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -484,7 +484,7 @@ namespace PileDesign.Views
 
             foreach (var fb in fbBeams)
             {
-                if (!fb.IsVisible) continue;
+                if (!IsFoundationBeamVisibleForResult(viewModel, fb)) continue;
                 var cI = inputModel.GetNodeCoordinates(fb.NodeI_Type, fb.NodeI_Id);
                 var cJ = inputModel.GetNodeCoordinates(fb.NodeJ_Type, fb.NodeJ_Id);
                 if (cI == null || cJ == null) continue;
@@ -594,7 +594,7 @@ namespace PileDesign.Views
 
             foreach (var fbBeam in fbBeams)
             {
-                if (!fbBeam.IsVisible) continue;
+                if (!IsFoundationBeamVisibleForResult(viewModel, fbBeam)) continue;
 
                 var coordsI = inputModel.GetNodeCoordinates(fbBeam.NodeI_Type, fbBeam.NodeI_Id);
                 var coordsJ = inputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);

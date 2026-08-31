@@ -1,4 +1,4 @@
-using MathNet.Numerics.LinearAlgebra;
+﻿using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Common;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -46,13 +46,15 @@ namespace PileDesign.Views
             {
                 visibleBeams = new HashSet<Beam>();
                 invisibleFBNames = new HashSet<string>();
+                // 可視性は現在の入力に従う (理由は BuildLivePileVisibility の説明を参照)
+                var livePileVisibility = BuildLivePileVisibility(viewModel);
                 hasInvisiblePile = false;
 
                 if (viewModel.ResultInputModel?.PileLayoutItems != null)
                 {
                     foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
-                        if (pile.IsVisible)
+                        if (IsPileVisibleForResult(livePileVisibility, pile))
                             foreach (var beam in pile.Beams) visibleBeams.Add(beam);
                         else
                             hasInvisiblePile = true;
@@ -63,7 +65,7 @@ namespace PileDesign.Views
                     var beams = viewModel.ResultInputModel.FoundationBeamInput.Beams;
                     for (int i = 0; i < beams.Count; i++)
                     {
-                        if (!beams[i].IsVisible)
+                        if (!IsFoundationBeamVisibleForResult(viewModel, i, beams[i]))
                             invisibleFBNames.Add($"FoundationBeam-{i + 1}");
                     }
                 }
@@ -176,7 +178,7 @@ namespace PileDesign.Views
                 visiblePileNos = new HashSet<int>();
                 foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                 {
-                    if (pile.IsVisible) visiblePileNos.Add(pile.No);
+                    if (IsPileVisibleForResult(viewModel, pile)) visiblePileNos.Add(pile.No);
                 }
             }
 
@@ -532,7 +534,7 @@ namespace PileDesign.Views
 
             foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
             {
-                if (!pile.IsVisible) continue;
+                if (!IsPileVisibleForResult(viewModel, pile)) continue;
                 if (pile.PileNodes == null || pile.PileNodes.Count < 2) continue;
                 if (pile.Beams == null || pile.Beams.Count == 0) continue;
 

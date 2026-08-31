@@ -21,6 +21,74 @@ namespace PileDesign.Views
     public partial class MainWindow
     {
  
+        /// <summary>
+        /// 結果表示で「この杭を描くか」を返す。
+        ///
+        /// 結果の中身は解析時のスナップショット (<c>ResultInputModel</c>) を見るが、
+        /// <b>可視性は表示専用の状態なので、いま利用者が操作している
+        /// <c>CurrentInputModel</c> に従う</b>。スナップショットの IsVisible は
+        /// 解析時のまま凍結されているため、そちらを見ると解析後に杭を絞り込んでも
+        /// 結果図だけが全杭ぶん残る。
+        /// スナップショットは DeepCopy で <c>UniqueId</c> を引き継ぐので対応が付く。
+        /// </summary>
+        private static Dictionary<Guid, bool> BuildLivePileVisibility(MainWindowViewModel viewModel)
+        {
+            var map = new Dictionary<Guid, bool>();
+            var live = viewModel?.CurrentInputModel?.PileLayoutItems;
+            if (live == null) return map;
+            foreach (var pile in live) map[pile.UniqueId] = pile.IsVisible;
+            return map;
+        }
+
+        /// <summary>スナップショット側の杭が、いまの入力で表示対象かどうか。</summary>
+        private static bool IsPileVisibleForResult(Dictionary<Guid, bool> livePileVisibility, PileLayoutDataItem pile)
+        {
+            if (pile == null) return false;
+            if (livePileVisibility != null && livePileVisibility.TryGetValue(pile.UniqueId, out bool visible))
+                return visible;
+            return pile.IsVisible;   // 対応が取れない場合はスナップショットに従う
+        }
+
+        /// <summary>
+        /// 対応表を持ち回らない版。呼び出しごとに現在の入力を線形に引く。
+        /// ループの中で使ってよい程度の件数 (杭は多くても数百本)。
+        /// </summary>
+        private static bool IsPileVisibleForResult(MainWindowViewModel viewModel, PileLayoutDataItem pile)
+        {
+            if (pile == null) return false;
+            var live = viewModel?.CurrentInputModel?.PileLayoutItems;
+            if (live != null)
+            {
+                foreach (var p in live)
+                    if (p.UniqueId == pile.UniqueId) return p.IsVisible;
+            }
+            return pile.IsVisible;
+        }
+
+        /// <summary>添字を呼び出し側が持たない場合の版。</summary>
+        private static bool IsFoundationBeamVisibleForResult(MainWindowViewModel viewModel, FoundationBeam snapshotBeam)
+        {
+            var snap = viewModel?.ResultInputModel?.FoundationBeamInput?.Beams;
+            if (snap == null || snapshotBeam == null) return snapshotBeam?.IsVisible ?? true;
+            return IsFoundationBeamVisibleForResult(viewModel, snap.IndexOf(snapshotBeam), snapshotBeam);
+        }
+
+        /// <summary>
+        /// 基礎梁の可視性も同じ理由で現在の入力から取る。
+        /// FEM 側の梁名が "FoundationBeam-{添字}" なので対応付けは添字で行い、
+        /// 本数が変わっている場合は対応が取れないのでスナップショット側に従う。
+        /// </summary>
+        private static bool IsFoundationBeamVisibleForResult(
+            MainWindowViewModel viewModel, int index, FoundationBeam snapshotBeam)
+        {
+            var live = viewModel?.CurrentInputModel?.FoundationBeamInput?.Beams;
+            var snap = viewModel?.ResultInputModel?.FoundationBeamInput?.Beams;
+            if (live != null && snap != null && live.Count == snap.Count
+                && index >= 0 && index < live.Count)
+                return live[index].IsVisible;
+            return snapshotBeam?.IsVisible ?? true;
+        }
+
         private static IEnumerable<LoadCase> GetSelectedLoadCases(MainWindowViewModel vm)
             => vm.ResultInputModel.LoadCasesInput.AllSeismicLoadCases
                .Where(lc => vm.LoadCaseNameOption.Contains(lc.LoadName));
@@ -50,12 +118,21 @@ namespace PileDesign.Views
             HashSet<Node> visibleFemNodes = null;
             HashSet<HorizontalSoilSpring> visibleSoilSprings = null;
             bool hasInvisiblePile = false;
+            // 可視性は「いま利用者が操作している入力」に従う。
+            // 結果の中身は解析時のスナップショット (ResultInputModel) を見るが、
+            // 表示するかどうかは表示専用の状態なので CurrentInputModel を見ないと、
+            // 解析後に杭を絞り込んでも結果図だけが全杭ぶん残る
+            // (スナップショットの IsVisible は解析時のまま凍結されているため)。
+            // スナップショットは DeepCopy で UniqueId を引き継ぐので、これで対応が付く。
+            var livePileVisibility = BuildLivePileVisibility(viewModel);
+            bool IsPileVisible(PileLayoutDataItem pile) => IsPileVisibleForResult(livePileVisibility, pile);
+
             if (viewModel.ResultInputModel?.PileLayoutItems != null)
             {
                 // まず非表示杭があるかだけ確認（全杭可視ならセット構築を省略）
                 foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                 {
-                    if (!pile.IsVisible) { hasInvisiblePile = true; break; }
+                    if (!IsPileVisible(pile)) { hasInvisiblePile = true; break; }
                 }
 
                 if (hasInvisiblePile)
@@ -66,7 +143,7 @@ namespace PileDesign.Views
                     int visiblePileCount = 0;
                     foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
-                        if (pile.IsVisible)
+                        if (IsPileVisible(pile))
                         {
                             visiblePileCount++;
                             foreach (var beam in pile.Beams) visibleBeams.Add(beam);
@@ -104,9 +181,12 @@ namespace PileDesign.Views
             if (viewModel.ResultInputModel?.FoundationBeamInput?.Beams != null)
             {
                 var beams = viewModel.ResultInputModel.FoundationBeamInput.Beams;
+                // 杭と同じ理由で、可視性は現在の入力から取る。
+                // FEM 側の梁名が "FoundationBeam-{添字}" なので対応付けも添字で行う。
+                // 本数が変わっている場合は対応が取れないのでスナップショット側に従う。
                 for (int i = 0; i < beams.Count; i++)
                 {
-                    if (!beams[i].IsVisible)
+                    if (!IsFoundationBeamVisibleForResult(viewModel, i, beams[i]))
                         invisibleFBNames.Add($"FoundationBeam-{i + 1}");
                 }
             }

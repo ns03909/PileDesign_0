@@ -1,4 +1,4 @@
-using MathNet.Numerics.LinearAlgebra;
+﻿using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Common;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -476,7 +476,7 @@ namespace PileDesign.Views
             {
                 foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                 {
-                    if (!pile.IsVisible) continue;
+                    if (!IsPileVisibleForResult(viewModel, pile)) continue;
                     var tipNode = pile.PileNodes?.LastOrDefault();
                     if (tipNode?.CumulativeReaction == null) continue;
 
@@ -704,7 +704,7 @@ namespace PileDesign.Views
 
             foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
             {
-                if (!pile.IsVisible) continue;
+                if (!IsPileVisibleForResult(viewModel, pile)) continue;
                 if (pile.PileNodes == null) continue;
                 var pileNodeSet = new HashSet<FEM.Node>(pile.PileNodes);
 
@@ -888,7 +888,7 @@ namespace PileDesign.Views
 
             foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
             {
-                if (!pile.IsVisible) continue;
+                if (!IsPileVisibleForResult(viewModel, pile)) continue;
 
                 // 杭配置のXY座標に最も近い杭頭Beam要素を検索
                 var topBeam = pileTopBeams.FirstOrDefault(b =>
@@ -1058,7 +1058,7 @@ namespace PileDesign.Views
 
             foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
             {
-                if (!pile.IsVisible) continue;
+                if (!IsPileVisibleForResult(viewModel, pile)) continue;
 
                 Beam targetBeam = null;
                 Node targetNode = null;

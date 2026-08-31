@@ -1,4 +1,4 @@
-using MathNet.Numerics.LinearAlgebra;
+﻿using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Common;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -87,7 +87,7 @@ namespace PileDesign.Views
             {
                 foreach (var fbBeam in inputModel.FoundationBeamInput.Beams)
                 {
-                    if (!fbBeam.IsVisible) continue;
+                    if (!IsFoundationBeamVisibleForResult(viewModel, fbBeam)) continue;
 
                     var coordsI = inputModel.GetNodeCoordinates(fbBeam.NodeI_Type, fbBeam.NodeI_Id);
                     var coordsJ = inputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
@@ -198,7 +198,7 @@ namespace PileDesign.Views
 
             foreach (var pile in inputModel.PileLayoutItems)
             {
-                if (!pile.IsVisible) continue;
+                if (!IsPileVisibleForResult(viewModel, pile)) continue;
 
                 int spIdx = pile.SoilPileAltNo - 1;
                 if (spIdx < 0 || spIdx >= soilPiles.Count) continue;
@@ -248,7 +248,7 @@ namespace PileDesign.Views
 
             foreach (var fbBeam in fbInput.Beams)
             {
-                if (!fbBeam.IsVisible) continue;
+                if (!IsFoundationBeamVisibleForResult(viewModel, fbBeam)) continue;
 
                 double bw = fbBeam.Width;
                 double bh = fbBeam.Height;
@@ -391,7 +391,7 @@ namespace PileDesign.Views
             var cached = new List<(PileLayoutDataItem pile, List<double> nodeZ, List<double> uz)>();
             foreach (var pile in inputModel.PileLayoutItems)
             {
-                if (!pile.IsVisible) continue;
+                if (!IsPileVisibleForResult(viewModel, pile)) continue;
                 double? forceOpt = GetSelectedCaseAxialForce(pile, viewModel);
                 if (forceOpt == null) continue;
 
@@ -673,7 +673,7 @@ namespace PileDesign.Views
                     foreach (var pr in pileResults)
                     {
                         var pile = viewModel.ResultInputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
-                        if (pile == null || !pile.IsVisible) continue;
+                        if (pile == null || !IsPileVisibleForResult(viewModel, pile)) continue;
                         points.Add(new Point3D(pr.X, pr.Y, loadingPlaneAlt));
                         values.Add(Math.Abs(pr.Settlement_mm));
                     }
@@ -686,7 +686,7 @@ namespace PileDesign.Views
                     // v2 セマンティクス: pile.Z は接合節点 Z
                     foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
-                        if (!pile.IsVisible) continue;
+                        if (!IsPileVisibleForResult(viewModel, pile)) continue;
                         var pr = caseResult.PileResults?.FirstOrDefault(p => p.PileNo == pile.No);
                         double vbSettlement = pr?.Settlement_mm ?? 0;
                         double combined = Math.Abs(vbSettlement
@@ -709,7 +709,7 @@ namespace PileDesign.Views
                     foreach (var pr in pileResults)
                     {
                         var pile = viewModel.ResultInputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
-                        if (pile == null || !pile.IsVisible) continue;
+                        if (pile == null || !IsPileVisibleForResult(viewModel, pile)) continue;
 
                         // v2 セマンティクス: pile.Z は接合節点 Z
                         points.Add(new Point3D(pr.X, pr.Y, pile.Z));
@@ -783,7 +783,7 @@ namespace PileDesign.Views
                 double loadingPlaneAlt = inputModel.PileGroupSettlement.LoadingPlaneAltitude;
                 foreach (var pile in inputModel.PileLayoutItems)
                 {
-                    if (!pile.IsVisible) continue;
+                    if (!IsPileVisibleForResult(viewModel, pile)) continue;
                     double? forceOpt = GetSelectedCaseAxialForce(pile, viewModel);
                     if (forceOpt == null) continue;
                     points.Add(new Point3D(pile.X, pile.Y, loadingPlaneAlt));
@@ -798,7 +798,7 @@ namespace PileDesign.Views
 
                 foreach (var pile in inputModel.PileLayoutItems)
                 {
-                    if (!pile.IsVisible) continue;
+                    if (!IsPileVisibleForResult(viewModel, pile)) continue;
                     double? forceOpt = GetSelectedCaseAxialForce(pile, viewModel);
                     if (forceOpt == null) continue;
 
@@ -859,7 +859,7 @@ namespace PileDesign.Views
             foreach (var pr in pileResults)
             {
                 var pile = inputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
-                if (pile == null || !pile.IsVisible) { Serilog.Log.Debug($"[VB-PerNode] pile not found or invisible: PileNo={pr.PileNo}"); continue; }
+                if (pile == null || !IsPileVisibleForResult(viewModel, pile)) { Serilog.Log.Debug($"[VB-PerNode] pile not found or invisible: PileNo={pr.PileNo}"); continue; }
 
                 // SoilPileの取得
                 int soilPileIdx = pile.SoilPileAltNo - 1;
@@ -982,7 +982,7 @@ namespace PileDesign.Views
                 var fbBeams = viewModel.ResultInputModel.FoundationBeamInput?.Beams;
                 var fbBeam = (fbBeams != null && beamNo >= 1 && beamNo <= fbBeams.Count)
                     ? fbBeams[beamNo - 1] : null;
-                if (fbBeam == null || !fbBeam.IsVisible) continue;
+                if (fbBeam == null || !IsFoundationBeamVisibleForResult(viewModel, fbBeam)) continue;
 
                 var coordsI = viewModel.ResultInputModel.GetNodeCoordinates(fbBeam.NodeI_Type, fbBeam.NodeI_Id);
                 var coordsJ = viewModel.ResultInputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
