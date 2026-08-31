@@ -181,22 +181,22 @@ namespace PileDesign.Models.InputData
         // [JsonIgnore]: NM 系と同じ理由で、これらも computed プロパティで重い計算をトリガする
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) UnfactoredServiceNQ =>
-            _unfactoredServiceNQCache ??= GetNQScaled(nameof(UnfactoredServiceNQ));
+            GetOrComputeCurve(ref _unfactoredServiceNQCache, () => GetNQScaled(nameof(UnfactoredServiceNQ)));
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) UnfactoredDamageNQ =>
-            _unfactoredDamageNQCache ??= GetNQScaled(nameof(UnfactoredDamageNQ));
+            GetOrComputeCurve(ref _unfactoredDamageNQCache, () => GetNQScaled(nameof(UnfactoredDamageNQ)));
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) UnfactoredUltimateNQ =>
-            _unfactoredUltimateNQCache ??= GetNQScaled(nameof(UnfactoredUltimateNQ));
+            GetOrComputeCurve(ref _unfactoredUltimateNQCache, () => GetNQScaled(nameof(UnfactoredUltimateNQ)));
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) FactoredServiceNQ =>
-            _factoredServiceNQCache ??= GetNQScaled(nameof(FactoredServiceNQ));
+            GetOrComputeCurve(ref _factoredServiceNQCache, () => GetNQScaled(nameof(FactoredServiceNQ)));
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) FactoredDamageNQ =>
-            _factoredDamageNQCache ??= GetNQScaled(nameof(FactoredDamageNQ));
+            GetOrComputeCurve(ref _factoredDamageNQCache, () => GetNQScaled(nameof(FactoredDamageNQ)));
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> Q) FactoredUltimateNQ =>
-            _factoredUltimateNQCache ??= GetNQScaled(nameof(FactoredUltimateNQ));
+            GetOrComputeCurve(ref _factoredUltimateNQCache, () => GetNQScaled(nameof(FactoredUltimateNQ)));
 
         // 後方互換性のためのエイリアス（Dagame -> Damage）
         [System.Text.Json.Serialization.JsonIgnore]
@@ -220,6 +220,34 @@ namespace PileDesign.Models.InputData
         private (List<double> N, List<double> M)? _factoredDamageNMCache;
         private (List<double> N, List<double> M)? _factoredDamageNMLevel1Cache;
         private (List<double> N, List<double> M)? _factoredUltimateNMCache;
+
+        /// <summary>
+        /// NM / NQ の遅延キャッシュを直列化する、断面インスタンスごとのロック。
+        ///
+        /// 理由は 2 つあり、どちらも並列に読むと壊れる。
+        /// ・キャッシュの器が <c>(List&lt;double&gt;, List&lt;double&gt;)?</c>（24 バイトの構造体）で、
+        ///   書き込みがアトミックでない。「N は今回の計算・M は別の計算」という破れた値が読める。
+        /// ・算出 (<c>GetNMRaw</c>) が純粋関数ではない。<c>UpdateSteelPipeAxialThresholds()</c> 等で
+        ///   この断面の軸力閾値を<b>書き換えてから</b>、その閾値で曲線をクリップする。
+        ///   同時に走ると互いの中間状態を掴み、クリップが狂った曲線ができる。
+        ///
+        /// 検定 (EvaluationService) は杭要素ごとに Parallel.For で回すため、
+        /// 同じ断面のこれらのプロパティが同時に叩かれる。
+        /// Monitor は再入可能なので、算出の途中で同じ断面の別プロパティを読んでも止まらない。
+        /// </summary>
+        private readonly object _curveCacheLock = new();
+
+        /// <summary>遅延キャッシュの取得。読み・算出・書き込みをまとめてロックの中で行う。</summary>
+        private (List<double> A, List<double> B) GetOrComputeCurve(
+            ref (List<double> A, List<double> B)? cache,
+            Func<(List<double> A, List<double> B)> compute)
+        {
+            lock (_curveCacheLock)
+            {
+                cache ??= compute();
+                return cache.Value;
+            }
+        }
 
         // --- 追加: M-φキャッシュ（同一断面・同一軸力での再計算を抑制） ---
         // キーは断面プロパティハッシュ + 軸力(kN)を丸めた値
@@ -248,23 +276,30 @@ namespace PileDesign.Models.InputData
         }
         private void InvalidateNMCache()
         {
-            _unfactoredServiceNMCache = null;
-            _unfactoredDamageNMCache = null;
-            _unfactoredUltimateNMCache = null;
-            _factoredServiceNMCache = null;
-            _factoredDamageNMCache = null;
-            _factoredDamageNMLevel1Cache = null;
-            _factoredUltimateNMCache = null;
+            // 算出中に捨てられると、書き戻しと破棄が入れ違って古い曲線が残る
+            lock (_curveCacheLock)
+            {
+                _unfactoredServiceNMCache = null;
+                _unfactoredDamageNMCache = null;
+                _unfactoredUltimateNMCache = null;
+                _factoredServiceNMCache = null;
+                _factoredDamageNMCache = null;
+                _factoredDamageNMLevel1Cache = null;
+                _factoredUltimateNMCache = null;
+            }
         }
         // せん断 (N-Q) キャッシュ無効化。告示せん断オプション等の変更を反映するため NM と同時に破棄する。
         private void InvalidateNQCache()
         {
-            _unfactoredServiceNQCache = null;
-            _unfactoredDamageNQCache = null;
-            _unfactoredUltimateNQCache = null;
-            _factoredServiceNQCache = null;
-            _factoredDamageNQCache = null;
-            _factoredUltimateNQCache = null;
+            lock (_curveCacheLock)
+            {
+                _unfactoredServiceNQCache = null;
+                _unfactoredDamageNQCache = null;
+                _unfactoredUltimateNQCache = null;
+                _factoredServiceNQCache = null;
+                _factoredDamageNQCache = null;
+                _factoredUltimateNQCache = null;
+            }
         }
 
         // 追加: 降伏開始NMのキャッシュ
@@ -344,45 +379,45 @@ namespace PileDesign.Models.InputData
         // --- 変更: NMプロパティをキャッシュ ---
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredServiceNM =>
-            _unfactoredServiceNMCache ??= (
+            GetOrComputeCurve(ref _unfactoredServiceNMCache, () => (
                 GetMultipliedListValues(UnfactoredServiceNMRaw.N, 1e-3),
                 GetMultipliedListValues(UnfactoredServiceNMRaw.M, 1e-6)
-            );
+            ));
 
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredDamageNM =>
-            _unfactoredDamageNMCache ??= (
+            GetOrComputeCurve(ref _unfactoredDamageNMCache, () => (
                 GetMultipliedListValues(UnfactoredDamageNMRaw.N, 1e-3),
                 GetMultipliedListValues(UnfactoredDamageNMRaw.M, 1e-6)
-            );
+            ));
 
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) UnfactoredUltimateNM =>
-            _unfactoredUltimateNMCache ??= (
+            GetOrComputeCurve(ref _unfactoredUltimateNMCache, () => (
                 GetMultipliedListValues(UnfactoredUltimateNMRaw.N, 1e-3),
                 GetMultipliedListValues(UnfactoredUltimateNMRaw.M, 1e-6)
-            );
+            ));
 
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredServiceNM =>
-            _factoredServiceNMCache ??= (
+            GetOrComputeCurve(ref _factoredServiceNMCache, () => (
                 GetMultipliedListValues(FactoredServiceNMRaw.N, 1e-3),
                 GetMultipliedListValues(FactoredServiceNMRaw.M, 1e-6)
-            );
+            ));
 
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredDamageNM =>
-            _factoredDamageNMCache ??= (
+            GetOrComputeCurve(ref _factoredDamageNMCache, () => (
                 GetMultipliedListValues(FactoredDamageNMRaw.N, 1e-3),
                 GetMultipliedListValues(FactoredDamageNMRaw.M, 1e-6)
-            );
+            ));
 
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredDamageNMLevel1 =>
-            _factoredDamageNMLevel1Cache ??= (
+            GetOrComputeCurve(ref _factoredDamageNMLevel1Cache, () => (
                 GetMultipliedListValues(FactoredDamageNMLevel1Raw.N, 1e-3),
                 GetMultipliedListValues(FactoredDamageNMLevel1Raw.M, 1e-6)
-            );
+            ));
 
         /// <summary>
         /// レベル別の損傷限界 NM 曲線を返す。
@@ -394,10 +429,10 @@ namespace PileDesign.Models.InputData
 
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) FactoredUltimateNM =>
-            _factoredUltimateNMCache ??= (
+            GetOrComputeCurve(ref _factoredUltimateNMCache, () => (
                 GetMultipliedListValues(FactoredUltimateNMRaw.N, 1e-3),
                 GetMultipliedListValues(FactoredUltimateNMRaw.M, 1e-6)
-            );
+            ));
 
         // 降伏開始NM（Raw: N[N], M[Nmm]）をキャッシュ付きで返す
         [System.Text.Json.Serialization.JsonIgnore]

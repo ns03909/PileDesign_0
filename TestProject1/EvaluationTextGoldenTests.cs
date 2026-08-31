@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.ViewModels;
 using System;
 using System.IO;
@@ -65,9 +65,10 @@ namespace TestProject1
         /// この static が別のモデルの設定に書き換わる。検定テキストは呼ばれた時点の
         /// 限界曲線で組み立てるので、解析が済んでいても出力が変わりうる。
         ///
-        /// ※ <c>("Example3_5", factored: true, filter: 2)</c> の間欠的な失敗の原因は<b>これではない</b>。
-        ///    鋼管杭の例題なのでコンクリートのオプションは効かず、全オプションを個別に立てても
-        ///    テキストが変わらないことを確認済み (テキストの組み立て自体も決定的)。原因は未特定。
+        /// ※ <c>("Example3_5", factored: true, filter: 2)</c> の間欠的な失敗は<b>これが原因ではなく</b>、
+        ///    断面の NM 曲線を並列に読んだときの競合だった (2026-08-30 に解決)。
+        ///    解析値は正しく、安全限界 M だけが 710.3 と 664.8 の間で揺れていた。
+        ///    詳細と回帰ガードは <see cref="PileSectionCurveThreadSafetyTests"/>。
         /// </summary>
         private static MainWindowViewModel? GetAnalyzedViewModel(string ground)
         {
