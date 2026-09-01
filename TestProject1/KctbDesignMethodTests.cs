@@ -322,6 +322,44 @@ namespace TestProject1
                 $"短期({shortTerm:F0}) が長期({longTerm:F0}) を上回らない");
         }
 
+        /// <summary>
+        /// 単純累加を選んだとき、長期（使用限界）・短期（損傷限界）とも
+        /// <b>検定が実際に読む曲線</b>が単純累加の包絡線になっていること。
+        ///
+        /// 検定は Factored 側 (EvaluationService.GetNMCurve) を読む。低減前だけ差し替えて
+        /// 低減後に伝わっていないと、画面のグラフだけ単純累加で検定は従来のまま、という
+        /// 食い違いが静かに起きる。場所打ち鋼管コンクリート杭は使用・損傷限界とも
+        /// 軸力閾値が空・β=1.0 なので、低減後は低減前と一致するのが正しい。
+        /// </summary>
+        [TestMethod]
+        public void KctbSuperposition_FactoredCurvesUsedByEvaluation_AreSuperposed()
+        {
+            ResetOptions();
+            ConcreteModelOptions.UseFiberNMForSteelPipeConcrete = false;
+            var s = CreateSprcSection();
+
+            var svc = s.UnfactoredServiceNM;
+            var dmg = s.UnfactoredDamageNM;
+
+            Assert.IsTrue(MaxMoment(svc) > 0.0, "長期の許容時曲げが 0");
+            Assert.IsTrue(MaxMoment(dmg) > 0.0, "短期の許容時曲げが 0");
+
+            // 長期（使用限界）
+            Assert.AreEqual(0, CountDifferingPoints(svc, s.FactoredServiceNM),
+                "長期: 低減後の曲線が単純累加になっていない");
+            // 短期（損傷限界）はレベル 1 / 2 とも
+            Assert.AreEqual(0, CountDifferingPoints(dmg, s.GetFactoredDamageNM(1)),
+                "短期(L1): 低減後の曲線が単純累加になっていない");
+            Assert.AreEqual(0, CountDifferingPoints(dmg, s.GetFactoredDamageNM(2)),
+                "短期(L2): 低減後の曲線が単純累加になっていない");
+
+            // 断面分割積分のときとは別物であること（対照）
+            ResetOptions();
+            var fiber = CreateSprcSection();
+            Assert.IsTrue(CountDifferingPoints(fiber.FactoredDamageNM, dmg) > 0,
+                "単純累加と断面分割積分で短期の曲線が一致してしまっている");
+        }
+
         // ───────────── (E) 適用範囲の検査 ─────────────
 
         /// <summary>
@@ -433,6 +471,57 @@ namespace TestProject1
 
             Assert.AreEqual(0, KctbApplicableRange.Validate(body).Count(),
                 "場所打ち鋼管コンクリート杭以外は検査しない");
+        }
+
+        // ───────────── 保存・復元 ─────────────
+
+        /// <summary>
+        /// 3 つのオプションがプロジェクトファイルに保存され、読み込みで復元されること。
+        ///
+        /// System.Text.Json + ReferenceHandler.Preserve という保存形式には
+        /// 「get のみのプロパティは書き出されるが復元されない」等の落とし穴があるので、
+        /// 新しい設定を足したら往復を実際に確かめる。
+        /// UseFiberNMForSteelPipeConcrete は既定 true なので、false で保存して
+        /// false のまま戻ることを見る（既定値へ巻き戻ってしまわないか）。
+        /// </summary>
+        [TestMethod]
+        public void Options_SurviveSaveAndLoad()
+        {
+            // new InputModel() は FundamentalInput を作らないので用意する
+            var model = new InputModel { FundamentalInput = new FundamentalInput() };
+            model.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete = true;
+            model.FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete = true;
+            model.FundamentalInput.UseFiberNMForSteelPipeConcrete = false;   // 単純累加
+
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true,
+                ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve,
+            };
+            string json = System.Text.Json.JsonSerializer.Serialize(model, options);
+            var restored = System.Text.Json.JsonSerializer.Deserialize<InputModel>(json, options);
+
+            Assert.IsNotNull(restored, "読み込みに失敗した");
+            Assert.IsTrue(restored!.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete,
+                "終局ひずみ 5,000μ の設定が復元されない");
+            Assert.IsTrue(restored.FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete,
+                "許容時の判定材料の設定が復元されない");
+            Assert.IsFalse(restored.FundamentalInput.UseFiberNMForSteelPipeConcrete,
+                "本体部の設計法（単純累加）の設定が復元されない（既定 true へ巻き戻っている）");
+        }
+
+        /// <summary>
+        /// 設定を持たない古いファイルを読んでも、従来どおりの挙動になること。
+        /// UseFiberNMForSteelPipeConcrete の既定は true（断面分割積分）で、
+        /// キーが無いファイルを開いただけで検定値が変わってはいけない。
+        /// </summary>
+        [TestMethod]
+        public void Options_AbsentInOldFile_KeepPreviousBehaviour()
+        {
+            var f = new FundamentalInput();
+            Assert.IsFalse(f.UseUltimateStrain5000ForSteelPipeConcrete, "終局ひずみは既定 3,000μ のはず");
+            Assert.IsFalse(f.ExcludeRebarFromAllowableLimitForSteelPipeConcrete, "判定材料は既定で全材料のはず");
+            Assert.IsTrue(f.UseFiberNMForSteelPipeConcrete, "本体部の設計法は既定で断面分割積分のはず");
         }
 
         // ───────────── オプションの記録 ─────────────
