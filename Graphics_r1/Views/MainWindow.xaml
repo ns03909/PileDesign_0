@@ -1328,10 +1328,18 @@
                 <Fluent:RibbonGroupBox Header="解析条件設定" ToolTip="解析条件設定">
                     <!-- ツールチップの Step 番号はヘルプ「クイックスタートガイド」に合わせる。
                          リボン・クイックヒント・ヘルプで手順が食い違わないようにするため。 -->
+                    <Fluent:Button x:Name="ButtonProjectInfo"
+                         Header="プロジェクト 情報"
+                         ToolTipService.ShowOnDisabled="True"
+                         ToolTip="プロジェクト情報&#x0A;プロジェクト番号・名称と、計算書の標高表記 (標高記号 / Z=0 の標高) を設定します。"
+                         Command="{Binding OpenProjectInfoWindowCommand}"
+                         LargeIcon="pack://application:,,,/Icons/FundamentalWindow.png"
+                         Icon="pack://application:,,,/Icons/FundamentalWindow.png"/>
+
                     <Fluent:Button x:Name="ButtonFundamental"
                          Header="基本 設定"
                          ToolTipService.ShowOnDisabled="True"
-                         ToolTip="基本設定 (Ctrl+E)&#x0A;Z=0 の標高や材料モデルなど、プロジェクト全体に効く設定です。"
+                         ToolTip="基本設定 (Ctrl+E)&#x0A;性能グレードと、杭体の材料モデル化の選択です。プロジェクト全体に効きます。"
                          Command="{Binding OpenFundamentalWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/FundamentalWindow.png"
                          Icon="pack://application:,,,/Icons/FundamentalWindow.png"/>

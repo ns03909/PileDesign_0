@@ -132,6 +132,14 @@ namespace PileDesign.Output
                     ? "バイリニア型の折れ点を 0.85·Fc とする（ξ を乗じない）"
                     : "バイリニア型の折れ点を ξ·Fc（施工品質管理係数 ξ を考慮）とする"));
 
+            rows.Add(("既製杭の PC鋼材・鉄筋・鋼管のヤング係数",
+                ConcreteModelOptions.UseGuideYoungsModulus
+                    ? "基礎部材の強度と変形性能" : "製品カタログ（既定）",
+                ConcreteModelOptions.UseGuideYoungsModulus
+                    ? "PHC・PRC はヤング係数比 n = 5 固定（Ep = Er = 5·Ec）、SC杭の鋼管は Es = 205,000 N/mm² とする"
+                    : "製品ライブラリに収録したメーカー公称値を用いる" +
+                      "（場所打ち系の鉄筋・鋼管はカタログ・指針とも 205,000 N/mm² で差はない）"));
+
             rows.Add(("ヤング係数 Ec の算定における ξ",
                 ConcreteModelOptions.UseUnitGsiForConcreteE ? "ξ = 1.0" : "実際の ξ（既定）",
                 ConcreteModelOptions.UseUnitGsiForConcreteE

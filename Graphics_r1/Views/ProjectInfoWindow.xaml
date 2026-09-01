@@ -1,0 +1,128 @@
+<Window x:Class="PileDesign.Views.ProjectInfoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        d:DataContext="{d:DesignInstance Type=local:ProjectInfoViewModel}"
+        mc:Ignorable="d"
+        Title="プロジェクト情報" Height="340" Width="480"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+        <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding OkCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+    </Window.InputBindings>
+
+    <Grid Margin="20,20,20,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,0,8,0">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="プロジェクト番号" VerticalAlignment="Top" Grid.Column="0"/>
+                <TextBox x:Name="textBoxProjectNo" Text="{Binding ProjectNo}"
+                    TextWrapping="Wrap" VerticalAlignment="Top" Grid.Column="1"
+                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                    KeyDown="TextBox_KeyDown"
+                    common:TextBoxNavigationBehavior.Enable="True">
+                </TextBox>
+            </Grid>
+
+            <Grid Margin="0,6,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="プロジェクト名" HorizontalAlignment="Left" Grid.Column="0"/>
+                <TextBox x:Name="textBoxProjectName" Text="{Binding ProjectName}"
+                    TextWrapping="Wrap" Grid.Column="1"
+                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                    KeyDown="TextBox_KeyDown"
+                    common:TextBoxNavigationBehavior.Enable="True">
+                </TextBox>
+            </Grid>
+
+            <TextBlock Text="標高の表記" FontWeight="Bold" Margin="0,16,0,4"/>
+            <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,0,0,6"
+                       Text="計算書で標高を書くときに使います。「標高」は地盤・基本設定・杭先端でのみ用い、ほかは Z 基準です。"/>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="標高記号" HorizontalAlignment="Left" Grid.Column="0"/>
+                <TextBox x:Name="textBoxRefLevel0"
+                    TextWrapping="Wrap" Grid.Column="1"
+                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                    KeyDown="TextBox_KeyDown">
+                    <TextBox.Text>
+                        <Binding Path="RefLevel" UpdateSourceTrigger="LostFocus">
+                            <Binding.ValidationRules>
+                                <local:StringMaxLengthValidationRule MaxLength="3" />
+                            </Binding.ValidationRules>
+                        </Binding>
+                    </TextBox.Text>
+                    <TextBox.ToolTip>
+                        <ToolTip>
+                            <TextBlock>
+                                <Run>3文字まで (例: TP)</Run>
+                            </TextBlock>
+                        </ToolTip>
+                    </TextBox.ToolTip>
+                </TextBox>
+            </Grid>
+
+            <Grid Margin="0,6,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Z=0 の標高 (m)" HorizontalAlignment="Left" Grid.Column="0"/>
+                <TextBox x:Name="textBoxReferenceAltitude"
+                    Text="{Binding ReferenceAltitude, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                    TextWrapping="Wrap" Grid.Column="1"
+                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                    KeyDown="TextBox_KeyDown"
+                    common:TextBoxNavigationBehavior.Enable="True">
+                    <TextBox.ToolTip>
+                        <ToolTip>
+                            <TextBlock>
+                                <Run>Z=0 が絶対標高で何 m に相当するかを指定します。</Run>
+                            </TextBlock>
+                        </ToolTip>
+                    </TextBox.ToolTip>
+                </TextBox>
+            </Grid>
+
+            <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,8,0,0"
+                       Text="※ Z=0 の標高を変えると、地盤の標高を保ったまま Z 座標が全体にずれます。ジオメトリが動くため、既存の解析結果と杭要素分割は確認のうえ削除されます。"/>
+
+        </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Orientation="Horizontal" Margin="0,10,0,0">
+            <Button x:Name="ButtonOk" Content="保存(_S)" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
+                    IsDefault="True"
+                    ToolTip="変更を保存して閉じます (Enter / Ctrl+Enter / Alt+S)"/>
+            <Button x:Name="ButtonCancel" Content="キャンセル(_C)" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"
+                    IsCancel="True"
+                    ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
+        </StackPanel>
+    </Grid>
+</Window>

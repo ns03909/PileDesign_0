@@ -2001,6 +2001,14 @@ namespace PileDesign.ViewModels
             OpenDialogWindowWithUndo<FundamentalViewModel, FundamentalWindow>(undoDescription: "基本設定 編集");
         }
 
+        // プロジェクト情報ウィンドウを開くメソッド
+        // (プロジェクト番号・名称と、計算書の標高表記に使う 標高記号 / Z=0 の標高)
+        [RelayCommand]
+        private void OpenProjectInfoWindow()
+        {
+            OpenDialogWindowWithUndo<ProjectInfoViewModel, ProjectInfoWindow>(undoDescription: "プロジェクト情報 編集");
+        }
+
         // 荷重条件ウィンドウを開くメソッド
         [RelayCommand]
         public void OpenLoadCaseWindow()

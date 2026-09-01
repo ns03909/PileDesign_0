@@ -11,6 +11,13 @@ using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
+    /// <summary>
+    /// 「基本設定」ウィンドウ。性能グレードと、杭体の材料モデル化オプションを扱う。
+    ///
+    /// プロジェクト番号・名称・標高記号・Z=0 の標高は
+    /// <see cref="ProjectInfoViewModel"/>（プロジェクト情報ウィンドウ）へ分けた。
+    /// 保存先はどちらも <see cref="FundamentalInput"/> で同じインスタンスを共有する。
+    /// </summary>
     public partial class FundamentalViewModel : ObservableObject, ICloseable
     {
         private readonly UndoManager _undoManager = new();
@@ -18,94 +25,6 @@ namespace PileDesign.ViewModels
         private readonly MainWindowViewModel _mainWindowViewModel;
 
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
-
-        [ObservableProperty]
-        private string _refLevel;
-
-        partial void OnRefLevelChanged(string value)
-        {
-            var oldValue = InputModel.FundamentalInput.RefLevel;
-
-            _undoManager.PushAction(
-                () => InputModel.FundamentalInput.RefLevel = oldValue,
-                () => InputModel.FundamentalInput.RefLevel = value,
-                "RefLevel変更"
-            );
-            InputModel.FundamentalInput.RefLevel = value;
-        }
-
-        [ObservableProperty]
-        private double _referenceAltitude;
-
-        // 確認ダイアログキャンセル時の revert 中は再入を抑制するフラグ
-        private bool _suppressReferenceAltitudeConfirm;
-
-        partial void OnReferenceAltitudeChanged(double value)
-        {
-            if (_suppressReferenceAltitudeConfirm) return;
-
-            var oldValue = InputModel.FundamentalInput.ReferenceAltitude;
-            if (oldValue == value) return;
-
-            // 解析結果・杭要素分割があればユーザーに確認（キャンセルなら値を戻す）
-            if (!_mainWindowViewModel.ConfirmResetAllForGeometryChange("Z=0 の標高の変更"))
-            {
-                _suppressReferenceAltitudeConfirm = true;
-                try { ReferenceAltitude = oldValue; }
-                finally { _suppressReferenceAltitudeConfirm = false; }
-                return;
-            }
-
-            var delta = value - oldValue;
-
-            _undoManager.PushAction(
-                () => {
-                    // Undo: ReferenceAltitude を戻し、地盤 Z を逆方向にシフト
-                    InputModel.FundamentalInput.ReferenceAltitude = oldValue;
-                    InputModel.ShiftGroundZByDelta(+delta);
-                },
-                () => {
-                    // Redo: ReferenceAltitude を進め、地盤 Z をシフト
-                    InputModel.FundamentalInput.ReferenceAltitude = value;
-                    InputModel.ShiftGroundZByDelta(-delta);
-                },
-                "基準標高変更"
-            );
-
-            // 即時適用: 標高（絶対）は不変、ReferenceAltitude が変わった分だけ地盤 Z を逆方向にシフト
-            InputModel.FundamentalInput.ReferenceAltitude = value;
-            InputModel.ShiftGroundZByDelta(-delta);
-        }
-
-        [ObservableProperty]
-        private string _projectNo;
-
-        partial void OnProjectNoChanged(string value)
-        {
-            var oldValue = InputModel.FundamentalInput.ProjectNo;
-
-            _undoManager.PushAction(
-                () => InputModel.FundamentalInput.ProjectNo = oldValue,
-                () => InputModel.FundamentalInput.ProjectNo = value,
-                "ProjectNo変更"
-            );
-            InputModel.FundamentalInput.ProjectNo = value;
-        }
-
-        [ObservableProperty]
-        private string _projectName;
-
-        partial void OnProjectNameChanged(string value)
-        {
-            var oldValue = InputModel.FundamentalInput.ProjectName;
-
-            _undoManager.PushAction(
-                () => InputModel.FundamentalInput.ProjectName = oldValue,
-                () => InputModel.FundamentalInput.ProjectName = value,
-                "ProjectName変更"
-            );
-            InputModel.FundamentalInput.ProjectName = value;
-        }
 
         [ObservableProperty]
         private string _seismicGrade;
@@ -562,10 +481,6 @@ namespace PileDesign.ViewModels
             // ShallowCopyメソッドを使用して値渡し
             PrevFundamentalInput = InputModel.FundamentalInput.ShallowCopy();
 
-            RefLevel = InputModel.FundamentalInput.RefLevel;
-            ReferenceAltitude = InputModel.FundamentalInput.ReferenceAltitude;
-            ProjectNo = InputModel.FundamentalInput.ProjectNo;
-            ProjectName = InputModel.FundamentalInput.ProjectName;
             Point3D0 = InputModel.FundamentalInput.Point3D0;
             SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
             IgnoreConcreteTensileStrength = InputModel.FundamentalInput.IgnoreConcreteTensileStrength;
@@ -616,18 +531,6 @@ namespace PileDesign.ViewModels
         {
             switch (e.PropertyName)
             {
-                case nameof(FundamentalInput.RefLevel):
-                    RefLevel = InputModel.FundamentalInput.RefLevel;
-                    break;
-                case nameof(FundamentalInput.ReferenceAltitude):
-                    ReferenceAltitude = InputModel.FundamentalInput.ReferenceAltitude;
-                    break;
-                case nameof(FundamentalInput.ProjectNo):
-                    ProjectNo = InputModel.FundamentalInput.ProjectNo;
-                    break;
-                case nameof(FundamentalInput.ProjectName):
-                    ProjectName = InputModel.FundamentalInput.ProjectName;
-                    break;
                 case nameof(FundamentalInput.SeismicGrade):
                     SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
                     break;

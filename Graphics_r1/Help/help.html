@@ -2807,14 +2807,33 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             <h3 id="h-解析条件設定グループ" style="font-weight: bold;">解析条件設定グループ</h3>
 
             <h3 id="h-「基本設定」入力" style="font-weight: bold;"><img class="heading-icon" src="icons/FundamentalWindow.svg" alt="">「基本設定」入力</h3>
-            <p><img class="button-icon" src="icons/FundamentalWindow.svg" alt="">「基本設定」ボタンをクリックして開くウィンドウで、プロジェクトの基本情報を入力します。</p>
+            <p><img class="button-icon" src="icons/FundamentalWindow.svg" alt="">「基本設定」ボタンをクリックして開くウィンドウで、
+                性能グレードと、杭体の材料モデル化を選びます。</p>
+            <ul>
+                <li><strong>性能グレード</strong>: 耐震性能グレード（S / A）の選択。グレードにより検定に用いる限界状態が異なります</li>
+            </ul>
+            <p>
+                プロジェクト番号・名称と標高の表記は
+                <span class="xref"><a href="#h-「プロジェクト情報」入力">「プロジェクト情報」入力</a></span> に分けています。
+            </p>
+            <p>
+                以降の項目は、変更したときに<strong>既存の解析結果が削除されるもの</strong>と、
+                <strong>検定の耐力側だけに効いて解析結果が保持されるもの</strong>に分けて並べています。
+                どちらに属するかは各グループの帯見出しに書いてあります。
+            </p>
+
+            <h3 id="h-「プロジェクト情報」入力" style="font-weight: bold;"><img class="heading-icon" src="icons/FundamentalWindow.svg" alt="">「プロジェクト情報」入力</h3>
+            <p><img class="button-icon" src="icons/FundamentalWindow.svg" alt="">「プロジェクト 情報」ボタンをクリックして開くウィンドウで、
+                計算書の表紙と標高表記に使う情報を入力します。最初に一度入れたら以後ほとんど触りません。</p>
             <ul>
                 <li><strong>プロジェクト番号</strong>: 管理用のプロジェクト識別番号</li>
                 <li><strong>プロジェクト名</strong>: プロジェクトの名称（計算書の表紙に使用されます）</li>
-                <li><strong>標高記号</strong>: 標高体系の記号（例: TP、AP）。基本的に docx 計算書の標高値表記で使用されます</li>
-                <li><strong>Z=0 の標高 (m)</strong>: ローカル Z=0 が標高で何 m に相当するかを指定します。</li>
-                <li><strong>性能グレード</strong>: 耐震性能グレード（S / A）の選択。グレードにより検定に用いる限界状態が異なります</li>
+                <li><strong>標高記号</strong>: 標高体系の記号（例: TP、AP）。3 文字までで、docx 計算書の標高値表記に使用されます</li>
+                <li><strong>Z=0 の標高 (m)</strong>: ローカル Z=0 が標高で何 m に相当するかを指定します。
+                    これを変えると<strong>地盤の標高を保ったまま Z 座標が全体にずれます</strong>。
+                    ジオメトリが動くため、既存の解析結果と杭要素分割は確認のうえ削除されます。</li>
             </ul>
+
 
             <h4 id="fund-options" style="font-weight: bold;">モデル化オプション（ラジオボタン選択）</h4>
             <p>

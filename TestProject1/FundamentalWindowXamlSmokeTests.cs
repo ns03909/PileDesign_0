@@ -55,6 +55,35 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// プロジェクト情報ウィンドウ（基本設定から分けたもの）が開くこと。
+        /// </summary>
+        [TestMethod]
+        public void ProjectInfoWindow_Opens()
+        {
+            bool created = false;
+
+            var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
+            {
+                var window = new PileDesign.Views.ProjectInfoWindow();
+                created = true;
+                window.Close();
+            }, out bool timedOut);
+
+            if (timedOut)
+            {
+                Assert.Inconclusive("XAML パースが 60 秒以内に完了しなかったためスキップ");
+                return;
+            }
+            if (captured != null)
+            {
+                Assert.Fail("ProjectInfoWindow の XAML パースに失敗: "
+                            + $"{captured.GetType().Name}: {captured.Message}"
+                            + Environment.NewLine + captured.StackTrace);
+            }
+            Assert.IsTrue(created, "ProjectInfoWindow が生成されなかった");
+        }
+
+        /// <summary>
         /// 各オプションのラジオ対が、FundamentalViewModel に実在するプロパティへ
         /// TwoWay で結び付いていること。パスを打ち間違えても WPF は例外を出さないため、
         /// 宣言を直接検査する。Header と HelpAnchor の付け忘れも同時に拾う

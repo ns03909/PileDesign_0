@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -46,6 +46,7 @@ namespace TestProject1
             ["要素分割"] = null,    // ElementDivisionWindow
             ["基礎梁"] = null,      // FoundationBeamWindow
             ["荷重ケース"] = null,  // LoadCaseWindow
+            ["プロジェクト情報"] = null,  // ProjectInfoWindow
         };
 
         private static string GetHelpHtmlPath()

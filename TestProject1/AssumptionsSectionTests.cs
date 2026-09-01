@@ -71,19 +71,24 @@ namespace TestProject1
         }
 
         [TestMethod]
-        public void BuildMaterialOptionRows_Defaults_Returns15RowsWithDefaultChoices()
+        public void BuildMaterialOptionRows_Defaults_Returns16RowsWithDefaultChoices()
         {
             using var _ = OptionsScope.AllDefaults();
 
             var rows = WordDocument.BuildMaterialOptionRows();
 
-            Assert.AreEqual(15, rows.Count, "材料モデル化オプションの行数");
+            Assert.AreEqual(16, rows.Count, "材料モデル化オプションの行数");
             Assert.IsTrue(rows[0].Choice.Contains("個別選択"), "2025解説書はチェックなし表示のはず");
             Assert.IsTrue(rows.Count(r => r.Choice.Contains("既定")) >= 8,
                 "全既定なら大半の行に（既定）表記が付くはず");
             // 許容圧縮・許容せん断・判定材料の 3 行が既定呼称「使用限界」を項目名に含む
             // (区分行の「告示1113(第8) 長期許容応力度」は告示側の固有名詞なので対象外)
             Assert.AreEqual(3, rows.Count(r => r.Item.Contains("使用限界")), "既定では「使用限界」呼称のはず");
+            // ヤング係数の出所（EI・EA と N-M に効くので計算書に残す）
+            Assert.AreEqual("製品カタログ（既定）",
+                rows.Single(r => r.Item.Contains("ヤング係数")
+                              && r.Item.Contains("既製杭")).Choice);
+
             // 既定では場所打ち鋼管コンクリート杭も従来どおり（断面分割積分・εcu 3,000μ）
             Assert.AreEqual("断面分割積分", rows.Single(r => r.Item.Contains("本体部の設計法")).Choice);
             Assert.AreEqual("3,000μ（既定）", rows.Single(r => r.Item.Contains("終局の圧縮縁ひずみ")).Choice);
