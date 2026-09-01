@@ -160,7 +160,9 @@ namespace PileDesign.Models.InputData
         {
             double beta1 = 1.0;
 
-            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
+            // 軸力をコンクリートと鋼管の全塑性軸力の比で分担させるための鋼管断面積。
+            // ここも内径を d − ts としており、正しい値の約半分だった（使用/損傷限界せん断と同じ誤り）。
+            double area = PipeShearArea;
             double kappa = 2.0;
             double sfss = InsituSteelPipe.F / 1.5 / Math.Sqrt(3);
             return beta1 * area / kappa * sfss;
@@ -174,7 +176,7 @@ namespace PileDesign.Models.InputData
             double beta1 = 1.0;
             double beta2 = 1.0;
             double beta = level == 1 ? beta1 : beta1 * beta2;
-            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
+            double area = PipeShearArea;
             double kappa = 2.0;
             double sfsd = InsituSteelPipe.F / Math.Sqrt(3);
             return beta * area / kappa * sfsd;   // level 別の beta を反映（従来 beta1 固定で level 引数が無効だった）
@@ -200,6 +202,18 @@ namespace PileDesign.Models.InputData
                 double sA = InsituSteelPipe.AMinus;                 // 腐食考慮鋼管有効断面積
                 double sNcu = sSigmaY * sA;
                 double eta = sNcu > 1e-9 ? n / sNcu : 0.0;
+        /// <summary>
+        /// 鋼管の断面積（腐食考慮）。外径 d = OutDiaMinus、板厚 ts = TMinus として
+        /// <c>π/4·(d² − (d−2ts)²) = π·ts·(d − ts)</c>。
+        ///
+        /// 以前は内径を <c>d − ts</c>（板厚を片側しか引かない）としていたため、
+        /// 板厚 ts/2 の管の断面積＝正しい値のおよそ半分になっていた。
+        /// 安全限界側 <see cref="GetUltimateLimitShear"/> は当初から <c>π·ts·(d − ts)</c> で
+        /// 正しく、使用限界・損傷限界だけが食い違っていた。
+        /// </summary>
+        private double PipeShearArea =>
+            Math.PI * (InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus) * InsituSteelPipe.TMinus;
+
                 eta = Math.Max(-0.999, Math.Min(0.999, eta));       // √(1-η²)・cos の破綻防止
 
                 double R = d * 0.5;
@@ -217,7 +231,7 @@ namespace PileDesign.Models.InputData
 
             double beta1 = 1.0;
             double beta2 = 1.0;
-            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
+            double area = PipeShearArea;
             double fcy = 1.1 * InsituSteelPipe.F;
             double ns;
             if (n >= 0)
