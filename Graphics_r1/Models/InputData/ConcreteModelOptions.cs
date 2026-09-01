@@ -1,4 +1,4 @@
-namespace PileDesign.Models.InputData
+﻿namespace PileDesign.Models.InputData
 {
     /// <summary>
     /// 場所打ち系杭の材料モデル化オプション（プロジェクト全体に適用）。
@@ -107,6 +107,69 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public static bool UseFiberMPhi { get; set; }
 
+        // ─── 場所打ち鋼管コンクリート杭（KCTB / TB 工法）───
+        //
+        // BCJ評定-FD0356-08 が定めているのは、コンクリートの許容応力度（告示1113(第8) 打設方法(一)）、
+        // 本体部の設計法（SRC規準2014 4章2節の累加）、腐食しろ 1mm、適用範囲・形状寸法 である。
+        // 評定書に終局（安全限界）の規定は無く、評定申込事項 7 項目にも含まれない。
+        // したがって εcu = 5,000μ と「許容時の判定に鉄筋を用いない」は<b>評定範囲外</b>であり、
+        // 出典はジャパンパイル Technical Note Vol.1-5 および
+        // 建設省総合技術開発プロジェクト 基礎WG 最終報告書（平成12年3月）資料4-7 である。
+        // 混同を避けるため、評定で決まっている項目と決まっていない項目を別のフラグに分ける。
+
+        /// <summary>
+        /// 【評定範囲外】場所打ち鋼管コンクリート杭の終局（安全限界）圧縮縁ひずみを
+        /// εcu = 5,000μ とする（既定は 3,000μ）。
+        ///
+        /// 出典: 建設省総合技術開発プロジェクト 基礎WG 最終報告書 (平成12年3月) 資料4-7。
+        /// 鋼管によるコンクリートの拘束効果があるため、3,000μ では限界曲率を過小評価する
+        /// （7,000μ は実験値を上回る＝危険側）。値そのものは Technical Note Vol.1-5 p.2 にも示される。
+        ///
+        /// 安全限界 NM と M-φ の終点 (φu, Mu0)（→ 解析）に影響するため、変更時は解析結果をリセットする。
+        /// 鋼管杭のコンクリート充填鋼管部は対象外。
+        /// </summary>
+        public static bool UseUltimateStrain5000ForSteelPipeConcrete { get; set; }
+
+        /// <summary>
+        /// 【評定範囲外】場所打ち鋼管コンクリート杭の許容時（使用限界・損傷限界）の判定を、
+        /// コンクリートと鋼管のみで行う（鉄筋の許容応力度では限界状態を決めない）。
+        ///
+        /// 出典: ジャパンパイル Technical Note Vol.1-5 (2022年11月) p.2。
+        /// 「圧縮側のコンクリートの応力度が σca に達した時、もしくは圧縮側または引張側の
+        /// 鋼管の応力度が許容応力度 σsa（= 基準強度 Fs）に達した時」と定める。
+        /// 鉄筋は耐力への寄与（断面積分）には従来どおり参入する。
+        ///
+        /// 使用・損傷限界 NM のみに効き、安全限界・M-φ・解析には影響しない。
+        /// 鋼管杭のコンクリート充填鋼管部は対象外。
+        /// </summary>
+        public static bool ExcludeRebarFromAllowableLimitForSteelPipeConcrete { get; set; }
+
+        /// <summary>
+        /// 場所打ち鋼管コンクリート杭の許容時（使用限界・損傷限界）N-M を、
+        /// 断面分割積分（Technical Note Vol.1-5）で求める。
+        ///
+        /// <b>既定は true（従来どおりの断面分割積分）。</b>
+        /// false にすると評定書 5.(3) の単純累加式
+        /// （日本建築学会「鉄骨鉄筋コンクリート構造計算規準・同解説」2014 4章2節）で算定する。
+        ///
+        /// UI では評定書が定める単純累加を上段に置くため、この bool は
+        /// 「代替側 = 断面分割積分」という向きで持つ。既定値を true にしてあるのは、
+        /// 何も選ばない既存プロジェクトの挙動（断面分割積分）を変えないためである。
+        ///
+        /// 使用・損傷限界 NM のみに効き、安全限界・M-φ・解析には影響しない。
+        /// </summary>
+        public static bool UseFiberNMForSteelPipeConcrete { get; set; } = true;
+
+        /// <summary>
+        /// BCJ評定-FD0356-08 が定める項目がすべて評定どおりに設定されているか。
+        /// 適用範囲（φ700〜2700・板厚下限・鋼管長・腐食しろ 1mm・Fc 18〜45）の検査を
+        /// 有効にするかの判定に使う。個別に切り替えると自動で追随する。
+        /// </summary>
+        public static bool FollowsKctbEvaluation =>
+            UseNotification1113Compression
+            && Notification1113CompressionCase == 1
+            && !UseFiberNMForSteelPipeConcrete;
+
         /// <summary>
         /// 告示1113(第8) の長期許容応力度の区分（圧縮・せん断で共用）。
         /// 圧縮 1: Fc/4、2: min(Fc/4.5, 6.0)（短期 2 倍）。
@@ -150,6 +213,9 @@ namespace PileDesign.Models.InputData
                $"Q{(UseNotification1113Shear ? Notification1113CompressionCase : 0)}" +
                $"U{(UseInsituUltimateEFunction ? 1 : 0)}" +
                $"F{(UseFiberMPhi ? 1 : 0)}" +
-               $"Y{(UseGuideYoungsModulus ? 1 : 0)}";
+               $"Y{(UseGuideYoungsModulus ? 1 : 0)}" +
+               $"J{(UseUltimateStrain5000ForSteelPipeConcrete ? 1 : 0)}" +
+               $"{(ExcludeRebarFromAllowableLimitForSteelPipeConcrete ? 1 : 0)}" +
+               $"{(UseFiberNMForSteelPipeConcrete ? 1 : 0)}";
     }
 }

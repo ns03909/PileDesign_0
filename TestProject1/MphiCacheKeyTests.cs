@@ -1,4 +1,4 @@
-using PileDesign.Models.InputData;
+﻿using PileDesign.Models.InputData;
 using System;
 
 namespace TestProject1
@@ -23,6 +23,9 @@ namespace TestProject1
             ConcreteModelOptions.IgnoreTensileStrength = false;
             ConcreteModelOptions.UseReducedCompression = false;
             ConcreteModelOptions.UseFiberMPhi = false;
+            ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete = false;
+            ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete = false;
+            ConcreteModelOptions.UseFiberNMForSteelPipeConcrete = true;
         }
 
         [TestInitialize]
@@ -239,6 +242,21 @@ namespace TestProject1
             ConcreteModelOptions.IgnoreTensileStrength = true;
             Assert.AreNotEqual(baseKey, MakeRc().GetMPhiCacheKey(1000.0),
                 "IgnoreTensileStrength の変更がキーに反映されない");
+
+            ResetOptions();
+            ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete = true;
+            Assert.AreNotEqual(baseKey, MakeRc().GetMPhiCacheKey(1000.0),
+                "終局ひずみ 5,000μ の変更がキーに反映されない");
+
+            ResetOptions();
+            ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete = true;
+            Assert.AreNotEqual(baseKey, MakeRc().GetMPhiCacheKey(1000.0),
+                "許容時の判定材料の変更がキーに反映されない");
+
+            ResetOptions();
+            ConcreteModelOptions.UseFiberNMForSteelPipeConcrete = false;
+            Assert.AreNotEqual(baseKey, MakeRc().GetMPhiCacheKey(1000.0),
+                "本体部の設計法（単純累加）の変更がキーに反映されない");
         }
     }
 }

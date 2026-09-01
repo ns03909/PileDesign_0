@@ -144,6 +144,7 @@ namespace PileDesign.ViewModels
                 v => InputModel.FundamentalInput.IgnoreConcreteTensileStrength = v,
                 v => IgnoreConcreteTensileStrength = v,
                 "コンクリート引張無視の変更");
+            OnPropertyChanged(nameof(FollowsKctbEvaluation));
         }
 
         partial void OnUseReducedConcreteCompressiveStrengthChanged(bool value)
@@ -154,6 +155,7 @@ namespace PileDesign.ViewModels
                 v => InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength = v,
                 v => UseReducedConcreteCompressiveStrength = v,
                 "コンクリート圧縮低減の変更");
+            OnPropertyChanged(nameof(FollowsKctbEvaluation));
         }
 
         // 鉄筋を 1.1×F で降伏する完全バイリニア型とする
@@ -168,6 +170,7 @@ namespace PileDesign.ViewModels
                 v => InputModel.FundamentalInput.RebarYieldAt11F = v,
                 v => RebarYieldAt11F = v,
                 "鉄筋1.1F完全バイリニアの変更");
+            OnPropertyChanged(nameof(FollowsKctbEvaluation));
         }
 
         // 鋼管を 1.1×F で降伏する完全バイリニア型とする
@@ -182,6 +185,7 @@ namespace PileDesign.ViewModels
                 v => InputModel.FundamentalInput.SteelPipeYieldAt11F = v,
                 v => SteelPipeYieldAt11F = v,
                 "鋼管1.1F完全バイリニアの変更");
+            OnPropertyChanged(nameof(FollowsKctbEvaluation));
         }
 
         // コンクリートのヤング係数 Ec の算定で ξ=1.0 とする
@@ -227,6 +231,7 @@ namespace PileDesign.ViewModels
                 "許容圧縮を告示1113(第8)による へ変更");
             OnPropertyChanged(nameof(Notification1113CaseEnabled));
             OnPropertyChanged(nameof(UseGuideline2025Appendix13));
+            OnPropertyChanged(nameof(FollowsKctbEvaluation));
         }
 
         // 場所打ちRC杭のコンクリート許容せん断を告示1113(第8)による（使用限界=長期・損傷限界=短期）
@@ -266,6 +271,7 @@ namespace PileDesign.ViewModels
                 v => UseInsituUltimateEFunction = v,
                 "安全限界曲げをe関数法(指針準拠) へ変更");
             OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
+            OnPropertyChanged(nameof(FollowsKctbEvaluation));
         }
 
         /// <summary>
@@ -336,7 +342,121 @@ namespace PileDesign.ViewModels
                 () => InputModel.FundamentalInput.Notification1113CompressionCase,
                 v => InputModel.FundamentalInput.Notification1113CompressionCase = v,
                 v => Notification1113CompressionCase = v);
+            OnPropertyChanged(nameof(FollowsKctbEvaluation));
         }
+
+        // ─── 場所打ち鋼管コンクリート杭（KCTB / TB 工法）───
+        //
+        // BCJ評定-FD0356-08 が定めるのは「コンクリートの許容応力度＝告示1113(第8) 打設方法(一)」と
+        // 「本体部の設計法＝SRC規準2014 4章2節の累加」。評定書に終局の規定は無いので、
+        // εcu = 5,000μ と「許容時の判定に鉄筋を用いない」は評定範囲外の個別オプションとする。
+
+        // 【評定】許容時 N-M を断面分割積分で求める（false = 評定 5.(3) の単純累加）
+        [ObservableProperty]
+        private bool _useFiberNMForSteelPipeConcrete = true;
+
+        partial void OnUseFiberNMForSteelPipeConcreteChanged(bool value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseFiberNMForSteelPipeConcrete,
+                v => InputModel.FundamentalInput.UseFiberNMForSteelPipeConcrete = v,
+                v => UseFiberNMForSteelPipeConcrete = v,
+                value ? "許容時N-Mを断面分割積分で算定 へ変更" : "許容時N-Mを単純累加で算定 へ変更");
+            OnPropertyChanged(nameof(FollowsKctbEvaluation));
+        }
+
+        // 【評定範囲外】終局の圧縮縁ひずみを 5,000μ とする（解析に効く）
+        [ObservableProperty]
+        private bool _useUltimateStrain5000ForSteelPipeConcrete;
+
+        partial void OnUseUltimateStrain5000ForSteelPipeConcreteChanged(bool value)
+        {
+            HandleConcreteOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete,
+                v => InputModel.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete = v,
+                v => UseUltimateStrain5000ForSteelPipeConcrete = v,
+                "終局の圧縮縁ひずみを 5,000μ とする へ変更");
+        }
+
+        // 【評定範囲外】許容時の判定に鉄筋を用いない（耐力側のみ）
+        [ObservableProperty]
+        private bool _excludeRebarFromAllowableLimitForSteelPipeConcrete;
+
+        partial void OnExcludeRebarFromAllowableLimitForSteelPipeConcreteChanged(bool value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete,
+                v => InputModel.FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete = v,
+                v => ExcludeRebarFromAllowableLimitForSteelPipeConcrete = v,
+                "許容時の判定に鉄筋を用いない へ変更");
+        }
+
+        /// <summary>
+        /// BCJ評定-FD0356-08 が定める項目に従うマスタースイッチ。
+        ///
+        /// 評定が定めているのは次の 2 つだけで、終局ひずみや許容時の判定は評定範囲外のため含めない。
+        ///   ・コンクリートの許容応力度 = 告示1113(第8) 打設方法(一)（評定 5.(1)・表1.2）
+        ///   ・本体部の設計法 = 単純累加（評定 5.(3)、SRC規準2014 4章2節）
+        /// get は構成項目が評定どおりのとき true（個別に切替えると自動で追随）。
+        /// ON のとき適用範囲（φ700〜2700・板厚下限・鋼管長・腐食しろ 1mm・Fc 18〜45）の検査も働く。
+        /// </summary>
+        public bool FollowsKctbEvaluation
+        {
+            get => UseNotification1113Compression
+                   && Notification1113CompressionCase == 1
+                   && !UseFiberNMForSteelPipeConcrete;
+            set
+            {
+                if (FollowsKctbEvaluation == value) return;
+
+                var before = CaptureKctbState();
+                var after = value
+                    ? new KctbState(true, 1, false)
+                    : new KctbState(before.Notification1113, before.Case, true);
+
+                _undoManager.PushAction(
+                    () => ApplyKctb(before),
+                    () => ApplyKctb(after),
+                    "BCJ評定-FD0356-08 準拠の一括切替");
+                ApplyKctb(after);
+            }
+        }
+
+        // 評定マスターが束ねる構成項目（いずれも検定の耐力側のみ。解析結果は保持される）
+        private readonly record struct KctbState(bool Notification1113, int Case, bool FiberNM);
+
+        private KctbState CaptureKctbState() =>
+            new(UseNotification1113Compression, Notification1113CompressionCase, UseFiberNMForSteelPipeConcrete);
+
+        // 構成項目を一括設定（個別ハンドラを抑制し、キャッシュ破棄と通知を 1 回にまとめる）
+        private void ApplyKctb(KctbState s)
+        {
+            if (CaptureKctbState().Equals(s)) return;
+
+            bool prev = _suppressConcreteOptionConfirm;
+            _suppressConcreteOptionConfirm = true;
+            try
+            {
+                UseNotification1113Compression = s.Notification1113;
+                Notification1113CompressionCase = s.Case;
+                UseFiberNMForSteelPipeConcrete = s.FiberNM;
+
+                var f = InputModel.FundamentalInput;
+                f.UseNotification1113Compression = s.Notification1113;
+                f.Notification1113CompressionCase = s.Case;
+                f.UseFiberNMForSteelPipeConcrete = s.FiberNM;
+            }
+            finally { _suppressConcreteOptionConfirm = prev; }
+
+            _mainWindowViewModel.ApplyConcreteModelOptions();
+            OnPropertyChanged(nameof(Notification1113CaseEnabled));
+            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
+            OnPropertyChanged(nameof(FollowsKctbEvaluation));
+        }
+
 
         // 告示1113(第8) 圧縮の区分 ComboBox 用（値=区分番号、表示=式）
         public sealed record Notification1113CaseItem(int Value, string Display);
@@ -458,6 +578,9 @@ namespace PileDesign.ViewModels
             UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
             UseInsituUltimateEFunction = InputModel.FundamentalInput.UseInsituUltimateEFunction;
             UseFiberMPhi = InputModel.FundamentalInput.UseFiberMPhi;
+            UseUltimateStrain5000ForSteelPipeConcrete = InputModel.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete;
+            ExcludeRebarFromAllowableLimitForSteelPipeConcrete = InputModel.FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete;
+            UseFiberNMForSteelPipeConcrete = InputModel.FundamentalInput.UseFiberNMForSteelPipeConcrete;
             Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
@@ -534,6 +657,18 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.UseInsituUltimateEFunction):
                     UseInsituUltimateEFunction = InputModel.FundamentalInput.UseInsituUltimateEFunction;
+                    break;
+                case nameof(FundamentalInput.UseFiberMPhi):
+                    UseFiberMPhi = InputModel.FundamentalInput.UseFiberMPhi;
+                    break;
+                case nameof(FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete):
+                    UseUltimateStrain5000ForSteelPipeConcrete = InputModel.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete;
+                    break;
+                case nameof(FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete):
+                    ExcludeRebarFromAllowableLimitForSteelPipeConcrete = InputModel.FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete;
+                    break;
+                case nameof(FundamentalInput.UseFiberNMForSteelPipeConcrete):
+                    UseFiberNMForSteelPipeConcrete = InputModel.FundamentalInput.UseFiberNMForSteelPipeConcrete;
                     break;
                 case nameof(FundamentalInput.Notification1113CompressionCase):
                     Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;

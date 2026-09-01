@@ -182,7 +182,29 @@ namespace PileDesign.Output
                 ConcreteModelOptions.UseInsituUltimateEFunction
                     ? "RC基礎構造部材の耐震設計指針(案) 5.4.1 の e関数でコンクリートをモデル化する" +
                       "（β1・β2 低減および軸力適用範囲の制限は課さない）"
-                    : "εcu = 0.003 のバイリニア型でモデル化し、β1・β2 低減と軸力適用範囲を考慮する"));
+                    : "バイリニア型でモデル化し、β1・β2 低減と軸力適用範囲を考慮する"));
+
+            rows.Add(("本体部の設計法（場所打ち鋼管コンクリート杭）",
+                ConcreteModelOptions.UseFiberNMForSteelPipeConcrete ? "断面分割積分" : "単純累加",
+                ConcreteModelOptions.UseFiberNMForSteelPipeConcrete
+                    ? "断面を微小要素に分割し、平面保持のもとで応力を積分して許容時 N-M を求める"
+                    : "鋼管部と鉄筋コンクリート部の許容耐力を累加する" +
+                      "（BCJ評定-FD0356-08 5.(3)、鉄骨鉄筋コンクリート構造計算規準・同解説 2014 4章2節）"));
+
+            rows.Add(("終局の圧縮縁ひずみ εcu（場所打ち鋼管コンクリート杭）",
+                ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete ? "5,000μ" : "3,000μ（既定）",
+                ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete
+                    ? "鋼管によるコンクリートの拘束効果を考慮した値" +
+                      "（建設省総合技術開発プロジェクト 基礎WG 最終報告書 資料4-7。BCJ評定-FD0356-08 の評定範囲外）"
+                    : "場所打ち系杭に共通の終局圧縮縁ひずみを用いる"));
+
+            rows.Add((ConcreteModelOptions.MapLimitStateText("使用限界・損傷限界の判定材料（場所打ち鋼管コンクリート杭）"),
+                ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete
+                    ? "コンクリートと鋼管" : "コンクリート・鉄筋・鋼管（既定）",
+                ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete
+                    ? "鉄筋は限界状態の判定に用いず、耐力への寄与としてのみ考慮する" +
+                      "（ジャパンパイル Technical Note Vol.1-5。BCJ評定-FD0356-08 の評定範囲外）"
+                    : "断面内の全材料のうち最初に許容ひずみに達したもので限界状態を決める"));
 
             rows.Add(("限界状態の呼称",
                 ConcreteModelOptions.UseAllowableStressLabels ? "長期許容・短期許容" : "使用限界・損傷限界（既定）",

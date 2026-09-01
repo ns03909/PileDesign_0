@@ -136,6 +136,32 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _notification1113CompressionCase, value);
         }
 
+        // 【評定範囲外】場所打ち鋼管コンクリート杭の終局圧縮縁ひずみを 5,000μ とする（既定 3,000μ）
+        private bool _useUltimateStrain5000ForSteelPipeConcrete;
+        public bool UseUltimateStrain5000ForSteelPipeConcrete
+        {
+            get => _useUltimateStrain5000ForSteelPipeConcrete;
+            set => SetProperty(ref _useUltimateStrain5000ForSteelPipeConcrete, value);
+        }
+
+        // 【評定範囲外】場所打ち鋼管コンクリート杭の許容時の判定を、コンクリートと鋼管のみで行う
+        private bool _excludeRebarFromAllowableLimitForSteelPipeConcrete;
+        public bool ExcludeRebarFromAllowableLimitForSteelPipeConcrete
+        {
+            get => _excludeRebarFromAllowableLimitForSteelPipeConcrete;
+            set => SetProperty(ref _excludeRebarFromAllowableLimitForSteelPipeConcrete, value);
+        }
+
+        // 場所打ち鋼管コンクリート杭の許容時 N-M を断面分割積分で求める。
+        // 既定 true（従来どおり）。false で評定書 5.(3) の単純累加式になる。
+        // 旧い保存ファイルにはキーが無いので、この初期値がそのまま効く（挙動を変えないため true）。
+        private bool _useFiberNMForSteelPipeConcrete = true;
+        public bool UseFiberNMForSteelPipeConcrete
+        {
+            get => _useFiberNMForSteelPipeConcrete;
+            set => SetProperty(ref _useFiberNMForSteelPipeConcrete, value);
+        }
+
         //
         private double _x0;
         public double X0

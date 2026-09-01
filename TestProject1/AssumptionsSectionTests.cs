@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml.Packaging;
+﻿using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Models.InputData;
@@ -28,6 +28,9 @@ namespace TestProject1
             private readonly bool _n1113s = ConcreteModelOptions.UseNotification1113Shear;
             private readonly bool _eFunc = ConcreteModelOptions.UseInsituUltimateEFunction;
             private readonly bool _fiber = ConcreteModelOptions.UseFiberMPhi;
+            private readonly bool _ecu5000 = ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete;
+            private readonly bool _exclRebar = ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete;
+            private readonly bool _fiberNM = ConcreteModelOptions.UseFiberNMForSteelPipeConcrete;
             private readonly int _case = ConcreteModelOptions.Notification1113CompressionCase;
 
             public static OptionsScope AllDefaults()
@@ -42,6 +45,9 @@ namespace TestProject1
                 ConcreteModelOptions.UseNotification1113Shear = false;
                 ConcreteModelOptions.UseInsituUltimateEFunction = false;
                 ConcreteModelOptions.UseFiberMPhi = false;
+                ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete = false;
+                ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete = false;
+                ConcreteModelOptions.UseFiberNMForSteelPipeConcrete = true;
                 ConcreteModelOptions.Notification1113CompressionCase = 1;
                 return scope;
             }
@@ -57,24 +63,30 @@ namespace TestProject1
                 ConcreteModelOptions.UseNotification1113Shear = _n1113s;
                 ConcreteModelOptions.UseInsituUltimateEFunction = _eFunc;
                 ConcreteModelOptions.UseFiberMPhi = _fiber;
+                ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete = _ecu5000;
+                ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete = _exclRebar;
+                ConcreteModelOptions.UseFiberNMForSteelPipeConcrete = _fiberNM;
                 ConcreteModelOptions.Notification1113CompressionCase = _case;
             }
         }
 
         [TestMethod]
-        public void BuildMaterialOptionRows_Defaults_Returns12RowsWithDefaultChoices()
+        public void BuildMaterialOptionRows_Defaults_Returns15RowsWithDefaultChoices()
         {
             using var _ = OptionsScope.AllDefaults();
 
             var rows = WordDocument.BuildMaterialOptionRows();
 
-            Assert.AreEqual(12, rows.Count, "材料モデル化オプションの行数");
+            Assert.AreEqual(15, rows.Count, "材料モデル化オプションの行数");
             Assert.IsTrue(rows[0].Choice.Contains("個別選択"), "2025解説書はチェックなし表示のはず");
             Assert.IsTrue(rows.Count(r => r.Choice.Contains("既定")) >= 8,
                 "全既定なら大半の行に（既定）表記が付くはず");
-            // 圧縮・せん断の 2 行が既定呼称「使用限界」を項目名に含む
+            // 許容圧縮・許容せん断・判定材料の 3 行が既定呼称「使用限界」を項目名に含む
             // (区分行の「告示1113(第8) 長期許容応力度」は告示側の固有名詞なので対象外)
-            Assert.AreEqual(2, rows.Count(r => r.Item.Contains("使用限界")), "既定では「使用限界」呼称のはず");
+            Assert.AreEqual(3, rows.Count(r => r.Item.Contains("使用限界")), "既定では「使用限界」呼称のはず");
+            // 既定では場所打ち鋼管コンクリート杭も従来どおり（断面分割積分・εcu 3,000μ）
+            Assert.AreEqual("断面分割積分", rows.Single(r => r.Item.Contains("本体部の設計法")).Choice);
+            Assert.AreEqual("3,000μ（既定）", rows.Single(r => r.Item.Contains("終局の圧縮縁ひずみ")).Choice);
             // 告示オプション OFF なら区分は対象外
             var caseRow = rows.Single(r => r.Item.Contains("区分"));
             Assert.AreEqual("—", caseRow.Choice);

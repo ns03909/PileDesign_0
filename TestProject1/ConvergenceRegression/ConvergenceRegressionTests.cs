@@ -1,4 +1,4 @@
-using PileDesign.Models.InputData;
+﻿using PileDesign.Models.InputData;
 using System;
 using System.IO;
 using System.Linq;
@@ -71,6 +71,9 @@ namespace TestProject1
             ConcreteModelOptions.UseInsituUltimateEFunction = false;
             ConcreteModelOptions.UseFiberMPhi = false;
             ConcreteModelOptions.Notification1113CompressionCase = 1;
+            ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete = false;
+            ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete = false;
+            ConcreteModelOptions.UseFiberNMForSteelPipeConcrete = true;
 
             // M-φ の静的キャッシュも入口でクリアする。
             //

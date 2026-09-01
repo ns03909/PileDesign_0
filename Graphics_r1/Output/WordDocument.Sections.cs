@@ -514,6 +514,12 @@ namespace PileDesign.Output
                 string plateau = ConcreteModelOptions.UseReducedCompression ? @"0.85 F_{c}" : @"\xi F_{c}";
                 AddText(body, "コンクリートの応力ひずみ関係（バイリニア型）");
                 AddEq(body, $@"\sigma = \min\left(E_{{c}}\varepsilon,\ {plateau}\right)\quad(0 \le \varepsilon \le \varepsilon_{{cu}})");
+                // εcu は杭種・オプションで変わるので、値は本文で明示する（式に埋め込まない）。
+                AddText(body,
+                    "ここで εcu は終局（安全限界）の圧縮縁ひずみであり、"
+                    + (ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete
+                        ? "場所打ち鋼管コンクリート杭の鋼管コンクリート部は εcu = 5,000μ、その他の場所打ち系は εcu = 3,000μ とする。"
+                        : "場所打ち系は εcu = 3,000μ とする。"));
             }
 
             // 解析用 M-φ の算定方式（基本設定「M-φ関係をファイバーモデルで算定する」ON時のみ明記）
@@ -525,7 +531,7 @@ namespace PileDesign.Output
                     "ファイバーモデル（断面分割積分）により算定する。各曲率 φ に対し軸力つり合いを満たす" +
                     "断面ひずみ状態を解き、曲げモーメント M を断面積分で直接求める" +
                     "（対象: 場所打ちRC杭・場所打ち鋼管コンクリート杭・PHC/PRC/SC杭・コンクリート充填鋼管部。" +
-                    "掃引終点は各杭種の終局状態（場所打ち系: 圧縮縁ひずみ 0.003、PHC/PRC: コンクリート圧壊 εcu）。" +
+                    "掃引終点は各杭種の終局状態（圧縮縁ひずみが終局ひずみ εcu に達した状態）。" +
                     "低減係数 β1・β2 は乗じない。曲線は解析の安定のため単調非減少化して用いる。" +
                     "鋼管杭の鋼管部は対象外で従来の折線による）。");
                 AddEq(body, @"N = \int_{A} \sigma\left(\varepsilon_{0}-\phi\,z\right)dA,\quad
@@ -542,6 +548,109 @@ namespace PileDesign.Output
                     "Mcr は曲げひび割れモーメント、My は主筋（鋼材）降伏時モーメント、" +
                     "Mu0 は安全限界曲げモーメントで、対応する曲率は断面曲げ解析により定める。" +
                     "解析（FEM）で負勾配のばねとならないよう、曲線は単調非減少化して用いる。");
+            }
+
+            AddSectionKctbMethod(body);
+        }
+
+        /// <summary>
+        /// KCTB 場所打ち鋼管コンクリート杭（TB工法、BCJ評定-FD0356-08）の設計法の節。
+        /// オプション ON のときだけ出力する。
+        /// </summary>
+        private static void AddSectionKctbMethod(Body body)
+        {
+            // 評定に従う設定でも、評定範囲外のオプションだけでも、この節を出す。
+            if (!ConcreteModelOptions.FollowsKctbEvaluation
+                && !ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete
+                && !ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete) return;
+
+            AddText(body, "KCTB 場所打ち鋼管コンクリート杭（TB工法）の設計法");
+            if (ConcreteModelOptions.FollowsKctbEvaluation)
+            AddText(body,
+                "場所打ち鋼管コンクリート杭の鋼管コンクリート部は、KCTB 場所打ち鋼管コンクリート杭" +
+                "（BCJ評定-FD0356-08）による。コンクリートの許容応力度は平成13年国土交通省告示第1113号" +
+                "第8第1項第一号の表中のくい体の打設の方法（一）に該当するものとし、" +
+                "設計基準強度 Fc の範囲は 18 N/mm² 以上 45 N/mm² 以下、鋼管の腐食しろは 1 mm とする。");
+
+            // 評定申込事項は 7 項目で、終局（安全限界）の規定は含まれない。
+            // 評定範囲外の設定を用いた場合は出典を明記する。
+            if (ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete
+                || ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete)
+            {
+                AddText(body,
+                    "次の項目は BCJ評定-FD0356-08 の評定範囲外であり、" +
+                    "ジャパンパイル株式会社 Technical Note Vol.1-5 および" +
+                    "建設省総合技術開発プロジェクト「新建築構造体系の開発」性能評価分科会" +
+                    "基礎WG 最終報告書（平成12年3月、建設省建築研究所）資料4-7 による。");
+            }
+
+            if (ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete)
+            {
+            AddText(body, "許容時の限界状態の定義");
+            AddText(body,
+                "許容時（使用限界・損傷限界）は、圧縮側のコンクリートの応力度が許容圧縮応力度 σca に達した時、もしくは" +
+                "圧縮側または引張側の鋼管の応力度が許容応力度 σsa（= 基準強度 Fs）に達した時とする。" +
+                "鉄筋は限界状態の判定には用いず、断面の耐力への寄与としてのみ考慮する。");
+            }
+
+            if (ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete)
+            {
+            AddText(body, "コンクリートの終局ひずみ");
+            AddEq(body, @"\varepsilon_{cu} = 5{,}000\,\mu");
+            AddText(body,
+                "鋼管によるコンクリートの拘束効果を考慮した値である。建設省総合技術開発プロジェクト" +
+                "「新建築構造体系の開発」性能評価分科会 基礎WG 最終報告書（平成12年3月、建設省建築研究所）" +
+                "資料4-7 において、φ800×t9（SKK400）の内面リブ・突起付き鋼管に現場施工でコンクリートを充填した" +
+                "実大試験体の正負交番繰り返し曲げ試験と断面解析の照合により、" +
+                "3,000μ では限界曲率を実験値に比べ過小に評価し、7,000μ では実験値を上回るため、" +
+                "5,000μ であれば十分安全であると結論されている。");
+            }
+
+            if (!ConcreteModelOptions.UseFiberNMForSteelPipeConcrete)
+            {
+                AddText(body, "許容時の軸方向力と曲げモーメントの算定（単純累加）");
+                AddText(body,
+                    "鋼管コンクリート部の本体部は、日本建築学会「鉄骨鉄筋コンクリート構造計算規準・同解説」" +
+                    "（2014）4章 許容応力度に基づく設計 2節 構造各部の算定 に準拠し、" +
+                    "鋼管部と鉄筋コンクリート部の許容耐力を累加して算定する。");
+                AddEq(body, @"{}_{r}N_{t} \le N \le {}_{r}N_{c}\ \text{のとき}\quad N = {}_{r}N,\quad
+                    M \le {}_{s}M_{0} + {}_{r}M");
+                AddEq(body, @"N > {}_{r}N_{c}\ \text{のとき}\quad N \le {}_{r}N_{c} + {}_{s}N,\quad M = {}_{s}M");
+                AddEq(body, @"N < {}_{r}N_{t}\ \text{のとき}\quad N \ge {}_{r}N_{t} + {}_{s}N,\quad M = {}_{s}M");
+                AddEq(body, @"{}_{s}M_{0} = {}_{s}Z\cdot{}_{s}f_{t}");
+                AddEq(body, @"\frac{{}_{s}N}{{}_{s}A} + \frac{{}_{s}M}{{}_{s}Z} = {}_{s}f_{c}
+                    \quad({}_{s}N\ \text{が圧縮})");
+                AddEq(body, @"\frac{{}_{s}N}{{}_{s}A} - \frac{{}_{s}M}{{}_{s}Z} = -{}_{s}f_{t}
+                    \quad({}_{s}N\ \text{が引張})");
+                AddEq(body, @"{}_{r}N_{c} = \min\left(A_{e}f_{c},\ \frac{A_{e}\,{}_{m}f_{c}}{n}\right),\quad
+                    {}_{r}N_{t} = -{}_{m}A\cdot{}_{m}f_{t}");
+                AddText(body,
+                    "ここで、sA は鋼管部分の断面積、sZ は鋼管の断面係数、sfc・sft は鋼管の許容圧縮・許容引張応力度、" +
+                    "mA は全主筋断面積、mfc・mft は主筋の許容圧縮・許容引張応力度、fc はコンクリートの許容圧縮応力度、" +
+                    "Ae はコンクリート断面に主筋の断面積を n 倍して加算した換算断面積、n はヤング係数比である。" +
+                    "rN・rM は鉄筋コンクリート部の許容軸方向力・許容曲げモーメントで、" +
+                    "「鉄筋コンクリート構造計算規準・同解説」（2018）による。");
+                AddText(body, "せん断力に対する算定");
+                AddEq(body, @"{}_{s}Q = \frac{{}_{s}A}{2}\,{}_{s}f_{s}");
+            }
+            else
+            {
+                AddText(body, "許容時の軸方向力と曲げモーメントの算定（ファイバーモデル）");
+                AddText(body,
+                    "杭断面を中立軸に平行な微小要素に分割し、断面の平面保持を仮定して、" +
+                    "各要素のひずみと構成材料の応力度～ひずみ度関係から応力分布を作成し、" +
+                    "軸力と曲げモーメントを累加して N-M 関係を求める。" +
+                    "鉄筋は等価な断面を持つ薄肉鋼管に置き換える。" +
+                    "コンクリートの応力度～ひずみ度関係は σB（= 0.85Fc）を折れ点とするバイリニア型とし、" +
+                    "引張応力度は無視する。鋼材の応力度～ひずみ度関係は材料強度を用いたバイリニア型とする。" +
+                    "算定手順はジャパンパイル株式会社 Technical Note Vol.1-5 による" +
+                    "（BCJ評定-FD0356-08 の本体部の設計法は単純累加であり、本方法は評定範囲外である）。");
+                AddEq(body, @"N_{i} = \sigma_{ci}A_{ci} + \sigma_{ri}A_{ri} + \sigma_{si}A_{si},\quad
+                    M_{i} = N_{i}L_{i}");
+                AddEq(body, @"N = \sum_{i} N_{i},\quad M = \sum_{i} M_{i}");
+                AddText(body,
+                    "ここで、Aci・Ari・Asi は各要素のコンクリート・鉄筋・鋼管の断面積、" +
+                    "σci・σri・σsi はそれぞれの応力度、Li は図心から要素中心までの距離である。");
             }
         }
 

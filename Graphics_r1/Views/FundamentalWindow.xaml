@@ -36,87 +36,6 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                
-                <TextBlock Text="プロジェクト番号" VerticalAlignment="Top" Grid.Column="0"
-                       />
-                <TextBox x:Name="textBoxProjectNo" Text="{Binding ProjectNo}"
-                    TextWrapping="Wrap" VerticalAlignment="Top" Grid.Column="1"
-                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                    KeyDown="TextBox_KeyDown"
-                    common:TextBoxNavigationBehavior.Enable="True">
-                </TextBox>
-            </Grid>
-
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="プロジェクト名" HorizontalAlignment="Left" Grid.Column="0"
-                       />
-                <TextBox x:Name="textBoxProjectName" Text="{Binding ProjectName}"
-                    TextWrapping="Wrap" Grid.Column="1"
-                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                    KeyDown="TextBox_KeyDown"
-                    common:TextBoxNavigationBehavior.Enable="True">
-                </TextBox>
-            </Grid>
-
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="標高記号" HorizontalAlignment="Left" Grid.Column="0"/>
-                <TextBox x:Name="textBoxRefLevel0" 
-                    TextWrapping="Wrap" Grid.Column="1"
-                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                    KeyDown="TextBox_KeyDown">
-                    <TextBox.Text>
-                        <Binding Path="RefLevel" UpdateSourceTrigger="LostFocus">
-                            <Binding.ValidationRules>
-                                <local:StringMaxLengthValidationRule MaxLength="3" />
-                            </Binding.ValidationRules>
-                        </Binding>
-                        
-                    </TextBox.Text>
-                    <TextBox.ToolTip>
-                        <ToolTip>
-                            <TextBlock>
-                                <Run>3文字まで</Run>
-                            </TextBlock>
-                        </ToolTip>
-                    </TextBox.ToolTip>
-                </TextBox>
-            </Grid>
-
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="Z=0 の標高 (m)" HorizontalAlignment="Left" Grid.Column="0"/>
-                <TextBox x:Name="textBoxReferenceAltitude"
-                    Text="{Binding ReferenceAltitude, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                    TextWrapping="Wrap" Grid.Column="1"
-                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                    KeyDown="TextBox_KeyDown"
-                    common:TextBoxNavigationBehavior.Enable="True">
-                    <TextBox.ToolTip>
-                        <ToolTip>
-                            <TextBlock>
-                                <Run>Z=0 が絶対標高で何 m に相当するかを指定します (docx 出力時の標高表記に使用)</Run>
-                            </TextBlock>
-                        </ToolTip>
-                    </TextBox.ToolTip>
-                </TextBox>
-            </Grid>
-
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
                 <TextBlock Text="性能グレード" HorizontalAlignment="Left" Grid.Column="0"/>
                 <ComboBox ItemsSource="{Binding SeismicGradeOptions}" SelectedItem="{Binding SeismicGrade}"
                           Grid.Column="1"
@@ -178,23 +97,17 @@
                 </TextBlock>
             </Border>
 
-            <!-- 鋼材のヤング係数の出所（製品カタログ / 基礎部材の強度と変形性能） -->
-            <GroupBox Header="鋼材のヤング係数" Margin="0,6,0,0">
-                <StackPanel Margin="6,4,6,4">
-                    <ctrl:MaterialOptionRadioPair
-                        Header="PC鋼材・鉄筋・鋼管のヤング係数の出所" HelpAnchor="fund-opt-steel-e" GroupName="OptSteelE"
-                        IsAlternativeSelected="{Binding UseGuideYoungsModulus, Mode=TwoWay}"
-                        DefaultText="製品カタログの値を用いる"
-                        DefaultFormula="Ec / Ep / Er / Es は選択した製品の値"
-                        DefaultToolTip="製品ライブラリに収録したメーカー公称値をそのまま使います。&#x0a;メーカーで食い違いがあり、異形棒鋼は 200,000 (JIS・三谷セキサン) と 205,000 (ジャパンパイル)、&#x0a;鋼管は 200,000 (JIS) と 205,000 (三谷 Hi-SC105) に割れます。"
-                        AlternativeText="「基礎部材の強度と変形性能」の値を用いる"
-                        AlternativeFormula="既製杭 n = 5 固定 / 場所打ち系の鉄筋・鋼管と SC杭の鋼管 E = 205,000 N/mm²"
-                        AlternativeToolTip="カタログに拠らず指針の値で統一します。&#x0a;既製杭 (PHC・PRC・節杭) は指針が E ではなくヤング係数比 n = 5 を規定しているため、&#x0a;E = 5·Ec として与えます (Ec が 40,000 以外でも n が 5 に保たれます)。&#x0a;EA・EI だけでなく N-M 曲線・M-φ にも一貫して効きます。"/>
-                </StackPanel>
-            </GroupBox>
+            <Border Background="#E4ECF5" BorderBrush="#9DB4CC" BorderThickness="0,0,0,1"
+                    Margin="0,16,0,0" Padding="8,5,8,5">
+                <TextBlock TextWrapping="Wrap">
+                    <Run FontWeight="Bold" FontSize="13">解析に影響する項目</Run>
+                    <LineBreak/>
+                    <Run FontSize="11" Foreground="#40506A">杭体の構成則と解析用 M-φ を決めます。変更すると M-φ が変わるため、既存の解析結果は確認のうえ削除されます（杭要素分割は保持されます）。</Run>
+                </TextBlock>
+            </Border>
 
             <!-- 場所打ちコンクリート系 杭のコンクリートのモデル化オプション -->
-            <GroupBox Header="コンクリートのモデル化" Margin="0,6,0,0">
+            <GroupBox Header="場所打ちコンクリート杭のコンクリートのモデル化" Margin="0,6,0,0">
                 <StackPanel Margin="6,4,6,4">
 
                     <ctrl:MaterialOptionRadioPair
@@ -222,19 +135,84 @@
                         AreRadiosEnabled="{Binding ConflictingMaterialOptionsEnabled}"
                         IsAlternativeSelected="{Binding UseReducedConcreteCompressiveStrength, Mode=TwoWay}"
                         DefaultText="ξ·Fc とする（「基礎部材の強度と変形性能」）"
-                        DefaultFormula="σ = Ec·ε を ξ·Fc で頭打ち（0 ≤ ε ≤ 0.003）"
-                        DefaultToolTip="バイリニア型コンクリートの圧縮側折れ点応力度を ξ·Fc とします。"
+                        DefaultFormula="σ = Ec·ε を ξ·Fc で頭打ち（0 ≤ ε ≤ εcu）"
+                        DefaultToolTip="バイリニア型コンクリートの圧縮側折れ点応力度を ξ·Fc とします。&#x0a;εcu は終局（安全限界）の圧縮縁ひずみで、既定は 3,000μ、KCTB（TB 工法）を選んだ場所打ち鋼管コンクリート杭では 5,000μ です。"
                         AlternativeText="0.85·Fc とする（ξ は乗じない）"
-                        AlternativeFormula="σ = Ec·ε を 0.85·Fc で頭打ち（0 ≤ ε ≤ 0.003）"
+                        AlternativeFormula="σ = Ec·ε を 0.85·Fc で頭打ち（0 ≤ ε ≤ εcu）"
                         AlternativeToolTip="圧縮側の折れ点応力度を、既定の Gsi·Fc に代えて 0.85·Fc とします（Gsi は乗じません）。&#x0a;安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。"/>
 
-                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
-                               Text="※ 変更すると M-φ が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。"/>
                 </StackPanel>
             </GroupBox>
 
-            <!-- 許容耐力・終局強度の準拠文献 -->
-            <GroupBox Header="許容耐力・終局強度の準拠" Margin="0,6,0,0">
+            <!-- 鋼材（PC鋼材・鉄筋・鋼管）の構成則: ヤング係数の出所と降伏応力度 -->
+            <GroupBox Header="鋼材のモデル化（PC鋼材・鉄筋・鋼管）" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+
+                    <ctrl:MaterialOptionRadioPair
+                        Header="既製コンクリート杭の PC鋼材・鉄筋・鋼管のヤング係数" HelpAnchor="fund-opt-steel-e" GroupName="OptSteelE"
+                        IsAlternativeSelected="{Binding UseGuideYoungsModulus, Mode=TwoWay}"
+                        DefaultText="製品カタログの値を用いる"
+                        DefaultFormula="PHC・PRC: Ep = 200,000 ／ Er = 200,000（JIS・三谷セキサン）・205,000（ジャパンパイル） ／ SC: Es = 200,000（JIS）・205,000（三谷 Hi-SC105）"
+                        DefaultToolTip="製品ライブラリに収録したメーカー公称値をそのまま使います。&#x0a;同じ材料でもメーカーで値が割れており、異形棒鋼は 200,000（JIS・三谷セキサン）と 205,000（ジャパンパイル）、&#x0a;鋼管は 200,000（JIS）と 205,000（三谷 Hi-SC105）に分かれます。"
+                        AlternativeText="「基礎部材の強度と変形性能」の計算式による"
+                        AlternativeFormula="PHC・PRC: ヤング係数比 n = 5 固定（Ep = Er = 5·Ec） ／ SC: Es = 205,000 N/mm²"
+                        AlternativeToolTip="カタログに拠らず指針で統一します。&#x0a;PHC杭・PRC杭（節杭を含む）は、指針が E ではなく「ヤング係数比 n = 5 そのもの」を規定しているため、E = 5·Ec として与えます。&#x0a;換算断面二次モーメント Ie の式は (n−1) を含むので、n を Ep/Ec で計算するか 5 に固定するかで結果が変わります。&#x0a;Ec = 40,000 のカタログ品では 5·Ec = 200,000 となりカタログ値と一致し、差が出るのは Ec が 40,000 以外（Fc 105 級など）の製品と、Er = 205,000 のジャパンパイル JP-NPRC です。&#x0a;EA・EI だけでなく N-M 曲線・M-φ にも一貫して効きます。"/>
+
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="24,0,0,6"
+                               Text="※ 場所打ち系の鉄筋・鋼管は、カタログ・指針とも E = 205,000 N/mm² のため本項目では変わりません。"/>
+
+
+                    <ctrl:MaterialOptionRadioPair
+                        Header="鉄筋の降伏応力度（場所打ちRC杭・場所打ち鋼管コンクリート杭）" HelpAnchor="fund-opt-rebar11f" GroupName="OptRebarYield"
+                        IsAlternativeSelected="{Binding RebarYieldAt11F, Mode=TwoWay}"
+                        DefaultText="規格降伏点 σy で降伏する完全バイリニア型とする（「基礎部材の強度と変形性能」）"
+                        DefaultFormula="σ = ±σy 頭打ち（SD345→345、SD390→390 N/mm² 等）"
+                        DefaultToolTip="JIS 規格降伏点で降伏する完全弾塑性型（ひずみ硬化なし）とします。"
+                        AlternativeText="1.1×F で降伏する完全バイリニア型とする"
+                        AlternativeFormula="σ = ±1.1·σy 頭打ち（SD490 は対象外＝規格降伏点のまま）"
+                        AlternativeToolTip="場所打ち RC 杭・場所打ち鋼管コンクリート杭の鉄筋について、降伏応力度を σy から 1.1×σy に引き上げます（完全バイリニア型）。&#x0a;安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。"/>
+
+                    <ctrl:MaterialOptionRadioPair
+                        Header="鋼管の降伏応力度（場所打ち鋼管コンクリート杭）" HelpAnchor="fund-opt-pipe11f" GroupName="OptPipeYield"
+                        AreRadiosEnabled="{Binding ConflictingMaterialOptionsEnabled}"
+                        IsAlternativeSelected="{Binding SteelPipeYieldAt11F, Mode=TwoWay}"
+                        DefaultText="1.1×F で降伏・ひずみ硬化と破断を考慮する（「基礎部材の強度と変形性能」）"
+                        DefaultFormula="降伏 σy = 1.1·F、降伏後の勾配 E/30、±σu（引張強さ）で頭打ち"
+                        DefaultToolTip="降伏後はひずみ硬化と破断応力（引張強さ）を考慮したモデルとします。"
+                        AlternativeText="±1.1×F 頭打ちの完全バイリニア型とする"
+                        AlternativeFormula="σ = ±1.1·F 頭打ち（ひずみ硬化・破断なし）"
+                        AlternativeToolTip="場所打ち鋼管コンクリート杭の鋼管について、ひずみ硬化・破断を廃し ±1.1×F で頭打ちの完全バイリニア型とします。&#x0a;安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます（鋼管杭は対象外）。"/>
+
+                </StackPanel>
+            </GroupBox>
+
+            <!-- 解析用 M-φ 関係の算定方式 -->
+            <GroupBox Header="解析用 M-φ 関係" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+
+                    <ctrl:MaterialOptionRadioPair
+                        Header="解析用 M-φ 関係（コンクリート系杭）" HelpAnchor="fund-opt-fiber-mphi" GroupName="OptMPhi"
+                        IsAlternativeSelected="{Binding UseFiberMPhi, Mode=TwoWay}"
+                        DefaultText="杭種ごとのポリリニアで算定する（「基礎部材の強度と変形性能」）"
+                        DefaultFormula="場所打ちRC: 折線 (0,0)-(φcr, Mcr)-(φy, My)-(φc, β₁·Mu0) 等、杭種ごとの折線（β₁・β₂ 低減込み）"
+                        DefaultToolTip="ひび割れ (Mcr)・主筋降伏 (My)・安全限界 (β1·Mu0) を折れ点とする折線で解析用 M-φ を与えます（強度と変形性能 3.10〜3.12）。"
+                        AlternativeText="ファイバーモデルで算定する（断面分割積分）"
+                        AlternativeFormula="各 φ で N = ∫σ(ε₀−φ·z)dA = N₀ を解き、M = −∫σ·z dA（約50点、β₁·β₂ 低減なし。鋼管杭の鋼管部を除く全コンクリート系杭）"
+                        AlternativeToolTip="コンクリート系杭の解析用 M-φ 関係を、「基礎部材の強度と変形性能」のポリリニア（折線）に代えて、&#x0a;ファイバーモデル（断面分割積分。各曲率で軸力つり合いを解き M を直接積分）で算定します。&#x0a;対象: 場所打ちRC杭・場所打ち鋼管コンクリート杭（RC部・鋼管コンクリート部）・PHC/PRC/SC杭・コンクリート充填鋼管部。&#x0a;指針の低減係数 β1・β2 は乗じない「素の」断面応答です（終局側はポリリニアより大きくなります）。&#x0a;掃引終点は各杭種の終局状態（場所打ち系: 圧縮縁ひずみ εcu、PHC/PRC: コンクリート圧壊 εcu）。材料構成則は解析用と同じバイリニアです。&#x0a;FEM で負勾配ばねとならないよう、曲線は単調非減少化（最小勾配床付き）して使用します。&#x0a;※ 鋼管杭の鋼管部は対象外（既に厳密な折線）。M-θ（杭頭回転ばね）も従来どおりです。"/>
+                </StackPanel>
+            </GroupBox>
+
+            <Border Background="#EAF3E8" BorderBrush="#9DB4CC" BorderThickness="0,0,0,1"
+                    Margin="0,16,0,0" Padding="8,5,8,5">
+                <TextBlock TextWrapping="Wrap">
+                    <Run FontWeight="Bold" FontSize="13">検定の耐力側だけに効く項目</Run>
+                    <LineBreak/>
+                    <Run FontSize="11" Foreground="#40506A">限界値（N-M 曲線・せん断耐力）の算定方法を決めます。解析（変位・応力）には影響しないため、既存の解析結果は保持されます。</Run>
+                </TextBlock>
+            </Border>
+
+            <!-- 使用限界・損傷限界（長期・短期許容応力度）の準拠文献 -->
+            <GroupBox Header="場所打ちコンクリート杭のコンクリートの使用限界・損傷限界強度（長期・短期許容応力度）" Margin="0,6,0,0">
                 <StackPanel Margin="6,4,6,4">
                     <CheckBox IsChecked="{Binding UseGuideline2025Appendix13}"
                               FontWeight="Bold" Margin="0,2,0,2">
@@ -288,70 +266,110 @@
                                   SelectedValue="{Binding Notification1113CompressionCase}"
                                   Width="240" HorizontalContentAlignment="Left"/>
                     </StackPanel>
-                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,2,0,0"
-                               Text="※ 使用/損傷限界のみ変更（検定の耐力側）。解析結果は保持されます。"/>
+                </StackPanel>
+            </GroupBox>
 
-                    <Separator Margin="0,6,0,4"/>
+            <!-- 安全限界状態のひずみ度〜応力度関係 -->
+            <GroupBox Header="場所打ちコンクリート杭の安全限界状態のひずみ度〜応力度関係" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
 
                     <ctrl:MaterialOptionRadioPair
-                        Header="安全限界の耐力（場所打ちRC杭／鋼管巻き杭）" HelpAnchor="fund-opt-ultimate" GroupName="OptUltimateCode"
+                        Header="コンクリートの応力度〜ひずみ度関係" HelpAnchor="fund-opt-ultimate" GroupName="OptUltimateCode"
                         IsAlternativeSelected="{Binding UseInsituUltimateEFunction, Mode=TwoWay}"
                         DefaultText="コンクリートをバイリニア近似で算定する"
-                        DefaultFormula="σ = Ec·ε を ξ·Fc で頭打ち、εcu = 0.003（β₁・β₂ 低減・軸力適用範囲あり）"
-                        DefaultToolTip="安全限界曲げ強度をバイリニア型コンクリート（εcu=0.003）で算定し、低減係数 β1・β2 と軸力適用範囲を適用します。"
+                        DefaultFormula="σ = Ec·ε を ξ·Fc で頭打ち（β₁・β₂ 低減・軸力適用範囲あり）"
+                        DefaultToolTip="安全限界曲げ強度をバイリニア型コンクリートで算定し、低減係数 β1・β2 と軸力適用範囲を適用します。&#x0a;εcu は終局（安全限界）の圧縮縁ひずみで、既定は 3,000μ、KCTB（TB 工法）を選んだ場所打ち鋼管コンクリート杭では 5,000μ です。"
                         AlternativeText="RC基礎構造部材の耐震設計指針(案) 5.4.1 による（e関数法）"
                         AlternativeFormula="σ/(ξ·Fc) = 6.75·{e^(−0.812·ε/εM) − e^(−1.218·ε/εM)}（β 低減・軸力制限なし）"
-                        AlternativeToolTip="RC基礎構造部材の耐震設計指針(案) 5.4.1 に従い安全限界曲げ強度（安全限界 NM 曲線）等を算定します（既定はバイリニア近似）。&#x0a;・場所打ちRC杭: コンクリートを e関数法（εcu=0.003・圧縮材料強度 ξFc）。&#x0a;・場所打ち鋼管コンクリート杭: 鋼管内コンクリート=e関数法、鋼管=圧縮側 0.85×引張強さ・引張側 引張強さで頭打ちのトリリニア、主筋=バイリニア。せん断終局 Qu=sQ0·√(1-η²)·(scMu/sMu)。&#x0a;安全限界NM曲線は低減(β)・軸力制限を課さず1本の耐力包絡線として描きます（低減後=低減前）。σ0=-0.07ξFc〜0.15ξFc は適用範囲の目安（曲線は切りません）。&#x0a;安全限界の耐力側（NM・せん断 QN）のみに効きます。解析用 M-φ/M-θ は収束のため常にバイリニアで算定するため、解析結果・使用/損傷限界には影響せず、解析結果は保持されます。"/>
-                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,2,0,0"
-                               Text="※ 本グループは検定の耐力側のみ変更（許容圧縮/せん断=使用・損傷限界、指針(案)=安全限界）。解析結果は保持されます。"/>
+                        AlternativeToolTip="RC基礎構造部材の耐震設計指針(案) 5.4.1 に従い安全限界曲げ強度（安全限界 NM 曲線）等を算定します（既定はバイリニア近似）。&#x0a;・場所打ちRC杭: コンクリートを e関数法（圧縮材料強度 ξFc）。&#x0a;・場所打ち鋼管コンクリート杭: 鋼管内コンクリート=e関数法、鋼管=圧縮側 0.85×引張強さ・引張側 引張強さで頭打ちのトリリニア、主筋=バイリニア。せん断終局 Qu=sQ0·√(1-η²)·(scMu/sMu)。&#x0a;安全限界NM曲線は低減(β)・軸力制限を課さず1本の耐力包絡線として描きます（低減後=低減前）。σ0=-0.07ξFc〜0.15ξFc は適用範囲の目安（曲線は切りません）。&#x0a;安全限界の耐力側（NM・せん断 QN）のみに効きます。解析用 M-φ/M-θ は収束のため常にバイリニアで算定するため、解析結果・使用/損傷限界には影響せず、解析結果は保持されます。"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
+                               Text="※ 場所打ち鋼管コンクリート杭では、コンクリートに加えて鋼管の応力度〜ひずみ度関係と安全限界せん断の算定式も併せて切り替わります。"/>
                 </StackPanel>
             </GroupBox>
 
-            <!-- 鉄筋・鋼管の 1.1F 完全バイリニア型オプション -->
-            <GroupBox Header="鉄筋・鋼管のモデル化" Margin="0,6,0,0">
+            <Border Background="#F5EFE4" BorderBrush="#9DB4CC" BorderThickness="0,0,0,1"
+                    Margin="0,16,0,0" Padding="8,5,8,5">
+                <TextBlock TextWrapping="Wrap">
+                    <Run FontWeight="Bold" FontSize="13">工法固有の設計法</Run>
+                    <LineBreak/>
+                    <Run FontSize="11" Foreground="#40506A">特定の工法の評定に従って、上記の項目をまとめて設定します。</Run>
+                </TextBlock>
+            </Border>
+
+            <!-- BCJ評定-FD0356-08 が定めている項目 -->
+            <GroupBox Header="KCTB 場所打ち鋼管コンクリート杭（TB 工法）— BCJ評定-FD0356-08 が定める項目" Margin="0,6,0,0">
                 <StackPanel Margin="6,4,6,4">
+                    <CheckBox IsChecked="{Binding FollowsKctbEvaluation}"
+                              FontWeight="Bold" Margin="0,2,0,2">
+                        <CheckBox.Content>
+                            <TextBlock TextWrapping="Wrap"
+                                       Text="BCJ評定-FD0356-08 が定める設計法に従う"/>
+                        </CheckBox.Content>
+                        <CheckBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>下記 2 項目を一括で切り替えます（個別に切替えると本チェックは自動追随します）。</Run>
+                                    <LineBreak/>
+                                    <Run>・コンクリートの許容応力度 → 告示1113(第8) 打設方法(一)（評定 5.(1)・表1.2、区分 1）</Run>
+                                    <LineBreak/>
+                                    <Run>・本体部の設計法 → 単純累加（評定 5.(3)、鉄骨鉄筋コンクリート構造計算規準 2014 4章2節）</Run>
+                                    <LineBreak/>
+                                    <Run>チェックを入れると、適用範囲（φ700〜2700・板厚下限・鋼管長・腐食しろ 1mm・Fc 18〜45）の検査も働きます。</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </CheckBox.ToolTip>
+                    </CheckBox>
+                    <Separator Margin="0,4,0,4"/>
 
                     <ctrl:MaterialOptionRadioPair
-                        Header="鉄筋の降伏応力度（場所打ちRC杭・場所打ち鋼管コンクリート杭）" HelpAnchor="fund-opt-rebar11f" GroupName="OptRebarYield"
-                        IsAlternativeSelected="{Binding RebarYieldAt11F, Mode=TwoWay}"
-                        DefaultText="規格降伏点 σy で降伏する完全バイリニア型とする（「基礎部材の強度と変形性能」）"
-                        DefaultFormula="σ = ±σy 頭打ち（SD345→345、SD390→390 N/mm² 等）"
-                        DefaultToolTip="JIS 規格降伏点で降伏する完全弾塑性型（ひずみ硬化なし）とします。"
-                        AlternativeText="1.1×F で降伏する完全バイリニア型とする"
-                        AlternativeFormula="σ = ±1.1·σy 頭打ち（SD490 は対象外＝規格降伏点のまま）"
-                        AlternativeToolTip="場所打ち RC 杭・場所打ち鋼管コンクリート杭の鉄筋について、降伏応力度を σy から 1.1×σy に引き上げます（完全バイリニア型）。&#x0a;安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。"/>
+                        Header="本体部の設計法（許容時 N-M の求め方）" HelpAnchor="fund-opt-kctb-nm" GroupName="OptKctbNM"
+                        IsAlternativeSelected="{Binding UseFiberNMForSteelPipeConcrete, Mode=TwoWay}"
+                        DefaultText="単純累加で算定する（評定 5.(3)・鉄骨鉄筋コンクリート構造計算規準 2014）"
+                        DefaultFormula="rNt ≦ N ≦ rNc: M = sM₀ + rM ／ 範囲外: M = sZ·(sf − sN/sA)、sM₀ = sZ·sfₜ"
+                        DefaultToolTip="評定書 5.(3) が定める本体部の設計法です。&#x0a;断面を積分せず、鋼管部の許容耐力と鉄筋コンクリート部の許容耐力を累加します。&#x0a;rNc = min(Ae·fc, Ae·mfc/n)、rNt = −mA·mfₜ、Ae はコンクリート断面に主筋断面積を n 倍して加算した換算断面積です。&#x0a;使用限界・損傷限界の NM 曲線（検定の耐力側）のみに効き、安全限界・M-φ・解析には影響しません。"
+                        AlternativeText="断面を分割して積分する"
+                        AlternativeFormula="断面の平面保持を解き、N = Σσᵢ·Aᵢ、M = Σσᵢ·Aᵢ·Lᵢ"
+                        AlternativeToolTip="評定書には無い方法です（ジャパンパイル Technical Note Vol.1-5）。&#x0a;断面を中立軸に平行な微小要素に分割し、平面保持のもとで各材料の応力を積分します。鉄筋は等価な断面を持つ薄肉鋼管に置き換えます。&#x0a;本プログラムの他の杭種と同じ求め方で、これが既定です。"/>
 
-                    <ctrl:MaterialOptionRadioPair
-                        Header="鋼管の降伏応力度（場所打ち鋼管コンクリート杭）" HelpAnchor="fund-opt-pipe11f" GroupName="OptPipeYield"
-                        AreRadiosEnabled="{Binding ConflictingMaterialOptionsEnabled}"
-                        IsAlternativeSelected="{Binding SteelPipeYieldAt11F, Mode=TwoWay}"
-                        DefaultText="1.1×F で降伏・ひずみ硬化と破断を考慮する（「基礎部材の強度と変形性能」）"
-                        DefaultFormula="降伏 σy = 1.1·F、降伏後の勾配 E/30、±σu（引張強さ）で頭打ち"
-                        DefaultToolTip="降伏後はひずみ硬化と破断応力（引張強さ）を考慮したモデルとします。"
-                        AlternativeText="±1.1×F 頭打ちの完全バイリニア型とする"
-                        AlternativeFormula="σ = ±1.1·F 頭打ち（ひずみ硬化・破断なし）"
-                        AlternativeToolTip="場所打ち鋼管コンクリート杭の鋼管について、ひずみ硬化・破断を廃し ±1.1×F で頭打ちの完全バイリニア型とします。&#x0a;安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます（鋼管杭は対象外）。"/>
-
-                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
-                               Text="※ 変更すると M-φ が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="24,0,0,2"
+                               Text="※ コンクリートの許容応力度は上のチェック、または「使用限界・損傷限界強度」グループの告示1113(第8) の項目で設定します。"/>
                 </StackPanel>
             </GroupBox>
 
-            <!-- 解析用 M-φ 関係の算定方式 -->
-            <GroupBox Header="M-φ関係の算定" Margin="0,6,0,0">
+            <!-- 評定書では定めていない項目 -->
+            <GroupBox Header="KCTB 場所打ち鋼管コンクリート杭（TB 工法）— 評定書では定めていない項目" Margin="0,6,0,0">
                 <StackPanel Margin="6,4,6,4">
+                    <Border Background="#FBF3E4" BorderBrush="#E0CFA8" BorderThickness="1" CornerRadius="3"
+                            Margin="0,0,0,6" Padding="8,6,8,6">
+                        <TextBlock TextWrapping="Wrap" FontSize="11">
+                            <Run FontWeight="Bold">BCJ評定-FD0356-08 の評定範囲外です。</Run>
+                            <LineBreak/>
+                            <Run>評定申込事項は「コンクリートの許容応力度」「鋼管のコンクリートに対する許容支圧せん断応力度」「本体部の設計法」「継手部の設計法」「鋼管の材質・形状・寸法等」「掘削孔および鋼管の寸法範囲等」「鋼管の腐食しろ」の 7 項目で、終局（安全限界）の規定はありません。下記の出典は評定書ではなく、ジャパンパイル Technical Note Vol.1-5 および 建設省総合技術開発プロジェクト 基礎WG 最終報告書（平成12年3月）資料4-7 です。</Run>
+                        </TextBlock>
+                    </Border>
 
                     <ctrl:MaterialOptionRadioPair
-                        Header="解析用 M-φ 関係（コンクリート系杭）" HelpAnchor="fund-opt-fiber-mphi" GroupName="OptMPhi"
-                        IsAlternativeSelected="{Binding UseFiberMPhi, Mode=TwoWay}"
-                        DefaultText="杭種ごとのポリリニアで算定する（「基礎部材の強度と変形性能」）"
-                        DefaultFormula="場所打ちRC: 折線 (0,0)-(φcr, Mcr)-(φy, My)-(φc, β₁·Mu0) 等、杭種ごとの折線（β₁・β₂ 低減込み）"
-                        DefaultToolTip="ひび割れ (Mcr)・主筋降伏 (My)・安全限界 (β1·Mu0) を折れ点とする折線で解析用 M-φ を与えます（強度と変形性能 3.10〜3.12）。"
-                        AlternativeText="ファイバーモデルで算定する（断面分割積分）"
-                        AlternativeFormula="各 φ で N = ∫σ(ε₀−φ·z)dA = N₀ を解き、M = −∫σ·z dA（約50点、β₁·β₂ 低減なし。鋼管杭の鋼管部を除く全コンクリート系杭）"
-                        AlternativeToolTip="コンクリート系杭の解析用 M-φ 関係を、「基礎部材の強度と変形性能」のポリリニア（折線）に代えて、&#x0a;ファイバーモデル（断面分割積分。各曲率で軸力つり合いを解き M を直接積分）で算定します。&#x0a;対象: 場所打ちRC杭・場所打ち鋼管コンクリート杭（RC部・鋼管コンクリート部）・PHC/PRC/SC杭・コンクリート充填鋼管部。&#x0a;指針の低減係数 β1・β2 は乗じない「素の」断面応答です（終局側はポリリニアより大きくなります）。&#x0a;掃引終点は各杭種の終局状態（場所打ち系: 圧縮縁ひずみ 0.003、PHC/PRC: コンクリート圧壊 εcu）。材料構成則は解析用と同じバイリニアです。&#x0a;FEM で負勾配ばねとならないよう、曲線は単調非減少化（最小勾配床付き）して使用します。&#x0a;※ 鋼管杭の鋼管部は対象外（既に厳密な折線）。M-θ（杭頭回転ばね）も従来どおりです。"/>
+                        Header="終局の圧縮縁ひずみ εcu（場所打ち鋼管コンクリート杭）" HelpAnchor="fund-opt-kctb-ecu" GroupName="OptKctbEcu"
+                        IsAlternativeSelected="{Binding UseUltimateStrain5000ForSteelPipeConcrete, Mode=TwoWay}"
+                        DefaultText="3,000μ とする（「基礎部材の強度と変形性能」）"
+                        DefaultFormula="εcu = 0.003（他の場所打ち系杭と同じ）"
+                        DefaultToolTip="場所打ち系杭に共通の終局圧縮縁ひずみです。"
+                        AlternativeText="5,000μ とする（鋼管の拘束効果を考慮）"
+                        AlternativeFormula="εcu = 0.005"
+                        AlternativeToolTip="出典: 建設省総合技術開発プロジェクト「新建築構造体系の開発」基礎WG 最終報告書（平成12年3月）資料4-7。&#x0a;φ800×t9（SKK400）の内面リブ・突起付き鋼管に現場施工でコンクリートを充填した実大試験体の正負交番繰り返し曲げ試験と断面解析の照合により、&#x0a;3,000μ では鋼管によるコンクリートの拘束効果が考慮されず限界曲率を過小評価し、7,000μ では実験値を上回るため、5,000μ が安全側と結論されています。&#x0a;安全限界 NM と M-φ の終点（→ 解析）に影響します。鋼管杭のコンクリート充填鋼管部は対象外です。"/>
+
+                    <ctrl:MaterialOptionRadioPair
+                        Header="許容時（使用限界・損傷限界）の判定材料（場所打ち鋼管コンクリート杭）" HelpAnchor="fund-opt-kctb-allowable" GroupName="OptKctbAllowable"
+                        IsAlternativeSelected="{Binding ExcludeRebarFromAllowableLimitForSteelPipeConcrete, Mode=TwoWay}"
+                        DefaultText="コンクリート・鉄筋・鋼管で判定する（「基礎部材の強度と変形性能」）"
+                        DefaultFormula="3 材料のうち最初に許容ひずみに達したもので限界状態を決める"
+                        DefaultToolTip="他の場所打ち系杭と同じく、断面内の全材料を判定に用います。"
+                        AlternativeText="コンクリートと鋼管のみで判定する（鉄筋の許容応力度では決めない）"
+                        AlternativeFormula="圧縮側コンクリートが σca に達する、または圧縮/引張側の鋼管が σsa = Fs に達する"
+                        AlternativeToolTip="出典: ジャパンパイル Technical Note Vol.1-5 (2022年11月) p.2。&#x0a;「圧縮側のコンクリートの応力度が許容圧縮応力度 σca に達した時、もしくは圧縮側または引張側の鋼管の応力度が許容応力度 σsa（= 基準強度 Fs）に達した時」と定めています。&#x0a;鉄筋は限界状態の判定には用いませんが、耐力への寄与（断面積分）には従来どおり参入します。&#x0a;使用限界・損傷限界の NM 曲線のみに効き、安全限界・M-φ・解析には影響しません。"/>
+
                     <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
-                               Text="※ 変更すると M-φ が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。"/>
+                               Text="※ εcu を変更すると M-φ の終点が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。判定材料の切替は検定の耐力側のみのため解析結果は保持されます。"/>
                 </StackPanel>
             </GroupBox>
 

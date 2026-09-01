@@ -5,7 +5,7 @@ using System.Linq;
 namespace PileDesign.Models.InputData
 {
     // 場所打ち鋼管コンクリート杭断面クラス
-    internal class InsituSteelPipeReinforcedConcreteSection : AbstractPileSection
+    internal partial class InsituSteelPipeReinforcedConcreteSection : AbstractPileSection
     {
         public CircularSolidSection CircularSolidSectionConcrete { get; private set; }
         public CircularPipeSection CircularPipeSectionMainbars { get; private set; }
@@ -26,6 +26,30 @@ namespace PileDesign.Models.InputData
         public double Ie { get; private set; }
         public double Ft { get; private set; }
 
+        // ─── 場所打ち鋼管コンクリート杭のオプション（いずれも鋼管杭の充填鋼管部には適用しない）───
+        // BCJ評定-FD0356-08 が定めるのは許容応力度と本体部の設計法（単純累加）で、
+        // 終局ひずみと許容時の判定は評定範囲外（Technical Note Vol.1-5 / 基礎WG 資料4-7）。
+        // 出所が違うので独立したフラグで持つ。
+
+        /// <summary>終局の圧縮縁ひずみを 5,000μ とするか（評定範囲外）。</summary>
+        private readonly bool _ultimateStrain5000;
+
+        /// <summary>許容時の判定に鉄筋を用いないか（評定範囲外）。</summary>
+        private readonly bool _excludeRebarFromAllowable;
+
+        /// <summary>許容時 N-M を単純累加式で求めるか（評定 5.(3)）。</summary>
+        private readonly bool _superposedAllowableNM;
+
+        /// <summary>
+        /// 終局圧縮縁ひずみ。オプション時は 5,000μ（総プロ基礎WG 資料4-7）。
+        /// コンストラクタで InsituConcrete にも同じ εcu を渡してあることが前提
+        /// （<see cref="PileSection.CreateSectionCalculator"/>）。
+        /// </summary>
+        internal override double UltimateCompressiveStrain =>
+            _ultimateStrain5000
+                ? PileDesign.Constants.SectionDesignConstants.KCTB_ULTIMATE_COMPRESSIVE_STRAIN
+                : base.UltimateCompressiveStrain;
+
         // コンストラクタ
         // isInsituSteelPipeConcretePile: 場所打ち鋼管コンクリート杭のとき true（既定）。
         //   鋼管 1.1F 完全バイリニア型オプションはこの杭種のみ適用する（鋼管杭では false を渡す）。
@@ -37,6 +61,14 @@ namespace PileDesign.Models.InputData
             mainBars.YieldAt11F = ConcreteModelOptions.RebarYieldAt11F;
             // 鋼管 1.1F 完全バイリニア型オプション（場所打ち鋼管コンクリート杭のみ）
             insituSteelPipe.PerfectBilinear11F = ConcreteModelOptions.SteelPipeYieldAt11F && isInsituSteelPipeConcretePile;
+
+            // 場所打ち鋼管コンクリート杭のオプション（鋼管杭の充填鋼管部には適用しない）
+            _ultimateStrain5000 =
+                ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete && isInsituSteelPipeConcretePile;
+            _excludeRebarFromAllowable =
+                ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete && isInsituSteelPipeConcretePile;
+            _superposedAllowableNM =
+                !ConcreteModelOptions.UseFiberNMForSteelPipeConcrete && isInsituSteelPipeConcretePile;
 
             InsituSteelPipe = insituSteelPipe;
             InsituConcrete = insituConcrete;
@@ -61,13 +93,25 @@ namespace PileDesign.Models.InputData
             // プレストレスひずみ度
             Prestrains = [insituSteelPipe.Prestrain, insituConcrete.Prestrain, mainBars.Prestrain];
 
-            // 使用限界状態ひずみ度
-            ServiceLimitStrainCs = [insituSteelPipe.ServiceLimitStrainC, insituConcrete.ServiceLimitStrainC, mainBars.ServiceLimitStrainC,];
-            ServiceLimitStrainTs = [insituSteelPipe.ServiceLimitStrainT, insituConcrete.ServiceLimitStrainT, mainBars.ServiceLimitStrainT,];
+            // 使用限界状態・損傷限界状態のひずみ度。並びは [鋼管, コンクリート, 主筋]（PositionCs/Ts と対応）。
+            //
+            // 「許容時の判定に鉄筋を用いない」オプション時は、許容時の判定を
+            // 「圧縮側コンクリートが許容圧縮応力度に達する」か
+            // 「圧縮側または引張側の鋼管が許容応力度（=基準強度 F）に達する」の早い方と定める
+            // （ジャパンパイル Technical Note Vol.1-5、2022年11月 p.2）。主筋は判定に用いないため、
+            // 枠を ±∞ にして GetAllowableCompressionEdgeStrain の Min/Max から外す
+            // （MainBars が安全限界で採っている書き方と同じ）。
+            // 主筋の耐力への寄与（断面積分）は従来どおり参入する。
+            double mainBarServiceC = _excludeRebarFromAllowable ? double.MaxValue : mainBars.ServiceLimitStrainC;
+            double mainBarServiceT = _excludeRebarFromAllowable ? double.MinValue : mainBars.ServiceLimitStrainT;
+            double mainBarDamageC = _excludeRebarFromAllowable ? double.MaxValue : mainBars.DamageLimitStrainC;
+            double mainBarDamageT = _excludeRebarFromAllowable ? double.MinValue : mainBars.DamageLimitStrainT;
 
-            // 損傷限界状態ひずみ度
-            DamageLimitStrainCs = [insituSteelPipe.DamageLimitStrainC, insituConcrete.DamageLimitStrainC, mainBars.DamageLimitStrainC,];
-            DamageLimitStrainTs = [insituSteelPipe.DamageLimitStrainT, insituConcrete.DamageLimitStrainT, mainBars.DamageLimitStrainT,];
+            ServiceLimitStrainCs = [insituSteelPipe.ServiceLimitStrainC, insituConcrete.ServiceLimitStrainC, mainBarServiceC,];
+            ServiceLimitStrainTs = [insituSteelPipe.ServiceLimitStrainT, insituConcrete.ServiceLimitStrainT, mainBarServiceT,];
+
+            DamageLimitStrainCs = [insituSteelPipe.DamageLimitStrainC, insituConcrete.DamageLimitStrainC, mainBarDamageC,];
+            DamageLimitStrainTs = [insituSteelPipe.DamageLimitStrainT, insituConcrete.DamageLimitStrainT, mainBarDamageT,];
 
             // 使用限界状態最大曲率
             CurvatureMaxServiceLimit = GetAllowableMaxCurvature(ServiceLimitStrainCs, PositionCs, ServiceLimitStrainTs, PositionTs);
@@ -156,12 +200,22 @@ namespace PileDesign.Models.InputData
 
         }
 
+        /// <summary>
+        /// 鋼管の断面積（腐食考慮）。外径 d = OutDiaMinus、板厚 ts = TMinus として
+        /// <c>π/4·(d² − (d−2ts)²) = π·ts·(d − ts)</c>。
+        ///
+        /// 以前は内径を <c>d − ts</c>（板厚を片側しか引かない）としていたため、
+        /// 板厚 ts/2 の管の断面積＝正しい値のおよそ半分になっていた。
+        /// 安全限界側 <see cref="GetUltimateLimitShear"/> は当初から <c>π·ts·(d − ts)</c> で
+        /// 正しく、使用限界・損傷限界だけが食い違っていた。
+        /// </summary>
+        private double PipeShearArea =>
+            Math.PI * (InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus) * InsituSteelPipe.TMinus;
+
         private double GetServiceLimitShear()
         {
             double beta1 = 1.0;
 
-            // 軸力をコンクリートと鋼管の全塑性軸力の比で分担させるための鋼管断面積。
-            // ここも内径を d − ts としており、正しい値の約半分だった（使用/損傷限界せん断と同じ誤り）。
             double area = PipeShearArea;
             double kappa = 2.0;
             double sfss = InsituSteelPipe.F / 1.5 / Math.Sqrt(3);
@@ -202,18 +256,6 @@ namespace PileDesign.Models.InputData
                 double sA = InsituSteelPipe.AMinus;                 // 腐食考慮鋼管有効断面積
                 double sNcu = sSigmaY * sA;
                 double eta = sNcu > 1e-9 ? n / sNcu : 0.0;
-        /// <summary>
-        /// 鋼管の断面積（腐食考慮）。外径 d = OutDiaMinus、板厚 ts = TMinus として
-        /// <c>π/4·(d² − (d−2ts)²) = π·ts·(d − ts)</c>。
-        ///
-        /// 以前は内径を <c>d − ts</c>（板厚を片側しか引かない）としていたため、
-        /// 板厚 ts/2 の管の断面積＝正しい値のおよそ半分になっていた。
-        /// 安全限界側 <see cref="GetUltimateLimitShear"/> は当初から <c>π·ts·(d − ts)</c> で
-        /// 正しく、使用限界・損傷限界だけが食い違っていた。
-        /// </summary>
-        private double PipeShearArea =>
-            Math.PI * (InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus) * InsituSteelPipe.TMinus;
-
                 eta = Math.Max(-0.999, Math.Min(0.999, eta));       // √(1-η²)・cos の破綻防止
 
                 double R = d * 0.5;
@@ -231,6 +273,8 @@ namespace PileDesign.Models.InputData
 
             double beta1 = 1.0;
             double beta2 = 1.0;
+            // 軸力をコンクリートと鋼管の全塑性軸力の比で分担させるための鋼管断面積。
+            // ここも内径を d − ts としており、正しい値の約半分だった（使用/損傷限界せん断と同じ誤り）。
             double area = PipeShearArea;
             double fcy = 1.1 * InsituSteelPipe.F;
             double ns;
@@ -446,6 +490,9 @@ namespace PileDesign.Models.InputData
         // 最外縁の鋼管または杭主筋が引張降伏するときのN、Mを返すメソッド
         internal (double, double) GetYieldForceAndMoment(double curvature)
         {
+            // 解析用 M-φ の降伏折れ点。KCTB(TB工法) を選んでも、M-φ の作り方は
+            // 「基礎部材の強度と変形性能」のままとする（Technical Note Vol.1-5 の降伏時は
+            // N-M 耐力線 My の定義であって、M-φ の折れ点を規定するものではない）。
             double epsilonCReinf = -MainBars.RSigmaY / MainBars.Er + curvature * (PileDia * 0.5 + MainBars.PCD * 0.5);
             double epsilonCpipe = -InsituSteelPipe.SEpsilonY + curvature * (PileDia - 1);
             double epsilonC = Math.Min(epsilonCReinf, epsilonCpipe);
@@ -473,7 +520,7 @@ namespace PileDesign.Models.InputData
         {
             try
             {
-                double epsilonC = PileDesign.Constants.SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN;
+                double epsilonC = UltimateCompressiveStrain;
                 List<double> Ns = UnfactoredUltimateNM.Item1;
                 List<double> Ms = UnfactoredUltimateNM.Item2;
                 List<double> curvatureList = UnfactoredUltimateNM.Item4;

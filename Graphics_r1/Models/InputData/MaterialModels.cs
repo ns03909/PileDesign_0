@@ -189,7 +189,9 @@ namespace PileDesign.Models.InputData
             }
             else if (type == MaterialLaw.EFunction)
             {
-                if (-EpsilonCr_eFunction <= epsilon && epsilon <= SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN)
+                // 有効範囲上限は当該コンクリートの終局ひずみ EpsilonCu（既定 0.003）。
+                // KCTB 場所打ち鋼管コンクリート杭では 0.005 を渡すため定数直参照にしない。
+                if (-EpsilonCr_eFunction <= epsilon && epsilon <= EpsilonCu)
                 {
                     epsilon = Math.Min(epsilon, EpsilonCu);
                     return 6.75 * (Math.Exp(-0.812 * epsilon / EpsilonM) - Math.Exp(-1.218 * epsilon / EpsilonM)) * Gsi * Fc;
@@ -208,7 +210,9 @@ namespace PileDesign.Models.InputData
                     ? BearingFactor * ConcreteModelOptions.CompressionReductionFactor * Fc
                     : BearingFactor * Gsi * Fc;
 
-                if (tensionMinStrain <= epsilon && epsilon <= SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN)
+                // 有効範囲上限は当該コンクリートの終局ひずみ EpsilonCu（既定 0.003）。
+                // KCTB 場所打ち鋼管コンクリート杭では 0.005 を渡すため定数直参照にしない。
+                if (tensionMinStrain <= epsilon && epsilon <= EpsilonCu)
                 {
                     return Math.Min(Ec * epsilon, compressionPlateau);
                 }

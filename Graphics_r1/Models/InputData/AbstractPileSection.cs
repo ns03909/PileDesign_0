@@ -37,6 +37,17 @@ namespace PileDesign.Models.InputData
         /// </summary>
         protected virtual double CompressionEdgePosition => -PileDia / 2;
 
+        /// <summary>
+        /// 安全限界（終局）のコンクリート圧縮縁ひずみ εcu。既定 0.003
+        /// （「基礎部材の強度と変形性能」）。終局の定義が異なる断面型はオーバーライドする。
+        ///
+        /// 安全限界 NM 曲線の掃引・最大曲率の既定値・ファイバー掃引の εc 上限に共通で使う。
+        /// これを大きくするときは、材料側（InsituConcrete.EpsilonCu）の有効範囲上限も
+        /// 併せて広げること。広げないと ε&gt;0.003 でコンクリート応力が 0 に脱落し、
+        /// 終局曲げが静かに小さくなる。
+        /// </summary>
+        internal virtual double UltimateCompressiveStrain => SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN;
+
         public List<double> ServiceLimitAxialForceThresholds { get; protected set; } = [];
         public List<double> ServiceLimitBendingMomentThresholds { get; protected set; } = [];
         public List<double> ServiceLimitBeta { get; protected set; } = [];
@@ -339,10 +350,11 @@ namespace PileDesign.Models.InputData
             => GetUltimateMomentForSpecificN(Ntarget);
 
         /// <summary>
-        /// ファイバー掃引で圧縮縁ひずみ εc を探索する上限。既定はコンクリート安全限界圧縮ひずみ εcu=0.003
+        /// ファイバー掃引で圧縮縁ひずみ εc を探索する上限。既定は当該断面の安全限界圧縮ひずみ
+        /// <see cref="UltimateCompressiveStrain"/>
         /// （InsituConcrete.GetStress は ε&gt;εcu で σ=0 に脱落し N(εc) が非単調になるため超えない）。
         /// </summary>
-        internal virtual double FiberSweepEdgeStrainMax => SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN;
+        internal virtual double FiberSweepEdgeStrainMax => UltimateCompressiveStrain;
 
         /// <summary>
         /// ファイバーモデル（断面分割積分）による M-φ 関係。
@@ -601,14 +613,14 @@ namespace PileDesign.Models.InputData
             List<double> curvatures = [];
             double epsilonC;
             double curvature;
-            double maxCurvatureDefault = (0.003 + 0.0025) * 20.0 / PileDia;
+            double maxCurvatureDefault = (UltimateCompressiveStrain + 0.0025) * 20.0 / PileDia;
             // CurvatureMaxUltimateLimitが設定されていて、デフォルトより小さい場合はそちらを使用
             // ただし極端に小さい値（デフォルトの1/10未満）は無視して退化した曲線を防ぐ
             double minAllowed = maxCurvatureDefault * 0.1;
             double maxCurvature = CurvatureMaxUltimateLimit > minAllowed && CurvatureMaxUltimateLimit < maxCurvatureDefault
                 ? CurvatureMaxUltimateLimit
                 : maxCurvatureDefault;
-            double maxEpsilonC = 0.003;
+            double maxEpsilonC = UltimateCompressiveStrain;
 
             for (int i = 0; i <= DivisionNum * 2; i++)
             {

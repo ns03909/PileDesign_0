@@ -213,6 +213,12 @@ namespace PileDesign.ViewModels
             Models.InputData.ConcreteModelOptions.UseNotification1113Shear = f?.UseNotification1113Shear ?? false;
             Models.InputData.ConcreteModelOptions.UseInsituUltimateEFunction = f?.UseInsituUltimateEFunction ?? false;
             Models.InputData.ConcreteModelOptions.UseFiberMPhi = f?.UseFiberMPhi ?? false;
+            Models.InputData.ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete =
+                f?.UseUltimateStrain5000ForSteelPipeConcrete ?? false;
+            Models.InputData.ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete =
+                f?.ExcludeRebarFromAllowableLimitForSteelPipeConcrete ?? false;
+            Models.InputData.ConcreteModelOptions.UseFiberNMForSteelPipeConcrete =
+                f?.UseFiberNMForSteelPipeConcrete ?? true;
             Models.InputData.ConcreteModelOptions.Notification1113CompressionCase = f?.Notification1113CompressionCase ?? 1;
 
             // M-φ 静的キャッシュ（全断面共有）

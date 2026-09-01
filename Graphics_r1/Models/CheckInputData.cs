@@ -68,6 +68,17 @@ namespace PileDesign.Models
                 }
             }
 
+            // BCJ評定-FD0356-08 の適用範囲。評定どおりに設定しているときだけ検査する。
+            // 範囲外でも計算は止めず、警告として出す。
+            if (ConcreteModelOptions.FollowsKctbEvaluation && inputModel.PileBodies != null)
+            {
+                foreach (var pileBody in inputModel.PileBodies)
+                {
+                    foreach (var w in KctbApplicableRange.Validate(pileBody))
+                        warnings.Add($"BCJ評定-FD0356-08 {w}");
+                }
+            }
+
             return warnings;
         }
 

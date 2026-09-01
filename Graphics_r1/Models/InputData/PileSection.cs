@@ -3625,10 +3625,16 @@ namespace PileDesign.Models.InputData
                         new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize)),
 
                 // 場所打ち鋼管RC杭 - 鋼管RC部
+                // 終局ひずみ 5,000μ オプション時はコンクリートにも同じ εcu を渡す。
+                // 断面側 (UltimateCompressiveStrain) だけ広げても、材料側の有効範囲が 0.003 のままだと
+                // ε>0.003 で σ=0 に脱落して終局曲げが静かに小さくなるため、必ずセットで渡すこと。
                 (PileTypeNames.InsituSteelPipeConcrete, PileTypeNames.SteelPipeConcreteSection) =>
                     new InsituSteelPipeReinforcedConcreteSection(
                         new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth),
-                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
+                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc,
+                            epsilonCu: ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete
+                                ? SectionDesignConstants.KCTB_ULTIMATE_COMPRESSIVE_STRAIN
+                                : SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN),
                         new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize)),
 
                 // PHC杭
