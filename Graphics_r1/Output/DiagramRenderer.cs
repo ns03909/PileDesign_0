@@ -238,7 +238,7 @@ namespace PileDesign.Output
                     $"α={alphaL:F2} βU={betaU:F2} βL={betaL:F2}",
                     System.Globalization.CultureInfo.CurrentCulture,
                     FlowDirection.LeftToRight, typeface, 12, Brushes.Black,
-                    VisualTreeHelper.GetDpi(Application.Current.MainWindow).PixelsPerDip);
+                    SafePixelsPerDip());
                 dc.DrawText(ft, new Point(4, 4));
             }
 
@@ -1580,6 +1580,31 @@ namespace PileDesign.Output
             using var ms = new MemoryStream();
             encoder.Save(ms);
             return ms.ToArray();
+        }
+
+        /// <summary>
+        /// FormattedText 用の PixelsPerDip を安全に返す。
+        ///
+        /// <c>Application.Current.MainWindow</c> は、それを開いたスレッドからしか触れない。
+        /// テストではスモークテストがウィンドウを開いて閉じたあと MainWindow の参照だけが残り、
+        /// 別スレッドから <c>VisualTreeHelper.GetDpi(...)</c> を呼ぶと
+        /// スレッド親和性の違反でテストホストごと落ちる
+        /// （単体では通るのにクラス名の並び順しだいで全体実行だけ壊れる、という形で出る）。
+        /// アクセスできないときは既定の 1.0 にフォールバックする。
+        /// </summary>
+        private static double SafePixelsPerDip()
+        {
+            try
+            {
+                var w = Application.Current?.MainWindow;
+                if (w != null && w.CheckAccess())
+                    return VisualTreeHelper.GetDpi(w).PixelsPerDip;
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "PixelsPerDip の取得に失敗したため 1.0 を使用");
+            }
+            return 1.0;
         }
 
         /// <summary>

@@ -16,6 +16,25 @@ namespace PileDesign.Output
 
     public static class WordDocumentUtils
     {
+        /// <summary>
+        /// FormattedText 用の PixelsPerDip を安全に返す。
+        ///
+        /// <c>Application.Current.MainWindow</c> はそれを開いたスレッドからしか触れない。
+        /// 別スレッドから <c>VisualTreeHelper.GetDpi(...)</c> を呼ぶとスレッド親和性の違反となり、
+        /// 例外ではなくプロセスごと落ちることがある。アクセスできないときは 1.0 を返す。
+        /// </summary>
+        private static double SafePixelsPerDip()
+        {
+            try
+            {
+                var w = Application.Current?.MainWindow;
+                if (w != null && w.CheckAccess())
+                    return VisualTreeHelper.GetDpi(w).PixelsPerDip;
+            }
+            catch { /* 取得できないときは既定値 */ }
+            return 1.0;
+        }
+
 
         public enum DiagramAlignment
         {
@@ -300,7 +319,7 @@ namespace PileDesign.Output
                     typeface,
                     fontSize,
                     brush,
-                    VisualTreeHelper.GetDpi(Application.Current.MainWindow).PixelsPerDip
+                    SafePixelsPerDip()
                 );
                 formattedLines.Add(ft);
                 totalHeight += ft.Height;
