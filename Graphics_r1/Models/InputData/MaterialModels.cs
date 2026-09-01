@@ -413,14 +413,21 @@ namespace PileDesign.Models.InputData
     }
 
     /// <summary>
-    /// 鋼管規格の材料特性を管理する静的クラス
+    /// 鋼管規格の材料特性を管理する静的クラス。
+    ///
+    /// F は<b>基準強度</b>（平成12年建設省告示第2464号）であって、JIS A 5525 の規格降伏点ではない。
+    /// SKK490 は規格降伏点が 315 N/mm²、基準強度が 325 N/mm² と値が分かれるので注意すること
+    /// （SKK400 はどちらも 235 N/mm²）。
+    /// このクラスの F は許容応力度（長期 F/1.5・短期 F）と材料強度（1.1F）の基準になるため、
+    /// 規格降伏点ではなく基準強度を持つのが正しい。
+    /// ジャパンパイル Technical Note Vol.1-5 (2022年11月) 表1 も SKK490 の基準強度を 325 とする。
     /// </summary>
     internal static class SteelPipeGrades
     {
         private static readonly Dictionary<string, (double SigmaU, double F)> Properties = new()
         {
             ["SKK400"] = (400.0, 235.0),
-            ["SKK490"] = (490.0, 315.0)
+            ["SKK490"] = (490.0, 325.0)
         };
 
         public static (double SigmaU, double F) GetProperties(string grade)
