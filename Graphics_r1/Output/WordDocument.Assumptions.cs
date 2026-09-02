@@ -203,15 +203,15 @@ namespace PileDesign.Output
                 ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete ? "5,000μ" : "3,000μ（既定）",
                 ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete
                     ? "鋼管によるコンクリートの拘束効果を考慮した値" +
-                      "（建設省総合技術開発プロジェクト 基礎WG 最終報告書 資料4-7。BCJ評定-FD0356-08 の評定範囲外）"
-                    : "場所打ち系杭に共通の終局圧縮縁ひずみを用いる"));
+                      "（建設省総合技術開発プロジェクト 基礎WG 最終報告書 資料4-7。BCJ評定-FD0356-08 に規定は無い）"
+                    : "場所打ち系杭に共通の終局圧縮縁ひずみを用いる（BCJ評定-FD0356-08 に規定は無い）"));
 
             rows.Add((ConcreteModelOptions.MapLimitStateText("使用限界・損傷限界の判定材料（場所打ち鋼管コンクリート杭）"),
                 ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete
                     ? "コンクリートと鋼管" : "コンクリート・鉄筋・鋼管（既定）",
                 ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete
                     ? "鉄筋は限界状態の判定に用いず、耐力への寄与としてのみ考慮する" +
-                      "（ジャパンパイル Technical Note Vol.1-5。BCJ評定-FD0356-08 の評定範囲外）"
+                      "（ジャパンパイル Technical Note Vol.1-5。BCJ評定-FD0356-08 に規定は無い）"
                     : "断面内の全材料のうち最初に許容ひずみに達したもので限界状態を決める"));
 
             rows.Add(("限界状態の呼称",

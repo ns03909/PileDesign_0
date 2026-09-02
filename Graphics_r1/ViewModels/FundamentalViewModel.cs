@@ -268,7 +268,8 @@ namespace PileDesign.ViewModels
         //
         // BCJ評定-FD0356-08 が定めるのは「コンクリートの許容応力度＝告示1113(第8) 打設方法(一)」と
         // 「本体部の設計法＝SRC規準2014 4章2節の累加」。評定書に終局の規定は無いので、
-        // εcu = 5,000μ と「許容時の判定に鉄筋を用いない」は評定範囲外の個別オプションとする。
+        // εcu と「許容時の判定に鉄筋を用いない」は評定書に規定が無く、
+        // どの文献に依るかを設計者が選ぶ項目なので個別オプションとする。
 
         // 【評定】許容時 N-M を断面分割積分で求める（false = 評定 5.(3) の単純累加）
         [ObservableProperty]
@@ -283,9 +284,10 @@ namespace PileDesign.ViewModels
                 v => UseFiberNMForSteelPipeConcrete = v,
                 value ? "許容時N-Mを断面分割積分で算定 へ変更" : "許容時N-Mを単純累加で算定 へ変更");
             OnPropertyChanged(nameof(FollowsKctbEvaluation));
+            OnPropertyChanged(nameof(AllowableJudgementEnabled));
         }
 
-        // 【評定範囲外】終局の圧縮縁ひずみを 5,000μ とする（解析に効く）
+        // 【評定書に規定が無い】終局の圧縮縁ひずみを 5,000μ とする（解析に効く）
         [ObservableProperty]
         private bool _useUltimateStrain5000ForSteelPipeConcrete;
 
@@ -299,7 +301,7 @@ namespace PileDesign.ViewModels
                 "終局の圧縮縁ひずみを 5,000μ とする へ変更");
         }
 
-        // 【評定範囲外】許容時の判定に鉄筋を用いない（耐力側のみ）
+        // 【評定書に規定が無い】許容時の判定に鉄筋を用いない（耐力側のみ）
         [ObservableProperty]
         private bool _excludeRebarFromAllowableLimitForSteelPipeConcrete;
 
@@ -314,9 +316,18 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 「許容時の判定材料」を選べるか。
+        ///
+        /// 単純累加は断面を積分せず許容応力度を累加するので、
+        /// 「どの材料で限界状態を決めるか」という概念自体が現れない。
+        /// 選べたままだと効かない設定を触らせることになるのでグレーアウトする。
+        /// </summary>
+        public bool AllowableJudgementEnabled => UseFiberNMForSteelPipeConcrete;
+
+        /// <summary>
         /// BCJ評定-FD0356-08 が定める項目に従うマスタースイッチ。
         ///
-        /// 評定が定めているのは次の 2 つだけで、終局ひずみや許容時の判定は評定範囲外のため含めない。
+        /// 評定が定めているのは次の 2 つだけ。終局ひずみや許容時の判定は評定書に規定が無いため含めない。
         ///   ・コンクリートの許容応力度 = 告示1113(第8) 打設方法(一)（評定 5.(1)・表1.2）
         ///   ・本体部の設計法 = 単純累加（評定 5.(3)、SRC規準2014 4章2節）
         /// get は構成項目が評定どおりのとき true（個別に切替えると自動で追随）。

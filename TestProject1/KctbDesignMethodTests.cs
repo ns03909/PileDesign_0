@@ -541,7 +541,7 @@ namespace TestProject1
 
             var ecuRow = rows.Single(r => r.Item.Contains("終局の圧縮縁ひずみ"));
             Assert.AreEqual("5,000μ", ecuRow.Choice);
-            Assert.IsTrue(ecuRow.Note.Contains("評定範囲外"), "評定範囲外である旨の記載が無い");
+            Assert.IsTrue(ecuRow.Note.Contains("規定は無い"), "評定書に規定が無い旨の記載が無い");
 
             Assert.AreEqual("コンクリートと鋼管",
                 rows.Single(r => r.Item.Contains("判定材料")).Choice);

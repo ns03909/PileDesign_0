@@ -559,7 +559,7 @@ namespace PileDesign.Output
         /// </summary>
         private static void AddSectionKctbMethod(Body body)
         {
-            // 評定に従う設定でも、評定範囲外のオプションだけでも、この節を出す。
+            // 評定に従う設定でも、評定書に規定が無い側のオプションだけでも、この節を出す。
             if (!ConcreteModelOptions.FollowsKctbEvaluation
                 && !ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete
                 && !ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete) return;
@@ -572,16 +572,16 @@ namespace PileDesign.Output
                 "第8第1項第一号の表中のくい体の打設の方法（一）に該当するものとし、" +
                 "設計基準強度 Fc の範囲は 18 N/mm² 以上 45 N/mm² 以下、鋼管の腐食しろは 1 mm とする。");
 
-            // 評定申込事項は 7 項目で、終局（安全限界）の規定は含まれない。
-            // 評定範囲外の設定を用いた場合は出典を明記する。
+            // 評定申込事項は 7 項目で、終局（安全限界）は含まれない。評定書は 3,000μ とも
+            // 5,000μ とも書いていないので、依った文献を明記する。
             if (ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete
                 || ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete)
             {
                 AddText(body,
-                    "次の項目は BCJ評定-FD0356-08 の評定範囲外であり、" +
+                    "次の項目は BCJ評定-FD0356-08 に規定が無く、依った文献は" +
                     "ジャパンパイル株式会社 Technical Note Vol.1-5 および" +
                     "建設省総合技術開発プロジェクト「新建築構造体系の開発」性能評価分科会" +
-                    "基礎WG 最終報告書（平成12年3月、建設省建築研究所）資料4-7 による。");
+                    "基礎WG 最終報告書（平成12年3月、建設省建築研究所）資料4-7 である。");
             }
 
             if (ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete)
@@ -632,6 +632,14 @@ namespace PileDesign.Output
                     "「鉄筋コンクリート構造計算規準・同解説」（2018）による。");
                 AddText(body, "せん断力に対する算定");
                 AddEq(body, @"{}_{s}Q = \frac{{}_{s}A}{2}\,{}_{s}f_{s}");
+                AddText(body,
+                    "単純累加では断面を積分しないため、コンクリートおよび鋼材の応力度～ひずみ度関係は用いない。" +
+                    "許容時の算定に用いるのは各材料の許容応力度と換算断面である。" +
+                    "評定書はヤング係数 Ec の算定式および主筋・鋼管の許容応力度の具体値を定めていないため、" +
+                    "Ec は日本建築学会「基礎部材の強度と変形性能」の式により、" +
+                    "主筋の許容応力度は「鉄筋コンクリート構造計算規準・同解説」により" +
+                    "（長期 min(σy/1.5, 215 または 195 N/mm²)、短期 σy）、" +
+                    "鋼管の許容応力度は 長期 F/1.5・短期 F とする。");
             }
             else
             {
@@ -644,7 +652,7 @@ namespace PileDesign.Output
                     "コンクリートの応力度～ひずみ度関係は σB（= 0.85Fc）を折れ点とするバイリニア型とし、" +
                     "引張応力度は無視する。鋼材の応力度～ひずみ度関係は材料強度を用いたバイリニア型とする。" +
                     "算定手順はジャパンパイル株式会社 Technical Note Vol.1-5 による" +
-                    "（BCJ評定-FD0356-08 の本体部の設計法は単純累加であり、本方法は評定範囲外である）。");
+                    "（BCJ評定-FD0356-08 が定める本体部の設計法は単純累加であり、本方法はそれとは別の方法である）。");
                 AddEq(body, @"N_{i} = \sigma_{ci}A_{ci} + \sigma_{ri}A_{ri} + \sigma_{si}A_{si},\quad
                     M_{i} = N_{i}L_{i}");
                 AddEq(body, @"N = \sum_{i} N_{i},\quad M = \sum_{i} M_{i}");
