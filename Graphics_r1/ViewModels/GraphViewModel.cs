@@ -1493,12 +1493,34 @@ namespace PileDesign.ViewModels
                     }
                 }
 
+                // PHC・PRC のせん断耐力は「斜め引張破壊」と「ウェブ破壊」の 2 式の小さい方で決まる。
+                // どちらが効いているか分かるよう、内訳を点線で重ねる（β 低減前なので、
+                // 2 本の小さい方が「低減前」の破線に一致する）。対象外の杭種では空。
+                var shearComponents = pileSection.ComputeQNShearComponents(MonQd);
+
+                void DrawQNShearComponents(string limitState, ScottPlot.Color color)
+                {
+                    foreach (var c in shearComponents.Where(x => x.LimitState == limitState))
+                    {
+                        if (!(c.N?.Count > 0) || !(c.Q?.Count > 0)) continue;
+                        var sc = WpfPlot.Plot.Add.ScatterLine(c.N.ToArray(), c.Q.ToArray());
+                        sc.LegendText = $"低減前{limitState}（{c.Mode}）";
+                        sc.LineStyle.Pattern = LinePattern.Dotted;
+                        sc.LineStyle.Color = color.WithAlpha(0.55);
+                        sc.LineStyle.Width = 1;
+                        _graphHoverMap[sc] = $"低減前{limitState}の内訳: {c.Mode}" + Environment.NewLine
+                                             + "2 式の小さい方が採用値です。" + Environment.NewLine + qnSectionDetails;
+                    }
+                }
+
                 // 損傷限界（指定レベル）を描画
                 DrawQNCurvePair(qnCurves.FactoredDamage, qnCurves.UnfactoredDamage, qDamageLabel, qnDamageColor);
+                DrawQNShearComponents("損傷限界", qnDamageColor);
                 // グレードAのみ安全限界を描画
                 if (isGradeAQ)
                 {
                     DrawQNCurvePair(qnCurves.FactoredUltimate, qnCurves.UnfactoredUltimate, "レベル2 安全限界", qnUltimateColor);
+                    DrawQNShearComponents("安全限界", qnUltimateColor);
                 }
 
                 // 解析結果プロット

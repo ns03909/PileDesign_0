@@ -3079,6 +3079,57 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// せん断耐力の内訳曲線 1 本。<see cref="ComputeQNShearComponents"/> が返す。
+        /// </summary>
+        /// <param name="LimitState">"使用限界" / "損傷限界" / "安全限界"</param>
+        /// <param name="Mode">"斜め引張破壊" / "ウェブ破壊"</param>
+        public sealed record ShearComponentCurve(
+            string LimitState, string Mode, List<double> N, List<double> Q);
+
+        /// <summary>
+        /// せん断耐力の内訳（斜め引張破壊 / ウェブ破壊）の QN 曲線を返す（kN 単位、β 低減前）。
+        ///
+        /// PHC・PRC のせん断耐力は 2 式の小さい方で決まるが、採用値だけではどちらが
+        /// 効いているか分からない。図に点線で重ねられるよう内訳を返す。
+        /// 2 本の小さい方が「低減前」の曲線に一致する。
+        /// 対象外の杭種（SC・場所打ち系・鋼管杭）では空リストを返す。
+        /// </summary>
+        public List<ShearComponentCurve> ComputeQNShearComponents(double monQd, int iCount = 100)
+        {
+            var result = new List<ShearComponentCurve>();
+            // PHC / PRC のみ。SC は式が別系統、場所打ち系は 2 式に分かれない。
+            if (CreateSectionCalculator() is not PrecastPileSection precast
+                || precast is SCSection)
+                return result;
+
+            void Add(string limitState, (double DiagonalTension, double Web) c,
+                     double nMin, double nMax)
+            {
+                foreach (var (mode, q) in new[]
+                         { ("斜め引張破壊", c.DiagonalTension), ("ウェブ破壊", c.Web) })
+                {
+                    if (!double.IsFinite(q) || q <= 0.0) continue;
+                    var ns = new List<double>(iCount);
+                    var qs = new List<double>(iCount);
+                    for (int i = 0; i < iCount; i++)
+                    {
+                        ns.Add((nMin * (iCount - i) + nMax * i) / iCount * 1e-3);
+                        qs.Add(q * 1e-3);
+                    }
+                    result.Add(new ShearComponentCurve(limitState, mode, ns, qs));
+                }
+            }
+
+            Add("使用限界", precast.GetServiceLimitShearComponents(monQd),
+                precast.ShearNMinService, precast.ShearNMaxService);
+            Add("損傷限界", precast.GetDamageLimitShearComponents(monQd),
+                precast.ShearNMinDamage, precast.ShearNMaxDamage);
+            Add("安全限界", precast.GetUltimateLimitShearComponents(monQd),
+                precast.ShearNMinUltimate, precast.ShearNMaxUltimate);
+            return result;
+        }
+
+        /// <summary>
         /// 指定したM/Qdで全6種のQN曲線を再計算して返す（kN単位）
         /// </summary>
         public (

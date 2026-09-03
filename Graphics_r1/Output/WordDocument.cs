@@ -1551,7 +1551,8 @@ namespace PileDesign.Output
     List<List<double>> xsLineLists, List<List<double>> ysLineLists, List<string> lineLegends,
     List<List<double>> xsScatterLists, List<List<double>> ysScatterLists, List<string> scatterLegends,
     string title, string xLabel, string yLabel,
-    double widthMm = 150, double heightMm = 150, bool showLegend = true)
+    double widthMm = 150, double heightMm = 150, bool showLegend = true,
+    List<(LinePattern Pattern, ScottPlot.Color Color, float Width)?>? lineStyles = null)
         {
             try
             {
@@ -1593,11 +1594,24 @@ namespace PileDesign.Output
                     {
                         var pl = plot.Add.ScatterLine(xs, ys);
                         pl.LegendText = i < lineLegends.Count ? lineLegends[i] : null;
-                        pl.LinePattern = i % 2 == 0 ? LinePattern.Dashed : LinePattern.Solid;
-                        pl.LineWidth = i % 2 == 0 ? 1 : 2;
                         pl.MarkerSize = 0;
-                        if (i < lineColors.Length)
-                            pl.LineColor = lineColors[i];
+
+                        // 体裁の明示指定があればそれに従う。無い場合は従来どおり、
+                        // 並び順の偶奇で 低減前=破線 / 低減後=実線 とし、色は上の既定配列を使う。
+                        var style = (lineStyles != null && i < lineStyles.Count) ? lineStyles[i] : null;
+                        if (style.HasValue)
+                        {
+                            pl.LinePattern = style.Value.Pattern;
+                            pl.LineWidth = style.Value.Width;
+                            pl.LineColor = style.Value.Color;
+                        }
+                        else
+                        {
+                            pl.LinePattern = i % 2 == 0 ? LinePattern.Dashed : LinePattern.Solid;
+                            pl.LineWidth = i % 2 == 0 ? 1 : 2;
+                            if (i < lineColors.Length)
+                                pl.LineColor = lineColors[i];
+                        }
                     }
                 }
 

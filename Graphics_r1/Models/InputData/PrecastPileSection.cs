@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -203,6 +203,72 @@ namespace PileDesign.Models.InputData
         internal override (double Ec, double Ie, double Ae, double ROuter) GetElasticSectionProps()
             => (PrecastConcrete?.Ec ?? 0.0, Ie, Ae, Ro);
 
+        // ─── せん断耐力の 2 成分（PHC・PRC 共通） ───
+        //
+        // 既製コンクリート杭のせん断耐力は「斜め引張破壊」と「ウェブ破壊」の 2 式で求め、
+        // 小さい方を採る。採用値だけを見てもどちらが効いているか分からないので、
+        // 内訳を返せるようにして Q-N 図に重ねられるようにする。
+        // PHC と PRC は同一の式なのでここに 1 度だけ置き、両クラスの
+        // GetXxxLimitShear もここから min を採る（内訳と採用値がずれないように）。
+        // いずれも低減係数 β を掛ける前の値を返す。
+
+        /// <summary>せん断の断面一次モーメント s0。</summary>
+        private double ShearS0 => 2.0 * (Math.Pow(Ro, 3) - Math.Pow(Ri, 3)) / 3.0;
+
+        /// <summary>肉厚 t。</summary>
+        private double ShearT => (Ro - Ri) / 2.0;
+
+        /// <summary>せん断スパン比による割増 α（1.0〜2.0）。</summary>
+        private protected static double ShearAlpha(double monQd)
+            => Math.Min(Math.Max(4.0 / (monQd + 1.0), 1.0), 2.0);
+
+        /// <summary>PC鋼線の欠損を見込む低減率 η1（鋼線径は 15mm とする）。</summary>
+        private double ShearEta1
+        {
+            get { double t = ShearT; const double dpc = 15.0; return (t - dpc) / t; }
+        }
+
+        /// <summary>ウェブ破壊側のコンクリートのせん断強度 τV。</summary>
+        private double ShearTauV => 1.9 * Math.Pow(Fc, 0.323);
+
+        /// <summary>
+        /// 斜め引張破壊側のせん断応力度。σG = σe + σ0e、σlimit は限界状態ごとの引張応力度。
+        /// </summary>
+        private double ShearTauDiagonal(double sigmaLimit)
+        {
+            double sigmaG = SigmaE + Sigma0E;
+            return 0.5 * Math.Sqrt(Math.Pow(sigmaG + 2.0 * sigmaLimit, 2) - Math.Pow(sigmaG, 2));
+        }
+
+        /// <summary>使用限界せん断力の内訳（斜め引張破壊 / ウェブ破壊）。β 低減前。</summary>
+        internal (double DiagonalTension, double Web) GetServiceLimitShearComponents(double monQd)
+        {
+            double s0 = ShearS0, t = ShearT, alpha = ShearAlpha(monQd);
+            // 使用限界式 (5.4): 斜め引張破壊側は τS のみ ((2/3) 係数なしが正)。
+            double diagonal = 0.6 * alpha * 2.0 * t * I / s0 * ShearTauDiagonal(1.2);
+            // ウェブ破壊側は (2/3)τV (使用限界の安全率)。
+            double web = 0.6 * alpha * ShearEta1 * 2.0 * t * I / s0 * 2.0 / 3.0 * ShearTauV;
+            return (diagonal, web);
+        }
+
+        /// <summary>損傷限界せん断力の内訳（斜め引張破壊 / ウェブ破壊）。β 低減前。</summary>
+        internal (double DiagonalTension, double Web) GetDamageLimitShearComponents(double monQd)
+        {
+            double s0 = ShearS0, t = ShearT, alpha = ShearAlpha(monQd);
+            double diagonal = 0.6 * alpha * 2.0 * t * I / s0 * ShearTauDiagonal(1.8);
+            double web = 0.6 * alpha * ShearEta1 * 2.0 * t * I / s0 * ShearTauV;
+            return (diagonal, web);
+        }
+
+        /// <summary>安全限界せん断力の内訳（斜め引張破壊 / ウェブ破壊）。β 低減前。</summary>
+        internal (double DiagonalTension, double Web) GetUltimateLimitShearComponents(double monQd)
+        {
+            double s0 = ShearS0, t = ShearT, alpha = ShearAlpha(monQd);
+            double diagonal = 0.75 * alpha * 2.0 * t * I / s0 * ShearTauDiagonal(1.8);
+            double web = 0.75 * alpha * ShearEta1 * 2.0 * t * I / s0 * ShearTauV;
+            return (diagonal, web);
+        }
+
         // 限界モーメント取得メソッド
         internal double GetServiceLimitMoment(double beta, double Sigma0E)
         {
@@ -384,22 +450,9 @@ namespace PileDesign.Models.InputData
         private double GetServiceLimitShear(double MonQd, bool isFactored)
         {
             double beta1 = 1.0;
-            double s0 = 2.0 * (Math.Pow(Ro, 3) - Math.Pow(Ri, 3)) / 3.0;
-            double t = (Ro - Ri) / 2.0;
-            double alpha = Math.Min(Math.Max(4.0 / (MonQd + 1.0), 1.0), 2.0);
-            double sigmaG = SigmaE + Sigma0E;
-            double sigmaS = 1.2;
-            double tauS = 0.5 * Math.Sqrt(Math.Pow(sigmaG + 2.0 * sigmaS, 2) - Math.Pow(sigmaG, 2));
-
-            // 使用限界式 (5.4): 斜め引張破壊側は τS のみ ((2/3) 係数なしが正)。
-            double Qs1 = 0.6 * alpha * 2.0 * t * I / s0 * tauS;
-
-            double dpc = 15; // PC鋼線の径を15mmとする
-            double eta1 = (t - dpc) / t;
-            double tauV = 1.9 * Math.Pow(Fc, 0.323);
-            // ウェブ破壊側は (2/3)τV (使用限界の安全率)。
-            double Qs2 = 0.6 * alpha * eta1 * 2.0 * t * I / s0 * 2.0 / 3.0 * tauV;
-            double Qs = Math.Min(Qs1, Qs2);
+            // 式は基底クラスの内訳メソッドに集約している（Q-N 図に重ねる内訳と同じ値を使う）
+            var (diagonal, web) = GetServiceLimitShearComponents(MonQd);
+            double Qs = Math.Min(diagonal, web);
             return isFactored ? beta1 * Qs : Qs;
         }
         /// <summary>
@@ -411,20 +464,8 @@ namespace PileDesign.Models.InputData
             double beta2 = 0.65;
             // L1: β2 を乗じない、L2: β1×β2
             double beta = level == 1 ? beta1 : beta1 * beta2;
-            double s0 = 2.0 * (Math.Pow(Ro, 3) - Math.Pow(Ri, 3)) / 3.0;
-            double t = (Ro - Ri) / 2.0;
-            double alpha = Math.Min(Math.Max(4.0 / (MonQd + 1.0), 1.0), 2.0);
-            double sigmaG = SigmaE + Sigma0E;
-            double sigmaD = 1.8;
-            double tauD = 0.5 * Math.Sqrt(Math.Pow(sigmaG + 2.0 * sigmaD, 2) - Math.Pow(sigmaG, 2));
-
-            double Qd1 = 0.6 * alpha * 2.0 * t * I / s0 * tauD;
-
-            double dpc = 15; // PC鋼線の径を15mmとする
-            double eta1 = (t - dpc) / t;
-            double tauV = 1.9 * Math.Pow(Fc, 0.323);
-            double Qd2 = 0.6 * alpha * eta1 * 2.0 * t * I / s0 * tauV;
-            double Qd = Math.Min(Qd1, Qd2);
+            var (diagonal, web) = GetDamageLimitShearComponents(MonQd);
+            double Qd = Math.Min(diagonal, web);
             return isFactored ? beta * Qd : Qd;
         }
         /// <summary>
@@ -435,20 +476,8 @@ namespace PileDesign.Models.InputData
             double beta1 = 1.0;
             double beta2 = 0.65;
 
-            double s0 = 2.0 * (Math.Pow(Ro, 3) - Math.Pow(Ri, 3)) / 3.0;
-            double t = (Ro - Ri) / 2.0;
-            double alpha = Math.Min(Math.Max(4.0 / (MonQd + 1.0), 1.0), 2.0);
-            double sigmaG = SigmaE + Sigma0E;
-            double sigmaD = 1.8;
-            double tauD = 0.5 * Math.Sqrt(Math.Pow(sigmaG + 2.0 * sigmaD, 2) - Math.Pow(sigmaG, 2));
-
-            double Qu1 = 0.75 * alpha * 2.0 * t * I / s0 * tauD;
-
-            double dpc = 15; // PC鋼線の径を15mmとする
-            double eta1 = (t - dpc) / t;
-            double tauV = 1.9 * Math.Pow(Fc, 0.323);
-            double Qu2 = 0.75 * alpha * eta1 * 2.0 * t * I / s0 * tauV;
-            double Qu = Math.Min(Qu1, Qu2);
+            var (diagonal, web) = GetUltimateLimitShearComponents(MonQd);
+            double Qu = Math.Min(diagonal, web);
             return isFactored ? beta1 * beta2 * Qu : Qu;
         }
 
@@ -1014,22 +1043,9 @@ namespace PileDesign.Models.InputData
         private double GetServiceLimitShear(double MonQd, bool isFactored)
         {
             double beta1 = 1.0;
-            double s0 = 2.0 * (Math.Pow(Ro, 3) - Math.Pow(Ri, 3)) / 3.0;
-            double t = (Ro - Ri) / 2.0;
-            double alpha = Math.Min(Math.Max(4.0 / (MonQd + 1.0), 1.0), 2.0);
-            double sigmaG = SigmaE + Sigma0E;
-            double sigmaS = 1.2;
-            double tauS = 0.5 * Math.Sqrt(Math.Pow(sigmaG + 2.0 * sigmaS, 2) - Math.Pow(sigmaG, 2));
-
-            // 使用限界式 (5.4): 斜め引張破壊側は τS のみ ((2/3) 係数なしが正)。
-            double Qs1 = 0.6 * alpha * 2.0 * t * I / s0 * tauS;
-
-            double dpc = 15; // PC鋼線の径を15mmとする
-            double eta1 = (t - dpc) / t;
-            double tauV = 1.9 * Math.Pow(Fc, 0.323);
-            // ウェブ破壊側は (2/3)τV (使用限界の安全率)。
-            double Qs2 = 0.6 * alpha * eta1 * 2.0 * t * I / s0 * 2.0 / 3.0 * tauV;
-            double Qs = Math.Min(Qs1, Qs2);
+            // 式は基底クラスの内訳メソッドに集約している（Q-N 図に重ねる内訳と同じ値を使う）
+            var (diagonal, web) = GetServiceLimitShearComponents(MonQd);
+            double Qs = Math.Min(diagonal, web);
             return isFactored ? beta1 * Qs : Qs;
         }
         /// <summary>
@@ -1041,20 +1057,8 @@ namespace PileDesign.Models.InputData
             double beta2 = 0.65;
             // L1: β2 を乗じない、L2: β1×β2
             double beta = level == 1 ? beta1 : beta1 * beta2;
-            double s0 = 2.0 * (Math.Pow(Ro, 3) - Math.Pow(Ri, 3)) / 3.0;
-            double t = (Ro - Ri) / 2.0;
-            double alpha = Math.Min(Math.Max(4.0 / (MonQd + 1.0), 1.0), 2.0);
-            double sigmaG = SigmaE + Sigma0E;
-            double sigmaD = 1.8;
-            double tauD = 0.5 * Math.Sqrt(Math.Pow(sigmaG + 2.0 * sigmaD, 2) - Math.Pow(sigmaG, 2));
-
-            double Qd1 = 0.6 * alpha * 2.0 * t * I / s0 * tauD;
-
-            double dpc = 15; // PC鋼線の径を15mmとする
-            double eta1 = (t - dpc) / t;
-            double tauV = 1.9 * Math.Pow(Fc, 0.323);
-            double Qd2 = 0.6 * alpha * eta1 * 2.0 * t * I / s0 * tauV;
-            double Qd = Math.Min(Qd1, Qd2);
+            var (diagonal, web) = GetDamageLimitShearComponents(MonQd);
+            double Qd = Math.Min(diagonal, web);
             return isFactored ? beta * Qd : Qd;
         }
         /// <summary>
@@ -1065,20 +1069,8 @@ namespace PileDesign.Models.InputData
             double beta1 = 1.0;
             double beta2 = 0.65;
 
-            double s0 = 2.0 * (Math.Pow(Ro, 3) - Math.Pow(Ri, 3)) / 3.0;
-            double t = (Ro - Ri) / 2.0;
-            double alpha = Math.Min(Math.Max(4.0 / (MonQd + 1.0), 1.0), 2.0);
-            double sigmaG = SigmaE + Sigma0E;
-            double sigmaD = 1.8;
-            double tauD = 0.5 * Math.Sqrt(Math.Pow(sigmaG + 2.0 * sigmaD, 2) - Math.Pow(sigmaG, 2));
-
-            double Qu1 = 0.75 * alpha * 2.0 * t * I / s0 * tauD;
-
-            double dpc = 15; // PC鋼線の径を15mmとする
-            double eta1 = (t - dpc) / t;
-            double tauV = 1.9 * Math.Pow(Fc, 0.323);
-            double Qu2 = 0.75 * alpha * eta1 * 2.0 * t * I / s0 * tauV;
-            double Qu = Math.Min(Qu1, Qu2);
+            var (diagonal, web) = GetUltimateLimitShearComponents(MonQd);
+            double Qu = Math.Min(diagonal, web);
             return isFactored ? beta1 * beta2 * Qu : Qu;
         }
 

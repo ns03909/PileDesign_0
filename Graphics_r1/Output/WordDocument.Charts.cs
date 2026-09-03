@@ -1,6 +1,8 @@
 ﻿using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using PileDesign.Common;
 using PileDesign.FEM;
+using ScottPlot;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
@@ -369,6 +371,38 @@ namespace PileDesign.Output
                         Log.Debug($"[WordDoc] NQ曲線取得失敗 (杭体:{pileBody.PileBodyRef}, 区間:{segment.No}): {ex.Message}");
                     }
 
+                    // PHC・PRC のせん断耐力は「斜め引張破壊」と「ウェブ破壊」の 2 式の小さい方で
+                    // 決まる。採用値だけではどちらが効いているか分からないので、内訳を点線で重ねる。
+                    // β 低減前なので、2 本の小さい方が「低減前」の破線に一致する。
+                    // 上の 6 本は体裁を既定（並び順の偶奇）に任せるため null を並べておく。
+                    var nqLineStyles =
+                        new List<(LinePattern Pattern, ScottPlot.Color Color, float Width)?>(
+                            Enumerable.Repeat<(LinePattern, ScottPlot.Color, float)?>(null, lineListsX.Count));
+                    try
+                    {
+                        var componentColors = new Dictionary<string, ScottPlot.Color>
+                        {
+                            ["安全限界"] = ScottPlot.Color.FromSKColor(NikkenSKColor.PaleRed),
+                            ["損傷限界"] = ScottPlot.Color.FromSKColor(NikkenSKColor.Green),
+                            ["使用限界"] = ScottPlot.Color.FromSKColor(NikkenSKColor.DeepBlue),
+                        };
+                        foreach (var c in pileSection.ComputeQNShearComponents(3.0))
+                        {
+                            if (!(c.N?.Count > 0) || !(c.Q?.Count > 0)) continue;
+                            lineListsX.Add(ToList(c.N));
+                            lineListsY.Add(ToList(c.Q));
+                            lineListsLegend.Add(
+                                ConcreteModelOptions.MapLimitStateText($"低減前{c.LimitState}") + $"（{c.Mode}）");
+                            var color = componentColors.TryGetValue(c.LimitState, out var col)
+                                ? col : ScottPlot.Color.FromSKColor(NikkenSKColor.Green);
+                            nqLineStyles.Add((LinePattern.Dotted, color.WithAlpha(0.55), 1f));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug($"[WordDoc] NQ曲線取得失敗 (杭体:{pileBody.PileBodyRef}, 区間:{segment.No}): {ex.Message}");
+                    }
+
                     // 散布点
                     List<double> axialForceResultsVL = [];
                     List<double> shearResultsVL = [];
@@ -488,7 +522,7 @@ namespace PileDesign.Output
                         lineListsX, lineListsY, lineListsLegend,
                         xsLists, ysLists, legends,
                         "", "軸力[kN]", "せん断力[kN]",
-                        150, 150);
+                        150, 150, showLegend: true, lineStyles: nqLineStyles);
 
                     AddAutoFigureCaption(body,
                         $"軸力-せん断力関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",

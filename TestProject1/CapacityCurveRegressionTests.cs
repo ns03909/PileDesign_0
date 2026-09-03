@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.InputData;
+﻿using PileDesign.Constants;
+using PileDesign.Models.InputData;
 using PileDesign.Models.PileLibrary;
 using PileDesign.Services;
 using System.Collections.Generic;
@@ -203,6 +204,65 @@ namespace TestProject1
             Assert.IsTrue(variation > 0.01,
                 $"SPRC安全限界せん断が軸力にほぼ依存していない（variation={variation:P2}）。" +
                 "GetUltimateLimitShear のせん断面積式（A2）を確認。");
+        }
+
+        // ---- PHC・PRC のせん断耐力の内訳（斜め引張破壊 / ウェブ破壊）----
+        // 2 式の小さい方が採用値になる。内訳を図に重ねられるようにしたので、
+        // 「内訳の小さい方が低減前の採用値と一致する」ことを固定する。
+        // ここがずれると、図の点線と実線が食い違っていても誰も気づかない。
+        [TestMethod]
+        public void Precast_ShearComponents_MinimumMatchesAdoptedCurve()
+        {
+            ResetOptions();
+
+            foreach (string sectionType in new[] { PileTypeNames.Phc, PileTypeNames.Prc })
+            {
+                var lib = sectionType == PileTypeNames.Phc ? PileSection.PHCs : PileSection.PRCs;
+                if (lib == null || lib.Count == 0) continue;
+
+                var s = CreatePrecastSection(sectionType, lib, "400");
+                var components = s.ComputeQNShearComponents(3.0);
+
+                Assert.AreEqual(6, components.Count,
+                    $"{sectionType}: 内訳は 3 限界状態 × 2 モードの 6 本のはず");
+
+                foreach (var (limitState, adopted) in new[]
+                {
+                    ("使用限界", s.UnfactoredServiceNQ),
+                    ("損傷限界", s.UnfactoredDamageNQ),
+                    ("安全限界", s.UnfactoredUltimateNQ),
+                })
+                {
+                    var two = components.Where(c => c.LimitState == limitState).ToList();
+                    Assert.AreEqual(2, two.Count, $"{sectionType} {limitState}: 内訳が 2 本でない");
+
+                    double minOfComponents = two.Min(c => c.Q[0]);
+                    double adoptedQ = adopted.Q[0];
+                    Assert.IsTrue(adoptedQ > 0, $"{sectionType} {limitState}: 採用値が 0");
+                    Assert.AreEqual(adoptedQ, minOfComponents, adoptedQ * 1e-9,
+                        $"{sectionType} {limitState}: 内訳の小さい方が低減前の採用値と一致しない");
+
+                    // 内訳はどちらも正で、破壊モードの名前が付いている
+                    foreach (var c in two)
+                    {
+                        Assert.IsTrue(c.Q[0] > 0, $"{sectionType} {limitState} {c.Mode}: 内訳が非正");
+                        Assert.IsTrue(c.Mode is "斜め引張破壊" or "ウェブ破壊",
+                            $"想定外の破壊モード名: {c.Mode}");
+                    }
+                }
+            }
+        }
+
+        // ---- 対象外の杭種では内訳を返さない ----
+        // SC は式が別系統、場所打ち系は 2 式に分かれない。空を返さないと図に無意味な線が出る。
+        [TestMethod]
+        public void ShearComponents_AreEmptyForOtherPileTypes()
+        {
+            ResetOptions();
+            Assert.AreEqual(0, CreateInsituRcSection().ComputeQNShearComponents(3.0).Count,
+                "場所打ちRC杭で内訳が返っている");
+            Assert.AreEqual(0, CreateSprcSection().ComputeQNShearComponents(3.0).Count,
+                "場所打ち鋼管コンクリート杭で内訳が返っている");
         }
 
         // ===== 既製杭（PrecastPileSection: PHC / SC）=====
