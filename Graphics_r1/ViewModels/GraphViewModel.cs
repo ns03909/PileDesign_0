@@ -1456,15 +1456,9 @@ namespace PileDesign.ViewModels
                 string qDamageLabel = ConcreteModelOptions.MapLimitStateText(isGradeAQ ? "レベル1 損傷限界" : "レベル2 損傷限界");
 
                 // 損傷限界はレベル別に再計算
-                var qnCurves = pileSection.ComputeQNForMonQd(MonQd, damageLevel: qDamageLevel);
-                if (qnCurves.UnfactoredService.N == null)
-                {
-                    qnCurves = (
-                        pileSection.UnfactoredServiceNQ, pileSection.FactoredServiceNQ,
-                        pileSection.UnfactoredDamageNQ, pileSection.FactoredDamageNQ,
-                        pileSection.UnfactoredUltimateNQ, pileSection.FactoredUltimateNQ
-                    );
-                }
+                // 曲線の取り出しは PileSection.GetQNCurvesForLevel に一本化してある
+                // (鋼管杭のように MonQd 別の再計算ができない断面へのフォールバックも中にある)。
+                var qnCurves = pileSection.GetQNCurvesForLevel(qDamageLevel, MonQd);
 
                 // 限界ごとの色: 損傷=NikkenGreen, 安全=NikkenPaleRed
                 var qnDamageColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x23 << 16) | (0x89 << 8) | 0x66))); // NikkenGreen #238966
@@ -1493,7 +1487,7 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                // PHC・PRC のせん断耐力は「斜め引張破壊」と「ウェブ破壊」の 2 式の小さい方で決まる。
+                // PHC・PRC のせん断耐力は「斜めひび割れ」と「縦ひび割れ」の 2 式の小さい方で決まる。
                 // どちらが効いているか分かるよう、内訳を点線で重ねる（β 低減前なので、
                 // 2 本の小さい方が「低減前」の破線に一致する）。対象外の杭種では空。
                 var shearComponents = pileSection.ComputeQNShearComponents(MonQd);
@@ -2018,14 +2012,18 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 選択された限界状態に対応するNM曲線を取得
         /// </summary>
-        private static (List<double> N, List<double> M) GetLimitStateNMCurve(PileSection pileSection, string limitState)
+        private (List<double> N, List<double> M) GetLimitStateNMCurve(PileSection pileSection, string limitState)
         {
+            // 損傷限界はレベルで低減係数が変わる。グレードA は損傷限界をレベル1 で、
+            // グレードS はレベル2 で照査するので、描く曲線もそのレベルに合わせる
+            // (計算書・検定と同じ規則)。
+            var factoredDamage = pileSection.GetFactoredDamageNM(DamageLevelForGrade);
             return limitState switch
             {
                 "低減前使用限界状態" => (pileSection.UnfactoredServiceNM.N, pileSection.UnfactoredServiceNM.M),
                 "低減後使用限界状態" => (pileSection.FactoredServiceNM.N, pileSection.FactoredServiceNM.M),
                 "低減前損傷限界状態" => (pileSection.UnfactoredDamageNM.N, pileSection.UnfactoredDamageNM.M),
-                "低減後損傷限界状態" => (pileSection.FactoredDamageNM.N, pileSection.FactoredDamageNM.M),
+                "低減後損傷限界状態" => (factoredDamage.N, factoredDamage.M),
                 "低減前安全限界状態" => (pileSection.UnfactoredUltimateNM.N, pileSection.UnfactoredUltimateNM.M),
                 "低減後安全限界状態" => (pileSection.FactoredUltimateNM.N, pileSection.FactoredUltimateNM.M),
                 _ => (null, null)
@@ -2033,18 +2031,25 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 損傷限界を照査する地震動レベル。グレードA はレベル1、グレードS はレベル2。
+        /// 限界曲線を選ぶすべての場所で同じ規則を使う。
+        /// </summary>
+        private int DamageLevelForGrade => SelectedSeismicGrade == "S" ? 2 : 1;
+
+        /// <summary>
         /// 選択された限界状態に対応するNQ曲線を取得
         /// </summary>
-        private static (List<double> N, List<double> Q) GetLimitStateNQCurve(PileSection pileSection, string limitState)
+        private (List<double> N, List<double> Q) GetLimitStateNQCurve(PileSection pileSection, string limitState)
         {
+            var qn = pileSection.GetQNCurvesForLevel(DamageLevelForGrade, MonQd);
             return limitState switch
             {
-                "低減前使用限界状態" => (pileSection.UnfactoredServiceNQ.N, pileSection.UnfactoredServiceNQ.Q),
-                "低減後使用限界状態" => (pileSection.FactoredServiceNQ.N, pileSection.FactoredServiceNQ.Q),
-                "低減前損傷限界状態" => (pileSection.UnfactoredDamageNQ.N, pileSection.UnfactoredDamageNQ.Q),
-                "低減後損傷限界状態" => (pileSection.FactoredDamageNQ.N, pileSection.FactoredDamageNQ.Q),
-                "低減前安全限界状態" => (pileSection.UnfactoredUltimateNQ.N, pileSection.UnfactoredUltimateNQ.Q),
-                "低減後安全限界状態" => (pileSection.FactoredUltimateNQ.N, pileSection.FactoredUltimateNQ.Q),
+                "低減前使用限界状態" => (qn.UnfactoredService.N, qn.UnfactoredService.Q),
+                "低減後使用限界状態" => (qn.FactoredService.N, qn.FactoredService.Q),
+                "低減前損傷限界状態" => (qn.UnfactoredDamage.N, qn.UnfactoredDamage.Q),
+                "低減後損傷限界状態" => (qn.FactoredDamage.N, qn.FactoredDamage.Q),
+                "低減前安全限界状態" => (qn.UnfactoredUltimate.N, qn.UnfactoredUltimate.Q),
+                "低減後安全限界状態" => (qn.FactoredUltimate.N, qn.FactoredUltimate.Q),
                 _ => (null, null)
             };
         }

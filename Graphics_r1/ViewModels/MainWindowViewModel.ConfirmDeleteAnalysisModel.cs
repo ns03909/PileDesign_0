@@ -137,6 +137,19 @@ namespace PileDesign.ViewModels
             return true;
         }
 
+        /// <summary>入力モデル 1 つぶんの沈下結果を消す。現在の入力とスナップショットの両方に使う。</summary>
+        private static void ClearSettlementResultsIn(Models.InputData.InputModel? input)
+        {
+            var pgs = input?.PileGroupSettlement;
+            if (pgs == null) return;
+
+            pgs.CaseRecords?.Clear();
+            pgs.ActiveCaseIndex = -1;
+            pgs.SettlementGridData = [];
+            if (input!.PileLayoutItems != null)
+                foreach (var pile in input.PileLayoutItems) pile.GroupPileSettlement = 0;
+        }
+
         // テスト用フック (内部ロジックをそのまま検証する)
         internal bool HasSettlementResultsForTest() => HasSettlementResults();
         internal void ClearSettlementResultsForTest() => ClearSettlementResults();
@@ -153,22 +166,20 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 沈下解析の結果を現在の入力から破棄する。
-        /// これらは入力モデルの中に格納されているため、解析結果セットでは切り離せない。
+        /// 沈下解析の結果を破棄する。
+        ///
+        /// 沈下の結果は入力モデルの中に格納されているので、現在の入力と
+        /// <b>解析時のスナップショット</b>の両方から消す。結果表示はスナップショットを読むため、
+        /// 現在の入力だけ消すと「削除しました」と言いながら結果テーブルに残る。
         /// </summary>
         private void ClearSettlementResults()
         {
             IsVerticalAnalysisDone = false;
             IsGroupPileSettlementAnalysisDone = false;
 
-            var pgs = CurrentInputModel?.PileGroupSettlement;
-            if (pgs == null) return;
+            ClearSettlementResultsIn(CurrentResultSet?.InputSnapshot);
+            ClearSettlementResultsIn(CurrentInputModel);
 
-            pgs.CaseRecords?.Clear();
-            pgs.ActiveCaseIndex = -1;
-            pgs.SettlementGridData = [];
-            if (CurrentInputModel?.PileLayoutItems != null)
-                foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
             OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
             OnPropertyChanged(nameof(HasGroupSettlementBeamAwareCases));
             OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));

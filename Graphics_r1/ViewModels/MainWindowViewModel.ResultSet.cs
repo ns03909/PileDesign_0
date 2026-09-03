@@ -116,8 +116,13 @@ namespace PileDesign.ViewModels
 
             if (InputChangedSinceAnalysis && horizontalIsStillTheCapturedOne)
             {
+                // 水平解析の結果は解析時のまま据え置くが、いま終わった沈下の結果だけは
+                // スナップショットへ移す。移さないと、水平解析のあとに入力を編集して沈下を
+                // 実行した場合に、結果表示 (ResultInputModel) が沈下の結果を持たないまま残る。
+                RefreshSettlementResultsInSnapshot();
                 Serilog.Log.Information(
-                    "[結果セット] 入力が編集済みのためスナップショットは取り直さない (水平解析結果は解析時のまま)");
+                    "[結果セット] 入力が編集済みのためスナップショットは取り直さない "
+                    + "(水平解析結果は解析時のまま。沈下の結果だけ移した)");
                 return;
             }
 
@@ -139,6 +144,53 @@ namespace PileDesign.ViewModels
             CurrentResultSet = set;
             if (set.AnaModel != null) CurrentModel = set.AnaModel;
             InputChangedSinceAnalysis = false;
+        }
+
+        /// <summary>
+        /// 沈下の結果 (群杭沈下の記録・グリッド・各杭の沈下量) を、
+        /// 既存のスナップショットへ写す。
+        ///
+        /// 沈下の結果は入力モデルの中に格納されているため、スナップショットを取り直さない限り
+        /// 結果表示から見えない。取り直すと「編集後の入力」と「解析時の水平解析結果」が
+        /// 1 組に組み直されてしまうので、沈下の部分だけを写す。
+        ///
+        /// 記録 (<see cref="GroupSettlementCaseRecord"/>) は杭を PileNo で参照する自己完結した
+        /// データなので、複製してもモデルをまたぐ参照は生まれない。
+        /// </summary>
+        private void RefreshSettlementResultsInSnapshot()
+        {
+            var live = CurrentInputModel?.PileGroupSettlement;
+            var snapshot = _currentResultSet?.InputSnapshot;
+            if (live == null || snapshot == null) return;
+
+            try
+            {
+                // 旧いファイル由来のモデルでは沈下の入れ物ごと無い場合がある。
+                // 無いまま黙って戻ると、沈下の結果が結果表示に出ない理由が追えなくなる。
+                snapshot.PileGroupSettlement ??= new PileGroupSettlement();
+                var snapPgs = snapshot.PileGroupSettlement;
+
+                var records = Common.DeepCopyUtil.CloneJson(live.CaseRecords);
+                snapPgs.CaseRecords = records ?? [];
+                snapPgs.ActiveCaseIndex = live.ActiveCaseIndex;
+                snapPgs.ActiveLoadingType = live.ActiveLoadingType;
+                snapPgs.SettlementGridData =
+                    Common.DeepCopyUtil.CloneJson(live.LegacySettlementGridData) ?? [];
+
+                // 各杭が持つ沈下量は表示用の複製なので、入力側から読み写すのではなく
+                // 写した記録 (表示中のケース) から引き直す。正は記録の側にある。
+                if (snapshot.PileLayoutItems != null)
+                {
+                    foreach (var pile in snapshot.PileLayoutItems)
+                        pile.GroupPileSettlement = snapPgs.SettlementOf(pile.PileNo);
+                }
+            }
+            catch (Exception ex)
+            {
+                // 写せなくても解析自体は成立している。結果表示が沈下を出さないだけなので、
+                // 例外で解析完了の後処理を止めない。
+                Serilog.Log.Warning(ex, "[結果セット] 沈下の結果をスナップショットへ写せなかった");
+            }
         }
 
         /// <summary>

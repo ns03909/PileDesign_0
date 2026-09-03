@@ -206,7 +206,7 @@ namespace TestProject1
                 "GetUltimateLimitShear のせん断面積式（A2）を確認。");
         }
 
-        // ---- PHC・PRC のせん断耐力の内訳（斜め引張破壊 / ウェブ破壊）----
+        // ---- PHC・PRC のせん断耐力の内訳（斜めひび割れ / 縦ひび割れ）----
         // 2 式の小さい方が採用値になる。内訳を図に重ねられるようにしたので、
         // 「内訳の小さい方が低減前の採用値と一致する」ことを固定する。
         // ここがずれると、図の点線と実線が食い違っていても誰も気づかない。
@@ -246,9 +246,55 @@ namespace TestProject1
                     foreach (var c in two)
                     {
                         Assert.IsTrue(c.Q[0] > 0, $"{sectionType} {limitState} {c.Mode}: 内訳が非正");
-                        Assert.IsTrue(c.Mode is "斜め引張破壊" or "ウェブ破壊",
+                        Assert.IsTrue(c.Mode is "斜めひび割れ" or "縦ひび割れ",
                             $"想定外の破壊モード名: {c.Mode}");
                     }
+                }
+            }
+        }
+
+        // ---- PHC・PRC の斜めひび割れは軸力に依存（σG = σe + σ0e, σ0e = N/Ae）----
+        // σ0e を渡し忘れると σG が有効プレストレスだけになり、Q-N が完全な水平線になる。
+        // N の掃引範囲そのものが σG = 4.0 〜 Fc/3.5 を動くように決められているので、
+        // 水平になっている時点で軸力が効いていない（実際に長らくそうなっていた）。
+        // 一方縦ひび割れ側は τV に σG を含まないので軸力に依存しない。両方を固定する。
+        [TestMethod]
+        public void Precast_ShearDiagonalTension_VariesWithAxialForce()
+        {
+            ResetOptions();
+
+            foreach (string sectionType in new[] { PileTypeNames.Phc, PileTypeNames.Prc })
+            {
+                var lib = sectionType == PileTypeNames.Phc ? PileSection.PHCs : PileSection.PRCs;
+                if (lib == null || lib.Count == 0) continue;
+
+                var s = CreatePrecastSection(sectionType, lib, "400");
+                var components = s.ComputeQNShearComponents(3.0);
+
+                foreach (string limitState in new[] { "使用限界", "損傷限界", "安全限界" })
+                {
+                    var diagonal = components.Single(
+                        c => c.LimitState == limitState && c.Mode == "斜めひび割れ");
+                    var web = components.Single(
+                        c => c.LimitState == limitState && c.Mode == "縦ひび割れ");
+
+                    AssertAllFinite(diagonal.Q, $"{sectionType} {limitState} 斜めひび割れ");
+
+                    // 圧縮軸力が増えるほど斜めひび割れのせん断耐力は上がる（単調非減少）
+                    for (int i = 1; i < diagonal.Q.Count; i++)
+                        Assert.IsTrue(diagonal.Q[i] >= diagonal.Q[i - 1] * (1.0 - 1e-9),
+                            $"{sectionType} {limitState}: 斜めひび割れが軸力に対して単調増加でない");
+
+                    double lo = diagonal.Q[0];
+                    double hi = diagonal.Q[^1];
+                    Assert.IsTrue(hi > lo * 1.2,
+                        $"{sectionType} {limitState}: 斜めひび割れが軸力でほとんど変わらない " +
+                        $"({lo:F1}→{hi:F1} kN)。ShearTauDiagonal に σ0e = N/Ae を渡しているか確認。");
+
+                    // 縦ひび割れは τV = 1.9·Fc^0.323 で σG を含まないため軸力に依存しない
+                    foreach (double q in web.Q)
+                        Assert.AreEqual(web.Q[0], q, web.Q[0] * 1e-9,
+                            $"{sectionType} {limitState}: 縦ひび割れが軸力に依存している");
                 }
             }
         }

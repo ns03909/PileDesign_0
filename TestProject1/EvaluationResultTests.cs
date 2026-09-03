@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.Results;
 using System.Linq;
 using System.Text;
@@ -25,6 +25,7 @@ namespace TestProject1
             TargetName = "beam",
             EndLabel = end,
             PileBodyNo = 7,
+            PileNo = 12,
             SegmentIndex = 3,
             LoadCaseName = "L2-1",
             LoadCombinationName = "cmb1",
@@ -145,7 +146,7 @@ namespace TestProject1
             EvaluationTextFormatter.AppendItem(sb, Moment(3000.05, 2685.14));
 
             Assert.AreEqual(
-                "  [NG] 安全限界超過（i端）: beam  杭配置No.7 / 要素3\r\n" +
+                "  [NG] 安全限界超過（i端）: beam  杭No.12 / 杭体No.7 / 要素3\r\n" +
                 "       荷重ケース: L2-1 / 組合せ: cmb1 / 液状化有\r\n" +
                 "       M=3000.1 kNm > 安全限界M=2685.1 kNm (N=2452.0 kN)\r\n" +
                 "\r\n",
@@ -159,7 +160,7 @@ namespace TestProject1
             EvaluationTextFormatter.AppendItem(sb, Moment(376.94, 2685.14, "j端"));
 
             Assert.AreEqual(
-                "  [OK] 安全限界（j端）: beam  杭配置No.7 / 要素3\r\n" +
+                "  [OK] 安全限界（j端）: beam  杭No.12 / 杭体No.7 / 要素3\r\n" +
                 "       荷重ケース: L2-1 / 組合せ: cmb1 / 液状化有\r\n" +
                 "       M=376.9 kNm ≤ 安全限界M=2685.1 kNm (N=2452.0 kN)\r\n" +
                 "\r\n",
@@ -187,7 +188,7 @@ namespace TestProject1
             EvaluationTextFormatter.AppendItem(sb, item);
 
             Assert.AreEqual(
-                "  [NG] θ超過（場所打ちRC杭）: RS-1  杭配置No.4\r\n" +
+                "  [NG] θ超過（場所打ちRC杭）: RS-1  杭体No.4\r\n" +
                 "       荷重ケース: L2-1 / 組合せ: cmb1 / 液状化無\r\n" +
                 "       θ=0.01235 rad > 0.01 rad\r\n" +
                 "\r\n",
@@ -220,7 +221,7 @@ namespace TestProject1
         public void Descriptions_IdentifyTheTargetAndCondition()
         {
             var item = Moment(1150, 1000);
-            Assert.AreEqual("杭配置No.7 / 要素3 / i端", item.TargetDescription);
+            Assert.AreEqual("杭No.12 / 杭体No.7 / 要素3 / i端", item.TargetDescription);
             Assert.AreEqual("L2-1 / cmb1 / 液状化有", item.ConditionDescription);
 
             var beam = new EvaluationItem
@@ -230,6 +231,22 @@ namespace TestProject1
                 TargetName = "FoundationBeam-12",
             };
             Assert.AreEqual("基礎梁 #12", beam.TargetDescription);
+        }
+
+        /// <summary>
+        /// 杭体は複数の杭で共有されるので、杭体番号だけでは行を特定できない。
+        /// 杭が分かるときは杭No. を併記し、分からないときは杭体No. だけを名乗る
+        /// (「杭配置No.」と名乗って杭体番号を出すと、別の杭の行が同じ表記になる)。
+        /// </summary>
+        [TestMethod]
+        public void TargetDescription_DistinguishesPilesSharingAPileBody()
+        {
+            var withPile = Moment(1150, 1000);
+            Assert.AreEqual("杭No.12 / 杭体No.7 / 要素3 / i端", withPile.TargetDescription);
+
+            var withoutPile = withPile with { PileNo = null };
+            Assert.AreEqual("杭体No.7 / 要素3 / i端", withoutPile.TargetDescription,
+                "杭が特定できないときに杭No. を名乗ってはいけない");
         }
     }
 }

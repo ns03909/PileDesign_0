@@ -453,8 +453,10 @@ namespace PileDesign.ViewModels
         /// </summary>
         private List<ResultTable> BuildGroupSettlementBeamAwareTables()
         {
+            // 出所は解析時のスナップショット (ResultInputModel)。現在の入力を読むと、
+            // 解析後に杭を足したり配置を変えたりした状態で結果の行を組むことになる。
             var tables = new List<ResultTable>();
-            var pgs = CurrentInputModel?.PileGroupSettlement;
+            var pgs = ResultInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords == null) return tables;
 
             const string category = "群杭沈下解析（反復）";
@@ -465,10 +467,10 @@ namespace PileDesign.ViewModels
                 string caseName = rec.LoadCaseName ?? "";
 
                 // 杭結果テーブル: PileSettlements_mm / PileReactions_kN / SpringStiffness を統合した行
-                if (CurrentInputModel.PileLayoutItems != null && rec.PileSettlements_mm.Count > 0)
+                if (ResultInputModel.PileLayoutItems != null && rec.PileSettlements_mm.Count > 0)
                 {
                     var rows = new List<object>();
-                    foreach (var pile in CurrentInputModel.PileLayoutItems)
+                    foreach (var pile in ResultInputModel.PileLayoutItems)
                     {
                         rec.PileSettlements_mm.TryGetValue(pile.PileNo, out double s);
                         rec.PileReactions_kN.TryGetValue(pile.PileNo, out double r);
@@ -570,7 +572,7 @@ namespace PileDesign.ViewModels
         private List<ResultTable> BuildGroupSettlementNonBeamAwareTables()
         {
             var tables = new List<ResultTable>();
-            var pgs = CurrentInputModel?.PileGroupSettlement;
+            var pgs = ResultInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords == null) return tables;
 
             const string category = "群杭沈下解析（一般）";
@@ -581,7 +583,7 @@ namespace PileDesign.ViewModels
                 string caseName = rec.LoadCaseName ?? "";
 
                 // 杭結果: 杭ごとの 沈下量 (反力やばねは無いが LinkedPileNo に紐付く矩形荷重 QA を表示)
-                if (CurrentInputModel.PileLayoutItems != null && rec.PileSettlements_mm.Count > 0)
+                if (ResultInputModel.PileLayoutItems != null && rec.PileSettlements_mm.Count > 0)
                 {
                     var loadByPile = new Dictionary<int, double>();
                     if (rec.RectLoads != null)
@@ -596,7 +598,7 @@ namespace PileDesign.ViewModels
                         }
                     }
                     var rows = new List<object>();
-                    foreach (var pile in CurrentInputModel.PileLayoutItems)
+                    foreach (var pile in ResultInputModel.PileLayoutItems)
                     {
                         rec.PileSettlements_mm.TryGetValue(pile.PileNo, out double s);
                         loadByPile.TryGetValue(pile.PileNo, out double load);
@@ -627,7 +629,7 @@ namespace PileDesign.ViewModels
 
                     // 節点変位 (一般): 梁解析を行わないため、杭頭位置 (= 節点) と Uz のみ。
                     var nodeRows = new List<object>();
-                    foreach (var pile in CurrentInputModel.PileLayoutItems)
+                    foreach (var pile in ResultInputModel.PileLayoutItems)
                     {
                         rec.PileSettlements_mm.TryGetValue(pile.PileNo, out double s);
                         nodeRows.Add(new NonBeamAwareNodeRow
@@ -758,7 +760,7 @@ namespace PileDesign.ViewModels
                 logSources["単杭沈下解析（基礎梁考慮）"] = VerticalBeamAnalysisLogs;
 
             // 個別矩形（基礎梁考慮）反復解析の永続化ログ
-            var pgs = CurrentInputModel?.PileGroupSettlement;
+            var pgs = ResultInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords != null)
             {
                 foreach (var rec in pgs.CaseRecords.Where(r => r.IsBeamAware && r.IterationLog?.Count > 0))
@@ -776,7 +778,7 @@ namespace PileDesign.ViewModels
         {
             if (HorizontalAnalysisLogs.Count > 0) return true;
             if (VerticalBeamAnalysisLogs.Count > 0) return true;
-            var pgs = CurrentInputModel?.PileGroupSettlement;
+            var pgs = ResultInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords?.Any(r => r.IsBeamAware && r.IterationLog?.Count > 0) == true) return true;
             return false;
         }

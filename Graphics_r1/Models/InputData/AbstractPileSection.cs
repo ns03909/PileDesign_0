@@ -62,7 +62,6 @@ namespace PileDesign.Models.InputData
         public List<double> UltimateLimitBeta { get; protected set; } = [];
 
         public int DivisionNum { get; protected set; } = 100;
-        public double DeltaCurvature { get; protected set; }
 
         public (List<double>, List<double>, List<double>, List<double>) UnfactoredServiceNM { get; protected set; }
         public (List<double>, List<double>, List<double>, List<double>) UnfactoredDamageNM { get; protected set; }

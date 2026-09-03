@@ -135,7 +135,6 @@ namespace PileDesign.Models.InputData
         public double Rp { get; protected set; } // PC鋼材配置半径
 
         public double As { get; protected set; } // 主筋断面積
-        public double Rs { get; protected set; } // 主筋配置半径
 
         public double Ag { get; protected set; } // 
         public double Rg { get; protected set; } // 
@@ -146,7 +145,8 @@ namespace PileDesign.Models.InputData
         public double Ie { get; protected set; } //  換算断面二次モーメント
         public double I { get; protected set; } // 断面二次モーメント
         public double Fts { get; protected set; } // 
-        public double Sigma0E { get; protected set; } // 平均軸応力度　N/Ae
+        // 平均軸応力度 σ0e = N/Ae は断面に固定の量ではないので、フィールドに持たず
+        // 曲げ (GetXxxLimitMoment) と同じく軸力ごとに引数で渡す。
 
         public new double CurvatureMaxUltimateLimit { get; protected set; }
 
@@ -205,7 +205,7 @@ namespace PileDesign.Models.InputData
 
         // ─── せん断耐力の 2 成分（PHC・PRC 共通） ───
         //
-        // 既製コンクリート杭のせん断耐力は「斜め引張破壊」と「ウェブ破壊」の 2 式で求め、
+        // 既製コンクリート杭のせん断耐力は「斜めひび割れ」と「縦ひび割れ」の 2 式で求め、
         // 小さい方を採る。採用値だけを見てもどちらが効いているか分からないので、
         // 内訳を返せるようにして Q-N 図に重ねられるようにする。
         // PHC と PRC は同一の式なのでここに 1 度だけ置き、両クラスの
@@ -228,43 +228,47 @@ namespace PileDesign.Models.InputData
             get { double t = ShearT; const double dpc = 15.0; return (t - dpc) / t; }
         }
 
-        /// <summary>ウェブ破壊側のコンクリートのせん断強度 τV。</summary>
+        /// <summary>縦ひび割れ側のコンクリートのせん断強度 τV。</summary>
         private double ShearTauV => 1.9 * Math.Pow(Fc, 0.323);
 
         /// <summary>
-        /// 斜め引張破壊側のせん断応力度。σG = σe + σ0e、σlimit は限界状態ごとの引張応力度。
+        /// 斜めひび割れ側のせん断応力度。σG = σe + σ0e、σlimit は限界状態ごとの引張応力度。
+        /// σ0e は平均軸応力度 N/Ae で、軸力ごとに変わる（Q-N の掃引範囲もこの σG で決めている）。
         /// </summary>
-        private double ShearTauDiagonal(double sigmaLimit)
+        private double ShearTauDiagonal(double sigmaLimit, double sigma0E)
         {
-            double sigmaG = SigmaE + Sigma0E;
+            double sigmaG = SigmaE + sigma0E;
             return 0.5 * Math.Sqrt(Math.Pow(sigmaG + 2.0 * sigmaLimit, 2) - Math.Pow(sigmaG, 2));
         }
 
-        /// <summary>使用限界せん断力の内訳（斜め引張破壊 / ウェブ破壊）。β 低減前。</summary>
-        internal (double DiagonalTension, double Web) GetServiceLimitShearComponents(double monQd)
+        /// <summary>軸力 N (N) から平均軸応力度 σ0e = N/Ae を返す。Ae 未設定なら 0。</summary>
+        private protected double Sigma0EFor(double n) => Ae > 0.0 ? n / Ae : 0.0;
+
+        /// <summary>使用限界せん断力の内訳（斜めひび割れ / 縦ひび割れ）。β 低減前。</summary>
+        internal (double DiagonalTension, double Web) GetServiceLimitShearComponents(double monQd, double sigma0E)
         {
             double s0 = ShearS0, t = ShearT, alpha = ShearAlpha(monQd);
-            // 使用限界式 (5.4): 斜め引張破壊側は τS のみ ((2/3) 係数なしが正)。
-            double diagonal = 0.6 * alpha * 2.0 * t * I / s0 * ShearTauDiagonal(1.2);
-            // ウェブ破壊側は (2/3)τV (使用限界の安全率)。
+            // 使用限界式 (5.4): 斜めひび割れ側は τS のみ ((2/3) 係数なしが正)。
+            double diagonal = 0.6 * alpha * 2.0 * t * I / s0 * ShearTauDiagonal(1.2, sigma0E);
+            // 縦ひび割れ側は (2/3)τV (使用限界の安全率)。
             double web = 0.6 * alpha * ShearEta1 * 2.0 * t * I / s0 * 2.0 / 3.0 * ShearTauV;
             return (diagonal, web);
         }
 
-        /// <summary>損傷限界せん断力の内訳（斜め引張破壊 / ウェブ破壊）。β 低減前。</summary>
-        internal (double DiagonalTension, double Web) GetDamageLimitShearComponents(double monQd)
+        /// <summary>損傷限界せん断力の内訳（斜めひび割れ / 縦ひび割れ）。β 低減前。</summary>
+        internal (double DiagonalTension, double Web) GetDamageLimitShearComponents(double monQd, double sigma0E)
         {
             double s0 = ShearS0, t = ShearT, alpha = ShearAlpha(monQd);
-            double diagonal = 0.6 * alpha * 2.0 * t * I / s0 * ShearTauDiagonal(1.8);
+            double diagonal = 0.6 * alpha * 2.0 * t * I / s0 * ShearTauDiagonal(1.8, sigma0E);
             double web = 0.6 * alpha * ShearEta1 * 2.0 * t * I / s0 * ShearTauV;
             return (diagonal, web);
         }
 
-        /// <summary>安全限界せん断力の内訳（斜め引張破壊 / ウェブ破壊）。β 低減前。</summary>
-        internal (double DiagonalTension, double Web) GetUltimateLimitShearComponents(double monQd)
+        /// <summary>安全限界せん断力の内訳（斜めひび割れ / 縦ひび割れ）。β 低減前。</summary>
+        internal (double DiagonalTension, double Web) GetUltimateLimitShearComponents(double monQd, double sigma0E)
         {
             double s0 = ShearS0, t = ShearT, alpha = ShearAlpha(monQd);
-            double diagonal = 0.75 * alpha * 2.0 * t * I / s0 * ShearTauDiagonal(1.8);
+            double diagonal = 0.75 * alpha * 2.0 * t * I / s0 * ShearTauDiagonal(1.8, sigma0E);
             double web = 0.75 * alpha * ShearEta1 * 2.0 * t * I / s0 * ShearTauV;
             return (diagonal, web);
         }
@@ -447,36 +451,36 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 使用限界せん断力を返す。
         /// </summary>
-        private double GetServiceLimitShear(double MonQd, bool isFactored)
+        private double GetServiceLimitShear(double MonQd, bool isFactored, double sigma0E)
         {
             double beta1 = 1.0;
             // 式は基底クラスの内訳メソッドに集約している（Q-N 図に重ねる内訳と同じ値を使う）
-            var (diagonal, web) = GetServiceLimitShearComponents(MonQd);
+            var (diagonal, web) = GetServiceLimitShearComponents(MonQd, sigma0E);
             double Qs = Math.Min(diagonal, web);
             return isFactored ? beta1 * Qs : Qs;
         }
         /// <summary>
         /// 損傷限界せん断力を返す。
         /// </summary>
-        private double GetDamageLimitShear(double MonQd, bool isFactored, int level = 2)
+        private double GetDamageLimitShear(double MonQd, bool isFactored, double sigma0E, int level = 2)
         {
             double beta1 = 1.0;
             double beta2 = 0.65;
             // L1: β2 を乗じない、L2: β1×β2
             double beta = level == 1 ? beta1 : beta1 * beta2;
-            var (diagonal, web) = GetDamageLimitShearComponents(MonQd);
+            var (diagonal, web) = GetDamageLimitShearComponents(MonQd, sigma0E);
             double Qd = Math.Min(diagonal, web);
             return isFactored ? beta * Qd : Qd;
         }
         /// <summary>
         /// 安全限界せん断力を返す。
         /// </summary>
-        private double GetUltimateLimitShear(double MonQd, bool isFactored)
+        private double GetUltimateLimitShear(double MonQd, bool isFactored, double sigma0E)
         {
             double beta1 = 1.0;
             double beta2 = 0.65;
 
-            var (diagonal, web) = GetUltimateLimitShearComponents(MonQd);
+            var (diagonal, web) = GetUltimateLimitShearComponents(MonQd, sigma0E);
             double Qu = Math.Min(diagonal, web);
             return isFactored ? beta1 * beta2 * Qu : Qu;
         }
@@ -496,7 +500,7 @@ namespace PileDesign.Models.InputData
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetServiceLimitShear(MonQd, isFactored);
+                double q = GetServiceLimitShear(MonQd, isFactored, Sigma0EFor(n));
                 ns.Add(n);
                 qs.Add(q);
             }
@@ -515,7 +519,7 @@ namespace PileDesign.Models.InputData
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetDamageLimitShear(MonQd, isFactored, level);
+                double q = GetDamageLimitShear(MonQd, isFactored, Sigma0EFor(n), level);
                 ns.Add(n);
                 qs.Add(q);
             }
@@ -534,7 +538,7 @@ namespace PileDesign.Models.InputData
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetUltimateLimitShear(MonQd, isFactored);
+                double q = GetUltimateLimitShear(MonQd, isFactored, Sigma0EFor(n));
                 ns.Add(n);
                 qs.Add(q);
             }
@@ -1040,36 +1044,36 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 使用限界せん断力を返す。
         /// </summary>
-        private double GetServiceLimitShear(double MonQd, bool isFactored)
+        private double GetServiceLimitShear(double MonQd, bool isFactored, double sigma0E)
         {
             double beta1 = 1.0;
             // 式は基底クラスの内訳メソッドに集約している（Q-N 図に重ねる内訳と同じ値を使う）
-            var (diagonal, web) = GetServiceLimitShearComponents(MonQd);
+            var (diagonal, web) = GetServiceLimitShearComponents(MonQd, sigma0E);
             double Qs = Math.Min(diagonal, web);
             return isFactored ? beta1 * Qs : Qs;
         }
         /// <summary>
         /// 損傷限界せん断力を返す。
         /// </summary>
-        private double GetDamageLimitShear(double MonQd, bool isFactored, int level = 2)
+        private double GetDamageLimitShear(double MonQd, bool isFactored, double sigma0E, int level = 2)
         {
             double beta1 = 1.0;
             double beta2 = 0.65;
             // L1: β2 を乗じない、L2: β1×β2
             double beta = level == 1 ? beta1 : beta1 * beta2;
-            var (diagonal, web) = GetDamageLimitShearComponents(MonQd);
+            var (diagonal, web) = GetDamageLimitShearComponents(MonQd, sigma0E);
             double Qd = Math.Min(diagonal, web);
             return isFactored ? beta * Qd : Qd;
         }
         /// <summary>
         /// 安全限界せん断力を返す。
         /// </summary>
-        private double GetUltimateLimitShear(double MonQd, bool isFactored)
+        private double GetUltimateLimitShear(double MonQd, bool isFactored, double sigma0E)
         {
             double beta1 = 1.0;
             double beta2 = 0.65;
 
-            var (diagonal, web) = GetUltimateLimitShearComponents(MonQd);
+            var (diagonal, web) = GetUltimateLimitShearComponents(MonQd, sigma0E);
             double Qu = Math.Min(diagonal, web);
             return isFactored ? beta1 * beta2 * Qu : Qu;
         }
@@ -1087,7 +1091,7 @@ namespace PileDesign.Models.InputData
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetServiceLimitShear(MonQd, isFactored);
+                double q = GetServiceLimitShear(MonQd, isFactored, Sigma0EFor(n));
                 ns.Add(n);
                 qs.Add(q);
             }
@@ -1106,7 +1110,7 @@ namespace PileDesign.Models.InputData
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetDamageLimitShear(MonQd, isFactored, level);
+                double q = GetDamageLimitShear(MonQd, isFactored, Sigma0EFor(n), level);
                 ns.Add(n);
                 qs.Add(q);
             }
@@ -1125,7 +1129,7 @@ namespace PileDesign.Models.InputData
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetUltimateLimitShear(MonQd, isFactored);
+                double q = GetUltimateLimitShear(MonQd, isFactored, Sigma0EFor(n));
                 ns.Add(n);
                 qs.Add(q);
             }
@@ -1670,8 +1674,13 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// N-Q曲線に軸力制限を適用（制限値外ではQ=0）
         /// </summary>
-        private static (List<double>, List<double>) ApplyAxialForceLimitsToNQ(
-            (List<double> N, List<double> Q) unfactored,
+        /// <remarks>
+        /// タプルは <b>(Q, N) の順</b>。Get*QNInteraction の戻り値も NQ プロパティも同じ順であり、
+        /// ここだけ (N, Q) と名付けていたため、せん断耐力の列を軸力として制限に掛け、
+        /// 軸力の列をせん断耐力として返していた（SC杭の低減後 Q-N が丸ごと入れ替わっていた）。
+        /// </remarks>
+        private static (List<double> Q, List<double> N) ApplyAxialForceLimitsToNQ(
+            (List<double> Q, List<double> N) unfactored,
             double nMin, double nMax)
         {
             var ns = new List<double>();
@@ -1712,7 +1721,7 @@ namespace PileDesign.Models.InputData
             ns.Add(nMax);
             qs.Add(0.0);
 
-            return (ns, qs);
+            return (qs, ns);
         }
 
         /// <summary>
@@ -1737,6 +1746,12 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// 使用限界せん断力を返す。
+        ///
+        /// SC 杭のせん断は鋼管だけが負担する扱いなので、使用限界・損傷限界は
+        /// <b>軸力に依存しない</b>（PHC・PRC のようにコンクリートの σG = σe + σ0e が
+        /// 入らないため）。Q-N 図が水平線になるのは正しい。軸力が入るのは
+        /// <see cref="GetUltimateLimitShear"/> の η = N/Ny だけ。
+        /// この依存関係は <c>ShearAxialDependenceTableTests</c> で表として固定している。
         /// </summary>
         private double GetServiceLimitShear(bool isFactored)
         {
@@ -1749,7 +1764,8 @@ namespace PileDesign.Models.InputData
             return isFactored ? beta1 * unfactoredQs : unfactoredQs;
         }
         /// <summary>
-        /// 損傷限界せん断力を返す。
+        /// 損傷限界せん断力を返す。使用限界と同じく軸力に依存しない
+        /// （<see cref="GetServiceLimitShear"/> の注記を参照）。
         /// </summary>
         private double GetDamageLimitShear(bool isFactored)
         {

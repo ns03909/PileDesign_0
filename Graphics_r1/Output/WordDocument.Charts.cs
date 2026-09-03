@@ -16,6 +16,16 @@ namespace PileDesign.Output
     // 各種グラフ出力（N-M, Q-N, M-φ, M-θ インタラクション曲線、全杭ダイアグラム、荷重沈下曲線）を提供する partial。
     internal partial class WordDocument
     {
+
+        /// <summary>
+        /// 計算書に描く<b>損傷限界</b>のレベル。耐震性能グレードで決まる。
+        /// グレードA は損傷限界をレベル1 で、グレードS はレベル2 で照査するので、
+        /// 図に描く曲線もそのレベルのものにする（画面のグラフ・検定と同じ規則）。
+        /// 損傷限界はレベル1 では β2 を乗じないため、レベルを取り違えると
+        /// 同じ「低減後損傷限界」でも別の曲線になる。
+        /// </summary>
+        private int DocxDamageLevel =>
+            (inputModel?.FundamentalInput?.SeismicGrade ?? "A") == "S" ? 2 : 1;
         private void AddNMinT(MainDocumentPart mainPart, Body body)
         {
             if (inputModel?.PileBodies == null || inputModel.PileBodies.Count == 0)
@@ -64,7 +74,11 @@ namespace PileDesign.Output
                         lineListsY.Add(ToList(nmUDmg.M));
                         lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前損傷限界"));
 
-                        var nmFDmg = pileSection.FactoredDamageNM;
+                        // 損傷限界はレベルで低減係数が変わる (レベル1: β2 なし / レベル2: β1×β2)。
+                        // グレードA は損傷限界をレベル1 で、グレードS はレベル2 で照査するので、
+                        // 描く曲線もそれに合わせる (画面のグラフ・検定と同じ規則)。
+                        // 従来はレベル2 固定で、グレードA では画面と違う曲線が計算書に載っていた。
+                        var nmFDmg = pileSection.GetFactoredDamageNM(DocxDamageLevel);
                         lineListsX.Add(ToList(nmFDmg.N));
                         lineListsY.Add(ToList(nmFDmg.M));
                         lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後損傷限界"));
@@ -336,34 +350,33 @@ namespace PileDesign.Output
 
                     try
                     {
-                        var nqUUlt = pileSection.UnfactoredUltimateNQ;
-                        lineListsX.Add(ToList(nqUUlt.N));
-                        lineListsY.Add(ToList(nqUUlt.Q));
+                        // 曲線の取り出しは PileSection に一本化してある。損傷限界はレベルで
+                        // 低減係数が変わるため、キャッシュ済みプロパティを直に読むと
+                        // 画面のグラフ・検定と違う曲線が計算書に載る (従来そうなっていた)。
+                        var qn = pileSection.GetQNCurvesForLevel(DocxDamageLevel);
+
+                        lineListsX.Add(ToList(qn.UnfactoredUltimate.N));
+                        lineListsY.Add(ToList(qn.UnfactoredUltimate.Q));
                         lineListsLegend.Add("低減前安全限界");
 
-                        var nqFUlt = pileSection.FactoredUltimateNQ;
-                        lineListsX.Add(ToList(nqFUlt.N));
-                        lineListsY.Add(ToList(nqFUlt.Q));
+                        lineListsX.Add(ToList(qn.FactoredUltimate.N));
+                        lineListsY.Add(ToList(qn.FactoredUltimate.Q));
                         lineListsLegend.Add("低減後安全限界");
 
-                        var nqUDmg = pileSection.UnfactoredDamageNQ;
-                        lineListsX.Add(ToList(nqUDmg.N));
-                        lineListsY.Add(ToList(nqUDmg.Q));
+                        lineListsX.Add(ToList(qn.UnfactoredDamage.N));
+                        lineListsY.Add(ToList(qn.UnfactoredDamage.Q));
                         lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前損傷限界"));
 
-                        var nqFDmg = pileSection.FactoredDamageNQ;
-                        lineListsX.Add(ToList(nqFDmg.N));
-                        lineListsY.Add(ToList(nqFDmg.Q));
+                        lineListsX.Add(ToList(qn.FactoredDamage.N));
+                        lineListsY.Add(ToList(qn.FactoredDamage.Q));
                         lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後損傷限界"));
 
-                        var nqUSvc = pileSection.UnfactoredServiceNQ;
-                        lineListsX.Add(ToList(nqUSvc.N));
-                        lineListsY.Add(ToList(nqUSvc.Q));
+                        lineListsX.Add(ToList(qn.UnfactoredService.N));
+                        lineListsY.Add(ToList(qn.UnfactoredService.Q));
                         lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前使用限界"));
 
-                        var nqFSvc = pileSection.FactoredServiceNQ;
-                        lineListsX.Add(ToList(nqFSvc.N));
-                        lineListsY.Add(ToList(nqFSvc.Q));
+                        lineListsX.Add(ToList(qn.FactoredService.N));
+                        lineListsY.Add(ToList(qn.FactoredService.Q));
                         lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後使用限界"));
                     }
                     catch (Exception ex)
@@ -371,7 +384,7 @@ namespace PileDesign.Output
                         Log.Debug($"[WordDoc] NQ曲線取得失敗 (杭体:{pileBody.PileBodyRef}, 区間:{segment.No}): {ex.Message}");
                     }
 
-                    // PHC・PRC のせん断耐力は「斜め引張破壊」と「ウェブ破壊」の 2 式の小さい方で
+                    // PHC・PRC のせん断耐力は「斜めひび割れ」と「縦ひび割れ」の 2 式の小さい方で
                     // 決まる。採用値だけではどちらが効いているか分からないので、内訳を点線で重ねる。
                     // β 低減前なので、2 本の小さい方が「低減前」の破線に一致する。
                     // 上の 6 本は体裁を既定（並び順の偶奇）に任せるため null を並べておく。
@@ -527,6 +540,13 @@ namespace PileDesign.Output
                     AddAutoFigureCaption(body,
                         $"軸力-せん断力関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
                         "図");
+                    // せん断耐力は M/(Q·d) に依存する。この図は杭体区間ごとに 1 枚なので、
+                    // 杭・荷重ケースごとに変わる M/(Q·d) を反映できず既定値で描いている。
+                    // 検定は解析した断面力から求めた M/(Q·d) を使う (検定表の M/(Q·d) 列)。
+                    AddTableNote(body,
+                        $"※ この図のせん断耐力は M/(Q·d) = {PileSection.DefaultMonQd:F1}（既定値）で描いています。"
+                        + "検定では杭ごと・荷重ケースごとに解析結果から求めた M/(Q·d) を使うため、"
+                        + "検定表の限界値とは一致しないことがあります。");
                 }
             }
         }
@@ -1212,9 +1232,12 @@ namespace PileDesign.Output
                 // 逆対称 (Fxj = -Fxi) なので恒等的に 0 になり、常に N=0 の耐力を出力していた。
                 double axialN = pli.GetDesignAxialForce(lc.No, lc.Level);
 
-                // モーメント限界
+                // モーメント限界。損傷限界はその荷重レベルの曲線を使う
+                // (レベル1 は β2 を乗じない)。従来はレベル2 固定で、レベル1 の重ね線が
+                // 検定より小さい限界を描いていた。
+                var damageNM = pileSection.GetFactoredDamageNM(lc.Level == 1 ? 1 : 2);
                 var (nMs, mVals) = useDamage
-                    ? (pileSection.FactoredDamageNM.N, pileSection.FactoredDamageNM.M)
+                    ? (damageNM.N, damageNM.M)
                     : (pileSection.FactoredUltimateNM.N, pileSection.FactoredUltimateNM.M);
                 double mLim = InterpolateLimitFromNCurve(nMs, mVals, axialN);
                 if (!double.IsNaN(mLim) && mLim > 0)
@@ -1223,10 +1246,11 @@ namespace PileDesign.Output
                     momentXs.Add(mLim); momentZs.Add(beam.NodeJ.Coord.Z);
                 }
 
-                // せん断限界
+                // せん断限界。曲げと同じく荷重レベルの曲線を使う
+                var qnLevel = pileSection.GetQNCurvesForLevel(lc.Level == 1 ? 1 : 2);
                 var (nQs, qVals) = useDamage
-                    ? (pileSection.FactoredDamageNQ.N, pileSection.FactoredDamageNQ.Q)
-                    : (pileSection.FactoredUltimateNQ.N, pileSection.FactoredUltimateNQ.Q);
+                    ? (qnLevel.FactoredDamage.N, qnLevel.FactoredDamage.Q)
+                    : (qnLevel.FactoredUltimate.N, qnLevel.FactoredUltimate.Q);
                 double qLim = InterpolateLimitFromNCurve(nQs, qVals, axialN);
                 if (!double.IsNaN(qLim) && qLim > 0)
                 {
@@ -1242,31 +1266,17 @@ namespace PileDesign.Output
         /// 軸力 N に対応する限界値 (M または Q) を線形補間で取得。
         /// 範囲外は端点クランプ。GraphViewModel.InterpolateLimitValue と同等。
         /// </summary>
+        /// <summary>
+        /// 限界曲線から軸力に対応する限界値を補間する。
+        /// 実装は <see cref="PileSection.InterpolateLimitAtAxialForce"/> に一本化してある。
+        ///
+        /// 従来はここだけ「N で並べ替えて最初に挟まる区間を採る」実装で、
+        /// 圧縮側と引張側の 2 本が同じ軸力を横切る N-M 曲線では、
+        /// 別々の枝の点を結んだ値を返しうる形だった。範囲外の軸力も端の値へ丸めており、
+        /// 軸力制限の外に「端の耐力がある」線を引いていた。
+        /// </summary>
         private static double InterpolateLimitFromNCurve(List<double> nValues, List<double> mOrQValues, double targetN)
-        {
-            if (nValues == null || mOrQValues == null) return double.NaN;
-            if (nValues.Count == 0 || nValues.Count != mOrQValues.Count) return double.NaN;
-
-            double minN = nValues.Min();
-            double maxN = nValues.Max();
-            if (targetN <= minN) return mOrQValues[nValues.IndexOf(minN)];
-            if (targetN >= maxN) return mOrQValues[nValues.IndexOf(maxN)];
-
-            var sorted = nValues.Select((n, i) => new { N = n, Index = i }).OrderBy(x => x.N).ToList();
-            for (int i = 0; i < sorted.Count - 1; i++)
-            {
-                double n1 = sorted[i].N;
-                double n2 = sorted[i + 1].N;
-                if (n1 <= targetN && targetN <= n2)
-                {
-                    double m1 = mOrQValues[sorted[i].Index];
-                    double m2 = mOrQValues[sorted[i + 1].Index];
-                    double r = (n2 - n1) != 0 ? (targetN - n1) / (n2 - n1) : 0;
-                    return m1 + r * (m2 - m1);
-                }
-            }
-            return double.NaN;
-        }
+            => PileSection.InterpolateLimitAtAxialForce(nValues, mOrQValues, targetN);
 
         /// <summary>
         /// 杭地盤セット（ElementDivision.SoilPiles）単位でグループ化し、同一セット内の杭を

@@ -13,6 +13,10 @@
         MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         WindowStartupLocation="CenterScreen">
     
+    <Window.Resources>
+        <conv:BoolEqualsConverter x:Key="BoolEqualsConverter"/>
+    </Window.Resources>
+
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
@@ -47,6 +51,117 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate> "-->
             </Grid>
+
+            <GroupBox Header="沈下検討の対象" Margin="0,0,0,10" Padding="6">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"
+                               Text="沈下量の検討をどちらで行うかを決めます。杭頭 2 点間の変形角（沈下）の検定も、ここで選んだ沈下量の差で求めます。群杭沈下解析を実行していないときは群杭分が 0 なので、どちらを選んでも単杭沈下と同じになります。"/>
+                    <!-- 正負 2 つの TwoWay ライターはウィンドウ再表示時に StackOverflow を起こすため、
+                         「チェック時のみ書く」BoolEqualsConverter に統一する -->
+                    <RadioButton Content="単杭沈下" GroupName="SettlementDesignBasis" Margin="0,2,0,0"
+                                 IsChecked="{Binding SettlementDesignIncludesGroup, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=False}"/>
+                    <RadioButton Content="単杭＋群杭沈下" GroupName="SettlementDesignBasis" Margin="0,2,0,0"
+                                 IsChecked="{Binding SettlementDesignIncludesGroup, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=True}"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="杭頭 2 点間の変形角の限界値" Margin="0,0,0,10" Padding="6">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"
+                               Text="すべての杭頭の組について「鉛直変位の差 ÷ 2 点間の水平距離」を求め、その最大値を下の値と比べます。長期は使用限界、レベル1 は損傷限界、レベル2 は終局限界（性能グレードS ではレベル2 も損傷限界）で照査します。"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="使用限界変形角 (rad)" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
+                        <TextBox Text="{Binding ServiceDeformationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
+                                 Grid.Row="0" Grid.Column="1" Margin="0,0,0,4"/>
+
+                        <TextBlock Text="損傷限界変形角 (rad)" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"/>
+                        <TextBox Text="{Binding DamageDeformationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
+                                 Grid.Row="1" Grid.Column="1" Margin="0,0,0,4"/>
+
+                        <TextBlock Text="終局限界変形角 (rad)" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center"/>
+                        <TextBox Text="{Binding UltimateDeformationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
+                                 Grid.Row="2" Grid.Column="1" Margin="0,0,0,4"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <ToggleButton x:Name="ButtonShowDeformationAngleGuide" Padding="6,2" FontSize="11"
+                                      Background="Transparent" BorderThickness="0" Foreground="#666"
+                                      ToolTip="基礎指針'19 表5.3.8 の設計用限界値の目安を表示">
+                            <TextBlock><Run Text="設計用限界値の目安 (基礎指針'19 表5.3.8)"/><Run Text=" ▾"/></TextBlock>
+                        </ToggleButton>
+                        <Popup PlacementTarget="{Binding ElementName=ButtonShowDeformationAngleGuide}" Placement="Bottom"
+                               IsOpen="{Binding IsChecked, ElementName=ButtonShowDeformationAngleGuide, Mode=TwoWay}"
+                               StaysOpen="False" AllowsTransparency="True">
+                            <Border Background="White" BorderBrush="#888" BorderThickness="1" Padding="14" SnapsToDevicePixels="True">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="6" ShadowDepth="2" Opacity="0.25"/>
+                                </Border.Effect>
+                                <StackPanel MinWidth="520">
+                                    <TextBlock Text="基礎指針'19 表5.3.8 沈下の設計用限界値の目安" FontWeight="Bold" FontSize="13" Margin="0,0,0,8"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <Border Grid.Row="0" Grid.Column="0" Padding="10,4" Background="{StaticResource SurfaceMutedBrush}" BorderBrush="#CCC" BorderThickness="1,1,0,1"><TextBlock Text="想定荷重" FontWeight="Bold"/></Border>
+                                        <Border Grid.Row="0" Grid.Column="1" Padding="10,4" Background="{StaticResource SurfaceMutedBrush}" BorderBrush="#CCC" BorderThickness="1,1,0,1"><TextBlock Text="性能グレード" FontWeight="Bold"/></Border>
+                                        <Border Grid.Row="0" Grid.Column="2" Padding="10,4" Background="{StaticResource SurfaceMutedBrush}" BorderBrush="#CCC" BorderThickness="1,1,0,1"><TextBlock Text="要求性能のレベル" FontWeight="Bold"/></Border>
+                                        <Border Grid.Row="0" Grid.Column="3" Padding="10,4" Background="{StaticResource SurfaceMutedBrush}" BorderBrush="#CCC" BorderThickness="1"><TextBlock Text="変形角の設計用限界値の目安" FontWeight="Bold"/></Border>
+
+                                        <Border Grid.Row="1" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="常時荷重"/></Border>
+                                        <Border Grid.Row="1" Grid.Column="1" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="—" HorizontalAlignment="Center"/></Border>
+                                        <Border Grid.Row="1" Grid.Column="2" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="使用限界状態"/></Border>
+                                        <Border Grid.Row="1" Grid.Column="3" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,1,1"><TextBlock Text="即時沈下: 1×10⁻³ rad"/></Border>
+
+                                        <Border Grid.Row="2" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="常時荷重"/></Border>
+                                        <Border Grid.Row="2" Grid.Column="1" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="—" HorizontalAlignment="Center"/></Border>
+                                        <Border Grid.Row="2" Grid.Column="2" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="使用限界状態"/></Border>
+                                        <Border Grid.Row="2" Grid.Column="3" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,1,1"><TextBlock Text="圧密沈下: 2×10⁻³ rad"/></Border>
+
+                                        <Border Grid.Row="3" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="レベル1荷重"/></Border>
+                                        <Border Grid.Row="3" Grid.Column="1" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="—" HorizontalAlignment="Center"/></Border>
+                                        <Border Grid.Row="3" Grid.Column="2" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="損傷限界状態"/></Border>
+                                        <Border Grid.Row="3" Grid.Column="3" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,1,1"><TextBlock Text="5×10⁻³ rad"/></Border>
+
+                                        <Border Grid.Row="4" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="レベル2荷重"/></Border>
+                                        <Border Grid.Row="4" Grid.Column="1" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="S" HorizontalAlignment="Center"/></Border>
+                                        <Border Grid.Row="4" Grid.Column="2" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="損傷限界状態"/></Border>
+                                        <Border Grid.Row="4" Grid.Column="3" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,1,1"><TextBlock Text="5×10⁻³ rad"/></Border>
+
+                                        <Border Grid.Row="5" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="レベル2荷重"/></Border>
+                                        <Border Grid.Row="5" Grid.Column="1" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="A" HorizontalAlignment="Center"/></Border>
+                                        <Border Grid.Row="5" Grid.Column="2" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="終局限界状態"/></Border>
+                                        <Border Grid.Row="5" Grid.Column="3" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,1,1"><TextBlock Text="7×10⁻³ rad"/></Border>
+                                    </Grid>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#666" MaxWidth="520"
+                                               Text="※ 圧密沈下は直接基礎を圧密層に載せる場合の目安です。杭基礎では圧密沈下は生じないため、常時荷重の使用限界には即時沈下の 1×10⁻³ rad を用います。"/>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
 
             <Grid Margin="10,10,10,10">
                 <Grid.RowDefinitions>

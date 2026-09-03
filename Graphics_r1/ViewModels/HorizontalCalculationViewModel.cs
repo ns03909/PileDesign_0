@@ -2354,20 +2354,11 @@ namespace PileDesign.ViewModels
                         }
                     }
 
-                    // MonQdでQN曲線を再計算
-                    var qnCurves = pileSection.ComputeQNForMonQd(monQd);
-                    (List<double> N, List<double> Q) unfNQ, facNQ;
-                    if (qnCurves.UnfactoredService.N != null)
-                    {
-                        unfNQ = lcLevel == 1 ? qnCurves.UnfactoredDamage : qnCurves.UnfactoredUltimate;
-                        facNQ = lcLevel == 1 ? qnCurves.FactoredDamage : qnCurves.FactoredUltimate;
-                    }
-                    else
-                    {
-                        // 場所打ち杭等: キャッシュ値にフォールバック
-                        unfNQ = lcLevel == 1 ? pileSection.UnfactoredDamageNQ : pileSection.UnfactoredUltimateNQ;
-                        facNQ = lcLevel == 1 ? pileSection.FactoredDamageNQ : pileSection.FactoredUltimateNQ;
-                    }
+                    // MonQd で QN 曲線を再計算する。損傷限界はレベルで低減係数が変わるので
+                    // レベルも渡す (曲線の取り出しは PileSection 側に一本化してある)。
+                    var qnCurves = pileSection.GetQNCurvesForLevel(lcLevel == 1 ? 1 : 2, monQd);
+                    var unfNQ = lcLevel == 1 ? qnCurves.UnfactoredDamage : qnCurves.UnfactoredUltimate;
+                    var facNQ = lcLevel == 1 ? qnCurves.FactoredDamage : qnCurves.FactoredUltimate;
 
                     var ratios = FEM.Utils.ComputeCapacityRatios(force, pileSection, lcLevel, axialN_kN, unfNQ, facNQ);
                     result.AxialForceForRatio = axialN_kN;

@@ -810,6 +810,15 @@ diameterSelector,
             }
 
             body.Append(table);
+
+            // どの列を設計値として扱うかは基本設定で決まる。表に 3 列並ぶだけでは読み手が判断できない。
+            bool includesGroup = inputModel.FundamentalInput?.SettlementDesignIncludesGroup ?? true;
+            AddTableNote(body,
+                "※ 沈下検討の対象は基本設定で「"
+                + (inputModel.FundamentalInput?.SettlementDesignBasisName ?? "単杭＋群杭沈下")
+                + "」に設定されている。設計値は"
+                + (includesGroup ? "合計沈下量" : "単杭沈下量")
+                + "の列。杭頭変形角の検定もこの値の差で求めている。");
         }
 
         /// <summary>

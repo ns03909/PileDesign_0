@@ -1154,6 +1154,26 @@ namespace PileDesign.Output
             }
             if (result == null || result.IsEmpty) return;
 
+            // 長期 (常時) の検定は既定では載せない。VL 単独ケースを解析したときだけ現れ、
+            // 水平荷重が無いので土圧などが無ければ問題にならない。
+            // 落とすときは<b>落とした事実を書く</b> (黙って消すと「長期は検定していない」のか
+            // 「検定して OK だった」のか読めない)。
+            // 対象は長期の<b>曲げ・せん断</b>だけ。杭頭変形角 (不同沈下) は長期そのものが本題なので、
+            // 出力しない設定でも残す。
+            static bool IsLongTermSectionCheck(Models.Results.EvaluationItem i) =>
+                i.Level == 0
+                && i.Kind is Models.Results.EvaluationKind.PileSectionMoment
+                          or Models.Results.EvaluationKind.PileSectionShear;
+
+            int longTermCount = result.Items.Count(IsLongTermSectionCheck);
+            bool includeLongTerm = mainWindowViewModel.DocxOutput.IncludeHorizontal_LongTermEvaluation;
+            if (!includeLongTerm && longTermCount > 0)
+            {
+                result = new Models.Results.EvaluationResult(
+                    result.Items.Where(i => !IsLongTermSectionCheck(i)).ToList());
+                if (result.IsEmpty) return;
+            }
+
             AddPageBreak(body);
             // H1 に昇格 (旧: H2 で親 H1 がなく、直前の無関係な H1 の子として番号付けされていた)
             AddHeader1(body, factored ? "水平解析 検定（低減後）" : "水平解析 検定（低減前）", 1);
@@ -1165,6 +1185,17 @@ namespace PileDesign.Output
             AddText(body,
                 $"耐震性能グレード {grade}。検定項目 {result.Items.Count} 件（OK {result.OkCount} 件 / NG {result.NgCount} 件）。"
                 + (result.MaxRatio is { } r ? $" 最大検定比 {r:F2}。{governing}" : string.Empty));
+
+            if (!includeLongTerm && longTermCount > 0)
+            {
+                AddTableNote(body,
+                    $"※ 長期（常時）の曲げ・せん断の検定 {longTermCount} 件は、出力しない設定のため件数に含めていない。");
+            }
+            else if (includeLongTerm && longTermCount > 0)
+            {
+                AddTableNote(body,
+                    $"※ 長期（常時）の曲げ・せん断の検定 {longTermCount} 件を含む。いずれも使用限界で照査している。");
+            }
 
             if (result.NgCount == 0)
             {
@@ -1209,6 +1240,78 @@ namespace PileDesign.Output
 
             body.Append(table);
             AddTableNote(body, "※ 検定比 = 応答値 / 限界値。1.00 を超えるものを NG として挙げている。");
+        }
+
+        /// <summary>
+        /// 杭の鉛直支持力の検定（押込み・引抜き）を DOCX に追記する。
+        ///
+        /// 水平解析の検定とは別の節にする。支持力は低減の有無で変わらないので
+        /// 「低減前 / 低減後」の 2 枚に混ぜると同じ行が重複し、
+        /// 検定比の降順で読んだときに支配ケースを読み違えるため。
+        /// NG だけでなく全項目を載せる（件数が杭本数 × 限界状態と少なく、
+        /// 余裕度を読むのが目的の表なので、OK 側も見えている方が使える）。
+        /// </summary>
+        private void AddPileBearingEvaluationReport(Body body)
+        {
+            if (inputModel == null) return;
+
+            List<Models.Results.EvaluationItem> items;
+            try
+            {
+                string grade = inputModel.FundamentalInput?.SeismicGrade ?? "A";
+                items = Services.PileBearingEvaluator.Evaluate(inputModel, grade);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[DOCX] 支持力の検定の生成に失敗");
+                return;
+            }
+            if (items == null || items.Count == 0) return;
+
+            AddPageBreak(body);
+            AddHeader1(body, "杭の鉛直支持力 検定", 1);
+
+            int ng = items.Count(i => !i.IsOk);
+            AddText(body,
+                $"検定項目 {items.Count} 件（OK {items.Count - ng} 件 / NG {ng} 件）。"
+                + "応答値は入力した杭軸力、限界値は地盤と杭体から定まる支持力・引抜き抵抗力である。");
+            AddText(body,
+                "限界状態の対応は杭体断面の検定と同じで、長期は使用限界（極限支持力の 1/3）、"
+                + "レベル1 は損傷限界（1/1.5）、レベル2 は終局限界（極限支持力）とした"
+                + "（耐震性能グレード S ではレベル2 も損傷限界）。"
+                + "引抜き側は損傷限界で降伏引抜き抵抗力、終局限界で残留引抜き抵抗力を限界値とする。");
+
+            AddTableCaption(body, "検定結果（杭の鉛直支持力）");
+
+            const double fontSize = 8.0;
+            var table = CreateTableWithBorders();
+            table.Append(CreateHeaderRow(
+                CreateTableCell(["検定項目"], fontSize, "center"),
+                CreateTableCell(["対象"], fontSize, "center"),
+                CreateTableCell(["荷重ケース"], fontSize, "center"),
+                CreateTableCell(["応答"], fontSize, "center"),
+                CreateTableCell(["限界"], fontSize, "center"),
+                CreateTableCell(["単位"], fontSize, "center"),
+                CreateTableCell(["検定比"], fontSize, "center"),
+                CreateTableCell(["判定"], fontSize, "center")));
+
+            // 検定比の大きい順。どこが一番余裕がないかを上から読めるようにする
+            foreach (var item in items.OrderByDescending(i => double.IsNaN(i.Ratio) ? -1.0 : i.Ratio))
+            {
+                var row = new TableRow();
+                row.Append(CreateTableCell([item.Category], fontSize, "left"));
+                row.Append(CreateTableCell([item.TargetDescription], fontSize, "left"));
+                row.Append(CreateTableCell([item.LoadCaseName], fontSize, "left"));
+                row.Append(CreateTableCell([item.ResponseText], fontSize, "right"));
+                row.Append(CreateTableCell([item.LimitText], fontSize, "right"));
+                row.Append(CreateTableCell([item.Unit], fontSize, "center"));
+                row.Append(CreateTableCell([double.IsNaN(item.Ratio) ? "-" : $"{item.Ratio:F2}"], fontSize, "right"));
+                row.Append(CreateTableCell([item.StatusLabel], fontSize, "center"));
+                table.Append(row);
+            }
+
+            body.Append(table);
+            AddTableNote(body, "※ 検定比 = 応答値 / 限界値。押込み・引抜きとも大きさ（絶対値）で比較している。");
         }
 
     }

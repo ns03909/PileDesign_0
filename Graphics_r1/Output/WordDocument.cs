@@ -478,6 +478,13 @@ namespace PileDesign.Output
                 });
             }
 
+            // 支持力の検定は水平解析の検定とは別の節にする (低減の有無で値が変わらないため、
+            // 低減前/低減後の 2 枚に混ぜると同じ行が重複して支配ケースを読み違える)。
+            if (mainWindowViewModel.DocxOutput.IncludeBearingEvaluation)
+            {
+                Time("PileBearingEvaluation (支持力の検定)", () => AddPileBearingEvaluationReport(body));
+            }
+
             if (mainWindowViewModel.DocxOutput.IncludeHorizontal)
             {
                 var swH = new System.Diagnostics.Stopwatch();

@@ -52,7 +52,6 @@ namespace PileDesign.Models.InputData
         public double Fc { get; }
         public double Ec { get; private set; }
         public double Ac { get; private set; }
-        public double Epsilon { get; private set; }
         public double EpsilonM { get; }
         public double EpsilonCu { get; }
         public double EpsilonCr_bilinear { get; private set; }

@@ -47,6 +47,53 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _seismicGrade, value);
         }
 
+        // 沈下検討の対象。true = 単杭沈下 + 群杭沈下 (合計)、false = 単杭沈下のみ。
+        //
+        // 群杭沈下解析を実行していなければ群杭分は 0 なので、true でも実質単杭沈下になる。
+        // 杭頭変形角 (沈下) の検定も、この基準で選んだ沈下量の差で求める。
+        private bool _settlementDesignIncludesGroup = true;
+        /// <summary>沈下検討に群杭沈下を含めるか (既定: 含める = 単杭＋群杭)。</summary>
+        public bool SettlementDesignIncludesGroup
+        {
+            get => _settlementDesignIncludesGroup;
+            set => SetProperty(ref _settlementDesignIncludesGroup, value);
+        }
+
+        /// <summary>沈下検討の対象の名乗り。画面・計算書で共通に使う。</summary>
+        public string SettlementDesignBasisName =>
+            SettlementDesignIncludesGroup ? "単杭＋群杭沈下" : "単杭沈下";
+
+        // ── 杭頭 2 点間の変形角の限界値 (rad) ──
+        //
+        // すべての杭頭の組について θ = |Uz_i − Uz_j| / (2 点間の水平距離) を求め、
+        // その最大値をこの値と比べる。基礎の回転・不同沈下による変形角。
+        // 既定は 1/1000・1/200・1/143。旧いファイルには無いので、
+        // 0 以下 (未設定) のときは検定側で既定値に落とす。
+
+        private double _serviceDeformationAngleLimit = 1.0e-3;
+        /// <summary>使用限界の変形角 (rad)。長期 (常時) の検定に使う。</summary>
+        public double ServiceDeformationAngleLimit
+        {
+            get => _serviceDeformationAngleLimit;
+            set => SetProperty(ref _serviceDeformationAngleLimit, value);
+        }
+
+        private double _damageDeformationAngleLimit = 5.0e-3;
+        /// <summary>損傷限界の変形角 (rad)。レベル1 の検定に使う。</summary>
+        public double DamageDeformationAngleLimit
+        {
+            get => _damageDeformationAngleLimit;
+            set => SetProperty(ref _damageDeformationAngleLimit, value);
+        }
+
+        private double _ultimateDeformationAngleLimit = 7.0e-3;
+        /// <summary>終局限界の変形角 (rad)。レベル2 (耐震グレードA) の検定に使う。</summary>
+        public double UltimateDeformationAngleLimit
+        {
+            get => _ultimateDeformationAngleLimit;
+            set => SetProperty(ref _ultimateDeformationAngleLimit, value);
+        }
+
         // バイリニア型コンクリートの引張側の降伏応力度を 0 とする（コンクリート引張を無視）
         private bool _ignoreConcreteTensileStrength;
         public bool IgnoreConcreteTensileStrength

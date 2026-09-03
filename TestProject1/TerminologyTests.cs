@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -29,6 +29,12 @@ namespace TestProject1
             // 同じ解析に 3 つ目の呼び名が付いていた。計算書の見出しにも出ていた
             ("基礎梁考慮鉛直解析",   "単杭沈下解析（基礎梁考慮）"),
             ("Export to File",       "ファイルに出力"),
+            // 既製杭のせん断耐力の 2 式は、コード内では「斜め引張破壊 / ウェブ破壊」と
+            // 呼んでいたが、出典の「基礎部材の強度と変形性能」は
+            // 「斜めひび割れ / 縦ひび割れ」と書いている。図の凡例に出すにあたり出典に合わせた。
+            ("斜め引張破壊",         "斜めひび割れ"),
+            ("斜め引張り破壊",       "斜めひび割れ"),
+            ("ウェブ破壊",           "縦ひび割れ"),
         };
 
         private static string FindSolutionRoot()

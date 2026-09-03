@@ -108,23 +108,10 @@ namespace PileDesign.ViewModels
             {
                 if (PileSection != null && PileSectionWindowInstance != null)
                 {
-                    var thresholds = PileSection.UltimateLimitAxialForceThresholds;
-                    if (thresholds != null && thresholds.Count >= 2)
-                    {
-                        double NMin = thresholds[0];
-                        double NMax = thresholds[^1];
-                        Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                        {
-                            DrawNQForCurrentPile(NMin, NMax, 10);
-                        }));
-                    }
-                    else
-                    {
-                        Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                        {
-                            ChartUpdate();
-                        }));
-                    }
+                    // 軸力の掃引範囲は各杭種の断面側が自分で決めるので、ここで
+                    // UltimateLimitAxialForceThresholds を見る必要はない
+                    // （見た上で使っておらず、しきい値が無い断面では N-Q が描き直されなかった）。
+                    Application.Current?.Dispatcher?.BeginInvoke(new Action(DrawNQForCurrentPile));
                 }
             }
             catch (Exception ex)
@@ -133,43 +120,45 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 追加: 杭種に応じて適切な N-Q グラフを描くヘルパー
-        private void DrawNQForCurrentPile(double NMin, double NMax, int nDiv)
+        // 杭種に応じて適切な N-Q グラフを描くヘルパー。
+        // 軸力の掃引範囲と分割数は各杭種の断面計算（Get*QNInteraction / 鋼管杭のヘルパー）が
+        // 自分で決めるため、呼び出し側から N の範囲を渡す口は持たない。
+        private void DrawNQForCurrentPile()
         {
             if (PileSection == null) return;
 
             if (PileSection.PileBodyType == PileTypeNames.InsituRc ||
                 (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.RcSection))
             {
-                DrawInsituReinforcedConcretePile_NQ(NMin, NMax, nDiv);
+                DrawInsituReinforcedConcretePile_NQ();
             }
             else if (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
             {
-                DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, nDiv);
+                DrawInsituSteelPipeReinforcedConcretePile_NQ();
             }
             else if (PileSection.PileBodyType == PileTypeNames.SteelPipe && PileSection.PileSectionType == PileTypeNames.CftSection)
             {
                 // 鋼管杭+コンクリート充填鋼管部 は SPRC の鋼管コンクリート部 と同じ計算で描画
-                DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, nDiv);
+                DrawInsituSteelPipeReinforcedConcretePile_NQ();
             }
             else if (PileSection.PileBodyType == PileTypeNames.SteelPipe && PileSection.PileSectionType == PileTypeNames.SteelPipeSection)
             {
                 // 鋼管杭 (鋼管部、純鋼管区間) は SteelPipeSection の Middle ヘルパーで直接描画
-                DrawSteelPipePileMiddle_NQ(nDiv);
+                DrawSteelPipePileMiddle_NQ();
             }
             // PHC節杭 の断面耐力は軸部基準で PHC杭 と同一
             else if (PileTypeNames.IsPhcLikeSection(PileSection.PileSectionType))
             {
-                DrawPHC_NQ(NMin, NMax, nDiv);
+                DrawPHC_NQ();
             }
             else if (PileTypeNames.IsPrcLikeSection(PileSection.PileSectionType))
             {
-                DrawPRC_NQ(NMin, NMax, nDiv);
+                DrawPRC_NQ();
             }
             else if (PileSection.PileSectionType == PileTypeNames.Sc)
             {
                 if (PileSection.PipeTs > 0)
-                    DrawSC_NQ(NMin, NMax, nDiv);
+                    DrawSC_NQ();
             }
         }
 
@@ -185,21 +174,11 @@ namespace PileDesign.ViewModels
             {
                 if (PileSection != null && PileSectionWindowInstance != null)
                 {
-                    var thresholds = PileSection.UltimateLimitAxialForceThresholds;
-                    if (thresholds != null && thresholds.Count >= 2)
+                    Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                     {
-                        double NMin = thresholds[0];
-                        double NMax = thresholds[^1];
-                        Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                        {
-                            DrawNQForCurrentPile(NMin, NMax, 10);
-                            ChartUpdate(); // N-M プロットも損傷限界曲線の L1/L2 切替のため再描画
-                        }));
-                    }
-                    else
-                    {
-                        Application.Current?.Dispatcher?.BeginInvoke(new Action(() => ChartUpdate()));
-                    }
+                        DrawNQForCurrentPile();
+                        ChartUpdate(); // N-M プロットも損傷限界曲線の L1/L2 切替のため再描画
+                    }));
                 }
             }
             catch (Exception ex)
@@ -424,6 +403,27 @@ namespace PileDesign.ViewModels
             TryPlot(ultimateUnfactored, "(低減前) 安全限界 Q-N", NikkenSKColor.PaleRed, true, 1.5);
             TryPlot(ultimateFactored, "(低減後) 安全限界 Q-N", NikkenSKColor.PaleRed, false, 2.0);
 
+            // せん断耐力の内訳（斜めひび割れ / 縦ひび割れ）を点線で重ねる。
+            // Q-N 本線はこの 2 つの小さい方なので、どちらが決めているかが読める。
+            // PHC・PRC 以外は空リストが返るため、そのまま呼んでよい。
+            foreach (var c in PileSection.ComputeQNShearComponents(MonQd))
+            {
+                if (c.N.Count == 0) continue;
+                var sc = wpf.Plot.Add.Scatter(c.N.ToArray(), c.Q.ToArray());
+                sc.LegendText = ConcreteModelOptions.MapLimitStateText(
+                    $"(低減前) {c.LimitState} {c.Mode}");
+                sc.Color = ScottPlot.Color.FromSKColor(
+                    c.LimitState switch
+                    {
+                        "使用限界" => NikkenSKColor.DeepBlue,
+                        "損傷限界" => NikkenSKColor.Green,
+                        _ => NikkenSKColor.PaleRed,
+                    }).WithAlpha(0.55);
+                sc.LineWidth = 1;
+                sc.MarkerSize = 0;
+                sc.LineStyle.Pattern = ScottPlot.LinePattern.Dotted;
+            }
+
             var blackNQ = new ScottPlot.Color(0, 0, 0);
             wpf.Plot.Add.VerticalLine(0, 1, blackNQ);
             wpf.Plot.Add.HorizontalLine(0, 1, blackNQ);
@@ -441,7 +441,7 @@ namespace PileDesign.ViewModels
         }
 
         // 場所打ち鉄筋コンクリート杭せん断力
-        private void DrawInsituReinforcedConcretePile_NQ(double NMin, double NMax, int nDiv)
+        private void DrawInsituReinforcedConcretePile_NQ()
         {
             var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
             var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
@@ -464,7 +464,7 @@ namespace PileDesign.ViewModels
         }
 
         // 場所打ち鉄筋コンクリート杭せん断力
-        private void DrawInsituSteelPipeReinforcedConcretePile_NQ(double NMin, double NMax, int nDiv)
+        private void DrawInsituSteelPipeReinforcedConcretePile_NQ()
         {
             var insituSteelPipe = new InsituSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
             var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
@@ -485,7 +485,7 @@ namespace PileDesign.ViewModels
         }
 
         // PHC杭せん断力
-        private void DrawPHC_NQ(double NMin, double NMax, int nDiv)
+        private void DrawPHC_NQ()
         {
             var precastConcrete = new PrecastPHCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
             var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
@@ -506,7 +506,7 @@ namespace PileDesign.ViewModels
         }
 
         // PRC杭せん断力
-        private void DrawPRC_NQ(double NMin, double NMax, int nDiv)
+        private void DrawPRC_NQ()
         {
             var precastConcrete = new PrecastPRCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
             var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
@@ -528,7 +528,7 @@ namespace PileDesign.ViewModels
         }
 
         // SC杭せん断力
-        private void DrawSC_NQ(double NMin, double NMax, int nDiv)
+        private void DrawSC_NQ()
         {
             var precastConcrete = new PrecastSCConcrete(PileSection.PileDiameter - 2 * PileSection.PipeTs, PileSection.PileDiameter - 2 * PileSection.PipeTs - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
             var steelPipe = new PrecastSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
@@ -597,7 +597,7 @@ namespace PileDesign.ViewModels
 
         // 鋼管杭 (鋼管部) の N-Q
         // 使用限界・損傷限界せん断は軸力非依存 (水平直線)。安全限界のみ Nud に依存。
-        private void DrawSteelPipePileMiddle_NQ(int nDiv)
+        private void DrawSteelPipePileMiddle_NQ()
         {
             var section = CreateSteelPipeSectionMiddle();
             if (section == null) return;
@@ -1165,7 +1165,7 @@ namespace PileDesign.ViewModels
                 double NMax = ns[^1];
 
                 DrawInsituReinforcedConcretePile_MPhiMThetaGraph(NMin, NMax, 10);
-                DrawInsituReinforcedConcretePile_NQ(NMin, NMax, 10);
+                DrawInsituReinforcedConcretePile_NQ();
             }
 
             else if (PileSection.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSection.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
@@ -1175,7 +1175,7 @@ namespace PileDesign.ViewModels
                 double NMax = ns[^1]; // kN -> N
 
                 DrawInsituSteelPipeReinforcedConcretePile_MPhiMThetaGraph(NMin, NMax, 10);
-                DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, 10);
+                DrawInsituSteelPipeReinforcedConcretePile_NQ();
             }
 
             else if (PileSection.PileBodyType == PileTypeNames.SteelPipe && PileSection.PileSectionType == PileTypeNames.CftSection)
@@ -1186,7 +1186,7 @@ namespace PileDesign.ViewModels
                 double NMax = ns[^1];
 
                 DrawSteelPipePileTopComposite_MPhiMThetaGraph(NMin, NMax, 10);
-                DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, 10);
+                DrawInsituSteelPipeReinforcedConcretePile_NQ();
             }
 
             else if (PileSection.PileBodyType == PileTypeNames.SteelPipe && PileSection.PileSectionType == PileTypeNames.SteelPipeSection)
@@ -1195,7 +1195,7 @@ namespace PileDesign.ViewModels
                 // UltimateLimitAxialForceThresholds は CreateSectionCalculator が null を返すため
                 // 利用できないので、N 範囲は描画ヘルパー内で sNut/NucMiddle から自動計算する。
                 DrawSteelPipePileMiddle_MPhiMThetaGraph(10);
-                DrawSteelPipePileMiddle_NQ(10);
+                DrawSteelPipePileMiddle_NQ();
             }
 
             // PHC節杭 の断面耐力は軸部基準で PHC杭 と同一
@@ -1206,7 +1206,7 @@ namespace PileDesign.ViewModels
                 double NMax = ns[^1]; // kN -> N
 
                 DrawPHC_MPhiMThetaGraph(NMin, NMax, 10);
-                DrawPHC_NQ(NMin, NMax, 10);
+                DrawPHC_NQ();
             }
 
 
@@ -1223,7 +1223,7 @@ namespace PileDesign.ViewModels
                 double NMax = ns[^1]; // kN -> N
 
                 DrawPRC_MPhiMThetaGraph(NMin, NMax, 10);
-                DrawPRC_NQ(NMin, NMax, 10);
+                DrawPRC_NQ();
             }
 
             else if (PileSection.PileSectionType == PileTypeNames.Sc)
@@ -1235,7 +1235,7 @@ namespace PileDesign.ViewModels
                     double NMax = ns[^1]; // kN -> N
 
                     DrawSC_MPhiMThetaGraph(NMin, NMax, 10);
-                    DrawSC_NQ(NMin, NMax, 10);
+                    DrawSC_NQ();
                 }
             }
         }

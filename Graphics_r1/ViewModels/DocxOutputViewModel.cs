@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Services;
 using System;
@@ -93,6 +93,7 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(IncludeHorizontal_MPhi));
             OnPropertyChanged(nameof(IncludeHorizontal_MTheta));
             OnPropertyChanged(nameof(IncludeHorizontal_NGReport));
+            OnPropertyChanged(nameof(IncludeHorizontal_LongTermEvaluation));
             OnPropertyChanged(nameof(IncludeHorizontal_StressLimitState));
             OnPropertyChanged(nameof(IncludeAnalysisSummaryReport));
             OnPropertyChanged(nameof(IncludePileHeadMomentMap));
@@ -102,7 +103,17 @@ namespace PileDesign.ViewModels
         private void NotifyVerticalChildrenChanged()
         {
             OnPropertyChanged(nameof(IncludeSettlement));
+            OnPropertyChanged(nameof(IncludeBearingEvaluation));
             OnPropertyChanged(nameof(CanEditVerticalChildren));
+        }
+
+        // 杭の鉛直支持力の検定 (押込み・引抜き)。支持力検討 (IncludeVertical) の子。
+        // 限界値は鉛直解析が求めた抵抗力を使うので、親と同じく鉛直解析の完了が要る。
+        private bool _includeBearingEvaluation = true;
+        public bool IncludeBearingEvaluation
+        {
+            get => _includeBearingEvaluation && _includeVertical && _main.IsVerticalAnalysisDone;
+            set { if (_includeBearingEvaluation != value) { _includeBearingEvaluation = value; OnPropertyChanged(); } }
         }
 
         // 水平検討の子フラグ — 親 (_includeHorizontal) が true かつ 解析完了 の時のみ display=true
@@ -147,6 +158,16 @@ namespace PileDesign.ViewModels
         {
             get => _includeHorizontal_NGReport && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeHorizontal_NGReport != value) { _includeHorizontal_NGReport = value; OnPropertyChanged(); } }
+        }
+
+        // 長期 (常時) の検定を計算書に載せるか (default OFF)。
+        // 長期は VL 単独ケースを解析したときだけ現れ、水平荷重が無いので
+        // 土圧などが無い限り問題にならない。既定では出さず、必要な人だけ出す。
+        private bool _includeHorizontal_LongTermEvaluation;
+        public bool IncludeHorizontal_LongTermEvaluation
+        {
+            get => _includeHorizontal_LongTermEvaluation && _includeHorizontal && _main.IsHorizontalAnalysisDone;
+            set { if (_includeHorizontal_LongTermEvaluation != value) { _includeHorizontal_LongTermEvaluation = value; OnPropertyChanged(); } }
         }
         // 杭変位・応力ダイアグラムへの限界状態線重ね描き (default ON)
         // - レベル1 → 損傷限界

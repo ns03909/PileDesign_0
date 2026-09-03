@@ -3082,12 +3082,12 @@ namespace PileDesign.Models.InputData
         /// せん断耐力の内訳曲線 1 本。<see cref="ComputeQNShearComponents"/> が返す。
         /// </summary>
         /// <param name="LimitState">"使用限界" / "損傷限界" / "安全限界"</param>
-        /// <param name="Mode">"斜め引張破壊" / "ウェブ破壊"</param>
+        /// <param name="Mode">"斜めひび割れ" / "縦ひび割れ"</param>
         public sealed record ShearComponentCurve(
             string LimitState, string Mode, List<double> N, List<double> Q);
 
         /// <summary>
-        /// せん断耐力の内訳（斜め引張破壊 / ウェブ破壊）の QN 曲線を返す（kN 単位、β 低減前）。
+        /// せん断耐力の内訳（斜めひび割れ / 縦ひび割れ）の QN 曲線を返す（kN 単位、β 低減前）。
         ///
         /// PHC・PRC のせん断耐力は 2 式の小さい方で決まるが、採用値だけではどちらが
         /// 効いているか分からない。図に点線で重ねられるよう内訳を返す。
@@ -3102,31 +3102,114 @@ namespace PileDesign.Models.InputData
                 || precast is SCSection)
                 return result;
 
-            void Add(string limitState, (double DiagonalTension, double Web) c,
+            // 内訳も軸力ごとに評価する。σ0e = N/Ae が σG に入るので、本線と同じく N で変わる。
+            void Add(string limitState,
+                     Func<double, (double DiagonalTension, double Web)> components,
                      double nMin, double nMax)
             {
-                foreach (var (mode, q) in new[]
-                         { ("斜め引張破壊", c.DiagonalTension), ("ウェブ破壊", c.Web) })
+                var nsD = new List<double>(iCount);
+                var qsD = new List<double>(iCount);
+                var nsW = new List<double>(iCount);
+                var qsW = new List<double>(iCount);
+                for (int i = 0; i < iCount; i++)
                 {
-                    if (!double.IsFinite(q) || q <= 0.0) continue;
-                    var ns = new List<double>(iCount);
-                    var qs = new List<double>(iCount);
-                    for (int i = 0; i < iCount; i++)
+                    double n = (nMin * (iCount - i) + nMax * i) / iCount;
+                    double sigma0E = precast.Ae > 0.0 ? n / precast.Ae : 0.0;
+                    var c = components(sigma0E);
+                    if (double.IsFinite(c.DiagonalTension) && c.DiagonalTension > 0.0)
                     {
-                        ns.Add((nMin * (iCount - i) + nMax * i) / iCount * 1e-3);
-                        qs.Add(q * 1e-3);
+                        nsD.Add(n * 1e-3);
+                        qsD.Add(c.DiagonalTension * 1e-3);
                     }
-                    result.Add(new ShearComponentCurve(limitState, mode, ns, qs));
+                    if (double.IsFinite(c.Web) && c.Web > 0.0)
+                    {
+                        nsW.Add(n * 1e-3);
+                        qsW.Add(c.Web * 1e-3);
+                    }
                 }
+                if (nsD.Count > 0)
+                    result.Add(new ShearComponentCurve(limitState, "斜めひび割れ", nsD, qsD));
+                if (nsW.Count > 0)
+                    result.Add(new ShearComponentCurve(limitState, "縦ひび割れ", nsW, qsW));
             }
 
-            Add("使用限界", precast.GetServiceLimitShearComponents(monQd),
+            Add("使用限界", s => precast.GetServiceLimitShearComponents(monQd, s),
                 precast.ShearNMinService, precast.ShearNMaxService);
-            Add("損傷限界", precast.GetDamageLimitShearComponents(monQd),
+            Add("損傷限界", s => precast.GetDamageLimitShearComponents(monQd, s),
                 precast.ShearNMinDamage, precast.ShearNMaxDamage);
-            Add("安全限界", precast.GetUltimateLimitShearComponents(monQd),
+            Add("安全限界", s => precast.GetUltimateLimitShearComponents(monQd, s),
                 precast.ShearNMinUltimate, precast.ShearNMaxUltimate);
             return result;
+        }
+
+        /// <summary>
+        /// N-M / Q-N 曲線から、指定軸力に対応する限界値を線形補間で求める。
+        ///
+        /// <b>限界曲線は軸力について 1 価とは限らない。</b>圧縮側と引張側で 2 度、
+        /// 軸力制限を入れた曲線では境界の垂直線でさらに複数回、同じ N を横切る。
+        /// 検定に使うのは<b>包絡</b>なので、横切ったすべての区間のうち最大値を採る。
+        ///
+        /// 範囲外の軸力では NaN を返す。端の値へ丸めると、軸力制限の外にある断面に
+        /// 「端の耐力がある」と読める線を引いてしまう
+        /// (計算書の限界線がそうなっていた。検定は 0 を返して項目を作らない扱いだった)。
+        /// </summary>
+        public static double InterpolateLimitAtAxialForce(
+            List<double>? ns, List<double>? values, double targetN)
+        {
+            if (ns == null || values == null) return double.NaN;
+            if (ns.Count < 2 || ns.Count != values.Count) return double.NaN;
+
+            double best = double.NaN;
+            for (int i = 0; i < ns.Count - 1; i++)
+            {
+                double n0 = ns[i], n1 = ns[i + 1];
+                if (targetN < Math.Min(n0, n1) || targetN > Math.Max(n0, n1)) continue;
+
+                double v0 = values[i], v1 = values[i + 1];
+                double dn = n1 - n0;
+                double v = Math.Abs(dn) < 1e-10
+                    ? Math.Max(v0, v1)                       // 垂直な区間 (軸力制限の境界)
+                    : v0 + (v1 - v0) * (targetN - n0) / dn;
+
+                if (double.IsNaN(best) || v > best) best = v;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// 検定・グラフ・計算書が共通で使う M/(Q·d)。
+        /// せん断耐力は M/(Q·d) に依存する (場所打ちRC の (M/Qd + 1.7)、既製杭の α)。
+        /// 画面のグラフだけは利用者が値を変えられるが、既定はこの値。
+        /// </summary>
+        public const double DefaultMonQd = 3.0;
+
+        /// <summary>
+        /// <b>荷重レベルに応じた Q-N 曲線</b>を返す。限界曲線を引く経路はすべてここを通すこと。
+        ///
+        /// 損傷限界はレベルで低減係数が変わる (レベル1 は β2 を乗じない、レベル2 は β1×β2)。
+        /// キャッシュ済みの <see cref="FactoredDamageNQ"/> 等はレベルを持たないため、
+        /// それを直接読むと<b>画面・計算書・検定で違う曲線</b>になる (実際にそうなっていた)。
+        ///
+        /// 鋼管杭のように <see cref="ComputeQNForMonQd"/> が曲線を返せない断面では、
+        /// キャッシュ済みプロパティに落とす (鋼管杭の損傷限界はレベルに依存しない)。
+        /// </summary>
+        public (
+            (List<double> N, List<double> Q) UnfactoredService,
+            (List<double> N, List<double> Q) FactoredService,
+            (List<double> N, List<double> Q) UnfactoredDamage,
+            (List<double> N, List<double> Q) FactoredDamage,
+            (List<double> N, List<double> Q) UnfactoredUltimate,
+            (List<double> N, List<double> Q) FactoredUltimate
+        ) GetQNCurvesForLevel(int damageLevel, double monQd = DefaultMonQd)
+        {
+            var curves = ComputeQNForMonQd(monQd, damageLevel);
+            if (curves.UnfactoredService.N != null) return curves;
+
+            return (
+                UnfactoredServiceNQ, FactoredServiceNQ,
+                UnfactoredDamageNQ, FactoredDamageNQ,
+                UnfactoredUltimateNQ, FactoredUltimateNQ
+            );
         }
 
         /// <summary>

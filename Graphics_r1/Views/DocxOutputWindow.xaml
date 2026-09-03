@@ -1,4 +1,4 @@
-<Window x:Class="PileDesign.Views.DocxOutputWindow"
+﻿<Window x:Class="PileDesign.Views.DocxOutputWindow"
 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -197,9 +197,14 @@ WindowStartupLocation="CenterOwner">
                     </GroupBox>
 
                     <GroupBox Header="支持力" Margin="0,0,0,4" Padding="4">
-                        <CheckBox Content="支持力検討" IsChecked="{Binding DocxOutput.IncludeVertical, Mode=TwoWay}"
-                                  IsEnabled="{Binding IsVerticalAnalysisDone}"
-                                  ToolTip="単杭沈下解析が未完了の場合は灰色"/>
+                        <StackPanel>
+                            <CheckBox Content="支持力検討" IsChecked="{Binding DocxOutput.IncludeVertical, Mode=TwoWay}"
+                                      IsEnabled="{Binding IsVerticalAnalysisDone}"
+                                      ToolTip="単杭沈下解析が未完了の場合は灰色"/>
+                            <CheckBox Content="支持力の検定（押込み・引抜き）" IsChecked="{Binding DocxOutput.IncludeBearingEvaluation, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditVerticalChildren}"
+                                      ToolTip="支持力検討 ON かつ 単杭沈下解析完了で編集可"/>
+                        </StackPanel>
                     </GroupBox>
 
                     <GroupBox Header="水平検討" Margin="0,0,0,4" Padding="4">
@@ -251,6 +256,9 @@ WindowStartupLocation="CenterOwner">
                                       IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
                             <CheckBox Content="検定結果（NGのみ）" IsChecked="{Binding DocxOutput.IncludeHorizontal_NGReport, Mode=TwoWay}" Margin="15,2,0,2"
                                       IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
+                            <CheckBox Content="長期（常時）も検定する" IsChecked="{Binding DocxOutput.IncludeHorizontal_LongTermEvaluation, Mode=TwoWay}" Margin="30,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"
+                                      ToolTip="VL（常時）単独ケースを解析したときの曲げ・せん断を使用限界で検定します。水平荷重が無いため、土圧などが無ければ通常は問題になりません"/>
                         </StackPanel>
                     </GroupBox>
 

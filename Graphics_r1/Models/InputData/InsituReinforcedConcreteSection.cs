@@ -141,6 +141,10 @@ namespace PileDesign.Models.InputData
             UnfactoredDamageNQ = GetDamageLimitQNInteraction(3.0, false);
 
             // 低減前安全限界NQインタラクション
+            // pw = 0.002 / σwy = 295 は<b>仮値</b>。この断面クラスは帯筋の入力を持たないため、
+            // 実際の帯筋 (径・ピッチ・材質) を反映した曲線は PileSection.ComputeQNForMonQd が
+            // HoopPw / HoopSigmay を渡して作る。曲線を使う側は必ず
+            // PileSection.GetQNCurvesForLevel を通すこと (ここは鋼管杭等のフォールバック用)。
             UnfactoredUltimateNQ = GetUltimateQNInteraction(3.0, 0.002, 295, false);
 
             // 低減前使用限界NQインタラクション

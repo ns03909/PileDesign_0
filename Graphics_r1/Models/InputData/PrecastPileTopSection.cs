@@ -22,7 +22,6 @@ namespace PileDesign.Models.InputData
         public double Rp { get; protected set; } // PC鋼材配置半径
 
         public double As { get; protected set; } // 主筋断面積
-        public double Rs { get; protected set; } // 主筋配置半径
 
         public double Ag { get; protected set; } // 
         public double Rg { get; protected set; } // 
@@ -33,7 +32,6 @@ namespace PileDesign.Models.InputData
         public double Ie { get; protected set; } //  換算断面二次モーメント
         public double I { get; protected set; } // 断面二次モーメント
         public double Fts { get; protected set; } // 
-        public double Sigma0E { get; protected set; } // 平均軸応力度　N/Ae
 
         public new double CurvatureMaxUltimateLimit { get; protected set; }
 

@@ -44,6 +44,57 @@ namespace PileDesign.ViewModels
             InputModel.FundamentalInput.SeismicGrade = value;
         }
 
+        // ── 杭頭 2 点間の変形角の限界値 (rad) ──
+        // 解析結果には影響せず、検定の限界値が変わるだけなので解析結果は破棄しない。
+
+        // 沈下検討の対象 (true = 単杭＋群杭沈下 / false = 単杭沈下)
+        [ObservableProperty]
+        private bool _settlementDesignIncludesGroup;
+
+        partial void OnSettlementDesignIncludesGroupChanged(bool value)
+        {
+            var oldValue = InputModel.FundamentalInput.SettlementDesignIncludesGroup;
+            if (oldValue == value) return;
+
+            _undoManager.PushAction(
+                () => InputModel.FundamentalInput.SettlementDesignIncludesGroup = oldValue,
+                () => InputModel.FundamentalInput.SettlementDesignIncludesGroup = value,
+                "沈下検討の対象変更");
+            InputModel.FundamentalInput.SettlementDesignIncludesGroup = value;
+        }
+
+        [ObservableProperty]
+        private double _serviceDeformationAngleLimit;
+
+        partial void OnServiceDeformationAngleLimitChanged(double value)
+            => PushDeformationAngleChange(
+                v => InputModel.FundamentalInput.ServiceDeformationAngleLimit = v,
+                InputModel.FundamentalInput.ServiceDeformationAngleLimit, value, "使用限界変形角変更");
+
+        [ObservableProperty]
+        private double _damageDeformationAngleLimit;
+
+        partial void OnDamageDeformationAngleLimitChanged(double value)
+            => PushDeformationAngleChange(
+                v => InputModel.FundamentalInput.DamageDeformationAngleLimit = v,
+                InputModel.FundamentalInput.DamageDeformationAngleLimit, value, "損傷限界変形角変更");
+
+        [ObservableProperty]
+        private double _ultimateDeformationAngleLimit;
+
+        partial void OnUltimateDeformationAngleLimitChanged(double value)
+            => PushDeformationAngleChange(
+                v => InputModel.FundamentalInput.UltimateDeformationAngleLimit = v,
+                InputModel.FundamentalInput.UltimateDeformationAngleLimit, value, "終局限界変形角変更");
+
+        private void PushDeformationAngleChange(
+            Action<double> apply, double oldValue, double newValue, string description)
+        {
+            if (oldValue == newValue) return;
+            _undoManager.PushAction(() => apply(oldValue), () => apply(newValue), description);
+            apply(newValue);
+        }
+
         // バイリニア型コンクリートの引張側降伏応力度を 0 とする
         [ObservableProperty]
         private bool _ignoreConcreteTensileStrength;
@@ -494,6 +545,10 @@ namespace PileDesign.ViewModels
 
             Point3D0 = InputModel.FundamentalInput.Point3D0;
             SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
+            SettlementDesignIncludesGroup = InputModel.FundamentalInput.SettlementDesignIncludesGroup;
+            ServiceDeformationAngleLimit = InputModel.FundamentalInput.ServiceDeformationAngleLimit;
+            DamageDeformationAngleLimit = InputModel.FundamentalInput.DamageDeformationAngleLimit;
+            UltimateDeformationAngleLimit = InputModel.FundamentalInput.UltimateDeformationAngleLimit;
             IgnoreConcreteTensileStrength = InputModel.FundamentalInput.IgnoreConcreteTensileStrength;
             UseReducedConcreteCompressiveStrength = InputModel.FundamentalInput.UseReducedConcreteCompressiveStrength;
             RebarYieldAt11F = InputModel.FundamentalInput.RebarYieldAt11F;
@@ -544,6 +599,19 @@ namespace PileDesign.ViewModels
             {
                 case nameof(FundamentalInput.SeismicGrade):
                     SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
+                    break;
+                case nameof(FundamentalInput.SettlementDesignIncludesGroup):
+                    SettlementDesignIncludesGroup = InputModel.FundamentalInput.SettlementDesignIncludesGroup;
+                    break;
+                // Undo/Redo でモデル側が変わったとき、入力欄にも反映する
+                case nameof(FundamentalInput.ServiceDeformationAngleLimit):
+                    ServiceDeformationAngleLimit = InputModel.FundamentalInput.ServiceDeformationAngleLimit;
+                    break;
+                case nameof(FundamentalInput.DamageDeformationAngleLimit):
+                    DamageDeformationAngleLimit = InputModel.FundamentalInput.DamageDeformationAngleLimit;
+                    break;
+                case nameof(FundamentalInput.UltimateDeformationAngleLimit):
+                    UltimateDeformationAngleLimit = InputModel.FundamentalInput.UltimateDeformationAngleLimit;
                     break;
                 case nameof(FundamentalInput.IgnoreConcreteTensileStrength):
                     IgnoreConcreteTensileStrength = InputModel.FundamentalInput.IgnoreConcreteTensileStrength;

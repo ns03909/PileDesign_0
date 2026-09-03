@@ -205,5 +205,92 @@ namespace TestProject1
             Assert.IsTrue(text.Contains("[OK]") || text.Contains("[NG]"),
                 "検定項目が 1 件も出ていない (解析結果が空の可能性)");
         }
-    }
+    
+        /// <summary>
+        /// 杭体せん断の検定が、地震動レベルに応じた限界状態で並ぶこと。
+        ///
+        /// せん断はもともと検定されておらず、Q-N 曲線はグラフと計算書に描くだけだった。
+        /// 割り当ては曲げと同じ規則にしてある。
+        ///   レベル1 → 損傷限界 / レベル2 → 安全限界 (耐震グレード S は損傷限界)
+        ///   長期 (VL 単独ケース) → 使用限界
+        /// 長期は VL 単独解析を行った場合にだけ現れるので、ここでは有無を問わない。
+        /// </summary>
+        [TestMethod]
+        public void ShearItems_UseTheSameLimitStateAsMoment()
+        {
+            var vm = GetAnalyzedViewModel("Example10");
+            if (vm == null) { Assert.Inconclusive("例題の解析ができない環境"); return; }
+
+            var result = EvaluationService.BuildEvaluationResult(vm, factored: false);
+            var shear = result.Items
+                .Where(i => i.Kind == PileDesign.Models.Results.EvaluationKind.PileSectionShear)
+                .ToList();
+
+            Assert.IsTrue(shear.Count > 0, "せん断の検定項目が 1 件も無い");
+
+            foreach (var item in shear)
+            {
+                string expected = item.Level switch
+                {
+                    0 => "使用限界",
+                    1 => "損傷限界",
+                    _ => "安全限界",
+                };
+                Assert.AreEqual(expected, item.LimitName,
+                    $"レベル{item.Level} のせん断が {item.LimitName} で検定されている");
+                Assert.AreEqual("kN", item.Unit, "せん断の単位が kN でない");
+                Assert.IsTrue(item.Limit > 0, "せん断の限界値が 0 以下のまま項目になっている");
+                Assert.IsNotNull(item.AxialForce, "限界値の前提となった軸力が記録されていない");
+            }
+
+            // M/(Q·d) は解析した断面力から杭・荷重ケースごとに求める。
+            // 既定値 3.0 で固定していると、解析した形状と関係のない耐力で検定することになる。
+            Assert.IsTrue(shear.All(i => i.MonQd != null), "M/(Q·d) が記録されていない");
+            Assert.IsTrue(shear.Select(i => System.Math.Round(i.MonQd!.Value, 3)).Distinct().Count() > 1
+                          || shear.Any(i => System.Math.Abs(i.MonQd!.Value - PileDesign.Models.InputData.PileSection.DefaultMonQd) > 1e-6),
+                "M/(Q·d) が全行で既定値のまま。解析結果から求めていない疑いがある。");
+
+            // 曲げと同じ対象 (梁要素の i端/j端) で、同じ数だけ並ぶこと
+            var moment = result.Items
+                .Where(i => i.Kind == PileDesign.Models.Results.EvaluationKind.PileSectionMoment)
+                .ToList();
+            Assert.AreEqual(moment.Count, shear.Count,
+                "曲げとせん断で検定した端部の数が食い違う (どちらかが欠けている)");
+        }
+
+        /// <summary>
+        /// 検定は<b>杭ごとの軸力</b>で限界値を引くこと。
+        ///
+        /// 杭体番号 (PileBodyNo) は断面と区間の仕様の番号で、同じ杭体を複数の杭が使う。
+        /// 杭体番号で杭を引くと最初の 1 本しか当たらず、その杭の軸力で全部を検定してしまう。
+        /// 限界値は軸力で変わるので、他の杭は別の杭の軸力で引いた限界値と比べられていた
+        /// (計算例3.5 では 安全限界M が 728.6 と 614.1 で 16% 違った)。
+        /// </summary>
+        [TestMethod]
+        public void Items_UseEachPilesOwnAxialForce()
+        {
+            var vm = GetAnalyzedViewModel("Example3_5");
+            if (vm == null) { Assert.Inconclusive("例題の解析ができない環境"); return; }
+
+            var items = EvaluationService.BuildEvaluationResult(vm, factored: false).Items
+                .Where(i => i.Kind == PileDesign.Models.Results.EvaluationKind.PileSectionMoment
+                         || i.Kind == PileDesign.Models.Results.EvaluationKind.PileSectionShear)
+                .ToList();
+            Assert.IsTrue(items.Count > 0, "杭体の検定項目が無い");
+
+            // 杭が特定できていること (できないと行が区別できず、軸力も引けない)
+            Assert.IsTrue(items.All(i => i.PileNo != null),
+                "杭を特定できていない項目がある (梁→杭の対応表を引けていない)");
+
+            // 同じ杭体を共有する杭が、それぞれ自分の軸力で検定されていること
+            var byPileBody = items.GroupBy(i => i.PileBodyNo)
+                .FirstOrDefault(g => g.Select(i => i.PileNo).Distinct().Count() > 1);
+            Assert.IsNotNull(byPileBody, "前提: 杭体を共有する杭が複数ある例題であること");
+
+            int distinctAxial = byPileBody!.Select(i => i.AxialForce).Distinct().Count();
+            Assert.IsTrue(distinctAxial > 1,
+                $"杭体No.{byPileBody.Key} を共有する杭が全部同じ軸力 ({byPileBody.First().AxialForce:F1} kN) "
+                + "で検定されている。杭体番号で杭を引いていないか確認すること。");
+        }
+}
 }
