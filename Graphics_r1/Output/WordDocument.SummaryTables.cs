@@ -1216,12 +1216,16 @@ namespace PileDesign.Output
                 CreateTableCell(["応答"], fontSize, "center"),
                 CreateTableCell(["限界"], fontSize, "center"),
                 CreateTableCell(["単位"], fontSize, "center"),
+                CreateTableCell(["軸力", "[kN]"], fontSize, "center"),
+                CreateTableCell(["M/(Q·d)"], fontSize, "center"),
                 CreateTableCell(["検定比"], fontSize, "center")));
 
             // 検定比の大きい順。どこが一番危ないかを上から読めるようにする
             foreach (var item in result.ByRatioDescending.Where(i => !i.IsOk))
             {
-                string target = $"{item.TargetName}{item.EndLabel}";
+                // 対象は TargetDescription を使う。要素名 + 端 (「beam i端」) では
+                // どの杭のどこか読めず、行がすべて同じ表記になる。
+                string target = item.TargetDescription;
                 string liq = item.LiquefactionLabel;
                 string load = string.IsNullOrEmpty(liq) ? item.LoadCaseName : $"{item.LoadCaseName}（{liq}）";
 
@@ -1234,12 +1238,20 @@ namespace PileDesign.Output
                 row.Append(CreateTableCell([item.ResponseText], fontSize, "right"));
                 row.Append(CreateTableCell([item.LimitText], fontSize, "right"));
                 row.Append(CreateTableCell([item.Unit], fontSize, "center"));
+                // 限界値の前提。曲げ・せん断以外は軸力を持たず、M/(Q·d) はせん断のみ。
+                row.Append(CreateTableCell(
+                    [item.AxialForce is double n ? $"{n:N1}" : "—"], fontSize, "right"));
+                row.Append(CreateTableCell(
+                    [item.MonQd is double q ? $"{q:N2}" : "—"], fontSize, "right"));
                 row.Append(CreateTableCell([item.Ratio is { } ratio ? $"{ratio:F2}" : "-"], fontSize, "right"));
                 table.Append(row);
             }
 
             body.Append(table);
-            AddTableNote(body, "※ 検定比 = 応答値 / 限界値。1.00 を超えるものを NG として挙げている。");
+            AddTableNote(body,
+                "※ 検定比 = 応答値 / 限界値。1.00 を超えるものを NG として挙げている。"
+                + "軸力は限界値を求めるのに使った値、M/(Q·d) はせん断耐力の算定に使った値で、"
+                + "いずれも杭ごと・荷重ケースごとに求めている。");
         }
 
         /// <summary>
