@@ -172,12 +172,13 @@ namespace PileDesign.Models.InputData
             FactoredDamageNM = GetFactoredMNInteraction(UnfactoredDamageNM, (DamageLimitAxialForceThresholds, DamageLimitBendingMomentThresholds), DamageLimitBeta);
             FactoredDamageNMLevel1 = FactoredDamageNM;
 
-            // 低減後安全限界NMインタラクション
-            // 指針(案) 準拠オプション時は安全限界曲げ強度をそのまま採用し、低減・軸力制限を課さない
-            // （低減後＝低減前の全体を描く＝1本の滑らかな耐力包絡線）。既定は基礎部材の低減率・軸力制限を適用。
-            FactoredUltimateNM = ConcreteModelOptions.UseInsituUltimateEFunction
-                ? UnfactoredUltimateNM
-                : GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
+            // 低減後安全限界NMインタラクション。
+            // 耐力の求め方 (バイリニア / e 関数) によらず、低減率と軸力制限は同じように課す
+            // (以前は e 関数のとき低減後＝低減前で、2 本が重なって「低減後が無い」ように見えた)。
+            FactoredUltimateNM = GetFactoredMNInteraction(
+                UnfactoredUltimateNM,
+                (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds),
+                UltimateLimitBeta);
 
             // 低減前使用限界NMインタラクション
             UnfactoredServiceNQ = GetServiceLimitQNInteraction();

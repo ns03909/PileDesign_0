@@ -759,6 +759,138 @@
                                     </Grid>
                             </avalonDock:LayoutAnchorable>
 
+                            <avalonDock:LayoutAnchorable x:Name="MaterialOptionsTab" Title="材料のモデル化（全杭共通）" CanClose="False" CanHide="False">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel Margin="8">
+                                        <Border Margin="0,0,0,8" Padding="8,6" CornerRadius="3"
+                                                Background="#FFF8E1" BorderBrush="#FFB300" BorderThickness="1"
+                                                Visibility="{Binding AreMaterialOptionsAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <StackPanel>
+                                                <TextBlock TextWrapping="Wrap" FontWeight="Bold" Margin="0,0,0,4"
+                                                           Text="ここの設定はすべての杭に影響します。"/>
+                                                <TextBlock TextWrapping="Wrap"
+                                                           Text="基本設定と同じ値で、この断面だけでなく全杭体・全区間の N-M・N-Q・M-φ に適用されます。いま表示している断面の設定ではありません。"/>
+                                                <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
+                                                           Text="変えるとグラフが描き直されます。この画面のキャンセルでは戻りません（元に戻すには同じ選択肢を選び直すか、基本設定で戻してください）。"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <StackPanel Visibility="{Binding AreMaterialOptionsAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <GroupBox Header="コンクリートのモデル化" Margin="0,0,0,6" Padding="4"
+                                                      Visibility="{Binding UsesInsituConcrete, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <StackPanel>
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="ヤング係数 Ec の算定" HelpAnchor="fund-opt-ec" GroupName="SecOptConcreteE"
+                                                        IsAlternativeSelected="{Binding UseUnitGsiForConcreteE, Mode=TwoWay}"
+                                                        DefaultText="σB=ξFc として算定"
+                                                        DefaultFormula="Ec = 3.35×10⁴ · (γ/24)² · (σB/60)^(1/3)、σB = ξ·Fc"
+                                                        AlternativeText="σB=Fc として算定（ξ の影響を受けない）"
+                                                        AlternativeFormula="Ec = 3.35×10⁴ · (γ/24)² · (Fc/60)^(1/3)"/>
+
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="引張側の扱い（バイリニア型）" HelpAnchor="fund-opt-tension" GroupName="SecOptConcreteTension"
+                                                        IsAlternativeSelected="{Binding IgnoreConcreteTensileStrength, Mode=TwoWay}"
+                                                        DefaultText="ひび割れ強度まで引張を負担する"
+                                                        DefaultFormula="ft = 0.56·√(ξFc)"
+                                                        AlternativeText="引張を無視する"
+                                                        AlternativeFormula="ε &lt; 0 で σ = 0"/>
+
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="圧縮側の折れ点応力度" HelpAnchor="fund-opt-compression" GroupName="SecOptConcreteCompression"
+                                                        IsAlternativeSelected="{Binding UseReducedConcreteCompressiveStrength, Mode=TwoWay}"
+                                                        DefaultText="ξ·Fc とする"
+                                                        DefaultFormula="σc = ξ·Fc"
+                                                        AlternativeText="0.85·ξ·Fc とする"
+                                                        AlternativeFormula="σc = 0.85·ξ·Fc"/>
+
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="安全限界の応力度〜ひずみ度関係" HelpAnchor="fund-opt-ultimate" GroupName="SecOptUltimateStress"
+                                                        IsAlternativeSelected="{Binding UseInsituUltimateEFunction, Mode=TwoWay}"
+                                                        DefaultText="バイリニア型"
+                                                        AlternativeText="e 関数型"/>
+                                                </StackPanel>
+                                            </GroupBox>
+
+                                            <GroupBox Header="鋼材のモデル化" Margin="0,0,0,6" Padding="4"
+                                                      Visibility="{Binding ShowSteelOptionsGroup, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <StackPanel>
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="既製杭の PC鋼材・鉄筋・鋼管のヤング係数" HelpAnchor="fund-opt-steel-e" GroupName="SecOptSteelE"
+                                                        Visibility="{Binding ShowGuideYoungsModulusOption, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        IsAlternativeSelected="{Binding UseGuideYoungsModulus, Mode=TwoWay}"
+                                                        DefaultText="入力したヤング係数をそのまま使う"
+                                                        AlternativeText="指針のヤング係数比 n=5 で与える"/>
+
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="鉄筋の降伏応力度" HelpAnchor="fund-opt-rebar11f" GroupName="SecOptRebarYield"
+                                                        Visibility="{Binding ShowRebarYieldOption, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        IsAlternativeSelected="{Binding RebarYieldAt11F, Mode=TwoWay}"
+                                                        DefaultText="σy で降伏させる"
+                                                        AlternativeText="1.1F の完全バイリニア型とする"/>
+
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="鋼管の降伏応力度" HelpAnchor="fund-opt-pipe11f" GroupName="SecOptPipeYield"
+                                                        Visibility="{Binding ShowSteelPipeYieldOption, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        IsAlternativeSelected="{Binding SteelPipeYieldAt11F, Mode=TwoWay}"
+                                                        DefaultText="σy で降伏させる"
+                                                        AlternativeText="1.1F の完全バイリニア型とする"/>
+                                                </StackPanel>
+                                            </GroupBox>
+
+                                            <GroupBox Header="許容応力度（使用限界・損傷限界）" Margin="0,0,0,6" Padding="4"
+                                                      Visibility="{Binding ShowNotification1113CompressionOption, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <StackPanel>
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="許容圧縮応力度" HelpAnchor="fund-opt-1113comp" GroupName="SecOptN1113Compression"
+                                                        IsAlternativeSelected="{Binding UseNotification1113Compression, Mode=TwoWay}"
+                                                        DefaultText="「基礎部材の強度と変形性能」による"
+                                                        AlternativeText="告示1113(第8) による"/>
+
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="許容せん断" HelpAnchor="fund-opt-1113shear" GroupName="SecOptN1113Shear"
+                                                        Visibility="{Binding ShowNotification1113ShearOption, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        IsAlternativeSelected="{Binding UseNotification1113Shear, Mode=TwoWay}"
+                                                        DefaultText="「基礎部材の強度と変形性能」による"
+                                                        AlternativeText="告示1113(第8) による"/>
+                                                </StackPanel>
+                                            </GroupBox>
+
+                                            <GroupBox Header="場所打ち鋼管コンクリート杭の項目" Margin="0,0,0,6" Padding="4"
+                                                      Visibility="{Binding ShowKctbOptions, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <StackPanel>
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="本体部の設計法（許容時 N-M の求め方）" HelpAnchor="fund-opt-kctb-nm" GroupName="SecOptSprcNM"
+                                                        IsAlternativeSelected="{Binding UseFiberNMForSteelPipeConcrete, Mode=TwoWay}"
+                                                        DefaultText="重ね合わせ（累加強度）による"
+                                                        AlternativeText="ファイバーモデルによる"/>
+
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="終局の圧縮縁ひずみ εcu" HelpAnchor="fund-opt-kctb-ecu" GroupName="SecOptSprcEcu"
+                                                        IsAlternativeSelected="{Binding UseUltimateStrain5000ForSteelPipeConcrete, Mode=TwoWay}"
+                                                        DefaultText="0.003 とする"
+                                                        AlternativeText="0.005 とする"/>
+
+                                                    <ctrl:MaterialOptionRadioPair
+                                                        Header="許容時の判定材料" HelpAnchor="fund-opt-kctb-allowable" GroupName="SecOptSprcAllowable"
+                                                        IsAlternativeSelected="{Binding ExcludeRebarFromAllowableLimitForSteelPipeConcrete, Mode=TwoWay}"
+                                                        DefaultText="鉄筋も判定に含める"
+                                                        AlternativeText="鉄筋を判定から外す"/>
+                                                </StackPanel>
+                                            </GroupBox>
+
+                                            <GroupBox Header="解析用 M-φ 関係" Margin="0,0,0,6" Padding="4"
+                                                      Visibility="{Binding ShowFiberMPhiOption, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <ctrl:MaterialOptionRadioPair
+                                                    Header="解析用 M-φ 関係" HelpAnchor="fund-opt-fiber-mphi" GroupName="SecOptMPhi"
+                                                    IsAlternativeSelected="{Binding UseFiberMPhi, Mode=TwoWay}"
+                                                    DefaultText="三折れ線（トリリニア）で与える"
+                                                    AlternativeText="ファイバーモデルで算定する"/>
+                                            </GroupBox>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </avalonDock:LayoutAnchorable>
+
                             <avalonDock:LayoutAnchorable x:Name="AxialLimitTab" Title="軸力制限（基礎部材の強度と変形性能）" CanClose="False" CanHide="False">
 
                                 <StackPanel>
@@ -1303,10 +1435,10 @@
 
                                     <StackPanel Orientation="Horizontal" Grid.Row="1" HorizontalAlignment="Left" Margin="10,0,0,5"
                                                 Visibility="{Binding IsFiberMPhiOverlayAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <CheckBox Content="ファイバーモデル比較（破線）"
+                                        <CheckBox Content="{Binding FiberMPhiOverlayCheckText}"
                                                   IsChecked="{Binding ShowFiberMPhiOverlay, Mode=TwoWay}"
                                                   VerticalAlignment="Center"
-                                                  ToolTip="ファイバーモデル（断面分割積分）による M-φ を破線で重ね描きします（コンクリート系断面。鋼管杭の鋼管部を除く）。&#x0a;各曲率で軸力つり合いを解いた断面応答そのもので、指針の β1・β2 低減は乗じていません。"/>
+                                                  ToolTip="実線は「解析用 M-φ 関係」で選んだモデル（解析が使う曲線と同じ）です。&#x0a;チェックを入れると、もう一方のモデルを破線で重ね描きします（コンクリート系断面。鋼管杭の鋼管部を除く）。&#x0a;ファイバーモデルは各曲率で軸力つり合いを解いた断面応答そのもので、指針の β1・β2 低減は乗じていません。"/>
                                     </StackPanel>
 
                                 </Grid>
@@ -1370,6 +1502,9 @@
                 <Button x:Name="ButtonMaximizeSpecs" Content="諸元" Tag="Specs"
                         Height="28" MinWidth="70" Margin="0,0,4,0"
                         ToolTip="諸元ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />
+                <Button x:Name="ButtonMaximizeMaterialOptions" Content="材料" Tag="MaterialOptions"
+                        Height="28" MinWidth="70" Margin="0,0,4,0"
+                        ToolTip="材料のモデル化ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />
                 <Button x:Name="ButtonMaximizeAxialLimit" Content="軸力制限" Tag="AxialLimit"
                         Height="28" MinWidth="70" Margin="0,0,4,0"
                         ToolTip="軸力制限ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />

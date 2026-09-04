@@ -1,4 +1,4 @@
-using PileDesign.Models.PileLibrary;
+﻿using PileDesign.Models.PileLibrary;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -18,7 +18,13 @@ namespace PileDesign.Models
     public class CapringPile : BaseModel
     {
         // ───────── 定数 ─────────
-        /// <summary>限界回転角 (rad)</summary>
+        /// <summary>
+        /// 限界回転角 (rad)。
+        /// 出典: キャプリングパイル工法 設計施工マニュアル 3.4(1)
+        /// 「限界回転角θu は実験結果及び設計許容範囲等を考慮し、0.03rad とする」。
+        /// 照査は略算解析法の設計フロー 11) に置かれており、フロー全体が短期
+        /// (短期軸力・短期許容せん断力) なので<b>レベル1 の照査</b>にあたる。
+        /// </summary>
         public const double ThetaU = 0.03;
         /// <summary>鋼材ヤング係数 (N/mm²)</summary>
         public const double EsRebar = 2.05e5;

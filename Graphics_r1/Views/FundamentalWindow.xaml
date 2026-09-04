@@ -52,6 +52,22 @@
                     </ComboBox.ItemTemplate> "-->
             </Grid>
 
+            <GroupBox Header="杭頭の安全限界回転角" Margin="0,0,0,10" Padding="6">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"
+                               Text="杭頭固定の場合、場所打ち鉄筋コンクリート杭に限り安全限界回転角 θu を照査します（既定 1/100 = 0.01 rad）。他の杭種にこの規定はありません。杭頭半固定は工法ごとの閾値によります。"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="安全限界回転角 θu (rad)" Grid.Column="0" VerticalAlignment="Center"/>
+                        <TextBox Text="{Binding InsituRcUltimateRotationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
+                                 Grid.Column="1" Margin="0,0,0,4"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
             <GroupBox Header="沈下検討の対象" Margin="0,0,0,10" Padding="6">
                 <StackPanel>
                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"

@@ -77,19 +77,25 @@ namespace PileDesign.Models.Results
             sb.AppendLine();
         }
 
+        /// <summary>
+        /// 杭頭回転角。限界値と照査するレベルは杭頭工法で決まるので、
+        /// どの規定で照査したかが読めるように工法名 (Category) と限界状態を出す。
+        /// </summary>
         private static void AppendRotation(StringBuilder sb, EvaluationItem item)
         {
             string tail = $": {item.TargetName}  {PileLabel(item)}";
+            string kind = string.IsNullOrEmpty(item.Category) ? "杭頭回転角" : item.Category;
 
             if (item.IsOk)
-                sb.AppendLine($"  [OK] θ（場所打ちRC杭）{tail}");
+                sb.AppendLine($"  [OK] {kind}{tail}");
             else
-                sb.AppendLine($"  [NG] θ超過（場所打ちRC杭）{tail}");
+                sb.AppendLine($"  [NG] {kind} 超過{tail}");
 
             AppendCondition(sb, item);
 
             string op = item.IsOk ? "≤" : ">";
-            sb.AppendLine($"       θ={item.Response:F5} rad {op} {item.Limit:F2} rad");
+            string limitName = string.IsNullOrEmpty(item.LimitName) ? "" : item.LimitName;
+            sb.AppendLine($"       θ={item.Response:F5} rad {op} {limitName}θ={item.Limit:F5} rad");
             sb.AppendLine();
         }
 

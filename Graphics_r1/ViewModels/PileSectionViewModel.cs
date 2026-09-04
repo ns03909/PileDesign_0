@@ -629,6 +629,53 @@ namespace PileDesign.ViewModels
                 (qsUltimate, ns), (qsUltimate, ns));
         }
 
+        /// <summary>
+        /// M-φ の主曲線。<b>「解析用 M-φ 関係」の選択に追随する</b>。
+        ///
+        /// この画面のグラフは以前つねに三折れ線を描いており、ファイバーモデルを選んでも
+        /// 見た目が変わらなかった (設定は効いているのにグラフだけ別物を描いていた)。
+        /// 解析が使う曲線と画面を一致させる。
+        /// ファイバーが解けない軸力では三折れ線に落ちる (解析側と同じ扱い)。
+        /// </summary>
+        private static Func<double, (List<double> phis, List<double> Ms)> MainMPhiGetter(AbstractPileSection section)
+        {
+            if (!ConcreteModelOptions.UseFiberMPhi)
+                return n => section.GetMPhiRelationship(n);
+
+            return n =>
+            {
+                try
+                {
+                    if (section.GetMPhiRelationshipFiber(n) is { } fiber
+                        && fiber.Phis.Count > 1 && fiber.Phis.Count == fiber.Moments.Count)
+                        return (fiber.Phis, fiber.Moments);
+                }
+                catch { /* 解けない軸力は三折れ線へ落とす */ }
+                return section.GetMPhiRelationship(n);
+            };
+        }
+
+        /// <summary>
+        /// 重ね描き (破線) で比べるほうの曲線。主曲線と逆のモデルを出す。
+        /// チェックが外れているときは null (重ね描きしない)。
+        /// </summary>
+        private Func<double, (List<double> phis, List<double> Ms)?>? ComparisonMPhiGetter(AbstractPileSection section)
+        {
+            if (!ShowFiberMPhiOverlay) return null;
+
+            return ConcreteModelOptions.UseFiberMPhi
+                ? n => section.GetMPhiRelationship(n)
+                : n => section.GetMPhiRelationshipFiber(n);
+        }
+
+        /// <summary>重ね描きの凡例。主曲線と逆のモデル名を出す。</summary>
+        public string FiberMPhiOverlayLabel =>
+            ConcreteModelOptions.UseFiberMPhi ? "三折れ線（破線）" : "ファイバーモデル（破線）";
+
+        /// <summary>比較チェックボックスの文言。主曲線と逆のモデルを示す。</summary>
+        public string FiberMPhiOverlayCheckText =>
+            ConcreteModelOptions.UseFiberMPhi ? "三折れ線を破線で比較" : "ファイバーモデルを破線で比較";
+
         // 共通: M-φ 曲線を描画するヘルパー
         private void PlotMPhiCurves(
             IEnumerable<double> nTargets,
@@ -696,7 +743,7 @@ namespace PileDesign.ViewModels
                         scatterFiber.Color = scatter.Color;
                         scatterFiber.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
                         scatterFiber.MarkerShape = ScottPlot.MarkerShape.None;
-                        scatterFiber.LegendText = fiberLegendShown ? string.Empty : "ファイバーモデル（破線）";
+                        scatterFiber.LegendText = fiberLegendShown ? string.Empty : FiberMPhiOverlayLabel;
                         fiberLegendShown = true;
                     }
                 }
@@ -864,8 +911,8 @@ namespace PileDesign.ViewModels
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
             // M-φ: 場所打ちRC（オプション時はファイバーモデル曲線を破線で重ね描き）
-            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n),
-                getFiberOverlay: ShowFiberMPhiOverlay ? (n => section.GetMPhiRelationshipFiber(n)) : null);
+            PlotMPhiCurves(nTargets, MainMPhiGetter(section),
+                getFiberOverlay: ComparisonMPhiGetter(section));
 
             // M-θ: 場所打ちRC（安全側にラムダで明示）
             PlotMThetaCurves(
@@ -911,8 +958,8 @@ namespace PileDesign.ViewModels
             }
 
             // M-φ（杭頭部 + 杭中間部(破線)。オプション時はファイバーモデル曲線も重ね描き）
-            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n), BuildMiddlePhis, "杭中間部",
-                getFiberOverlay: ShowFiberMPhiOverlay ? (n => section.GetMPhiRelationshipFiber(n)) : null);
+            PlotMPhiCurves(nTargets, MainMPhiGetter(section), BuildMiddlePhis, "杭中間部",
+                getFiberOverlay: ComparisonMPhiGetter(section));
 
             // M-θ は未定義メッセージ。鋼管杭+コンクリート充填鋼管部 は M-θ が杭頭部側 (PileTop) で
             // Kθ 線形ばねとして定義されるため、その旨を表示する。
@@ -971,8 +1018,8 @@ namespace PileDesign.ViewModels
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
             // M-φ（beta1 はデフォルト利用。オプション時はファイバーモデル曲線も重ね描き）
-            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n),
-                getFiberOverlay: ShowFiberMPhiOverlay ? (n => section.GetMPhiRelationshipFiber(n)) : null);
+            PlotMPhiCurves(nTargets, MainMPhiGetter(section),
+                getFiberOverlay: ComparisonMPhiGetter(section));
 
             // M-θ は未定義メッセージ
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
@@ -995,8 +1042,8 @@ namespace PileDesign.ViewModels
 
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
-            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n),
-                getFiberOverlay: ShowFiberMPhiOverlay ? (n => section.GetMPhiRelationshipFiber(n)) : null);
+            PlotMPhiCurves(nTargets, MainMPhiGetter(section),
+                getFiberOverlay: ComparisonMPhiGetter(section));
 
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
                 notDefinedMessageIfNull: "PRC杭の曲げモーメント-回転角関係の定義はありません");
@@ -1011,8 +1058,8 @@ namespace PileDesign.ViewModels
 
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
-            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n),
-                getFiberOverlay: ShowFiberMPhiOverlay ? (n => section.GetMPhiRelationshipFiber(n)) : null);
+            PlotMPhiCurves(nTargets, MainMPhiGetter(section),
+                getFiberOverlay: ComparisonMPhiGetter(section));
 
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
                 notDefinedMessageIfNull: "SC杭の曲げモーメント-回転角関係の定義はありません");
@@ -1062,6 +1109,9 @@ namespace PileDesign.ViewModels
 
             // 杭種変更でファイバー重ね描きチェックボックスの表示可否が変わり得るため通知
             OnPropertyChanged(nameof(IsFiberMPhiOverlayAvailable));
+
+            // 材料のモデル化パネルは杭種で出し分けるので、断面が変わったら出し直す
+            NotifyMaterialOptionsChanged();
 
             List<double> ns;
 

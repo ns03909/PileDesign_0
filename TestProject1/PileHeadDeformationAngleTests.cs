@@ -97,6 +97,44 @@ namespace TestProject1
                 "対象を切り替えても名乗りが変わっていない");
         }
 
+        /// <summary>
+        /// 場所打ち鉄筋コンクリート杭の杭頭 安全限界回転角。既定 1/100 rad で、基本設定で変更できる。
+        /// 杭頭固定の場合にこの杭種だけ規定があり、他の杭種には無い。
+        /// </summary>
+        [TestMethod]
+        public void InsituRcUltimateRotationAngle_DefaultsTo1Over100()
+        {
+            var f = new PileDesign.Models.InputData.FundamentalInput();
+            Assert.AreEqual(0.01, f.InsituRcUltimateRotationAngleLimit, 1e-15, "既定が 1/100 でない");
+
+            f.InsituRcUltimateRotationAngleLimit = 1.0 / 150.0;
+            Assert.AreEqual(1.0 / 150.0, f.InsituRcUltimateRotationAngleLimit, 1e-15, "変更できない");
+
+            Assert.AreEqual(0.01, EvaluationService.DefaultInsituRcUltimateRotationAngleLimit, 1e-15,
+                "検定側の既定値が 1/100 でない");
+        }
+
+        /// <summary>
+        /// 杭頭回転角の限界値と照査するレベルは杭頭工法で決まる。
+        ///   杭頭固定 (場所打ちRC のみ) … レベル2、基本設定の θu
+        ///   キャプテンパイル工法 … レベル2、0.04 rad (終局設計のフロー)
+        ///   キャプリングパイル工法 … レベル1、0.03 rad (短期の設計フロー)
+        ///   FT-Pile 構法 … レベル1、θa = min(θac, θas) (短期の設計クライテリア)
+        /// FT-Pile とキャプリングをレベル2 でも照査するかは基本設定で選ぶ。
+        /// </summary>
+        [TestMethod]
+        public void PileHeadMethodLimits_MatchTheirManuals()
+        {
+            Assert.AreEqual(0.03, PileDesign.Models.CapringPile.ThetaU, 1e-15,
+                "キャプリングパイルの限界回転角がマニュアル (3.4(1)) の 0.03 rad でない");
+            Assert.AreEqual(0.04, PileDesign.Models.CaptainPile.ThetaU, 1e-15,
+                "キャプテンパイルの限界回転角がマニュアル (3-9(3)②) の 0.04 rad でない");
+
+            var f = new PileDesign.Models.InputData.FundamentalInput();
+            Assert.IsTrue(f.ApplyLevel1RotationLimitToLevel2,
+                "FT-Pile・キャプリングをレベル2 でも照査する既定が ON になっていない");
+        }
+
         /// <summary>基本設定の既定値。1/1000・1/200・1/143。</summary>
         [TestMethod]
         public void DefaultLimitsAreFixed()

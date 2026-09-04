@@ -173,6 +173,8 @@ namespace TestProject1
             var item = new EvaluationItem
             {
                 Kind = EvaluationKind.PileHeadRotation,
+                Category = "杭頭回転角 (場所打ちRC杭・杭頭固定)",
+                LimitName = "安全限界",
                 TargetName = "RS-1",
                 PileBodyNo = 4,
                 LoadCaseName = "L2-1",
@@ -188,9 +190,9 @@ namespace TestProject1
             EvaluationTextFormatter.AppendItem(sb, item);
 
             Assert.AreEqual(
-                "  [NG] θ超過（場所打ちRC杭）: RS-1  杭体No.4\r\n" +
+                "  [NG] 杭頭回転角 (場所打ちRC杭・杭頭固定) 超過: RS-1  杭体No.4\r\n" +
                 "       荷重ケース: L2-1 / 組合せ: cmb1 / 液状化無\r\n" +
-                "       θ=0.01235 rad > 0.01 rad\r\n" +
+                "       θ=0.01235 rad > 安全限界θ=0.01000 rad\r\n" +
                 "\r\n",
                 sb.ToString());
         }

@@ -47,6 +47,32 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _seismicGrade, value);
         }
 
+        // 場所打ち鉄筋コンクリート杭の杭頭 安全限界回転角 θu (rad)。
+        //
+        // 杭頭固定の場合、場所打ち鉄筋コンクリート杭に限り θu ≤ 1/100 とする規定による。
+        // 他の杭種にこの規定は無い (杭頭半固定は工法ごとの閾値による)。
+        // 旧いファイルには無いので、0 以下 (未設定) のときは検定側で既定値に落とす。
+        private double _insituRcUltimateRotationAngleLimit = 1.0 / 100.0;
+        /// <summary>場所打ち鉄筋コンクリート杭の杭頭 安全限界回転角 θu (rad)。既定 1/100。</summary>
+        public double InsituRcUltimateRotationAngleLimit
+        {
+            get => _insituRcUltimateRotationAngleLimit;
+            set => SetProperty(ref _insituRcUltimateRotationAngleLimit, value);
+        }
+
+        // FT-Pile 構法・キャプリングパイル工法の杭頭回転角の照査を、レベル2 にも当てるか。
+        //
+        // この 2 工法の限界回転角は短期 (レベル1) の照査として規定されており、
+        // 終局時の規定は無い。安全側にレベル2 でも同じ値で確認したい場合に true にする。
+        // false のときは、この 2 工法のレベル2 では回転角の検討を行わない。
+        private bool _applyLevel1RotationLimitToLevel2 = true;
+        /// <summary>FT-Pile・キャプリングの回転角照査をレベル2 にも適用するか (既定: する)。</summary>
+        public bool ApplyLevel1RotationLimitToLevel2
+        {
+            get => _applyLevel1RotationLimitToLevel2;
+            set => SetProperty(ref _applyLevel1RotationLimitToLevel2, value);
+        }
+
         // 沈下検討の対象。true = 単杭沈下 + 群杭沈下 (合計)、false = 単杭沈下のみ。
         //
         // 群杭沈下解析を実行していなければ群杭分は 0 なので、true でも実質単杭沈下になる。

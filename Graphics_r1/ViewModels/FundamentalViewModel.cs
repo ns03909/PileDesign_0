@@ -47,6 +47,38 @@ namespace PileDesign.ViewModels
         // ── 杭頭 2 点間の変形角の限界値 (rad) ──
         // 解析結果には影響せず、検定の限界値が変わるだけなので解析結果は破棄しない。
 
+        // 場所打ち鉄筋コンクリート杭の杭頭 安全限界回転角 θu (rad)
+        [ObservableProperty]
+        private double _insituRcUltimateRotationAngleLimit;
+
+        // FT-Pile・キャプリングの回転角照査をレベル2 にも当てるか
+        [ObservableProperty]
+        private bool _applyLevel1RotationLimitToLevel2;
+
+        partial void OnApplyLevel1RotationLimitToLevel2Changed(bool value)
+        {
+            var oldValue = InputModel.FundamentalInput.ApplyLevel1RotationLimitToLevel2;
+            if (oldValue == value) return;
+
+            _undoManager.PushAction(
+                () => InputModel.FundamentalInput.ApplyLevel1RotationLimitToLevel2 = oldValue,
+                () => InputModel.FundamentalInput.ApplyLevel1RotationLimitToLevel2 = value,
+                "レベル2 への回転角照査の適用変更");
+            InputModel.FundamentalInput.ApplyLevel1RotationLimitToLevel2 = value;
+        }
+
+        partial void OnInsituRcUltimateRotationAngleLimitChanged(double value)
+        {
+            var oldValue = InputModel.FundamentalInput.InsituRcUltimateRotationAngleLimit;
+            if (oldValue == value) return;
+
+            _undoManager.PushAction(
+                () => InputModel.FundamentalInput.InsituRcUltimateRotationAngleLimit = oldValue,
+                () => InputModel.FundamentalInput.InsituRcUltimateRotationAngleLimit = value,
+                "安全限界回転角変更");
+            InputModel.FundamentalInput.InsituRcUltimateRotationAngleLimit = value;
+        }
+
         // 沈下検討の対象 (true = 単杭＋群杭沈下 / false = 単杭沈下)
         [ObservableProperty]
         private bool _settlementDesignIncludesGroup;
@@ -546,6 +578,8 @@ namespace PileDesign.ViewModels
             Point3D0 = InputModel.FundamentalInput.Point3D0;
             SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
             SettlementDesignIncludesGroup = InputModel.FundamentalInput.SettlementDesignIncludesGroup;
+            InsituRcUltimateRotationAngleLimit = InputModel.FundamentalInput.InsituRcUltimateRotationAngleLimit;
+            ApplyLevel1RotationLimitToLevel2 = InputModel.FundamentalInput.ApplyLevel1RotationLimitToLevel2;
             ServiceDeformationAngleLimit = InputModel.FundamentalInput.ServiceDeformationAngleLimit;
             DamageDeformationAngleLimit = InputModel.FundamentalInput.DamageDeformationAngleLimit;
             UltimateDeformationAngleLimit = InputModel.FundamentalInput.UltimateDeformationAngleLimit;
@@ -599,6 +633,12 @@ namespace PileDesign.ViewModels
             {
                 case nameof(FundamentalInput.SeismicGrade):
                     SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
+                    break;
+                case nameof(FundamentalInput.ApplyLevel1RotationLimitToLevel2):
+                    ApplyLevel1RotationLimitToLevel2 = InputModel.FundamentalInput.ApplyLevel1RotationLimitToLevel2;
+                    break;
+                case nameof(FundamentalInput.InsituRcUltimateRotationAngleLimit):
+                    InsituRcUltimateRotationAngleLimit = InputModel.FundamentalInput.InsituRcUltimateRotationAngleLimit;
                     break;
                 case nameof(FundamentalInput.SettlementDesignIncludesGroup):
                     SettlementDesignIncludesGroup = InputModel.FundamentalInput.SettlementDesignIncludesGroup;

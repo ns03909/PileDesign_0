@@ -62,6 +62,7 @@ namespace PileDesign.Views
                 _paneMaximizer = new PaneFloatMaximizer(dockingManager);
                 _paneMaximizer.Register("Input",       InputTab,       ButtonMaximizeInput,       "入力");
                 _paneMaximizer.Register("Specs",       SpecsTab,       ButtonMaximizeSpecs,       "諸元");
+                _paneMaximizer.Register("MaterialOptions", MaterialOptionsTab, ButtonMaximizeMaterialOptions, "材料のモデル化");
                 _paneMaximizer.Register("AxialLimit",  AxialLimitTab,  ButtonMaximizeAxialLimit,  "軸力制限");
                 _paneMaximizer.Register("SectionView", SectionViewTab, ButtonMaximizeSectionView, "断面図");
                 _paneMaximizer.Register("NM",          NMTab,          ButtonMaximizeNM,          "N-M");

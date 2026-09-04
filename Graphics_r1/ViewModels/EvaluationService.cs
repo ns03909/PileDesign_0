@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.FEM;
+using PileDesign.Models;
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
 using System;
@@ -905,6 +906,12 @@ namespace PileDesign.ViewModels
         // 限界値は限界状態ごとの既定値。曲げ・せん断と同じ割り当て
         // (長期 = 使用限界 / レベル1 = 損傷限界 / レベル2 = 終局限界) で使う。
 
+        /// <summary>
+        /// 場所打ち鉄筋コンクリート杭の杭頭 安全限界回転角の既定値 1/100 rad。基本設定で変更できる。
+        /// 杭頭固定の場合にこの杭種だけ規定がある (他の杭種には無く、杭頭半固定は工法ごとの閾値)。
+        /// </summary>
+        internal const double DefaultInsituRcUltimateRotationAngleLimit = 1.0 / 100.0;
+
         /// <summary>使用限界の変形角の既定値 1.0×10⁻³ rad (= 1/1000)。基本設定で変更できる。</summary>
         internal const double DefaultServiceDeformationAngleLimit = 1.0e-3;
 
@@ -1127,15 +1134,99 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 場所打ち鉄筋コンクリート杭の回転角θが1/100 radを超えるかチェック
+        /// 杭頭回転角の照査 1 件分の条件。杭頭工法ごとに限界値と照査するレベルが違う。
+        /// </summary>
+        /// <param name="Limit">限界回転角 (rad)</param>
+        /// <param name="LimitName">限界状態の名乗り</param>
+        /// <param name="MethodName">工法の名乗り (対象の説明に出す)</param>
+        private sealed record RotationCriterion(double Limit, string LimitName, string MethodName);
+
+        /// <summary>
+        /// 杭頭回転角の照査条件を返す。該当する規定が無ければ null (検定しない)。
+        ///
+        /// 規定の出所は工法ごとに違う。
+        /// <list type="bullet">
+        /// <item><b>杭頭固定</b>: 場所打ち鉄筋コンクリート杭に限り θu ≤ 1/100 (基本設定で変更可)。
+        ///   レベル2 (安全限界) の照査。他の杭種にこの規定は無い。</item>
+        /// <item><b>キャプリングパイル工法</b>: θu = 0.03 rad。設計フローが短期なのでレベル1。</item>
+        /// <item><b>FT-Pile 構法</b>: θa = min(θac, θas) (軸力で変わる)。短期の照査なのでレベル1。</item>
+        /// <item><b>キャプテンパイル工法</b>: θu = 0.04 rad。終局設計のフローに置かれておりレベル2。</item>
+        /// </list>
+        /// FT-Pile とキャプリングは短期の規定しか無いので、レベル2 で照査するかは
+        /// 基本設定の <c>ApplyLevel1RotationLimitToLevel2</c> で選ぶ (既定は照査する)。
+        /// </summary>
+        private static RotationCriterion? ResolveRotationCriterion(
+            PileBodyInput? pileBody, PileSection? section, int level,
+            double axialN_kN, FundamentalInput? fundamental)
+        {
+            string top = pileBody?.PileTopType ?? "";
+            bool applyToLevel2 = fundamental?.ApplyLevel1RotationLimitToLevel2 ?? true;
+
+            // ── 杭頭半固定 (工法ごとの限界回転角) ──
+            if (top.Contains("キャプテンパイル工法"))
+            {
+                // 終局設計のフローに置かれた照査。レベル2 のみ。
+                return level == 2
+                    ? new RotationCriterion(CaptainPile.ThetaU, "安全限界", "キャプテンパイル工法")
+                    : null;
+            }
+
+            if (top.Contains("キャプリングパイル工法"))
+            {
+                if (level == 2 && !applyToLevel2) return null;
+                return new RotationCriterion(
+                    CapringPile.ThetaU,
+                    level == 2 ? "安全限界" : "損傷限界",
+                    "キャプリングパイル工法");
+            }
+
+            if (top.Contains("FT-Pile構法"))
+            {
+                if (level == 2 && !applyToLevel2) return null;
+
+                // θa は軸力で変わる (θac に圧縮合力による軸応力度が入る)。
+                double thetaA = pileBody?.PileTop?.FTPile?.GetAllowableRotationAngle(axialN_kN) ?? 0.0;
+                if (!(thetaA > 0) || !double.IsFinite(thetaA)) return null;
+
+                return new RotationCriterion(
+                    thetaA,
+                    level == 2 ? "安全限界" : "損傷限界",
+                    "FT-Pile構法");
+            }
+
+            // ── 杭頭固定 ──
+            // 規定があるのは場所打ち鉄筋コンクリート杭だけ。安全限界 (レベル2) の照査。
+            if (level != 2) return null;
+            if (section?.PileBodyType != PileTypeNames.InsituRc) return null;
+
+            double configured = fundamental?.InsituRcUltimateRotationAngleLimit ?? 0.0;
+            double limit = configured > 0 && double.IsFinite(configured)
+                ? configured
+                : DefaultInsituRcUltimateRotationAngleLimit;
+
+            return new RotationCriterion(limit, "安全限界", "場所打ちRC杭・杭頭固定");
+        }
+
+        /// <summary>
+        /// 杭頭回転角を照査する。限界値と照査するレベルは杭頭工法で決まる
+        /// (<see cref="ResolveRotationCriterion"/>)。
         /// </summary>
         private List<EvaluationItem> CheckThetaLimit(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             AnalysisStepResult stepResult,
             string lcName, string combName)
         {
-            const double thetaLimit = 1.0 / 100.0; // 1/100 rad
             int level = stepResult.LoadCase?.Level ?? 1;
+            var inputModel = _mainVm.ResultInputModel;
+            var fundamental = inputModel?.FundamentalInput;
+
+            // 回転ばね → 杭 の対応。杭体番号では杭を特定できない (同じ杭体を複数の杭が使う)。
+            var pileBySpring = new Dictionary<RotationalSpring, PileLayoutDataItem>();
+            foreach (var pile in inputModel?.PileLayoutItems ?? [])
+            {
+                if (pile.PileTopRotationalSpring != null)
+                    pileBySpring[pile.PileTopRotationalSpring] = pile;
+            }
 
             var rsArr = model.RotationalSprings.ToArray();
             var perItem = new List<EvaluationItem>[rsArr.Length];
@@ -1154,7 +1245,19 @@ namespace PileDesign.ViewModels
 
                 var section = soilPile.PileBodySegments[0].PileSection;
                 if (section == null) { perItem[idx] = found; return; }
-                if (section.PileBodyType != PileTypeNames.InsituRc) { perItem[idx] = found; return; }
+
+                // 軸力は FT-Pile の θa (軸力依存) に要る。杭が特定できないときは 0 のまま。
+                pileBySpring.TryGetValue(rs, out var pileItem);
+                double axialN_kN = 0.0;
+                if (pileItem != null)
+                {
+                    int lcNo = stepResult.LoadCase?.No ?? 0;
+                    axialN_kN = pileItem.GetDesignAxialForce(lcNo, level);
+                }
+
+                var criterion = ResolveRotationCriterion(
+                    soilPile.PileBodyInput, section, level, axialN_kN, fundamental);
+                if (criterion == null) { perItem[idx] = found; return; }
 
                 // RotationalSpringResultを検索
                 var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
@@ -1175,16 +1278,19 @@ namespace PileDesign.ViewModels
                 {
                     Kind = EvaluationKind.PileHeadRotation,
                     Level = level,
-                    Category = "杭頭回転角 (場所打ちRC杭)",
+                    Category = $"杭頭回転角 ({criterion.MethodName})",
+                    LimitName = criterion.LimitName,
                     TargetName = rs.Name,
                     PileBodyNo = pb,
+                    PileNo = pileItem?.PileNo,
                     LoadCaseName = lcName,
                     LoadCombinationName = combName,
                     IsLiquefaction = stepResult.IsLiquefaction,
                     Response = theta,
-                    Limit = thetaLimit,
+                    Limit = criterion.Limit,
                     Unit = "rad",
-                    IsOk = !(theta > thetaLimit),
+                    AxialForce = pileItem != null ? axialN_kN : null,
+                    IsOk = !(theta > criterion.Limit),
                 });
                 perItem[idx] = found;
             });

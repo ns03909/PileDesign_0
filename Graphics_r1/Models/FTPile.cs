@@ -262,6 +262,16 @@ namespace PileDesign.Models
             }
         }
 
+        /// <summary>
+        /// 軸力 N (kN, 圧縮正) に対する許容回転角 θa = min(θac, θas) を返す。検定から使う。
+        ///
+        /// 出典: F.T.Pile 構法 既製コンクリート杭 設計・施工指針 4.3.1 設計クライテリア / 表4-3-1。
+        /// 標準タイプは θac (パイルキャップのひび割れ発生限界)、
+        /// 引抜き対応タイプは min(θac, θas) (θas は引抜き抵抗用鋼棒の短期許容応力度で決まる)。
+        /// <b>短期の照査</b>として規定されている (終局時の限界回転角は本指針に無い)。
+        /// </summary>
+        public double GetAllowableRotationAngle(double N) => GetThetaA(N);
+
         // 許容回転角を返すメソッド
         private double GetThetaA(double N)
         {

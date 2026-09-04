@@ -13,6 +13,15 @@ namespace PileDesign.Models
     // CaptainPileクラス
     public class CaptainPile : BaseModel
     {
+        // ───────── 定数 ─────────
+        /// <summary>
+        /// 限界回転角 (rad)。杭頭接合部実験で確認した値。
+        /// 出典: キャプテンパイル工法 設計施工マニュアル 3-9 (3)② 杭頭接合部の注記
+        /// 「限界回転角は、杭頭接合部実験にて確認した値 0.04rad とする」。
+        /// 照査は終局設計のフローに置かれており、必要に応じて行うものとされている。
+        /// </summary>
+        public const double ThetaU = 0.04;
+
         // 計算結果のメモ化 (epsilon0/curvature を丸めたタプルをキー)
         // 注: 以前は long(BitConverter.DoubleToInt64Bits(a) ^ (b<<1)) で XOR ハッシュキーを使っていたが、
         //     異なる (ε₀, φ) ペアが同一キーに衝突し MN 曲線がノコギリ状に乱れる原因となっていた。
@@ -544,7 +553,7 @@ namespace PileDesign.Models
             double Mu = GetMu(N);
             (double My, double curvatureY) = GetMyCurvatureY(N);
             double thetaY = curvatureY * D * Nu;
-            double thetaU = 0.04;
+            double thetaU = ThetaU;
 
             if (0 <= N) // 圧縮
             {
