@@ -43,10 +43,7 @@ namespace PileDesign.Models.Results
         {
             string tail = $": {item.TargetName}  {PileLabel(item)} / 要素{item.SegmentIndex}";
 
-            if (item.IsOk)
-                sb.AppendLine($"  [OK] {item.LimitName}（{item.EndLabel}）{tail}");
-            else
-                sb.AppendLine($"  [NG] {item.LimitName}超過（{item.EndLabel}）{tail}");
+            sb.AppendLine($"  [{Verdict(item)}] {item.LimitName}{OverSuffix(item)}（{item.EndLabel}）{tail}");
 
             AppendCondition(sb, item);
 
@@ -63,10 +60,7 @@ namespace PileDesign.Models.Results
         {
             string tail = $": {item.TargetName}  {PileLabel(item)} / 要素{item.SegmentIndex}";
 
-            if (item.IsOk)
-                sb.AppendLine($"  [OK] {item.LimitName}せん断（{item.EndLabel}）{tail}");
-            else
-                sb.AppendLine($"  [NG] {item.LimitName}せん断超過（{item.EndLabel}）{tail}");
+            sb.AppendLine($"  [{Verdict(item)}] {item.LimitName}せん断{OverSuffix(item)}（{item.EndLabel}）{tail}");
 
             AppendCondition(sb, item);
 
@@ -86,10 +80,8 @@ namespace PileDesign.Models.Results
             string tail = $": {item.TargetName}  {PileLabel(item)}";
             string kind = string.IsNullOrEmpty(item.Category) ? "杭頭回転角" : item.Category;
 
-            if (item.IsOk)
-                sb.AppendLine($"  [OK] {kind}{tail}");
-            else
-                sb.AppendLine($"  [NG] {kind} 超過{tail}");
+            string over = OverSuffix(item).Length > 0 ? " 超過" : "";
+            sb.AppendLine($"  [{Verdict(item)}] {kind}{over}{tail}");
 
             AppendCondition(sb, item);
 
@@ -105,10 +97,7 @@ namespace PileDesign.Models.Results
         /// </summary>
         private static void AppendDeformationAngle(StringBuilder sb, EvaluationItem item)
         {
-            string status = item.IsOk ? "OK" : "NG";
-            string over = item.IsOk ? "" : "超過";
-
-            sb.AppendLine($"  [{status}] {item.LimitName}変形角{over}: {item.TargetName}");
+            sb.AppendLine($"  [{Verdict(item)}] {item.LimitName}変形角{OverSuffix(item)}: {item.TargetName}");
             AppendCondition(sb, item);
 
             string op = item.IsOk ? "≤" : ">";
@@ -125,6 +114,17 @@ namespace PileDesign.Models.Results
             sb.AppendLine($"  {status} 梁 #{item.FoundationBeamNo}: " +
                           $"傾斜角 = {item.Response:E3} rad (1/{inv:F0}), L={item.BeamLength:F2}m");
         }
+
+        /// <summary>
+        /// 行頭の判定。収束していないケースは <b>OK とも NG とも名乗らない</b> —
+        /// 応答値が釣り合いを満たしていないので、限界値と比べた結果に意味が無い。
+        /// </summary>
+        private static string Verdict(EvaluationItem item) =>
+            item.IsFromUnconvergedCase ? "未収束" : (item.IsOk ? "OK" : "NG");
+
+        /// <summary>「超過」。NG のときだけ付く (未収束は超過とも言えない)。</summary>
+        private static string OverSuffix(EvaluationItem item) =>
+            !item.IsFromUnconvergedCase && !item.IsOk ? "超過" : "";
 
         /// <summary>
         /// 対象の杭の名乗り。杭体は複数の杭で共有されるので、

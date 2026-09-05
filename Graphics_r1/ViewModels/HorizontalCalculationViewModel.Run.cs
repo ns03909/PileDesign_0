@@ -1557,11 +1557,15 @@ namespace PileDesign.ViewModels
                                 }
                             }
 
+                            // このステップの収束状態。サマリーレポートと解析結果の両方が使う
+                            // (結果に持たせないと検定・計算書・保存ファイルへ届かない)。
+                            StepStatus stepStatus = !converged ? StepStatus.Unconverged
+                                : (physicallyUnconvergeable ? StepStatus.PhysicallyUnconverged
+                                    : StepStatus.Converged);
+
                             // v29 (2026-04-27): ステップ単位の収束サマリー記録 (解析終了時にレポート出力)
                             {
-                                StepStatus _status = !converged ? StepStatus.Unconverged
-                                    : (physicallyUnconvergeable ? StepStatus.PhysicallyUnconverged
-                                        : StepStatus.Converged);
+                                StepStatus _status = stepStatus;
                                 double _elapsedSec = profStepTimer.Elapsed.TotalSeconds;
                                 _stepSummaries.Add(new StepSummary(
                                     CaseTag: caseTag,
@@ -1618,7 +1622,9 @@ namespace PileDesign.ViewModels
                                 }
                             }
 
-                            caseModel.AnalysisStepResults.Add(new(loadCase, loadCombination, isLiquefaction, step, n_iteration, caseModel.NormsROnNormsFint));
+                            // 収束状態も一緒に残す。これが無いと、収束していないステップの応答値が
+                            // 検定表・計算書に「ただの結果」として並んでしまう。
+                            caseModel.AnalysisStepResults.Add(new(loadCase, loadCombination, isLiquefaction, step, n_iteration, caseModel.NormsROnNormsFint, stepStatus));
                             foreach (var node in caseModel.Nodes)
                                 node.NodeResults.Add(new(loadCase, loadCombination, isLiquefaction, step, node));
                             foreach (var beam in caseModel.Beams)

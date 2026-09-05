@@ -1,8 +1,9 @@
-using PileDesign.Models.InputData;
+﻿using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
 
+using PileDesign.FEM;   // StepStatus (収束状態は解析結果側の型)
 using static PileDesign.ViewModels.HorizontalCalculationViewModel;
 
 namespace TestProject1

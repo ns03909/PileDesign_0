@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -183,7 +183,7 @@ namespace TestProject1.ConvergenceRegression
                 int totalIter = steps.Sum(s => s.Iterations);
                 int totalSteps = steps.Count;
                 int maxBisection = steps.Max(s => s.BisectionAttempt);
-                bool allConverged = steps.All(s => s.Status == HorizontalCalculationViewModel.StepStatus.Converged);
+                bool allConverged = steps.All(s => s.Status == StepStatus.Converged);
                 double finalResidual = steps.LastOrDefault()?.FinalResidual ?? 0.0;
 
                 string liq = grp.Key.IsLiquefaction ? "Liq" : "NoLq";

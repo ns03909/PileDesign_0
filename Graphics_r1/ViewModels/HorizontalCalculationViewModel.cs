@@ -72,7 +72,8 @@ namespace PileDesign.ViewModels
 
         // v29 (2026-04-27): 解析終了時にステップ単位の収束状況サマリーを表示するため、
         // 各ステップの結果を蓄積。ConcurrentBag でケース並列実行下でも安全に append。
-        public enum StepStatus { Converged, Unconverged, PhysicallyUnconverged }
+        // StepStatus は FEM/AnalysisStepResult.cs (PileDesign.FEM) に移した。
+        // ステップの収束状態は解析結果と同じ場所に持たせないと、検定・計算書・保存へ届かない。
         public sealed record StepSummary(
             string CaseTag, int Level, int LoadCaseNo, int ComboNo, bool IsLiquefaction,
             int Step, int NStep, int BisectionAttempt, int Iterations,

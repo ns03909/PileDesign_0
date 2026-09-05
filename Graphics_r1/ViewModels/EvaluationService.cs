@@ -177,10 +177,22 @@ namespace PileDesign.ViewModels
             // 常時荷重による即時沈下の不同分で、水平解析の杭頭変位とは別の量なので別項目にする。
             var settlementAngleItems = EvaluateSettlementDeformationAngle();
 
-            int totalNgCount = longTermItems.Count(i => !i.IsOk)
-                + level1Items.Count(i => !i.IsOk) + level2Items.Count(i => !i.IsOk);
-            int totalOkCount = longTermItems.Count(i => i.IsOk)
-                + level1Items.Count(i => i.IsOk) + level2Items.Count(i => i.IsOk);
+            // 収束しなかったケースの行に印を付ける。
+            // 応答値は釣り合っていないので、OK / NG のどちらとも言えない。
+            var convergenceByCase = model.BuildCaseConvergenceMap();
+            longTermItems = MarkUnconvergedCases(longTermItems, convergenceByCase);
+            level1Items = MarkUnconvergedCases(level1Items, convergenceByCase);
+            level2Items = MarkUnconvergedCases(level2Items, convergenceByCase);
+
+            // 未収束の行は OK にも NG にも数えない。
+            int totalUnconvergedCount = longTermItems.Count(i => i.IsFromUnconvergedCase)
+                + level1Items.Count(i => i.IsFromUnconvergedCase) + level2Items.Count(i => i.IsFromUnconvergedCase);
+            int totalNgCount = longTermItems.Count(i => !i.IsFromUnconvergedCase && !i.IsOk)
+                + level1Items.Count(i => !i.IsFromUnconvergedCase && !i.IsOk)
+                + level2Items.Count(i => !i.IsFromUnconvergedCase && !i.IsOk);
+            int totalOkCount = longTermItems.Count(i => !i.IsFromUnconvergedCase && i.IsOk)
+                + level1Items.Count(i => !i.IsFromUnconvergedCase && i.IsOk)
+                + level2Items.Count(i => !i.IsFromUnconvergedCase && i.IsOk);
 
             // ── テキスト組立 ──
             if (longTermResults.Count > 0)
@@ -223,6 +235,16 @@ namespace PileDesign.ViewModels
             else
                 sb.AppendLine($"検定: NG項目 {totalNgCount} 件");
 
+            // 未収束のケースがあったときだけ足す。
+            // すべて収束していれば従来と 1 文字も変わらない (golden テストが固定している)。
+            if (totalUnconvergedCount > 0)
+            {
+                sb.AppendLine($"未収束のケースの検定: {totalUnconvergedCount} 件");
+                sb.AppendLine("  これらは解析が収束しておらず、応答値が釣り合いを満たしていません。");
+                sb.AppendLine("  OK / NG の判定はできません。水平解析ウィンドウで計算ステップ数を増やして");
+                sb.AppendLine("  やり直すか、耐力が足りているかを確認してください。");
+            }
+
             // ── 個別矩形（基礎梁考慮）反復解析の傾斜角検定 ──
             AppendInclinationSection(sb, inclinationItems);
 
@@ -255,6 +277,40 @@ namespace PileDesign.ViewModels
             Result = new EvaluationResult(all);
 
             EvaluationText = sb.ToString();
+        }
+
+        /// <summary>
+        /// 収束しなかった荷重ケースから作られた検定項目に印を付ける。
+        ///
+        /// 検定は項目を作る場所が多い (曲げ・せん断・回転角・変形角・支持力…) ので、
+        /// 作る側すべてに収束状態を配るのではなく、<b>出来上がった項目に後から付ける</b>。
+        /// 項目は自分の荷重条件を名乗っている (<c>IHasLoadCondition</c>) ので、
+        /// それを鍵にケース単位の収束状態を引ける。
+        ///
+        /// 液状化の別が無い項目 (基礎梁の傾斜角など) は水平解析の外なので対象外。
+        /// </summary>
+        private static List<EvaluationItem> MarkUnconvergedCases(
+            List<EvaluationItem> items,
+            Dictionary<(string LoadCaseName, string LoadCombinationName, bool IsLiquefaction), FEM.StepStatus> convergenceByCase)
+        {
+            if (items.Count == 0 || convergenceByCase.Count == 0) return items;
+
+            var marked = new List<EvaluationItem>(items.Count);
+            foreach (var item in items)
+            {
+                if (item.IsLiquefaction is not bool liq)
+                {
+                    marked.Add(item);
+                    continue;
+                }
+
+                var key = (item.LoadCaseName, item.LoadCombinationName, liq);
+                marked.Add(convergenceByCase.TryGetValue(key, out var status) && status != FEM.StepStatus.Converged
+                    ? item with { CaseConvergence = status }
+                    : item);
+            }
+
+            return marked;
         }
 
         /// <summary>

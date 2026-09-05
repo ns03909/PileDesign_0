@@ -106,6 +106,19 @@ namespace PileDesign.Models.Results
         public string LiquefactionLabel =>
             IsLiquefaction is bool b ? (b ? "液状化有" : "液状化無") : "";
 
+        /// <summary>
+        /// この検定の元になった荷重ケースの収束状態。
+        ///
+        /// 収束していないケースの応答値は<b>釣り合っていない状態の値</b>で、
+        /// 限界値と比べても意味が無い。既定は収束 —
+        /// 水平解析を通らない検定 (基礎梁の傾斜角・沈下による変形角) と、
+        /// 収束状態を記録していない古い保存ファイルがこれにあたる。
+        /// </summary>
+        public FEM.StepStatus CaseConvergence { get; init; } = FEM.StepStatus.Converged;
+
+        /// <summary>収束していないケースか。</summary>
+        public bool IsFromUnconvergedCase => CaseConvergence != FEM.StepStatus.Converged;
+
         /// <summary>応答値 (解析から得た値)。</summary>
         public double Response { get; init; }
 
@@ -179,9 +192,14 @@ namespace PileDesign.Models.Results
         [ResultColumn("検定比", 0, "N2", "応答値 ÷ 限界値。1 を超えると NG")]
         public double Ratio => Limit > 0 ? Response / Limit : double.NaN;
 
-        /// <summary>一覧に出す判定の文字列。</summary>
-        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG")]
-        public string StatusLabel => IsOk ? "OK" : "NG";
+        /// <summary>
+        /// 一覧に出す判定の文字列。
+        ///
+        /// 収束していないケースは <b>OK でも NG でもない</b>。応答値が釣り合いを満たしていないので、
+        /// 限界値と比べた結果を判定として出すと「解いていないものを合格と言う」ことになる。
+        /// </summary>
+        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG。解析が収束しなかったケースは「未収束」")]
+        public string StatusLabel => IsFromUnconvergedCase ? "未収束" : (IsOk ? "OK" : "NG");
 
         /// <summary>画面で対象を特定するための文字列。例:「杭配置No.7 / 要素3 / i端」</summary>
         [ResultColumn("対象", 3, tooltip: "どの杭のどこか (杭配置番号 / 杭体区間 / 端部)")]

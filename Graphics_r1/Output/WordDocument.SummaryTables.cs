@@ -1186,6 +1186,27 @@ namespace PileDesign.Output
                 $"耐震性能グレード {grade}。検定項目 {result.Items.Count} 件（OK {result.OkCount} 件 / NG {result.NgCount} 件）。"
                 + (result.MaxRatio is { } r ? $" 最大検定比 {r:F2}。{governing}" : string.Empty));
 
+            // 収束しなかったケースがあれば、判定より先に書く。
+            // 「OK n 件」だけを読んで安心されると、解けていないケースが検討済みとして通ってしまう。
+            if (result.UnconvergedCount > 0)
+            {
+                var unconvergedCases = result.Items
+                    .Where(i => i.IsFromUnconvergedCase)
+                    .Select(i => string.IsNullOrEmpty(i.LiquefactionLabel)
+                        ? $"{i.LoadCaseName} {i.LoadCombinationName}"
+                        : $"{i.LoadCaseName} {i.LoadCombinationName}（{i.LiquefactionLabel}）")
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToList();
+
+                AddText(body,
+                    $"このうち {result.UnconvergedCount} 件は、水平解析が収束しなかった荷重ケースの結果である。"
+                    + "収束していない状態の応答値は釣り合いを満たしておらず、限界値と比べても意味を持たないため、"
+                    + "OK / NG のいずれにも数えていない。"
+                    + "計算ステップ数を増やして再解析するか、耐力が足りているかを確認すること。");
+                AddText(body, "収束しなかった荷重ケース: " + string.Join(" / ", unconvergedCases));
+            }
+
             if (!includeLongTerm && longTermCount > 0)
             {
                 AddTableNote(body,
@@ -1199,7 +1220,10 @@ namespace PileDesign.Output
 
             if (result.NgCount == 0)
             {
-                AddText(body, "すべての検定項目が限界値を下回っている（NG 項目なし）。");
+                AddText(body, result.UnconvergedCount > 0
+                    ? "収束した荷重ケースの検定項目は、すべて限界値を下回っている（NG 項目なし）。"
+                      + "収束しなかったケースについては上記のとおり判定できていない。"
+                    : "すべての検定項目が限界値を下回っている（NG 項目なし）。");
                 return;
             }
 

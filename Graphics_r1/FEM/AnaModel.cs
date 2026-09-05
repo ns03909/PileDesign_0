@@ -1320,6 +1320,36 @@ namespace PileDesign.FEM
             return null;
         }
 
+        /// <summary>
+        /// 荷重ケースごとの収束状態。キーは (荷重ケース名, 荷重組合せ名, 液状化)。
+        ///
+        /// <b>ケースの中で最も悪いステップの状態</b>を返す。途中のステップが収束していなければ、
+        /// そこから先のステップは釣り合っていない状態の上に積み上がるので、
+        /// 最終ステップだけを見て「収束した」と言ってはいけない。
+        ///
+        /// 検定・計算書は結果を「ケース単位」で読むので、こちらもケース単位で畳んで渡す。
+        /// </summary>
+        public Dictionary<(string LoadCaseName, string LoadCombinationName, bool IsLiquefaction), StepStatus>
+            BuildCaseConvergenceMap()
+        {
+            var map = new Dictionary<(string, string, bool), StepStatus>();
+            if (AnalysisStepResults == null) return map;
+
+            foreach (var r in AnalysisStepResults)
+            {
+                var key = (r.LoadCase?.LoadName ?? "", r.LoadCombination?.Name ?? "", r.IsLiquefaction);
+                // Unconverged / PhysicallyUnconverged の方を残す (enum の値が大きい方が悪い)。
+                if (map.TryGetValue(key, out var current) && current >= r.Status) continue;
+                map[key] = r.Status;
+            }
+
+            return map;
+        }
+
+        /// <summary>収束していないステップを含む解析結果があるか。</summary>
+        public bool HasUnconvergedSteps()
+            => AnalysisStepResults?.Any(r => r.Status != StepStatus.Converged) == true;
+
         public AnalysisStepResult? GetAnalysisLastStepResult(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {
             // 名前ベースで比較（参照比較の代わりに）
