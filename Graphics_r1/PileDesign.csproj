@@ -8,8 +8,11 @@
 	     コードを修正したら下記リストから該当コードを削除して strict 化する。
 	     2026-04-29 baseline (全 6076 警告 → 29 種類のコードを許容)。-->
 	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-	<!-- 解消済: CS0067 CS0108 CS0169 CS0414 CS1717 CS8073 CS8321 CS8621 CS8765 CS8767 CS9113 (2026-04-29) / CS0168 CS0219 (2026-05-11) -->
-	<WarningsNotAsErrors>CS0162;CS0649;CS4014;CS8600;CS8601;CS8602;CS8603;CS8604;CS8605;CS8612;CS8618;CS8619;CS8622;CS8625;CS8629;NU1701</WarningsNotAsErrors>
+	<!-- 解消済: CS0067 CS0108 CS0169 CS0414 CS1717 CS8073 CS8321 CS8621 CS8765 CS8767 CS9113 (2026-04-29) / CS0168 CS0219 (2026-05-11)
+	     / CS0162 CS0649 CS4014 CS8605 CS8612 CS8629 (2026-09-05)。
+	     CS0162 CS0649 CS4014 は既に 0 件だったので許容から外しただけ。
+	     CS8605 CS8612 CS8629 は 16 箇所を直して 0 件にした (うち 1 件は既定引数で必ず落ちる死にコード)。-->
+	<WarningsNotAsErrors>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8619;CS8622;CS8625;NU1701</WarningsNotAsErrors>
     <OutputType>WinExe</OutputType>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>
@@ -20,10 +23,10 @@
     <ApplicationIcon>Icons\ApplicationIcon\ApplicationIcon.ico</ApplicationIcon>
 
     <!-- バージョン管理 -->
-    <Version>1.0.29-beta</Version>
-    <AssemblyVersion>1.0.29.0</AssemblyVersion>
-    <FileVersion>1.0.29.0</FileVersion>
-    <InformationalVersion>1.0.29-beta</InformationalVersion>
+    <Version>1.0.30-beta</Version>
+    <AssemblyVersion>1.0.30.0</AssemblyVersion>
+    <FileVersion>1.0.30.0</FileVersion>
+    <InformationalVersion>1.0.30-beta</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
@@ -2078,18 +2081,18 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ACadSharp" Version="3.7.1" />
-    <PackageReference Include="CSparse" Version="4.4.0" />
+    <PackageReference Include="CSparse" Version="4.4.1" />
     <PackageReference Include="HelixToolkit.Geometry" Version="3.1.2" />
     <PackageReference Include="HelixToolkit.Maths" Version="3.1.2" />
     <PackageReference Include="HelixToolkit.Wpf" Version="3.1.2" />
-    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.158" />
     <PackageReference Include="Rhino3dm" Version="8.32.0" />
     <PackageReference Include="ScottPlot" Version="5.1.59" />
     <PackageReference Include="ScottPlot.WPF" Version="5.1.59" />
     <PackageReference Include="SharpVectors" Version="1.8.5" />
     <PackageReference Include="SharpVectors.Wpf" Version="1.8.5" />
-    <PackageReference Include="SkiaSharp" Version="4.151.1" />
-    <PackageReference Include="Svg.Skia" Version="5.2.1" />
+    <PackageReference Include="SkiaSharp" Version="4.151.2" />
+    <PackageReference Include="Svg.Skia" Version="5.2.3" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
@@ -2099,7 +2102,7 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <!-- WebView2: ランタイム同梱(Runtime.X64)からSDKのみに変更（-509MB）
          Windows 10/11にはWebView2 Evergreen Runtimeが標準搭載 -->
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
     <PackageReference Include="WpfMath" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
@@ -2114,9 +2117,9 @@
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageReference Include="Fluent.Ribbon" Version="11.0.2" />
     <PackageReference Include="DocumentFormat.OpenXml.Framework" Version="3.5.1" />
-    <PackageReference Include="HarfBuzzSharp" Version="14.2.1.2" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.2" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.2" />
+    <PackageReference Include="HarfBuzzSharp" Version="14.2.1.102" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.2.1.102" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.2.1.102" />
     <PackageReference Include="HelixToolkit" Version="3.1.2" />
     <PackageReference Include="MathNet.Numerics.Signed" Version="5.0.0" />
     <PackageReference Include="OpenTK" Version="5.0.0-pre.13" />
