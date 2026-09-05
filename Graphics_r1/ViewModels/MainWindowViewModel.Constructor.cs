@@ -331,6 +331,19 @@ namespace PileDesign.ViewModels
             // 選択状態の変更はUpdatePropertyPanel自体が呼ばれるので無視
             if (e.PropertyName == nameof(PileLayoutDataItem.IsSelected)) return;
 
+            // <b>背景スレッドから来ることがある。</b>
+            // 解析モデルの組立 (AnalysisModelling) は Task.Run で走り、その中で杭へ
+            // FEM の参照 (PileTopRotationalSpring など) を書き込む。杭を選択していると
+            // その通知がここへ届く。プロパティ一覧は UI にバインドされたコレクションなので、
+            // 背景スレッドから触ると CollectionView が NotSupportedException を投げて
+            // <b>解析ごと落ちる</b> (杭を選んでいるときだけ再現するので気付きにくい)。
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.BeginInvoke(new Action(() => OnSelectedItemPropertyChanged(sender, e)));
+                return;
+            }
+
             // プロパティ一覧を再構築
             SelectedItemProperties.Clear();
             OnPropertyChanged(nameof(SelectedItemHeader));
