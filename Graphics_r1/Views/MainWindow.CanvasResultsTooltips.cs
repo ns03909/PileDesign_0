@@ -504,17 +504,20 @@ namespace PileDesign.Views
             if (closestFb == null) { HideBeamResultTooltip(); return; }
 
             // 部材角計算
-            var coordsI = inputModel.GetNodeCoordinates(closestFb.NodeI_Type, closestFb.NodeI_Id);
-            var coordsJ = inputModel.GetNodeCoordinates(closestFb.NodeJ_Type, closestFb.NodeJ_Id);
-            int pileNoI = GetPileNoAtCoord(inputModel, coordsI.Value.X, coordsI.Value.Y);
-            int pileNoJ = GetPileNoAtCoord(inputModel, coordsJ.Value.X, coordsJ.Value.Y);
+            // 節点が引けない梁 (参照先を消した直後など) はツールチップを出さない
+            if (inputModel.GetNodeCoordinates(closestFb.NodeI_Type, closestFb.NodeI_Id) is not { } coordsI
+                || inputModel.GetNodeCoordinates(closestFb.NodeJ_Type, closestFb.NodeJ_Id) is not { } coordsJ)
+            { HideBeamResultTooltip(); return; }
+
+            int pileNoI = GetPileNoAtCoord(inputModel, coordsI.X, coordsI.Y);
+            int pileNoJ = GetPileNoAtCoord(inputModel, coordsJ.X, coordsJ.Y);
 
             if (!settlementMap.TryGetValue(pileNoI, out double uzI) || !settlementMap.TryGetValue(pileNoJ, out double uzJ))
             { HideBeamResultTooltip(); return; }
 
-            double dx = coordsJ.Value.X - coordsI.Value.X;
-            double dy = coordsJ.Value.Y - coordsI.Value.Y;
-            double dz = coordsJ.Value.Z - coordsI.Value.Z;
+            double dx = coordsJ.X - coordsI.X;
+            double dy = coordsJ.Y - coordsI.Y;
+            double dz = coordsJ.Z - coordsI.Z;
             double beamLength = Math.Sqrt(dx * dx + dy * dy + dz * dz);
             if (beamLength < 1e-6) { HideBeamResultTooltip(); return; }
 

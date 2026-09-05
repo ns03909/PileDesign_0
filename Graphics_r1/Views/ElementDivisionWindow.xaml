@@ -32,24 +32,6 @@
 
 
         <!-- SvgViewboxコントロール用のスタイルを定義 -->
-        <Style x:Key="SvgIconStyle16" TargetType="svgc:SvgViewbox">
-            <Setter Property="Width" Value="16"/>
-            <Setter Property="Height" Value="16"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="StretchDirection" Value="DownOnly"/>
-            <Setter Property="ClipToBounds" Value="True"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-        </Style>
-
-        <Style x:Key="SvgIconStyle24" TargetType="svgc:SvgViewbox">
-            <Setter Property="Width" Value="24"/>
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="StretchDirection" Value="DownOnly"/>
-            <Setter Property="ClipToBounds" Value="True"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-        </Style>
-        
         <!--CheckBoxのスタイル定義-->
 
 
@@ -59,7 +41,9 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 
-        <Style x:Key="GranularityClassTextBlockStyle" TargetType="TextBlock">
+        <!-- 土質 (SoilType) で色分けする。地盤ウィンドウの同名スタイルは粒度区分
+             (GranularityClass) で色分けする別物だったので、名前を分けた -->
+        <Style x:Key="SoilTypeTextBlockStyle" TargetType="TextBlock">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding SoilType}" Value="粘性土">
                     <Setter Property="Foreground" Value="DarkRed"/>
@@ -97,7 +81,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:LampState}">
-                        <Button Width="18" Height="18" Margin="2" Click="SoilPileLamp_Click" ToolTip="土層-杭セットを開く">
+                        <Button Width="18" Height="18" Margin="2" Click="SoilPileLamp_Click" ToolTip="土層-杭セットを開く" AutomationProperties.Name="土層-杭セットを開く">
                             <Ellipse Width="14" Height="14" Fill="{Binding IsOn, Converter={StaticResource BoolToBrushConverter}}" Stroke="Black" StrokeThickness="0.5"/>
                         </Button>
                     </DataTemplate>
@@ -114,7 +98,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:LampState}">
-                        <Button Width="18" Height="18" Margin="2" Click="EmbedmentLamp_Click" ToolTip="土層-根入れセットを開く">
+                        <Button Width="18" Height="18" Margin="2" Click="EmbedmentLamp_Click" ToolTip="土層-根入れセットを開く" AutomationProperties.Name="土層-根入れセットを開く">
                             <Ellipse Width="14" Height="14" Fill="{Binding IsOn, Converter={StaticResource BoolToBrushConverter}}" Stroke="Black" StrokeThickness="0.5"/>
                         </Button>
                     </DataTemplate>
@@ -124,7 +108,7 @@
             <!-- 全杭セット自動分割ボタン＋パラメータ -->
             <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="8,0"/>
             <Button Command="{Binding AutoZsAllPilesCommand}"
-                    ToolTip="全杭セット自動分割 (Ctrl+A): 全ての土層-杭セットに対して自動杭要素分割を実行します" Padding="6,2" Margin="2" VerticalAlignment="Center">
+                    ToolTip="全杭セット自動分割 (Ctrl+A): 全ての土層-杭セットに対して自動杭要素分割を実行します" Padding="6,2" Margin="2" VerticalAlignment="Center" AutomationProperties.Name="全杭セット自動分割 (Ctrl+A): 全ての土層-杭セットに対して自動杭要素分割を実行します">
                     <svgc:SvgViewbox Source="/Icons/AutoSplitAll.svg" Style="{StaticResource SvgIconStyle24}"/>
             </Button>
 
@@ -212,7 +196,7 @@
 
                                                     <Button x:Name="ButtonAuto" ToolTip="この杭セットを自動分割" Grid.Row="5"
                                                         Command="{Binding AutoZsCommand}"
-                                                        HorizontalAlignment="Left" Margin="0,4">
+                                                        HorizontalAlignment="Left" Margin="0,4" AutomationProperties.Name="この杭セットを自動分割">
                                                         <svgc:SvgViewbox Source="/Icons/AutoSplit.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
 
@@ -447,7 +431,7 @@
                                                         </DataGridTextColumn>
 
                                                         <DataGridTextColumn Binding="{Binding SoilType, UpdateSourceTrigger=LostFocus}" IsReadOnly="True"
-                                                                ElementStyle="{StaticResource GranularityClassTextBlockStyle}">
+                                                                ElementStyle="{StaticResource SoilTypeTextBlockStyle}">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="土層" TextAlignment="Center"/>
@@ -681,7 +665,7 @@
 
                                                         <Button x:Name="ButtonEmbedmentAuto" ToolTip="自動杭要素分割実行" Width="100"
                                                                 Command="{Binding AutoEmbedmentZsCommand}"
-                                                                HorizontalAlignment="Left">
+                                                                HorizontalAlignment="Left" AutomationProperties.Name="自動杭要素分割実行">
                                                             <svgc:SvgViewbox Source="/Icons/AutoSplitD.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                         </Button>
                                                     </StackPanel>

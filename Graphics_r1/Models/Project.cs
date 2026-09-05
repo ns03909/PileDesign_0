@@ -7,7 +7,7 @@ namespace PileDesign.Models
     public class Input : INotifyPropertyChanged
     {
         // イベントハンドラー
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged(string propertyName)
         {

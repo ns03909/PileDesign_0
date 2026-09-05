@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,14 +32,16 @@ namespace TestProject1
         }
 
         /// <summary>既に重複している名前。<b>増やさないための一覧</b>で、直したらここから消すこと。</summary>
+        /// <remarks>
+        /// 残る 2 件は<b>中身が画面ごとに違う</b>ので、寄せると見た目が変わる。
+        /// ・CustomDataGridCellStyle … 共通版はホバー、画面版は選択色が別
+        /// ・DeepBlueHeaderStyle … 中央寄せの有無・BasedOn の有無が 3 通り
+        /// どちらに揃えるかは画面を見て決める話なので、機械的には寄せない。
+        /// </remarks>
         private static readonly HashSet<string> KnownDuplicates =
         [
             "CustomDataGridCellStyle",
-            "DeepBlueHeaderStyle",
-            "FormulaControlStyle",
-            "GranularityClassTextBlockStyle",
-            "SvgIconStyle16",
-            "SvgIconStyle24"
+            "DeepBlueHeaderStyle"
         ];
 
         /// <summary>

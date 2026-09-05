@@ -38,7 +38,7 @@ namespace PileDesign.Views
 
         private object _prevLoadingType;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         // プロパティ変更通知を発行するヘルパーメソッド
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -2518,7 +2518,7 @@ namespace PileDesign.Views
         private void CheckBoxCommonActionPoint3D_Click(object sender, RoutedEventArgs e)
         {
             var viewModel = DataContext as MainWindowViewModel;
-            if ((bool)CheckBoxCommonActionPoint3D.IsChecked)
+            if (CheckBoxCommonActionPoint3D.IsChecked == true)
             {
                 viewModel.IsActionPointVisible = true;
             }

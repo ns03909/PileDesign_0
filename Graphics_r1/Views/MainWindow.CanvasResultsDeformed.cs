@@ -283,7 +283,7 @@ namespace PileDesign.Views
             if (viewModel.IsPileSectionVisible && viewModel.ResultInputModel?.PileLayoutItems != null)
             {
                 DrawDeformedPileSections(viewModel, anaModel, selectedLoadCase, selectedLoadCombination,
-                    dispScale, hasInvisiblePile, brush, nodeToValue, deformColorGeoms);
+                    dispScale, brush, nodeToValue, deformColorGeoms);
             }
 
             // 変形後基礎梁断面形状の描画
@@ -522,7 +522,9 @@ namespace PileDesign.Views
         private void DrawDeformedPileSections(
             MainWindowViewModel viewModel, AnaModel anaModel,
             LoadCase selectedLoadCase, LoadCombination selectedLoadCombination,
-            double dispScale, bool hasInvisiblePile, Brush brush,
+            // hasInvisiblePile は受け取っていたが本文で使っておらず、
+            // 「非表示杭があると描き方が変わる」と読めるだけだったので外した
+            double dispScale, Brush brush,
             Dictionary<Node, double>? nodeToValue = null,
             List<ColorBaredGeometry>? colorGeoms = null)
         {

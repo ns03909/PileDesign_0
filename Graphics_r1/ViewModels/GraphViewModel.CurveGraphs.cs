@@ -876,13 +876,17 @@ namespace PileDesign.ViewModels
                                         marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
                                         marker.LegendText = $"最終:{legend}";
 
-                                        if (isPeakPlot)
+                                        // n 方向は isPeakPlot を立てたときに必ず入っているが、
+                                        // ここで取り出しておく (isPeakPlot 越しには追えないため)
+                                        if (isPeakPlot
+                                            && rsResult.CrackNx is double crackNx
+                                            && rsResult.CrackNy is double crackNy)
                                         {
                                             // ピーク表示: 現在値 (θ_proj, M_proj) もホバーに併記
                                             double dRxH = rsResult.CumulativeDisp.Rxj - rsResult.CumulativeDisp.Rxi;
                                             double dRyH = rsResult.CumulativeDisp.Ryj - rsResult.CumulativeDisp.Ryi;
-                                            double thetaProjNow = dRxH * rsResult.CrackNx.Value + dRyH * rsResult.CrackNy.Value;
-                                            double mProjNow = mxi * rsResult.CrackNx.Value + myi * rsResult.CrackNy.Value;
+                                            double thetaProjNow = dRxH * crackNx + dRyH * crackNy;
+                                            double mProjNow = mxi * crackNx + myi * crackNy;
                                             _graphHoverMap[marker] =
                                                 mthetaDetails + "\n" +
                                                 $"ピーク θ_proj_max (n=({rsResult.CrackNx:F3},{rsResult.CrackNy:F3})): {thetaFinal:F6} rad\n" +

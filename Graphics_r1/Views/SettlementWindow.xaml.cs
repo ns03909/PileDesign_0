@@ -127,7 +127,8 @@ namespace PileDesign.Views
         {
             if (DataContext is SettlementViewModel viewModel && ComboBoxSoilPileNo.SelectedIndex + 1 is int selectedSoilPileNo)
             {
-                int previousSelectedSoilPileNo = e.RemovedItems.Count > 0 ? (int)e.RemovedItems[0] : -1;
+                int previousSelectedSoilPileNo =
+                    e.RemovedItems.Count > 0 && e.RemovedItems[0] is int previous ? previous : -1;
                 viewModel.ComboBoxSoilPileNo_SelectionChanged(/*selectedSoilPileNo, */previousSelectedSoilPileNo);
             }
         }

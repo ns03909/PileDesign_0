@@ -112,7 +112,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                         <ToggleButton x:Name="ButtonShowDeformationAngleGuide" Padding="6,2" FontSize="11"
                                       Background="Transparent" BorderThickness="0" Foreground="#666"
-                                      ToolTip="基礎指針'19 表5.3.8 の設計用限界値の目安を表示">
+                                      ToolTip="基礎指針'19 表5.3.8 の設計用限界値の目安を表示" AutomationProperties.Name="基礎指針'19 表5.3.8 の設計用限界値の目安を表示">
                             <TextBlock><Run Text="設計用限界値の目安 (基礎指針'19 表5.3.8)"/><Run Text=" ▾"/></TextBlock>
                         </ToggleButton>
                         <Popup PlacementTarget="{Binding ElementName=ButtonShowDeformationAngleGuide}" Placement="Bottom"

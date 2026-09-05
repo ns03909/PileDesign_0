@@ -28,11 +28,6 @@
 
     <Window.Resources>
         <!-- FormulaControlに適用するスタイルを定義 -->
-        <Style x:Key="FormulaControlStyle" TargetType="controls:FormulaControl">
-            <Setter Property="Scale" Value="12"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-        
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="SkyBlueHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}"/>
@@ -94,7 +89,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:LampState}">
-                        <Button Width="18" Height="18" Margin="2" Click="SoilPileLamp_Click" ToolTip="土層-杭セットを選択">
+                        <Button Width="18" Height="18" Margin="2" Click="SoilPileLamp_Click" ToolTip="土層-杭セットを選択" AutomationProperties.Name="土層-杭セットを選択">
                             <Ellipse Width="14" Height="14" Fill="{Binding IsOn, Converter={StaticResource BoolToBrushConverter}}" Stroke="Black" StrokeThickness="0.5"/>
                         </Button>
                     </DataTemplate>
@@ -793,7 +788,7 @@
                                     Orientation="Horizontal" HorizontalAlignment="Right">
                             <Button Margin="0,2,16,2" Padding="6,2"
                                     Command="{Binding OpenMasingHysteresisCommand}"
-                                    ToolTip="単杭骨格曲線を用いた一定変動軸力下の Masing 則履歴グラフ">
+                                    ToolTip="単杭骨格曲線を用いた一定変動軸力下の Masing 則履歴グラフ" AutomationProperties.Name="単杭骨格曲線を用いた一定変動軸力下の Masing 則履歴グラフ">
                                 <StackPanel Orientation="Horizontal">
                                     <Image Source="pack://application:,,,/Icons/Masing-Pyke.png"
                                            Width="20" Height="20" Margin="0,0,6,0" Stretch="Uniform"/>

@@ -20,11 +20,6 @@
     
     <Window.Resources>
         <!-- FormulaControlに適用するスタイルを定義 -->
-        <Style x:Key="FormulaControlStyle" TargetType="controls:FormulaControl">
-            <Setter Property="Scale" Value="12"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-
         <!-- カスタムレジェンドテンプレートを定義 -->
         <DataTemplate x:Key="CustomLegendTemplate">
             <StackPanel Orientation="Horizontal">

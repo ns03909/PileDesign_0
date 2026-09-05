@@ -47,7 +47,8 @@
         <KeyBinding Key="F4" Command="{Binding OpenElementDivisionWindowCommand}" />
         <KeyBinding Key="F5" Command="{Binding OpenLateralLoadAnalysisWindowCommand}" />
         <KeyBinding Key="F6" Command="{Binding OpenSettlementWindowCommand}" />
-        <KeyBinding Key="F7" Command="{Binding OpenVerticalBeamCalculationCommand}" />
+        <KeyBinding Key="F6" Modifiers="Shift" Command="{Binding OpenVerticalBeamCalculationCommand}" />
+        <KeyBinding Key="F7" Command="{Binding PileGroupSettlementAnalysisCommand}" />
     </Window.InputBindings>
 
     <Window.DataContext>
@@ -156,40 +157,8 @@
 
         <!-- Imageコントロール用のスタイルを定義 -->
 
-        <!-- SvgViewboxコントロール用のスタイルを定義
-             SvgViewbox 自身の IsEnabled が False のとき (UIElement.IsEnabled は親から自動継承されるため、
-             親 Button の IsEnabled=False が伝播する) に薄く表示する。
-             RelativeSource AncestorType=ButtonBase 方式 (旧実装) は SvgViewbox が Button 外で使われた
-             場合に「源が見つからない」警告を出すが、本方式は警告ゼロかつ意図する挙動が得られる。 -->
-        <Style x:Key="SvgIconStyle16" TargetType="svgc:SvgViewbox">
-            <Setter Property="Width" Value="16"/>
-            <Setter Property="Height" Value="16"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="StretchDirection" Value="DownOnly"/>
-            <Setter Property="ClipToBounds" Value="True"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Style.Triggers>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.35"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="SvgIconStyle24" TargetType="svgc:SvgViewbox">
-            <Setter Property="Width" Value="24"/>
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="StretchDirection" Value="DownOnly"/>
-            <Setter Property="ClipToBounds" Value="True"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Style.Triggers>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.35"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-
+        <!-- SvgViewbox のスタイル (SvgIconStyle16 / 24) は Styles.xaml へ移した。
+             同じキーを 4 つの画面が別々に持っており、内容も食い違っていたため。 -->
         <!-- ToolTipのスタイルを定義 -->
         <Style TargetType="ToolTip" x:Key="DeepBlueToolTipStyle">
             <Setter Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
@@ -610,14 +579,14 @@
                                        Icon="pack://application:,,,/Icons/NewFile.png"
                                        LargeIcon="pack://application:,,,/Icons/NewFile.png"
                                        Fluent:RibbonProperties.IconSize="Large"
-                                       KeyTip="N"/>
+                                       KeyTip="N" AutomationProperties.Name="新規 (Ctrl+N)"/>
 
                         <!-- 開く -->
                         <Fluent:Button Header="開く (Ctrl+O)" Command="{Binding OpenInputModelFileCommand}"
                                        Icon="pack://application:,,,/Icons/OpenFile.png"
                                        LargeIcon="pack://application:,,,/Icons/OpenFile.png"
                                        Fluent:RibbonProperties.IconSize="Large"
-                                       KeyTip="O"/>
+                                       KeyTip="O" AutomationProperties.Name="開く (Ctrl+O)"/>
 
                         <!-- 最近使ったファイル -->
                         <Fluent:BackstageTabItem Header="最近使ったファイル" KeyTip="R"
@@ -652,14 +621,14 @@
                                        Icon="pack://application:,,,/Icons/SaveFile.png"
                                        LargeIcon="pack://application:,,,/Icons/SaveFile.png"
                                        Fluent:RibbonProperties.IconSize="Large"
-                                       KeyTip="S"/>
+                                       KeyTip="S" AutomationProperties.Name="上書き保存 (Ctrl+S)"/>
 
                         <!-- 名前を付けて保存 -->
                         <Fluent:Button Header="名前を付けて保存 (Ctrl+Shift+S)" Command="{Binding SaveInputModelFileAsCommand}"
                                        Icon="pack://application:,,,/Icons/SaveFileAs.png"
                                        LargeIcon="pack://application:,,,/Icons/SaveFileAs.png"
                                        Fluent:RibbonProperties.IconSize="Large"
-                                       KeyTip="A"/>
+                                       KeyTip="A" AutomationProperties.Name="名前を付けて保存 (Ctrl+Shift+S)"/>
 
                         <Fluent:SeparatorTabItem/>
 
@@ -675,75 +644,75 @@
                                         <TextBlock Text="建築基礎構造設計指針 2019" FontWeight="Bold" Foreground="#3271AD" Margin="0,8,0,4" FontSize="14"/>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example5PileCommand}"
-                                                ToolTip="基礎指針'19 計算例5 直接基礎の即時沈下量（PHC杭φ600 L=14m 12本付き）">
+                                                ToolTip="基礎指針'19 計算例5 直接基礎の即時沈下量（PHC杭φ600 L=14m 12本付き）" AutomationProperties.Name="基礎指針'19 計算例5 直接基礎の即時沈下量（PHC杭φ600 L=14m 12本付き）">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例5　直接基礎の即時沈下量" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example7Command}"
-                                                ToolTip="基礎指針'19 計算例7 杭の限界鉛直支持力および限界引抜き抵抗力">
+                                                ToolTip="基礎指針'19 計算例7 杭の限界鉛直支持力および限界引抜き抵抗力" AutomationProperties.Name="基礎指針'19 計算例7 杭の限界鉛直支持力および限界引抜き抵抗力">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例7　杭の限界鉛直支持力および限界引抜き抵抗力" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example9Command}"
-                                                ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗">
+                                                ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗" AutomationProperties.Name="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例9　地下室の影響を考慮した杭の地震時水平抵抗" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example10Command}"
-                                                ToolTip="基礎指針'19 計算例10 場所打ち鉄筋コンクリート杭φ1500 L=37.5m">
+                                                ToolTip="基礎指針'19 計算例10 場所打ち鉄筋コンクリート杭φ1500 L=37.5m" AutomationProperties.Name="基礎指針'19 計算例10 場所打ち鉄筋コンクリート杭φ1500 L=37.5m">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例10　液状化の可能性がある場所打ち杭の水平抵抗" VerticalAlignment="Center"/></StackPanel></Button>
 
                                         <!-- 設計例集 -->
                                         <TextBlock Text="建築基礎構造設計例集 2024" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_1Command}"
-                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.1　非液状化地盤に建つ建物のPHC杭基礎">
+                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.1　非液状化地盤に建つ建物のPHC杭基礎" AutomationProperties.Name="日本建築学会　建築基礎構造設計例集 2024　3.1　非液状化地盤に建つ建物のPHC杭基礎">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.1　非液状化地盤に建つ建物のPRC杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_2Command}"
-                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.2　砂地盤に建つ建物のPHC節杭基礎">
+                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.2　砂地盤に建つ建物のPHC節杭基礎" AutomationProperties.Name="日本建築学会　建築基礎構造設計例集 2024　3.2　砂地盤に建つ建物のPHC節杭基礎">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.2　砂地盤に建つ建物のPHC節杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_3Command}"
-                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.3　粘性土地盤に建つ免振建物の場所打ち鉄筋コンクリート杭基礎">
+                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.3　粘性土地盤に建つ免振建物の場所打ち鉄筋コンクリート杭基礎" AutomationProperties.Name="日本建築学会　建築基礎構造設計例集 2024　3.3　粘性土地盤に建つ免振建物の場所打ち鉄筋コンクリート杭基礎">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.3　粘性土地盤に建つ免震建物の場所打ち鉄筋コンクリート杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_4Command}"
-                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎">
+                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎" AutomationProperties.Name="日本建築学会　建築基礎構造設計例集 2024　3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_5Command}"
-                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.5　鋼管杭基礎">
+                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.5　鋼管杭基礎" AutomationProperties.Name="日本建築学会　建築基礎構造設計例集 2024　3.5　鋼管杭基礎">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.5　液状化の可能性がある地盤に建つ建物の鋼管杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_8Command}"
-                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.8　場所打ち鋼管コンクリート杭基礎 (9 杭体 / 9 地盤 / 42 本杭)">
+                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.8　場所打ち鋼管コンクリート杭基礎 (9 杭体 / 9 地盤 / 42 本杭)" AutomationProperties.Name="日本建築学会　建築基礎構造設計例集 2024　3.8　場所打ち鋼管コンクリート杭基礎 (9 杭体 / 9 地盤 / 42 本杭)">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="3.8　支持層が傾斜した地盤に建つ建物の場所打ち鋼管コンクリート杭基礎" VerticalAlignment="Center"/></StackPanel></Button>
 
                                         <!-- 関東支部 -->
                                         <TextBlock Text="基礎構造の設計 2023（関東支部）" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding ExampleK7Command}"
-                                                ToolTip="日本建築学会　関東支部　基礎構造の設計 2023　学びやすい構造設計 設計例7（直接基礎）を実行">
+                                                ToolTip="日本建築学会　関東支部　基礎構造の設計 2023　学びやすい構造設計 設計例7（直接基礎）を実行" AutomationProperties.Name="日本建築学会　関東支部　基礎構造の設計 2023　学びやすい構造設計 設計例7（直接基礎）を実行">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/332-8002.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="7. 直接基礎の設計例 (関東支部 設計例7)" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding ExampleK8Command}"
-                                                ToolTip="日本建築学会　関東支部　基礎構造の設計 2023　学びやすい構造設計 計算例8（杭基礎）を実行">
+                                                ToolTip="日本建築学会　関東支部　基礎構造の設計 2023　学びやすい構造設計 計算例8（杭基礎）を実行" AutomationProperties.Name="日本建築学会　関東支部　基礎構造の設計 2023　学びやすい構造設計 計算例8（杭基礎）を実行">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/332-8002.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="8. 杭基礎の設計例 (関東支部 計算例8)" VerticalAlignment="Center"/></StackPanel></Button>
 
                                         <!-- キャプテンパイル工法計算例 -->
                                         <TextBlock Text="キャプテンパイル工法 計算例" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding ExampleCPT2018Command}"
-                                                ToolTip="日本建築学会 学術講演梗概集 2018 年 9 月 応答変位法による杭頭半固定杭の杭体応力に関するケーススタディ&#x0a;(キャプテンパイル工法 / 場所打ち D=2100mm / 10 本杭)">
+                                                ToolTip="日本建築学会 学術講演梗概集 2018 年 9 月 応答変位法による杭頭半固定杭の杭体応力に関するケーススタディ&#x0a;(キャプテンパイル工法 / 場所打ち D=2100mm / 10 本杭)" AutomationProperties.Name="日本建築学会 学術講演梗概集 2018 年 9 月 応答変位法による杭頭半固定杭の杭体応力に関するケーススタディ&#x0a;(キャプテンパイル工法 / 場所打ち D=2100mm / 10 本杭)">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="応答変位法による杭頭半固定杭の杭体応力 (AIJ 2018)" VerticalAlignment="Center"/></StackPanel></Button>
 
                                         <!-- キャプリングパイル工法計算例 -->
                                         <TextBlock Text="キャプリングパイル工法 計算例" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding ExampleCAP3_7Command}"
-                                                ToolTip="キャプリングパイル工法設計例3.7.1 杭頭に引張力が生じない場合&#x0a;(既製コンクリート杭 PHC-800 / 12 本杭 / 砂質土地盤 N=10)">
+                                                ToolTip="キャプリングパイル工法設計例3.7.1 杭頭に引張力が生じない場合&#x0a;(既製コンクリート杭 PHC-800 / 12 本杭 / 砂質土地盤 N=10)" AutomationProperties.Name="キャプリングパイル工法設計例3.7.1 杭頭に引張力が生じない場合&#x0a;(既製コンクリート杭 PHC-800 / 12 本杭 / 砂質土地盤 N=10)">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="設計例3.7.1 杭頭に引張力が生じない場合" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding ExampleCAP3_7_3Command}"
-                                                ToolTip="キャプリングパイル工法設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)&#x0a;(既製コンクリート杭 PHC-800-B / 引張定着筋 3-D19 SD390 / 12 本杭 / 4 層砂質土+礫質土地盤)">
+                                                ToolTip="キャプリングパイル工法設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)&#x0a;(既製コンクリート杭 PHC-800-B / 引張定着筋 3-D19 SD390 / 12 本杭 / 4 層砂質土+礫質土地盤)" AutomationProperties.Name="キャプリングパイル工法設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)&#x0a;(既製コンクリート杭 PHC-800-B / 引張定着筋 3-D19 SD390 / 12 本杭 / 4 層砂質土+礫質土地盤)">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)" VerticalAlignment="Center"/></StackPanel></Button>
                                     </StackPanel>
                                 </ScrollViewer>
@@ -902,20 +871,20 @@
                     <Fluent:ToggleButton Header="目盛" IsChecked="{Binding IsTickMarkVisible}"
                                                LargeIcon="pack://application:,,,/Icons/TickMarkVisible.png"
                                                Icon="pack://application:,,,/Icons/TickMarkVisible.png"
-                                               ToolTip="Z軸に平行なビュー、Z軸に垂直なビューのときの5m間隔の目盛の表示／非表示を切り替えます。" SizeDefinition="Small, Small, Small"/>
+                                               ToolTip="Z軸に平行なビュー、Z軸に垂直なビューのときの5m間隔の目盛の表示／非表示を切り替えます。" SizeDefinition="Small, Small, Small" AutomationProperties.Name="目盛"/>
                     <Fluent:ToggleButton Header="通り心" IsChecked="{Binding IsGridLineVisible}"
                                                LargeIcon="pack://application:,,,/Icons/GridVisible.png"
                                                Icon="pack://application:,,,/Icons/GridVisible.png"
-                                               ToolTip="定義した通り心の表示／非表示を切り替えます。" SizeDefinition="Small, Small, Small"/>
+                                               ToolTip="定義した通り心の表示／非表示を切り替えます。" SizeDefinition="Small, Small, Small" AutomationProperties.Name="通り心"/>
                     <Fluent:ToggleButton Header="XYZ 軸" IsChecked="{Binding IsXYZAxesVisible}"
                                                LargeIcon="pack://application:,,,/Icons/AxesVisible.png"
                                                Icon="pack://application:,,,/Icons/AxesVisible.png"
-                                               ToolTip="XYZ座標軸の表示／非表示を切り替えます。" SizeDefinition="Small, Small, Small"/>
+                                               ToolTip="XYZ座標軸の表示／非表示を切り替えます。" SizeDefinition="Small, Small, Small" AutomationProperties.Name="XYZ 軸"/>
                     <Fluent:DropDownButton Header="軸中心"
                                             LargeIcon="pack://application:,,,/Icons/AxesVisible.png"
                                             Icon="pack://application:,,,/Icons/AxesVisible.png"
                                             ToolTip="参考軸中心 (X0, Y0, Z0) を設定します。Z0 は通り心の描画高さに使用されます。"
-                                            SizeDefinition="Small, Small, Small">
+                                            SizeDefinition="Small, Small, Small" AutomationProperties.Name="軸中心">
                         <StackPanel Margin="8" MinWidth="160">
                             <TextBlock Text="軸中心 (m)" FontWeight="Bold" Margin="0,0,0,6"/>
                             <Grid>
@@ -959,14 +928,14 @@
                     <!-- その他 -->
                     <Fluent:ToggleButton Header="慣性力作用点" ToolTip="慣性力作用点の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsActionPointVisible}"
-                                                Icon="pack://application:,,,/Icons/LateralLoadActionPointVisible.png" SizeDefinition="Small, Small, Small"/>
+                                                Icon="pack://application:,,,/Icons/LateralLoadActionPointVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="慣性力作用点"/>
                     <Fluent:ToggleButton Header="連結" ToolTip="連結線の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsRigidFloorVisible}"
-                                                Icon="pack://application:,,,/Icons/IsRigidConnectionVisible.png" SizeDefinition="Small, Small, Small"/>
+                                                Icon="pack://application:,,,/Icons/IsRigidConnectionVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="連結"/>
                     <!-- 節点系 -->
                     <Fluent:SplitButton Header="節点" IsCheckable="True" IsChecked="{Binding IsNodeVisible}"
                                               LargeIcon="pack://application:,,,/Icons/NodeVisible.png"
-                                              Icon="pack://application:,,,/Icons/NodeVisible.png" SizeDefinition="Small, Small, Small">
+                                              Icon="pack://application:,,,/Icons/NodeVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="節点">
                         <Fluent:SplitButton.ToolTip>
                             <Fluent:ScreenTip Title="節点"
                                               Text="節点の表示／非表示を切り替えます。▼メニューから接合節点の表示を個別に制御できます。"/>
@@ -977,15 +946,15 @@
                     </Fluent:SplitButton>
                     <Fluent:ToggleButton Header="要素縮小表示" ToolTip="要素の端点を縮小して節点が見やすくします。"
                                                 IsChecked="{Binding IsShrinkElementMode}"
-                                                Icon="pack://application:,,,/Icons/ShrinkElementMode.png" SizeDefinition="Small, Small, Small"/>
+                                                Icon="pack://application:,,,/Icons/ShrinkElementMode.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="要素縮小表示"/>
                     <!-- 杭系 -->
                     <Fluent:ToggleButton Header="根入部形状" ToolTip="根入部形状の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsEmbedmentBoxVisible}"
-                                                Icon="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png" SizeDefinition="Small, Small, Small"/>
+                                                Icon="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="根入部形状"/>
                     <!-- 梁系 -->
                     <Fluent:SplitButton Header="梁 中心線" IsCheckable="True" IsChecked="{Binding IsFoundationBeamVisible}"
                                               LargeIcon="pack://application:,,,/Icons/ElementVisible.png"
-                                              Icon="pack://application:,,,/Icons/ElementVisible.png" SizeDefinition="Small, Small, Small">
+                                              Icon="pack://application:,,,/Icons/ElementVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="梁 中心線">
                         <Fluent:SplitButton.ToolTip>
                             <Fluent:ScreenTip Title="梁中心線"
                                               Text="梁中心線の表示／非表示を切り替えます。▼メニューから杭中心線・要素軸の表示を個別に制御できます。"/>
@@ -999,7 +968,7 @@
                     </Fluent:SplitButton>
                     <Fluent:SplitButton Header="梁形状" IsCheckable="True" IsChecked="{Binding IsBeamElementSectionVisible}"
                                               LargeIcon="pack://application:,,,/Icons/BeamVisible.png"
-                                              Icon="pack://application:,,,/Icons/BeamVisible.png" SizeDefinition="Small, Small, Small">
+                                              Icon="pack://application:,,,/Icons/BeamVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="梁形状">
                         <Fluent:SplitButton.ToolTip>
                             <Fluent:ScreenTip Title="梁形状"
                                               Text="梁断面形状の表示／非表示を切り替えます。▼メニューから杭体形状の表示を個別に制御できます。"/>
@@ -1014,50 +983,50 @@
                 <Fluent:RibbonGroupBox Header="一般梁要素ラベル" ToolTip="一般梁要素ラベル" Icon="pack://application:,,,/Icons/ElementNo.png">
                     <Fluent:ToggleButton Header="梁要素番号" ToolTip="梁要素番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsElementNoVisible}"
-                               Icon="pack://application:,,,/Icons/ElementNo.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/ElementNo.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="梁要素番号"/>
                     <Fluent:ToggleButton Header="材料No" ToolTip="梁要素の材料番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamMaterialNoVisible}"
-                               Icon="pack://application:,,,/Icons/BeamMaterialNoVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/BeamMaterialNoVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="材料No"/>
                     <Fluent:ToggleButton Header="材料名称" ToolTip="梁要素の材料名称ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamMaterialNameVisible}"
-                               Icon="pack://application:,,,/Icons/BeamMaterialNameVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/BeamMaterialNameVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="材料名称"/>
                     <Fluent:ToggleButton Header="断面No" ToolTip="梁要素の断面番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamSectionNoVisible}"
-                               Icon="pack://application:,,,/Icons/BeamSectionNoVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/BeamSectionNoVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="断面No"/>
                     <Fluent:ToggleButton Header="断面名称" ToolTip="梁要素の断面名称ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamSectionNameVisible}"
-                               Icon="pack://application:,,,/Icons/BeamSectionNameVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/BeamSectionNameVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="断面名称"/>
                     <Fluent:ToggleButton Header="β" ToolTip="梁要素のβ角度ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamAngleBetaVisible}"
-                               Icon="pack://application:,,,/Icons/BeamAngleBetaVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/BeamAngleBetaVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="β"/>
                 </Fluent:RibbonGroupBox>
 
                 <!-- 節点ラベル -->
                 <Fluent:RibbonGroupBox Header="節点ラベル" ToolTip="節点ラベル" Icon="pack://application:,,,/Icons/IsPileRefVisible.png">
                     <Fluent:ToggleButton Header="節点番号" ToolTip="節点番号ラベルの表示／非表示を切り替えます。"
-                                               IsChecked="{Binding IsNodeNoVisible}" Icon="pack://application:,,,/Icons/NodeNo.png" SizeDefinition="Small, Small, Small"/>
+                                               IsChecked="{Binding IsNodeNoVisible}" Icon="pack://application:,,,/Icons/NodeNo.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="節点番号"/>
                     <Fluent:ToggleButton Header="一般Z" ToolTip="一般節点のZ座標ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsGeneralNodeZVisible}"
-                               Icon="pack://application:,,,/Icons/IsGeneralLevelVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/IsGeneralLevelVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="一般Z"/>
                     <Fluent:ToggleButton Header="杭体番号" ToolTip="杭体番号ラベルの表示／非表示を切り替えます。"
-                                               IsChecked="{Binding IsPileRefVisible}" Icon="pack://application:,,,/Icons/IsPileRefVisible.png" SizeDefinition="Small, Small, Small"/>
+                                               IsChecked="{Binding IsPileRefVisible}" Icon="pack://application:,,,/Icons/IsPileRefVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="杭体番号"/>
                     <Fluent:ToggleButton Header="杭頭Z" ToolTip="杭頭のZ座標ラベルの表示／非表示を切り替えます。"
-                                               IsChecked="{Binding IsPileTopLevelVisible}" Icon="pack://application:,,,/Icons/IsPileTopLevelVisible.png" SizeDefinition="Small, Small, Small"/>
+                                               IsChecked="{Binding IsPileTopLevelVisible}" Icon="pack://application:,,,/Icons/IsPileTopLevelVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="杭頭Z"/>
                     <Fluent:ToggleButton Header="接合Z" ToolTip="接合節点（杭頭+ΔZc）のZ座標ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsConnectionNodeZVisible}"
-                               Icon="pack://application:,,,/Icons/IsConnectionLevelVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/IsConnectionLevelVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="接合Z"/>
                     <Fluent:ToggleButton Header="杭間隔比" ToolTip="杭間隔比ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsPileDiaSpacingRatioLabelVisible}"
-                               Icon="pack://application:,,,/Icons/IsPileDiaSpacingRatioVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/IsPileDiaSpacingRatioVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="杭間隔比"/>
                     <Fluent:ToggleButton Header="前後方杭" ToolTip="前後方杭ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsFrontPileLabelVisible}"
-                               Icon="pack://application:,,,/Icons/IsFrontPileVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/IsFrontPileVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="前後方杭"/>
                     <Fluent:ToggleButton Header="地盤番号" ToolTip="地盤番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsSoilRefVisible}"
-                               Icon="pack://application:,,,/Icons/IsSoilRefVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/IsSoilRefVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="地盤番号"/>
                     <Fluent:ToggleButton Header="群杭係数" ToolTip="群杭係数ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsGroupPileFactorLabelVisible}"
-                               Icon="pack://application:,,,/Icons/IsGroupPileFactorVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/IsGroupPileFactorVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="群杭係数"/>
                 </Fluent:RibbonGroupBox>
 
                 <!-- 荷重 -->
@@ -1066,12 +1035,12 @@
                                                ToolTip="慣性力の表示／非表示を切り替えます。"
                                                IsChecked="{Binding IsMassLoadingVisible}"
                                                LargeIcon="pack://application:,,,/Icons/IsActionPointLoadVisible.png"
-                                               Icon="pack://application:,,,/Icons/IsActionPointLoadVisible.png" SizeDefinition="Small, Small, Small"/>
+                                               Icon="pack://application:,,,/Icons/IsActionPointLoadVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="慣性力"/>
                     <Fluent:ToggleButton Header="杭軸力"
                                                ToolTip="杭軸力の表示／非表示を切り替えます。"
                                                IsChecked="{Binding IsAxialLoadingVisible}"
                                                LargeIcon="pack://application:,,,/Icons/IsAxialLoadVisible.png"
-                                               Icon="pack://application:,,,/Icons/IsAxialLoadVisible.png" SizeDefinition="Small, Small, Small"/>
+                                               Icon="pack://application:,,,/Icons/IsAxialLoadVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="杭軸力"/>
                     <!-- ダイアグラムスケール（応力）は右端「テキスト・ダイアグラムスケール」グループに統合済み -->
                 </Fluent:RibbonGroupBox>
                 
@@ -1084,12 +1053,12 @@
                                                  IsChecked="{Binding IsGroundVisible}"
                                                  LargeIcon="pack://application:,,,/Icons/SurroundingSoilVisible.png"
                                                  Icon="pack://application:,,,/Icons/SurroundingSoilVisible.png"
-                                                 SizeDefinition="Small, Small, Small"/>
+                                                 SizeDefinition="Small, Small, Small" AutomationProperties.Name="杭周 土層"/>
                             <Fluent:ToggleButton Header="値表示" Margin="2,0,0,0"
                                                  ToolTip="土層・土質点のパラメータの値の表示／非表示を切り替えます。"
                                                  IsChecked="{Binding IsSoilValueVisible}"
                                                  Icon="pack://application:,,,/Icons/GroundParameterValueVisible.png"
-                                                 SizeDefinition="Small, Small, Small"/>
+                                                 SizeDefinition="Small, Small, Small" AutomationProperties.Name="値表示"/>
                         </StackPanel>
                         <!-- 2 行目: 土層 / 土層パラメータ -->
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
@@ -1097,7 +1066,7 @@
                                                  ToolTip="土層パラメータ（密度・粘着力・Vs・Es・平均N値）の表示／非表示"
                                                  IsChecked="{Binding IsSoilLayerParamDisplayEnabled}"
                                                  Icon="pack://application:,,,/Icons/GroundLayerParametersVisible.png"
-                                                 SizeDefinition="Small, Small, Small"/>
+                                                 SizeDefinition="Small, Small, Small" AutomationProperties.Name="土層"/>
                             <ComboBox Width="70" Margin="2,0,0,0" VerticalAlignment="Center"
                                       ItemsSource="{Binding SoilParamDisplayOptions}"
                                       SelectedItem="{Binding SelectedSoilParamDisplay}"
@@ -1109,7 +1078,7 @@
                                                  ToolTip="土質点パラメータ（N値・Vs0・Fc）の表示／非表示"
                                                  IsChecked="{Binding IsSoilMassParamDisplayEnabled}"
                                                  Icon="pack://application:,,,/Icons/GroundPointParametersVisible.png"
-                                                 SizeDefinition="Small, Small, Small"/>
+                                                 SizeDefinition="Small, Small, Small" AutomationProperties.Name="土質点"/>
                             <ComboBox Width="70" Margin="2,0,0,0" VerticalAlignment="Center"
                                       ItemsSource="{Binding SoilMassParamDisplayOptions}"
                                       SelectedItem="{Binding SelectedSoilMassParamDisplay}"
@@ -1123,7 +1092,7 @@
                     <Fluent:ToggleButton Header="地盤 変位" ToolTip="地盤変位の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsForcedDisplacementVisible}"
                                                    LargeIcon="pack://application:,,,/Icons/IsForcedDispVisible.png"
-                                                   Icon="pack://application:,,,/Icons/IsForcedDispVisible.png" SizeDefinition="Small, Small, Small"/>
+                                                   Icon="pack://application:,,,/Icons/IsForcedDispVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="地盤 変位"/>
                     <!-- ダイアグラムスケール（変位）は右端「テキスト・ダイアグラムスケール」グループに統合済み -->
                 </Fluent:RibbonGroupBox>
 
@@ -1131,13 +1100,13 @@
                 <Fluent:RibbonGroupBox Header="群杭沈下" ToolTip="群杭沈下" Icon="pack://application:,,,/Icons/IsSettlementGridVisible.png">
                     <Fluent:ToggleButton Header="群杭沈下グリッド" ToolTip="群杭沈下グリッド表示"
                                IsChecked="{Binding IsGroupPileGridVisible}"
-                               Icon="pack://application:,,,/Icons/IsSettlementGridVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/IsSettlementGridVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="群杭沈下グリッド"/>
                     <Fluent:ToggleButton Header="群杭沈下土層" ToolTip="群杭沈下用土層表示（水平視）"
                                IsChecked="{Binding IsSettlementGroundVisible}"
-                               Icon="pack://application:,,,/Icons/SoilLayerVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/SoilLayerVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="群杭沈下土層"/>
                     <Fluent:ToggleButton Header="群杭沈下荷重面" ToolTip="群杭沈下用荷重面表示"
                                IsChecked="{Binding IsSettlementLoadVisible}"
-                               Icon="pack://application:,,,/Icons/LoadingPlaneVisible.png" SizeDefinition="Small, Small, Small"/>
+                               Icon="pack://application:,,,/Icons/LoadingPlaneVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="群杭沈下荷重面"/>
                 </Fluent:RibbonGroupBox>
 
                 <!-- XYZ平行軸グループは目盛・通り心に統合済み -->
@@ -1146,23 +1115,23 @@
                 <Fluent:RibbonGroupBox Header="選択・表示" ToolTip="選択・表示" Icon="pack://application:,,,/Icons/ActiveAll.png">
                     <Fluent:Button ToolTip="すべて選択 (Ctrl + A)"
                              Click="SelectAllNodesButton_Click"
-                             Icon="pack://application:,,,/Icons/SelectAll.png" SizeDefinition="Small, Small, Small"/>
+                             Icon="pack://application:,,,/Icons/SelectAll.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="すべて選択 (Ctrl + A)"/>
                     <Fluent:Button ToolTip="全選択解除 (Esc)"
                              Click="DeselectAllNodesButton_Click"
-                             Icon="pack://application:,,,/Icons/DeselectAll.png" SizeDefinition="Small, Small, Small"/>
+                             Icon="pack://application:,,,/Icons/DeselectAll.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="全選択解除 (Esc)"/>
                     <Separator/>
                     <Fluent:Button ToolTip="すべてアクティブ (Ctrl + Shift + A)"
                              Click="ShowAllNodesButton_Click"
-                             Icon="pack://application:,,,/Icons/ActiveAll.png" SizeDefinition="Small, Small, Small"/>
+                             Icon="pack://application:,,,/Icons/ActiveAll.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="すべてアクティブ (Ctrl + Shift + A)"/>
                     <Fluent:Button ToolTip="選択のみアクティブ (F2)"
                              Click="ShowSelectedNodesButton_Click"
-                             Icon="pack://application:,,,/Icons/SelectedActive.png" SizeDefinition="Small, Small, Small"/>
+                             Icon="pack://application:,,,/Icons/SelectedActive.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="選択のみアクティブ (F2)"/>
                     <Fluent:Button ToolTip="選択を非アクティブ (Shift + F2)"
                              Click="ShowUnselectedNodesButton_Click"
-                             Icon="pack://application:,,,/Icons/SelectedInactive.png" SizeDefinition="Small, Small, Small"/>
+                             Icon="pack://application:,,,/Icons/SelectedInactive.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="選択を非アクティブ (Shift + F2)"/>
                     <Fluent:Button ToolTip="アクティブ反転"
                              Click="InvertActiveNodesButton_click"
-                             Icon="pack://application:,,,/Icons/InvertActive.png" SizeDefinition="Small, Small, Small"/>
+                             Icon="pack://application:,,,/Icons/InvertActive.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="アクティブ反転"/>
                 </Fluent:RibbonGroupBox>
 
 
@@ -1171,23 +1140,23 @@
                     <Fluent:Button Header="ズームフィット" Command="{Binding ZoomFitCommand}"
                                          Icon="pack://application:,,,/Icons/ZoomFit.png"
                                          ToolTipService.ShowOnDisabled="True"
-                                         ToolTip="ズームフィット (ctrl + 0)" SizeDefinition="Small, Small, Small"/>
+                                         ToolTip="ズームフィット (ctrl + 0)" SizeDefinition="Small, Small, Small" AutomationProperties.Name="ズームフィット"/>
                     <Fluent:Button Header="平面" Command="{Binding ViewXYPlaneCommand}"
                                          Icon="pack://application:,,,/Icons/TopView.png"
                                          ToolTipService.ShowOnDisabled="True"
-                                         ToolTip="平面 (Ctrl + Shift + T)" SizeDefinition="Small, Small, Small"/>
+                                         ToolTip="平面 (Ctrl + Shift + T)" SizeDefinition="Small, Small, Small" AutomationProperties.Name="平面"/>
                     <Fluent:Button Header="正面" Command="{Binding ViewXZPlaneCommand}"
                                          Icon="pack://application:,,,/Icons/FrontView.png"
                                          ToolTipService.ShowOnDisabled="True"
-                                         ToolTip="正面 (Ctrl + Shift + F)" SizeDefinition="Small, Small, Small"/>
+                                         ToolTip="正面 (Ctrl + Shift + F)" SizeDefinition="Small, Small, Small" AutomationProperties.Name="正面"/>
                     <Fluent:Button Header="右面" Command="{Binding ViewYZPlaneCommand}"
                                          Icon="pack://application:,,,/Icons/RightView.png"
                                          ToolTipService.ShowOnDisabled="True"
-                                         ToolTip="右面 (Ctrl + Shift + R)" SizeDefinition="Small, Small, Small"/>
+                                         ToolTip="右面 (Ctrl + Shift + R)" SizeDefinition="Small, Small, Small" AutomationProperties.Name="右面"/>
                     <Fluent:Button Header="アイソメ" Command="{Binding ViewIsometricCommand}"
                                          Icon="pack://application:,,,/Icons/IsometricView.png"
                                          ToolTipService.ShowOnDisabled="True"
-                                         ToolTip="アイソメ (Ctrl + Shift + I)" SizeDefinition="Small, Small, Small"/>
+                                         ToolTip="アイソメ (Ctrl + Shift + I)" SizeDefinition="Small, Small, Small" AutomationProperties.Name="アイソメ"/>
                 </Fluent:RibbonGroupBox>
 
 
@@ -1334,7 +1303,7 @@
                          ToolTip="プロジェクト情報&#x0A;プロジェクト番号・名称と、計算書の標高表記 (標高記号 / Z=0 の標高) を設定します。"
                          Command="{Binding OpenProjectInfoWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/FundamentalWindow.png"
-                         Icon="pack://application:,,,/Icons/FundamentalWindow.png"/>
+                         Icon="pack://application:,,,/Icons/FundamentalWindow.png" AutomationProperties.Name="プロジェクト 情報"/>
 
                     <Fluent:Button x:Name="ButtonFundamental"
                          Header="基本 設定"
@@ -1342,7 +1311,7 @@
                          ToolTip="基本設定 (Ctrl+E)&#x0A;性能グレードと、杭体の材料モデル化の選択です。プロジェクト全体に効きます。"
                          Command="{Binding OpenFundamentalWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/FundamentalWindow.png"
-                         Icon="pack://application:,,,/Icons/FundamentalWindow.png"/>
+                         Icon="pack://application:,,,/Icons/FundamentalWindow.png" AutomationProperties.Name="基本 設定"/>
 
                     <Fluent:Button x:Name="RibbonButtonLoadCase"
                          Header="荷重"
@@ -1350,7 +1319,7 @@
                          ToolTip="Step 2: 荷重条件の設定&#x0A;地震時に建物から杭基礎に伝わる慣性力の大きさと作用位置を決めます。"
                          Command="{Binding OpenLoadCaseWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/LoadCaseWindow.png"
-                         Icon="pack://application:,,,/Icons/LoadCaseWindow.png"/>
+                         Icon="pack://application:,,,/Icons/LoadCaseWindow.png" AutomationProperties.Name="荷重"/>
 
                     <Fluent:Button x:Name="RibbonButtonGround"
                          Header="地盤"
@@ -1359,7 +1328,7 @@
                          PreviewMouseDown="ButtonGround_PreviewMouseDown"
                          Command="{Binding OpenGroundWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/GroundWindow.png"
-                         Icon="pack://application:,,,/Icons/GroundWindow.png"/>
+                         Icon="pack://application:,,,/Icons/GroundWindow.png" AutomationProperties.Name="地盤"/>
 
                     <Fluent:Button x:Name="RibbonButtonPileBody"
                          Header="杭体"
@@ -1368,7 +1337,7 @@
                          PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
                          Command="{Binding OpenPileBodyWindowCommand}"
                          LargeIcon="pack://application:,,,/Icons/PileBodyWindow.png"
-                         Icon="pack://application:,,,/Icons/PileBodyWindow.png"/>
+                         Icon="pack://application:,,,/Icons/PileBodyWindow.png" AutomationProperties.Name="杭体"/>
 
                     <Fluent:Button x:Name="RibbonButtonAxialForceCheck"
                          Header="軸力 確認"
@@ -1377,12 +1346,12 @@
                          PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
                          Command="{Binding AxialForceCheckCommand}"
                          LargeIcon="pack://application:,,,/Icons/AxialForceVeirification.png"
-                         Icon="pack://application:,,,/Icons/AxialForceVeirification.png"/>
+                         Icon="pack://application:,,,/Icons/AxialForceVeirification.png" AutomationProperties.Name="軸力 確認"/>
 
                     <Fluent:Button x:Name="RibbonButtonExecuteAnalyse"
                              ToolTipService.ShowOnDisabled="True"
                              ToolTip="Step 7: 杭要素分割 (F4)&#x0A;杭を解析用の要素に分け、地盤ばねを割り当てます。水平解析と沈下解析の前提です。"
-                             Command="{Binding OpenElementDivisionWindowCommand}">
+                             Command="{Binding OpenElementDivisionWindowCommand}" AutomationProperties.Name="Step 7: 杭要素分割 (F4)&#x0A;杭を解析用の要素に分け、地盤ばねを割り当てます。水平解析と沈下解析の前提です。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <!-- 未分割時（既定） -->
@@ -1409,7 +1378,7 @@
                     <Fluent:Button x:Name="RibbonButtonLateralLoadAnalysisSettlement"
                          ToolTipService.ShowOnDisabled="True"
                          ToolTip="Step 8: 水平解析の実行 (F5)&#x0A;杭要素分割が済んでいると押せます。"
-                         Command="{Binding OpenLateralLoadAnalysisWindowCommand}">
+                         Command="{Binding OpenLateralLoadAnalysisWindowCommand}" AutomationProperties.Name="Step 8: 水平解析の実行 (F5)&#x0A;杭要素分割が済んでいると押せます。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <Setter Property="Header" Value="水平解析"/>
@@ -1433,7 +1402,7 @@
                          PreviewMouseDown="ButtonButtonSettlement_PreviewMouseDown"
                          Command="{Binding OpenSettlementWindowCommand}"
                          ToolTipService.ShowOnDisabled="True"
-                         ToolTip="各杭の荷重-沈下関係を計算します。杭要素分割が前提です。">
+                         ToolTip="各杭の荷重-沈下関係を計算します。杭要素分割が前提です。" AutomationProperties.Name="各杭の荷重-沈下関係を計算します。杭要素分割が前提です。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <Setter Property="Header" Value="単杭沈下&#x0A;解析"/>
@@ -1454,7 +1423,7 @@
                     <Fluent:Button x:Name="RibbonButtonVerticalBeamCalculation"
                          Command="{Binding OpenVerticalBeamCalculationCommand}"
                          ToolTipService.ShowOnDisabled="True"
-                         ToolTip="基礎梁の剛性を考慮した単杭沈下解析です。基礎梁を含むモデルで単杭沈下解析を実行したときに押下可能となります。">
+                         ToolTip="基礎梁の剛性を考慮した単杭沈下解析です。基礎梁を含むモデルで単杭沈下解析を実行したときに押下可能となります。" AutomationProperties.Name="基礎梁の剛性を考慮した単杭沈下解析です。基礎梁を含むモデルで単杭沈下解析を実行したときに押下可能となります。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <Setter Property="Header" Value="単杭沈下解析&#x0A;（基礎梁考慮）"/>
@@ -1476,7 +1445,7 @@
                 <Fluent:RibbonGroupBox Header="群杭沈下解析" ToolTip="群杭沈下解析">
                     <Fluent:Button x:Name="RibbonButtonGroupPileSettlement"
                      Click="ButtonGroupPileSettlement_Click"
-                     ToolTip="スタインブレナー近似式による即時沈下量を計算します。群杭沈下タブで荷重面・土層を設定してください。">
+                     ToolTip="スタインブレナー近似式による即時沈下量を計算します。群杭沈下タブで荷重面・土層を設定してください。" AutomationProperties.Name="スタインブレナー近似式による即時沈下量を計算します。群杭沈下タブで荷重面・土層を設定してください。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <Setter Property="Header" Value="群杭沈下&#x0A;解析（一般）"/>
@@ -1497,7 +1466,7 @@
                     <Fluent:Button x:Name="RibbonButtonGroupPileSettlementWithBeam"
                                    Command="{Binding OpenGroupSettlementWithBeamWindowCommand}"
                                    ToolTipService.ShowOnDisabled="True"
-                                   ToolTip="基礎梁の剛性を考慮して、矩形荷重 (個別矩形) を反復で再分配しながらスタインブレナー沈下を解く解析です。基礎梁が定義されているモデルで実行可能となります。">
+                                   ToolTip="基礎梁の剛性を考慮して、矩形荷重 (個別矩形) を反復で再分配しながらスタインブレナー沈下を解く解析です。基礎梁が定義されているモデルで実行可能となります。" AutomationProperties.Name="基礎梁の剛性を考慮して、矩形荷重 (個別矩形) を反復で再分配しながらスタインブレナー沈下を解く解析です。基礎梁が定義されているモデルで実行可能となります。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <Setter Property="Header" Value="群杭沈下&#x0A;解析（反復）"/>
@@ -1526,7 +1495,7 @@
                         IsChecked="{Binding IsAnalysisResultVisible}"
                         IsEnabled="{Binding HasAnyAnalysisResult}"
                         LargeIcon="pack://application:,,,/Icons/AnalysisResult.png"
-                        Icon="pack://application:,,,/Icons/AnalysisResult.png"/>
+                        Icon="pack://application:,,,/Icons/AnalysisResult.png" AutomationProperties.Name="杭・梁 要素"/>
 
                     <Fluent:ComboBox Header="内容" Width="100"
                           SelectedItem="{Binding AnalysisResultContent}"
@@ -1704,14 +1673,14 @@
                                IsChecked="{Binding IsGroupPileGridDeformationVisible}"
                                IsEnabled="{Binding HasGroupSettlementCaseRecords}"
                                LargeIcon="pack://application:,,,/Icons/GroupPileContorVisible.png"
-                               Icon="pack://application:,,,/Icons/GroupPileContorVisible.png"/>
+                               Icon="pack://application:,,,/Icons/GroupPileContorVisible.png" AutomationProperties.Name="群杭グリッド 変位"/>
                 </Fluent:RibbonGroupBox>
                 
                 <Fluent:RibbonGroupBox Header="バブル" ToolTip="バブル">
                     <Fluent:SplitButton Header="バブル 表示" IsCheckable="True"
                                               IsChecked="{Binding IsBubbleVisible}"
                                               LargeIcon="pack://application:,,,/Icons/BubbleVisible.png"
-                                              Icon="pack://application:,,,/Icons/BubbleVisible.png">
+                                              Icon="pack://application:,,,/Icons/BubbleVisible.png" AutomationProperties.Name="バブル 表示">
                         <Fluent:SplitButton.IsEnabled>
                             <MultiBinding Converter="{StaticResource AnyBoolConverter}">
                                 <Binding Path="IsVerticalAnalysisDone"/>
@@ -1740,7 +1709,7 @@
                     <Fluent:SplitButton Header="矢印 表示" IsCheckable="True"
                                               IsChecked="{Binding IsArrowVisible}"
                                               LargeIcon="pack://application:,,,/Icons/ArrowVisible.png"
-                                              Icon="pack://application:,,,/Icons/ArrowVisible.png">
+                                              Icon="pack://application:,,,/Icons/ArrowVisible.png" AutomationProperties.Name="矢印 表示">
                         <Fluent:SplitButton.IsEnabled>
                             <MultiBinding Converter="{StaticResource AnyBoolConverter}">
                                 <Binding Path="IsVerticalAnalysisDone"/>
@@ -1788,7 +1757,7 @@
                                    IsChecked="{Binding IsDeformedElementVisible}"
                                    LargeIcon="pack://application:,,,/Icons/DeformedElementVisible.png"
                                    Icon="pack://application:,,,/Icons/DeformedElementVisible.png"
-                                   ToolTip="水平解析結果の変形後形状を描画します。&#x0a;杭体形状ONの場合は変形後の杭体断面も表示します。&#x0a;梁断面形状ONの場合は変形後の基礎梁断面も表示します。&#x0a;解析結果表示がOFFでも独立して動作します。">
+                                   ToolTip="水平解析結果の変形後形状を描画します。&#x0a;杭体形状ONの場合は変形後の杭体断面も表示します。&#x0a;梁断面形状ONの場合は変形後の基礎梁断面も表示します。&#x0a;解析結果表示がOFFでも独立して動作します。" AutomationProperties.Name="変形後 形状">
                         <Fluent:ToggleButton.IsEnabled>
                             <MultiBinding Converter="{StaticResource AnyBoolConverter}">
                                 <Binding Path="IsHorizontalAnalysisDone"/>
@@ -1805,13 +1774,13 @@
                              ToolTip="杭変位応力グラフ・沈下曲線などの結果グラフウィンドウを開きます。"
                              Command="{Binding OpenGraphWindowCommand}"
                              LargeIcon="pack://application:,,,/Icons/Graph.png"
-                             Icon="pack://application:,,,/Icons/Graph.png"/>
+                             Icon="pack://application:,,,/Icons/Graph.png" AutomationProperties.Name="グラフ 出力"/>
                     <Fluent:Button Header="テーブル 出力"
                              ToolTipService.ShowOnDisabled="True"
                              ToolTip="解析結果をテーブル形式で表示します。"
                              Command="{Binding OpenTableWindowCommand}"
                              LargeIcon="pack://application:,,,/Icons/Table.png"
-                             Icon="pack://application:,,,/Icons/Table.png"/>
+                             Icon="pack://application:,,,/Icons/Table.png" AutomationProperties.Name="テーブル 出力"/>
                 </Fluent:RibbonGroupBox>
 
                 <Fluent:RibbonGroupBox Header="ログ" ToolTip="ログ">
@@ -1820,7 +1789,7 @@
                              ToolTip="解析ログウィンドウを開きます。"
                              Command="{Binding OpenLogWindowCommand}"
                              LargeIcon="pack://application:,,,/Icons/Log.png"
-                             Icon="pack://application:,,,/Icons/Log.png"/>
+                             Icon="pack://application:,,,/Icons/Log.png" AutomationProperties.Name="ログ 表示"/>
                 </Fluent:RibbonGroupBox>
 
                 <!-- 値表示・テキスト 統合グループ（右端、ダイアグラムスケールは別出） -->
@@ -1964,7 +1933,7 @@
                         ToolTip="計算書を Word (.docx) ファイルとして出力 (Ctrl+Shift+W)"
                         Command="{Binding OpenDocxOutputWindowCommand}"
                         LargeIcon="pack://application:,,,/Icons/DocxFileOutput.png"
-                        Icon="pack://application:,,,/Icons/DocxFileOutput.png"/>
+                        Icon="pack://application:,,,/Icons/DocxFileOutput.png" AutomationProperties.Name="Docx 出力"/>
                 </Fluent:RibbonGroupBox>
 
 
@@ -1974,32 +1943,32 @@
                         ToolTip="杭・根入れ部・基礎梁の3Dモデルを Rhino 3D (.3dm) ファイルにエクスポート"
                         Command="{Binding Export3dmFileCommand}"
                         LargeIcon="pack://application:,,,/Icons/rhino8-.png"
-                        Icon="pack://application:,,,/Icons/rhino8-.png"/>
+                        Icon="pack://application:,,,/Icons/rhino8-.png" AutomationProperties.Name="3dm 出力"/>
                     <Fluent:Button Header="DXF (3D)"
                         ToolTipService.ShowOnDisabled="True"
                         ToolTip="杭・根入れ部・基礎梁の3Dモデルを DXF ファイルにエクスポート"
                         Command="{Binding ExportDxfFileCommand}"
                         LargeIcon="pack://application:,,,/Icons/dxf.png"
-                        Icon="pack://application:,,,/Icons/dxf.png"/>
+                        Icon="pack://application:,,,/Icons/dxf.png" AutomationProperties.Name="DXF (3D)"/>
                     <Fluent:Button Header="DXF (伏図)"
                         ToolTipService.ShowOnDisabled="True"
                         ToolTip="杭伏図（通り心・寸法・杭位置・基礎梁）を2D DXFファイルにエクスポート"
                         Command="{Binding ExportDxfPlanFileCommand}"
                         LargeIcon="pack://application:,,,/Icons/dxf.png"
-                        Icon="pack://application:,,,/Icons/dxf.png"/>
+                        Icon="pack://application:,,,/Icons/dxf.png" AutomationProperties.Name="DXF (伏図)"/>
                     <Fluent:Button Header="MGT 出力"
                         ToolTipService.ShowOnDisabled="True"
                         ToolTip="FEM解析モデルを midas iGen / Gen MGT テキスト形式でエクスポート（非線形地盤ばね・慣性力・強制変位・荷重組合せを含む）"
                         Command="{Binding ExportMgtFileCommand}"
                         LargeIcon="pack://application:,,,/Icons/mgtFile.png"
-                        Icon="pack://application:,,,/Icons/mgtFile.png"/>
+                        Icon="pack://application:,,,/Icons/mgtFile.png" AutomationProperties.Name="MGT 出力"/>
                 </Fluent:RibbonGroupBox>
 
                 <Fluent:RibbonGroupBox Header="ライブラリ" ToolTip="ライブラリ">
                     <Fluent:Button Header="杭断面 ライブラリ" ToolTipService.ShowOnDisabled="True" ToolTip="杭ライブラリを確認"
                         Command="{Binding OpenPileSectionLibraryWindowCommand}"
                         LargeIcon="pack://application:,,,/Icons/PileSectionLibrary.png"
-                        Icon="pack://application:,,,/Icons/PileSectionLibrary.png"/>
+                        Icon="pack://application:,,,/Icons/PileSectionLibrary.png" AutomationProperties.Name="杭断面 ライブラリ"/>
                 </Fluent:RibbonGroupBox>
 
                 <Fluent:RibbonGroupBox Header="画像" ToolTip="画像">
@@ -2009,35 +1978,35 @@
                              Command="{Binding ImageCopyCommand}"
                              LargeIcon="pack://application:,,,/Icons/CopyPicture1.png"
                              Icon="pack://application:,,,/Icons/CopyPicture1.png"
-                             CommandParameter="1.0"/>
+                             CommandParameter="1.0" AutomationProperties.Name="画像コピー (x1.0)"/>
                     <Fluent:Button Header="画像コピー (x2.0)"
                              ToolTipService.ShowOnDisabled="True"
                              ToolTip="現在の画面を画像としてクリップボードにコピー（2倍解像度）"
                              Command="{Binding ImageCopyCommand}"
                              LargeIcon="pack://application:,,,/Icons/CopyPicture2.png"
                              Icon="pack://application:,,,/Icons/CopyPicture2.png"
-                             CommandParameter="2.0"/>
+                             CommandParameter="2.0" AutomationProperties.Name="画像コピー (x2.0)"/>
                     <Fluent:Button Header="画像保存 (x1.0)"
                              ToolTipService.ShowOnDisabled="True"
                              ToolTip="現在の画面を画像ファイルとして保存（等倍）"
                              Command="{Binding ImageSaveCommand}"
                              LargeIcon="pack://application:,,,/Icons/SavePicture1.png"
                              Icon="pack://application:,,,/Icons/SavePicture1.png"
-                             CommandParameter="1.0"/>
+                             CommandParameter="1.0" AutomationProperties.Name="画像保存 (x1.0)"/>
                     <Fluent:Button Header="画像保存 (x2.0)"
                              ToolTipService.ShowOnDisabled="True"
                              ToolTip="現在の画面を画像ファイルとして保存（2倍解像度）"
                              Command="{Binding ImageSaveCommand}"
                              LargeIcon="pack://application:,,,/Icons/SavePicture2.png"
                              Icon="pack://application:,,,/Icons/SavePicture2.png"
-                             CommandParameter="2.0"/>
+                             CommandParameter="2.0" AutomationProperties.Name="画像保存 (x2.0)"/>
                 </Fluent:RibbonGroupBox>
 
                 <Fluent:RibbonGroupBox Header="サブプログラム" ToolTip="サブプログラム">
                     <Fluent:Button Header="Chang" ToolTipService.ShowOnDisabled="True" ToolTip="Chang"
                         Command="{Binding OpenChangWindowCommand}"
                         LargeIcon="pack://application:,,,/Icons/ChangPile.png"
-                        Icon="pack://application:,,,/Icons/ChangPile.png"/>
+                        Icon="pack://application:,,,/Icons/ChangPile.png" AutomationProperties.Name="Chang"/>
                 </Fluent:RibbonGroupBox>
 
                 <Fluent:RibbonGroupBox Header="拡張機能" ToolTip="拡張機能">
@@ -2045,17 +2014,17 @@
                         ToolTip="現在の解析モデル・水平/沈下/梁鉛直解析の状況をカード形式で一括表示"
                         Click="OpenResultDashboard_Click"
                         LargeIcon="pack://application:,,,/Icons/Dashboard.png"
-                        Icon="pack://application:,,,/Icons/Dashboard.png"/>
+                        Icon="pack://application:,,,/Icons/Dashboard.png" AutomationProperties.Name="解析結果 ダッシュボード"/>
                     <Fluent:Button Header="コマンド パレット"
                         ToolTip="コマンドパレット (Ctrl+Shift+P): 機能名で検索して実行"
                         Click="OpenCommandPalette_Click"
                         LargeIcon="pack://application:,,,/Icons/CommandPalette.png"
-                        Icon="pack://application:,,,/Icons/CommandPalette.png"/>
+                        Icon="pack://application:,,,/Icons/CommandPalette.png" AutomationProperties.Name="コマンド パレット"/>
                     <Fluent:Button Header="編集履歴"
                         ToolTip="Undo/Redo 履歴の一覧表示・任意ジャンプ"
                         Click="OpenEditHistoryPanel_Click"
                         LargeIcon="pack://application:,,,/Icons/History.png"
-                        Icon="pack://application:,,,/Icons/History.png"/>
+                        Icon="pack://application:,,,/Icons/History.png" AutomationProperties.Name="編集履歴"/>
                 </Fluent:RibbonGroupBox>
 
 
@@ -2069,33 +2038,33 @@
                                          IsChecked="True"
                                          Click="ToggleLeftTabs_Click"
                                          LargeIcon="pack://application:,,,/Icons/DataTabVisible.png"
-                                         Icon="pack://application:,,,/Icons/DataTabVisible.png"/>
+                                         Icon="pack://application:,,,/Icons/DataTabVisible.png" AutomationProperties.Name="データ タブ"/>
                     <Fluent:ToggleButton x:Name="PropertiesPanelToggle"
                                          Header="プロパティ"
                                          ToolTip="プロパティパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="TogglePropertiesPanel_Click"
                                          LargeIcon="pack://application:,,,/Icons/PropertyVisible.png"
-                                         Icon="pack://application:,,,/Icons/PropertyVisible.png"/>
+                                         Icon="pack://application:,,,/Icons/PropertyVisible.png" AutomationProperties.Name="プロパティ"/>
                     <Fluent:ToggleButton x:Name="MinimapPanelToggle"
                                          Header="ミニ マップ"
                                          ToolTip="ミニマップパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleMinimapPanel_Click"
                                          LargeIcon="pack://application:,,,/Icons/MiniMapVisible.png"
-                                         Icon="pack://application:,,,/Icons/MiniMapVisible.png"/>
+                                         Icon="pack://application:,,,/Icons/MiniMapVisible.png" AutomationProperties.Name="ミニ マップ"/>
                 </Fluent:RibbonGroupBox>
                 <Fluent:RibbonGroupBox Header="3Dビュー" ToolTip="3Dビュー">
                     <Fluent:ToggleButton Header="ビュー キューブ"
                                                 ToolTip="ビューキューブの表示/非表示"
                                                 IsChecked="{Binding IsViewCubeVisible}"
                                                 LargeIcon="pack://application:,,,/Icons/ViewCubeVisible.png"
-                                                Icon="pack://application:,,,/Icons/ViewCubeVisible.png"/>
+                                                Icon="pack://application:,,,/Icons/ViewCubeVisible.png" AutomationProperties.Name="ビュー キューブ"/>
                     <Fluent:ToggleButton Header="ツール"
                                                 ToolTip="右ツール群の表示/非表示"
                                                 IsChecked="{Binding IsRightToolbarVisible}"
                                                 LargeIcon="pack://application:,,,/Icons/ToolVisible.png"
-                                                Icon="pack://application:,,,/Icons/ToolVisible.png"/>
+                                                Icon="pack://application:,,,/Icons/ToolVisible.png" AutomationProperties.Name="ツール"/>
                 </Fluent:RibbonGroupBox>
 
                 <Fluent:RibbonGroupBox Header="説明用" ToolTip="説明用">
@@ -2103,7 +2072,7 @@
                         ToolTip="マウス・キーボード入力状態を画面右下に表示 (F12)"
                         IsChecked="{Binding IsInputVisualizerVisible}"
                         LargeIcon="pack://application:,,,/Icons/Mouse.png"
-                        Icon="pack://application:,,,/Icons/Mouse.png"/>
+                        Icon="pack://application:,,,/Icons/Mouse.png" AutomationProperties.Name="INPUT 表示"/>
                 </Fluent:RibbonGroupBox>
             </Fluent:RibbonTabItem>
 
@@ -2116,21 +2085,21 @@
                                  Command="{Binding OpenQuickStartHelpCommand}"
                                  LargeIcon="pack://application:,,,/Icons/Help.png"
                                  Icon="pack://application:,,,/Icons/Help.png"
-                                 KeyTip="K"/>
+                                 KeyTip="K" AutomationProperties.Name="クイック スタート"/>
                     <Fluent:Button x:Name="RibbonButtonHelp"
                                  Header="ヘルプ"
                                          ToolTipService.ShowOnDisabled="True"
                                          ToolTip="ヘルプ (F1)"
                                  Command="{Binding OpenHelpWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/Help.png"
-                                 Icon="pack://application:,,,/Icons/Help.png"/>
+                                 Icon="pack://application:,,,/Icons/Help.png" AutomationProperties.Name="ヘルプ"/>
                     <Fluent:Button x:Name="RibbonButtonHelpChat"
                                  Header="ヘルプ チャット"
                                  ToolTipService.ShowOnDisabled="True"
                                  ToolTip="質問入力でヘルプを検索"
                                  Command="{Binding OpenHelpChatWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/HelpChat.png"
-                                 Icon="pack://application:,,,/Icons/HelpChat.png"/>
+                                 Icon="pack://application:,,,/Icons/HelpChat.png" AutomationProperties.Name="ヘルプ チャット"/>
                     <Fluent:ToggleButton x:Name="RibbonToggleQuickHint"
                                    Header="クイック ヒント"
                                                ToolTip="クイックヒント (Shift + F1)"
@@ -2139,7 +2108,7 @@
                                    Icon="pack://application:,,,/Icons/QuickHint.png"
                                    Checked="QuickHintToggle_Checked"
                                    Unchecked="QuickHintToggle_Unchecked"
-                                   KeyTip="Q"/>
+                                   KeyTip="Q" AutomationProperties.Name="クイック ヒント"/>
                     <Fluent:Button x:Name="RibbonButtonShortcutKeys"
                                  Header="ショート カット"
                                  ToolTipService.ShowOnDisabled="True"
@@ -2147,7 +2116,7 @@
                                  Command="{Binding OpenShortcutKeysWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/ShortcutKeys.png"
                                  Icon="pack://application:,,,/Icons/ShortcutKeys.png"
-                                 />
+                                  AutomationProperties.Name="ショート カット"/>
                     <Fluent:Button x:Name="RibbonButtonAbout"
                                  Header="バージョン 情報"
                                  ToolTipService.ShowOnDisabled="True"
@@ -2155,13 +2124,13 @@
                                  Command="{Binding OpenAboutWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/cover.png"
                                  Icon="pack://application:,,,/Icons/cover.png"
-                                 KeyTip="V"/>
+                                 KeyTip="V" AutomationProperties.Name="バージョン 情報"/>
                     <Fluent:Button Header="検証"
                                  ToolTipService.ShowOnDisabled="True"
                                  ToolTip="設計例によるプログラムの検証"
                                  Command="{Binding OpenVerificationWindowCommand}"
                                  LargeIcon="pack://application:,,,/Icons/Verification.png"
-                                 Icon="pack://application:,,,/Icons/Verification.png"/>
+                                 Icon="pack://application:,,,/Icons/Verification.png" AutomationProperties.Name="検証"/>
                 </Fluent:RibbonGroupBox>
             </Fluent:RibbonTabItem>
         </Fluent:Ribbon>
@@ -2185,24 +2154,24 @@
                                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
                                         <Button
                                                 Command="{Binding AddInputNodeCommand}"
-                                                ToolTip="新しい一般節点を追加します">
+                                                ToolTip="新しい一般節点を追加します" AutomationProperties.Name="新しい一般節点を追加します">
                                                 <svgc:SvgViewbox Source="/Icons/AddGeneralNode.svg"
                                                 Style="{StaticResource SvgIconStyle24}"/>
                                         </Button>
                                         <Button
                                                 Command="{Binding DeleteDuplicateInputNodesCommand}"
-                                                ToolTip="同一座標の重複する一般節点を削除します（梁要素の参照は自動で付け替えます）">
+                                                ToolTip="同一座標の重複する一般節点を削除します（梁要素の参照は自動で付け替えます）" AutomationProperties.Name="同一座標の重複する一般節点を削除します（梁要素の参照は自動で付け替えます）">
                                                 <svgc:SvgViewbox Source="/Icons/MergeNodes.svg"
                                                 Style="{StaticResource SvgIconStyle24}"/>
                                         </Button>
                                         <Button ToolTip="X優先整列（X昇順→Y昇順）"
                                                 Command="{Binding SortInputNodesXFirstCommand}"
-                                                Width="32" Height="32" Padding="0">
+                                                Width="32" Height="32" Padding="0" AutomationProperties.Name="X優先整列（X昇順→Y昇順）">
                                             <svgc:SvgViewbox Source="/Icons/SortXY.svg" Style="{StaticResource SvgIconStyle24}"/>
                                         </Button>
                                         <Button ToolTip="Y優先整列（Y昇順→X昇順）"
                                                 Command="{Binding SortInputNodesYFirstCommand}"
-                                                Width="32" Height="32" Padding="0">
+                                                Width="32" Height="32" Padding="0" AutomationProperties.Name="Y優先整列（Y昇順→X昇順）">
                                             <svgc:SvgViewbox Source="/Icons/SortYX.svg" Style="{StaticResource SvgIconStyle24}"/>
                                         </Button>
                                     </StackPanel>
@@ -2320,7 +2289,7 @@
                                             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2">
                                                 <Button 
                                                         Command="{Binding OpenMaterialWizardCommand}"
-                                                        ToolTip="コンクリート強度から材料特性を自動計算します">
+                                                        ToolTip="コンクリート強度から材料特性を自動計算します" AutomationProperties.Name="コンクリート強度から材料特性を自動計算します">
                                                         <svgc:SvgViewbox Source="/Icons/MaterialWizard.svg"
                                                         Style="{StaticResource SvgIconStyle24}"/>
                                                      </Button>
@@ -2417,14 +2386,14 @@
                                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2">
                                         <Button Command="{Binding OpenSectionWizardCommand}"
                                                 ToolTip="断面ウィザード：断面寸法から断面性能を自動計算します"
-                                                Margin="2">
+                                                Margin="2" AutomationProperties.Name="断面ウィザード：断面寸法から断面性能を自動計算します">
                                             <svgc:SvgViewbox Source="/Icons/SectionWizard.svg"
                                                              Style="{StaticResource SvgIconStyle24}"/>
                                         </Button>
                                         <Button Command="{Binding ClearAllTorsionalStiffnessCommand}"
                                                 ToolTip="全断面ねじり剛性無視：すべての断面のIxx係数を0.0に設定し、ねじり剛性を無視します"
                                                 Margin="2"
-                                                Padding="5,2">
+                                                Padding="5,2" AutomationProperties.Name="全断面ねじり剛性無視：すべての断面のIxx係数を0.0に設定し、ねじり剛性を無視します">
                                             <svgc:SvgViewbox Source="/Icons/BeamTwistStiffness0.svg"
                                                              Style="{StaticResource SvgIconStyle24}"/>
                                         </Button>
@@ -2597,33 +2566,33 @@
                                                        Text="※梁要素を追加するには、&#x0a;Canvas上で梁要素追加モード(Alt+1)にし、&#x0a;杭接合節点、一般節点をクリックしてください。"/>
                                             <StackPanel Orientation="Horizontal" Margin="4,2" >
                                                 <Button Command="{Binding AutoGenerateFoundationBeamsCommand}"
-                                                        ToolTip="自動梁要素生成 (Ctrl + 0)　選択中の杭配置について、x成分、y成分がそれぞれ同一の隣り合う杭配置の接合節点を基礎梁（材料No.1、断面No.1）で連結します。">
+                                                        ToolTip="自動梁要素生成 (Ctrl + 0)　選択中の杭配置について、x成分、y成分がそれぞれ同一の隣り合う杭配置の接合節点を基礎梁（材料No.1、断面No.1）で連結します。" AutomationProperties.Name="自動梁要素生成 (Ctrl + 0)　選択中の杭配置について、x成分、y成分がそれぞれ同一の隣り合う杭配置の接合節点を基礎梁（材料No.1、断面No.1）で連結します。">
                                                     <svgc:SvgViewbox Source="/Icons/AutoBeamGeneration.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                                 <Button ToolTip="要素番号昇順で整列"
-                                                        Command="{Binding SortBeamsByNoCommand}">
+                                                        Command="{Binding SortBeamsByNoCommand}" AutomationProperties.Name="要素番号昇順で整列">
                                                     <svgc:SvgViewbox Source="/Icons/SortNo.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                                 <Button ToolTip="I端節点昇順→J端節点昇順で整列"
-                                                        Command="{Binding SortBeamsByNodeCommand}">
+                                                        Command="{Binding SortBeamsByNodeCommand}" AutomationProperties.Name="I端節点昇順→J端節点昇順で整列">
                                                     <svgc:SvgViewbox Source="/Icons/SortIJ.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                                 <Button ToolTip="重複要素の削除"
-                                                        Command="{Binding DeleteDupulicateElementsCommand}">
+                                                        Command="{Binding DeleteDupulicateElementsCommand}" AutomationProperties.Name="重複要素の削除">
                                                     <svgc:SvgViewbox Source="/Icons/MergeElems.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                                 <Button ToolTip="交差点で杭要素分割:選択要素同士の交差点に一般節点を生成し、要素を分割します"
-                                                        Command="{Binding SplitElementsAtIntersectionsCommand}">
+                                                        Command="{Binding SplitElementsAtIntersectionsCommand}" AutomationProperties.Name="交差点で杭要素分割:選択要素同士の交差点に一般節点を生成し、要素を分割します">
                                                     <svgc:SvgViewbox Source="/Icons/Intersect.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                                 <Button ToolTip="IJ逆転：選択要素（無選択時は全要素）の I 端と J 端の節点参照を入れ替えます"
-                                                        Command="{Binding SwapBeamIJCommand}">
+                                                        Command="{Binding SwapBeamIJCommand}" AutomationProperties.Name="IJ逆転：選択要素（無選択時は全要素）の I 端と J 端の節点参照を入れ替えます">
                                                     <svgc:SvgViewbox Source="/Icons/SwapBeamIJ.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="4,2">
                                                 <Button ToolTip="選択要素を重なる一般節点で分割します (Alt + 7)"
-                                                        Command="{Binding SplitElementsByNodesCommand}">
+                                                        Command="{Binding SplitElementsByNodesCommand}" AutomationProperties.Name="選択要素を重なる一般節点で分割します (Alt + 7)">
                                                     <svgc:SvgViewbox Source="/Icons/SplitElementByNodes.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                                 <TextBlock Text="距離(m)" VerticalAlignment="Center" Margin="4,0,2,0"/>
@@ -2640,7 +2609,7 @@
                                                     </TextBox.ToolTip>
                                                 </TextBox>
                                                 <Button ToolTip="選択要素を等分割し、分割点に一般節点を生成します"
-                                                        Command="{Binding EqualDivideElementsCommand}" Margin="8,0,0,0">
+                                                        Command="{Binding EqualDivideElementsCommand}" Margin="8,0,0,0" AutomationProperties.Name="選択要素を等分割し、分割点に一般節点を生成します">
                                                     <svgc:SvgViewbox Source="/Icons/SplitElementEqually.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                                 <TextBlock Text="分割数" VerticalAlignment="Center" Margin="4,0,2,0"/>
@@ -2811,7 +2780,7 @@
                                                             ToolTip="杭配置追加"
                                                             Foreground="white"
                                                             Background="{StaticResource PrimaryAccentBrush}"
-                                                            Command="{Binding AddPileCommand}" VerticalAlignment="Top">
+                                                            Command="{Binding AddPileCommand}" VerticalAlignment="Top" AutomationProperties.Name="杭配置追加">
                                                             <svgc:SvgViewbox Source="/Icons/AddPileLoc.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                         </Button>
                                                         <Button Command="{Binding MoveForceActionPointToAverageCenterCommand}"
@@ -2836,12 +2805,12 @@
                                                         </Button>
                                                         <Button ToolTip="X優先整列（X昇順→Y昇順）"
                                                                 Command="{Binding SortPileLayoutXFirstCommand}"
-                                                                VerticalAlignment="Top">
+                                                                VerticalAlignment="Top" AutomationProperties.Name="X優先整列（X昇順→Y昇順）">
                                                             <svgc:SvgViewbox Source="/Icons/SortXY.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                         </Button>
                                                         <Button ToolTip="Y優先整列（Y昇順→X昇順）"
                                                                 Command="{Binding SortPileLayoutYFirstCommand}"
-                                                                VerticalAlignment="Top">
+                                                                VerticalAlignment="Top" AutomationProperties.Name="Y優先整列（Y昇順→X昇順）">
                                                             <svgc:SvgViewbox Source="/Icons/SortYX.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                         </Button>
                                                     </StackPanel>
@@ -3177,11 +3146,11 @@
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
                                                             <Button x:Name="ButtonEInput" ToolTip="転倒モーメント簡易入力"
-                                                            Command="{Binding AutoOverturningMomentCommand}">
+                                                            Command="{Binding AutoOverturningMomentCommand}" AutomationProperties.Name="転倒モーメント簡易入力">
                                                                 <svgc:SvgViewbox Source="/Icons/OTMInput.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                             </Button>
                                                             <Button ToolTip="慣性力作用点のVL重心への移動"
-                                                            Command="{Binding AutoActionPointXYCommand}">
+                                                            Command="{Binding AutoActionPointXYCommand}" AutomationProperties.Name="慣性力作用点のVL重心への移動">
                                                                 <svgc:SvgViewbox Source="/Icons/MoveActionPointToGravityCenter.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                             </Button>
                                                             <Border BorderBrush="LightGray" BorderThickness="1"
@@ -3983,7 +3952,7 @@
 
                                             <Button Grid.Row="0" x:Name ="ButtonAutoIsFrontPiles"
                                                     ToolTip="自動選別" HorizontalAlignment="Left"
-                                                    Command="{Binding AutoIsFrontPilesCommand}">
+                                                    Command="{Binding AutoIsFrontPilesCommand}" AutomationProperties.Name="自動選別">
                                                 <svgc:SvgViewbox Source="/Icons/AutoFrontRear.svg"
                                                                      Style="{StaticResource SvgIconStyle24}"/>
                                             </Button>
@@ -4345,7 +4314,7 @@
                                     </StackPanel>
 
                                     <!--<Button x:Name="ButtonAddGridX" ToolTip="Y軸平行通り心追加"  Background="{StaticResource PrimaryAccentBrush}" Foreground="white"
-                                                Command="{Binding AddGridXCommand}" Grid.Row="0" Grid.Column="0">
+                                                Command="{Binding AddGridXCommand}" Grid.Row="0" Grid.Column="0" AutomationProperties.Name="Y軸平行通り心追加">
                                         <svgc:SvgViewbox Source="/Icons/AddXGrid.svg" Style="{StaticResource SvgIconStyle24}"/>
                                     </Button>-->
 
@@ -4468,7 +4437,7 @@
 
 
                                     <!--<Button x:Name="ButtonAddGridY" ToolTip="X軸平行通り心追加"  Background="{StaticResource PrimaryAccentBrush}" Foreground="white"
-                                                Command="{Binding AddGridYCommand}" Grid.Row="0" Grid.Column="1">
+                                                Command="{Binding AddGridYCommand}" Grid.Row="0" Grid.Column="1" AutomationProperties.Name="X軸平行通り心追加">
                                         <svgc:SvgViewbox Source="/Icons/AddYGrid.svg" Style="{StaticResource SvgIconStyle24}"/>
                                     </Button>-->
                                     <Button x:Name="ButtonAddGridY" Padding="0"  HorizontalAlignment="Left"
@@ -5507,7 +5476,7 @@
                                                         <!-- リセットボタン: 個別矩形 (杭ごとに1矩形) を再生成 -->
                                                         <Button Grid.Row="1" HorizontalAlignment="Left" Margin="4,2,4,4" Padding="8,2"
                                                                 Command="{Binding ResetBeamAwareRectLoadsCommand}"
-                                                                ToolTip="現在の矩形荷重を破棄し、各杭に対して個別矩形 (1 矩形/杭) を再生成します。&#x0A;DX/DY は荷重面等価径から、QA は VL 軸力から自動算出。">
+                                                                ToolTip="現在の矩形荷重を破棄し、各杭に対して個別矩形 (1 矩形/杭) を再生成します。&#x0A;DX/DY は荷重面等価径から、QA は VL 軸力から自動算出。" AutomationProperties.Name="現在の矩形荷重を破棄し、各杭に対して個別矩形 (1 矩形/杭) を再生成します。&#x0A;DX/DY は荷重面等価径から、QA は VL 軸力から自動算出。">
                                                             <StackPanel Orientation="Horizontal">
                                                                 <svgc:SvgViewbox Source="/Icons/CreateAutoUniformlyDistributedLoad.svg" Style="{StaticResource SvgIconStyle24}" Margin="0,0,4,0"/>
                                                                 <TextBlock Text="リセット (個別矩形を再生成)" VerticalAlignment="Center"/>
@@ -5563,7 +5532,7 @@
                                                 <!-- 反復解析実行ボタン (タブ最下段) -->
                                                 <Button Grid.Row="6" Width="240" HorizontalAlignment="Left" Margin="0,8,0,0"
                                                         Command="{Binding OpenGroupSettlementWithBeamWindowCommand}"
-                                                        ToolTip="基礎梁の剛性を考慮した反復スタインブレナー解析を実行します。">
+                                                        ToolTip="基礎梁の剛性を考慮した反復スタインブレナー解析を実行します。" AutomationProperties.Name="基礎梁の剛性を考慮した反復スタインブレナー解析を実行します。">
                                                     <StackPanel Orientation="Horizontal">
                                                         <svgc:SvgViewbox Source="/Icons/GroupPileSettlementWithBeamWindow.svg"
                                                                          Style="{StaticResource SvgIconStyle24}" Margin="0,0,6,0"/>
@@ -6466,6 +6435,11 @@
                                     <Setter Property="Foreground" Value="DarkOrange"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
                                 </DataTrigger>
+                                <!-- 応答値は解析時・限界曲線は今のオプション、という混ざった表示になる -->
+                                <DataTrigger Binding="{Binding MaterialOptionsChangedSinceAnalysis}" Value="True">
+                                    <Setter Property="Foreground" Value="DarkOrange"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
@@ -6518,7 +6492,7 @@
                         Background="Transparent" BorderThickness="0"
                         Padding="6,2" Margin="4,0,4,0"
                         VerticalAlignment="Center"
-                        ToolTip="クリックまたは Ctrl+/ でショートカットキー一覧を表示 (F1 はヘルプ)">
+                        ToolTip="クリックまたは Ctrl+/ でショートカットキー一覧を表示 (F1 はヘルプ)" AutomationProperties.Name="クリックまたは Ctrl+/ でショートカットキー一覧を表示 (F1 はヘルプ)">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#x2328;" Foreground="#666" FontSize="14"
                                    VerticalAlignment="Center" Margin="0,0,4,0"/>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using ACadSharp;
 using ACadSharp.Entities;
@@ -26,7 +26,7 @@ namespace PileDesign.Output
         {
             GetModelBounds(inputModel, out double xMin, out double xMax, out double yMin, out double yMax);
             AddGridLines(doc, inputModel, gridLayer, symbolLayer, xMin, xMax, yMin, yMax, z);
-            AddGridDimensions(doc, inputModel, dimLayer, xMin, xMax, yMin, yMax, z);
+            AddGridDimensions(doc, inputModel, dimLayer, xMax, yMin, z);
         }
 
         private static void GetModelBounds(InputModel inputModel,
@@ -106,8 +106,10 @@ namespace PileDesign.Output
             });
         }
 
+        // 寸法線は通り芯の座標から引くので、図形範囲は下端 (yMin) と右端 (xMax) だけ使う。
+        // 以前は xMin / yMax も受け取っていたが本文で使っておらず、範囲全体で位置を決めていると読めた。
         private static void AddGridDimensions(CadDocument doc, InputModel inputModel,
-            Layer dimLayer, double xMin, double xMax, double yMin, double yMax, double z)
+            Layer dimLayer, double xMax, double yMin, double z)
         {
             if (inputModel.GridXItems != null && inputModel.GridXItems.Count >= 2)
             {

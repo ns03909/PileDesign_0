@@ -1117,38 +1117,6 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
-        /// 変位境界条件（杭頭固定 + 土固定）を剛性マトリクスと残差ベクトルに適用
-        /// </summary>
-        private void ApplyDisplacementBoundaryConditions(Matrix<double> stiffnessMatrix, Vector<double> residualVector, double targetHeadDisp)
-        {
-            // 1. 杭頭DOF (index=0) を固定
-            // 残差ベクトルの杭頭成分を0に
-            residualVector[0] = 0;
-
-            // 剛性マトリクスの杭頭行・列をクリア、対角を1に
-            for (int j = 0; j < nodesCount; j++)
-            {
-                stiffnessMatrix[0, j] = 0;
-                stiffnessMatrix[j, 0] = 0;
-            }
-            stiffnessMatrix[0, 0] = 1.0;
-
-            // 2. 土DOF (奇数インデックス) を固定
-            for (int i = 0; i < pileNodesCount; i++)
-            {
-                int dofIndex = 2 * i + 1;
-                residualVector[dofIndex] = 0;
-
-                for (int j = 0; j < nodesCount; j++)
-                {
-                    stiffnessMatrix[dofIndex, j] = 0;
-                    stiffnessMatrix[j, dofIndex] = 0;
-                }
-                stiffnessMatrix[dofIndex, dofIndex] = 1.0;
-            }
-        }
-
-        /// <summary>
         /// 杭頭反力（荷重）を計算
         /// </summary>
         private double CalculateHeadReaction(string state)

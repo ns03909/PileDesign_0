@@ -129,7 +129,7 @@ namespace PileDesign.Models.InputData
 
         public string Name => "α\u2097:" + Alpha1.ToString("F2") + "/β\u1d64:" + Beta1.ToString("F2") + "/β\u2097:" + Beta2.ToString("F2");
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string propertyName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 

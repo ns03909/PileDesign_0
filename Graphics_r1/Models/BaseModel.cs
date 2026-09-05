@@ -36,7 +36,7 @@ namespace PileDesign.Models
 {
     public class BaseModel : ObservableObject, INotifyPropertyChanged, INotifyDataErrorInfo
     {
-        public new event PropertyChangedEventHandler PropertyChanged;
+        public new event PropertyChangedEventHandler? PropertyChanged;
 
         public new virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -56,7 +56,7 @@ namespace PileDesign.Models
 
         // INotifyDataErrorInfo
         public bool HasErrors => _errors.Count > 0;
-        public event EventHandler<DataErrorsChangedEventArgs> ErrorsChanged;
+        public event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
 
         public IEnumerable GetErrors(string? propertyName)
         {

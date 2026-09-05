@@ -737,7 +737,7 @@
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                 <ToggleButton x:Name="ButtonShowPLInfo" Padding="6,2" FontSize="11"
                                               Background="Transparent" BorderThickness="0" Foreground="#666"
-                                              ToolTip="液状化指標 PL の定義と判定目安を表示">
+                                              ToolTip="液状化指標 PL の定義と判定目安を表示" AutomationProperties.Name="液状化指標 PL の定義と判定目安を表示">
                                     <TextBlock><Run Text="PL の定義と判定目安"/><Run Text=" ▾"/></TextBlock>
                                 </ToggleButton>
                                 <Popup PlacementTarget="{Binding ElementName=ButtonShowPLInfo}" Placement="Bottom"
@@ -1572,7 +1572,7 @@
                                             <StackPanel Orientation="Horizontal">
                                                 <Button Content="土質点データ平均N値入力" Command="{Binding InputAverageNValueCommand}"/>
                                                 <Button Content="土質点データ平均S波速度入力" Command="{Binding InputModelAverageVsCommand}"/>
-                                                <Button Command="{Binding Input700NCommand}" ToolTip="砂質土、礫質土のみ">
+                                                <Button Command="{Binding Input700NCommand}" ToolTip="砂質土、礫質土のみ" AutomationProperties.Name="砂質土、礫質土のみ">
                                                     <TextBlock>
                                                         <Run Text="E"/>
                                                         <Run Text="0" BaselineAlignment="Subscript" FontSize="10"/>

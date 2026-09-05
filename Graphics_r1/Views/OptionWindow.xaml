@@ -30,7 +30,7 @@
             <StackPanel Orientation="Vertical">
 
                 <StackPanel Orientation="Horizontal">
-                    <ToggleButton ToolTip="XYZ軸表示" IsChecked="{Binding IsXYZAxesVisible, Mode=TwoWay}">
+                    <ToggleButton ToolTip="XYZ軸表示" IsChecked="{Binding IsXYZAxesVisible, Mode=TwoWay}" AutomationProperties.Name="XYZ軸表示">
                         <svgc:SvgViewbox Source="/Icons/AxesVisible.svg" Style="{StaticResource SvgIconStyle}"/>
                     </ToggleButton>
                     <Label Content="軸中心(X,Y,Z)"/>
@@ -44,10 +44,10 @@
 
                 <GroupBox Header="要素表示レベル">
                     <StackPanel Orientation="Horizontal">
-                        <ToggleButton ToolTip="杭頭" IsChecked="{Binding IsElementShownAtSettlementPlane, Converter={StaticResource BooleanNegationConverter}}">
+                        <ToggleButton ToolTip="杭頭" IsChecked="{Binding IsElementShownAtSettlementPlane, Converter={StaticResource BooleanNegationConverter}}" AutomationProperties.Name="杭頭">
                             <svgc:SvgViewbox Source="/Icons/PileTopSelected.svg" Style="{StaticResource SvgIconStyle}"/>
                         </ToggleButton>
-                        <ToggleButton ToolTip="沈下荷重面" IsChecked="{Binding IsElementShownAtSettlementPlane}">
+                        <ToggleButton ToolTip="沈下荷重面" IsChecked="{Binding IsElementShownAtSettlementPlane}" AutomationProperties.Name="沈下荷重面">
                             <svgc:SvgViewbox Source="/Icons/LoadingPlaneSelected.svg" Style="{StaticResource SvgIconStyle}"/>
                         </ToggleButton>
                     </StackPanel>
@@ -55,7 +55,7 @@
 
                 <StackPanel Orientation="Horizontal">
 
-                    <ToggleButton ToolTip="入力ラベル表示" IsChecked="{Binding IsLabelVisible, Mode=TwoWay}">
+                    <ToggleButton ToolTip="入力ラベル表示" IsChecked="{Binding IsLabelVisible, Mode=TwoWay}" AutomationProperties.Name="入力ラベル表示">
                         <svgc:SvgViewbox Source="/Icons/LabelVisible.svg" Style="{StaticResource SvgIconStyle}"/>
                     </ToggleButton>
 
@@ -120,13 +120,13 @@
 
 
                 <StackPanel Orientation="Horizontal">
-                    <ToggleButton ToolTip="バブル" IsChecked="{Binding IsBubbleVisible, UpdateSourceTrigger=PropertyChanged}">
+                    <ToggleButton ToolTip="バブル" IsChecked="{Binding IsBubbleVisible, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="バブル">
                         <svgc:SvgViewbox Source="/Icons/BubbleVisible.svg" Style="{StaticResource SvgIconStyle}"/>
                     </ToggleButton>
-                    <ToggleButton ToolTip="矢印" IsChecked="{Binding IsArrowVisible, UpdateSourceTrigger=PropertyChanged}">
+                    <ToggleButton ToolTip="矢印" IsChecked="{Binding IsArrowVisible, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="矢印">
                         <svgc:SvgViewbox Source="/Icons/ArrowVisible.svg" Style="{StaticResource SvgIconStyle}"/>
                     </ToggleButton>
-                    <ToggleButton ToolTip="変形後形状" IsChecked="{Binding IsDeformedElementVisible, UpdateSourceTrigger=PropertyChanged}">
+                    <ToggleButton ToolTip="変形後形状" IsChecked="{Binding IsDeformedElementVisible, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="変形後形状">
                         <svgc:SvgViewbox Source="/Icons/DeformedElementVisible.svg" Style="{StaticResource SvgIconStyle}"/>
                     </ToggleButton>
                 </StackPanel>

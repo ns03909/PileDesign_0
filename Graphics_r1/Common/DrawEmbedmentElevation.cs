@@ -193,6 +193,9 @@ namespace PileDesign.Common
         private static void DrawSelectedZLine(
             Canvas canvas, double z0, double? selectedZ, DoatsuGoryokuBane doatsuGoryokuBane, double midValue, string direction, double ratio, double topMargin)
         {
+            // 選択深さが無いときは描くものが無い (呼び出し側でも弾いているが、ここでも決める)
+            if (selectedZ is not double selectedZValue) return;
+
             double canvasWidth = canvas.ActualWidth;
             double canvasHeight = canvas.ActualHeight;
             double selectedMinValue = double.MaxValue;
@@ -221,7 +224,7 @@ namespace PileDesign.Common
             double cetnerXInPixwl = canvas.ActualWidth * 0.5 + (selectedMidValue - midValue) * ratio;
             double lengthInPixel = (selectedMaxValue - selectedMinValue) * ratio;
 
-            double centerYInPixel = topMargin + (z0 - (double)selectedZ) * ratio;
+            double centerYInPixel = topMargin + (z0 - selectedZValue) * ratio;
             DrawCapsule(
                 canvas,
                 cetnerXInPixwl,

@@ -426,7 +426,7 @@ namespace PileDesign.Services
             for (int i = 0; i <= numberOfColors; i++)
             {
                 double offset = i / (double)numberOfColors;
-                Color color = GetColorForValue(offset, minValue, maxValue);
+                Color color = GetGradientColor(offset);
                 gradientBrush.GradientStops.Add(new GradientStop(color, offset));
             }
 
@@ -482,12 +482,16 @@ namespace PileDesign.Services
             }
         }
 
-        // 仮
-        private static Color GetColorForValue(double value, double minValue, double maxValue)
+        /// <summary>
+        /// カラーバーの色。<paramref name="ratio"/> は 0〜1 の位置 (値そのものではない)。
+        /// 以前は最小値・最大値も受け取っていたが本文で使っておらず、
+        /// 「値の範囲で色が決まる」と読める形だけが残っていた。
+        /// </summary>
+        private static Color GetGradientColor(double ratio)
         {
-            // ここでは単純な赤から青へのグラデーションを使用しますが、適宜調整してください。
-            byte r = (byte)(255 * (1 - value));
-            byte b = (byte)(255 * value);
+            // 単純な赤→青のグラデーション
+            byte r = (byte)(255 * (1 - ratio));
+            byte b = (byte)(255 * ratio);
             return Color.FromRgb(r, 0, b);
         }
     }

@@ -841,7 +841,7 @@ namespace PileDesign.Common
 
             // データ未算定 (全値0または欠損) の場合は何も描画しない
             bool hasData = groundInput.GroundMassesData.Any(m =>
-                m.FL != null && m.FL.Count > levelIndex && m.FL[levelIndex].HasValue && m.FL[levelIndex].Value != 0.0);
+                m.FL != null && m.FL.Count > levelIndex && m.FL[levelIndex] is double fl && fl != 0.0);
             if (!hasData) return;
 
             double canvasWidth = canvas.ActualWidth;
@@ -1155,6 +1155,9 @@ namespace PileDesign.Common
         private static void DrawSelectedZ(
             Canvas canvas, double z0, double? selectedZ, double ratio, double topMargin)
         {
+            // 選択深さが無いときは描くものが無い (呼び出し側でも弾いているが、ここでも決める)
+            if (selectedZ is not double selectedZValue) return;
+
             double canvasWidth = canvas.ActualWidth;
             //double canvasHeight = canvas.ActualHeight;
 
@@ -1169,7 +1172,7 @@ namespace PileDesign.Common
 
             };
             Canvas.SetLeft(ellipse, canvasWidth * 0.5 - dia * 0.5);
-            Canvas.SetTop(ellipse, (topMargin + (z0 - (double)selectedZ) * ratio - dia * 0.5));
+            Canvas.SetTop(ellipse, (topMargin + (z0 - selectedZValue) * ratio - dia * 0.5));
             canvas.Children.Add(ellipse);
         }
 
