@@ -3087,9 +3087,52 @@ namespace PileDesign.Views
         }
 
         // ショートカット
+        /// <summary>
+        /// 解析のキー (F5 / F6 / Shift+F6 / F7) が<b>効かないときに理由を出す</b>。
+        ///
+        /// 実行そのものは <c>Window.InputBindings</c> が行う。ところが実行できない状態だと
+        /// InputBinding は<b>黙って何もしない</b>。ボタンなら灰色と説明で分かるが、
+        /// キーには押した感触が無く「押しても何も起きない」としか見えない。
+        ///
+        /// ここでは<b>理由を出すだけ</b>で実行はしない (CanExecute を迂回しないため)。
+        /// 実行できる状態なら何もせず、InputBinding にそのまま任せる。
+        /// </summary>
+        private bool ExplainIfAnalysisKeyIsBlocked(KeyEventArgs e, MainWindowViewModel? viewModel)
+        {
+            if (viewModel == null) return false;
+
+            (System.Windows.Input.ICommand command, string title, string? reason)? target =
+                (e.Key, Keyboard.Modifiers) switch
+                {
+                    (Key.F5, ModifierKeys.None) =>
+                        (viewModel.OpenLateralLoadAnalysisWindowCommand, "水平解析", null),
+                    (Key.F6, ModifierKeys.None) =>
+                        (viewModel.OpenSettlementWindowCommand, "単杭沈下解析", null),
+                    (Key.F6, ModifierKeys.Shift) =>
+                        (viewModel.OpenVerticalBeamCalculationCommand, "単杭沈下解析（基礎梁考慮）", null),
+                    (Key.F7, ModifierKeys.None) =>
+                        (viewModel.PileGroupSettlementAnalysisCommand, "群杭沈下解析（一般）",
+                         viewModel.GroupSettlementAnalysisDisabledReason),
+                    _ => null,
+                };
+
+            if (target is not { } t) return false;
+            if (t.command.CanExecute(null)) return false;   // 実行できる → InputBinding に任せる
+
+            // 理由が用意されていないもの (ウィンドウを開く系) は共通の前提を出す
+            PileDesign.Services.MessageService.Show(
+                t.reason ?? PileDesign.Services.GuardMessages.NotElementSplit,
+                t.title, MessageBoxButton.OK, MessageBoxImage.Information);
+            e.Handled = true;
+            return true;
+        }
+
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
             var viewModel = DataContext as MainWindowViewModel;
+
+            // 解析のキーが効かないときは理由を出す (実行は InputBindings が行う)
+            if (ExplainIfAnalysisKeyIsBlocked(e, viewModel)) return;
 
 
             // ファイルを開く

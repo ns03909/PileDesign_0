@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -94,6 +94,55 @@ namespace TestProject1
             Assert.AreEqual(0, direct.Count,
                 "code-behind が解析コマンドを直接呼んでいる (CanExecute を迂回する):\n  "
                 + string.Join("\n  ", direct));
+        }
+
+        /// <summary>
+        /// 解析のキーが効かないときに<b>理由を出す</b>こと。
+        ///
+        /// <c>Window.InputBindings</c> は実行できない状態だと黙って何もしない。
+        /// ボタンなら灰色と説明で分かるが、キーには押した感触が無く
+        /// 「押しても何も起きない」としか見えない
+        /// (群杭沈下 F7 を、土層も矩形荷重も無い状態で押したときに実際にそうなった)。
+        ///
+        /// InputBindings に登録した解析のキーは、すべて説明の対象に入れること。
+        /// </summary>
+        [TestMethod]
+        public void BlockedAnalysisKeysExplainWhy()
+        {
+            string root = FindSolutionRoot();
+            string xaml = File.ReadAllText(Path.Combine(root, "Graphics_r1", "Views", "MainWindow.xaml"));
+            string code = File.ReadAllText(Path.Combine(root, "Graphics_r1", "Views", "MainWindow.xaml.cs"));
+
+            int helper = code.IndexOf("ExplainIfAnalysisKeyIsBlocked", StringComparison.Ordinal);
+            Assert.IsTrue(helper >= 0, "解析キーの理由を出す処理がありません");
+
+            // 実行できないときに黙らないよう、CanExecute を見てから説明していること
+            StringAssert.Contains(code, "CanExecute(null)",
+                "CanExecute を見ずに説明しています (実行できるのに割り込む恐れ)");
+
+            var missing = new List<string>();
+            foreach (Match m in Regex.Matches(xaml,
+                         @"<KeyBinding\s+Key=""(?<key>F\d+)""(?:\s+Modifiers=""(?<mod>[^""]+)"")?\s+Command=""\{Binding\s+(?<cmd>\w+)\}"""))
+            {
+                string cmd = m.Groups["cmd"].Value;
+
+                // 解析を起動しないキー (要素分割ウィンドウ等) は対象外
+                if (!cmd.Contains("Analysis", StringComparison.Ordinal)
+                    && !cmd.Contains("Settlement", StringComparison.Ordinal)
+                    && !cmd.Contains("Calculation", StringComparison.Ordinal)) continue;
+
+                string key = m.Groups["key"].Value;
+                string mod = m.Groups["mod"].Success ? m.Groups["mod"].Value : "None";
+
+                // 説明の対象表に、そのキーと修飾キーの組が出てくること
+                if (!Regex.IsMatch(code, @"\(Key\." + key + @",\s*ModifierKeys\." + mod + @"\)"))
+                    missing.Add($"{mod} + {key} ({cmd})");
+            }
+
+            Assert.AreEqual(0, missing.Count,
+                "実行できないとき黙って何も起きない解析キーがあります。"
+                + "ExplainIfAnalysisKeyIsBlocked に足してください:"
+                + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", missing));
         }
 
         private static string StripComment(string line)
