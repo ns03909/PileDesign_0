@@ -1,4 +1,5 @@
 ﻿using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
 using PileDesign.Services;
 using PileDesign.ViewModels;
 using System.Collections.ObjectModel;
@@ -148,17 +149,30 @@ namespace TestProject1
         [TestMethod]
         public void ApplyActiveCaseToLegacyFields_StillSyncsPileSettlements()
         {
-            var pgs = new PileGroupSettlement();
+            // 杭ごとの沈下量は<b>結果から引く</b>。同期 (コピー) はもう行わないので、
+            // 見るのは「表示中のケースの値が読めること」と「切替が表示に伝わること」。
             var record = new GroupSettlementCaseRecord
             {
                 LoadCaseName = "VL",
                 PileSettlements_mm = new Dictionary<int, double> { [1] = 4.25 },
             };
             var pile = new PileLayoutDataItem { PileNo = 1 };
+            var input = new InputModel { PileLayoutItems = [pile] };
+            input.PileGroupSettlement ??= new PileGroupSettlement();
+            input.PileGroupSettlement.CaseRecords.Add(record);
+            input.PileGroupSettlement.ActiveCaseIndex = 0;
+            input.SetPileOwnersForTest();
 
-            GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(pgs, record, [pile]);
+            var raised = new List<string>();
+            pile.PropertyChanged += (_, e) => raised.Add(e.PropertyName ?? "");
 
-            Assert.AreEqual(4.25, pile.GroupPileSettlement, 1e-12);
+            GroupSettlementWithBeamCalculationViewModel.ApplyActiveCaseToLegacyFields(
+                input.PileGroupSettlement, record, [pile]);
+
+            Assert.AreEqual(4.25, pile.GroupPileSettlement, 1e-12,
+                "表示中のケースの沈下量が読めていない");
+            CollectionAssert.Contains(raised, nameof(PileLayoutDataItem.GroupPileSettlement),
+                "ケースを切り替えても沈下量の表示更新が通知されない");
         }
 
         [TestMethod]

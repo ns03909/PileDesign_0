@@ -1,4 +1,4 @@
-# 杭基礎検討プログラム (PileDesign)
+﻿# 杭基礎検討プログラム (PileDesign)
 
 杭基礎の水平抵抗・鉛直支持力・沈下を検討する WPF デスクトップアプリケーションです。
 建築基礎構造設計指針および告示に基づく検討と、計算書 (Word) の出力を行います。
@@ -79,10 +79,15 @@ FEM モデル (AnaModel)
 
 - 解析結果は `AnalysisResultSet` として、**解析時の入力ごとスナップショット**で保持します。
   結果を見ながら入力を変更できるのはこのためです。
-- ただし**沈下解析の結果は入力モデルの中にあります**
-  (`SoilPile.LoadDisplacements` / `PileGroupSettlement.CaseRecords` /
-  `PileLayoutDataItem.GroupPileSettlement`)。
-  そのため沈下だけはスナップショットで切り離せず、特別扱いが要ります。
+- **群杭沈下の結果は `GroupSettlementResult` が持ちます**。実体は 1 つで、現在の入力と
+  スナップショットの `PileGroupSettlement.Result` が<b>同じインスタンス</b>を指します
+  ([JsonIgnore] なので JSON 往復では複製されません)。保存はファイルの
+  `GroupSettlementResult` の節で、**入力の中には書き出しません**。
+  読込は `LegacySettlementMigration.AttachResultAndMigrate` が結び付けます
+  (旧ファイルは入力側の `"CaseRecords"` に入っているので、そこから移します)。
+  - `PileGroupSettlement.SettlementGridData` と `PileLayoutDataItem.GroupPileSettlement` は
+    旧ファイル互換のための複製で、**結果を書かないこと**。読むのも移行処理だけです。
+  - 単杭沈下の結果 (`SoilPile.LoadDisplacements`) は**まだ入力モデルの中**にあります。
 - `IsElementSplit` は保存されないため、読み込み時に FEM モデルの有無から復元します。
 
 ### 3. 杭軸力は解析中に動く

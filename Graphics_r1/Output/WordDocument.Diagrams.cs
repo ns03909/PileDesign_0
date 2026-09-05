@@ -733,8 +733,11 @@ diameterSelector,
                 if (settlementData == null || settlementData.Count == 0)
                     return;
 
-                var gridXs = pgs?.SettlementGridX?.ToList();
-                var gridYs = pgs?.SettlementGridY?.ToList();
+                // 格子は表示中のケースの沈下値から引く (画面と同じ)。
+                // 入力側の SettlementGridX/Y は解析時のスナップショットに移らないので、
+                // 沈下だけ再実行した場合に計算書のコンタだけ古い軸で描かれてしまう。
+                var gridXs = pgs?.ActiveGridX?.ToList();
+                var gridYs = pgs?.ActiveGridY?.ToList();
 
                 // 杭位置リスト
                 var pilePositions = inputModel?.PileLayoutItems?

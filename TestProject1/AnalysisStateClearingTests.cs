@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
 using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -93,18 +94,18 @@ namespace TestProject1
             vm.IsGroupPileSettlementAnalysisDone = true;
             vm.CaptureAnalysisResultSet();
 
-            // 群杭沈下の結果は入力モデルの中に入る
+            // 群杭沈下の結果 (ケース記録)。杭ごとの沈下量も記録が持つ
             inputModel.PileGroupSettlement ??= new PileGroupSettlement();
             inputModel.PileGroupSettlement.CaseRecords =
             [
-                new PileDesign.Models.InputData.GroupSettlementCaseRecord
+                new PileDesign.Models.Results.GroupSettlementCaseRecord
                 {
                     LoadCaseName = "VL",
                     SettlementGridData = [new() { X = 0, Y = 0, Settlement = 12.3 }],
+                    PileSettlements_mm = new() { [inputModel.PileLayoutItems[0].PileNo] = 12.3 },
                 }
             ];
             inputModel.PileGroupSettlement.ActiveCaseIndex = 0;
-            inputModel.PileLayoutItems[0].GroupPileSettlement = 12.3;
 
             return vm;
         }

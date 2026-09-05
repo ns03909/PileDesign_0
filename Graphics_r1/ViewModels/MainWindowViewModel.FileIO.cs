@@ -224,7 +224,9 @@ namespace PileDesign.ViewModels
             // M-φ 静的キャッシュ（全断面共有）
             PileSection.ClearMphiCache();
 
-            // 各断面インスタンスの NM/降伏/ひび割れキャッシュ
+            // 各断面の Ec と諸元。曲線のキャッシュは断面が自分で捨てる
+            // (ConcreteModelOptions.Version の判定)。ここでたどれるのは現在の入力モデルだけで、
+            // ダイアログが編集している複製の断面には届かないため、たどる方式には頼らない。
             if (CurrentInputModel?.PileBodies != null)
             {
                 foreach (var pb in CurrentInputModel.PileBodies)
@@ -234,7 +236,6 @@ namespace PileDesign.ViewModels
                     {
                         var sec = seg?.PileSection;
                         if (sec == null) continue;
-                        sec.InvalidateComputedCaches();
                         // ξ→Ec オプションは PileSection.ConcreteE（諸元表示・EA/EI）にも効くため、
                         // 場所打ち系（既製杭以外＝式ベース Ec）で再計算し諸元も更新する。
                         if (sec.PileBodyType != PileTypeNames.PrecastConcrete)
@@ -245,6 +246,10 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
+
+            // 解析済みの結果を表示したままオプションを変えると、応答値は解析時・限界曲線は今の
+            // オプション、という混ざった表示になる。ステータスに出して気付けるようにする。
+            NotifyMaterialOptionsSignatureChanged();
         }
 
         private void ApplyPostLoadProtocol(Models.ProjectData? projectData, string? filePath, string successMessage)
@@ -266,10 +271,24 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.MigratePileZSemantics_v1_to_v2();
             }
 
-            // CaseRecord.LoadingType の旧データ互換マイグレーション
-            // 旧ファイルでは LoadingType フィールドが空文字 → IsBeamAware から推定して補完
-            PileDesign.Services.LegacySettlementMigration.Apply(
-                CurrentInputModel.PileGroupSettlement, CurrentInputModel.PileLayoutItems);
+            // 単杭沈下の荷重-沈下曲線を土層-杭セットへ戻す。
+            // 解析済みの判定 (RestoreAnalysisState) が曲線の有無を見るので、<b>それより前に</b>行う。
+            // 旧ファイルはこの節が無く、入力側の "LoadDisplacements" に入っているので、
+            // 受け取り口から本体へ移して空にする。
+            if (projectData?.SinglePileSettlementResult is { } singlePileCurves)
+            {
+                singlePileCurves.ApplyTo(CurrentInputModel);
+            }
+            if (CurrentInputModel?.ElementDivision?.SoilPiles is { } loadedSoilPiles)
+            {
+                foreach (var sp in loadedSoilPiles) sp?.MigrateLegacyLoadDisplacements();
+            }
+
+            // 群杭沈下の結果を入力モデルへ結び付け、旧データの互換マイグレーションを走らせる。
+            // 結果は入力とは別の節にある。旧ファイルはこの節が無く、入力側の "CaseRecords"
+            // に入っているので、移行がそれを結果側へ移して受け取り口を空にする。
+            PileDesign.Services.LegacySettlementMigration.AttachResultAndMigrate(
+                CurrentInputModel, projectData?.GroupSettlementResult);
 
             // 梁要素 ComboBox 用の節点候補リストを再構築 (deserialize 直後は空のため)
             CurrentInputModel.RefreshAvailableNodeReferenceOptions();
@@ -610,6 +629,18 @@ namespace PileDesign.ViewModels
                 snapshot.RefreshAvailableNodeReferenceOptions();
                 snapshot.AttachViewModel(this);
                 snapshot.UpdateCountLists();
+
+                // 単杭沈下の曲線は入力の節に書き出さないので、スナップショットの
+                // 土層-杭セットには入っていない。結果表示はスナップショットを読むため写す。
+                Models.Results.SinglePileSettlementResult.CopyCurves(CurrentInputModel, snapshot);
+
+                // 群杭沈下の結果は 1 つしかない。スナップショットからも同じインスタンスを指させる。
+                // 別々に持つと、結果表示 (スナップショットを読む) と入力系の表示がずれる。
+                if (CurrentInputModel?.PileGroupSettlement != null)
+                {
+                    snapshot.PileGroupSettlement ??= new PileGroupSettlement();
+                    snapshot.PileGroupSettlement.Result = CurrentInputModel.PileGroupSettlement.Result;
+                }
             }
 
             // AnaModel.InputModel は getter のみで JSON から復元されないため張り直す

@@ -58,6 +58,14 @@ namespace PileDesign.Services
                 VerticalBeamCaseResults = verticalBeamCaseResults != null
                     ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
                     : null!,
+                // 単杭沈下の荷重-沈下曲線も入力の中ではなくこの節に 1 回だけ書く。
+                // SoilPile 側は [JsonIgnore] なので、ここで書かないと保存されない。
+                SinglePileSettlementResult = Models.Results.SinglePileSettlementResult.Capture(inputModel),
+                // 群杭沈下の結果は入力の中ではなく、この節に 1 回だけ書く。
+                // 入力モデルは結果への参照を持つだけ ([JsonIgnore]) なので、ここで書かないと保存されない。
+                // 水平解析の結果を保存しない設定でも沈下の結果は保存する (従来と同じ)。
+                GroupSettlementResult = inputModel?.PileGroupSettlement?.Result is { HasResults: true } gsr
+                    ? gsr : null,
                 // 解析結果を保存しないときはスナップショットも不要
                 ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
                 ResultCapturedAt = anaModel != null ? resultCapturedAt : null,
@@ -133,6 +141,14 @@ namespace PileDesign.Services
                 VerticalBeamCaseResults = verticalBeamCaseResults != null
                     ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
                     : null!,
+                // 単杭沈下の荷重-沈下曲線も入力の中ではなくこの節に 1 回だけ書く。
+                // SoilPile 側は [JsonIgnore] なので、ここで書かないと保存されない。
+                SinglePileSettlementResult = Models.Results.SinglePileSettlementResult.Capture(inputModel),
+                // 群杭沈下の結果は入力の中ではなく、この節に 1 回だけ書く。
+                // 入力モデルは結果への参照を持つだけ ([JsonIgnore]) なので、ここで書かないと保存されない。
+                // 水平解析の結果を保存しない設定でも沈下の結果は保存する (従来と同じ)。
+                GroupSettlementResult = inputModel?.PileGroupSettlement?.Result is { HasResults: true } gsr
+                    ? gsr : null,
                 // 解析結果を保存しないときはスナップショットも不要
                 ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
                 ResultCapturedAt = anaModel != null ? resultCapturedAt : null,

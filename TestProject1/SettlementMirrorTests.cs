@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -126,10 +127,12 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 表示系が杭の複製 <c>GroupPileSettlement</c> を読んでいないこと。
+        /// 杭の <c>LegacyGroupPileSettlement</c> を移行以外が触っていないこと。
         ///
-        /// 読み手が残っていると、ケースを切り替えたのに古い沈下量が出る。
-        /// 書き込み (解析・同期・クリア) と <c>DeepCopy</c> は複製がある限り必要なので対象外。
+        /// これは<b>旧ファイルの値を受け取るためだけ</b>のプロパティ。
+        /// 表示は <c>GroupPileSettlement</c> (表示中のケースの結果から引く計算プロパティ) を読む。
+        /// ここへ書き戻すと、保存ファイルに結果が二重に入り、
+        /// 「ケースを切り替えたのにここだけ古い値」が復活する。
         /// </summary>
         [TestMethod]
         public void NothingReadsThePileSettlementMirror()
@@ -159,19 +162,14 @@ namespace TestProject1
                 {
                     int comment = lines[i].IndexOf("//", StringComparison.Ordinal);
                     string code = comment >= 0 ? lines[i][..comment] : lines[i];
-                    // 「GroupPileSettlementXOffset」等の別プロパティと区別するため語境界で見る
-                    if (!Regex.IsMatch(code, @"\.GroupPileSettlement\b")) continue;
-
-                    // 書き込みは可 (複製がある限り更新は要る)
-                    if (Regex.IsMatch(code, @"\.GroupPileSettlement\s*=[^=]"))
-                        continue;
+                    if (!Regex.IsMatch(code, @"LegacyGroupPileSettlement")) continue;
 
                     readers.Add($"{Path.GetFileName(cs)}:{i + 1}  {code.Trim()}");
                 }
             }
 
             Assert.AreEqual(0, readers.Count,
-                "杭の複製を読んでいます。PileGroupSettlement.SettlementOf(pileNo) を使ってください:\n  "
+                "旧ファイル用の受け取り口を触っています。表示は GroupPileSettlement (結果から引く) を使ってください:" + Environment.NewLine + "  "
                 + string.Join("\n  ", readers));
         }
 
@@ -234,6 +232,52 @@ namespace TestProject1
 
         private const string MIRROR_READ = @"(pgs|settlement|PileGroupSettlement)\??\.SettlementGridData\b";
         private const string WRITE = @"\.SettlementGridData\s*=[^=]";
+
+        /// <summary>
+        /// コンタの複製 <c>PileGroupSettlement.SettlementGridData</c> に<b>結果を書いていない</b>こと。
+        ///
+        /// 空にするのは可 (破棄・初期化)。結果を書くと保存ファイルにコンタが二重に入り、
+        /// 複製とケースで要素を共有すれば <c>$ref</c> が復活して、将来この複製を撤去できなくなる。
+        /// 実際、群杭沈下解析の直後に 1 か所だけ結果を書き込んでいた。
+        /// </summary>
+        [TestMethod]
+        public void NothingWritesResultsIntoTheGridMirror()
+        {
+            string? root = FindSolutionRootOrNull();
+            Assert.IsNotNull(root, "ソリューションルートが見つかりません");
+
+            var writers = new List<string>();
+            foreach (string cs in Directory.EnumerateFiles(
+                         Path.Combine(root!, "Graphics_r1"), "*.cs", SearchOption.AllDirectories))
+            {
+                if (cs.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")) continue;
+                if (Path.GetFileName(cs) == "PileGroupSettlement.cs") continue;        // 定義とコンストラクタ
+                if (Path.GetFileName(cs) == "FileOperationService.cs") continue;       // 読込時のコレクション変換
+                if (Path.GetFileName(cs) == "LegacySettlementMigration.cs") continue;  // 旧ファイルの移行
+
+                var lines = File.ReadAllLines(cs);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    int comment = lines[i].IndexOf("//", StringComparison.Ordinal);
+                    string code = comment >= 0 ? lines[i][..comment] : lines[i];
+
+                    var m = Regex.Match(code, MIRROR_READ + @"\s*=\s*(?<rhs>.+)$");
+                    if (!m.Success) continue;
+
+                    // 空にするのは可
+                    string rhs = m.Groups["rhs"].Value.Trim();
+                    if (Regex.IsMatch(rhs, @"^(\[\s*\]|new\s+ObservableCollection<SettlementGridDataItem>\(\))\s*;?$"))
+                        continue;
+
+                    writers.Add($"{Path.GetFileName(cs)}:{i + 1}  {code.Trim()}");
+                }
+            }
+
+            Assert.AreEqual(0, writers.Count,
+                "コンタの複製に結果を書いています。記録 (CaseRecord.SettlementGridData) に持たせてください:"
+                + System.Environment.NewLine + "  "
+                + string.Join(System.Environment.NewLine + "  ", writers));
+        }
 
         // ── 矩形荷重は入力。結果で上書きしない ─────────────
 
@@ -359,7 +403,13 @@ namespace TestProject1
             var pgs = JsonSerializer.Deserialize<PileGroupSettlement>(oldJson, options);
 
             Assert.IsNotNull(pgs);
+
+            // 旧ファイルのケース記録は入力の中にある。読込の移行が結果側へ移すところまでが本番。
+            PileDesign.Services.LegacySettlementMigration.Apply(pgs!);
+
             Assert.AreEqual(1, pgs!.CaseRecords.Count);
+            Assert.AreEqual(0, pgs.LegacyCaseRecords.Count,
+                "受け取り口が空になっていない (保存し直すと結果が二重に入る)");
             Assert.AreEqual(2, pgs.ActiveSettlementGridData.Count, "$ref が解決できていない");
             Assert.AreEqual(2.0, pgs.ActiveSettlementGridData[1].Settlement, 1e-12);
         }
@@ -424,12 +474,18 @@ namespace TestProject1
                 new System.Text.RegularExpressions.Regex(@"\$ref"),
                 "保存ファイルに $ref が出ています (複製とケースで要素を共有している)");
 
-            // 書き出していなくても、ケースは往復できること
-            var restored = JsonSerializer.Deserialize<PileGroupSettlement>(json, options);
-            Assert.IsNotNull(restored);
-            Assert.AreEqual(1, restored!.CaseRecords.Count, "ケースが復元できていない");
+            // ケース記録は入力の側には出さない (結果は ProjectData の別の節が持つ)
+            StringAssert.DoesNotMatch(json,
+                new System.Text.RegularExpressions.Regex(@"LoadCaseName"),
+                "入力の中にケース記録が書き出されています (結果が二重に入る)");
+
+            // 結果は結果の型として往復できること
+            string resultJson = JsonSerializer.Serialize(pgs.Result, options);
+            var restoredResult = JsonSerializer.Deserialize<GroupSettlementResult>(resultJson, options);
+            Assert.IsNotNull(restoredResult);
+            Assert.AreEqual(1, restoredResult!.CaseRecords.Count, "ケースが復元できていない");
             Assert.AreEqual(pgs.CaseRecords[0].SettlementGridData.Count,
-                            restored.CaseRecords[0].SettlementGridData.Count,
+                            restoredResult.CaseRecords[0].SettlementGridData.Count,
                             "ケースの結果が復元できていない");
         }
 

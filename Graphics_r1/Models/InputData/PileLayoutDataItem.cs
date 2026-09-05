@@ -140,7 +140,14 @@ namespace PileDesign.Models.InputData
         public int PileBodyNo
         {
             get => _pileBodyNo;
-            set => SetProperty(ref _pileBodyNo, value);
+            set
+            {
+                if (SetProperty(ref _pileBodyNo, value))
+                {
+                    // ComboBox のホバー説明は杭体番号から引いた要約。通知しないと前の杭体の説明が残る
+                    OnPropertyChanged(nameof(PileBodySummary));
+                }
+            }
         }
 
         // 地盤番号
@@ -153,6 +160,8 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _groundNo, value))
                 {
                     OnPropertyChanged(nameof(SoilPile));
+                    // ComboBox のホバー説明は地盤番号から引いた要約 (PileBodySummary と同じ理由)
+                    OnPropertyChanged(nameof(GroundSummary));
                 }
             }
         }
@@ -508,13 +517,32 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _ru, value);
         }
 
-        // 長期群杭沈下
-        private double _groupPileSettlement;
-        public double GroupPileSettlement
-        {
-            get => _groupPileSettlement;
-            set => SetProperty(ref _groupPileSettlement, value);
-        }
+        /// <summary>
+        /// 表示中のケースにおける、この杭の群杭沈下量 [mm]。<b>結果であって入力ではない。</b>
+        ///
+        /// 実体は <c>GroupSettlementResult</c> の側にあり、ここは杭配置グリッドなどが
+        /// 読むための入口。以前は解析が書き込む複製で、入力として保存もされていたため
+        /// <list type="bullet">
+        /// <item>保存ファイルに結果が二重に入る</item>
+        /// <item>ケースを切り替えたのに同期を忘れた経路でここだけ古い値が出る</item>
+        /// <item>結果を破棄するのに杭を全部なめて 0 を書いて回る必要がある</item>
+        /// </list>
+        /// という状態だった。<b>書き込まない。</b>ケースが変わったら
+        /// <see cref="NotifyGroupPileSettlementChanged"/> で表示に知らせる。
+        /// </summary>
+        [JsonIgnore]
+        public double GroupPileSettlement => InputModel?.PileGroupSettlement?.SettlementOf(PileNo) ?? 0.0;
+
+        /// <summary>
+        /// 旧ファイルの "GroupPileSettlement" を受け取るためだけのプロパティ。
+        /// 読込時の移行が結果へ移したあと空にするので、保存し直すと 0 になる。
+        /// <b>ここを読んでよいのは移行処理だけ</b>。
+        /// </summary>
+        [JsonPropertyName("GroupPileSettlement")]
+        public double LegacyGroupPileSettlement { get; set; }
+
+        /// <summary>表示中のケースが変わったときに、沈下量の表示を出し直す。</summary>
+        public void NotifyGroupPileSettlementChanged() => OnPropertyChanged(nameof(GroupPileSettlement));
 
         // 解析杭節点 (FEM 解析ランタイム状態 — Undo/ファイル保存対象外)
         private ObservableCollection<FEM.Node> pileNodes = [];
@@ -708,7 +736,7 @@ namespace PileDesign.Models.InputData
                 Rf = this.Rf,
                 Rp = this.Rp,
                 Ru = this.Ru,
-                GroupPileSettlement = this.GroupPileSettlement,
+                LegacyGroupPileSettlement = this.LegacyGroupPileSettlement,
                 AxialForce = this.AxialForce,
                 AxialForceIncrement = this.AxialForceIncrement,
             };

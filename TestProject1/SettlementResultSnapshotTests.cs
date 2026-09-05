@@ -3,22 +3,23 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
 using PileDesign.ViewModels;
 
 namespace TestProject1
 {
     /// <summary>
-    /// 沈下の結果は入力モデルの中に格納されているため、そのままでは
-    /// 解析結果セット（解析時の入力ごと切り離した複製）に乗らない。
+    /// 沈下の結果は <see cref="GroupSettlementResult"/> が持ち、<b>実体は 1 つ</b>。
+    /// 現在の入力と解析結果セットのスナップショットは同じインスタンスを指す。
     ///
-    /// 乗らないと次が起きる。
+    /// 以前は結果が入力モデルの中にあり、スナップショットへ<b>写して</b>いた。
+    /// 写す経路を 1 つ忘れると
     /// <list type="bullet">
     /// <item>水平解析のあとに入力を編集して沈下を実行すると、結果表示が読む
     ///   スナップショットに沈下の結果が無く、沈下のテーブルが出ない</item>
-    /// <item>結果テーブルが現在の入力を読むと、解析後に杭を足した状態で結果の行を組む</item>
+    /// <item>入力側でケースを切り替えても結果表示が古いケースのまま</item>
     /// </list>
-    /// 解析完了時に沈下の結果だけをスナップショットへ写し、破棄は両方から行う。
-    /// ここではその往復を固定する。
+    /// になる。共有にすると写し忘れという失敗自体が無くなる。ここではそれを固定する。
     /// </summary>
     [TestClass]
     public class SettlementResultSnapshotTests
@@ -63,7 +64,6 @@ namespace TestProject1
             pgs.CaseRecords ??= [];
             pgs.CaseRecords.Add(record);
             pgs.ActiveCaseIndex = pgs.CaseRecords.Count - 1;
-            pile.GroupPileSettlement = settlement_mm;
             return record;
         }
 
@@ -91,12 +91,11 @@ namespace TestProject1
 
             var snapPgs = vm.CurrentResultSet!.InputSnapshot.PileGroupSettlement;
             Assert.AreEqual(1, snapPgs.CaseRecords?.Count ?? 0,
-                "沈下の記録がスナップショットへ写っていない（結果テーブルが沈下を出せない）");
+                "沈下の記録がスナップショットから見えない（結果テーブルが沈下を出せない）");
             Assert.AreEqual(12.5,
                 snapPgs.CaseRecords![0].PileSettlements_mm[input.PileLayoutItems[0].PileNo], 1e-9);
-            Assert.AreEqual(12.5,
-                vm.CurrentResultSet.InputSnapshot.PileLayoutItems[0].GroupPileSettlement, 1e-9,
-                "各杭の沈下量がスナップショットへ写っていない");
+            Assert.AreEqual(12.5, snapPgs.SettlementOf(input.PileLayoutItems[0].PileNo), 1e-9,
+                "各杭の沈下量が結果から引けない");
 
             Assert.AreSame(capturedAnaModel, vm.CurrentResultSet.AnaModel,
                 "水平解析の結果まで取り直している（編集後の入力と解析時の結果が 1 組になる）");
@@ -105,11 +104,14 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// スナップショットへ写した記録は複製であること。
-        /// 同じインスタンスを共有すると、以降の入力側の操作が結果表示に漏れる。
+        /// 現在の入力とスナップショットは<b>同じ結果</b>を指すこと。
+        ///
+        /// 複製にすると、入力側でケースを切り替えたときに結果表示が追随せず、
+        /// 「沈下だけ再実行したのに結果テーブルが古い」が起きる。
+        /// 結果の実体は 1 つ、というのがこの設計の要。
         /// </summary>
         [TestMethod]
-        public void SnapshotSettlement_IsACopy()
+        public void SnapshotSettlement_IsTheSameResultInstance()
         {
             var built = Build();
             if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
@@ -120,14 +122,15 @@ namespace TestProject1
             var liveRecord = AddSettlementResult(input, settlement_mm: 20.0);
             vm.CaptureAnalysisResultSet();
 
-            var snapRecord = vm.CurrentResultSet!.InputSnapshot.PileGroupSettlement.CaseRecords![0];
-            Assert.AreNotSame(liveRecord, snapRecord, "記録のインスタンスを共有している");
+            var snapPgs = vm.CurrentResultSet!.InputSnapshot.PileGroupSettlement;
+            Assert.AreSame(input.PileGroupSettlement.Result, snapPgs.Result,
+                "結果のインスタンスが分かれている (写し忘れが起きる形に戻っている)");
+            Assert.AreSame(liveRecord, snapPgs.CaseRecords![0]);
+            Assert.AreSame(vm.CurrentResultSet.GroupSettlement, snapPgs.Result);
 
-            // 入力側を書き換えても結果側は動かない
-            liveRecord.PileSettlements_mm[input.PileLayoutItems[0].PileNo] = 99.0;
-            Assert.AreEqual(20.0,
-                snapRecord.PileSettlements_mm[input.PileLayoutItems[0].PileNo], 1e-9,
-                "入力側の書き換えが結果側に漏れている");
+            // 入力側でケースを切り替えたら結果表示も同じケースを見る
+            input.PileGroupSettlement.ActiveCaseIndex = -1;
+            Assert.IsNull(snapPgs.ActiveRecord, "ケースの切り替えが結果表示に届いていない");
         }
 
         // ── 破棄は両方から ──────────────────────────────

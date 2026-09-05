@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
 using PileDesign.Services;
 using System;
 using System.Collections.Generic;
@@ -1179,7 +1180,7 @@ namespace PileDesign.ViewModels
                 if (CurrentInputModel?.PileLayoutItems != null)
                 {
                     foreach (var pile in CurrentInputModel.PileLayoutItems)
-                        pile.GroupPileSettlement = 0;
+                        pile.NotifyGroupPileSettlementChanged();
                 }
                 OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
                 return;
@@ -1198,7 +1199,7 @@ namespace PileDesign.ViewModels
         /// VL0 / VLadd など部分一致は無視する (一致なし → -1 で結果非表示)。
         /// </summary>
         private static int FindMatchingCaseRecordIndex(
-            ObservableCollection<Models.InputData.GroupSettlementCaseRecord> records,
+            ObservableCollection<Models.Results.GroupSettlementCaseRecord> records,
             string loadCaseName, string activeLoadingType = null)
         {
             if (records == null || records.Count == 0 || string.IsNullOrEmpty(loadCaseName)) return -1;
@@ -1435,7 +1436,11 @@ namespace PileDesign.ViewModels
             switch (content)
             {
                 case "沈下量":
-                    // 既存のSettlementOptionをそのまま使用（単杭/群杭/単杭+群杭 + 基礎梁考慮は別途管理済み）
+                    // 解析済みフラグから組み直す。
+                    // 以前は「既存の一覧をそのまま使う」としていたが、他の表示内容
+                    // (沈下反力など) に切り替えると一覧ごと差し替えられてしまい、
+                    // 戻ってきたときに<b>群杭が選べない</b>状態になっていた。
+                    RebuildSettlementTypeOptions();
                     break;
                 case "沈下部材角":
                 {
@@ -2995,19 +3000,15 @@ namespace PileDesign.ViewModels
                 OpenVerticalBeamCalculationCommand?.NotifyCanExecuteChanged();
 
                 const string settlementLabel = "沈下量";
-                const string singlePileLabel = "単杭";
 
                 if (value)
                 {
                     if (!AnalysisResultContentOption.Contains(settlementLabel))
                         AnalysisResultContentOption.Add(settlementLabel);
-                    if (!AnalysisResultSettlementOption.Contains(singlePileLabel))
-                        AnalysisResultSettlementOption.Add(singlePileLabel);
                 }
                 else
                 {
                     AnalysisResultContentOption.Remove(settlementLabel);
-                    AnalysisResultSettlementOption.Remove(singlePileLabel);
                 }
 
                 // ステータスバー更新
@@ -3017,7 +3018,7 @@ namespace PileDesign.ViewModels
                 // docx 出力 CheckBox の表示更新
                 DocxOutput.OnVerticalAnalysisDoneChanged();
 
-                Both(); // 単杭+群杭 の表示制御
+                RebuildSettlementTypeOptions();
                 UpdateSettlementCategories();
             }
         }
@@ -3050,32 +3051,45 @@ namespace PileDesign.ViewModels
             Toggle("沈下応力", hasBeams && (IsVerticalBeamAnalysisDone || HasGroupSettlementBeamAwareCases));
         }
 
-        private void Both()
+        /// <summary>
+        /// 「沈下量」の沈下種別 (単杭 / 群杭 / 単杭+群杭 / 基礎梁考慮 / 基礎梁考慮+群杭) の一覧を、
+        /// 解析済みフラグから<b>組み直す</b>。
+        ///
+        /// 以前は各フラグのセッターが自分の分だけを足し引きしていた。そのため
+        /// <list type="bullet">
+        /// <item>表示内容を沈下反力などに切り替えると一覧ごと差し替えられ、沈下量に戻っても復元されない</item>
+        /// <item>フラグが既に true のまま解析し直しても、値が変わらないのでセッターが走らず足し直されない</item>
+        /// </list>
+        /// のどちらでも<b>群杭が選べない</b>状態になった。一覧はフラグだけで決まるので、
+        /// 継ぎ足しではなく毎回作り直す。
+        ///
+        /// ItemsSource のインスタンスは差し替えない (差し替えると選択中の項目が飛ぶ)。
+        /// </summary>
+        private void RebuildSettlementTypeOptions()
         {
-            // "単杭+群杭"の表示制御
-            const string bothLabel = "単杭+群杭";
-            if (IsVerticalAnalysisDone && IsGroupPileSettlementAnalysisDone)
+            var wanted = new List<string>();
+            if (IsVerticalAnalysisDone) wanted.Add("単杭");
+            if (IsGroupPileSettlementAnalysisDone) wanted.Add("群杭");
+            if (IsVerticalAnalysisDone && IsGroupPileSettlementAnalysisDone) wanted.Add("単杭+群杭");
+            if (IsVerticalBeamAnalysisDone) wanted.Add("基礎梁考慮");
+            if (IsVerticalBeamAnalysisDone && IsGroupPileSettlementAnalysisDone) wanted.Add("基礎梁考慮+群杭");
+
+            var list = AnalysisResultSettlementOption;
+            for (int i = list.Count - 1; i >= 0; i--)
             {
-                if (!AnalysisResultSettlementOption.Contains(bothLabel))
-                    AnalysisResultSettlementOption.Add(bothLabel);
+                if (!wanted.Contains(list[i])) list.RemoveAt(i);
             }
-            else
+            for (int i = 0; i < wanted.Count; i++)
             {
-                AnalysisResultSettlementOption.Remove(bothLabel);
+                if (!list.Contains(wanted[i])) list.Insert(Math.Min(i, list.Count), wanted[i]);
             }
 
-            // "基礎梁考慮+群杭"の表示制御
-            const string vbGroupLabel = "基礎梁考慮+群杭";
-            if (IsVerticalBeamAnalysisDone && IsGroupPileSettlementAnalysisDone)
-            {
-                if (!AnalysisResultSettlementOption.Contains(vbGroupLabel))
-                    AnalysisResultSettlementOption.Add(vbGroupLabel);
-            }
-            else
-            {
-                AnalysisResultSettlementOption.Remove(vbGroupLabel);
-            }
+            if (list.Count > 0 && !list.Contains(AnalysisResultSettlementType))
+                AnalysisResultSettlementType = list[0];
         }
+
+        /// <summary>テスト用フック (一覧の組み立てをそのまま検証する)。</summary>
+        internal void RebuildSettlementTypeOptionsForTest() => RebuildSettlementTypeOptions();
 
         // 鉛直解析済か否か
         private bool _isGroupPileSettlementAnalysisDone;
@@ -3100,17 +3114,7 @@ namespace PileDesign.ViewModels
                         AnalysisResultContentOption.Remove(settlementLabel);
                     }
 
-                    const string groupPileLabel = "群杭";
-                    if (value)
-                    {
-                        if (!AnalysisResultSettlementOption.Contains(groupPileLabel))
-                            AnalysisResultSettlementOption.Add(groupPileLabel);
-                    }
-                    else
-                    {
-                        AnalysisResultSettlementOption.Remove(groupPileLabel);
-                    }
-                    Both();
+                    RebuildSettlementTypeOptions();
                     UpdateSettlementCategories();
 
                     // docx 出力 CheckBox の表示更新
@@ -3135,22 +3139,15 @@ namespace PileDesign.ViewModels
                     OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
                     RaiseResultCommandsCanExecute();
 
-                    // 基礎梁考慮 サブオプションの追加/削除
-                    const string vbSubLabel = "基礎梁考慮";
-                    if (value)
+                    if (!value)
                     {
-                        if (!AnalysisResultSettlementOption.Contains(vbSubLabel))
-                            AnalysisResultSettlementOption.Add(vbSubLabel);
-                    }
-                    else
-                    {
-                        AnalysisResultSettlementOption.Remove(vbSubLabel);
                         VerticalBeamCaseResults = null;
 
                         // 基礎梁考慮オプションが選択中だった場合は「個別十字」にフォールバック
                         if (CurrentInputModel?.PileGroupSettlement?.LoadingType == "個別十字（基礎梁反力）")
                             CurrentInputModel.PileGroupSettlement.LoadingType = "個別十字";
                     }
+                    RebuildSettlementTypeOptions();
                     UpdateSettlementCategories();
 
                     // docx 出力 CheckBox の表示更新
@@ -3321,7 +3318,7 @@ namespace PileDesign.ViewModels
                     {
                         pgs.SettlementGridData = [];
                         if (CurrentInputModel?.PileLayoutItems != null)
-                            foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
+                            foreach (var pile in CurrentInputModel.PileLayoutItems) pile.NotifyGroupPileSettlementChanged();
                     }
                 }
             }
@@ -3511,7 +3508,7 @@ namespace PileDesign.ViewModels
                 pgs.ActiveCaseIndex = -1;
                 pgs.SettlementGridData = [];
                 if (CurrentInputModel?.PileLayoutItems != null)
-                    foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
+                    foreach (var pile in CurrentInputModel.PileLayoutItems) pile.NotifyGroupPileSettlementChanged();
             }
 
             // 通知 + Canvas 更新
@@ -3606,7 +3603,7 @@ namespace PileDesign.ViewModels
                         pgs.SettlementGridData = [];
 
                         if (CurrentInputModel?.PileLayoutItems != null)
-                            foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
+                            foreach (var pile in CurrentInputModel.PileLayoutItems) pile.NotifyGroupPileSettlementChanged();
                     }
                 }
 
@@ -4110,19 +4107,28 @@ namespace PileDesign.ViewModels
         private readonly object _analysisResultContentOptionLock = new();
 
         /// <summary>
-        /// 群杭沈下解析ボタンの可否を UI 操作のたびに問い直すためのハンドラ。
+        /// 群杭沈下解析ボタンの可否と、押せない理由 (ツールチップ) を UI 操作のたびに問い直すハンドラ。
         ///
         /// 判定材料 (荷重タイプ・矩形荷重・杭の軸力・土層・荷重面 Z) が多く、
         /// すべての変更に通知を張ると必ずどれか漏れ、<b>押せるはずのボタンが灰色のまま</b>になる。
         /// WPF の <c>CommandManager.RequerySuggested</c> はフォーカス移動やクリックのたびに
         /// 発火するので、これに任せるほうが取りこぼしが無い。
         /// 弱参照で保持されるため、ハンドラはフィールドに置いて回収されないようにする。
+        ///
+        /// <b>ツールチップも同じ信号で更新する。</b>以前は可否だけをここで問い直しており、
+        /// 文言のほうは通知が無かったため、矩形荷重を足したあとも
+        /// 「矩形荷重が定義されていません」と出たままになっていた
+        /// (ボタンは押せるのに、理由だけが古い)。
         /// </summary>
         private readonly EventHandler _requeryGroupSettlement;
 
+        /// <summary>直近に評価した「実行できない理由」。文言が変わったときだけ通知するために持つ。</summary>
+        private string? _lastGroupSettlementBlocker;
+        private bool _hasEvaluatedGroupSettlementBlocker;
+
         public MainWindowViewModel()
         {
-            _requeryGroupSettlement = (_, _) => PileGroupSettlementAnalysisCommand.NotifyCanExecuteChanged();
+            _requeryGroupSettlement = (_, _) => RefreshGroupSettlementGuard();
             System.Windows.Input.CommandManager.RequerySuggested += _requeryGroupSettlement;
 
             // WPF にクロススレッド変更の同期化を許可（Add/Remove が背景スレッドから来ても UI スレッドへ安全にマーシャル）

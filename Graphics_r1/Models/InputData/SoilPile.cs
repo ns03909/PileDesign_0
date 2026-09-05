@@ -478,9 +478,23 @@ namespace PileDesign.Models.InputData
         }
 
 
-        // 解析結果（荷重-沈下曲線）
-        // 計算プロパティ（SettlementAtR_SLS/DLS/ULS 等）の更新通知を飛ばすため SetProperty 経由で管理
+        /// <summary>
+        /// 単杭沈下解析の結果 (常時の荷重-沈下曲線)。
+        ///
+        /// <b>置き場所はここのままにしてある。</b>基礎梁考慮沈下の杭頭ばねと、
+        /// 水平解析の杭先端 P-S ばねが<b>次の解析の入力として</b>これを読むため、
+        /// 結果側へ動かすと数値の出る経路に手が入る。
+        ///
+        /// ただし<b>入力の一部としては保存しない</b> ([JsonIgnore])。以前は現在の入力と
+        /// 解析時のスナップショットの両方に同じ曲線が書き出され、保存・Undo のたびに
+        /// 曲線ぶんの直列化が走っていた。保存はファイルの
+        /// <c>SinglePileSettlementResult</c> の節が 1 回だけ受け持つ。
+        /// 旧ファイルは <see cref="LegacyLoadDisplacements"/> が受け取る。
+        ///
+        /// 計算プロパティ (SettlementAtR_SLS/DLS/ULS 等) の更新通知を飛ばすため SetProperty 経由。
+        /// </summary>
         private ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> _loadDisplacements = [];
+        [JsonIgnore]
         public ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> LoadDisplacements
         {
             get => _loadDisplacements;
@@ -495,7 +509,41 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>単杭沈下解析の結果 (極限の荷重-沈下曲線)。<see cref="LoadDisplacements"/> と同じ扱い。</summary>
+        [JsonIgnore]
         public ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> LoadDisplacementsLimit { get; set; } = [];
+
+        /// <summary>
+        /// 旧ファイルの "LoadDisplacements" / "LoadDisplacementsLimit" を受け取るためだけのプロパティ。
+        /// 読込時に本体へ移して空にするので、保存し直したファイルでは空配列になる。
+        /// <b>ここを読んでよいのは読込の移行だけ。</b>
+        /// </summary>
+        [JsonPropertyName("LoadDisplacements")]
+        public List<VerticalLoadTransferMethod.LoadDisplacement> LegacyLoadDisplacements { get; set; } = [];
+
+        /// <summary>旧ファイルの極限側。<see cref="LegacyLoadDisplacements"/> と同じ。</summary>
+        [JsonPropertyName("LoadDisplacementsLimit")]
+        public List<VerticalLoadTransferMethod.LoadDisplacement> LegacyLoadDisplacementsLimit { get; set; } = [];
+
+        /// <summary>
+        /// 旧ファイルから受け取った曲線を本体へ移し、受け取り口を空にする。
+        /// 移すものが無ければ何もしない (新しいファイルは結果の節から入る)。
+        /// </summary>
+        internal void MigrateLegacyLoadDisplacements()
+        {
+            if (LegacyLoadDisplacements.Count > 0)
+            {
+                if (LoadDisplacements.Count == 0)
+                    LoadDisplacements = [.. LegacyLoadDisplacements];
+                LegacyLoadDisplacements = [];
+            }
+            if (LegacyLoadDisplacementsLimit.Count > 0)
+            {
+                if (LoadDisplacementsLimit.Count == 0)
+                    LoadDisplacementsLimit = [.. LegacyLoadDisplacementsLimit];
+                LegacyLoadDisplacementsLimit = [];
+            }
+        }
 
         // 全節点変位・反力（各荷重ステップ）— DeepCopy/JSON保存から除外
         [JsonIgnore]
@@ -1175,7 +1223,8 @@ namespace PileDesign.Models.InputData
                 this.PileBodyNo,
                 this.PileBodyInput,
                 this.Z,
-                new ObservableCollection<PileZDataItem>(this.ZDataItems.Select(item => item.DeepCopy()))
+                new ObservableCollection<PileZDataItem>(
+                    (this.ZDataItems ?? []).Select(item => item.DeepCopy()))
             );
             {
                 copy.PileBottomAltitude = this.PileBottomAltitude;
@@ -1205,12 +1254,14 @@ namespace PileDesign.Models.InputData
                 copy.NodeDisplacements = this.NodeDisplacements;
                 copy.NodeReactions = this.NodeReactions;
 
+                // 空を許す。Undo のたびに全 SoilPile でここを通るので、
+                // 途中まで組んだモデルで落とさない
                 copy.PileBodySegments = new ObservableCollection<PileBodySegment>
-                    (this.PileBodySegments.Select(segment => segment.DeepCopy()));
+                    ((this.PileBodySegments ?? []).Select(segment => segment.DeepCopy()));
                 copy.GroundLayers = new ObservableCollection<GroundLayerInput>
-                    (this.GroundLayers.Select(layer => layer.DeepCopy()));
+                    ((this.GroundLayers ?? []).Select(layer => layer.DeepCopy()));
                 copy.PileCircumVerticals = new ObservableCollection<PileCircumVertical>
-                    (this.PileCircumVerticals.Select(pileCircumVertical => pileCircumVertical.DeepCopy()));
+                    ((this.PileCircumVerticals ?? []).Select(pileCircumVertical => pileCircumVertical.DeepCopy()));
                 copy.HorizontalSoilReactions = new ObservableCollection<HorizontalSoilReactionItem>
                     (this.HorizontalSoilReactions.Select(horizontalSoilReaction => horizontalSoilReaction.DeepCopy()));
                 copy.Kh0LayerOverrides = new ObservableCollection<Kh0LayerOverride>

@@ -634,6 +634,9 @@ namespace PileDesign.ViewModels
             if (DoatsuGoryokuBane != null)
             {
                 OnPropertyChanged(nameof(IsDoatsuGoryokuBaneVisible));
+                // 警告文はこのフラグで文面が変わる。通知しないと、根入れのタブが出たのに
+                // 「土層-杭セットを確認してください」のままになる
+                OnPropertyChanged(nameof(WarningMessage));
             }
         }
 

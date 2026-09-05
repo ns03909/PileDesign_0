@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
 using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
 using PileDesign.Services;
 using System;
 using System.Collections.Generic;
@@ -200,13 +201,10 @@ namespace PileDesign.ViewModels
             // 書くと保存ファイルに複製が復活してケース側の要素が $ref になる。
             // 空のまま残すことで、新しく保存するファイルからは中身が消える。
 
-            // 杭ごとの沈下量
+            // 杭ごとの沈下量も書かない。表示は結果 (記録) から引くので、
+            // 表示中のケースが変わったことだけ知らせる。
             if (piles == null) return;
-            foreach (var pile in piles)
-            {
-                if (record.PileSettlements_mm.TryGetValue(pile.PileNo, out double s))
-                    pile.GroupPileSettlement = s;
-            }
+            foreach (var pile in piles) pile.NotifyGroupPileSettlementChanged();
         }
 
         private ObservableCollection<SettlementGridDataItem> ComputeGridData(

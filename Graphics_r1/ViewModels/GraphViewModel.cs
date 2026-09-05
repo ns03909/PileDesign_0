@@ -4,6 +4,7 @@ using PileDesign.Common;
 using PileDesign.Common.Undo;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
 using ScottPlot;
 using ScottPlot.Plottables;
 using ScottPlot.WPF;

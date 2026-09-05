@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json.Serialization;
+using PileDesign.Models.Results;
 using System.Windows;
 using System.Windows.Media.Media3D;
 
@@ -103,12 +104,9 @@ namespace PileDesign.Models.InputData
         [JsonIgnore]
         internal ObservableCollection<SettlementGridDataItem> LegacySettlementGridData => _settlementGridData;
 
-        /// <summary>表示中のケースの結果。未解析・該当なしは null。</summary>
+        /// <summary>表示中のケースの結果。未解析・該当なしは null。実体は <see cref="Result"/>。</summary>
         [JsonIgnore]
-        public GroupSettlementCaseRecord? ActiveRecord =>
-            CaseRecords != null && ActiveCaseIndex >= 0 && ActiveCaseIndex < CaseRecords.Count
-                ? CaseRecords[ActiveCaseIndex]
-                : null;
+        public GroupSettlementCaseRecord? ActiveRecord => _result.ActiveRecord;
 
         /// <summary>
         /// 表示中のケースの沈下グリッド。<b>表示系はこちらを読む。</b>
@@ -118,9 +116,21 @@ namespace PileDesign.Models.InputData
         /// </summary>
         [JsonIgnore]
         public ObservableCollection<SettlementGridDataItem> ActiveSettlementGridData =>
-            ActiveRecord?.SettlementGridData ?? _emptyGrid;
+            _result.ActiveSettlementGridData;
 
-        private readonly ObservableCollection<SettlementGridDataItem> _emptyGrid = [];
+        /// <summary>
+        /// 表示中のケースのコンタ格子 X 座標。<b>記録から引く。</b>
+        ///
+        /// <see cref="SettlementGridX"/> は解析が現在の入力に書くもので、解析時のスナップショットには
+        /// 移らない。表示はスナップショットを読むため、沈下だけ再実行すると軸が古いまま
+        /// (または空のまま) になり、コンタが出なくなっていた。
+        /// </summary>
+        [JsonIgnore]
+        public System.Collections.Generic.List<double> ActiveGridX => _result.ActiveGridX;
+
+        /// <summary>表示中のケースのコンタ格子 Y 座標 (<see cref="ActiveGridX"/> と同じ)。</summary>
+        [JsonIgnore]
+        public System.Collections.Generic.List<double> ActiveGridY => _result.ActiveGridY;
 
         /// <summary>
         /// 表示中のケースの矩形荷重。ケースが無ければ<b>入力そのもの</b>を返す。
@@ -141,36 +151,113 @@ namespace PileDesign.Models.InputData
         /// 入力側に持たせた複製。表示系はこちらを読むこと
         /// (複製の同期を忘れた経路で画面がずれるのを断つため)。
         /// </summary>
-        public double SettlementOf(int pileNo) =>
-            ActiveRecord != null && ActiveRecord.PileSettlements_mm.TryGetValue(pileNo, out double s)
-                ? s
-                : 0.0;
+        public double SettlementOf(int pileNo) => _result.SettlementOf(pileNo);
 
-        // 群杭沈下解析結果 (ケース別)。基礎梁考慮反復・通常 Steinbrenner どちらでも 1+ レコード保存。
-        // 既存単一結果との互換性: 解析実行時は最終的に SettlementGridData / RectLoads / 各杭 GroupPileSettlement
-        // を ActiveCaseIndex のレコードからコピーして反映する。
-        private ObservableCollection<GroupSettlementCaseRecord> _caseRecords = [];
+        /// <summary>
+        /// 群杭沈下解析の<b>結果</b>。入力ではないので JSON には載せない
+        /// (保存は <c>ProjectData.GroupSettlementResult</c> の節が受け持つ)。
+        ///
+        /// 現在の入力と解析時のスナップショットは<b>同じインスタンス</b>を指す。
+        /// 以前はケース記録を入力モデルの中に持っていたため、保存ファイルに二重に入り、
+        /// スナップショットへ写す処理を別に書く必要があり、Undo が入力ごと巻き戻すと
+        /// 沈下の結果まで消えていた。
+        ///
+        /// 空にするだけなら <see cref="GroupSettlementResult.Clear"/> を使うこと。
+        /// インスタンスを差し替えると、共有している側の参照が切れる。
+        /// </summary>
+        [JsonIgnore]
+        public GroupSettlementResult Result
+        {
+            get => _result;
+            set
+            {
+                _result = value ?? new GroupSettlementResult();
+                OnPropertyChanged(nameof(Result));
+                RaiseResultDerivedChanged();
+            }
+        }
+        private GroupSettlementResult _result = new();
+
+        /// <summary>結果まわりの派生プロパティをまとめて通知する。</summary>
+        private void RaiseResultDerivedChanged()
+        {
+            OnPropertyChanged(nameof(CaseRecords));
+            OnPropertyChanged(nameof(ActiveCaseIndex));
+            OnPropertyChanged(nameof(ActiveLoadingType));
+            OnPropertyChanged(nameof(ActiveRecord));
+            OnPropertyChanged(nameof(ActiveSettlementGridData));
+            OnPropertyChanged(nameof(ActiveRectLoads));
+        }
+
+        /// <summary>
+        /// 群杭沈下解析結果 (ケース別)。<b>実体は <see cref="Result"/> にある。</b>
+        ///
+        /// ここは既存の読み手 (画面・計算書・検定) をそのまま通すための入口で、保存はしない。
+        /// 旧ファイルの "CaseRecords" は <see cref="LegacyCaseRecords"/> が受け取り、
+        /// 読込時に <see cref="Result"/> へ移す。
+        /// </summary>
+        [JsonIgnore]
         public ObservableCollection<GroupSettlementCaseRecord> CaseRecords
         {
-            get => _caseRecords;
-            set => SetProperty(ref _caseRecords, value ?? []);
+            get => _result.CaseRecords;
+            set
+            {
+                _result.CaseRecords = value ?? [];
+                OnPropertyChanged(nameof(CaseRecords));
+                OnPropertyChanged(nameof(ActiveRecord));
+                OnPropertyChanged(nameof(ActiveSettlementGridData));
+                OnPropertyChanged(nameof(ActiveRectLoads));
+            }
         }
 
-        // 現在表示中のケース index (CaseRecords に対応)。-1 = 未選択 or 単一結果
-        private int _activeCaseIndex = -1;
+        /// <summary>
+        /// 旧ファイルの "CaseRecords" を受け取るためだけのプロパティ。
+        ///
+        /// System.Text.Json には「読み込めるが書き出さない」プロパティが作れない
+        /// (セッターのみ・internal ゲッターのいずれも逆直列化されない) ので、
+        /// 別名のプロパティに旧 JSON 名を割り当てている。
+        /// 読込時に <see cref="Result"/> へ移したあと<b>空にする</b>ので、
+        /// 保存し直したファイルでは常に空配列になる。
+        /// </summary>
+        [JsonPropertyName("CaseRecords")]
+        public ObservableCollection<GroupSettlementCaseRecord> LegacyCaseRecords { get; set; } = [];
+
+        /// <summary>
+        /// 現在表示中のケース index (CaseRecords に対応)。-1 = 未選択 or 単一結果。
+        /// 実体は <see cref="Result"/>。
+        ///
+        /// 結果の節にも入るが、<b>旧ファイルをそのまま読める</b>ようにこちらも JSON に載せている
+        /// (どちらも同じ値。読込時は結果の節が勝つ)。
+        /// </summary>
         public int ActiveCaseIndex
         {
-            get => _activeCaseIndex;
-            set => SetProperty(ref _activeCaseIndex, value);
+            get => _result.ActiveCaseIndex;
+            set
+            {
+                if (_result.ActiveCaseIndex == value) return;
+                _result.ActiveCaseIndex = value;
+                OnPropertyChanged(nameof(ActiveCaseIndex));
+                OnPropertyChanged(nameof(ActiveRecord));
+                OnPropertyChanged(nameof(ActiveSettlementGridData));
+                OnPropertyChanged(nameof(ActiveRectLoads));
+            }
         }
 
-        // 表示中の LoadingType (CaseRecords を LoadingType で絞り込んで表示するため)。
-        // 入力設定 LoadingType (次回解析で使う) とは独立。空文字 = 未指定 (旧データ互換)。
-        private string _activeLoadingType = "";
+        /// <summary>
+        /// 表示中の LoadingType (CaseRecords を LoadingType で絞り込んで表示するため)。
+        /// 入力設定 LoadingType (次回解析で使う) とは独立。空文字 = 未指定 (旧データ互換)。
+        /// 実体は <see cref="Result"/> ( <see cref="ActiveCaseIndex"/> と同じ理由で JSON にも載せる)。
+        /// </summary>
         public string ActiveLoadingType
         {
-            get => _activeLoadingType;
-            set => SetProperty(ref _activeLoadingType, value ?? "");
+            get => _result.ActiveLoadingType;
+            set
+            {
+                string v = value ?? "";
+                if (_result.ActiveLoadingType == v) return;
+                _result.ActiveLoadingType = v;
+                OnPropertyChanged(nameof(ActiveLoadingType));
+            }
         }
 
         // グリッドX
@@ -606,50 +693,6 @@ namespace PileDesign.Models.InputData
     }
 
 
-
-    /// <summary>
-    /// 群杭沈下解析結果のケース別レコード。
-    /// 通常 (Steinbrenner 単発) は 1 レコード、基礎梁考慮反復は VL/L1/L2 各 1 レコード。
-    /// </summary>
-    public class GroupSettlementCaseRecord : BaseModel
-    {
-        public string LoadCaseName { get; set; } = "";
-
-        /// <summary>このレコードを生成した解析タイプ ("任意矩形" / "個別矩形" / "個別十字" / "個別十字（基礎梁反力）" / "個別矩形（基礎梁考慮）")。空文字 = 旧データ。</summary>
-        public string LoadingType { get; set; } = "";
-
-        /// <summary>true: 個別矩形（基礎梁考慮）反復解析の結果。false: 通常 Steinbrenner 単発。</summary>
-        public bool IsBeamAware { get; set; }
-
-        /// <summary>このケースの (反復後の) 矩形荷重。</summary>
-        public ObservableCollection<RectLoad> RectLoads { get; set; } = [];
-
-        /// <summary>このケースの沈下グリッドデータ (コンタ図描画用)。</summary>
-        public ObservableCollection<SettlementGridDataItem> SettlementGridData { get; set; } = [];
-
-        /// <summary>各杭の沈下量 [mm]。Key = PileLayoutDataItem.PileNo</summary>
-        public Dictionary<int, double> PileSettlements_mm { get; set; } = [];
-
-        // ── 基礎梁考慮の場合のみ ──
-        public bool IsConverged { get; set; }
-        public int IterationCount { get; set; }
-        public double FinalResidual { get; set; }
-
-        /// <summary>各杭の杭反力 Pi [kN]。</summary>
-        public Dictionary<int, double> PileReactions_kN { get; set; } = [];
-
-        /// <summary>各杭の杭頭ばね剛性 ki [kN/m]。</summary>
-        public Dictionary<int, double> SpringStiffness { get; set; } = [];
-
-        /// <summary>節点変位 (基礎梁考慮のみ)。</summary>
-        public List<FEM.VerticalBeamNodeResult> NodeResults { get; set; } = [];
-
-        /// <summary>梁断面力 (基礎梁考慮のみ)。</summary>
-        public List<FEM.VerticalBeamBeamResult> BeamResults { get; set; } = [];
-
-        /// <summary>反復ログ (基礎梁考慮反復のときの履歴。表示は ObservableCollection 化される)。</summary>
-        public List<string> IterationLog { get; set; } = [];
-    }
 
     public class Steinnbrener : BaseModel
     {

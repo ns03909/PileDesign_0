@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -35,6 +35,15 @@ namespace PileDesign.Models
 
         /// <summary>解析を実行した時刻（表示用）。</summary>
         public DateTime CapturedAt { get; init; } = DateTime.Now;
+
+        /// <summary>
+        /// 群杭沈下解析の結果。<see cref="InputSnapshot"/> と現在の入力が指す<b>同じインスタンス</b>。
+        ///
+        /// 沈下の結果は水平解析と違って「解析時の入力ごと切り離す」形になっていない
+        /// (杭は PileNo で引く)。ここは所在をはっきりさせるための入口。
+        /// </summary>
+        public Results.GroupSettlementResult? GroupSettlement =>
+            InputSnapshot?.PileGroupSettlement?.Result;
 
         /// <summary>どの解析が実行済みかのフラグ（復元用）。</summary>
         public bool HasHorizontal { get; init; }
@@ -98,6 +107,20 @@ namespace PileDesign.Models
                     HasVerticalBeam = hasVerticalBeam,
                     IsElementSplit = isElementSplit,
                 };
+
+                // 単杭沈下の荷重-沈下曲線も [JsonIgnore] なので往復で落ちる。
+                // 結果表示 (グラフ・計算書) はスナップショットを読むため写す。
+                Results.SinglePileSettlementResult.CopyCurves(liveInput, set.InputSnapshot);
+
+                // 群杭沈下の結果は入力ではないので JSON 往復では複製されない ([JsonIgnore])。
+                // スナップショットからも<b>同じインスタンス</b>を指させる。
+                // 複製すると「沈下だけ再実行したときにスナップショットへ写す」処理が要り、
+                // 写し忘れた経路で結果表示に沈下が出ない、という不具合になっていた。
+                if (liveInput.PileGroupSettlement != null)
+                {
+                    set.InputSnapshot.PileGroupSettlement ??= new PileGroupSettlement();
+                    set.InputSnapshot.PileGroupSettlement.Result = liveInput.PileGroupSettlement.Result;
+                }
 
                 // JSON に載らない表示用の揮発状態を引き継ぐ（ばねはインデックス整合）
                 CopyVolatileDisplayState(anaModel, set.AnaModel);

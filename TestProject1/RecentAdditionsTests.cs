@@ -1,4 +1,4 @@
-using PileDesign.Converters;
+﻿using PileDesign.Converters;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
 using PileDesign.ViewModels;
@@ -514,10 +514,11 @@ namespace TestProject1
         [TestMethod]
         public void PileSettlements_ParallelMatchesSequential()
         {
-            // 各杭の GroupPileSettlement が並列計算後も逐次計算と同じか
+            // 各杭の沈下量が並列計算後も逐次計算と同じか。
+            // 値は解析が返す PileSettlements_mm が正 (入力側の杭には書かない)。
             var (pgs, piles, soilPiles, gridX, gridY) = BuildFixture();
             var svc = new SettlementAnalysisService();
-            svc.PerformSettlementAnalysis(
+            var result = svc.PerformSettlementAnalysis(
                 pgs, piles, soilPiles, gridX, gridY,
                 xMin: -10, xMax: 10, yMin: -10, yMax: 10,
                 xOffset: 0, yOffset: 0,
@@ -527,7 +528,9 @@ namespace TestProject1
             {
                 double seqMm = Steinnbrener.CalcSettlement(
                     new Point(p.Point3D.X, p.Point3D.Y), pgs.RectLoads, pgs.SettlementSoilLayers) * 1000.0;
-                Assert.AreEqual(seqMm, p.GroupPileSettlement, 1e-9,
+                Assert.IsTrue(result.PileSettlements_mm.TryGetValue(p.PileNo, out double parMm),
+                    $"杭 {p.PileNo} の沈下量が結果に無い");
+                Assert.AreEqual(seqMm, parMm, 1e-9,
                     $"杭 {p.PileNo} の並列結果が逐次と差分");
             }
         }

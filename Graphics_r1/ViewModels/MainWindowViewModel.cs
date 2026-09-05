@@ -114,6 +114,17 @@ namespace PileDesign.ViewModels
         public void MarkPossiblyEdited() => _hasUnsavedWork = true;
 
         public void SaveUndoState([System.Runtime.CompilerServices.CallerMemberName] string? description = null)
+            => SaveUndoState(AnalysisInputScope.All, description);
+
+        /// <summary>
+        /// Undo スナップショットを積み、入力が編集されたことを記録する。
+        ///
+        /// <paramref name="scope"/> は<b>この編集がどの解析に効くか</b>。
+        /// 群杭沈下の入力しか触らない画面は <see cref="AnalysisInputScope.Settlement"/> を渡す。
+        /// 既定 (<see cref="AnalysisInputScope.All"/>) は水平解析の結果も陳腐化させる。
+        /// </summary>
+        public void SaveUndoState(AnalysisInputScope scope,
+            [System.Runtime.CompilerServices.CallerMemberName] string? description = null)
         {
             // 直接呼出は「大規模操作」を意味するため、進行中のデバウンスセッションを終了させる
             // (これ以降の編集は新しい Undo ステップに割り当てられる)
@@ -131,7 +142,7 @@ namespace PileDesign.ViewModels
                 // 入力が編集された = 表示中の解析結果は現在の入力と一致しない。
                 // 結果は破棄しない (解析時の入力ごと切り離してあるため表示は整合している)。
                 // ここは DataGrid のセル確定 (SaveUndoStateDebounced 経由) も含む全編集の集約点。
-                MarkInputChangedSinceAnalysis();
+                MarkInputChangedSinceAnalysis(scope);
             }
         }
 
@@ -154,13 +165,26 @@ namespace PileDesign.ViewModels
         public void SaveUndoStateDebounced(
             [System.Runtime.CompilerServices.CallerMemberName] string? description = null,
             int debounceMs = DefaultUndoBatchDebounceMs)
+            => SaveUndoStateDebounced(AnalysisInputScope.All, description, debounceMs);
+
+        /// <summary>
+        /// <see cref="SaveUndoStateDebounced(string?, int)"/> に編集の効く範囲を付けたもの。
+        /// </summary>
+        public void SaveUndoStateDebounced(AnalysisInputScope scope,
+            [System.Runtime.CompilerServices.CallerMemberName] string? description = null,
+            int debounceMs = DefaultUndoBatchDebounceMs)
         {
             // セッション開始時のみ重い DeepCopy を実行 (pre-edit 状態を捕捉)。
             // 2 回目以降の連続編集では SaveUndoState をスキップし、デバウンスタイマーだけ更新。
             if (!_undoBatchActive)
             {
-                SaveUndoState(description);
+                SaveUndoState(scope, description);
                 _undoBatchActive = true;
+            }
+            else
+            {
+                // 2 回目以降でも「効く範囲」だけは記録する
+                MarkInputChangedSinceAnalysis(scope);
             }
 
             // 既存タイマーがあれば破棄、新規タイマーで debounceMs 後にセッション終了
@@ -400,10 +424,15 @@ namespace PileDesign.ViewModels
         /// <param name="e">DataGridセルエディットイベント引数</param>
         /// <param name="customAction">追加のカスタム処理（オプション）</param>
         /// <returns>Commitアクションの場合true、それ以外false</returns>
+        /// <param name="scope">
+        /// この編集がどの解析に効くか。群杭沈下の入力だけを扱う DataGrid は
+        /// <see cref="AnalysisInputScope.Settlement"/> を渡す (水平解析の結果を陳腐化させない)。
+        /// </param>
         private bool HandleDataGridCellEditEnding(DataGridCellEditEndingEventArgs e,
             Action customAction = null,
             bool useDebouncedUndo = false,
-            [System.Runtime.CompilerServices.CallerMemberName] string? undoDescription = null)
+            [System.Runtime.CompilerServices.CallerMemberName] string? undoDescription = null,
+            AnalysisInputScope scope = AnalysisInputScope.All)
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
@@ -411,9 +440,9 @@ namespace PileDesign.ViewModels
                 // (binding.UpdateSource() より前 = まだモデルは旧値のため pre-edit が捕捉される)
                 // useDebouncedUndo=true の場合、連続編集セッションの最初の 1 回のみ DeepCopy 実行 (Phase A)
                 if (useDebouncedUndo)
-                    SaveUndoStateDebounced(undoDescription);
+                    SaveUndoStateDebounced(scope, undoDescription);
                 else
-                    SaveUndoState(undoDescription);
+                    SaveUndoState(scope, undoDescription);
 
                 // バインディングソースの更新
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
@@ -1165,7 +1194,8 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            HandleDataGridCellEditEnding(e, () =>
+            // 矩形荷重は群杭沈下だけが読む。水平解析の結果を陳腐化させない
+            HandleDataGridCellEditEnding(e, scope: AnalysisInputScope.Settlement, customAction: () =>
             {
                 IsGroupPileSettlementAnalysisDone = false;
                 // ユーザ編集時は個別十字系から「任意矩形」に切替
@@ -1214,7 +1244,8 @@ namespace PileDesign.ViewModels
             }
 
             // pre-edit 状態を Undo スナップショットに保存 (binding.UpdateSource より前に実行)
-            SaveUndoState();
+            // 沈下用の土層は群杭沈下だけが読む。水平解析の結果は陳腐化しない
+            SaveUndoState(AnalysisInputScope.Settlement);
 
             // バインディングソースの更新 (= コミット)
             var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
@@ -1786,8 +1817,15 @@ namespace PileDesign.ViewModels
         {
             if (_undoManager.CurrentState is InputModel state)
             {
+                // 沈下の結果は入力ではないので Undo で巻き戻さない。
+                // DeepCopy は結果を複製しない ([JsonIgnore]) ため、持ち越さないと
+                // 「入力を 1 つ直して戻したら沈下の結果が消えた」になる。
+                var settlementResult = CurrentInputModel?.PileGroupSettlement?.Result;
+
                 CurrentInputModel = state.DeepCopy();
                 CurrentInputModel.AttachViewModel(this);
+                if (settlementResult != null && CurrentInputModel.PileGroupSettlement != null)
+                    CurrentInputModel.PileGroupSettlement.Result = settlementResult;
 
                 NotifyUIChanged(immediate: true);
                 OnPropertyChanged(nameof(CurrentInputModel));
@@ -1890,7 +1928,7 @@ namespace PileDesign.ViewModels
                 pgs.ActiveCaseIndex = -1;
                 pgs.SettlementGridData = [];
                 if (CurrentInputModel?.PileLayoutItems != null)
-                    foreach (var pile in CurrentInputModel.PileLayoutItems) pile.GroupPileSettlement = 0;
+                    foreach (var pile in CurrentInputModel.PileLayoutItems) pile.NotifyGroupPileSettlementChanged();
             }
             OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
             OnPropertyChanged(nameof(HasGroupSettlementBeamAwareCases));
@@ -2726,7 +2764,8 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            SaveUndoState();
+            // 沈下用の土層は群杭沈下だけが読む。水平解析の結果は陳腐化しない
+            SaveUndoState(AnalysisInputScope.Settlement);
 
             var groundInput = CurrentInputModel.GroundsInput[SelectedGroundInputModelNo - 1];
             double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;

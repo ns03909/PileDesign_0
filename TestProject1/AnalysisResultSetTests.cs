@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.FEM;
@@ -200,5 +200,39 @@ namespace TestProject1
             Assert.IsNull(vm.CurrentModel);
             Assert.IsFalse(vm.IsHorizontalAnalysisDone);
         }
-    }
+    
+        /// <summary>
+        /// 材料モデル化オプションを解析後に変えたら、ステータスに出ること。
+        ///
+        /// オプションは静的で現在の入力から書き込まれるため、解析後に変えると
+        /// <b>応答値は解析時・限界曲線は今のオプション</b>という混ざった表示になる。
+        /// 計算書には同じ照合の注意書きがあるのに、画面には何も出ていなかった。
+        /// </summary>
+        [TestMethod]
+        public void MaterialOptionsChangedAfterAnalysis_IsShownInTheStatus()
+        {
+            bool ignoreTension = PileDesign.Models.InputData.ConcreteModelOptions.IgnoreTensileStrength;
+            try
+            {
+                var vm = new MainWindowViewModel();
+                var model = new PileDesign.FEM.AnaModel
+                {
+                    ConcreteOptionsSignature = PileDesign.Models.InputData.ConcreteModelOptions.Signature(),
+                };
+                vm.CurrentModel = model;
+
+                Assert.IsFalse(vm.MaterialOptionsChangedSinceAnalysis,
+                    "解析直後は食い違っていないはず");
+
+                PileDesign.Models.InputData.ConcreteModelOptions.IgnoreTensileStrength = !ignoreTension;
+
+                Assert.IsTrue(vm.MaterialOptionsChangedSinceAnalysis,
+                    "オプションを変えたのに食い違いが検出されない");
+            }
+            finally
+            {
+                PileDesign.Models.InputData.ConcreteModelOptions.IgnoreTensileStrength = ignoreTension;
+            }
+        }
+}
 }

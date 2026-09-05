@@ -18,6 +18,25 @@ namespace PileDesign.Models
         public InputModel InputModel { get; set; }
         public AnaModel AnaModel { get; set; }
 
+        /// <summary>
+        /// 群杭沈下解析の結果。<b>入力とは別の節</b>に持つ。
+        ///
+        /// 以前はケース記録が <c>InputModel.PileGroupSettlement</c> の中にあったため、
+        /// 現在の入力と <see cref="ResultInputSnapshot"/> の両方に同じ結果が書き出されていた。
+        /// 旧ファイルはここが null で、入力側の "CaseRecords" から読込時に移す
+        /// (<c>LegacySettlementMigration</c>)。
+        /// </summary>
+        public Results.GroupSettlementResult? GroupSettlementResult { get; set; }
+
+        /// <summary>
+        /// 単杭沈下解析の結果 (土層-杭セットごとの荷重-沈下曲線)。<b>入力とは別の節</b>に持つ。
+        ///
+        /// 以前は <c>ElementDivision.SoilPiles[].LoadDisplacements</c> として入力の一部に
+        /// 書き出しており、現在の入力と <see cref="ResultInputSnapshot"/> の両方に同じ曲線が
+        /// 入っていた。旧ファイルはここが null で、入力側から読込時に移す。
+        /// </summary>
+        public Results.SinglePileSettlementResult? SinglePileSettlementResult { get; set; }
+
         /// <summary>基礎梁鉛直解析結果</summary>
         public List<VerticalBeamCaseResult> VerticalBeamCaseResults { get; set; }
 

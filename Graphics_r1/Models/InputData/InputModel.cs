@@ -726,6 +726,17 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 杭の親をこのモデルに固定する。<c>AttachViewModel</c> の親固定だけを行う版で、
+        /// ViewModel を用意できないテストのための入口。
+        /// 杭は自分の沈下量を親モデルの結果から引くので、親が無いと 0 になる。
+        /// </summary>
+        internal void SetPileOwnersForTest()
+        {
+            if (PileLayoutItems == null) return;
+            foreach (var item in PileLayoutItems) item.SetOwner(this);
+        }
+
+        /// <summary>
         /// 地盤関係の Z 値を一括シフトする。ReferenceAltitude 変更時に呼び、
         /// 絶対標高を保持したまま Z 座標だけ更新するのに使う。
         ///
@@ -1816,6 +1827,18 @@ namespace PileDesign.Models.InputData
                 Serilog.Log.Verbose(
                     "InputModel.DeepCopy total={Total}ms (hand={Hand}, quickClone={Qc}, json-rest={Json}) piles={Piles}",
                     swTotal.ElapsedMilliseconds, tHand, tQc, tJsonRest, _pileLayoutItems?.Count ?? 0);
+
+                // SoilPiles は JSON から外してあるので、複製側へは手書きの DeepCopy で入れる。
+                // <b>入れないと複製の SoilPiles が空になる。</b>Undo はこの複製を現在の入力に
+                // 差し替えるので、そのままでは<b>杭要素分割と単杭沈下の結果が丸ごと消える</b>
+                // (分割済みのフラグだけが残り、基礎梁考慮沈下が「単杭沈下が未実行」と言い出す)。
+                // 荷重-沈下曲線は SoilPile.DeepCopy が参照で持たせるので、ここでの費用は
+                // 杭数ぶんのフィールドコピーだけ。JSON 直列化に比べれば桁違いに軽い。
+                if (savedSoilPiles != null && copy.ElementDivision != null)
+                {
+                    copy.ElementDivision.SetSoilPilesSilently(
+                        [.. savedSoilPiles.Select(sp => sp.DeepCopy())]);
+                }
 
                 return copy;
             }

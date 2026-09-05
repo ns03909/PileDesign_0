@@ -2,6 +2,7 @@
 using PileDesign.Common;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
 using PileDesign.Services;
 using PileDesign.ViewModels;
 using System;

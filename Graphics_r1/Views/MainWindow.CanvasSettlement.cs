@@ -275,13 +275,12 @@ namespace PileDesign.Views
                 viewModel.ResultInputModel.PileGroupSettlement == null) return;
 
             var pileGroupSettlement = viewModel.ResultInputModel.PileGroupSettlement;
-            if (pileGroupSettlement.SettlementGridX == null ||
-                pileGroupSettlement.SettlementGridY == null)
-                return;
 
             double z = viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude;
-            var xs = pileGroupSettlement.SettlementGridX;
-            var ys = pileGroupSettlement.SettlementGridY;
+            // 格子は表示中のケースの沈下値から引く (入力側の SettlementGridX/Y は
+            // 解析が現在の入力に書くもので、スナップショットには移らない)
+            var xs = pileGroupSettlement.ActiveGridX;
+            var ys = pileGroupSettlement.ActiveGridY;
             // 表示中のケースの結果を読む (複製の SettlementGridData ではなく)
             var items = pileGroupSettlement.ActiveSettlementGridData;
 
@@ -711,8 +710,8 @@ namespace PileDesign.Views
             double worldY = worldPoint.Y;
 
             // グリッド範囲内かチェック
-            var xs = pileGroupSettlement.SettlementGridX;
-            var ys = pileGroupSettlement.SettlementGridY;
+            var xs = pileGroupSettlement.ActiveGridX;
+            var ys = pileGroupSettlement.ActiveGridY;
 
             if (xs.Count < 2 || ys.Count < 2)
             {
@@ -748,8 +747,8 @@ namespace PileDesign.Views
         /// </summary>
         private double? InterpolateSettlement(double x, double y, PileGroupSettlement pileGroupSettlement)
         {
-            var xs = pileGroupSettlement.SettlementGridX;
-            var ys = pileGroupSettlement.SettlementGridY;
+            var xs = pileGroupSettlement.ActiveGridX;
+            var ys = pileGroupSettlement.ActiveGridY;
             var items = pileGroupSettlement.ActiveSettlementGridData;
 
             // x, yを含むセルを探す

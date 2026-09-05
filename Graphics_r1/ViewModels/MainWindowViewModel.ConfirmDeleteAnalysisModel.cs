@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.Input;
+﻿using PileDesign.Models.Results;
+using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
 using System.Windows;
 using PileDesign.Services;
@@ -137,17 +138,22 @@ namespace PileDesign.ViewModels
             return true;
         }
 
-        /// <summary>入力モデル 1 つぶんの沈下結果を消す。現在の入力とスナップショットの両方に使う。</summary>
+        /// <summary>
+        /// 入力モデル 1 つぶんの沈下の痕跡を消す。
+        ///
+        /// 結果そのもの (<c>PileGroupSettlement.Result</c>) は現在の入力とスナップショットで
+        /// <b>同じインスタンス</b>なので 1 回消せば足りる。ここで消すのは、入力側に残っている
+        /// 複製 (旧ファイル用の沈下グリッド・各杭の沈下量) で、こちらはモデルごとに存在する。
+        /// </summary>
         private static void ClearSettlementResultsIn(Models.InputData.InputModel? input)
         {
             var pgs = input?.PileGroupSettlement;
             if (pgs == null) return;
 
-            pgs.CaseRecords?.Clear();
-            pgs.ActiveCaseIndex = -1;
+            pgs.Result.Clear();
             pgs.SettlementGridData = [];
             if (input!.PileLayoutItems != null)
-                foreach (var pile in input.PileLayoutItems) pile.GroupPileSettlement = 0;
+                foreach (var pile in input.PileLayoutItems) pile.NotifyGroupPileSettlementChanged();
         }
 
         // テスト用フック (内部ロジックをそのまま検証する)

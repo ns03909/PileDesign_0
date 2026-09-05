@@ -1263,6 +1263,26 @@ namespace PileDesign.ViewModels
         private bool CanPileGroupSettlementAnalysis() => DescribeGroupSettlementBlocker() == null;
 
         /// <summary>
+        /// 群杭沈下解析ボタンの可否と、押せない理由 (ツールチップ) を問い直す。
+        ///
+        /// <c>CommandManager.RequerySuggested</c> から呼ばれるので、判定は 1 回だけ行い、
+        /// <b>文言が変わったときだけ</b>通知する (RequerySuggested はクリックや
+        /// フォーカス移動のたびに飛んでくる)。
+        /// </summary>
+        internal void RefreshGroupSettlementGuard()
+        {
+            PileGroupSettlementAnalysisCommand.NotifyCanExecuteChanged();
+
+            string? blocker = DescribeGroupSettlementBlocker();
+            if (_hasEvaluatedGroupSettlementBlocker && blocker == _lastGroupSettlementBlocker) return;
+
+            _hasEvaluatedGroupSettlementBlocker = true;
+            _lastGroupSettlementBlocker = blocker;
+            OnPropertyChanged(nameof(GroupSettlementAnalysisDisabledReason));
+            OnPropertyChanged(nameof(GroupSettlementAnalysisToolTip));
+        }
+
+        /// <summary>
         /// 実行を妨げているものを 1 つ返す (利用者向けの文面)。無ければ null。
         /// 荷重タイプごとに必要な入力が違うので、まず荷重タイプで分岐する。
         /// </summary>
@@ -1384,7 +1404,9 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            CurrentInputModel.PileGroupSettlement.SettlementGridData = result.SettlementGridData;
+            // 沈下グリッドは記録 (CaseRecord) の側に持たせる。入力モデルの複製
+            // (PileGroupSettlement.SettlementGridData) は旧ファイルを開くためだけに残してあり、
+            // ここへ書くと保存ファイルにコンタが二重に入る。表示は ActiveSettlementGridData を読む。
 
             // 個別矩形（基礎梁考慮）以外の解析結果を CaseRecord として永続化
             // (個別矩形（基礎梁考慮）は OpenGroupSettlementWithBeamWindow 側で既に保存済み)

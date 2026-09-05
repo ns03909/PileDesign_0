@@ -1,4 +1,4 @@
-using PileDesign.FEM;
+﻿using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
@@ -309,7 +309,8 @@ namespace PileDesign.Services
             for (int i = 0; i < n; i++)
             {
                 // 入力側の複製にも書く (表示系は既にケースの記録を読むが、複製はまだ残っている)
-                pilesArr[i].GroupPileSettlement = settlementsMm[i];
+                // 杭ごとの沈下量は結果 (CaseRecord.PileSettlements_mm) が持つ。
+                // 入力側の杭へは書かない (表示は GroupPileSettlement が結果から引く)。
                 byPileNo[pilesArr[i].PileNo] = settlementsMm[i];
             }
             return byPileNo;
