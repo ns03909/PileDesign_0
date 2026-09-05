@@ -370,6 +370,22 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(AllowableJudgementEnabled));
         }
 
+        // 鋼管杭の柱座屈 (曲げ座屈) を考慮する。座屈長は液状化区間の長さ
+        // (「基礎部材の強度と変形性能」解説図 8.3)。既定 true。
+        // 液状化区間が無ければ低減は生じないので、多くのモデルでは何も変わらない。
+        [ObservableProperty]
+        private bool _considerSteelPipeColumnBuckling = true;
+
+        partial void OnConsiderSteelPipeColumnBucklingChanged(bool value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.ConsiderSteelPipeColumnBuckling,
+                v => InputModel.FundamentalInput.ConsiderSteelPipeColumnBuckling = v,
+                v => ConsiderSteelPipeColumnBuckling = v,
+                value ? "鋼管杭の柱座屈を考慮する へ変更" : "鋼管杭の柱座屈を考慮しない へ変更");
+        }
+
         // 【評定書に規定が無い】終局の圧縮縁ひずみを 5,000μ とする（解析に効く）
         [ObservableProperty]
         private bool _useUltimateStrain5000ForSteelPipeConcrete;
@@ -596,6 +612,7 @@ namespace PileDesign.ViewModels
             UseUltimateStrain5000ForSteelPipeConcrete = InputModel.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete;
             ExcludeRebarFromAllowableLimitForSteelPipeConcrete = InputModel.FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete;
             UseFiberNMForSteelPipeConcrete = InputModel.FundamentalInput.UseFiberNMForSteelPipeConcrete;
+            ConsiderSteelPipeColumnBuckling = InputModel.FundamentalInput.ConsiderSteelPipeColumnBuckling;
             Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
@@ -688,6 +705,9 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete):
                     ExcludeRebarFromAllowableLimitForSteelPipeConcrete = InputModel.FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete;
+                    break;
+                case nameof(FundamentalInput.ConsiderSteelPipeColumnBuckling):
+                    ConsiderSteelPipeColumnBuckling = InputModel.FundamentalInput.ConsiderSteelPipeColumnBuckling;
                     break;
                 case nameof(FundamentalInput.UseFiberNMForSteelPipeConcrete):
                     UseFiberNMForSteelPipeConcrete = InputModel.FundamentalInput.UseFiberNMForSteelPipeConcrete;

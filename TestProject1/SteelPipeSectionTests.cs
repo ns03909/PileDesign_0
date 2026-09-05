@@ -1,4 +1,4 @@
-using PileDesign.Models.InputData;
+﻿using PileDesign.Models.InputData;
 using System;
 using System.Reflection;
 
@@ -39,14 +39,21 @@ namespace TestProject1
             return (SteelPipeSection)ctor.Invoke(new object[] { D, t, F, beta1, Fc, E });
         }
 
-        private static SteelPipeSection NewSection_Full(double D, double t, double F, double beta1, double Fc, double sigmaB, double E = 205000.0)
+        /// <summary>
+        /// 完全コンストラクタ。末尾の座屈長は 0 (柱座屈による低減なし) を既定にする。
+        /// 座屈長を与えたときの挙動は <see cref="SteelPipeBucklingTests"/> が受け持つ。
+        /// </summary>
+        private static SteelPipeSection NewSection_Full(double D, double t, double F, double beta1, double Fc, double sigmaB,
+            double E = 205000.0, double bucklingLength = 0.0)
         {
             var type = typeof(SteelPipeSection);
             var ctor = type.GetConstructor(
                 BindingFlags.NonPublic | BindingFlags.Instance,
-                binder: null, types: new[] { typeof(double), typeof(double), typeof(double), typeof(double), typeof(double), typeof(double), typeof(double) },
+                binder: null,
+                types: new[] { typeof(double), typeof(double), typeof(double), typeof(double),
+                               typeof(double), typeof(double), typeof(double), typeof(double) },
                 modifiers: null)!;
-            return (SteelPipeSection)ctor.Invoke(new object[] { D, t, F, beta1, Fc, sigmaB, E });
+            return (SteelPipeSection)ctor.Invoke(new object[] { D, t, F, beta1, Fc, sigmaB, E, bucklingLength });
         }
 
         // ===== Sfc1: 局部座屈低減式 =====
@@ -91,35 +98,31 @@ namespace TestProject1
             Assert.AreEqual(expected, s.Sfc1, 1e-6);
         }
 
-        // ===== Sfc2: 柱座屈低減式 (Nc=Ny プレースホルダ → λC=1) =====
+        // ===== Sfc2: 柱座屈低減 =====
 
+        /// <summary>
+        /// 柱座屈による低減は<b>液状化区間があるときだけ</b>効く。
+        ///
+        /// 座屈長は液状化区間 (β &lt; 1 の範囲) の長さ
+        /// （「基礎部材の強度と変形性能」解説図 8.3）。液状化を検討していないモデルでは
+        /// 座屈長が 0 になり、sfc2 = F/1.5 で低減されない。このとき局部座屈側の
+        /// sfc1 (≤ F/1.5) が必ず支配するので、<b>耐力は従来と変わらない</b>。
+        ///
+        /// 座屈長を与えたときの挙動は <see cref="SteelPipeBucklingTests"/> が受け持つ。
+        /// </summary>
         [TestMethod]
-        [Ignore("ComputeSfc2 は Nc (弾性曲げ座屈荷重) の本格算定が未実装のため暫定的に Sfc1 を返す。Nc 実装後に有効化する。SteelPipeSection.cs:150 参照。")]
-        public void Sfc2_Placeholder_GivesShortColumnRegime()
+        public void Sfc2_WithoutLiquefaction_LeavesLocalBucklingGoverning()
         {
-            // SS400 で λ = π√(E/F) = π × √(205000/235) ≈ 92.8
-            //         Λ = √(π²E/0.6F) = π × √(205000/(0.6×235)) ≈ 119.8
-            // λ ≤ Λ → 短柱式
-            // ν = 1.5 + (2/3)(λ/Λ)² ≈ 1.5 + 0.401 = 1.901
-            // (λC/eλC)² = (1/√(1/0.6))² = 0.6
-            // sfc2 = (1 - 0.4×0.6) × F/ν = 0.76 × 235 / 1.901 ≈ 93.96
-            var s = NewSection_NoFc(600, 12, 235);
-            double E = 205000.0;
-            double F = 235.0;
-            double lambda = 1.0 * Math.PI * Math.Sqrt(E / F);
-            double Lambda = Math.Sqrt(Math.PI * Math.PI * E / 0.6 / F);
-            double nu = 1.5 + (2.0 / 3.0) * Math.Pow(lambda / Lambda, 2);
-            double expected = (1.0 - 0.4 * 0.6) * F / nu;
-            Assert.AreEqual(expected, s.Sfc2, 1e-3);
-        }
-
-        [TestMethod]
-        [Ignore("ComputeSfc2 は Nc 本格算定が未実装で暫定的に Sfc1 を返す。Nc 実装後に有効化する。SteelPipeSection.cs:150 参照。")]
-        public void Sfc2_LessThanSfc1_DueToColumnBuckling()
-        {
-            // Sfc2 (柱座屈考慮) は Sfc1 (短柱想定) より小さくなる
-            var s = NewSection_NoFc(600, 12, 235);
-            Assert.IsTrue(s.Sfc2 < s.Sfc1);
+            foreach (var (D, t) in new[] { (600.0, 12.0), (1000.0, 10.0), (600.0, 24.0) })
+            {
+                var s = NewSection_NoFc(D, t, 235);
+                Assert.AreEqual(235.0 / 1.5, s.Sfc2, 1e-9,
+                    $"D={D}, t={t}: 液状化区間が無いのに柱座屈低減が入っています");
+                Assert.IsTrue(s.Sfc1 <= s.Sfc2 + 1e-9,
+                    $"D={D}, t={t}: 局部座屈側が支配しなくなっています (sfc1={s.Sfc1}, sfc2={s.Sfc2})");
+                Assert.AreEqual(s.sNdc1, s.Ndc, 1e-6,
+                    $"D={D}, t={t}: 損傷限界圧縮軸力が局部座屈側と一致しません");
+            }
         }
 
         // ===== Ndc = β1 × min(sNdc1, sNdc2) =====
@@ -410,32 +413,38 @@ namespace TestProject1
             Assert.AreEqual(Mu0, Mu_at02, 1e-3);
         }
 
+        /// <summary>
+        /// |Nud|/sNuc &gt; 0.2 では Mu = 1.25 × sσCy1 × (1 − |Nud|/sNuc) × <b>sZp</b>。
+        /// 断面係数は 0.2 の上下で同じ sZp を使う (以前は上側だけ sZe だった)。
+        /// </summary>
         [TestMethod]
-        [Ignore("実装は ratio>0.2 領域でも sZp を使用 (連続式に変更済み)。テスト期待値は旧仕様の sZe を想定しており不整合。SteelPipeSection.cs:391-413 参照。")]
         public void UltimateLimitMomentMiddle_AboveThreshold_LinearInteraction()
         {
-            // |Nud|/sNuc > 0.2 領域では Mu = 1.25 × sσCy1 × (1 - |Nud|/sNuc) × sZe
             var s = NewSection_NoFc(600, 12, 235);
             double Nud = 0.5 * s.sNuc;
             double Mu = s.GetUltimateLimitMomentMiddle(Nud);
-            double expected = 1.0 * 1.0 * 1.25 * s.sSigmaCy1 * (1.0 - 0.5) * s.sZe;
+            double expected = 1.0 * 1.0 * 1.25 * s.sSigmaCy1 * (1.0 - 0.5) * s.sZp;
             Assert.AreEqual(expected, Mu, 1e-3);
         }
 
+        /// <summary>
+        /// 0.2 の境界で<b>連続</b>であること。
+        ///
+        /// 以前は上側だけ sZe を使っており、境界で Mu が 2 割ほど跳んでいた。
+        /// 軸力は荷重ステップごとに動く (README「暗黙の前提」3) ので、
+        /// この段差は解析の途中で耐力が跳ぶことを意味する。
+        /// </summary>
         [TestMethod]
-        [Ignore("実装は 0.2 境界で連続 (どちらも sZp を使用) に変更済み。テスト期待値は旧仕様の不連続を想定しており不整合。SteelPipeSection.cs:395 のコメント参照。")]
-        public void UltimateLimitMomentMiddle_DiscontinuityAt02_Documented()
+        public void UltimateLimitMomentMiddle_IsContinuousAt02()
         {
-            // 0.2 境界で意図的な不連続: 低軸力で sZp、高軸力で sZe ベース
             var s = NewSection_NoFc(600, 12, 235);
-            double Mu_below = s.GetUltimateLimitMomentMiddle(0.199 * s.sNuc);  // sZp ベース
-            double Mu_above = s.GetUltimateLimitMomentMiddle(0.201 * s.sNuc);  // sZe ベース
-            // sZp > sZe なので Mu_below > Mu_above (意図的不連続)
-            Assert.IsTrue(Mu_below > Mu_above);
-            // sZe ≈ sZp / 1.27 のため約 80% に低下
-            double drop_ratio = Mu_above / Mu_below;
-            Assert.IsTrue(drop_ratio > 0.7 && drop_ratio < 0.85,
-                $"Discontinuity ratio out of expected: {drop_ratio}");
+            double below = s.GetUltimateLimitMomentMiddle(0.199 * s.sNuc);
+            double above = s.GetUltimateLimitMomentMiddle(0.201 * s.sNuc);
+
+            // 境界の直下は軸力によらず一定 (塑性モーメント)、直上は 1.25(1−0.201) 倍。
+            // 0.2 ちょうどで 1.25 × (1 − 0.2) = 1.0 になるので両側がつながる。
+            Assert.AreEqual(below, above, below * 2e-3,
+                $"0.2 の境界で耐力が跳んでいます (下 {below:F1} / 上 {above:F1})");
         }
 
         [TestMethod]

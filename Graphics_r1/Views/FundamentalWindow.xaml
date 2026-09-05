@@ -333,6 +333,22 @@
                 </StackPanel>
             </GroupBox>
 
+            <!-- 鋼管杭の柱座屈 (曲げ座屈) -->
+            <GroupBox Header="鋼管杭の柱座屈" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+
+                    <ctrl:MaterialOptionRadioPair
+                        Header="柱座屈（曲げ座屈）による許容圧縮応力度の低減" HelpAnchor="fund-opt-steelpipe-buckling" GroupName="OptPipeBuckling"
+                        IsAlternativeSelected="{Binding ConsiderSteelPipeColumnBuckling, Mode=TwoWay}"
+                        DefaultText="考慮しない（局部座屈のみ）"
+                        DefaultFormula="sfc = sfc1（径厚比による局部座屈低減のみ）"
+                        DefaultToolTip="柱としての曲げ座屈による低減を行わず、径厚比 D/t による局部座屈の低減だけを考慮します。&#x0a;液状化した鋼管杭の耐力を、この項目を入れる前の値と比べたいときに選びます。"
+                        AlternativeText="液状化区間を座屈長として考慮する（既定）"
+                        AlternativeFormula="lk = 液状化区間（β &lt; 1）の長さ、Nc = π²EI/lk²、sfc2 は (8.10)〜(8.12)"
+                        AlternativeToolTip="「基礎部材の強度と変形性能」解説図 8.3 により、鋼管杭の座屈長を液状化区間（水平地盤反力係数の低減係数 β が 1 未満の範囲）の長さとします。&#x0a;連続する場合はその合計を 1 つの座屈長とし、区間が複数あるときは最も長いものを採ります。杭が通る範囲だけを数えます。&#x0a;β はレベル1・レベル2 で異なるため、長い方（厳しい方）を採ります。&#x0a;液状化区間が無ければ座屈長は 0 になり、局部座屈側の sfc1 が必ず支配するので低減は生じません。&#x0a;座屈長は液状化の判定を行った地盤でのみ求まります（地盤ウィンドウで FL・β を算定していない地盤では 0）。&#x0a;使用限界・損傷限界・安全限界の圧縮軸力（検定の耐力側）に効きます。"/>
+                </StackPanel>
+            </GroupBox>
+
             <Border Background="#EAF3E8" BorderBrush="#9DB4CC" BorderThickness="0,0,0,1"
                     Margin="0,16,0,0" Padding="8,5,8,5">
                 <TextBlock TextWrapping="Wrap">

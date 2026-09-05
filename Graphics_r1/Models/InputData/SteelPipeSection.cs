@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace PileDesign.Models.InputData
 {
@@ -99,7 +99,12 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 完全コンストラクタ (損傷限界 + 安全限界 両対応)。Fc, sigmaB を指定する。
         /// </summary>
-        internal SteelPipeSection(double _D, double _T, double _F, double _beta1, double fc, double sigmaB, double e = 205000.0)
+        /// <param name="bucklingLength">
+        /// 座屈長 (m)。液状化区間の長さ。0 なら柱座屈による低減を行わない
+        /// (液状化しないモデルではこれが既定になり、結果は従来と変わらない)。
+        /// </param>
+        internal SteelPipeSection(double _D, double _T, double _F, double _beta1, double fc, double sigmaB,
+            double e = 205000.0, double bucklingLength = 0.0)
         {
             D = _D;
             T = _T;
@@ -108,6 +113,7 @@ namespace PileDesign.Models.InputData
             Beta1 = _beta1;
             Fc = fc;
             E = e;
+            BucklingLength = bucklingLength;
 
             // ずれ止め板厚 zh (D に応じて段階値、文献 8 章規定)
             zh = D switch
@@ -126,8 +132,8 @@ namespace PileDesign.Models.InputData
                 ? F / 1.5 * (0.8 + 5.0 / (D / T))
                 : F / 1.5;
 
-            // 許容圧縮応力度 sfc2 (柱座屈低減、Johnson 放物線 + Euler、Nc=Ny プレースホルダ)
-            Sfc2 = ComputeSfc2();
+            // 許容圧縮応力度 sfc2 (柱座屈低減。座屈長 = 液状化区間の長さ)
+            Sfc2 = ComputeSfc2(BucklingLength);
 
             // ずれ止めコンクリートの短期許容支圧応力度
             // cσCk = (2/3) × α × √(sApf / (zn × Atr)) × Fc
@@ -143,35 +149,58 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 柱座屈低減を考慮した許容圧縮応力度 sfc2 を計算する。
-        /// Nc プレースホルダ = Ny のため λC = 1 で固定。
-        /// (Nc 本格実装後は引数化する想定)
+        /// 座屈長 l_k (m)。液状化区間の長さで、0 なら柱座屈による低減を行わない。
+        ///
+        /// 「基礎部材の強度と変形性能」解説図 8.3 により、鋼管杭の座屈長は
+        /// 液状化区間 (水平地盤反力係数の低減係数 β &lt; 1 の範囲) の長さとする。
+        /// 求め方は <see cref="SteelPipeBuckling.ComputeBucklingLength"/>。
         /// </summary>
-        private double ComputeSfc2()
-        {
-            // 暫定実装: Nc (弾性曲げ座屈荷重) の本格算定が未実装のため、柱座屈低減を行わず
-            // sfc2 = sfc1 (= F/1.5) を返す。地盤に支持される杭では Nc が十分大きく λc → 0 と
-            // なり sfc2 は sfc1 にほぼ等しくなる前提。Nc プレースホルダ = Ny のままだと
-            // λc = 1 で過度な低減 (sfc2 ≈ 0.4·F) となり、安全限界軸力が損傷限界を下回る
-            // 異常を生じるため、ここでは保守的に sfc1 を返す。Nc 本格実装後にこの暫定処理を
-            // 解除する想定。
-            return Sfc1;
+        public double BucklingLength { get; }
 
-            // 元実装 (Nc プレースホルダ = Ny で λc=1 固定の場合):
-            //   double Ny = 1.5 * sft * sAp;
-            //   double Nc = Ny;                      // placeholder
-            //   double lambdaC = Math.Sqrt(Ny / Nc); // = 1
-            //   double eLambdaC = 1.0 / Math.Sqrt(0.6);
-            //   double lambda = lambdaC * Math.PI * Math.Sqrt(E / F);
-            //   double Lambda = Math.Sqrt(Math.PI * Math.PI * E / 0.6 / F);
-            //   double ratio = lambda / Lambda;
-            //   double nu = 1.5 + (2.0 / 3.0) * ratio * ratio;
-            //   if (lambda <= Lambda) {
-            //       double r = lambdaC / eLambdaC;
-            //       return (1.0 - 0.4 * r * r) * F / nu;
-            //   } else {
-            //       return F / (nu * lambdaC * lambdaC);
-            //   }
+        /// <summary>
+        /// 柱座屈 (曲げ座屈) を考慮した許容圧縮応力度 sfc2。
+        /// 「基礎部材の強度と変形性能」(8.10)〜(8.12)。
+        ///
+        /// <code>
+        ///   λc = √(Ny / Nc),  eλc = 1/√0.6,  ν = 3/2 + (2/3)(λc/eλc)²
+        ///   λc ≤ eλc :  sfc2 = (1 − 0.4·λc²/eλc²)·F/ν        …(8.10)
+        ///   λc &gt; eλc :  sfc2 = F/(ν·λc²)                      …(8.11)
+        /// </code>
+        ///
+        /// Ny は鋼管杭の降伏軸力 F·sAp、Nc は液状化による地盤剛性の低下を考慮した
+        /// 弾性曲げ座屈荷重 <c>Nc = π²·E·I / lk²</c>。I は鋼管のみ (充填コンクリートは見込まない)。
+        ///
+        /// <b>座屈長が 0 のときは低減しない。</b>液状化区間が無ければ杭は全長にわたって
+        /// 地盤に横から支えられており、柱として座屈しないため。このとき λc = 0、ν = 3/2 で
+        /// sfc2 = F/1.5 となり、局部座屈側の sfc1 (≤ F/1.5) が必ず支配する
+        /// = <b>液状化しないモデルの結果は変わらない</b>。
+        /// </summary>
+        private double ComputeSfc2(double bucklingLength)
+        {
+            // 液状化区間なし → 柱座屈の検討範囲が無い
+            if (!(bucklingLength > 0) || !double.IsFinite(bucklingLength)) return F / 1.5;
+
+            // 断面二次モーメント (mm⁴)。鋼管のみで評価する。
+            double iSteel = Math.PI / 64.0 * (Math.Pow(D, 4) - Math.Pow(D - 2 * T, 4));
+            if (!(iSteel > 0)) return F / 1.5;
+
+            // 弾性曲げ座屈荷重 Nc = π²EI / lk²。単位を N に揃えるため lk を mm にする。
+            double lk_mm = bucklingLength * 1000.0;
+            double nc = Math.PI * Math.PI * E * iSteel / (lk_mm * lk_mm);
+            if (!(nc > 0) || !double.IsFinite(nc)) return F / 1.5;
+
+            double ny = F * sAp;                    // 降伏軸力 (= 1.5·sft·sAp)
+            double lambdaC = Math.Sqrt(ny / nc);
+            double eLambdaC = 1.0 / Math.Sqrt(0.6); // 弾性限界細長比
+            double ratio = lambdaC / eLambdaC;
+            double nu = 1.5 + (2.0 / 3.0) * ratio * ratio;   // 座屈安全率 (8.12)
+
+            double sfc2 = lambdaC <= eLambdaC
+                ? (1.0 - 0.4 * ratio * ratio) * F / nu                 // (8.10)
+                : F / (nu * lambdaC * lambdaC);                        // (8.11)
+
+            // 低減式なので、低減なしの値を上回ることはない
+            return Math.Min(sfc2, F / 1.5);
         }
 
         // -------------- 使用限界 --------------

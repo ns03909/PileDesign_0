@@ -1523,6 +1523,12 @@ namespace PileDesign.Models.InputData
                 var usedCombinations = new HashSet<(int groundNo, int pileBodyNo, long zKey)>();
                 var newPiles = new List<SoilPile>();
 
+                // 杭体ごとの座屈長 (m)。鋼管杭の柱座屈の検討範囲で、液状化区間の長さ
+                // （「基礎部材の強度と変形性能」解説図 8.3）。
+                // 同じ杭体を複数の杭が使い、それぞれ別の地盤・別の深さに居ることがあるので、
+                // ここで<b>最も長いもの</b>を集める。
+                var bucklingLengthByPileBody = new Dictionary<int, double>();
+
                 foreach (PileLayoutDataItem pileLayoutDataItem in PileLayoutItems)
                 {
                     int pileBodyNo = pileLayoutDataItem.PileBodyNo;
@@ -1589,6 +1595,21 @@ namespace PileDesign.Models.InputData
                                 zs.Add(zD);
                             }
                         }
+                    }
+
+                    // 鋼管杭の座屈長 = この杭が通る液状化区間の長さ。
+                    // レベル1・レベル2 で液状化する範囲が違うので、長い方 (=厳しい方) を採る。
+                    {
+                        var ground = GroundsInput[groundNo - 1];
+                        double lk = 0.0;
+                        for (int levelIndex = 0; levelIndex < 2; levelIndex++)
+                        {
+                            lk = Math.Max(lk, SteelPipeBuckling.ComputeBucklingLength(
+                                ground.GroundMassesData, ground.GroundTopAltitude,
+                                levelIndex, pileTopAltitude, pileBottomAltitude));
+                        }
+                        bucklingLengthByPileBody[pileBodyNo] =
+                            Math.Max(bucklingLengthByPileBody.GetValueOrDefault(pileBodyNo), lk);
                     }
 
                     int glAdded = 0;
@@ -1680,6 +1701,8 @@ namespace PileDesign.Models.InputData
                         pileLayoutDataItem.SoilPileAltNo = altNo;
                     }
                 }
+
+                ApplyBucklingLengthToSections(bucklingLengthByPileBody);
             }
             finally
             {
@@ -1688,6 +1711,47 @@ namespace PileDesign.Models.InputData
 
             // 一括通知は RegenerateSoilPilesAndNotify 側で実施
             // NotifySoilPileChangedForAll();
+        }
+
+        /// <summary>
+        /// 求めた座屈長を、その杭体の全断面へ配る。
+        ///
+        /// 座屈長は断面そのものの性質ではなく<b>その杭が置かれた地盤</b>で決まるが、
+        /// 許容曲げ座屈応力度 sfc2 は断面が持つ量なので、ここで書き込む。
+        /// 鋼管杭以外は sfc2 を使わないため 0 のままでよい（無駄なキャッシュ破棄も避ける）。
+        ///
+        /// 基本設定で柱座屈を考慮しない選択にしているときは 0 を配る
+        /// （= この項目を入れる前と同じ耐力になる）。
+        /// </summary>
+        private void ApplyBucklingLengthToSections(Dictionary<int, double> bucklingLengthByPileBody)
+        {
+            if (PileBodies == null) return;
+
+            for (int i = 0; i < PileBodies.Count; i++)
+            {
+                var pileBody = PileBodies[i];
+                if (pileBody?.PileBodySegments == null) continue;
+                if (pileBody.PileBodyType != PileTypeNames.SteelPipe) continue;
+
+                double lk = ConcreteModelOptions.ConsiderSteelPipeColumnBuckling
+                    ? bucklingLengthByPileBody.GetValueOrDefault(i + 1)
+                    : 0.0;
+
+                foreach (var segment in pileBody.PileBodySegments)
+                {
+                    // 値が変わったときだけ書く (setter が断面のキャッシュを捨てるため)
+                    var section = segment?.PileSection;
+                    if (section == null) continue;
+                    if (Math.Abs(section.BucklingLength - lk) > 1e-9)
+                        section.BucklingLength = lk;
+                }
+
+                if (lk > 0)
+                {
+                    Log.Debug("[GenerateSoilPiles] 鋼管杭 杭体{PileBodyNo}: 座屈長 (液状化区間) = {Lk:F2} m",
+                        i + 1, lk);
+                }
+            }
         }
 
         // 地盤根入れ生成メソッド

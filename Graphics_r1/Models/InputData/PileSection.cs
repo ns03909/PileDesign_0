@@ -656,7 +656,9 @@ namespace PileDesign.Models.InputData
                 // その他（鋼管杭の鋼管部、コンクリート充填鋼管部など）。
                 // 充填鋼管部はファイバー M-φ の対象となり得るため、断面諸元をキーに含めて
                 // 異なる断面同士のキャッシュ衝突を防ぐ。
-                _ => $"OTHER|{PileBodyType}|{PileSectionType}|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}"
+                // 鋼管杭はここに落ちる。座屈長は耐力を変えるのでキーに含める
+                // (含めないと、液状化の有無が違うモデルで前のモデルの曲線が返る)。
+                _ => $"OTHER|{PileBodyType}|{PileSectionType}|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|lk={BucklingLength:F3}|N={axialNRounded}"
             };
 
             return $"{key}|{cmo}";
@@ -1720,6 +1722,28 @@ namespace PileDesign.Models.InputData
             {
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageService.ShowError($"断面プロパティのリセット中にエラーが発生しました。", ex, "断面リセットエラー"));
+            }
+        }
+
+        // 座屈長 (m)。鋼管杭の柱座屈の検討範囲で、液状化区間の長さ。
+        //
+        // 断面そのものの性質ではなく<b>その杭が置かれた地盤</b>で決まるので、
+        // 杭要素分割 (GenerateSoilPiles) が地盤と杭の対応から求めて書き込む。
+        // 0 なら柱座屈による低減を行わない (液状化を検討していないモデルはこれになる)。
+        //
+        // 同じ杭体を複数の杭が使い、それぞれ別の地盤に居ることがある。その場合は
+        // <b>最も長い座屈長</b>を採る (どの杭でも成り立つ耐力にするため)。
+        private double _bucklingLength;
+        public double BucklingLength
+        {
+            get => _bucklingLength;
+            set
+            {
+                double safeValue = value < 0 || !double.IsFinite(value) ? 0.0 : value;
+                if (SetProperty(ref _bucklingLength, safeValue))
+                {
+                    InvalidateAllCaches();
+                }
             }
         }
 
@@ -3472,7 +3496,8 @@ namespace PileDesign.Models.InputData
                 _beta1: 1.0,
                 fc: fcForSection,
                 sigmaB: sigmaU,
-                e: 205000.0);
+                e: 205000.0,
+                bucklingLength: BucklingLength);
         }
 
         /// <summary>

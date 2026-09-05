@@ -225,6 +225,17 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _excludeRebarFromAllowableLimitForSteelPipeConcrete, value);
         }
 
+        // 鋼管杭の柱座屈 (曲げ座屈) による許容圧縮応力度の低減を考慮する。
+        // 座屈長は液状化区間の長さ (「基礎部材の強度と変形性能」解説図 8.3)。
+        // 既定 true。液状化区間が無ければ低減は生じないので、
+        // 液状化を検討していない旧い保存ファイルの結果は変わらない。
+        private bool _considerSteelPipeColumnBuckling = true;
+        public bool ConsiderSteelPipeColumnBuckling
+        {
+            get => _considerSteelPipeColumnBuckling;
+            set => SetProperty(ref _considerSteelPipeColumnBuckling, value);
+        }
+
         // 場所打ち鋼管コンクリート杭の許容時 N-M を断面分割積分で求める。
         // 既定 true（従来どおり）。false で評定書 5.(3) の単純累加式になる。
         // 旧い保存ファイルにはキーが無いので、この初期値がそのまま効く（挙動を変えないため true）。

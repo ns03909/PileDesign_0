@@ -45,8 +45,66 @@ namespace PileDesign.Output
             AddHeader2(body, "設計条件");
             AddAssumptionTable(body, "項目", "設定", "内容", BuildDesignConditionRows(inputModel));
             WarnIfAnalysisConditionsChanged(body, inputModel);
+            NoteSteelPipeColumnBuckling(body, inputModel);
 
             AddLineBreak(body);
+        }
+
+        /// <summary>
+        /// 鋼管杭の柱座屈 (曲げ座屈) をどう扱ったかを明記する。
+        ///
+        /// 座屈長は液状化区間 (水平地盤反力係数の低減係数 β &lt; 1 の範囲) の長さとする
+        /// (日本建築学会「基礎部材の強度と変形性能」解説図 8.3)。
+        /// 液状化区間が無ければ低減は効かないが、<b>「効かなかった」ことも書く</b> —
+        /// 黙っていると「検討していない」のか「検討して低減が不要だった」のか読めないため。
+        ///
+        /// 鋼管杭が無い計算書には出さない。
+        /// </summary>
+        private void NoteSteelPipeColumnBuckling(Body body, InputModel inputModel)
+        {
+            // 杭体番号は一覧の並び順 (1 始まり)。杭体自身は番号を持たない。
+            var steelPipeBodies = inputModel?.PileBodies?
+                .Select((pb, i) => (No: i + 1, Body: pb))
+                .Where(x => (x.Body?.PileBodyType ?? "").Contains(PileTypeNames.SteelPipe))
+                .ToList();
+            if (steelPipeBodies == null || steelPipeBodies.Count == 0) return;
+
+            if (!ConcreteModelOptions.ConsiderSteelPipeColumnBuckling)
+            {
+                AddTableNote(body,
+                    "※ 鋼管杭の許容圧縮応力度は、径厚比による局部座屈の低減のみを考慮し、"
+                    + "柱としての曲げ座屈による低減は行っていない (基本設定で考慮しない選択)。"
+                    + "液状化層が厚いなど、水平抵抗が期待できない区間が長い場合は別途検討すること。");
+                return;
+            }
+
+            // 杭体ごとの座屈長。区間で違うことは無いので、杭体につき 1 つ取り出す。
+            var lengths = steelPipeBodies
+                .Select(x => (x.No,
+                              Lk: x.Body.PileBodySegments?
+                                    .Select(seg => seg?.PileSection?.BucklingLength ?? 0.0)
+                                    .DefaultIfEmpty(0.0).Max() ?? 0.0))
+                .ToList();
+
+            var reduced = lengths.Where(x => x.Lk > 0).ToList();
+            if (reduced.Count == 0)
+            {
+                AddTableNote(body,
+                    "※ 鋼管杭の許容圧縮応力度は、径厚比による局部座屈の低減を考慮している。"
+                    + "柱としての曲げ座屈の検討範囲は液状化区間 (水平地盤反力係数の低減係数 β < 1 の範囲) "
+                    + "の長さとするが (「基礎部材の強度と変形性能」解説図 8.3)、"
+                    + "本計算では該当する区間が無いため、曲げ座屈による低減は生じていない。");
+                return;
+            }
+
+            string detail = string.Join("、", reduced.Select(x => $"杭体No.{x.No}: {x.Lk:F2} m"));
+            AddTableNote(body,
+                "※ 鋼管杭の許容曲げ座屈応力度 sfc2 は、液状化区間 "
+                + "(水平地盤反力係数の低減係数 β < 1 の範囲、連続する場合はその合計) の長さを座屈長として算定した"
+                + "（「基礎部材の強度と変形性能」解説図 8.3 および (8.10)〜(8.12)）。"
+                + $"座屈長は {detail}。"
+                + "弾性曲げ座屈荷重は Nc = π²EI/lk²（I は鋼管のみ）とし、"
+                + "許容圧縮応力度は局部座屈による sfc1 との小さい方を採っている。");
         }
 
         /// <summary>
@@ -205,6 +263,15 @@ namespace PileDesign.Output
                     ? "鋼管によるコンクリートの拘束効果を考慮した値" +
                       "（建設省総合技術開発プロジェクト 基礎WG 最終報告書 資料4-7。BCJ評定-FD0356-08 に規定は無い）"
                     : "場所打ち系杭に共通の終局圧縮縁ひずみを用いる（BCJ評定-FD0356-08 に規定は無い）"));
+
+            rows.Add(("鋼管杭の柱座屈（曲げ座屈）",
+                ConcreteModelOptions.ConsiderSteelPipeColumnBuckling ? "考慮（既定）" : "考慮しない",
+                ConcreteModelOptions.ConsiderSteelPipeColumnBuckling
+                    ? "液状化区間（水平地盤反力係数の低減係数 β < 1 の範囲、連続する場合はその合計）を"
+                      + "座屈長として許容曲げ座屈応力度 sfc2 を算定する"
+                      + "（「基礎部材の強度と変形性能」解説図 8.3、(8.10)〜(8.12)）。"
+                      + "液状化区間が無ければ低減は生じない"
+                    : "柱としての曲げ座屈による低減を行わず、局部座屈のみを考慮する"));
 
             rows.Add((ConcreteModelOptions.MapLimitStateText("使用限界・損傷限界の判定材料（場所打ち鋼管コンクリート杭）"),
                 ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete

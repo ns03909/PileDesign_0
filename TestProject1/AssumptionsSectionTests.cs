@@ -71,13 +71,13 @@ namespace TestProject1
         }
 
         [TestMethod]
-        public void BuildMaterialOptionRows_Defaults_Returns16RowsWithDefaultChoices()
+        public void BuildMaterialOptionRows_Defaults_Returns17RowsWithDefaultChoices()
         {
             using var _ = OptionsScope.AllDefaults();
 
             var rows = WordDocument.BuildMaterialOptionRows();
 
-            Assert.AreEqual(16, rows.Count, "材料モデル化オプションの行数");
+            Assert.AreEqual(17, rows.Count, "材料モデル化オプションの行数");
             Assert.IsTrue(rows[0].Choice.Contains("個別選択"), "2025解説書はチェックなし表示のはず");
             Assert.IsTrue(rows.Count(r => r.Choice.Contains("既定")) >= 8,
                 "全既定なら大半の行に（既定）表記が付くはず");

@@ -219,6 +219,8 @@ namespace PileDesign.ViewModels
                 f?.ExcludeRebarFromAllowableLimitForSteelPipeConcrete ?? false;
             Models.InputData.ConcreteModelOptions.UseFiberNMForSteelPipeConcrete =
                 f?.UseFiberNMForSteelPipeConcrete ?? true;
+            Models.InputData.ConcreteModelOptions.ConsiderSteelPipeColumnBuckling =
+                f?.ConsiderSteelPipeColumnBuckling ?? true;
             Models.InputData.ConcreteModelOptions.Notification1113CompressionCase = f?.Notification1113CompressionCase ?? 1;
 
             // M-φ 静的キャッシュ（全断面共有）

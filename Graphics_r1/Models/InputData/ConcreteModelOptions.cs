@@ -255,6 +255,24 @@
         private static bool _useFiberNMForSteelPipeConcrete = true;
 
         /// <summary>
+        /// 鋼管杭の許容圧縮応力度で、柱としての曲げ座屈による低減 (sfc2) を考慮するか。
+        ///
+        /// <b>既定は true。</b>日本建築学会「基礎部材の強度と変形性能」解説図 8.3 により、
+        /// 座屈長は<b>液状化区間 (水平地盤反力係数の低減係数 β &lt; 1 の範囲) の長さ</b>とし、
+        /// 連続する場合はその合計を採る。液状化区間が無ければ座屈長は 0 になり、
+        /// 局部座屈側 (sfc1) が必ず支配するので<b>結果は変わらない</b>。
+        ///
+        /// false にすると座屈長を 0 として扱う (柱座屈を考慮しない)。
+        /// 液状化した鋼管杭の耐力を、この項目を入れる前の値と比べたいときに使う。
+        /// </summary>
+        public static bool ConsiderSteelPipeColumnBuckling
+        {
+            get => _considerSteelPipeColumnBuckling;
+            set => Set(ref _considerSteelPipeColumnBuckling, value);
+        }
+        private static bool _considerSteelPipeColumnBuckling = true;
+
+        /// <summary>
         /// BCJ評定-FD0356-08 が定める項目がすべて評定どおりに設定されているか。
         /// 適用範囲（φ700〜2700・板厚下限・鋼管長・腐食しろ 1mm・Fc 18〜45）の検査を
         /// 有効にするかの判定に使う。個別に切り替えると自動で追随する。
@@ -315,6 +333,7 @@
                $"Y{(UseGuideYoungsModulus ? 1 : 0)}" +
                $"J{(UseUltimateStrain5000ForSteelPipeConcrete ? 1 : 0)}" +
                $"{(ExcludeRebarFromAllowableLimitForSteelPipeConcrete ? 1 : 0)}" +
-               $"{(UseFiberNMForSteelPipeConcrete ? 1 : 0)}";
+               $"{(UseFiberNMForSteelPipeConcrete ? 1 : 0)}" +
+               $"B{(ConsiderSteelPipeColumnBuckling ? 1 : 0)}";
     }
 }
