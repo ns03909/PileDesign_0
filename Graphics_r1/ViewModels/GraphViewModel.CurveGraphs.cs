@@ -294,25 +294,19 @@ namespace PileDesign.ViewModels
                                 : -1;
                             if (lastStepForSet < 0 && ShowAnalysisOverlay) continue;
 
-                            // 軸力推定
+                            // 軸力推定: 荷重ケースの地震時軸力、取れなければ杭配置の軸力。
+                            // (以前はこの手前に LoadCase.NonlinearAxialForceN を反射で探す分岐があったが、
+                            //  LoadCase にその名前のプロパティは無く、必ずこちらへ来ていた)
                             double axialN = 0.0;
-                            var prop = loadCase.GetType().GetProperty("NonlinearAxialForceN");
-                            if (prop?.GetValue(loadCase) is double nlc && double.IsFinite(nlc) && nlc != 0.0)
+                            try
                             {
-                                axialN = nlc;
+                                double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                if (double.IsFinite(nSeis) && nSeis != 0.0)
+                                    axialN = nSeis;
                             }
-                            else
-                            {
-                                try
-                                {
-                                    double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-                                    if (double.IsFinite(nSeis) && nSeis != 0.0)
-                                        axialN = nSeis;
-                                }
-                                catch (Exception ex) { Log.Warning(ex, "[GraphVM] GetSeismicAxialForce"); }
-                                if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
-                                    axialN = pileLayout.AxialForce;
-                            }
+                            catch (Exception ex) { Log.Warning(ex, "[GraphVM] GetSeismicAxialForce"); }
+                            if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
+                                axialN = pileLayout.AxialForce;
 
                             // M-φ曲線取得（解析で使用したものを優先）
                             List<double> phis = null;
@@ -683,25 +677,19 @@ namespace PileDesign.ViewModels
                             if (pileLayout == null) continue;
                             if (SelectedPileOption != UiText.All && !targetPileNos.Contains(pileLayout.No)) continue;
 
-                            // 軸力推定
+                            // 軸力推定: 荷重ケースの地震時軸力、取れなければ杭配置の軸力。
+                            // (以前はこの手前に LoadCase.NonlinearAxialForceN を反射で探す分岐があったが、
+                            //  LoadCase にその名前のプロパティは無く、必ずこちらへ来ていた)
                             double axialN = 0.0;
-                            var prop = loadCase.GetType().GetProperty("NonlinearAxialForceN");
-                            if (prop?.GetValue(loadCase) is double nlc && double.IsFinite(nlc) && nlc != 0.0)
+                            try
                             {
-                                axialN = nlc;
+                                double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                if (double.IsFinite(nSeis) && nSeis != 0.0)
+                                    axialN = nSeis;
                             }
-                            else
-                            {
-                                try
-                                {
-                                    double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-                                    if (double.IsFinite(nSeis) && nSeis != 0.0)
-                                        axialN = nSeis;
-                                }
-                                catch (Exception ex) { Log.Warning(ex, "[GraphVM] GetSeismicAxialForce"); }
-                                if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
-                                    axialN = pileLayout.AxialForce;
-                            }
+                            catch (Exception ex) { Log.Warning(ex, "[GraphVM] GetSeismicAxialForce"); }
+                            if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
+                                axialN = pileLayout.AxialForce;
 
                             // Y 案: 表示中ケースに対応するスナップショットから曲線取得 (解析実体と整合)
                             // 無ければ rs 直接 (旧経路、後方互換)、それも無ければ K·θ 線形外挿。

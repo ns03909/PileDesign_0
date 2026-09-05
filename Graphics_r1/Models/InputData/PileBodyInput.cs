@@ -697,16 +697,13 @@ namespace PileDesign.Models.InputData
                             return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // 直接呼び出し失敗したら反射フォールバックへ
+                        // M-θ が作れなければ、最後の Rigid() (安全側) まで落ちる。
+                        Serilog.Log.Warning(ex,
+                            "[GetMThetaRelationship] キャプテンパイル工法の M-θ を作れませんでした (N={AxialN} kN)", axialN);
                     }
                 }
-
-                // 反射フォールバック（既存のヘルパをそのまま利用）
-                // axialN は kN、計算クラスは N を期待するため×1000
-                var curve = TryCallMThetaRelationship(cpObj, axialN * 1000);
-                if (curve != null) return PileHeadRotationDef.Combined(curve);
             }
 
             // 2) FT-Pile 構法 → PileTop.FTPile の M-θ を採用
@@ -730,15 +727,13 @@ namespace PileDesign.Models.InputData
                             return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // フォールバック
+                        // M-θ が作れなければ、最後の Rigid() (安全側) まで落ちる。
+                        Serilog.Log.Warning(ex,
+                            "[GetMThetaRelationship] FT-Pile構法の M-θ を作れませんでした (N={AxialN} kN)", axialN);
                     }
                 }
-
-                // axialN は kN、FTPile は N を期待するため×1000
-                var curve = TryCallMThetaRelationship(ftObj, axialN * 1000);
-                if (curve != null) return PileHeadRotationDef.Combined(curve);
             }
 
             // 2.5) キャプリングパイル工法 → PileTop.CapringPile の M-θ を採用
@@ -808,15 +803,13 @@ namespace PileDesign.Models.InputData
                             return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // フォールバック
+                        // M-θ が作れなければ、最後の Rigid() (安全側) まで落ちる。
+                        Serilog.Log.Warning(ex,
+                            "[GetMThetaRelationship] キャプリングパイル工法の M-θ を作れませんでした (N={AxialN} kN)", axialN);
                     }
                 }
-
-                // 反射フォールバック
-                var curve = TryCallMThetaRelationship(caprObj, axialN * 1000);
-                if (curve != null) return PileHeadRotationDef.Combined(curve);
             }
 
             // 3) 定着筋方式/埋込み方式 → 完全剛
@@ -921,168 +914,22 @@ namespace PileDesign.Models.InputData
                 return PileHeadRotationDef.Rigid();
             }
 
-            // ===== ここから汎用ロジック（従来実装） =====
-            var pileTop = this.PileTop as object;
-            if (pileTop == null)
-            {
-                Serilog.Log.Debug(
-                    $"[GetMThetaRelationship] PileTop=null → Rigid() (フォールバック)");
-                return PileHeadRotationDef.Rigid();
-            }
-
-            // 完全剛フラグ
-            var rigidProp = pileTop.GetType().GetProperty("IsRigidHead") ??
-                            pileTop.GetType().GetProperty("RigidHead") ??
-                            pileTop.GetType().GetProperty("IsRotationRigid");
-            if (rigidProp?.GetValue(pileTop) is bool isRigid && isRigid)
-            {
-                return PileHeadRotationDef.Rigid();
-            }
-
-            // 合成XY（N依存のファミリ）
-            var famXY = pileTop.GetType().GetProperty("MthetaXY_ByN")?.GetValue(pileTop);
-            if (famXY != null)
-            {
-                var c = AxialCurveFamily.ResolveMTheta(famXY, axialN);
-                if (c != null) return PileHeadRotationDef.Combined(c);
-            }
-
-            // 個別（N依存）
-            var famX = pileTop.GetType().GetProperty("MthetaX_ByN")?.GetValue(pileTop);
-            var famY = pileTop.GetType().GetProperty("MthetaY_ByN")?.GetValue(pileTop);
-            var cx = famX != null ? AxialCurveFamily.ResolveMTheta(famX, axialN) : null;
-            var cy = famY != null ? AxialCurveFamily.ResolveMTheta(famY, axialN) : null;
-            if (cx != null || cy != null) return PileHeadRotationDef.Separate(cx, cy);
-
-            // 線形K
-            double? kxy = TryGetDouble(pileTop, "KthetaXY", "KΘXY", "Kxy");
-            if (kxy.HasValue) return PileHeadRotationDef.CombinedLinear(kxy.Value);
-
-            double? kx = TryGetDouble(pileTop, "KthetaX", "Kθx", "Kx");
-            double? ky = TryGetDouble(pileTop, "KthetaY", "Kθy", "Ky");
-            if (kx.HasValue || ky.HasValue) return PileHeadRotationDef.Separate(null, null, kx, ky);
-
-            // データ無し → 安全側として剛結（M-θデータなしの場合はモーメントを完全伝達）
+            // ===== どの杭頭タイプにも当てはまらなかった =====
+            //
+            // 杭頭タイプごとの分岐は上でぜんぶ尽くしている。ここへ来るのは
+            // 「杭頭タイプを増やしたが、その M-θ をここに書いていない」ときで、
+            // そのときは<b>安全側として剛結</b>にする (モーメントを完全に伝達する)。
+            //
+            // 以前はここに「PileTop に IsRigidHead / MthetaXY_ByN / KthetaXY といった
+            // プロパティがあれば使う」という反射のフォールバックが並んでいたが、
+            // PileTop にその名前のプロパティは<b>ひとつも無い</b>。つまり必ず素通りして
+            // この Rigid() に来ており、読む人には「汎用の受け皿がある」ように見えていた。
+            // 杭頭タイプを足すときの受け皿は反射ではなく、上の分岐に 1 つ足すこと。
             Serilog.Log.Debug(
-                $"[GetMThetaRelationship] M-θデータ取得不可 (PileTopType='{pileTopType}', PileBodyType='{pileBodyType}') → Rigid() (フォールバック)");
+                $"[GetMThetaRelationship] 杭頭タイプに対応する M-θ が無い "
+                + $"(PileTopType='{pileTopType}', PileBodyType='{pileBodyType}') → Rigid() (安全側)");
             return PileHeadRotationDef.Rigid();
         }
-
-        // 反射で obj の GetMThetaRelationship を呼び、(theta[], M[]) から曲線を生成する（寛容検索版）
-        // 注意: 反射で取得したデータは断面計算クラスの生データ（θ:[rad], M:[N·mm]）のため、
-        //       M を kNm に変換（×10⁻⁶）する必要がある
-        private static MomentRotationCurve? TryCallMThetaRelationship(object obj, double axialN)
-        {
-            if (obj == null) return null;
-
-            var type = obj.GetType();
-
-            // まず典型的なシグニチャを厳密に検索（double) / (double,double)
-            var mi = type.GetMethod("GetMThetaRelationship", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new Type[] { typeof(double) }, null)
-                     ?? type.GetMethod("GetMThetaRelationship", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new Type[] { typeof(double), typeof(double) }, null);
-
-            // 見つからなければ名前だけで柔軟に検索（パラメタ数 >= 1 のものを優先）
-            if (mi == null)
-            {
-                mi = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                         .FirstOrDefault(m => string.Equals(m.Name, "GetMThetaRelationship", StringComparison.OrdinalIgnoreCase)
-                                              && m.GetParameters().Length >= 1);
-            }
-
-            // 明示的インターフェイス実装など "IFoo.GetMThetaRelationship" の可能性を探す
-            if (mi == null)
-            {
-                mi = type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-                         .FirstOrDefault(m => m.Name.EndsWith(".GetMThetaRelationship", StringComparison.Ordinal)
-                                              && m.GetParameters().Length >= 1);
-            }
-
-            if (mi == null) return null;
-
-            object result;
-            try
-            {
-                var ps = mi.GetParameters();
-                object[] args;
-
-                if (ps.Length == 1)
-                {
-                    args = new object[] { Convert.ChangeType(axialN, ps[0].ParameterType) };
-                }
-                else if (ps.Length == 2)
-                {
-                    args = new object[] { Convert.ChangeType(axialN, ps[0].ParameterType), Convert.ChangeType(1.0, ps[1].ParameterType) };
-                }
-                else
-                {
-                    args = new object[ps.Length];
-                    args[0] = Convert.ChangeType(axialN, ps[0].ParameterType);
-                    for (int i = 1; i < ps.Length; i++)
-                    {
-                        var pType = ps[i].ParameterType;
-                        if (pType.IsValueType)
-                        {
-                            if (pType == typeof(double) || pType == typeof(float) || pType == typeof(decimal) || typeof(IConvertible).IsAssignableFrom(pType))
-                                args[i] = Convert.ChangeType(1.0, pType);
-                            else
-                                args[i] = Activator.CreateInstance(pType);
-                        }
-                        else
-                        {
-                            args[i] = null;
-                        }
-                    }
-                }
-
-                result = mi.Invoke(obj, args);
-            }
-            catch
-            {
-                return null;
-            }
-
-            if (result == null) return null;
-
-            // 直接 MomentRotationCurve を返す実装に対応（既に変換済みと仮定）
-            if (result is MomentRotationCurve direct) return direct;
-
-            var t = result.GetType();
-
-            // タプル (Item1, Item2) やプロパティ名 Thetas/Moments を探す
-            var item1 = t.GetProperty("Item1")?.GetValue(result) as System.Collections.IEnumerable;
-            var item2 = t.GetProperty("Item2")?.GetValue(result) as System.Collections.IEnumerable;
-
-            if (item1 == null || item2 == null)
-            {
-                item1 = t.GetProperty("Thetas")?.GetValue(result) as System.Collections.IEnumerable
-                        ?? t.GetProperty("Theta")?.GetValue(result) as System.Collections.IEnumerable;
-                item2 = t.GetProperty("Moments")?.GetValue(result) as System.Collections.IEnumerable
-                        ?? t.GetProperty("Moment")?.GetValue(result) as System.Collections.IEnumerable;
-            }
-
-            if (item1 == null || item2 == null) return null;
-
-            var th = item1.Cast<object>().Select(Convert.ToDouble).ToList();
-            var mmRaw = item2.Cast<object>().Select(Convert.ToDouble).ToList();
-            if (th.Count < 2 || th.Count != mmRaw.Count) return null;
-
-            // 単位変換: 断面計算から取得したデータは M:[N·mm] → [kNm] (×10⁻⁶)
-            var pts = new List<(double theta, double moment)>(th.Count);
-            for (int i = 0; i < th.Count; i++)
-                pts.Add((th[i], mmRaw[i] * 1e-6));
-            return new MomentRotationCurve(pts);
-        }
-
-        private static double? TryGetDouble(object target, params string[] names)
-        {
-            foreach (var n in names)
-            {
-                var p = target.GetType().GetProperty(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (p?.GetValue(target) is IConvertible cv) return Convert.ToDouble(cv);
-            }
-            return null;
-        }
-
 
         // 深いコピーを作成するメソッド
         public PileBodyInput DeepCopy()

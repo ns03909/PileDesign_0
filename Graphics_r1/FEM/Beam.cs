@@ -1,4 +1,4 @@
-
+﻿
 using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Models.InputData;
 using System;
@@ -34,11 +34,13 @@ namespace PileDesign.FEM
         public int? PileBodyNo { get; set; }
         public int? SegmentIndex { get; set; }
 
-        // M-φ 非線形（N依存の曲線ファミリを保持：合成 or 個別）
-        // 例: family の各要素 { double N; IEnumerable<(double Phi,double Moment)> Points; } など
-        public object? MPhi_ByN { get; set; }   // 合成: Mres-φres 用
-        public object? MphiY_ByN { get; set; }  // 個別: My-φy
-        public object? MphiZ_ByN { get; set; }  // 個別: Mz-φz
+        // M-φ 非線形の曲線。軸力ごとの解決は HorizontalCalculationViewModel が行い、
+        // 結果を SetResolvedCombinedMPhi(phis, moments) で渡してくる。
+        //
+        // 以前はここに「軸力依存の曲線ファミリ」を型無し (object?) で持つ
+        // MPhi_ByN / MphiY_ByN / MphiZ_ByN があったが、<b>どこからも代入されておらず</b>、
+        // 読み手も解決メソッド 1 つだけ (それも呼ばれていなかった)。
+        // 保存ファイルには beam ごとに null が 3 つ書き出されるだけだった。
 
         // 解決後（N固定）の曲線をキャッシュ
         private MomentCurvatureCurve? _combinedCurve;
@@ -142,59 +144,6 @@ namespace PileDesign.FEM
                 // Serilog.Log.Debug($"[v2] SetResolvedCombinedMPhi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}, InitialCurveTangent={InitialCurveTangent:E6}");
             }
             catch (Exception ex) { Log.Warning(ex, "SetResolvedCombinedMPhi"); }
-        }
-
-        // 荷重ケースの代表軸力 N を与えて、そのケース用の曲線を解決（線形補間）
-        public void ResolveMPhiForAxial(double axialN)
-        {
-            // 旧: _combinedCurve = (MPhi_ByN != null) ? AxialCurveFamily.ResolveMPhi(MPhi_ByN, axialN) : null;
-            if (MPhi_ByN == null)
-            {
-                _combinedCurve = null;
-                // Serilog.Log.Debug($"ResolveMPhiForAxial: Beam={Name}, MPhi_ByN=null");
-                return;
-            }
-
-            try
-            {
-                var resolved = AxialCurveFamily.ResolveMPhi(MPhi_ByN, axialN);
-                _combinedCurve = resolved;
-                if (resolved == null)
-                {
-                    // Serilog.Log.Debug($"ResolveMPhiForAxial: Beam={Name}, resolved=null for N={axialN:E}");
-                }
-                else
-                {
-                    // 可能なら点数と端点を出力（MomentCurvatureCurve が Points を公開している場合）
-                    try
-                    {
-                        var ptsField = resolved.GetType().GetProperty("Points");
-                        if (ptsField != null)
-                        {
-                            var pts = ptsField.GetValue(resolved) as System.Collections.IEnumerable;
-                            if (pts != null)
-                            {
-                                var list = pts.Cast<object>().Select(o =>
-                                {
-                                    var pi = o.GetType().GetProperty("Phi")?.GetValue(o);
-                                    var mi = o.GetType().GetProperty("Moment")?.GetValue(o);
-                                    return (Phi: Convert.ToDouble(pi), Moment: Convert.ToDouble(mi));
-                                }).ToList();
-                                int cnt = list.Count;
-                                var first5 = string.Join(", ", list.Take(5).Select(t => $"{t.Phi:E6}/{t.Moment:E6}"));
-                                var last = list.Last();
-                                // Serilog.Log.Debug($"ResolveMPhiForAxial: Beam={Name}, Points={cnt}, first5=[{first5}], last={last.Phi:E6}/{last.Moment:E6}");
-                            }
-                        }
-                    }
-                    catch { /* best-effort logging */ }
-                }
-            }
-            catch (Exception)
-            {
-                _combinedCurve = null;
-                // Serilog.Log.Debug($"ResolveMPhiForAxial: Beam={Name}, Exception resolving for N={axialN:E}: {ex}");
-            }
         }
 
         // 要素中央曲率から接線剛性（EI_eff）を返す
