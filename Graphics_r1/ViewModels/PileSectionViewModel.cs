@@ -445,7 +445,8 @@ namespace PileDesign.ViewModels
         {
             var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
             var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-            var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
+            var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars,
+                hoopPw: PileSection.HoopPw, hoopSigmaWy: PileSection.HoopSigmay);
 
             double monQd = MonQd;
             double pw = PileSection.HoopPw;
@@ -903,7 +904,8 @@ namespace PileDesign.ViewModels
 
             var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
             var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-            var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
+            var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars,
+                hoopPw: PileSection.HoopPw, hoopSigmaWy: PileSection.HoopSigmay);
 
             // kN -> N
             NMin *= UnitConversion.KN_TO_N;

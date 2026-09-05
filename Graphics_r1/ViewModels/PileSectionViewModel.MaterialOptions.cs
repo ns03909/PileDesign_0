@@ -331,23 +331,22 @@ namespace PileDesign.ViewModels
         ///
         /// <b>この画面の断面は現在の入力モデルに居ない。</b>杭体ウィンドウが
         /// <c>InputModel.PileBodies</c> の複製を編集しており、断面ウィンドウはその複製の断面を
-        /// 受け取るため、<c>ApplyConcreteModelOptions</c> のキャッシュ破棄
-        /// (CurrentInputModel の断面をたどる) が届かない。
-        /// 破棄しないと N-M・N-Q が<b>前の設定のまま描かれ続ける</b> (実際にそうなっていた)。
-        /// この断面のキャッシュはここで自分で捨てる。
+        /// 受け取るため、<c>ApplyConcreteModelOptions</c> が入力モデルをたどって行う後始末は
+        /// この断面に届かない。
+        ///
+        /// 曲線のキャッシュは断面が自分で捨てる (<c>ConcreteModelOptions.Version</c> の判定) ので
+        /// ここでは何もしない。<b>Ec だけは書き換えが要る</b> — 値そのものを持つ入力側の状態で、
+        /// 版数の判定では直らないため。
         /// </summary>
         private void RedrawAfterMaterialOptionChange()
         {
             try
             {
-                if (PileSection != null)
+                // ξ→Ec のオプションは PileSection.ConcreteE (諸元・EA/EI) にも効く。
+                // 既製杭は式ベースではないので対象外 (ApplyConcreteModelOptions と同じ扱い)。
+                if (PileSection != null && PileSection.PileBodyType != PileTypeNames.PrecastConcrete)
                 {
-                    PileSection.InvalidateComputedCaches();
-
-                    // ξ→Ec のオプションは PileSection.ConcreteE (諸元・EA/EI) にも効く。
-                    // 既製杭は式ベースではないので対象外 (ApplyConcreteModelOptions と同じ扱い)。
-                    if (PileSection.PileBodyType != PileTypeNames.PrecastConcrete)
-                        PileSection.RecalculateConcreteE();
+                    PileSection.RecalculateConcreteE();
                 }
 
                 // N-M / M-φ / M-θ は ChartUpdate、N-Q は専用の描画ヘルパー

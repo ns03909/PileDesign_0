@@ -26,9 +26,32 @@ namespace PileDesign.Models.InputData
         // コンストラクタ
         // applyBodyMaterialOptions: 杭体断面のみ true。鉄筋 1.1F 完全バイリニア型オプションを適用する。
         //   杭頭接合部（PileTop の定着筋断面）などは false を渡してオプション対象外とする。
+        /// <summary>
+        /// 帯筋の既定のせん断補強筋比。<b>帯筋の入力を渡せない呼び出し用の仮値</b>。
+        /// 杭体の断面では PileSection が実際の値を渡すので、ここが使われるのは
+        /// 杭頭接合部の断面のように帯筋を持たない場合だけ。
+        /// </summary>
+        internal const double DefaultHoopPw = 0.002;
+
+        /// <summary>帯筋の既定の降伏点 (N/mm²)。<see cref="DefaultHoopPw"/> と同じ扱い。</summary>
+        internal const double DefaultHoopSigmaWy = 295.0;
+
+        /// <summary>せん断補強筋比 pw。安全限界せん断の算定に使う。</summary>
+        internal double HoopPw { get; }
+
+        /// <summary>せん断補強筋の降伏点 σwy (N/mm²)。</summary>
+        internal double HoopSigmaWy { get; }
+
         internal InsituReinforcedConcreteSection(
-            InsituConcrete insituConcrete, MainBars mainBars, bool applyBodyMaterialOptions = true)
+            InsituConcrete insituConcrete, MainBars mainBars, bool applyBodyMaterialOptions = true,
+            double hoopPw = DefaultHoopPw, double hoopSigmaWy = DefaultHoopSigmaWy)
         {
+            // 帯筋 (せん断補強筋)。安全限界せん断の算定に要る。
+            // 既定値は帯筋の入力を持たない呼び出し (杭頭接合部の断面など) 用で、
+            // 杭体の断面は PileSection から実際の帯筋を渡す。
+            HoopPw = hoopPw > 0 ? hoopPw : DefaultHoopPw;
+            HoopSigmaWy = hoopSigmaWy > 0 ? hoopSigmaWy : DefaultHoopSigmaWy;
+
             // 鉄筋 1.1F 完全バイリニア型オプション（降伏応力度 σy → 1.1σy）を適用（限界ひずみ再計算より前）
             if (applyBodyMaterialOptions)
                 mainBars.YieldAt11F = ConcreteModelOptions.RebarYieldAt11F;
@@ -144,12 +167,8 @@ namespace PileDesign.Models.InputData
             // 低減前損傷限界NQインタラクション
             UnfactoredDamageNQ = GetDamageLimitQNInteraction(3.0, false);
 
-            // 低減前安全限界NQインタラクション
-            // pw = 0.002 / σwy = 295 は<b>仮値</b>。この断面クラスは帯筋の入力を持たないため、
-            // 実際の帯筋 (径・ピッチ・材質) を反映した曲線は PileSection.ComputeQNForMonQd が
-            // HoopPw / HoopSigmay を渡して作る。曲線を使う側は必ず
-            // PileSection.GetQNCurvesForLevel を通すこと (ここは鋼管杭等のフォールバック用)。
-            UnfactoredUltimateNQ = GetUltimateQNInteraction(3.0, 0.002, 295, false);
+            // 低減前安全限界NQインタラクション。帯筋は ctor で受け取った実際の値を使う。
+            UnfactoredUltimateNQ = GetUltimateQNInteraction(3.0, HoopPw, HoopSigmaWy, false);
 
             // 低減前使用限界NQインタラクション
             FactoredServiceNQ = GetServiceLimitQNInteraction(3.0, true);
@@ -158,7 +177,7 @@ namespace PileDesign.Models.InputData
             FactoredDamageNQ = GetDamageLimitQNInteraction(3.0, true);
 
             // 低減前安全限界NQインタラクション
-            FactoredUltimateNQ = GetUltimateQNInteraction(3.0, 0.002, 295, true);
+            FactoredUltimateNQ = GetUltimateQNInteraction(3.0, HoopPw, HoopSigmaWy, true);
 
 
             // NOTE: ここで SteelYieldNM を重い計算で生成しない（ウィンドウ起動を阻害するため）

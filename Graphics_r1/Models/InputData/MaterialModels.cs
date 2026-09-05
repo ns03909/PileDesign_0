@@ -740,8 +740,18 @@ namespace PileDesign.Models.InputData
         public double SigmaE { get; private set; }
         public double EpsilonPi { get; set; }
 
+        /// <summary>
+        /// PC鋼材の安全限界引張ひずみ度 (正値)。
+        ///
+        /// 出典: 「基礎部材の強度と変形性能」6.2.3。安全限界はこのひずみで頭打ちにする
+        /// (<c>UltimateLimitStrainT = -EpsilonPu</c>)。
+        /// PHC/PRC 杭の安全限界 N-M と M-φ の終点を決める値なので、変えると耐力が動く。
+        /// </summary>
+        internal const double DefaultEpsilonPu = 0.02;
+
         // コンストラクタ
-        public Tendons(double _PCD, double _ap, double _fpy = 1226.0, double _fpu = 1418.0, double _epsilonPu = 0.02)
+        public Tendons(double _PCD, double _ap, double _fpy = 1226.0, double _fpu = 1418.0,
+            double _epsilonPu = DefaultEpsilonPu)
         {
             if (_fpy == 0.0) { Fpy = 1226.0; }
             else { Fpy = _fpy; }
@@ -766,7 +776,8 @@ namespace PileDesign.Models.InputData
 
             ServiceLimitStrainT = double.MinValue; // 使用限界引張ひずみ度
             DamageLimitStrainT = double.MinValue; // 損傷限界引張ひずみ度
-            UltimateLimitStrainT = -EpsilonPu; // 安全限界引張ひずみ度
+            // 安全限界引張ひずみ度。「基礎部材の強度と変形性能」6.2.3 により -0.02
+            UltimateLimitStrainT = -EpsilonPu;
         }
 
         // ひずみ度から応力を計算するメソッド

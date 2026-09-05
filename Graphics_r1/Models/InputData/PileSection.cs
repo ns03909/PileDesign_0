@@ -244,9 +244,37 @@ namespace PileDesign.Models.InputData
         {
             lock (_curveCacheLock)
             {
+                DropCachesIfMaterialOptionsChanged();
                 cache ??= compute();
                 return cache.Value;
             }
+        }
+
+        /// <summary>キャッシュを作ったときの材料モデル化オプションの版数。</summary>
+        private int _cacheOptionsVersion = -1;
+
+        /// <summary>
+        /// 材料のモデル化オプションが変わっていたら、この断面のキャッシュを捨てる。
+        /// <b>呼び出し側が <see cref="_curveCacheLock"/> を持っていること。</b>
+        ///
+        /// オプションは静的 (<see cref="ConcreteModelOptions"/>) なので、変えると
+        /// <b>生きているすべての断面</b>の曲線が変わる。以前は入力モデルをたどって
+        /// キャッシュを捨てて回っていたが、ダイアログが編集している<b>複製</b>の断面は
+        /// その走査から漏れる。実際、杭断面ウィンドウでオプションを変えても
+        /// N-M・N-Q が変わらないという不具合が出た (杭体ウィンドウは PileBodies の複製を編集し、
+        /// 断面ウィンドウはその複製側の断面を受け取るため)。
+        ///
+        /// 捨てて回るのをやめ、<b>使うときに自分で古さを判定する</b>。
+        /// これなら断面がどのモデルにぶら下がっていても取り違えない。
+        /// M-φ の静的キャッシュは同じ理由でキーに署名を含めている。
+        /// </summary>
+        private void DropCachesIfMaterialOptionsChanged()
+        {
+            int version = ConcreteModelOptions.Version;
+            if (_cacheOptionsVersion == version) return;
+
+            InvalidateAllCaches();
+            _cacheOptionsVersion = version;
         }
 
         // --- 追加: M-φキャッシュ（同一断面・同一軸力での再計算を抑制） ---
@@ -261,9 +289,13 @@ namespace PileDesign.Models.InputData
         /// 断面パラメータ変更時にすべてのキャッシュを一括で無効化します。
         /// </summary>
         /// <summary>
-        /// この断面の NM / 降伏 / ひび割れキャッシュを外部から無効化します。
-        /// コンクリートのモデル化オプション (ConcreteModelOptions) 変更時など、
-        /// 断面プロパティ自体は変わらないが計算結果が変わるケースで使用します。
+        /// この断面の NM / 降伏 / ひび割れキャッシュを無効化します。
+        ///
+        /// 材料のモデル化オプション (<see cref="ConcreteModelOptions"/>) の変更では<b>呼ぶ必要がありません</b>。
+        /// 断面が曲線を使うときに版数を見て自分で捨てます
+        /// (<c>DropCachesIfMaterialOptionsChanged</c>)。たどって捨てて回る方式は、
+        /// ダイアログが編集している複製の断面に届かないためやめました。
+        /// 断面の値そのものが変わったとき (Ec の再計算など) に使います。
         /// </summary>
         public void InvalidateComputedCaches() => InvalidateAllCaches();
 
@@ -437,7 +469,16 @@ namespace PileDesign.Models.InputData
         // 降伏開始NM（Raw: N[N], M[Nmm]）をキャッシュ付きで返す
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) SteelYieldNMRaw
-            => _steelYieldNMRawCache ??= ComputeSteelYieldNMRaw();
+        {
+            get
+            {
+                lock (_curveCacheLock)
+                {
+                    DropCachesIfMaterialOptionsChanged();
+                    return _steelYieldNMRawCache ??= ComputeSteelYieldNMRaw();
+                }
+            }
+        }
 
         // スケーリング後（kN, kNm）
         [System.Text.Json.Serialization.JsonIgnore]
@@ -446,10 +487,19 @@ namespace PileDesign.Models.InputData
             GetMultipliedListValues(SteelYieldNMRaw.M, 1e-6)
         );
 
-        // 降伏開始NM（Raw: N[N], M[Nmm]）をキャッシュ付きで返す
+        // ひび割れNM（Raw: N[N], M[Nmm]）をキャッシュ付きで返す
         [System.Text.Json.Serialization.JsonIgnore]
         public (List<double> N, List<double> M) CrackNMRaw
-            => _crackNMRawCache ??= ComputeCrackNMRaw();
+        {
+            get
+            {
+                lock (_curveCacheLock)
+                {
+                    DropCachesIfMaterialOptionsChanged();
+                    return _crackNMRawCache ??= ComputeCrackNMRaw();
+                }
+            }
+        }
 
         // スケーリング後（kN, kNm）
         [System.Text.Json.Serialization.JsonIgnore]
@@ -1756,7 +1806,15 @@ namespace PileDesign.Models.InputData
         {
             // Ec 算定用 ξ: オプション時は 1.0（強度側 Gsi·Fc 等は実 Gsi のまま）
             double gsiForEc = ConcreteModelOptions.UseUnitGsiForConcreteE ? 1.0 : ConcreteGsi;
-            ConcreteE = 3.35 * Math.Pow(10, 4) * Math.Pow(ConcreteGamma / 24.0, 2.0) * Math.Pow(gsiForEc * ConcreteFc / 60.0, 1.0 / 3.0);
+            double e = 3.35 * Math.Pow(10, 4) * Math.Pow(ConcreteGamma / 24.0, 2.0) * Math.Pow(gsiForEc * ConcreteFc / 60.0, 1.0 / 3.0);
+            if (ConcreteE == e) return;
+
+            ConcreteE = e;
+
+            // Ec はひび割れ・降伏の曲線に効くので、変わったらこの断面のキャッシュを捨てる。
+            // オプション変更による破棄 (版数の判定) とは別で、あちらは Ec を書き換える前に
+            // 済んでいることがある。ここで捨てないと、新しい Ec が曲線に出ない。
+            InvalidateComputedCaches();
         }
 
         // コンクリートプレストレス N/mm2
@@ -3747,16 +3805,20 @@ namespace PileDesign.Models.InputData
             return (PileBodyType, PileSectionType) switch
             {
                 // 場所打ちRC杭
+                // 帯筋 (HoopPw / HoopSigmay) を渡す。渡さないと安全限界せん断が
+                // 断面クラスの仮値 (pw=0.002 / σwy=295) で作られる。
                 (PileTypeNames.InsituRc, _) =>
                     new InsituReinforcedConcreteSection(
                         new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
-                        new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize)),
+                        new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize),
+                        hoopPw: HoopPw, hoopSigmaWy: HoopSigmay),
 
                 // 場所打ち鋼管RC杭 - RC部
                 (PileTypeNames.InsituSteelPipeConcrete, PileTypeNames.RcSection) =>
                     new InsituReinforcedConcreteSection(
                         new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
-                        new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize)),
+                        new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize),
+                        hoopPw: HoopPw, hoopSigmaWy: HoopSigmay),
 
                 // 場所打ち鋼管RC杭 - 鋼管RC部
                 // 終局ひずみ 5,000μ オプション時はコンクリートにも同じ εcu を渡す。

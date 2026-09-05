@@ -18,11 +18,44 @@
     /// </summary>
     internal static class ConcreteModelOptions
     {
+        /// <summary>
+        /// オプションが変わるたびに増える版数。
+        ///
+        /// <see cref="Signature()"/> は文字列を組み立てるので、曲線を引くたびに呼ぶには重い。
+        /// キャッシュを持つ側 (<c>PileSection</c>) が「自分のキャッシュは古いか」を
+        /// <b>整数の比較だけ</b>で判定できるようにする。
+        ///
+        /// これがあると、入力モデルをたどってキャッシュを捨てて回る必要がなくなる。
+        /// ダイアログが編集している<b>複製</b>の断面はその走査から漏れるため、
+        /// オプションを変えても前の設定で計算済みの曲線が描かれ続ける、という不具合が出ていた。
+        /// </summary>
+        public static int Version => _version;
+        private static int _version;
+
+        private static void Set(ref bool field, bool value)
+        {
+            if (field == value) return;
+            field = value;
+            _version++;
+        }
+
+        private static void Set(ref int field, int value)
+        {
+            if (field == value) return;
+            field = value;
+            _version++;
+        }
+
         /// <summary>圧縮側折れ点応力度の低減係数（0.85·Fc）。</summary>
         public const double CompressionReductionFactor = 0.85;
 
         /// <summary>引張側の降伏応力度を 0 とする（コンクリートの引張負担を無視する）。</summary>
-        public static bool IgnoreTensileStrength { get; set; }
+        public static bool IgnoreTensileStrength
+        {
+            get => _ignoreTensileStrength;
+            set => Set(ref _ignoreTensileStrength, value);
+        }
+        private static bool _ignoreTensileStrength;
 
         /// <summary>
         /// 鋼材のヤング係数に「基礎部材の強度と変形性能」の値を用いる
@@ -37,7 +70,12 @@
         /// EI・EA だけでなく N-M 曲線・M-φ まで一貫して効かせるため、
         /// 製品を断面へ反映する時点で E を差し替える方式を採る。
         /// </summary>
-        public static bool UseGuideYoungsModulus { get; set; }
+        public static bool UseGuideYoungsModulus
+        {
+            get => _useGuideYoungsModulus;
+            set => Set(ref _useGuideYoungsModulus, value);
+        }
+        private static bool _useGuideYoungsModulus;
 
         /// <summary>
         /// 基礎部材の強度と変形性能が規定する既製杭のヤング係数比 n（PC鋼材・鉄筋とも 5 で固定）。
@@ -51,25 +89,45 @@
         public const double GuideSteelYoungsModulus = 205000.0;
 
         /// <summary>圧縮側の折れ点応力度を 0.85·Fc とする（既定の Gsi·Fc に代えて、Gsi を乗じない）。</summary>
-        public static bool UseReducedCompression { get; set; }
+        public static bool UseReducedCompression
+        {
+            get => _useReducedCompression;
+            set => Set(ref _useReducedCompression, value);
+        }
+        private static bool _useReducedCompression;
 
         /// <summary>
         /// 鉄筋（場所打ち RC 杭・場所打ち鋼管コンクリート杭）を 1.1×F で降伏する
         /// 完全バイリニア型とする（降伏応力度を σy → 1.1·σy に引き上げる）。
         /// </summary>
-        public static bool RebarYieldAt11F { get; set; }
+        public static bool RebarYieldAt11F
+        {
+            get => _rebarYieldAt11F;
+            set => Set(ref _rebarYieldAt11F, value);
+        }
+        private static bool _rebarYieldAt11F;
 
         /// <summary>
         /// 鋼管（場所打ち鋼管コンクリート杭）を 1.1×F で降伏する完全バイリニア型とする
         /// （ひずみ硬化・破断応力を廃し、±1.1F で頭打ち）。
         /// </summary>
-        public static bool SteelPipeYieldAt11F { get; set; }
+        public static bool SteelPipeYieldAt11F
+        {
+            get => _steelPipeYieldAt11F;
+            set => Set(ref _steelPipeYieldAt11F, value);
+        }
+        private static bool _steelPipeYieldAt11F;
 
         /// <summary>
         /// コンクリートのヤング係数 Ec の算定で ξ(=Gsi) を 1.0 として計算する
         /// （強度側 Gsi·Fc 等には従来どおり実際の ξ を用いる）。
         /// </summary>
-        public static bool UseUnitGsiForConcreteE { get; set; }
+        public static bool UseUnitGsiForConcreteE
+        {
+            get => _useUnitGsiForConcreteE;
+            set => Set(ref _useUnitGsiForConcreteE, value);
+        }
+        private static bool _useUnitGsiForConcreteE;
 
         /// <summary>
         /// 場所打ち系コンクリートの使用限界・損傷限界の許容圧縮応力度を、
@@ -77,7 +135,12 @@
         /// 長期・短期許容圧縮応力度で算定する（使用限界=長期、損傷限界=短期）。
         /// せん断・安全限界・M-φ・解析には影響しない（使用/損傷限界 NM のみ）。
         /// </summary>
-        public static bool UseNotification1113Compression { get; set; }
+        public static bool UseNotification1113Compression
+        {
+            get => _useNotification1113Compression;
+            set => Set(ref _useNotification1113Compression, value);
+        }
+        private static bool _useNotification1113Compression;
 
         /// <summary>
         /// 場所打ち鉄筋コンクリート杭のコンクリート許容せん断応力度を、
@@ -85,7 +148,12 @@
         /// 長期・短期許容せん断応力度で算定する（使用限界=長期、損傷限界=短期=長期×1.5）。
         /// 許容せん断力 Q = fs·b·j（軸力・M/(Q·d) 非依存）。安全限界・M-φ・解析には影響しない。
         /// </summary>
-        public static bool UseNotification1113Shear { get; set; }
+        public static bool UseNotification1113Shear
+        {
+            get => _useNotification1113Shear;
+            set => Set(ref _useNotification1113Shear, value);
+        }
+        private static bool _useNotification1113Shear;
 
         /// <summary>
         /// 場所打ち鉄筋コンクリート杭の安全限界曲げ強度の算定で、コンクリートの応力ひずみ関係を
@@ -93,7 +161,12 @@
         /// 圧縮限界ひずみ εcu=0.003・圧縮材料強度 ξFc は共通。安全限界 NM 曲線および
         /// M-φ 端点 Mu0（→ 解析）に影響するため、変更時は解析結果をリセットする。
         /// </summary>
-        public static bool UseInsituUltimateEFunction { get; set; }
+        public static bool UseInsituUltimateEFunction
+        {
+            get => _useInsituUltimateEFunction;
+            set => Set(ref _useInsituUltimateEFunction, value);
+        }
+        private static bool _useInsituUltimateEFunction;
 
         /// <summary>
         /// コンクリート系杭の解析用 M-φ 関係を、指針ポリリニア（Mcr-My-β1·Mu0 等の折線）に
@@ -105,7 +178,12 @@
         /// 単調非減少化＋最小勾配床の後処理を施した曲線を用いる。
         /// M-φ（→ 非線形 FEM 解析）に影響するため、変更時は解析結果をリセットする。
         /// </summary>
-        public static bool UseFiberMPhi { get; set; }
+        public static bool UseFiberMPhi
+        {
+            get => _useFiberMPhi;
+            set => Set(ref _useFiberMPhi, value);
+        }
+        private static bool _useFiberMPhi;
 
         // ─── 場所打ち鋼管コンクリート杭（KCTB / TB 工法）───
         //
@@ -129,7 +207,12 @@
         /// 安全限界 NM と M-φ の終点 (φu, Mu0)（→ 解析）に影響するため、変更時は解析結果をリセットする。
         /// 鋼管杭のコンクリート充填鋼管部は対象外。
         /// </summary>
-        public static bool UseUltimateStrain5000ForSteelPipeConcrete { get; set; }
+        public static bool UseUltimateStrain5000ForSteelPipeConcrete
+        {
+            get => _useUltimateStrain5000ForSteelPipeConcrete;
+            set => Set(ref _useUltimateStrain5000ForSteelPipeConcrete, value);
+        }
+        private static bool _useUltimateStrain5000ForSteelPipeConcrete;
 
         /// <summary>
         /// 【評定書に規定が無い項目】場所打ち鋼管コンクリート杭の許容時（使用限界・損傷限界）の判定を、
@@ -143,7 +226,12 @@
         /// 使用・損傷限界 NM のみに効き、安全限界・M-φ・解析には影響しない。
         /// 鋼管杭のコンクリート充填鋼管部は対象外。
         /// </summary>
-        public static bool ExcludeRebarFromAllowableLimitForSteelPipeConcrete { get; set; }
+        public static bool ExcludeRebarFromAllowableLimitForSteelPipeConcrete
+        {
+            get => _excludeRebarFromAllowableLimitForSteelPipeConcrete;
+            set => Set(ref _excludeRebarFromAllowableLimitForSteelPipeConcrete, value);
+        }
+        private static bool _excludeRebarFromAllowableLimitForSteelPipeConcrete;
 
         /// <summary>
         /// 場所打ち鋼管コンクリート杭の許容時（使用限界・損傷限界）N-M を、
@@ -159,7 +247,12 @@
         ///
         /// 使用・損傷限界 NM のみに効き、安全限界・M-φ・解析には影響しない。
         /// </summary>
-        public static bool UseFiberNMForSteelPipeConcrete { get; set; } = true;
+        public static bool UseFiberNMForSteelPipeConcrete
+        {
+            get => _useFiberNMForSteelPipeConcrete;
+            set => Set(ref _useFiberNMForSteelPipeConcrete, value);
+        }
+        private static bool _useFiberNMForSteelPipeConcrete = true;
 
         /// <summary>
         /// BCJ評定-FD0356-08 が定める項目がすべて評定どおりに設定されているか。
@@ -176,7 +269,12 @@
         /// 圧縮 1: Fc/4、2: min(Fc/4.5, 6.0)（短期 2 倍）。
         /// せん断 1: Fc/40、2: Fc/45 とアーチ項 (3/4)(0.49+Fc/100) の小さい方（短期 1.5 倍）。
         /// </summary>
-        public static int Notification1113CompressionCase { get; set; } = 1;
+        public static int Notification1113CompressionCase
+        {
+            get => _notification1113CompressionCase;
+            set => Set(ref _notification1113CompressionCase, value);
+        }
+        private static int _notification1113CompressionCase = 1;
 
         /// <summary>
         /// 解説書準拠（告示1113 圧縮）オプションが有効なとき、限界状態の表示名を

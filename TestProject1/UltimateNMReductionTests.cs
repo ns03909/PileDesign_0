@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using PileDesign.Models.InputData;
 
 namespace TestProject1
@@ -92,5 +92,31 @@ namespace TestProject1
                     $"{law}: 低減後の曲線に M=0 の点が無い (軸力制限で切り詰められていない)");
             }
         }
-    }
+    
+        /// <summary>
+        /// 場所打ちRC の安全限界せん断は<b>実際の帯筋</b>で算定すること。
+        ///
+        /// 断面クラスは以前 pw=0.002 / σwy=295 の仮値で曲線を作っており、
+        /// 実際の帯筋を反映するのは PileSection.ComputeQNForMonQd の経路だけだった。
+        /// 帯筋を渡すようにしたので、径・ピッチ・材質を変えれば曲線が変わる。
+        /// </summary>
+        [TestMethod]
+        public void UltimateShear_UsesTheActualHoops()
+        {
+            ResetOptions();
+
+            var dense = CreateInsituRcSection();
+            dense.HoopSpacing = 100.0;
+
+            var sparse = CreateInsituRcSection();
+            sparse.HoopSpacing = 300.0;
+
+            double qDense = dense.UnfactoredUltimateNQ.Q.Max();
+            double qSparse = sparse.UnfactoredUltimateNQ.Q.Max();
+
+            Assert.IsTrue(qDense > qSparse * 1.01,
+                $"帯筋を密にしても安全限界せん断が変わらない (@100 {qDense:F1} / @300 {qSparse:F1} kN)。"
+                + "断面クラスの仮値で曲線が作られている可能性がある。");
+        }
+}
 }
