@@ -922,7 +922,8 @@ namespace PileDesign.ViewModels
                 int piles = mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?.Count ?? -1;
                 int activeCases = mainWindowViewModel?.CurrentInputModel?.LoadCasesInput?.AnalysisTargetSeismicLoadCases?.Count ?? -1;
                 int applicableCombos = mainWindowViewModel?.CurrentInputModel?.LoadCasesInput?.AllLoadCombinations?.Count(c => c.IsApplicable) ?? -1;
-                Serilog.Log.Warning(
+                // 水平解析ウィンドウを開くたびに通る正常な経路なので Debug。
+                Serilog.Log.Debug(
                     "[HCM ctor] new HorizontalCalculationViewModel: piles={P}, activeCases={C}, applicableCombos={K}, isHorizontalAnalysisDone={D}",
                     piles, activeCases, applicableCombos, mainWindowViewModel?.IsHorizontalAnalysisDone);
             }
@@ -1522,19 +1523,37 @@ namespace PileDesign.ViewModels
         /// これらが満たされない間 F9 ボタンが灰色になり、ユーザに「設定不足」が
         /// 視覚的にフィードバックされる。
         /// </summary>
+        /// <summary>
+        /// 直前にログへ書いた活性状態。同じ状態を繰り返し書かないための記録。
+        ///
+        /// <c>CanExecute</c> は WPF のコマンドマネージャが<b>フォーカス移動のたびに</b>呼ぶ。
+        /// 以前はここで毎回ログを出しており、しかも実行不可のときは Warning だったため、
+        /// 「解析を実行中です」という<b>まったく正常な状態</b>が 1 回の解析につき数件の
+        /// 警告になっていた。直近のログでは警告の 100% がこれで、
+        /// ログを開いた人が最初に見るのが偽の警告という状態だった。
+        /// </summary>
+        private string? _lastLoggedAnalysisBlocker;
+        private bool _hasLoggedAnalysisBlocker;
+
         private bool CanExecuteAnalysis()
         {
             var blocker = DescribeAnalysisBlocker();
-            if (blocker != null)
+            string? detail = blocker?.Detail;
+
+            // 状態が変わったときだけ記録する。レベルは Debug —
+            // 実行できない状態は入力の途中でも解析中でも普通に起こることで、
+            // 利用者にはボタンのツールチップで理由が出ている。
+            if (!_hasLoggedAnalysisBlocker || _lastLoggedAnalysisBlocker != detail)
             {
-                // 診断ログ — 実行ボタンが灰色のままになる原因を即座に追跡できるよう毎回出力
-                // Warning レベルで出力 (Info より確実にログに残る + filter で見つけやすい)
-                Serilog.Log.Warning("[水平解析 disabled] {Reason}", blocker.Value.Detail);
-                return false;
+                _hasLoggedAnalysisBlocker = true;
+                _lastLoggedAnalysisBlocker = detail;
+                if (detail != null)
+                    Serilog.Log.Debug("[水平解析 disabled] {Reason}", detail);
+                else
+                    Serilog.Log.Debug("[水平解析 enabled] 実行できる状態になりました");
             }
-            // 活性時も 1 度ログを出して、CanExecute が確実に呼ばれていることを確認できるように
-            Serilog.Log.Information("[水平解析 enabled] CanExecuteAnalysis returned true");
-            return true;
+
+            return blocker == null;
         }
 
         /// <summary>
