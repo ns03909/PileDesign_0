@@ -630,18 +630,9 @@ namespace PileDesign.Views
             if (isSteelPipe)
             {
                 capringPile.IsConcreteFilledSteelPipe = true;
-                // 管厚は最上部杭区間の鋼管厚から取得 (PileSection.SteelPipeThickness が無ければ ConcreteThickness を試す)
-                double ts = 0;
-                try
-                {
-                    var prop = pileSection.GetType().GetProperty("SteelPipeThickness")
-                            ?? pileSection.GetType().GetProperty("PipeThickness")
-                            ?? pileSection.GetType().GetProperty("Ts");
-                    if (prop != null && prop.GetValue(pileSection) is double v) ts = v;
-                }
-                catch { }
-                if (ts <= 0) ts = pileSection.ConcreteThickness; // フォールバック
-                capringPile.SteelPipeWallThickness = ts;
+                // 管厚は最上部杭区間の鋼管厚 (腐食代を引く前)。外径に PipeDia を使うのと対で、
+                // 例題読込 (PileExampleLoader)・自動初期化 (PileBodyInput) と同じ値になる。
+                capringPile.SteelPipeWallThickness = pileSection.PipeTs;
             }
 
             capringPile.Update();
