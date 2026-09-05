@@ -2006,6 +2006,13 @@ namespace PileDesign.Views
 
         private void HandleKeyDown(KeyEventArgs e)
         {
+            // 解析のキーが効かないときは理由を出す (実行は InputBindings が行う)。
+            // <b>PreviewKeyDown 側に置く。</b>F2・Delete・Alt+数字がここで拾えている以上、
+            // この経路はキーが確実に届く。バブリングの KeyDown は途中で握り潰されうる。
+            // 二重に出さないよう、既に処理済みのイベントには触らない
+            // (Canvas3DLayout と Window の両方から呼ばれる)。
+            if (!e.Handled && ExplainIfAnalysisKeyIsBlocked(e, DataContext as MainWindowViewModel)) return;
+
             if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
             {
                 // Ctrl + Shift + A が押されたときの処理: すべてアクティブ
@@ -3130,9 +3137,6 @@ namespace PileDesign.Views
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
             var viewModel = DataContext as MainWindowViewModel;
-
-            // 解析のキーが効かないときは理由を出す (実行は InputBindings が行う)
-            if (ExplainIfAnalysisKeyIsBlocked(e, viewModel)) return;
 
 
             // ファイルを開く
