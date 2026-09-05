@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 
 namespace TestProject1
@@ -62,6 +62,27 @@ namespace TestProject1
             Assert.AreEqual(2.5, copied.LoadDisplacements[0].DD0s, 1e-12);
             Assert.AreEqual(1, copied.LoadDisplacementsLimit.Count,
                 "極限側の曲線が複製に入っていません");
+        }
+
+        /// <summary>
+        /// 複製は<b>同じ土層-杭セットを指す</b>こと (複製しない)。
+        ///
+        /// 土層-杭セットは解析の入力そのもので、水平地盤反力・杭周鉛直力・荷重-沈下曲線と
+        /// 派生した値を大量に抱えている。手書きの複製はそれらを完全には写せず
+        /// (<c>PileZDataItem.DeepCopy</c> は 3 つのプロパティを落とす)、
+        /// 写し損ねると<b>地盤ばねが 0 の解析モデル</b>ができあがる。
+        /// </summary>
+        [TestMethod]
+        public void DeepCopy_SharesTheSoilPileInstances()
+        {
+            var sp = MakeSoilPile();
+            var input = new InputModel { ElementDivision = new ElementDivision() };
+            input.ElementDivision.SoilPiles.Add(sp);
+
+            var copy = input.DeepCopy();
+
+            Assert.AreSame(sp, copy!.ElementDivision.SoilPiles[0],
+                "土層-杭セットを複製しています。写し損ねた値で解析されます");
         }
 
         /// <summary>

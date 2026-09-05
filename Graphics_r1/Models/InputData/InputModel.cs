@@ -1828,16 +1828,21 @@ namespace PileDesign.Models.InputData
                     "InputModel.DeepCopy total={Total}ms (hand={Hand}, quickClone={Qc}, json-rest={Json}) piles={Piles}",
                     swTotal.ElapsedMilliseconds, tHand, tQc, tJsonRest, _pileLayoutItems?.Count ?? 0);
 
-                // SoilPiles は JSON から外してあるので、複製側へは手書きの DeepCopy で入れる。
-                // <b>入れないと複製の SoilPiles が空になる。</b>Undo はこの複製を現在の入力に
+                // SoilPiles は JSON から外してあるので、複製側へも明示的に持たせる。
+                // <b>持たせないと複製の SoilPiles が空になる。</b>Undo はこの複製を現在の入力に
                 // 差し替えるので、そのままでは<b>杭要素分割と単杭沈下の結果が丸ごと消える</b>
                 // (分割済みのフラグだけが残り、基礎梁考慮沈下が「単杭沈下が未実行」と言い出す)。
-                // 荷重-沈下曲線は SoilPile.DeepCopy が参照で持たせるので、ここでの費用は
-                // 杭数ぶんのフィールドコピーだけ。JSON 直列化に比べれば桁違いに軽い。
+                //
+                // <b>同じインスタンスを渡す (複製しない)。</b>
+                // 土層-杭セットは解析の入力そのもので、水平地盤反力・杭周鉛直力・荷重-沈下曲線と、
+                // 派生した値を大量に抱えている。手書きの複製はそれらを完全には写せず
+                // (実際 PileZDataItem.DeepCopy は 3 つのプロパティを落とす)、
+                // 写し損ねると<b>地盤ばねが 0 の解析モデル</b>ができあがる。
+                // Undo で戻せるのは「土層-杭セットの集合」までで、その中身の編集は戻らないが、
+                // 中身の Undo は杭要素分割ウィンドウが自前で持っている。
                 if (savedSoilPiles != null && copy.ElementDivision != null)
                 {
-                    copy.ElementDivision.SetSoilPilesSilently(
-                        [.. savedSoilPiles.Select(sp => sp.DeepCopy())]);
+                    copy.ElementDivision.SetSoilPilesSilently(savedSoilPiles);
                 }
 
                 return copy;

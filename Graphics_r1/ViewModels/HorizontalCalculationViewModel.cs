@@ -1602,7 +1602,40 @@ namespace PileDesign.ViewModels
                 return ("解析する計算が 1 件もありません。荷重が 0 のケースだけが選ばれていないか確認してください。",
                         "TotalCalculationCount == 0");
 
+            // 水平地盤ばねの元になる水平地盤反力が空だと、地盤節点の Ux/Uy に剛性が付かず
+            // 「剛性マトリクスにゼロの対角成分」で止まる。マトリクスの話をされても直しようが
+            // 無いので、ここで<b>何をすれば直るか</b>を出す。
+            if (DescribeMissingSoilReaction() is { } soilReactionBlocker) return soilReactionBlocker;
+
             return null;
+        }
+
+        /// <summary>
+        /// 水平地盤反力が計算されていない土層-杭セットがあれば、その理由を返す。
+        ///
+        /// 反力が空のまま解析すると、地盤ばねの剛性が全て 0 になり
+        /// 「剛性マトリクスにゼロ/負の対角成分が N 個」という形でしか現れない。
+        /// 杭要素分割をやり直せば作り直されるので、そう言う。
+        /// </summary>
+        private (string User, string Detail)? DescribeMissingSoilReaction()
+        {
+            var soilPiles = InputModel?.ElementDivision?.SoilPiles;
+            if (soilPiles == null || soilPiles.Count == 0)
+                return ("杭要素分割が済んでいません。リボンの「杭要素分割」(F4) を実行してください。",
+                        "ElementDivision.SoilPiles が空");
+
+            var empty = soilPiles
+                .Where(sp => sp != null && (sp.HorizontalSoilReactions?.Count ?? 0) == 0)
+                .ToList();
+            if (empty.Count == 0) return null;
+
+            string names = string.Join("、", empty.Take(3)
+                .Select(sp => $"地盤{sp.GroundNo}-杭体{sp.PileBodyNo}"));
+            if (empty.Count > 3) names += $" ほか {empty.Count - 3} 件";
+
+            return ($"水平地盤反力が計算されていない土層-杭セットがあります ({names})。" + Environment.NewLine
+                    + "地盤の土層が入力されているか確認し、リボンの「杭要素分割」(F4) をやり直してください。",
+                    $"HorizontalSoilReactions が空の SoilPile が {empty.Count} 件");
         }
 
         /// <summary>追加実行 (段階追加再解析)。既存結果を保持し、未計算ケースのみ実行。</summary>
