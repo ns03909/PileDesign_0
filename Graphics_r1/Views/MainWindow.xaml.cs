@@ -149,6 +149,9 @@ namespace PileDesign.Views
             viewModel.UpdateCanvas3DAction = UpdateCanvas3D;
             viewModel.ShowToastAction = (msg, type) => ShowToast(msg, (ToastType)type);
 
+            // 群杭沈下の入力タブを開く (実行できない理由を出すときに、直す場所を見せる)
+            viewModel.ActivateGroupSettlementInputTabAction = ActivateGroupSettlementInputTab;
+
             // データグリッドの選択変更イベントを設定
             DataGridPileLayout.SelectionChanged += DataGridPileLayout_SelectionChanged;
             DataGridPileAxialForce.SelectionChanged += DataGridPileAxialForce_SelectionChanged;
@@ -3117,11 +3120,16 @@ namespace PileDesign.Views
                         (viewModel.OpenSettlementWindowCommand, "単杭沈下解析", null),
                     (Key.F6, ModifierKeys.Shift) =>
                         (viewModel.OpenVerticalBeamCalculationCommand, "単杭沈下解析（基礎梁考慮）", null),
-                    (Key.F7, ModifierKeys.None) =>
-                        (viewModel.PileGroupSettlementAnalysisCommand, "群杭沈下解析（一般）",
-                         viewModel.GroupSettlementAnalysisDisabledReason),
                     _ => null,
                 };
+
+            // 群杭沈下だけは、理由を出すついでに<b>直す場所のタブを開く</b>ので VM に任せる
+            if (e.Key == Key.F7 && Keyboard.Modifiers == ModifierKeys.None)
+            {
+                if (!viewModel.ShowGroupSettlementBlockerIfAny()) return false;
+                e.Handled = true;
+                return true;
+            }
 
             if (target is not { } t) return false;
             if (t.command.CanExecute(null)) return false;   // 実行できる → InputBinding に任せる
@@ -3341,6 +3349,23 @@ namespace PileDesign.Views
             {
                 GroupPileTabControl.SelectedItem = TabItemLoadNonBeam;
             }
+        }
+
+        /// <summary>
+        /// 群杭沈下の入力タブを開く。実行できない理由を出す前に呼び、直す場所を見せる。
+        /// </summary>
+        private void ActivateGroupSettlementInputTab(MainWindowViewModel.GroupSettlementInputTab tab)
+        {
+            ActivateGroupPileLoadTab();
+            if (GroupPileTabControl == null) return;
+
+            TabItem? target = tab switch
+            {
+                MainWindowViewModel.GroupSettlementInputTab.SoilLayers => TabItemSettlementSoilLayers,
+                MainWindowViewModel.GroupSettlementInputTab.Grid => TabItemSettlementGrid,
+                _ => TabItemLoadNonBeam,
+            };
+            if (target != null) GroupPileTabControl.SelectedItem = target;
         }
 
         private void ActivateGroupPileLoadTab()

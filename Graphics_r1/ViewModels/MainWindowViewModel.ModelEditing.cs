@@ -1253,12 +1253,45 @@ namespace PileDesign.ViewModels
         /// 判定をここ 1 か所に集め、<see cref="PileGroupSettlementAnalysisCommand"/> の
         /// CanExecute とボタンの ToolTip の両方から使う。
         /// </summary>
-        public string? GroupSettlementAnalysisDisabledReason => DescribeGroupSettlementBlocker();
+        public string? GroupSettlementAnalysisDisabledReason => DescribeGroupSettlementBlocker()?.User;
 
         /// <summary>群杭沈下解析ボタンの説明。実行できないときはその理由を出す。</summary>
         public string GroupSettlementAnalysisToolTip =>
-            DescribeGroupSettlementBlocker()
+            DescribeGroupSettlementBlocker()?.User
             ?? "基礎梁を考慮しない単発のスタインブレナー解析を実行します。";
+
+        /// <summary>群杭沈下の入力タブ。実行できない理由を出すとき、直す場所を開くのに使う。</summary>
+        public enum GroupSettlementInputTab
+        {
+            /// <summary>土層。</summary>
+            SoilLayers,
+            /// <summary>グリッド。</summary>
+            Grid,
+            /// <summary>解析（一般）。荷重面・荷重タイプ・矩形荷重はここ。</summary>
+            GeneralAnalysis,
+        }
+
+        /// <summary>
+        /// 群杭沈下の入力タブを開く。タブの操作は画面の持ち物なので、View 側が差し込む。
+        /// </summary>
+        public Action<GroupSettlementInputTab>? ActivateGroupSettlementInputTabAction { get; set; }
+
+        /// <summary>
+        /// 実行できない理由があれば、<b>直す場所のタブを開いてから</b>知らせる。
+        ///
+        /// 「矩形荷重を追加してください」と言われても、どのタブかを探すところから始まる。
+        /// 先にタブを開いておけば、OK を押した時点で入力の場所が出ている。
+        /// </summary>
+        /// <returns>理由を出した (＝実行できない) なら true。</returns>
+        public bool ShowGroupSettlementBlockerIfAny()
+        {
+            if (DescribeGroupSettlementBlocker() is not { } blocker) return false;
+
+            ActivateGroupSettlementInputTabAction?.Invoke(blocker.Tab);
+            MessageService.Show(blocker.User, "群杭沈下解析（一般）",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return true;
+        }
 
         private bool CanPileGroupSettlementAnalysis() => DescribeGroupSettlementBlocker() == null;
 
@@ -1273,7 +1306,7 @@ namespace PileDesign.ViewModels
         {
             PileGroupSettlementAnalysisCommand.NotifyCanExecuteChanged();
 
-            string? blocker = DescribeGroupSettlementBlocker();
+            string? blocker = DescribeGroupSettlementBlocker()?.User;
             if (_hasEvaluatedGroupSettlementBlocker && blocker == _lastGroupSettlementBlocker) return;
 
             _hasEvaluatedGroupSettlementBlocker = true;
@@ -1286,10 +1319,10 @@ namespace PileDesign.ViewModels
         /// 実行を妨げているものを 1 つ返す (利用者向けの文面)。無ければ null。
         /// 荷重タイプごとに必要な入力が違うので、まず荷重タイプで分岐する。
         /// </summary>
-        private string? DescribeGroupSettlementBlocker()
+        private (string User, GroupSettlementInputTab Tab)? DescribeGroupSettlementBlocker()
         {
             var pgs = CurrentInputModel?.PileGroupSettlement;
-            if (pgs == null) return "群杭沈下解析の入力がありません。";
+            if (pgs == null) return ("群杭沈下解析の入力がありません。", GroupSettlementInputTab.GeneralAnalysis);
 
             var piles = CurrentInputModel?.PileLayoutItems;
             var rectLoads = pgs.RectLoads;
@@ -1298,51 +1331,51 @@ namespace PileDesign.ViewModels
             {
                 case "任意矩形":
                     if (rectLoads == null || rectLoads.Count == 0)
-                        return "群杭荷重（矩形荷重）が定義されていません。\n荷重タブで矩形荷重を追加してください。";
+                        return ("群杭荷重（矩形荷重）が定義されていません。\n「解析（一般）」タブで矩形荷重を追加してください。", GroupSettlementInputTab.GeneralAnalysis);
                     if (rectLoads.All(r => r.QA == 0))
-                        return "値が0の群杭荷重（矩形荷重）しか定義されていません。\n荷重タブで荷重値を設定してください。";
+                        return ("値が0の群杭荷重（矩形荷重）しか定義されていません。\n「解析（一般）」タブで荷重値を設定してください。", GroupSettlementInputTab.GeneralAnalysis);
                     break;
 
                 case "個別十字":
                 case "個別矩形":
                     // 杭位置と軸力から矩形荷重を自動生成するため、杭が必要
                     if (piles == null || piles.Count == 0)
-                        return GuardMessages.NoPileLayout;
+                        return (GuardMessages.NoPileLayout, GroupSettlementInputTab.GeneralAnalysis);
                     if (piles.All(p => (p.AxialForceVL0 + p.AxialForceVLAdditional) == 0))
-                        return "全ての杭の軸力（VL0+VLadd）が0です。\n杭タブで軸力を設定してください。";
+                        return ("全ての杭の軸力（VL0+VLadd）が0です。\n杭タブで軸力を設定してください。", GroupSettlementInputTab.GeneralAnalysis);
                     break;
 
                 case "個別十字（基礎梁反力）":
                     if (!IsVerticalBeamAnalysisDone || VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0)
-                        return "単杭沈下解析（基礎梁考慮）が実行されていません。\n先に単杭沈下解析（基礎梁考慮）を実行してください。";
+                        return ("単杭沈下解析（基礎梁考慮）が実行されていません。\n先に単杭沈下解析（基礎梁考慮）を実行してください。", GroupSettlementInputTab.GeneralAnalysis);
                     if (piles == null || piles.Count == 0)
-                        return GuardMessages.NoPileLayout;
+                        return (GuardMessages.NoPileLayout, GroupSettlementInputTab.GeneralAnalysis);
                     break;
 
                 case "個別矩形（基礎梁考慮）":
                     if (piles == null || piles.Count == 0)
-                        return GuardMessages.NoPileLayout;
+                        return (GuardMessages.NoPileLayout, GroupSettlementInputTab.GeneralAnalysis);
                     if (CurrentInputModel?.FoundationBeamInput?.Beams is not { Count: > 0 })
-                        return "基礎梁が定義されていません。\n基礎梁を入力してください。";
+                        return ("基礎梁が定義されていません。\n基礎梁を入力してください。", GroupSettlementInputTab.GeneralAnalysis);
                     if (rectLoads == null || rectLoads.Count == 0 || rectLoads.All(r => r.QA == 0))
-                        return "矩形荷重が定義されていません (または全て 0)。\n荷重面等価径を入力すると自動生成されます。";
+                        return ("矩形荷重が定義されていません (または全て 0)。\n荷重面等価径を入力すると自動生成されます。", GroupSettlementInputTab.GeneralAnalysis);
                     break;
 
                 default:
-                    return "荷重タイプが設定されていません。\n荷重タブで荷重タイプを選択してください。";
+                    return ("荷重タイプが設定されていません。\n「解析（一般）」タブで荷重タイプを選択してください。", GroupSettlementInputTab.GeneralAnalysis);
             }
 
             if (pgs.SettlementSoilLayers == null || pgs.SettlementSoilLayers.Count == 0)
-                return "群杭沈下解析用の土層が1層以上必要です。\n土層タブで土層を追加してください。";
+                return ("群杭沈下解析用の土層が1層以上必要です。\n「土層」タブで土層を追加してください。", GroupSettlementInputTab.SoilLayers);
 
             // 荷重面が土層の範囲に入っていること
             double topAlt = pgs.SoilLayersTopAltitude;
             double loadAlt = pgs.LoadingPlaneAltitude;
             double bottomAlt = pgs.SettlementSoilLayers[^1].BottomAltitude;
             if (loadAlt > topAlt + NumericalConstants.NEAR_ZERO_EPSILON)
-                return $"荷重面 Z ({loadAlt:N3} m) が土層上端 Z ({topAlt:N3} m) より高くなっています。\n荷重面を土層上端以下に設定してください。";
+                return ($"荷重面 Z ({loadAlt:N3} m) が土層上端 Z ({topAlt:N3} m) より高くなっています。\n荷重面を土層上端以下に設定してください。", GroupSettlementInputTab.GeneralAnalysis);
             if (loadAlt < bottomAlt - NumericalConstants.NEAR_ZERO_EPSILON)
-                return $"荷重面 Z ({loadAlt:N3} m) が最下層下端 Z ({bottomAlt:N3} m) より低くなっています。\n荷重面を最下層下端以上に設定してください。";
+                return ($"荷重面 Z ({loadAlt:N3} m) が最下層下端 Z ({bottomAlt:N3} m) より低くなっています。\n荷重面を最下層下端以上に設定してください。", GroupSettlementInputTab.GeneralAnalysis);
 
             return null;
         }
@@ -1351,11 +1384,7 @@ namespace PileDesign.ViewModels
         private void PileGroupSettlementAnalysis()
         {
             // CanExecute で弾いているが、コマンドを直接 Execute された場合の最後の砦。
-            if (DescribeGroupSettlementBlocker() is { } blocker)
-            {
-                MessageService.Show(blocker, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
+            if (ShowGroupSettlementBlockerIfAny()) return;
 
             var loadingType = CurrentInputModel.PileGroupSettlement.LoadingType;
 

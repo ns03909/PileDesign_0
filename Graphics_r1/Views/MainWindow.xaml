@@ -4573,7 +4573,7 @@
 
                                     <TabControl x:Name="GroupPileTabControl" Grid.Row="1" SelectionChanged="GroupPileTabControl_SelectionChanged">
 
-                                        <TabItem Header="土層">
+                                        <TabItem Header="土層" x:Name="TabItemSettlementSoilLayers">
                                             <Grid>
                                                 <StackPanel Grid.Row=" 2">
                                                     <GroupBox Header="土層上端 (ボーリング孔口レベル)" Margin="0,0,0,4">
@@ -4821,7 +4821,7 @@
                                             </Grid>
                                         </TabItem>
 
-                                        <TabItem Header="グリッド" ToolTip = "各交差点において沈下計算を行うグリッドを定義します。">
+                                        <TabItem Header="グリッド" x:Name="TabItemSettlementGrid" ToolTip = "各交差点において沈下計算を行うグリッドを定義します。">
                                             <StackPanel Margin="4">
                                                 <!-- 杭配置範囲（読み取り専用） -->
                                                 <GroupBox Header="杭配置範囲" Margin="0,0,0,4">

@@ -113,8 +113,13 @@ namespace TestProject1
             string xaml = File.ReadAllText(Path.Combine(root, "Graphics_r1", "Views", "MainWindow.xaml"));
             string code = File.ReadAllText(Path.Combine(root, "Graphics_r1", "Views", "MainWindow.xaml.cs"));
 
-            int helper = code.IndexOf("ExplainIfAnalysisKeyIsBlocked", StringComparison.Ordinal);
+            int helper = code.IndexOf("private bool ExplainIfAnalysisKeyIsBlocked", StringComparison.Ordinal);
             Assert.IsTrue(helper >= 0, "解析キーの理由を出す処理がありません");
+
+            // 説明の本体 (次のメソッドの手前まで)
+            int helperEnd = code.IndexOf("private void MainWindow_KeyDown", helper, StringComparison.Ordinal);
+            if (helperEnd < 0) helperEnd = Math.Min(code.Length, helper + 4000);
+            string helperBody = code[helper..helperEnd];
 
             // 実行できないときに黙らないよう、CanExecute を見てから説明していること
             StringAssert.Contains(code, "CanExecute(null)",
@@ -134,9 +139,10 @@ namespace TestProject1
                 string key = m.Groups["key"].Value;
                 string mod = m.Groups["mod"].Success ? m.Groups["mod"].Value : "None";
 
-                // 説明の対象表に、そのキーと修飾キーの組が出てくること
-                if (!Regex.IsMatch(code, @"\(Key\." + key + @",\s*ModifierKeys\." + mod + @"\)"))
-                    missing.Add($"{mod} + {key} ({cmd})");
+                // 説明の本体にそのキーが出てくること (書き方は問わない)
+                bool covered = helperBody.Contains("Key." + key, StringComparison.Ordinal)
+                    && (mod == "None" || helperBody.Contains("ModifierKeys." + mod, StringComparison.Ordinal));
+                if (!covered) missing.Add($"{mod} + {key} ({cmd})");
             }
 
             Assert.AreEqual(0, missing.Count,
