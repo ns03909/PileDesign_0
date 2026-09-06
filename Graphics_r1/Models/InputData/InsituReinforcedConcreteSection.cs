@@ -696,7 +696,9 @@ namespace PileDesign.Models.InputData
 
             // 収束条件
             const int maxIter = 50;
-            const double tolN = 1e-2; // kN
+            // 軸力残差の許容値 [N]（GetUltimateForceAndMoment の N は N 単位。以前「kN」と注記されていた）。
+            // 0.01 N は実質成立しないので、収束は下の tolPhiRel（曲率の相対変化）で決まる。挙動は変えていない。
+            const double tolN = 1e-2; // N
             const double tolPhiRel = 1e-6;
 
             for (int iter = 0; iter < maxIter; iter++)

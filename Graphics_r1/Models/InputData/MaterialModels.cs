@@ -915,8 +915,8 @@ namespace PileDesign.Models.InputData
                 As = (OutDia - T) * Math.PI * T;
                 Ftsp = -F / 1.5; //鋼管の使用限界引張応力度
                 Fcsp = F / 1.5; //鋼管の使用限界圧縮応力度
-                Ftdp = -F; //鋼管の使用限界引張応力度
-                Fcdp = F; //鋼管の使用限界圧縮応力度
+                Ftdp = -F; //鋼管の損傷限界引張応力度（短期）
+                Fcdp = F; //鋼管の損傷限界圧縮応力度（短期）
                 Fys = 1.1 * F; // 鋼管の降伏強度
                 EpsilonY = Fys / SE1; // 降伏ひずみ
 
