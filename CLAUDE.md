@@ -56,6 +56,8 @@ dotnet publish Graphics_r1/PileDesign.csproj -p:PublishProfile=FolderProfile
 | 解析結果テーブルの列 | `ResultColumnTooltipTests` (説明の書き忘れ検出) |
 | 画面の用語 | `TerminologyTests` (引退した呼び名の復活を検出) |
 | メッセージ | `UserFacingMessageTests` (内部用語の露出を検出) |
+| 杭種・断面タイプ・工法の追加 | `SectionInvariantTests` に代表断面を登録 (未登録だと `EverySectionTypeIsRegistered` が落ちる)。カタログに Mcr/Mu があれば `PrecastCatalogCrackMomentTests` の流儀で突合 |
+| 材料則・断面積分 | `SectionInvariantTests` (零ひずみで N≈0 / 材料の σ(0)=0 / Mcr>0 / M-φ 単調) と `CrackStrainThresholdTests`。**プレストレスひずみは断面積分側だけが足す**（材料側 `GetStress` は足さない） |
 
 ## 数値を動かす変更
 

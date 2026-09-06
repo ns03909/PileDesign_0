@@ -92,6 +92,10 @@ namespace TestProject1
         [DataRow("Example3_5", "PileExample3_5", 4, 16)] // 設計例集3.5: 鋼管杭基礎 (液状化有)
         [DataRow("ExampleK8", "PileExampleK8", 4, 8)]    // 関東支部 計算例8: 杭基礎標準例
         [DataRow("Example10", "PileExample10", 4, 16)]   // 基礎指針'19 計算例10: 場所打ち杭 (液状化)
+        // 既製杭。2026-09-07 まで既製杭は 1 つも回帰網に無く、既製杭の M-φ（ひび割れモーメントの符号・
+        // プレストレスひずみの二重加算）の誤りが解析結果に乗ったまま検出されなかった。
+        [DataRow("Example3_1", "PileExample3_1", 4, 8)]  // 設計例集3.1: PRC杭 + SC杭
+        [DataRow("Example3_4", "PileExample3_4", 4, 8)]  // 設計例集3.4: PHC杭 + SC杭
         public void ConvergenceMatchesSnapshot(
             string groundName, string pileName, int level1Steps, int level2Steps)
         {

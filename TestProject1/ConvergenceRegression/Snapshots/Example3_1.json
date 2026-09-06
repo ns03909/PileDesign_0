@@ -1,0 +1,62 @@
+{
+  "exampleName": "Example3_1",
+  "exampleDisplayName": "設計例集3.1",
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-07",
+  "options": {
+    "level1Steps": 4,
+    "level2Steps": 8,
+    "liquefactionMode": "Yes",
+    "useLineSearch": true,
+    "parallelism": 1
+  },
+  "cases": [
+    {
+      "caseKey": "L1-1.C1.Liq",
+      "level": 1,
+      "loadCaseNo": 1,
+      "combinationNo": 1,
+      "isLiquefaction": true,
+      "converged": true,
+      "totalIterations": 17,
+      "totalSteps": 4,
+      "bisectionRetries": 0,
+      "finalResidual": 2.4879851150331047E-09,
+      "apUx": 0.0003526504985683443,
+      "apUy": -0.00017731149649157247,
+      "apUz": 1.93125684396228E-05,
+      "apRx": -1.3279607925313941E-21,
+      "apRy": 4.828142109905698E-07,
+      "apRz": 8.865574824578625E-06,
+      "maxAbsHorizDisp": 0.000394717292411395,
+      "maxAbsHorizSpringReaction": 84.58663618215216
+    },
+    {
+      "caseKey": "L2-1.C1.Liq",
+      "level": 2,
+      "loadCaseNo": 1,
+      "combinationNo": 1,
+      "isLiquefaction": true,
+      "converged": true,
+      "totalIterations": 29,
+      "totalSteps": 8,
+      "bisectionRetries": 0,
+      "finalResidual": 2.1511100166277E-07,
+      "apUx": 0.0007053029746295205,
+      "apUy": -0.00035462399718465195,
+      "apUz": 3.8625098197775287E-05,
+      "apRx": 1.147505786210037E-20,
+      "apRy": 9.656274549443852E-07,
+      "apRz": 1.773119985923247E-05,
+      "maxAbsHorizDisp": 0.0007894368026640702,
+      "maxAbsHorizSpringReaction": 169.17371433740567
+    }
+  ],
+  "summary": {
+    "totalCases": 2,
+    "convergedCases": 2,
+    "totalIterations": 46,
+    "totalSteps": 12,
+    "maxResidualOverAllCases": 2.1511100166277E-07
+  }
+}

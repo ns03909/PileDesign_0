@@ -180,6 +180,22 @@ namespace PileDesign.Models.InputData
         public virtual double ShearNMinUltimate => (4.0 - SigmaE) * Ae;
         public virtual double ShearNMaxUltimate => (45.0 - SigmaE) * Ae;
 
+        /// <summary>
+        /// 解析用 M-φ を「弾性線で低減後の安全限界 β1β2·Mu0 まで、そこで頭打ち」の 2 点折線にする。
+        ///
+        /// ひび割れモーメント Mcr が β1β2·Mu0 以上のときに使う。既製杭は Mcr/Mu が 0.6〜0.7 なので、
+        /// N=0 付近では β1β2 = 0.6 の低減後安全限界がひび割れより低くなるのが普通で、
+        /// その場合、指針の折線式 φ_final = φcr + … ·(β1β2·Mu0 − Mcr) は φ_final &lt; φcr となって
+        /// 折線が折り返す（負勾配のばね）。断面は β1β2·Mu0 までひび割れないので弾性剛性 Ec·Ie で
+        /// つなぐのが物理的に正しく、「圧壊のみ」ケースが元から採っている構成と同じ。
+        /// 2026-09-07 まで Mcr の符号誤りで Mcr が過小だったためこの分岐に入らず、顕在化しなかった。
+        /// </summary>
+        protected (List<double> Phis, List<double> Moments) ElasticUpToReducedUltimate(double mReduced)
+        {
+            double phi = (PrecastConcrete.Ec > 0.0 && Ie > 0.0) ? mReduced / (PrecastConcrete.Ec * Ie) : 0.0;
+            return ([0.0, phi], [0.0, mReduced]);
+        }
+
         // 断面プロパティ設定メソッド
         internal void SetSectionParameters()
         {
@@ -581,6 +597,9 @@ namespace PileDesign.Models.InputData
             if (phiCr < phiY && phiY < phiCf) // a. コンクリートのひび割れの後にPC鋼材の降伏が発生する場合
             {
                 double Mu0 = Math.Min(MCf, MY);
+                // ひび割れ前に低減後の安全限界へ達する → 弾性線で頭打ち（折線が折り返すのを防ぐ）
+                if (MCr > 0 && MCr >= beta1 * beta2 * Mu0)
+                    return ElasticUpToReducedUltimate(beta1 * beta2 * Mu0);
                 phiD = phiCr + (phiY - phiCr) * (beta1 * Mu0 - MCr) / (MY - MCr);
                 double phi_final = phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr);
 
@@ -604,6 +623,8 @@ namespace PileDesign.Models.InputData
 
                 if (MY < beta1 * Mu0) // b. PC鋼材が引張降伏せずに、コンクリートの曲げひび割れと圧壊が発生する場合
                 {
+                    if (MCr > 0 && MCr >= beta1 * beta2 * Mu0)
+                        return ElasticUpToReducedUltimate(beta1 * beta2 * Mu0);
                     phiD = phiCr + (phiU0 - phiCr) * (beta1 * Mu0 - MCr) / (Mu0 - MCr);
                     double phi_final = phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr);
 
@@ -641,7 +662,10 @@ namespace PileDesign.Models.InputData
         internal (double, double) GetCrackMoment(double Ntarget)
         {
             double sigma0e = Ntarget / Ae;
-            double Mcr = Ze * (Ftd + SigmaE + sigma0e);
+            // ひび割れ開始: 引張縁の応力度 σe + σ0 − M/Ze が曲げ引張強度に達する状態。
+            // Ftd は「引張＝負」の規約で −0.56√Fc を持つので、引張強度の絶対値は −Ftd。
+            // 以前は +Ftd で引張強度を差し引いており、A 種では Mcr が負になっていた。
+            double Mcr = Ze * (-Ftd + SigmaE + sigma0e);
             double phiCr = Mcr / (PrecastConcrete.Ec * Ie);
             return (Mcr, phiCr);
         }
@@ -1202,6 +1226,9 @@ namespace PileDesign.Models.InputData
             //if (phiCr < phiU0 && phiU0 < phiYT && phiU0 < phiYC) // a コンクリートのひび割れの後に軸方向鉄筋の引張降伏が先行する場合
             if (phiCr < phiYT && phiYT < phiYC /*&& phiU0 < phiYC*/) // a コンクリートのひび割れの後に軸方向鉄筋の引張降伏が先行する場合
             {
+                // ひび割れ前に低減後の安全限界へ達する → 弾性線で頭打ち（PHC と同じ扱い）
+                if (MCr > 0 && MCr >= beta1 * beta2 * Mu0)
+                    return ElasticUpToReducedUltimate(beta1 * beta2 * Mu0);
                 phiD = phiCr + (phiYT - phiCr) * (beta1 * Mu0 - MCr) / (MYT - MCr);
                 double phi_final = phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr);
 
@@ -1240,7 +1267,8 @@ namespace PileDesign.Models.InputData
                 }
                 else
                 {
-                    // MCr <= 0 の場合は空の曲線（原点のみ）
+                    // ひび割れ前に低減後の安全限界へ達する。以前は (φcr, Mcr) で打ち切っており、
+                    // 頭打ちが β1β2·Mu0 より高い位置にあった。他の分岐と同じく β1β2·Mu0 で頭打ちにする。
                     if (MCr <= 0 || phiCr <= 0)
                     {
                         phis = [0.0];
@@ -1248,8 +1276,7 @@ namespace PileDesign.Models.InputData
                     }
                     else
                     {
-                        phis = [0.0, phiCr];
-                        Ms = [0.0, MCr];
+                        return ElasticUpToReducedUltimate(beta1 * beta2 * Mu0);
                     }
                 }
                 return (phis, Ms);
@@ -1273,7 +1300,10 @@ namespace PileDesign.Models.InputData
         internal (double, double) GetCrackMoment(double Ntarget)
         {
             double sigma0e = Ntarget / Ae;
-            double Mcr = Ze * (Ftd + SigmaE + sigma0e);
+            // ひび割れ開始: 引張縁の応力度 σe + σ0 − M/Ze が曲げ引張強度に達する状態。
+            // Ftd は「引張＝負」の規約で −0.56√Fc を持つので、引張強度の絶対値は −Ftd。
+            // 以前は +Ftd で引張強度を差し引いており、A 種では Mcr が負になっていた。
+            double Mcr = Ze * (-Ftd + SigmaE + sigma0e);
             double phiCr = Mcr / (PrecastConcrete.Ec * Ie);
             return (Mcr, phiCr);
         }
@@ -2040,7 +2070,8 @@ namespace PileDesign.Models.InputData
         internal (double, double) GetCrackMoment(double Ntarget)
         {
             double sigma0 = Ntarget / Ae;
-            double Mcr = Ze * (Ftd + sigma0);
+            // Ftd は「引張＝負」の規約 (−0.56√Fc)。引張強度の絶対値は −Ftd（PHC/PRC と同じ取り違えを修正）。
+            double Mcr = Ze * (-Ftd + sigma0);
             double phiCr = Mcr / PrecastConcrete.Ec / Ie;
             return (Mcr, phiCr);
         }
