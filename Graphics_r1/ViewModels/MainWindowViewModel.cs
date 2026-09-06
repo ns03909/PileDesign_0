@@ -111,7 +111,11 @@ namespace PileDesign.ViewModels
         /// 「編集したのに確認が出ない」でデータを失うよりはよい。
         /// <b>編集できるウィンドウを追加したら、ここを呼ぶこと。</b>
         /// </summary>
-        public void MarkPossiblyEdited() => _hasUnsavedWork = true;
+        public void MarkPossiblyEdited()
+        {
+            _hasUnsavedWork = true;
+            InputEditVersion++;
+        }
 
         public void SaveUndoState([System.Runtime.CompilerServices.CallerMemberName] string? description = null)
             => SaveUndoState(AnalysisInputScope.All, description);
@@ -138,6 +142,7 @@ namespace PileDesign.ViewModels
 
                 // 編集が入ったので、以降は破棄・保存の確認を出す。
                 _hasUnsavedWork = true;
+                InputEditVersion++;
 
                 // 入力が編集された = 表示中の解析結果は現在の入力と一致しない。
                 // 結果は破棄しない (解析時の入力ごと切り離してあるため表示は整合している)。

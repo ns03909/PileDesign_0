@@ -1674,6 +1674,20 @@
                                IsEnabled="{Binding HasGroupSettlementCaseRecords}"
                                LargeIcon="pack://application:,,,/Icons/GroupPileContorVisible.png"
                                Icon="pack://application:,,,/Icons/GroupPileContorVisible.png" AutomationProperties.Name="群杭グリッド 変位"/>
+                    <Fluent:ToggleButton Header="検定比 色分け"
+                               ToolTip="杭を検定比で色分けします (緑: 0.8 以下 / 黄: 0.8 超〜1.0 以下 / 赤: NG / 灰: 未収束)。杭体は分割した要素ごとに、その要素の曲げ・せん断で塗ります。杭頭の丸は、部位を持たない検定 (杭頭回転角・変形角・支持力) です。低減後の水平解析と杭の鉛直支持力の検定から、全荷重ケースの最悪を取ります。杭要素分割後に使えます"
+                               ToolTipService.ShowOnDisabled="True"
+                               IsChecked="{Binding IsEvaluationColoringVisible}"
+                               IsEnabled="{Binding IsElementSplit}"
+                               LargeIcon="pack://application:,,,/Icons/AxialForceVeirification.png"
+                               Icon="pack://application:,,,/Icons/AxialForceVeirification.png" AutomationProperties.Name="検定比 色分け"/>
+                    <Fluent:ToggleButton Header="検定比 詳細"
+                               ToolTip="色分けした杭にマウスを近づけると、その部位の検定項目・検定比・応答値/限界値をポップアップで表示します。ON の間は応力や変位のツールチップより優先します。杭要素分割後に使えます"
+                               ToolTipService.ShowOnDisabled="True"
+                               IsChecked="{Binding IsEvaluationDetailVisible}"
+                               IsEnabled="{Binding IsElementSplit}"
+                               LargeIcon="pack://application:,,,/Icons/Mouse.png"
+                               Icon="pack://application:,,,/Icons/Mouse.png" AutomationProperties.Name="検定比 詳細"/>
                 </Fluent:RibbonGroupBox>
                 
                 <Fluent:RibbonGroupBox Header="バブル" ToolTip="バブル">
@@ -2011,7 +2025,7 @@
 
                 <Fluent:RibbonGroupBox Header="拡張機能" ToolTip="拡張機能">
                     <Fluent:Button Header="解析結果 ダッシュボード"
-                        ToolTip="現在の解析モデル・水平/沈下/梁鉛直解析の状況をカード形式で一括表示"
+                        ToolTip="検定の総括 (OK / NG / 未収束の件数、支配ケース、杭ごとの最大検定比) と解析の状態を 1 画面に表示"
                         Click="OpenResultDashboard_Click"
                         LargeIcon="pack://application:,,,/Icons/Dashboard.png"
                         Icon="pack://application:,,,/Icons/Dashboard.png" AutomationProperties.Name="解析結果 ダッシュボード"/>
@@ -5579,6 +5593,24 @@
                                                     <GradientStop Offset="1" Color="#EFF2F5"/>
                                                 </LinearGradientBrush>
                                             </Border.Background>
+                                        </Border>
+
+                                        <!-- 検定比色分けの凡例。色は MainCanvasGeometry の PileRatio*Fill と同じ -->
+                                        <Border x:Name="EvaluationLegend" Grid.Row="2" Grid.Column="0"
+                                                HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                                Margin="12,0,0,12" Panel.ZIndex="5" IsHitTestVisible="False"
+                                                Background="#F2FFFFFF" BorderBrush="{StaticResource ControlBorderBrush}"
+                                                BorderThickness="1" CornerRadius="4" Padding="8,6"
+                                                Visibility="{Binding IsEvaluationColoringVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <StackPanel>
+                                                <TextBlock Text="検定比 (低減後・全ケースの最大)" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,4"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,1"><Rectangle Width="14" Height="14" RadiusX="2" RadiusY="2" Fill="#96238966"/><TextBlock Text="0.8 以下" FontSize="11" Margin="6,0,0,0"/></StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,1"><Rectangle Width="14" Height="14" RadiusX="2" RadiusY="2" Fill="#AAF7B515"/><TextBlock Text="0.8 超 〜 1.0 以下" FontSize="11" Margin="6,0,0,0"/></StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,1"><Rectangle Width="14" Height="14" RadiusX="2" RadiusY="2" Fill="#A0D82531"/><TextBlock Text="1.0 超 (NG)" FontSize="11" Margin="6,0,0,0"/></StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,1"><Rectangle Width="14" Height="14" RadiusX="2" RadiusY="2" Fill="#96708090"/><TextBlock Text="未収束" FontSize="11" Margin="6,0,0,0"/></StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,1"><Rectangle Width="14" Height="14" RadiusX="2" RadiusY="2" Fill="#2687CEEB" Stroke="#888" StrokeThickness="0.5"/><TextBlock Text="検定なし" FontSize="11" Margin="6,0,0,0"/></StackPanel>
+                                                <TextBlock Text="要素 = その要素の曲げ・せん断&#x0A;杭頭の丸 = 杭頭回転角・支持力など" FontSize="10" Foreground="#666" Margin="0,5,0,0"/>
+                                            </StackPanel>
                                         </Border>
 
                                         <Canvas x:Name="Canvas3DLayout"

@@ -1,10 +1,10 @@
-<Window x:Class="PileDesign.Views.ResultDashboardWindow"
+﻿<Window x:Class="PileDesign.Views.ResultDashboardWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:common="clr-namespace:PileDesign.Common"
         Title="解析結果ダッシュボード"
-        Width="540" SizeToContent="Height"
-        MinHeight="200"
+        Width="640" Height="720"
+        MinHeight="360" MinWidth="520"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
@@ -38,6 +38,7 @@
             <Setter Property="Foreground" Value="#222"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
         <Style x:Key="DashOkStyle" TargetType="TextBlock" BasedOn="{StaticResource DashValueStyle}">
@@ -48,9 +49,29 @@
             <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
         </Style>
 
+        <!-- 未収束: NG (赤) とも OK (緑) とも違う色にする -->
+        <Style x:Key="DashCautionStyle" TargetType="TextBlock" BasedOn="{StaticResource DashValueStyle}">
+            <Setter Property="Foreground" Value="{StaticResource StatusWarningDarkBrush}"/>
+        </Style>
+
         <Style x:Key="DashMutedStyle" TargetType="TextBlock" BasedOn="{StaticResource DashValueStyle}">
             <Setter Property="Foreground" Value="#999"/>
             <Setter Property="FontWeight" Value="Normal"/>
+        </Style>
+
+        <!-- 総括の判定バッジ (背景色はコードビハインドで差し替える) -->
+        <Style x:Key="DashBadgeStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="#999"/>
+        </Style>
+        <Style x:Key="DashBadgeTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
     </Window.Resources>
 
@@ -76,18 +97,174 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
 
-                <!-- ▍解析モデル -->
+                <!-- ▍検定の総括 -->
                 <Border Style="{StaticResource DashCardStyle}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource DashSectionTitleStyle}" Text="解析モデル"/>
+                        <TextBlock Style="{StaticResource DashSectionTitleStyle}" Text="検定の総括"/>
+
+                        <!-- 判定バッジ + 一言 -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" x:Name="VerdictBadge" Style="{StaticResource DashBadgeStyle}">
+                                <TextBlock x:Name="VerdictText" Style="{StaticResource DashBadgeTextStyle}" Text="—"/>
+                            </Border>
+                            <TextBlock Grid.Column="1" x:Name="VerdictNoteText" Style="{StaticResource DashValueStyle}"
+                                       FontWeight="Normal" Text=""/>
+                        </Grid>
+
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="水平解析 (低減後)"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="HorizontalCountsText" Style="{StaticResource DashValueStyle}"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="　最大検定比"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="HorizontalMaxRatioText" Style="{StaticResource DashValueStyle}"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="　支配ケース"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="HorizontalGoverningText" Style="{StaticResource DashValueStyle}" FontWeight="Normal"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="　未収束のケース"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="UnconvergedCasesText" Style="{StaticResource DashCautionStyle}" FontWeight="Normal"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="　低減前 (参考)"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" x:Name="UnfactoredText" Style="{StaticResource DashValueStyle}" FontWeight="Normal"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="杭の鉛直支持力"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" x:Name="BearingCountsText" Style="{StaticResource DashValueStyle}"/>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="　最大検定比"/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" x:Name="BearingGoverningText" Style="{StaticResource DashValueStyle}" FontWeight="Normal"/>
+
+                            <TextBlock Grid.Row="7" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="耐震グレード"/>
+                            <TextBlock Grid.Row="7" Grid.Column="1" x:Name="SeismicGradeText" Style="{StaticResource DashValueStyle}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ▍杭ごとの最大検定比 -->
+                <Border Style="{StaticResource DashCardStyle}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Style="{StaticResource DashSectionTitleStyle}" Margin="0" Text="杭ごとの最大検定比"/>
+                            <CheckBox Grid.Column="1" Content="杭配置を色分け" VerticalAlignment="Center"
+                                      IsChecked="{Binding IsEvaluationColoringVisible}"
+                                      IsEnabled="{Binding IsElementSplit}"
+                                      ToolTipService.ShowOnDisabled="True"
+                                      ToolTip="メインビューの杭を杭ごとの最大検定比で色分けします (緑: 0.8 以下 / 黄: 1.0 以下 / 赤: NG / 灰: 未収束)。杭要素分割後に使えます"/>
+                        </Grid>
+                        <TextBlock x:Name="PileBandCountsText" Style="{StaticResource DashValueStyle}" FontWeight="Normal" Margin="0,0,0,6"/>
+                        <DataGrid x:Name="PileRatioGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                                  HeadersVisibility="Column" CanUserSortColumns="True" CanUserResizeRows="False"
+                                  GridLinesVisibility="Horizontal" MaxHeight="260" FontSize="12"
+                                  SelectionMode="Single" SelectionUnit="FullRow">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="杭No." Binding="{Binding PileNo}" Width="55"/>
+                                <DataGridTextColumn Header="判定" Binding="{Binding Status}" Width="60">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status}" Value="NG">
+                                                    <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="未収束">
+                                                    <Setter Property="Foreground" Value="{StaticResource StatusWarningDarkBrush}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="OK">
+                                                    <Setter Property="Foreground" Value="{StaticResource NikkenGreenBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="検定比" Binding="{Binding RatioText}" Width="60">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="検定項目" Binding="{Binding Category}" Width="130"/>
+                                <DataGridTextColumn Header="応答 / 限界" Binding="{Binding ValuesText}" Width="120"/>
+                                <DataGridTextColumn Header="荷重条件" Binding="{Binding Condition}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock x:Name="PileListNoteText" Style="{StaticResource DashMutedStyle}" Margin="0,4,0,0"
+                                   Text="低減後の水平解析と杭の鉛直支持力の検定から、杭ごとに最も厳しい項目を 1 行にしています。全件は「テーブル」の「検定」にあります。"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ▍解析の状態 -->
+                <Border Style="{StaticResource DashCardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource DashSectionTitleStyle}" Text="解析の状態"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="120"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="水平解析"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="HorizontalStatusText"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="ケース数"/>
+                            <TextBlock Grid.Row="0" Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="HorizontalCaseCountText"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="単杭沈下解析"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="SettlementStatusText"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="最終解析"/>
+                            <TextBlock Grid.Row="1" Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="LastAnalysisText"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="単杭沈下解析（基礎梁考慮）"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="VerticalBeamStatusText"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="ファイル"/>
+                            <TextBlock Grid.Row="2" Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="CurrentFileText"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ▍解析の詳細 (規模・収束) -->
+                <Expander Header="解析の詳細 (規模・収束)" IsExpanded="False" Margin="0,0,0,8">
+                    <Border Style="{StaticResource DashCardStyle}" Margin="0,6,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
@@ -99,107 +276,21 @@
                             <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource DashValueStyle}" x:Name="FemNodeCountText"/>
                             <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="FEM 要素数"/>
                             <TextBlock Grid.Row="1" Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="FemBeamCountText"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="総ステップ"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource DashValueStyle}" x:Name="HorizontalStepCountText"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="平均反復"/>
+                            <TextBlock Grid.Row="2" Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="HorizontalAvgIterText"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="最大反復"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource DashValueStyle}" x:Name="HorizontalMaxIterText"/>
+                            <TextBlock Grid.Row="3" Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="最悪残差"/>
+                            <TextBlock Grid.Row="3" Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="HorizontalWorstResidualText"/>
+                            <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="代表変位 (m)"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource DashValueStyle}" x:Name="HorizontalMaxDispText"/>
+                            <TextBlock Grid.Row="4" Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="基礎梁考慮 ケース数"/>
+                            <TextBlock Grid.Row="4" Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="VerticalBeamCaseCountText"/>
                         </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- ▍水平解析 -->
-                <Border Style="{StaticResource DashCardStyle}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource DashSectionTitleStyle}" Text="水平解析"/>
-                        <Grid x:Name="HorizontalAnalysisGrid">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="状態"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="HorizontalStatusText"/>
-
-                            <TextBlock Grid.Row="0" Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="ケース数"/>
-                            <TextBlock Grid.Row="0" Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="HorizontalCaseCountText"/>
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="総ステップ"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource DashValueStyle}" x:Name="HorizontalStepCountText"/>
-
-                            <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="平均反復"/>
-                            <TextBlock Grid.Row="1" Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="HorizontalAvgIterText"/>
-
-                            <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="最大反復"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource DashValueStyle}" x:Name="HorizontalMaxIterText"/>
-
-                            <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="最悪残差"/>
-                            <TextBlock Grid.Row="2" Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="HorizontalWorstResidualText"/>
-
-                            <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="代表変位 (m)"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource DashValueStyle}" x:Name="HorizontalMaxDispText"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- ▍沈下解析 -->
-                <Border Style="{StaticResource DashCardStyle}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource DashSectionTitleStyle}" Text="沈下解析"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="状態"/>
-                            <TextBlock Grid.Column="1" x:Name="SettlementStatusText"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- ▍単杭沈下解析（基礎梁考慮） -->
-                <Border Style="{StaticResource DashCardStyle}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource DashSectionTitleStyle}" Text="単杭沈下解析（基礎梁考慮）"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="状態"/>
-                            <TextBlock Grid.Column="1" x:Name="VerticalBeamStatusText"/>
-                            <TextBlock Grid.Column="2" Style="{StaticResource DashLabelStyle}" Text="ケース数"/>
-                            <TextBlock Grid.Column="3" Style="{StaticResource DashValueStyle}" x:Name="VerticalBeamCaseCountText"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- ▍ファイル -->
-                <Border Style="{StaticResource DashCardStyle}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource DashSectionTitleStyle}" Text="ファイル"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="現在のファイル"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource DashValueStyle}" x:Name="CurrentFileText"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="最終解析"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource DashValueStyle}" x:Name="LastAnalysisText"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                    </Border>
+                </Expander>
 
             </StackPanel>
         </ScrollViewer>
@@ -210,10 +301,14 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <Button Grid.Column="1" Content="再計算(_R)" Click="RefreshButton_Click" Padding="12,4" Margin="0,0,8,0"
+            <Button Grid.Column="1" Content="検定結果をテーブルで開く(_T)" Command="{Binding OpenTableWindowCommand}"
+                    Padding="12,4" Margin="0,0,8,0" ToolTipService.ShowOnDisabled="True"
+                    ToolTip="解析結果テーブルを開きます。「検定」カテゴリに全件が検定比の降順で並びます (Alt+T)"/>
+            <Button Grid.Column="2" Content="再計算(_R)" Click="RefreshButton_Click" Padding="12,4" Margin="0,0,8,0"
                     ToolTip="ダッシュボードを再計算します (Alt+R)"/>
-            <Button Grid.Column="2" Content="閉じる(_C)" IsCancel="True" Padding="12,4"
+            <Button Grid.Column="3" Content="閉じる(_C)" IsCancel="True" Padding="12,4"
                     ToolTip="ウィンドウを閉じます (Esc / Alt+C)"/>
         </Grid>
     </Grid>

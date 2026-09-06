@@ -52,6 +52,27 @@ namespace TestProject1
             });
         }
 
+        /// <summary>
+        /// 解析結果ダッシュボード。DataTrigger 付きの DataGrid 列と、
+        /// StatusWarningDarkBrush などアプリ辞書のブラシを使うので、パースと再計算を踏む。
+        /// 解析していない状態で「未実施」の分岐を通す。
+        /// </summary>
+        [TestMethod]
+        public void ResultDashboardWindow_XamlParses_AndRefreshesWithoutAnalysis()
+        {
+            var (inputModel, _) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+            if (inputModel == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            AssertWindowParses("ResultDashboardWindow", () =>
+            {
+                var mainVm = new PileDesign.ViewModels.MainWindowViewModel { CurrentInputModel = inputModel };
+                inputModel.AttachViewModel(mainVm);
+                var window = new PileDesign.Views.ResultDashboardWindow(mainVm);
+                window.RefreshNow();
+                return window;
+            });
+        }
+
         // 検定ウィンドウは廃止した (検定は解析結果テーブルから見る)。
 
         // MainWindow は他のテストが別 STA スレッドで作った WPF の静的オブジェクトに触れてしまい、

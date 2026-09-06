@@ -32,6 +32,9 @@ namespace PileDesign.Views
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
 
+            // 検定比の詳細は他のツールチップより優先する
+            if (TryShowEvaluationRatioTooltip(viewModel, mousePos)) return;
+
             // 梁応力、節点変位、部材角表示が有効かチェック
             string effContent = viewModel.EffectiveSettlementContent;
             bool isMemberAngle = effContent is "単杭沈下部材角" or "群杭沈下部材角" or "単杭+群杭沈下部材角"
@@ -134,6 +137,107 @@ namespace PileDesign.Views
                 closestNodeI2D.Y * (1 - closestT) + closestNodeJ2D.Y * closestT);
 
             ShowBeamResultTooltip(mousePos, tooltipContent, samplePos);
+        }
+
+        /// <summary>
+        /// 検定比の詳細ツールチップ。色分けした杭の上で「何の検定比がいくつか」を出す。
+        ///
+        /// <see cref="MainWindowViewModel.IsEvaluationDetailVisible"/> が ON の間は
+        /// <b>常に true を返す</b> (表示するものが無くても他のツールチップを出さない)。
+        /// 色を見ながら値を確かめるための表示で、応力や変位が割り込むと目的を果たせない。
+        /// </summary>
+        private bool TryShowEvaluationRatioTooltip(MainWindowViewModel viewModel, Point mousePos)
+        {
+            if (!viewModel.IsEvaluationDetailVisible) return false;
+
+            Services.PileEvaluationSummary summary;
+            try
+            {
+                summary = viewModel.GetEvaluationSummary();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[検定比ツールチップ] 検定の取得に失敗");
+                HideBeamResultTooltip();
+                return true;
+            }
+
+            // 結果の表示なので、解析したときの入力 (スナップショット) を見る
+            var piles = viewModel.ResultInputModel?.PileLayoutItems;
+            if (piles == null || piles.Count == 0) { HideBeamResultTooltip(); return true; }
+
+            const double hitThreshold = 20.0; // ピクセル。他のツールチップと同じ
+            double best = double.MaxValue;
+            PileLayoutDataItem? elementPile = null;
+            int elementIndex = -1;
+            PileLayoutDataItem? headPile = null;
+            Point sample = default;
+
+            // 杭体の要素 (色分けした帯)
+            foreach (var pile in piles)
+            {
+                if (pile.Beams == null) continue;
+                foreach (var beam in pile.Beams)
+                {
+                    if (beam?.NodeI == null || beam.NodeJ == null || beam.SegmentIndex is not int seg) continue;
+
+                    Point a = viewModel.CanvasThreeDView.Transformation(
+                        new Point3D(beam.NodeI.Coord.X, beam.NodeI.Coord.Y, beam.NodeI.Coord.Z));
+                    Point b = viewModel.CanvasThreeDView.Transformation(
+                        new Point3D(beam.NodeJ.Coord.X, beam.NodeJ.Coord.Y, beam.NodeJ.Coord.Z));
+                    var (distance, t) = PointToLineSegmentDistance(mousePos, a, b);
+                    if (distance < best && distance < hitThreshold)
+                    {
+                        best = distance;
+                        elementPile = pile;
+                        elementIndex = seg;
+                        headPile = null;
+                        sample = new Point(a.X * (1 - t) + b.X * t, a.Y * (1 - t) + b.Y * t);
+                    }
+                }
+            }
+
+            // 杭頭の印 (部位を持たない検定)。要素より近ければそちらを出す
+            foreach (var pile in piles)
+            {
+                Point head = viewModel.CanvasThreeDView.Transformation(
+                    new Point3D(pile.Point3D.X, pile.Point3D.Y, pile.PileHeadZ));
+                double distance = (mousePos - head).Length;
+                if (distance < best && distance < hitThreshold)
+                {
+                    best = distance;
+                    headPile = pile;
+                    elementPile = null;
+                    sample = head;
+                }
+            }
+
+            Services.PileEvaluationEntry? entry = null;
+            string where = "";
+            if (headPile != null && summary.ByPileHead.TryGetValue(headPile.PileNo, out var headEntry))
+            {
+                entry = headEntry;
+                where = $"杭No.{headPile.PileNo}　杭頭";
+            }
+            else if (elementPile != null
+                     && summary.ByPileElement.TryGetValue((elementPile.PileNo, elementIndex), out var elemEntry))
+            {
+                entry = elemEntry;
+                where = $"杭No.{elementPile.PileNo}　要素{elementIndex}";
+            }
+
+            // 検定の無いところ (色が付いていない) では何も出さない
+            if (entry?.Governing is not { } governing) { HideBeamResultTooltip(); return true; }
+
+            string ratio = double.IsNaN(entry.MaxRatio) ? "—" : entry.MaxRatio.ToString("F2");
+            string unit = string.IsNullOrEmpty(governing.Unit) ? "" : " " + governing.Unit;
+            ShowBeamResultTooltip(mousePos,
+                $"{where}　{entry.StatusLabel}\n"
+                + $"{governing.Category}　検定比 {ratio}\n"
+                + $"応答 {governing.ResponseText} / 限界 {governing.LimitText}{unit}\n"
+                + governing.ConditionDescription,
+                sample);
+            return true;
         }
 
         /// <summary>

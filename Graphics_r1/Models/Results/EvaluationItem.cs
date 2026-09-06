@@ -86,7 +86,14 @@ namespace PileDesign.Models.Results
         /// </summary>
         public int? PileNo { get; init; }
 
-        /// <summary>杭体区間の番号。区間の区別が無い検定では null。</summary>
+        /// <summary>
+        /// 杭を要素に分けたときの<b>要素の番号</b> (0 が杭頭側の最上段)。
+        /// <c>Beam.SegmentIndex</c> をそのまま持つ。杭体の曲げ・せん断だけが持ち、
+        /// 部位を持たない検定 (杭頭回転角・変形角・支持力) では null。
+        ///
+        /// 画面の色分けは、この番号で描画側の要素と対応付ける
+        /// (キャンバスの描画も同じ順で要素を回している)。
+        /// </summary>
         public int? SegmentIndex { get; init; }
 
         [ResultColumn("荷重ケース", 4, tooltip: "この検定を行った荷重ケース")]

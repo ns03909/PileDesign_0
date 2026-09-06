@@ -6511,9 +6511,11 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
             <table class="table-doc">
                 <thead><tr><th style="text-align:center">グループ</th><th style="text-align:center">アイコン</th><th style="text-align:center">項目</th><th>説明</th></tr></thead>
                 <tbody>
-                    <tr><td rowspan="3">解析結果表示</td><td><img class="button-icon" src="icons/AnalysisResultVisilbe.svg" alt=""></td><td>杭・梁要素</td><td>解析結果ダイアグラムの表示/非表示</td></tr>
+                    <tr><td rowspan="5">解析結果表示</td><td><img class="button-icon" src="icons/AnalysisResultVisilbe.svg" alt=""></td><td>杭・梁要素</td><td>解析結果ダイアグラムの表示/非表示</td></tr>
                     <tr><td><img class="button-icon" src="icons/AnalysisResult.svg" alt=""></td><td>内容</td><td>梁応力/節点変位/地盤反力/杭頭M・Qマップ/沈下量等の切替</td></tr>
                     <tr><td><img class="button-icon" src="icons/GroupPileContorVisible.svg" alt=""></td><td>群杭グリッド変位</td><td>群杭沈下グリッドの変形表示。<strong>群杭沈下解析（一般 または 反復）が完了している場合のみ有効</strong></td></tr>
+                    <tr><td><img class="button-icon" src="icons/AxialForceVeirification.svg" alt=""></td><td>検定比 色分け</td><td>杭を検定比で色分けします（緑: 0.8 以下 / 黄: 0.8 超〜1.0 以下 / 赤: 1.0 超 = NG / 灰: 未収束）。<strong>杭体は分割した要素ごと</strong>に、その要素の曲げ・せん断で塗ります。<strong>杭頭の丸</strong>は、部位を持たない検定（杭頭回転角・杭頭 2 点間の変形角・支持力）で、杭頭のすぐ上に置きます（杭頭に重ねると、杭頭にできる短い要素を覆い隠すためです）。</td></tr>
+                    <tr><td><img class="button-icon" src="icons/Mouse.svg" alt=""></td><td>検定比 詳細</td><td>色分けした杭にマウスを近づけると、<strong>その部位の検定項目・検定比・応答値/限界値・荷重条件</strong>をポップアップで表示します。色だけでは「何の検定比がいくつか」が分からないためです。ON の間は<strong>応力や変位のツールチップより優先</strong>します（色を見ながら値を確かめるための表示なので、他が割り込むと目的を果たせません）。<strong>杭要素分割後に有効</strong>です低減後の水平解析と杭の鉛直支持力の検定から、全荷重ケースの最悪を取ります。凡例はメインビューの左下に出ます。<strong>杭要素分割後に有効</strong>で、水平解析前は支持力の検定だけが色になります</td></tr>
                     <tr><td rowspan="5">値表示</td><td>—</td><td>値表示</td><td>ダイアグラム上の数値の表示/非表示</td></tr>
                     <tr><td>—</td><td>要素中間</td><td>要素中間位置のみ値を表示</td></tr>
                     <tr><td>—</td><td>杭頭</td><td>杭頭位置のみ値を表示</td></tr>
@@ -7373,7 +7375,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <tr><td><img class="button-icon" src="icons/dxf.png" alt=""></td><td>DXF (3D)</td><td>3D モデルを DXF 形式でエクスポート</td></tr>
                     <tr><td><img class="button-icon" src="icons/dxf.png" alt=""></td><td>DXF (伏図)</td><td>杭伏図（通り心・寸法・杭位置・基礎梁）を 2D DXF 形式でエクスポート</td></tr>
                     <tr><td><img class="button-icon" src="icons/mgtFile.svg" alt=""></td><td>MGT 出力</td><td>FEM 解析モデルを midas iGen / Gen MGT テキスト形式でエクスポート（非線形地盤ばね・慣性力・強制変位・荷重組合せを含む）</td></tr>
-                    <tr><td rowspan="3">拡張機能</td><td><img class="button-icon" src="icons/Dashboard.svg" alt=""></td><td>解析結果ダッシュボード</td><td>解析規模・統計・状態を 1 画面のカード形式に集約表示するパネルを開きます</td></tr>
+                    <tr><td rowspan="3">拡張機能</td><td><img class="button-icon" src="icons/Dashboard.svg" alt=""></td><td>解析結果ダッシュボード</td><td>検定の総括（OK / NG / 未収束の件数、支配ケース、杭ごとの最大検定比）と解析の状態を 1 画面に集約表示するパネルを開きます</td></tr>
                     <tr><td><img class="button-icon" src="icons/CommandPalette.svg" alt=""></td><td>コマンド パレット</td><td>登録済みコマンドを AND 部分一致で検索・実行する小ウィンドウを開きます (Ctrl+Shift+P)</td></tr>
                     <tr><td><img class="button-icon" src="icons/History.svg" alt=""></td><td>編集履歴</td><td>Undo/Redo 履歴を一覧表示し、任意時点へジャンプできるパネルを開きます</td></tr>
                 </tbody>
@@ -7615,10 +7617,22 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h5><img class="heading-icon" src="icons/Dashboard.svg" alt="">解析結果ダッシュボード</h5>
             <p>
-                解析規模・統計・状態を 1 画面でカード形式に集約表示するパネルです。
-                杭本数・ステップ数・反復回数・代表変位などを一覧でき、解析全体の俯瞰に使えます。
+                解析が終わったあとに「検定は通ったか、通っていないならどの杭か」を 1 画面で確かめるパネルです。
                 リボン「ツール」タブの「<strong>解析結果ダッシュボード</strong>」ボタンから開きます。
             </p>
+            <ul>
+                <li><strong>検定の総括</strong>: 判定（すべて OK / NG n 件 / 未収束 n 件 / 未実施）と、
+                    低減後の水平解析・杭の鉛直支持力それぞれの OK / NG / 未収束の件数、最大検定比、支配ケース
+                    （対象｜検定項目｜荷重条件）。収束しなかった荷重ケースは名前を並べます。
+                    未収束の項目は OK にも NG にも数えません（釣り合っていない応答値を限界値と比べても意味が無いため）。</li>
+                <li><strong>杭ごとの最大検定比</strong>: 杭 1 本につき最も厳しい項目を 1 行にした一覧です。
+                    NG の杭を先頭に、検定比の降順で並びます。「杭配置を色分け」にチェックを入れると、
+                    メインビューの杭が同じ値で色分けされます（リボン「解析結果」タブの「検定比 色分け」と同じ）。
+                    全件は「検定結果をテーブルで開く」から、解析結果テーブルの「検定」カテゴリで確認できます。</li>
+                <li><strong>解析の状態</strong>: 水平解析・単杭沈下解析・単杭沈下解析（基礎梁考慮）の実施状況、ケース数、最終解析時刻、ファイル名。</li>
+                <li><strong>解析の詳細（規模・収束）</strong>: 杭本数・FEM 節点数・要素数、総ステップ・反復回数・最悪残差・代表変位。
+                    設計の判断に直接は要らないので畳んであります。</li>
+            </ul>
 
             <h5><img class="heading-icon" src="icons/CommandPalette.svg" alt="">コマンドパレット (Ctrl+Shift+P)</h5>
             <p>

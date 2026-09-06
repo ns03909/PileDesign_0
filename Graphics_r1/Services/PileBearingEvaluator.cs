@@ -151,7 +151,10 @@ namespace PileDesign.Services
                     : $"引抜き抵抗 ({limitName})",
                 LimitName = limitName,
                 TargetName = $"Pile-{pile.PileNo}",
-                PileBodyNo = pile.PileNo,
+                // 杭配置番号は PileNo に持つ。以前は PileBodyNo に入れていたため、
+                // 杭ごとに畳む処理 (PileEvaluationSummary) が支持力の行を杭に結び付けられなかった。
+                PileNo = pile.PileNo,
+                PileBodyNo = pile.PileBodyNo,
                 LoadCaseName = loadCaseName,
                 Response = response,
                 Limit = limit,

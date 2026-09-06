@@ -2,6 +2,7 @@ using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Constants;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using PileDesign.Services;
 using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -28,8 +29,78 @@ namespace PileDesign.Views
             return (point1 - factorV * vector, point0 + factorV * vector);
         }
 
+        /// <summary>
+        /// 検定比の色分けが有効なとき、この杭の杭頭に置く印の塗り先。無効・検定なしなら null。
+        /// 杭頭の印は<b>部位を持たない検定</b> (杭頭回転角・変形角・支持力) の最悪を表す。
+        /// </summary>
+        private PathGeometry? _pileRatioHeadPath;
+
+        /// <summary>
+        /// いま描いている要素の検定比の塗り先。<b>その要素の曲げ・せん断</b>の最悪を表す。
+        /// 要素の帯 1 つを描く間だけ設定し、<see cref="CurrentPileFillPath"/> が優先して返す。
+        ///
+        /// 要素ごとに色を変えるのは、分割した要素が塗り分けられていれば
+        /// 「その要素の判定」と読まれるため。杭 1 本を一色にすると、
+        /// 杭頭回転角だけが NG の杭が「全長にわたって NG」に見えてしまう。
+        /// </summary>
+        private PathGeometry? _pileElementRatioPath;
+
+        /// <summary>いま描いている杭の検定比 (要素番号 → 帯)。色分けが無効なら null。</summary>
+        private System.Collections.Generic.IReadOnlyDictionary<(int PileNo, int ElementIndex), PileEvaluationEntry>? _pileElementRatios;
+
+        /// <summary>いま描いている杭の杭配置番号。</summary>
+        private int _pileRatioPileNo;
+
         // 杭要素の更新メソッド
         private void UpdatePileElement(PileLayoutDataItem pileLocation)
+        {
+            if (DataContext is not MainWindowViewModel viewModel) return;
+
+            _pileRatioHeadPath = GetRatioFillPath(viewModel, pileLocation);
+            _pileElementRatios = GetElementRatios(viewModel);
+            _pileRatioPileNo = pileLocation.PileNo;
+            try
+            {
+                UpdatePileElementCore(pileLocation);
+            }
+            finally
+            {
+                _pileRatioHeadPath = null;
+                _pileElementRatios = null;
+                _pileElementRatioPath = null;
+            }
+        }
+
+        /// <summary>
+        /// 杭頭の印の塗り先を返す。部位を持たない検定 (杭頭回転角・変形角・支持力) の帯。
+        /// </summary>
+        private static PathGeometry? GetRatioFillPath(MainWindowViewModel viewModel, PileLayoutDataItem pileLocation)
+        {
+            // 表紙のモデル図は解析結果を載せないので、検定比の色分けも外す
+            if (viewModel.IsCapturingForExport) return null;
+            if (!viewModel.IsEvaluationColoringVisible) return null;
+            var summary = viewModel.GetEvaluationSummary();
+            return summary.ByPileHead.TryGetValue(pileLocation.PileNo, out var entry)
+                ? viewModel.CanvasGeometry.PathGeoPileRatio(entry.Band)
+                : null;
+        }
+
+        /// <summary>要素ごとの検定比。色分けが無効なら null。</summary>
+        private static System.Collections.Generic.IReadOnlyDictionary<(int PileNo, int ElementIndex), PileEvaluationEntry>? GetElementRatios(MainWindowViewModel viewModel)
+        {
+            if (viewModel.IsCapturingForExport) return null;
+            if (!viewModel.IsEvaluationColoringVisible) return null;
+            return viewModel.GetEvaluationSummary().ByPileElement;
+        }
+
+        /// <summary>要素 <paramref name="elementIndex"/> の検定比に対応する塗り先。無ければ null。</summary>
+        private PathGeometry? GetElementRatioPath(MainWindowViewModel viewModel, int elementIndex) =>
+            _pileElementRatios != null
+            && _pileElementRatios.TryGetValue((_pileRatioPileNo, elementIndex), out var entry)
+                ? viewModel.CanvasGeometry.PathGeoPileRatio(entry.Band)
+                : null;
+
+        private void UpdatePileElementCore(PileLayoutDataItem pileLocation)
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
 
@@ -81,6 +152,22 @@ namespace PileDesign.Views
             if (pileBodySegments.Count == 0) return;
 
             double pileBottomDia = pileBodySegments[^1].PileSection.PileDiameter / 1000.0;
+
+            // 検定比の色分け: 杭頭の印 (部位を持たない検定の帯)。
+            // 「杭形状」を消していても平面図で判定が読めるよう、杭頭の印は常に置く。
+            // 縮尺が小さくても見えるよう半径は 6px を下限にする。
+            //
+            // 印は杭頭の<b>すぐ上</b>に置く。杭頭に重ねると、最上段の要素を覆い隠してしまう
+            // (要素分割は杭頭に 0.1m 程度の短い要素を作ることがあり、杭径 1.2m の円板の下に
+            //  完全に隠れる。そこが NG でも赤が見えず、「杭体は OK」と読み違える)。
+            if (_pileRatioHeadPath != null)
+            {
+                double headDia2D = pileBodySegments[0].PileSection.PileDiameter / 1000.0 * viewModel.CanvasThreeDView.Scale;
+                double headRadius = Math.Max(headDia2D * 0.5, 6.0);
+                double headRadiusY = headRadius * viewModel.CanvasThreeDView.Flattening;
+                var headMarkCenter = new Point(pointT.X, pointT.Y - headRadiusY - 2.0);
+                AddEllipseFigure(_pileRatioHeadPath, headMarkCenter, headRadius, headRadiusY);
+            }
             double pileToeDia = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileToeDia / 1000.0;
             double pileToeAngle = pileBody.InsituPileToeAngle;
             double pileToeHeight = pileBody.InsituPileToeHeight / 1000.0;
@@ -131,7 +218,16 @@ namespace PileDesign.Views
                     double pileDia = pileBodySegments[i].PileSection.PileDiameter / 1000.0;
                     double flattening = viewModel.CanvasThreeDView.Flattening;
 
-                    AddPileSectionGeometry(point1, point2, pileDia2D, flattening);
+                    // 要素ごとの検定比で塗り分ける (この要素の曲げ・せん断)
+                    _pileElementRatioPath = GetElementRatioPath(viewModel, i);
+                    try
+                    {
+                        AddPileSectionGeometry(point1, point2, pileDia2D, flattening);
+                    }
+                    finally
+                    {
+                        _pileElementRatioPath = null;
+                    }
                     AddNodularPilePositionGeometry(
                         x, y, z1, zs[i + 1], zToeTop, pileBodySegments[i], pileDia2D, flattening);
 
@@ -275,6 +371,7 @@ namespace PileDesign.Views
         /// <summary>現在の表示状態に対応する杭体の塗りパス。</summary>
         private PathGeometry CurrentPileFillPath =>
             DataContext is not MainWindowViewModel vm ? null
+            : _pileElementRatioPath != null ? _pileElementRatioPath
             : vm.IsElementSplit ? vm.CanvasGeometry.PathGeoPileDividedFill
             : vm.CanvasGeometry.PathGeoPileFill;
 

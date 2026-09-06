@@ -4104,11 +4104,27 @@ namespace PileDesign.Views
 
         // ---- E.18 / C.9 Dashboard / Command Palette ハンドラ ----------------
 
+        private ResultDashboardWindow? _resultDashboard;
+
+        /// <summary>
+        /// ダッシュボードはモードレスで開く。
+        /// 「杭配置を色分け」をダッシュボードから切り替えて、メインビューの色を見ながら
+        /// 一覧を読むためで、モーダルだとメインビューを回転もできない。
+        /// 二重に開かず、既に開いていれば前面に出す。
+        /// </summary>
         private void OpenResultDashboard_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is not MainWindowViewModel vm) return;
+            if (_resultDashboard is { IsLoaded: true })
+            {
+                _resultDashboard.RefreshNow();
+                _resultDashboard.Activate();
+                return;
+            }
             var w = new ResultDashboardWindow(vm) { Owner = this };
-            w.ShowDialog();
+            w.Closed += (_, __) => _resultDashboard = null;
+            _resultDashboard = w;
+            w.Show();
         }
 
         private void OpenCommandPalette_Click(object sender, RoutedEventArgs e) => OpenCommandPalette();

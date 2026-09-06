@@ -40,6 +40,31 @@ namespace PileDesign.Services
         public PathGeometry PathGeoPileFill { get; set; } = new() { FillRule = FillRule.Nonzero };
         public PathGeometry PathGeoPileDividedFill { get; set; } = new() { FillRule = FillRule.Nonzero };
 
+        // 検定比による杭の色分け (帯ごとに 1 パス)。杭体の塗りと同じ作りで、
+        // 色分けが有効な杭は通常の塗りの代わりにこちらへ積む。
+        // 帯 → パスの対応は PathGeoPileRatio() に集約する。
+        public PathGeometry PathGeoPileRatioSafe { get; set; } = new() { FillRule = FillRule.Nonzero };
+        public PathGeometry PathGeoPileRatioTight { get; set; } = new() { FillRule = FillRule.Nonzero };
+        public PathGeometry PathGeoPileRatioNg { get; set; } = new() { FillRule = FillRule.Nonzero };
+        public PathGeometry PathGeoPileRatioUnconverged { get; set; } = new() { FillRule = FillRule.Nonzero };
+
+        /// <summary>検定比の帯に対応する塗りパス。検定の無い杭 (None) は null。</summary>
+        public PathGeometry? PathGeoPileRatio(PileRatioBand band) => band switch
+        {
+            PileRatioBand.Safe => PathGeoPileRatioSafe,
+            PileRatioBand.Tight => PathGeoPileRatioTight,
+            PileRatioBand.Ng => PathGeoPileRatioNg,
+            PileRatioBand.Unconverged => PathGeoPileRatioUnconverged,
+            _ => null,
+        };
+
+        // 検定比の色 (凡例 MainWindow.xaml の EvaluationLegend と同じ色にすること)。
+        // 杭体の通常の塗りより濃くしないと、地盤の塗りに埋もれて判定が読めない。
+        private static readonly Brush PileRatioSafeFill = FrozenBrush(Color.FromArgb(150, 35, 137, 102));
+        private static readonly Brush PileRatioTightFill = FrozenBrush(Color.FromArgb(170, 247, 181, 21));
+        private static readonly Brush PileRatioNgFill = FrozenBrush(Color.FromArgb(160, 216, 37, 49));
+        private static readonly Brush PileRatioUnconvergedFill = FrozenBrush(Color.FromArgb(150, 112, 128, 144));
+
         /// <summary>要素分割前の杭体の塗り (輪郭の Orange に合わせた薄い橙)。</summary>
         private static readonly Brush PileFillBeforeSplit = FrozenBrush(Color.FromArgb(38, 255, 165, 0));
 
@@ -153,6 +178,10 @@ namespace PileDesign.Services
             PathGeoPileDias.Figures.Clear();
             PathGeoPileFill.Figures.Clear();
             PathGeoPileDividedFill.Figures.Clear();
+            PathGeoPileRatioSafe.Figures.Clear();
+            PathGeoPileRatioTight.Figures.Clear();
+            PathGeoPileRatioNg.Figures.Clear();
+            PathGeoPileRatioUnconverged.Figures.Clear();
             PathGeoPileNodeDetails.Figures.Clear();
             PathGeoPileDividedNodeDetails.Figures.Clear();
             PathGeoPileDividedDias.Figures.Clear();
@@ -406,6 +435,18 @@ namespace PileDesign.Services
                 Data = PathGeoPileDividedFill,
                 Name = "Node"
             });
+
+            // 検定比の色分け (通常の塗りの代わりに使うので同じ層に置く)
+            foreach (var (fill, data) in new (Brush, PathGeometry)[]
+            {
+                (PileRatioSafeFill, PathGeoPileRatioSafe),
+                (PileRatioTightFill, PathGeoPileRatioTight),
+                (PileRatioNgFill, PathGeoPileRatioNg),
+                (PileRatioUnconvergedFill, PathGeoPileRatioUnconverged),
+            })
+            {
+                canvas.Children.Add(new Path() { Fill = fill, Data = data, Name = "Node" });
+            }
 
             // 杭径
             canvas.Children.Add(new Path()
