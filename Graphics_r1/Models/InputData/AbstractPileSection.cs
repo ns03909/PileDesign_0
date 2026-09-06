@@ -342,6 +342,17 @@ namespace PileDesign.Models.InputData
         protected bool _forceBilinearUltimate;
 
         /// <summary>
+        /// 安全限界の耐力算定で、いまコンクリートに使われている構成則。
+        ///
+        /// ひび割れ判定のひずみ度は構成則ごとに違うので、判定側がこれを見て閾値を選ぶ。
+        /// コンクリートを常にバイリニアで積分する断面（杭頭断面など）はこれを使わず
+        /// <see cref="MaterialLaw.Bilinear"/> を直に渡すこと。
+        /// </summary>
+        protected MaterialLaw ActiveUltimateConcreteLaw =>
+            (ConcreteModelOptions.UseInsituUltimateEFunction && !_forceBilinearUltimate)
+                ? MaterialLaw.EFunction : MaterialLaw.Bilinear;
+
+        /// <summary>
         /// ファイバー M-φ 掃引の終点 (Mu0, φu)。既定は安全限界ソルバ（圧縮縁 εc=0.003）。
         /// 終局の定義が異なる断面型（PHC/PRC/SC のコンクリート圧壊状態など）はオーバーライドする。
         /// </summary>

@@ -172,7 +172,24 @@ namespace PileDesign.Models.InputData
         internal void SetEpsilonCr()
         {
             EpsilonCr_bilinear = SigmaCr / Ec;
-            EpsilonCr_eFunction = GetEFuncEpsilon(SigmaCr);
+            // 引張側で解く。e 関数は原点対称ではないので、圧縮側で σ=SigmaCr となる ε を
+            // 符号反転して使うと、引張側では |σ| が SigmaCr を 1 割ほど超えてしまう。
+            EpsilonCr_eFunction = GetEFuncEpsilonTension(SigmaCr);
+        }
+
+        /// <summary>
+        /// ひび割れ開始の引張ひずみ度（絶対値, &gt;0）。指定した構成則で σ(−ε) = −SigmaCr となる ε。
+        ///
+        /// ひび割れ開始の判定は「引張縁の応力度が曲げ引張強度 Ft に達したか」なので、
+        /// 判定に使うひずみ度は<b>そのとき使っている構成則</b>から決まる。
+        /// 構成則と閾値がちぐはぐだと、まだひび割れていない状態を「ひび割れ」と呼んだり
+        /// （バイリニアに e 関数の閾値を当てると Ft の 8 割で判定される）、
+        /// 行き過ぎた状態で判定したりする。
+        /// </summary>
+        internal double GetCrackTensileStrain(MaterialLaw type)
+        {
+            if (SigmaCr <= 0.0 || Ec <= 0.0) return 0.0;
+            return type == MaterialLaw.EFunction ? EpsilonCr_eFunction : EpsilonCr_bilinear;
         }
 
         // ひずみ度から応力を計算するメソッド// ひずみ度から応力を計算するメソッド 使用限界、損傷限界用
@@ -228,6 +245,55 @@ namespace PileDesign.Models.InputData
         internal double GetEFuncDSonDEpsilon(double epsilon)
         {
             return 6.75 * (-0.812 / EpsilonM * Math.Exp(-0.812 * epsilon / EpsilonM) - (-1.218 / EpsilonM) * Math.Exp(-1.218 * epsilon / EpsilonM)) * Gsi * Fc;
+        }
+
+        /// <summary>
+        /// e 関数の<b>引張側</b>で σ(−ε) = −sigma となる ε（絶対値, &gt;0）を返す。
+        ///
+        /// <see cref="GetEFuncEpsilon"/> は解を [0, EpsilonCu] にクランプするため圧縮側しか解けない。
+        /// e 関数 σ(ε) = 6.75(e^(−0.812ε/εm) − e^(−1.218ε/εm))·ξFc は原点対称ではなく、
+        /// 引張側のほうが立ち上がりが急なので、圧縮側の解を符号反転して流用できない
+        /// （Fc=27・ξ=0.75 で |σ| が 2.52 のところ 2.78 と 1 割超過する）。
+        ///
+        /// 引張側では |σ| が単調増加なので Newton は素直に収束する。
+        /// </summary>
+        internal double GetEFuncEpsilonTension(double sigma)
+        {
+            try
+            {
+                if (sigma <= 0.0 || Ec <= 0.0) return 0.0;
+
+                // 上限: 引張側は圧縮側より急なので、線形解 sigma/Ec より必ず内側に解がある
+                double upper = Math.Max(sigma / Ec, 1e-9) * 4.0;
+                double u = Math.Max(sigma / Ec, 1e-12);
+                const int maxIter = 40;
+                const double tol = 1e-6;
+
+                for (int i = 0; i < maxIter; i++)
+                {
+                    // g(u) = |σ(−u)| − sigma （σ(−u) は負値）
+                    double g = -GetEFuncSigma(-u) - sigma;
+                    if (Math.Abs(g) < tol) return u;
+
+                    // d/du[−σ(−u)] = σ'(−u)
+                    double dg = GetEFuncDSonDEpsilon(-u);
+                    if (Math.Abs(dg) < 1e-12) break;
+
+                    double step = g / dg;
+                    if (Math.Abs(step) > u * 0.5) step = Math.Sign(step) * u * 0.5;
+
+                    double next = Math.Clamp(u - step, 1e-12, upper);
+                    if (Math.Abs(next - u) < tol * Math.Max(u, 1e-9)) return next;
+                    u = next;
+                }
+                return Math.Clamp(u, 0.0, upper);
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Debug($"[InsituConcrete.GetEFuncEpsilonTension] sigma={sigma}, EpsilonM={EpsilonM}, Ec={Ec}, Fc={Fc}: {ex.GetType().Name}: {ex.Message}");
+                // 落ちるくらいならバイリニアのひび割れひずみで代替する（0 を返すと Mcr=0 になる）
+                return Ec > 0.0 ? sigma / Ec : 0.0;
+            }
         }
 
         internal double GetEFuncEpsilon(double sigma)

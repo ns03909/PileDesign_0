@@ -2,7 +2,7 @@
   "exampleName": "ExampleK8",
   "exampleDisplayName": "関東支部8章",
   "schemaVersion": 1,
-  "capturedAt": "2026-08-21",
+  "capturedAt": "2026-09-07",
   "options": {
     "level1Steps": 4,
     "level2Steps": 8,
@@ -18,18 +18,18 @@
       "combinationNo": 1,
       "isLiquefaction": true,
       "converged": true,
-      "totalIterations": 70,
+      "totalIterations": 49,
       "totalSteps": 4,
       "bisectionRetries": 0,
-      "finalResidual": 3.420639084219029E-07,
-      "apUx": 0.007147434723768152,
-      "apUy": -0.0037545684552403513,
-      "apUz": 8.120022424204249E-05,
-      "apRx": -8.264036523845738E-08,
-      "apRy": 3.7026456868756176E-06,
-      "apRz": 0.00033538846724732123,
-      "maxAbsHorizDisp": 0.008073574636777233,
-      "maxAbsHorizSpringReaction": 107.49305448553817
+      "finalResidual": 3.4206390845006023E-07,
+      "apUx": 0.006939158786653132,
+      "apUy": -0.0036041698166887704,
+      "apUz": 8.166819469944666E-05,
+      "apRx": -6.649124310584232E-08,
+      "apRy": 3.7353761250685283E-06,
+      "apRz": 0.0003236509472841291,
+      "maxAbsHorizDisp": 0.007819332755031962,
+      "maxAbsHorizSpringReaction": 106.36779061125499
     },
     {
       "caseKey": "L2-1.C1.Liq",
@@ -38,25 +38,25 @@
       "combinationNo": 1,
       "isLiquefaction": true,
       "converged": true,
-      "totalIterations": 117,
+      "totalIterations": 108,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 8.812189189838468E-07,
-      "apUx": 0.027176051185140403,
-      "apUy": -0.01527477922317504,
-      "apUz": 0.00015995191909540541,
-      "apRx": -2.7245600607407474E-07,
-      "apRy": 7.218498620625425E-06,
-      "apRz": 0.0013104044995929653,
-      "maxAbsHorizDisp": 0.03117461528766812,
-      "maxAbsHorizSpringReaction": 245.0657893270083
+      "finalResidual": 9.653439995676113E-07,
+      "apUx": 0.02494609689854443,
+      "apUy": -0.013794998126199578,
+      "apUz": 0.00016216475169760053,
+      "apRx": -2.4872237680884066E-07,
+      "apRy": 7.337206505593965E-06,
+      "apRz": 0.0012047692124473137,
+      "maxAbsHorizDisp": 0.028506310244811022,
+      "maxAbsHorizSpringReaction": 249.80026891327202
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 187,
+    "totalIterations": 157,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 8.812189189838468E-07
+    "maxResidualOverAllCases": 9.653439995676113E-07
   }
 }

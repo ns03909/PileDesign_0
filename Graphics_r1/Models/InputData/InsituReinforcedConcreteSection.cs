@@ -387,9 +387,8 @@ namespace PileDesign.Models.InputData
                 }
                 else
                 {
-                    // e関数法:
-                    // 1) εt,cr を e関数から逆算（σ=Ft を満たす ε）
-                    epsTcr = InsituConcrete.GetEFuncEpsilon(FtLoc);
+                    // 1) εt,cr は、積分に使う構成則で σ=-FtLoc となるひずみ度
+                    epsTcr = InsituConcrete.GetCrackTensileStrain(ActiveUltimateConcreteLaw);
                     (Mcr, phiCr) = GetCrackMoment(Ntarget, isLinear);
                 }
 
@@ -484,9 +483,9 @@ namespace PileDesign.Models.InputData
             }
             else
             {
-                // e関数法: 引張縁のひずみ閾値を Ft から逆算（堅牢）
-                double epsTcr = InsituConcrete.GetEFuncEpsilon(Ft); // >0（引張ひずみの絶対値）
-                //double epsilonCT = InsituConcrete.EpsilonCr_eFunction;
+                // 引張縁のひずみ閾値は、積分に使う構成則で σ=-Ft となるひずみ度。
+                // ここを取り違えると、ひび割れていない状態を「ひび割れ」と呼ぶ。
+                double epsTcr = InsituConcrete.GetCrackTensileStrain(ActiveUltimateConcreteLaw); // >0（引張ひずみの絶対値）
                 if (epsTcr <= 0) return (0, 0);
                 double lever = PileDia;
 

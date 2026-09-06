@@ -144,9 +144,15 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// ひび割れ点アンカー: φcr でのファイバー M は Mcr と概ね整合する。
-        /// GetCrackMoment の引張ひずみ閾値は e関数逆算 (GetEFuncEpsilon(Ft))、ファイバーの
-        /// バイリニア引張脱落は EpsilonCr_bilinear で、閾値の算定に差があるため許容は 10% と緩め。
+        /// ひび割れ点アンカー: φcr でのファイバー M は Mcr と一致する。
+        ///
+        /// φcr は<b>折れ点そのもの</b>で、直後にコンクリート引張負担の脱落で M が微減する。
+        /// 既定の 50 点掃引では φcr を挟む格子が広く（例題断面の N=0 で φ=1.47e-7〜2.26e-7）、
+        /// 弦がこの山を跨いで 10% も低く出る。曲線の誤差ではなく折線補間の誤差なので、
+        /// ここでは<b>折れ点が分解される密さ</b>で掃引して比べる（200 点で誤差 0.2%）。
+        ///
+        /// 掃引を粗いままにして許容を広げると、閾値の取り違え
+        /// （<see cref="CrackStrainThresholdTests"/> が押さえている類）を隠してしまう。
         /// </summary>
         [TestMethod]
         public void FiberMPhi_NearCrackPoint()
@@ -157,7 +163,7 @@ namespace TestProject1
             foreach (double r in ratios)
             {
                 double n = AxialN(r);
-                var fiber = section.GetMPhiRelationshipFiber(n);
+                var fiber = section.GetMPhiRelationshipFiber(n, numPoints: 200);
                 Assert.IsNotNull(fiber, $"ファイバー M-φ が null (σ0/ξFc={r:F3})");
                 var (phis, ms) = fiber.Value;
 
@@ -165,7 +171,7 @@ namespace TestProject1
                 if (mcr <= 0 || phiCr <= 0) continue;
 
                 double mFiber = Interpolate(phis, ms, phiCr);
-                Assert.AreEqual(mcr, mFiber, 0.10 * mcr,
+                Assert.AreEqual(mcr, mFiber, 0.02 * mcr,
                     $"φcr でのファイバー M が Mcr と不一致: M_fiber={mFiber:E4}, Mcr={mcr:E4} (σ0/ξFc={r:F3})");
             }
         }
