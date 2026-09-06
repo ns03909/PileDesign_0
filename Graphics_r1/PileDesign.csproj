@@ -67,6 +67,11 @@
     <None Remove="Icons\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" />
     <None Remove="Icons\332-8002.jpg" />
     <None Remove="Icons\cover.png" />
+    <None Remove="Help\images\screenshots\plan_evaluation.png" />
+    <None Remove="Help\images\screenshots\dashboard.png" />
+    <None Remove="Help\images\screenshots\graph.png" />
+    <None Remove="Help\images\screenshots\report_page.png" />
+    <None Remove="Help\images\screenshots\workflow.gif" />
     <None Remove="Help\images\F.T.Pile構法 既製コンクリート杭設計・施工指針【暫定版】%28BCJ評定-FD0141-05%29.png" />
     <None Remove="Help\images\F.T.Pile構法　既製コンクリート杭設計・施工指針【暫定版】%28BCJ評定-FD0141-05%29.png" />
     <None Remove="Help\images\キャプリングパイル工法.png" />
@@ -642,6 +647,21 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Help\verification.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\screenshots\plan_evaluation.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\screenshots\dashboard.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\screenshots\graph.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\screenshots\report_page.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\screenshots\workflow.gif">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Help\verification_methods.html">

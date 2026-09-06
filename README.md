@@ -6,6 +6,22 @@
 - .NET 8 / C# / WPF
 - 現在 β 版です。重要な計算書としての使用は想定していません。
 
+## 画面
+
+例題を読み込み、杭要素分割 → 水平解析 → 検定 と進む流れです (基礎指針'19 計算例9、約 1 分の操作)。
+
+![操作の流れ](Graphics_r1/Help/images/screenshots/workflow.gif)
+
+| 杭配置の検定比色分け | 解析結果ダッシュボード |
+|---|---|
+| ![杭配置を杭ごとの最大検定比で色分けした平面図](Graphics_r1/Help/images/screenshots/plan_evaluation.png) | ![検定の総括と杭ごとの最大検定比](Graphics_r1/Help/images/screenshots/dashboard.png) |
+| 平面図の杭頭を、杭ごとの最大検定比で 緑 / 黄 / 赤 / 灰 に塗ります | 判定バッジ・支配ケース・杭ごとの一覧を 1 画面にまとめます |
+
+| 解析結果グラフ | 計算書 (Word) |
+|---|---|
+| ![慣性力作用点の荷重変形関係](Graphics_r1/Help/images/screenshots/graph.png) | ![杭の変位・応力ダイアグラムのページ](Graphics_r1/Help/images/screenshots/report_page.png) |
+| 荷重変形関係、杭の変位・応力、沈下曲線などを荷重ケース・組合せで絞り込めます | 入力諸元・地盤・解析結果・検定を目次付きの docx に書き出します |
+
 ---
 
 ## リポジトリの構成
