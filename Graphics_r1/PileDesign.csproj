@@ -64,6 +64,9 @@
     <None Remove="Help\images\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" />
     <None Remove="Help\images\332-8002.jpg" />
     <None Remove="Help\images\cover.png" />
+    <None Remove="Icons\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" />
+    <None Remove="Icons\332-8002.jpg" />
+    <None Remove="Icons\cover.png" />
     <None Remove="Help\images\F.T.Pile構法 既製コンクリート杭設計・施工指針【暫定版】%28BCJ評定-FD0141-05%29.png" />
     <None Remove="Help\images\F.T.Pile構法　既製コンクリート杭設計・施工指針【暫定版】%28BCJ評定-FD0141-05%29.png" />
     <None Remove="Help\images\キャプリングパイル工法.png" />
@@ -127,8 +130,6 @@
     <None Remove="Help\images\図2.1.jpeg" />
     <None Remove="Help\images\図3.1.png" />
     <None Remove="Help\images\図3.2.png" />
-    <None Remove="Help\images\基礎構造部材の強度変形性能%28５月20日版全章%29.docx" />
-    <None Remove="Help\images\基礎構造部材の強度変形性能%28５月20日版全章%29.pdf" />
     <None Remove="Help\images\解説図1.1.png" />
     <None Remove="Help\images\解説図1.1_r1.png" />
     <None Remove="Help\images\解説図1.1_r1._original.png" />
@@ -145,8 +146,6 @@
     <None Remove="Help\images\解説図4.12.png" />
     <None Remove="Help\images\解説図4.2.png" />
     <None Remove="Help\images\解説図4.8.png" />
-    <None Remove="Icons\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" />
-    <None Remove="Icons\332-8002.jpg" />
     <None Remove="Icons\ActiveAll.png" />
     <None Remove="Icons\ActiveAll.svg" />
     <None Remove="Icons\AddElementMode.png" />
@@ -232,7 +231,6 @@
     <None Remove="Icons\CopyPicture2.svg" />
     <None Remove="Icons\CopySoilLayer.png" />
     <None Remove="Icons\CopySoilLayer.svg" />
-    <None Remove="Icons\cover.png" />
     <None Remove="Icons\CreateAutoUniformlyDistributedLoad.png" />
     <None Remove="Icons\CreateAutoUniformlyDistributedLoad.svg" />
     <None Remove="Icons\BeamedCrossFormPressure.png" />
@@ -631,6 +629,18 @@
     <Content Include="Help\help.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Help\images\0669.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\332-8002.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\cover.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Help\verification.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -647,18 +657,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Help\images\0669.jpg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Help\images\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Help\images\332-8002.jpg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Help\images\cover.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="Help\images\F.T.Pile構法　既製コンクリート杭設計・施工指針【暫定版】(BCJ評定-FD0141-05).png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -785,14 +783,6 @@
     <Content Include="Help\images\図3.2.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <!-- 参考資料（ヘルプHTMLから未参照のため配布対象外）
-    <Content Include="Help\images\基礎構造部材の強度変形性能(５月20日版全章).docx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Help\images\基礎構造部材の強度変形性能(５月20日版全章).pdf">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    -->
     <Content Include="Help\images\解説図1.1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -853,12 +843,6 @@
     <Content Include="Help\images\verification_c\shishin19\Table1.1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Resource Include="Icons\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Icons\332-8002.jpg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
     <Resource Include="Icons\ActiveAll.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -932,6 +916,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AnyFormPressure.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\332-8002.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\cover.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AppLogo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ApplicationIcon.svg">
@@ -1112,9 +1108,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CopySoilLayer.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Icons\cover.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CreateAutoUniformlyDistributedLoad.png">

@@ -15,7 +15,7 @@
 
             <!-- アプリ名とバージョン -->
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Image Source="pack://application:,,,/Icons/cover.png" Width="44" Height="44"
+                <Image Source="pack://application:,,,/Icons/AppLogo.png" Width="44" Height="44"
                        Stretch="Uniform" Margin="0,0,14,0" VerticalAlignment="Top"/>
                 <StackPanel>
                     <TextBlock Text="杭基礎検討プログラム" FontSize="17" FontWeight="SemiBold"/>

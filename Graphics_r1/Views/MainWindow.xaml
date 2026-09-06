@@ -702,18 +702,18 @@
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding ExampleCPT2018Command}"
                                                 ToolTip="日本建築学会 学術講演梗概集 2018 年 9 月 応答変位法による杭頭半固定杭の杭体応力に関するケーススタディ&#x0a;(キャプテンパイル工法 / 場所打ち D=2100mm / 10 本杭)" AutomationProperties.Name="日本建築学会 学術講演梗概集 2018 年 9 月 応答変位法による杭頭半固定杭の杭体応力に関するケーススタディ&#x0a;(キャプテンパイル工法 / 場所打ち D=2100mm / 10 本杭)">
-                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="応答変位法による杭頭半固定杭の杭体応力 (AIJ 2018)" VerticalAlignment="Center"/></StackPanel></Button>
+                                            <StackPanel Orientation="Horizontal"><TextBlock Margin="44,0,0,0" Text="応答変位法による杭頭半固定杭の杭体応力 (AIJ 2018)" VerticalAlignment="Center"/></StackPanel></Button>
 
                                         <!-- キャプリングパイル工法計算例 -->
                                         <TextBlock Text="キャプリングパイル工法 計算例" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding ExampleCAP3_7Command}"
                                                 ToolTip="キャプリングパイル工法設計例3.7.1 杭頭に引張力が生じない場合&#x0a;(既製コンクリート杭 PHC-800 / 12 本杭 / 砂質土地盤 N=10)" AutomationProperties.Name="キャプリングパイル工法設計例3.7.1 杭頭に引張力が生じない場合&#x0a;(既製コンクリート杭 PHC-800 / 12 本杭 / 砂質土地盤 N=10)">
-                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="設計例3.7.1 杭頭に引張力が生じない場合" VerticalAlignment="Center"/></StackPanel></Button>
+                                            <StackPanel Orientation="Horizontal"><TextBlock Margin="44,0,0,0" Text="設計例3.7.1 杭頭に引張力が生じない場合" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding ExampleCAP3_7_3Command}"
                                                 ToolTip="キャプリングパイル工法設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)&#x0a;(既製コンクリート杭 PHC-800-B / 引張定着筋 3-D19 SD390 / 12 本杭 / 4 層砂質土+礫質土地盤)" AutomationProperties.Name="キャプリングパイル工法設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)&#x0a;(既製コンクリート杭 PHC-800-B / 引張定着筋 3-D19 SD390 / 12 本杭 / 4 層砂質土+礫質土地盤)">
-                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)" VerticalAlignment="Center"/></StackPanel></Button>
+                                            <StackPanel Orientation="Horizontal"><TextBlock Margin="44,0,0,0" Text="設計例3.7.3 杭頭に引張力が生じる杭がある場合 (清算解析法)" VerticalAlignment="Center"/></StackPanel></Button>
                                     </StackPanel>
                                 </ScrollViewer>
                             </Border>
@@ -2122,8 +2122,8 @@
                                  ToolTipService.ShowOnDisabled="True"
                                  ToolTip="お使いのバージョンと、プログラム更新履歴概要を確認します。"
                                  Command="{Binding OpenAboutWindowCommand}"
-                                 LargeIcon="pack://application:,,,/Icons/cover.png"
-                                 Icon="pack://application:,,,/Icons/cover.png"
+                                 LargeIcon="pack://application:,,,/Icons/AppLogo.png"
+                                 Icon="pack://application:,,,/Icons/AppLogo.png"
                                  KeyTip="V" AutomationProperties.Name="バージョン 情報"/>
                     <Fluent:Button Header="検証"
                                  ToolTipService.ShowOnDisabled="True"
