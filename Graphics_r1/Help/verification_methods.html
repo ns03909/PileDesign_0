@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>認定工法の支持力算定の検証</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", "Meiryo", sans-serif;
+            font-size: 14px;
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 検証ウィンドウ (verification.html) と同じ見出し帯 */
+        .header {
+            background-color: #62B0E2;
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .header h1 { font-size: 18px; font-weight: bold; }
+        .header .nav { display: flex; gap: 8px; flex-wrap: wrap; }
+        .header .nav a {
+            color: white;
+            text-decoration: none;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            background: rgba(255,255,255,0.15);
+            transition: background 0.2s;
+        }
+        .header .nav a:hover { background: rgba(255,255,255,0.3); }
+
+        .scroll-container { flex: 1; overflow-y: auto; padding: 16px 24px 32px; }
+
+        .intro {
+            background: #f4f9fd;
+            border-left: 4px solid #62B0E2;
+            padding: 12px 16px;
+            margin: 0 0 16px;
+            line-height: 1.7;
+        }
+        .intro h2 { font-size: 15px; margin-bottom: 6px; }
+        .intro ul { margin: 6px 0 0 20px; }
+
+        .item-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin: 16px 0 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #ddd;
+        }
+        .summary-lead { line-height: 1.6; }
+        .summary-count { font-weight: normal; color: #666; font-size: 12px; }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+        .comparison-table th {
+            background-color: #62B0E2;
+            color: white;
+            padding: 8px 12px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .comparison-table td {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .comparison-table tr:nth-child(even) { background-color: #f8f8f8; }
+        .comparison-table td:nth-child(2) { text-align: left; }
+        .match { color: #2e8b57; font-weight: bold; }
+        .diff { color: #e95541; font-weight: bold; }
+        code { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>認定工法の支持力算定の検証</h1>
+        <div class="nav">
+            <a href="verification.html">← 設計例による検証</a>
+        </div>
+    </div>
+    <div class="scroll-container">
+        <div class="intro">
+            <h2>このページの位置づけ</h2>
+            <p>
+                杭先端の支持力算定について、認定工法のカタログ・設計マニュアルに数値として書かれている
+                算定式の値や対比表を本プログラムで再現し、突き合わせた結果です。
+            </p>
+            <ul>
+                <li>学会の指針・計算例 (建築基礎構造設計指針、基礎部材の強度と変形性能) との照合は
+                    <a href="verification.html">設計例による検証</a> にあります。あちらは設計法そのものの再現です。</li>
+                <li>ここに載る値は、各メーカーが評定・認定の範囲で公表している算定式・係数です。
+                    本プログラムはそれを忠実に計算することを確かめていますが、
+                    工法の適用範囲や係数の妥当性はカタログ・評定書の記載が正です。</li>
+                <li>設計に用いる際は、必ず最新のカタログ・評定書を確認してください。</li>
+            </ul>
+        </div>
+
+        <!-- verification-methods:begin (自動生成: VerificationTableTests が書く。手で編集しない) -->
+            <p class="summary-lead">認定工法のカタログ・設計マニュアルに数値として書かれている 39 項目を本プログラムで計算し、39 項目がカタログの表記と一致しました。この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。</p>
+            <div class="item-title">Smart-MAGNUM 工法カタログ (ジャパンパイル)　<span class="summary-count">17 / 17 項目</span></div>
+            <table class="comparison-table">
+                <tr><th>箇所</th><th>項目</th><th>文献値</th><th>プログラム値</th><th>差</th><th>許容</th><th>判定</th></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.04, LL=0.5 m, 砂質・礫質)</td><td>348</td><td>348 (348.14)</td><td>0.0%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.04, LL=1.0 m, 砂質・礫質)</td><td>394</td><td>394 (394.94)</td><td>+0.2%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.04, LL=2.0 m, 砂質・礫質)</td><td>441</td><td>441 (441.74)</td><td>+0.2%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.28, LL=0.5 m, 砂質・礫質)</td><td>462</td><td>462 (462.76)</td><td>+0.2%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.60, LL=0.5 m, 砂質・礫質)</td><td>629</td><td>629 (629.73)</td><td>+0.1%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.60, LL=1.0 m, 砂質・礫質)</td><td>701</td><td>701 (701.73)</td><td>+0.1%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.60, LL=2.0 m, 砂質・礫質)</td><td>773</td><td>773 (773.73)</td><td>+0.1%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.00, LL=0.5 m, 砂質・礫質)</td><td>330</td><td>330 (330.00)</td><td>0.0%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=2.00, LL=2.0 m, 砂質・礫質)</td><td>1,038</td><td>1,038 (1038.82)</td><td>+0.1%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.04, LL=0.5 m, 粘土質)</td><td>314</td><td>314 (314.15)</td><td>0.0%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.28, LL=0.5 m, 粘土質)</td><td>401</td><td>401 (401.11)</td><td>0.0%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.76, LL=0.5 m, 粘土質)</td><td>584</td><td>584 (584.11)</td><td>0.0%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.76, LL=2.0 m, 粘土質)</td><td>742</td><td>742 (742.51)</td><td>+0.1%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.00, LL=0.5 m, 粘土質)</td><td>300</td><td>300 (300.00)</td><td>0.0%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=2.00, LL=2.0 m, 粘土質)</td><td>859</td><td>859 (859.47)</td><td>+0.1%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 計算例</td><td style="text-align:left">先端支持力係数 α</td><td>654</td><td>654 (654.96)</td><td>+0.1%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.10 計算例</td><td style="text-align:left">長期許容先端支持力 Rpa = α&#183;N&#183;Ap/3<br><small>カタログ表記 1.10&#215;10⁴ kN</small></td><td>11,000 kN</td><td>11,018 kN</td><td>+0.2%</td><td>&#177;1%</td><td><span class="match">一致</span></td></tr>
+            </table>
+            <div class="item-title">Hybrid ニーディング工法カタログ (三谷セキサン)　<span class="summary-count">22 / 22 項目</span></div>
+            <table class="comparison-table">
+                <tr><th>箇所</th><th>項目</th><th>文献値</th><th>プログラム値</th><th>差</th><th>許容</th><th>判定</th></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.0, 砂質・礫質)</td><td>240</td><td>240</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.0, 粘土質)</td><td>200</td><td>200</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.1, 砂質・礫質)</td><td>286</td><td>286</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.1, 粘土質)</td><td>242</td><td>242</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.2, 砂質・礫質)</td><td>336</td><td>336</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.2, 粘土質)</td><td>288</td><td>288</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.3, 砂質・礫質)</td><td>390</td><td>390</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.3, 粘土質)</td><td>338</td><td>338</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.4, 砂質・礫質)</td><td>448</td><td>448</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.4, 粘土質)</td><td>392</td><td>392</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.5, 砂質・礫質)</td><td>510</td><td>510</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.5, 粘土質)</td><td>450</td><td>450</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.6, 砂質・礫質)</td><td>576</td><td>576</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.6, 粘土質)</td><td>512</td><td>512</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.7, 砂質・礫質)</td><td>646</td><td>646</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.7, 粘土質)</td><td>578</td><td>578</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.8, 砂質・礫質)</td><td>720</td><td>720</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.8, 粘土質)</td><td>648</td><td>648</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.9, 砂質・礫質)</td><td>798</td><td>798</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.9, 粘土質)</td><td>722</td><td>722</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=2.0, 砂質・礫質)</td><td>880</td><td>880</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+                <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=2.0, 粘土質)</td><td>800</td><td>800</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+            </table>
+            <!-- verification-methods:end -->
+    </div>
+</body>
+</html>

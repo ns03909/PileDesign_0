@@ -39,6 +39,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="ビルド日" Margin="0,0,12,4"
@@ -56,11 +57,16 @@
                          IsReadOnly="True" BorderThickness="0" Background="Transparent"
                          Padding="0" TextWrapping="Wrap"/>
 
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="自動保存の保存先" Margin="0,0,12,0"
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="自動保存の保存先" Margin="0,0,12,4"
                            Foreground="{StaticResource MutedTextBrush}"/>
-                <TextBox Grid.Row="3" Grid.Column="1" x:Name="AutoSavePathText"
+                <TextBox Grid.Row="3" Grid.Column="1" x:Name="AutoSavePathText" Margin="0,0,0,4"
                          IsReadOnly="True" BorderThickness="0" Background="Transparent"
                          Padding="0" TextWrapping="Wrap"/>
+
+                <!-- 文献値との照合件数。Help/verification_results.json はテストが書き出す -->
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="文献検証" Margin="0,0,12,0"
+                           Foreground="{StaticResource MutedTextBrush}"/>
+                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="VerificationText" TextWrapping="Wrap"/>
             </Grid>
 
             <Separator Margin="0,14,0,12"/>

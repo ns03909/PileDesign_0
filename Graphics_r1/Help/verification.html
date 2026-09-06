@@ -277,6 +277,25 @@
             font-weight: bold;
         }
 
+        /* 文献値との照合一覧 (自動生成ブロック) */
+        .summary-block {
+            padding: 12px 24px 16px;
+        }
+        .summary-block .item-title {
+            margin-top: 14px;
+        }
+        .summary-lead {
+            line-height: 1.6;
+        }
+        .summary-count {
+            font-weight: normal;
+            color: #666;
+            font-size: 12px;
+        }
+        .summary-block .comparison-table td:nth-child(2) {
+            text-align: left;
+        }
+
         /* =========================
             Placeholder
         ========================= */
@@ -382,6 +401,7 @@
     <div class="header">
         <h1>設計例によるプログラムの検証</h1>
         <div class="nav">
+            <a href="#sec-summary">照合一覧</a>
             <a href="#sec-5">計算例5</a>
             <a href="#sec-9">計算例9</a>
             <a href="#sec-3-1">設計例3.1</a>
@@ -390,6 +410,7 @@
             <a href="#sec-3-4">設計例3.4</a>
             <a href="#sec-k7">関東支部7</a>
             <a href="#sec-k8">関東支部8</a>
+            <a href="verification_methods.html" title="杭先端の支持力算定を認定工法のカタログと照合した別ページ">認定工法 →</a>
         </div>
     </div>
 
@@ -401,6 +422,31 @@
             <div class="column-header column-header-right">比較・考察</div>
         </div>
 
+        <!-- ============================================================
+     文献値との照合一覧 (テストが生成)
+    ============================================================ -->
+        <div class="section" id="sec-summary">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">学会の指針・計算例との照合一覧</div>
+                <div class="section-title-cell section-title-cell-center">テスト (VerificationTableTests) が計算して書き出した表</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="summary-block">
+            <!-- verification-summary:begin (自動生成: VerificationTableTests が書く。手で編集しない) -->
+            <p class="summary-lead">学会の指針・計算例に数値として書かれている 6 項目を本プログラムで計算し、6 項目が文献の許容内でした。この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。認定工法 (杭先端の支持力算定) のカタログとの照合は <a href="verification_methods.html">別ページ</a> にあります。</p>
+            <div class="item-title">建築基礎構造設計指針 2019　<span class="summary-count">6 / 6 項目</span></div>
+            <table class="comparison-table">
+                <tr><th>箇所</th><th>項目</th><th>文献値</th><th>プログラム値</th><th>差</th><th>許容</th><th>判定</th></tr>
+                <tr><td>計算例2 例表2.2</td><td style="text-align:left">地表面の地盤変位 (レベル2)</td><td>127.4 mm</td><td>126.8 mm</td><td>-0.5%</td><td>&#177;1.5%</td><td><span class="match">一致</span></td></tr>
+                <tr><td>計算例1 例表1.2</td><td style="text-align:left">繰返しせん断ひずみ γcy (GL-3.0 m, レベル1)</td><td>4 %</td><td>4 %</td><td>0.0%</td><td>倍半分</td><td><span class="match">一致</span></td></tr>
+                <tr><td>計算例1 例表1.2</td><td style="text-align:left">繰返しせん断ひずみ γcy (GL-4.0 m, レベル1)</td><td>8 %</td><td>8 %</td><td>0.0%</td><td>倍半分</td><td><span class="match">一致</span></td></tr>
+                <tr><td>計算例1 例表1.2</td><td style="text-align:left">繰返しせん断ひずみ γcy (GL-5.0 m, レベル1)<br><small>チャート読み取り (図3.2.6) のため文献が倍半分を許容</small></td><td>1 %</td><td>0.5 %</td><td>-50.0%</td><td>倍半分</td><td><span class="match">一致</span></td></tr>
+                <tr><td>計算例1 例表1.2</td><td style="text-align:left">繰返しせん断ひずみ γcy (GL-6.0 m, レベル1)</td><td>2 %</td><td>2 %</td><td>0.0%</td><td>倍半分</td><td><span class="match">一致</span></td></tr>
+                <tr><td>計算例1 例表1.2</td><td style="text-align:left">繰返しせん断ひずみ γcy (GL-7.0 m, レベル1)</td><td>0.5 %</td><td>0.5 %</td><td>0.0%</td><td>倍半分</td><td><span class="match">一致</span></td></tr>
+            </table>
+            <!-- verification-summary:end -->
+            </div>
+        </div>
         <!-- ============================================================
      計算例1
     ============================================================ -->
@@ -4387,8 +4433,10 @@
         // ===== ナビゲーションリンク: セクションへスクロール =====
         document.querySelectorAll('.header .nav a').forEach(link => {
             link.addEventListener('click', (e) => {
+                const href = link.getAttribute('href') || '';
+                if (!href.startsWith('#')) return; // 別ページへのリンクはそのまま遷移させる
                 e.preventDefault();
-                const targetId = link.getAttribute('href').substring(1);
+                const targetId = href.substring(1);
                 const target = document.getElementById(targetId);
                 if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
