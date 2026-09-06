@@ -518,7 +518,11 @@ namespace PileDesign.Models.InputData
         public double SSigmaU { get; private set; }
         public double F { get; private set; }
         public double Fcy => 1.1 * F;
-        public double OutDiaMinus => OutDia - 2.0;
+        // 有効外径: OutDia はコンストラクタで腐食代を引いた値。以前はここでさらに 2.0 mm
+        // (負の許容差 1 mm × 両側) を引いていたが、1.0.15-beta で板厚側の負許容差を廃止した際に
+        // 径側だけ取り残されていた。せん断面積・Ie・断面係数は本値、軸断面積 AMinus は OutDia を
+        // 使っており、同じ鋼管で外径が食い違っていた。腐食のみ考慮に統一する。
+        public double OutDiaMinus => OutDia;
         public double AMinus => Math.PI * (OutDia - TMinus) * TMinus;
         public double SSigmaY { get; private set; }　// 材料強度 1.1F
         public double SEpsilonY { get; private set; }

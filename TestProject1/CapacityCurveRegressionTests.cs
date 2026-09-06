@@ -166,8 +166,10 @@ namespace TestProject1
             ResetOptions();
             var s = CreateSprcSection();
 
-            // 腐食 1mm: 外径 1000 → 998、板厚 12 → 11。せん断式はさらに OutDiaMinus = 外径 − 2mm を使う。
-            const double d = 1000.0 - 2 * 1.0 - 2.0;   // = 996
+            // 腐食 1mm: 外径 1000 → 998、板厚 12 → 11。
+            // 以前はせん断式だけ OutDiaMinus = 外径 − 2mm（負の許容差の名残）を使い d=996 だったが、
+            // 板厚と同じく「腐食のみ考慮」に統一した（軸断面積 AMinus とも同じ外径になる）。
+            const double d = 1000.0 - 2 * 1.0;         // = 998
             const double ts = 12.0 - 1.0;              // = 11
             const double F = 235.0;                    // SKK400
             double area = System.Math.PI * (d - ts) * ts;
