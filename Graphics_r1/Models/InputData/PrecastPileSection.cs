@@ -306,9 +306,13 @@ namespace PileDesign.Models.InputData
     internal class PHCSection : PrecastPileSection ////////////////////////////////////////////////////////////////////////////////////////////
     {
         /// <summary>
-        /// 純引張時のεC: PC鋼材が最大引張耐力(-Fpu)に達し、コンクリートが応力ゼロとなるひずみ。
-        /// GetUltimateForceAndMomentでPrestrains加算＋GetStress内でEpsilonPi/EpsilonE加算のため、
-        /// 実効ひずみは εC + 2*Prestrain となる。
+        /// プレストレスひずみの規約: 断面ひずみ εC/φ にはプレストレスを含めず、
+        /// 断面積分 (GetUltimateForceAndMoment 等) が材料ごとに Prestrains[] を足して
+        /// 材料の全ひずみにする。材料側 GetStress は足さない。
+        /// 降伏・圧壊の状態定義 (GetYieldForceAndMoment 等) と限界ひずみ (… − Prestrain) は
+        /// この規約で書かれている。
+        /// 以前は GetStress 側でも EpsilonPi/EpsilonE を足しており、実効ひずみが εC + 2×Prestrain に
+        /// なっていた (断面ひずみ 0 でコンクリート 2σe・PC 鋼材が降伏域・N ≠ 0)。
         /// </summary>
 
         /// <summary>

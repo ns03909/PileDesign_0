@@ -472,12 +472,15 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // ひずみ度から応力を計算するメソッド
+        // ひずみ度から応力を計算するメソッド。
+        // epsilon は材料の全ひずみ度。プレストレスひずみ (EpsilonSi = Prestrain) は
+        // 断面積分側 (GetUltimateForceAndMoment 等) が Prestrain として足して渡すので、ここでは足さない。
+        // 以前はここでも EpsilonSi を足しており、PRC 杭で二重に加算されていた。
         internal override double GetStress(MaterialLaw type, double epsilon)
         {
-            if (RSigmaY / Er < epsilon + EpsilonSi) { return RSigmaY; }
-            else if (epsilon + EpsilonSi < -RSigmaY / Er) { return -RSigmaY; }
-            else { return Er * (epsilon + EpsilonSi); }
+            if (RSigmaY / Er < epsilon) { return RSigmaY; }
+            else if (epsilon < -RSigmaY / Er) { return -RSigmaY; }
+            else { return Er * epsilon; }
         }
     }
 
@@ -635,17 +638,21 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // ひずみ度から応力を計算するメソッド
+        // ひずみ度から応力を計算するメソッド。
+        // epsilon は材料の全ひずみ度。プレストレスひずみ (EpsilonE = Prestrain) は
+        // 断面積分側が Prestrain として足して渡すので、ここでは足さない。
+        // 以前はここでも EpsilonE を足しており、断面ひずみ 0 でコンクリートが 2σe の圧縮、
+        // PC 鋼材が降伏域という状態から積分が始まっていた（PHC/PRC 杭で二重加算）。
         internal override double GetStress(MaterialLaw type, double epsilon)
         {
             // 算術式のみで例外は発生しない。以前の try/catch (Exception ex) は無意味だったため削除。
-            if (EpsilonCy <= EpsilonE + epsilon) // && (EpsilonE + epsilon) <= EpsilonCu) // 降伏域
+            if (EpsilonCy <= epsilon) // && epsilon <= EpsilonCu) // 降伏域
             {
                 return Fc;
             }
-            else if (0 < EpsilonE + epsilon && EpsilonE + epsilon < EpsilonCy)
+            else if (0 < epsilon && epsilon < EpsilonCy)
             {
-                return Ec * (EpsilonE + epsilon); // 弾性範囲
+                return Ec * epsilon; // 弾性範囲
             }
             else
             {
@@ -846,17 +853,19 @@ namespace PileDesign.Models.InputData
             UltimateLimitStrainT = -EpsilonPu;
         }
 
-        // ひずみ度から応力を計算するメソッド
+        // ひずみ度から応力を計算するメソッド。
+        // epsilon は材料の全ひずみ度。プレストレスひずみ (EpsilonPi = Prestrain) は
+        // 断面積分側が Prestrain として足して渡すので、ここでは足さない（二重加算の修正）。
         internal override double GetStress(MaterialLaw type, double epsilon)
         {
-            if (0 < EpsilonPi + epsilon) { return 0.0; } // 圧縮の場合
-            else if (-EpsilonPy < EpsilonPi + epsilon) // 第一勾配
+            if (0 < epsilon) { return 0.0; } // 圧縮の場合
+            else if (-EpsilonPy < epsilon) // 第一勾配
             {
-                return Ep * (EpsilonPi + epsilon);
+                return Ep * epsilon;
             }
-            else if (-0.015 < EpsilonPi + epsilon) // 第二勾配
+            else if (-0.015 < epsilon) // 第二勾配
             {
-                return -Fpy + (EpsilonPi + epsilon + EpsilonPy) * Ep2;
+                return -Fpy + (epsilon + EpsilonPy) * Ep2;
             }
             else
             {

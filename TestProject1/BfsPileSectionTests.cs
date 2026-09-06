@@ -251,8 +251,11 @@ namespace TestProject1
         {
             // カタログの破壊モーメント Mu (軸力 0 時) と、アプリの N-M 曲線の
             // 軸力 0 における安全限界モーメントを突き合わせる。
-            // 断面計算の規準が違うので一致はしないが、実測では全製品で +2〜7% (計算が安全側でない側)
-            // に収まる。ここが崩れたら断面諸元の転記か PCD 逆算を疑うこと。
+            // 断面計算の規準が違うので一致はしないが、実測では全 27 製品が 0.96〜1.06 に収まる
+            // （2026-09-07 実測: min 0.960 / 中央値 1.006 / max 1.057）。
+            // それ以前は +2〜7% に寄っていたが、それはプレストレスひずみの二重加算で
+            // PC 鋼材が零ひずみで既に降伏域にあったためで、修正後にカタログへ寄った。
+            // ここが崩れたら断面諸元の転記・PCD 逆算・プレストレスの扱いを疑うこと。
             // 先端軸部はカタログに Mu が無いので、この突合が唯一の外部照合になる。
             foreach (var product in PileSection.BfsPiles.Where(p => p.Fc == 105))
             {
@@ -261,7 +264,7 @@ namespace TestProject1
                 double mAtZero = InterpolateAtZeroAxial(ns, ms);
 
                 double ratio = mAtZero / product.HeadMu;
-                Assert.IsTrue(ratio > 0.98 && ratio < 1.12,
+                Assert.IsTrue(ratio > 0.93 && ratio < 1.10,
                     $"{product.DisplayName}: 計算 {mAtZero:F0} kN·m / カタログ Mu {product.HeadMu} kN·m = {ratio:F2}");
             }
         }

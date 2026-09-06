@@ -227,8 +227,11 @@ namespace TestProject1
         {
             // カタログの破壊モーメント Mu (軸力 0 時) と、アプリの N-M 曲線の
             // 軸力 0 における安全限界モーメントを突き合わせる。
-            // 断面計算の規準が違うので一致はしないが、実測では全 94 製品が同じ幅に収まる。
-            // ここが崩れたら断面諸元の転記か PCD 逆算を疑うこと。
+            // 断面計算の規準が違うので一致はしないが、実測では全 94 製品が 0.94〜1.05 に収まる
+            // （2026-09-07 実測: min 0.937 / 中央値 0.983 / max 1.048。プレストレスひずみの
+            // 二重加算を直す前は最大 1.06 だった）。
+            // ここが崩れたら断面諸元の転記・PCD 逆算・プレストレスの扱いを疑うこと。
+            // ひび割れモーメント Mcr のカタログ突合は PrecastCatalogCrackMomentTests にある。
             double lo = double.MaxValue, hi = 0.0;
             foreach (var r in _raw)
             {
@@ -245,7 +248,7 @@ namespace TestProject1
                 double ratio = mAtZero / Num(r, "CatalogMu");
                 lo = Math.Min(lo, ratio);
                 hi = Math.Max(hi, ratio);
-                Assert.IsTrue(ratio is > 0.90 and < 1.20,
+                Assert.IsTrue(ratio is > 0.90 and < 1.10,
                     $"{r["typ"]}: 計算 {mAtZero:F0} / カタログ Mu {r["CatalogMu"]} = {ratio:F2}");
             }
             Assert.IsTrue(hi - lo < 0.25, $"比のばらつきが大きい ({lo:F2}〜{hi:F2})");
