@@ -127,6 +127,7 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(UseNotification1113Compression));
             OnPropertyChanged(nameof(UseNotification1113Shear));
             OnPropertyChanged(nameof(UseInsituUltimateEFunction));
+            OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
             OnPropertyChanged(nameof(UseFiberMPhi));
             OnPropertyChanged(nameof(UseFiberNMForSteelPipeConcrete));
             OnPropertyChanged(nameof(UseUltimateStrain5000ForSteelPipeConcrete));
@@ -180,6 +181,17 @@ namespace PileDesign.ViewModels
                 "鉄筋の降伏応力度の変更", affectsAnalysis: true);
         }
 
+        /// <summary>
+        /// 安全限界を e 関数型で算定するときに競合する材料オプション
+        /// （引張側の扱い・圧縮側の折れ点応力度・鋼管の降伏応力度）を選べるか。
+        ///
+        /// e 関数型を選ぶと、安全限界の耐力算定は <c>MaterialLaw.EFunction</c> の枝を通る。
+        /// その枝はこれら 3 つのオプションを一切読まないため、切り替えても N-M 曲線は動かない
+        /// （<c>ConcreteMaterial.GetSigma</c> でオプションを読むのはバイリニアの枝だけ）。
+        /// 選べてしまうと「変えたのに変わらない」になるので、基本設定ウィンドウと同じく灰色にする。
+        /// </summary>
+        public bool ConflictingMaterialOptionsEnabled => !UseInsituUltimateEFunction;
+
         public bool UseInsituUltimateEFunction
         {
             get => Fundamental?.UseInsituUltimateEFunction ?? false;
@@ -187,7 +199,9 @@ namespace PileDesign.ViewModels
                 () => Fundamental!.UseInsituUltimateEFunction,
                 v => Fundamental!.UseInsituUltimateEFunction = v,
                 nameof(UseInsituUltimateEFunction),
-                "安全限界の応力度〜ひずみ度関係の変更", affectsAnalysis: true);
+                "安全限界の応力度〜ひずみ度関係の変更", affectsAnalysis: true,
+                // 競合オプションの灰色/理由表示は、この選択に追随する
+                alsoNotify: [nameof(ConflictingMaterialOptionsEnabled)]);
         }
 
         public bool UseFiberMPhi

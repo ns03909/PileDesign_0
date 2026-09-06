@@ -33,6 +33,29 @@
             </TextBlock>
         </StackPanel>
 
+        <!-- 無効な理由: 灰色のラジオだけでは「なぜ変わらないのか」が読めないため、
+             無効のときに限って理由を出す（AreRadiosEnabled の外に置き、灰色にしない） -->
+        <TextBlock Margin="12,2,0,1" TextWrapping="Wrap" FontSize="11" Foreground="#A15C00"
+                   Text="{Binding DisabledReason, ElementName=Root}">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding AreRadiosEnabled, ElementName=Root}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <!-- 理由が未指定なら、無効でも行を出さない（後勝ちのため最後に置く） -->
+                        <Trigger Property="Text" Value="">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="Text" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+
         <StackPanel IsEnabled="{Binding AreRadiosEnabled, ElementName=Root}">
             <!-- 既定（基礎部材の強度と変形性能）側 -->
             <RadioButton GroupName="{Binding GroupName, ElementName=Root}" Margin="12,1,0,1"

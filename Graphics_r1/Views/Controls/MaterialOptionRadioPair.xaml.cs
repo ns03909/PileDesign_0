@@ -129,6 +129,22 @@ namespace PileDesign.Views.Controls
             DependencyProperty.Register(nameof(AreRadiosEnabled), typeof(bool), typeof(MaterialOptionRadioPair),
                 new PropertyMetadata(true));
 
+        /// <summary>
+        /// <see cref="AreRadiosEnabled"/>=false のときにラジオの上に出す理由。
+        ///
+        /// 灰色になっているだけでは「なぜ選べないのか」「選んでも何も変わらないのはなぜか」が
+        /// 読めない。押せない操作は理由を出す（無反応にしない）という方針に合わせる。
+        /// 空文字なら行ごと出さない。
+        /// </summary>
+        public string DisabledReason
+        {
+            get => (string)GetValue(DisabledReasonProperty);
+            set => SetValue(DisabledReasonProperty, value);
+        }
+        public static readonly DependencyProperty DisabledReasonProperty =
+            DependencyProperty.Register(nameof(DisabledReason), typeof(string), typeof(MaterialOptionRadioPair),
+                new PropertyMetadata(string.Empty));
+
         // 「ヘルプ」リンク: help.html の HelpAnchor 位置へスクロールして開く
         private void HelpLink_Click(object sender, RoutedEventArgs e)
         {

@@ -253,6 +253,8 @@
 
                     <ctrl:MaterialOptionRadioPair
                         Header="引張側の扱い（バイリニア型コンクリート）" HelpAnchor="fund-opt-tension" GroupName="OptConcreteTension"
+                        AreRadiosEnabled="{Binding ConflictingMaterialOptionsEnabled}"
+                        DisabledReason="安全限界を「e 関数型」で算定しているため選べません。e 関数型は引張側のひび割れひずみが式で決まっており、この選択は安全限界 N-M 曲線に効きません。バイリニア型に切り替えると選べます。"
                         IsAlternativeSelected="{Binding IgnoreConcreteTensileStrength, Mode=TwoWay}"
                         DefaultText="ひび割れ強度まで引張を負担する（「基礎部材の強度と変形性能」）"
                         DefaultFormula="ft = 0.56·√(ξFc)、−ft/Ec ≤ ε &lt; 0 で σ = Ec·ε（それ以下は σ = 0）"
@@ -264,6 +266,7 @@
                     <ctrl:MaterialOptionRadioPair
                         Header="圧縮側の折れ点応力度" HelpAnchor="fund-opt-compression" GroupName="OptConcreteCompression"
                         AreRadiosEnabled="{Binding ConflictingMaterialOptionsEnabled}"
+                        DisabledReason="安全限界を「e 関数型」で算定しているため選べません。e 関数型に折れ点は無く、この選択は安全限界 N-M 曲線に効きません。バイリニア型に切り替えると選べます。"
                         IsAlternativeSelected="{Binding UseReducedConcreteCompressiveStrength, Mode=TwoWay}"
                         DefaultText="ξ·Fc とする（「基礎部材の強度と変形性能」）"
                         DefaultFormula="σ = Ec·ε を ξ·Fc で頭打ち（0 ≤ ε ≤ εcu）"
@@ -306,6 +309,7 @@
                     <ctrl:MaterialOptionRadioPair
                         Header="鋼管の降伏応力度（場所打ち鋼管コンクリート杭）" HelpAnchor="fund-opt-pipe11f" GroupName="OptPipeYield"
                         AreRadiosEnabled="{Binding ConflictingMaterialOptionsEnabled}"
+                        DisabledReason="安全限界を「e 関数型」で算定しているため選べません。e 関数型では鋼管を指針のトリリニア型で扱うため、この選択は安全限界 N-M 曲線に効きません。バイリニア型に切り替えると選べます。"
                         IsAlternativeSelected="{Binding SteelPipeYieldAt11F, Mode=TwoWay}"
                         DefaultText="1.1×F で降伏・ひずみ硬化と破断を考慮する（「基礎部材の強度と変形性能」）"
                         DefaultFormula="降伏 σy = 1.1·F、降伏後の勾配 E/30、±σu（引張強さ）で頭打ち"

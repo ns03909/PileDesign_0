@@ -789,6 +789,8 @@
 
                                                     <ctrl:MaterialOptionRadioPair
                                                         Header="引張側の扱い（バイリニア型）" HelpAnchor="fund-opt-tension" GroupName="SecOptConcreteTension"
+                                                        AreRadiosEnabled="{Binding ConflictingMaterialOptionsEnabled}"
+                                                        DisabledReason="安全限界が「e 関数型」のため選べません。e 関数型は引張側のひび割れひずみが式で決まっており、この選択は N-M 曲線に効きません。下の「バイリニア型」に切り替えると選べます。"
                                                         IsAlternativeSelected="{Binding IgnoreConcreteTensileStrength, Mode=TwoWay}"
                                                         DefaultText="ひび割れ強度まで引張を負担する"
                                                         DefaultFormula="ft = 0.56·√(ξFc)"
@@ -797,11 +799,13 @@
 
                                                     <ctrl:MaterialOptionRadioPair
                                                         Header="圧縮側の折れ点応力度" HelpAnchor="fund-opt-compression" GroupName="SecOptConcreteCompression"
+                                                        AreRadiosEnabled="{Binding ConflictingMaterialOptionsEnabled}"
+                                                        DisabledReason="安全限界が「e 関数型」のため選べません。e 関数型に折れ点は無く、この選択は N-M 曲線に効きません。下の「バイリニア型」に切り替えると選べます。"
                                                         IsAlternativeSelected="{Binding UseReducedConcreteCompressiveStrength, Mode=TwoWay}"
                                                         DefaultText="ξ·Fc とする"
                                                         DefaultFormula="σc = ξ·Fc"
-                                                        AlternativeText="0.85·ξ·Fc とする"
-                                                        AlternativeFormula="σc = 0.85·ξ·Fc"/>
+                                                        AlternativeText="0.85·Fc とする（ξ は乗じない）"
+                                                        AlternativeFormula="σc = 0.85·Fc"/>
 
                                                     <ctrl:MaterialOptionRadioPair
                                                         Header="安全限界の応力度〜ひずみ度関係" HelpAnchor="fund-opt-ultimate" GroupName="SecOptUltimateStress"
@@ -831,6 +835,8 @@
                                                     <ctrl:MaterialOptionRadioPair
                                                         Header="鋼管の降伏応力度" HelpAnchor="fund-opt-pipe11f" GroupName="SecOptPipeYield"
                                                         Visibility="{Binding ShowSteelPipeYieldOption, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        AreRadiosEnabled="{Binding ConflictingMaterialOptionsEnabled}"
+                                                        DisabledReason="安全限界が「e 関数型」のため選べません。e 関数型では鋼管を指針のトリリニア型で扱うため、この選択は N-M 曲線に効きません。"
                                                         IsAlternativeSelected="{Binding SteelPipeYieldAt11F, Mode=TwoWay}"
                                                         DefaultText="σy で降伏させる"
                                                         AlternativeText="1.1F の完全バイリニア型とする"/>
