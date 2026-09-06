@@ -61,7 +61,7 @@ namespace PileDesign.Views
             viewModel?.DataGridEmbedment_OnCellEditEndingCommand.Execute(e);
         }
 
-        private void DataGridSoilPile_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        internal void DataGridSoilPile_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             if (e.EditAction != DataGridEditAction.Commit) return;
 
@@ -92,13 +92,13 @@ namespace PileDesign.Views
             viewModel?.DataGridSoilPile_OnCellEditEndingCommand.Execute(e);
         }
 
-        private void DataGridRectLoads_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        internal void DataGridRectLoads_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             var viewModel = DataContext as MainWindowViewModel;
             viewModel?.DataGridRectLoads_OnCellEditEndingCommand.Execute(e);
         }
 
-        private void DataGridSettlementSoilLayers_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        internal void DataGridSettlementSoilLayers_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             if (e.EditAction != DataGridEditAction.Commit) return;
 

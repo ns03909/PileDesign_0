@@ -152,6 +152,35 @@
         <Setter Property="Height" Value="16"/>
     </Style>
     
+    <!-- アイコンだけのボタンに、拡大アイコン + 説明のツールチップを付ける。
+         メイン画面と群杭沈下ウィンドウで共用するのでここに置く -->
+    <Style x:Key="LargeIconToolTipButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <!-- 追加 -->
+        <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
+        <Setter Property="ToolTip">
+            <Setter.Value>
+                <ToolTip Placement="Mouse" HasDropShadow="True">
+                    <StackPanel Orientation="Horizontal" Margin="6">
+                        <!-- 元の UIElement を再利用せず DataTemplateで複製 -->
+                        <ContentPresenter Content="{Binding RelativeSource={RelativeSource AncestorType=ToolTip}, Path=PlacementTarget.Content}">
+                            <ContentPresenter.ContentTemplate>
+                                <!-- ボタン Content が SvgViewbox の場合に新しいインスタンスを生成 -->
+                                <DataTemplate DataType="{x:Type svgc:SvgViewbox}">
+                                    <svgc:SvgViewbox Source="{Binding Source}" Width="48" Height="48"/>
+                                </DataTemplate>
+                            </ContentPresenter.ContentTemplate>
+                        </ContentPresenter>
+
+                        <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=ToolTip}, Path=PlacementTarget.Tag}"
+                                   Margin="12,0,0,0"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ToolTip>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">

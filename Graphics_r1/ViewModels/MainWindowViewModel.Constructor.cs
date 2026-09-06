@@ -2739,7 +2739,7 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _isSettlementGroundVisible, value))
                 {
                     RequestUpdateWindow();
-                    // ONにしたとき: 群杭荷重タブ→土層タブを表示し、θ=0にする
+                    // ONにしたとき: 群杭沈下ウィンドウの土層タブを表示し、θ=0にする
                     if (value)
                     {
                         ActivateSettlementSoilTabAction?.Invoke();

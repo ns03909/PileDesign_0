@@ -2227,7 +2227,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     <tr><td><img class="button-icon" src="icons/SettlementWindow.svg" alt="">単杭沈下解析ウィンドウを開く</td><td>F6</td></tr>
                     <tr><td><img class="button-icon" src="icons/SettlementWithBeamWindow.svg" alt="">単杭沈下解析（基礎梁考慮）ウィンドウを開く</td><td>Shift + F6</td></tr>
                     <tr><td><img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">群杭沈下解析（一般）を実行</td><td>F7</td></tr>
-                    <tr><td>群杭沈下タブへ移動</td><td>F8</td></tr>
+                    <tr><td>群杭沈下ウィンドウを開く</td><td>F8</td></tr>
                     <tr><td>解析実行（水平解析ウィンドウ内）</td><td>F5</td></tr>
                     <tr><td>追加解析実行（水平解析ウィンドウ内）</td><td>Ctrl+F5</td></tr>
                     <tr><td><img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">群杭沈下解析（反復）</td><td>(リボン / サブタブから起動)</td></tr>
@@ -2860,6 +2860,11 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     ジオメトリが動くため、既存の解析結果と杭要素分割は確認のうえ削除されます。</li>
             </ul>
 
+
+            <p><img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">「群杭沈下」ボタン（F8）で
+            <strong>群杭沈下ウィンドウ</strong>を開きます。沈下計算用の土層・グリッド・荷重面と、
+            一般 / 反復それぞれの解析の設定をまとめてあります。詳しくは
+            <a href="#data-group-settlement-tab">「群杭沈下」ウィンドウ</a>を参照してください。</p>
 
             <h4 id="fund-options" style="font-weight: bold;">モデル化オプション（ラジオボタン選択）</h4>
             <p>
@@ -4317,7 +4322,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 AvalonDock ベースの可動パネルで、各タブは <strong>独立したドキュメントとしてフロート / ドッキング / 自動非表示</strong> が可能です。
             </p>
             <p>
-                標準で表示されるタブは以下の 6 つです。「ウィンドウ」タブから「データタブ」パネルの表示/非表示を切替えられます。
+                標準で表示されるタブは以下の 5 つです。「ウィンドウ」タブから「データタブ」パネルの表示/非表示を切替えられます。
             </p>
             <table class="table-doc">
                 <thead>
@@ -4332,9 +4337,14 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     <tr><td><strong>杭</strong></td><td>杭配置 (X/Y/Z/杭体参照)、軸力、前後方杭、杭間隔比等を入力</td></tr>
                     <tr><td><strong>根入部</strong></td><td>地下躯体 (根入部) の形状・支圧抵抗・摩擦抵抗を入力</td></tr>
                     <tr><td><strong>通り心</strong></td><td>X/Y 通り心の追加・編集</td></tr>
-                    <tr><td><strong>群杭沈下</strong></td><td>群杭沈下解析 (一般 / 反復) の入力 (土層・グリッド・荷重・解析実行)</td></tr>
+                    
                 </tbody>
             </table>
+            <p>
+                群杭沈下の入力は、以前はここに 6 つ目のタブとしてありましたが、
+                他の解析条件（基本設定・荷重・地盤・杭体）と同じく<strong>独立したウィンドウ</strong>に移しました。
+                リボン「解析条件/解析(S)」タブ →「解析条件設定」グループ →「<strong>群杭沈下</strong>」ボタン（F8）で開きます。
+            </p>
 
             <h3 id="data-pile-tab" style="font-weight: bold;">「杭」</h3>
             <p>
@@ -4924,13 +4934,18 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 </tbody>
             </table>
 
-            <h3 id="data-group-settlement-tab" style="font-weight: bold;">「群杭沈下」</h3>
+            <h3 id="data-group-settlement-tab" style="font-weight: bold;">「群杭沈下」ウィンドウ</h3>
+            <p>
+                リボン「解析条件/解析(S)」タブ →「解析条件設定」グループ →「<strong>群杭沈下</strong>」ボタン、
+                または <strong>F8</strong> で開きます。メイン画面の図（グリッド・荷重面）を見ながら編集できるよう、
+                閉じなくても本体を操作できます。
+            </p>
             <p>
                 基礎指針'19、5.3節　沈下、1.沈下量の検討、(3)即時沈下量の算定、(ⅲ)多層地盤の場合　に従い、<br>
                 スタインブレナー近似式による沈下計算のための条件を入力します。
             </p>
             <p>
-                「群杭沈下」タブは、以下のサブタブから構成されます:
+                「群杭沈下」ウィンドウは、以下のタブから構成されます:
             </p>
             <ul>
                 <li><strong>土層</strong>: 沈下計算用の成層地盤を入力</li>
@@ -6265,7 +6280,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
 
             <h3 id="section-settlement-group" style="font-weight: bold;"><img class="heading-icon" src="icons/GroupPileSettlement.svg" alt="">「群杭沈下解析（一般）」（F7）</h3>
             <p>
-                左ペインの「群杭沈下」タブ → <strong>解析（一般）</strong> サブタブで定義した矩形荷重・土層データに基づき、
+                「群杭沈下」ウィンドウ → <strong>解析（一般）</strong> タブで定義した矩形荷重・土層データに基づき、
                 Steinbrennerの近似解による群杭沈下量を計算します。
             </p>
             <p>
@@ -8372,7 +8387,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>解析のショートカットキーを付け替えました。</strong>
                     単杭沈下解析（基礎梁考慮）は <strong>Shift + F6</strong>、
                     群杭沈下解析（一般）は <strong>F7</strong> になりました。
-                    F8 は従来どおり群杭沈下タブへの移動です（一覧の誤記も直しました）。</li>
+                    F8 は群杭沈下の入力を開きます（一覧の誤記も直しました）。</li>
 
                 <li><strong>結果テーブルウィンドウの CSV 出力アイコンの大きさが揃っていませんでした。</strong></li>
 

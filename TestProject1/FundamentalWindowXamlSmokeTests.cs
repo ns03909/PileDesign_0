@@ -55,6 +55,40 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 群杭沈下ウィンドウ（左ペインのタブから移したもの）が開くこと。
+        ///
+        /// 移設で持ってきた XAML は 14 個の StaticResource を参照する。
+        /// キーの取り違えはビルドを通り、<b>開いた瞬間に例外</b>になるので、
+        /// 移設のたびにここで踏んでおく。
+        /// </summary>
+        [TestMethod]
+        public void GroupSettlementWindow_Opens()
+        {
+            bool created = false;
+
+            var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
+            {
+                XamlSmokeTestSupport.EnsureApplicationResources();
+                var window = new PileDesign.Views.GroupSettlementWindow();
+                created = true;
+                window.Close();
+            }, out bool timedOut);
+
+            if (timedOut)
+            {
+                Assert.Inconclusive("XAML パースが 60 秒以内に完了しなかったためスキップ");
+                return;
+            }
+            if (captured != null)
+            {
+                Assert.Fail("GroupSettlementWindow の XAML パースに失敗: "
+                            + $"{captured.GetType().Name}: {captured.Message}"
+                            + Environment.NewLine + captured.StackTrace);
+            }
+            Assert.IsTrue(created, "GroupSettlementWindow が生成されなかった");
+        }
+
+        /// <summary>
         /// プロジェクト情報ウィンドウ（基本設定から分けたもの）が開くこと。
         /// </summary>
         [TestMethod]

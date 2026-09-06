@@ -36,7 +36,6 @@ namespace PileDesign.Views
         // クラス内フィールドを追加
         private readonly Dictionary<(object item, string path), object?> _dgOldValues = [];
 
-        private object _prevLoadingType;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -91,7 +90,6 @@ namespace PileDesign.Views
         public MainWindow()
         {
             InitializeComponent();
-            _prevLoadingType = ComboBoxLoadingType.SelectedItem;
 
             // ViewModelインスタンスを生成し、フィールドとDataContext両方にセット
             _mainWindowViewModel = new MainWindowViewModel();
@@ -103,14 +101,9 @@ namespace PileDesign.Views
             // 追加: ZoomFitAction をコードビハインド実装に接続
             viewModel.ZoomFitAction = ZoomFit;
 
-            // 沈下土層ON時: 群杭荷重タブ→土層タブを表示
+            // 沈下土層ON時: 群杭沈下ウィンドウの土層タブを表示
             viewModel.ActivateSettlementSoilTabAction = () =>
-            {
-                ActivateGroupPileLoadTab();
-                // 土層タブ（インデックス1）を選択
-                if (GroupPileTabControl != null && GroupPileTabControl.Items.Count > 1)
-                    GroupPileTabControl.SelectedIndex = 1;
-            };
+                ShowGroupSettlementWindow(MainWindowViewModel.GroupSettlementInputTab.SoilLayers);
 
             // （任意）アニメーション角度用も接続したい場合
             viewModel.AnimateViewAnglesAction = async (tht, phi) =>
@@ -151,7 +144,7 @@ namespace PileDesign.Views
             viewModel.ShowToastAction = (msg, type) => ShowToast(msg, (ToastType)type);
 
             // 群杭沈下の入力タブを開く (実行できない理由を出すときに、直す場所を見せる)
-            viewModel.ActivateGroupSettlementInputTabAction = ActivateGroupSettlementInputTab;
+            viewModel.ActivateGroupSettlementInputTabAction = ShowGroupSettlementWindow;
 
             // データグリッドの選択変更イベントを設定
             DataGridPileLayout.SelectionChanged += DataGridPileLayout_SelectionChanged;
@@ -2456,13 +2449,13 @@ namespace PileDesign.Views
             UpdateWindow();
         }
 
-        private void TextBox_GotFocus(object sender, RoutedEventArgs e)
+        internal void TextBox_GotFocus(object sender, RoutedEventArgs e)
         {
             TextBox textBox = sender as TextBox;
             textBox?.SelectAll();
         }
 
-        private void TextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        internal void TextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is TextBox textBox && !textBox.IsKeyboardFocusWithin)
             {
@@ -2566,59 +2559,6 @@ namespace PileDesign.Views
         }
 
         // 群杭荷重タイプ変化時のメソッド
-        private void ComboBoxLoadingType_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _prevLoadingType ??= ComboBoxLoadingType.SelectedItem;
-
-            // ComboBoxの選択変更後の内容を取得
-            var comboBox = sender as ComboBox;
-            var selectedItem = comboBox?.SelectedItem as string;
-
-            var vm = this.DataContext as PileDesign.ViewModels.MainWindowViewModel;
-
-            // 個別十字系・個別矩形系に切り替わった場合は RectLoads を自動生成で置換
-            if (vm != null && (selectedItem == "個別十字" || selectedItem == "個別十字（基礎梁反力）"
-                            || selectedItem == "個別矩形" || selectedItem == "個別矩形（基礎梁考慮）"))
-            {
-                // 既存の RectLoads (任意矩形等で入力済) があれば、上書き確認ダイアログを表示
-                var existingRectLoads = vm.CurrentInputModel?.PileGroupSettlement?.RectLoads;
-                int existingCount = existingRectLoads?.Count ?? 0;
-                if (existingCount > 0)
-                {
-                    var prevName = _prevLoadingType as string ?? "(以前の荷重タイプ)";
-                    string shapeDesc = (selectedItem == "個別矩形" || selectedItem == "個別矩形（基礎梁考慮）")
-                        ? "杭頭ごとの正方形荷重"
-                        : "杭頭ごとの十字形矩形荷重";
-                    var msg = $"現在「{prevName}」で {existingCount} 件の矩形荷重が登録されています。\n\n" +
-                              $"「{selectedItem}」へ切替えると、これらは破棄され、{shapeDesc}で上書きされます。\n\n" +
-                              "切替えを続行しますか? (キャンセルで元の荷重タイプに戻ります)";
-                    var result = PileDesign.Services.MessageService.Show(
-                        msg, "荷重タイプ切替確認",
-                        System.Windows.MessageBoxButton.OKCancel,
-                        System.Windows.MessageBoxImage.Warning);
-                    if (result != System.Windows.MessageBoxResult.OK)
-                    {
-                        // キャンセル: 前回値に戻す (SelectionChanged 再発火は短絡される)
-                        if (_prevLoadingType != null)
-                            comboBox.SelectedItem = _prevLoadingType;
-                        return;
-                    }
-                }
-
-                // UpdateSourceTrigger=LostFocus のためモデル側 LoadingType が
-                // まだ古い値の可能性 → 先にソース更新してから再生成
-                comboBox?.GetBindingExpression(ComboBox.SelectedItemProperty)?.UpdateSource();
-                vm.RebuildAutoCrossRectLoadsIfNeeded();
-            }
-
-            // 群杭表示
-            if (vm != null) vm.IsSettlementGroundVisible = true;
-
-            // 変更を確定し、前回値を更新
-            _prevLoadingType = ComboBoxLoadingType.SelectedItem;
-
-            UpdateWindow();
-        }
 
         // 群杭沈下解析結果のアクティブケース切替: 選択ケースの SettlementGridData / RectLoads /
         // 各杭沈下を legacy フィールドへ反映してキャンバスを再描画する。
@@ -2761,7 +2701,7 @@ namespace PileDesign.Views
         }
 
         // 行番号を設定するメソッド
-        private void DataGrid_LoadingRow_Numbering(object sender, DataGridRowEventArgs e)
+        internal void DataGrid_LoadingRow_Numbering(object sender, DataGridRowEventArgs e)
         {
             e.Row.Header = (e.Row.GetIndex() + 1).ToString(); // 行番号を設定
         }
@@ -3221,7 +3161,7 @@ namespace PileDesign.Views
             // CanExecute を迂回してしまい、「ボタンは灰色なのにキーでは実行できて、
             // 直後にダイアログで叱られる」状態になる (Execute は CanExecute を見ない)。
 
-            // 群杭沈下タブへ移動 (解析の実行ではないので CanExecute は要らない)
+            // 群杭沈下ウィンドウを開く (解析の実行ではないので CanExecute は要らない)
             else if (e.Key == Key.F8)
             {
                 ButtonGroupPileSettlement_Click(null, null);
@@ -3256,7 +3196,7 @@ namespace PileDesign.Views
         }
 
         // CSVエクスポートのコンテキストメニュークリックイベントハンドラ
-        private void ExportCsvFromContextMenu_Click(object sender, RoutedEventArgs e)
+        internal void ExportCsvFromContextMenu_Click(object sender, RoutedEventArgs e)
         {
             if (sender is MenuItem menuItem && menuItem.CommandParameter is DataGrid dataGrid)
             {
@@ -3268,7 +3208,7 @@ namespace PileDesign.Views
         }
 
         // ContextMenuが開かれたときにDataGridをCommandParameterに設定するイベントハンドラ
-        private void ContextMenu_Opened(object sender, RoutedEventArgs e)
+        internal void ContextMenu_Opened(object sender, RoutedEventArgs e)
         {
             if (sender is ContextMenu contextMenu)
             {
@@ -3343,45 +3283,46 @@ namespace PileDesign.Views
 
         private void ButtonGroupPileSettlement_Click(object sender, RoutedEventArgs e)
         {
-            // 入力は主画面の「群杭荷重」タブに集約。基礎梁無し用の「一回解析」サブタブをアクティブ化。
+            // 入力は群杭沈下ウィンドウに集約。基礎梁無し用の「解析（一般）」タブを開く。
             // 基礎梁有りの反復解析は別リボンボタン (OpenGroupSettlementWithBeamWindowCommand) から起動。
-            ActivateGroupPileLoadTab();
-            if (TabItemLoadNonBeam != null && GroupPileTabControl != null)
-            {
-                GroupPileTabControl.SelectedItem = TabItemLoadNonBeam;
-            }
+            ShowGroupSettlementWindow(MainWindowViewModel.GroupSettlementInputTab.GeneralAnalysis);
         }
 
         /// <summary>
-        /// 群杭沈下の入力タブを開く。実行できない理由を出す前に呼び、直す場所を見せる。
+        /// 「解析条件設定」の群杭沈下ボタン。<b>条件から</b>開くので土層タブを出す。
+        /// 実行側 (「群杭沈下解析」グループ) は解析タブを出す。入口を役割で分けている。
         /// </summary>
-        private void ActivateGroupSettlementInputTab(MainWindowViewModel.GroupSettlementInputTab tab)
-        {
-            ActivateGroupPileLoadTab();
-            if (GroupPileTabControl == null) return;
+        private void OpenGroupSettlementWindow_Click(object sender, RoutedEventArgs e)
+            => ShowGroupSettlementWindow(MainWindowViewModel.GroupSettlementInputTab.SoilLayers);
 
-            TabItem? target = tab switch
-            {
-                MainWindowViewModel.GroupSettlementInputTab.SoilLayers => TabItemSettlementSoilLayers,
-                MainWindowViewModel.GroupSettlementInputTab.Grid => TabItemSettlementGrid,
-                _ => TabItemLoadNonBeam,
-            };
-            if (target != null) GroupPileTabControl.SelectedItem = target;
-        }
+        private GroupSettlementWindow? _groupSettlementWindow;
 
-        private void ActivateGroupPileLoadTab()
+        /// <summary>
+        /// 群杭沈下ウィンドウを開き、指定のタブを選ぶ。
+        /// 実行できない理由を出す前にも呼び、直す場所を見せる。
+        ///
+        /// メイン画面の図 (グリッド・荷重面) を見ながら編集できるようモードレスで開く。
+        /// 二重に開かず、既に開いていれば前面に出してタブだけ切り替える。
+        /// </summary>
+        internal void ShowGroupSettlementWindow(MainWindowViewModel.GroupSettlementInputTab tab)
         {
-            // "群杭沈下"タブを探してアクティブ化
-            foreach (var doc in dockingManager.Layout.Descendents().OfType<LayoutDocument>())
+            if (DataContext is not MainWindowViewModel vm) return;
+
+            if (_groupSettlementWindow is not { IsLoaded: true })
             {
-                if (doc.Title == "群杭沈下")
-                {
-                    doc.IsSelected = true;
-                    doc.IsActive = true;
-                    break;
-                }
+                var w = new GroupSettlementWindow(this, vm);
+                w.Closed += (_, __) => _groupSettlementWindow = null;
+                _groupSettlementWindow = w;
+                w.Show();
             }
+            else
+            {
+                _groupSettlementWindow.Activate();
+            }
+
+            _groupSettlementWindow.SelectTab(tab);
         }
+
 
         private void DataGridPileAxialForce_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
         {
@@ -3437,30 +3378,6 @@ namespace PileDesign.Views
             //}
         }
 
-        private void GroupPileTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var tabControl = sender as TabControl;
-            if (tabControl?.SelectedItem is TabItem selectedTab)
-            {
-                if (selectedTab.Header?.ToString() == "グリッド")
-                {
-                    // ViewModel取得
-                    if (this.DataContext is PileDesign.ViewModels.MainWindowViewModel vm)
-                    {
-                        vm.IsGroupPileGridVisible = true;
-                    }
-                }
-
-                if (selectedTab.Header?.ToString() == "荷重")
-                {
-                    // ViewModel取得
-                    if (this.DataContext is PileDesign.ViewModels.MainWindowViewModel vm)
-                    {
-                        vm.IsSettlementLoadVisible = true;
-                    }
-                }
-            }
-        }
 
         private void DataGridPileAxialForce_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
         {
@@ -3501,7 +3418,7 @@ namespace PileDesign.Views
             }
         }
 
-        private void TextBox_KeyDown(object sender, KeyEventArgs e)
+        internal void TextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
@@ -3512,7 +3429,7 @@ namespace PileDesign.Views
             }
         }
 
-        private void DataGridGrid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
+        internal void DataGridGrid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
         {
             var path = GetBindingPath(e.Column);
             if (string.IsNullOrEmpty(path)) return;
