@@ -56,7 +56,12 @@
       "PowerShell(dotnet build Graphics_r1\\\\PileDesign.csproj -v q --nologo 2>$null | Select-Object -Last 3; \"exit=$LASTEXITCODE\")",
       "PowerShell(dotnet test TestProject1\\\\TestProject1.csproj --nologo -v q 2>$null | Select-Object -Last 2; \"exit=$LASTEXITCODE\")",
       "PowerShell($log = Join-Path $env:LOCALAPPDATA \"PileDesign\\\\Logs\\\\PileDesign-$\\(Get-Date -Format yyyyMMdd\\).log\"; if \\(Test-Path $log\\) { \"size: $\\(\\(Get-Item $log\\).Length\\)\"; Get-Content $log -Tail 60 } else { \"not found: $log\"; Get-ChildItem \\(Join-Path $env:LOCALAPPDATA \"PileDesign\\\\Logs\"\\) | Select-Object -Last 5 })",
-      "PowerShell(git log --format=\"%h %ad %s\" --date=short 6ef2fdf..85cf5a7; \"---\"; git show -s --format=%B \\(git log --format=%h 6ef2fdf..85cf5a7 | Select-Object -Last 1\\))"
+      "PowerShell(git log --format=\"%h %ad %s\" --date=short 6ef2fdf..85cf5a7; \"---\"; git show -s --format=%B \\(git log --format=%h 6ef2fdf..85cf5a7 | Select-Object -Last 1\\))",
+      "PowerShell(dotnet msbuild Graphics_r1/PileDesign.csproj -t:Compile -v:m 2>&1 | Select-Object -Last 12; Write-Output \"EXITCODE=$LASTEXITCODE\")",
+      "PowerShell(dotnet msbuild Graphics_r1/PileDesign.csproj -t:Compile -v:m 2>&1 | Select-String -Pattern \"error\" | Select-Object -First 10; Write-Output \"EXITCODE=$LASTEXITCODE\")",
+      "Bash(python -c ' *)",
+      "Bash(cp TestProject1/GoldenFiles/Evaluation/Example3_5_factored_filter2.txt __TRACKED_VAR__/before_f2.txt)",
+      "Bash(cp TestProject1/GoldenFiles/Evaluation/Example3_5_factored_filter2.txt /tmp/before_f2.txt)"
     ],
     "additionalDirectories": [
       "c:\\Users\\keisu\\source\\repos\\PileDesign_0",
