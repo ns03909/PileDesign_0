@@ -147,6 +147,7 @@ namespace PileDesign.Views
 
             // デリゲートの設定
             viewModel.UpdateCanvas3DAction = UpdateCanvas3D;
+            viewModel.HideTransientOverlaysAction = HideBeamResultTooltip;
             viewModel.ShowToastAction = (msg, type) => ShowToast(msg, (ToastType)type);
 
             // 群杭沈下の入力タブを開く (実行できない理由を出すときに、直す場所を見せる)

@@ -319,22 +319,31 @@ namespace PileDesign.Views
 
                 // === 以下はDrawAllPathsの後に実行（ColorBaredGeometryのPathが削除されないようにする） ===
 
+                // 計算書の表紙に入れるモデル図では解析結果を描かない。
+                // 図のキャプションが「モデル図（アイソメトリック）」なので、応力ダイアグラムや
+                // 変形後形状が重なった図をそこに載せない。
+                // 表示の設定 (IsAnalysisResultVisible など) は<b>書き換えない</b> —
+                // 書き換えると PropertyChanged の副作用 (リボンのタブ切替) まで起き、
+                // キャプチャの前後で利用者の画面が動いてしまう。
+                bool drawResults = !viewModel.IsCapturingForExport;
+
                 // 変形後沈下グリッドの描画（コンター図）
-                if (viewModel.IsGroupPileGridDeformationVisible) UpdateSettlementGridDeformation();
+                if (drawResults && viewModel.IsGroupPileGridDeformationVisible) UpdateSettlementGridDeformation();
 
                 // 軸力・慣性力の描画
                 if (viewModel.IsMassLoadingVisible || viewModel.IsAxialLoadingVisible) UpdateLoading3D();
 
                 // 解析結果の描画
-                if (viewModel.IsAnalysisResultVisible) UpdateAnalysisResult3D();
+                if (drawResults && viewModel.IsAnalysisResultVisible) UpdateAnalysisResult3D();
 
                 // 変形後形状の描画（解析結果表示OFFでも独立して動作）
-                if (viewModel.IsDeformedElementVisible && !viewModel.IsAnalysisResultVisible)
+                if (drawResults && viewModel.IsDeformedElementVisible && !viewModel.IsAnalysisResultVisible)
                     UpdateDeformedElementsStandalone();
 
                 // 追加: 沈下系のバブル/矢印は最後に描いて最前面に
                 string effContent = viewModel.EffectiveSettlementContent;
-                if (_pendingSettlementPoints != null &&
+                if (drawResults &&
+                    _pendingSettlementPoints != null &&
                     _pendingSettlementValues != null &&
                     (effContent == "沈下" ||
                      effContent == "基礎梁考慮沈下" ||

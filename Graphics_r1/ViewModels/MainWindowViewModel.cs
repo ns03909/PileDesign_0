@@ -829,7 +829,14 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _canvas3DLayout, value);
         }
 
-        // エクスポート用キャプチャ中フラグ（SetCtの自動上書きをスキップする）
+        /// <summary>
+        /// 計算書の表紙に入れるモデル図をキャプチャしている間だけ true。
+        ///
+        /// SetCt の自動上書きを飛ばすほか、<b>解析結果の描画も外す</b>
+        /// (応力ダイアグラム・変形後形状・沈下グリッド・検定比の色分け)。
+        /// 表紙の図は「モデル図」なので、結果が重なった図をそこに載せない。
+        /// 表示の設定そのものは書き換えない (書き換えると利用者の画面が動く)。
+        /// </summary>
         public bool IsCapturingForExport { get; set; }
 
         private Action? _updateWindowAction;
@@ -840,6 +847,15 @@ namespace PileDesign.ViewModels
             get => _updateWindowAction;
             set => SetProperty(ref _updateWindowAction, value);
         }
+
+        /// <summary>
+        /// マウスを近づけたときだけ出る目印を消す (結果ツールチップのサンプル位置マーカー)。
+        ///
+        /// この目印は Canvas の子として直接置かれ、再描画では消えない。
+        /// そのため計算書の表紙をキャプチャすると、直前にカーソルがあった位置の
+        /// 赤い丸がモデル図に写り込む。キャプチャの前に View 側で消してもらう。
+        /// </summary>
+        public Action? HideTransientOverlaysAction { get; set; }
 
         private Action? _updateCanvas3DAction;
         public Action? UpdateCanvas3DAction
@@ -3265,6 +3281,10 @@ namespace PileDesign.ViewModels
             {
                 // SetCt自動上書きをスキップするフラグをON
                 IsCapturingForExport = true;
+
+                // カーソル位置の目印 (結果ツールチップの赤い丸) を消す。
+                // 再描画では消えないので、ここで明示的に消しておく。
+                HideTransientOverlaysAction?.Invoke();
 
                 // --- 2. 杭頭＋杭先端＋地盤範囲を含む全3D点を収集 ---
                 var allPoints = new System.Collections.ObjectModel.ObservableCollection<Point3D>();
