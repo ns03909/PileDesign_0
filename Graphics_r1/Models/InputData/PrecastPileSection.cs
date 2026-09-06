@@ -1148,11 +1148,14 @@ namespace PileDesign.Models.InputData
             PrecastConcrete.Prestrain = PrecastConcrete.EpsilonE;
         }
 
-        // テンドンのプレストレスひずみ取得メソッド
+        // テンドンのプレストレスひずみ取得メソッド。
+        // 「基礎部材の強度と変形性能」では PHC と PRC の扱いは同じで、コンクリートの弾性短縮項
+        // 1/(Ec(Ac−Ap−As)) を含む (PHCSection.SetEpsilonPi と同じ式)。
+        // 以前はこの項をコメントアウトして外しており、PC 鋼材のプレストレスひずみが PHC より 5% ほど
+        // 小さかった (2026-09-07 に出典で確認して戻した)。
         internal void SetEpsilonPi(double Ac, double Ap, double As, double Ec, double Ep, double Es, double sigmaE)
         {
-            //Tendons.EpsilonPi = -(Ac - Ap - As) * sigmaE * (1 / (Ec * (Ac - Ap - As)) + 1 / (Ep * Ap) + Es * As / (Ec * (Ac - Ap - As) * Ep * Ap));
-            Tendons.EpsilonPi = -(Ac - Ap - As) * sigmaE * (1 / (Ep * Ap) + Es * As / (Ec * (Ac - Ap - As) * Ep * Ap));
+            Tendons.EpsilonPi = -(Ac - Ap - As) * sigmaE * (1 / (Ec * (Ac - Ap - As)) + 1 / (Ep * Ap) + Es * As / (Ec * (Ac - Ap - As) * Ep * Ap));
             Tendons.Prestrain = Tendons.EpsilonPi;
         }
 
