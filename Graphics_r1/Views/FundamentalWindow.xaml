@@ -261,7 +261,7 @@
                         DefaultToolTip="曲げ引張強度 ft に対応するひび割れひずみまで、引張側を弾性で負担します。"
                         AlternativeText="引張を無視する"
                         AlternativeFormula="ε &lt; 0 で σ = 0"
-                        AlternativeToolTip="場所打ち RC 系杭のバイリニア型コンクリートで、引張側のひび割れ強度を無視します（σ=0）。&#x0a;安全限界 NM 曲線と M-φ（→ 解析）の両方に適用されます。"/>
+                        AlternativeToolTip="場所打ち RC 系杭のバイリニア型コンクリートで、引張側のひび割れ強度を無視します（σ=0）。&#x0a;効くのは主に解析用 M-φ の初期剛性で、コンクリートが引張を持たないため最初からひび割れ剛性になります（場所打ち鋼管コンクリート杭のひび割れモーメントは Ze·σ0、N=0 で 0）。&#x0a;安全限界 N-M 曲線への影響はひび割れ前の引張域だけで 1% 未満、使用限界・損傷限界 N-M には影響しません。"/>
 
                     <ctrl:MaterialOptionRadioPair
                         Header="圧縮側の折れ点応力度" HelpAnchor="fund-opt-compression" GroupName="OptConcreteCompression"

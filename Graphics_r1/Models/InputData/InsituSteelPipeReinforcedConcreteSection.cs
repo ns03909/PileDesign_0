@@ -371,7 +371,12 @@ namespace PileDesign.Models.InputData
             // 退化断面（Ae/Ec/Ie=0）でのゼロ除算→Inf/NaN の M-φ 伝播を防ぐ（RC 版と同様のガード）。
             if (Ae <= 0.0 || InsituConcrete.Ec <= 0.0 || Ie <= 0.0) return (0.0, 0.0);
             double sigma0e = Ntarget / Ae;
-            double Mcr = Ze * (Ft + sigma0e);
+            // 「引張側の扱い」で引張無視のときは、コンクリートは引張を負担しないので曲げ引張強度を 0 とし、
+            // 引張縁がデコンプレッションする Mcr = Ze·σ0 (N=0 で 0) を「ひび割れ」とする。
+            // 場所打ち RC 杭の Newton 解法が引張無視で「最初からひび割れ剛性」になるのと同じ扱い。
+            // 以前は閉形式が Ft を常に使い、このオプションが M-φ に一切効かなかった。
+            double ft = ConcreteModelOptions.IgnoreTensileStrength ? 0.0 : Ft;
+            double Mcr = Ze * (ft + sigma0e);
             // 平均応力度が −Ft を下回る強い引張では曲げ 0 で既にひび割れている (Mcr は負になる)。
             // 以前は負の Mcr・φcr がそのまま M-φ の点になり、折線が原点から負側へ折れていた。
             if (Mcr <= 0.0) return (0.0, 0.0);

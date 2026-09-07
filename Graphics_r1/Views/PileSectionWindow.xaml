@@ -794,8 +794,10 @@
                                                         IsAlternativeSelected="{Binding IgnoreConcreteTensileStrength, Mode=TwoWay}"
                                                         DefaultText="ひび割れ強度まで引張を負担する"
                                                         DefaultFormula="ft = 0.56·√(ξFc)"
+                                                        DefaultToolTip="効くのは主に解析用 M-φ の初期剛性です。N-M 曲線への影響はひび割れ前の引張域だけで 1% 未満、使用限界・損傷限界 N-M には影響しません。"
                                                         AlternativeText="引張を無視する"
-                                                        AlternativeFormula="ε &lt; 0 で σ = 0"/>
+                                                        AlternativeFormula="ε &lt; 0 で σ = 0"
+                                                        AlternativeToolTip="コンクリートが引張を持たないため、解析用 M-φ は最初からひび割れ剛性になります（場所打ち鋼管コンクリート杭のひび割れモーメントは Ze·σ0、N=0 で 0）。&#x0a;N-M 曲線への影響はひび割れ前の引張域だけで 1% 未満、使用限界・損傷限界 N-M には影響しません。"/>
 
                                                     <ctrl:MaterialOptionRadioPair
                                                         Header="圧縮側の折れ点応力度" HelpAnchor="fund-opt-compression" GroupName="SecOptConcreteCompression"
