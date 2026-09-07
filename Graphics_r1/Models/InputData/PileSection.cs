@@ -762,7 +762,15 @@ namespace PileDesign.Models.InputData
                     }
                     else
                     {
+                        // 指針折線。FEM は区間勾配をそのまま接線剛性に使い、1% の下限は終点より先にしか無い。
+                        // 折線の作り方は断面ごとに分岐が多く、既製杭の折り返し (Mcr ≥ β1β2·Mu0、2026-09-07)
+                        // のように途中の区間が負勾配になると K_tan が負のまま Newton-Raphson に入る。
+                        // 断面側で折り返さないようにしたうえで、FEM の入口でもファイバー M-φ と同じ
+                        // 単調化 (最大 M の割線 × 1% を勾配の下限) を通しておく。
+                        // 単調な折線には (勾配が下限を下回る区間が無い限り) 何もしない。
                         (phisRaw, msRaw) = section.GetMPhiRelationship(axialN_inN);
+                        if (phisRaw != null && msRaw != null && phisRaw.Count == msRaw.Count && phisRaw.Count >= 2)
+                            (phisRaw, msRaw) = MakeMonotonicForAnalysis(phisRaw, msRaw);
                     }
                 }
 
@@ -818,7 +826,7 @@ namespace PileDesign.Models.InputData
         /// MomentCurvatureCurve の post-yield 外挿床（降伏時割線 × 1%）と同方針で整合させる。
         /// 単位は入力のまま（φ [1/mm], M [N·mm]）。
         /// </summary>
-        private static (List<double> Phis, List<double> Moments) MakeMonotonicForAnalysis(
+        internal static (List<double> Phis, List<double> Moments) MakeMonotonicForAnalysis(
             List<double> phis, List<double> ms)
         {
             // 最大 M 点の割線剛性から最小勾配床を決める
