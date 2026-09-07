@@ -57,6 +57,7 @@ dotnet publish Graphics_r1/PileDesign.csproj -p:PublishProfile=FolderProfile
 | 画面の用語 | `TerminologyTests` (引退した呼び名の復活を検出) |
 | メッセージ | `UserFacingMessageTests` (内部用語の露出を検出) |
 | 杭種・断面タイプ・工法の追加 | `SectionInvariantTests` に代表断面を登録 (未登録だと `EverySectionTypeIsRegistered` が落ちる)。カタログに Mcr/Mu があれば `PrecastCatalogCrackMomentTests` の流儀で突合 |
+| 断面計算オブジェクトの生成 | `SectionAssemblyTests`。ファクトリ (`PileSection.CreateSectionCalculator()`) と杭頭部 (`PileTop`) 以外で断面・材料を `new` しない。自前で組むと材料側のオプション (KCTB の εcu 等) が渡らず、解析と違う曲線になる (杭断面ウィンドウ 10 か所と杭中間部 M-φ で実際に起きた) |
 | 材料則・断面積分 | `SectionInvariantTests` (零ひずみで N≈0 / 材料の σ(0)=0 / Mcr>0 / M-φ 単調) と `CrackStrainThresholdTests`。**プレストレスひずみは断面積分側だけが足す**（材料側 `GetStress` は足さない） |
 
 ## 数値を動かす変更

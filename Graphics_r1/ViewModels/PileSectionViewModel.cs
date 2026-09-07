@@ -443,10 +443,10 @@ namespace PileDesign.ViewModels
         // 場所打ち鉄筋コンクリート杭せん断力
         private void DrawInsituReinforcedConcretePile_NQ()
         {
-            var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
-            var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-            var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars,
-                hoopPw: PileSection.HoopPw, hoopSigmaWy: PileSection.HoopSigmay);
+            // 断面は PileSection.CreateSectionCalculator に組み立てさせる。画面で自前に組むと
+            // 材料側のオプション (KCTB の εcu=0.005、帯筋、1.1F 等) が渡らず、解析と違う曲線を描く。
+            // 実際に εcu=0.005 のとき M-φ の終点だけ 0.003 の材料で計算され、頂点の後に下がる図が出ていた。
+            if (PileSection.CreateSectionCalculator() is not InsituReinforcedConcreteSection section) return;
 
             double monQd = MonQd;
             double pw = PileSection.HoopPw;
@@ -467,10 +467,8 @@ namespace PileDesign.ViewModels
         // 場所打ち鉄筋コンクリート杭せん断力
         private void DrawInsituSteelPipeReinforcedConcretePile_NQ()
         {
-            var insituSteelPipe = new InsituSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
-            var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
-            var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-            var section = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
+            // 断面は PileSection.CreateSectionCalculator に組み立てさせる (上の RC と同じ理由)。
+            if (PileSection.CreateSectionCalculator() is not InsituSteelPipeReinforcedConcreteSection section) return;
 
             // ライブラリ側の仕様により同一取得を2度呼んでいたが、ここではそのまま尊重
             var svcUnf = section.GetServiceLimitQNInteraction();
@@ -488,9 +486,8 @@ namespace PileDesign.ViewModels
         // PHC杭せん断力
         private void DrawPHC_NQ()
         {
-            var precastConcrete = new PrecastPHCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-            var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
-            var section = new PHCSection(precastConcrete, tendons, PileSection.Prestress);
+            // 断面は PileSection.CreateSectionCalculator に組み立てさせる (場所打ち系と同じ理由。組み立て方を 1 か所にする)
+            if (PileSection.CreateSectionCalculator() is not PHCSection section) return;
 
             double monQd = MonQd;
 
@@ -509,10 +506,7 @@ namespace PileDesign.ViewModels
         // PRC杭せん断力
         private void DrawPRC_NQ()
         {
-            var precastConcrete = new PrecastPRCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-            var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-            var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
-            var section = new PRCSection(precastConcrete, mainBars, tendons, PileSection.Prestress);
+            if (PileSection.CreateSectionCalculator() is not PRCSection section) return;
 
             double monQd = MonQd;
 
@@ -531,9 +525,7 @@ namespace PileDesign.ViewModels
         // SC杭せん断力
         private void DrawSC_NQ()
         {
-            var precastConcrete = new PrecastSCConcrete(PileSection.PileDiameter - 2 * PileSection.PipeTs, PileSection.PileDiameter - 2 * PileSection.PipeTs - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-            var steelPipe = new PrecastSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
-            var section = new SCSection(precastConcrete, steelPipe);
+            if (PileSection.CreateSectionCalculator() is not SCSection section) return;
 
             double monQd = MonQd;
 
@@ -902,10 +894,10 @@ namespace PileDesign.ViewModels
             _lastMPhiNMax = NMax;
             _lastMPhiNDiv = nDiv;
 
-            var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
-            var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-            var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars,
-                hoopPw: PileSection.HoopPw, hoopSigmaWy: PileSection.HoopSigmay);
+            // 断面は PileSection.CreateSectionCalculator に組み立てさせる。画面で自前に組むと
+            // 材料側のオプション (KCTB の εcu=0.005、帯筋、1.1F 等) が渡らず、解析と違う曲線を描く。
+            // 実際に εcu=0.005 のとき M-φ の終点だけ 0.003 の材料で計算され、頂点の後に下がる図が出ていた。
+            if (PileSection.CreateSectionCalculator() is not InsituReinforcedConcreteSection section) return;
 
             // kN -> N
             NMin *= UnitConversion.KN_TO_N;
@@ -920,17 +912,15 @@ namespace PileDesign.ViewModels
             PlotMThetaCurves(
                 nTargets,
                 n => section.GetMThetaRelationship(n),
-                n => n / section.Ae <= 0.25 * insituConcrete.Gsi * insituConcrete.Fc,
+                n => n / section.Ae <= 0.25 * section.InsituConcrete.Gsi * section.InsituConcrete.Fc,
                 notDefinedMessageIfNull: null);
         }
 
         // 場所打ち鋼管コンクリート杭
         private void DrawInsituSteelPipeReinforcedConcretePile_MPhiMThetaGraph(double NMin, double NMax, int nDiv)
         {
-            var insituSteelPipe = new InsituSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
-            var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
-            var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-            var section = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
+            // 断面は PileSection.CreateSectionCalculator に組み立てさせる (上の RC と同じ理由)。
+            if (PileSection.CreateSectionCalculator() is not InsituSteelPipeReinforcedConcreteSection section) return;
 
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
@@ -1013,9 +1003,8 @@ namespace PileDesign.ViewModels
         // PHC杭
         private void DrawPHC_MPhiMThetaGraph(double NMin, double NMax, int nDiv)
         {
-            var precastConcrete = new PrecastPHCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-            var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
-            var section = new PHCSection(precastConcrete, tendons, PileSection.Prestress);
+            // 断面は PileSection.CreateSectionCalculator に組み立てさせる (場所打ち系と同じ理由。組み立て方を 1 か所にする)
+            if (PileSection.CreateSectionCalculator() is not PHCSection section) return;
 
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
@@ -1037,10 +1026,7 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            var precastConcrete = new PrecastPRCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-            var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-            var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
-            var section = new PRCSection(precastConcrete, mainBars, tendons, PileSection.Prestress);
+            if (PileSection.CreateSectionCalculator() is not PRCSection section) return;
 
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
@@ -1054,9 +1040,7 @@ namespace PileDesign.ViewModels
         // SC杭
         private void DrawSC_MPhiMThetaGraph(double NMin, double NMax, int nDiv)
         {
-            var precastConcrete = new PrecastSCConcrete(PileSection.PileDiameter - 2 * PileSection.PipeTs, PileSection.PileDiameter - 2 * PileSection.PipeTs - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-            var steelPipe = new PrecastSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
-            var section = new SCSection(precastConcrete, steelPipe);
+            if (PileSection.CreateSectionCalculator() is not SCSection section) return;
 
             var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 

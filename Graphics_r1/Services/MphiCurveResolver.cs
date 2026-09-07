@@ -34,14 +34,19 @@ namespace PileDesign.Services
             {
                 try
                 {
-                    var sprcSection = new InsituSteelPipeReinforcedConcreteSection(
-                        new InsituSteelPipe(section.PipeGrade, section.PipeDia, section.PipeTs, section.CorrosionDepth),
-                        new InsituConcrete(section.ConcreteOutDia, section.ConcreteGsi, section.ConcreteFc),
-                        new MainBars(section.MainBarDr, section.MainBarNum, section.MainBarSpec, section.MainBarSize));
-                    // 単位変換: kN → N（断面計算は N 単位）、φ [1/mm] → [1/m]、M [N·mm] → [kN·m]
+                    // 断面は PileSection.CreateSectionCalculator に組み立てさせる。以前はここで自前に
+                    // new しており、材料側のオプション (KCTB の εcu=0.005 等) が渡らなかった。
+                    // εcu=0.005 では終点の曲率だけ 0.005・材料は 0.003 のままで、頂点の後に下がる
+                    // M-φ がそのまま解析に入っていた (この経路は PileSection.GetMPhiRelationship を
+                    // 通らないので、そこの単調化も効かない)。
+                    if (section.CreateSectionCalculator() is not InsituSteelPipeReinforcedConcreteSection sprcSection)
+                        return null;
                     var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN * UnitConversion.KN_TO_N);
-                    var phis = middle.Phis.Select(p => p * UnitConversion.PER_MM_TO_PER_M).ToList();
-                    var ms = middle.Moments.Select(m => m * UnitConversion.NMM_TO_KNM).ToList();
+                    // FEM ばねとして負勾配にならないよう、通常経路と同じ単調化を通す
+                    var (phisRaw, msRaw) = PileSection.MakeMonotonicForAnalysis(middle.Phis, middle.Moments);
+                    // 単位変換: kN → N（断面計算は N 単位）、φ [1/mm] → [1/m]、M [N·mm] → [kN·m]
+                    var phis = phisRaw.Select(p => p * UnitConversion.PER_MM_TO_PER_M).ToList();
+                    var ms = msRaw.Select(m => m * UnitConversion.NMM_TO_KNM).ToList();
                     return ((IList<double>)phis, (IList<double>)ms);
                 }
                 catch (Exception ex)
