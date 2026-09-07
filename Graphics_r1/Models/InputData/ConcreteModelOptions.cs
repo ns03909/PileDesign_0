@@ -156,6 +156,21 @@
         private static bool _useNotification1113Shear;
 
         /// <summary>
+        /// 使用限界・損傷限界の許容応力度の規準（圧縮・せん断共通）。
+        /// 画面と入力モデルはこれ 1 つを扱い、材料・断面・計算書は従来どおり圧縮／せん断の各フラグを読む
+        /// （入力からの反映 <c>ApplyConcreteModelOptions</c> が 2 つを同じ値にする）。
+        /// </summary>
+        public static bool UseNotification1113
+        {
+            get => _useNotification1113Compression;
+            set
+            {
+                UseNotification1113Compression = value;
+                UseNotification1113Shear = value;
+            }
+        }
+
+        /// <summary>
         /// 場所打ち鉄筋コンクリート杭の安全限界曲げ強度の算定で、コンクリートの応力ひずみ関係を
         /// バイリニアに代えて e関数法で設定する（RC基礎構造部材の耐震設計指針(案) 5.4.1 準拠）。
         /// 圧縮限界ひずみ εcu=0.003・圧縮材料強度 ξFc は共通。安全限界 NM 曲線および

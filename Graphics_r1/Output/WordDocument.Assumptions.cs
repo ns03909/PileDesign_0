@@ -163,13 +163,14 @@ namespace PileDesign.Output
         {
             var rows = new List<(string, string, string)>();
 
-            bool guideline2025 = ConcreteModelOptions.UseNotification1113Compression
-                              && ConcreteModelOptions.UseNotification1113Shear;
-            rows.Add(("2025年版 技術基準解説書 付録1-3（コンクリート系杭体の許容耐力）",
-                guideline2025 ? "準拠" : "個別選択",
-                guideline2025
-                    ? "使用・損傷限界の許容圧縮/せん断を告示1113(第8) の長期・短期許容応力度で算定する"
-                    : "許容圧縮・許容せん断の扱いを下記の項目で個別に選択している"));
+            // 許容圧縮応力度と許容せん断は同じ規準 (1 つの選択) で算定する
+            bool notification1113 = ConcreteModelOptions.UseNotification1113;
+            rows.Add((ConcreteModelOptions.MapLimitStateText("使用限界・損傷限界の許容応力度（場所打ち系。許容圧縮応力度・許容せん断 共通）"),
+                notification1113 ? "告示1113(第8) 長期・短期" : "基礎部材の強度と変形性能（既定）",
+                notification1113
+                    ? "圧縮: 使用限界 = 長期許容圧縮応力度、損傷限界 = 短期（長期の 2 倍）。せん断（場所打ちRC杭）: 許容せん断応力度 fs による Q = fs·b·j"
+                      + "（軸力・M/(Q·d) 非依存。短期は長期の 1.5 倍）。2025年版 技術基準解説書 付録1-3 の扱い"
+                    : "圧縮: 使用限界 (1/3)ξFc、損傷限界 (2/3)ξFc。せん断（場所打ちRC杭）: 軸力と M/(Q·d) を考慮したせん断耐力式"));
 
             rows.Add(("解析用 M-φ 関係（コンクリート系杭）",
                 ConcreteModelOptions.UseFiberMPhi ? "ファイバーモデル" : "指針ポリリニア（既定）",
@@ -216,24 +217,7 @@ namespace PileDesign.Output
                     ? "±1.1F で頭打ちの完全バイリニア型とする"
                     : "1.1F で降伏し、ひずみ硬化（E/30）と破断応力 σu を考慮する"));
 
-            rows.Add((ConcreteModelOptions.MapLimitStateText("使用限界・損傷限界の許容圧縮応力度（場所打ち系）"),
-                ConcreteModelOptions.UseNotification1113Compression
-                    ? "告示1113(第8) 長期・短期"
-                    : "基礎部材 (1/3)ξFc・(2/3)ξFc（既定）",
-                ConcreteModelOptions.UseNotification1113Compression
-                    ? "使用限界 = 長期許容圧縮応力度、損傷限界 = 短期許容圧縮応力度（長期の 2 倍）で算定する"
-                    : "使用限界 (1/3)ξFc、損傷限界 (2/3)ξFc で算定する"));
-
-            rows.Add((ConcreteModelOptions.MapLimitStateText("使用限界・損傷限界の許容せん断（場所打ちRC杭）"),
-                ConcreteModelOptions.UseNotification1113Shear
-                    ? "告示1113(第8) Q = fs·b·j"
-                    : "基礎部材のせん断耐力式（既定）",
-                ConcreteModelOptions.UseNotification1113Shear
-                    ? "許容せん断応力度 fs による Q = fs·b·j（軸力・M/(Q·d) 非依存。短期は長期の 1.5 倍）"
-                    : "軸力と M/(Q·d) を考慮したせん断耐力式で算定する"));
-
-            bool anyNotification = ConcreteModelOptions.UseNotification1113Compression
-                                || ConcreteModelOptions.UseNotification1113Shear;
+            bool anyNotification = ConcreteModelOptions.UseNotification1113;
             rows.Add(("告示1113(第8) 長期許容応力度の区分",
                 !anyNotification ? "—"
                     : ConcreteModelOptions.Notification1113CompressionCase == 2 ? "区分 2" : "区分 1",

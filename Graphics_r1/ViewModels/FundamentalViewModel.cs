@@ -219,41 +219,25 @@ namespace PileDesign.ViewModels
                 "鋼材ヤング係数の出所変更");
         }
 
-        // 場所打ち系コンクリートの許容圧縮を告示1113(第8)による（使用限界=長期・損傷限界=短期）
+        // 使用限界・損傷限界の許容応力度の規準（圧縮・せん断共通）: false = 基礎部材の強度と変形性能 / true = 告示1113(第8)
+        // 許容圧縮と許容せん断を別々の規準にすることは無いので 1 つにまとめた（永続化は従来の 2 フラグ）。
         [ObservableProperty]
-        private bool _useNotification1113Compression;
+        private bool _useNotification1113;
 
-        partial void OnUseNotification1113CompressionChanged(bool value)
+        partial void OnUseNotification1113Changed(bool value)
         {
             HandleCapacityOnlyOptionChanged(
                 value,
-                () => InputModel.FundamentalInput.UseNotification1113Compression,
-                v => InputModel.FundamentalInput.UseNotification1113Compression = v,
-                v => UseNotification1113Compression = v,
-                "許容圧縮を告示1113(第8)による へ変更");
+                () => InputModel.FundamentalInput.UseNotification1113,
+                v => InputModel.FundamentalInput.UseNotification1113 = v,
+                v => UseNotification1113 = v,
+                "許容応力度の規準を変更");
             OnPropertyChanged(nameof(Notification1113CaseEnabled));
-            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
             OnPropertyChanged(nameof(FollowsKctbEvaluation));
         }
 
-        // 場所打ちRC杭のコンクリート許容せん断を告示1113(第8)による（使用限界=長期・損傷限界=短期）
-        [ObservableProperty]
-        private bool _useNotification1113Shear;
-
-        partial void OnUseNotification1113ShearChanged(bool value)
-        {
-            HandleCapacityOnlyOptionChanged(
-                value,
-                () => InputModel.FundamentalInput.UseNotification1113Shear,
-                v => InputModel.FundamentalInput.UseNotification1113Shear = v,
-                v => UseNotification1113Shear = v,
-                "許容せん断を告示1113(第8)による へ変更");
-            OnPropertyChanged(nameof(Notification1113CaseEnabled));
-            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
-        }
-
-        // 告示1113(第8) の区分 ComboBox を有効化するか（圧縮・せん断いずれかON）
-        public bool Notification1113CaseEnabled => UseNotification1113Compression || UseNotification1113Shear;
+        // 告示1113(第8) の区分 ComboBox を有効化するか
+        public bool Notification1113CaseEnabled => UseNotification1113;
 
         // 指針安全限界オプションと競合する材料オプション（圧縮 0.85Fc・鋼管 1.1F）を有効化するか。
         // 指針安全限界ON時はグレーアウトして併用を防ぐ（0.85Fc は解析 M-φ と、鋼管 1.1F は指針の
@@ -274,49 +258,6 @@ namespace PileDesign.ViewModels
                 "安全限界曲げをe関数法(指針準拠) へ変更");
             OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
             OnPropertyChanged(nameof(FollowsKctbEvaluation));
-        }
-
-        /// <summary>
-        /// 2025年版「建築物の構造関係技術基準解説書」付録1-3 の許容耐力に従うマスタースイッチ
-        /// （申請実務では必ずチェックを入れる想定）。
-        /// 「場所打ち杭の許容圧縮を告示1113(第8)による」「場所打ちRC杭の許容せん断を告示1113(第8)による」
-        /// の 2 項目を一括で ON/OFF する。安全限界（終局強度）の算定方式は含まない（個別に選択）。
-        /// get は 2 項目とも ON のとき true（個別に切替えると自動で追随）。
-        /// </summary>
-        public bool UseGuideline2025Appendix13
-        {
-            get => UseNotification1113Compression && UseNotification1113Shear;
-            set
-            {
-                bool oc = UseNotification1113Compression;
-                bool os = UseNotification1113Shear;
-                if (oc == value && os == value) return;
-
-                _undoManager.PushAction(
-                    () => ApplyGuideline2025(oc, os),
-                    () => ApplyGuideline2025(value, value),
-                    "2025解説書 付録1-3 許容耐力オプション一括切替");
-                ApplyGuideline2025(value, value);
-            }
-        }
-
-        // 2 項目を一括設定（個別ハンドラを抑制し、キャッシュ破棄＋通知は 1 回にまとめる）
-        private void ApplyGuideline2025(bool compression, bool shear)
-        {
-            bool prev = _suppressConcreteOptionConfirm;
-            _suppressConcreteOptionConfirm = true;
-            try
-            {
-                UseNotification1113Compression = compression;   // VM 更新（個別ハンドラは抑制で早期 return）
-                UseNotification1113Shear = shear;
-                InputModel.FundamentalInput.UseNotification1113Compression = compression;
-                InputModel.FundamentalInput.UseNotification1113Shear = shear;
-            }
-            finally { _suppressConcreteOptionConfirm = prev; }
-
-            _mainWindowViewModel.ApplyConcreteModelOptions();
-            OnPropertyChanged(nameof(Notification1113CaseEnabled));
-            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
         }
 
         // 場所打ちRC杭の解析用 M-φ をファイバーモデルで算定する（解析に影響 → 変更時は解析結果リセット）
@@ -434,7 +375,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         public bool FollowsKctbEvaluation
         {
-            get => UseNotification1113Compression
+            get => UseNotification1113
                    && Notification1113CompressionCase == 1
                    && !UseFiberNMForSteelPipeConcrete;
             set
@@ -458,7 +399,7 @@ namespace PileDesign.ViewModels
         private readonly record struct KctbState(bool Notification1113, int Case, bool FiberNM);
 
         private KctbState CaptureKctbState() =>
-            new(UseNotification1113Compression, Notification1113CompressionCase, UseFiberNMForSteelPipeConcrete);
+            new(UseNotification1113, Notification1113CompressionCase, UseFiberNMForSteelPipeConcrete);
 
         // 構成項目を一括設定（個別ハンドラを抑制し、キャッシュ破棄と通知を 1 回にまとめる）
         private void ApplyKctb(KctbState s)
@@ -469,12 +410,12 @@ namespace PileDesign.ViewModels
             _suppressConcreteOptionConfirm = true;
             try
             {
-                UseNotification1113Compression = s.Notification1113;
+                UseNotification1113 = s.Notification1113;
                 Notification1113CompressionCase = s.Case;
                 UseFiberNMForSteelPipeConcrete = s.FiberNM;
 
                 var f = InputModel.FundamentalInput;
-                f.UseNotification1113Compression = s.Notification1113;
+                f.UseNotification1113 = s.Notification1113;
                 f.Notification1113CompressionCase = s.Case;
                 f.UseFiberNMForSteelPipeConcrete = s.FiberNM;
             }
@@ -482,7 +423,6 @@ namespace PileDesign.ViewModels
 
             _mainWindowViewModel.ApplyConcreteModelOptions();
             OnPropertyChanged(nameof(Notification1113CaseEnabled));
-            OnPropertyChanged(nameof(UseGuideline2025Appendix13));
             OnPropertyChanged(nameof(FollowsKctbEvaluation));
         }
 
@@ -605,8 +545,7 @@ namespace PileDesign.ViewModels
             SteelPipeYieldAt11F = InputModel.FundamentalInput.SteelPipeYieldAt11F;
             UseUnitGsiForConcreteE = InputModel.FundamentalInput.UseUnitGsiForConcreteE;
             UseGuideYoungsModulus = InputModel.FundamentalInput.UseGuideYoungsModulus;
-            UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
-            UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
+            UseNotification1113 = InputModel.FundamentalInput.UseNotification1113;
             UseInsituUltimateEFunction = InputModel.FundamentalInput.UseInsituUltimateEFunction;
             UseFiberMPhi = InputModel.FundamentalInput.UseFiberMPhi;
             UseUltimateStrain5000ForSteelPipeConcrete = InputModel.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete;
@@ -689,10 +628,8 @@ namespace PileDesign.ViewModels
                     UseGuideYoungsModulus = InputModel.FundamentalInput.UseGuideYoungsModulus;
                     break;
                 case nameof(FundamentalInput.UseNotification1113Compression):
-                    UseNotification1113Compression = InputModel.FundamentalInput.UseNotification1113Compression;
-                    break;
                 case nameof(FundamentalInput.UseNotification1113Shear):
-                    UseNotification1113Shear = InputModel.FundamentalInput.UseNotification1113Shear;
+                    UseNotification1113 = InputModel.FundamentalInput.UseNotification1113;
                     break;
                 case nameof(FundamentalInput.UseInsituUltimateEFunction):
                     UseInsituUltimateEFunction = InputModel.FundamentalInput.UseInsituUltimateEFunction;

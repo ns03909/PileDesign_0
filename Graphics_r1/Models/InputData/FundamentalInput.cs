@@ -201,6 +201,38 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _useNotification1113Shear, value);
         }
 
+        /// <summary>
+        /// 使用限界・損傷限界の許容応力度の規準（false: 基礎部材の強度と変形性能 / true: 告示1113(第8)）。
+        ///
+        /// 許容圧縮応力度と許容せん断を別々の規準にすることは無いので、画面と VM はこの 1 つだけを扱う。
+        /// 保存ファイルの互換のため、永続化は従来どおり <see cref="UseNotification1113Compression"/> と
+        /// <see cref="UseNotification1113Shear"/> の 2 つで行い（本プロパティは書き出さない・読まない）、
+        /// 読み込んだ 2 つが食い違っていれば <see cref="NormalizeNotification1113"/> で揃える。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool UseNotification1113
+        {
+            get => _useNotification1113Compression;
+            set
+            {
+                UseNotification1113Compression = value;
+                UseNotification1113Shear = value;
+            }
+        }
+
+        /// <summary>
+        /// 旧ファイルで許容圧縮と許容せん断の規準が食い違っていたら、圧縮側に揃える（true を返す）。
+        /// 2 つを別々に選べた時期のファイルへの互換処理。圧縮側を正とするのは、区分の選択
+        /// (<see cref="Notification1113CompressionCase"/>) が圧縮の項目として作られていて、
+        /// 圧縮側だけ告示に切り替えた設定のほうが実務上あり得たため。
+        /// </summary>
+        public bool NormalizeNotification1113()
+        {
+            if (_useNotification1113Compression == _useNotification1113Shear) return false;
+            UseNotification1113Shear = _useNotification1113Compression;
+            return true;
+        }
+
         // 告示1113(第8) 長期許容応力度の区分（圧縮・せん断で共用。圧縮 1: Fc/4、2: min(Fc/4.5, 6)／せん断 1: Fc/40、2: Fc/45）
         private int _notification1113CompressionCase = 1;
         public int Notification1113CompressionCase

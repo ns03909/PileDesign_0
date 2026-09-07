@@ -71,19 +71,20 @@ namespace TestProject1
         }
 
         [TestMethod]
-        public void BuildMaterialOptionRows_Defaults_Returns17RowsWithDefaultChoices()
+        public void BuildMaterialOptionRows_Defaults_Returns15RowsWithDefaultChoices()
         {
             using var _ = OptionsScope.AllDefaults();
 
             var rows = WordDocument.BuildMaterialOptionRows();
 
-            Assert.AreEqual(17, rows.Count, "材料モデル化オプションの行数");
-            Assert.IsTrue(rows[0].Choice.Contains("個別選択"), "2025解説書はチェックなし表示のはず");
+            // 2026-09-08: 許容圧縮・許容せん断の規準を 1 つにまとめたので、付録1-3 の行と圧縮・せん断の 2 行が 1 行になった (17 → 15)
+            Assert.AreEqual(15, rows.Count, "材料モデル化オプションの行数");
+            Assert.IsTrue(rows[0].Choice.Contains("基礎部材") && rows[0].Choice.Contains("既定"), "許容応力度の規準は既定 (基礎部材) 表示のはず");
             Assert.IsTrue(rows.Count(r => r.Choice.Contains("既定")) >= 8,
                 "全既定なら大半の行に（既定）表記が付くはず");
-            // 許容圧縮・許容せん断・判定材料の 3 行が既定呼称「使用限界」を項目名に含む
+            // 許容応力度の規準 (圧縮・せん断 共通) と判定材料の 2 行が既定呼称「使用限界」を項目名に含む
             // (区分行の「告示1113(第8) 長期許容応力度」は告示側の固有名詞なので対象外)
-            Assert.AreEqual(3, rows.Count(r => r.Item.Contains("使用限界")), "既定では「使用限界」呼称のはず");
+            Assert.AreEqual(2, rows.Count(r => r.Item.Contains("使用限界")), "既定では「使用限界」呼称のはず");
             // ヤング係数の出所（EI・EA と N-M に効くので計算書に残す）
             Assert.AreEqual("製品カタログ（既定）",
                 rows.Single(r => r.Item.Contains("ヤング係数")
@@ -101,13 +102,12 @@ namespace TestProject1
         public void BuildMaterialOptionRows_Guideline2025_MapsLabelsAndCase()
         {
             using var _ = OptionsScope.AllDefaults();
-            ConcreteModelOptions.UseNotification1113Compression = true;
-            ConcreteModelOptions.UseNotification1113Shear = true;
+            ConcreteModelOptions.UseNotification1113 = true;   // 許容圧縮・許容せん断 共通
             ConcreteModelOptions.Notification1113CompressionCase = 2;
 
             var rows = WordDocument.BuildMaterialOptionRows();
 
-            Assert.AreEqual("準拠", rows[0].Choice);
+            StringAssert.Contains(rows[0].Choice, "告示1113");
             // MapLimitStateText により項目名の「使用限界・損傷限界」は「長期許容・短期許容」へ置換される
             Assert.IsTrue(rows.Any(r => r.Item.Contains("長期許容")), "呼称が長期許容へ置換されるはず");
             Assert.IsFalse(rows.Any(r => r.Item.Contains("使用限界")), "「使用限界」が残ってはいけない");

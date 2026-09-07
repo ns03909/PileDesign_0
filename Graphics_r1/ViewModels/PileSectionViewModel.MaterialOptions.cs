@@ -73,11 +73,8 @@ namespace PileDesign.ViewModels
         /// <summary>鋼管 1.1F の対象 (場所打ち鋼管コンクリート杭のみ。鋼管杭は対象外)。</summary>
         public bool ShowSteelPipeYieldOption => IsInsituSteelPipeConcreteSectionShown;
 
-        /// <summary>告示1113(第8) の許容圧縮の対象 (場所打ちコンクリートを使う断面)。</summary>
-        public bool ShowNotification1113CompressionOption => UsesInsituConcrete;
-
-        /// <summary>告示1113(第8) の許容せん断の対象 (場所打ちRC杭のみ)。</summary>
-        public bool ShowNotification1113ShearOption => IsInsituRcSectionShown;
+        /// <summary>許容応力度の規準（圧縮・せん断共通）を出すか。場所打ち系のコンクリートを持つ断面。</summary>
+        public bool ShowNotification1113Option => UsesInsituConcrete;
 
         /// <summary>既製杭の PC鋼材・鉄筋・鋼管のヤング係数 (n=5) の対象。</summary>
         public bool ShowGuideYoungsModulusOption => IsPrecastConcreteSectionShown;
@@ -111,8 +108,7 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(UsesInsituConcrete));
             OnPropertyChanged(nameof(ShowRebarYieldOption));
             OnPropertyChanged(nameof(ShowSteelPipeYieldOption));
-            OnPropertyChanged(nameof(ShowNotification1113CompressionOption));
-            OnPropertyChanged(nameof(ShowNotification1113ShearOption));
+            OnPropertyChanged(nameof(ShowNotification1113Option));
             OnPropertyChanged(nameof(ShowGuideYoungsModulusOption));
             OnPropertyChanged(nameof(ShowSteelOptionsGroup));
             OnPropertyChanged(nameof(ShowKctbOptions));
@@ -124,8 +120,7 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(UseReducedConcreteCompressiveStrength));
             OnPropertyChanged(nameof(RebarYieldAt11F));
             OnPropertyChanged(nameof(SteelPipeYieldAt11F));
-            OnPropertyChanged(nameof(UseNotification1113Compression));
-            OnPropertyChanged(nameof(UseNotification1113Shear));
+            OnPropertyChanged(nameof(UseNotification1113));
             OnPropertyChanged(nameof(UseInsituUltimateEFunction));
             OnPropertyChanged(nameof(ConflictingMaterialOptionsEnabled));
             OnPropertyChanged(nameof(UseFiberMPhi));
@@ -217,28 +212,17 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 許容圧縮応力度を告示1113(第8) で求めるか。
-        /// 検定の耐力側 (使用限界・損傷限界 NM) にしか効かないので、解析結果は消さない。
+        /// 使用限界・損傷限界の許容応力度の規準（許容圧縮応力度・許容せん断 共通）を告示1113(第8) にするか。
+        /// 検定の耐力側 (使用限界・損傷限界 NM / QN) にしか効かないので、解析結果は消さない。
         /// </summary>
-        public bool UseNotification1113Compression
+        public bool UseNotification1113
         {
-            get => Fundamental?.UseNotification1113Compression ?? false;
+            get => Fundamental?.UseNotification1113 ?? false;
             set => ChangeOption(value,
-                () => Fundamental!.UseNotification1113Compression,
-                v => Fundamental!.UseNotification1113Compression = v,
-                nameof(UseNotification1113Compression),
-                "許容圧縮応力度の変更", affectsAnalysis: false);
-        }
-
-        /// <summary>許容せん断を告示1113(第8) で求めるか (場所打ちRC杭)。耐力側のみ。</summary>
-        public bool UseNotification1113Shear
-        {
-            get => Fundamental?.UseNotification1113Shear ?? false;
-            set => ChangeOption(value,
-                () => Fundamental!.UseNotification1113Shear,
-                v => Fundamental!.UseNotification1113Shear = v,
-                nameof(UseNotification1113Shear),
-                "許容せん断の変更", affectsAnalysis: false);
+                () => Fundamental!.UseNotification1113,
+                v => Fundamental!.UseNotification1113 = v,
+                nameof(UseNotification1113),
+                "許容応力度の規準の変更", affectsAnalysis: false);
         }
 
         /// <summary>

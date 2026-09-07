@@ -88,7 +88,7 @@ namespace TestProject1
                 PileDesign.Constants.PileTypeNames.InsituRc,
                 PileDesign.Constants.PileTypeNames.RcSection);
             Assert.IsTrue(vm.UsesInsituConcrete, "場所打ちRC: コンクリートのモデル化が出ない");
-            Assert.IsTrue(vm.ShowNotification1113ShearOption, "場所打ちRC: 告示1113 せん断が出ない");
+            Assert.IsTrue(vm.ShowNotification1113Option, "場所打ちRC: 許容応力度の規準 (告示1113) が出ない");
             Assert.IsFalse(vm.ShowSteelPipeYieldOption, "場所打ちRC: 鋼管 1.1F が出ている");
             Assert.IsFalse(vm.ShowKctbOptions, "場所打ちRC: KCTB の項目が出ている");
             Assert.IsFalse(vm.ShowGuideYoungsModulusOption, "場所打ちRC: 既製杭の鋼材 E が出ている");
@@ -99,8 +99,8 @@ namespace TestProject1
                 PileDesign.Constants.PileTypeNames.SteelPipeConcreteSection);
             Assert.IsTrue(vm.ShowSteelPipeYieldOption, "場所打ち鋼管ｺﾝｸﾘ: 鋼管 1.1F が出ない");
             Assert.IsTrue(vm.ShowKctbOptions, "場所打ち鋼管ｺﾝｸﾘ: KCTB の項目が出ない");
-            Assert.IsFalse(vm.ShowNotification1113ShearOption,
-                "場所打ち鋼管ｺﾝｸﾘ: 告示1113 せん断が出ている (場所打ちRC だけの規定)");
+            Assert.IsTrue(vm.ShowNotification1113Option,
+                "場所打ち鋼管ｺﾝｸﾘ: 許容応力度の規準が出ない (許容圧縮に効く。せん断は鋼管負担のため対象外と注記)");
 
             vm = BuildSectionViewModel(
                 PileDesign.Constants.PileTypeNames.PrecastConcrete,

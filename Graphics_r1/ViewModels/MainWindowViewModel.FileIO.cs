@@ -266,6 +266,13 @@ namespace PileDesign.ViewModels
             CurrentInputModel.EnsureFoundationBeamDefaults();
             CurrentInputModel.EnsureAnalysisTargetDefaults();
 
+            // 許容圧縮と許容せん断の規準は同じもの 1 つになった。別々に選べた時期のファイルは圧縮側に揃える。
+            if (CurrentInputModel.FundamentalInput?.NormalizeNotification1113() == true)
+            {
+                Serilog.Log.Information("[読込] 許容圧縮と許容せん断の規準が食い違っていたので、圧縮側 ({Std}) に揃えました",
+                    CurrentInputModel.FundamentalInput.UseNotification1113 ? "告示1113(第8)" : "基礎部材の強度と変形性能");
+            }
+
             // PileZ セマンティクス v1 → v2: pile.Z を「杭頭節点」から「接合節点」へシフト
             // 適用条件: ProjectData.FormatVersion < 2 (旧ファイル) または InputModel 単独ロード (projectData == null)
             if (projectData == null || projectData.FormatVersion < 2)
