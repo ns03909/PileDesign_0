@@ -372,6 +372,9 @@ namespace PileDesign.Models.InputData
             if (Ae <= 0.0 || InsituConcrete.Ec <= 0.0 || Ie <= 0.0) return (0.0, 0.0);
             double sigma0e = Ntarget / Ae;
             double Mcr = Ze * (Ft + sigma0e);
+            // 平均応力度が −Ft を下回る強い引張では曲げ 0 で既にひび割れている (Mcr は負になる)。
+            // 以前は負の Mcr・φcr がそのまま M-φ の点になり、折線が原点から負側へ折れていた。
+            if (Mcr <= 0.0) return (0.0, 0.0);
             double phiCr = Mcr / InsituConcrete.Ec / Ie;
             return (Mcr, phiCr);
         }
@@ -441,28 +444,30 @@ namespace PileDesign.Models.InputData
             (double MY, double phiY) = GetYieldMoment(Ntarget);
             (double Mu0, double phiU) = GetUltimateMomentForSpecificN(Ntarget);
 
-            List<double> phis;
-            List<double> Ms;
+            double mEnd = beta1 * Mu0;   // 折線の終点
 
-            if (phiU <= 0 || phiU <= phiCr)
+            if (phiU <= 0 || mEnd <= 0)
             {
-                // 終局曲率がひび割れ曲率以下 → M≈0
-                phis = [0.0];
-                Ms = [0.0];
-            }
-            else if (phiU <= phiY || phiY <= phiCr || phiY <= 0)
-            {
-                // 降伏前に終局到達、または降伏点が不正（高軸力で鋼材が降伏しない）
-                // → ひび割れ→終局の2点で直線
-                phis = [0.0, phiCr, phiU];
-                Ms = [0.0, MCr, beta1 * Mu0];
-            }
-            else
-            {
-                phis = [0.0, phiCr, phiY, phiU];
-                Ms = [0.0, MCr, MY, beta1 * Mu0];
+                // 終局が定義できない → M≈0 (呼び出し側が線形フォールバックにする)
+                return ([0.0], [0.0]);
             }
 
+            // 折線は FEM に単調化なしで渡り、途中の負勾配はそのまま負の接線剛性になる。
+            //  - ひび割れが終点以上 (高軸力側): 断面は終点までひび割れないので弾性線で終点まで。
+            //    以前は [0, (φcr, Mcr), (φu, β1·Mu0)] で Mcr > β1·Mu0 のまま折り返していた
+            //  - ひび割れ・降伏の点は、順序と大小が保てるときだけ持つ
+            bool hasCrack = MCr > 0 && phiCr > 0 && phiCr < phiU;
+            if (hasCrack && MCr >= mEnd)
+                return ([0.0, phiCr * (mEnd / MCr)], [0.0, mEnd]);
+
+            bool hasYield = phiY > 0 && phiY < phiU && MY < mEnd
+                            && (!hasCrack || (phiY > phiCr && MY > MCr));
+
+            List<double> phis = [0.0];
+            List<double> Ms = [0.0];
+            if (hasCrack) { phis.Add(phiCr); Ms.Add(MCr); }
+            if (hasYield) { phis.Add(phiY); Ms.Add(MY); }
+            phis.Add(phiU); Ms.Add(mEnd);
             return (phis, Ms);
             }
             finally { _forceBilinearUltimate = prevForceBilinear; }

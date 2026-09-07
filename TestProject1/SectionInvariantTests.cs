@@ -257,36 +257,81 @@ namespace TestProject1
             Assert.AreEqual(0, bad.Count, "ひび割れモーメントの不整合:\n  " + string.Join("\n  ", bad));
         }
 
+        private static double CrackMomentAt(AbstractPileSection sec, MethodInfo m, double n)
+        {
+            object[] args = m.GetParameters().Length == 1 ? [n] : [n, false];
+            var (mcr, _) = ((double, double))m.Invoke(sec, args)!;
+            return mcr;
+        }
+
         /// <summary>
-        /// 解析用 M-φ は φ が単調増加・M が単調非減少・全点有限で、
-        /// 折れ点が 3 つ以上ある杭種では 2 点目がひび割れモーメントそのものであること。
-        /// Mcr の誤りは解析結果には「折れ点が少しずれる」形でしか現れないので、ここで直接見る。
+        /// 解析用 M-φ は、軸力を引張側から圧縮側まで掃引しても、φ が単調増加・M が単調非減少・
+        /// 全点有限で、折れ点が 3 つ以上あるときは 2 点目がその軸力のひび割れモーメントそのものであること。
+        ///
+        /// 指針折線は FEM に単調化なしで渡り、FEM は区間勾配をそのまま接線剛性に使う
+        /// （1% の下限があるのは終点より先だけ）。途中の区間が負勾配だと K_tan が負になり
+        /// Newton-Raphson が停滞する。N=0 だけ見ていた 2026-09-07 時点では、既製杭の
+        /// 折り返し (Mcr ≥ β1β2·Mu0) が N=0 で見つかったが、高軸力側の分岐は誰も見ていなかった。
+        /// 掃引は安全限界 N-M の軸力範囲を基準に、引張端の半分から圧縮端の 7 割までを取る
+        /// （端では折線が原点だけになる杭種があるので、2 点未満は「M-φ 無し」として許す）。
         /// </summary>
         [TestMethod]
-        public void MPhiIsMonotonicAndStartsAtTheCrackMoment()
+        public void MPhiIsMonotonicAndStartsAtTheCrackMomentAcrossAxialForce()
         {
             var bad = new List<string>();
             foreach (var b in BuildAll())
             {
-                var (phis, moments) = b.Section.GetMPhiRelationship(0.0);
-                if (phis.Count < 2 || phis.Count != moments.Count)
-                { bad.Add($"{b.Type}: M-φ の点数が異常 ({phis.Count}/{moments.Count})"); continue; }
-
-                for (int i = 0; i < phis.Count; i++)
-                    if (!double.IsFinite(phis[i]) || !double.IsFinite(moments[i]))
-                        bad.Add($"{b.Type}: M-φ[{i}] が非有限");
-                for (int i = 1; i < phis.Count; i++)
-                {
-                    if (!(phis[i] > phis[i - 1])) bad.Add($"{b.Type}: φ が単調増加でない ({phis[i - 1]:E3} → {phis[i]:E3})");
-                    if (moments[i] < moments[i - 1] - 1e-9) bad.Add($"{b.Type}: M が減少 ({moments[i - 1] / 1e6:F1} → {moments[i] / 1e6:F1})");
-                }
-
+                var (ns, _, _, _) = b.Section.UnfactoredUltimateNM;
+                double nMin = ns.Min(), nMax = ns.Max();
+                double[] levels = [0.5 * nMin, 0.0, 0.15 * nMax, 0.3 * nMax, 0.5 * nMax, 0.7 * nMax];
                 var m = CrackMethod(b.Section);
-                if (m != null && phis.Count >= 3)
+
+                // 杭中間部用の折線 (場所打ち鋼管コンクリート杭) は解析が別経路で使うので、同じ条件で見る
+                var middle = b.Section.GetType().GetMethod("GetMPhiRelationshipForMiddle",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+                foreach (double n in levels)
+                foreach (var (label, curve) in new (string, Func<(List<double>, List<double>)>)[]
                 {
-                    double mcr = CrackMomentAtZero(b.Section, m);
-                    if (Math.Abs(moments[1] - mcr) > 1e-6 * Math.Abs(mcr))
-                        bad.Add($"{b.Type}: M-φ の 2 点目 {moments[1] / 1e6:F2} が Mcr {mcr / 1e6:F2} と違う");
+                    ("", () => b.Section.GetMPhiRelationship(n)),
+                    (" 杭中間部", () => ((List<double>, List<double>))middle!.Invoke(b.Section, [n])!),
+                }.Where(c => c.Item1 == "" || middle != null))
+                {
+                    string tag = $"{b.Type}{label} N={n / 1e3:F0} kN";
+                    var (phis, moments) = curve();
+                    if (phis.Count != moments.Count) { bad.Add($"{tag}: 点数不一致 ({phis.Count}/{moments.Count})"); continue; }
+                    if (phis.Count < 2) continue;   // 端の軸力で M-φ が成り立たない杭種 (原点のみ) は対象外
+
+                    for (int i = 0; i < phis.Count; i++)
+                        if (!double.IsFinite(phis[i]) || !double.IsFinite(moments[i]))
+                            bad.Add($"{tag}: M-φ[{i}] が非有限");
+                    for (int i = 1; i < phis.Count; i++)
+                    {
+                        if (!(phis[i] > phis[i - 1])) bad.Add($"{tag}: φ が単調増加でない ({phis[i - 1]:E3} → {phis[i]:E3})");
+                        if (moments[i] < moments[i - 1] - 1e-9) bad.Add($"{tag}: M が減少 ({moments[i - 1] / 1e6:F1} → {moments[i] / 1e6:F1})");
+                    }
+
+                    if (m != null && phis.Count >= 2)
+                    {
+                        // ひび割れ点 (φcr, Mcr) が折線に含まれるなら、その M は Mcr そのもの。
+                        // ひび割れが最初の折れ点より手前に来るのに点が無いのは、点を落としている。
+                        // (鋼管が先に圧縮降伏する SC の分岐のように、ひび割れ点を持たない折線は正当)
+                        object[] args = m.GetParameters().Length == 1 ? [n] : [n, false];
+                        var (mcr, phiCr) = ((double, double))m.Invoke(b.Section, args)!;
+                        if (mcr > 0 && phiCr > 0)
+                        {
+                            int at = phis.FindIndex(p => Math.Abs(p - phiCr) <= 1e-9 * phiCr);
+                            if (at >= 0)
+                            {
+                                if (Math.Abs(moments[at] - mcr) > 1e-6 * mcr)
+                                    bad.Add($"{tag}: φcr の点の M {moments[at] / 1e6:F2} が Mcr {mcr / 1e6:F2} と違う");
+                            }
+                            else if (phiCr < phis[1] && mcr < moments[^1])
+                            {
+                                bad.Add($"{tag}: ひび割れ (φ={phiCr:E3}, M={mcr / 1e6:F1}) が最初の折れ点 (φ={phis[1]:E3}) より手前なのに点が無い");
+                            }
+                        }
+                    }
                 }
             }
             Assert.AreEqual(0, bad.Count, "M-φ の不整合:\n  " + string.Join("\n  ", bad));

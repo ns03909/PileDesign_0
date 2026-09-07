@@ -768,22 +768,38 @@ namespace PileDesign.Models.InputData
                 (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
 
                 double ag = Math.PI * PileDia * PileDia / 4.0;
-                double beta1 = (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc) ? 0.95 : 0.80;
-                double phiC = GetPhiC(phiCr, MCr, phiY, MY, Mu0, beta1);
+                bool lowAxial = Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc;
+                double beta1 = lowAxial ? 0.95 : 0.80;
+                double beta2 = lowAxial ? 1.0 : 0.65;
+                double mEnd = beta1 * beta2 * Mu0;   // 折線の終点 (低減後の安全限界)
+                bool hasCrack = MCr > 0 && phiCr > 0;  // 引張軸力でひび割れが定義できないときは点を持たない
+
+                // 折線は FEM に単調化なしで渡り、途中の負勾配はそのまま負の接線剛性になる。
+                // 以下の 2 つの分岐は、指針の折線式がそのままでは折り返す状況の扱い:
+                //  - ひび割れが終点以上 (高軸力側で起きる。Mcr は N とともに増え、Mu0 は減る):
+                //    断面は終点までひび割れないので、弾性線 Ec·Ie で終点まで
+                //  - 降伏点が終点以上: 降伏点を省き、ひび割れ後勾配の延長で終点へ
+                if (hasCrack && MCr >= mEnd)
+                    return ([0.0, phiCr * (mEnd / MCr)], [0.0, mEnd]);
+
+                double phiC = GetPhiC(phiCr, MCr, phiY, MY, Mu0, beta1);   // β1·Mu0 に達する曲率 (ひび割れ後勾配の延長)
                 List<double> phis;
                 List<double> Ms;
 
-                if (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc)
+                if (lowAxial)
                 {
-                    phis = [0.0, phiCr, phiY, phiC];
-                    Ms = [0.0, MCr, MY, beta1 * Mu0];
+                    bool hasYield = beta1 * Mu0 > MY && phiY > phiCr;
+                    phis = [0.0]; Ms = [0.0];
+                    if (hasCrack) { phis.Add(phiCr); Ms.Add(MCr); }
+                    if (hasYield) { phis.Add(phiY); Ms.Add(MY); }
+                    phis.Add(phiC); Ms.Add(mEnd);
                 }
                 else
                 {
-                    double beta2 = 0.65;
-                    double phiCshort = phiCr + (phiC - phiCr) * (beta1 * beta2 * Mu0 - MCr) / (beta1 * Mu0 - MCr);
-                    phis = [0.0, phiCr, phiCshort];
-                    Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                    double phiCshort = phiCr + (phiC - phiCr) * (mEnd - MCr) / (beta1 * Mu0 - MCr);
+                    phis = [0.0]; Ms = [0.0];
+                    if (hasCrack) { phis.Add(phiCr); Ms.Add(MCr); }
+                    phis.Add(phiCshort); Ms.Add(mEnd);
                 }
 
                 return (phis, Ms);
