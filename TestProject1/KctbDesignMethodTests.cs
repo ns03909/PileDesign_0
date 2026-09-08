@@ -14,12 +14,12 @@ namespace TestProject1
     ///      （鋼管の拘束効果。総プロ基礎WG 最終報告書 資料4-7）。
     ///  (B) 鋼管杭のコンクリート充填鋼管部は対象外（3,000μ のまま）。
     ///  (C) 許容時の判定に鉄筋を用いない（純引張端が伸び、鉄筋が支配しない断面では不変）。
-    ///  (D) 単純累加（評定 5.(3)）は許容時のみを置き換え、安全限界は動かさない。
+    ///  (D) 累加強度式（評定 5.(3)）は許容時のみを置き換え、安全限界は動かさない。
     ///  (E) 適用範囲の検査が評定書の範囲外を検出する。
     ///
     /// なお εcu = 5,000μ と「許容時の判定に鉄筋を用いない」は BCJ評定-FD0356-08 の範囲外で、
     /// 出典は Technical Note Vol.1-5 と基礎WG 最終報告書 資料4-7。評定が定めるのは
-    /// 許容応力度（告示1113(第8)）と本体部の設計法（単純累加）である。
+    /// 許容応力度（告示1113(第8)）と本体部の設計法（累加強度式）である。
     /// </summary>
     [TestClass]
     public class KctbDesignMethodTests
@@ -238,9 +238,9 @@ namespace TestProject1
             return count;
         }
 
-        // ───────────── (D) 単純累加 ─────────────
+        // ───────────── (D) 累加強度式 ─────────────
 
-        /// <summary>単純累加は許容時（使用・損傷限界）だけを置き換え、安全限界は動かさない。</summary>
+        /// <summary>累加強度式は許容時（使用・損傷限界）だけを置き換え、安全限界は動かさない。</summary>
         [TestMethod]
         public void KctbSuperposition_ReplacesAllowableOnly_UltimateUnchanged()
         {
@@ -253,15 +253,15 @@ namespace TestProject1
             var superDamage = CreateSprcSection().UnfactoredDamageNM;
             double superUltimate = MaxMoment(CreateSprcSection().UnfactoredUltimateNM);
 
-            Assert.IsTrue(MaxMoment(superDamage) > 0.0, "単純累加の許容時曲げが 0");
+            Assert.IsTrue(MaxMoment(superDamage) > 0.0, "累加強度式の許容時曲げが 0");
             Assert.AreNotEqual(MaxMoment(fiberDamage), MaxMoment(superDamage),
-                "単純累加とファイバーで許容時 N-M が一致してしまっている");
+                "累加強度式とファイバーで許容時 N-M が一致してしまっている");
             Assert.AreEqual(fiberUltimate, superUltimate, Math.Abs(fiberUltimate) * 1e-9,
-                "単純累加は安全限界に影響してはいけない");
+                "累加強度式は安全限界に影響してはいけない");
         }
 
         /// <summary>
-        /// 単純累加は場所打ち鋼管コンクリート杭だけの設計法で、
+        /// 累加強度式は場所打ち鋼管コンクリート杭だけの設計法で、
         /// 鋼管杭のコンクリート充填鋼管部には効かない（評定の対象外）。
         /// </summary>
         [TestMethod]
@@ -276,11 +276,11 @@ namespace TestProject1
 
             Assert.IsTrue(plain > 0.0, "充填鋼管部の許容時曲げが 0");
             Assert.AreEqual(plain, withFlag, Math.Abs(plain) * 1e-9,
-                "鋼管杭のコンクリート充填鋼管部に単純累加が効いてはいけない");
+                "鋼管杭のコンクリート充填鋼管部に累加強度式が効いてはいけない");
         }
 
         /// <summary>
-        /// 単純累加の N-M は N について単調に並び、両端で M が 0 に落ちる（純引張端・純圧縮端）。
+        /// 累加強度式の N-M は N について単調に並び、両端で M が 0 に落ちる（純引張端・純圧縮端）。
         /// 評定書の (1)〜(3) が rNc・rNt の両境界で M = sM0 となり連続することも、
         /// 曲線に不連続な跳びが無いことで確認する。
         /// </summary>
@@ -323,11 +323,11 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 単純累加を選んだとき、長期（使用限界）・短期（損傷限界）とも
-        /// <b>検定が実際に読む曲線</b>が単純累加の包絡線になっていること。
+        /// 累加強度式を選んだとき、長期（使用限界）・短期（損傷限界）とも
+        /// <b>検定が実際に読む曲線</b>が累加強度式の包絡線になっていること。
         ///
         /// 検定は Factored 側 (EvaluationService.GetNMCurve) を読む。低減前だけ差し替えて
-        /// 低減後に伝わっていないと、画面のグラフだけ単純累加で検定は従来のまま、という
+        /// 低減後に伝わっていないと、画面のグラフだけ累加強度式で検定は従来のまま、という
         /// 食い違いが静かに起きる。場所打ち鋼管コンクリート杭は使用・損傷限界とも
         /// 軸力閾値が空・β=1.0 なので、低減後は低減前と一致するのが正しい。
         /// </summary>
@@ -346,18 +346,18 @@ namespace TestProject1
 
             // 長期（使用限界）
             Assert.AreEqual(0, CountDifferingPoints(svc, s.FactoredServiceNM),
-                "長期: 低減後の曲線が単純累加になっていない");
+                "長期: 低減後の曲線が累加強度式になっていない");
             // 短期（損傷限界）はレベル 1 / 2 とも
             Assert.AreEqual(0, CountDifferingPoints(dmg, s.GetFactoredDamageNM(1)),
-                "短期(L1): 低減後の曲線が単純累加になっていない");
+                "短期(L1): 低減後の曲線が累加強度式になっていない");
             Assert.AreEqual(0, CountDifferingPoints(dmg, s.GetFactoredDamageNM(2)),
-                "短期(L2): 低減後の曲線が単純累加になっていない");
+                "短期(L2): 低減後の曲線が累加強度式になっていない");
 
             // 断面分割積分のときとは別物であること（対照）
             ResetOptions();
             var fiber = CreateSprcSection();
             Assert.IsTrue(CountDifferingPoints(fiber.FactoredDamageNM, dmg) > 0,
-                "単純累加と断面分割積分で短期の曲線が一致してしまっている");
+                "累加強度式と断面分割積分で短期の曲線が一致してしまっている");
         }
 
         // ───────────── (E) 適用範囲の検査 ─────────────
@@ -491,7 +491,7 @@ namespace TestProject1
             var model = new InputModel { FundamentalInput = new FundamentalInput() };
             model.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete = true;
             model.FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete = true;
-            model.FundamentalInput.UseFiberNMForSteelPipeConcrete = false;   // 単純累加
+            model.FundamentalInput.UseFiberNMForSteelPipeConcrete = false;   // 累加強度式
 
             var options = new System.Text.Json.JsonSerializerOptions
             {
@@ -507,7 +507,7 @@ namespace TestProject1
             Assert.IsTrue(restored.FundamentalInput.ExcludeRebarFromAllowableLimitForSteelPipeConcrete,
                 "許容時の判定材料の設定が復元されない");
             Assert.IsFalse(restored.FundamentalInput.UseFiberNMForSteelPipeConcrete,
-                "本体部の設計法（単純累加）の設定が復元されない（既定 true へ巻き戻っている）");
+                "本体部の設計法（累加強度式）の設定が復元されない（既定 true へ巻き戻っている）");
         }
 
         /// <summary>
@@ -537,7 +537,7 @@ namespace TestProject1
 
             var rows = PileDesign.Output.WordDocument.BuildMaterialOptionRows();
 
-            Assert.AreEqual("単純累加", rows.Single(r => r.Item.Contains("本体部の設計法")).Choice);
+            Assert.AreEqual("累加強度式", rows.Single(r => r.Item.Contains("本体部の設計法")).Choice);
 
             var ecuRow = rows.Single(r => r.Item.Contains("終局の圧縮縁ひずみ"));
             Assert.AreEqual("5,000μ", ecuRow.Choice);

@@ -295,7 +295,7 @@ namespace PileDesign.ViewModels
         // εcu と「許容時の判定に鉄筋を用いない」は評定書に規定が無く、
         // どの文献に依るかを設計者が選ぶ項目なので個別オプションとする。
 
-        // 【評定】許容時 N-M を断面分割積分で求める（false = 評定 5.(3) の単純累加）
+        // 【評定】許容時 N-M を断面分割積分で求める（false = 評定 5.(3) の累加強度式）
         [ObservableProperty]
         private bool _useFiberNMForSteelPipeConcrete = true;
 
@@ -306,7 +306,7 @@ namespace PileDesign.ViewModels
                 () => InputModel.FundamentalInput.UseFiberNMForSteelPipeConcrete,
                 v => InputModel.FundamentalInput.UseFiberNMForSteelPipeConcrete = v,
                 v => UseFiberNMForSteelPipeConcrete = v,
-                value ? "許容時N-Mを断面分割積分で算定 へ変更" : "許容時N-Mを単純累加で算定 へ変更");
+                value ? "許容時N-Mを断面分割積分で算定 へ変更" : "許容時N-Mを累加強度式で算定 へ変更");
             OnPropertyChanged(nameof(FollowsKctbEvaluation));
             OnPropertyChanged(nameof(AllowableJudgementEnabled));
         }
@@ -358,7 +358,7 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 「許容時の判定材料」を選べるか。
         ///
-        /// 単純累加は断面を積分せず許容応力度を累加するので、
+        /// 累加強度式は断面を積分せず許容応力度を累加するので、
         /// 「どの材料で限界状態を決めるか」という概念自体が現れない。
         /// 選べたままだと効かない設定を触らせることになるのでグレーアウトする。
         /// </summary>
@@ -369,7 +369,7 @@ namespace PileDesign.ViewModels
         ///
         /// 評定が定めているのは次の 2 つだけ。終局ひずみや許容時の判定は評定書に規定が無いため含めない。
         ///   ・コンクリートの許容応力度 = 告示1113(第8) 打設方法(一)（評定 5.(1)・表1.2）
-        ///   ・本体部の設計法 = 単純累加（評定 5.(3)、SRC規準2014 4章2節）
+        ///   ・本体部の設計法 = 累加強度式（評定 5.(3)、SRC規準2014 4章2節）
         /// get は構成項目が評定どおりのとき true（個別に切替えると自動で追随）。
         /// ON のとき適用範囲（φ700〜2700・板厚下限・鋼管長・腐食しろ 1mm・Fc 18〜45）の検査も働く。
         /// </summary>

@@ -429,7 +429,7 @@
                                     <LineBreak/>
                                     <Run>・コンクリートの許容応力度 → 告示1113(第8) 打設方法(一)（評定 5.(1)・表1.2、区分 1）</Run>
                                     <LineBreak/>
-                                    <Run>・本体部の設計法 → 単純累加（評定 5.(3)、鉄骨鉄筋コンクリート構造計算規準 2014 4章2節）</Run>
+                                    <Run>・本体部の設計法 → 累加強度式（評定 5.(3)、鉄骨鉄筋コンクリート構造計算規準 2014 4章2節）</Run>
                                     <LineBreak/>
                                     <Run>チェックを入れると、適用範囲（φ700〜2700・板厚下限・鋼管長・腐食しろ 1mm・Fc 18〜45）の検査も働きます。</Run>
                                 </TextBlock>
@@ -445,7 +445,7 @@
                             <LineBreak/>
                             <Run>　 （評定 5.(1)・表1.2。長期 圧縮 Fc/4、短期 圧縮 Fc/2）</Run>
                             <LineBreak/>
-                            <Run>2. 本体部の設計法 → 単純累加（評定 5.(3)、鉄骨鉄筋コンクリート構造計算規準 2014 4章2節）</Run>
+                            <Run>2. 本体部の設計法 → 累加強度式（評定 5.(3)、鉄骨鉄筋コンクリート構造計算規準 2014 4章2節）</Run>
                             <LineBreak/>
                             <Run>3. 適用範囲の検査が働く（鋼管外径 φ700〜2700・板厚の下限・鋼管長の上限・腐食しろ 1mm・Fc 18〜45）</Run>
                             <LineBreak/>
@@ -459,9 +459,9 @@
                     <ctrl:MaterialOptionRadioPair
                         Header="本体部の設計法（許容時 N-M の求め方）" HelpAnchor="fund-opt-kctb-nm" GroupName="OptKctbNM"
                         IsAlternativeSelected="{Binding UseFiberNMForSteelPipeConcrete, Mode=TwoWay}"
-                        DefaultText="単純累加で算定する（評定 5.(3)・鉄骨鉄筋コンクリート構造計算規準 2014）"
+                        DefaultText="累加強度式で算定する（評定 5.(3)・鉄骨鉄筋コンクリート構造計算規準 2014）"
                         DefaultFormula="rNt ≦ N ≦ rNc: M = sM₀ + rM ／ 範囲外: M = sZ·(sf − sN/sA)、sM₀ = sZ·sfₜ"
-                        DefaultToolTip="評定書 5.(3) が定める本体部の設計法です。&#x0a;断面を積分せず、鋼管部の許容耐力と鉄筋コンクリート部の許容耐力を累加します。&#x0a;rNc = min(Ae·fc, Ae·mfc/n)、rNt = −mA·mfₜ、Ae はコンクリート断面に主筋断面積を n 倍して加算した換算断面積です。&#x0a;使用限界・損傷限界の NM 曲線（検定の耐力側）のみに効き、安全限界・M-φ・解析には影響しません。"
+                        DefaultToolTip="評定書 5.(3) が定める本体部の設計法です。&#x0a;断面を積分せず、鋼管部の許容耐力と鉄筋コンクリート部の許容耐力を累加します。&#x0a;rNc = min(Ae·fc, Ae·mfc/n)、rNt = −mA·mfₜ、Ae はコンクリート断面に主筋断面積を n 倍して加算した換算断面積です。&#x0a;ひずみの適合を課さないため、断面を分割して積分した NM 曲線よりかなり大きくなります（φ1000・Fc27 の例で長期 1.3〜2.4 倍）。これは方法の性質で、誤りではありません。&#x0a;使用限界・損傷限界の NM 曲線（検定の耐力側）のみに効き、安全限界・M-φ・解析には影響しません。"
                         AlternativeText="断面を分割して積分する"
                         AlternativeFormula="断面の平面保持を解き、N = Σσᵢ·Aᵢ、M = Σσᵢ·Aᵢ·Lᵢ"
                         AlternativeToolTip="評定書には無い方法です（ジャパンパイル Technical Note Vol.1-5）。&#x0a;断面を中立軸に平行な微小要素に分割し、平面保持のもとで各材料の応力を積分します。鉄筋は等価な断面を持つ薄肉鋼管に置き換えます。&#x0a;本プログラムの他の杭種と同じ求め方で、これが既定です。"/>
@@ -469,9 +469,9 @@
                     <Border Background="#EEF3F8" BorderBrush="#B8CCE0" BorderThickness="1" CornerRadius="3"
                             Margin="0,8,0,0" Padding="8,6,8,6">
                         <TextBlock TextWrapping="Wrap" FontSize="11">
-                            <Run FontWeight="Bold">単純累加を選んだときに効く設定・効かない設定</Run>
+                            <Run FontWeight="Bold">累加強度式を選んだときに効く設定・効かない設定</Run>
                             <LineBreak/>
-                            <Run>単純累加は断面を積分せず、許容応力度と換算断面だけで許容 N-M を作ります。</Run>
+                            <Run>累加強度式は断面を積分せず、許容応力度と換算断面だけで許容 N-M を作ります。</Run>
                             <Run>そのため</Run><Run FontWeight="Bold">応力度〜ひずみ度関係は使いません</Run><Run>。</Run>
                             <LineBreak/>
                             <Run FontWeight="Bold">効く:</Run>
@@ -531,7 +531,7 @@
                         AlternativeToolTip="出典: ジャパンパイル Technical Note Vol.1-5 (2022年11月) p.2。&#x0a;「圧縮側のコンクリートの応力度が許容圧縮応力度 σca に達した時、もしくは圧縮側または引張側の鋼管の応力度が許容応力度 σsa（= 基準強度 Fs）に達した時」と定めています。&#x0a;鉄筋は限界状態の判定には用いませんが、耐力への寄与（断面積分）には従来どおり参入します。&#x0a;使用限界・損傷限界の NM 曲線のみに効き、安全限界・M-φ・解析には影響しません。"/>
 
                     <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="24,0,0,2"
-                               Text="※ 判定材料は、上の「本体部の設計法」で断面を分割して積分するときだけ選べます。単純累加では断面を積分しないため、この選択は現れません。"/>
+                               Text="※ 判定材料は、上の「本体部の設計法」で断面を分割して積分するときだけ選べます。累加強度式では断面を積分しないため、この選択は現れません。"/>
 
                     <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
                                Text="※ εcu を変更すると M-φ の終点が変わるため、既存の解析結果は削除されます（杭要素分割は保持）。判定材料の切替は検定の耐力側のみのため解析結果は保持されます。"/>

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace PileDesign.Models.InputData
 {
     /// <summary>
-    /// KCTB 場所打ち鋼管コンクリート杭（TB工法）の本体部を、単純累加式で検討する部分。
+    /// KCTB 場所打ち鋼管コンクリート杭（TB工法）の本体部を、累加強度式で検討する部分。
     ///
     /// 出典: BCJ評定-FD0356-08「KCTB 場所打ち鋼管コンクリート杭」5.(3) 本体部の設計法。
     /// 同評定は鋼管コンクリート部の設計を日本建築学会
@@ -20,7 +20,7 @@ namespace PileDesign.Models.InputData
         // 鉄筋コンクリート部（コンクリート＋主筋、鋼管を含まない）の許容耐力算定用の断面。
         // 評定書の rN・rM は「鉄筋コンクリート構造計算規準・同解説」(2018) によるとされているので、
         // 新たな積分器は書かず、既存の場所打ち鉄筋コンクリート杭断面をそのまま使う。
-        // 単純累加を選んだときだけ作る（構築コストが小さくないため遅延生成）。
+        // 累加強度式を選んだときだけ作る（構築コストが小さくないため遅延生成）。
         private InsituReinforcedConcreteSection? _rcPartForSuperposition;
 
         private InsituReinforcedConcreteSection RcPartForSuperposition =>
@@ -29,7 +29,7 @@ namespace PileDesign.Models.InputData
             _rcPartForSuperposition ??= new InsituReinforcedConcreteSection(
                 InsituConcrete, MainBars, applyBodyMaterialOptions: false);
 
-        /// <summary>単純累加で許容 N-M を作るか（評定書 5.(3) の本体部の設計法）。</summary>
+        /// <summary>累加強度式で許容 N-M を作るか（評定書 5.(3) の本体部の設計法）。</summary>
         private bool UseSuperposition => _superposedAllowableNM;
 
         internal override (List<double>, List<double>, List<double>, List<double>) GetServiceLimitMNInteraction()
@@ -43,7 +43,7 @@ namespace PileDesign.Models.InputData
                 : base.GetDamageLimitMNInteraction();
 
         /// <summary>
-        /// 単純累加による許容 N-M 相関を返す（limitStateNo 0=使用限界/長期、1=損傷限界/短期）。
+        /// 累加強度式による許容 N-M 相関を返す（limitStateNo 0=使用限界/長期、1=損傷限界/短期）。
         ///
         /// 評定書 5.(3) 2) の記号と式:
         ///   (1) rNt ≦ N ≦ rNc または M ≧ sM0 : N = rN,  M ≦ sM0 + rM
@@ -146,7 +146,7 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 PileDesign.Common.CalcFallbackTracker.Report(
-                    "単純累加による許容N-Mの算定（→空）", ex,
+                    "累加強度式による許容N-Mの算定（→空）", ex,
                     $"場所打ち鋼管コンクリート杭, 限界状態={limitStateNo}");
                 return (ns, ms, epsilonCs, curvatures);
             }

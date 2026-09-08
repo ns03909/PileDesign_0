@@ -192,7 +192,7 @@ namespace TestProject1
             {
                 f.UseNotification1113 = true;               // 許容圧縮・許容せん断 共通の規準 = 告示1113(第8)
                 f.Notification1113CompressionCase = 1;
-                f.UseFiberNMForSteelPipeConcrete = false;   // 評定 5.(3) の単純累加
+                f.UseFiberNMForSteelPipeConcrete = false;   // 評定 5.(3) の累加強度式
                 mainVm.ApplyConcreteModelOptions();
 
                 var vm = new FundamentalViewModel(mainVm);

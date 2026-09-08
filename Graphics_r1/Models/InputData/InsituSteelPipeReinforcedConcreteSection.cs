@@ -27,7 +27,7 @@ namespace PileDesign.Models.InputData
         public double Ft { get; private set; }
 
         // ─── 場所打ち鋼管コンクリート杭のオプション（いずれも鋼管杭の充填鋼管部には適用しない）───
-        // BCJ評定-FD0356-08 が定めるのは許容応力度と本体部の設計法（単純累加）で、
+        // BCJ評定-FD0356-08 が定めるのは許容応力度と本体部の設計法（累加強度式）で、
         // 終局ひずみと許容時の判定は評定書に規定が無く、依る文献を設計者が選ぶ
         // （Technical Note Vol.1-5 / 基礎WG 資料4-7）。
         // 出所が違うので独立したフラグで持つ。
@@ -38,7 +38,7 @@ namespace PileDesign.Models.InputData
         /// <summary>許容時の判定に鉄筋を用いないか（評定書に規定が無い項目）。</summary>
         private readonly bool _excludeRebarFromAllowable;
 
-        /// <summary>許容時 N-M を単純累加式で求めるか（評定 5.(3)）。</summary>
+        /// <summary>許容時 N-M を累加強度式で求めるか（評定 5.(3)）。</summary>
         private readonly bool _superposedAllowableNM;
 
         /// <summary>

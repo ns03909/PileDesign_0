@@ -235,7 +235,7 @@ namespace PileDesign.Output
                     : "バイリニア型でモデル化し、β1・β2 低減と軸力適用範囲を考慮する"));
 
             rows.Add(("本体部の設計法（場所打ち鋼管コンクリート杭）",
-                ConcreteModelOptions.UseFiberNMForSteelPipeConcrete ? "断面分割積分" : "単純累加",
+                ConcreteModelOptions.UseFiberNMForSteelPipeConcrete ? "断面分割積分" : "累加強度式",
                 ConcreteModelOptions.UseFiberNMForSteelPipeConcrete
                     ? "断面を微小要素に分割し、平面保持のもとで応力を積分して許容時 N-M を求める"
                     : "鋼管部と鉄筋コンクリート部の許容耐力を累加する" +

@@ -269,7 +269,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 場所打ち鋼管コンクリート杭の許容時 N-M を断面分割積分で求める。
-        // 既定 true（従来どおり）。false で評定書 5.(3) の単純累加式になる。
+        // 既定 true（従来どおり）。false で評定書 5.(3) の累加強度式になる。
         // 旧い保存ファイルにはキーが無いので、この初期値がそのまま効く（挙動を変えないため true）。
         private bool _useFiberNMForSteelPipeConcrete = true;
         public bool UseFiberNMForSteelPipeConcrete

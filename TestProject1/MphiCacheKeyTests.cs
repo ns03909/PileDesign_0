@@ -256,7 +256,7 @@ namespace TestProject1
             ResetOptions();
             ConcreteModelOptions.UseFiberNMForSteelPipeConcrete = false;
             Assert.AreNotEqual(baseKey, MakeRc().GetMPhiCacheKey(1000.0),
-                "本体部の設計法（単純累加）の変更がキーに反映されない");
+                "本体部の設計法（累加強度式）の変更がキーに反映されない");
         }
     }
 }
