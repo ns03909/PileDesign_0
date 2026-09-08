@@ -170,6 +170,21 @@ namespace PileDesign.Common
             band.LineStyle.Width = 0;
             band.LegendText = "杭断面";
 
+            // 杭端 (z = ±R): 太い線。どこまでが断面かを、塗りだけでなく線でも示す
+            var edgeColor = new ScottPlot.Color((byte)80, (byte)80, (byte)80);
+            foreach (double z in new[] { -p.Radius, p.Radius })
+                wpf.Plot.Add.HorizontalLine(z, 2.5f, edgeColor);
+
+            // 鉄筋・PC 鋼材の配置位置 (z = ±r): 細い破線。応力度の折れがどの深さで起きているかを読めるように
+            foreach (var m in p.Materials)
+            {
+                if (m.Kind is not (SectionMaterialKind.MainBar or SectionMaterialKind.Tendon) || m.Z.Count == 0) continue;
+                double r = m.Z.Max(Math.Abs);
+                if (r <= 0) continue;
+                foreach (double z in new[] { -r, r })
+                    wpf.Plot.Add.HorizontalLine(z, 1f, ColorFor(m.Kind), ScottPlot.LinePattern.Dashed);
+            }
+
             foreach (var m in p.Materials)
             {
                 double[] xs = (stress ? m.Stress : m.Strain).ToArray();
@@ -181,7 +196,10 @@ namespace PileDesign.Common
                 sc.MarkerSize = 0;
             }
 
-            wpf.Plot.Add.VerticalLine(0, 1, new ScottPlot.Color((byte)0, (byte)0, (byte)0));
+            // ゼロ線 (ε=0 / σ=0 と z=0): 太く。符号の読み取りと中立軸位置の目安
+            var zeroColor = new ScottPlot.Color((byte)0, (byte)0, (byte)0);
+            wpf.Plot.Add.VerticalLine(0, 2.5f, zeroColor);
+            wpf.Plot.Add.HorizontalLine(0, 2.5f, zeroColor);
             wpf.Plot.Axes.AutoScale();
             wpf.Plot.Axes.InvertY();   // 圧縮縁を上に
             PlotHelper.InitCrosshair(wpf, new ScottPlot.Color((byte)98, (byte)176, (byte)226));
