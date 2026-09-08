@@ -166,13 +166,12 @@ namespace PileDesign.Services
 
         private void PerformAutoSave()
         {
-            // セッションが開始されていない (Start 前 / Stop 後) 場合は何もしない
-            if (_currentInputModel == null)
-                return;
-
             try
             {
                 var path = SaveSnapshot(tag: "autosave");
+                // 保存対象が無い (ライブ状態が空) 場合は何もしない
+                if (path == null)
+                    return;
 
                 LastAutoSaveTime = DateTime.Now;
                 ConsecutiveFailures = 0;
@@ -204,15 +203,19 @@ namespace PileDesign.Services
         /// <summary>
         /// 致命的例外発生時に呼び出される緊急保存。
         /// 通常の AutoSave と異なり、イベントを発火せず、成功時はファイルパスを返す。
-        /// 失敗時 (またはセッション開始前で _currentInputModel が無いとき) は null を返す。
+        /// 失敗時 (または保存する状態が無いとき) は null を返す。
         /// 例外を投げない (呼び出し側がさらに例外処理する手間を避けるため)。
+        ///
+        /// <b>タイマーが止まっていても保存する。</b>「新規作成」直後は Stop() されているが、
+        /// そこで落ちたときこそ作業を残す必要があるため、_currentInputModel ではなく
+        /// ライブ状態 (<see cref="LiveStateProvider"/>) の有無で判断する。
         /// </summary>
         public string? TryEmergencyAutoSave()
         {
-            if (_currentInputModel == null) return null;
             try
             {
                 var path = SaveSnapshot(tag: "emergency");
+                if (path == null) return null;
                 Log.Information("Emergency AutoSave succeeded: {Path}", path);
                 return path;
             }
@@ -226,9 +229,16 @@ namespace PileDesign.Services
         /// <summary>
         /// 共通スナップショット保存ロジック。例外はそのまま伝播する。
         /// tag は "autosave" または "emergency" を渡す (ファイル名に埋め込む)。
+        /// 保存する状態が無ければ null を返す。
         /// </summary>
-        private string SaveSnapshot(string tag)
+        private string? SaveSnapshot(string tag)
         {
+            // ライブ状態を解決 (LiveStateProvider があれば最新 + 自動保存チェックボックスを反映)
+            var (input, ana, vbcr) = ResolveState();
+
+            // 保存対象が無い。Start 前 / Stop 後で、かつプロバイダも入力を返さない場合。
+            if (input == null) return null;
+
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var originalFileName = !string.IsNullOrEmpty(_currentFilePath)
                 ? Path.GetFileNameWithoutExtension(_currentFilePath)
@@ -237,9 +247,10 @@ namespace PileDesign.Services
             var fileName = $"{originalFileName}_{tag}_{timestamp}.pdj";
             var filePath = Path.Combine(AutoSaveFolder, fileName);
 
-            // ライブ状態を解決 (LiveStateProvider があれば最新 + 自動保存チェックボックスを反映)
-            var (input, ana, vbcr) = ResolveState();
-            _fileOperationService.SaveProjectData(filePath, input!, ana, vbcr);
+            // 元ファイルのフルパスをファイルの中に残す。
+            // ファイル名には「拡張子を除いた名前」しか入らないので、復元したあとの保存先を
+            // 名前から推測すると、カレントディレクトリ相対の別ファイルに書いてしまう。
+            _fileOperationService.SaveProjectData(filePath, input, ana, vbcr, sourceFilePath: _currentFilePath);
             return filePath;
         }
 

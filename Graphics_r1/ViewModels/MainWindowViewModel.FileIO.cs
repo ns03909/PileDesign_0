@@ -38,7 +38,16 @@ namespace PileDesign.ViewModels
     {
         // 名前をつけて保存
         [RelayCommand]
-        public async Task SaveInputModelFileAs()
+        public async Task SaveInputModelFileAs() => await SaveInputModelFileAsCoreAsync();
+
+        /// <summary>
+        /// 「名前を付けて保存」の本体。<b>保存できたかどうかを返す</b>。
+        ///
+        /// 呼び出し側が結果を見ないと、保存ダイアログをキャンセルした場合や保存に失敗した
+        /// 場合まで「保存した」ものとして先へ進んでしまう (未保存のまま新規作成・終了)。
+        /// コマンド (<see cref="SaveInputModelFileAs"/>) は戻り値を持てないので本体を分ける。
+        /// </summary>
+        internal async Task<bool> SaveInputModelFileAsCoreAsync()
         {
             var saveFileDialog = new SaveFileDialog
             {
@@ -46,48 +55,56 @@ namespace PileDesign.ViewModels
                 DefaultExt = "pdj"
             };
 
-            if (saveFileDialog.ShowDialog() == true)
+            if (saveFileDialog.ShowDialog() != true)
+                return false;   // 保存ダイアログをキャンセル
+
+            CurrentFilePath = saveFileDialog.FileName;
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
             {
-                CurrentFilePath = saveFileDialog.FileName;
-                Mouse.OverrideCursor = Cursors.Wait;
-                try
-                {
-                    StatusMessage = "保存中...";
-                    // 解析結果保存フラグ OFF の場合は AnaModel/VerticalBeamCaseResults を null にして
-                    // 入力のみの軽量ファイルとして保存する
-                    var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
-                    var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
-                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
-                        CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
-                        Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
-                        IsElementSplit,
-                        InputChangedSinceAnalysis);
-                    ShowToast("保存が完了しました。");
-                    MarkWorkSaved();
+                StatusMessage = "保存中...";
+                // 解析結果保存フラグ OFF の場合は AnaModel/VerticalBeamCaseResults を null にして
+                // 入力のみの軽量ファイルとして保存する
+                var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
+                var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
+                await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
+                    CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
+                    Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
+                    IsElementSplit,
+                    InputChangedSinceAnalysis);
+                ShowToast("保存が完了しました。");
+                MarkWorkSaved();
 
-                    // MRUに追加
-                    _mruService.AddFile(CurrentFilePath);
+                // MRUに追加
+                _mruService.AddFile(CurrentFilePath);
 
-                    // 自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)
-                    _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
-                }
-                catch (Exception ex)
-                {
-                    MessageService.ShowError($"保存に失敗しました。", ex, "エラー");
-                }
-                finally
-                {
-                    StatusMessage = "準備完了";
-                    Mouse.OverrideCursor = null;
-                }
+                // 自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)
+                _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageService.ShowError($"保存に失敗しました。", ex, "エラー");
+                return false;
+            }
+            finally
+            {
+                StatusMessage = "準備完了";
+                Mouse.OverrideCursor = null;
             }
         }
 
         [RelayCommand]
-        public async Task SaveInputModelFile()
+        public async Task SaveInputModelFile() => await SaveInputModelFileCoreAsync();
+
+        /// <summary>
+        /// 「上書き保存」の本体。<b>保存できたかどうかを返す</b>
+        /// (理由は <see cref="SaveInputModelFileAsCoreAsync"/> を参照)。
+        /// </summary>
+        internal async Task<bool> SaveInputModelFileCoreAsync()
         {
             if (string.IsNullOrEmpty(CurrentFilePath))
-                await SaveInputModelFileAs();
+                return await SaveInputModelFileAsCoreAsync();
             else
             {
                 Mouse.OverrideCursor = Cursors.Wait;
@@ -103,10 +120,12 @@ namespace PileDesign.ViewModels
                         InputChangedSinceAnalysis);
                     ShowToast("保存が完了しました。");
                     MarkWorkSaved();
+                    return true;
                 }
                 catch (Exception ex)
                 {
                     MessageService.ShowError($"保存に失敗しました。", ex, "エラー");
+                    return false;
                 }
                 finally
                 {
@@ -114,6 +133,29 @@ namespace PileDesign.ViewModels
                     Mouse.OverrideCursor = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// 現在の作業を捨ててよいか確認する。捨ててよい (または保存できた) なら true。
+        ///
+        /// 「新規作成」だけがこの確認を持っていて、<b>ファイルを開く・最近使ったファイル・
+        /// ドラッグ＆ドロップ・起動引数</b>は素通りしていた。数時間の入力が確認なしに消える。
+        /// 4 経路で同じ確認を使うためにここへ集約する。
+        /// </summary>
+        internal async Task<bool> ConfirmDiscardUnsavedWorkAsync()
+        {
+            if (!HasUnsavedWork) return true;
+
+            var result = MessageService.Show(
+                "現在のデータを保存しますか？",
+                "確認",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Cancel) return false;
+            // 「はい」は保存できたときだけ先へ進む。キャンセル・失敗で進むと作業が消える。
+            if (result == MessageBoxResult.Yes) return await SaveInputModelFileCoreAsync();
+            return true;   // 「いいえ」= 破棄して続行
         }
 
         /// <summary>
@@ -126,20 +168,10 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public async Task NewInputModelFile()
         {
-            // 保存していない作業が無ければ確認しない (起動直後に新規作成した場合など)
-            if (HasUnsavedWork)
-            {
-                var result = MessageService.Show(
-                    "現在のデータを保存しますか？",
-                    "確認",
-                    MessageBoxButton.YesNoCancel,
-                    MessageBoxImage.Question);
-
-                if (result == MessageBoxResult.Cancel)
-                    return;
-                else if (result == MessageBoxResult.Yes)
-                    await SaveInputModelFile();
-            }
+            // 保存していない作業が無ければ確認しない (起動直後に新規作成した場合など)。
+            // 「はい」で保存をキャンセル・失敗したときも、ここで止まる。
+            if (!await ConfirmDiscardUnsavedWorkAsync())
+                return;
 
             // 自動保存を停止
             _autoSaveService.Stop();
@@ -157,6 +189,11 @@ namespace PileDesign.ViewModels
 
             // バイリニアコンクリート・オプションを既定 (false) へ戻し、キャッシュを破棄
             ApplyConcreteModelOptions();
+
+            // 名前の無いセッションとして自動保存を回し直す。
+            // 上の Stop() のままにすると、新規作成のあとに入力した内容は自動保存も
+            // 緊急保存も対象外になる (落ちると全部消える)。
+            _autoSaveService.Start(null, CurrentInputModel, null, null);
 
             // ここで初期状態をUndoスタックに積む
             SaveUndoState();
@@ -252,6 +289,57 @@ namespace PileDesign.ViewModels
             // 解析済みの結果を表示したままオプションを変えると、応答値は解析時・限界曲線は今の
             // オプション、という混ざった表示になる。ステータスに出して気付けるようにする。
             NotifyMaterialOptionsSignatureChanged();
+        }
+
+        /// <summary>
+        /// 読み込んだ <see cref="Models.ProjectData"/> を現在のモデルへ反映する。
+        ///
+        /// 以前は呼び出し側が <c>CurrentInputModel = projectData.InputModel</c> を代入した<b>あと</b>で
+        /// <see cref="ApplyPostLoadProtocol"/> を走らせていた。そのため
+        ///
+        /// <list type="bullet">
+        /// <item>無関係な JSON を開くと <c>InputModel</c> が null のまま代入され、以後 NullReference の連鎖になる
+        ///   (<c>Deserialize</c> は JSON オブジェクトでありさえすれば非 null を返すので、
+        ///    呼び出し側の <c>projectData == null</c> 分岐は成立しない)</item>
+        /// <item>移行処理の途中で例外が出ると、前の入力は既に捨てられていて元に戻せない</item>
+        /// </list>
+        ///
+        /// という形で<b>読込に失敗すると編集中の作業まで失われて</b>いた。
+        /// ここで先に中身を検査し、失敗したら読込前の入力へ戻す。
+        /// </summary>
+        private void ApplyLoadedProjectData(Models.ProjectData projectData, string? filePath, string successMessage)
+        {
+            if (projectData.InputModel == null)
+                throw new InvalidOperationException("ファイル形式が不正です。入力データが含まれていません。");
+
+            var previousInput = CurrentInputModel;
+            var previousAnaModel = CurrentModel;
+            var previousFilePath = CurrentFilePath;
+            var previousResultSet = CurrentResultSet;
+
+            try
+            {
+                CurrentInputModel = projectData.InputModel;
+                CurrentModel = projectData.AnaModel;
+                ApplyPostLoadProtocol(projectData, filePath, successMessage);
+            }
+            catch
+            {
+                // 読込前の状態へ戻す。CurrentInputModel の setter が購読を張り直すので、
+                // 戻したモデルの編集は再びメイン画面に反映される。
+                CurrentInputModel = previousInput;
+                CurrentModel = previousAnaModel;
+                CurrentFilePath = previousFilePath;
+                CurrentResultSet = previousResultSet;
+                if (previousInput != null)
+                {
+                    // 静的な材料オプションと軸力モードは InputModel の外にあるので、明示的に戻す。
+                    ApplyConcreteModelOptions();
+                    Common.AxialForceModeContext.IsVariationMode = previousInput.IsAxialForceVariationMode;
+                }
+                OnPropertyChanged(nameof(CurrentInputModel));
+                throw;
+            }
         }
 
         private void ApplyPostLoadProtocol(Models.ProjectData? projectData, string? filePath, string successMessage)
@@ -485,44 +573,47 @@ namespace PileDesign.ViewModels
                 DefaultExt = "pdj"
             };
 
-            if (openFileDialog.ShowDialog() == true)
+            if (openFileDialog.ShowDialog() != true)
+                return;
+
+            // 開く前に、保存していない作業の扱いを確認する
+            if (!await ConfirmDiscardUnsavedWorkAsync())
+                return;
+
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
             {
-                Mouse.OverrideCursor = Cursors.Wait;
-                try
-                {
-                    StatusMessage = "読込中...";
-                    var projectData = await _fileOperationService.LoadProjectDataAsync(openFileDialog.FileName);
+                StatusMessage = "読込中...";
+                var projectData = await _fileOperationService.LoadProjectDataAsync(openFileDialog.FileName);
 
-                    if (projectData != null)
-                    {
-                        CurrentInputModel = projectData.InputModel;
-                        CurrentModel = projectData.AnaModel;
-                        ApplyPostLoadProtocol(projectData, openFileDialog.FileName, "読込が完了しました。");
-                    }
-                    else
-                    {
-                        // ProjectDataでない場合を想定して InputModel 単体で読めるか試す
-                        var ok = TryLoadInputModelFileUsingInputModelLoader(openFileDialog.FileName);
-                        if (!ok)
-                            throw new InvalidOperationException("ファイル形式が不正です。ProjectData でも InputModel でもありません。");
-                        return;
-                    }
-
-                    // MRU に追加
-                    _mruService.AddFile(CurrentFilePath);
-
-                    // 自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)
-                    _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
-                }
-                catch (Exception ex)
+                if (projectData?.InputModel != null)
                 {
-                    HandleFileLoadError(ex, openFileDialog.FileName);
+                    ApplyLoadedProjectData(projectData, openFileDialog.FileName, "読込が完了しました。");
                 }
-                finally
+                else
                 {
-                    StatusMessage = "準備完了";
-                    Mouse.OverrideCursor = null;
+                    // ProjectData の体裁でない (InputModel が無い) 場合を想定して
+                    // InputModel 単体で読めるか試す
+                    var ok = TryLoadInputModelFileUsingInputModelLoader(openFileDialog.FileName);
+                    if (!ok)
+                        throw new InvalidOperationException("ファイル形式が不正です。ProjectData でも InputModel でもありません。");
+                    return;
                 }
+
+                // MRU に追加
+                _mruService.AddFile(CurrentFilePath);
+
+                // 自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)
+                _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
+            }
+            catch (Exception ex)
+            {
+                HandleFileLoadError(ex, openFileDialog.FileName);
+            }
+            finally
+            {
+                StatusMessage = "準備完了";
+                Mouse.OverrideCursor = null;
             }
         }
 

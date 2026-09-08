@@ -446,7 +446,7 @@ namespace PileDesign.Views
 
                 // ViewModel の OpenFromMru メソッドを使用してファイルを開く
                 // (post-load protocol で AutoSave / Undo クリア等まで実行される)
-                _mainWindowViewModel.OpenFromMru(files[0]);
+                _mainWindowViewModel.OpenFromMruCommand.Execute(files[0]);
             }
             finally
             {

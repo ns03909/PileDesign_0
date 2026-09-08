@@ -204,6 +204,11 @@ namespace PileDesign.ViewModels
             // 読み込んだ直後は保存していない作業は無い。
             // 続けて別の計算例を読むときに、無意味な確認を出さないため。
             MarkWorkSaved();
+
+            // 自動保存の宛先を「名前の無いセッション」に張り替える。
+            // 張り替えないと、直前に開いていたプロジェクト名のまま計算例が自動保存され、
+            // 次回起動で「そのプロジェクトの自動保存」として復元候補に出てしまう。
+            _autoSaveService.Start(null, CurrentInputModel, null, null);
         }
 
         /// <summary>
@@ -330,6 +335,11 @@ namespace PileDesign.ViewModels
             // 読み込んだ直後は保存していない作業は無い。
             // 続けて別の計算例を読むときに、無意味な確認を出さないため。
             MarkWorkSaved();
+
+            // 自動保存の宛先を「名前の無いセッション」に張り替える。
+            // 張り替えないと、直前に開いていたプロジェクト名のまま計算例が自動保存され、
+            // 次回起動で「そのプロジェクトの自動保存」として復元候補に出てしまう。
+            _autoSaveService.Start(null, CurrentInputModel, null, null);
         }
 
         // 設計例集3.1

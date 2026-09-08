@@ -43,7 +43,7 @@ namespace PileDesign.Services
             IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
             PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
-            bool inputChangedSinceAnalysis = false)
+            bool inputChangedSinceAnalysis = false, string? sourceFilePath = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -72,6 +72,8 @@ namespace PileDesign.Services
                 InputChangedSinceAnalysis = anaModel != null ? inputChangedSinceAnalysis : null,
                 PileFemLinks = anaModel != null ? pileFemLinks : null,
                 IsElementSplit = isElementSplit,
+                // 自動保存・緊急保存だけが渡す。復元したあとの保存先を確定するために使う。
+                SourceFilePath = sourceFilePath,
             };
 
             // string 中間生成を避けて UTF-8 バイト直書き。
@@ -126,7 +128,7 @@ namespace PileDesign.Services
             IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
             PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
-            bool inputChangedSinceAnalysis = false)
+            bool inputChangedSinceAnalysis = false, string? sourceFilePath = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -155,6 +157,8 @@ namespace PileDesign.Services
                 InputChangedSinceAnalysis = anaModel != null ? inputChangedSinceAnalysis : null,
                 PileFemLinks = anaModel != null ? pileFemLinks : null,
                 IsElementSplit = isElementSplit,
+                // 自動保存・緊急保存だけが渡す。復元したあとの保存先を確定するために使う。
+                SourceFilePath = sourceFilePath,
             };
 
             long tValidate = 0;

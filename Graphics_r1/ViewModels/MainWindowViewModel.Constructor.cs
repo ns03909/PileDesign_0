@@ -4223,6 +4223,11 @@ namespace PileDesign.ViewModels
                       (VerticalBeamCaseResults != null && VerticalBeamCaseResults.Count > 0) ||
                       HasGroupSettlementBeamAwareCases);
 
+            // 起動直後の「名前の無いセッション」でも自動保存を回す。
+            // 以前は「開く」「名前を付けて保存」でしか Start していなかったため、
+            // 起動して新規に入力しただけの状態は 3 分ごとの自動保存も緊急保存も動かず、
+            // 落ちると作業が丸ごと消えていた。ファイル名は Untitled_autosave_… になる。
+            _autoSaveService.Start(null, CurrentInputModel, null, null);
         }
 
         private void PileLayoutItem_PropertyChanged(object sender, PropertyChangedEventArgs e)

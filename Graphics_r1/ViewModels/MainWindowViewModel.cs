@@ -3508,7 +3508,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         /// <param name="filePath">ファイルパス</param>
         [RelayCommand]
-        public void OpenFromMru(string filePath)
+        public async Task OpenFromMru(string filePath)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             {
@@ -3517,16 +3517,20 @@ namespace PileDesign.ViewModels
                 return;
             }
 
+            // 開く前に、保存していない作業の扱いを確認する。
+            // この経路には「最近使ったファイル」だけでなく、ウィンドウへのドラッグ＆ドロップと
+            // 起動引数も流れてくる。確認が無いと、それらで作業が確認なしに消えていた。
+            if (!await ConfirmDiscardUnsavedWorkAsync())
+                return;
+
             Mouse.OverrideCursor = Cursors.Wait;
             try
             {
                 var projectData = _fileOperationService.LoadProjectData(filePath);
 
-                if (projectData != null)
+                if (projectData?.InputModel != null)
                 {
-                    CurrentInputModel = projectData.InputModel;
-                    CurrentModel = projectData.AnaModel;
-                    ApplyPostLoadProtocol(projectData, filePath, "読込が完了しました。");
+                    ApplyLoadedProjectData(projectData, filePath, "読込が完了しました。");
                 }
                 else
                 {
@@ -3627,29 +3631,27 @@ namespace PileDesign.ViewModels
                 try
                 {
                     var projectData = _fileOperationService.LoadProjectData(latestAutoSave);
-                    if (projectData != null)
+                    if (projectData?.InputModel != null)
                     {
-                        CurrentInputModel = projectData.InputModel;
-                        CurrentModel = projectData.AnaModel;
+                        // 復元後の保存先は、自動保存ファイルに記録した元ファイルのフルパスを使う。
+                        // 以前は自動保存ファイル名から "Foo.pdj" という相対パスを組み立てていたため、
+                        // Ctrl+S が元ファイルではなくカレントディレクトリの同名ファイルへ書き、
+                        // 利用者は保存できたと思い込んだまま元ファイルが古いまま残っていた。
+                        // 記録が無い (旧い自動保存ファイル) か、元ファイルが移動・削除されていれば
+                        // null にして、次の保存を「名前を付けて保存」に倒す。
+                        var sourceFilePath = projectData.SourceFilePath;
+                        if (string.IsNullOrEmpty(sourceFilePath) || !System.IO.File.Exists(sourceFilePath))
+                            sourceFilePath = null;
 
-                        // ファイルパスは元のファイル名から推測（自動保存ファイル名から取得）
-                        string? inferredFilePath = null;
-                        var originalFileName = System.IO.Path.GetFileNameWithoutExtension(latestAutoSave);
-                        var autoSaveIndex = originalFileName.IndexOf("_autosave_");
-                        if (autoSaveIndex > 0)
-                        {
-                            originalFileName = originalFileName[..autoSaveIndex];
-                            // 元のファイルパスを推測（未保存ならnull）
-                            inferredFilePath = originalFileName != "Untitled" ? originalFileName + ".pdj" : null;
-                        }
+                        ApplyLoadedProjectData(projectData, sourceFilePath, "自動保存ファイルの復元が完了しました。");
 
-                        ApplyPostLoadProtocol(projectData, inferredFilePath, "自動保存ファイルの復元が完了しました。");
-
-                        // 復元後は自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)
-                        if (!string.IsNullOrEmpty(CurrentFilePath))
-                        {
-                            _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
-                        }
+                        // 復元後は自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)。
+                        // 元ファイルが分からない場合も、名前の無いセッションとして回し続ける。
+                        _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("自動保存ファイルに入力データが含まれていません。");
                     }
                 }
                 catch (Exception ex)

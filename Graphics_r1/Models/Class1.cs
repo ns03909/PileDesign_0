@@ -92,6 +92,19 @@ namespace PileDesign.Models
         /// </summary>
         public bool? IsElementSplit { get; set; }
 
+        /// <summary>
+        /// このファイルが写し取った「元のファイル」のフルパス。自動保存・緊急保存だけが書く。
+        ///
+        /// 自動保存ファイルの名前には拡張子を除いたファイル名しか入らない。復元したあとの
+        /// 保存先をその名前から組み立てると <c>Foo.pdj</c> という<b>相対パス</b>になり、
+        /// Ctrl+S が元ファイルではなくカレントディレクトリの同名ファイルへ書いてしまう
+        /// (利用者は保存できたと思い、元ファイルは古いまま残る)。復元先を確定するために持つ。
+        ///
+        /// 手動保存では書かない (保存先は呼び出し側が知っている)。
+        /// 省略可能なプロパティなので旧ファイルは null。
+        /// </summary>
+        public string? SourceFilePath { get; set; }
+
         // 保存メソッド
         public static void SaveProject(string filePath, InputModel inputModel, AnaModel anaModel)
         {
