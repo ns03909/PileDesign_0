@@ -1,4 +1,4 @@
-using PileDesign.FEM;
+﻿using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
 using PileDesign.ViewModels;
@@ -17,12 +17,7 @@ namespace TestProject1
     [TestClass]
     public class IntegrationTests
     {
-        private static string GetExamplesDir()
-        {
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var projectRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", ".."));
-            return Path.Combine(projectRoot, "Graphics_r1", "Examples");
-        }
+        private static string GetExamplesDir() => TestSource.ExamplesDir();
 
         /// <summary>
         /// 地盤例題JSONをGroundInputにロードし、地盤反力係数計算が実行できるか

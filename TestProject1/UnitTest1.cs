@@ -1,4 +1,4 @@
-using PileDesign.FEM;
+﻿using PileDesign.FEM;
 using MathNet.Numerics.LinearAlgebra;
 using System.IO;
 using System.Windows.Media.Media3D;
@@ -736,14 +736,7 @@ namespace TestProject1
     [TestClass]
     public class ExampleLoadTests
     {
-        private static string GetExamplesDir()
-        {
-            // テスト実行時のアセンブリから相対パスでExamplesフォルダを探す
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            // ビルド出力からプロジェクトルートへ遡る
-            var projectRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", ".."));
-            return Path.Combine(projectRoot, "Graphics_r1", "Examples");
-        }
+        private static string GetExamplesDir() => TestSource.ExamplesDir();
 
         [TestMethod]
         public void Example1_Deserializes_WithoutError()

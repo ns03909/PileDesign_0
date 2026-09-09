@@ -68,6 +68,27 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 例題 (<c>Graphics_r1/Examples</c>) の場所。
+        ///
+        /// <b>出力先から数えて遡らないこと。</b> 以前は 4 通りの探し方があり、
+        /// うち 3 つが <c>"..","..","..",".."</c> の決め打ちだった。出力先を変えて
+        /// ビルドすると（アプリ起動中で通常の出力先が使えないときなど）存在しない
+        /// パスを返し、例題を使うテストが<b>静かに Inconclusive になる</b>。
+        /// 実際に 13 件が失敗、203 件がスキップされたまま「成功」と出たことがある。
+        /// <see cref="Root"/> は自分のソース位置からも遡るので、出力先に依らない。
+        /// </summary>
+        internal static string ExamplesDir() => Dir("Graphics_r1", "Examples");
+
+        /// <summary>
+        /// 例題 1 つのパス。無ければ null（呼び出し側で Inconclusive にする用）。
+        /// </summary>
+        internal static string? ExamplePath(string fileName)
+        {
+            var path = Path.Combine(ExamplesDir(), fileName);
+            return File.Exists(path) ? path : null;
+        }
+
+        /// <summary>
         /// メソッドの本体を、最初の '{' から対応する '}' まで切り出す。
         ///
         /// 文字数で切ると、対象が長ければ後半を見落とし、短ければ次のメソッドが混ざる。

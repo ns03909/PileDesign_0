@@ -1,4 +1,4 @@
-// Smoke tests for the No-property removal refactor (BeamMaterial/BeamSection/FoundationBeam).
+﻿// Smoke tests for the No-property removal refactor (BeamMaterial/BeamSection/FoundationBeam).
 // Verifies that:
 //   - DTO deserialization silently ignores legacy "no" fields
 //   - Loaded data class instances have correct counts
@@ -17,24 +17,7 @@ namespace TestProject1
     [TestClass]
     public class NoRemovalSmokeTests
     {
-        private static string GetExamplesDir()
-        {
-            // Test dll lives in TestProject1\bin\..\..\
-            var asmDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-            // Try several relative locations
-            string[] candidates =
-            {
-                Path.Combine(asmDir, "Examples"),
-                Path.Combine(asmDir, "..", "..", "..", "..", "Graphics_r1", "Examples"),
-                Path.Combine(asmDir, "..", "..", "..", "Examples"),
-            };
-            foreach (var c in candidates)
-            {
-                var full = Path.GetFullPath(c);
-                if (Directory.Exists(full)) return full;
-            }
-            return Path.GetFullPath(Path.Combine(asmDir, "Examples"));
-        }
+        private static string GetExamplesDir() => TestSource.ExamplesDir();
 
         private static PileExampleData? LoadPileExampleDto(string fileName)
         {

@@ -1,4 +1,4 @@
-using PileDesign.FEM;
+﻿using PileDesign.FEM;
 using MathNet.Numerics.LinearAlgebra;
 using System.IO;
 using System.Windows.Media.Media3D;
@@ -671,11 +671,10 @@ namespace TestProject1
     /// </summary>
     internal static class TestHelper
     {
-        internal static string GetExamplesDir()
-        {
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var projectRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", ".."));
-            return Path.Combine(projectRoot, "Graphics_r1", "Examples");
-        }
+        /// <summary>
+        /// 例題の場所。探し方は <see cref="TestSource.ExamplesDir"/> に 1 つだけ置いてある。
+        /// 出力先から遡ると、出力先を変えたときに静かに見つからなくなる。
+        /// </summary>
+        internal static string GetExamplesDir() => TestSource.ExamplesDir();
     }
 }
