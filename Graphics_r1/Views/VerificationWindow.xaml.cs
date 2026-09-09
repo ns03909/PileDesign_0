@@ -1,4 +1,4 @@
-using Serilog;
+﻿using Serilog;
 using System;
 using System.IO;
 using System.Windows;
@@ -18,7 +18,12 @@ namespace PileDesign.Views
                 return;
             }
 
-            var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Help", "verification.html");
+            // ヘルプと同じ枠をはめる (詳細は WebViewHardening)
+            var helpFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Help");
+            Common.WebViewHardening.UseLocalUserDataFolder(VerificationWebView);
+            Common.WebViewHardening.RestrictToLocalContent(VerificationWebView, helpFolder);
+
+            var filePath = Path.Combine(helpFolder, "verification.html");
             if (!File.Exists(filePath))
             {
                 Log.Warning("[VerificationWindow] verification.html が見つかりません: {Path}", filePath);

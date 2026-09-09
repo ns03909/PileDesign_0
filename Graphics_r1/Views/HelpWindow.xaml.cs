@@ -40,6 +40,12 @@ namespace PileDesign.Views
                 return;
             }
 
+            // 同梱フォルダの外へ出さない・開発者ツール無効・作業フォルダはローカル領域。
+            // 作業フォルダは表示先を設定する前に決める必要がある (初期化のときにしか効かない)。
+            var helpFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Help");
+            Common.WebViewHardening.UseLocalUserDataFolder(HelpWebView);
+            Common.WebViewHardening.RestrictToLocalContent(HelpWebView, helpFolder);
+
             HelpWebView.Source = BuildUri(anchor);
 
             HelpWebView.NavigationCompleted += async (s, e) =>

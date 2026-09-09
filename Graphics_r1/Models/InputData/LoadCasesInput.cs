@@ -332,13 +332,22 @@ namespace PileDesign.Models.InputData
         {
             var copy = (LoadCasesInput)this.MemberwiseClone();
 
+            // null のコレクションは null のまま写す。
+            //
+            // 以前は無条件に辿っていたため、いずれかが未設定だと複製が例外になった。
+            // 保存が複製を書くようになってからは、そこで落ちると保護が黙って効かなくなる。
+            // 空のリストに置き換えると保存ファイルの中身が変わるので、形は保つこと。
             copy.LoadCombinationFactor = this.LoadCombinationFactor;
-            copy.LoadCombinations = [.. this.LoadCombinations.Select(combination => combination.DeepCopy())];
-            copy.LoadCombinationsPlus = [.. this.LoadCombinationsPlus.Select(combination => combination.DeepCopy())];
-            copy.LoadCaseLevel1Common = this.LoadCaseLevel1Common.DeepCopy();
-            copy.LoadCaseLevel2Common = this.LoadCaseLevel2Common.DeepCopy();
-            copy.LoadCasesLevel1 = [.. this.LoadCasesLevel1.Select(loadCase => loadCase.DeepCopy())];
-            copy.LoadCasesLevel2 = [.. this.LoadCasesLevel2.Select(loadCase => loadCase.DeepCopy())];
+            copy.LoadCombinations = this.LoadCombinations == null
+                ? null! : [.. this.LoadCombinations.Select(combination => combination.DeepCopy())];
+            copy.LoadCombinationsPlus = this.LoadCombinationsPlus == null
+                ? null! : [.. this.LoadCombinationsPlus.Select(combination => combination.DeepCopy())];
+            copy.LoadCaseLevel1Common = this.LoadCaseLevel1Common?.DeepCopy()!;
+            copy.LoadCaseLevel2Common = this.LoadCaseLevel2Common?.DeepCopy()!;
+            copy.LoadCasesLevel1 = this.LoadCasesLevel1 == null
+                ? null! : [.. this.LoadCasesLevel1.Select(loadCase => loadCase.DeepCopy())];
+            copy.LoadCasesLevel2 = this.LoadCasesLevel2 == null
+                ? null! : [.. this.LoadCasesLevel2.Select(loadCase => loadCase.DeepCopy())];
             return copy;
         }
     }

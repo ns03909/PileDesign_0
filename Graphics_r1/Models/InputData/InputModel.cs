@@ -1851,6 +1851,11 @@ namespace PileDesign.Models.InputData
                 {
                     UseAnalysisAxialForce = this.UseAnalysisAxialForce,
                     IsAxialForceVariationMode = this.IsAxialForceVariationMode,
+                    // 杭先端の P-S 非線形ばねと VL 単独解析。写し忘れていた。
+                    // 元に戻す操作でこの 2 つだけ既定へ落ちるうえ、保存で複製を書くように
+                    // なってからは保存でも消えていた (SaveLoadRoundTripTests が検出)。
+                    UsePsSpringAtPileTip = this.UsePsSpringAtPileTip,
+                    IsVLAnalysisEnabled = this.IsVLAnalysisEnabled,
                 };
 
                 long tStart = swTotal.ElapsedMilliseconds;
