@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 
@@ -70,17 +70,6 @@ namespace PileDesign.Graphics.Abstractions
         /// 描画領域のサイズ
         /// </summary>
         Size Size { get; }
-    }
-
-    /// <summary>
-    /// レイヤー情報（PathGeometryとスタイルのセット）
-    /// </summary>
-    public class DrawingLayer
-    {
-        public string Name { get; set; } = "default";
-        public PathGeometry Geometry { get; set; } = new();
-        public DrawingStyle Style { get; set; } = new();
-        public List<TextInfo> Texts { get; set; } = [];
     }
 
     /// <summary>

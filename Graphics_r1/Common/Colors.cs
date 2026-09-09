@@ -3,16 +3,6 @@ using System.Windows.Media;
 
 namespace PileDesign.Common
 {
-    public static class NikkenDrawingColors
-    {
-        public static readonly System.Drawing.Color SkyBlue = System.Drawing.Color.FromArgb(98, 176, 226); // sky blue #62B0E2
-        public static readonly System.Drawing.Color PaleRed = System.Drawing.Color.FromArgb(233, 85, 65); // pale red #E95541
-        public static readonly System.Drawing.Color Red = System.Drawing.Color.FromArgb(216, 37, 49); // red #D82531
-        public static readonly System.Drawing.Color DeepBlue = System.Drawing.Color.FromArgb(50, 113, 173); // deep blue #3271AD
-        public static readonly System.Drawing.Color Yellow = System.Drawing.Color.FromArgb(247, 181, 21); // yellow #F7B515
-        public static readonly System.Drawing.Color Green = System.Drawing.Color.FromArgb(35, 137, 102); // green #238966
-    }
-
     public static class NikkenWindowsMediaColors
     {
         public static readonly Color SkyBlue = Color.FromRgb(98, 176, 226); // sky blue

@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -29,10 +29,7 @@ namespace TestProject1
         /// <summary>画面を触ってはいけない層。</summary>
         private static readonly string[] LowerLayers = ["Models", "FEM"];
 
-        /// <summary>
-        /// 例外。<c>Models/PileTopDrawer.cs</c> のような描画補助が
-        /// <c>Models/</c> にいる歴史的経緯があるため、実害のあるものだけを見る。
-        /// </summary>
+        /// <summary>禁じる呼び出し。実害のあるものだけを見る。</summary>
         private static readonly string[] ForbiddenCalls =
         [
             "MessageService.Show",

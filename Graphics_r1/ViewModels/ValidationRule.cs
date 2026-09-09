@@ -37,22 +37,6 @@ namespace PileDesign.ViewModels
         }
     }
 
-    public class MassForceValidationRule : ValidationRule
-    {
-        public override ValidationResult Validate(object value, CultureInfo cultureInfo)
-        {
-            if (double.TryParse(value as string, out double result))
-            {
-                if (result >= 0.0)
-                {
-                    return ValidationResult.ValidResult;
-                }
-            }
-
-            return new ValidationResult(false, "Please enter a numeric value 0.00 or above.");
-        }
-    }
-
     public class NumericRangeValidationRule : ValidationRule
     {
         public double Minimum { get; set; }
