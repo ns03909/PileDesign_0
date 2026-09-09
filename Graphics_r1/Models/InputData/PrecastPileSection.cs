@@ -289,6 +289,94 @@ namespace PileDesign.Models.InputData
             return (diagonal, web);
         }
 
+        /// <summary>
+        /// 使用限界せん断力。β 低減前の値は内訳メソッドに集約している
+        /// (Q-N 図に重ねる内訳と同じ値を使う)。
+        /// </summary>
+        private protected double GetServiceLimitShear(double MonQd, bool isFactored, double sigma0E)
+        {
+            double beta1 = 1.0;
+            var (diagonal, web) = GetServiceLimitShearComponents(MonQd, sigma0E);
+            double Qs = Math.Min(diagonal, web);
+            return isFactored ? beta1 * Qs : Qs;
+        }
+
+        /// <summary>損傷限界せん断力。L1 は β2 を乗じない。L2 は β1×β2。</summary>
+        private protected double GetDamageLimitShear(double MonQd, bool isFactored, double sigma0E, int level = 2)
+        {
+            double beta1 = 1.0;
+            double beta2 = 0.65;
+            double beta = level == 1 ? beta1 : beta1 * beta2;
+            var (diagonal, web) = GetDamageLimitShearComponents(MonQd, sigma0E);
+            double Qd = Math.Min(diagonal, web);
+            return isFactored ? beta * Qd : Qd;
+        }
+
+        /// <summary>安全限界せん断力。</summary>
+        private protected double GetUltimateLimitShear(double MonQd, bool isFactored, double sigma0E)
+        {
+            double beta1 = 1.0;
+            double beta2 = 0.65;
+            var (diagonal, web) = GetUltimateLimitShearComponents(MonQd, sigma0E);
+            double Qu = Math.Min(diagonal, web);
+            return isFactored ? beta1 * beta2 * Qu : Qu;
+        }
+
+        /// <summary>
+        /// 軸力の範囲を等分し、各軸力でのせん断耐力を並べて Q-N 曲線を作る。
+        ///
+        /// 同じ繰り返しが杭種ごとに 6 か所へ書き写されていた。違うのは
+        /// <b>軸力の範囲</b>と<b>呼ぶせん断耐力</b>だけなので、そこだけ引数で受け取る。
+        /// 返り値は (せん断力, 軸力) の順。軸力が第 2 要素なのは呼び出し側の約束。
+        /// </summary>
+        private protected static (List<double>, List<double>) BuildQNCurve(
+            double NMin, double NMax, Func<double, double> shearAt, int iCount)
+        {
+            List<double> ns = [];
+            List<double> qs = [];
+            for (int i = 0; i < iCount; i++)
+            {
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
+                ns.Add(n);
+                qs.Add(shearAt(n));
+            }
+            return (qs, ns);
+        }
+
+        /// <summary>使用限界 Q-N。軸力の範囲は <see cref="ShearNMinService"/> ～ <see cref="ShearNMaxService"/>。</summary>
+        public virtual (List<double>, List<double>) GetServiceLimitQNInteraction(double MonQd, bool isFactored, int iCount = 100)
+            => BuildQNCurve(ShearNMinService, ShearNMaxService,
+                n => GetServiceLimitShear(MonQd, isFactored, Sigma0EFor(n)), iCount);
+
+        /// <summary>損傷限界 Q-N。軸力の範囲は <see cref="ShearNMinDamage"/> ～ <see cref="ShearNMaxDamage"/>。</summary>
+        public virtual (List<double>, List<double>) GetDamageLimitQNInteraction(double MonQd, bool isFactored, int level = 1, int iCount = 100)
+            => BuildQNCurve(ShearNMinDamage, ShearNMaxDamage,
+                n => GetDamageLimitShear(MonQd, isFactored, Sigma0EFor(n), level), iCount);
+
+        /// <summary>安全限界 Q-N。軸力の範囲は <see cref="ShearNMinUltimate"/> ～ <see cref="ShearNMaxUltimate"/>。</summary>
+        public virtual (List<double>, List<double>) GetUltimateQNInteraction(double MonQd, bool isFactored, int iCount = 100)
+            => BuildQNCurve(ShearNMinUltimate, ShearNMaxUltimate,
+                n => GetUltimateLimitShear(MonQd, isFactored, Sigma0EFor(n)), iCount);
+
+        /// <summary>コンクリートのプレストレスひずみを設定する。</summary>
+        internal void SetEpsilonE(double Ec, double sigmaE)
+        {
+            PrecastConcrete.EpsilonE = sigmaE / Ec;
+            PrecastConcrete.Prestrain = PrecastConcrete.EpsilonE;
+        }
+
+        /// <summary>
+        /// テンドンのプレストレスひずみを設定する。
+        /// 「基礎部材の強度と変形性能」では PHC と PRC の扱いは同じで、コンクリートの弾性短縮項
+        /// 1/(Ec(Ac−Ap−As)) を含む。PRC 側では以前この項をコメントアウトして外しており、
+        /// PC 鋼材のプレストレスひずみが PHC より 5% ほど小さかった (2026-09-07 に出典で確認して戻した)。
+        /// </summary>
+        internal void SetEpsilonPi(double Ac, double Ap, double As, double Ec, double Ep, double Es, double sigmaE)
+        {
+            Tendons.EpsilonPi = -(Ac - Ap - As) * sigmaE * (1 / (Ec * (Ac - Ap - As)) + 1 / (Ep * Ap) + Es * As / (Ec * (Ac - Ap - As) * Ep * Ap));
+            Tendons.Prestrain = Tendons.EpsilonPi;
+        }
+
         // 限界モーメント取得メソッド
         internal double GetServiceLimitMoment(double beta, double Sigma0E)
         {
@@ -479,116 +567,6 @@ namespace PileDesign.Models.InputData
             FactoredUltimateNQ = GetUltimateQNInteraction(3.0, true);
         }
 
-        /// <summary>
-        /// 使用限界せん断力を返す。
-        /// </summary>
-        private double GetServiceLimitShear(double MonQd, bool isFactored, double sigma0E)
-        {
-            double beta1 = 1.0;
-            // 式は基底クラスの内訳メソッドに集約している（Q-N 図に重ねる内訳と同じ値を使う）
-            var (diagonal, web) = GetServiceLimitShearComponents(MonQd, sigma0E);
-            double Qs = Math.Min(diagonal, web);
-            return isFactored ? beta1 * Qs : Qs;
-        }
-        /// <summary>
-        /// 損傷限界せん断力を返す。
-        /// </summary>
-        private double GetDamageLimitShear(double MonQd, bool isFactored, double sigma0E, int level = 2)
-        {
-            double beta1 = 1.0;
-            double beta2 = 0.65;
-            // L1: β2 を乗じない、L2: β1×β2
-            double beta = level == 1 ? beta1 : beta1 * beta2;
-            var (diagonal, web) = GetDamageLimitShearComponents(MonQd, sigma0E);
-            double Qd = Math.Min(diagonal, web);
-            return isFactored ? beta * Qd : Qd;
-        }
-        /// <summary>
-        /// 安全限界せん断力を返す。
-        /// </summary>
-        private double GetUltimateLimitShear(double MonQd, bool isFactored, double sigma0E)
-        {
-            double beta1 = 1.0;
-            double beta2 = 0.65;
-
-            var (diagonal, web) = GetUltimateLimitShearComponents(MonQd, sigma0E);
-            double Qu = Math.Min(diagonal, web);
-            return isFactored ? beta1 * beta2 * Qu : Qu;
-        }
-
-
-        // せん断の軸力制限値は基底クラスPrecastPileSectionで定義
-
-        /// <summary>
-        /// 使用限界QNを返す。(σ₀+σ₀ₑ)=4 ～ fc,s=Fc/3.5
-        /// </summary>
-        public (List<double>, List<double>) GetServiceLimitQNInteraction(double MonQd, bool isFactored, int iCount = 100)
-        {
-            List<double> ns = [];
-            List<double> qs = [];
-            double NMin = ShearNMinService;
-            double NMax = ShearNMaxService;
-            for (int i = 0; i < iCount; i++)
-            {
-                double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetServiceLimitShear(MonQd, isFactored, Sigma0EFor(n));
-                ns.Add(n);
-                qs.Add(q);
-            }
-            return (qs, ns);
-        }
-
-        /// <summary>
-        /// 損傷限界QNを返す。(σ₀+σ₀ₑ)=4 ～ 45
-        /// </summary>
-        public (List<double>, List<double>) GetDamageLimitQNInteraction(double MonQd, bool isFactored, int level = 1, int iCount = 100)
-        {
-            List<double> ns = [];
-            List<double> qs = [];
-            double NMin = ShearNMinDamage;
-            double NMax = ShearNMaxDamage;
-            for (int i = 0; i < iCount; i++)
-            {
-                double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetDamageLimitShear(MonQd, isFactored, Sigma0EFor(n), level);
-                ns.Add(n);
-                qs.Add(q);
-            }
-            return (qs, ns);
-        }
-
-        /// <summary>
-        /// 安全限界QNを返す。(σ₀+σ₀ₑ)=4 ～ 45
-        /// </summary>
-        public (List<double>, List<double>) GetUltimateQNInteraction(double MonQd, bool isFactored, int iCount = 100)
-        {
-            List<double> ns = [];
-            List<double> qs = [];
-            double NMin = ShearNMinUltimate;
-            double NMax = ShearNMaxUltimate;
-            for (int i = 0; i < iCount; i++)
-            {
-                double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetUltimateLimitShear(MonQd, isFactored, Sigma0EFor(n));
-                ns.Add(n);
-                qs.Add(q);
-            }
-            return (qs, ns);
-        }
-
-        // コンクリートのひずみ度取得メソッド
-        internal void SetEpsilonE(double Ec, double sigmaE)
-        {
-            PrecastConcrete.EpsilonE = sigmaE / Ec;
-            PrecastConcrete.Prestrain = PrecastConcrete.EpsilonE;
-        }
-
-        // テンドンのプレストレスひずみ取得メソッド
-        internal void SetEpsilonPi(double Ac, double Ap, double As, double Ec, double Ep, double Es, double sigmaE)
-        {
-            Tendons.EpsilonPi = -(Ac - Ap - As) * sigmaE * (1 / (Ec * (Ac - Ap - As)) + 1 / (Ep * Ap) + Es * As / (Ec * (Ac - Ap - As) * Ep * Ap));
-            Tendons.Prestrain = Tendons.EpsilonPi;
-        }
 
         // IPileSectionCalculation インターフェース実装（親クラスのオーバーライド）
         public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
@@ -1081,119 +1059,6 @@ namespace PileDesign.Models.InputData
             FactoredUltimateNQ = GetUltimateQNInteraction(3.0, true);
         }
 
-        /// <summary>
-        /// 使用限界せん断力を返す。
-        /// </summary>
-        private double GetServiceLimitShear(double MonQd, bool isFactored, double sigma0E)
-        {
-            double beta1 = 1.0;
-            // 式は基底クラスの内訳メソッドに集約している（Q-N 図に重ねる内訳と同じ値を使う）
-            var (diagonal, web) = GetServiceLimitShearComponents(MonQd, sigma0E);
-            double Qs = Math.Min(diagonal, web);
-            return isFactored ? beta1 * Qs : Qs;
-        }
-        /// <summary>
-        /// 損傷限界せん断力を返す。
-        /// </summary>
-        private double GetDamageLimitShear(double MonQd, bool isFactored, double sigma0E, int level = 2)
-        {
-            double beta1 = 1.0;
-            double beta2 = 0.65;
-            // L1: β2 を乗じない、L2: β1×β2
-            double beta = level == 1 ? beta1 : beta1 * beta2;
-            var (diagonal, web) = GetDamageLimitShearComponents(MonQd, sigma0E);
-            double Qd = Math.Min(diagonal, web);
-            return isFactored ? beta * Qd : Qd;
-        }
-        /// <summary>
-        /// 安全限界せん断力を返す。
-        /// </summary>
-        private double GetUltimateLimitShear(double MonQd, bool isFactored, double sigma0E)
-        {
-            double beta1 = 1.0;
-            double beta2 = 0.65;
-
-            var (diagonal, web) = GetUltimateLimitShearComponents(MonQd, sigma0E);
-            double Qu = Math.Min(diagonal, web);
-            return isFactored ? beta1 * beta2 * Qu : Qu;
-        }
-
-
-        /// <summary>
-        /// 使用限界QNを返す。
-        /// </summary>
-        public (List<double>, List<double>) GetServiceLimitQNInteraction(double MonQd, bool isFactored, int iCount = 100)
-        {
-            List<double> ns = [];
-            List<double> qs = [];
-            double NMin = ShearNMinService;
-            double NMax = ShearNMaxService;
-            for (int i = 0; i < iCount; i++)
-            {
-                double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetServiceLimitShear(MonQd, isFactored, Sigma0EFor(n));
-                ns.Add(n);
-                qs.Add(q);
-            }
-            return (qs, ns);
-        }
-
-        /// <summary>
-        /// 損傷限界QNを返す。
-        /// </summary>
-        public (List<double>, List<double>) GetDamageLimitQNInteraction(double MonQd, bool isFactored, int level = 1, int iCount = 100)
-        {
-            List<double> ns = [];
-            List<double> qs = [];
-            double NMin = ShearNMinDamage;
-            double NMax = ShearNMaxDamage;
-            for (int i = 0; i < iCount; i++)
-            {
-                double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetDamageLimitShear(MonQd, isFactored, Sigma0EFor(n), level);
-                ns.Add(n);
-                qs.Add(q);
-            }
-            return (qs, ns);
-        }
-
-        /// <summary>
-        /// 安全限界QNを返す。
-        /// </summary>
-        public (List<double>, List<double>) GetUltimateQNInteraction(double MonQd, bool isFactored, int iCount = 100)
-        {
-            List<double> ns = [];
-            List<double> qs = [];
-            double NMin = ShearNMinUltimate;
-            double NMax = ShearNMaxUltimate;
-            for (int i = 0; i < iCount; i++)
-            {
-                double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetUltimateLimitShear(MonQd, isFactored, Sigma0EFor(n));
-                ns.Add(n);
-                qs.Add(q);
-            }
-            return (qs, ns);
-        }
-
-
-        // コンクリートのひずみ度取得メソッド
-        internal void SetEpsilonE(double Ec, double sigmaE)
-        {
-            PrecastConcrete.EpsilonE = sigmaE / Ec;
-            PrecastConcrete.Prestrain = PrecastConcrete.EpsilonE;
-        }
-
-        // テンドンのプレストレスひずみ取得メソッド。
-        // 「基礎部材の強度と変形性能」では PHC と PRC の扱いは同じで、コンクリートの弾性短縮項
-        // 1/(Ec(Ac−Ap−As)) を含む (PHCSection.SetEpsilonPi と同じ式)。
-        // 以前はこの項をコメントアウトして外しており、PC 鋼材のプレストレスひずみが PHC より 5% ほど
-        // 小さかった (2026-09-07 に出典で確認して戻した)。
-        internal void SetEpsilonPi(double Ac, double Ap, double As, double Ec, double Ep, double Es, double sigmaE)
-        {
-            Tendons.EpsilonPi = -(Ac - Ap - As) * sigmaE * (1 / (Ec * (Ac - Ap - As)) + 1 / (Ep * Ap) + Es * As / (Ec * (Ac - Ap - As) * Ep * Ap));
-            Tendons.Prestrain = Tendons.EpsilonPi;
-        }
 
         // 鉄筋のプレストレスひずみ取得メソッド
         internal void SetEpsilonSi(double Ec, double sigmaE)
@@ -1867,62 +1732,28 @@ namespace PileDesign.Models.InputData
             return isFactored ? beta1 * beta2 * unfactoredQu : unfactoredQu;
         }
 
-        /// <summary>
-        /// 使用限界QNを返す。
-        /// </summary>
-        public (List<double>, List<double>) GetServiceLimitQNInteraction(double MonQd, bool isFactored, int iCount = 100)
-        {
-            List<double> ns = [];
-            List<double> qs = [];
-            double NMin = 4 * Ae;
-            double NMax = 45 * Ae;
-            for (int i = 0; i < iCount; i++)
-            {
-                double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetServiceLimitShear(isFactored);
-                ns.Add(n);
-                qs.Add(q);
-            }
-            return (qs, ns);
-        }
+        // ── SC 杭の Q-N は、軸力の範囲もせん断耐力の式も他の既製杭と違う ──
+        //
+        // せん断耐力は鋼管のせん断降伏で決まり、使用限界と損傷限界は軸力に依らない
+        // (曲げとの相関がないため、曲線は水平線になる)。
+        //
+        // 軸力の範囲は、ここでは 4·Ae ～ 45·Ae を直に書いている。一方
+        // 表示と内訳曲線が読む ShearNMinService などは、基底クラスの既定
+        // ((4−σE)·Ae ～ (Fc/3.5−σE)·Ae) のままで、SC 杭では上書きしていない。
+        // <b>同じ「せん断の軸力範囲」が 2 通りある。</b>どちらが正かは出典に当たる
+        // 必要があり、直すと数値が動くので、ここでは現状を明示するにとどめる。
 
-        /// <summary>
-        /// 損傷限界QNを返す。
-        /// </summary>
-        public (List<double>, List<double>) GetDamageLimitQNInteraction(double MonQd, bool isFactored, int level = 1, int iCount = 100)
-        {
-            List<double> ns = [];
-            List<double> qs = [];
-            double NMin = 0.0;
-            double NMax = 45 * Ae;
-            for (int i = 0; i < iCount; i++)
-            {
-                double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetDamageLimitShear(isFactored);
-                ns.Add(n);
-                qs.Add(q);
-            }
-            return (qs, ns);
-        }
+        /// <summary>使用限界 Q-N。軸力に依らないので水平線になる。</summary>
+        public override (List<double>, List<double>) GetServiceLimitQNInteraction(double MonQd, bool isFactored, int iCount = 100)
+            => BuildQNCurve(4 * Ae, 45 * Ae, _ => GetServiceLimitShear(isFactored), iCount);
 
-        /// <summary>
-        /// 安全限界QNを返す。
-        /// </summary>
-        public (List<double>, List<double>) GetUltimateQNInteraction(double MonQd, bool isFactored, int iCount = 100)
-        {
-            List<double> ns = [];
-            List<double> qs = [];
-            double NMin = 4 * Ae; // N
-            double NMax = 45 * Ae; // N
-            for (int i = 0; i < iCount; i++)
-            {
-                double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetUltimateLimitShear(n, isFactored);
-                ns.Add(n);
-                qs.Add(q);
-            }
-            return (qs, ns);
-        }
+        /// <summary>損傷限界 Q-N。軸力に依らないので水平線になる。</summary>
+        public override (List<double>, List<double>) GetDamageLimitQNInteraction(double MonQd, bool isFactored, int level = 1, int iCount = 100)
+            => BuildQNCurve(0.0, 45 * Ae, _ => GetDamageLimitShear(isFactored), iCount);
+
+        /// <summary>安全限界 Q-N。曲げとの相関があるので軸力ごとに変わる。</summary>
+        public override (List<double>, List<double>) GetUltimateQNInteraction(double MonQd, bool isFactored, int iCount = 100)
+            => BuildQNCurve(4 * Ae, 45 * Ae, n => GetUltimateLimitShear(n, isFactored), iCount);
 
         // IPileSectionCalculation インターフェース実装（親クラスのオーバーライド）
         public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
