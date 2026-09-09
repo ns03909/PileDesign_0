@@ -1924,7 +1924,12 @@ namespace PileDesign.ViewModels
 
                         _mainWindowViewModel.SetLatestAnalysisLogs(CalculationLog);
 
-                        if (Application.Current.MainWindow is PileDesign.Views.MainWindow mainWin)
+                        // 窓を閉じたあとにメイン画面を触らない。
+                        // 閉じるときの後始末は解析の終了を最大 3 秒しか待たないので、
+                        // 諦めたあとに完走したワーカーがここへ来ることがある。OK を通らないため
+                        // 解析済みフラグは立たず、テーブルとタブだけ動く中途半端な状態になる。
+                        if (Application.Current.MainWindow is PileDesign.Views.MainWindow mainWin
+                            && !IsWindowClosed)
                         {
                             // 明示的にタブを選択
                             mainWin.AnalysisResultRibbonTab.IsSelected = true;

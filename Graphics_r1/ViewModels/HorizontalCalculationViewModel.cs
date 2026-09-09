@@ -938,27 +938,32 @@ namespace PileDesign.ViewModels
                 var lcInput = _mainWindowViewModel?.CurrentInputModel?.LoadCasesInput;
                 if (lcInput != null)
                 {
-                    void OnApplicabilityChanged()
+                    // 名前付きハンドラにして控えを持つ。
+                    //
+                    // 購読先の荷重ケース・組合せはプロジェクトと同じ寿命で、この VM は
+                    // ウィンドウを開くたびに作られる。ラムダで張って外さずにいたため、
+                    // 開いて閉じるたびに死んだ VM (解析モデルと結果を抱えたまま) が
+                    // 購読者として積み上がり、チェックを 1 つ変えるだけで全部が動いていた。
+                    _applicabilityChangedHandler = (s, e) =>
                     {
-                        ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
-                NotifyExecuteAnalysisToolTipChanged();
-                        OnPropertyChanged(nameof(TotalCalculationCount));
-                        OnPropertyChanged(nameof(TotalLoadCaseCount));
-                        OnPropertyChanged(nameof(TotalPlannedCaseCount));
-                        OnPropertyChanged(nameof(PendingCaseCount));
-                    }
+                        if (e.PropertyName == nameof(LoadCase.IsApplicable)
+                            || e.PropertyName == nameof(LoadCombination.IsApplicable)
+                            || e.PropertyName == nameof(LoadCase.IsAnalysisTarget))
+                        {
+                            ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+                            NotifyExecuteAnalysisToolTipChanged();
+                            OnPropertyChanged(nameof(TotalCalculationCount));
+                            OnPropertyChanged(nameof(TotalLoadCaseCount));
+                            OnPropertyChanged(nameof(TotalPlannedCaseCount));
+                            OnPropertyChanged(nameof(PendingCaseCount));
+                        }
+                    };
                     void HookApplicabilityChanged(System.ComponentModel.INotifyPropertyChanged item)
                     {
                         if (item == null) return;
-                        item.PropertyChanged += (s, e) =>
-                        {
-                            if (e.PropertyName == nameof(LoadCase.IsApplicable)
-                                || e.PropertyName == nameof(LoadCombination.IsApplicable)
-                                || e.PropertyName == nameof(LoadCase.IsAnalysisTarget))
-                            {
-                                OnApplicabilityChanged();
-                            }
-                        };
+                        item.PropertyChanged -= _applicabilityChangedHandler;   // 二重購読を防ぐ
+                        item.PropertyChanged += _applicabilityChangedHandler;
+                        _applicabilitySubscriptions.Add(item);
                     }
                     foreach (var lc in lcInput.LoadCasesLevel1) HookApplicabilityChanged(lc);
                     foreach (var lc in lcInput.LoadCasesLevel2) HookApplicabilityChanged(lc);
@@ -2008,7 +2013,8 @@ namespace PileDesign.ViewModels
                 // 計算完了通知（UIスレッドで直接表示）
                 // owner を HorizontalCalculationWindow に明示固定して、解析完了直後にフォーカスが
                 // MainWindow に移っていてもダイアログが水平解析ウィンドウの上に表示されるようにする。
-                if (!BypassUiPromptsForTesting)
+                // 閉じた窓の完了通知は出さない (利用者は既に解析から離れている)
+                if (!BypassUiPromptsForTesting && !IsWindowClosed)
                 {
                     var doneIcon = MessageBoxImage.Information;
                     var horizontalWindow = System.Windows.Application.Current?.Windows
@@ -2075,8 +2081,34 @@ namespace PileDesign.ViewModels
         /// ウィンドウクローズ時に呼び出されるクリーンアップメソッド
         /// 実行中の解析をキャンセルし、完了を待機する
         /// </summary>
+        /// <summary>荷重ケース・組合せへの購読。ウィンドウを閉じるときに外す。</summary>
+        private System.ComponentModel.PropertyChangedEventHandler? _applicabilityChangedHandler;
+        private readonly List<System.ComponentModel.INotifyPropertyChanged> _applicabilitySubscriptions = [];
+
+        /// <summary>
+        /// ウィンドウが閉じられたか。閉じたあとに画面を触らないための印。
+        ///
+        /// 閉じるときの後始末は解析の終了を最大 3 秒待って諦める。諦めたあとにワーカーが
+        /// 完走すると、閉じた窓の VM がメイン画面のリボンタブを切り替え、結果テーブルを
+        /// 作り直し、「計算が終了しました」を出していた。OK を通らないので解析済みフラグは
+        /// 立たず、テーブルだけ更新された中途半端な状態になる。
+        /// </summary>
+        internal bool IsWindowClosed { get; private set; }
+
+        private void UnsubscribeApplicabilityChanged()
+        {
+            if (_applicabilityChangedHandler == null) return;
+            foreach (var item in _applicabilitySubscriptions)
+                item.PropertyChanged -= _applicabilityChangedHandler;
+            _applicabilitySubscriptions.Clear();
+            _applicabilityChangedHandler = null;
+        }
+
         public async Task CleanupAsync()
         {
+            IsWindowClosed = true;
+            UnsubscribeApplicabilityChanged();
+
             // タイマーを停止してUIへのポストを止める
             if (_logTimerStarted)
             {

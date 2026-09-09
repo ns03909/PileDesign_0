@@ -471,7 +471,9 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _mainBarSize2, value))
                 {
-                    MainBarAg2 = MainBarNum1 * GetBarArea(MainBarSize2);
+                    // 本数は 2 側を使う。1 側を掛けていたのは書き写しの誤り
+                    // (下の MainBarNum2 の setter は 2 側で計算しており、そちらが正)。
+                    MainBarAg2 = MainBarNum2 * GetBarArea(MainBarSize2);
                 }
             }
         }
