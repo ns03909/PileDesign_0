@@ -703,6 +703,43 @@ namespace PileDesign.Models.InputData
 
 
         // Reset/Set/Attach の最後でハンドラ張り直し
+        /// <summary>
+        /// どこにもつながっていない一般節点を返す。
+        ///
+        /// 一般節点は境界条件なしの自由な節点として解析モデルに入る。基礎梁の端点に
+        /// 使われていなければ剛性が 1 つも入らず、剛性行列の対角が 0 になって
+        /// <b>「モデルが不安定です」で解析が止まる</b>。
+        /// 節点を作ったあとに梁を消した (あるいはまだ作っていない) 場合に起きる。
+        ///
+        /// 解析モデルを組む側はこれを使って<b>取り除き</b>、
+        /// 入力の検査はこれを使って<b>知らせる</b>。同じ判定を 2 か所で書かないこと。
+        /// </summary>
+        public IReadOnlyList<InputNode> GetUnconnectedGeneralNodes()
+        {
+            var result = new List<InputNode>();
+            if (InputNodes == null) return result;
+
+            // 基礎梁の端点として使われている一般節点
+            var used = new HashSet<Guid>();
+            var beams = FoundationBeamInput?.Beams;
+            if (beams != null)
+            {
+                foreach (var b in beams)
+                {
+                    if (b == null) continue;
+                    if (b.NodeI_Type == NodeReferenceType.GeneralNode) used.Add(b.NodeI_Id);
+                    if (b.NodeJ_Type == NodeReferenceType.GeneralNode) used.Add(b.NodeJ_Id);
+                }
+            }
+
+            foreach (var n in InputNodes)
+            {
+                if (n == null || n.Type != NodeType.General) continue;
+                if (!used.Contains(n.UniqueId)) result.Add(n);
+            }
+            return result;
+        }
+
         public void SetMainWindowViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));

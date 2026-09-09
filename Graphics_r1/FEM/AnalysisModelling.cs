@@ -763,8 +763,29 @@ namespace PileDesign.FEM
             if (InputModel.InputNodes == null)
                 return;
 
+            // どこにもつながっていない一般節点は解析モデルに入れない。
+            //
+            // 入れると境界条件なしの自由な節点になり、剛性が 1 つも入らないので
+            // 剛性行列の対角が 0 になる。安定性の検査が「モデルが不安定です」で
+            // 例外を投げ、利用者は剛性行列の内部的なメッセージから
+            // 「使っていない節点が 1 つある」ことを読み取ることになる。
+            //
+            // 取り除いても結果は変わらない (何も負担していない)。
+            // つなぎ忘れに気づけるよう、解析前の入力検査が警告として知らせる
+            // (CheckInputData.CollectInputWarnings)。判定は 1 か所に置いてある。
+            var unconnected = InputModel.GetUnconnectedGeneralNodes();
+            var skip = new HashSet<Guid>();
+            foreach (var n in unconnected) skip.Add(n.UniqueId);
+            if (skip.Count > 0)
+            {
+                Log.Information("[AnalysisModelling] つながっていない一般節点 {Count} 個を解析モデルから除外しました: {Names}",
+                    skip.Count, string.Join(", ", unconnected.Select(n => $"InputNode-{n.No}")));
+            }
+
             foreach (var inputNode in InputModel.InputNodes)
             {
+                if (skip.Contains(inputNode.UniqueId)) continue;
+
                 // General型のみFEM.Nodeとして追加（Pile型は杭生成で処理済み）
                 // ※ IsVisible で絞らないこと。表示専用のフラグであり、これを見ると
                 //    「非表示にした節点が解析モデルから消える」= 画面の見た目で結果が変わる。

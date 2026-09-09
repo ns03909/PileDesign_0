@@ -86,6 +86,15 @@ namespace PileDesign.Services
                 }
             }
 
+            // どこにもつながっていない一般節点。
+            // 解析モデルからは取り除いて計算を続けるので、エラーではなく警告。
+            // 節点を作ったあとに基礎梁を消した (まだ作っていない) 場合に出る。
+            foreach (var n in inputModel.GetUnconnectedGeneralNodes())
+            {
+                warnings.Add($"一般節点 No.{n.No} (X={n.X:N3}, Y={n.Y:N3}, Z={n.Z:N3}): "
+                           + "どの基礎梁にもつながっていません。解析では無視します。");
+            }
+
             return warnings;
         }
 
