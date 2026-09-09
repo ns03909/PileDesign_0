@@ -288,6 +288,88 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 使用限界・損傷限界のせん断は、せん断スパン比に<b>永続的に</b>依らないこと。
+        ///
+        /// 鋼管の許容せん断応力度 (長期 F/(1.5√3)、短期 F/√3) だけで決まり、
+        /// a/D が式に入らない。(7.8) の 3 分岐を実装しても、それは安全限界の話なので
+        /// ここは変わらない。動いたら PHC/PRC の係数 α(M/(Q·d)) を拾っている。
+        /// </summary>
+        [TestMethod]
+        public void TheScServiceAndDamageShear_NeverDependOnTheShearSpanRatio()
+        {
+            var s = Sc();
+
+            foreach (double monQd in new[] { 0.5, 1.0, 2.0, 3.0, 10.0 })
+            {
+                CollectionAssert.AreEqual(
+                    s.GetServiceLimitQNInteraction(3.0, false).Item1,
+                    s.GetServiceLimitQNInteraction(monQd, false).Item1,
+                    $"使用限界が M/(Q·d)={monQd} で変わっています");
+
+                CollectionAssert.AreEqual(
+                    s.GetDamageLimitQNInteraction(3.0, false).Item1,
+                    s.GetDamageLimitQNInteraction(monQd, false).Item1,
+                    $"損傷限界が M/(Q·d)={monQd} で変わっています");
+            }
+
+            PileDesign.Common.CalcFallbackTracker.Reset();
+        }
+
+        /// <summary>
+        /// 安全限界のせん断は、<b>a/D &gt; 1.0 の側では</b>せん断スパン比に依らないこと。
+        ///
+        /// この側は第 8 章の (8.26) による。式に a/D の項がないので、
+        /// (7.8) の 3 分岐を実装したあとも<b>ここは変わらない</b>。
+        /// a/D = 0.9 × M/(Q·d) なので、分かれ目は M/(Q·d) ≒ 1.11。
+        /// </summary>
+        [TestMethod]
+        public void TheScUltimateShear_AboveShearSpanRatioOne_DoesNotDependOnIt()
+        {
+            var s = Sc();
+
+            foreach (double monQd in new[] { 1.2, 2.0, 3.0, 10.0 })   // a/D = 1.08〜9.0
+            {
+                Assert.IsTrue(0.9 * monQd > 1.0, $"この値は a/D ≦ 1.0 側です: {monQd}");
+                CollectionAssert.AreEqual(
+                    s.GetUltimateQNInteraction(3.0, false).Item1,
+                    s.GetUltimateQNInteraction(monQd, false).Item1,
+                    $"安全限界が M/(Q·d)={monQd} で変わっています。"
+                    + "(8.26) に a/D の項はありません");
+            }
+        }
+
+        /// <summary>
+        /// 安全限界のせん断は、<b>a/D ≦ 1.0 の側では現在 (8.26) で代替している</b>こと。
+        ///
+        /// 本来は「コンクリート充填鋼管構造設計施工指針」の円形鋼管のせん断強度式
+        /// (sQun が両辺に現れる 3 分岐の陰な式) による。<b>未実装</b>なので、
+        /// a/D &gt; 1.0 と同じ値を返している。
+        ///
+        /// <b>(7.8) を実装したら、このテストは落ちる。それが正しい合図。</b>
+        /// 落ちたらこのテストを消して、3 分岐の値を固定するテストに置き換えること。
+        /// 「M/(Q·d) に依らない」を全域で固定してしまうと、正しい実装のほうが
+        /// 邪魔者に見えてしまうので、範囲を分けてある。
+        /// </summary>
+        [TestMethod]
+        public void TheScUltimateShear_BelowShearSpanRatioOne_StillUsesTheSubstitute()
+        {
+            var s = Sc();
+
+            foreach (double monQd in new[] { 0.3, 0.5, 1.0, 1.11 })   // a/D = 0.27〜0.999
+            {
+                Assert.IsTrue(0.9 * monQd <= 1.0, $"この値は a/D > 1.0 側です: {monQd}");
+                CollectionAssert.AreEqual(
+                    s.GetUltimateQNInteraction(3.0, false).Item1,
+                    s.GetUltimateQNInteraction(monQd, false).Item1,
+                    $"M/(Q·d)={monQd} (a/D={0.9 * monQd:F2}) で値が変わりました。"
+                    + "(7.8) の 3 分岐を実装したのなら、このテストを消して"
+                    + "3 分岐の値を固定するテストに置き換えてください");
+            }
+
+            PileDesign.Common.CalcFallbackTracker.Reset();
+        }
+
+        /// <summary>
         /// せん断スパン比が 1.0 以下のとき、未実装であることを記録に残すこと。
         ///
         /// a/D ≦ 1.0 では本来「コンクリート充填鋼管構造設計施工指針」の円形鋼管の
@@ -296,6 +378,9 @@ namespace TestProject1
         ///
         /// プログラムが持っているのは M/(Q·d) で d = 0.9D なので、a/D = 0.9 × M/(Q·d)。
         /// 既定の M/(Q·d) = 3.0 は a/D = 2.7 で、記録は残らない。
+        ///
+        /// <b>(7.8) を実装したら、この記録は要らなくなる。</b>代替していないのだから、
+        /// そのときはこのテストごと消すこと。
         /// </summary>
         [TestMethod]
         public void TheScUltimateShear_RecordsWhenTheShearSpanRatioIsSmall()

@@ -11028,9 +11028,46 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         M-φ 関係を構築する際は別途 $\beta_1 = 0.9$ を乗じてモーメント値を低減する。
                     </p>
 
+                    <h4 id="sc-shear-monqd">SC 杭のせん断と $M/(Q\!\cdot\! d)$</h4>
+                    <p>
+                        SC 杭のせん断耐力は 3 つの限界状態とも<strong>鋼管で決まります</strong>。
+                        $M/(Q\!\cdot\! d)$ の入り方は限界状態で違います。
+                    </p>
+                    <table class="table-doc">
+                        <thead>
+                            <tr><th>限界状態</th><th>$M/(Q\!\cdot\! d)$ の影響</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>使用限界・損傷限界</td>
+                                <td>鋼管の許容せん断応力度だけで決まるため、<strong>依りません</strong></td>
+                            </tr>
+                            <tr>
+                                <td>安全限界（せん断スパン比 $a/D &gt; 1.0$）</td>
+                                <td>(8.26) には $a/D$ の項がないため、<strong>依りません</strong></td>
+                            </tr>
+                            <tr>
+                                <td>安全限界（$a/D \leq 1.0$）</td>
+                                <td>本来は (7.8) の 3 分岐によりますが<strong>未実装</strong>で、
+                                    $a/D &gt; 1.0$ と同じ値で代替しています。
+                                    実装すればここだけ $M/(Q\!\cdot\! d)$ で値が変わります</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p>
+                        したがって<strong>いまは、$M/(Q\!\cdot\! d)$ を変えても SC 杭の N-Q 図は動きません</strong>。
+                        不具合ではありません。$a/D = 0.9 \times M/(Q\!\cdot\! d)$ で、
+                        分かれ目は $M/(Q\!\cdot\! d) \fallingdotseq 1.11$ です。
+                    </p>
+                    <p>
+                        $M/(Q\!\cdot\! d)$ が効く係数 $\alpha$ は、PHC 杭・PRC 杭の
+                        <strong>コンクリートのせん断式</strong>の中の量です。場所打ち RC 杭のせん断式にも
+                        $M/(Q\!\cdot\! d)$ が入ります。それらの杭種では曲線が動きます。
+                    </p>
+
                     <h4>SC 杭の使用限界せん断力 $Q_s$</h4>
                     <p>
-                        鋼管断面の許容せん断応力度に基づく単純式。
+                        鋼管断面の許容せん断応力度に基づく単純式。$M/(Q\!\cdot\! d)$ には依りません。
                     </p>
                     <div class="formula-block">
                         <div class="formula-left">
@@ -11068,6 +11105,12 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         ${}_sQ_{un}$ は<strong>せん断スパン比 $a/D$</strong> で分かれます。$a$ は反曲点から材端までの長さ、
                         $D$ は鋼管の径です。本プログラムが持つ $M/(Q\!\cdot\! d)$ は有効せい $d = 0.9D$ によるので、
                         $a/D = 0.9 \times M/(Q\!\cdot\! d)$ になります（既定の $M/(Q\!\cdot\! d)=3.0$ なら $a/D = 2.7$）。
+                    </p>
+                    <p style="font-size: 0.92em; color: #555;">
+                        ※ $M/(Q\!\cdot\! d)$ が使われるのは<strong>この分かれ目だけ</strong>です。
+                        どちらの側でも本プログラムが返す値は (8.26)$\times 1/2$ で同じなので、
+                        $M/(Q\!\cdot\! d)$ を変えても<strong>曲線は動きません</strong>。
+                        (7.8) の 3 分岐を実装すれば、$a/D \leq 1.0$ の側だけ値が変わることになります。
                     </p>
                     <p>
                         <strong>$a/D &gt; 1.0$ の場合</strong>（本プログラムが算定する場合）。解説に従い第 8 章を参照し、
