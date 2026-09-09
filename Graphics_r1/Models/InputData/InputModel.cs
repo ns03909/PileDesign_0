@@ -204,11 +204,20 @@ namespace PileDesign.Models.InputData
         // クラス内フィールドに追加
         [System.Text.Json.Serialization.JsonIgnore]
         private bool _suppressSoilPileNotify;
-        private static readonly Dictionary<(int groundNo, int pileBodyNo, double z), SoilPile> value = [];
-
         // Phase 1: SoilPile キャッシュ最適化 (ランタイム一時データ — シリアライズ対象外)
+        //
+        // <b>インスタンスごとに持つこと。</b>以前は static readonly な辞書 1 つを
+        // 全 InputModel が共有していた (IDE の「フィールドの導入」が既定名 value の
+        // まま残った形)。有効フラグ _soilPileCacheValid はインスタンスごとなので、
+        //   A が引く → 共有辞書を Clear して A で埋め、A のフラグを立てる
+        //   B が引く → 同じ辞書を Clear して B で埋め、B のフラグを立てる
+        //   A が引く → A のフラグは立ったままなので再構築せず、<b>B の中身を返す</b>
+        // という順で、別のモデルの土質杭が返っていた。解析結果のスナップショットと
+        // 編集中の入力は同時に生きているので、解析のあとに入力を変えると起きる。
+        // 値は多くの場合たまたま一致するので、気づきにくい。
+        // 下の _soilPileCacheLock もインスタンスごとで、共有辞書は守れていなかった。
         [System.Text.Json.Serialization.JsonIgnore]
-        private Dictionary<(int groundNo, int pileBodyNo, double z), SoilPile> _soilPileCache = value;
+        private readonly Dictionary<(int groundNo, int pileBodyNo, double z), SoilPile> _soilPileCache = [];
         [System.Text.Json.Serialization.JsonIgnore]
         private bool _soilPileCacheValid = false;
         // _soilPileCache / _soilPileCacheValid の同時アクセス保護用 lock。
