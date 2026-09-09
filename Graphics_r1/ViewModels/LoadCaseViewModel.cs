@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
@@ -7,6 +7,8 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+
+using PileDesign.Common;
 
 namespace PileDesign.ViewModels
 

@@ -1,9 +1,10 @@
-﻿using PileDesign.ViewModels;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+
+using PileDesign.Common;
 
 namespace PileDesign.Models.InputData
 {
-    public class GroundLayerInput : BaseViewModel
+    public class GroundLayerInput : ObservableModel
     {
         // 入力データのエラーチェック
         private bool _isError;

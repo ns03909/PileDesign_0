@@ -1,10 +1,11 @@
-﻿using PileDesign.ViewModels;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Linq;
+
+using PileDesign.Common;
 
 namespace PileDesign.Models.InputData
 {
-    public class ElementDivision : BaseViewModel
+    public class ElementDivision : ObservableModel
     {
         private ObservableCollection<SoilPile> _soilPiles;
         public ObservableCollection<SoilPile> SoilPiles

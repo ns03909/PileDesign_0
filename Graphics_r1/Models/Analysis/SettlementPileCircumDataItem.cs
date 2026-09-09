@@ -1,5 +1,6 @@
 ﻿using PileDesign.Models.InputData;
-using PileDesign.ViewModels;
+
+using PileDesign.Common;
 
 namespace PileDesign.Models.Analysis
 {

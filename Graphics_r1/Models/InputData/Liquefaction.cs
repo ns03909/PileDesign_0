@@ -1,6 +1,7 @@
 ﻿using PileDesign.FEM;
-using PileDesign.ViewModels;
 using System;
+
+using PileDesign.Common;
 
 namespace PileDesign.Models.InputData
 {

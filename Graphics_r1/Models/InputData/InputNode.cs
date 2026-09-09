@@ -1,8 +1,9 @@
-using PileDesign.ViewModels;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.Windows.Media.Media3D;
+
+using PileDesign.Common;
 
 namespace PileDesign.Models.InputData
 {

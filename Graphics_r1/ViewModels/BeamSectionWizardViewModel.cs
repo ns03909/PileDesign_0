@@ -1,5 +1,7 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+
+using PileDesign.Common;
 
 namespace PileDesign.ViewModels
 {

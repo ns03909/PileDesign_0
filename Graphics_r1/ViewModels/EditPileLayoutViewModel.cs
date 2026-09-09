@@ -2,6 +2,8 @@
 using System;
 using System.Collections.ObjectModel;
 
+using PileDesign.Common;
+
 namespace PileDesign.ViewModels
 {
     internal class EditPileLayoutViewModel : BaseViewModel

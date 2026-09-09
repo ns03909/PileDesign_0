@@ -1,4 +1,4 @@
-﻿using PileDesign.ViewModels;
+﻿using PileDesign.Common;
 
 namespace PileDesign.Models.InputData
 {

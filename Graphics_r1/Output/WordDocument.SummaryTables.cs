@@ -4,7 +4,6 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Common;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
-using PileDesign.ViewModels;
 using ScottPlot;
 using System;
 using System.Collections.Generic;

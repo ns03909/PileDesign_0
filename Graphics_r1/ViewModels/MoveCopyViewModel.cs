@@ -2,6 +2,8 @@
 using System.Windows;
 using PileDesign.Services;
 
+using PileDesign.Common;
+
 namespace PileDesign.ViewModels
 {
     public partial class MoveCopyViewModel : BaseViewModel

@@ -1,9 +1,10 @@
-﻿using PileDesign.ViewModels;
-using System.Windows.Media.Media3D;
+﻿using System.Windows.Media.Media3D;
+
+using PileDesign.Common;
 
 namespace PileDesign.Models.InputData
 {
-    public class FundamentalInput : BaseViewModel
+    public class FundamentalInput : ObservableModel
     {
         // プロジェクト番号
         private string _projectNo;

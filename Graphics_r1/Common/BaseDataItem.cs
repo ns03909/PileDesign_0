@@ -3,7 +3,7 @@
 //using System.ComponentModel;
 //using System.Runtime.CompilerServices;
 
-//namespace PileDesign.ViewModels
+//namespace PileDesign.Common
 //{
 //    [Serializable]
 //    public partial class BaseDataItem : INotifyPropertyChanged
@@ -33,8 +33,15 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace PileDesign.ViewModels
+namespace PileDesign.Common
 {
+    /// <summary>
+    /// 表の 1 行や入力項目の土台。変更通知と数値の検査だけを持つ。
+    ///
+    /// 画面固有のものは何も入っていないが、以前は ViewModels 名前空間にいた。
+    /// そのため入力データ側の 13 ファイルが「画面の名前空間」を using しており、
+    /// <b>下の層が画面に依存しているように見えて</b>いた。本当の違反が埋もれるので移した。
+    /// </summary>
     [Serializable]
     public partial class BaseDataItem : INotifyPropertyChanged
     {

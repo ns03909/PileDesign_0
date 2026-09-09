@@ -1,6 +1,8 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using PileDesign.Models.InputData;
 using System.Collections.ObjectModel;
+
+using PileDesign.Common;
 
 namespace PileDesign.ViewModels
 {
