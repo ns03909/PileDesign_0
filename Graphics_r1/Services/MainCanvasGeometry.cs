@@ -1,4 +1,4 @@
-using PileDesign.Common;
+﻿using PileDesign.Common;
 using PileDesign.Models;
 using PileDesign.ViewModels; // ViewModelのusingを追加
 using System.Collections.Generic;
@@ -70,6 +70,9 @@ namespace PileDesign.Services
 
         /// <summary>要素分割後の杭体の塗り (輪郭の SkyBlue に合わせた薄い青)。</summary>
         private static readonly Brush PileFillAfterSplit = FrozenBrush(Color.FromArgb(38, 135, 206, 235));
+
+        /// <summary>梁要素の塗り。輪郭と同じ茶 (139,69,19) で、濃さは杭体の塗りと揃える。</summary>
+        private static readonly Brush BeamSectionFill = FrozenBrush(Color.FromArgb(38, 139, 69, 19));
 
         // static な Brush は必ず Freeze する (凍結しないと生成したスレッドに縛られる)
         private static SolidColorBrush FrozenBrush(Color color)
@@ -157,6 +160,15 @@ namespace PileDesign.Services
         public PathGeometry PathGeoInputNodesGeneral { get; set; } = new(); // 一般節点（General型・オレンジ）
         public PathGeometry PathGeoBeamSections { get; set; } = new(); // 梁要素断面形状
 
+        // 梁要素の塗り。杭体の塗り (PathGeoPileFill) と同じ考え方で、
+        // 1 つの Path にまとめて 1 回のブラシで塗る (半透明でも重なりが濃くならない)。
+        //
+        // 杭は円筒なのでシルエットが多角形にならず、上下の楕円と側面の四角の和が要る。
+        // 梁は直方体なので、平行投影のシルエットは<b>8 隅の投影点の凸包</b>そのもので、
+        // 視線方向によらず 1 枚の多角形になる。6 面をそのまま足すと、奥の面が逆巻きに
+        // なって手前の面と重なった部分で巻き数が 0 になり、穴が空く。
+        public PathGeometry PathGeoBeamFill { get; set; } = new() { FillRule = FillRule.Nonzero };
+
         // ホバーハイライト（Clear()では消さない。MouseMoveで直接更新する）
         public PathGeometry PathGeoHoverNode { get; set; } = new();
         public PathGeometry PathGeoHoverElement { get; set; } = new();
@@ -234,6 +246,7 @@ namespace PileDesign.Services
             PathGeoInputNodesPile.Figures.Clear();
             PathGeoInputNodesGeneral.Figures.Clear();
             PathGeoBeamSections.Figures.Clear();
+            PathGeoBeamFill.Figures.Clear();
         }
 
 
@@ -666,6 +679,14 @@ namespace PileDesign.Services
 
             // 基礎梁 (基礎梁未定義時に空)
             AddPath(canvas, PathGeoFoundationBeams, Brushes.DarkOrange, 1.0, "FoundationBeam");
+
+            // 梁要素の塗り (輪郭より先に描いて背面に回す。杭体の塗りと同じ扱い)
+            canvas.Children.Add(new Path()
+            {
+                Fill = BeamSectionFill,
+                Data = PathGeoBeamFill,
+                Name = "BeamSection"
+            });
 
             // 梁要素断面形状
             AddPath(canvas, PathGeoBeamSections,

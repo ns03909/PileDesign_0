@@ -1,4 +1,4 @@
-using MathNet.Numerics.LinearAlgebra;
+﻿using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Constants;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -27,6 +27,22 @@ namespace PileDesign.Views
             double factorV = 0.5 + 0.5 * factor;
             Vector3D vector = point1 - point0;
             return (point1 - factorV * vector, point0 + factorV * vector);
+        }
+
+        /// <summary>
+        /// 杭の要素の帯を、画面上で中央へ縮める。
+        /// 縮め方は <see cref="GetShrinkElementPoints"/> と同じ (既定 0.8)。
+        /// 投影はアフィンなので、3D で縮めても 2D で縮めても結果は同じ。
+        /// 2D で行うのは、楕円の半径と扁平率を触らずに済むため。
+        /// </summary>
+        private static (Point Top, Point Bottom) ShrinkBand2D(Point top, Point bottom, double factor = 0.8)
+        {
+            double keep = 0.5 * (1.0 - factor);   // 端から捨てる割合
+            double dx = bottom.X - top.X;
+            double dy = bottom.Y - top.Y;
+            return (
+                new Point(top.X + dx * keep, top.Y + dy * keep),
+                new Point(bottom.X - dx * keep, bottom.Y - dy * keep));
         }
 
         /// <summary>
@@ -218,11 +234,25 @@ namespace PileDesign.Views
                     double pileDia = pileBodySegments[i].PileSection.PileDiameter / 1000.0;
                     double flattening = viewModel.CanvasThreeDView.Flattening;
 
+                    // 要素縮小モードでは、この要素の帯だけを中央へ縮める。
+                    //
+                    // 帯 1 つが要素 1 つ (pileBodySegments[i]) に対応しているので、
+                    // 基礎梁と同じ見え方になり、分割した要素の境目が読めるようになる。
+                    // 節点・杭先端・節杭の節は<b>本当の位置に残す</b>。
+                    // これらは要素ではなく、位置そのものに意味があるため
+                    // (基礎梁でも節点は縮めていない)。
+                    //
+                    // 縮小は投影の前後どちらでも同じ (投影がアフィンなので) だが、
+                    // 楕円の半径・扁平率を触らずに済むよう 2D 側で行う。
+                    var (bandTop, bandBottom) = viewModel.IsShrinkElementMode
+                        ? ShrinkBand2D(point1, point2)
+                        : (point1, point2);
+
                     // 要素ごとの検定比で塗り分ける (この要素の曲げ・せん断)
                     _pileElementRatioPath = GetElementRatioPath(viewModel, i);
                     try
                     {
-                        AddPileSectionGeometry(point1, point2, pileDia2D, flattening);
+                        AddPileSectionGeometry(bandTop, bandBottom, pileDia2D, flattening);
                     }
                     finally
                     {
@@ -993,6 +1023,77 @@ namespace PileDesign.Views
             {
                 path.AddGeometry(new LineGeometry(corners2D[0][i], corners2D[1][i]));
             }
+
+            // 半透明の塗り。輪郭と同じ 8 隅から作るので、要素縮小モードで端点が
+            // 縮んでいれば塗りもそのまま追従する (縮小は呼び出し側で済んでいる)。
+            AddBeamFillSilhouette(viewModel.CanvasGeometry.PathGeoBeamFill,
+                [.. corners2D[0], .. corners2D[1]]);
+        }
+
+        /// <summary>
+        /// 直方体（梁要素）のシルエットを塗りパスに 1 枚の多角形として積む。
+        ///
+        /// 平行投影では凸な立体の投影も凸なので、シルエットは
+        /// <b>8 隅の投影点の凸包</b>そのものになる。視線方向によらず正確で、
+        /// 真横・真上から見て潰れても破綻しない。
+        ///
+        /// 6 面をそのまま足す方法は採らない。<see cref="FillRule.Nonzero"/> では
+        /// 奥の面が逆巻きになり、手前の面と重なった部分で巻き数が 0 になって
+        /// <b>穴が空く</b>。杭体の塗り (AddPileFillBand) が巻き方向を揃えているのは
+        /// 同じ理由だが、多角形で足りる梁は凸包のほうが単純で確実。
+        ///
+        /// 図形どうしは隣の要素と重なるが、1 つの Path にまとめて 1 回のブラシで
+        /// 塗るので半透明でも重なりが濃くならない。
+        /// </summary>
+        private static void AddBeamFillSilhouette(PathGeometry fillPath, Point[] projected)
+        {
+            if (fillPath == null || projected == null || projected.Length < 3) return;
+            foreach (var p in projected)
+                if (!double.IsFinite(p.X) || !double.IsFinite(p.Y)) return;
+
+            var hull = ConvexHull(projected);
+            if (hull.Count < 3) return;   // 一直線に潰れた（線幅ゼロ）ので塗らない
+
+            var figure = new PathFigure
+            {
+                StartPoint = hull[0],
+                IsClosed = true,
+                IsFilled = true,
+            };
+            for (int i = 1; i < hull.Count; i++)
+                figure.Segments.Add(new LineSegment(hull[i], false));
+
+            fillPath.Figures.Add(figure);
+        }
+
+        /// <summary>
+        /// 凸包（Andrew's monotone chain）。点数が 8 と決まっているので素直に書く。
+        /// </summary>
+        private static System.Collections.Generic.List<Point> ConvexHull(Point[] points)
+        {
+            var pts = points.Distinct().OrderBy(p => p.X).ThenBy(p => p.Y).ToList();
+            if (pts.Count < 3) return pts;
+
+            static double Cross(Point o, Point a, Point b)
+                => (a.X - o.X) * (b.Y - o.Y) - (a.Y - o.Y) * (b.X - o.X);
+
+            var lower = new System.Collections.Generic.List<Point>();
+            foreach (var p in pts)
+            {
+                while (lower.Count >= 2 && Cross(lower[^2], lower[^1], p) <= 0) lower.RemoveAt(lower.Count - 1);
+                lower.Add(p);
+            }
+            var upper = new System.Collections.Generic.List<Point>();
+            for (int i = pts.Count - 1; i >= 0; i--)
+            {
+                var p = pts[i];
+                while (upper.Count >= 2 && Cross(upper[^2], upper[^1], p) <= 0) upper.RemoveAt(upper.Count - 1);
+                upper.Add(p);
+            }
+            lower.RemoveAt(lower.Count - 1);
+            upper.RemoveAt(upper.Count - 1);
+            lower.AddRange(upper);
+            return lower;
         }
 
         // 一般節点（InputNode）描画の更新
