@@ -59,7 +59,16 @@ namespace PileDesign.Models.InputData
         public double SigmaCr { get; }
 
         // コンストラクタ
-        public InsituConcrete(double _DO, double gsi, double _Fc, string type = "普通", double epsilonM = 0.002, double epsilonCu = 0.003)
+        /// <param name="gamma">
+        /// 単位体積重量 [kN/m³]。0 なら強度から表引きする (従来どおり)。
+        ///
+        /// 杭体では利用者が入力した値 (<c>PileSection.ConcreteGamma</c>) を渡す。
+        /// 渡さないと、断面の Ec は表引きの γ、FEM の曲げ剛性は入力の γc という
+        /// <b>2 つの Ec</b> ができる。式は同じで γ だけ違うので、
+        /// 単位体積重量を変えても N-M 曲線とひび割れモーメントは動かず、曲げ剛性だけが動いていた
+        /// (Fc≤36 は表引きが既定の 23.0 と一致するので差 0。Fc=40 で 4.4%、Fc=60 で 8.9%)。
+        /// </param>
+        public InsituConcrete(double _DO, double gsi, double _Fc, string type = "普通", double epsilonM = 0.002, double epsilonCu = 0.003, double gamma = 0.0)
         {
             try
             {
@@ -69,7 +78,7 @@ namespace PileDesign.Models.InputData
                 EpsilonM = epsilonM;
                 EpsilonCu = epsilonCu;
                 Type = type;
-                Ec = GetEc();
+                Ec = GetEc(gamma);
                 Ac = Math.PI * Math.Pow(DO, 2) / 4.0;
                 SigmaCr = 0.56 * Math.Sqrt(Gsi * Fc);
                 SetEpsilonCr();

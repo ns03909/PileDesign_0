@@ -1,4 +1,4 @@
-using PileDesign.Constants;
+﻿using PileDesign.Constants;
 using PileDesign.Models.PileLibrary;
 using System;
 using System.Collections.Generic;
@@ -282,7 +282,10 @@ namespace PileDesign.Models.InputData
             {
                 double N = 0.0; double N1;
                 double M = 0.0;
-                double epsilonC = SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN;
+                // その断面の終局圧縮ひずみを使う。直値 0.003 を書いていたため、
+                // 安全限界 N-M 曲線とファイバー M-φ が別の終局ひずみで作られていた断面では、
+                // 折線 M-φ の終点 Mu0 だけが曲線から外れていた。
+                double epsilonC = UltimateCompressiveStrain;
                 double curvature = 1.0 * Math.Pow(10, -6);
                 double deltaCurvature = curvature / 500.0;
 

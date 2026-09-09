@@ -610,15 +610,15 @@ namespace PileDesign.Models.InputData
             {
                 // 場所打ちRC杭
                 (PileTypeNames.InsituRc, _) =>
-                    $"RC|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}",
+                    $"RC|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{ConcreteGamma}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}",
 
                 // 場所打ち鋼管RC杭 - RC部
                 (PileTypeNames.InsituSteelPipeConcrete, PileTypeNames.RcSection) =>
-                    $"SPRC-RC|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}",
+                    $"SPRC-RC|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{ConcreteGamma}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}",
 
                 // 場所打ち鋼管RC杭 - 鋼管RC部
                 (PileTypeNames.InsituSteelPipeConcrete, PileTypeNames.SteelPipeConcreteSection) =>
-                    $"SPRC-SP|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}",
+                    $"SPRC-SP|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{ConcreteGamma}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}",
 
                 // PHC杭
                 (PileTypeNames.PrecastConcrete, PileTypeNames.Phc) =>
@@ -3842,14 +3842,14 @@ namespace PileDesign.Models.InputData
                 // 断面クラスの仮値 (pw=0.002 / σwy=295) で作られる。
                 (PileTypeNames.InsituRc, _) =>
                     new InsituReinforcedConcreteSection(
-                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
+                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc, gamma: ConcreteGamma),
                         new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize),
                         hoopPw: HoopPw, hoopSigmaWy: HoopSigmay),
 
                 // 場所打ち鋼管RC杭 - RC部
                 (PileTypeNames.InsituSteelPipeConcrete, PileTypeNames.RcSection) =>
                     new InsituReinforcedConcreteSection(
-                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
+                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc, gamma: ConcreteGamma),
                         new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize),
                         hoopPw: HoopPw, hoopSigmaWy: HoopSigmay),
 
@@ -3863,7 +3863,8 @@ namespace PileDesign.Models.InputData
                         new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc,
                             epsilonCu: ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete
                                 ? SectionDesignConstants.KCTB_ULTIMATE_COMPRESSIVE_STRAIN
-                                : SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN),
+                                : SectionDesignConstants.ULTIMATE_COMPRESSIVE_STRAIN,
+                            gamma: ConcreteGamma),
                         new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize)),
 
                 // PHC杭
@@ -3928,7 +3929,7 @@ namespace PileDesign.Models.InputData
                 (PileTypeNames.SteelPipe, PileTypeNames.CftSection) =>
                     new InsituSteelPipeReinforcedConcreteSection(
                         new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth),
-                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
+                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc, gamma: ConcreteGamma),
                         new MainBars(MainBarDr, 0, MainBarSpec, MainBarSize),
                         // 鋼管杭は鋼管 1.1F 完全バイリニア型オプションの対象外
                         isInsituSteelPipeConcretePile: false),

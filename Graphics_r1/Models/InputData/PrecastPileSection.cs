@@ -322,6 +322,17 @@ namespace PileDesign.Models.InputData
     internal class PHCSection : PrecastPileSection ////////////////////////////////////////////////////////////////////////////////////////////
     {
         /// <summary>
+        /// 終局の圧縮縁ひずみ (断面ひずみ)。
+        ///
+        /// 安全限界 N-M 曲線とファイバー M-φ の終点は
+        /// <c>GetCompressiveFailureForceAndMoment</c> と同じ <c>EpsilonCu − Prestrains[0]</c> で作る。
+        /// 材料の全ひずみが εcu になる断面ひずみで、プレストレスぶんだけ小さい。
+        /// 基底の既定 (0.003 の直値) のままだと、折線 M-φ の終点 Mu0 だけが
+        /// 別の終局ひずみで解かれ、N-M 曲線から外れた値になっていた。
+        /// </summary>
+        internal override double UltimateCompressiveStrain => PrecastConcrete.EpsilonCu - Prestrains[0];
+
+        /// <summary>
         /// プレストレスひずみの規約: 断面ひずみ εC/φ にはプレストレスを含めず、
         /// 断面積分 (GetUltimateForceAndMoment 等) が材料ごとに Prestrains[] を足して
         /// 材料の全ひずみにする。材料側 GetStress は足さない。
@@ -916,6 +927,11 @@ namespace PileDesign.Models.InputData
     // PRCSection杭クラス ////////////////////////////////////////////////////////////////////////////////////////////
     internal class PRCSection : PrecastPileSection
     {
+        /// <summary>
+        /// 終局の圧縮縁ひずみ (断面ひずみ)。理由は <see cref="PHCSection.UltimateCompressiveStrain"/> と同じ。
+        /// </summary>
+        internal override double UltimateCompressiveStrain => PrecastConcrete.EpsilonCu - PrecastConcrete.Prestrain;
+
         // PRC杭のせん断軸力制限: σce=0〜fcs(使用), σce=0〜50(損傷/安全)
         public override double ShearNMinService => (0.0 - SigmaE) * Ae;
         public override double ShearNMaxService => (Fcs - SigmaE) * Ae;
