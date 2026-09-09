@@ -1651,8 +1651,11 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Application.Current?.Dispatcher.Invoke(() =>
-                    MessageService.ShowError($"杭径再計算中にエラーが発生しました。", ex, "杭径再計算エラー"));
+                // 画面へ直接ダイアログを出さない。ここは解析からも呼ばれる。
+                // ケース並列では 8 本のワーカーが同時に画面スレッドへ割り込むことになり、
+                // 相手が終了していると永久に待つ。記録に寄せて、解析の完了時にまとめて出す。
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "杭径の再計算（既定値で継続）", ex, $"杭体={PileBodyType}, 断面={PileSectionType}");
             }
         }
 
@@ -1728,8 +1731,8 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Application.Current?.Dispatcher.Invoke(() =>
-                    MessageService.ShowError($"断面プロパティのリセット中にエラーが発生しました。", ex, "断面リセットエラー"));
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "断面諸元の初期化（既定値で継続）", ex, $"杭体={PileBodyType}, 断面={PileSectionType}");
             }
         }
 

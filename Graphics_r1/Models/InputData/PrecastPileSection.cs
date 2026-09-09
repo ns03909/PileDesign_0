@@ -825,14 +825,10 @@ namespace PileDesign.Models.InputData
             Ms.Add(GetDamageLimitMoment(1.0, (Fcd + Ftd) * 0.5 - SigmaE));
             Ms.Add(0.0);
 
-            epsilonCs.Add(0.0);
-            epsilonCs.Add(0.0);
-            epsilonCs.Add(0.0);
-
-            curvatures.Add(0.0);
-            curvatures.Add(0.0);
-            curvatures.Add(0.0);
-
+            // 4 本のリストは同じ長さでなければならない (添字が対応する)。
+            // 以前はここで 3 個ずつ明示的に足したうえでループでも 3 個足しており、
+            // εc と φ だけ 6 個になっていた。読む側は Ns.Count までしか見ず中身も 0 なので
+            // 数値は変わらないが、契約違反。SectionInvariantTests が長さの一致を見張る。
             for (int i = 0; i < Ns.Count; i++)
             {
                 epsilonCs.Add(0.0);
@@ -1687,16 +1683,29 @@ namespace PileDesign.Models.InputData
             var uN = unfactored.N;
             var uM = unfactored.M;
 
+            // 4 本のリストは添字が対応する約束なので、絞り込みにも合わせる。
+            // 境界のために作った点はどの断面状態にも対応しないので NaN
+            // (詳細は AbstractPileSection.GetFactoredMNInteraction のコメント)。
+            var epsilonCs = new List<double>();
+            var curvatures = new List<double>();
+            void AddPoint(double n, double m, int srcIndex)
+            {
+                ns.Add(n);
+                ms.Add(m);
+                epsilonCs.Add(srcIndex >= 0 && srcIndex < unfactored.EpsilonC.Count
+                    ? unfactored.EpsilonC[srcIndex] : double.NaN);
+                curvatures.Add(srcIndex >= 0 && srcIndex < unfactored.Curvature.Count
+                    ? unfactored.Curvature[srcIndex] : double.NaN);
+            }
+
             // 制限値下限でM=0を挿入
-            ns.Add(nMin);
-            ms.Add(0.0);
+            AddPoint(nMin, 0.0, -1);
 
             // 下限境界での補間値を追加（M=0 → M_interpolated の垂直遷移）
             double mAtMin = InterpolateMAtN(uN, uM, nMin);
             if (mAtMin > 0)
             {
-                ns.Add(nMin);
-                ms.Add(mAtMin);
+                AddPoint(nMin, mAtMin, -1);
             }
 
             // 制限値内の点のみ追加
@@ -1704,8 +1713,7 @@ namespace PileDesign.Models.InputData
             {
                 if (uN[i] >= nMin && uN[i] <= nMax)
                 {
-                    ns.Add(uN[i]);
-                    ms.Add(uM[i]);
+                    AddPoint(uN[i], uM[i], i);
                 }
             }
 
@@ -1713,15 +1721,13 @@ namespace PileDesign.Models.InputData
             double mAtMax = InterpolateMAtN(uN, uM, nMax);
             if (mAtMax > 0)
             {
-                ns.Add(nMax);
-                ms.Add(mAtMax);
+                AddPoint(nMax, mAtMax, -1);
             }
 
             // 制限値上限でM=0を挿入
-            ns.Add(nMax);
-            ms.Add(0.0);
+            AddPoint(nMax, 0.0, -1);
 
-            return (ns, ms, unfactored.EpsilonC, unfactored.Curvature);
+            return (ns, ms, epsilonCs, curvatures);
         }
 
         /// <summary>

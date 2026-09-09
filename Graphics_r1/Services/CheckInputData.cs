@@ -4,11 +4,18 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows;
-using PileDesign.Services;
 
 
-namespace PileDesign.Models
+namespace PileDesign.Services
 {
+    /// <summary>
+    /// 解析を始める前の入力検査。<b>画面から呼ぶ</b>もので、問題があればダイアログで知らせる。
+    ///
+    /// 以前は Models/ にあったが、ここは断面計算や FEM から呼ばれない
+    /// (呼ぶのは水平解析・単杭沈下・群杭沈下の各 ViewModel)。
+    /// Models/ に置いたままだと「下の層は画面を触らない」という決まりの例外になり、
+    /// 本当に直すべき違反 (解析の途中からダイアログを出すもの) が見つけにくくなる。
+    /// </summary>
     class CheckInputData
     {
         /// <summary>

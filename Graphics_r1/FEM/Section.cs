@@ -47,9 +47,13 @@
 
         public Section DeepCopy()
         {
-            var materialCopy = Material is not null && Material.GetType().GetMethod("DeepCopy") is not null
-                ? (Material)Material.GetType().GetMethod("DeepCopy")!.Invoke(Material, null)
-                : Material;
+            // 材料は共有でよい (値だけを持ち、解析中に書き換えない)。
+            //
+            // 以前はここで DeepCopy という名前のメソッドを反射で探していたが、
+            // Material にも派生 6 型のどれにも存在せず、常に空振りして else 側へ落ちていた。
+            // 梁 1 本を複製するたびに探索を 2 回払っていただけ。
+            // 材料を複製したくなったら、反射ではなく型に仮想メソッドを足すこと。
+            var materialCopy = Material;
 
             return new Section(materialCopy, AX, AY, AZ, IX, IY, IZ);
         }

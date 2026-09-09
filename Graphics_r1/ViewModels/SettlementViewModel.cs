@@ -482,7 +482,7 @@ namespace PileDesign.ViewModels
         public async Task ExecuteAnalysis()
         {
             // 入力データの整合性ゲート
-            if (!PileDesign.Models.CheckInputData.ValidateForAnalysis(InputModel, "単杭沈下解析"))
+            if (!PileDesign.Services.CheckInputData.ValidateForAnalysis(InputModel, "単杭沈下解析"))
                 return;
 
             try

@@ -209,6 +209,43 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// N-M 相関が返す 4 本のリストは、必ず同じ長さであること。
+        ///
+        /// 添字が対応する前提で読まれる (N[i] のときの M[i]・εc[i]・φ[i])。
+        /// 実際に PHC の損傷限界だけが εc と φ を 3 個ずつ余分に返していた。
+        /// 読む側が短いほうに合わせていたので数値は変わらなかったが、
+        /// 「余分な要素は読まれない」という暗黙の前提に寄りかかった状態だった。
+        /// </summary>
+        [TestMethod]
+        public void EveryNMInteractionReturnsFourListsOfTheSameLength()
+        {
+            var bad = new List<string>();
+            foreach (var b in BuildAll())
+            {
+                foreach (var (label, curve) in new (string, (List<double> N, List<double> M, List<double> Ec, List<double> Phi))[]
+                {
+                    ("低減前 使用限界", b.Section.UnfactoredServiceNM),
+                    ("低減前 損傷限界", b.Section.UnfactoredDamageNM),
+                    ("低減前 安全限界", b.Section.UnfactoredUltimateNM),
+                    ("低減後 使用限界", b.Section.FactoredServiceNM),
+                    ("低減後 損傷限界", b.Section.FactoredDamageNM),
+                    ("低減後 安全限界", b.Section.FactoredUltimateNM),
+                })
+                {
+                    int n = curve.N?.Count ?? -1;
+                    if (n != (curve.M?.Count ?? -1) || n != (curve.Ec?.Count ?? -1) || n != (curve.Phi?.Count ?? -1))
+                    {
+                        bad.Add($"{b.Type} {label}: N={curve.N?.Count} M={curve.M?.Count} "
+                              + $"εc={curve.Ec?.Count} φ={curve.Phi?.Count}");
+                    }
+                }
+            }
+            Assert.AreEqual(0, bad.Count,
+                "N-M 相関の 4 本のリストの長さが揃っていません:" + Environment.NewLine + "  "
+                + string.Join(Environment.NewLine + "  ", bad));
+        }
+
+        /// <summary>
         /// 断面ひずみ 0・曲率 0 の状態は自己釣合い（N ≈ 0, M ≈ 0）であること。
         /// プレストレスはコンクリートの圧縮と鋼材の引張が打ち消し合う内力なので、外力ゼロで N は出ない。
         /// 二重加算があると PC 鋼材が降伏域に入って釣合いが崩れ、N が軸耐力の 1 割近く出ていた。

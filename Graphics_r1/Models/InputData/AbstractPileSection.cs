@@ -695,8 +695,21 @@ namespace PileDesign.Models.InputData
 
             List<double> unfactoredNs = unfactoredNM.Item1;
             List<double> unfactoredMs = unfactoredNM.Item2;
-            List<double> epsilonCs = unfactoredNM.Item3;
-            List<double> curvatures = unfactoredNM.Item4;
+            List<double> unfactoredEpsilonCs = unfactoredNM.Item3;
+            List<double> unfactoredCurvatures = unfactoredNM.Item4;
+
+            // 4 本のリストは添字が対応する約束なので、点を足したらこちらにも足す。
+            //
+            // 以前は元のリストをそのまま返しており、低減の段差で点を挿入したぶん
+            // N・M だけが長くなって添字が食い違っていた。読み手が低減前の曲線しか
+            // 見ていなかったので表には出ていなかった。
+            // 段差のために作った点は、どの断面状態にも対応しないので NaN を入れる
+            // (0 を入れると「ひずみ 0 の状態」と読めてしまう)。
+            List<double> factoredEpsilonCs = [];
+            List<double> factoredCurvatures = [];
+
+            double EpsilonCAt(int i) => i < unfactoredEpsilonCs.Count ? unfactoredEpsilonCs[i] : double.NaN;
+            double CurvatureAt(int i) => i < unfactoredCurvatures.Count ? unfactoredCurvatures[i] : double.NaN;
 
             List<double> additionalNs = additionalNM.Item1;
             List<double> additionalMs = additionalNM.Item2;
@@ -710,8 +723,13 @@ namespace PileDesign.Models.InputData
                     {
                         factoredNs.Add(additionalNs[j]);
                         factoredMs.Add(additionalMs[j] * factor[j]);
+                        factoredEpsilonCs.Add(double.NaN);
+                        factoredCurvatures.Add(double.NaN);
+
                         factoredNs.Add(additionalNs[j]);
                         factoredMs.Add(additionalMs[j] * factor[j + 1]);
+                        factoredEpsilonCs.Add(double.NaN);
+                        factoredCurvatures.Add(double.NaN);
                         j += 1;
 
                         if (j >= additionalNs.Count) { break; }
@@ -719,8 +737,10 @@ namespace PileDesign.Models.InputData
                 }
                 factoredNs.Add(unfactoredNs[i]);
                 factoredMs.Add(unfactoredMs[i] * factor[j]);
+                factoredEpsilonCs.Add(EpsilonCAt(i));
+                factoredCurvatures.Add(CurvatureAt(i));
             }
-            return (factoredNs, factoredMs, epsilonCs, curvatures);
+            return (factoredNs, factoredMs, factoredEpsilonCs, factoredCurvatures);
         }
 
         /// <summary>

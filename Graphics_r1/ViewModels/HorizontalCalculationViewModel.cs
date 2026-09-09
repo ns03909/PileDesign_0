@@ -1714,7 +1714,7 @@ namespace PileDesign.ViewModels
                 ? $"L1={level1Count} / L2={level2Count} (液状化: あり/なし両方)"
                 : $"L1={level1Count} / L2={level2Count}";
 
-            var inputWarnings = PileDesign.Models.CheckInputData.CollectInputWarnings(InputModel);
+            var inputWarnings = PileDesign.Services.CheckInputData.CollectInputWarnings(InputModel);
 
             return new Views.AnalysisPreflightSummary(
                 AnalysisName: "水平解析",
@@ -1730,7 +1730,7 @@ namespace PileDesign.ViewModels
         private async Task OnExecuteAnalysisCore(bool additive)
         {
             // 入力データの整合性ゲート (杭体・地盤・寸法・配筋など)
-            if (!PileDesign.Models.CheckInputData.ValidateForAnalysis(
+            if (!PileDesign.Services.CheckInputData.ValidateForAnalysis(
                     _mainWindowViewModel.CurrentInputModel, "水平解析"))
                 return;
 

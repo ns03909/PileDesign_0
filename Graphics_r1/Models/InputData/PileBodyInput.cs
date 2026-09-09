@@ -150,8 +150,9 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Application.Current?.Dispatcher.Invoke(() =>
-                    MessageService.ShowError($"杭区間情報の更新中にエラーが発生しました。", ex, "区間更新エラー"));
+                // 画面へ直接ダイアログを出さない (理由は PileSection の同種の箇所を参照)
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "杭区間情報の更新（既定値で継続）", ex, $"杭体={PileBodyRef}");
             }
         }
 
@@ -599,8 +600,8 @@ namespace PileDesign.Models.InputData
                 }
                 catch (Exception ex)
                 {
-                    Application.Current?.Dispatcher.Invoke(() =>
-                        MessageService.ShowError($"杭体タイプ設定中にエラーが発生しました。", ex, "プロパティエラー"));
+                    PileDesign.Common.CalcFallbackTracker.Report(
+                        "杭体タイプの設定（既定値で継続）", ex, $"杭体={PileBodyRef}");
                 }
             }
         }
@@ -655,8 +656,8 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Application.Current?.Dispatcher.Invoke(() =>
-                    MessageService.ShowError($"杭区間コレクション変更時にエラーが発生しました。", ex, "コレクションエラー"));
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "杭区間コレクションの変更（既定値で継続）", ex, $"杭体={PileBodyRef}");
             }
         }
 
