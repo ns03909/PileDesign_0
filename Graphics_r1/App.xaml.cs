@@ -264,7 +264,27 @@ namespace PileDesign
                 return;
             }
 
-            HandleFatalException(e.Exception, source: "TaskScheduler.UnobservedTaskException", canContinue: false);
+            // 未観測の Task 例外で<b>アプリを終了しない</b>。
+            //
+            // .NET Core ではこの種の例外はプロセスを落とさないのが仕様で、しかも通知は
+            // 「その例外が回収されたとき」に来る。つまり原因となった処理が終わったずっと後、
+            // 無関係な操作の最中に「致命的エラー」が出て終了する。原因の特定が難しいうえ、
+            // 通知はファイナライザのスレッドで来るので、ダイアログすら出ないことがある
+            // (ケース並列のキャンセルで実際にそうなっていた)。
+            //
+            // 記録と作業の退避までにとどめて続行する。アプリが動いていれば利用者は
+            // 自分で保存できる。
+            Log.Error(e.Exception, "Unobserved task exception (記録のみ・アプリは継続します)");
+            try
+            {
+                var path = CurrentMainViewModel?.TryEmergencyAutoSave();
+                if (!string.IsNullOrEmpty(path))
+                    Log.Information("Emergency AutoSave saved to {Path}", path);
+            }
+            catch (Exception inner)
+            {
+                Log.Error(inner, "Emergency AutoSave after unobserved task exception failed");
+            }
             e.SetObserved(); // CLR にプロセスを落とさせない
         }
 
@@ -318,6 +338,43 @@ namespace PileDesign
         // --- 致命的例外の共通処理 ---------------------------------------------
 
         private bool _handlingFatal = false;
+
+        /// <summary>
+        /// 致命的エラーのダイアログを<b>画面のスレッドで</b>出す。
+        ///
+        /// <see cref="Services.MessageService"/> は親ウィンドウを決めるために
+        /// <c>Application.Windows</c> を走査する。この一覧は画面のスレッドからしか触れず、
+        /// 別のスレッド (AppDomain の未捕捉ハンドラなど) から呼ぶと例外になって、
+        /// ダイアログが出ないまま終了していた。
+        ///
+        /// 画面のスレッドが例外で止まっている可能性もあるので、待つのは 30 秒まで。
+        /// 出せなかったときは「終了」と同じ扱いにする。
+        /// </summary>
+        private static MessageBoxResult ShowFatalDialog(string msg, string title)
+        {
+            var dispatcher = Current?.Dispatcher;
+
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                return MessageService.Show(msg, title,
+                    MessageBoxButton.YesNo, MessageBoxImage.Error, MessageBoxResult.No);
+            }
+
+            try
+            {
+                return dispatcher.Invoke(
+                    () => MessageService.Show(msg, title,
+                        MessageBoxButton.YesNo, MessageBoxImage.Error, MessageBoxResult.No),
+                    System.Windows.Threading.DispatcherPriority.Normal,
+                    System.Threading.CancellationToken.None,
+                    TimeSpan.FromSeconds(30));
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "致命的エラーのダイアログを画面のスレッドで出せません");
+                return MessageBoxResult.No;
+            }
+        }
 
         /// <summary>
         /// 全ハンドラから集約される致命的例外処理:
@@ -407,8 +464,7 @@ namespace PileDesign
                     $"ログ: {AppLog.LogDirectory}\n\n" +
                     actionPrompt;
 
-                var result = MessageService.Show(msg, title,
-                    MessageBoxButton.YesNo, MessageBoxImage.Error, MessageBoxResult.No);
+                var result = ShowFatalDialog(msg, title);
 
                 if (canContinue)
                 {

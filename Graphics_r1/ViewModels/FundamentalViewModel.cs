@@ -4,6 +4,7 @@ using PileDesign.Common;
 using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Media.Media3D;
@@ -437,8 +438,14 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// バイリニアコンクリート・オプションの変更を処理する共通ハンドラ。
-        /// これらは M-φ（→ 非線形 FEM 解析）に影響するため、解析結果があれば確認のうえリセットする
-        /// （杭要素分割＝メッシュは材料変更では不変のため保持）。確認キャンセル時はチェックを元に戻す。
+        /// これらは M-φ（→ 非線形 FEM 解析）に影響するため、解析結果と辻褄が合わなくなる。
+        /// 実際に捨てられるのは<b>沈下解析の結果</b>で、水平解析の結果は「再解析が必要」の
+        /// 印が付くだけで残る（解析時の入力ごと切り離してあるため）。
+        ///
+        /// <b>捨てるのは OK を押したとき</b>で、ここでは「捨てることになる」印を立てるだけ。
+        /// 以前はチェックを変えた時点で確認して捨てていた。利用者がそのあと画面の
+        /// 「キャンセル」を押すと、入力は元に戻るのに沈下の結果は消えたままになる。
+        /// 同じボタンの意味が 2 つに割れていた (入力の取り消しであって、破棄の取り消しではない)。
         /// </summary>
         private void HandleConcreteOptionChanged(
             bool value, Func<bool> getter, Action<bool> setModel, Action<bool> setVm, string reason)
@@ -448,13 +455,8 @@ namespace PileDesign.ViewModels
             bool oldValue = getter();
             if (oldValue == value) return;
 
-            if (!_mainWindowViewModel.CheckAndResetAnalysisResultsKeepingSplit(reason))
-            {
-                _suppressConcreteOptionConfirm = true;
-                try { setVm(oldValue); }
-                finally { _suppressConcreteOptionConfirm = false; }
-                return;
-            }
+            // 捨てるのは OK のとき。ここでは理由を控えておく
+            NoteAnalysisResultsWillBeDiscarded(reason);
 
             _undoManager.PushAction(
                 () => { setModel(oldValue); _mainWindowViewModel.ApplyConcreteModelOptions(); },
@@ -569,17 +571,47 @@ namespace PileDesign.ViewModels
         private void Redo() => _undoManager.Redo();
 
 
+        /// <summary>
+        /// 解析結果と辻褄が合わなくなる変更をしたか。理由は確認ダイアログに出す。
+        /// </summary>
+        private readonly List<string> _pendingDiscardReasons = [];
+
+        private void NoteAnalysisResultsWillBeDiscarded(string reason)
+        {
+            if (!_pendingDiscardReasons.Contains(reason))
+                _pendingDiscardReasons.Add(reason);
+        }
+
+        /// <summary>元の設定へ戻し、静的オプションを再同期する。</summary>
+        private void RestorePreviousSettings()
+        {
+            InputModel.FundamentalInput = PrevFundamentalInput.ShallowCopy();
+            _mainWindowViewModel.ApplyConcreteModelOptions();
+            _pendingDiscardReasons.Clear();
+        }
+
         private void OnOk()
         {
+            // 解析結果を捨てる確認は、ここでまとめて 1 回だけ出す。
+            // 断ったら設定ごと元に戻す (結果を残すなら設定は適用できない)。
+            if (_pendingDiscardReasons.Count > 0)
+            {
+                string reason = string.Join("・", _pendingDiscardReasons);
+                if (!_mainWindowViewModel.CheckAndResetAnalysisResultsKeepingSplit(reason))
+                {
+                    RestorePreviousSettings();
+                    return;   // 画面は開いたまま。入力し直せる
+                }
+                _pendingDiscardReasons.Clear();
+            }
+
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
         private void OnCancel()
         {
-            // プロパティを元に戻す処理
-            InputModel.FundamentalInput = PrevFundamentalInput.ShallowCopy();
-            // 復元した基本設定の値で静的オプションを再同期（解析結果は既に確認のうえ削除済み）
-            _mainWindowViewModel.ApplyConcreteModelOptions();
+            // 入力を元に戻す。解析結果はまだ捨てていないので、そのまま残る。
+            RestorePreviousSettings();
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
