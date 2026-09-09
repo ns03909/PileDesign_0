@@ -1206,7 +1206,16 @@ namespace PileDesign.Models.InputData
 
                 effectiveStress += Math.Max((layerTopLevel - layerBottomLevel) * density, 0);
             }
-            effectiveStress -= Math.Max(waterLevel - z, 0) * 10;
+
+            // 水圧は<b>応力計算面より下の水柱だけ</b>を引く。
+            //
+            // 土被りは応力計算面 (StressAltitude) から下だけを数えるのに、水圧は地下水位から
+            // 数えていた。地下水位が応力計算面より上にある場合 (地下室で基礎底に応力計算面を
+            // 置いた場合など)、その差ぶんの水柱まで引いてしまい、有効応力が負になる。
+            // 負になると畑中式の内部摩擦角が sqrt(負) で NaN になり、受働土圧が静かに NaN に
+            // なる (地表 0・応力計算面 -3・地下水位 -1・γ=18 で z=-3.5 のとき σ' = -16)。
+            double waterTop = Math.Min(waterLevel, stressLevel);
+            effectiveStress -= Math.Max(waterTop - z, 0) * 10;
 
             return effectiveStress;
         }

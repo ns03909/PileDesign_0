@@ -505,8 +505,22 @@ namespace PileDesign.Models.InputData
             // 解析用 M-φ の降伏折れ点。KCTB(TB工法) を選んでも、M-φ の作り方は
             // 「基礎部材の強度と変形性能」のままとする（Technical Note Vol.1-5 の降伏時は
             // N-M 耐力線 My の定義であって、M-φ の折れ点を規定するものではない）。
-            double epsilonCReinf = -MainBars.RSigmaY / MainBars.Er + curvature * (PileDia * 0.5 + MainBars.PCD * 0.5);
-            double epsilonCpipe = -InsituSteelPipe.SEpsilonY + curvature * (PileDia - 1);
+            // 圧縮縁から引張側の材料までの距離。
+            //
+            // epsilonC が「どこのひずみか」は GetUltimateForceAndMoment の
+            //   epsilon0 = epsilonC - (PileDia * 0.5 - PipeT) * curvature
+            // で決まっていて、<b>断面中心から (D/2 - t) 離れた縁</b>、つまり鋼管の内側の面。
+            // ここから引張側の材料までを測る。
+            //   ・最外縁の主筋   : (D/2 - t) + PCD/2
+            //   ・鋼管の引張側   : (D/2 - t) + (D - t)/2 = D - 1.5t
+            //     (鋼管はリング中心径 D - t の要素として積分している)
+            //
+            // 以前は板厚を引かずに (D/2 + PCD/2)、鋼管は板厚と無関係な (D - 1) だった。
+            // どちらもレバーが長すぎて、降伏時の圧縮縁ひずみを過大に見積もっていた
+            // (D=1000, t=12 で主筋 +1.3%、鋼管 +1.7%)。
+            double edgeToCenter = PileDia * 0.5 - PipeT;
+            double epsilonCReinf = -MainBars.RSigmaY / MainBars.Er + curvature * (edgeToCenter + MainBars.PCD * 0.5);
+            double epsilonCpipe = -InsituSteelPipe.SEpsilonY + curvature * (edgeToCenter + (PileDia - PipeT) * 0.5);
             double epsilonC = Math.Min(epsilonCReinf, epsilonCpipe);
             // 最外縁の杭主筋が引張降伏
             double N, M;
