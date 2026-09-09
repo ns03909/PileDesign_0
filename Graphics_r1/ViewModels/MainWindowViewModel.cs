@@ -2551,14 +2551,17 @@ namespace PileDesign.ViewModels
 
         // 水平荷重解析ウィンドウを開くメソッド
         [RelayCommand(CanExecute = nameof(CanOpenLateralLoadAnalysisWindow))]
-        public async Task OpenLateralLoadAnalysisWindowAsync()
+        // await するところが無いので async にしない。async を付けたままだと
+        // CS1998 になり、クリーンビルド (WPF の一時プロジェクト) でだけ失敗する。
+        // 戻り値は Task のままにして、コマンドは AsyncRelayCommand として作らせる。
+        public Task OpenLateralLoadAnalysisWindowAsync()
         {
             if (IsPreparedForAnalysis())
             {
                 if (CurrentInputModel.ElementDivision.SoilPiles == null || CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
                     MessageService.Show(GuardMessages.NoPileLayout);
-                    return;
+                    return Task.CompletedTask;
                 }
                 else
                 {
@@ -2609,6 +2612,8 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>

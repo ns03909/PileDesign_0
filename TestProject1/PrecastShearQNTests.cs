@@ -339,64 +339,121 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 安全限界のせん断は、<b>a/D ≦ 1.0 の側では現在 (8.26) で代替している</b>こと。
+        /// せん断スパン比が 1.0 以下のとき、(7.8) の 3 分岐によること。
         ///
-        /// 本来は「コンクリート充填鋼管構造設計施工指針」の円形鋼管のせん断強度式
-        /// (sQun が両辺に現れる 3 分岐の陰な式) による。<b>未実装</b>なので、
-        /// a/D &gt; 1.0 と同じ値を返している。
-        ///
-        /// <b>(7.8) を実装したら、このテストは落ちる。それが正しい合図。</b>
-        /// 落ちたらこのテストを消して、3 分岐の値を固定するテストに置き換えること。
-        /// 「M/(Q·d) に依らない」を全域で固定してしまうと、正しい実装のほうが
-        /// 邪魔者に見えてしまうので、範囲を分けてある。
+        /// この式は sQun が条件式にも入る陰な式なので、3 つとも解いてから
+        /// 自分の条件を満たすものを採る。<b>分岐を取り違えても曲線は描ける</b>ので、
+        /// 値で押さえる。期待値は正規化した形 (sN0 = 1) の実測値。
         /// </summary>
         [TestMethod]
-        public void TheScUltimateShear_BelowShearSpanRatioOne_StillUsesTheSubstitute()
+        public void TheShortSpanShear_FollowsTheThreeBranches()
         {
-            var s = Sc();
-
-            foreach (double monQd in new[] { 0.3, 0.5, 1.0, 1.11 })   // a/D = 0.27〜0.999
+            // a/D, |N|/sN0, sQun/sN0
+            foreach (var (aOverD, m, expected) in new[]
             {
-                Assert.IsTrue(0.9 * monQd <= 1.0, $"この値は a/D > 1.0 側です: {monQd}");
-                CollectionAssert.AreEqual(
-                    s.GetUltimateQNInteraction(3.0, false).Item1,
-                    s.GetUltimateQNInteraction(monQd, false).Item1,
-                    $"M/(Q·d)={monQd} (a/D={0.9 * monQd:F2}) で値が変わりました。"
-                    + "(7.8) の 3 分岐を実装したのなら、このテストを消して"
-                    + "3 分岐の値を固定するテストに置き換えてください");
+                (0.25, 0.0, 0.3183098861837907),   // 分岐 1 (sN0/π)
+                (0.25, 0.1, 0.3183098861837907),   // 分岐 1
+                (0.25, 0.3, 0.3121872559191483),   // 分岐 2
+                (0.50, 0.0, 0.3183098861837907),   // 分岐 1
+                (0.50, 0.3, 0.29078636757814036),  // 分岐 2
+                (0.75, 0.0, 0.2938245103234991),   // 分岐 3
+                (0.75, 0.5, 0.2113057900527215),
+                (1.00, 0.0, 0.25464790894703254),  // 分岐 3
+                (1.00, 0.7, 0.1198247998860142),
+            })
+            {
+                Assert.AreEqual(expected, ScShortSpanShear.Unfactored(aOverD, 1.0, m),
+                    $"a/D={aOverD}, |N|/sN0={m}");
             }
-
-            PileDesign.Common.CalcFallbackTracker.Reset();
         }
 
         /// <summary>
-        /// せん断スパン比が 1.0 以下のとき、未実装であることを記録に残すこと。
+        /// 分岐の境目で値がつながること。
         ///
-        /// a/D ≦ 1.0 では本来「コンクリート充填鋼管構造設計施工指針」の円形鋼管の
-        /// せん断強度式 (sQun が両辺に現れる 3 分岐の陰な式) による。未実装なので
-        /// (8.26)×0.5 で代替しているが、黙って代替すると気づけない。
-        ///
-        /// プログラムが持っているのは M/(Q·d) で d = 0.9D なので、a/D = 0.9 × M/(Q·d)。
-        /// 既定の M/(Q·d) = 3.0 は a/D = 2.7 で、記録は残らない。
-        ///
-        /// <b>(7.8) を実装したら、この記録は要らなくなる。</b>代替していないのだから、
-        /// そのときはこのテストごと消すこと。
+        /// <b>この検査が読み方を決めた。</b> 出典の紙面から不等号の向きと sN の符号の
+        /// 扱いを読み取るのが難しく、考えられる 8 通りを全部試した。全域を隙間なく覆い、
+        /// 境目で値が一致するのは 1 通りだけだった。つながらなくなったら、
+        /// 係数か条件のどこかを読み違えている。
         /// </summary>
         [TestMethod]
-        public void TheScUltimateShear_RecordsWhenTheShearSpanRatioIsSmall()
+        public void TheShortSpanShear_JoinsAtTheBranchBoundaries()
+        {
+            foreach (double aOverD in new[] { 0.2, 0.4, 0.6, 0.8, 1.0 })
+            {
+                double previous = ScShortSpanShear.Unfactored(aOverD, 1.0, 0.0);
+                Assert.IsTrue(previous > 0, $"a/D={aOverD}: 無軸力で 0 になっています");
+
+                for (int k = 1; k <= 200; k++)
+                {
+                    double m = 0.6 * k / 200.0;
+                    double q = ScShortSpanShear.Unfactored(aOverD, 1.0, m);
+                    if (q == 0.0) break;   // 軸力で使い切った先は見ない
+
+                    Assert.IsTrue(q > 0, $"a/D={aOverD}, m={m:F3}: せん断耐力が負です");
+                    Assert.IsTrue(q <= previous + 1e-12,
+                        $"a/D={aOverD}, m={m:F3}: 軸力が増えたのに耐力が増えています");
+                    Assert.IsTrue(previous - q < 0.01,
+                        $"a/D={aOverD}, m={m:F3}: 分岐の境目で {previous:F4} → {q:F4} と跳んでいます。"
+                        + "条件式か係数の読み違いが疑われます");
+                    previous = q;
+                }
+            }
+        }
+
+        /// <summary>
+        /// (7.8) が、軸力がないときの純せん断耐力 sQ0 を超えないこと。
+        ///
+        /// sQ0 = 2t(D−t)·sσty/√3 は鋼管が周方向にせん断降伏する値で、上限になるはず。
+        /// 超えたら係数を読み違えている。
+        /// </summary>
+        [TestMethod]
+        public void TheShortSpanShear_StaysBelowThePureShearCapacity()
+        {
+            // sN0 = As·fy、sQ0 = 2t(D−t)fy/√3。As = πt(D−t) なので sQ0 = (2/(π√3))·sN0。
+            double cap = 2.0 / (System.Math.PI * System.Math.Sqrt(3.0));
+
+            foreach (double aOverD in new[] { 0.1, 0.25, 0.5, 0.75, 1.0 })
+                foreach (double m in new[] { 0.0, 0.1, 0.3, 0.5 })
+                    Assert.IsTrue(ScShortSpanShear.Unfactored(aOverD, 1.0, m) <= cap,
+                        $"a/D={aOverD}, m={m}: 純せん断耐力 {cap:F4} を超えています");
+        }
+
+        /// <summary>
+        /// 引張と圧縮で同じ値になること。sN は絶対値で入る。
+        /// </summary>
+        [TestMethod]
+        public void TheShortSpanShear_TreatsTensionAndCompressionAlike()
+        {
+            foreach (double aOverD in new[] { 0.25, 0.5, 1.0 })
+                foreach (double m in new[] { 0.1, 0.3, 0.5 })
+                    Assert.AreEqual(
+                        ScShortSpanShear.Unfactored(aOverD, 1.0, m),
+                        ScShortSpanShear.Unfactored(aOverD, 1.0, -m),
+                        $"a/D={aOverD}, |N|/sN0={m}: 引張と圧縮で値が違います");
+        }
+
+        /// <summary>
+        /// せん断スパン比 1.0 の前後で式が切り替わること。
+        ///
+        /// a/D ≦ 1.0 は (7.8)、a/D &gt; 1.0 は (8.26)×1/2。1/2 は解説が
+        /// a/D &gt; 1.0 の場合について述べたもので、<b>(7.8) の側には掛からない</b>。
+        /// そのため境目で値は跳ぶ（連続にはならない）。
+        /// </summary>
+        [TestMethod]
+        public void TheScUltimateShear_SwitchesFormulaAtShearSpanRatioOne()
         {
             var s = Sc();
 
-            PileDesign.Common.CalcFallbackTracker.Reset();
-            s.GetUltimateQNInteraction(3.0, false);      // a/D = 2.7
-            Assert.AreEqual(0L, PileDesign.Common.CalcFallbackTracker.TotalCount,
-                "既定のせん断スパン比で記録が残っています");
+            // a/D = 0.9 (7.8 の側) と a/D = 1.08 (8.26 の側)
+            double shortSpan = s.GetUltimateQNInteraction(1.0, false).Item1.Max();
+            double longSpan = s.GetUltimateQNInteraction(1.2, false).Item1.Max();
 
-            PileDesign.Common.CalcFallbackTracker.Reset();
-            s.GetUltimateQNInteraction(1.0, false);      // a/D = 0.9
-            StringAssert.Contains(PileDesign.Common.CalcFallbackTracker.BuildSummary(), "せん断スパン比",
-                "a/D ≦ 1.0 なのに記録が残っていません");
-            PileDesign.Common.CalcFallbackTracker.Reset();
+            Assert.AreEqual(303044.85198733147, shortSpan, "a/D = 0.90 (7.8)");
+            Assert.AreEqual(206068.37661097015, longSpan, "a/D = 1.08 (8.26)×1/2");
+
+            Assert.IsTrue(shortSpan > longSpan,
+                "短いせん断スパンのほうが小さくなっています。"
+                + "(8.26) 側の 1/2 を (7.8) 側にも掛けていないか確認してください");
         }
 
         /// <summary>

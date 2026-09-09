@@ -1760,31 +1760,31 @@ namespace PileDesign.Models.InputData
         /// sQun はせん断スパン比 a/D で 2 通りに分かれる。
         ///
         /// <list type="bullet">
+        /// <item><b>a/D ≦ 1.0</b>: 本会「コンクリート充填鋼管構造設計施工指針」の
+        ///   円形鋼管のせん断強度式による (<see cref="ScShortSpanShear"/>)。
+        ///   sQun が条件式にも入る陰な 3 分岐で、コンクリートの寄与は見ない。</item>
         /// <item><b>a/D &gt; 1.0</b>: 解説に従い第 8 章を参照し、鋼管部分のみが外力に
         ///   抵抗すると考えて (8.26) を使い、その<b>半分程度</b>を鋼管寄与分とする。
-        ///   コンクリートの寄与は見ない。</item>
-        /// <item><b>a/D ≦ 1.0</b>: 本来は「コンクリート充填鋼管構造設計施工指針」の
-        ///   円形鋼管のせん断強度式 (sQun が両辺に現れる 3 分岐の陰な式) による。
-        ///   <b>未実装</b>なので、上と同じ (8.26)×0.5 で代替し、記録に残す。
-        ///   代替値のほうが小さい (この断面で 1.7 倍ほど違う) ので安全側。</item>
+        ///   「せん断耐力時には鋼管全断面が周方向にせん断降伏しないとの実験結果もあり」
+        ///   という解説による。<b>この 1/2 は a/D ≦ 1.0 の側には掛からない。</b></item>
         /// </list>
         ///
-        /// 軸力比の分母は鋼管の降伏軸力 sNy = sσty·sAp で、コンクリートを含まない。
+        /// どちらも軸力比の分母は<b>鋼管だけ</b>の量で、コンクリートを含まない。
         /// 適用範囲 (§7.2) の分母 N0 とは別物なので取り違えないこと。
         /// </summary>
         private double GetUltimateLimitShear(double monQd, double nud, bool isFactored)
         {
-            if (ShearSpanRatio(monQd) <= 1.0)
-            {
-                PileDesign.Common.CalcFallbackTracker.Report(
-                    "SC杭の安全限界せん断（せん断スパン比 1.0 以下の式は未実装。第8章の式で代替）",
-                    detail: $"a/D={ShearSpanRatio(monQd):F2}, M/(Q·d)={monQd:F2}");
-            }
+            double aOverD = ShearSpanRatio(monQd);
 
-            double unfactoredQu = SteelPipeContribution * SteelPipeUltimateShear.Unfactored(
-                PrecastSteelPipe.T, PrecastSteelPipe.OutDia,
-                PrecastSteelPipe.Fys,   // sσty = 1.1F
-                PrecastSteelPipe.As, nud);
+            double unfactoredQu = aOverD <= 1.0
+                ? ScShortSpanShear.Unfactored(
+                    aOverD,
+                    PrecastSteelPipe.As * PrecastSteelPipe.Fys,   // sN0 = As·fy
+                    nud)
+                : SteelPipeContribution * SteelPipeUltimateShear.Unfactored(
+                    PrecastSteelPipe.T, PrecastSteelPipe.OutDia,
+                    PrecastSteelPipe.Fys,   // sσty = 1.1F
+                    PrecastSteelPipe.As, nud);
 
             return isFactored ? UltimateShearBeta * unfactoredQu : unfactoredQu;
         }

@@ -11048,16 +11048,16 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                             </tr>
                             <tr>
                                 <td>安全限界（$a/D \leq 1.0$）</td>
-                                <td>本来は (7.8) の 3 分岐によりますが<strong>未実装</strong>で、
-                                    $a/D &gt; 1.0$ と同じ値で代替しています。
-                                    実装すればここだけ $M/(Q\!\cdot\! d)$ で値が変わります</td>
+                                <td>(7.8) の 3 分岐によるため、<strong>依ります</strong></td>
                             </tr>
                         </tbody>
                     </table>
                     <p>
-                        したがって<strong>いまは、$M/(Q\!\cdot\! d)$ を変えても SC 杭の N-Q 図は動きません</strong>。
-                        不具合ではありません。$a/D = 0.9 \times M/(Q\!\cdot\! d)$ で、
-                        分かれ目は $M/(Q\!\cdot\! d) \fallingdotseq 1.11$ です。
+                        $a/D = 0.9 \times M/(Q\!\cdot\! d)$ で、分かれ目は
+                        $M/(Q\!\cdot\! d) \fallingdotseq 1.11$ です。
+                        <strong>これより大きい範囲では、$M/(Q\!\cdot\! d)$ を変えても
+                        SC 杭の N-Q 図は動きません</strong>（不具合ではありません）。
+                        既定の $M/(Q\!\cdot\! d) = 3.0$ はこちら側です。
                     </p>
                     <p>
                         $M/(Q\!\cdot\! d)$ が効く係数 $\alpha$ は、PHC 杭・PRC 杭の
@@ -11107,10 +11107,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         $a/D = 0.9 \times M/(Q\!\cdot\! d)$ になります（既定の $M/(Q\!\cdot\! d)=3.0$ なら $a/D = 2.7$）。
                     </p>
                     <p style="font-size: 0.92em; color: #555;">
-                        ※ $M/(Q\!\cdot\! d)$ が使われるのは<strong>この分かれ目だけ</strong>です。
-                        どちらの側でも本プログラムが返す値は (8.26)$\times 1/2$ で同じなので、
-                        $M/(Q\!\cdot\! d)$ を変えても<strong>曲線は動きません</strong>。
-                        (7.8) の 3 分岐を実装すれば、$a/D \leq 1.0$ の側だけ値が変わることになります。
+                        ※ $a/D \leq 1.0$ の側は (7.8) の 3 分岐によるので、
+                        $M/(Q\!\cdot\! d)$ で値が変わります。
                     </p>
                     <p>
                         <strong>$a/D &gt; 1.0$ の場合</strong>（本プログラムが算定する場合）。解説に従い第 8 章を参照し、
@@ -11143,10 +11141,34 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         鋼管部分のみが外力に抵抗すると考える以上、そうなります。
                     </p>
                     <p style="font-size: 0.92em; color: #555;">
-                        ※ <strong>$a/D \leq 1.0$ の場合</strong>、(7.8) は本会「コンクリート充填鋼管構造設計施工指針」の
-                        円形鋼管のせん断強度式（${}_sQ_{un}$ が両辺に現れる 3 通りの場合分け）によります。
-                        <strong>本プログラムは未実装</strong>で、上と同じ (8.26)$\times 1/2$ で代替し、解析完了時にその旨を記録として表示します。
-                        代替値のほうが小さいため安全側です。杭でせん断スパン比が 1.0 以下になるのは杭頭近傍の短い区間に限られます。
+                        ※ 杭でせん断スパン比が 1.0 以下になるのは、杭頭近傍の短い区間に限られます。
+                        既定の $M/(Q\!\cdot\! d) = 3.0$ では $a/D = 2.7$ で、上の (8.26) の側になります。
+                    </p>
+
+                    <p>
+                        <strong>$a/D \leq 1.0$ の場合</strong>は、本会「コンクリート充填鋼管構造設計施工指針」の
+                        円形鋼管のせん断強度式によります。${}_sQ_{un}$ が条件式にも現れる<strong>陰な 3 分岐</strong>で、
+                        3 つとも解いてから、自分の条件を満たすものを採ります。
+                        <strong>解説の $1/2$ はこちらには掛かりません</strong>（$a/D &gt; 1.0$ の場合について述べたものです）。
+                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$3|{}_sN| + 2\pi\,{}_s\bar{a}\,{}_sQ_{un} \leq {}_sN_0 \;\Rightarrow\; {}_sQ_{un} = \frac{{}_sN_0}{\pi}$$</p>
+                            <p>$$2\pi\,{}_s\bar{a}\,{}_sQ_{un} \leq {}_sN_0 \leq 3|{}_sN| + 2\pi\,{}_s\bar{a}\,{}_sQ_{un} \;\Rightarrow\;$$</p>
+                            <p>$$\pi^2(1+{}_s\bar{a}^2)\,{}_sQ_{un}^2 + \pi\,{}_s\bar{a}\,(3|{}_sN|-{}_sN_0)\,{}_sQ_{un} - \tfrac{3}{2}|{}_sN|\,{}_sN_0 + \tfrac{9}{4}{}_sN^2 - \tfrac{3}{4}{}_sN_0^2 = 0$$</p>
+                            <p>$$2\pi\,{}_s\bar{a}\,{}_sQ_{un} \geq {}_sN_0 \;\Rightarrow\; \pi^2(1+4{}_s\bar{a}^2)\,{}_sQ_{un}^2 - 4\pi\,{}_s\bar{a}\,{}_sQ_{un}\,{}_sN_0 + \tfrac{9}{4}{}_sN^2 = 0$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (7.8)</div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">${}_s\bar{a}$</span>せん断スパンと鋼管径の比 $= a/D$</li>
+                        <li><span class="symbol-label">${}_sN$</span>鋼管柱の軸力。<strong>絶対値で入ります</strong>（引張と圧縮で同じ値になります）</li>
+                        <li><span class="symbol-label">${}_sN_0$</span>鋼管柱の中心圧縮耐力 $= {}_sA_s\,f_y$。上の ${}_sN_y$ と同じ量です</li>
+                    </ul>
+                    <p style="font-size: 0.92em; color: #555;">
+                        ※ 軸力が大きくなると、どの式も実数解を持たなくなります。軸力だけで断面を使い切っていて
+                        せん断に回せる分が残っていない状態で、$0$ とします（(8.26) の $|\eta| \geq 1$ と同じ扱い）。
                     </p>
 
                     <h4>SC 杭の軸力の適用範囲</h4>

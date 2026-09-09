@@ -72,19 +72,15 @@ if ($Clean) {
 }
 
 # 本体を先に。テスト側から先に組むと _wpftmp の CS2001 が間欠的に出る。
+# 出力はそのまま流す。native の stderr を 2>&1 すると、Windows PowerShell では
+# NativeCommandError に包まれて、ビルドエラーの代わりに PowerShell の例外が出る。
 Write-Host "本体をビルドしています..." -ForegroundColor Cyan
-$buildApp = & dotnet build $app 2>&1
-if ($LASTEXITCODE -ne 0) {
-    $buildApp | Select-String -Pattern "error" | Select-Object -First 10 | ForEach-Object { Write-Host $_ }
-    Fail "本体のビルドに失敗しました。"
-}
+& dotnet build $app
+if ($LASTEXITCODE -ne 0) { Fail "本体のビルドに失敗しました。上の error を見てください。" }
 
 Write-Host "テストをビルドしています..." -ForegroundColor Cyan
-$buildTests = & dotnet build $tests 2>&1
-if ($LASTEXITCODE -ne 0) {
-    $buildTests | Select-String -Pattern "error" | Select-Object -First 10 | ForEach-Object { Write-Host $_ }
-    Fail "テストのビルドに失敗しました。"
-}
+& dotnet build $tests
+if ($LASTEXITCODE -ne 0) { Fail "テストのビルドに失敗しました。上の error を見てください。" }
 
 Write-Host "テストを実行しています..." -ForegroundColor Cyan
 
