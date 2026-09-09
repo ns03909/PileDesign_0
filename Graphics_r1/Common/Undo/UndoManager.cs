@@ -69,7 +69,9 @@ public sealed class UndoManager
         {
             return;
         }
-        PushCore(_scope);
+        // 何も積まれなかったスコープは捨てる。積むと Ctrl+Z が 1 回、
+        // 見た目に何も起きないまま消費される。
+        if (_scope.Count > 0) PushCore(_scope);
         _scope = null;
     }
 

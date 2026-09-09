@@ -89,6 +89,9 @@ public sealed class CompositeUndoAction : IUndoAction
 
     public void Add(IUndoAction action) => _actions.Add(action);
 
+    /// <summary>まとめた件数。0 件なら積んでも Ctrl+Z が無反応になるだけ。</summary>
+    public int Count => _actions.Count;
+
     public void Undo()
     {
         for (int i = _actions.Count - 1; i >= 0; i--) _actions[i].Undo();
