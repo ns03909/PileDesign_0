@@ -10,8 +10,50 @@ using PileDesign.Services;
 
 namespace PileDesign.Models.InputData
 {
-    public class PileSection : BaseModel
+    public class PileSection : BaseModel,
+        System.Text.Json.Serialization.IJsonOnDeserializing,
+        System.Text.Json.Serialization.IJsonOnDeserialized
     {
+        // 読み込み中は、寸法の連鎖 (RecalculatePileDia) を止める。
+        //
+        // System.Text.Json は<b>ファイルに書かれた順</b>にプロパティを設定する。
+        // ConcreteOutDia / CorrosionDepth / PileDiameter のセッターはどれも
+        // RecalculatePileDia() を呼ぶので、杭体タイプがまだ既定 (場所打ちRC) の
+        // うちにそれが走ると、既製杭の肉厚・杭径・鋼管径を場所打ちRC の式で
+        // 塗り潰す (φ1100 で 140mm → 550mm)。<b>塗り潰された値は、あとで
+        // 杭体タイプが正しくなっても戻らない。</b>
+        //
+        // 読み終わってから一度だけ走らせれば、すべての値が揃った状態で
+        // 正しい分岐に入る。RecalculatePileDia は他の値から計算するだけなので、
+        // 何度呼んでも結果は同じ (冪等)。
+        //
+        // PileBodyInput / SoilPile / ZDataItem が同じ仕組みを使っている。
+        private bool _isDeserializing;
+
+        // System.Text.Json 用コールバック (本プロジェクトの主デシリアライザ)
+        void System.Text.Json.Serialization.IJsonOnDeserializing.OnDeserializing()
+            => _isDeserializing = true;
+
+        void System.Text.Json.Serialization.IJsonOnDeserialized.OnDeserialized()
+        {
+            _isDeserializing = false;
+            RecalculatePileDia();
+            InvalidateAllCaches();
+        }
+
+        // Newtonsoft.Json 用コールバック (副デシリアライザ経由で読む場合に備えて)
+        [System.Runtime.Serialization.OnDeserializing]
+        internal void OnDeserializingHandler(System.Runtime.Serialization.StreamingContext _)
+            => _isDeserializing = true;
+
+        [System.Runtime.Serialization.OnDeserialized]
+        internal void OnDeserializedHandler(System.Runtime.Serialization.StreamingContext _)
+        {
+            _isDeserializing = false;
+            RecalculatePileDia();
+            InvalidateAllCaches();
+        }
+
         // 静的キャッシュ（CSVデータは一度だけ読み込む）
         // PHC杭 は JIS 汎用ライブラリに加え、メーカー製品ライブラリを連結する。
         // ストレート杭は断面の挙動が PHC杭 と完全に同じなので、断面タイプを増やさず
@@ -348,8 +390,17 @@ namespace PileDesign.Models.InputData
 
         //public List<double> UltimateLimitAxialForceThresholds { get; private set; } = [];
 
+        // ここから下の軸力制限値は、断面計算オブジェクトから転送される派生値。
+        //
+        // [JsonIgnore] 必須: セッターが private なので、保存はされても読み戻されない。
+        // とくに List のほうは、保存時に他と同じ実体を指して "$ref" で書かれるのに、
+        // 読込では別の空リストになるため参照の共有まで壊れる。値は GetNMRaw() の
+        // 転送で入れ直されるので、保存する意味がない。
+        // (SaveLoadFirstCycleTests が 1 周目の保存→読込でこれを見張る)
+
         // 新: バッキングフィールド＋通知
         private List<double> _ultimateLimitAxialForceThresholds = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<double> UltimateLimitAxialForceThresholds
         {
             get => _ultimateLimitAxialForceThresholds;
@@ -357,6 +408,7 @@ namespace PileDesign.Models.InputData
         }
 
         private List<double> _damageLimitAxialForceThresholds = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<double> DamageLimitAxialForceThresholds
         {
             get => _damageLimitAxialForceThresholds;
@@ -365,6 +417,7 @@ namespace PileDesign.Models.InputData
 
         // 使用限界軸力制限値（kN単位、PrecastPileSectionから転送）
         private double _serviceLimitNMin;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double ServiceLimitNMin
         {
             get => _serviceLimitNMin;
@@ -372,6 +425,7 @@ namespace PileDesign.Models.InputData
         }
 
         private double _serviceLimitNMax;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double ServiceLimitNMax
         {
             get => _serviceLimitNMax;
@@ -382,11 +436,17 @@ namespace PileDesign.Models.InputData
         private double _shearNMinService, _shearNMaxService;
         private double _shearNMinDamage, _shearNMaxDamage;
         private double _shearNMinUltimate, _shearNMaxUltimate;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double ShearNMinService { get => _shearNMinService; private set => SetProperty(ref _shearNMinService, value); }
+        [System.Text.Json.Serialization.JsonIgnore]
         public double ShearNMaxService { get => _shearNMaxService; private set => SetProperty(ref _shearNMaxService, value); }
+        [System.Text.Json.Serialization.JsonIgnore]
         public double ShearNMinDamage { get => _shearNMinDamage; private set => SetProperty(ref _shearNMinDamage, value); }
+        [System.Text.Json.Serialization.JsonIgnore]
         public double ShearNMaxDamage { get => _shearNMaxDamage; private set => SetProperty(ref _shearNMaxDamage, value); }
+        [System.Text.Json.Serialization.JsonIgnore]
         public double ShearNMinUltimate { get => _shearNMinUltimate; private set => SetProperty(ref _shearNMinUltimate, value); }
+        [System.Text.Json.Serialization.JsonIgnore]
         public double ShearNMaxUltimate { get => _shearNMaxUltimate; private set => SetProperty(ref _shearNMaxUltimate, value); }
 
         // [JsonIgnore] 必須: これらは GetNMRaw() で重い断面計算をトリガする computed プロパティ。
@@ -812,8 +872,14 @@ namespace PileDesign.Models.InputData
 
                 return (new List<double>(phis), new List<double>(ms));
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // CreateLinearFallback() が「線形弾性で代替した」ことは記録するが、
+                // 例外そのものは伝わらない。原因が分からないと直せないので、
+                // ここで理由だけ足しておく。
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "M-φ の算定で例外", ex,
+                    $"杭体={PileBodyType}, 断面={PileSectionType}");
                 return CreateLinearFallback();
             }
         }
@@ -1015,6 +1081,14 @@ namespace PileDesign.Models.InputData
 
                 if (SetProperty(ref _pileBodyType, safeValue))
                 {
+                    // 場所打ち鉄筋コンクリート杭は断面タイプが 1 つしかないので、
+                    // 杭体タイプが変わったこの時点で揃える。
+                    // (以前は RecalculatePileDia の中でやっていたが、そこは
+                    //  PileSectionType のセッターからも呼ばれるため、読み込みの
+                    //  順序しだいで断面タイプが化けていた)
+                    if (safeValue == PileTypeNames.InsituRc)
+                        PileSectionType = PileTypeNames.RcSection;
+
                     RecalculatePileDia();
                     InvalidateAllCaches();
                 }
@@ -1600,14 +1674,33 @@ namespace PileDesign.Models.InputData
         // 杭径変更時のメソッド
         public void RecalculatePileDia()
         {
+            // 読み込み中は走らせない。すべての値が揃ってから OnDeserialized で一度だけ。
+            if (_isDeserializing) return;
+
             try
             {
-                if (PileBodyType == PileTypeNames.InsituRc)
+                // 断面タイプも見てから動く。ほかの 2 つの分岐は元からそうしている。
+                //
+                // 場所打ちRC の分岐だけが杭体タイプしか見ておらず、読み込みで
+                // プロパティの順序が入れ替わって「杭体タイプは既定 (場所打ちRC) の
+                // まま、断面タイプだけ先に PHC杭 が入る」状態になると、
+                // <b>既製杭の肉厚・杭径・鋼管径を場所打ちRC の式で塗り潰していた。</b>
+                // 塗り潰された値は、あとで杭体タイプが正しくなっても戻らない。
+                if (PileBodyType == PileTypeNames.InsituRc
+                    && PileSectionType == PileTypeNames.RcSection)
                 {
                     PileDiameter = ConcreteOutDia;
                     ConcreteThickness = ConcreteOutDia * 0.5;
                     MainBarDr = ConcreteOutDia - 2.0 * MainBarCenterCover;
-                    PileSectionType = PileTypeNames.RcSection;
+                    // ここで PileSectionType を書き換えないこと。
+                    //
+                    // PileSectionType のセッターがこのメソッドを呼ぶので、
+                    // 「今セットした断面タイプを自分で上書きする」形になる。
+                    // 読み込みでプロパティの順序が入れ替わり、杭体タイプがまだ
+                    // 既定 (場所打ちRC) のまま断面タイプが先に来ると、
+                    // <b>PHC杭 が鉄筋コンクリート部に化ける</b>。杭種が変われば
+                    // 断面計算オブジェクトごと別物になるので、耐力が丸ごと変わる。
+                    // 場所打ちRC への揃え直しは PileBodyType のセッターが行う。
                     PipeDia = 0.0;
                     PipeTs = 0.0;
                 }
