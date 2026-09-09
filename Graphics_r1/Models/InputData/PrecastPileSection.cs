@@ -1495,13 +1495,12 @@ namespace PileDesign.Models.InputData
             //安全限界最大曲率時の軸力
             AxialForceCurvatureMaxUltimateLimit = GetAllowableForceAndMoment(2, true, CurvatureMaxUltimateLimit).Item1;
 
-            // 曲げに関する軸力制限値
-            double nBendMin = -0.4 * PrecastSteelPipe.F * 1.1 * PrecastSteelPipe.As;
-            double nBendMax = 0.5 * (PrecastSteelPipe.F * 1.1 * PrecastSteelPipe.As + Ac * Fc);
-
-            // せん断に関する軸力制限値
-            double nShearMin = -0.3 * PrecastSteelPipe.F * 1.1 * PrecastSteelPipe.As;
-            double nShearMax = 0.5 * (PrecastSteelPipe.F * 1.1 * PrecastSteelPipe.As + Ac * Fc);
+            // 曲げ・せん断に関する軸力の適用範囲 (§7.2)。
+            // 引張側と圧縮側で分母 N0 が違うので、プロパティに寄せてある。
+            double nBendMin = BendNMin;
+            double nBendMax = BendNMax;
+            double nShearMin = ShearNMinService;
+            double nShearMax = ShearNMaxService;
 
             // 軸力制限閾値（表示用: 曲げ引張、曲げ圧縮、せん断引張、せん断圧縮）
             UltimateLimitAxialForceThresholds =
@@ -1701,35 +1700,93 @@ namespace PileDesign.Models.InputData
             double unfactoredQd = beta1 / kappaS * fd * As;
             return isFactored ? beta1 * unfactoredQd : unfactoredQd;
         }
+        // ── 軸力の適用範囲 (§7.2) ────────────────────────────────────────
+        //
+        // 「設計用限界値」として、限界状態の種類にかかわらず、軸力比 N/N0 が
+        //   曲げ    −0.40 〜 0.50
+        //   せん断  −0.30 〜 0.50
+        // を適用範囲とする。N0 は SC 杭の軸耐力の絶対値で、圧縮と引張で別の量になる。
+        //
+        // ここでの fys は鋼管の降伏強度 1.1F。せん断強度式の中に出てくる
+        // sN0 = As·fy (鋼管柱の中心圧縮耐力) とは別物なので、取り違えないこと。
+
+        /// <summary>圧縮側の軸耐力 N0 = |As·fys + Ac·Fc|。</summary>
+        private double AxialCapacityCompression => PrecastSteelPipe.As * PrecastSteelPipe.Fys + Ac * Fc;
+
+        /// <summary>引張側の軸耐力 N0 = |As·fys|。コンクリートは含めない。</summary>
+        private double AxialCapacityTension => PrecastSteelPipe.As * PrecastSteelPipe.Fys;
+
+        /// <summary>曲げの適用範囲 (引張側)。軸力比 −0.40。</summary>
+        internal double BendNMin => -0.4 * AxialCapacityTension;
+
+        /// <summary>曲げの適用範囲 (圧縮側)。軸力比 0.50。</summary>
+        internal double BendNMax => 0.5 * AxialCapacityCompression;
+
+        // せん断の適用範囲。限界状態によらず同じ値なので 3 組とも同じものを返す。
+        public override double ShearNMinService => -0.3 * AxialCapacityTension;
+        public override double ShearNMaxService => 0.5 * AxialCapacityCompression;
+        public override double ShearNMinDamage => ShearNMinService;
+        public override double ShearNMaxDamage => ShearNMaxService;
+        public override double ShearNMinUltimate => ShearNMinService;
+        public override double ShearNMaxUltimate => ShearNMaxService;
+
         /// <summary>
-        /// 安全限界せん断力を返す。
+        /// せん断スパン比 a/D。a は反曲点から材端までの長さ、D は鋼管の径。
+        ///
+        /// プログラムが持っているのは M/(Q·d) で、d は有効せい 0.9D (基礎指針'19)。
+        /// a = M/Q なので a/D = M/(Q·d) × d/D = 0.9 × M/(Q·d) になる。
+        /// 既定の M/(Q·d) = 3.0 なら a/D = 2.7 で、(8.26) を使う側に入る。
         /// </summary>
-        private double GetUltimateLimitShear(double nud, bool isFactored)
+        private static double ShearSpanRatio(double monQd) => 0.9 * monQd;
+
+        /// <summary>
+        /// 安全限界せん断の低減係数 β = β1·β2 (7.8)。基本設定から採る。既定は 1.0。
+        /// </summary>
+        private static double UltimateShearBeta
+            => ConcreteModelOptions.ScUltimateShearBeta1 * ConcreteModelOptions.ScUltimateShearBeta2;
+
+        /// <summary>
+        /// せん断スパン比が 1.0 を超えるとき、(8.26) の値のうち鋼管寄与分とみなす割合。
+        ///
+        /// 解説にいわく「せん断耐力時には鋼管全断面が周方向にせん断降伏しないとの
+        /// 実験結果もあり、当面は (8.26) 式から得られる値の半分程度を鋼管寄与分と
+        /// 考えることが望ましい」。低減係数 β とは別で、強度 sQun 側に掛かる。
+        /// </summary>
+        private const double SteelPipeContribution = 0.5;
+
+        /// <summary>
+        /// 安全限界せん断力。「基礎部材の強度と変形性能」(7.8) Qu = β·sQun。
+        ///
+        /// sQun はせん断スパン比 a/D で 2 通りに分かれる。
+        ///
+        /// <list type="bullet">
+        /// <item><b>a/D &gt; 1.0</b>: 解説に従い第 8 章を参照し、鋼管部分のみが外力に
+        ///   抵抗すると考えて (8.26) を使い、その<b>半分程度</b>を鋼管寄与分とする。
+        ///   コンクリートの寄与は見ない。</item>
+        /// <item><b>a/D ≦ 1.0</b>: 本来は「コンクリート充填鋼管構造設計施工指針」の
+        ///   円形鋼管のせん断強度式 (sQun が両辺に現れる 3 分岐の陰な式) による。
+        ///   <b>未実装</b>なので、上と同じ (8.26)×0.5 で代替し、記録に残す。
+        ///   代替値のほうが小さい (この断面で 1.7 倍ほど違う) ので安全側。</item>
+        /// </list>
+        ///
+        /// 軸力比の分母は鋼管の降伏軸力 sNy = sσty·sAp で、コンクリートを含まない。
+        /// 適用範囲 (§7.2) の分母 N0 とは別物なので取り違えないこと。
+        /// </summary>
+        private double GetUltimateLimitShear(double monQd, double nud, bool isFactored)
         {
-            // 鋼管杭の安全限界せん断
-            double beta1 = 1.0;
-            double beta2 = 1.0;
-            double sSigmaY = PrecastSteelPipe.F;         // N/mm²
-            double sNy = sSigmaY * PrecastSteelPipe.As;  // N（降伏軸力）
+            if (ShearSpanRatio(monQd) <= 1.0)
+            {
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "SC杭の安全限界せん断（せん断スパン比 1.0 以下の式は未実装。第8章の式で代替）",
+                    detail: $"a/D={ShearSpanRatio(monQd):F2}, M/(Q·d)={monQd:F2}");
+            }
 
-            // sNy が 0 の場合は計算不能
-            if (Math.Abs(sNy) < 1e-10)
-                return 0.0;
+            double unfactoredQu = SteelPipeContribution * SteelPipeUltimateShear.Unfactored(
+                PrecastSteelPipe.T, PrecastSteelPipe.OutDia,
+                PrecastSteelPipe.Fys,   // sσty = 1.1F
+                PrecastSteelPipe.As, nud);
 
-            double eta = nud / sNy;  // 軸力比 η = N / Ny
-
-            // η >= 1 の場合、sqrt(1 - η²) が虚数になるため、0 を返す
-            // （軸力が降伏軸力以上のとき、せん断耐力は 0）
-            if (Math.Abs(eta) >= 1.0)
-                return 0.0;
-
-            double t = PrecastSteelPipe.T;
-            double D = PrecastSteelPipe.OutDia;
-
-            double sQ0 = 2 * t * (D - t) * sSigmaY / Math.Sqrt(3);  // N
-            double unfactoredQu = sQ0 * Math.Sqrt(1 - eta * eta);
-
-            return isFactored ? beta1 * beta2 * unfactoredQu : unfactoredQu;
+            return isFactored ? UltimateShearBeta * unfactoredQu : unfactoredQu;
         }
 
         // ── SC 杭の Q-N は、軸力の範囲もせん断耐力の式も他の既製杭と違う ──
@@ -1737,23 +1794,31 @@ namespace PileDesign.Models.InputData
         // せん断耐力は鋼管のせん断降伏で決まり、使用限界と損傷限界は軸力に依らない
         // (曲げとの相関がないため、曲線は水平線になる)。
         //
-        // 軸力の範囲は、ここでは 4·Ae ～ 45·Ae を直に書いている。一方
-        // 表示と内訳曲線が読む ShearNMinService などは、基底クラスの既定
-        // ((4−σE)·Ae ～ (Fc/3.5−σE)·Ae) のままで、SC 杭では上書きしていない。
-        // <b>同じ「せん断の軸力範囲」が 2 通りある。</b>どちらが正かは出典に当たる
-        // 必要があり、直すと数値が動くので、ここでは現状を明示するにとどめる。
+        // 軸力の範囲は §7.2 の適用範囲そのものを使う。以前は 4·Ae ～ 45·Ae を直に
+        // 書いていたが、これは PHC/PRC の章から来た σ0+σ0e = 4～45 N/mm² という
+        // <b>応力</b>の範囲で、プレストレスを前提にしている。SC 杭にプレストレスは
+        // 無いので 4·Ae がそのまま圧縮軸力になり、§7.2 が認めている引張側に
+        // 計算点が 1 つも無かった (曲線が 0 から水平部へ斜めに立ち上がり、無軸力で
+        // 半分の値に読めていた)。
 
         /// <summary>使用限界 Q-N。軸力に依らないので水平線になる。</summary>
         public override (List<double>, List<double>) GetServiceLimitQNInteraction(double MonQd, bool isFactored, int iCount = 100)
-            => BuildQNCurve(4 * Ae, 45 * Ae, _ => GetServiceLimitShear(isFactored), iCount);
+            => BuildQNCurve(ShearNMinService, ShearNMaxService, _ => GetServiceLimitShear(isFactored), iCount);
 
         /// <summary>損傷限界 Q-N。軸力に依らないので水平線になる。</summary>
         public override (List<double>, List<double>) GetDamageLimitQNInteraction(double MonQd, bool isFactored, int level = 1, int iCount = 100)
-            => BuildQNCurve(0.0, 45 * Ae, _ => GetDamageLimitShear(isFactored), iCount);
+            => BuildQNCurve(ShearNMinDamage, ShearNMaxDamage, _ => GetDamageLimitShear(isFactored), iCount);
 
-        /// <summary>安全限界 Q-N。曲げとの相関があるので軸力ごとに変わる。</summary>
+        /// <summary>
+        /// 安全限界 Q-N。軸力ごとに変わる。
+        ///
+        /// 軸力比 η = N/sNy が 1 に達すると 0 になる。sNy は鋼管だけの降伏軸力なので、
+        /// §7.2 の適用範囲 (分母にコンクリートを含む N0) の圧縮側より<b>ずっと手前</b>で
+        /// 0 になる。鋼管部分のみが外力に抵抗すると考える (解説) 以上、そうなる。
+        /// </summary>
         public override (List<double>, List<double>) GetUltimateQNInteraction(double MonQd, bool isFactored, int iCount = 100)
-            => BuildQNCurve(4 * Ae, 45 * Ae, n => GetUltimateLimitShear(n, isFactored), iCount);
+            => BuildQNCurve(ShearNMinUltimate, ShearNMaxUltimate,
+                n => GetUltimateLimitShear(MonQd, n, isFactored), iCount);
 
         // IPileSectionCalculation インターフェース実装（親クラスのオーバーライド）
         public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)

@@ -579,14 +579,8 @@ namespace PileDesign.Models.InputData
         internal double GetUltimateLimitShearMiddle(double Nud)
         {
             const double beta2 = 1.0;
-            double sNy = sSigmaTy * sAp;
-            if (Math.Abs(sNy) < 1e-10) return 0.0;
-
-            double eta = Nud / sNy;
-            if (Math.Abs(eta) >= 1.0) return 0.0;
-
-            double sQ0 = 2.0 * T * (D - T) * sSigmaTy / Math.Sqrt(3.0);
-            return Beta1 * beta2 * sQ0 * Math.Sqrt(1.0 - eta * eta);
+            return Beta1 * beta2
+                 * SteelPipeUltimateShear.Unfactored(T, D, sSigmaTy, sAp, Nud);
         }
 
         /// <summary>
@@ -614,10 +608,12 @@ namespace PileDesign.Models.InputData
             var (sMu, cMu) = ComputeUltimateMomentComponents(Nud);
             if (sMu <= 0) return 0.0;
 
-            double sQ0 = 2.0 * T * (D - T) * sSigmaTy / Math.Sqrt(3.0);
+            // 杭頭部は η の正規化が中間部と違う (上で Nuc / Nut を使っている) ので、
+            // 共有できるのは sQ0 と √(1−η²) まで。
+            double sQ0 = SteelPipeUltimateShear.Q0(T, D, sSigmaTy);
             double moment_ratio = (sMu + cMu) / sMu;
 
-            return Beta1 * beta2 * sQ0 * Math.Sqrt(1.0 - eta * eta) * moment_ratio;
+            return Beta1 * beta2 * sQ0 * SteelPipeUltimateShear.AxialInteraction(eta) * moment_ratio;
         }
 
         /// <summary>

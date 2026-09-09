@@ -46,6 +46,13 @@
             _version++;
         }
 
+        private static void Set(ref double field, double value)
+        {
+            if (field.Equals(value)) return;
+            field = value;
+            _version++;
+        }
+
         /// <summary>圧縮側折れ点応力度の低減係数（0.85·Fc）。</summary>
         public const double CompressionReductionFactor = 0.85;
 
@@ -309,6 +316,47 @@
         }
         private static int _notification1113CompressionCase = 1;
 
+        // ── SC 杭の安全限界せん断の低減係数 β ──────────────────────────────
+        //
+        // 「基礎部材の強度と変形性能」(7.8) は Qu = β·sQun、β = β1·β2 とし、
+        //   β1: 設計式の信頼性に基づく低減係数で、1.0 以下の値とする
+        //   β2: 杭の変形性能および軸力保持性能に基づく低減係数で、1.0 以下の値とする。
+        //       ただしコンクリートの圧縮破壊や鋼管の座屈が変形性能に影響を与える場合は
+        //       0.75 以下とすることが望ましい
+        // としている。値は設計者が選ぶものなので入力にした。既定は 1.0（低減しない）。
+        //
+        // 鋼管杭 (第 8 章) は解説が「算定方法が下限値に基づいていると判断し…1.0 以下とした」
+        // と 1.0 を明示しているので、そちらは 1.0 固定のままにしてある。
+
+        /// <summary>SC 杭の安全限界せん断の低減係数 β1。1.0 以下。</summary>
+        public static double ScUltimateShearBeta1
+        {
+            get => _scUltimateShearBeta1;
+            set => Set(ref _scUltimateShearBeta1, ClampBeta(value));
+        }
+        private static double _scUltimateShearBeta1 = 1.0;
+
+        /// <summary>
+        /// SC 杭の安全限界せん断の低減係数 β2。1.0 以下。
+        /// コンクリートの圧縮破壊や鋼管の座屈が変形性能に影響する場合は 0.75 以下が望ましい。
+        /// </summary>
+        public static double ScUltimateShearBeta2
+        {
+            get => _scUltimateShearBeta2;
+            set => Set(ref _scUltimateShearBeta2, ClampBeta(value));
+        }
+        private static double _scUltimateShearBeta2 = 1.0;
+
+        /// <summary>
+        /// 低減係数を出典の範囲に収める。上限 1.0 は本文の「1.0 以下の値とする」。
+        /// 下限 0.01 は、0 を入れると耐力が消えて原因の分からない検定 NG になるため。
+        /// 数値でない値は既定の 1.0 に戻す。
+        /// </summary>
+        private static double ClampBeta(double value)
+            => double.IsNaN(value) || double.IsInfinity(value)
+                ? 1.0
+                : System.Math.Clamp(value, 0.01, 1.0);
+
         /// <summary>
         /// 解説書準拠（告示1113 圧縮）オプションが有効なとき、限界状態の表示名を
         /// 許容応力度設計の用語（長期許容 / 短期許容）で表示するかどうか。
@@ -349,6 +397,7 @@
                $"J{(UseUltimateStrain5000ForSteelPipeConcrete ? 1 : 0)}" +
                $"{(ExcludeRebarFromAllowableLimitForSteelPipeConcrete ? 1 : 0)}" +
                $"{(UseFiberNMForSteelPipeConcrete ? 1 : 0)}" +
-               $"B{(ConsiderSteelPipeColumnBuckling ? 1 : 0)}";
+               $"B{(ConsiderSteelPipeColumnBuckling ? 1 : 0)}" +
+               $"S{ScUltimateShearBeta1:F2}/{ScUltimateShearBeta2:F2}";
     }
 }

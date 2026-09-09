@@ -2952,6 +2952,26 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     変更すると既存の解析結果は確認のうえ削除されます（杭要素分割は保持）。</li>
             </ul>
 
+            <h4 style="font-weight: bold;">SC 杭の安全限界せん断の低減係数 β</h4>
+            <ul>
+                <li id="fund-opt-sc-shear-beta"><strong>β1（設計式の信頼性）・β2（変形性能・軸力保持性能）</strong>:
+                    既定はどちらも <strong>1.0</strong>（低減しない）。値は $0.01 \sim 1.00$ に収めます。
+                    「基礎部材の強度と変形性能」7.2 は SC 杭の安全限界せん断強度を
+                    $Q_u = \beta \cdot {}_sQ_{un}$（$\beta = \beta_1 \cdot \beta_2$）とし、
+                    $\beta_1$ を設計式の信頼性に基づく低減係数、$\beta_2$ を杭の変形性能および軸力保持性能に
+                    基づく低減係数として、いずれも <strong>1.0 以下の値とする</strong>としています。
+                    さらに $\beta_2$ については、<strong>コンクリートの圧縮破壊や鋼管の座屈が変形性能に影響を
+                    与える場合は 0.75 以下とすることが望ましい</strong>、とされています。
+                    値の選択は設計者に委ねられているため、入力としました。
+                    <br>
+                    <strong>SC 杭の安全限界せん断（検定の耐力側）のみ</strong>に効きます。解析・使用限界・損傷限界・
+                    N-M 曲線には影響しないため、既存の解析結果は保持されます。
+                    <br>
+                    鋼管杭（第 8 章）は解説が「算定方法が下限値に基づいていると判断し、$\beta_1$ および $\beta_2$ は
+                    軸力・曲げモーメント・せん断力ともに 1.0 以下とした」と 1.0 を明示しているため、
+                    こちらは 1.0 固定で、この項目の対象外です。
+                    詳しくは<a href="#sc-ultimate-shear">「SC 杭の安全限界せん断力」</a>を参照してください。</li>
+            </ul>
             <h4 style="font-weight: bold;">鋼管杭の柱座屈</h4>
             <ul>
                 <li id="fund-opt-steelpipe-buckling"><strong>柱座屈（曲げ座屈）による許容圧縮応力度の低減</strong>:
@@ -11036,34 +11056,70 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                         <div class="formula-right">強度と変形性能 (7.4)</div>
                     </div>
 
-                    <h4>SC 杭の安全限界せん断力 $Q_u$</h4>
-                    <p>
-                        鋼管杭と同形式。軸力相互作用を考慮した相関式。
-                    </p>
+                    <h4 id="sc-ultimate-shear">SC 杭の安全限界せん断力 $Q_u$</h4>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$Q_u = \beta \cdot {}_sQ_{un}$$</p>
+                            <p>$$Q_u = \beta \cdot {}_sQ_{un},\qquad \beta = \beta_1 \cdot \beta_2$$</p>
                         </div>
                         <div class="formula-right">強度と変形性能 (7.8)</div>
                     </div>
+                    <p>
+                        ${}_sQ_{un}$ は<strong>せん断スパン比 $a/D$</strong> で分かれます。$a$ は反曲点から材端までの長さ、
+                        $D$ は鋼管の径です。本プログラムが持つ $M/(Q\!\cdot\! d)$ は有効せい $d = 0.9D$ によるので、
+                        $a/D = 0.9 \times M/(Q\!\cdot\! d)$ になります（既定の $M/(Q\!\cdot\! d)=3.0$ なら $a/D = 2.7$）。
+                    </p>
+                    <p>
+                        <strong>$a/D &gt; 1.0$ の場合</strong>（本プログラムが算定する場合）。解説に従い第 8 章を参照し、
+                        <strong>鋼管部分のみが外力に抵抗する</strong>と考えて (8.26) 式を用います。コンクリートの寄与は見ません。
+                        さらに解説は「せん断耐力時には鋼管全断面が周方向にせん断降伏しないとの実験結果もあり、当面は
+                        (8.26) 式から得られる値の<strong>半分程度</strong>を鋼管寄与分と考えることが望ましい」としており、
+                        本プログラムは $1/2$ を乗じます。
+                    </p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$${}_sQ_{un} = {}_sQ_0 \sqrt{\,1 - \eta^2\,},\qquad \eta = \frac{N}{N_y}$$</p>
-                            <p>$${}_sQ_0 = \frac{2\,t\,(D - t)\,\sigma_y}{\sqrt{3}},\qquad N_y = \sigma_y \cdot A_{s,\text{pipe}}$$</p>
+                            <p>$${}_sQ_{un} = \tfrac{1}{2}\,{}_sQ_0 \sqrt{\,1 - \eta^2\,},\qquad \eta = \frac{N_{ud}}{{}_sN_y}$$</p>
+                            <p>$${}_sQ_0 = \frac{2\,t\,(D - t)\,{}_s\sigma_{ty}}{\sqrt{3}},\qquad {}_sN_y = {}_s\sigma_{ty} \cdot {}_sA_p$$</p>
+                            <p>$${}_s\sigma_{ty} = 1.1 \times 1.5 \times {}_sf_t = 1.1F$$</p>
                         </div>
-                        <div class="formula-right"></div>
+                        <div class="formula-right">強度と変形性能 (8.26)、(8.18)</div>
                     </div>
                     <ul class="symbol-list">
                         <li class="symbol-intro">記号</li>
-                        <li><span class="symbol-label">${}_sQ_{un}$</span>低減前の SC 杭安全限界せん断力 (軸力相互作用 $\sqrt{1-\eta^2}$ を考慮した鋼管断面のせん断耐力)。<strong>鋼管杭と同式</strong>とする。</li>
+                        <li><span class="symbol-label">${}_sQ_{un}$</span>SC 杭鋼管部分のせん断強度（低減前）</li>
                         <li><span class="symbol-label">${}_sQ_0$</span>軸力がないときの鋼管断面の安全限界せん断力</li>
-                        <li><span class="symbol-label">$\eta$</span>軸力比 $= N/N_y$</li>
-                        <li><span class="symbol-label">$\sigma_y$</span>鋼管の設計基準強度 ($=F$)</li>
-                        <li><span class="symbol-label">$N_y$</span>鋼管降伏軸力 (コンクリート寄与なし)</li>
-                        <li><span class="symbol-label">$\beta$</span>$\beta_1 \cdot \beta_2 = 1.0$ (SC 杭は両者とも $1.0$)</li>
+                        <li><span class="symbol-label">$\eta$</span>軸力比。<strong>分母は鋼管だけの降伏軸力</strong>で、コンクリートを含みません（本プログラムでの呼び名です。原典に $\eta$ の記号はありません）</li>
+                        <li><span class="symbol-label">${}_s\sigma_{ty}$</span>鋼管杭の材料強度。長期許容引張応力度 ${}_sf_t = F/1.5$ の $1.1\times1.5$ 倍、すなわち $1.1F$</li>
+                        <li><span class="symbol-label">${}_sA_p$</span>腐食しろを考慮した鋼管の断面積</li>
+                        <li><span class="symbol-label">$\beta_1$</span>設計式の信頼性に基づく低減係数。$1.0$ 以下（基本設定で入力、既定 $1.0$）</li>
+                        <li><span class="symbol-label">$\beta_2$</span>杭の変形性能・軸力保持性能に基づく低減係数。$1.0$ 以下（基本設定で入力、既定 $1.0$）。コンクリートの圧縮破壊や鋼管の座屈が変形性能に影響を与える場合は $0.75$ 以下とすることが望ましい、とされています</li>
                     </ul>
                     <p style="font-size: 0.92em; color: #555;">
-                        ※ $|\eta| \geq 1$ のとき、すなわち軸力が降伏軸力以上のときは $Q_u = 0$ とする。
+                        ※ $|\eta| \geq 1$ のとき、すなわち軸力が鋼管の降伏軸力以上のときは $Q_u = 0$ とします。
+                        軸力比の分母は鋼管だけの降伏軸力なので、これは<strong>下の適用範囲の圧縮側よりかなり手前</strong>で起こります。
+                        鋼管部分のみが外力に抵抗すると考える以上、そうなります。
+                    </p>
+                    <p style="font-size: 0.92em; color: #555;">
+                        ※ <strong>$a/D \leq 1.0$ の場合</strong>、(7.8) は本会「コンクリート充填鋼管構造設計施工指針」の
+                        円形鋼管のせん断強度式（${}_sQ_{un}$ が両辺に現れる 3 通りの場合分け）によります。
+                        <strong>本プログラムは未実装</strong>で、上と同じ (8.26)$\times 1/2$ で代替し、解析完了時にその旨を記録として表示します。
+                        代替値のほうが小さいため安全側です。杭でせん断スパン比が 1.0 以下になるのは杭頭近傍の短い区間に限られます。
+                    </p>
+
+                    <h4>SC 杭の軸力の適用範囲</h4>
+                    <p>
+                        設計用限界値として、<strong>限界状態の種類にかかわらず</strong>、軸力比 $N/N_0$ が
+                        曲げでは $-0.40 \sim 0.50$、せん断では $-0.30 \sim 0.50$ を適用範囲とします（7.2 節）。
+                        低減後の N-M 曲線・Q-N 曲線は、この範囲の外で $0$ になります。
+                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$N_0 = \begin{cases} |{}_sA_s\,{}_sf_{ys} + A_c F_c| & (\text{圧縮}) \\[4pt] |{}_sA_s\,{}_sf_{ys}| & (\text{引張}) \end{cases},\qquad {}_sf_{ys} = 1.1F$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 7.2</div>
+                    </div>
+                    <p style="font-size: 0.92em; color: #555;">
+                        ※ $N_0$ は圧縮と引張で別の量です（引張ではコンクリートを含みません）。
+                        せん断強度式の中に出てくる ${}_sN_0 = {}_sA_s\,f_y$（鋼管柱の中心圧縮耐力）とは別物です。
                     </p>
 
                     <h4>SC 杭の M-φ 関係</h4>

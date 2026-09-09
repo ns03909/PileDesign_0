@@ -328,6 +328,35 @@ namespace PileDesign.ViewModels
                 value ? "鋼管杭の柱座屈を考慮する へ変更" : "鋼管杭の柱座屈を考慮しない へ変更");
         }
 
+        // SC 杭の安全限界せん断の低減係数 β1・β2 (7.8) Qu = β·sQun。どちらも 1.0 以下。
+        // β2 はコンクリートの圧縮破壊や鋼管の座屈が変形性能に影響する場合、
+        // 0.75 以下とすることが望ましいとされている。既定 1.0（低減しない）。
+        [ObservableProperty]
+        private double _scUltimateShearBeta1 = 1.0;
+
+        partial void OnScUltimateShearBeta1Changed(double value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.ScUltimateShearBeta1,
+                v => InputModel.FundamentalInput.ScUltimateShearBeta1 = v,
+                v => ScUltimateShearBeta1 = v,
+                $"SC杭 安全限界せん断 β1 = {value:0.##} へ変更");
+        }
+
+        [ObservableProperty]
+        private double _scUltimateShearBeta2 = 1.0;
+
+        partial void OnScUltimateShearBeta2Changed(double value)
+        {
+            HandleCapacityOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.ScUltimateShearBeta2,
+                v => InputModel.FundamentalInput.ScUltimateShearBeta2 = v,
+                v => ScUltimateShearBeta2 = v,
+                $"SC杭 安全限界せん断 β2 = {value:0.##} へ変更");
+        }
+
         // 【評定書に規定が無い】終局の圧縮縁ひずみを 5,000μ とする（解析に効く）
         [ObservableProperty]
         private bool _useUltimateStrain5000ForSteelPipeConcrete;
@@ -472,12 +501,12 @@ namespace PileDesign.ViewModels
         /// 解析（M-φ・変形・応力）・安全限界には影響しないため、解析結果は削除せず保持する
         /// （確認ダイアログ無し）。キャッシュ破棄は ApplyConcreteModelOptions が行う。
         /// </summary>
-        private void HandleCapacityOnlyOptionChanged(
-            bool value, Func<bool> getter, Action<bool> setModel, Action<bool> setVm, string reason)
+        private void HandleCapacityOnlyOptionChanged<T>(
+            T value, Func<T> getter, Action<T> setModel, Action<T> setVm, string reason)
         {
             if (_suppressConcreteOptionConfirm) return;
-            bool oldValue = getter();
-            if (oldValue == value) return;
+            T oldValue = getter();
+            if (EqualityComparer<T>.Default.Equals(oldValue, value)) return;
 
             _undoManager.PushAction(
                 () => { setModel(oldValue); _mainWindowViewModel.ApplyConcreteModelOptions(); },
@@ -555,6 +584,8 @@ namespace PileDesign.ViewModels
             UseFiberNMForSteelPipeConcrete = InputModel.FundamentalInput.UseFiberNMForSteelPipeConcrete;
             ConsiderSteelPipeColumnBuckling = InputModel.FundamentalInput.ConsiderSteelPipeColumnBuckling;
             Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
+            ScUltimateShearBeta1 = InputModel.FundamentalInput.ScUltimateShearBeta1;
+            ScUltimateShearBeta2 = InputModel.FundamentalInput.ScUltimateShearBeta2;
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
 
@@ -688,6 +719,12 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.Notification1113CompressionCase):
                     Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
+                    break;
+                case nameof(FundamentalInput.ScUltimateShearBeta1):
+                    ScUltimateShearBeta1 = InputModel.FundamentalInput.ScUltimateShearBeta1;
+                    break;
+                case nameof(FundamentalInput.ScUltimateShearBeta2):
+                    ScUltimateShearBeta2 = InputModel.FundamentalInput.ScUltimateShearBeta2;
                     break;
             }
         }

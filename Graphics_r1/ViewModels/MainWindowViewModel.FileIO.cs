@@ -259,6 +259,8 @@ namespace PileDesign.ViewModels
             Models.InputData.ConcreteModelOptions.ConsiderSteelPipeColumnBuckling =
                 f?.ConsiderSteelPipeColumnBuckling ?? true;
             Models.InputData.ConcreteModelOptions.Notification1113CompressionCase = f?.Notification1113CompressionCase ?? 1;
+            Models.InputData.ConcreteModelOptions.ScUltimateShearBeta1 = f?.ScUltimateShearBeta1 ?? 1.0;
+            Models.InputData.ConcreteModelOptions.ScUltimateShearBeta2 = f?.ScUltimateShearBeta2 ?? 1.0;
 
             // M-φ 静的キャッシュ（全断面共有）
             PileSection.ClearMphiCache();

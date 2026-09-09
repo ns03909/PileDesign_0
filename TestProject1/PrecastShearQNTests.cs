@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using System.Collections.Generic;
@@ -128,23 +128,28 @@ namespace TestProject1
             }
         }
 
+
         // ── SC ─────────────────────────────────────────────────────────────
+
+        private static PrecastPileSection Sc() => Calc(PileTypeNames.Sc, "SC-400-標準-80-4.5", pipeGrade: "SKK400");
 
         /// <summary>
         /// SC 杭は鋼管のせん断降伏で決まる。使用限界と損傷限界は軸力に依らないので
-        /// 水平線になり、安全限界だけが曲げとの相関で軸力ごとに変わる。
+        /// 水平線になり、安全限界だけが軸力ごとに変わる。
         /// </summary>
         [TestMethod]
         public void TheScShearCurves_KeepTheirValues()
         {
-            var s = Calc(PileTypeNames.Sc, "SC-400-標準-80-4.5", pipeGrade: "SKK400");
+            var s = Sc();
+            const double n0 = -336392.8270772405;      // −0.3·N0(引張)
+            const double nLast = 3039234.68447165;     // 掃引の末尾 (上限 0.5·N0(圧縮) の 1 つ手前)
 
             Curve(s.GetServiceLimitQNInteraction(3.0, false), 100,
-                196178.27198636768, 196178.27198636768, 338022.80315564736, 3768109.198177579, "SC 使用限界");
+                196178.27198636768, 196178.27198636768, n0, nLast, "SC 使用限界");
             Curve(s.GetDamageLimitQNInteraction(3.0, false), 100,
-                294267.4079795516, 294267.4079795516, 0.0, 3764728.9701460223, "SC 損傷限界");
+                294267.4079795516, 294267.4079795516, n0, nLast, "SC 損傷限界");
             Curve(s.GetUltimateQNInteraction(3.0, false), 100,
-                353474.06806923856, 0.0, 338022.80315564736, 3768109.198177579, "SC 安全限界");
+                196578.34215732265, 0.0, n0, nLast, "SC 安全限界");
         }
 
         /// <summary>
@@ -156,7 +161,7 @@ namespace TestProject1
         [TestMethod]
         public void TheScServiceAndDamageShear_DoNotDependOnAxialForce()
         {
-            var s = Calc(PileTypeNames.Sc, "SC-400-標準-80-4.5", pipeGrade: "SKK400");
+            var s = Sc();
 
             foreach (var (name, c) in new (string, (List<double> Qs, List<double> Ns))[]
             {
@@ -171,28 +176,228 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// <b>SC 杭のせん断の軸力範囲が 2 通りある。</b>
+        /// せん断の軸力範囲が §7.2 の適用範囲そのものであること。
         ///
-        /// 曲線を描く範囲は 4·Ae ～ 45·Ae を直に書いている。一方、諸元表の表示と
-        /// せん断内訳曲線が読む <c>ShearNMaxService</c> は基底クラスの既定
-        /// (Fc/3.5 − σE)·Ae のままで、SC 杭では上書きしていない。使用限界では
-        /// 表示が曲線の半分ほどの値になる。
+        /// 出典は「限界状態の種類にかかわらず」軸力比 N/N0 で
+        /// 曲げ −0.40〜0.50、せん断 −0.30〜0.50 を適用範囲としている。
+        /// N0 は圧縮では鋼管＋コンクリート、引張では鋼管のみ。
         ///
-        /// どちらが正かは出典に当たる必要があり、直すと数値が動く。
-        /// ここでは<b>食い違いが残っていることを記録する</b>。解決したらこのテストを
-        /// 消して、上の値の固定だけを残すこと。
+        /// 以前は曲線を描く範囲に 4·Ae〜45·Ae を直に書いていた。これは PHC/PRC の章から
+        /// 来た σ0+σ0e = 4〜45 N/mm² という<b>応力</b>の範囲で、プレストレスを前提にしている。
+        /// SC 杭にプレストレスは無いので 4·Ae がそのまま圧縮軸力になり、
+        /// <b>引張側に計算点が 1 つも無かった</b>。曲線は 0 から水平部へ斜めに立ち上がり、
+        /// 無軸力では本来の半分の値に読めていた。
         /// </summary>
         [TestMethod]
-        public void TheScShearAxialRange_IsStillDefinedTwice()
+        public void TheScShearAxialRange_FollowsTheApplicabilityRange()
         {
-            var s = Calc(PileTypeNames.Sc, "SC-400-標準-80-4.5", pipeGrade: "SKK400");
+            var s = Sc();
+            var pipe = s.PrecastSteelPipe;
 
-            double curveMax = s.GetServiceLimitQNInteraction(3.0, false).Item2.Max();
+            double n0Tension = pipe.As * pipe.Fys;                   // |As·fys|
+            double n0Compression = pipe.As * pipe.Fys + s.Ac * s.Fc; // |As·fys + Ac·Fc|
 
-            Assert.AreEqual(1931558.8751751278, s.ShearNMaxService, "表示側の使用限界の上限");
-            Assert.IsTrue(curveMax > 1.8 * s.ShearNMaxService,
-                "食い違いが解消されたようです。このテストを消して、値の固定だけ残してください "
-                + $"(曲線の上限 {curveMax:N0} N / 表示の上限 {s.ShearNMaxService:N0} N)");
+            Assert.AreEqual(-0.3 * n0Tension, s.ShearNMinService, "せん断 引張側 (軸力比 −0.30)");
+            Assert.AreEqual(0.5 * n0Compression, s.ShearNMaxService, "せん断 圧縮側 (軸力比 0.50)");
+
+            // 限界状態が変わっても同じ範囲であること (出典の「限界状態の種類にかかわらず」)。
+            Assert.AreEqual(s.ShearNMinService, s.ShearNMinDamage, "損傷限界の引張側");
+            Assert.AreEqual(s.ShearNMinService, s.ShearNMinUltimate, "安全限界の引張側");
+            Assert.AreEqual(s.ShearNMaxService, s.ShearNMaxDamage, "損傷限界の圧縮側");
+            Assert.AreEqual(s.ShearNMaxService, s.ShearNMaxUltimate, "安全限界の圧縮側");
+
+            // 曲線もその範囲から始まること。掃引と表示が別々の値だと、
+            // 諸元表と図で違う範囲を見ることになる。
+            foreach (var (name, c) in new (string, (List<double> Qs, List<double> Ns))[]
+            {
+                ("使用限界", s.GetServiceLimitQNInteraction(3.0, false)),
+                ("損傷限界", s.GetDamageLimitQNInteraction(3.0, false)),
+                ("安全限界", s.GetUltimateQNInteraction(3.0, false)),
+            })
+            {
+                Assert.AreEqual(s.ShearNMinService, c.Ns[0], $"{name}: 掃引の始点が適用範囲と違う");
+                Assert.IsTrue(c.Ns[0] < 0, $"{name}: 引張側に計算点がない");
+            }
+        }
+
+        /// <summary>
+        /// 安全限界せん断が (8.26) そのものであること。<b>材料強度は 1.1F。</b>
+        ///
+        /// (8.26) の sσty は (8.18) の記号説明で 1.1 × 1.5 × sft と定義され、
+        /// sft は長期許容引張応力度 F/1.5 なので 1.1F になる。基準強度 F をそのまま
+        /// 入れると耐力が 1 割低く、しかも η が 1 割大きくなって √(1−η²) も小さくなる。
+        /// <b>実際にそうなっていた</b>。鋼管杭と場所打ち鋼管コンクリート杭にある同じ式は
+        /// 1.1F を使っており、SC 杭の写しだけが F だった。
+        ///
+        /// あわせて、解説の「(8.26) 式から得られる値の半分程度を鋼管寄与分と考える」も
+        /// ここで見る。1 点ずつ式で突き合わせるので、どちらが抜けても落ちる。
+        /// </summary>
+        [TestMethod]
+        public void TheScUltimateShear_Follows826WithTheMaterialStrength()
+        {
+            var s = Sc();
+            var pipe = s.PrecastSteelPipe;
+
+            double sSigmaTy = 1.1 * pipe.F;                 // (8.18) sσty = 1.1×1.5×sft = 1.1F
+            double sQ0 = 2.0 * pipe.T * (pipe.OutDia - pipe.T) * sSigmaTy / System.Math.Sqrt(3.0);
+            double sNy = sSigmaTy * pipe.As;
+
+            var c = s.GetUltimateQNInteraction(3.0, false);
+
+            for (int i = 0; i < c.Item2.Count; i++)
+            {
+                double eta = c.Item2[i] / sNy;
+                double interaction = System.Math.Abs(eta) >= 1.0
+                    ? 0.0
+                    : System.Math.Sqrt(1.0 - eta * eta);
+                double expected = 0.5 * (sQ0 * interaction);   // 0.5 = 解説の「半分程度」
+
+                Assert.AreEqual(expected, c.Item1[i],
+                    $"N={c.Item2[i]:N0} での安全限界せん断。"
+                    + "材料強度 (1.1F か F か) と鋼管寄与分 1/2 のどちらかが違います");
+            }
+        }
+
+        /// <summary>
+        /// 軸力比が 1 に達すると 0 になること、そしてそれが適用範囲の圧縮側より
+        /// <b>手前</b>で起きること。
+        ///
+        /// 鋼管部分のみが外力に抵抗すると考える (解説) 以上、軸力比の分母は鋼管だけの
+        /// 降伏軸力 sNy になる。適用範囲の分母 N0 はコンクリートを含むのでずっと大きく、
+        /// 圧縮側の適用範囲の途中で耐力が 0 になる。これは出典どおりの帰結で、誤りではない。
+        /// 取り違えて N0 で正規化すると 0 にならなくなるので、ここで押さえておく。
+        /// </summary>
+        [TestMethod]
+        public void TheScUltimateShear_ReachesZeroBeforeTheCompressiveLimit()
+        {
+            var s = Sc();
+            var pipe = s.PrecastSteelPipe;
+            double sNy = 1.1 * pipe.F * pipe.As;
+
+            Assert.IsTrue(sNy < s.ShearNMaxService,
+                "鋼管だけの降伏軸力が適用範囲の圧縮側より大きくなっています。"
+                + "軸力比の分母を N0 と取り違えていないか確認してください");
+
+            var c = s.GetUltimateQNInteraction(3.0, false);
+            Assert.IsTrue(c.Item1.Any(q => q > 0), "安全限界せん断が全区間で 0 です");
+            Assert.IsTrue(c.Item1.Any(q => q == 0), "軸力比 1 以上で 0 になっていません");
+
+            for (int i = 0; i < c.Item2.Count; i++)
+                if (System.Math.Abs(c.Item2[i]) >= sNy)
+                    Assert.AreEqual(0.0, c.Item1[i], $"N={c.Item2[i]:N0} は鋼管の降伏軸力以上なので 0 のはず");
+        }
+
+        /// <summary>
+        /// せん断スパン比が 1.0 以下のとき、未実装であることを記録に残すこと。
+        ///
+        /// a/D ≦ 1.0 では本来「コンクリート充填鋼管構造設計施工指針」の円形鋼管の
+        /// せん断強度式 (sQun が両辺に現れる 3 分岐の陰な式) による。未実装なので
+        /// (8.26)×0.5 で代替しているが、黙って代替すると気づけない。
+        ///
+        /// プログラムが持っているのは M/(Q·d) で d = 0.9D なので、a/D = 0.9 × M/(Q·d)。
+        /// 既定の M/(Q·d) = 3.0 は a/D = 2.7 で、記録は残らない。
+        /// </summary>
+        [TestMethod]
+        public void TheScUltimateShear_RecordsWhenTheShearSpanRatioIsSmall()
+        {
+            var s = Sc();
+
+            PileDesign.Common.CalcFallbackTracker.Reset();
+            s.GetUltimateQNInteraction(3.0, false);      // a/D = 2.7
+            Assert.AreEqual(0L, PileDesign.Common.CalcFallbackTracker.TotalCount,
+                "既定のせん断スパン比で記録が残っています");
+
+            PileDesign.Common.CalcFallbackTracker.Reset();
+            s.GetUltimateQNInteraction(1.0, false);      // a/D = 0.9
+            StringAssert.Contains(PileDesign.Common.CalcFallbackTracker.BuildSummary(), "せん断スパン比",
+                "a/D ≦ 1.0 なのに記録が残っていません");
+            PileDesign.Common.CalcFallbackTracker.Reset();
+        }
+
+        /// <summary>
+        /// 低減係数 β = β1·β2 が、低減後の曲線にだけ効くこと。
+        ///
+        /// 出典は β1・β2 とも 1.0 以下とし、コンクリートの圧縮破壊や鋼管の座屈が
+        /// 変形性能に影響する場合は β2 を 0.75 以下とすることが望ましいとしている。
+        /// 既定は 1.0 で、以前は固定だった。
+        /// </summary>
+        [TestMethod]
+        public void TheScUltimateShearBeta_AppliesToTheFactoredCurveOnly()
+        {
+            using var _ = TestStateScope.Enter();
+            var s = Sc();
+
+            ConcreteModelOptions.ScUltimateShearBeta1 = 1.0;
+            ConcreteModelOptions.ScUltimateShearBeta2 = 1.0;
+            var unfactored = s.GetUltimateQNInteraction(3.0, false).Item1;
+            var atOne = s.GetUltimateQNInteraction(3.0, true).Item1;
+            CollectionAssert.AreEqual(unfactored, atOne, "β = 1.0 なら低減前と同じはず");
+
+            ConcreteModelOptions.ScUltimateShearBeta2 = 0.75;
+            var stillUnfactored = s.GetUltimateQNInteraction(3.0, false).Item1;
+            var atThreeQuarters = s.GetUltimateQNInteraction(3.0, true).Item1;
+
+            CollectionAssert.AreEqual(unfactored, stillUnfactored, "低減前の曲線が β で変わっています");
+            for (int i = 0; i < unfactored.Count; i++)
+                Assert.AreEqual(0.75 * unfactored[i], atThreeQuarters[i], $"[{i}] β2 = 0.75 が効いていない");
+        }
+
+        /// <summary>
+        /// 低減係数が出典の範囲に収まること。本文は「1.0 以下の値とする」。
+        /// 0 を入れると耐力が消えて、原因の分からない検定 NG になる。
+        /// </summary>
+        [TestMethod]
+        public void TheScUltimateShearBeta_StaysWithinTheSourceRange()
+        {
+            using var _ = TestStateScope.Enter();
+
+            ConcreteModelOptions.ScUltimateShearBeta2 = 1.5;
+            Assert.AreEqual(1.0, ConcreteModelOptions.ScUltimateShearBeta2, "1.0 を超える値が通っています");
+
+            ConcreteModelOptions.ScUltimateShearBeta2 = 0.0;
+            Assert.IsTrue(ConcreteModelOptions.ScUltimateShearBeta2 > 0.0, "0 が通っています");
+
+            ConcreteModelOptions.ScUltimateShearBeta2 = double.NaN;
+            Assert.AreEqual(1.0, ConcreteModelOptions.ScUltimateShearBeta2, "数値でない値が既定に戻っていません");
+        }
+
+        /// <summary>
+        /// (8.26) が杭種ごとに書き写されていないこと。
+        ///
+        /// 同じ式が鋼管杭 (中間部・杭頭部) と SC 杭にあり、<b>SC 杭のものだけ</b>が
+        /// 材料強度に F を使っていた。曲線は描けて例外にもならないので、
+        /// 値を比べない限り気づけない。式は 1 か所に置く。
+        /// </summary>
+        [TestMethod]
+        public void The826Formula_LivesInOnePlace()
+        {
+            var root = TestSource.Dir("Graphics_r1");
+            var copies = new List<string>();
+            int scanned = 0;
+
+            foreach (var file in System.IO.Directory.GetFiles(root, "*.cs", System.IO.SearchOption.AllDirectories))
+            {
+                if (file.Contains($"{System.IO.Path.DirectorySeparatorChar}obj{System.IO.Path.DirectorySeparatorChar}")) continue;
+                if (file.Contains($"{System.IO.Path.DirectorySeparatorChar}bin{System.IO.Path.DirectorySeparatorChar}")) continue;
+                scanned++;
+
+                foreach (var line in System.IO.File.ReadAllLines(file))
+                {
+                    var t = line.Trim();
+                    if (t.StartsWith("//")) continue;
+                    // sQ0 = 2·t·(D−t)·σ/√3 の形
+                    if (t.Contains("Math.Sqrt(3") && t.Contains("2.0 *") && t.Contains("* ("))
+                        copies.Add(System.IO.Path.GetFileName(file) + ": " + t);
+                }
+            }
+
+            TestSource.AssertScanned(scanned, 300, "本体のソース");
+            Assert.AreEqual(1, copies.Count,
+                $"sQ0 = 2t(D−t)·sσty/√3 の式が {copies.Count} か所にあります。"
+                + "SteelPipeUltimateShear に 1 つだけ置いてください。"
+                + "書き写すと、材料強度を 1.1F にするのを片方だけ忘れます (実際にそうなっていました):"
+                + System.Environment.NewLine + "  "
+                + string.Join(System.Environment.NewLine + "  ", copies));
         }
     }
 }

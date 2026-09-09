@@ -264,7 +264,7 @@ namespace PileDesign.Models.InputData
                 double Zp = 4.0 / 3.0 * (Math.Pow(R, 3) - Math.Pow(R - ts, 3));
                 double sMu0 = Zp * sSigmaY;
                 double sMu = sMu0 * Math.Cos(Math.PI * eta / 2.0);
-                double sQ0 = 2.0 * ts * (d - ts) * sSigmaY / Math.Sqrt(3.0);
+                double sQ0 = SteelPipeUltimateShear.Q0(ts, d, sSigmaY);
                 double scMu = GetUltimateMomentForSpecificN(n).Item1;
 
                 double pipeShear = sQ0 * Math.Sqrt(Math.Max(0.0, 1.0 - eta * eta));
