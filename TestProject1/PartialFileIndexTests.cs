@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -79,23 +79,27 @@ namespace TestProject1
         ///
         /// 分けても、次から次へと同じファイルに足していけば元に戻る。
         /// 上限に当たったら、名前で分けられるまとまりを探すこと。
+        ///
+        /// ViewModels と Views の両方を見る。画面のコードビハインドも <c>partial</c> なので、
+        /// 同じように分けられる (MainWindow.xaml.cs は 4,090 行あった)。
         /// </summary>
         [TestMethod]
-        public void NoViewModelFile_GrowsBackToFourThousandLines()
+        public void NoScreenFile_GrowsBackToFourThousandLines()
         {
             const int Limit = 3500;
             var oversized = new List<string>();
             int scanned = 0;
 
-            foreach (var file in Directory.GetFiles(TestSource.Dir("Graphics_r1", "ViewModels"), "*.cs"))
-            {
-                scanned++;
-                int lines = File.ReadAllLines(file).Length;
-                if (lines > Limit)
-                    oversized.Add($"{Path.GetFileName(file)}: {lines:N0} 行");
-            }
+            foreach (var dir in new[] { "ViewModels", "Views" })
+                foreach (var file in Directory.GetFiles(TestSource.Dir("Graphics_r1", dir), "*.cs"))
+                {
+                    scanned++;
+                    int lines = File.ReadAllLines(file).Length;
+                    if (lines > Limit)
+                        oversized.Add($"{dir}/{Path.GetFileName(file)}: {lines:N0} 行");
+                }
 
-            TestSource.AssertScanned(scanned, 30, "ViewModels のソース");
+            TestSource.AssertScanned(scanned, 60, "画面まわりのソース");
             Assert.AreEqual(0, oversized.Count,
                 $"{Limit:N0} 行を超えたファイルがあります。名前で分けられるまとまりを探してください:"
                 + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", oversized));
