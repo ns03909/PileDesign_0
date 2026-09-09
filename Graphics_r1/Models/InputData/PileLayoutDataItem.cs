@@ -789,6 +789,12 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public double GetSeismicAxialForce(int loadCaseNo, int level)
         {
+            // 長期 (常時) は地震時軸力を持たない。VL 単独ケースがここへ来る。
+            //
+            // 以前は level が 1 でなければ無条件にレベル 2 の列を読んでいたため、
+            // level=0 を渡すと<b>黙ってレベル 2 の地震時軸力</b>が返っていた。
+            if (level == 0) return AxialForceVL;
+
             if (level == 1)
             {
                 if (loadCaseNo <= 0 || AxialForceLevel1s == null || AxialForceLevel1s.Count < loadCaseNo)

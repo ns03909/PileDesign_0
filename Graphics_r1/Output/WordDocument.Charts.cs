@@ -1208,8 +1208,11 @@ namespace PileDesign.Output
             if (anaModel == null || pli?.Beams == null) return (shearXs, shearZs, momentXs, momentZs, "限界状態");
 
             string seismicGrade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
+            // 常時 (VL, Level=0) は使用限界で見る。検定 (EvaluationService.EvaluateLongTerm) と同じ。
+            bool isLongTerm = lc.Level == 0;
             bool useDamage = lc.Level == 1 || (lc.Level == 2 && seismicGrade == "S");
-            string limitName = ConcreteModelOptions.MapLimitStateText(useDamage ? "損傷限界 (低減後)" : "安全限界 (低減後)");
+            string limitName = ConcreteModelOptions.MapLimitStateText(
+                isLongTerm ? "使用限界 (低減後)" : useDamage ? "損傷限界 (低減後)" : "安全限界 (低減後)");
 
             var soilPile = pli.SoilPile;
             if (soilPile?.PileBodySegments == null) return (shearXs, shearZs, momentXs, momentZs, limitName);
@@ -1236,9 +1239,11 @@ namespace PileDesign.Output
                 // (レベル1 は β2 を乗じない)。従来はレベル2 固定で、レベル1 の重ね線が
                 // 検定より小さい限界を描いていた。
                 var damageNM = pileSection.GetFactoredDamageNM(lc.Level == 1 ? 1 : 2);
-                var (nMs, mVals) = useDamage
-                    ? (damageNM.N, damageNM.M)
-                    : (pileSection.FactoredUltimateNM.N, pileSection.FactoredUltimateNM.M);
+                var (nMs, mVals) = isLongTerm
+                    ? (pileSection.FactoredServiceNM.N, pileSection.FactoredServiceNM.M)
+                    : useDamage
+                        ? (damageNM.N, damageNM.M)
+                        : (pileSection.FactoredUltimateNM.N, pileSection.FactoredUltimateNM.M);
                 double mLim = InterpolateLimitFromNCurve(nMs, mVals, axialN);
                 if (!double.IsNaN(mLim) && mLim > 0)
                 {
@@ -1248,9 +1253,11 @@ namespace PileDesign.Output
 
                 // せん断限界。曲げと同じく荷重レベルの曲線を使う
                 var qnLevel = pileSection.GetQNCurvesForLevel(lc.Level == 1 ? 1 : 2);
-                var (nQs, qVals) = useDamage
-                    ? (qnLevel.FactoredDamage.N, qnLevel.FactoredDamage.Q)
-                    : (qnLevel.FactoredUltimate.N, qnLevel.FactoredUltimate.Q);
+                var (nQs, qVals) = isLongTerm
+                    ? (qnLevel.FactoredService.N, qnLevel.FactoredService.Q)
+                    : useDamage
+                        ? (qnLevel.FactoredDamage.N, qnLevel.FactoredDamage.Q)
+                        : (qnLevel.FactoredUltimate.N, qnLevel.FactoredUltimate.Q);
                 double qLim = InterpolateLimitFromNCurve(nQs, qVals, axialN);
                 if (!double.IsNaN(qLim) && qLim > 0)
                 {

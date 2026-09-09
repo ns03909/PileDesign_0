@@ -1,4 +1,4 @@
-using PileDesign.Constants;
+﻿using PileDesign.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MathNet.Numerics;
@@ -204,7 +204,14 @@ namespace PileDesign.ViewModels
                 {
                     LoadName = "VL",
                     No = 1,
-                    Level = 1,
+                    // 常時 (長期)。地震動レベルではないので 0。
+                    //
+                    // 以前は 1 だったため、検定側 (EvaluationService) が長期として拾う
+                    // Level==0 に 1 件も入らず、VL が損傷限界 (レベル1) で検定されていた。
+                    // 限界線に使う軸力も、VL の常時軸力ではなく荷重ケース 1 のレベル1
+                    // 地震時軸力になっていた。画面・計算書の他の箇所は元から
+                    // 「VL 系は Level=0」と書いてある (LoadCaseNameToDisplayConverter ほか)。
+                    Level = 0,
                     LoadAngle = 0,
                     UpperMassForce = 0,
                     FoundationMassForce = 0,
@@ -369,6 +376,9 @@ namespace PileDesign.ViewModels
                         //   - CounterLoading (βU × βL < 0): 基本 ×2 (min 12) で開始、retry 最大 2
                         bool isSoilNonLinear = loadCase.SoilNonlinearityMode.IsNonLinear();
                         int configuredNStep = (!isSoilNonLinear && !loadCase.IsPileNonLinear) ? 1 :
+                            // VL は Level=0 (常時) だが、鉛直軸力を段階的に載せるので
+                            // 1 ステップでは収束しない。レベル1 と同じ分割数を使う。
+                            isVLCase ? Level1CalculationStepsCount :
                             loadCase.Level == 1 ? Level1CalculationStepsCount :
                             loadCase.Level == 2 ? Level2CalculationStepsCount :
                             1;
