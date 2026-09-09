@@ -190,7 +190,21 @@ namespace PileDesign.Models.Results
         /// 傾斜角は「限界未満なら OK」= ちょうど等しいと NG) ため、
         /// <see cref="Ratio"/> &lt;= 1 で導くと境界で判定が変わってしまう。
         /// </summary>
-        public bool IsOk { get; init; }
+        /// <remarks>
+        /// 算出元はどこも <c>!(応答 &gt; 限界)</c> の形で決めている。<b>この形は
+        /// 応答か限界が NaN のとき true (= OK) になる。</b>NaN との比較はすべて
+        /// false なので、<c>!false</c> で OK に化ける。解析が NaN を返した項目や、
+        /// 軸力が耐力曲線の範囲外で限界値が引けなかった項目が「合格」と読める。
+        ///
+        /// 算出元の 6 か所すべてで気をつけるより、ここで一度に塞ぐ。
+        /// 有限でない値は判定できないので OK にしない。
+        /// </remarks>
+        private readonly bool _isOk;
+        public bool IsOk
+        {
+            get => _isOk && double.IsFinite(Response) && double.IsFinite(Limit);
+            init => _isOk = value;
+        }
 
         /// <summary>
         /// 検定比 = 応答値 / 限界値。1 を超えるほど厳しい。
