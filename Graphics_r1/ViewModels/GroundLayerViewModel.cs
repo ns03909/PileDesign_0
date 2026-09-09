@@ -616,7 +616,7 @@ namespace PileDesign.ViewModels
         }
 
         // 階段状データの作成メソッド
-        private static (List<double>, List<double>) GetSteppedData(List<double> originalX, List<double> originalY)
+        internal static (List<double>, List<double>) GetSteppedData(List<double> originalX, List<double> originalY)
         {
             // ガード節
             if (originalX == null || originalY == null || originalX.Count == 0 || originalY.Count == 0)
@@ -659,12 +659,14 @@ namespace PileDesign.ViewModels
         }
 
         // rectangle
-        private static List<CoordinateRect> GetRectangleGeometry(List<double> originalX, List<double> originalY)
+        internal static List<CoordinateRect> GetRectangleGeometry(List<double> originalX, List<double> originalY)
         {
             List<CoordinateRect> coordinateRects = [];
-            if (originalX.Count > 0)
+            // GetSteppedData と同じガードを置く。同じ 2 本のリストを続けて渡す
+            // 使い方なので、片方だけ空や null を許すと折れ線は描けて矩形で落ちる。
+            if (originalX != null && originalY != null && originalX.Count > 0 && originalY.Count > 0)
             {
-                for (int i = 0; i < originalX.Count; i++)
+                for (int i = 0; i < originalX.Count && i < originalY.Count; i++)
                 {
                     if (i == 0)
                     {
