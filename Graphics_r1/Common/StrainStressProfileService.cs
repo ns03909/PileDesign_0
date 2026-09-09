@@ -1,4 +1,4 @@
-using PileDesign.Models.InputData;
+﻿using PileDesign.Models.InputData;
 using PileDesign.Views;
 using System;
 using System.Collections.Generic;
@@ -85,12 +85,20 @@ namespace PileDesign.Common
 
         private static bool EnsureCurves(PileSection pileSection)
         {
+            // 断面を決めるものは、M-φ キャッシュの鍵 (PileSection.GetMPhiCacheKey) と
+            // 同じだけ並べること。ここに無い諸元を変えても鍵が変わらないので、
+            // <b>前の諸元で計算したひずみ度・応力度分布がそのまま出る</b>。
+            // コンクリート単位体積重量 (→ Ec) とテンドンの降伏・引張強度が抜けていた。
+            // (StrainStressProfileSignatureTests が突き合わせる)
             string sig = string.Join("|",
                 pileSection.PileBodyType, pileSection.PileSectionType,
-                pileSection.ConcreteOutDia, pileSection.ConcreteFc, pileSection.ConcreteGsi, pileSection.ConcreteThickness,
+                pileSection.ConcreteOutDia, pileSection.ConcreteFc, pileSection.ConcreteGsi,
+                pileSection.ConcreteGamma, pileSection.ConcreteThickness,
                 pileSection.MainBarDr, pileSection.MainBarNum, pileSection.MainBarSpec, pileSection.MainBarSize,
                 pileSection.PipeDia, pileSection.PipeTs, pileSection.PipeGrade, pileSection.CorrosionDepth,
-                pileSection.TendonDp, pileSection.TendonAp, pileSection.Prestress, pileSection.PileDiameter,
+                pileSection.TendonDp, pileSection.TendonAp,
+                pileSection.TendonSigmaPy, pileSection.TendonSigmaPu,
+                pileSection.Prestress, pileSection.PileDiameter,
                 PileDesign.Models.InputData.ConcreteModelOptions.Signature());
 
             if (_sig == sig && _section != null && _curves != null) return true;
