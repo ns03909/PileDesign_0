@@ -2615,7 +2615,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     <tr><td><img class="button-icon" src="icons/SaveFileAs.svg" alt="">名前を付けて保存</td><td>Ctrl+Shift+S</td><td>新しいファイル名を指定して保存します</td></tr>
                     <tr><td><img class="button-icon" src="icons/DocxFileOutput.svg" alt="">Docx 計算書出力</td><td>Ctrl+Shift+W</td><td>計算書出力ウィンドウを開き、含める項目を選択して Word (.docx) ファイルとして出力します</td></tr>
                     <tr><td><img class="button-icon" src="icons/Examples.png" alt="">計算例</td><td>-</td><td>出典別 (建築基礎構造設計指針 2019 / 建築基礎構造設計例集 2024 / 基礎構造の設計 2023（関東支部）) のサンプルプロジェクト一覧から選択してロード</td></tr>
-                    <tr><td><img class="button-icon" src="icons/Display.png" alt="">オプション</td><td>-</td><td>「保存オプション (手動保存・自動保存それぞれに解析結果を含めるか)」と「ファイル関連付け (.pdj を PileDesign に関連付ける)」を設定します</td></tr>
+                    <tr><td><img class="button-icon" src="icons/Display.svg" alt="">オプション</td><td>-</td><td>「保存オプション (手動保存・自動保存それぞれに解析結果を含めるか)」と「ファイル関連付け (.pdj を PileDesign に関連付ける)」を設定します</td></tr>
                 </tbody>
             </table>
             <p style="font-size: 0.92em; color: #555;">
@@ -2869,9 +2869,6 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 <li id="fund-opt-compression"><strong>圧縮側の折れ点応力度</strong>: 既定（基礎部材の強度と変形性能）は $\xi F_c$（Gsi&middot;Fc）です。
                     代替の<strong>「0.85&middot;Fc とする」</strong>を選ぶと $0.85\,F_c$ とします（$\xi$ は乗じません）。</li>
             </ul>
-            <p>
-                上記3項目は M-&phi; を変化させるため、変更すると既存の解析結果は確認のうえ削除されます（杭要素分割＝メッシュは保持）。
-            </p>
             <h4 style="font-weight: bold;">許容耐力・終局強度の準拠</h4>
             <p>
                 使用限界・損傷限界の許容応力度と安全限界の耐力を、既定（基礎部材の強度と変形性能）と
@@ -2911,9 +2908,6 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 <li id="fund-opt-rebar11f"><strong>鉄筋の降伏応力度</strong>: 既定（基礎部材の強度と変形性能）は規格降伏点 $\sigma_y$ で降伏する完全バイリニア型（$\sigma=\pm\sigma_y$ 頭打ち、SD345→345・SD390→390 N/mm² 等）。代替の<strong>「1.1×F で降伏する完全バイリニア型とする」</strong>を選ぶと、場所打ちRC杭・場所打ち鋼管コンクリート杭の主筋について降伏応力度を $1.1\,\sigma_y$ に引き上げます（完全弾塑性）。RC基礎構造部材の耐震設計指針(案) に従い、<strong>SD490 は 1.1 倍の対象外</strong>（規格降伏点のまま）です。主筋（せん断補強以外）は圧縮・引張とも 1.1 倍の対象、安全限界にのみ適用（使用・損傷限界は $\sigma_y$）。</li>
                 <li id="fund-opt-pipe11f"><strong>鋼管の降伏応力度</strong>: 既定（基礎部材の強度と変形性能）は材料強度 $\sigma_y=1.1F$ で降伏し、降伏後のひずみ硬化（第2勾配 $E/30$）と破断応力（$\pm$引張強さ $\sigma_u$ で頭打ち）を考慮します。代替の<strong>「±1.1×F 頭打ちの完全バイリニア型とする」</strong>を選ぶと、場所打ち鋼管コンクリート杭の鋼管についてひずみ硬化・破断を廃し $\pm 1.1F$ で頭打ちの完全弾塑性とします（鋼管杭は対象外）。</li>
             </ul>
-            <p>
-                これらも M-&phi; を変化させるため、変更すると既存の解析結果は確認のうえ削除されます（杭要素分割＝メッシュは保持）。
-            </p>
 
             <h4 style="font-weight: bold;">M-φ関係の算定</h4>
             <ul>
@@ -2927,7 +2921,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     対象は場所打ちRC・場所打ち鋼管コンクリート・PHC/PRC/SC・コンクリート充填鋼管部（鋼管杭の鋼管部は対象外）
                     （詳細は<strong>「場所打ち鉄筋コンクリート杭の曲げモーメントと曲率の関係」</strong>の
                     <a href="#fiber-mphi-option">「解析用 M-φ をファイバーモデルで算定するオプション」</a>を参照）。
-                    変更すると既存の解析結果は確認のうえ削除されます（杭要素分割は保持）。</li>
+                    変更すると既存の解析結果は削除されます（上記のとおり）。</li>
             </ul>
 
             <h4 style="font-weight: bold;">SC 杭の安全限界せん断の低減係数 β</h4>
@@ -2994,7 +2988,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     ここで $_rN_c=\min(A_e f_c,\; A_e\,{}_mf_c/n)$、$_rN_t=-{}_mA\cdot{}_mf_t$、
                     $A_e$ はコンクリート断面に主筋断面積を $n$ 倍して加算した換算断面積、$n$ はヤング係数比です。<br>
                     もう一方の<strong>「断面を分割して積分する」</strong>は評定書には無い方法で、
-                    ジャパンパイル Technical Note Vol.1-5 によります。
+                    本プログラムが他の杭種で用いている求め方をそのまま適用したものです。
                     断面を中立軸に平行な微小要素に分割し、平面保持のもとで
                     $$N=\sum_i \sigma_i A_i,\qquad M=\sum_i \sigma_i A_i L_i$$
                     を積分します（鉄筋は等価な断面を持つ薄肉鋼管に置換）。
@@ -3064,7 +3058,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     $3{,}000\mu$ では限界曲率を過小評価し、$7{,}000\mu$ では実験値を上回るため、
                     $5{,}000\mu$ が安全側であると結論されています。
                     安全限界 NM 曲線と M-&phi; の終点 $(\phi_u,\ M_{u0})$ に効くため、
-                    変更すると既存の解析結果は確認のうえ削除されます（杭要素分割は保持）。
+                    変更すると既存の解析結果は削除されます（上記のとおり）。
                     解析用 M-&phi; の折れ点の取り方そのものは「基礎部材の強度と変形性能」のままです。
                     鋼管杭のコンクリート充填鋼管部は対象外です。</li>
 
@@ -10412,7 +10406,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                             目標軸力 $N$ に対応する曲げモーメントを Newton-Raphson 法で算定する。
                             基本設定で安全限界の耐力を「耐震設計指針(案)による」とした場合は、安全限界 NM 曲線のみ、鋼管内コンクリートを e 関数法、鋼管を圧縮側 0.85×引張強さ・引張側 引張強さで頭打ちのトリリニアとして算定する（解析用 M-φ は常にバイリニア）。
                         </li>
-                        <li><span class="symbol-label">$\beta_1, \beta_2$</span>SC 系断面に対し $\beta_1=\beta_2=1.0$ とする (レベル 1・レベル 2 同値)。</li>
+                        <li><span class="symbol-label">$\beta_1, \beta_2$</span>場所打ち鋼管コンクリート杭では $\beta_1=\beta_2=1.0$ とする (レベル 1・レベル 2 同値)。SC 杭の低減係数とは別です。</li>
                     </ul>
 
 
@@ -10474,7 +10468,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     </figure>
 
                     <figure>
-                        <img src="images/解説図1.1r1.png" alt="___" width="600">
+                        <img src="images/解説図1.1_r1.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図1.1r1</figcaption>
                     </figure>
 
@@ -10489,7 +10483,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     </figure>
 
                     <!--             <figure>
-                                    <img src="解説図2.2a.png" alt="___" width="600">
+                                    <img src="images/解説図2.2a.png" alt="___" width="600">
                                     <figcaption>基礎地盤の強度と変形性能　解説図2.2a</figcaption>
                                 </figure>  -->
 

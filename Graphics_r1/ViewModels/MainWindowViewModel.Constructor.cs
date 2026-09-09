@@ -48,6 +48,9 @@ namespace PileDesign.ViewModels
         public DocxOutputViewModel DocxOutput => _docxOutput ??= new DocxOutputViewModel(this);
 
 
+        // クロススレッドで AnalysisResultContentOption を変更したときに CollectionView が例外を出すのを防ぐための同期ロック
+        private readonly object _analysisResultContentOptionLock = new();
+
         // コンストラクタ //
         /// <summary>
         /// 解析結果コンテンツの正規並び順（水平解析→沈下解析）。
@@ -73,28 +76,67 @@ namespace PileDesign.ViewModels
 
         private bool _reorderingAnalysisContentOption;
 
+        /// <summary>
+        /// 解析結果コンテンツの候補を、決められた順に並べ替える。
+        ///
+        /// <b>並べ替えの最中に中身が変わりうる。</b> この整列は
+        /// <c>CollectionChanged</c> から <c>BeginInvoke</c> で遅らせて呼ばれるので、
+        /// 走る頃には候補が増減していることがある。並び順を先に計算してから
+        /// <c>Move</c> で当てはめるため、その間に消えた項目は
+        /// <c>IndexOf</c> が −1 を返し、<c>Move(-1, i)</c> で落ちる。
+        ///
+        /// 実際にテストの全体実行が 3 回、これでテストホストごと止まった
+        /// (ArgumentOutOfRangeException)。投げ放しの処理なので誰も受け取らない。
+        /// 実機でも、解析が終わって候補が入れ替わる瞬間に同じことが起こりうる。
+        ///
+        /// 毎回の <c>IndexOf</c> で今の位置を取り直し、見つからない項目は飛ばす。
+        /// 並べ替えは<b>やり直せる</b> (次の CollectionChanged でまた呼ばれる) ので、
+        /// 途中で諦めても順序が崩れたままにはならない。
+        /// </summary>
         private void EnsureAnalysisResultContentOrder()
         {
             if (_reorderingAnalysisContentOption) return;
             _reorderingAnalysisContentOption = true;
             try
             {
-                var sorted = AnalysisResultContentOption
-                    .Select(item => (item, idx: CanonicalAnalysisContentOrder.IndexOf(item)))
-                    .OrderBy(x => x.idx < 0 ? int.MaxValue : x.idx)
-                    .Select(x => x.item)
-                    .ToList();
-                for (int i = 0; i < sorted.Count; i++)
+                lock (_analysisResultContentOptionLock)
                 {
-                    int cur = AnalysisResultContentOption.IndexOf(sorted[i]);
-                    if (cur != i) AnalysisResultContentOption.Move(cur, i);
+                    var sorted = AnalysisResultContentOption
+                        .Select(item => (item, idx: CanonicalAnalysisContentOrder.IndexOf(item)))
+                        .OrderBy(x => x.idx < 0 ? int.MaxValue : x.idx)
+                        .Select(x => x.item)
+                        .ToList();
+
+                    ApplyContentOrder(AnalysisResultContentOption, sorted);
                 }
             }
             finally { _reorderingAnalysisContentOption = false; }
         }
 
-        // クロススレッドで AnalysisResultContentOption を変更したときに CollectionView が例外を出すのを防ぐための同期ロック
-        private readonly object _analysisResultContentOptionLock = new();
+        /// <summary>
+        /// <paramref name="desired"/> の順になるよう <paramref name="live"/> を並べ替える。
+        ///
+        /// <b><paramref name="desired"/> は古いかもしれない。</b> 並び順を決めてから
+        /// 当てはめるまでの間に、別のところが候補を足したり消したりしうる。
+        /// 見つからない項目は飛ばし、長さも都度見る。途中で諦めても、
+        /// 次の変更でまた呼ばれるので順序は崩れたままにならない。
+        ///
+        /// 分けてあるのは<b>試せるようにするため</b>。本物のすれ違いは時機次第で
+        /// 再現しないが、古い並び順を渡せば同じ状況を作れる。
+        /// </summary>
+        internal static void ApplyContentOrder(
+            System.Collections.ObjectModel.ObservableCollection<string> live,
+            System.Collections.Generic.IReadOnlyList<string> desired)
+        {
+            if (live == null || desired == null) return;
+
+            for (int i = 0; i < desired.Count && i < live.Count; i++)
+            {
+                int cur = live.IndexOf(desired[i]);
+                if (cur < 0) continue;          // 並べ替えの間に消えた
+                if (cur != i) live.Move(cur, i);
+            }
+        }
 
         /// <summary>
         /// 群杭沈下解析ボタンの可否と、押せない理由 (ツールチップ) を UI 操作のたびに問い直すハンドラ。
