@@ -95,6 +95,10 @@ namespace PileDesign.Services
                            + "どの基礎梁にもつながっていません。解析では無視します。");
             }
 
+            // 意図しない入力の可能性が高いもの (同じ位置に複数の杭など)。
+            // 解析は通るので警告にとどめる。
+            warnings.AddRange(ModelConnectivityCheck.CollectWarnings(inputModel));
+
             return warnings;
         }
 
@@ -111,6 +115,12 @@ namespace PileDesign.Services
             message = CheckSoilEmbedment(inputModel, message);
             message = CheckPileBodyGeometry(inputModel, message);
             message = CheckGroundLayerGeometry(inputModel, message);
+
+            // モデルの「つながり」。剛性行列を組んでから初めて分かる不安定は、
+            // 利用者に原因が読み取れない (「対角成分がゼロ」としか出ない)。
+            // 入力の段階で分かるものは、ここで名指しで止める。
+            foreach (var e in ModelConnectivityCheck.CollectErrors(inputModel))
+                message += "・" + e + Environment.NewLine;
 
             if (message.Length == 0) return true; // OK: ダイアログなしで続行
 
