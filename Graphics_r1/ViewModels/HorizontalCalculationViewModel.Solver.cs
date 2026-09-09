@@ -481,6 +481,10 @@ namespace PileDesign.ViewModels
         //   resetCumulative=true (default): 従来挙動 — IncrementalLoad/VectorDF と CumulativeLoad/VectorF を初期化 (=ステップ 1 から)
         //   resetCumulative=false: substep モード — IncrementalLoad/VectorDF のみ更新、累積側は保持 (=チェックポイント復元後の継続実行)
         // AxialForceIncrement は常に書換 (per-step 値、累積はモデル内で別管理)。
+        /// <summary>増分荷重をゼロに戻す。足し込む前の起点を揃えるために使う。</summary>
+        private static void ResetIncrementalLoad(FEM.Node? node)
+            => node?.SetIncrementalLoad(new FEM.NodeLoad(0, 0, 0, 0, 0, 0));
+
         private void SetVectorDF(AnaModel targetModel, LoadCase loadCase, LoadCombination loadCombination, int level, int iLC, double nStep, bool resetCumulative = true) // PileDesign
         {
             double loadAngle = loadCase.LoadAngle;
@@ -506,6 +510,25 @@ namespace PileDesign.ViewModels
             // 杭ごとに異なる軸力が FEM Fxi に現れる (前後方杭の差を再現)。
             if (InputModel.UsePsSpringAtPileTip)
             {
+                // このあとの 2 つのループ (杭軸力・杭体自重) は、同じ節点の Z に<b>足し込む</b>。
+                // 1 回の呼び出しの中では意図どおりだが、増分荷重を先に 0 に戻しておかないと
+                // 前回の呼び出しの値が残る。
+                //
+                // SetVectorDF は再試行 (nStep を倍にしてやり直す) のたびに呼ばれ、
+                // AnaModel.InitializeStates は節点荷重を戻さない。そのため nStep 16 → 32 の
+                // やり直しで最終的な鉛直荷重が 1.5N → さらにやり直せば 3N と<b>累積して</b>いた。
+                // 累積側 (CumulativeLoad) は下の resetCumulative ブロックが同じ形で戻している。
+                foreach (var pli in InputModel.PileLayoutItems)
+                {
+                    ResetIncrementalLoad(ResolvePileJointNodeInModel(targetModel, pli.No));
+
+                    var pileNodesToReset = targetModel.GetPileNodes(pli);
+                    if (pileNodesToReset == null) continue;
+                    // k=0 (杭頭節点) の自重は jointNode に集約しているので、そちらは上で戻している
+                    for (int k = 1; k < pileNodesToReset.Count; k++)
+                        ResetIncrementalLoad(pileNodesToReset[k]);
+                }
+
                 bool isVLCase = loadCase != null && loadCase.LoadName == "VL";
                 foreach (var pli in InputModel.PileLayoutItems)
                 {

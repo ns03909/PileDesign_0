@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace PileDesign.FEM
 {
@@ -623,6 +624,18 @@ namespace PileDesign.FEM
 
             if (this.KeTan != null) copy.SetKeFromMatrix(this.KeTan, isTan: true);
             if (this.KeSec != null) copy.SetKeFromMatrix(this.KeSec, isTan: false);
+
+            // 結果リストも複製する。Beam / Node / HorizontalSoilSpring は複製しており、
+            // ここだけ写していなかった。
+            //
+            // ケース並列の結果マージ (AnaModel.AppendCaseResultsToMain) は「複製した時点の
+            // 件数」を起点に差分を足す。その件数は main 側から取るので、複製が空だと
+            // ケース 2 以降は起点が件数と同じになり、for (i = snap; i < src.Count) が
+            // <b>1 件も回らない</b>。杭頭回転ばねの結果が main に入らず、
+            // EvaluationService.CheckThetaLimit は結果が無いと検定項目を作らないため、
+            // 最初のケース以外の杭頭回転角の検定が黙って消えていた。
+            copy.RotationalSpringResults = new List<RotationalSpringResult>(
+                this.RotationalSpringResults.Select(r => r.DeepCopy()));
 
             return copy;
         }
