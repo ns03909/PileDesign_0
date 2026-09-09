@@ -167,6 +167,15 @@ namespace PileDesign.ViewModels
             }
 
             HandleDataGridCellEditEnding(e);
+
+            // ΣV は全杭配置の地震時軸力の合計。荷重ケース側から見ると外の値なので、
+            // 編集したここから知らせないと、水平解析ウィンドウの ΣV / ΣH/ΣV 列が
+            // 古いまま残る。
+            if (CurrentInputModel?.LoadCasesInput?.AllSeismicLoadCases != null)
+            {
+                foreach (var lc in CurrentInputModel.LoadCasesInput.AllSeismicLoadCases)
+                    lc?.RaiseForceSummaryChanged();
+            }
         }
 
         // 前後杭更新メソッド

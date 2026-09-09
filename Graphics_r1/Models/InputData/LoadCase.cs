@@ -173,6 +173,9 @@ namespace PileDesign.Models.InputData
                 {
                     _upperMassForce = value;
                     OnPropertyChanged(nameof(UpperMassForce));
+                    // ΣH = 上部構造慣性力 + 基礎構造慣性力。知らせないと
+                    // 水平解析ウィンドウの ΣH / ΣH/ΣV 列が古いまま残る。
+                    RaiseForceSummaryChanged();
                 }
             }
         }
@@ -187,6 +190,9 @@ namespace PileDesign.Models.InputData
                 {
                     _foundationMassForce = value;
                     OnPropertyChanged(nameof(FoundationMassForce));
+                    // ΣH = 上部構造慣性力 + 基礎構造慣性力。知らせないと
+                    // 水平解析ウィンドウの ΣH / ΣH/ΣV 列が古いまま残る。
+                    RaiseForceSummaryChanged();
                 }
             }
         }
