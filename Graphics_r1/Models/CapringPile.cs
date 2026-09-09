@@ -348,6 +348,58 @@ namespace PileDesign.Models
             }
         }
 
+        /// <summary>
+        /// パイルキャップの Fc・Ec を反映し、変わったときだけ組み直す。
+        /// <see cref="Models.InputData.PileTop.ApplyPileCapConcrete"/> から呼ばれる。
+        ///
+        /// PileCapEc は Ec / Eb / Ep に入って杭頭ばねの剛性そのものになる。
+        /// これまでは杭頭部ウィンドウを<b>開いた瞬間</b>にしか同期しておらず、
+        /// Fc を変えて OK を押しても古い剛性のまま解析していた。
+        /// </summary>
+        internal void SetPileCapConcrete(double pileCapFc, double pileCapEc)
+        {
+            if (pileCapFc <= 0.0 || pileCapEc <= 0.0) return;
+            if (PileCapFc == pileCapFc && PileCapEc == pileCapEc) return;
+            PileCapFc = pileCapFc;
+            PileCapEc = pileCapEc;
+            Update();
+        }
+
+        /// <summary>
+        /// 杭体が鋼管かどうかと、その管厚を杭断面に合わせ、
+        /// 変わったときだけ組み直す。変わったら true。
+        ///
+        /// 管厚は合成 EI (Es·I_pipe + Ec·I_fill) に効くが、PC リングの自動選定と
+        /// 例題読込でしか入っていなかった。画面で編集できる値ではないので、
+        /// 杭断面が持つ値をそのまま写す。PC リングと D は利用者の選択なので触らない。
+        /// </summary>
+        internal bool SetSteelPipeFromSection(bool isConcreteFilled, double wallThickness)
+        {
+            bool changed = false;
+            if (IsConcreteFilledSteelPipe != isConcreteFilled)
+            {
+                IsConcreteFilledSteelPipe = isConcreteFilled;
+                changed = true;
+            }
+            if (isConcreteFilled && wallThickness > 0.0 && SteelPipeWallThickness != wallThickness)
+            {
+                SteelPipeWallThickness = wallThickness;
+                changed = true;
+            }
+            if (changed) Update();
+            return changed;
+        }
+
+        /// <summary>
+        /// Undo のスナップショット用。
+        ///
+        /// 子は <c>PCRing</c> と <c>TensionBar</c> (どちらもカタログの行) だけで、
+        /// どちらも差し替えでしか変わらないので <c>MemberwiseClone</c> で足りる。
+        /// 表と選択肢も差し替えのみ。<b>中身がその場で書き換わる子を足したら、
+        /// ここで写すこと</b> (<c>DeepCopyIsActuallyDeepTests</c> が見張る)。
+        /// </summary>
+        public CapringPile DeepCopy() => (CapringPile)this.MemberwiseClone();
+
         // ───────── 諸元更新 ─────────
         /// <summary>
         /// 杭体プロパティ (Ep, Ip, D) と PC リングが設定された後に呼ぶ。

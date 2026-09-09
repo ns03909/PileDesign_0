@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace PileDesign.Models.InputData
 {
@@ -51,10 +52,19 @@ namespace PileDesign.Models.InputData
             return (SoilEmbedment)this.MemberwiseClone();
         }
 
-        // 深いコピーを作成するメソッド
+        /// <summary>
+        /// 深いコピー。以前は <c>ShallowCopy()</c> と同じで、節点と土層を元と
+        /// 共有していた。<c>GroundLayers</c> は地盤側と同じ実体を指す
+        /// (根入部が参照する土層そのもの) ので、要素は写さず入れ物だけ分ける。
+        /// </summary>
         public SoilEmbedment DeepCopy()
         {
-            return (SoilEmbedment)this.MemberwiseClone();
+            var copy = (SoilEmbedment)this.MemberwiseClone();
+            copy.ZDataItems = ZDataItems == null
+                ? null! : [.. ZDataItems.Select(z => z.DeepCopy())];
+            copy.GroundLayers = GroundLayers == null
+                ? null! : [.. GroundLayers];
+            return copy;
         }
     }
 }

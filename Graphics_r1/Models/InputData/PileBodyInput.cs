@@ -676,6 +676,21 @@ namespace PileDesign.Models.InputData
             string pileTopType = PileTopType ?? string.Empty;
             string pileBodyType = PileBodyType ?? string.Empty;
 
+            // 半剛接合の 3 工法は、既にできている杭頭モデルを使い回す。入力を変えても
+            // 届かない値があったので、ここで揃える。変わっていなければ何もしない。
+            //  - パイルキャップの Fc・γ … コンストラクタ引数でしか入らなかった
+            //  - FT-Pile の杭径 … 画面の操作でしか入らず、読込直後は既定の φ600
+            PileTop?.ApplyPileCapConcrete();
+            if (PileTop?.FTPile != null)
+            {
+                var topSection = PileBodySegments?.FirstOrDefault()?.PileSection;
+                if (topSection != null)
+                {
+                    PileTop.FTPile.SetDimensionsFromSection(
+                        topSection.PileDiameter, topSection.ConcreteThickness);
+                }
+            }
+
             // 1) キャプテンパイル工法 → PileTop.CaptainPile の M-θ を採用
             if (pileTopType.Contains("キャプテンパイル工法"))
             {
@@ -789,6 +804,13 @@ namespace PileDesign.Models.InputData
                 var caprObj = PileTop?.CapringPile;
                 if (caprObj is CapringPile cpr)
                 {
+                    // 鋼管厚は杭断面が持つ。合成 EI に効くのに PC リングの自動選定でしか
+                    // 入らず、あとから断面を変えても届かなかった。ここで揃える。
+                    var topSec = PileBodySegments?.FirstOrDefault()?.PileSection;
+                    cpr.SetSteelPipeFromSection(
+                        (pileBodyType ?? "").Contains(PileTypeNames.SteelPipe),
+                        topSec?.PipeTs ?? 0.0);
+
                     try
                     {
                         // axialN は kN、CapringPile は N を期待するため×1000

@@ -511,6 +511,41 @@ namespace PileDesign.Models
             }
         }
 
+        /// <summary>
+        /// パイルキャップの Fc・Ec を反映し、変わったときだけ組み直す。
+        /// <see cref="Models.InputData.PileTop.ApplyPileCapConcrete"/> から呼ばれる。
+        ///
+        /// この 2 つはコンストラクタ引数でしか入っていなかった。CaptainPile は
+        /// 「まだ無ければ作る」形でしか生成されないので、一度できたあとに
+        /// パイルキャップの Fc を変えても届かなかった。private プロパティなので
+        /// 保存ファイルからも戻らず、読込直後は 0 になる。
+        /// </summary>
+        internal void SetPileCapConcrete(double pileCapFc, double pileCapEc)
+        {
+            if (pileCapFc <= 0.0 || pileCapEc <= 0.0) return;
+            if (PileCapFc == pileCapFc && PileCapEc == pileCapEc) return;
+            PileCapFc = pileCapFc;
+            PileCapEc = pileCapEc;
+            if (D != 0) Update();
+        }
+
+        /// <summary>
+        /// Undo のスナップショット用。子のうち<b>その場で書き換えられるもの</b>だけ写す。
+        /// <c>CTPTensionRebars</c> は <c>Update()</c> と <c>TDorTBmax</c> の代入で
+        /// 中身が書き換わる。<c>CTPConcrete</c> は <c>Update()</c> で差し替えられるが、
+        /// 念のため写す (小さい)。
+        ///
+        /// <c>PCRing</c> (カタログの行)・<c>PCRings</c>・PCD の表・選択肢は
+        /// 差し替えでしか変わらないので共有してよい。
+        /// </summary>
+        public CaptainPile DeepCopy()
+        {
+            var copy = (CaptainPile)this.MemberwiseClone();
+            copy.CTPTensionRebars = this.CTPTensionRebars?.DeepCopy()!;
+            copy.CTPConcrete = this.CTPConcrete?.DeepCopy()!;
+            return copy;
+        }
+
         // CaptainPileクラス 更新メソッド
         public void Update()
         {
@@ -1123,6 +1158,9 @@ namespace PileDesign.Models
     // CaptainPileコンクリートクラス
     public class CTPConcrete : CTPMaterial
     {
+
+        /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
+        public CTPConcrete DeepCopy() => (CTPConcrete)this.MemberwiseClone();
         internal double D { get; set; }
         internal double PileCapFc { get; set; }
         internal double Nu { get; set; }
@@ -1198,6 +1236,9 @@ namespace PileDesign.Models
     // キャプテンパイル引張鉄筋クラス
     public class CTPTensionRebars : CTPMaterial
     {
+
+        /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
+        public CTPTensionRebars DeepCopy() => (CTPTensionRebars)this.MemberwiseClone();
         public double SigmaY { get; set; }
         public double EpsilonY { get; set; }
         public double Es { get; set; } = 205_000;

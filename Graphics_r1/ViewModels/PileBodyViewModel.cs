@@ -1135,24 +1135,9 @@ namespace PileDesign.ViewModels
                 pileBody.PileTop.SelectedFTCap = (int)targetFTCap.Phi;
 
                 // 杭の寸法を設定（外径と内径）
-                // PHC杭の場合: 内径 = 外径 - 2 × コンクリート厚
-                double outerDia = pileDia;
-                double innerDia = 0;
-                var pileSection = segment0.PileSection;
-                if (pileSection != null)
-                {
-                    double thickness = pileSection.ConcreteThickness;
-                    if (thickness > 0)
-                    {
-                        innerDia = outerDia - 2 * thickness;
-                    }
-                    else
-                    {
-                        // コンクリート厚が設定されていない場合は一般的な比率で推定
-                        innerDia = outerDia * 0.6; // 仮の値
-                    }
-                }
-                ftPile.FTPilePile.SetDimensions(outerDia, innerDia);
+                // 杭径は杭断面から。導出は FTPile.DimensionsFromSection に集約
+                ftPile.SetDimensionsFromSection(
+                    pileDia, segment0.PileSection?.ConcreteThickness ?? 0.0);
 
                 // FTPileを更新
                 ftPile.Update();

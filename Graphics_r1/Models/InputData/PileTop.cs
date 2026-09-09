@@ -35,14 +35,45 @@ namespace PileDesign.Models.InputData
         public double PileCapFc
         {
             get => _pileCapFc;
-            set => SetProperty(ref _pileCapFc, value);
+            set { if (SetProperty(ref _pileCapFc, value)) ApplyPileCapConcrete(); }
         }
 
         private double _pileCapGamma = 23.0;
         public double PileCapGamma
         {
             get => _pileCapGamma;
-            set => SetProperty(ref _pileCapGamma, value);
+            set { if (SetProperty(ref _pileCapGamma, value)) ApplyPileCapConcrete(); }
+        }
+
+        /// <summary>
+        /// パイルキャップの Fc・Ec を、杭頭接合部のモデル 3 つに配る。
+        ///
+        /// 半剛接合の 3 工法 (キャプテン / FT-Pile / キャプリング) は、どれも
+        /// 「まだ無ければ作る」形でしか生成されない。Fc・γ をコンストラクタ引数で
+        /// しか渡していなかったので、一度できたあとに変えても届かなかった
+        /// (FT-Pile は受け取った値をどこからも読んでおらず、Fc=24 固定だった)。
+        /// 既定が Fc=24・γ=23 で、FT-Pile の固定値もちょうどそれと同じだったため、
+        /// <b>既定から変えたときだけ</b>ずれる形になっていた。
+        ///
+        /// 入力が変わった時 (この上の 2 つのセッター) と、解析の入口
+        /// (<c>PileBodyInput.GetMThetaRelationship</c>) の両方から呼ぶ。
+        /// 後者がいるのは、保存ファイルから読んだ直後に杭頭部ウィンドウを
+        /// 開かないまま解析できるため。値が変わらなければ何もしない。
+        /// </summary>
+        internal void ApplyPileCapConcrete()
+        {
+            double fc = PileCapFc;
+            double ec = PileCapEc;
+
+            // Ec は Fc・γ から毎回計算し直す getter なので、値そのものは常に正しい。
+            // ただし変更通知が飛ばないと、画面の Ec 欄が既定 (Fc=24 の 22,669) の
+            // ままになる。計算は合っているのに表示だけ古い、という形になるので、
+            // ここで知らせる。
+            OnPropertyChanged(nameof(PileCapEc));
+
+            CaptainPile?.SetPileCapConcrete(fc, ec);
+            FTPile?.SetPileCapConcrete(fc, ec);
+            CapringPile?.SetPileCapConcrete(fc, ec);
         }
 
         private double _pileCapEc;
@@ -261,14 +292,22 @@ namespace PileDesign.Models.InputData
         /// PileBodyType が「鋼管杭」/「場所打ち鋼管コンクリート杭」/「既製コンクリート杭」のいずれかで動作。
         /// 鋼管杭のみ付着長さ Ld・補正係数群・弾性回転剛性 Kθ(N=0) も併記する。
         /// </summary>
+        /// <summary>
+        /// パイルキャップのコンクリート諸元 (Fc・γc・Ec)。
+        /// 半剛接合の 3 工法でも杭頭 M-θ を動かすので、計算書の杭頭諸元表に
+        /// 出す。<see cref="UpdateRebarAnchorageSpecs"/> と同じ 3 行。
+        /// </summary>
+        internal IEnumerable<Spec> GetPileCapConcreteSpecs() =>
+        [
+            new Spec("パイルキャップ コンクリート基準強度", "Fc", $"{PileCapFc:N0}", "N/mm2"),
+            new Spec("パイルキャップ コンクリート単位体積重量", "γc", $"{PileCapGamma:N1}", "kN/m3"),
+            new Spec("パイルキャップ コンクリート縦弾性係数", "Ec", $"{PileCapEc:N0}", "N/mm2"),
+        ];
+
         public void UpdateRebarAnchorageSpecs(string pileBodyType, PileSection? pileSection)
         {
-            var specs = new ObservableCollection<Spec>
+            var specs = new ObservableCollection<Spec>(GetPileCapConcreteSpecs())
             {
-                // パイルキャップコンクリート
-                new Spec("パイルキャップ コンクリート基準強度", "Fc", $"{PileCapFc:N0}", "N/mm2"),
-                new Spec("パイルキャップ コンクリート単位体積重量", "γc", $"{PileCapGamma:N1}", "kN/m3"),
-                new Spec("パイルキャップ コンクリート縦弾性係数", "Ec", $"{PileCapEc:N0}", "N/mm2"),
                 // 杭頭部 RC 径
                 new Spec("杭頭部 RC径", "Dc", $"{ConcreteOutDia:N0}", "mm"),
             };
@@ -687,10 +726,25 @@ namespace PileDesign.Models.InputData
             return (PileTop)this.MemberwiseClone();
         }
 
-        // 深いコピーを作成するメソッド
+        /// <summary>
+        /// 深いコピー。Undo のスナップショットに使う。
+        ///
+        /// <b>以前は <c>ShallowCopy()</c> と 1 文字も違わなかった。</b>
+        /// 杭頭接合部の 3 モデルを元と共有するので、スナップショットが生きている
+        /// モデルと中身を共有し、PC リングの選択・FT キャップ・引張定着筋・
+        /// パイルキャップの Fc/Ec が Ctrl+Z で戻らなかった。例外にはならず、
+        /// 「戻したつもりで戻っていない」形で静かに間違える。
+        /// (<c>DeepCopyIsActuallyDeepTests</c> が見張る)
+        /// </summary>
         public PileTop DeepCopy()
         {
-            return (PileTop)this.MemberwiseClone();
+            var copy = (PileTop)this.MemberwiseClone();
+            copy.CaptainPile = this.CaptainPile?.DeepCopy()!;
+            copy.FTPile = this.FTPile?.DeepCopy()!;
+            copy.CapringPile = this.CapringPile?.DeepCopy()!;
+            copy.SelectedPileTopSpecification = this.SelectedPileTopSpecification == null
+                ? null! : [.. this.SelectedPileTopSpecification];
+            return copy;
         }
     }
 }

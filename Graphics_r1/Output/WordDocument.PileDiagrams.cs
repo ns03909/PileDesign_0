@@ -1,4 +1,4 @@
-using PileDesign.Constants;
+﻿using PileDesign.Constants;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Common;
@@ -358,6 +358,16 @@ namespace PileDesign.Output
                     }
                 }
                 if (specs == null || specs.Count == 0) continue;
+
+                // 半剛接合の 3 工法は、パイルキャップの Fc・γ・Ec が杭頭 M-θ を
+                // 動かす (FT-Pile は曲げ耐力 3/5·φc·Ap·Fc と K0、キャプテンは
+                // CTPConcrete、キャプリングは Ec/Eb/Ep)。それなのに諸元表に出て
+                // おらず、計算書だけを見ても検算できなかった。鉄筋定着工法の
+                // 諸元 (UpdateRebarAnchorageSpecs) には元から入っている。
+                if (pileBody.PileTopType is "キャプテンパイル工法" or "FT-Pile構法" or "キャプリングパイル工法")
+                {
+                    specs = [.. pileTop.GetPileCapConcreteSpecs(), .. specs];
+                }
 
                 try
                 {

@@ -225,7 +225,9 @@ namespace PileDesign.ViewModels
             PileSection = pileSection;
 
             // ShallowCopyメソッドを使用して値渡し
-            PrevPileTop = PileTop.ShallowCopy();
+            // ShallowCopy では杭頭接合部の 3 モデルを元と共有してしまい、
+            // キャンセルしても中身が戻らない。
+            PrevPileTop = PileTop.DeepCopy();
 
             PileTop.SelectedPileTopSpecification = [];
 
@@ -340,6 +342,26 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>
+        /// 戻した状態を、画面と<b>モデルの両方</b>に反映する。
+        ///
+        /// この画面は <c>PileBodies[n].PileTop</c> を参照で受け取り、
+        /// <c>{Binding PileTop.PileCapFc}</c> で直接書き換える。ViewModel 側の
+        /// プロパティを差し替えるだけでは<b>モデルには何も起きない</b>ので、
+        /// キャンセルも元に戻すも効いていなかった。
+        /// </summary>
+        private void ApplyPileTop(PileTop restored)
+        {
+            if (restored == null) return;
+            PileTop = restored;
+
+            var bodies = _mainWindowViewModel?.CurrentInputModel?.PileBodies;
+            if (bodies != null && PileBodyNo >= 1 && PileBodyNo <= bodies.Count)
+            {
+                bodies[PileBodyNo - 1].PileTop = restored;
+            }
+        }
+
         [RelayCommand]
         public void Undo()
         {
@@ -351,7 +373,7 @@ namespace PileDesign.ViewModels
             _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is PileTop state)
             {
-                PileTop = state.DeepCopy();
+                ApplyPileTop(state.DeepCopy());
             }
         }
 
@@ -361,7 +383,7 @@ namespace PileDesign.ViewModels
             _undoManager.RedoSnapshot();
             if (_undoManager.CurrentState is PileTop state)
             {
-                PileTop = state.DeepCopy();
+                ApplyPileTop(state.DeepCopy());
             }
         }
 
@@ -378,7 +400,7 @@ namespace PileDesign.ViewModels
         private void OnCancel()
         {
             // プロパティを前回の保存時の値に戻す
-            PileTop = PrevPileTop.ShallowCopy();
+            ApplyPileTop(PrevPileTop.DeepCopy());
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 

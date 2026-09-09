@@ -8,6 +8,9 @@ namespace PileDesign.Models
     // FTパイル引張鉄筋クラス
     public class FTPileTensionBars : BaseModel
     {
+
+        /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
+        public FTPileTensionBars DeepCopy() => (FTPileTensionBars)this.MemberwiseClone();
         // 引張鉄筋
         public string[] TensionAnchorGradeOption { get; private set; } =
         [
@@ -61,19 +64,43 @@ namespace PileDesign.Models
     // FTパイルキャップクラス
     public class FTPileCap : BaseModel
     {
+
+        /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
+        public FTPileCap DeepCopy() => (FTPileCap)this.MemberwiseClone();
+        // [JsonInclude] が要る理由は FTPilePile.D1 のコメントを参照。
+        [System.Text.Json.Serialization.JsonInclude]
         public double Fc { get; private set; } = 24.0;// パイルキャップのコンクリートの設計基準強度(N/mm2)
+        [System.Text.Json.Serialization.JsonInclude]
         public double E { get; private set; } = 33_500.0 * Math.Pow(23.0 / 24.0, 2.0) * Math.Pow(24.0 / 60, 1.0 / 3.0); // パイルキャップコンクリートの弾性係数（N/mm2）
         public double Density { get; private set; } = 23.0;
         public double Nu { get; private set; } = 0.2; // パイルキャップコンクリートのポアソン比
         public double Ac { get; private set; } // 支承面積（パイルキャップ面積）(m2)
-        private double PileCapFc { get; set; }
-        private double PileCapEc { get; set; }
+
+        // パラメータなしコンストラクタ（System.Text.Json デシリアライズ用）。
+        // Fc / E はセッターが private なので逆直列化されない。読込後は
+        // PileTop.ApplyPileCapConcrete() が入力値を入れ直す。
+        public FTPileCap() { }
 
         // FTパイルキャップクラスコンストラクタ
         public FTPileCap(double pileCapFc, double pileCapEc)
         {
-            PileCapFc = pileCapFc;
-            PileCapEc = pileCapEc;
+            SetPileCapConcrete(pileCapFc, pileCapEc);
+        }
+
+        /// <summary>
+        /// 杭頭部ウィンドウの「パイルキャップ」で入力された Fc・Ec を反映する。
+        /// 反映したら true。
+        ///
+        /// 0 以下は無視する。逆直列化の途中や未入力のまま Fc=0 が入ると、
+        /// 曲げ耐力 (3/5·φc·Ap·Fc) が 0 になり、θ 上限と η が 0 除算になる。
+        /// </summary>
+        internal bool SetPileCapConcrete(double pileCapFc, double pileCapEc)
+        {
+            if (pileCapFc <= 0.0 || pileCapEc <= 0.0) return false;
+            if (Fc == pileCapFc && E == pileCapEc) return false;
+            Fc = pileCapFc;
+            E = pileCapEc;
+            return true;
         }
 
         public void UpdateAc(double d)
@@ -85,8 +112,17 @@ namespace PileDesign.Models
     // FTパイル杭クラス
     public class FTPilePile : BaseModel
     {
+
+        /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
+        public FTPilePile DeepCopy() => (FTPilePile)this.MemberwiseClone();
+        // [JsonInclude] が要る。private セッターは既定では逆直列化されないので、
+        // 付けないと保存ファイルから読んだときに既定の 600 / 400 に戻る。
+        // ファイルには正しい値が書いてあるので、ファイルを見ても気づけない。
+        [System.Text.Json.Serialization.JsonInclude]
         public double D1 { get; private set; } = 600.0; // 杭の外径
+        [System.Text.Json.Serialization.JsonInclude]
         public double D2 { get; private set; } = 400.0; // 杭の内径
+        [System.Text.Json.Serialization.JsonInclude]
         public double Ap { get; private set; } // 杭頭面積（m2）
 
         // FTパイル杭クラスコンストラクタ
@@ -154,9 +190,6 @@ namespace PileDesign.Models
         public ObservableCollection<double> Ns { get; private set; }
         public ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> ThetasMs { get; private set; }
 
-        private double PileCapFc { get; set; }
-        private double PileCapEc { get; set; }
-
         // パラメータなしコンストラクタ（System.Text.Json デシリアライズ用）。
         // CSV テーブル読込・再計算は LoadFTCaps() と Update() を明示的に呼ぶこと。
         public FTPile() { }
@@ -167,6 +200,62 @@ namespace PileDesign.Models
             FTPileCap = new(pileCapFc, pileCapEc);
 
             LoadFTCaps();
+            Update();
+        }
+
+        /// <summary>
+        /// パイルキャップの Fc・Ec を反映し、変わったときだけ M-θ を組み直す。
+        /// <see cref="Models.InputData.PileTop.ApplyPileCapConcrete"/> から呼ばれる。
+        /// </summary>
+        /// <summary>
+        /// Undo のスナップショット用。子のうち<b>その場で書き換えられるもの</b>だけ写す。
+        /// <c>FTPileCap</c> は <c>SetPileCapConcrete</c> / <c>UpdateAc</c> で、
+        /// <c>FTPilePile</c> は <c>SetDimensions</c> で、<c>FTPileTensionBars</c> は
+        /// <c>Update</c> で中身が書き換わるので、共有すると元と一緒に動く。
+        ///
+        /// <c>FTCaps</c> (CSV の表) と <c>FTCapOption</c>、<c>Ns</c> / <c>ThetasMs</c> は
+        /// 差し替えでしか変わらないので共有してよい。
+        /// </summary>
+        public FTPile DeepCopy()
+        {
+            var copy = (FTPile)this.MemberwiseClone();
+            copy.FTPileCap = this.FTPileCap?.DeepCopy()!;
+            copy.FTPilePile = this.FTPilePile?.DeepCopy()!;
+            copy.FTPileTensionBars = this.FTPileTensionBars?.DeepCopy()!;
+            return copy;
+        }
+
+        internal void SetPileCapConcrete(double pileCapFc, double pileCapEc)
+        {
+            if (FTPileCap == null) return;
+            if (!FTPileCap.SetPileCapConcrete(pileCapFc, pileCapEc)) return;
+            Update();
+        }
+
+        /// <summary>
+        /// 杭断面から FT パイル杭体の外径・内径を決める。
+        /// コンクリート厚が未設定なら中空比 0.6 で仮に置く (元から 3 か所で
+        /// 同じ式を書いていたのをここにまとめた)。
+        /// </summary>
+        internal static (double Outer, double Inner) DimensionsFromSection(
+            double pileDiameter, double concreteThickness)
+            => (pileDiameter,
+                concreteThickness > 0 ? pileDiameter - 2.0 * concreteThickness : pileDiameter * 0.6);
+
+        /// <summary>
+        /// 杭径を杭断面に合わせ、変わったときだけ M-θ を組み直す。
+        ///
+        /// 杭径は 3 か所 (工法の選択・FT キャップの選択・杭頭部ウィンドウの初期化) から
+        /// しか入っておらず、どれも画面の操作でしか走らない。杭断面ウィンドウで杭径を
+        /// 変えても届かず、既定の φ600 / φ400 のまま耐力 (Ap 経由) と初期回転剛性
+        /// K0 (D1³ − D2³) を計算していた。解析の入口からも呼ぶ。
+        /// </summary>
+        internal void SetDimensionsFromSection(double pileDiameter, double concreteThickness)
+        {
+            if (FTPilePile == null || pileDiameter <= 0.0) return;
+            var (outer, inner) = DimensionsFromSection(pileDiameter, concreteThickness);
+            if (FTPilePile.D1 == outer && FTPilePile.D2 == inner) return;
+            FTPilePile.SetDimensions(outer, inner);
             Update();
         }
 

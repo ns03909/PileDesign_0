@@ -90,13 +90,16 @@ namespace PileDesign.Views
                 }
                 // PileBodyType を伝える (鋼管杭判定で合成EI に切替)
                 viewModel.PileTop.CapringPile.PileBodyType = pileBodyType;
-                viewModel.PileTop.CapringPile.PileCapFc = viewModel.PileTop.PileCapFc;
-                viewModel.PileTop.CapringPile.PileCapEc = viewModel.PileTop.PileCapEc;
             }
             else if (pileTopType == "鉄筋定着工法")
             {
 
             }
+
+            // 3 工法とも、既にできているものは作り直さない。パイルキャップの
+            // Fc・γ はここで入力の値に揃える (以前はキャプリングだけを、
+            // Update() を呼ばずに書き写していた)。
+            viewModel.PileTop.ApplyPileCapConcrete();
 
             //Chart関連
             ComboBoxBarNumberSquare.Visibility = Visibility.Visible;
@@ -373,13 +376,12 @@ namespace PileDesign.Views
                 {
                     viewModel.PileTop.SelectedPileTopSpecification = viewModel.PileTop.FTPile.GetCombinedSpecs();
 
-                    // 杭の寸法を設定（外径と内径）
+                    // 杭の寸法を設定（外径と内径）。導出は FTPile 側に集約
                     if (viewModel.PileSection != null)
                     {
-                        double outerDia = viewModel.PileSection.PileDiameter;
-                        double thickness = viewModel.PileSection.ConcreteThickness;
-                        double innerDia = thickness > 0 ? outerDia - 2 * thickness : outerDia * 0.6;
-                        viewModel.PileTop.FTPile.FTPilePile.SetDimensions(outerDia, innerDia);
+                        viewModel.PileTop.FTPile.SetDimensionsFromSection(
+                            viewModel.PileSection.PileDiameter,
+                            viewModel.PileSection.ConcreteThickness);
                     }
                 }
                 Recalculate();
@@ -678,19 +680,8 @@ namespace PileDesign.Views
                 ftPile.SelectedFTCapName = targetFTCap.Phi.ToString();
                 viewModel.PileTop.SelectedFTCap = (int)targetFTCap.Phi;
 
-                // 杭の寸法を設定（外径と内径）
-                double outerDia = pileDia;
-                double innerDia = 0;
-                double thickness = pileSection.ConcreteThickness;
-                if (thickness > 0)
-                {
-                    innerDia = outerDia - 2 * thickness;
-                }
-                else
-                {
-                    innerDia = outerDia * 0.6; // 仮の値
-                }
-                ftPile.FTPilePile.SetDimensions(outerDia, innerDia);
+                // 杭の寸法を設定（外径と内径）。導出は FTPile 側に集約
+                ftPile.SetDimensionsFromSection(pileDia, pileSection.ConcreteThickness);
 
                 // FTPileを更新
                 ftPile.Update();

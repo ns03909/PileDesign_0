@@ -348,6 +348,11 @@ namespace PileDesign.Models.InputData
                 ? null! : [.. this.LoadCasesLevel1.Select(loadCase => loadCase.DeepCopy())];
             copy.LoadCasesLevel2 = this.LoadCasesLevel2 == null
                 ? null! : [.. this.LoadCasesLevel2.Select(loadCase => loadCase.DeepCopy())];
+            // 鉛直荷重ケース (常時・付加・合計)。地震時ケースだけ写して、この 3 つが
+            // 抜けていた。元と同じ実体を指すので、鉛直荷重の編集が Ctrl+Z で戻らない。
+            copy.LoadCaseVL0 = this.LoadCaseVL0?.DeepCopy()!;
+            copy.LoadCaseVLadd = this.LoadCaseVLadd?.DeepCopy()!;
+            copy.LoadCaseVL = this.LoadCaseVL?.DeepCopy()!;
             return copy;
         }
     }
