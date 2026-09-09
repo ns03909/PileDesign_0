@@ -57,9 +57,23 @@ namespace TestProject1
         /// （「単体では通るが全体実行だと稀に落ちる」という形で現れる）。
         /// このテストは反復数そのものを固定するため、入口で必ず既知の状態に揃える。
         /// </summary>
+        /// <summary>
+        /// 入口で退避し、出口で必ず元へ戻す。
+        ///
+        /// 以前は入口で既定へ揃えるだけで<b>戻す処理が無かった</b>。
+        /// このテストが揃えた値のまま後続のテストが走るので、
+        /// 「順番によって結果が変わる」の元になっていた。
+        /// </summary>
+        private TestStateScope? _stateScope;
+
+        [TestCleanup]
+        public void RestoreSharedState() => _stateScope?.Dispose();
+
         [TestInitialize]
         public void ResetSharedState()
         {
+            _stateScope = TestStateScope.Enter();
+
             ConcreteModelOptions.IgnoreTensileStrength = false;
             ConcreteModelOptions.UseReducedCompression = false;
             ConcreteModelOptions.RebarYieldAt11F = false;
@@ -74,6 +88,9 @@ namespace TestProject1
             ConcreteModelOptions.UseUltimateStrain5000ForSteelPipeConcrete = false;
             ConcreteModelOptions.ExcludeRebarFromAllowableLimitForSteelPipeConcrete = false;
             ConcreteModelOptions.UseFiberNMForSteelPipeConcrete = true;
+            // 以下 2 つは、以前どの戻し処理にも入っていなかった
+            ConcreteModelOptions.ConsiderSteelPipeColumnBuckling = true;
+            ConcreteModelOptions.UseNotification1113 = false;
 
             // M-φ の静的キャッシュも入口でクリアする。
             //
