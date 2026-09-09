@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PileDesign.Models.InputData;
 
@@ -48,6 +48,29 @@ namespace TestProject1
             // N=500 は下枝 (0→1000 で 300→500) と上枝 (1000→0 で 800→400) の 2 区間に挟まる。
             // 下枝 400 / 上枝 600 なので 600。
             Assert.AreEqual(600.0, PileSection.InterpolateLimitAtAxialForce(n, m, 500), 1e-9);
+        }
+
+        /// <summary>
+        /// 曲線の<b>端ちょうど</b>の軸力でも値が引けること。
+        ///
+        /// 区間の判定は <c>targetN &lt; min || targetN &gt; max</c> で、両端を含む。
+        /// ここを <c>&lt;=</c> / <c>&gt;=</c> に変えると端が範囲外になり、NaN が返る。
+        /// 呼び出し側は NaN を「限界値が引けなかった」として項目ごと落とすので、
+        /// <b>軸力制限のちょうど境界にある杭が検定から静かに外れる。</b>
+        /// 境界は軸力制限を入れた曲線でいちばん起きやすい軸力でもある。
+        /// </summary>
+        [TestMethod]
+        public void TheExactEndsOfTheCurve_StillGiveAValue()
+        {
+            var (n, m) = ClosedCurve();
+
+            double lo = n.Min(), hi = n.Max();
+
+            Assert.IsFalse(double.IsNaN(PileSection.InterpolateLimitAtAxialForce(n, m, lo)),
+                $"引張側の端ちょうど (N={lo}) で値が引けていません。"
+                + "境界にある杭が検定から外れます");
+            Assert.IsFalse(double.IsNaN(PileSection.InterpolateLimitAtAxialForce(n, m, hi)),
+                $"圧縮側の端ちょうど (N={hi}) で値が引けていません");
         }
 
         [TestMethod]
