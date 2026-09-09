@@ -186,16 +186,50 @@ namespace PileDesign.Models.InputData
 
         }
 
+        // ── せん断の共通量 ────────────────────────────────────────────────
+        //
+        // 円形断面を等価な矩形に置き換えて評価する。3 つの限界状態で同じ値を使う。
+        // 以前は 3 か所に書き写されていた。
+
+        /// <summary>等価な幅 b = πD/4。</summary>
+        private double ShearB => Math.PI * PileDia / 4.0;
+
+        /// <summary>有効せい d = 0.9D。</summary>
+        private double ShearD => 0.9 * PileDia;
+
+        /// <summary>応力中心距離 j = (7/8)d。</summary>
+        private double ShearJ => 7.0 / 8.0 * ShearD;
+
+        /// <summary>円形断面の断面形状係数 kc。使用限界と損傷限界の式に掛かる。</summary>
+        private const double ShearKc = 0.72;
+
+        // ── 低減係数 β1・β2 ──────────────────────────────────────────────
+        //
+        // β1 は材料強度や施工のばらつきを見込む係数、β2 は繰り返しを受けたあとの
+        // 耐力低下を見込む係数。低減前 (isFactored = false) の曲線には掛けない。
+        // 値は限界状態ごとに違い、場所打ち RC では次のとおり。
+        //
+        //   使用限界   β1 = 0.9、β2 なし
+        //   損傷限界   β1 = 0.9、β2 = 0.75 (σ0 ≦ (1/3)·Gsi·Fc) / 0.65 (それ以外)
+        //              L1 は β2 を掛けない
+        //   安全限界   β1 = 0.8、β2 は損傷限界と同じ
+        //
+        // M-φ の折線終点は別の値 (0.95 / 0.80) を使う。同じ記号だが出所が違うので、
+        // ここにまとめず各所に置いてある。
+
+        /// <summary>繰り返しによる耐力低下を見込む係数 β2。軸応力度で 2 段。</summary>
+        private double ShearBeta2(double sigma0)
+            => sigma0 <= 1.0 / 3.0 * InsituConcrete.Gsi * InsituConcrete.Fc ? 0.75 : 0.65;
+
         /// <summary>
         /// 使用限界せん断力を返す。
         /// </summary>
         private double GetServiceLimitShear(double MonQd, double sigma0, bool isFactored)
         {
             double beta1 = 0.9;
-            double kc = 0.72;
-            double b = Math.PI * PileDia / 4.0;
-            double d = 0.9 * PileDia;
-            double j = 7.0 / 8.0 * d;
+            double kc = ShearKc;
+            double b = ShearB;
+            double j = ShearJ;
             if (ConcreteModelOptions.UseNotification1113Shear)
             {
                 // 告示1113(第8): 使用限界=長期許容せん断応力度 fs。許容せん断力 Q = fs·b·j
@@ -223,12 +257,14 @@ namespace PileDesign.Models.InputData
         private double GetDamageLimitShear(double MonQd, double sigma0, int level, bool isFactored)
         {
             double beta1 = 0.9;
-            double beta2 = sigma0 <= 1.0 / 3.0 * InsituConcrete.Gsi * InsituConcrete.Fc ? 0.75 : 0.65;
-            double beta = level == 1 ? beta1 : level == 2 ? beta1 * beta2 : beta1 * beta2;
-            double kc = 0.72;
-            double b = Math.PI * PileDia / 4.0;
-            double d = 0.9 * PileDia;
-            double j = 7.0 / 8.0 * d;
+            double beta2 = ShearBeta2(sigma0);
+            // 地震動レベルは 1 か 2 のどちらか (画面のラジオボタン)。L1 は β2 を掛けない。
+            // 以前は「L2 のとき β1·β2、それ以外も β1·β2」と同じ式を二度書いており、
+            // 3 通りの場合分けがあるように読めた。
+            double beta = level == 1 ? beta1 : beta1 * beta2;
+            double kc = ShearKc;
+            double b = ShearB;
+            double j = ShearJ;
             if (ConcreteModelOptions.UseNotification1113Shear)
             {
                 // 告示1113(第8): 損傷限界=短期許容せん断応力度 = 長期の 1.5 倍。Q = fs_短期·b·j
@@ -244,10 +280,9 @@ namespace PileDesign.Models.InputData
         private double GetUltimateLimitShear(double MonQd, double sigma0, double pt, double pw, double sigmaWy, bool isFactored)
         {
             double beta1 = 0.8;
-            double beta2 = sigma0 <= 1.0 / 3.0 * InsituConcrete.Gsi * InsituConcrete.Fc ? 0.75 : 0.65;
-            double b = Math.PI * PileDia / 4.0;
-            double d = 0.9 * PileDia;
-            double j = 7.0 / 8.0 * d;
+            double beta2 = ShearBeta2(sigma0);
+            double b = ShearB;
+            double j = ShearJ;
             return (isFactored ? beta1 * beta2 : 1.0) * (0.053 * Math.Pow(pt, 0.23) * (18 + InsituConcrete.Gsi * InsituConcrete.Fc) / (MonQd + 0.12) + 0.85 * Math.Sqrt(pw * sigmaWy) + 0.1 * sigma0) * b * j;
         }
 
@@ -282,7 +317,12 @@ namespace PileDesign.Models.InputData
             // β2 は σ0=(1/3)ξFc で 0.75→0.65 に切り替わる (レベル2 のみ β2 を乗じる)。
             // 閾値をまたぐ区間では同一 N の 2 点 (切替前値・切替後値) を挿入し、
             // 低減後曲線の段差を斜めでなく垂直に描く (NM 曲線の複製点方式と同じ)。
-            double nThreshold = 1.0 / 3.0 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            //
+            // σ0 は閾値そのものを渡す。以前は N に直してから Ae で割り戻しており、
+            // 6.75 が 6.749999999999999 になって 1 つ下に落ちていた。BitIncrement を
+            // 足しても 6.75 に戻るだけで、2 点とも切替前 (β2=0.75) の値になっていた。
+            double sigma0Threshold = 1.0 / 3.0 * InsituConcrete.Gsi * InsituConcrete.Fc;
+            double nThreshold = sigma0Threshold * Ae;
             bool hasBetaStep = isFactored && level == 2;
             for (int i = 0; i < iCount; i++)
             {
@@ -290,9 +330,9 @@ namespace PileDesign.Models.InputData
                 if (hasBetaStep && ns.Count > 0 && ns[^1] < nThreshold && n > nThreshold)
                 {
                     ns.Add(nThreshold);
-                    qs.Add(GetDamageLimitShear(MonQd, nThreshold / Ae, level, isFactored));                    // σ0 ≤ 閾値側 (β2=0.75)
+                    qs.Add(GetDamageLimitShear(MonQd, sigma0Threshold, level, isFactored));                    // σ0 ≤ 閾値側 (β2=0.75)
                     ns.Add(nThreshold);
-                    qs.Add(GetDamageLimitShear(MonQd, Math.BitIncrement(nThreshold / Ae), level, isFactored)); // σ0 > 閾値側 (β2=0.65)
+                    qs.Add(GetDamageLimitShear(MonQd, Math.BitIncrement(sigma0Threshold), level, isFactored)); // σ0 > 閾値側 (β2=0.65)
                 }
                 double q = GetDamageLimitShear(MonQd, n / Ae, level, isFactored);
                 ns.Add(n);
@@ -315,16 +355,19 @@ namespace PileDesign.Models.InputData
             // β2 は σ0=(1/3)ξFc で 0.75→0.65 に切り替わる。閾値をまたぐ区間では
             // 同一 N の 2 点 (切替前値・切替後値) を挿入し、低減後曲線の段差を
             // 斜めでなく垂直に描く (NM 曲線の複製点方式と同じ)。
-            double nThreshold = 1.0 / 3.0 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            // σ0 は閾値そのものを渡す (損傷限界側と同じ理由。N に直して割り戻すと
+            // 1 つ下に落ち、2 点とも切替前の値になる)。
+            double sigma0Threshold = 1.0 / 3.0 * InsituConcrete.Gsi * InsituConcrete.Fc;
+            double nThreshold = sigma0Threshold * Ae;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 if (isFactored && ns.Count > 0 && ns[^1] < nThreshold && n > nThreshold)
                 {
                     ns.Add(nThreshold);
-                    qs.Add(GetUltimateLimitShear(MonQd, nThreshold / Ae, pt, pw, sigmaWy, isFactored));                    // σ0 ≤ 閾値側 (β2=0.75)
+                    qs.Add(GetUltimateLimitShear(MonQd, sigma0Threshold, pt, pw, sigmaWy, isFactored));                    // σ0 ≤ 閾値側 (β2=0.75)
                     ns.Add(nThreshold);
-                    qs.Add(GetUltimateLimitShear(MonQd, Math.BitIncrement(nThreshold / Ae), pt, pw, sigmaWy, isFactored)); // σ0 > 閾値側 (β2=0.65)
+                    qs.Add(GetUltimateLimitShear(MonQd, Math.BitIncrement(sigma0Threshold), pt, pw, sigmaWy, isFactored)); // σ0 > 閾値側 (β2=0.65)
                 }
                 double q = GetUltimateLimitShear(MonQd, n / Ae, pt, pw, sigmaWy, isFactored);
                 ns.Add(n);
