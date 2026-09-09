@@ -12,7 +12,7 @@ namespace PileDesign.Models.InputData
     ///   sN  = 鋼管柱の軸力
     ///   sN0 = 鋼管柱の中心圧縮耐力 (= As·fy、fy は鋼管の降伏強度 1.1F)
     ///
-    ///   3|sN| + 2π·sā·sQun ≦ sN0                        → sQun = sN0/π
+    ///   3|sN| + 2π·sā·sQun &lt; sN0                        → sQun = sN0/π
     ///   2π·sā·sQun ≦ sN0 ≦ 3|sN| + 2π·sā·sQun
     ///       π²(1+sā²)sQun² + π·sā(3|sN|−sN0)sQun
     ///           − (3/2)|sN|·sN0 + (9/4)sN² − (3/4)sN0² = 0
@@ -23,9 +23,13 @@ namespace PileDesign.Models.InputData
     /// <b>この式は sQun が条件式にも入っている（陰な式）。</b> 分岐を先に決められないので、
     /// 3 つとも解いてから、自分の条件を満たすものを採る。
     ///
-    /// <b>読み方は数値で決めた。</b> 出典の紙面から不等号の向きと sN の符号の扱いを
-    /// 読み取るのが難しく、考えられる 8 通りを全部試した。軸力比 −0.3〜0.5、
-    /// せん断スパン比 0.05〜1.0 の 820 点で、
+    /// <b>分岐 1 の不等号は、出典の初出が誤っている。</b> 紙面は
+    /// 「3sN + 2π·sā·sQun ≧ sN0 の場合」となっているが、正しくは <c>&lt;</c>。
+    /// 著者に確認済み (2026-09-10)。
+    ///
+    /// <b>実装前に数値でも同じ結論に達していた。</b> 不等号の向きと sN の符号の扱いで
+    /// 考えられる 8 通りを全部試し、軸力比 −0.3〜0.5、せん断スパン比 0.05〜1.0 の
+    /// 820 点で、
     ///
     /// <list type="bullet">
     /// <item>どの分岐も当てはまらない点が 1 つも無い</item>
@@ -63,9 +67,9 @@ namespace PileDesign.Models.InputData
             double m = Math.Abs(axialForce) / axialCapacity;
             double twoPiA = 2.0 * Math.PI * a;
 
-            // ── 分岐 1: 3|sN| + 2π·sā·sQun ≦ sN0 ──
+            // ── 分岐 1: 3|sN| + 2π·sā·sQun < sN0 ──
             double q1 = 1.0 / Math.PI;
-            if (3.0 * m + twoPiA * q1 <= 1.0)
+            if (3.0 * m + twoPiA * q1 < 1.0 + Tolerance)
                 return q1 * axialCapacity;
 
             // ── 分岐 2: 2π·sā·sQun ≦ sN0 ≦ 3|sN| + 2π·sā·sQun ──
@@ -73,7 +77,9 @@ namespace PileDesign.Models.InputData
                 Math.PI * Math.PI * (1.0 + a * a),
                 Math.PI * a * (3.0 * m - 1.0),
                 -1.5 * m + 2.25 * m * m - 0.75);
-            if (IsPositive(q2) && twoPiA * q2 <= 1.0 && 1.0 <= 3.0 * m + twoPiA * q2)
+            if (IsPositive(q2)
+                && twoPiA * q2 <= 1.0 + Tolerance
+                && 1.0 <= 3.0 * m + twoPiA * q2 + Tolerance)
                 return q2 * axialCapacity;
 
             // ── 分岐 3: 2π·sā·sQun ≧ sN0 ──
@@ -81,11 +87,24 @@ namespace PileDesign.Models.InputData
                 Math.PI * Math.PI * (1.0 + 4.0 * a * a),
                 -4.0 * Math.PI * a,
                 2.25 * m * m);
-            if (IsPositive(q3) && twoPiA * q3 >= 1.0)
+            if (IsPositive(q3) && twoPiA * q3 >= 1.0 - Tolerance)
                 return q3 * axialCapacity;
 
             return 0.0;
         }
+
+        /// <summary>
+        /// 条件式を比べるときの許容差。
+        ///
+        /// 境界ちょうどの点が、丸めでどの分岐からも外れることがある。
+        /// 実際に sā = 0.425、|sN|/sN0 = 0.05 で
+        /// 3m + 2π·sā·(1/π) = 0.15 + 0.85 が 1.0 をわずかに下回り、
+        /// <b>どの分岐にも当てはまらず 0 が返って</b>いた（曲線に落ち込みができる）。
+        ///
+        /// 境界では分岐どうしが同じ値を返すので、どちらが拾っても結果は変わらない。
+        /// 拾い損ねないことのほうが大事。
+        /// </summary>
+        private const double Tolerance = 1e-9;
 
         /// <summary>
         /// せん断強度として意味のある値か。

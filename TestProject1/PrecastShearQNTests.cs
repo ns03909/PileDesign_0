@@ -401,6 +401,30 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 分岐の境目ちょうどでも、耐力が落ち込まないこと。
+        ///
+        /// 出典の分岐 1 の条件は<b>等号を含まない</b> (3|sN| + 2π·sā·sQun &lt; sN0)。
+        /// そのまま比べると、境界ちょうどの点が丸めでどの分岐からも外れて 0 が返る。
+        /// 曲線に 1 点だけ落ち込みができるが、例外にはならない。
+        ///
+        /// sā = 0.425、|sN|/sN0 = 0.05 が、ちょうど 0.15 + 0.85 = 1.0 になる点。
+        /// </summary>
+        [TestMethod]
+        public void TheShortSpanShear_DoesNotDropAtABranchBoundary()
+        {
+            // 3m + 2·sā = 1 となる (sā, m) を作って踏む
+            foreach (double aOverD in new[] { 0.1, 0.2, 0.3, 0.4, 0.425, 0.49 })
+            {
+                double m = (1.0 - 2.0 * aOverD) / 3.0;
+                double q = ScShortSpanShear.Unfactored(aOverD, 1.0, m);
+
+                Assert.AreEqual(1.0 / System.Math.PI, q, 1e-12,
+                    $"a/D={aOverD}, m={m:F6}: 境界ちょうどで sN0/π にならず {q:F6} でした。"
+                    + "どの分岐からも外れて 0 が返っていないか確認してください");
+            }
+        }
+
+        /// <summary>
         /// (7.8) が、軸力がないときの純せん断耐力 sQ0 を超えないこと。
         ///
         /// sQ0 = 2t(D−t)·sσty/√3 は鋼管が周方向にせん断降伏する値で、上限になるはず。

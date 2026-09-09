@@ -11153,7 +11153,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     </p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$3|{}_sN| + 2\pi\,{}_s\bar{a}\,{}_sQ_{un} \leq {}_sN_0 \;\Rightarrow\; {}_sQ_{un} = \frac{{}_sN_0}{\pi}$$</p>
+                            <p>$$3|{}_sN| + 2\pi\,{}_s\bar{a}\,{}_sQ_{un} \lt {}_sN_0 \;\Rightarrow\; {}_sQ_{un} = \frac{{}_sN_0}{\pi}$$</p>
                             <p>$$2\pi\,{}_s\bar{a}\,{}_sQ_{un} \leq {}_sN_0 \leq 3|{}_sN| + 2\pi\,{}_s\bar{a}\,{}_sQ_{un} \;\Rightarrow\;$$</p>
                             <p>$$\pi^2(1+{}_s\bar{a}^2)\,{}_sQ_{un}^2 + \pi\,{}_s\bar{a}\,(3|{}_sN|-{}_sN_0)\,{}_sQ_{un} - \tfrac{3}{2}|{}_sN|\,{}_sN_0 + \tfrac{9}{4}{}_sN^2 - \tfrac{3}{4}{}_sN_0^2 = 0$$</p>
                             <p>$$2\pi\,{}_s\bar{a}\,{}_sQ_{un} \geq {}_sN_0 \;\Rightarrow\; \pi^2(1+4{}_s\bar{a}^2)\,{}_sQ_{un}^2 - 4\pi\,{}_s\bar{a}\,{}_sQ_{un}\,{}_sN_0 + \tfrac{9}{4}{}_sN^2 = 0$$</p>
@@ -11162,7 +11162,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     </div>
                     <ul class="symbol-list">
                         <li class="symbol-intro">記号</li>
-                        <li><span class="symbol-label">${}_s\bar{a}$</span>せん断スパンと鋼管径の比 $= a/D$</li>
+                        <li><span class="symbol-label">${}_s\bar{a}$</span>せん断スパンと鋼管径の比 $= a/D$。
+                            $a$ は反曲点より材端までの長さ（mm）、$D$ は鋼管の径（mm）</li>
                         <li><span class="symbol-label">${}_sN$</span>鋼管柱の軸力。<strong>絶対値で入ります</strong>（引張と圧縮で同じ値になります）</li>
                         <li><span class="symbol-label">${}_sN_0$</span>鋼管柱の中心圧縮耐力 $= {}_sA_s\,f_y$。上の ${}_sN_y$ と同じ量です</li>
                     </ul>
