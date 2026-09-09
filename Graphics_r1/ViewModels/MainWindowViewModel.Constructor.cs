@@ -4223,10 +4223,20 @@ namespace PileDesign.ViewModels
                       (VerticalBeamCaseResults != null && VerticalBeamCaseResults.Count > 0) ||
                       HasGroupSettlementBeamAwareCases);
 
-            // 起動直後の「名前の無いセッション」でも自動保存を回す。
-            // 以前は「開く」「名前を付けて保存」でしか Start していなかったため、
-            // 起動して新規に入力しただけの状態は 3 分ごとの自動保存も緊急保存も動かず、
-            // 落ちると作業が丸ごと消えていた。ファイル名は Untitled_autosave_… になる。
+        }
+
+        /// <summary>
+        /// 名前の無いセッションとして自動保存を始める。<b>画面が使う ViewModel だけが呼ぶ。</b>
+        ///
+        /// 以前は「開く」「名前を付けて保存」でしか始めておらず、起動して新規に入力した
+        /// だけの状態は 3 分ごとの自動保存も緊急保存も動かなかった。落ちると作業が丸ごと消える。
+        ///
+        /// かといってコンストラクタで始めると、画面が使わない ViewModel の分まで動く。
+        /// 同じ "Untitled_autosave_&lt;秒&gt;.pdj" を取り合い、一時ファイルの作成が
+        /// 「別のプロセスが使用中」で落ちる。呼ぶのは <see cref="Views.MainWindow"/> だけ。
+        /// </summary>
+        internal void BeginAutoSaveSession()
+        {
             _autoSaveService.Start(null, CurrentInputModel, null, null);
         }
 

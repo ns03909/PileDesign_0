@@ -96,6 +96,14 @@ namespace PileDesign.Views
             // DataContextをViewModelに設定
             DataContext = _mainWindowViewModel;
 
+            // 画面が実際に使うのはこの ViewModel。緊急保存と App.InputModel の宛先にする。
+            App.CurrentMainViewModel = _mainWindowViewModel;
+
+            // 自動保存はここで 1 回だけ始める。ViewModel のコンストラクタで始めると、
+            // テストなどで作られた分まで動き、同じ名前の一時ファイルを取り合って
+            // 「別のプロセスが使用中」で落ちる。
+            _mainWindowViewModel.BeginAutoSaveSession();
+
             var viewModel = _mainWindowViewModel;
 
             // 追加: ZoomFitAction をコードビハインド実装に接続

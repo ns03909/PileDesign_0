@@ -1,4 +1,4 @@
-using PileDesign.Common.Logging;
+﻿using PileDesign.Common.Logging;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
@@ -231,7 +231,23 @@ namespace PileDesign.Services
         /// tag は "autosave" または "emergency" を渡す (ファイル名に埋め込む)。
         /// 保存する状態が無ければ null を返す。
         /// </summary>
+        /// <summary>
+        /// 書き出しの重なりを防ぐ錠。
+        ///
+        /// ファイル名は秒までなので、同じ秒に 2 回書くと同じ一時ファイルを取り合って
+        /// 「別のプロセスが使用中」で落ちる。自動保存と緊急保存が重なる場合がこれにあたる。
+        /// </summary>
+        private readonly object _saveLock = new();
+
         private string? SaveSnapshot(string tag)
+        {
+            lock (_saveLock)
+            {
+                return SaveSnapshotCore(tag);
+            }
+        }
+
+        private string? SaveSnapshotCore(string tag)
         {
             // ライブ状態を解決 (LiveStateProvider があれば最新 + 自動保存チェックボックスを反映)
             var (input, ana, vbcr) = ResolveState();

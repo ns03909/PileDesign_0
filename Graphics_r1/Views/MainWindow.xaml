@@ -51,9 +51,9 @@
         <KeyBinding Key="F7" Command="{Binding PileGroupSettlementAnalysisCommand}" />
     </Window.InputBindings>
 
-    <Window.DataContext>
-        <local:MainWindowViewModel/>
-    </Window.DataContext>
+    <!-- DataContext はコードビハインドで設定する。
+         ここで生成すると、直後に上書きされる ViewModel がもう 1 つできる
+         (重い初期化が二重に走り、自動保存も二重に始まっていた)。 -->
 
     <Window.Resources>
         <conv:BooleanToContentConverter x:Key="BooleanToContentConverter"/>

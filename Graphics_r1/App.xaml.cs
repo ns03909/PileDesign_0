@@ -63,10 +63,13 @@ namespace PileDesign
             {
                 Log.Information("App constructor start");
 
-                var mainWindowViewModel = new MainWindowViewModel();
-                CurrentMainViewModel = mainWindowViewModel;
-                // InputModel は CurrentMainViewModel から引くので、ここで別に作らない。
-                // (作っていた頃は、そちらが誰にも更新されない空のモデルとして残っていた)
+                // ここでは ViewModel を作らない。
+                //
+                // 以前は作って CurrentMainViewModel に入れていたが、画面が実際に使うのは
+                // MainWindow のコンストラクタが作るものなので、<b>誰も使わない空のモデル</b>を
+                // 握り続けていた。緊急保存も App.InputModel もそちらを見ており、
+                // 保存されるのは空、標高の逆変換も基準標高 0 のままだった。
+                // CurrentMainViewModel は MainWindow が自分を登録する。
 
                 Log.Information("App constructor complete");
             }
