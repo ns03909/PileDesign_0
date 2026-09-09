@@ -345,20 +345,81 @@ namespace TestProject1
         /// <summary>
         /// 低減係数が出典の範囲に収まること。本文は「1.0 以下の値とする」。
         /// 0 を入れると耐力が消えて、原因の分からない検定 NG になる。
+        ///
+        /// 数値でない値は<b>その係数の既定</b>に戻す。一律 1.0 に戻すと、β2 では
+        /// 既定 (0.75) より低減しない側へ動いてしまう。
         /// </summary>
         [TestMethod]
         public void TheScUltimateShearBeta_StaysWithinTheSourceRange()
         {
             using var _ = TestStateScope.Enter();
 
-            ConcreteModelOptions.ScUltimateShearBeta2 = 1.5;
-            Assert.AreEqual(1.0, ConcreteModelOptions.ScUltimateShearBeta2, "1.0 を超える値が通っています");
+            foreach (var (name, setter, getter, fallback) in new (string, System.Action<double>, System.Func<double>, double)[]
+            {
+                ("β1", v => ConcreteModelOptions.ScUltimateShearBeta1 = v,
+                       () => ConcreteModelOptions.ScUltimateShearBeta1,
+                       ConcreteModelOptions.DefaultScUltimateShearBeta1),
+                ("β2", v => ConcreteModelOptions.ScUltimateShearBeta2 = v,
+                       () => ConcreteModelOptions.ScUltimateShearBeta2,
+                       ConcreteModelOptions.DefaultScUltimateShearBeta2),
+            })
+            {
+                setter(1.5);
+                Assert.AreEqual(1.0, getter(), $"{name}: 1.0 を超える値が通っています");
 
-            ConcreteModelOptions.ScUltimateShearBeta2 = 0.0;
-            Assert.IsTrue(ConcreteModelOptions.ScUltimateShearBeta2 > 0.0, "0 が通っています");
+                setter(0.0);
+                Assert.IsTrue(getter() > 0.0, $"{name}: 0 が通っています");
 
-            ConcreteModelOptions.ScUltimateShearBeta2 = double.NaN;
-            Assert.AreEqual(1.0, ConcreteModelOptions.ScUltimateShearBeta2, "数値でない値が既定に戻っていません");
+                setter(double.NaN);
+                Assert.AreEqual(fallback, getter(), $"{name}: 数値でない値がその係数の既定に戻っていません");
+            }
+        }
+
+        /// <summary>
+        /// 既定が β1 = 1.00、β2 = 0.75 であること。
+        ///
+        /// β2 の既定を 0.75 にしたのは、出典が「コンクリートの圧縮破壊や鋼管の座屈が
+        /// 変形性能に影響を与える場合は 0.75 以下とすることが望ましい」としており、
+        /// 安全限界状態の SC 杭では通常その条件に当たるため。<b>耐力が 25% 下がる</b>ので、
+        /// 気づかずに戻すことがないよう値で押さえておく。
+        ///
+        /// あわせて、既定が 1 か所にしか書かれていないことも見る。入力の初期値・
+        /// 保存ファイルにキーが無いときの補い・画面の初期値の 3 か所に書き写すと、
+        /// 片方だけ直したときに食い違う。
+        /// </summary>
+        [TestMethod]
+        public void TheScUltimateShearBetaDefaults_AreOneAndThreeQuarters()
+        {
+            Assert.AreEqual(1.0, ConcreteModelOptions.DefaultScUltimateShearBeta1, "β1 の既定");
+            Assert.AreEqual(0.75, ConcreteModelOptions.DefaultScUltimateShearBeta2, "β2 の既定");
+
+            // 何も設定していない入力モデルが、その既定を持つこと
+            var f = new FundamentalInput();
+            Assert.AreEqual(ConcreteModelOptions.DefaultScUltimateShearBeta1, f.ScUltimateShearBeta1,
+                "入力の初期値が既定と違います");
+            Assert.AreEqual(ConcreteModelOptions.DefaultScUltimateShearBeta2, f.ScUltimateShearBeta2,
+                "入力の初期値が既定と違います");
+
+            // 既定の数値が書き写されていないこと
+            foreach (var (dir, file) in new[]
+            {
+                ("Models", "InputData/FundamentalInput.cs"),
+                ("ViewModels", "FundamentalViewModel.cs"),
+                ("ViewModels", "MainWindowViewModel.FileIO.cs"),
+            })
+            {
+                var text = TestSource.Read("Graphics_r1", dir, file.Replace('/', System.IO.Path.DirectorySeparatorChar));
+                foreach (var line in text.Split('\n'))
+                {
+                    // 大文字小文字を問わず拾う。フィールド名は _scUltimateShearBeta2 で
+                    // 頭が小文字なので、"ScUltimateShearBeta" だけを見ると空振りする。
+                    if (!line.Contains("UltimateShearBeta")) continue;
+                    if (line.TrimStart().StartsWith("//")) continue;
+                    Assert.IsFalse(line.Contains("0.75") || line.Contains("= 1.0;") || line.Contains("?? 1.0"),
+                        $"{file}: 既定の数値が書き写されています。"
+                        + $"ConcreteModelOptions.DefaultScUltimateShearBeta1/2 を使ってください:{System.Environment.NewLine}  {line.Trim()}");
+                }
+            }
         }
 
         /// <summary>

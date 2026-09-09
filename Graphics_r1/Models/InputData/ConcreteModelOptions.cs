@@ -328,13 +328,31 @@
         // 鋼管杭 (第 8 章) は解説が「算定方法が下限値に基づいていると判断し…1.0 以下とした」
         // と 1.0 を明示しているので、そちらは 1.0 固定のままにしてある。
 
+        /// <summary>
+        /// β1 の既定。設計式の信頼性に基づく低減係数で、低減しない側に置く。
+        ///
+        /// <b>既定はここだけに書く。</b> 入力の初期値・保存ファイルにキーが無いときの
+        /// 補い・画面の初期値の 3 か所に書き写すと、片方だけ直したときに食い違う。
+        /// </summary>
+        public const double DefaultScUltimateShearBeta1 = 1.0;
+
+        /// <summary>
+        /// β2 の既定。<b>0.75</b> を採る。
+        ///
+        /// 出典は「1.0 以下の値とする。ただし、コンクリートの圧縮破壊や鋼管の座屈が
+        /// 変形性能に影響を与える場合は 0.75 以下とすることが望ましい」としている。
+        /// 安全限界状態の SC 杭ではその条件に当たるのが通常なので、望ましいとされる側を
+        /// 既定にする。低減しない扱いにしたい場合は基本設定で 1.00 にできる。
+        /// </summary>
+        public const double DefaultScUltimateShearBeta2 = 0.75;
+
         /// <summary>SC 杭の安全限界せん断の低減係数 β1。1.0 以下。</summary>
         public static double ScUltimateShearBeta1
         {
             get => _scUltimateShearBeta1;
-            set => Set(ref _scUltimateShearBeta1, ClampBeta(value));
+            set => Set(ref _scUltimateShearBeta1, ClampBeta(value, DefaultScUltimateShearBeta1));
         }
-        private static double _scUltimateShearBeta1 = 1.0;
+        private static double _scUltimateShearBeta1 = DefaultScUltimateShearBeta1;
 
         /// <summary>
         /// SC 杭の安全限界せん断の低減係数 β2。1.0 以下。
@@ -343,18 +361,19 @@
         public static double ScUltimateShearBeta2
         {
             get => _scUltimateShearBeta2;
-            set => Set(ref _scUltimateShearBeta2, ClampBeta(value));
+            set => Set(ref _scUltimateShearBeta2, ClampBeta(value, DefaultScUltimateShearBeta2));
         }
-        private static double _scUltimateShearBeta2 = 1.0;
+        private static double _scUltimateShearBeta2 = DefaultScUltimateShearBeta2;
 
         /// <summary>
         /// 低減係数を出典の範囲に収める。上限 1.0 は本文の「1.0 以下の値とする」。
         /// 下限 0.01 は、0 を入れると耐力が消えて原因の分からない検定 NG になるため。
-        /// 数値でない値は既定の 1.0 に戻す。
+        /// 数値でない値は<b>その係数の既定</b>に戻す（1.0 に戻すと、β2 では
+        /// 既定より低減しない側へ動いてしまう）。
         /// </summary>
-        private static double ClampBeta(double value)
+        private static double ClampBeta(double value, double fallback)
             => double.IsNaN(value) || double.IsInfinity(value)
-                ? 1.0
+                ? fallback
                 : System.Math.Clamp(value, 0.01, 1.0);
 
         /// <summary>

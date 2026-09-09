@@ -332,7 +332,7 @@ namespace PileDesign.ViewModels
         // β2 はコンクリートの圧縮破壊や鋼管の座屈が変形性能に影響する場合、
         // 0.75 以下とすることが望ましいとされている。既定 1.0（低減しない）。
         [ObservableProperty]
-        private double _scUltimateShearBeta1 = 1.0;
+        private double _scUltimateShearBeta1 = ConcreteModelOptions.DefaultScUltimateShearBeta1;
 
         partial void OnScUltimateShearBeta1Changed(double value)
         {
@@ -345,7 +345,7 @@ namespace PileDesign.ViewModels
         }
 
         [ObservableProperty]
-        private double _scUltimateShearBeta2 = 1.0;
+        private double _scUltimateShearBeta2 = ConcreteModelOptions.DefaultScUltimateShearBeta2;
 
         partial void OnScUltimateShearBeta2Changed(double value)
         {

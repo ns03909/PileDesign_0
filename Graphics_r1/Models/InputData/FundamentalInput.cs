@@ -272,15 +272,16 @@ namespace PileDesign.Models.InputData
         // SC 杭の安全限界せん断の低減係数 β1・β2（「基礎部材の強度と変形性能」(7.8) Qu = β·sQun）。
         // どちらも 1.0 以下。β2 はコンクリートの圧縮破壊や鋼管の座屈が変形性能に影響する
         // 場合に 0.75 以下とすることが望ましい、とされている。
-        // 既定 1.0（低減しない）。旧い保存ファイルにはキーが無いのでこの初期値が効く。
-        private double _scUltimateShearBeta1 = 1.0;
+        // 既定は ConcreteModelOptions に 1 つだけ置いてある（β1 = 1.00、β2 = 0.75）。
+        // 旧い保存ファイルにはキーが無いので、この初期値がそのまま効く。
+        private double _scUltimateShearBeta1 = ConcreteModelOptions.DefaultScUltimateShearBeta1;
         public double ScUltimateShearBeta1
         {
             get => _scUltimateShearBeta1;
             set => SetProperty(ref _scUltimateShearBeta1, value);
         }
 
-        private double _scUltimateShearBeta2 = 1.0;
+        private double _scUltimateShearBeta2 = ConcreteModelOptions.DefaultScUltimateShearBeta2;
         public double ScUltimateShearBeta2
         {
             get => _scUltimateShearBeta2;

@@ -407,10 +407,11 @@
             <!-- SC 杭の安全限界せん断の低減係数 -->
             <GroupBox Header="SC 杭の安全限界せん断の低減係数 β" Margin="0,6,0,0">
                 <StackPanel Margin="6,4,6,4">
-                    <ctrl:HelpLinkButton Anchor="fund-opt-sc-shear-beta"
+                    <ctrl:HelpLinkButton Anchor="fund-opt-sc-shear-beta" Text="ヘルプ"
+                                         LinkToolTip="SC 杭の安全限界せん断の低減係数 β の説明を開きます。"
                                          HorizontalAlignment="Right" Margin="0,0,0,2"/>
                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"
-                               Text="「基礎部材の強度と変形性能」7.2 は SC 杭の安全限界せん断強度を Qu = β·sQun（β = β1·β2）とし、β1・β2 とも 1.0 以下の値とする、としています。既定は 1.0（低減しない）です。値は 0.01〜1.00 に収めます。"/>
+                               Text="「基礎部材の強度と変形性能」7.2 は SC 杭の安全限界せん断強度を Qu = β·sQun（β = β1·β2）とし、β1・β2 とも 1.0 以下の値とする、としています。値は 0.01〜1.00 に収めます。&#x0a;既定は β1 = 1.00、β2 = 0.75 です。β2 は「コンクリートの圧縮破壊や鋼管の座屈が変形性能に影響を与える場合は 0.75 以下とすることが望ましい」とされており、安全限界状態の SC 杭では通常その条件に当たるため、望ましいとされる側を既定にしています。低減しない扱いにする場合は 1.00 にしてください。"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -422,15 +423,15 @@
                         </Grid.RowDefinitions>
                         <TextBlock Text="β1（設計式の信頼性）" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"
                                    ToolTip="設計式の信頼性に基づく低減係数です。1.0 以下の値とします。"/>
-                        <TextBox Text="{Binding ScUltimateShearBeta1, StringFormat={}{0:0.##}, UpdateSourceTrigger=LostFocus}"
+                        <TextBox Text="{Binding ScUltimateShearBeta1, StringFormat={}{0:0.00}, UpdateSourceTrigger=LostFocus}"
                                  Grid.Row="0" Grid.Column="1" Margin="0,0,0,4"/>
                         <TextBlock Text="β2（変形性能・軸力保持性能）" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"
                                    ToolTip="杭の変形性能および軸力保持性能に基づく低減係数です。1.0 以下の値とします。&#x0a;コンクリートの圧縮破壊や鋼管の座屈が変形性能に影響を与える場合は 0.75 以下とすることが望ましい、とされています。"/>
-                        <TextBox Text="{Binding ScUltimateShearBeta2, StringFormat={}{0:0.##}, UpdateSourceTrigger=LostFocus}"
+                        <TextBox Text="{Binding ScUltimateShearBeta2, StringFormat={}{0:0.00}, UpdateSourceTrigger=LostFocus}"
                                  Grid.Row="1" Grid.Column="1" Margin="0,0,0,4"/>
                     </Grid>
                     <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
-                               Text="※ コンクリートの圧縮破壊や鋼管の座屈が変形性能に影響を与える場合は、β2 を 0.75 以下とすることが望ましい、とされています。鋼管杭（第 8 章）は解説が 1.0 を明示しているため、こちらは対象外です。"/>
+                               Text="※ 鋼管杭（第 8 章）は解説が「算定方法が下限値に基づいていると判断し、β1・β2 は軸力・曲げモーメント・せん断力ともに 1.0 以下とした」と 1.0 を明示しているため、こちらは対象外です。"/>
                 </StackPanel>
             </GroupBox>
 
