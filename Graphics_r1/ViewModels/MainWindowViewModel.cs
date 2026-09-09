@@ -509,14 +509,32 @@ namespace PileDesign.ViewModels
         /// ※ 以前はここに「未使用」と書いてあったが、DeepCopy の高速化 (2026-05-25) で
         ///    Undo の記録が復活しており、実装と正反対になっていた。
         /// </param>
+        /// <summary>
+        /// ダイアログが何か適用したか。
+        ///
+        /// <see cref="IDialogAppliedState"/> を実装していないダイアログは従来どおり
+        /// 「編集されたかもしれない」扱いにする (安全側)。
+        /// </summary>
+        internal static bool DialogAppliedChanges(object? dialogViewModel)
+            => dialogViewModel is not IDialogAppliedState state || state.AppliedChanges;
+
         private void OpenDialogWindowWithUndo<TViewModel, TWindow>(Action postDialogAction = null, string? undoDescription = null)
             where TViewModel : ObservableObject
             where TWindow : Window, new()
         {
-            // ダイアログを開く
-            OpenDialogWindow<TViewModel, TWindow>(this);
+            // 「入力が変更されています。再解析が必要です」の状態を控えておく。
+            // ダイアログが何も適用しなかった (キャンセル) 場合に戻すため。
+            bool changedBefore = InputChangedSinceAnalysis;
 
-            MarkPossiblyEdited();
+            // ダイアログを開く
+            var dialogViewModel = OpenDialogWindow<TViewModel, TWindow>(this);
+
+            bool applied = DialogAppliedChanges(dialogViewModel);
+
+            if (applied)
+            {
+                MarkPossiblyEdited();
+            }
 
             // 追加処理の実行
             postDialogAction?.Invoke();
@@ -527,9 +545,17 @@ namespace PileDesign.ViewModels
             // 重複するが副作用は無い (一回 Undo しても画面は変わらないだけ)。
             // 旧版は DeepCopy が 28s かかったため省略していたが、PileSection の重い computed
             // プロパティに [JsonIgnore] を付けた後は数百 ms 以下に短縮されており支障なし。
-            if (!string.IsNullOrEmpty(undoDescription))
+            if (!string.IsNullOrEmpty(undoDescription) && applied)
             {
                 SaveUndoState(undoDescription);
+            }
+
+            if (!applied)
+            {
+                // SaveUndoState は全編集の集約点なので「再解析が必要」も立ててしまう。
+                // 適用していないのだから、開く前の記録へ戻す
+                // (キャンセルしたのに脚部に「再解析が必要です」が残っていた)。
+                RestoreInputChangedSinceAnalysis(changedBefore);
             }
         }
 
@@ -2024,7 +2050,7 @@ namespace PileDesign.ViewModels
         }
 
         // ウィンドウを開くメソッド
-        private void OpenDialogWindow<TViewModel, TWindow>(MainWindowViewModel mainWindowViewModel)
+        private TViewModel OpenDialogWindow<TViewModel, TWindow>(MainWindowViewModel mainWindowViewModel)
             where TViewModel : ObservableObject
             where TWindow : Window, new()
         {
@@ -2051,6 +2077,8 @@ namespace PileDesign.ViewModels
 
             // 変更: ダイアログ後は即時実行
             UpdateWindowImmediate();
+
+            return viewModel;
         }
 
         // 基本設定ウィンドウを開くメソッド

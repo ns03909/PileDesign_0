@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
@@ -95,6 +95,69 @@ namespace TestProject1
             var confirm = ExtractMethodBody(source, "private bool ConfirmDiscardInvalidatedByInputChange(");
             StringAssert.Contains(confirm, "水平解析の結果は保持されます",
                 "水平解析の結果を保持する説明が消えている");
+        }
+
+
+        /// <summary>
+        /// キャンセルで「再解析が必要です」の表示が残らないこと。
+        ///
+        /// ダイアログを開く共通処理は、閉じたあとに必ず元に戻す履歴を 1 段積む。
+        /// そこは全編集の集約点なので、この表示も一緒に立つ。キャンセルで閉じても同じで、
+        /// 何も変えていないのに脚部に「再解析が必要です」が残っていた
+        /// (実機で確認)。
+        /// </summary>
+        [TestMethod]
+        public void Cancelling_DoesNotLeaveTheReanalysisNotice()
+        {
+            var vm = new FundamentalViewModel(new MainWindowViewModel());
+
+            vm.IgnoreConcreteTensileStrength = !vm.IgnoreConcreteTensileStrength;
+            vm.CancelCommand.Execute(null);
+
+            Assert.IsFalse(MainWindowViewModel.DialogAppliedChanges(vm),
+                "キャンセルなのに「適用した」と扱われる。"
+                + "呼び出し側が履歴を積み、再解析が必要の表示が残る");
+        }
+
+        /// <summary>OK なら適用したと申告すること。こちらは表示が立ってよい。</summary>
+        [TestMethod]
+        public void PressingOk_ReportsThatItApplied()
+        {
+            var vm = new FundamentalViewModel(new MainWindowViewModel());
+
+            vm.IgnoreConcreteTensileStrength = !vm.IgnoreConcreteTensileStrength;
+            vm.OkCommand.Execute(null);
+
+            Assert.IsTrue(MainWindowViewModel.DialogAppliedChanges(vm),
+                "OK なのに「適用していない」と扱われる");
+        }
+
+        /// <summary>
+        /// 何も申告しないダイアログは、従来どおり「編集されたかもしれない」扱いにすること。
+        /// 5 つある入力ウィンドウの挙動を変えないため。
+        /// </summary>
+        [TestMethod]
+        public void ADialogThatSaysNothing_IsStillTreatedAsEdited()
+        {
+            Assert.IsTrue(MainWindowViewModel.DialogAppliedChanges(new object()),
+                "申告しないダイアログの扱いが変わっている");
+        }
+
+        /// <summary>
+        /// 呼び出し側が、その申告を見て履歴と表示を扱うこと。
+        /// </summary>
+        [TestMethod]
+        public void TheCallerHonoursTheAppliedFlag()
+        {
+            var source = ReadSource("Graphics_r1", "ViewModels", "MainWindowViewModel.cs");
+            var body = ExtractMethodBody(source, "private void OpenDialogWindowWithUndo<TViewModel, TWindow>(");
+
+            StringAssert.Contains(body, "DialogAppliedChanges(dialogViewModel)",
+                "ダイアログの申告を見ていない");
+            StringAssert.Contains(body, "RestoreInputChangedSinceAnalysis(changedBefore)",
+                "適用していないときに、開く前の状態へ戻していない");
+            StringAssert.Contains(body, "&& applied",
+                "適用していなくても履歴を積んでいる (そこで再解析の表示が立つ)");
         }
 
         // ── ソース走査の道具 ──

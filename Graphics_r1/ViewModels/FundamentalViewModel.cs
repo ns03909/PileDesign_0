@@ -19,7 +19,7 @@ namespace PileDesign.ViewModels
     /// <see cref="ProjectInfoViewModel"/>（プロジェクト情報ウィンドウ）へ分けた。
     /// 保存先はどちらも <see cref="FundamentalInput"/> で同じインスタンスを共有する。
     /// </summary>
-    public partial class FundamentalViewModel : ObservableObject, ICloseable
+    public partial class FundamentalViewModel : ObservableObject, ICloseable, IDialogAppliedState
     {
         private readonly UndoManager _undoManager = new();
 
@@ -590,6 +590,9 @@ namespace PileDesign.ViewModels
             _pendingDiscardReasons.Clear();
         }
 
+        /// <summary>OK で閉じたか。キャンセルなら false。<see cref="IDialogAppliedState"/>。</summary>
+        public bool AppliedChanges { get; private set; }
+
         private void OnOk()
         {
             // 解析結果を捨てる確認は、ここでまとめて 1 回だけ出す。
@@ -605,6 +608,7 @@ namespace PileDesign.ViewModels
                 _pendingDiscardReasons.Clear();
             }
 
+            AppliedChanges = true;
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
@@ -612,6 +616,7 @@ namespace PileDesign.ViewModels
         {
             // 入力を元に戻す。解析結果はまだ捨てていないので、そのまま残る。
             RestorePreviousSettings();
+            AppliedChanges = false;
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
