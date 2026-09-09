@@ -27,7 +27,7 @@ namespace PileDesign.Models.InputData
         Ultimate = 1,
     }
 
-    public class InputModel : BaseModel
+    public partial class InputModel : BaseModel
     {
         private MainWindowViewModel _mainWindowViewModel;
 

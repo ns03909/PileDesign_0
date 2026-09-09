@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -119,5 +120,73 @@ namespace TestProject1
                 "未設定のコレクションが空リストに置き換わっている (保存ファイルの中身が変わる)");
         }
 
+
+        // ───────── 保存用に写した器 ─────────
+
+        /// <summary>
+        /// 保存用に写した器が、直列化した結果まで<b>元と一致する</b>こと。
+        ///
+        /// 入れ物だけ新しくして要素は共有するので、参照の畳まれ方まで含めて同じになる。
+        /// ここが崩れると、保存ファイルの中身が黙って変わる。
+        /// </summary>
+        [TestMethod]
+        public void TheSaveSnapshot_SerializesIdenticallyForAnExample()
+        {
+            var (input, _) = IntegrationTests.BuildExampleInputModel("Example9", "PileExample9");
+            Assert.IsNotNull(input, "例題を読み込めない");
+
+            var snapshot = input.SnapshotForSaving();
+
+            string a = NormalizeRuntimeIds(JsonSerializer.Serialize(input, SaveOptions()));
+            string b = NormalizeRuntimeIds(JsonSerializer.Serialize(snapshot, SaveOptions()));
+
+            Assert.AreEqual(a, b, "保存用に写した器が元と違う結果になる。保存ファイルの中身が変わる");
+        }
+
+        /// <summary>
+        /// 写した器は<b>入れ物が別</b>であること。これが保存中の編集から守る要。
+        /// 中身の要素は同じ実体を指したままであること。
+        /// </summary>
+        [TestMethod]
+        public void TheSaveSnapshot_HasItsOwnContainersButSharesTheItems()
+        {
+            var (input, _) = IntegrationTests.BuildExampleInputModel("Example9", "PileExample9");
+            Assert.IsNotNull(input, "例題を読み込めない");
+            Assert.IsTrue(input.PileLayoutItems.Count > 0, "例題に杭が無い");
+
+            var snapshot = input.SnapshotForSaving();
+
+            Assert.AreNotSame(input.PileLayoutItems, snapshot.PileLayoutItems,
+                "入れ物が同じ。保存中に杭を足し引きすると列挙が壊れる");
+            Assert.AreSame(input.PileLayoutItems[0], snapshot.PileLayoutItems[0],
+                "要素まで複製している。保存ファイルの参照の畳まれ方が変わる");
+        }
+
+        /// <summary>
+        /// 写した器を辿っているあいだに元のコレクションを編集しても、列挙が壊れないこと。
+        /// これが直したかった現象そのもの。
+        /// </summary>
+        [TestMethod]
+        public void EditingDuringSerialization_DoesNotBreakTheSnapshot()
+        {
+            var (input, _) = IntegrationTests.BuildExampleInputModel("Example9", "PileExample9");
+            Assert.IsNotNull(input, "例題を読み込めない");
+
+            // 例題は通り芯を持たないので、編集できる状態にしてから写す
+            input.GridXItems ??= [];
+
+            var snapshot = input.SnapshotForSaving();
+            int before = snapshot.GridXItems.Count;
+
+            // 直列化の最中に利用者が通り芯を足した状況。
+            // (杭の追加は画面が要るのでここでは使えない。守る仕組みは入れ物単位で同じ)
+            input.GridXItems.Add(new GridDataItem());
+
+            Assert.AreEqual(before, snapshot.GridXItems.Count,
+                "元を編集すると写した器まで動く。列挙が壊れる余地が残っている");
+
+            string json = JsonSerializer.Serialize(snapshot, SaveOptions());   // 例外が出ないこと
+            Assert.IsTrue(json.Length > 0, "写した器を直列化できない");
+        }
     }
 }

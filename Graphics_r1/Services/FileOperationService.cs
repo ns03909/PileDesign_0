@@ -50,21 +50,24 @@ namespace PileDesign.Services
 
             ValidateFinite(inputModel);
 
+            // 画面のスレッドで、編集できるコレクションだけ写しておく (理由は SnapshotForSaving)
+            var inputToSave = SnapshotForSaving(inputModel, anaModel, resultInputSnapshot);
+
             var projectData = new ProjectData
             {
                 FormatVersion = 2,  // v2: PileLayoutItems[*].Z = 接合節点 Z (旧 v1 = 杭頭 Z)
-                InputModel = inputModel,
+                InputModel = inputToSave!,
                 AnaModel = anaModel!,
                 VerticalBeamCaseResults = verticalBeamCaseResults != null
                     ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
                     : null!,
                 // 単杭沈下の荷重-沈下曲線も入力の中ではなくこの節に 1 回だけ書く。
                 // SoilPile 側は [JsonIgnore] なので、ここで書かないと保存されない。
-                SinglePileSettlementResult = Models.Results.SinglePileSettlementResult.Capture(inputModel),
+                SinglePileSettlementResult = Models.Results.SinglePileSettlementResult.Capture(inputToSave),
                 // 群杭沈下の結果は入力の中ではなく、この節に 1 回だけ書く。
                 // 入力モデルは結果への参照を持つだけ ([JsonIgnore]) なので、ここで書かないと保存されない。
                 // 水平解析の結果を保存しない設定でも沈下の結果は保存する (従来と同じ)。
-                GroupSettlementResult = inputModel?.PileGroupSettlement?.Result is { HasResults: true } gsr
+                GroupSettlementResult = inputToSave?.PileGroupSettlement?.Result is { HasResults: true } gsr
                     ? gsr : null,
                 // 解析結果を保存しないときはスナップショットも不要
                 ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
@@ -82,6 +85,43 @@ namespace PileDesign.Services
             // (旧実装は new Utf8JsonWriter(stream) を JsonWriterOptions 無しで生成しており
             //  WriteIndented が効かず常にコンパクト出力になっていた)
             WriteAtomically(filePath, stream => JsonSerializer.Serialize(stream, projectData, _jsonOptions));
+        }
+
+
+        /// <summary>
+        /// 直列化にかける入力モデルを決める。編集できるコレクションだけを写した器を返す。
+        ///
+        /// 保存は別スレッドで直列化する一方、利用者は表を編集し続けられる。生きたモデルを
+        /// そのまま辿ると列挙が壊れて保存が失敗する。入れ物だけを新しくし、要素は同じ実体を
+        /// 指したまま渡す (詳細は <see cref="InputModel.SnapshotForSaving"/>)。
+        /// 要素が同じなので保存ファイルの中身は変わらない。
+        ///
+        /// 解析結果と同じインスタンスを指しているときは<b>写さない</b>。保存ファイルは
+        /// ProjectData.InputModel → AnaModel.InputModel → ResultInputSnapshot が同じ実体を
+        /// 指すことで $ref 1 個に畳まれており、ここだけ差し替えると実体が 2 つになる。
+        /// その状態は「結果を読み込んだ直後」で、利用者が編集していない場面なので写す必要もない。
+        /// </summary>
+        private static InputModel? SnapshotForSaving(
+            InputModel? inputModel, AnaModel? anaModel, InputModel? resultInputSnapshot)
+        {
+            if (inputModel == null) return null;
+
+            if (ReferenceEquals(inputModel, resultInputSnapshot) ||
+                ReferenceEquals(inputModel, anaModel?.InputModel))
+            {
+                return inputModel;
+            }
+
+            try
+            {
+                return inputModel.SnapshotForSaving();
+            }
+            catch (Exception ex)
+            {
+                // 写せなければ従来どおり生きたモデルを書く (保存できないよりはよい)
+                Serilog.Log.Warning(ex, "[Save] 入力モデルを写せません。編集中の変更が混ざる可能性があります");
+                return inputModel;
+            }
         }
 
         /// <summary>
@@ -135,21 +175,24 @@ namespace PileDesign.Services
 
             var swTotal = Stopwatch.StartNew();
 
+            // 画面のスレッドで、編集できるコレクションだけ写しておく (理由は SnapshotForSaving)
+            var inputToSave = SnapshotForSaving(inputModel, anaModel, resultInputSnapshot);
+
             var projectData = new ProjectData
             {
                 FormatVersion = 2,  // v2: PileLayoutItems[*].Z = 接合節点 Z (旧 v1 = 杭頭 Z)
-                InputModel = inputModel,
+                InputModel = inputToSave!,
                 AnaModel = anaModel!,
                 VerticalBeamCaseResults = verticalBeamCaseResults != null
                     ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
                     : null!,
                 // 単杭沈下の荷重-沈下曲線も入力の中ではなくこの節に 1 回だけ書く。
                 // SoilPile 側は [JsonIgnore] なので、ここで書かないと保存されない。
-                SinglePileSettlementResult = Models.Results.SinglePileSettlementResult.Capture(inputModel),
+                SinglePileSettlementResult = Models.Results.SinglePileSettlementResult.Capture(inputToSave),
                 // 群杭沈下の結果は入力の中ではなく、この節に 1 回だけ書く。
                 // 入力モデルは結果への参照を持つだけ ([JsonIgnore]) なので、ここで書かないと保存されない。
                 // 水平解析の結果を保存しない設定でも沈下の結果は保存する (従来と同じ)。
-                GroupSettlementResult = inputModel?.PileGroupSettlement?.Result is { HasResults: true } gsr
+                GroupSettlementResult = inputToSave?.PileGroupSettlement?.Result is { HasResults: true } gsr
                     ? gsr : null,
                 // 解析結果を保存しないときはスナップショットも不要
                 ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
@@ -174,7 +217,7 @@ namespace PileDesign.Services
                 if (ValidateFiniteBeforeSave)
                 {
                     var swVal = Stopwatch.StartNew();
-                    ValidateFinite(inputModel);
+                    ValidateFinite(inputToSave!);
                     swVal.Stop();
                     tValidate = swVal.ElapsedMilliseconds;
                 }

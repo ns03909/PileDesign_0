@@ -41,6 +41,15 @@ namespace PileDesign.Models
         public new virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
+        /// <summary>
+        /// 変更通知の購読者をすべて外す。
+        ///
+        /// <see cref="object.MemberwiseClone"/> は field-like event のデリゲートも写すため、
+        /// 複製した器が元の購読者 (画面) を抱えたまま生き残る。
+        /// 複製を作る側は写した直後にこれを呼ぶこと。
+        /// </summary>
+        protected void ClearPropertyChangedSubscribers() => PropertyChanged = null;
+
         protected new bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
         {
             if (EqualityComparer<T>.Default.Equals(field, value)) return false;
