@@ -1808,7 +1808,9 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // E3c-3-enable: 並列投入された全ケースの完了を待つ (MDOP=1 では _caseTasks は空)
+            // E3c-3-enable: 並列投入された全ケースの完了を待つ (MDOP=1 では _caseTasks は空)。
+            // 下の finally でも待つが、あちらは例外を握る後始末。正常系でケースの失敗を
+            // 呼び出し側へ伝えるのはここ。
             if (_caseTasks.Count > 0)
             {
                 await System.Threading.Tasks.Task.WhenAll(_caseTasks);
@@ -1816,6 +1818,23 @@ namespace PileDesign.ViewModels
             }
             finally
             {
+                // 投げたケースの後始末。キャンセルで抜けるときは、まだ走っているケースが残る。
+                //
+                // 待機 (WaitAsync) はキャンセルで例外を投げ、その場で finally へ飛ぶ。
+                // 走行中のケースを待たずに semaphore を捨てると、そのケースが終わったときの
+                // Release() が「破棄済み」例外になる。この Task は誰も await しないので
+                // 未観測例外となり、App の未観測ハンドラが良性一覧に無い例外として
+                // <b>続行不可の致命的エラー</b>に流す。GC の走ったところで、キャンセルとは
+                // 無関係に見えるタイミングでアプリが落ちていた。
+                //
+                // 例外はここでは扱わない (キャンセルも失敗も呼び出し側が既に扱っている)。
+                // 待つこと自体が目的なので、待ち切ってから捨てる。
+                if (_caseTasks.Count > 0)
+                {
+                    try { await System.Threading.Tasks.Task.WhenAll(_caseTasks); }
+                    catch (Exception ex) { Log.Debug(ex, "[Case] 後始末で待機中のケースが例外終了"); }
+                }
+
                 // E3c-3: MathNet 並列度を元に戻す + semaphore 解放
                 MathNet.Numerics.Control.MaxDegreeOfParallelism = _origMathNetMDOP;
                 _caseSemaphore?.Dispose();

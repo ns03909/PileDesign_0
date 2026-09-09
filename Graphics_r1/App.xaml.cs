@@ -17,12 +17,31 @@ namespace PileDesign
     /// </summary>
     public partial class App : Application
     {
-        public static InputModel InputModel { get; set; } = null!;
+        /// <summary>
+        /// いま編集している入力モデル。
+        ///
+        /// 以前はここが起動時に作った<b>別インスタンス</b>を保持し、以後どこからも
+        /// 代入されなかった。ファイルを開いても計算例を読んでも中身は空のまま。
+        /// 標高の入力欄はこの基準標高で Z へ逆変換していたため、基準標高を 0 以外に
+        /// していると、入力した標高がそのまま Z として保存されていた
+        /// (<see cref="Converters.ZElevationConverter"/>)。
+        ///
+        /// メイン画面の現在値を返す。起動前 (画面が組み上がる前) だけ空のモデルを返す。
+        /// </summary>
+        public static InputModel InputModel
+            => CurrentMainViewModel?.CurrentInputModel ?? (_fallbackInputModel ??= new InputModel());
+
+        /// <summary>メイン画面がまだ無いときの器。実運用では使われない。</summary>
+        private static InputModel? _fallbackInputModel;
 
         /// <summary>
         /// 致命的例外時に緊急 AutoSave を呼び出すための MainWindowViewModel 参照。
         /// </summary>
-        public static MainWindowViewModel? CurrentMainViewModel { get; private set; }
+        /// <remarks>
+        /// setter が internal なのはテスト用。<see cref="InputModel"/> がここから引くので、
+        /// 「編集中のモデルを返す」ことを画面なしで確かめられるようにしてある。
+        /// </remarks>
+        public static MainWindowViewModel? CurrentMainViewModel { get; internal set; }
 
         /// <summary>
         /// コマンドライン引数 `--open &lt;path&gt;` または `&lt;path&gt;` (位置引数) で指定された
@@ -46,8 +65,8 @@ namespace PileDesign
 
                 var mainWindowViewModel = new MainWindowViewModel();
                 CurrentMainViewModel = mainWindowViewModel;
-                InputModel = new InputModel();
-                InputModel.SetMainWindowViewModel(mainWindowViewModel);
+                // InputModel は CurrentMainViewModel から引くので、ここで別に作らない。
+                // (作っていた頃は、そちらが誰にも更新されない空のモデルとして残っていた)
 
                 Log.Information("App constructor complete");
             }

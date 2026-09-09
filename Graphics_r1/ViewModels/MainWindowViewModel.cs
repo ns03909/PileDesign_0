@@ -3660,11 +3660,18 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // はい・いいえどちらでもリネームして再表示を防止（データは残すので手動復元可能）
+            // はい・いいえどちらでもリネームして再表示を防止（データは残すので手動復元可能）。
+            //
+            // 自動保存と緊急保存の両方を扱うこと。以前は "_autosave_" だけを置換していたので、
+            // 緊急保存 ("_emergency_") のファイル名は 1 文字も変わらず、同じ場所へ Move する
+            // だけだった。候補を探す側は緊急保存も拾うので、一度落ちると 24 時間のあいだ
+            // 起動のたびに同じ復元確認が出ていた。
             try
             {
-                var dismissed = latestAutoSave.Replace("_autosave_", "_autosave_dismissed_");
-                System.IO.File.Move(latestAutoSave, dismissed);
+                var dismissed = System.Text.RegularExpressions.Regex.Replace(
+                    latestAutoSave, "_(autosave|emergency)_", "_$1_dismissed_");
+                if (dismissed != latestAutoSave)
+                    System.IO.File.Move(latestAutoSave, dismissed);
             }
             catch (Exception ex) { Log.Warning(ex, "[AutoSave] リネーム失敗"); }
         }
