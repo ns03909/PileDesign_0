@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,7 +20,8 @@ namespace TestProject1
     /// <item>拡張子の食い違い（<c>icons/Display.png</c> / 実物は <c>.svg</c>）</item>
     /// </list>
     ///
-    /// コメントアウトされた <c>&lt;img&gt;</c> は表示されないので対象外です。
+    /// <b>コメントアウトされた <c>&lt;img&gt;</c> も見ます。</b> 表示はされませんが、
+    /// コメントを外したときに壊れます。実際に 9 件が <c>images/</c> 抜きのまま残っていました。
     /// </summary>
     [TestClass]
     public class HelpAssetTests
@@ -31,13 +32,12 @@ namespace TestProject1
             var dir = Path.Combine(TestSource.Root(), "Graphics_r1", "Help");
             var text = File.ReadAllText(Path.Combine(dir, "help.html"));
 
-            // コメントの中は表示されないので外す
-            string visible = Regex.Replace(text, "<!--.*?-->", "", RegexOptions.Singleline);
-
+            // コメントの中も見る。表示はされないが、コメントを外したときに壊れる。
+            // 実際に 9 件が images/ 抜きのまま残っていた。
             var missing = new List<string>();
             int scanned = 0;
 
-            foreach (Match m in Regex.Matches(visible, @"src=""([^""]+)"""))
+            foreach (Match m in Regex.Matches(text, @"src=""([^""]+)"""))
             {
                 string src = m.Groups[1].Value;
                 if (src.StartsWith("http", StringComparison.Ordinal)
