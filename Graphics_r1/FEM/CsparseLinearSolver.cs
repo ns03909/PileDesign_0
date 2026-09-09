@@ -1,4 +1,4 @@
-using CSparse;
+﻿using CSparse;
 using CSparse.Double;                // SparseMatrix
 using CSparse.Double.Factorization;  // SparseQR, SparseLU, SparseCholesky, SparseLDL
 using System;
@@ -230,8 +230,12 @@ namespace PileDesign.FEM
                 LastSuccessfulSolver = SolverKind.QR;
                 return x;
             }
-            catch
+            catch (Exception ex)
             {
+                // 並べ替えを変えて解き直す。解自体は同じなので値は変わらないが、
+                // ここに落ちるのは行列の条件が悪い合図なので記録する。
+                Serilog.Log.Debug(ex,
+                    "[CsparseLinearSolver] MinimumDegreeAtA で分解できず、Natural で解き直します");
                 long _tsFact = System.Diagnostics.Stopwatch.GetTimestamp();
                 var qr = SparseQR.Create(A, ColumnOrdering.Natural);
                 FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;

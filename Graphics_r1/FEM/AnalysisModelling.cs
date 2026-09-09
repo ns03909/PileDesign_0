@@ -490,8 +490,12 @@ namespace PileDesign.FEM
                 {
                     curve = new FEM.VerticalPileSpringCurve(points);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    // 曲線が作れないと、この節点には鉛直地盤ばねが付かない。
+                    // 杭がその深さで地盤に支えられなくなるので、黙って落とさない。
+                    PileDesign.Common.CalcFallbackTracker.Report(
+                        "杭の鉛直地盤ばね（ばね無しで継続）", ex, $"杭={pile.No}, 節点={k}");
                     if (k == pileNodeCount - 1)
                         result.PileNodes[k].SetBoundary(PileTipBoundary);
                     continue;

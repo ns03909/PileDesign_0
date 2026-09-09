@@ -1,4 +1,4 @@
-using CsvHelper;
+﻿using CsvHelper;
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -102,8 +102,13 @@ namespace PileDesign.Models.PileLibrary
                         SpiralNum = spiralNum,
                     });
                 }
-                catch
+                catch (Exception ex)
                 {
+                    // 読めない行は飛ばすが、黙って消さない。
+                    // 記録が無いと「カタログに製品が出てこない」だけが症状になり、
+                    // CSV の 1 行が壊れていることに気づけない。
+                    Serilog.Log.Warning(ex,
+                        "[CapringPCRing] CSV の %d 行目を読み飛ばしました", csv.Parser.Row);
                     continue;
                 }
             }

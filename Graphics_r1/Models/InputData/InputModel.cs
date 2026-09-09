@@ -63,6 +63,10 @@ namespace PileDesign.Models.InputData
 
         // 地盤数リスト（内部 backing field を持ち、クラス内部で更新可能にする）
         private ObservableCollection<int> _groundsInputCountList = [];
+        // [JsonIgnore]: ComboBox 用の 1..N を並べただけの派生リスト。
+        // セッターが private なので保存しても読み戻されず、読込後は
+        // UpdateCountLists() が組み直す。書き出す意味がない。
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<int> GroundsInputCountList
         {
             get => _groundsInputCountList;
@@ -85,6 +89,10 @@ namespace PileDesign.Models.InputData
 
         // 杭体数リスト（内部 backing field を持ち、クラス内部で更新可能にする）
         private ObservableCollection<int> _pileBodiesCountList = [];
+        // [JsonIgnore]: ComboBox 用の 1..N を並べただけの派生リスト。
+        // セッターが private なので保存しても読み戻されず、読込後は
+        // UpdateCountLists() が組み直す。書き出す意味がない。
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<int> PileBodiesCountList
         {
             get => _pileBodiesCountList;
@@ -1027,12 +1035,12 @@ namespace PileDesign.Models.InputData
             {
                 return PileLayoutItems.Sum(item => item.AxialForceVL0);
             }
-            catch (InvalidOperationException)
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentNullException)
             {
-                return 0.0;
-            }
-            catch (ArgumentNullException)
-            {
+                // 合計が 0 になると転倒モーメントの配分が変わる。黙って落とさない。
+                // (InvalidOperationException は、数え上げ中に杭配置が変わったとき)
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "杭軸力の合計（0 で継続）", ex, "GetSumVL");
                 return 0.0;
             }
         }
@@ -1044,12 +1052,12 @@ namespace PileDesign.Models.InputData
             {
                 return PileLayoutItems.Sum(item => item.AxialForceVLAdditional);
             }
-            catch (InvalidOperationException)
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentNullException)
             {
-                return 0.0;
-            }
-            catch (ArgumentNullException)
-            {
+                // 合計が 0 になると転倒モーメントの配分が変わる。黙って落とさない。
+                // (InvalidOperationException は、数え上げ中に杭配置が変わったとき)
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "杭軸力の合計（0 で継続）", ex, "GetSumVLadd");
                 return 0.0;
             }
         }
@@ -1060,8 +1068,10 @@ namespace PileDesign.Models.InputData
             {
                 return GetSumVL() + GetSumVLadd();
             }
-            catch (OverflowException)
+            catch (OverflowException ex)
             {
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "杭軸力の合計（0 で継続）", ex, "GetSumVLplusVLadd");
                 return 0.0;
             }
         }
@@ -1158,12 +1168,12 @@ namespace PileDesign.Models.InputData
 
                 return new Point3D(sumX / count, sumY / count, sumZ / count);
             }
-            catch (DivideByZeroException)
+            catch (Exception ex) when (ex is DivideByZeroException or InvalidOperationException)
             {
-                return new Point3D(0, 0, 0);
-            }
-            catch (InvalidOperationException)
-            {
+                // 重心が原点に落ちると荷重の分布が変わる。黙って 0 を返さない。
+                // (InvalidOperationException は、数え上げ中に杭配置が変わったとき)
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "杭群の重心（原点で継続）", ex);
                 return new Point3D(0, 0, 0);
             }
         }

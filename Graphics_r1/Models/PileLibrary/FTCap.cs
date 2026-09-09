@@ -73,13 +73,13 @@ namespace PileDesign.Models.PileLibrary
                     };
                     _FTCaps.Add(_FTCap);
                 }
-                catch (CsvHelper.TypeConversion.TypeConverterException)
+                catch (Exception ex)
                 {
-                    // 型変換失敗の行はスキップしてデバッグ出力
-                    continue;
-                }
-                catch (Exception)
-                {
+                    // 読めない行は飛ばすが、黙って消さない。
+                    // 記録が無いと「カタログに製品が出てこない」だけが症状になり、
+                    // CSV の 1 行が壊れていることに気づけない。
+                    Serilog.Log.Warning(ex,
+                        "[FTCap] CSV の %d 行目を読み飛ばしました", csv.Parser.Row);
                     continue;
                 }
             }

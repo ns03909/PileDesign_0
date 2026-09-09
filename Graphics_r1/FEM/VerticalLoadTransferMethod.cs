@@ -1055,8 +1055,12 @@ namespace PileDesign.FEM
                 {
                     newX = stiffnessMatrix.Solve(rhs);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    // 解けなかった = 収束しなかった、として呼び出し元へ返す。
+                    // 理由 (行列が特異など) は残しておかないと追えない。
+                    PileDesign.Common.CalcFallbackTracker.Report(
+                        "変位制御の求解（未収束として継続）", ex);
                     return false;
                 }
 

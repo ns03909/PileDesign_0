@@ -824,9 +824,15 @@ namespace PileDesign.Models.InputData
                 double n = GetSeismicAxialForce(loadCaseNo, level);
                 if (double.IsFinite(n) && n != 0.0) return n;
             }
-            catch (ArgumentOutOfRangeException)
+            catch (ArgumentOutOfRangeException ex)
             {
-                // 範囲外は常時軸力へフォールバック
+                // 範囲外は常時軸力へフォールバック。
+                // ここは耐力に直に効く (以前この経路の取り違えで、場所打ちRC 1200φ の
+                // 安全 M が 39% 過小、鋼管の充填鋼管部で 61% 過大になった)。
+                // 黙って落ちると気づけないので記録する。
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "設計軸力（常時軸力で継続）", ex,
+                    $"荷重ケース={loadCaseNo}, レベル={level}");
             }
             return AxialForceVL;
         }
