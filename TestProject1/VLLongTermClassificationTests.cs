@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.ObjectModel;
@@ -108,9 +108,10 @@ namespace TestProject1
         [TestMethod]
         public void ThePseudoCase_KeepsTheLevel1StepCount()
         {
-            var body = ExtractMethodBody(
+            // 目印はメソッドではなく式なので、括弧照合ではなく周辺を見る
+            var body = TestSource.Region(
                 ReadSource("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.Run.cs"),
-                "int configuredNStep =");
+                "int configuredNStep =", 800);
 
             StringAssert.Contains(body, "isVLCase ? Level1CalculationStepsCount",
                 "VL の荷重分割数がレベル1 と揃っていない。Level=0 だと 1 ステップになり収束しない");
@@ -149,12 +150,5 @@ namespace TestProject1
             return source[at..end];
         }
 
-        private static string ExtractMethodBody(string source, string signatureFragment)
-        {
-            int at = source.IndexOf(signatureFragment, StringComparison.Ordinal);
-            Assert.IsTrue(at >= 0, $"シグネチャが見つかりません: {signatureFragment}");
-            int end = Math.Min(source.Length, at + 800);
-            return source[at..end];
-        }
     }
 }
