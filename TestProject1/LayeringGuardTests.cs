@@ -70,9 +70,7 @@ namespace TestProject1
                 }
             }
 
-            // 検査対象が実際にあったこと。層ごと消えたり移動したりしたら気づけるように。
-            Assert.IsTrue(scanned >= 80,
-                $"走査したファイルが {scanned} 件しかありません。層の場所が変わっていないか確認してください");
+            TestSource.AssertScanned(scanned, 80, "画面より下の層のソース");
 
             Assert.AreEqual(0, bad.Count,
                 "下の層から画面のダイアログを出しています。CalcFallbackTracker.Report に寄せてください:"
@@ -90,6 +88,7 @@ namespace TestProject1
         {
             var root = FindSolutionRoot();
             var bad = new List<string>();
+            int scanned = 0;
 
             foreach (var layer in LowerLayers)
             {
@@ -98,6 +97,7 @@ namespace TestProject1
 
                 foreach (var file in Directory.GetFiles(dir, "*.cs", SearchOption.AllDirectories))
                 {
+                    scanned++;
                     var lines = File.ReadAllLines(file);
                     for (int i = 0; i < lines.Length; i++)
                     {
@@ -109,23 +109,14 @@ namespace TestProject1
                 }
             }
 
+            TestSource.AssertScanned(scanned, 80, "画面より下の層のソース");
+
             Assert.AreEqual(0, bad.Count,
                 "下の層が画面スレッドへ割り込んでいます (相手が終了していると永久に待ちます):"
                 + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", bad));
         }
 
-        private static string FindSolutionRoot([CallerFilePath] string thisFile = "")
-        {
-            foreach (var start in new[] { Path.GetDirectoryName(typeof(LayeringGuardTests).Assembly.Location), Path.GetDirectoryName(thisFile) })
-            {
-                if (string.IsNullOrEmpty(start)) continue;
-                for (var dir = new DirectoryInfo(start); dir != null; dir = dir.Parent)
-                {
-                    if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
-                        return dir.FullName;
-                }
-            }
-            throw new FileNotFoundException("ソリューションルートが見つかりません");
-        }
+        /// <summary>ソリューションのルート。探し方は <see cref="TestSource.Root"/> に 1 つだけ置いてある。</summary>
+        private static string FindSolutionRoot() => TestSource.Root();
     }
 }

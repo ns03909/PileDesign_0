@@ -759,17 +759,8 @@ namespace TestProject1
         [TestMethod]
         public void AllExamples_Deserialize_WithoutError()
         {
-            var examplesDir = GetExamplesDir();
-            if (!Directory.Exists(examplesDir))
-            {
-                Assert.Inconclusive($"Examples directory not found: {examplesDir}");
-                return;
-            }
-
-            var files = Directory.GetFiles(examplesDir, "Example*.json");
-            Assert.IsTrue(files.Length > 0, "計算例ファイルが見つかりません");
-
-            foreach (var file in files)
+            // 「0 件でないこと」だけだと 1 件でも通る。件数の下限は TestSource が持つ。
+            foreach (var file in TestSource.ExampleFiles("Example*.json", 25))
             {
                 var json = File.ReadAllText(file);
                 var ground = Newtonsoft.Json.JsonConvert.DeserializeObject<PileDesign.Models.InputData.GroundInput>(json);

@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,14 +23,8 @@ namespace TestProject1
     [TestClass]
     public class SectionAssemblyTests
     {
-        private static string FindSolutionRoot()
-        {
-            var dir = new DirectoryInfo(Path.GetDirectoryName(typeof(SectionAssemblyTests).Assembly.Location)!);
-            for (; dir != null; dir = dir.Parent)
-                if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
-                    return dir.FullName;
-            throw new FileNotFoundException("ソリューションルートが見つかりません");
-        }
+        /// <summary>ソリューションのルート。探し方は <see cref="TestSource.Root"/> に 1 つだけ置いてある。</summary>
+        private static string FindSolutionRoot() => TestSource.Root();
 
         private static readonly Regex HandBuilt = new(
             @"\bnew\s+(InsituConcrete|InsituSteelPipe|MainBars|Tendons|PrecastPHCConcrete|PrecastPRCConcrete|PrecastSCConcrete|PrecastSteelPipe" +
@@ -56,11 +50,13 @@ namespace TestProject1
         {
             string root = Path.Combine(FindSolutionRoot(), "Graphics_r1");
             var offenders = new List<string>();
+            int scanned = 0;
             foreach (string file in Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories))
             {
                 string rel = Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/');
                 if (rel.StartsWith("obj/", StringComparison.Ordinal) || rel.StartsWith("bin/", StringComparison.Ordinal)) continue;
                 if (Allowed.Any(a => rel.Equals(a, StringComparison.Ordinal))) continue;
+                scanned++;
 
                 string[] lines = File.ReadAllLines(file);
                 for (int i = 0; i < lines.Length; i++)
@@ -71,6 +67,8 @@ namespace TestProject1
                         offenders.Add($"{rel}:{i + 1}: {line.Trim()}");
                 }
             }
+            TestSource.AssertScanned(scanned, 300, "本体のソース");
+
             Assert.AreEqual(0, offenders.Count,
                 "ファクトリと杭頭以外で断面・材料を組み立てています。PileSection.CreateSectionCalculator() を使ってください:\n  "
                 + string.Join("\n  ", offenders));

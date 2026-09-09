@@ -22,16 +22,8 @@ namespace TestProject1
         /// <summary>ヘルプウィンドウを直接 new してよい場所 (共通の開き口そのもの)。</summary>
         private static readonly string[] Allowed = ["MainWindowViewModel.ToolWindowsAndMoveCopy.cs"];
 
-        private static string FindSolutionRoot()
-        {
-            var dir = new DirectoryInfo(Path.GetDirectoryName(typeof(HelpWindowOpeningTests).Assembly.Location)!);
-            for (; dir != null; dir = dir.Parent)
-            {
-                if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
-                    return dir.FullName;
-            }
-            throw new FileNotFoundException("ソリューションルートが見つかりません");
-        }
+        /// <summary>ソリューションのルート。探し方は <see cref="TestSource.Root"/> に 1 つだけ置いてある。</summary>
+        private static string FindSolutionRoot() => TestSource.Root();
 
         [TestMethod]
         public void HelpIsAlwaysOpenedThroughTheSharedEntryPoint()

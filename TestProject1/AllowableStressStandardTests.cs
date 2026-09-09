@@ -101,11 +101,15 @@ namespace TestProject1
             Assert.IsNotNull(dir, "ソリューションルートが見つかりません");
 
             var forbidden = new Regex(@"Binding\s+(UseNotification1113Compression|UseNotification1113Shear|UseGuideline2025Appendix13)\b");
+            int scanned = 0;
             foreach (string file in Directory.GetFiles(Path.Combine(dir!.FullName, "Graphics_r1", "Views"), "*.xaml", SearchOption.AllDirectories))
             {
+                scanned++;
                 string xaml = File.ReadAllText(file);
                 Assert.IsFalse(forbidden.IsMatch(xaml), $"{Path.GetFileName(file)}: 圧縮・せん断の個別フラグが画面にバインドされています");
             }
+
+            TestSource.AssertScanned(scanned, 30, "画面の XAML");
         }
     }
 }

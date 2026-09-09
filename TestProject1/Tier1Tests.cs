@@ -1,4 +1,4 @@
-using PileDesign.FEM;
+﻿using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using MathNet.Numerics.LinearAlgebra;
 using System.Collections.ObjectModel;
@@ -686,10 +686,7 @@ namespace TestProject1
         [TestMethod]
         public void ExampleJsonFiles_AreValidJson()
         {
-            var examplesDir = TestHelper.GetExamplesDir();
-            if (!Directory.Exists(examplesDir)) { Assert.Inconclusive("Examples dir not found"); return; }
-
-            foreach (var file in Directory.GetFiles(examplesDir, "*.json"))
+            foreach (var file in TestSource.ExampleFiles("*.json", 40))
             {
                 var json = File.ReadAllText(file);
                 Assert.IsTrue(json.Length > 0, $"{Path.GetFileName(file)} is empty");

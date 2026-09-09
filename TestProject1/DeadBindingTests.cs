@@ -19,16 +19,8 @@ namespace TestProject1
     [TestClass]
     public class DeadBindingTests
     {
-        private static string FindSolutionRoot()
-        {
-            var dir = new DirectoryInfo(Path.GetDirectoryName(typeof(DeadBindingTests).Assembly.Location)!);
-            for (; dir != null; dir = dir.Parent)
-            {
-                if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
-                    return dir.FullName;
-            }
-            throw new FileNotFoundException("ソリューションルートが見つかりません");
-        }
+        /// <summary>ソリューションのルート。探し方は <see cref="TestSource.Root"/> に 1 つだけ置いてある。</summary>
+        private static string FindSolutionRoot() => TestSource.Root();
 
         /// <summary>
         /// XAML が参照する {Binding XxxCommand} が、そのウィンドウの ViewModel に実在すること。

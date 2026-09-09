@@ -89,6 +89,20 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 例題のファイル一覧。<b>0 件なら落とす。</b>
+        ///
+        /// 「全例題について〜」という形のテストは、1 件も見つからなくても
+        /// ループが 0 回まわるだけで合格する。例題の名前が変わった・場所が変わった、
+        /// のどちらでも起きる。件数の下限をここで一度に置いておく。
+        /// </summary>
+        internal static string[] ExampleFiles(string pattern, int atLeast)
+        {
+            var files = Directory.GetFiles(ExamplesDir(), pattern);
+            AssertScanned(files.Length, atLeast, $"例題 ({pattern})");
+            return files;
+        }
+
+        /// <summary>
         /// メソッドの本体を、最初の '{' から対応する '}' まで切り出す。
         ///
         /// 文字数で切ると、対象が長ければ後半を見落とし、短ければ次のメソッドが混ざる。

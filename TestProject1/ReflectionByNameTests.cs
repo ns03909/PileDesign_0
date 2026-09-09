@@ -61,16 +61,8 @@ namespace TestProject1
         private static readonly Regex MethodByName =
             new(@"(?<!Try)\.GetMethod\(\s*""(?<name>[^""]+)""", RegexOptions.Compiled);
 
-        private static string FindSolutionRoot()
-        {
-            var dir = new DirectoryInfo(Path.GetDirectoryName(typeof(ReflectionByNameTests).Assembly.Location)!);
-            for (; dir != null; dir = dir.Parent)
-            {
-                if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
-                    return dir.FullName;
-            }
-            throw new FileNotFoundException("ソリューションルートが見つかりません");
-        }
+        /// <summary>ソリューションのルート。探し方は <see cref="TestSource.Root"/> に 1 つだけ置いてある。</summary>
+        private static string FindSolutionRoot() => TestSource.Root();
 
         /// <summary>PileDesign アセンブリの全型が持つメンバー名を集める。</summary>
         private static HashSet<string> CollectAppMemberNames()

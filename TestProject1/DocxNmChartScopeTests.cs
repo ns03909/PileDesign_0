@@ -18,16 +18,8 @@ namespace TestProject1
     [TestClass]
     public class DocxNmChartScopeTests
     {
-        private static string FindSolutionRoot()
-        {
-            var dir = new DirectoryInfo(Path.GetDirectoryName(typeof(DocxNmChartScopeTests).Assembly.Location)!);
-            for (; dir != null; dir = dir.Parent)
-            {
-                if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
-                    return dir.FullName;
-            }
-            throw new FileNotFoundException("ソリューションルートが見つかりません");
-        }
+        /// <summary>ソリューションのルート。探し方は <see cref="TestSource.Root"/> に 1 つだけ置いてある。</summary>
+        private static string FindSolutionRoot() => TestSource.Root();
 
         /// <summary>
         /// 杭のループに入ったら、荷重ケースを回す前に杭体で絞っていること。

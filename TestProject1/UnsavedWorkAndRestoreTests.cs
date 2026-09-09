@@ -48,19 +48,8 @@ namespace TestProject1
         /// 両方を辿る。出力先を変えてビルドしたとき (アプリ起動中に bin が使えない場合など) でも
         /// 検査が空振りしないようにするため。
         /// </summary>
-        private static string FindSolutionRoot([CallerFilePath] string thisFile = "")
-        {
-            foreach (var start in new[] { Path.GetDirectoryName(typeof(UnsavedWorkAndRestoreTests).Assembly.Location), Path.GetDirectoryName(thisFile) })
-            {
-                if (string.IsNullOrEmpty(start)) continue;
-                for (var dir = new DirectoryInfo(start); dir != null; dir = dir.Parent)
-                {
-                    if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
-                        return dir.FullName;
-                }
-            }
-            throw new FileNotFoundException("ソリューションルートが見つかりません");
-        }
+        /// <summary>ソリューションのルート。探し方は <see cref="TestSource.Root"/> に 1 つだけ置いてある。</summary>
+        private static string FindSolutionRoot() => TestSource.Root();
 
         private static string ReadSource(params string[] relativeParts)
             => File.ReadAllText(Path.Combine(new[] { FindSolutionRoot() }.Concat(relativeParts).ToArray()));

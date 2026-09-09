@@ -34,7 +34,7 @@ namespace TestProject1
         /// </summary>
         private static readonly (string Name, Regex Pattern, int AtMost)[] Helpers =
         [
-            ("FindSolutionRoot", new Regex(@"static\s+string\s+FindSolutionRoot\s*\("), 43),
+            ("FindSolutionRoot", new Regex(@"static\s+string\s+FindSolutionRoot\s*\("), 0),
             ("ReadSource",       new Regex(@"static\s+string\s+ReadSource\s*\("),       8),
             ("ExtractMethodBody",new Regex(@"static\s+string\s+ExtractMethodBody\s*\("), 8),
         ];

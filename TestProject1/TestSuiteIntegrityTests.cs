@@ -114,6 +114,56 @@ namespace TestProject1
                 + string.Join(Environment.NewLine + "  ", offenders));
         }
 
+        /// <summary>
+        /// ソースを走査するテストが、件数の下限を置いていること。
+        ///
+        /// 「悪い書き方が 0 件であること」を見る作りは、<b>対象が 1 件も見つからなくても合格する</b>。
+        /// 名前を変えた・ファイルを移した・層ごと移した、のどれでも起きる。
+        /// 実際、以前は 16 の走査のうち下限を置いていたのは 5 つだけだった。
+        ///
+        /// 走査するのに下限を置かないテストが増えたら、ここが知らせる。
+        /// 一時ファイルや自動保存のフォルダを見るものは対象外（生成された件数を
+        /// そのまま検査するので、下限という考え方が合わない）。
+        /// </summary>
+        [TestMethod]
+        public void TheScanningTests_AllHaveAFloor()
+        {
+            // 実行時に作られるフォルダを見るもの。件数を直接検査するので下限は要らない。
+            string[] runtimeFolders =
+            [
+                "AutoSaveServiceNaNTests.cs",
+                "SaveDurabilityTests.cs",
+                "UnsavedWorkAndRestoreTests.cs",
+                "IconRegenerator.cs",
+            ];
+
+            var missing = new System.Collections.Generic.List<string>();
+            int scanned = 0;
+
+            foreach (var file in Directory.GetFiles(TestSource.Dir("TestProject1"), "*.cs", SearchOption.AllDirectories))
+            {
+                if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")) continue;
+                if (file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")) continue;
+                scanned++;
+
+                var name = Path.GetFileName(file);
+                if (runtimeFolders.Contains(name)) continue;
+
+                var text = File.ReadAllText(file);
+                if (!text.Contains("Directory.GetFiles")) continue;
+                if (text.Contains("AssertScanned") || text.Contains("TestSource.ExampleFiles")) continue;
+
+                missing.Add(name);
+            }
+
+            TestSource.AssertScanned(scanned, 150, "テストのソース");
+            Assert.AreEqual(0, missing.Count,
+                "走査するのに件数の下限を置いていないテストがあります。"
+                + "対象が見つからなくなっても合格してしまいます。"
+                + $"TestSource.AssertScanned を足してください:{Environment.NewLine}  "
+                + string.Join(Environment.NewLine + "  ", missing));
+        }
+
         /// <summary>例題が実際に見つかること。ここが落ちたら、下の全テストの前提が崩れている。</summary>
         [TestMethod]
         public void TheExamplesFolder_Exists()

@@ -518,14 +518,7 @@ namespace TestProject1
         [TestMethod]
         public void AllExamples_HGetValueOrDefault_NoException()
         {
-            var examplesDir = GetExamplesDir();
-            if (!Directory.Exists(examplesDir))
-            {
-                Assert.Inconclusive("Examples directory not found");
-                return;
-            }
-
-            foreach (var file in Directory.GetFiles(examplesDir, "Example*.json"))
+            foreach (var file in TestSource.ExampleFiles("Example*.json", 25))
             {
                 var json = System.IO.File.ReadAllText(file);
                 var ground = Newtonsoft.Json.JsonConvert.DeserializeObject<PileDesign.Models.InputData.GroundInput>(json);

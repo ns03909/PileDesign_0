@@ -47,10 +47,7 @@ namespace TestProject1
         [TestMethod]
         public void AllGroundExamples_GetFrictionAngle_Finite()
         {
-            var examplesDir = GetExamplesDir();
-            if (!Directory.Exists(examplesDir)) { Assert.Inconclusive(); return; }
-
-            foreach (var file in Directory.GetFiles(examplesDir, "Example*.json"))
+            foreach (var file in TestSource.ExampleFiles("Example*.json", 25))
             {
                 var json = File.ReadAllText(file);
                 var ground = Newtonsoft.Json.JsonConvert.DeserializeObject<GroundInput>(json);
@@ -97,9 +94,6 @@ namespace TestProject1
         [TestMethod]
         public void AllPileExamples_Deserialize_NoException()
         {
-            var examplesDir = GetExamplesDir();
-            if (!Directory.Exists(examplesDir)) { Assert.Inconclusive(); return; }
-
             var opts = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
@@ -107,7 +101,7 @@ namespace TestProject1
                 AllowTrailingCommas = true
             };
 
-            foreach (var file in Directory.GetFiles(examplesDir, "PileExample*.json"))
+            foreach (var file in TestSource.ExampleFiles("PileExample*.json", 10))
             {
                 var json = File.ReadAllText(file);
                 var data = JsonSerializer.Deserialize<PileExampleData>(json, opts);

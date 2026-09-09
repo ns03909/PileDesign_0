@@ -69,16 +69,7 @@ namespace TestProject1
                 + "OnSelectedItemPropertyChanged の UI スレッド回避が要るかを見直してください");
         }
 
-        private static string FindSolutionRoot()
-        {
-            var dir = new DirectoryInfo(
-                Path.GetDirectoryName(typeof(BackgroundThreadUiCollectionTests).Assembly.Location)!);
-            for (; dir != null; dir = dir.Parent)
-            {
-                if (File.Exists(Path.Combine(dir.FullName, "Graphics_r1", "Help", "help.html")))
-                    return dir.FullName;
-            }
-            throw new FileNotFoundException("ソリューションルートが見つかりません");
-        }
+        /// <summary>ソリューションのルート。探し方は <see cref="TestSource.Root"/> に 1 つだけ置いてある。</summary>
+        private static string FindSolutionRoot() => TestSource.Root();
     }
 }
