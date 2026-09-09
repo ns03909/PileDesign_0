@@ -1,4 +1,7 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Windows.Threading;
 
@@ -38,6 +41,26 @@ namespace TestProject1
                 {
                     EnsureApplicationResources();
                     _staDispatcher = Dispatcher.CurrentDispatcher;
+
+                    // このスレッドに後から届く処理の例外を拾う。
+                    //
+                    // ここで作った Application が Application.Current になるので、
+                    // 本体が Application.Current?.Dispatcher.BeginInvoke(...) で投げた処理は
+                    // すべてこのスレッドで走る。投げ放しなので、例外は誰も受け取らない。
+                    // 何もしないと <b>テストホストごと落ちる</b>。
+                    //
+                    // 実際に 1 日で 3 回、全体実行が途中で止まった (1,342 / 1,336 件など)。
+                    // dotnet test はそれでも「成功!」と表示するので、
+                    // tools/run-tests.ps1 が件数で気づくまで分からなかった。
+                    // 一度は Unhandled exception. System.ArgumentOutOfRangeException が見えた。
+                    //
+                    // 落とさずに記録する。実行は最後まで進み、何が起きたかは残る。
+                    _staDispatcher.UnhandledException += (_, e) =>
+                    {
+                        RecordStrayException(e.Exception);
+                        e.Handled = true;
+                    };
+
                     ready.Set();
                     Dispatcher.Run();   // テスト実行の間ずっとメッセージを処理し続ける
                 })
@@ -50,6 +73,42 @@ namespace TestProject1
                 thread.Start();
                 ready.Wait();
                 return _staDispatcher!;
+            }
+        }
+
+        /// <summary>
+        /// 共有 STA スレッドに後から届いた処理が投げた例外。<b>テストが直接呼んだものではない。</b>
+        ///
+        /// 本体が投げ放し (<c>BeginInvoke</c>) にした処理が、テストが次へ進んだあとに
+        /// 走って落ちるとここに入る。解析の進捗更新のように、走り終えた頃に
+        /// 画面へ書き戻すものが疑わしい。
+        /// </summary>
+        public static IReadOnlyList<string> StrayExceptions
+        {
+            get { lock (_strayLock) return _strayExceptions.ToArray(); }
+        }
+        private static readonly object _strayLock = new();
+        private static readonly List<string> _strayExceptions = [];
+
+        /// <summary>
+        /// 拾った例外を控える。<b>ファイルにも書く。</b>
+        /// あとで走るテストが見るだけだと、それより後に起きたものを取りこぼす。
+        /// 実行が終わったあとに tools/run-tests.ps1 がファイルの有無で気づく。
+        /// </summary>
+        private static void RecordStrayException(Exception ex)
+        {
+            string text = $"{DateTime.Now:HH:mm:ss}  {ex.GetType().Name}: {ex.Message}"
+                        + Environment.NewLine + ex.StackTrace + Environment.NewLine;
+            lock (_strayLock)
+            {
+                _strayExceptions.Add(text);
+                try
+                {
+                    var dir = Path.Combine(TestSource.Root(), "TestProject1", "TestResults");
+                    Directory.CreateDirectory(dir);
+                    File.AppendAllText(Path.Combine(dir, "dispatcher-exceptions.log"), text);
+                }
+                catch { /* 記録に失敗しても実行は続ける */ }
             }
         }
 

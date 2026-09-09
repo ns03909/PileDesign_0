@@ -92,6 +92,10 @@ $trxName = "run-tests.trx"
 $trxPath = Join-Path $resultsDir $trxName
 if (Test-Path $trxPath) { Remove-Item -Force $trxPath }
 
+# 共有 STA スレッドに後から届いた処理が落ちた記録。前回の分を消してから走らせる。
+$strayLog = Join-Path $resultsDir "dispatcher-exceptions.log"
+if (Test-Path $strayLog) { Remove-Item -Force $strayLog }
+
 # 出力はそのまま流す。Windows PowerShell で native の stderr を 2>&1 すると
 # NativeCommandError に包まれて、本当のエラーが読めなくなる。
 $loggerArg = "trx;LogFileName=$trxName"
@@ -131,6 +135,17 @@ if ($failed -gt 0) {
 
 if ($testExit -ne 0) {
     Fail "テストの実行が異常終了しました (合計 $total 件、合格 $passed 件)。"
+}
+
+# 本体が投げ放しにした処理が、テストの外で落ちていないか。
+# 拾わずにいるとテストホストごと落ちて、実行が途中で終わる。
+if (Test-Path $strayLog) {
+    Write-Host ""
+    Write-Host "画面スレッドで拾われなかった例外があります:" -ForegroundColor Yellow
+    Get-Content $strayLog | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }
+    Fail ("テストの外で例外が起きています: $strayLog" +
+          "`n     本体が BeginInvoke で投げた処理が、テストが次へ進んだあとに落ちています。" +
+          "`n     拾わずにいると実行が途中で止まります。")
 }
 
 if ($Filter) {
