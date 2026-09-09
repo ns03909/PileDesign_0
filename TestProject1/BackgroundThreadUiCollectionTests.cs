@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -29,12 +29,27 @@ namespace TestProject1
         [TestMethod]
         public void HandlersReachedFromTheModellingThreadMarshalToTheUiThread()
         {
-            string root = FindSolutionRoot();
-            string code = File.ReadAllText(Path.Combine(
-                root, "Graphics_r1", "ViewModels", "MainWindowViewModel.Constructor.cs"));
+            // ファイル名で決め打ちしない。partial の分割は動くので、
+            // 「MainWindowViewModel.*.cs のどれかにある」で探す。
+            // 実際、MainWindowViewModel.Constructor.cs (4,542 行) を分割したときに
+            // このメソッドが PropertyPanel.cs へ移り、決め打ちが外れて落ちた。
+            const string Signature = "private void OnSelectedItemPropertyChanged";
+            string code = "";
+            var candidates = Directory.GetFiles(
+                Path.Combine(FindSolutionRoot(), "Graphics_r1", "ViewModels"),
+                "MainWindowViewModel*.cs");
+            foreach (var f in candidates)
+            {
+                string text = File.ReadAllText(f);
+                if (text.Contains(Signature, StringComparison.Ordinal)) { code = text; break; }
+            }
 
-            int start = code.IndexOf("private void OnSelectedItemPropertyChanged", StringComparison.Ordinal);
-            Assert.IsTrue(start >= 0, "OnSelectedItemPropertyChanged が見つかりません");
+            TestSource.AssertScanned(candidates.Length, 8, "MainWindowViewModel の分割ファイル");
+
+            int start = code.IndexOf(Signature, StringComparison.Ordinal);
+            Assert.IsTrue(start >= 0,
+                "OnSelectedItemPropertyChanged が MainWindowViewModel*.cs のどこにもありません。"
+                + "名前を変えたなら、ここも直してください");
 
             int clear = code.IndexOf("SelectedItemProperties.Clear()", start, StringComparison.Ordinal);
             Assert.IsTrue(clear > start, "プロパティ一覧を消す処理が見つかりません");

@@ -24,22 +24,6 @@ namespace PileDesign.ViewModels
         });
 
         private static void CopyDataGridSelection(DataGrid dataGrid)
-        {
-            if (dataGrid == null || dataGrid.SelectedCells.Count == 0) return;
-
-            var sb = new StringBuilder();
-            var selectedCells = dataGrid.SelectedCells.GroupBy(cell => cell.Item).ToList();
-
-            foreach (var row in selectedCells)
-            {
-                var rowValues = new List<string>();
-                foreach (var cell in row)
-                {
-                    rowValues.Add(Output.DataGridCsv.GetCellValue(cell));
-                }
-                sb.AppendLine(string.Join("\t", rowValues));
-            }
-            ClipboardHelper.TrySetText(sb.ToString());
-        }
+            => Output.DataGridCsv.CopySelectionToClipboard(dataGrid);
     }
 }

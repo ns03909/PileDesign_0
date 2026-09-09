@@ -167,7 +167,6 @@ namespace PileDesign.Views
         }
 
 
-        // 以下をクラス内（ChangWindow クラスの他のメソッドと並ぶ位置）に追加してください
         private void CopyDataGridSelection_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not MenuItem menuItem) return;
@@ -176,22 +175,7 @@ namespace PileDesign.Views
             if (menuItem.CommandParameter is DataGrid dg) dataGrid = dg;
             else if (menuItem.Parent is ContextMenu cm && cm.PlacementTarget is DataGrid dg2) dataGrid = dg2;
 
-            if (dataGrid == null || dataGrid.SelectedCells.Count == 0) return;
-
-            var sb = new StringBuilder();
-            var selectedRows = dataGrid.SelectedCells.GroupBy(c => c.Item);
-
-            foreach (var row in selectedRows)
-            {
-                var rowValues = new List<string>();
-                foreach (var cell in row)
-                {
-                    rowValues.Add(Output.DataGridCsv.GetCellValue(cell));
-                }
-                sb.AppendLine(string.Join("\t", rowValues));
-            }
-
-            Common.ClipboardHelper.TrySetText(sb.ToString());
+            Output.DataGridCsv.CopySelectionToClipboard(dataGrid);
         }
 
         private void ExportCsvFromContextMenu_Click(object sender, RoutedEventArgs e)

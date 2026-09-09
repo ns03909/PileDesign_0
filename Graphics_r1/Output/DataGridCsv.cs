@@ -28,6 +28,28 @@ namespace PileDesign.Output
             return ThousandGroupedNumberPattern.IsMatch(text) ? text.Replace(",", string.Empty) : text;
         }
 
+        /// <summary>
+        /// 選択セルをタブ区切りでクリップボードへ写す（Excel にそのまま貼れる形）。
+        ///
+        /// <b>行番号の列は入れない。</b> 入れると貼り付け先で列がずれる。
+        ///
+        /// 以前は同じ 15 行が 4 か所にあった（<c>BaseViewModel</c>・
+        /// <c>MainWindowViewModel</c>・<c>SettlementViewModel</c>・
+        /// <c>GroupSettlementWithBeamCalculationViewModel</c>）。どれも同じだったが、
+        /// 形を直すときに 1 つ直し忘れれば、その画面だけ貼り付けがずれる。
+        /// セルの値の取り方 (<see cref="GetCellValue"/>) と同じ場所に置く。
+        /// </summary>
+        public static void CopySelectionToClipboard(DataGrid dataGrid)
+        {
+            if (dataGrid == null || dataGrid.SelectedCells.Count == 0) return;
+
+            var sb = new StringBuilder();
+            foreach (var row in dataGrid.SelectedCells.GroupBy(cell => cell.Item))
+                sb.AppendLine(string.Join("	", row.Select(GetCellValue)));
+
+            PileDesign.Common.ClipboardHelper.TrySetText(sb.ToString());
+        }
+
         // データグリッドをCSVファイルにエクスポートするメソッド
         public static void CreateCsv(IEnumerable<object> data, DataGrid dataGrid, string filePath)
         {
