@@ -549,6 +549,19 @@ namespace PileDesign.Models
         // CaptainPileクラス 更新メソッド
         public void Update()
         {
+            // 諸元が変わったのでキャッシュを捨てる。
+            //
+            // GetForceAndMoment は鍵 (ε₀, φ) だけの関数ではなく、CTPConcrete・
+            // 絞り率 Nu・引張定着筋にも依存する。とくに<b>安全限界 N-M 曲線の鍵は
+            // 終局ひずみ 0.003 と PC リング径・絞り率だけで決まり、パイルキャップの
+            // Fc を含まない</b>。捨てないと、Fc を変えても鍵が 1 つも変わらないので
+            // 古い Fc で計算した曲線がそのまま返る。鍵が一部だけ変わる諸元では、
+            // 新旧の混ざった — どの断面にも対応しない — 曲線になる。
+            //
+            // PileSection の NM/NQ 曲線で 2026-08-30 に直したのと同じ系統
+            // (遅延キャッシュ + 鍵だけの関数ではない算出) で、こちらが残っていた。
+            _forceMomentCache.Clear();
+
             CTPConcrete = new(PileCapFc, Nu, D);
             CTPTensionRebars.Update();
             SetBasicProperties(PCRing, PileCapEc);
