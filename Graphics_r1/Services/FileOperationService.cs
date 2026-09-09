@@ -48,6 +48,15 @@ namespace PileDesign.Services
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
 
+            // ここは ValidateFiniteBeforeSave に関わらず必ず走らせる。
+            //
+            // この同期版を呼ぶのは自動保存だけで、その出力は<b>あとで復元する元</b>に
+            // なる。NaN を含んだまま書くと、壊れたファイルしか残っていない状態で
+            // 復元することになる。非同期版 (手動保存) が既定で走らせないのは、
+            // 反射の全走査で 6 秒以上かかり、対話的な保存には重すぎるため。
+            // どちらか一方に揃えないこと。
+            // (AutoSaveServiceNaNTests が、NaN のとき保存を失敗させ、
+            //  どのフィールドかを伝えることを見ている)
             ValidateFinite(inputModel);
 
             // 画面のスレッドで、編集できるコレクションだけ写しておく (理由は SnapshotForSaving)
