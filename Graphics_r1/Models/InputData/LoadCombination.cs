@@ -127,6 +127,8 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string Name => "α\u2097:" + Alpha1.ToString("F2") + "/β\u1d64:" + Beta1.ToString("F2") + "/β\u2097:" + Beta2.ToString("F2");
 
         public event PropertyChangedEventHandler? PropertyChanged;

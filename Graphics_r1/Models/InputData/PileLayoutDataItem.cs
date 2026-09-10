@@ -252,6 +252,8 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double AxialForceVL => AxialForceVL0 + AxialForceVLAdditional;
 
         // レベル1地震時軸力 (絶対値、ファイル保存対象)

@@ -178,6 +178,8 @@ namespace PileDesign.Models.InputData
             OnPropertyChanged(nameof(AllLoadCases));
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ObservableCollection<LoadCase> AllSeismicLoadCases
         {
             get
@@ -197,6 +199,8 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ObservableCollection<LoadCase> AllLoadCases
         {
             get
@@ -225,6 +229,8 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 解析対象の地震荷重ケース（IsAnalysisTarget=true のもの）
         /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ObservableCollection<LoadCase> AnalysisTargetSeismicLoadCases
         {
             get
@@ -240,6 +246,8 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ObservableCollection<LoadCombination> AllLoadCombinations
         {
             get

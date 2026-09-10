@@ -109,6 +109,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 3D座標
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public Point3D Point3D => new() { X = X, Y = Y, Z = Z };
 
         /// <summary>

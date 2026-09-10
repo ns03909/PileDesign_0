@@ -86,20 +86,48 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _forceActionPoint, value);
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase1CommonSoilNonlinearityModeCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase1CommonIsPileNonLinearCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase1CommonForceActionPointXCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase1CommonForceActionPointYCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase1CommonForceActionPointZCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase1CommonUpperMassForceCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase1CommonFoundationMassForceCommand { get; }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase2CommonSoilNonlinearityModeCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase2CommonIsPileNonLinearCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase2CommonForceActionPointXCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase2CommonForceActionPointYCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase2CommonForceActionPointZCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase2CommonUpperMassForceCommand { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ICommand LoadCase2CommonFoundationMassForceCommand { get; }
 
         // コンストラクタ

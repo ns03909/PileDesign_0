@@ -8,9 +8,17 @@ namespace PileDesign.Models.InputData
 {
     public class GroundInput : BaseModel
     {
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public bool IsErrorGroundWaterTableAltitude => GroundWaterTableAltitude > GroundTopAltitude;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public bool IsErrorStressAltitude => StressAltitude > GroundTopAltitude;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public bool IsErrorGroundWaterGLDepth => GroundWaterGLDepth > 0;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public bool IsErrorStressGLDepth => StressGLDepth > 0;
 
         // 地盤参照
@@ -188,6 +196,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 内部摩擦角とN値の関係　p30
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public List<string> SelectedInternalFrictionAngleCalcumationMethodOption { get; } =
         [
             "大崎式",

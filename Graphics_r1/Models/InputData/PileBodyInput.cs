@@ -479,6 +479,8 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _tipNonPermability, value);
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public ObservableCollection<string> TipStyleOption { get; } =
         ["開端杭", "閉端杭",];
 

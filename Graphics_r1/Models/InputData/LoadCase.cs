@@ -279,6 +279,8 @@ namespace PileDesign.Models.InputData
         public string GetLoadName() => LoadName;
 
         /// <summary>杭軸力の合計 ΣV (kN) — 全杭配置の地震時軸力を合算</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double SumV
         {
             get
@@ -298,9 +300,13 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>代表節点への水平力の合計 ΣH (kN) — 上部構造慣性力＋基礎構造慣性力</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double SumH => UpperMassForce + FoundationMassForce;
 
         /// <summary>ΣH/ΣV 比</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string SumHOverSumVText
         {
             get

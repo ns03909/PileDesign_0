@@ -78,32 +78,50 @@ namespace PileDesign.Models.InputData
         public double ExcludedLength { get; set; }
 
         // 杭径 m
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double D => UseNodeDiameterForCircumference && PileBodySegment.PileSection.IsNodularPile
             ? PileBodySegment.PileSection.NodeDiameter / 1000.0
             : PileBodySegment.PileSection.PileDiameter / 1000.0;
 
         // 区間長 m
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double L => Top - Bottom;
 
         // 周面抵抗の有効区間長 m（自重の算定などには物理長 L の方を使うこと）
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double EffectiveL => Math.Max(L - ExcludedLength, 0);
 
         // 周長 m
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Psi => Math.PI * D;
 
         // 杭周面積 m2
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double PsiL => Psi * EffectiveL;
 
         // 極限周面抵抗 kN
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Rf => Tau2 * EffectiveL * Psi;
 
         // 最大引き抜き抵抗力 kN
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Rtu => TauT * EffectiveL * Psi;
 
         // 残留引抜き抵抗力 kN
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Rtr => (1.0 / 1.2) * TauT * EffectiveL * Psi;
 
         // 降伏引抜き抵抗力 kN
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Rty => (2.0 / 3.0) * TauT * EffectiveL * Psi;
 
         public PileCircumVertical DeepCopy()

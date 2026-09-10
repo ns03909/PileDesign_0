@@ -1912,6 +1912,11 @@ namespace PileDesign.Models.InputData
                     // なってからは保存でも消えていた (SaveLoadRoundTripTests が検出)。
                     UsePsSpringAtPileTip = this.UsePsSpringAtPileTip,
                     IsVLAnalysisEnabled = this.IsVLAnalysisEnabled,
+                    // 基礎のねじれ拘束。写し忘れていた。
+                    // AnalysisModelling が代表節点の Rz 拘束に使う<b>解析に効く設定</b>で、
+                    // 元に戻す操作でこれだけ既定 (拘束しない) へ落ちていた。
+                    // 値を動かしてから複製を比べる網 (PerturbedInvariantTests) が検出。
+                    RestrainFoundationTorsion = this.RestrainFoundationTorsion,
                 };
 
                 long tStart = swTotal.ElapsedMilliseconds;

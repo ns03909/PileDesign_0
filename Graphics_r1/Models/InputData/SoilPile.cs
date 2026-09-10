@@ -51,12 +51,21 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭先端標高
-        private double _pileBottomAltitude;
+        //
+        // Z と最下段の SegmentDepth から導く派生値なので<b>書き出さない</b>。
+        // 書き出すと、保存した時点で古くなっている値がファイルに残る。
+        // Z のセッターと PileBodySegments の変更で導き直しているが、その両方を
+        // 通らずに古くなる経路があり、実際に「保存した値と開き直した値が違う」形で
+        // 出ていた (保存 30.125 → 開き直し -64)。
+        // 読み込みの仕上げ (OnDeserialized) で導き直す。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double PileBottomAltitude
         {
             get => _pileBottomAltitude;
             set => SetProperty(ref _pileBottomAltitude, value);
         }
+        private double _pileBottomAltitude;
 
         // 子要素 (ZDataItems) への自動同期 (SetSoilDisplacement) を抑止するフラグ。
         // JSON デシリアライズ中は GroundInput や ZDataItem.GroundDisp* が個別に loaded されるため、
@@ -65,14 +74,24 @@ namespace PileDesign.Models.InputData
 
         // System.Text.Json 用コールバック (本プロジェクトの主デシリアライザ)
         void IJsonOnDeserializing.OnDeserializing() => _suppressChildSync = true;
-        void IJsonOnDeserialized.OnDeserialized() => _suppressChildSync = false;
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            _suppressChildSync = false;
+            // 派生値を導き直す。Z と区間が揃ってから 1 回だけ。
+            UpdatePileBottomAltitude();
+        }
 
         // Newtonsoft.Json 用コールバック (副デシリアライザ経由でロードされる場合に備えて)
         [OnDeserializing]
         internal void OnDeserializingHandler(StreamingContext _) => _suppressChildSync = true;
 
         [OnDeserialized]
-        internal void OnDeserializedHandler(StreamingContext _) => _suppressChildSync = false;
+        internal void OnDeserializedHandler(StreamingContext _)
+        {
+            _suppressChildSync = false;
+            UpdatePileBottomAltitude();
+        }
 
         // 節点 (ZDataItems.Z: Z)
         private ObservableCollection<PileZDataItem> _zDataItems;
@@ -186,6 +205,11 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭先端N値
+        //
+        // get だけの計算プロパティ。地盤の土質点と杭先端標高から導くので<b>書き出さない</b>。
+        // 書き出しても読み戻されないため、保存した値と開き直した値が食い違う。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double PileToeNValue
         {
             //get
@@ -222,6 +246,9 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭先端平均N値用N値
+        // get だけの計算プロパティ (表示用の文字列)。書き出さない。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string NValuesForAverage
         {
             //get
@@ -257,6 +284,8 @@ namespace PileDesign.Models.InputData
 
         // 杭先端N値平均範囲上端
         // Smart-MAGNUM は Nu の範囲（杭先端から上方 2m）。一般式は杭先端 +D。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double PileToeNValueAverageRangeUpperAltitude
         {
             get => IsSmartMagnum ? PileBottomAltitude + SmartMagnumNuRangeAboveToe
@@ -266,6 +295,8 @@ namespace PileDesign.Models.InputData
 
         // 杭先端N値平均範囲下端
         // Smart-MAGNUM は Nl の範囲（杭先端から下方 LL+Den+Don）。一般式は杭先端 -D。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double PileToeNValueAverageRangeLowerAltitude
         {
             get => IsSmartMagnum ? PileBottomAltitude - (SmartMagnumLL + SmartMagnumDen + SmartMagnumDon)
@@ -307,9 +338,13 @@ namespace PileDesign.Models.InputData
 
         // 沈下検討用先端面積 m2 (沈下検討用杭先端径 Dp[mm] 基準)。
         // 支持力検討の Ap は構造先端径 D[m] 基準で別物。Dp は mm 保持のため /1000 で m 換算する。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double SettleAp => Math.PI * Math.Pow(Dp / 1000.0, 2) * 0.25;
 
         // 沈下検討用極限先端支持力（沈下計算で使用）
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double SettleRpu => SettleQpu * SettleAp;
 
         // 杭工法
@@ -349,16 +384,22 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭先端面積 m2（構造先端径 D = 杭先端径/根固め部径 基準）
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Ap => Math.PI * Math.Pow(D, 2) * 0.25;
 
         // 先端支持力の算定に使う面積 m2。
         // Smart-MAGNUM は「根固め部に位置する節杭の節部有効断面積 Ap = π·Don²/4」であり、
         // 姿図・N値範囲に使う根固め部径 Den 基準の Ap とは別物。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double ApBearing =>
             IsSmartMagnum ? SmartMagnumAp :
             IsHybridKneading ? HybridAp : Ap;
 
         // 極限先端支持力 kN
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Rpu => Qpu * ApBearing;
 
         // 極限周面抵抗力 kN
@@ -370,6 +411,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 極限鉛直支持力 kN
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Ru => Rpu + Rfu;
 
         // 使用限界支持力 kN
@@ -419,12 +462,18 @@ namespace PileDesign.Models.InputData
         [System.Text.Json.Serialization.JsonIgnore]
         public double SettlementAtR_ULS => InterpolateD0sForLoadMagnitude(R_ULS);
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double R_SLS => (1.0 / 3.0) * Ru;
 
         // 損傷限界支持力 kN
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double R_DLS => (1.0 / 1.5) * Ru;
 
         // 終局限界支持力 kN
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double R_ULS => Ru;
 
         // 使用限界引抜力 kN

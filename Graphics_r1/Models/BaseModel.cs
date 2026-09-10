@@ -64,6 +64,13 @@ namespace PileDesign.Models
         private readonly Dictionary<string, List<string>> _errors = [];
 
         // INotifyDataErrorInfo
+        //
+        // 入力の検証状態であって保存する値ではないので<b>書き出さない</b>。
+        // BaseModel にあるため、付けないと保存グラフの<b>全オブジェクト</b>に
+        // "HasErrors" が書かれる。get だけなので読み戻されず、検証状態が違うだけで
+        // 「保存して開き直すと結果が変わる」形になる (設計例集3.8 で実際に出た)。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public bool HasErrors => _errors.Count > 0;
         public event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
 

@@ -639,7 +639,11 @@ namespace PileDesign.Models.InputData
             QA = QA, LinkedPileNo = LinkedPileNo,
         };
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double A => DX * DY;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Q => A > 0 ? QA / A : 0;
     }
 

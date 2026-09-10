@@ -130,9 +130,13 @@ namespace PileDesign.Models.InputData
         }
 
         // 初期せん断剛性 Gs0 (kN/m^2) = γ × Vs^2 / 9.80665
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Gs0 => _density * _vs * _vs / 9.80665;
 
         // 初期変形係数 Es0 (kN/m^2) = 2(1 + νs) × Gs0
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Es0 => 2.0 * (1.0 + _poissonsRatio) * Gs0;
 
         // 土層年代

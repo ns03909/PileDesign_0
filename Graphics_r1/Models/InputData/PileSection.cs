@@ -37,6 +37,7 @@ namespace PileDesign.Models.InputData
         void System.Text.Json.Serialization.IJsonOnDeserialized.OnDeserialized()
         {
             _isDeserializing = false;
+            RecalculateConcreteE();
             // 再計算より先にかぶり厚を配置直径へ揃える。RecalculatePileDia は
             // 場所打ちRC で配置直径をかぶり厚から導くので、揃えずに呼ぶと
             // ファイルに書かれた配置直径が既定のかぶり厚から導いた値に塗り潰される。
@@ -54,6 +55,7 @@ namespace PileDesign.Models.InputData
         internal void OnDeserializedHandler(System.Runtime.Serialization.StreamingContext _)
         {
             _isDeserializing = false;
+            RecalculateConcreteE();
             SyncCoverFromPlacementDiameter();
             RecalculatePileDia();
             InvalidateAllCaches();
@@ -213,6 +215,8 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>有効せい d [mm]（MonQd計算用）: d = 0.9D（基礎指針'19）</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double EffectiveDepth => PileDiameter * 0.9;
 
         // フィールド
@@ -1023,6 +1027,8 @@ namespace PileDesign.Models.InputData
 
 
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string PileDescription
         {
             get
@@ -1170,6 +1176,8 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _selectedSteelPipe, value);
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string[] InsituPileSectionTypesOption { get; } =
         [
             PileTypeNames.InsituRc,
@@ -1177,6 +1185,8 @@ namespace PileDesign.Models.InputData
         ];
 
         // 場所打ち鋼管コンクリート杭の部位 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string[] InsituSteelPileSectionTypeOption { get; } =
         [
             PileTypeNames.SteelPipeConcreteSection,
@@ -1214,6 +1224,8 @@ namespace PileDesign.Models.InputData
         /// 「最上段に節杭が来ている」こと自体は施工上の注意なので、入力チェックの警告で知らせる
         /// （<c>CheckInputData.CheckPileBodyGeometry</c>）。
         /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string[] PreCastConcretePileSectionTypeOption =>
         [
             PileTypeNames.Phc,
@@ -1233,6 +1245,8 @@ namespace PileDesign.Models.InputData
         // - PileTypeNames.SteelPipeSection          : 純粋な鋼管 (M-φ 計算: SteelPipeSection)
         // - PileTypeNames.CftSection: 杭頭部、鋼管内コンクリート充填 + 鉄筋配置可
         //                       (但し M-φ の耐力には鉄筋を参入しない、長さ ≒ 鋼管外径)
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string[] SteelPipePileSectionTypeOption { get; } =
         [
             PileTypeNames.CftSection,
@@ -1927,12 +1941,19 @@ namespace PileDesign.Models.InputData
         }
 
         // コンクリート縦弾性係数 N/mm2
-        private double _concreteE;
+        //
+        // γ・Gsi・Fc から導く派生値なので<b>書き出さない</b>。
+        // 書き出すと、ファイル内の値の並び順で「Ec が先か、その材料が先か」が変わり、
+        // 読み込み結果が変わっていた (揺らした並び順の網が全例題で検出)。
+        // 読み込みの仕上げ (OnDeserialized) で導き直す。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double ConcreteE
         {
             get => _concreteE;
             set => SetProperty(ref _concreteE, value);
         }
+        private double _concreteE;
 
         // コンクリートのヤング係数の計算メソッド
         public void RecalculateConcreteE()
@@ -2196,7 +2217,15 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _selectedSteelPipePileName, value))
                 {
-                    RecalculateSelectedSteelPipePipe();
+                    // 読み込み中はライブラリから寸法を復元しない。
+                    //
+                    // ファイルには製品名と PipeDia / PipeTs の両方が入っているので、
+                    // 名前が先に来れば寸法をライブラリ値で上書きし、寸法が先に来れば
+                    // ファイルの値が残る。<b>値の並び順で読み込み結果が変わっていた</b>
+                    // (揺らした並び順の網が鋼管杭で検出)。
+                    // ファイルの寸法は保存時にライブラリから導いた値なので、
+                    // そのまま使えば同じ結果になり、しかも順序に依存しない。
+                    if (!_isDeserializing) RecalculateSelectedSteelPipePipe();
                 }
             }
         }
@@ -2258,12 +2287,16 @@ namespace PileDesign.Models.InputData
         }
 
         // 鉄筋径
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string[] MainBarSizeOption { get; } =
         [
             "D10","D13","D16","D19","D22","D25","D29","D32","D35","D38","D41"
         ];
 
         // 鉄筋規格
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string[] MainBarSpecOption { get; } =
         [
             "SD295", "SD345", "SD390", "SD490"
@@ -2271,6 +2304,8 @@ namespace PileDesign.Models.InputData
 
 
         // 鋼管規格オプション
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string[] PipeGradeOption { get; } =
         [
             "SKK400",
@@ -2541,11 +2576,15 @@ namespace PileDesign.Models.InputData
         }
         // せん断補強筋比
         //private double _hoopPw;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double HoopPw => 2 * GetBarArea(HoopSize) / (Math.PI / 4.0 * ConcreteOutDia) / HoopSpacing;
 
 
         // せん断補強筋降伏点
         //private double _hoopSigmay;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double HoopSigmay
         {
             get /*=> _hoopPw;*/
@@ -2602,6 +2641,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 鋼管断面積
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double PipeAs => PipeTs * (PipeDia - PipeTs) * Math.PI;
 
         // 鋼管降伏点
@@ -2648,9 +2689,13 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭全断面積(mm2)
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double A0 => Ac + MainBarAg + TendonAp + PipeAs;
 
         // 杭コンクリート断面積(mm2)
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Ac => (ConcreteOutDia - ConcreteThickness) * Math.PI * ConcreteThickness - MainBarAg - TendonAp;
 
         // 杭単位長さ重量 (kN/m)
@@ -2665,12 +2710,16 @@ namespace PileDesign.Models.InputData
         //   主筋・テンドンを控除済みなので、ここで再度引くと鋼材ぶんを二重に控除して
         //   自重が過小になる (PHC で 0.5〜1.1%、PRC で 1.4〜5.5%)。
         //   押込み側は軸力の過小評価 = 危険側、引抜き側は抵抗の過小評価 = 安全側だった。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double W => IsNodularPile && CatalogMassPerM > 0
             ? CatalogMassPerM * UnitConversion.TON_TO_KN   // t/m -> kN/m
             : ((MainBarAg + TendonAp + PipeAs) * 78.5 + Ac * ConcreteGamma) * Math.Pow(10, -6);
 
         // 軸剛性 (kN)
         // 合成断面: コンクリート + 主筋 + PC鋼材 + 鋼管（Es·As）。鋼管を持たない断面では PipeAs=0 のため影響なし。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double EA => (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAs) * 0.001;
 
         /// <summary>
@@ -2744,6 +2793,8 @@ namespace PileDesign.Models.InputData
         // ※ 換算項の断面積は MainBarAg / TendonAp（鋼材断面積）を使用。
         //    A0（全断面積）を使用すると過大評価になるので注意
         // ※ コンクリート断面は中空断面（ConcreteOutDia - 2*ConcreteThickness = 内径）として計算
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double EI => (ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent)
             + PipeEs * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 64.0) * Math.Pow(10, -9);
 
@@ -2754,21 +2805,31 @@ namespace PileDesign.Models.InputData
         private double PipeInnerDiaDisp => PipeDia - 2.0 * PipeTs; // = コンクリート外径（腐食で不変）
 
         // 腐食考慮 鋼管断面積 (mm2)
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double PipeAsCorroded =>
             Math.PI / 4.0 * (Math.Pow(CorrodedPipeOuterDiaDisp, 2) - Math.Pow(PipeInnerDiaDisp, 2));
 
         // 腐食考慮 杭全断面積 (mm2)
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double A0Corroded => Ac + MainBarAg + TendonAp + PipeAsCorroded;
 
         // 腐食考慮 杭単位長さ重量 (kN/m)
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double WCorroded =>
             ((MainBarAg + TendonAp + PipeAsCorroded) * 78.5 + Ac * ConcreteGamma) * Math.Pow(10, -6);
 
         // 腐食考慮 軸剛性 (kN)
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double EACorroded =>
             (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAsCorroded) * 0.001;
 
         // 腐食考慮 曲げ剛性 (kNm2) — 鋼管項のみ腐食後外径で置換
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double EICorroded => (ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent)
             + PipeEs * Math.PI * (Math.Pow(CorrodedPipeOuterDiaDisp, 4) - Math.Pow(PipeInnerDiaDisp, 4)) / 64.0) * Math.Pow(10, -9);
 
@@ -2777,6 +2838,8 @@ namespace PileDesign.Models.InputData
         // ねじり剛性 (kNm2)
         // 円形断面のねじり定数は断面二次極モーメント J = Ip = π(D^4 - d^4)/32。
         // 曲げの断面二次モーメント I = π(D^4 - d^4)/64 を使っていたため 2 倍過小だった。
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double GJ => (GetG(ConcreteE, 0.2) * Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 32.0 +
             GetG(PipeEs, 0.3) * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 32.0) * Math.Pow(10, -9);
 

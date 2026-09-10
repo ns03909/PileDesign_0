@@ -63,7 +63,11 @@ namespace PileDesign.Models.InputData
         }
 
         // Add a property for DX and DY
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double DX => X2 - X1;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double DY => Y2 - Y1;
     }
 }

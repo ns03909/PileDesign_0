@@ -22,11 +22,21 @@ namespace PileDesign.Models.InputData
         public double Y1 { get; set; }
         public double Y2 { get; set; }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double X0 => (X1 + X2) * 0.5;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Y0 => (Y1 + Y2) * 0.5;
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double DX => Math.Abs(X2 - X1);
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double DY => Math.Abs(Y2 - Y1);
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double DZ => Math.Abs(ZTop - ZBtm);
 
         public string Name { get; set; }
@@ -49,12 +59,24 @@ namespace PileDesign.Models.InputData
         public double Q { get; set; } // (kN/m2) 深さZaでの上載圧（public set にしておく）
 
         // P0, Pp 等は状態に基づき動的計算する
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double P0 => (Q + Gamma * (ZTop - ZBtm)) * K0; // kN/m2 p484
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double Pp => (Q + Gamma * (ZTop - ZBtm)) * Kp + 2 * C * Math.Sqrt(Kp); // kN/m2 p484
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double P0Top => K0 * StressTop;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double P0Btm => K0 * StressBtm;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double PpTop => Kp * StressTop;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public double PpBtm => Kp * StressBtm;
 
         // ランタイム参照はシリアライズ対象外にする

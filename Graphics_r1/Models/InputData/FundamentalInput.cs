@@ -87,6 +87,8 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>沈下検討の対象の名乗り。画面・計算書で共通に使う。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string SettlementDesignBasisName =>
             SettlementDesignIncludesGroup ? "単杭＋群杭沈下" : "単杭沈下";
 
@@ -321,6 +323,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 参考軸中心
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public Point3D Point3D0 => new() { X = X0, Y = Y0, Z = Z0 };
 
 
