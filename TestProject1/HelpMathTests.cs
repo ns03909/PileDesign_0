@@ -46,11 +46,17 @@ namespace TestProject1
             var lines = text.Split('\n');
             for (int i = 0; i < lines.Length; i++)
             {
-                foreach (char c in lines[i])
+                for (int k = 0; k < lines[i].Length; k++)
                 {
-                    if (c >= ' ' || c == '\r') continue;
+                    char c = lines[i][k];
+                    // CR は行末 (CRLF の一部) だけ許す。行の途中の CR は \r を解釈した跡。
+                    // 以前は CR を一律に許していたため、\right が壊れて生まれた
+                    // 行途中の裸の CR を見逃していた (2026-09-10 に実際に通り抜けた)。
+                    if (c == '\r' && k == lines[i].Length - 1) continue;
+                    if (c >= ' ') continue;
                     string what = c switch
                     {
+                        '\r' => @"復帰 (\r を解釈した跡。\right など)",
                         '\t' => @"タブ (\t を解釈した跡。\times など)",
                         '\v' => @"垂直タブ (\v を解釈した跡。\varepsilon など)",
                         '\f' => @"改ページ (\f を解釈した跡。\frac など)",
@@ -101,6 +107,34 @@ namespace TestProject1
                 while ((i = s.IndexOf(needle, i, StringComparison.Ordinal)) >= 0) { n++; i += needle.Length; }
                 return n;
             }
+        }
+
+        /// <summary>
+        /// 数式の <c>\left</c> と <c>\right</c> の数が合っていること。
+        ///
+        /// 対応が崩れると MathJax は数式全体を描かず「Math input error」とだけ出す。
+        /// 制御文字の網とは別に要る。<c>\right</c> が丸ごと消えても制御文字は残らない場合が
+        /// あるうえ、片方だけ書き足す取りこぼしも起こる。
+        /// </summary>
+        [TestMethod]
+        public void TheHelp_HasBalancedLeftAndRight()
+        {
+            var path = Path.Combine(TestSource.Root(), "Graphics_r1", "Help", "help.html");
+            var text = File.ReadAllText(path);
+
+            // \leftarrow / \rightarrow は括弧の対応とは無関係なので除く。
+            // 数を数えるだけだと、この 2 つで 8 対 3 の差が出て空振りする
+            // (2026-09-10 に実際に誤検出した)。
+            int left = System.Text.RegularExpressions.Regex
+                .Matches(text, @"\\left(?!arrow)").Count;
+            int right = System.Text.RegularExpressions.Regex
+                .Matches(text, @"\\right(?!arrow)").Count;
+
+            TestSource.AssertScanned(left, 5, @"ヘルプの \left");
+
+            Assert.AreEqual(left, right,
+                $@"ヘルプの数式で \left ({left} 個) と \right ({right} 個) の数が合いません。"
+                + "対応が崩れると、その数式は「Math input error」だけになります");
         }
     }
 }
