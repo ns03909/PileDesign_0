@@ -1,4 +1,4 @@
-{
+﻿{
   "displayName": "設計例集3.8_地盤1",
   "groundRef": "設計例集3.8_地盤1",
   "groundTopAltitude": 0,
@@ -12,7 +12,7 @@
     { "no": 4, "bottomGLDepth": -14.00, "layerThickness": 2.00, "bottomAltitude": -14.00, "name": "Ds1", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 23.0, "cohesive":   0.0, "vs": 280.0, "es": 22500.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
     { "no": 5, "bottomGLDepth": -17.00, "layerThickness": 3.00, "bottomAltitude": -17.00, "name": "Ds2", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 29.0, "cohesive":   0.0, "vs": 320.0, "es": 28400.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
     { "no": 6, "bottomGLDepth": -18.00, "layerThickness": 1.00, "bottomAltitude": -18.00, "name": "Dc1", "granularityClass": "粘性土", "poissonsRatio": 0.4, "density": 17.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 31.0, "cohesive": 525.0, "vs": 310.0, "es": 29500.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
-    { "no": 7, "bottomGLDepth": -23.00, "layerThickness": 5.00, "bottomAltitude": -23.00, "name": "Ds3", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 19.0, "ageCategory": "洪積層", "isEngineeringBedrock": true,  "nValue": 54.0, "cohesive":   0.0, "vs": 410.0, "es": 50400.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  }
+    { "no": 7, "bottomGLDepth": -24.0, "layerThickness": 6.0, "bottomAltitude": -24.0, "name": "Ds3", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 19.0, "ageCategory": "洪積層", "isEngineeringBedrock": true,  "nValue": 54.0, "cohesive":   0.0, "vs": 410.0, "es": 50400.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  }
   ],
   "groundMassesData": [
     { "glDepth":  -2.5, "h": 1.0, "nValue":  6.0, "fc": 30.0, "density": 18.0, "vs0": 150.0 },

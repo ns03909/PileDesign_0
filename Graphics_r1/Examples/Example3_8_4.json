@@ -1,4 +1,4 @@
-{
+﻿{
   "displayName": "設計例集3.8_地盤4",
   "groundRef": "設計例集3.8_地盤4",
   "groundTopAltitude": 0,
@@ -12,7 +12,7 @@
     { "no": 4, "bottomGLDepth": -15.875, "layerThickness": 2.750, "bottomAltitude": -15.875, "name": "Ds1", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 20.0, "cohesive":   0.0, "vs": 280.0, "es": 22500.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
     { "no": 5, "bottomGLDepth": -20.000, "layerThickness": 4.125, "bottomAltitude": -20.000, "name": "Ds2", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 18.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 30.0, "cohesive":   0.0, "vs": 320.0, "es": 28400.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
     { "no": 6, "bottomGLDepth": -21.750, "layerThickness": 1.750, "bottomAltitude": -21.750, "name": "Dc1", "granularityClass": "粘性土", "poissonsRatio": 0.4, "density": 17.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 35.0, "cohesive": 525.0, "vs": 310.0, "es": 29500.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  },
-    { "no": 7, "bottomGLDepth": -26.750, "layerThickness": 5.000, "bottomAltitude": -26.750, "name": "Ds3", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 19.0, "ageCategory": "洪積層", "isEngineeringBedrock": true,  "nValue": 55.0, "cohesive":   0.0, "vs": 410.0, "es": 50400.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  }
+    { "no": 7, "bottomGLDepth": -27.75, "layerThickness": 6.0, "bottomAltitude": -27.75, "name": "Ds3", "granularityClass": "砂質土", "poissonsRatio": 0.3, "density": 19.0, "ageCategory": "洪積層", "isEngineeringBedrock": true,  "nValue": 55.0, "cohesive":   0.0, "vs": 410.0, "es": 50400.0, "isPositiveCircumResistance": true,  "isNegativeCircumResistance": true  }
   ],
   "groundMassesData": [
     { "glDepth":  -2.5, "h": 1.0, "nValue":  4.0, "fc": 30.0, "density": 18.0, "vs0": 150.0 },
