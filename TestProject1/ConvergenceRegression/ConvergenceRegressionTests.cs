@@ -111,17 +111,17 @@ namespace TestProject1
         [DataRow("Example10", "PileExample10", 4, 16)]   // 基礎指針'19 計算例10: 場所打ち杭 (液状化)
         // 既製杭。2026-09-07 まで既製杭は 1 つも回帰網に無く、既製杭の M-φ（ひび割れモーメントの符号・
         // プレストレスひずみの二重加算）の誤りが解析結果に乗ったまま検出されなかった。
+        [DataRow("Example3_1", "PileExample3_1", 4, 8)]  // 設計例集3.1: SC杭 φ700/800 + PRC杭
+        [DataRow("Example3_4", "PileExample3_4", 4, 8)]  // 設計例集3.4: SC杭 + PHC杭 φ900/1000
+        // 場所打ち鋼管コンクリート杭。2026-09-10 まで回帰網に無かった最後の杭種。
         //
-        // 注意: <b>断面タイプと杭径は例題 JSON の値ではない。</b>
-        // BuildExampleInputModel が pileSectionType / precastPileName を読まないため、
-        // 杭体タイプ (既製コンクリート杭) の既定断面 = PHC杭 φ1100 で解析される
-        // (2026-09-10 に実測で確認)。したがってこの 2 行が通しているのは
-        // <b>PHC の M-φ 経路だけ</b>で、SC杭・PRC杭・場所打ち鋼管コンクリート杭は
-        // まだ 1 度も回帰網を通っていない。断面タイプまで写すにはビルダーの拡張が必要で、
-        // 拡張すると既存 6 件のスナップショットが (正しく) 変わるため、
-        // 再ベースラインの判断とセットで行うこと。
-        [DataRow("Example3_1", "PileExample3_1", 4, 8)]  // 設計例集3.1 の地盤・配置・軸力 + PHC φ1100
-        [DataRow("Example3_4", "PileExample3_4", 4, 8)]  // 設計例集3.4 の地盤・配置・軸力 + PHC φ1100
+        // この杭種は 2026-04-05 に「杭変位応力グラフが空」で報告され 2026-05-10 に解消を
+        // 確認したが、直したコミットが特定できていない (K 行列条件数改善や master-slave
+        // 連鎖解決の副作用と推察)。原因が分からないまま直った不具合は静かに戻りうる。
+        //
+        // 地盤 9 セット × 杭体 9 種 × 杭 42 本の多地盤例題なので、
+        // BuildExampleInputModel の多地盤対応 (additionalGroundExampleNames) が前提。
+        [DataRow("Example3_8_1", "PileExample3_8", 4, 8)] // 設計例集3.8: 場所打ち鋼管コンクリート杭 φ2200
         public void ConvergenceMatchesSnapshot(
             string groundName, string pileName, int level1Steps, int level2Steps)
         {
