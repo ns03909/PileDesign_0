@@ -199,6 +199,27 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// ツールチップの当たり判定が、縮小モードでも描いてあるところに合うこと。
+        ///
+        /// 判定を縮める前の座標で取ると、隙間 (描かれていない場所) を指しても値が出る。
+        /// さらに図は「端点を縮めて値は端の値のまま」描くので、縮めた端では
+        /// <b>図と値が食い違う</b> (同じ場所を指しているのに t が 0.1 ずれる)。
+        /// </summary>
+        [TestMethod]
+        public void TheTooltipHitTest_FollowsTheMode()
+        {
+            string src = TestSource.Read("Graphics_r1", "Views", "MainWindow.CanvasResultsTooltips.cs");
+
+            int n = Regex.Matches(src,
+                @"IsShrinkElementMode[\s\S]{0,120}?GetShrinkElementPoints\(").Count;
+
+            TestSource.AssertScanned(n, 4, "ツールチップの当たり判定の縮小追従");
+            Assert.AreEqual(4, n,
+                $"当たり判定が縮小モードに追従している箇所が {n} 件です (4 件のはず: "
+                + "応力・変位 / 杭要素の検定比 / 基礎梁の沈下 / 部材角の色分け)");
+        }
+
+        /// <summary>
         /// 節杭の節が、帯と同じ縮んだ Z から描かれること。
         /// 帯だけ縮めると、節が帯からはみ出して別物のように見える。
         /// </summary>

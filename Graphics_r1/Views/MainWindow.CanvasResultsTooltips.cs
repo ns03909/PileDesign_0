@@ -85,6 +85,16 @@ namespace PileDesign.Views
                 Point3D nodeI3D = new(beam.NodeI.Coord.X, beam.NodeI.Coord.Y, beam.NodeI.Coord.Z);
                 Point3D nodeJ3D = new(beam.NodeJ.Coord.X, beam.NodeJ.Coord.Y, beam.NodeJ.Coord.Z);
 
+                // 要素縮小モードでは、当たり判定も描いてあるところに合わせる。
+                // 縮めないと、隙間 (描かれていない場所) を指しても値が出るうえ、
+                // <b>図と値が食い違う</b>。図は「端点を縮めて値は端の値のまま」描くので、
+                // 縮めた端は I 端そのものの値になる。判定を縮める前の座標で取ると、
+                // 同じ場所を指しているのに t が 0.1 ずれた値を答えてしまう。
+                if (viewModel.IsShrinkElementMode)
+                {
+                    (nodeI3D, nodeJ3D) = GetShrinkElementPoints(nodeI3D, nodeJ3D);
+                }
+
                 Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
                 Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
 
@@ -181,10 +191,17 @@ namespace PileDesign.Views
                 {
                     if (beam?.NodeI == null || beam.NodeJ == null || beam.SegmentIndex is not int seg) continue;
 
-                    Point a = viewModel.CanvasThreeDView.Transformation(
-                        new Point3D(beam.NodeI.Coord.X, beam.NodeI.Coord.Y, beam.NodeI.Coord.Z));
-                    Point b = viewModel.CanvasThreeDView.Transformation(
-                        new Point3D(beam.NodeJ.Coord.X, beam.NodeJ.Coord.Y, beam.NodeJ.Coord.Z));
+                    Point3D e3dI = new(beam.NodeI.Coord.X, beam.NodeI.Coord.Y, beam.NodeI.Coord.Z);
+                    Point3D e3dJ = new(beam.NodeJ.Coord.X, beam.NodeJ.Coord.Y, beam.NodeJ.Coord.Z);
+
+                    // 縮小モードでは帯も縮んでいるので、判定も帯に合わせる
+                    if (viewModel.IsShrinkElementMode)
+                    {
+                        (e3dI, e3dJ) = GetShrinkElementPoints(e3dI, e3dJ);
+                    }
+
+                    Point a = viewModel.CanvasThreeDView.Transformation(e3dI);
+                    Point b = viewModel.CanvasThreeDView.Transformation(e3dJ);
                     var (distance, t) = PointToLineSegmentDistance(mousePos, a, b);
                     if (distance < best && distance < hitThreshold)
                     {
@@ -593,8 +610,17 @@ namespace PileDesign.Views
                 var cJ = inputModel.GetNodeCoordinates(fb.NodeJ_Type, fb.NodeJ_Id);
                 if (cI == null || cJ == null) continue;
 
-                Point pI = viewModel.CanvasThreeDView.Transformation(new Point3D(cI.Value.X, cI.Value.Y, cI.Value.Z));
-                Point pJ = viewModel.CanvasThreeDView.Transformation(new Point3D(cJ.Value.X, cJ.Value.Y, cJ.Value.Z));
+                Point3D fb3dI = new(cI.Value.X, cI.Value.Y, cI.Value.Z);
+                Point3D fb3dJ = new(cJ.Value.X, cJ.Value.Y, cJ.Value.Z);
+
+                // 縮小モードでは基礎梁も縮んでいるので、判定も梁に合わせる
+                if (viewModel.IsShrinkElementMode)
+                {
+                    (fb3dI, fb3dJ) = GetShrinkElementPoints(fb3dI, fb3dJ);
+                }
+
+                Point pI = viewModel.CanvasThreeDView.Transformation(fb3dI);
+                Point pJ = viewModel.CanvasThreeDView.Transformation(fb3dJ);
                 var (dist, t) = PointToLineSegmentDistance(mousePos, pI, pJ);
 
                 if (dist < closestDist && dist < hitThreshold)
@@ -735,8 +761,15 @@ namespace PileDesign.Views
             // 梁要素を色付きで描画（Pathを使用してキャンバス再描画時に自動クリアされるようにする）
             foreach (var (midPt, ptI, ptJ, angle) in drawEntries)
             {
-                Point p2dI = viewModel.CanvasThreeDView.Transformation(ptI);
-                Point p2dJ = viewModel.CanvasThreeDView.Transformation(ptJ);
+                // 部材角は要素ごとの値なので、要素縮小モードでは要素と一緒に縮める
+                Point3D drawI = ptI, drawJ = ptJ;
+                if (viewModel.IsShrinkElementMode)
+                {
+                    (drawI, drawJ) = GetShrinkElementPoints(drawI, drawJ);
+                }
+
+                Point p2dI = viewModel.CanvasThreeDView.Transformation(drawI);
+                Point p2dJ = viewModel.CanvasThreeDView.Transformation(drawJ);
 
                 var geo = ColorBarUtils.PickColorGeometryInclusiveTop(angle, colorBaredGeometries);
                 var brush = geo != null ? new SolidColorBrush(geo.Color) : Brushes.Gray;
