@@ -40,7 +40,7 @@
 #>
 [CmdletBinding()]
 param(
-    [int]$Minimum = 1900,
+    [int]$Minimum = 1980,
     [string]$Filter = "",
     [switch]$Clean
 )

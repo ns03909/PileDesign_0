@@ -33,7 +33,7 @@ namespace TestProject1
         /// <b>実行件数とは一致しない。</b> ここが数えるのは <c>[TestMethod]</c> の宣言で、
         /// <c>[DataRow]</c> による展開は数えない。実行側は 100 件ほど多く出る。
         /// </summary>
-        private const int MinimumTestCount = 1730;
+        private const int MinimumTestCount = 1800;
 
         [TestMethod]
         public void TheSuite_StillHasAllItsTests()
