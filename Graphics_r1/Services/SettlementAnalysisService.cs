@@ -372,14 +372,14 @@ namespace PileDesign.Services
             int ny = ys.Count;
             var xArray = xs.ToArray();
             var yArray = ys.ToArray();
-            var settlementsM = new double[nx * ny];
+            var settlementsMm = new double[nx * ny];
 
             Parallel.For(0, nx * ny, idx =>
             {
                 int ix = idx / ny;
                 int iy = idx % ny;
                 Point point = new() { X = xArray[ix], Y = yArray[iy] };
-                settlementsM[idx] = Steinnbrener.CalcSettlement(point, rectLoads, settlementSoilLayers) * 1000;
+                settlementsMm[idx] = Steinnbrener.CalcSettlement(point, rectLoads, settlementSoilLayers) * 1000;
             });
 
             // ObservableCollection は thread-safe ではないため UI スレッドで構築
@@ -392,7 +392,7 @@ namespace PileDesign.Services
                     {
                         X = xArray[ix],
                         Y = yArray[iy],
-                        Settlement = settlementsM[ix * ny + iy]
+                        Settlement = settlementsMm[ix * ny + iy]
                     });
                 }
             }
