@@ -53,6 +53,14 @@ namespace PileDesign.ViewModels
             private set => SetProperty(ref _pileBody, value);
         }
 
+        // 開いた時点の杭体入力の控え。キャンセルで戻すために使う。
+        //
+        // このウィンドウは SoilPiles は DeepCopy を編集するが、杭体入力 (PileBody) は
+        // InputModel.PileBodies の実体をそのまま編集する。控えを取らないと、
+        // 先端径・α・N・杭体記号・非排水率がキャンセルしても残る。
+        // 地盤杭セットを切り替えると PileBody も変わるので、全件控える。
+        private readonly List<PileBodyInput> _prevPileBodies = [];
+
         // 杭先端閉塞率を使用する工法かどうか
         public bool UsesPileToeEta => SoilPile?.PileConstructionType == "回転貫入杭"
                                     || SoilPile?.PileConstructionType == "打込み杭";
@@ -351,6 +359,12 @@ namespace PileDesign.ViewModels
             // 件数チェックして参照を安全に取得
             SoilPile = SoilPiles.Count > 0 ? SoilPiles[Math.Clamp(SoilPileNo - 1, 0, SoilPiles.Count - 1)] : throw new InvalidOperationException("SoilPiles が空です。");
 
+            // 杭体入力は実体を編集するので、キャンセルで戻せるように先に控える。
+            foreach (var pb in InputModel.PileBodies)
+            {
+                _prevPileBodies.Add(pb?.DeepCopy());
+            }
+
             PileBody = InputModel.PileBodies[SoilPile.PileBodyNo - 1];
 
             // 先端平均N値が0の場合に警告メッセージを表示
@@ -378,8 +392,59 @@ namespace PileDesign.ViewModels
             UpdateCircumstanceSeries();
             DrawShapes();
 
-            // 初期状態をUndoManagerに保存（ここもスナップショット→DeepCopyで安全に）
-            UndoManager.SaveState(new ObservableCollection<SoilPile>(SoilPiles.Select(p => p.DeepCopy())));
+            // 初期状態をUndoManagerに保存（形の組み立ては CaptureUndoState に一本化）
+            SaveUndoSnapshot();
+        }
+
+        // Undo の控え。
+        //
+        // <b>地盤杭セットだけでは足りない。</b>このウィンドウは杭体入力 (PileBody) の
+        // 実体も編集しており、しかも沈下検討用杭先端径は
+        // PileBody.SettlePileToeDia と SoilPile.Dp の<b>両方</b>へ書いている
+        // (解析は SoilPile.Dp を読む)。片方だけ戻すと、画面には新しい値が出たまま
+        // 解析は古い値で回る。
+        private sealed record SettlementUndoState(
+            IList<SoilPile> SoilPiles,
+            IList<PileBodyInput?> PileBodies);
+
+        // 控えを取る。**形を組み立てるのはここだけ。**
+        // 以前は同じ形が 3 か所 (初期化・Undo の直前・コードビハインドの
+        // フォーカス喪失) にあり、どこも地盤杭セットしか写していなかった。
+        private SettlementUndoState CaptureUndoState()
+            => new(
+                SoilPiles.Select(p => p.DeepCopy()).ToList(),
+                (InputModel.PileBodies ?? []).Select(pb => pb?.DeepCopy()).ToList());
+
+        /// <summary>
+        /// 画面の編集を Undo の履歴へ 1 段積む。コードビハインド (フォーカス喪失) から呼ぶ。
+        /// </summary>
+        public void SaveUndoSnapshot() => _undoManager.SaveState(CaptureUndoState());
+
+        // 控えを戻す。杭体入力は実体を差し替えずスカラーだけ写す
+        // (差し替えると他所が持っている参照と保存グラフの $ref が外れる)。
+        private void ApplyUndoState()
+        {
+            if (_undoManager.CurrentState is not SettlementUndoState state) return;
+
+            SoilPiles = new ObservableCollection<SoilPile>(state.SoilPiles.Select(p => p.DeepCopy()));
+            UpdateSoilPilesCountList();
+            SoilPile = SoilPiles[Math.Clamp(SoilPileNo - 1, 0, SoilPiles.Count - 1)];
+
+            var bodies = InputModel.PileBodies;
+            if (bodies != null && bodies.Count == state.PileBodies.Count)
+            {
+                for (int i = 0; i < bodies.Count; i++)
+                {
+                    bodies[i]?.RestoreScalarsFrom(state.PileBodies[i]);
+                }
+            }
+
+            PileBody = bodies != null && SoilPile != null
+                && SoilPile.PileBodyNo >= 1 && SoilPile.PileBodyNo <= bodies.Count
+                ? bodies[SoilPile.PileBodyNo - 1]
+                : PileBody;
+
+            DrawShapes();
         }
 
         [RelayCommand]
@@ -388,29 +453,17 @@ namespace PileDesign.ViewModels
             // Redo時に現在のライブ状態を復元できるよう、Undo前に履歴へ追加
             if (_undoManager.CurrentIndex == _undoManager.History.Count - 1)
             {
-                _undoManager.SaveState(new ObservableCollection<SoilPile>(SoilPiles.Select(p => p.DeepCopy())));
+                SaveUndoSnapshot();
             }
             _undoManager.UndoSnapshot();
-            if (_undoManager.CurrentState is ObservableCollection<SoilPile> state)
-            {
-                SoilPiles = new ObservableCollection<SoilPile>(state.Select(p => p.DeepCopy()));
-                UpdateSoilPilesCountList();
-                SoilPile = SoilPiles[Math.Max(0, SoilPileNo - 1)];
-                DrawShapes();
-            }
+            ApplyUndoState();
         }
 
         [RelayCommand]
         private void Redo()
         {
             _undoManager.RedoSnapshot();
-            if (_undoManager.CurrentState is ObservableCollection<SoilPile> state)
-            {
-                SoilPiles = new ObservableCollection<SoilPile>(state.Select(p => p.DeepCopy()));
-                UpdateSoilPilesCountList();
-                SoilPile = SoilPiles[Math.Max(0, SoilPileNo - 1)];
-                DrawShapes();
-            }
+            ApplyUndoState();
         }
 
         [RelayCommand]
@@ -432,7 +485,18 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnCancel()
         {
-            //// プロパティを前回の保存時の値に戻す
+            // SoilPiles は DeepCopy を編集しているので捨てるだけでよい。
+            // 杭体入力は実体を編集しているため、開いた時点の値へ戻す。
+            // 戻す項目は並べない (PileBodyInput.RestoreScalarsFrom の説明を参照)。
+            var bodies = InputModel.PileBodies;
+            if (bodies != null && bodies.Count == _prevPileBodies.Count)
+            {
+                for (int i = 0; i < bodies.Count; i++)
+                {
+                    bodies[i]?.RestoreScalarsFrom(_prevPileBodies[i]);
+                }
+            }
+
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 

@@ -62,6 +62,25 @@ namespace PileDesign.Views
             Canvas.SizeChanged -= Canvas_SizeChanged;
         }
 
+        // × で閉じたときも「キャンセル」と同じ扱いにする。
+        //
+        // このウィンドウは杭体入力 (InputModel.PileBodies) の実体をそのまま編集するので、
+        // キャンセルを通らずに閉じると先端径・α・N がそのまま残る。
+        // 地盤・荷重ケース・杭体・杭断面・杭頭のウィンドウは同じ形で塞いである。
+        //
+        // 「保存」で閉じるときは RequestClose 側が先に _isClosingHandled を立てるので、
+        // ここは素通りする (保存をキャンセルで打ち消してしまわない)。
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (_isClosingHandled) return;
+            _isClosingHandled = true;
+
+            if (DataContext is SettlementViewModel vm)
+            {
+                vm.CancelCommand?.Execute(null);
+            }
+        }
+
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control)
@@ -262,9 +281,9 @@ namespace PileDesign.Views
         {
             if (DataContext is SettlementViewModel viewModel)
             {
-                viewModel.UndoManager.SaveState(
-                    new ObservableCollection<SoilPile>(viewModel.SoilPiles.Select(p => p.DeepCopy()))
-                );
+                // 控えの形はここで組み立てない (地盤杭セットしか写しておらず、
+                // 杭体入力が履歴に入っていなかった)。ViewModel 側に一本化してある。
+                viewModel.SaveUndoSnapshot();
 
             }
         }

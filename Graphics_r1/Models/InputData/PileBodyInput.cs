@@ -1035,5 +1035,33 @@ namespace PileDesign.Models.InputData
                 return null;
             }
         }
+
+        /// <summary>
+        /// この杭体入力のスカラー項目を <paramref name="other"/> の値へ戻す。
+        /// 沈下ウィンドウのキャンセルが使う。
+        ///
+        /// <para><b>戻す項目を手で並べない。</b>並べると、後から沈下側の入力が増えたときに
+        /// ここへ足すのを忘れ、キャンセルしたのに値が残る。杭断面ウィンドウで実際に起きた形
+        /// (<see cref="PileSection.RestoreFrom"/> の経緯も同じ)。</para>
+        ///
+        /// <para>フィールドを直に写す。セッター経由だと子要素の同期 (<c>_suppressChildSync</c> が
+        /// 抑えている類) が走るが、戻すのは<b>もともと過去の姿</b>なので同期は要らない。</para>
+        ///
+        /// <para>参照型 (セグメント・杭頭・選択肢のコレクション) は写さない。沈下ウィンドウは
+        /// そこを編集しないうえ、写すとコレクションの実体がスナップショット側と入れ替わり、
+        /// 他所が持っている参照 (SoilPile 経由や保存グラフの $ref) が外れてしまう。</para>
+        /// </summary>
+        internal void RestoreScalarsFrom(PileBodyInput other)
+        {
+            if (other == null) return;
+
+            PileDesign.Common.ModelRestore.CopyScalarFields(this, other);
+
+            // 一時的な抑止フラグだけは過去の値ではなく「いま抑止していない」が正しい。
+            _suppressChildSync = false;
+
+            // 画面へ全プロパティの変更を知らせる (空文字は「全部」の意味)
+            OnPropertyChanged(string.Empty);
+        }
     }
 }
