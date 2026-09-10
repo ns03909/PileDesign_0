@@ -1,4 +1,4 @@
-﻿using PileDesign.FEM;
+using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
 using PileDesign.ViewModels;
@@ -378,27 +378,24 @@ namespace TestProject1
         // ================================================================
 
         /// <summary>
-        /// 地盤例題＋杭例題を組み合わせて InputModel を構築する
+        /// 例題 JSON から地盤 1 セットを読む。
+        ///
+        /// 例題 JSON は土質点を GL からの深さ (GLDepth) で持ち、標高 (AltitudeDepth) は保存しない。
+        /// 実機では GroundExampleLoader が標高へ換算するが、ここは JSON を直接読むので自前で行う。
+        /// これを忘れると全土質点の標高が 0 になり、杭先端 N 値が常に 0 になる
+        /// (= 先端支持力が 0 のままテストが通ってしまう)。
         /// </summary>
-        internal static (InputModel? model, string? error) BuildExampleInputModel(
-            string groundExampleName, string pileExampleName)
+        private static (GroundInput? ground, string? error) LoadGroundExample(string examplesDir, string name)
         {
-            var examplesDir = GetExamplesDir();
-
-            // 地盤データ読み込み
-            var groundPath = Path.Combine(examplesDir, $"{groundExampleName}.json");
+            var groundPath = Path.Combine(examplesDir, $"{name}.json");
             if (!File.Exists(groundPath))
                 return (null, $"File not found: {groundPath}");
 
-            var groundJson = File.ReadAllText(groundPath);
-            var groundInput = Newtonsoft.Json.JsonConvert.DeserializeObject<GroundInput>(groundJson);
+            var groundInput = Newtonsoft.Json.JsonConvert.DeserializeObject<GroundInput>(
+                File.ReadAllText(groundPath));
             if (groundInput == null)
-                return (null, "Ground deserialization failed");
+                return (null, $"Ground deserialization failed: {name}");
 
-            // 例題 JSON は土質点を GL からの深さ (GLDepth) で持ち、標高 (AltitudeDepth) は保存しない。
-            // 実機では GroundExampleLoader が標高へ換算するが、ここは JSON を直接読むので自前で行う。
-            // これを忘れると全土質点の標高が 0 になり、杭先端 N 値が常に 0 になる
-            // (= 先端支持力が 0 のままテストが通ってしまう)。
             if (groundInput.GroundMassesData != null)
             {
                 foreach (var mass in groundInput.GroundMassesData)
@@ -407,6 +404,36 @@ namespace TestProject1
                     mass.AltitudeDepth = mass.GLDepth + groundInput.GroundTopAltitude;
                 }
             }
+            return (groundInput, null);
+        }
+
+        /// <summary>
+        /// 地盤例題＋杭例題を組み合わせて InputModel を構築する。
+        ///
+        /// <b>断面タイプ・杭径・工法は実機の <see cref="PileExampleLoader"/> と同じ順で写す。</b>
+        /// 以前はここで <c>pileSectionType</c> / <c>precastPileName</c> を読んでおらず、
+        /// 杭体タイプの既定断面 (既製コンクリート杭 → PHC杭 φ1100) で解析されていた。
+        /// 設計例集3.1 は SC-700 + CPRC-700 (φ700) なのに全段 PHC φ1100 で走っており、
+        /// 回帰網が「PRC杭 + SC杭」を通していると読めて実際は通していなかった
+        /// (2026-09-10 に実測で確認)。
+        ///
+        /// 順序が要点で、<b>段をコレクションに入れてから</b>断面タイプを設定する。
+        /// 入れた時点で CollectionChanged が既定値を設定するので、先に設定すると上書きされる。
+        /// 杭体タイプも段を入れ替えたあとに配り直す (setter の波及は入れ替え前の段にしか届かない)。
+        ///
+        /// 地盤は<b>複数セット</b>読む。設計例集3.8 のように
+        /// <c>additionalGroundExampleNames</c> を持つ例題は、杭配置が地盤番号 1〜9 を参照する。
+        /// 1 セットしか読まないと杭が地盤に紐づかず、解析ケースが 0 件になる。
+        /// </summary>
+        internal static (InputModel? model, string? error) BuildExampleInputModel(
+            string groundExampleName, string pileExampleName)
+        {
+            var examplesDir = GetExamplesDir();
+
+            // 地盤データ読み込み (Ground No1)
+            var (groundInput, groundError) = LoadGroundExample(examplesDir, groundExampleName);
+            if (groundInput == null)
+                return (null, groundError);
 
             // 杭データ読み込み
             var pilePath = Path.Combine(examplesDir, $"{pileExampleName}.json");
@@ -428,25 +455,90 @@ namespace TestProject1
             var inputModel = new InputModel();
             inputModel.GroundsInput = new ObservableCollection<GroundInput> { groundInput };
 
-            // 杭体データの構築
+            // 追加地盤 (Ground No2 以降)。杭配置が参照する地盤番号ぶんだけ要る。
+            if (pileData.AdditionalGroundExampleNames != null)
+            {
+                foreach (var extra in pileData.AdditionalGroundExampleNames)
+                {
+                    if (string.IsNullOrEmpty(extra)) continue;
+                    var (extraGround, extraError) = LoadGroundExample(examplesDir, extra);
+                    if (extraGround == null)
+                        return (null, extraError);
+                    inputModel.GroundsInput.Add(extraGround);
+                }
+            }
+
+            // 杭体データの構築。実機の PileExampleLoader.ApplyToInputModel と同じ順で写す。
             var pileBodies = new ObservableCollection<PileBodyInput>();
             foreach (var pbDto in pileData.PileBodies)
             {
-                var pb = new PileBodyInput();
-                pb.PileBodyType = pbDto.PileBodyType ?? "場所打ち鉄筋コンクリート杭";
+                var pb = new PileBodyInput
+                {
+                    PileBodyRef = pbDto.PileBodyRef,
+                    PileBodyType = pbDto.PileBodyType ?? "場所打ち鉄筋コンクリート杭",
+                    PileTopType = pbDto.PileTopType,
+                    PileConstructionType = pbDto.PileConstructionType,
+                    PileToeDia = pbDto.PileToeDia,
+                    TipNonPermability = pbDto.TipNonPermability,
+                    EmbedmentIntoBearingSoil = pbDto.EmbedmentIntoBearingSoil,
+                    PileInnerDia = pbDto.PileInnerDia,
+                    PileTipStyle = pbDto.PileTipStyle,
+                    SettlePileToeDia = pbDto.SettlePileToeDia,
+                    SettleAlpha = pbDto.SettleAlpha,
+                    SettleN = pbDto.SettleN,
+                };
+
                 pb.PileBodySegments.Clear();
                 if (pbDto.Segments != null)
                 {
-                    foreach (var seg in pbDto.Segments)
+                    foreach (var segDto in pbDto.Segments)
                     {
-                        var s = new PileBodySegment
+                        var seg = new PileBodySegment
                         {
-                            No = seg.No,
-                            SegmentLength = seg.SegmentLength,
+                            No = segDto.No,
+                            SegmentLength = segDto.SegmentLength,
+                            SegmentDepth = segDto.SegmentDepth,
                         };
-                        pb.PileBodySegments.Add(s);
+
+                        // 先にコレクションへ入れる (CollectionChanged が既定値を設定する)
+                        pb.PileBodySegments.Add(seg);
+
+                        // 入れたあとに断面タイプを設定する (既定値を上書きする)
+                        if (!string.IsNullOrEmpty(segDto.PileSectionType))
+                            seg.PileSection.PileSectionType = segDto.PileSectionType;
+
+                        // 既製杭 / 鋼管杭ライブラリの選択。杭径・板厚はここで復元される
+                        if (!string.IsNullOrEmpty(segDto.PrecastPileName))
+                        {
+                            if (seg.PileSection.PileBodyType == PileDesign.Constants.PileTypeNames.SteelPipe)
+                                seg.PileSection.SelectedSteelPipePileName = segDto.PrecastPileName;
+                            else
+                                seg.PileSection.SetSelectedPrecastPileByName(segDto.PrecastPileName);
+                        }
+
+                        // 場所打ち杭 (鉄筋コンクリート部 / 鋼管コンクリート部) の寸法・材料
+                        if (segDto.ConcreteOutDia.HasValue) seg.PileSection.ConcreteOutDia = segDto.ConcreteOutDia.Value;
+                        if (segDto.ConcreteThickness.HasValue) seg.PileSection.ConcreteThickness = segDto.ConcreteThickness.Value;
+                        if (segDto.MainBarDr.HasValue) seg.PileSection.MainBarDr = segDto.MainBarDr.Value;
+                        if (segDto.PipeTs.HasValue) seg.PileSection.PipeTs = segDto.PipeTs.Value;
+                        if (segDto.PipeDia.HasValue) seg.PileSection.PipeDia = segDto.PipeDia.Value;
+                        if (segDto.MainBarNum.HasValue) seg.PileSection.MainBarNum = segDto.MainBarNum.Value;
+                        if (!string.IsNullOrEmpty(segDto.MainBarSize)) seg.PileSection.MainBarSize = segDto.MainBarSize;
+                        if (segDto.ConcreteFc.HasValue) seg.PileSection.ConcreteFc = segDto.ConcreteFc.Value;
+                        if (segDto.ConcreteGsi.HasValue) seg.PileSection.ConcreteGsi = segDto.ConcreteGsi.Value;
+                        if (segDto.ConcreteGamma.HasValue) seg.PileSection.ConcreteGamma = segDto.ConcreteGamma.Value;
+                        if (!string.IsNullOrEmpty(segDto.HoopSize)) seg.PileSection.HoopSize = segDto.HoopSize;
+                        if (segDto.HoopSpacing.HasValue) seg.PileSection.HoopSpacing = segDto.HoopSpacing.Value;
                     }
                 }
+
+                // 杭体タイプを配り直す。setter の波及は入れ替え前の段にしか届いていない
+                foreach (var seg in pb.PileBodySegments)
+                {
+                    if (seg?.PileSection != null)
+                        seg.PileSection.PileBodyType = pb.PileBodyType;
+                }
+
                 pileBodies.Add(pb);
             }
             inputModel.PileBodies = pileBodies;
