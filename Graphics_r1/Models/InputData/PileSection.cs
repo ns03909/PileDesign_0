@@ -3592,6 +3592,49 @@ namespace PileDesign.Models.InputData
             return (PileSection)this.MemberwiseClone();
         }
 
+        /// <summary>
+        /// 他の断面の状態を、この断面に<b>そのまま</b>書き戻す。
+        ///
+        /// 杭断面ウィンドウの「キャンセル」で使う。あちらは開いたときに
+        /// <see cref="DeepCopy"/> で控えを取っておき、キャンセル時にこれで戻す。
+        ///
+        /// <para>以前は呼び出し側が<b>戻す項目を手で並べて</b>いた (20 項目)。
+        /// PC 鋼材の諸元 (TendonAp・TendonDp・TendonSigmaPy・TendonSigmaPu・Prestress) が
+        /// 抜けており、<b>既製杭の製品を変えてキャンセルすると PC 鋼材が戻らなかった</b>。
+        /// 製品名と杭径だけ戻るので断面が食い違った状態になり、N-M 曲線が変わる。
+        /// 一覧を持つ形は諸元が増えるたびに取り残されるので、まるごと写す形にした。</para>
+        ///
+        /// <para>フィールドを直に写す。セッターを順に呼ぶと、途中の食い違った状態で
+        /// 派生値が計算され直してしまう。写すのは<b>整合した過去の状態</b>なので
+        /// 計算し直す必要はない。</para>
+        ///
+        /// <para>イベントの購読者 (デリゲート) は写さない。写すと画面の購読が
+        /// 控えのものに入れ替わる (MemberwiseClone がデリゲートも写す問題と同じ)。
+        /// readonly なフィールド (ロック等) も写さない。</para>
+        ///
+        /// (PileSectionRestoreTests が、揺らしてから戻して全項目が一致することを見張る)
+        /// </summary>
+        internal void RestoreFrom(PileSection other)
+        {
+            if (other == null) return;
+
+            foreach (var f in typeof(PileSection).GetFields(
+                System.Reflection.BindingFlags.Instance
+                | System.Reflection.BindingFlags.Public
+                | System.Reflection.BindingFlags.NonPublic))
+            {
+                if (f.IsInitOnly) continue;
+                if (typeof(Delegate).IsAssignableFrom(f.FieldType)) continue;
+                f.SetValue(this, f.GetValue(other));
+            }
+
+            // 曲線は作り直させる
+            InvalidateAllCaches();
+
+            // 画面へ全プロパティの変更を知らせる (空文字は「全部」の意味)
+            OnPropertyChanged(string.Empty);
+        }
+
         // 深いコピーを作成するメソッド
         public PileSection DeepCopy()
         {

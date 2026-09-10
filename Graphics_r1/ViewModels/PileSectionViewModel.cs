@@ -266,27 +266,10 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnCancel()
         {
-            // PileSectionの変更を元に戻す
-            PileSection.PileBodyNo = PrevPileSection.PileBodyNo;
-            PileSection.PileBodyType = PrevPileSection.PileBodyType;
-            PileSection.PileSectionType = PrevPileSection.PileSectionType;
-            PileSection.PileDiameter = PrevPileSection.PileDiameter;
-            PileSection.ConcreteOutDia = PrevPileSection.ConcreteOutDia;
-            PileSection.ConcreteThickness = PrevPileSection.ConcreteThickness;
-            PileSection.ConcreteFc = PrevPileSection.ConcreteFc;
-            PileSection.ConcreteGamma = PrevPileSection.ConcreteGamma;
-            PileSection.ConcreteGsi = PrevPileSection.ConcreteGsi;
-            PileSection.ConcreteE = PrevPileSection.ConcreteE;
-            PileSection.SelectedPrecastPile = PrevPileSection.SelectedPrecastPile;
-            PileSection.SelectedSteelPipePile = PrevPileSection.SelectedSteelPipePile;
-            PileSection.SelectedSteelPipePileName = PrevPileSection.SelectedSteelPipePileName;
-            PileSection.MainBarSize = PrevPileSection.MainBarSize;
-            PileSection.MainBarNum = PrevPileSection.MainBarNum;
-            PileSection.MainBarCenterCover = PrevPileSection.MainBarCenterCover;
-            PileSection.HoopSize = PrevPileSection.HoopSize;
-            PileSection.PipeDia = PrevPileSection.PipeDia;
-            PileSection.PipeGrade = PrevPileSection.PipeGrade;
-            PileSection.SelectedPileSectionSpecification = PrevPileSection.SelectedPileSectionSpecification;
+            // 戻す項目を手で並べない。以前は 20 項目を並べており、PC 鋼材の諸元が
+            // 抜けていたため「既製杭の製品を変えてキャンセルすると PC 鋼材が戻らない」
+            // 状態になっていた。諸元が増えるたびに取り残されるので、まるごと戻す。
+            PileSection.RestoreFrom(PrevPileSection);
 
             RequestClose?.Invoke(this, false);
         }
