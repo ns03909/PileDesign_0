@@ -780,6 +780,33 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 荷重ケースへ ViewModel を配り、<b>親をこのモデルに固定する</b>。
+        ///
+        /// <para>固定しないと、控え (解析結果セットの InputSnapshot・Undo の履歴・
+        /// 荷重条件ウィンドウの控え) の中の荷重ケースが、自分の親ではなく
+        /// いま画面が持っている入力を読む。ΣV は杭配置の軸力を合算するので、
+        /// 控えの荷重ケースが生の杭配置を読むと他の列と揃わない値が出る。
+        /// 杭配置では同じ形を既に直してある。</para>
+        ///
+        /// <para>絞らずに全件配る (<c>EveryLoadCase</c>)。<c>AllLoadCases</c> は
+        /// IsApplicable で絞るので、いま適用外の荷重ケースだけ配線されず、
+        /// あとで適用に切り替えたときに親を持たないまま残る。</para>
+        ///
+        /// <para><b>配線の入口は 2 つある</b> (<c>SetMainWindowViewModel</c> は新規作成、
+        /// <c>AttachViewModel</c> は読込・Undo)。ここへ寄せて、片方だけ直すのを防ぐ。</para>
+        /// </summary>
+        private void WireLoadCases(MainWindowViewModel mainWindowViewModel)
+        {
+            if (LoadCasesInput == null) return;
+
+            foreach (var loadCase in LoadCasesInput.EveryLoadCase)
+            {
+                loadCase.SetMainWindowViewModel(mainWindowViewModel);
+                loadCase.SetOwner(this);
+            }
+        }
+
+        /// <summary>
         /// 杭の親をこのモデルに固定する。<c>AttachViewModel</c> の親固定だけを行う版で、
         /// ViewModel を用意できないテストのための入口。
         /// 杭は自分の沈下量を親モデルの結果から引くので、親が無いと 0 になる。
@@ -857,15 +884,7 @@ namespace PileDesign.Models.InputData
             // LoadCase の MainWindowViewModel を再セット（デシリアライズ後は null のため）
             if (LoadCasesInput != null)
             {
-                LoadCasesInput.LoadCaseVL0?.SetMainWindowViewModel(mainWindowViewModel);
-                LoadCasesInput.LoadCaseVLadd?.SetMainWindowViewModel(mainWindowViewModel);
-                LoadCasesInput.LoadCaseVL?.SetMainWindowViewModel(mainWindowViewModel);
-                if (LoadCasesInput.LoadCasesLevel1 != null)
-                    foreach (var lc in LoadCasesInput.LoadCasesLevel1)
-                        lc.SetMainWindowViewModel(mainWindowViewModel);
-                if (LoadCasesInput.LoadCasesLevel2 != null)
-                    foreach (var lc in LoadCasesInput.LoadCasesLevel2)
-                        lc.SetMainWindowViewModel(mainWindowViewModel);
+                WireLoadCases(mainWindowViewModel);
             }
 
             // 重要: DeepCopy 後に null になり得るコレクションを補正
@@ -885,6 +904,7 @@ namespace PileDesign.Models.InputData
             FundamentalInput = new FundamentalInput();
             LoadCasesInput = new LoadCasesInput();
             LoadCasesInput.SetMainWindowViewModel(_mainWindowViewModel);
+            WireLoadCases(_mainWindowViewModel);
             GroundsInput = [new GroundInput()];
             PileBodies = [new PileBodyInput()];
             PileLayoutItems = [];

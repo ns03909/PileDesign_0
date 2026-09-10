@@ -192,8 +192,11 @@ namespace TestProject1
 
                         if (f.FieldType.IsValueType || f.FieldType == typeof(string)) continue;
 
-                        // 画面との配線は入力ではないので戻す対象ではない
+                        // 配線は入力ではないので戻す対象ではない。
+                        // MainWindowViewModel は画面への参照、InputModel は
+                        // 「自分の親」の固定 (控えの中で生の入力を読まないため)。
                         if (f.FieldType == typeof(MainWindowViewModel)) continue;
+                        if (f.FieldType == typeof(PileDesign.Models.InputData.InputModel)) continue;
 
                         offenders.Add($"{type.Name}.{f.Name} ({f.FieldType.Name})");
                     }

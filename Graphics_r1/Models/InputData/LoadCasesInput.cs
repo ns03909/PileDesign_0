@@ -1,5 +1,6 @@
 ﻿using PileDesign.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -196,6 +197,25 @@ namespace PileDesign.Models.InputData
                     foreach (var lc in LoadCasesLevel2.Where(x => x.IsApplicable))
                         allSeismicLoadCases.Add(lc);
                 return allSeismicLoadCases;
+            }
+        }
+
+        /// <summary>
+        /// 保持している荷重ケースを<b>絞らずに</b>すべて返す。配線 (親の固定・VM の再セット) 用。
+        ///
+        /// <see cref="AllLoadCases"/> は IsApplicable で絞るので配線には使えない。
+        /// 絞ると、いま適用外の荷重ケースだけ配線されず、あとで適用に切り替えたときに
+        /// 親を持たないまま残る。
+        /// </summary>
+        internal IEnumerable<LoadCase> EveryLoadCase
+        {
+            get
+            {
+                if (LoadCaseVL0 != null) yield return LoadCaseVL0;
+                if (LoadCaseVLadd != null) yield return LoadCaseVLadd;
+                if (LoadCaseVL != null) yield return LoadCaseVL;
+                foreach (var lc in LoadCasesLevel1 ?? []) if (lc != null) yield return lc;
+                foreach (var lc in LoadCasesLevel2 ?? []) if (lc != null) yield return lc;
             }
         }
 

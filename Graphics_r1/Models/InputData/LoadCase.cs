@@ -12,8 +12,19 @@ namespace PileDesign.Models.InputData
         private MainWindowViewModel? _mainWindowViewModel;
         // [JsonIgnore]: InputModel への back-reference は循環参照を生むため JSON シリアライズ対象外
         // (InputModel → LoadCasesInput → LoadCases[] → LoadCase → InputModel の循環)
+        // 自分が属している入力。VM 経由で「現在の入力」に化けないよう親を固定する。
+        //
+        // 固定していないと、控え (解析結果セットの InputSnapshot・荷重条件ウィンドウの
+        // 控え・Undo の履歴) の中の荷重ケースが、自分の親ではなく<b>いま画面が持っている
+        // 入力</b>を読む。ΣV (SumV) は杭配置の軸力を合算するので、控えの荷重ケースが
+        // 生の杭配置を読むと、他の列と揃わない値が出る。荷重名の重複判定も同じ。
+        // 杭配置 (PileLayoutDataItem) では同じ形を既に直してある。
+        private InputModel? _owner;
+
+        internal void SetOwner(InputModel? owner) => _owner = owner;
+
         [JsonIgnore]
-        public InputModel? InputModel => _mainWindowViewModel?.CurrentInputModel;
+        public InputModel? InputModel => _owner ?? _mainWindowViewModel?.CurrentInputModel;
 
         // プロパティ
         private bool _isApplicable;
