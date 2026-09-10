@@ -179,7 +179,7 @@ namespace TestProject1
             StringAssert.Contains(gate, "ModelConnectivityCheck.CollectErrors(inputModel)",
                 "解析前の検査がつながりを見ていない");
 
-            var warn = TestSource.MethodBody(source, "public static List<string> CollectInputWarnings(InputModel inputModel, bool isElementSplit = true)");
+            var warn = TestSource.MethodBody(source, "public static List<string> CollectInputWarnings(InputModel inputModel)");
             StringAssert.Contains(warn, "ModelConnectivityCheck.CollectWarnings(inputModel)",
                 "警告の集約がつながりを見ていない");
         }

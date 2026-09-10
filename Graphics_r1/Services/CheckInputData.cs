@@ -24,16 +24,11 @@ namespace PileDesign.Services
         /// ・ΔZc &lt;= 0 (接合点が杭頭より下または同位置 = ジオメトリ異常)
         /// ・地盤側の既存 ValidateForAnalysis 由来の注意 (Es=0 / 粘性土で Cu=0 / 深度順序逆 / 土質点 N=0 等)
         /// </summary>
-        /// <param name="isElementSplit">
-        /// 杭要素分割を行っているか。行っていないと土層境界だけで分割されるため、
-        /// 特性長に対して長い要素が残る。詳細は <see cref="WarnIfNotElementSplit"/>。
-        /// </param>
-        public static List<string> CollectInputWarnings(InputModel inputModel, bool isElementSplit = true)
+        public static List<string> CollectInputWarnings(InputModel inputModel)
         {
             var warnings = new List<string>();
             if (inputModel == null) return warnings;
 
-            WarnIfNotElementSplit(inputModel, isElementSplit, warnings);
 
             // 各杭の ΔZc (接合点 − 杭頭オフセット)
             if (inputModel.PileLayoutItems != null)
@@ -360,40 +355,20 @@ namespace PileDesign.Services
             return message;
         }
 
-        /// <summary>
-        /// 杭要素分割を行っていないときに注意を出す。<b>解析は止めない。</b>
-        ///
-        /// 分割しないと、杭の節点は土層境界と杭区間の境にしか置かれない。土層が厚い区間では
-        /// 要素が長く残り、その区間の地盤反力が両端の節点へ集約されるため、<b>支持が実際より
-        /// 遠くに置かれて水平変位が過大に出る</b>。
-        ///
-        /// 効き方は要素長を特性長 1/β (β = (kh·B / 4EI)^(1/4)) と比べると読める。
-        /// 2026-09-10 に同梱の計算例で実測した結果:
-        ///
-        /// <list type="bullet">
-        /// <item>計算例9: 1/β = 3.62m に対し最長要素 9.00m (2.5 倍)。1 段細分化で変位 -10.2%</item>
-        /// <item>設計例集3.1: 1/β = 2.64m に対し最長要素 5.00m (1.9 倍)。同 -27.4%</item>
-        /// </list>
-        ///
-        /// どちらも 2 段目以降は 0.05〜0.86% に収まり、単調に一定値へ収束する。
-        /// 要素長に依存してはいけない量が依存しているわけではなく、純粋な離散化誤差。
-        /// アプリの要素分割の既定 (MaxPileSpacing = 1.0m) は特性長の 0.3 倍程度なので、
-        /// <b>分割すれば収束した値が得られる</b>。だから「分割したか」だけを見れば足りる。
-        /// (AnalysisOutputInvariantTests が収束することを見張っている)
-        /// </summary>
-        private static void WarnIfNotElementSplit(
-            InputModel inputModel, bool isElementSplit, List<string> warnings)
-        {
-            if (isElementSplit) return;
-            if ((inputModel.PileLayoutItems?.Count ?? 0) == 0) return;
-
-            // 実測した差 (計算例で -10.2% / -27.4%) は文に出さない。
-            // 2 例題の値なので一般の保証として読まれると誤解を招くうえ、
-            // 「その程度なら許容」とも読めてしまう。程度は上の <summary> に置いてある。
-            warnings.Add(
-                "杭要素分割を行っていません。杭の節点が土層境界にしか置かれないため、"
-                + "厚い土層では要素が長くなり、水平変位が大きめに出ることがあります。"
-                + "「杭要素分割」を実行してから解析すると、分割を細かくしても変わらない値が得られます。");
-        }
+        // 杭要素分割が済んでいないことは、ここでは注意にしない。
+        //
+        // 2026-09-10 に一度足したが、<b>構造上出ない</b>ので取り下げた。
+        // 水平解析は MainWindowViewModel.EnsureElementSplit("水平解析") を通ってからしか
+        // ウィンドウを開かない。分割が済んでいなければその場で訊き、断られても分割画面で
+        // 取り消しても false を返してウィンドウを作らない。そのウィンドウは ShowDialog
+        // (モーダル) なので、開いている間に断面を編集して分割を無効化することもできない。
+        // つまりこの検査に届く時点で分割は必ず済んでいる。
+        //
+        // 出ない注意を置くと「保護がある」と読めてしまうのが害。状況そのものを防ぐほうが
+        // 上位の解決で、そちらは既に入っている。
+        //
+        // 分割前の解析が粗いこと自体は事実 (計算例で応答が 10〜27% 過大。詳細は
+        // AnalysisOutputInvariantTests.RefiningTheMesh_ConvergesToAFixedAnswer)。
+        // 別の入口から分割前に解析できるようになったら、そこで注意を出すこと。
     }
 }

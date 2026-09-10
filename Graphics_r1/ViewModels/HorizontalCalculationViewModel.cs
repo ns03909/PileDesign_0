@@ -1715,8 +1715,7 @@ namespace PileDesign.ViewModels
                 ? $"L1={level1Count} / L2={level2Count} (液状化: あり/なし両方)"
                 : $"L1={level1Count} / L2={level2Count}";
 
-            var inputWarnings = PileDesign.Services.CheckInputData.CollectInputWarnings(
-                InputModel, isElementSplit: _mainWindowViewModel?.IsElementSplit ?? true);
+            var inputWarnings = PileDesign.Services.CheckInputData.CollectInputWarnings(InputModel);
 
             return new Views.AnalysisPreflightSummary(
                 AnalysisName: "水平解析",
