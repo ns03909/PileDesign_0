@@ -4500,6 +4500,11 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 、「方向2」は荷重ケース「1-2」、「2-2」に、以下同様に対応します。
             </p>
             <p>
+                区分は<strong>荷重ケースの方向ごと</strong>で、荷重組合せの係数 &beta; の符号では入れ替わりません。
+                その考え方と、杭間隔による効き方の違いは
+                <a href="#h-前方杭・後方杭の区分と荷重組合せの関係">「前方杭・後方杭の区分と荷重組合せの関係」</a>を参照してください。
+            </p>
+            <p>
                 <img class="button-icon" src="icons/AutoFrontRear.svg" alt="">「自動選別」ボタンをクリックすると、方向別にそれぞれの杭について指定した角度の範囲にほかの杭の有無を調べ、自動的に前方杭、後方杭を選別します。
             </p>
 
@@ -8302,6 +8307,55 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-05  max|δu|=2.12E-04  K=[1.0E+0
                     <tr><td>PRCくい</td><td>23</td><td>25</td><td>23</td><td>23</td><td>23</td><td>23</td><td>23</td></tr>
                 </tbody>
             </table>
+
+            <h3 id="h-前方杭・後方杭の区分と荷重組合せの関係">前方杭・後方杭の区分と荷重組合せの関係</h3>
+            <p>
+                前方杭・後方杭の区分は、<strong>荷重ケースの方向ごと</strong>に指定します
+                （「方向1」は荷重ケース「1-1」「2-1」に対応、以下同様）。
+                <strong>荷重組合せの係数 &beta;<sub>1</sub>・&beta;<sub>2</sub> の符号は見ません。</strong>
+                つまり &beta;<sub>1</sub> が負の組合せ（上部構造慣性力が逆位相）でも、
+                区分は荷重ケースの方向のまま用います。
+            </p>
+            <p>
+                <em>なぜそうするか。</em> 前方杭・後方杭は<strong>群杭の中でのその杭の位置</strong>で決まります。
+                実際の配置では<strong>ほとんどの杭が後方杭で、端部の杭のみが前方杭</strong>になります。
+                これは荷重組合せごとに入れ替えられる性質のものではありません。
+            </p>
+            <div class="warning" style="background:#FFFAEB; border:1px solid #E0A030; padding:8px 12px; margin:8px 0; color:#8A4500;">
+                ⚠ <strong>設計上の判断が残る点</strong>：上部構造慣性力が支配的な場合、
+                &beta;<sub>1</sub> が負の組合せでは<strong>正味の水平力が荷重ケースの公称方向と逆になる</strong>ことがあります。
+                この状態で前方杭・後方杭の区分をそのまま用いることには疑問が残りますが、
+                本プログラムは<strong>指針式の組み立てどおり</strong>としています。
+                逆位相では杭が S 字に変形し、一方向載荷を前提とする「前面・背面」の考え方が
+                そのままでは当てはまらないことにも留意してください。
+            </div>
+            <p>
+                区分による差は<strong>杭間隔で大きく変わります</strong>。群杭効果の係数 &kappa; は
+                前方杭が 3.0 固定、後方杭が
+                $\min\!\left((0.55-0.007\phi)(r/B-1)+0.4,\ 3.0\right)$ です。
+                &phi; = 30&deg; のとき次のようになり、杭間隔が広いと頭打ちで<strong>前後の差が無くなります</strong>。
+            </p>
+            <table class="table-doc">
+                <caption style="text-align: center">前方杭・後方杭の &kappa; の差 (&phi; = 30&deg;)</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">杭間隔比 r/B</th>
+                        <th style="text-align: center">前方杭 &kappa;</th>
+                        <th style="text-align: center">後方杭 &kappa;</th>
+                        <th style="text-align: center">py の比</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td style="text-align:center">2.5</td><td style="text-align:center">3.00</td><td style="text-align:center">0.91</td><td style="text-align:center">3.3 倍</td></tr>
+                    <tr><td style="text-align:center">3</td><td style="text-align:center">3.00</td><td style="text-align:center">1.08</td><td style="text-align:center">2.8 倍</td></tr>
+                    <tr><td style="text-align:center">4</td><td style="text-align:center">3.00</td><td style="text-align:center">1.42</td><td style="text-align:center">2.1 倍</td></tr>
+                    <tr><td style="text-align:center">10</td><td style="text-align:center">3.00</td><td style="text-align:center">3.00 (頭打ち)</td><td style="text-align:center">差なし</td></tr>
+                </tbody>
+            </table>
+            <p style="font-style: italic; color: #666;">
+                ※ 同梱の計算例は r/B = 10 のため、前方杭・後方杭を入れ替えても結果が変わりません。
+                実務の杭間隔 (2.5〜4B) では py が 2〜3 倍違うため、区分の指定が結果に効きます。
+            </p>
         </section>
 
 
