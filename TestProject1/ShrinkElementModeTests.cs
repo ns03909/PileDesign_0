@@ -140,6 +140,65 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 変形後形状も要素縮小モードに追従すること。
+        ///
+        /// 変形後形状は Hermite 補間で要素内の点列を作るので、縮めるのは<b>媒介変数</b>。
+        /// 点列を作ってから両端を捨てるのではないので、端が刻み幅に量子化しない。
+        /// </summary>
+        [TestMethod]
+        public void TheDeformedShape_FollowsTheMode()
+        {
+            string hermite = TestSource.Read("Graphics_r1", "Common", "HermiteBeamInterpolation.cs");
+
+            // 刻みが sFrom〜sTo の範囲になっていること (0〜1 決め打ちでない)
+            StringAssert.Contains(hermite, "sFrom + (sTo - sFrom)",
+                "Hermite 補間の刻みが要素の全長に固定されています。"
+                + "範囲を渡せないと変形後形状を分節できません");
+
+            string src = TestSource.Read("Graphics_r1", "Views", "MainWindow.CanvasResultsDeformed.cs");
+
+            StringAssert.Contains(src, "DeformedShrinkRange",
+                "変形後形状の縮小範囲を決める処理がありません");
+
+            // 縮小率は要素の形状・応力図と同じ ShrinkSpan を通すこと。
+            // 別に書くと同じ図の中で隙間の大きさが食い違う
+            StringAssert.Contains(src, "ShrinkSpan(0.0, 1.0)",
+                "変形後形状が ShrinkSpan を通っていません。"
+                + "縮小率を別に持つと、要素の形状と隙間の大きさが食い違います");
+
+            // 3 種類 (基礎梁の断面・杭の断面・中心線) すべてに範囲が渡っていること
+            int wired = Regex.Matches(src, @"GetDeformedPoints\([\s\S]{0,200}?sFrom: sFrom, sTo: sTo").Count;
+            TestSource.AssertScanned(wired, 3, "変形後形状の縮小追従");
+            Assert.AreEqual(3, wired,
+                $"変形後形状で縮小範囲を渡している箇所が {wired} 件です (3 件のはず: "
+                + "基礎梁の断面・杭の断面・中心線)");
+        }
+
+        /// <summary>
+        /// 杭の変形後輪郭が、要素ごとの区間に分かれること。
+        ///
+        /// 杭の輪郭は<b>杭 1 本ぶんを 1 本の連続した点列に連結して</b>張っている。
+        /// そのままだと縮めても隙間をまたぐ線分が張られ、隙間が埋まって
+        /// 縮めていないのと同じ見え方になる。
+        /// </summary>
+        [TestMethod]
+        public void TheDeformedPileOutline_DoesNotBridgeTheGaps()
+        {
+            string src = TestSource.Read("Graphics_r1", "Views", "MainWindow.CanvasResultsDeformed.cs");
+
+            StringAssert.Contains(src, "runStarts",
+                "杭の変形後輪郭に区間の区切りがありません");
+            StringAssert.Contains(src, "runStarts.Contains(k + 1)",
+                "杭の変形後輪郭が区間をまたいで線分を張っています。"
+                + "隙間が埋まって、縮めていないのと同じ見え方になります");
+
+            // 縮小モードでは 2 要素目以降も始点を落とさないこと (落とすと 1 点短くなる)
+            StringAssert.Contains(src, "isFirstBeam || viewModel.IsShrinkElementMode",
+                "縮小モードでも 2 要素目以降の始点を落としています。"
+                + "節点を共有しないので、落とすと要素が 1 点短くなります");
+        }
+
+        /// <summary>
         /// 節杭の節が、帯と同じ縮んだ Z から描かれること。
         /// 帯だけ縮めると、節が帯からはみ出して別物のように見える。
         /// </summary>

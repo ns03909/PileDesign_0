@@ -1,4 +1,4 @@
-using MathNet.Numerics.LinearAlgebra;
+﻿using MathNet.Numerics.LinearAlgebra;
 using PileDesign.FEM;
 using System;
 using System.Collections.Generic;
@@ -20,14 +20,16 @@ namespace PileDesign.Common
         /// <param name="dispJ">j端の全体座標系変位 (Ux,Uy,Uz,Rx,Ry,Rz)</param>
         /// <param name="dispScale">表示倍率</param>
         /// <param name="nDiv">要素内分割数</param>
+        /// <param name="sFrom">刻み始めの位置 (0=i端)。要素縮小モードで内側から描き始めるために使う</param>
+        /// <param name="sTo">刻み終わりの位置 (1=j端)</param>
         /// <returns>変形後の3D座標点列 (nDiv+1 点)</returns>
         public static List<Point3D> GetDeformedPoints(
             Beam beam, NodeDisp dispI, NodeDisp dispJ,
-            double dispScale, int nDiv = 10)
+            double dispScale, int nDiv = 10, double sFrom = 0.0, double sTo = 1.0)
         {
             Matrix<double> T12 = beam.GetCachedCoordTransform();
             var R = T12.SubMatrix(0, 3, 0, 3); // 3×3 回転行列
-            return GetDeformedPointsCore(beam.NodeI.Coord, beam.NodeJ.Coord, R, dispI, dispJ, dispScale, nDiv);
+            return GetDeformedPointsCore(beam.NodeI.Coord, beam.NodeJ.Coord, R, dispI, dispJ, dispScale, nDiv, sFrom, sTo);
         }
 
         /// <summary>
@@ -38,7 +40,7 @@ namespace PileDesign.Common
         public static List<Point3D> GetDeformedPoints(
             Point3D coordI, Point3D coordJ,
             NodeDisp dispI, NodeDisp dispJ,
-            double dispScale, int nDiv = 10)
+            double dispScale, int nDiv = 10, double sFrom = 0.0, double sTo = 1.0)
         {
             Vector3D v = new(coordJ.X - coordI.X, coordJ.Y - coordI.Y, coordJ.Z - coordI.Z);
             if (v.Length < 1e-12)
@@ -51,12 +53,13 @@ namespace PileDesign.Common
                 };
             }
             var R = Utils.GetNodeTransformMatrix(v);
-            return GetDeformedPointsCore(coordI, coordJ, R, dispI, dispJ, dispScale, nDiv);
+            return GetDeformedPointsCore(coordI, coordJ, R, dispI, dispJ, dispScale, nDiv, sFrom, sTo);
         }
 
         private static List<Point3D> GetDeformedPointsCore(
             Point3D coordI, Point3D coordJ, Matrix<double> R,
-            NodeDisp dispI, NodeDisp dispJ, double dispScale, int nDiv)
+            NodeDisp dispI, NodeDisp dispJ, double dispScale, int nDiv,
+            double sFrom, double sTo)
         {
             var points = new List<Point3D>(nDiv + 1);
 
@@ -89,7 +92,10 @@ namespace PileDesign.Common
 
             for (int k = 0; k <= nDiv; k++)
             {
-                double s = (double)k / nDiv;
+                // sFrom〜sTo の範囲だけを刻む。要素縮小モードでは両端を内側へ寄せた
+                // 範囲を渡すので、<b>縮めた区間の本当の変形形状</b>がそのまま出る。
+                // 点列を後から間引くのと違い、端が刻み幅に量子化しない。
+                double s = sFrom + (sTo - sFrom) * k / nDiv;
 
                 double ux_s = uxi * (1 - s) + uxj * s;
                 double uy_s = Hermite(s, L, vyi, thetaZi, vyj, thetaZj);

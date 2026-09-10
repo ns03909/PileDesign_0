@@ -23,6 +23,19 @@ namespace PileDesign.Views
     public partial class MainWindow
     {
         /// <summary>
+        /// 変形後形状を描くときの、Hermite 補間の刻み範囲。要素縮小モードでなければ
+        /// 0〜1 (要素の全長)。
+        ///
+        /// 縮めるのは<b>媒介変数</b>なので、出てくるのは縮めた区間の<b>本当の変形形状</b>。
+        /// 点列を作ってから両端を捨てるのと違い、端が刻み幅に量子化しない。
+        ///
+        /// 縮め方は要素の形状・応力図と同じ <see cref="ShrinkSpan"/> を通す。
+        /// 別に書くと、同じ図の中で隙間の大きさが食い違う。
+        /// </summary>
+        private static (double From, double To) DeformedShrinkRange(MainWindowViewModel viewModel)
+            => viewModel.IsShrinkElementMode ? ShrinkSpan(0.0, 1.0) : (0.0, 1.0);
+
+        /// <summary>
         /// 解析結果表示と独立して変形後形状を描画する
         /// </summary>
         private void UpdateDeformedElementsStandalone(
@@ -413,8 +426,11 @@ namespace PileDesign.Views
                 if (nrI?.CumulativeDisp == null || nrJ?.CumulativeDisp == null) continue;
 
                 // Hermite補間で変形後3D中心線点列を取得
+                // 要素縮小モードでは、刻む範囲を内側へ寄せて要素を分節する。
+                // 稜線も両端の矩形も要素ごとに閉じているので、範囲を渡すだけで足りる。
+                var (sFrom, sTo) = DeformedShrinkRange(viewModel);
                 var points3D = Common.HermiteBeamInterpolation.GetDeformedPoints(
-                    beam, nrI.CumulativeDisp, nrJ.CumulativeDisp, dispScale);
+                    beam, nrI.CumulativeDisp, nrJ.CumulativeDisp, dispScale, sFrom: sFrom, sTo: sTo);
                 if (points3D.Count < 2) continue;
 
                 double hw = bw / 2.0;
@@ -561,6 +577,10 @@ namespace PileDesign.Views
                 var radiusList = new List<double>();
                 // 要素境界のインデックス（楕円を描画する位置）
                 var boundaryIndices = new List<int>();
+                // 輪郭の区間 (run) の先頭インデックス。
+                // 通常は杭 1 本が 1 本の連続した輪郭なので {0} のみ。要素縮小モードでは
+                // 要素ごとに独立した輪郭になるので、<b>隙間をまたぐ線分を張らない</b>ために使う。
+                var runStarts = new HashSet<int>();
                 // 各輪郭点に対応する「表示値」（色分け用の補間値。colorize=false 時は未使用）
                 var pointValues = new List<double>();
 
@@ -595,8 +615,10 @@ namespace PileDesign.Views
                     if (nrI?.CumulativeDisp == null || nrJ?.CumulativeDisp == null) continue;
 
                     // Hermite補間で変形後3D点列を取得
+                    // 要素縮小モードでは、刻む範囲を内側へ寄せて要素を分節する。
+                    var (sFrom, sTo) = DeformedShrinkRange(viewModel);
                     var points3D = Common.HermiteBeamInterpolation.GetDeformedPoints(
-                        beam, nrI.CumulativeDisp, nrJ.CumulativeDisp, dispScale);
+                        beam, nrI.CumulativeDisp, nrJ.CumulativeDisp, dispScale, sFrom: sFrom, sTo: sTo);
                     if (points3D.Count < 2) continue;
 
                     // 3D → 2D変換
@@ -612,11 +634,17 @@ namespace PileDesign.Views
 
                     // 各補間点で法線方向にオフセットして左右の輪郭点を算出
                     bool isFirstBeam = (leftPoints.Count == 0);
-                    int startK = isFirstBeam ? 0 : 1; // 2要素目以降は始点を重複させない
+                    // 通常は 2 要素目以降の始点が前の要素の終点と重なるので落とす。
+                    // 要素縮小モードでは節点を共有しないので、落とすと要素が 1 点短くなる。
+                    bool startsNewRun = isFirstBeam || viewModel.IsShrinkElementMode;
+                    int startK = startsNewRun ? 0 : 1;
 
-                    // 要素I端（最初の要素のみ）の境界インデックスを記録
-                    if (isFirstBeam)
-                        boundaryIndices.Add(0);
+                    // 区間の先頭と、要素 I 端の境界インデックスを記録
+                    if (startsNewRun)
+                    {
+                        runStarts.Add(centerPoints.Count);
+                        boundaryIndices.Add(centerPoints.Count);
+                    }
 
                     for (int k = startK; k < pts2D.Count; k++)
                     {
@@ -645,7 +673,9 @@ namespace PileDesign.Views
                         tangentVectors.Add(tangent);
                         radiusList.Add(radius2D);
 
-                        // 色分け用: 梁軸方向の位置比率 t で vBeamI と vBeamJ を線形補間
+                        // 色分け用: 梁軸方向の位置比率 t で vBeamI と vBeamJ を線形補間。
+                        // 縮小モードでは t は<b>縮めた区間</b>を 0〜1 で見るので、縮めた端に
+                        // 節点そのものの値が乗る。応力図と同じ「端点を縮めて値は端の値のまま」。
                         if (colorize)
                         {
                             double t = (pts2D.Count > 1) ? (double)k / (pts2D.Count - 1) : 0.0;
@@ -664,6 +694,10 @@ namespace PileDesign.Views
                 // colorize=false: すべて defaultPathGeo に集約
                 for (int k = 0; k < leftPoints.Count - 1; k++)
                 {
+                    // 要素縮小モードでは要素間に隙間があるので、区間をまたぐ線分は張らない。
+                    // 張ると隙間が埋まって、縮めていないのと同じ見え方になる。
+                    if (runStarts.Contains(k + 1)) continue;
+
                     PathGeometry targetGeo;
                     if (colorize)
                     {
@@ -887,8 +921,9 @@ namespace PileDesign.Views
             var nrJ = beam.NodeJ.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
             if (nrI?.CumulativeDisp == null || nrJ?.CumulativeDisp == null) return;
 
+            var (sFrom, sTo) = DeformedShrinkRange(viewModel);
             var points3D = Common.HermiteBeamInterpolation.GetDeformedPoints(
-                beam, nrI.CumulativeDisp, nrJ.CumulativeDisp, dispScale);
+                beam, nrI.CumulativeDisp, nrJ.CumulativeDisp, dispScale, sFrom: sFrom, sTo: sTo);
 
             if (points3D.Count < 2) return;
 
