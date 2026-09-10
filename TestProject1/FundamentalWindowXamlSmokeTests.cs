@@ -220,6 +220,41 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// 基礎梁ウィンドウが開くこと。
+        ///
+        /// このウィンドウはスモークに載っていなかった。
+        /// <c>Closing="..."</c> のようなハンドラ名の取り違えはコンパイルが止めてくれるが
+        /// (生成される .g.cs が結線するので CS1061)、<b>StaticResource のキー誤りや
+        /// Grid の行数と Grid.Row の不一致はビルドを通り、開いた瞬間に例外</b>になる。
+        /// </summary>
+        [TestMethod]
+        public void FoundationBeamWindow_Opens()
+        {
+            bool created = false;
+
+            var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
+            {
+                XamlSmokeTestSupport.EnsureApplicationResources();
+                var window = new PileDesign.Views.FoundationBeamWindow();
+                created = true;
+                window.Close();
+            }, out bool timedOut);
+
+            if (timedOut)
+            {
+                Assert.Inconclusive("XAML パースが 60 秒以内に完了しなかったためスキップ");
+                return;
+            }
+            if (captured != null)
+            {
+                Assert.Fail("FoundationBeamWindow の XAML パースに失敗: "
+                            + $"{captured.GetType().Name}: {captured.Message}"
+                            + Environment.NewLine + captured.StackTrace);
+            }
+            Assert.IsTrue(created, "FoundationBeamWindow が生成されなかった");
+        }
+
         private static IEnumerable<object> LogicalDescendants(DependencyObject root)
         {
             foreach (object child in LogicalTreeHelper.GetChildren(root))

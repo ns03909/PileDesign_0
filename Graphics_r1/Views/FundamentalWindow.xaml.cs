@@ -12,6 +12,8 @@ namespace PileDesign.Views
     /// </summary>
     public partial class FundamentalWindow : Window
     {
+        private bool _isClosingHandled = false;
+
         // コンストラクタ
         public FundamentalWindow()
         {
@@ -30,9 +32,31 @@ namespace PileDesign.Views
         private void FundamentalViewModel_RequestClose(object sender, System.EventArgs e)
         {
             // すでに閉じ処理中なら何もしない
+            if (_isClosingHandled) return;
             if (!this.IsLoaded || !this.IsVisible) return;
+            _isClosingHandled = true;
             this.Close();
         }
+
+        // × で閉じたときも「キャンセル」と同じ扱いにする。
+        //
+        // このウィンドウは入力の実体をそのまま編集し、戻すのはキャンセルだけなので、
+        // キャンセルを通らずに閉じると編集が残ってしまう。
+        // 地盤・荷重ケース・杭体・杭断面・杭頭・単杭沈下は同じ形で塞いである。
+        //
+        // OK で閉じるときは RequestClose 側が先に _isClosingHandled を立てるので、
+        // ここは素通りする (OK をキャンセルで打ち消してしまわない)。
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (_isClosingHandled) return;
+            _isClosingHandled = true;
+
+            if (DataContext is FundamentalViewModel vm)
+            {
+                vm.CancelCommand?.Execute(null);
+            }
+        }
+
 
         // モデル化オプション各項目の「ヘルプ」リンクは MaterialOptionRadioPair コントロール側で処理する
         // （HelpAnchor プロパティ → MainWindowViewModel.OpenHelpWindowAt）。

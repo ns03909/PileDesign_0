@@ -39,6 +39,25 @@ namespace PileDesign.Views
             }
         }
 
+        // × で閉じたときも「キャンセル」と同じ扱いにする。
+        //
+        // このウィンドウは入力の実体をそのまま編集し、戻すのはキャンセルだけなので、
+        // キャンセルを通らずに閉じると編集が残ってしまう。
+        // 地盤・荷重ケース・杭体・杭断面・杭頭・単杭沈下は同じ形で塞いである。
+        //
+        // OK で閉じるときは RequestClose 側が先に _isClosingHandled を立てるので、
+        // ここは素通りする (OK をキャンセルで打ち消してしまわない)。
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (_isClosingHandled) return;
+            _isClosingHandled = true;
+
+            if (DataContext is FoundationBeamViewModel vm)
+            {
+                vm.CancelCommand?.Execute(null);
+            }
+        }
+
         private void DeleteNodeButton_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is FoundationBeamViewModel viewModel)

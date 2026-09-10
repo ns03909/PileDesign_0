@@ -11,7 +11,8 @@
         mc:Ignorable="d"
         Title="基本設定" Height="700" Width="560"
         MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        Closing="Window_Closing">
     
     <Window.Resources>
         <conv:BoolEqualsConverter x:Key="BoolEqualsConverter"/>
