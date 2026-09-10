@@ -20,7 +20,7 @@
     TestSuiteIntegrityTests が見張る。片方だけでは足りないので両方いる。
 
 .PARAMETER Minimum
-    実行件数の下限。既定 1750。テストを増やしたら上げること。
+    実行件数の下限。既定 1900。テストを増やしたら上げること。
 
 .PARAMETER Filter
     dotnet test の --filter に渡す文字列。指定すると件数の検査は行わない
@@ -40,7 +40,7 @@
 #>
 [CmdletBinding()]
 param(
-    [int]$Minimum = 1750,
+    [int]$Minimum = 1900,
     [string]$Filter = "",
     [switch]$Clean
 )

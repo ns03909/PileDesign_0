@@ -70,6 +70,52 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// 杭区間を 1 つずつ 2 等分する。<b>物理的に同じ杭で、離散化だけが細かくなる。</b>
+        ///
+        /// 節点は区間の境と土層の境に置かれるので、区間を割れば節点が増える。
+        /// 断面は複製して同じものを持たせる (参照を共有すると、一方の再計算が
+        /// もう一方に及ぶ)。
+        /// </summary>
+        private static int RefinePileSegments(InputModel model)
+        {
+            if (model.PileBodies == null) return 0;
+
+            int added = 0;
+            foreach (var pb in model.PileBodies)
+            {
+                if (pb.PileBodySegments == null || pb.PileBodySegments.Count == 0) continue;
+
+                var refined = new System.Collections.ObjectModel.ObservableCollection<PileBodySegment>();
+                int no = 1;
+                foreach (var seg in pb.PileBodySegments.ToList())
+                {
+                    double half = seg.SegmentLength * 0.5;
+                    double bottomDepth = seg.SegmentDepth;
+
+                    var upper = seg.DeepCopy();
+                    upper.No = no++;
+                    upper.SegmentLength = half;
+                    upper.SegmentDepth = bottomDepth - half;
+
+                    var lower = seg.DeepCopy();
+                    lower.No = no++;
+                    lower.SegmentLength = half;
+                    lower.SegmentDepth = bottomDepth;
+
+                    refined.Add(upper);
+                    refined.Add(lower);
+                    added++;
+                }
+
+                pb.PileBodySegments = refined;
+            }
+
+            // 区間を差し替えたので土質杭を作り直す
+            model.GenerateSoilPiles();
+            return added;
+        }
+
         private static HeadlessHorizontalRunner.RunOptions LinearOptions(
             Action<InputModel>? extra = null) => new()
             {
@@ -210,6 +256,71 @@ namespace TestProject1
             Assert.AreEqual(0, offenders.Count,
                 $"[{groundName}] 線形域なのに荷重の 2 倍が応答の 2 倍になりません。"
                 + "荷重に依らない項が混ざっているか、荷重の載せ方がステップ数に依存しています:"
+                + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", offenders));
+        }
+
+        /// <summary>
+        /// 要素分割を細かくしていくと、応答が一定値に収束すること。
+        ///
+        /// 杭区間を 1 つずつ 2 等分する。杭そのものは同じで離散化だけが細かくなる。
+        /// 地盤ばねは <c>kh × B × (ZTop - ZBtm) × 0.5</c> で<b>要素長を含む</b>ので、
+        /// 2 分割すると「半分の長さ × 2 個」になり総剛性は保存される。
+        /// つまりこの変換は物理的に中立で、動くぶんは離散化誤差だけ。
+        ///
+        /// 見るのは<b>収束したあと</b>の領域。1 段目と 2 段目を比べる。
+        ///
+        /// 要素分割をしていない状態から 1 段目への変化は大きい (2026-09-10 の実測で
+        /// 計算例9 が -10.18%、設計例集3.1 が -27.44%)。これは既定の分割が粗いためで、
+        /// アプリには別に「杭要素分割」があるので、そこを検査対象にはしない。
+        /// 2 段目以降は 0.05〜0.86% に収まっており、単調に一定値へ近づいている。
+        ///
+        /// <b>この網が捕まえるのは「いくら細かくしても答えが動き続ける」形。</b>
+        /// 要素長に依存してはいけない量が依存していると、そうなる。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("Example9", "PileExample9")]
+        [DataRow("Example3_1", "PileExample3_1")]
+        public void RefiningTheMesh_ConvergesToAFixedAnswer(string groundName, string pileName)
+        {
+            ConvergenceSnapshot once, twice;
+            int split = 0;
+            try
+            {
+                once = HeadlessHorizontalRunner.RunExample(groundName, pileName,
+                    LinearOptions(m => RefinePileSegments(m)));
+                twice = HeadlessHorizontalRunner.RunExample(groundName, pileName,
+                    LinearOptions(m => { RefinePileSegments(m); split = RefinePileSegments(m); }));
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("例題ロード失敗"))
+            {
+                Assert.Inconclusive(ex.Message);
+                return;
+            }
+
+            TestSource.AssertScanned(split, 1, $"{groundName} で 2 等分した杭区間");
+            Assert.AreEqual(once.Cases.Count, twice.Cases.Count,
+                $"[{groundName}] ケース数が違います");
+            Assert.IsTrue(once.Cases.Count > 0, $"[{groundName}] 解析ケースが 0 件です");
+
+            var offenders = new System.Collections.Generic.List<string>();
+            int compared = 0;
+            for (int i = 0; i < once.Cases.Count; i++)
+            {
+                double a = once.Cases[i].MaxAbsHorizDisp;
+                double b = twice.Cases[i].MaxAbsHorizDisp;
+                if (Math.Abs(a) < 1e-9) continue;
+
+                compared++;
+                double rel = Math.Abs(b - a) / Math.Abs(a);
+                if (rel > 0.02)
+                    offenders.Add($"{once.Cases[i].CaseKey}: 1 段 {a:E4} / 2 段 {b:E4} (差 {rel:P2})");
+            }
+
+            TestSource.AssertScanned(compared, 1, $"{groundName} で比べたメッシュ収束のケース");
+
+            Assert.AreEqual(0, offenders.Count,
+                $"[{groundName}] 要素分割を細かくしても応答が収束しません。"
+                + "要素長に依存してはいけない量が依存しています:"
                 + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", offenders));
         }
     }
