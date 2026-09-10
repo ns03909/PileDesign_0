@@ -368,6 +368,20 @@ namespace PileDesign.Views
             if (!double.IsFinite(top.X) || !double.IsFinite(top.Y)) return;
             if (!double.IsFinite(bottom.X) || !double.IsFinite(bottom.Y)) return;
 
+            // 上下が入れ替わっていたら入れ替え直して、巻き方向を必ず時計回りに揃える。
+            //
+            // 帯の下端は z2 = Math.Max(zs[i + 1], zToeTop) なので、根固め部より下にある
+            // 要素では<b>下端が上端より上に来る</b>。そのまま積むと側面の四角だけが
+            // 逆回りになり、Nonzero では重なった相手の巻き数を打ち消して穴が空く
+            // (根固め部の内部が白く抜けていた)。要素分割を細かくするほど
+            // 逆向きの帯が増えるので、抜けも広がる。
+            if (bottom.Y < top.Y)
+            {
+                (top, bottom) = (bottom, top);
+                (topRadiusX, bottomRadiusX) = (bottomRadiusX, topRadiusX);
+                (topRadiusY, bottomRadiusY) = (bottomRadiusY, topRadiusY);
+            }
+
             AddEllipseFigure(fillPath, top, topRadiusX, topRadiusY);
             AddEllipseFigure(fillPath, bottom, bottomRadiusX, bottomRadiusY);
 
