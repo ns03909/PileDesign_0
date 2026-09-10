@@ -34,6 +34,13 @@ namespace TestProject1.ConvergenceRegression
             /// <summary>true: 全 LoadCase の IsPileNonLinear/IsSoilNonLinear を強制 ON
             /// (M-φ / bisection / line search / state 遷移などの非線形収束経路をテスト対象に含める)</summary>
             public bool ForceNonLinear { get; set; } = true;
+
+            /// <summary>
+            /// 解析の直前に入力を加工する。荷重を 0 にする・符号を反転する・線形にする、
+            /// といった<b>変換をかけて応答の関係を見る</b>網で使う。
+            /// ForceNonLinear の適用より<b>後</b>に呼ぶので、ここで上書きできる。
+            /// </summary>
+            public Action<InputModel>? Customize { get; set; }
         }
 
         /// <summary>
@@ -85,6 +92,9 @@ namespace TestProject1.ConvergenceRegression
                     lc.IsSoilNonLinear = true;
                 }
             }
+
+            // 2.5 変換をかける網のためのフック (荷重を 0 にする・符号を反転する等)
+            options.Customize?.Invoke(inputModel);
 
             // 3. MainWindowViewModel をテストモードで構築 (CurrentInputModel をセット)
             var mainVm = new MainWindowViewModel();
