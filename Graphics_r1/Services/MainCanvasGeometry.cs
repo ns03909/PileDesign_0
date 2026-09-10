@@ -71,8 +71,12 @@ namespace PileDesign.Services
         /// <summary>要素分割後の杭体の塗り (輪郭の SkyBlue に合わせた薄い青)。</summary>
         private static readonly Brush PileFillAfterSplit = FrozenBrush(Color.FromArgb(38, 135, 206, 235));
 
-        /// <summary>梁要素の塗り。輪郭と同じ茶 (139,69,19) で、濃さは杭体の塗りと揃える。</summary>
-        private static readonly Brush BeamSectionFill = FrozenBrush(Color.FromArgb(38, 139, 69, 19));
+        /// <summary>
+        /// 梁要素の塗り。輪郭と同じ茶 (139,69,19)。
+        /// 濃さは杭体の塗り (38) より薄い 26 にしている。梁は投影面積が大きく、
+        /// 交差部で重なるぶんも効くので、同じ値だと杭より濃く見えるため。
+        /// </summary>
+        private static readonly Brush BeamSectionFill = FrozenBrush(Color.FromArgb(26, 139, 69, 19));
 
         // static な Brush は必ず Freeze する (凍結しないと生成したスレッドに縛られる)
         private static SolidColorBrush FrozenBrush(Color color)

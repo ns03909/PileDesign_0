@@ -30,19 +30,17 @@ namespace PileDesign.Views
         }
 
         /// <summary>
-        /// 杭の要素の帯を、画面上で中央へ縮める。
+        /// 杭の要素の範囲を、中央へ縮める。杭は鉛直なので Z だけで足りる。
         /// 縮め方は <see cref="GetShrinkElementPoints"/> と同じ (既定 0.8)。
-        /// 投影はアフィンなので、3D で縮めても 2D で縮めても結果は同じ。
-        /// 2D で行うのは、楕円の半径と扁平率を触らずに済むため。
+        ///
+        /// 投影の前でも後でも結果は同じ (投影がアフィン) だが、投影の前に
+        /// 縮めておくと、帯と節杭の節を<b>同じ Z から</b>作れる。
         /// </summary>
-        private static (Point Top, Point Bottom) ShrinkBand2D(Point top, Point bottom, double factor = 0.8)
+        private static (double From, double To) ShrinkSpan(double from, double to, double factor = 0.8)
         {
             double keep = 0.5 * (1.0 - factor);   // 端から捨てる割合
-            double dx = bottom.X - top.X;
-            double dy = bottom.Y - top.Y;
-            return (
-                new Point(top.X + dx * keep, top.Y + dy * keep),
-                new Point(bottom.X - dx * keep, bottom.Y - dy * keep));
+            double d = to - from;
+            return (from + d * keep, to - d * keep);
         }
 
         /// <summary>
@@ -234,19 +232,27 @@ namespace PileDesign.Views
                     double pileDia = pileBodySegments[i].PileSection.PileDiameter / 1000.0;
                     double flattening = viewModel.CanvasThreeDView.Flattening;
 
-                    // 要素縮小モードでは、この要素の帯だけを中央へ縮める。
+                    // 要素縮小モードでは、この要素を中央へ縮める。
                     //
                     // 帯 1 つが要素 1 つ (pileBodySegments[i]) に対応しているので、
                     // 基礎梁と同じ見え方になり、分割した要素の境目が読めるようになる。
-                    // 節点・杭先端・節杭の節は<b>本当の位置に残す</b>。
-                    // これらは要素ではなく、位置そのものに意味があるため
-                    // (基礎梁でも節点は縮めていない)。
                     //
-                    // 縮小は投影の前後どちらでも同じ (投影がアフィンなので) だが、
-                    // 楕円の半径・扁平率を触らずに済むよう 2D 側で行う。
-                    var (bandTop, bandBottom) = viewModel.IsShrinkElementMode
-                        ? ShrinkBand2D(point1, point2)
-                        : (point1, point2);
+                    // 節杭の節も一緒に縮める。節は要素の一部なので、帯だけ縮めると
+                    // 節が帯からはみ出して別物のように見える。<b>Z を先に縮めて</b>
+                    // 帯と節の両方をそこから作れば、要素として揃ったまま縮む。
+                    // (節の深さは縮んだぶんだけ実寸とずれるが、縮小モードは
+                    //  要素の境目を読むための表示なので、まとまりを優先する)
+                    //
+                    // 節点と杭先端は縮めない。要素ではなく、位置そのものに意味がある
+                    // (基礎梁でも節点は縮めていない)。
+                    double bandZ1 = z1, bandZ2 = z2, nodularZ2 = zs[i + 1];
+                    if (viewModel.IsShrinkElementMode)
+                    {
+                        (bandZ1, bandZ2) = ShrinkSpan(z1, z2);
+                        (_, nodularZ2) = ShrinkSpan(z1, zs[i + 1]);
+                    }
+                    var bandTop = viewModel.CanvasThreeDView.Transformation(new Point3D(x, y, bandZ1));
+                    var bandBottom = viewModel.CanvasThreeDView.Transformation(new Point3D(x, y, bandZ2));
 
                     // 要素ごとの検定比で塗り分ける (この要素の曲げ・せん断)
                     _pileElementRatioPath = GetElementRatioPath(viewModel, i);
@@ -259,7 +265,7 @@ namespace PileDesign.Views
                         _pileElementRatioPath = null;
                     }
                     AddNodularPilePositionGeometry(
-                        x, y, z1, zs[i + 1], zToeTop, pileBodySegments[i], pileDia2D, flattening);
+                        x, y, bandZ1, nodularZ2, zToeTop, pileBodySegments[i], pileDia2D, flattening);
 
                     var ctype = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType;
                     if (ctype == "場所打ちコンクリート杭")
