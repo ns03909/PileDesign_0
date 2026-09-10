@@ -106,6 +106,40 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 応力図も要素縮小モードに追従すること。
+        ///
+        /// 縮めるのは端点だけで、値は端の値のまま描く。縮めた位置の補間値ではないので、
+        /// 図は要素とぴったり揃うかわりに、折れ線の両端が実際の節点位置から少し
+        /// 内側にずれる。
+        ///
+        /// 追従させたのは応力図と節点変位図。<b>変形後形状は縮めていない</b>
+        /// (折れ線の連続性そのものに意味があるため)。
+        /// </summary>
+        [TestMethod]
+        public void TheForceDiagram_FollowsTheMode()
+        {
+            var files = new[]
+            {
+                ("MainWindow.CanvasResults.cs", 2),        // 応力図と節点変位図
+                ("MainWindow.CanvasResultsForces.cs", 2),  // 基礎梁の Mh / Fh
+            };
+
+            int scanned = 0;
+            foreach (var (name, expected) in files)
+            {
+                string src = TestSource.Read("Graphics_r1", "Views", name);
+                int n = Regex.Matches(src,
+                    @"IsShrinkElementMode[\s\S]{0,120}?GetShrinkElementPoints\(nodeI3D, nodeJ3D\)").Count;
+                scanned += n;
+                Assert.AreEqual(expected, n,
+                    $"{name} で応力図が縮小モードに追従している箇所が {n} 件です "
+                    + $"({expected} 件のはず)。端点を縮めてから図を作ること");
+            }
+
+            TestSource.AssertScanned(scanned, 4, "応力図・節点変位図の縮小追従");
+        }
+
+        /// <summary>
         /// 節杭の節が、帯と同じ縮んだ Z から描かれること。
         /// 帯だけ縮めると、節が帯からはみ出して別物のように見える。
         /// </summary>

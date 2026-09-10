@@ -640,12 +640,27 @@ namespace PileDesign.Views
                     double forceJ = maxAbsValue == 0 ? 0 : originalForceJ / maxAbsValue * forceScale;
 
                     Point3D nodeI3D = beam.NodeI.Coord;
+                    Point3D nodeJ3D = beam.NodeJ.Coord;
+
+                    // 要素縮小モードでは、図の足元も要素と一緒に縮める。
+                    //
+                    // <b>縮めるのは端点だけで、値 (forceI / forceJ) は端の値のまま</b>。
+                    // 縮めた位置の補間値ではないので、図は要素とぴったり揃うかわりに
+                    // 折れ線の両端が実際の節点位置から少し内側にずれる。
+                    //
+                    // 上で作った軸ベクトル (transformedForceDirection*) は縮める前の
+                    // 座標から作っている。向きしか使わないので縮めても同じだが、
+                    // 倍率に触らないためこのままにしてある。
+                    if (viewModel.IsShrinkElementMode)
+                    {
+                        (nodeI3D, nodeJ3D) = GetShrinkElementPoints(nodeI3D, nodeJ3D);
+                    }
+
                     Point3D nodeIForce3D = new(
                         nodeI3D.X + forceI * transformedForceDirectionI[0],
                         nodeI3D.Y + forceI * transformedForceDirectionI[1],
                         nodeI3D.Z + forceI * transformedForceDirectionI[2]);
 
-                    Point3D nodeJ3D = beam.NodeJ.Coord;
                     Point3D nodeJForce3D;
                     if (isDerivedMagnitude)
                     {
@@ -1011,6 +1026,14 @@ namespace PileDesign.Views
 
                         Point3D nodeI3D = beam.NodeI.Coord;
                         Point3D nodeJ3D = beam.NodeJ.Coord;
+
+                        // 要素縮小モードでは、図の足元も要素と一緒に縮める。
+                        // 応力図と同じで、縮めるのは端点だけ。変位の値はそのまま。
+                        if (viewModel.IsShrinkElementMode)
+                        {
+                            (nodeI3D, nodeJ3D) = GetShrinkElementPoints(nodeI3D, nodeJ3D);
+                        }
+
                         Point3D nodeIDisp3D = new(
                             nodeI3D.X + ndI.Ux * effectiveVector[0] * dispScale,
                             nodeI3D.Y + ndI.Uy * effectiveVector[1] * dispScale,

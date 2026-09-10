@@ -71,6 +71,20 @@ namespace PileDesign.Views
                 Point3D nodeI3D = beam.NodeI.Coord;
                 Point3D nodeJ3D = beam.NodeJ.Coord;
 
+                // 要素縮小モードでは、図の足元も要素と一緒に縮める。
+                //
+                // <b>縮めるのは端点だけで、値 (fI / fJ) は端の値のまま</b>。
+                // 縮めた位置の補間値ではないので、図は要素とぴったり揃うかわりに
+                // 折れ線の両端が実際の節点位置から少し内側にずれる。
+                //
+                // 上の beamDir はここより前に、縮める前の座標から作っている。
+                // 向きしか使わない (GetNodeTransformMatrix は回転行列) ので
+                // 縮めても同じだが、倍率を触らないためこのままにしてある。
+                if (viewModel.IsShrinkElementMode)
+                {
+                    (nodeI3D, nodeJ3D) = GetShrinkElementPoints(nodeI3D, nodeJ3D);
+                }
+
                 Point3D nodeIForce3D = new(
                     nodeI3D.X + fI * transformedDir[0],
                     nodeI3D.Y + fI * transformedDir[1],
@@ -154,6 +168,20 @@ namespace PileDesign.Views
 
                 Point3D nodeI3D = beam.NodeI.Coord;
                 Point3D nodeJ3D = beam.NodeJ.Coord;
+
+                // 要素縮小モードでは、図の足元も要素と一緒に縮める。
+                //
+                // <b>縮めるのは端点だけで、値 (fI / fJ) は端の値のまま</b>。
+                // 縮めた位置の補間値ではないので、図は要素とぴったり揃うかわりに
+                // 折れ線の両端が実際の節点位置から少し内側にずれる。
+                //
+                // 上の beamDir はここより前に、縮める前の座標から作っている。
+                // 向きしか使わない (GetNodeTransformMatrix は回転行列) ので
+                // 縮めても同じだが、倍率を触らないためこのままにしてある。
+                if (viewModel.IsShrinkElementMode)
+                {
+                    (nodeI3D, nodeJ3D) = GetShrinkElementPoints(nodeI3D, nodeJ3D);
+                }
 
                 Point3D nodeIForce3D = new(
                     nodeI3D.X + fI * transformedDir[0],
