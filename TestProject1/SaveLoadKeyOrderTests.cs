@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.FEM;
 using PileDesign.Services;
 using System;
@@ -113,7 +113,7 @@ namespace TestProject1
         /// <b>値だけのプロパティ</b>の並びを逆にする。オブジェクトと配列は元の位置に
         /// 置いたままにする (Preserve の <c>$id</c> が <c>$ref</c> より前に必要なため)。
         /// </summary>
-        private static JsonNode ReverseScalarKeys(JsonNode node)
+        internal static JsonNode ReverseScalarKeys(JsonNode node)
         {
             if (node is JsonObject obj)
             {
