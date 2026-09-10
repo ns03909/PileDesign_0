@@ -111,8 +111,17 @@ namespace TestProject1
         [DataRow("Example10", "PileExample10", 4, 16)]   // 基礎指針'19 計算例10: 場所打ち杭 (液状化)
         // 既製杭。2026-09-07 まで既製杭は 1 つも回帰網に無く、既製杭の M-φ（ひび割れモーメントの符号・
         // プレストレスひずみの二重加算）の誤りが解析結果に乗ったまま検出されなかった。
-        [DataRow("Example3_1", "PileExample3_1", 4, 8)]  // 設計例集3.1: PRC杭 + SC杭
-        [DataRow("Example3_4", "PileExample3_4", 4, 8)]  // 設計例集3.4: PHC杭 + SC杭
+        //
+        // 注意: <b>断面タイプと杭径は例題 JSON の値ではない。</b>
+        // BuildExampleInputModel が pileSectionType / precastPileName を読まないため、
+        // 杭体タイプ (既製コンクリート杭) の既定断面 = PHC杭 φ1100 で解析される
+        // (2026-09-10 に実測で確認)。したがってこの 2 行が通しているのは
+        // <b>PHC の M-φ 経路だけ</b>で、SC杭・PRC杭・場所打ち鋼管コンクリート杭は
+        // まだ 1 度も回帰網を通っていない。断面タイプまで写すにはビルダーの拡張が必要で、
+        // 拡張すると既存 6 件のスナップショットが (正しく) 変わるため、
+        // 再ベースラインの判断とセットで行うこと。
+        [DataRow("Example3_1", "PileExample3_1", 4, 8)]  // 設計例集3.1 の地盤・配置・軸力 + PHC φ1100
+        [DataRow("Example3_4", "PileExample3_4", 4, 8)]  // 設計例集3.4 の地盤・配置・軸力 + PHC φ1100
         public void ConvergenceMatchesSnapshot(
             string groundName, string pileName, int level1Steps, int level2Steps)
         {
@@ -141,6 +150,17 @@ namespace TestProject1
             // UPDATE_SNAPSHOTS=1 のときはスナップショットを書き出して終了
             // 非決定的な変動を吸収するため、3 回実行して per-case の MAX を採用 (反復数のみ)。
             // 物理量 (変位 / 反力) は最後の実行値を採用 (相対 1% 許容で検出十分)。
+            // 1 ケースも走らなかったら失敗にする。
+            //
+            // AssertCompatible はケース数の一致から始まるので、期待値も実測も 0 なら
+            // 何も検査せずに合格する。実際に、多地盤の例題 (設計例集3.8) を足したときに
+            // 「地盤が 1 つしか読めず解析ケースが 0」になり、空のスナップショットが
+            // 保存されて 7 件すべて合格した。網が張れていないのに緑になる。
+            Assert.IsTrue(actual.Cases.Count > 0,
+                $"[{groundName}] 解析ケースが 0 件です。例題は読めていますが解析が走っていません "
+                + "(杭配置が参照する地盤番号に対して地盤が足りない等)。"
+                + "このまま保存すると、何も検査しないスナップショットができます");
+
             if (IsUpdateMode)
             {
                 const int UPDATE_RUN_COUNT = 5;
