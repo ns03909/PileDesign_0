@@ -23,10 +23,10 @@
     <ApplicationIcon>Icons\ApplicationIcon\ApplicationIcon.ico</ApplicationIcon>
 
     <!-- バージョン管理 -->
-    <Version>1.0.31-beta</Version>
-    <AssemblyVersion>1.0.31.0</AssemblyVersion>
-    <FileVersion>1.0.31.0</FileVersion>
-    <InformationalVersion>1.0.31-beta</InformationalVersion>
+    <Version>1.0.32-beta</Version>
+    <AssemblyVersion>1.0.32.0</AssemblyVersion>
+    <FileVersion>1.0.32.0</FileVersion>
+    <InformationalVersion>1.0.32-beta</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
