@@ -1646,8 +1646,9 @@ namespace PileDesign.ViewModels
         {
             var soilPiles = InputModel?.ElementDivision?.SoilPiles;
             if (soilPiles == null || soilPiles.Count == 0)
-                return ("杭要素分割が済んでいません。リボンの「杭要素分割」(F4) を実行してください。",
-                        "ElementDivision.SoilPiles が空");
+                // 文は一箇所から。**同じ状況に同じ文**——ここに書き写すと、直したときに
+                // 片方だけが直る（実際、同じ趣旨の文が三通りに分かれていた）。
+                return (GuardMessages.NotElementSplit, "ElementDivision.SoilPiles が空");
 
             var empty = soilPiles
                 .Where(sp => sp != null && (sp.HorizontalSoilReactions?.Count ?? 0) == 0)

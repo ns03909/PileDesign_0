@@ -1364,15 +1364,18 @@ namespace PileDesign.Views
         {
             if (viewModel == null) return false;
 
+            // **F5 と F6 はここに居ない。**コマンド自身が前提を確かめ、済んでいなければ
+            // その場で訊くようになったので、塞がれることが無い——ここに残すと、押した人と
+            // 叩いた人で応えが違う状態に戻る。
             (System.Windows.Input.ICommand command, string title, string? reason)? target =
                 (e.Key, Keyboard.Modifiers) switch
                 {
-                    (Key.F5, ModifierKeys.None) =>
-                        (viewModel.OpenLateralLoadAnalysisWindowCommand, "水平解析", null),
-                    (Key.F6, ModifierKeys.None) =>
-                        (viewModel.OpenSettlementWindowCommand, "単杭沈下解析", null),
+                    // 基礎梁考慮は前提が一つではない（杭・基礎梁・単杭沈下の荷重-変位）。
+                    // **足りていないものを名指しする**——「杭要素分割が済んでいません」と
+                    // 出していたが、分割は済んでいるので言われたとおり F4 をやり直しても直らない。
                     (Key.F6, ModifierKeys.Shift) =>
-                        (viewModel.OpenVerticalBeamCalculationCommand, "単杭沈下解析（基礎梁考慮）", null),
+                        (viewModel.OpenVerticalBeamCalculationCommand, "単杭沈下解析（基礎梁考慮）",
+                         viewModel.DescribeVerticalBeamBlocker()),
                     _ => null,
                 };
 

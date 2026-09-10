@@ -1355,12 +1355,13 @@
                 </Fluent:RibbonGroupBox>
 
                 <Fluent:RibbonGroupBox Header="水平解析" ToolTip="水平解析">
-                    <!-- 有効/無効はコマンドの CanExecute (杭要素分割済みか) に任せる。
-                         IsEnabled を別途書くと、ボタンとキーボードで条件が二重管理になる。 -->
+                    <!-- **塞がない。**前提はコマンドが確かめ、済んでいなければその場で訊く。
+                         塞ぐとボタンは押しても何も返らず、キーだけが理由を出す状態になる
+                         （押した人と叩いた人で応えが違う）。IsEnabled も書かない。 -->
                     <Fluent:Button x:Name="RibbonButtonLateralLoadAnalysisSettlement"
                          ToolTipService.ShowOnDisabled="True"
-                         ToolTip="Step 8: 水平解析の実行 (F5)&#x0A;杭要素分割が済んでいると押せます。"
-                         Command="{Binding OpenLateralLoadAnalysisWindowCommand}" AutomationProperties.Name="Step 8: 水平解析の実行 (F5)&#x0A;杭要素分割が済んでいると押せます。">
+                         ToolTip="Step 8: 水平解析の実行 (F5)&#x0A;杭要素分割が済んでいなければ、その場で実行できます。"
+                         Command="{Binding OpenLateralLoadAnalysisWindowCommand}" AutomationProperties.Name="Step 8: 水平解析の実行 (F5)&#x0A;杭要素分割が済んでいなければ、その場で実行できます。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <Setter Property="Header" Value="水平解析"/>

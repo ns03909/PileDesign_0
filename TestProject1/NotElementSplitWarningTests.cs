@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -67,6 +67,13 @@ namespace TestProject1
                 "何が起きるかが書かれていません");
             StringAssert.Contains(hit[0], "土層境界",
                 "なぜ起きるか (節点が土層境界にしか置かれない) が書かれていません");
+
+            // 実測した差の数字は文に出さない。2 例題の値なので一般の保証として
+            // 読まれると誤解を招き、「その程度なら許容」とも読めてしまう
+            foreach (var n in new[] { "10", "20", "30", "%" })
+                Assert.IsFalse(hit[0].Contains(n),
+                    $"注意の文に程度の数字 ({n}) が入っています。"
+                    + "2 例題での実測値なので、一般の保証としては書かないこと: " + hit[0]);
         }
 
         /// <summary>分割していれば余計な注意を出さないこと。</summary>

@@ -1368,42 +1368,62 @@ namespace PileDesign.ViewModels
             return errors.Length > 0 ? errors.ToString() : null;
         }
 
-        // 沈下ウィンドウを開くメソッド
-        // 杭要素分割が前提。CanExecute に持たせることで、ボタン・キーボード (F6)・
-        // コマンドパレットのどこから呼んでも同じ条件になる。
-        private bool CanOpenSettlementWindow() => IsElementSplit;
-
-        [RelayCommand(CanExecute = nameof(CanOpenSettlementWindow))]
-        public void OpenSettlementWindow()
+        /// <summary>
+        /// 杭要素分割が済んでいることを確かめる。<b>済んでいなければ、その場で訊いて実行する。</b>
+        ///
+        /// <para>足りない前提が分かっていて、それを済ませる画面もこちらが持っているのに
+        /// 「リボンの『杭要素分割』(F4) を実行してください」で終わらせていた。閉じて探して
+        /// 実行して、もう一度呼ぶ——<b>四手かかっていたものが一手になる</b>。</para>
+        ///
+        /// <para><b>勝手にはやらない。</b>分割は設定を選ぶ画面（F4）を通す作業で、無人で
+        /// 走らせる口が無い。だから「開くところまで連れていく」までにする——黙って
+        /// モデルを組み替えられるのは、頼んでいないことをされたのと同じ。</para>
+        /// </summary>
+        /// <param name="what">何をしようとして止まったか。「水平解析」など。</param>
+        /// <returns>済んでいる（か、いま済ませた）なら true。</returns>
+        private bool EnsureElementSplit(string what)
         {
-            if (IsPreparedForAnalysis())
-            {
-                if (CurrentInputModel.ElementDivision.SoilPiles == null || CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
-                {
-                    MessageService.Show(GuardMessages.NoPileLayout);
-                    return;
-                }
-                else
-                {
-                    if (IsElementSplit == false)
-                        PileDesign.Services.MessageService.Show("杭要素分割を行ってください。");
-                    else
-                        OpenDialogWindow<SettlementViewModel, SettlementWindow>(this);
-                }
-            }
+            if (IsElementSplit) return true;
+
+            if (!MessageService.Confirm(GuardMessages.NotElementSplitAsk(what), what)) return false;
+
+            OpenElementDivisionWindowCommand.Execute(null);
+
+            // 開いた画面で取り消されたかもしれない。**通ったことにしない。**
+            return IsElementSplit;
         }
 
-        /// <summary>
-        /// 水平解析ウィンドウを開けるか。杭要素分割が済んでいることが前提。
-        ///
-        /// この判定をコマンド側に持たせることで、リボンのボタンもキーボード (F5) も
-        /// 同じ条件で無効になる。以前はボタンにだけ IsEnabled を掛けていたため、
-        /// キーからは実行できてしまい、直後に「杭要素分割を行ってください。」と叱られていた。
-        /// </summary>
-        private bool CanOpenLateralLoadAnalysisWindow() => IsElementSplit;
+        // 沈下ウィンドウを開くメソッド
+        //
+        // **無効にせず、押させて理由を出す。**以前は CanExecute で塞いでいたので、
+        // リボンのボタンは押しても何も返らなかった（キーだけが理由を出していた）。
+        // 前提はここで確かめ、済んでいなければその場で訊く。
+        [RelayCommand]
+        public void OpenSettlementWindow()
+        {
+            if (!IsPreparedForAnalysis()) return;
+
+            if (CurrentInputModel.ElementDivision.SoilPiles == null || CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
+            {
+                MessageService.Show(GuardMessages.NoPileLayout);
+                return;
+            }
+
+            if (!EnsureElementSplit("単杭沈下解析")) return;
+
+            OpenDialogWindow<SettlementViewModel, SettlementWindow>(this);
+        }
 
         // 水平荷重解析ウィンドウを開くメソッド
-        [RelayCommand(CanExecute = nameof(CanOpenLateralLoadAnalysisWindow))]
+        //
+        // **無効にせず、押させて理由を出す。**以前は CanExecute で塞いでいた。ボタンと
+        // キーで条件が二重になるのを避けるためだったが、塞ぐと<b>ボタンは押しても何も
+        // 返らない</b>——キーだけが窓側の細工（ExplainIfAnalysisKeyIsBlocked）で理由を
+        // 出していて、押した人と叩いた人で応えが違っていた。
+        //
+        // 前提をここで確かめれば、どこから呼んでも同じ応えになる。しかも
+        // <b>済ませるところまで連れていける</b>——塞いだままでは案内しかできない。
+        [RelayCommand]
         // await するところが無いので async にしない。async を付けたままだと
         // CS1998 になり、クリーンビルド (WPF の一時プロジェクト) でだけ失敗する。
         // 戻り値は Task のままにして、コマンドは AsyncRelayCommand として作らせる。
@@ -1418,9 +1438,9 @@ namespace PileDesign.ViewModels
                 }
                 else
                 {
-                    if (IsElementSplit == false)
+                    if (!EnsureElementSplit("水平解析"))
                     {
-                        PileDesign.Services.MessageService.Show("杭要素分割を行ってください。");
+                        return Task.CompletedTask;
                     }
                     else
                     {
@@ -1568,6 +1588,30 @@ namespace PileDesign.ViewModels
                 if (sp.LoadDisplacements == null || sp.LoadDisplacements.Count == 0) return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// 基礎梁考慮の沈下が開けない理由。開けるなら null。
+        ///
+        /// <para><b>前提が一つではない。</b>杭・基礎梁・単杭沈下の荷重-変位——どれが
+        /// 足りないかで直し方が違う。以前は一律に「杭要素分割が済んでいません」と出して
+        /// いたが、分割は済んでいるので、言われたとおり F4 をやり直しても直らない。</para>
+        /// </summary>
+        public string? DescribeVerticalBeamBlocker()
+        {
+            if (CurrentInputModel?.PileLayoutItems is not { Count: > 0 }) return GuardMessages.NoPileLayout;
+            if (CurrentInputModel.FoundationBeamInput?.Beams is not { Count: > 0 }) return GuardMessages.NoFoundationBeam;
+
+            var soilPiles = CurrentInputModel.ElementDivision?.SoilPiles;
+            if (soilPiles == null || soilPiles.Count == 0) return GuardMessages.NotElementSplit;
+
+            foreach (var sp in soilPiles)
+            {
+                if (sp.LoadDisplacements == null || sp.LoadDisplacements.Count == 0)
+                    return GuardMessages.NoLoadDisplacements;
+            }
+
+            return null;
         }
 
         // 基礎梁鉛直解析ウィンドウを開くメソッド

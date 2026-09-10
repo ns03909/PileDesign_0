@@ -134,6 +134,12 @@ namespace TestProject1
                 // 説明の本体にそのキーが出てくること (書き方は問わない)
                 bool covered = helperBody.Contains("Key." + key, StringComparison.Ordinal)
                     && (mod == "None" || helperBody.Contains("ModifierKeys." + mod, StringComparison.Ordinal));
+
+                // **黙らない道は二つ。**塞がれないコマンド (CanExecute を持たない) は、
+                // 押せば動いて自分で理由を出す——むしろそのほうがよい。塞ぐと、ボタンは
+                // 押しても何も返らず、キーだけがここで理由を出す状態になる。
+                if (!covered && !CanBeBlocked(cmd)) continue;
+
                 if (!covered) missing.Add($"{mod} + {key} ({cmd})");
             }
 
@@ -141,6 +147,120 @@ namespace TestProject1
                 "実行できないとき黙って何も起きない解析キーがあります。"
                 + "ExplainIfAnalysisKeyIsBlocked に足してください:"
                 + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", missing));
+        }
+
+        /// <summary>
+        /// そのコマンドは<b>塞がれうる</b>か——<c>[RelayCommand(CanExecute = ...)]</c> が
+        /// 付いているか。
+        ///
+        /// <para>付いていなければ実行できない状態が無いので、キーを叩けば必ず動く。
+        /// 動けば、前提が足りていないことはコマンド自身が言う。</para>
+        /// </summary>
+        private static bool CanBeBlocked(string commandName)
+        {
+            string stem = commandName.EndsWith("Command", StringComparison.Ordinal)
+                ? commandName[..^"Command".Length]
+                : commandName;
+
+            string root = FindSolutionRoot();
+            var files = Directory.GetFiles(
+                Path.Combine(root, "Graphics_r1", "ViewModels"), "MainWindowViewModel*.cs");
+
+            foreach (string file in files)
+            {
+                string text = File.ReadAllText(file);
+
+                // 生成元の宣言を探す。名前は Xxx か XxxAsync。
+                foreach (string name in new[] { stem + "(", stem + "Async(" })
+                {
+                    int at = text.IndexOf(name, StringComparison.Ordinal);
+                    while (at >= 0)
+                    {
+                        // 直前の [RelayCommand...] を見る。属性は宣言のすぐ上にある。
+                        int attr = text.LastIndexOf("[RelayCommand", at, StringComparison.Ordinal);
+                        if (attr >= 0 && at - attr < 400)
+                        {
+                            int close = text.IndexOf(']', attr);
+                            string head = close > attr ? text[attr..close] : string.Empty;
+                            return head.Contains("CanExecute", StringComparison.Ordinal);
+                        }
+
+                        at = text.IndexOf(name, at + 1, StringComparison.Ordinal);
+                    }
+                }
+            }
+
+            // 見つからなければ安全側。**塞がれうるものとして扱う**——見落として
+            // 「黙るキー」を通すより、余計に説明を求めるほうがよい。
+            return true;
+        }
+
+        /// <summary>
+        /// 同じ状況の文は<b>一箇所から</b>。
+        ///
+        /// <para><c>GuardMessages</c> は「同じ状況には同じ文」のために作られているのに、
+        /// 杭要素分割の断りだけ<b>三通りに分かれていた</b>（定数・短い直書き・同じ文の直書き）。
+        /// 直したときに片方だけが直る。</para>
+        /// </summary>
+        [TestMethod]
+        public void TheElementSplitGuardIsWordedInOnePlace()
+        {
+            string root = FindSolutionRoot();
+            var offenders = new List<string>();
+
+            var sources = Directory.GetFiles(
+                Path.Combine(root, "Graphics_r1"), "*.cs", SearchOption.AllDirectories);
+
+            // **見つからなくなったら落ちること。**走査する側が空を数えて 0 件と答えると、
+            // 対象がどこかへ移っただけで合格し続ける。
+            TestSource.AssertScanned(sources.Length, 200, "Graphics_r1 の C#");
+
+            foreach (string file in sources)
+            {
+                if (file.EndsWith("GuardMessages.cs", StringComparison.OrdinalIgnoreCase)) continue;
+
+                var lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string stripped = StripComment(lines[i]);
+                    if (!stripped.Contains('"')) continue;
+
+                    if (stripped.Contains("杭要素分割が済んでいません", StringComparison.Ordinal)
+                        || stripped.Contains("杭要素分割を行ってください", StringComparison.Ordinal))
+                    {
+                        offenders.Add($"{Path.GetFileName(file)}:{i + 1}  {stripped.Trim()}");
+                    }
+                }
+            }
+
+            Assert.AreEqual(0, offenders.Count,
+                "杭要素分割の断りが GuardMessages の外に書かれています。"
+                + "GuardMessages.NotElementSplit を使ってください:"
+                + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", offenders));
+        }
+
+        /// <summary>
+        /// 済ませられる前提は、<b>案内ではなく訊く</b>。
+        ///
+        /// <para>足りないものが分かっていて、それを済ませる画面もこちらが持っているなら、
+        /// 「実行してください」で終わらせない——閉じて探して実行してもう一度、の四手が
+        /// 一手になる。</para>
+        /// </summary>
+        [TestMethod]
+        public void TheSplitIsOfferedRatherThanOnlyExplained()
+        {
+            string root = FindSolutionRoot();
+            string vm = File.ReadAllText(
+                Path.Combine(root, "Graphics_r1", "ViewModels", "MainWindowViewModel.cs"));
+
+            StringAssert.Contains(vm, "NotElementSplitAsk",
+                "杭要素分割を訊く文を使っていません");
+            StringAssert.Contains(vm, "OpenElementDivisionWindowCommand.Execute",
+                "訊いたあとに分割の画面を開いていません (訊くだけでは四手のまま)");
+
+            foreach (string what in new[] { "水平解析", "単杭沈下解析" })
+                StringAssert.Contains(vm, $"EnsureElementSplit(\"{what}\")",
+                    $"{what} が前提を確かめていません");
         }
 
         private static string StripComment(string line)
