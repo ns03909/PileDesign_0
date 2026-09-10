@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
 using System;
@@ -179,7 +179,7 @@ namespace TestProject1
             StringAssert.Contains(gate, "ModelConnectivityCheck.CollectErrors(inputModel)",
                 "解析前の検査がつながりを見ていない");
 
-            var warn = TestSource.MethodBody(source, "public static List<string> CollectInputWarnings(InputModel inputModel)");
+            var warn = TestSource.MethodBody(source, "public static List<string> CollectInputWarnings(InputModel inputModel, bool isElementSplit = true)");
             StringAssert.Contains(warn, "ModelConnectivityCheck.CollectWarnings(inputModel)",
                 "警告の集約がつながりを見ていない");
         }
