@@ -386,7 +386,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AddZs()
         {
-            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+            SaveUndoSnapshot();
 
             for (int i = 0; i < SelectedZDataItems.Count - 1; i++)
             {
@@ -598,35 +598,83 @@ namespace PileDesign.ViewModels
         // メソッド //
 
 
+        // 履歴へ積む控え。
+        //
+        // <b>土層-杭セットと根入れ部の Z を 1 つの器にまとめる。</b>
+        // 以前は同じ履歴へ別々の形で積んでいたが、戻す側は
+        // List&lt;SoilPile&gt; しか見ていなかった。根入れ部をいじってから Ctrl+Z すると
+        // 何も起きないまま履歴の位置だけ進み、根入れ部は Undo で戻らなかった。
+        private sealed record ElementDivisionUndoState(
+            IList<SoilPile> SoilPiles,
+            IList<EmbedmentZDataItem> EmbedmentZs);
+
+        // 控えを取る。**形を組み立てるのはここだけ。**
+        private ElementDivisionUndoState CaptureUndoState()
+            => new(
+                (SoilPiles ?? []).Select(p => p.DeepCopy()).ToList(),
+                (EmbedmentZsCollection ?? []).Select(z => z.DeepCopy()).ToList());
+
+        // 履歴へ 1 段積む。
+        private void SaveUndoSnapshot() => _undoManager.SaveState(CaptureUndoState());
+
+        // 控えを戻す。
+        //
+        // <b>戻している間は控えを取らない。</b>SaveState は現在位置より後ろを
+        // 切り捨てるので、戻したあとの再計算 (OnZDataItemsChanged) が控えを積むと
+        // その場で Redo が消え、履歴の位置も末尾へ戻って
+        // <b>2 回目以降の Ctrl+Z が効かなくなる</b>。
+        // 抑止フラグは元からあったのに、一括更新の 2 か所でしか使われていなかった。
+        private void ApplyUndoState()
+        {
+            if (_undoManager.CurrentState is not ElementDivisionUndoState state) return;
+
+            bool previous = _suppressUndoSave;
+            _suppressUndoSave = true;
+            try
+            {
+                SoilPiles = new ObservableCollection<SoilPile>(
+                    state.SoilPiles.Select(p => p.DeepCopy()));
+                EmbedmentZsCollection = new ObservableCollection<EmbedmentZDataItem>(
+                    state.EmbedmentZs.Select(z => z.DeepCopy()));
+
+                if (SoilPiles.Count > 0)
+                {
+                    int no = Math.Clamp(SelectedSoilPileNo, 1, SoilPiles.Count);
+                    SelectedZDataItems = new ObservableCollection<PileZDataItem>(
+                        SoilPiles[no - 1].ZDataItems.Select(item => item.DeepCopy()));
+                }
+
+                OnZDataItemsChanged();
+
+                // 行番号は画面がある時だけ振り直す
+                if (ElementDivisionWindowInstance?.DataGridEmbedmentZs != null)
+                {
+                    AutoNumberingDataGrid(ElementDivisionWindowInstance.DataGridEmbedmentZs);
+                }
+            }
+            finally
+            {
+                _suppressUndoSave = previous;
+            }
+        }
+
         [RelayCommand]
         private void Undo()
         {
             // Redo時に現在のライブ状態を復元できるよう、Undo前に履歴へ追加
             if (_undoManager.CurrentIndex == _undoManager.History.Count - 1)
             {
-                _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+                SaveUndoSnapshot();
             }
             _undoManager.UndoSnapshot();
-            if (_undoManager.CurrentState is List<SoilPile> state)
-            {
-                SoilPiles = new ObservableCollection<SoilPile>(state.Select(p => p.DeepCopy()));
-                SelectedZDataItems = new ObservableCollection<PileZDataItem>(
-                    SoilPiles[SelectedSoilPileNo - 1].ZDataItems.Select(item => item.DeepCopy()));
-                OnZDataItemsChanged();
-            }
+            ApplyUndoState();
         }
 
         [RelayCommand]
         private void Redo()
         {
             _undoManager.RedoSnapshot();
-            if (_undoManager.CurrentState is List<SoilPile> state)
-            {
-                SoilPiles = new ObservableCollection<SoilPile>(state.Select(p => p.DeepCopy()));
-                SelectedZDataItems = new ObservableCollection<PileZDataItem>(
-                    SoilPiles[SelectedSoilPileNo - 1].ZDataItems.Select(item => item.DeepCopy()));
-                OnZDataItemsChanged();
-            }
+            ApplyUndoState();
         }
 
         private void OnDoatsuGoryokuBaneItemsChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -761,7 +809,7 @@ namespace PileDesign.ViewModels
             if (string.IsNullOrEmpty(editedItem.Name)) return;
             if (!double.IsFinite(newValue) || newValue <= 0) { SetHorizontalSoilReaction(); return; }
 
-            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+            SaveUndoSnapshot();
 
             // モデル側（解析が参照する SoilPile.HorizontalSoilReactions）を再構築
             SoilPiles[SelectedSoilPileNo - 1].SetKh0Override(editedItem.Name, newValue);
@@ -777,7 +825,7 @@ namespace PileDesign.ViewModels
             if (SoilPiles == null || SelectedSoilPileNo < 1 || SelectedSoilPileNo > SoilPiles.Count) return;
             if (string.IsNullOrEmpty(SelectedLayeronDataGrid.Name)) return;
 
-            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+            SaveUndoSnapshot();
             SoilPiles[SelectedSoilPileNo - 1].ClearKh0Override(SelectedLayeronDataGrid.Name);
             SetHorizontalSoilReaction();
         }
@@ -788,7 +836,7 @@ namespace PileDesign.ViewModels
         {
             if (SoilPiles == null || SelectedSoilPileNo < 1 || SelectedSoilPileNo > SoilPiles.Count) return;
 
-            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+            SaveUndoSnapshot();
             SoilPiles[SelectedSoilPileNo - 1].ClearAllKh0Overrides();
             SetHorizontalSoilReaction();
         }
@@ -1252,7 +1300,7 @@ namespace PileDesign.ViewModels
         private void AutoZs()
         {
             // 1回だけ Undo スナップショットを作る（コストの高い DeepCopy を一度に）
-            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+            SaveUndoSnapshot();
 
             // 以前の自動分割で追加されたノード（IsChangeable=true）を除去してから再分割
             var original = SelectedZDataItems.Where(z => !z.IsChangeable).ToList();
@@ -1337,7 +1385,7 @@ namespace PileDesign.ViewModels
             if (SoilPiles == null || SoilPiles.Count == 0) return;
 
             // Undo スナップショットを1回だけ保存
-            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+            SaveUndoSnapshot();
 
             // 現在選択中の杭データを SoilPiles に反映
             if (SelectedSoilPileNo > 0 && SelectedSoilPileNo <= SoilPiles.Count)
@@ -1433,7 +1481,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AutoEmbedmentZs()
         {
-            _undoManager.SaveState(EmbedmentZsCollection.Select(z => z.DeepCopy()).ToList());
+            SaveUndoSnapshot();
 
             // 元リスト（Original）から作業用リストを作成
             // EmbedmentZsOriginalCollection は変更されない前提で、これをベースに新しいリストを構築します
@@ -1505,7 +1553,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DeleteZs(object parameter)
         {
-            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+            SaveUndoSnapshot();
 
             for (int i = SelectedZDataItems.Count - 1; i >= 0; i--)
             {
@@ -1527,7 +1575,7 @@ namespace PileDesign.ViewModels
             // バルク更新時は外部で既に SaveState しているので重複して取らない
             if (!_suppressUndoSave)
             {
-                _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
+                SaveUndoSnapshot();
             }
 
             if (SoilPiles == null || SoilPiles.Count == 0) return;
@@ -1592,7 +1640,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DeleteEmbedmentZs(object parameter)
         {
-            _undoManager.SaveState(EmbedmentZsCollection.Select(z => z.DeepCopy()).ToList());
+            SaveUndoSnapshot();
 
             for (int i = EmbedmentZsCollection.Count - 1; i >= 0; i--)
             {
@@ -1617,7 +1665,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void ResetEmbedment()
         {
-            _undoManager.SaveState(EmbedmentZsCollection.Select(z => z.DeepCopy()).ToList());
+            SaveUndoSnapshot();
 
             // IsChangeableがtrueの行を削除
             var itemsToRemove = EmbedmentZsCollection.Where(z => z.IsChangeable).ToList();
@@ -1636,7 +1684,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AddEmbedmentZs()
         {
-            _undoManager.SaveState(EmbedmentZsCollection.Select(z => z.DeepCopy()).ToList());
+            SaveUndoSnapshot();
 
             for (int i = 0; i < EmbedmentZsCollection.Count - 1; i++)
             {

@@ -239,20 +239,38 @@ namespace PileDesign.ViewModels
                 _undoManager.SaveState(PileSection.DeepCopy());
             }
             _undoManager.UndoSnapshot();
-            if (_undoManager.CurrentState is PileSection state)
-            {
-                PileSection = state.DeepCopy();
-            }
+            ApplyUndoState();
         }
 
         [RelayCommand]
         public void Redo()
         {
             _undoManager.RedoSnapshot();
-            if (_undoManager.CurrentState is PileSection state)
-            {
-                PileSection = state.DeepCopy();
-            }
+            ApplyUndoState();
+        }
+
+        // 控えを戻す。
+        //
+        // <b>断面をオブジェクトごと差し替えない。</b>この画面は
+        // PileBodySegment が持つ断面の実体をそのまま編集しており
+        // (OK は閉じるだけ、キャンセルが RestoreFrom で戻す)、
+        // 差し替えると ViewModel の指す先がその実体から外れる。外れると
+        //
+        //   1. 画面には戻った値が出るが実体は編集後のままで、解析も計算書もそれを使う
+        //   2. そのあとに打った値がどこにも届かない
+        //   3. キャンセルを押しても、戻されるのは外れた複製なので効かない
+        //
+        // どれも黙って起きる。キャンセルと同じ「中身だけ写す」に揃えてある。
+        private void ApplyUndoState()
+        {
+            if (_undoManager.CurrentState is not PileSection state) return;
+            if (PileSection == null) return;
+
+            PileSection.RestoreFrom(state);
+
+            // RestoreFrom が断面側の全プロパティ変更を知らせるが、
+            // ViewModel 経由で見ている項目のために念のため知らせ直す
+            OnPropertyChanged(nameof(PileSection));
         }
 
         [RelayCommand]

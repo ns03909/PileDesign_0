@@ -92,6 +92,7 @@ namespace PileDesign.ViewModels
         public LoadCaseViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel;
+            _suppressUndoSave = true;   // 組み立て中は控えを取らない (最後に 1 段だけ積む)
 
             PrevLoadCasesInput = InputModel.LoadCasesInput.DeepCopy();
 
@@ -117,11 +118,27 @@ namespace PileDesign.ViewModels
             SetTotalMassForces(); // 初期データの設定
 
             SubscribeLoadCasePropertyChanged();
+
+            // 組み立て中に積んだ控えを捨て、開いた時点の姿を 1 段だけ積む。
+            // 以前は LoadCombinations の代入が組み立ての途中で控えを積んでいたため、
+            // 履歴の先頭が「半分できた状態」になっていた。
+            _suppressUndoSave = false;
+            _undoManager.Clear();
+            PushUndoState();
         }
+
+        // 控えを取らない区間の目印。
+        //
+        // 戻す処理の中で控えを積むと、UndoManager.SaveState が現在位置より後ろを
+        // 切り捨てるので、その場で Redo が消える。組み立て中も同じで、
+        // 半分できた状態が履歴の先頭に入ってしまう。
+        private bool _suppressUndoSave;
 
         // 状態を保存
         public void PushUndoState()
         {
+            if (_suppressUndoSave) return;
+
             var currentState = new LoadCaseState
             {
                 LoadCasesLevel1 = new ObservableCollection<LoadCase>(LoadCasesLevel1.Select(x => x.DeepCopy())),
@@ -136,21 +153,76 @@ namespace PileDesign.ViewModels
         }
 
         // 状態を復元
+        /// <summary>
+        /// 控えを戻す。
+        ///
+        /// <para><b>荷重ケースのコレクションを差し替えない。</b>この画面は
+        /// <c>InputModel.LoadCasesInput</c> が持つコレクションの実体をそのまま編集しており
+        /// (OK は割増係数と荷重組合せしか書き戻さない)、差し替えると実体から外れる。
+        /// 外れると、画面には戻った値が出るのに実体は編集後のままになり、
+        /// <b>そのあとに打った値もどこにも届かなくなる</b>
+        /// (実測: Undo 後に実体 1111 / 画面 1000、その後 777 を打っても実体は 1111)。
+        /// 中身だけを写す。</para>
+        ///
+        /// <para>荷重組合せ (<c>LoadCombinations</c> / <c>LoadCombinationsPlus</c>) は
+        /// 割増係数から組み立てる画面側の持ち物で、OK で書き戻す作りなので差し替えてよい。</para>
+        /// </summary>
         private void RestoreState(LoadCaseState state)
         {
-            LoadCasesLevel1 = new ObservableCollection<LoadCase>(state.LoadCasesLevel1.Select(x => x.DeepCopy()));
-            LoadCasesLevel2 = new ObservableCollection<LoadCase>(state.LoadCasesLevel2.Select(x => x.DeepCopy()));
-            LoadCombinations = new ObservableCollection<LoadCombination>(state.LoadCombinations.Select(x => x.DeepCopy()));
-            LoadCombinationsPlus = new ObservableCollection<LoadCombination>(state.LoadCombinationsPlus.Select(x => x.DeepCopy()));
-            LoadCombinationFactor = state.LoadCombinationFactor;
-            LoadCasesLevel1Common = new ObservableCollection<LoadCaseCommon>(state.LoadCasesLevel1Common.Select(x => x.DeepCopy()));
-            LoadCasesLevel2Common = new ObservableCollection<LoadCaseCommon>(state.LoadCasesLevel2Common.Select(x => x.DeepCopy()));
+            bool previous = _suppressUndoSave;
+            _suppressUndoSave = true;
+            try
+            {
+                RestoreItemsInPlace(LoadCasesLevel1, state.LoadCasesLevel1);
+                RestoreItemsInPlace(LoadCasesLevel2, state.LoadCasesLevel2);
+                RestoreItemsInPlace(LoadCasesLevel1Common, state.LoadCasesLevel1Common);
+                RestoreItemsInPlace(LoadCasesLevel2Common, state.LoadCasesLevel2Common);
 
-            SetTotalMassForces();
-            OnPropertyChanged(nameof(LoadCasesLevel1));
-            OnPropertyChanged(nameof(LoadCasesLevel1Common));
-            OnPropertyChanged(nameof(LoadCasesLevel2));
-            OnPropertyChanged(nameof(LoadCasesLevel2Common));
+                LoadCombinationFactor = state.LoadCombinationFactor;
+                LoadCombinations = new ObservableCollection<LoadCombination>(
+                    state.LoadCombinations.Select(x => x.DeepCopy()));
+                LoadCombinationsPlus = new ObservableCollection<LoadCombination>(
+                    state.LoadCombinationsPlus.Select(x => x.DeepCopy()));
+
+                SubscribeLoadCasePropertyChanged();
+                SetTotalMassForces();
+                OnPropertyChanged(nameof(LoadCasesLevel1));
+                OnPropertyChanged(nameof(LoadCasesLevel1Common));
+                OnPropertyChanged(nameof(LoadCasesLevel2));
+                OnPropertyChanged(nameof(LoadCasesLevel2Common));
+                RefreshDataGrids();
+            }
+            finally
+            {
+                _suppressUndoSave = previous;
+            }
+        }
+
+        /// <summary>
+        /// コレクションの<b>中身だけ</b>を控えの値に戻す。実体は入れ替えない。
+        ///
+        /// 件数が合わないときだけ作り直す。この画面に荷重ケースの追加・削除は無いので
+        /// 通常は通らないが、通ったときに黙って何もしないのは避ける。
+        /// </summary>
+        private static void RestoreItemsInPlace<T>(
+            ObservableCollection<T> target, ObservableCollection<T> saved)
+            where T : Models.BaseModel
+        {
+            if (target == null || saved == null) return;
+
+            if (target.Count != saved.Count)
+            {
+                target.Clear();
+                foreach (var item in saved) target.Add(item);
+                return;
+            }
+
+            for (int i = 0; i < target.Count; i++)
+            {
+                if (target[i] == null || saved[i] == null) continue;
+                Common.ModelRestore.CopyScalarFields(target[i], saved[i]);
+                target[i].OnPropertyChanged(string.Empty);   // 空文字は「全部」の意味
+            }
         }
 
         [RelayCommand]
