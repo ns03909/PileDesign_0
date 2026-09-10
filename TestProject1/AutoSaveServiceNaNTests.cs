@@ -1,4 +1,4 @@
-using PileDesign.FEM;
+﻿using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
 using System;
@@ -43,6 +43,26 @@ namespace TestProject1
                 BindingFlags.NonPublic | BindingFlags.Instance)
                 ?? throw new InvalidOperationException($"メソッド {methodName} が見つかりません");
             m.Invoke(obj, args);
+        }
+
+        /// <summary>
+        /// Tick と同じ順番で自動保存を 1 回走らせる。
+        ///
+        /// 写しは<b>画面のスレッドで</b>取ってから書き出しへ渡すので、実物も 2 段になっている
+        /// (PrepareState → PerformAutoSave)。写しをバックグラウンドで取ると、写す処理自体が
+        /// 元のコレクションを列挙するため、保存中の編集で列挙が壊れる。
+        /// テストも同じ順番で呼ぶ。1 段にまとめると、実物の順番が崩れても気づけない。
+        /// </summary>
+        private static void RunAutoSave(object auto)
+        {
+            var prepare = auto.GetType().GetMethod("PrepareState",
+                BindingFlags.NonPublic | BindingFlags.Instance)
+                ?? throw new InvalidOperationException("メソッド PrepareState が見つかりません");
+
+            var prepared = prepare.Invoke(auto, null);
+            if (prepared == null) return;   // 保存対象が無い
+
+            InvokePrivate(auto, "PerformAutoSave", prepared);
         }
 
         /// <summary>
@@ -101,7 +121,7 @@ namespace TestProject1
                 AutoSaveEventArgs? captured = null;
                 auto.AutoSaveCompleted += (s, e) => captured = e;
 
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
 
                 Assert.IsNotNull(captured, "AutoSaveCompleted が発火しなかった");
                 Assert.IsFalse(captured.Success, "NaN を含むのに Success=true");
@@ -141,7 +161,7 @@ namespace TestProject1
                 auto.Start("TestProject_TimerSurvival.json", inputModel, new AnaModel());
                 Assert.IsTrue(auto.IsEnabled, "Start 直後にタイマーが有効でない");
 
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
 
                 // 例外で握りつぶされたが、タイマーは止まっていない (= 次回再試行可能)
                 Assert.IsTrue(auto.IsEnabled,
@@ -173,15 +193,15 @@ namespace TestProject1
 
                 Assert.AreEqual(0, auto.ConsecutiveFailures, "初期値は 0");
 
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
                 Assert.AreEqual(1, auto.ConsecutiveFailures);
                 Assert.AreEqual(1, lastEvent!.ConsecutiveFailures, "イベントにも反映");
 
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
                 Assert.AreEqual(2, auto.ConsecutiveFailures);
                 Assert.AreEqual(2, lastEvent!.ConsecutiveFailures);
 
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
                 Assert.AreEqual(3, auto.ConsecutiveFailures, "3 回目で閾値到達");
                 Assert.AreEqual(3, lastEvent!.ConsecutiveFailures);
             }
@@ -211,13 +231,13 @@ namespace TestProject1
                 auto.AutoSaveCompleted += (s, e) => lastEvent = e;
 
                 // 失敗を 2 回重ねる
-                InvokePrivate(auto, "PerformAutoSave");
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
+                RunAutoSave(auto);
                 Assert.AreEqual(2, auto.ConsecutiveFailures);
 
                 // NaN を修正して成功させる
                 inputModel.GroundsInput![0].GroundTopAltitude = 0.0;
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
 
                 Assert.AreEqual(0, auto.ConsecutiveFailures, "成功でカウンタが 0 にリセット");
                 Assert.IsTrue(lastEvent!.Success);
@@ -329,8 +349,8 @@ namespace TestProject1
             SetPrivateField(auto, "_currentInputModel", inputModel);
             SetPrivateField(auto, "_currentModel", new AnaModel());
 
-            InvokePrivate(auto, "PerformAutoSave");
-            InvokePrivate(auto, "PerformAutoSave");
+            RunAutoSave(auto);
+            RunAutoSave(auto);
             Assert.AreEqual(2, auto.ConsecutiveFailures);
 
             auto.Stop();
@@ -357,7 +377,7 @@ namespace TestProject1
                 auto.AutoSaveCompleted += (s, e) => lastEvent = e;
 
                 // 1 回目: 失敗
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
                 Assert.IsNotNull(lastEvent);
                 Assert.IsFalse(lastEvent.Success, "1 回目は失敗するはず");
 
@@ -365,7 +385,7 @@ namespace TestProject1
                 inputModel.GroundsInput![0].GroundTopAltitude = 0.0;
 
                 // 2 回目: 成功
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
                 Assert.IsNotNull(lastEvent);
                 Assert.IsTrue(lastEvent.Success,
                     $"修正後も失敗: {lastEvent.ErrorMessage}");

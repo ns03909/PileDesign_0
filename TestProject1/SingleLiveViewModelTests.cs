@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -82,7 +82,7 @@ namespace TestProject1
         public void WritesAreSerialised()
         {
             var source = ReadSource("Graphics_r1", "Services", "AutoSaveService.cs");
-            var body = ExtractMethodBody(source, "private string? SaveSnapshot(string tag)");
+            var body = ExtractMethodBody(source, "private string? SaveSnapshot(string tag, PreparedState prepared)");
 
             StringAssert.Contains(body, "lock (_saveLock)",
                 "書き出しが重なりうる。ファイル名は秒までなので同じ一時ファイルを取り合う");

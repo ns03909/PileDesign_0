@@ -48,6 +48,14 @@ namespace PileDesign.Services
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
 
+            // 編集できるコレクションだけ写した器を先に作る (理由は SnapshotForSaving)。
+            //
+            // 呼び出し側 (AutoSaveService) が画面のスレッドで<b>すでに写している</b>ので、
+            // ここでの写しは二重になる。要素は同じ実体を指したままなので保存ファイルの
+            // 中身は変わらず、費用も入れ物の作り直しだけ。写す責任をここに残しておくのは、
+            // 画面を持たない呼び出し (テスト・CLI) からも守られるようにするため。
+            var inputToSave = SnapshotForSaving(inputModel, anaModel, resultInputSnapshot);
+
             // ここは ValidateFiniteBeforeSave に関わらず必ず走らせる。
             //
             // この同期版を呼ぶのは自動保存だけで、その出力は<b>あとで復元する元</b>に
@@ -57,10 +65,14 @@ namespace PileDesign.Services
             // どちらか一方に揃えないこと。
             // (AutoSaveServiceNaNTests が、NaN のとき保存を失敗させ、
             //  どのフィールドかを伝えることを見ている)
-            ValidateFinite(inputModel);
-
-            // 画面のスレッドで、編集できるコレクションだけ写しておく (理由は SnapshotForSaving)
-            var inputToSave = SnapshotForSaving(inputModel, anaModel, resultInputSnapshot);
+            //
+            // 検査は<b>写した器</b>にかける。生きたモデルにかけると、6 秒のあいだずっと
+            // 生きたコレクションを列挙することになり (FindNonFiniteDouble は
+            // IEnumerable を全部辿る)、自動保存はバックグラウンドで走るので
+            // そのあいだの行の足し引きで列挙が壊れる。写しを守る仕組みを入れたのに、
+            // その手前で 6 秒間むき出しにしていた。書き出すものをそのまま検査するほうが、
+            // 検査としても正しい。
+            ValidateFinite(inputToSave ?? inputModel);
 
             var projectData = new ProjectData
             {
@@ -110,7 +122,13 @@ namespace PileDesign.Services
         /// 指すことで $ref 1 個に畳まれており、ここだけ差し替えると実体が 2 つになる。
         /// その状態は「結果を読み込んだ直後」で、利用者が編集していない場面なので写す必要もない。
         /// </summary>
-        private static InputModel? SnapshotForSaving(
+        /// <remarks>
+        /// <b>画面のスレッドから呼ぶこと。</b>写す処理そのものが元のコレクションを列挙するので、
+        /// バックグラウンドで呼ぶと、写している最中の編集で列挙が壊れる。
+        /// 自動保存は <see cref="AutoSaveService"/> が Tick (画面のスレッド) で写してから
+        /// バックグラウンドへ渡す。
+        /// </remarks>
+        internal static InputModel? SnapshotForSaving(
             InputModel? inputModel, AnaModel? anaModel, InputModel? resultInputSnapshot)
         {
             if (inputModel == null) return null;

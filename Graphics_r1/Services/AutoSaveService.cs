@@ -137,16 +137,66 @@ namespace PileDesign.Services
         /// </summary>
         private async void OnAutoSaveTimer(object? sender, EventArgs e)
         {
-            // バックグラウンドで実行して UI スレッドをブロックしない
+            // モーダルの入力ウィンドウが開いているあいだは見送る。
+            //
+            // DispatcherTimer.Tick は ShowDialog の入れ子ディスパッチャでも発火するので、
+            // 「入力ウィンドウはモーダルだから保存とぶつからない」という前提は
+            // 自動保存には効かない。そして写しが守るのは InputModel 直下の入れ物だけで、
+            // 土層表や区間表のような<b>入れ子の表は生きたまま</b>辿られる
+            // (要素を複製すると実体が変わり、保存ファイルの $ref の畳まれ方が変わるため
+            //  守れない)。入れ子の表を編集できるのはモーダルのウィンドウだけなので、
+            // そのあいだ見送れば露出が無くなる。次の Tick で保存される。
+            if (System.Windows.Interop.ComponentDispatcher.IsThreadModal)
+            {
+                Log.Debug("AutoSave skipped: a modal window is open");
+                return;
+            }
+
+            // 写しは<b>画面のスレッドで</b>取る。Task.Run の中で取ると、写す処理そのものが
+            // 元のコレクションを列挙するので、そのあいだの編集で列挙が壊れる。
+            PreparedState prepared;
+            try
+            {
+                var p = PrepareState();
+                if (p == null) return;   // 保存対象が無い
+                prepared = p.Value;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "AutoSave snapshot failed");
+                return;
+            }
+
+            // 書き出しはバックグラウンドで実行して UI スレッドをブロックしない
             // (DispatcherTimer.Tick は UI スレッドで発火するため明示的に Task.Run へ逃がす)
             try
             {
-                await Task.Run(PerformAutoSave);
+                await Task.Run(() => PerformAutoSave(prepared));
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "AutoSave timer task failed");
             }
+        }
+
+        /// <summary>保存にかける状態。入力は写した器。</summary>
+        private readonly record struct PreparedState(
+            InputModel Input, AnaModel? Ana, IList<FEM.VerticalBeamCaseResult>? Vbcr);
+
+        /// <summary>
+        /// 保存する状態を解決し、編集から守った器に写す。<b>画面のスレッドから呼ぶこと。</b>
+        ///
+        /// 写すかどうかの判断は <see cref="FileOperationService.SnapshotForSaving"/> に任せる。
+        /// 自前で <c>InputModel.SnapshotForSaving()</c> を呼ぶと、解析結果と同じ実体を
+        /// 指している場面でも写してしまい、保存ファイルの $ref の畳まれ方が変わる。
+        /// </summary>
+        private PreparedState? PrepareState()
+        {
+            var (input, ana, vbcr) = ResolveState();
+            if (input == null) return null;
+
+            var snapshot = FileOperationService.SnapshotForSaving(input, ana, resultInputSnapshot: null);
+            return snapshot == null ? null : new PreparedState(snapshot, ana, vbcr);
         }
 
         /// <summary>
@@ -164,11 +214,11 @@ namespace PileDesign.Services
             return (_currentInputModel, _currentModel, _verticalBeamCaseResults);
         }
 
-        private void PerformAutoSave()
+        private void PerformAutoSave(PreparedState prepared)
         {
             try
             {
-                var path = SaveSnapshot(tag: "autosave");
+                var path = SaveSnapshot(tag: "autosave", prepared);
                 // 保存対象が無い (ライブ状態が空) 場合は何もしない
                 if (path == null)
                     return;
@@ -214,7 +264,12 @@ namespace PileDesign.Services
         {
             try
             {
-                var path = SaveSnapshot(tag: "emergency");
+                // 緊急保存はその場で写す。落ちる直前なので、画面のスレッドかどうかを
+                // 選べない。列挙が壊れる危険は残るが、何も残さないより残すほうがよい。
+                var prepared = PrepareState();
+                if (prepared == null) return null;
+
+                var path = SaveSnapshot(tag: "emergency", prepared.Value);
                 if (path == null) return null;
                 Log.Information("Emergency AutoSave succeeded: {Path}", path);
                 return path;
@@ -239,21 +294,17 @@ namespace PileDesign.Services
         /// </summary>
         private readonly object _saveLock = new();
 
-        private string? SaveSnapshot(string tag)
+        private string? SaveSnapshot(string tag, PreparedState prepared)
         {
             lock (_saveLock)
             {
-                return SaveSnapshotCore(tag);
+                return SaveSnapshotCore(tag, prepared);
             }
         }
 
-        private string? SaveSnapshotCore(string tag)
+        private string? SaveSnapshotCore(string tag, PreparedState prepared)
         {
-            // ライブ状態を解決 (LiveStateProvider があれば最新 + 自動保存チェックボックスを反映)
-            var (input, ana, vbcr) = ResolveState();
-
-            // 保存対象が無い。Start 前 / Stop 後で、かつプロバイダも入力を返さない場合。
-            if (input == null) return null;
+            var (input, ana, vbcr) = (prepared.Input, prepared.Ana, prepared.Vbcr);
 
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var originalFileName = !string.IsNullOrEmpty(_currentFilePath)

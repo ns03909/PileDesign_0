@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
 using PileDesign.ViewModels;
@@ -80,11 +80,29 @@ namespace TestProject1
             return "";
         }
 
-        private static void InvokePrivate(object obj, string methodName)
+        private static void InvokePrivate(object obj, string methodName, params object?[]? args)
         {
             var m = obj.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance)
                 ?? throw new InvalidOperationException($"メソッド {methodName} が見つかりません");
-            m.Invoke(obj, null);
+            m.Invoke(obj, args);
+        }
+
+        /// <summary>
+        /// Tick と同じ順番で自動保存を 1 回走らせる。
+        ///
+        /// 写しは<b>画面のスレッドで</b>取ってから書き出しへ渡すので、実物も 2 段になっている
+        /// (PrepareState → PerformAutoSave)。テストも同じ順番で呼ぶ。
+        /// </summary>
+        private static void RunAutoSave(object auto)
+        {
+            var prepare = auto.GetType().GetMethod("PrepareState",
+                BindingFlags.NonPublic | BindingFlags.Instance)
+                ?? throw new InvalidOperationException("メソッド PrepareState が見つかりません");
+
+            var prepared = prepare.Invoke(auto, null);
+            if (prepared == null) return;   // 保存対象が無い
+
+            InvokePrivate(auto, "PerformAutoSave", prepared);
         }
 
         /// <summary>自動保存フォルダは共有なので、テストが作ったものだけを消す。</summary>
@@ -118,7 +136,7 @@ namespace TestProject1
             {
                 auto.LiveStateProvider = () => (new InputModel(), null, null);
 
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
 
                 var produced = Directory.GetFiles(auto.AutoSaveFolder, "Untitled_autosave_*.pdj");
                 Assert.AreEqual(1, produced.Length,
@@ -193,7 +211,7 @@ namespace TestProject1
             {
                 auto.Start(original, new InputModel(), null, null);
 
-                InvokePrivate(auto, "PerformAutoSave");
+                RunAutoSave(auto);
 
                 var produced = Directory.GetFiles(auto.AutoSaveFolder, prefix + "_autosave_*.pdj").Single();
                 var loaded = fileOps.LoadProjectData(produced);
