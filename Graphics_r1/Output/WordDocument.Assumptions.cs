@@ -121,7 +121,52 @@ namespace PileDesign.Output
             var runConfig = anaModel?.LastRunConfig;
             if (runConfig == null) return;   // 旧いファイル等で記録がない場合は照合しない
 
+            var diffs = CollectAnalysisConditionDiffs(runConfig, inputModel);
+
+            if (diffs.Count == 0) return;
+
+            AddTableNote(body,
+                "※ 注意: 次の条件が水平解析の実行後に変更されています。"
+                + "本計算書の解析結果は変更前の条件によるものです。再解析のうえ出力し直してください — "
+                + string.Join("、", diffs));
+        }
+
+        /// <summary>
+        /// 解析時の条件と現在の入力の食い違いを集める。<b>照合する項目はここだけに置く。</b>
+        ///
+        /// 照合するのは「切り替えても解析結果が破棄されない」設定に限る。破棄される
+        /// 設定なら、そもそも古い結果が残らないので照合は要らない。
+        ///
+        /// <para><b>照合する 3 つ</b>（いずれも <see cref="AnalysisRunSnapshot"/> に記録され、
+        /// 切り替えても <c>MarkInputChangedSinceAnalysis</c> を通らない）:</para>
+        /// <list type="bullet">
+        /// <item><c>RestrainFoundationTorsion</c> … 基礎のねじれ拘束</item>
+        /// <item><c>ConnectionMode</c> … 杭頭の接続仮定</item>
+        /// <item><c>UseAnalysisAxialForce</c> … 杭軸力モード。<b>以前ここが抜けていた。</b>
+        ///   上の説明が 3 つ挙げているのに 2 つしか照合しておらず、
+        ///   「解析 → 杭軸力モードを切り替え → 計算書出力」で注意が出なかった。
+        ///   計算書のグラフは <c>inputModel.UseAnalysisAxialForce</c> をその場で読むので
+        ///   (WordDocument.Charts.cs)、解析と違う軸力の出所で耐力曲線が描かれる</item>
+        /// </list>
+        ///
+        /// <para><b>照合しないもの</b>と、その理由:</para>
+        /// <list type="bullet">
+        /// <item>反復の設定 (<c>UseModifiedNewtonRaphson</c>・<c>FullNRIterations</c>・
+        ///   <c>SkipIteration</c>・<c>UseLineSearch</c>・<c>RelaxationFactor</c>・
+        ///   ステップ数) … 解き方の設定で、設計条件として計算書に載る値ではない。
+        ///   毎回出る注意は読まれなくなるので、載らない設定では出さない</item>
+        /// <item><c>LiquefactionOption</c> … 実行するケースの範囲が変わるので、
+        ///   結果表そのものに現れる</item>
+        /// <item><c>ExecutedCaseKeys</c>・<c>InputModelHash</c> … 設定ではなく記録</item>
+        /// </list>
+        ///
+        /// (AnalysisConditionDiffTests が、記録されている設定を残さず判断しているかを見張る)
+        /// </summary>
+        internal static List<string> CollectAnalysisConditionDiffs(
+            PileDesign.FEM.AnalysisRunSnapshot runConfig, InputModel inputModel)
+        {
             var diffs = new List<string>();
+            if (runConfig == null) return diffs;
 
             if (runConfig.RestrainFoundationTorsion != (inputModel?.RestrainFoundationTorsion ?? false))
             {
@@ -135,13 +180,15 @@ namespace PileDesign.Output
                 diffs.Add($"杭頭の接続仮定（解析時: {runConfig.ConnectionMode}）");
             }
 
-            if (diffs.Count == 0) return;
+            if (runConfig.UseAnalysisAxialForce != (inputModel?.UseAnalysisAxialForce ?? false))
+            {
+                diffs.Add("杭軸力モード（解析時: "
+                    + (runConfig.UseAnalysisAxialForce ? "解析軸力を使う" : "入力軸力を使う") + "）");
+            }
 
-            AddTableNote(body,
-                "※ 注意: 次の条件が水平解析の実行後に変更されています。"
-                + "本計算書の解析結果は変更前の条件によるものです。再解析のうえ出力し直してください — "
-                + string.Join("、", diffs));
+            return diffs;
         }
+
 
         /// <summary>単位系・符号規約の宣言文。</summary>
         private static void AddUnitAndSignConventionText(Body body, FundamentalInput fund)
