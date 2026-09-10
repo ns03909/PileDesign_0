@@ -37,6 +37,10 @@ namespace PileDesign.Models.InputData
         void System.Text.Json.Serialization.IJsonOnDeserialized.OnDeserialized()
         {
             _isDeserializing = false;
+            // 再計算より先にかぶり厚を配置直径へ揃える。RecalculatePileDia は
+            // 場所打ちRC で配置直径をかぶり厚から導くので、揃えずに呼ぶと
+            // ファイルに書かれた配置直径が既定のかぶり厚から導いた値に塗り潰される。
+            SyncCoverFromPlacementDiameter();
             RecalculatePileDia();
             InvalidateAllCaches();
         }
@@ -50,6 +54,7 @@ namespace PileDesign.Models.InputData
         internal void OnDeserializedHandler(System.Runtime.Serialization.StreamingContext _)
         {
             _isDeserializing = false;
+            SyncCoverFromPlacementDiameter();
             RecalculatePileDia();
             InvalidateAllCaches();
         }
@@ -2317,7 +2322,12 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _mainBarSize, value))
                 {
-                    MainBarAg = MainBarNum * GetBarArea(MainBarSize);
+                    // 読み込み中は再計算しない。ファイルに書かれた MainBarAg は
+                    // 製品カタログの値 (SetSelectedPrecastPileByName で pipe.Ag) の場合があり、
+                    // 公称値 (本数 × 呼び径の断面積) とわずかに違う。
+                    // 再計算すると、キーの並び順によってどちらが残るかが変わる
+                    // (設計例集3.1 の PRC杭 で 4592 ⇄ 4584 と揺れていた)。
+                    if (!_isDeserializing) MainBarAg = MainBarNum * GetBarArea(MainBarSize);
                     InvalidateAllCaches();
                 }
             }
@@ -2333,7 +2343,8 @@ namespace PileDesign.Models.InputData
                 int safeValue = value < 0 ? 0 : value;
                 if (SetProperty(ref _mainBarNum, safeValue))
                 {
-                    MainBarAg = MainBarNum * GetBarArea(MainBarSize);
+                    // 読み込み中は再計算しない (理由は MainBarSize と同じ)
+                    if (!_isDeserializing) MainBarAg = MainBarNum * GetBarArea(MainBarSize);
                     InvalidateAllCaches();
                 }
             }
@@ -2387,6 +2398,23 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 重心かぶり厚を、いまの配置直径に合わせる。
+        ///
+        /// 逆向きのセッター (<see cref="MainBarCenterCover"/>) は配置直径を書き戻すので、
+        /// ここから呼ばずに控えの値を直に書く。互いを呼び合う形を避ける。
+        /// </summary>
+        private void SyncCoverFromPlacementDiameter()
+        {
+            if (!(ConcreteOutDia > 0) || !(_mainBarDr > 0)) return;
+
+            double cover = (ConcreteOutDia - _mainBarDr) * 0.5;
+            if (_mainbarCenterCover == cover) return;
+
+            _mainbarCenterCover = cover;
+            OnPropertyChanged(nameof(MainBarCenterCover));
+        }
+
         // 鉄筋配置直径
         private double _mainBarDr;
         public double MainBarDr
@@ -2396,6 +2424,23 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _mainBarDr, value))
                 {
+                    // 重心かぶり厚を配置直径に合わせる。
+                    //
+                    // 画面の入力欄は<b>かぶり厚</b>で、配置直径は
+                    // <see cref="RecalculatePileDia"/> が ConcreteOutDia - 2·かぶり厚 で導く。
+                    // ここで揃えておかないと、配置直径を<b>直接与えた</b>状態
+                    // (例題データ・保存ファイル) が、読み込みの仕上げ (OnDeserialized →
+                    // RecalculatePileDia) で既定のかぶり厚 200mm から導いた値に塗り潰される。
+                    //
+                    // 実際に例題 5 件 (基礎指針 計算例9 は φ1000 で 700 → 600) がそうなっており、
+                    // <b>保存して開き直すと主筋の配置直径が縮んで曲げ耐力が下がっていた。</b>
+                    // 製品ライブラリを当てる経路では以前からこの向きで揃えている
+                    // (MainBarCenterCover = (ConcreteOutDia - MainBarDr)/2)。
+                    //
+                    // 読み込み中は揃えない。外径がまだ既定のまま配置直径が先に来ると、
+                    // 誤ったかぶり厚を導いてしまう (キーの並び順で結果が変わる)。
+                    // 値が揃った仕上げ (OnDeserialized) で一度だけ揃える。
+                    if (!_isDeserializing) SyncCoverFromPlacementDiameter();
                     InvalidateAllCaches();
                 }
             }
