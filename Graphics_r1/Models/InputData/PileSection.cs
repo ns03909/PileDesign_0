@@ -727,7 +727,13 @@ namespace PileDesign.Models.InputData
                 // 異なる断面同士のキャッシュ衝突を防ぐ。
                 // 鋼管杭はここに落ちる。座屈長は耐力を変えるのでキーに含める
                 // (含めないと、液状化の有無が違うモデルで前のモデルの曲線が返る)。
-                _ => $"OTHER|{PileBodyType}|{PileSectionType}|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|lk={BucklingLength:F3}|N={axialNRounded}"
+                // ConcreteGamma を含める。Ec = 3.35e4 · (γ/24)² · (ξ·Fc/60)^(1/3) なので
+                // γ は曲線に効く。場所打ちRC と場所打ち鋼管コンクリートの鍵には入って
+                // いたが、ここだけ抜けていた。M-φ キャッシュ (static) を捨てるのは
+                // ファイル読込の 1 か所だけなので、キャッシュの正しさは鍵の完全性だけに
+                // 依存する。抜けていると γ を変えても古い曲線が返る
+                // (MphiCacheKeyCompletenessTests が検出)。
+                _ => $"OTHER|{PileBodyType}|{PileSectionType}|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{ConcreteGamma}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|lk={BucklingLength:F3}|N={axialNRounded}"
             };
 
             return $"{key}|{cmo}";
