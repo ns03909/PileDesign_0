@@ -121,8 +121,8 @@ namespace PileDesign.ViewModels
                 List<double> pileGroupFactors = [];
                 foreach (double rOnB in rOnBs)
                 {
-                    double e = 1.2 / Math.Pow(totalPileCounts[i], 0.65 / rOnB);
-                    double pileGroupFactor = Math.Min(Math.Pow(e, 4.0 / 3.0), 1);
+                    // 式は Services.PileGroupFactor に 1 つだけ置く (テストが守っているのはそちら)
+                    double pileGroupFactor = PileDesign.Services.PileGroupFactor.GetPileGroupFactor(totalPileCounts[i], rOnB);
                     pileGroupFactors.Add(pileGroupFactor);
                 }
 
@@ -158,8 +158,7 @@ namespace PileDesign.ViewModels
             {
                 return;
             }
-            double e = 1.2 / Math.Pow(TotalPileCount.Value, 0.65 / PileSpacingDiaRatio.Value);
-            PileGroupFactor = Math.Min(Math.Pow(e, 4.0 / 3.0), 1);
+            PileGroupFactor = PileDesign.Services.PileGroupFactor.GetPileGroupFactor(TotalPileCount.Value, PileSpacingDiaRatio.Value);
         }
 
         // チャート更新

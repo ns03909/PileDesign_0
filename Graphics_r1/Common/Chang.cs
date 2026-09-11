@@ -479,32 +479,6 @@ namespace PileDesign.Common
             }
         }
 
-        // 地表面変位
-        public double GetGroundSurfaceDisplacement()
-        {
-            if (H == 0)
-            {
-                return GetPileHeadDisplacement();
-            }
-            else
-            {
-                return HorizontalLoad / (4 * EI * Beta * Beta * Beta) * (1 + Beta * H) * (2 - Ar);
-            }
-        }
-
-        // 杭頭拘束モーメント
-        public double GetPileHeadMoment()
-        {
-            if (H == 0)
-            {
-                return HorizontalLoad / (2 * Beta) * Ar;
-            }
-            else
-            {
-                return HorizontalLoad / (2 * Beta) * (1 + Beta * H) * Ar;
-            }
-        }
-
         // 杭各部の曲げモーメント
         public double GetBendingMoment(double x)
         {
@@ -521,30 +495,6 @@ namespace PileDesign.Common
             {
                 return -HorizontalLoad / (2 * Beta) * Math.Exp(-Beta * x) * ((1 + Beta * H) * (2 - Ar) * Math.Sin(Beta * x)
                     + (2 * Beta * H - (1 + Beta * H) * Ar) * Math.Cos(Beta * x));
-            }
-        }
-        // 地中部最大曲げモーメント
-        public double GetMaxBendingMoment()
-        {
-            if (H == 0)
-            {
-                return -HorizontalLoad / (2 * Beta) * Math.Sqrt((1 - Ar) * (1 - Ar) + 1) * Math.Exp(-Math.Atan(1 / (1 - Ar)));
-            }
-            else
-            {
-                return -HorizontalLoad / (2 * Beta) * Math.Sqrt(Math.Pow(((1 + 2 * Beta * H) - (1 + Beta * H) * Ar), 2) + 1) * Math.Exp(-Math.Atan(1 / (1 + 2 * Beta * H - (1 + Beta * H) * Ar)));
-            }
-        }
-        // Mmを生じる深さ
-        public double GetDepthOfMaxBendingMoment()
-        {
-            if (H == 0)
-            {
-                return 1 / Beta * Math.Atan(1 / (1 - Ar));
-            }
-            else
-            {
-                return 1 / Beta * Math.Atan(1 / (1 + 2 * Beta * H - (1 + Beta * H) * Ar));
             }
         }
 

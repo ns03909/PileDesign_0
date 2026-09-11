@@ -499,40 +499,6 @@ namespace PileDesign.Views
                 // 変換行列は各ビームの方向に応じて個別に計算する（per-beam）
                 // （水平基礎梁の応力図を正しく描画するため）
 
-                // ヘルパ: ビーム結果から端点ごとの 3 成分ベクトルを取得する
-                static Vector<double> GetEnd3Vector(BeamForce bf, bool isMoment, bool isIend, string derivedType)
-                {
-                    // bf のインデックス対応: I端(0..5)、J端(6..11)
-                    int baseIdx = isIend ? 0 : 6;
-                    double fx = bf.GetByIndex(baseIdx + 0);
-                    double fy = bf.GetByIndex(baseIdx + 1);
-                    double fz = bf.GetByIndex(baseIdx + 2);
-                    double mx = bf.GetByIndex(baseIdx + 3);
-                    double my = bf.GetByIndex(baseIdx + 4);
-                    double mz = bf.GetByIndex(baseIdx + 5);
-
-                    if (!string.IsNullOrEmpty(derivedType))
-                    {
-                        // 派生タイプ別の比率設定
-                        if (derivedType == "Mh")
-                        {
-                            // 曲げ合成: -Mz, My の比率を使う（Mxは無視）
-                            return Vector<double>.Build.DenseOfArray([0.0, -mz, my]);
-                        }
-                        else if (derivedType == "Fh")
-                        {
-                            // 水平力合成: Fx, Fy の比率を使（Fzは無視）
-                            return Vector<double>.Build.DenseOfArray([0, fy, fz]);
-                        }
-                    }
-
-                    // 通常: 力 or モーメントの選択
-                    if (isMoment)
-                        return Vector<double>.Build.DenseOfArray([mx, mz, my]);
-                    else
-                        return Vector<double>.Build.DenseOfArray([fx, fy, fz]);
-                }
-
                 // 「杭MaxMin」モード用の事前計算: 各杭の (max, min) 値の出現位置 (beam, I/J) を特定する。
                 // 表示時の値規約: I 端 = originalForceI, J 端 = signJ * originalForceJ
                 // (Fx は signJ=+1、それ以外は signJ=-1)
@@ -606,8 +572,10 @@ namespace PileDesign.Views
                     bool isMomentType = viewModel.AnalysisResultBeamForceType.StartsWith('M');
                     string derivedTypeLocal = isDerivedMagnitude ? derivedMagnitudeType : string.Empty;
 
-                    Vector<double> rawI = GetEnd3Vector(beamResult.CumulativeForce, isMomentType, true, derivedTypeLocal);
-                    Vector<double> rawJ = GetEnd3Vector(beamResult.CumulativeForce, isMomentType, false, derivedTypeLocal);
+                    // 端点の 3 成分は BeamForceExtensions.GetEnd3Vector (BeamForceTests が守る) を使う。
+                    // 以前はここに同じ式の写しを持っていて、テストは使われていない方を見ていた
+                    Vector<double> rawI = beamResult.CumulativeForce.GetEnd3Vector(isMomentType, true, derivedTypeLocal);
+                    Vector<double> rawJ = beamResult.CumulativeForce.GetEnd3Vector(isMomentType, false, derivedTypeLocal);
 
                     // 正規化（ゼロ長は既定方向を使う）
                     // 個別成分（Fx,Fy,Fz,Mx,My,Mz）は固定の forceDirection を使用

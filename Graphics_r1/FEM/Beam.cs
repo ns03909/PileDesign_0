@@ -322,49 +322,6 @@ namespace PileDesign.FEM
         //PLNO = plno; // 杭
 
 
-        // 梁端部回転剛性をセットする。
-        public void SetRotStiffness(float ky, float kz, bool isTan, bool isEndI)
-        {
-            double _ky = isTan ? KTan_y : KSec_y;
-            double _kz = isTan ? KTan_z : KSec_z;
-
-            double eIy_per_L1 = Section.Material.E * Section.IY / Length * ky;
-            double eIz_per_L1 = Section.Material.E * Section.IZ / Length * kz;
-
-            if (isTan)
-            {
-                if (isEndI == true)
-                {
-                    Ryi_tan = 1 / (1 + 6 * eIy_per_L1 / _ky);
-                    Rzi_tan = 1 / (1 + 6 * eIz_per_L1 / _kz);
-                }
-                else if (isEndI == false)
-                {
-                    Ryj_tan = 1 / (1 + 6 * eIy_per_L1 / _ky);
-                    Rzj_tan = 1 / (1 + 6 * eIz_per_L1 / _kz);
-                }
-            }
-            else
-            {
-                if (isEndI == true)
-                {
-                    Ryi_sec = 1 / (1 + 6 * eIy_per_L1 / _ky);
-                    Rzi_sec = 1 / (1 + 6 * eIz_per_L1 / _kz);
-                }
-                else if (isEndI == false)
-                {
-                    Ryj_sec = 1 / (1 + 6 * eIy_per_L1 / _ky);
-                    Rzj_sec = 1 / (1 + 6 * eIz_per_L1 / _kz);
-                }
-            }
-        }
-
-        // 要素剛性補正係数を取得する
-        public void SetMultiplier(double eA_multiplier)
-        {
-            EA_Multiplier = eA_multiplier;
-        }
-
         // 要素剛性を取得する
         public void SetKe(bool isTan)
         {
@@ -498,32 +455,6 @@ namespace PileDesign.FEM
             return matrixGlobalStiffness;
         }
 
-        // 要素応力の計算
-        public Vector<double> CalcBeamForce(bool isTan)
-        {
-            // 節点の変位ベクトル（全体座標系）
-
-            Vector<double> dispNodeI = NodeI.CumulativeDisp.GetVector(); //double[] dispNodeI = nodeI.OutNode.Disp;
-            Vector<double> dispNodeJ = NodeJ.CumulativeDisp.GetVector(); //double[] dispNodeJ = nodeJ.OutNode.Disp;
-
-            // dispNodeIとdispNodeJを組合せて2n行のベクトルを作成
-            Vector<double> disp = Vector<double>.Build.Dense(dispNodeI.Count + dispNodeJ.Count); //double[] disp = [.. dispNodeI, .. dispNodeJ];
-            disp.SetSubVector(0, dispNodeI.Count, dispNodeI);
-            disp.SetSubVector(dispNodeI.Count, dispNodeJ.Count, dispNodeJ);
-
-            // 節点の変位ベクトル（要素座標系）
-
-            Matrix<double> t = Utils.GetTransformMatrix(NodeI, NodeJ); //double[,] t = Utils.GetTransformMatrix(nodeI, nodeJ);
-            Vector<double> d = t * disp; //double[] d = Utils.MatrixVectorMultiply(t, disp);
-            // 要素応力 f = k * d
-            Matrix<double> k = (isTan ? KeTan : KeSec) ?? throw new InvalidOperationException("Stiffness matrix is not initialized. Call SetKe() before CalcInternalForce().");
-            // 内力計算
-            Vector<double> f = k * d; //double[] f = Utils.MatrixVectorMultiply(k, d);
-                                      // 要素応力を結果用オブジェクトにセット
-            return f;
-
-        }
-
         // 要素変位、要素応力のセットメソッド
         public void SetBeamDispAndForce(bool isTan = false)
         {
@@ -572,12 +503,6 @@ namespace PileDesign.FEM
         {
             IncrementalDisp = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
             CumulativeDisp = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        }
-
-        // 初期曲率状態のセット
-        public void SetInitialCurve()
-        {
-            Curve = Vector<double>.Build.Dense(2, 0.0);
         }
 
         // 梁要素の解析結果を取得する

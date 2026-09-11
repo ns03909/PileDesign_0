@@ -1574,17 +1574,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 深さの再計算
-        internal void RecalculateGLDepth()
-        {
-            double totalThickness = 0;
-            foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
-            {
-                totalThickness += groundMassData.Spacing;
-                groundMassData.GLDepth = -totalThickness;
-            }
-        }
-
         // 厚さの再計算
         internal void RecalculateLayerThickness()
         {
@@ -1598,17 +1587,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-
-        // 深さの再計算
-        internal void RecalculateBottomGLDepth()
-        {
-            double totalThickness = 0;
-            foreach (GroundLayerInput groundLayer in GroundInput.GroundLayers)
-            {
-                totalThickness += groundLayer.LayerThickness;
-                groundLayer.BottomGLDepth = -totalThickness;
-            }
-        }
 
         // 厚さの再計算
         internal void RecalculateMassSpacing()

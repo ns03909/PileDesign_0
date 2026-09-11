@@ -133,32 +133,6 @@ namespace PileDesign.Services
             return false;
         }
 
-        // データのチェック
-        public static bool CheckData(InputModel inputModel)
-
-        {
-            string message = "";
-            message = CheckSoilPile(inputModel, message);
-            message = CheckSoilEmbedment(inputModel, message);
-            message = CheckPileBodyGeometry(inputModel, message);
-            message = CheckGroundLayerGeometry(inputModel, message);
-
-            if (message != "")
-            {
-                MessageService.Show(message);
-                return false;
-            }
-            else
-            {
-                MessageService.Show("問題は検出されませんでした。\n" +
-                    "\n杭体の存在高さ範囲すべてに選定された土層の定義が存在します。" +
-                    "\n根入部の存在高さ範囲すべてに選定された土層の定義が存在します。" +
-                    "\n杭断面寸法・主筋ピッチ円直径・コンクリート設計基準強度の整合性に問題はありません。" +
-                    "\n土層厚さに問題はありません。");
-                return true;
-            }
-        }
-
         /// <summary>
         /// 杭体ジオメトリ・断面整合性のチェック (MED #5, #6, #7)。
         ///   - 杭セグメント長 ≤ 0

@@ -592,18 +592,6 @@ namespace PileDesign.FEM
             return matrix;
         }
 
-        // 荷重ベクトルの生成メソッド
-        public Vector<double> GenerateForceVector(List<double> weights, double pileTopForce)
-        {
-            var forceVector = Vector<double>.Build.Dense(nodesCount, 0);
-            for (int i = 0; i < weights.Count; i++)
-            {
-                forceVector[2 * i] += weights[i];
-            }
-            forceVector[0] += pileTopForce;
-            return forceVector;
-        }
-
         // 内力取得算定メソッド
         private Vector<double> GetVectorT(
             List<double> beamStiffnesses, List<double> soilStiffnesses, Vector<double> vectorX)

@@ -105,39 +105,6 @@ namespace PileDesign.Models
         /// </summary>
         public string? SourceFilePath { get; set; }
 
-        // 保存メソッド
-        public static void SaveProject(string filePath, InputModel inputModel, AnaModel anaModel)
-        {
-            var projectData = new ProjectData
-            {
-                FormatVersion = 2,  // v2: PileLayoutItems[*].Z = 接合節点 Z (旧 v1 = 杭頭 Z)
-                InputModel = inputModel,
-                AnaModel = anaModel
-            };
-
-            JsonSerializerOptions jsonSerializerOptions = new()
-            {
-                WriteIndented = true,
-                ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
-            };
-            JsonSerializerOptions options = jsonSerializerOptions;
-
-            string json = JsonSerializer.Serialize(projectData, options);
-            File.WriteAllText(filePath, json);
-        }
-
-        // 復元メソッド
-        public static ProjectData LoadProject(string filePath)
-        {
-            JsonSerializerOptions jsonSerializerOptions = new()
-            {
-                ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
-            };
-            JsonSerializerOptions options = jsonSerializerOptions;
-
-            string json = File.ReadAllText(filePath);
-            return JsonSerializer.Deserialize<ProjectData>(json, options);
-        }
     }
 
 
