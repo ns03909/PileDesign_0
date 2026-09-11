@@ -9358,7 +9358,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <h4>各層変位 (論文式 1)</h4>
             <div class="formula-block">
                 <div class="formula-left">
-                    $$u_i = \left(\frac{T_1}{2\pi}\right)^2 S_{a0}(T_1) F_h(\xi_e) \beta U_i$$
+                    $$u_i = \left(\frac{T_1}{2\pi}\right)^2 S_{a0}(T_1) F_h(\xi_e) \beta U_i \cdot L Z$$
                 </div>
                 <div class="formula-right">論文(1)</div>
             </div>
@@ -9368,6 +9368,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 <li><span class="symbol-label">$\beta$</span>1 次モード参加係数 $= \{U\}^T[M]\{1\} / \{U\}^T[M]\{U\}$ (論文式 3)</li>
                 <li><span class="symbol-label">$U_i$</span>1 次モード形の質点 $i$ における値</li>
                 <li><span class="symbol-label">$\xi_e$</span>等価減衰定数 (論文式 10、ひずみエネルギー重み付き平均)</li>
+                <li><span class="symbol-label">$L,\ Z$</span>レベルに応じた係数 (レベル1 0.2、レベル2 1.0) と地域係数。本プログラムは論文式 (1) にこれらを乗じる</li>
             </ul>
 
             <h4>地盤増幅率 (論文式 9)</h4>
@@ -9416,7 +9417,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 (この場合は $T = 1.2 T_1$ で $Gs_1$、$T \to \infty$ で正確に 1)。
             </p>
 
-            <p>地表応答スペクトル: $S_a(T) = Gs(T) \cdot S_{a0}(T)$</p>
+            <p>地表応答スペクトル: $S_a(T) = Gs(T) \cdot L Z \cdot S_{a0}(T)$</p>
 
             <h4>Hardin-Drnevich モデル (歪み依存性)</h4>
             <div class="formula-block">
@@ -9941,6 +9942,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     </div>
                     <div class="formula-right">基礎指針'19(6.6.17)</div>
                 </div>
+                <p>本プログラムでは、$\xi$ が 1 を超えるときは 1 とします。</p>
 
                 <div class="formula-block">
                     <div class="formula-left">
@@ -9974,6 +9976,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     </div>
                     <div class="formula-right">基礎指針'19 表6.6.3</div>
                 </div>
+                <p>本プログラムでは、後方杭の $\kappa$ は前方杭の値 3 を上限とします。</p>
 
                 <p><strong>単杭および前方杭の場合</strong></p>
                 <div class="formula-block">
@@ -10844,7 +10847,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         <li><span class="symbol-label">$F_{cs}$</span>使用限界圧縮応力度 $= F_c/3.5$ [N/mm$^2$]</li>
                         <li><span class="symbol-label">$\sigma_e$</span>有効プレストレス応力度</li>
                         <li><span class="symbol-label">$\sigma_{0e}$</span>軸力による応力度 $= N/A_e$</li>
-                        <li><span class="symbol-label">$\beta_1$</span>低減係数 ($\beta_1 = 1.0$)</li>
+                        <li><span class="symbol-label">$\beta_1$</span>低減係数 ($\beta_1 = 0.9$。検定の「低減前」の曲線は $\beta_1 = 1.0$)</li>
                     </ul>
 
                     <h4>PHC 杭の損傷限界曲げモーメント $M_d$</h4>
@@ -10875,7 +10878,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         <li><span class="symbol-label">$M_{d2}$</span>圧縮縁の応力度が損傷限界圧縮応力度 $F_{cd}$ に達するときの曲げモーメント</li>
                         <li><span class="symbol-label">$F_{td}$</span>損傷限界引張応力度 $= 0.56\sqrt{F_c}$ [N/mm$^2$]</li>
                         <li><span class="symbol-label">$F_{cd}$</span>損傷限界圧縮応力度 $= 2F_c/3.5$ [N/mm$^2$]</li>
-                        <li><span class="symbol-label">$\beta$</span>L1: $\beta_1=1.0$、L2: $\beta_1\beta_2=1.0\times0.65$</li>
+                        <li><span class="symbol-label">$\beta$</span>L1: $\beta_1 = 1.0$ ($\beta_2$ は乗じない)、L2: $\beta_1\beta_2$ ($\beta_1 = 1.0$、$\beta_2$ は $\sigma_e + \sigma_{0e}$ が 10 N/mm$^2$ を境に 0.75 / 0.65。解説表 2.7)</li>
                     </ul>
 
                     <h4>PHC 杭の安全限界曲げモーメント $M_u$</h4>
@@ -10901,7 +10904,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         <li><span class="symbol-label">$M_{u1}$</span>圧縮側最外縁のコンクリートのひずみが圧縮限界ひずみ $\varepsilon_{cu}$ に達するときの曲げモーメント</li>
                         <li><span class="symbol-label">$M_{u2}$</span>PC 鋼材のひずみが引張限界ひずみ $\varepsilon_{pu} = -0.02$ に達するときの曲げモーメント</li>
                         <li><span class="symbol-label">$\beta_1$</span>$= 0.8$ (PHC 杭、設計式の信頼性に基づく低減係数)</li>
-                        <li><span class="symbol-label">$\beta_2$</span>$= 1.0$ (軸力比依存の低減係数、PHC 杭は 1.0 固定)</li>
+                        <li><span class="symbol-label">$\beta_2$</span>軸力による低減係数。$\sigma_e + \sigma_{0e}$ が 10 N/mm$^2$ を境に 0.75 / 0.65 (解説表 2.7)</li>
                     </ul>
 
                     <h4>PHC 杭のせん断耐力 $Q_s, Q_d, Q_u$</h4>
@@ -10969,7 +10972,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         コンクリートはバイリニア（弾完全塑性、圧縮応力度に上限を設ける）、PC 鋼材はバイリニアでモデル化する。<br>
                         各折れ点の曲率は、目標軸力 $N$ に対応する中立軸位置を Newton-Raphson 法で逐次解いて求める。
                         終局曲率 $\phi_u$ は数値的な発散を避けるために上限値で打ち切る。
-                        終局耐力には $\beta_1\beta_2 = 0.65$ を乗じる。
+                        終局耐力には $\beta_1\beta_2$ ($\beta_1 = 0.8$、$\beta_2 = 0.75$ または 0.65) を乗じる。
                     </p>
                 </section>
 
@@ -11031,7 +11034,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         <li><span class="symbol-label">$F_{cs}$</span>使用限界圧縮応力度 $= F_c/3.5$ [N/mm$^2$]</li>
                         <li><span class="symbol-label">$\sigma_e$</span>有効プレストレス応力度</li>
                         <li><span class="symbol-label">$\sigma_{0e}$</span>軸力による応力度 $= N/A_e$</li>
-                        <li><span class="symbol-label">$\beta_1$</span>低減係数 ($\beta_1 = 1.0$)</li>
+                        <li><span class="symbol-label">$\beta_1$</span>低減係数 ($\beta_1 = 0.8$。検定の「低減前」の曲線は $\beta_1 = 1.0$)</li>
                     </ul>
 
                     <h4>PRC 杭の損傷限界曲げモーメント $M_d$</h4>
@@ -12803,7 +12806,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 <div class="formula-block">
                     <div class="formula-left">
                         $$F_1 = \frac{1}{\pi} \left[ l \log_e \frac{(1 + \sqrt{l^2 + 1}) \sqrt{l^2 + d^2}}{l (1 +
-                        \sqrt{l^2 + d^2 + 1})} + \log_e \frac{l + \sqrt{l^2 + 1} \sqrt{1^2 + d^2}}{l + \sqrt{l^2 + d^2 +
+                        \sqrt{l^2 + d^2 + 1})} + \log_e \frac{(l + \sqrt{l^2 + 1}) \sqrt{1 + d^2}}{l + \sqrt{l^2 + d^2 +
                         1}} \right]$$
                     </div>
                     <div class="formula-right">基礎指針'19(5.3.5)</div>
@@ -12830,8 +12833,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
                 <div class="formula-block">
                     <div class="formula-left">
-                        $$S_E = \frac{I_S(H_1, \nu_{s1})}{E_{s1}} + \sum_{k=2}^{n} \left\{ \frac{I_s(H_k, \nu_{sk}) -
-                        I_s(H_{k-1}, \nu_{sk})}{E_{sk}} qB \right\}$$
+                        $$S_E = qB \left\{ \frac{I_s(H_1, \nu_{s1})}{E_{s1}} + \sum_{k=2}^{n} \frac{I_s(H_k, \nu_{sk}) -
+                        I_s(H_{k-1}, \nu_{sk})}{E_{sk}} \right\}$$
                     </div>
                     <div class="formula-right">基礎指針'19(5.3.9)</div>
                 </div>

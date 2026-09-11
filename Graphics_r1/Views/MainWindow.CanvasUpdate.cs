@@ -374,21 +374,11 @@ namespace PileDesign.Views
 
         private static double GetDispFromGroundMass(GroundInput ground, GroundMassDataInput mass, int level, bool isLiquefaction)
         {
-            if (ground != null)
-            {
-                if (ground.IsGroundDisplacementIgnored) return 0.0;
-                var custom = ground.CustomDisplacementProfile;
-                if (custom != null && custom.IsEnabled)
-                {
-                    var profile = (level == 1)
-                        ? (isLiquefaction ? custom.Level1Liq : custom.Level1NonLiq)
-                        : (isLiquefaction ? custom.Level2Liq : custom.Level2NonLiq);
-                    return custom.Interpolate(profile, mass.AltitudeDepth);
-                }
-            }
-            // フォールバック (基礎指針'19 4.5 自動計算値)
-            int idx = level == 1 ? 0 : 1;
-            return isLiquefaction ? mass.DmaxUStarSigmaGammaCyH[idx] : mass.DmaxUStar[idx];
+            // 判定は GroundInput.GetMassDisplacement に 1 つだけ置く (杭体ウィンドウと共通)
+            int levelIndex = level == 1 ? 0 : 1;
+            return ground != null
+                ? ground.GetMassDisplacement(mass, levelIndex, isLiquefaction)
+                : GroundInput.AutoMassDisplacement(mass, levelIndex, isLiquefaction);
         }
 
         private bool TryGetLoadContext(

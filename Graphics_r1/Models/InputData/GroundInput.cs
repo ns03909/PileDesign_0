@@ -195,6 +195,42 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _isGroundDisplacementIgnored, value);
         }
 
+        /// <summary>
+        /// 標高 <paramref name="z"/> [m] を GL 基準深さ [m] (地表 0・地中で負) にする。
+        /// 地盤変位のグラフは土層も自動計算値もこの向きで描くので、任意入力の点もここを通す
+        /// (計算書だけ「地表 − Z」と逆向きにしていた。GroundDisplacementDisplayTests)。
+        /// </summary>
+        internal double ToGLDepth(double z) => z - GroundTopAltitude;
+
+        /// <summary>
+        /// 質点 <paramref name="mass"/> の位置の地盤変位 [mm]。解析 (<c>ZDataItem.SetSoilDisplacement</c>) と
+        /// 同じく地盤変位のモードに従う: 考慮しない → 0、任意入力 → 質点の標高で補間、それ以外 → 自動計算値。
+        /// 画面ごとに自前で書くと、モードを見ない画面が解析と違う値を見せる (杭体ウィンドウで実際に起きた)。
+        /// </summary>
+        /// <param name="levelIndex">0 = レベル1、1 = レベル2</param>
+        internal double GetMassDisplacement(GroundMassDataInput mass, int levelIndex, bool isLiquefaction)
+        {
+            if (IsGroundDisplacementIgnored) return 0.0;
+
+            var custom = CustomDisplacementProfile;
+            if (custom != null && custom.IsEnabled)
+            {
+                var profile = levelIndex == 0
+                    ? (isLiquefaction ? custom.Level1Liq : custom.Level1NonLiq)
+                    : (isLiquefaction ? custom.Level2Liq : custom.Level2NonLiq);
+                return custom.Interpolate(profile, mass.AltitudeDepth);
+            }
+
+            return AutoMassDisplacement(mass, levelIndex, isLiquefaction);
+        }
+
+        /// <summary>自動計算 (基礎指針'19 4.5) の地盤変位 [mm]。値が無ければ 0。</summary>
+        internal static double AutoMassDisplacement(GroundMassDataInput mass, int levelIndex, bool isLiquefaction)
+        {
+            var values = isLiquefaction ? mass.DmaxUStarSigmaGammaCyH : mass.DmaxUStar;
+            return values != null && values.Count > levelIndex ? values[levelIndex] : 0.0;
+        }
+
         // 内部摩擦角とN値の関係　p30
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]

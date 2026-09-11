@@ -358,7 +358,7 @@ namespace PileDesign.Common
                     break;
                 }
 
-                double newKh = groundDisp < 0.1 ? Kh0 : Kh0 / Math.Sqrt(groundDisp / 0.01);
+                double newKh = ReducedKh(Kh0, groundDisp);
                 if (!(double.IsFinite(newKh) && newKh > 0.0))
                 {
                     newKh = kh;
@@ -387,6 +387,13 @@ namespace PileDesign.Common
 
         }
 
+
+        /// <summary>
+        /// 変位 <paramref name="y"/> [m] での地盤反力係数。kh = kh0·(y/y0)^(-1/2)、y0 = 1 cm 未満は kh0
+        /// (閾値で連続。水平解析と同じ)。反復 (Update) だけ閾値が 0.1 m になっていて、1〜10 cm で
+        /// 低減されず 10 cm で 0.32 倍へ跳んでいたのを 2026-09-11 に揃えた (ChangFormulaTests)。
+        /// </summary>
+        private static double ReducedKh(double kh0, double y) => y < 0.01 ? kh0 : kh0 / Math.Sqrt(y / 0.01);
 
         // 以下、beta を引数に取る計算メソッド群（元の式を beta 依存にしたもの）
         private double ComputePileHeadDisplacement(double beta)
@@ -451,10 +458,10 @@ namespace PileDesign.Common
             }
             else
             {
-                return HorizontalLoad / (4 * EI * Beta * Beta * Beta) * Math.Exp(-Beta * H) * ((1 + Beta * H) * (2 - Ar) * Math.Cos(Beta * x)
+                // 地中は exp(-βx) で減衰する (exp(-βH) になっていたのを 2026-09-11 に直した。
+                // 曲げモーメントの式と M = -EI·y'' で結ばれ、x = 0 で地上の式とつながる)
+                return HorizontalLoad / (4 * EI * Beta * Beta * Beta) * Math.Exp(-Beta * x) * ((1 + Beta * H) * (2 - Ar) * Math.Cos(Beta * x)
                     - (2 * Beta * H - (1 + Beta * H) * Ar) * Math.Sin(Beta * x));
-                // たわみ曲線の計算
-                // ここでは簡単な例として、たわみ曲線を直線で近似
             }
         }
 
@@ -554,14 +561,16 @@ namespace PileDesign.Common
             }
             else
             {
-                return -HorizontalLoad / 2 * Math.Exp(-Beta * H) * ((1 + Beta * H) * (2 - Ar) * (Math.Cos(Beta * x) - Math.Sin(Beta * x))
-                    - (2 * Beta * H - (1 + Beta * H) * Ar) * (Math.Cos(Beta * x) - Math.Sin(Beta * x)));
+                // Q = dM/dx。地中は exp(-βx) で減衰し、第 2 項は cos + sin
+                // (exp(-βH)・cos - sin になっていたのを 2026-09-11 に直した。x = 0 で -P)
+                return -HorizontalLoad / 2 * Math.Exp(-Beta * x) * ((1 + Beta * H) * (2 - Ar) * (Math.Cos(Beta * x) - Math.Sin(Beta * x))
+                    - (2 * Beta * H - (1 + Beta * H) * Ar) * (Math.Cos(Beta * x) + Math.Sin(Beta * x)));
             }
         }
 
         public double GetHorizontalForce(double displacement)
         {
-            double kh = displacement < 0.01 ? Kh0 : Kh0 / Math.Sqrt(displacement / 0.01);
+            double kh = ReducedKh(Kh0, displacement);
             double beta = Beta0 * Math.Pow(kh / Kh0, 1.0 / 4.0);
             return 12 * EI * Math.Pow(beta, 3) / (Math.Pow(1 + beta * H, 3) * (4 - 3 * Ar) + 2) * displacement;
         }

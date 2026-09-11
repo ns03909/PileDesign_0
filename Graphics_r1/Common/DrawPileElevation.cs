@@ -917,24 +917,16 @@ namespace PileDesign.Common
         }
 
         // 地盤変位描画メソッド (杭姿図右側に重ね描き、auto-scale、左→右で値が増加)
-        // withLiquefaction=true: DmaxUStarSigmaGammaCyH (液状化考慮)、false: DmaxUStar (非考慮)
+        // 値は解析と同じく地盤変位のモード (考慮しない / 任意入力 / 自動計算) に従う。
+        // withLiquefaction=true で液状化考慮の値
         private static void DrawDisplacementValues(
             Canvas canvas, GroundInput groundInput, double pileTopAltitude, double ratio, double topMargin,
             int levelIndex, bool withLiquefaction)
         {
             if (groundInput?.GroundMassesData == null || groundInput.GroundMassesData.Count == 0) return;
 
-            // 値取得関数 (考慮/非考慮 切替)
-            double Get(GroundMassDataInput m)
-            {
-                if (withLiquefaction)
-                {
-                    if (m.DmaxUStarSigmaGammaCyH == null || m.DmaxUStarSigmaGammaCyH.Count <= levelIndex) return 0.0;
-                    return m.DmaxUStarSigmaGammaCyH[levelIndex];
-                }
-                if (m.DmaxUStar == null || m.DmaxUStar.Count <= levelIndex) return 0.0;
-                return m.DmaxUStar[levelIndex];
-            }
+            // 値取得関数。考慮しない → 0 (何も描かない)、任意入力 → 質点の標高で補間、それ以外 → 自動計算値
+            double Get(GroundMassDataInput m) => groundInput.GetMassDisplacement(m, levelIndex, withLiquefaction);
 
             bool hasData = groundInput.GroundMassesData.Any(m => Math.Abs(Get(m)) > 1e-9);
             if (!hasData) return;

@@ -156,7 +156,7 @@ namespace PileDesign.Output
         }
 
         // 任意入力モード用: CustomDisplacementProfile から該当ケース (L1/L2 × 液状化あり/なし) のプロファイルを描画。
-        // 値は 標高 Z [m] / 変位 [mm] のプロットを GL基準深さ [m] / 変位 [mm] に変換 (深さ = GroundTopAltitude - Z)。
+        // 値は 標高 Z [m] / 変位 [mm] のプロットを GL基準深さ [m] / 変位 [mm] に変換 (GroundInput.ToGLDepth。地表 0・地中で負で、土層・自動計算の曲線と同じ向き)。
         private static bool AddCustomDispScatter(Plot plot, GroundInput ground, bool isLiq, int level, SKColor skColor, string legend)
         {
             var custom = ground.CustomDisplacementProfile;
@@ -166,14 +166,13 @@ namespace PileDesign.Output
                 : (isLiq ? custom.Level2Liq : custom.Level2NonLiq);
             if (profile == null || profile.Count == 0) return false;
 
-            double topAlt = ground.GroundTopAltitude;
             var xs = new List<double>();
             var ys = new List<double>();
             foreach (var p in profile)
             {
                 if (double.IsNaN(p.Displacement)) continue;
                 xs.Add(p.Displacement);
-                ys.Add(topAlt - p.Z); // 標高 Z → GL 基準深さ
+                ys.Add(ground.ToGLDepth(p.Z));
             }
             if (xs.Count == 0) return false;
 

@@ -1239,7 +1239,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 有効応力を得るメソッド
-        private static double GetEffectiveStress(GroundInput groundInput, double z)
+        // 杭要素分割ウィンドウの表示も同じものを使う (写しを持つと直したときに取り残される)
+        internal static double GetEffectiveStress(GroundInput groundInput, double z)
         {
             double stressLevel = groundInput.StressAltitude;
             double waterLevel = groundInput.GroundWaterTableAltitude;

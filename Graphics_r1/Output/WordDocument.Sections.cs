@@ -285,7 +285,7 @@ namespace PileDesign.Output
             AddEquation_Kp(body);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, ["単杭および前方杭の場合:", Tex(@"\kappa = 3")]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, ["後方杭の場合:", Tex(@"\kappa = \min\left(0.55 - 0.007\phi, \frac{R}{B} - 1.0, 0.4\right)")]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, ["後方杭の場合:", Tex(@"\kappa = \min\left((0.55 - 0.007\phi)\left(\frac{R}{B} - 1.0\right) + 0.4, 3\right)")]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, ["単杭および前方杭の場合:", Tex(@"\mu = 1.4"), ",", Tex(@"\lambda = 9.0")]);
             AddInlineMathParagraph(body, ["後方杭で", Tex(@"\frac{R}{B} \ge 3.0"), "の場合　:",

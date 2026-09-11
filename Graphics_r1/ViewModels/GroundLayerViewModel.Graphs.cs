@@ -144,10 +144,8 @@ namespace PileDesign.ViewModels
                 {
                     if (profile == null || profile.Count < 2) continue;
 
-                    // 標高 → GL基準深さに変換
-                    double groundTopAlt = GroundInput.GroundTopAltitude;
                     var disps = profile.Select(p => p.Displacement).ToArray();
-                    var depths = profile.Select(p => p.Z - groundTopAlt).ToArray();
+                    var depths = profile.Select(p => GroundInput.ToGLDepth(p.Z)).ToArray();
 
                     var scatter = wpf.Plot.Add.Scatter(disps, depths);
                     scatter.Color = Color.FromSKColor(color);

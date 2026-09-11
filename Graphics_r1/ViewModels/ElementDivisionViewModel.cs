@@ -768,8 +768,8 @@ namespace PileDesign.ViewModels
                         nValue = groundLayer.NValue;
                         gamma = groundLayer.Density;
                         //phi = Math.Min(Math.Sqrt(20 * groundLayer.NValue) + 15, 40); // 大崎式
-                        stressTop = GetEffectiveStress(groundInput, zDataTop);
-                        stressBtm = GetEffectiveStress(groundInput, zDataBtm);
+                        stressTop = SoilPile.GetEffectiveStress(groundInput,zDataTop);
+                        stressBtm = SoilPile.GetEffectiveStress(groundInput,zDataBtm);
                         phi = groundInput.GetFrictionAngle(nValue, (stressTop + stressBtm) * 0.5);
                         soilType = groundLayer.GranularityClass;
                         e0 = groundLayer.Es;
@@ -892,8 +892,8 @@ namespace PileDesign.ViewModels
                         cohesive = groundLayer.Cohesive;
                         //phi = Math.Min(Math.Sqrt(20 * groundLayer.NValue) + 15, 40); // 大崎式
 
-                        stressTop = GetEffectiveStress(groundInput, zTop);
-                        stressBtm = GetEffectiveStress(groundInput, zBtm);
+                        stressTop = SoilPile.GetEffectiveStress(groundInput,zTop);
+                        stressBtm = SoilPile.GetEffectiveStress(groundInput,zBtm);
                         phi = groundInput.GetFrictionAngle(groundLayer.NValue, (stressTop + stressBtm) * 0.5);
                         name = groundLayer.Name;
                         break;
@@ -907,27 +907,6 @@ namespace PileDesign.ViewModels
             DrawDoatsuGoryokuBaneGraph();
         }
 
-        // 有効応力を得るメソッド
-        private static double GetEffectiveStress(GroundInput groundInput, double z)
-        {
-            double stressLevel = groundInput.StressAltitude;
-            double waterLevel = groundInput.GroundWaterTableAltitude;
-
-            double effectiveStress = 0;
-
-            foreach (var groundLayer in groundInput.GroundLayers)
-            {
-                double density = groundLayer.Density;
-                double topAltitude = groundLayer.BottomAltitude + groundLayer.LayerThickness;
-                double layerTopLevel = Math.Min(stressLevel, topAltitude);
-                double layerBottomLevel = Math.Max(z, groundLayer.BottomAltitude);
-
-                effectiveStress += Math.Max((layerTopLevel - layerBottomLevel) * density, 0);
-            }
-            effectiveStress -= Math.Max(waterLevel - z, 0) * 10;
-
-            return effectiveStress;
-        }
 
         // 水平地盤反力を描くメソッド
         private void DrawHorizontalSoilReacitonGraph()
