@@ -2801,12 +2801,20 @@ namespace PileDesign.Models.InputData
         // ※ コンクリート断面は中空断面（ConcreteOutDia - 2*ConcreteThickness = 内径）として計算
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double EI => (ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent)
+        // ※ 鋼管は腐食後の寸法 (外径 − 2×腐食代。内径 = コンクリート外径は不変) で計算する。
+        //    M-φ・耐力は元から腐食後の寸法なので、弾性剛性だけ公称寸法だと 1 本の杭の中で初期剛性と
+        //    M-φ が食い違っていた。2026-09-12 に利用者の判断で腐食後に揃えた (PileSectionCorrosionTests)。
+        public double EI => EICorroded;
+
+        // 公称寸法 (腐食代を見込まない) の曲げ剛性 (kNm2)。諸元表の「腐食非考慮」欄だけが使う
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double EINominal => (ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent)
             + PipeEs * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 64.0) * Math.Pow(10, -9);
 
-        // ===== 腐食代考慮の断面諸量（諸元の「両方記載」表示専用） =====
+        // ===== 腐食代考慮の断面諸量 =====
         // 腐食モデル: 鋼管外径を 2×腐食代 だけ縮小、管厚を腐食代だけ減じ、内径（コンクリート外径）は不変。
-        // （解析用の PipeAs/A0/W/EA/EI は公称寸法のまま。ここは表示比較用）
+        // （解析用の EI は上の EI = 腐食後。PipeAs/A0/W/EA は公称寸法のままで、ここの値は諸元表の比較用）
         private double CorrodedPipeOuterDiaDisp => PipeDia - 2.0 * CorrosionDepth;
         private double PipeInnerDiaDisp => PipeDia - 2.0 * PipeTs; // = コンクリート外径（腐食で不変）
 
@@ -2836,8 +2844,11 @@ namespace PileDesign.Models.InputData
         // 腐食考慮 曲げ剛性 (kNm2) — 鋼管項のみ腐食後外径で置換
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
+        // 鋼管の無い断面 (PipeDia = 0) では、腐食後外径が −2×腐食代になって偽の鋼管項が出るので足さない
         public double EICorroded => (ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent)
-            + PipeEs * Math.PI * (Math.Pow(CorrodedPipeOuterDiaDisp, 4) - Math.Pow(PipeInnerDiaDisp, 4)) / 64.0) * Math.Pow(10, -9);
+            + (PipeDia > 0
+                ? PipeEs * Math.PI * (Math.Pow(CorrodedPipeOuterDiaDisp, 4) - Math.Pow(PipeInnerDiaDisp, 4)) / 64.0
+                : 0.0)) * Math.Pow(10, -9);
 
         // ねじり剛性 (kNm2)
         // ※ コンクリート断面は中空断面として計算
@@ -3110,7 +3121,7 @@ namespace PileDesign.Models.InputData
             AddCorrodible("杭の全断面積", "A0", "mm2", "N0", A0, A0Corroded);
             AddCorrodible("杭の単位長さ重量", "W", "kN/m", "N2", W, WCorroded);
             AddCorrodible("杭の弾性軸剛性", "EA", "kN", "N0", EA, EACorroded);
-            AddCorrodible("杭の弾性曲げ剛性", "EI", "kNm2", "N0", EI, EICorroded);
+            AddCorrodible("杭の弾性曲げ剛性", "EI", "kNm2", "N0", EINominal, EICorroded);
             //new Spec("PCリングスパイラル巻数", "", SpiralNum.ToString(), "")
             //return specs;
         }
@@ -3743,7 +3754,8 @@ namespace PileDesign.Models.InputData
         /// PileSectionType=PileTypeNames.SteelPipeSection は Fc=0、PileTypeNames.CftSection は Fc=ConcreteFc を渡す。
         /// β1=1.0、e=205000 N/mm² 固定。必要入力が欠落していれば null。
         /// </summary>
-        private SteelPipeSection? TryCreateSteelPipeSection()
+        // 杭断面ウィンドウの杭頭部 M-φ 図もここを通す (杭頭部の合成 EI を渡すため。組み立て方を 1 か所にする)
+        internal SteelPipeSection? TryCreateSteelPipeSection()
         {
             if (PileBodyType != PileTypeNames.SteelPipe) return null;
             if (PileSectionType != PileTypeNames.SteelPipeSection && PileSectionType != PileTypeNames.CftSection) return null;
@@ -3758,7 +3770,11 @@ namespace PileDesign.Models.InputData
                 fc: fcForSection,
                 sigmaB: sigmaU,
                 e: 205000.0,
-                bucklingLength: BucklingLength);
+                bucklingLength: BucklingLength)
+            {
+                // 杭頭部 (コンクリート充填鋼管部) の合成 EI は杭断面の EI (腐食後) を使う。kNm² → N·mm²
+                CompositeHeadEI = PileSectionType == PileTypeNames.CftSection ? EI * 1e9 : null,
+            };
         }
 
         /// <summary>

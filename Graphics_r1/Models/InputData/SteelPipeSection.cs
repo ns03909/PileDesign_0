@@ -44,6 +44,14 @@ namespace PileDesign.Models.InputData
         // コンクリートヤング係数 (強度と変形性能 3.1 式の簡略形 Ec = 33500 × (Fc/60)^(1/3))
         public double Ec => Fc > 0 ? 33500.0 * Math.Pow(Fc / 60.0, 1.0 / 3.0) : 0.0;
 
+        /// <summary>
+        /// 杭頭部 (コンクリート充填鋼管部) の合成曲げ剛性 EI1 [N·mm²]。杭断面の EI
+        /// (PileSection.EI: 腐食後の鋼管 + 充填コンクリート + 主筋換算、Ec は γ・ξ 込み) を渡す。
+        /// 未設定のときだけ簡略形 E·Is + Ec·Ic (Ec は上の γ・ξ なしの式) で組む。
+        /// 以前は常に簡略形で、FEM の弾性剛性と別の EI を使っていた (2026-09-12 に杭断面の EI を参照するようにした)。
+        /// </summary>
+        internal double? CompositeHeadEI { get; init; }
+
         // 許容応力度 (基準 sfc1 = F/1.5 with 局部座屈低減)
         public double sft => F / 1.5;
         public double Sfc1 { get; }
@@ -788,7 +796,7 @@ namespace PileDesign.Models.InputData
             double l3 = 3.0 * D;
             double L = l1 + l2 + l3;
 
-            double EI1 = E * Iisteel + Ec * Iiconcrete;   // コンクリート充填鋼管部 合成 (鋼管 + 充填コン)
+            double EI1 = CompositeHeadEI ?? (E * Iisteel + Ec * Iiconcrete);   // コンクリート充填鋼管部 合成 (杭断面の EI)
             double EI2 = E * Iisteel;                      // 厚部 (本実装ではデフォルト同一)
             double EI3 = E * Iisteel;                      // 鋼管のみ薄部
 

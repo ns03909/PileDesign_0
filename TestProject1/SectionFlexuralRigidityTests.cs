@@ -92,7 +92,8 @@ namespace TestProject1
             double expected = (s.ConcreteE * ConcreteI(s)
                 + s.PipeEs * Math.PI * (Math.Pow(s.PipeDia, 4) - Math.Pow(s.PipeDia - 2 * s.PipeTs, 4)) / 64.0) * 1e-9;
 
-            Assert.AreEqual(expected, s.EI, expected * 1e-9,
+            // 公称寸法の EI で組成を見る (解析の EI は 2026-09-12 から腐食後。PileSectionCorrosionTests)
+            Assert.AreEqual(expected, s.EINominal, expected * 1e-9,
                 "SC杭の EI がコンクリート + 鋼管になっていない");
             Assert.AreEqual(0.0, s.TendonAp, 1e-9, "SC杭に PC鋼材が入っている");
         }
@@ -107,7 +108,7 @@ namespace TestProject1
 
             // 腐食で変わるのは鋼管項だけ。コンクリート + 換算項は共通
             double concreteAndEquivalent = s.ConcreteE * ConcreteI(s) * 1e-9;
-            double pipeNominal = s.EI - concreteAndEquivalent;
+            double pipeNominal = s.EINominal - concreteAndEquivalent;   // 解析の EI は腐食後なので公称は EINominal
             double pipeCorroded = s.EICorroded - concreteAndEquivalent;
 
             Assert.IsTrue(pipeCorroded < pipeNominal,

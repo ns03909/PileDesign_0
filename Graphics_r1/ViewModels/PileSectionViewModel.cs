@@ -988,17 +988,10 @@ namespace PileDesign.ViewModels
         {
             if (PileSection == null || PileSection.PileBodyType != PileTypeNames.SteelPipe) return null;
             if (PileSection.PileSectionType != PileTypeNames.CftSection) return null;
-            if (PileSection.PileDiameter <= 0 || PileSection.CorrodedPipeTs <= 0) return null;
 
-            var (sigmaU, f) = SteelPipeGrades.GetProperties(PileSection.PipeGrade ?? "SKK400");
-            return new SteelPipeSection(
-                PileSection.PileDiameter,
-                PileSection.CorrodedPipeTs,
-                f,
-                _beta1: 1.0,
-                fc: PileSection.ConcreteFc,
-                sigmaB: sigmaU,
-                e: 205000.0);
+            // 断面は PileSection に組み立てさせる。自前で組むと杭頭部の合成 EI に杭断面の EI
+            // (腐食後) が渡らず、解析と別の EI で M-φ 図を描く (2026-09-12 まで実際にそうだった)
+            return PileSection.TryCreateSteelPipeSection();
         }
 
         // PHC杭
