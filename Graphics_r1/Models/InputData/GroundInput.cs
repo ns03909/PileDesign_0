@@ -445,6 +445,19 @@ namespace PileDesign.Models.InputData
                         hasWarning = true;
                         warningMessage += $"- 土質点番号 {groundMassData.No}: 深度が直上層の深度より高いです。\n";
                     }
+                    // 最下層より深い土質点は、どの土層からも密度などを写せない。密度 0 のまま地盤の
+                    // 計算に入ると、せん断ばね剛性が 0 になってその下の地盤変位が求まらない
+                    // (地盤変位はその位置から下を 0 として扱う)。土層データの入力漏れなので警告する。
+                    if (GroundLayers.Count > 0)
+                    {
+                        double deepestLayerBottom = GroundLayers.Min(layer => layer.BottomGLDepth);
+                        if (groundMassData.GLDepth < deepestLayerBottom - 1e-9)
+                        {
+                            hasWarning = true;
+                            warningMessage += $"- 土質点番号 {groundMassData.No}: 最下層 (GL{deepestLayerBottom:0.00}m) より深いです。"
+                                + "土層を追加してください。ここから下の地盤変位は 0 として扱います。\n";
+                        }
+                    }
                 }
                 return !hasWarning;
             }

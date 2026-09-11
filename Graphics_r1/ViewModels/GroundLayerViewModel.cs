@@ -2266,6 +2266,15 @@ namespace PileDesign.ViewModels
                     SigmaGammaVS0H += density * vs0 * h;
                 }
 
+                // 工学的基盤より上の層厚が無い (土質点が 1 件も無い / 層厚が未入力) 地盤では、
+                // 固有周期ののび α が 0/0 で NaN、インピーダンス比も 0 割りになる。そのまま進むと
+                // 固有周期などに NaN・∞ が入り、保存できないファイルになる (同梱の地盤例題
+                // ExampleCPT2018 は土質点が 0 件で、実際にそうなっていた)。何も計算せずに抜ける。
+                if (!(SigmaH > 0.0))
+                {
+                    continue;
+                }
+
                 // 地盤の地震時の固有周期ののび
                 double alpha = Math.Min(1 + L * Z * CAlpha * T0 / SigmaH, 4.0);
 
@@ -2278,6 +2287,7 @@ namespace PileDesign.ViewModels
 
                 double mu = 0.0;
                 double uNPlusOne = 0.0;
+                int stopIndex = -1;   // K = 0 で柱を止めた土質点の番号 (止めていなければ −1)
 
                 for (int i = 0; i < groundMassesData.Count; i++)
                 {
@@ -2298,6 +2308,24 @@ namespace PileDesign.ViewModels
                     }
                     else
                     {
+                        // 直上の土質点のせん断ばね剛性が 0 なら、そこで地盤の柱を止める。
+                        // どの土層とも重ならない土質点 (最下層より深い) は密度が 0 のままなので
+                        // VSE = 0、K = 0 になり、40/K で −∞ → NaN になって、上の全土質点の U* まで
+                        // NaN が広がっていた (同梱例題の設計例集3.8・3.5-2 で実際に起きていた)。
+                        // 2026-09-12 に工学的基盤と同じ扱いで止めるようにした。入力側では
+                        // GroundInput.ValidateForAnalysis が「最下層より深い土質点」を警告する。
+                        double kPrev = groundMassesData[i - 1].K[levelIndex];
+                        if (!(kPrev > 0.0) || !double.IsFinite(kPrev))
+                        {
+                            uNPlusOne = groundMassesData[i - 1].U[levelIndex];
+                            stopIndex = i;
+                            for (int j = i; j < groundMassesData.Count; j++)
+                            {
+                                groundMassesData[j].U[levelIndex] = 0.0;
+                            }
+                            break;
+                        }
+
                         mu += groundMassesData[i - 1].Mass * groundMassesData[i - 1].U[levelIndex];
                         groundMassData.U[levelIndex] = groundMassesData[i - 1].U[levelIndex] - 40.0 / groundMassesData[i - 1].K[levelIndex] / Math.Pow(alpha * T0, 2.0) * mu;
                     }
@@ -2317,8 +2345,26 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                foreach (var groundMassData in groundMassesData)
+                for (int i = 0; i < groundMassesData.Count; i++)
                 {
+                    var groundMassData = groundMassesData[i];
+
+                    // K = 0 で止めた位置より下は 0 (工学的基盤より下と同じ扱い)
+                    if (stopIndex >= 0 && i >= stopIndex)
+                    {
+                        groundMassData.UStar[levelIndex] = 0.0;
+                        continue;
+                    }
+
+                    // 基盤の変位 u_{N+1} が地表の 1 と同じ (土質点が 1 件だけ、など) だと 0/0 になる。
+                    // 地盤の柱として厚みが無いので、地盤変位は 0 として扱う
+                    // (同梱の地盤例題 ExampleCPT2018 は土質点 1 件で、NaN のまま保存できなくなっていた)。
+                    if (Math.Abs(1 - uNPlusOne) < 1e-12)
+                    {
+                        groundMassData.UStar[levelIndex] = 0.0;
+                        continue;
+                    }
+
                     groundMassData.UStar[levelIndex] = (groundMassData.U[levelIndex] - uNPlusOne) / (1 - uNPlusOne);
                     if (groundMassData.IsEngineeringBedrock)
                     {
