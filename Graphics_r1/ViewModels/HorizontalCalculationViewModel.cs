@@ -456,10 +456,19 @@ namespace PileDesign.ViewModels
         public int ProcessorCount => Environment.ProcessorCount;
 
         // 既定値 16 (2026-04-26): MDOP=8 で 16 ケース 6 秒完走を実機検証済 (hang 解消)。
-        //   既定値 2 → 16 に引き上げ。Math.Clamp で論理プロセッサ数に自動制限されるため、
+        //   既定値 2 → 16 に引き上げ。論理プロセッサ数で自動制限するので、
         //   8 コア機なら 8 に、16 コア機なら 16 に、それぞれ安全な上限に収まる。
         //   hang 対策の主因は Dispatcher.BeginInvoke 化 (2376fbe) と MKL_NUM_THREADS=1。
-        private int _maxCaseDegreeOfParallelism = 16;
+        //
+        //   初期値も絞ること。以前はフィールドに 16 を直に入れていたため
+        //   セッターの Math.Clamp を通らず、利用者が値を触るまでは 4 コア機でも
+        //   16 並列で走っていた (上の「自動制限」は初期値に効いていなかった)。
+        internal const int DefaultCaseParallelism = 16;
+
+        internal static int InitialCaseParallelism(int processorCount)
+            => Math.Clamp(DefaultCaseParallelism, 1, Math.Max(1, processorCount));
+
+        private int _maxCaseDegreeOfParallelism = InitialCaseParallelism(Environment.ProcessorCount);
         public int MaxCaseDegreeOfParallelism
         {
             get => _maxCaseDegreeOfParallelism;

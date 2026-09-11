@@ -1164,14 +1164,14 @@ namespace PileDesign.FEM
         /// <summary>
         /// 剛床連結モード:
         /// ・ActionPoint → ConnectionNode: 剛床仮定（Ux, Uy, Rz をmaster-slave拘束）
-        /// ・ConnectionNode → CapNode: 完全剛（ペナルティばね Kbig=1e8 で全6DOF結合）
+        /// ・ConnectionNode → CapNode: 完全剛（ペナルティばね 並進 KbigT=1e7 kN/m・回転 KbigR=1e8 kN·m/rad で全6DOF結合）
         /// ・ConnectionNode の自由DOF: Uz, Rx, Ry（基礎梁が剛性を負担）
         /// ・PileNode-0 → CapNode: master-slave（Ux, Uy, Uz, Rz）
         ///
         /// ペナルティばね方式を採用する理由:
         /// ・旧RigidLinkビーム（L=0.01m）は 12EI/L³≈1e16 の曲げ剛性でK行列がill-conditioning
         /// ・master-slaveチェーンは GetEquationNumbers が1レベルしか辿れない
-        /// ・ペナルティばね（Kbig=1e8）はK行列に適度な剛性を加算し、チェーン問題を回避
+        /// ・ペナルティばね（KbigT=1e7 / KbigR=1e8、FemConstants）はK行列に適度な剛性を加算し、チェーン問題を回避
         /// </summary>
         private void ConnectCapsFlexibleBeam(Section rigidLinkSec)
         {
