@@ -2119,39 +2119,38 @@ namespace PileDesign.ViewModels
         }
 
         // M
+        /// <summary>
+        /// 質点 <paramref name="i"/> が受け持つ深さの範囲 (GL 基準、下向き負)。質点 i は層の上端
+        /// (上の層厚 H の和) にあり、上下の層の半分ずつを受け持つ (GroundMassRegionTests)。
+        /// </summary>
+        internal static (double Top, double Bottom) MassRegion(IReadOnlyList<double> h, int i)
+        {
+            if (i == 0) return (0.0, -0.5 * h[0]);
+
+            // 上端 = 質点 i の深さ −(H0 + … + H_{i-1}) から H_{i-1} の半分だけ上。
+            // 以前はこの和を j < i-2 で打ち切っていて H_{i-2} が抜け、3 番目以降の質点の
+            // 範囲が 1 小層ぶん上にずれていた (2026-09-11 に修正)
+            double top = -0.5 * h[i - 1];
+            for (int j = 0; j < i - 1; j++)
+            {
+                top -= h[j];
+            }
+            return (top, top - 0.5 * h[i - 1] - 0.5 * h[i]);
+        }
+
         internal void RecalculateMass()
         {
             double zi1;
             double zi2;
             double zj1;
             double zj2;
+            var h = GroundInput.GroundMassesData.Select(m => m.H.GetValueOrDefault()).ToList();
 
             for (int i = 0; i < GroundInput.GroundMassesData.Count; i++)
             {
                 GroundInput.GroundMassesData[i].Mass = 0.0;
 
-                if (i == 0)
-                {
-                    zi1 = 0;
-                    zi2 = -0.5 * GroundInput.GroundMassesData[0].H.GetValueOrDefault();
-                }
-                else if ( i == 1)
-                {
-                    zi1 = -0.5 * GroundInput.GroundMassesData[0].H.GetValueOrDefault();
-                    zi2 = - GroundInput.GroundMassesData[0].H.GetValueOrDefault() - 0.5 * GroundInput.GroundMassesData[1].H.GetValueOrDefault();
-                }
-
-                else
-                {
-                    zi1 = 0;
-                    zi2 = 0;
-                    for (int j = 0; j < i-2; j++)
-                    {
-                        zi1 -= GroundInput.GroundMassesData[j].H.GetValueOrDefault();
-                    }
-                    zi1 -= 0.5 * GroundInput.GroundMassesData[i-1].H.GetValueOrDefault();
-                    zi2 = zi1 - 0.5 * GroundInput.GroundMassesData[i - 1].H.GetValueOrDefault() - 0.5 * GroundInput.GroundMassesData[i].H.GetValueOrDefault();
-                }
+                (zi1, zi2) = MassRegion(h, i);
                     //zi1 = (GroundInput.GroundMassesData[i - 1].GLDepth + GroundInput.GroundMassesData[i].GLDepth) / 2.0;
 
 
