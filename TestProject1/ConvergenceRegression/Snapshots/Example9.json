@@ -2,7 +2,7 @@
   "exampleName": "Example9",
   "exampleDisplayName": "'19Ex2",
   "schemaVersion": 1,
-  "capturedAt": "2026-09-10",
+  "capturedAt": "2026-09-11",
   "options": {
     "level1Steps": 4,
     "level2Steps": 8,
@@ -18,18 +18,18 @@
       "combinationNo": 1,
       "isLiquefaction": true,
       "converged": true,
-      "totalIterations": 16,
+      "totalIterations": 12,
       "totalSteps": 4,
       "bisectionRetries": 0,
-      "finalResidual": 1.0392240607174338E-08,
-      "apUx": 0.0010183086158716643,
-      "apUy": -0.0005609022497964084,
-      "apUz": 6.706011597145721E-05,
-      "apRx": -1.3195605985750954E-21,
-      "apRy": 1.8222857600939456E-06,
-      "apRz": 3.0483817923717856E-05,
-      "maxAbsHorizDisp": 0.001162567748987188,
-      "maxAbsHorizSpringReaction": 81.91008177562247
+      "finalResidual": 1.0199765838772048E-08,
+      "apUx": 0.0007680665530333523,
+      "apUy": -0.0004168120634275066,
+      "apUz": 6.645189971884528E-05,
+      "apRx": 3.3530746145401297E-21,
+      "apRy": 1.80575814453384E-06,
+      "apRz": 2.265282953410362E-05,
+      "maxAbsHorizDisp": 0.0008738755781615774,
+      "maxAbsHorizSpringReaction": 85.72248489714723
     },
     {
       "caseKey": "L2-1.C1.Liq",
@@ -38,25 +38,25 @@
       "combinationNo": 1,
       "isLiquefaction": true,
       "converged": true,
-      "totalIterations": 39,
+      "totalIterations": 38,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 1.932515477230743E-08,
-      "apUx": 0.003268681675009388,
-      "apUy": -0.0019086899547444125,
-      "apUz": 0.00013728357698761278,
-      "apRx": -2.363153217348618E-20,
-      "apRy": 3.730531983359033E-06,
-      "apRz": 0.0001037331497143703,
-      "maxAbsHorizDisp": 0.0037851522077565663,
-      "maxAbsHorizSpringReaction": 148.59559714104952
+      "finalResidual": 3.7116529163031753E-07,
+      "apUx": 0.001995021416974539,
+      "apUy": -0.0011607639347697072,
+      "apUz": 0.000134140270263611,
+      "apRx": 1.0375261172232381E-21,
+      "apRy": 3.6451160397720395E-06,
+      "apRz": 6.308499645487538E-05,
+      "maxAbsHorizDisp": 0.002308134174273487,
+      "maxAbsHorizSpringReaction": 153.87453476180616
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 55,
+    "totalIterations": 50,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 1.932515477230743E-08
+    "maxResidualOverAllCases": 3.7116529163031753E-07
   }
 }

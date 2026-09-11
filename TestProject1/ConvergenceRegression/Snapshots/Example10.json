@@ -2,7 +2,7 @@
   "exampleName": "Example10",
   "exampleDisplayName": "'19Ex10",
   "schemaVersion": 1,
-  "capturedAt": "2026-09-10",
+  "capturedAt": "2026-09-11",
   "options": {
     "level1Steps": 4,
     "level2Steps": 16,
@@ -18,18 +18,18 @@
       "combinationNo": 1,
       "isLiquefaction": true,
       "converged": true,
-      "totalIterations": 14,
+      "totalIterations": 12,
       "totalSteps": 4,
       "bisectionRetries": 0,
-      "finalResidual": 2.078066514468825E-09,
-      "apUx": 0.0010591273831913157,
-      "apUy": -0.0005318689228753108,
-      "apUz": 2.1345023181187814E-05,
-      "apRx": 5.132216175267087E-23,
-      "apRy": 6.670319744121193E-07,
-      "apRz": 3.324180767970692E-05,
-      "maxAbsHorizDisp": 0.0011851731371180447,
-      "maxAbsHorizSpringReaction": 80.78572756302684
+      "finalResidual": 1.853018113777696E-09,
+      "apUx": 0.000859321724565635,
+      "apUy": -0.0004307892713248181,
+      "apUz": 2.0413345497122508E-05,
+      "apRx": -4.9168327193763724E-23,
+      "apRy": 6.379170467850784E-07,
+      "apRz": 2.6924329457801127E-05,
+      "maxAbsHorizDisp": 0.0009612560650518804,
+      "maxAbsHorizSpringReaction": 81.92374746412509
     },
     {
       "caseKey": "L2-1.C1.Liq",
@@ -38,25 +38,25 @@
       "combinationNo": 1,
       "isLiquefaction": true,
       "converged": true,
-      "totalIterations": 68,
+      "totalIterations": 64,
       "totalSteps": 16,
       "bisectionRetries": 0,
-      "finalResidual": 1.148633923580529E-07,
-      "apUx": 0.002449501974583424,
-      "apUy": -0.0012406053888360613,
-      "apUz": 4.484535570627862E-05,
-      "apRx": -1.485529005319851E-22,
-      "apRy": 1.401417365821207E-06,
-      "apRz": 7.75378368022538E-05,
-      "maxAbsHorizDisp": 0.002745753385556898,
-      "maxAbsHorizSpringReaction": 147.65272672086857
+      "finalResidual": 1.8193038015543107E-07,
+      "apUx": 0.0018780748098492094,
+      "apUy": -0.0009469456000785392,
+      "apUz": 4.228334456405163E-05,
+      "apRx": -1.0681446046089017E-22,
+      "apRy": 1.3213545176266134E-06,
+      "apRz": 5.91841000049087E-05,
+      "maxAbsHorizDisp": 0.0021033000168540505,
+      "maxAbsHorizSpringReaction": 165.32705703345724
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 82,
+    "totalIterations": 76,
     "totalSteps": 20,
-    "maxResidualOverAllCases": 1.148633923580529E-07
+    "maxResidualOverAllCases": 1.8193038015543107E-07
   }
 }

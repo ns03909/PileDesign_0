@@ -16,6 +16,8 @@ namespace TestProject1
     ///   - 退化 (反復数が増えた / 収束フラグが偽になった): 改善前に巻き戻すか、原因を修正
     ///
     /// スナップショットファイル: TestProject1/ConvergenceRegression/Snapshots/{ExampleName}.json
+    ///   ※ 更新モードが書き出すのはビルド出力側 (bin/.../ConvergenceRegression/Snapshots) なので、
+    ///     更新したらそこからソース側の Snapshots へ写すこと (写さないと次のビルドで古いものに戻る)
     ///
     /// 注意:
     ///   - 各テスト 30s〜3min 程度 (非線形解析のため)

@@ -34,12 +34,19 @@ namespace PileDesign.Models.InputData
         public HorizontalSoilReactionItem()
         { }
 
+        /// <summary>
+        /// 基準水平地盤反力係数 kh0 = α ξ E0 (B/B0)^(-3/4) の α [1/m] (基礎指針'19 (6.6.12))。
+        /// 初版から 60 になっていたが、文献・ヘルプ・計算書は 80。2026-09-11 に文献値へ直した
+        /// (水平解析の地盤ばねがすべて 4/3 倍になる。Kh0AlphaTests)。
+        /// </summary>
+        internal const double Kh0Alpha = 80;
+
         // パラメータセット
         public void SetParameters(
             string name, string soilType, double gamma, double b, double e0,
             double zTop, double zBtm,
             double xi, double rOnB, double nValue, double phi, double cu,
-            double sigmaZPrimeTop, double sigmaZPrimeBtm, double alpha = 60)
+            double sigmaZPrimeTop, double sigmaZPrimeBtm, double alpha = Kh0Alpha)
         {
             Name = name;
             SoilType = soilType;
@@ -56,7 +63,6 @@ namespace PileDesign.Models.InputData
             SigmaZPrimeTop = sigmaZPrimeTop;
             SigmaZPrimeBtm = sigmaZPrimeBtm;
 
-            //double alpha = 80;
             Kh0 = GetKh0(alpha, xi, e0, b);
             PyFrontTop = GetPy(soilType, true, b, zTop, rOnB, phi, cu, sigmaZPrimeTop);
             PyFrontBtm = GetPy(soilType, true, b, zBtm, rOnB, phi, cu, sigmaZPrimeBtm);
