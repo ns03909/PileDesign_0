@@ -473,14 +473,8 @@ namespace PileDesign.Output
         {
             if (ground.GroundMassesData == null || ground.GroundMassesData.Count == 0) return false;
 
-            // 各 mass の中央深さ
-            double[] depths = new double[ground.GroundMassesData.Count];
-            for (int i = 0; i < ground.GroundMassesData.Count; i++)
-            {
-                var data = ground.GroundMassesData[i];
-                double factor = (i == 0) ? 1.0 : (i == ground.GroundMassesData.Count - 1) ? 0.0 : 0.5;
-                depths[i] = data.GLDepth + data.Spacing * factor;
-            }
+            // FL は土質点の深度 (N 値などの土質データの深度) に描く。画面・杭姿図の FL と同じ位置
+            double[] depths = ground.GroundMassesData.Select(m => m.GLDepth).ToArray();
 
             bool hasAny = false;
             for (int level = 0; level < 2; level++)

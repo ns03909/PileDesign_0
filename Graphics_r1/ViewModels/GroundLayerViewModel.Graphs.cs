@@ -324,14 +324,8 @@ namespace PileDesign.ViewModels
             if (GroundWindowInstance == null) return;
             if (GroundInput?.GroundMassesData == null) return;
 
-            List<double> gLDepths = [];
-            foreach (var data in GroundInput.GroundMassesData)
-            {
-                double _factor = data == GroundInput.GroundMassesData.First() ? 1.0 :
-                                 data == GroundInput.GroundMassesData.Last() ? 0.0 : 0.5;
-                double gLDepth = data.GLDepth + data.Spacing * _factor;
-                gLDepths.Add(gLDepth);
-            }
+            // FL は土質点の深度 (N 値などの土質データの深度) に描く。杭姿図の FL と同じ位置
+            List<double> gLDepths = [.. GroundInput.GroundMassesData.Select(m => m.GLDepth)];
 
             var wpf = GroundWindowInstance.wpfPlotFL;
             wpf.Plot.Clear();

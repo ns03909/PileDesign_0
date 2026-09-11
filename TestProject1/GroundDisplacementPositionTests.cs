@@ -64,6 +64,29 @@ namespace TestProject1
             Assert.AreEqual(4 * expected, item.GroundDisp2L, 1e-9, "L2 液状化");
         }
 
+        /// <summary>
+        /// FL のグラフは土質点の深度 (N 値などの土質データの深度) に描く。以前は地盤ウィンドウと
+        /// 計算書だけ GLDepth + 間隔×(1 / 0.5 / 0) で、杭姿図 (土質点の深度) と食い違っていた。
+        /// </summary>
+        [TestMethod]
+        public void FlGraphsUseTheSoilDataDepth()
+        {
+            foreach (var (path, marker, label) in new[]
+            {
+                (new[] { "Graphics_r1", "ViewModels", "GroundLayerViewModel.Graphs.cs" }, "void DrawFLGraph(", "地盤ウィンドウの FL"),
+                (new[] { "Graphics_r1", "Output", "WordDocument.GroundGraphs.cs" }, "bool AddFLDataToPlot(", "計算書の FL"),
+            })
+            {
+                string src = Regex.Replace(TestSource.Read(path), "//.*", "");
+                int a = src.IndexOf(marker, StringComparison.Ordinal);
+                int b = src.IndexOf("private ", a + marker.Length, StringComparison.Ordinal);
+                Assert.IsTrue(a >= 0 && b > a, $"{marker} が見つかりません");
+                string body = src[a..b];
+                Assert.IsFalse(Regex.IsMatch(body, @"\.Spacing\s*\*"), $"{label}のグラフに GLDepth + 間隔×係数 の置き方が残っています");
+                StringAssert.Contains(body, "GLDepth", $"{label}のグラフが土質点の深度を使っていません");
+            }
+        }
+
         [TestMethod]
         public void EveryDisplacementViewUsesTheLayerTops()
         {

@@ -2,7 +2,7 @@
   "exampleName": "Example9",
   "exampleDisplayName": "'19Ex2",
   "schemaVersion": 1,
-  "capturedAt": "2026-09-11",
+  "capturedAt": "2026-09-12",
   "options": {
     "level1Steps": 4,
     "level2Steps": 8,
@@ -41,7 +41,7 @@
       "totalIterations": 38,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 3.7116529163031753E-07,
+      "finalResidual": 1.0199765838772048E-08,
       "apUx": 0.001995021416974539,
       "apUy": -0.0011607639347697072,
       "apUz": 0.000134140270263611,
@@ -57,6 +57,6 @@
     "convergedCases": 2,
     "totalIterations": 50,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 3.7116529163031753E-07
+    "maxResidualOverAllCases": 1.0199765838772048E-08
   }
 }

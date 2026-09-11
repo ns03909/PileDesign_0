@@ -2,7 +2,7 @@
   "exampleName": "ExampleK8",
   "exampleDisplayName": "関東支部8章",
   "schemaVersion": 1,
-  "capturedAt": "2026-09-11",
+  "capturedAt": "2026-09-12",
   "options": {
     "level1Steps": 4,
     "level2Steps": 8,
@@ -41,7 +41,7 @@
       "totalIterations": 100,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 6.840332187860618E-07,
+      "finalResidual": 7.339048857660713E-07,
       "apUx": 0.016070148576957745,
       "apUy": -0.008830577365806929,
       "apUz": 0.00014665325768340094,
@@ -57,6 +57,6 @@
     "convergedCases": 2,
     "totalIterations": 136,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 6.840332187860618E-07
+    "maxResidualOverAllCases": 7.339048857660713E-07
   }
 }

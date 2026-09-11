@@ -54,10 +54,26 @@ namespace TestProject1
         }
 
         [TestMethod]
+        public void EAUsesTheCorrodedPipeButWeightDoesNot()
+        {
+            var s = Cft(1.0);
+            Assert.AreEqual(s.EACorroded, s.EA, 0.0, "EA が腐食後の値になっていません");
+
+            // 公称との差は鋼管の断面積の差だけ
+            double steelDiff = Es * Math.PI / 4.0 * (Math.Pow(1000.0, 2) - Math.Pow(998.0, 2)) * 0.001;
+            Assert.AreEqual(steelDiff, s.EANominal - s.EA, steelDiff * 1e-9, "公称と腐食後の差が鋼管項と合いません");
+
+            // 単位長さ重量は公称のまま (腐食考慮の値は諸元表の比較用)
+            Assert.IsTrue(s.W > s.WCorroded, "重量の腐食考慮の値が公称より小さくなっていません");
+        }
+
+        [TestMethod]
         public void CorrosionDoesNotTouchSectionsWithoutPipe()
         {
             var rc = new PileSection { PipeDia = 0.0, PipeTs = 0.0, CorrosionDepth = 1.0, PipeEs = Es, ConcreteE = 25000.0 };
             Assert.AreEqual(rc.EINominal, rc.EI, 0.0, "鋼管の無い断面で腐食代が EI を変えています");
+            Assert.AreEqual(rc.EANominal, rc.EA, 0.0, "鋼管の無い断面で腐食代が EA を変えています");
+            Assert.AreEqual(0.0, rc.PipeAsCorroded, 0.0, "鋼管の無い断面に腐食後の鋼管断面積が出ています");
         }
 
         [TestMethod]

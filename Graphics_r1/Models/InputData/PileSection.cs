@@ -2726,7 +2726,13 @@ namespace PileDesign.Models.InputData
         // 合成断面: コンクリート + 主筋 + PC鋼材 + 鋼管（Es·As）。鋼管を持たない断面では PipeAs=0 のため影響なし。
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double EA => (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAs) * 0.001;
+        // ※ 鋼管は腐食後の寸法。EI と揃える (2026-09-12 に利用者の判断で公称から腐食後へ。重量 W は公称のまま)
+        public double EA => EACorroded;
+
+        // 公称寸法 (腐食代を見込まない) の軸剛性 (kN)。諸元表の「腐食非考慮」欄だけが使う
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double EANominal => (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAs) * 0.001;
 
         /// <summary>
         /// 「基礎部材の強度と変形性能」のヤング係数を使う設定のとき、
@@ -2821,8 +2827,10 @@ namespace PileDesign.Models.InputData
         // 腐食考慮 鋼管断面積 (mm2)
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double PipeAsCorroded =>
-            Math.PI / 4.0 * (Math.Pow(CorrodedPipeOuterDiaDisp, 2) - Math.Pow(PipeInnerDiaDisp, 2));
+        // 鋼管の無い断面 (PipeDia = 0) では、腐食後外径が −2×腐食代になって偽の鋼管項が出るので 0
+        public double PipeAsCorroded => PipeDia > 0
+            ? Math.PI / 4.0 * (Math.Pow(CorrodedPipeOuterDiaDisp, 2) - Math.Pow(PipeInnerDiaDisp, 2))
+            : 0.0;
 
         // 腐食考慮 杭全断面積 (mm2)
         [System.Text.Json.Serialization.JsonIgnore]
@@ -3120,7 +3128,7 @@ namespace PileDesign.Models.InputData
 
             AddCorrodible("杭の全断面積", "A0", "mm2", "N0", A0, A0Corroded);
             AddCorrodible("杭の単位長さ重量", "W", "kN/m", "N2", W, WCorroded);
-            AddCorrodible("杭の弾性軸剛性", "EA", "kN", "N0", EA, EACorroded);
+            AddCorrodible("杭の弾性軸剛性", "EA", "kN", "N0", EANominal, EACorroded);
             AddCorrodible("杭の弾性曲げ剛性", "EI", "kNm2", "N0", EINominal, EICorroded);
             //new Spec("PCリングスパイラル巻数", "", SpiralNum.ToString(), "")
             //return specs;

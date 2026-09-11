@@ -2,7 +2,7 @@
   "exampleName": "Example3_4",
   "exampleDisplayName": "設計例集3.4",
   "schemaVersion": 1,
-  "capturedAt": "2026-09-11",
+  "capturedAt": "2026-09-12",
   "options": {
     "level1Steps": 4,
     "level2Steps": 8,
@@ -21,15 +21,15 @@
       "totalIterations": 19,
       "totalSteps": 4,
       "bisectionRetries": 0,
-      "finalResidual": 1.2546530763155096E-07,
-      "apUx": 0.0018896201238072946,
-      "apUy": -0.000710047911183771,
-      "apUz": 0.00010252211196411787,
-      "apRx": -1.5380054659662103E-08,
-      "apRy": 5.881698552959661E-06,
-      "apRz": 8.270663975218781E-05,
-      "maxAbsHorizDisp": 0.0020186213732332104,
-      "maxAbsHorizSpringReaction": 187.94507100209597
+      "finalResidual": 1.759452613053611E-08,
+      "apUx": 0.0018902716715336763,
+      "apUy": -0.0007100613187976979,
+      "apUz": 0.00010511685522589767,
+      "apRx": -2.115979317899508E-08,
+      "apRy": 6.035825675452314E-06,
+      "apRz": 8.271068423494735E-05,
+      "maxAbsHorizDisp": 0.002019236011132786,
+      "maxAbsHorizSpringReaction": 187.95580325764746
     },
     {
       "caseKey": "L2-1.C1.Liq",
@@ -38,25 +38,25 @@
       "combinationNo": 1,
       "isLiquefaction": true,
       "converged": true,
-      "totalIterations": 37,
+      "totalIterations": 36,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 1.2546530793954855E-07,
-      "apUx": 0.005456493644157969,
-      "apUy": -0.002069602861926502,
-      "apUz": 0.0002293281714533329,
-      "apRx": -8.589039311797186E-09,
-      "apRy": 1.3194691060657444E-05,
-      "apRz": 0.00023734402151298154,
-      "maxAbsHorizDisp": 0.005835801478360165,
-      "maxAbsHorizSpringReaction": 319.3331159451449
+      "finalResidual": 1.759452619488456E-08,
+      "apUx": 0.005458188613017882,
+      "apUy": -0.0020696835227413416,
+      "apUz": 0.0002351344365888041,
+      "apRx": -2.0817825244149814E-08,
+      "apRy": 1.3540724376978813E-05,
+      "apRz": 0.00023735915353830775,
+      "maxAbsHorizDisp": 0.005837414908980266,
+      "maxAbsHorizSpringReaction": 319.353938418779
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 56,
+    "totalIterations": 55,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 1.2546530793954855E-07
+    "maxResidualOverAllCases": 1.759452619488456E-08
   }
 }
