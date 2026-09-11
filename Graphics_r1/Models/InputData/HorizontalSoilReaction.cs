@@ -345,7 +345,9 @@ namespace PileDesign.Models.InputData
                 }
                 else
                 {
-                    return (0.6 * rOnB - 0.4, 3.0);
+                    // 表6.6.4: λ = 3.0(R/B)。z/B = 2.5 で 2(1 + μz/B) = 3.0(R/B) となり py が連続する
+                    // (λ = 3.0 になっていたのを 2026-09-11 に修正。SoilReactionContinuityTests)
+                    return (0.6 * rOnB - 0.4, 3.0 * rOnB);
                 }
             }
         }
