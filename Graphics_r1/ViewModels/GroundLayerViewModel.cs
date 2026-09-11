@@ -1774,7 +1774,7 @@ namespace PileDesign.ViewModels
                 if (groundMassData.IsLiquefactionLayer)
                 {
                     double _NL = groundMassData.NL.GetValueOrDefault();
-                    groundMassData.TauLonSigmaZPrime = 0.0410 * (Math.Sqrt(_NL) + 0.00903 * Math.Pow(_NL / 10, 7));
+                    groundMassData.TauLonSigmaZPrime = LiquefactionResistance(_NL);
                 }
                 else
                 {
@@ -1783,26 +1783,20 @@ namespace PileDesign.ViewModels
             }
         }
 
-        internal void RecalculateTauLonSigmaZPrime2()
+        /// <summary>
+        /// 液状化抵抗比 τL/σz′ (補正 N 値 <paramref name="na"/>)。基礎指針'19 は図3.2.1 のせん断ひずみ振幅
+        /// 5% の線から読み取るとしており、式は示していない。その線を閉じた形
+        /// a·Cr·{16√Na/100 + (16√Na/Cs)^n} (a = 0.45, Cr = 0.57, Cs = 80, n = 14) で表す。
+        /// 16√Na/Cs = 1 となる Na = 25 で立ち上がり、5% の線に当たる。
+        /// 1.0.32-beta までは近似式 0.0410·{√Na + 0.00903·(Na/10)^7} (Cs ≈ 80.7 相当。Na = 28 で 8.6% 小さい)
+        /// を使っていた。2026-09-12 に利用者と図を見比べて閉じた形に切り替えた (LiquefactionResistanceTests)。
+        /// </summary>
+        internal static double LiquefactionResistance(double na)
         {
-            foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
-            {
-                if (groundMassData.IsLiquefactionLayer)
-                {
-                    double _NL = groundMassData.NL.GetValueOrDefault();
-                    double Cs = 80;
-                    double a = 0.45;
-                    double Cr = 0.57;
-                    double n = 14;
-                    groundMassData.TauLonSigmaZPrime = a * Cr * (16 * Math.Sqrt(_NL) / 100.0 + Math.Pow(16 * Math.Sqrt(_NL) / Cs, n));
-                }
-                else
-                {
-                    groundMassData.TauLonSigmaZPrime = null;
-                }
-            }
+            const double a = 0.45, cr = 0.57, cs = 80.0, n = 14.0;
+            double s = 16.0 * Math.Sqrt(na);
+            return a * cr * (s / 100.0 + Math.Pow(s / cs, n));
         }
-
         // τd/σz'
         internal void RecalculateTauDonSigmaZprime()
         {

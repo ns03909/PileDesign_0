@@ -9192,6 +9192,28 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 <li class="symbol-intro">ここに、</li>
                 <li><span class="symbol-label">$\tau_L$</span>水平面における液状化抵抗</li>
             </ul>
+            <p>
+                液状化抵抗比 $\tau_L/\sigma_z'$ は、基礎指針'19 では図3.2.1 のせん断ひずみ振幅 5% の線から読み取るとされ、式は示されていません。
+                本プログラムはこの線を次の式で表します（<strong>採用</strong>）。
+            </p>
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$\frac{\tau_L}{\sigma_z'} = a\,C_r\left\{\frac{16\sqrt{N_a}}{100} + \left(\frac{16\sqrt{N_a}}{C_s}\right)^{n}\right\},\quad a = 0.45,\ C_r = 0.57,\ C_s = 80,\ n = 14$$
+                </div>
+                <div class="formula-right">採用</div>
+            </div>
+            <p>
+                $16\sqrt{N_a}/C_s = 1$ となる $N_a = 25$ で曲線が急に立ち上がり、図3.2.1 の 5% の線に当たります。
+                1.0.32-beta までは、次の近似式を使っていました（<strong>不採用</strong>）。第 1 項は同じで、第 2 項の係数が 12% 小さく
+                （$C_s \approx 80.7$ に相当）、$N_a \le 15$ ではほぼ一致しますが、立ち上がり付近で小さめになります
+                （$N_a = 20$ で約 3%、$N_a = 28$ で約 9%）。
+            </p>
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$\frac{\tau_L}{\sigma_z'} = 0.0410\left\{\sqrt{N_a} + 0.00903\left(\frac{N_a}{10}\right)^{7}\right\}$$
+                </div>
+                <div class="formula-right">旧（不採用）</div>
+            </div>
 
 
             <div class="formula-block">
