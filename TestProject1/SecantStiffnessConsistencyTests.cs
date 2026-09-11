@@ -5,16 +5,18 @@ using System;
 namespace TestProject1
 {
     /// <summary>
-    /// 変位制御法の割線剛性が、内力の評価と同じものであること。
+    /// 割線剛性が、内力の評価と同じものであること。
     ///
-    /// 変位制御法は $K_{sec}(x)\,x = F$ を繰り返し解く。収束した解が釣り合い
-    /// $R(x) = F$ を満たすのは、<b>$K_{sec}(x)\,x = R(x)$ が恒等的に成り立つ</b>ときだけ。
-    /// 内力 (<c>GetSoilReactionVector</c>) は割線剛性 × 変位で作っているので、
-    /// 剛性側に接線を混ぜるとこの恒等式が崩れ、
-    /// 収束しても釣り合っていない解に落ち着く。
+    /// 割線剛性 $K_{sec}(x)$ は「その変位で出ている反力 ÷ 変位」なので、
+    /// <b>$K_{sec}(x)\,x = R(x)$ が恒等的に成り立つ</b>ことが定義そのもの。
+    /// いまこれを使っているのは鉛直解析の杭ばね
+    /// (<c>PileVerticalSoilSpringModel.GetSecantStiffness</c>)。
+    /// 恒等式が崩れると、ばねの力と剛性が食い違い、収束しても釣り合っていない解に落ち着く。
     ///
-    /// 実際に周面ばねだけ接線剛性を足しており (先端のみ割線)、
-    /// 非線形域の荷重-変位曲線がずれていた。既定の荷重制御法は接線剛性で正しく組んでいる。
+    /// <para>もともとは単杭沈下の変位制御法を守るために置いた検査で、周面ばねだけ
+    /// 接線剛性を足していた誤り (1.0.24-beta で修正) を捕まえていた。変位制御法は
+    /// 画面から一度も選べないまま別の誤りも抱えていたので 2026-09-11 に削除したが、
+    /// 割線剛性の関数そのものは鉛直解析が使い続けているので、この 2 本は残す。</para>
     /// </summary>
     [TestClass]
     public class SecantStiffnessConsistencyTests
@@ -52,7 +54,7 @@ namespace TestProject1
 
         /// <summary>
         /// 割線剛性 × 変位が、その変位における反力そのものになること。
-        /// 変位制御法が釣り合いに収束するための条件。
+        /// 割線剛性を使う側 (鉛直解析の杭ばね) が釣り合いに収束するための条件。
         /// </summary>
         [TestMethod]
         public void SecantTimesDisplacement_EqualsTheReaction()
@@ -71,40 +73,6 @@ namespace TestProject1
                 Assert.AreEqual(expected, Secant(s) * s, Math.Max(Math.Abs(expected) * 1e-9, 1e-12),
                     $"変位 {s} m で 割線剛性 × 変位 が反力に一致しない");
             }
-        }
-
-        /// <summary>
-        /// 変位制御法の剛性が周面・先端とも割線であること。
-        /// 片方だけ接線にすると、上の恒等式が壊れる。
-        /// </summary>
-        [TestMethod]
-        public void DisplacementControl_UsesSecantForEverySpring()
-        {
-            string source = System.IO.File.ReadAllText(FindSource());
-            int start = source.IndexOf("public List<double> GetSecantSoilStiffness", StringComparison.Ordinal);
-            Assert.IsTrue(start > 0, "GetSecantSoilStiffness が見つからない");
-
-            int end = source.IndexOf("private static double GetTangentStiffnessPileToeFromRp", start, StringComparison.Ordinal);
-            Assert.IsTrue(end > start, "メソッドの終端が特定できない");
-
-            string body = source[start..end];
-            StringAssert.Contains(body, "GetSecantStiffnessPilePerimeter", "周面ばねが割線になっていない");
-            StringAssert.Contains(body, "GetSecantStiffnessPileToeFromSettlement", "先端ばねが割線になっていない");
-            Assert.IsFalse(body.Contains("GetTangentStiffness"),
-                "割線剛性の中で接線剛性を呼んでいる (収束しても釣り合わない)");
-        }
-
-        private static string FindSource()
-        {
-            var dir = new System.IO.DirectoryInfo(
-                System.IO.Path.GetDirectoryName(typeof(SecantStiffnessConsistencyTests).Assembly.Location)!);
-            for (; dir != null; dir = dir.Parent)
-            {
-                string candidate = System.IO.Path.Combine(
-                    dir.FullName, "Graphics_r1", "FEM", "VerticalLoadTransferMethod.cs");
-                if (System.IO.File.Exists(candidate)) return candidate;
-            }
-            throw new System.IO.FileNotFoundException("VerticalLoadTransferMethod.cs が見つかりません");
         }
     }
 }

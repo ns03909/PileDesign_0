@@ -163,7 +163,7 @@ namespace PileDesign.ViewModels
                     var soilPile = SoilPiles[i];
 
                     // 各SoilPileに対してVerticalLoadTransferMethodを作成・解析
-                    var vtm = new VerticalLoadTransferMethod(InputModel, soilPile, SelectedAnalysisMode);
+                    var vtm = new VerticalLoadTransferMethod(InputModel, soilPile);
 
                     // SoilPileに計算結果を保存（ViewModel内コピー）
                     soilPile.LoadDisplacements = vtm.LoadDisplacements;
@@ -218,7 +218,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // 現在選択中のSoilPileのVerticalLoadTransferMethodも更新
-                VerticalLoadTransferMethod = new VerticalLoadTransferMethod(InputModel, SoilPile, SelectedAnalysisMode);
+                VerticalLoadTransferMethod = new VerticalLoadTransferMethod(InputModel, SoilPile);
                 UpdateSettlementChart();
                 UpdateCircumstanceSeries();
             }
@@ -257,25 +257,6 @@ namespace PileDesign.ViewModels
 
         [ObservableProperty]
         private VerticalLoadTransferMethod _verticalLoadTransferMethod;
-
-        // 解析制御モード選択（荷重制御法をデフォルトに）
-        [ObservableProperty]
-        private AnalysisControlMode _selectedAnalysisMode = AnalysisControlMode.LoadControl;
-
-        // 解析制御モードリスト（ComboBox用）
-        public AnalysisControlMode[] AnalysisModes { get; } =
-            [AnalysisControlMode.LoadControl, AnalysisControlMode.DisplacementControl];
-
-        // 解析制御モードが変位制御法かどうか
-        public bool IsDisplacementControl
-        {
-            get => SelectedAnalysisMode == AnalysisControlMode.DisplacementControl;
-            set
-            {
-                SelectedAnalysisMode = value ? AnalysisControlMode.DisplacementControl : AnalysisControlMode.LoadControl;
-                OnPropertyChanged(nameof(IsDisplacementControl));
-            }
-        }
 
         // xamlフィールド
         public Canvas Canvas { get; set; }
@@ -557,9 +538,8 @@ namespace PileDesign.ViewModels
                 // バックグラウンドで解析実行（UIスレッドブロッキング防止）
                 var inputModelRef = InputModel;
                 var soilPileRef = SoilPile;
-                var mode = SelectedAnalysisMode;
 
-                var vtm = await Task.Run(() => new VerticalLoadTransferMethod(inputModelRef, soilPileRef, mode));
+                var vtm = await Task.Run(() => new VerticalLoadTransferMethod(inputModelRef, soilPileRef));
                 VerticalLoadTransferMethod = vtm;
 
                 // UIスレッドでチャートと結果を更新
