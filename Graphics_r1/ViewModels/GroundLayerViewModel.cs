@@ -2361,7 +2361,9 @@ namespace PileDesign.ViewModels
 
                 double fA = Math.Min(1.6 * alpha * T0, 1);
                 double C1 = (shallowSoilType == "粘性土") ? 0.0028 : 0.0015;
-                double C2 = (shallowSoilType == "粘性土") ? 0.53 : 0.666;
+                // C2: 表層の土質の減衰特性から決まる定数 (文献値: 粘性土 0.53、砂質土 0.66)。
+                // 砂質土は 0.666 になっていたのを 2026-09-11 に文献値へ直した (GroundDisplacementConstantTests)
+                double C2 = (shallowSoilType == "粘性土") ? 0.53 : 0.66;
                 double Dmax = 0;
 
                 if (calculationMethod == "a1(b1)")
