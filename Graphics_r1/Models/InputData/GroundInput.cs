@@ -203,12 +203,34 @@ namespace PileDesign.Models.InputData
         internal double ToGLDepth(double z) => z - GroundTopAltitude;
 
         /// <summary>
-        /// 質点 <paramref name="mass"/> の位置の地盤変位 [mm]。解析 (<c>ZDataItem.SetSoilDisplacement</c>) と
-        /// 同じく地盤変位のモードに従う: 考慮しない → 0、任意入力 → 質点の標高で補間、それ以外 → 自動計算値。
+        /// 各土質点の変位 (U_i) が表す位置の標高 [m]。土質点 i は層 i の上端、つまり地表から層厚 H を
+        /// 積んだ位置 −(H0 + … + H_{i−1}) にある。質量・モード形の漸化式 (U0 = 地表) と同じ置き方で、
+        /// 最後の土質点が基盤面 (U* = 0)。土質点の GLDepth / AltitudeDepth は N 値などの土質データの
+        /// 深度で、変位の位置ではない。解析・画面・計算書はすべてここを通す
+        /// (以前は解析が AltitudeDepth、グラフが GLDepth＋間隔×(1/0.5/0) と別々だった。2026-09-12)。
+        /// </summary>
+        internal double[] MassTopAltitudes()
+        {
+            var masses = GroundMassesData;
+            var tops = new double[masses?.Count ?? 0];
+            double depth = 0.0;
+            for (int i = 0; i < tops.Length; i++)
+            {
+                tops[i] = GroundTopAltitude + depth;
+                // 層厚が未入力なら間隔 (RecalculateH と同じ既定)。0 で積むと全土質点が地表に重なる
+                depth -= masses![i].H ?? masses[i].Spacing;
+            }
+            return tops;
+        }
+
+        /// <summary>
+        /// 土質点 <paramref name="massIndex"/> の位置 (層の上端) の地盤変位 [mm]。解析
+        /// (<c>ZDataItem.SetSoilDisplacement</c>) と同じく地盤変位のモードに従う: 考慮しない → 0、
+        /// 任意入力 → その位置の標高で補間、それ以外 → 自動計算値。
         /// 画面ごとに自前で書くと、モードを見ない画面が解析と違う値を見せる (杭体ウィンドウで実際に起きた)。
         /// </summary>
         /// <param name="levelIndex">0 = レベル1、1 = レベル2</param>
-        internal double GetMassDisplacement(GroundMassDataInput mass, int levelIndex, bool isLiquefaction)
+        internal double GetMassDisplacement(int massIndex, int levelIndex, bool isLiquefaction)
         {
             if (IsGroundDisplacementIgnored) return 0.0;
 
@@ -218,10 +240,10 @@ namespace PileDesign.Models.InputData
                 var profile = levelIndex == 0
                     ? (isLiquefaction ? custom.Level1Liq : custom.Level1NonLiq)
                     : (isLiquefaction ? custom.Level2Liq : custom.Level2NonLiq);
-                return custom.Interpolate(profile, mass.AltitudeDepth);
+                return custom.Interpolate(profile, MassTopAltitudes()[massIndex]);
             }
 
-            return AutoMassDisplacement(mass, levelIndex, isLiquefaction);
+            return AutoMassDisplacement(GroundMassesData[massIndex], levelIndex, isLiquefaction);
         }
 
         /// <summary>自動計算 (基礎指針'19 4.5) の地盤変位 [mm]。値が無ければ 0。</summary>

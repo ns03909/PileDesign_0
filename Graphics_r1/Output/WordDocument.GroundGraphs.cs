@@ -81,13 +81,8 @@ namespace PileDesign.Output
                 bool isCustom = ground.CustomDisplacementProfile?.IsEnabled == true;
 
                 // 各 mass の中央深さ
-                double[] depths = new double[ground.GroundMassesData.Count];
-                for (int i = 0; i < ground.GroundMassesData.Count; i++)
-                {
-                    var data = ground.GroundMassesData[i];
-                    double factor = (i == 0) ? 1.0 : (i == ground.GroundMassesData.Count - 1) ? 0.0 : 0.5;
-                    depths[i] = data.GLDepth + data.Spacing * factor;
-                }
+                // 土質点の変位は層の上端 (地表から層厚 H を積んだ位置) に描く。解析と同じ (GroundInput.MassTopAltitudes)
+                double[] depths = ground.MassTopAltitudes().Select(a => a - ground.GroundTopAltitude).ToArray();
 
                 var plot = new Plot();
                 DrawSoilLayersOnPlot(plot, ground);

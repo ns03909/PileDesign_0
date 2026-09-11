@@ -600,18 +600,13 @@ namespace PileDesign.Views
             }
 
             // 各土質点について Z (標高) と変位を算出
-            double topAlt = ground.GroundTopAltitude;
+            double[] tops = ground.MassTopAltitudes();   // 土質点の変位の位置 = 層の上端 (解析と同じ)
             var newPoints = new List<DisplacementPoint>(masses.Count);
             int skipped = 0;
             for (int i = 0; i < masses.Count; i++)
             {
                 var data = masses[i];
-                // GroundLayerViewModel.DrawGroundDisplacementGraph と同じ深さ算出ロジック
-                double factor = (i == 0) ? 1.0
-                              : (i == masses.Count - 1) ? 0.0
-                              : 0.5;
-                double gLDepth = data.GLDepth + data.Spacing * factor;
-                double Z = topAlt + gLDepth; // 標高 = 孔口標高 + GL基準深さ(負値)
+                double Z = tops[i];
 
                 double disp;
                 var src = withLiq ? data.DmaxUStarSigmaGammaCyH : data.DmaxUStar;
@@ -681,7 +676,7 @@ namespace PileDesign.Views
                 if (ans != MessageBoxResult.Yes) return;
             }
 
-            double topAlt = ground.GroundTopAltitude;
+            double[] tops = ground.MassTopAltitudes();   // 土質点の変位の位置 = 層の上端 (解析と同じ)
             int totalCopied = 0;
             int totalSkipped = 0;
 
@@ -694,11 +689,7 @@ namespace PileDesign.Views
                 for (int i = 0; i < masses.Count; i++)
                 {
                     var data = masses[i];
-                    double factor = (i == 0) ? 1.0
-                                  : (i == masses.Count - 1) ? 0.0
-                                  : 0.5;
-                    double gLDepth = data.GLDepth + data.Spacing * factor;
-                    double Z = topAlt + gLDepth;
+                    double Z = tops[i];
 
                     var src = withLiq ? data.DmaxUStarSigmaGammaCyH : data.DmaxUStar;
                     if (src == null || src.Count <= level)

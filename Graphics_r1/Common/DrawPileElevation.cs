@@ -926,13 +926,14 @@ namespace PileDesign.Common
             if (groundInput?.GroundMassesData == null || groundInput.GroundMassesData.Count == 0) return;
 
             // 値取得関数。考慮しない → 0 (何も描かない)、任意入力 → 質点の標高で補間、それ以外 → 自動計算値
-            double Get(GroundMassDataInput m) => groundInput.GetMassDisplacement(m, levelIndex, withLiquefaction);
+            double Get(int i) => groundInput.GetMassDisplacement(i, levelIndex, withLiquefaction);
+            var indices = Enumerable.Range(0, groundInput.GroundMassesData.Count);
 
-            bool hasData = groundInput.GroundMassesData.Any(m => Math.Abs(Get(m)) > 1e-9);
+            bool hasData = indices.Any(i => Math.Abs(Get(i)) > 1e-9);
             if (!hasData) return;
 
-            double maxAbs = groundInput.GroundMassesData
-                .Select(m => Math.Abs(Get(m)))
+            double maxAbs = indices
+                .Select(i => Math.Abs(Get(i)))
                 .DefaultIfEmpty(0)
                 .Max();
             if (maxAbs <= 0) return;
@@ -946,13 +947,15 @@ namespace PileDesign.Common
 
             var points = new PointCollection();
             var pointInfo = new List<(double x, double y, double value, double depth)>();
-            foreach (var m in groundInput.GroundMassesData)
+            // 変位は層の上端 (解析と同じ位置) に描く。N 値・FL の図は土質データの深度のまま
+            double[] tops = groundInput.MassTopAltitudes();
+            for (int i = 0; i < tops.Length; i++)
             {
-                double v = Math.Abs(Get(m));
-                double y = (-m.AltitudeDepth + pileTopAltitude) * ratio + topMargin;
+                double v = Math.Abs(Get(i));
+                double y = (-tops[i] + pileTopAltitude) * ratio + topMargin;
                 double x = leftOrigin + v * xScale;
                 points.Add(new Point(x, y));
-                pointInfo.Add((x, y, Get(m), m.GLDepth));
+                pointInfo.Add((x, y, Get(i), tops[i] - groundInput.GroundTopAltitude));
             }
 
             canvas.Children.Add(new Polyline
@@ -970,7 +973,7 @@ namespace PileDesign.Common
             }
 
             double y1 = (-groundInput.GroundTopAltitude + pileTopAltitude) * ratio + topMargin;
-            double y2 = (-groundInput.GroundMassesData[^1].AltitudeDepth + pileTopAltitude) * ratio + topMargin;
+            double y2 = (-tops[^1] + pileTopAltitude) * ratio + topMargin;
             const int tickCount = 4;
             for (int k = 0; k <= tickCount; k++)
             {

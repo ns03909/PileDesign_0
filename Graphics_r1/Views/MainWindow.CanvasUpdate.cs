@@ -175,15 +175,13 @@ namespace PileDesign.Views
                         double x = (layer0.X1 + layer0.X2) * 0.5;
                         double y = (layer0.Y1 + layer0.Y2) * 0.5;
 
+                        double[] tops = groundInput.MassTopAltitudes();   // 変位の位置 = 層の上端 (解析と同じ)
                         for (int j = 0; j < masses.Count - 1; j++)
                         {
-                            var mI = masses[j];
-                            var mJ = masses[j + 1];
-
-                            double zI = mI.AltitudeDepth;
-                            double zJ = mJ.AltitudeDepth;
-                            double displacementI = GetDispFromGroundMass(groundInput, mI, level, vm.IsLiquefaction);
-                            double displacementJ = GetDispFromGroundMass(groundInput, mJ, level, vm.IsLiquefaction);
+                            double zI = tops[j];
+                            double zJ = tops[j + 1];
+                            double displacementI = GetDispFromGroundMass(groundInput, j, level, vm.IsLiquefaction);
+                            double displacementJ = GetDispFromGroundMass(groundInput, j + 1, level, vm.IsLiquefaction);
 
                             DrawGroundDispSegment(vm, comb, cos, sin, x, y, zI, displacementI, zJ, displacementJ, isFirstSegment: j == 0);
                         }
@@ -224,16 +222,14 @@ namespace PileDesign.Views
                     int groundNo = pile.GroundNo;
                     var groundInput2 = vm.CurrentInputModel.GroundsInput[groundNo - 1];
                     var masses = groundInput2.GroundMassesData;
+                    double[] tops = groundInput2.MassTopAltitudes();   // 変位の位置 = 層の上端 (解析と同じ)
                     for (int j = 0; j < masses.Count - 1; j++)
                     {
-                        var mI = masses[j];
-                        var mJ = masses[j + 1];
+                        double zI = tops[j];
+                        double zJ = tops[j + 1];
 
-                        double zI = mI.AltitudeDepth;
-                        double zJ = mJ.AltitudeDepth;
-
-                        double displacementI = GetDispFromGroundMass(groundInput2, mI, level, vm.IsLiquefaction);
-                        double displacementJ = GetDispFromGroundMass(groundInput2, mJ, level, vm.IsLiquefaction);
+                        double displacementI = GetDispFromGroundMass(groundInput2, j, level, vm.IsLiquefaction);
+                        double displacementJ = GetDispFromGroundMass(groundInput2, j + 1, level, vm.IsLiquefaction);
 
                         DrawGroundDispSegment(vm, comb, cos, sin, x, y, zI, displacementI, zJ, displacementJ, isFirstSegment: j == 0);
                     }
@@ -329,9 +325,9 @@ namespace PileDesign.Views
                         var groundForScale = vm.CurrentInputModel.GroundsInput[gIdx];
                         var masses = groundForScale.GroundMassesData;
                         if (masses == null) continue;
-                        foreach (var m in masses)
+                        for (int i = 0; i < masses.Count; i++)
                         {
-                            double d = Math.Abs(GetDispFromGroundMass(groundForScale, m, level, vm.IsLiquefaction));
+                            double d = Math.Abs(GetDispFromGroundMass(groundForScale, i, level, vm.IsLiquefaction));
                             if (d > maxGroundMm) maxGroundMm = d;
                         }
                     }
@@ -372,13 +368,11 @@ namespace PileDesign.Views
                 return isLiquefaction ? item.GroundDisp2L : item.GroundDisp2;
         }
 
-        private static double GetDispFromGroundMass(GroundInput ground, GroundMassDataInput mass, int level, bool isLiquefaction)
+        private static double GetDispFromGroundMass(GroundInput ground, int massIndex, int level, bool isLiquefaction)
         {
             // 判定は GroundInput.GetMassDisplacement に 1 つだけ置く (杭体ウィンドウと共通)
             int levelIndex = level == 1 ? 0 : 1;
-            return ground != null
-                ? ground.GetMassDisplacement(mass, levelIndex, isLiquefaction)
-                : GroundInput.AutoMassDisplacement(mass, levelIndex, isLiquefaction);
+            return ground?.GetMassDisplacement(massIndex, levelIndex, isLiquefaction) ?? 0.0;
         }
 
         private bool TryGetLoadContext(

@@ -105,9 +105,12 @@ namespace PileDesign.Models.InputData
                 GroundDisp2L = custom.Interpolate(custom.Level2Liq, Z);
                 return;
             }
+            // 土質点の変位は層の上端 (地表から層厚 H を積んだ位置) に置き、その間を直線補間する。
+            // 以前は土質データの深度 (AltitudeDepth) に置いていて、分布が半層ほど深くなっていた (2026-09-12)
+            double[] tops = groundInput.MassTopAltitudes();
             for (int i = 0; i < groundInput.GroundMassesData.Count; i++)
             {
-                if (groundInput.GroundMassesData[i].AltitudeDepth < Z)
+                if (tops[i] < Z)
                 {
                     if (i == 0)
                     {
@@ -121,11 +124,12 @@ namespace PileDesign.Models.InputData
                     {
                         var data1 = groundInput.GroundMassesData[i - 1];
                         var data2 = groundInput.GroundMassesData[i];
+                        double z1 = tops[i - 1], z2 = tops[i];
 
-                        GroundDisp1 = GetInterpolatedValue(Z, data1.AltitudeDepth, data2.AltitudeDepth, data1.DmaxUStar[0], data2.DmaxUStar[0]);
-                        GroundDisp2 = GetInterpolatedValue(Z, data1.AltitudeDepth, data2.AltitudeDepth, data1.DmaxUStar[1], data2.DmaxUStar[1]);
-                        GroundDisp1L = GetInterpolatedValue(Z, data1.AltitudeDepth, data2.AltitudeDepth, data1.DmaxUStarSigmaGammaCyH[0], data2.DmaxUStarSigmaGammaCyH[0]);
-                        GroundDisp2L = GetInterpolatedValue(Z, data1.AltitudeDepth, data2.AltitudeDepth, data1.DmaxUStarSigmaGammaCyH[1], data2.DmaxUStarSigmaGammaCyH[1]);
+                        GroundDisp1 = GetInterpolatedValue(Z, z1, z2, data1.DmaxUStar[0], data2.DmaxUStar[0]);
+                        GroundDisp2 = GetInterpolatedValue(Z, z1, z2, data1.DmaxUStar[1], data2.DmaxUStar[1]);
+                        GroundDisp1L = GetInterpolatedValue(Z, z1, z2, data1.DmaxUStarSigmaGammaCyH[0], data2.DmaxUStarSigmaGammaCyH[0]);
+                        GroundDisp2L = GetInterpolatedValue(Z, z1, z2, data1.DmaxUStarSigmaGammaCyH[1], data2.DmaxUStarSigmaGammaCyH[1]);
                         break;
                     }
                 }

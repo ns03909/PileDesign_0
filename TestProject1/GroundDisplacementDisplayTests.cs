@@ -72,26 +72,28 @@ namespace TestProject1
         [TestMethod]
         public void MassDisplacementFollowsTheMode()
         {
-            var mass = new GroundMassDataInput { AltitudeDepth = -2.0 };
+            // 2 番目の土質点は層の上端 −2.0 m にある (1 番目の層厚 2.0)。AltitudeDepth (土質データの深度) は見ない
+            var mass = new GroundMassDataInput { H = 2.0, AltitudeDepth = -3.5 };
             mass.DmaxUStar = [10.0, 20.0];
             mass.DmaxUStarSigmaGammaCyH = [30.0, 40.0];
-            var ground = new GroundInput();
+            var ground = new GroundInput { GroundTopAltitude = 0.0 };
+            ground.GroundMassesData = [new GroundMassDataInput { H = 2.0 }, mass];
 
             // 自動計算: レベル・液状化で 4 つを取り分ける
-            Assert.AreEqual(10.0, ground.GetMassDisplacement(mass, 0, false));
-            Assert.AreEqual(20.0, ground.GetMassDisplacement(mass, 1, false));
-            Assert.AreEqual(30.0, ground.GetMassDisplacement(mass, 0, true));
-            Assert.AreEqual(40.0, ground.GetMassDisplacement(mass, 1, true));
+            Assert.AreEqual(10.0, ground.GetMassDisplacement(1, 0, false));
+            Assert.AreEqual(20.0, ground.GetMassDisplacement(1, 1, false));
+            Assert.AreEqual(30.0, ground.GetMassDisplacement(1, 0, true));
+            Assert.AreEqual(40.0, ground.GetMassDisplacement(1, 1, true));
 
-            // 任意入力: 質点の標高で補間する (自動計算値は見ない)
+            // 任意入力: 土質点の位置 (層の上端 −2.0 m) で補間する (自動計算値は見ない)
             ground.CustomDisplacementProfile = new CustomDisplacementProfile { IsEnabled = true };
             ground.CustomDisplacementProfile.Level2NonLiq.Add(new DisplacementPoint(0.0, 100.0));
             ground.CustomDisplacementProfile.Level2NonLiq.Add(new DisplacementPoint(-4.0, 0.0));
-            Assert.AreEqual(50.0, ground.GetMassDisplacement(mass, 1, false), 1e-12);
+            Assert.AreEqual(50.0, ground.GetMassDisplacement(1, 1, false), 1e-12);
 
             // 考慮しない: 任意入力が有効でも 0
             ground.IsGroundDisplacementIgnored = true;
-            Assert.AreEqual(0.0, ground.GetMassDisplacement(mass, 1, false));
+            Assert.AreEqual(0.0, ground.GetMassDisplacement(1, 1, false));
         }
 
         private static string StripComments(string src) => Regex.Replace(src, "//.*", "");

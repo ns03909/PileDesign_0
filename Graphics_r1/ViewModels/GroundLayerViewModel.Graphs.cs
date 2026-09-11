@@ -112,15 +112,9 @@ namespace PileDesign.ViewModels
             { return; }
             if (GroundInput?.GroundMassesData == null) return;
 
-            List<double> gLDepths = [];
-
-            foreach (var data in GroundInput.GroundMassesData)
-            {
-                double _factor = data == GroundInput.GroundMassesData.First() ? 1.0 :
-                                 data == GroundInput.GroundMassesData.Last() ? 0.0 : 0.5;
-                double gLDepth = data.GLDepth + data.Spacing * _factor;
-                gLDepths.Add(gLDepth);
-            }
+            // 土質点の変位は層の上端 (地表から層厚 H を積んだ位置) に描く。解析と同じ (GroundInput.MassTopAltitudes)
+            double topAltitude = GroundInput.GroundTopAltitude;
+            List<double> gLDepths = [.. GroundInput.MassTopAltitudes().Select(a => a - topAltitude)];
 
             var wpf = GroundWindowInstance.wpfPlotDisplacement;
 
