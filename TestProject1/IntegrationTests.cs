@@ -404,6 +404,15 @@ namespace TestProject1
                     mass.AltitudeDepth = mass.GLDepth + groundInput.GroundTopAltitude;
                 }
             }
+
+            // 地盤の計算 (層厚・有効応力・FL・βL・γcy・質量・VSE・地盤変位) を通す。
+            // 以前は JSON を読むだけで、DmaxUStar が 0 のまま解析していた。そのため収束の回帰
+            // スナップショットと検定の黄金ファイルは、強制変位が全くない解析しか見ていなかった
+            // (地盤変位まわりの修正で回帰が動かなかった理由。2026-09-12)。
+            // 実機の例題コマンド (GroundLayerViewModel.LoadExampleFromJson) と同じ「入れてから Update()」の順。
+            var groundVm = new GroundLayerViewModel(new MainWindowViewModel()) { GroundInput = groundInput };
+            groundVm.Update();
+
             return (groundInput, null);
         }
 

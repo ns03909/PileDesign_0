@@ -510,6 +510,19 @@ namespace TestProject1
                 LiquefactionMode = PileDesign.ViewModels.HorizontalCalculationViewModel.LiquefactionOptionType.Yes,
                 UseLineSearch = true,
                 Parallelism = 1,
+                // このスモークが見たいのはファイバー M-φ が負勾配・零勾配のばねを作らないことで、
+                // 例題の地盤変位そのものではない。例題の組み立てが地盤の計算を通すようになった
+                // (2026-09-12) ため、地盤変位を入れた液状化ケースは収束しなくなった。これは
+                // 別の課題として扱うので、ここは元の前提 (地盤変位なし) に戻して見る。
+                Customize = m =>
+                {
+                    foreach (var ground in m.GroundsInput)
+                    {
+                        ground.IsGroundDisplacementIgnored = true;
+                    }
+                    // 節点の地盤変位は組み立てのときに書き込まれているので、作り直さないと効かない
+                    m.GenerateSoilPiles();
+                },
             };
 
             ConvergenceRegression.ConvergenceSnapshot snap;

@@ -41,6 +41,18 @@ namespace TestProject1
         /// </summary>
         private static void MakeLinear(InputModel model)
         {
+            // 地盤変位も切る。液状化を切る理由 (下の LinearOptions のコメント) と同じで、
+            // 地盤変位は荷重に依らない強制入力なので、荷重を反転・2 倍しても応答は比例しない。
+            // 例題の組み立てが地盤の計算を通すようになった (2026-09-12) ので、液状化なしの
+            // ケースにも地盤変位が入る。ここで見たいのは慣性力に対する応答なので切る。
+            // 節点の地盤変位は組み立てのときに書き込まれているので、旗を立てたあと
+            // GenerateSoilPiles() で作り直さないと効かない。
+            foreach (var ground in model.GroundsInput)
+            {
+                ground.IsGroundDisplacementIgnored = true;
+            }
+            model.GenerateSoilPiles();
+
             if (model.LoadCasesInput == null) return;
             foreach (var lc in model.LoadCasesInput.AllLoadCases)
             {

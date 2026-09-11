@@ -33,8 +33,23 @@ namespace TestProject1
                 .Any(pb => (pb?.PileBodyType ?? "").Contains(PileTypeNames.SteelPipe));
             if (!hasSteelPipe) { skipReason = "例題 3.5 が鋼管杭ではありません"; return null; }
 
+            // 例題の組み立てが地盤の計算 (FL・βL) を通すようになった (2026-09-12) ので、
+            // 読んだ直後の地盤には本物の液状化層が入っている。ここでは「液状化を入れていない
+            // 状態」から始めたいので、計算された判定を消してから MakeLiquefied で作る。
+            ClearLiquefaction(model.GroundsInput[0]);
+
             skipReason = null;
             return model;
+        }
+
+        /// <summary>地盤の液状化の判定を消す (液状化を入れていない状態にする)。</summary>
+        private static void ClearLiquefaction(GroundInput ground)
+        {
+            foreach (var mass in ground.GroundMassesData)
+            {
+                mass.IsLiquefactionLayer = false;
+                mass.BetaL = new ObservableCollection<double?> { null, null };
+            }
         }
 
         /// <summary>上から <paramref name="count"/> 番目までの土質点を液状化させる。</summary>
