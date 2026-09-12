@@ -341,11 +341,13 @@
                                                 </Grid.RowDefinitions>
 
                                                 <StackPanel Orientation="Horizontal" Grid.Row="0">
-                                                    <TextBlock Text="確認用群杭影響係数ξ [0.0-1.0]" Width="200"/>
+                                                    <TextBlock Text="確認用群杭影響係数ξ [0.0-1.0]" Width="200"
+                                                               ToolTip="確認用の値です。解析は杭配置ごとに入力した群杭係数・杭間隔比を使います (データタブ「杭」→「配置」)。"/>
                                                     <TextBox Text="{Binding Xi, StringFormat=N2, UpdateSourceTrigger=LostFocus, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
                                                             Width="50"
                                                             Style="{StaticResource DecimalTextBoxStyle}"
                                                             common:NumericInput.Min="0.1" common:NumericInput.Max="1.0"
+                                                            ToolTip="確認用。解析は杭配置ごとの群杭係数を使います。"
                                                             TextChanged="XiROnB_TextChanged"/>
                                                     <Slider Value="{Binding Xi, UpdateSourceTrigger=PropertyChanged}" Minimum="0.1" Maximum="1" Width="50"/>
 
@@ -354,7 +356,7 @@
                                                             Width="50"
                                                             Style="{StaticResource DecimalTextBoxStyle}"
                                                             common:NumericInput.Min="0.1"
-                                                            ToolTip="後方杭の塑性地盤反力を求めるパラメータとしてのみ。群杭係数には連動せず、別途指定する。"
+                                                            ToolTip="確認用。後方杭の塑性地盤反力 py の κ・µ・λ に入ります。解析は杭配置ごとの杭間隔比を使います (未入力の杭は群杭の影響なし)。"
                                                             TextChanged="XiROnB_TextChanged"/>
                                                     <Slider Value="{Binding ROnB, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="10" Width="50"/>
                                                 </StackPanel>

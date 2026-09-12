@@ -25,6 +25,14 @@ namespace PileDesign.Models.InputData
         public double PyRearBtm { get; set; } // 塑性地盤反力
 
         public double E0 { get; set; }
+
+        /// <summary>
+        /// 地表面の標高 [m]。粘性土の py は「深さ z/B」で式が切り替わるが、ZTop / ZBtm は標高なので、
+        /// 深さは (地表 − 標高) で求める。2026-09-12 まで標高の絶対値を深さとして使っていて、
+        /// 地表が Z=0 でない地盤 (設計例集3.1: +2.40 m) で地表付近の粘性土の py がずれていた。
+        /// </summary>
+        public double GroundTopAltitude { get; set; }
+
         public double Kh0 { get; set; } // 基準水平地盤反力係数（自動計算値、または手入力オーバーライド値）
         public bool IsKh0Manual { get; set; } // Kh0 が手入力オーバーライドか（表示・判定用）
         public double Gamma { get; set; }
@@ -46,7 +54,8 @@ namespace PileDesign.Models.InputData
             string name, string soilType, double gamma, double b, double e0,
             double zTop, double zBtm,
             double xi, double rOnB, double nValue, double phi, double cu,
-            double sigmaZPrimeTop, double sigmaZPrimeBtm, double alpha = Kh0Alpha)
+            double sigmaZPrimeTop, double sigmaZPrimeBtm, double alpha = Kh0Alpha,
+            double groundTopAltitude = 0.0)
         {
             Name = name;
             SoilType = soilType;
@@ -62,12 +71,13 @@ namespace PileDesign.Models.InputData
             Cu = cu;
             SigmaZPrimeTop = sigmaZPrimeTop;
             SigmaZPrimeBtm = sigmaZPrimeBtm;
+            GroundTopAltitude = groundTopAltitude;
 
             Kh0 = GetKh0(alpha, xi, e0, b);
-            PyFrontTop = GetPy(soilType, true, b, zTop, rOnB, phi, cu, sigmaZPrimeTop);
-            PyFrontBtm = GetPy(soilType, true, b, zBtm, rOnB, phi, cu, sigmaZPrimeBtm);
-            PyRearTop = GetPy(soilType, false, b, zTop, rOnB, phi, cu, sigmaZPrimeTop);
-            PyRearBtm = GetPy(soilType, false, b, zBtm, rOnB, phi, cu, sigmaZPrimeBtm);
+            PyFrontTop = GetPy(soilType, true, b, zTop, rOnB, phi, cu, sigmaZPrimeTop, groundTopAltitude);
+            PyFrontBtm = GetPy(soilType, true, b, zBtm, rOnB, phi, cu, sigmaZPrimeBtm, groundTopAltitude);
+            PyRearTop = GetPy(soilType, false, b, zTop, rOnB, phi, cu, sigmaZPrimeTop, groundTopAltitude);
+            PyRearBtm = GetPy(soilType, false, b, zBtm, rOnB, phi, cu, sigmaZPrimeBtm, groundTopAltitude);
         }
 
         // DeepCopy メソッドの追加
@@ -94,7 +104,8 @@ namespace PileDesign.Models.InputData
                 PyRearTop = this.PyRearTop,
                 PyRearBtm = this.PyRearBtm,
                 Kh0 = this.Kh0,
-                IsKh0Manual = this.IsKh0Manual
+                IsKh0Manual = this.IsKh0Manual,
+                GroundTopAltitude = this.GroundTopAltitude
             };
         }
 
@@ -115,7 +126,7 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private double PyAt(bool isTop, bool isFront, double rOnB)
             => GetPy(SoilType, isFront, B, isTop ? ZTop : ZBtm, rOnB, Phi, Cu,
-                isTop ? SigmaZPrimeTop : SigmaZPrimeBtm);
+                isTop ? SigmaZPrimeTop : SigmaZPrimeBtm, GroundTopAltitude);
 
         // 反力を返すメソッド (kN)
         public double GetSoilReaction(double y, bool isTop, bool isFront,
@@ -332,8 +343,15 @@ namespace PileDesign.Models.InputData
             return alpha * xi * e0 * Math.Pow(b / b0, -3.0 / 4.0);
         }
 
-        // 塑性地盤反力pyを返すメソッド (kN/m2)
-        public static double GetPy(string soilType, bool isFront, double b, double z, double rOnB, double phi, double cu, double sigmaZPrime)
+        /// <summary>
+        /// 塑性水平地盤反力度 py (kN/m²) (基礎指針'19 表6.6.3・表6.6.4)。
+        /// </summary>
+        /// <param name="z">評価位置の<b>標高</b> [m]。粘性土の式は深さ z/B で切り替わるので、深さは
+        /// <paramref name="groundTopAltitude"/> − z で求める (地表が Z=0 でない地盤で標高を深さ扱いしていた
+        /// のを 2026-09-12 に直した。SoilReactionContinuityTests)。</param>
+        /// <param name="groundTopAltitude">地表面の標高 [m]。省略時 0 (= 標高がそのまま深さの符号違い)。</param>
+        public static double GetPy(string soilType, bool isFront, double b, double z, double rOnB, double phi, double cu, double sigmaZPrime,
+            double groundTopAltitude = 0.0)
         {
 
             if (soilType == "砂質土" || soilType == "礫質土")
@@ -348,9 +366,11 @@ namespace PileDesign.Models.InputData
             {
                 (double mu, double lambda) = GetMuLambda(isFront, rOnB);
 
-                if (Math.Abs(z) / b <= 2.5)
+                // 地表からの深さ。地表より上 (根入れ部など) は 0 として扱う
+                double depth = Math.Max(0.0, groundTopAltitude - z);
+                if (depth / b <= 2.5)
                 {
-                    return 2 * (1 + mu * Math.Abs(z) / b) * cu;
+                    return 2 * (1 + mu * depth / b) * cu;
                 }
                 else
                 {

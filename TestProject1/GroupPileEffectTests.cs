@@ -186,6 +186,34 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 杭要素分割ウィンドウの表示用反力が、解析と<b>同じ組み立て</b>を通ること。
+        ///
+        /// <para>表示側は <c>SoilPile.SetHorizontalSoilReaction</c> の写しを持っていて、
+        /// 杭径・土層のフォールバック 3 段が無く、地表の標高も渡していなかった。
+        /// 写しがあると直したほうだけが直って表示と解析が食い違う (2026-09-12 に統合)。</para>
+        /// </summary>
+        [TestMethod]
+        public void TheElementDivisionWindowUsesTheSharedReactionBuilder()
+        {
+            string vmSource = TestSource.Read("Graphics_r1", "ViewModels", "ElementDivisionViewModel.cs");
+            string vmBody = StripComments(TestSource.MethodBody(vmSource, "void SetHorizontalSoilReaction()"));
+
+            Assert.IsTrue(vmBody.Contains("SoilPile.BuildReaction(", StringComparison.Ordinal),
+                "杭要素分割ウィンドウが共通の組み立て (SoilPile.BuildReaction) を使っていません");
+            Assert.IsFalse(vmBody.Contains("SetParameters(", StringComparison.Ordinal),
+                "杭要素分割ウィンドウが反力を自前で組んでいます (SetParameters を直接呼んでいる)。"
+                + "解析側の組み立てと食い違うので SoilPile.BuildReaction に寄せてください");
+
+            string soilPileSource = TestSource.Read("Graphics_r1", "Models", "InputData", "SoilPile.cs");
+            string soilPileBody = StripComments(
+                TestSource.MethodBody(soilPileSource, "void SetHorizontalSoilReaction()"));
+            Assert.IsTrue(soilPileBody.Contains("BuildReaction(", StringComparison.Ordinal),
+                "解析側が共通の組み立て (BuildReaction) を使っていません");
+            Assert.IsFalse(soilPileBody.Contains("SetParameters(", StringComparison.Ordinal),
+                "解析側が反力を自前で組んでいます。共通の組み立ては 1 か所に保つこと");
+        }
+
+        /// <summary>
         /// 杭要素分割ウィンドウが、表示専用の ξ・R/B を解析へ書き戻さないこと。
         ///
         /// <para>このウィンドウは自分の Xi (既定 1) と ROnB (既定 10) で表示用の反力を組み、

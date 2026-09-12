@@ -1082,16 +1082,6 @@ namespace PileDesign.Models.InputData
                 var zDataTop = ZDataItems[i].Z;
                 var zDataBtm = ZDataItems[i + 1].Z;
 
-                double b = 0;
-                double cohesive = 0;
-                double nValue = 0;
-                double gamma = 0;
-                double phi = 0;
-                double stressTop = 0;
-                double stressBtm = 0;
-                string soilType = string.Empty;
-                double e0 = 0;
-                string name = string.Empty;
                 // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B) はここでは入れない。
                 // 1 つの土層-杭セットは複数の杭で共有され、ξ・R/B は杭ごとの入力なので、
                 // ここに焼き込むとどれか 1 本の値が他の杭にも効く。
@@ -1100,10 +1090,51 @@ namespace PileDesign.Models.InputData
                 double xi = 1;
                 double rOnB = 0;
 
-                double upper = zDataTop - zTop; // 杭頭基準深さ
-                double lower = zDataBtm - zTop; // 杭頭基準深さ
+                HorizontalSoilReactions.Add(BuildReaction(
+                    GroundInput, PileBodyInput, GroundLayers, zTop, zDataTop, zDataBtm,
+                    xi, rOnB, GetKh0Override, i));
+            }
+        }
 
-                foreach (PileBodySegment pileBodySegment in PileBodyInput.PileBodySegments)
+        /// <summary>
+        /// 杭の 1 要素 (標高 zTop〜zBtm) の水平地盤反力を組み立てる。
+        ///
+        /// <para>解析 (<see cref="SetHorizontalSoilReaction"/>) と杭要素分割ウィンドウの表示が
+        /// <b>同じ組み立て</b>を通るための唯一の実装。以前は表示側が写しを持っていて、杭径・土層の
+        /// フォールバックが無い・地表の標高を渡さない、といった差が取り残されていた (2026-09-12)。</para>
+        ///
+        /// <para>杭径は杭体の区間から (合わなければ最近接区間)、土質は <paramref name="matchedLayers"/> から
+        /// (合わなければ入力地盤層、それも合わなければ最近接の入力地盤層)。有効応力・内部摩擦角は
+        /// 地盤入力から求め、粘性土の py の深さは地表の標高から測る。</para>
+        /// </summary>
+        /// <param name="matchedLayers">最初に探す土層 (解析側は杭に対応付けた土層、表示側は入力地盤層)。</param>
+        /// <param name="zPileTop">杭頭の標高 [m]。杭体の区間は杭頭基準の深さで定義されている。</param>
+        /// <param name="xi">群杭係数 ξ (解析側は 1 = 基準値、表示側は確認用の値)。</param>
+        /// <param name="rOnB">杭間隔比 R/B (解析側は 0 = 未設定、表示側は確認用の値)。</param>
+        /// <param name="kh0Override">土層名 → 手入力の kh0。null か値なしなら自動計算のまま。</param>
+        internal static HorizontalSoilReactionItem BuildReaction(
+            GroundInput groundInput, PileBodyInput pileBody, IEnumerable<GroundLayerInput> matchedLayers,
+            double zPileTop, double zTop, double zBtm, double xi, double rOnB,
+            Func<string, double?> kh0Override, int elementIndex)
+        {
+            double b = 0;
+            double cohesive = 0;
+            double nValue = 0;
+            double gamma = 0;
+            double phi = 0;
+            double stressTop = 0;
+            double stressBtm = 0;
+            string soilType = string.Empty;
+            double e0 = 0;
+            string name = string.Empty;
+
+            double upper = zTop - zPileTop; // 杭頭基準深さ
+            double lower = zBtm - zPileTop; // 杭頭基準深さ
+
+            var segments = pileBody?.PileBodySegments;
+            if (segments != null)
+            {
+                foreach (PileBodySegment pileBodySegment in segments)
                 {
                     double segmentTop = -pileBodySegment.SegmentDepth + pileBodySegment.SegmentLength;
                     double segmentBtm = -pileBodySegment.SegmentDepth;
@@ -1116,12 +1147,12 @@ namespace PileDesign.Models.InputData
                 }
 
                 // フォールバック: マッチしない場合は最も近い区間の杭径を使用
-                if (Math.Abs(b) < epsilon && PileBodyInput.PileBodySegments.Count > 0)
+                if (Math.Abs(b) < epsilon && segments.Count > 0)
                 {
                     double midDepth = (upper + lower) * 0.5;
                     PileBodySegment closest = null;
                     double closestDist = double.MaxValue;
-                    foreach (var seg in PileBodyInput.PileBodySegments)
+                    foreach (var seg in segments)
                     {
                         double segMid = (-seg.SegmentDepth + seg.SegmentLength * 0.5);
                         double dist = Math.Abs(midDepth - segMid);
@@ -1135,112 +1166,96 @@ namespace PileDesign.Models.InputData
                     {
                         b = closest.PileSection.PileDiameter / 1000.0;
                         Serilog.Log.Debug(
-                            $"[SetHorizontalSoilReaction] WARNING: 要素{i}(Z={zDataTop:F3}~{zDataBtm:F3})の杭区間マッチなし→最近接区間(b={b:F4}m)を使用");
+                            $"[BuildReaction] WARNING: 要素{elementIndex}(Z={zTop:F3}~{zBtm:F3})の杭区間マッチなし→最近接区間(b={b:F4}m)を使用");
                     }
                 }
+            }
 
-                bool groundFound = false;
-                foreach (GroundLayerInput groundLayer in GroundLayers)
+            bool groundFound = false;
+            void Take(GroundLayerInput layer)
+            {
+                cohesive = layer.Cohesive;
+                nValue = layer.NValue;
+                gamma = layer.Density;
+                stressTop = GetEffectiveStress(groundInput, zTop);
+                stressBtm = GetEffectiveStress(groundInput, zBtm);
+                phi = groundInput.GetFrictionAngle(nValue, (stressTop + stressBtm) * 0.5);
+                soilType = layer.GranularityClass;
+                e0 = layer.Es;
+                name = layer.Name;
+                groundFound = true;
+            }
+
+            if (matchedLayers != null)
+            {
+                foreach (GroundLayerInput groundLayer in matchedLayers)
                 {
-                    var groundInput = GroundInput;
                     double top = groundLayer.LayerThickness + groundLayer.BottomAltitude;
                     double bottom = groundLayer.BottomAltitude;
-
-                    if (bottom - epsilon <= zDataBtm && zDataTop <= top + epsilon)
+                    if (bottom - epsilon <= zBtm && zTop <= top + epsilon)
                     {
-                        cohesive = groundLayer.Cohesive;
-                        nValue = groundLayer.NValue;
-                        gamma = groundLayer.Density;
-
-                        stressTop = GetEffectiveStress(groundInput, zDataTop);
-                        stressBtm = GetEffectiveStress(groundInput, zDataBtm);
-
-                        phi = groundInput.GetFrictionAngle(nValue, (stressTop + stressBtm) * 0.5);
-                        soilType = groundLayer.GranularityClass;
-                        e0 = groundLayer.Es;
-                        name = groundLayer.Name;
-                        groundFound = true;
+                        Take(groundLayer);
                         break;
                     }
                 }
-
-                // フォールバック: マッチしない場合は入力地盤層から直接検索
-                if (!groundFound && GroundInput?.GroundLayers != null)
-                {
-                    foreach (GroundLayerInput gl in GroundInput.GroundLayers)
-                    {
-                        double top = gl.LayerThickness + gl.BottomAltitude;
-                        double bottom = gl.BottomAltitude;
-
-                        if (bottom - epsilon <= zDataBtm && zDataTop <= top + epsilon)
-                        {
-                            cohesive = gl.Cohesive;
-                            nValue = gl.NValue;
-                            gamma = gl.Density;
-
-                            stressTop = GetEffectiveStress(GroundInput, zDataTop);
-                            stressBtm = GetEffectiveStress(GroundInput, zDataBtm);
-
-                            phi = GroundInput.GetFrictionAngle(nValue, (stressTop + stressBtm) * 0.5);
-                            soilType = gl.GranularityClass;
-                            e0 = gl.Es;
-                            name = gl.Name;
-                            groundFound = true;
-                            Serilog.Log.Debug(
-                                $"[SetHorizontalSoilReaction] WARNING: 要素{i}(Z={zDataTop:F3}~{zDataBtm:F3})のSoilPile.GroundLayersマッチなし→入力地盤層'{name}'(top={top:F3},btm={bottom:F3})を使用");
-                            break;
-                        }
-                    }
-                }
-
-                // 最終フォールバック: 要素の中点に最も近い入力地盤層を使用
-                if (!groundFound && GroundInput?.GroundLayers != null && GroundInput.GroundLayers.Count > 0)
-                {
-                    double midZ = (zDataTop + zDataBtm) * 0.5;
-                    GroundLayerInput closest = null;
-                    double closestDist = double.MaxValue;
-                    foreach (var gl in GroundInput.GroundLayers)
-                    {
-                        double layerMid = gl.BottomAltitude + gl.LayerThickness * 0.5;
-                        double dist = Math.Abs(midZ - layerMid);
-                        if (dist < closestDist)
-                        {
-                            closestDist = dist;
-                            closest = gl;
-                        }
-                    }
-                    if (closest != null)
-                    {
-                        cohesive = closest.Cohesive;
-                        nValue = closest.NValue;
-                        gamma = closest.Density;
-                        stressTop = GetEffectiveStress(GroundInput, zDataTop);
-                        stressBtm = GetEffectiveStress(GroundInput, zDataBtm);
-                        phi = GroundInput.GetFrictionAngle(nValue, (stressTop + stressBtm) * 0.5);
-                        soilType = closest.GranularityClass;
-                        e0 = closest.Es;
-                        name = closest.Name;
-                        Serilog.Log.Debug(
-                            $"[SetHorizontalSoilReaction] WARNING: 要素{i}(Z={zDataTop:F3}~{zDataBtm:F3})の地盤層マッチなし→最近接地盤層'{name}'を使用");
-                    }
-                }
-
-                HorizontalSoilReactionItem horizontalSoilReactionItem = new();
-                horizontalSoilReactionItem.SetParameters(
-                name, soilType, gamma, b, e0,
-                zDataTop, zDataBtm,
-                xi, rOnB, nValue, phi, cohesive, stressTop, stressBtm);
-
-                // 土層ごとの kh0 手入力オーバーライドがあれば適用（自動計算値を上書き）
-                double? kh0Override = GetKh0Override(name);
-                if (kh0Override.HasValue)
-                {
-                    horizontalSoilReactionItem.Kh0 = kh0Override.Value;
-                    horizontalSoilReactionItem.IsKh0Manual = true;
-                }
-
-                HorizontalSoilReactions.Add(horizontalSoilReactionItem);
             }
+
+            // フォールバック: マッチしない場合は入力地盤層から直接検索
+            if (!groundFound && groundInput?.GroundLayers != null)
+            {
+                foreach (GroundLayerInput gl in groundInput.GroundLayers)
+                {
+                    double top = gl.LayerThickness + gl.BottomAltitude;
+                    double bottom = gl.BottomAltitude;
+                    if (bottom - epsilon <= zBtm && zTop <= top + epsilon)
+                    {
+                        Take(gl);
+                        Serilog.Log.Debug(
+                            $"[BuildReaction] WARNING: 要素{elementIndex}(Z={zTop:F3}~{zBtm:F3})の土層マッチなし→入力地盤層'{name}'(top={top:F3},btm={bottom:F3})を使用");
+                        break;
+                    }
+                }
+            }
+
+            // 最終フォールバック: 要素の中点に最も近い入力地盤層を使用
+            if (!groundFound && groundInput?.GroundLayers != null && groundInput.GroundLayers.Count > 0)
+            {
+                double midZ = (zTop + zBtm) * 0.5;
+                GroundLayerInput closest = null;
+                double closestDist = double.MaxValue;
+                foreach (var gl in groundInput.GroundLayers)
+                {
+                    double layerMid = gl.BottomAltitude + gl.LayerThickness * 0.5;
+                    double dist = Math.Abs(midZ - layerMid);
+                    if (dist < closestDist)
+                    {
+                        closestDist = dist;
+                        closest = gl;
+                    }
+                }
+                if (closest != null)
+                {
+                    Take(closest);
+                    Serilog.Log.Debug(
+                        $"[BuildReaction] WARNING: 要素{elementIndex}(Z={zTop:F3}~{zBtm:F3})の地盤層マッチなし→最近接地盤層'{name}'を使用");
+                }
+            }
+
+            HorizontalSoilReactionItem item = new();
+            item.SetParameters(
+                name, soilType, gamma, b, e0,
+                zTop, zBtm,
+                xi, rOnB, nValue, phi, cohesive, stressTop, stressBtm,
+                groundTopAltitude: groundInput?.GroundTopAltitude ?? 0.0);
+
+            // 土層ごとの kh0 手入力オーバーライドがあれば適用（自動計算値を上書き）
+            double? overridden = kh0Override?.Invoke(name);
+            if (overridden.HasValue)
+            {
+                item.Kh0 = overridden.Value;
+                item.IsKh0Manual = true;
+            }
+            return item;
         }
 
         // 有効応力を得るメソッド

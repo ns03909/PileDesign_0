@@ -719,80 +719,21 @@ namespace PileDesign.ViewModels
 
             SelectedHorizontalSoilReactions.Clear();
 
-            GroundInput groundInput = InputModel.GroundsInput[SoilPiles[SelectedSoilPileNo - 1].GroundNo - 1];
-            PileBodyInput pileBody = InputModel.PileBodies[SoilPiles[SelectedSoilPileNo - 1].PileBodyNo - 1];
+            var soilPile = SoilPiles[SelectedSoilPileNo - 1];
+            GroundInput groundInput = InputModel.GroundsInput[soilPile.GroundNo - 1];
+            PileBodyInput pileBody = InputModel.PileBodies[soilPile.PileBodyNo - 1];
 
+            // 解析と同じ組み立て (SoilPile.BuildReaction) を通す。ここに写しを持つと、杭径・土層の
+            // フォールバックや地表の標高の受け渡しが取り残される (2026-09-12 まで実際にそうだった)。
+            // 確認用の ξ・R/B はそのまま渡す。解析は杭配置ごとの群杭係数・杭間隔比を使うので、
+            // ここで見えるのは「この土層-杭セットにその値を当てたら」という確認用の値。
+            double zTop = SelectedZDataItems[0].Z;
             for (int i = 0; i < SelectedZDataItems.Count - 1; i++)
             {
-                double zTop = SelectedZDataItems[0].Z;
-                double zDataTop = SelectedZDataItems[i].Z;
-                double zDataBtm = SelectedZDataItems[i + 1].Z;
-
-                double b = 0;
-                double cohesive = 0;
-                double nValue = 0;
-                double gamma = 0;
-                double phi = 0;
-                double stressTop = 0;
-                double stressBtm = 0;
-                string soilType = string.Empty;
-                double e0 = 0;
-                string name = string.Empty;
-                double xi = Xi;
-                double rOnB = ROnB;
-
-                foreach (PileBodySegment pileBodySegment in pileBody.PileBodySegments)
-                {
-                    double segmentTop = -pileBodySegment.SegmentDepth + pileBodySegment.SegmentLength;
-                    double segmentBtm = -pileBodySegment.SegmentDepth;
-
-                    double upper = zDataTop - zTop;
-                    double lower = zDataBtm - zTop;
-
-                    if (segmentBtm - epsilon <= lower && upper <= segmentTop + epsilon)
-                    {
-                        b = pileBodySegment.PileSection.PileDiameter / 1000.0;
-                        break;
-                    }
-                }
-
-                foreach (GroundLayerInput groundLayer in groundInput.GroundLayers)
-                {
-                    double top = groundLayer.LayerThickness + groundLayer.BottomAltitude;
-                    double bottom = groundLayer.BottomAltitude;
-
-                    // 浮動小数点誤差を考慮した比較（epsilonを使用）
-                    if (bottom - epsilon <= zDataBtm && zDataTop <= top + epsilon)
-                    {
-                        cohesive = groundLayer.Cohesive;
-                        nValue = groundLayer.NValue;
-                        gamma = groundLayer.Density;
-                        //phi = Math.Min(Math.Sqrt(20 * groundLayer.NValue) + 15, 40); // 大崎式
-                        stressTop = SoilPile.GetEffectiveStress(groundInput,zDataTop);
-                        stressBtm = SoilPile.GetEffectiveStress(groundInput,zDataBtm);
-                        phi = groundInput.GetFrictionAngle(nValue, (stressTop + stressBtm) * 0.5);
-                        soilType = groundLayer.GranularityClass;
-                        e0 = groundLayer.Es;
-                        name = groundLayer.Name;
-                        break;
-                    }
-                }
-
-                HorizontalSoilReactionItem horizontalSoilReactionItem = new();
-                horizontalSoilReactionItem.SetParameters(
-                name, soilType, gamma, b, e0,
-                zDataTop, zDataBtm,
-                xi, rOnB, nValue, phi, cohesive, stressTop, stressBtm);
-
-                // 土層ごとの kh0 手入力オーバーライドがあれば適用（自動計算値を上書き）
-                double? kh0Override = SoilPiles[SelectedSoilPileNo - 1].GetKh0Override(name);
-                if (kh0Override.HasValue)
-                {
-                    horizontalSoilReactionItem.Kh0 = kh0Override.Value;
-                    horizontalSoilReactionItem.IsKh0Manual = true;
-                }
-
-                SelectedHorizontalSoilReactions.Add(horizontalSoilReactionItem);
+                SelectedHorizontalSoilReactions.Add(SoilPile.BuildReaction(
+                    groundInput, pileBody, soilPile.GroundLayers ?? groundInput.GroundLayers, zTop,
+                    SelectedZDataItems[i].Z, SelectedZDataItems[i + 1].Z,
+                    Xi, ROnB, soilPile.GetKh0Override, i));
             }
             DrawHorizontalSoilReacitonGraph();
         }
