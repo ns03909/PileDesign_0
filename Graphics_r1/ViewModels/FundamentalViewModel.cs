@@ -277,7 +277,8 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// 収束判定で残差を割る基準値の取り方。既定は <see cref="ResidualReferenceModes.Default"/>。
-        /// 収束の判定そのものが変わるので、変更すると既存の解析結果は削除される。
+        /// 収束の判定そのものが変わるので、変更すると表示中の解析結果は
+        /// 「再解析が必要」の扱いになる (沈下解析の結果は確認のうえ削除される)。
         /// </summary>
         [ObservableProperty]
         private ResidualReferenceMode _residualReference = ResidualReferenceModes.Default;
@@ -538,7 +539,11 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// 解析 (変位・応力) に効くが材料モデルは変えないオプション用ハンドラ。
-        /// M-φ や NM 曲線のキャッシュは無関係なので破棄しない。解析結果は OK のときに捨てる。
+        /// M-φ や NM 曲線のキャッシュは無関係なので破棄しない。
+        ///
+        /// <para>保存 (OK) のときに <c>CheckAndResetAnalysisResultsKeepingSplit</c> を通す。
+        /// 水平解析の結果は<b>消さずに「再解析が必要」の印を立てる</b>だけで、確認ダイアログは
+        /// 沈下解析の結果があるときにしか出ない (材料オプションと同じ扱い)。</para>
         /// </summary>
         private void HandleAnalysisOptionChanged<T>(
             T value, Func<T> getter, Action<T> setModel, string reason)
