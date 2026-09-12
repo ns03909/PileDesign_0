@@ -882,6 +882,10 @@ namespace PileDesign.ViewModels
                 var isFrontPile = pileLayoutItem.IsFrontPiles != null && iLC >= 0 && iLC < pileLayoutItem.IsFrontPiles.Count
                     ? pileLayoutItem.IsFrontPiles[iLC] : false;
 
+                // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B) はこの杭配置の入力から。
+                // 土層-杭セットは複数の杭で共有されるので、反力項目には保存されていない。
+                var groupPileEffect = GroupPileEffect.For(pileLayoutItem);
+
                 // E3b: case-local な PileNodes / SoilNodes / HorizontalSoilSprings を取得
                 var pileNodes = model.GetPileNodes(pileLayoutItem);
                 var soilNodes = model.GetSoilNodes(pileLayoutItem);
@@ -904,14 +908,14 @@ namespace PileDesign.ViewModels
                     if (i > 0 && i - 1 < reactionCount)
                     {
                         bool isTop = false;
-                        kTan += horizontalReactions[i - 1].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile, soilMode);
-                        kSec += horizontalReactions[i - 1].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile, soilMode);
+                        kTan += horizontalReactions[i - 1].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile, groupPileEffect, soilMode);
+                        kSec += horizontalReactions[i - 1].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile, groupPileEffect, soilMode);
                     }
                     if (i < pileNodes.Count - 1 && i < reactionCount)
                     {
                         bool isTop = true;
-                        kTan += horizontalReactions[i].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile, soilMode);
-                        kSec += horizontalReactions[i].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile, soilMode);
+                        kTan += horizontalReactions[i].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile, groupPileEffect, soilMode);
+                        kSec += horizontalReactions[i].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile, groupPileEffect, soilMode);
                     }
 
                     kTan = SafeK(kTan);

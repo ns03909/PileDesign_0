@@ -1092,8 +1092,13 @@ namespace PileDesign.Models.InputData
                 string soilType = string.Empty;
                 double e0 = 0;
                 string name = string.Empty;
+                // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B) はここでは入れない。
+                // 1 つの土層-杭セットは複数の杭で共有され、ξ・R/B は杭ごとの入力なので、
+                // ここに焼き込むとどれか 1 本の値が他の杭にも効く。
+                // 解析・グラフは GroupPileEffect を評価時に渡す。ここで作る Kh0 / Py* は
+                // 「群杭の影響なし」の基準値 (杭要素分割ウィンドウなど杭を特定しない表示用)。
                 double xi = 1;
-                double rOnB = 10_000;
+                double rOnB = 0;
 
                 double upper = zDataTop - zTop; // 杭頭基準深さ
                 double lower = zDataBtm - zTop; // 杭頭基準深さ

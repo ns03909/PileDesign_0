@@ -942,6 +942,7 @@ namespace PileDesign.ViewModels
                                             if (reactions == null) continue;
                                             // VL ケースは iLC=-1 となるため >=0 チェック必須
                                             bool isFront = pli.IsFrontPiles != null && iLC >= 0 && iLC < pli.IsFrontPiles.Count && pli.IsFrontPiles[iLC];
+                                            var groupPileEffect = Models.InputData.GroupPileEffect.For(pli);
                                             // E3b: case-local な PileNodes / SoilNodes を取得
                                             var pliPileNodes = caseModel.GetPileNodes(pli);
                                             var pliSoilNodes = caseModel.GetSoilNodes(pli);
@@ -953,12 +954,12 @@ namespace PileDesign.ViewModels
                                                 var rel = pn.CumulativeDisp - sn.CumulativeDisp;
                                                 double abs = Math.Sqrt(rel.Ux * rel.Ux + rel.Uy * rel.Uy);
                                                 // i-1 (bottom side) と i (top side) の 2 層
-                                                if (i > 0 && i - 1 < reactions.Count && reactions[i - 1].IsYieldedAtY(abs, isTop: false, isFront, loadCase.SoilNonlinearityMode))
+                                                if (i > 0 && i - 1 < reactions.Count && reactions[i - 1].IsYieldedAtY(abs, isTop: false, isFront, groupPileEffect, loadCase.SoilNonlinearityMode))
                                                 {
                                                     string key = $"{pli.No}-{i}-btm";
                                                     currentYieldedSoilSprings.Add(key);
                                                 }
-                                                if (i < reactions.Count && reactions[i].IsYieldedAtY(abs, isTop: true, isFront, loadCase.SoilNonlinearityMode))
+                                                if (i < reactions.Count && reactions[i].IsYieldedAtY(abs, isTop: true, isFront, groupPileEffect, loadCase.SoilNonlinearityMode))
                                                 {
                                                     string key = $"{pli.No}-{i}-top";
                                                     currentYieldedSoilSprings.Add(key);

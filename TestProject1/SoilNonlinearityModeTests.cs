@@ -52,8 +52,8 @@ namespace TestProject1
 
             foreach (double y in new[] { 0.0001, 0.001, Y0, 0.5 })
             {
-                double kTan = item.GetSoilTangentReactionCoefficient(y, isTop: true, isFront: true, SoilNonlinearityMode.Linear);
-                double kSec = item.GetSoilSecantReactionCoefficient(y, isTop: true, isFront: true, SoilNonlinearityMode.Linear);
+                double kTan = item.GetSoilTangentReactionCoefficient(y, isTop: true, isFront: true, GroupPileEffect.None, SoilNonlinearityMode.Linear);
+                double kSec = item.GetSoilSecantReactionCoefficient(y, isTop: true, isFront: true, GroupPileEffect.None, SoilNonlinearityMode.Linear);
                 Assert.AreEqual(kSec, kTan, kSec * 1e-12, $"線形なら接線 = 割線 (y={y})");
             }
         }
@@ -63,7 +63,7 @@ namespace TestProject1
         {
             var item = BuildItem();
             double yWayPastYield = 10.0 * YieldDisp(item);
-            Assert.IsFalse(item.IsYieldedAtY(yWayPastYield, isTop: true, isFront: true, SoilNonlinearityMode.Linear));
+            Assert.IsFalse(item.IsYieldedAtY(yWayPastYield, isTop: true, isFront: true, GroupPileEffect.None, SoilNonlinearityMode.Linear));
         }
 
         // ── kh 低減のみ ─────────────────────────────────────────────
@@ -89,7 +89,7 @@ namespace TestProject1
         {
             var item = BuildItem();
             double yWayPastYield = 10.0 * YieldDisp(item);
-            Assert.IsFalse(item.IsYieldedAtY(yWayPastYield, isTop: true, isFront: true, SoilNonlinearityMode.KhReduction));
+            Assert.IsFalse(item.IsYieldedAtY(yWayPastYield, isTop: true, isFront: true, GroupPileEffect.None, SoilNonlinearityMode.KhReduction));
         }
 
         // ── kh 低減 + py 頭打ち ────────────────────────────────────
@@ -112,8 +112,8 @@ namespace TestProject1
         {
             var item = BuildItem();
             double yy = YieldDisp(item);
-            Assert.IsFalse(item.IsYieldedAtY(0.9 * yy, isTop: true, isFront: true, SoilNonlinearityMode.KhReductionWithPy));
-            Assert.IsTrue(item.IsYieldedAtY(1.1 * yy, isTop: true, isFront: true, SoilNonlinearityMode.KhReductionWithPy));
+            Assert.IsFalse(item.IsYieldedAtY(0.9 * yy, isTop: true, isFront: true, GroupPileEffect.None, SoilNonlinearityMode.KhReductionWithPy));
+            Assert.IsTrue(item.IsYieldedAtY(1.1 * yy, isTop: true, isFront: true, GroupPileEffect.None, SoilNonlinearityMode.KhReductionWithPy));
         }
 
         // ── モード間の関係 ─────────────────────────────────────────
@@ -182,7 +182,7 @@ namespace TestProject1
                 foreach (double y in new[] { 0.0005, 0.002, Y0, 0.9 * yy, 1.2 * yy, 5.0 * yy, 0.3 })
                 {
                     double pFromGraph = item.GetP(y, py, mode);
-                    double kSec = item.GetSoilSecantReactionCoefficient(y, isTop: true, isFront: true, mode);
+                    double kSec = item.GetSoilSecantReactionCoefficient(y, isTop: true, isFront: true, GroupPileEffect.None, mode);
                     double pFromFem = kSec * y / areaScale;
                     Assert.AreEqual(pFromFem, pFromGraph, Math.Max(pFromFem, 1.0) * 1e-9,
                         $"表示用 GetP と FEM 割線剛性が不一致 (mode={mode}, y={y})");

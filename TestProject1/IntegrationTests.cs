@@ -577,6 +577,13 @@ namespace TestProject1
                     AxialForceLevel2s = plDto.AxialForceLevel2s?.Length >= 4
                         ? new ObservableCollection<double>(plDto.AxialForceLevel2s)
                         : new ObservableCollection<double>([0.0, 0.0, 0.0, 0.0]),
+                    // 群杭係数 ξ と杭間隔比 R/B も実機の PileExampleLoader と同じ形で写す。
+                    // これを忘れると全杭が ξ = 1 (低減なし)・R/B 未設定になり、
+                    // 群杭の影響が解析に入らないまま回帰網が通る。実際に 2026-09-12 まで
+                    // そうなっていて、設計例集3.1 の ξ = 0.981 が一度も検査されていなかった
+                    // (軸力のときと同じ取り残し。ExampleBuilderFidelityTests で見張る)。
+                    GroupPileFactor = plDto.GroupPileFactor,
+                    PileSpacingFactor = plDto.PileSpacingFactor,
                 };
                 pileLayoutItems.Add(item);
             }

@@ -946,13 +946,18 @@ namespace PileDesign.ViewModels
 
                 bool isFront = pileLayout.IsFrontPiles?.FirstOrDefault() ?? true;
 
+                // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B)。解析と同じ p-y 曲線を描くために必要
+                var groupPileEffect = Models.InputData.GroupPileEffect.For(pileLayout);
+                double kh0ForPile = 0.0; // 要素ごとに求める (下の reaction が決まってから)
+
                 foreach (int segIdx in segIndices)
                 {
                 var reaction = reactions[segIdx];
 
                 // 理論P-y曲線（Top/Btm）を描画
-                double pyTop = isFront ? reaction.PyFrontTop : reaction.PyRearTop;
-                double pyBtm = isFront ? reaction.PyFrontBtm : reaction.PyRearBtm;
+                double pyTop = reaction.GetPyFor(isTop: true, isFront, groupPileEffect);
+                double pyBtm = reaction.GetPyFor(isTop: false, isFront, groupPileEffect);
+                kh0ForPile = reaction.GetKh0For(groupPileEffect);
 
                 // P-y曲線のサンプリング点（小変位域を細かく、大変位域は粗く）
                 var yValues = new List<double>();
@@ -977,13 +982,13 @@ namespace PileDesign.ViewModels
                         ? $"|{SoilNonlinearityModes.ToShortText(curveMode)}" : "";
 
                     // Top曲線
-                    var ysT = yValues.Select(y => reaction.GetP(y, pyTop, curveMode)).ToArray();
+                    var ysT = yValues.Select(y => reaction.GetP(y, pyTop, curveMode, kh0ForPile)).ToArray();
                     var curveT = wpfPlot.Plot.Add.ScatterLine(xsT, ysT);
                     curveT.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Top{modeSuffix}";
                     _graphHoverMap[curveT] = pyDetails;
 
                     // Btm曲線（X値は同じ）
-                    var ysB = yValues.Select(y => reaction.GetP(y, pyBtm, curveMode)).ToArray();
+                    var ysB = yValues.Select(y => reaction.GetP(y, pyBtm, curveMode, kh0ForPile)).ToArray();
                     var curveB = wpfPlot.Plot.Add.ScatterLine(xsT, ysB);
                     curveB.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Btm{modeSuffix}";
                     curveB.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
@@ -1030,7 +1035,7 @@ namespace PileDesign.ViewModels
                                 double relDispMm = relDisp * 1000.0;
 
                                 // Y軸は理論値（P-y曲線上の値）
-                                double pTheory = reaction.GetP(relDisp, py, loadCase.SoilNonlinearityMode);
+                                double pTheory = reaction.GetP(relDisp, py, loadCase.SoilNonlinearityMode, kh0ForPile);
 
                                 string legend = $"LC:{loadCase.LoadName}|LIQ:{isLiquefaction}|P{pileLayout.No}|{endLabel}";
 

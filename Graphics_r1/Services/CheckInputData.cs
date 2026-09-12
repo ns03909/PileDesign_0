@@ -39,6 +39,15 @@ namespace PileDesign.Services
                     if (p == null) continue;
                     if (p.FoundationBeamDeltaZc <= 0)
                         warnings.Add($"杭 No.{p.No}: 接合-杭頭 ΔZc = {p.FoundationBeamDeltaZc:N3} (>0 で接合点が杭頭の上に来るのが正常)。");
+
+                    // 群杭係数 ξ は kh0 に、杭間隔比 R/B は後方杭の py に効く。
+                    // どちらも杭配置の入力で、入れ忘れると群杭の影響が消えたまま計算が通る。
+                    if (p.GroupPileFactor > 1.0)
+                        warnings.Add($"杭 No.{p.No}: 群杭係数 ξ = {p.GroupPileFactor:N3} が 1 を超えています " +
+                                     "(群杭は水平地盤反力を下げる側なので 1 以下が通常)。");
+                    if (!(p.PileSpacingFactor > 0))
+                        warnings.Add($"杭 No.{p.No}: 杭間隔比 R/B が未入力です。" +
+                                     "後方杭の塑性水平地盤反力 py は群杭の影響を考えない (単杭と同じ) 扱いで計算します。");
                 }
             }
 
@@ -116,6 +125,7 @@ namespace PileDesign.Services
             message = CheckSoilEmbedment(inputModel, message);
             message = CheckPileBodyGeometry(inputModel, message);
             message = CheckGroundLayerGeometry(inputModel, message);
+            message = CheckGroupPileFactor(inputModel, message);
 
             // モデルの「つながり」。剛性行列を組んでから初めて分かる不安定は、
             // 利用者に原因が読み取れない (「対角成分がゼロ」としか出ない)。
@@ -131,6 +141,32 @@ namespace PileDesign.Services
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             return false;
+        }
+
+        /// <summary>
+        /// 群杭係数 ξ の検査。
+        ///
+        /// ξ は基準水平地盤反力係数 kh0 に掛かる (基礎指針'19 (6.6.12)) ので、0 以下だと
+        /// <b>その杭の水平地盤ばねが全深さで消える</b>。剛性行列が特異になって解析が解けないか、
+        /// 解けても意味のない結果になるため、ここで名指しして止める。
+        /// 1 を超える値は物理的にありえないが計算は成り立つので、警告
+        /// (<see cref="CollectInputWarnings"/>) にとどめる。
+        /// </summary>
+        public static string CheckGroupPileFactor(InputModel inputModel, string message)
+        {
+            if (inputModel?.PileLayoutItems == null) return message;
+
+            foreach (var p in inputModel.PileLayoutItems)
+            {
+                if (p == null) continue;
+                if (!(p.GroupPileFactor > 0) || !double.IsFinite(p.GroupPileFactor))
+                {
+                    message += $"杭 No.{p.No}: 群杭係数 ξ = {p.GroupPileFactor} です " +
+                               "(0 より大きく 1 以下で入力してください)。" +
+                               "ξ は基準水平地盤反力係数 kh0 に掛かるため、0 以下だと水平地盤ばねが無くなります。\n";
+                }
+            }
+            return message;
         }
 
         /// <summary>

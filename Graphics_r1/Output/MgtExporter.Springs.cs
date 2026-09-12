@@ -20,6 +20,23 @@ namespace PileDesign.Output
             var funcIds = ctx.SpringFunctionIds;
             if (funcIds.Count == 0) return;
 
+            // 節点 → その節点を持つ杭の群杭の影響 (群杭係数 ξ・杭間隔比 R/B)。
+            // ξ・R/B は杭配置ごとの入力で、反力項目 (土層-杭セットで共有) には入っていないため、
+            // 杭から引き当てる。引き当てられない節点は単杭扱い (None)。
+            var effectByNode = new Dictionary<Node, GroupPileEffect>(ReferenceEqualityComparer.Instance);
+            if (_anaModel.InputModel?.PileLayoutItems != null)
+            {
+                foreach (var pile in _anaModel.InputModel.PileLayoutItems)
+                {
+                    if (pile?.PileNodes == null) continue;
+                    var pileEffect = GroupPileEffect.For(pile);
+                    foreach (var node in pile.PileNodes)
+                    {
+                        if (node != null) effectByNode[node] = pileEffect;
+                    }
+                }
+            }
+
             // 節点から地盤反力情報への参照を構築
             var reactionByNode = new Dictionary<Node, HorizontalSoilReactionItem>(ReferenceEqualityComparer.Instance);
             foreach (var beam in _anaModel.Beams)
@@ -41,7 +58,10 @@ namespace PileDesign.Output
                 HorizontalSoilReactionItem reaction = null;
                 if (spring.NodeI != null) reactionByNode.TryGetValue(spring.NodeI, out reaction);
 
-                double py = reaction?.PyFrontTop ?? 0;
+                var effect = GroupPileEffect.None;
+                if (spring.NodeI != null && effectByNode.TryGetValue(spring.NodeI, out var found)) effect = found;
+
+                double py = reaction?.GetPyFor(isTop: true, isFront: true, effect) ?? 0;
                 double B = reaction?.B ?? 1;
                 double tributary = reaction != null ? (reaction.ZTop - reaction.ZBtm) * 0.5 : 1;
 
@@ -54,7 +74,7 @@ namespace PileDesign.Output
                     double force;
                     if (reaction != null && py > 0)
                     {
-                        double p = reaction.GetP(y, py); // kN/m2
+                        double p = reaction.GetP(y, py, kh0: reaction.GetKh0For(effect)); // kN/m2
                         force = p * B * tributary; // kN
                     }
                     else

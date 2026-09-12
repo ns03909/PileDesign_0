@@ -667,8 +667,8 @@ namespace TestProject1
             // 力 p = K_sec × |y| を 2 点で計算、数値微分で接線を得る
             double B = item.B, DZ = Math.Abs(item.ZTop - item.ZBtm);
             double areaScale = B * DZ * 0.5;
-            double kSec1 = item.GetSoilSecantReactionCoefficient(y1, true, true);
-            double kSec2 = item.GetSoilSecantReactionCoefficient(y2, true, true);
+            double kSec1 = item.GetSoilSecantReactionCoefficient(y1, true, true, PileDesign.Models.InputData.GroupPileEffect.None);
+            double kSec2 = item.GetSoilSecantReactionCoefficient(y2, true, true, PileDesign.Models.InputData.GroupPileEffect.None);
             double p1 = kSec1 * y1 / areaScale; // kh_sec 相当に戻す
             double p2 = kSec2 * y2 / areaScale;
             double numericalTangent = (p2 - p1) / (y2 - y1);

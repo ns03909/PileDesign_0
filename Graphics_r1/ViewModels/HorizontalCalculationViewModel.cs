@@ -2201,7 +2201,8 @@ namespace PileDesign.ViewModels
                         var sp = soilPiles[soilIdx];
                         if (sp?.HorizontalSoilReactions != null && sp.HorizontalSoilReactions.Count > 0)
                         {
-                            double kh0 = sp.HorizontalSoilReactions[0].Kh0;
+                            // 群杭係数 ξ は杭ごとの入力。剛心の重みも ξ を掛けた kh0 で取る
+                            double kh0 = sp.HorizontalSoilReactions[0].GetKh0For(GroupPileEffect.For(pli));
                             if (kh0 > 0)
                             {
                                 sumKX += pli.X * kh0;
@@ -2238,7 +2239,7 @@ namespace PileDesign.ViewModels
                     if (soilPiles == null || soilIdx < 0 || soilIdx >= soilPiles.Count) continue;
                     var sp = soilPiles[soilIdx];
                     if (sp?.HorizontalSoilReactions == null || sp.HorizontalSoilReactions.Count == 0) continue;
-                    double kh0 = sp.HorizontalSoilReactions[0].Kh0;
+                    double kh0 = sp.HorizontalSoilReactions[0].GetKh0For(GroupPileEffect.For(pli));
                     if (kh0 <= 0) continue;
                     double dx = pli.X - rgCx;
                     double dy = pli.Y - rgCy;

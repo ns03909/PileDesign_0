@@ -1826,9 +1826,15 @@ namespace PileDesign.ViewModels
 
             SoilPiles[soilPileNo - 1].OnZDataItemsChanged(SoilPiles[soilPileNo - 1].ZDataItems);
 
-            // HorizontalSoilReactionsの更新
-            SoilPiles[soilPileNo - 1].HorizontalSoilReactions = new ObservableCollection<HorizontalSoilReactionItem>
-                (SelectedHorizontalSoilReactions.Select(horizontalSoilReaction => horizontalSoilReaction.DeepCopy()));
+            // 水平地盤反力は書き戻さない。
+            //
+            // 上の ZDataItems 代入 (OnZDataItemsChanged) で、モデル側が自分の入力から
+            // 組み直している。ここで画面側の写し (SelectedHorizontalSoilReactions) を
+            // 上書きすると、このウィンドウの<b>表示専用</b>の群杭係数 ξ・杭間隔比 R/B
+            // (既定 1 と 10) が解析に入り、ウィンドウを開いて OK したかどうかで
+            // 結果が変わっていた。ξ・R/B は杭配置の入力で、解析は評価時に
+            // GroupPileEffect として渡す (2026-09-12)。
+            // kh0 の手入力は SoilPile.Kh0LayerOverrides に持っているので、組み直しても残る。
         }
 
         [RelayCommand]

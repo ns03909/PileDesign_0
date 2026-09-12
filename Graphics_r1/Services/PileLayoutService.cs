@@ -70,7 +70,12 @@ namespace PileDesign.Services
                     {
                         X = pile.X + deltaX * (i + 1),
                         Y = pile.Y + deltaY * (i + 1),
-                        Z = pile.Z + deltaZ * (i + 1)
+                        Z = pile.Z + deltaZ * (i + 1),
+                        // 群杭係数 ξ・杭間隔比 R/B は複製元から引き継ぐ。
+                        // 解析の地盤ばねに効くようになったので、既定値 (ξ=1・R/B 未設定) に
+                        // 戻ると複製した杭だけ群杭の影響が消える (2026-09-12)。
+                        GroupPileFactor = pile.GroupPileFactor,
+                        PileSpacingFactor = pile.PileSpacingFactor,
                     };
                     viewModelSetter(newItem);
                     newItems.Add(newItem);

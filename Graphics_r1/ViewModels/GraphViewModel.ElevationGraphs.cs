@@ -435,6 +435,9 @@ namespace PileDesign.ViewModels
                                             && iLC < pileLayoutDataItem.IsFrontPiles.Count
                                             && pileLayoutDataItem.IsFrontPiles[iLC];
 
+                                // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B) も解析と同じものを使う
+                                var groupPileEffect = Models.InputData.GroupPileEffect.For(pileLayoutDataItem);
+
                                 // 各節点 k の理論 上/下 寄与 (FEM と同じモデルで再計算) と、FEM 実測値に合わせた
                                 // 比例スケール factor を計算
                                 //   F_above_k: 節点 k の上方セグメント (k-1) の下半分寄与 (isTop=false)
@@ -450,9 +453,9 @@ namespace PileDesign.ViewModels
                                     //   上方寄与: k > 0 かつ セグメント k-1 が存在
                                     //   下方寄与: k が最終節点でない (k < nSprings - 1) かつ セグメント k が存在
                                     if (k > 0 && (k - 1) < reactions.Count)
-                                        fAboveTh = Math.Abs(reactions[k - 1].GetSoilReaction(y, isTop: false, isFront, loadCase.SoilNonlinearityMode));
+                                        fAboveTh = Math.Abs(reactions[k - 1].GetSoilReaction(y, isTop: false, isFront, groupPileEffect, loadCase.SoilNonlinearityMode));
                                     if (k < nSprings - 1 && k < reactions.Count)
-                                        fBelowTh = Math.Abs(reactions[k].GetSoilReaction(y, isTop: true, isFront, loadCase.SoilNonlinearityMode));
+                                        fBelowTh = Math.Abs(reactions[k].GetSoilReaction(y, isTop: true, isFront, groupPileEffect, loadCase.SoilNonlinearityMode));
 
                                     // 純理論モード時は scale=1 (FEM スケールなし、理論値そのまま)
                                     double sum = fAboveTh + fBelowTh;

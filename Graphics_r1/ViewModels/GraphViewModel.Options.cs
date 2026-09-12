@@ -106,6 +106,8 @@ namespace PileDesign.ViewModels
             int idx = oneBased - 1;
 
             var reactions = new List<HorizontalSoilReactionItem>();
+            // 群杭係数 ξ・杭間隔比 R/B は杭ごとの入力なので、反力項目ではなく杭から読む
+            var reactionPiles = new List<Models.InputData.PileLayoutDataItem>();
             foreach (var pile in GetSelectedPileLayouts())
             {
                 if (pile.SoilPileAltNo <= 0 || pile.SoilPileAltNo > InputModel.ElementDivision.SoilPiles.Count) continue;
@@ -113,6 +115,7 @@ namespace PileDesign.ViewModels
                 if (sp?.HorizontalSoilReactions == null) continue;
                 if (idx < 0 || idx >= sp.HorizontalSoilReactions.Count) continue;
                 reactions.Add(sp.HorizontalSoilReactions[idx]);
+                reactionPiles.Add(pile);
             }
 
             if (reactions.Count == 0)
@@ -139,12 +142,19 @@ namespace PileDesign.ViewModels
             string b = CommonNum(reactions.Select(r => r.B * 1000.0), "F0");
             string nValue = CommonNum(reactions.Select(r => r.NValue), "F1");
 
+            string xi = CommonNum(reactionPiles.Select(p => p.GroupPileFactor), "F3");
+            string spacing = reactionPiles.Count > 0 && reactionPiles.All(p => !(p.PileSpacingFactor > 0))
+                ? "未入力 (群杭の影響なし)"
+                : CommonNum(reactionPiles.Select(p => p.PileSpacingFactor), "F3");
+
             SelectedPileSegmentDetails =
                 $"地盤層: {name}\n" +
                 $"土質: {soilType}\n" +
                 $"標高: {zTop} ~ {zBtm} m\n" +
                 $"杭径 B: {b} mm\n" +
-                $"N 値: {nValue}";
+                $"N 値: {nValue}\n" +
+                $"群杭係数 ξ: {xi}\n" +
+                $"杭間隔比 R/B: {spacing}";
         }
 
         // M/Qdスライダー表示

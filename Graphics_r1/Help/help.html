@@ -1408,6 +1408,10 @@
                 地盤の変形係数・杭径から自動計算されますが、<strong>セルを直接編集して任意の値を入力</strong>できます。
                 入力は<strong>土層単位</strong>で、同じ土層内の全要素に適用されます（現在選択中の土層-杭セットに保存されます）。
                 手入力した値は太字・アクセント色で表示され、安全限界 NM ではなく水平解析（p-y 曲線の初期勾配）に用いられます。<br>
+                <strong>手入力した k<sub>h0</sub> にも群杭係数 &xi; が掛かります。</strong>
+                &xi; は地盤の硬さではなく杭の並び（杭間隔比と杭本数）で決まる係数なので、
+                k<sub>h0</sub> を手で与えても群杭の影響は別に効かせる必要があるためです。
+                &xi; を含めた値を直接入力したい場合は、杭配置側の群杭係数を 1 にしてください。<br>
                 自動計算値に戻すには、グリッドを右クリックして「選択した土層の k<sub>h0</sub> を自動計算に戻す」
                 または「全土層の k<sub>h0</sub> を自動計算に戻す」を選びます。
             </p>
@@ -8052,8 +8056,12 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
             <h4>Q: 群杭効果はどのように考慮されますか？</h4>
             <p>
-                <strong>A:</strong> 水平解析では、基礎指針'19に基づき
-                杭間隔比(R/B)と杭本数から自動計算値を <img class="button-icon" src="icons/GroupPileGraph.svg" alt="">「群杭係数グラフ確認」 で確認できますが、適用するには手動での設定が必要です。
+                <strong>A:</strong> 杭配置ごとに入力する<strong>群杭係数 &xi;</strong> と<strong>杭間隔比 R/B</strong> が、
+                水平解析の地盤ばねに効きます。&xi; は基準水平地盤反力係数 k<sub>h0</sub> に掛かり（手入力した k<sub>h0</sub> にも掛かります）、
+                R/B は<strong>後方杭</strong>の塑性水平地盤反力度 p<sub>y</sub>（&kappa;・&mu;・&lambda;）に入ります。
+                &xi; の値は基礎指針'19 図6.6.16 から杭間隔比と杭本数で読み取れます。
+                <img class="button-icon" src="icons/GroupPileGraph.svg" alt="">「群杭係数グラフ確認」で確認し、<strong>「モデルの全杭に適用」で杭配置へ書き込んでください</strong>（自動では入りません）。
+                R/B が未入力（0 以下）の杭は、群杭の影響を考えない（単杭と同じ）扱いで計算し、解析前の確認で知らせます。
             </p>
 
             <h4>Q: 杭の極限先端支持力度 \(q_p\) が想定より小さくなります</h4>
@@ -9648,7 +9656,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 <ul class="symbol-list">
                     <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$\alpha$</span>80</li>
-                    <li><span class="symbol-label">$\xi$</span>水平地盤反力に群杭の影響を考慮する係数</li>
+                    <li><span class="symbol-label">$\xi$</span>水平地盤反力に群杭の影響を考慮する係数（<strong>杭配置ごとの入力「群杭係数」</strong>。データタブ「杭」→「配置」で入力し、<img class="button-icon" src="icons/GroupPileGraph.svg" alt="">「群杭係数グラフ確認」で基礎指針'19 図6.6.16 から読み取れます）</li>
                     <li><span class="symbol-label">$B$</span>杭径</li>
                     <li><span class="symbol-label">$\overline{B}$</span>無次元化杭径(=$B/B_0$)</li>
                     <li><span class="symbol-label">$B_0$</span>杭径の基準値(=0.01)</li>
@@ -10006,6 +10014,11 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     <div class="formula-right">基礎指針'19 表6.6.3</div>
                 </div>
                 <p>本プログラムでは、後方杭の $\kappa$ は前方杭の値 3 を上限とします。</p>
+                <p>
+                    $R/B$ は<strong>杭配置ごとの入力「杭間隔比」</strong>です。
+                    <strong>未入力（0 以下）の杭は群杭の影響を考えず</strong>、後方杭でも前方杭と同じ
+                    $\kappa = 3$・$\mu = 1.4$・$\lambda = 9.0$ を用います（解析前の確認で知らせます）。
+                </p>
 
                 <p><strong>単杭および前方杭の場合</strong></p>
                 <div class="formula-block">
