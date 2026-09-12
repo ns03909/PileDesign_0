@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
+using PileDesign.ViewModels;
 using System;
 using System.Text.RegularExpressions;
 
@@ -34,6 +35,57 @@ namespace TestProject1
                 g.GroundMassesData.Add(m);
             }
             return g;
+        }
+
+        /// <summary>
+        /// 液状化分 ΣγcyH は「その質点より下にある層の γcy·H の総和」であること。
+        ///
+        /// <para>これが層の上端に置く<b>物理の根拠</b>。ΣγcyH は基盤面から上へ積んだせん断ひずみの
+        /// 積分なので、値が属する位置は積分を止めた位置＝質点そのもの（層の上端）である。
+        /// 層厚 H は質点 i と質点 i+1 の間の層のもの（ばね剛性 K = ρVse²/H と同じ区間）なので、
+        /// 質点 i の総和には自分の層 i が丸ごと入る。土質データの深度（層のほぼ中央）に置くと
+        /// 半層ぶん深くへずれる。</para>
+        /// </summary>
+        [TestMethod]
+        public void TheLiquefactionShearStrainIsIntegratedUpToTheNode()
+        {
+            var vm = new GroundLayerViewModel(new MainWindowViewModel());
+            var g = new GroundInput { GroundTopAltitude = 0.0 };
+            g.GroundMassesData = [];
+
+            double[] h = [2.0, 3.0, 1.5];
+            double[] gammaCy = [4.0, 2.0, 1.0];   // %
+            for (int i = 0; i < h.Length; i++)
+            {
+                var m = new GroundMassDataInput { H = h[i], GLDepth = -(1.0 + i), IsEngineeringBedrock = false };
+                m.GammaCy = [gammaCy[i], gammaCy[i]];
+                g.GroundMassesData.Add(m);
+            }
+            // 最後の質点は工学的基盤面 (変位 0 の基準)
+            var bedrock = new GroundMassDataInput { H = 0.0, GLDepth = -10.0, IsEngineeringBedrock = true };
+            bedrock.GammaCy = [0.0, 0.0];
+            g.GroundMassesData.Add(bedrock);
+
+            vm.GroundInput = g;
+            vm.RecalculateSigmaGammaCyH();
+
+            // 期待値: 質点 i から下の層の γcy[%]/100 × H[m] × 1000 [mm] の総和
+            for (int level = 0; level < 2; level++)
+            {
+                for (int i = 0; i < h.Length; i++)
+                {
+                    double expected = 0.0;
+                    for (int j = i; j < h.Length; j++)
+                        expected += gammaCy[j] / 100.0 * h[j] * 1000.0;
+
+                    Assert.AreEqual(expected, g.GroundMassesData[i].SigmaGammaCyH[level], 1e-9,
+                        $"レベル{level + 1} 質点{i + 1}: ΣγcyH がその質点より下の層の総和になっていません。"
+                        + "積分を止めた位置 (= 質点 = 層の上端) の値であることが、変位をそこに置く根拠です");
+                }
+            }
+
+            Assert.AreEqual(0.0, g.GroundMassesData[^1].SigmaGammaCyH[0], 0.0,
+                "工学的基盤面の変位は 0 であること (積分の起点)");
         }
 
         [TestMethod]
