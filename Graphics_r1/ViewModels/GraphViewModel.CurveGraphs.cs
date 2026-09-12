@@ -948,16 +948,32 @@ namespace PileDesign.ViewModels
 
                 // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B)。解析と同じ p-y 曲線を描くために必要
                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pileLayout);
-                double kh0ForPile = 0.0; // 要素ごとに求める (下の reaction が決まってから)
+
+                // 液状化の低減率 βL は要素ごと・レベルごとに違い、液状化を考慮するケースだけ 1 未満になる。
+                // kh0 と py の両方に掛かるので、βL が違えば曲線も別物になる。マーカー (解析結果) は
+                // 必ず自分のケースの曲線上に乗る必要があるため、βL の種類だけ曲線を描く。
+                var curveGround = soilPile.GroundInput;
+                double BetaFor(int level, bool isLiq, int segIndex)
+                    => (isLiq && curveGround != null && segIndex >= 0 && segIndex < reactions.Count)
+                        ? curveGround.LiquefactionReductionAt(reactions[segIndex].ZTop, reactions[segIndex].ZBtm, level - 1)
+                        : 1.0;
 
                 foreach (int segIdx in segIndices)
                 {
                 var reaction = reactions[segIdx];
 
-                // 理論P-y曲線（Top/Btm）を描画
-                double pyTop = reaction.GetPyFor(isTop: true, isFront, groupPileEffect);
-                double pyBtm = reaction.GetPyFor(isTop: false, isFront, groupPileEffect);
-                kh0ForPile = reaction.GetKh0For(groupPileEffect);
+                // この要素に現れる βL の種類 (値が同じものは 1 本にまとめるので、
+                // 液状化していない要素は従来どおり 1 本のまま)
+                var betaVariants = new List<double>();
+                foreach (var lcForBeta in selectedLoadCases)
+                {
+                    foreach (var liqForBeta in SelectedLiquefactionCases)
+                    {
+                        double b = BetaFor(lcForBeta.Level, liqForBeta, segIdx);
+                        if (!betaVariants.Any(v => Math.Abs(v - b) < 1e-12)) betaVariants.Add(b);
+                    }
+                }
+                if (betaVariants.Count == 0) betaVariants.Add(1.0);
 
                 // P-y曲線のサンプリング点（小変位域を細かく、大変位域は粗く）
                 var yValues = new List<double>();
@@ -981,18 +997,31 @@ namespace PileDesign.ViewModels
                     string modeSuffix = curveModes.Count > 1
                         ? $"|{SoilNonlinearityModes.ToShortText(curveMode)}" : "";
 
-                    // Top曲線
-                    var ysT = yValues.Select(y => reaction.GetP(y, pyTop, curveMode, kh0ForPile)).ToArray();
-                    var curveT = wpfPlot.Plot.Add.ScatterLine(xsT, ysT);
-                    curveT.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Top{modeSuffix}";
-                    _graphHoverMap[curveT] = pyDetails;
+                    foreach (double beta in betaVariants)
+                    {
+                        var curveEffect = groupPileEffect.WithLiquefaction(beta);
+                        double pyTop = reaction.GetPyFor(isTop: true, isFront, curveEffect);
+                        double pyBtm = reaction.GetPyFor(isTop: false, isFront, curveEffect);
+                        double kh0ForCurve = reaction.GetKh0For(curveEffect);
+                        // βL が 1 種類なら凡例は簡潔に保つ
+                        string betaSuffix = betaVariants.Count > 1 ? $"|βL={beta:0.00}" : "";
+                        string curveDetails = beta < 1.0 - 1e-9
+                            ? pyDetails + $"\n液状化低減 βL: {beta:0.00}"
+                            : pyDetails;
 
-                    // Btm曲線（X値は同じ）
-                    var ysB = yValues.Select(y => reaction.GetP(y, pyBtm, curveMode, kh0ForPile)).ToArray();
-                    var curveB = wpfPlot.Plot.Add.ScatterLine(xsT, ysB);
-                    curveB.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Btm{modeSuffix}";
-                    curveB.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
-                    _graphHoverMap[curveB] = pyDetails;
+                        // Top曲線
+                        var ysT = yValues.Select(y => reaction.GetP(y, pyTop, curveMode, kh0ForCurve)).ToArray();
+                        var curveT = wpfPlot.Plot.Add.ScatterLine(xsT, ysT);
+                        curveT.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Top{modeSuffix}{betaSuffix}";
+                        _graphHoverMap[curveT] = curveDetails;
+
+                        // Btm曲線（X値は同じ）
+                        var ysB = yValues.Select(y => reaction.GetP(y, pyBtm, curveMode, kh0ForCurve)).ToArray();
+                        var curveB = wpfPlot.Plot.Add.ScatterLine(xsT, ysB);
+                        curveB.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Btm{modeSuffix}{betaSuffix}";
+                        curveB.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+                        _graphHoverMap[curveB] = curveDetails;
+                    }
                 }
 
                 // 最終ステップのマーカーを描画（i端・j端）
@@ -1001,13 +1030,15 @@ namespace PileDesign.ViewModels
                 if (springs == null) continue;
 
                 // i端 = node segIdx, j端 = node segIdx+1
-                var endNodes = new List<(int nodeIdx, string label, double py, ScottPlot.MarkerShape shape)>();
+                // py は液状化の低減 βL がケースごとに違うので、ここでは端 (上/下) だけを持ち、
+                // 値はケースが決まってから求める
+                var endNodes = new List<(int nodeIdx, string label, bool isTop, ScottPlot.MarkerShape shape)>();
                 if (segIdx < springs.Count)
-                    endNodes.Add((segIdx, "i端", pyTop, ScottPlot.MarkerShape.FilledCircle));
+                    endNodes.Add((segIdx, "i端", true, ScottPlot.MarkerShape.FilledCircle));
                 if (segIdx + 1 < springs.Count)
-                    endNodes.Add((segIdx + 1, "j端", pyBtm, ScottPlot.MarkerShape.FilledSquare));
+                    endNodes.Add((segIdx + 1, "j端", false, ScottPlot.MarkerShape.FilledSquare));
 
-                foreach (var (nodeIdx, endLabel, py, shape) in endNodes)
+                foreach (var (nodeIdx, endLabel, isTopEnd, shape) in endNodes)
                 {
                     var spring = springs[nodeIdx];
 
@@ -1034,8 +1065,12 @@ namespace PileDesign.ViewModels
                                 double relDisp = Math.Sqrt(relDispX * relDispX + relDispY * relDispY);
                                 double relDispMm = relDisp * 1000.0;
 
-                                // Y軸は理論値（P-y曲線上の値）
-                                double pTheory = reaction.GetP(relDisp, py, loadCase.SoilNonlinearityMode, kh0ForPile);
+                                // Y軸は理論値（P-y曲線上の値）。βL はこのケースのものを使う
+                                var markerEffect = groupPileEffect.WithLiquefaction(
+                                    BetaFor(loadCase.Level, isLiquefaction, segIdx));
+                                double py = reaction.GetPyFor(isTopEnd, isFront, markerEffect);
+                                double pTheory = reaction.GetP(relDisp, py, loadCase.SoilNonlinearityMode,
+                                    reaction.GetKh0For(markerEffect));
 
                                 string legend = $"LC:{loadCase.LoadName}|LIQ:{isLiquefaction}|P{pileLayout.No}|{endLabel}";
 

@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 using System;
 using System.Text.RegularExpressions;
@@ -36,7 +36,7 @@ namespace TestProject1
         }
 
         private static GroupPileEffect Effect(double xi, double rOnB)
-            => new() { Xi = xi, ROnB = rOnB };
+            => new() { Xi = xi, ROnB = rOnB, BetaL = 1.0 };   // βL は液状化の低減 (ここでは 1 = 低減なし)
 
         // ── 群杭係数 ξ ────────────────────────────────────────────
 

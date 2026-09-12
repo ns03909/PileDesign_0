@@ -339,6 +339,10 @@ namespace PileDesign.ViewModels
 
                         // 地盤 (p-y) 非線形モードはケース単位の設定。PrepareKmat が caseModel から読む。
                         caseModel.SoilNonlinearityMode = loadCase.SoilNonlinearityMode;
+                        // 液状化による水平地盤反力の低減率 βL もケース単位 (レベル別・液状化ケースのみ)。
+                        // 同じく PrepareKmat が caseModel から読む。
+                        caseModel.CaseLevel = level;
+                        caseModel.CaseIsLiquefaction = isLiquefaction;
 
                         // ── 軸剛性 0 (Uz 解放): 引張定着筋なし半剛接合 (キャプテン/F.T.Pile/キャプリング) で
                         //    入力軸力が引張となる杭について、case-local モデルの杭頭 Uz master-slave を
@@ -947,6 +951,12 @@ namespace PileDesign.ViewModels
                                             // VL ケースは iLC=-1 となるため >=0 チェック必須
                                             bool isFront = pli.IsFrontPiles != null && iLC >= 0 && iLC < pli.IsFrontPiles.Count && pli.IsFrontPiles[iLC];
                                             var groupPileEffect = Models.InputData.GroupPileEffect.For(pli);
+                                            // 液状化の低減率 βL は要素ごと。ばねの組立 (PrepareKmat) と同じ値を使う
+                                            var pliGround = InputModel.ElementDivision?.SoilPiles?[pli.SoilPileAltNo - 1]?.GroundInput;
+                                            bool applyBeta = isLiquefaction && pliGround != null;
+                                            double BetaAt(int e) => applyBeta && e >= 0 && e < reactions.Count
+                                                ? pliGround!.LiquefactionReductionAt(reactions[e].ZTop, reactions[e].ZBtm, loadCase.Level - 1)
+                                                : 1.0;
                                             // E3b: case-local な PileNodes / SoilNodes を取得
                                             var pliPileNodes = caseModel.GetPileNodes(pli);
                                             var pliSoilNodes = caseModel.GetSoilNodes(pli);
@@ -958,12 +968,12 @@ namespace PileDesign.ViewModels
                                                 var rel = pn.CumulativeDisp - sn.CumulativeDisp;
                                                 double abs = Math.Sqrt(rel.Ux * rel.Ux + rel.Uy * rel.Uy);
                                                 // i-1 (bottom side) と i (top side) の 2 層
-                                                if (i > 0 && i - 1 < reactions.Count && reactions[i - 1].IsYieldedAtY(abs, isTop: false, isFront, groupPileEffect, loadCase.SoilNonlinearityMode))
+                                                if (i > 0 && i - 1 < reactions.Count && reactions[i - 1].IsYieldedAtY(abs, isTop: false, isFront, groupPileEffect.WithLiquefaction(BetaAt(i - 1)), loadCase.SoilNonlinearityMode))
                                                 {
                                                     string key = $"{pli.No}-{i}-btm";
                                                     currentYieldedSoilSprings.Add(key);
                                                 }
-                                                if (i < reactions.Count && reactions[i].IsYieldedAtY(abs, isTop: true, isFront, groupPileEffect, loadCase.SoilNonlinearityMode))
+                                                if (i < reactions.Count && reactions[i].IsYieldedAtY(abs, isTop: true, isFront, groupPileEffect.WithLiquefaction(BetaAt(i)), loadCase.SoilNonlinearityMode))
                                                 {
                                                     string key = $"{pli.No}-{i}-top";
                                                     currentYieldedSoilSprings.Add(key);

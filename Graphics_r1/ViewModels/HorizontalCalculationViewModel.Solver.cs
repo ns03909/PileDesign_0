@@ -892,6 +892,19 @@ namespace PileDesign.ViewModels
                 var pileSprings = model.GetPileHorizontalSoilSprings(pileLayoutItem);
 
                 int reactionCount = horizontalReactions.Count;
+
+                // 液状化による水平地盤反力の低減率 βL (基礎指針'19 表4.5.1)。kh0 と py の両方に掛かる。
+                // 深さ (土質点) ごと・レベルごとに違うので要素単位に持つ。液状化を考慮しないケースと
+                // VL は 1 (低減なし)。判定していない地盤も 1 になる (GroundInput.LiquefactionReductionAt)。
+                var betaL = new double[reactionCount];
+                Array.Fill(betaL, 1.0);
+                var pileGround = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1].GroundInput;
+                if (model.CaseIsLiquefaction && pileGround != null)
+                {
+                    for (int e = 0; e < reactionCount; e++)
+                        betaL[e] = pileGround.LiquefactionReductionAt(
+                            horizontalReactions[e].ZTop, horizontalReactions[e].ZBtm, model.CaseLevel - 1);
+                }
                 for (int i = 0; i < pileNodes.Count; i++)
                 {
                     var pileNode = pileNodes[i];
@@ -908,14 +921,16 @@ namespace PileDesign.ViewModels
                     if (i > 0 && i - 1 < reactionCount)
                     {
                         bool isTop = false;
-                        kTan += horizontalReactions[i - 1].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile, groupPileEffect, soilMode);
-                        kSec += horizontalReactions[i - 1].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile, groupPileEffect, soilMode);
+                        var effAbove = groupPileEffect.WithLiquefaction(betaL[i - 1]);
+                        kTan += horizontalReactions[i - 1].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile, effAbove, soilMode);
+                        kSec += horizontalReactions[i - 1].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile, effAbove, soilMode);
                     }
                     if (i < pileNodes.Count - 1 && i < reactionCount)
                     {
                         bool isTop = true;
-                        kTan += horizontalReactions[i].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile, groupPileEffect, soilMode);
-                        kSec += horizontalReactions[i].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile, groupPileEffect, soilMode);
+                        var effBelow = groupPileEffect.WithLiquefaction(betaL[i]);
+                        kTan += horizontalReactions[i].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile, effBelow, soilMode);
+                        kSec += horizontalReactions[i].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile, effBelow, soilMode);
                     }
 
                     kTan = SafeK(kTan);

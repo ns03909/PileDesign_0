@@ -437,6 +437,12 @@ namespace PileDesign.ViewModels
 
                                 // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B) も解析と同じものを使う
                                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pileLayoutDataItem);
+                                // 液状化の低減率 βL も要素ごとに解析と同じ値を使う
+                                var graphGround = InputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1].GroundInput;
+                                bool applyBeta = isLiquefaction && graphGround != null;
+                                double BetaAt(int e) => applyBeta && e >= 0 && e < reactions.Count
+                                    ? graphGround!.LiquefactionReductionAt(reactions[e].ZTop, reactions[e].ZBtm, loadCase.Level - 1)
+                                    : 1.0;
 
                                 // 各節点 k の理論 上/下 寄与 (FEM と同じモデルで再計算) と、FEM 実測値に合わせた
                                 // 比例スケール factor を計算
@@ -453,9 +459,9 @@ namespace PileDesign.ViewModels
                                     //   上方寄与: k > 0 かつ セグメント k-1 が存在
                                     //   下方寄与: k が最終節点でない (k < nSprings - 1) かつ セグメント k が存在
                                     if (k > 0 && (k - 1) < reactions.Count)
-                                        fAboveTh = Math.Abs(reactions[k - 1].GetSoilReaction(y, isTop: false, isFront, groupPileEffect, loadCase.SoilNonlinearityMode));
+                                        fAboveTh = Math.Abs(reactions[k - 1].GetSoilReaction(y, isTop: false, isFront, groupPileEffect.WithLiquefaction(BetaAt(k - 1)), loadCase.SoilNonlinearityMode));
                                     if (k < nSprings - 1 && k < reactions.Count)
-                                        fBelowTh = Math.Abs(reactions[k].GetSoilReaction(y, isTop: true, isFront, groupPileEffect, loadCase.SoilNonlinearityMode));
+                                        fBelowTh = Math.Abs(reactions[k].GetSoilReaction(y, isTop: true, isFront, groupPileEffect.WithLiquefaction(BetaAt(k)), loadCase.SoilNonlinearityMode));
 
                                     // 純理論モード時は scale=1 (FEM スケールなし、理論値そのまま)
                                     double sum = fAboveTh + fBelowTh;

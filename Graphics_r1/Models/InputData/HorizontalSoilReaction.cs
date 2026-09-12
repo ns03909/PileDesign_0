@@ -111,6 +111,7 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// この要素の塑性水平地盤反力度 py (kN/m²)。杭間隔比 R/B は評価時に渡されたものを使う。
         /// 保存されている <c>Py*</c> は R/B 未設定 (群杭の影響なし) の基準値。
+        /// 液状化の低減 βL は呼び出し側で掛ける。
         /// </summary>
         private double PyAt(bool isTop, bool isFront, double rOnB)
             => GetPy(SoilType, isFront, B, isTop ? ZTop : ZBtm, rOnB, Phi, Cu,
@@ -121,8 +122,8 @@ namespace PileDesign.Models.InputData
             in GroupPileEffect effect,
             SoilNonlinearityMode mode = SoilNonlinearityMode.KhReductionWithPy)
         {
-            double py = PyAt(isTop, isFront, effect.ROnB);
-            return GetP(y, py, mode, Kh0 * effect.Xi) * B * (ZTop - ZBtm) * 0.5;
+            double py = PyAt(isTop, isFront, effect.ROnB) * effect.BetaL;
+            return GetP(y, py, mode, Kh0 * effect.Kh0Factor) * B * (ZTop - ZBtm) * 0.5;
         }
 
         //  接線剛性を返すメソッド (kN/m)
@@ -130,16 +131,16 @@ namespace PileDesign.Models.InputData
             in GroupPileEffect effect,
             SoilNonlinearityMode mode = SoilNonlinearityMode.KhReductionWithPy)
         {
-            double py = PyAt(isTop, isFront, effect.ROnB);
-            return GetkhTan(Kh0 * effect.Xi, y, py, mode) * B * (ZTop - ZBtm) * 0.5;
+            double py = PyAt(isTop, isFront, effect.ROnB) * effect.BetaL;
+            return GetkhTan(Kh0 * effect.Kh0Factor, y, py, mode) * B * (ZTop - ZBtm) * 0.5;
         }
 
         public double GetSoilSecantReactionCoefficient(double y, bool isTop, bool isFront,
             in GroupPileEffect effect,
             SoilNonlinearityMode mode = SoilNonlinearityMode.KhReductionWithPy)
         {
-            double py = PyAt(isTop, isFront, effect.ROnB);
-            return GetKh(Kh0 * effect.Xi, y, py, mode) * B * (ZTop - ZBtm) * 0.5;
+            double py = PyAt(isTop, isFront, effect.ROnB) * effect.BetaL;
+            return GetKh(Kh0 * effect.Kh0Factor, y, py, mode) * B * (ZTop - ZBtm) * 0.5;
         }
 
         /// <summary>
@@ -154,8 +155,8 @@ namespace PileDesign.Models.InputData
             SoilNonlinearityMode mode = SoilNonlinearityMode.KhReductionWithPy)
         {
             if (mode != SoilNonlinearityMode.KhReductionWithPy) return false;
-            double py = PyAt(isTop, isFront, effect.ROnB);
-            double kh0 = Kh0 * effect.Xi;
+            double py = PyAt(isTop, isFront, effect.ROnB) * effect.BetaL;
+            double kh0 = Kh0 * effect.Kh0Factor;
             if (py <= 0 || kh0 <= 0) return false;
             double yy = GetYieldDisplacement(kh0, py);
             return Math.Abs(y) >= yy;
@@ -316,10 +317,13 @@ namespace PileDesign.Models.InputData
         /// グラフ・表示が解析と同じ値を出すための公開口。
         /// </summary>
         public double GetPyFor(bool isTop, bool isFront, in GroupPileEffect effect)
-            => PyAt(isTop, isFront, effect.ROnB);
+            => PyAt(isTop, isFront, effect.ROnB) * effect.BetaL;
 
-        /// <summary>この杭における基準水平地盤反力係数 kh0 (kN/m³)。手入力の上書きにも ξ が掛かる。</summary>
-        public double GetKh0For(in GroupPileEffect effect) => Kh0 * effect.Xi;
+        /// <summary>
+        /// この杭・この要素における基準水平地盤反力係数 kh0 (kN/m³)。
+        /// 手入力で上書きした kh0 にも 群杭係数 ξ と液状化低減率 βL が掛かる。
+        /// </summary>
+        public double GetKh0For(in GroupPileEffect effect) => Kh0 * effect.Kh0Factor;
 
         // 基準水平地盤反力係数kh0を返すメソッド (kN/m3)
         private static double GetKh0(double alpha, double xi, double e0, double b)
@@ -428,14 +432,30 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public double ROnB { get; init; }
 
-        /// <summary>群杭の影響を考えない (単杭と同じ) 補正。杭を特定できない表示用。</summary>
-        public static GroupPileEffect None => new() { Xi = 1.0, ROnB = 0.0 };
+        /// <summary>
+        /// 液状化による水平地盤反力の低減率 βL (基礎指針'19 表4.5.1)。<b>kh0 と py の両方に掛ける。</b>
+        /// 1 = 低減なし。液状化を考慮しないケース・液状化判定の対象外の層・VL では 1。
+        ///
+        /// <para>βL は深さ (土質点) ごと・地震動レベルごとに違うので、杭単位ではなく
+        /// <b>要素単位</b>に付ける。<see cref="WithLiquefaction"/> で要素ごとの写しを作る。</para>
+        /// </summary>
+        public double BetaL { get; init; }
 
-        /// <summary>この杭配置の入力から作る。</summary>
+        /// <summary>群杭の影響・液状化の低減を考えない (単杭・非液状化) 補正。杭を特定できない表示用。</summary>
+        public static GroupPileEffect None => new() { Xi = 1.0, ROnB = 0.0, BetaL = 1.0 };
+
+        /// <summary>この杭配置の入力から作る (βL は 1 = 液状化の低減なし)。</summary>
         public static GroupPileEffect For(PileLayoutDataItem pile)
             => pile == null
                 ? None
-                : new GroupPileEffect { Xi = pile.GroupPileFactor, ROnB = pile.PileSpacingFactor };
+                : new GroupPileEffect { Xi = pile.GroupPileFactor, ROnB = pile.PileSpacingFactor, BetaL = 1.0 };
+
+        /// <summary>この要素の液状化低減率 βL を付けた写しを返す。</summary>
+        public GroupPileEffect WithLiquefaction(double betaL)
+            => new() { Xi = Xi, ROnB = ROnB, BetaL = betaL };
+
+        /// <summary>kh0 に掛ける係数 (群杭係数 ξ × 液状化低減率 βL)。</summary>
+        public double Kh0Factor => Xi * BetaL;
     }
 
     /// <summary>

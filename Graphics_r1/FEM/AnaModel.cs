@@ -118,6 +118,20 @@ namespace PileDesign.FEM
         [JsonIgnore]
         public SoilNonlinearityMode SoilNonlinearityMode { get; set; } = SoilNonlinearityMode.KhReductionWithPy;
 
+        /// <summary>
+        /// このモデルで解析中の荷重ケースの地震動レベル (1 / 2。VL は 0)。
+        /// 液状化による低減率 βL はレベルごとに違うので、PrepareKmat がここから選ぶ。
+        /// SoilNonlinearityMode と同じくケース単位の設定なので JSON には保存しない。
+        /// </summary>
+        [JsonIgnore]
+        public int CaseLevel { get; set; }
+
+        /// <summary>
+        /// このモデルで解析中のケースが液状化を考慮するか。true のときだけ βL を kh0・py に掛ける。
+        /// </summary>
+        [JsonIgnore]
+        public bool CaseIsLiquefaction { get; set; }
+
         public List<Node> Nodes { get; set; }
         public List<Beam> Beams { get; set; }
         public List<DummyBeam> DummyBeams { get; set; }
@@ -1644,6 +1658,8 @@ namespace PileDesign.FEM
             }
             copy.CaseLocalState = snap;
             copy.SoilNonlinearityMode = this.SoilNonlinearityMode;
+            copy.CaseLevel = this.CaseLevel;
+            copy.CaseIsLiquefaction = this.CaseIsLiquefaction;
 
             return copy;
         }

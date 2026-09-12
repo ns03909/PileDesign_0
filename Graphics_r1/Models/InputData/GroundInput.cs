@@ -224,6 +224,44 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 標高 <paramref name="zTop"/>〜<paramref name="zBtm"/> の杭要素に掛ける、液状化による
+        /// 水平地盤反力の低減率 βL (基礎指針'19 表4.5.1)。kh0 と py の両方に掛ける。1 = 低減なし。
+        ///
+        /// <para>土質点の占める深さの範囲は層の上端 (地表から層厚 H を積んだ位置) で決まる
+        /// (<see cref="MassTopAltitudes"/> と同じ置き方)。要素の中央が入る土質点の βL を使う。</para>
+        ///
+        /// <para><b>βL の初期値 [0, 0] は「未判定」で「完全液状化」ではない。</b> 判定を一度も
+        /// 行っていない地盤で 0 を低減率として使うと、地盤ばねが全部消える。
+        /// <c>IsLiquefactionLayer</c> が立っている土質点だけを対象とし、対象外 (βL が null)・
+        /// 土質点の範囲外・地表より上は 1 を返す (<c>SteelPipeBuckling.IsLiquefied</c> と同じ切り分け)。</para>
+        /// </summary>
+        /// <param name="levelIndex">0 = レベル1、1 = レベル2。負 (VL) なら 1 を返す。</param>
+        internal double LiquefactionReductionAt(double zTop, double zBtm, int levelIndex)
+        {
+            if (levelIndex < 0) return 1.0;
+            var masses = GroundMassesData;
+            if (masses == null || masses.Count == 0) return 1.0;
+
+            double zMid = 0.5 * (zTop + zBtm);
+            double[] tops = MassTopAltitudes();
+            for (int i = 0; i < masses.Count; i++)
+            {
+                if (zMid > tops[i] + 1e-9) return 1.0;   // 最初の土質点 (地表) より上
+                double bottom = tops[i] - (masses[i].H ?? masses[i].Spacing);
+                if (zMid < bottom - 1e-9) continue;      // この土質点より下 → 次を見る
+
+                var mass = masses[i];
+                if (!mass.IsLiquefactionLayer) return 1.0;
+                var betas = mass.BetaL;
+                if (betas == null || levelIndex >= betas.Count) return 1.0;
+                double? beta = betas[levelIndex];
+                if (!beta.HasValue || !double.IsFinite(beta.Value)) return 1.0;
+                return Math.Clamp(beta.Value, 0.0, 1.0);
+            }
+            return 1.0;                                   // 最下の土質点より深い
+        }
+
+        /// <summary>
         /// 土質点 <paramref name="massIndex"/> の位置 (層の上端) の地盤変位 [mm]。解析
         /// (<c>ZDataItem.SetSoilDisplacement</c>) と同じく地盤変位のモードに従う: 考慮しない → 0、
         /// 任意入力 → その位置の標高で補間、それ以外 → 自動計算値。
