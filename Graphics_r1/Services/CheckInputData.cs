@@ -126,6 +126,7 @@ namespace PileDesign.Services
             message = CheckPileBodyGeometry(inputModel, message);
             message = CheckGroundLayerGeometry(inputModel, message);
             message = CheckGroupPileFactor(inputModel, message);
+            message = CheckLoadCombinations(inputModel, message);
 
             // モデルの「つながり」。剛性行列を組んでから初めて分かる不安定は、
             // 利用者に原因が読み取れない (「対角成分がゼロ」としか出ない)。
@@ -164,6 +165,51 @@ namespace PileDesign.Services
                     message += $"杭 No.{p.No}: 群杭係数 ξ = {p.GroupPileFactor} です " +
                                "(0 より大きく 1 以下で入力してください)。" +
                                "ξ は基準水平地盤反力係数 kh0 に掛かるため、0 以下だと水平地盤ばねが無くなります。\n";
+                }
+            }
+            return message;
+        }
+
+        /// <summary>
+        /// 慣性力が 0 になる「荷重ケース × 組合せ」の検査。
+        ///
+        /// <para>非線形反復の収束判定は残差比 ‖R‖²/‖F‖² (<c>AnaModel.FindR</c>) で、分母 F は
+        /// 慣性力 (外力) です。βU·上部構造慣性力 と βL·基礎部慣性力 がともに 0 になる組合せでは
+        /// F=0 となり、比が固定値 (1e30) のまま反復上限まで回ります。地盤変位を強制変位で
+        /// 与えるケースは応答そのものは出るので、<b>収束しないまま結果が残る</b>のが厄介です。</para>
+        ///
+        /// <para>組合せ係数のスライダーが 0.5 未満だと
+        /// <see cref="ViewModels.LoadCaseViewModel.GetCombinations"/> は (0, 0.0, 0.0, 0.0) を返すため、
+        /// これは通常操作で到達します。解法 (残差比の分母) は触らず、入力の段階で名指しして止めます。</para>
+        ///
+        /// <para>慣性力がどちらも 0 の荷重ケースは水平解析側でスキップされる
+        /// (<c>HorizontalCalculationViewModel.Run</c>) ので対象外。VL ケースは水平荷重 0 で
+        /// 組合せを 1 回だけ走らせる別扱いなので、ここでも対象外です。</para>
+        /// </summary>
+        public static string CheckLoadCombinations(InputModel inputModel, string message)
+        {
+            var loadCases = inputModel?.LoadCasesInput?.AnalysisTargetSeismicLoadCases;
+            var combinations = inputModel?.LoadCasesInput?.AllLoadCombinations;
+            if (loadCases == null || combinations == null) return message;
+
+            foreach (var lc in loadCases)
+            {
+                if (lc == null) continue;
+                // 慣性力がどちらも 0 のケースは解析側でスキップされる (組合せの責任ではない)。
+                if (lc.UpperMassForce == 0 && lc.FoundationMassForce == 0) continue;
+
+                foreach (var comb in combinations)
+                {
+                    if (comb == null) continue;
+                    // 外力ベクトルの大きさが 0 になるのは、上部構造・基礎部の項が両方 0 のとき。
+                    // (2 つは別の節点に載るので、符号が逆でも打ち消し合わない)
+                    bool upperZero = comb.Beta1 * lc.UpperMassForce == 0;
+                    bool foundationZero = comb.Beta2 * lc.FoundationMassForce == 0;
+                    if (!upperZero || !foundationZero) continue;
+
+                    message += $"レベル{lc.Level} 荷重ケース No.{lc.No} × 組合せ {comb.Name}: " +
+                               "βU と βL で慣性力が 0 になり、収束判定 (残差/外力) が成り立ちません。" +
+                               "荷重条件の組合せ係数を 0.5〜1.0 にしてください。\n";
                 }
             }
             return message;
