@@ -20,7 +20,6 @@ namespace PileDesign.ViewModels
 {
     public partial class GraphViewModel : ObservableObject
     {
-        private readonly UndoManager _undoManager = new();
 
         private readonly MainWindowViewModel _mainWindowViewModel;
 
@@ -601,11 +600,9 @@ namespace PileDesign.ViewModels
             UpdateLiquefactionOptions();
         }
 
-        [RelayCommand]
-        private void Undo() => _undoManager.Undo();
-
-        [RelayCommand]
-        private void Redo() => _undoManager.Redo();
+        // Undo / Redo はこの ViewModel には置かない。解析結果を見るだけで入力を編集しないので、
+        // 戻すものが無い。以前はコマンドと Ctrl+Z / Ctrl+Y の割り当てがあったが、
+        // この画面は履歴に何も積まないので押しても無反応だった (2026-09-12 に撤去)。
 
         [RelayCommand]
         private void OnClose()

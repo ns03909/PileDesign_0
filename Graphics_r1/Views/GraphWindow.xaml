@@ -12,10 +12,9 @@
         common:EscapeKeyBehavior.Enable="True"
         >
 
-    <Window.InputBindings>
-        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
-        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
-    </Window.InputBindings>
+    <!-- Ctrl+Z / Ctrl+Y は置かない。この窓は解析結果を見るだけで入力を編集しないので、
+         戻すものが無い。以前は Undo コマンドに割り当てていたが、何も積まれていない
+         Undo を呼ぶだけで、押しても無反応だった (2026-09-12 に撤去) -->
 
     <Window.Resources>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
