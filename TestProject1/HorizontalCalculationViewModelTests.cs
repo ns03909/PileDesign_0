@@ -339,7 +339,7 @@ namespace TestProject1
             StringAssert.Contains(text, "⛔ 物理的未収束 (耐力超過の可能性) 1 件");
 
             // 未収束再掲セクション
-            StringAssert.Contains(text, "未収束 / 物理的未収束のステップ");
+            StringAssert.Contains(text, "未収束 / 物理的未収束 / 緩和受理のステップ");
             StringAssert.Contains(text, "✗ 未収束");
             StringAssert.Contains(text, "⛔ 物理的未収束");
         }

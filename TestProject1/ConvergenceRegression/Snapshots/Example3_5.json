@@ -18,10 +18,11 @@
       "combinationNo": 1,
       "isLiquefaction": true,
       "converged": true,
+      "relaxedSteps": 0,
       "totalIterations": 43,
       "totalSteps": 4,
       "bisectionRetries": 0,
-      "finalResidual": 1.016797568523876E-08,
+      "finalResidual": 3.2456995190065726E-07,
       "apUx": 0.03296573539292353,
       "apUy": -0.00013782153424560502,
       "apUz": 0.00020152434019221708,
@@ -38,25 +39,26 @@
       "combinationNo": 1,
       "isLiquefaction": true,
       "converged": true,
-      "totalIterations": 323,
+      "relaxedSteps": 0,
+      "totalIterations": 319,
       "totalSteps": 16,
       "bisectionRetries": 0,
-      "finalResidual": 6.427890007932117E-07,
-      "apUx": 0.1427437066327042,
-      "apUy": -0.004524506757533752,
-      "apUz": 0.000376075716230037,
-      "apRx": 2.6118269114726876E-08,
-      "apRy": 1.1778484401303379E-05,
-      "apRz": 0.00029079433094917234,
+      "finalResidual": 6.9685527128639E-07,
+      "apUx": 0.14274375759811073,
+      "apUy": -0.004524513521751793,
+      "apUz": 0.0003760757118107534,
+      "apRx": 2.6118341794146326E-08,
+      "apRy": 1.1778484335880192E-05,
+      "apRz": 0.0002907947677842071,
       "maxAbsHorizDisp": 0.1916271875482871,
-      "maxAbsHorizSpringReaction": 1265.2485673224605
+      "maxAbsHorizSpringReaction": 1265.248323379384
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 366,
+    "totalIterations": 362,
     "totalSteps": 20,
-    "maxResidualOverAllCases": 6.427890007932117E-07
+    "maxResidualOverAllCases": 6.9685527128639E-07
   }
 }

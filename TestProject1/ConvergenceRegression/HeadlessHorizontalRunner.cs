@@ -41,6 +41,9 @@ namespace TestProject1.ConvergenceRegression
             /// ForceNonLinear の適用より<b>後</b>に呼ぶので、ここで上書きできる。
             /// </summary>
             public Action<InputModel>? Customize { get; set; }
+
+            /// <summary>解析の直前に HCVM の設定を変える (解法の切替など)。オプション適用の後に呼ぶ。</summary>
+            public Action<HorizontalCalculationViewModel>? Configure { get; set; }
         }
 
         /// <summary>
@@ -112,6 +115,7 @@ namespace TestProject1.ConvergenceRegression
             hcvm.LiquefactionOption = options.LiquefactionMode;
             hcvm.UseLineSearch = options.UseLineSearch;
             hcvm.MaxCaseDegreeOfParallelism = options.Parallelism;
+            options.Configure?.Invoke(hcvm);
 
             // 4. 解析実行 (ExecuteAnalysisCommand は RelayCommand — Execute(null) で同期実行開始 → 内部で Task.Run)
             //    本来は await 待ち合わせ不能だが、IsAnalysisRunning フラグの off を待つことで完了検知
@@ -190,11 +194,19 @@ namespace TestProject1.ConvergenceRegression
             foreach (var grp in grouped)
             {
                 var steps = grp.ToList();
-                int totalIter = steps.Sum(s => s.Iterations);
+                int totalIter = steps.Sum(s => s.Iterations);       // 再試行分も含む (コストの指標)
                 int totalSteps = steps.Count;
                 int maxBisection = steps.Max(s => s.BisectionAttempt);
-                bool allConverged = steps.All(s => s.Status == StepStatus.Converged);
-                double finalResidual = steps.LastOrDefault()?.FinalResidual ?? 0.0;
+                // 収束の判定と最終残差は「最後の試行」をステップ順に見る。
+                // _stepSummaries は ConcurrentBag で順序が不定なので、単に LastOrDefault() を取ると
+                // 失敗した初回試行のステップ 1 (残差 288) を最終値として拾い、
+                // 「収束=True・残差 288」という矛盾した記録になっていた (2026-09-12)。
+                var finalAttempt = steps.Where(s => s.BisectionAttempt == maxBisection).OrderBy(s => s.Step).ToList();
+                // 「収束」= 最後の試行に未収束・物理的未収束が無い。緩めた基準で受理したステップは
+                // 別に数え、増えたら退化として捕まえる (収束と同じ印にすると見えなくなる)。
+                bool allConverged = finalAttempt.All(s => s.Status < StepStatus.Unconverged);
+                int relaxedSteps = finalAttempt.Count(s => s.Status == StepStatus.ConvergedRelaxed);
+                double finalResidual = finalAttempt.LastOrDefault()?.FinalResidual ?? 0.0;
 
                 string liq = grp.Key.IsLiquefaction ? "Liq" : "NoLq";
                 string caseKey = $"L{grp.Key.Level}-{grp.Key.LoadCaseNo}.C{grp.Key.ComboNo}.{liq}";
@@ -253,6 +265,7 @@ namespace TestProject1.ConvergenceRegression
                     CombinationNo = grp.Key.ComboNo,
                     IsLiquefaction = grp.Key.IsLiquefaction,
                     Converged = allConverged,
+                    RelaxedSteps = relaxedSteps,
                     TotalIterations = totalIter,
                     TotalSteps = totalSteps,
                     BisectionRetries = maxBisection,

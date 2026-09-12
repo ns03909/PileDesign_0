@@ -1346,9 +1346,13 @@ namespace PileDesign.FEM
             return map;
         }
 
-        /// <summary>収束していないステップを含む解析結果があるか。</summary>
+        /// <summary>収束していないステップを含む解析結果があるか (緩めた基準で受理したステップは含めない)。</summary>
         public bool HasUnconvergedSteps()
-            => AnalysisStepResults?.Any(r => r.Status != StepStatus.Converged) == true;
+            => AnalysisStepResults?.Any(r => r.Status >= StepStatus.Unconverged) == true;
+
+        /// <summary>緩めた基準で受理したステップを含む解析結果があるか。</summary>
+        public bool HasRelaxedSteps()
+            => AnalysisStepResults?.Any(r => r.Status == StepStatus.ConvergedRelaxed) == true;
 
         public AnalysisStepResult? GetAnalysisLastStepResult(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {

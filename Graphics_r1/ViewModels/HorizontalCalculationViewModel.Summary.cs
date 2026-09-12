@@ -72,6 +72,7 @@ namespace PileDesign.ViewModels
                 .ToList();
 
             int convergedCount = sorted.Count(s => s.Status == StepStatus.Converged);
+            int relaxedCount = sorted.Count(s => s.Status == StepStatus.ConvergedRelaxed);
             int unconvergedCount = sorted.Count(s => s.Status == StepStatus.Unconverged);
             int physicallyUnconvergedCount = sorted.Count(s => s.Status == StepStatus.PhysicallyUnconverged);
             int retryCount = sorted.Count(s => s.BisectionAttempt > 0);
@@ -80,7 +81,7 @@ namespace PileDesign.ViewModels
             var sb = new StringBuilder();
             sb.AppendLine($"# 解析サマリーレポート (生成: {DateTime.Now:yyyy-MM-dd HH:mm:ss})");
             sb.AppendLine($"# ステップ総数 {sorted.Count} (再試行含む)、合計時間 {totalElapsed:F1}s");
-            sb.AppendLine($"# 収束 {convergedCount} 件 / 未収束 {unconvergedCount} 件 / 物理的未収束 {physicallyUnconvergedCount} 件 / 再試行発生 {retryCount} 件");
+            sb.AppendLine($"# 収束 {convergedCount} 件 / 緩和受理 {relaxedCount} 件 / 未収束 {unconvergedCount} 件 / 物理的未収束 {physicallyUnconvergedCount} 件 / 再試行発生 {retryCount} 件");
             sb.AppendLine();
             // ヘッダ行
             sb.AppendLine(string.Join(sep, new[] {
@@ -92,6 +93,7 @@ namespace PileDesign.ViewModels
                 string statusStr = s.Status switch
                 {
                     StepStatus.Converged => "Converged",
+                    StepStatus.ConvergedRelaxed => "ConvergedRelaxed",
                     StepStatus.Unconverged => "Unconverged",
                     StepStatus.PhysicallyUnconverged => "PhysUnconverged",
                     _ => "?"
@@ -206,6 +208,7 @@ namespace PileDesign.ViewModels
 
             int totalCount = sorted.Count;
             int convergedCount = sorted.Count(s => s.Status == StepStatus.Converged);
+            int relaxedCount = sorted.Count(s => s.Status == StepStatus.ConvergedRelaxed);
             int unconvergedCount = sorted.Count(s => s.Status == StepStatus.Unconverged);
             int physicallyUnconvergedCount = sorted.Count(s => s.Status == StepStatus.PhysicallyUnconverged);
             int retryCount = sorted.Count(s => s.BisectionAttempt > 0);
@@ -223,6 +226,7 @@ namespace PileDesign.ViewModels
             emit(topRule);
             emit($"ステップ総数 {totalCount} (再試行含む)  ┃  合計時間 {totalElapsed:F1}s");
             emit($"  ✓ 収束 {convergedCount} 件" +
+                (relaxedCount > 0 ? $"  /  △ 緩和受理 (残差 1e-6 に届かず) {relaxedCount} 件" : "") +
                 (unconvergedCount > 0 ? $"  /  ✗ 未収束 (反復上限到達) {unconvergedCount} 件" : "") +
                 (physicallyUnconvergedCount > 0 ? $"  /  ⛔ 物理的未収束 (耐力超過の可能性) {physicallyUnconvergedCount} 件" : "") +
                 (retryCount > 0 ? $"  /  ♻ 再試行発生 {retryCount} 件" : ""));
@@ -256,6 +260,7 @@ namespace PileDesign.ViewModels
                 string statusStr = s.Status switch
                 {
                     StepStatus.Converged => "OK Converged",
+                    StepStatus.ConvergedRelaxed => "OK 緩和受理",
                     StepStatus.Unconverged => "NG Unconverged",
                     StepStatus.PhysicallyUnconverged => "!! Phys.Unconv",
                     _ => "?"
@@ -281,11 +286,12 @@ namespace PileDesign.ViewModels
             if (failures.Count > 0)
             {
                 emit("");
-                emit("  ─ 未収束 / 物理的未収束のステップ ─");
+                emit("  ─ 未収束 / 物理的未収束 / 緩和受理のステップ ─");
                 foreach (var s in failures)
                 {
                     string statusStr = s.Status switch
                     {
+                        StepStatus.ConvergedRelaxed => "△ 緩和受理 (残差 1e-6 に届かず)",
                         StepStatus.Unconverged => "✗ 未収束",
                         StepStatus.PhysicallyUnconverged => "⛔ 物理的未収束",
                         _ => "?"

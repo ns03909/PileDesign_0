@@ -113,6 +113,10 @@ namespace TestProject1.ConvergenceRegression
         [JsonPropertyName("converged")]
         public bool Converged { get; set; }
 
+        /// <summary>緩めた基準 (残差 1e-6 に届かず最大 1e-2) で受理したステップ数 (最後の試行)。増えたら退化。</summary>
+        [JsonPropertyName("relaxedSteps")]
+        public int RelaxedSteps { get; set; }
+
         /// <summary>全ステップ通算の Newton-Raphson 反復数</summary>
         [JsonPropertyName("totalIterations")]
         public int TotalIterations { get; set; }

@@ -782,7 +782,8 @@ namespace PileDesign.ViewModels
                                     // - Full NR: 常に毎反復で接線剛性+Kマトリクス更新
                                     // - Modified NR: 最初の FullNRIterations 回は Full NR、以降は K 再利用
                                     // v29: 直前反復で M-φ セグメント変化 / p-y 降伏変化を検知した場合は強制 Full NR
-                                    bool useFullNR = !UseModifiedNewtonRaphson || n_iteration <= FullNRIterations || forceFullNRNextIter;
+                                    bool useFullNR = !UseModifiedNewtonRaphson || n_iteration <= FullNRIterations || forceFullNRNextIter
+                                        || caseModel.NormsROnNormsFint > FullNRAboveResidualRatio; // 混成則 (FullNRAboveResidualRatio の説明を参照)
                                     forceFullNRNextIter = false; // フラグ消費
 
                                     if (loadCase.IsPileNonLinear && useFullNR)
@@ -891,6 +892,9 @@ namespace PileDesign.ViewModels
                                         recentCumulativeDisp.Dequeue();
 
                                     // v28: Mcr 同期 Mode 切替 (ヒステリシス付き)
+                                    // ここで立つ印 (HasCrackedXY / ThetaProjMax) は反復中の「試行」で、Newton の行き過ぎを
+                                    // 止める安定化装置を兼ねる。確定はステップ収束後に、収束した状態から決め直す
+                                    // (RotationalSpring.CommitFromConvergedState)。
                                     // 場所打ち RC 杭の杭頭回転ばねで |M| が Mcr を初めて超えた瞬間を検出し、
                                     // HasCrackedXY = true にラッチ。以降は post-crack curve を使用 (除荷しても戻らない)。
                                     // 閾値 0.999×Mcr で若干緩めてヒステリシスラッチを安定化。
@@ -1570,9 +1574,19 @@ namespace PileDesign.ViewModels
 
                             // このステップの収束状態。サマリーレポートと解析結果の両方が使う
                             // (結果に持たせないと検定・計算書・保存ファイルへ届かない)。
+                            // ステップが受理されたら、履歴変数を「収束した状態」から確定する。
+                            // 反復途中の行き過ぎで立った印や上がった最大値は捨てる (再試行はケース開始時に全消去される)。
+                            if (converged && caseModel.RotationalSprings != null)
+                            {
+                                foreach (var rs in caseModel.RotationalSprings)
+                                    rs?.CommitFromConvergedState();
+                            }
+
+                            // 緩めた基準 (RELAXED_ALPHA より大きい許容値) で受理したステップは区別する
                             StepStatus stepStatus = !converged ? StepStatus.Unconverged
                                 : (physicallyUnconvergeable ? StepStatus.PhysicallyUnconverged
-                                    : StepStatus.Converged);
+                                    : (effectiveAlpha > RELAXED_ALPHA ? StepStatus.ConvergedRelaxed
+                                        : StepStatus.Converged));
 
                             // v29 (2026-04-27): ステップ単位の収束サマリー記録 (解析終了時にレポート出力)
                             {

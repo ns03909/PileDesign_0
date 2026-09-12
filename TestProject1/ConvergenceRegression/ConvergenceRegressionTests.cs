@@ -212,6 +212,10 @@ namespace TestProject1
                 Assert.AreEqual(exp.CaseKey, act.CaseKey,
                     $"[{exampleName}] Case[{i}] キー不一致");
 
+                // 緩和受理: 増えたら退化 (減るのは改善)
+                Assert.IsTrue(act.RelaxedSteps <= exp.RelaxedSteps,
+                    $"[{exampleName}] {exp.CaseKey}: 緩和受理のステップが増えました {exp.RelaxedSteps} → {act.RelaxedSteps}");
+
                 // 収束フラグ: 完全一致必須 (退化を即検出)
                 Assert.AreEqual(exp.Converged, act.Converged,
                     $"[{exampleName}] {exp.CaseKey}: 収束フラグ退化 expected={exp.Converged}, actual={act.Converged}");

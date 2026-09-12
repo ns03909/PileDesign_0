@@ -120,7 +120,10 @@ namespace PileDesign.Models.Results
         /// 応答値が釣り合いを満たしていないので、限界値と比べた結果に意味が無い。
         /// </summary>
         private static string Verdict(EvaluationItem item) =>
-            item.IsFromUnconvergedCase ? "未収束" : (item.IsOk ? "OK" : "NG");
+            item.IsFromUnconvergedCase ? "未収束"
+            // 緩めた基準で受理したケースは判定はするが、その旨を名乗る (残差 1e-6 に届いていない)
+            : item.IsFromRelaxedCase ? (item.IsOk ? "OK(緩和受理)" : "NG(緩和受理)")
+            : (item.IsOk ? "OK" : "NG");
 
         /// <summary>「超過」。NG のときだけ付く (未収束は超過とも言えない)。</summary>
         private static string OverSuffix(EvaluationItem item) =>

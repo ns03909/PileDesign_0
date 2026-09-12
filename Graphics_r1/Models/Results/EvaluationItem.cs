@@ -123,8 +123,11 @@ namespace PileDesign.Models.Results
         /// </summary>
         public FEM.StepStatus CaseConvergence { get; init; } = FEM.StepStatus.Converged;
 
-        /// <summary>収束していないケースか。</summary>
-        public bool IsFromUnconvergedCase => CaseConvergence != FEM.StepStatus.Converged;
+        /// <summary>収束していないケースか (緩めた基準で受理したケースは含めない)。</summary>
+        public bool IsFromUnconvergedCase => CaseConvergence >= FEM.StepStatus.Unconverged;
+
+        /// <summary>緩めた基準 (残差 1e-6 に届かず最大 1e-2) で受理したケースか。</summary>
+        public bool IsFromRelaxedCase => CaseConvergence == FEM.StepStatus.ConvergedRelaxed;
 
         /// <summary>応答値 (解析から得た値)。</summary>
         public double Response { get; init; }

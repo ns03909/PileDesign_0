@@ -5628,8 +5628,10 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     <code>NR/MNR</code> (Full NR で K 再構築した反復数 / Modified NR で K を再利用した反復数) /
                     <code>Resid</code> (最終残差) / <code>a_tol</code> (有効収束許容値、緩和適用後) /
                     <code>max|du|</code> (最終反復の最大変位増分) / <code>Status</code> / <code>Time</code></li>
-                <li>Status: <code>OK Converged</code> / <code>NG Unconverged</code> / <code>!! Phys.Unconv</code></li>
-                <li>未収束件数があれば、表の後に「未収束 / 物理的未収束のステップ一覧」が再掲されます</li>
+                <li>Status: <code>OK Converged</code> / <code>OK 緩和受理</code> / <code>NG Unconverged</code> / <code>!! Phys.Unconv</code>。
+                    「緩和受理」は残差が許容値 $10^{-6}$ まで下がらず、停滞・振動のため緩めた基準（最大 $10^{-2}$）で
+                    受理したステップです。検定では未収束とは扱いませんが、判定に <code>OK(緩和受理)</code> のように明記します</li>
+                <li>未収束・緩和受理があれば、表の後に「未収束 / 物理的未収束 / 緩和受理のステップ一覧」が再掲されます</li>
                 <li>ヘッダ行は MS Gothic / Consolas など複数フォント環境での列幅崩れを避けるため ASCII で統一しています</li>
             </ul>
             <p>
@@ -14337,6 +14339,19 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     </tr>
                 </tbody>
             </table>
+            <p>
+                <strong>混成則</strong>: Modified NR を選んでいても、残差比 $\|R\|^2/\|F\|^2$ が
+                <strong>$10^{-2}$ より大きい間は毎反復 K を組み直します</strong>（実質 Full NR）。
+                地盤変位を与えた液状化ケースでは、最初のステップで全杭頭が同時にひび割れ・降伏したあと、
+                古い（硬い）接線を使い続けると残差が大きいまま停滞し、ステップを細かくしても同じ場所で
+                失敗していました。残差比が $10^{-2}$ 以下の仕上げ域だけ K を再利用するので、
+                大型モデルでの Modified NR の速さは保たれます。
+            </p>
+            <p>
+                <strong>履歴変数の確定</strong>: 杭頭回転ばねのひび割れの記憶・方向ロック・回転の最大値は、
+                反復中は試行値として扱い、<strong>ステップが収束したときに収束した状態から確定</strong>します。
+                反復途中の行き過ぎた状態を記憶に残すと、収束解が解法（Full NR か Modified NR か）に依存するためです。
+            </p>
 
             <h4>適応的緩和係数</h4>
             <p>

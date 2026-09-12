@@ -332,6 +332,105 @@ namespace PileDesign.FEM
         /// Mcr 到達を記録。同時にクラック方向 (M の方向、= 回転方向と等価) を単位ベクトルとして保存。
         /// mx, my は CumulativeForce.Mxj, Myj (kNm) で渡す。
         /// </summary>
+        // ── 履歴変数の確定値 (ステップ収束時にだけ更新) ──
+        // 反復中は上の 4 変数を「試行値」として使い、各反復の判定前に確定値へ戻してから決め直す。
+        // 反復途中の行き過ぎた状態を記憶に残さないため (収束解が解法の経路に依存しないようにする)。
+        private bool _committedHasCrackedXY;
+        private double? _committedCrackNx, _committedCrackNy;
+        private double _committedThetaProjMax;
+
+        /// <summary>
+        /// ヒステリシスの θ_proj 最大値を確定値へ戻す (各反復の履歴判定の直前に呼ぶ)。
+        /// 次の K 組立で「確定値と現在の試行の大きい方」に決め直される。
+        ///
+        /// <para>ひび割れの記憶 (HasCrackedXY / CrackNx / CrackNy) は戻さない。ひび割れの検出は
+        /// 試行中も不可逆にしておかないと、Mcr 付近で「ひび割れ↔未ひび割れ」が反復ごとに反転して
+        /// 剛性が 100 倍跳び、収束しなくなる (2026-09-12 に実測)。商用コードも増分内では戻さず、
+        /// 増分が棄却されたときにだけ確定値へ戻す。</para>
+        ///
+        /// <para>θ_proj 最大値だけを戻すのは、行き過ぎた反復で上がった最大値が残ると収束点が
+        /// 除荷枝 (剛) に乗り、解が解法の経路に依存するため。</para>
+        /// </summary>
+        public void RestoreCommittedState()
+        {
+            HasCrackedXY = _committedHasCrackedXY;
+            CrackNx = _committedCrackNx;
+            CrackNy = _committedCrackNy;
+            ThetaProjMax = _committedThetaProjMax;
+        }
+
+        /// <summary>試行値をそのまま確定する (状態の復元・初期化用)。</summary>
+        public void CommitStepState()
+        {
+            _committedHasCrackedXY = HasCrackedXY;
+            _committedCrackNx = CrackNx;
+            _committedCrackNy = CrackNy;
+            _committedThetaProjMax = ThetaProjMax;
+        }
+
+        /// <summary>
+        /// ステップが収束したときに、履歴変数を<b>収束した状態</b>から確定し、試行値をそれに揃える。
+        ///
+        /// <para>反復中はひび割れの印や θ_proj 最大値が行き過ぎた反復で立つことがある
+        /// (それ自体は Newton の行き過ぎを止める安定化装置として必要)。それを記憶に残すと
+        /// 収束解が解法の経路に依存する (関東支部8 で修正 NR と Full NR の杭頭変位が 0.4% 違った)。
+        /// 商用コードと同じく、履歴は収束した増分の状態からだけ更新する (2026-09-12)。</para>
+        ///
+        /// <list type="bullet">
+        /// <item>ひび割れ: 確定済みなら維持。未確定なら収束時の |M| が 0.999·Mcr 以上のときだけ確定し、
+        ///   方向は収束時のモーメント方向。</item>
+        /// <item>θ_proj 最大値: max(確定値, 収束時の θ_proj)。行き過ぎで上がった分は捨てる。</item>
+        /// </list>
+        /// </summary>
+        public void CommitFromConvergedState()
+        {
+            if (Mode != RotationalSpringMode.CombinedXY || !McrXY.HasValue)
+            {
+                CommitStepState();
+                return;
+            }
+
+            double mx = CumulativeForce?.Mxj ?? 0.0;
+            double my = CumulativeForce?.Myj ?? 0.0;
+            double mRes = Math.Sqrt(mx * mx + my * my);
+
+            if (!_committedHasCrackedXY)
+            {
+                if (mRes >= McrXY.Value * 0.999)
+                {
+                    double norm = mRes > 1e-15 ? mRes : 1.0;
+                    _committedHasCrackedXY = true;
+                    _committedCrackNx = mx / norm;
+                    _committedCrackNy = my / norm;
+                    _committedThetaProjMax = Math.Max(0.0, ProjectedRotation(_committedCrackNx.Value, _committedCrackNy.Value));
+                }
+                else
+                {
+                    _committedHasCrackedXY = false;
+                    _committedCrackNx = null; _committedCrackNy = null;
+                    _committedThetaProjMax = 0.0;
+                }
+            }
+            else
+            {
+                double thetaProj = ProjectedRotation(_committedCrackNx ?? 0.0, _committedCrackNy ?? 1.0);
+                _committedThetaProjMax = Math.Max(_committedThetaProjMax, thetaProj);
+            }
+
+            HasCrackedXY = _committedHasCrackedXY;
+            CrackNx = _committedCrackNx;
+            CrackNy = _committedCrackNy;
+            ThetaProjMax = _committedThetaProjMax;
+        }
+
+        /// <summary>杭頭 (NodeJ) と杭頭接合節点 (NodeI) の相対回転を、ひび割れ方向 n へ投影した値。</summary>
+        private double ProjectedRotation(double nx, double ny)
+        {
+            double dRx = (NodeJ?.CumulativeDisp?.Rx ?? 0.0) - (NodeI?.CumulativeDisp?.Rx ?? 0.0);
+            double dRy = (NodeJ?.CumulativeDisp?.Ry ?? 0.0) - (NodeI?.CumulativeDisp?.Ry ?? 0.0);
+            return dRx * nx + dRy * ny;
+        }
+
         public void MarkCracked(double mx, double my)
         {
             HasCrackedXY = true;
@@ -354,6 +453,7 @@ namespace PileDesign.FEM
             HasCrackedXY = false;
             CrackNx = null; CrackNy = null;
             ThetaProjMax = 0.0;
+            CommitStepState();
         }
 
         // Phase 1 (step-level cut-back retry): スナップショットからの方向ロック状態復元用。
@@ -364,6 +464,7 @@ namespace PileDesign.FEM
             CrackNx = crackNx;
             CrackNy = crackNy;
             ThetaProjMax = thetaProjMax;
+            CommitStepState();
         }
 
         public int? PileBodyNo { get; set; }
@@ -622,6 +723,7 @@ namespace PileDesign.FEM
                 Kbig = this.Kbig,
             };
 
+            copy.RestoreLockState(this.HasCrackedXY, this.CrackNx, this.CrackNy, this.ThetaProjMax);
             if (this.KeTan != null) copy.SetKeFromMatrix(this.KeTan, isTan: true);
             if (this.KeSec != null) copy.SetKeFromMatrix(this.KeSec, isTan: false);
 
