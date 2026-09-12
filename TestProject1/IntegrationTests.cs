@@ -419,50 +419,57 @@ namespace TestProject1
         /// <summary>
         /// 地盤例題＋杭例題を組み合わせて InputModel を構築する。
         ///
-        /// <b>断面タイプ・杭径・工法は実機の <see cref="PileExampleLoader"/> と同じ順で写す。</b>
-        /// 以前はここで <c>pileSectionType</c> / <c>precastPileName</c> を読んでおらず、
-        /// 杭体タイプの既定断面 (既製コンクリート杭 → PHC杭 φ1100) で解析されていた。
-        /// 設計例集3.1 は SC-700 + CPRC-700 (φ700) なのに全段 PHC φ1100 で走っており、
-        /// 回帰網が「PRC杭 + SC杭」を通していると読めて実際は通していなかった
-        /// (2026-09-10 に実測で確認)。
+        /// <para><b>杭側は実機の読込 (<see cref="PileExampleLoader"/>) をそのまま通す。</b>
+        /// 以前はここに <c>ApplyToInputModel</c> の写しを持っていて、3 度取り残しを踏んだ
+        /// (軸力が全杭 0・断面タイプが既定のまま・群杭係数 ξ と杭間隔比 R/B が入らない)。
+        /// 写しがあるかぎり同じことが起きるので、写しを消して実機の読込を呼ぶ (2026-09-12)。
+        /// 根入れ・ΔZc・基礎梁・杭頭工法の設定もこれで例題どおりに入る。</para>
         ///
-        /// 順序が要点で、<b>段をコレクションに入れてから</b>断面タイプを設定する。
-        /// 入れた時点で CollectionChanged が既定値を設定するので、先に設定すると上書きされる。
-        /// 杭体タイプも段を入れ替えたあとに配り直す (setter の波及は入れ替え前の段にしか届かない)。
+        /// <para>順序は実機の例題コマンド (<c>MainWindowViewModel.LoadPileExampleAsync</c>) と同じ:
+        /// 地盤を入れる → <c>ApplyToInputModel</c> → 杭 Z のセマンティクス移行 (v1→v2) →
+        /// 断面の再計算 → 杭配置の番号 → <c>GenerateSoilPiles</c>。
+        /// 移行を飛ばすと杭下端が ΔZc (既定 1 m) ぶん浅くなる。</para>
         ///
-        /// 地盤は<b>複数セット</b>読む。設計例集3.8 のように
+        /// <para><b>荷重だけは回帰の契約として固定する</b> (レベル1 1000/800・レベル2 2000/1600・
+        /// 組合せ (1,1,1) を 1 つずつ)。例題の荷重を使うと荷重ケースが 4 倍になり、
+        /// 収束スナップショットと検定の黄金ファイルの意味が変わる。</para>
+        ///
+        /// <para>地盤は<b>複数セット</b>読む。設計例集3.8 のように
         /// <c>additionalGroundExampleNames</c> を持つ例題は、杭配置が地盤番号 1〜9 を参照する。
-        /// 1 セットしか読まないと杭が地盤に紐づかず、解析ケースが 0 件になる。
+        /// 1 セットしか読まないと杭が地盤に紐づかず、解析ケースが 0 件になる。</para>
         /// </summary>
         internal static (InputModel? model, string? error) BuildExampleInputModel(
             string groundExampleName, string pileExampleName)
         {
             var examplesDir = GetExamplesDir();
 
-            // 地盤データ読み込み (Ground No1)
+            // 地盤データ読み込み (Ground No1)。
+            // 実機は地盤の例題名を杭例題 JSON から取るが、ここは回帰で組み合わせを選ぶため引数で受ける。
             var (groundInput, groundError) = LoadGroundExample(examplesDir, groundExampleName);
             if (groundInput == null)
                 return (null, groundError);
 
-            // 杭データ読み込み
-            var pilePath = Path.Combine(examplesDir, $"{pileExampleName}.json");
-            if (!File.Exists(pilePath))
-                return (null, $"File not found: {pilePath}");
-
-            var pileJson = File.ReadAllText(pilePath);
-            var pileOpts = new JsonSerializerOptions
+            // 杭データ読み込み (実機と同じローダー)
+            PileExampleData pileData;
+            try
             {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true
-            };
-            var pileData = JsonSerializer.Deserialize<PileExampleData>(pileJson, pileOpts);
-            if (pileData == null)
-                return (null, "Pile deserialization failed");
+                pileData = PileExampleLoader.LoadFromFile(pileExampleName);
+            }
+            catch (System.Exception ex)
+            {
+                return (null, $"{pileExampleName}: {ex.Message}");
+            }
 
-            // InputModel を構築
-            var inputModel = new InputModel();
-            inputModel.GroundsInput = new ObservableCollection<GroundInput> { groundInput };
+            // 既定の入力から始める。ApplyToInputModel は既にある荷重ケース・根入れ・
+            // 基礎梁の入れ物へ書き込むので、空の InputModel では通らない。
+            var vm = new MainWindowViewModel();
+            var inputModel = vm.CurrentInputModel;
+            if (inputModel == null)
+                return (null, "既定の入力がありません");
+
+            inputModel.GroundsInput[0] = groundInput;
+            while (inputModel.GroundsInput.Count > 1)
+                inputModel.GroundsInput.RemoveAt(inputModel.GroundsInput.Count - 1);
 
             // 追加地盤 (Ground No2 以降)。杭配置が参照する地盤番号ぶんだけ要る。
             if (pileData.AdditionalGroundExampleNames != null)
@@ -477,121 +484,33 @@ namespace TestProject1
                 }
             }
 
-            // 杭体データの構築。実機の PileExampleLoader.ApplyToInputModel と同じ順で写す。
-            var pileBodies = new ObservableCollection<PileBodyInput>();
-            foreach (var pbDto in pileData.PileBodies)
+            // 杭体・断面・杭頭工法・根入れ・杭配置 (ΔZc 含む)・一般節点・グリッド・基礎梁
+            PileExampleLoader.ApplyToInputModel(inputModel, pileData, vm);
+
+            // 例題 JSON は v1 (= 杭頭 Z) なので v2 (= 接合節点 Z) へ移行する。
+            // GenerateSoilPiles より前に行う (SoilPile は v2 の pile.Z を前提)。
+            inputModel.MigratePileZSemantics_v1_to_v2();
+
+            // 断面のプロパティを反映する (実機の例題コマンドと同じ)
+            foreach (var pb in inputModel.PileBodies)
             {
-                var pb = new PileBodyInput
-                {
-                    PileBodyRef = pbDto.PileBodyRef,
-                    PileBodyType = pbDto.PileBodyType ?? "場所打ち鉄筋コンクリート杭",
-                    PileTopType = pbDto.PileTopType,
-                    PileConstructionType = pbDto.PileConstructionType,
-                    PileToeDia = pbDto.PileToeDia,
-                    TipNonPermability = pbDto.TipNonPermability,
-                    EmbedmentIntoBearingSoil = pbDto.EmbedmentIntoBearingSoil,
-                    PileInnerDia = pbDto.PileInnerDia,
-                    PileTipStyle = pbDto.PileTipStyle,
-                    SettlePileToeDia = pbDto.SettlePileToeDia,
-                    SettleAlpha = pbDto.SettleAlpha,
-                    SettleN = pbDto.SettleN,
-                };
-
-                pb.PileBodySegments.Clear();
-                if (pbDto.Segments != null)
-                {
-                    foreach (var segDto in pbDto.Segments)
-                    {
-                        var seg = new PileBodySegment
-                        {
-                            No = segDto.No,
-                            SegmentLength = segDto.SegmentLength,
-                            SegmentDepth = segDto.SegmentDepth,
-                        };
-
-                        // 先にコレクションへ入れる (CollectionChanged が既定値を設定する)
-                        pb.PileBodySegments.Add(seg);
-
-                        // 入れたあとに断面タイプを設定する (既定値を上書きする)
-                        if (!string.IsNullOrEmpty(segDto.PileSectionType))
-                            seg.PileSection.PileSectionType = segDto.PileSectionType;
-
-                        // 既製杭 / 鋼管杭ライブラリの選択。杭径・板厚はここで復元される
-                        if (!string.IsNullOrEmpty(segDto.PrecastPileName))
-                        {
-                            if (seg.PileSection.PileBodyType == PileDesign.Constants.PileTypeNames.SteelPipe)
-                                seg.PileSection.SelectedSteelPipePileName = segDto.PrecastPileName;
-                            else
-                                seg.PileSection.SetSelectedPrecastPileByName(segDto.PrecastPileName);
-                        }
-
-                        // 場所打ち杭 (鉄筋コンクリート部 / 鋼管コンクリート部) の寸法・材料
-                        if (segDto.ConcreteOutDia.HasValue) seg.PileSection.ConcreteOutDia = segDto.ConcreteOutDia.Value;
-                        if (segDto.ConcreteThickness.HasValue) seg.PileSection.ConcreteThickness = segDto.ConcreteThickness.Value;
-                        if (segDto.MainBarDr.HasValue) seg.PileSection.MainBarDr = segDto.MainBarDr.Value;
-                        if (segDto.PipeTs.HasValue) seg.PileSection.PipeTs = segDto.PipeTs.Value;
-                        if (segDto.PipeDia.HasValue) seg.PileSection.PipeDia = segDto.PipeDia.Value;
-                        if (segDto.MainBarNum.HasValue) seg.PileSection.MainBarNum = segDto.MainBarNum.Value;
-                        if (!string.IsNullOrEmpty(segDto.MainBarSize)) seg.PileSection.MainBarSize = segDto.MainBarSize;
-                        if (segDto.ConcreteFc.HasValue) seg.PileSection.ConcreteFc = segDto.ConcreteFc.Value;
-                        if (segDto.ConcreteGsi.HasValue) seg.PileSection.ConcreteGsi = segDto.ConcreteGsi.Value;
-                        if (segDto.ConcreteGamma.HasValue) seg.PileSection.ConcreteGamma = segDto.ConcreteGamma.Value;
-                        if (!string.IsNullOrEmpty(segDto.HoopSize)) seg.PileSection.HoopSize = segDto.HoopSize;
-                        if (segDto.HoopSpacing.HasValue) seg.PileSection.HoopSpacing = segDto.HoopSpacing.Value;
-                    }
-                }
-
-                // 杭体タイプを配り直す。setter の波及は入れ替え前の段にしか届いていない
                 foreach (var seg in pb.PileBodySegments)
                 {
-                    if (seg?.PileSection != null)
-                        seg.PileSection.PileBodyType = pb.PileBodyType;
+                    var sec = seg?.PileSection;
+                    if (sec == null) continue;
+                    if (!string.IsNullOrWhiteSpace(sec.SelectedPrecastPile?.Name))
+                        sec.RecalculateSelectedPrecastPile();
+                    sec.RecalculatePileDia();
+                    sec.RecalculateConcreteE();
+                    sec.SetSpecs();
                 }
-
-                pileBodies.Add(pb);
             }
-            inputModel.PileBodies = pileBodies;
+            inputModel.UpdateCountLists();
 
-            // 杭配置データの構築 — No / PileNo は AnalysisModelling のガード (item.No == i+1) を満たすため設定必須
-            var pileLayoutItems = new ObservableCollection<PileLayoutDataItem>();
-            for (int i = 0; i < pileData.PileLayoutItems.Count; i++)
-            {
-                var plDto = pileData.PileLayoutItems[i];
-                var item = new PileLayoutDataItem
-                {
-                    No = i + 1,
-                    PileNo = i + 1,
-                    PileBodyNo = plDto.PileBodyNo > 0 ? plDto.PileBodyNo : 1,
-                    GroundNo = plDto.GroundNo > 0 ? plDto.GroundNo : 1,
-                    X = plDto.X,
-                    Y = plDto.Y,
-                    Z = plDto.Z != 0 ? plDto.Z : groundInput.GroundTopAltitude,
-                    // 軸力は実機の PileExampleLoader と同じ形で写す。
-                    // これを忘れると全杭の軸力が 0 になり、M-φ が N=0 でしか作られない
-                    // (Example10 の 1200φ では Mcr が常時軸力時の 40% にしかならず、
-                    //  軸力依存の退化を一切検出できないまま解析テストが通ってしまう)。
-                    AxialForceVL0 = plDto.AxialForceVL0,
-                    AxialForceLevel1s = plDto.AxialForceLevel1s?.Length >= 4
-                        ? new ObservableCollection<double>(plDto.AxialForceLevel1s)
-                        : new ObservableCollection<double>([0.0, 0.0, 0.0, 0.0]),
-                    AxialForceLevel2s = plDto.AxialForceLevel2s?.Length >= 4
-                        ? new ObservableCollection<double>(plDto.AxialForceLevel2s)
-                        : new ObservableCollection<double>([0.0, 0.0, 0.0, 0.0]),
-                    // 群杭係数 ξ と杭間隔比 R/B も実機の PileExampleLoader と同じ形で写す。
-                    // これを忘れると全杭が ξ = 1 (低減なし)・R/B 未設定になり、
-                    // 群杭の影響が解析に入らないまま回帰網が通る。実際に 2026-09-12 まで
-                    // そうなっていて、設計例集3.1 の ξ = 0.981 が一度も検査されていなかった
-                    // (軸力のときと同じ取り残し。ExampleBuilderFidelityTests で見張る)。
-                    GroupPileFactor = plDto.GroupPileFactor,
-                    PileSpacingFactor = plDto.PileSpacingFactor,
-                };
-                pileLayoutItems.Add(item);
-            }
-            inputModel.PileLayoutItems = pileLayoutItems;
+            // 杭配置の番号 (AnalysisModelling は item.No == i+1 を要求する)
+            vm.UpdatePileLayoutNo();
 
-            // 荷重ケース（最小限のデフォルト値）
-            inputModel.LoadCasesInput = new LoadCasesInput();
-            // AnalysisModelling が LoadCasesLevel1 を要求するため、最小限の荷重ケースを設定
+            // 荷重は回帰の契約として固定する (例題の荷重は使わない — 上の説明を参照)
             inputModel.LoadCasesInput.LoadCasesLevel1 = new ObservableCollection<LoadCase>
             {
                 new LoadCase { Level = 1, No = 1, IsApplicable = true, IsAnalysisTarget = true,
@@ -605,12 +524,6 @@ namespace TestProject1
             inputModel.LoadCasesInput.LoadCombinations = new ObservableCollection<LoadCombination>
             {
                 new LoadCombination(1, 1.0, 1.0, 1.0) { IsApplicable = true }
-            };
-
-            // ElementDivision の初期化
-            inputModel.ElementDivision = new ElementDivision
-            {
-                SoilPiles = new ObservableCollection<SoilPile>()
             };
 
             // SoilPiles の生成（要素分割）

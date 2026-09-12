@@ -22,15 +22,15 @@
       "totalIterations": 19,
       "totalSteps": 4,
       "bisectionRetries": 0,
-      "finalResidual": 8.45018259066418E-08,
-      "apUx": 0.00435303210924325,
-      "apUy": -0.00011426005654570435,
-      "apUz": 1.852387916454489E-05,
-      "apRx": -2.765902681316957E-09,
-      "apRy": 3.6896051415119713E-07,
-      "apRz": 4.554630817517531E-06,
-      "maxAbsHorizDisp": 0.012871371626861614,
-      "maxAbsHorizSpringReaction": 408.09744204845174
+      "finalResidual": 2.987460309693443E-08,
+      "apUx": 0.004993269547581206,
+      "apUy": -0.0001205516321973642,
+      "apUz": 2.0203141281512757E-05,
+      "apRx": -3.2950002004460294E-09,
+      "apRy": 4.021840509610574E-07,
+      "apRz": 4.860886942109909E-06,
+      "maxAbsHorizDisp": 0.013295603087929429,
+      "maxAbsHorizSpringReaction": 367.47179468923855
     },
     {
       "caseKey": "L2-1.C1.Liq",
@@ -40,25 +40,25 @@
       "isLiquefaction": true,
       "converged": true,
       "relaxedSteps": 0,
-      "totalIterations": 94,
+      "totalIterations": 103,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 7.475368588329276E-07,
-      "apUx": 0.016635123120538386,
-      "apUy": -0.00040557195545912374,
-      "apUz": 6.386349472879325E-05,
-      "apRx": -4.094307981089815E-09,
-      "apRy": 1.2764219533600564E-06,
-      "apRz": 1.4709463336408048E-05,
-      "maxAbsHorizDisp": 0.08332721476742799,
-      "maxAbsHorizSpringReaction": 1276.944500451674
+      "finalResidual": 3.324285251362523E-07,
+      "apUx": 0.020113699136678348,
+      "apUy": -0.00048086835052459076,
+      "apUz": 7.291241170622514E-05,
+      "apRx": -3.6466212935839777E-09,
+      "apRy": 1.4581079052843069E-06,
+      "apRz": 1.6934687162170302E-05,
+      "maxAbsHorizDisp": 0.08678496494642683,
+      "maxAbsHorizSpringReaction": 1382.3377144726394
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 113,
+    "totalIterations": 122,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 7.475368588329276E-07
+    "maxResidualOverAllCases": 3.324285251362523E-07
   }
 }

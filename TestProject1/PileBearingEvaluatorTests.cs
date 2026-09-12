@@ -204,17 +204,19 @@ namespace TestProject1
         /// 例題を読んだだけで検定が出ること (水平解析は要らない)。
         ///
         /// 地盤は<b>杭体 No</b> で引くこと。<c>PileLayoutDataItem.SoilPile</c> は
-        /// (地盤No, 杭体No, 杭頭Z) を鍵にするキャッシュなので Z が合わず null になり、
-        /// それを使うと<b>黙って検定が 0 件になる</b>。
+        /// (地盤No, 杭体No, 杭頭Z) を鍵にするキャッシュなので、Z が合わなければ引けず、
+        /// それに頼ると<b>黙って検定が 0 件になる</b>。
+        ///
+        /// <para>以前はここで「この例題では <c>pile.SoilPile</c> が引けない」ことを前提として
+        /// 確かめていた。2026-09-12 に例題ビルダーを実機の読込に寄せたところ、杭 Z の
+        /// セマンティクス移行まで通るようになり<b>引けるようになった</b>ので前提は外した。
+        /// 引けなくなったときに黙って 0 件になる形は、下の件数の確認が捕まえる。</para>
         /// </summary>
         [TestMethod]
         public void RealExample_ProducesBearingItemsWithoutAnyAnalysis()
         {
             var (inputModel, error) = IntegrationTests.BuildExampleInputModel("Example9", "PileExample9");
             Assert.IsNotNull(inputModel, error);
-
-            Assert.IsNull(inputModel.PileLayoutItems[0].SoilPile,
-                "前提が崩れている: この例題では pile.SoilPile は引けないはず");
 
             var items = PileBearingEvaluator.Evaluate(inputModel, "A");
 

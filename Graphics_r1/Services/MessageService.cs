@@ -15,6 +15,32 @@ namespace PileDesign.Services
     /// </summary>
     public static class MessageService
     {
+        /// <summary>
+        /// <b>無人実行モード</b>。true の間、ダイアログは出さずにログへ流し、既定の答えを返す。
+        ///
+        /// <para>回帰テストは水平解析の入口 (<c>HorizontalCalculationViewModel</c>) を通るので、
+        /// そこにある 20 か所の <c>Show</c> のどれかに当たると<b>誰も押せないダイアログの前で
+        /// 実行が止まる</b>。実際に 2026-09-12、例題ビルダーを実機の読込に寄せた拍子に
+        /// 「基礎梁が定義されていないため剛体連結モードに切り替えて…」が出て全体実行が固まった。</para>
+        ///
+        /// <para>返す答えは、進めるかどうかを聞くもの (OKCancel / YesNo) では<b>進めない側</b>。
+        /// 無人の実行が確認を飛び越えて先へ進むほうが危ない。</para>
+        /// </summary>
+        public static bool IsUnattended { get; set; }
+
+        /// <summary>無人実行モードでの答え。ボタンの並びごとに「進めない側」を返す。</summary>
+        private static MessageBoxResult UnattendedResult(string text, string caption, MessageBoxButton button)
+        {
+            Serilog.Log.Information("[無人実行] ダイアログを表示せずに進めます: [{Caption}] {Text}", caption, text);
+            return button switch
+            {
+                MessageBoxButton.OKCancel => MessageBoxResult.Cancel,
+                MessageBoxButton.YesNo => MessageBoxResult.No,
+                MessageBoxButton.YesNoCancel => MessageBoxResult.Cancel,
+                _ => MessageBoxResult.OK,
+            };
+        }
+
         // owner は「現在アクティブなウィンドウ」を優先取得。
         // 例: 水平解析ウィンドウで操作中なら HorizontalCalculationWindow が owner となり、
         //     完了通知ダイアログがその上に表示される。アクティブウィンドウがなければ
@@ -73,6 +99,8 @@ namespace PileDesign.Services
 
             Serilog.Log.Error(ex, "[{Caption}] {Summary}", caption, summary);
 
+            if (IsUnattended) return;
+
             MessageBox.Show(owner,
                 $"{summary}\n{ex.Message}\n\n詳細はログに記録しています（ヘルプ タブ → バージョン情報 → ログフォルダを開く）。",
                 caption, MessageBoxButton.OK, MessageBoxImage.Error);
@@ -84,6 +112,7 @@ namespace PileDesign.Services
 
         public static MessageBoxResult Show(string messageBoxText)
         {
+            if (IsUnattended) return UnattendedResult(messageBoxText, "", MessageBoxButton.OK);
             var o = Owner;
             return o != null ? MessageBox.Show(o, messageBoxText)
                              : MessageBox.Show(messageBoxText);
@@ -91,6 +120,7 @@ namespace PileDesign.Services
 
         public static MessageBoxResult Show(string messageBoxText, string caption)
         {
+            if (IsUnattended) return UnattendedResult(messageBoxText, caption, MessageBoxButton.OK);
             var o = Owner;
             return o != null ? MessageBox.Show(o, messageBoxText, caption)
                              : MessageBox.Show(messageBoxText, caption);
@@ -98,6 +128,7 @@ namespace PileDesign.Services
 
         public static MessageBoxResult Show(string messageBoxText, string caption, MessageBoxButton button)
         {
+            if (IsUnattended) return UnattendedResult(messageBoxText, caption, button);
             var o = Owner;
             return o != null ? MessageBox.Show(o, messageBoxText, caption, button)
                              : MessageBox.Show(messageBoxText, caption, button);
@@ -105,6 +136,7 @@ namespace PileDesign.Services
 
         public static MessageBoxResult Show(string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon)
         {
+            if (IsUnattended) return UnattendedResult(messageBoxText, caption, button);
             var o = Owner;
             return o != null ? MessageBox.Show(o, messageBoxText, caption, button, icon)
                              : MessageBox.Show(messageBoxText, caption, button, icon);
@@ -112,6 +144,7 @@ namespace PileDesign.Services
 
         public static MessageBoxResult Show(string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon, MessageBoxResult defaultResult)
         {
+            if (IsUnattended) return UnattendedResult(messageBoxText, caption, button);
             var o = Owner;
             return o != null ? MessageBox.Show(o, messageBoxText, caption, button, icon, defaultResult)
                              : MessageBox.Show(messageBoxText, caption, button, icon, defaultResult);
@@ -119,15 +152,20 @@ namespace PileDesign.Services
 
         // Owner を明示的に指定したい場合のフォールバック (子ウィンドウから自身を owner にしたい等)。
         public static MessageBoxResult Show(Window owner, string messageBoxText)
-            => MessageBox.Show(owner, messageBoxText);
+            => IsUnattended ? UnattendedResult(messageBoxText, "", MessageBoxButton.OK)
+                            : MessageBox.Show(owner, messageBoxText);
         public static MessageBoxResult Show(Window owner, string messageBoxText, string caption)
-            => MessageBox.Show(owner, messageBoxText, caption);
+            => IsUnattended ? UnattendedResult(messageBoxText, caption, MessageBoxButton.OK)
+                            : MessageBox.Show(owner, messageBoxText, caption);
         public static MessageBoxResult Show(Window owner, string messageBoxText, string caption, MessageBoxButton button)
-            => MessageBox.Show(owner, messageBoxText, caption, button);
+            => IsUnattended ? UnattendedResult(messageBoxText, caption, button)
+                            : MessageBox.Show(owner, messageBoxText, caption, button);
         public static MessageBoxResult Show(Window owner, string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon)
-            => MessageBox.Show(owner, messageBoxText, caption, button, icon);
+            => IsUnattended ? UnattendedResult(messageBoxText, caption, button)
+                            : MessageBox.Show(owner, messageBoxText, caption, button, icon);
         public static MessageBoxResult Show(Window owner, string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon, MessageBoxResult defaultResult)
-            => MessageBox.Show(owner, messageBoxText, caption, button, icon, defaultResult);
+            => IsUnattended ? UnattendedResult(messageBoxText, caption, button)
+                            : MessageBox.Show(owner, messageBoxText, caption, button, icon, defaultResult);
 
         // === 短縮 API (用途別) ===
 
