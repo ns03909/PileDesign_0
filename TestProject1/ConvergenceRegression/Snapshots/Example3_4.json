@@ -40,25 +40,25 @@
       "isLiquefaction": true,
       "converged": true,
       "relaxedSteps": 0,
-      "totalIterations": 52,
+      "totalIterations": 51,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 7.557931899670811E-07,
-      "apUx": 0.17652854443902355,
-      "apUy": -0.008701926809726576,
-      "apUz": 0.0006650372162499829,
-      "apRx": -1.2800521393853812E-07,
-      "apRy": 3.8195224214281564E-05,
-      "apRz": 0.000986388614174214,
+      "finalResidual": 7.55793177347627E-07,
+      "apUx": 0.1765285444390244,
+      "apUy": -0.008701926809726954,
+      "apUz": 0.0006650372162499882,
+      "apRx": -1.2800521393861655E-07,
+      "apRy": 3.819522421428178E-05,
+      "apRz": 0.0009863886141742641,
       "maxAbsHorizDisp": 0.21580580348361084,
-      "maxAbsHorizSpringReaction": 1073.9575607548504
+      "maxAbsHorizSpringReaction": 1073.9575607545419
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 69,
+    "totalIterations": 68,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 7.557931899670811E-07
+    "maxResidualOverAllCases": 7.55793177347627E-07
   }
 }

@@ -132,6 +132,17 @@ namespace PileDesign.Output
                 "kh = kh0/√(|y|/y0) の変位依存低減を考慮する（塑性地盤反力 py による頭打ちは行わない）。 " +
                 $"「{SoilNonlinearityModes.ToShortText(SoilNonlinearityMode.KhReductionWithPy)}」: " +
                 "上記に加え地盤反力 p を塑性地盤反力 py で頭打ちとする。");
+
+            // 収束判定の基準値。既定 (外力のみ) から変えたときだけ書く。
+            // 判定の厳しさが変わる = 結果が変わるので、計算書に残らないと後から辿れない。
+            var residualReference = fundamentalInput?.ResidualReference ?? ResidualReferenceModes.Default;
+            if (residualReference != ResidualReferenceModes.Default)
+            {
+                AddTableNote(body,
+                    "※ 非線形反復の収束判定は、残差 ‖R‖² を " +
+                    $"「{ResidualReferenceModes.ToText(residualReference)}」の 2 乗で割った比で行った " +
+                    "（既定は外力と強制変位の反力の大きい方）。許容値は既定と同じ 1e-6 である。");
+            }
         }
 
         //

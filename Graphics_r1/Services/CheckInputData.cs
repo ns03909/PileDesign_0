@@ -185,12 +185,20 @@ namespace PileDesign.Services
         /// <para>慣性力がどちらも 0 の荷重ケースは水平解析側でスキップされる
         /// (<c>HorizontalCalculationViewModel.Run</c>) ので対象外。VL ケースは水平荷重 0 で
         /// 組合せを 1 回だけ走らせる別扱いなので、ここでも対象外です。</para>
+        ///
+        /// <para><b>基本設定で収束判定の基準値を外力以外にしている場合は止めません。</b>
+        /// 強制変位の反力や内力を基準にすれば慣性力 0 でも判定が成り立つので、
+        /// 止める理由が無くなります (<see cref="ResidualReferenceMode"/>)。</para>
         /// </summary>
         public static string CheckLoadCombinations(InputModel inputModel, string message)
         {
             var loadCases = inputModel?.LoadCasesInput?.AnalysisTargetSeismicLoadCases;
             var combinations = inputModel?.LoadCasesInput?.AllLoadCombinations;
             if (loadCases == null || combinations == null) return message;
+
+            // 収束判定の基準値が外力以外なら、慣性力 0 でも判定が成り立つので止めない
+            var reference = inputModel?.FundamentalInput?.ResidualReference ?? ResidualReferenceModes.Default;
+            if (reference.WorksWithoutInertia()) return message;
 
             foreach (var lc in loadCases)
             {
@@ -209,7 +217,8 @@ namespace PileDesign.Services
 
                     message += $"レベル{lc.Level} 荷重ケース No.{lc.No} × 組合せ {comb.Name}: " +
                                "βU と βL で慣性力が 0 になり、収束判定 (残差/外力) が成り立ちません。" +
-                               "荷重条件の組合せ係数を 0.5〜1.0 にしてください。\n";
+                               "荷重条件の組合せ係数を 0.5〜1.0 にしてください " +
+                               "(基本設定で収束判定の基準値を変えれば、慣性力 0 でも解けます)。\n";
                 }
             }
             return message;

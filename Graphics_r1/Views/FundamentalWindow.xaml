@@ -16,6 +16,7 @@
     
     <Window.Resources>
         <conv:BoolEqualsConverter x:Key="BoolEqualsConverter"/>
+        <conv:ResidualReferenceModeToTextConverter x:Key="ResidualReferenceModeToTextConverter"/>
     </Window.Resources>
 
     <Window.InputBindings>
@@ -335,6 +336,30 @@
                         AlternativeText="ファイバーモデルで算定する（断面分割積分）"
                         AlternativeFormula="各 φ で N = ∫σ(ε₀−φ·z)dA = N₀ を解き、M = −∫σ·z dA（約50点、β₁·β₂ 低減なし。鋼管杭の鋼管部を除く全コンクリート系杭）"
                         AlternativeToolTip="コンクリート系杭の解析用 M-φ 関係を、「基礎部材の強度と変形性能」のポリリニア（折線）に代えて、&#x0a;ファイバーモデル（断面分割積分。各曲率で軸力つり合いを解き M を直接積分）で算定します。&#x0a;対象: 場所打ちRC杭・場所打ち鋼管コンクリート杭（RC部・鋼管コンクリート部）・PHC/PRC/SC杭・コンクリート充填鋼管部。&#x0a;指針の低減係数 β1・β2 は乗じない「素の」断面応答です（終局側はポリリニアより大きくなります）。&#x0a;掃引終点は各杭種の終局状態（場所打ち系: 圧縮縁ひずみ εcu、PHC/PRC: コンクリート圧壊 εcu）。材料構成則は解析用と同じバイリニアです。&#x0a;FEM で負勾配ばねとならないよう、曲線は単調非減少化（最小勾配床付き）して使用します。&#x0a;※ 鋼管杭の鋼管部は対象外（既に厳密な折線）。M-θ（杭頭回転ばね）も従来どおりです。"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- 収束判定の基準値 (残差を何で割るか) -->
+            <GroupBox Header="収束判定の基準値" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+                    <ctrl:HelpLinkButton Anchor="fund-opt-residual-reference" Text="ヘルプ"
+                                         LinkToolTip="収束判定の基準値の説明を開きます。"
+                                         HorizontalAlignment="Right" Margin="0,0,0,2"/>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"
+                               Text="非線形反復の収束は、残差（まだ釣り合っていない力）を何かの力の大きさで割った比で判定します。&#x0a;液状化ケースは地盤変位を強制変位で与えるため、慣性力が小さくても構造は大きく動きます。慣性力が 0 の組合せでは外力だけでは基準が 0 になり、判定が成り立ちません。&#x0a;そのため既定は「外力と強制変位の反力の大きい方」です。基準値を変えると収束の判定そのものが変わるため、結果が動きます。&#x0a;1.0.32-beta 以前の結果と比べるときは「外力のみ（旧版の判定）」を選んでください。"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="残差を割る基準値" VerticalAlignment="Center" Width="150"/>
+                        <ComboBox Width="290" ItemsSource="{Binding ResidualReferenceOptions}"
+                                  SelectedItem="{Binding ResidualReference, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource ResidualReferenceModeToTextConverter}}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,6,0,0"
+                               Text="外力のみ（旧版の判定）: ‖F‖² で割ります。1.0.32-beta 以前と同じ判定です。強制変位だけで駆動するケースでは判定が成り立たず、慣性力 0 の組合せは入力検査で止めます。&#x0a;外力と強制変位の反力の大きい方（既定）: max(‖F‖², ‖T_強制変位‖²) で割ります。ANSYS の CNVTOL が採る流儀で、慣性力 0 でも判定が成り立ちます。&#x0a;内力の時間平均: これまでのステップの ‖T‖ の平均（外力・反力の大きい方を下限）で割ります。Abaqus/Standard の flux norm に相当し、駆動源が混在するモデルでもケースごとの厳しさが揃います。"/>
                 </StackPanel>
             </GroupBox>
 

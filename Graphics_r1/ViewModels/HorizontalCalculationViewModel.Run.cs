@@ -343,6 +343,9 @@ namespace PileDesign.ViewModels
                         // 同じく PrepareKmat が caseModel から読む。
                         caseModel.CaseLevel = level;
                         caseModel.CaseIsLiquefaction = isLiquefaction;
+                        // 収束判定で残差を割る基準値の取り方 (基本設定)。
+                        caseModel.ResidualReference =
+                            InputModel.FundamentalInput?.ResidualReference ?? ResidualReferenceModes.Default;
 
                         // ── 軸剛性 0 (Uz 解放): 引張定着筋なし半剛接合 (キャプテン/F.T.Pile/キャプリング) で
                         //    入力軸力が引張となる杭について、case-local モデルの杭頭 Uz master-slave を
@@ -1591,6 +1594,11 @@ namespace PileDesign.ViewModels
                                 foreach (var rs in caseModel.RotationalSprings)
                                     rs?.CommitFromConvergedState();
                             }
+
+                            // 内力基準 (Abaqus の flux norm 相当) の時間平均は、増分ごとの平均で取る。
+                            // 反復の途中で積むと、反復数の多いステップの重みが大きくなる。
+                            if (converged)
+                                caseModel.CommitInternalFluxNorm();
 
                             // 緩めた基準 (RELAXED_ALPHA より大きい許容値) で受理したステップは区別する
                             StepStatus stepStatus = !converged ? StepStatus.Unconverged

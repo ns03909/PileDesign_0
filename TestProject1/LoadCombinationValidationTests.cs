@@ -37,6 +37,14 @@ namespace TestProject1
             model.LoadCasesInput.LoadCasesLevel2 = new ObservableCollection<LoadCase>();
             model.LoadCasesInput.LoadCombinationFactor = factor;
             model.LoadCasesInput.LoadCombinations = LoadCaseViewModel.GetCombinations(factor);
+
+            // この検査は「収束判定の基準値が外力のみ」のときだけ働く。
+            // 既定 (外力と反力の大きい方) では慣性力 0 でも判定が成り立つので止めない
+            // (その区別は ResidualReferenceModeTests が見る)。
+            model.FundamentalInput = new FundamentalInput
+            {
+                ResidualReference = ResidualReferenceMode.ExternalForce,
+            };
             return model;
         }
 

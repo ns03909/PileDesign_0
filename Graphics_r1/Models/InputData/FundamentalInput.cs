@@ -244,6 +244,16 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _notification1113CompressionCase, value);
         }
 
+        // 非線形反復の収束判定で、残差を何の大きさで割るか (基準値の取り方)。
+        // 既定は外力と強制変位の反力の大きい方 (ResidualReferenceModes.Default)。
+        // 解析の収束判定を変えるので、変更すると結果が動く。
+        private ResidualReferenceMode _residualReference = ResidualReferenceModes.Default;
+        public ResidualReferenceMode ResidualReference
+        {
+            get => _residualReference;
+            set => SetProperty(ref _residualReference, value);
+        }
+
         // 【評定書に規定が無い】場所打ち鋼管コンクリート杭の終局圧縮縁ひずみを 5,000μ とする（既定 3,000μ）
         private bool _useUltimateStrain5000ForSteelPipeConcrete;
         public bool UseUltimateStrain5000ForSteelPipeConcrete

@@ -19,18 +19,18 @@
       "isLiquefaction": true,
       "converged": true,
       "relaxedSteps": 0,
-      "totalIterations": 77,
+      "totalIterations": 84,
       "totalSteps": 4,
       "bisectionRetries": 0,
-      "finalResidual": 5.14326496347354E-07,
-      "apUx": 0.044445887965405106,
-      "apUy": -0.013564821090788942,
-      "apUz": 8.177497266947511E-05,
-      "apRx": 5.679363044028017E-07,
-      "apRy": 4.1921334291270025E-06,
-      "apRz": 0.001542563921268422,
+      "finalResidual": 6.432115439073566E-07,
+      "apUx": 0.03685156741203235,
+      "apUy": -0.010771965634730655,
+      "apUz": 9.734205677638373E-05,
+      "apRx": 6.667858207546732E-08,
+      "apRy": 4.554273092983375E-06,
+      "apRz": 0.001029196166924463,
       "maxAbsHorizDisp": 0.20303929579752292,
-      "maxAbsHorizSpringReaction": 373.6551393686854
+      "maxAbsHorizSpringReaction": 306.1623911880928
     },
     {
       "caseKey": "L2-1.C1.Liq",
@@ -57,7 +57,7 @@
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 200,
+    "totalIterations": 207,
     "totalSteps": 12,
     "maxResidualOverAllCases": 8.294829275876815E-07
   }

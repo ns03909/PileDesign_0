@@ -19,18 +19,18 @@
       "isLiquefaction": true,
       "converged": true,
       "relaxedSteps": 0,
-      "totalIterations": 67,
+      "totalIterations": 65,
       "totalSteps": 4,
       "bisectionRetries": 0,
-      "finalResidual": 4.793067811852504E-09,
-      "apUx": 0.12421440264814422,
-      "apUy": -0.0019729309335105158,
-      "apUz": 0.0001971867354971884,
-      "apRx": -4.321170996157265E-22,
-      "apRy": 5.358335203727949E-06,
-      "apRz": 0.00010722450725600627,
+      "finalResidual": 3.5365322231402803E-09,
+      "apUx": 0.12437391066574544,
+      "apUy": -0.0019721282115770537,
+      "apUz": 0.000196312846902892,
+      "apRx": -2.516608443880835E-22,
+      "apRy": 5.3345882310568485E-06,
+      "apRz": 0.00010718088106397038,
       "maxAbsHorizDisp": 0.18348648588966726,
-      "maxAbsHorizSpringReaction": 477.4736587322182
+      "maxAbsHorizSpringReaction": 477.46841707486095
     },
     {
       "caseKey": "L2-1.C1.Liq",
@@ -40,25 +40,25 @@
       "isLiquefaction": true,
       "converged": true,
       "relaxedSteps": 0,
-      "totalIterations": 140,
+      "totalIterations": 127,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 6.264633204839955E-07,
-      "apUx": 0.22258427266245803,
-      "apUy": -0.005729145559152389,
-      "apUz": 0.0002480233380004579,
-      "apRx": -2.9030356506726746E-20,
-      "apRy": 6.7397646195776484E-06,
-      "apRz": 0.00031136660647567853,
+      "finalResidual": 8.039609673999761E-07,
+      "apUx": 0.22265896367425303,
+      "apUy": -0.005838466222796058,
+      "apUz": 0.0002478828526152411,
+      "apRx": -5.682949597776603E-21,
+      "apRy": 6.735947081935893E-06,
+      "apRz": 0.00031730794689109143,
       "maxAbsHorizDisp": 0.28123899215856346,
-      "maxAbsHorizSpringReaction": 462.2350437704934
+      "maxAbsHorizSpringReaction": 462.23085381609377
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 207,
+    "totalIterations": 192,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 6.264633204839955E-07
+    "maxResidualOverAllCases": 8.039609673999761E-07
   }
 }

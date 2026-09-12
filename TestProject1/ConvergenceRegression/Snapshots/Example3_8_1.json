@@ -19,18 +19,18 @@
       "isLiquefaction": true,
       "converged": true,
       "relaxedSteps": 0,
-      "totalIterations": 19,
+      "totalIterations": 18,
       "totalSteps": 4,
       "bisectionRetries": 0,
-      "finalResidual": 2.987460309693443E-08,
-      "apUx": 0.004993269547581206,
-      "apUy": -0.0001205516321973642,
-      "apUz": 2.0203141281512757E-05,
-      "apRx": -3.2950002004460294E-09,
-      "apRy": 4.021840509610574E-07,
-      "apRz": 4.860886942109909E-06,
+      "finalResidual": 5.765827081980916E-07,
+      "apUx": 0.004993491689189081,
+      "apUy": -0.0001205755860784241,
+      "apUz": 2.0203897356544685E-05,
+      "apRx": -3.2961076021274392E-09,
+      "apRy": 4.0219830960664166E-07,
+      "apRz": 4.861692236737592E-06,
       "maxAbsHorizDisp": 0.013295603087929429,
-      "maxAbsHorizSpringReaction": 367.47179468923855
+      "maxAbsHorizSpringReaction": 367.5159092179834
     },
     {
       "caseKey": "L2-1.C1.Liq",
@@ -40,25 +40,25 @@
       "isLiquefaction": true,
       "converged": true,
       "relaxedSteps": 0,
-      "totalIterations": 103,
+      "totalIterations": 75,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 3.324285251362523E-07,
-      "apUx": 0.020113699136678348,
-      "apUy": -0.00048086835052459076,
-      "apUz": 7.291241170622514E-05,
-      "apRx": -3.6466212935839777E-09,
-      "apRy": 1.4581079052843069E-06,
-      "apRz": 1.6934687162170302E-05,
+      "finalResidual": 7.98602529100631E-07,
+      "apUx": 0.020113693828712483,
+      "apUy": -0.0004808703339828857,
+      "apUz": 7.291240164596088E-05,
+      "apRx": -3.64667314811519E-09,
+      "apRy": 1.4581076619317536E-06,
+      "apRz": 1.693476496648364E-05,
       "maxAbsHorizDisp": 0.08678496494642683,
-      "maxAbsHorizSpringReaction": 1382.3377144726394
+      "maxAbsHorizSpringReaction": 1382.35808553425
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 122,
+    "totalIterations": 93,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 3.324285251362523E-07
+    "maxResidualOverAllCases": 7.98602529100631E-07
   }
 }

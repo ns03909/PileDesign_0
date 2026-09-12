@@ -132,6 +132,42 @@ namespace PileDesign.FEM
         [JsonIgnore]
         public bool CaseIsLiquefaction { get; set; }
 
+        /// <summary>
+        /// 収束判定で残差を割る基準値の取り方。既定は <see cref="ResidualReferenceModes.Default"/>。
+        /// 基本設定で選び、SoilNonlinearityMode と同じくケース単位で配る (JSON には保存しない)。
+        /// </summary>
+        [JsonIgnore]
+        public ResidualReferenceMode ResidualReference { get; set; } = ResidualReferenceModes.Default;
+
+        /// <summary>
+        /// 内力基準 (<see cref="ResidualReferenceMode.InternalForce"/>) のための ‖T‖ の積算と回数。
+        /// ステップが収束するたびに <see cref="CommitInternalFluxNorm"/> で積む (Abaqus の flux norm は
+        /// 増分ごとの平均で、反復ごとの平均ではない)。ケース単位の実行時状態なので保存しない。
+        /// </summary>
+        [JsonIgnore]
+        public double InternalFluxNormSum { get; private set; }
+
+        /// <summary>積算した回数 (= 収束したステップ数)。</summary>
+        [JsonIgnore]
+        public int InternalFluxNormCount { get; private set; }
+
+        /// <summary>
+        /// いまの内力の大きさ ‖T‖ を、内力基準の時間平均へ積む。<b>ステップが収束したときに呼ぶ。</b>
+        /// 反復の途中で呼ぶと、反復数の多いステップの重みが大きくなる。
+        /// </summary>
+        public void CommitInternalFluxNorm()
+        {
+            if (VectorT == null) return;
+            double norm = VectorT.L2Norm();
+            if (!double.IsFinite(norm) || norm <= 0.0) return;
+            InternalFluxNormSum += norm;
+            InternalFluxNormCount++;
+        }
+
+        /// <summary>これまでのステップの ‖T‖ の平均。まだ 1 つも積んでいなければ 0。</summary>
+        public double AveragedInternalFluxNorm
+            => InternalFluxNormCount > 0 ? InternalFluxNormSum / InternalFluxNormCount : 0.0;
+
         public List<Node> Nodes { get; set; }
         public List<Beam> Beams { get; set; }
         public List<DummyBeam> DummyBeams { get; set; }
@@ -1054,6 +1090,39 @@ namespace PileDesign.FEM
             VectorR += VectorDF;
         }
 
+        /// <summary>
+        /// 収束判定に使う残差比を求める。<b>純関数</b>（テストはここを直接見る）。
+        ///
+        /// <para>返すのは<b>2 乗の比</b> ‖R‖²/‖基準‖²。反復側の許容値 (1e-6) がこの形なので合わせている。
+        /// 1 乗に直すと 1e-3 = 0.1% で、Abaqus の flux norm に対する 0.5% より厳しい。</para>
+        ///
+        /// <para>基準値の取り方は <see cref="ResidualReferenceMode"/> を参照。基準が 0 のときは、
+        /// 残差も 0 なら 0 (釣り合っている)、残差があるなら 1e30 (判定できないので収束させない) を返す。
+        /// 従来の扱いをそのまま残したもので、外力のみの基準で慣性力が 0 のときにここに来る。</para>
+        /// </summary>
+        /// <param name="mode">基準値の取り方。</param>
+        /// <param name="normsqR">残差の 2 乗ノルム ‖R‖² (強制変位の自由度は 0 と置いたもの)。</param>
+        /// <param name="normsqF">外力の 2 乗ノルム ‖F‖²。</param>
+        /// <param name="normsqForcedReaction">強制変位の自由度の内力 (反力) の 2 乗ノルム。</param>
+        /// <param name="internalFluxNorm">内力の大きさ ‖T‖ (時間平均。無ければ現在値)。<b>2 乗ではない</b>。</param>
+        public static double ResidualRatio(
+            ResidualReferenceMode mode, double normsqR, double normsqF,
+            double normsqForcedReaction, double internalFluxNorm)
+        {
+            double normsqRef = mode switch
+            {
+                ResidualReferenceMode.ExternalForceOrReaction
+                    => Math.Max(normsqF, normsqForcedReaction),
+                ResidualReferenceMode.InternalForce
+                    => Math.Max(internalFluxNorm * internalFluxNorm,
+                                Math.Max(normsqF, normsqForcedReaction)),
+                _ => normsqF,
+            };
+
+            if (normsqRef > 1e-30) return normsqR / normsqRef;
+            return normsqR > 1e-30 ? 1e30 : 0.0;
+        }
+
         // 残余力ベクトルの更新
         private int _findRCallCount = 0;
         public void FindR()
@@ -1071,9 +1140,21 @@ namespace PileDesign.FEM
                 }
             }
 
+            // 強制変位の自由度で構造が返している力 = 反力。残差計算では 0 と置いて捨てているが、
+            // 地盤変位で駆動するケースでは「どれだけの力で押されているか」を表すので、基準値に使える。
+            double normsqForcedReaction = 0.0;
+            for (int i = 0; i < CountFree; i++)
+            {
+                if (VectorDOFForcedDisp[i])
+                    normsqForcedReaction += VectorT[i] * VectorT[i];
+            }
+
             double normsqR = VectorR.L2Norm() * VectorR.L2Norm();
             double normsqF = VectorF.L2Norm() * VectorF.L2Norm();
-            NormsROnNormsFint = normsqF > 1e-30 ? normsqR / normsqF : (normsqR > 1e-30 ? 1e30 : 0.0);
+            double averagedFlux = AveragedInternalFluxNorm;
+            NormsROnNormsFint = ResidualRatio(
+                ResidualReference, normsqR, normsqF, normsqForcedReaction,
+                averagedFlux > 0.0 ? averagedFlux : VectorT.L2Norm());
 
             // NaN診断
             // NaNDiagnostics.DiagnoseResidual(VectorF, VectorT, VectorR, NormsROnNormsFint);
@@ -1085,7 +1166,7 @@ namespace PileDesign.FEM
                 string[] dofNames = ["Ux", "Uy", "Uz", "Rx", "Ry", "Rz"];
                 var log = new System.Text.StringBuilder();
                 log.AppendLine($"=== FindR 診断 (呼び出し#{_findRCallCount}) ===");
-                log.AppendLine($"||R||²/||F||² = {NormsROnNormsFint:E3}");
+                log.AppendLine($"‖R‖²/‖基準‖² = {NormsROnNormsFint:E3} (基準: {ResidualReferenceModes.ToText(ResidualReference)})");
                 log.AppendLine($"||F|| = {VectorF.L2Norm():E3}, ||T|| = {VectorT.L2Norm():E3}, ||R|| = {VectorR.L2Norm():E3}");
 
                 // 残差の大きいDOFトップ10
@@ -1283,6 +1364,11 @@ namespace PileDesign.FEM
             InitializeVectorR();  // 残余力の初期値 R = 0
 
             InitializeAxialForces(); // 杭軸力を長期荷重に設定
+
+            // 内力基準の時間平均も戻す。ケースの再試行 (ステップ数を増やして最初から) は
+            // ここを通るので、戻さないと前の試行で積んだ内力が次の試行の判定基準に混ざる。
+            InternalFluxNormSum = 0.0;
+            InternalFluxNormCount = 0;
         }
 
         public void InitializeVectorF()
@@ -1660,6 +1746,9 @@ namespace PileDesign.FEM
             copy.SoilNonlinearityMode = this.SoilNonlinearityMode;
             copy.CaseLevel = this.CaseLevel;
             copy.CaseIsLiquefaction = this.CaseIsLiquefaction;
+            copy.ResidualReference = this.ResidualReference;
+            copy.InternalFluxNormSum = this.InternalFluxNormSum;
+            copy.InternalFluxNormCount = this.InternalFluxNormCount;
 
             return copy;
         }

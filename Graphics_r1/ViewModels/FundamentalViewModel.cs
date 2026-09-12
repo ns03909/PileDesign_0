@@ -275,6 +275,25 @@ namespace PileDesign.ViewModels
                 "M-φをファイバーモデルで算定 へ変更");
         }
 
+        /// <summary>
+        /// 収束判定で残差を割る基準値の取り方。既定は <see cref="ResidualReferenceModes.Default"/>。
+        /// 収束の判定そのものが変わるので、変更すると既存の解析結果は削除される。
+        /// </summary>
+        [ObservableProperty]
+        private ResidualReferenceMode _residualReference = ResidualReferenceModes.Default;
+
+        partial void OnResidualReferenceChanged(ResidualReferenceMode value)
+        {
+            HandleAnalysisOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.ResidualReference,
+                v => InputModel.FundamentalInput.ResidualReference = v,
+                $"収束判定の基準値を「{ResidualReferenceModes.ToText(value)}」へ変更");
+        }
+
+        /// <summary>ComboBox の選択肢。</summary>
+        public IReadOnlyList<ResidualReferenceMode> ResidualReferenceOptions => ResidualReferenceModes.All;
+
         // 告示1113(第8) 長期許容圧縮の区分（1: Fc/4、2: min(Fc/4.5, 6)）
         [ObservableProperty]
         private int _notification1113CompressionCase = 1;
@@ -517,6 +536,25 @@ namespace PileDesign.ViewModels
             _mainWindowViewModel.ApplyConcreteModelOptions();
         }
 
+        /// <summary>
+        /// 解析 (変位・応力) に効くが材料モデルは変えないオプション用ハンドラ。
+        /// M-φ や NM 曲線のキャッシュは無関係なので破棄しない。解析結果は OK のときに捨てる。
+        /// </summary>
+        private void HandleAnalysisOptionChanged<T>(
+            T value, Func<T> getter, Action<T> setModel, string reason)
+        {
+            if (_suppressConcreteOptionConfirm) return;
+
+            T oldValue = getter();
+            if (EqualityComparer<T>.Default.Equals(oldValue, value)) return;
+
+            NoteAnalysisResultsWillBeDiscarded(reason);
+
+            _undoManager.PushAction(() => setModel(oldValue), () => setModel(value), reason);
+
+            setModel(value);
+        }
+
         // 区分(int)用の capacity-only ハンドラ（解析結果は保持）
         private void HandleCapacityOnlyCaseChanged(
             int value, Func<int> getter, Action<int> setModel, Action<int> setVm)
@@ -584,6 +622,7 @@ namespace PileDesign.ViewModels
             UseFiberNMForSteelPipeConcrete = InputModel.FundamentalInput.UseFiberNMForSteelPipeConcrete;
             ConsiderSteelPipeColumnBuckling = InputModel.FundamentalInput.ConsiderSteelPipeColumnBuckling;
             Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
+            ResidualReference = InputModel.FundamentalInput.ResidualReference;
             ScUltimateShearBeta1 = InputModel.FundamentalInput.ScUltimateShearBeta1;
             ScUltimateShearBeta2 = InputModel.FundamentalInput.ScUltimateShearBeta2;
 
@@ -704,6 +743,9 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.UseFiberMPhi):
                     UseFiberMPhi = InputModel.FundamentalInput.UseFiberMPhi;
+                    break;
+                case nameof(FundamentalInput.ResidualReference):
+                    ResidualReference = InputModel.FundamentalInput.ResidualReference;
                     break;
                 case nameof(FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete):
                     UseUltimateStrain5000ForSteelPipeConcrete = InputModel.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete;
