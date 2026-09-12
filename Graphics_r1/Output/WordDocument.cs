@@ -669,6 +669,10 @@ namespace PileDesign.Output
                 AddDescriptionCapringPile(body);
                 AddLineBreak(body);
             }
+
+            // 参考文献と用語・記号。第三者が計算書だけで何に依った計算かを追えるようにするため、
+            // 計算書レベル (簡易/詳細) に依らず常に出力する (仮定の章と同じ扱い)。
+            AddReferencesAndGlossarySection(body);
         }
 
         // 荷重組合せ + 図・グラフ類

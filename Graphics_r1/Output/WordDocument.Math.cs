@@ -339,7 +339,9 @@ namespace PileDesign.Output
         // kh = kh0 / sqrt(ybar)
         public static void AddEquationKh_2(Body body)
         {
-            var math = Tex(@"k_{h} = \frac{k_{h0}}{\sqrt{\overline{y}}} = \frac{k_{h0}}{\sqrt{\frac{y}{0.01}}}");
+            // 横線付きの y は変換器が出せないので (overline という語が出ていた)、
+            // 基準変位 y0 = 1 cm で割った比として書く
+            var math = Tex(@"k_{h} = \frac{k_{h0}}{\sqrt{y / y_{0}}} = \frac{k_{h0}}{\sqrt{\frac{y}{0.01}}}");
             PutMathInBody(body, math);
         }
 

@@ -377,7 +377,18 @@ namespace PileDesign.Output
             // 圧縮: 基本設定「場所打ち杭の許容圧縮応力度を告示1113(第8)による」ON時は、使用/損傷限界の
             // 許容圧縮応力度を告示（長期・短期）で評価する旨を注記（Ms/Md の Msi/Mdi に反映される）。
             if (ConcreteModelOptions.UseNotification1113Compression)
-                AddTableNote(body, "※ 使用限界・損傷限界の許容圧縮応力度は告示 平13国交告第1113号(第8) による（使用限界=長期、損傷限界=短期）。");
+            {
+                AddText(body, ConcreteModelOptions.MapLimitStateText(
+                    "コンクリートの許容圧縮応力度（告示 平13国交告第1113号(第8)）"));
+                // 区分は基本設定で選ぶ。選んでいない側の式を並べると、どちらで計算したのか読めない
+                if (ConcreteModelOptions.Notification1113CompressionCase == 2)
+                    AddEq(body, @"f_{c,L} = \min\left(\frac{F_{c}}{4.5},\ 6.0\right),\qquad f_{c,S} = 2\,f_{c,L}");
+                else
+                    AddEq(body, @"f_{c,L} = \frac{F_{c}}{4},\qquad f_{c,S} = 2\,f_{c,L}");
+                AddTableNote(body, ConcreteModelOptions.MapLimitStateText(
+                    "※ 使用限界は長期 (fc,L)、損傷限界は短期 (fc,S = 2·fc,L) を用いる。"
+                    + "施工品質管理係数 ξ は掛けない（告示の値そのもの）。単位は N/mm²。"));
+            }
 
             AddText(body, ConcreteModelOptions.MapLimitStateText("場所打ち鉄筋コンクリート杭の使用限界曲げモーメントMs"));
             //AddEquation_InsituReinforcedPileMs(body);
@@ -551,7 +562,94 @@ namespace PileDesign.Output
             }
 
             AddSectionKctbMethod(body);
-        }
+        
+            // ── 既製コンクリート杭 (PHC / PRC / SC) ────────────────────────────
+            //
+            // 曲げは閉じた式ではなく「限界状態ごとのひずみ度の上限を与えて断面を積分する」方式なので、
+            // 式を並べる代わりに、その手順と上限の決め方を書く (Phase5、2026-09-12)。
+            AddHeader2(body, ConcreteModelOptions.MapLimitStateText("既製コンクリート杭 (PHC・PRC・SC杭) の曲げ耐力"), 2);
+            AddIntroText(body, ConcreteModelOptions.MapLimitStateText(
+                "既製コンクリート杭の曲げ耐力は、限界状態ごとに材料のひずみ度の上限を与え、"
+                + "断面を分割して積分した N-M 相関として求める (軸力に応じて曲げ耐力が変わるため)。"
+                + "PC鋼材にはプレストレスひずみ εpi を断面積分側で加えたうえで、上限と照合する。"));
+
+            AddText(body, ConcreteModelOptions.MapLimitStateText("既製コンクリート杭のひずみ度の上限"));
+            var precastStrain = CreateTableWithBordersAndWidths(20, 26, 27, 27);
+            precastStrain.Append(CreateHeaderRow(
+                CreateTableCell(["材料"], 8.0, "center"),
+                CreateTableCell([ConcreteModelOptions.MapLimitStateText("使用限界")], 8.0, "center"),
+                CreateTableCell([ConcreteModelOptions.MapLimitStateText("損傷限界")], 8.0, "center"),
+                CreateTableCell(["安全限界"], 8.0, "center")));
+
+            string serviceC = ConcreteModelOptions.UseNotification1113Compression
+                ? "告示の長期許容圧縮応力度 ÷ Ec"
+                : "(1/3)·ξ·Fc ÷ Ec";
+            string damageC = ConcreteModelOptions.UseNotification1113Compression
+                ? "告示の短期許容圧縮応力度 (長期の 2 倍) ÷ Ec"
+                : "(2/3)·ξ·Fc ÷ Ec";
+            var strainRow1 = new TableRow();
+            strainRow1.Append(
+                CreateTableCell(["コンクリート (圧縮)"], 8.0, "left"),
+                CreateTableCell([serviceC], 8.0, "left"),
+                CreateTableCell([damageC], 8.0, "left"),
+                CreateTableCell(["εcu (杭種ごとの終局圧縮縁ひずみ)"], 8.0, "left"));
+            precastStrain.Append(strainRow1);
+
+            var strainRow2 = new TableRow();
+            strainRow2.Append(
+                CreateTableCell(["コンクリート (引張)"], 8.0, "left"),
+                CreateTableCell(["考慮しない"], 8.0, "left"),
+                CreateTableCell(["考慮しない"], 8.0, "left"),
+                CreateTableCell(["考慮しない"], 8.0, "left"));
+            precastStrain.Append(strainRow2);
+
+            var strainRow3 = new TableRow();
+            strainRow3.Append(
+                CreateTableCell(["PC鋼材 (引張)"], 8.0, "left"),
+                CreateTableCell(["許容引張応力度 ÷ Ep"], 8.0, "left"),
+                CreateTableCell(["許容引張応力度 ÷ Ep"], 8.0, "left"),
+                CreateTableCell(["εpu = 0.02 (強度と変形性能 6.2.3)"], 8.0, "left"));
+            precastStrain.Append(strainRow3);
+            body.Append(precastStrain);
+
+            AddTableNote(body,
+                "※ 上限は材料のひずみ度で与える。プレストレスひずみ εpi は断面積分側で加算し、材料側では加算しない。"
+                + "低減係数 β1・β2 は、求めた N-M 相関に対して乗じる。");
+
+            AddHeader2(body, ConcreteModelOptions.MapLimitStateText("既製コンクリート杭のせん断耐力"), 2);
+            AddIntroText(body,
+                "せん断耐力は、斜めひび割れによる値と縦ひび割れによる値の小さい方とする。"
+                + "いずれもせん断スパン比による係数 α と、中空円形断面の断面定数 (I / S0・板厚 t) で表される。");
+            AddEq(body, @"Q = \min\left(Q_{\text{斜め}},\ Q_{\text{縦}}\right),\qquad
+                \alpha = \min\left(\max\left(\frac{4}{M/(Q\,d)+1},\,1\right),\,2\right)");
+            AddEq(body, @"Q_{\text{斜め}} = c\,\alpha\,\frac{2\,t\,I}{S_{0}}\,\tau_{S},\qquad
+                \tau_{S} = \frac{1}{2}\sqrt{\left(\sigma_{G}+2\sigma_{a}\right)^{2}-\sigma_{G}^{2}},\qquad
+                \sigma_{G} = \sigma_{e} + \sigma_{0e}");
+            AddEq(body, @"Q_{\text{縦}} = c\,\alpha\,\eta_{1}\,\frac{2\,t\,I}{S_{0}}\,k\,\tau_{V},\qquad
+                \tau_{V} = 1.9\,F_{c}^{0.323},\qquad \eta_{1} = \frac{t - 15}{t}");
+            AddTableNote(body,
+                "※ 係数 c は使用限界・損傷限界で 0.6、安全限界で 0.75。σa は限界状態ごとの引張応力度で、"
+                + "使用限界 1.2、損傷限界・安全限界 1.8 [N/mm²]。縦ひび割れ側の係数 k は使用限界のみ 2/3、"
+                + "損傷限界・安全限界は 1.0。σe はプレストレスによる有効応力度、σ0e = N/Ae は平均軸応力度で、"
+                + "軸力ごとに耐力が変わる。η1 は PC鋼線 (径 15 mm) の欠損を見込む低減率。");
+
+            // ── 鋼管杭 ────────────────────────────────────────────────────
+            AddHeader2(body, ConcreteModelOptions.MapLimitStateText("鋼管杭の曲げ・せん断耐力"), 2);
+            AddIntroText(body, ConcreteModelOptions.MapLimitStateText(
+                "鋼管杭の鋼管部は、軸力と曲げの線形相互作用で表す。"
+                + "コンクリートを充填する区間 (杭頭部など) では、鋼管と充填コンクリートの耐力を累加する。"));
+            AddEq(body, @"M_{s} = \beta_{1}\left({}_{s}f - \frac{|N|}{{}_{s}A_{p}}\right){}_{s}Z_{e}");
+            AddEq(body, @"M_{d} = \beta_{1}\left(1.5\,{}_{s}f_{c1} - \frac{|N|}{{}_{s}A_{p}}\right){}_{s}Z_{e}");
+            AddEq(body, @"M_{u} = \beta_{1}\,\beta_{2}\left({}_{s}M_{u} + {}_{c}M_{u}\right)");
+            AddEq(body, @"Q_{s} = \beta_{1}\,\frac{{}_{s}f_{s}\,{}_{s}A_{p}}{\kappa},\qquad
+                Q_{d} = 1.5\,\beta_{1}\,\frac{{}_{s}f_{s}\,{}_{s}A_{p}}{\kappa}");
+            AddEq(body, @"Q_{u} = \beta_{1}\,\beta_{2}\,{}_{s}Q_{0}\sqrt{1-\eta^{2}}\;\frac{{}_{sc}M_{u}}{{}_{s}M_{u}}");
+            AddTableNote(body,
+                "※ sZe・sAp は腐食深さを控除した鋼管の断面係数・断面積 (単位長さ重量は公称寸法)。"
+                + "sf は許容応力度、sfc1 は径厚比による局部座屈を考慮した許容圧縮応力度、κ は形状係数、"
+                + "η は軸力比、cMu は充填コンクリートの寄与。液状化区間を座屈長とする柱座屈を考慮する設定では、"
+                + "sfc1 に代えて曲げ座屈を考慮した許容圧縮応力度を用いる。");
+}
 
         /// <summary>
         /// KCTB 場所打ち鋼管コンクリート杭（TB工法、BCJ評定-FD0356-08）の設計法の節。
