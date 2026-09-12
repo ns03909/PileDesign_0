@@ -235,7 +235,7 @@
                 <TextBlock TextWrapping="Wrap">
                     <Run FontWeight="Bold" FontSize="13">解析に影響する項目</Run>
                     <LineBreak/>
-                    <Run FontSize="11" Foreground="#40506A">杭体の構成則と解析用 M-φ を決めます。変更すると M-φ が変わるため、既存の解析結果は確認のうえ削除されます（杭要素分割は保持されます）。</Run>
+                    <Run FontSize="11" Foreground="#40506A">杭体の構成則と解析用 M-φ を決めます。変更すると M-φ が変わるため、解析のやり直しが必要になります。保存しても表示中の解析結果は消えず「再解析が必要」の表示になります（沈下解析の結果がある場合はそれだけを確認のうえ削除します。杭要素分割は保持されます）。</Run>
                 </TextBlock>
             </Border>
 

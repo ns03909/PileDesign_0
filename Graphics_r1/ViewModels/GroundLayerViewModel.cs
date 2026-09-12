@@ -1974,8 +1974,12 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// 土質点の代表土層 (LayerNo / Name) を再計算する。
-        /// 土質点は深さ区間 [GLDepth - H, GLDepth] を占め、各土層 i は
-        /// 深さ区間 [layers[i-1].BottomGLDepth, layers[i].BottomGLDepth] (i=0 は 0 起点)。
+        ///
+        /// <para><b>GLDepth・BottomGLDepth は地表を 0 とし下方を負とする値</b>なので、区間は
+        /// 「下端 (より負) から上端 (より 0 寄り)」の順で書く。土質点は [GLDepth, GLDepth + H]、
+        /// 各土層 i は [layers[i].BottomGLDepth, (i=0 なら 0、それ以外は layers[i-1].BottomGLDepth)]。
+        /// 以前この説明だけが深さを下向き正として [GLDepth - H, GLDepth] と書いてあり、
+        /// コードと 1 層ずれて読めた (2026-09-12 に書き方を揃えた。コードは元から正しい)。</para>
         /// 区間の重なり長 (overlap) が最大の土層を代表とし、同値で複数候補があるときは
         /// 最も深い (リスト後方の) 土層を選ぶ。
         /// H が null / 0 のときや、点が全層と重ならないときは、
