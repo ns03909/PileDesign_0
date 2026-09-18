@@ -420,7 +420,6 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _mainBarSize1, value))
                 {
-                    MainBarAg1 = MainBarNum1 * GetBarArea(MainBarSize1);
                 }
             }
         }
@@ -434,23 +433,12 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _mainBarNum1, value))
                 {
-                    MainBarAg1 = MainBarNum1 * GetBarArea(MainBarSize1);
                 }
             }
         }
 
-        // 鉄筋断面積 mm2
-        private double _mainBarAg1;
-        public double MainBarAg1
-        {
-            get => _mainBarAg1;
-            set
-            {
-                if (SetProperty(ref _mainBarAg1, value))
-                {
-                }
-            }
-        }
+        // 主筋の全断面積 (Ag) は持たない。計算して入れていただけで誰も読まなかった
+        // (杭頭の耐力は工法ごとのデータから求める)。2026-09-19 に撤去。
 
         // 鉄筋規格
         private string _mainBarSpec1 = "SD390";
@@ -479,12 +467,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 鉄筋規格降伏点
-        private double _mainbarFtr1;
-        public double MainBarFtr1
-        {
-            get => _mainbarFtr1;
-            set => SetProperty(ref _mainbarFtr1, value);
-        }
+        // 主筋の規格強度 (Ftr) は持たない。1 段目は代入も読み出しも無く、
+        // 2 段目は入れるだけで誰も読まなかった。2026-09-19 に撤去。
 
         // 鉄筋重心かぶり厚 mm
         private double _mainbarCenterCover1 = 100;
@@ -512,7 +496,6 @@ namespace PileDesign.Models.InputData
                 {
                     // 本数は 2 側を使う。1 側を掛けていたのは書き写しの誤り
                     // (下の MainBarNum2 の setter は 2 側で計算しており、そちらが正)。
-                    MainBarAg2 = MainBarNum2 * GetBarArea(MainBarSize2);
                 }
             }
         }
@@ -525,20 +508,6 @@ namespace PileDesign.Models.InputData
             set
             {
                 if (SetProperty(ref _mainBarNum2, value))
-                {
-                    MainBarAg2 = MainBarNum2 * GetBarArea(MainBarSize2);
-                }
-            }
-        }
-
-        // 鉄筋断面積 mm2
-        private double _mainBarAg2;
-        public double MainBarAg2
-        {
-            get => _mainBarAg2;
-            set
-            {
-                if (SetProperty(ref _mainBarAg2, value))
                 {
                 }
             }
@@ -571,13 +540,6 @@ namespace PileDesign.Models.InputData
         }
 
         // 鉄筋規格降伏点
-        private double _mainbarFtr2;
-        public double MainBarFtr2
-        {
-            get => _mainbarFtr2;
-            set => SetProperty(ref _mainbarFtr2, value);
-        }
-
         // 鉄筋重心かぶり厚 mm
         private double _mainbarCenterCover2;
         public double MainBarCenterCover2

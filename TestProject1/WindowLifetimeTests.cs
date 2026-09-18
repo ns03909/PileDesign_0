@@ -80,40 +80,10 @@ namespace TestProject1
 
         // ───────── 杭頭の定着筋 ─────────
 
-        /// <summary>
-        /// 定着筋の断面積は、その段の本数で決まること。
-        ///
-        /// 径の setter だけが 1 段目の本数を掛けていた (書き写しの誤り)。
-        /// 本数の setter は 2 段目で計算しており、どちらの順で入力したかで値が変わる。
-        /// </summary>
-        [TestMethod]
-        public void TheSecondRebarArea_UsesItsOwnCount()
-        {
-            // 1 段目と 2 段目で本数を変えておく (既定の 1 段目は 16 本)
-            var top = new PileTop { MainBarNum1 = 16, MainBarNum2 = 10 };
-
-            // 径を「既定 (D29) と違う値へ」変える。同じ値を入れ直すと setter が走らない
-            top.MainBarSize2 = "D25";
-
-            double expected = 10 * PileTop.GetBarArea("D25");
-            Assert.AreEqual(expected, top.MainBarAg2, 1e-9,
-                "径を入力したときの定着筋の断面積が、その段の本数で計算されていない");
-        }
-
-        /// <summary>入力の順で結果が変わらないこと。</summary>
-        [TestMethod]
-        public void TheSecondRebarArea_IsTheSameWhicheverOrderYouType()
-        {
-            var countFirst = new PileTop { MainBarNum2 = 10 };
-            countFirst.MainBarSize2 = "D25";
-
-            var sizeFirst = new PileTop();
-            sizeFirst.MainBarSize2 = "D25";
-            sizeFirst.MainBarNum2 = 10;
-
-            Assert.AreEqual(sizeFirst.MainBarAg2, countFirst.MainBarAg2, 1e-9,
-                "本数と径のどちらを先に入力したかで定着筋の断面積が変わる");
-        }
+        // 杭頭主筋の全断面積 (MainBarAg1/2) の検査は置かない。
+        // 計算して入れているだけで誰も読まない値だった (杭頭の耐力は工法ごとのデータ、
+        // 例えば CapringPile.GetTensionBarArea から求める)。値ごと 2026-09-19 に撤去した。
+        // テストが「使われていない値」を守っていた形。
 
         // ── ソース走査の道具 ──
 

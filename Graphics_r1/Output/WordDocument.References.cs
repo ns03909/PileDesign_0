@@ -62,8 +62,30 @@ namespace PileDesign.Output
         /// そのモデルで実際に使っているものだけを載せる (使っていないマニュアルを並べると、
         /// 何に依った計算書なのかが読めなくなる)。</para>
         /// </summary>
+        /// <summary>
+        /// 断面計算が既定値で代替された箇所があれば、計算書に注記を出す。
+        ///
+        /// <para>諸元・N-M 曲線・M-φ は計算書の生成でも作り直すので、そこで既定値に落ちた箇所は
+        /// 解析ログには出ない。値が 0 のまま表に載ると、読み手には「そういう断面」に見える。
+        /// 件数は生成の終わりまで確定しないので、本文の最後 (参考文献の直前) に置く。</para>
+        /// </summary>
+        private void AddFallbackNoteIfAny(Body body)
+        {
+            long count = PileDesign.Common.CalcFallbackTracker.TotalCount;
+            if (count <= 0) return;
+
+            AddHeader1(body, "断面計算で既定値に代替した箇所", 1);
+            AddIntroText(body,
+                $"本計算書の作成中に、断面の諸元・耐力の算定が {count} 件、既定値 (0 等) で代替された。"
+                + "該当する表の値は断面の実際の耐力を表していない。入力 (材料・配筋・寸法) を確認のうえ、"
+                + "出力し直すこと。内訳は次のとおり (詳細はログに記録している)。");
+            AddTableNote(body, PileDesign.Common.CalcFallbackTracker.BuildSummary());
+        }
+
         private void AddReferencesAndGlossarySection(Body body)
         {
+            AddFallbackNoteIfAny(body);
+
             AddPageBreak(body);
             AddHeader1(body, "参考文献", 1);
             AddIntroText(body,

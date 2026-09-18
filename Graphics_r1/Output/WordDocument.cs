@@ -210,6 +210,11 @@ namespace PileDesign.Output
             if (inputModel.ElementDivision == null)
                 throw new InvalidOperationException("ElementDivision が未設定です。");
 
+            // 断面計算が既定値 (0 等) で代替された件数を、この計算書の生成ぶんだけ数える。
+            // 水平解析は解析ログに出しているが、計算書の生成でも断面を作り直すので、
+            // ここで既定値に落ちた箇所は今まで誰にも見えていなかった (2026-09-19)。
+            PileDesign.Common.CalcFallbackTracker.Reset();
+
             var sw = new System.Diagnostics.Stopwatch();
             void StartSection() => sw.Restart();
             void EndSection(string label) { sw.Stop(); Log.Information("[Docx]   {Section}: {Elapsed:N2}s", label, sw.Elapsed.TotalSeconds); }

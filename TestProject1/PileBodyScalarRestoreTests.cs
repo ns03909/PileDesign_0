@@ -221,8 +221,6 @@ namespace TestProject1
             var freeText = new HashSet<string>(StringComparer.Ordinal)
             {
                 nameof(PileBodyInput.PileBodyRef),
-                nameof(PileBodyInput.SettleAlphaString),
-                nameof(PileBodyInput.SettleNString),
             };
 
             int seq = 0;

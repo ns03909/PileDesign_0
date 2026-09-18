@@ -2488,12 +2488,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 鉄筋規格降伏点
-        private double _mainbarFtr;
-        public double MainBarFtr
-        {
-            get => _mainbarFtr;
-            set => SetProperty(ref _mainbarFtr, value);
-        }
+        // 鉄筋の規格降伏点は材料 (Rebar) が持つ。断面側の写しは読み手がいなかったので
+        // 2026-09-19 に撤去した (諸元表の行も以前からコメントアウトされていた)。
 
         // 鉄筋重心かぶり厚 mm
         private double _mainbarCenterCover = 200.0;

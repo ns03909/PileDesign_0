@@ -945,8 +945,6 @@ namespace PileDesign.ViewModels
                 {
                     InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha = parameter.Alpha;
                     InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleN = parameter.N;
-                    PileBody.SettleAlphaString = parameter.Alpha.ToString();
-                    PileBody.SettleNString = parameter.N.ToString();
                     break;
                 }
             }
@@ -1022,8 +1020,6 @@ namespace PileDesign.ViewModels
                 {
                     pileBody.SettleAlpha = parameter.Alpha;
                     pileBody.SettleN = parameter.N;
-                    pileBody.SettleAlphaString = parameter.Alpha.ToString();
-                    pileBody.SettleNString = parameter.N.ToString();
 
                     // ComboBox の選択を同期
                     if (ComboBoxPresetSettlementParameters != null && pileBody.PileTipSettlementPresetParameterNames != null)

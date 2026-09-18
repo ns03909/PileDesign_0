@@ -253,7 +253,6 @@ namespace PileDesign.ViewModels
                     // 主筋情報（存在するフィールドを安全に参照）
                     try { PileTop.MainBarSize2 = PileSection.MainBarSize ?? string.Empty; } catch { PileTop.MainBarSize2 = string.Empty; }
                     try { PileTop.MainBarNum2 = PileSection.MainBarNum; } catch { PileTop.MainBarNum2 = 0; }
-                    try { PileTop.MainBarFtr2 = PileSection.MainBarFtr; } catch { PileTop.MainBarFtr2 = 0; }
                     try { PileTop.MainBarSpec2 = PileSection.MainBarSpec; } catch { PileTop.MainBarSpec2 = "SD390"; }
 
                     // 鋼管情報（場所打ち鋼管コンクリート杭向け）
@@ -275,7 +274,6 @@ namespace PileDesign.ViewModels
                     // 主筋情報（存在するフィールドを安全に参照）
                     PileTop.MainBarSize2 = string.Empty;
                     PileTop.MainBarNum2 = 0;
-                    PileTop.MainBarFtr2 = 0;
                     PileTop.MainBarSpec2 = "SD390";
 
                     //// 鋼管情報（場所打ち鋼管コンクリート杭向け）
@@ -293,7 +291,6 @@ namespace PileDesign.ViewModels
                     try { PileTop.MainBarCenterCover2 = PileSection.MainBarCenterCover; } catch { PileTop.MainBarCenterCover2 = 0; }
                     PileTop.MainBarSize2 = string.Empty;
                     PileTop.MainBarNum2 = 0;
-                    PileTop.MainBarFtr2 = 0;
                     PileTop.MainBarSpec2 = "SD390";
                 }
                 else if (string.Equals(PileBodyType, PileTypeNames.SteelPipe, StringComparison.Ordinal) && PileSection != null)

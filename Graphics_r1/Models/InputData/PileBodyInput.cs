@@ -523,43 +523,14 @@ namespace PileDesign.Models.InputData
         }
 
 
-        private string _settleAlphaString;
-        public string SettleAlphaString
-        {
-            get => _settleAlphaString;
-            set
-            {
-                if (SetProperty(ref _settleAlphaString, value))
-                {
-                    if (double.TryParse(value, out double result))
-                    {
-                        SettleAlpha = result;
-                    }
-                }
-            }
-        }
+        // 沈下の α・N の文字列版は持たない。画面は数値の SettleAlpha / SettleN を
+        // 直接 Binding しており、文字列版は入れるだけで誰も読まなかった (2026-09-19 に撤去)。
 
         private double _settleN;
         public double SettleN
         {
             get => _settleN;
             set => SetProperty(ref _settleN, value);
-        }
-
-        private string _settleNString;
-        public string SettleNString
-        {
-            get => _settleNString;
-            set
-            {
-                if (SetProperty(ref _settleNString, value))
-                {
-                    if (double.TryParse(value, out double result))
-                    {
-                        SettleN = result;
-                    }
-                }
-            }
         }
 
         // 名前、alphaの値、nの値を格納する構造体

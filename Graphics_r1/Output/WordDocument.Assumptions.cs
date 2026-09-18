@@ -189,7 +189,6 @@ namespace PileDesign.Output
             return diffs;
         }
 
-
         /// <summary>単位系・符号規約の宣言文。</summary>
         private static void AddUnitAndSignConventionText(Body body, FundamentalInput fund)
         {
