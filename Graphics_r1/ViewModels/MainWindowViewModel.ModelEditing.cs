@@ -818,8 +818,39 @@ namespace PileDesign.ViewModels
 
             TrySaveUndoSnapshotSafely();
             CurrentInputModel.FoundationBeamInput.Beams.Remove(beam);
+            RemoveOrphanFoundationNodes();
             RenumberFoundationBeams();
             RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// どの梁からも参照されなくなった基礎梁節点を取り除く。
+        ///
+        /// <para>基礎梁節点は梁を引くと作られる (<c>MainWindow.FoundationBeamEditing</c>)。
+        /// 梁を消しても節点は残り、<b>掃除する操作はどこにも無かった</b>ので、使われない節点が
+        /// たまり続けていた (2026-09-19 に梁の削除でカスケードさせた)。</para>
+        ///
+        /// <para>杭頭の接合節点 (<c>NodeReferenceType.PileLayout</c>) と一般節点は対象外。
+        /// ここで消すのは基礎梁節点 (<c>FoundationBeamInput.Nodes</c>) だけである。</para>
+        /// </summary>
+        private void RemoveOrphanFoundationNodes()
+        {
+            var fbInput = CurrentInputModel?.FoundationBeamInput;
+            if (fbInput?.Nodes == null || fbInput.Nodes.Count == 0) return;
+
+            var used = new HashSet<Guid>();
+            foreach (var b in fbInput.Beams ?? [])
+            {
+                if (b == null) continue;
+                if (b.NodeI_Type == NodeReferenceType.FoundationNode) used.Add(b.NodeI_Id);
+                if (b.NodeJ_Type == NodeReferenceType.FoundationNode) used.Add(b.NodeJ_Id);
+            }
+
+            var orphans = fbInput.Nodes.Where(n => n != null && !used.Contains(n.Id)).ToList();
+            if (orphans.Count == 0) return;
+
+            foreach (var n in orphans) fbInput.Nodes.Remove(n);
+            RenumberFoundationNodes();
         }
 
         // 重複要素削除

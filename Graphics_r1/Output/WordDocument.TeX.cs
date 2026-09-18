@@ -147,6 +147,10 @@ namespace PileDesign.Output
                 "operatorname" => "",
                 // 点の無い j (応力中心距離係数)。jmath という語が出ていた
                 "jmath" => "ȷ",
+                // 矢印 (折れ点のつながりを表すのに使う)
+                "longrightarrow" => "⟶",
+                "rightarrow" => "→",
+                "to" => "→",
                 _ => cmd
             };
 

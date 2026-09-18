@@ -1,4 +1,5 @@
 ﻿using DocumentFormat.OpenXml.Wordprocessing;
+using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using System.Collections.Generic;
 using System.Linq;
@@ -561,6 +562,46 @@ namespace PileDesign.Output
                     "解析（FEM）で負勾配のばねとならないよう、曲線は単調非減少化して用いる。");
             }
 
+            // 折れ点の決め方。式だけでなく「折り返しを避ける扱い」も明記する
+            // (この 2 つの分岐は解析の剛性を変えるのに、計算書では見えていなかった。2026-09-19)
+            AddText(body, "解析用 M-φ の折れ点の決め方");
+            AddText(body,
+                "解析用 M-φ は、軸力 N ごとに次の 3 点を結ぶ折線とする。"
+                + "曲率は各点の断面のつり合いから解き、曲げモーメントには低減係数を乗じる。");
+            AddEq(body, @"(0,\ 0)\ \longrightarrow\ (\phi_{cr},\ M_{cr})\ \longrightarrow\
+                (\phi_{y},\ M_{y})\ \longrightarrow\ (\phi_{c},\ \beta_{1}\beta_{2}M_{u0})");
+            AddTableNote(body,
+                "※ Mcr はひび割れ、My は引張側の主筋 (既製杭は PC鋼材) の降伏開始、Mu0 は安全限界。"
+                + "低減係数 β1・β2 は「基礎部材の強度と変形性能」解説表 2.6・2.7 による。");
+
+            AddText(body, "ひび割れモーメントと曲率");
+            AddEq(body, @"M_{cr} = Z_{e}\left(F_{t} + \sigma_{0e}\right),\quad
+                \phi_{cr} = \frac{M_{cr}}{E_{c} I_{e}},\quad \sigma_{0e} = \frac{N}{A_{e}}");
+            AddTableNote(body,
+                "※ Ft は引張強度 (場所打ち系は 0.56√(ξFc))、Ze・Ie・Ae は換算断面の断面係数・"
+                + "断面二次モーメント・断面積。軸力による引張側応力度の増減を σ0e で反映する。"
+                + "引張軸力で Mcr ≦ 0 となる場合は、ひび割れの折れ点を持たない折線とする。");
+
+            AddText(body, "安全限界に達する曲率 (ひび割れ後勾配の延長)");
+            AddEq(body, @"\phi_{c} = \phi_{cr} + \left(\phi_{y}-\phi_{cr}\right)
+                \frac{\beta_{1}M_{u0}-M_{cr}}{M_{y}-M_{cr}}");
+            AddTableNote(body,
+                "※ 高軸力側 (場所打ち系は N/Ag > (1/3)ξFc、既製杭は解説表 2.7 の区分) では β2 < 1 となるため、"
+                + "終点の曲率は上式を β1β2·Mu0 まで比例で縮めた値とする。");
+
+            AddText(body, "折線が折り返す場合の扱い");
+            AddText(body,
+                "指針の折線式は、低減後の安全限界 β1β2·Mu0 がひび割れや降伏より低くなる状況で"
+                + "曲率が戻る (負勾配の) 折線を与える。負勾配は解析では負の接線剛性になるため、次のように扱う。");
+            AddTableNote(body,
+                "※ (1) ひび割れが終点以上 (Mcr ≧ β1β2·Mu0。Mcr は軸力とともに増え Mu0 は減るので高軸力側で起きる): "
+                + "断面は終点までひび割れないので、弾性剛性 Ec·Ie の直線で終点まで結ぶ。"
+                + "(2) 降伏点が終点以上 (β1·Mu0 ≦ My): 降伏の折れ点を省き、ひび割れ後勾配の延長で終点へ結ぶ。"
+                + "いずれも折線は単調非減少になる。");
+            AddTableNote(body,
+                "※ 軸力は解析のステップごとに更新した値 (ランプ) を用いる。常時軸力には固定しない。"
+                + "M-φ は軸力ごとに作り直し、同じ断面・同じ軸力の組は再利用する。");
+
             AddSectionKctbMethod(body);
         
             // ── 既製コンクリート杭 (PHC / PRC / SC) ────────────────────────────
@@ -784,16 +825,16 @@ namespace PileDesign.Output
                 CreateTableCellWithWidth("安全限界", "center", w2, fs)));
             (string Type, string Force, string S, string D, string U)[] beta1Rows =
             [
-                ("場所打ち鉄筋コンクリート杭", "曲げ", "1.0", "1.0", "σ0≤(1/3)ξFc: 0.95\nσ0>(1/3)ξFc: 0.8"),
-                ("場所打ち鉄筋コンクリート杭", "せん断", "0.9", "0.9", "0.8"),
-                ("場所打ち鋼管コンクリート杭", "曲げ", "1.0", "1.0", "1.0"),
-                ("場所打ち鋼管コンクリート杭", "せん断", "1.0", "1.0", "1.0"),
-                ("PHC杭・PHC節杭", "曲げ", "0.9", "1.0", "0.8"),
-                ("PHC杭・PHC節杭", "せん断", "1.0", "1.0", "1.0"),
-                ("PRC杭", "曲げ", "0.8", "0.8", "0.8"),
-                ("PRC杭", "せん断", "1.0", "1.0", "1.0"),
-                ("SC杭", "曲げ", "1.0", "1.0", "1.0"),
-                ("SC杭", "せん断", "1.0", "1.0", "1.0"),
+                (PileTypeNames.InsituRc, "曲げ", "1.0", "1.0", "σ0≤(1/3)ξFc: 0.95\nσ0>(1/3)ξFc: 0.8"),
+                (PileTypeNames.InsituRc, "せん断", "0.9", "0.9", "0.8"),
+                (PileTypeNames.InsituSteelPipeConcrete, "曲げ", "1.0", "1.0", "1.0"),
+                (PileTypeNames.InsituSteelPipeConcrete, "せん断", "1.0", "1.0", "1.0"),
+                ($"{PileTypeNames.Phc}・{PileTypeNames.PhcNodular}", "曲げ", "0.9", "1.0", "0.8"),
+                ($"{PileTypeNames.Phc}・{PileTypeNames.PhcNodular}", "せん断", "1.0", "1.0", "1.0"),
+                (PileTypeNames.Prc, "曲げ", "0.8", "0.8", "0.8"),
+                (PileTypeNames.Prc, "せん断", "1.0", "1.0", "1.0"),
+                (PileTypeNames.Sc, "曲げ", "1.0", "1.0", "1.0"),
+                (PileTypeNames.Sc, "せん断", "1.0", "1.0", "1.0"),
             ];
             foreach (var r in beta1Rows)
             {
@@ -816,16 +857,16 @@ namespace PileDesign.Output
                 CreateTableCellWithWidth("β2", "center", v2, fs)));
             (string Type, string Force, string B2)[] beta2Rows =
             [
-                ("場所打ち鉄筋コンクリート杭", "曲げ", "σ0≤(1/3)ξFc: 1.0、σ0>(1/3)ξFc: 0.65"),
-                ("場所打ち鉄筋コンクリート杭", "せん断", "σ0≤(1/3)ξFc: 0.75、σ0>(1/3)ξFc: 0.65"),
-                ("場所打ち鋼管コンクリート杭", "曲げ", "1.0"),
-                ("場所打ち鋼管コンクリート杭", "せん断", "1.0"),
-                ("PHC杭・PHC節杭", "曲げ", "σe+σ0e≤10 N/mm²: 0.75、σe+σ0e>10 N/mm²: 0.65"),
-                ("PHC杭・PHC節杭", "せん断", "0.65"),
-                ("PRC杭", "曲げ", "σe+σ0e≤10 N/mm²: 0.75、σe+σ0e>10 N/mm²: 0.65"),
-                ("PRC杭", "せん断", "0.65"),
-                ("SC杭", "曲げ", "1.0"),
-                ("SC杭", "せん断", "1.0"),
+                (PileTypeNames.InsituRc, "曲げ", "σ0≤(1/3)ξFc: 1.0、σ0>(1/3)ξFc: 0.65"),
+                (PileTypeNames.InsituRc, "せん断", "σ0≤(1/3)ξFc: 0.75、σ0>(1/3)ξFc: 0.65"),
+                (PileTypeNames.InsituSteelPipeConcrete, "曲げ", "1.0"),
+                (PileTypeNames.InsituSteelPipeConcrete, "せん断", "1.0"),
+                ($"{PileTypeNames.Phc}・{PileTypeNames.PhcNodular}", "曲げ", "σe+σ0e≤10 N/mm²: 0.75、σe+σ0e>10 N/mm²: 0.65"),
+                ($"{PileTypeNames.Phc}・{PileTypeNames.PhcNodular}", "せん断", "0.65"),
+                (PileTypeNames.Prc, "曲げ", "σe+σ0e≤10 N/mm²: 0.75、σe+σ0e>10 N/mm²: 0.65"),
+                (PileTypeNames.Prc, "せん断", "0.65"),
+                (PileTypeNames.Sc, "曲げ", "1.0"),
+                (PileTypeNames.Sc, "せん断", "1.0"),
             ];
             foreach (var r in beta2Rows)
             {
