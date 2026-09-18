@@ -1125,11 +1125,7 @@ namespace PileDesign.ViewModels
             Update();
         }
 
-        [RelayCommand]
-        private void OnComboBoxLevelSelectionChanged(int selectedLevel)
-        {
-            Update();
-        }
+        // 地震動レベルの選択に応じた処理は、レベルごとのプロパティ側で行う (旧 OnComboBoxLevelSelectionChanged は参照が無かったので 2026-09-19 に撤去)。
 
         //土質データ　土質点データの平均N値を代入する
         [RelayCommand]

@@ -601,48 +601,8 @@ namespace PileDesign.ViewModels
             binding?.UpdateSource(); // ViewModelのプロパティに値を反映
         }
 
-        [RelayCommand]
-        public void OnTextBoxLostFocus(object sender)
-        {
-            if (sender is not TextBox textBox) return;
-            if (!int.TryParse(ComboBoxPileBodyNo.SelectedItem?.ToString(), out int pileBodyNo)) return;
-
-            var pileBody = PileBodies[pileBodyNo - 1];
-
-            switch (textBox.Name)
-            {
-                case nameof(TextBoxPileBodyRef):
-                    pileBody.PileBodyRef = textBox.Text;
-                    break;
-                case nameof(TextBoxPileToeDia):
-                    if (double.TryParse(textBox.Text, out double toeDia))
-                    {
-                        pileBody.PileToeDia = toeDia;
-                        DrawShapes();
-                        UpdateTemporarySoilPile();
-                    }
-                    break;
-                case nameof(TextBoxPrecastPileTipNonPermeability):
-                case nameof(TextBoxSteelPileTipNonPermeability):
-                    if (double.TryParse(textBox.Text, out double tipNonPermability))
-                    {
-                        pileBody.TipNonPermability = tipNonPermability;
-                    }
-                    break;
-                case nameof(TextBoxSettleAlpha):
-                    if (double.TryParse(textBox.Text, out double settleAlpha))
-                    {
-                        pileBody.SettleAlpha = settleAlpha;
-                    }
-                    break;
-                case nameof(TextBoxSettleN):
-                    if (double.TryParse(textBox.Text, out double settleN))
-                    {
-                        pileBody.SettleN = settleN;
-                    }
-                    break;
-            }
-        }
+        // 入力欄のフォーカスが外れたときの処理は code-behind の LostFocus ハンドラが持つ。
+        // ViewModel 側にあった写しは参照が無かったので 2026-09-19 に撤去。
 
         // 杭頭編集メソッド
         [RelayCommand]
@@ -758,23 +718,8 @@ namespace PileDesign.ViewModels
             }
         }
 
-        [RelayCommand]
-        private void DeletePileSection(object parameter)
-        {
-            if (parameter is PileBodySegment selectedItem)
-            {
-                PileBodies[PileBodyNo - 1].PileBodySegments.Remove(selectedItem);
-                RecalculateDataGridPileBody();
-                DrawShapes();
-                UpdateTemporarySoilPile();
-            }
-            else
-            {
-                // ここに来るのは実装の不具合。利用者に内部の型の話をしても操作は決まらないので、
-                // ダイアログは出さずログに残す。
-                Serilog.Log.Warning("選択項目の型が想定と異なるため処理をスキップしました");
-            }
-        }
+        // 断面の削除コマンドは置かない (どこからも辿れなかったので 2026-09-19 に撤去)。
+        // 画面の「削除」は杭体 (DeletePileBodyCommand) と区間 (DeletePileBodySegmentCommand) を消す。
 
         [RelayCommand]
         private void RecalculateTipNonPermability(object parameter)
@@ -901,23 +846,8 @@ namespace PileDesign.ViewModels
             }
         }
 
-        [RelayCommand]
-        private void DeleteSelectedPileBodySegment(object parameter)
-        {
-            if (parameter is PileBodySegment selectedItem)
-            {
-                PileBodies[PileBodyNo - 1].PileBodySegments.Remove(selectedItem);
-                RecalculateDataGridPileBody();
-                DrawShapes();
-                UpdateTemporarySoilPile();
-            }
-            else
-            {
-                // ここに来るのは実装の不具合。利用者に内部の型の話をしても操作は決まらないので、
-                // ダイアログは出さずログに残す。
-                Serilog.Log.Warning("選択項目の型が想定と異なるため処理をスキップしました");
-            }
-        }
+        // 区間の削除は DeletePileBodySegmentCommand (画面の「区間削除」ボタン) が行う。
+        // 選択行を消す版の写しは参照が無かったので 2026-09-19 に撤去。
 
         // 杭頭タイプと工法のセット
         private void SetPileTopTypeAndConstruction()

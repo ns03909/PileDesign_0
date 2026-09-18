@@ -261,7 +261,6 @@ namespace PileDesign.ViewModels
                 // 基礎梁
                 "AutoGenerateFoundationBeams" or "OnAutoGenerateFoundationBeams" => "基礎梁 自動生成",
                 "AddBeamElement" or "EditBeamElements" => "梁要素 編集",
-                "DeleteFoundationNode" => "基礎節点 削除",
                 "DeleteFoundationBeam" => "基礎梁 削除",
                 "DeleteDupulicateElements" => "要素重複整理",
                 "OnSplitElementsByNodes" => "梁要素 節点分割",
@@ -276,7 +275,7 @@ namespace PileDesign.ViewModels
                 "OnMoveForceActionPointToAverageCenter" => "慣性力作用点を平均中心へ移動",
 
                 // ファイル
-                "OpenInputModelFileSimple" or "OpenInputModelFile" => "ファイル読込",
+                "OpenInputModelFile" => "ファイル読込",
 
                 // クリップボード
                 "Paste" or "PasteFromClipboard" => "貼り付け",

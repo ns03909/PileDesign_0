@@ -314,7 +314,7 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>解析結果を明示的に破棄する（メニュー等から呼ぶ）。</summary>
-        [RelayCommand]
+        // コマンドとしては使っていない (画面に操作は無く、呼ぶのは内部とテストだけ)。2026-09-19 に属性を外した。
         public void DiscardAnalysisResults()
         {
             // 杭要素分割は入力側の状態なので残す (従来の挙動)。

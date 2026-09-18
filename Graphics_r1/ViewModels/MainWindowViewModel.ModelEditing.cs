@@ -806,40 +806,9 @@ namespace PileDesign.ViewModels
         }
 
         // 基礎梁節点削除 (接続された梁要素もカスケード削除)
-        [RelayCommand]
-        private void DeleteFoundationNode(FoundationNode node)
-        {
-            if (CurrentInputModel?.FoundationBeamInput?.Nodes == null) return;
-
-            // 接続されている梁要素を抽出 (NodeI/J_Type=FoundationNode かつ Id が一致するもの)
-            var beams = CurrentInputModel.FoundationBeamInput.Beams;
-            var connectedBeams = beams.Where(b =>
-                (b.NodeI_Type == NodeReferenceType.FoundationNode && b.NodeI_Id == node.Id) ||
-                (b.NodeJ_Type == NodeReferenceType.FoundationNode && b.NodeJ_Id == node.Id)
-            ).ToList();
-
-            if (connectedBeams.Count > 0)
-            {
-                var beamNos = connectedBeams.Select(b => beams.IndexOf(b) + 1).OrderBy(n => n).ToList();
-                string list = string.Join(", ", beamNos.Take(20).Select(n => $"#{n}"));
-                if (beamNos.Count > 20) list += $" ほか {beamNos.Count - 20} 件";
-                var result = PileDesign.Services.MessageService.Show(
-                    $"節点 {node.No} を削除します。\n" +
-                    $"同時に接続された一般梁要素 {beamNos.Count} 本 ({list}) も削除されます。\n" +
-                    $"よろしいですか?",
-                    "削除確認",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Question);
-                if (result != System.Windows.MessageBoxResult.Yes) return;
-            }
-
-            TrySaveUndoSnapshotSafely();
-            foreach (var beam in connectedBeams)
-                beams.Remove(beam);
-            CurrentInputModel.FoundationBeamInput.Nodes.Remove(node);
-            RenumberFoundationNodes();
-            RequestUpdateWindow();
-        }
+        // 基礎梁節点の削除コマンドは置かない (どこからも辿れなかったので 2026-09-19 に撤去)。
+        // 節点は梁を引くと作られ、梁を消しても残る。使われなくなった節点の掃除が要るなら、
+        // 梁の削除でカスケードさせるか、梁要素タブに削除の操作を足すこと。
 
         // 基礎梁削除
         [RelayCommand]

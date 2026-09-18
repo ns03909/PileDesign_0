@@ -1806,50 +1806,14 @@ namespace PileDesign.ViewModels
         /// 全杭の L1/L2 軸力 (AxialForceLevel1s / AxialForceLevel2s) に各杭の VL (VL0 + VLadd) を加算する。
         /// 入力データが「地震時 ΔN」(増分) の場合に「VL + 地震時」(全軸力) へ変換するためのユーティリティ。
         /// </summary>
-        [RelayCommand]
-        private void AddVLToL1L2AxialForce()
-        {
-            if (CurrentInputModel?.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
-                return;
-            if (!CheckAndResetAnalysisResults()) return;
-
-            var result = MessageService.Show(
-                "全杭の L1/L2 軸力に VL (常時軸力) を加算します。\n" +
-                "現在値が「地震時増分 ΔN」のときに「VL + 地震時 = 全軸力」へ変換するために使用します。\n\n" +
-                "実行してよろしいですか?\n" +
-                "(元に戻すには Undo (Ctrl+Z) または「VL を減算」ボタンを使用してください)",
-                "L1/L2 軸力に VL を加算", MessageBoxButton.OKCancel, MessageBoxImage.Question);
-            if (result != MessageBoxResult.OK) return;
-
-            SaveUndoState();
-            ApplyVLOffsetToL1L2(+1.0);
-            UpdateSumAndOTM();
-            RequestUpdateWindow();
-        }
+        // 地震時軸力への VL の加算・減算は、杭配置編集ウィンドウの「追加」で行う (旧 AddVLToL1L2AxialForce /
+        // SubtractVLFromL1L2AxialForce はどこからも辿れなかったので 2026-09-19 に撤去)。
 
         /// <summary>
         /// 全杭の L1/L2 軸力 (AxialForceLevel1s / AxialForceLevel2s) から各杭の VL (VL0 + VLadd) を減算する。
         /// 「VL を加算」を誤適用した場合の取り消しや、「VL + 地震時」を「地震時 ΔN」へ戻す変換に使用。
         /// </summary>
-        [RelayCommand]
-        private void SubtractVLFromL1L2AxialForce()
-        {
-            if (CurrentInputModel?.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
-                return;
-            if (!CheckAndResetAnalysisResults()) return;
-
-            var result = MessageService.Show(
-                "全杭の L1/L2 軸力から VL (常時軸力) を減算します。\n" +
-                "現在値が「VL + 地震時 = 全軸力」のときに「地震時増分 ΔN」へ変換するために使用します。\n\n" +
-                "実行してよろしいですか?",
-                "L1/L2 軸力から VL を減算", MessageBoxButton.OKCancel, MessageBoxImage.Question);
-            if (result != MessageBoxResult.OK) return;
-
-            SaveUndoState();
-            ApplyVLOffsetToL1L2(-1.0);
-            UpdateSumAndOTM();
-            RequestUpdateWindow();
-        }
+        // (上の注記を参照)
 
         /// <summary>
         /// 全杭の L1/L2 軸力配列に sign × AxialForceVL を加算する内部ヘルパ。

@@ -171,11 +171,7 @@ namespace PileDesign.ViewModels
         // 2026-05-19: PileDesign.Mcp (prototype) を廃止したため RegisterMcpServer コマンドと
         // FindClaudeDesktopConfigPath を削除。UI へのバインドも元々存在せず orphan だった。
 
-        [RelayCommand]
-        public void OnQuickHint()
-        {
-            IsQuickHintVisible = true;
-        }
+        // クイックヒントのコマンドは置かない (どこからも辿れなかったので 2026-09-19 に撤去)。
 
         [RelayCommand]
         public void OpenChangWindow()

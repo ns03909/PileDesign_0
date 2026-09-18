@@ -175,21 +175,8 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 現在のGroundInputデータをJSONファイルとしてエクスポート（開発用）
         /// </summary>
-        [RelayCommand]
-        private void ExportCurrentToJson()
-        {
-            var fileName = $"Export_{DateTime.Now:yyyyMMdd_HHmmss}";
-            var displayName = GroundInput.GroundRef ?? "Unknown";
+        // 「現在の地盤を JSON に書き出す」開発用のコマンドは置かない (どこからも辿れなかったので 2026-09-19 に撤去。例題の追加は Examples フォルダへ直接置く)。
 
-            try
-            {
-                GroundExampleLoader.ExportToJson(GroundInput, fileName, displayName);
-            }
-            catch (Exception ex)
-            {
-                Serilog.Log.Debug($"[GroundExampleExport] エクスポート失敗: {ex.GetType().Name}: {ex.Message}");
-            }
-        }
 #endif
     }
 }

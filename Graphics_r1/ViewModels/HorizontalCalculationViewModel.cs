@@ -1496,7 +1496,7 @@ namespace PileDesign.ViewModels
         }
 
         // コマンド用ラッパー（コンストラクタ・手動呼び出し用）
-        [RelayCommand]
+        // コマンドとしては使っていない (この ViewModel の中から呼ぶだけ)。2026-09-19 に属性を外した。
         private void OnAnalysisModeling() => TryCreateAnalysisModel();
 
         /// <summary>

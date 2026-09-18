@@ -193,12 +193,7 @@ namespace PileDesign.ViewModels
         }
 
         // 杭配置表編集開始時メソッド
-        [RelayCommand]
-        private void DataGridPileLayout_OnBeginningEdit(DataGridBeginningEditEventArgs e)
-        {
-            if (!CheckAndResetElementSplit("杭配置"))
-                e.Cancel = true;
-        }
+        // 編集開始時の処理は code-behind の DataGrid のイベントで行う (旧 DataGridPileLayout_OnBeginningEdit は参照が無かったので 2026-09-19 に撤去)。
 
         // 杭要素分割解除確認メソッド
         public bool CheckAndResetElementSplit(string text)
@@ -236,22 +231,9 @@ namespace PileDesign.ViewModels
                 // マウス位置で ContextMenu を表示
             }
         }
-        [RelayCommand]
-        private void DataGridPileLayout_AutoGeneratingColumn(DataGridAutoGeneratingColumnEventArgs e)
-        {
-            // カラム名をチェックし、適宜処理を行う
-            if (e.PropertyName == "AxialForceEX" || e.PropertyName == "AxialForceEY" ||
-                e.PropertyName == "AxialForceLevel1s[0]" || e.PropertyName == "AxialForceLevel1s[1]" ||
-                e.PropertyName == "AxialForceLevel1s[2]" || e.PropertyName == "AxialForceLevel1s[3]")
-            {
-                if (e.Column is DataGridTextColumn dataGridColumn)
-                {
-                    // Visibility を制御するバインディングを設定
-                    var isElastic = IsElastic ? Visibility.Visible : Visibility.Collapsed;
-                    dataGridColumn.Visibility = isElastic;
-                }
-            }
-        }
+        // 列の自動生成の扱いは MainWindow.xaml.cs の同名ハンドラが持つ (XAML の AutoGeneratingColumn が指すのはそちら)。
+        // ViewModel 側にあった写しは 2026-09-19 に撤去。
+
         [RelayCommand]
         private void ComboBoxEmbedmentNums_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
@@ -300,29 +282,8 @@ namespace PileDesign.ViewModels
         private static void ButtonSettlement_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
         }
-        [RelayCommand]
-        private void ComboBoxEmbedmentNums_OnSelectionChanged(SelectionChangedEventArgs e)
-        {
-            if (e.AddedItems.Count > 0 && e.AddedItems[0] is int selectedValue)
-            {
-                int currentCollectionSize = CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count;
+        // 根入れ段数の選択の反映は入力側のセッターで行う (旧 ComboBoxEmbedmentNums_OnSelectionChanged は参照が無かったので 2026-09-19 に撤去)。
 
-                // Remove excess items if selectedValue is less than the current collection size
-                for (int i = currentCollectionSize - 1; i >= selectedValue; i--)
-                    CurrentInputModel.EmbedmentInput.EmbedmentLayers.RemoveAt(i);
-
-                // Add new rows only if selectedValue is greater than the current collection size
-                for (int i = currentCollectionSize; i < selectedValue; i++)
-                {
-                    EmbedmentDataItem newItem = CreateNewEmbedmentDataItem(i, currentCollectionSize);
-                    CurrentInputModel.EmbedmentInput.EmbedmentLayers.Add(newItem);
-                }
-
-                UpdateEmbedment();
-                // 変更後（以下の箇所で適用）
-                NotifyUIChanged();
-            }
-        }
         [RelayCommand]
         private void TextBoxAltitude_OnTextChanged(TextChangedEventArgs e)
         {

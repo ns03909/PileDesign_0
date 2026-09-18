@@ -797,7 +797,8 @@ namespace PileDesign.ViewModels
             wpfPlot.Refresh();
         }
 
-        [RelayCommand]
+        // コマンドとしては使っていない (沈下ウィンドウの code-behind の LostFocus ハンドラが
+        // このメソッドを直接呼ぶ)。2026-09-19 に属性を外した。
         public void OnPileBodyLostFocus(object sender)
         {
             if (sender is TextBox textBox)

@@ -550,23 +550,8 @@ namespace PileDesign.ViewModels
             }
         }
 
-        [RelayCommand]
-        public void OpenInputModelFileSimple()
-        {
-            var ofd = new Microsoft.Win32.OpenFileDialog { Filter = "PileDesign プロジェクト (*.pdj;*.json)|*.pdj;*.json|PileDesign プロジェクト (*.pdj)|*.pdj|JSON Files (*.json)|*.json", DefaultExt = "pdj" };
-            if (ofd.ShowDialog() != true) return;
-            // Undo 保存は安全ヘルパを使用
-            TrySaveUndoSnapshotSafely();
-            Mouse.OverrideCursor = Cursors.Wait;
-            try
-            {
-                TryLoadInputModelFileUsingInputModelLoader(ofd.FileName);
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
-            }
-        }
+        // 「確認なしでファイルを開く」コマンドは置かない (どこからも辿れなかったので 2026-09-19 に撤去)。
+        // 読込は OpenInputModelFile を通す (未保存の作業の確認と読込後の後処理が要る)。
 
         [RelayCommand]
         public async Task OpenInputModelFile()
@@ -780,7 +765,7 @@ namespace PileDesign.ViewModels
 
         // Word ファイルに保存するメソッド
         // 出力前チェック（未選択の確認）は OK ボタン（DocxOutputWindow.OkButton_Click）で行う。
-        [RelayCommand]
+        // コマンドとしては使っていない (計算書出力ウィンドウの code-behind から直接呼ぶ)。2026-09-19 に属性を外した。
         public void OutputWordFile()
         {
             // ファイル名: (yyMMdd)_(HHmm)_構造計算書_(本体ファイル名).docx

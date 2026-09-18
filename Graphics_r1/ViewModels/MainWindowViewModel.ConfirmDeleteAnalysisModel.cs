@@ -238,12 +238,8 @@ namespace PileDesign.ViewModels
             UpdateWindowImmediate();
         }
 
-        [RelayCommand]
-        private void DeleteAnalysisResults()
-        {
-            // ユーザーが Yes を選んだらリセットを行う（従来挙動を踏襲）
-            if (!ConfirmDeleteAnalysisModel(message: "解析結果を削除します。よろしいですか？", caption: "確認", icon: MessageBoxImage.Question, resetModel: true))
-                return;
-        }
+        // 「解析結果を削除する」コマンドは置かない。結果は入力の編集で自動的に 「再解析が必要」になり、
+        // 明示的に消す操作は画面に無かった (2026-09-19 に撤去)。消す必要があるときは ResetAnalysisResultsSilently を使う。
+
     }
 }
