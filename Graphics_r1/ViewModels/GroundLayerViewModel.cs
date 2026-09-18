@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using PileDesign.Constants;
 using AvalonDock.Layout;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -1799,6 +1800,8 @@ namespace PileDesign.ViewModels
             double magnitude = 7.5;
             double rn = 0.1 * (magnitude - 1.0);
             double alphaMax = 3.5;
+            // この g は基礎指針の τd/σz′ の式の書き方に合わせた値。標準重力加速度
+            // (UnitConversion.GRAVITY = 9.80665) には寄せない (式の一部なので)
             double gravity = 9.8;
 
             for (int levelIndex = 0; levelIndex < 2; levelIndex++)
@@ -2158,8 +2161,10 @@ namespace PileDesign.ViewModels
                     zj1 = GroundInput.GroundLayers[j].BottomGLDepth + GroundInput.GroundLayers[j].LayerThickness;
                     zj2 = GroundInput.GroundLayers[j].BottomGLDepth;
 
+                    // 重量密度 [kN/m³] → 質量密度 [t/m³]。2026-09-19 まで、ここだけ 9.806665
+                    // (桁が 1 つ多い) を使っていた。他は 9.80665 で、同じ量が 2 通りあった
                     GroundInput.GroundMassesData[i].Mass += Math.Max(Math.Min(zi1, zj1) - Math.Max(zi2, zj2), 0)
-                        * GroundInput.GroundLayers[j].Density / 9.806665;
+                        * GroundInput.GroundLayers[j].Density / UnitConversion.GRAVITY;
                 }
 
             }
@@ -2226,9 +2231,9 @@ namespace PileDesign.ViewModels
                                 var gmd = groundMassesData[i];
                                 double rho = gmd.Density;
                                 double h = gmd.H.GetValueOrDefault();
-                                double vse = Math.Sqrt(rs.G[i] * 9.80665 / rho);
+                                double vse = Math.Sqrt(rs.G[i] * UnitConversion.GRAVITY / rho);
                                 gmd.VSE[levelIndex] = vse;
-                                gmd.K[levelIndex] = (h > 0) ? rho / 9.80665 * vse * vse / h : 0.0;
+                                gmd.K[levelIndex] = (h > 0) ? rho / UnitConversion.GRAVITY * vse * vse / h : 0.0;
                                 gmd.U[levelIndex] = rs.PhiU0_1[i];
                                 gmd.UStar[levelIndex] = rs.PhiU0_1[i]; // U[0]=1, U_bedrock=0 → UStar=U
                                 gmd.DmaxUStar[levelIndex] = rs.DispMm[i];
@@ -2300,7 +2305,7 @@ namespace PileDesign.ViewModels
                     groundMassData.VSE[levelIndex] = Math.Pow(density * vs0 / bedrockDensity / bedrockShearWaveVelocity, beta) * vs0;
 
                     // 等価せん断ばね剛性
-                    groundMassData.K[levelIndex] = density / 9.80665 * Math.Pow(groundMassData.VSE[levelIndex], 2.0) / groundMassData.H.GetValueOrDefault();
+                    groundMassData.K[levelIndex] = density / UnitConversion.GRAVITY * Math.Pow(groundMassData.VSE[levelIndex], 2.0) / groundMassData.H.GetValueOrDefault();
 
                     if (i == 0)
                     {

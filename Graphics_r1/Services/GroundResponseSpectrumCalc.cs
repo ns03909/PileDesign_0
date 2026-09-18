@@ -1,3 +1,4 @@
+using PileDesign.Constants;
 using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Models.InputData;
 using System;
@@ -20,7 +21,8 @@ namespace PileDesign.Services
         private const double GReductionFloor = 0.05;       // G/G0 下限
         private const double EffectiveStrainCoeff = 0.65;  // γeff = 0.65 γmax (SHAKE 慣行)
         private const double XiInitial = 0.05;             // 材料減衰
-        private const double Gravity = 9.80665;            // m/s²
+        // 重力加速度は UnitConversion.GRAVITY (1 か所で持つ)
+        private const double Gravity = UnitConversion.GRAVITY;
 
         // Gamma05/HMax が未設定 (= 0) の場合のフォールバック (ShallowSoilType ベース)
         internal const double Gamma05DefaultSand = 7e-4;

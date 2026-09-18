@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using PileDesign.Constants;
+using System.Collections.Generic;
 
 using PileDesign.Common;
 
@@ -132,7 +133,7 @@ namespace PileDesign.Models.InputData
         // 初期せん断剛性 Gs0 (kN/m^2) = γ × Vs^2 / 9.80665
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double Gs0 => _density * _vs * _vs / 9.80665;
+        public double Gs0 => _density * _vs * _vs / UnitConversion.GRAVITY;
 
         // 初期変形係数 Es0 (kN/m^2) = 2(1 + νs) × Gs0
         [System.Text.Json.Serialization.JsonIgnore]

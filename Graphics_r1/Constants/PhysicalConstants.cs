@@ -73,6 +73,23 @@ public static class UnitConversion
     /// 自重 [kN/m] に直すのに使う。
     /// </summary>
     public const double TON_TO_KN = 9.80665;
+
+    /// <summary>
+    /// 標準重力加速度 [m/s²]。重量密度 [kN/m³] を質量密度 [t/m³] に直すのに使う
+    /// (地盤の質量・せん断剛性・Vse)。
+    ///
+    /// <para><b>値は 1 か所で持つこと。</b> 2026-09-19 まで地盤の質量の算定だけが 9.806665
+    /// (桁が 1 つ多い) を使っていて、同じ量が 2 通りあった。</para>
+    ///
+    /// <para>液状化の τd/σz′ の式に出てくる g は、基礎指針の式の書き方に合わせた 9.8 を使う。
+    /// あちらは式の一部なのでこの定数には寄せない (<c>RecalculateTauDonSigmaZprime</c>)。</para>
+    /// </summary>
+    public const double GRAVITY = 9.80665;
+
+    /// <summary>
+    /// 鋼材の単位体積重量 [kN/m³]。鉄筋・PC鋼材・鋼管の自重に使う。
+    /// </summary>
+    public const double STEEL_UNIT_WEIGHT = 78.5;
 }
 
 /// <summary>

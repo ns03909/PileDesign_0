@@ -2716,7 +2716,7 @@ namespace PileDesign.Models.InputData
         [Newtonsoft.Json.JsonIgnore]
         public double W => IsNodularPile && CatalogMassPerM > 0
             ? CatalogMassPerM * UnitConversion.TON_TO_KN   // t/m -> kN/m
-            : ((MainBarAg + TendonAp + PipeAs) * 78.5 + Ac * ConcreteGamma) * Math.Pow(10, -6);
+            : ((MainBarAg + TendonAp + PipeAs) * UnitConversion.STEEL_UNIT_WEIGHT + Ac * ConcreteGamma) * Math.Pow(10, -6);
 
         // 軸剛性 (kN)
         // 合成断面: コンクリート + 主筋 + PC鋼材 + 鋼管（Es·As）。鋼管を持たない断面では PipeAs=0 のため影響なし。
@@ -2837,7 +2837,7 @@ namespace PileDesign.Models.InputData
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
         public double WCorroded =>
-            ((MainBarAg + TendonAp + PipeAsCorroded) * 78.5 + Ac * ConcreteGamma) * Math.Pow(10, -6);
+            ((MainBarAg + TendonAp + PipeAsCorroded) * UnitConversion.STEEL_UNIT_WEIGHT + Ac * ConcreteGamma) * Math.Pow(10, -6);
 
         // 腐食考慮 軸剛性 (kN)
         [System.Text.Json.Serialization.JsonIgnore]
