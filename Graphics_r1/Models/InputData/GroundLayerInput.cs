@@ -225,21 +225,10 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _isNegativeCircumResistance, value);
         }
 
-        // 沈下検討用変形係数
-        private bool _settleEs;
-        public bool SettleEs
-        {
-            get => _settleEs;
-            set => SetProperty(ref _settleEs, value);
-        }
-
-        // 沈下検討用ポアソン比
-        private bool _settleNus;
-        public bool SettleNus
-        {
-            get => _settleNus;
-            set => SetProperty(ref _settleNus, value);
-        }
+        // 「沈下検討用変形係数」「沈下検討用ポアソン比」という bool の入力が 2 つあったが、
+        // 名前に反して型は bool で、しかもどこからも読まれず画面にも出ていなかった
+        // (2026-09-18 に撤去)。沈下解析が使う変形係数は Es / Ek、ポアソン比は
+        // SettlementSoilLayer 側の入力である。
 
         // コンストラクタ
         public GroundLayerInput()
@@ -290,9 +279,6 @@ namespace PileDesign.Models.InputData
 
             copy._isPositiveCircumResistance = _isPositiveCircumResistance;
             copy._isNegativeCircumResistance = _isNegativeCircumResistance;
-
-            copy._settleEs = _settleEs;
-            copy._settleNus = _settleNus;
 
             return copy;
         }

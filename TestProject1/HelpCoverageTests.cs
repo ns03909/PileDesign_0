@@ -44,7 +44,8 @@ namespace TestProject1
             ["杭断面"] = null,      // PileSectionWindow
             ["地盤"] = null,        // GroundWindow
             ["要素分割"] = null,    // ElementDivisionWindow
-            ["基礎梁"] = null,      // FoundationBeamWindow
+            // 基礎梁の専用ウィンドウは 2026-09-18 に撤去した (梁は主画面の「梁要素」タブで編集)。
+            // 主画面の説明の中にあるので、窓の見出しとしては数えない。
             ["荷重ケース"] = null,  // LoadCaseWindow
             ["プロジェクト情報"] = null,  // ProjectInfoWindow
         };

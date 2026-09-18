@@ -180,13 +180,8 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // 接続先の基礎梁節点番号（剛床連結の場合）
-        private int? _connectedFoundationNodeNo;
-        public int? ConnectedFoundationNodeNo
-        {
-            get => _connectedFoundationNodeNo;
-            set => SetProperty(ref _connectedFoundationNodeNo, value);
-        }
+        // 接続先の基礎梁節点番号は持たない。梁の端部は節点の UniqueId で指すため
+        // (NodeI_Id / NodeJ_Id)、番号での参照はどこからも読まれていなかった (2026-09-18 に撤去)。
 
         // 基礎梁接合節点の相対高さ（杭頭からの鉛直オフセット, 通常 +）
         private double _foundationBeamDeltaZc = 1.0;
@@ -487,13 +482,8 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _isFrontPiles, value);
         }
 
-        // 杭先端N値
-        private double _pileTipNValue;
-        public double PileTipNValue
-        {
-            get => _pileTipNValue;
-            set => SetFiniteClampedDouble(ref _pileTipNValue, value, min: 0.0, max: 1000.0, fallback: 0.0);
-        }
+        // 杭先端 N 値の入力は置かない。どこからも読まれておらず (支持力は地盤の土質データから
+        // 杭先端位置の N 値を引く)、画面にも出ていなかったため 2026-09-18 に撤去した。
 
         // 極限周面抵抗力
         private double _rf;
@@ -727,14 +717,12 @@ namespace PileDesign.Models.InputData
                 PileBodyNo = this.PileBodyNo,
                 GroundNo = this.GroundNo,
                 SoilPileAltNo = this.SoilPileAltNo,
-                ConnectedFoundationNodeNo = this.ConnectedFoundationNodeNo,
                 FoundationBeamDeltaZc = this.FoundationBeamDeltaZc,
                 GroupPileFactor = this.GroupPileFactor,
                 PileSpacingFactor = this.PileSpacingFactor,
                 AxialForceVL0 = this.AxialForceVL0,
                 AxialForceVLAdditional = this.AxialForceVLAdditional,
                 SinglePileSettlementVL = this.SinglePileSettlementVL,
-                PileTipNValue = this.PileTipNValue,
                 Rf = this.Rf,
                 Rp = this.Rp,
                 Ru = this.Ru,

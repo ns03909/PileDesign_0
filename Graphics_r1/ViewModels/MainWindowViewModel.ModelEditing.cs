@@ -64,25 +64,11 @@ namespace PileDesign.ViewModels
             UpdatePileLayoutNo();
         }
 
-        [RelayCommand]
-        private void OnComputePileGroupFactor()
-        {
-            if (!CheckAndResetAnalysisResults()) return;
-
-            double pileCount = CurrentInputModel.PileLayoutItems.Count;
-            if (pileCount == 0)
-                return;
-        }
-
-        [RelayCommand]
-        private void OnComputePileSpacingFactor()
-        {
-            if (!CheckAndResetAnalysisResults()) return;
-
-            double pileCount = CurrentInputModel.PileLayoutItems.Count;
-            if (pileCount == 0)
-                return;
-        }
+        // 群杭係数 ξ・杭間隔比 R/B の自動計算コマンドは置かない。
+        // 以前 OnComputePileGroupFactor / OnComputePileSpacingFactor があったが、中身は
+        // 杭の本数を数えて何もせず返る空実装で、しかも呼ばれると先に解析結果を捨てる確認だけ
+        // 走った。どこからも参照されていなかったので 2026-09-18 に撤去した。
+        // ξ は「群杭係数グラフ確認」(GroupPileFactorCommand) で読み取って全杭へ適用する。
 
         /// <summary>X優先整列: X昇順 → Y昇順でPileLayoutItemsをソート</summary>
         [RelayCommand]

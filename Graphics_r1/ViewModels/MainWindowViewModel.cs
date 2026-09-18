@@ -515,8 +515,8 @@ namespace PileDesign.ViewModels
                     }
 
                     // 基礎梁の CollectionChanged 再購読 → 基礎梁考慮沈下解析ボタンの活性化条件再評価
-                    // FoundationBeamInput.Beams 自体が新インスタンスで置換された場合 (FoundationBeamViewModel
-                    // 経由の編集確定など) にも再購読するため、Input 側の PropertyChanged も併せて監視する
+                    // FoundationBeamInput.Beams 自体が新インスタンスで置換された場合 (例題の読込や
+                    // ファイルの読込など) にも再購読するため、Input 側の PropertyChanged も併せて監視する
                     if (_currentInputModel?.FoundationBeamInput is { } fbInput)
                     {
                         fbInput.PropertyChanged -= FoundationBeamInput_PropertyChanged;
@@ -784,7 +784,7 @@ namespace PileDesign.ViewModels
             }
 
             // 基礎梁の変更で 反復解析結果が無効になるため自動破棄 + トースト通知
-            // (FoundationBeamWindow 編集中は CollectionChanged が頻繁に発火するため
+            // (梁要素の編集中は CollectionChanged が頻繁に発火するため
             //  ダイアログでなくトーストで通知)
             if (HasGroupSettlementBeamAwareCases)
             {
@@ -1106,29 +1106,11 @@ namespace PileDesign.ViewModels
             method?.Invoke(this, null);
         }
 
-        // 基礎梁ウィンドウを開くメソッド
-        [RelayCommand]
-        public void OpenFoundationBeamWindow()
-        {
-            OpenDialogWindowWithUndo<FoundationBeamViewModel, FoundationBeamWindow>(() =>
-            {
-                // ダイアログ確定/破棄後に基礎梁有無に応じて荷重タイプ ComboBox を再評価
-                // (FoundationBeamInput / Beams 置換が PropertyChanged 経路で取りこぼされた場合の保険)
-                if (CurrentInputModel?.FoundationBeamInput is { } fbInput)
-                {
-                    // 新インスタンス参照に再購読
-                    fbInput.PropertyChanged -= FoundationBeamInput_PropertyChanged;
-                    fbInput.PropertyChanged += FoundationBeamInput_PropertyChanged;
-                    if (fbInput.Beams is { } beams)
-                    {
-                        beams.CollectionChanged -= FoundationBeams_CollectionChanged;
-                        beams.CollectionChanged += FoundationBeams_CollectionChanged;
-                    }
-                }
-                OpenVerticalBeamCalculationCommand?.NotifyCanExecuteChanged();
-                OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
-            }, undoDescription: "基礎梁 編集");
-        }
+        // 基礎梁入力ウィンドウは置かない。梁と基礎梁節点は主画面の「梁要素」タブと
+        // 画面上の作図 (MainWindow.FoundationBeamEditing) で編集し、接続モード (剛体/剛床) は
+        // 水平解析ウィンドウで選ぶ。専用の窓は 2026-02-14 にリボンのボタンだけが外され、
+        // 窓・ViewModel・コマンドが 7 か月ぶん取り残されていたので 2026-09-18 に撤去した
+        // (同じデータに編集経路が 2 つあると、片方だけ直して食い違う)。
 
         // 杭体ウィンドウを開くメソッド
         [RelayCommand]

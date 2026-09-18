@@ -621,6 +621,10 @@
                                                 ToolTip="基礎指針'19 計算例5 直接基礎の即時沈下量（PHC杭φ600 L=14m 12本付き）" AutomationProperties.Name="基礎指針'19 計算例5 直接基礎の即時沈下量（PHC杭φ600 L=14m 12本付き）">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例5　直接基礎の即時沈下量" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example5Command}"
+                                                ToolTip="基礎指針'19 計算例5 群杭の沈下量（荷重面・沈下層・基礎梁つき）" AutomationProperties.Name="基礎指針'19 計算例5 群杭の沈下量（荷重面・沈下層・基礎梁つき）">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例5　群杭の沈下量" VerticalAlignment="Center"/></StackPanel></Button>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example7Command}"
                                                 ToolTip="基礎指針'19 計算例7 杭の限界鉛直支持力および限界引抜き抵抗力" AutomationProperties.Name="基礎指針'19 計算例7 杭の限界鉛直支持力および限界引抜き抵抗力">
                                             <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/cover.png" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="計算例7　杭の限界鉛直支持力および限界引抜き抵抗力" VerticalAlignment="Center"/></StackPanel></Button>
@@ -635,6 +639,10 @@
 
                                         <!-- 設計例集 -->
                                         <TextBlock Text="建築基礎構造設計例集 2024" FontWeight="Bold" Foreground="#3271AD" Margin="0,16,0,4" FontSize="14"/>
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
+                                                Command="{Binding Example2_1Command}"
+                                                ToolTip="日本建築学会　建築基礎構造設計例集 2024　2.1　直接基礎の沈下量（荷重面・沈下層）" AutomationProperties.Name="日本建築学会　建築基礎構造設計例集 2024　2.1　直接基礎の沈下量（荷重面・沈下層）">
+                                            <StackPanel Orientation="Horizontal"><Image Source="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" Width="32" Height="32" Margin="0,0,12,0" Stretch="Uniform"/><TextBlock Text="2.1　直接基礎の沈下量" VerticalAlignment="Center"/></StackPanel></Button>
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8" Margin="0,2"
                                                 Command="{Binding Example3_1Command}"
                                                 ToolTip="日本建築学会　建築基礎構造設計例集 2024　3.1　非液状化地盤に建つ建物のPHC杭基礎" AutomationProperties.Name="日本建築学会　建築基礎構造設計例集 2024　3.1　非液状化地盤に建つ建物のPHC杭基礎">
