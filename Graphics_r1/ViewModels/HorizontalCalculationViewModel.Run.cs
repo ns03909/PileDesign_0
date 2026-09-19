@@ -1197,41 +1197,8 @@ namespace PileDesign.ViewModels
                     double currentResidual = caseModel.NormsROnNormsFint;
                     if (UseAdaptiveRelaxation)
                     {
-                        double residualRatio = prevResidual > 1e-20 ? currentResidual / prevResidual : 1.0;
-
-                        if (residualRatio < 0.8) // 残差が20%以上減少 → 良好な収束
-                        {
-                            consecutiveDecrease++;
-                            // 2回連続で大幅減少したらω回復（最大1.0）
-                            if (consecutiveDecrease >= 2 && currentRelaxFactor < 1.0)
-                            {
-                                currentRelaxFactor = Math.Min(currentRelaxFactor * 1.3, 1.0);
-                                consecutiveDecrease = 0;
-                            }
-                        }
-                        else if (residualRatio > 1.02) // 残差が2%以上増加 → 即座にω減少
-                        {
-                            // 増加量に応じてω減少幅を調整（より積極的に）
-                            double reductionFactor = residualRatio > 1.5 ? 0.25 : (residualRatio > 1.1 ? 0.5 : 0.7);
-                            currentRelaxFactor = Math.Max(currentRelaxFactor * reductionFactor, 0.1);
-                            consecutiveDecrease = 0;
-                        }
-                        else if (residualRatio < 1.0) // 微減（0-20%）
-                        {
-                            consecutiveDecrease++;
-                            // 3回連続微減でもω小幅回復
-                            if (consecutiveDecrease >= 3 && currentRelaxFactor < 0.7)
-                            {
-                                currentRelaxFactor = Math.Min(currentRelaxFactor * 1.1, 0.7);
-                                consecutiveDecrease = 0;
-                            }
-                        }
-                        else // 停滞（1.0-1.02）
-                        {
-                            consecutiveDecrease = 0;
-                            // 停滞時もωを少し下げる
-                            currentRelaxFactor = Math.Max(currentRelaxFactor * 0.85, 0.15);
-                        }
+                        (currentRelaxFactor, consecutiveDecrease) = UpdateAdaptiveRelaxation(
+                            currentResidual, prevResidual, currentRelaxFactor, consecutiveDecrease);
                     }
 
                     // v12/v13: 発散検出 - 残差が初期値や最小値から大幅に増加した場合
@@ -1753,6 +1720,64 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 解析の後処理。LastRunConfig の記録、ステップ収束サマリーの出力、経過時間タイマーの停止、
         /// ペナルティばねの精度検証、完了進捗の報告、メインウィンドウへのログ受け渡しを行う。
+
+        /// <summary>
+        /// 適応緩和係数 ω の更新規則。残差比 (今回/前回) から ω と連続改善回数を決める。
+        /// </summary>
+        /// <remarks>
+        /// 規則は 4 つに分かれる。
+        /// <list type="bullet">
+        /// <item>残差比 &lt; 0.8 (2 割以上の減少): 2 回続いたら ω を 1.3 倍 (上限 1.0)</item>
+        /// <item>残差比 &gt; 1.02 (増加): 増え方に応じて 0.25 / 0.5 / 0.7 倍 (下限 0.1)</item>
+        /// <item>残差比 &lt; 1.0 (微減): 3 回続いたら ω を 1.1 倍 (上限 0.7)</item>
+        /// <item>それ以外 (停滞、1.0〜1.02): ω を 0.85 倍 (下限 0.15)</item>
+        /// </list>
+        /// ω を動かした反復では連続改善回数を 0 に戻す。前回残差が 0 に近いときは残差比 1.0、
+        /// つまり停滞として扱う (0 除算を避けるため。切り出す前からこの扱い)。
+        ///
+        /// <para>この規則は反復回数に直接効くので、変えると収束スナップショットが動く。
+        /// <c>AdaptiveRelaxationTests</c> が 4 つの分岐と上下限を固定している。</para>
+        /// </remarks>
+        internal static (double RelaxFactor, int ConsecutiveDecrease) UpdateAdaptiveRelaxation(
+            double currentResidual, double prevResidual, double relaxFactor, int consecutiveDecrease)
+        {
+            double residualRatio = prevResidual > 1e-20 ? currentResidual / prevResidual : 1.0;
+
+            if (residualRatio < 0.8) // 残差が20%以上減少 → 良好な収束
+            {
+                consecutiveDecrease++;
+                // 2回連続で大幅減少したらω回復（最大1.0）
+                if (consecutiveDecrease >= 2 && relaxFactor < 1.0)
+                {
+                    relaxFactor = Math.Min(relaxFactor * 1.3, 1.0);
+                    consecutiveDecrease = 0;
+                }
+            }
+            else if (residualRatio > 1.02) // 残差が2%以上増加 → 即座にω減少
+            {
+                // 増加量に応じてω減少幅を調整（より積極的に）
+                double reductionFactor = residualRatio > 1.5 ? 0.25 : (residualRatio > 1.1 ? 0.5 : 0.7);
+                relaxFactor = Math.Max(relaxFactor * reductionFactor, 0.1);
+                consecutiveDecrease = 0;
+            }
+            else if (residualRatio < 1.0) // 微減（0-20%）
+            {
+                consecutiveDecrease++;
+                // 3回連続微減でもω小幅回復
+                if (consecutiveDecrease >= 3 && relaxFactor < 0.7)
+                {
+                    relaxFactor = Math.Min(relaxFactor * 1.1, 0.7);
+                    consecutiveDecrease = 0;
+                }
+            }
+            else // 停滞（1.0-1.02）
+            {
+                consecutiveDecrease = 0;
+                // 停滞時もωを少し下げる
+                relaxFactor = Math.Max(relaxFactor * 0.85, 0.15);
+            }
+            return (relaxFactor, consecutiveDecrease);
+        }
         /// 中断されていたらここで <see cref="OperationCanceledException"/> を投げる (切り出す前と同じ)。
         /// </summary>
         private async Task FinishRunAsync(CancellationToken token, IProgress<Models.AnalysisProgress>? progress, RunContext ctx)
