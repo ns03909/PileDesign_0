@@ -71,6 +71,28 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 集計も緩和受理を数えること。行の判定は「OK(緩和受理)」と出るのに、
+        /// まとめが「OK n 件」としか言わないと、まとめだけ読む人には伝わらない。
+        /// 緩和受理は未収束とは違い、OK / NG の内訳には<b>含める</b>。
+        /// </summary>
+        [TestMethod]
+        public void TheCountsSeparateRelaxedWithoutRemovingItFromOkOrNg()
+        {
+            var result = new EvaluationResult(new[]
+            {
+                Item(StepStatus.Converged, 100, 200),          // OK
+                Item(StepStatus.ConvergedRelaxed, 100, 200),   // OK (緩和受理)
+                Item(StepStatus.ConvergedRelaxed, 300, 200),   // NG (緩和受理)
+                Item(StepStatus.Unconverged, 100, 200),        // どちらでもない
+            });
+
+            Assert.AreEqual(2, result.OkCount, "緩和受理の OK も OK に数える");
+            Assert.AreEqual(1, result.NgCount, "緩和受理の NG も NG に数える");
+            Assert.AreEqual(1, result.UnconvergedCount);
+            Assert.AreEqual(2, result.RelaxedCount, "緩和受理は別に数えられること");
+        }
+
+        /// <summary>
         /// 画面・計算書が読む <see cref="EvaluationItem.StatusLabel"/> と、テキスト出力が
         /// 同じことを言うこと。出口によって違う顔をしていたのが元の不具合。
         /// </summary>

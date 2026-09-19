@@ -32,6 +32,16 @@ namespace PileDesign.Models.Results
         /// <summary>収束しなかったケースから作られた項目の件数。OK とも NG とも言えないもの。</summary>
         public int UnconvergedCount => Items.Count(i => i.IsFromUnconvergedCase);
 
+        /// <summary>
+        /// 緩めた基準 (残差 1e-6 に届かず最大 1e-2) で受理したケースから作られた項目の件数。
+        ///
+        /// <para><b>OK / NG の内訳にも含まれる</b> (未収束とは違い、釣り合いは満たしているとみなす)。
+        /// ここは「そのうち何件が緩めた基準だったか」を別に数えるためのもの。行の判定は
+        /// 「OK(緩和受理)」と出るのに、集計行が「OK n 件」としか言わないと、
+        /// まとめだけ読んだ人には伝わらない。</para>
+        /// </summary>
+        public int RelaxedCount => Items.Count(i => i.IsFromRelaxedCase);
+
         public bool IsEmpty => Items.Count == 0;
 
         /// <summary>

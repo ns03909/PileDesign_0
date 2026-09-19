@@ -1206,6 +1206,26 @@ namespace PileDesign.Output
                 AddText(body, "収束しなかった荷重ケース: " + string.Join(" / ", unconvergedCases));
             }
 
+            // 緩めた基準で受理したケースも、件数だけは集計に添える。
+            // 各行の判定は「OK(緩和受理)」と出るが、まとめだけを読む人には伝わらないため。
+            if (result.RelaxedCount > 0)
+            {
+                var relaxedCases = result.Items
+                    .Where(i => i.IsFromRelaxedCase)
+                    .Select(i => string.IsNullOrEmpty(i.LiquefactionLabel)
+                        ? $"{i.LoadCaseName} {i.LoadCombinationName}"
+                        : $"{i.LoadCaseName} {i.LoadCombinationName}（{i.LiquefactionLabel}）")
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToList();
+
+                AddText(body,
+                    $"上記のうち {result.RelaxedCount} 件は、収束基準を緩めて受理したステップを含む荷重ケースの結果である。"
+                    + "釣り合いは満たしているとみなして OK / NG に数えているが、残差は本来の許容値まで下がっていない。"
+                    + "判定には「(緩和受理)」を添えてある。");
+                AddText(body, "緩和受理を含む荷重ケース: " + string.Join(" / ", relaxedCases));
+            }
+
             if (!includeLongTerm && longTermCount > 0)
             {
                 AddTableNote(body,
