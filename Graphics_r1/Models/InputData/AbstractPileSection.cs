@@ -525,6 +525,128 @@ namespace PileDesign.Models.InputData
 
         // <抽象> 安全限界軸力、曲げモーメント取得メソッド
         internal abstract (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature);
+
+        /// <summary>
+        /// 主筋の降伏を「終局側の圧縮縁ひずみ εcu」で見たときの断面力と曲率。
+        /// 降伏点を探すときの曲率の上限に使う。
+        /// </summary>
+        /// <param name="epsY">主筋の引張降伏ひずみ (絶対値、σy/Es)</param>
+        /// <param name="lever">圧縮縁から主筋重心までの距離</param>
+        /// <remarks>
+        /// εcu は <see cref="UltimateCompressiveStrain"/> (断面ごとに上書きできる) から取る。
+        /// 2026-09-19 まで 3 つの断面に写しがあり、場所打ち RC だけが定数を参照し、
+        /// 残り 2 つは 0.003 を直書きしていた。値は同じだが、定数を変えても片方しか動かない形だった。
+        /// </remarks>
+        protected (double N, double M, double epsilonC, double phi) SteelYieldNMax(double epsY, double lever)
+        {
+            double epsilonC = UltimateCompressiveStrain;   // 終局側の代表圧縮縁ひずみ εcu
+            double phi = (epsilonC + epsY) / Math.Max(lever, 1e-9); // φ = (εc + εy)/lever
+            var (N, M) = GetUltimateForceAndMoment(epsilonC, phi);
+            return (N, M, epsilonC, phi);
+        }
+
+        /// <summary>
+        /// 主筋が引張降伏する点の曲げモーメントと曲率を、曲率を進めながら探す。
+        /// </summary>
+        /// <param name="Ntarget">釣り合わせる軸力</param>
+        /// <param name="epsY">主筋の引張降伏ひずみ (絶対値、σy/Es)</param>
+        /// <param name="lever">圧縮縁から主筋重心までの距離</param>
+        /// <remarks>断面ごとの違いは epsY と lever の出どころだけ (2026-09-19 に写し 3 つを 1 つへ)。</remarks>
+        internal (double M, double curvature) SolveSteelYieldMoment(double Ntarget, double epsY, double lever)
+        {
+
+            // 初期値
+            double phi = Math.Max(1e-7, epsY / lever * 0.5);
+            double phiMin = Math.Max(1e-8, phi * 0.1);
+            (_, _, _, double phiMax) = SteelYieldNMax(epsY, lever);
+
+            // 収束条件
+            const int maxIter = 50;
+            // 軸力残差の許容値 [N]（GetUltimateForceAndMoment の N は N 単位。以前「kN」と注記されていた）。
+            // 0.01 N は実質成立しないので、収束は下の tolPhiRel（曲率の相対変化）で決まる。挙動は変えていない。
+            const double tolN = 1e-2; // N
+            const double tolPhiRel = 1e-6;
+
+            for (int iter = 0; iter < maxIter; iter++)
+            {
+                double epsC = -epsY + phi * lever;
+                (double N, double M) = GetUltimateForceAndMoment(epsC, phi);
+
+                double f = N - Ntarget;
+                if (Math.Abs(f) < tolN)
+                    return (M, phi);
+
+                // 数値微分
+                double dPhi = Math.Max(phi * 1e-4, 1e-10);
+                double epsC2 = -epsY + (phi + dPhi) * lever;
+                (double N2, _) = GetUltimateForceAndMoment(epsC2, phi + dPhi);
+                double df_dphi = (N2 - N) / dPhi;
+
+                // 極端な場合は収束不能
+                if (Math.Abs(df_dphi) < 1e-12)
+                    break;
+
+                // Newtonステップ
+                double step = f / df_dphi;
+                // ステップ幅制限
+                if (Math.Abs(step) > phi * 0.5)
+                    step = Math.Sign(step) * phi * 0.5;
+
+                double phiNext = phi - step;
+                phiNext = Math.Clamp(phiNext, phiMin, phiMax);
+
+                // 収束判定
+                if (Math.Abs(phiNext - phi) / (Math.Abs(phi) + 1e-12) < tolPhiRel)
+                    return (M, phiNext);
+
+                phi = phiNext;
+            }
+
+            // 収束しない場合は端点値
+            double epsCedge = -epsY + phi * lever;
+            (double _, double Medge) = GetUltimateForceAndMoment(epsCedge, phi);
+            return (Medge, phi);
+        }
+
+        /// <summary>
+        /// 主筋が引張降伏する状態の N-M 相関 (曲率を振って軸力と曲げを集めたもの)。
+        /// </summary>
+        /// <param name="epsY">主筋の引張降伏ひずみ (絶対値、σy/Es)</param>
+        /// <param name="lever">圧縮縁から主筋重心までの距離</param>
+        /// <remarks>断面ごとの違いは epsY と lever の出どころだけ (2026-09-19 に写し 3 つを 1 つへ)。</remarks>
+        internal (List<double> axialForces, List<double> bendingMoments, List<double> epsilonCs, List<double> curvatures)
+            SolveSteelYieldMNInteraction(double epsY, double lever)
+        {
+            var axialForces = new List<double>();
+            var bendingMoments = new List<double>();
+            var epsilonCs = new List<double>();
+            var curvatures = new List<double>();
+
+            // パラメータ
+            int div = DivisionNum > 0 ? DivisionNum : 60;
+
+            (double MMin, double phiMin) = SolveSteelYieldMoment(UltimateLimitAxialForceThresholds[0], epsY, lever);
+            (double MMax, double phiMax) = SolveSteelYieldMoment(UltimateLimitAxialForceThresholds[3], epsY, lever);
+
+            // 1) φ走査で降伏線上の N(φ) 範囲を得る
+            var scanNs = new List<double>();
+            var scanPhis = new List<double>();
+            var scanMs = new List<double>();
+            var scanEpsC = new List<double>();
+            for (int i = 0; i <= div * 2; i++)
+            {
+                double phi = phiMin + (phiMax - phiMin) * i / (div * 2.0);
+                // 降伏条件: εs = εc - φ*lever = -epsY → εc = -epsY + φ*lever
+                double epsC = -epsY + phi * lever;
+
+                var (N, M) = GetUltimateForceAndMoment(epsC, phi);
+                scanNs.Add(N);
+                scanPhis.Add(phi);
+                scanMs.Add(M);
+                scanEpsC.Add(epsC);
+            }
+            return (scanNs, scanMs, scanEpsC, scanPhis);
+        }
         /// <summary>
         /// 2 変数 (圧縮縁ひずみ εc, 曲率 φ) 同時未知数のニュートン法で、
         /// 「指定軸力 Ntarget」かつ「最外縁主筋が引張降伏 (εs = -σy/Es)」となる

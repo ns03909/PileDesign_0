@@ -149,19 +149,11 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 引張側主筋が降伏し始めるとき（降伏開始）のNMインタラクションで、軸力が最大の(N,M)を返す。
-        /// φ 上限スケール取得目的（降伏条件: εs = εc − φ·lever = −εy）
+        /// 主筋の降伏を終局側の圧縮縁ひずみで見たときの断面力と曲率。
+        /// 中身は <see cref="AbstractPileSection.SteelYieldNMax(double, double)"/>。
         /// </summary>
         private (double N, double M, double epsilonC, double phi) GetSteelYieldNMax()
-        {
-            double epsY1 = MainBars1.RSigmaY / MainBars1.Er; // 正: 降伏ひずみ
-            double lever1 = (PileDia * 0.5 + MainBars1.PCD * 0.5);
-            double epsilonC = 0.003;                      // 終局側の代表圧縮縁ひずみ
-            double phi1 = (epsilonC + epsY1) / Math.Max(lever1, 1e-9); // φ = (εc + εy)/lever
-
-            var (N, M) = GetUltimateForceAndMoment(epsilonC, phi1);
-            return (N, M, epsilonC, phi1);
-        }
+            => SteelYieldNMax(MainBars1.RSigmaY / MainBars1.Er, PileDia * 0.5 + MainBars1.PCD * 0.5);
 
         internal (List<double> axialForces, List<double> bendingMoments, List<double> epsilonCs, List<double> curvatures)
         GetCrackMNInteraction(bool isLinear = false)
@@ -220,51 +212,12 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 引張側主筋が降伏し始めるとき（降伏開始）のNMインタラクションを取得する。
-        /// 形式は (axialForces, bendingMoments, epsilonCs, curvatures) で、FactoredUltimateNM 等と同じ。
-        /// 生成方針:
-        ///  1) 先に曲率φをパラメトリックに走査し、降伏条件(εs = -σy/Es)を満たす状態の N(φ) 範囲[minN,maxN]を把握
-        ///  2) その範囲で Ntarget を等分割し、GetYieldMoment(Ntarget) を用いて (M, φ) を解く
-        ///  3) その (φ) に対応する圧縮縁ひずみ εc = -σy/Es + φ*(D/2 + PCD/2) を計算
-        /// 備考:
-        ///  - 2)で得た (M, φ) から再度 N, M を算出して返却するため、Ntarget≒N実値 になる
-        ///  - 一部 Ntarget で解が安定しない場合、事前走査結果から最も近いφを用いるフォールバックあり
+        /// 主筋が引張降伏する状態の N-M 相関。中身は
+        /// <see cref="AbstractPileSection.SolveSteelYieldMNInteraction(double, double)"/>。
         /// </summary>
         internal (List<double> axialForces, List<double> bendingMoments, List<double> epsilonCs, List<double> curvatures)
             GetSteelYieldMNInteraction()
-        {
-            var axialForces = new List<double>();
-            var bendingMoments = new List<double>();
-            var epsilonCs = new List<double>();
-            var curvatures = new List<double>();
-
-            // パラメータ
-            int div = DivisionNum > 0 ? DivisionNum : 60;
-            double epsY1 = MainBars1.RSigmaY / MainBars1.Er; // >0
-            double lever1 = (PileDia * 0.5 + MainBars1.PCD * 0.5);
-
-            (double MMin, double phiMin) = GetSteelYieldMoment(UltimateLimitAxialForceThresholds[0]);
-            (double MMax, double phiMax) = GetSteelYieldMoment(UltimateLimitAxialForceThresholds[3]);
-
-            // 1) φ走査で降伏線上の N(φ) 範囲を得る
-            var scanNs = new List<double>();
-            var scanPhis = new List<double>();
-            var scanMs = new List<double>();
-            var scanEpsC = new List<double>();
-            for (int i = 0; i <= div * 2; i++)
-            {
-                double phi = phiMin + (phiMax - phiMin) * i / (div * 2.0);
-                // 降伏条件: εs = εc - φ*lever = -epsY → εc = -epsY + φ*lever
-                double epsC = -epsY1 + phi * lever1;
-
-                var (N, M) = GetUltimateForceAndMoment(epsC, phi);
-                scanNs.Add(N);
-                scanPhis.Add(phi);
-                scanMs.Add(M);
-                scanEpsC.Add(epsC);
-            }
-            return (scanNs, scanMs, scanEpsC, scanPhis);
-        }
+            => SolveSteelYieldMNInteraction(MainBars1.RSigmaY / MainBars1.Er, PileDia * 0.5 + MainBars1.PCD * 0.5);
 
         // Ze, Ft, Ieのセット
         internal void SetZeFtIe()
@@ -386,65 +339,11 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 最外縁主筋が引張降伏する状態に対応する (M, φ) を与軸力 Ntarget で求める改良版
+        /// 主筋が引張降伏する点 (M, φ)。解法は
+        /// <see cref="AbstractPileSection.SolveSteelYieldMoment(double, double, double)"/>。
         /// </summary>
         internal (double M, double curvature) GetSteelYieldMoment(double Ntarget)
-        {
-            double epsY = MainBars1.RSigmaY / MainBars1.Er;
-            double lever = (PileDia * 0.5 + MainBars1.PCD * 0.5);
-
-            // 初期値
-            double phi = Math.Max(1e-7, epsY / lever * 0.5);
-            double phiMin = Math.Max(1e-8, phi * 0.1);
-            (_, _, _, double phiMax) = GetSteelYieldNMax();
-
-            // 収束条件
-            const int maxIter = 50;
-            // 軸力残差の許容値 [N]（GetUltimateForceAndMoment の N は N 単位。以前「kN」と注記されていた）。
-            // 0.01 N は実質成立しないので、収束は下の tolPhiRel（曲率の相対変化）で決まる。挙動は変えていない。
-            const double tolN = 1e-2; // N
-            const double tolPhiRel = 1e-6;
-
-            for (int iter = 0; iter < maxIter; iter++)
-            {
-                double epsC = -epsY + phi * lever;
-                (double N, double M) = GetUltimateForceAndMoment(epsC, phi);
-
-                double f = N - Ntarget;
-                if (Math.Abs(f) < tolN)
-                    return (M, phi);
-
-                // 数値微分
-                double dPhi = Math.Max(phi * 1e-4, 1e-10);
-                double epsC2 = -epsY + (phi + dPhi) * lever;
-                (double N2, _) = GetUltimateForceAndMoment(epsC2, phi + dPhi);
-                double df_dphi = (N2 - N) / dPhi;
-
-                // 極端な場合は収束不能
-                if (Math.Abs(df_dphi) < 1e-12)
-                    break;
-
-                // Newtonステップ
-                double step = f / df_dphi;
-                // ステップ幅制限
-                if (Math.Abs(step) > phi * 0.5)
-                    step = Math.Sign(step) * phi * 0.5;
-
-                double phiNext = phi - step;
-                phiNext = Math.Clamp(phiNext, phiMin, phiMax);
-
-                // 収束判定
-                if (Math.Abs(phiNext - phi) / (Math.Abs(phi) + 1e-12) < tolPhiRel)
-                    return (M, phiNext);
-
-                phi = phiNext;
-            }
-
-            // 収束しない場合は端点値
-            double epsCedge = -epsY + phi * lever;
-            (double _, double Medge) = GetUltimateForceAndMoment(epsCedge, phi);
-            return (Medge, phi);
-        }
+            => SolveSteelYieldMoment(Ntarget, MainBars1.RSigmaY / MainBars1.Er, PileDia * 0.5 + MainBars1.PCD * 0.5);
 
         // C点を返すメソッド
         internal static double GetPhiC(double phiCr, double Mcr, double phiY, double My, double Mu0, double beta1)
