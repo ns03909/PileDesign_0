@@ -219,11 +219,18 @@ namespace PileDesign.Models.Results
         /// <summary>
         /// 一覧に出す判定の文字列。
         ///
-        /// 収束していないケースは <b>OK でも NG でもない</b>。応答値が釣り合いを満たしていないので、
-        /// 限界値と比べた結果を判定として出すと「解いていないものを合格と言う」ことになる。
+        /// <para>収束していないケースは <b>OK でも NG でもない</b>。応答値が釣り合いを満たしていないので、
+        /// 限界値と比べた結果を判定として出すと「解いていないものを合格と言う」ことになる。</para>
+        ///
+        /// <para>緩めた基準で受理したケースは未収束とは扱わないが、<b>そのことを判定に明記する</b>。
+        /// 2026-09-19 まで明記していたのはテキスト出力 (<see cref="EvaluationTextFormatter"/>) だけで、
+        /// 画面の一覧・計算書の検定表・結果ダッシュボードには素の「OK」「NG」が出ていた。
+        /// ヘルプは「判定に OK(緩和受理) のように明記します」と書いてあり、実装が追いついていなかった。</para>
         /// </summary>
-        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG。解析が収束しなかったケースは「未収束」")]
-        public string StatusLabel => IsFromUnconvergedCase ? "未収束" : (IsOk ? "OK" : "NG");
+        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG。解析が収束しなかったケースは「未収束」、緩めた基準で受理したケースは「(緩和受理)」を付ける")]
+        public string StatusLabel => IsFromUnconvergedCase ? "未収束"
+            : IsFromRelaxedCase ? (IsOk ? "OK(緩和受理)" : "NG(緩和受理)")
+            : (IsOk ? "OK" : "NG");
 
         /// <summary>画面で対象を特定するための文字列。例:「杭配置No.7 / 要素3 / i端」</summary>
         [ResultColumn("対象", 3, tooltip: "どの杭のどこか (杭配置番号 / 杭体区間 / 端部)")]
