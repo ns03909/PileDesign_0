@@ -1708,10 +1708,6 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 解析の後処理。LastRunConfig の記録、ステップ収束サマリーの出力、経過時間タイマーの停止、
-        /// ペナルティばねの精度検証、完了進捗の報告、メインウィンドウへのログ受け渡しを行う。
-
-        /// <summary>
         /// 適応緩和係数 ω の更新規則。残差比 (今回/前回) から ω と連続改善回数を決める。
         /// </summary>
         /// <remarks>
@@ -1849,6 +1845,10 @@ namespace PileDesign.ViewModels
 
             return (false, "リミットサイクルとして早期に打ち切り");
         }
+
+        /// <summary>
+        /// 解析の後処理。LastRunConfig の記録、ステップ収束サマリーの出力、経過時間タイマーの停止、
+        /// ペナルティばねの精度検証、完了進捗の報告、メインウィンドウへのログ受け渡しを行う。
         /// 中断されていたらここで <see cref="OperationCanceledException"/> を投げる (切り出す前と同じ)。
         /// </summary>
         private async Task FinishRunAsync(CancellationToken token, IProgress<Models.AnalysisProgress>? progress, RunContext ctx)
