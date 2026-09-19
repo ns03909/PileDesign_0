@@ -525,6 +525,134 @@ namespace PileDesign.Models.InputData
 
         // <抽象> 安全限界軸力、曲げモーメント取得メソッド
         internal abstract (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature);
+        /// <summary>
+        /// 2 変数 (圧縮縁ひずみ εc, 曲率 φ) 同時未知数のニュートン法で、
+        /// 「指定軸力 Ntarget」かつ「最外縁主筋が引張降伏 (εs = -σy/Es)」となる
+        /// 降伏点 (My, φy) を求める。
+        /// </summary>
+        /// <param name="Ntarget">釣り合わせる軸力</param>
+        /// <param name="epsY">主筋の引張降伏ひずみ (絶対値、σy/Es)</param>
+        /// <param name="cSteel">圧縮縁から主筋重心までの距離</param>
+        /// <returns>収束しなければ hasYield=false。呼び出し側は既存の近似手法へ落とす。</returns>
+        /// <remarks>
+        /// <para>解析上の符号規約 (圧縮ひずみ正 / 引張ひずみ負) を前提とする。
+        /// 断面ごとの違いは εy と cSteel の<b>出どころだけ</b>なので、それを引数で受け取る。
+        /// 断面の評価は <see cref="GetUltimateForceAndMoment"/> (派生側の実装) を呼ぶ。</para>
+        ///
+        /// <para>2026-09-19 まで場所打ち RC・場所打ち鋼管コンクリート杭頭・既製杭杭頭の
+        /// 3 か所に 113 行ずつ写しがあった (差は先頭 2 行のみ)。写しは直すと取り残される。</para>
+        /// </remarks>
+        internal (bool hasYield, double My, double phiY) SolveYieldPoint2DNewton(
+            double Ntarget, double epsY, double cSteel)
+        {
+            if (cSteel <= 0) return (false, 0, 0);
+
+            // 初期推定
+            // 旧手法の推定曲率を利用し、圧縮縁ひずみは一旦コンクリートの 0.003 程度から開始
+            double phi0 = epsY / Math.Max(cSteel, 1e-9);                // 旧: epsY/lever
+            if (phi0 <= 0) phi0 = 1e-5;
+            //double epsC0 = epsY + phi0 * cSteel;                        // εs = εc - φ*cSteel = -epsY → εc = -epsY + φ*cSteel
+            double epsC0 = -epsY + phi0 * cSteel;                        // εs = εc - φ*cSteel = -epsY → εc = -epsY + φ*cSteel
+            epsC0 = Math.Max(epsC0, 0.001);                             // 過小初期値防止
+
+            double epsC = epsC0;
+            double phi = phi0;
+
+            const int maxIter = 40;
+            double tolF = 1e-3 * Math.Max(Math.Abs(Ntarget), 1.0);      // f1 許容（軸力残差）
+            double tolPhiRel = 1e-4;                                    // φ 相対更新許容
+            double damping = 1.0;
+
+            // 数値差分ステップ
+            double dEps = 1e-6;
+            double dPhi = 1e-6;
+
+            double My = 0;
+            bool converged = false;
+
+            for (int iter = 0; iter < maxIter; iter++)
+            {
+                // f1, f2 の評価
+                (double Nval, double Mval) = GetUltimateForceAndMoment(epsC, phi);
+                My = Mval;
+                double f1 = Nval - Ntarget;                     // 軸力条件
+                double epsSteel = epsC - phi * cSteel;          // 主筋ひずみ（圧縮縁基準）
+                double f2 = epsSteel + epsY;                    // εs = -epsY ⇒ εs + epsY = 0
+
+                // 収束判定
+                if (Math.Abs(f1) < tolF &&
+                    Math.Abs(f2) < 1e-6 &&
+                    iter > 1)
+                {
+                    converged = true;
+                    break;
+                }
+
+                // ヤコビアン(J) の数値差分
+                // ∂f1/∂epsC
+                (double N_deps, _) = GetUltimateForceAndMoment(epsC + dEps, phi);
+                double df1_deps = (N_deps - Nval) / dEps;
+
+                // ∂f1/∂phi
+                (double N_dphi, _) = GetUltimateForceAndMoment(epsC, phi + dPhi);
+                double df1_dphi = (N_dphi - Nval) / dPhi;
+
+                // f2 の解析的導関数
+                // f2 = (epsC - phi*cSteel + epsY)
+                double df2_deps = 1.0;
+                double df2_dphi = -cSteel;
+
+                // 2x2 連立解く: J * Δx = -f
+                // | df1_deps  df1_dphi | | dEpsC | = | -f1 |
+                // | df2_deps  df2_dphi | | dPhi  |   | -f2 |
+                double det = df1_deps * df2_dphi - df1_dphi * df2_deps;
+                if (Math.Abs(det) < 1e-16)
+                {
+                    // ヤコビアン特異 → ダンピング or 終了
+                    damping *= 0.5;
+                    if (damping < 1e-3) break;
+                    continue;
+                }
+
+                double dEpsC = (-f1 * df2_dphi - (-f2) * df1_dphi) / det;
+                double dPhi_ = (df1_deps * (-f2) - df2_deps * (-f1)) / det;
+
+                // ダンピング（暴走抑制）
+                double scale = 1.0;
+                // 大きすぎるステップを抑制
+                double maxRel = Math.Max(Math.Abs(dEpsC / (Math.Abs(epsC) + 1e-9)),
+                                         Math.Abs(dPhi_ / (Math.Abs(phi) + 1e-9)));
+                if (maxRel > 0.25) scale = 0.25 / maxRel;
+
+                dEpsC *= damping * scale;
+                dPhi_ *= damping * scale;
+
+                // 更新
+                epsC += dEpsC;
+                phi += dPhi_;
+
+                // 物理制約
+                if (phi <= 0) phi = Math.Abs(phi) + 1e-9;
+                if (epsC <= 0) epsC = 1e-7;
+
+                // 進捗が乏しい→ダンプ
+                if (Math.Abs(dPhi_) / (Math.Abs(phi) + 1e-12) < tolPhiRel &&
+                    Math.Abs(f1) < 5 * tolF)
+                {
+                    // f2 がまだ大きければ降伏未達の可能性
+                    if (Math.Abs(f2) > 5e-5)
+                        break;
+                }
+            }
+
+            if (!converged)
+            {
+                // 降伏が成立しない（高軸力圧縮等）と判定
+                return (false, 0, 0);
+            }
+
+            return (true, My, phi);
+        }
 
         // ある曲率時の圧縮縁ひずみ度取得メソッド
         internal double GetAllowableCompressionEdgeStrain(
