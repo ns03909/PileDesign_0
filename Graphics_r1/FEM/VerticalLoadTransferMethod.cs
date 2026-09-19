@@ -49,6 +49,18 @@ namespace PileDesign.FEM
         //private double prevPrevF0 = 0.0;
 
         private readonly double Tolerance = Math.Pow(10, -6);
+
+        /// <summary>
+        /// 解析中に静かに起きたこと (収束基準を緩めて受理した・初期状態が収束しなかった・
+        /// 軸力が荷重-沈下曲線の範囲外) を、利用者に見せる文で持つ。
+        /// 2026-09-19 まで Trace かログにしか出ておらず、曲線の精度が落ちていても
+        /// 沈下量がそのまま検定・計算書へ流れていた。数値は変えない (表示だけ)。
+        /// </summary>
+        public List<string> Warnings { get; } = [];
+
+        // 緩めて受理した荷重段階の数と、そのときの残差/許容値の最大比 (Warnings の 1 行に集約する)
+        private int _relaxedAcceptCount;
+        private double _relaxedAcceptWorstRatio;
         private double PileWeight;
         private double FricpMax;
         private double FricmMax;
@@ -207,6 +219,41 @@ namespace PileDesign.FEM
             Initialize();
 
             RunAnalysis();
+
+            if (_relaxedAcceptCount > 0)
+            {
+                Warnings.Add(
+                    $"荷重-沈下曲線の計算で、収束基準を緩めて受理した荷重段階が {_relaxedAcceptCount} 段階あります" +
+                    $" (残差は最大で基準の {_relaxedAcceptWorstRatio:F0} 倍)。曲線の精度が落ちている可能性があります。");
+            }
+        }
+
+        /// <summary>
+        /// 反復が 100 回を超えたら許容値を段階的に緩める (100 回までは元の値、以降 0.5 倍ずつ増え、
+        /// 最大で 100 倍)。純粋関数。切り出す前と同じ式。
+        /// </summary>
+        internal static double RelaxedTolerance(double tolerance, int iterationCount)
+            => iterationCount > 100
+                ? tolerance * Math.Min(100.0, 1.0 + (iterationCount - 100) * 0.5)
+                : tolerance;
+
+        /// <summary>
+        /// 反復上限に達したときの受理規則。残差が元の許容値の 1000 倍以内なら受理する。
+        /// NaN は受理しない (比較が偽になる)。純粋関数。切り出す前と同じ判定。
+        /// </summary>
+        /// <remarks>
+        /// この受理は 2026-09-19 まで無音だった。受理そのものは変えず、受理した段階の数と
+        /// 残差/許容値の比を <see cref="Warnings"/> に集約して利用者へ見せる。
+        /// </remarks>
+        internal static bool AcceptAtIterationLimit(double norm, double tolerance)
+            => norm <= tolerance * 1000;
+
+        /// <summary>緩めた基準で受理したことを数える (Warnings には最後に 1 行で出す)。</summary>
+        private void NoteRelaxedAcceptance(double norm)
+        {
+            _relaxedAcceptCount++;
+            double ratio = norm / Tolerance;
+            if (ratio > _relaxedAcceptWorstRatio) _relaxedAcceptWorstRatio = ratio;
         }
 
         private void Initialize()
@@ -703,6 +750,7 @@ namespace PileDesign.FEM
                     double norm = VectorR.L2Norm() / VectorF.L2Norm();
                     System.Diagnostics.Trace.TraceWarning(
                         $"初期状態の収束計算が完了しませんでした。残差ノルム: {norm:E3}。計算結果の精度が低下する可能性があります。");
+                    Warnings.Add($"自重による初期状態の計算が収束しませんでした (残差 {norm:E2})。荷重-沈下曲線の精度が落ちている可能性があります。");
                 }
 
                 double settlement = VectorX[^2];
@@ -1006,19 +1054,17 @@ namespace PileDesign.FEM
                 iterationCount += 1;
 
                 // 反復回数が多くなったら許容値を段階的に緩和（最大100倍まで）
-                if (iterationCount > 100)
-                {
-                    currentTolerance = Tolerance * Math.Min(100.0, 1.0 + (iterationCount - 100) * 0.5);
-                }
+                currentTolerance = RelaxedTolerance(Tolerance, iterationCount);
 
                 if (iterationCount >= maxIterations)
                 {
-                    // 許容値を大幅に緩和しても収束しない場合のみ失敗
-                    if (norm > Tolerance * 1000)
+                    // 許容値を大幅に緩和しても収束しない場合のみ失敗。
+                    // 1000 倍以内で受理したことは Warnings に集約して利用者へ見せる。
+                    if (!AcceptAtIterationLimit(norm, Tolerance))
                     {
                         return false;
                     }
-                    // norm <= Tolerance * 1000 なら許容範囲内として成功扱い
+                    NoteRelaxedAcceptance(norm);
                     return true;
                 }
 
@@ -1060,6 +1106,9 @@ namespace PileDesign.FEM
                 }
                 prevNorm = norm;
             }
+            // 緩めた許容値 (100 反復超) で抜けたなら、それも受理として数える
+            if (norm > Tolerance)
+                NoteRelaxedAcceptance(norm);
             return true;
         }
 
@@ -1193,7 +1242,13 @@ namespace PileDesign.FEM
 
             if (pileTopForce >= sortedList[^1].PileTopLoad)
             {
-                // 最大荷重以上の場合は最大値を返す
+                // 最大荷重以上の場合は最大値を返す。曲線が途中で終わっている (極限状態に達した) と
+                // 沈下量を小さく見積もるので、端の値を使ったことは Warnings で知らせる
+                if (pileTopForce > sortedList[^1].PileTopLoad)
+                {
+                    string note = $"軸力 {pileTopForce:F0} kN は荷重-沈下曲線の範囲 (最大 {sortedList[^1].PileTopLoad:F0} kN) を超えています。曲線の端の沈下量を使いました。";
+                    if (!Warnings.Contains(note)) Warnings.Add(note);
+                }
                 var result = Vector<double>.Build.Dense(nodesCount);
                 result[0] = sortedList[^1].DD0s / 1000.0; // mm -> m
                 result[^2] = sortedList[^1].DDns / 1000.0; // mm -> m

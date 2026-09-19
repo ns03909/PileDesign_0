@@ -157,6 +157,7 @@ namespace PileDesign.ViewModels
             try
             {
                 Mouse.OverrideCursor = Cursors.Wait;
+                var warnings = new List<string>();
 
                 for (int i = 0; i < SoilPiles.Count; i++)
                 {
@@ -215,17 +216,34 @@ namespace PileDesign.ViewModels
                             }
                         }
                     }
+                    // 曲線の精度が落ちた/範囲外の軸力があった杭を集める (沈下量の取り出しの後で見る)
+                    foreach (var w in vtm.Warnings)
+                        warnings.Add($"杭体 {soilPileNo}: {w}");
                 }
 
                 // 現在選択中のSoilPileのVerticalLoadTransferMethodも更新
                 VerticalLoadTransferMethod = new VerticalLoadTransferMethod(InputModel, SoilPile);
                 UpdateSettlementChart();
                 UpdateCircumstanceSeries();
+
+                ShowAnalysisWarnings(warnings);
             }
             finally
             {
                 Mouse.OverrideCursor = null;
             }
+        }
+
+        /// <summary>
+        /// 荷重-沈下解析で静かに起きたこと (緩めた基準での受理・初期状態の未収束・範囲外の軸力) を
+        /// 1 つの警告にまとめて出す。2026-09-19 まで Trace にしか出ておらず、利用者には見えなかった。
+        /// </summary>
+        private static void ShowAnalysisWarnings(IReadOnlyCollection<string> warnings)
+        {
+            if (warnings.Count == 0) return;
+            MessageService.ShowWarning(
+                "荷重-沈下解析は完了しましたが、次の点に注意してください。" + Environment.NewLine + Environment.NewLine +
+                string.Join(Environment.NewLine, warnings.Select(w => "・" + w)));
         }
 
         // ランプ状態（各SoilPileの解析済み/未済を表す）
@@ -561,6 +579,8 @@ namespace PileDesign.ViewModels
                     originalSoilPiles[spIdx].NodeDisplacements = VerticalLoadTransferMethod.Ds;
                     originalSoilPiles[spIdx].NodeReactions = VerticalLoadTransferMethod.Rs;
                 }
+
+                ShowAnalysisWarnings(vtm.Warnings);
             }
             finally
             {
