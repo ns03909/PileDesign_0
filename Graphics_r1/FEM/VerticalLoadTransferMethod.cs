@@ -1225,7 +1225,14 @@ namespace PileDesign.FEM
         {
             // LoadDisplacementsから補間して沈下量を求める
             if (LoadDisplacements == null || LoadDisplacements.Count < 2)
+            {
+                // 曲線が 2 点に満たない (解析が最初の荷重段階で行き詰まった等)。
+                // 呼び出し側は null を受けて「何もしない」ので、沈下量は前回の値が残る。
+                // 黙って古い値が残るのが一番わかりにくいので、知らせる
+                const string note = "荷重-沈下曲線が得られなかったため、沈下量を更新できませんでした。";
+                if (!Warnings.Contains(note)) Warnings.Add(note);
                 return null;
+            }
 
             // 荷重でソートされたリストを作成
             var sortedList = LoadDisplacements.OrderBy(ld => ld.PileTopLoad).ToList();
