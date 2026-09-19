@@ -573,8 +573,7 @@ namespace PileDesign.ViewModels
 
                 // v11: 停滞検出用の変数
                 int stagnationCount = 0;           // 停滞カウント（残差がほぼ変化しない回数）
-                const int STAGNATION_LIMIT = 15;   // 停滞判定の閾値回数
-                const double STAGNATION_RATIO = 0.98; // 残差比がこれ以上なら停滞とみなす
+                                                   // 閾値回数と残差比は UpdateStagnationRelaxation が持つ
                 const double RELAXED_ALPHA = 1e-5; // 停滞時の緩和収束基準
                 double effectiveAlpha = alpha;     // 実効収束基準（停滞時に緩和）
 
@@ -1314,28 +1313,15 @@ namespace PileDesign.ViewModels
                         divergenceCount = 0;  // 発散していなければカウントリセット
                     }
 
-                    // v11: 停滞検出 - 残差がほぼ変化しない場合をカウント
-                    double residualRatioForStagnation = prevResidual > 1e-20 ? currentResidual / prevResidual : 1.0;
-                    if (residualRatioForStagnation >= STAGNATION_RATIO && residualRatioForStagnation <= 1.05)
+                    // v11: 停滞検出 — 残差がほぼ変わらない反復を数え、続いたら収束基準を緩和する。
+                    // 規則は UpdateStagnationRelaxation (StagnationRelaxationTests で固定)。
                     {
-                        stagnationCount++;
-                        // 停滞が続き、残差が緩和基準以下なら収束基準を緩和
-                        if (stagnationCount >= STAGNATION_LIMIT && currentResidual <= RELAXED_ALPHA)
-                        {
-                            effectiveAlpha = RELAXED_ALPHA;
-                            await AddLogAsync($"  ⚠ 停滞検出: {stagnationCount}回連続で残差が改善しません。収束基準を緩和します ({alpha:E2}→{effectiveAlpha:E2})");
-                        }
-                        else if (stagnationCount >= STAGNATION_LIMIT * 2)
-                        {
-                            // 長期停滞の場合は強制的に収束基準を緩和
-                            effectiveAlpha = Math.Max(currentResidual * 1.1, RELAXED_ALPHA);
-                            await AddLogAsync($"  ⚠ 長期停滞検出: 収束基準を現在の残差に合わせて緩和します ({alpha:E2}→{effectiveAlpha:E2})");
-                        }
-                    }
-                    else if (residualRatioForStagnation < STAGNATION_RATIO)
-                    {
-                        // 改善があればカウントリセット
-                        stagnationCount = 0;
+                        var stagnation = UpdateStagnationRelaxation(
+                            currentResidual, prevResidual, stagnationCount, effectiveAlpha, alpha, RELAXED_ALPHA);
+                        stagnationCount = stagnation.StagnationCount;
+                        effectiveAlpha = stagnation.EffectiveAlpha;
+                        if (stagnation.Log != null)
+                            await AddLogAsync(stagnation.Log);
                     }
 
                     prevResidual = currentResidual;
@@ -1351,13 +1337,17 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                // Maximum iteration check
+                // 反復ループの抜け方は 3 通りある。基準を満たした / 反復上限に達した /
+                // リミットサイクルとして早期に打ち切った。収束したかどうかは抜け方ではなく、
+                // 抜けた時点の残差で決める (JudgeStepConvergence のコメント参照)。
                 string dispInfo = !double.IsNaN(dispMaxAbs) ? $", max|d|={dispMaxAbs:E3}m" : "";
-                bool converged = !(n_iteration > maxIterations && caseModel.NormsROnNormsFint >= effectiveAlpha);
+                var stepJudge = JudgeStepConvergence(
+                    caseModel.NormsROnNormsFint, effectiveAlpha, n_iteration, maxIterations);
+                bool converged = stepJudge.Converged;
                 if (!converged)
                 {
                     double finalResidual = caseModel.NormsROnNormsFint;
-                    await AddLogAsync($"  → 未収束: 最大反復回数 {maxIterations} に到達。残差ノルム={finalResidual:E3} (許容値={effectiveAlpha:E3}){dispInfo}");
+                    await AddLogAsync($"  → 未収束: {stepJudge.UnconvergedReason}。残差ノルム={finalResidual:E3} (許容値={effectiveAlpha:E3}){dispInfo}");
 
                     // Phase 3 step-level cut-back: 直近成功ステップに巻き戻して、失敗ステップだけ 1/M に分割して再試行。
                     // 条件: フラグ on, checkpoint 取得済 (= step >= 1 で前ステップ収束), cut-back 上限未達。
@@ -1777,6 +1767,87 @@ namespace PileDesign.ViewModels
                 relaxFactor = Math.Max(relaxFactor * 0.85, 0.15);
             }
             return (relaxFactor, consecutiveDecrease);
+        }
+
+        /// <summary>
+        /// 停滞検出と、それによる収束基準の緩和。残差比 (今回/前回) がほぼ 1 の反復を数え、
+        /// 15 回続いて残差が緩和基準以下なら基準を緩和基準まで、30 回続いたら現在残差 ×1.1 まで緩める。
+        /// </summary>
+        /// <remarks>
+        /// <para>残差比が 0.98 未満 (= 改善した) ならカウントを 0 に戻す。1.05 を超える増加は
+        /// 「改善」ではないのでカウントは据え置き、発散側の判定に任せる。</para>
+        ///
+        /// <para><b>緩和は緩める方向にしか動かさない。</b> 2026-09-19 まで代入だったため、
+        /// 先に他の判定 (長期未改善・改善率不足) が大きく緩めた基準を引き戻し得た。引き戻すと、
+        /// 緩めて抜けるつもりだったステップが抜けられずに再試行へ回る。他の 4 つの緩和判定は
+        /// 元から「今より緩いときだけ動かす」形をしていて、ここだけが代入だった。</para>
+        /// </remarks>
+        internal static (int StagnationCount, double EffectiveAlpha, string? Log) UpdateStagnationRelaxation(
+            double currentResidual, double prevResidual, int stagnationCount,
+            double effectiveAlpha, double alpha, double relaxedAlpha)
+        {
+            const int STAGNATION_LIMIT = 15;      // 停滞判定の閾値回数
+            const double STAGNATION_RATIO = 0.98; // 残差比がこれ以上なら停滞とみなす
+
+            double ratio = prevResidual > 1e-20 ? currentResidual / prevResidual : 1.0;
+
+            if (ratio >= STAGNATION_RATIO && ratio <= 1.05)
+            {
+                stagnationCount++;
+                if (stagnationCount >= STAGNATION_LIMIT && currentResidual <= relaxedAlpha)
+                {
+                    // 停滞が続き、残差が緩和基準以下なら収束基準を緩和
+                    if (relaxedAlpha > effectiveAlpha)
+                        return (stagnationCount, relaxedAlpha,
+                            $"  ⚠ 停滞検出: {stagnationCount}回連続で残差が改善しません。収束基準を緩和します ({alpha:E2}→{relaxedAlpha:E2})");
+                }
+                else if (stagnationCount >= STAGNATION_LIMIT * 2)
+                {
+                    // 長期停滞の場合は収束基準を現在の残差に合わせて緩和
+                    double relaxed = Math.Max(currentResidual * 1.1, relaxedAlpha);
+                    if (relaxed > effectiveAlpha)
+                        return (stagnationCount, relaxed,
+                            $"  ⚠ 長期停滞検出: 収束基準を現在の残差に合わせて緩和します ({alpha:E2}→{relaxed:E2})");
+                }
+                return (stagnationCount, effectiveAlpha, null);
+            }
+
+            if (ratio < STAGNATION_RATIO)
+                return (0, effectiveAlpha, null);   // 改善があればカウントリセット
+
+            return (stagnationCount, effectiveAlpha, null);
+        }
+
+        /// <summary>
+        /// ステップが収束したかの判定と、未収束のときの理由。
+        /// </summary>
+        /// <remarks>
+        /// <para>反復ループの抜け方は 3 通りある。(1) 残差が実効基準を下回った、(2) 反復上限に達した、
+        /// (3) リミットサイクルとして早期に打ち切った。収束したかどうかは<b>抜け方ではなく、
+        /// 抜けた時点の残差で</b>決める。</para>
+        ///
+        /// <para>2026-09-19 まで「反復上限に達していない」ことを収束の根拠にしていたため、(3) で
+        /// 抜けたステップが収束として記録されていた。早期打ち切りは残差が実効基準以上のときだけ通る
+        /// 道なので、収束のはずがない。この印は回転ばねの履歴確定・内力基準の時間平均・ステップ状態
+        /// (検定・計算書・保存ファイル) まで届くので、静かに収束として扱われていた。</para>
+        ///
+        /// <para>残差が NaN や ∞ になった場合も同じ穴に落ちていた。NaN との比較はすべて false になる
+        /// ので、反復ループは「基準を満たした」ように抜け、収束として記録されていた。残差で決めれば
+        /// NaN は収束にならない (NaN &lt; 基準 も false)。</para>
+        /// </remarks>
+        internal static (bool Converged, string? UnconvergedReason) JudgeStepConvergence(
+            double finalResidual, double effectiveAlpha, int nIteration, int maxIterations)
+        {
+            if (finalResidual < effectiveAlpha)
+                return (true, null);
+
+            if (!double.IsFinite(finalResidual))
+                return (false, "残差が数値でなくなりました");
+
+            if (nIteration > maxIterations)
+                return (false, $"最大反復回数 {maxIterations} に到達");
+
+            return (false, "リミットサイクルとして早期に打ち切り");
         }
         /// 中断されていたらここで <see cref="OperationCanceledException"/> を投げる (切り出す前と同じ)。
         /// </summary>
