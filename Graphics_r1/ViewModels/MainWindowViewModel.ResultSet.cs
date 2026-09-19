@@ -85,6 +85,37 @@ namespace PileDesign.ViewModels
         private bool _horizontalInputChanged;
 
         /// <summary>
+        /// 沈下の結果が陳腐化しているか (沈下解析のあとに入力が編集された)。
+        ///
+        /// <para><b>水平解析とは別に持つ。</b> 沈下の結果は表示されるだけでなく、
+        /// <b>次の解析の入力でもある</b> — 単杭沈下の荷重-沈下曲線を、水平解析の杭先端
+        /// P-S ばねと基礎梁考慮沈下の杭頭ばねが読む。印を 1 つで兼ねると、水平解析を
+        /// やり直した時点で沈下の陳腐化まで消え、入力変更前の曲線が「最新」の顔で
+        /// 次の解析に入る。</para>
+        ///
+        /// <para>解析を実行したときではなく、<b>沈下解析を実行したとき</b>に降ろす
+        /// (<see cref="MarkSettlementResultsCurrent"/>)。</para>
+        /// </summary>
+        private bool _settlementInputChanged;
+
+        /// <summary>
+        /// 表示・出力に使える沈下の結果があり、それが入力変更前のものか。
+        /// 解析の入口で「古い沈下の結果を入力として使ってよいか」を尋ねるのに使う。
+        /// </summary>
+        public bool SettlementResultsAreStale => _settlementInputChanged && HasSettlementResults();
+
+        /// <summary>
+        /// 沈下解析が終わった (または読み込んだ結果が入力と整合している) ことを記録する。
+        /// 沈下の陳腐化の印だけを降ろす。水平解析の印には触らない。
+        /// </summary>
+        public void MarkSettlementResultsCurrent()
+        {
+            if (!_settlementInputChanged) return;
+            _settlementInputChanged = false;
+            OnPropertyChanged(nameof(ResultSetStatusText));
+        }
+
+        /// <summary>
         /// 材料モデル化オプションが、表示中の解析結果を出したときから変わっているか。
         ///
         /// これが起きると<b>応答値は解析時、限界曲線は今のオプション</b>という混ざった図・表になる。
@@ -112,6 +143,11 @@ namespace PileDesign.ViewModels
                     : InputChangedSinceAnalysis
                         ? $"解析結果: {stamp} 実行／沈下解析の入力が変更されています（沈下解析の再実行が必要です）"
                         : $"解析結果: {stamp} 実行";
+
+                // 沈下の結果は水平解析をやり直しても新しくならない。別に言う
+                // (曲線は次の解析の入力でもあるので、古いまま使われると静かに効く)
+                if (SettlementResultsAreStale && !InputChangedSinceAnalysis)
+                    baseText += "／沈下解析の結果は入力変更前のものです（沈下解析の再実行が必要です）";
 
                 // 応答値は解析時のもの、限界曲線は今のオプションで引かれる。混ざったまま読ませない
                 return MaterialOptionsChangedSinceAnalysis
@@ -161,13 +197,26 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void MarkInputChangedSinceAnalysis(AnalysisInputScope scope)
         {
-            if (_currentResultSet == null) return;
             if (scope == AnalysisInputScope.None) return;
+
+            // 沈下の結果は、モデル側の入力でも沈下側の入力でも陳腐化する
+            // (地盤・杭配置が変われば曲線も沈下量も合わなくなる)。
+            //
+            // 下の 2 つの早期 return より前に置く。
+            // ・結果セットの有無に縛らない: 沈下の結果は結果セットと独立に存在しうる
+            //   (水平解析をしていない、結果セットを持たない旧いファイルを開いた等)。
+            //   縛ると、その状態で入力を編集しても印が立たず、次の解析が古い曲線を黙って使う。
+            // ・沈下の結果がまだ無い段階でも印だけ立てておき、沈下解析が終わったときに降ろす。
+            //   実際に効くのは SettlementResultsAreStale (結果を持っているときだけ真)。
+            _settlementInputChanged = true;
+
+            if (_currentResultSet == null) return;
 
             if (scope.HasFlag(AnalysisInputScope.Model))
             {
                 _horizontalInputChanged = true;
             }
+
             else if (!IsGroupPileSettlementAnalysisDone)
             {
                 // 沈下の入力しか触っておらず、群杭沈下の結果もまだ無い。
@@ -265,6 +314,7 @@ namespace PileDesign.ViewModels
             bool changed = set != null && changedSinceAnalysis;
             InputChangedSinceAnalysis = changed;
             _horizontalInputChanged = changed;   // 範囲は保存していないので安全側
+            _settlementInputChanged = changed;
         }
 
         /// <summary>

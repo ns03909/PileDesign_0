@@ -69,15 +69,15 @@ namespace PileDesign.ViewModels
         /// </summary>
         public bool ConfirmSaveElementDivision()
         {
-            bool discardSettlement = HasSettlementResults();
+            bool settlementGoesStale = HasSettlementResults();
             bool horizontalGoesStale = IsHorizontalAnalysisDone || HasAnalysisResultSet;
 
             // 影響を受ける結果が無ければ黙って通す
-            if (discardSettlement || horizontalGoesStale)
+            if (settlementGoesStale || horizontalGoesStale)
             {
                 var parts = new List<string>();
-                if (discardSettlement) parts.Add("・沈下解析の結果は削除されます");
                 if (horizontalGoesStale) parts.Add("・水平解析の結果は残りますが、再解析が必要になります");
+                if (settlementGoesStale) parts.Add("・沈下解析の結果は残りますが、再解析が必要になります");
 
                 string msg = "杭要素分割を保存すると、解析結果に次の影響があります。\n\n"
                            + string.Join("\n", parts)
@@ -85,8 +85,6 @@ namespace PileDesign.ViewModels
 
                 var result = MessageService.Show(msg, "確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
                 if (result != MessageBoxResult.Yes) return false;
-
-                if (discardSettlement) ClearSettlementResults();
             }
 
             MarkInputChangedSinceAnalysis();
@@ -95,44 +93,40 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 入力変更で無効になるものを 1 回のダイアログで確認し、破棄する。
+        /// 入力変更で無効になるものを確認し、破棄する。
         ///
-        /// <b>水平解析の結果は破棄しない。</b>解析完了時に入力ごと複製して切り離してあるので、
-        /// 入力を編集しても結果表示は解析時のまま整合する。
+        /// <b>解析結果は破棄しない。</b>解析完了時に入力ごと複製して切り離してあるので、
+        /// 入力を編集しても結果表示は解析時のまま整合する。代わりに「再解析が必要」の
+        /// 印が立つ (<see cref="MarkInputChangedSinceAnalysis()"/>)。
         ///
-        /// 一方、次の 2 つは入力側の状態なので従来どおり破棄する。
-        /// <list type="bullet">
-        /// <item>杭要素分割 — ジオメトリが変われば分割は無効</item>
-        /// <item>沈下解析の結果 — <see cref="PileGroupSettlement"/> の CaseRecords /
-        ///   SettlementGridData や各杭の GroupPileSettlement のように<b>入力モデルの中に</b>
-        ///   格納されており、解析結果セットで切り離せない。残すと杭配置グリッドなど入力系の表示に
-        ///   古い値がそのまま出て、しかも傾斜角検定の可否判定にも使われる</item>
-        /// </list>
-        /// 破棄するものが無ければダイアログを出さずに true を返す
-        /// （沈下解析を使っていない場合や、既に分割を取り消してある場合は何も出ない）。
+        /// <para>沈下の結果も 2026-09-20 から破棄しない。切り離しが済んで
+        /// (<see cref="Models.Results.GroupSettlementResult"/> が持ち、スナップショットと同じ
+        /// インスタンスを指す)、各杭の沈下量も結果から引く計算プロパティになり、傾斜角検定も
+        /// スナップショットを読むようになったので、水平解析と同じ扱いにできる。
+        /// 残すと古い値が入力系の表示に出る、という以前の理由は解消している。</para>
+        ///
+        /// <para><b>杭要素分割だけは従来どおり取り消す。</b>解析結果ではなく入力側の状態で、
+        /// ジオメトリが変われば分割そのものが成り立たない。</para>
+        ///
+        /// 取り消すものが無ければダイアログを出さずに true を返す。
         /// </summary>
         /// <param name="includeElementSplit">杭要素分割も対象にするか（ジオメトリを変える編集で true）。</param>
         /// <param name="reason">「〜により、」として文頭に付ける理由（省略可）。</param>
         private bool ConfirmDiscardInvalidatedByInputChange(bool includeElementSplit, string? reason = null)
         {
             bool discardSplit = includeElementSplit && IsElementSplit;
-            bool discardSettlement = HasSettlementResults();
+            if (!discardSplit) return true;
 
-            if (!discardSplit && !discardSettlement) return true;
-
-            var parts = new List<string>();
-            if (discardSettlement) parts.Add("沈下解析結果");
-            if (discardSplit) parts.Add("杭要素分割");
+            bool resultsGoStale = HasSettlementResults() || IsHorizontalAnalysisDone || HasAnalysisResultSet;
 
             string msg = (string.IsNullOrEmpty(reason) ? string.Empty : $"{reason}により、")
-                       + string.Join("と", parts)
-                       + "が削除されます。続けますか？\n（水平解析の結果は保持されます）";
+                       + "杭要素分割が取り消されます。続けますか？"
+                       + (resultsGoStale ? "\n（解析結果は保持されますが、再解析が必要になります）" : string.Empty);
 
             var result = MessageService.Show(msg, "確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes) return false;
 
-            if (discardSplit) IsElementSplit = false;
-            if (discardSettlement) ClearSettlementResults();
+            IsElementSplit = false;
 
             UpdateWindowImmediate();
             return true;
@@ -202,6 +196,36 @@ namespace PileDesign.ViewModels
                 sp.NodeDisplacements = [];
                 sp.NodeReactions = [];
             }
+        }
+
+        /// <summary>
+        /// 古い沈下の結果を<b>次の解析の入力として</b>使ってよいかを尋ねる。
+        ///
+        /// <para>入力編集で沈下の結果を捨てなくなった (2026-09-20、水平解析と同じ扱いに揃えた) ため、
+        /// 単杭沈下の荷重-沈下曲線と節点別履歴が入力変更前のまま残る。これを読むのは表示だけでなく
+        /// 次の解析でもある。</para>
+        ///
+        /// <list type="bullet">
+        /// <item>水平解析の杭先端 P-S ばね (節点別履歴)</item>
+        /// <item>基礎梁を考慮した沈下解析の杭頭ばね (荷重-沈下曲線)</item>
+        /// </list>
+        ///
+        /// <para>捨てていた頃は「無ければ使わない」で済んでいたが、残すなら<b>入口で尋ねる</b>しかない。
+        /// 黙って使うと、ばねだけ入力変更前という混ざった解析になる。解法には触らない。</para>
+        /// </summary>
+        /// <param name="what">尋ねる解析の名前 (「水平解析」など)。</param>
+        /// <param name="uses">古い結果を何に使うか (「杭先端の P-S ばね」など)。</param>
+        /// <returns>続けてよいなら true。</returns>
+        public bool ConfirmUsingStaleSettlementResults(string what, string uses)
+        {
+            if (!SettlementResultsAreStale) return true;
+
+            string msg = $"沈下解析の結果が入力変更前のものです。\n"
+                       + $"{what}は{uses}にこの結果を使います。\n\n"
+                       + "先に沈下解析を再実行することをおすすめします。\n"
+                       + "このまま続けますか？";
+            return MessageService.Show(msg, "確認", MessageBoxButton.YesNo, MessageBoxImage.Warning)
+                == MessageBoxResult.Yes;
         }
 
         // テスト用フック (内部ロジックをそのまま検証する)

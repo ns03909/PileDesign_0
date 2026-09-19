@@ -320,6 +320,11 @@ namespace PileDesign.ViewModels
         private async Task ExecuteAnalysisAsync()
         {
             // 入力データの整合性ゲート (杭体・地盤・寸法・配筋など)
+            // 杭頭ばねは単杭沈下の荷重-沈下曲線を入力として読む。古いまま使わないか尋ねる
+            if (_mainWindowViewModel?.ConfirmUsingStaleSettlementResults(
+                    "基礎梁を考慮した沈下解析", "杭頭ばね") == false)
+                return;
+
             if (!PileDesign.Services.CheckInputData.ValidateForAnalysis(InputModel, "群杭沈下解析"))
                 return;
 

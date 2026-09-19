@@ -476,6 +476,7 @@ namespace PileDesign.ViewModels
             if (Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainWindowViewModel)
             {
                 mainWindowViewModel.IsVerticalAnalysisDone = true;
+                mainWindowViewModel.MarkSettlementResultsCurrent();
                 mainWindowViewModel.CaptureAnalysisResultSet();
             }
             RequestClose?.Invoke(this, EventArgs.Empty);

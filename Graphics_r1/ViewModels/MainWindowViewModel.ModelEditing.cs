@@ -1439,6 +1439,7 @@ namespace PileDesign.ViewModels
 
             IsGroupPileGridDeformationVisible = true;
             IsGroupPileSettlementAnalysisDone = true;
+            MarkSettlementResultsCurrent();
             CaptureAnalysisResultSet();
             //IsAnalysisResultVisible = true;
             IsBubbleVisible = true;

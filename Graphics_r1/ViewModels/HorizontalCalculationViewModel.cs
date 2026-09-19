@@ -1037,6 +1037,16 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
+                // 杭先端 P-S ばねは沈下解析の節点別履歴を入力として読む。
+                // 入力編集で沈下の結果は残るようになったので、古いまま使わないか入口で尋ねる。
+                if (InputModel.UsePsSpringAtPileTip
+                    && _mainWindowViewModel?.ConfirmUsingStaleSettlementResults(
+                        "水平解析", "杭先端の P-S ばね") == false)
+                {
+                    RequestClose?.Invoke(this, EventArgs.Empty);
+                    return;
+                }
+
                 // PileLayoutItems の No/PileNo 振り直しは UI スレッドで実施する。
                 // (AnalysisModelling 内で振り直すと bg スレッドから item プロパティが変更され、
                 //  PileLayoutItems がバインドされた DataGrid の CollectionView が

@@ -76,14 +76,14 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 捨てられるのは沈下解析の結果で、水平解析の結果は残ること。
+        /// 入力を編集しても<b>解析結果は捨てない</b>こと。捨てるのは杭要素分割だけ。
         ///
-        /// この経路は杭要素分割を保持する呼び方をしており、水平解析の結果も
-        /// 「再解析が必要」の印が付くだけで消えない。文面もそう書いてある。
-        /// ここを取り違えると、直す対象を見誤る。
+        /// <para>この経路は杭要素分割を保持する呼び方をしており、水平解析の結果は
+        /// 「再解析が必要」の印が付くだけで消えない。<b>沈下の結果も 2026-09-20 から同じ扱い</b>
+        /// (それまでは確認のうえ削除していた)。ここを取り違えると、直す対象を見誤る。</para>
         /// </summary>
         [TestMethod]
-        public void OnlyTheSettlementResultsAreDiscarded()
+        public void NothingButTheElementSplitIsDiscarded()
         {
             var source = ReadSource("Graphics_r1", "ViewModels",
                 "MainWindowViewModel.ConfirmDeleteAnalysisModel.cs");
@@ -93,8 +93,10 @@ namespace TestProject1
                 "杭要素分割まで捨てる呼び方になっている");
 
             var confirm = ExtractMethodBody(source, "private bool ConfirmDiscardInvalidatedByInputChange(");
-            StringAssert.Contains(confirm, "水平解析の結果は保持されます",
-                "水平解析の結果を保持する説明が消えている");
+            StringAssert.Contains(confirm, "解析結果は保持されます",
+                "解析結果を保持する説明が消えている");
+            Assert.IsFalse(confirm.Contains("ClearSettlementResults"),
+                "入力編集で沈下の結果を捨てている (残して「再解析が必要」の印を立てる扱いに揃えた)");
         }
 
 
