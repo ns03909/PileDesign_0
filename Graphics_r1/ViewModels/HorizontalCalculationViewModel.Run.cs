@@ -33,194 +33,30 @@ namespace PileDesign.ViewModels
             // additive=true: 既存結果を保持し、未計算ケースのみを実行 (段階追加再解析)
             // additive=false: 通常実行 (既存結果を明示クリアして全ケース計算)
             await Task.Yield();
+            // 前処理 (結果の保持/クリア・ログとモニタの初期化・並列度の設定) は
+            // PrepareRunAsync に集約してある。null が返るのは計算モデルが無いときだけで、
+            // 理由は既にログへ出している。
+            var ctx = await PrepareRunAsync(progress, additive);
+            if (ctx == null) return;
 
-            // === 追加実行モード用: 既存ケースキー集合 ===
-            // RunAsync 開始時に 1 回スナップショットを取り、ループ内で skip 判定に使用。
-            // 並列ループ実行中は targetModel.AnalysisStepResults へ append が走るため
-            // 並列実行内で再評価しない (ロック保護下のスナップショット)。
-            HashSet<FEM.AnalysisRunSnapshot.CaseKey> existingKeys = new();
-
-            var preTargetModel = TryGetTargetAnaModel();
-            if (preTargetModel != null)
-            {
-                lock (_caseMergeLock)
-                {
-                    if (additive && preTargetModel.LastRunConfig != null)
-                    {
-                        existingKeys = preTargetModel.LastRunConfig.ExecutedCaseKeys.ToHashSet();
-                    }
-                    else if (additive && preTargetModel.AnalysisStepResults?.Count > 0)
-                    {
-                        // 防御: LastRunConfig が null だが結果がある旧データの場合、結果から復元
-                        existingKeys = preTargetModel.AnalysisStepResults
-                            .Select(r => new FEM.AnalysisRunSnapshot.CaseKey(
-                                r.LoadCase.LoadName, r.LoadCombination.Name, r.IsLiquefaction))
-                            .ToHashSet();
-                    }
-                }
-            }
-
-            if (additive)
-            {
-                await AddLogAsync($"=== 追加実行: 既存 {existingKeys.Count} ケースを保持し、未計算分のみ計算します ===");
-                // _stepSummaries.Clear() は呼ばない (既存ログを保持)
-                // 既存結果のステップ数を baseline として記録 (プログレスバー分母から除外)
-                _additiveBaselineSteps = preTargetModel?.AnalysisStepResults?.Count ?? 0;
-            }
-            else
-            {
-                // 既に「計算モデル作成開始」が出ているので、ここでは「計算開始」を追記する
-                await AddLogAsync("解析計算処理開始");
-                // v29: ステップサマリーをリセット (前回解析の結果をクリア)
-                _stepSummaries.Clear();
-                // 結果と前回設定を明示クリア (新規実行時)
-                if (preTargetModel != null)
-                {
-                    lock (_caseMergeLock)
-                    {
-                        preTargetModel.ClearAllAnalysisResults();
-                    }
-                }
-                // baseline をリセット (通常実行)
-                _additiveBaselineSteps = 0;
-            }
-            OnPropertyChanged(nameof(EffectiveProgressTotal));
-            OnPropertyChanged(nameof(EffectiveProgress));
-            OnPropertyChanged(nameof(ProgressText));
-
-            // v29: 経過/残り時間表示用に開始時刻記録 + 1 秒タイマーで定期更新
-            _analysisStartUtc = DateTime.UtcNow;
-            ClearMThetaCurveCache();   // 実行間で材料オプション等が変わり得るため毎回捨てる
-            StartElapsedTimer();
-
-            // 並列モニタ (案 B): 新解析のたびに Active/Completed をリセット
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-            {
-                ActiveCases.Clear();
-                ActiveCasesCount = 0;
-                CompletedCaseCount = 0;
-                // load case 単位 (= CompletedCaseCount と同じ単位) で完了率を表示
-                TotalPlannedCaseCount = TotalLoadCaseCount;
-                // setter 内で PendingCaseCount PropertyChanged も発火するが念のため再度発火
-                OnPropertyChanged(nameof(PendingCaseCount));
-            });
-
-            // MDOP>=2 ならモニタを表示
-            bool showMonitor = MaxCaseDegreeOfParallelism > 1;
-            if (showMonitor)
-            {
-                System.Windows.Application.Current?.Dispatcher.Invoke(() => RequestShowParallelMonitor?.Invoke());
-            }
-
-            // 進捗報告用の開始時刻を記録
-            var startTime = DateTime.Now;
-
-            // 計算対象モデルを決定（編集用があればそれ、なければ本体）
-            var targetModel = AnaModels.Count > 1 ? AnaModels[1] : AnaModels[0];
-            if (targetModel == null)
-            {
-                await AddLogAsync("計算モデルが存在しません。");
-                return;
-            }
-
-            targetModel.SetSlaveNodes(); // 剛体連結のスレーブ節点のセット
-
-            // E3c-3 (2026-04-23): ケース並列化対応。calcNo を StrongBox に包み Interlocked で
-            // atomic にインクリメントする。MDOP=1 (逐次) でも同じ経路 (overhead は無視できる)。
-            var calcNoBox = new System.Runtime.CompilerServices.StrongBox<int>(0);
-
-            // v19: 解析開始時に再試行による追加ステップ数をリセット
-            _bisectionExtraSteps = 0;
-            NotifyProgressPropertiesChanged();
-            OnPropertyChanged(nameof(TotalLoadCaseCount));
-
-            // 初期進捗を報告
-            progress?.Report(new Models.AnalysisProgress
-            {
-                Percentage = 0,
-                CurrentStep = "解析計算を開始しています...",
-                CurrentStepNumber = 0,
-                TotalSteps = TotalCalculationCount,
-                StartTime = startTime
-            });
+            // 以下の別名は、切り出す前と同じ名前で本体を読めるようにするためのもの。
+            var preTargetModel = ctx.PreTargetModel;
+            var targetModel = ctx.TargetModel;
+            var existingKeys = ctx.ExistingKeys;
+            var startTime = ctx.StartTime;
+            var calcNoBox = ctx.CalcNoBox;
+            int _caseMDOP = ctx.CaseMdop;
+            int _origMathNetMDOP = ctx.OriginalMathNetMdop;
+            string? _origMklNumThreads = ctx.OriginalMklNumThreads;
+            string? _origOmpNumThreads = ctx.OriginalOmpNumThreads;
+            var _caseTasks = ctx.CaseTasks;
+            var _caseSemaphore = ctx.CaseSemaphore;
 
             const double alpha = 1e-6;
 
-            // v21 Phase 3 prep: 将来のケース並列化に向けた設計メモ（このループを並列実行する場合の必要要件）
-            //
-            // ■ 現状はスレッド安全ではない以下の共有状態に注意:
-            //   - InputModel.PileLayoutItems[].AxialForce   → InitializeAxialForces / UpdateAxialForceFromAnalysis が書換
-            //   - InputModel.PileLayoutItems[].SoilNodes[].CumulativeForcedDisp  → UpdateSoilDisp が書換
-            //   - InputModel.ElementDivision.DoatsuGoryokuBane.Items[].*SoilNode.CumulativeForcedDisp  → 同上
-            //   - InputModel.ElementDivision.SoilPiles[].HorizontalSoilReactions  → PrepareKmat が評価（読み取り中に他 worker が AxialForce 経由で値を変える可能性）
-            //   - targetModel.AnalysisStepResults / Nodes[].NodeResults / Beams[].BeamResults / HorizontalSoilSprings[].HorizontalSpringResults / RotationalSprings[].RotationalSpringResults  → 結果 append
-            //
-            // ■ 並列化手順（Phase 3.1 本実装時）:
-            //   (a) 事前に cases = [(lc, combo, isLiq), ...] を全列挙
-            //   (b) 各 case ごとに InputModel+AnaModel の「スレッド固有コピー」を構築
-            //       （PileLayoutItem / DoatsuGoryokuBane / SoilPiles の書換対象を clone し、
-            //        AnaModel.DeepCopy 済みのノードへ参照 fixup）
-            //   (c) Parallel.ForEachAsync(cases, new ParallelOptions { MaxDegreeOfParallelism = MaxCaseDegreeOfParallelism }, ...)
-            //   (d) 完了後、key=(lc.No, combo.No, isLiq, step) で AnalysisStepResults / 各要素 Results を
-            //       決定的順序でマージ（乱序混入を防ぐ）
-            //   (e) MathNet Control.MaxDegreeOfParallelism を並列実行中は 1 にクランプ
-            //   (f) AddLogAsync / CurrentProgress / _bisectionExtraSteps を Interlocked or lock で保護
-
-            // E3c-3 (2026-04-23): ケース並列化中は MathNet 内部並列度を 1 に clamp。
-            // 並列ケース × 並列 MathNet の掛け算でスレッド過剰を防ぐ。MDOP=1 (逐次) では clamp 不要。
-            int _caseMDOP = Math.Max(1, MaxCaseDegreeOfParallelism);
-            int _origMathNetMDOP = MathNet.Numerics.Control.MaxDegreeOfParallelism;
-            // 元の MKL/OMP 環境変数を退避 (try/finally で復元)
-            string? _origMklNumThreads = Environment.GetEnvironmentVariable("MKL_NUM_THREADS");
-            string? _origOmpNumThreads = Environment.GetEnvironmentVariable("OMP_NUM_THREADS");
-            if (_caseMDOP > 1)
-            {
-                MathNet.Numerics.Control.MaxDegreeOfParallelism = 1;
-                // hang 対策 (2026-04-26): MKL/OMP ネイティブ層の並列度を強制 1 に。
-                // MathNet.Numerics.Control の clamp は managed 層のみで、MKL ネイティブが
-                // 内部スレッドプールを別途持つ場合 oversubscription が起き ThreadPool starvation
-                // → hang の一因。環境変数で強制クランプしておく。
-                Environment.SetEnvironmentVariable("MKL_NUM_THREADS", "1");
-                Environment.SetEnvironmentVariable("OMP_NUM_THREADS", "1");
-            }
-
-            // E3c-3-enable: MDOP > 1 のとき、ケースを Task.Run で並行実行し SemaphoreSlim で
-            // 同時実行数を _caseMDOP に制限。MDOP=1 では null のまま、従来通り逐次実行。
-            var _caseTasks = new List<System.Threading.Tasks.Task>();
-            System.Threading.SemaphoreSlim? _caseSemaphore = _caseMDOP > 1 ? new System.Threading.SemaphoreSlim(_caseMDOP) : null;
-
             try
             {
-            // P-S 非線形ばね + VL 単独解析が有効な場合: VL 仮想ケースを先頭に挿入
-            // VL ケース: 水平荷重 0、各杭頭に AxialForceVL を外力として与える
-            // No=1 とするのは iLC=0 で配列アクセスが安全になるため (VL 判定は LoadName で行う)
-            // IsPileNonLinear=true / IsSoilNonLinear=true は、P-S ばねの非線形性に対応するため
-            // Level1CalculationStepsCount に基づく段階適用 (nStep > 1) を有効化する目的。
-            // (configuredNStep の決定で両者が false だと nStep=1 となり 1 ステップで全 N0 適用 → 発散)
-            var casesToRun = new List<LoadCase>();
-            if (InputModel.UsePsSpringAtPileTip && InputModel.IsVLAnalysisEnabled)
-            {
-                casesToRun.Add(new LoadCase
-                {
-                    LoadName = "VL",
-                    No = 1,
-                    // 常時 (長期)。地震動レベルではないので 0。
-                    //
-                    // 以前は 1 だったため、検定側 (EvaluationService) が長期として拾う
-                    // Level==0 に 1 件も入らず、VL が損傷限界 (レベル1) で検定されていた。
-                    // 限界線に使う軸力も、VL の常時軸力ではなく荷重ケース 1 のレベル1
-                    // 地震時軸力になっていた。画面・計算書の他の箇所は元から
-                    // 「VL 系は Level=0」と書いてある (LoadCaseNameToDisplayConverter ほか)。
-                    Level = 0,
-                    LoadAngle = 0,
-                    UpperMassForce = 0,
-                    FoundationMassForce = 0,
-                    IsPileNonLinear = true,
-                    SoilNonlinearityMode = SoilNonlinearityMode.KhReductionWithPy,
-                });
-            }
-            foreach (var lc in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
-                casesToRun.Add(lc);
+            var casesToRun = BuildCasesToRun();
 
             foreach (var loadCaseItem in casesToRun)
             {
@@ -1879,6 +1715,24 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            // 後処理 (実行設定の記録・収束サマリー・完了報告・画面へのログ受け渡し) は
+            // FinishRunAsync にまとめてある。
+            await FinishRunAsync(token, progress, ctx);
+
+        }
+
+        /// <summary>
+        /// 解析の後処理。LastRunConfig の記録、ステップ収束サマリーの出力、経過時間タイマーの停止、
+        /// ペナルティばねの精度検証、完了進捗の報告、メインウィンドウへのログ受け渡しを行う。
+        /// 中断されていたらここで <see cref="OperationCanceledException"/> を投げる (切り出す前と同じ)。
+        /// </summary>
+        private async Task FinishRunAsync(CancellationToken token, IProgress<Models.AnalysisProgress>? progress, RunContext ctx)
+        {
+            // 別名は切り出す前と同じ名前。
+            var preTargetModel = ctx.PreTargetModel;
+            var targetModel = ctx.TargetModel;
+            var startTime = ctx.StartTime;
+
             token.ThrowIfCancellationRequested();
 
             // === LastRunConfig 更新 (追加実行の互換性比較に使用) ===
@@ -1985,7 +1839,248 @@ namespace PileDesign.ViewModels
             {
                 // Dispatcher が利用できない場面は無視
             }
+        }
+        /// <summary>
+        /// <see cref="RunAsync"/> の前処理でそろえる実行環境。
+        /// 名前は切り出す前の局所変数に対応する (本体側は同じ名前の別名を置いて読む)。
+        /// </summary>
+        private sealed class RunContext
+        {
+            /// <summary>実行前の主モデル。追加実行の既存キーと、実行後の LastRunConfig 保存に使う</summary>
+            public AnaModel? PreTargetModel;
+            /// <summary>計算対象モデル (編集用があればそれ、なければ本体)</summary>
+            public AnaModel TargetModel = null!;
+            /// <summary>追加実行で skip 判定に使う既存ケースキー (開始時のスナップショット)</summary>
+            public HashSet<FEM.AnalysisRunSnapshot.CaseKey> ExistingKeys = new();
+            /// <summary>進捗報告用の開始時刻</summary>
+            public DateTime StartTime;
+            /// <summary>ケース並列でも重複しない計算番号 (Interlocked で増やす)</summary>
+            public System.Runtime.CompilerServices.StrongBox<int> CalcNoBox = new(0);
+            /// <summary>ケース並列度 (1 なら逐次)</summary>
+            public int CaseMdop;
+            /// <summary>復元用: MathNet の並列度</summary>
+            public int OriginalMathNetMdop;
+            /// <summary>復元用: MKL_NUM_THREADS</summary>
+            public string? OriginalMklNumThreads;
+            /// <summary>復元用: OMP_NUM_THREADS</summary>
+            public string? OriginalOmpNumThreads;
+            /// <summary>並列投入したケースの Task (MDOP=1 では空のまま)</summary>
+            public List<System.Threading.Tasks.Task> CaseTasks = new();
+            /// <summary>同時実行数の制限 (MDOP=1 では null)</summary>
+            public System.Threading.SemaphoreSlim? CaseSemaphore;
+        }
 
+        /// <summary>
+        /// 解析の前処理。既存結果の保持/クリア、ログ・進捗・並列モニタの初期化、
+        /// MathNet と MKL/OMP の並列度クランプまでを行う。
+        /// 計算モデルが無いときは理由をログに出して null を返す (呼び出し側はそのまま戻る)。
+        /// </summary>
+        private async Task<RunContext?> PrepareRunAsync(IProgress<Models.AnalysisProgress>? progress, bool additive)
+        {
+            // === 追加実行モード用: 既存ケースキー集合 ===
+            // RunAsync 開始時に 1 回スナップショットを取り、ループ内で skip 判定に使用。
+            // 並列ループ実行中は targetModel.AnalysisStepResults へ append が走るため
+            // 並列実行内で再評価しない (ロック保護下のスナップショット)。
+            HashSet<FEM.AnalysisRunSnapshot.CaseKey> existingKeys = new();
+
+            var preTargetModel = TryGetTargetAnaModel();
+            if (preTargetModel != null)
+            {
+                lock (_caseMergeLock)
+                {
+                    if (additive && preTargetModel.LastRunConfig != null)
+                    {
+                        existingKeys = preTargetModel.LastRunConfig.ExecutedCaseKeys.ToHashSet();
+                    }
+                    else if (additive && preTargetModel.AnalysisStepResults?.Count > 0)
+                    {
+                        // 防御: LastRunConfig が null だが結果がある旧データの場合、結果から復元
+                        existingKeys = preTargetModel.AnalysisStepResults
+                            .Select(r => new FEM.AnalysisRunSnapshot.CaseKey(
+                                r.LoadCase.LoadName, r.LoadCombination.Name, r.IsLiquefaction))
+                            .ToHashSet();
+                    }
+                }
+            }
+
+            if (additive)
+            {
+                await AddLogAsync($"=== 追加実行: 既存 {existingKeys.Count} ケースを保持し、未計算分のみ計算します ===");
+                // _stepSummaries.Clear() は呼ばない (既存ログを保持)
+                // 既存結果のステップ数を baseline として記録 (プログレスバー分母から除外)
+                _additiveBaselineSteps = preTargetModel?.AnalysisStepResults?.Count ?? 0;
+            }
+            else
+            {
+                // 既に「計算モデル作成開始」が出ているので、ここでは「計算開始」を追記する
+                await AddLogAsync("解析計算処理開始");
+                // v29: ステップサマリーをリセット (前回解析の結果をクリア)
+                _stepSummaries.Clear();
+                // 結果と前回設定を明示クリア (新規実行時)
+                if (preTargetModel != null)
+                {
+                    lock (_caseMergeLock)
+                    {
+                        preTargetModel.ClearAllAnalysisResults();
+                    }
+                }
+                // baseline をリセット (通常実行)
+                _additiveBaselineSteps = 0;
+            }
+            OnPropertyChanged(nameof(EffectiveProgressTotal));
+            OnPropertyChanged(nameof(EffectiveProgress));
+            OnPropertyChanged(nameof(ProgressText));
+
+            // v29: 経過/残り時間表示用に開始時刻記録 + 1 秒タイマーで定期更新
+            _analysisStartUtc = DateTime.UtcNow;
+            ClearMThetaCurveCache();   // 実行間で材料オプション等が変わり得るため毎回捨てる
+            StartElapsedTimer();
+
+            // 並列モニタ (案 B): 新解析のたびに Active/Completed をリセット
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                ActiveCases.Clear();
+                ActiveCasesCount = 0;
+                CompletedCaseCount = 0;
+                // load case 単位 (= CompletedCaseCount と同じ単位) で完了率を表示
+                TotalPlannedCaseCount = TotalLoadCaseCount;
+                // setter 内で PendingCaseCount PropertyChanged も発火するが念のため再度発火
+                OnPropertyChanged(nameof(PendingCaseCount));
+            });
+
+            // MDOP>=2 ならモニタを表示
+            bool showMonitor = MaxCaseDegreeOfParallelism > 1;
+            if (showMonitor)
+            {
+                System.Windows.Application.Current?.Dispatcher.Invoke(() => RequestShowParallelMonitor?.Invoke());
+            }
+
+            // 進捗報告用の開始時刻を記録
+            var startTime = DateTime.Now;
+
+            // 計算対象モデルを決定（編集用があればそれ、なければ本体）
+            var targetModel = AnaModels.Count > 1 ? AnaModels[1] : AnaModels[0];
+            if (targetModel == null)
+            {
+                await AddLogAsync("計算モデルが存在しません。");
+                return null;
+            }
+
+            targetModel.SetSlaveNodes(); // 剛体連結のスレーブ節点のセット
+
+            // E3c-3 (2026-04-23): ケース並列化対応。calcNo を StrongBox に包み Interlocked で
+            // atomic にインクリメントする。MDOP=1 (逐次) でも同じ経路 (overhead は無視できる)。
+            var calcNoBox = new System.Runtime.CompilerServices.StrongBox<int>(0);
+
+            // v19: 解析開始時に再試行による追加ステップ数をリセット
+            _bisectionExtraSteps = 0;
+            NotifyProgressPropertiesChanged();
+            OnPropertyChanged(nameof(TotalLoadCaseCount));
+
+            // 初期進捗を報告
+            progress?.Report(new Models.AnalysisProgress
+            {
+                Percentage = 0,
+                CurrentStep = "解析計算を開始しています...",
+                CurrentStepNumber = 0,
+                TotalSteps = TotalCalculationCount,
+                StartTime = startTime
+            });
+
+            // v21 Phase 3 prep: 将来のケース並列化に向けた設計メモ（このループを並列実行する場合の必要要件）
+            //
+            // ■ 現状はスレッド安全ではない以下の共有状態に注意:
+            //   - InputModel.PileLayoutItems[].AxialForce   → InitializeAxialForces / UpdateAxialForceFromAnalysis が書換
+            //   - InputModel.PileLayoutItems[].SoilNodes[].CumulativeForcedDisp  → UpdateSoilDisp が書換
+            //   - InputModel.ElementDivision.DoatsuGoryokuBane.Items[].*SoilNode.CumulativeForcedDisp  → 同上
+            //   - InputModel.ElementDivision.SoilPiles[].HorizontalSoilReactions  → PrepareKmat が評価（読み取り中に他 worker が AxialForce 経由で値を変える可能性）
+            //   - targetModel.AnalysisStepResults / Nodes[].NodeResults / Beams[].BeamResults / HorizontalSoilSprings[].HorizontalSpringResults / RotationalSprings[].RotationalSpringResults  → 結果 append
+            //
+            // ■ 並列化手順（Phase 3.1 本実装時）:
+            //   (a) 事前に cases = [(lc, combo, isLiq), ...] を全列挙
+            //   (b) 各 case ごとに InputModel+AnaModel の「スレッド固有コピー」を構築
+            //       （PileLayoutItem / DoatsuGoryokuBane / SoilPiles の書換対象を clone し、
+            //        AnaModel.DeepCopy 済みのノードへ参照 fixup）
+            //   (c) Parallel.ForEachAsync(cases, new ParallelOptions { MaxDegreeOfParallelism = MaxCaseDegreeOfParallelism }, ...)
+            //   (d) 完了後、key=(lc.No, combo.No, isLiq, step) で AnalysisStepResults / 各要素 Results を
+            //       決定的順序でマージ（乱序混入を防ぐ）
+            //   (e) MathNet Control.MaxDegreeOfParallelism を並列実行中は 1 にクランプ
+            //   (f) AddLogAsync / CurrentProgress / _bisectionExtraSteps を Interlocked or lock で保護
+
+            // E3c-3 (2026-04-23): ケース並列化中は MathNet 内部並列度を 1 に clamp。
+            // 並列ケース × 並列 MathNet の掛け算でスレッド過剰を防ぐ。MDOP=1 (逐次) では clamp 不要。
+            int _caseMDOP = Math.Max(1, MaxCaseDegreeOfParallelism);
+            int _origMathNetMDOP = MathNet.Numerics.Control.MaxDegreeOfParallelism;
+            // 元の MKL/OMP 環境変数を退避 (try/finally で復元)
+            string? _origMklNumThreads = Environment.GetEnvironmentVariable("MKL_NUM_THREADS");
+            string? _origOmpNumThreads = Environment.GetEnvironmentVariable("OMP_NUM_THREADS");
+            if (_caseMDOP > 1)
+            {
+                MathNet.Numerics.Control.MaxDegreeOfParallelism = 1;
+                // hang 対策 (2026-04-26): MKL/OMP ネイティブ層の並列度を強制 1 に。
+                // MathNet.Numerics.Control の clamp は managed 層のみで、MKL ネイティブが
+                // 内部スレッドプールを別途持つ場合 oversubscription が起き ThreadPool starvation
+                // → hang の一因。環境変数で強制クランプしておく。
+                Environment.SetEnvironmentVariable("MKL_NUM_THREADS", "1");
+                Environment.SetEnvironmentVariable("OMP_NUM_THREADS", "1");
+            }
+
+            // E3c-3-enable: MDOP > 1 のとき、ケースを Task.Run で並行実行し SemaphoreSlim で
+            // 同時実行数を _caseMDOP に制限。MDOP=1 では null のまま、従来通り逐次実行。
+            var _caseTasks = new List<System.Threading.Tasks.Task>();
+            System.Threading.SemaphoreSlim? _caseSemaphore = _caseMDOP > 1 ? new System.Threading.SemaphoreSlim(_caseMDOP) : null;
+            return new RunContext
+            {
+                PreTargetModel = preTargetModel,
+                TargetModel = targetModel,
+                ExistingKeys = existingKeys,
+                StartTime = startTime,
+                CalcNoBox = calcNoBox,
+                CaseMdop = _caseMDOP,
+                OriginalMathNetMdop = _origMathNetMDOP,
+                OriginalMklNumThreads = _origMklNumThreads,
+                OriginalOmpNumThreads = _origOmpNumThreads,
+                CaseTasks = _caseTasks,
+                CaseSemaphore = _caseSemaphore,
+            };
+        }
+
+        /// <summary>
+        /// 実行するケースの一覧を組み立てる。P-S ばね + VL 単独解析が有効なら VL 仮想ケースが先頭に入る。
+        /// </summary>
+        private List<LoadCase> BuildCasesToRun()
+        {
+            // P-S 非線形ばね + VL 単独解析が有効な場合: VL 仮想ケースを先頭に挿入
+            // VL ケース: 水平荷重 0、各杭頭に AxialForceVL を外力として与える
+            // No=1 とするのは iLC=0 で配列アクセスが安全になるため (VL 判定は LoadName で行う)
+            // IsPileNonLinear=true / IsSoilNonLinear=true は、P-S ばねの非線形性に対応するため
+            // Level1CalculationStepsCount に基づく段階適用 (nStep > 1) を有効化する目的。
+            // (configuredNStep の決定で両者が false だと nStep=1 となり 1 ステップで全 N0 適用 → 発散)
+            var casesToRun = new List<LoadCase>();
+            if (InputModel.UsePsSpringAtPileTip && InputModel.IsVLAnalysisEnabled)
+            {
+                casesToRun.Add(new LoadCase
+                {
+                    LoadName = "VL",
+                    No = 1,
+                    // 常時 (長期)。地震動レベルではないので 0。
+                    //
+                    // 以前は 1 だったため、検定側 (EvaluationService) が長期として拾う
+                    // Level==0 に 1 件も入らず、VL が損傷限界 (レベル1) で検定されていた。
+                    // 限界線に使う軸力も、VL の常時軸力ではなく荷重ケース 1 のレベル1
+                    // 地震時軸力になっていた。画面・計算書の他の箇所は元から
+                    // 「VL 系は Level=0」と書いてある (LoadCaseNameToDisplayConverter ほか)。
+                    Level = 0,
+                    LoadAngle = 0,
+                    UpperMassForce = 0,
+                    FoundationMassForce = 0,
+                    IsPileNonLinear = true,
+                    SoilNonlinearityMode = SoilNonlinearityMode.KhReductionWithPy,
+                });
+            }
+            foreach (var lc in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
+                casesToRun.Add(lc);
+            return casesToRun;
         }
 
     }
