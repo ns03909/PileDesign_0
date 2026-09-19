@@ -588,12 +588,21 @@ namespace PileDesign.ViewModels
                     await AddLogAsync($"    iter {iteration}: ||R||²/||F||² = {residual:E2} {convSymbol} {ConvergenceTolerance:E2}");
                 }
 
-                bool stepConverged = residual < ConvergenceTolerance;
+                var judge = JudgeStep(residual, ConvergenceTolerance, MaxIterations);
+                bool stepConverged = judge.Converged;
                 if (!stepConverged)
                 {
-                    await AddLogAsync($"    ⚠ ステップ {step + 1}: 最大反復回数 {MaxIterations} で収束せず (残差={residual:E3})");
-                    if (residual > ConvergenceTolerance * 1000)
+                    await AddLogAsync($"    ⚠ ステップ {step + 1}: {judge.Reason} (残差={residual:E3})");
+                    if (judge.CaseStaysConverged)
+                    {
+                        // 基準の 1000 倍以内なので受理する。黙って受理するとケースが「収束」と
+                        // 出たまま精度の落ちたステップが混じるので、受理したことを残す
+                        await AddLogAsync($"      → 残差は基準 {ConvergenceTolerance:E2} の 1000 倍以内。このステップを受理し、ケースは収束として扱います");
+                    }
+                    else
+                    {
                         caseConverged = false;
+                    }
                 }
                 else
                 {
@@ -606,6 +615,33 @@ namespace PileDesign.ViewModels
 
             caseResult.IsConverged = caseConverged;
             return caseResult;
+        }
+
+        /// <summary>
+        /// 荷重ステップ 1 つの判定。ステップが収束したか、ケースの収束の印を保てるか、
+        /// 未収束のときの理由を返す。
+        /// </summary>
+        /// <remarks>
+        /// <para>残差が基準を下回れば収束。上回っていても<b>基準の 1000 倍以内なら受理</b>し、
+        /// ケースの印は収束のままにする (ステップ自身は未収束として記録する)。この緩い受理は
+        /// 元からの規則で、変えていない。ただし黙って通っていたので、ログに残すようにした。</para>
+        ///
+        /// <para><b>残差が数値でない (NaN・∞) ときは受理しない。</b> 2026-09-19 まで
+        /// <c>residual &gt; 許容値 × 1000</c> という比較だけで判定していたため、NaN は
+        /// どの比較も偽になってすり抜け、「ステップは未収束なのにケースは収束」という
+        /// 食い違いのまま計算書の収束状態に出ていた。反復ループも NaN では 1 回も回らずに
+        /// 抜けるので、反復回数 0 のまま収束と記録される。</para>
+        /// </remarks>
+        internal static (bool Converged, bool CaseStaysConverged, string? Reason) JudgeStep(
+            double residual, double tolerance, int maxIterations)
+        {
+            if (residual < tolerance)
+                return (true, true, null);
+
+            if (!double.IsFinite(residual))
+                return (false, false, "残差が数値でなくなりました");
+
+            return (false, residual <= tolerance * 1000, $"最大反復回数 {maxIterations} で収束せず");
         }
 
         // ══════════════════════════════════════════════════════
