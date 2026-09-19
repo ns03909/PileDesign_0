@@ -143,17 +143,65 @@ namespace PileDesign.ViewModels
         ///
         /// 結果そのもの (<c>PileGroupSettlement.Result</c>) は現在の入力とスナップショットで
         /// <b>同じインスタンス</b>なので 1 回消せば足りる。ここで消すのは、入力側に残っている
-        /// 複製 (旧ファイル用の沈下グリッド・各杭の沈下量) で、こちらはモデルごとに存在する。
+        /// 複製 (旧ファイル用の沈下グリッド・各杭の沈下量) と、土層-杭セットが持つ
+        /// 単杭沈下の結果で、こちらはモデルごとに存在する。
         /// </summary>
         private static void ClearSettlementResultsIn(Models.InputData.InputModel? input)
         {
-            var pgs = input?.PileGroupSettlement;
-            if (pgs == null) return;
+            if (input == null) return;
 
-            pgs.Result.Clear();
-            pgs.SettlementGridData = [];
-            if (input!.PileLayoutItems != null)
-                foreach (var pile in input.PileLayoutItems) pile.NotifyGroupPileSettlementChanged();
+            // 群杭沈下と単杭沈下は別々に持たれているので、片方が無くても他方を消す。
+            // 沈下の入れ物 (PileGroupSettlement) を持たないモデルもあるため、
+            // ここで早期に return すると単杭沈下の結果が消え残る (2026-09-20)。
+            var pgs = input.PileGroupSettlement;
+            if (pgs != null)
+            {
+                pgs.Result.Clear();
+                pgs.SettlementGridData = [];
+                if (input.PileLayoutItems != null)
+                    foreach (var pile in input.PileLayoutItems) pile.NotifyGroupPileSettlementChanged();
+            }
+
+            ClearSinglePileSettlementResultsIn(input);
+        }
+
+        /// <summary>
+        /// 単杭沈下の結果 (土層-杭セットごとの荷重-沈下曲線と節点別の履歴) を消す。
+        ///
+        /// <para>2026-09-20 まで、ここを消していなかった。「沈下解析結果が削除されます」と
+        /// 確認したうえで消えるのは群杭沈下の記録だけで、単杭沈下の曲線と履歴は残っていた。
+        /// 画面・計算書・グラフは <c>IsVerticalAnalysisDone</c> が false になるので「未実行」と
+        /// 扱うのに、<b>解析の入口は残った値をそのまま使っていた</b>。</para>
+        ///
+        /// <list type="bullet">
+        /// <item>水平解析の杭節点 Z ばね (P-S ばね) は節点別履歴の有無だけを見る
+        ///   (<c>AnalysisModelling.ShouldApplyVerticalSpringsToPile</c>)</item>
+        /// <item>基礎梁考慮沈下の杭頭ばねは曲線の有無だけを見る (<c>VerticalBeamModelling</c>)</item>
+        /// <item>保存して開き直すと、曲線の有無から <c>IsVerticalAnalysisDone</c> が true に戻り、
+        ///   消したはずの単杭沈下が「実行済み」として復活する</item>
+        /// </list>
+        ///
+        /// <para>曲線は「結果でありながら次の解析の入力でもある」ため置き場所は
+        /// <c>SoilPile</c> のままにしてある (<see cref="Models.Results.SinglePileSettlementResult"/>)。
+        /// 置き場所が入力側にあることと、消さなくてよいことは別の話。</para>
+        ///
+        /// <para>節点別履歴は <c>DeepCopy</c> が同じリストを共有するので、空のリストを
+        /// 入れ直す (<c>Clear()</c> だと写し先にも及ぶ)。呼び出し側は現在の入力と
+        /// スナップショットの両方に対してこれを呼ぶ。</para>
+        /// </summary>
+        private static void ClearSinglePileSettlementResultsIn(Models.InputData.InputModel input)
+        {
+            var soilPiles = input.ElementDivision?.SoilPiles;
+            if (soilPiles == null) return;
+
+            foreach (var sp in soilPiles)
+            {
+                if (sp == null) continue;
+                sp.LoadDisplacements = [];
+                sp.LoadDisplacementsLimit = [];
+                sp.NodeDisplacements = [];
+                sp.NodeReactions = [];
+            }
         }
 
         // テスト用フック (内部ロジックをそのまま検証する)
