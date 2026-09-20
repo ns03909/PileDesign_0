@@ -490,6 +490,10 @@ namespace PileDesign.Output
                 Time("PileBearingEvaluation (支持力の検定)", () => AddPileBearingEvaluationReport(body));
             }
 
+            // 沈下量の検定は基本設定で有効にしたときだけ項目が作られる (既定は なし)。
+            // 支持力と同じく低減の有無で値が変わらないので、別の節にする。
+            Time("PileSettlementEvaluation (沈下量の検定)", () => AddPileSettlementEvaluationReport(body));
+
             if (mainWindowViewModel.DocxOutput.IncludeHorizontal)
             {
                 var swH = new System.Diagnostics.Stopwatch();

@@ -183,8 +183,15 @@ namespace PileDesign.Services
                 unfactored = TryBuild(() => EvaluationService.BuildEvaluationResult(vm, factored: false), "低減前");
             }
 
+            // 鉛直系の検定 (支持力 + 沈下量)。沈下量は基本設定で有効にしたときだけ項目が出る。
+            // 同じ入れ物に入れるのは、杭ごとに畳む処理 (Fold) が 1 回で済み、
+            // 沈下の NG も杭の色に出るため (別扱いにすると色に出ない)。
             var bearing = TryBuild(
-                () => new EvaluationResult(PileBearingEvaluator.Evaluate(inputModel, seismicGrade)), "支持力")
+                () => new EvaluationResult(
+                [
+                    .. PileBearingEvaluator.Evaluate(inputModel, seismicGrade),
+                    .. PileSettlementEvaluator.Evaluate(inputModel),
+                ]), "支持力・沈下量")
                 ?? new EvaluationResult([]);
 
             return FromResults(horizontal, unfactored, bearing, seismicGrade);

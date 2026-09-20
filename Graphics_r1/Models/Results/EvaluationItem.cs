@@ -39,6 +39,15 @@ namespace PileDesign.Models.Results
         /// 「−1200 が −1500 を超えたか」を読むことになり分かりにくい。
         /// </summary>
         PileUpliftResistance,
+
+        /// <summary>
+        /// 杭の沈下量。応答 = 単杭沈下 + 群杭沈下 (長期)、限界 = 許容沈下量 (入力値)。
+        ///
+        /// <b>既定では検定しない。</b> 許容沈下量は設計者が決める量で、規準が一意の値を
+        /// 与えるわけではない。基本設定で明示的に有効にしたときだけ項目が作られる
+        /// (<see cref="Services.PileSettlementEvaluator"/>)。
+        /// </summary>
+        PileSettlement,
     }
 
     /// <summary>

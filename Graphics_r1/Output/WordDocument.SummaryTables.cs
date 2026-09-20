@@ -1369,5 +1369,76 @@ namespace PileDesign.Output
             AddTableNote(body, "※ 検定比 = 応答値 / 限界値。押込み・引抜きとも大きさ（絶対値）で比較している。");
         }
 
+        /// <summary>
+        /// 杭の沈下量の検定。<b>基本設定で有効にしたときだけ出す。</b>
+        ///
+        /// <para>許容沈下量は設計者が決める量なので、既定では検定しない。既定値で勝手に
+        /// 合否を出すと、根拠の無い判定が計算書に残る。有効にした場合は、その許容値が
+        /// 入力であることを本文に明記する。</para>
+        /// </summary>
+        private void AddPileSettlementEvaluationReport(Body body)
+        {
+            if (inputModel == null) return;
+
+            List<Models.Results.EvaluationItem> items;
+            try
+            {
+                items = Services.PileSettlementEvaluator.Evaluate(inputModel);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[DOCX] 沈下量の検定の生成に失敗");
+                return;
+            }
+            if (items == null || items.Count == 0) return;   // 検定しない設定、または許容値が未入力
+
+            AddPageBreak(body);
+            AddHeader1(body, "杭の沈下量 検定", 1);
+
+            int ng = items.Count(i => !i.IsOk);
+            double limit = inputModel.FundamentalInput?.AllowableSettlement_mm ?? 0.0;
+            AddText(body,
+                $"検定項目 {items.Count} 件（OK {items.Count - ng} 件 / NG {ng} 件）。"
+                + $"応答値は沈下解析が求めた各杭の沈下量（単杭沈下 + 群杭沈下、長期）、"
+                + $"限界値は入力した許容沈下量 {limit:0.###} mm である。");
+            AddText(body,
+                "許容沈下量は、上部構造が許せる変形から設計者が定める値である"
+                + "（建築基礎構造設計指針は構造種別に応じて定めるとしており、一意の値を与えない）。"
+                + "したがってこの検定は既定では行わず、基本設定で有効にした場合にのみ出力する。"
+                + "群杭沈下解析を実行していない場合、応答値は単杭沈下量に等しい。");
+
+            AddTableCaption(body, "検定結果（杭の沈下量）");
+
+            const double fontSize = 8.0;
+            var table = CreateTableWithBorders();
+            table.Append(CreateHeaderRow(
+                CreateTableCell(["検定項目"], fontSize, "center"),
+                CreateTableCell(["対象"], fontSize, "center"),
+                CreateTableCell(["荷重ケース"], fontSize, "center"),
+                CreateTableCell(["応答"], fontSize, "center"),
+                CreateTableCell(["限界"], fontSize, "center"),
+                CreateTableCell(["単位"], fontSize, "center"),
+                CreateTableCell(["検定比"], fontSize, "center"),
+                CreateTableCell(["判定"], fontSize, "center")));
+
+            // 検定比の大きい順。どこが一番余裕がないかを上から読めるようにする
+            foreach (var item in items.OrderByDescending(i => double.IsNaN(i.Ratio) ? -1.0 : i.Ratio))
+            {
+                var row = new TableRow();
+                row.Append(CreateTableCell([item.Category], fontSize, "left"));
+                row.Append(CreateTableCell([item.TargetDescription], fontSize, "left"));
+                row.Append(CreateTableCell([item.LoadCaseName], fontSize, "left"));
+                row.Append(CreateTableCell([item.ResponseText], fontSize, "right"));
+                row.Append(CreateTableCell([item.LimitText], fontSize, "right"));
+                row.Append(CreateTableCell([item.Unit], fontSize, "center"));
+                row.Append(CreateTableCell([double.IsNaN(item.Ratio) ? "-" : $"{item.Ratio:F2}"], fontSize, "right"));
+                row.Append(CreateTableCell([item.StatusLabel], fontSize, "center"));
+                table.Append(row);
+            }
+
+            body.Append(table);
+            AddTableNote(body, "※ 検定比 = 沈下量 / 許容沈下量。");
+        }
+
     }
 }

@@ -304,6 +304,7 @@ namespace PileDesign.ViewModels
             var columns = ResultColumnReflectionCache.GetColumns(typeof(EvaluationItem));
 
             AddBearingTable(tables, columns);
+            AddSettlementEvaluationTable(tables, columns);
 
             if (CurrentModel == null || !IsHorizontalAnalysisDone) return tables;
 
@@ -344,6 +345,35 @@ namespace PileDesign.ViewModels
         /// 低減の有無で変わらず、2 枚に載せると同じ行が重複して支配ケースを読み違える。
         /// 同じ理由で水平解析が済んでいなくても (杭要素分割だけで) 出せる。
         /// </summary>
+        /// <summary>
+        /// 杭の沈下量の検定を 1 枚の表にする。<b>基本設定で有効にしたときだけ出る。</b>
+        ///
+        /// 支持力と同じく、応答値は沈下解析の結果・限界値は入力した許容沈下量なので
+        /// 低減の有無で変わらない。水平解析が済んでいなくても出せる。
+        /// </summary>
+        private void AddSettlementEvaluationTable(List<ResultTable> tables, ResultColumnDescriptor[] columns)
+        {
+            try
+            {
+                var inputModel = ResultInputModel ?? CurrentInputModel;
+                var result = new EvaluationResult(PileSettlementEvaluator.Evaluate(inputModel));
+                if (result.IsEmpty) return;   // 検定しない設定、または許容値が未入力
+
+                tables.Add(new ResultTable
+                {
+                    Name = "検定結果（杭の沈下量）",
+                    Category = "検定",
+                    Columns = columns,
+                    Rows = result.ByRatioDescending.Cast<object>().ToList(),
+                    SpansAllConditions = true,
+                });
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Warning(ex, "沈下量の検定テーブルの生成に失敗");
+            }
+        }
+
         private void AddBearingTable(List<ResultTable> tables, ResultColumnDescriptor[] columns)
         {
             try

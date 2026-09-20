@@ -278,7 +278,7 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 収束判定で残差を割る基準値の取り方。既定は <see cref="ResidualReferenceModes.Default"/>。
         /// 収束の判定そのものが変わるので、変更すると表示中の解析結果は
-        /// 「再解析が必要」の扱いになる (沈下解析の結果は確認のうえ削除される)。
+        /// 「再解析が必要」の扱いになる (沈下解析の結果も残る。2026-09-20 に揃えた)。
         /// </summary>
         [ObservableProperty]
         private ResidualReferenceMode _residualReference = ResidualReferenceModes.Default;
@@ -294,6 +294,41 @@ namespace PileDesign.ViewModels
 
         /// <summary>ComboBox の選択肢。</summary>
         public IReadOnlyList<ResidualReferenceMode> ResidualReferenceOptions => ResidualReferenceModes.All;
+
+        /// <summary>
+        /// 杭の沈下量を検定するか。<b>既定は なし。</b>
+        ///
+        /// 許容沈下量は設計者が決める量なので、プログラムが勝手に合否を出さない。
+        /// 検定の項目が増えるだけで解析はやり直さないので、結果は保持する。
+        /// </summary>
+        [ObservableProperty]
+        private bool _evaluateSettlement;
+
+        partial void OnEvaluateSettlementChanged(bool value)
+        {
+            HandleEvaluationOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.EvaluateSettlement,
+                v => InputModel.FundamentalInput.EvaluateSettlement = v,
+                value ? "沈下量の検定を有効化" : "沈下量の検定を無効化");
+            OnPropertyChanged(nameof(CanEditAllowableSettlement));
+        }
+
+        /// <summary>許容沈下量 [mm]。沈下量の検定を有効にしたときだけ使う。</summary>
+        [ObservableProperty]
+        private double _allowableSettlement_mm = 20.0;
+
+        partial void OnAllowableSettlement_mmChanged(double value)
+        {
+            HandleEvaluationOnlyOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.AllowableSettlement_mm,
+                v => InputModel.FundamentalInput.AllowableSettlement_mm = v,
+                $"許容沈下量を {value:0.###} mm へ変更");
+        }
+
+        /// <summary>許容沈下量の入力欄を編集できるか (検定を有効にしたときだけ)。</summary>
+        public bool CanEditAllowableSettlement => EvaluateSettlement;
 
         // 告示1113(第8) 長期許容圧縮の区分（1: Fc/4、2: min(Fc/4.5, 6)）
         [ObservableProperty]
@@ -560,6 +595,23 @@ namespace PileDesign.ViewModels
             setModel(value);
         }
 
+        /// <summary>
+        /// <b>検定の内容だけ</b>を変えるオプション用。解析結果は保持し、
+        /// 「再解析が必要」の確認も出さない (解析の入力に効かないため)。
+        /// Undo には積む。
+        /// </summary>
+        private void HandleEvaluationOnlyOptionChanged<T>(
+            T value, Func<T> getter, Action<T> setModel, string reason)
+        {
+            if (_suppressConcreteOptionConfirm) return;
+
+            T oldValue = getter();
+            if (EqualityComparer<T>.Default.Equals(oldValue, value)) return;
+
+            _undoManager.PushAction(() => setModel(oldValue), () => setModel(value), reason);
+            setModel(value);
+        }
+
         // 区分(int)用の capacity-only ハンドラ（解析結果は保持）
         private void HandleCapacityOnlyCaseChanged(
             int value, Func<int> getter, Action<int> setModel, Action<int> setVm)
@@ -628,6 +680,8 @@ namespace PileDesign.ViewModels
             ConsiderSteelPipeColumnBuckling = InputModel.FundamentalInput.ConsiderSteelPipeColumnBuckling;
             Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
             ResidualReference = InputModel.FundamentalInput.ResidualReference;
+            EvaluateSettlement = InputModel.FundamentalInput.EvaluateSettlement;
+            AllowableSettlement_mm = InputModel.FundamentalInput.AllowableSettlement_mm;
             ScUltimateShearBeta1 = InputModel.FundamentalInput.ScUltimateShearBeta1;
             ScUltimateShearBeta2 = InputModel.FundamentalInput.ScUltimateShearBeta2;
 
@@ -751,6 +805,12 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.ResidualReference):
                     ResidualReference = InputModel.FundamentalInput.ResidualReference;
+                    break;
+                case nameof(FundamentalInput.EvaluateSettlement):
+                    EvaluateSettlement = InputModel.FundamentalInput.EvaluateSettlement;
+                    break;
+                case nameof(FundamentalInput.AllowableSettlement_mm):
+                    AllowableSettlement_mm = InputModel.FundamentalInput.AllowableSettlement_mm;
                     break;
                 case nameof(FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete):
                     UseUltimateStrain5000ForSteelPipeConcrete = InputModel.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete;

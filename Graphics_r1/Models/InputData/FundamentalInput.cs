@@ -254,6 +254,26 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _residualReference, value);
         }
 
+        // 杭の沈下量を検定するか (既定 なし)。
+        // 許容沈下量は構造・基礎形式・上部構造が許せる変形から設計者が決める量で、
+        // 規準が一意の値を与えるわけではない。プログラムが勝手に値を置いて合否を出すと
+        // 根拠の無い判定が計算書に残るので、明示的に有効にしたときだけ検定する。
+        private bool _evaluateSettlement;
+        public bool EvaluateSettlement
+        {
+            get => _evaluateSettlement;
+            set => SetProperty(ref _evaluateSettlement, value);
+        }
+
+        // 許容沈下量 [mm]。上の検定を有効にしたときだけ使う。
+        // 既定 20 mm は「入力を促すための初期値」で、規準値ではない。
+        private double _allowableSettlement_mm = 20.0;
+        public double AllowableSettlement_mm
+        {
+            get => _allowableSettlement_mm;
+            set => SetProperty(ref _allowableSettlement_mm, value);
+        }
+
         // 【評定書に規定が無い】場所打ち鋼管コンクリート杭の終局圧縮縁ひずみを 5,000μ とする（既定 3,000μ）
         private bool _useUltimateStrain5000ForSteelPipeConcrete;
         public bool UseUltimateStrain5000ForSteelPipeConcrete

@@ -363,6 +363,31 @@
                 </StackPanel>
             </GroupBox>
 
+            <!-- 沈下量の検定 (既定 なし) -->
+            <GroupBox Header="沈下量の検定" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+                    <ctrl:HelpLinkButton Anchor="fund-opt-settlement-evaluation" Text="ヘルプ"
+                                         LinkToolTip="沈下量の検定の説明を開きます。"
+                                         HorizontalAlignment="Right" Margin="0,0,0,2"/>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"
+                               Text="沈下解析が求めた各杭の沈下量を、許容沈下量と比べて検定します。&#x0a;許容沈下量は上部構造が許せる変形から設計者が定める値で、規準は一意の値を与えません（建築基礎構造設計指針は構造種別に応じて定めるとしています）。&#x0a;そのため既定では検定しません。既定値のまま合否を出すと、根拠のない判定が計算書に残るためです。&#x0a;有効にすると、解析結果テーブルと計算書に「検定結果（杭の沈下量）」が加わります。解析はやり直しません。"/>
+                    <CheckBox Content="沈下量を検定する" Margin="0,0,0,6"
+                              IsChecked="{Binding EvaluateSettlement, Mode=TwoWay}"
+                              ToolTipService.ShowOnDisabled="True"
+                              ToolTip="各杭の沈下量（単杭沈下 + 群杭沈下、長期）を許容沈下量と比べます。&#x0a;既定は検定なしです。群杭沈下解析を実行していない場合、応答値は単杭沈下量に等しくなります。"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="許容沈下量" VerticalAlignment="Center" Width="150"/>
+                        <TextBox Width="90" Text="{Binding AllowableSettlement_mm, Mode=TwoWay, StringFormat=N1}"
+                                 IsEnabled="{Binding CanEditAllowableSettlement}"
+                                 ToolTipService.ShowOnDisabled="True"
+                                 ToolTip="設計者が定める許容沈下量です。初期値 20.0 mm は入力を促すための値で、規準値ではありません。"/>
+                        <TextBlock Text="mm" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,6,0,0"
+                               Text="応答値は「単杭沈下 + 群杭沈下」の長期の沈下量です（画面のグラフ「沈下 単杭+群杭」と同じ組み方）。&#x0a;地震時の沈下量は対象にしません。許容沈下量は常時の沈下に対して定める量で、地震時の値と比べる根拠がないためです。&#x0a;不同沈下による変形角は、別に「基礎梁の傾斜角」「杭頭 2 点間の変形角」で検定しています。"/>
+                </StackPanel>
+            </GroupBox>
+
             <!-- 鋼管杭の柱座屈 (曲げ座屈) -->
             <GroupBox Header="鋼管杭の柱座屈" Margin="0,6,0,0">
                 <StackPanel Margin="6,4,6,4">
