@@ -119,6 +119,79 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 例題から組んだ入力に、単杭沈下を終えた状態を作る。
+        /// <c>GenerateSoilPiles</c> は地盤・杭体がそろっていないと通らないので、
+        /// 作り直しを試す検査は例題を使う。
+        /// </summary>
+        private static (MainWindowViewModel vm, InputModel input)? BuildFromExample()
+        {
+            var (input, _) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+            if (input == null) return null;
+
+            var vm = new MainWindowViewModel { CurrentInputModel = input };
+            input.AttachViewModel(vm);
+
+            var soilPiles = input.ElementDivision?.SoilPiles;
+            if (soilPiles == null || soilPiles.Count == 0) return null;
+
+            foreach (var sp in soilPiles)
+            {
+                sp.LoadDisplacements.Add(new VerticalLoadTransferMethod.LoadDisplacement { PileTopLoad = 0, DD0s = 0 });
+                sp.LoadDisplacements.Add(new VerticalLoadTransferMethod.LoadDisplacement { PileTopLoad = 1000, DD0s = 5 });
+                sp.NodeDisplacements = [Vector<double>.Build.Dense(4, 0.0), Vector<double>.Build.Dense(4, 0.001)];
+                sp.NodeReactions = [Vector<double>.Build.Dense(4, 0.0), Vector<double>.Build.Dense(4, 100.0)];
+            }
+            vm.IsVerticalAnalysisDone = true;
+            return (vm, input);
+        }
+
+        /// <summary>
+        /// 土層-杭セットを作り直したら、単杭沈下の「実行済み」を降ろすこと。
+        ///
+        /// <para><c>GenerateSoilPiles</c> は <c>SoilPile</c> を新規構築し、引き継ぐのは
+        /// 荷重面等価径と kh0 の手入力だけ。単杭沈下の曲線と節点別履歴はそこに載っているので
+        /// 失われる。入力編集で沈下の結果を捨てなくなった (2026-09-20) ため、
+        /// <b>旗だけが立ったまま中身が無い</b>状態が起き得た。</para>
+        ///
+        /// <para>そのままだとグラフを開いても曲線が空、P-S ばねは無音で付かない、
+        /// 保存すると次に開いたとき未実行に戻る。</para>
+        /// </summary>
+        [TestMethod]
+        public void RebuildingTheSoilPilesLowersTheSinglePileSettlementFlag()
+        {
+            var built = BuildFromExample();
+            if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            var (vm, input) = built.Value;
+
+            Assert.IsTrue(vm.IsVerticalAnalysisDone, "前提: 単杭沈下は実行済み");
+            Assert.IsFalse(vm.IsElementSplit, "前提: 分割は済んでいない (済んでいる間は作り直さない)");
+
+            input.GenerateSoilPiles();
+
+            Assert.IsFalse(vm.IsVerticalAnalysisDone,
+                "土層-杭セットを作り直したのに「単杭沈下 実行済み」が残っている"
+                + " (グラフが空・P-S ばねが無音で付かない・保存すると未実行に戻る)");
+        }
+
+        /// <summary>
+        /// 曲線を持っていなければ、作り直しでも旗に触らないこと (無関係な操作で旗を落とさない)。
+        /// </summary>
+        [TestMethod]
+        public void RebuildingWithoutResultsLeavesTheFlagAlone()
+        {
+            var (input, _) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+            if (input == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            var vm = new MainWindowViewModel { CurrentInputModel = input };
+            input.AttachViewModel(vm);
+            vm.IsVerticalAnalysisDone = true;   // 旗だけ立てておく (曲線は無い)
+
+            input.GenerateSoilPiles();
+
+            Assert.IsTrue(vm.IsVerticalAnalysisDone, "曲線を持っていないのに旗を落としている");
+        }
+
+        /// <summary>
         /// 節点別の履歴は、空のリストを<b>入れ直して</b>消すこと (<c>Clear()</c> ではない)。
         ///
         /// <c>SoilPile.DeepCopy</c> は節点別履歴のリストを写し先と共有するので、

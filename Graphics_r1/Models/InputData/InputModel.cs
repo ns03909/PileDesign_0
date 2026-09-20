@@ -1568,6 +1568,15 @@ namespace PileDesign.Models.InputData
                 return;
             }
 
+            // 単杭沈下の結果は SoilPile に載っている (荷重-沈下曲線・節点別履歴)。
+            // 作り直すと失われるので、持っていたかどうかを先に見ておく。
+            // 曲線は貼り直さない: 鍵 (地盤番号・杭体番号・Z) は土層-杭セットの形を表さないので、
+            // 杭長や土層が変わった曲線を「使える」と誤認する。
+            bool hadSinglePileSettlementResults =
+                ElementDivision?.SoilPiles?.Any(sp =>
+                    (sp?.LoadDisplacements?.Count ?? 0) > 0
+                    || (sp?.NodeDisplacements?.Count ?? 0) > 0) == true;
+
             _suppressSoilPileNotify = true;
             try
             {
@@ -1783,6 +1792,13 @@ namespace PileDesign.Models.InputData
             finally
             {
                 _suppressSoilPileNotify = false;
+            }
+
+            // 作り直したので単杭沈下の結果は失われた。旗を中身に追従させる
+            // (立ったままだとグラフが空・P-S ばねが無音で付かない・保存すると未実行に戻る)
+            if (hadSinglePileSettlementResults)
+            {
+                _mainWindowViewModel?.NoteSinglePileSettlementResultsLost();
             }
 
             // 一括通知は RegenerateSoilPilesAndNotify 側で実施

@@ -199,6 +199,30 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 土層-杭セットを作り直したので、単杭沈下の結果が無くなったことを記録する。
+        ///
+        /// <para><see cref="Models.InputData.InputModel.GenerateSoilPiles"/> は
+        /// <see cref="Models.InputData.SoilPile"/> を<b>新規構築</b>し、引き継ぐのは荷重面等価径と
+        /// kh0 の手入力だけ。単杭沈下の荷重-沈下曲線と節点別履歴はそこに載っているので失われる。</para>
+        ///
+        /// <para>入力編集で沈下の結果を捨てなくなった (2026-09-20) ため、<b>旗だけが立ったまま
+        /// 中身が無い</b>状態が起きた。グラフを開いても曲線が空、P-S ばねは無音で付かない、
+        /// 保存すると次に開いたとき未実行に戻る。旗は中身に追従させる。</para>
+        ///
+        /// <para>鍵 (地盤番号・杭体番号・Z) が一致する曲線を貼り直すことはしない。鍵は
+        /// 土層-杭セットの<b>形</b>を表さないので、杭長や土層が変わった曲線を「使える」と
+        /// 誤認する。読込のときだけ貼り直してよいのは、そこでは形も一緒に読むため。</para>
+        /// </summary>
+        internal void NoteSinglePileSettlementResultsLost()
+        {
+            if (!IsVerticalAnalysisDone) return;
+
+            IsVerticalAnalysisDone = false;
+            Serilog.Log.Information(
+                "[沈下] 土層-杭セットを作り直したため、単杭沈下の結果 (荷重-沈下曲線・節点別履歴) を無効にした");
+        }
+
+        /// <summary>
         /// 古い沈下の結果を<b>次の解析の入力として</b>使ってよいかを尋ねる。
         ///
         /// <para>入力編集で沈下の結果を捨てなくなった (2026-09-20、水平解析と同じ扱いに揃えた) ため、
