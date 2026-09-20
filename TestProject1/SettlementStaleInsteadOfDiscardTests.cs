@@ -147,6 +147,46 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 状態表示は<b>実際に持っている解析</b>だけを名指しすること。
+        ///
+        /// 単杭沈下だけを実行して入力を編集したとき、水平解析を実行していないのに
+        /// 「表示中の解析結果は … 実行時の入力によるものです（再解析が必要です）」と
+        /// 出ていた (実機で確認、2026-09-20)。
+        /// </summary>
+        [TestMethod]
+        public void TheStatusTextNamesOnlyTheAnalysesThatExist()
+        {
+            // 沈下だけ実行して入力を編集した状態
+            string settlementOnly = MainWindowViewModel.BuildResultSetStatusText(
+                "2026-09-20 14:50", horizontalStale: false, settlementStale: true, materialOptionsChanged: false);
+            StringAssert.Contains(settlementOnly, "沈下解析の再実行が必要です");
+            Assert.IsFalse(settlementOnly.Contains("表示中の解析結果は"),
+                "水平解析の結果が表示されている前提の文が出ている");
+
+            // 水平解析だけを持っている状態 (従来の文面)
+            string horizontalOnly = MainWindowViewModel.BuildResultSetStatusText(
+                "2026-09-20 14:50", horizontalStale: true, settlementStale: false, materialOptionsChanged: false);
+            StringAssert.Contains(horizontalOnly, "表示中の解析結果は");
+            Assert.IsFalse(horizontalOnly.Contains("沈下"), "沈下を実行していないのに名指ししている");
+
+            // 両方が陳腐化したら両方を名指しする
+            string both = MainWindowViewModel.BuildResultSetStatusText(
+                "2026-09-20 14:50", horizontalStale: true, settlementStale: true, materialOptionsChanged: false);
+            StringAssert.Contains(both, "水平解析と沈下解析の再実行が必要です");
+
+            // どちらも最新なら余計なことを言わない
+            string fresh = MainWindowViewModel.BuildResultSetStatusText(
+                "2026-09-20 14:50", horizontalStale: false, settlementStale: false, materialOptionsChanged: false);
+            Assert.AreEqual("解析結果: 2026-09-20 14:50 実行", fresh);
+
+            // 材料オプションの注記は、どの組み合わせにも後ろから足す
+            string withOptions = MainWindowViewModel.BuildResultSetStatusText(
+                "2026-09-20 14:50", horizontalStale: false, settlementStale: true, materialOptionsChanged: true);
+            StringAssert.Contains(withOptions, "沈下解析の再実行が必要です");
+            StringAssert.Contains(withOptions, "材料モデル化オプション");
+        }
+
+        /// <summary>
         /// 明示的な破棄 (解析結果の削除) では、これまでどおり全部消えること。
         /// 「残して印を立てる」のは<b>入力編集のとき</b>だけ。
         /// </summary>

@@ -58,7 +58,9 @@ namespace TestProject1
             vm.MarkInputChangedSinceAnalysis(MainWindowViewModel.AnalysisInputScope.Settlement);
 
             Assert.IsTrue(vm.InputChangedSinceAnalysis, "編集そのものは記録されること");
-            StringAssert.Contains(vm.ResultSetStatusText, "沈下解析の入力が変更されています",
+            // 文面は「沈下解析の結果は入力変更前のものです（沈下解析の再実行が必要です）」。
+            // 促すのが沈下の再実行であることだけを見る (言い回しは 2026-09-20 に変えた)
+            StringAssert.Contains(vm.ResultSetStatusText, "沈下解析の再実行が必要です",
                 "沈下の入力を触っただけなのに、文言が沈下の話になっていません");
             Assert.IsFalse(vm.ResultSetStatusText.Contains("表示中の解析結果は"),
                 $"水平解析の再解析を促しています: {vm.ResultSetStatusText}");

@@ -235,12 +235,18 @@ namespace PileDesign.ViewModels
             // 置換されるため、named handler を使って setter から再アタッチできるようにする。
             SubscribeSettlementChanged();
 
-            // コンストラクタ内の適当な位置
+            // テーブルウィンドウが実際に組む表と、押せる条件を揃えておくこと。
+            // OpenTableWindow は 水平解析 / 基礎梁鉛直 / 群杭沈下(反復) / 群杭沈下(一般) / 検定 を
+            // 束ねるが、押せる条件は長く「群杭沈下(反復)」しか見ていなかった。
+            // そのため群杭沈下(一般)の結果しか無いときは、表があるのにボタンが灰色だった
+            // (実機で確認、2026-09-20)。ResultCommandRequeryTests が対応を見張る。
+            //
+            // 単杭沈下は表を持たない (結果は荷重-沈下曲線なのでグラフ側)。押せないのが正しい。
             OpenTableWindowCommand = new ToolkitRelayCommand(
                 OpenTableWindow,
                 () => (LatestResultTables != null && LatestResultTables.Count > 0) ||
                       (VerticalBeamCaseResults != null && VerticalBeamCaseResults.Count > 0) ||
-                      HasGroupSettlementBeamAwareCases);
+                      HasGroupSettlementCaseRecords);
 
         }
 

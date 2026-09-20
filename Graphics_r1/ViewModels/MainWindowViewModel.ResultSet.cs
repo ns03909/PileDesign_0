@@ -133,28 +133,48 @@ namespace PileDesign.ViewModels
             get
             {
                 if (_currentResultSet == null) return string.Empty;
-                string stamp = _currentResultSet.CapturedAt.ToString("yyyy-MM-dd HH:mm");
 
-                // 何が陳腐化したのかで言い分ける。沈下の入力しか触っていないのに
-                // 「再解析が必要」と言われると、水平解析をやり直す話に読める。
-                string baseText =
-                    _horizontalInputChanged
-                        ? $"表示中の解析結果は {stamp} 実行時の入力によるものです（入力が変更されています。再解析が必要です）"
-                    : InputChangedSinceAnalysis
-                        ? $"解析結果: {stamp} 実行／沈下解析の入力が変更されています（沈下解析の再実行が必要です）"
-                        : $"解析結果: {stamp} 実行";
-
-                // 沈下の結果は水平解析をやり直しても新しくならない。別に言う
-                // (曲線は次の解析の入力でもあるので、古いまま使われると静かに効く)
-                if (SettlementResultsAreStale && !InputChangedSinceAnalysis)
-                    baseText += "／沈下解析の結果は入力変更前のものです（沈下解析の再実行が必要です）";
-
-                // 応答値は解析時のもの、限界曲線は今のオプションで引かれる。混ざったまま読ませない
-                return MaterialOptionsChangedSinceAnalysis
-                    ? baseText + "／材料モデル化オプションが解析後に変更されています"
-                        + "（限界曲線は変更後のオプションで描かれます。再解析が必要です）"
-                    : baseText;
+                return BuildResultSetStatusText(
+                    _currentResultSet.CapturedAt.ToString("yyyy-MM-dd HH:mm"),
+                    horizontalStale: _horizontalInputChanged && IsHorizontalAnalysisDone,
+                    settlementStale: SettlementResultsAreStale,
+                    materialOptionsChanged: MaterialOptionsChangedSinceAnalysis);
             }
+        }
+
+        /// <summary>
+        /// 状態表示の文を組む。<b>実際に持っている解析</b>だけを名指しする。
+        /// </summary>
+        /// <remarks>
+        /// <para>2026-09-20 まで「水平解析の入力が編集された」だけで
+        /// 「表示中の解析結果は … 実行時の入力によるものです（再解析が必要です）」と出していた。
+        /// 単杭沈下だけを実行して入力を編集すると、<b>水平解析を実行していないのに</b>
+        /// その結果が表示されている前提の文が出る (実機で確認)。</para>
+        ///
+        /// <para>沈下と水平解析は別に言う。沈下の結果は水平解析をやり直しても新しくならず、
+        /// しかも次の解析の入力でもあるので、混ぜると「再解析した」つもりで古い曲線が使われる。</para>
+        /// </remarks>
+        /// <param name="stamp">結果を取った時刻の表示。</param>
+        /// <param name="horizontalStale">水平解析の結果を持っていて、それが陳腐化しているか。</param>
+        /// <param name="settlementStale">沈下の結果を持っていて、それが陳腐化しているか。</param>
+        /// <param name="materialOptionsChanged">材料モデル化オプションが解析後に変わったか。</param>
+        internal static string BuildResultSetStatusText(
+            string stamp, bool horizontalStale, bool settlementStale, bool materialOptionsChanged)
+        {
+            string baseText =
+                horizontalStale && settlementStale
+                    ? $"表示中の解析結果は {stamp} 実行時の入力によるものです（入力が変更されています。水平解析と沈下解析の再実行が必要です）"
+                : horizontalStale
+                    ? $"表示中の解析結果は {stamp} 実行時の入力によるものです（入力が変更されています。再解析が必要です）"
+                : settlementStale
+                    ? $"解析結果: {stamp} 実行／沈下解析の結果は入力変更前のものです（沈下解析の再実行が必要です）"
+                    : $"解析結果: {stamp} 実行";
+
+            // 応答値は解析時のもの、限界曲線は今のオプションで引かれる。混ざったまま読ませない
+            return materialOptionsChanged
+                ? baseText + "／材料モデル化オプションが解析後に変更されています"
+                    + "（限界曲線は変更後のオプションで描かれます。再解析が必要です）"
+                : baseText;
         }
 
         /// <summary>

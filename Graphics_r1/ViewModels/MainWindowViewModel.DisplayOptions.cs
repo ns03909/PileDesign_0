@@ -2244,6 +2244,10 @@ namespace PileDesign.ViewModels
 
                 if (value) SetLatestAnalysisCompleted();
                 OnPropertyChanged(nameof(HasAnyAnalysisResult));
+                // 結果ウィンドウのコマンド (グラフ出力・テーブル出力・ログ表示) を再評価する。
+                // CanExecute は HasAnyAnalysisResult を見るが、CommunityToolkit の RelayCommand は
+                // 通知しないと聞き直さない。プロパティの通知だけではボタンが押せないままになる。
+                RaiseResultCommandsCanExecute();
                 // 基礎梁考慮沈下解析の活性化条件が変わるため再評価
                 OpenVerticalBeamCalculationCommand?.NotifyCanExecuteChanged();
 
@@ -2350,6 +2354,10 @@ namespace PileDesign.ViewModels
                 {
                     if (value) SetLatestAnalysisCompleted();
                     OnPropertyChanged(nameof(HasAnyAnalysisResult));
+                    // 結果ウィンドウのコマンド (グラフ出力・テーブル出力・ログ表示) を再評価する。
+                    // CanExecute は HasAnyAnalysisResult を見るが、CommunityToolkit の RelayCommand は
+                    // 通知しないと聞き直さない。プロパティの通知だけではボタンが押せないままになる。
+                    RaiseResultCommandsCanExecute();
 
                     const string settlementLabel = "沈下量";
                     if (value)
@@ -2937,6 +2945,10 @@ namespace PileDesign.ViewModels
                 {
                     if (value) SetLatestAnalysisCompleted();
                     OnPropertyChanged(nameof(HasAnyAnalysisResult));
+                    // 結果ウィンドウのコマンド (グラフ出力・テーブル出力・ログ表示) を再評価する。
+                    // CanExecute は HasAnyAnalysisResult を見るが、CommunityToolkit の RelayCommand は
+                    // 通知しないと聞き直さない。プロパティの通知だけではボタンが押せないままになる。
+                    RaiseResultCommandsCanExecute();
 
                     // "梁応力（水平）"の表示制御
                     const string beamForceLabel = "梁応力（水平）";
