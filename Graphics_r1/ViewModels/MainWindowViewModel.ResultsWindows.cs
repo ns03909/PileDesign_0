@@ -136,6 +136,14 @@ namespace PileDesign.ViewModels
                || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone
                || HasGroupSettlementBeamAwareCases;
 
+        /// <summary>
+        /// 単杭沈下の荷重-沈下曲線を持っているか (テーブル出力の可否に使う)。
+        /// 表は <see cref="BuildSinglePileSettlementTables"/> が組む。
+        /// </summary>
+        public bool HasSinglePileSettlementCurves =>
+            ResultInputModel?.ElementDivision?.SoilPiles?
+                .Any(sp => (sp?.LoadDisplacements?.Count ?? 0) > 0) == true;
+
         // コマンド状態一括更新ヘルパ
         private void RaiseResultCommandsCanExecute()
         {
@@ -264,6 +272,8 @@ namespace PileDesign.ViewModels
                 allTables.AddRange(BuildGroupSettlementBeamAwareTables());
                 // 群杭沈下解析（一般）の結果テーブル
                 allTables.AddRange(BuildGroupSettlementNonBeamAwareTables());
+                // 単杭沈下解析の結果テーブル (荷重-沈下曲線と各杭の沈下量)
+                allTables.AddRange(BuildSinglePileSettlementTables());
                 // 検定結果 (検定比の降順)
                 allTables.AddRange(BuildEvaluationTables());
                 vm.LoadTables(allTables);
@@ -667,6 +677,169 @@ namespace PileDesign.ViewModels
                 }
             }
             return tables;
+        }
+
+        /// <summary>テーブル出力用の行 (単杭沈下解析: 荷重-沈下曲線の 1 段階)。</summary>
+        public class SinglePileSettlementCurveRow
+        {
+            public int Step { get; set; }
+            public double PileTopLoad_kN { get; set; }
+            public double HeadSettlement_mm { get; set; }
+            public double ToeSettlement_mm { get; set; }
+            public double ToeReaction_kN { get; set; }
+            public double CircumResistance_kN { get; set; }
+            public string Note { get; set; } = "";
+        }
+
+        /// <summary>テーブル出力用の行 (単杭沈下解析: 各杭の沈下量)。</summary>
+        public class SinglePileSettlementPileRow
+        {
+            public int PileNo { get; set; }
+            public double X { get; set; }
+            public double Y { get; set; }
+            public string LoadCaseName { get; set; } = "";
+            public double AxialForce_kN { get; set; }
+            public double Settlement_mm { get; set; }
+        }
+
+        /// <summary>
+        /// 単杭沈下解析の結果テーブル。
+        ///
+        /// <para>これまで単杭沈下の結果はグラフ (荷重沈下曲線) だけで、テーブルには 1 枚も
+        /// 出していなかった。数値で確かめる手段が無く、単杭沈下しか実行していないと
+        /// 「テーブル出力」自体が押せなかった (2026-09-20 に追加)。</para>
+        ///
+        /// <para>2 種類出す。
+        /// <list type="bullet">
+        /// <item>土層-杭セットごとの<b>荷重-沈下曲線</b> (グラフと同じ値。杭頭・杭先端の沈下量は
+        ///   初期状態からの増分 <c>DD0s</c> / <c>DDns</c> で、グラフの縦横に対応する)</item>
+        /// <item><b>各杭の沈下量</b> (荷重ケースごと。3D 表示の数字と同じ値)</item>
+        /// </list>
+        /// どちらも結果表示と同じ入力 (<see cref="ResultInputModel"/>) から読む。</para>
+        /// </summary>
+        internal List<ResultTable> BuildSinglePileSettlementTables()
+        {
+            var tables = new List<ResultTable>();
+            const string category = "単杭沈下解析";
+
+            var soilPiles = ResultInputModel?.ElementDivision?.SoilPiles;
+            if (soilPiles == null) return tables;
+
+            // ── 荷重-沈下曲線 (土層-杭セットごと) ──
+            for (int i = 0; i < soilPiles.Count; i++)
+            {
+                var sp = soilPiles[i];
+                if ((sp?.LoadDisplacements?.Count ?? 0) == 0) continue;
+
+                var sorted = sp!.LoadDisplacements.OrderBy(ld => ld.PileTopLoad).ToList();
+                var rows = new List<object>();
+                for (int k = 0; k < sorted.Count; k++)
+                {
+                    var ld = sorted[k];
+                    rows.Add(new SinglePileSettlementCurveRow
+                    {
+                        Step = k + 1,
+                        PileTopLoad_kN = ld.PileTopLoad,
+                        HeadSettlement_mm = ld.DD0s,
+                        ToeSettlement_mm = ld.DDns,
+                        ToeReaction_kN = ld.RzToe,
+                        CircumResistance_kN = ld.RzCircum,
+                        Note = ld.Note ?? "",
+                    });
+                }
+
+                tables.Add(new ResultTable
+                {
+                    Name = $"単杭沈下解析 荷重-沈下曲線 (杭セット{i + 1}: 地盤{sp.GroundNo}/杭体{sp.PileBodyNo})",
+                    Category = category,
+                    SpansAllConditions = true,   // 荷重ケースに紐づかない (曲線そのもの)
+                    Columns =
+                    [
+                        new() { Header = "段階", Order = 0, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.Step))! },
+                        new() { Header = "杭頭荷重 (kN)", Order = 1, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.PileTopLoad_kN))!, Format = "N1" },
+                        new() { Header = "杭頭沈下量 (mm)", Order = 2, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.HeadSettlement_mm))!, Format = "N3" },
+                        new() { Header = "杭先端沈下量 (mm)", Order = 3, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.ToeSettlement_mm))!, Format = "N3" },
+                        new() { Header = "杭先端反力 (kN)", Order = 4, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.ToeReaction_kN))!, Format = "N1" },
+                        new() { Header = "周面抵抗 (kN)", Order = 5, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.CircumResistance_kN))!, Format = "N1" },
+                        new() { Header = "備考", Order = 6, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.Note))! },
+                    ],
+                    Rows = rows,
+                });
+            }
+
+            // ── 各杭の沈下量 (荷重ケースごと) ──
+            var piles = ResultInputModel?.PileLayoutItems;
+            var loadCases = ResultInputModel?.LoadCasesInput;
+            if (piles != null && piles.Count > 0 && tables.Count > 0)
+            {
+                var pileRows = new List<object>();
+                foreach (var pile in piles)
+                {
+                    if (pile == null) continue;
+
+                    pileRows.Add(new SinglePileSettlementPileRow
+                    {
+                        PileNo = pile.PileNo,
+                        X = pile.Point3D.X,
+                        Y = pile.Point3D.Y,
+                        LoadCaseName = "VL",
+                        AxialForce_kN = pile.AxialForceVL0 + pile.AxialForceVLAdditional,
+                        Settlement_mm = pile.SinglePileSettlementVL * 1000.0,   // m → mm
+                    });
+
+                    AddLevelRows(pileRows, pile, loadCases?.LoadCasesLevel1,
+                        pile.SinglePileSettlementLevel1s, pile.AxialForceLevel1s);
+                    AddLevelRows(pileRows, pile, loadCases?.LoadCasesLevel2,
+                        pile.SinglePileSettlementLevel2s, pile.AxialForceLevel2s);
+                }
+
+                tables.Add(new ResultTable
+                {
+                    Name = "単杭沈下解析 各杭の沈下量",
+                    Category = category,
+                    SpansAllConditions = true,   // 荷重ケースを列で区別する
+                    Columns =
+                    [
+                        new() { Header = "杭No", Order = 0, Property = typeof(SinglePileSettlementPileRow).GetProperty(nameof(SinglePileSettlementPileRow.PileNo))! },
+                        new() { Header = "X (m)", Order = 1, Property = typeof(SinglePileSettlementPileRow).GetProperty(nameof(SinglePileSettlementPileRow.X))!, Format = "N3" },
+                        new() { Header = "Y (m)", Order = 2, Property = typeof(SinglePileSettlementPileRow).GetProperty(nameof(SinglePileSettlementPileRow.Y))!, Format = "N3" },
+                        new() { Header = "荷重ケース", Order = 3, Property = typeof(SinglePileSettlementPileRow).GetProperty(nameof(SinglePileSettlementPileRow.LoadCaseName))! },
+                        new() { Header = "軸力 (kN)", Order = 4, Property = typeof(SinglePileSettlementPileRow).GetProperty(nameof(SinglePileSettlementPileRow.AxialForce_kN))!, Format = "N1" },
+                        new() { Header = "沈下量 (mm)", Order = 5, Property = typeof(SinglePileSettlementPileRow).GetProperty(nameof(SinglePileSettlementPileRow.Settlement_mm))!, Format = "N3" },
+                    ],
+                    Rows = pileRows,
+                });
+            }
+
+            return tables;
+        }
+
+        /// <summary>
+        /// 各杭の沈下量の行を、レベル別の荷重ケース 1 組ぶん足す。
+        /// 沈下量・軸力は荷重ケースと<b>同じ並び</b>で持たれている (グラフ側も同じ対応で読む)。
+        /// 並びが足りないときは足さない (解析前・ケース追加後などで長さが揃わないことがある)。
+        /// </summary>
+        private static void AddLevelRows(
+            List<object> rows, Models.InputData.PileLayoutDataItem pile,
+            System.Collections.Generic.IList<Models.InputData.LoadCase>? cases,
+            System.Collections.Generic.IList<double>? settlements_m,
+            System.Collections.Generic.IList<double>? axialForces_kN)
+        {
+            if (cases == null || settlements_m == null) return;
+
+            for (int i = 0; i < cases.Count; i++)
+            {
+                if (i >= settlements_m.Count) break;
+                rows.Add(new SinglePileSettlementPileRow
+                {
+                    PileNo = pile.PileNo,
+                    X = pile.Point3D.X,
+                    Y = pile.Point3D.Y,
+                    LoadCaseName = cases[i]?.LoadName ?? "",
+                    AxialForce_kN = (axialForces_kN != null && i < axialForces_kN.Count) ? axialForces_kN[i] : 0.0,
+                    Settlement_mm = settlements_m[i] * 1000.0,   // m → mm
+                });
+            }
         }
 
         /// <summary>

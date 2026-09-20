@@ -52,7 +52,7 @@ namespace TestProject1
 
         /// <summary>
         /// 単杭沈下だけを終えた状態で「グラフ出力」が押せること (結果は荷重-沈下曲線)。
-        /// テーブル出力は表を持たないので押せないのが正しい。
+        /// 旗だけで曲線が無いなら、テーブル出力は押せない (出す表が無い)。
         /// </summary>
         [TestMethod]
         public void AfterASinglePileSettlementAnalysisTheGraphCommandIsEnabled()
@@ -65,7 +65,36 @@ namespace TestProject1
             Assert.IsTrue(vm.HasAnyAnalysisResult, "前提: 解析結果があると答えること");
             Assert.IsTrue(vm.OpenGraphWindowCommand.CanExecute(null), "グラフ出力が押せない");
             Assert.IsFalse(vm.OpenTableWindowCommand.CanExecute(null),
-                "単杭沈下は表を持たないので、テーブル出力は押せないのが正しい");
+                "曲線が無いのにテーブル出力が押せる (出す表が無い)");
+        }
+
+        /// <summary>
+        /// 単杭沈下の荷重-沈下曲線があれば「テーブル出力」も押せること。
+        ///
+        /// 単杭沈下の結果は長くグラフだけで、テーブルには 1 枚も出ていなかった
+        /// (2026-09-20 に荷重-沈下曲線と各杭の沈下量の表を追加)。
+        /// </summary>
+        [TestMethod]
+        public void SinglePileSettlementCurvesEnableTheTableCommand()
+        {
+            var input = new PileDesign.Models.InputData.InputModel();
+            input.ElementDivision ??= new PileDesign.Models.InputData.ElementDivision();
+            var sp = new PileDesign.Models.InputData.SoilPile { GroundNo = 1, PileBodyNo = 1, Z = 0.0 };
+            sp.LoadDisplacements.Add(new PileDesign.FEM.VerticalLoadTransferMethod.LoadDisplacement
+            { PileTopLoad = 0, DD0s = 0 });
+            sp.LoadDisplacements.Add(new PileDesign.FEM.VerticalLoadTransferMethod.LoadDisplacement
+            { PileTopLoad = 1000, DD0s = 5 });
+            input.ElementDivision.SoilPiles.Add(sp);
+
+            var vm = new MainWindowViewModel { CurrentInputModel = input };
+            input.AttachViewModel(vm);
+
+            Assert.IsTrue(vm.HasSinglePileSettlementCurves, "前提: 曲線を持っていると答えること");
+
+            vm.IsVerticalAnalysisDone = true;
+
+            Assert.IsTrue(vm.OpenTableWindowCommand.CanExecute(null),
+                "単杭沈下の曲線があるのにテーブル出力が押せない");
         }
 
         /// <summary>
@@ -115,6 +144,8 @@ namespace TestProject1
             StringAssert.Contains(condition, "VerticalBeamCaseResults", "基礎梁鉛直の表を見ていない");
             StringAssert.Contains(condition, "HasGroupSettlementCaseRecords",
                 "群杭沈下の表を反復だけで見ている (一般の結果しか無いと開けない)");
+            StringAssert.Contains(condition, "HasSinglePileSettlementCurves",
+                "単杭沈下の表を見ていない (曲線があるのに開けない)");
         }
 
         /// <summary>波括弧の対応で property の本体を切り出す。</summary>

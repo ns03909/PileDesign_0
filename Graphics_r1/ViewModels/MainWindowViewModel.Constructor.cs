@@ -92,6 +92,11 @@ namespace PileDesign.ViewModels
         /// 毎回の <c>IndexOf</c> で今の位置を取り直し、見つからない項目は飛ばす。
         /// 並べ替えは<b>やり直せる</b> (次の CollectionChanged でまた呼ばれる) ので、
         /// 途中で諦めても順序が崩れたままにはならない。
+        ///
+        /// <para>2026-09-20 追記: <b>並び順を計算する側も同じ理由で落ちる。</b> LINQ は要素数を
+        /// 先に読んでから添字で取りに行くので、その間に候補が減ると添字外れになる。
+        /// 当てはめる側 (<see cref="ApplyContentOrder"/>) だけ直しても足りなかった。
+        /// こちらも諦めて次に任せる。</para>
         /// </summary>
         private void EnsureAnalysisResultContentOrder()
         {
@@ -101,11 +106,24 @@ namespace PileDesign.ViewModels
             {
                 lock (_analysisResultContentOptionLock)
                 {
-                    var sorted = AnalysisResultContentOption
-                        .Select(item => (item, idx: CanonicalAnalysisContentOrder.IndexOf(item)))
-                        .OrderBy(x => x.idx < 0 ? int.MaxValue : x.idx)
-                        .Select(x => x.item)
-                        .ToList();
+                    List<string> sorted;
+                    try
+                    {
+                        sorted = AnalysisResultContentOption
+                            .Select(item => (item, idx: CanonicalAnalysisContentOrder.IndexOf(item)))
+                            .OrderBy(x => x.idx < 0 ? int.MaxValue : x.idx)
+                            .Select(x => x.item)
+                            .ToList();
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // 並び順を計算している最中に候補が減った。LINQ は要素数を先に読んでから
+                        // 添字で取りに行くので、その間に消えると添字外れになる (この lock を
+                        // 通らない書き手 — 解析済み旗の setter — が候補を足し引きする)。
+                        // 並べ替えはやり直せるので、ここは諦めてよい
+                        // (次の CollectionChanged でまた呼ばれる)。
+                        return;
+                    }
 
                     ApplyContentOrder(AnalysisResultContentOption, sorted);
                 }
@@ -241,12 +259,12 @@ namespace PileDesign.ViewModels
             // そのため群杭沈下(一般)の結果しか無いときは、表があるのにボタンが灰色だった
             // (実機で確認、2026-09-20)。ResultCommandRequeryTests が対応を見張る。
             //
-            // 単杭沈下は表を持たない (結果は荷重-沈下曲線なのでグラフ側)。押せないのが正しい。
             OpenTableWindowCommand = new ToolkitRelayCommand(
                 OpenTableWindow,
                 () => (LatestResultTables != null && LatestResultTables.Count > 0) ||
                       (VerticalBeamCaseResults != null && VerticalBeamCaseResults.Count > 0) ||
-                      HasGroupSettlementCaseRecords);
+                      HasGroupSettlementCaseRecords ||
+                      HasSinglePileSettlementCurves);
 
         }
 
