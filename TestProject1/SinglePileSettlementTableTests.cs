@@ -51,9 +51,9 @@ namespace TestProject1
             var sp = new SoilPile { GroundNo = 2, PileBodyNo = 3, Z = 0.0 };
             // 荷重の小さい順に入れない (表は荷重で並べ替えることの確認も兼ねる)
             sp.LoadDisplacements.Add(new VerticalLoadTransferMethod.LoadDisplacement
-            { PileTopLoad = 1000, DD0s = 5.0, DDns = 3.0, RzToe = 400, RzCircum = 600, Note = "R_SLS" });
+            { PileTopLoad = 1000, DD0s = 5.0, DDns = 3.0, RzToe = 400, RzCircum = 600, Weight = 485, Note = "R_SLS" });
             sp.LoadDisplacements.Add(new VerticalLoadTransferMethod.LoadDisplacement
-            { PileTopLoad = 0, DD0s = 0.0, DDns = 0.0, RzToe = 0, RzCircum = 0 });
+            { PileTopLoad = 0, DD0s = 0.0, DDns = 0.0, RzToe = 0, RzCircum = 0, Weight = 485 });
             input.ElementDivision.SoilPiles.Add(sp);
 
             vm.IsVerticalAnalysisDone = true;
@@ -96,11 +96,43 @@ namespace TestProject1
             Assert.AreEqual(0.0, rows[0].PileTopLoad_kN, 1e-9, "荷重の小さい順に並んでいない");
             Assert.AreEqual(2, rows[1].Step);
             Assert.AreEqual(1000.0, rows[1].PileTopLoad_kN, 1e-9);
-            Assert.AreEqual(5.0, rows[1].HeadSettlement_mm, 1e-9, "杭頭沈下量 (mm) が違う");
-            Assert.AreEqual(3.0, rows[1].ToeSettlement_mm, 1e-9, "杭先端沈下量 (mm) が違う");
-            Assert.AreEqual(400.0, rows[1].ToeReaction_kN, 1e-9);
+            Assert.AreEqual(5.0, rows[1].HeadDisplacement_mm, 1e-9, "杭頭変位 (mm) が違う");
+            Assert.AreEqual(3.0, rows[1].ToeDisplacement_mm, 1e-9, "杭先端変位 (mm) が違う");
+            Assert.AreEqual(400.0, rows[1].ToeResistance_kN, 1e-9);
             Assert.AreEqual(600.0, rows[1].CircumResistance_kN, 1e-9);
+            Assert.AreEqual(485.0, rows[1].PileWeight_kN, 1e-9, "杭自重が落ちている (釣り合いが読めない)");
             Assert.AreEqual("R_SLS", rows[1].Note, "備考 (極限に達した段階の印) が落ちている");
+        }
+
+        /// <summary>
+        /// 列の呼び名が、単杭沈下解析ウィンドウの表と揃っていること。
+        ///
+        /// 同じプロパティ (<c>RzToe</c> / <c>RzCircum</c> / <c>Weight</c> / <c>DD0s</c> / <c>DDns</c>) を
+        /// 同じ画面の中で違う呼び名で出すと、別の量だと読まれる。実機で食い違いが出た
+        /// (2026-09-21: 杭先端反力 / 周面抵抗 と書いていた。窓は 杭先端支持力 / 杭周面抵抗力)。
+        /// </summary>
+        [TestMethod]
+        public void TheCurveColumnsUseTheSameNamesAsTheSettlementWindow()
+        {
+            var (vm, _) = Build();
+
+            var curve = vm.BuildSinglePileSettlementTables()
+                .First(t => t.Name.Contains("荷重-沈下曲線"));
+            var headers = curve.Columns.OrderBy(c => c.Order).Select(c => c.Header).ToList();
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "段階", "杭頭荷重 (kN)", "杭先端支持力 (kN)", "杭周面抵抗力 (kN)",
+                    "杭自重 (kN)", "杭頭変位 (mm)", "杭先端変位 (mm)", "備考",
+                },
+                headers,
+                "単杭沈下解析ウィンドウの表と呼び名・並びが揃っていません: " + string.Join(" / ", headers));
+
+            // 窓の XAML に同じ呼び名があること (窓の側が変わったらここで気づく)
+            string xaml = TestSource.Read("Graphics_r1", "Views", "SettlementWindow.xaml");
+            foreach (var name in new[] { "杭頭荷重", "杭先端支持力", "杭周面抵抗力", "杭自重", "杭頭変位", "杭先端変位" })
+                StringAssert.Contains(xaml, name, $"窓の表に「{name}」が無い (呼び名が変わった?)");
         }
 
         /// <summary>

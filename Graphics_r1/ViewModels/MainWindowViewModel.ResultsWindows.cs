@@ -679,15 +679,27 @@ namespace PileDesign.ViewModels
             return tables;
         }
 
-        /// <summary>テーブル出力用の行 (単杭沈下解析: 荷重-沈下曲線の 1 段階)。</summary>
+        /// <summary>
+        /// テーブル出力用の行 (単杭沈下解析: 荷重-沈下曲線の 1 段階)。
+        ///
+        /// 列の並びと呼び名は、単杭沈下解析ウィンドウの表 (<c>SettlementWindow.xaml</c>) に合わせる。
+        /// 同じプロパティを同じ画面の中で違う呼び名で出すと、別の量だと読まれる。
+        /// </summary>
         public class SinglePileSettlementCurveRow
         {
             public int Step { get; set; }
+            /// <summary><c>PileTopLoad</c> — 杭頭荷重。</summary>
             public double PileTopLoad_kN { get; set; }
-            public double HeadSettlement_mm { get; set; }
-            public double ToeSettlement_mm { get; set; }
-            public double ToeReaction_kN { get; set; }
+            /// <summary><c>RzToe</c> — 杭先端支持力。</summary>
+            public double ToeResistance_kN { get; set; }
+            /// <summary><c>RzCircum</c> — 杭周面抵抗力。</summary>
             public double CircumResistance_kN { get; set; }
+            /// <summary><c>Weight</c> — 杭自重。釣り合いを読むのに要る。</summary>
+            public double PileWeight_kN { get; set; }
+            /// <summary><c>DD0s</c> — 杭頭変位 (初期状態からの増分)。</summary>
+            public double HeadDisplacement_mm { get; set; }
+            /// <summary><c>DDns</c> — 杭先端変位 (初期状態からの増分)。</summary>
+            public double ToeDisplacement_mm { get; set; }
             public string Note { get; set; } = "";
         }
 
@@ -711,8 +723,9 @@ namespace PileDesign.ViewModels
         ///
         /// <para>2 種類出す。
         /// <list type="bullet">
-        /// <item>土層-杭セットごとの<b>荷重-沈下曲線</b> (グラフと同じ値。杭頭・杭先端の沈下量は
-        ///   初期状態からの増分 <c>DD0s</c> / <c>DDns</c> で、グラフの縦横に対応する)</item>
+        /// <item>土層-杭セットごとの<b>荷重-沈下曲線</b> (グラフと同じ値。杭頭変位・杭先端変位は
+        ///   初期状態からの増分 <c>DD0s</c> / <c>DDns</c> で、グラフの縦横に対応する)。
+        ///   列の並びと呼び名は単杭沈下解析ウィンドウの表に合わせる</item>
         /// <item><b>各杭の沈下量</b> (荷重ケースごと。3D 表示の数字と同じ値)</item>
         /// </list>
         /// どちらも結果表示と同じ入力 (<see cref="ResultInputModel"/>) から読む。</para>
@@ -740,10 +753,11 @@ namespace PileDesign.ViewModels
                     {
                         Step = k + 1,
                         PileTopLoad_kN = ld.PileTopLoad,
-                        HeadSettlement_mm = ld.DD0s,
-                        ToeSettlement_mm = ld.DDns,
-                        ToeReaction_kN = ld.RzToe,
+                        ToeResistance_kN = ld.RzToe,
                         CircumResistance_kN = ld.RzCircum,
+                        PileWeight_kN = ld.Weight,
+                        HeadDisplacement_mm = ld.DD0s,
+                        ToeDisplacement_mm = ld.DDns,
                         Note = ld.Note ?? "",
                     });
                 }
@@ -757,11 +771,12 @@ namespace PileDesign.ViewModels
                     [
                         new() { Header = "段階", Order = 0, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.Step))! },
                         new() { Header = "杭頭荷重 (kN)", Order = 1, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.PileTopLoad_kN))!, Format = "N1" },
-                        new() { Header = "杭頭沈下量 (mm)", Order = 2, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.HeadSettlement_mm))!, Format = "N3" },
-                        new() { Header = "杭先端沈下量 (mm)", Order = 3, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.ToeSettlement_mm))!, Format = "N3" },
-                        new() { Header = "杭先端反力 (kN)", Order = 4, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.ToeReaction_kN))!, Format = "N1" },
-                        new() { Header = "周面抵抗 (kN)", Order = 5, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.CircumResistance_kN))!, Format = "N1" },
-                        new() { Header = "備考", Order = 6, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.Note))! },
+                        new() { Header = "杭先端支持力 (kN)", Order = 2, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.ToeResistance_kN))!, Format = "N1" },
+                        new() { Header = "杭周面抵抗力 (kN)", Order = 3, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.CircumResistance_kN))!, Format = "N1" },
+                        new() { Header = "杭自重 (kN)", Order = 4, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.PileWeight_kN))!, Format = "N1" },
+                        new() { Header = "杭頭変位 (mm)", Order = 5, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.HeadDisplacement_mm))!, Format = "N3" },
+                        new() { Header = "杭先端変位 (mm)", Order = 6, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.ToeDisplacement_mm))!, Format = "N3" },
+                        new() { Header = "備考", Order = 7, Property = typeof(SinglePileSettlementCurveRow).GetProperty(nameof(SinglePileSettlementCurveRow.Note))! },
                     ],
                     Rows = rows,
                 });
