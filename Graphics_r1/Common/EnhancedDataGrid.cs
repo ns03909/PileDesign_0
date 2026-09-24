@@ -129,14 +129,18 @@ namespace PileDesign.Common
             }
 
             // Ctrl+V で貼り付け
-            if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            //
+            // 貼り付けを試みたら、成功しても拒否しても (理由を表示して) キーは処理済みにする。
+            // 以前は成功したときだけ処理済みにしていたので、拒否のあとキーが既定の処理へ流れ、
+            // セルが編集状態に入って「v」が入っていた (Esc で戻るが、確定すると値が壊れる)。
+            // クリップボードに文字が無いときは何もしていないので、従来どおり既定の処理に任せる。
+            if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control
+                && ClipboardHasText())
             {
                 if (TryPasteFromClipboard())
-                {
                     PasteCompleted?.Invoke(this, EventArgs.Empty);
-                    e.Handled = true;
-                    return;
-                }
+                e.Handled = true;
+                return;
             }
 
             bool ctrlOrAlt = (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt)) != ModifierKeys.None;
@@ -563,84 +567,11 @@ namespace PileDesign.Common
         {
             try
             {
-                if (SelectedCells == null || SelectedCells.Count == 0) return false;
-
-                // Items → 行インデックスの高速逆引きテーブル
-                var itemIndexMap = new Dictionary<object, int>();
-                for (int i = 0; i < Items.Count; i++)
-                {
-                    var item = Items[i];
-                    if (item != null && !itemIndexMap.ContainsKey(item))
-                        itemIndexMap[item] = i;
-                }
-
-                // 選択セルを行・列順に整理
-                var cellsByRow = new SortedDictionary<int, SortedDictionary<int, string>>();
-
-                foreach (var cellInfo in SelectedCells)
-                {
-                    if (cellInfo.Item == null || cellInfo.Column == null) continue;
-
-                    if (!itemIndexMap.TryGetValue(cellInfo.Item, out int rowIndex)) continue;
-                    int colDisplayIndex = cellInfo.Column.DisplayIndex;
-
-                    string cellText = GetCellText(cellInfo.Item, cellInfo.Column);
-
-                    // DataGridTemplateColumn の場合、VisualTreeから表示テキストを取得
-                    if (string.IsNullOrEmpty(cellText) && cellInfo.Column is DataGridTemplateColumn)
-                    {
-                        cellText = GetCellTextFromVisualTree(rowIndex, cellInfo.Column);
-                    }
-
-                    if (!cellsByRow.ContainsKey(rowIndex))
-                        cellsByRow[rowIndex] = new SortedDictionary<int, string>();
-                    cellsByRow[rowIndex][colDisplayIndex] = cellText;
-                }
-
-                if (cellsByRow.Count == 0) return false;
-
-                // 選択に含まれる列のDisplayIndexを収集（ヘッダー行用）
-                var selectedColIndices = new SortedSet<int>();
-                foreach (var row in cellsByRow.Values)
-                    foreach (var colIdx in row.Keys)
-                        selectedColIndices.Add(colIdx);
-
-                var displayOrderedCols = Columns.OrderBy(c => c.DisplayIndex).ToList();
-
-                // TSV形式で組み立て
-                // 注意: 行番号列は出力しない。
-                // 出力すると、自分自身への貼り付け時に行番号 "1", "2"... が
-                // データ行先頭セルへ列ズレして書き込まれる (TryPasteFromClipboard は
-                // 1 行目のみ非数値ヘッダー行として剥がし、データ行の行番号は剥がさない)。
-                var sb = new StringBuilder();
-
-                // ヘッダー行: 各列のヘッダーテキスト (タブ区切り)
-                bool first = true;
-                foreach (var colIdx in selectedColIndices)
-                {
-                    if (!first) sb.Append('\t');
-                    first = false;
-                    if (colIdx >= 0 && colIdx < displayOrderedCols.Count)
-                        sb.Append(GetColumnHeaderText(displayOrderedCols[colIdx]));
-                }
-                sb.AppendLine();
-
-                // データ行: セル値のみ (タブ区切り)
-                foreach (var (_, rowData) in cellsByRow)
-                {
-                    first = true;
-                    foreach (var colIdx in selectedColIndices)
-                    {
-                        if (!first) sb.Append('\t');
-                        first = false;
-                        if (rowData.TryGetValue(colIdx, out var text))
-                            sb.Append(text);
-                    }
-                    sb.AppendLine();
-                }
+                string? text = BuildSelectionText();
+                if (text == null) return false;
 
                 // クリップボードアクセスはリトライ（他アプリのロック対策）
-                ClipboardHelper.TrySetText(sb.ToString());
+                ClipboardHelper.TrySetText(text);
                 return true;
             }
             catch
@@ -649,107 +580,17 @@ namespace PileDesign.Common
             }
         }
 
+        /// <summary>
+        /// Ctrl+C でコピーする文字 (見出し 1 行 + 選択セルをタブ区切り)。選択が無ければ null。
+        /// クリップボードに書く部分と分けてあるのは、試験で利用者のクリップボードを書き換えずに済ませるため。
+        /// </summary>
+        internal string? BuildSelectionText()
+            // 並べ方は右クリックの「選択セルをコピー」と同じ処理を使う (見出し行を付けるかどうかだけが違う)。
+            // 以前はここに別の写しがあった。
+            => PileDesign.Output.DataGridCsv.BuildSelectionText(this, withTitleRow: true);
+
         /// <summary>列ヘッダーの表示文字列を取得します。</summary>
         private static string GetColumnHeaderText(DataGridColumn column) => DataGridHeaderText.From(column);
-
-        private static string GetCellText(object item, DataGridColumn column)
-        {
-            switch (column)
-            {
-                case DataGridBoundColumn bound:
-                    if (bound.Binding is Binding binding && binding.Path != null)
-                    {
-                        var value = GetPropertyValue(item, binding.Path.Path);
-                        if (value == null) return string.Empty;
-
-                        if (value is bool b) return b ? "True" : "False";
-
-                        if (!string.IsNullOrEmpty(binding.StringFormat))
-                        {
-                            try
-                            {
-                                string fmt = binding.StringFormat;
-                                // WPFのStringFormat ("N3"等) をstring.Format互換 ("{0:N3}") に変換
-                                if (!fmt.Contains('{'))
-                                    fmt = $"{{0:{fmt}}}";
-                                string formatted = string.Format(fmt, value);
-                                // Excel 貼付け互換: N1/N3 等の桁区切りコンマ "1,554.0" を
-                                // Excel が列区切りとして解釈し 1 セルを複数セルに分割するケース
-                                // (直前の「区切り位置」設定の残留等) があるため、数値型のみ
-                                // コンマを除去する。小数点のピリオドはそのまま維持。
-                                if (IsNumericType(value))
-                                    formatted = formatted.Replace(",", string.Empty);
-                                return formatted;
-                            }
-                            catch { return value.ToString() ?? string.Empty; }
-                        }
-                        return value.ToString() ?? string.Empty;
-                    }
-                    break;
-
-                case DataGridComboBoxColumn combo:
-                    {
-                        var comboBinding = (combo.SelectedValueBinding as Binding)
-                                        ?? (combo.SelectedItemBinding as Binding);
-                        if (comboBinding?.Path != null)
-                        {
-                            var value = GetPropertyValue(item, comboBinding.Path.Path);
-                            return value?.ToString() ?? string.Empty;
-                        }
-                        break;
-                    }
-
-                case DataGridTemplateColumn:
-                    // TemplateColumn: VisualTree内のTextBlockから表示テキストを取得
-                    return string.Empty; // VisualTree版は別途GetCellTextFromVisualTreeで取得
-            }
-
-            return string.Empty;
-        }
-
-        private string GetCellTextFromVisualTree(int rowIndex, DataGridColumn column)
-        {
-            try
-            {
-                // DataGridRowコンテナを取得（仮想化により存在しない場合がある）
-                var row = ItemContainerGenerator.ContainerFromIndex(rowIndex) as DataGridRow;
-                if (row != null)
-                {
-                    var presenter = FindVisualChild<DataGridCellsPresenter>(row);
-                    if (presenter != null)
-                    {
-                        var cell = presenter.ItemContainerGenerator.ContainerFromIndex(column.DisplayIndex) as DataGridCell;
-                        if (cell != null)
-                        {
-                            // TextBlock または Button の Content からテキストを取得
-                            var textBlock = FindVisualChild<System.Windows.Controls.TextBlock>(cell);
-                            if (textBlock != null) return textBlock.Text;
-
-                            var button = FindVisualChild<System.Windows.Controls.Button>(cell);
-                            if (button?.Content is string btnText) return btnText;
-                        }
-                    }
-                }
-
-                // VisualTree取得失敗時: CellTemplateからバインディングパスを解析してデータから取得
-                if (column is DataGridTemplateColumn templateCol && templateCol.CellTemplate != null)
-                {
-                    var item = Items[rowIndex];
-                    // テンプレート内のボタンの静的Contentを取得するフォールバック
-                    var content = templateCol.CellTemplate.LoadContent();
-                    if (content is System.Windows.Controls.Button btn && btn.Content is string staticText)
-                        return staticText;
-                    if (content is System.Windows.Controls.TextBlock tb && tb.Text != null)
-                        return tb.Text;
-                }
-
-                return string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
 
         private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
@@ -763,88 +604,47 @@ namespace PileDesign.Common
             return null;
         }
 
-        private static bool IsNumericType(object value) =>
-            value is sbyte or byte or short or ushort or int or uint or long or ulong
-                 or float or double or decimal;
-
-        private static object? GetPropertyValue(object item, string path)
+        /// <summary>貼り付けに使える文字がクリップボードにあるか。読めなければ無いものとする。</summary>
+        private static bool ClipboardHasText()
         {
-            if (string.IsNullOrEmpty(path)) return null;
-
-            object? current = item;
-            foreach (var segment in path.Split('.'))
+            try
             {
-                if (current == null) return null;
-
-                // インデクサ表記 (例: "AxialForceLevel1s[0]") を解析
-                string propName = segment;
-                int? index = null;
-                int bracketStart = segment.IndexOf('[');
-                if (bracketStart >= 0)
-                {
-                    int bracketEnd = segment.IndexOf(']', bracketStart);
-                    if (bracketEnd > bracketStart &&
-                        int.TryParse(segment.Substring(bracketStart + 1, bracketEnd - bracketStart - 1), out int idx))
-                    {
-                        index = idx;
-                        propName = bracketStart > 0 ? segment[..bracketStart] : string.Empty;
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(propName))
-                {
-                    var prop = current.GetType().GetProperty(propName,
-                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (prop == null) return null;
-                    current = prop.GetValue(current);
-                }
-
-                if (index.HasValue && current != null)
-                {
-                    if (current is IList list && index.Value >= 0 && index.Value < list.Count)
-                        current = list[index.Value];
-                    else if (current is Array arr && index.Value >= 0 && index.Value < arr.Length)
-                        current = arr.GetValue(index.Value);
-                    else
-                        return null;
-                }
+                return !string.IsNullOrWhiteSpace(Clipboard.GetText(TextDataFormat.Text));
             }
-            return current;
+            catch
+            {
+                return false;
+            }
         }
 
         private bool TryPasteFromClipboard()
         {
+            string text;
             try
             {
-                string text = Clipboard.GetText(TextDataFormat.Text);
+                text = Clipboard.GetText(TextDataFormat.Text);
+            }
+            catch (Exception ex)
+            {
+                MessageService.ShowError(OwnerWindow, "貼り付け中にエラーが発生しました。", ex, "貼り付けエラー");
+                return false;
+            }
+            return TryPasteText(text);
+        }
+
+        /// <summary>
+        /// タブ区切りの文字列を、選択セルを起点に貼り付ける。クリップボードを読む部分と分けてあるのは、
+        /// 試験でクリップボード (利用者のもの) を書き換えずに済ませるため。
+        /// </summary>
+        internal bool TryPasteText(string text)
+        {
+            try
+            {
                 if (string.IsNullOrWhiteSpace(text)) return false;
 
-                var rows = text
-                    .Replace("\r\n", "\n")
-                    .Replace('\r', '\n')
-                    .Split('\n')
-                    .Where(line => line.Length > 0)
-                    .Select(line => line.Split('\t'))
-                    .ToArray();
+                var rows = SplitPastedRows(text);
 
                 if (rows.Length == 0) return false;
-
-                // ヘッダー行スキップ: 先頭行の全セルが数値変換不可の場合はヘッダーとみなす
-                if (rows.Length > 1 && rows[0].Length > 0)
-                {
-                    bool firstRowAllNonNumeric = rows[0].All(cell =>
-                        !double.TryParse(cell.Trim(), NumberStyles.Float | NumberStyles.AllowThousands,
-                            CultureInfo.CurrentCulture, out _) &&
-                        !double.TryParse(cell.Trim(), NumberStyles.Float | NumberStyles.AllowThousands,
-                            CultureInfo.InvariantCulture, out _));
-                    if (firstRowAllNonNumeric)
-                        rows = rows.Skip(1).ToArray();
-                }
-
-                if (rows.Length == 0) return false;
-
-                int pasteRowCount = rows.Length;
-                int pasteColCount = rows.Max(r => r.Length);
 
                 if (!TryGetPasteStart(out int startRowIndex, out int startDisplayIndex))
                 {
@@ -854,6 +654,17 @@ namespace PileDesign.Common
 
                 var displayOrderedCols = Columns.OrderBy(c => c.DisplayIndex).ToList();
 
+                // 先頭行が貼り付け先の列の見出しと同じなら、見出しとして読み飛ばす
+                // (この表を見出しごと「全体コピー」して貼り戻す場合)。
+                //
+                // 以前は「先頭行のセルがすべて数値に読めない」だけで見出しとみなしていた。
+                // 荷重ケース名のような文字の列に「CASE-A / CASE-B」を貼ると、CASE-A が黙って捨てられた。
+                if (rows.Length > 1 && IsHeaderRowOf(rows[0], displayOrderedCols, startDisplayIndex))
+                    rows = rows.Skip(1).ToArray();
+
+                int pasteRowCount = rows.Length;
+                int pasteColCount = rows.Max(r => r.Length);
+
                 // Excel ライク: クリップボードが 1×1 で複数セル選択中なら、選択全セルへ同じ値を流し込む
                 if (pasteRowCount == 1 && pasteColCount == 1
                     && SelectedCells != null && SelectedCells.Count > 1)
@@ -861,55 +672,73 @@ namespace PileDesign.Common
                     return TryFillSelectedCells(rows[0][0]);
                 }
 
-                // 行数不足時: ItemsSourceがObservableCollectionの場合は自動追加
-                if (startRowIndex + pasteRowCount > Items.Count)
-                {
-                    if (ItemsSource is System.Collections.IList list)
-                    {
-                        var itemType = list.GetType().GetGenericArguments().FirstOrDefault();
-                        if (itemType != null)
-                        {
-                            int needRows = startRowIndex + pasteRowCount - Items.Count;
-                            for (int i = 0; i < needRows; i++)
-                            {
-                                try { list.Add(Activator.CreateInstance(itemType)); }
-                                catch { break; }
-                            }
-                        }
-                    }
-                    // それでも足りない場合はエラー
-                    if (startRowIndex + pasteRowCount > Items.Count)
-                    {
-                        MessageService.Show(OwnerWindow, "貼り付け範囲が行数を超えています。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return false;
-                    }
-                }
                 if (startDisplayIndex + pasteColCount > displayOrderedCols.Count)
                 {
                     MessageService.Show(OwnerWindow, "貼り付け範囲が列数を超えています。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return false;
                 }
 
-                // 1) 事前検証
+                // 行が足りないときは、表に入れない仮の行を作って検証にかけ、全体が妥当なときだけ表へ足す。
+                //
+                // 以前は先に表へ行を足してから列数・値を検証していたので、貼り付けが検証で止まっても
+                // 足した空の行が残った (失敗したのに表が変わる)。
+                //
+                // 行は、新規入力用の空行 (NewItemPlaceholder) を除いたデータの行だけを数える。
+                // 空行を数に入れると、足りない行を 1 行少なく見積もり、空行そのものへ書こうとして止まる。
+                var dataRows = Items.Cast<object>().Where(i => i != CollectionView.NewItemPlaceholder).ToList();
+                var pendingRows = new List<object>();
+                System.Collections.IList? targetList = null;
+                if (startRowIndex + pasteRowCount > dataRows.Count)
+                {
+                    targetList = ItemsSource as System.Collections.IList;
+                    var itemType = targetList?.GetType().GetGenericArguments().FirstOrDefault();
+                    int needRows = startRowIndex + pasteRowCount - dataRows.Count;
+                    if (itemType != null)
+                    {
+                        for (int i = 0; i < needRows; i++)
+                        {
+                            object? created;
+                            try { created = Activator.CreateInstance(itemType); }
+                            catch { break; }
+                            if (created == null) break;
+                            pendingRows.Add(created);
+                        }
+                    }
+                    if (pendingRows.Count < needRows)
+                    {
+                        MessageService.Show(OwnerWindow, "貼り付け範囲が行数を超えています。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return false;
+                    }
+                }
+
+                // 貼り付け先の r 行目 (既存の行か、まだ表に無い仮の行)。
+                // 仮の行を表へ足すと Items が変わるので、足す前に控えたデータの行から引く
+                object RowAt(int r)
+                {
+                    int index = startRowIndex + r;
+                    return index < dataRows.Count ? dataRows[index] : pendingRows[index - dataRows.Count];
+                }
+
+                // 1) 事前検証 (仮の行も含めて、表に何も書く前に)
                 for (int r = 0; r < pasteRowCount; r++)
                 {
-                    var item = Items[startRowIndex + r];
+                    var item = RowAt(r);
                     for (int c = 0; c < pasteColCount; c++)
                     {
                         string cellText = c < rows[r].Length ? rows[r][c] : string.Empty;
 
                         var col = displayOrderedCols[startDisplayIndex + c];
                         if (col.IsReadOnly)
-                            return FailFormat(r, c, "対象列は読み取り専用です。");
+                            return FailFormat(r, c, "この列は読み取り専用です (計算で決まる値など)。", col);
 
                         if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind))
-                            return FailFormat(r, c, "対象列へのバインディング情報を取得できません。");
+                            return FailFormat(r, c, "この列には貼り付けられません (ボタンや、値を直接持たない列です)。", col);
 
                         if (!CanConvert(cellText, targetType, columnKind))
-                            return FailFormat(r, c, $"値 '{cellText}' は列の型({PrettyTypeName(targetType)})に変換できません。");
+                            return FailFormat(r, c, DescribeConversionFailure(cellText, targetType, columnKind), col);
 
                         if (!TryNavigateForSet(item, path, out _, out _, out _))
-                            return FailFormat(r, c, "バインディングのパスに該当するプロパティ/インデクサが見つかりません。");
+                            return FailFormat(r, c, "この列には貼り付けられません (書き込み先が見つかりません)。", col);
                     }
                 }
 
@@ -917,12 +746,18 @@ namespace PileDesign.Common
                 CommitEdit(DataGridEditingUnit.Cell, true);
                 CommitEdit(DataGridEditingUnit.Row, true);
 
+                // 検証が通ったので、仮の行を表へ足す。値は足したあとに書く
+                // (表に入ってから書かないと、行の追加で始まる購読が値の変更を取りこぼす)。
+                foreach (var row in pendingRows)
+                    targetList!.Add(row);
+
+                bool written = false;
                 IsBulkEditing = true;
                 try
                 {
                     for (int r = 0; r < pasteRowCount; r++)
                     {
-                        var item = Items[startRowIndex + r];
+                        var item = RowAt(r);
                         for (int c = 0; c < pasteColCount; c++)
                         {
                             string cellText = c < rows[r].Length ? rows[r][c] : string.Empty;
@@ -933,11 +768,19 @@ namespace PileDesign.Common
                             object? converted = ConvertValue(cellText, targetType, columnKind);
 
                             if (!TrySetValueByPath(item, path, converted))
-                                return FailFormat(r, c, "値の設定に失敗しました。");
+                                return FailFormat(r, c, "値を書き込めませんでした。", col);
                         }
                     }
+                    written = true;
                 }
-                finally { IsBulkEditing = false; }
+                finally
+                {
+                    IsBulkEditing = false;
+                    // 書き込みの途中で止まったら (値の設定の失敗・例外)、この貼り付けで足した行は取り除く
+                    if (!written)
+                        foreach (var row in pendingRows)
+                            targetList!.Remove(row);
+                }
 
                 var focusAnchor = CurrentCell;
                 if (ItemsSource is ICollectionView view)
@@ -953,6 +796,103 @@ namespace PileDesign.Common
                 MessageService.ShowError(OwnerWindow, "貼り付け中にエラーが発生しました。", ex, "貼り付けエラー");
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 貼り付ける文字列を行・セルに分ける。
+        ///
+        /// 捨てるのは<b>末尾の空行だけ</b> (コピーした文字列の最後に付く改行のぶん)。
+        /// 以前は空の行をすべて捨てていたので、1 列の「10 / 空白 / 30」が「10 / 30」に詰まり、
+        /// 30 が 1 行上の別の行に入った。途中の空行は空欄のセルとして残し、
+        /// 空欄にできない列なら検証で止める (行はずらさない)。
+        ///
+        /// <b>引用符で囲まれたセルの中のタブ・改行は、区切りではなく値の一部として読む</b> (Excel の形)。
+        /// 表のコピー (<c>DataGridCsv</c>) は、タブ・改行を含む値を引用符で囲んで書き出す。Excel も
+        /// 改行を含むセルをそう書き出す。以前は単純にタブと改行で割っていたので、名称などにタブや改行が
+        /// 入ると、貼り付け先で列や行がずれた。囲みの中の "" は " 1 文字。
+        /// </summary>
+        internal static string[][] SplitPastedRows(string text)
+        {
+            text = text.Replace("\r\n", "\n").Replace('\r', '\n');
+
+            var rows = new List<string[]>();
+            var fields = new List<string>();
+            var field = new StringBuilder();
+            bool quoted = false;      // 囲みの中
+            bool fieldStart = true;   // セルの先頭 (ここに来た " だけが囲みの始まり)
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (quoted)
+                {
+                    if (c == '"')
+                    {
+                        if (i + 1 < text.Length && text[i + 1] == '"') { field.Append('"'); i++; }
+                        else quoted = false;
+                    }
+                    else field.Append(c);
+                    continue;
+                }
+
+                switch (c)
+                {
+                    case '"' when fieldStart:
+                        quoted = true;
+                        fieldStart = false;
+                        break;
+                    case '\t':
+                        fields.Add(field.ToString()); field.Clear();
+                        fieldStart = true;
+                        break;
+                    case '\n':
+                        fields.Add(field.ToString()); field.Clear();
+                        rows.Add([.. fields]); fields.Clear();
+                        fieldStart = true;
+                        break;
+                    default:
+                        field.Append(c);
+                        fieldStart = false;
+                        break;
+                }
+            }
+            fields.Add(field.ToString());
+            rows.Add([.. fields]);
+
+            // 末尾の空行 (最後の改行のぶん) だけを捨てる
+            while (rows.Count > 0 && rows[^1] is [""])
+                rows.RemoveAt(rows.Count - 1);
+            return [.. rows];
+        }
+
+        /// <summary>
+        /// 貼り付ける先頭行が、貼り付け先の列の見出しそのものか。
+        ///
+        /// 見出しと一致しない限り、文字だけの行もデータとして扱う。見出しの比較は空白を除いて行う
+        /// (多段の見出しは「層厚 (m)」のように空白で繋いで書き出しているため)。
+        /// 見出しが空の列だけに当たるときは、見出しとは判定しない。
+        /// </summary>
+        internal static bool IsHeaderRowOf(IReadOnlyList<string> firstRow, IReadOnlyList<DataGridColumn> displayOrderedCols, int startDisplayIndex)
+        {
+            static string Normalize(string s) => new(s.Where(ch => !char.IsWhiteSpace(ch)).ToArray());
+
+            bool anyHeader = false;
+            for (int c = 0; c < firstRow.Count; c++)
+            {
+                int index = startDisplayIndex + c;
+                if (index >= displayOrderedCols.Count) return false;
+
+                string header = Normalize(DataGridHeaderText.From(displayOrderedCols[index]));
+                string cell = Normalize(firstRow[c]);
+                if (header.Length == 0)
+                {
+                    if (cell.Length != 0) return false;
+                    continue;
+                }
+                if (!string.Equals(header, cell, StringComparison.Ordinal)) return false;
+                anyHeader = true;
+            }
+            return anyHeader;
         }
 
         /// <summary>
@@ -984,7 +924,7 @@ namespace PileDesign.Common
                     if (!CanConvert(cellText, targetType, columnKind))
                     {
                         MessageService.Show(OwnerWindow,
-                            $"値 '{cellText}' は列「{GetColumnHeaderText(col)}」の型 ({PrettyTypeName(targetType)}) に変換できません。",
+                            $"列「{GetColumnHeaderText(col)}」: {DescribeConversionFailure(cellText, targetType, columnKind)}",
                             "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return false;
                     }
@@ -1023,7 +963,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                MessageService.ShowError(OwnerWindow, "塗り潰しペースト中にエラーが発生しました。", ex, "貼り付けエラー");
+                MessageService.ShowError(OwnerWindow, "選択したセルへの貼り付け中にエラーが発生しました。", ex, "貼り付けエラー");
                 return false;
             }
         }
@@ -1213,9 +1153,11 @@ namespace PileDesign.Common
 
             if (string.IsNullOrEmpty(input))
             {
-                if (IsNullable(targetType)) return null;
+                // 文字の列は空文字にする。string は「null を許す型」でもあるので、先に見ないと
+                // null が入る (名前などを空文字で持つ前提の処理が null に当たる)
                 if (targetType == typeof(string)) return string.Empty;
-                throw new FormatException("空文字は非Nullable列へは設定できません。");
+                if (IsNullable(targetType)) return null;
+                throw new FormatException("この列は空欄にできません。");
             }
 
             var (underlying, _) = UnwrapNullable(targetType);
@@ -1226,7 +1168,7 @@ namespace PileDesign.Common
             if (kind == ColumnKind.CheckBox || underlying == typeof(bool))
             {
                 if (TryParseBool(input, out bool b)) return b;
-                throw new FormatException("bool型へ変換できません。");
+                throw new FormatException("「はい」「いいえ」として読めません。");
             }
 
             if (underlying == typeof(string)) return input;
@@ -1235,21 +1177,30 @@ namespace PileDesign.Common
             {
                 if (int.TryParse(input, NumberStyles.Integer, CultureInfo.CurrentCulture, out var i)) return i;
                 if (int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out i)) return i;
-                throw new FormatException("int型へ変換できません。");
+                throw new FormatException("整数として読めません。");
             }
 
             if (underlying == typeof(double))
             {
-                if (double.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out var d)) return d;
-                if (double.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out d)) return d;
-                throw new FormatException("double型へ変換できません。");
+                if (double.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out var d)
+                    || double.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out d))
+                    return RequireFinite(d);
+                throw new FormatException("数値として読めません。");
+            }
+
+            if (underlying == typeof(float))
+            {
+                if (float.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out var f)
+                    || float.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out f))
+                    return float.IsFinite(f) ? f : throw new NonFiniteNumberException();
+                throw new FormatException("数値として読めません。");
             }
 
             if (underlying == typeof(decimal))
             {
                 if (decimal.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out var m)) return m;
                 if (decimal.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out m)) return m;
-                throw new FormatException("decimal型へ変換できません。");
+                throw new FormatException("数値として読めません。");
             }
 
             var converter = TypeDescriptor.GetConverter(underlying);
@@ -1259,6 +1210,55 @@ namespace PileDesign.Common
             }
 
             return input;
+        }
+
+        /// <summary>
+        /// 貼り付けた文字が「NaN」「Infinity」「∞」だったとき。
+        ///
+        /// <c>double.TryParse</c> はこれらを数値として受け付けるので、型の変換だけを見ていると
+        /// 貼り付けが通り、一般節点の座標のように有限値を検査しないプロパティへそのまま入る。
+        /// 画面では空欄や「NaN」と出るだけで、解析や描画で初めて壊れる。
+        /// </summary>
+        internal sealed class NonFiniteNumberException : FormatException
+        {
+            public NonFiniteNumberException() : base("有限の数値ではありません。") { }
+        }
+
+        private static double RequireFinite(double value)
+            => double.IsFinite(value) ? value : throw new NonFiniteNumberException();
+
+        /// <summary>貼り付けの事前検証で、変換できない理由を利用者向けの文にする。</summary>
+        private static string DescribeConversionFailure(string cellText, Type targetType, ColumnKind kind)
+        {
+            try
+            {
+                _ = ConvertValue(cellText, targetType, kind);
+                return string.Empty;
+            }
+            catch (NonFiniteNumberException)
+            {
+                return $"値 '{cellText}' は数値として扱えません。有限の数値を貼り付けてください。";
+            }
+            catch
+            {
+                return string.IsNullOrWhiteSpace(cellText)
+                    ? "この列は空欄にできません。値を貼り付けてください。"
+                    : $"値 '{cellText}' は{ExpectedValueText(targetType, kind)}として読めません。";
+            }
+        }
+
+        /// <summary>
+        /// 列に入る値の種類を、利用者の言葉で言う (「数値」「整数」など)。
+        /// 以前は型名をそのまま出していて、「列の型(Double)に変換できません」のように内部の名前が見えていた。
+        /// </summary>
+        private static string ExpectedValueText(Type targetType, ColumnKind kind)
+        {
+            var (u, _) = UnwrapNullable(targetType);
+            if (kind == ColumnKind.CheckBox || u == typeof(bool)) return "「はい」「いいえ」(1 / 0)";
+            if (u == typeof(int) || u == typeof(long) || u == typeof(short)) return "整数";
+            if (u == typeof(double) || u == typeof(float) || u == typeof(decimal)) return "数値";
+            if (u.IsEnum || kind == ColumnKind.ComboSelectedItem || kind == ColumnKind.ComboSelectedValue) return "この列の選択肢";
+            return "この列の値";
         }
 
         private static bool TryParseBool(string s, out bool value)
@@ -1526,21 +1526,22 @@ namespace PileDesign.Common
             return null;
         }
 
-        private bool FailFormat(int r, int c, string message)
+        /// <summary>
+        /// 貼り付けを止めて理由を示す。場所は「貼り付けたデータの何行目・何列目」と、表の列の見出しで言う。
+        /// 以前は「行: 2, 列: 1」とだけ出していて、表の行なのか貼ったデータの行なのかが分からなかった。
+        /// </summary>
+        private bool FailFormat(int r, int c, string message, DataGridColumn? column = null)
         {
+            string header = column != null ? GetColumnHeaderText(column) : "";
+            string where = $"貼り付けたデータの {r + 1} 行目・{c + 1} 列目"
+                + (string.IsNullOrWhiteSpace(header) ? "" : $" (列「{header}」)");
             MessageService.Show(
                 OwnerWindow,
-                $"貼り付けできませんでした。\n行: {r + 1}, 列: {c + 1}\n理由: {message}",
+                $"貼り付けできませんでした。\n場所: {where}\n理由: {message}",
                 "貼り付けエラー",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             return false;
-        }
-
-        private static string PrettyTypeName(Type t)
-        {
-            var (u, isN) = UnwrapNullable(t);
-            return isN ? $"{u.Name}?" : u.Name;
         }
     }
 }

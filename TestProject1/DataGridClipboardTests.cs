@@ -34,14 +34,13 @@ namespace TestProject1
                 if (file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")) continue;
                 scanned++;
 
-                foreach (var line in File.ReadAllLines(file))
-                {
-                    var t = line.Trim();
-                    if (t.StartsWith("//") || t.StartsWith("///")) continue;
-                    // 選択セルを行ごとにまとめる形
-                    if (t.Contains("SelectedCells.GroupBy"))
-                        copies.Add($"{Path.GetFileName(file)}: {t}");
-                }
+                // コメントを落としてから、選択セルを行ごとにまとめる形を探す。
+                // 1 つの文の中なら改行を挟んでも捕まえる (「.SelectedCells」「.Where(...)」「.GroupBy(」と
+                // 行を分けて書くと、1 行ずつ見る検査は素通りする)
+                var code = System.Text.RegularExpressions.Regex.Replace(File.ReadAllText(file), @"//[^\n]*", "");
+                foreach (System.Text.RegularExpressions.Match m in
+                         System.Text.RegularExpressions.Regex.Matches(code, @"SelectedCells[^;{}]*?\.GroupBy\("))
+                    copies.Add($"{Path.GetFileName(file)}: {System.Text.RegularExpressions.Regex.Replace(m.Value, @"\s+", " ")}");
             }
 
             TestSource.AssertScanned(scanned, 300, "本体のソース");

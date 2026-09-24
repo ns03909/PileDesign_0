@@ -298,7 +298,7 @@ namespace PileDesign.ViewModels
 
                 var sb = new StringBuilder();
                 // ヘッダ（タブ区切り）
-                sb.AppendLine(string.Join("\t", SelectedTable.Columns.Select(c => c.Header)));
+                sb.AppendLine(string.Join("\t", SelectedTable.Columns.Select(c => Output.DataGridCsv.EscapeTsvField(c.Header))));
 
                 var ci = CultureInfo.InvariantCulture;
 
@@ -320,7 +320,8 @@ namespace PileDesign.ViewModels
                         }
                         return formatted;
                     });
-                    sb.AppendLine(string.Join("\t", values));
+                    // タブ・改行を含む値は囲む (表のコピーと同じ規則。DataGridCsv.EscapeTsvField)
+                    sb.AppendLine(string.Join("\t", values.Select(Output.DataGridCsv.EscapeTsvField)));
                 }
 
                 Common.ClipboardHelper.TrySetText(sb.ToString());
