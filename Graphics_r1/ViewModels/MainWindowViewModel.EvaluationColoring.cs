@@ -79,9 +79,60 @@ namespace PileDesign.ViewModels
             if (!force && _evaluationSummaryCache != null && _evaluationSummaryKey.Equals(key))
                 return _evaluationSummaryCache;
 
-            _evaluationSummaryCache = PileEvaluationSummary.Build(this);
+            AdoptEvaluationSummary(PileEvaluationSummary.Build(this));
             _evaluationSummaryKey = key;
-            return _evaluationSummaryCache;
+            return _evaluationSummaryCache!;
+        }
+
+        /// <summary>
+        /// 作り直したまとめを受け取る。凡例の注意書き (<see cref="EvaluationColoringWarning"/>) もここで決める
+        /// (まとめを持つ所と注意書きを決める所を 1 つにして、片方だけ更新されないようにする)。
+        /// </summary>
+        internal void AdoptEvaluationSummary(PileEvaluationSummary summary)
+        {
+            _evaluationSummaryCache = summary;
+            EvaluationColoringWarning = DescribeColoringFailure(
+                summary, horizontalDone: CurrentModel != null && IsHorizontalAnalysisDone);
+        }
+
+        private string? _evaluationColoringWarning;
+
+        /// <summary>
+        /// 色分けの凡例に出す注意書き。検定の組み立てに失敗した部分があれば、その検定が色に入っていないこと。
+        /// 無ければ null。
+        ///
+        /// 失敗した検定はまとめに入らないので、色分けは組めた検定 (たとえば支持力) だけで塗られる。
+        /// 以前は失敗をダッシュボードにしか出さず、キャンバスでは杭頭の緑の印などがそのまま残り、
+        /// 水平解析も含めて OK と読めた。
+        /// </summary>
+        public string? EvaluationColoringWarning
+        {
+            get => _evaluationColoringWarning;
+            private set
+            {
+                if (SetProperty(ref _evaluationColoringWarning, value))
+                    OnPropertyChanged(nameof(HasEvaluationColoringWarning));
+            }
+        }
+
+        /// <summary>凡例の注意書きを出すか。</summary>
+        public bool HasEvaluationColoringWarning => !string.IsNullOrEmpty(EvaluationColoringWarning);
+
+        /// <summary>
+        /// 検定の組み立てに失敗した部分を、色分けを見る人向けに書く。失敗が無ければ null。
+        /// 水平解析をしていないときの水平解析の失敗は数えない (組もうとしていない)。
+        /// </summary>
+        internal static string? DescribeColoringFailure(PileEvaluationSummary summary, bool horizontalDone)
+        {
+            bool horizontal = horizontalDone && summary.HorizontalFailed;
+            bool bearing = summary.BearingFailed;
+            if (!horizontal && !bearing) return null;
+
+            string parts = horizontal && bearing
+                ? $"{PileEvaluationSummary.HorizontalPart}と{PileEvaluationSummary.BearingPart}"
+                : horizontal ? PileEvaluationSummary.HorizontalPart : PileEvaluationSummary.BearingPart;
+            return $"{parts}の検定を組めませんでした。色に入っていないので、色の無い所も OK ではありません"
+                   + "（解析結果ダッシュボードで確認してください）。";
         }
 
         /// <summary>解析結果を捨てたときなど、次回は必ず作り直させる。</summary>

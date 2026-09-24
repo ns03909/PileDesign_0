@@ -31,6 +31,12 @@ namespace PileDesign.Services
         /// 釣り合っていない応答値なので OK とも NG とも言えない。
         /// </summary>
         Unconverged,
+
+        /// <summary>
+        /// NG も未収束も無いが、算定式 (高強度せん断補強筋の工法) の適用範囲の外の項目がある。
+        /// 限界値が指針の保証の外なので OK とも NG とも言えない。色は未収束と同じ「判定できない」色。
+        /// </summary>
+        OutOfScope,
     }
 
     /// <summary>杭 1 本ぶんの検定のまとめ。</summary>
@@ -52,6 +58,9 @@ namespace PileDesign.Services
         /// <summary>この杭に、収束しなかったケースの項目があるか。</summary>
         public bool HasUnconverged { get; init; }
 
+        /// <summary>この杭に、算定式の適用範囲の外の項目があるか。</summary>
+        public bool HasOutOfScope { get; init; }
+
         /// <summary>この杭に、収束したケースの NG があるか。</summary>
         public bool HasNg { get; init; }
 
@@ -62,6 +71,7 @@ namespace PileDesign.Services
         {
             PileRatioBand.Ng => "NG",
             PileRatioBand.Unconverged => "未収束",
+            PileRatioBand.OutOfScope => "適用範囲外",
             PileRatioBand.None => "—",
             _ => "OK",
         };
@@ -82,6 +92,16 @@ namespace PileDesign.Services
         /// <summary>これを超えると「余裕が少ない」(黄)。1.0 を超えると NG (赤)。</summary>
         public const double TightThreshold = 0.8;
 
+        /// <summary>検定の組み立てに失敗した部分の名前 (<see cref="BuildFailure.Part"/>)。</summary>
+        public const string HorizontalPart = "水平解析 (低減後)";
+        public const string HorizontalUnfactoredPart = "水平解析 (低減前)";
+        public const string BearingPart = "支持力・沈下量";
+        /// <summary>まとめ全体が組めなかった (どの部分の検定も分からない)。</summary>
+        public const string WholePart = "検定全体";
+
+        /// <summary>検定の組み立てに失敗した部分と、その理由。</summary>
+        public sealed record BuildFailure(string Part, string Message);
+
         private PileEvaluationSummary(
             EvaluationResult? horizontal,
             EvaluationResult? horizontalUnfactored,
@@ -89,8 +109,10 @@ namespace PileDesign.Services
             string seismicGrade,
             IReadOnlyDictionary<int, PileEvaluationEntry> byPile,
             IReadOnlyDictionary<(int PileNo, int ElementIndex), PileEvaluationEntry> byPileElement,
-            IReadOnlyDictionary<int, PileEvaluationEntry> byPileHead)
+            IReadOnlyDictionary<int, PileEvaluationEntry> byPileHead,
+            IReadOnlyList<BuildFailure> failures)
         {
+            Failures = failures;
             ByPileElement = byPileElement;
             ByPileHead = byPileHead;
             Horizontal = horizontal;
@@ -133,6 +155,27 @@ namespace PileDesign.Services
         /// <summary>NG の杭を先頭に、検定比の降順。</summary>
         public IReadOnlyList<PileEvaluationEntry> ByRatioDescending { get; }
 
+        /// <summary>
+        /// 組み立てに失敗した検定。
+        ///
+        /// 以前は失敗をログに残すだけで、その部分を「検定なし」(null / 空) として返していた。
+        /// 水平解析が済んでいるのに検定が組めなかったとき、ダッシュボードは「検定の対象になる項目が
+        /// ありません」や、支持力だけを見て「すべて OK」と出した。組めなかったことを明示した状態として
+        /// 画面へ渡し、OK と読めないようにする。
+        /// </summary>
+        public IReadOnlyList<BuildFailure> Failures { get; }
+
+        public bool HasFailure => Failures.Count > 0;
+
+        /// <summary>低減後の水平解析の検定が組めなかったか (全体の失敗を含む)。</summary>
+        public bool HorizontalFailed => Failures.Any(f => f.Part is HorizontalPart or WholePart);
+
+        /// <summary>低減前の水平解析の検定が組めなかったか (全体の失敗を含む)。</summary>
+        public bool HorizontalUnfactoredFailed => Failures.Any(f => f.Part is HorizontalUnfactoredPart or WholePart);
+
+        /// <summary>支持力・沈下量の検定が組めなかったか (全体の失敗を含む)。</summary>
+        public bool BearingFailed => Failures.Any(f => f.Part is BearingPart or WholePart);
+
         public bool HasHorizontal => Horizontal != null && !Horizontal.IsEmpty;
         public bool HasBearing => !Bearing.IsEmpty;
         public bool IsEmpty => !HasHorizontal && !HasBearing;
@@ -154,10 +197,11 @@ namespace PileDesign.Services
                     .ToList();
 
         /// <summary>検定比と収束状態から帯を決める。</summary>
-        public static PileRatioBand BandOf(double maxRatio, bool hasNg, bool hasUnconverged)
+        public static PileRatioBand BandOf(double maxRatio, bool hasNg, bool hasUnconverged, bool hasOutOfScope = false)
         {
             if (hasNg) return PileRatioBand.Ng;
             if (hasUnconverged) return PileRatioBand.Unconverged;
+            if (hasOutOfScope) return PileRatioBand.OutOfScope;
             if (double.IsNaN(maxRatio)) return PileRatioBand.None;
             if (maxRatio > 1.0) return PileRatioBand.Ng;
             return maxRatio > TightThreshold ? PileRatioBand.Tight : PileRatioBand.Safe;
@@ -175,12 +219,13 @@ namespace PileDesign.Services
             var inputModel = vm.ResultInputModel ?? vm.CurrentInputModel;
             string seismicGrade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
 
+            var failures = new List<BuildFailure>();
             EvaluationResult? horizontal = null;
             EvaluationResult? unfactored = null;
             if (vm.CurrentModel != null && vm.IsHorizontalAnalysisDone)
             {
-                horizontal = TryBuild(() => EvaluationService.BuildEvaluationResult(vm, factored: true), "低減後");
-                unfactored = TryBuild(() => EvaluationService.BuildEvaluationResult(vm, factored: false), "低減前");
+                horizontal = TryBuild(() => EvaluationService.BuildEvaluationResult(vm, factored: true), HorizontalPart, failures);
+                unfactored = TryBuild(() => EvaluationService.BuildEvaluationResult(vm, factored: false), HorizontalUnfactoredPart, failures);
             }
 
             // 鉛直系の検定 (支持力 + 沈下量)。沈下量は基本設定で有効にしたときだけ項目が出る。
@@ -191,16 +236,17 @@ namespace PileDesign.Services
                 [
                     .. PileBearingEvaluator.Evaluate(inputModel, seismicGrade),
                     .. PileSettlementEvaluator.Evaluate(inputModel),
-                ]), "支持力・沈下量")
+                ]), BearingPart, failures)
                 ?? new EvaluationResult([]);
 
-            return FromResults(horizontal, unfactored, bearing, seismicGrade);
+            return FromResults(horizontal, unfactored, bearing, seismicGrade, failures);
         }
 
         /// <summary>検定結果からまとめを作る (テストと、結果が手元にあるときの入口)。</summary>
         public static PileEvaluationSummary FromResults(
             EvaluationResult? horizontal, EvaluationResult? horizontalUnfactored,
-            EvaluationResult bearing, string seismicGrade)
+            EvaluationResult bearing, string seismicGrade,
+            IReadOnlyList<BuildFailure>? failures = null)
         {
             ArgumentNullException.ThrowIfNull(bearing);
 
@@ -226,17 +272,19 @@ namespace PileDesign.Services
                 byPileHead[group.Key] = Fold(group, group.Key, elementIndex: null);
 
             return new PileEvaluationSummary(horizontal, horizontalUnfactored, bearing, seismicGrade,
-                byPile, byPileElement, byPileHead);
+                byPile, byPileElement, byPileHead, failures ?? []);
         }
 
         /// <summary>検定の項目をまとめて 1 件の帯に畳む。</summary>
         private static PileEvaluationEntry Fold(IEnumerable<EvaluationItem> items, int pileNo, int? elementIndex)
         {
             var list = items as IReadOnlyList<EvaluationItem> ?? items.ToList();
-            var converged = list.Where(i => !i.IsFromUnconvergedCase).ToList();
-            var governing = converged.OrderByDescending(i => i.Ratio).FirstOrDefault();
-            bool hasNg = converged.Any(i => !i.IsOk);
+            // 判定できる項目 (収束したケース・算定式の適用範囲内) だけで最大比と NG を見る
+            var judged = list.Where(i => i.IsJudged).ToList();
+            var governing = judged.OrderByDescending(i => i.Ratio).FirstOrDefault();
+            bool hasNg = judged.Any(i => !i.IsOk);
             bool hasUnconverged = list.Any(i => i.IsFromUnconvergedCase);
+            bool hasOutOfScope = list.Any(i => !i.IsFromUnconvergedCase && i.IsOutOfScope);
             double maxRatio = governing?.Ratio ?? double.NaN;
 
             return new PileEvaluationEntry
@@ -247,11 +295,16 @@ namespace PileDesign.Services
                 Governing = governing,
                 HasNg = hasNg,
                 HasUnconverged = hasUnconverged,
-                Band = BandOf(maxRatio, hasNg, hasUnconverged),
+                HasOutOfScope = hasOutOfScope,
+                Band = BandOf(maxRatio, hasNg, hasUnconverged, hasOutOfScope),
             };
         }
 
-        private static EvaluationResult? TryBuild(Func<EvaluationResult> build, string label)
+        /// <summary>
+        /// 検定を組む。失敗したら <paramref name="failures"/> に記録して null を返す
+        /// (記録しないと、画面は失敗を「検定なし」と区別できない。<see cref="Failures"/> 参照)。
+        /// </summary>
+        private static EvaluationResult? TryBuild(Func<EvaluationResult> build, string part, List<BuildFailure> failures)
         {
             try
             {
@@ -259,7 +312,8 @@ namespace PileDesign.Services
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[検定サマリー] 生成に失敗 ({Label})", label);
+                Serilog.Log.Warning(ex, "[検定サマリー] 生成に失敗 ({Label})", part);
+                failures.Add(new BuildFailure(part, ex.Message));
                 return null;
             }
         }

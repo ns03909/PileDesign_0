@@ -73,9 +73,11 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                // 検定が組めなくても解析の状態は出す
+                // 検定が組めなくても解析の状態は出す。ただし「検定なし」「すべて OK」と読めないよう、
+                // 組めなかったことをまとめに持たせて渡す
                 Serilog.Log.Warning(ex, "[ダッシュボード] 検定サマリーの生成に失敗");
-                summary = PileEvaluationSummary.FromResults(null, null, new EvaluationResult([]), "A");
+                summary = PileEvaluationSummary.FromResults(null, null, new EvaluationResult([]), "A",
+                    [new PileEvaluationSummary.BuildFailure(PileEvaluationSummary.WholePart, ex.Message)]);
             }
 
             UpdateVerdictSection(summary);
@@ -103,6 +105,15 @@ namespace PileDesign.Views
                 SetMuted(UnconvergedCasesText, "—");
                 SetMuted(UnfactoredText, "—");
             }
+            else if (summary.HorizontalFailed)
+            {
+                // 組めなかったことを「検定なし」と区別して出す
+                SetWarn(HorizontalCountsText, "検定を組めませんでした (OK / NG を判定できません)");
+                SetMuted(HorizontalMaxRatioText, "—");
+                SetMuted(HorizontalGoverningText, "—");
+                SetMuted(UnconvergedCasesText, "—");
+                SetMuted(UnfactoredText, "—");
+            }
             else if (h == null || h.IsEmpty)
             {
                 SetMuted(HorizontalCountsText, "検定なし (検定の対象になる項目がありません)");
@@ -114,9 +125,7 @@ namespace PileDesign.Views
             else
             {
                 HorizontalCountsText.Text = CountsText(h);
-                HorizontalCountsText.Style = h.NgCount > 0 ? StyleResource("DashWarnStyle")
-                    : h.UnconvergedCount > 0 ? StyleResource("DashCautionStyle")
-                    : StyleResource("DashOkStyle");
+                HorizontalCountsText.Style = CountsStyle(h);
 
                 HorizontalMaxRatioText.Text = h.MaxRatio is double r ? r.ToString("F2", CultureInfo.InvariantCulture) : "—";
                 HorizontalMaxRatioText.Style = RatioStyle(h.MaxRatio);
@@ -137,7 +146,11 @@ namespace PileDesign.Views
                     UnconvergedCasesText.FontWeight = FontWeights.Normal;
                 }
 
-                if (u == null || u.IsEmpty)
+                if (summary.HorizontalUnfactoredFailed)
+                {
+                    SetWarn(UnfactoredText, "検定を組めませんでした");
+                }
+                else if (u == null || u.IsEmpty)
                 {
                     SetMuted(UnfactoredText, "—");
                 }
@@ -152,7 +165,12 @@ namespace PileDesign.Views
             }
 
             // 杭の鉛直支持力
-            if (b.IsEmpty)
+            if (summary.BearingFailed)
+            {
+                SetWarn(BearingCountsText, "検定を組めませんでした (OK / NG を判定できません)");
+                SetMuted(BearingGoverningText, "—");
+            }
+            else if (b.IsEmpty)
             {
                 SetMuted(BearingCountsText, _vm.IsElementSplit ? "検定なし" : "未実施 (杭要素分割を行うと検定します)");
                 SetMuted(BearingGoverningText, "—");
@@ -160,7 +178,7 @@ namespace PileDesign.Views
             else
             {
                 BearingCountsText.Text = CountsText(b);
-                BearingCountsText.Style = b.NgCount > 0 ? StyleResource("DashWarnStyle") : StyleResource("DashOkStyle");
+                BearingCountsText.Style = CountsStyle(b);
                 BearingGoverningText.Text = b.MaxRatio is double br
                     ? $"{br.ToString("F2", CultureInfo.InvariantCulture)}　{Describe(b.Governing)}"
                     : "—";
@@ -169,37 +187,86 @@ namespace PileDesign.Views
             }
 
             // 判定バッジ
-            if (!horizontalDone && b.IsEmpty)
+            var verdict = DecideVerdict(summary, horizontalDone);
+            SetVerdict(verdict.Text, verdict.Kind switch
             {
-                SetVerdict("未実施", "#999999",
+                VerdictKind.NotRun => "#999999",
+                VerdictKind.Ng => BrushHex("ErrorBrush"),
+                VerdictKind.CannotJudge => BrushHex("StatusWarningDarkBrush"),
+                _ => BrushHex("NikkenGreenBrush"),
+            }, verdict.Note);
+        }
+
+        /// <summary>判定バッジの種類 (色の選び分け)。</summary>
+        internal enum VerdictKind { NotRun, Ng, CannotJudge, Ok }
+
+        /// <summary>判定バッジの中身。</summary>
+        internal sealed record Verdict(string Text, VerdictKind Kind, string Note);
+
+        /// <summary>
+        /// 総合判定を決める (画面に依らない部分。テストはここを直接見る)。
+        ///
+        /// 「OK」を出してよいのは、組めた検定に NG が無く、<b>判定できない項目も無い</b>ときだけ。
+        /// 判定できない項目は 3 通りある。
+        /// <list type="bullet">
+        /// <item>検定の組み立てに失敗した。以前は失敗を「検定なし」として扱い、水平解析が済んでいるのに
+        ///   支持力だけを見て「すべて OK」を出した。</item>
+        /// <item>収束しなかった荷重ケースの項目。</item>
+        /// <item>算定式 (高強度せん断補強筋の工法) の適用範囲の外の項目。以前は総合判定がこれを数えず、
+        ///   杭ごとの一覧には「適用範囲外」と出ているのに、上に緑の「すべて OK」を出した。</item>
+        /// </list>
+        /// NG は判定できた事実なので、判定できない項目があっても NG を先に出す (説明に書き添える)。
+        /// </summary>
+        internal static Verdict DecideVerdict(PileEvaluationSummary summary, bool horizontalDone)
+        {
+            var h = horizontalDone ? summary.Horizontal : null;
+            var b = summary.Bearing;
+            bool horizontalFailed = horizontalDone && summary.HorizontalFailed;
+            bool bearingFailed = summary.BearingFailed;
+
+            if (!horizontalDone && b.IsEmpty && !bearingFailed)
+                return new Verdict("未実施", VerdictKind.NotRun,
                     "水平解析または杭要素分割を実行すると、検定の総括がここに出ます。");
-                return;
-            }
+
+            var failedParts = new List<string>();
+            if (horizontalFailed) failedParts.Add(PileEvaluationSummary.HorizontalPart);
+            if (bearingFailed) failedParts.Add(PileEvaluationSummary.BearingPart);
+            string failedNote = failedParts.Count == 0 ? ""
+                : $"{string.Join("・", failedParts)}の検定を組めませんでした"
+                  + (summary.Failures.Count > 0 ? $" ({summary.Failures[0].Message})" : "") + "。";
 
             int ngCount = (h?.NgCount ?? 0) + b.NgCount;
-            int unconvergedCount = h?.UnconvergedCount ?? 0;
+            int unconvergedCount = (h?.UnconvergedCount ?? 0) + b.UnconvergedCount;
+            int outOfScopeCount = (h?.OutOfScopeCount ?? 0) + b.OutOfScopeCount;
+
             if (ngCount > 0)
-            {
-                SetVerdict($"NG {ngCount} 件", BrushHex("ErrorBrush"),
-                    "限界値を超えた項目があります。下の一覧で杭を確認してください。");
-            }
-            else if (unconvergedCount > 0)
-            {
-                SetVerdict($"未収束 {unconvergedCount} 件", BrushHex("StatusWarningDarkBrush"),
+                return new Verdict($"NG {ngCount} 件", VerdictKind.Ng,
+                    "限界値を超えた項目があります。下の一覧で杭を確認してください。"
+                    + (failedNote.Length > 0 ? " " + failedNote : ""));
+
+            if (failedParts.Count > 0)
+                return new Verdict("判定できません", VerdictKind.CannotJudge,
+                    failedNote + " OK / NG を判定できません。再計算するか、解析をやり直してください"
+                    + "（詳しい理由はログに記録しています）。");
+
+            if (unconvergedCount > 0)
+                return new Verdict($"未収束 {unconvergedCount} 件", VerdictKind.CannotJudge,
                     "収束しなかった荷重ケースがあり、その項目は OK / NG を判定できません。"
-                    + "計算ステップ数を増やして再解析するか、耐力が足りているかを確認してください。");
-            }
-            else if (!horizontalDone)
-            {
-                SetVerdict("支持力 OK", BrushHex("NikkenGreenBrush"),
+                    + "計算ステップ数を増やして再解析するか、耐力が足りているかを確認してください。"
+                    + (outOfScopeCount > 0 ? $" ほかに適用範囲外の項目が {outOfScopeCount} 件あります。" : ""));
+
+            if (outOfScopeCount > 0)
+                return new Verdict($"適用範囲外 {outOfScopeCount} 件", VerdictKind.CannotJudge,
+                    "せん断耐力の算定式 (高強度せん断補強筋の工法) の適用範囲の外の項目があり、OK / NG を判定できません。"
+                    + "下の一覧で杭を確認し、工法の適用範囲に収まる断面に見直すか、工法を「標準」にして検討してください。");
+
+            if (!horizontalDone)
+                return new Verdict("支持力 OK", VerdictKind.Ok,
                     "杭の鉛直支持力はすべて OK です。水平解析は未実施です。");
-            }
-            else
-            {
-                double max = Math.Max(h?.MaxRatio ?? 0, b.MaxRatio ?? 0);
-                SetVerdict("すべて OK", BrushHex("NikkenGreenBrush"),
-                    $"最大検定比 {max.ToString("F2", CultureInfo.InvariantCulture)}。");
-            }
+
+            double max = Math.Max(h?.MaxRatio ?? 0, b.MaxRatio ?? 0);
+            return new Verdict("すべて OK", VerdictKind.Ok,
+                $"最大検定比 {max.ToString("F2", CultureInfo.InvariantCulture)}。");
         }
 
         private void SetVerdict(string text, string backgroundHex, string note)
@@ -213,9 +280,16 @@ namespace PileDesign.Views
             FindResource(resourceKey) is SolidColorBrush brush ? brush.Color.ToString() : "#999999";
 
         private static string CountsText(EvaluationResult r) =>
-            r.UnconvergedCount > 0
-                ? $"OK {r.OkCount} / NG {r.NgCount} / 未収束 {r.UnconvergedCount}　(全 {r.Items.Count} 件)"
-                : $"OK {r.OkCount} / NG {r.NgCount}　(全 {r.Items.Count} 件)";
+            $"OK {r.OkCount} / NG {r.NgCount}"
+            + (r.UnconvergedCount > 0 ? $" / 未収束 {r.UnconvergedCount}" : "")
+            + (r.OutOfScopeCount > 0 ? $" / 適用範囲外 {r.OutOfScopeCount}" : "")
+            + $"　(全 {r.Items.Count} 件)";
+
+        /// <summary>件数の色。NG は赤、判定できない項目 (未収束・適用範囲外) があれば注意色、それ以外は緑。</summary>
+        private System.Windows.Style CountsStyle(EvaluationResult r) =>
+            r.NgCount > 0 ? StyleResource("DashWarnStyle")
+            : r.UnconvergedCount > 0 || r.OutOfScopeCount > 0 ? StyleResource("DashCautionStyle")
+            : StyleResource("DashOkStyle");
 
         /// <summary>支配ケースの 1 行。「対象｜検定項目｜荷重条件」。</summary>
         private static string Describe(EvaluationItem? item) =>
@@ -245,9 +319,12 @@ namespace PileDesign.Views
             int ng = piles.Count(e => e.Band == PileRatioBand.Ng);
             int tight = piles.Count(e => e.Band == PileRatioBand.Tight);
             int unconverged = piles.Count(e => e.Band == PileRatioBand.Unconverged);
+            int outOfScope = piles.Count(e => e.Band == PileRatioBand.OutOfScope);
             int safe = piles.Count(e => e.Band == PileRatioBand.Safe);
             PileBandCountsText.Text =
-                $"検定した杭 {piles.Count} 本 / 全 {total} 本 ─ NG {ng} 本、余裕小 (0.8 超) {tight} 本、未収束 {unconverged} 本、余裕あり {safe} 本";
+                $"検定した杭 {piles.Count} 本 / 全 {total} 本 ─ NG {ng} 本、余裕小 (0.8 超) {tight} 本、未収束 {unconverged} 本、"
+                + (outOfScope > 0 ? $"適用範囲外 {outOfScope} 本、" : "")
+                + $"余裕あり {safe} 本";
             PileBandCountsText.Style = ng > 0 ? StyleResource("DashWarnStyle") : StyleResource("DashValueStyle");
             PileBandCountsText.FontWeight = FontWeights.Normal;
 
@@ -258,7 +335,8 @@ namespace PileDesign.Views
         {
             var g = e.Governing;
             string ratio = double.IsNaN(e.MaxRatio) ? "—" : e.MaxRatio.ToString("F2", CultureInfo.InvariantCulture);
-            string category = g?.Category ?? (e.HasUnconverged ? "(未収束のケースのみ)" : "");
+            string category = g?.Category
+                ?? (e.HasUnconverged ? "(未収束のケースのみ)" : e.HasOutOfScope ? "(適用範囲外の項目のみ)" : "");
             string values = g == null ? "" : $"{g.ResponseText} / {g.LimitText} {g.Unit}".TrimEnd();
             string condition = g?.ConditionDescription ?? "";
             return new PileRow(e.PileNo, e.StatusLabel, ratio, category, values, condition);
@@ -364,6 +442,12 @@ namespace PileDesign.Views
         {
             block.Text = text;
             block.Style = StyleResource("DashMutedStyle");
+        }
+
+        private void SetWarn(System.Windows.Controls.TextBlock block, string text)
+        {
+            block.Text = text;
+            block.Style = StyleResource("DashWarnStyle");
         }
     }
 }

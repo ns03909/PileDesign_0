@@ -230,21 +230,29 @@ namespace PileDesign.Views
             }
 
             Services.PileEvaluationEntry? entry = null;
-            string where = "";
+            string where = headPile != null ? $"杭No.{headPile.PileNo}　杭頭"
+                : elementPile != null ? $"杭No.{elementPile.PileNo}　要素{elementIndex}"
+                : "";
             if (headPile != null && summary.ByPileHead.TryGetValue(headPile.PileNo, out var headEntry))
-            {
                 entry = headEntry;
-                where = $"杭No.{headPile.PileNo}　杭頭";
-            }
             else if (elementPile != null
                      && summary.ByPileElement.TryGetValue((elementPile.PileNo, elementIndex), out var elemEntry))
-            {
                 entry = elemEntry;
-                where = $"杭No.{elementPile.PileNo}　要素{elementIndex}";
-            }
 
-            // 検定の無いところ (色が付いていない) では何も出さない
-            if (entry?.Governing is not { } governing) { HideBeamResultTooltip(); return true; }
+            // 組めなかった検定は色にも値にも入っていない。杭の上では必ずそれを添える
+            string? failure = MainWindowViewModel.DescribeColoringFailure(
+                summary, horizontalDone: viewModel.CurrentModel != null && viewModel.IsHorizontalAnalysisDone);
+
+            if (entry?.Governing is not { } governing)
+            {
+                // 検定の無いところ (色が付いていない) では何も出さない。
+                // ただし組めなかった検定があれば、色が無いのは「検定なし」ではないと知らせる
+                if (failure != null && where.Length > 0)
+                    ShowBeamResultTooltip(mousePos, $"{where}　判定できません\n{failure}", sample);
+                else
+                    HideBeamResultTooltip();
+                return true;
+            }
 
             string ratio = double.IsNaN(entry.MaxRatio) ? "—" : entry.MaxRatio.ToString("F2");
             string unit = string.IsNullOrEmpty(governing.Unit) ? "" : " " + governing.Unit;
@@ -252,7 +260,8 @@ namespace PileDesign.Views
                 $"{where}　{entry.StatusLabel}\n"
                 + $"{governing.Category}　検定比 {ratio}\n"
                 + $"応答 {governing.ResponseText} / 限界 {governing.LimitText}{unit}\n"
-                + governing.ConditionDescription,
+                + governing.ConditionDescription
+                + (failure != null ? $"\n※ {failure}" : ""),
                 sample);
             return true;
         }
