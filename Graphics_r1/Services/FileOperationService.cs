@@ -24,10 +24,12 @@ namespace PileDesign.Services
         private readonly JsonSerializerOptions _jsonOptions;
 
         /// <summary>
-        /// 保存前に ValidateFinite (NaN/∞ 検出) を実行するかどうか。
-        /// 既定 false: 6 秒以上のリフレクションコストが惜しく、また AllowNamedFloatingPointLiterals
-        /// により NaN/∞ もそのまま保存できるため事前チェック不要。
-        /// デバッグ目的で値を確認したい場合のみ true にする。
+        /// 手動保存 (<see cref="SaveProjectDataAsync"/>) でも ValidateFinite (NaN/∞ 検出) を実行するかどうか。
+        /// 既定 false: 手動保存を NaN で失敗させると、利用者が作業を保存できなくなる。
+        /// AllowNamedFloatingPointLiterals により NaN/∞ もそのまま保存できる。
+        /// 自動保存・緊急保存 (<see cref="SaveProjectData"/>) はこの設定に関わらず必ず検査する。
+        /// (かつては反射の全走査に 6 秒以上かかったが、重い算出プロパティを [JsonIgnore] にしてからは
+        ///  計算例 9・10 の入力で 15 ms 以下。2026-09-25 実測)
         /// </summary>
         public bool ValidateFiniteBeforeSave { get; set; } = false;
 
@@ -37,7 +39,10 @@ namespace PileDesign.Services
         }
 
         /// <summary>
-        /// ProjectData を JSON ファイルに保存
+        /// ProjectData を JSON ファイルに保存 (自動保存・緊急保存・テスト・CLI が使う)。
+        /// 中身の確定 (<see cref="PrepareSave"/>) と書き出し (<see cref="WritePrepared"/>) を続けて行う。
+        /// 画面のスレッドで確定させてから書き出しだけをバックグラウンドへ回したい呼び出し
+        /// (自動保存) は、2 つを別々に呼ぶこと。
         /// </summary>
         public void SaveProjectData(string filePath, InputModel inputModel, AnaModel? anaModel,
             IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
@@ -48,31 +53,81 @@ namespace PileDesign.Services
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
 
-            // 編集できるコレクションだけ写した器を先に作る (理由は SnapshotForSaving)。
+            // NaN 検査はここでは ValidateFiniteBeforeSave に関わらず必ず走らせる。
             //
-            // 呼び出し側 (AutoSaveService) が画面のスレッドで<b>すでに写している</b>ので、
-            // ここでの写しは二重になる。要素は同じ実体を指したままなので保存ファイルの
-            // 中身は変わらず、費用も入れ物の作り直しだけ。写す責任をここに残しておくのは、
-            // 画面を持たない呼び出し (テスト・CLI) からも守られるようにするため。
-            var inputToSave = SnapshotForSaving(inputModel, anaModel, resultInputSnapshot);
-
-            // ここは ValidateFiniteBeforeSave に関わらず必ず走らせる。
-            //
-            // この同期版を呼ぶのは自動保存だけで、その出力は<b>あとで復元する元</b>に
+            // この同期版を呼ぶのは自動保存・緊急保存で、その出力は<b>あとで復元する元</b>に
             // なる。NaN を含んだまま書くと、壊れたファイルしか残っていない状態で
             // 復元することになる。非同期版 (手動保存) が既定で走らせないのは、
-            // 反射の全走査で 6 秒以上かかり、対話的な保存には重すぎるため。
-            // どちらか一方に揃えないこと。
+            // 手動保存を NaN で失敗させると作業を保存できなくなるため。
             // (AutoSaveServiceNaNTests が、NaN のとき保存を失敗させ、
             //  どのフィールドかを伝えることを見ている)
-            //
-            // 検査は<b>写した器</b>にかける。生きたモデルにかけると、6 秒のあいだずっと
-            // 生きたコレクションを列挙することになり (FindNonFiniteDouble は
-            // IEnumerable を全部辿る)、自動保存はバックグラウンドで走るので
-            // そのあいだの行の足し引きで列挙が壊れる。写しを守る仕組みを入れたのに、
-            // その手前で 6 秒間むき出しにしていた。書き出すものをそのまま検査するほうが、
-            // 検査としても正しい。
-            ValidateFinite(inputToSave ?? inputModel);
+            var prepared = PrepareSave(inputModel, anaModel, verticalBeamCaseResults, resultInputSnapshot,
+                resultCapturedAt, pileFemLinks, isElementSplit, inputChangedSinceAnalysis, sourceFilePath,
+                validateFinite: true);
+            WritePrepared(filePath, prepared);
+        }
+
+        /// <summary>
+        /// 保存 1 回ぶんの中身。<see cref="PrepareSave"/> が画面のスレッドで作り、
+        /// <see cref="WritePrepared"/> (または非同期保存) がバックグラウンドで書く。
+        /// </summary>
+        internal sealed class PreparedSave
+        {
+            /// <summary>書き出す入力 (編集できるコレクションだけ写した器)。</summary>
+            public InputModel? InputToSave { get; init; }
+
+            /// <summary>直列化した中身。検査か直列化に失敗したときは null で、理由は <see cref="Error"/>。</summary>
+            public byte[]? Payload { get; init; }
+
+            /// <summary>
+            /// NaN 検査か直列化で出た例外。書き出しの側で投げ直す。
+            /// 中身を確定させる処理は画面のスレッドで走るので (自動保存の Tick など)、そこでは投げずに持ち越し、
+            /// 書き出しの失敗として同じ経路で知らせる。
+            /// </summary>
+            public Exception? Error { get; init; }
+        }
+
+        /// <summary>
+        /// 保存する中身を<b>いまの値で確定させる</b> (直列化まで済ませる)。<b>画面のスレッドから呼ぶこと。</b>
+        ///
+        /// 以前は写した器をバックグラウンドへ渡し、そこで直列化していた。写しが守るのは
+        /// コレクションの入れ物だけで、要素の実体は画面と共有している (要素まで複製すると
+        /// $ref の畳まれ方が変わる。<see cref="SnapshotForSaving"/> 参照)。そのため保存の途中で
+        /// セルの値を書き換えると、先に書いた要素は編集前・後に書いた要素は編集後という、
+        /// どの時点にも無かった入力が 1 つのファイルに混ざり得た。画面のスレッドで直列化まで
+        /// 済ませれば、そのあいだ編集は割り込めない。かかる時間は計算例 10 で入力のみ 2 ms 以下、
+        /// 解析結果込み (14.6 MB) で約 0.1 秒。
+        ///
+        /// <paramref name="validateFinite"/> のときは、<b>直列化の直前に同じスレッドで</b> NaN / ±∞ を検査する。
+        /// 以前は直列化だけをここで済ませ、検査はあとからバックグラウンドで、画面と要素を共有する
+        /// モデルにかけていた。そのあいだに値が変わると、検査した値と書いた JSON が食い違った
+        /// (NaN を書いたのに検査を通る、またはその逆)。検査と直列化のあいだに編集は割り込めないので、
+        /// いまは検査した値がそのまま書かれる。
+        /// </summary>
+        internal PreparedSave PrepareSave(InputModel? inputModel, AnaModel? anaModel,
+            IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
+            InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
+            PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
+            bool inputChangedSinceAnalysis = false, string? sourceFilePath = null, string? autoSaveSessionId = null,
+            bool validateFinite = false)
+        {
+            // 編集できるコレクションだけ写した器を先に作る (理由は SnapshotForSaving)。
+            // 自動保存では呼び出し側がすでに写していることがあり、二重になるが、
+            // 要素は同じ実体を指したままなので保存ファイルの中身は変わらない。
+            var inputToSave = SnapshotForSaving(inputModel, anaModel, resultInputSnapshot);
+
+            // 検査は<b>写した器</b>に、直列化と同じ時点でかける (書き出すものをそのまま検査する)
+            if (validateFinite)
+            {
+                try
+                {
+                    ValidateFinite(inputToSave);
+                }
+                catch (Exception ex)
+                {
+                    return new PreparedSave { InputToSave = inputToSave, Error = ex };
+                }
+            }
 
             var projectData = new ProjectData
             {
@@ -98,14 +153,43 @@ namespace PileDesign.Services
                 IsElementSplit = isElementSplit,
                 // 自動保存・緊急保存だけが渡す。復元したあとの保存先を確定するために使う。
                 SourceFilePath = sourceFilePath,
+                AutoSaveSessionId = autoSaveSessionId,
             };
 
-            // string 中間生成を避けて UTF-8 バイト直書き。
-            // Stream オーバーロードは _jsonOptions の全設定 (WriteIndented / Encoder 等) を尊重し、
-            // 内部で UTF-8 を直接書き出すため SaveProjectDataAsync と出力が一致する。
-            // (旧実装は new Utf8JsonWriter(stream) を JsonWriterOptions 無しで生成しており
-            //  WriteIndented が効かず常にコンパクト出力になっていた)
-            WriteAtomically(filePath, stream => JsonSerializer.Serialize(stream, projectData, _jsonOptions));
+            try
+            {
+                // string 中間生成を避けて UTF-8 バイトへ直に書く。_jsonOptions の全設定 (WriteIndented /
+                // Encoder 等) を尊重するので、同期・非同期の保存で出力が一致する。
+                return new PreparedSave
+                {
+                    InputToSave = inputToSave,
+                    Payload = JsonSerializer.SerializeToUtf8Bytes(projectData, _jsonOptions),
+                };
+            }
+            catch (Exception ex)
+            {
+                return new PreparedSave { InputToSave = inputToSave, Error = ex };
+            }
+        }
+
+        /// <summary>
+        /// <see cref="PrepareSave"/> で確定させた中身を書き出す。バックグラウンドから呼んでよい
+        /// (生きたモデルを直列化も検査もしないので、保存中の編集は中身にも検査にも入らない)。
+        /// </summary>
+        internal void WritePrepared(string filePath, PreparedSave prepared)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
+
+            ThrowIfPrepareFailed(prepared);
+            WriteAtomically(filePath, stream => stream.Write(prepared.Payload!));
+        }
+
+        /// <summary>検査・直列化で出た例外を、型とスタックを保ったまま投げ直す。</summary>
+        private static void ThrowIfPrepareFailed(PreparedSave prepared)
+        {
+            if (prepared.Error != null)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(prepared.Error).Throw();
         }
 
 
@@ -158,24 +242,70 @@ namespace PileDesign.Services
         /// 自動保存では、その切り株が復元候補として拾われてしまう。
         /// 同じフォルダの一時ファイルに書き切ってから <see cref="File.Move(string, string, bool)"/> で
         /// 置き換えれば、保存先は「前の内容」か「新しい内容」のどちらかになる。
+        /// 保存ファイルのほか、MGT・CSV の書き出しも使う。
         /// </summary>
-        private static void WriteAtomically(string filePath, Action<Stream> write)
+        internal static void WriteAtomically(string filePath, Action<Stream> write)
+            => ReplaceAtomically(filePath, tempPath =>
+            {
+                using var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                write(stream);
+            });
+
+        /// <summary>
+        /// <see cref="WriteAtomically"/> の、書き込み先を<b>パス</b>で受け取る版。
+        /// ファイルのパスしか受け付けない部品 (計算書の docx・DXF・3dm の書き出し) に一時ファイルのパスを渡して
+        /// 書かせ、書き切ってから保存先と差し替える。<paramref name="writeToPath"/> が例外を出せば差し替えず、
+        /// 一時ファイルも消す (保存先は前の内容のまま)。
+        /// </summary>
+        internal static void ReplaceAtomically(string filePath, Action<string> writeToPath)
         {
-            string tempPath = filePath + ".saving";
+            var gate = GateFor(filePath);
+            gate.Wait();
             try
             {
-                using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                string tempPath = TempPathFor(filePath);
+                try
                 {
-                    write(stream);
+                    writeToPath(tempPath);
+                    File.Move(tempPath, filePath, overwrite: true);
                 }
-                File.Move(tempPath, filePath, overwrite: true);
+                catch
+                {
+                    TryDelete(tempPath);
+                    throw;
+                }
             }
-            catch
+            finally
             {
-                TryDelete(tempPath);
-                throw;
+                gate.Release();
             }
         }
+
+        /// <summary>
+        /// 保存先ごとの排他。同じ保存先への書き込みと差し替えを 1 本ずつ通す。
+        ///
+        /// 一時ファイルの名前を保存ごとに分けても (<see cref="TempPathFor"/>)、最後の差し替え
+        /// (<see cref="File.Move(string, string, bool)"/> の上書き) 同士が同時にぶつかると、OS が一方を
+        /// 「アクセスが拒否されました」で拒む。上書き保存・自動保存・緊急保存が同じファイルに重なる場合がこれにあたる。
+        /// 同期 (<c>Wait</c>) と非同期 (<c>WaitAsync</c>) の保存が同じ排他を使う。
+        /// </summary>
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, System.Threading.SemaphoreSlim> _saveGates
+            = new(StringComparer.OrdinalIgnoreCase);
+
+        internal static System.Threading.SemaphoreSlim GateFor(string filePath)
+            => _saveGates.GetOrAdd(Path.GetFullPath(filePath), _ => new System.Threading.SemaphoreSlim(1, 1));
+
+        /// <summary>
+        /// 保存 1 回ぶんの一時ファイルの名前 (保存先と同じフォルダ、<c>保存先.xxxxxxxx.saving</c>)。
+        ///
+        /// 以前は <c>保存先.saving</c> 固定で、同じ保存先への保存が重なると (上書き保存・自動保存・緊急保存、
+        /// 同期と非同期)、一方がもう一方の一時ファイルを作り直したり消したりして、保存が失敗したり
+        /// 片方の内容がもう片方の名前で差し替わったりした。保存ごとに名前を分ければ、それぞれが自分の
+        /// 一時ファイルに書き切ってから差し替えるので、保存先は常にどれか 1 回ぶんの完全な内容になる。
+        /// 拡張子は .saving のままにして、自動保存の復元候補 (*.pdj) に拾われないようにする。
+        /// </summary>
+        internal static string TempPathFor(string filePath)
+            => $"{filePath}.{Guid.NewGuid().ToString("N")[..8]}.saving";
 
         /// <summary>一時ファイルの後始末。消せなくても保存の失敗として扱わない。</summary>
         private static void TryDelete(string path)
@@ -189,7 +319,9 @@ namespace PileDesign.Services
         }
 
         /// <summary>
-        /// ProjectData を JSON ファイルに非同期保存（UIスレッドをブロックしない）
+        /// ProjectData を JSON ファイルに非同期保存する (手動保存が使う)。
+        /// 中身の確定 (直列化) は呼び出したスレッド (画面のスレッド) で済ませ、ファイルへの書き込みだけを
+        /// バックグラウンドで行う (理由は <see cref="PrepareSave"/>)。
         /// </summary>
         public async Task SaveProjectDataAsync(string filePath, InputModel inputModel, AnaModel? anaModel,
             IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
@@ -202,58 +334,30 @@ namespace PileDesign.Services
 
             var swTotal = Stopwatch.StartNew();
 
-            // 画面のスレッドで、編集できるコレクションだけ写しておく (理由は SnapshotForSaving)
-            var inputToSave = SnapshotForSaving(inputModel, anaModel, resultInputSnapshot);
+            // 保存する値は<b>ここ (画面のスレッド) で確定させる</b>。最初の await より前に済ませること。
+            // NaN 検査は既定では行わない (ValidateFiniteBeforeSave 参照)。行うときも確定と同じ時点で行う。
+            var swSer = Stopwatch.StartNew();
+            var prepared = PrepareSave(inputModel, anaModel, verticalBeamCaseResults, resultInputSnapshot,
+                resultCapturedAt, pileFemLinks, isElementSplit, inputChangedSinceAnalysis, sourceFilePath,
+                validateFinite: ValidateFiniteBeforeSave);
+            swSer.Stop();
+            long tSerialize = swSer.ElapsedMilliseconds;
 
-            var projectData = new ProjectData
-            {
-                FormatVersion = 2,  // v2: PileLayoutItems[*].Z = 接合節点 Z (旧 v1 = 杭頭 Z)
-                InputModel = inputToSave!,
-                AnaModel = anaModel!,
-                VerticalBeamCaseResults = verticalBeamCaseResults != null
-                    ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
-                    : null!,
-                // 単杭沈下の荷重-沈下曲線も入力の中ではなくこの節に 1 回だけ書く。
-                // SoilPile 側は [JsonIgnore] なので、ここで書かないと保存されない。
-                SinglePileSettlementResult = Models.Results.SinglePileSettlementResult.Capture(inputToSave),
-                // 群杭沈下の結果は入力の中ではなく、この節に 1 回だけ書く。
-                // 入力モデルは結果への参照を持つだけ ([JsonIgnore]) なので、ここで書かないと保存されない。
-                // 水平解析の結果を保存しない設定でも沈下の結果は保存する (従来と同じ)。
-                GroupSettlementResult = inputToSave?.PileGroupSettlement?.Result is { HasResults: true } gsr
-                    ? gsr : null,
-                // 解析結果を保存しないときはスナップショットも不要
-                ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
-                ResultCapturedAt = anaModel != null ? resultCapturedAt : null,
-                InputChangedSinceAnalysis = anaModel != null ? inputChangedSinceAnalysis : null,
-                PileFemLinks = anaModel != null ? pileFemLinks : null,
-                IsElementSplit = isElementSplit,
-                // 自動保存・緊急保存だけが渡す。復元したあとの保存先を確定するために使う。
-                SourceFilePath = sourceFilePath,
-            };
-
-            long tValidate = 0;
-            long tSerialize = 0;
+            long tWrite = 0;
             long fileSize = 0;
 
-            // ValidateFinite はリフレクション全走査で 6 秒以上かかるため既定では実行しない。
-            // NumberHandling=AllowNamedFloatingPointLiterals が設定済みなので NaN/Infinity は
-            // "NaN" 等の文字列としてそのまま保存される (シリアライズが失敗しない)。
-            // 必要なときだけ ValidateFiniteBeforeSave=true で有効化する。
             await Task.Run(async () =>
             {
-                if (ValidateFiniteBeforeSave)
-                {
-                    var swVal = Stopwatch.StartNew();
-                    ValidateFinite(inputToSave!);
-                    swVal.Stop();
-                    tValidate = swVal.ElapsedMilliseconds;
-                }
+                ThrowIfPrepareFailed(prepared);
 
-                var swSer = Stopwatch.StartNew();
+                var swWrite = Stopwatch.StartNew();
                 const int bufferSize = 1024 * 1024;  // 1 MB バッファ (旧 80KB → I/O 回数削減)
 
-                // 一時ファイルへ書き切ってから差し替える (WriteAtomically と同じ理由)
-                string tempPath = filePath + ".saving";
+                // 一時ファイルへ書き切ってから差し替える (WriteAtomically と同じ理由)。
+                // 同じ保存先への保存は 1 本ずつ通す (GateFor 参照)
+                var gate = GateFor(filePath);
+                await gate.WaitAsync();
+                string tempPath = TempPathFor(filePath);
                 try
                 {
                     await using (var stream = new FileStream(
@@ -264,7 +368,7 @@ namespace PileDesign.Services
                         bufferSize,
                         FileOptions.Asynchronous | FileOptions.SequentialScan))
                     {
-                        await JsonSerializer.SerializeAsync(stream, projectData, _jsonOptions);
+                        await stream.WriteAsync(prepared.Payload!);
                         await stream.FlushAsync();
                         fileSize = stream.Length;
                     }
@@ -275,15 +379,19 @@ namespace PileDesign.Services
                     TryDelete(tempPath);
                     throw;
                 }
+                finally
+                {
+                    gate.Release();
+                }
 
-                swSer.Stop();
-                tSerialize = swSer.ElapsedMilliseconds;
+                swWrite.Stop();
+                tWrite = swWrite.ElapsedMilliseconds;
             });
 
             swTotal.Stop();
             Log.Information(
-                "[Save] total={Total}ms validate={Validate}ms serialize+write={Serialize}ms size={SizeKB:N0}KB path={Path}",
-                swTotal.ElapsedMilliseconds, tValidate, tSerialize, fileSize / 1024, System.IO.Path.GetFileName(filePath));
+                "[Save] total={Total}ms prepare(validate+serialize)={Serialize}ms write={Write}ms size={SizeKB:N0}KB path={Path}",
+                swTotal.ElapsedMilliseconds, tSerialize, tWrite, fileSize / 1024, System.IO.Path.GetFileName(filePath));
         }
 
         /// <summary>

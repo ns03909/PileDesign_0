@@ -146,6 +146,53 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// 検査するのは、中身を確定させた時点の値 (= 書く JSON と同じ値) であること。
+        ///
+        /// 以前は確定 (画面のスレッド) のあと、書き出し (バックグラウンド) の時点で、画面と要素を
+        /// 共有するモデルを検査していた。確定のときに NaN だった値をそのあいだに直すと、検査を通って
+        /// NaN の入った JSON が復元の元として書かれた。逆に、確定のあとに NaN になっても、
+        /// 書く JSON は確定した値なので失敗にしない。
+        /// </summary>
+        [TestMethod]
+        public void AutoSave_ChecksTheValuesThatAreActuallyWritten()
+        {
+            var auto = new AutoSaveService(new FileOperationService(MakeOptions()));
+            string? written = null;
+            try
+            {
+                var ground = CreateGroundInputWithRawNaN();
+                var inputModel = new InputModel { GroundsInput = new ObservableCollection<GroundInput> { ground } };
+                auto.LiveStateProvider = () => (inputModel, "TestProject_Moment.json", null, null);
+
+                AutoSaveEventArgs? last = null;
+                auto.AutoSaveCompleted += (s, e) => last = e;
+                var prepare = typeof(AutoSaveService).GetMethod("PrepareState", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+                // 確定のときは NaN、書き出しの前に直した → 書く JSON には NaN が入っているので失敗
+                var withNaN = prepare.Invoke(auto, null);
+                ground.GroundTopAltitude = 0.0;
+                InvokePrivate(auto, "PerformAutoSave", withNaN);
+                Assert.IsNotNull(last);
+                Assert.IsFalse(last!.Success, "確定したときの値は NaN なのに、書き出しの時点の値を検査して通しています");
+                StringAssert.Contains(last.ErrorMessage, "GroundTopAltitude");
+
+                // 確定のときは有限、書き出しの前に NaN になった → 書く JSON は有限なので成功
+                var finite = prepare.Invoke(auto, null);
+                typeof(GroundInput).GetField("_groundTopAltitude", BindingFlags.NonPublic | BindingFlags.Instance)!
+                    .SetValue(ground, double.NaN);
+                InvokePrivate(auto, "PerformAutoSave", finite);
+                Assert.IsTrue(last!.Success, $"確定したときの値は有限なのに、失敗しました: {last.ErrorMessage}");
+                written = last.FilePath;
+            }
+            finally
+            {
+                auto.Stop();
+                if (written != null && File.Exists(written))
+                    try { File.Delete(written); } catch { /* ignore */ }
+            }
+        }
+
         [TestMethod]
         public void AutoSave_FailureDoesNotStopTimer()
         {

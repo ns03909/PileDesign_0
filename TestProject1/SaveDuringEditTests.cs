@@ -209,29 +209,31 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// NaN 検査が<b>写した器</b>にかかること。
+        /// NaN 検査が<b>写した器</b>に、<b>直列化と同じ時点で</b>かかること。
         ///
-        /// 検査 (<c>FindNonFiniteDouble</c>) は反射で IEnumerable を全部辿り、
-        /// 6 秒以上かかる。生きたモデルにかけると、そのあいだずっと生きたコレクションを
-        /// 列挙することになり、自動保存はバックグラウンドで走るので行の足し引きで
-        /// 列挙が壊れる。<b>写しより手前に検査を置くと、守る仕組みが無意味になる。</b>
+        /// 以前は直列化だけを画面のスレッドで済ませ、検査はあとからバックグラウンドで、
+        /// 画面と要素を共有するモデルにかけていた。そのあいだに値が変わると、検査した値と
+        /// 書いた JSON が食い違った。検査は中身を確定させる処理 (PrepareSave) の中で、
+        /// 写しのあと・直列化の前に置き、書き出し側では検査しないこと。
         /// </summary>
         [TestMethod]
-        public void TheNaNCheck_RunsOnTheSnapshotNotTheLiveModel()
+        public void TheNaNCheck_RunsOnTheSnapshotAtTheSameMomentAsSerialization()
         {
             string src = TestSource.Read("Graphics_r1", "Services", "FileOperationService.cs");
 
-            int snapshotAt = src.IndexOf("var inputToSave = SnapshotForSaving(", StringComparison.Ordinal);
-            int validateAt = src.IndexOf("ValidateFinite(", StringComparison.Ordinal);
+            string prepare = TestSource.MethodBody(src, "internal PreparedSave PrepareSave(");
+            int snapshotAt = prepare.IndexOf("var inputToSave = SnapshotForSaving(", StringComparison.Ordinal);
+            int validateAt = prepare.IndexOf("ValidateFinite(inputToSave)", StringComparison.Ordinal);
+            int serializeAt = prepare.IndexOf("JsonSerializer.SerializeToUtf8Bytes(", StringComparison.Ordinal);
+            Assert.IsTrue(snapshotAt >= 0 && validateAt > snapshotAt && serializeAt > validateAt,
+                "NaN 検査が、写しのあと・直列化の前 (同じ時点) にありません");
 
-            Assert.IsTrue(snapshotAt > 0, "写しを取る処理が見つかりません");
-            Assert.IsTrue(validateAt > 0, "NaN 検査が見つかりません");
-            Assert.IsTrue(snapshotAt < validateAt,
-                "NaN 検査が写しより手前にあります。6 秒のあいだ生きたコレクションを"
-                + "列挙するので、保存中の編集で列挙が壊れます");
-
-            StringAssert.Contains(src, "ValidateFinite(inputToSave",
-                "NaN 検査が生きたモデルにかかっています。書き出すもの (写した器) を検査すること");
+            string write = TestSource.MethodBody(src, "internal void WritePrepared(string filePath, PreparedSave prepared)");
+            Assert.IsFalse(write.Contains("ValidateFinite(", StringComparison.Ordinal),
+                "書き出しの側で NaN 検査をしています (書く JSON と別の時点の値を検査することになる)");
+            string saveAsync = TestSource.MethodBody(src, "public async Task SaveProjectDataAsync(");
+            Assert.IsFalse(saveAsync.Contains("ValidateFinite(", StringComparison.Ordinal),
+                "非同期保存がバックグラウンドで NaN 検査をしています");
         }
 
         /// <summary>
@@ -255,11 +257,11 @@ namespace TestProject1
                 "自動保存が Task.Run の中で写しています。"
                 + "写す処理自体が元のコレクションを列挙するので、そのあいだの編集で壊れます");
 
-            // 写すかどうかの判断は共通の場所に任せること。
+            // 写すかどうかの判断と直列化は、手動保存と共通の場所に任せること。
             // 自前で InputModel.SnapshotForSaving() を呼ぶと、解析結果と同じ実体を
             // 指している場面でも写してしまい、保存ファイルの $ref の畳まれ方が変わる
-            StringAssert.Contains(src, "FileOperationService.SnapshotForSaving(",
-                "自動保存が写しの判断を自前で持っています。共通の判断を通すこと");
+            StringAssert.Contains(src, "_fileOperationService.PrepareSave(",
+                "自動保存が中身の確定を自前で持っています。手動保存と共通の PrepareSave を通すこと");
         }
 
         /// <summary>

@@ -134,7 +134,7 @@ namespace TestProject1
             DeleteByPrefix(auto.AutoSaveFolder, "Untitled_autosave_");
             try
             {
-                auto.LiveStateProvider = () => (new InputModel(), null, null);
+                auto.LiveStateProvider = () => (new InputModel(), null, null, null);
 
                 RunAutoSave(auto);
 
@@ -161,7 +161,7 @@ namespace TestProject1
             DeleteByPrefix(auto.AutoSaveFolder, "Untitled_emergency_");
             try
             {
-                auto.LiveStateProvider = () => (new InputModel(), null, null);
+                auto.LiveStateProvider = () => (new InputModel(), null, null, null);
                 auto.Stop();
 
                 var path = auto.TryEmergencyAutoSave();

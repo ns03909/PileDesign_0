@@ -5,6 +5,7 @@ using PileDesign.Services;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -57,17 +58,81 @@ namespace TestProject1
             const string previous = "前回の保存内容";
             File.WriteAllText(path, previous);
 
-            // 一時ファイルと同じ名前のフォルダを作っておくと、一時ファイルを作れず保存が落ちる
-            string blocker = path + ".saving";
-            Directory.CreateDirectory(blocker);
+            // 書き込みの途中で落とす (一時ファイルに書いている最中に直列化が例外を出す)。
+            // 以前は一時ファイルと同じ名前のフォルダを置いて作成を失敗させていたが、
+            // 一時ファイルの名前は保存ごとに変わるようにしたので、途中で落とす形にした (実際の壊れ方にも近い)
+            var options = SaveOptions();
+            options.Converters.Add(new ThrowingGroundInputConverter());
+            var input = new InputModel { GroundsInput = new ObservableCollection<GroundInput> { new() } };
 
-            var service = new FileOperationService(SaveOptions());
-            Assert.ThrowsException<UnauthorizedAccessException>(
-                () => service.SaveProjectData(path, new InputModel(), null),
+            var service = new FileOperationService(options);
+            Assert.ThrowsException<IOException>(
+                () => service.SaveProjectData(path, input, null),
                 "保存が失敗しなかった (この検査が成立していない)");
 
             Assert.AreEqual(previous, File.ReadAllText(path),
                 "保存に失敗したのに、前の内容が壊れている");
+            CollectionAssert.AreEqual(new[] { "model.pdj" },
+                Array.ConvertAll(Directory.GetFiles(_dir), Path.GetFileName),
+                "失敗した保存の一時ファイルが残っている");
+        }
+
+        /// <summary>直列化の途中で書き込みが失敗したことにする変換器 (試験用)。</summary>
+        private sealed class ThrowingGroundInputConverter : JsonConverter<GroundInput>
+        {
+            public override GroundInput Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+                => throw new NotSupportedException();
+
+            public override void Write(Utf8JsonWriter writer, GroundInput value, JsonSerializerOptions options)
+                => throw new IOException("書き込みの途中で失敗 (試験)");
+        }
+
+        /// <summary>
+        /// 同じ保存先への保存が重なっても、互いの一時ファイルを壊さないこと。
+        ///
+        /// 以前は一時ファイルが <c>保存先.saving</c> 固定で、上書き保存・自動保存・緊急保存が重なると、
+        /// 一方がもう一方の一時ファイルを作り直したり消したりした (保存の失敗・内容の取り違え)。
+        /// 今は保存ごとに一時ファイルの名前を分け、さらに同じ保存先への書き込みと差し替えを 1 本ずつ通す
+        /// (名前を分けただけでは、最後の差し替え同士がぶつかって OS に「アクセスが拒否されました」で拒まれた)。
+        /// 保存先は常にどれか 1 回ぶんの完全な内容になる。
+        /// </summary>
+        [TestMethod]
+        public void OverlappingSavesToTheSamePath_DoNotBreakEachOther()
+        {
+            string path = Path.Combine(_dir, "model.pdj");
+            var service = new FileOperationService(SaveOptions());
+
+            var saves = new System.Collections.Generic.List<System.Threading.Tasks.Task>();
+            for (int i = 0; i < 8; i++)
+            {
+                int n = i;
+                // 同期と非同期の保存を混ぜる (両方が同じ一時ファイルの作り方を使う)
+                saves.Add(n % 2 == 0
+                    ? System.Threading.Tasks.Task.Run(() => service.SaveProjectData(path, new InputModel(), null))
+                    : System.Threading.Tasks.Task.Run(() => service.SaveProjectDataAsync(path, new InputModel(), null)));
+            }
+
+            // どれか 1 つでも失敗したら、その理由を出して落とす
+            try { System.Threading.Tasks.Task.WaitAll([.. saves]); }
+            catch (AggregateException ex)
+            {
+                Assert.Fail("重なった保存が失敗しました: " + string.Join(" / ", ex.InnerExceptions.Select(e => e.Message)));
+            }
+
+            var loaded = service.LoadProjectData(path);
+            Assert.IsNotNull(loaded.InputModel, "保存先が読めるファイルになっていません");
+            CollectionAssert.AreEqual(new[] { "model.pdj" },
+                Array.ConvertAll(Directory.GetFiles(_dir), Path.GetFileName),
+                "一時ファイルが残っています");
+        }
+
+        [TestMethod]
+        public void TemporaryFileNamesAreUniqueAndNotAutoSaveCandidates()
+        {
+            string a = FileOperationService.TempPathFor(@"C:\x\proj_autosave_20260924_120000.pdj");
+            string b = FileOperationService.TempPathFor(@"C:\x\proj_autosave_20260924_120000.pdj");
+            Assert.AreNotEqual(a, b, "一時ファイルの名前が保存ごとに変わっていません");
+            StringAssert.EndsWith(a, ".saving", "一時ファイルの拡張子が .saving でありません (復元候補に拾われるおそれ)");
         }
 
         /// <summary>保存が成功したら、一時ファイルを残さないこと。</summary>

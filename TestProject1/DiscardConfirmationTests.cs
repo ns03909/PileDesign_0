@@ -124,11 +124,11 @@ namespace TestProject1
             vm.SaveUndoState("テスト編集");
             Assert.IsTrue(vm.HasUnsavedWork);
 
-            // 保存・読み込み・新規作成・計算例ロードの直後に呼ばれる
-            vm.MarkWorkSaved();
+            // 読み込み・新規作成・計算例ロードの直後に呼ばれる (保存の完了は MarkWorkSavedAsOf)
+            vm.MarkProjectReplaced();
 
             Assert.IsFalse(vm.HasUnsavedWork,
-                "保存した直後なのに、確認が出る判定のままになっている");
+                "開き直した直後なのに、確認が出る判定のままになっている");
         }
     }
 }

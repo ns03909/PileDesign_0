@@ -192,7 +192,7 @@ namespace PileDesign.ViewModels
         /// 読込の最後に <c>SaveUndoState</c> を呼んで初期状態を積むが、あれは
         /// <b>全編集の集約点</b>なので <see cref="MarkInputChangedSinceAnalysis"/> も走る。
         /// 何も触っていないのに編集扱いになり、計算書を出すたびに確認が出ていた。
-        /// <c>MarkWorkSaved</c> と同じ役目。
+        /// <c>MarkProjectReplaced</c> と同じ役目。
         /// </summary>
         internal void RestoreInputChangedSinceAnalysis(bool changed)
         {

@@ -78,10 +78,56 @@ namespace PileDesign.ViewModels
         public bool HasUnsavedWork => _hasUnsavedWork;
 
         /// <summary>
-        /// 保存・読み込み・新規作成・計算例ロードの直後に呼ぶ。
-        /// 「今この状態を捨てても失うものが無い」に戻す。
+        /// 読み込み・新規作成・計算例ロードの直後 (= 画面のプロジェクトを取り替えた直後) に呼ぶ。
+        /// 「今この状態を捨てても失うものが無い」に戻し、プロジェクトの番号 (<see cref="ProjectGeneration"/>) を進める。
+        /// 保存の完了はここを通さない (<see cref="MarkWorkSavedAsOf"/>)。
         /// </summary>
-        public void MarkWorkSaved() => _hasUnsavedWork = false;
+        public void MarkProjectReplaced()
+        {
+            _hasUnsavedWork = false;
+            ProjectGeneration++;
+        }
+
+        /// <summary>
+        /// 画面のプロジェクトを取り替えた回数 (新規作成・読み込み・計算例ロード)。
+        ///
+        /// 保存は待ち合わせ (await) のあいだも画面を動かすので、保存の途中で別のプロジェクトを開けてしまう。
+        /// 以前は保存の完了処理が、保存を始めたときのプロジェクトかどうかを確かめずに、いまの作業の
+        /// 保存先 (<see cref="CurrentFilePath"/>) を書き換え、未保存の印を消し、自動保存をつなぎ直していた。
+        /// 開いたばかりの別のプロジェクトが、前のプロジェクトのファイル名で上書き保存される形になる。
+        /// 保存の開始時にこの番号を控え、完了時に変わっていたら、いまの作業には何もしない。
+        /// 元に戻す (Undo) は入力の実体を差し替えるが、同じプロジェクトなので数えない
+        /// (実体の同一性で照合できないのはそのため)。
+        /// </summary>
+        internal int ProjectGeneration { get; private set; }
+
+        /// <summary>
+        /// 「未保存」の印を立てた回数。印を立てる所 (<see cref="MarkUnsavedWork"/>) でだけ進む。
+        ///
+        /// 保存は待ち合わせ (await) のあいだも画面を動かすので、保存を始めたあとに入力を編集したり
+        /// 解析が終わったりすることがある。その変更はファイルに入っていないのに、保存の完了で無条件に
+        /// 「保存済み」にすると、未保存の印が消えて、閉じるときに確認が出なかった。
+        /// 保存の開始時にこの番号を控え、完了時に進んでいなければ保存済みにする (<see cref="MarkWorkSavedAsOf"/>)。
+        /// 入力の編集番号 (<see cref="InputEditVersion"/>) を使わないのは、解析の完了でも印が立つため。
+        /// </summary>
+        internal int UnsavedWorkGeneration { get; private set; }
+
+        /// <summary>「未保存」の印を立てる。印を立てる所はすべてここを通すこと (回数を数えるため)。</summary>
+        private void MarkUnsavedWork()
+        {
+            _hasUnsavedWork = true;
+            UnsavedWorkGeneration++;
+        }
+
+        /// <summary>
+        /// 保存の完了時に呼ぶ。保存を始めたとき (<paramref name="generationAtSaveStart"/>) から
+        /// 未保存の印が立っていなければ保存済みにする。立っていれば、その変更はファイルに入っていないので残す。
+        /// </summary>
+        internal void MarkWorkSavedAsOf(int generationAtSaveStart)
+        {
+            if (UnsavedWorkGeneration == generationAtSaveStart)
+                _hasUnsavedWork = false;
+        }
 
         /// <summary>
         /// 編集された<b>かもしれない</b>ことを記録する。
@@ -97,7 +143,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void MarkPossiblyEdited()
         {
-            _hasUnsavedWork = true;
+            MarkUnsavedWork();
             InputEditVersion++;
         }
 
@@ -125,7 +171,7 @@ namespace PileDesign.ViewModels
                 RaiseUndoStateChanged();
 
                 // 編集が入ったので、以降は破棄・保存の確認を出す。
-                _hasUnsavedWork = true;
+                MarkUnsavedWork();
                 InputEditVersion++;
 
                 // 入力が編集された = 表示中の解析結果は現在の入力と一致しない。

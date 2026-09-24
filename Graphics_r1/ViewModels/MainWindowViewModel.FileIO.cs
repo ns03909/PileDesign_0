@@ -58,7 +58,12 @@ namespace PileDesign.ViewModels
             if (saveFileDialog.ShowDialog() != true)
                 return false;   // 保存ダイアログをキャンセル
 
-            CurrentFilePath = saveFileDialog.FileName;
+            // 保存先は書き込みが成功してから切り替える。
+            // 以前は書き込みの前に CurrentFilePath を新しいパスにし、失敗しても戻していなかった。
+            // 次の上書き保存・自動保存・タイトルが、書けなかった保存先を「いまのファイル」として扱った。
+            string newPath = saveFileDialog.FileName;
+            int generationAtSaveStart = UnsavedWorkGeneration;
+            int projectAtSaveStart = ProjectGeneration;
             Mouse.OverrideCursor = Cursors.Wait;
             try
             {
@@ -67,13 +72,17 @@ namespace PileDesign.ViewModels
                 // 入力のみの軽量ファイルとして保存する
                 var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
                 var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
-                await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
+                await _fileOperationService.SaveProjectDataAsync(newPath, CurrentInputModel, anaModelToSave, vbcrToSave,
                     CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
                     Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
                     IsElementSplit,
                     InputChangedSinceAnalysis);
+                if (ProjectReplacedDuringSave(projectAtSaveStart, newPath))
+                    return false;
+                CurrentFilePath = newPath;
                 ShowToast("保存が完了しました。");
-                MarkWorkSaved();
+                // 保存を始めたあとの編集・解析はファイルに入っていないので、あれば未保存のまま残す
+                MarkWorkSavedAsOf(generationAtSaveStart);
 
                 // MRUに追加
                 _mruService.AddFile(CurrentFilePath);
@@ -107,19 +116,25 @@ namespace PileDesign.ViewModels
                 return await SaveInputModelFileAsCoreAsync();
             else
             {
+                int generationAtSaveStart = UnsavedWorkGeneration;
+                int projectAtSaveStart = ProjectGeneration;
+                string pathAtSaveStart = CurrentFilePath;
                 Mouse.OverrideCursor = Cursors.Wait;
                 try
                 {
                     StatusMessage = "保存中...";
                     var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
                     var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
-                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, anaModelToSave, vbcrToSave,
+                    await _fileOperationService.SaveProjectDataAsync(pathAtSaveStart, CurrentInputModel, anaModelToSave, vbcrToSave,
                         CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
                         Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
                         IsElementSplit,
                         InputChangedSinceAnalysis);
+                    if (ProjectReplacedDuringSave(projectAtSaveStart, pathAtSaveStart))
+                        return false;
                     ShowToast("保存が完了しました。");
-                    MarkWorkSaved();
+                    // 保存を始めたあとの編集・解析はファイルに入っていないので、あれば未保存のまま残す
+                    MarkWorkSavedAsOf(generationAtSaveStart);
                     return true;
                 }
                 catch (Exception ex)
@@ -133,6 +148,24 @@ namespace PileDesign.ViewModels
                     Mouse.OverrideCursor = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// 保存の途中で別のプロジェクトを開いたか (新規作成・読み込み・計算例ロード)。開いていれば true。
+        ///
+        /// ファイルに書いたのは保存を始めたときのプロジェクトなので、いまのプロジェクトの保存先・
+        /// 未保存の印・自動保存・最近使ったファイルには触れない。完了とファイル名だけ知らせる。
+        /// 呼び出し側は「いまの作業を保存できた」とは扱わないこと (false を返す)。
+        /// 「保存しますか？」の「はい」から来た場合、ここで true を返すと、保存のあいだに開いた
+        /// プロジェクトを確認なしに捨てて先へ進んでしまう。
+        /// </summary>
+        private bool ProjectReplacedDuringSave(int projectAtSaveStart, string savedPath)
+        {
+            if (ProjectGeneration == projectAtSaveStart)
+                return false;
+
+            ShowToast($"「{Path.GetFileName(savedPath)}」の保存が完了しました。保存中に開いたプロジェクトは保存していません。");
+            return true;
         }
 
         /// <summary>
@@ -177,7 +210,7 @@ namespace PileDesign.ViewModels
             _autoSaveService.Stop();
 
             CurrentInputModel.Reset();
-            MarkWorkSaved();
+            MarkProjectReplaced();
 
             // 解析に由来する状態をすべて捨てる。CurrentModel だけ null にしていた頃は、
             // 解析済みフラグと結果セットが残り、新規作成したのに前のモデルの結果が
@@ -451,16 +484,25 @@ namespace PileDesign.ViewModels
             OpenVerticalBeamCalculationCommand?.NotifyCanExecuteChanged();
             OpenGroupSettlementWithBeamWindowCommand?.NotifyCanExecuteChanged();
 
+            // 荷重ケースの番号を並び順に揃える (理由は NormalizeLoadCaseNumbers)。
+            // 解析結果の入力 (スナップショット) が別の実体なら、そちらも揃える。グラフ・計算書はそちらの番号で軸力を引く
+            var renumbered = CurrentInputModel.LoadCasesInput?.NormalizeLoadCaseNumbers() ?? [];
+            if (ResultInputModel != null && !ReferenceEquals(ResultInputModel, CurrentInputModel))
+                ResultInputModel.LoadCasesInput?.NormalizeLoadCaseNumbers();
+
             // Undo 履歴をクリアして読込状態を初期状態として保存
             // SaveUndoState は全編集の集約点なので、解析後に編集した記録も立ってしまう。
             // ファイルから復元した値を控えておき、あとで戻す。
             bool changedSinceAnalysisOnLoad = InputChangedSinceAnalysis;
+            // 番号を振り直したら、読み込んだ解析結果は別のケースの軸力で解いた恐れがある。再解析を促す
+            if (renumbered.Count > 0 && CurrentModel != null)
+                changedSinceAnalysisOnLoad = true;
             _undoManager.Clear();
             SaveUndoState();
 
             // 読み込んだ直後は保存していない作業は無い。
             // (直前の SaveUndoState で編集扱いになるため、その後に戻す)
-            MarkWorkSaved();
+            MarkProjectReplaced();
             RestoreInputChangedSinceAnalysis(changedSinceAnalysisOnLoad);
 
             // 最終描画＆通知
@@ -470,7 +512,24 @@ namespace PileDesign.ViewModels
             // 既製コンクリート杭ライブラリの整合性チェック (デフォルト径 1200mm にフォールバックして
             // 描画・解析が意図せず狂うのを防ぐため、ロード後に一括で検証して警告する)
             ShowPrecastPileNameWarningsIfAny(CurrentInputModel);
+
+            if (renumbered.Count > 0)
+            {
+                Serilog.Log.Warning("[読込] 荷重ケースの番号を並び順に振り直しました: {Changes}", string.Join(" / ", renumbered));
+                MessageService.Show(DescribeRenumberedLoadCases(renumbered, hasResults: CurrentModel != null),
+                    "荷重ケースの番号", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
+
+        /// <summary>荷重ケースの番号を振り直したことを知らせる文面。</summary>
+        internal static string DescribeRenumberedLoadCases(IReadOnlyList<string> renumbered, bool hasResults)
+            => "荷重ケースの番号が一覧の並び順と合っていなかった (重複・欠番・順序の入れ替わり) ので、並び順に振り直しました。\n"
+               + "杭の地震時軸力は荷重ケースの並び順で対応させています。番号がずれたままだと、解析が別のケースの軸力を使います。\n\n"
+               + string.Join("\n", renumbered.Take(10))
+               + (renumbered.Count > 10 ? $"\n…ほか {renumbered.Count - 10} 件" : "")
+               + (hasResults
+                   ? "\n\nこのファイルの解析結果は、振り直す前の番号で解いた恐れがあります。再解析してください。"
+                   : "");
 
         /// <summary>
         /// 全 PileSection の SelectedPrecastPile.Name がライブラリに存在するかチェックし、

@@ -173,35 +173,47 @@ namespace PileDesign.Services
         /// 表示用のファイル名を取得
         /// </summary>
         /// <param name="filePath">ファイルパス</param>
-        /// <param name="maxLength">最大文字数（パスの省略用）</param>
+        /// <param name="maxLength">最大文字数（パスの省略用）。1 以上。返す文字列は必ずこの長さ以内</param>
         /// <returns>表示用ファイル名</returns>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxLength"/> が 1 未満</exception>
         public static string GetDisplayName(string filePath, int maxLength = 60)
         {
+            // 0 文字以下に収まる表示名は無い。空文字を返すと「ファイルが無い」と区別できないので拒否する
+            if (maxLength < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxLength), maxLength, "表示名の最大文字数は 1 以上にしてください。");
+
             if (string.IsNullOrEmpty(filePath))
                 return "";
 
             if (filePath.Length <= maxLength)
                 return filePath;
 
-            // パスが長い場合は中央を省略
-            // 例: C:\...\folder\file.json
+            // パスが長い場合は中央を省略する。長さは必ず maxLength 以内に収める。
+            //   C:\...\file.pdj        ドライブとファイル名が入るとき
+            //   ...\file.pdj           ファイル名は入るがドライブまでは入らないとき
+            //   ...ong_file_name.pdj   ファイル名だけでも入らないとき (末尾を残す)
+            //
+            // 以前は「ファイル名 + 10 文字が入らない」ときに末尾 (maxLength − 3) 文字を切り出していたが、
+            // ファイル名がそれより短い (既定の 60 で 51〜56 文字) と切り出し位置が負になり、
+            // 最近使ったファイルの一覧を作るところで例外になった。
+            const string Ellipsis = "...";
             var fileName = Path.GetFileName(filePath);
-            var directory = Path.GetDirectoryName(filePath) ?? "";
 
-            if (fileName.Length + 10 > maxLength)
-            {
-                // ファイル名自体が長い場合
-                return "..." + fileName.Substring(fileName.Length - maxLength + 3);
-            }
+            // 「...」を付ける余地が無い幅 (3 文字以下) では、ファイル名の末尾をその幅だけ返す。
+            // 以前は幅が 3 未満でも「...」(3 文字) を返し、最大文字数を超えていた
+            if (maxLength <= Ellipsis.Length)
+                return fileName.Length <= maxLength ? fileName : fileName[^maxLength..];
 
-            var availableLength = maxLength - fileName.Length - 6; // "..." + "\" を考慮
-            if (availableLength > 0 && directory.Length > availableLength)
-            {
-                var drive = Path.GetPathRoot(directory) ?? "";
-                return drive + "..." + Path.DirectorySeparatorChar + fileName;
-            }
+            var tail = Path.DirectorySeparatorChar + fileName;
+            var drive = Path.GetPathRoot(filePath) ?? "";
 
-            return filePath;
+            if (drive.Length + Ellipsis.Length + tail.Length <= maxLength)
+                return drive + Ellipsis + tail;
+            if (Ellipsis.Length + tail.Length <= maxLength)
+                return Ellipsis + tail;
+
+            int keep = Math.Max(0, maxLength - Ellipsis.Length);
+            return Ellipsis + fileName[^Math.Min(keep, fileName.Length)..];
         }
     }
 

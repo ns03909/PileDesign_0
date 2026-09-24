@@ -250,7 +250,7 @@ namespace PileDesign.ViewModels
 
             // 解析には時間がかかる。入力を編集していなくても、
             // 結果を保存せずに閉じようとしたら確認する。
-            _hasUnsavedWork = true;
+            MarkUnsavedWork();
         }
 
         // 直近の自動保存状態表示 (ステータスバー用)。OnAutoSaveCompleted から更新。

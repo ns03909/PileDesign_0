@@ -102,8 +102,24 @@ namespace PileDesign.Models
         ///
         /// 手動保存では書かない (保存先は呼び出し側が知っている)。
         /// 省略可能なプロパティなので旧ファイルは null。
+        ///
+        /// <b>ファイルの先頭に書く</b> (<see cref="System.Text.Json.Serialization.JsonPropertyOrderAttribute"/>)。
+        /// 起動時の復元候補の検索は、この項目と <see cref="AutoSaveSessionId"/> だけを読むので、
+        /// 先頭にあればファイルの頭 (数十 KB) だけで足りる。末尾にあると、解析結果込みで数十 MB の
+        /// ファイルを候補ごとに丸ごと読むことになる。
         /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyOrder(-2)]
         public string? SourceFilePath { get; set; }
+
+        /// <summary>
+        /// このファイルを書いたアプリの起動ごとの印。自動保存・緊急保存だけが書く。
+        ///
+        /// 起動時の復元の確認に答えたとき、同じ作業の古い自動保存だけを見送るために使う。
+        /// 名前の無いプロジェクトは <see cref="SourceFilePath"/> を持たないので、これでしか結べない。
+        /// 手動保存では書かない。省略可能なプロパティなので旧ファイルは null。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyOrder(-1)]   // 先頭に書く (SourceFilePath 参照)
+        public string? AutoSaveSessionId { get; set; }
 
     }
 

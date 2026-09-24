@@ -206,8 +206,10 @@ namespace PileDesign.ViewModels
             // 自動保存が保存時に参照する「ライブ状態」を提供する。
             // Start 時の固定参照ではなく毎回ここで現在値を返すことで、解析完了後・Undo/Redo 後の
             // 最新状態と「自動保存に解析結果を含める」チェックボックスを保存時点で正しく反映する。
+            // 元ファイルのパスも同じ瞬間に取る (入力とパスが別のプロジェクトを指さないように)。
             _autoSaveService.LiveStateProvider = () => (
                 CurrentInputModel,
+                CurrentFilePath,
                 IsSaveAnalysisResultsAutoSave ? CurrentModel : null,
                 IsSaveAnalysisResultsAutoSave ? VerticalBeamCaseResults : null);
 

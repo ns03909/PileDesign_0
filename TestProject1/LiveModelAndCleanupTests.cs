@@ -166,7 +166,7 @@ namespace TestProject1
         [TestMethod]
         public void TheRestorePrompt_UsesThatReplacement()
         {
-            var source = ReadSource("Graphics_r1", "ViewModels", "MainWindowViewModel.cs");
+            var source = ReadSource("Graphics_r1", "Services", "AutoSaveService.cs");
 
             StringAssert.Contains(source, "\"_(autosave|emergency)_\"",
                 "復元の見送りが自動保存の名前しか置換していない。緊急保存が消えない");

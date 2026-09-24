@@ -207,6 +207,35 @@ namespace PileDesign.Models.InputData
         /// 絞ると、いま適用外の荷重ケースだけ配線されず、あとで適用に切り替えたときに
         /// 親を持たないまま残る。
         /// </summary>
+        /// <summary>
+        /// レベル 1・2 の荷重ケースの番号を、一覧の並び順 (1 始まり) に揃える。振り直したケースの説明を返す (無ければ空)。
+        ///
+        /// 杭の地震時軸力は、荷重ケースの<b>並び順</b>で対応させている所 (杭配置の表・計算書の杭配置図) と、
+        /// <b>番号</b>で引いている所 (<see cref="PileLayoutDataItem.GetSeismicAxialForce"/>: 解析・グラフ・ΣV) がある。
+        /// 番号は画面では変えられず、並び順どおりに振られるので、通常は食い違わない。
+        /// 手で編集したファイルなどで番号が重複したり並び順と合わなかったりすると、解析が<b>別のケースの軸力</b>を
+        /// 黙って使い、MGT 出力では同じ番号のケースが欠けた。画面に見えている並び順を正として揃える。
+        /// </summary>
+        internal IReadOnlyList<string> NormalizeLoadCaseNumbers()
+        {
+            var changes = new List<string>();
+            Normalize(LoadCasesLevel1, 1);
+            Normalize(LoadCasesLevel2, 2);
+            return changes;
+
+            void Normalize(IList<LoadCase>? cases, int level)
+            {
+                if (cases == null) return;
+                for (int i = 0; i < cases.Count; i++)
+                {
+                    var lc = cases[i];
+                    if (lc == null || lc.No == i + 1) continue;
+                    changes.Add($"レベル{level}「{lc.LoadName}」: 番号 {lc.No} → {i + 1}");
+                    lc.No = i + 1;
+                }
+            }
+        }
+
         internal IEnumerable<LoadCase> EveryLoadCase
         {
             get

@@ -380,7 +380,11 @@ namespace PileDesign.Views
                         e.Cancel = true;
                         Dispatcher.BeginInvoke(new Action(async () =>
                         {
-                            await viewModel.SaveInputModelFile();
+                            // 保存できたときだけ閉じる。以前は保存の成否を見ずに閉じていたので、
+                            // 保存ダイアログをキャンセルしたり保存に失敗したりしても、
+                            // 保存されないまま終了した (「はい」を選んだのに作業が消える)。
+                            if (!await viewModel.SaveInputModelFileCoreAsync())
+                                return;
                             _isClosingAfterSave = true;
                             Close();
                         }));
@@ -483,6 +487,10 @@ namespace PileDesign.Views
             if (DataContext is MainWindowViewModel vm)
             {
                 vm.PropertyChanged -= VmOnPropertyChanged;
+
+                // 閉じ終えた = 保存するか捨てるかを利用者が決めたあと。このセッションの自動保存は
+                // 次の起動で勧めない (致命的なエラーで閉じた場合は、サービス側が残す)
+                vm.EndAutoSaveSessionNormally();
             }
         }
 

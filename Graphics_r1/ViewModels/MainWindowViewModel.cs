@@ -2008,6 +2008,16 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// メイン画面が閉じたときに呼ぶ。このセッションの定期の自動保存を確認済みにし、
+        /// 次の起動で復元を勧めないようにする (<see cref="AutoSaveService.EndSessionNormally"/>)。
+        /// </summary>
+        public void EndAutoSaveSessionNormally()
+        {
+            try { _autoSaveService?.EndSessionNormally(); }
+            catch (Exception ex) { Log.Warning(ex, "[AutoSave] 終了時の後始末に失敗"); }
+        }
+
+        /// <summary>
         /// 自動保存完了時のイベントハンドラ
         /// </summary>
         private void OnAutoSaveCompleted(object? sender, AutoSaveEventArgs e)
@@ -2105,14 +2115,37 @@ namespace PileDesign.ViewModels
         /// ファイル読込失敗時の共通ハンドラー。例外種別ごとにユーザーフレンドリーなメッセージを表示し、
         /// 互換性問題やファイル不存在の場合は MRU から該当ファイルを除去する。
         /// </summary>
+        /// <summary><paramref name="ex"/> とその内側 (InnerException・AggregateException) から、最初の <typeparamref name="T"/> を探す。</summary>
+        internal static T? FindInnerException<T>(Exception? ex) where T : Exception
+        {
+            for (var e = ex; e != null; e = e.InnerException)
+            {
+                if (e is T found) return found;
+                if (e is AggregateException agg)
+                    foreach (var inner in agg.InnerExceptions)
+                        if (FindInnerException<T>(inner) is T nested) return nested;
+            }
+            return null;
+        }
+
         private void HandleFileLoadError(Exception ex, string filePath)
         {
             string message;
             bool removeFromMru = false;
             string fileName = !string.IsNullOrEmpty(filePath) ? System.IO.Path.GetFileName(filePath) : "(不明)";
 
+            // 有限でない数値 (NaN・±∞) が入力に書かれていた。保存形式は「NaN」「Infinity」を読めるので、
+            // 読み込みの途中で座標などが受け付けずに止まる。JSON の読み込みに包まれて届くことがあるので内側まで見る。
+            // ファイル自体は壊れていない (直せば開ける) ので、最近使ったファイルからは外さない。
+            var nonFinite = FindInnerException<PileDesign.Common.NonFiniteValueException>(ex);
+            if (nonFinite != null)
+            {
+                message = $"ファイルに有限でない数値 (NaN または無限大) が含まれているため、開けませんでした。\n" +
+                          $"{fileName}\n\n" +
+                          $"{nonFinite.Message}";
+            }
             // 旧バージョンで保存されたファイルとの互換性問題 ($id/$ref のチェーンが現スキーマと不整合)
-            if (ex is System.Text.Json.JsonException jsonRefEx
+            else if (ex is System.Text.Json.JsonException jsonRefEx
                 && jsonRefEx.Message.Contains("Reference") && jsonRefEx.Message.Contains("was not found"))
             {
                 message = $"このファイルは現バージョンと互換性がありません。\n" +
@@ -2147,78 +2180,103 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// 起動時に自動保存ファイルの復元を確認
+        ///
+        /// どれを勧めるか (見送り済み・24 時間・元ファイルのほうが新しいもの) は
+        /// <see cref="AutoSaveService.FindRestoreCandidate()"/> が決める。
+        /// 答えたら (いいえ、または復元できたとき)、同じ作業のそれより古い候補もまとめて見送る。
+        /// <b>復元に失敗したら、その 1 件だけを見送って次の候補を続けて案内する。</b>
+        /// 以前は失敗しても古い候補をまとめて見送っていたので、最新の自動保存が壊れていると、
+        /// 読める古い自動保存まで二度と案内されなくなった。扱った候補はこの起動の中では二度と選ばないので
+        /// (見送りの印を付けられなくても)、壊れた候補が何件あっても必ず終わる。
         /// </summary>
         public void CheckAutoSaveRestore()
         {
-            var latestAutoSave = _autoSaveService.GetLatestAutoSaveFile();
-            if (string.IsNullOrEmpty(latestAutoSave))
-                return;
-
-            var fileInfo = new System.IO.FileInfo(latestAutoSave);
-            var timeSinceAutoSave = DateTime.Now - fileInfo.CreationTime;
-
-            // 24時間以内の自動保存ファイルのみ復元提案
-            if (timeSinceAutoSave.TotalHours > 24)
-                return;
-
-            var result = MessageService.Show(
-                $"自動保存されたファイルが見つかりました。\n\n" +
-                $"保存日時: {fileInfo.CreationTime:yyyy/MM/dd HH:mm:ss}\n" +
-                $"ファイル: {System.IO.Path.GetFileName(latestAutoSave)}\n" +
-                $"場所: {System.IO.Path.GetDirectoryName(latestAutoSave)}\n\n" +
-                $"このファイルを復元しますか？",
-                "自動保存ファイルの復元",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
+            // この起動の中で扱った候補。見送りの印 (名前の変更) は、読み取り専用や他のソフトが掴んでいると
+            // 付けられない。そのとき同じ候補が選ばれ直し、エラーと確認が延々と繰り返されないよう、
+            // 印を付けられたかどうかに関わらず、ここで除いて次へ進む
+            var handled = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            while (true)
             {
-                try
-                {
-                    var projectData = _fileOperationService.LoadProjectData(latestAutoSave);
-                    if (projectData?.InputModel != null)
-                    {
-                        // 復元後の保存先は、自動保存ファイルに記録した元ファイルのフルパスを使う。
-                        // 以前は自動保存ファイル名から "Foo.pdj" という相対パスを組み立てていたため、
-                        // Ctrl+S が元ファイルではなくカレントディレクトリの同名ファイルへ書き、
-                        // 利用者は保存できたと思い込んだまま元ファイルが古いまま残っていた。
-                        // 記録が無い (旧い自動保存ファイル) か、元ファイルが移動・削除されていれば
-                        // null にして、次の保存を「名前を付けて保存」に倒す。
-                        var sourceFilePath = projectData.SourceFilePath;
-                        if (string.IsNullOrEmpty(sourceFilePath) || !System.IO.File.Exists(sourceFilePath))
-                            sourceFilePath = null;
+                var candidate = _autoSaveService.FindRestoreCandidate(handled);
+                if (candidate == null)
+                    return;
+                handled.Add(candidate.FilePath);
 
-                        ApplyLoadedProjectData(projectData, sourceFilePath, "自動保存ファイルの復元が完了しました。");
+                var result = MessageService.Show(
+                    $"自動保存されたファイルが見つかりました。\n\n" +
+                    $"保存日時: {candidate.SavedAt:yyyy/MM/dd HH:mm:ss}\n" +
+                    $"ファイル: {System.IO.Path.GetFileName(candidate.FilePath)}\n" +
+                    $"場所: {System.IO.Path.GetDirectoryName(candidate.FilePath)}\n" +
+                    (string.IsNullOrEmpty(candidate.SourceFilePath) ? "" : $"元のファイル: {candidate.SourceFilePath}\n") +
+                    $"\nこのファイルを復元しますか？\n" +
+                    $"（この作業のこれより前の自動保存は、次回から案内しません）",
+                    "自動保存ファイルの復元",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
 
-                        // 復元後は自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)。
-                        // 元ファイルが分からない場合も、名前の無いセッションとして回し続ける。
-                        _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException("自動保存ファイルに入力データが含まれていません。");
-                    }
-                }
-                catch (Exception ex)
+                if (result == MessageBoxResult.Yes && !TryRestoreAutoSave(candidate))
                 {
-                    MessageService.ShowError($"自動保存ファイルの復元に失敗しました。", ex, "エラー");
+                    // 読めなかった 1 件だけを見送り、同じ作業の古い候補は残して続けて案内する
+                    _autoSaveService.DismissRestoreCandidate(candidate);
+                    continue;
                 }
+
+                // いいえ、または復元できた: この候補と同じ作業の古い候補をまとめて見送る
+                // (データは残すので手動復元可能)。1 件だけだと、次の起動で 1 つ古いものを勧め続ける。
+                _autoSaveService.DismissRestoreCandidatesUpTo(candidate);
+                return;
             }
+        }
 
-            // はい・いいえどちらでもリネームして再表示を防止（データは残すので手動復元可能）。
-            //
-            // 自動保存と緊急保存の両方を扱うこと。以前は "_autosave_" だけを置換していたので、
-            // 緊急保存 ("_emergency_") のファイル名は 1 文字も変わらず、同じ場所へ Move する
-            // だけだった。候補を探す側は緊急保存も拾うので、一度落ちると 24 時間のあいだ
-            // 起動のたびに同じ復元確認が出ていた。
+        /// <summary>
+        /// 自動保存ファイルを読み込んで復元する。できなければ理由を知らせて false。
+        ///
+        /// 復元した作業は<b>未保存</b>として扱う。読み込みは通常のファイルを開くのと同じ処理を通り、
+        /// そこで「保存していない作業は無い」に戻る。以前はそのままだったので、復元してすぐ閉じても
+        /// 「保存しますか？」が出ず、正常終了の後始末でこのセッションの自動保存も確認済みになった。
+        /// 復元した内容はどこにも正式には保存されておらず (元ファイルは古いまま)、そのまま消えていた。
+        /// </summary>
+        internal bool TryRestoreAutoSave(AutoSaveService.RestoreCandidate candidate)
+        {
             try
             {
-                var dismissed = System.Text.RegularExpressions.Regex.Replace(
-                    latestAutoSave, "_(autosave|emergency)_", "_$1_dismissed_");
-                if (dismissed != latestAutoSave)
-                    System.IO.File.Move(latestAutoSave, dismissed);
+                var projectData = _fileOperationService.LoadProjectData(candidate.FilePath);
+                if (projectData?.InputModel != null)
+                {
+                    // 復元後の保存先は、自動保存ファイルに記録した元ファイルのフルパスを使う。
+                    // 以前は自動保存ファイル名から "Foo.pdj" という相対パスを組み立てていたため、
+                    // Ctrl+S が元ファイルではなくカレントディレクトリの同名ファイルへ書き、
+                    // 利用者は保存できたと思い込んだまま元ファイルが古いまま残っていた。
+                    // 記録が無い (旧い自動保存ファイル) か、元ファイルが移動・削除されていれば
+                    // null にして、次の保存を「名前を付けて保存」に倒す。
+                    var sourceFilePath = projectData.SourceFilePath;
+                    if (string.IsNullOrEmpty(sourceFilePath) || !System.IO.File.Exists(sourceFilePath))
+                        sourceFilePath = null;
+
+                    ApplyLoadedProjectData(projectData, sourceFilePath, "自動保存ファイルの復元が完了しました。");
+
+                    // 元ファイル (またはどこか) へ明示的に保存するまで、未保存のままにする
+                    MarkUnsavedWork();
+
+                    // 復元後は自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)。
+                    // 元ファイルが分からない場合も、名前の無いセッションとして回し続ける。
+                    _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
+                }
+                else
+                {
+                    throw new InvalidOperationException("自動保存ファイルに入力データが含まれていません。");
+                }
+                return true;
             }
-            catch (Exception ex) { Log.Warning(ex, "[AutoSave] リネーム失敗"); }
+            catch (Exception ex)
+            {
+                // 有限でない数値で止まったときは、包んだ外側ではなく理由 (どの欄か) を見せる
+                var reason = FindInnerException<PileDesign.Common.NonFiniteValueException>(ex) ?? ex;
+                MessageService.ShowError($"自動保存ファイルの復元に失敗しました。\n" +
+                    "この自動保存ファイルは次回から案内しません。同じ作業のひとつ前の自動保存があれば、続けて案内します。",
+                    reason, "エラー");
+                return false;
+            }
         }
 
         // ==================== InputNode 管理機能 ====================
