@@ -43,7 +43,14 @@ namespace PileDesign.Output
             double topZ = GetMaxPileTopZ();
             AddGridAndDimensions(file, gridLayerIdx, dimLayerIdx, topZ);
 
-            file.Write(filePath, 8);
+            // 一時ファイルに書き切ってから差し替える (失敗しても前に出力した 3dm を壊さない)。
+            // Write は失敗を例外ではなく false で返す。以前は戻り値を見ていなかったので、書けなくても
+            // 「出力しました」と知らせていた
+            PileDesign.Services.FileOperationService.ReplaceAtomically(filePath, tempPath =>
+            {
+                if (!file.Write(tempPath, 8))
+                    throw new System.IO.IOException("3dm ファイルを書き出せませんでした。");
+            });
         }
 
         private double GetMaxPileTopZ()

@@ -129,10 +129,49 @@ namespace PileDesign.Output
 
         public void Export(string filePath)
         {
+            // 数値は地域設定によらず「1.25」の形で書く。
+            //
+            // 各所の数値は $"{x:F4}" のように組み立てていて、実行中の地域設定の小数点で書かれる。
+            // 小数点がカンマの地域 (ドイツ語など) では「1,25」になり、MGT の項目の区切りのカンマとぶつかって
+            // 値が 2 つに割れる。組み立てた文字列は書き出し先の書式では直せないので、
+            // 書き出しのあいだだけこのスレッドの地域設定を InvariantCulture にし、終わったら必ず戻す。
+            // (書式を 1 つずつ直すと 5 つのファイルに散らばった書式のどれかが漏れる)
+            // 出力先を作る前に確かめる (途中まで書いたファイルを残さない)
+            EnsureLoadCaseNumbersAreUnique(_anaModel.AnalysisStepResults);
+            EnsureLoadCombinationNumbersAreUnique(_anaModel.AnalysisStepResults);
+
+            var previousCulture = System.Globalization.CultureInfo.CurrentCulture;
+            System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+            try
+            {
+                ExportCore(filePath);
+            }
+            finally
+            {
+                System.Globalization.CultureInfo.CurrentCulture = previousCulture;
+            }
+        }
+
+        /// <summary>
+        /// 一時ファイルに書き切ってから保存先と差し替える (<see cref="Services.FileOperationService.WriteAtomically"/>)。
+        ///
+        /// 以前は保存先を直接開き直して書いていたので、途中で書き込みに失敗する (容量不足・例外) と、
+        /// 前に出力した正常な MGT ファイルが途中までの内容で上書きされて失われた。
+        /// いまは失敗しても保存先は前の内容のままで、一時ファイルも残さない。
+        /// </summary>
+        private void ExportCore(string filePath)
+        {
             var ctx = BuildContext();
+            Services.FileOperationService.WriteAtomically(filePath, stream =>
+            {
+                using var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(false), bufferSize: 64 * 1024, leaveOpen: true);
+                WriteAll(writer, ctx);
+            });
+        }
 
-            using var writer = new StreamWriter(filePath, false, new System.Text.UTF8Encoding(false));
-
+        /// <summary>MGT の全体を書く。書き出しの途中で例外を出すとファイルは差し替わらない (<see cref="ExportCore"/>)。</summary>
+        private void WriteAll(StreamWriter writer, ExportContext ctx)
+        {
             WriteHeader(writer);
             WriteUnit(writer);
             WriteNodes(writer, ctx);

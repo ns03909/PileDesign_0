@@ -221,7 +221,25 @@ namespace PileDesign.Output
 
             try
             {
-                using var wordDocument = WordprocessingDocument.Create(fileName, WordprocessingDocumentType.Document);
+                // 一時ファイルに書き切ってから差し替える。計算書は組み立てに時間がかかり、途中で失敗すると
+                // 以前は前に出力した計算書が壊れた (作りかけの docx で上書きされる)
+                PileDesign.Services.FileOperationService.ReplaceAtomically(fileName, tempPath =>
+                    BuildWordDocument(inputModel, tempPath, StartSection, EndSection));
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Word 出力中にエラー");
+                throw;
+            }
+
+            Log.Debug("Word文書を出力しました。Word で開き、目次上をクリック → F9 でフィールド更新してください。");
+        }
+
+        /// <summary>計算書の本体を <paramref name="tempPath"/> に書く (<see cref="CreateWordDocument"/> が一時ファイルのパスを渡す)。</summary>
+        private void BuildWordDocument(InputModel inputModel, string tempPath, Action StartSection, Action<string> EndSection)
+        {
+            {
+                using var wordDocument = WordprocessingDocument.Create(tempPath, WordprocessingDocumentType.Document);
                 MainDocumentPart mainPart = wordDocument.AddMainDocumentPart();
 
                 StartSection();
@@ -262,13 +280,6 @@ namespace PileDesign.Output
                 mainPart.Document.Save();
                 EndSection("Document.Save (zip 書き出し)");
             }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "Word 出力中にエラー");
-                throw;
-            }
-
-            Log.Debug("Word文書を出力しました。Word で開き、目次上をクリック → F9 でフィールド更新してください。");
         }
 
 

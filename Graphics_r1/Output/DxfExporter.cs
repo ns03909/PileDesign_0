@@ -48,8 +48,12 @@ namespace PileDesign.Output
             double topZ = GetMaxPileTopZ();
             GridDimHelper.AddGridAndDimensions(doc, _inputModel, gridLayer, gridSymbolLayer, dimLayer, topZ);
 
-            using var writer = new DxfWriter(filePath, doc, false);
-            writer.Write();
+            // 一時ファイルに書き切ってから差し替える (失敗しても前に出力した DXF を壊さない)
+            PileDesign.Services.FileOperationService.ReplaceAtomically(filePath, tempPath =>
+            {
+                using var writer = new DxfWriter(tempPath, doc, false);
+                writer.Write();
+            });
         }
 
         private double GetMaxPileTopZ()

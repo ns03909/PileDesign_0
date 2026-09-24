@@ -33,7 +33,7 @@ namespace TestProject1
         /// <b>実行件数とは一致しない。</b> ここが数えるのは <c>[TestMethod]</c> の宣言で、
         /// <c>[DataRow]</c> による展開は数えない。実行側は 100 件ほど多く出る。
         /// </summary>
-        private const int MinimumTestCount = 1950;
+        private const int MinimumTestCount = 2100;
 
         [TestMethod]
         public void TheSuite_StillHasAllItsTests()
@@ -134,6 +134,9 @@ namespace TestProject1
                 "AutoSaveServiceNaNTests.cs",
                 "SaveDurabilityTests.cs",
                 "UnsavedWorkAndRestoreTests.cs",
+                "MgtExportTests.cs",          // 出力に失敗したあと、一時ファイルが残っていないかを見る
+                "ExportAtomicityTests.cs",    // 書き出しのあと、一時ファイルが残っていないかを見る
+
                 "IconRegenerator.cs",
             ];
 
