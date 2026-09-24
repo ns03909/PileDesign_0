@@ -43,6 +43,7 @@ namespace PileDesign.Models.InputData
             // ファイルに書かれた配置直径が既定のかぶり厚から導いた値に塗り潰される。
             SyncCoverFromPlacementDiameter();
             RecalculatePileDia();
+            SyncHoopMethodConsistency();
             InvalidateAllCaches();
         }
 
@@ -58,7 +59,45 @@ namespace PileDesign.Models.InputData
             RecalculateConcreteE();
             SyncCoverFromPlacementDiameter();
             RecalculatePileDia();
+            SyncHoopMethodConsistency();
             InvalidateAllCaches();
+        }
+
+        /// <summary>
+        /// せん断補強筋の工法・呼び名・規格の食い違いを、読み込み後に揃える。
+        ///
+        /// System.Text.Json はファイルに書かれた順にプロパティを設定するので、
+        /// 工法より後に呼び名が来ると、工法の表に無い呼び名 (「標準」の D13 など) が
+        /// 残ることがある。そのままだと公称断面積が引けず <b>pw が 0</b> になり、
+        /// 安全限界せん断の √(pw·σwy) から補強筋の項が黙って消える。
+        /// 読み終わってから一度だけ、工法側の既定へ寄せる。
+        /// </summary>
+        private void SyncHoopMethodConsistency()
+        {
+            var spec = ShearReinforcementMethods.Get(HoopMethod);
+            if (spec == null)
+            {
+                // 「標準」または知らない工法名。呼び名・規格が標準の一覧の外なら既定へ戻す。
+                if (!string.IsNullOrEmpty(HoopMethod) && HoopMethod != ShearReinforcementMethods.Standard)
+                {
+                    PileDesign.Common.CalcFallbackTracker.Report(
+                        "せん断補強筋の工法 (→標準)", null, $"HoopMethod={HoopMethod}");
+                    _hoopMethod = ShearReinforcementMethods.Standard;
+                }
+                // 「標準」には算定式の選択肢が無い。工法から戻したファイルで
+                // 選べない式が残ると、標準の断面が工法の式で計算される。
+                SyncHoopOptionCollections();
+                return;
+            }
+
+            if (!spec.BarAreas.ContainsKey(HoopSize))
+            {
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    $"せん断補強筋の呼び名 (→{spec.DefaultBarSize})", null,
+                    $"HoopMethod={HoopMethod}, HoopSize={HoopSize}");
+            }
+            // 選択肢の入れ替えと、外れた値の寄せ直しは 1 か所に集約してある。
+            SyncHoopOptionCollections();
         }
 
         // 静的キャッシュ（CSVデータは一度だけ読み込む）
@@ -214,10 +253,28 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        /// <summary>有効せい d [mm]（MonQd計算用）: d = 0.9D（基礎指針'19）</summary>
+        /// <summary>
+        /// 有効せい d [mm]（MonQd計算用）: d = 0.9D（基礎指針'19）。
+        ///
+        /// せん断補強筋の工法を選んだときは、工法の指針の定義
+        /// d = (B/2)·√π − dt（dt は主筋重心かぶり厚）に替える。
+        /// せん断耐力の式が d を使うので、M/(Q·d) を別の d で作ると
+        /// 耐力を引く位置がずれる（B=1000 で 1.2 倍ほど違う）。
+        /// </summary>
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double EffectiveDepth => PileDiameter * 0.9;
+        public double EffectiveDepth
+        {
+            get
+            {
+                if (!ShearReinforcementMethods.IsProprietary(HoopMethod)) return PileDiameter * 0.9;
+                // 断面側 (InsituReinforcedConcreteSection) と同じ出所から作る。
+                // かぶり厚と配筋径のどちらから引くかを変えると、両者が静かにずれる。
+                double dt = (ConcreteOutDia - MainBarDr) / 2.0;
+                double d = ConcreteOutDia / 2.0 * Math.Sqrt(Math.PI) - dt;
+                return d > 0 ? d : PileDiameter * 0.9;
+            }
+        }
 
         // フィールド
         private int _pileBodyNo;
@@ -2520,6 +2577,246 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        // せん断補強筋の工法
+        //
+        // 「標準」以外を選ぶと、材料だけでなく<b>せん断耐力の算定式そのもの</b>が
+        // 工法の指針の式に替わる (ShearReinforcementMethods 参照)。
+        private string _hoopMethod = ShearReinforcementMethods.Standard;
+        public string HoopMethod
+        {
+            get => _hoopMethod;
+            set
+            {
+                // ComboBox は選択肢を差し替えた瞬間に null を書き戻してくる。
+                // 受けると工法が消えて式が静かに標準へ戻るので、無視する。
+                if (string.IsNullOrEmpty(value)) return;
+                RequireHoopOption(value, ShearReinforcementMethods.Options, "せん断補強筋の工法");
+                if (SetProperty(ref _hoopMethod, value))
+                {
+                    // 呼び名・規格・算定式の選択肢はどれも工法で入れ替わる。
+                    // 入れ物は作り替えず、選択値が候補の外に出ないように書き換える。
+                    SyncHoopOptionCollections();
+
+                    OnPropertyChanged(nameof(IsStandardHoopMethod));
+                    OnPropertyChanged(nameof(IsHoopDamageFormulaSelectable));
+                    OnPropertyChanged(nameof(IsHoopUltimateFormulaSelectable));
+                    OnPropertyChanged(nameof(ShearDesignMagnification));
+                    InvalidateAllCaches();
+                }
+            }
+        }
+
+        /// <summary>せん断補強筋の工法の選択肢。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public string[] HoopMethodOption => ShearReinforcementMethods.Options;
+
+        // 工法で入れ替わる選択肢は、<b>入れ物ごと差し替えない</b>。
+        //
+        // ItemsSource を別の配列に差し替えると、WPF は候補から外れた選択値を捨てて
+        // null を元へ書き戻す。モデル側で null を無視しても<b>画面の ComboBox は空のまま残り</b>、
+        // 利用者には「入力が消えた」ように見える (値は正しいので保存すると直る、という分かりにくさ)。
+        //
+        // 同じコレクションを ①新しい候補を足す → ②選択値を移す → ③古い候補を外す の順に
+        // 書き換えれば、選択値が候補の外に出る瞬間が無くなる。
+        // 「選択肢を絞るときは現在値を必ず含める」を、入れ替えの途中にも守らせる形。
+        private ObservableCollection<string> _hoopSizeOption = new(ShearReinforcementMethods.StandardBarSizes);
+        private ObservableCollection<string> _hoopSpecOption = new(ShearReinforcementMethods.StandardGrades);
+
+        /// <summary>せん断補強筋の呼び名の選択肢。工法で入れ替わる。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public ObservableCollection<string> HoopSizeOption => _hoopSizeOption;
+
+        /// <summary>せん断補強筋の規格の選択肢。工法では 1 つに決まる。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public ObservableCollection<string> HoopSpecOption => _hoopSpecOption;
+
+        /// <summary>
+        /// 工法の断面で、杭径・Fc が工法の適用範囲の外ならその理由。範囲内・工法なし (標準) なら null。
+        /// せん断の検定はこの理由を項目に付け、判定を「適用範囲外」にする (EvaluationService)。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public string? HoopMethodOutOfScopeReason
+            => UsesHoopMethodFormulas
+                ? ShearReinforcementMethods.Get(HoopMethod)?.OutOfScopeReason(ConcreteOutDia, ConcreteFc)
+                : null;
+
+        /// <summary>
+        /// 工法の断面で、せん断補強筋比・間隔が工法の構造規定を満たさなければその理由。満たす・工法なしなら null。
+        /// 間隔の上限は深さで変わるので、要素の上端の杭頭からの深さ (m) を受け取る。
+        /// せん断の検定はこの理由を項目に付け、判定を「適用範囲外」にする (EvaluationService)。
+        /// </summary>
+        /// <param name="ultimate">終局 (安全限界) の検定か</param>
+        /// <param name="elementTopDepthM">要素の上端の、杭頭からの深さ (m)</param>
+        internal string? HoopMethodDetailingReason(bool ultimate, double elementTopDepthM)
+        {
+            if (!UsesHoopMethodFormulas) return null;
+            var spec = ShearReinforcementMethods.Get(HoopMethod);
+            if (spec == null) return null;
+            bool nearPileHead = elementTopDepthM * 1000.0 < spec.PileHeadRangeInDiameters * ConcreteOutDia;
+            return spec.DetailingViolation(HoopPw, HoopSpacing, nearPileHead, ultimate);
+        }
+
+        /// <summary>
+        /// せん断耐力を工法の指針の式で算定する断面か。工法を選んでいて、かつ工法の式を使う断面の種類
+        /// (場所打ちRC杭 / 場所打ち鋼管コンクリート杭の RC 部) のとき。<see cref="CreateSectionCalculator"/> と同じ条件。
+        ///
+        /// 工法の設定は断面の種類を変えても残るので、工法名だけを見ると、工法の式を使っていない
+        /// 既製杭などの検定まで「適用範囲外」にしてしまう。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        internal bool UsesHoopMethodFormulas
+            => ShearReinforcementMethods.IsProprietary(HoopMethod)
+               && (PileBodyType == PileTypeNames.InsituRc
+                   || (PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileSectionType == PileTypeNames.RcSection));
+
+        /// <summary>工法を使っていない (＝規格を選べる) か。画面の有効・無効に使う。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsStandardHoopMethod => !ShearReinforcementMethods.IsProprietary(HoopMethod);
+
+        // 損傷限界 (一次設計) の算定式。
+        //
+        // エムケーパイルリング785 は 3.2式 (損傷限界せん断力) と
+        // 3.3式 (安全性確保のための短期許容せん断力) のどちらかによる、と指針が定めている。
+        // 3.3式 を選んだときは設計用せん断力を 1.5 倍に割り増すのが前提なので、
+        // 式だけ差し替えて応答をそのままにしてはいけない (ShearDesignMagnification 参照)。
+        private string _hoopDamageFormula = ShearReinforcementMethods.DamageFormulaDamageLimit;
+        public string HoopDamageFormula
+        {
+            get => _hoopDamageFormula;
+            set
+            {
+                if (string.IsNullOrEmpty(value)) return;
+                RequireHoopOption(value, _hoopDamageFormulaOption, "損傷限界の算定式");
+                if (SetProperty(ref _hoopDamageFormula, value))
+                {
+                    OnPropertyChanged(nameof(ShearDesignMagnification));
+                    InvalidateAllCaches();
+                }
+            }
+        }
+
+        // 終局限界の算定式。
+        //
+        // ウルボンは「③式（大野・荒川 min 式）または④式（トラス・アーチ式）による」。
+        // どちらを使うかは設計者の選択なので、プログラムが大きい方を勝手に採ることはしない。
+        private string _hoopUltimateFormula = ShearReinforcementMethods.UltimateFormulaArakawa;
+        public string HoopUltimateFormula
+        {
+            get => _hoopUltimateFormula;
+            set
+            {
+                if (string.IsNullOrEmpty(value)) return;
+                RequireHoopOption(value, _hoopUltimateFormulaOption, "終局の算定式");
+                if (SetProperty(ref _hoopUltimateFormula, value))
+                {
+                    InvalidateAllCaches();
+                }
+            }
+        }
+
+        private ObservableCollection<string> _hoopDamageFormulaOption =
+            new(ShearReinforcementMethods.DamageFormulas(null));
+        private ObservableCollection<string> _hoopUltimateFormulaOption =
+            new(ShearReinforcementMethods.UltimateFormulas(null));
+
+        /// <summary>損傷限界の算定式の選択肢。工法で入れ替わる。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public ObservableCollection<string> HoopDamageFormulaOption => _hoopDamageFormulaOption;
+
+        /// <summary>終局限界の算定式の選択肢。工法で入れ替わる。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public ObservableCollection<string> HoopUltimateFormulaOption => _hoopUltimateFormulaOption;
+
+        /// <summary>損傷限界の算定式を選べるか (選択肢が 2 つ以上あるか)。画面の有効・無効に使う。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsHoopDamageFormulaSelectable => HoopDamageFormulaOption.Count > 1;
+
+        /// <summary>終局限界の算定式を選べるか (選択肢が 2 つ以上あるか)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsHoopUltimateFormulaSelectable => HoopUltimateFormulaOption.Count > 1;
+
+        /// <summary>
+        /// 工法に応じて選択肢のコレクションを書き換え、外れた選択値を新しい候補へ移す。
+        ///
+        /// 順番が要点。新しい候補を先に足してから選択値を移し、最後に古い候補を外す。
+        /// 逆順にすると、選択値が候補に無い瞬間ができて ComboBox が空になる。
+        /// </summary>
+        /// <summary>
+        /// 工法・呼び名・規格・算定式に、いまの工法で選べない値を入れさせない。
+        ///
+        /// 以前は読み込みのあとにだけ整合を取っていて、setter は選択肢の外の文字列もそのまま受け入れた。
+        /// 画面の外 (プログラム・計算例の読み込みなど) から入れると、表示は入れた値なのに、
+        /// 耐力は別の式 (標準の式や工法の既定の式) で計算される、という食い違いが起きうる。
+        ///
+        /// <b>読み込みの最中は受け入れる。</b>保存ファイルは工法より前に呼び名が来ることがあり、
+        /// その時点では正しい呼び名 (工法の「MD13」など) も「いまの工法 (標準) の外」に見える。
+        /// 読み終わりの <see cref="SyncHoopMethodConsistency"/> が工法に合わせて寄せ直す。
+        /// </summary>
+        private void RequireHoopOption(string value, IEnumerable<string> options, string what)
+        {
+            if (_isDeserializing) return;
+            var list = options as IList<string> ?? [.. options];
+            if (list.Contains(value)) return;
+            throw new ArgumentException(
+                $"{what}に「{value}」は選べません (工法「{HoopMethod}」)。選べるのは {string.Join("・", list)} です。",
+                nameof(value));
+        }
+
+        private void SyncHoopOptionCollections()
+        {
+            Apply(_hoopSizeOption, ShearReinforcementMethods.BarSizes(_hoopMethod),
+                ref _hoopSize, nameof(HoopSize));
+            Apply(_hoopSpecOption, ShearReinforcementMethods.Grades(_hoopMethod),
+                ref _hoopSpec, nameof(HoopSpec));
+            Apply(_hoopDamageFormulaOption, ShearReinforcementMethods.DamageFormulas(_hoopMethod),
+                ref _hoopDamageFormula, nameof(HoopDamageFormula));
+            Apply(_hoopUltimateFormulaOption, ShearReinforcementMethods.UltimateFormulas(_hoopMethod),
+                ref _hoopUltimateFormula, nameof(HoopUltimateFormula));
+
+            void Apply(ObservableCollection<string> options, string[] wanted, ref string current, string valueName)
+            {
+                if (wanted.Length == 0) return;
+                foreach (string w in wanted)                                  // ① 足す
+                    if (!options.Contains(w)) options.Add(w);
+                if (!wanted.Contains(current)) current = wanted[0];           // ② 移す
+                OnPropertyChanged(valueName);
+                for (int i = options.Count - 1; i >= 0; i--)                  // ③ 外す
+                    if (!wanted.Contains(options[i])) options.RemoveAt(i);
+            }
+        }
+
+        /// <summary>
+        /// 損傷限界せん断の検定で、設計用せん断力に掛ける割増係数。
+        ///
+        /// 「安全性確保のための短期許容せん断力」(エムケーパイルリング785 3.3式) は、
+        /// <b>水平荷重時せん断力を 1.5 倍以上に割り増した設計用せん断力</b>と比べる式。
+        /// 耐力式だけ差し替えて応答を解析値のままにすると、指針より緩い検定になる。
+        /// 検定側 (EvaluationService) が損傷限界せん断の応答にこれを掛ける。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double ShearDesignMagnification
+        {
+            get
+            {
+                var spec = ShearReinforcementMethods.Get(HoopMethod);
+                if (spec == null) return 1.0;
+                return HoopDamageFormula == ShearReinforcementMethods.DamageFormulaSafetyShortTerm
+                    ? spec.SafetyShearMagnification
+                    : 1.0;
+            }
+        }
+
         // せん断補強筋径
         private string _hoopSize = "D13";
         public string HoopSize
@@ -2527,6 +2824,9 @@ namespace PileDesign.Models.InputData
             get => _hoopSize;
             set
             {
+                // 選択肢の差し替えに伴う null の書き戻しを無視する (HoopMethod 参照)。
+                if (string.IsNullOrEmpty(value)) return;
+                RequireHoopOption(value, _hoopSizeOption, "せん断補強筋の呼び名");
                 if (SetProperty(ref _hoopSize, value))
                 {
                     InvalidateAllCaches();
@@ -2556,6 +2856,9 @@ namespace PileDesign.Models.InputData
             get => _hoopSpec;
             set
             {
+                // 選択肢の差し替えに伴う null の書き戻しを無視する (HoopMethod 参照)。
+                if (string.IsNullOrEmpty(value)) return;
+                RequireHoopOption(value, _hoopSpecOption, "せん断補強筋の規格");
                 if (SetProperty(ref _hoopSpec, value))
                 {
                     InvalidateAllCaches();
@@ -2576,28 +2879,82 @@ namespace PileDesign.Models.InputData
                 }
             }
         }
-        // せん断補強筋比
-        //private double _hoopPw;
+        /// <summary>せん断補強筋 1 本の公称断面積 (mm²)。工法では工法の呼び名の表を引く。</summary>
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double HoopPw => 2 * GetBarArea(HoopSize) / (Math.PI / 4.0 * ConcreteOutDia) / HoopSpacing;
+        public double HoopBarArea
+        {
+            get
+            {
+                var spec = ShearReinforcementMethods.Get(HoopMethod);
+                if (spec == null) return GetBarArea(HoopSize);
 
+                double area = spec.BarArea(HoopSize);
+                if (area <= 0)
+                {
+                    // 工法の表に無い呼び名。0 のままだと pw が 0 になり、
+                    // 安全限界せん断から補強筋の項が黙って消える。
+                    PileDesign.Common.CalcFallbackTracker.Report(
+                        "せん断補強筋の公称断面積 (→工法の既定径)", null,
+                        $"HoopMethod={HoopMethod}, HoopSize={HoopSize}");
+                    area = spec.BarArea(spec.DefaultBarSize);
+                }
+                return area;
+            }
+        }
 
-        // せん断補強筋降伏点
-        //private double _hoopSigmay;
+        /// <summary>
+        /// せん断補強筋比 pw = aw/(b·x)。aw は 1 組 (両側 2 本) の断面積。
+        ///
+        /// <b>等価な幅 b の取り方が工法で違う</b>。標準は b = πD/4、工法は b = (B/2)·√π で、
+        /// 同じ配筋でも pw が 13% ずれる。工法の適用範囲 (0.1%〜) の判定も
+        /// 工法の式が使う pw で見ないと意味がないので、ここで揃えておく。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double HoopPw
+        {
+            get
+            {
+                if (!(ConcreteOutDia > 0) || !(HoopSpacing > 0)) return 0.0;
+                double b = ShearReinforcementMethods.IsProprietary(HoopMethod)
+                    ? ConcreteOutDia / 2.0 * Math.Sqrt(Math.PI)
+                    : Math.PI / 4.0 * ConcreteOutDia;
+                return 2 * HoopBarArea / b / HoopSpacing;
+            }
+        }
+
+        /// <summary>
+        /// せん断補強筋の降伏点 σwy (N/mm²)。工法では終局限界せん断力の算定に使う材料強度。
+        ///
+        /// 以前は if の連鎖で、知らない規格名では<b>黙って 0</b> を返していた。
+        /// 0 のまま安全限界せん断の √(pw·σwy) に入ると、補強筋の項が消えて
+        /// 耐力だけが静かに下がる。表に無い規格は記録して既定へ落とす。
+        /// </summary>
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
         public double HoopSigmay
         {
-            get /*=> _hoopPw;*/
+            get
             {
-                if (HoopSpec == "SD295") return 295;
-                else if (HoopSpec == "SD345") return 345;
-                else if (HoopSpec == "SD390") return 390;
-                else if (HoopSpec == "SD490") return 490;
-                else return 0;
+                var spec = ShearReinforcementMethods.Get(HoopMethod);
+                if (spec != null) return spec.UltimateSigmaWy;
+                if (ShearReinforcementMethods.StandardGrades.Contains(HoopSpec))
+                    return MainBars.GradeYieldStrength(HoopSpec);
+
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "せん断補強筋の降伏点 (→SD295)", null, $"HoopSpec={HoopSpec}, HoopMethod={HoopMethod}");
+                return 295.0;
             }
         }
+
+        /// <summary>
+        /// せん断補強筋の短期許容引張応力度 wft (N/mm²)。工法の短期許容せん断力の第2項に使う。
+        /// 工法を使わないときは短期許容せん断力の式自体を使わないので 0。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double HoopWft => ShearReinforcementMethods.Get(HoopMethod)?.ShortTermTensileStress ?? 0.0;
 
         // せん断補強筋降伏点
         private double _hoopPsSigmay;
@@ -3089,19 +3446,89 @@ namespace PileDesign.Models.InputData
                 }
                 else
                 {
+                    var hoopMethod = ShearReinforcementMethods.Get(HoopMethod);
+                    if (hoopMethod != null)
+                    {
+                        SelectedPileSectionSpecification.Add(
+                            new Spec("せん断補強筋の工法", "", hoopMethod.Name, "",
+                                $"{hoopMethod.Certification}。せん断耐力は本工法の設計施工指針の式による"));
+
+                        bool isSafetyShortTerm =
+                            HoopDamageFormula == ShearReinforcementMethods.DamageFormulaSafetyShortTerm;
+                        SelectedPileSectionSpecification.Add(
+                            new Spec("損傷限界の算定式", "", HoopDamageFormula, "",
+                                isSafetyShortTerm
+                                    ? $"設計用せん断力を水平荷重時せん断力の {ShearDesignMagnification:N1} 倍に割り増して検定する"
+                                    : hoopMethod.DamageIncludesHoop
+                                        ? "b·j·{ sfs + 0.5·wft·(pw − 0.001) }"
+                                        : "sfs·Ac/κ (せん断補強筋を考慮しない式)"));
+
+                        bool isTrussArch =
+                            HoopUltimateFormula == ShearReinforcementMethods.UltimateFormulaTrussArch;
+                        SelectedPileSectionSpecification.Add(
+                            new Spec("終局の算定式", "", HoopUltimateFormula, "",
+                                isTrussArch
+                                    ? "トラス項のみ (b·jt·pw·σwy、上限 (ν·Fc/3)·b·jt)。"
+                                      + "アーチ項は部材長 L が入力に無いため安全側に 0 とする"
+                                    : "大野・荒川 min 式"));
+                    }
+
+                    // 間隔の上限は工法で違う (エムケーパイルリング785 は杭頭から杭径の 5 倍まで
+                    // 150mm 以下・それ以外 300mm 以下、ウルボンは 150mm 以下)。
+                    // どの深さの区間かはこの断面だけでは決まらないので、緩い方を超えたときに知らせる。
                     string noteHoopSpacing =
-                        HoopSpacing > 300 ? "([強度と変形性能]3.1,5(6))300より大" : "";
+                        hoopMethod != null && HoopSpacing > hoopMethod.SpacingMax
+                            ? $"({hoopMethod.Name})構造規定の{hoopMethod.SpacingMax:N0}mmより大"
+                            : hoopMethod != null && HoopSpacing > hoopMethod.SpacingMaxNearPileHead
+                            ? $"({hoopMethod.Name})杭頭から杭径の{hoopMethod.PileHeadRangeInDiameters:N0}倍の範囲は{hoopMethod.SpacingMaxNearPileHead:N0}mm以下"
+                            : hoopMethod == null && HoopSpacing > 300 ? "([強度と変形性能]3.1,5(6))300より大" : "";
                     SelectedPileSectionSpecification.Add(
                         new Spec("せん断補強筋呼び径@間隔", "", $"{HoopSize}@{HoopSpacing}", "", noteHoopSpacing));
                     SelectedPileSectionSpecification.Add(
-                        new Spec("せん断補強筋降伏点", "σy", $"{HoopSigmay:N0}", "N/mm2"));
+                        new Spec("せん断補強筋降伏点", "σy", $"{HoopSigmay:N0}", "N/mm2",
+                            hoopMethod != null ? "終局限界せん断力の算定に使う材料強度" : ""));
+                    if (hoopMethod != null)
+                    {
+                        SelectedPileSectionSpecification.Add(
+                            new Spec("せん断補強筋短期許容応力度", "wft", $"{HoopWft:N0}", "N/mm2",
+                                "短期許容せん断力の補強筋項に使う"));
+                    }
+
+                    double pwPercent = HoopPw * 100.0;
                     string noteHoopPw =
-                        PileSectionType == PileTypeNames.RcSection && HoopPw * 100 < 0.1 ? "([強度と変形性能]3.1,5(6))0.1%未満" : "";
-                    string hoopPwValue = (HoopSpacing != 0 && ConcreteOutDia != 0) ? $"{HoopPw * 100:N2}" : "N/A";
+                        hoopMethod != null && pwPercent < hoopMethod.MinPw * 100.0
+                            ? $"({hoopMethod.Name})構造規定の{hoopMethod.MinPw * 100:N1}%未満"
+                            : hoopMethod != null && pwPercent > hoopMethod.MaxPw * 100.0
+                            ? $"({hoopMethod.Name})構造規定の{hoopMethod.MaxPw * 100:N1}%より大"
+                            : hoopMethod != null && pwPercent < hoopMethod.UltimateMinPw * 100.0
+                            ? $"({hoopMethod.Name})終局を検討する場合は{hoopMethod.UltimateMinPw * 100:N1}%以上"
+                            : hoopMethod != null && pwPercent > hoopMethod.UltimatePwCap * 100.0
+                            ? $"({hoopMethod.Name})終局は{hoopMethod.UltimatePwCap * 100:N1}%を上限として算定"
+                            : hoopMethod == null && PileSectionType == PileTypeNames.RcSection && pwPercent < 0.1
+                            ? "([強度と変形性能]3.1,5(6))0.1%未満" : "";
+                    string hoopPwValue = (HoopSpacing != 0 && ConcreteOutDia != 0) ? $"{pwPercent:N2}" : "N/A";
                     SelectedPileSectionSpecification.Add(
                         new Spec("せん断補強筋比", "pw", hoopPwValue, "%", noteHoopPw));
                     SelectedPileSectionSpecification.Add(
                         new Spec("せん断補強筋重心かぶり厚", "", $"{HoopCenterCover:N0}", "mm"));
+
+                    // 工法の適用範囲 (杭径・Fc・引張軸力) は入力を見れば押せる前に分かる。
+                    if (hoopMethod != null)
+                    {
+                        bool hasDiaLimit = !double.IsPositiveInfinity(hoopMethod.PileDiaMax);
+                        string diaText = hasDiaLimit
+                            ? $"杭径 {hoopMethod.PileDiaMin:N0}〜{hoopMethod.PileDiaMax:N0}mm"
+                            : "杭径 規定なし";
+                        // 範囲の判定は検定と同じもの (HoopMethodOutOfScopeReason) を使う
+                        string noteRange = HoopMethodOutOfScopeReason
+                            ?? (hoopMethod.DamageExcludesTension
+                                ? "損傷限界せん断力時に引張軸力になる杭体は本工法の適用外です (その検定は「適用範囲外」になります)"
+                                : "");
+                        SelectedPileSectionSpecification.Add(
+                            new Spec("せん断補強筋工法の適用範囲", "",
+                                $"{diaText} / Fc {hoopMethod.FcMin:N0}〜{hoopMethod.FcMax:N0}N/mm2",
+                                "", noteRange));
+                    }
                 }
             }
 
@@ -3656,6 +4083,14 @@ namespace PileDesign.Models.InputData
             // 浅いコピーを作成してから、参照型フィールドを個別に複製する
             var copy = (PileSection)this.MemberwiseClone();
 
+            // せん断補強筋の選択肢は入れ物を共有させない。
+            // 共有したまま控えを取ると、控え側で工法を変えたときに元の画面の
+            // ComboBox の候補まで書き換わる (同じコレクションを見ているため)。
+            copy._hoopSizeOption = new ObservableCollection<string>(this._hoopSizeOption);
+            copy._hoopSpecOption = new ObservableCollection<string>(this._hoopSpecOption);
+            copy._hoopDamageFormulaOption = new ObservableCollection<string>(this._hoopDamageFormulaOption);
+            copy._hoopUltimateFormulaOption = new ObservableCollection<string>(this._hoopUltimateFormulaOption);
+
             // SelectedPrecastPile をコピー (null 安全)
             if (this.SelectedPrecastPile != null)
             {
@@ -4113,18 +4548,22 @@ namespace PileDesign.Models.InputData
                 // 場所打ちRC杭
                 // 帯筋 (HoopPw / HoopSigmay) を渡す。渡さないと安全限界せん断が
                 // 断面クラスの仮値 (pw=0.002 / σwy=295) で作られる。
+                // 工法 (HoopMethod) も渡す。渡さないとせん断耐力の式が標準のままになり、
+                // 高強度せん断補強筋を選んでも耐力が指針どおりにならない。
                 (PileTypeNames.InsituRc, _) =>
                     new InsituReinforcedConcreteSection(
                         new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc, gamma: ConcreteGamma),
                         new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize),
-                        hoopPw: HoopPw, hoopSigmaWy: HoopSigmay),
+                        hoopPw: HoopPw, hoopSigmaWy: HoopSigmay, hoopMethod: HoopMethod,
+                        hoopDamageFormula: HoopDamageFormula, hoopUltimateFormula: HoopUltimateFormula),
 
                 // 場所打ち鋼管RC杭 - RC部
                 (PileTypeNames.InsituSteelPipeConcrete, PileTypeNames.RcSection) =>
                     new InsituReinforcedConcreteSection(
                         new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc, gamma: ConcreteGamma),
                         new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize),
-                        hoopPw: HoopPw, hoopSigmaWy: HoopSigmay),
+                        hoopPw: HoopPw, hoopSigmaWy: HoopSigmay, hoopMethod: HoopMethod,
+                        hoopDamageFormula: HoopDamageFormula, hoopUltimateFormula: HoopUltimateFormula),
 
                 // 場所打ち鋼管RC杭 - 鋼管RC部
                 // 終局ひずみ 5,000μ オプション時はコンクリートにも同じ εcu を渡す。

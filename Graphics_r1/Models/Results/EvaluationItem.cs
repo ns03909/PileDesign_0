@@ -138,6 +138,24 @@ namespace PileDesign.Models.Results
         /// <summary>緩めた基準 (残差 1e-6 に届かず最大 1e-2) で受理したケースか。</summary>
         public bool IsFromRelaxedCase => CaseConvergence == FEM.StepStatus.ConvergedRelaxed;
 
+        /// <summary>
+        /// 限界値の算定式の適用範囲の外なら、その理由 (利用者向けの文)。範囲内なら null。
+        ///
+        /// 高強度せん断補強筋の工法は、杭径・Fc や軸力 (引張) に適用範囲がある。範囲の外でも式は数値を返すが、
+        /// 指針の保証の外の値なので、限界値と比べた結果を OK / NG として出さない (未収束と同じ扱い)。
+        /// 以前は諸元表の注記に出すだけで、検定は通常どおり OK / NG を出していた。
+        /// </summary>
+        public string? OutOfScopeReason { get; init; }
+
+        /// <summary>限界値の算定式の適用範囲の外か。</summary>
+        public bool IsOutOfScope => !string.IsNullOrEmpty(OutOfScopeReason);
+
+        /// <summary>
+        /// OK / NG を判定できる項目か。収束していないケースと、算定式の適用範囲の外の項目は判定しない。
+        /// OK・NG の件数や最大の検定比は、これが true の項目だけから数える。
+        /// </summary>
+        public bool IsJudged => !IsFromUnconvergedCase && !IsOutOfScope;
+
         /// <summary>応答値 (解析から得た値)。</summary>
         public double Response { get; init; }
 
@@ -188,6 +206,17 @@ namespace PileDesign.Models.Results
         [ResultColumn("M/(Q·d)", 14, "N2", "せん断耐力の算定に使った M/(Q·d)。杭ごと・荷重ケースごとに解析結果から求めた値")]
         public double? MonQd { get; init; }
 
+        /// <summary>
+        /// 設計用せん断力の割増係数。割り増した行だけに入る (それ以外は空)。
+        ///
+        /// 高強度せん断補強筋の工法で「安全性確保のための短期許容せん断力」を選ぶと、
+        /// 指針が設計用せん断力を水平荷重時の 1.5 倍以上とすることを前提にしている。
+        /// 応答値はこの係数を掛けたあとの値なので、解析結果テーブルのせん断力とは一致しない。
+        /// どの行が割り増されているかを読めるようにする。
+        /// </summary>
+        [ResultColumn("せん断割増", 15, "N2", "設計用せん断力の割増係数。応答値はこの係数を掛けたあとの値（空欄は割増なし）")]
+        public double? ShearMagnification { get; init; }
+
         /// <summary>基礎梁の長さ (m)。傾斜角のみ。</summary>
         public double? BeamLength { get; init; }
 
@@ -236,8 +265,9 @@ namespace PileDesign.Models.Results
         /// 画面の一覧・計算書の検定表・結果ダッシュボードには素の「OK」「NG」が出ていた。
         /// ヘルプは「判定に OK(緩和受理) のように明記します」と書いてあり、実装が追いついていなかった。</para>
         /// </summary>
-        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG。解析が収束しなかったケースは「未収束」、緩めた基準で受理したケースは「(緩和受理)」を付ける")]
+        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG。解析が収束しなかったケースは「未収束」、算定式 (工法) の適用範囲の外は「適用範囲外」、緩めた基準で受理したケースは「(緩和受理)」を付ける")]
         public string StatusLabel => IsFromUnconvergedCase ? "未収束"
+            : IsOutOfScope ? "適用範囲外"
             : IsFromRelaxedCase ? (IsOk ? "OK(緩和受理)" : "NG(緩和受理)")
             : (IsOk ? "OK" : "NG");
 

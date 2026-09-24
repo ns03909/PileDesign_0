@@ -569,11 +569,20 @@
                                         <StackPanel>
 
                                             <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text ="工法" Width="100" HorizontalAlignment="Right"/>
+                                                <ComboBox  SelectedItem="{Binding PileSection.HoopMethod, UpdateSourceTrigger=PropertyChanged}" Width="180"
+                                                           ItemsSource="{Binding PileSection.HoopMethodOption}"
+                                                           ToolTip="高強度せん断補強筋の工法を選ぶと、材料だけでなく せん断耐力の算定式が工法の設計施工指針の式に替わります"
+                                                           DropDownOpened="ComboBox_DropDownOpened"
+                                                           SelectionChanged="ComboBox_SelectionChanged"/>
+                                            </StackPanel>
+
+                                            <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text ="補強筋径@間隔 (mm)" Width="150" HorizontalAlignment="Right"/>
 
-                                                <ComboBox  SelectedItem="{Binding PileSection.HoopSize, UpdateSourceTrigger=PropertyChanged}" Width="50"
-                                                           ItemsSource="{Binding PileSection.MainBarSizeOption}"
-                                                           DropDownOpened="ComboBox_DropDownOpened" 
+                                                <ComboBox  SelectedItem="{Binding PileSection.HoopSize, UpdateSourceTrigger=PropertyChanged}" Width="70"
+                                                           ItemsSource="{Binding PileSection.HoopSizeOption}"
+                                                           DropDownOpened="ComboBox_DropDownOpened"
                                                            SelectionChanged="ComboBox_SelectionChanged"/>
                                                 <TextBlock Text ="@" Width="20"/>
                                                 <TextBox Text="{Binding PileSection.HoopSpacing, UpdateSourceTrigger=LostFocus}" Width="50"
@@ -588,8 +597,11 @@
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text ="規格" Width="100"  HorizontalAlignment="Right"/>
                                                 <ComboBox  SelectedItem="{Binding PileSection.HoopSpec, UpdateSourceTrigger=PropertyChanged}"
-                                                           ItemsSource="{Binding PileSection.MainBarSpecOption}" Width="100"
-                                                           DropDownOpened="ComboBox_DropDownOpened" 
+                                                           ItemsSource="{Binding PileSection.HoopSpecOption}" Width="130"
+                                                           IsEnabled="{Binding PileSection.IsStandardHoopMethod}"
+                                                           ToolTipService.ShowOnDisabled="True"
+                                                           ToolTip="工法を選んだときは、材料が工法の指針で決まっているため規格は選べません"
+                                                           DropDownOpened="ComboBox_DropDownOpened"
                                                            SelectionChanged="ComboBox_SelectionChanged"/>
 
                                                 <TextBlock Text ="重心かぶり厚 (mm)" Width="150" HorizontalAlignment="Right"/>
@@ -600,6 +612,26 @@
                                                           PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                           TextChanged="TextBox_TextChanged"
                                                           LostFocus="TextBox_LostFocus"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text ="損傷限界の式" Width="100"  HorizontalAlignment="Right"/>
+                                                <ComboBox  SelectedItem="{Binding PileSection.HoopDamageFormula, UpdateSourceTrigger=PropertyChanged}"
+                                                           ItemsSource="{Binding PileSection.HoopDamageFormulaOption}" Width="260"
+                                                           IsEnabled="{Binding PileSection.IsHoopDamageFormulaSelectable}"
+                                                           ToolTipService.ShowOnDisabled="True"
+                                                           ToolTip="「安全性確保のための短期許容せん断力」を選ぶと、指針の定めに従い 設計用せん断力を水平荷重時せん断力の 1.5 倍に割り増して検定します&#x0a;工法を選んでいないとき、または選択肢が 1 つの工法では選べません"
+                                                           DropDownOpened="ComboBox_DropDownOpened"
+                                                           SelectionChanged="ComboBox_SelectionChanged"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text ="終局の式" Width="100"  HorizontalAlignment="Right"/>
+                                                <ComboBox  SelectedItem="{Binding PileSection.HoopUltimateFormula, UpdateSourceTrigger=PropertyChanged}"
+                                                           ItemsSource="{Binding PileSection.HoopUltimateFormulaOption}" Width="260"
+                                                           IsEnabled="{Binding PileSection.IsHoopUltimateFormulaSelectable}"
+                                                           ToolTipService.ShowOnDisabled="True"
+                                                           ToolTip="トラス・アーチ式は、部材長 L が杭断面の入力に無いため アーチ項を安全側に無視して算定します&#x0a;工法を選んでいないとき、または選択肢が 1 つの工法では選べません"
+                                                           DropDownOpened="ComboBox_DropDownOpened"
+                                                           SelectionChanged="ComboBox_SelectionChanged"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </GroupBox>
@@ -614,10 +646,19 @@
                                             <StackPanel>
 
                                                 <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="工法" Width="100" HorizontalAlignment="Right"/>
+                                                    <ComboBox  SelectedItem="{Binding PileSection.HoopMethod, UpdateSourceTrigger=PropertyChanged}" Width="180"
+                                                               ItemsSource="{Binding PileSection.HoopMethodOption}"
+                                                               ToolTip="高強度せん断補強筋の工法を選ぶと、材料だけでなく せん断耐力の算定式が工法の設計施工指針の式に替わります"
+                                                               DropDownOpened="ComboBox_DropDownOpened"
+                                                               SelectionChanged="ComboBox_SelectionChanged"/>
+                                                </StackPanel>
+
+                                                <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text ="補強筋径@間隔 (mm)" Width="150" HorizontalAlignment="Right"/>
-                                                    <ComboBox  SelectedItem="{Binding PileSection.HoopSize, UpdateSourceTrigger=PropertyChanged}" Width="50"
-                                                               ItemsSource="{Binding PileSection.MainBarSizeOption}"
-                                                               DropDownOpened="ComboBox_DropDownOpened" 
+                                                    <ComboBox  SelectedItem="{Binding PileSection.HoopSize, UpdateSourceTrigger=PropertyChanged}" Width="70"
+                                                               ItemsSource="{Binding PileSection.HoopSizeOption}"
+                                                               DropDownOpened="ComboBox_DropDownOpened"
                                                                SelectionChanged="ComboBox_SelectionChanged"/>
                                                     <TextBlock Text ="@" Width="20"/>
                                                     <TextBox Text="{Binding PileSection.HoopSpacing, UpdateSourceTrigger=LostFocus}" Width="50"
@@ -631,8 +672,11 @@
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text ="規格" Width="100"  HorizontalAlignment="Right"/>
                                                     <ComboBox  SelectedItem="{Binding PileSection.HoopSpec, UpdateSourceTrigger=PropertyChanged}"
-                                                               ItemsSource="{Binding PileSection.MainBarSpecOption}" Width="100"
-                                                               DropDownOpened="ComboBox_DropDownOpened" 
+                                                               ItemsSource="{Binding PileSection.HoopSpecOption}" Width="130"
+                                                               IsEnabled="{Binding PileSection.IsStandardHoopMethod}"
+                                                               ToolTipService.ShowOnDisabled="True"
+                                                               ToolTip="工法を選んだときは、材料が工法の指針で決まっているため規格は選べません"
+                                                               DropDownOpened="ComboBox_DropDownOpened"
                                                                SelectionChanged="ComboBox_SelectionChanged"/>
                                                     <TextBlock Text ="重心かぶり厚 (mm)" Width="150" HorizontalAlignment="Right"/>
                                                     <TextBox Text="{Binding PileSection.HoopCenterCover, UpdateSourceTrigger=LostFocus}" Width="50"
@@ -640,6 +684,26 @@
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="損傷限界の式" Width="100"  HorizontalAlignment="Right"/>
+                                                    <ComboBox  SelectedItem="{Binding PileSection.HoopDamageFormula, UpdateSourceTrigger=PropertyChanged}"
+                                                               ItemsSource="{Binding PileSection.HoopDamageFormulaOption}" Width="260"
+                                                               IsEnabled="{Binding PileSection.IsHoopDamageFormulaSelectable}"
+                                                               ToolTipService.ShowOnDisabled="True"
+                                                               ToolTip="「安全性確保のための短期許容せん断力」を選ぶと、指針の定めに従い 設計用せん断力を水平荷重時せん断力の 1.5 倍に割り増して検定します&#x0a;工法を選んでいないとき、または選択肢が 1 つの工法では選べません"
+                                                               DropDownOpened="ComboBox_DropDownOpened"
+                                                               SelectionChanged="ComboBox_SelectionChanged"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="終局の式" Width="100"  HorizontalAlignment="Right"/>
+                                                    <ComboBox  SelectedItem="{Binding PileSection.HoopUltimateFormula, UpdateSourceTrigger=PropertyChanged}"
+                                                               ItemsSource="{Binding PileSection.HoopUltimateFormulaOption}" Width="260"
+                                                               IsEnabled="{Binding PileSection.IsHoopUltimateFormulaSelectable}"
+                                                               ToolTipService.ShowOnDisabled="True"
+                                                               ToolTip="トラス・アーチ式は、部材長 L が杭断面の入力に無いため アーチ項を安全側に無視して算定します&#x0a;工法を選んでいないとき、または選択肢が 1 つの工法では選べません"
+                                                               DropDownOpened="ComboBox_DropDownOpened"
+                                                               SelectionChanged="ComboBox_SelectionChanged"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </GroupBox>

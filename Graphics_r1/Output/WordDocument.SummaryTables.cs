@@ -1206,6 +1206,24 @@ namespace PileDesign.Output
                 AddText(body, "収束しなかった荷重ケース: " + string.Join(" / ", unconvergedCases));
             }
 
+            // 算定式 (工法) の適用範囲の外の項目も、判定より先に書く。理由ごとにまとめる。
+            if (result.OutOfScopeCount > 0)
+            {
+                var reasons = result.Items
+                    .Where(i => !i.IsFromUnconvergedCase && i.IsOutOfScope)
+                    .Select(i => i.OutOfScopeReason!)
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToList();
+
+                AddText(body,
+                    $"このうち {result.OutOfScopeCount} 件は、せん断耐力の算定式 (高強度せん断補強筋の工法の指針の式) の"
+                    + "適用範囲の外である。範囲の外の限界値は指針の保証の外の値なので、"
+                    + "OK / NG のいずれにも数えていない (表の判定は「適用範囲外」)。"
+                    + "工法の適用範囲に収まる断面に見直すか、工法を「標準」にして検討すること。");
+                AddText(body, "適用範囲の外になった理由: " + string.Join(" / ", reasons));
+            }
+
             // 緩めた基準で受理したケースも、件数だけは集計に添える。
             // 各行の判定は「OK(緩和受理)」と出るが、まとめだけを読む人には伝わらないため。
             if (result.RelaxedCount > 0)
@@ -1239,9 +1257,9 @@ namespace PileDesign.Output
 
             if (result.NgCount == 0)
             {
-                AddText(body, result.UnconvergedCount > 0
-                    ? "収束した荷重ケースの検定項目は、すべて限界値を下回っている（NG 項目なし）。"
-                      + "収束しなかったケースについては上記のとおり判定できていない。"
+                AddText(body, result.UnconvergedCount > 0 || result.OutOfScopeCount > 0
+                    ? "判定できた検定項目は、すべて限界値を下回っている（NG 項目なし）。"
+                      + "収束しなかったケース・算定式の適用範囲の外の項目については、上記のとおり判定していない。"
                     : "すべての検定項目が限界値を下回っている（NG 項目なし）。");
                 return;
             }
@@ -1264,7 +1282,9 @@ namespace PileDesign.Output
                 CreateTableCell(["検定比"], fontSize, "center")));
 
             // 検定比の大きい順。どこが一番危ないかを上から読めるようにする
-            foreach (var item in result.ByRatioDescending.Where(i => !i.IsOk))
+            // NG の件数 (NgCount) と同じく、判定できる項目だけを並べる。未収束・適用範囲外の行は
+            // 限界値を超えていても NG とは言えないので、この表には入れない (上の本文で別に知らせている)
+            foreach (var item in result.ByRatioDescending.Where(i => i.IsJudged && !i.IsOk))
             {
                 // 対象は TargetDescription を使う。要素名 + 端 (「beam i端」) では
                 // どの杭のどこか読めず、行がすべて同じ表記になる。

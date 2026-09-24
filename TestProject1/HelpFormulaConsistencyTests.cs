@@ -100,14 +100,18 @@ namespace TestProject1
             return "";
         }
 
-        /// <summary>見出し (h4) から次の h4 まで。</summary>
+        /// <summary>
+        /// 見出し (h3 か h4) から次の見出し (h2〜h4) まで。
+        /// 杭種の章は、章の直下に h4 を置くと「3.0.1」と番号が飛ぶため h3 に揃えてある。
+        /// </summary>
         private static string HelpSection(string heading)
         {
             string help = Help();
-            int a = help.IndexOf("<h4>" + heading, StringComparison.Ordinal);
-            Assert.IsTrue(a >= 0, $"ヘルプに見出し「{heading}」がありません");
-            int b = help.IndexOf("<h4", a + 1, StringComparison.Ordinal);
-            return help[a..(b < 0 ? help.Length : b)];
+            var start = Regex.Match(help, "<h[34][^>]*>" + Regex.Escape(heading));
+            Assert.IsTrue(start.Success, $"ヘルプに見出し「{heading}」がありません");
+            var next = Regex.Match(help[(start.Index + 1)..], "<h[2-4][ >]");
+            int b = next.Success ? start.Index + 1 + next.Index : help.Length;
+            return help[start.Index..b];
         }
     }
 }

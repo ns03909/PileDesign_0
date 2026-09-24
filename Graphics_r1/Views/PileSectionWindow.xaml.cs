@@ -129,6 +129,8 @@ namespace PileDesign.Views
                 nameof(PileDesign.Models.InputData.PileSection.MainBarSize) => true,
                 nameof(PileDesign.Models.InputData.PileSection.MainBarCenterCover) => true,
                 nameof(PileDesign.Models.InputData.PileSection.HoopSize) => true,
+                // 工法を替えると補強筋の呼び名の一覧ごと入れ替わる (太さが変わる)
+                nameof(PileDesign.Models.InputData.PileSection.HoopMethod) => true,
                 nameof(PileDesign.Models.InputData.PileSection.HoopCenterCover) => true,
                 nameof(PileDesign.Models.InputData.PileSection.PileSectionType) => true,
                 nameof(PileDesign.Models.InputData.PileSection.SelectedSteelPipePileName) => true,
@@ -330,41 +332,6 @@ namespace PileDesign.Views
             PileSectionViewModel viewModel = (PileSectionViewModel)DataContext;
             viewModel.RedrawShapes();
             viewModel.ChartUpdate();
-        }
-
-        // データグリッドの全コピー
-        private static void CopyDataGridToClipboard(DataGrid dataGrid, bool isSelectedOnly)
-        {
-            if (dataGrid == null || dataGrid.Items.Count == 0) return;
-
-            var sb = new StringBuilder();
-
-            // ヘッダー行
-            foreach (var column in dataGrid.Columns)
-            {
-                sb.Append(column.Header);
-                sb.Append('\t');
-            }
-            sb.Length = Math.Max(0, sb.Length - 1); // 最後のタブ削除
-            sb.AppendLine();
-
-            var items = isSelectedOnly
-                ? dataGrid.SelectedItems.Cast<object>()
-                : dataGrid.Items.Cast<object>();
-
-            foreach (var item in items)
-            {
-                if (item == CollectionView.NewItemPlaceholder) continue;
-                foreach (var column in dataGrid.Columns)
-                {
-                    sb.Append(Output.DataGridCsv.GetCellValue(column, item));
-                    sb.Append('\t');
-                }
-                sb.Length = Math.Max(0, sb.Length - 1);
-                sb.AppendLine();
-            }
-
-            Common.ClipboardHelper.TrySetText(sb.ToString());
         }
 
         // 散布図

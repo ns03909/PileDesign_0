@@ -87,7 +87,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>認定工法の支持力算定の検証</h1>
+        <h1>認定工法の算定式の検証</h1>
         <div class="nav">
             <a href="verification.html">← 設計例による検証</a>
         </div>
@@ -96,7 +96,7 @@
         <div class="intro">
             <h2>このページの位置づけ</h2>
             <p>
-                杭先端の支持力算定について、認定工法のカタログ・設計マニュアルに数値として書かれている
+                杭先端の支持力や杭体のせん断耐力の算定について、認定工法のカタログ・設計マニュアルに数値として書かれている
                 算定式の値や対比表を本プログラムで再現し、突き合わせた結果です。
             </p>
             <ul>
@@ -110,7 +110,7 @@
         </div>
 
         <!-- verification-methods:begin (自動生成: VerificationTableTests が書く。手で編集しない) -->
-            <p class="summary-lead">認定工法のカタログ・設計マニュアルに数値として書かれている 39 項目を本プログラムで計算し、39 項目がカタログの表記と一致しました。この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。</p>
+            <p class="summary-lead">認定工法のカタログ・設計マニュアルに数値として書かれている 43 項目を本プログラムで計算し、43 項目がカタログの表記と一致しました。この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。</p>
             <div class="item-title">Smart-MAGNUM 工法カタログ (ジャパンパイル)　<span class="summary-count">17 / 17 項目</span></div>
             <table class="comparison-table">
                 <tr><th>箇所</th><th>項目</th><th>文献値</th><th>プログラム値</th><th>差</th><th>許容</th><th>判定</th></tr>
@@ -157,6 +157,14 @@
                 <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.9, 粘土質)</td><td>722</td><td>722</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
                 <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=2.0, 砂質・礫質)</td><td>880</td><td>880</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
                 <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=2.0, 粘土質)</td><td>800</td><td>800</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
+            </table>
+            <div class="item-title">エムケーパイルリング785 設計施工指針・同解説 (向山工場)　<span class="summary-count">4 / 4 項目</span></div>
+            <table class="comparison-table">
+                <tr><th>箇所</th><th>項目</th><th>文献値</th><th>プログラム値</th><th>差</th><th>許容</th><th>判定</th></tr>
+                <tr><td>解表5.2 杭径の検討用試験体</td><td style="text-align:left">使用限界せん断力 QAL (試験体 No.4、杭径 400 mm)<br><small>QAL = Lfs&#183;Ac/κ (κ = 4/3)</small></td><td>55.7 kN</td><td>55.7 kN</td><td>0.0%</td><td>&#177;0.5%</td><td><span class="match">一致</span></td></tr>
+                <tr><td>解表5.2 杭径の検討用試験体</td><td style="text-align:left">損傷限界せん断力 QAs (試験体 No.4、杭径 400 mm)<br><small>QAs = sfs&#183;Ac/κ (せん断補強筋を考慮しない式)</small></td><td>83.6 kN</td><td>83.55 kN</td><td>-0.1%</td><td>&#177;0.5%</td><td><span class="match">一致</span></td></tr>
+                <tr><td>解表5.2 杭径の検討用試験体</td><td style="text-align:left">使用限界せん断力 QAL (試験体 No.12、杭径 700 mm)<br><small>QAL = Lfs&#183;Ac/κ (κ = 4/3)</small></td><td>185.3 kN</td><td>185.3 kN</td><td>0.0%</td><td>&#177;0.5%</td><td><span class="match">一致</span></td></tr>
+                <tr><td>解表5.2 杭径の検討用試験体</td><td style="text-align:left">損傷限界せん断力 QAs (試験体 No.12、杭径 700 mm)<br><small>QAs = sfs&#183;Ac/κ (せん断補強筋を考慮しない式)</small></td><td>278 kN</td><td>278 kN</td><td>0.0%</td><td>&#177;0.5%</td><td><span class="match">一致</span></td></tr>
             </table>
             <!-- verification-methods:end -->
     </div>

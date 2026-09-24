@@ -63,11 +63,17 @@ namespace PileDesign.Models.Results
             sb.AppendLine($"  [{Verdict(item)}] {item.LimitName}せん断{OverSuffix(item)}（{item.EndLabel}）{tail}");
 
             AppendCondition(sb, item);
+            // 適用範囲の外の項目は、何が範囲の外かを添える (数値は参考として残す)
+            if (item.IsOutOfScope)
+                sb.AppendLine($"       適用範囲外: {item.OutOfScopeReason} (以下の数値は参考)");
 
             string op = item.IsOk ? "≤" : ">";
             // せん断耐力は M/(Q·d) に依存するので、どの値で算定したかも残す
             string monQd = item.MonQd is double v ? $", M/(Q·d)={v:F2}" : string.Empty;
-            sb.AppendLine($"       Q={item.Response:F1} kN {op} {item.LimitName}Q={item.Limit:F1} kN (N={item.AxialForce:F1} kN{monQd})");
+            // 割り増した行は、解析値そのままでないことが読めるようにする
+            string magnification = item.ShearMagnification is double m
+                ? $", 設計用せん断力は解析値の {m:F1} 倍" : string.Empty;
+            sb.AppendLine($"       Q={item.Response:F1} kN {op} {item.LimitName}Q={item.Limit:F1} kN (N={item.AxialForce:F1} kN{monQd}{magnification})");
             sb.AppendLine();
         }
 
@@ -116,18 +122,15 @@ namespace PileDesign.Models.Results
         }
 
         /// <summary>
-        /// 行頭の判定。収束していないケースは <b>OK とも NG とも名乗らない</b> —
-        /// 応答値が釣り合いを満たしていないので、限界値と比べた結果に意味が無い。
+        /// 行頭の判定。画面の一覧・計算書と同じ文字 (<see cref="EvaluationItem.StatusLabel"/>) を使う。
+        /// 判定できない項目 (収束していないケース・算定式の適用範囲の外) は <b>OK とも NG とも名乗らない</b>。
+        /// 以前はここに同じ規則の写しがあり、画面側だけに足した区分を知らないまま残るおそれがあった。
         /// </summary>
-        private static string Verdict(EvaluationItem item) =>
-            item.IsFromUnconvergedCase ? "未収束"
-            // 緩めた基準で受理したケースは判定はするが、その旨を名乗る (残差 1e-6 に届いていない)
-            : item.IsFromRelaxedCase ? (item.IsOk ? "OK(緩和受理)" : "NG(緩和受理)")
-            : (item.IsOk ? "OK" : "NG");
+        private static string Verdict(EvaluationItem item) => item.StatusLabel;
 
-        /// <summary>「超過」。NG のときだけ付く (未収束は超過とも言えない)。</summary>
+        /// <summary>「超過」。NG のときだけ付く (判定できない項目は超過とも言えない)。</summary>
         private static string OverSuffix(EvaluationItem item) =>
-            !item.IsFromUnconvergedCase && !item.IsOk ? "超過" : "";
+            item.IsJudged && !item.IsOk ? "超過" : "";
 
         /// <summary>
         /// 対象の杭の名乗り。杭体は複数の杭で共有されるので、

@@ -184,15 +184,18 @@ namespace PileDesign.ViewModels
             level1Items = MarkUnconvergedCases(level1Items, convergenceByCase);
             level2Items = MarkUnconvergedCases(level2Items, convergenceByCase);
 
-            // 未収束の行は OK にも NG にも数えない。
+            // 判定できない行 (未収束・算定式の適用範囲外) は OK にも NG にも数えない。
             int totalUnconvergedCount = longTermItems.Count(i => i.IsFromUnconvergedCase)
                 + level1Items.Count(i => i.IsFromUnconvergedCase) + level2Items.Count(i => i.IsFromUnconvergedCase);
-            int totalNgCount = longTermItems.Count(i => !i.IsFromUnconvergedCase && !i.IsOk)
-                + level1Items.Count(i => !i.IsFromUnconvergedCase && !i.IsOk)
-                + level2Items.Count(i => !i.IsFromUnconvergedCase && !i.IsOk);
-            int totalOkCount = longTermItems.Count(i => !i.IsFromUnconvergedCase && i.IsOk)
-                + level1Items.Count(i => !i.IsFromUnconvergedCase && i.IsOk)
-                + level2Items.Count(i => !i.IsFromUnconvergedCase && i.IsOk);
+            int totalOutOfScopeCount = longTermItems.Count(i => !i.IsFromUnconvergedCase && i.IsOutOfScope)
+                + level1Items.Count(i => !i.IsFromUnconvergedCase && i.IsOutOfScope)
+                + level2Items.Count(i => !i.IsFromUnconvergedCase && i.IsOutOfScope);
+            int totalNgCount = longTermItems.Count(i => i.IsJudged && !i.IsOk)
+                + level1Items.Count(i => i.IsJudged && !i.IsOk)
+                + level2Items.Count(i => i.IsJudged && !i.IsOk);
+            int totalOkCount = longTermItems.Count(i => i.IsJudged && i.IsOk)
+                + level1Items.Count(i => i.IsJudged && i.IsOk)
+                + level2Items.Count(i => i.IsJudged && i.IsOk);
 
             // ── テキスト組立 ──
             if (longTermResults.Count > 0)
@@ -230,10 +233,14 @@ namespace PileDesign.ViewModels
             sb.AppendLine();
             sb.AppendLine(new string('=', 60));
             sb.AppendLine($"チェック合計: OK {totalOkCount} 件 / NG {totalNgCount} 件");
-            if (totalNgCount == 0)
-                sb.AppendLine("検定: すべてOK");
-            else
+            // 判定できない項目 (未収束・適用範囲外) があるときは「すべてOK」と書かない
+            // (以前は NG が 0 件なら書いていた)。無いときの文言は従来のまま (golden テストが固定している)。
+            if (totalNgCount > 0)
                 sb.AppendLine($"検定: NG項目 {totalNgCount} 件");
+            else if (totalUnconvergedCount > 0 || totalOutOfScopeCount > 0)
+                sb.AppendLine("検定: NG項目なし (ただし OK / NG を判定できない項目があります。下記参照)");
+            else
+                sb.AppendLine("検定: すべてOK");
 
             // 未収束のケースがあったときだけ足す。
             // すべて収束していれば従来と 1 文字も変わらない (golden テストが固定している)。
@@ -243,6 +250,15 @@ namespace PileDesign.ViewModels
                 sb.AppendLine("  これらは解析が収束しておらず、応答値が釣り合いを満たしていません。");
                 sb.AppendLine("  OK / NG の判定はできません。水平解析ウィンドウで計算ステップ数を増やして");
                 sb.AppendLine("  やり直すか、耐力が足りているかを確認してください。");
+            }
+
+            // 算定式 (工法) の適用範囲の外の項目があったときだけ足す (無ければ従来と 1 文字も変わらない)。
+            if (totalOutOfScopeCount > 0)
+            {
+                sb.AppendLine($"適用範囲外の検定: {totalOutOfScopeCount} 件");
+                sb.AppendLine("  せん断耐力の算定式 (高強度せん断補強筋の工法の指針の式) の適用範囲の外です。");
+                sb.AppendLine("  OK / NG の判定はできません。工法の適用範囲に収まる断面に見直すか、");
+                sb.AppendLine("  工法を「標準」にして検討してください。");
             }
 
             // ── 個別矩形（基礎梁考慮）反復解析の傾斜角検定 ──
@@ -885,12 +901,44 @@ namespace PileDesign.ViewModels
                 double qI = result.CumulativeForce.Fi;
                 double qJ = result.CumulativeForce.Fj;
 
-                found.Add(MakeShearItem(qI, allowableQ, "i端"));
-                found.Add(MakeShearItem(qJ, allowableQ, "j端"));
+                // 設計用せん断力の割増。
+                //
+                // 高強度せん断補強筋の工法で「安全性確保のための短期許容せん断力」を選ぶと、
+                // 指針が<b>水平荷重時せん断力を 1.5 倍以上に割り増す</b>ことを前提にしている。
+                // 耐力式だけ差し替えて応答を解析値のままにすると、指針より緩い検定になる。
+                // 長期 (使用限界) と終局には掛からない — 割増は一次設計の短期の規定だから。
+                double magnification = shearLimit == LimitState.Damage ? section.ShearDesignMagnification : 1.0;
+
+                // 工法の式の適用範囲の外なら、OK / NG を出さずに「適用範囲外」とする。
+                //   ・杭径・Fc が範囲外 … 3 つの限界状態すべて
+                //   ・引張軸力 … 工法が損傷限界の式 ((3.2) 式) を引張の杭体に適用外としている場合の損傷限界だけ
+                //     ((3.3) 式や終局の式には、この除外は無い)
+                // 以前は諸元表の注記に出すだけで、範囲外でも通常どおり検定していた。
+                string? outOfScope = section.HoopMethodOutOfScopeReason;
+                if (outOfScope == null && shearLimit == LimitState.Damage && section.UsesHoopMethodFormulas
+                    && Models.InputData.ShearReinforcementMethods.Get(section.HoopMethod) is { DamageExcludesTension: true } hoopSpec
+                    && section.HoopDamageFormula == Models.InputData.ShearReinforcementMethods.DamageFormulaDamageLimit
+                    && axialN_kN < 0)
+                {
+                    outOfScope = $"引張軸力 ({-axialN_kN:N1}kN) の杭体は{hoopSpec.Name}の損傷限界せん断力の適用外です";
+                }
+                // 構造規定 (せん断補強筋比・間隔) を満たさない断面も、工法の式の前提が成り立たないので判定しない。
+                // 間隔の上限は深さで変わるので、要素の上端の杭頭からの深さで決める
+                // (要素分割後の区間の SegmentDepth は下端の深さ)。
+                if (outOfScope == null)
+                {
+                    var element = soilPile.PileBodySegments[seg];
+                    outOfScope = section.HoopMethodDetailingReason(
+                        ultimate: shearLimit == LimitState.Ultimate,
+                        elementTopDepthM: element.SegmentDepth - element.SegmentLength);
+                }
+
+                found.Add(MakeShearItem(qI * magnification, allowableQ, "i端", magnification));
+                found.Add(MakeShearItem(qJ * magnification, allowableQ, "j端", magnification));
 
                 perBeamResults[idx] = found;
 
-                EvaluationItem MakeShearItem(double response, double limit, string end) => new()
+                EvaluationItem MakeShearItem(double response, double limit, string end, double magnification) => new()
                 {
                     Kind = EvaluationKind.PileSectionShear,
                     Level = level,
@@ -909,8 +957,12 @@ namespace PileDesign.ViewModels
                     Unit = "kN",
                     AxialForce = axialN_kN,
                     MonQd = monQd,
+                    // 割増なし (1.0) のときは列を空にする。ほぼ全行が 1.00 で埋まると、
+                    // 割り増した行がかえって見つけにくくなる。
+                    ShearMagnification = magnification != 1.0 ? magnification : null,
                     // 判定は曲げと同じ「超えたら NG」
                     IsOk = !(response > limit),
+                    OutOfScopeReason = outOfScope,
                 };
             });
 

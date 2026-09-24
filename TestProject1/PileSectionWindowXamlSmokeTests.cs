@@ -6,6 +6,7 @@ using System.Windows.Data;
 using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using PileDesign.ViewModels;
 
 namespace TestProject1
@@ -348,6 +349,96 @@ namespace TestProject1
                     {
                         window.Close();
                     }
+                }
+            }, out bool timedOut, timeoutSeconds: 180);
+
+            if (timedOut)
+            {
+                Assert.Inconclusive("ウィンドウ生成が 180 秒以内に完了しなかったためスキップ");
+                return;
+            }
+            if (captured != null)
+                Assert.Fail($"杭断面ウィンドウの生成に失敗: {captured.GetType().Name}: {captured.Message}\n{captured.StackTrace}");
+
+            Assert.AreEqual(0, failures.Count, string.Join("\n", failures));
+        }
+
+        /// <summary>
+        /// せん断補強筋の工法を切り替えても、呼び名と規格の ComboBox が空にならないこと。
+        ///
+        /// 工法ごとに選択肢が総入れ替えになるため、ItemsSource を差し替えた瞬間に
+        /// WPF は「候補に無くなった選択値」を捨てて <b>null を元へ書き戻す</b>。
+        /// モデル側で null を無視しても、<b>画面の ComboBox は空のまま残る</b>。
+        /// 値は正しいのに選択が見えないので、利用者には「入力が消えた」ように見える。
+        ///
+        /// モデルだけのテストでは再現しない (null を無視した時点で値は正しい)。
+        /// 実際にウィンドウを組み、バインディングを進めてから選択を見る。
+        /// </summary>
+        [TestMethod]
+        public void SwitchingHoopMethod_KeepsComboBoxSelectionVisible()
+        {
+            var failures = new List<string>();
+
+            var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
+            {
+                var window = new PileDesign.Views.PileSectionWindow(
+                    BuildMainViewModel(), BuildSection(), pileBodyNo: 1, segmentNo: 1);
+                try
+                {
+                    // バインディングの反映は DataBind 優先度でキューに積まれる。
+                    // ディスパッチャを一度も回さないと ComboBox は空のままなので、
+                    // 「工法を替えたから空になった」と区別できない。都度キューを流す。
+                    static void Flush() =>
+                        System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
+                            System.Windows.Threading.DispatcherPriority.SystemIdle, new Action(() => { }));
+
+                    // ウィンドウが編集するのは渡した断面の複製なので、そちらを掴む
+                    var target = window.ViewModel.PileSection;
+                    window.Measure(new System.Windows.Size(1920, 1200));
+                    window.Arrange(new System.Windows.Rect(0, 0, 1920, 1200));
+                    window.UpdateLayout();
+                    Flush();
+
+                    var combos = LogicalDescendants(window).OfType<ComboBox>().ToList();
+                    List<ComboBox> ByPath(string path) => combos
+                        .Where(c => BindingOperations.GetBinding(c, Selector.SelectedItemProperty)?.Path?.Path == path)
+                        .ToList();
+
+                    var watched = new (string Path, List<ComboBox> Boxes)[]
+                    {
+                        ("PileSection.HoopMethod", ByPath("PileSection.HoopMethod")),
+                        ("PileSection.HoopSize", ByPath("PileSection.HoopSize")),
+                        ("PileSection.HoopSpec", ByPath("PileSection.HoopSpec")),
+                        ("PileSection.HoopDamageFormula", ByPath("PileSection.HoopDamageFormula")),
+                        ("PileSection.HoopUltimateFormula", ByPath("PileSection.HoopUltimateFormula")),
+                    };
+                    foreach (var (path, boxes) in watched)
+                    {
+                        if (boxes.Count == 0) failures.Add($"{path} に結ばれた ComboBox が見つからない");
+                    }
+
+                    foreach (string method in ShearReinforcementMethods.Options
+                             .Concat(ShearReinforcementMethods.Options))
+                    {
+                        target.HoopMethod = method;
+                        window.UpdateLayout();
+                        Flush();
+
+                        foreach (var (path, boxes) in watched)
+                        {
+                            foreach (var box in boxes)
+                            {
+                                if (box.SelectedItem == null)
+                                    failures.Add($"{method}: {path} の ComboBox が空になっている");
+                                else if (box.Items.Count > 0 && !box.Items.Contains(box.SelectedItem))
+                                    failures.Add($"{method}: {path} の選択値 {box.SelectedItem} が選択肢の外");
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    window.Close();
                 }
             }, out bool timedOut, timeoutSeconds: 180);
 

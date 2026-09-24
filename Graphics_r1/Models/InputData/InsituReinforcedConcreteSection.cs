@@ -42,15 +42,33 @@ namespace PileDesign.Models.InputData
         /// <summary>せん断補強筋の降伏点 σwy (N/mm²)。</summary>
         internal double HoopSigmaWy { get; }
 
+        /// <summary>
+        /// せん断補強筋の工法。null なら「標準」(建築基礎構造設計指針の式)。
+        ///
+        /// 工法を選んだときは 3 つの限界状態すべてが<b>工法の指針の式</b>に替わる。
+        /// 等価正方形断面の取り方まで違うので、材料だけ差し替えてはいけない。
+        /// </summary>
+        internal ShearReinforcementMethodSpec? ShearMethod { get; }
+
+        /// <summary>損傷限界 (一次設計) に使う算定式。工法が選択肢を持つ場合のみ意味を持つ。</summary>
+        internal string HoopDamageFormula { get; } = ShearReinforcementMethods.DamageFormulaDamageLimit;
+
+        /// <summary>終局限界に使う算定式。工法が選択肢を持つ場合のみ意味を持つ。</summary>
+        internal string HoopUltimateFormula { get; } = ShearReinforcementMethods.UltimateFormulaArakawa;
+
         internal InsituReinforcedConcreteSection(
             InsituConcrete insituConcrete, MainBars mainBars, bool applyBodyMaterialOptions = true,
-            double hoopPw = DefaultHoopPw, double hoopSigmaWy = DefaultHoopSigmaWy)
+            double hoopPw = DefaultHoopPw, double hoopSigmaWy = DefaultHoopSigmaWy,
+            string? hoopMethod = null, string? hoopDamageFormula = null, string? hoopUltimateFormula = null)
         {
+            if (!string.IsNullOrEmpty(hoopDamageFormula)) HoopDamageFormula = hoopDamageFormula;
+            if (!string.IsNullOrEmpty(hoopUltimateFormula)) HoopUltimateFormula = hoopUltimateFormula;
             // 帯筋 (せん断補強筋)。安全限界せん断の算定に要る。
             // 既定値は帯筋の入力を持たない呼び出し (杭頭接合部の断面など) 用で、
             // 杭体の断面は PileSection から実際の帯筋を渡す。
             HoopPw = hoopPw > 0 ? hoopPw : DefaultHoopPw;
             HoopSigmaWy = hoopSigmaWy > 0 ? hoopSigmaWy : DefaultHoopSigmaWy;
+            ShearMethod = ShearReinforcementMethods.Get(hoopMethod);
 
             // 鉄筋 1.1F 完全バイリニア型オプション（降伏応力度 σy → 1.1σy）を適用（限界ひずみ再計算より前）
             if (applyBodyMaterialOptions)
@@ -286,11 +304,193 @@ namespace PileDesign.Models.InputData
             return (isFactored ? beta1 * beta2 : 1.0) * (0.053 * Math.Pow(pt, 0.23) * (18 + InsituConcrete.Gsi * InsituConcrete.Fc) / (MonQd + 0.12) + 0.85 * Math.Sqrt(pw * sigmaWy) + 0.1 * sigma0) * b * j;
         }
 
+        // ── 高強度せん断補強筋の工法の式 ───────────────────────────────
+        //
+        // 工法を選んだときは、上の既定の式ではなく工法の指針の式を使う。
+        // 置き換えは材料強度だけではない。断面の置き換え方から違う。
+        //
+        //                     既定 (基礎指針)        工法 (指針)
+        //   等価な幅 b        π·D/4                 (B/2)·√π          ← 13% 違う
+        //   有効せい d        0.9·D                 b − dt
+        //   応力中心距離 j    (7/8)·d               (7/8)·d
+        //   断面形状係数      kc = 0.72 を式に乗じる κ = 4/3 で Ac を割る
+        //   軸応力度 σ0       N / Ae (換算断面積)    N / Ac (コンクリート全断面)
+        //   コンクリート強度  ξ·Fc                  Fc (許容応力度は告示1113)
+        //
+        // dt は円形断面の引張縁から引張鉄筋重心までの距離で、主筋重心かぶり厚に等しい。
+
+        /// <summary>工法の等価正方形断面の幅 b = (B/2)·√π (断面積が等しい正方形の一辺)。</summary>
+        private double MethodB => PileDia / 2.0 * Math.Sqrt(Math.PI);
+
+        /// <summary>引張縁から引張鉄筋重心までの距離 dt (＝主筋重心かぶり厚)。</summary>
+        private double MethodDt => (PileDia - MainBarPCD) / 2.0;
+
+        /// <summary>工法の有効せい d = D − dt (D = b)。</summary>
+        private double MethodD => MethodB - MethodDt;
+
+        /// <summary>工法の応力中心間距離 j = (7/8)·d。</summary>
+        private double MethodJ => 7.0 / 8.0 * MethodD;
+
+        /// <summary>円形断面の形状係数 κ = 4/3。</summary>
+        private const double MethodKappa = 4.0 / 3.0;
+
+        /// <summary>
+        /// 工法の引張鉄筋比 pt (%)。
+        ///
+        /// 円形断面を断面積が等価な正方形断面に置換し、各辺の主筋本数を
+        /// 「全主筋本数/4 + 1」として、<b>一辺に配置された本数だけ</b>を引張鉄筋とする
+        /// (エムケーパイルリング785 指針 4章【解説】(2))。
+        /// 既定の式が使う pt (全主筋の 1/4 を断面積で割ったもの) とは値が違う。
+        /// </summary>
+        private double MethodPt
+        {
+            get
+            {
+                double b = MethodB;
+                double d = MethodD;
+                if (!(b > 0) || !(d > 0) || MainBars.Number <= 0 || !(MainBars.Ag > 0)) return 0.0;
+                double oneBarArea = MainBars.Ag / MainBars.Number;
+                double at = (MainBars.Number / 4.0 + 1.0) * oneBarArea;
+                return at * 100.0 / (b * d);
+            }
+        }
+
+        /// <summary>
+        /// 工法の使用限界せん断力 QAL = Lfs·Ac/κ。
+        /// Lfs は告示1113(第8 第一号) の長期許容せん断応力度。軸力にも M/(Q·d) にも依らない。
+        /// </summary>
+        private double GetMethodServiceLimitShear()
+            => GetNotification1113LongTermShearStress() * InsituConcrete.Ac / MethodKappa;
+
+        /// <summary>
+        /// 工法の損傷限界せん断力。工法と、選んだ算定式で違う。
+        ///
+        /// - エムケーパイルリング785 (3.2式): QAs = sfs·Ac/κ。<b>せん断補強筋は効かない</b>。
+        /// - エムケーパイルリング785 (3.3式): QA = b·j·{ sfs + 0.5·wft·(pw − 0.001) }。
+        ///   こちらを選んだときは<b>設計用せん断力を 1.5 倍に割り増す</b>のが指針の前提で、
+        ///   割り増しは検定側 (<c>PileSection.ShearDesignMagnification</c>) が掛ける。
+        /// - ウルボン (②式): 式の形は 3.3式 と同じ (RC規準 (15.6) 式の第2項を (pw−0.001) にしたもの)。
+        /// </summary>
+        private double GetMethodDamageLimitShear(ShearReinforcementMethodSpec spec, double pw)
+        {
+            double sfs = 1.5 * GetNotification1113LongTermShearStress();
+            bool includesHoop = spec.DamageIncludesHoop
+                || HoopDamageFormula == ShearReinforcementMethods.DamageFormulaSafetyShortTerm;
+            if (!includesHoop)
+                return sfs * InsituConcrete.Ac / MethodKappa;
+
+            // pw は指針の頭打ちを掛ける。下限 (0.1%) を下回る配筋は式の適用外なので
+            // 補強筋の項を 0 にして落とす (諸元表で適用範囲外として知らせる)。
+            double pwUsed = Math.Min(pw, spec.DamagePwCap);
+            double hoop = 0.5 * spec.ShortTermTensileStress * Math.Max(pwUsed - 0.001, 0.0);
+            return MethodB * MethodJ * (sfs + hoop);
+        }
+
+        /// <summary>
+        /// 主筋重心間距離 jt (等価正方形断面)。トラス・アーチ式で使う。
+        /// 応力中心間距離 j = (7/8)d とは違う量なので取り違えないこと。
+        /// </summary>
+        private double MethodJt => MethodB - 2.0 * MethodDt;
+
+        /// <summary>
+        /// ウルボン ④式 (トラス・アーチ機構) による終局せん断強度。
+        ///
+        ///   Qsu2 = b·jt·pw·σwy + η·k1·(1−k2)·b·D·ν·Fc   ただし Qsu2 ≦ (ν·Fc/3)·b·jt
+        ///
+        /// <b>アーチ項 (第2項) は安全側に 0 として算定する。</b>
+        /// k1 = {√((L/D)²+1) − (L/D)}/2 は部材長 L を要し、L は杭断面の入力に無い。
+        /// k1 は L/D に対して単調に減少するので、L を長く見るほど小さくなる。
+        /// L の読み方 (反曲点間距離か、区間長か) で値が変わり、短く見積もると危険側になるため、
+        /// 上限の L (＝アーチ項 0) を採る。この形は ④式 の下限であり、
+        /// どの読み方をしても指針の ④式 を上回らない。
+        ///
+        /// トラス項だけでも、せん断補強筋比が大きい範囲では ③式 を上回る
+        /// (pw·σwy が √(pw·σwy) より速く伸びるため)。③式 と ④式 のどちらを使うかは
+        /// 指針が設計者の選択としているので、プログラムが大きい方を勝手に採ることはしない。
+        /// </summary>
+        private double GetMethodTrussArchUltimateShear(ShearReinforcementMethodSpec spec, double pw)
+        {
+            double fc = InsituConcrete.Fc;
+            double nu = 0.7 - fc / 200.0;                     // ν = 0.7 − Fc/200
+            double pwUsed = Math.Min(pw, spec.UltimatePwCap); // 終局は 0.3% 上限
+            double bjt = MethodB * MethodJt;
+            if (!(bjt > 0) || !(nu > 0)) return 0.0;
+
+            double truss = bjt * pwUsed * spec.UltimateSigmaWy;
+            double cap = nu * fc / 3.0 * bjt;
+            return Math.Min(truss, cap);
+        }
+
+        /// <summary>
+        /// 工法の終局限界せん断力 (大野・荒川 min 式)。
+        ///
+        /// Qsu = β·{ η·0.053·pt^0.23·(Fc+18)/(M/(Q·d)+0.12) + c·√(pw·σwy) + 0.1·σ0 }·b·j
+        ///
+        /// 工法ごとに違うのは c (0.85 / 0.846)、σwy (785 / 1275)、pw の頭打ち
+        /// (0.4% / 0.3%)、寸法効果の見方 (β=0.9 / η=B^(−1/4))、M/(Q·d) と σ0 の頭打ち。
+        /// <paramref name="isFactored"/> が false のときは β を掛けない (低減前の曲線)。
+        /// η は式の一部なので低減前でも掛ける。
+        /// </summary>
+        private double GetMethodUltimateShear(
+            ShearReinforcementMethodSpec spec, double monQd, double n, double pw, bool isFactored)
+        {
+            // 水中・泥水打設 (告示1113 第8 第一号の区分(2)) では Fc を 0.9 倍する。
+            double fc = InsituConcrete.Fc;
+            double fcForShear = spec.ReduceUltimateFcForSlurry && ConcreteModelOptions.Notification1113CompressionCase == 2
+                ? fc * 0.9
+                : fc;
+
+            double qd = Math.Clamp(monQd, spec.UltimateMonQdMin, spec.UltimateMonQdMax);
+            double pwUsed = Math.Min(pw, spec.UltimatePwCap);
+
+            // σ0 = N/Ac。引張側は式の適用外なので 0 で止める。上限は工法の規定による。
+            double sigma0Cap = double.IsPositiveInfinity(spec.UltimateSigma0Cap)
+                ? double.PositiveInfinity
+                : spec.UltimateSigma0Cap * fc;
+            double sigma0 = InsituConcrete.Ac > 0
+                ? Math.Clamp(n / InsituConcrete.Ac, 0.0, sigma0Cap)
+                : 0.0;
+
+            double eta = spec.SizeEffectEta(PileDia);
+            double beta = isFactored ? spec.UltimateBeta : 1.0;
+
+            double term1 = eta * 0.053 * Math.Pow(MethodPt, 0.23) * (fcForShear + 18.0) / (qd + 0.12);
+            double term2 = spec.UltimateHoopCoefficient * Math.Sqrt(pwUsed * spec.UltimateSigmaWy);
+            double term3 = 0.1 * sigma0;
+            return beta * (term1 + term2 + term3) * MethodB * MethodJ;
+        }
+
+        /// <summary>
+        /// 工法の式で Q-N 曲線を作る。
+        ///
+        /// 軸力の掃引範囲は既定の式と揃えてある。限界状態ごとに横軸が変わると
+        /// 検定側の補間がずれるため、範囲は変えずに式だけ差し替える。
+        /// 工法の式には β2 (繰り返しによる低減) の段差が無いので、
+        /// 既定の式が入れている閾値上の複製点も入れない。
+        /// </summary>
+        private (List<double>, List<double>) GetMethodQNInteraction(Func<double, double> shearAt, int iCount)
+        {
+            List<double> ns = [];
+            List<double> qs = [];
+            double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            for (int i = 0; i < iCount; i++)
+            {
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
+                ns.Add(n);
+                qs.Add(shearAt(n));
+            }
+            return (qs, ns);
+        }
+
         /// <summary>
         /// 使用限界QNを返す。
         /// </summary>
         public (List<double>, List<double>) GetServiceLimitQNInteraction(double MonQd, bool isFactored, int iCount = 100)
         {
+            if (ShearMethod != null)
+                return GetMethodQNInteraction(_ => GetMethodServiceLimitShear(), iCount);
+
             List<double> ns = [];
             List<double> qs = [];
             double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
@@ -310,6 +510,9 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public (List<double>, List<double>) GetDamageLimitQNInteraction(double MonQd, bool isFactored, int level = 1, int iCount = 100)
         {
+            if (ShearMethod != null)
+                return GetMethodQNInteraction(_ => GetMethodDamageLimitShear(ShearMethod, HoopPw), iCount);
+
             List<double> ns = [];
             List<double> qs = [];
             double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
@@ -346,6 +549,17 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public (List<double>, List<double>) GetUltimateQNInteraction(double MonQd, double pw, double sigmaWy, bool isFactored, int iCount = 100)
         {
+            // 工法では σwy を指針が決めている (引数の sigmaWy は使わない)。
+            // 終局用の σwy と短期許容応力度 wft は別の値なので、工法側を唯一の出所にする。
+            if (ShearMethod != null)
+            {
+                // トラス・アーチ式は軸力の項を持たない (曲線は N によらず一定)。
+                if (HoopUltimateFormula == ShearReinforcementMethods.UltimateFormulaTrussArch)
+                    return GetMethodQNInteraction(_ => GetMethodTrussArchUltimateShear(ShearMethod, pw), iCount);
+
+                return GetMethodQNInteraction(n => GetMethodUltimateShear(ShearMethod, MonQd, n, pw, isFactored), iCount);
+            }
+
             List<double> ns = [];
             List<double> qs = [];
             double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;

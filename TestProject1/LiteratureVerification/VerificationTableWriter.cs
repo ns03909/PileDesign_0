@@ -82,7 +82,7 @@ namespace TestProject1.LiteratureVerification
             string lead =
                 $"学会の指針・計算例に数値として書かれている {results.Count} 項目を本プログラムで計算し、{ok} 項目が文献の許容内でした。" +
                 "この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。" +
-                "認定工法 (杭先端の支持力算定) のカタログとの照合は <a href=\"verification_methods.html\">別ページ</a> にあります。";
+                "認定工法 (杭先端の支持力・せん断耐力の算定) のカタログとの照合は <a href=\"verification_methods.html\">別ページ</a> にあります。";
             return HtmlBlock(HtmlBegin, HtmlEnd, lead, results);
         }
 
@@ -148,7 +148,7 @@ namespace TestProject1.LiteratureVerification
             AppendMarkdownTable(sb, academic);
 
             sb.Append($"\n### 認定工法のカタログ ({methods.Count(r => r.Ok)} / {methods.Count} 項目)\n\n");
-            sb.Append("杭先端の支持力算定を、メーカーが評定・認定の範囲で公表している算定式・対比表と照合したものです。")
+            sb.Append("杭先端の支持力や杭体のせん断耐力の算定を、メーカーが評定・認定の範囲で公表している算定式・対比表・検証用の計算値と照合したものです。")
               .Append("学会の指針の再現とは性格が違うので、検証ウィンドウでも別ページにしています。\n\n");
             AppendMarkdownTable(sb, methods);
 

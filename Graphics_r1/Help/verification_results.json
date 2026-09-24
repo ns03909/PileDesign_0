@@ -1,11 +1,12 @@
 {
   "summary": {
-    "count": 45,
-    "okCount": 45,
+    "count": 49,
+    "okCount": 49,
     "sources": [
       "建築基礎構造設計指針 2019",
       "Smart-MAGNUM 工法カタログ (ジャパンパイル)",
-      "Hybrid ニーディング工法カタログ (三谷セキサン)"
+      "Hybrid ニーディング工法カタログ (三谷セキサン)",
+      "エムケーパイルリング785 設計施工指針・同解説 (向山工場)"
     ],
     "academic": {
       "count": 6,
@@ -15,11 +16,12 @@
       ]
     },
     "certifiedMethods": {
-      "count": 39,
-      "okCount": 39,
+      "count": 43,
+      "okCount": 43,
       "sources": [
         "Smart-MAGNUM 工法カタログ (ジャパンパイル)",
-        "Hybrid ニーディング工法カタログ (三谷セキサン)"
+        "Hybrid ニーディング工法カタログ (三谷セキサン)",
+        "エムケーパイルリング785 設計施工指針・同解説 (向山工場)"
       ]
     }
   },
@@ -608,6 +610,58 @@
       "diffPercent": 0,
       "ok": true,
       "note": null
+    },
+    {
+      "kind": "CertifiedMethod",
+      "source": "エムケーパイルリング785 設計施工指針・同解説 (向山工場)",
+      "section": "解表5.2 杭径の検討用試験体",
+      "item": "使用限界せん断力 QAL (試験体 No.4、杭径 400 mm)",
+      "unit": "kN",
+      "literature": 55.7,
+      "program": "55.7",
+      "tolerance": "±0.5%",
+      "diffPercent": 0,
+      "ok": true,
+      "note": "QAL = Lfs·Ac/κ (κ = 4/3)"
+    },
+    {
+      "kind": "CertifiedMethod",
+      "source": "エムケーパイルリング785 設計施工指針・同解説 (向山工場)",
+      "section": "解表5.2 杭径の検討用試験体",
+      "item": "損傷限界せん断力 QAs (試験体 No.4、杭径 400 mm)",
+      "unit": "kN",
+      "literature": 83.6,
+      "program": "83.55",
+      "tolerance": "±0.5%",
+      "diffPercent": -0.06,
+      "ok": true,
+      "note": "QAs = sfs·Ac/κ (せん断補強筋を考慮しない式)"
+    },
+    {
+      "kind": "CertifiedMethod",
+      "source": "エムケーパイルリング785 設計施工指針・同解説 (向山工場)",
+      "section": "解表5.2 杭径の検討用試験体",
+      "item": "使用限界せん断力 QAL (試験体 No.12、杭径 700 mm)",
+      "unit": "kN",
+      "literature": 185.3,
+      "program": "185.3",
+      "tolerance": "±0.5%",
+      "diffPercent": 0,
+      "ok": true,
+      "note": "QAL = Lfs·Ac/κ (κ = 4/3)"
+    },
+    {
+      "kind": "CertifiedMethod",
+      "source": "エムケーパイルリング785 設計施工指針・同解説 (向山工場)",
+      "section": "解表5.2 杭径の検討用試験体",
+      "item": "損傷限界せん断力 QAs (試験体 No.12、杭径 700 mm)",
+      "unit": "kN",
+      "literature": 278,
+      "program": "278",
+      "tolerance": "±0.5%",
+      "diffPercent": -0.02,
+      "ok": true,
+      "note": "QAs = sfs·Ac/κ (せん断補強筋を考慮しない式)"
     }
   ]
 }

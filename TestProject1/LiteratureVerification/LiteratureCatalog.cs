@@ -26,6 +26,7 @@ namespace TestProject1.LiteratureVerification
         public const string Shishin19 = "建築基礎構造設計指針 2019";
         public const string SmartMagnum = "Smart-MAGNUM 工法カタログ (ジャパンパイル)";
         public const string HybridKneading = "Hybrid ニーディング工法カタログ (三谷セキサン)";
+        public const string MkPileRing785 = "エムケーパイルリング785 設計施工指針・同解説 (向山工場)";
 
         private static readonly Lazy<IReadOnlyList<LiteratureCheck>> _all = new(Build);
 
@@ -37,6 +38,7 @@ namespace TestProject1.LiteratureVerification
             list.AddRange(Shishin19Checks());
             list.AddRange(SmartMagnumChecks());
             list.AddRange(HybridKneadingChecks());
+            list.AddRange(MkPileRing785Checks());
             return list;
         }
 
@@ -175,6 +177,94 @@ namespace TestProject1.LiteratureVerification
                     clay, ToleranceKind.Absolute, 0.5,
                     () => SoilPile.HybridAlpha(e, isCohesive: true),
                     SourceKind: SourceKind.CertifiedMethod);
+            }
+        }
+
+        // ── エムケーパイルリング785 ───────────────────────────────────
+
+        /// <summary>
+        /// 場所打ち RC 杭の高強度せん断補強筋の工法。指針が式の検証に使った試験体の計算値と突き合わせる。
+        ///
+        /// 解表5.2『杭径の検討用試験体の計算値と実験値』の QAL (使用限界) と QAS (損傷限界)。
+        /// どちらも QAL = Lfs·Ac/κ、QAS = sfs·Ac/κ で、せん断補強筋にも軸力にも依らない。
+        /// ここが合えば、杭断面積 Ac・形状係数 κ=4/3・告示1113(第8 第一号) の fs が指針どおりである。
+        ///
+        /// 試験体の杭径は 400mm と 700mm で、指針の適用範囲 (800〜2600mm) の外にあるが、
+        /// 指針自身が算定式の検証に用いた値なので、式の照合にはこれを使う。
+        ///
+        /// 終局限界せん断力 QSU は、解表5.2 が<b>実験の実測 σwy = 834 N/mm²</b> で算定した値のため
+        /// ここには載せない (本プログラムは指針が定める設計値 785 N/mm² を使う)。
+        /// 式の形の照合は <c>ShearReinforcementMethodTests</c> で行っている。
+        /// </summary>
+        private static IEnumerable<LiteratureCheck> MkPileRing785Checks()
+        {
+            (string no, double b, double fc, string mainBar, double qal, double qas)[] table =
+            [
+                ("No.4",  400.0, 29.8, "D13", 55.7, 83.6),
+                ("No.12", 700.0, 36.6, "D25", 185.3, 278.0),
+            ];
+            foreach (var (no, b, fc, mainBar, qal, qas) in table)
+            {
+                double diameter = b, strength = fc;
+                string bar = mainBar;
+                yield return new LiteratureCheck(
+                    MkPileRing785, "解表5.2 杭径の検討用試験体",
+                    $"使用限界せん断力 QAL (試験体 {no}、杭径 {b:0} mm)", "kN",
+                    qal, ToleranceKind.Relative, 0.005,
+                    () => MkShearKn(diameter, strength, bar, ultimate: false, damage: false),
+                    Note: "QAL = Lfs·Ac/κ (κ = 4/3)",
+                    SourceKind: SourceKind.CertifiedMethod);
+                yield return new LiteratureCheck(
+                    MkPileRing785, "解表5.2 杭径の検討用試験体",
+                    $"損傷限界せん断力 QAs (試験体 {no}、杭径 {b:0} mm)", "kN",
+                    qas, ToleranceKind.Relative, 0.005,
+                    () => MkShearKn(diameter, strength, bar, ultimate: false, damage: true),
+                    Note: "QAs = sfs·Ac/κ (せん断補強筋を考慮しない式)",
+                    SourceKind: SourceKind.CertifiedMethod);
+            }
+        }
+
+        /// <summary>
+        /// エムケーパイルリング785 を選んだ場所打ち RC 断面のせん断力 [kN]。
+        ///
+        /// 告示1113 の区分は静的オプションなので、区分(1) に固定してから計算し、必ず戻す。
+        /// 戻さないと後続のテストが別の区分で走る。
+        /// </summary>
+        private static double MkShearKn(double pileDia, double fc, string mainBarSize, bool ultimate, bool damage)
+        {
+            int saved = ConcreteModelOptions.Notification1113CompressionCase;
+            try
+            {
+                ConcreteModelOptions.Notification1113CompressionCase = 1;
+                var section = new PileSection
+                {
+                    PileBodyType = PileDesign.Constants.PileTypeNames.InsituRc,
+                    PileSectionType = PileDesign.Constants.PileTypeNames.RcSection,
+                    ConcreteOutDia = pileDia,
+                    PileDiameter = pileDia,
+                    ConcreteFc = fc,
+                    ConcreteGsi = 1.0,
+                    MainBarNum = 20,
+                    MainBarSize = mainBarSize,
+                    MainBarSpec = "SD390",
+                    MainBarCenterCover = 40.0,
+                    HoopMethod = ShearReinforcementMethods.MkPileRing785,
+                    HoopSize = "MD10",
+                    HoopSpacing = 150.0,
+                    HoopCenterCover = 40.0,
+                };
+                var calc = section.CreateSectionCalculator() as InsituReinforcedConcreteSection;
+                if (calc == null) return double.NaN;
+                var curve = ultimate
+                    ? calc.GetUltimateQNInteraction(2.54, section.HoopPw, section.HoopSigmay, true)
+                    : damage
+                        ? calc.GetDamageLimitQNInteraction(2.54, true)
+                        : calc.GetServiceLimitQNInteraction(2.54, true);
+                return curve.Item1[0] / 1000.0;
+            }
+            finally
+            {
+                ConcreteModelOptions.Notification1113CompressionCase = saved;
             }
         }
     }

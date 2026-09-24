@@ -20,17 +20,22 @@ namespace PileDesign.Models.Results
         public IReadOnlyList<EvaluationItem> Items { get; }
 
         /// <summary>
-        /// NG の件数。<b>収束しなかったケースの項目は数えない</b> —
-        /// 応答値が釣り合いを満たしておらず、限界値と比べた結果に意味が無いため。
-        /// それらは <see cref="UnconvergedCount"/> で別に数える。
+        /// NG の件数。<b>判定できない項目は数えない</b> — 収束しなかったケースの項目 (応答値が釣り合いを
+        /// 満たしていない) と、算定式の適用範囲の外の項目 (限界値が指針の保証の外)。
+        /// それらは <see cref="UnconvergedCount"/> / <see cref="OutOfScopeCount"/> で別に数える。
         /// </summary>
-        public int NgCount => Items.Count(i => !i.IsFromUnconvergedCase && !i.IsOk);
+        public int NgCount => Items.Count(i => i.IsJudged && !i.IsOk);
 
-        /// <summary>OK の件数 (収束しなかったケースの項目を除く)。</summary>
-        public int OkCount => Items.Count(i => !i.IsFromUnconvergedCase && i.IsOk);
+        /// <summary>OK の件数 (判定できない項目を除く)。</summary>
+        public int OkCount => Items.Count(i => i.IsJudged && i.IsOk);
 
         /// <summary>収束しなかったケースから作られた項目の件数。OK とも NG とも言えないもの。</summary>
         public int UnconvergedCount => Items.Count(i => i.IsFromUnconvergedCase);
+
+        /// <summary>
+        /// 算定式 (工法) の適用範囲の外の項目の件数 (収束しなかったケースの項目を除く)。OK とも NG とも言えないもの。
+        /// </summary>
+        public int OutOfScopeCount => Items.Count(i => !i.IsFromUnconvergedCase && i.IsOutOfScope);
 
         /// <summary>
         /// 緩めた基準 (残差 1e-6 に届かず最大 1e-2) で受理したケースから作られた項目の件数。
@@ -50,12 +55,12 @@ namespace PileDesign.Models.Results
         /// NG の有無にかかわらず「一番厳しいところ」を返す。
         /// すべて OK でも、余裕がどれだけあるかはここで分かる。
         ///
-        /// 収束しなかったケースの項目は<b>対象から外す</b>。釣り合っていない応答値の比が
-        /// たまたま最大になると、支配ケースとして「解けていないケース」を指してしまう。
-        /// 収束したケースが 1 件も無ければ null。
+        /// 判定できない項目 (収束しなかったケース・算定式の適用範囲の外) は<b>対象から外す</b>。
+        /// 釣り合っていない応答値や、保証の外の限界値との比がたまたま最大になると、
+        /// 支配ケースとして判定できない項目を指してしまう。判定できる項目が 1 件も無ければ null。
         /// </summary>
         public EvaluationItem? Governing =>
-            Items.Where(i => !i.IsFromUnconvergedCase)
+            Items.Where(i => i.IsJudged)
                  .OrderByDescending(i => i.Ratio)
                  .FirstOrDefault();
 
@@ -82,14 +87,14 @@ namespace PileDesign.Models.Results
         /// 件数の集計には使わないこと (集計は常に全項目が対象)。
         /// </summary>
         /// <remarks>
-        /// 収束しなかったケースの項目は<b>どちらのフィルタでも残す</b>。
+        /// 判定できない項目 (収束しなかったケース・算定式の適用範囲の外) は<b>どちらのフィルタでも残す</b>。
         /// OK とも NG とも言えないので、「NG のみ」で消すと見落とし、
         /// 「OK のみ」で残すと合格したように読める。常に見えている方が安全側。
         /// </remarks>
         public static bool PassesFilter(EvaluationItem item, int displayFilter) => displayFilter switch
         {
-            0 => item.IsFromUnconvergedCase || !item.IsOk,
-            1 => item.IsFromUnconvergedCase || item.IsOk,
+            0 => !item.IsJudged || !item.IsOk,
+            1 => !item.IsJudged || item.IsOk,
             _ => true,
         };
     }

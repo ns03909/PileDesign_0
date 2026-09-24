@@ -213,10 +213,13 @@ namespace PileDesign.Output
             bool notification1113 = ConcreteModelOptions.UseNotification1113;
             rows.Add((ConcreteModelOptions.MapLimitStateText("使用限界・損傷限界の許容応力度（場所打ち系。許容圧縮応力度・許容せん断 共通）"),
                 notification1113 ? "告示1113(第8) 長期・短期" : "基礎部材の強度と変形性能（既定）",
-                notification1113
+                (notification1113
                     ? "圧縮: 使用限界 = 長期許容圧縮応力度、損傷限界 = 短期（長期の 2 倍）。せん断（場所打ちRC杭）: 許容せん断応力度 fs による Q = fs·b·j"
                       + "（軸力・M/(Q·d) 非依存。短期は長期の 1.5 倍）。2025年版 技術基準解説書 付録1-3 の扱い"
-                    : "圧縮: 使用限界 (1/3)ξFc、損傷限界 (2/3)ξFc。せん断（場所打ちRC杭）: 軸力と M/(Q·d) を考慮したせん断耐力式"));
+                    : "圧縮: 使用限界 (1/3)ξFc、損傷限界 (2/3)ξFc。せん断（場所打ちRC杭）: 軸力と M/(Q·d) を考慮したせん断耐力式")
+                // 高強度せん断補強筋の工法を指定した区間は、ここの選択によらず工法の式で算定する。
+                // 使っていない場合も断り書きだけは残す (この行だけ読んで全杭に当てはめられると誤る)。
+                + "。ただし、せん断補強筋に工法を指定した区間のせん断はその工法の指針の式による（設計条件の一覧を参照）"));
 
             rows.Add(("解析用 M-φ 関係（コンクリート系杭）",
                 ConcreteModelOptions.UseFiberMPhi ? "ファイバーモデル" : "指針ポリリニア（既定）",
@@ -349,11 +352,80 @@ namespace PileDesign.Output
                     "代表点の鉛直軸回りの回転を拘束する。基礎はねじれず、杭頭の水平変位は全杭で等しくなる"));
             }
 
+            // 高強度せん断補強筋の工法は、使っている杭体があるときだけ出す。
+            // 工法を選ぶとせん断耐力の算定式が替わるので、どの区間がどの工法かを
+            // 計算書から追えるようにしておく (既定の「標準」しか無いときは書かない)。
+            string hoopMethods = BuildHoopMethodSummary(inputModel, out string hoopMethodNote);
+            if (hoopMethods != null)
+            {
+                rows.Add(("せん断補強筋の工法", hoopMethods, hoopMethodNote));
+            }
+
             rows.Add(("鋼管の腐食代", BuildCorrosionSummary(inputModel, out string corrosionNote), corrosionNote));
 
             rows.Add(("基準水平地盤反力係数 kh0", BuildKh0OverrideSummary(inputModel, out string kh0Note), kh0Note));
 
             return rows;
+        }
+
+        /// <summary>
+        /// 高強度せん断補強筋の工法を杭体・区間ごとに要約する。
+        /// 使っている区間が 1 つも無ければ null を返す (行自体を出さない)。
+        /// </summary>
+        private static string? BuildHoopMethodSummary(InputModel inputModel, out string note)
+        {
+            var entries = new List<string>();
+            var methods = new SortedSet<string>(System.StringComparer.Ordinal);
+            int pileBodyNo = 0;
+            foreach (var pileBody in inputModel?.PileBodies ?? [])
+            {
+                pileBodyNo++;
+                int segNo = 0;
+                foreach (var seg in pileBody.PileBodySegments ?? [])
+                {
+                    segNo++;
+                    var sec = seg.PileSection;
+                    if (sec == null) continue;
+                    if (!ShearReinforcementMethods.IsProprietary(sec.HoopMethod)) continue;
+                    methods.Add(sec.HoopMethod);
+                    string magnification = sec.ShearDesignMagnification != 1.0
+                        ? $"、設計用せん断力 ×{sec.ShearDesignMagnification:N1}" : "";
+                    entries.Add($"杭体{pileBodyNo}({pileBody.PileBodyRef}) 区間{segNo}: {sec.HoopMethod}" +
+                                $" {sec.HoopSize}@{sec.HoopSpacing:N0}" +
+                                $"（損傷限界: {sec.HoopDamageFormula}{magnification} / 終局: {sec.HoopUltimateFormula}）");
+                }
+            }
+
+            if (entries.Count == 0)
+            {
+                note = "";
+                return null;
+            }
+
+            var certifications = methods
+                .Select(m => ShearReinforcementMethods.Get(m))
+                .Where(s => s != null)
+                .Select(s => $"{s!.Name}: {s.Certification}");
+
+            note = "上記の区間のせん断耐力 (使用限界・損傷限界・安全限界) は、" +
+                   "本プログラム既定の式ではなく各工法の設計施工指針の式により算定している" +
+                   "（円形断面を断面積が等しい正方形断面に置換し、コンクリートの許容せん断応力度は" +
+                   "告示 平13国交告第1113号 第8 第一号による）。\n";
+
+            // 1.5 倍の割増は「応答値をそのまま読めば分かる」量ではないので必ず書く。
+            if (entries.Any(e => e.Contains("設計用せん断力 ×")))
+            {
+                note += "「安全性確保のための短期許容せん断力」を選んだ区間は、指針の定めにより" +
+                        "損傷限界せん断の設計用せん断力を水平荷重時せん断力の 1.5 倍に割り増している" +
+                        "（検定結果の応答値は割り増したあとの値）。\n";
+            }
+            if (entries.Any(e => e.Contains(ShearReinforcementMethods.UltimateFormulaTrussArch)))
+            {
+                note += "「トラス・アーチ式」を選んだ区間は、部材長 L が入力に無いためアーチ項を 0 として" +
+                        "トラス項のみで算定している（指針式の下限側）。\n";
+            }
+            note += string.Join("\n", certifications);
+            return string.Join("\n", entries);
         }
 
         /// <summary>鋼管系断面の腐食代を杭体・区間ごとに要約する。</summary>
