@@ -10,6 +10,7 @@ namespace PileDesign.ViewModels
     {
         public override ValidationResult Validate(object value, CultureInfo cultureInfo)
         {
+            // NaN は比較が偽になるので、ここで拒まれる (範囲の比較を「外なら拒む」に書き換えないこと)
             if (double.TryParse(value as string, out double result))
             {
                 if (result >= 0.0 && result <= 1.0)
@@ -17,7 +18,7 @@ namespace PileDesign.ViewModels
                     return ValidationResult.ValidResult;
                 }
             }
-            return new ValidationResult(false, "Please enter a numeric value between 0.00 and 1.00.");
+            return new ValidationResult(false, "0.00 以上 1.00 以下の数値を入力してください。");
         }
     }
 
@@ -33,7 +34,7 @@ namespace PileDesign.ViewModels
                 return ValidationResult.ValidResult;
             }
 
-            return new ValidationResult(false, $"Please enter up to {MaxLength} characters.");
+            return new ValidationResult(false, $"{MaxLength} 文字以内で入力してください。");
         }
     }
 
@@ -44,8 +45,11 @@ namespace PileDesign.ViewModels
 
         public override ValidationResult Validate(object value, CultureInfo cultureInfo)
         {
-            if (double.TryParse(value.ToString(), out double inputValue))
+            // NaN・無限大は範囲の比較の前に拒む (NaN は大小の比較がどちらも偽になり、範囲内として通るため)
+            if (value != null && double.TryParse(value.ToString(), out double inputValue))
             {
+                if (!double.IsFinite(inputValue))
+                    return new ValidationResult(false, PileDesign.Common.RangeValidationRule.NonFiniteMessage);
                 if (inputValue < Minimum || inputValue > Maximum)
                     return new ValidationResult(false, $"値は{Minimum}から{Maximum}の間である必要があります。");
             }

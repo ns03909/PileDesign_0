@@ -198,54 +198,13 @@ namespace PileDesign.Views
 
             try
             {
-                var cols = dataGrid.Columns;
-                var sb = new StringBuilder();
-
-                // ヘッダ
-                var headers = cols.Select(c => PileDesign.Common.DataGridHeaderText.From(c).Replace("\"", "\"\""));
-                sb.AppendLine(string.Join(",", headers.Select(h => h.Contains(',') || h.Contains('"') ? $"\"{h}\"" : h)));
-
-                // 行（Items を使う：ItemsSource が null の場合も安全）
-                foreach (var item in dataGrid.Items)
-                {
-                    // 新規行プレースホルダ等をスキップ
-                    if (Equals(item, System.Windows.Data.CollectionView.NewItemPlaceholder)) continue;
-
-                    var row = new List<string>();
-                    foreach (var col in cols)
-                    {
-                        string text = "";
-
-                        // まず表示要素から取得
-                        var content = col.GetCellContent(item);
-                        if (content is TextBlock tb) text = tb.Text;
-                        else if (content is TextBox tbox) text = tbox.Text;
-                        else
-                        {
-                            // バインディングからプロパティを取得できるなら取得（安全策）
-                            if (col is DataGridBoundColumn boundCol && boundCol.Binding is Binding b && b.Path != null)
-                            {
-                                var propName = b.Path.Path;
-                                var prop = item?.GetType().GetProperty(propName);
-                                if (prop != null)
-                                {
-                                    var val = prop.GetValue(item);
-                                    text = val?.ToString() ?? "";
-                                }
-                            }
-                        }
-
-                        // エスケープ
-                        if (text.Contains('"')) text = text.Replace("\"", "\"\"");
-                        if (text.Contains(',') || text.Contains('"') || text.Contains('\n'))
-                            text = $"\"{text}\"";
-
-                        row.Add(text);
-                    }
-                    sb.AppendLine(string.Join(",", row));
-                }
-
-                File.WriteAllText(sfd.FileName, sb.ToString(), Encoding.UTF8);
+                // 書き出しは表の共通処理に任せる。以前はここに独自の写しがあり、
+                // 表示用の単位変換・書式・セルを組んだ列・画面の列の並びが反映されず、
+                // 画面外の行やテンプレート列は空欄・内部の値で出ていた。
+                // この画面の CSV は以前から「R/WR」の行を持たないので、その形は保つ。
+                var items = dataGrid.Items.Cast<object>()
+                    .Where(item => !Equals(item, System.Windows.Data.CollectionView.NewItemPlaceholder));
+                Output.DataGridCsv.CreateCsv(items, dataGrid, sfd.FileName, includeEditableRow: false);
             }
             catch (Exception ex)
             {

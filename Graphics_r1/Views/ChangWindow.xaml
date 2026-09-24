@@ -374,7 +374,7 @@
                                                     </DataGridTemplateColumn.CellTemplate>
                                                     <DataGridTemplateColumn.CellEditingTemplate>
                                                         <DataTemplate>
-                                                            <ComboBox SelectedItem="{Binding PileTopType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            <ComboBox SelectedValue="{Binding PileTopType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectedValuePath="Content"
                                                                     HorizontalAlignment="Stretch" MinWidth="80">
                                                                 <ComboBoxItem Content="キャプテンパイル工法"/>
                                                                 <ComboBoxItem Content="キャプリングパイル工法"/>

@@ -2464,7 +2464,7 @@
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
                                                                     <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding FL, Converter={StaticResource DoubleLessThanConverter}, ConverterParameter=1}" Value="True">
+                                                                        <DataTrigger Binding="{Binding FL[0], Converter={StaticResource DoubleLessThanConverter}, ConverterParameter=1}" Value="True">
                                                                             <Setter Property="FontWeight" Value="Bold"/>
                                                                         </DataTrigger>
                                                                     </Style.Triggers>
@@ -2549,7 +2549,7 @@
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
                                                                     <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding FL, Converter={StaticResource DoubleLessThanConverter}, ConverterParameter=1}" Value="True">
+                                                                        <DataTrigger Binding="{Binding FL[1], Converter={StaticResource DoubleLessThanConverter}, ConverterParameter=1}" Value="True">
                                                                             <Setter Property="FontWeight" Value="Bold"/>
                                                                         </DataTrigger>
                                                                     </Style.Triggers>

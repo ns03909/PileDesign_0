@@ -104,9 +104,10 @@ namespace PileDesign.Common
         }
 
         /// <summary>
-        /// TextBoxのテキストから数値を解析
+        /// TextBoxのテキストから数値を解析。NaN・無限大は解析できなかったものとして扱う
+        /// (増減しても NaN のままで、範囲の検証ルールが無い欄ではそのまま値として書き込まれるため)。
         /// </summary>
-        private static bool TryParseCurrentValue(TextBox textBox, out double currentValue)
+        internal static bool TryParseCurrentValue(TextBox textBox, out double currentValue)
         {
             currentValue = 0.0;
 
@@ -119,10 +120,11 @@ namespace PileDesign.Common
             }
 
             // カルチャを考慮して解析
-            return double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands,
+            bool parsed = double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands,
                 CultureInfo.CurrentCulture, out currentValue) ||
                    double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands,
                 CultureInfo.InvariantCulture, out currentValue);
+            return parsed && double.IsFinite(currentValue);
         }
 
         /// <summary>
@@ -142,7 +144,7 @@ namespace PileDesign.Common
             if (rangeRule == null)
                 return true; // 範囲検証ルールがない場合はOK
 
-            // Min/Max範囲内かチェック
+            // Min/Max範囲内かチェック (NaN はどちらの比較も偽なので範囲外になる)
             return newValue >= rangeRule.Min && newValue <= rangeRule.Max;
         }
 

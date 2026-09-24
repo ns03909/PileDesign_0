@@ -84,12 +84,19 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _isVisible, value);
         }
 
+        // 座標は有限の数値だけを受け付ける。NaN・±∞ は例外 (NonFiniteValueException) で拒否する。
+        //
+        // 以前は何でも受け入れていた。表への貼り付けやプロパティパネルは入口で弾くようにしたが、
+        // ファイルには「NaN」「Infinity」が書けて、そのまま読めてしまう (保存形式が名前付きの
+        // 浮動小数点を許している)。座標の NaN は画面でも解析でも静かに壊れるので、
+        // 入口がどこでも、ここで止めて何が悪いかを示す。
+
         // X座標
         private double _x;
         public double X
         {
             get => _x;
-            set => SetProperty(ref _x, value);
+            set => SetProperty(ref _x, NonFiniteValueException.RequireFinite(value, CoordinateName("X")));
         }
 
         // Y座標
@@ -97,7 +104,7 @@ namespace PileDesign.Models.InputData
         public double Y
         {
             get => _y;
-            set => SetProperty(ref _y, value);
+            set => SetProperty(ref _y, NonFiniteValueException.RequireFinite(value, CoordinateName("Y")));
         }
 
         // Z座標
@@ -105,8 +112,14 @@ namespace PileDesign.Models.InputData
         public double Z
         {
             get => _z;
-            set => SetProperty(ref _z, value);
+            set => SetProperty(ref _z, NonFiniteValueException.RequireFinite(value, CoordinateName("Z")));
         }
+
+        /// <summary>
+        /// メッセージに出す欄の名前。読み込みの途中は番号がまだ入っていないことがあるので、そのときは付けない。
+        /// </summary>
+        private string CoordinateName(string axis)
+            => (No > 0 ? $"節点 {No} の " : "節点の ") + axis + " 座標";
 
         // 3D座標
         [System.Text.Json.Serialization.JsonIgnore]

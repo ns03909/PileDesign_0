@@ -6,6 +6,8 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows;
+using PileDesign.Services;
 
 namespace PileDesign.ViewModels
 {
@@ -254,6 +256,16 @@ namespace PileDesign.ViewModels
                 if (!double.TryParse(rawValue, out var newVal))
                 {
                     item.SetValueSilent(getter().ToString(format));
+                    return;
+                }
+                // 「NaN」「Infinity」も数値として読めてしまう。以前は次の差の比較 (NaN は常に偽) を
+                // すり抜けて、節点や杭の座標にそのまま入っていた。知らせて元の値に戻す。
+                if (!double.IsFinite(newVal))
+                {
+                    item.SetValueSilent(getter().ToString(format));
+                    MessageService.Show(
+                        $"「{rawValue.Trim()}」は数値として扱えません。有限の数値を入力してください。",
+                        "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
                 var oldVal = getter();
