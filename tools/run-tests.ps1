@@ -20,7 +20,7 @@
     TestSuiteIntegrityTests が見張る。片方だけでは足りないので両方いる。
 
 .PARAMETER Minimum
-    実行件数の下限。既定 2130。テストを増やしたら上げること。
+    実行件数の下限。既定 2360。テストを増やしたら上げること。
 
 .PARAMETER Filter
     dotnet test の --filter に渡す文字列。指定すると件数の検査は行わない
@@ -40,7 +40,7 @@
 #>
 [CmdletBinding()]
 param(
-    [int]$Minimum = 2130,
+    [int]$Minimum = 2360,
     [string]$Filter = "",
     [switch]$Clean
 )
@@ -99,12 +99,31 @@ if (Test-Path $strayLog) { Remove-Item -Force $strayLog }
 # 出力はそのまま流す。Windows PowerShell で native の stderr を 2>&1 すると
 # NativeCommandError に包まれて、本当のエラーが読めなくなる。
 $loggerArg = "trx;LogFileName=$trxName"
+
+# テストホストが落ちたときに「どのテストの直後か」(Sequence_*.xml) と小さなダンプを残す。
+# 2026-09-23 に全体実行が 289 件目で一度だけ落ち、同じ条件で 4 回走らせても再現せず、
+# 何が落ちたのか分からないままになった。落ちなければ何も残らないので、普段の実行にも付けておく。
+# 前回の記録が残っていると、落ちていないのに「落ちた」と出るので先に消す。
+Get-ChildItem -Path $resultsDir -Recurse -Include "Sequence_*.xml", "*.dmp" -ErrorAction SilentlyContinue |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+$blameArgs = @("--blame-crash", "--blame-crash-dump-type", "mini")
+
 if ($Filter) {
-    & dotnet test $tests --no-build --filter $Filter --logger $loggerArg --results-directory $resultsDir
+    & dotnet test $tests --no-build --filter $Filter --logger $loggerArg --results-directory $resultsDir @blameArgs
 } else {
-    & dotnet test $tests --no-build --logger $loggerArg --results-directory $resultsDir
+    & dotnet test $tests --no-build --logger $loggerArg --results-directory $resultsDir @blameArgs
 }
 $testExit = $LASTEXITCODE
+
+# 落ちた記録があれば場所を示す (結果ファイルの有無に関わらず)。
+$sequence = Get-ChildItem -Path $resultsDir -Recurse -Filter "Sequence_*.xml" -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if ($sequence) {
+    Write-Host ""
+    Write-Host "テストホストが途中で落ちました。落ちる直前に走っていたテストの記録:" -ForegroundColor Red
+    Write-Host ("  " + $sequence.FullName)
+    Write-Host "  (最後に並んでいるテストが、落ちたときに実行中だったものです。同じ場所にダンプ *.dmp もあります)"
+}
 
 if (-not (Test-Path $trxPath)) {
     Fail ("テストの結果ファイルが作られませんでした: $trxPath" +
