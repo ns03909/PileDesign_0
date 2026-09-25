@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -83,6 +84,29 @@ namespace PileDesign.Output
             return master;
         }
 
+        /// <summary>
+        /// 書けない対象があれば、対象と理由を示して出力を止める (<see cref="InvalidOperationException"/>)。
+        /// 梁 (<see cref="WriteElements"/>)・ばね・剛体連結で同じ文面にする。
+        /// </summary>
+        private static void ThrowIfCannotWrite(string what, string unit, List<string> problems, string consequence)
+        {
+            if (problems.Count == 0) return;
+            throw new InvalidOperationException(
+                $"解析モデルの{what} {problems.Count} {unit}を MGT に書けないため、出力を止めました (書くと{consequence})。\n"
+                + string.Join("\n", problems.Take(10))
+                + (problems.Count > 10 ? $"\n…ほか {problems.Count - 10} {unit}" : "")
+                + "\n解析モデルを作り直す (杭要素分割・解析をやり直す) と直ることがあります。");
+        }
+
+        /// <summary>メッセージ用の節点の呼び名 (名前、無ければ座標)。</summary>
+        private static string NodeLabel(Node n)
+            => !string.IsNullOrWhiteSpace(n.Name) ? $"節点「{n.Name}」"
+             : $"節点 ({n.Coord.X:0.###}, {n.Coord.Y:0.###}, {n.Coord.Z:0.###})";
+
+        /// <summary>メッセージ用のばねの呼び名 (名前、無ければ一覧での番号)。</summary>
+        private static string SpringLabel(TwoNodeSpringElement? s, int index)
+            => s != null && !string.IsNullOrWhiteSpace(s.Name) ? $"「{s.Name}」" : $" #{index + 1}";
+
         private void WriteRigidLinks(StreamWriter writer, ExportContext ctx)
         {
             var nodeIdMap = ctx.NodeIdMap;
@@ -118,22 +142,28 @@ namespace PileDesign.Output
 
             if (groups.Count == 0) return;
 
+            // ★マスター・スレーブの節点が解析モデルの節点に無い剛体連結は、黙って飛ばさずに出力を止める
+            //   (以前はマスターが無ければリンクごと、スレーブが無ければそのスレーブだけを外していた。
+            //   出力は成功するので、剛体連結の欠けた MGT ファイルを正常な成果物として渡していた)。
+            var problems = new List<string>();
+            foreach (var ((master, dofStr), slaves) in groups)
+            {
+                if (!nodeIdMap.ContainsKey(master))
+                    problems.Add($"・剛体連結 (マスター {NodeLabel(master)}・自由度 {dofStr}・スレーブ {slaves.Count} 個): "
+                                 + "マスター節点が解析モデルの節点にありません");
+                foreach (var slave in slaves.Where(s => !nodeIdMap.ContainsKey(s)))
+                    problems.Add($"・剛体連結 (マスター {NodeLabel(master)}・自由度 {dofStr}): "
+                                 + $"スレーブ節点 ({NodeLabel(slave)}) が解析モデルの節点にありません");
+            }
+            ThrowIfCannotWrite("剛体連結", "件", problems, "剛体連結の欠けたモデルになります");
+
             writer.WriteLine("*RIGIDLINK    ; Rigid Link");
             writer.WriteLine("; M-NODE, DOF, S-NODE LIST, GROUP");
             foreach (var ((master, dofStr), slaves) in groups)
             {
-                if (!nodeIdMap.TryGetValue(master, out int masterId)) continue;
-
-                var slaveIds = new List<string>();
-                foreach (var slave in slaves)
-                {
-                    if (nodeIdMap.TryGetValue(slave, out int slaveId))
-                        slaveIds.Add(slaveId.ToString());
-                }
-                if (slaveIds.Count > 0)
-                {
-                    writer.WriteLine($" {masterId}, {dofStr}, {string.Join(" ", slaveIds)}, ");
-                }
+                int masterId = nodeIdMap[master];
+                var slaveIds = slaves.Select(s => nodeIdMap[s].ToString()).ToList();
+                writer.WriteLine($" {masterId}, {dofStr}, {string.Join(" ", slaveIds)}, ");
             }
             writer.WriteLine();
         }

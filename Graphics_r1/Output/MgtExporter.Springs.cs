@@ -100,6 +100,13 @@ namespace PileDesign.Output
             writer.WriteLine();
         }
 
+        /// <summary>
+        /// ばね (弾性リンク) を書く。<b>書けないばねが 1 つでもあれば、ばねと理由を示して出力を止める</b>
+        /// (<see cref="InvalidOperationException"/>。梁 (<see cref="WriteElements"/>) と同じ扱い)。
+        ///
+        /// 以前は節点・荷重-変形関数・Y 方向の仮想節点が引けないばねを黙って飛ばしていた。出力は成功するので、
+        /// 参照が壊れた解析モデルでは、地盤ばね・杭頭の連結が欠けた MGT ファイルを正常な成果物として渡していた。
+        /// </summary>
         private void WriteElasticLinks(StreamWriter writer, ExportContext ctx)
         {
             var nodeIdMap = ctx.NodeIdMap;
@@ -109,6 +116,33 @@ namespace PileDesign.Output
             bool hasHorizontal = _anaModel.HorizontalSoilSprings != null && _anaModel.HorizontalSoilSprings.Count > 0;
             bool hasPenalty = _anaModel.PenaltySprings != null && _anaModel.PenaltySprings.Count > 0;
             if (!hasHorizontal && !hasPenalty) return;
+
+            // 書く前に全部確かめる (途中まで書いてから止めても、一時ファイルなので保存先は前の内容のまま)。
+            var problems = new List<string>();
+            string? NodeProblem(Node? n, string side)
+                => n == null ? $"{side}の節点がありません"
+                 : !nodeIdMap.ContainsKey(n) ? $"{side}の節点 ({NodeLabel(n)}) が解析モデルの節点にありません"
+                 : null;
+            bool hasY = HasYDirectionAnalysis();
+            if (hasHorizontal)
+                for (int i = 0; i < _anaModel.HorizontalSoilSprings!.Count; i++)
+                {
+                    var s = _anaModel.HorizontalSoilSprings[i];
+                    string? p = s == null ? "ばねがありません (空の要素)"
+                        : NodeProblem(s.NodeI, "杭側") ?? NodeProblem(s.NodeJ, "地盤側")
+                          ?? (!funcIds.ContainsKey(s) ? "荷重-変形関数が割り当てられていません" : null)
+                          ?? (hasY && !springYNodeIds.ContainsKey(s) ? "Y 方向の仮想地盤節点が割り当てられていません" : null);
+                    if (p != null) problems.Add($"・水平地盤ばね{SpringLabel(s, i)}: {p}");
+                }
+            if (hasPenalty)
+                for (int i = 0; i < _anaModel.PenaltySprings!.Count; i++)
+                {
+                    var s = _anaModel.PenaltySprings[i];
+                    string? p = s == null ? "ばねがありません (空の要素)"
+                        : NodeProblem(s.NodeI, "始端") ?? NodeProblem(s.NodeJ, "終端");
+                    if (p != null) problems.Add($"・杭頭の連結ばね{SpringLabel(s, i)}: {p}");
+                }
+            ThrowIfCannotWrite("ばね", "個", problems, "ばねの欠けたモデル (地盤ばね・杭頭の連結が無い) になります");
 
             writer.WriteLine("*ELASTICLINK    ; Elastic Link");
             writer.WriteLine("; iNO, iNODE1, iNODE2, LINK, ANGLE, DIR, FUNCTION, bSHEAR, DRENDI, GROUP                         ; MULTI LINEAR");
@@ -121,21 +155,17 @@ namespace PileDesign.Output
                 // X方向リンク（軸方向=DIR 0、既存のNodeJはX方向にオフセット済み）
                 foreach (var spring in _anaModel.HorizontalSoilSprings)
                 {
-                    if (spring.NodeI == null || spring.NodeJ == null) continue;
-                    if (!nodeIdMap.TryGetValue(spring.NodeI, out int nodeI)) continue;
-                    if (!nodeIdMap.TryGetValue(spring.NodeJ, out int nodeJ)) continue;
-                    if (!funcIds.TryGetValue(spring, out int fid)) continue;
-
+                    // 参照は上で確かめ済み (欠けていれば出力を止めている)。
+                    int nodeI = nodeIdMap[spring.NodeI], nodeJ = nodeIdMap[spring.NodeJ], fid = funcIds[spring];
                     writer.WriteLine($"   {linkId,5}, {nodeI,5}, {nodeJ,5}, MULTI LINEAR, 0, 0, {fid}, NO, 0.5, ");
                     linkId++;
                 }
                 // Y方向リンク（軸方向=DIR 0、仮想Y節点にY方向オフセット）
                 foreach (var spring in _anaModel.HorizontalSoilSprings)
                 {
-                    if (spring.NodeI == null) continue;
-                    if (!nodeIdMap.TryGetValue(spring.NodeI, out int nodeI)) continue;
+                    // Y 方向を解析していなければ仮想節点は作らない (Y 方向のリンクは書かない)。
                     if (!springYNodeIds.TryGetValue(spring, out int yNodeId)) continue;
-                    if (!funcIds.TryGetValue(spring, out int fid)) continue;
+                    int nodeI = nodeIdMap[spring.NodeI], fid = funcIds[spring];
 
                     writer.WriteLine($"   {linkId,5}, {nodeI,5}, {yNodeId,5}, MULTI LINEAR, 0, 0, {fid}, NO, 0.5, ");
                     linkId++;
@@ -147,9 +177,7 @@ namespace PileDesign.Output
             {
                 foreach (var spring in _anaModel.PenaltySprings)
                 {
-                    if (spring.NodeI == null || spring.NodeJ == null) continue;
-                    if (!nodeIdMap.TryGetValue(spring.NodeI, out int nodeI)) continue;
-                    if (!nodeIdMap.TryGetValue(spring.NodeJ, out int nodeJ)) continue;
+                    int nodeI = nodeIdMap[spring.NodeI], nodeJ = nodeIdMap[spring.NodeJ];
 
                     // RIGID形式: iNO, iNODE1, iNODE2, LINK, ANGLE, bSHEAR, DRy, DRz, GROUP
                     writer.WriteLine($"   {linkId,5}, {nodeI,5}, {nodeJ,5}, RIGID, 0, NO, 0, 0, ");

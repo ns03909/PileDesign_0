@@ -371,5 +371,77 @@ namespace TestProject1
             Assert.AreEqual("", MgtExporter.SanitizeDesc(null));
             Assert.AreEqual("地震 X", MgtExporter.SanitizeDesc("地震\u0000X"));
         }
+
+        // ---- ばね・剛体連結の参照切れ (梁と同じく、黙って飛ばさずに出力を止める) ----
+
+        /// <summary>解析モデルの節点一覧に<b>入っていない</b>節点 (参照が壊れたモデルを作るため)。</summary>
+        private static Node Orphan(string name)
+            => new Node { Name = name, Coord = new Point3D(9, 9, 9), Boundary = new Boundary(false, false, false, false, false, false) };
+
+        private static InvalidOperationException ExportFails(AnaModel model)
+        {
+            string file = Path.Combine(Path.GetTempPath(), $"MgtExport_{Guid.NewGuid():N}.mgt");
+            try
+            {
+                var ex = Assert.ThrowsException<InvalidOperationException>(() => new MgtExporter(model).Export(file),
+                    "参照の切れたモデルを出力成功として扱っています");
+                Assert.IsFalse(File.Exists(file), "失敗した出力のファイルを残しています");
+                return ex;
+            }
+            finally
+            {
+                if (File.Exists(file)) File.Delete(file);
+            }
+        }
+
+        /// <summary>(前提) 参照の揃ったばね・剛体連結はそのまま書けること。</summary>
+        [TestMethod]
+        public void SpringsAndRigidLinksWithValidReferencesAreWritten()
+        {
+            var model = BuildModel(new InputModel());
+            var nI = model.Nodes[0]; var nJ = model.Nodes[1];
+            model.HorizontalSoilSprings = [new HorizontalSoilSpring("S1", nJ, nI)];
+            model.PenaltySprings = [new HorizontalSoilSpring("P1", nI, nJ)];
+            nJ.MasterNodes[0] = nI;
+            string mgt = Export(model);
+            StringAssert.Contains(mgt, "MULTI LINEAR");
+            StringAssert.Contains(mgt, "RIGID, 0, NO");
+            StringAssert.Contains(mgt, "*RIGIDLINK");
+        }
+
+        /// <summary>
+        /// ★節点が引けない水平地盤ばね・杭頭の連結ばねは、ばねと理由を示して出力を止める。
+        /// 以前は <c>continue</c> で飛ばし、地盤ばねの欠けた MGT ファイルを出力成功として扱っていた。
+        /// </summary>
+        [TestMethod]
+        public void SpringWithMissingNodeStopsTheExport()
+        {
+            var model = BuildModel(new InputModel());
+            var nI = model.Nodes[0];
+            model.HorizontalSoilSprings = [new HorizontalSoilSpring("S1", nI, Orphan("地盤X"))];
+            var ex = ExportFails(model);
+            StringAssert.Contains(ex.Message, "水平地盤ばね「S1」");
+            StringAssert.Contains(ex.Message, "地盤側の節点 (節点「地盤X」) が解析モデルの節点にありません");
+
+            var model2 = BuildModel(new InputModel());
+            model2.PenaltySprings = [new HorizontalSoilSpring("P1", Orphan("杭頭"), model2.Nodes[1])];
+            var ex2 = ExportFails(model2);
+            StringAssert.Contains(ex2.Message, "杭頭の連結ばね「P1」");
+            StringAssert.Contains(ex2.Message, "始端の節点 (節点「杭頭」)");
+        }
+
+        /// <summary>
+        /// ★マスター節点が解析モデルに無い剛体連結は、連結と理由を示して出力を止める。
+        /// 以前はリンクごと飛ばし、拘束の欠けた MGT ファイルを出力成功として扱っていた。
+        /// </summary>
+        [TestMethod]
+        public void RigidLinkWithMissingMasterStopsTheExport()
+        {
+            var model = BuildModel(new InputModel());
+            model.Nodes[1].MasterNodes[0] = Orphan("マスター");
+            var ex = ExportFails(model);
+            StringAssert.Contains(ex.Message, "剛体連結 (マスター 節点「マスター」");
+            StringAssert.Contains(ex.Message, "マスター節点が解析モデルの節点にありません");
+        }
     }
 }
