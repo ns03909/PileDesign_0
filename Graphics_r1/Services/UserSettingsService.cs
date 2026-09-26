@@ -57,6 +57,13 @@ namespace PileDesign.Services
             Load();
         }
 
+        /// <summary>設定ファイルの場所を指定して作る (テスト用。利用者の設定ファイルに触れないため)。</summary>
+        internal UserSettingsService(string filePath)
+        {
+            _filePath = filePath;
+            Load();
+        }
+
         private void Load()
         {
             try
@@ -78,8 +85,11 @@ namespace PileDesign.Services
         {
             try
             {
-                var json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_filePath, json);
+                // 同じフォルダの一時ファイルに書き切ってから差し替える (プロジェクトの保存と同じ)。
+                // 以前は設定ファイルへ直接書いていたので、書き込みの途中で終了すると JSON が壊れ、
+                // 次の起動で読めずに設定が既定値へ戻った。中身は従来と同じ (BOM なし UTF-8)。
+                byte[] json = JsonSerializer.SerializeToUtf8Bytes(Settings, new JsonSerializerOptions { WriteIndented = true });
+                FileOperationService.WriteAtomically(_filePath, stream => stream.Write(json));
             }
             catch (Exception ex)
             {

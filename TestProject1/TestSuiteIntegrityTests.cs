@@ -136,6 +136,7 @@ namespace TestProject1
                 "UnsavedWorkAndRestoreTests.cs",
                 "MgtExportTests.cs",          // 出力に失敗したあと、一時ファイルが残っていないかを見る
                 "ExportAtomicityTests.cs",    // 書き出しのあと、一時ファイルが残っていないかを見る
+                "UserSettingsAndAssociationTests.cs", // 設定の保存のあと、一時ファイルが残っていないかを見る
 
                 "IconRegenerator.cs",
             ];

@@ -123,13 +123,55 @@ namespace PileDesign.Services
                 var command = commandKey?.GetValue(string.Empty) as string;
                 if (string.IsNullOrEmpty(command)) return false;
 
-                var exePath = GetExePath();
-                return !string.IsNullOrEmpty(exePath) && command!.Contains(exePath, StringComparison.OrdinalIgnoreCase);
+                return CommandRunsExecutable(command, GetExePath());
             }
             catch
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 登録したコマンド (<c>"exe" --open "%1"</c>) が起動する実行ファイルが <paramref name="exePath"/> と同じか。
+        ///
+        /// 以前はコマンドに現在のパスが<b>含まれるか</b>で判定していたので、似た名前のパス
+        /// (<c>C:\App\PileDesign.exe</c> と <c>C:\App\PileDesign.exe.old\PileDesign.exe</c>) や、
+        /// パスを引数に含む別のコマンドも一致とみなし、更新が要る関連付けを見逃した。
+        /// 実行ファイルの部分を取り出し、完全なパスとして比べる (大文字小文字は区別しない)。
+        /// </summary>
+        internal static bool CommandRunsExecutable(string? command, string? exePath)
+        {
+            if (string.IsNullOrWhiteSpace(command) || string.IsNullOrWhiteSpace(exePath)) return false;
+            string? registered = ExecutableOf(command);
+            if (string.IsNullOrEmpty(registered)) return false;
+            try
+            {
+                return string.Equals(Path.GetFullPath(registered), Path.GetFullPath(exePath), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception)
+            {
+                return false;   // パスとして読めない登録値は一致しない
+            }
+        }
+
+        /// <summary>
+        /// コマンド文字列の先頭の実行ファイルのパス。引用符で囲まれていればその中、
+        /// 囲まれていなければ「.exe」までを取る (空白を含む無引用のパスもあるため)。見つからなければ最初の空白まで。
+        /// </summary>
+        internal static string? ExecutableOf(string command)
+        {
+            string s = command.Trim();
+            if (s.Length == 0) return null;
+            if (s[0] == '"')
+            {
+                int close = s.IndexOf('"', 1);
+                return close > 1 ? s[1..close] : null;
+            }
+            int exe = s.IndexOf(".exe", StringComparison.OrdinalIgnoreCase);
+            if (exe > 0 && (exe + 4 == s.Length || char.IsWhiteSpace(s[exe + 4])))
+                return s[..(exe + 4)];
+            int space = s.IndexOfAny([' ', '\t']);
+            return space < 0 ? s : s[..space];
         }
 
         /// <summary>
