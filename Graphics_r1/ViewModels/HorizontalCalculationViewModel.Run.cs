@@ -881,7 +881,7 @@ namespace PileDesign.ViewModels
                                 var reactions = InputModel.ElementDivision?.SoilPiles?[pli.SoilPileAltNo - 1]?.HorizontalSoilReactions;
                                 if (reactions == null) continue;
                                 // VL ケースは iLC=-1 となるため >=0 チェック必須
-                                bool isFront = pli.IsFrontPiles != null && iLC >= 0 && iLC < pli.IsFrontPiles.Count && pli.IsFrontPiles[iLC];
+                                bool isFront = pli.IsFrontAt(iLC);
                                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pli);
                                 // 液状化の低減率 βL は要素ごと。ばねの組立 (PrepareKmat) と同じ値を使う
                                 var pliGround = InputModel.ElementDivision?.SoilPiles?[pli.SoilPileAltNo - 1]?.GroundInput;

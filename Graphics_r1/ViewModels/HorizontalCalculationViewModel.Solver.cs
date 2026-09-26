@@ -879,8 +879,7 @@ namespace PileDesign.ViewModels
             {
                 var horizontalReactions = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1].HorizontalSoilReactions;
                 // VL ケースは iLC=-1 となるため安全アクセス
-                var isFrontPile = pileLayoutItem.IsFrontPiles != null && iLC >= 0 && iLC < pileLayoutItem.IsFrontPiles.Count
-                    ? pileLayoutItem.IsFrontPiles[iLC] : false;
+                var isFrontPile = pileLayoutItem.IsFrontAt(iLC);
 
                 // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B) はこの杭配置の入力から。
                 // 土層-杭セットは複数の杭で共有されるので、反力項目には保存されていない。

@@ -347,6 +347,76 @@ namespace PileDesign.ViewModels
             wpfPlot.Refresh();
         }
 
+        /// <summary>
+        /// ばねの結果のうち、指定した荷重ケース・組合せ・液状化の最終ステップのもの (無ければ null)。
+        /// 「そのばねにある最新」ではなく最終ステップに限るのは、一部のばねで結果が欠けたときに
+        /// 別のステップの値を 1 本のグラフに混ぜないため。
+        /// </summary>
+        internal static HorizontalSpringResult? FinalSpringResult(HorizontalSoilSpring? spring,
+            LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int lastStep)
+            => spring?.HorizontalSpringResults?.FirstOrDefault(r => r.Step == lastStep
+                && LoadCase.IsSameCase(r.LoadCase, loadCase)
+                && LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)
+                && r.IsLiquefaction == isLiquefaction);
+
+        /// <summary>
+        /// 長方形分布の点列。要素 j の上半分は節点 j、下半分は節点 j+1 の値で描く。
+        /// 結果の無い節点が受け持つ半区間は点を置かず null (線の切れ目) を入れる — ゼロとして描くと
+        /// 「反力が本当にゼロ」と見分けがつかない。節点の無い半区間 (要素が節点より多い) も同じ扱い。
+        /// </summary>
+        internal static List<(double V, double Z)?> RectangleDistributionPoints(
+            IReadOnlyList<(double ZTop, double ZBtm)> segments, bool[] hasResult,
+            Func<int, double> upperValue, Func<int, double> lowerValue)
+        {
+            var points = new List<(double V, double Z)?>();
+            for (int j = 0; j < segments.Count; j++)
+            {
+                double zTop = segments[j].ZTop, zBtm = segments[j].ZBtm;
+                if (zTop - zBtm <= 0) continue;
+                double zMid = 0.5 * (zTop + zBtm);
+
+                if (j < hasResult.Length && hasResult[j])
+                {
+                    double v = upperValue(j);
+                    points.Add((v, zTop)); points.Add((v, zMid));
+                }
+                else points.Add(null);
+
+                if (j + 1 < hasResult.Length && hasResult[j + 1])
+                {
+                    double v = lowerValue(j);
+                    points.Add((v, zMid)); points.Add((v, zBtm));
+                }
+                else points.Add(null);
+            }
+            return points;
+        }
+
+        /// <summary>点列を切れ目 (null) で分けた連続区間。空の区間は含めない。</summary>
+        internal static List<(List<double> Values, List<double> Zs)> SplitAtGaps(IEnumerable<(double V, double Z)?> points)
+        {
+            var runs = new List<(List<double> Values, List<double> Zs)>();
+            (List<double> Values, List<double> Zs)? current = null;
+            foreach (var p in points)
+            {
+                if (p == null) { current = null; continue; }
+                if (current == null) { current = ([], []); runs.Add(current.Value); }
+                current.Value.Values.Add(p.Value.V);
+                current.Value.Zs.Add(p.Value.Z);
+            }
+            return runs;
+        }
+
+        /// <summary>一部の節点で結果が欠けていた系列を知らせる文 (多いときは先頭 5 件と件数)。</summary>
+        internal static string DescribePartiallyMissingSpringResults(IReadOnlyList<string> series)
+        {
+            const int shown = 5;
+            string list = string.Join(", ", series.Take(shown))
+                + (series.Count > shown ? $" ほか {series.Count - shown} 件" : "");
+            return "最終ステップの結果が一部の節点で欠けているため、その区間は描いていません"
+                + "（反力がゼロという意味ではありません。再解析すると揃います）: " + list;
+        }
+
         // 水平地盤反力描画（相対変位、地盤反力、ばね割線剛性）
         private void DrawHorizontalSoilReaction(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText, string dataType, string unit)
         {
@@ -361,6 +431,9 @@ namespace PileDesign.ViewModels
 
             // 土層背景色を scatter より先に追加 (背後に描画される)
             AddSoilLayerBackground(wpfPlot);
+
+            // 一部の節点で結果が欠けていた系列 (その区間は描かない。後で画面に知らせる)
+            var partiallyMissing = new List<string>();
 
             foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
             {
@@ -389,8 +462,9 @@ namespace PileDesign.ViewModels
                             int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
                             if (lastStep < 0) continue;
 
-                            List<double> springZs = [];
-                            List<double> springValues = [];
+                            // 描く点。null は結果の欠けた節点で、線をそこで切る (ゼロとして描かない)
+                            var points = new List<(double V, double Z)?>();
+                            int missingNodes = 0, expectedNodes = 0;
 
                             int nSprings = horizontalSoilSprings.Count;
 
@@ -403,37 +477,31 @@ namespace PileDesign.ViewModels
 
                             if (useRectDist)
                             {
-                                // 全節点の 相対変位 と FEM 実測ばね反力 をキャッシュ
+                                // 全節点の 相対変位 と FEM 実測ばね反力 をキャッシュ。
+                                // 結果は最終ステップのものだけを使う (節点ごとに「ある中で最新」を拾うと、
+                                // 一部が欠けたとき別のステップの値が 1 本の分布に混ざる)。
+                                // 結果の無い節点は hasResult=false とし、その節点が受け持つ半区間は描かない。
                                 double[] nodeRelDisps = new double[nSprings];
                                 double[] nodeActualForces = new double[nSprings]; // |F|_FEM [kN]
+                                bool[] hasResult = new bool[nSprings];
                                 for (int k = 0; k < nSprings; k++)
                                 {
                                     var sp = horizontalSoilSprings[k];
                                     if (sp == null) continue;
-                                    var res = sp.HorizontalSpringResults?
-                                        .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
-                                                 && r.LoadCombination?.No == loadCombination.No
-                                                 && r.IsLiquefaction == isLiquefaction)
-                                        .OrderByDescending(r => r.Step)
-                                        .FirstOrDefault();
-                                    if (res?.CumulativeDisp == null) continue;
+                                    expectedNodes++;
+                                    var res = FinalSpringResult(sp, loadCase, loadCombination, isLiquefaction, lastStep);
+                                    if (res?.CumulativeDisp == null || res.CumulativeForce == null) { missingNodes++; continue; }
+                                    hasResult[k] = true;
                                     double dx = res.CumulativeDisp.Dxi - res.CumulativeDisp.Dxj;
                                     double dy = res.CumulativeDisp.Dyi - res.CumulativeDisp.Dyj;
                                     nodeRelDisps[k] = Math.Sqrt(dx * dx + dy * dy);
-                                    if (res.CumulativeForce != null)
-                                    {
-                                        double fx = res.CumulativeForce.Fxi;
-                                        double fy = res.CumulativeForce.Fyi;
-                                        nodeActualForces[k] = Math.Sqrt(fx * fx + fy * fy);
-                                    }
+                                    double fx = res.CumulativeForce.Fxi;
+                                    double fy = res.CumulativeForce.Fyi;
+                                    nodeActualForces[k] = Math.Sqrt(fx * fx + fy * fy);
                                 }
 
                                 // isFront: 当該荷重ケースでのこの杭の前後判定 (p-y 計算に影響)
-                                int iLC = loadCase.No - 1;
-                                bool isFront = pileLayoutDataItem.IsFrontPiles != null
-                                            && iLC >= 0
-                                            && iLC < pileLayoutDataItem.IsFrontPiles.Count
-                                            && pileLayoutDataItem.IsFrontPiles[iLC];
+                                bool isFront = pileLayoutDataItem.IsFrontFor(loadCase);
 
                                 // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B) も解析と同じものを使う
                                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pileLayoutDataItem);
@@ -482,45 +550,22 @@ namespace PileDesign.ViewModels
                                 // 要素分割後の各 FEM 梁ごとに作られている (SoilPile.SetHorizontalSoilReaction)
                                 // ため、FEM 上の実梁長と等価。Canvas 側の SoilReactionUtil (Beam.Length 集計) と
                                 // 同じ「分割後の実長」ベースで計算している。
-                                for (int j = 0; j < reactions.Count; j++)
+                                double HalfValue(int j, int node, bool upper)
                                 {
-                                    double zTop = reactions[j].ZTop;
-                                    double zBtm = reactions[j].ZBtm;
-                                    double zMid = 0.5 * (zTop + zBtm);
-                                    double L = zTop - zBtm;
-                                    if (L <= 0) continue;
+                                    double L = reactions[j].ZTop - reactions[j].ZBtm;
                                     double B = reactions[j].B > 0 ? reactions[j].B : 1.0;
                                     double halfArea = 0.5 * L * B; // kN → kN/m² 変換用
-
-                                    // 上半分: 節点 j の 下方寄与 (F_below_j) がこのセグメントの上半分に対応
-                                    double fUpper = (j < nSprings) ? fBelowScaled[j] : 0;
-                                    // 下半分: 節点 j+1 の 上方寄与 (F_above_{j+1}) がこのセグメントの下半分に対応
-                                    double fLower = ((j + 1) < nSprings) ? fAboveScaled[j + 1] : 0;
-
-                                    double pUpperPa = halfArea > 0 ? fUpper / halfArea : 0; // kN/m²
-                                    double pLowerPa = halfArea > 0 ? fLower / halfArea : 0;
-
-                                    double yUp = (j < nSprings) ? nodeRelDisps[j] : 0;
-                                    double yLo = ((j + 1) < nSprings) ? nodeRelDisps[j + 1] : 0;
-
-                                    double vUp, vLo;
-                                    if (dataType == "Reaction")
-                                    {
-                                        vUp = pUpperPa;
-                                        vLo = pLowerPa;
-                                    }
-                                    else // SecantStiffness
-                                    {
-                                        vUp = yUp > 1e-10 ? pUpperPa / yUp : 0; // kN/m³
-                                        vLo = yLo > 1e-10 ? pLowerPa / yLo : 0;
-                                    }
-
-                                    // 長方形を作る 4 点
-                                    springValues.Add(vUp); springZs.Add(zTop);
-                                    springValues.Add(vUp); springZs.Add(zMid);
-                                    springValues.Add(vLo); springZs.Add(zMid);
-                                    springValues.Add(vLo); springZs.Add(zBtm);
+                                    // 上半分: 節点 j の 下方寄与 (F_below_j) / 下半分: 節点 j+1 の 上方寄与 (F_above_{j+1})
+                                    double f = upper ? fBelowScaled[node] : fAboveScaled[node];
+                                    double p = halfArea > 0 ? f / halfArea : 0; // kN/m²
+                                    if (dataType == "Reaction") return p;
+                                    double y = nodeRelDisps[node];
+                                    return y > 1e-10 ? p / y : 0; // SecantStiffness: kN/m³
                                 }
+                                points.AddRange(RectangleDistributionPoints(
+                                    reactions.Select(r => (r.ZTop, r.ZBtm)).ToList(), hasResult,
+                                    j => HalfValue(j, j, upper: true),
+                                    j => HalfValue(j, j + 1, upper: false)));
                             }
                             else
                             {
@@ -533,15 +578,16 @@ namespace PileDesign.ViewModels
                                     // 深度（杭節点のZ座標）
                                     double z = spring.NodeI.Coord.Z;
 
-                                    // 結果を取得（最終ステップ）
-                                    var result = spring.HorizontalSpringResults?
-                                        .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
-                                                 && r.LoadCombination?.No == loadCombination.No
-                                                 && r.IsLiquefaction == isLiquefaction)
-                                        .OrderByDescending(r => r.Step)
-                                        .FirstOrDefault();
+                                    // 結果を取得（最終ステップのものだけ。無い節点は線を切る）
+                                    expectedNodes++;
+                                    var result = FinalSpringResult(spring, loadCase, loadCombination, isLiquefaction, lastStep);
 
-                                    if (result?.CumulativeDisp == null || result?.CumulativeForce == null) continue;
+                                    if (result?.CumulativeDisp == null || result?.CumulativeForce == null)
+                                    {
+                                        missingNodes++;
+                                        points.Add(null);
+                                        continue;
+                                    }
 
                                     // 相対変位（杭節点 - 地盤節点）のX,Y合成
                                     double relDispX = result.CumulativeDisp.Dxi - result.CumulativeDisp.Dxj;
@@ -556,22 +602,37 @@ namespace PileDesign.ViewModels
                                     // ばね全体剛性 [kN/m] = 反力 [kN] / 変位 [m]
                                     double springStiffness = relDisp > 1e-10 ? force / relDisp : 0;
 
-                                    springZs.Add(z);
-                                    if (dataType == "RelativeDisp")
-                                        springValues.Add(relDisp * 1000.0); // mm
-                                    else if (dataType == "Reaction")
-                                        springValues.Add(force); // kN
-                                    else if (dataType == "SecantStiffness")
-                                        springValues.Add(springStiffness); // kN/m
+                                    double value = dataType switch
+                                    {
+                                        "RelativeDisp" => relDisp * 1000.0, // mm
+                                        "Reaction" => force, // kN
+                                        _ => springStiffness, // SecantStiffness: kN/m
+                                    };
+                                    points.Add((value, z));
                                 }
                             }
 
-                            if (springZs.Count > 0)
+                            // 全部欠けた系列は何も描かれないので紛れない。一部だけ欠けたものを知らせる
+                            if (missingNodes > 0 && missingNodes < expectedNodes)
+                                partiallyMissing.Add($"杭 #{pileLayoutDataItem.PileNo} {loadCase.LoadName} 組合せ{loadCombination.No}"
+                                    + $" 液状化{(isLiquefaction ? "考慮" : "非考慮")} ({missingNodes}/{expectedNodes} 節点)");
+
+                            var runs = SplitAtGaps(points);
+                            if (runs.Count > 0)
                             {
-                                var scatter = wpfPlot.Plot.Add.Scatter(springValues, springZs);
-                                scatter.LegendText = GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
+                                var springValues = runs.SelectMany(r => r.Values).ToList();
+                                int drawnPoints = springValues.Count;
+                                string legend = GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
                                 // 案 C v3: 長方形分布モードでは 4 点/セグメントを直線で結ぶだけで長方形が描ける
-                                // (ConnectStyle の調整は不要)
+                                // (ConnectStyle の調整は不要)。欠けた区間で切った線は同じ色でつなげずに描き、凡例は先頭だけ
+                                var scatters = new List<ScottPlot.Plottables.Scatter>();
+                                foreach (var (values, zs) in runs)
+                                {
+                                    var s = wpfPlot.Plot.Add.Scatter(values, zs);
+                                    if (scatters.Count == 0) s.LegendText = legend;
+                                    else s.Color = scatters[0].Color;
+                                    scatters.Add(s);
+                                }
 
                                 // ホバーポップアップ用詳細
                                 double absMax = springValues.Count > 0 ? springValues.Max(Math.Abs) : 0;
@@ -582,14 +643,16 @@ namespace PileDesign.ViewModels
                                     "SecantStiffness" => "水平地盤反力係数",
                                     _ => dataType
                                 };
-                                _graphHoverMap[scatter] =
+                                string hover =
                                     $"杭: #{pileLayoutDataItem.PileNo} (X={pileLayoutDataItem.X:N2}, Y={pileLayoutDataItem.Y:N2})\n"
                                     + $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}°\n"
                                     + $"組合せ: cmb{loadCombination.No} (αL={loadCombination.Alpha1:F2}/βU={loadCombination.Beta1:F2}/βL={loadCombination.Beta2:F2})\n"
                                     + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}\n"
                                     + $"系列: {seriesLabel} ({unit})\n"
                                     + $"最大絶対値: {absMax:N2} {unit}\n"
-                                    + $"節点数: {springZs.Count}";
+                                    + $"節点数: {drawnPoints}"
+                                    + (missingNodes > 0 ? $"\n結果の欠けた節点: {missingNodes} (その区間は描いていません)" : "");
+                                foreach (var s in scatters) _graphHoverMap[s] = hover;
                             }
                         }
                     }
@@ -604,6 +667,12 @@ namespace PileDesign.ViewModels
                 _ => dataType
             };
             string axisX = title + " " + unit;
+
+            if (partiallyMissing.Count > 0)
+            {
+                string missing = DescribePartiallyMissingSpringResults(partiallyMissing);
+                GraphInfoMessage = string.IsNullOrEmpty(GraphInfoMessage) ? missing : GraphInfoMessage + "\n" + missing;
+            }
 
             ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, title, axisX, "Z(m)");
             wpfPlot.Plot.ShowLegend();

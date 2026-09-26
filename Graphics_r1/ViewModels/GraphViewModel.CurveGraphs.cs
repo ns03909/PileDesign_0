@@ -943,7 +943,10 @@ namespace PileDesign.ViewModels
                     ? Enumerable.Range(0, reactions.Count).ToList()
                     : (singleSegIdx >= 0 && singleSegIdx < reactions.Count ? new List<int> { singleSegIdx } : new List<int>());
 
-                bool isFront = pileLayout.IsFrontPiles?.FirstOrDefault() ?? true;
+                // 前方杭・後方杭は荷重ケースごとに違いうる (py が変わる)。解析と同じく
+                // ケースごとの判定を使い、選択ケースに現れる判定の種類だけ曲線を描く
+                var frontVariants = selectedLoadCases.Select(lc => pileLayout.IsFrontFor(lc)).Distinct().ToList();
+                if (frontVariants.Count == 0) frontVariants.Add(pileLayout.IsFrontAt(0));
 
                 // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B)。解析と同じ p-y 曲線を描くために必要
                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pileLayout);
@@ -997,16 +1000,19 @@ namespace PileDesign.ViewModels
                         ? $"|{SoilNonlinearityModes.ToShortText(curveMode)}" : "";
 
                     foreach (double beta in betaVariants)
+                    foreach (bool isFront in frontVariants)
                     {
                         var curveEffect = groupPileEffect.WithLiquefaction(beta);
                         double pyTop = reaction.GetPyFor(isTop: true, isFront, curveEffect);
                         double pyBtm = reaction.GetPyFor(isTop: false, isFront, curveEffect);
                         double kh0ForCurve = reaction.GetKh0For(curveEffect);
-                        // βL が 1 種類なら凡例は簡潔に保つ
-                        string betaSuffix = betaVariants.Count > 1 ? $"|βL={beta:0.00}" : "";
-                        string curveDetails = beta < 1.0 - 1e-9
+                        // βL・前後が 1 種類なら凡例は簡潔に保つ
+                        string betaSuffix = (betaVariants.Count > 1 ? $"|βL={beta:0.00}" : "")
+                            + (frontVariants.Count > 1 ? (isFront ? "|前方杭" : "|後方杭") : "");
+                        string curveDetails = (beta < 1.0 - 1e-9
                             ? pyDetails + $"\n液状化低減 βL: {beta:0.00}"
-                            : pyDetails;
+                            : pyDetails)
+                            + $"\n{(isFront ? "前方杭" : "後方杭")}";
 
                         // Top曲線
                         var ysT = yValues.Select(y => reaction.GetP(y, pyTop, curveMode, kh0ForCurve)).ToArray();
@@ -1050,12 +1056,7 @@ namespace PileDesign.ViewModels
                                 int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
                                 if (lastStep < 0) continue;
 
-                                var result = spring.HorizontalSpringResults?
-                                    .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
-                                             && r.LoadCombination?.No == loadCombination.No
-                                             && r.IsLiquefaction == isLiquefaction)
-                                    .OrderByDescending(r => r.Step)
-                                    .FirstOrDefault();
+                                var result = FinalSpringResult(spring, loadCase, loadCombination, isLiquefaction, lastStep);
 
                                 if (result?.CumulativeDisp == null) continue;
 
@@ -1067,6 +1068,8 @@ namespace PileDesign.ViewModels
                                 // Y軸は理論値（P-y曲線上の値）。βL はこのケースのものを使う
                                 var markerEffect = groupPileEffect.WithLiquefaction(
                                     BetaFor(loadCase.Level, isLiquefaction, segIdx));
+                                // 前方杭・後方杭もこのケースのもの (解析と同じ判定)
+                                bool isFront = pileLayout.IsFrontFor(loadCase);
                                 double py = reaction.GetPyFor(isTopEnd, isFront, markerEffect);
                                 double pTheory = reaction.GetP(relDisp, py, loadCase.SoilNonlinearityMode,
                                     reaction.GetKh0For(markerEffect));
@@ -1085,7 +1088,8 @@ namespace PileDesign.ViewModels
                                     marker.LegendText = $"最終:{legend}";
                                     _graphHoverMap[marker] =
                                         pyDetails + "\n" +
-                                        $"LC: {loadCase.LoadName} / Comb: {loadCombination.No} / LIQ: {isLiquefaction}\n" +
+                                        $"LC: {loadCase.LoadName} / Comb: {loadCombination.No} / LIQ: {isLiquefaction}"
+                                        + $" / {(isFront ? "前方杭" : "後方杭")}\n" +
                                         $"{endLabel}: 相対変位 {relDispMm:F2} mm, p = {pTheory:F1} kN/m²";
                                 }
                             }

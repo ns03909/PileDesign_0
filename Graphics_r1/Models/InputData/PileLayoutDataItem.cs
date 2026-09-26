@@ -482,6 +482,16 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _isFrontPiles, value);
         }
 
+        /// <summary>
+        /// 荷重ケース (0 始まりの番号) での前方杭判定。解析・グラフ・結果の説明はすべてここを通す。
+        /// 範囲外 (鉛直ケースの -1 を含む)・未設定は後方杭として扱う。
+        /// </summary>
+        public bool IsFrontAt(int loadCaseIndex)
+            => IsFrontPiles != null && loadCaseIndex >= 0 && loadCaseIndex < IsFrontPiles.Count && IsFrontPiles[loadCaseIndex];
+
+        /// <summary>荷重ケースでの前方杭判定 (<see cref="IsFrontAt"/>。ケース番号 - 1 番目の値)。</summary>
+        public bool IsFrontFor(LoadCase loadCase) => IsFrontAt(loadCase.No - 1);
+
         // 杭先端 N 値の入力は置かない。どこからも読まれておらず (支持力は地盤の土質データから
         // 杭先端位置の N 値を引く)、画面にも出ていなかったため 2026-09-18 に撤去した。
 
