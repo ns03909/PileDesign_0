@@ -231,7 +231,7 @@ namespace TestProject1
             string write = TestSource.MethodBody(src, "internal void WritePrepared(string filePath, PreparedSave prepared)");
             Assert.IsFalse(write.Contains("ValidateFinite(", StringComparison.Ordinal),
                 "書き出しの側で NaN 検査をしています (書く JSON と別の時点の値を検査することになる)");
-            string saveAsync = TestSource.MethodBody(src, "public async Task SaveProjectDataAsync(");
+            string saveAsync = TestSource.MethodBody(src, "public async Task<string?> SaveProjectDataAsync(");
             Assert.IsFalse(saveAsync.Contains("ValidateFinite(", StringComparison.Ordinal),
                 "非同期保存がバックグラウンドで NaN 検査をしています");
         }

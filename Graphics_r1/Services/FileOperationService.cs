@@ -24,8 +24,9 @@ namespace PileDesign.Services
         private readonly JsonSerializerOptions _jsonOptions;
 
         /// <summary>
-        /// 手動保存 (<see cref="SaveProjectDataAsync"/>) でも ValidateFinite (NaN/∞ 検出) を実行するかどうか。
+        /// 手動保存 (<see cref="SaveProjectDataAsync"/>) でも ValidateFinite (NaN/∞ 検出) を実行して、<b>保存を止める</b>かどうか。
         /// 既定 false: 手動保存を NaN で失敗させると、利用者が作業を保存できなくなる。
+        /// 止めないときも検査はして、見つかった箇所を戻り値で返す (画面が警告として知らせる)。
         /// AllowNamedFloatingPointLiterals により NaN/∞ もそのまま保存できる。
         /// 自動保存・緊急保存 (<see cref="SaveProjectData"/>) はこの設定に関わらず必ず検査する。
         /// (かつては反射の全走査に 6 秒以上かかったが、重い算出プロパティを [JsonIgnore] にしてからは
@@ -80,6 +81,12 @@ namespace PileDesign.Services
             public byte[]? Payload { get; init; }
 
             /// <summary>
+            /// 保存を止めない検査で見つかった NaN・無限大の箇所 (最初の 1 か所)。無ければ null。
+            /// 手動保存は NaN で止めないので、保存したあとに利用者へ知らせるのに使う。
+            /// </summary>
+            public string? NonFiniteLocation { get; init; }
+
+            /// <summary>
             /// NaN 検査か直列化で出た例外。書き出しの側で投げ直す。
             /// 中身を確定させる処理は画面のスレッドで走るので (自動保存の Tick など)、そこでは投げずに持ち越し、
             /// 書き出しの失敗として同じ経路で知らせる。
@@ -117,6 +124,7 @@ namespace PileDesign.Services
             var inputToSave = SnapshotForSaving(inputModel, anaModel, resultInputSnapshot);
 
             // 検査は<b>写した器</b>に、直列化と同じ時点でかける (書き出すものをそのまま検査する)
+            string? nonFiniteLocation = null;
             if (validateFinite)
             {
                 try
@@ -127,6 +135,14 @@ namespace PileDesign.Services
                 {
                     return new PreparedSave { InputToSave = inputToSave, Error = ex };
                 }
+            }
+            else
+            {
+                // 保存は止めないが、どこに NaN・無限大があるかは調べて返す (画面が警告として知らせる)。
+                // 以前は手動保存では調べもしなかったので、値の異常に気付く手掛かりが無かった。
+                // 調べること自体が失敗しても保存は続ける (警告のための検査で作業を失わない)
+                try { nonFiniteLocation = inputToSave == null ? null : FindNonFiniteDouble(inputToSave, "InputModel"); }
+                catch (Exception ex) { Log.Warning(ex, "[Save] NaN・無限大の箇所を調べられませんでした"); }
             }
 
             var projectData = new ProjectData
@@ -164,6 +180,7 @@ namespace PileDesign.Services
                 {
                     InputToSave = inputToSave,
                     Payload = JsonSerializer.SerializeToUtf8Bytes(projectData, _jsonOptions),
+                    NonFiniteLocation = nonFiniteLocation,
                 };
             }
             catch (Exception ex)
@@ -323,7 +340,11 @@ namespace PileDesign.Services
         /// 中身の確定 (直列化) は呼び出したスレッド (画面のスレッド) で済ませ、ファイルへの書き込みだけを
         /// バックグラウンドで行う (理由は <see cref="PrepareSave"/>)。
         /// </summary>
-        public async Task SaveProjectDataAsync(string filePath, InputModel inputModel, AnaModel? anaModel,
+        /// <returns>
+        /// 保存した入力に NaN・無限大があれば、その箇所 (最初の 1 か所)。無ければ null。
+        /// 保存は止めない (<see cref="ValidateFiniteBeforeSave"/> が false のとき)。呼び出し側が警告として知らせる。
+        /// </returns>
+        public async Task<string?> SaveProjectDataAsync(string filePath, InputModel inputModel, AnaModel? anaModel,
             IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null,
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
             PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
@@ -392,7 +413,17 @@ namespace PileDesign.Services
             Log.Information(
                 "[Save] total={Total}ms prepare(validate+serialize)={Serialize}ms write={Write}ms size={SizeKB:N0}KB path={Path}",
                 swTotal.ElapsedMilliseconds, tSerialize, tWrite, fileSize / 1024, System.IO.Path.GetFileName(filePath));
+            if (prepared.NonFiniteLocation != null)
+                Log.Warning("[Save] NaN・無限大を含んだまま保存しました: {Location}", prepared.NonFiniteLocation);
+            return prepared.NonFiniteLocation;
         }
+
+        /// <summary>手動保存のあとに出す警告の文。<paramref name="location"/> は <see cref="SaveProjectDataAsync"/> の戻り値。</summary>
+        internal static string DescribeSavedNonFinite(string location)
+            => "保存しましたが、数値として扱えない値 (NaN・無限大) が含まれています。\n"
+               + $"該当箇所: {location}\n"
+               + "値を確認して入力し直してください。このまま解析すると、結果が正しく求まりません。\n"
+               + "(作業を失わないよう、保存そのものは止めていません)";
 
         /// <summary>
         /// InputModel の中に NaN や ±∞ が含まれていれば、そのフィールドパスを示す

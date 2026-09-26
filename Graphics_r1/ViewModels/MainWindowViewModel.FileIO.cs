@@ -72,7 +72,7 @@ namespace PileDesign.ViewModels
                 // 入力のみの軽量ファイルとして保存する
                 var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
                 var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
-                await _fileOperationService.SaveProjectDataAsync(newPath, CurrentInputModel, anaModelToSave, vbcrToSave,
+                string? nonFinite = await _fileOperationService.SaveProjectDataAsync(newPath, CurrentInputModel, anaModelToSave, vbcrToSave,
                     CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
                     Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
                     IsElementSplit,
@@ -81,6 +81,7 @@ namespace PileDesign.ViewModels
                     return false;
                 CurrentFilePath = newPath;
                 ShowToast("保存が完了しました。");
+                WarnIfSavedNonFinite(nonFinite);
                 // 保存を始めたあとの編集・解析はファイルに入っていないので、あれば未保存のまま残す
                 MarkWorkSavedAsOf(generationAtSaveStart);
 
@@ -125,7 +126,7 @@ namespace PileDesign.ViewModels
                     StatusMessage = "保存中...";
                     var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
                     var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
-                    await _fileOperationService.SaveProjectDataAsync(pathAtSaveStart, CurrentInputModel, anaModelToSave, vbcrToSave,
+                    string? nonFinite = await _fileOperationService.SaveProjectDataAsync(pathAtSaveStart, CurrentInputModel, anaModelToSave, vbcrToSave,
                         CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
                         Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
                         IsElementSplit,
@@ -133,6 +134,7 @@ namespace PileDesign.ViewModels
                     if (ProjectReplacedDuringSave(projectAtSaveStart, pathAtSaveStart))
                         return false;
                     ShowToast("保存が完了しました。");
+                    WarnIfSavedNonFinite(nonFinite);
                     // 保存を始めたあとの編集・解析はファイルに入っていないので、あれば未保存のまま残す
                     MarkWorkSavedAsOf(generationAtSaveStart);
                     return true;
@@ -148,6 +150,19 @@ namespace PileDesign.ViewModels
                     Mouse.OverrideCursor = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// 保存した入力に NaN・無限大があれば、保存は済ませたうえで警告として知らせる。
+        ///
+        /// 手動保存は作業を失わないよう NaN で止めない。以前は調べもしなかったので、自動保存では
+        /// 箇所を示して止まる値の異常に、手動保存だけの利用者は気付く手掛かりが無かった。
+        /// </summary>
+        private static void WarnIfSavedNonFinite(string? location)
+        {
+            if (location == null) return;
+            MessageService.Show(Services.FileOperationService.DescribeSavedNonFinite(location),
+                "保存しました (値の確認)", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         /// <summary>
