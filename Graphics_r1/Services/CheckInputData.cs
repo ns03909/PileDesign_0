@@ -35,6 +35,9 @@ namespace PileDesign.Services
             foreach (var problem in PileDesign.FEM.AnalysisModelling.DescribeVerticalSpringProblems(inputModel))
                 warnings.Add("鉛直地盤ばね: " + problem);
 
+            // 杭体の形状の注意 (節杭が最上段にある等)。解析は止めない
+            warnings.AddRange(DescribePileBodyNotices(inputModel));
+
             // 各杭の ΔZc (接合点 − 杭頭オフセット)
             if (inputModel.PileLayoutItems != null)
             {
@@ -254,27 +257,14 @@ namespace PileDesign.Services
                     int segNo = j + 1;
                     var sec = seg.PileSection;
 
-                    if (seg.SegmentLength <= 0)
-                        message += $"杭体{pbNo} 区間{segNo}: 区間長が 0 以下です ({seg.SegmentLength}).\n";
+                    // 数値でない値 (NaN・無限大) も拒む。「0 以下」の比較は NaN で偽になり、素通りする
+                    // (入力欄は NaN を受け付けないが、古いファイル・手で編集したファイル・計算途中の値から入りうる)
+                    if (!IsPositive(seg.SegmentLength))
+                        message += $"杭体{pbNo} 区間{segNo}: 区間長が 0 以下か数値ではありません ({seg.SegmentLength}).\n";
 
                     if (sec == null) continue;
 
-                    // 節杭 は上杭に継手で接合される下杭として使うのが一般的なので、
-                    // 最上段区間に来ている場合は知らせる。
-                    // ただし Smart-MAGNUM / Hybrid ニーディングのように先端が節杭である前提の工法を
-                    // 1 区間でモデル化することはありうるため、禁止ではなく注意にとどめる。
-                    if (segNo == 1 && sec.IsNodularPile)
-                    {
-                        message += $"杭体{pbNo} 区間{segNo}: {sec.PileSectionType} が最上段の区間にあります " +
-                                   $"(節杭は上杭に継手で接合する下杭として使うのが一般的です).\n";
-                    }
-
-                    // 節杭 の拡頭径が直上区間の径と合っていない場合も知らせる
-                    if (sec.IsNodularPile && !string.IsNullOrEmpty(sec.NodularHeadNote)
-                        && sec.NodularHeadNote.Contains("一致する拡頭径がありません"))
-                    {
-                        message += $"杭体{pbNo} 区間{segNo}: {sec.NodularHeadNote}.\n";
-                    }
+                    // 節杭の注意 (最上段にある・拡頭径が合わない) は解析を止めない。警告 (CollectInputWarnings) で知らせる
 
                     // 場所打ち系 (PileBodyType=場所打ち鉄筋コンクリート杭 / 場所打ち鋼管コンクリート杭+鉄筋コンクリート部)
                     bool isInsituRC =
@@ -283,25 +273,73 @@ namespace PileDesign.Services
 
                     if (isInsituRC)
                     {
-                        if (sec.ConcreteOutDia <= 0)
-                            message += $"杭体{pbNo} 区間{segNo}: コンクリート外径が 0 以下です ({sec.ConcreteOutDia}).\n";
-                        if (sec.MainBarNum > 0 && sec.ConcreteOutDia > 0
-                            && (sec.MainBarDr <= 0 || sec.MainBarDr >= sec.ConcreteOutDia))
+                        if (!IsPositive(sec.ConcreteOutDia))
+                            message += $"杭体{pbNo} 区間{segNo}: コンクリート外径が 0 以下か数値ではありません ({sec.ConcreteOutDia}).\n";
+                        if (sec.MainBarNum > 0 && IsPositive(sec.ConcreteOutDia)
+                            && !(IsPositive(sec.MainBarDr) && sec.MainBarDr < sec.ConcreteOutDia))
                         {
                             message += $"杭体{pbNo} 区間{segNo}: 主筋配置直径 (MainBarDr={sec.MainBarDr}) が外径 ({sec.ConcreteOutDia}) との関係で不正です " +
                                         $"(0 < MainBarDr < 外径 を満たすこと).\n";
                         }
                     }
 
-                    if (sec.ConcreteFc <= 0
+                    if (!IsPositive(sec.ConcreteFc)
                         && sec.PileBodyType != PileTypeNames.SteelPipe  // 純鋼管杭は Fc 不要
                         && !(sec.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && sec.PileSectionType == PileTypeNames.SteelPipeSection))
                     {
-                        message += $"杭体{pbNo} 区間{segNo}: コンクリート設計基準強度 Fc が 0 以下です ({sec.ConcreteFc}).\n";
+                        message += $"杭体{pbNo} 区間{segNo}: コンクリート設計基準強度 Fc が 0 以下か数値ではありません ({sec.ConcreteFc}).\n";
                     }
                 }
             }
             return message;
+        }
+
+        /// <summary>正の有限の数か (NaN・無限大・0 以下は false)。「0 以下」の比較は NaN を素通りさせるので、こちらで判定する。</summary>
+        private static bool IsPositive(double value) => value > 0 && double.IsFinite(value);
+
+        /// <summary>
+        /// 杭が指す杭体番号・地盤番号が、入力にある範囲の番号か。範囲の外ならその説明 (どの杭か) を返し、よければ null。
+        /// </summary>
+        internal static string? DescribeBadPileReference(InputModel inputModel, PileLayoutDataItem pile)
+        {
+            int bodies = inputModel.PileBodies?.Count ?? 0;
+            int grounds = inputModel.GroundsInput?.Count ?? 0;
+            if (pile.PileBodyNo < 1 || pile.PileBodyNo > bodies || inputModel.PileBodies![pile.PileBodyNo - 1] == null)
+                return $"杭 No.{pile.No}: 杭体番号 {pile.PileBodyNo} の杭体がありません (杭体は {bodies} 個)。杭配置で杭体を選び直してください。";
+            if (pile.GroundNo < 1 || pile.GroundNo > grounds || inputModel.GroundsInput![pile.GroundNo - 1] == null)
+                return $"杭 No.{pile.No}: 地盤番号 {pile.GroundNo} の地盤がありません (地盤は {grounds} 個)。杭配置で地盤を選び直してください。";
+            return null;
+        }
+
+        /// <summary>
+        /// 杭体の形状についての注意 (解析は止めない)。<see cref="CollectInputWarnings"/> が警告として出す。
+        /// <list type="bullet">
+        /// <item>節杭が最上段の区間にある。節杭は上杭に継手で接合する下杭として使うのが一般的だが、
+        ///   Smart-MAGNUM / Hybrid ニーディングのように先端が節杭である前提の工法を 1 区間でモデル化することはありうる。</item>
+        /// <item>節杭の拡頭径が直上区間の径と合わない。標準タイプとして扱って計算は続ける。</item>
+        /// </list>
+        /// 以前は解析を止めるエラーの一覧に入れていたので、注意のつもりの項目で解析できなかった。
+        /// </summary>
+        internal static List<string> DescribePileBodyNotices(InputModel inputModel)
+        {
+            var notices = new List<string>();
+            if (inputModel?.PileBodies == null) return notices;
+            for (int i = 0; i < inputModel.PileBodies.Count; i++)
+            {
+                var segments = inputModel.PileBodies[i]?.PileBodySegments;
+                if (segments == null) continue;
+                for (int j = 0; j < segments.Count; j++)
+                {
+                    var sec = segments[j]?.PileSection;
+                    if (sec == null || !sec.IsNodularPile) continue;
+                    if (j == 0)
+                        notices.Add($"杭体{i + 1} 区間{j + 1}: {sec.PileSectionType} が最上段の区間にあります " +
+                                    "(節杭は上杭に継手で接合する下杭として使うのが一般的です)。");
+                    if (!string.IsNullOrEmpty(sec.NodularHeadNote) && sec.NodularHeadNote.Contains("一致する拡頭径がありません"))
+                        notices.Add($"杭体{i + 1} 区間{j + 1}: {sec.NodularHeadNote}。");
+                }
+            }
+            return notices;
         }
 
         /// <summary>
@@ -320,8 +358,10 @@ namespace PileDesign.Services
                 {
                     var layer = gi.GroundLayers[li];
                     if (layer == null) continue;
-                    if (layer.LayerThickness <= 0)
-                        message += $"地盤{gNo} 層{li + 1}: 層厚が 0 以下です ({layer.LayerThickness}).\n";
+                    if (!IsPositive(layer.LayerThickness))
+                        message += $"地盤{gNo} 層{li + 1}: 層厚が 0 以下か数値ではありません ({layer.LayerThickness}).\n";
+                    if (!double.IsFinite(layer.BottomAltitude))
+                        message += $"地盤{gNo} 層{li + 1}: 層の下端の標高が数値ではありません ({layer.BottomAltitude}).\n";
                 }
             }
             return message;
@@ -330,9 +370,10 @@ namespace PileDesign.Services
         // 杭のすべての高さ内で土質が定義されているかをチェック
         public static string CheckSoilPile(InputModel inputModel, string message)
         {
-            if (inputModel.PileLayoutItems.Count == 0)
+            if (inputModel.PileLayoutItems == null || inputModel.PileLayoutItems.Count == 0)
             {
                 message += $"杭配置にデータがありません。\n";
+                return message;
             }
 
 
@@ -340,8 +381,23 @@ namespace PileDesign.Services
 
             foreach (PileLayoutDataItem pileLayoutDataItem in inputModel.PileLayoutItems)
             {
+                if (pileLayoutDataItem == null) continue;
                 int pileBodyNo = pileLayoutDataItem.PileBodyNo;
                 int groundNo = pileLayoutDataItem.GroundNo;
+
+                // 番号の範囲を先に見る。以前は番号でそのまま配列を引いていたので、古いファイルなどで範囲の外の番号があると、
+                // 入力の問題を知らせる前に例外で落ちた
+                string? badReference = DescribeBadPileReference(inputModel, pileLayoutDataItem);
+                if (badReference != null)
+                {
+                    message += badReference + "\n";
+                    continue;
+                }
+                if (!double.IsFinite(pileLayoutDataItem.PileHeadZ))
+                {
+                    message += $"杭 No.{pileLayoutDataItem.No}: 杭頭の高さが数値ではありません ({pileLayoutDataItem.PileHeadZ}).\n";
+                    continue;
+                }
                 // pileTopAltitude は杭頭高さ。v2 セマンティクスでは pile.Z は接合節点 Z なので PileHeadZ を使う。
                 // SoilPile キャッシュ (杭頭基準) との整合のためにも PileHeadZ で揃える。
                 double pileTopAltitude = pileLayoutDataItem.PileHeadZ;
@@ -354,14 +410,14 @@ namespace PileDesign.Services
                     // pileBodyNoがUsedPileBodyNosに含まれていない場合の処理
                     UsedGroundNosPileBodyNosPileTopAltitudes.Add(groundNoPileBodyNoPileTopAltitude);
 
-                    if (inputModel.PileBodies[pileBodyNo - 1].PileBodySegments.Count == 0)
+                    if ((inputModel.PileBodies[pileBodyNo - 1].PileBodySegments?.Count ?? 0) == 0)
                     {
                         // 杭体データが空の場合のメッセージ
                         message += $"杭体番号{pileBodyNo}に杭区間データがありません。\n";
                         continue; // 次の杭体へスキップ
                     }
 
-                    if (inputModel.GroundsInput[groundNo - 1].GroundLayers.Count == 0)
+                    if ((inputModel.GroundsInput[groundNo - 1].GroundLayers?.Count ?? 0) == 0)
                     {
                         // 杭体データが空の場合のメッセージ
                         message += $"地盤番号{groundNo}に土層データがありません。\n";
@@ -397,8 +453,16 @@ namespace PileDesign.Services
             if (inputModel.EmbedmentInput.EmbedmentLayersCount != 0)
             {
                 int groundNo = inputModel.EmbedmentInput.GroundNo;
+                int groundCount = inputModel.GroundsInput?.Count ?? 0;
+                if (groundNo < 1 || groundNo > groundCount)
+                {
+                    message += $"根入部で選択された地盤番号{groundNo}の地盤がありません (地盤は {groundCount} 個)。根入部の地盤を選び直してください。\n";
+                    return message;
+                }
+                if ((inputModel.EmbedmentInput.EmbedmentLayers?.Count ?? 0) == 0)
+                    return message;
 
-                if (inputModel.GroundsInput[groundNo - 1].GroundLayers.Count == 0)
+                if ((inputModel.GroundsInput![groundNo - 1].GroundLayers?.Count ?? 0) == 0)
                 {
                     // 杭体データが空の場合のメッセージ
                     message += $"根入部で選択された地盤番号{groundNo}に土層データがありません。\n";
@@ -413,12 +477,12 @@ namespace PileDesign.Services
                     double embedmentBottomAltitude = inputModel.EmbedmentInput.EmbedmentLayers[^1].BottomAltitude;
                     if (groundTopAltitude < embedmentTopAltitude)
                     {
-                        message += "根入部の最上部が地盤番号{" + groundNo + "}の最上部よりも浅いです。\n";
+                        message += $"根入部の最上部が地盤番号{groundNo}の最上部よりも浅いです。\n";
                     }
 
                     if (embedmentBottomAltitude < groundBottomAltitude)
                     {
-                        message += "根入部の最下部が地盤番号{" + groundNo + "}の最下部よりも深いです。\n";
+                        message += $"根入部の最下部が地盤番号{groundNo}の最下部よりも深いです。\n";
                     }
                 }
             }
