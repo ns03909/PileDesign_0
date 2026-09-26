@@ -639,6 +639,8 @@ namespace PileDesign.ViewModels
             // 剛結扱いで M-θ 曲線が描画されない杭をユーザーに通知するためのセット
             // (杭体タイプ × 杭頭タイプの組合せが剛結となるケース。例: 場所打ち鋼管コンクリート杭 + 鉄筋定着工法)
             var rigidPileInfos = new HashSet<string>();
+            // どの杭のものか決められない回転ばね (RotationalSpring.FindPileLayout)
+            var unidentifiedSprings = new HashSet<string>();
 
             foreach (var loadCase in selectedLoadCases)
             {
@@ -652,29 +654,13 @@ namespace PileDesign.ViewModels
 
                         foreach (var rs in model.RotationalSprings)
                         {
-                            // 対応杭レイアウト探索
-                            // バネ名形式: "RθXY-{pileNo}" から杭番号を抽出
-                            PileLayoutDataItem pileLayout = null;
-                            if (rs.Name != null && rs.Name.Contains('-'))
+                            // 対応する杭。決められないばねは、別の杭の番号・軸力を付けて描かないよう飛ばして知らせる
+                            var pileLayout = rs.FindPileLayout(InputModel.PileLayoutItems);
+                            if (pileLayout == null)
                             {
-                                var parts = rs.Name.Split('-');
-                                if (parts.Length >= 2 && int.TryParse(parts[^1], out int pileNo))
-                                {
-                                    pileLayout = InputModel.PileLayoutItems.FirstOrDefault(pl => pl.No == pileNo);
-                                }
+                                unidentifiedSprings.Add(rs.Name ?? "(名前なし)");
+                                continue;
                             }
-                            // フォールバック: NodeJから探索
-                            if (pileLayout == null && rs.NodeJ != null)
-                            {
-                                pileLayout = InputModel.PileLayoutItems.FirstOrDefault(pl => pl.PileNodes.Count > 0 && ReferenceEquals(pl.PileNodes[0], rs.NodeJ));
-                            }
-                            // フォールバック: PileBodyNoから探索（最初の杭のみ）
-                            if (pileLayout == null && rs.PileBodyNo is int pb && pb > 0 && pb <= InputModel.PileBodies.Count)
-                            {
-                                pileLayout = InputModel.PileLayoutItems.FirstOrDefault(pl => pl.PileBodyNo == pb);
-                            }
-
-                            if (pileLayout == null) continue;
                             if (SelectedPileOption != UiText.All && !targetPileNos.Contains(pileLayout.No)) continue;
 
                             // 軸力推定: 荷重ケースの地震時軸力、取れなければ杭配置の軸力。
@@ -912,7 +898,18 @@ namespace PileDesign.ViewModels
                     "杭頭が剛結扱いのため M-θ 関係が存在しない杭があります（M-θ 曲線は描画されません）: "
                     + string.Join(", ", sortedInfos);
             }
+            if (unidentifiedSprings.Count > 0)
+            {
+                string unidentified = DescribeUnidentifiedMThetaSprings(unidentifiedSprings);
+                GraphInfoMessage = rigidPileInfos.Count == 0 ? unidentified : GraphInfoMessage + "\n" + unidentified;
+            }
         }
+
+        /// <summary>どの杭のものか決められずに M-θ 曲線を描かなかった回転ばねを知らせる文。</summary>
+        internal static string DescribeUnidentifiedMThetaSprings(IEnumerable<string> springNames)
+            => "どの杭の杭頭か決められない回転ばねがあるため、その M-θ 曲線は描いていません"
+               + "（同じ杭体を複数の杭が使っていて、ばねの名前・節点から杭を特定できません。再解析すると特定できます）: "
+               + string.Join(", ", springNames.OrderBy(s => s, StringComparer.Ordinal));
 
         // 水平地盤反力度p-y関係描画（理論P-y曲線 + 最終ステップマーカー）
         private void DrawPyCurvesWithMarker(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText)

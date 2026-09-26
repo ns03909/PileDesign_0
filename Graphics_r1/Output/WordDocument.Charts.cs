@@ -774,22 +774,18 @@ namespace PileDesign.Output
 
             // 回転ばね → 杭レイアウトのマッピングを構築
             var rsToLayout = new Dictionary<RotationalSpring, PileLayoutDataItem>();
+            // どの杭のものか決められないばねは、別の杭の番号・軸力を付けて描かないよう省いて知らせる
+            var unidentified = new List<string>();
             foreach (var rs in anaModel.RotationalSprings)
             {
-                PileLayoutDataItem pileLayout = null;
-                if (rs.Name != null && rs.Name.Contains('-'))
-                {
-                    var parts = rs.Name.Split('-');
-                    if (parts.Length >= 2 && int.TryParse(parts[^1], out int pileNo))
-                        pileLayout = inputModel.PileLayoutItems?.FirstOrDefault(pl => pl.No == pileNo);
-                }
-                if (pileLayout == null && rs.NodeJ != null)
-                    pileLayout = inputModel.PileLayoutItems?.FirstOrDefault(pl => pl.PileNodes.Count > 0 && ReferenceEquals(pl.PileNodes[0], rs.NodeJ));
-                if (pileLayout == null && rs.PileBodyNo is int pb && pb > 0 && pb <= inputModel.PileBodies.Count)
-                    pileLayout = inputModel.PileLayoutItems?.FirstOrDefault(pl => pl.PileBodyNo == pb);
-                if (pileLayout != null)
+                if (rs.FindPileLayout(inputModel.PileLayoutItems) is { } pileLayout)
                     rsToLayout[rs] = pileLayout;
+                else
+                    unidentified.Add(rs.Name ?? "(名前なし)");
             }
+            if (unidentified.Count > 0)
+                NoteOmitted(body, "杭頭 M-θ 曲線 (" + string.Join(", ", unidentified) + ")",
+                    new InvalidOperationException("どの杭の杭頭か決められない回転ばね (同じ杭体を複数の杭が使っていて、名前・節点から杭を特定できない)"));
 
             foreach (var pileBody in inputModel.PileBodies)
             {

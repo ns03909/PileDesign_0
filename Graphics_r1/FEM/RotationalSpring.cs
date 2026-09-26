@@ -325,6 +325,31 @@ namespace PileDesign.FEM
             => $"L{loadCase?.Level ?? 0}-{loadCase?.No ?? 0}|{loadCombinationNo}|{isLiquefaction}";
 
         /// <summary>
+        /// この回転ばねがどの杭の杭頭のものか。名前 (「RθXY-{杭番号}」) → 杭頭の節点 → 杭体番号の順に探し、
+        /// 決められなければ null (グラフ・計算書は描かずに知らせる)。
+        ///
+        /// 杭体番号で探すのは、その杭体を使う杭が 1 本だけのときに限る。以前は同じ杭体の<b>最初の杭</b>を採っていたので、
+        /// 同じ杭体を複数の杭が使うモデルでは、曲線に別の杭の番号と軸力が付き得た。
+        /// </summary>
+        public Models.InputData.PileLayoutDataItem? FindPileLayout(IEnumerable<Models.InputData.PileLayoutDataItem>? piles)
+        {
+            var list = piles?.Where(p => p != null).ToList();
+            if (list == null || list.Count == 0) return null;
+
+            if (Name != null && Name.Contains('-'))
+            {
+                var parts = Name.Split('-');
+                if (int.TryParse(parts[^1], out int pileNo) && list.Where(p => p.No == pileNo).ToList() is [var byName])
+                    return byName;
+            }
+            if (NodeJ != null && list.FirstOrDefault(p => p.PileNodes.Count > 0 && ReferenceEquals(p.PileNodes[0], NodeJ)) is { } byNode)
+                return byNode;
+            if (PileBodyNo is int pb && list.Where(p => p.PileBodyNo == pb).ToList() is [var onlyPileOfBody])
+                return onlyPileOfBody;
+            return null;
+        }
+
+        /// <summary>
         /// ケース別の控え (<see cref="CaseMThetaSnapshots"/>) の保存用の形。保存ファイルにだけ使う。
         ///
         /// 以前は控えを保存しなかったので、読み直すと表示中のケースの控えが無く、表とグラフは<b>ばね本体の曲線</b>
