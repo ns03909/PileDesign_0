@@ -2181,6 +2181,9 @@ namespace PileDesign.ViewModels
             var shallowSoilType = GroundInput.ShallowSoilType;
             var calculationMethod = GroundInput.CalculationMethod;
 
+            // 応答スペクトル法で計算できずに略算法へ切り替えたレベルと理由 (画面に出す)
+            var spectrumFailures = new List<string>();
+
             for (int levelIndex = 0; levelIndex < 2; levelIndex++)
             {
                 // 地震荷重により決まる係数
@@ -2249,7 +2252,12 @@ namespace PileDesign.ViewModels
                         }
                         continue; // 次レベルへ
                     }
-                    Serilog.Log.Debug($"[ResponseSpectrum] Level {levelIndex + 1} 計算失敗。a2(b2) にフォールバック。");
+                    // 略算法 (a2(b2)) に切り替える。以前はデバッグログだけで、利用者は応答スペクトル法を
+                    // 選んだつもりで別の算定法の値を使っていた。理由を画面に出し、ログにも残す
+                    string reason = rs.Failure ?? "理由不明";
+                    spectrumFailures.Add($"レベル{levelIndex + 1}: {reason}");
+                    Serilog.Log.Warning("[応答スペクトル法] レベル{Level} を計算できず略算法 (a2(b2)) で代用: {Reason} (入力の不備: {Input})",
+                        levelIndex + 1, reason, rs.IsInputProblem);
                 }
 
                 // 表層の土質の動的変形特性から決まる定数
@@ -2404,6 +2412,11 @@ namespace PileDesign.ViewModels
                     groundMassData.DmaxUStarSigmaGammaCyH[levelIndex] = groundMassData.DmaxUStar[levelIndex] + groundMassData.SigmaGammaCyH[levelIndex];
                 }
             }
+
+            // 応答スペクトル法を選んでいて計算できなかったレベルがあれば、地盤ウィンドウに知らせる
+            GroundInput.ResponseSpectrumWarning = spectrumFailures.Count == 0 ? null
+                : "応答スペクトル法で計算できなかったため、略算法 (a2(b2)) で代用しています。"
+                  + string.Join(" ", spectrumFailures);
         }
 
         public void DataGridGroundLayer_CellEditEnding()

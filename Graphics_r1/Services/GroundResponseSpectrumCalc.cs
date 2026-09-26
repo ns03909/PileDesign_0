@@ -38,7 +38,19 @@ namespace PileDesign.Services
             double[] G,        // 収束後 G_i [kPa] (アクティブ質点ぶんのみ)
             double[] PhiU0_1,  // U[0]=1 正規化済モード形 (アクティブ質点ぶんのみ)
             double[] DispMm    // u_i [mm] (アクティブ質点ぶんのみ)
-        );
+        )
+        {
+            /// <summary>
+            /// 計算できなかった理由 (利用者に見せる文)。計算できたときは null。
+            /// 以前は理由を持たずに T1 = NaN を返すだけだった。
+            /// </summary>
+            public string? Failure { get; init; }
+
+            /// <summary>
+            /// 失敗が入力の不備によるものか (true: 利用者が直す入力がある / false: 計算の途中で行き詰まった・例外)。
+            /// </summary>
+            public bool IsInputProblem { get; init; }
+        }
 
         /// <summary>
         /// 1 レベル分の応答スペクトル法計算。
@@ -63,7 +75,7 @@ namespace PileDesign.Services
                 }
                 int n = firstBedrockIdx; // active mass points: [0, n-1]
                 if (n <= 0)
-                    return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
+                    return Fail("工学的基盤より上に質点がありません。工学的基盤の指定 (質点の一覧) を確かめてください。", isInputProblem: true);
 
                 // ShallowSoilType ベースの γ0.5 デフォルト (per-layer 値が 0 のときのフォールバック)
                 double gamma05Fallback = (shallowSoilType == "粘性土") ? Gamma05DefaultClay : Gamma05DefaultSand;
@@ -80,13 +92,13 @@ namespace PileDesign.Services
                     var md = masses[i];
                     double h = md.H.GetValueOrDefault();
                     if (h <= 0)
-                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
+                        return Fail($"質点 {i + 1} の層厚が 0 以下です。", isInputProblem: true);
                     H[i] = h;
                     rhoMass[i] = md.Density / Gravity;
                     G0[i] = rhoMass[i] * md.VS0 * md.VS0;
                     m[i] = md.Mass;
                     if (m[i] <= 0 || G0[i] <= 0)
-                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
+                        return Fail($"質点 {i + 1} の質量または VS が 0 以下です (単位体積重量・層厚・VS を確かめてください)。", isInputProblem: true);
                     // 0 以下なら ShallowSoilType デフォルト (旧データの互換性)
                     gamma05[i] = (md.Gamma05 > 0) ? md.Gamma05 : gamma05Fallback;
                     hMax[i] = (md.HMax > 0) ? md.HMax : HMaxDefault;
@@ -160,7 +172,7 @@ namespace PileDesign.Services
                         }
                     }
                     if (minIdx < 0 || double.IsNaN(minOmegaSq) || double.IsInfinity(minOmegaSq))
-                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
+                        return Fail("固有値解析で 1 次の固有周期が求まりませんでした。", isInputProblem: false);
 
                     double omega1 = Math.Sqrt(minOmegaSq);
                     T1 = 2.0 * Math.PI / omega1;
@@ -180,14 +192,14 @@ namespace PileDesign.Services
                     // U[0]=1 正規化
                     double phi0 = phi[0];
                     if (Math.Abs(phi0) < 1e-300)
-                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
+                        return Fail("1 次モードの地表の振幅が 0 になり、モード形を正規化できませんでした。", isInputProblem: false);
                     for (int i = 0; i < n; i++) phiU0[i] = phi[i] / phi0;
 
                     // 参加係数 β = (φᵀ M 1) / (φᵀ M φ) — 論文式 (3)
                     double num = 0, den = 0;
                     for (int i = 0; i < n; i++) { num += phi[i] * m[i]; den += phi[i] * phi[i] * m[i]; }
                     if (den < 1e-300)
-                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
+                        return Fail("1 次モードの参加係数を求められませんでした。", isInputProblem: false);
                     Beta = num / den;
 
                     // 変位 u_i = |β · φ_i| · (T₁/2π)² · Sa0(T₁) · Fh(ξe) · L · Z — 論文式 (1)
@@ -245,7 +257,7 @@ namespace PileDesign.Services
                 }
 
                 if (double.IsNaN(T1))
-                    return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
+                    return Fail("等価線形化の反復で固有周期が求まりませんでした。", isInputProblem: false);
 
                 double[] dispMm = new double[n];
                 for (int i = 0; i < n; i++) dispMm[i] = u[i] * 1000.0;
@@ -276,11 +288,18 @@ namespace PileDesign.Services
 
                 return new LevelResult(T1, T2Period, xiE, Beta, alphaE, Gs1, Gs2, G, phiU0, dispMm);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
+                // 以前は理由を残さずに NaN を返していた。呼び出し側は黙って略算法に切り替えるので、
+                // 入力の不備なのか計算の不具合なのか、利用者にも開発者にも分からなかった
+                Serilog.Log.Warning(ex, "[応答スペクトル法] 計算中に例外 (L={L})", L);
+                return Fail($"計算中に例外が起きました ({ex.GetType().Name}: {ex.Message})。", isInputProblem: false);
             }
         }
+
+        /// <summary>計算できなかった結果。<paramref name="reason"/> は利用者に見せる文。</summary>
+        private static LevelResult Fail(string reason, bool isInputProblem)
+            => new(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []) { Failure = reason, IsInputProblem = isInputProblem };
 
         /// <summary>
         /// 周期依存の地盤増幅率 Gs(T) (論文式 (8))。T1=1次卓越周期, T2=2次卓越周期。

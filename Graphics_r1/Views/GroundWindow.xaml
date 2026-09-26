@@ -1070,6 +1070,10 @@
                                     </ComboBox.ToolTip>
                                 </ComboBox>
                             </StackPanel>
+                            <!-- 応答スペクトル法で計算できずに略算法で代用したとき、その理由 -->
+                            <TextBlock Text="{Binding GroundInput.ResponseSpectrumWarning}" Foreground="{StaticResource ErrorBrush}"
+                                       TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left" Margin="0,2,0,4"
+                                       Visibility="{Binding GroundInput.HasResponseSpectrumWarning, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                             <!-- 工学的基盤 単位体積重量 / せん断波速度 行 (自動計算モード時のみ表示) -->
                             <StackPanel Orientation="Horizontal"
                                         Visibility="{Binding IsAutoDisplacementMode, Converter={StaticResource BooleanToVisibilityConverter}}">

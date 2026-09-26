@@ -133,6 +133,28 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _shallowSoilType, value);
         }
 
+        private string? _responseSpectrumWarning;
+
+        /// <summary>
+        /// 応答スペクトル法で計算できずに略算法 (a2(b2)) で代用したときの理由。代用していなければ null。
+        /// 地盤ウィンドウの算定法の横に出す。保存しない (開き直すと計算し直して決まる)。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public string? ResponseSpectrumWarning
+        {
+            get => _responseSpectrumWarning;
+            set
+            {
+                if (SetProperty(ref _responseSpectrumWarning, value))
+                    OnPropertyChanged(nameof(HasResponseSpectrumWarning));
+            }
+        }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasResponseSpectrumWarning => !string.IsNullOrEmpty(ResponseSpectrumWarning);
+
         // 算定法
         private string _calculationMethod;
         public string CalculationMethod
