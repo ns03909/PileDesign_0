@@ -34,6 +34,26 @@ namespace TestProject1
     {
         private const double Tol = 1e-3;
 
+        /// <summary>反復沈下解析が入力の杭番号を書き換えないこと (以前は 1〜N に振り直していた)。</summary>
+        [TestMethod]
+        public void ItDoesNotRewriteThePileNumbers()
+        {
+            var (model, ppi) = Scene();
+            if (model == null) return;
+            var before = model.PileLayoutItems.Select(p => p.No).ToArray();
+
+            IterativeBeamSettlementService.Run(model, ppi, "検査", tol: Tol);
+            CollectionAssert.AreEqual(before, model.PileLayoutItems.Select(p => p.No).ToArray(), "解析が入力の杭番号を書き換えました");
+
+            // 番号が重なっていれば、書き換えずに止める
+            model.PileLayoutItems[1].No = model.PileLayoutItems[0].No;
+            var duplicated = model.PileLayoutItems.Select(p => p.No).ToArray();
+            var result = IterativeBeamSettlementService.Run(model, ppi, "検査", tol: Tol);
+            Assert.IsTrue(result.Log.Any(l => l.StartsWith("[ERROR]", StringComparison.Ordinal) && l.Contains("杭番号", StringComparison.Ordinal)),
+                "杭番号が重なっているのに、止めて知らせていません");
+            CollectionAssert.AreEqual(duplicated, model.PileLayoutItems.Select(p => p.No).ToArray(), "失敗した解析が入力の杭番号を書き換えました");
+        }
+
         [TestMethod]
         public void ItConverges_AndTheReportedSettlementsAgreeWithTheResidual()
         {

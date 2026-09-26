@@ -57,7 +57,32 @@ namespace PileDesign.FEM
         public VerticalBeamModelling(InputModel inputModel)
         {
             _inputModel = inputModel ?? throw new ArgumentNullException(nameof(inputModel));
+            // 杭の番号 (No) を節点名と対応表 (ConnectionNodes・PileSpringMap) の鍵に使う。重複や 0 以下があると
+            // 別の杭が同じ節点に縮退するので、組む前に名指しで止める
+            if (DescribeBadPileNumbers(inputModel.PileLayoutItems) is { } bad)
+                throw new InvalidOperationException(bad);
             Initialize();
+        }
+
+        /// <summary>
+        /// 杭の番号 (No) が 1 以上で重なっていないか。問題があればその説明を、なければ null を返す。
+        ///
+        /// 以前は反復沈下解析 (IterativeBeamSettlementService) が組む前に<b>入力の杭番号を 1〜N に書き換えて</b>いた。
+        /// 画面の杭番号が知らないうちに変わり、解析が途中で失敗しても変わったまま残った。書き換えずに止める。
+        /// </summary>
+        public static string? DescribeBadPileNumbers(IEnumerable<PileLayoutDataItem>? piles)
+        {
+            var list = piles?.Where(p => p != null).ToList() ?? [];
+            var nonPositive = list.Where(p => p.No <= 0).Select(p => p.No).Distinct().OrderBy(n => n).ToList();
+            var duplicated = list.GroupBy(p => p.No).Where(g => g.Key > 0 && g.Count() > 1)
+                .Select(g => $"No.{g.Key} が {g.Count()} 本").ToList();
+            if (nonPositive.Count == 0 && duplicated.Count == 0) return null;
+
+            var parts = new List<string>();
+            if (duplicated.Count > 0) parts.Add("重複: " + string.Join("、", duplicated));
+            if (nonPositive.Count > 0) parts.Add("0 以下: " + string.Join("、", nonPositive.Select(n => $"No.{n}")));
+            return "杭配置の杭番号が重なっているか 0 以下のため、基礎梁の解析モデルを組めません (" + string.Join(" / ", parts) + ")。"
+                 + "杭配置で杭番号を 1 から重ならないように振り直してください。";
         }
 
         private void Initialize()

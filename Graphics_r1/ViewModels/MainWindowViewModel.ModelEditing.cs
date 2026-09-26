@@ -1418,6 +1418,11 @@ namespace PileDesign.ViewModels
                 MessageService.Show(result.ErrorMessage, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
+            if (result.Warnings.Count > 0)
+            {
+                MessageService.Show("群杭沈下解析は終わりましたが、次の点を確認してください。\n\n" + string.Join("\n", result.Warnings),
+                    "群杭沈下解析", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
 
             // 沈下グリッドは記録 (CaseRecord) の側に持たせる。入力モデルの複製
             // (PileGroupSettlement.SettlementGridData) は旧ファイルを開くためだけに残してあり、

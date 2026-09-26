@@ -146,12 +146,13 @@ namespace PileDesign.Services
             var S2 = new Dictionary<int, double>();
             var ki = new Dictionary<int, double>();
 
-            // 安全策: VerticalBeamModelling は pile.No を ConnectionNodes/PileSpringMap のキーに使うため、
-            // 重複や 0 があると全杭が同一ノードに縮退してしまう。1〜N に再付番してから構築する。
-            int seqNo = 1;
-            foreach (var pile in piles)
+            // VerticalBeamModelling は pile.No を節点名と ConnectionNodes/PileSpringMap の鍵に使うため、
+            // 重複や 0 があると全杭が同一ノードに縮退する。以前はここで入力の杭番号を 1〜N に書き換えていたが、
+            // 画面の番号が知らないうちに変わり、失敗しても変わったまま残った。書き換えずに止める。
+            if (VerticalBeamModelling.DescribeBadPileNumbers(piles) is { } badNumbers)
             {
-                pile.No = seqNo++;
+                result.Log.Add($"[ERROR] {badNumbers}");
+                return result;
             }
 
             // FEM モデル構築 (SpringCurves 不要 — kz0 は後段で直接書き換える)
