@@ -421,7 +421,7 @@ namespace PileDesign.Models.InputData
         {
             if (string.IsNullOrEmpty(barSize)) return 0;
             var match = System.Text.RegularExpressions.Regex.Match(barSize, @"\d+(\.\d+)?");
-            if (match.Success && double.TryParse(match.Value, out double value))
+            if (match.Success && PileDesign.Common.NumericText.TryParse(match.Value, out double value))
                 return value;
             return 0;
         }

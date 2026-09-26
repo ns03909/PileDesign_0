@@ -9,7 +9,7 @@ namespace PileDesign.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is double d && double.TryParse(parameter?.ToString(), out double target))
+            if (value is double d && PileDesign.Common.NumericText.TryParse(parameter?.ToString(), out double target))
                 return Math.Abs(d - target) < 0.0001 ? Visibility.Visible : Visibility.Collapsed;
             return Visibility.Collapsed;
         }

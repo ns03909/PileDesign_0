@@ -92,7 +92,7 @@ namespace PileDesign.ViewModels
                 var editedItem = e.Row.Item as SettlementSoilLayer; // SettlementSoilLayer は適切なモデルクラスに置き換えてください
                 var editedTextBox = e.EditingElement as TextBox;
 
-                if (double.TryParse(editedTextBox.Text, out double newValue))
+                if (PileDesign.Common.NumericText.TryParse(editedTextBox.Text, out double newValue))
                 {
                     int rowIndex = dataGrid.Items.IndexOf(editedItem);
                     if (rowIndex > 0)
@@ -398,7 +398,7 @@ namespace PileDesign.ViewModels
                 var editedItem = e.Row.Item as SettlementSoilLayer;
                 var editedTextBox = e.EditingElement as TextBox;
 
-                if (editedTextBox != null && double.TryParse(editedTextBox.Text, out double newValue))
+                if (editedTextBox != null && PileDesign.Common.NumericText.TryParse(editedTextBox.Text, out double newValue))
                 {
                     int rowIndex = dataGrid?.Items.IndexOf(editedItem) ?? -1;
                     if (rowIndex > 0

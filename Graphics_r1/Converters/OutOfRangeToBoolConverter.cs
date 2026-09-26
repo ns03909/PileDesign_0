@@ -40,7 +40,7 @@ namespace PileDesign.Converters
             if (o is float fv) { d = fv; return true; }
             if (o is IConvertible)
             {
-                try { d = System.Convert.ToDouble(o); return true; }
+                try { d = System.Convert.ToDouble(o, CultureInfo.InvariantCulture); return true; }
                 catch { /* fallthrough */ }
             }
             d = 0;

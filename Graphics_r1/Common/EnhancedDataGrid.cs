@@ -1175,38 +1175,37 @@ namespace PileDesign.Common
 
             if (underlying == typeof(int))
             {
-                if (int.TryParse(input, NumberStyles.Integer, CultureInfo.CurrentCulture, out var i)) return i;
-                if (int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out i)) return i;
+                // 画面の数値の規則で読む (NumericText)。表計算ソフトの桁区切り「1,000」は受け付ける
+                if (NumericText.TryParseAllowingThousands(input, out int i)) return i;
                 throw new FormatException("整数として読めません。");
             }
 
             if (underlying == typeof(double))
             {
-                if (double.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out var d)
-                    || double.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out d))
+                // 以前は地域設定で先に読んでいたので、小数点が「,」の地域では、この表から写した「1.5」を 15 と読んだ。
+                // 「1,5」も桁区切りとしては不正な並びなので、15 と読まずに拒む
+                if (NumericText.TryParseAllowingThousands(input, out double d))
                     return RequireFinite(d);
                 throw new FormatException("数値として読めません。");
             }
 
             if (underlying == typeof(float))
             {
-                if (float.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out var f)
-                    || float.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out f))
-                    return float.IsFinite(f) ? f : throw new NonFiniteNumberException();
+                if (NumericText.TryParseAllowingThousands(input, out double fd))
+                    return float.IsFinite((float)fd) ? (float)fd : throw new NonFiniteNumberException();
                 throw new FormatException("数値として読めません。");
             }
 
             if (underlying == typeof(decimal))
             {
-                if (decimal.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out var m)) return m;
-                if (decimal.TryParse(input, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out m)) return m;
+                if (NumericText.TryParseAllowingThousands(input, out decimal m)) return m;
                 throw new FormatException("数値として読めません。");
             }
 
             var converter = TypeDescriptor.GetConverter(underlying);
             if (converter.CanConvertFrom(typeof(string)))
             {
-                return converter.ConvertFrom(null, CultureInfo.CurrentCulture, input);
+                return converter.ConvertFrom(null, CultureInfo.InvariantCulture, input);
             }
 
             return input;

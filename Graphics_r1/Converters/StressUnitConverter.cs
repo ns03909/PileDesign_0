@@ -33,7 +33,7 @@ namespace PileDesign.Converters
                 double kNPerM2 = nPerMM2 / KNPerM2_To_NPerMM2;
                 return kNPerM2;
             }
-            else if (value is string str && double.TryParse(str, out double nPerMM2Parsed))
+            else if (value is string str && PileDesign.Common.NumericText.TryParse(str, out double nPerMM2Parsed))
             {
                 // N/mm² → kN/m²
                 double kNPerM2 = nPerMM2Parsed / KNPerM2_To_NPerMM2;

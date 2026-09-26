@@ -57,7 +57,7 @@ namespace PileDesign.ViewModels
 
             // スケールファクターをパラメータから取得（デフォルト1.0）
             double scale = 1.0;
-            if (!string.IsNullOrEmpty(scaleParam) && double.TryParse(scaleParam, out double parsedScale))
+            if (!string.IsNullOrEmpty(scaleParam) && PileDesign.Common.NumericText.TryParse(scaleParam, out double parsedScale))
             {
                 scale = parsedScale;
             }
@@ -132,7 +132,7 @@ namespace PileDesign.ViewModels
             {
                 // スケールファクターをパラメータから取得（デフォルト1.0）
                 double scale = 1.0;
-                if (!string.IsNullOrEmpty(scaleParam) && double.TryParse(scaleParam, out double parsedScale))
+                if (!string.IsNullOrEmpty(scaleParam) && PileDesign.Common.NumericText.TryParse(scaleParam, out double parsedScale))
                 {
                     scale = parsedScale;
                 }

@@ -468,7 +468,7 @@ namespace PileDesign.Views
 
         private void TextBoxTDorTBTextChanged(object sender, TextChangedEventArgs e)
         {
-            if (double.TryParse(TextBoxTDorTB.Text, out double enteredValue))
+            if (PileDesign.Common.NumericText.TryParse(TextBoxTDorTB.Text, out double enteredValue))
             {
                 // ViewModelまたは適切なオブジェクトからTDorTBmaxの値を取得します。
                 PileTopViewModel viewModel = (PileTopViewModel)DataContext;
@@ -479,7 +479,7 @@ namespace PileDesign.Views
                 {
                     MessageService.Show("tDmaxまたはtBmaxよりも大きな値が入力されました。tDmax、TBmax以下の数値を入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     // テキストボックスのテキストをクリアまたは前の値に戻します。
-                    TextBoxTDorTB.Text = maxTDorTB.ToString();
+                    TextBoxTDorTB.Text = maxTDorTB.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 }
                 else
                 {

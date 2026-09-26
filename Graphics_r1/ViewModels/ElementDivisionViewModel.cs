@@ -1656,7 +1656,7 @@ namespace PileDesign.ViewModels
                         {
                             if (e.EditingElement is TextBox textBox)
                             {
-                                if (double.TryParse(textBox.Text, out double newValue))
+                                if (PileDesign.Common.NumericText.TryParse(textBox.Text, out double newValue))
                                 {
                                     // SelectedZDataItemsを直接使用（ItemsSourceのキャストは型の不一致でnullになる可能性がある）
                                     var items = SelectedZDataItems;
@@ -1670,7 +1670,7 @@ namespace PileDesign.ViewModels
                                         e.Cancel = true;
                                         isEditingCancelled = true;
                                         // 元の値に戻す
-                                        textBox.Text = originalValue.ToString();
+                                        textBox.Text = originalValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
                                         return;
                                     }
 
@@ -1680,7 +1680,7 @@ namespace PileDesign.ViewModels
                                         e.Cancel = true;
                                         isEditingCancelled = true;
                                         // 元の値に戻す
-                                        textBox.Text = originalValue.ToString();
+                                        textBox.Text = originalValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
                                         return;
                                     }
                                 }

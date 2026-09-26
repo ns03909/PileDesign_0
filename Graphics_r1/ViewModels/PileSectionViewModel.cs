@@ -1525,7 +1525,7 @@ namespace PileDesign.ViewModels
 
             // 数字以外の文字を削除してから double に変換
             string numericPart = Regex.Replace(input, "[^0-9.]", "");
-            if (double.TryParse(numericPart, out double result))
+            if (PileDesign.Common.NumericText.TryParse(numericPart, out double result))
             {
                 return result;
             }

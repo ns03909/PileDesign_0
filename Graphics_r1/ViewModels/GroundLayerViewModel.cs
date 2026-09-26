@@ -2431,7 +2431,7 @@ namespace PileDesign.ViewModels
         {
             if (e.EditAction != DataGridEditAction.Commit) return;
             if (e.EditingElement is not TextBox editedTextBox) return;
-            if (!double.TryParse(editedTextBox.Text, out double doubleValue)) return;
+            if (!PileDesign.Common.NumericText.TryParse(editedTextBox.Text, out double doubleValue)) return;
             if (e.Column is not DataGridBoundColumn boundColumn || boundColumn.Binding is not Binding binding) return;
 
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());

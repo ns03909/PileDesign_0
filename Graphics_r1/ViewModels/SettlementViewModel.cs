@@ -830,7 +830,7 @@ namespace PileDesign.ViewModels
                     PileBody.PileBodyRef = textBox.Text;
                 }
 
-                else if (textBox.Name == "TextBoxPileTipNonPermeability" && double.TryParse(textBox.Text, out double tipNonPermeability))
+                else if (textBox.Name == "TextBoxPileTipNonPermeability" && PileDesign.Common.NumericText.TryParse(textBox.Text, out double tipNonPermeability))
                 {
                     PileBody.TipNonPermability = tipNonPermeability;
                     // 閉塞率変更時に解析実行
@@ -838,7 +838,7 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
-                else if (textBox.Name == "TextBoxPileToeDiaD" && double.TryParse(textBox.Text, out double pileToeDiaD))
+                else if (textBox.Name == "TextBoxPileToeDiaD" && PileDesign.Common.NumericText.TryParse(textBox.Text, out double pileToeDiaD))
                 {
                     // 杭先端径D(m)を更新
                     SoilPile.D = pileToeDiaD;
@@ -854,7 +854,7 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
-                else if (textBox.Name == "TextBoxSettleQpu" && double.TryParse(textBox.Text, out double settleQpu))
+                else if (textBox.Name == "TextBoxSettleQpu" && PileDesign.Common.NumericText.TryParse(textBox.Text, out double settleQpu))
                 {
                     // 沈下検討用極限先端支持力度を更新
                     SoilPile.SettleQpu = settleQpu;
@@ -863,7 +863,7 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
-                else if (textBox.Name == "TextBoxSettleAlpha" && double.TryParse(textBox.Text, out double settleAlpha))
+                else if (textBox.Name == "TextBoxSettleAlpha" && PileDesign.Common.NumericText.TryParse(textBox.Text, out double settleAlpha))
                 {
                     PileBody.SettleAlpha = settleAlpha;
                     ComboBoxPresetSettlementParameters.SelectedIndex = -1;
@@ -874,7 +874,7 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
-                else if (textBox.Name == "TextBoxSettleN" && double.TryParse(textBox.Text, out double settleN))
+                else if (textBox.Name == "TextBoxSettleN" && PileDesign.Common.NumericText.TryParse(textBox.Text, out double settleN))
                 {
                     PileBody.SettleN = settleN;
                     ComboBoxPresetSettlementParameters.SelectedIndex = -1;
@@ -891,7 +891,7 @@ namespace PileDesign.ViewModels
 
             if (sender is string text)
             {
-                if (double.TryParse(text, out double value))
+                if (PileDesign.Common.NumericText.TryParse(text, out double value))
                 {
                     bool parameterChanged = false;
                     if (text == TextBoxSettleAlpha.Text)

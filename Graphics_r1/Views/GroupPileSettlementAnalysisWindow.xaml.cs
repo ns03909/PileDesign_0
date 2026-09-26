@@ -96,7 +96,7 @@ namespace PileDesign.Views
                             var editedItem = e.Row.Item as SettlementSoilLayer;
                             var editedTextBox = e.EditingElement as TextBox;
 
-                            if (double.TryParse(editedTextBox.Text, out double newValue))
+                            if (PileDesign.Common.NumericText.TryParse(editedTextBox.Text, out double newValue))
                             {
                                 int rowIndex = dataGrid.Items.IndexOf(editedItem);
                                 if (rowIndex > 0)
@@ -108,7 +108,7 @@ namespace PileDesign.Views
                                         e.Cancel = true;
 
                                         // 編集内容を元に戻す
-                                        editedTextBox.Text = editedItem.BottomAltitude.ToString("F2");
+                                        editedTextBox.Text = editedItem.BottomAltitude.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
                                     }
                                 }
                             }

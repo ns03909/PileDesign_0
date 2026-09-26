@@ -119,11 +119,9 @@ namespace PileDesign.Common
                 return true;
             }
 
-            // カルチャを考慮して解析
-            bool parsed = double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands,
-                CultureInfo.CurrentCulture, out currentValue) ||
-                   double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands,
-                CultureInfo.InvariantCulture, out currentValue);
+            // 画面の数値の規則で読む (NumericText。以前は地域設定で読み、小数点が「,」の地域では「1.5」を 15 と読んだ)。
+            // 書式 N などで表示した桁区切りは受け付ける
+            bool parsed = NumericText.TryParseAllowingThousands(text, out currentValue);
             return parsed && double.IsFinite(currentValue);
         }
 
@@ -173,7 +171,7 @@ namespace PileDesign.Common
             if (binding == null || string.IsNullOrEmpty(binding.StringFormat))
             {
                 // StringFormatがない場合はそのまま
-                return value.ToString(CultureInfo.CurrentCulture);
+                return value.ToString(CultureInfo.InvariantCulture);
             }
 
             string format = binding.StringFormat;
@@ -186,24 +184,24 @@ namespace PileDesign.Common
                 if (endIndex > colonIndex)
                 {
                     string formatSpecifier = format.Substring(colonIndex + 1, endIndex - colonIndex - 1);
-                    return value.ToString(formatSpecifier, CultureInfo.CurrentCulture);
+                    return value.ToString(formatSpecifier, CultureInfo.InvariantCulture);
                 }
             }
 
             // StringFormatが "N2" のようなシンプルな形式の場合
             if (format.Length <= 3 && (format.StartsWith("N") || format.StartsWith("F") || format.StartsWith("C")))
             {
-                return value.ToString(format, CultureInfo.CurrentCulture);
+                return value.ToString(format, CultureInfo.InvariantCulture);
             }
 
             // フォールバック: string.Formatを使用
             try
             {
-                return string.Format(CultureInfo.CurrentCulture, format, value);
+                return string.Format(CultureInfo.InvariantCulture, format, value);
             }
             catch
             {
-                return value.ToString(CultureInfo.CurrentCulture);
+                return value.ToString(CultureInfo.InvariantCulture);
             }
         }
     }

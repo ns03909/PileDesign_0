@@ -118,7 +118,7 @@ namespace PileDesign.Views
                             var editedItem = e.Row.Item as SettlementSoilLayer;
                             var editedTextBox = e.EditingElement as TextBox;
 
-                            if (double.TryParse(editedTextBox.Text, out double newValue))
+                            if (PileDesign.Common.NumericText.TryParse(editedTextBox.Text, out double newValue))
                             {
                                 int rowIndex = dataGrid.Items.IndexOf(editedItem);
                                 if (rowIndex > 0)
@@ -129,7 +129,7 @@ namespace PileDesign.Views
                                         MessageService.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                                         e.Cancel = true;
 
-                                        editedTextBox.Text = editedItem.BottomAltitude.ToString("F2");
+                                        editedTextBox.Text = editedItem.BottomAltitude.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
                                     }
                                 }
                             }

@@ -73,7 +73,7 @@ namespace PileDesign.Views
 
             // 現在のテキストボックスの内容と新しい入力を結合して、数値に変換できるか確認
             string newText = textBox.Text + e.Text;
-            if (double.TryParse(newText, out double result))
+            if (PileDesign.Common.NumericText.TryParse(newText, out double result))
             {
                 // 数値が 0.0 以上 1.0 以下の範囲内でない場合、処理済みにする
                 if (result < 0.5 || result > 1.0)

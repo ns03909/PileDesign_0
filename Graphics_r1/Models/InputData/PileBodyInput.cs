@@ -47,8 +47,8 @@ namespace PileDesign.Models.InputData
                     {
                         string name = parts[0].Trim();
                         string soilType = parts[1].Trim();
-                        if (!double.TryParse(parts[2].Trim(), out double alpha) ||
-                            !double.TryParse(parts[3].Trim(), out double n))
+                        if (!PileDesign.Common.NumericText.TryParse(parts[2].Trim(), out double alpha) ||
+                            !PileDesign.Common.NumericText.TryParse(parts[3].Trim(), out double n))
                         {
                             continue;
                         }

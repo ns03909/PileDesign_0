@@ -253,7 +253,7 @@ namespace PileDesign.ViewModels
         {
             return (item, rawValue) =>
             {
-                if (!double.TryParse(rawValue, out var newVal))
+                if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal))
                 {
                     item.SetValueSilent(getter().ToString(format));
                     return;
@@ -562,7 +562,7 @@ namespace PileDesign.ViewModels
                 PropertyInputType.Number,
                 (item, rawValue) =>
                 {
-                    if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))); return; }
+                    if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))); return; }
                     if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))); return; }
                     SaveUndoState();
                     foreach (var p in piles) p.GroupPileFactor = newVal;
@@ -578,7 +578,7 @@ namespace PileDesign.ViewModels
                 PropertyInputType.Number,
                 (item, rawValue) =>
                 {
-                    if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc))); return; }
+                    if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc))); return; }
                     if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc))); return; }
                     SaveUndoState();
                     foreach (var p in piles) p.FoundationBeamDeltaZc = newVal;
@@ -622,7 +622,7 @@ namespace PileDesign.ViewModels
                         PropertyInputType.Number,
                         (item, rawValue) =>
                         {
-                            if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                            if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
                             if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
                             SaveUndoState();
                             foreach (var p in piles) setter(p, newVal);
@@ -657,7 +657,7 @@ namespace PileDesign.ViewModels
                         PropertyInputType.Number,
                         (item, rawValue) =>
                         {
-                            if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                            if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
                             if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
                             SaveUndoState();
                             foreach (var p in piles) setter(p, newVal);

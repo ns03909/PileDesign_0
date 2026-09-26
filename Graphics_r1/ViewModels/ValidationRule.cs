@@ -11,7 +11,7 @@ namespace PileDesign.ViewModels
         public override ValidationResult Validate(object value, CultureInfo cultureInfo)
         {
             // NaN は比較が偽になるので、ここで拒まれる (範囲の比較を「外なら拒む」に書き換えないこと)
-            if (double.TryParse(value as string, out double result))
+            if (PileDesign.Common.NumericText.TryParse(value as string, out double result))
             {
                 if (result >= 0.0 && result <= 1.0)
                 {
@@ -46,7 +46,7 @@ namespace PileDesign.ViewModels
         public override ValidationResult Validate(object value, CultureInfo cultureInfo)
         {
             // NaN・無限大は範囲の比較の前に拒む (NaN は大小の比較がどちらも偽になり、範囲内として通るため)
-            if (value != null && double.TryParse(value.ToString(), out double inputValue))
+            if (value != null && PileDesign.Common.NumericText.TryParse(value.ToString(), out double inputValue))
             {
                 if (!double.IsFinite(inputValue))
                     return new ValidationResult(false, PileDesign.Common.RangeValidationRule.NonFiniteMessage);
@@ -66,9 +66,9 @@ namespace PileDesign.ViewModels
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value != null && double.TryParse(value.ToString(), out double doubleValue))
+            if (value != null && PileDesign.Common.NumericText.TryParse(value.ToString(), out double doubleValue))
             {
-                if (double.TryParse(parameter.ToString(), out double threshold))
+                if (PileDesign.Common.NumericText.TryParse(parameter.ToString(), out double threshold))
                 {
                     return doubleValue < threshold;
                 }

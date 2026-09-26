@@ -436,7 +436,7 @@ namespace PileDesign.Models.InputData
 
         // 主筋の呼び径 [mm]（"D25" → 25）。使用限界（長期許容）の径による上限（215/195）判定に用いる。
         private double BarDiameter =>
-            (!string.IsNullOrEmpty(BarSize) && BarSize.Length > 1 && double.TryParse(BarSize.Substring(1), out double d))
+            (!string.IsNullOrEmpty(BarSize) && BarSize.Length > 1 && PileDesign.Common.NumericText.TryParse(BarSize.Substring(1), out double d))
                 ? d : 25.0;
 
         internal void SetRSigmaY()

@@ -20,7 +20,7 @@ namespace PileDesign.Common
 
         public override ValidationResult Validate(object value, CultureInfo cultureInfo)
         {
-            if (value != null && double.TryParse(value.ToString(), out double number))
+            if (value != null && PileDesign.Common.NumericText.TryParse(value.ToString(), out double number))
             {
                 if (!double.IsFinite(number))
                     return new ValidationResult(false, NonFiniteMessage);
