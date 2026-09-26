@@ -55,6 +55,24 @@ namespace PileDesign.Services
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly Regex _tagRegex = new(@"<[^>]+>", RegexOptions.Compiled);
+
+        // 本文でないもの (スクリプト・スタイル・コメント)。タグだけ除くと中身が本文として残る
+        private static readonly Regex _nonContentRegex = new(
+            @"<(script|style)\b[^>]*>.*?</\1\s*>|<!--.*?-->",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// 本文の 1 語あたりの点の上限。長い節ほど同じ語が多く出るので、出現回数をそのまま足すと、
+        /// 見出しが一致する短い節より、語を何度も含むだけの長い節が上に来た。
+        /// 本文は「含むか・何度か出るか」までを見て、それ以上は数えない。
+        /// </summary>
+        internal const int BodyHitCap = 3;
+
+        /// <summary>入力した語が、分けずにそのまま見出しに出るときの加点。</summary>
+        internal const int PhraseInTitleBonus = 80;
+
+        /// <summary>入力した語が、分けずにそのまま本文に出るときの加点 (見出しより小さく)。</summary>
+        internal const int PhraseInBodyBonus = 50;
         private static readonly Regex _wsRegex = new(@"\s+", RegexOptions.Compiled);
 
         private static List<HelpSection> LoadSections()
@@ -77,6 +95,19 @@ namespace PileDesign.Services
                 Log.Warning(ex, "[HelpSearch] help.html 読込失敗: {Path}", path);
                 return new List<HelpSection>();
             }
+            return ParseSections(html);
+        }
+
+        /// <summary>
+        /// HTML を見出し (h2〜h4) ごとの節に分ける。
+        ///
+        /// <b>スクリプト・スタイル・コメントは先に除く。</b>以前はタグだけを除いていたので、help.html の末尾の
+        /// 長い &lt;script&gt; の中身 (JavaScript の文字列) が最後の見出しの本文として索引に入り、
+        /// 無関係な語で最後の節が検索に出た。
+        /// </summary>
+        internal static List<HelpSection> ParseSections(string html)
+        {
+            html = _nonContentRegex.Replace(html, " ");
             var matches = _headingRegex.Matches(html);
             if (matches.Count == 0) return new List<HelpSection>();
 
@@ -123,8 +154,16 @@ namespace PileDesign.Services
         }
 
         public IReadOnlyList<SearchResult> Search(string query, int maxResults = 6)
+            => Search(query, maxResults, out _);
+
+        /// <summary>検索する。<paramref name="totalHits"/> は絞る前の該当件数 (表示件数とは別)。</summary>
+        public IReadOnlyList<SearchResult> Search(string query, int maxResults, out int totalHits)
+            => Search(EnsureLoaded(), query, maxResults, out totalHits);
+
+        /// <summary>与えた節から検索する (テストで検索例を比べるため)。</summary>
+        internal static IReadOnlyList<SearchResult> Search(IReadOnlyList<HelpSection> sections, string query, int maxResults, out int totalHits)
         {
-            EnsureLoaded();
+            totalHits = 0;
             if (string.IsNullOrWhiteSpace(query)) return Array.Empty<SearchResult>();
 
             query = query.Replace('　', ' ').Trim();
@@ -134,7 +173,7 @@ namespace PileDesign.Services
             if (tokens.Count == 0) return Array.Empty<SearchResult>();
 
             var results = new List<SearchResult>();
-            foreach (var sec in _sections!)
+            foreach (var sec in sections)
             {
                 int score = 0;
                 int titleHits = 0;
@@ -144,9 +183,17 @@ namespace PileDesign.Services
                     if (th > 0) titleHits++;
                     score += th * 12;
                     score += CountOccurrences(sec.TitlePath, t) * 4;
-                    score += CountOccurrences(sec.PlainText, t);
+                    // 本文は上限まで (長い節が語の繰り返しだけで上位を占めないように。BodyHitCap 参照)
+                    score += Math.Min(CountOccurrences(sec.PlainText, t), BodyHitCap);
                 }
                 if (titleHits >= 2) score += 30;
+                // 入力した語がそのまま (2 文字ずつに分けずに) 出る節を上に。分けた語だけで比べると、
+                // 「ダッシュボード」が「キーボード」「クリップボード」の見出しと「ボー」「ード」で一致して上位を占めた
+                if (score > 0 && query.Length >= 2)
+                {
+                    if (sec.Title.Contains(query, StringComparison.OrdinalIgnoreCase)) score += PhraseInTitleBonus;
+                    else if (sec.PlainText.Contains(query, StringComparison.OrdinalIgnoreCase)) score += PhraseInBodyBonus;
+                }
                 if (score > 0)
                 {
                     results.Add(new SearchResult
@@ -157,6 +204,7 @@ namespace PileDesign.Services
                     });
                 }
             }
+            totalHits = results.Count;
             return results.OrderByDescending(r => r.Score)
                           .ThenBy(r => r.Section.Level)
                           .Take(maxResults).ToList();

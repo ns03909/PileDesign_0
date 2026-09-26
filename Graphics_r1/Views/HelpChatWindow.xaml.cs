@@ -103,9 +103,10 @@ namespace PileDesign.Views
             AddUserBubble(query);
 
             IReadOnlyList<HelpSearchService.SearchResult> results;
+            int totalHits;
             try
             {
-                results = HelpSearchService.Instance.Search(query, maxResults: 20);
+                results = HelpSearchService.Instance.Search(query, MaxShown, out totalHits);
             }
             catch (Exception ex)
             {
@@ -114,7 +115,7 @@ namespace PileDesign.Views
                 return;
             }
 
-            AddBotResultsBubble(query, results);
+            AddBotResultsBubble(query, results, totalHits);
             ScrollToEnd();
         }
 
@@ -163,7 +164,19 @@ namespace PileDesign.Views
             ChatPanel.Children.Add(bubble);
         }
 
-        private void AddBotResultsBubble(string query, IReadOnlyList<HelpSearchService.SearchResult> results)
+        /// <summary>1 回の検索で出す件数の上限。</summary>
+        private const int MaxShown = 20;
+
+        /// <summary>
+        /// 件数の見出し。出した件数が該当の全件でないときは「上位 n 件」と書く。
+        /// 以前は上限 (20 件) で絞った件数を「○件見つかりました」と出していたので、21 件以上あっても 20 件と読めた。
+        /// </summary>
+        internal static string DescribeResultCount(int shown, int total)
+            => shown < total
+                ? $"関連する項目が {total} 件見つかりました (関連の強い上位 {shown} 件を表示):"
+                : $"関連する項目が {total} 件見つかりました:";
+
+        private void AddBotResultsBubble(string query, IReadOnlyList<HelpSearchService.SearchResult> results, int totalHits)
         {
             var bubble = CreateBotBubble();
             var panel = (StackPanel)bubble.Child;
@@ -181,7 +194,7 @@ namespace PileDesign.Views
 
             panel.Children.Add(new TextBlock
             {
-                Text = "関連する項目が " + results.Count + " 件見つかりました:",
+                Text = DescribeResultCount(results.Count, Math.Max(totalHits, results.Count)),
                 Margin = new Thickness(0, 0, 0, 6),
                 Foreground = MutedBrush,
                 FontSize = 11,
