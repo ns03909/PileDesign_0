@@ -150,7 +150,8 @@ namespace PileDesign.ViewModels
             var pgs = input.PileGroupSettlement;
             if (pgs != null)
             {
-                pgs.Result.Clear();
+                // 中身を空にせず、空の結果に差し替える (前の実行の結果を持っている側を書き換えない)
+                pgs.Result = new Models.Results.GroupSettlementResult();
                 pgs.SettlementGridData = [];
                 if (input.PileLayoutItems != null)
                     foreach (var pile in input.PileLayoutItems) pile.NotifyGroupPileSettlementChanged();

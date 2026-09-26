@@ -736,6 +736,9 @@ namespace PileDesign.ViewModels
                 UpdatePropertyPanel();
             }
             RaiseUndoStateChanged();
+
+            // 解析したときと同じ入力へ戻ったら「再解析が必要」を降ろし、違う入力へ移ったら立てる (中身で判定)
+            RecheckInputAgainstAnalysis();
         }
 
         /// <summary>D.16 HistoryPanel が UndoManager 参照を取得するためのアクセサ。</summary>
@@ -820,7 +823,9 @@ namespace PileDesign.ViewModels
             if (pgs?.CaseRecords == null) return;
             var doomed = pgs.CaseRecords.Where(r => r.IsBeamAware).ToList();
             if (doomed.Count == 0) return;
-            foreach (var r in doomed) pgs.CaseRecords.Remove(r);
+            // 結果の中身は書き換えず、除いた新しい結果に差し替える (実行ごとに固定)
+            pgs.Result = pgs.Result.Without(doomed);
+            EnsureSettlementResultSharedWithSnapshot();
 
             // ActiveCase が無効なら -1
             if (pgs.ActiveLoadingType == "個別矩形（基礎梁考慮）")
@@ -1072,18 +1077,12 @@ namespace PileDesign.ViewModels
 
             // 2 スロットモデル: 基礎梁無しスロットの既存 record (= IsBeamAware=false) を全削除し、
             // 今回の 1 件で置換。基礎梁有りスロット (IsBeamAware=true) は保持。
-            if (pgs.CaseRecords == null)
-                pgs.CaseRecords = [];
-            for (int i = pgs.CaseRecords.Count - 1; i >= 0; i--)
-            {
-                if (!pgs.CaseRecords[i].IsBeamAware)
-                    pgs.CaseRecords.RemoveAt(i);
-            }
-            pgs.CaseRecords.Add(record);
-
-            // ActiveLoadingType を今回解析したタイプに切替 (アクティブケースもこの 1 件)
-            pgs.ActiveLoadingType = loadingType;
-            pgs.ActiveCaseIndex = pgs.CaseRecords.IndexOf(record);
+            // 結果は今回の実行の<b>新しい実体</b>にする (前の結果を持っている側を書き換えない)。
+            // 表示するのは今回の実行 (ActiveLoadingType・表示中のケースもこの 1 件)
+            var records = (pgs.CaseRecords ?? []).Where(r => r.IsBeamAware).ToList();
+            records.Add(record);
+            pgs.Result = pgs.Result.With(records, records.Count - 1, loadingType);
+            EnsureSettlementResultSharedWithSnapshot();
 
             OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
             OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));

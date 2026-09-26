@@ -40,6 +40,148 @@ namespace PileDesign.ViewModels
 
         public bool HasAnalysisResultSet => _currentResultSet != null;
 
+        private bool _resultSnapshotFailed;
+
+        /// <summary>
+        /// 直近の解析で、解析結果の控え (解析したときの入力の写し) を作れなかったか。
+        ///
+        /// 控えが無いと、結果表示・出力は<b>編集中の入力</b>を解析時の入力の代わりに見る。入力を編集した時点で
+        /// 結果と入力が混ざるので、利用者に知らせ、編集後は混ざったことを状態表示に出し、計算書の出力を止める。
+        /// 以前は複製の失敗をログに残すだけで、呼び出し側はそのまま続けていた。
+        /// </summary>
+        public bool ResultSnapshotFailed
+        {
+            get => _resultSnapshotFailed;
+            private set
+            {
+                if (SetProperty(ref _resultSnapshotFailed, value))
+                {
+                    OnPropertyChanged(nameof(ResultSetStatusText));
+                    OnPropertyChanged(nameof(ResultsMixedWithEditedInput));
+                }
+            }
+        }
+
+        // ── 入力の署名 (「再解析が必要」を入力の中身で判定する) ─────────────────
+        //
+        // 「再解析が必要」は編集のたびに印を立てる方式で、元に戻す・やり直しで解析時と同じ入力へ戻しても印が残り、
+        // 逆に解析より前の入力へ戻しても印が立たなかった。元に戻す・やり直しのあとでは、解析したときの入力と
+        // 今の入力の署名を比べて印を決め直す (RecheckInputAgainstAnalysis)。編集時に印を立てる仕組みはそのまま。
+
+        /// <summary>解析結果の控えを取ったとき (= 最後に解析したとき) の入力の署名。分からなければ null。</summary>
+        private string? _analysisInputSignature;
+
+        /// <summary>沈下解析をしたときの入力の署名。沈下の結果は水平解析と別に陳腐化するので別に持つ。</summary>
+        private string? _settlementInputSignature;
+
+        private static readonly System.Text.Json.JsonSerializerOptions SignatureOptions = new()
+        {
+            // 参照の共有 ($id/$ref) を書かない。元に戻すは入力を DeepCopy で作り直し、共有していた参照が
+            // 分かれることがある (保存ファイルの形が変わる)。中身が同じなら同じ署名になるよう、共有も全部書く
+            ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles,
+            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        };
+
+        /// <summary>署名から除く、画面だけの状態・読むたびに振り直す番号。</summary>
+        private static readonly System.Collections.Generic.HashSet<string> SignatureIgnoredNames = new(StringComparer.Ordinal)
+        {
+            "IsSelected", "IsVisible", "Id",
+        };
+
+        /// <summary>
+        /// 入力の署名 (解析に効く中身が同じなら同じ値)。直列化できなければ null (判定できない — 印は変えない)。
+        /// 選択・表示の有無と、実行時に振り直す節点の Id は含めない。
+        /// </summary>
+        internal static string? InputSignature(InputModel? input)
+        {
+            if (input == null) return null;
+            try
+            {
+                var node = System.Text.Json.JsonSerializer.SerializeToNode(input, SignatureOptions);
+                StripIgnored(node);
+                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(node?.ToJsonString() ?? "");
+                return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Warning(ex, "[結果セット] 入力の署名を作れませんでした (再解析が必要かの判定は編集の記録に任せます)");
+                return null;
+            }
+        }
+
+        private static void StripIgnored(System.Text.Json.Nodes.JsonNode? node)
+        {
+            switch (node)
+            {
+                case System.Text.Json.Nodes.JsonObject obj:
+                    foreach (var key in obj.Select(p => p.Key).Where(SignatureIgnoredNames.Contains).ToList())
+                        obj.Remove(key);
+                    foreach (var (_, child) in obj) StripIgnored(child);
+                    break;
+                case System.Text.Json.Nodes.JsonArray arr:
+                    foreach (var child in arr) StripIgnored(child);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 元に戻す・やり直しのあとに呼ぶ。今の入力を、解析したとき・沈下解析をしたときの入力と比べ、
+        /// 「再解析が必要」の印を中身で決め直す。同じなら降ろし、違えば立てる (解析より前の入力へ戻したときも)。
+        /// 署名が分からないものは今の印のまま。
+        /// </summary>
+        internal void RecheckInputAgainstAnalysis()
+        {
+            bool holdsResults = _currentResultSet != null || ResultSnapshotFailed;
+            bool checkHorizontal = holdsResults && _analysisInputSignature != null;
+            bool checkSettlement = _settlementInputSignature != null && HasSettlementResults();
+            if (!checkHorizontal && !checkSettlement) return;
+
+            string? current = InputSignature(CurrentInputModel);
+            if (current == null) return;
+
+            bool horizontalChanged = checkHorizontal ? current != _analysisInputSignature : _horizontalInputChanged;
+            if (checkSettlement) _settlementInputChanged = current != _settlementInputSignature;
+
+            bool stale = (holdsResults && horizontalChanged) || SettlementResultsAreStale;
+            InputChangedSinceAnalysis = stale;          // false なら水平の印もここで降りる
+            _horizontalInputChanged = horizontalChanged && stale;
+            OnPropertyChanged(nameof(ResultSetStatusText));
+        }
+
+        /// <summary>
+        /// 読込の仕上げで、解析したときの入力の署名を取る。ファイルが「解析後に編集していない」と言うなら
+        /// 今の入力が解析時の入力。編集済みなら、別に持っている解析時の入力 (控え) から取る。どちらも無ければ分からない。
+        /// </summary>
+        internal void CaptureInputSignaturesAfterLoad()
+        {
+            if (!InputChangedSinceAnalysis)
+            {
+                string? current = InputSignature(CurrentInputModel);
+                _analysisInputSignature = HasAnalysisResultSet ? current : null;
+                _settlementInputSignature = _settlementInputChanged ? null : current;
+            }
+            else
+            {
+                var snapshot = _currentResultSet?.InputSnapshot;
+                _analysisInputSignature = snapshot != null && !ReferenceEquals(snapshot, CurrentInputModel)
+                    ? InputSignature(snapshot) : null;
+                _settlementInputSignature = null;
+            }
+        }
+
+        /// <summary>
+        /// 表示中の沈下の結果が、水平解析とは別の時点の入力で解いたものか (水平解析の結果を持つときだけ)。
+        /// 入力を編集したあと沈下解析だけをやり直すと、水平解析の控えは前の入力のまま、沈下は最新の実行を表示する。
+        /// </summary>
+        public bool SettlementSolvedFromOtherInput =>
+            IsHorizontalAnalysisDone && _currentResultSet?.AnaModel != null
+            && _analysisInputSignature != null && _settlementInputSignature != null
+            && _analysisInputSignature != _settlementInputSignature
+            && HasSettlementResults();
+
+        /// <summary>控えが無いまま入力が編集され、表示・出力中の結果が編集後の入力と混ざっているか。</summary>
+        public bool ResultsMixedWithEditedInput => ResultSnapshotFailed && InputChangedSinceAnalysis;
+
         /// <summary>
         /// 結果表示系（グラフ・結果テーブル・結果キャンバス・計算書・評価）が参照すべき入力。
         ///
@@ -58,7 +200,10 @@ namespace PileDesign.ViewModels
             private set
             {
                 if (SetProperty(ref _inputChangedSinceAnalysis, value))
+                {
                     OnPropertyChanged(nameof(ResultSetStatusText));
+                    OnPropertyChanged(nameof(ResultsMixedWithEditedInput));
+                }
                 if (!value) _horizontalInputChanged = false;
             }
         }
@@ -110,6 +255,8 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void MarkSettlementResultsCurrent()
         {
+            // 沈下解析をしたときの入力 (元に戻したときに比べる相手)
+            _settlementInputSignature = InputSignature(CurrentInputModel);
             if (!_settlementInputChanged) return;
             _settlementInputChanged = false;
             OnPropertyChanged(nameof(ResultSetStatusText));
@@ -132,13 +279,15 @@ namespace PileDesign.ViewModels
         {
             get
             {
-                if (_currentResultSet == null) return string.Empty;
+                if (_currentResultSet == null)
+                    return ResultSnapshotFailed ? DescribeResultSnapshotStatus(InputChangedSinceAnalysis) : string.Empty;
 
                 return BuildResultSetStatusText(
                     _currentResultSet.CapturedAt.ToString("yyyy-MM-dd HH:mm"),
                     horizontalStale: _horizontalInputChanged && IsHorizontalAnalysisDone,
                     settlementStale: SettlementResultsAreStale,
-                    materialOptionsChanged: MaterialOptionsChangedSinceAnalysis);
+                    materialOptionsChanged: MaterialOptionsChangedSinceAnalysis,
+                    settlementFromOtherInput: SettlementSolvedFromOtherInput);
             }
         }
 
@@ -159,7 +308,8 @@ namespace PileDesign.ViewModels
         /// <param name="settlementStale">沈下の結果を持っていて、それが陳腐化しているか。</param>
         /// <param name="materialOptionsChanged">材料モデル化オプションが解析後に変わったか。</param>
         internal static string BuildResultSetStatusText(
-            string stamp, bool horizontalStale, bool settlementStale, bool materialOptionsChanged)
+            string stamp, bool horizontalStale, bool settlementStale, bool materialOptionsChanged,
+            bool settlementFromOtherInput = false)
         {
             string baseText =
                 horizontalStale && settlementStale
@@ -170,12 +320,28 @@ namespace PileDesign.ViewModels
                     ? $"解析結果: {stamp} 実行／沈下解析の結果は入力変更前のものです（沈下解析の再実行が必要です）"
                     : $"解析結果: {stamp} 実行";
 
+            // 沈下だけをやり直した (水平解析は前の入力のまま) ときは、表示中の沈下は最新の沈下解析の結果。
+            // 水平解析とは解いた入力の時点が違うことを言う
+            if (settlementFromOtherInput)
+                baseText += "／沈下は水平解析と別の時点の入力で解いた最新の結果を表示しています";
+
             // 応答値は解析時のもの、限界曲線は今のオプションで引かれる。混ざったまま読ませない
             return materialOptionsChanged
                 ? baseText + "／材料モデル化オプションが解析後に変更されています"
                     + "（限界曲線は変更後のオプションで描かれます。再解析が必要です）"
                 : baseText;
         }
+
+        /// <summary>控えを作れなかったときの状態表示。入力を編集したあとは、結果と入力が混ざっていることを言う。</summary>
+        internal static string DescribeResultSnapshotStatus(bool inputEdited) => inputEdited
+            ? "解析結果の控えが無いまま入力が編集されました。表示中の結果は編集後の入力と混ざっています（再解析が必要です）"
+            : "解析結果の控えを作れませんでした（入力を編集すると、結果と編集後の入力が混ざります）";
+
+        /// <summary>控えを作れなかったときに利用者へ知らせる文。</summary>
+        internal static string DescribeResultSnapshotFailure() =>
+            "解析結果の控え（解析したときの入力の写し）を作れませんでした。詳細はログに記録しています。\n\n"
+            + "結果はこのまま表示できますが、このあと入力を編集すると、結果と編集後の入力が混ざって表示されます。"
+            + "入力を編集する前に結果を確認・出力してください。編集した場合は、計算書を出す前に再解析してください。";
 
         /// <summary>
         /// 材料モデル化オプションを変えたあとに呼ぶ。ステータス表示を出し直す。
@@ -229,6 +395,16 @@ namespace PileDesign.ViewModels
             // ・沈下の結果がまだ無い段階でも印だけ立てておき、沈下解析が終わったときに降ろす。
             //   実際に効くのは SettlementResultsAreStale (結果を持っているときだけ真)。
             _settlementInputChanged = true;
+
+            // 控えを作れなかった結果は、編集中の入力を解析時の入力の代わりに見ている。
+            // 編集した時点で結果と入力が混ざるので、そのことを記録する (結果セットが無くても)
+            if (_currentResultSet == null && ResultSnapshotFailed)
+            {
+                _horizontalInputChanged = true;
+                InputChangedSinceAnalysis = true;
+                OnPropertyChanged(nameof(ResultSetStatusText));
+                return;
+            }
 
             if (_currentResultSet == null) return;
 
@@ -295,7 +471,11 @@ namespace PileDesign.ViewModels
                 IsVerticalBeamAnalysisDone,
                 IsElementSplit);
 
-            if (set == null) return;   // 複製に失敗したときは従来どおり live を参照する
+            if (set == null)
+            {
+                OnResultSnapshotFailed();
+                return;
+            }
 
             // スナップショット側の要素が VM 経由で「現在の入力」を見に行かないよう親を固定する
             set.InputSnapshot.AttachViewModel(this);
@@ -303,6 +483,28 @@ namespace PileDesign.ViewModels
             CurrentResultSet = set;
             if (set.AnaModel != null) CurrentModel = set.AnaModel;
             InputChangedSinceAnalysis = false;
+            ResultSnapshotFailed = false;
+            _analysisInputSignature = InputSignature(CurrentInputModel);
+        }
+
+        /// <summary>
+        /// 解析結果の控えを作れなかったときの後始末。
+        ///
+        /// 前の控えは、今の解析モデルと組でなければ捨てる。残すと、新しい解析の結果が<b>前の解析の入力</b>と
+        /// 組になって表示される。今の解析は今の入力で解いたばかりなので、編集された印は降ろす
+        /// (このあと編集すると <see cref="MarkInputChangedSinceAnalysis(AnalysisInputScope)"/> が立てる)。
+        /// </summary>
+        internal void OnResultSnapshotFailed()
+        {
+            if (_currentResultSet != null && !ReferenceEquals(_currentResultSet.AnaModel, CurrentModel))
+                CurrentResultSet = null;
+            InputChangedSinceAnalysis = false;
+            ResultSnapshotFailed = true;
+            // 控えは無いが、今の入力で解いたばかり。元に戻したときに比べる相手にはなる
+            _analysisInputSignature = InputSignature(CurrentInputModel);
+            Serilog.Log.Warning("[結果セット] 解析結果の控えを作れませんでした。結果表示は編集中の入力を見ます");
+            PileDesign.Services.MessageService.Show(DescribeResultSnapshotFailure(), "解析結果の控え",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
 
         /// <summary>
@@ -313,7 +515,7 @@ namespace PileDesign.ViewModels
         /// 結び付けているので通常は何もしないが、旧いファイル由来のモデルでは
         /// 沈下の入れ物ごと無いことがあるため、ここで作って結び付ける。
         /// </summary>
-        private void EnsureSettlementResultSharedWithSnapshot()
+        internal void EnsureSettlementResultSharedWithSnapshot()
         {
             var live = CurrentInputModel?.PileGroupSettlement;
             var snapshot = _currentResultSet?.InputSnapshot;
@@ -331,6 +533,7 @@ namespace PileDesign.ViewModels
         internal void SetRestoredResultSet(AnalysisResultSet? set, bool changedSinceAnalysis)
         {
             CurrentResultSet = set;
+            ResultSnapshotFailed = false;
             bool changed = set != null && changedSinceAnalysis;
             InputChangedSinceAnalysis = changed;
             _horizontalInputChanged = changed;   // 範囲は保存していないので安全側
@@ -346,6 +549,8 @@ namespace PileDesign.ViewModels
         {
             CurrentResultSet = null;
             InputChangedSinceAnalysis = false;
+            ResultSnapshotFailed = false;
+            _analysisInputSignature = null;
         }
 
         /// <summary>

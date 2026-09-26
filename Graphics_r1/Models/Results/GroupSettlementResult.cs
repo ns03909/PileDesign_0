@@ -21,6 +21,12 @@ namespace PileDesign.Models.Results
     /// <see cref="PileGroupSettlement.Result"/> は現在の入力・解析時のスナップショットの
     /// どちらからも<b>同じインスタンス</b>を指す ([JsonIgnore] なので JSON 往復では複製されない)。
     /// 保存は <c>ProjectData.GroupSettlementResult</c> の節が受け持つ。
+    ///
+    /// <para><b>解析の実行ごとに固定する。</b>できあがった結果の中身 (ケース記録の並び) は書き換えず、
+    /// 解析・結果の破棄のたびに <see cref="With"/> / <see cref="Without"/> で<b>新しい実体</b>を作って差し替える
+    /// (差し替えたら MainWindowViewModel.EnsureSettlementResultSharedWithSnapshot でスナップショットにも付け直す)。
+    /// 以前は同じ実体のケース記録を足し引きし、Clear で空にしていたので、開いている結果の窓や作りかけの出力が
+    /// 持っている結果まで途中で変わった。表示中のケース (<see cref="ActiveCaseIndex"/>) は表示の状態なので書き換えてよい。</para>
     /// </summary>
     public sealed class GroupSettlementResult : BaseModel
     {
@@ -73,11 +79,31 @@ namespace PileDesign.Models.Results
                 ? s
                 : 0.0;
 
-        /// <summary>結果を空にする。<b>インスタンスは差し替えない</b> (共有している参照が切れるため)。</summary>
-        public void Clear()
+        /// <summary>
+        /// ケース記録を差し替えた<b>新しい</b>結果。この結果は書き換えない (実行ごとに固定する)。
+        /// </summary>
+        public GroupSettlementResult With(IEnumerable<GroupSettlementCaseRecord> records, int activeCaseIndex, string activeLoadingType)
         {
-            CaseRecords?.Clear();
-            ActiveCaseIndex = -1;
+            var list = new ObservableCollection<GroupSettlementCaseRecord>(records.Where(r => r != null));
+            return new GroupSettlementResult
+            {
+                CaseRecords = list,
+                ActiveCaseIndex = activeCaseIndex >= 0 && activeCaseIndex < list.Count ? activeCaseIndex : -1,
+                ActiveLoadingType = activeLoadingType ?? "",
+            };
+        }
+
+        /// <summary>
+        /// <paramref name="doomed"/> を除いた<b>新しい</b>結果。表示中のケースが残ればそれを表示し、
+        /// 消えたら末尾のケース (無ければ未選択) にする。この結果は書き換えない。
+        /// </summary>
+        public GroupSettlementResult Without(IEnumerable<GroupSettlementCaseRecord> doomed)
+        {
+            var remove = new HashSet<GroupSettlementCaseRecord>(doomed, ReferenceEqualityComparer.Instance);
+            var active = ActiveRecord;
+            var kept = (CaseRecords ?? []).Where(r => !remove.Contains(r)).ToList();
+            int index = active != null && !remove.Contains(active) ? kept.IndexOf(active) : kept.Count - 1;
+            return With(kept, index, ActiveLoadingType);
         }
     }
 

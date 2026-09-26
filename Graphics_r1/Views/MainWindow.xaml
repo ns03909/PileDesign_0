@@ -5472,6 +5472,15 @@
                                     <Setter Property="Foreground" Value="DarkOrange"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
                                 </DataTrigger>
+                                <!-- 解析結果の控えを作れなかった (入力を編集すると結果と混ざる) -->
+                                <DataTrigger Binding="{Binding ResultSnapshotFailed}" Value="True">
+                                    <Setter Property="Foreground" Value="DarkOrange"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ResultsMixedWithEditedInput}" Value="True">
+                                    <Setter Property="Foreground" Value="Firebrick"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                </DataTrigger>
                                 <!-- 応答値は解析時・限界曲線は今のオプション、という混ざった表示になる -->
                                 <DataTrigger Binding="{Binding MaterialOptionsChangedSinceAnalysis}" Value="True">
                                     <Setter Property="Foreground" Value="DarkOrange"/>

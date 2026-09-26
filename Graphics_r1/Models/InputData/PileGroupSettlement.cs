@@ -171,6 +171,8 @@ namespace PileDesign.Models.InputData
             get => _result;
             set
             {
+                // 解析・結果の破棄のたびに新しい実体へ差し替える (GroupSettlementResult 参照)。
+                // 差し替えたら、スナップショットにも付け直すこと (EnsureSettlementResultSharedWithSnapshot)
                 _result = value ?? new GroupSettlementResult();
                 OnPropertyChanged(nameof(Result));
                 RaiseResultDerivedChanged();
@@ -200,14 +202,8 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<GroupSettlementCaseRecord> CaseRecords
         {
             get => _result.CaseRecords;
-            set
-            {
-                _result.CaseRecords = value ?? [];
-                OnPropertyChanged(nameof(CaseRecords));
-                OnPropertyChanged(nameof(ActiveRecord));
-                OnPropertyChanged(nameof(ActiveSettlementGridData));
-                OnPropertyChanged(nameof(ActiveRectLoads));
-            }
+            // 結果の中身は書き換えず、ケース記録を差し替えた新しい結果にする (実行ごとに固定。GroupSettlementResult 参照)
+            set => Result = _result.With(value ?? [], _result.ActiveCaseIndex, _result.ActiveLoadingType);
         }
 
         /// <summary>

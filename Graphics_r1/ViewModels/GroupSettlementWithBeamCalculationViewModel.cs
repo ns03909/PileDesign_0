@@ -124,15 +124,12 @@ namespace PileDesign.ViewModels
                 const string thisLoadingType = "個別矩形（基礎梁考慮）";
                 var pgs = InputModel.PileGroupSettlement;
 
-                // 同じ LoadingType の既存レコードのみ削除 (他タイプの結果は保持)
-                if (pgs.CaseRecords == null)
-                    pgs.CaseRecords = [];
-                for (int i = pgs.CaseRecords.Count - 1; i >= 0; i--)
-                {
-                    if (pgs.CaseRecords[i].LoadingType == thisLoadingType
-                        || (string.IsNullOrEmpty(pgs.CaseRecords[i].LoadingType) && pgs.CaseRecords[i].IsBeamAware))
-                        pgs.CaseRecords.RemoveAt(i);
-                }
+                // 同じ LoadingType の既存レコードのみ除く (他タイプの結果は保持)。
+                // 結果は今回の実行の<b>新しい実体</b>にする (前の結果を持っている側を書き換えない)
+                var records = (pgs.CaseRecords ?? [])
+                    .Where(r => !(r.LoadingType == thisLoadingType
+                                  || (string.IsNullOrEmpty(r.LoadingType) && r.IsBeamAware)))
+                    .ToList();
 
                 // 新規レコードを追加 (各ケースのグリッドコンタも事前計算)
                 var addedRecords = new List<GroupSettlementCaseRecord>();
@@ -160,7 +157,7 @@ namespace PileDesign.ViewModels
                     // 計算されていない。ここで最終段階の矩形荷重を使って改めてグリッド全体の
                     // Steinbrenner を回しコンタ図を得る。
                     record.SettlementGridData = ComputeGridData(cr.ConvergedRectLoads, pgs);
-                    pgs.CaseRecords.Add(record);
+                    records.Add(record);
                     addedRecords.Add(record);
                 }
 
@@ -169,8 +166,8 @@ namespace PileDesign.ViewModels
                     ? CaseResults.IndexOf(SelectedCaseResult) : 0;
                 if (activeLocal < 0 || activeLocal >= addedRecords.Count) activeLocal = 0;
                 var activeRec = addedRecords[activeLocal];
-                pgs.ActiveLoadingType = thisLoadingType;
-                pgs.ActiveCaseIndex = pgs.CaseRecords.IndexOf(activeRec);
+                pgs.Result = pgs.Result.With(records, records.IndexOf(activeRec), thisLoadingType);
+                _mainWindowViewModel.EnsureSettlementResultSharedWithSnapshot();
 
                 // 主画面 Canvas のコンタ描画用: SettlementGridX/Y を再計算
                 // (反復解析を直接実行した場合 PerformSettlementAnalysis を経由しないため、

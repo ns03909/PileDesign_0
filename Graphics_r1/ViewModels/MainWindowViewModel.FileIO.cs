@@ -548,6 +548,8 @@ namespace PileDesign.ViewModels
             // (直前の SaveUndoState で編集扱いになるため、その後に戻す)
             MarkProjectReplaced();
             RestoreInputChangedSinceAnalysis(changedSinceAnalysisOnLoad);
+            // 元に戻したときに比べる相手 (解析したときの入力の署名)。荷重ケースの番号・名前を揃えたあとに取る
+            CaptureInputSignaturesAfterLoad();
 
             // 最終描画＆通知
             UpdateWindowImmediate();
@@ -926,6 +928,17 @@ namespace PileDesign.ViewModels
                 Filter = "Word documents (*.docx)|*.docx|All files (*.*)|*.*",
                 FileName = defaultDocxName
             };
+
+            // 解析したときの入力の控えが無いまま入力を編集した。計算書は編集後の入力と解析結果を混ぜることになり、
+            // 解析時の入力で作り直す手段も無いので出さない
+            if (ResultsMixedWithEditedInput)
+            {
+                MessageService.Show(
+                    "解析結果の控え（解析したときの入力の写し）が無いまま入力が編集されたため、" +
+                    "解析結果と整合する計算書を作れません。\n\n再解析してから出力してください。",
+                    "計算書", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
             // 計算書は「解析を実行した時点の入力」で作る。結果と整合するのはそれだけで、
             // 現在の入力を混ぜると諸元表と解析結果の前提が食い違う (画面はスナップショットを見ている)。

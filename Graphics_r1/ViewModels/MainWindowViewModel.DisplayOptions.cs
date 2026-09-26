@@ -2566,8 +2566,9 @@ namespace PileDesign.ViewModels
                         System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Warning);
                     if (res != System.Windows.MessageBoxResult.OK) return false;
 
-                    foreach (var r in doomed)
-                        pgs.CaseRecords.Remove(r);
+                    // 結果の中身は書き換えず、除いた新しい結果に差し替える (実行ごとに固定)
+                    pgs.Result = pgs.Result.Without(doomed);
+                    EnsureSettlementResultSharedWithSnapshot();
 
                     if (pgs.ActiveCaseIndex >= pgs.CaseRecords.Count)
                         pgs.ActiveCaseIndex = pgs.CaseRecords.Count - 1;
@@ -2748,7 +2749,8 @@ namespace PileDesign.ViewModels
             if (res != System.Windows.MessageBoxResult.OK) return false;
 
             // 該当ルートの CaseRecord を削除
-            foreach (var rec in doomed) pgs.CaseRecords.Remove(rec);
+            pgs.Result = pgs.Result.Without(doomed);
+            EnsureSettlementResultSharedWithSnapshot();
 
             // ActiveCase が無効なら -1、Legacy フィールドも対応してクリア
             if (pgs.ActiveCaseIndex >= pgs.CaseRecords.Count)
