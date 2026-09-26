@@ -398,7 +398,7 @@ namespace PileDesign.Models
         /// 表と選択肢も差し替えのみ。<b>中身がその場で書き換わる子を足したら、
         /// ここで写すこと</b> (<c>DeepCopyIsActuallyDeepTests</c> が見張る)。
         /// </summary>
-        public CapringPile DeepCopy() => (CapringPile)this.MemberwiseClone();
+        public CapringPile DeepCopy() => CloneWithoutSubscribers<CapringPile>();
 
         // ───────── 諸元更新 ─────────
         /// <summary>

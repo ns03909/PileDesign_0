@@ -49,7 +49,7 @@ namespace PileDesign.Models.InputData
         // 浅いコピーを作成するメソッド
         public SoilEmbedment ShallowCopy()
         {
-            return (SoilEmbedment)this.MemberwiseClone();
+            return CloneWithoutSubscribers<SoilEmbedment>();
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public SoilEmbedment DeepCopy()
         {
-            var copy = (SoilEmbedment)this.MemberwiseClone();
+            var copy = CloneWithoutSubscribers<SoilEmbedment>();
             copy.ZDataItems = ZDataItems == null
                 ? null! : [.. ZDataItems.Select(z => z.DeepCopy())];
             copy.GroundLayers = GroundLayers == null

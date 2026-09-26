@@ -446,13 +446,13 @@ namespace PileDesign.Models.InputData
         // 浅いコピーを作成するメソッド
         public GroundInput ShallowCopy()
         {
-            return (GroundInput)this.MemberwiseClone();
+            return CloneWithoutSubscribers<GroundInput>();
         }
 
         // 深いコピーを作成するメソッド
         public GroundInput DeepCopy()
         {
-            var copy = (GroundInput)this.MemberwiseClone();
+            var copy = CloneWithoutSubscribers<GroundInput>();
             copy.GroundLayers = new ObservableCollection<GroundLayerInput>(this.GroundLayers.Select(layer => layer.DeepCopy()));
             copy.GroundMassesData = new ObservableCollection<GroundMassDataInput>(this.GroundMassesData.Select(mass => mass.DeepCopy()));
             copy.CustomDisplacementProfile = this.CustomDisplacementProfile?.DeepCopy() ?? new CustomDisplacementProfile();

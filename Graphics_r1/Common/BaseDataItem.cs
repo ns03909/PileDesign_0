@@ -47,6 +47,17 @@ namespace PileDesign.Common
     {
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        /// <summary>
+        /// <see cref="object.MemberwiseClone"/> の代わりに使う複製。値はそのまま写し、変更通知の購読者は写さない
+        /// (MemberwiseClone はデリゲートも写すので、複製を変えると元を見ている画面へ通知が飛ぶ)。
+        /// </summary>
+        protected T CloneWithoutSubscribers<T>() where T : BaseDataItem
+        {
+            var copy = (T)MemberwiseClone();
+            ((BaseDataItem)copy).PropertyChanged = null;
+            return copy;
+        }
+
         public virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 

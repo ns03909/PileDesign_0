@@ -986,7 +986,7 @@ namespace PileDesign.Models.InputData
         {
             try
             {
-                var copy = (PileBodyInput)this.MemberwiseClone();
+                var copy = CloneWithoutSubscribers<PileBodyInput>();
                 copy.PileBodyType = this.PileBodyType;
                 copy._suppressChildSync = true;
                 copy.PileBodySegments = new ObservableCollection<PileBodySegment>(

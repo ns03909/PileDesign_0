@@ -540,7 +540,7 @@ namespace PileDesign.Models
         /// </summary>
         public CaptainPile DeepCopy()
         {
-            var copy = (CaptainPile)this.MemberwiseClone();
+            var copy = CloneWithoutSubscribers<CaptainPile>();
             copy.CTPTensionRebars = this.CTPTensionRebars?.DeepCopy()!;
             copy.CTPConcrete = this.CTPConcrete?.DeepCopy()!;
             return copy;
@@ -1173,7 +1173,7 @@ namespace PileDesign.Models
     {
 
         /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
-        public CTPConcrete DeepCopy() => (CTPConcrete)this.MemberwiseClone();
+        public CTPConcrete DeepCopy() => CloneWithoutSubscribers<CTPConcrete>();
         internal double D { get; set; }
         internal double PileCapFc { get; set; }
         internal double Nu { get; set; }
@@ -1251,7 +1251,7 @@ namespace PileDesign.Models
     {
 
         /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
-        public CTPTensionRebars DeepCopy() => (CTPTensionRebars)this.MemberwiseClone();
+        public CTPTensionRebars DeepCopy() => CloneWithoutSubscribers<CTPTensionRebars>();
         public double SigmaY { get; set; }
         public double EpsilonY { get; set; }
         public double Es { get; set; } = 205_000;

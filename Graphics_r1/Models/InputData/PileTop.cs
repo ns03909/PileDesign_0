@@ -685,7 +685,7 @@ namespace PileDesign.Models.InputData
         // 浅いコピーを作成するメソッド
         public PileTop ShallowCopy()
         {
-            return (PileTop)this.MemberwiseClone();
+            return CloneWithoutSubscribers<PileTop>();
         }
 
         /// <summary>
@@ -700,7 +700,7 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public PileTop DeepCopy()
         {
-            var copy = (PileTop)this.MemberwiseClone();
+            var copy = CloneWithoutSubscribers<PileTop>();
             copy.CaptainPile = this.CaptainPile?.DeepCopy()!;
             copy.FTPile = this.FTPile?.DeepCopy()!;
             copy.CapringPile = this.CapringPile?.DeepCopy()!;

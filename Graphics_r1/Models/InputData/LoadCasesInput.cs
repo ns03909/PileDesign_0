@@ -460,7 +460,7 @@ namespace PileDesign.Models.InputData
         // 深いコピーを作成するメソッド
         public LoadCasesInput DeepCopy()
         {
-            var copy = (LoadCasesInput)this.MemberwiseClone();
+            var copy = CloneWithoutSubscribers<LoadCasesInput>();
             // 購読の控えは複製と共有しない (共有すると、複製の一覧の差し替えが元の購読の控えを書き換える)
             copy._subscribedLoadCases = new(ReferenceEqualityComparer.Instance);
 

@@ -395,7 +395,7 @@ namespace PileDesign.Models.InputData
         // 深いコピーを作成するメソッド
         public GroundMassDataInput DeepCopy()
         {
-            var copy = (GroundMassDataInput)this.MemberwiseClone();
+            var copy = CloneWithoutSubscribers<GroundMassDataInput>();
             copy.TauDonSigmaZPrime = new ObservableCollection<double?>(this.TauDonSigmaZPrime);
             copy.FL = new ObservableCollection<double?>(this.FL);
             copy.BetaL = new ObservableCollection<double?>(this.BetaL);

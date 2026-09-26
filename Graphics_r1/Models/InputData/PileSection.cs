@@ -4031,7 +4031,7 @@ namespace PileDesign.Models.InputData
         // 浅いコピーを作成するメソッド
         public PileSection ShallowCopy()
         {
-            return (PileSection)this.MemberwiseClone();
+            return CloneWithoutSubscribers<PileSection>();
         }
 
         /// <summary>
@@ -4081,7 +4081,7 @@ namespace PileDesign.Models.InputData
         public PileSection DeepCopy()
         {
             // 浅いコピーを作成してから、参照型フィールドを個別に複製する
-            var copy = (PileSection)this.MemberwiseClone();
+            var copy = CloneWithoutSubscribers<PileSection>();
 
             // せん断補強筋の選択肢は入れ物を共有させない。
             // 共有したまま控えを取ると、控え側で工法を変えたときに元の画面の

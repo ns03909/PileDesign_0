@@ -187,6 +187,8 @@ namespace TestProject1
                     {
                         if (f.IsInitOnly) continue;                     // 購読やロックの入れ物
                         if (typeof(Delegate).IsAssignableFrom(f.FieldType)) continue;
+                        // 検証エラーの入れ物 (入力ではない)。複製 (CloneWithoutSubscribers) で分けるので readonly にしていない
+                        if (t == typeof(PileDesign.Models.BaseModel) && f.Name == "_errors") continue;
 
                         scanned++;
 

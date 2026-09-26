@@ -1,5 +1,6 @@
 ﻿//using CommunityToolkit.Mvvm.ComponentModel;
 //using System.Collections.Generic;
+using System.Linq;
 //using System.ComponentModel;
 //using System.Runtime.CompilerServices;
 
@@ -42,13 +43,22 @@ namespace PileDesign.Models
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         /// <summary>
-        /// 変更通知の購読者をすべて外す。
+        /// <see cref="object.MemberwiseClone"/> の代わりに使う複製。値はそのまま写し、<b>変更通知の購読者と
+        /// 検証エラーの入れ物は写さない</b>。
         ///
-        /// <see cref="object.MemberwiseClone"/> は field-like event のデリゲートも写すため、
-        /// 複製した器が元の購読者 (画面) を抱えたまま生き残る。
-        /// 複製を作る側は写した直後にこれを呼ぶこと。
+        /// MemberwiseClone は PropertyChanged / ErrorsChanged のデリゲートと検証エラーの辞書まで写す。
+        /// 解析結果・Undo・キャンセル用の控えとして複製したものを変えると、元を見ている画面へ通知が飛び、
+        /// 片方の検証エラーがもう片方にも現れた。
         /// </summary>
-        protected void ClearPropertyChangedSubscribers() => PropertyChanged = null;
+        protected T CloneWithoutSubscribers<T>() where T : BaseModel
+        {
+            var copy = (T)MemberwiseClone();
+            BaseModel b = copy;
+            b.PropertyChanged = null;
+            b.ErrorsChanged = null;
+            b._errors = _errors.ToDictionary(e => e.Key, e => new List<string>(e.Value));
+            return copy;
+        }
 
         protected new bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
         {
@@ -61,7 +71,8 @@ namespace PileDesign.Models
         // ---- 追加: 数値バリデーション支援 ---------------------------------
 
         // エラー格納
-        private readonly Dictionary<string, List<string>> _errors = [];
+        // 複製 (CloneWithoutSubscribers) で入れ物を分けるので readonly にしない
+        private Dictionary<string, List<string>> _errors = [];
 
         // INotifyDataErrorInfo
         //

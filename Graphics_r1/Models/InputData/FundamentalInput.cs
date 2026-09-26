@@ -371,7 +371,7 @@ namespace PileDesign.Models.InputData
         // 浅いコピーを作成するメソッド
         public FundamentalInput ShallowCopy()
         {
-            return (FundamentalInput)this.MemberwiseClone();
+            return CloneWithoutSubscribers<FundamentalInput>();
         }
     }
 }

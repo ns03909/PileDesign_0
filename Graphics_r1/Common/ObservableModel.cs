@@ -19,6 +19,26 @@ namespace PileDesign.Common
     [Serializable]
     public partial class ObservableModel : ObservableObject
     {
+        // ObservableObject が持つ変更通知のデリゲート (field-like event の裏のフィールド)。
+        // 派生クラスからは null にできないので、複製の購読者を外すときだけ名前で引く。
+        // 名前が変わった (ツールキットの更新) ことは ObservableModelCloneTests が見張る
+        internal static readonly System.Reflection.FieldInfo? PropertyChangedField =
+            typeof(ObservableObject).GetField(nameof(PropertyChanged), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        internal static readonly System.Reflection.FieldInfo? PropertyChangingField =
+            typeof(ObservableObject).GetField(nameof(PropertyChanging), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        /// <summary>
+        /// <see cref="object.MemberwiseClone"/> の代わりに使う複製。値はそのまま写し、変更通知の購読者は写さない
+        /// (MemberwiseClone はデリゲートも写すので、複製を変えると元を見ている画面へ通知が飛ぶ)。
+        /// </summary>
+        protected T CloneWithoutSubscribers<T>() where T : ObservableModel
+        {
+            var copy = (T)MemberwiseClone();
+            PropertyChangedField?.SetValue(copy, null);
+            PropertyChangingField?.SetValue(copy, null);
+            return copy;
+        }
+
         // ObservableObject の OnPropertyChanged を呼び出す
         public new virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
             base.OnPropertyChanged(propertyName);

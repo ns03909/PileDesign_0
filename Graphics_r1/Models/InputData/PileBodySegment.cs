@@ -49,7 +49,7 @@
         // 深いコピーを作成するメソッド
         public PileBodySegment DeepCopy()
         {
-            var copy = (PileBodySegment)this.MemberwiseClone();
+            var copy = CloneWithoutSubscribers<PileBodySegment>();
             copy.PileSection = this.PileSection.DeepCopy();
             return copy;
         }

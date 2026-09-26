@@ -10,7 +10,7 @@ namespace PileDesign.Models
     {
 
         /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
-        public FTPileTensionBars DeepCopy() => (FTPileTensionBars)this.MemberwiseClone();
+        public FTPileTensionBars DeepCopy() => CloneWithoutSubscribers<FTPileTensionBars>();
         // 引張鉄筋
         public string[] TensionAnchorGradeOption { get; private set; } =
         [
@@ -66,7 +66,7 @@ namespace PileDesign.Models
     {
 
         /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
-        public FTPileCap DeepCopy() => (FTPileCap)this.MemberwiseClone();
+        public FTPileCap DeepCopy() => CloneWithoutSubscribers<FTPileCap>();
         // [JsonInclude] が要る理由は FTPilePile.D1 のコメントを参照。
         [System.Text.Json.Serialization.JsonInclude]
         public double Fc { get; private set; } = 24.0;// パイルキャップのコンクリートの設計基準強度(N/mm2)
@@ -114,7 +114,7 @@ namespace PileDesign.Models
     {
 
         /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
-        public FTPilePile DeepCopy() => (FTPilePile)this.MemberwiseClone();
+        public FTPilePile DeepCopy() => CloneWithoutSubscribers<FTPilePile>();
         // [JsonInclude] が要る。private セッターは既定では逆直列化されないので、
         // 付けないと保存ファイルから読んだときに既定の 600 / 400 に戻る。
         // ファイルには正しい値が書いてあるので、ファイルを見ても気づけない。
@@ -218,7 +218,7 @@ namespace PileDesign.Models
         /// </summary>
         public FTPile DeepCopy()
         {
-            var copy = (FTPile)this.MemberwiseClone();
+            var copy = CloneWithoutSubscribers<FTPile>();
             copy.FTPileCap = this.FTPileCap?.DeepCopy()!;
             copy.FTPilePile = this.FTPilePile?.DeepCopy()!;
             copy.FTPileTensionBars = this.FTPileTensionBars?.DeepCopy()!;

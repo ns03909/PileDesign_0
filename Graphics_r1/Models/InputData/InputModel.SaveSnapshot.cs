@@ -36,10 +36,8 @@ namespace PileDesign.Models.InputData
         internal InputModel SnapshotForSaving()
         {
             // 器だけ新しくする。参照はすべて元と同じものを指したまま。
-            var snapshot = (InputModel)MemberwiseClone();
-
-            // 複製した器に購読者を引き継がない (MemberwiseClone はデリゲートも写す)。
-            snapshot.DetachChangeNotification();
+            // 複製した器に購読者 (と検証エラーの入れ物) を引き継がない (MemberwiseClone はデリゲートも写す)。
+            var snapshot = CloneWithoutSubscribers<InputModel>();
 
             // ── メイン画面の表 ──
             snapshot._pileLayoutItems = Shallow(_pileLayoutItems);
@@ -61,16 +59,5 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private static ObservableCollection<T>? Shallow<T>(ObservableCollection<T>? source)
             => source == null ? null : new ObservableCollection<T>(source);
-
-        /// <summary>
-        /// 写した器から変更通知の購読者を外す。
-        ///
-        /// <see cref="object.MemberwiseClone"/> は field-like event のデリゲートも写すため、
-        /// 何もしないと保存用の器が画面の購読者を抱えたまま生き残る。
-        /// </summary>
-        private void DetachChangeNotification()
-        {
-            ClearPropertyChangedSubscribers();
-        }
     }
 }

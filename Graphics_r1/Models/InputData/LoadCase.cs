@@ -349,7 +349,7 @@ namespace PileDesign.Models.InputData
         // 深いコピー
         public LoadCase DeepCopy()
         {
-            return (LoadCase)this.MemberwiseClone();
+            return CloneWithoutSubscribers<LoadCase>();
         }
     }
 
