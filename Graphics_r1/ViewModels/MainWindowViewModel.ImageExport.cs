@@ -47,6 +47,98 @@ namespace PileDesign.ViewModels
     /// </summary>
     public partial class MainWindowViewModel
     {
+        /// <summary>画像の倍率の上限。メニューは 1 倍・2 倍だが、コマンドに直接渡る値に備える。</summary>
+        internal const double MaxImageScale = 8.0;
+
+        /// <summary>画像 1 辺の画素数の上限 (RenderTargetBitmap が扱える大きさの目安)。</summary>
+        internal const int MaxImageSide = 16384;
+
+        /// <summary>画像の総画素数の上限 (1 画素 4 バイトなので約 200 MB)。</summary>
+        internal const long MaxImagePixels = 50_000_000;
+
+        /// <summary>
+        /// 倍率の指定を読む。空なら 1 倍。正の有限の数で、上限 (<see cref="MaxImageScale"/>) 以下でなければ false と理由を返す。
+        ///
+        /// 以前は読めた数をそのまま画素数の計算に使っていたので、0・負数・極端に大きい値が渡ると、
+        /// 0 画素の画像を作る例外や、メモリを使い切る大きさの画像を作ろうとした。
+        /// </summary>
+        internal static bool TryResolveImageScale(string? scaleParam, out double scale, out string? error)
+        {
+            scale = 1.0;
+            error = null;
+            if (string.IsNullOrEmpty(scaleParam)) return true;
+            if (!PileDesign.Common.NumericText.TryParse(scaleParam, out double parsed) || !double.IsFinite(parsed) || parsed <= 0)
+            {
+                error = $"画像の倍率「{scaleParam}」は正の数ではありません。";
+                return false;
+            }
+            if (parsed > MaxImageScale)
+            {
+                error = $"画像の倍率 {parsed} は大きすぎます (最大 {MaxImageScale} 倍)。";
+                return false;
+            }
+            scale = parsed;
+            return true;
+        }
+
+        /// <summary>
+        /// 画像の画素数を決める。1 画素以上で、1 辺と総画素数が上限以下でなければ false と理由を返す。
+        /// </summary>
+        internal static bool TryImagePixelSize(double actualWidth, double actualHeight, double dpiX, double dpiY, double scale,
+            out int width, out int height, out string? error)
+        {
+            width = height = 0;
+            error = null;
+            double w = actualWidth * dpiX / 96.0 * scale;
+            double h = actualHeight * dpiY / 96.0 * scale;
+            if (!double.IsFinite(w) || !double.IsFinite(h) || w < 1 || h < 1)
+            {
+                error = "モデル図の表示領域の大きさが 0 のため、画像を作れません (ウィンドウを表示してからやり直してください)。";
+                return false;
+            }
+            if (w > MaxImageSide || h > MaxImageSide || w * h > MaxImagePixels)
+            {
+                error = $"画像が大きすぎます ({w:N0}×{h:N0} 画素。1 辺 {MaxImageSide:N0}・計 {MaxImagePixels:N0} 画素まで)。倍率を下げてください。";
+                return false;
+            }
+            width = (int)w;
+            height = (int)h;
+            return true;
+        }
+
+        /// <summary>
+        /// モデル図 (Canvas3D) を、指定の倍率で白地の画像にする。倍率・大きさが不正なら理由を知らせて null。
+        /// 保存とコピーで同じ手順を使う (以前は 2 か所に同じ処理の写しがあった)。
+        /// </summary>
+        private RenderTargetBitmap? RenderCanvasImage(string? scaleParam, string action)
+        {
+            if (Canvas3DLayout == null) return null;
+
+            var dpiInfo = VisualTreeHelper.GetDpi(Canvas3DLayout);
+            if (!TryResolveImageScale(scaleParam, out double scale, out string? error)
+                || !TryImagePixelSize(Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight,
+                        dpiInfo.PixelsPerInchX, dpiInfo.PixelsPerInchY, scale, out int width, out int height, out error))
+            {
+                PileDesign.Services.MessageService.Show(error!, action, MessageBoxButton.OK, MessageBoxImage.Warning);
+                return null;
+            }
+
+            // Canvas を RenderTargetBitmap でキャプチャ（システムDPI考慮）
+            var rtb = new RenderTargetBitmap(width, height,
+                dpiInfo.PixelsPerInchX * scale, dpiInfo.PixelsPerInchY * scale, PixelFormats.Pbgra32);
+
+            // 背景を白で描画してからCanvasを直接レンダリング
+            var dv = new DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                dc.DrawRectangle(Brushes.White, null,
+                    new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
+            }
+            rtb.Render(dv);
+            rtb.Render(Canvas3DLayout);
+            return rtb;
+        }
+
         /// <summary>
         /// Canvas3D の画像を保存するコマンド
         /// </summary>
@@ -54,13 +146,6 @@ namespace PileDesign.ViewModels
         private void ImageSave(string scaleParam)
         {
             if (Canvas3DLayout == null) return;
-
-            // スケールファクターをパラメータから取得（デフォルト1.0）
-            double scale = 1.0;
-            if (!string.IsNullOrEmpty(scaleParam) && PileDesign.Common.NumericText.TryParse(scaleParam, out double parsedScale))
-            {
-                scale = parsedScale;
-            }
 
             var dialog = new Microsoft.Win32.SaveFileDialog
             {
@@ -73,30 +158,8 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
-                    // システムDPIを取得
-                    var dpiInfo = VisualTreeHelper.GetDpi(Canvas3DLayout);
-                    double dpiX = dpiInfo.PixelsPerInchX;
-                    double dpiY = dpiInfo.PixelsPerInchY;
-
-                    int width = (int)(Canvas3DLayout.ActualWidth * dpiX / 96.0 * scale);
-                    int height = (int)(Canvas3DLayout.ActualHeight * dpiY / 96.0 * scale);
-
-                    // Canvas を RenderTargetBitmap でキャプチャ（システムDPI考慮）
-                    var rtb = new RenderTargetBitmap(
-                        width,
-                        height,
-                        dpiX * scale, dpiY * scale,
-                        PixelFormats.Pbgra32);
-
-                    // 背景を白で描画してからCanvasを直接レンダリング
-                    var dv = new DrawingVisual();
-                    using (var dc = dv.RenderOpen())
-                    {
-                        dc.DrawRectangle(Brushes.White, null,
-                            new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
-                    }
-                    rtb.Render(dv);
-                    rtb.Render(Canvas3DLayout);
+                    var rtb = RenderCanvasImage(scaleParam, "画像の保存");
+                    if (rtb == null) return;
 
                     // エンコーダーを選択
                     BitmapEncoder encoder = System.IO.Path.GetExtension(dialog.FileName).ToLower() switch
@@ -108,10 +171,11 @@ namespace PileDesign.ViewModels
 
                     encoder.Frames.Add(BitmapFrame.Create(rtb));
 
-                    using var fs = new System.IO.FileStream(dialog.FileName, System.IO.FileMode.Create);
-                    encoder.Save(fs);
+                    // 一時ファイルに書き切ってから差し替える。以前は保存先を直接作り直していたので、
+                    // 既存の画像を選んでエンコードや書き込みに失敗すると、前の画像が失われた
+                    PileDesign.Services.FileOperationService.WriteAtomically(dialog.FileName, stream => encoder.Save(stream));
 
-                    StatusMessage = $"画像を保存しました ({width}x{height}): {dialog.FileName}";
+                    StatusMessage = $"画像を保存しました ({rtb.PixelWidth}x{rtb.PixelHeight}): {dialog.FileName}";
                 }
                 catch (Exception ex)
                 {
@@ -130,36 +194,8 @@ namespace PileDesign.ViewModels
 
             try
             {
-                // スケールファクターをパラメータから取得（デフォルト1.0）
-                double scale = 1.0;
-                if (!string.IsNullOrEmpty(scaleParam) && PileDesign.Common.NumericText.TryParse(scaleParam, out double parsedScale))
-                {
-                    scale = parsedScale;
-                }
-                // システムDPIを取得
-                var dpiInfo = VisualTreeHelper.GetDpi(Canvas3DLayout);
-                double dpiX = dpiInfo.PixelsPerInchX;
-                double dpiY = dpiInfo.PixelsPerInchY;
-
-                int width = (int)(Canvas3DLayout.ActualWidth * dpiX / 96.0 * scale);
-                int height = (int)(Canvas3DLayout.ActualHeight * dpiY / 96.0 * scale);
-
-                // Canvas を RenderTargetBitmap でキャプチャ（システムDPI考慮）
-                var rtb = new RenderTargetBitmap(
-                    width,
-                    height,
-                    dpiX * scale, dpiY * scale,
-                    PixelFormats.Pbgra32);
-
-                // 背景を白で描画してからCanvasを直接レンダリング
-                var dv = new DrawingVisual();
-                using (var dc = dv.RenderOpen())
-                {
-                    dc.DrawRectangle(Brushes.White, null,
-                        new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
-                }
-                rtb.Render(dv);
-                rtb.Render(Canvas3DLayout);
+                var rtb = RenderCanvasImage(scaleParam, "画像のコピー");
+                if (rtb == null) return;
 
                 // Clipboard.SetImage()はStringMetadata非対応で例外になる環境があるため
                 // BitmapSourceを一切渡さず、生バイトストリームのみでクリップボードに設定
@@ -180,15 +216,23 @@ namespace PileDesign.ViewModels
                 var dataObject = new DataObject();
                 dataObject.SetData("PNG", pngStream, false);
                 dataObject.SetData(DataFormats.Dib, new System.IO.MemoryStream(dibBytes), false);
-                Common.ClipboardHelper.TrySetDataObject(dataObject, true);
 
-                StatusMessage = $"画像をクリップボードにコピーしました ({width}x{height})";
+                // 書き込めたかで知らせ方を分ける。以前は結果を見ずに「コピーしました」と出していたので、
+                // 他のアプリがクリップボードを使っていて書き込めなくても成功と表示した
+                StatusMessage = DescribeImageCopyResult(
+                    Common.ClipboardHelper.TrySetDataObject(dataObject, true), rtb.PixelWidth, rtb.PixelHeight);
             }
             catch (Exception ex)
             {
                 PileDesign.Services.MessageService.ShowError($"画像のコピーに失敗しました", ex, "エラー");
             }
         }
+
+        /// <summary>画像のコピーの結果の文。書き込めなかったときは、その理由と対処を書く。</summary>
+        internal static string DescribeImageCopyResult(bool copied, int width, int height)
+            => copied
+                ? $"画像をクリップボードにコピーしました ({width}x{height})"
+                : "画像をクリップボードにコピーできませんでした。他のアプリがクリップボードを使っている可能性があります。少し待ってからやり直してください。";
 
         /// <summary>
         /// アイソメトリック表示でモデル全体（杭先端含む）をキャプチャし、PNGバイト配列を返す。
