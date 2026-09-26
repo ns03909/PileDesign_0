@@ -36,15 +36,10 @@ namespace PileDesign.Services
             var level1Cases = SeismicCases(inputModel, level: 1);
             var level2Cases = SeismicCases(inputModel, level: 2);
             bool level2UsesDamageLimit = seismicGrade == "S";
-            var soilPileByPileBodyNo = SoilPilesByPileBodyNo(inputModel);
 
             foreach (var pile in inputModel.PileLayoutItems)
             {
-                // 杭体 No で引く。pile.SoilPile のキャッシュは
-                // (地盤No, 杭体No, 杭頭Z) を鍵にするため Z が合わないと null になる。
-                // 検定本体 (EvaluationService) も同じく杭体 No で引いているのでそれに合わせる。
-                if (!soilPileByPileBodyNo.TryGetValue(pile.PileBodyNo, out var soilPile))
-                    soilPile = pile.SoilPile;
+                var soilPile = SoilPileFor(inputModel, pile);
                 if (soilPile == null) continue;
 
                 AddPileItems(items, pile, soilPile, level1Cases, level2Cases, level2UsesDamageLimit);
@@ -91,20 +86,16 @@ namespace PileDesign.Services
             }
         }
 
-        /// <summary>杭体 No で地盤を引けるようにする。同じ杭体 No が複数あれば最初の 1 つ。</summary>
-        private static Dictionary<int, SoilPile> SoilPilesByPileBodyNo(InputModel inputModel)
-        {
-            var map = new Dictionary<int, SoilPile>();
-            var soilPiles = inputModel.ElementDivision?.SoilPiles;
-            if (soilPiles == null) return map;
-
-            foreach (var sp in soilPiles)
-            {
-                if (sp.PileBodyNo > 0)
-                    map.TryAdd(sp.PileBodyNo, sp);
-            }
-            return map;
-        }
+        /// <summary>
+        /// この杭の地盤条件の土層-杭セット。(地盤No, 杭体No, 杭頭Z) で引く (<see cref="PileLayoutDataItem.SoilPile"/> と同じ対応)。
+        ///
+        /// 支持力は地盤と杭頭の高さで決まる。以前は杭体 No だけで引き、同じ杭体 No のセットが複数あると
+        /// 最初の 1 つを使ったので、地盤や杭頭の高さが違う杭に別の杭の支持力を当てていた。
+        /// 検定する入力 (<paramref name="inputModel"/>) の要素分割から引き、無ければ杭自身の条件で組み立てたものを使う
+        /// (<see cref="PileLayoutDataItem.SoilPile"/> の既定の動き)。
+        /// </summary>
+        internal static SoilPile? SoilPileFor(InputModel inputModel, PileLayoutDataItem pile)
+            => inputModel.LookupSoilPile(pile.GroundNo, pile.PileBodyNo, pile.PileHeadZ) ?? pile.SoilPile;
 
         /// <summary>解析対象の地震時荷重ケース (表示名, ケース番号)。</summary>
         private static IReadOnlyList<(string Name, int No)> SeismicCases(InputModel inputModel, int level)
@@ -124,9 +115,12 @@ namespace PileDesign.Services
         /// 軸力の向きに応じて、押込みか引抜きの<b>どちらか一方</b>を足す。
         /// 両方出すと、圧縮の杭に「引抜きは OK」という無意味な行が並ぶ。
         ///
-        /// 引抜き抵抗は内部で<b>負値</b>として保持されている
-        /// (<see cref="SoilPile.CalculateResistances"/> 参照) ので、応答も限界も大きさで比べる。
+        /// 押込みの限界値は<b>正値</b>、引抜き抵抗は<b>負値</b>で保持されている
+        /// (<see cref="SoilPile.CalculateResistances"/> 参照) ので、符号を確かめてから大きさで比べる。
         /// 限界値が 0 のときは検定できない (引抜き抵抗を計算していない杭など) ので出さない。
+        /// 限界値が数でない・無限大・符号が逆のときは「検定不能」として出す。以前は大きさを取ってから
+        /// 0 より大きければ採用したので、無限大の限界値では有限の軸力がすべて合格になり、
+        /// 符号の逆な限界値もそのまま使われた。
         /// </summary>
         private static void AddIfAvailable(List<EvaluationItem> items, PileLayoutDataItem pile,
             int level, string limitName, string loadCaseName,
@@ -137,8 +131,10 @@ namespace PileDesign.Services
             bool isCompression = axialForce >= 0;
 
             double response = Math.Abs(axialForce);
-            double limit = Math.Abs(isCompression ? compressionLimit : upliftLimit);
-            if (!(limit > 0)) return;
+            double signedLimit = isCompression ? compressionLimit : upliftLimit;
+            if (signedLimit == 0) return;
+            string? unavailable = DescribeInvalidLimit(signedLimit, isCompression);
+            double limit = unavailable == null ? Math.Abs(signedLimit) : double.NaN;
 
             items.Add(new EvaluationItem
             {
@@ -160,8 +156,22 @@ namespace PileDesign.Services
                 Limit = limit,
                 Unit = Unit,
                 AxialForce = axialForce,   // 符号付き。圧縮が正
-                IsOk = !(response > limit),
+                UnavailableReason = unavailable,
+                IsOk = unavailable == null && !(response > limit),
             });
+        }
+
+        /// <summary>
+        /// 限界値が検定に使えないときの理由 (使えるなら null)。押込みは正、引抜きは負が規約。
+        /// </summary>
+        internal static string? DescribeInvalidLimit(double signedLimit, bool isCompression)
+        {
+            string what = isCompression ? "押込みの支持力" : "引抜き抵抗";
+            if (!double.IsFinite(signedLimit))
+                return $"{what}が数値として求まっていません ({signedLimit})。地盤・杭体の入力を確認してください";
+            if (isCompression ? signedLimit < 0 : signedLimit > 0)
+                return $"{what}の符号が逆です ({signedLimit:0.0} kN)。地盤・杭体の入力を確認してください";
+            return null;
         }
     }
 }

@@ -189,6 +189,59 @@ namespace TestProject1
             Assert.AreEqual("杭No.7", Evaluate(axialForceVL: 900.0).First().TargetDescription);
         }
 
+        // ── 限界値の異常 ───────────────────────────────────
+
+        /// <summary>
+        /// 限界値が無限大・NaN のときは「検定不能」。以前は大きさを取って 0 より大きければ採用したので、
+        /// 無限大の限界値では有限の軸力がすべて合格の形になった (表示は IsOk の有限性の確認で NG に化けていた)。
+        /// </summary>
+        [TestMethod]
+        public void NonFiniteLimits_AreUnavailableNotPassed()
+        {
+            foreach (double bad in new[] { double.PositiveInfinity, double.NaN })
+            {
+                var items = Evaluate(axialForceVL: 900.0, ground: new SoilPile { Rfu = bad });
+                Assert.AreEqual(3, items.Count, $"Ru={bad}: 項目を黙って落としています");
+                Assert.IsTrue(items.All(i => i.IsUnavailable && !i.IsJudged && !i.IsOk), $"Ru={bad}: 検定不能になっていません");
+                StringAssert.Contains(items[0].UnavailableReason, "押込みの支持力");
+                Assert.AreEqual("検定不能", items[0].StatusLabel);
+            }
+
+            var uplift = Evaluate(axialForceVL: -500.0, ground: new SoilPile
+            {
+                Rfu = Ru, Rt_SLS = double.NegativeInfinity, Rt_DLS = -1200.0, Rt_ULS = -1800.0,
+            });
+            Assert.IsTrue(uplift.Single(i => i.Level == 0).IsUnavailable, "引抜きの -∞ を検定に使っています");
+            Assert.IsTrue(uplift.Where(i => i.Level > 0).All(i => i.IsJudged && i.IsOk), "正しい限界値の項目まで検定不能にしています");
+        }
+
+        /// <summary>押込みは正・引抜きは負が規約。符号が逆の限界値は大きさを取って使わない。</summary>
+        [TestMethod]
+        public void LimitsWithTheWrongSign_AreUnavailable()
+        {
+            var compression = Evaluate(axialForceVL: 900.0, ground: new SoilPile { Rfu = -Ru });
+            Assert.IsTrue(compression.All(i => i.IsUnavailable), "負の押込み支持力を大きさで使っています");
+            StringAssert.Contains(compression[0].UnavailableReason, "符号が逆");
+
+            var uplift = Evaluate(axialForceVL: -500.0, ground: new SoilPile
+            {
+                Rfu = Ru, Rt_SLS = 600.0, Rt_DLS = 1200.0, Rt_ULS = 1800.0,
+            });
+            Assert.IsTrue(uplift.All(i => i.IsUnavailable && i.Kind == EvaluationKind.PileUpliftResistance),
+                "正の引抜き抵抗を大きさで使っています");
+        }
+
+        [TestMethod]
+        public void DescribeInvalidLimit_FollowsTheSignConvention()
+        {
+            Assert.IsNull(PileBearingEvaluator.DescribeInvalidLimit(1000, isCompression: true));
+            Assert.IsNull(PileBearingEvaluator.DescribeInvalidLimit(-1000, isCompression: false));
+            Assert.IsNotNull(PileBearingEvaluator.DescribeInvalidLimit(-1000, isCompression: true));
+            Assert.IsNotNull(PileBearingEvaluator.DescribeInvalidLimit(1000, isCompression: false));
+            Assert.IsNotNull(PileBearingEvaluator.DescribeInvalidLimit(double.PositiveInfinity, isCompression: true));
+            Assert.IsNotNull(PileBearingEvaluator.DescribeInvalidLimit(double.NaN, isCompression: false));
+        }
+
         // ── 入力が無いとき ─────────────────────────────────
 
         [TestMethod]
@@ -232,6 +285,35 @@ namespace TestProject1
             Assert.IsTrue(items.All(i => i.Kind == EvaluationKind.PileBearingCompression));
             Assert.AreEqual(0, items.OrderByDescending(i => i.Ratio).First().Level,
                 "長期 (使用限界) が支配になっていない");
+        }
+
+        /// <summary>
+        /// 杭ごとに、その杭の (地盤No, 杭体No, 杭頭Z) の土層-杭セットで支持力を取ること。
+        ///
+        /// 以前は杭体 No だけで引き、同じ杭体 No のセットが複数あると最初の 1 つを使ったので、
+        /// 地盤や杭頭の高さが違う杭に別の杭の支持力を当てていた。同じ杭体 No で地盤の違うセットを
+        /// 先頭に置き、それが使われないことを確かめる。
+        /// </summary>
+        [TestMethod]
+        public void EachPileUsesTheSoilPileOfItsOwnGroundAndHead()
+        {
+            var (inputModel, error) = IntegrationTests.BuildExampleInputModel("Example9", "PileExample9");
+            Assert.IsNotNull(inputModel, error);
+            var pile = inputModel.PileLayoutItems[0];
+            var own = PileBearingEvaluator.SoilPileFor(inputModel, pile);
+            Assert.IsNotNull(own);
+            Assert.AreEqual(pile.GroundNo, own.GroundNo);
+            Assert.AreEqual(pile.PileBodyNo, own.PileBodyNo);
+            Assert.AreEqual(pile.PileHeadZ, own.Z, 1e-6);
+
+            const double decoyRu = 1.0e7;
+            inputModel.ElementDivision.SoilPiles.Insert(0,
+                new SoilPile { GroundNo = pile.GroundNo + 98, PileBodyNo = pile.PileBodyNo, Rfu = decoyRu });
+
+            Assert.AreSame(own, PileBearingEvaluator.SoilPileFor(inputModel, pile), "杭体 No だけで別の地盤のセットを引いています");
+            var items = PileBearingEvaluator.Evaluate(inputModel, "A");
+            Assert.IsTrue(items.Count > 0);
+            Assert.IsFalse(items.Any(i => i.Limit >= decoyRu / 3.0 - 1e-6), "別の地盤の支持力で検定しています");
         }
     }
 }
