@@ -13,6 +13,9 @@ namespace PileDesign.Models.Results
         // 追加メタデータ
         public string LoadCaseName { get; init; } = "";
         public string LoadCombinationName { get; init; } = "";
+
+        /// <summary>荷重組合せの番号 (表の絞り込みで組合せを見分ける。表示名は係数を丸めた文字列で重なりうる)。</summary>
+        public int? LoadCombinationNo { get; init; }
         public bool IsLiquefaction { get; init; }
 
         /// <summary>
@@ -45,6 +48,7 @@ namespace PileDesign.Models.Results
             Rows = rows,
             LoadCaseName = LoadCaseName,
             LoadCombinationName = LoadCombinationName,
+            LoadCombinationNo = LoadCombinationNo,
             IsLiquefaction = IsLiquefaction,
             SpansAllConditions = SpansAllConditions,
             OmittedRowCount = OmittedRowCount,

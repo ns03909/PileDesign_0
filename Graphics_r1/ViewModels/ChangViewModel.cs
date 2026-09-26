@@ -293,12 +293,8 @@ namespace PileDesign.ViewModels
         {
             var input = _inputModel;
             if (input?.LoadCasesInput?.LoadCombinations == null || string.IsNullOrEmpty(name)) return null;
-
-            foreach (var comb in input.LoadCasesInput.LoadCombinations)
-            {
-                if (comb.GetName() == name || comb.Name == name) return comb;
-            }
-            return null;
+            // 表示名の重なる組合せは番号付きの選択肢で見分ける (LoadCombinations.GetLoadCombination)
+            return LoadCombinations.GetLoadCombination(input.LoadCasesInput.LoadCombinations, name);
         }
 
         // ヘルパ：単一杭の軸力を取得（選択 loadCase に応じて）

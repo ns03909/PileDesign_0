@@ -12,6 +12,9 @@ namespace PileDesign.Models.Results
         string LoadCaseName { get; }
         string LoadCombinationName { get; }
 
+        /// <summary>荷重組合せの番号 (表示名は重なりうるので、絞り込みはこれで見分ける)。組合せの無い行は null。</summary>
+        int? LoadCombinationNo { get; }
+
         /// <summary>液状化を考慮したケースか。液状化の概念が無い検定では null。</summary>
         bool? IsLiquefaction { get; }
     }

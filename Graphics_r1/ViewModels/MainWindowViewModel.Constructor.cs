@@ -336,12 +336,11 @@ namespace PileDesign.ViewModels
         // LoadCombinationOptionの更新メソッド
         private void UpdateLoadCombinationOption()
         {
-            var loadCombinationNames = new ObservableCollection<string>();
-
-            foreach (var loadCombination in CurrentInputModel.LoadCasesInput.LoadCombinations)
-            {
-                loadCombinationNames.Add(loadCombination.GetName());
-            }
+            // 表示名が重なる組合せには番号を添え、選択肢の文字列で組合せを一意に引けるようにする
+            // (LoadCombinations.GetLoadCombination が番号へ解く)
+            var loadCombinationNames = new ObservableCollection<string>(
+                LoadCombinationChoice.Build(CurrentInputModel.LoadCasesInput.LoadCombinations)
+                    .Where(c => !c.IsAll).Select(c => c.Label));
             LoadCombinationNameOption = loadCombinationNames;
 
             // 現在の選択値が新オプションに存在しなければ先頭にフォールバック。

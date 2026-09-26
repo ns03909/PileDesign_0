@@ -37,7 +37,7 @@ namespace PileDesign.Converters
 
     /// <summary>
     /// 荷重組合せ名が解析済みかどうかを Visibility に変換する。
-    /// values[0]: string loadCombinationName (GetName() or Name 形式)
+    /// values[0]: string loadCombinationName (GetName() or Name 形式)、または LoadCombinationChoice (番号で照合)
     /// values[1]: string selectedLoadCaseName (省略時 or「すべて」は全荷重ケース対象)
     /// values[2]: AnaModel currentModel
     /// </summary>
@@ -45,6 +45,20 @@ namespace PileDesign.Converters
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
+            // 番号を持つ選択肢 (グラフ) は番号で照合する。表示名は重なりうる
+            if (values.Length >= 3 &&
+                values[0] is PileDesign.Models.InputData.LoadCombinationChoice choice &&
+                values[2] is AnaModel choiceModel &&
+                choiceModel.AnalysisStepResults != null)
+            {
+                if (choice.IsAll) return Visibility.Collapsed;
+                string? caseName = values[1] as string;
+                bool byCase = !string.IsNullOrEmpty(caseName) && !PileDesign.Common.UiText.IsAll(caseName);
+                bool analyzed = choiceModel.AnalysisStepResults
+                    .Any(r => (!byCase || r.LoadCase?.LoadName == caseName) && r.LoadCombination?.No == choice.No);
+                return analyzed ? Visibility.Visible : Visibility.Collapsed;
+            }
+
             if (values.Length >= 3 &&
                 values[0] is string loadCombinationName &&
                 values[2] is AnaModel model &&
@@ -58,10 +72,16 @@ namespace PileDesign.Converters
                 bool filterByLoadCase = !string.IsNullOrEmpty(selectedLoadCase) &&
                                         !PileDesign.Common.UiText.IsAll(selectedLoadCase);
 
+                // 選択肢の文字列は表示名 (重なるときは番号付き)。組合せに解けたら番号で比べる
+                // (表示名で比べると、表示名の同じ別の組合せが解析済みなら印が付く)
+                var combination = PileDesign.Models.InputData.LoadCombinations.GetLoadCombination(
+                    model.InputModel?.LoadCasesInput?.LoadCombinations, loadCombinationName);
                 bool isAnalyzed = model.AnalysisStepResults
                     .Any(r => (!filterByLoadCase || r.LoadCase?.LoadName == selectedLoadCase) &&
-                              (r.LoadCombination?.GetName() == loadCombinationName ||
-                               r.LoadCombination?.Name == loadCombinationName));
+                              (combination != null
+                                  ? r.LoadCombination?.No == combination.No
+                                  : r.LoadCombination?.GetName() == loadCombinationName
+                                    || r.LoadCombination?.Name == loadCombinationName));
                 return isAnalyzed ? Visibility.Visible : Visibility.Collapsed;
             }
             return Visibility.Collapsed;

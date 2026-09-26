@@ -40,7 +40,8 @@ namespace PileDesign.ViewModels
         // フィルタ選択肢
         public ObservableCollection<string> TableCategoryFilterOptions { get; } = [];
         public ObservableCollection<string> LoadCaseFilterOptions { get; } = [];
-        public ObservableCollection<string> LoadCombinationFilterOptions { get; } = [];
+        // 荷重組合せは番号で見分ける (表示名は係数を丸めた文字列で重なりうる。LoadCombinationChoice 参照)
+        public ObservableCollection<LoadCombinationChoice> LoadCombinationFilterOptions { get; } = [];
         public ObservableCollection<string> LiquefactionFilterOptions { get; } = [];
 
         [ObservableProperty]
@@ -54,9 +55,11 @@ namespace PileDesign.ViewModels
         partial void OnSelectedLoadCaseFilterChanged(string value) => ApplyFilters();
 
         [ObservableProperty]
-        private string _selectedLoadCombinationFilter = UiText.All;
+        private LoadCombinationChoice _selectedLoadCombinationFilter = LoadCombinationChoice.Build(Array.Empty<LoadCombination>())[0];
 
-        partial void OnSelectedLoadCombinationFilterChanged(string value) => ApplyFilters();
+        partial void OnSelectedLoadCombinationFilterChanged(LoadCombinationChoice value) => ApplyFilters();
+
+        private bool FiltersByCombination => SelectedLoadCombinationFilter is { IsAll: false };
 
         [ObservableProperty]
         private string _selectedLiquefactionFilter = UiText.All;
@@ -110,9 +113,12 @@ namespace PileDesign.ViewModels
                 LoadCaseFilterOptions.Add(name);
 
             LoadCombinationFilterOptions.Clear();
-            LoadCombinationFilterOptions.Add(UiText.All);
-            foreach (var name in AllTables.Select(t => t.LoadCombinationName).Where(s => !string.IsNullOrEmpty(s)).Distinct())
-                LoadCombinationFilterOptions.Add(name);
+            foreach (var choice in LoadCombinationChoice.Build(AllTables
+                         .Where(t => t.LoadCombinationNo != null)
+                         .Select(t => (No: t.LoadCombinationNo!.Value, Name: t.LoadCombinationName))
+                         .Distinct()
+                         .OrderBy(c => c.No)))
+                LoadCombinationFilterOptions.Add(choice);
 
             LiquefactionFilterOptions.Clear();
             LiquefactionFilterOptions.Add(UiText.All);
@@ -121,7 +127,7 @@ namespace PileDesign.ViewModels
 
             SelectedTableCategoryFilter = UiText.All;
             SelectedLoadCaseFilter = UiText.All;
-            SelectedLoadCombinationFilter = UiText.All;
+            SelectedLoadCombinationFilter = LoadCombinationFilterOptions[0];
             SelectedLiquefactionFilter = UiText.All;
         }
 
@@ -173,7 +179,7 @@ namespace PileDesign.ViewModels
             (SelectedLoadCaseFilter == UiText.All
                 || (levelCaseNames != null && levelCaseNames.Contains(t.LoadCaseName))
                 || t.LoadCaseName == SelectedLoadCaseFilter)
-            && (SelectedLoadCombinationFilter == UiText.All || t.LoadCombinationName == SelectedLoadCombinationFilter)
+            && (!FiltersByCombination || t.LoadCombinationNo == SelectedLoadCombinationFilter.No)
             && (SelectedLiquefactionFilter == UiText.All
                 || (SelectedLiquefactionFilter == "有" ? t.IsLiquefaction : !t.IsLiquefaction));
 
@@ -185,7 +191,7 @@ namespace PileDesign.ViewModels
         private bool RowMatchesConditionFilters(object row)
         {
             bool filtering = SelectedLoadCaseFilter != UiText.All
-                          || SelectedLoadCombinationFilter != UiText.All
+                          || FiltersByCombination
                           || SelectedLiquefactionFilter != UiText.All;
             if (!filtering) return true;
 
@@ -205,8 +211,7 @@ namespace PileDesign.ViewModels
                 else if (c.LoadCaseName != SelectedLoadCaseFilter) return false;
             }
 
-            if (SelectedLoadCombinationFilter != UiText.All
-                && c.LoadCombinationName != SelectedLoadCombinationFilter) return false;
+            if (FiltersByCombination && c.LoadCombinationNo != SelectedLoadCombinationFilter.No) return false;
 
             if (SelectedLiquefactionFilter != UiText.All)
             {

@@ -628,12 +628,13 @@ namespace PileDesign.ViewModels
             var results = CurrentModel.AnalysisStepResults
                 .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, selectedLoadCase));
 
-            // 荷重組合せが選択されている場合はさらにフィルタリング
-            // SelectedLoadCombinationNameはGetName()形式（"1.00/1.00/1.00"）なので、
-            // LoadCombination.Name（"αL:1.00/βU:1.00/βL:1.00"）ではなくGetName()で比較する
+            // 荷重組合せが選択されている場合はさらに絞る。選択肢の文字列は表示名 (重なるときは番号付き) なので、
+            // 組合せに解いてから番号で比べる (表示名で比べると、表示名の同じ別の組合せの結果を拾う)
             if (!string.IsNullOrEmpty(SelectedLoadCombinationName))
             {
-                results = results.Where(r => r.LoadCombination?.GetName() == SelectedLoadCombinationName);
+                var selectedCombination = LoadCombinations.GetLoadCombination(
+                    CurrentInputModel?.LoadCasesInput?.LoadCombinations, SelectedLoadCombinationName);
+                results = results.Where(r => LoadCombination.IsSameCombination(r.LoadCombination, selectedCombination));
             }
 
             var resultList = results.ToList();

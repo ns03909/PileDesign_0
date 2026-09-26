@@ -233,8 +233,8 @@ namespace PileDesign.ViewModels
         public bool IsDistributedModeOptionVisible => SelectedGraphOption == "杭周地盤変位反力";
         public bool IsPureTheoreticalOptionVisible => IsDistributedModeOptionVisible && IsDistributedMode;
 
-        private ObservableCollection<string> _loadCombinationOptions;
-        public ObservableCollection<string> LoadCombinationOptions
+        private ObservableCollection<LoadCombinationChoice> _loadCombinationOptions;
+        public ObservableCollection<LoadCombinationChoice> LoadCombinationOptions
         {
             get => _loadCombinationOptions;
             set
@@ -260,8 +260,9 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private string _selectedLoadCombinationOption;
-        public string SelectedLoadCombinationOption
+        // 選んだ組合せは番号で持つ (表示名は係数を丸めた文字列で、重なりうる。LoadCombinationChoice 参照)
+        private LoadCombinationChoice _selectedLoadCombinationOption;
+        public LoadCombinationChoice SelectedLoadCombinationOption
         {
             get => _selectedLoadCombinationOption;
             set
@@ -482,11 +483,7 @@ namespace PileDesign.ViewModels
             }
             SelectedLoadCaseOption = LoadCaseOptions[0]; // 初期値
 
-            LoadCombinationOptions = [UiText.All];
-            foreach (LoadCombination loadCombination in InputModel.LoadCasesInput.LoadCombinations)
-            {
-                LoadCombinationOptions.Add(loadCombination.GetName());
-            }
+            LoadCombinationOptions = new(LoadCombinationChoice.Build(InputModel.LoadCasesInput.LoadCombinations));
             SelectedLoadCombinationOption = LoadCombinationOptions[0]; // 初期値
 
             PileOptions = [UiText.All];

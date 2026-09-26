@@ -1,5 +1,7 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 
 namespace PileDesign.Models.InputData
 {
@@ -152,26 +154,73 @@ namespace PileDesign.Models.InputData
             return Alpha1.ToString("F2") + "/" + Beta1.ToString("F2") + "/" + Beta2.ToString("F2");
         }
 
-        // 深いコピーを作成するメソッド
-        public LoadCombination DeepCopy()
+        /// <summary>
+        /// 値を新しいインスタンスへ写す。
+        ///
+        /// 以前は MemberwiseClone で、PropertyChanged の購読者 (元の組合せを見ている画面) まで写していた。
+        /// 解析結果や Undo の控えとして複製した組合せを変えると、元の組合せの画面へ通知が飛んだ。
+        /// 購読者は写さない。
+        /// </summary>
+        public LoadCombination DeepCopy() => new(No, Alpha1, Beta1, Beta2)
         {
-            return (LoadCombination)this.MemberwiseClone();
+            _isApplicable = _isApplicable,
+            _isAnalyzed = _isAnalyzed,
+        };
+    }
+
+    /// <summary>
+    /// グラフなどで荷重組合せを選ぶ項目。表示は係数、選んだものは<b>番号</b>で見分ける (<see cref="No"/> が null は「すべて」)。
+    ///
+    /// 以前は選択肢を係数を小数 2 桁に丸めた文字列で持ち、一致した最初の組合せを返していた。係数の近い 2 つの
+    /// 組合せは同じ文字列になり、選び分けられなかった。表示が重なるときは番号を添える。
+    /// </summary>
+    public sealed record LoadCombinationChoice(int? No, string Label)
+    {
+        public override string ToString() => Label;
+
+        public bool IsAll => No == null;
+
+        /// <summary>「すべて」と各組合せの選択肢。表示名が重なる組合せには番号を添える。</summary>
+        public static List<LoadCombinationChoice> Build(IEnumerable<LoadCombination>? combinations)
+            => Build(combinations?.Where(c => c != null).Select(c => (c.No, c.GetName())));
+
+        /// <summary>(番号, 表示名) の組から選択肢を作る (表の絞り込みなど、組合せの実体を持たない所で使う)。</summary>
+        public static List<LoadCombinationChoice> Build(IEnumerable<(int No, string Name)>? combinations)
+        {
+            var list = new List<LoadCombinationChoice> { new(null, PileDesign.Common.UiText.All) };
+            var items = combinations?.ToList() ?? [];
+            var duplicatedNames = items.GroupBy(c => c.Name).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet();
+            foreach (var (no, name) in items)
+                list.Add(new(no, duplicatedNames.Contains(name) ? $"{name} (組合せ{no})" : name));
+            return list;
         }
     }
 
-    // 名前からLoadCombinationを返すメソッド
+    /// <summary>
+    /// 画面の選択肢の文字列と荷重組合せの対応。
+    ///
+    /// 選択肢の文字列は <see cref="LoadCombinationChoice.Build(IEnumerable{LoadCombination})"/> の表示名
+    /// (係数を丸めた文字列。重なるときは番号を添える)。以前は係数の文字列だけで照合し、一致した最初の組合せを返したので、
+    /// 表示名の重なる 2 つ目の組合せは選べなかった。
+    /// </summary>
     public static class LoadCombinations
     {
-        public static LoadCombination GetLoadCombination(ObservableCollection<LoadCombination> loadCombinations, string name)
+        /// <summary>選択肢の文字列に当たる組合せ。番号を添えた表示名も解く。どれにも当たらなければ係数の文字列で探す。</summary>
+        public static LoadCombination? GetLoadCombination(IEnumerable<LoadCombination>? loadCombinations, string? label)
         {
-            foreach (var loadCombination in loadCombinations)
-            {
-                if (name == loadCombination.GetName())
-                {
-                    return loadCombination;
-                }
-            }
-            return null;
+            if (loadCombinations == null || string.IsNullOrEmpty(label)) return null;
+            var list = loadCombinations.Where(c => c != null).ToList();
+            var choice = LoadCombinationChoice.Build(list).FirstOrDefault(c => !c.IsAll && c.Label == label);
+            if (choice != null) return list.FirstOrDefault(c => c.No == choice.No);
+            return list.FirstOrDefault(c => c.GetName() == label || c.Name == label);
+        }
+
+        /// <summary>組合せの選択肢の文字列 (<see cref="GetLoadCombination"/> の逆)。</summary>
+        public static string? LabelOf(IEnumerable<LoadCombination>? loadCombinations, LoadCombination? combination)
+        {
+            if (combination == null) return null;
+            return LoadCombinationChoice.Build(loadCombinations).FirstOrDefault(c => c.No == combination.No)?.Label
+                ?? combination.GetName();
         }
     }
 }

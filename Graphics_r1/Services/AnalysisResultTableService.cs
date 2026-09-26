@@ -101,6 +101,7 @@ namespace PileDesign.Services
                     Rows = forceRows,
                     LoadCaseName = loadCase?.LoadName ?? "",
                     LoadCombinationName = loadCombination?.Name ?? "",
+                    LoadCombinationNo = loadCombination?.No,
                     IsLiquefaction = isLiquefaction,
                     OmittedRowCount = omitted,
                 });
@@ -141,6 +142,7 @@ namespace PileDesign.Services
                     Rows = dispRows,
                     LoadCaseName = loadCase?.LoadName ?? "",
                     LoadCombinationName = loadCombination?.Name ?? "",
+                    LoadCombinationNo = loadCombination?.No,
                     IsLiquefaction = isLiquefaction,
                     OmittedRowCount = omitted,
                 });
@@ -182,6 +184,7 @@ namespace PileDesign.Services
                         Rows = pileHeadRows.OrderBy(r => ((PileHeadForceRow)r).PileNo).ToList(),
                         LoadCaseName = loadCase?.LoadName ?? "",
                         LoadCombinationName = loadCombination?.Name ?? "",
+                    LoadCombinationNo = loadCombination?.No,
                         IsLiquefaction = isLiquefaction,
                         OmittedRowCount = omitted,
                     });
@@ -207,6 +210,7 @@ namespace PileDesign.Services
                     Rows = nodeDispRows,
                     LoadCaseName = loadCase?.LoadName ?? "",
                     LoadCombinationName = loadCombination?.Name ?? "",
+                    LoadCombinationNo = loadCombination?.No,
                     IsLiquefaction = isLiquefaction,
                     OmittedRowCount = omitted,
                 });
@@ -243,6 +247,7 @@ namespace PileDesign.Services
                     Rows = soilSpringRows,
                     LoadCaseName = loadCase?.LoadName ?? "",
                     LoadCombinationName = loadCombination?.Name ?? "",
+                    LoadCombinationNo = loadCombination?.No,
                     IsLiquefaction = isLiquefaction,
                     OmittedRowCount = omitted,
                 });
@@ -361,6 +366,7 @@ namespace PileDesign.Services
                         Rows = mphiRows,
                         LoadCaseName = loadCase?.LoadName ?? "",
                         LoadCombinationName = loadCombination?.Name ?? "",
+                    LoadCombinationNo = loadCombination?.No,
                         IsLiquefaction = isLiquefaction
                     });
                 }
@@ -497,6 +503,7 @@ namespace PileDesign.Services
                         Rows = mthetaRows,
                         LoadCaseName = loadCase?.LoadName ?? "",
                         LoadCombinationName = loadCombination?.Name ?? "",
+                    LoadCombinationNo = loadCombination?.No,
                         IsLiquefaction = isLiquefaction
                     });
                 }
@@ -579,6 +586,7 @@ namespace PileDesign.Services
                         Rows = summaryRows,
                         LoadCaseName = loadCase?.LoadName ?? "",
                         LoadCombinationName = loadCombination?.Name ?? "",
+                    LoadCombinationNo = loadCombination?.No,
                         IsLiquefaction = isLiquefaction,
                         OmittedRowCount = summaryOmitted,
                     });

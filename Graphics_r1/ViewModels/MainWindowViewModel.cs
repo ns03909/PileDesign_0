@@ -1544,7 +1544,8 @@ namespace PileDesign.ViewModels
             // 荷重組合せを選択
             if (firstResult.LoadCombination != null)
             {
-                SelectedLoadCombinationName = firstResult.LoadCombination.GetName();
+                SelectedLoadCombinationName = LoadCombinations.LabelOf(
+                    CurrentInputModel?.LoadCasesInput?.LoadCombinations, firstResult.LoadCombination);
             }
 
             // 液状化状態を選択

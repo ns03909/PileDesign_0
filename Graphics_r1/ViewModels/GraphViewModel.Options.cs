@@ -614,20 +614,16 @@ namespace PileDesign.ViewModels
         private ObservableCollection<LoadCombination> GetSelectedLoadCombinations()
         {
             ObservableCollection<LoadCombination> selectedLoadCombinations = [];
-            if (SelectedLoadCombinationOption == UiText.All)
+            if (SelectedLoadCombinationOption == null || SelectedLoadCombinationOption.IsAll)
             {
                 selectedLoadCombinations = InputModel.LoadCasesInput.LoadCombinations;
             }
             else
             {
-                foreach (var loadCombination in InputModel.LoadCasesInput.LoadCombinations)
-                {
-                    if (SelectedLoadCombinationOption == loadCombination.GetName())
-                    {
-                        selectedLoadCombinations.Add(loadCombination);
-                        return selectedLoadCombinations;
-                    }
-                }
+                // 番号で引く (表示名は係数を丸めた文字列で、別の組合せと重なりうる)
+                var selected = InputModel.LoadCasesInput.LoadCombinations
+                    .FirstOrDefault(c => c?.No == SelectedLoadCombinationOption.No);
+                if (selected != null) selectedLoadCombinations.Add(selected);
             }
             return selectedLoadCombinations;
         }
