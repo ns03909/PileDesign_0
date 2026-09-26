@@ -112,6 +112,16 @@ namespace PileDesign.Models.Results
         public string LoadCombinationName { get; init; } = "";
 
         /// <summary>
+        /// 荷重ケースの番号・荷重組合せの番号 (水平解析の検定のみ。それ以外は null)。
+        /// 荷重条件の照合 (収束状態など) は名前ではなく<see cref="Level"/> とこの番号で行う
+        /// (荷重ケース名は空欄・重複がありえ、組合せ名は係数の丸めで別の組合せと重なりうる)。表には出さない。
+        /// </summary>
+        public int? LoadCaseNo { get; init; }
+
+        /// <inheritdoc cref="LoadCaseNo"/>
+        public int? LoadCombinationNo { get; init; }
+
+        /// <summary>
         /// 液状化を考慮したケースか。液状化の概念が無い検定 (基礎梁の傾斜角) では null。
         /// 条件フィルタで行を絞るのに使う。
         /// </summary>
@@ -151,10 +161,23 @@ namespace PileDesign.Models.Results
         public bool IsOutOfScope => !string.IsNullOrEmpty(OutOfScopeReason);
 
         /// <summary>
-        /// OK / NG を判定できる項目か。収束していないケースと、算定式の適用範囲の外の項目は判定しない。
+        /// 検定に要るデータ (その荷重条件の解析結果・断面・限界曲線など) が欠けていて検定できなかったなら、その理由
+        /// (利用者向けの文)。検定したなら null。応答値・限界値は NaN。
+        ///
+        /// 以前は検定できないとその項目を作らずに進めていたので、一覧に項目が無い理由が分からず、
+        /// 検定していないものが「NG 無し」に紛れた。検定の<b>対象外</b> (杭以外の要素、規定の無い杭種の杭頭回転角など) は
+        /// 項目を作らない。こちらは対象なのにデータが欠けたもの。
+        /// </summary>
+        public string? UnavailableReason { get; init; }
+
+        /// <summary>データが欠けて検定できなかった項目か。</summary>
+        public bool IsUnavailable => !string.IsNullOrEmpty(UnavailableReason);
+
+        /// <summary>
+        /// OK / NG を判定できる項目か。収束していないケース・算定式の適用範囲の外・データが欠けて検定できなかった項目は判定しない。
         /// OK・NG の件数や最大の検定比は、これが true の項目だけから数える。
         /// </summary>
-        public bool IsJudged => !IsFromUnconvergedCase && !IsOutOfScope;
+        public bool IsJudged => !IsFromUnconvergedCase && !IsOutOfScope && !IsUnavailable;
 
         /// <summary>応答値 (解析から得た値)。</summary>
         public double Response { get; init; }
@@ -183,10 +206,10 @@ namespace PileDesign.Models.Results
         };
 
         [ResultColumn("応答値", 10, tooltip: "解析から得た値。単位は「単位」列を参照", rightAlign: true)]
-        public string ResponseText => Response.ToString(ValueFormat, CultureInfo.InvariantCulture);
+        public string ResponseText => double.IsFinite(Response) ? Response.ToString(ValueFormat, CultureInfo.InvariantCulture) : "—";
 
         [ResultColumn("限界値", 11, tooltip: "この値を超えると NG。単位は「単位」列を参照", rightAlign: true)]
-        public string LimitText => Limit.ToString(ValueFormat, CultureInfo.InvariantCulture);
+        public string LimitText => double.IsFinite(Limit) ? Limit.ToString(ValueFormat, CultureInfo.InvariantCulture) : "—";
 
         /// <summary>応答値・限界値の単位。「kN·m」「rad」など。</summary>
         [ResultColumn("単位", 12, tooltip: "応答値・限界値の単位")]
@@ -265,8 +288,9 @@ namespace PileDesign.Models.Results
         /// 画面の一覧・計算書の検定表・結果ダッシュボードには素の「OK」「NG」が出ていた。
         /// ヘルプは「判定に OK(緩和受理) のように明記します」と書いてあり、実装が追いついていなかった。</para>
         /// </summary>
-        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG。解析が収束しなかったケースは「未収束」、算定式 (工法) の適用範囲の外は「適用範囲外」、緩めた基準で受理したケースは「(緩和受理)」を付ける")]
-        public string StatusLabel => IsFromUnconvergedCase ? "未収束"
+        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG。解析が収束しなかったケースは「未収束」、算定式 (工法) の適用範囲の外は「適用範囲外」、検定に要るデータが欠けていたものは「検定不能」、緩めた基準で受理したケースは「(緩和受理)」を付ける")]
+        public string StatusLabel => IsUnavailable ? "検定不能"
+            : IsFromUnconvergedCase ? "未収束"
             : IsOutOfScope ? "適用範囲外"
             : IsFromRelaxedCase ? (IsOk ? "OK(緩和受理)" : "NG(緩和受理)")
             : (IsOk ? "OK" : "NG");
@@ -298,6 +322,10 @@ namespace PileDesign.Models.Results
                 return s;
             }
         }
+
+        /// <summary>OK / NG を判定しなかった理由 (検定不能・適用範囲外)。判定した項目では空。</summary>
+        [ResultColumn("判定しない理由", 16, tooltip: "「検定不能」「適用範囲外」の理由。検定に要るデータが欠けていたもの、算定式の適用範囲の外のもの")]
+        public string NotJudgedReason => UnavailableReason ?? OutOfScopeReason ?? "";
 
         /// <summary>画面で荷重条件を特定するための文字列。</summary>
         public string ConditionDescription =>

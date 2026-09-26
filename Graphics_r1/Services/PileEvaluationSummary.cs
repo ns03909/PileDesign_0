@@ -37,6 +37,13 @@ namespace PileDesign.Services
         /// 限界値が指針の保証の外なので OK とも NG とも言えない。色は未収束と同じ「判定できない」色。
         /// </summary>
         OutOfScope,
+
+        /// <summary>
+        /// NG・未収束・適用範囲外は無いが、データが欠けて検定できなかった項目がある
+        /// (<see cref="EvaluationItem.UnavailableReason"/>)。検定していないものがあるので「余裕あり」とは言えない。
+        /// 色は未収束と同じ「判定できない」色。
+        /// </summary>
+        Unavailable,
     }
 
     /// <summary>杭 1 本ぶんの検定のまとめ。</summary>
@@ -61,6 +68,9 @@ namespace PileDesign.Services
         /// <summary>この杭に、算定式の適用範囲の外の項目があるか。</summary>
         public bool HasOutOfScope { get; init; }
 
+        /// <summary>この杭に、データが欠けて検定できなかった項目があるか。</summary>
+        public bool HasUnavailable { get; init; }
+
         /// <summary>この杭に、収束したケースの NG があるか。</summary>
         public bool HasNg { get; init; }
 
@@ -72,6 +82,7 @@ namespace PileDesign.Services
             PileRatioBand.Ng => "NG",
             PileRatioBand.Unconverged => "未収束",
             PileRatioBand.OutOfScope => "適用範囲外",
+            PileRatioBand.Unavailable => "検定不能",
             PileRatioBand.None => "—",
             _ => "OK",
         };
@@ -197,11 +208,12 @@ namespace PileDesign.Services
                     .ToList();
 
         /// <summary>検定比と収束状態から帯を決める。</summary>
-        public static PileRatioBand BandOf(double maxRatio, bool hasNg, bool hasUnconverged, bool hasOutOfScope = false)
+        public static PileRatioBand BandOf(double maxRatio, bool hasNg, bool hasUnconverged, bool hasOutOfScope = false, bool hasUnavailable = false)
         {
             if (hasNg) return PileRatioBand.Ng;
             if (hasUnconverged) return PileRatioBand.Unconverged;
             if (hasOutOfScope) return PileRatioBand.OutOfScope;
+            if (hasUnavailable) return PileRatioBand.Unavailable;
             if (double.IsNaN(maxRatio)) return PileRatioBand.None;
             if (maxRatio > 1.0) return PileRatioBand.Ng;
             return maxRatio > TightThreshold ? PileRatioBand.Tight : PileRatioBand.Safe;
@@ -236,6 +248,8 @@ namespace PileDesign.Services
                 [
                     .. PileBearingEvaluator.Evaluate(inputModel, seismicGrade),
                     .. PileSettlementEvaluator.Evaluate(inputModel),
+                    // 沈下による杭頭変形角も沈下の結果だけで決まる (以前は水平解析の検定の中にあった)
+                    .. SettlementDeformationAngleEvaluator.Evaluate(inputModel),
                 ]), BearingPart, failures)
                 ?? new EvaluationResult([]);
 
@@ -285,6 +299,7 @@ namespace PileDesign.Services
             bool hasNg = judged.Any(i => !i.IsOk);
             bool hasUnconverged = list.Any(i => i.IsFromUnconvergedCase);
             bool hasOutOfScope = list.Any(i => !i.IsFromUnconvergedCase && i.IsOutOfScope);
+            bool hasUnavailable = list.Any(i => i.IsUnavailable);
             double maxRatio = governing?.Ratio ?? double.NaN;
 
             return new PileEvaluationEntry
@@ -296,7 +311,8 @@ namespace PileDesign.Services
                 HasNg = hasNg,
                 HasUnconverged = hasUnconverged,
                 HasOutOfScope = hasOutOfScope,
-                Band = BandOf(maxRatio, hasNg, hasUnconverged, hasOutOfScope),
+                HasUnavailable = hasUnavailable,
+                Band = BandOf(maxRatio, hasNg, hasUnconverged, hasOutOfScope, hasUnavailable),
             };
         }
 

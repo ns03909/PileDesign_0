@@ -563,6 +563,14 @@ namespace PileDesign.ViewModels
                 MessageService.Show(DescribeRenamedLoadCases(renamed), "荷重ケース名", MessageBoxButton.OK, MessageBoxImage.Information);
             }
 
+            // 荷重組合せの表示名の重なり (画面の選択で見分けられない)。表示名は係数から決まり付け直せないので知らせるだけ
+            var duplicateCombinations = CurrentInputModel.LoadCasesInput?.DescribeDuplicateCombinationNames() ?? [];
+            if (duplicateCombinations.Count > 0)
+            {
+                Serilog.Log.Warning("[読込] 荷重組合せの表示名が重なっています: {Duplicates}", string.Join(" / ", duplicateCombinations));
+                MessageService.Show(DescribeDuplicateCombinationNames(duplicateCombinations), "荷重組合せ", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+
             if (renumbered.Count > 0)
             {
                 Serilog.Log.Warning("[読込] 荷重ケースの番号を並び順に振り直しました: {Changes}", string.Join(" / ", renumbered));
@@ -577,6 +585,15 @@ namespace PileDesign.ViewModels
                + "グラフ・表・計算書で荷重ケースを見分けるのに使うためです (名前は荷重ケースのウィンドウで変更できます)。\n\n"
                + string.Join("\n", renamed.Take(10))
                + (renamed.Count > 10 ? $"\n…ほか {renamed.Count - 10} 件" : "");
+
+        /// <summary>荷重組合せの表示名が重なっていることを知らせる文面。</summary>
+        internal static string DescribeDuplicateCombinationNames(IReadOnlyList<string> duplicates)
+            => "次の荷重組合せは、係数を小数 2 桁に丸めた表示名が同じです。\n\n"
+               + string.Join("\n", duplicates.Take(10))
+               + (duplicates.Count > 10 ? $"\n…ほか {duplicates.Count - 10} 件" : "")
+               + "\n\nグラフ・表・メイン画面の荷重組合せの選択では見分けられず、番号の小さい組合せが選ばれます。"
+               + "解析・検定・計算書は組合せを番号で区別しているので、結果には影響しません。"
+               + "見分けて表示するには、荷重ケースのウィンドウで荷重組合せを作り直してください。";
 
         /// <summary>荷重ケースの番号を振り直したことを知らせる文面。</summary>
         internal static string DescribeRenumberedLoadCases(IReadOnlyList<string> renumbered, bool hasResults)

@@ -54,8 +54,8 @@ namespace PileDesign.Services
             PileRatioBand.Safe => PathGeoPileRatioSafe,
             PileRatioBand.Tight => PathGeoPileRatioTight,
             PileRatioBand.Ng => PathGeoPileRatioNg,
-            // 適用範囲外も「判定できない」なので未収束と同じ色で塗る (凡例は「未収束・適用範囲外」)
-            PileRatioBand.Unconverged or PileRatioBand.OutOfScope => PathGeoPileRatioUnconverged,
+            // 適用範囲外・検定不能も「判定できない」なので未収束と同じ色で塗る (凡例は「未収束・適用範囲外・検定不能」)
+            PileRatioBand.Unconverged or PileRatioBand.OutOfScope or PileRatioBand.Unavailable => PathGeoPileRatioUnconverged,
             _ => null,
         };
 

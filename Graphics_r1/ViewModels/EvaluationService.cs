@@ -141,14 +141,11 @@ namespace PileDesign.ViewModels
             // 損傷限界はレベルで、せん断耐力は M/(Q·d) で変わるので、どちらもキーに含める。
             var nqCache = new ConcurrentDictionary<(int, int, bool, LimitState, int, double), (List<double> Ns, List<double> Qs)>();
 
-            // 全ての解析結果の組合せ（LoadCase, LoadCombination, IsLiquefaction）を取得
+            // 全ての解析結果の組合せ（LoadCase, LoadCombination, IsLiquefaction）を取得。
+            // レベル・荷重ケース番号・荷重組合せ番号で分ける。以前は名前で分けていたので、荷重ケース名が空欄・重複だと
+            // 別の条件が 1 つにまとめられ、片方の条件が検定されなかった (組合せ名は係数の丸めなので別の組合せでも重なりうる)
             var uniqueCombinations = model.AnalysisStepResults
-                .GroupBy(r => new
-                {
-                    LoadCaseName = r.LoadCase?.LoadName ?? "",
-                    LoadCombName = r.LoadCombination?.Name ?? "",
-                    r.IsLiquefaction
-                })
+                .GroupBy(r => AnaModel.CaseConvergenceKey(r.LoadCase, r.LoadCombination, r.IsLiquefaction))
                 .Select(g => g.OrderByDescending(r => r.Step).First())
                 .ToList();
 
@@ -173,9 +170,8 @@ namespace PileDesign.ViewModels
                 : [];
             var inclinationItems = EvaluateBeamAwareInclination();
 
-            // 群杭沈下の沈下量から求めた杭頭変形角 (長期・使用限界)。
-            // 常時荷重による即時沈下の不同分で、水平解析の杭頭変位とは別の量なので別項目にする。
-            var settlementAngleItems = EvaluateSettlementDeformationAngle();
+            // 沈下による杭頭変形角 (常時・使用限界) は水平解析の結果を使わないので、ここでは検定しない
+            // (SettlementDeformationAngleEvaluator。沈下の検定の表・計算書の沈下の章に出す)。
 
             // 収束しなかったケースの行に印を付ける。
             // 応答値は釣り合っていないので、OK / NG のどちらとも言えない。
@@ -187,6 +183,9 @@ namespace PileDesign.ViewModels
             // 判定できない行 (未収束・算定式の適用範囲外) は OK にも NG にも数えない。
             int totalUnconvergedCount = longTermItems.Count(i => i.IsFromUnconvergedCase)
                 + level1Items.Count(i => i.IsFromUnconvergedCase) + level2Items.Count(i => i.IsFromUnconvergedCase);
+            // 検定に要るデータが欠けて検定できなかった項目。一覧 (表) には行として出し、テキストは理由ごとにまとめる
+            var unavailableItems = longTermItems.Concat(level1Items).Concat(level2Items).Where(i => i.IsUnavailable).ToList();
+            int totalUnavailableCount = unavailableItems.Count;
             int totalOutOfScopeCount = longTermItems.Count(i => !i.IsFromUnconvergedCase && i.IsOutOfScope)
                 + level1Items.Count(i => !i.IsFromUnconvergedCase && i.IsOutOfScope)
                 + level2Items.Count(i => !i.IsFromUnconvergedCase && i.IsOutOfScope);
@@ -204,7 +203,7 @@ namespace PileDesign.ViewModels
                 sb.AppendLine("■ 長期（常時）");
                 sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 sb.AppendLine();
-                AppendLevelSection(sb, longTermItems);
+                AppendLevelSection(sb, longTermItems.Where(i => !i.IsUnavailable).ToList());
             }
 
             if (level1Results.Count > 0)
@@ -213,7 +212,7 @@ namespace PileDesign.ViewModels
                 sb.AppendLine("■ レベル1地震動");
                 sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 sb.AppendLine();
-                AppendLevelSection(sb, level1Items);
+                AppendLevelSection(sb, level1Items.Where(i => !i.IsUnavailable).ToList());
             }
 
             if (level2Results.Count > 0)
@@ -222,7 +221,7 @@ namespace PileDesign.ViewModels
                 sb.AppendLine($"■ レベル2地震動（耐震グレード{seismicGrade}）");
                 sb.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 sb.AppendLine();
-                AppendLevelSection(sb, level2Items);
+                AppendLevelSection(sb, level2Items.Where(i => !i.IsUnavailable).ToList());
             }
 
             if (level1Results.Count == 0 && level2Results.Count == 0)
@@ -237,7 +236,7 @@ namespace PileDesign.ViewModels
             // (以前は NG が 0 件なら書いていた)。無いときの文言は従来のまま (golden テストが固定している)。
             if (totalNgCount > 0)
                 sb.AppendLine($"検定: NG項目 {totalNgCount} 件");
-            else if (totalUnconvergedCount > 0 || totalOutOfScopeCount > 0)
+            else if (totalUnconvergedCount > 0 || totalOutOfScopeCount > 0 || totalUnavailableCount > 0)
                 sb.AppendLine("検定: NG項目なし (ただし OK / NG を判定できない項目があります。下記参照)");
             else
                 sb.AppendLine("検定: すべてOK");
@@ -261,35 +260,26 @@ namespace PileDesign.ViewModels
                 sb.AppendLine("  工法を「標準」にして検討してください。");
             }
 
+            // 検定できなかった項目があったときだけ足す (無ければ従来と 1 文字も変わらない)。
+            if (totalUnavailableCount > 0)
+            {
+                sb.AppendLine($"検定できなかった項目: {totalUnavailableCount} 件");
+                sb.AppendLine("  検定の対象ですが、必要なデータが欠けていて検定できませんでした。OK / NG の判定はしていません。");
+                foreach (var g in unavailableItems.GroupBy(i => (i.Category, Reason: i.UnavailableReason!))
+                             .OrderBy(g => g.Key.Category, StringComparer.Ordinal).ThenBy(g => g.Key.Reason, StringComparer.Ordinal))
+                    sb.AppendLine($"  ・{g.Key.Category}: {g.Key.Reason} … {g.Count()} 件");
+            }
+
             // ── 個別矩形（基礎梁考慮）反復解析の傾斜角検定 ──
             AppendInclinationSection(sb, inclinationItems);
 
-            // ── 群杭沈下による杭頭変形角 ──
-            if (settlementAngleItems.Count > 0)
-            {
-                sb.AppendLine();
-                sb.AppendLine(new string('=', 60));
-                sb.AppendLine("【沈下による杭頭変形角】");
-                sb.AppendLine($"沈下検討の対象: "
-                    + (_mainVm.ResultInputModel?.FundamentalInput?.SettlementDesignBasisName ?? "単杭＋群杭沈下"));
-                sb.AppendLine($"使用限界変形角: {settlementAngleItems[0].Limit:E3} (rad)");
-                sb.AppendLine();
-                foreach (var item in settlementAngleItems)
-                {
-                    if (EvaluationResult.PassesFilter(item, DisplayFilter))
-                        EvaluationTextFormatter.AppendItem(sb, item);
-                }
-                sb.AppendLine();
-            }
-
             var all = new List<EvaluationItem>(
                 longTermItems.Count + level1Items.Count + level2Items.Count
-                + inclinationItems.Count + settlementAngleItems.Count);
+                + inclinationItems.Count);
             all.AddRange(longTermItems);
             all.AddRange(level1Items);
             all.AddRange(level2Items);
             all.AddRange(inclinationItems);
-            all.AddRange(settlementAngleItems);
             Result = new EvaluationResult(all);
 
             EvaluationText = sb.ToString();
@@ -307,20 +297,20 @@ namespace PileDesign.ViewModels
         /// </summary>
         private static List<EvaluationItem> MarkUnconvergedCases(
             List<EvaluationItem> items,
-            Dictionary<(string LoadCaseName, string LoadCombinationName, bool IsLiquefaction), FEM.StepStatus> convergenceByCase)
+            Dictionary<(int Level, int LoadCaseNo, int LoadCombinationNo, bool IsLiquefaction), FEM.StepStatus> convergenceByCase)
         {
             if (items.Count == 0 || convergenceByCase.Count == 0) return items;
 
             var marked = new List<EvaluationItem>(items.Count);
             foreach (var item in items)
             {
-                if (item.IsLiquefaction is not bool liq)
+                if (item.IsUnavailable || item.IsLiquefaction is not bool liq || item.LoadCaseNo is not int caseNo || item.LoadCombinationNo is not int combNo)
                 {
                     marked.Add(item);
                     continue;
                 }
 
-                var key = (item.LoadCaseName, item.LoadCombinationName, liq);
+                var key = (item.Level, caseNo, combNo, liq);
                 marked.Add(convergenceByCase.TryGetValue(key, out var status) && status != FEM.StepStatus.Converged
                     ? item with { CaseConvergence = status }
                     : item);
@@ -633,9 +623,23 @@ namespace PileDesign.ViewModels
                 var beam = beamsArr[idx];
                 var found = new List<EvaluationItem>(2);
 
+                // 杭の要素でない梁は検定の対象外 (項目を作らない)
                 if (beam.PileBodyNo is not int pb || beam.SegmentIndex is not int seg)
                 {
                     perBeamResults[idx] = found; return;
+                }
+
+                // 杭は梁から引く。杭体番号で引くとその杭体を使う最初の 1 本しか当たらず、
+                // 同じ杭体を共有する他の杭まで同じ軸力で検定してしまう。
+                var pileItem = ResolvePile(beam, pb, pileByBeam, pileByPileBodyNo);
+
+                // ここから先で検定できないのは、対象なのにデータが欠けているとき。項目を作らずに進めると
+                // 一覧に出ない理由が分からないので、「検定不能」の項目として理由を残す
+                void Unavailable(string reason)
+                {
+                    found.Add(UnavailableItem(EvaluationKind.PileSectionMoment, $"杭体曲げ ({limitName})", limitName,
+                        beam.Name, pb, pileItem, seg, stepResult, lcName, combName, "kN·m", reason));
+                    perBeamResults[idx] = found;
                 }
 
                 // BeamResultを検索
@@ -643,20 +647,20 @@ namespace PileDesign.ViewModels
                     r.IsLiquefaction == stepResult.IsLiquefaction &&
                     r.Step == stepResult.Step &&
                     (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
-                    (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
+                    (stepResult.LoadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, stepResult.LoadCombination)));
 
-                if (result?.CumulativeForce == null) { perBeamResults[idx] = found; return; }
+                if (result?.CumulativeForce == null) { Unavailable(NoResultReason); return; }
 
                 // SoilPileからPileSectionを取得
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) { perBeamResults[idx] = found; return; }
-                if (soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count) { perBeamResults[idx] = found; return; }
+                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)
+                    || soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count
+                    || soilPile.PileBodySegments[seg].PileSection == null)
+                {
+                    Unavailable(NoSectionReason(pb, seg)); return;
+                }
                 var section = soilPile.PileBodySegments[seg].PileSection;
-                if (section == null) { perBeamResults[idx] = found; return; }
 
                 // 軸力: 荷重ケースに応じたユーザー入力値 (kN)。
-                // 杭は梁から引く。杭体番号で引くとその杭体を使う最初の 1 本しか当たらず、
-                // 同じ杭体を共有する他の杭まで同じ軸力で検定してしまう。
-                var pileItem = ResolvePile(beam, pb, pileByBeam, pileByPileBodyNo);
                 double axialN_kN = 0.0;
                 if (pileItem != null)
                 {
@@ -671,12 +675,18 @@ namespace PileDesign.ViewModels
                 int loadCaseLevel = stepResult.LoadCase?.Level ?? 1;
                 var cacheKey = (pb, seg, factored, momentLimit, loadCaseLevel);
                 var nmCurve = nmCache.GetOrAdd(cacheKey, _ => GetNMCurve(section, factored, momentLimit, loadCaseLevel));
-                if (nmCurve.Ns == null || nmCurve.Ms == null || nmCurve.Ns.Count < 2) { perBeamResults[idx] = found; return; }
+                if (nmCurve.Ns == null || nmCurve.Ms == null || nmCurve.Ns.Count < 2)
+                {
+                    Unavailable($"{limitName}の N-M 曲線を作れませんでした (断面の入力を確認してください)"); return;
+                }
 
                 // NM相関曲線から許容モーメントを補間
                 double allowableM = InterpolateAllowableMoment(nmCurve.Ns, nmCurve.Ms, axialN_kN);
                 // 範囲外の軸力では NaN が返る (NaN <= 0 は false なので、必ず > 0 で判定すること)
-                if (!(allowableM > 0)) { perBeamResults[idx] = found; return; }
+                if (!(allowableM > 0))
+                {
+                    Unavailable(OutsideCurveReason(axialN_kN, $"{limitName}の曲げ耐力", "N-M")); return;
+                }
 
                 // i端モーメント |M| = √(Myi² + Mzi²)
                 double mI = Math.Sqrt(
@@ -710,6 +720,8 @@ namespace PileDesign.ViewModels
                     LoadCaseName = lcName,
                     LoadCombinationName = combName,
                     IsLiquefaction = stepResult.IsLiquefaction,
+                    LoadCaseNo = stepResult.LoadCase?.No,
+                    LoadCombinationNo = stepResult.LoadCombination?.No,
                     Response = response,
                     Limit = limit,
                     Unit = "kN·m",
@@ -751,7 +763,9 @@ namespace PileDesign.ViewModels
                         var force = r.CumulativeForce;
                         if (force == null || r.LoadCase == null) continue;
 
-                        var key = (pile, r.LoadCase.LoadName ?? "");
+                        // 荷重ケースはレベルと番号で分ける。名前で分けていたので、名前が空欄・重複だと
+                        // レベル1 とレベル2 の最大断面力が混ざり、M/(Q·d) (せん断耐力) が別のレベルの断面力で決まっていた
+                        var key = (pile, CaseKeyOf(r.LoadCase));
                         double m = force.MabsMax;   // max(Mi, Mj) [kNm]
                         double q = force.FabsMax;   // max(Qi, Qj) [kN]
                         if (map.TryGetValue(key, out var prev))
@@ -771,7 +785,7 @@ namespace PileDesign.ViewModels
         /// その荷重ケースの結果が無い) だけ既定値に落とす。
         /// </summary>
         private static double ResolveMonQd(
-            PileLayoutDataItem? pile, string loadCaseName, PileSection section,
+            PileLayoutDataItem? pile, string caseKey, PileSection section,
             Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)> maxForces)
         {
             if (pile == null) return PileSection.DefaultMonQd;
@@ -779,13 +793,56 @@ namespace PileDesign.ViewModels
             double d = section.EffectiveDepth;   // [mm]
             if (!(d > 0)) return PileSection.DefaultMonQd;
 
-            if (!maxForces.TryGetValue((pile, loadCaseName), out var mf)) return PileSection.DefaultMonQd;
+            if (!maxForces.TryGetValue((pile, caseKey), out var mf)) return PileSection.DefaultMonQd;
             if (!(mf.MaxQ > 0)) return PileSection.DefaultMonQd;
 
             // M [kNm] → [N·mm] は ×1e6、Q [kN] → [N] は ×1e3
             double monQd = mf.MaxM * 1e6 / (mf.MaxQ * 1e3 * d);
             return double.IsFinite(monQd) && monQd > 0 ? monQd : PileSection.DefaultMonQd;
         }
+
+        // ── 検定できなかった項目 ─────────────────────────────
+
+        /// <summary>その荷重条件の解析結果が見つからないときの理由。</summary>
+        internal const string NoResultReason = "この荷重条件の解析結果がありません (再解析してください)";
+
+        /// <summary>断面が引けないときの理由。</summary>
+        internal static string NoSectionReason(int pileBodyNo, int segment)
+            => $"杭体 No.{pileBodyNo} の要素 {segment} の断面がありません (杭要素分割をやり直してください)";
+
+        /// <summary>軸力が限界曲線の範囲の外で限界値を引けないときの理由。</summary>
+        internal static string OutsideCurveReason(double axialN_kN, string what, string curve)
+            => $"軸力 {axialN_kN:N1} kN が {curve} 曲線の範囲の外で、{what}を求められません";
+
+        /// <summary>
+        /// 検定の対象なのにデータが欠けて検定できなかった項目 (<see cref="EvaluationItem.UnavailableReason"/>)。
+        /// 応答値・限界値は NaN。どの杭・要素・荷重条件のものかは通常の項目と同じく持たせる。
+        /// </summary>
+        private static EvaluationItem UnavailableItem(EvaluationKind kind, string category, string limitName,
+            string targetName, int pileBodyNo, PileLayoutDataItem? pile, int? segment,
+            AnalysisStepResult stepResult, string lcName, string combName, string unit, string reason) => new()
+        {
+            Kind = kind,
+            Level = stepResult.LoadCase?.Level ?? 0,
+            Category = category,
+            LimitName = limitName,
+            TargetName = targetName,
+            PileBodyNo = pileBodyNo,
+            PileNo = pile?.PileNo,
+            SegmentIndex = segment,
+            LoadCaseName = lcName,
+            LoadCombinationName = combName,
+            IsLiquefaction = stepResult.IsLiquefaction,
+            LoadCaseNo = stepResult.LoadCase?.No,
+            LoadCombinationNo = stepResult.LoadCombination?.No,
+            Response = double.NaN,
+            Limit = double.NaN,
+            Unit = unit,
+            UnavailableReason = reason,
+        };
+
+        /// <summary>最大断面力の表の鍵にする荷重ケースの識別 (レベル-番号)。</summary>
+        private static string CaseKeyOf(LoadCase? loadCase) => loadCase == null ? "" : $"L{loadCase.Level}-{loadCase.No}";
 
         /// <summary>
         /// 梁が属する杭を返す。
@@ -854,21 +911,32 @@ namespace PileDesign.ViewModels
                     perBeamResults[idx] = found; return;
                 }
 
+                // 曲げと同じく、対象なのにデータが欠けて検定できないときは「検定不能」の項目として理由を残す
+                var pileItem = ResolvePile(beam, pb, pileByBeam, pileByPileBodyNo);
+                void Unavailable(string reason)
+                {
+                    found.Add(UnavailableItem(EvaluationKind.PileSectionShear, $"杭体せん断 ({limitName})", limitName,
+                        beam.Name, pb, pileItem, seg, stepResult, lcName, combName, "kN", reason));
+                    perBeamResults[idx] = found;
+                }
+
                 var result = beam.BeamResults?.FirstOrDefault(r =>
                     r.IsLiquefaction == stepResult.IsLiquefaction &&
                     r.Step == stepResult.Step &&
                     (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
-                    (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
+                    (stepResult.LoadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, stepResult.LoadCombination)));
 
-                if (result?.CumulativeForce == null) { perBeamResults[idx] = found; return; }
+                if (result?.CumulativeForce == null) { Unavailable(NoResultReason); return; }
 
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) { perBeamResults[idx] = found; return; }
-                if (soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count) { perBeamResults[idx] = found; return; }
+                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)
+                    || soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count
+                    || soilPile.PileBodySegments[seg].PileSection == null)
+                {
+                    Unavailable(NoSectionReason(pb, seg)); return;
+                }
                 var section = soilPile.PileBodySegments[seg].PileSection;
-                if (section == null) { perBeamResults[idx] = found; return; }
 
                 // 軸力: 曲げと同じ値を使う (食い違うと同じ断面で限界線の前提が 2 通りになる)
-                var pileItem = ResolvePile(beam, pb, pileByBeam, pileByPileBodyNo);
                 double axialN_kN = 0.0;
                 if (pileItem != null)
                 {
@@ -887,15 +955,21 @@ namespace PileDesign.ViewModels
                 // 生の値で作ると、同じキーに丸められる 2 つの値のうち先にキャッシュへ入れたほうが
                 // 採用され、結果が実行ごとに変わる (安全限界せん断が 0.1 kN 揺れた)。
                 double monQd = Math.Round(
-                    ResolveMonQd(pileItem, lcName, section, maxForcesByPileCase), 3);
+                    ResolveMonQd(pileItem, CaseKeyOf(stepResult.LoadCase), section, maxForcesByPileCase), 3);
 
                 var nqCurve = nqCache.GetOrAdd((pb, seg, factored, shearLimit, damageLevel, monQd),
                     _ => GetNQCurve(section, factored, shearLimit, damageLevel, monQd));
-                if (nqCurve.Ns == null || nqCurve.Qs == null || nqCurve.Ns.Count < 2) { perBeamResults[idx] = found; return; }
+                if (nqCurve.Ns == null || nqCurve.Qs == null || nqCurve.Ns.Count < 2)
+                {
+                    Unavailable($"{limitName}の Q-N 曲線を作れませんでした (断面の入力を確認してください)"); return;
+                }
 
                 double allowableQ = InterpolateAllowableMoment(nqCurve.Ns, nqCurve.Qs, axialN_kN);
                 // 範囲外の軸力では NaN が返る (NaN <= 0 は false なので、必ず > 0 で判定すること)
-                if (!(allowableQ > 0)) { perBeamResults[idx] = found; return; }
+                if (!(allowableQ > 0))
+                {
+                    Unavailable(OutsideCurveReason(axialN_kN, $"{limitName}のせん断耐力", "Q-N")); return;
+                }
 
                 // i端・j端のせん断力 |Q| = √(Fy² + Fz²)
                 double qI = result.CumulativeForce.Fi;
@@ -952,6 +1026,8 @@ namespace PileDesign.ViewModels
                     LoadCaseName = lcName,
                     LoadCombinationName = combName,
                     IsLiquefaction = stepResult.IsLiquefaction,
+                    LoadCaseNo = stepResult.LoadCase?.No,
+                    LoadCombinationNo = stepResult.LoadCombination?.No,
                     Response = response,
                     Limit = limit,
                     Unit = "kN",
@@ -1020,71 +1096,31 @@ namespace PileDesign.ViewModels
         /// </summary>
         internal const double DefaultInsituRcUltimateRotationAngleLimit = 1.0 / 100.0;
 
-        /// <summary>使用限界の変形角の既定値 1.0×10⁻³ rad (= 1/1000)。基本設定で変更できる。</summary>
-        internal const double DefaultServiceDeformationAngleLimit = 1.0e-3;
+        // 変形角の求め方と限界値は PileHeadDeformationAngle (Services) にある。沈下の検定からも使うため、画面の層に置かない。
 
-        /// <summary>損傷限界の変形角の既定値 5.0×10⁻³ rad (= 1/200)。基本設定で変更できる。</summary>
-        internal const double DefaultDamageDeformationAngleLimit = 5.0e-3;
+        /// <summary>使用限界の変形角の既定値。<see cref="PileHeadDeformationAngle.DefaultServiceLimit"/>。</summary>
+        internal const double DefaultServiceDeformationAngleLimit = PileHeadDeformationAngle.DefaultServiceLimit;
 
-        /// <summary>終局限界の変形角の既定値 7.0×10⁻³ rad (≒ 1/143)。基本設定で変更できる。</summary>
-        internal const double DefaultUltimateDeformationAngleLimit = 7.0e-3;
+        /// <summary>損傷限界の変形角の既定値。<see cref="PileHeadDeformationAngle.DefaultDamageLimit"/>。</summary>
+        internal const double DefaultDamageDeformationAngleLimit = PileHeadDeformationAngle.DefaultDamageLimit;
+
+        /// <summary>終局限界の変形角の既定値。<see cref="PileHeadDeformationAngle.DefaultUltimateLimit"/>。</summary>
+        internal const double DefaultUltimateDeformationAngleLimit = PileHeadDeformationAngle.DefaultUltimateLimit;
 
         /// <summary>
         /// 限界状態に対応する変形角の限界値。基本設定の値を使い、
         /// 0 以下 (旧いファイルで未設定) のときだけ既定値に落とす。
         /// </summary>
-        internal static double DeformationAngleLimitFor(FundamentalInput? fundamental, LimitState limit)
+        internal static double DeformationAngleLimitFor(FundamentalInput? fundamental, LimitState limit) => limit switch
         {
-            double value = limit switch
-            {
-                LimitState.Service => fundamental?.ServiceDeformationAngleLimit ?? 0.0,
-                LimitState.Damage => fundamental?.DamageDeformationAngleLimit ?? 0.0,
-                _ => fundamental?.UltimateDeformationAngleLimit ?? 0.0,
-            };
-            if (value > 0 && double.IsFinite(value)) return value;
+            LimitState.Service => PileHeadDeformationAngle.ServiceLimit(fundamental),
+            LimitState.Damage => PileHeadDeformationAngle.DamageLimit(fundamental),
+            _ => PileHeadDeformationAngle.UltimateLimit(fundamental),
+        };
 
-            return limit switch
-            {
-                LimitState.Service => DefaultServiceDeformationAngleLimit,
-                LimitState.Damage => DefaultDamageDeformationAngleLimit,
-                _ => DefaultUltimateDeformationAngleLimit,
-            };
-        }
-
-        /// <summary>
-        /// 杭頭の (X, Y, 鉛直変位) から、全ペアの変形角の最大値と、その組を返す。
-        /// 杭が 2 本未満、または杭間距離が 0 のときは null。
-        /// </summary>
-        /// <param name="heads">(杭No, X[m], Y[m], 鉛直変位[m])。符号はそのままでよい (差で使う)</param>
+        /// <inheritdoc cref="PileHeadDeformationAngle.Max"/>
         internal static (double Angle, int PileNoA, int PileNoB)? MaxDeformationAngle(
-            IReadOnlyList<(int PileNo, double X, double Y, double Uz)> heads)
-        {
-            if (heads.Count < 2) return null;
-
-            double maxAngle = -1.0;
-            int a = 0, b = 0;
-
-            for (int i = 0; i < heads.Count - 1; i++)
-            {
-                for (int j = i + 1; j < heads.Count; j++)
-                {
-                    double dx = heads[i].X - heads[j].X;
-                    double dy = heads[i].Y - heads[j].Y;
-                    double span = Math.Sqrt(dx * dx + dy * dy);
-                    if (span < 1e-9) continue;   // 同じ位置の杭 (重なり) は角が定義できない
-
-                    double angle = Math.Abs(heads[i].Uz - heads[j].Uz) / span;
-                    if (angle > maxAngle)
-                    {
-                        maxAngle = angle;
-                        a = heads[i].PileNo;
-                        b = heads[j].PileNo;
-                    }
-                }
-            }
-
-            return maxAngle < 0 ? null : (maxAngle, a, b);
-        }
+            IReadOnlyList<(int PileNo, double X, double Y, double Uz)> heads) => PileHeadDeformationAngle.Max(heads);
 
         /// <summary>
         /// 水平解析の杭頭鉛直変位から、杭頭 2 点間の変形角を検定する。
@@ -1112,7 +1148,7 @@ namespace PileDesign.ViewModels
                     r.IsLiquefaction == stepResult.IsLiquefaction &&
                     r.Step == stepResult.Step &&
                     (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
-                    (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
+                    (stepResult.LoadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, stepResult.LoadCombination)));
 
                 if (nr?.CumulativeDisp == null) continue;
                 // NodeDisp は m 単位、杭の座標も m なので、そのまま割れば rad になる
@@ -1120,9 +1156,17 @@ namespace PileDesign.ViewModels
             }
 
             var max = MaxDeformationAngle(heads);
-            if (max == null) return items;
-
             string limitName = LimitStateName(limit);
+            if (max == null)
+            {
+                // 杭が 1 本なら対象外。2 本以上あるのに杭頭の変位が 2 本ぶん取れなければ検定不能
+                if (inputModel.PileLayoutItems.Count >= 2 && heads.Count < 2)
+                    items.Add(UnavailableItem(EvaluationKind.PileHeadDeformationAngle, $"杭頭変形角 ({limitName})", limitName,
+                        "杭頭 2 点間", 0, null, null, stepResult, lcName, combName, "rad",
+                        "杭頭の鉛直変位が 2 本以上の杭で得られません (" + NoResultReason + ")"));
+                return items;
+            }
+
             double limitValue = DeformationAngleLimitFor(inputModel.FundamentalInput, limit);
 
             items.Add(new EvaluationItem
@@ -1136,6 +1180,8 @@ namespace PileDesign.ViewModels
                 LoadCaseName = lcName,
                 LoadCombinationName = combName,
                 IsLiquefaction = stepResult.IsLiquefaction,
+                LoadCaseNo = stepResult.LoadCase?.No,
+                LoadCombinationNo = stepResult.LoadCombination?.No,
                 Response = max.Value.Angle,
                 Limit = limitValue,
                 Unit = "rad",
@@ -1164,81 +1210,6 @@ namespace PileDesign.ViewModels
             if (top == null) return null;
 
             return top.NodeI.Coord.Z >= top.NodeJ.Coord.Z ? top.NodeI : top.NodeJ;
-        }
-
-        /// <summary>
-        /// 群杭沈下解析の沈下量から、杭頭 2 点間の変形角を検定する (使用限界)。
-        ///
-        /// 水平解析の杭頭変位と別の項目にしてある。こちらは常時荷重による
-        /// 群杭の即時沈下 (Steinbrenner の弾性沈下) の不同分で、
-        /// 地震時の杭頭変位とは別の量。
-        ///
-        /// <b>杭基礎では圧密沈下は生じない</b> (圧密沈下の検討が要るのは
-        /// 直接基礎を圧密層に載せる場合)。基礎指針'19 表5.3.8 の常時荷重・使用限界には
-        /// 即時沈下 1×10⁻³ と圧密沈下 2×10⁻³ が併記されているが、ここで使うのは前者。
-        /// </summary>
-        private List<EvaluationItem> EvaluateSettlementDeformationAngle()
-        {
-            var items = new List<EvaluationItem>();
-
-            var inputModel = _mainVm.ResultInputModel;
-            var pgs = inputModel?.PileGroupSettlement;
-            if (pgs?.CaseRecords == null || inputModel?.PileLayoutItems == null) return items;
-
-            // 杭No → 座標
-            var coords = new Dictionary<int, (double X, double Y)>();
-            foreach (var pile in inputModel.PileLayoutItems)
-                coords[pile.PileNo] = (pile.Point3D.X, pile.Point3D.Y);
-
-            // 沈下検討の対象 (基本設定)。単杭沈下だけか、群杭沈下を足した合計か。
-            bool includesGroup = inputModel.FundamentalInput?.SettlementDesignIncludesGroup ?? true;
-            string basisName = inputModel.FundamentalInput?.SettlementDesignBasisName ?? "単杭＋群杭沈下";
-
-            // 単杭沈下 (常時) は杭ごとに 1 つ。群杭沈下はケースごとに持つ。
-            var singleByPileNo = new Dictionary<int, double>();
-            foreach (var pile in inputModel.PileLayoutItems)
-                singleByPileNo[pile.PileNo] = pile.SinglePileSettlementVL;   // m
-
-            foreach (var rec in pgs.CaseRecords)
-            {
-                if (rec.PileSettlements_mm == null || rec.PileSettlements_mm.Count < 2) continue;
-
-                var heads = new List<(int PileNo, double X, double Y, double Uz)>();
-                foreach (var kv in rec.PileSettlements_mm.OrderBy(kv => kv.Key))
-                {
-                    if (!coords.TryGetValue(kv.Key, out var c)) continue;
-
-                    // 単杭沈下 [m] + 群杭沈下 [mm→m]。単杭沈下だけで検討するときは群杭分を足さない。
-                    singleByPileNo.TryGetValue(kv.Key, out double single);
-                    double settlement = single + (includesGroup ? kv.Value * 1e-3 : 0.0);
-                    heads.Add((kv.Key, c.X, c.Y, settlement));
-                }
-
-                var max = MaxDeformationAngle(heads);
-                if (max == null) continue;
-
-                double limitValue = DeformationAngleLimitFor(inputModel.FundamentalInput, LimitState.Service);
-                string caseName = string.IsNullOrEmpty(rec.LoadCaseName) ? "群杭沈下" : rec.LoadCaseName;
-                string typeName = string.IsNullOrEmpty(rec.LoadingType) ? "" : $"（{rec.LoadingType}）";
-
-                items.Add(new EvaluationItem
-                {
-                    Kind = EvaluationKind.PileHeadDeformationAngle,
-                    Level = 0,
-                    Category = $"杭頭変形角 ({basisName}・使用限界)",
-                    LimitName = "使用限界",
-                    TargetName = $"杭No.{max.Value.PileNoA} − 杭No.{max.Value.PileNoB}{typeName}",
-                    PileNo = max.Value.PileNoA,
-                    LoadCaseName = caseName,
-                    // 沈下解析に液状化の区別は無い (null のまま)
-                    Response = max.Value.Angle,
-                    Limit = limitValue,
-                    Unit = "rad",
-                    IsOk = !(max.Value.Angle > limitValue),
-                });
-            }
-
-            return items;
         }
 
         /// <summary>
@@ -1372,9 +1343,14 @@ namespace PileDesign.ViewModels
                     r.IsLiquefaction == stepResult.IsLiquefaction &&
                     r.Step == stepResult.Step &&
                     (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
-                    (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
+                    (stepResult.LoadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, stepResult.LoadCombination)));
 
-                if (rsResult?.CumulativeDisp == null) { perItem[idx] = found; return; }
+                if (rsResult?.CumulativeDisp == null)
+                {
+                    found.Add(UnavailableItem(EvaluationKind.PileHeadRotation, $"杭頭回転角 ({criterion.MethodName})", criterion.LimitName,
+                        rs.Name, pb, pileItem, null, stepResult, lcName, combName, "rad", NoResultReason));
+                    perItem[idx] = found; return;
+                }
 
                 // CombinedXY: θ = √(dRx² + dRy²)
                 double dRx = rsResult.CumulativeDisp.Rxi - rsResult.CumulativeDisp.Rxj;
@@ -1394,6 +1370,8 @@ namespace PileDesign.ViewModels
                     LoadCaseName = lcName,
                     LoadCombinationName = combName,
                     IsLiquefaction = stepResult.IsLiquefaction,
+                    LoadCaseNo = stepResult.LoadCase?.No,
+                    LoadCombinationNo = stepResult.LoadCombination?.No,
                     Response = theta,
                     Limit = criterion.Limit,
                     Unit = "rad",

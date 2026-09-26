@@ -251,6 +251,23 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 表示名 (<see cref="LoadCombination.GetName"/>: 係数を小数 2 桁に丸めた文字列) が重なる荷重組合せを調べる (変えない)。
+        /// 重なりごとに「表示名: 組合せ No.a, No.b」を返す (無ければ空)。
+        ///
+        /// グラフ・表・メイン画面の荷重組合せの選択は表示名で行うので、重なると見分けられない (最初の組合せが選ばれる)。
+        /// 解析・検定・計算書は番号で区別する (<see cref="LoadCombination.IsSameCombination"/>) ので結果は正しい。
+        /// 画面の組合せは係数の刻み 0.1 から作られ重ならないので、起きるのは手で編集したファイルなど。
+        /// 表示名は係数から決まり付け直せないので、読込で知らせるだけにする。
+        /// </summary>
+        internal IReadOnlyList<string> DescribeDuplicateCombinationNames()
+            => (LoadCombinations ?? [])
+                .Where(c => c != null)
+                .GroupBy(c => c.GetName(), StringComparer.Ordinal)
+                .Where(g => g.Count() > 1)
+                .Select(g => $"{g.First().Name}: 組合せ " + string.Join(", ", g.Select(c => $"No.{c.No}")))
+                .ToList();
+
+        /// <summary>
         /// 地震時の荷重ケース名が空欄・重複していないかを調べる (変えない)。問題のある荷重ケースの説明を返す。
         ///
         /// 画面の荷重ケースの選択 (グラフ・表・メイン画面) は名前で行っているので、名前が空欄や重複だと

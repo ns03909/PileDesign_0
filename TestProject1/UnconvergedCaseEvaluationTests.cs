@@ -170,7 +170,7 @@ namespace TestProject1
             var map = model.BuildCaseConvergenceMap();
 
             Assert.AreEqual(1, map.Count);
-            Assert.AreEqual(StepStatus.Unconverged, map[("L2-1", Combo.Name, true)]);
+            Assert.AreEqual(StepStatus.Unconverged, map[AnaModel.CaseConvergenceKey(model.AnalysisStepResults[0].LoadCase, Combo, true)]);
             Assert.IsTrue(model.HasUnconvergedSteps());
         }
 
@@ -181,7 +181,7 @@ namespace TestProject1
             model.AnalysisStepResults.Add(Step(1, StepStatus.Converged));
             model.AnalysisStepResults.Add(Step(2, StepStatus.Converged));
 
-            Assert.AreEqual(StepStatus.Converged, model.BuildCaseConvergenceMap()[("L2-1", Combo.Name, true)]);
+            Assert.AreEqual(StepStatus.Converged, model.BuildCaseConvergenceMap()[AnaModel.CaseConvergenceKey(model.AnalysisStepResults[0].LoadCase, Combo, true)]);
             Assert.IsFalse(model.HasUnconvergedSteps());
         }
 

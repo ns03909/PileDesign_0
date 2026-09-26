@@ -45,7 +45,7 @@ namespace PileDesign.Services
                     r.IsLiquefaction == isLiquefaction &&
                     r.Step == step &&
                     (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                    (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
+                    (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
 
             // 結果検索用のヘルパー: RotationalSpringResultsから該当する結果を取得
             RotationalSpringResult? FindRotSpringResult(RotationalSpring rs) =>
@@ -53,7 +53,7 @@ namespace PileDesign.Services
                     r.IsLiquefaction == isLiquefaction &&
                     r.Step == step &&
                     (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                    (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
+                    (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
 
             // 結果検索用のヘルパー: NodeResultsから該当する結果を取得
             NodeResult? FindNodeResult(PileDesign.FEM.Node node) =>
@@ -61,7 +61,7 @@ namespace PileDesign.Services
                     r.IsLiquefaction == isLiquefaction &&
                     r.Step == step &&
                     (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                    (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
+                    (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
 
             if (beams.Count > 0 || rotSprings.Count > 0)
             {
@@ -507,7 +507,7 @@ namespace PileDesign.Services
                     var apResult = ap.NodeResults?.FirstOrDefault(r =>
                         r.IsLiquefaction == isLiquefaction && r.Step == step &&
                         (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                        (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
+                        (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
                     var apLoad = apResult?.CumulativedLoad ?? ap.CumulativedLoad;
                     if (apLoad != null)
                     {
@@ -530,7 +530,7 @@ namespace PileDesign.Services
                         var sr = spring.HorizontalSpringResults?.FirstOrDefault(r =>
                             r.IsLiquefaction == isLiquefaction && r.Step == step &&
                             (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                            (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
+                            (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
                         var bf = sr?.CumulativeForce ?? spring.CumulativeForce;
                         if (bf == null) continue;
                         sumFx += bf.Fxi; sumFy += bf.Fyi; sumFz += bf.Fzi;
@@ -553,7 +553,7 @@ namespace PileDesign.Services
                         var sr = spring.HorizontalSpringResults?.FirstOrDefault(r =>
                             r.IsLiquefaction == isLiquefaction && r.Step == step &&
                             (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                            (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
+                            (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
                         var bf = sr?.CumulativeForce ?? spring.CumulativeForce;
                         if (bf == null) continue;
                         sumFx += bf.Fxi; sumFy += bf.Fyi; sumFz += bf.Fzi;

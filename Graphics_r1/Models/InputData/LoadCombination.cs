@@ -32,6 +32,17 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 2 つの荷重組合せが同じ組合せか (番号で決める)。
+        ///
+        /// 表示名 (<see cref="Name"/>) は係数を小数 2 桁に丸めた文字列なので、係数の近い別の組合せが同じ名前になりうる
+        /// (係数 0.999 の組合せ 1 と 2 は、どちらも「1.00/-1.00/1.00」)。名前で照合すると、別の組合せの結果を拾ったり
+        /// 2 つを 1 つにまとめたりする。番号は読込で一覧の並び順に揃える
+        /// (<see cref="LoadCasesInput.NormalizeLoadCaseNumbers"/>) ので一意。
+        /// </summary>
+        public static bool IsSameCombination(LoadCombination? a, LoadCombination? b)
+            => a != null && b != null && a.No == b.No;
+
         private int _no = no;
         public int No
         {

@@ -207,13 +207,14 @@ namespace PileDesign.Views
         /// 総合判定を決める (画面に依らない部分。テストはここを直接見る)。
         ///
         /// 「OK」を出してよいのは、組めた検定に NG が無く、<b>判定できない項目も無い</b>ときだけ。
-        /// 判定できない項目は 3 通りある。
+        /// 判定できない項目は 4 通りある。
         /// <list type="bullet">
         /// <item>検定の組み立てに失敗した。以前は失敗を「検定なし」として扱い、水平解析が済んでいるのに
         ///   支持力だけを見て「すべて OK」を出した。</item>
         /// <item>収束しなかった荷重ケースの項目。</item>
         /// <item>算定式 (高強度せん断補強筋の工法) の適用範囲の外の項目。以前は総合判定がこれを数えず、
         ///   杭ごとの一覧には「適用範囲外」と出ているのに、上に緑の「すべて OK」を出した。</item>
+        /// <item>検定の対象なのにデータ (解析結果・断面など) が欠けて検定できなかった項目 (「検定不能」)。</item>
         /// </list>
         /// NG は判定できた事実なので、判定できない項目があっても NG を先に出す (説明に書き添える)。
         /// </summary>
@@ -238,6 +239,7 @@ namespace PileDesign.Views
             int ngCount = (h?.NgCount ?? 0) + b.NgCount;
             int unconvergedCount = (h?.UnconvergedCount ?? 0) + b.UnconvergedCount;
             int outOfScopeCount = (h?.OutOfScopeCount ?? 0) + b.OutOfScopeCount;
+            int unavailableCount = (h?.UnavailableCount ?? 0) + b.UnavailableCount;
 
             if (ngCount > 0)
                 return new Verdict($"NG {ngCount} 件", VerdictKind.Ng,
@@ -259,6 +261,11 @@ namespace PileDesign.Views
                 return new Verdict($"適用範囲外 {outOfScopeCount} 件", VerdictKind.CannotJudge,
                     "せん断耐力の算定式 (高強度せん断補強筋の工法) の適用範囲の外の項目があり、OK / NG を判定できません。"
                     + "下の一覧で杭を確認し、工法の適用範囲に収まる断面に見直すか、工法を「標準」にして検討してください。");
+
+            if (unavailableCount > 0)
+                return new Verdict($"検定不能 {unavailableCount} 件", VerdictKind.CannotJudge,
+                    "検定に必要なデータ (その荷重条件の解析結果・断面・限界曲線など) が欠けていて、検定できなかった項目があります。"
+                    + "解析結果テーブルの検定の表で、判定が「検定不能」の行の理由を確認してください。");
 
             if (!horizontalDone)
                 return new Verdict("支持力 OK", VerdictKind.Ok,
@@ -283,12 +290,13 @@ namespace PileDesign.Views
             $"OK {r.OkCount} / NG {r.NgCount}"
             + (r.UnconvergedCount > 0 ? $" / 未収束 {r.UnconvergedCount}" : "")
             + (r.OutOfScopeCount > 0 ? $" / 適用範囲外 {r.OutOfScopeCount}" : "")
+            + (r.UnavailableCount > 0 ? $" / 検定不能 {r.UnavailableCount}" : "")
             + $"　(全 {r.Items.Count} 件)";
 
-        /// <summary>件数の色。NG は赤、判定できない項目 (未収束・適用範囲外) があれば注意色、それ以外は緑。</summary>
+        /// <summary>件数の色。NG は赤、判定できない項目 (未収束・適用範囲外・検定不能) があれば注意色、それ以外は緑。</summary>
         private System.Windows.Style CountsStyle(EvaluationResult r) =>
             r.NgCount > 0 ? StyleResource("DashWarnStyle")
-            : r.UnconvergedCount > 0 || r.OutOfScopeCount > 0 ? StyleResource("DashCautionStyle")
+            : r.UnconvergedCount > 0 || r.OutOfScopeCount > 0 || r.UnavailableCount > 0 ? StyleResource("DashCautionStyle")
             : StyleResource("DashOkStyle");
 
         /// <summary>支配ケースの 1 行。「対象｜検定項目｜荷重条件」。</summary>
@@ -320,10 +328,12 @@ namespace PileDesign.Views
             int tight = piles.Count(e => e.Band == PileRatioBand.Tight);
             int unconverged = piles.Count(e => e.Band == PileRatioBand.Unconverged);
             int outOfScope = piles.Count(e => e.Band == PileRatioBand.OutOfScope);
+            int unavailable = piles.Count(e => e.Band == PileRatioBand.Unavailable);
             int safe = piles.Count(e => e.Band == PileRatioBand.Safe);
             PileBandCountsText.Text =
                 $"検定した杭 {piles.Count} 本 / 全 {total} 本 ─ NG {ng} 本、余裕小 (0.8 超) {tight} 本、未収束 {unconverged} 本、"
                 + (outOfScope > 0 ? $"適用範囲外 {outOfScope} 本、" : "")
+                + (unavailable > 0 ? $"検定不能の項目あり {unavailable} 本、" : "")
                 + $"余裕あり {safe} 本";
             PileBandCountsText.Style = ng > 0 ? StyleResource("DashWarnStyle") : StyleResource("DashValueStyle");
             PileBandCountsText.FontWeight = FontWeights.Normal;
@@ -336,7 +346,8 @@ namespace PileDesign.Views
             var g = e.Governing;
             string ratio = double.IsNaN(e.MaxRatio) ? "—" : e.MaxRatio.ToString("F2", CultureInfo.InvariantCulture);
             string category = g?.Category
-                ?? (e.HasUnconverged ? "(未収束のケースのみ)" : e.HasOutOfScope ? "(適用範囲外の項目のみ)" : "");
+                ?? (e.HasUnconverged ? "(未収束のケースのみ)" : e.HasOutOfScope ? "(適用範囲外の項目のみ)"
+                    : e.HasUnavailable ? "(検定不能の項目のみ)" : "");
             string values = g == null ? "" : $"{g.ResponseText} / {g.LimitText} {g.Unit}".TrimEnd();
             string condition = g?.ConditionDescription ?? "";
             return new PileRow(e.PileNo, e.StatusLabel, ratio, category, values, condition);

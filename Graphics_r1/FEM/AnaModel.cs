@@ -1421,7 +1421,8 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
-        /// 荷重ケースごとの収束状態。キーは (荷重ケース名, 荷重組合せ名, 液状化)。
+        /// 荷重ケースごとの収束状態。キーは (レベル, 荷重ケース番号, 荷重組合せ番号, 液状化) (<see cref="CaseConvergenceKey"/>)。
+        /// 以前は名前で作っていたので、荷重ケース名が空欄・重複だとレベル1 とレベル2 の収束状態が混ざった。
         ///
         /// <b>ケースの中で最も悪いステップの状態</b>を返す。途中のステップが収束していなければ、
         /// そこから先のステップは釣り合っていない状態の上に積み上がるので、
@@ -1429,15 +1430,15 @@ namespace PileDesign.FEM
         ///
         /// 検定・計算書は結果を「ケース単位」で読むので、こちらもケース単位で畳んで渡す。
         /// </summary>
-        public Dictionary<(string LoadCaseName, string LoadCombinationName, bool IsLiquefaction), StepStatus>
+        public Dictionary<(int Level, int LoadCaseNo, int LoadCombinationNo, bool IsLiquefaction), StepStatus>
             BuildCaseConvergenceMap()
         {
-            var map = new Dictionary<(string, string, bool), StepStatus>();
+            var map = new Dictionary<(int, int, int, bool), StepStatus>();
             if (AnalysisStepResults == null) return map;
 
             foreach (var r in AnalysisStepResults)
             {
-                var key = (r.LoadCase?.LoadName ?? "", r.LoadCombination?.Name ?? "", r.IsLiquefaction);
+                var key = CaseConvergenceKey(r.LoadCase, r.LoadCombination, r.IsLiquefaction);
                 // Unconverged / PhysicallyUnconverged の方を残す (enum の値が大きい方が悪い)。
                 if (map.TryGetValue(key, out var current) && current >= r.Status) continue;
                 map[key] = r.Status;
@@ -1445,6 +1446,11 @@ namespace PileDesign.FEM
 
             return map;
         }
+
+        /// <summary>荷重条件の識別 (レベル, 荷重ケース番号, 荷重組合せ番号, 液状化)。名前は空欄・重複がありうるので使わない。</summary>
+        public static (int Level, int LoadCaseNo, int LoadCombinationNo, bool IsLiquefaction) CaseConvergenceKey(
+            LoadCase? loadCase, LoadCombination? loadCombination, bool isLiquefaction)
+            => (loadCase?.Level ?? -1, loadCase?.No ?? -1, loadCombination?.No ?? -1, isLiquefaction);
 
         /// <summary>収束していないステップを含む解析結果があるか (緩めた基準で受理したステップは含めない)。</summary>
         public bool HasUnconvergedSteps()
@@ -1459,7 +1465,7 @@ namespace PileDesign.FEM
             // 荷重ケースはレベルと番号で比べる (名前は空欄・重複がありうる。LoadCase.IsSameCase 参照)
             var result = AnalysisStepResults
                 .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                            r.LoadCombination?.Name == loadCombination?.Name &&
+                            PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
                             r.IsLiquefaction == isLiquefaction)
                 .OrderByDescending(r => r.Step)
                 .FirstOrDefault();
@@ -1469,7 +1475,7 @@ namespace PileDesign.FEM
             // フォールバック: 逆の液状化状態で検索
             return AnalysisStepResults
                 .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                            r.LoadCombination?.Name == loadCombination?.Name &&
+                            PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
                             r.IsLiquefaction == !isLiquefaction)
                 .OrderByDescending(r => r.Step)
                 .FirstOrDefault();
@@ -1480,7 +1486,7 @@ namespace PileDesign.FEM
             // 荷重ケースはレベルと番号で比べる (名前は空欄・重複がありうる。LoadCase.IsSameCase 参照)
             var results = AnalysisStepResults
                 .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                            r.LoadCombination?.Name == loadCombination?.Name &&
+                            PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
                             r.IsLiquefaction == isLiquefaction)
                 .Select(r => r.Step)
                 .ToList();
@@ -1491,7 +1497,7 @@ namespace PileDesign.FEM
             // フォールバック: 逆の液状化状態で検索
             var fallback = AnalysisStepResults
                 .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                            r.LoadCombination?.Name == loadCombination?.Name &&
+                            PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
                             r.IsLiquefaction == !isLiquefaction)
                 .Select(r => r.Step)
                 .ToList();

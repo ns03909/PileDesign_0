@@ -587,7 +587,7 @@ namespace PileDesign.FEM
             {
                 // 名前ベースで比較（参照比較の代わりに）
                 bool loadCaseMatch = PileDesign.Models.InputData.LoadCase.IsSameCase(loadCase, beamResult.LoadCase);
-                bool loadCombMatch = loadCombination?.Name == beamResult.LoadCombination?.Name;
+                bool loadCombMatch = PileDesign.Models.InputData.LoadCombination.IsSameCombination(loadCombination, beamResult.LoadCombination);
                 bool isLiqMatch = isLiquefaction == beamResult.IsLiquefaction;
                 bool stepMatch = step == beamResult.Step;
 
@@ -600,7 +600,7 @@ namespace PileDesign.FEM
             foreach (BeamResult beamResult in BeamResults)
             {
                 bool loadCaseMatch = PileDesign.Models.InputData.LoadCase.IsSameCase(loadCase, beamResult.LoadCase);
-                bool loadCombMatch = loadCombination?.Name == beamResult.LoadCombination?.Name;
+                bool loadCombMatch = PileDesign.Models.InputData.LoadCombination.IsSameCombination(loadCombination, beamResult.LoadCombination);
                 bool isLiqMatch = !isLiquefaction == beamResult.IsLiquefaction;
                 bool stepMatch = fallbackStep == beamResult.Step;
 

@@ -529,6 +529,7 @@ namespace PileDesign.Output
             // 沈下量の検定は基本設定で有効にしたときだけ項目が作られる (既定は なし)。
             // 支持力と同じく低減の有無で値が変わらないので、別の節にする。
             Time("PileSettlementEvaluation (沈下量の検定)", () => AddPileSettlementEvaluationReport(body));
+            Time("SettlementDeformationAngle (沈下による杭頭変形角の検定)", () => AddSettlementDeformationAngleReport(body));
 
             if (mainWindowViewModel.DocxOutput.IncludeHorizontal)
             {

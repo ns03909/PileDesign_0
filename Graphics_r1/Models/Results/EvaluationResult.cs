@@ -38,6 +38,12 @@ namespace PileDesign.Models.Results
         public int OutOfScopeCount => Items.Count(i => !i.IsFromUnconvergedCase && i.IsOutOfScope);
 
         /// <summary>
+        /// 検定に要るデータが欠けて検定できなかった項目の件数 (<see cref="EvaluationItem.UnavailableReason"/>)。
+        /// OK とも NG とも言えないもの。収束状態の印は付けないので、未収束の件数とは重ならない。
+        /// </summary>
+        public int UnavailableCount => Items.Count(i => i.IsUnavailable);
+
+        /// <summary>
         /// 緩めた基準 (残差 1e-6 に届かず最大 1e-2) で受理したケースから作られた項目の件数。
         ///
         /// <para><b>OK / NG の内訳にも含まれる</b> (未収束とは違い、釣り合いは満たしているとみなす)。

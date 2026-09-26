@@ -133,7 +133,7 @@ namespace PileDesign.FEM
             foreach (NodeResult nodeResult in NodeResults)
             {
                 bool loadCaseMatch = PileDesign.Models.InputData.LoadCase.IsSameCase(loadCase, nodeResult.LoadCase);
-                bool loadCombMatch = loadCombination?.Name == nodeResult.LoadCombination?.Name;
+                bool loadCombMatch = PileDesign.Models.InputData.LoadCombination.IsSameCombination(loadCombination, nodeResult.LoadCombination);
                 if (loadCaseMatch && loadCombMatch &&
                     isLiquefaction == nodeResult.IsLiquefaction &&
                     step == nodeResult.Step)
@@ -147,7 +147,7 @@ namespace PileDesign.FEM
             foreach (NodeResult nodeResult in NodeResults)
             {
                 bool loadCaseMatch = PileDesign.Models.InputData.LoadCase.IsSameCase(loadCase, nodeResult.LoadCase);
-                bool loadCombMatch = loadCombination?.Name == nodeResult.LoadCombination?.Name;
+                bool loadCombMatch = PileDesign.Models.InputData.LoadCombination.IsSameCombination(loadCombination, nodeResult.LoadCombination);
                 if (loadCaseMatch && loadCombMatch &&
                     !isLiquefaction == nodeResult.IsLiquefaction &&
                     fallbackStep == nodeResult.Step)

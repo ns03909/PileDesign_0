@@ -305,6 +305,7 @@ namespace PileDesign.ViewModels
 
             AddBearingTable(tables, columns);
             AddSettlementEvaluationTable(tables, columns);
+            AddSettlementDeformationAngleTable(tables, columns);
 
             if (CurrentModel == null || !IsHorizontalAnalysisDone) return tables;
 
@@ -371,6 +372,34 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 Serilog.Log.Warning(ex, "沈下量の検定テーブルの生成に失敗");
+            }
+        }
+
+        /// <summary>
+        /// 沈下による杭頭変形角 (常時・使用限界) の検定を 1 枚の表にする。沈下解析をしていなければ出ない。
+        ///
+        /// 以前は水平解析の検定の中にあり、水平解析を済ませないと出ず、低減前・低減後の 2 枚に同じ行が並んでいた。
+        /// 沈下の結果だけで決まるので、沈下量の検定と同じく水平解析が済んでいなくても出す。
+        /// </summary>
+        private void AddSettlementDeformationAngleTable(List<ResultTable> tables, ResultColumnDescriptor[] columns)
+        {
+            try
+            {
+                var result = new EvaluationResult(SettlementDeformationAngleEvaluator.Evaluate(ResultInputModel ?? CurrentInputModel));
+                if (result.IsEmpty) return;   // 沈下解析をしていない、または杭が 1 本
+
+                tables.Add(new ResultTable
+                {
+                    Name = "検定結果（沈下による杭頭変形角）",
+                    Category = "検定",
+                    Columns = columns,
+                    Rows = result.ByRatioDescending.Cast<object>().ToList(),
+                    SpansAllConditions = true,
+                });
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Warning(ex, "沈下による杭頭変形角の検定テーブルの生成に失敗");
             }
         }
 

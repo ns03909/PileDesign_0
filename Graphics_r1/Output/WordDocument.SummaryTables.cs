@@ -1224,6 +1224,23 @@ namespace PileDesign.Output
                 AddText(body, "適用範囲の外になった理由: " + string.Join(" / ", reasons));
             }
 
+            // 検定の対象なのにデータが欠けて検定できなかった項目も、判定より先に書く。理由ごとにまとめる。
+            // 以前は項目を作らずに進めていたので、表に無い理由が読めなかった。
+            if (result.UnavailableCount > 0)
+            {
+                var reasons = result.Items
+                    .Where(i => i.IsUnavailable)
+                    .GroupBy(i => $"{i.Category}: {i.UnavailableReason}")
+                    .OrderBy(g => g.Key, StringComparer.Ordinal)
+                    .Select(g => $"{g.Key} ({g.Count()} 件)")
+                    .ToList();
+
+                AddText(body,
+                    $"このうち {result.UnavailableCount} 件は、検定に必要なデータ (その荷重条件の解析結果・断面・限界曲線) が"
+                    + "欠けていたため検定できなかった。OK / NG のいずれにも数えていない (表の判定は「検定不能」)。");
+                AddText(body, "検定できなかった理由: " + string.Join(" / ", reasons));
+            }
+
             // 緩めた基準で受理したケースも、件数だけは集計に添える。
             // 各行の判定は「OK(緩和受理)」と出るが、まとめだけを読む人には伝わらないため。
             if (result.RelaxedCount > 0)
@@ -1257,9 +1274,9 @@ namespace PileDesign.Output
 
             if (result.NgCount == 0)
             {
-                AddText(body, result.UnconvergedCount > 0 || result.OutOfScopeCount > 0
+                AddText(body, result.UnconvergedCount > 0 || result.OutOfScopeCount > 0 || result.UnavailableCount > 0
                     ? "判定できた検定項目は、すべて限界値を下回っている（NG 項目なし）。"
-                      + "収束しなかったケース・算定式の適用範囲の外の項目については、上記のとおり判定していない。"
+                      + "収束しなかったケース・算定式の適用範囲の外の項目・検定できなかった項目については、上記のとおり判定していない。"
                     : "すべての検定項目が限界値を下回っている（NG 項目なし）。");
                 return;
             }
@@ -1396,6 +1413,65 @@ namespace PileDesign.Output
         /// 合否を出すと、根拠の無い判定が計算書に残る。有効にした場合は、その許容値が
         /// 入力であることを本文に明記する。</para>
         /// </summary>
+        /// <summary>
+        /// 沈下による杭頭変形角の検定 (常時・使用限界)。沈下解析をしていなければ出さない。
+        ///
+        /// <para>以前は水平解析の検定の章 (低減前・低減後) の中にあり、水平解析を済ませないと載らず、
+        /// 2 つの章に同じ項目が並んでいた。沈下の結果だけで決まるので沈下の検定として独立させた。</para>
+        /// </summary>
+        private void AddSettlementDeformationAngleReport(Body body)
+        {
+            if (inputModel == null) return;
+
+            List<Models.Results.EvaluationItem> items;
+            try
+            {
+                items = Services.SettlementDeformationAngleEvaluator.Evaluate(inputModel);
+            }
+            catch (Exception ex)
+            {
+                NoteOmitted(body, "沈下による杭頭変形角の検定結果", ex);
+                return;
+            }
+            if (items == null || items.Count == 0) return;   // 沈下解析をしていない、または杭が 1 本
+
+            AddPageBreak(body);
+            AddHeader1(body, "沈下による杭頭変形角 検定", 1);
+
+            var judged = items.Where(i => i.IsJudged).ToList();
+            int ng = judged.Count(i => !i.IsOk);
+            string basis = inputModel.FundamentalInput?.SettlementDesignBasisName ?? "単杭＋群杭沈下";
+            double limit = items[0].Limit;
+            AddText(body,
+                $"検定項目 {items.Count} 件（OK {judged.Count - ng} 件 / NG {ng} 件）。"
+                + $"応答値は沈下検討の対象（{basis}）の沈下量から求めた、すべての杭頭の組の変形角 |ΔS| / 杭間の水平距離 の最大値、"
+                + $"限界値は使用限界の変形角 {limit:E3} rad である（常時荷重による即時沈下。杭基礎では圧密沈下は生じない）。");
+            foreach (var u in items.Where(i => i.IsUnavailable))
+                AddText(body, $"{u.LoadCaseName}: 検定できなかった（{u.UnavailableReason}）。");
+
+            AddTableCaption(body, "検定結果（沈下による杭頭変形角）");
+            const double fontSize = 8.0;
+            var table = CreateTableWithBorders();
+            table.Append(CreateHeaderRow(
+                CreateTableCell(["荷重ケース"], fontSize, "center"),
+                CreateTableCell(["対象"], fontSize, "center"),
+                CreateTableCell(["変形角", "[rad]"], fontSize, "center"),
+                CreateTableCell(["限界値", "[rad]"], fontSize, "center"),
+                CreateTableCell(["検定比"], fontSize, "center"),
+                CreateTableCell(["判定"], fontSize, "center")));
+            foreach (var i in items)
+            {
+                table.Append(new TableRow(
+                    CreateTableCell([i.LoadCaseName], fontSize, "center"),
+                    CreateTableCell([i.TargetName], fontSize, "center"),
+                    CreateTableCell([i.ResponseText], fontSize, "right"),
+                    CreateTableCell([i.LimitText], fontSize, "right"),
+                    CreateTableCell([double.IsFinite(i.Ratio) ? i.Ratio.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "—"], fontSize, "right"),
+                    CreateTableCell([i.StatusLabel], fontSize, "center")));
+            }
+            body.Append(table);
+        }
+
         private void AddPileSettlementEvaluationReport(Body body)
         {
             if (inputModel == null) return;
