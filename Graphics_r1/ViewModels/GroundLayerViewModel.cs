@@ -2711,6 +2711,10 @@ namespace PileDesign.ViewModels
                     continue;
                 }
 
+                // 並び (上から下へ標高が下がる)・同じ標高・数値でない値。解析前の検査と同じもの
+                foreach (var problem in CustomDisplacementProfile.DescribeProblems(profile))
+                    warnings.Add($"[{caseNames[i]}] {problem}。");
+
                 double maxZ = profile.Max(p => p.Z);
                 double minZ = profile.Min(p => p.Z);
 

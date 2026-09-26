@@ -1782,6 +1782,19 @@ namespace PileDesign.ViewModels
                     _mainWindowViewModel.CurrentInputModel, "水平解析"))
                 return;
 
+            // 任意入力の地盤変位: これから解く荷重レベル・液状化の別の曲線が空・並びの誤りなら止める
+            // (空だと地盤変位 0 として黙って解けてしまう)
+            var customDispProblems = PileDesign.Services.CheckInputData.DescribeCustomDisplacementProblems(
+                _mainWindowViewModel.CurrentInputModel, PlannedLevelsAndLiquefaction());
+            if (customDispProblems.Count > 0)
+            {
+                PileDesign.Services.MessageService.Show(
+                    "任意入力の地盤変位に以下の問題があります。水平解析を中止します。\n\n・"
+                    + string.Join("\n・", customDispProblems),
+                    "水平解析 入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             // 既存の解析結果がある場合は警告 (新規実行のみ。追加実行は既存結果保持が前提なのでスキップ)
             // メイン側 (OK 済み) または、現セッションでロードした「済」結果のいずれかがあれば確認
             bool hasExistingResults = _mainWindowViewModel.IsHorizontalAnalysisDone
@@ -3122,18 +3135,6 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// LiquefactionOption に応じたフラグ列挙。三重ループと CountPendingCases で共通利用。
-        /// </summary>
-        private IEnumerable<bool> EnumerateLiquefactionCases() =>
-            LiquefactionOption switch
-            {
-                LiquefactionOptionType.Both => new[] { true, false },
-                LiquefactionOptionType.Yes => new[] { true },
-                LiquefactionOptionType.None => new[] { false },
-                _ => new[] { false }
-            };
-
-        /// <summary>
         /// 水平解析に効く入力の署名。追加実行は、前回の解析のときとこれが一致するときだけ許す。
         ///
         /// 以前は解析設定 (ステップ数など) だけを比べ、地盤・杭体・杭配置・荷重などの入力は照合しなかった
@@ -3148,6 +3149,31 @@ namespace PileDesign.ViewModels
             => MainWindowViewModel.InputSignature(input,
                 alsoIgnore: ["IsAnalysisTarget", "IsApplicable", "PileGroupSettlement"],
                 extra: Models.Results.SinglePileSettlementResult.Capture(input));
+
+        /// <summary>
+        /// LiquefactionOption に応じたフラグ列挙。三重ループと CountPendingCases で共通利用。
+        /// </summary>
+        private IEnumerable<bool> EnumerateLiquefactionCases() =>
+            LiquefactionOption switch
+            {
+                LiquefactionOptionType.Both => new[] { true, false },
+                LiquefactionOptionType.Yes => new[] { true },
+                LiquefactionOptionType.None => new[] { false },
+                _ => new[] { false }
+            };
+
+        /// <summary>
+        /// これから解く (荷重レベル, 液状化の別)。解析対象の地震時荷重ケースのレベルと、液状化の選択の組。
+        /// </summary>
+        private IEnumerable<(int Level, bool IsLiquefaction)> PlannedLevelsAndLiquefaction()
+        {
+            var levels = InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases
+                .Where(lc => lc != null && (lc.Level == 1 || lc.Level == 2))
+                .Select(lc => lc.Level).Distinct().ToList();
+            foreach (int level in levels)
+                foreach (bool liq in EnumerateLiquefactionCases())
+                    yield return (level, liq);
+        }
 
         /// <summary>
         /// 「実行予定 (現在選択中) だが既存結果にない」ケースの件数。

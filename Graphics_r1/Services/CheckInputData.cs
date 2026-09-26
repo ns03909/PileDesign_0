@@ -3,6 +3,7 @@ using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 
 
@@ -150,6 +151,53 @@ namespace PileDesign.Services
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             return false;
+        }
+
+        /// <summary>
+        /// 任意入力の地盤変位の検査。水平解析の前に、これから解く荷重レベル・液状化の別について見る。
+        ///
+        /// <para>任意入力が有効な地盤で、そのケースの点が 1 つも無いと、補間は 0 mm を返し、地盤変位を
+        /// <b>無視したまま</b>計算が進んだ。画面には警告が出るが解析前の検査を通っていないので、ファイルを
+        /// 読み込んだあとなどに気づかず解ける。点の並び (上から下へ標高が下がる)・同じ標高・数値でない値も、
+        /// 補間が 0 mm や不定な値を返す原因なので止める。</para>
+        ///
+        /// 対象は杭か根入部が使っている地盤だけ。
+        /// </summary>
+        internal static List<string> DescribeCustomDisplacementProblems(
+            InputModel inputModel, IEnumerable<(int Level, bool IsLiquefaction)> cases)
+        {
+            var problems = new List<string>();
+            var grounds = inputModel?.GroundsInput;
+            if (grounds == null || grounds.Count == 0) return problems;
+
+            var used = new SortedSet<int>();
+            foreach (var p in inputModel!.PileLayoutItems ?? [])
+                if (p != null && p.GroundNo >= 1 && p.GroundNo <= grounds.Count) used.Add(p.GroundNo);
+            if ((inputModel.EmbedmentInput?.EmbedmentLayersCount ?? 0) > 0
+                && inputModel.EmbedmentInput!.GroundNo >= 1 && inputModel.EmbedmentInput.GroundNo <= grounds.Count)
+                used.Add(inputModel.EmbedmentInput.GroundNo);
+
+            var caseIndices = cases.Select(c => CustomDisplacementProfile.CaseIndexOf(c.Level, c.IsLiquefaction))
+                .Distinct().OrderBy(i => i).ToList();
+
+            foreach (int groundNo in used)
+            {
+                var custom = grounds[groundNo - 1]?.CustomDisplacementProfile;
+                if (custom?.IsEnabled != true) continue;
+                foreach (int ci in caseIndices)
+                {
+                    string where = $"地盤 {groundNo} の任意入力の地盤変位 [{CustomDisplacementProfile.CaseName(ci)}]";
+                    var profile = custom.GetProfile(ci);
+                    if (profile == null || profile.Count == 0)
+                    {
+                        problems.Add($"{where}: 点が入力されていません。このまま解くと地盤変位を 0 として計算します");
+                        continue;
+                    }
+                    foreach (var problem in CustomDisplacementProfile.DescribeProblems(profile))
+                        problems.Add($"{where}: {problem}");
+                }
+            }
+            return problems;
         }
 
         /// <summary>
