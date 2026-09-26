@@ -1148,7 +1148,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[DOCX] 検定結果の生成に失敗");
+                NoteOmitted(body, factored ? "水平解析の検定結果 (低減後)" : "水平解析の検定結果 (低減前)", ex);
                 return;
             }
             if (result == null || result.IsEmpty) return;
@@ -1338,7 +1338,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[DOCX] 支持力の検定の生成に失敗");
+                NoteOmitted(body, "支持力の検定結果", ex);
                 return;
             }
             if (items == null || items.Count == 0) return;
@@ -1407,7 +1407,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[DOCX] 沈下量の検定の生成に失敗");
+                NoteOmitted(body, "沈下量の検定結果", ex);
                 return;
             }
             if (items == null || items.Count == 0) return;   // 検定しない設定、または許容値が未入力

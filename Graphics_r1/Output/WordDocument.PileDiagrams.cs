@@ -87,8 +87,7 @@ namespace PileDesign.Output
                 }
                 catch (Exception ex)
                 {
-                    Serilog.Log.Warning(ex, "杭姿図 (PileBodyNo={PB}, GroundNo={GN}) の docx 出力中にエラー",
-                        soilPile.PileBodyNo, soilPile.GroundNo);
+                    NoteOmitted(body, $"杭姿図 (杭体 {soilPile.PileBodyNo}・地盤 {soilPile.GroundNo})", ex);
                 }
             }
         }
@@ -204,7 +203,7 @@ namespace PileDesign.Output
                     }
                     catch (Exception ex)
                     {
-                        Serilog.Log.Warning(ex, "杭断面図 (杭体 {PB}, 区間 {SEG}) の docx 出力中にエラー", pbIdx + 1, segIdx + 1);
+                        NoteOmitted(body, $"杭断面図 (杭体 {pbIdx + 1}・区間 {segIdx + 1})", ex);
                     }
                 }
             }
@@ -267,7 +266,7 @@ namespace PileDesign.Output
                 }
                 catch (Exception ex)
                 {
-                    Serilog.Log.Warning(ex, "杭頭上面図 (杭体 {PB}) の docx 出力中にエラー", pbIdx + 1);
+                    NoteOmitted(body, $"杭頭の上面図 (杭体 {pbIdx + 1})", ex);
                 }
             }
         }
@@ -377,7 +376,7 @@ namespace PileDesign.Output
                 }
                 catch (Exception ex)
                 {
-                    Serilog.Log.Warning(ex, "杭頭諸元 (PileBodyNo={PB}) の docx 出力中にエラー", i + 1);
+                    NoteOmitted(body, $"杭頭の諸元の表 (杭体 {i + 1})", ex);
                 }
             }
         }
@@ -435,8 +434,7 @@ namespace PileDesign.Output
                     }
                     catch (Exception ex)
                     {
-                        Serilog.Log.Warning(ex, "軸力制限テーブル (杭体 {PB}, 区間 {SEG}) の docx 出力中にエラー",
-                            pbIdx + 1, segIdx + 1);
+                        NoteOmitted(body, $"軸力の制限の表 (杭体 {pbIdx + 1}・区間 {segIdx + 1})", ex);
                     }
                 }
             }

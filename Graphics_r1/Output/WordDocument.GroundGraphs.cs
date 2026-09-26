@@ -123,7 +123,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "地盤変位グラフ ({Label}) の docx 出力中にエラー", groundLabel);
+                NoteOmitted(body, $"地盤変位のグラフ ({groundLabel})", ex);
             }
         }
 
@@ -283,7 +283,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Serilog.Log.Error(ex, "[ResponseSpectrum] FAIL ({Label}): {Message}", groundLabel, ex.Message);
+                NoteOmitted(body, $"応答スペクトルのグラフ ({groundLabel})", ex);
             }
         }
 
@@ -355,7 +355,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "地盤グラフ ({Type}) の docx 出力中にエラー", type);
+                NoteOmitted(body, $"{caption} ({groundLabel})", ex);
             }
         }
 

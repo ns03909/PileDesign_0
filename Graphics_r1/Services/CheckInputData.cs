@@ -30,6 +30,11 @@ namespace PileDesign.Services
             if (inputModel == null) return warnings;
 
 
+            // 杭の鉛直地盤ばね (P-S ばね) を入力のとおりに付けられない杭。
+            // 付けられないとモデル作成は杭先端を鉛直に固定して続けるので、支持条件が変わることを先に知らせる
+            foreach (var problem in PileDesign.FEM.AnalysisModelling.DescribeVerticalSpringProblems(inputModel))
+                warnings.Add("鉛直地盤ばね: " + problem);
+
             // 各杭の ΔZc (接合点 − 杭頭オフセット)
             if (inputModel.PileLayoutItems != null)
             {

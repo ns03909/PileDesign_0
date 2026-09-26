@@ -77,8 +77,7 @@ namespace PileDesign.Output
                 }
                 catch (Exception ex)
                 {
-                    Serilog.Log.Warning(ex, "要素分割杭姿図 (PileBodyNo={PB}, GroundNo={GN}) の docx 出力中にエラー",
-                        soilPile.PileBodyNo, soilPile.GroundNo);
+                    NoteOmitted(body, $"要素分割の杭姿図 (杭体 {soilPile.PileBodyNo}・地盤 {soilPile.GroundNo})", ex);
                 }
             }
         }
@@ -169,8 +168,7 @@ namespace PileDesign.Output
                 }
                 catch (Exception ex)
                 {
-                    Serilog.Log.Warning(ex, "水平地盤反力グラフ (PileBodyNo={PB}, GroundNo={GN}) の docx 出力中にエラー",
-                        soilPile.PileBodyNo, soilPile.GroundNo);
+                    NoteOmitted(body, $"水平地盤反力のグラフ (杭体 {soilPile.PileBodyNo}・地盤 {soilPile.GroundNo})", ex);
                 }
             }
         }
@@ -282,7 +280,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "土圧合力ばねグラフの docx 出力中にエラー");
+                NoteOmitted(body, "土圧合力ばねのグラフ", ex);
             }
         }
 

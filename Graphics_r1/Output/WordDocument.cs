@@ -214,6 +214,7 @@ namespace PileDesign.Output
             // 水平解析は解析ログに出しているが、計算書の生成でも断面を作り直すので、
             // ここで既定値に落ちた箇所は今まで誰にも見えていなかった (2026-09-19)。
             PileDesign.Common.CalcFallbackTracker.Reset();
+            lock (_omittedLock) _omitted.Clear();
 
             var sw = new System.Diagnostics.Stopwatch();
             void StartSection() => sw.Restart();
@@ -232,7 +233,31 @@ namespace PileDesign.Output
                 throw;
             }
 
+            lock (_omittedLock) OmittedItems = [.. _omitted];
             Log.Debug("Word文書を出力しました。Word で開き、目次上をクリック → F9 でフィールド更新してください。");
+        }
+
+        // ── 作成できずに省いた図・表 ──
+        // 図や表の作成で例外が出ても、計算書全体は止めずにその 1 つを省いて続ける。以前はログに残すだけで、
+        // 完成した計算書からは欠けていることに気付けなかった。省いた位置に注記を入れ、出力の最後に一覧で知らせる。
+        // 図を作る処理には静的なものもあるので、文書 1 つぶんの一覧を静的に持つ (CreateWordDocument の先頭で空にする)。
+        private static readonly object _omittedLock = new();
+        private static readonly List<string> _omitted = [];
+
+        /// <summary>この計算書で、作成できずに省いた図・表 (出力の順)。<see cref="CreateWordDocument"/> のあとに見る。</summary>
+        public IReadOnlyList<string> OmittedItems { get; private set; } = [];
+
+        /// <summary>
+        /// 図・表 <paramref name="what"/> を作成できずに省いたことを記録し、その位置に赤字の注記を入れる。
+        /// 注記は本文の流れの中に入るので、計算書を読む人が欠けに気付ける。理由 (例外) はログにだけ残す。
+        /// </summary>
+        internal static void NoteOmitted(Body? body, string what, Exception ex)
+        {
+            Log.Warning(ex, "[計算書] {What} を作成できず、省いて続けました", what);
+            lock (_omittedLock) _omitted.Add(what);
+            body?.AppendChild(new Paragraph(new Run(
+                new RunProperties(new Bold(), new DocumentFormat.OpenXml.Wordprocessing.Color { Val = "C00000" }),
+                new Text($"（{what}を作成できませんでした。理由はログに記録しています）"))));
         }
 
         /// <summary>計算書の本体を <paramref name="tempPath"/> に書く (<see cref="CreateWordDocument"/> が一時ファイルのパスを渡す)。</summary>
@@ -1573,7 +1598,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "AddScottPlotGraphToBody: エラー");
+                NoteOmitted(body, $"グラフ「{title}」", ex);
             }
         }
 
@@ -1707,7 +1732,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "AddNMinTScottPlotGraphToBody: エラー");
+                NoteOmitted(body, $"グラフ「{title}」", ex);
             }
         }
 
@@ -1801,7 +1826,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "AddScottPlotGraphWithMultipleDataToBody: エラー");
+                NoteOmitted(body, $"グラフ「{title}」", ex);
             }
         }
 

@@ -395,6 +395,72 @@ namespace PileDesign.FEM
             public List<FEM.PileVerticalSoilSpringModel> VerticalNodeSpringModels { get; } = [];
         }
 
+        /// <summary>
+        /// 杭の鉛直地盤ばね (単杭沈下解析の節点別の履歴から作る) を、入力のとおりには付けられない杭を、
+        /// <b>解析を始める前に</b>調べて文にする (解析前の確認に出す)。問題が無ければ空。
+        ///
+        /// ばねを作れないと、モデル作成は止まらずに<b>杭先端を鉛直に固定する</b> (または一部の節点にばねを付けない)
+        /// 代わりの支持条件で解析を続ける。以前はログに残すだけで、利用者は支持条件が変わったことを知らずに結果を使った。
+        /// ここでは <see cref="BuildVerticalNodeSprings"/> と同じ条件を、モデルを組まずに確かめる。
+        /// </summary>
+        internal static List<string> DescribeVerticalSpringProblems(InputModel input)
+        {
+            var problems = new List<string>();
+            if (input == null || !input.UsePsSpringAtPileTip) return problems;
+            var soilPiles = input.ElementDivision?.SoilPiles;
+            if (soilPiles == null || input.PileLayoutItems == null) return problems;
+
+            // 同じ杭体・地盤の杭 (同じ SoilPile) はまとめて 1 行にする
+            foreach (var group in input.PileLayoutItems
+                         .Where(p => p != null && p.SoilPileAltNo >= 1 && p.SoilPileAltNo <= soilPiles.Count)
+                         .GroupBy(p => p.SoilPileAltNo))
+            {
+                var soilPile = soilPiles[group.Key - 1];
+                if (soilPile == null) continue;
+                string piles = "杭 No." + string.Join(", ", group.Select(p => p.No).OrderBy(n => n));
+                string problem = DescribeVerticalSpringProblem(soilPile);
+                if (problem.Length > 0) problems.Add($"{piles}: {problem}");
+            }
+            return problems;
+        }
+
+        /// <summary>1 つの SoilPile について、鉛直地盤ばねを入力のとおりに付けられない理由。付けられるなら空。</summary>
+        internal static string DescribeVerticalSpringProblem(SoilPile soilPile)
+        {
+            const string Remedy = "単杭沈下解析をやり直すと直ります。";
+            var disps = soilPile.NodeDisplacements;
+            var reacts = soilPile.NodeReactions;
+            if (disps == null || reacts == null || disps.Count == 0 || reacts.Count == 0)
+                return "単杭沈下解析の結果が無いため、鉛直地盤ばねを付けず、杭先端を鉛直に固定して解析します。" + Remedy;
+
+            int steps = Math.Min(disps.Count, reacts.Count);
+            if (steps < 2)
+                return "単杭沈下解析の履歴が 2 ステップ未満のため、鉛直地盤ばねを付けず、杭先端を鉛直に固定して解析します。" + Remedy;
+
+            int pileNodeCount = soilPile.ZDataItems?.Count ?? 0;
+            int analysisNodeCount = (disps[0]?.Count ?? 0) / 2;
+            if (analysisNodeCount < pileNodeCount)
+                return $"杭の節点 {pileNodeCount} 個に対し単杭沈下解析の節点が {analysisNodeCount} 個で合わない (要素分割が変わった) ため、"
+                       + $"下の {pileNodeCount - analysisNodeCount} 節点 (杭先端を含む) に鉛直地盤ばねを付けず、杭先端を鉛直に固定して解析します。" + Remedy;
+            if (analysisNodeCount > pileNodeCount)
+                return $"杭の節点 {pileNodeCount} 個に対し単杭沈下解析の節点が {analysisNodeCount} 個で合わない (要素分割が変わった) ため、"
+                       + "鉛直地盤ばねが本来と違う深さに付きます。" + Remedy;
+
+            // 節点ごとに、曲線を作れるだけの履歴 (2 点以上) があるか
+            var missing = new List<int>();
+            for (int k = 0; k < pileNodeCount; k++)
+            {
+                int points = 0;
+                for (int s = 0; s < steps; s++)
+                    if (disps[s] != null && reacts[s] != null && disps[s].Count > 2 * k + 1 && reacts[s].Count > 2 * k) points++;
+                if (points < 2) missing.Add(k);
+            }
+            if (missing.Count > 0)
+                return $"{missing.Count} 節点で単杭沈下解析の履歴が足りないため、その節点に鉛直地盤ばねを付けません"
+                       + (missing.Contains(pileNodeCount - 1) ? " (杭先端は鉛直に固定します)" : "") + "。" + Remedy;
+            return "";
+        }
+
         // 各杭節点に Z 非線形ばねを設置するか判定
         // 条件: UsePsSpringAtPileTip が ON、かつ沈下解析の節点別履歴 (NodeDisplacements/NodeReactions) が存在
         private bool ShouldApplyVerticalSpringsToPile(Models.InputData.SoilPile soilPile)
@@ -480,6 +546,9 @@ namespace PileDesign.FEM
                 }
                 if (points.Count < 2)
                 {
+                    // 履歴が足りずにばねを付けない。杭がその深さで地盤に支えられなくなるので、黙って落とさない
+                    PileDesign.Common.CalcFallbackTracker.Report(
+                        "杭の鉛直地盤ばね（沈下解析の履歴が足りず、ばね無しで継続）", null, $"杭={pile.No}, 節点={k}");
                     if (k == pileNodeCount - 1)
                         result.PileNodes[k].SetBoundary(PileTipBoundary);
                     continue;
@@ -518,6 +587,17 @@ namespace PileDesign.FEM
                 result.VerticalNodeSprings.Add(sp);
                 result.VerticalNodeSpringCurves.Add(curve);
                 result.VerticalNodeSpringModels.Add(model);
+            }
+
+            // 沈下解析の節点が杭の節点より少ないと、下の節点 (杭先端を含む) にはばねが付かない。
+            // 以前は杭先端が鉛直方向にどこにも支えられないまま (固定もばねも無し) 解析していた。
+            // 他の「ばねを作れない」場合と同じく杭先端を鉛直に固定し、知らせる。
+            if (mapCount < pileNodeCount)
+            {
+                PileDesign.Common.CalcFallbackTracker.Report(
+                    "杭の鉛直地盤ばね（沈下解析と杭の節点数が合わず、下の節点はばね無し・杭先端は鉛直固定で継続）", null,
+                    $"杭={pile.No}, 杭の節点={pileNodeCount}, 沈下解析の節点={analysisNodeCount}");
+                result.PileNodes[pileNodeCount - 1].SetBoundary(PileTipBoundary);
             }
         }
 
@@ -660,9 +740,9 @@ namespace PileDesign.FEM
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning(ex,
-                        "[AnalysisModelling] Pile-{PileNo}: 節点別Zばね構築に失敗。先端 Uz 固定にフォールバック。",
-                        pile.No);
+                    // 支持条件が入力と変わるので、ログだけでなく解析の完了時にも知らせる (解析前の確認でも予告している)
+                    PileDesign.Common.CalcFallbackTracker.Report(
+                        "杭の鉛直地盤ばね（作れず、杭先端を鉛直固定にして継続）", ex, $"杭={pile.No}");
                     // フォールバック: 先端ノードに Uz 固定を適用 (上のループでスキップしたため再適用)
                     if (result.PileNodes.Count > 0)
                         result.PileNodes[^1].SetBoundary(PileTipBoundary);

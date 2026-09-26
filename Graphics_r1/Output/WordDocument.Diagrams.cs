@@ -409,8 +409,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "図の作成でエラー");
-                // フォールバック: 何もしないか、プレースホルダを追加する
+                NoteOmitted(body, "荷重の組合せの図", ex);
             }
         }
 
@@ -653,8 +652,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "AddPileForceDiagramByMm: 図作成エラー");
-                // 必要ならプレースホルダ段落を追加
+                NoteOmitted(body, "杭に作用する力の図", ex);
             }
         }
         //{
@@ -709,8 +707,7 @@ diameterSelector,
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "AddPilingLayoutDiagramByMm: 図作成エラー");
-                // 必要に応じプレースホルダ段落を追加するなどのフォールバック処理を入れてください
+                NoteOmitted(body, "杭配置図", ex);
             }
         }
 
@@ -763,7 +760,7 @@ diameterSelector,
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "AddGroupPileSettlementContourDiagram: 図作成エラー");
+                NoteOmitted(body, "群杭沈下の分布図", ex);
             }
         }
 

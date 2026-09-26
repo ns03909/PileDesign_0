@@ -73,7 +73,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "AddFundamentalTableでエラーが発生しました");
+                NoteOmitted(body, "基本条件の表", ex);
             }
         }
 

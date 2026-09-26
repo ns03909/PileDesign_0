@@ -152,6 +152,14 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>計算書で作成できずに省いた図・表を知らせる文面。</summary>
+        internal static string DescribeOmittedReportItems(IReadOnlyList<string> items)
+            => $"計算書は作成しましたが、次の {items.Count} 件の図・表を作成できなかったため省きました。\n"
+               + "計算書の該当位置に赤字で「作成できませんでした」と記しています。\n\n"
+               + string.Join("\n", items.Take(15).Select(i => "・" + i))
+               + (items.Count > 15 ? $"\n…ほか {items.Count - 15} 件" : "")
+               + "\n\n理由はログに記録しています (ヘルプ タブ → バージョン情報 → ログフォルダを開く)。";
+
         /// <summary>
         /// 保存した入力に NaN・無限大があれば、保存は済ませたうえで警告として知らせる。
         ///
@@ -896,6 +904,11 @@ namespace PileDesign.ViewModels
                         sw.Elapsed.TotalSeconds, System.IO.Path.GetFileName(saveFileDialog.FileName));
 
                     ShowToast($"計算書を作成しました ({sw.Elapsed.TotalSeconds:N1}秒)");
+
+                    // 作成できずに省いた図・表があれば知らせる (計算書の該当位置にも赤字で注記が入っている)
+                    if (doc.OmittedItems.Count > 0)
+                        MessageService.Show(DescribeOmittedReportItems(doc.OmittedItems),
+                            "計算書の作成 (一部を省きました)", MessageBoxButton.OK, MessageBoxImage.Warning);
 
                     // 「目次を F9 で更新」は出力後に必ず要る手順なので、
                     // 数秒で消える Toast だけに載せず、ステータスバーにも残す。
