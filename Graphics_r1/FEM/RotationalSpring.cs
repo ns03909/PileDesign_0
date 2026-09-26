@@ -25,6 +25,13 @@ namespace PileDesign.FEM
         public string SetupReason { get; init; } = "";
     }
 
+    /// <summary>ケース別の M–θ 構成の控え 1 件 (保存用)。<see cref="RotationalSpring.SavedCaseMThetaSnapshots"/> 参照。</summary>
+    public sealed class MThetaCaseSnapshotEntry
+    {
+        public string Key { get; set; } = "";
+        public MThetaCaseSnapshot? Snapshot { get; set; }
+    }
+
     /// <summary>M-θ 曲線の 1 点。保存できる形にするために要る。</summary>
     public sealed class MomentRotationPoint
     {
@@ -304,13 +311,39 @@ namespace PileDesign.FEM
         // 元 model のばねへ「ケース別スナップショット」として書き戻す辞書。
         // GraphViewModel / AnalysisResultTableService はこの辞書を引いて、
         // 表示中の (LoadCase, LoadCombination, IsLiquefaction) に対応する構成を可視化する。
-        // キー形式: MakeCaseKey() で生成 ("LoadName|CombNo|IsLiq")。
+        // キー形式: MakeCaseKey() で生成 ("L{Level}-{No}|CombNo|IsLiq")。
         [System.Text.Json.Serialization.JsonIgnore]
         public System.Collections.Concurrent.ConcurrentDictionary<string, MThetaCaseSnapshot> CaseMThetaSnapshots { get; }
             = new();
 
-        public static string MakeCaseKey(string? loadCaseName, int loadCombinationNo, bool isLiquefaction)
-            => $"{loadCaseName ?? ""}|{loadCombinationNo}|{isLiquefaction}";
+        /// <summary>
+        /// ケース別の控えの鍵。荷重ケースは<b>レベルと番号</b>で区別する。
+        /// 以前は荷重ケース名で作っていたので、名前が空欄・重複だとレベル1 とレベル2 が同じ鍵になり、
+        /// 後から解析したケースの M–θ 曲線で上書きされた (同梱の例題は名前がすべて空欄で、実際にそうなっていた)。
+        /// </summary>
+        public static string MakeCaseKey(Models.InputData.LoadCase? loadCase, int loadCombinationNo, bool isLiquefaction)
+            => $"L{loadCase?.Level ?? 0}-{loadCase?.No ?? 0}|{loadCombinationNo}|{isLiquefaction}";
+
+        /// <summary>
+        /// ケース別の控え (<see cref="CaseMThetaSnapshots"/>) の保存用の形。保存ファイルにだけ使う。
+        ///
+        /// 以前は控えを保存しなかったので、読み直すと表示中のケースの控えが無く、表とグラフは<b>ばね本体の曲線</b>
+        /// (どのケースのものとも限らない) に切り替わった。M–θ 曲線は軸力で変わるので、別のケースの曲線が出た。
+        /// </summary>
+        public List<MThetaCaseSnapshotEntry>? SavedCaseMThetaSnapshots
+        {
+            get => CaseMThetaSnapshots.IsEmpty
+                ? null
+                : CaseMThetaSnapshots.OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                    .Select(kv => new MThetaCaseSnapshotEntry { Key = kv.Key, Snapshot = kv.Value }).ToList();
+            set
+            {
+                if (value == null) return;
+                foreach (var e in value)
+                    if (!string.IsNullOrEmpty(e?.Key) && e.Snapshot != null)
+                        CaseMThetaSnapshots[e.Key] = e.Snapshot;
+            }
+        }
 
         [System.Text.Json.Serialization.JsonIgnore]
         public bool HasCrackedXY { get; private set; } = false;

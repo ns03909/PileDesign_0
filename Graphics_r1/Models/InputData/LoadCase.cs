@@ -97,6 +97,16 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 2 つの荷重ケースが同じケースか (レベルと番号で決める)。
+        ///
+        /// 荷重ケース名は利用者が自由に付けられ、空欄や重複も拒まない (同梱の例題はすべて空欄)。
+        /// 名前で照合すると、レベル1 とレベル2 の結果や M–θ 曲線を取り違える。番号は読込で並び順に揃える
+        /// (<see cref="LoadCasesInput.NormalizeLoadCaseNumbers"/>) ので、レベルと番号の組は一意。
+        /// </summary>
+        public static bool IsSameCase(LoadCase? a, LoadCase? b)
+            => a != null && b != null && a.Level == b.Level && a.No == b.No;
+
         private int _no;
         public int No
         {

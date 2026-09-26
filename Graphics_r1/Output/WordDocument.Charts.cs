@@ -924,9 +924,11 @@ namespace PileDesign.Output
                                             // アプリ内グラフ (GraphViewModel.CurveGraphs) と同じく、
                                             // ピーク履歴値 (ThetaProjMax, curve(ThetaProjMax)) をプロットする。
                                             string snapKey = RotationalSpring.MakeCaseKey(
-                                                loadCase.LoadName, loadCombination.No, isLiquefaction);
+                                                loadCase, loadCombination.No, isLiquefaction);
+                                            // 控えが無いときにばね本体の曲線 (別のケースのものかもしれない) を使わない。
+                                            // 無ければピーク値ではなく最終状態の値で描く (下の else)
                                             var peakCurve = rs.CaseMThetaSnapshots.TryGetValue(snapKey, out var snap)
-                                                && snap.CurveXY != null ? snap.CurveXY : rs.CurveXY;
+                                                ? snap.CurveXY : null;
                                             if (rsResult.HasCracked
                                                 && rsResult.CrackNx.HasValue && rsResult.CrackNy.HasValue
                                                 && rsResult.ThetaProjMax > 0.0

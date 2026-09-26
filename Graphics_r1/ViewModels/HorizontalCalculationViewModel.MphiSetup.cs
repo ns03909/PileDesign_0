@@ -387,7 +387,7 @@ namespace PileDesign.ViewModels
             if (src == null || dst == null) return;
             int n = Math.Min(src.Count, dst.Count);
             string key = FEM.RotationalSpring.MakeCaseKey(
-                loadCase?.LoadName, loadCombination?.No ?? 0, isLiquefaction);
+                loadCase, loadCombination?.No ?? 0, isLiquefaction);
             for (int i = 0; i < n; i++)
             {
                 var s = src[i];

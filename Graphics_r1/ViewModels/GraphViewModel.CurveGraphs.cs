@@ -694,7 +694,7 @@ namespace PileDesign.ViewModels
                             // Y 案: 表示中ケースに対応するスナップショットから曲線取得 (解析実体と整合)
                             // 無ければ rs 直接 (旧経路、後方互換)、それも無ければ K·θ 線形外挿。
                             string snapKey = RotationalSpring.MakeCaseKey(
-                                loadCase?.LoadName, loadCombination?.No ?? 0, isLiquefaction);
+                                loadCase, loadCombination?.No ?? 0, isLiquefaction);
                             MomentRotationCurve? snapCurveXY = null;
                             MomentRotationCurve? snapCurveSingle = null;
                             RotationalSpringMode snapMode = rs.Mode;
@@ -710,8 +710,10 @@ namespace PileDesign.ViewModels
                             }
                             else
                             {
-                                snapCurveXY = rs.CurveXY;
-                                snapCurveSingle = rs.Curve;
+                                // 表示中のケースの控えが無い (控えを保存するようにする前のファイル)。
+                                // 以前はばね本体の曲線 (どのケースのものとも限らない) を描いていた。別のケースの曲線は描かない
+                                Log.Information("[GraphVM] M-θ: 杭 {Pile} の {Key} の曲線の控えがありません (再解析すると表示します)", pileLayout.No, snapKey);
+                                continue;
                             }
 
                             double[] thetas;

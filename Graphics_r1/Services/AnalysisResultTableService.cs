@@ -44,7 +44,7 @@ namespace PileDesign.Services
                 beam.BeamResults?.FirstOrDefault(r =>
                     r.IsLiquefaction == isLiquefaction &&
                     r.Step == step &&
-                    (loadCase == null || r.LoadCase?.LoadName == loadCase.LoadName) &&
+                    (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
                     (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
 
             // 結果検索用のヘルパー: RotationalSpringResultsから該当する結果を取得
@@ -52,7 +52,7 @@ namespace PileDesign.Services
                 rs.RotationalSpringResults?.FirstOrDefault(r =>
                     r.IsLiquefaction == isLiquefaction &&
                     r.Step == step &&
-                    (loadCase == null || r.LoadCase?.LoadName == loadCase.LoadName) &&
+                    (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
                     (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
 
             // 結果検索用のヘルパー: NodeResultsから該当する結果を取得
@@ -60,7 +60,7 @@ namespace PileDesign.Services
                 node.NodeResults?.FirstOrDefault(r =>
                     r.IsLiquefaction == isLiquefaction &&
                     r.Step == step &&
-                    (loadCase == null || r.LoadCase?.LoadName == loadCase.LoadName) &&
+                    (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
                     (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
 
             if (beams.Count > 0 || rotSprings.Count > 0)
@@ -211,7 +211,7 @@ namespace PileDesign.Services
                     hss.HorizontalSpringResults?.FirstOrDefault(r =>
                         r.IsLiquefaction == isLiquefaction &&
                         r.Step == step &&
-                        (loadCase == null || r.LoadCase?.LoadName == loadCase.LoadName) &&
+                        (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
                         (loadCombination == null || r.LoadCombination?.No == loadCombination.No));
 
                 var soilSpringRows = new List<object>();
@@ -369,13 +369,17 @@ namespace PileDesign.Services
                 var mthetaRows = new List<object>();
                 // Y 案: 表示中ケースに対応するスナップショットを引いて使う。
                 string snapKey = RotationalSpring.MakeCaseKey(
-                    loadCase?.LoadName, loadCombination?.No ?? 0, isLiquefaction);
+                    loadCase, loadCombination?.No ?? 0, isLiquefaction);
                 for (int idx = 0; idx < rotSprings.Count; idx++)
                 {
                     var rs = rotSprings[idx];
 
-                    // M-θ曲線の取得 (snapshot 優先、無ければ rs 直接、それも無ければ K·θ フォールバック)
+                    // M-θ曲線の取得 (表示中のケースの控え)。
+                    // 控えが無いとき、以前はばね本体の曲線へ切り替えていたが、本体の曲線はどのケースのものとも限らない
+                    // (M–θ 曲線は軸力で変わる)。控えを保存するようにする前のファイルがこれにあたる。
+                    // 別のケースの曲線を出さず、曲線の行を省いて状態欄で知らせる。
                     MomentRotationCurve? curve = null;
+                    bool noCaseCurve = false;
                     RotationalSpringMode snapMode = rs.Mode;
                     double? snapKxy = rs.KthetaXY;
                     double? snapKsingle = rs.Ktheta;
@@ -390,8 +394,7 @@ namespace PileDesign.Services
                     }
                     else
                     {
-                        // フォールバック (旧経路): rs 直接の構成
-                        curve = rs.CurveXY ?? rs.Curve;
+                        noCaseCurve = true;
                     }
 
                     var thetas = new List<double>();
@@ -412,7 +415,7 @@ namespace PileDesign.Services
                             moms.Add(p.Moment);
                         }
                     }
-                    else
+                    else if (!noCaseCurve)
                     {
                         // フォールバック: Kθ から線形 M = K·θ を 50 点生成
                         // (GraphViewModel.DrawMThetaCurvesWithMarker と同条件)
@@ -471,7 +474,9 @@ namespace PileDesign.Services
                             Theta = thetaRes,
                             Moment = mRes,
                             Ktheta = kthRes,
-                            Status = $"★結果({status})",
+                            Status = noCaseCurve
+                                ? "★結果 (このケースの M-θ 曲線は保存されていません。再解析すると表示します)"
+                                : $"★結果({status})",
                         });
                     }
                 }
@@ -501,7 +506,7 @@ namespace PileDesign.Services
                     var ap = nodes[0];
                     var apResult = ap.NodeResults?.FirstOrDefault(r =>
                         r.IsLiquefaction == isLiquefaction && r.Step == step &&
-                        (loadCase == null || r.LoadCase?.LoadName == loadCase.LoadName) &&
+                        (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
                         (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
                     var apLoad = apResult?.CumulativedLoad ?? ap.CumulativedLoad;
                     if (apLoad != null)
@@ -524,7 +529,7 @@ namespace PileDesign.Services
                     {
                         var sr = spring.HorizontalSpringResults?.FirstOrDefault(r =>
                             r.IsLiquefaction == isLiquefaction && r.Step == step &&
-                            (loadCase == null || r.LoadCase?.LoadName == loadCase.LoadName) &&
+                            (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
                             (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
                         var bf = sr?.CumulativeForce ?? spring.CumulativeForce;
                         if (bf == null) continue;
@@ -547,7 +552,7 @@ namespace PileDesign.Services
                     {
                         var sr = spring.HorizontalSpringResults?.FirstOrDefault(r =>
                             r.IsLiquefaction == isLiquefaction && r.Step == step &&
-                            (loadCase == null || r.LoadCase?.LoadName == loadCase.LoadName) &&
+                            (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
                             (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
                         var bf = sr?.CumulativeForce ?? spring.CumulativeForce;
                         if (bf == null) continue;
