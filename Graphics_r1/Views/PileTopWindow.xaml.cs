@@ -715,7 +715,7 @@ namespace PileDesign.Views
             if (sender is MenuItem menuItem && menuItem.CommandParameter is DataGrid dataGrid)
             {
                 var data = dataGrid.ItemsSource.Cast<object>();
-                Output.DataGridCsv.Export(data, dataGrid);
+                Output.DataGridCsv.Export(dataGrid);
             }
         }
 

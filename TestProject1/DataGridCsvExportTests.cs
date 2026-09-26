@@ -316,6 +316,70 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// 行は画面に出ている順 (並べ替え・絞り込みのあと) に出すこと。以前は元データの順・全行のままだった。
+        /// あわせて、ファイルの形 (BOM 付き UTF-8・CRLF) が 1 行ずつ書く形にしても変わらないこと。
+        /// </summary>
+        [TestMethod]
+        public void CreateCsv_FollowsTheDisplayedRowOrderAfterSortingAndFiltering()
+        {
+            string path = Path.Combine(Path.GetTempPath(), $"DataGridCsvRows_{Guid.NewGuid():N}.csv");
+            try
+            {
+                OnSta(() =>
+                {
+                    var grid = new DataGrid { AutoGenerateColumns = false };
+                    grid.Columns.Add(new DataGridTextColumn { Header = "名前", Binding = new Binding(nameof(Row.Name)) });
+                    grid.Columns.Add(new DataGridTextColumn { Header = "上", Binding = new Binding(nameof(Row.Top)) { StringFormat = "F0" } });
+                    grid.ItemsSource = new List<Row>
+                    {
+                        new() { Name = "a", Top = 1 }, new() { Name = "b", Top = 3 }, new() { Name = "c", Top = 2 }, new() { Name = "d", Top = 4 },
+                    };
+                    grid.Items.SortDescriptions.Add(new System.ComponentModel.SortDescription(nameof(Row.Top), System.ComponentModel.ListSortDirection.Descending));
+                    grid.Items.Filter = o => ((Row)o).Name != "b";
+
+                    DataGridCsv.CreateCsv(DataGridCsv.RowsAsDisplayed(grid), grid, path, includeEditableRow: false);
+                });
+
+                CollectionAssert.AreEqual(new[] { "名前,上", "d,4", "c,2", "a,1" }, File.ReadAllLines(path, Encoding.UTF8),
+                    "CSV の行が画面の順 (並べ替え・絞り込みのあと) になっていません");
+                byte[] bytes = File.ReadAllBytes(path);
+                CollectionAssert.AreEqual(Encoding.UTF8.GetPreamble(), bytes.Take(3).ToArray(), "BOM が付いていません (Excel が文字コードを判別できない)");
+                StringAssert.Contains(Encoding.UTF8.GetString(bytes), "\r\n", "改行が CRLF ではありません");
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+
+            // 書き出し・コピーの入口が元データではなく画面の行を読むこと
+            string src = TestSource.Read("Graphics_r1", "Output", "DataGridCsv.cs");
+            StringAssert.Contains(TestSource.MethodBody(src, "public static void Export(DataGrid dataGrid)"), "RowsAsDisplayed(dataGrid)");
+            StringAssert.Contains(TestSource.MethodBody(src, "public static void CopyToClipboard(DataGrid dataGrid)"), "RowsAsDisplayed(dataGrid)");
+            Assert.IsFalse(TestSource.MethodBody(src, "public static void CreateCsv(").Contains("new StringBuilder", StringComparison.Ordinal),
+                "CSV を全行まとめてメモリに積んでから書いています (1 行ずつ書くこと)");
+        }
+
+        /// <summary>
+        /// Excel が数式として解釈する文字 (先頭が =・+・-・@) は、アポストロフィを付けて文字のまま保つこと。
+        /// 数と 1 文字だけの「-」には付けず、付けたものは先頭の 1 文字を除けば元の文字に戻ること。
+        /// </summary>
+        [TestMethod]
+        public void CsvFieldsThatExcelWouldEvaluateStayText()
+        {
+            foreach (var text in new[] { "=SUM(A1:A2)", "+81-3", "-杭頭", "@INDIRECT", "=1+1,2" })
+            {
+                string guarded = DataGridCsv.GuardAgainstFormula(text);
+                Assert.AreEqual("'" + text, guarded, $"「{text}」が Excel で数式として評価されます");
+                Assert.AreEqual(text, guarded[1..], "先頭の 1 文字を除いても元の文字に戻りません");
+            }
+            foreach (var text in new[] { "-1.5", "+3", "-2.5E-3", "-", "杭-1", "1=1" })
+                Assert.AreEqual(text, DataGridCsv.GuardAgainstFormula(text), $"「{text}」に印を付けています (数や式にならない文字には付けない)");
+
+            Assert.AreEqual("\"'=1+1,2\"", DataGridCsv.EscapeCsvField("=1+1,2"), "印を付けたうえで、カンマを含む欄は引用符で囲むこと");
+            Assert.AreEqual("=A1", DataGridCsv.EscapeTsvField("=A1"), "クリップボード (この表へ貼り戻す形) には印を付けないこと");
+        }
+
         [TestMethod]
         public void CreateCsv_CanOmitTheEditableRow()
         {

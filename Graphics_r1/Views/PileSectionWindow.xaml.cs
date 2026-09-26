@@ -480,7 +480,7 @@ namespace PileDesign.Views
             {
                 var data = dataGrid.ItemsSource.Cast<object>();
                 {
-                    DataGridCsv.Export(data, dataGrid);
+                    DataGridCsv.Export(dataGrid);
                 }
             }
         }

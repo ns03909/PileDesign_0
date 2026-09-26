@@ -66,8 +66,25 @@ namespace PileDesign.Output
         internal static string EscapeCsvField(string? field)
         {
             if (string.IsNullOrEmpty(field)) return string.Empty;
+            field = GuardAgainstFormula(field);
             if (field.IndexOfAny([',', '"', '\r', '\n']) < 0) return field;
             return "\"" + field.Replace("\"", "\"\"") + "\"";
+        }
+
+        /// <summary>
+        /// Excel で開いたときに数式として解釈される文字 (先頭が =・+・-・@) を、文字のまま保つ。
+        ///
+        /// 名称などが「=」「+」「-」「@」で始まると、Excel は CSV のセルを数式として評価し、
+        /// 表示が変わる (「#NAME?」になる、計算した値が出る)。先頭にアポストロフィ「'」を付けて文字として扱わせる
+        /// (OWASP の CSV インジェクション対策と同じ)。先頭の 1 文字を除けば元の文字に戻る。
+        /// <b>数 (「-1.5」「+3」) と、1 文字だけの「-」などは付けない</b>。数は数として開かれ、1 文字だけでは式にならない。
+        /// クリップボード (タブ区切り) には付けない。この表へ貼り戻す形なので、元の文字のまま写す。
+        /// </summary>
+        internal static string GuardAgainstFormula(string field)
+        {
+            if (field.Length < 2 || field[0] is not ('=' or '+' or '-' or '@')) return field;
+            if (double.TryParse(field, NumberStyles.Float, CultureInfo.InvariantCulture, out _)) return field;
+            return "'" + field;
         }
 
         private static string CsvLine(IEnumerable<string> fields)
@@ -190,37 +207,43 @@ namespace PileDesign.Output
         /// </param>
         public static void CreateCsv(IEnumerable<object> data, DataGrid dataGrid, string filePath, bool includeEditableRow = true)
         {
-            var sb = new StringBuilder();
             var columns = ColumnsAsDisplayed(dataGrid);
 
-            // 先頭行に「R」または「WR」を追加
-            if (includeEditableRow)
-                sb.AppendLine(CsvLine(columns.Select(column => column.IsReadOnly ? "R" : "WR")));
-
-            // ヘッダー行を追加
-            var headers = columns.Select(PileDesign.Common.DataGridHeaderText.From).ToArray();
-            sb.AppendLine(CsvLine(headers));
-
-            // データ行を追加（仮想化で画面外のセルも取得できるようバインディングから直接値を取得）
-            foreach (var item in data)
-            {
-                if (item is not null)
-                {
-                    var row = columns.Select(column => GetCellValue(column, item, dataGrid)).ToArray();
-                    sb.AppendLine(CsvLine(row));
-                }
-            }
-
-            // ファイルに書き込む。一時ファイルに書き切ってから差し替える (失敗しても前のファイルを壊さない)。
-            // 中身は従来の File.WriteAllText(…, Encoding.UTF8) と同じ (BOM 付き UTF-8。Excel が文字コードを判別できる)
-            byte[] bom = Encoding.UTF8.GetPreamble();
-            byte[] body = Encoding.UTF8.GetBytes(sb.ToString());
+            // 一時ファイルへ 1 行ずつ書き、書き切ってから差し替える (失敗しても前のファイルを壊さない)。
+            // 以前は全行を StringBuilder に積み、さらに全体を UTF-8 のバイト列にしてから書いたので、
+            // 行の多い結果表では同じ中身が 2 つ同時にメモリを占めた。
+            // 中身は従来と同じ (BOM 付き UTF-8。Excel が文字コードを判別できる。改行は CRLF)。
             PileDesign.Services.FileOperationService.WriteAtomically(filePath, stream =>
             {
-                stream.Write(bom);
-                stream.Write(body);
+                using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), bufferSize: 64 * 1024, leaveOpen: true)
+                {
+                    NewLine = "\r\n",
+                };
+
+                // 先頭行に「R」または「WR」を追加
+                if (includeEditableRow)
+                    writer.WriteLine(CsvLine(columns.Select(column => column.IsReadOnly ? "R" : "WR")));
+
+                // ヘッダー行を追加
+                writer.WriteLine(CsvLine(columns.Select(PileDesign.Common.DataGridHeaderText.From)));
+
+                // データ行を追加（仮想化で画面外のセルも取得できるようバインディングから直接値を取得）
+                foreach (var item in data)
+                {
+                    if (item is not null)
+                        writer.WriteLine(CsvLine(columns.Select(column => GetCellValue(column, item, dataGrid))));
+                }
             });
         }
+
+        /// <summary>
+        /// 表の行を、<b>画面に出ている順</b> (並べ替え・絞り込みのあと) に返す。新規行の置き場 (空の最終行) は除く。
+        ///
+        /// 以前は CSV もコピーも表の元データ (ItemsSource) を順に読んでいたので、画面で並べ替えたり絞り込んだりしても、
+        /// 出力は元の順・全行のままだった。列の並び (<see cref="ColumnsAsDisplayed"/>) と同じく画面に揃える。
+        /// </summary>
+        internal static IEnumerable<object> RowsAsDisplayed(DataGrid dataGrid)
+            => dataGrid.Items.Cast<object>().Where(item => item != null && !Equals(item, CollectionView.NewItemPlaceholder));
 
         /// <summary>
         /// DataGridの内容をタブ区切りテキストとしてクリップボードにコピーする
@@ -234,8 +257,8 @@ namespace PileDesign.Output
             var headers = columns.Select(PileDesign.Common.DataGridHeaderText.From).ToArray();
             sb.AppendLine(TsvLine(headers));
 
-            // データ行（仮想化で画面外のセルも取得できるようバインディングから直接値を取得）
-            foreach (var item in dataGrid.ItemsSource)
+            // データ行（仮想化で画面外のセルも取得できるようバインディングから直接値を取得）。行は画面の順
+            foreach (var item in RowsAsDisplayed(dataGrid))
             {
                 if (item is not null)
                 {
@@ -247,8 +270,10 @@ namespace PileDesign.Output
             Common.ClipboardHelper.TrySetText(sb.ToString());
         }
 
-        // データグリッドのデータをCSVファイルにエクスポートするメソッド
-        public static void Export(IEnumerable<object> data, DataGrid dataGrid)
+        /// <summary>
+        /// 表を CSV ファイルに書き出す (保存先を訊く)。行は画面に出ている順 (<see cref="RowsAsDisplayed"/>)。
+        /// </summary>
+        public static void Export(DataGrid dataGrid)
         {
             var dataGridName = dataGrid.Name;
             var saveFileDialog = new SaveFileDialog
@@ -259,7 +284,7 @@ namespace PileDesign.Output
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                CreateCsv(data, dataGrid, saveFileDialog.FileName);
+                CreateCsv(RowsAsDisplayed(dataGrid), dataGrid, saveFileDialog.FileName);
             }
         }
         /// <summary>
