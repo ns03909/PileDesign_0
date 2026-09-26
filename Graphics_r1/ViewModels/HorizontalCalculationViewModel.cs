@@ -3117,7 +3117,7 @@ namespace PileDesign.ViewModels
                 ConnectionMode = ConnectionMode.ToString(),
                 RestrainFoundationTorsion = RestrainFoundationTorsion,
                 ExecutedCaseKeys = new List<FEM.AnalysisRunSnapshot.CaseKey>(),
-                InputModelHash = null  // Phase 1 は null 許容、Phase 2 で SHA256 等
+                InputModelHash = HorizontalInputSignature(InputModel),
             };
         }
 
@@ -3134,6 +3134,22 @@ namespace PileDesign.ViewModels
             };
 
         /// <summary>
+        /// 水平解析に効く入力の署名。追加実行は、前回の解析のときとこれが一致するときだけ許す。
+        ///
+        /// 以前は解析設定 (ステップ数など) だけを比べ、地盤・杭体・杭配置・荷重などの入力は照合しなかった
+        /// (InputModelHash は常に null)。地盤を変えてからケースを足すと、旧条件と新条件の結果が同じモデルに並んだ。
+        /// <list type="bullet">
+        /// <item>含めない: 解析対象・適用のチェック (ケースを足すのが追加実行の使い方)、群杭沈下の入力 (水平解析は読まない)、
+        ///   選択・表示の有無 (MainWindowViewModel.InputSignature が除く)</item>
+        /// <item>足す: 単杭沈下の荷重-沈下曲線 (入力の JSON には載らないが、杭先端の P-S ばねに効く)</item>
+        /// </list>
+        /// </summary>
+        internal static string? HorizontalInputSignature(InputModel? input)
+            => MainWindowViewModel.InputSignature(input,
+                alsoIgnore: ["IsAnalysisTarget", "IsApplicable", "PileGroupSettlement"],
+                extra: Models.Results.SinglePileSettlementResult.Capture(input));
+
+        /// <summary>
         /// 「実行予定 (現在選択中) だが既存結果にない」ケースの件数。
         /// 追加実行モードの TotalPlannedCaseCount 表示用。
         /// </summary>
@@ -3147,7 +3163,7 @@ namespace PileDesign.ViewModels
                 {
                     foreach (var liq in EnumerateLiquefactionCases())
                     {
-                        var k = new FEM.AnalysisRunSnapshot.CaseKey(lc.LoadName, com.Name, liq);
+                        var k = FEM.AnalysisRunSnapshot.CaseKey.Of(lc, com, liq);
                         if (!existingKeys.Contains(k)) n++;
                     }
                 }
@@ -3162,7 +3178,7 @@ namespace PileDesign.ViewModels
         ///   - 解析パラメータ (ステップ数, NR モード, Full NR 反復, 反復なし簡易, ライン
         ///     サーチ, 緩和係数, 杭軸力モード, 接続方式, 基礎のねじれ拘束) は完全一致が必要
         ///   - 液状化選択は前回をカバーするスーパーセットなら可 (Both は Yes/None を内包)
-        ///   - InputModelHash は Phase 1 では null 許容、未来拡張用
+        ///   - 解析に効く入力 (InputModelHash) が一致すること。前回の記録が無いときも不可
         /// </summary>
         private bool ValidateIncrementalCompatibility(out string reason)
         {
@@ -3201,6 +3217,12 @@ namespace PileDesign.ViewModels
             if (!IsLiqSuperset(LiquefactionOption, prev.LiquefactionOption))
                 diffs.Add($"液状化選択 {prev.LiquefactionOption}→{LiquefactionOption} (現在が前回をカバーしていません)");
 
+            // 解析に効く入力 (地盤・杭体・杭配置・荷重など) が前回と同じか。違えば旧条件と新条件の結果が混ざる
+            if (prev.InputModelHash == null)
+                diffs.Add("前回の解析のときの入力の記録がありません (以前の版で解析した結果です)");
+            else if (prev.InputModelHash != HorizontalInputSignature(InputModel))
+                diffs.Add("入力 (地盤・杭体・杭配置・荷重など) が前回の解析から変わっています");
+
             if (diffs.Count == 0) { reason = ""; return true; }
             reason = "差分:\n  - " + string.Join("\n  - ", diffs);
             return false;
@@ -3229,14 +3251,10 @@ namespace PileDesign.ViewModels
             {
                 CompletedCaseKeys.Clear();
                 var target = TryGetTargetAnaModel();
-                if (target?.AnalysisStepResults == null) return;
-                foreach (var k in target.AnalysisStepResults
-                                       .Where(r => r.LoadCase != null && r.LoadCombination != null)
-                                       .Select(r => $"{r.LoadCase.LoadName}|{r.LoadCombination.Name}|{r.IsLiquefaction}")
-                                       .Distinct())
-                {
-                    CompletedCaseKeys.Add(k);
-                }
+                // 「済」は最後まで解けたケースだけ (途中までの結果・未収束は済にしない)。
+                // 荷重ケースは番号で見分ける (名前は重なりうる)
+                foreach (var k in target?.LastRunConfig?.ExecutedCaseKeys ?? [])
+                    CompletedCaseKeys.Add(k.ToDisplayKey());
                 OnPropertyChanged(nameof(CompletedCaseKeys));
             }));
         }

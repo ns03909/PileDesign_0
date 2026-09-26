@@ -294,10 +294,10 @@
                             <DataTemplate>
                                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
                                            FontSize="11" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="Bold"
-                                           ToolTip="このロードケースに 1 件以上の解析結果あり">
+                                           ToolTip="このロードケースに、最後まで解けた解析結果あり">
                                     <TextBlock.Text>
                                         <MultiBinding Converter="{StaticResource CompletedCaseToCheckMarkConverter}">
-                                            <Binding Path="LoadName"/>
+                                            <Binding/>
                                             <Binding Path="DataContext.CompletedCaseKeys"
                                                      RelativeSource="{RelativeSource AncestorType=Window}"/>
                                         </MultiBinding>
@@ -376,10 +376,10 @@
                             <DataTemplate>
                                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
                                            FontSize="11" Foreground="{StaticResource NikkenGreenBrush}" FontWeight="Bold"
-                                           ToolTip="このロードケースに 1 件以上の解析結果あり">
+                                           ToolTip="このロードケースに、最後まで解けた解析結果あり">
                                     <TextBlock.Text>
                                         <MultiBinding Converter="{StaticResource CompletedCaseToCheckMarkConverter}">
-                                            <Binding Path="LoadName"/>
+                                            <Binding/>
                                             <Binding Path="DataContext.CompletedCaseKeys"
                                                      RelativeSource="{RelativeSource AncestorType=Window}"/>
                                         </MultiBinding>

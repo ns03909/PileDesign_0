@@ -26,33 +26,33 @@ namespace TestProject1
         [TestMethod]
         public void CaseKey_SameValues_AreEqual()
         {
-            var k1 = new AnalysisRunSnapshot.CaseKey("VL+E1", "α=1.0/βU=1.0/βL=1.0", true);
-            var k2 = new AnalysisRunSnapshot.CaseKey("VL+E1", "α=1.0/βU=1.0/βL=1.0", true);
+            var k1 = new AnalysisRunSnapshot.CaseKey(1, 1, 1, true);
+            var k2 = new AnalysisRunSnapshot.CaseKey(1, 1, 1, true);
             Assert.AreEqual(k1, k2);
             Assert.AreEqual(k1.GetHashCode(), k2.GetHashCode());
         }
 
         [TestMethod]
-        public void CaseKey_DifferentLoadName_AreNotEqual()
+        public void CaseKey_DifferentCaseNo_AreNotEqual()
         {
-            var k1 = new AnalysisRunSnapshot.CaseKey("VL+E1", "C1", true);
-            var k2 = new AnalysisRunSnapshot.CaseKey("VL+E2", "C1", true);
+            var k1 = new AnalysisRunSnapshot.CaseKey(1, 1, 1, true);
+            var k2 = new AnalysisRunSnapshot.CaseKey(1, 2, 1, true);
             Assert.AreNotEqual(k1, k2);
         }
 
         [TestMethod]
-        public void CaseKey_DifferentCombinationName_AreNotEqual()
+        public void CaseKey_DifferentCombinationNo_AreNotEqual()
         {
-            var k1 = new AnalysisRunSnapshot.CaseKey("VL+E1", "C1", true);
-            var k2 = new AnalysisRunSnapshot.CaseKey("VL+E1", "C2", true);
+            var k1 = new AnalysisRunSnapshot.CaseKey(1, 1, 1, true);
+            var k2 = new AnalysisRunSnapshot.CaseKey(1, 1, 2, true);
             Assert.AreNotEqual(k1, k2);
         }
 
         [TestMethod]
         public void CaseKey_DifferentLiquefaction_AreNotEqual()
         {
-            var k1 = new AnalysisRunSnapshot.CaseKey("VL+E1", "C1", true);
-            var k2 = new AnalysisRunSnapshot.CaseKey("VL+E1", "C1", false);
+            var k1 = new AnalysisRunSnapshot.CaseKey(1, 1, 1, true);
+            var k2 = new AnalysisRunSnapshot.CaseKey(1, 1, 1, false);
             Assert.AreNotEqual(k1, k2);
         }
 
@@ -61,10 +61,10 @@ namespace TestProject1
         {
             var set = new HashSet<AnalysisRunSnapshot.CaseKey>
             {
-                new("VL+E1", "C1", true),
-                new("VL+E1", "C1", true),  // 重複
-                new("VL+E1", "C1", false), // 液状化違いは別キー
-                new("VL+E2", "C1", true),  // ロード名違いは別キー
+                new(1, 1, 1, true),
+                new(1, 1, 1, true),  // 重複
+                new(1, 1, 1, false), // 液状化違いは別キー
+                new(1, 2, 1, true),  // ケース番号違いは別キー
             };
             Assert.AreEqual(3, set.Count);
         }
@@ -93,13 +93,13 @@ namespace TestProject1
                 LiquefactionOption = "Yes",
                 ExecutedCaseKeys = new List<AnalysisRunSnapshot.CaseKey>
                 {
-                    new("VL+E1", "C1", true),
-                    new("VL+E2", "C1", true),
+                    new(1, 1, 1, true),
+                    new(1, 2, 1, true),
                 }
             };
             Assert.AreEqual(2, s.ExecutedCaseKeys.Count);
-            Assert.IsTrue(s.ExecutedCaseKeys.Contains(new AnalysisRunSnapshot.CaseKey("VL+E1", "C1", true)));
-            Assert.IsFalse(s.ExecutedCaseKeys.Contains(new AnalysisRunSnapshot.CaseKey("VL+E1", "C1", false)));
+            Assert.IsTrue(s.ExecutedCaseKeys.Contains(new AnalysisRunSnapshot.CaseKey(1, 1, 1, true)));
+            Assert.IsFalse(s.ExecutedCaseKeys.Contains(new AnalysisRunSnapshot.CaseKey(1, 1, 1, false)));
         }
 
         // ===== Test 3: 互換性検証ロジックの仕様 (純粋関数として再実装したもので検証) =====

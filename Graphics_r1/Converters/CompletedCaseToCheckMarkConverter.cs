@@ -8,20 +8,22 @@ namespace PileDesign.Converters
     /// <summary>
     /// IMultiValueConverter: 水平解析 DataGrid「済」列用。
     /// Bind 入力:
-    ///   [0] = LoadName (string) — DataGridRow の DataContext.LoadName
-    ///   [1] = CompletedCaseKeys (IEnumerable<string>) — VM 側の「LoadName|CombName|Liq」集合
+    ///   [0] = 荷重ケース (LoadCase) — DataGridRow の DataContext
+    ///   [1] = CompletedCaseKeys (IEnumerable<string>) — VM 側の「L{レベル}-{番号}|組合せ番号|液状化」集合
+    ///         (最後まで解けたケースだけ。AnalysisRunSnapshot.CaseKey.ToDisplayKey)
     /// 戻り値:
-    ///   このロードケース由来のキーが集合に 1 件以上あれば "✓"、なければ空文字。
+    ///   この荷重ケースのキーが集合に 1 件以上あれば "✓"、なければ空文字。
+    ///   荷重ケースは名前ではなくレベルと番号で見分ける (名前は空欄・重複がありうる)。
     /// </summary>
     public class CompletedCaseToCheckMarkConverter : IMultiValueConverter
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
             if (values == null || values.Length < 2) return "";
-            if (values[0] is not string loadName || string.IsNullOrEmpty(loadName)) return "";
+            if (values[0] is not PileDesign.Models.InputData.LoadCase loadCase) return "";
             if (values[1] is not IEnumerable keys) return "";
 
-            string prefix = loadName + "|";
+            string prefix = PileDesign.FEM.AnalysisRunSnapshot.CaseKey.PrefixOf(loadCase.Level, loadCase.No);
             foreach (var k in keys)
             {
                 if (k is string s && s.StartsWith(prefix, StringComparison.Ordinal))

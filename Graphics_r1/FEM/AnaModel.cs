@@ -1481,6 +1481,23 @@ namespace PileDesign.FEM
                 .FirstOrDefault();
         }
 
+        /// <summary>
+        /// 1 つの荷重条件の結果を、ステップ・節点・梁・ばねからすべて取り除く。
+        /// 追加実行で、途中までの結果・未収束のケースをやり直す前に呼ぶ (残すと新旧の結果が同じ条件に並ぶ)。
+        /// </summary>
+        public void RemoveCaseResults(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
+        {
+            bool Same(LoadCase? lc, LoadCombination? comb, bool liq) =>
+                liq == isLiquefaction && LoadCase.IsSameCase(lc, loadCase)
+                && PileDesign.Models.InputData.LoadCombination.IsSameCombination(comb, loadCombination);
+
+            AnalysisStepResults?.RemoveAll(r => Same(r.LoadCase, r.LoadCombination, r.IsLiquefaction));
+            foreach (var n in Nodes ?? []) n?.NodeResults?.RemoveAll(r => Same(r.LoadCase, r.LoadCombination, r.IsLiquefaction));
+            foreach (var b in Beams ?? []) b?.BeamResults?.RemoveAll(r => Same(r.LoadCase, r.LoadCombination, r.IsLiquefaction));
+            foreach (var s in HorizontalSoilSprings ?? []) s?.HorizontalSpringResults?.RemoveAll(r => Same(r.LoadCase, r.LoadCombination, r.IsLiquefaction));
+            foreach (var r in RotationalSprings ?? []) r?.RotationalSpringResults?.RemoveAll(x => Same(x.LoadCase, x.LoadCombination, x.IsLiquefaction));
+        }
+
         public int GetAnalysisLastStep(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {
             // 荷重ケースはレベルと番号で比べる (名前は空欄・重複がありうる。LoadCase.IsSameCase 参照)

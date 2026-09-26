@@ -93,15 +93,19 @@ namespace PileDesign.ViewModels
 
                     foreach (bool isLiquefaction in liquefactionCases)
                     {
-                        // 追加実行モード: 既存結果に同じキーがあるケースはスキップ
+                        // 追加実行モード: 最後まで解けているケースはスキップ
                         if (additive)
                         {
-                            var caseKey = new FEM.AnalysisRunSnapshot.CaseKey(
-                                loadCase.LoadName, loadCombination.Name, isLiquefaction);
+                            var caseKey = FEM.AnalysisRunSnapshot.CaseKey.Of(loadCase, loadCombination, isLiquefaction);
                             if (existingKeys.Contains(caseKey))
                             {
                                 await AddLogAsync($"[skip] {BuildCaseTag(loadCase, level, iLC, iLCOM, isLiquefaction)} は既存結果あり (追加実行モード)");
                                 continue;
+                            }
+                            // 途中までの結果・未収束の結果が残っていれば取り除いてからやり直す (新旧の結果を並べない)
+                            lock (_caseMergeLock)
+                            {
+                                targetModel.RemoveCaseResults(loadCase, loadCombination, isLiquefaction);
                             }
                         }
 
@@ -1674,7 +1678,13 @@ namespace PileDesign.ViewModels
             NotifyProgressPropertiesChanged();
         }  // end retry while-loop
 
-        _ = caseConverged; // 抑制: 未使用警告（将来診断に利用する可能性）
+            // 最後まで解けた (全ステップを受理した) ケースだけを「実行済み」にする。
+            // 途中で諦めた・未収束で確定したケースは、追加実行でやり直す対象
+            if (caseConverged)
+            {
+                lock (ctx.CompletedKeys)
+                    ctx.CompletedKeys.Add(FEM.AnalysisRunSnapshot.CaseKey.Of(loadCase, loadCombination, isLiquefaction));
+            }
 
             // NaN診断: 荷重ケース完了
             // FEM.NaNDiagnostics.End();
@@ -1873,11 +1883,12 @@ namespace PileDesign.ViewModels
                 lock (_caseMergeLock)
                 {
                     var snap = CaptureCurrentRunSnapshot();
-                    snap.ExecutedCaseKeys = preTargetModel.AnalysisStepResults
-                        .Select(r => new FEM.AnalysisRunSnapshot.CaseKey(
-                            r.LoadCase.LoadName, r.LoadCombination.Name, r.IsLiquefaction))
-                        .Distinct()
-                        .ToList();
+                    // 実行済み = 前回までに最後まで解けたケース (追加実行のとき) + 今回最後まで解けたケース。
+                    // 以前は結果が 1 ステップでもあるケースをすべて入れていたので、途中まで・未収束のケースも
+                    // 追加実行で「済」として飛ばされた
+                    var executed = new HashSet<FEM.AnalysisRunSnapshot.CaseKey>(ctx.ExistingKeys);
+                    lock (ctx.CompletedKeys) executed.UnionWith(ctx.CompletedKeys);
+                    snap.ExecutedCaseKeys = executed.ToList();
                     preTargetModel.LastRunConfig = snap;
                 }
                 RefreshCompletedCaseKeys();
@@ -1983,6 +1994,8 @@ namespace PileDesign.ViewModels
             public AnaModel TargetModel = null!;
             /// <summary>追加実行で skip 判定に使う既存ケースキー (開始時のスナップショット)</summary>
             public HashSet<FEM.AnalysisRunSnapshot.CaseKey> ExistingKeys = new();
+            /// <summary>今回の実行で最後まで解けたケース (並列でも lock して足す)</summary>
+            public HashSet<FEM.AnalysisRunSnapshot.CaseKey> CompletedKeys = new();
             /// <summary>進捗報告用の開始時刻</summary>
             public DateTime StartTime;
             /// <summary>ケース並列でも重複しない計算番号 (Interlocked で増やす)</summary>
@@ -2019,16 +2032,13 @@ namespace PileDesign.ViewModels
             {
                 lock (_caseMergeLock)
                 {
+                    // 最後まで解けたケースの記録だけを使う。前回の記録が無い旧データは、互換性の検査
+                    // (入力の記録が無い) で追加実行にならないので、結果から推し量らない
+                    // (結果があることは最後まで解けたことを意味しない)
                     if (additive && preTargetModel.LastRunConfig != null)
                     {
-                        existingKeys = preTargetModel.LastRunConfig.ExecutedCaseKeys.ToHashSet();
-                    }
-                    else if (additive && preTargetModel.AnalysisStepResults?.Count > 0)
-                    {
-                        // 防御: LastRunConfig が null だが結果がある旧データの場合、結果から復元
-                        existingKeys = preTargetModel.AnalysisStepResults
-                            .Select(r => new FEM.AnalysisRunSnapshot.CaseKey(
-                                r.LoadCase.LoadName, r.LoadCombination.Name, r.IsLiquefaction))
+                        existingKeys = preTargetModel.LastRunConfig.ExecutedCaseKeys
+                            .Where(k => k.CaseNo > 0)   // 名前で作っていた旧形式のキー (番号が 0) は読まない
                             .ToHashSet();
                     }
                 }

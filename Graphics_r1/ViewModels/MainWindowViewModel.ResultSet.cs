@@ -92,14 +92,22 @@ namespace PileDesign.ViewModels
         /// 入力の署名 (解析に効く中身が同じなら同じ値)。直列化できなければ null (判定できない — 印は変えない)。
         /// 選択・表示の有無と、実行時に振り直す節点の Id は含めない。
         /// </summary>
-        internal static string? InputSignature(InputModel? input)
+        /// <param name="alsoIgnore">さらに除く名前 (水平解析の追加実行では解析対象のチェックなど)。</param>
+        /// <param name="extra">入力の JSON に載らないが結果に効くもの (単杭沈下の曲線など)。一緒に署名に入れる。</param>
+        internal static string? InputSignature(InputModel? input,
+            System.Collections.Generic.IEnumerable<string>? alsoIgnore = null, object? extra = null)
         {
             if (input == null) return null;
             try
             {
+                var ignored = new System.Collections.Generic.HashSet<string>(SignatureIgnoredNames, StringComparer.Ordinal);
+                if (alsoIgnore != null) ignored.UnionWith(alsoIgnore);
                 var node = System.Text.Json.JsonSerializer.SerializeToNode(input, SignatureOptions);
-                StripIgnored(node);
-                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(node?.ToJsonString() ?? "");
+                StripIgnored(node, ignored);
+                string text = node?.ToJsonString() ?? "";
+                if (extra != null)
+                    text += "\n" + System.Text.Json.JsonSerializer.Serialize(extra, extra.GetType(), SignatureOptions);
+                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(text);
                 return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
             }
             catch (Exception ex)
@@ -109,17 +117,17 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private static void StripIgnored(System.Text.Json.Nodes.JsonNode? node)
+        private static void StripIgnored(System.Text.Json.Nodes.JsonNode? node, System.Collections.Generic.HashSet<string> ignored)
         {
             switch (node)
             {
                 case System.Text.Json.Nodes.JsonObject obj:
-                    foreach (var key in obj.Select(p => p.Key).Where(SignatureIgnoredNames.Contains).ToList())
+                    foreach (var key in obj.Select(p => p.Key).Where(ignored.Contains).ToList())
                         obj.Remove(key);
-                    foreach (var (_, child) in obj) StripIgnored(child);
+                    foreach (var (_, child) in obj) StripIgnored(child, ignored);
                     break;
                 case System.Text.Json.Nodes.JsonArray arr:
-                    foreach (var child in arr) StripIgnored(child);
+                    foreach (var child in arr) StripIgnored(child, ignored);
                     break;
             }
         }
