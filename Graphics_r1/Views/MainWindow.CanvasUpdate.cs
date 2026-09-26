@@ -744,7 +744,7 @@ namespace PileDesign.Views
                 {
                     foreach (LoadCase loadCase in viewModel.CurrentInputModel.LoadCasesInput.AllSeismicLoadCases)
                     {
-                        if (selectedLoadCase.LoadName == loadCase.LoadName)
+                        if (PileDesign.Models.InputData.LoadCase.IsSameCase(selectedLoadCase, loadCase))
                         {
                             double x = loadCase.ForceActionPointX;
                             double y = loadCase.ForceActionPointY;
@@ -1407,7 +1407,7 @@ namespace PileDesign.Views
                         {
                             for (int i = 0; i < list.Count; i++)
                             {
-                                if (list[i]?.LoadName == selected.LoadName)
+                                if (PileDesign.Models.InputData.LoadCase.IsSameCase(list[i], selected))
                                 {
                                     if (i < pileLocation.IsFrontPiles.Count)
                                         sb.Append(pileLocation.IsFrontPiles[i] ? "前, " : "後, ");
@@ -1423,7 +1423,7 @@ namespace PileDesign.Views
                         {
                             for (int i = 0; i < list.Count; i++)
                             {
-                                if (list[i]?.LoadName == selected.LoadName)
+                                if (PileDesign.Models.InputData.LoadCase.IsSameCase(list[i], selected))
                                 {
                                     if (i < pileLocation.IsFrontPiles.Count)
                                         sb.Append(pileLocation.IsFrontPiles[i] ? "前, " : "後, ");

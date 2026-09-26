@@ -1056,7 +1056,7 @@ namespace PileDesign.Output
                         {
                             var r = spring.HorizontalSpringResults?.FirstOrDefault(rr =>
                                 rr.IsLiquefaction == isLiq && rr.Step == lastStep &&
-                                rr.LoadCase?.LoadName == lc.LoadName &&
+                                PileDesign.Models.InputData.LoadCase.IsSameCase(rr.LoadCase, lc) &&
                                 rr.LoadCombination?.Name == comb.Name);
                             if (r?.CumulativeForce == null) continue;
                             sumFx += r.CumulativeForce.Fxi;

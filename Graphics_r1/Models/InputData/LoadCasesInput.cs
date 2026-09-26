@@ -236,6 +236,60 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 地震時の荷重ケース名が空欄・重複していないかを調べる (変えない)。問題のある荷重ケースの説明を返す。
+        ///
+        /// 画面の荷重ケースの選択 (グラフ・表・メイン画面) は名前で行っているので、名前が空欄や重複だと
+        /// レベル1 とレベル2 を選び分けられず、別のケースの結果が出る。鉛直荷重のケース名 (VL0・VLadd・VL) と
+        /// 同じ名前も重複とみなす (解析は名前「VL」で鉛直荷重のケースを見分けている)。
+        /// </summary>
+        internal IReadOnlyList<string> DescribeInvalidLoadCaseNames() => CheckLoadCaseNames(fix: false);
+
+        /// <summary>
+        /// 空欄・重複した荷重ケース名を、重ならない名前に付け直す。付け直したケースの説明を返す (無ければ空)。
+        /// 空欄は「L{レベル}-{番号}」、重複は「元の名前 (L{レベル}-{番号})」にする。読込・計算例の読込で呼ぶ
+        /// (同梱の計算例は荷重ケース名がすべて空欄)。
+        /// </summary>
+        internal IReadOnlyList<string> NormalizeLoadCaseNames() => CheckLoadCaseNames(fix: true);
+
+        private List<string> CheckLoadCaseNames(bool fix)
+        {
+            var messages = new List<string>();
+            var used = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var vl in new[] { LoadCaseVL0, LoadCaseVLadd, LoadCaseVL })
+                if (!string.IsNullOrWhiteSpace(vl?.LoadName)) used.Add(vl!.LoadName.Trim());
+
+            Check(LoadCasesLevel1, 1);
+            Check(LoadCasesLevel2, 2);
+            return messages;
+
+            void Check(IList<LoadCase>? cases, int level)
+            {
+                if (cases == null) return;
+                foreach (var lc in cases)
+                {
+                    if (lc == null) continue;
+                    string name = lc.LoadName?.Trim() ?? "";
+                    if (name.Length > 0 && used.Add(name)) continue;
+
+                    if (!fix)
+                    {
+                        messages.Add(name.Length == 0
+                            ? $"レベル{level} の {lc.No} 番目: 荷重ケース名が空欄です"
+                            : $"レベル{level} の {lc.No} 番目: 荷重ケース名「{name}」が他のケースと重複しています");
+                        continue;
+                    }
+                    string code = $"L{level}-{lc.No}";
+                    string fresh = name.Length == 0 ? code : $"{name} ({code})";
+                    for (int k = 2; !used.Add(fresh); k++) fresh = $"{code}_{k}";
+                    messages.Add(name.Length == 0
+                        ? $"レベル{level} の {lc.No} 番目: 空欄 → 「{fresh}」"
+                        : $"レベル{level} の {lc.No} 番目: 「{name}」(重複) → 「{fresh}」");
+                    lc.LoadName = fresh;
+                }
+            }
+        }
+
         internal IEnumerable<LoadCase> EveryLoadCase
         {
             get

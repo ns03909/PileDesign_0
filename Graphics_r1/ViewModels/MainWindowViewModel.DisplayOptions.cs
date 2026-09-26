@@ -626,7 +626,7 @@ namespace PileDesign.ViewModels
 
             // 選択されたLoadCaseとLoadCombinationに対応する結果を検索
             var results = CurrentModel.AnalysisStepResults
-                .Where(r => r.LoadCase?.LoadName == selectedLoadCase.LoadName);
+                .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, selectedLoadCase));
 
             // 荷重組合せが選択されている場合はさらにフィルタリング
             // SelectedLoadCombinationNameはGetName()形式（"1.00/1.00/1.00"）なので、

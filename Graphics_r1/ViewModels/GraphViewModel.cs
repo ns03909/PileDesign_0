@@ -911,7 +911,7 @@ namespace PileDesign.ViewModels
                                 foreach (var spring in pileSoilSprings)
                                 {
                                     var result = spring.HorizontalSpringResults?
-                                        .FirstOrDefault(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                        .FirstOrDefault(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
                                                           && r.LoadCombination?.No == loadCombination.No
                                                           && r.IsLiquefaction == isLiquefaction
                                                           && r.Step == step);
@@ -932,7 +932,7 @@ namespace PileDesign.ViewModels
                                 foreach (var spring in doatsuSoilSprings)
                                 {
                                     var result = spring.HorizontalSpringResults?
-                                        .FirstOrDefault(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                        .FirstOrDefault(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
                                                           && r.LoadCombination?.No == loadCombination.No
                                                           && r.IsLiquefaction == isLiquefaction
                                                           && r.Step == step);

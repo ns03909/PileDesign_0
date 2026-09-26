@@ -178,7 +178,7 @@ namespace PileDesign.Views
             {
                 for (int index = 0; index < viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1.Count; index++)
                 {
-                    if (selectedLoadCase.LoadName == viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1[index].LoadName)
+                    if (PileDesign.Models.InputData.LoadCase.IsSameCase(selectedLoadCase, viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1[index]))
                     {
                         return -pileLocation.AxialForceLevel1s[index];
                     }
@@ -189,7 +189,7 @@ namespace PileDesign.Views
             {
                 for (int index = 0; index < viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2.Count; index++)
                 {
-                    if (selectedLoadCase.LoadName == viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2[index].LoadName)
+                    if (PileDesign.Models.InputData.LoadCase.IsSameCase(selectedLoadCase, viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2[index]))
                     {
                         return -pileLocation.AxialForceLevel2s[index];
                     }

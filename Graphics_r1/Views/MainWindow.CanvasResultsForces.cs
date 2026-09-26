@@ -267,7 +267,7 @@ namespace PileDesign.Views
                     return null;
                 return spring.HorizontalSpringResults
                     .Where(r =>
-                        r.LoadCase?.LoadName == selectedLoadCase.LoadName &&
+                        PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, selectedLoadCase) &&
                         r.LoadCombination?.Name == selectedLoadCombination.Name &&
                         r.IsLiquefaction == viewModel.IsLiquefaction)
                     .OrderByDescending(r => r.Step)
@@ -714,7 +714,7 @@ namespace PileDesign.Views
                     return null;
                 return spring.HorizontalSpringResults
                     .Where(r =>
-                        r.LoadCase?.LoadName == selectedLoadCase.LoadName &&
+                        PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, selectedLoadCase) &&
                         r.LoadCombination?.Name == selectedLoadCombination.Name &&
                         r.IsLiquefaction == viewModel.IsLiquefaction)
                     .OrderByDescending(r => r.Step)

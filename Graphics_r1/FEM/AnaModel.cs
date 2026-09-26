@@ -1456,9 +1456,9 @@ namespace PileDesign.FEM
 
         public AnalysisStepResult? GetAnalysisLastStepResult(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {
-            // 名前ベースで比較（参照比較の代わりに）
+            // 荷重ケースはレベルと番号で比べる (名前は空欄・重複がありうる。LoadCase.IsSameCase 参照)
             var result = AnalysisStepResults
-                .Where(r => r.LoadCase?.LoadName == loadCase?.LoadName &&
+                .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
                             r.LoadCombination?.Name == loadCombination?.Name &&
                             r.IsLiquefaction == isLiquefaction)
                 .OrderByDescending(r => r.Step)
@@ -1468,7 +1468,7 @@ namespace PileDesign.FEM
 
             // フォールバック: 逆の液状化状態で検索
             return AnalysisStepResults
-                .Where(r => r.LoadCase?.LoadName == loadCase?.LoadName &&
+                .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
                             r.LoadCombination?.Name == loadCombination?.Name &&
                             r.IsLiquefaction == !isLiquefaction)
                 .OrderByDescending(r => r.Step)
@@ -1477,9 +1477,9 @@ namespace PileDesign.FEM
 
         public int GetAnalysisLastStep(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {
-            // 名前ベースで比較（参照比較の代わりに）
+            // 荷重ケースはレベルと番号で比べる (名前は空欄・重複がありうる。LoadCase.IsSameCase 参照)
             var results = AnalysisStepResults
-                .Where(r => r.LoadCase?.LoadName == loadCase?.LoadName &&
+                .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
                             r.LoadCombination?.Name == loadCombination?.Name &&
                             r.IsLiquefaction == isLiquefaction)
                 .Select(r => r.Step)
@@ -1490,7 +1490,7 @@ namespace PileDesign.FEM
 
             // フォールバック: 逆の液状化状態で検索
             var fallback = AnalysisStepResults
-                .Where(r => r.LoadCase?.LoadName == loadCase?.LoadName &&
+                .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
                             r.LoadCombination?.Name == loadCombination?.Name &&
                             r.IsLiquefaction == !isLiquefaction)
                 .Select(r => r.Step)

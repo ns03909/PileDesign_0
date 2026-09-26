@@ -411,7 +411,7 @@ namespace PileDesign.ViewModels
                                     var sp = horizontalSoilSprings[k];
                                     if (sp == null) continue;
                                     var res = sp.HorizontalSpringResults?
-                                        .Where(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                        .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
                                                  && r.LoadCombination?.No == loadCombination.No
                                                  && r.IsLiquefaction == isLiquefaction)
                                         .OrderByDescending(r => r.Step)
@@ -535,7 +535,7 @@ namespace PileDesign.ViewModels
 
                                     // 結果を取得（最終ステップ）
                                     var result = spring.HorizontalSpringResults?
-                                        .Where(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                        .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
                                                  && r.LoadCombination?.No == loadCombination.No
                                                  && r.IsLiquefaction == isLiquefaction)
                                         .OrderByDescending(r => r.Step)

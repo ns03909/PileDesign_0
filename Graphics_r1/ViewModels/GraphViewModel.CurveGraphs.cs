@@ -60,7 +60,7 @@ namespace PileDesign.ViewModels
                             foreach (var spring in doatsuSprings)
                             {
                                 var result = spring.HorizontalSpringResults?
-                                    .FirstOrDefault(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                    .FirstOrDefault(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
                                                       && r.LoadCombination?.No == loadCombination.No
                                                       && r.IsLiquefaction == isLiquefaction
                                                       && r.Step == step);
@@ -87,7 +87,7 @@ namespace PileDesign.ViewModels
 
                             // 最上点の相対変位
                             var topResult = topSpring.HorizontalSpringResults?
-                                .FirstOrDefault(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                .FirstOrDefault(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
                                                   && r.LoadCombination?.No == loadCombination.No
                                                   && r.IsLiquefaction == isLiquefaction
                                                   && r.Step == step);
@@ -101,7 +101,7 @@ namespace PileDesign.ViewModels
 
                             // 最下点の相対変位
                             var btmResult = btmSpring.HorizontalSpringResults?
-                                .FirstOrDefault(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                .FirstOrDefault(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
                                                   && r.LoadCombination?.No == loadCombination.No
                                                   && r.IsLiquefaction == isLiquefaction
                                                   && r.Step == step);
@@ -1054,7 +1054,7 @@ namespace PileDesign.ViewModels
                                 if (lastStep < 0) continue;
 
                                 var result = spring.HorizontalSpringResults?
-                                    .Where(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                    .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
                                              && r.LoadCombination?.No == loadCombination.No
                                              && r.IsLiquefaction == isLiquefaction)
                                     .OrderByDescending(r => r.Step)

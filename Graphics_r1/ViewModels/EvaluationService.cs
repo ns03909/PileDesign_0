@@ -642,7 +642,7 @@ namespace PileDesign.ViewModels
                 var result = beam.BeamResults?.FirstOrDefault(r =>
                     r.IsLiquefaction == stepResult.IsLiquefaction &&
                     r.Step == stepResult.Step &&
-                    (stepResult.LoadCase == null || r.LoadCase?.LoadName == stepResult.LoadCase.LoadName) &&
+                    (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
                     (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
 
                 if (result?.CumulativeForce == null) { perBeamResults[idx] = found; return; }
@@ -857,7 +857,7 @@ namespace PileDesign.ViewModels
                 var result = beam.BeamResults?.FirstOrDefault(r =>
                     r.IsLiquefaction == stepResult.IsLiquefaction &&
                     r.Step == stepResult.Step &&
-                    (stepResult.LoadCase == null || r.LoadCase?.LoadName == stepResult.LoadCase.LoadName) &&
+                    (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
                     (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
 
                 if (result?.CumulativeForce == null) { perBeamResults[idx] = found; return; }
@@ -1111,7 +1111,7 @@ namespace PileDesign.ViewModels
                 var nr = head.NodeResults?.FirstOrDefault(r =>
                     r.IsLiquefaction == stepResult.IsLiquefaction &&
                     r.Step == stepResult.Step &&
-                    (stepResult.LoadCase == null || r.LoadCase?.LoadName == stepResult.LoadCase.LoadName) &&
+                    (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
                     (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
 
                 if (nr?.CumulativeDisp == null) continue;
@@ -1371,7 +1371,7 @@ namespace PileDesign.ViewModels
                 var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
                     r.IsLiquefaction == stepResult.IsLiquefaction &&
                     r.Step == stepResult.Step &&
-                    (stepResult.LoadCase == null || r.LoadCase?.LoadName == stepResult.LoadCase.LoadName) &&
+                    (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
                     (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
 
                 if (rsResult?.CumulativeDisp == null) { perItem[idx] = found; return; }

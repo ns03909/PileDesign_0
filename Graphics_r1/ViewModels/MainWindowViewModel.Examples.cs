@@ -203,6 +203,8 @@ namespace PileDesign.ViewModels
 
             // 読み込んだ直後は保存していない作業は無い。
             // 続けて別の計算例を読むときに、無意味な確認を出さないため。
+            // 計算例は荷重ケース名がすべて空欄。画面の荷重ケースの選択は名前で行うので、重ならない名前を付ける
+            CurrentInputModel.LoadCasesInput?.NormalizeLoadCaseNames();
             MarkProjectReplaced();
 
             // 自動保存の宛先を「名前の無いセッション」に張り替える。
@@ -334,6 +336,8 @@ namespace PileDesign.ViewModels
 
             // 読み込んだ直後は保存していない作業は無い。
             // 続けて別の計算例を読むときに、無意味な確認を出さないため。
+            // 計算例は荷重ケース名がすべて空欄。画面の荷重ケースの選択は名前で行うので、重ならない名前を付ける
+            CurrentInputModel.LoadCasesInput?.NormalizeLoadCaseNames();
             MarkProjectReplaced();
 
             // 自動保存の宛先を「名前の無いセッション」に張り替える。

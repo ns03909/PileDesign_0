@@ -513,6 +513,11 @@ namespace PileDesign.ViewModels
             if (ResultInputModel != null && !ReferenceEquals(ResultInputModel, CurrentInputModel))
                 ResultInputModel.LoadCasesInput?.NormalizeLoadCaseNumbers();
 
+            // 荷重ケース名の空欄・重複も付け直す (画面の荷重ケースの選択が名前で行われるため。NormalizeLoadCaseNames 参照)
+            var renamed = CurrentInputModel.LoadCasesInput?.NormalizeLoadCaseNames() ?? [];
+            if (ResultInputModel != null && !ReferenceEquals(ResultInputModel, CurrentInputModel))
+                ResultInputModel.LoadCasesInput?.NormalizeLoadCaseNames();
+
             // Undo 履歴をクリアして読込状態を初期状態として保存
             // SaveUndoState は全編集の集約点なので、解析後に編集した記録も立ってしまう。
             // ファイルから復元した値を控えておき、あとで戻す。
@@ -536,6 +541,12 @@ namespace PileDesign.ViewModels
             // 描画・解析が意図せず狂うのを防ぐため、ロード後に一括で検証して警告する)
             ShowPrecastPileNameWarningsIfAny(CurrentInputModel);
 
+            if (renamed.Count > 0)
+            {
+                Serilog.Log.Information("[読込] 荷重ケース名を付け直しました: {Changes}", string.Join(" / ", renamed));
+                MessageService.Show(DescribeRenamedLoadCases(renamed), "荷重ケース名", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+
             if (renumbered.Count > 0)
             {
                 Serilog.Log.Warning("[読込] 荷重ケースの番号を並び順に振り直しました: {Changes}", string.Join(" / ", renumbered));
@@ -543,6 +554,13 @@ namespace PileDesign.ViewModels
                     "荷重ケースの番号", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
+
+        /// <summary>荷重ケース名を付け直したことを知らせる文面。</summary>
+        internal static string DescribeRenamedLoadCases(IReadOnlyList<string> renamed)
+            => "荷重ケース名が空欄または重複していたので、重ならない名前を付けました。\n"
+               + "グラフ・表・計算書で荷重ケースを見分けるのに使うためです (名前は荷重ケースのウィンドウで変更できます)。\n\n"
+               + string.Join("\n", renamed.Take(10))
+               + (renamed.Count > 10 ? $"\n…ほか {renamed.Count - 10} 件" : "");
 
         /// <summary>荷重ケースの番号を振り直したことを知らせる文面。</summary>
         internal static string DescribeRenumberedLoadCases(IReadOnlyList<string> renumbered, bool hasResults)

@@ -319,6 +319,17 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnOk()
         {
+            // 荷重ケース名が空欄・重複だと、グラフ・表で荷重ケースを見分けられない (選択が名前で行われる)
+            var invalidNames = InputModel.LoadCasesInput.DescribeInvalidLoadCaseNames();
+            if (invalidNames.Count > 0)
+            {
+                Services.MessageService.Show(
+                    "荷重ケース名を直してください。空欄や重複した名前では、グラフ・表・計算書で荷重ケースを見分けられません。\n\n"
+                    + string.Join("\n", invalidNames.Take(10)),
+                    "荷重ケース名", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
             // 荷重条件の変更はジオメトリ (メッシュ) に影響しないため、杭要素分割は保持する。
             // 解析結果のみリセットする (旧 CheckAndResetElementSplit は分割も破棄していた)。
             if (!_mainWindowViewModel.CheckAndResetAnalysisResultsKeepingSplit("荷重条件"))
