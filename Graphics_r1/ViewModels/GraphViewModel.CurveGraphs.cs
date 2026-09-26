@@ -576,8 +576,9 @@ namespace PileDesign.ViewModels
                             if (rs == null) continue;
 
                             var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
-                                r.LoadCase?.No == loadCase.No &&
-                                r.LoadCombination?.No == loadCombination.No &&
+                                // 荷重ケースはレベルと番号で見分ける (番号だけだとレベル 1 と 2 の同じ番号を取り違える)
+                                LoadCase.IsSameCase(r.LoadCase, loadCase) &&
+                                LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
                                 r.IsLiquefaction == isLiq &&
                                 r.Step == lastStep);
                             if (rsResult?.CumulativeDisp == null || rsResult.CumulativeForce == null) continue;
@@ -788,8 +789,9 @@ namespace PileDesign.ViewModels
                             {
                                 // RotationalSpringResultから該当する結果を取得（Beam.GetBeamResultと同様のパターン）
                                 var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
-                                    r.LoadCase?.No == loadCase.No &&
-                                    r.LoadCombination?.No == loadCombination.No &&
+                                    // 荷重ケースはレベルと番号で見分ける (番号だけだとレベル 1 と 2 の同じ番号を取り違える)
+                                    LoadCase.IsSameCase(r.LoadCase, loadCase) &&
+                                    LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
                                     r.IsLiquefaction == isLiquefaction &&
                                     r.Step == lastStep);
 

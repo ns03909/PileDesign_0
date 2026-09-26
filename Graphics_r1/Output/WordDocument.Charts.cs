@@ -813,6 +813,8 @@ namespace PileDesign.Output
                 // 断面の完全 M-θ 解析を行うため非常に重い。曲線は (pileBody, axialN) に
                 // のみ依存するので、axialN を 10kN 単位でバケット化してキャッシュする。
                 var mThetaInputDefCache = new Dictionary<int, PileDesign.FEM.PileHeadRotationDef>();
+                // ケース別の控えが無く、理論曲線を描けなかった (杭, ケース)。図の下に知らせる
+                var casesWithoutCurve = new SortedSet<string>(StringComparer.Ordinal);
 
                 foreach (var (rs, pileLayout) in springsForBody)
                 {
@@ -841,11 +843,16 @@ namespace PileDesign.Output
                                 // 曲線取得 (優先順位):
                                 // 1) 入力データ (pileBody.GetMThetaRelationship) — IsPileNonLinear=false で
                                 //    FEM が CurveXY を null にリセットする問題を回避
-                                // 2) FEM 側 CurveXY (非線形ケース)
-                                // 3) 線形 Kθ
-                                double[] thetas;
-                                double[] moments;
-                                string modeTag;
+                                // 2) 解析中に取ったこのケースの控え (CaseMThetaSnapshots) の曲線
+                                // 3) 同じ控えの線形 Kθ
+                                // ばね本体の CurveXY / Curve / Kθ は使わない。最後に解いた<b>別のケース</b>のものが残っていることがある
+                                // (M–θ 曲線は軸力で変わる)。控えも無ければ理論曲線は描かず、図の下で知らせる。
+                                double[] thetas = [];
+                                double[] moments = [];
+                                string modeTag = "";
+                                string snapKey = RotationalSpring.MakeCaseKey(loadCase, loadCombination.No, isLiquefaction);
+                                rs.CaseMThetaSnapshots.TryGetValue(snapKey, out var caseSnapshot);
+                                int lastStep = GetLastStepCached(loadCase, loadCombination, isLiquefaction);
 
                                 int axialNCacheKey = (int)Math.Round(axialN / 10.0);
                                 if (!mThetaInputDefCache.TryGetValue(axialNCacheKey, out var inputDef))
@@ -860,32 +867,38 @@ namespace PileDesign.Output
                                     (thetas, moments) = inputDef.CurveXY.ToArrays();
                                     modeTag = "XY";
                                 }
-                                else if (rs.Mode == RotationalSpringMode.CombinedXY && rs.CurveXY != null)
+                                else if (caseSnapshot is { Mode: RotationalSpringMode.CombinedXY, CurveXY: not null })
                                 {
-                                    (thetas, moments) = rs.CurveXY.ToArrays();
+                                    (thetas, moments) = caseSnapshot.CurveXY.ToArrays();
                                     modeTag = "XY";
                                 }
-                                else if (rs.Mode == RotationalSpringMode.SingleDof && rs.Curve != null)
+                                else if (caseSnapshot is { Mode: RotationalSpringMode.SingleDof, Curve: not null })
                                 {
-                                    (thetas, moments) = rs.Curve.ToArrays();
+                                    (thetas, moments) = caseSnapshot.Curve.ToArrays();
                                     modeTag = rs.Dof.ToString();
                                 }
-                                else
+                                else if (caseSnapshot != null)
                                 {
-                                    double? k = rs.Mode == RotationalSpringMode.CombinedXY ? rs.KthetaXY : rs.Ktheta;
-                                    if (!k.HasValue || k.Value <= 0.0) continue;
-                                    const double thetaMax = 0.02;
-                                    int nDiv = 50;
-                                    thetas = [.. Enumerable.Range(0, nDiv).Select(i => i * thetaMax / (nDiv - 1))];
-                                    moments = [.. thetas.Select(t => k.Value * t)];
-                                    modeTag = rs.Mode == RotationalSpringMode.CombinedXY ? "XY" : rs.Dof.ToString();
+                                    double? k = caseSnapshot.Mode == RotationalSpringMode.CombinedXY ? caseSnapshot.KthetaXY : caseSnapshot.Ktheta;
+                                    if (k is > 0.0)
+                                    {
+                                        const double thetaMax = 0.02;
+                                        int nDiv = 50;
+                                        thetas = [.. Enumerable.Range(0, nDiv).Select(i => i * thetaMax / (nDiv - 1))];
+                                        moments = [.. thetas.Select(t => k.Value * t)];
+                                        modeTag = caseSnapshot.Mode == RotationalSpringMode.CombinedXY ? "XY" : rs.Dof.ToString();
+                                    }
                                 }
-                                if (thetas.Length == 0 || moments.Length == 0) continue;
+                                else if (lastStep >= 0)
+                                {
+                                    // 解析したケースなのに控えが無い (控えを保存するようにする前のファイルなど)
+                                    casesWithoutCurve.Add($"杭No.{pileLayout.PileNo} {loadCase.LoadName}");
+                                }
 
                                 // 曲線の重複抑制: 同一 (LC, Comb, Liq, Mode, 軸力[10kN丸め]) はほぼ同一曲線
                                 int axialNBucket = (int)Math.Round(axialN / 10.0);
                                 string curveKey = $"{loadCase.LoadName}|{loadCombination.No}|{isLiquefaction}|{modeTag}|{axialNBucket}";
-                                if (seenMThetaKeys.Add(curveKey))
+                                if (thetas.Length > 0 && moments.Length > 0 && seenMThetaKeys.Add(curveKey))
                                 {
                                     lineListsX.Add(thetas.ToList());
                                     lineListsY.Add(moments.ToList());
@@ -895,12 +908,12 @@ namespace PileDesign.Output
                                 }
 
                                 // 最終ステップの (θ, M) 散布点
-                                int lastStep = GetLastStepCached(loadCase, loadCombination, isLiquefaction);
                                 if (lastStep >= 0)
                                 {
+                                    // 荷重ケースはレベルと番号で見分ける。番号だけだとレベル 1 と 2 の同じ番号のケースを取り違える
                                     var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
-                                        r.LoadCase?.No == loadCase.No &&
-                                        r.LoadCombination?.No == loadCombination.No &&
+                                        LoadCase.IsSameCase(r.LoadCase, loadCase) &&
+                                        LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
                                         r.IsLiquefaction == isLiquefaction &&
                                         r.Step == lastStep);
 
@@ -919,12 +932,9 @@ namespace PileDesign.Output
                                             // ずれるため |Δθ| > θ_proj となり、点が曲線の右下に外れる)。
                                             // アプリ内グラフ (GraphViewModel.CurveGraphs) と同じく、
                                             // ピーク履歴値 (ThetaProjMax, curve(ThetaProjMax)) をプロットする。
-                                            string snapKey = RotationalSpring.MakeCaseKey(
-                                                loadCase, loadCombination.No, isLiquefaction);
                                             // 控えが無いときにばね本体の曲線 (別のケースのものかもしれない) を使わない。
                                             // 無ければピーク値ではなく最終状態の値で描く (下の else)
-                                            var peakCurve = rs.CaseMThetaSnapshots.TryGetValue(snapKey, out var snap)
-                                                ? snap.CurveXY : null;
+                                            var peakCurve = caseSnapshot?.CurveXY;
                                             if (rsResult.HasCracked
                                                 && rsResult.CrackNx.HasValue && rsResult.CrackNy.HasValue
                                                 && rsResult.ThetaProjMax > 0.0
@@ -970,7 +980,12 @@ namespace PileDesign.Output
                     }
                 }
 
-                if (lineListsX.Count == 0) continue;
+                if (lineListsX.Count == 0)
+                {
+                    if (casesWithoutCurve.Count > 0)
+                        AddTableNote(body, "※ " + DescribeCasesWithoutMThetaCurve(pileBody.PileBodyRef, casesWithoutCurve));
+                    continue;
+                }
 
                 List<List<double>> xsScatter = [thetaResultsLevel2, thetaResultsLevel1];
                 List<List<double>> ysScatter = [momentResultsLevel2, momentResultsLevel1];
@@ -989,7 +1004,18 @@ namespace PileDesign.Output
                 AddAutoFigureCaption(body,
                     $"M-θ関係　杭体符号:{pileBody.PileBodyRef}{nRangeTheta}",
                     "図");
+                if (casesWithoutCurve.Count > 0)
+                    AddTableNote(body, "※ " + DescribeCasesWithoutMThetaCurve(pileBody.PileBodyRef, casesWithoutCurve));
             }
+        }
+
+        /// <summary>ケース別の M-θ 曲線の控えが無く、理論曲線を描けなかったケースの注記 (多いときは先頭 8 件と件数)。</summary>
+        internal static string DescribeCasesWithoutMThetaCurve(string pileBodyRef, IReadOnlyCollection<string> cases)
+        {
+            const int shown = 8;
+            string list = string.Join("、", cases.Take(shown)) + (cases.Count > shown ? $" ほか {cases.Count - shown} 件" : "");
+            return $"杭体符号 {pileBodyRef} の次のケースは、解析したときの M-θ 曲線が保存されていないため理論曲線を描いていません"
+                 + $"（別のケースの曲線で代用しないため。再解析すると描けます）: {list}";
         }
 
         /// <summary>
