@@ -470,24 +470,35 @@ namespace PileDesign.Services
         /// <summary>
         /// 古い自動保存ファイルを削除
         /// </summary>
-        private void CleanupOldAutoSaveFiles()
+        private void CleanupOldAutoSaveFiles() => CleanupOldAutoSaveFiles(AutoSaveFolder, DateTime.Now, RetentionDays);
+
+        /// <summary>
+        /// <paramref name="folder"/> の自動保存ファイルのうち、<b>最後に書かれてから</b> <paramref name="retentionDays"/> 日を過ぎたものを消す。
+        /// 消した数を返す。
+        ///
+        /// 以前は作成日時で判定していた。一方、復元候補の選択 (<see cref="FindRestoreCandidate"/>) は最終更新日時で決める。
+        /// 作られたのは古いがあとで書き直されたファイル (同じ名前で作り直すと、Windows は元の作成日時を引き継ぐことがある) は、
+        /// 復元の候補になる新しい内容なのに消えた。どちらも最終更新日時で揃える。
+        /// </summary>
+        internal static int CleanupOldAutoSaveFiles(string folder, DateTime now, int retentionDays)
         {
+            int deleted = 0;
             try
             {
-                var cutoffDate = DateTime.Now.AddDays(-RetentionDays);
+                var cutoffUtc = now.ToUniversalTime().AddDays(-retentionDays);
                 // 通常の autosave と緊急保存 (emergency) の両方をクリーンアップ対象にする
                 // 旧形式 (.json) と新形式 (.pdj) の両方を拾う
-                var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, "*_autosave_*.pdj")
-                    .Concat(Directory.GetFiles(AutoSaveFolder, "*_emergency_*.pdj"))
-                    .Concat(Directory.GetFiles(AutoSaveFolder, "*_autosave_*.json"))
-                    .Concat(Directory.GetFiles(AutoSaveFolder, "*_emergency_*.json"));
+                var autoSaveFiles = Directory.GetFiles(folder, "*_autosave_*.pdj")
+                    .Concat(Directory.GetFiles(folder, "*_emergency_*.pdj"))
+                    .Concat(Directory.GetFiles(folder, "*_autosave_*.json"))
+                    .Concat(Directory.GetFiles(folder, "*_emergency_*.json"));
 
                 foreach (var file in autoSaveFiles)
                 {
-                    var fileInfo = new FileInfo(file);
-                    if (fileInfo.CreationTime < cutoffDate)
+                    if (File.GetLastWriteTimeUtc(file) < cutoffUtc)
                     {
                         File.Delete(file);
+                        deleted++;
                     }
                 }
             }
@@ -496,6 +507,7 @@ namespace PileDesign.Services
                 // クリーンアップ失敗は次回に再試行
                 Log.Warning(ex, "[AutoSave] クリーンアップ失敗");
             }
+            return deleted;
         }
 
         /// <summary>復元を勧める自動保存・緊急保存。<see cref="FindRestoreCandidate()"/> が選ぶ。</summary>
