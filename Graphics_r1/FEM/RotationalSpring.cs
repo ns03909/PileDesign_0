@@ -350,6 +350,56 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
+        /// 荷重ケースの番号を振り直したとき (読込の <see cref="Models.InputData.LoadCasesInput.NormalizeLoadCaseNumbers"/>)、
+        /// ケース別の控えの鍵を新しい番号へ移す。<paramref name="cases"/> は解析したときの入力の、振り直した荷重ケースすべての
+        /// (レベル, 振り直す前の番号, 振り直した後の番号)。
+        ///
+        /// 鍵には番号が入るので、移さないと、欠番のある番号で解析したファイルでは読み直すとどのケースの曲線も引けない。
+        /// 次の控えは捨てる (表は「保存されていません。再解析すると表示します」と出す)。
+        /// <list type="bullet">
+        /// <item>振り直す前に番号が重複していたケースの控え: 解析したときに同じ鍵へ書かれ、どのケースのものか決められない。</item>
+        /// <item>一覧に無い番号の控え: 残すと、振り直したあとの番号と重なり、別のケースの曲線として出る恐れがある。</item>
+        /// </list>
+        /// </summary>
+        public static void RenumberCaseKeys(IEnumerable<RotationalSpring> springs,
+            IReadOnlyCollection<(int Level, int OldNo, int NewNo)> cases,
+            IReadOnlyCollection<(int OldNo, int NewNo)>? combinations = null)
+        {
+            var newNoOf = cases.GroupBy(c => (c.Level, c.OldNo))
+                .ToDictionary(g => g.Key, g => g.Count() == 1 ? g.First().NewNo : (int?)null);
+            var levels = cases.Select(c => c.Level).ToHashSet();
+            // 荷重組合せの番号も同じ扱い (重複していた番号・一覧に無い番号の控えは捨てる)。渡されなければ変えない
+            var newCombOf = combinations?.GroupBy(c => c.OldNo)
+                .ToDictionary(g => g.Key, g => g.Count() == 1 ? g.First().NewNo : (int?)null);
+
+            foreach (var rs in springs)
+            {
+                if (rs == null || rs.CaseMThetaSnapshots.IsEmpty) continue;
+                var entries = rs.CaseMThetaSnapshots.ToArray();
+                rs.CaseMThetaSnapshots.Clear();
+                foreach (var (key, snapshot) in entries)
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(key, @"^L(\d+)-(-?\d+)\|(-?\d+)\|(.*)$");
+                    if (!m.Success || !levels.Contains(int.Parse(m.Groups[1].Value)))
+                    {
+                        rs.CaseMThetaSnapshots[key] = snapshot;   // 振り直していないレベル
+                        continue;
+                    }
+                    int level = int.Parse(m.Groups[1].Value);
+                    if (!newNoOf.TryGetValue((level, int.Parse(m.Groups[2].Value)), out var newNo) || !newNo.HasValue)
+                        continue;
+                    int comb = int.Parse(m.Groups[3].Value);
+                    if (newCombOf != null)
+                    {
+                        if (!newCombOf.TryGetValue(comb, out var newComb) || !newComb.HasValue) continue;
+                        comb = newComb.Value;
+                    }
+                    rs.CaseMThetaSnapshots[$"L{level}-{newNo.Value}|{comb}|{m.Groups[4].Value}"] = snapshot;
+                }
+            }
+        }
+
+        /// <summary>
         /// ケース別の控え (<see cref="CaseMThetaSnapshots"/>) の保存用の形。保存ファイルにだけ使う。
         ///
         /// 以前は控えを保存しなかったので、読み直すと表示中のケースの控えが無く、表とグラフは<b>ばね本体の曲線</b>

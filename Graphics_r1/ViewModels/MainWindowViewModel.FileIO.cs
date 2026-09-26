@@ -509,9 +509,25 @@ namespace PileDesign.ViewModels
 
             // 荷重ケースの番号を並び順に揃える (理由は NormalizeLoadCaseNumbers)。
             // 解析結果の入力 (スナップショット) が別の実体なら、そちらも揃える。グラフ・計算書はそちらの番号で軸力を引く
+            // 杭頭 M–θ のケース別の控えの鍵には番号が入るので、解析したときの入力の振り直す前の番号を控えておき、鍵も移す
+            var resultCases = ResultInputModel?.LoadCasesInput is { } rlc
+                ? rlc.LoadCasesLevel1.Concat(rlc.LoadCasesLevel2).Where(c => c != null).Select(c => (Case: c, OldNo: c.No)).ToList()
+                : [];
+            var resultCombinations = ResultInputModel?.LoadCasesInput?.LoadCombinations is { } rcomb
+                ? rcomb.Where(c => c != null).Select(c => (Combination: c, OldNo: c.No)).ToList()
+                : [];
             var renumbered = CurrentInputModel.LoadCasesInput?.NormalizeLoadCaseNumbers() ?? [];
             if (ResultInputModel != null && !ReferenceEquals(ResultInputModel, CurrentInputModel))
                 ResultInputModel.LoadCasesInput?.NormalizeLoadCaseNumbers();
+            if (resultCases.Any(c => c.Case.No != c.OldNo) || resultCombinations.Any(c => c.Combination.No != c.OldNo))
+            {
+                var moves = resultCases.Select(c => (c.Case.Level, c.OldNo, NewNo: c.Case.No)).ToList();
+                var combinationMoves = resultCombinations.Select(c => (c.OldNo, NewNo: c.Combination.No)).ToList();
+                var springs = (CurrentModel?.RotationalSprings ?? []).AsEnumerable();
+                if (CurrentResultSet?.AnaModel is { } resultModel && !ReferenceEquals(resultModel, CurrentModel))
+                    springs = springs.Concat(resultModel.RotationalSprings ?? []);
+                FEM.RotationalSpring.RenumberCaseKeys(springs, moves, combinationMoves.Count > 0 ? combinationMoves : null);
+            }
 
             // 荷重ケース名の空欄・重複も付け直す (画面の荷重ケースの選択が名前で行われるため。NormalizeLoadCaseNames 参照)
             var renamed = CurrentInputModel.LoadCasesInput?.NormalizeLoadCaseNames() ?? [];
@@ -564,7 +580,7 @@ namespace PileDesign.ViewModels
 
         /// <summary>荷重ケースの番号を振り直したことを知らせる文面。</summary>
         internal static string DescribeRenumberedLoadCases(IReadOnlyList<string> renumbered, bool hasResults)
-            => "荷重ケースの番号が一覧の並び順と合っていなかった (重複・欠番・順序の入れ替わり) ので、並び順に振り直しました。\n"
+            => "荷重ケース (または荷重組合せ) の番号が一覧の並び順と合っていなかった (重複・欠番・順序の入れ替わり) ので、並び順に振り直しました。\n"
                + "杭の地震時軸力は荷重ケースの並び順で対応させています。番号がずれたままだと、解析が別のケースの軸力を使います。\n\n"
                + string.Join("\n", renumbered.Take(10))
                + (renumbered.Count > 10 ? $"\n…ほか {renumbered.Count - 10} 件" : "")

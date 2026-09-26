@@ -215,12 +215,26 @@ namespace PileDesign.Models.InputData
         /// 番号は画面では変えられず、並び順どおりに振られるので、通常は食い違わない。
         /// 手で編集したファイルなどで番号が重複したり並び順と合わなかったりすると、解析が<b>別のケースの軸力</b>を
         /// 黙って使い、MGT 出力では同じ番号のケースが欠けた。画面に見えている並び順を正として揃える。
+        /// 荷重組合せの番号も同じく揃える (結果・検定は組合せを番号で見分ける)。
         /// </summary>
         internal IReadOnlyList<string> NormalizeLoadCaseNumbers()
         {
             var changes = new List<string>();
             Normalize(LoadCasesLevel1, 1);
             Normalize(LoadCasesLevel2, 2);
+
+            // 荷重組合せも番号で見分ける (LoadCombination.IsSameCombination)。画面では係数から番号どおりに作られるので、
+            // 食い違うのは手で編集したファイルなど
+            if (LoadCombinations != null)
+            {
+                for (int i = 0; i < LoadCombinations.Count; i++)
+                {
+                    var comb = LoadCombinations[i];
+                    if (comb == null || comb.No == i + 1) continue;
+                    changes.Add($"荷重組合せ「{comb.Name}」: 番号 {comb.No} → {i + 1}");
+                    comb.No = i + 1;
+                }
+            }
             return changes;
 
             void Normalize(IList<LoadCase>? cases, int level)
