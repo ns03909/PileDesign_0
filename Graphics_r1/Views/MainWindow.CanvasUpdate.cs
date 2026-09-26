@@ -200,7 +200,8 @@ namespace PileDesign.Views
                 if (vm.IsElementSplit)
                 {
                     // 分割済: SoilPile の ZDataItems 列
-                    var soilPile = vm.CurrentInputModel.ElementDivision.SoilPiles[pile.SoilPileAltNo - 1];
+                    var soilPile = pile.SoilPileAt(vm.CurrentInputModel);
+                    if (soilPile == null) continue;   // 土層-杭セットに対応していない杭は描かない
                     var zs = soilPile.ZDataItems;
                     for (int j = 0; j < zs.Count - 1; j++)
                     {

@@ -44,7 +44,9 @@ namespace PileDesign.Views
                 foreach (PileLayoutDataItem pileLayout in viewModel.ResultInputModel.PileLayoutItems)
                 {
                     Point3D loc1 = new(pileLayout.Point3D.X, pileLayout.Point3D.Y, viewModel.ResultInputModel.PileGroupSettlement.LoadingPlaneAltitude);
-                    double radius = viewModel.ResultInputModel.ElementDivision.SoilPiles[pileLayout.SoilPileAltNo - 1].GroupPileLoadDia * 0.5;
+                    var soilPile = pileLayout.SoilPileAt(viewModel.ResultInputModel);
+                    if (soilPile == null) continue;   // 土層-杭セットに対応していない杭は描かない
+                    double radius = soilPile.GroupPileLoadDia * 0.5;
 
                     List<(Point3D, Point3D)> rectangles = PileGroupSettlement.GetFiveRectsPoints(loc1, radius);
                     rectangleGeometries.AddRange(viewModel.CanvasThreeDView.RectsTranformation(rectangles));

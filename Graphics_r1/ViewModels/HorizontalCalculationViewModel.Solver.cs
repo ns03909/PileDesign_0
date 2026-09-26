@@ -442,7 +442,9 @@ namespace PileDesign.ViewModels
 
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
-                var soilPile = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1];
+                // 対応が無い杭は解析前の検査 (CheckInputData.CheckSoilPile) で止めている
+                var soilPile = pileLayoutItem.SoilPileAt(InputModel)
+                    ?? throw new InvalidOperationException($"杭 No.{pileLayoutItem.No}: 土層-杭セットがありません");
                 // E3b: case-local SoilNodes 経由 (主モデルでは InputModel.PileLayoutItems.SoilNodes と同一参照)
                 var soilNodes = targetModel.GetSoilNodes(pileLayoutItem);
                 for (int i = 0; i < soilPile.ZDataItems.Count; i++)
@@ -877,7 +879,9 @@ namespace PileDesign.ViewModels
 
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
-                var horizontalReactions = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1].HorizontalSoilReactions;
+                var pileSoilPile = pileLayoutItem.SoilPileAt(InputModel)
+                    ?? throw new InvalidOperationException($"杭 No.{pileLayoutItem.No}: 土層-杭セットがありません");
+                var horizontalReactions = pileSoilPile.HorizontalSoilReactions;
                 // VL ケースは iLC=-1 となるため安全アクセス
                 var isFrontPile = pileLayoutItem.IsFrontAt(iLC);
 
@@ -897,7 +901,7 @@ namespace PileDesign.ViewModels
                 // VL は 1 (低減なし)。判定していない地盤も 1 になる (GroundInput.LiquefactionReductionAt)。
                 var betaL = new double[reactionCount];
                 Array.Fill(betaL, 1.0);
-                var pileGround = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1].GroundInput;
+                var pileGround = pileSoilPile.GroundInput;
                 if (model.CaseIsLiquefaction && pileGround != null)
                 {
                     for (int e = 0; e < reactionCount; e++)

@@ -398,6 +398,13 @@ namespace PileDesign.Services
                     message += $"杭 No.{pileLayoutDataItem.No}: 杭頭の高さが数値ではありません ({pileLayoutDataItem.PileHeadZ}).\n";
                     continue;
                 }
+                // 解析は杭ごとの土層-杭セットを SoilPileAltNo で引く。対応が無いまま進むと、範囲の外を引いて落ちる
+                if (pileLayoutDataItem.SoilPileAt(inputModel) == null)
+                {
+                    message += $"杭 No.{pileLayoutDataItem.No}: この杭の土層-杭セットがまだ作られていません。"
+                             + "杭配置・地盤・杭体の入力を確定してから、もう一度実行してください。\n";
+                    continue;
+                }
                 // pileTopAltitude は杭頭高さ。v2 セマンティクスでは pile.Z は接合節点 Z なので PileHeadZ を使う。
                 // SoilPile キャッシュ (杭頭基準) との整合のためにも PileHeadZ で揃える。
                 double pileTopAltitude = pileLayoutDataItem.PileHeadZ;

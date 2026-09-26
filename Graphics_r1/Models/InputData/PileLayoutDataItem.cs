@@ -166,7 +166,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // 地盤杭高さ番号
+        // 地盤杭高さ番号 (ElementDivision.SoilPiles の 1 始まりの位置。0 は対応する組が無い)
         private int _soilPileAltNo;
         public int SoilPileAltNo
         {
@@ -492,6 +492,17 @@ namespace PileDesign.Models.InputData
         /// <summary>荷重ケースでの前方杭判定 (<see cref="IsFrontAt"/>。ケース番号 - 1 番目の値)。</summary>
         public bool IsFrontFor(LoadCase loadCase) => IsFrontAt(loadCase.No - 1);
 
+        /// <summary>
+        /// 対応する土層-杭セット (<see cref="SoilPileAltNo"/> の位置)。対応が無い (0・範囲外) なら null。
+        /// 番号でそのまま配列を引く箇所は、範囲の外で例外になるので、これを通す。
+        /// </summary>
+        public SoilPile? SoilPileAt(InputModel? inputModel)
+        {
+            var soilPiles = inputModel?.ElementDivision?.SoilPiles;
+            int i = SoilPileAltNo - 1;
+            return soilPiles != null && i >= 0 && i < soilPiles.Count ? soilPiles[i] : null;
+        }
+
         // 杭先端 N 値の入力は置かない。どこからも読まれておらず (支持力は地盤の土質データから
         // 杭先端位置の N 値を引く)、画面にも出ていなかったため 2026-09-18 に撤去した。
 
@@ -644,7 +655,9 @@ namespace PileDesign.Models.InputData
 
             GroundNo = 1;
             PileBodyNo = 1;
-            SoilPileAltNo = 1;
+            // 0 = 土層-杭セットにまだ対応付けていない。以前は 1 で、対応付けの前から 1 番目の組を指していた。
+            // 対応付けは InputModel.GenerateSoilPiles が行う
+            SoilPileAltNo = 0;
             GroupPileFactor = 1;
 
             AxialForceLevel1s = [];

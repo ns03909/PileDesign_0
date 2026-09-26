@@ -1766,6 +1766,9 @@ namespace PileDesign.Models.InputData
 
                 // バッチでObservableCollectionを更新（個別Addの通知コストを回避）
                 ElementDivision.SoilPiles = new ObservableCollection<SoilPile>(newPiles);
+                // 差し替えた一覧の変更も受け取る。購読は ElementDivision を設定したときにしか付けていなかったので、
+                // 差し替え後の一覧は誰も見ていなかった
+                AttachElementDivisionHandlers();
 
                 ElementDivision.UpdateSoilPileNumberOption();
 
@@ -1779,12 +1782,13 @@ namespace PileDesign.Models.InputData
                 }
                 foreach (PileLayoutDataItem pileLayoutDataItem in PileLayoutItems)
                 {
-                    // SoilPile.Z は杭頭基準なので、ルックアップキーも PileHeadZ で揃える (v2 セマンティクス)
+                    // SoilPile.Z は杭頭基準なので、ルックアップキーも PileHeadZ で揃える (v2 セマンティクス)。
+                    // 見つからない杭 (地盤番号・杭体番号が一時的に無効など) は 0 (未対応) にする。以前は前の番号を
+                    // 残していたので、作り直して並びが変わった一覧の<b>別の組</b>を指し得た
                     long pZKey = (long)Math.Round(pileLayoutDataItem.PileHeadZ / NumericalConstants.COORDINATE_TOLERANCE);
-                    if (soilPileLookup.TryGetValue((pileLayoutDataItem.GroundNo, pileLayoutDataItem.PileBodyNo, pZKey), out int altNo))
-                    {
-                        pileLayoutDataItem.SoilPileAltNo = altNo;
-                    }
+                    pileLayoutDataItem.SoilPileAltNo =
+                        soilPileLookup.TryGetValue((pileLayoutDataItem.GroundNo, pileLayoutDataItem.PileBodyNo, pZKey), out int altNo)
+                            ? altNo : 0;
                 }
 
                 ApplyBucklingLengthToSections(bucklingLengthByPileBody);
@@ -1792,6 +1796,9 @@ namespace PileDesign.Models.InputData
             finally
             {
                 _suppressSoilPileNotify = false;
+                // 検索キャッシュはここで捨てる。画面側から GenerateSoilPiles() を直接呼ぶ経路 (杭配置の編集・例題の読込など) では
+                // 無効化されず、LookupSoilPile() / PileLayoutDataItem.SoilPile が作り直す前の土層-杭セットを返し得た
+                InvalidateSoilPileCache();
             }
 
             // 作り直したので単杭沈下の結果は失われた。旗を中身に追従させる
