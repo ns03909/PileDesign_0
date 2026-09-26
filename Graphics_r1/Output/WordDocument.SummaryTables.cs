@@ -428,159 +428,128 @@ namespace PileDesign.Output
                 "応答の最大値をレベル別にまとめる。Dmax は最大水平変位、Qmax・Mmax はせん断力・曲げモーメントの" +
                 "絶対値最大、N_Max・N_Min は軸力の最大値・最小値（圧縮を正）である。");
 
-            List<string> selectedPileBodies = [];
-            List<int> selectedSegment = [];
-            List<double> selectedSegmentTop = [];
-            List<double> selectedSegmentBtm = [];
-            List<List<double>> Qmaxs = [];
-            List<List<double>> Mmaxs = [];
-            List<List<double>> NMaxs = [];
-            List<List<double>> NMins = [];
-            List<List<double>> Dmaxs = [];
+            var rows = CollectPileForceSummary();
 
-            // 杭検討結果まとめ一覧
-            for (int selectedPileBodyNo = 1; selectedPileBodyNo <= inputModel.PileBodies.Count; selectedPileBodyNo++)
+            // レベルごとに解析結果が存在するか判定（実際にデータが収集されたかで判定）
+            bool hasLevel1Results = (inputModel.LoadCasesInput?.LoadCasesLevel1?.Any(x => x.IsApplicable) ?? false)
+                && rows.Any(r => r.Qmax[0] != null || r.Mmax[0] != null);
+            bool hasLevel2Results = (inputModel.LoadCasesInput?.LoadCasesLevel2?.Any(x => x.IsApplicable) ?? false)
+                && rows.Any(r => r.Qmax[1] != null || r.Mmax[1] != null);
+
+            BuildAnalysisResultSummaryTable(body, rows, hasLevel1Results, hasLevel2Results);
+        }
+
+        /// <summary>
+        /// 杭検討結果まとめ一覧の 1 行 (杭体の区間 1 つ)。値はレベル1・2 の順。
+        /// その区間・レベルの結果が 1 つも無ければ null (表には「—」と出す)。
+        ///
+        /// 以前は double.MinValue / MaxValue で初期化した値をそのまま書き出していたので、
+        /// 一部の区間だけ結果が欠けると「-1.8E+308」のような値が表に出た。
+        /// </summary>
+        internal sealed class PileForceSummaryRow
+        {
+            public string PileBodyRef { get; init; } = "";
+            public int SegmentNo { get; init; }
+            public double Top { get; init; }
+            public double Bottom { get; init; }
+            public double?[] Dmax { get; } = new double?[2];
+            public double?[] Qmax { get; } = new double?[2];
+            public double?[] Mmax { get; } = new double?[2];
+            public double?[] NMax { get; } = new double?[2];
+            public double?[] NMin { get; } = new double?[2];
+
+            /// <summary>いずれかの列に結果の無いセルがあるか (表に注記するため)。</summary>
+            internal bool HasMissing(int level)
+                => Dmax[level] == null || Qmax[level] == null || Mmax[level] == null || NMax[level] == null || NMin[level] == null;
+        }
+
+        /// <summary>
+        /// 杭体の区間ごとに、全杭・全荷重ケース・全組合せ・選択した液状化の有無にわたる最大値を集める。
+        ///
+        /// 区間は要素分割で複数の要素 (梁) に分かれる。<b>梁の区間番号</b> (<c>Beam.SegmentIndex</c> → 分割後の区間の元の区間番号)
+        /// で集めるので、1 区間が何要素に分かれていても、その区間のすべての要素が最大値に入る。
+        /// 節点の変位が取れない要素は変位の最大値に入れない (以前は 0 として入れていた)。
+        /// </summary>
+        internal List<PileForceSummaryRow> CollectPileForceSummary()
+        {
+            var rows = new List<PileForceSummaryRow>();
+            var liqPatterns = new List<bool>();
+            if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+            if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+            var soilPiles = inputModel.ElementDivision?.SoilPiles;
+
+            for (int pileBodyNo = 1; pileBodyNo <= inputModel.PileBodies.Count; pileBodyNo++)
             {
-                var pileBody = inputModel.PileBodies[selectedPileBodyNo - 1];
-                for (int selectedSegmentNo = 1; selectedSegmentNo <= pileBody.PileBodySegments.Count; selectedSegmentNo++)
+                var pileBody = inputModel.PileBodies[pileBodyNo - 1];
+                if (pileBody?.PileBodySegments == null) continue;
+
+                // この杭体の区間ごとの行 (区間番号 → 行)
+                var rowBySegment = new Dictionary<int, PileForceSummaryRow>();
+                for (int segNo = 1; segNo <= pileBody.PileBodySegments.Count; segNo++)
                 {
-                    selectedPileBodies.Add(pileBody.PileBodyRef);
-                    selectedSegment.Add(selectedSegmentNo);
-                    var segment = pileBody.PileBodySegments[selectedSegmentNo - 1];
-                    selectedSegmentBtm.Add(segment.SegmentDepth);
-                    selectedSegmentTop.Add(segment.SegmentDepth - segment.SegmentLength);
-                    Qmaxs.Add([double.MinValue, double.MinValue]);
-                    Mmaxs.Add([double.MinValue, double.MinValue]);
-                    NMaxs.Add([double.MinValue, double.MinValue]);
-                    NMins.Add([double.MaxValue, double.MaxValue]);
-                    Dmaxs.Add([double.MinValue, double.MinValue]);
-
-                    //foreach (PileLayoutDataItem pileLayoutDataItem in inputModel.PileLayoutItems)
-                    //{
-                    //    if (pileLayoutDataItem.PileBodyNo != selectedPileBodyNo) continue;
-
-                    //    NMaxs[^1][0] = Math.Max(NMaxs[^1][0], pileLayoutDataItem.AxialForceLevel1s.Max());
-                    //    NMins[^1][0] = Math.Min(NMins[^1][0], pileLayoutDataItem.AxialForceLevel1s.Min());
-                    //    NMaxs[^1][1] = Math.Max(NMaxs[^1][1], pileLayoutDataItem.AxialForceLevel2s.Max());
-                    //    NMins[^1][1] = Math.Min(NMins[^1][1], pileLayoutDataItem.AxialForceLevel2s.Min());
-
-                    //    foreach (LoadCase loadCase in inputModel.LoadCasesInput.AllSeismicLoadCases)
-                    //    {
-                    //        var axialForce = pileLayoutDataItem.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-
-                    //        foreach (LoadCombination loadCombination in inputModel.LoadCasesInput.AllLoadCombinations)
-                    //        {
-                    //            foreach (var isLiquefaction in new[] { true, false })
-                    //            {
-                    //                // PileBodySegmentループ
-                    //                for (int i = 0; i < inputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1].PileBodySegments.Count; i++)
-                    //                {
-                    //                    var pileBodySegment = inputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1].PileBodySegments[i];
-                    //                    if (pileBodySegment.No != selectedSegmentNo) continue;
-
-                    //                    var momentInPile = pileLayoutDataItem.Beams[i].GetBeamResult(
-                    //                    anaModel, loadCase, loadCombination, isLiquefaction).CumulativeForce.MabsMax;
-
-                    //                    var shearInPile = pileLayoutDataItem.Beams[i].GetBeamResult(
-                    //                    anaModel, loadCase, loadCombination, isLiquefaction).CumulativeForce.FabsMax;
-
-                    //                    var dispInPile = Math.Max(
-                    //                        pileLayoutDataItem.Beams[i].NodeI.GetNodeResult(
-                    //                        anaModel, loadCase, loadCombination, isLiquefaction).CumulativeDisp.Uh,
-                    //                        pileLayoutDataItem.Beams[i].NodeJ.GetNodeResult(
-                    //                        anaModel, loadCase, loadCombination, isLiquefaction).CumulativeDisp.Uh);
-
-                    //                    int k = loadCase.Level - 1;
-
-                    //                    Qmaxs[^1][k] = Math.Max(Qmaxs[^1][k], shearInPile);
-                    //                    Mmaxs[^1][k] = Math.Max(Mmaxs[^1][k], momentInPile);
-                    //                    Dmaxs[^1][k] = Math.Max(Dmaxs[^1][k], dispInPile);
-                    //                }
-                    //            }
-                    //        }
-                    //    }
-                    //}
-                    foreach (PileLayoutDataItem pileLayoutDataItem in inputModel.PileLayoutItems)
+                    var segment = pileBody.PileBodySegments[segNo - 1];
+                    var row = new PileForceSummaryRow
                     {
-                        if (pileLayoutDataItem == null) continue;
-                        if (pileLayoutDataItem.PileBodyNo != selectedPileBodyNo) continue;
+                        PileBodyRef = pileBody.PileBodyRef,
+                        SegmentNo = segNo,
+                        Bottom = segment.SegmentDepth,
+                        Top = segment.SegmentDepth - segment.SegmentLength,
+                    };
+                    rows.Add(row);
+                    rowBySegment[segNo] = row;
+                }
 
-                        // Safe update for NMax/NMin lists (guard against null or empty axial force lists)
-                        if (pileLayoutDataItem.AxialForceLevel1s != null && pileLayoutDataItem.AxialForceLevel1s.Count > 0)
+                foreach (PileLayoutDataItem pile in inputModel.PileLayoutItems)
+                {
+                    if (pile == null || pile.PileBodyNo != pileBodyNo) continue;
+
+                    // 軸力 (入力値) は区間によらない
+                    foreach (var row in rowBySegment.Values)
+                    {
+                        if (pile.AxialForceLevel1s is { Count: > 0 } n1)
                         {
-                            NMaxs[^1][0] = Math.Max(NMaxs[^1][0], pileLayoutDataItem.AxialForceLevel1s.Max());
-                            NMins[^1][0] = Math.Min(NMins[^1][0], pileLayoutDataItem.AxialForceLevel1s.Min());
+                            row.NMax[0] = Max(row.NMax[0], n1.Max());
+                            row.NMin[0] = Min(row.NMin[0], n1.Min());
                         }
-                        if (pileLayoutDataItem.AxialForceLevel2s != null && pileLayoutDataItem.AxialForceLevel2s.Count > 0)
+                        if (pile.AxialForceLevel2s is { Count: > 0 } n2)
                         {
-                            NMaxs[^1][1] = Math.Max(NMaxs[^1][1], pileLayoutDataItem.AxialForceLevel2s.Max());
-                            NMins[^1][1] = Math.Min(NMins[^1][1], pileLayoutDataItem.AxialForceLevel2s.Min());
+                            row.NMax[1] = Max(row.NMax[1], n2.Max());
+                            row.NMin[1] = Min(row.NMin[1], n2.Min());
                         }
+                    }
+
+                    int soilIndex = pile.SoilPileAltNo - 1;
+                    if (soilPiles == null || soilIndex < 0 || soilIndex >= soilPiles.Count) continue;
+                    var divided = soilPiles[soilIndex]?.PileBodySegments;
+                    if (divided == null || pile.Beams == null) continue;
+
+                    for (int b = 0; b < pile.Beams.Count; b++)
+                    {
+                        var beam = pile.Beams[b];
+                        if (beam == null) continue;
+                        // 梁の要素番号 → 分割後の区間 → 元の区間番号
+                        int element = beam.SegmentIndex ?? b;
+                        if (element < 0 || element >= divided.Count || divided[element] == null) continue;
+                        if (!rowBySegment.TryGetValue(divided[element].No, out var row)) continue;
 
                         foreach (LoadCase loadCase in inputModel.LoadCasesInput.AllSeismicLoadCases)
                         {
-                            var axialForce = pileLayoutDataItem.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-
+                            int k = loadCase.Level - 1;
+                            if (k < 0 || k > 1) continue;
                             foreach (LoadCombination loadCombination in inputModel.LoadCasesInput.AllLoadCombinations)
                             {
-                                // 液状化パターン（ユーザー選択に基づく）
-                                var liqPatterns2 = new List<bool>();
-                                if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns2.Add(true);
-                                if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns2.Add(false);
-
-                                foreach (var isLiquefaction in liqPatterns2)
+                                foreach (var isLiquefaction in liqPatterns)
                                 {
-                                    // PileBodySegmentループ（安全に null チェック）
-                                    var soilPiles = inputModel.ElementDivision?.SoilPiles;
-                                    if (soilPiles == null) continue;
-                                    int soilIndex = pileLayoutDataItem.SoilPileAltNo - 1;
-                                    if (soilIndex < 0 || soilIndex >= soilPiles.Count) continue;
+                                    var force = GetBeamResultCached(beam, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
+                                    if (force == null) continue;
+                                    row.Qmax[k] = Max(row.Qmax[k], force.FabsMax);
+                                    row.Mmax[k] = Max(row.Mmax[k], force.MabsMax);
 
-                                    var soilPile = soilPiles[soilIndex];
-                                    if (soilPile?.PileBodySegments == null) continue;
-
-                                    for (int i = 0; i < soilPile.PileBodySegments.Count; i++)
+                                    foreach (var node in new[] { beam.NodeI, beam.NodeJ })
                                     {
-                                        var pileBodySegment = soilPile.PileBodySegments[i];
-                                        if (pileBodySegment == null) continue;
-                                        if (pileBodySegment.No != selectedSegmentNo) continue;
-
-                                        // safety: beams list must exist and contain index i
-                                        if (pileLayoutDataItem.Beams == null || i < 0 || i >= pileLayoutDataItem.Beams.Count) continue;
-                                        var beam = pileLayoutDataItem.Beams[i];
-                                        if (beam == null) continue;
-
-                                        // GetBeamResult may return null or have null subproperties -> guard
-                                        var beamResult = GetBeamResultCached(beam, loadCase, loadCombination, isLiquefaction);
-                                        var cumForce = beamResult?.CumulativeForce;
-                                        if (cumForce == null) continue;
-
-                                        double momentInPile = cumForce.MabsMax;
-                                        double shearInPile = cumForce.FabsMax;
-
-                                        // Node results may be missing -> fallback to 0.0
-                                        double uhI = 0.0, uhJ = 0.0;
-                                        try
-                                        {
-                                            var nodeIResult = beam.NodeI is null ? null : GetNodeResultCached(beam.NodeI, loadCase, loadCombination, isLiquefaction);
-                                            var nodeJResult = beam.NodeJ is null ? null : GetNodeResultCached(beam.NodeJ, loadCase, loadCombination, isLiquefaction);
-                                            uhI = nodeIResult?.CumulativeDisp?.Uh ?? 0.0;
-                                            uhJ = nodeJResult?.CumulativeDisp?.Uh ?? 0.0;
-                                        }
-                                        catch
-                                        {
-                                            uhI = 0.0; uhJ = 0.0;
-                                        }
-
-                                        double dispInPile = Math.Max(uhI, uhJ);
-
-                                        int k = loadCase.Level - 1;
-                                        if (k < 0 || k > 1) continue; // ensure valid index for level (expects 1 or 2)
-
-                                        // Ensure per-segment lists have been initialized; they were created earlier with two elements
-                                        Qmaxs[^1][k] = Math.Max(Qmaxs[^1][k], shearInPile);
-                                        Mmaxs[^1][k] = Math.Max(Mmaxs[^1][k], momentInPile);
-                                        Dmaxs[^1][k] = Math.Max(Dmaxs[^1][k], dispInPile);
+                                        if (node == null) continue;
+                                        var disp = GetNodeResultCached(node, loadCase, loadCombination, isLiquefaction)?.CumulativeDisp;
+                                        if (disp != null) row.Dmax[k] = Max(row.Dmax[k], disp.Uh);
                                     }
                                 }
                             }
@@ -588,45 +557,13 @@ namespace PileDesign.Output
                     }
                 }
             }
+            return rows;
 
-            // レベルごとに解析結果が存在するか判定（実際にデータが収集されたかで判定）
-            bool hasLevel1Results = (inputModel.LoadCasesInput?.LoadCasesLevel1?.Any(x => x.IsApplicable) ?? false)
-                && (Qmaxs.Any(q => q[0] > double.MinValue) || Mmaxs.Any(m => m[0] > double.MinValue));
-            bool hasLevel2Results = (inputModel.LoadCasesInput?.LoadCasesLevel2?.Any(x => x.IsApplicable) ?? false)
-                && (Qmaxs.Any(q => q[1] > double.MinValue) || Mmaxs.Any(m => m[1] > double.MinValue));
-
-            BuildAnalysisResultSummaryTable(
-            body,
-            selectedPileBodies,
-            selectedSegment,
-            selectedSegmentTop,
-            selectedSegmentBtm,
-            Qmaxs,
-            Mmaxs,
-            NMaxs,
-            NMins,
-            Dmaxs,
-            hasLevel1Results,
-            hasLevel2Results
-            );
-
+            static double Max(double? current, double value) => current is double c ? Math.Max(c, value) : value;
+            static double Min(double? current, double value) => current is double c ? Math.Min(c, value) : value;
         }
 
-        private void BuildAnalysisResultSummaryTable(
-            Body body,
-            List<string> selectedPileBodies,
-            List<int> selectedSegment,
-            List<double> selectedSegmentTop,
-            List<double> selectedSegmentBtm,
-
-            List<List<double>> Qmaxs,
-            List<List<double>> Mmaxs,
-            List<List<double>> NMaxs,
-            List<List<double>> NMins,
-            List<List<double>> Dmaxs,
-            bool hasLevel1Results,
-            bool hasLevel2Results
-            )
+        private void BuildAnalysisResultSummaryTable(Body body, List<PileForceSummaryRow> rows, bool hasLevel1Results, bool hasLevel2Results)
         {
             for (int k = 0; k < 2; k++)
             {
@@ -654,7 +591,10 @@ namespace PileDesign.Output
                 );
                 table.AppendChild(tableProps);
 
-                for (int rowIdx = 1; rowIdx <= selectedPileBodies.Count + 1; rowIdx++)
+                // 結果の無いセルは「—」。以前は初期値 (double.MinValue など) をそのまま数値で出していた
+                static string Value(double? v, string format) => v is double d ? d.ToString(format) : "—";
+
+                for (int rowIdx = 1; rowIdx <= rows.Count + 1; rowIdx++)
                 {
                     TableRow row = new();
 
@@ -676,16 +616,16 @@ namespace PileDesign.Output
                         }
                         else
                         {
-                            int i = rowIdx - 2;
-                            if (colIdx == 1) SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedPileBodies[i]}", "center", 8), "center");
-                            else if (colIdx == 2) SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegment[i]}", "center", 8), "center");
-                            else if (colIdx == 3) SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegmentTop[i]:N3}", "center", 8), "center");
-                            else if (colIdx == 4) SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegmentBtm[i]:N3}", "center", 8), "center");
-                            else if (colIdx == 5) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Dmaxs[i][k]:N3}", "center", 8), "center");
-                            else if (colIdx == 6) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Qmaxs[i][k]:N1}", "center", 8), "center");
-                            else if (colIdx == 7) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Mmaxs[i][k]:N1}", "center", 8), "center");
-                            else if (colIdx == 8) SetTableCellWithVerticalAlign(cell, GetParagraph($"{NMaxs[i][k]:N1}", "center", 8), "center");
-                            else if (colIdx == 9) SetTableCellWithVerticalAlign(cell, GetParagraph($"{NMins[i][k]:N1}", "center", 8), "center");
+                            var r = rows[rowIdx - 2];
+                            if (colIdx == 1) SetTableCellWithVerticalAlign(cell, GetParagraph($"{r.PileBodyRef}", "center", 8), "center");
+                            else if (colIdx == 2) SetTableCellWithVerticalAlign(cell, GetParagraph($"{r.SegmentNo}", "center", 8), "center");
+                            else if (colIdx == 3) SetTableCellWithVerticalAlign(cell, GetParagraph($"{r.Top:N3}", "center", 8), "center");
+                            else if (colIdx == 4) SetTableCellWithVerticalAlign(cell, GetParagraph($"{r.Bottom:N3}", "center", 8), "center");
+                            else if (colIdx == 5) SetTableCellWithVerticalAlign(cell, GetParagraph(Value(r.Dmax[k], "N3"), "center", 8), "center");
+                            else if (colIdx == 6) SetTableCellWithVerticalAlign(cell, GetParagraph(Value(r.Qmax[k], "N1"), "center", 8), "center");
+                            else if (colIdx == 7) SetTableCellWithVerticalAlign(cell, GetParagraph(Value(r.Mmax[k], "N1"), "center", 8), "center");
+                            else if (colIdx == 8) SetTableCellWithVerticalAlign(cell, GetParagraph(Value(r.NMax[k], "N1"), "center", 8), "center");
+                            else if (colIdx == 9) SetTableCellWithVerticalAlign(cell, GetParagraph(Value(r.NMin[k], "N1"), "center", 8), "center");
                         }
 
                         row.Append(cell);
@@ -708,6 +648,8 @@ namespace PileDesign.Output
                 }
 
                 body.Append(table);
+                if (rows.Any(r => r.HasMissing(k)))
+                    AddTableNote(body, "※「—」は、その区間・レベルの解析結果 (軸力は入力値) が無いことを示す。");
             }
         }
 
@@ -1041,6 +983,7 @@ namespace PileDesign.Output
 
             if (dgbSprings.Count == 0 && pileSprings.Count == 0) return;
 
+            bool anyMissing = false;
             string ComputeCellText(List<HorizontalSoilSpring> springs, LoadCombination comb)
             {
                 var sb = new System.Text.StringBuilder();
@@ -1051,21 +994,11 @@ namespace PileDesign.Output
                     {
                         int lastStep = GetLastStepCached(lc, comb, isLiq);
                         if (lastStep < 0) continue;
-                        double sumFx = 0, sumFy = 0;
-                        foreach (var spring in springs)
-                        {
-                            var r = spring.HorizontalSpringResults?.FirstOrDefault(rr =>
-                                rr.IsLiquefaction == isLiq && rr.Step == lastStep &&
-                                PileDesign.Models.InputData.LoadCase.IsSameCase(rr.LoadCase, lc) &&
-                                rr.LoadCombination?.Name == comb.Name);
-                            if (r?.CumulativeForce == null) continue;
-                            sumFx += r.CumulativeForce.Fxi;
-                            sumFy += r.CumulativeForce.Fyi;
-                        }
-                        double fh = Math.Sqrt(sumFx * sumFx + sumFy * sumFy);
+                        var (fh, found) = SumHorizontalReaction(springs, lc, comb, isLiq, lastStep);
+                        if (found < springs.Count) anyMissing = true;
                         string liqMark = liqPatterns.Count > 1 ? (isLiq ? "[液]" : "[非液]") : string.Empty;
                         if (sb.Length > 0) sb.Append('\n');
-                        sb.Append($"{lc.LoadName}{liqMark}: {fh:N1}");
+                        sb.Append(ReactionCellEntry($"{lc.LoadName}{liqMark}", fh, found, springs.Count));
                     }
                 }
                 return sb.ToString();
@@ -1130,7 +1063,41 @@ namespace PileDesign.Output
             }
 
             body.Append(table);
+            if (anyMissing)
+                AddTableNote(body, "※ 印の値は、一部のばねの解析結果が無く、そのばねを除いて合計した値である (括弧内は結果のあったばねの本数 / 全本数)。"
+                    + "「結果なし」はどのばねにも結果が無いことを示す。");
         }
+
+        /// <summary>
+        /// 地盤ばねの水平反力を合計する (その荷重条件の最終ステップ)。合計の大きさと、結果のあったばねの本数を返す。
+        ///
+        /// 結果の無いばねは合計に入らない。以前はそれを数えずに黙って飛ばしていたので、一部が欠けても
+        /// 完全な合計のように表に出た。本数を返して、欠けたときは表で示す (<see cref="ReactionCellEntry"/>)。
+        /// </summary>
+        internal static (double Fh, int Found) SumHorizontalReaction(IEnumerable<HorizontalSoilSpring> springs,
+            LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step)
+        {
+            double sumFx = 0, sumFy = 0;
+            int found = 0;
+            foreach (var spring in springs)
+            {
+                var r = spring?.HorizontalSpringResults?.FirstOrDefault(rr =>
+                    rr.IsLiquefaction == isLiquefaction && rr.Step == step &&
+                    PileDesign.Models.InputData.LoadCase.IsSameCase(rr.LoadCase, loadCase) &&
+                    PileDesign.Models.InputData.LoadCombination.IsSameCombination(rr.LoadCombination, loadCombination));
+                if (r?.CumulativeForce == null) continue;
+                sumFx += r.CumulativeForce.Fxi;
+                sumFy += r.CumulativeForce.Fyi;
+                found++;
+            }
+            return (Math.Sqrt(sumFx * sumFx + sumFy * sumFy), found);
+        }
+
+        /// <summary>反力合計のセルの 1 行。欠けたばねがあれば「※ (結果のあった本数/全本数)」を添え、1 本も無ければ「結果なし」。</summary>
+        internal static string ReactionCellEntry(string label, double fh, int found, int total)
+            => found == 0 ? $"{label}: 結果なし"
+             : found < total ? $"{label}: {fh:N1} ※({found}/{total})"
+             : $"{label}: {fh:N1}";
 
         /// <summary>
         /// 水平解析の検定結果（NG のみ）を DOCX に追記する。
