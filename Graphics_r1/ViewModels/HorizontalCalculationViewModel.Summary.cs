@@ -82,6 +82,8 @@ namespace PileDesign.ViewModels
             sb.AppendLine($"# 解析サマリーレポート (生成: {DateTime.Now:yyyy-MM-dd HH:mm:ss})");
             sb.AppendLine($"# ステップ総数 {sorted.Count} (再試行含む)、合計時間 {totalElapsed:F1}s");
             sb.AppendLine($"# 収束 {convergedCount} 件 / 緩和受理 {relaxedCount} 件 / 未収束 {unconvergedCount} 件 / 物理的未収束 {physicallyUnconvergedCount} 件 / 再試行発生 {retryCount} 件");
+            foreach (var line in DescribeLargeResidualSolves(sorted.Sum(s => s.LargeResidualSolves), sorted.Count(s => s.LargeResidualSolves > 0)))
+                sb.AppendLine("# " + line.Trim());
             sb.AppendLine();
             // ヘッダ行
             sb.AppendLine(string.Join(sep, new[] {
@@ -192,6 +194,19 @@ namespace PileDesign.ViewModels
             return sb.ToString();
         }
 
+        /// <summary>
+        /// 連立方程式の解の相対残差が大きかった回数の説明 (無ければ空)。サマリーの見出しの下に出す。
+        ///
+        /// 解は差し替えずに使っている (外側の反復が残差 (外力と内力の差) を見て収束させるので、答えの精度は収束判定で決まる)。
+        /// 回数が多いときは、剛性の差が極端な要素・支持の足りない自由度など、条件の悪いモデルの手掛かりになる。
+        /// </summary>
+        internal static IEnumerable<string> DescribeLargeResidualSolves(long solves, int steps)
+        {
+            if (solves <= 0) yield break;
+            yield return $"  ⚠ 連立方程式の解の相対残差が {FEM.CsparseLinearSolver.ResidualTolerance:0E0} を超えた反復 {solves} 回 ({steps} ステップ)";
+            yield return "     解はそのまま使い、反復の収束判定で精度を確保しています。多い場合は、剛性の差が極端な要素や支持の足りない自由度が無いか確認してください。";
+        }
+
         // 旧 OutputStepSummaryReport の本体ロジックを Action<string> 経由で出力するように汎化
         internal static void Add_LegacyOutputStepSummary(StepSummary[] snapshot, Action<string> emit)
         {
@@ -230,6 +245,9 @@ namespace PileDesign.ViewModels
                 (unconvergedCount > 0 ? $"  /  ✗ 未収束 (反復上限到達) {unconvergedCount} 件" : "") +
                 (physicallyUnconvergedCount > 0 ? $"  /  ⛔ 物理的未収束 (耐力超過の可能性) {physicallyUnconvergedCount} 件" : "") +
                 (retryCount > 0 ? $"  /  ♻ 再試行発生 {retryCount} 件" : ""));
+            // 連立方程式の解の残差が大きかった回数 (解は差し替えない。DescribeLargeResidualSolves 参照)
+            foreach (var line in DescribeLargeResidualSolves(sorted.Sum(s => s.LargeResidualSolves), sorted.Count(s => s.LargeResidualSolves > 0)))
+                emit(line);
             emit("");
 
             // 列の視覚幅 (MS Gothic 上での col 数)。データの最大幅以上に確保すること:

@@ -538,6 +538,8 @@ namespace PileDesign.ViewModels
 
                 // v28 F-new: CsparseLinearSolver の内部タイマー (CSC 変換 / 分解 / 代入) をリセット
                 FEM.CsparseLinearSolver.ResetInternalTimers();
+                // このステップで残差の大きい解がいくつ出たかを、ケースのモデルの数え上げの差で見る (並列でも混ざらない)
+                long largeResidualAtStepStart = caseModel.SolverCache.LargeResidualCount;
 
                 UpdateSoilDisp(caseModel);
                 UpdateF(caseModel);
@@ -1441,6 +1443,9 @@ namespace PileDesign.ViewModels
                     string plateauTag = profPlateauRefreshCount > 0
                         ? $" ┃ Plateau-K×{profPlateauRefreshCount}"
                         : "";
+                    long largeResidualInStep = caseModel.SolverCache.LargeResidualCount - largeResidualAtStepStart;
+                    if (largeResidualInStep > 0)
+                        plateauTag += $" ┃ 残差大×{largeResidualInStep}";
                     await AddLogAsync(
                         $"{caseTag}  ⏱ total {_totalSec:F1}s ┃ " +
                         $"K組立 {_findKMs:F0}ms×{profFindKCalls} ┃ " +
@@ -1511,7 +1516,8 @@ namespace PileDesign.ViewModels
                         Status: _status,
                         ElapsedSec: _elapsedSec,
                         KRebuildCount: kRebuildCount,
-                        KReuseCount: kReuseCount));
+                        KReuseCount: kReuseCount,
+                        LargeResidualSolves: caseModel.SolverCache.LargeResidualCount - largeResidualAtStepStart));
                 }
 
                 // v21 Phase 3 prep: 自動ライン探索はステップ局所の effectiveUseLineSearch で

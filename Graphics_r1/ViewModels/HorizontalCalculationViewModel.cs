@@ -83,7 +83,10 @@ namespace PileDesign.ViewModels
             //   KRebuildCount = ステップ内で K 行列を組み直した反復数 (= Full NR 反復数)
             //   KReuseCount   = K を再利用した反復数 (= Modified NR 反復数)
             //   合計は Iterations に一致 (Iterations = KRebuildCount + KReuseCount)。
-            int KRebuildCount = 0, int KReuseCount = 0);
+            int KRebuildCount = 0, int KReuseCount = 0,
+            // 2026-09-26: このステップで解いた連立方程式のうち、解の相対残差が 1e-6 を超えた数。
+            //   解は差し替えずに使う (CsparseLinearSolver.ResidualTolerance)。条件の悪いモデルに気づく手掛かり
+            long LargeResidualSolves = 0);
         private readonly System.Collections.Concurrent.ConcurrentBag<StepSummary> _stepSummaries = new();
 
         /// <summary>

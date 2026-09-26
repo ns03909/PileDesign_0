@@ -40,6 +40,12 @@ namespace PileDesign.FEM
             _factor = factor;
             _factorVersion = _version;
         }
+
+        /// <summary>
+        /// このモデルで解いた解のうち、相対残差が <see cref="CsparseLinearSolver.ResidualTolerance"/> を超えた数。
+        /// モデル (荷重ケース) ごとに持つので、ケースを並列に解いても混ざらない。解析のログ・サマリーに出す。
+        /// </summary>
+        public long LargeResidualCount;
     }
 
     /// <summary>
@@ -73,7 +79,88 @@ namespace PileDesign.FEM
             CholeskyReuseCount = 0;
         }
 
-        // Kx = b を解く。
+        /// <summary>
+        /// 解の相対残差 ‖K x − b‖ / ‖b‖ がこれを超えたら記録する (<see cref="LargeResidualCount"/>・ログ)。
+        ///
+        /// 例題 (計算例 9・10・K8) の解の残差は最大でも 1e-10 程度。条件の悪い行列ではこれを超える。
+        /// <b>超えても解は差し替えない。</b>計算例 3-5 のように荷重が大きい段階で残差が 1e-6 を超える例題があり、
+        /// 別の解法に差し替えると解析結果が変わる (差し替える場合は影響を測ってから決める)。
+        /// </summary>
+        internal const double ResidualTolerance = 1e-6;
+
+        /// <summary>残差が <see cref="ResidualTolerance"/> を超えた解の数 (診断用。ステップ局所で読み取り→リセット)。</summary>
+        public static long LargeResidualCount => System.Threading.Interlocked.Read(ref _largeResidualCount);
+        private static long _largeResidualCount;
+        public static void ResetLargeResidualCount() => System.Threading.Interlocked.Exchange(ref _largeResidualCount, 0);
+
+        /// <summary>対称とみなす差の上限 (行列の最大の成分に対する比)。</summary>
+        internal const double SymmetryTolerance = 1e-10;
+
+        /// <summary>相対残差 ‖K x − b‖ / ‖b‖。b が 0 なら ‖K x‖。</summary>
+        private static double RelativeResidual(MathNet.Numerics.LinearAlgebra.Matrix<double> K,
+            MathNet.Numerics.LinearAlgebra.Vector<double> b, double[] x)
+        {
+            var r = K * MathNet.Numerics.LinearAlgebra.Vector<double>.Build.DenseOfArray(x) - b;
+            double bn = b.L2Norm();
+            double rn = r.L2Norm();
+            return bn > 0 ? rn / bn : rn;
+        }
+
+        /// <summary>
+        /// 解を残差で確かめる。残差が <see cref="ResidualTolerance"/> 以下なら true。超えたら数えて記録する
+        /// (解は差し替えない。<see cref="ResidualTolerance"/> 参照)。
+        /// </summary>
+        private static bool CheckResidual(MathNet.Numerics.LinearAlgebra.Matrix<double> K,
+            MathNet.Numerics.LinearAlgebra.Vector<double> b, double[] x, SolverKind kind, CholeskySolverCache? cache)
+        {
+            double residual = RelativeResidual(K, b, x);
+            if (double.IsFinite(residual) && residual <= ResidualTolerance) return true;
+            System.Threading.Interlocked.Increment(ref _largeResidualCount);
+            if (cache != null) System.Threading.Interlocked.Increment(ref cache.LargeResidualCount);
+            Serilog.Log.Debug("[CsparseLinearSolver] {Kind} の解の相対残差 {Residual:E2} が {Tolerance:E0} を超えています (解はそのまま使う)",
+                kind, residual, ResidualTolerance);
+            return false;
+        }
+
+        /// <summary>
+        /// CSC の行列が数値的に対称か (<see cref="SymmetryTolerance"/>)。
+        /// Cholesky・LDL 分解は片側の三角しか読まないので、非対称な行列に使うと例外にならずに別の方程式を解く。
+        /// </summary>
+        private static bool IsSymmetric(SparseMatrix A)
+        {
+            double maxAbs = 0;
+            foreach (double v in A.Values) maxAbs = Math.Max(maxAbs, Math.Abs(v));
+            if (maxAbs == 0) return true;
+            var At = (SparseMatrix)A.Transpose();
+            // 列ごとに A と Aᵀ の成分を行の順に突き合わせる (どちらも行の昇順。片方に無い位置は 0 とみなす)
+            double tol = SymmetryTolerance * maxAbs;
+            for (int j = 0; j < A.ColumnCount; j++)
+            {
+                int p = A.ColumnPointers[j], pEnd = A.ColumnPointers[j + 1];
+                int q = At.ColumnPointers[j], qEnd = At.ColumnPointers[j + 1];
+                while (p < pEnd || q < qEnd)
+                {
+                    int rowA = p < pEnd ? A.RowIndices[p] : int.MaxValue;
+                    int rowT = q < qEnd ? At.RowIndices[q] : int.MaxValue;
+                    double diff;
+                    if (rowA == rowT) { diff = A.Values[p] - At.Values[q]; p++; q++; }
+                    else if (rowA < rowT) { diff = A.Values[p]; p++; }
+                    else { diff = At.Values[q]; q++; }
+                    if (Math.Abs(diff) > tol) return false;
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Kx = b を解く。解の残差を確かめ、大きければ記録する (<see cref="ResidualTolerance"/>)。
+        ///
+        /// <paramref name="isSpd"/> は使わない (互換のために残す)。対称かどうかは行列から調べ、
+        /// <b>対称なときだけ</b> Cholesky → LDL を試し、非対称なら LU から始める。以前は isSpd に関係なく最初に
+        /// Cholesky を試し、分解と代入が例外なく終われば解をそのまま返していた。非対称な行列では Cholesky が
+        /// 例外にならずに片側の三角だけで別の方程式を解くので、誤った解が黙って返った
+        /// (例題の剛性行列は対称で、実際には起きていない)。
+        /// </summary>
         public static double[] Solve(MathNet.Numerics.LinearAlgebra.Matrix<double> K,
                                      MathNet.Numerics.LinearAlgebra.Vector<double> b,
                                      bool isSpd = true,
@@ -96,6 +183,10 @@ namespace PileDesign.FEM
                     long _tsSubReuse = System.Diagnostics.Stopwatch.GetTimestamp();
                     cachedFactor.Solve(rhsCached, xCached);
                     SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSubReuse;
+                    // 使い回した因子が今の K と合っているかを残差で確かめ、大きければ作り直す
+                    // (K が変わったのに因子が古いままなら、作り直すと正しい解になる。同じ K なら作り直しても同じ解)
+                    if (!CheckResidual(K, b, xCached, SolverKind.Cholesky, cache))
+                        throw new InvalidOperationException("再利用した Cholesky 因子の解の残差が大きい");
                     LastSuccessfulSolver = SolverKind.Cholesky;
                     CholeskyReuseCount++;
                     return xCached;
@@ -158,42 +249,53 @@ namespace PileDesign.FEM
             // 塑性ヒンジ近傍で indefinite 化した際は LDL が対応。
             // 数値的に SPD でない場合 (非対称 K 等) は LU。最終救済 QR。
 
+            // Cholesky・LDL は対称な行列にだけ使う (片側の三角しか読まないため)
+            bool symmetric = IsSymmetric(A);
+
             // 1) Cholesky (SPD)
-            try
+            if (symmetric)
             {
-                long _tsFact = System.Diagnostics.Stopwatch.GetTimestamp();
-                var chol = SparseCholesky.Create(A, ColumnOrdering.MinimumDegreeAtPlusA);
-                FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
+                try
+                {
+                    long _tsFact = System.Diagnostics.Stopwatch.GetTimestamp();
+                    var chol = SparseCholesky.Create(A, ColumnOrdering.MinimumDegreeAtPlusA);
+                    FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
 
-                long _tsSub = System.Diagnostics.Stopwatch.GetTimestamp();
-                chol.Solve(rhs, x);
-                SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
+                    long _tsSub = System.Diagnostics.Stopwatch.GetTimestamp();
+                    chol.Solve(rhs, x);
+                    SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
-                LastSuccessfulSolver = SolverKind.Cholesky;
-                cache?.Store(chol); // 成功した Cholesky 因子のみキャッシュ
-                return x;
-            }
-            catch
-            {
+                    CheckResidual(K, b, x, SolverKind.Cholesky, cache);
+                    LastSuccessfulSolver = SolverKind.Cholesky;
+                    cache?.Store(chol); // 成功した Cholesky 因子のみキャッシュ
+                    return x;
+                }
+                catch
+                {
+                }
                 Array.Clear(x, 0, n);
             }
 
             // 2) LDL (対称不定)
-            try
+            if (symmetric)
             {
-                long _tsFact = System.Diagnostics.Stopwatch.GetTimestamp();
-                var ldl = SparseLDL.Create(A, ColumnOrdering.MinimumDegreeAtPlusA);
-                FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
+                try
+                {
+                    long _tsFact = System.Diagnostics.Stopwatch.GetTimestamp();
+                    var ldl = SparseLDL.Create(A, ColumnOrdering.MinimumDegreeAtPlusA);
+                    FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
 
-                long _tsSub = System.Diagnostics.Stopwatch.GetTimestamp();
-                ldl.Solve(rhs, x);
-                SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
+                    long _tsSub = System.Diagnostics.Stopwatch.GetTimestamp();
+                    ldl.Solve(rhs, x);
+                    SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
-                LastSuccessfulSolver = SolverKind.LDL;
-                return x;
-            }
-            catch
-            {
+                    CheckResidual(K, b, x, SolverKind.LDL, cache);
+                    LastSuccessfulSolver = SolverKind.LDL;
+                    return x;
+                }
+                catch
+                {
+                }
                 Array.Clear(x, 0, n);
             }
 
@@ -208,13 +310,14 @@ namespace PileDesign.FEM
                 lu.Solve(rhs, x);
                 SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
+                CheckResidual(K, b, x, SolverKind.LU, cache);
                 LastSuccessfulSolver = SolverKind.LU;
                 return x;
             }
             catch
             {
-                Array.Clear(x, 0, n);
             }
+            Array.Clear(x, 0, n);
 
             // 4) QR (最終救済、MinimumDegreeAtA 失敗時は Natural)
             try
@@ -227,6 +330,7 @@ namespace PileDesign.FEM
                 qr.Solve(rhs, x);
                 SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
+                CheckResidual(K, b, x, SolverKind.QR, cache);
                 LastSuccessfulSolver = SolverKind.QR;
                 return x;
             }
@@ -244,6 +348,7 @@ namespace PileDesign.FEM
                 qr.Solve(rhs, x);
                 SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
+                CheckResidual(K, b, x, SolverKind.QR, cache);
                 LastSuccessfulSolver = SolverKind.QR;
                 return x;
             }
