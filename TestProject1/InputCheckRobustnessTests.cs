@@ -57,10 +57,11 @@ namespace TestProject1
             string message = CheckInputData.CheckSoilEmbedment(input, "");
             StringAssert.Contains(message, "地盤番号5の地盤がありません", "範囲の外の地盤番号で落ちるか、名指ししていません");
 
-            // 層数の欄と層の一覧が食い違っていても落ちないこと (層数は別に持たれている)
+            // 層数の欄と層の一覧が食い違っていても落ちず、食い違いを入力の誤りとして止めること (層数は別に持たれている)。
+            // 以前は一覧が空なら黙って検査を終えていた
             input.EmbedmentInput.GroundNo = 1;
             input.EmbedmentInput.EmbedmentLayers.Clear();
-            Assert.AreEqual("", CheckInputData.CheckSoilEmbedment(input, ""));
+            StringAssert.Contains(CheckInputData.CheckSoilEmbedment(input, ""), "根入部の層数 (1) と層の入力 (0 行) が合いません");
 
             string src = TestSource.Read("Graphics_r1", "Services", "CheckInputData.cs");
             Assert.IsFalse(src.Contains("地盤番号{\" + groundNo", StringComparison.Ordinal),
@@ -111,6 +112,69 @@ namespace TestProject1
             var warnings = CheckInputData.CollectInputWarnings(input);
             Assert.IsTrue(warnings.Any(w => w.Contains("最上段の区間にあります", StringComparison.Ordinal)),
                 "節杭が最上段にあることを警告に出していません");
+        }
+
+        // ── 根入部の各層の形 ─────────────────────────────
+
+        private static InputModel WithEmbedment(params (double Top, double Bottom, double Thickness)[] layers)
+        {
+            var input = new InputModel { GroundsInput = [Ground()] };
+            input.EmbedmentInput = new EmbedmentInput { GroundNo = 1 };
+            foreach (var (top, bottom, thickness) in layers)
+                input.EmbedmentInput.EmbedmentLayers.Add(new EmbedmentDataItem
+                {
+                    TopAltitude = top, BottomAltitude = bottom, LayerThickness = thickness,
+                });
+            input.EmbedmentInput.EmbedmentLayersCount = layers.Length;
+            return input;
+        }
+
+        [TestMethod]
+        public void ConsistentEmbedmentLayersPass()
+        {
+            Assert.AreEqual("", CheckInputData.CheckSoilEmbedment(WithEmbedment((0, -2, 2), (-2, -6.5, 4.5)), ""));
+        }
+
+        /// <summary>
+        /// 根入部の各層の厚さ・上下・隣の層とのつながりを解析前に見ること。以前は根入部全体の上端・下端と
+        /// 地盤の範囲しか比べず、壊れた形のまま計算に進んだ。
+        /// </summary>
+        [TestMethod]
+        public void BrokenEmbedmentLayersAreNamed()
+        {
+            string Check(params (double, double, double)[] layers) => CheckInputData.CheckSoilEmbedment(WithEmbedment(layers), "");
+
+            StringAssert.Contains(Check((0, -2, 0), (-2, -6, 4)), "根入部 第1層: 層厚が 0 以下か数値ではありません");
+            StringAssert.Contains(Check((0, -2, double.NaN)), "根入部 第1層: 層厚が 0 以下か数値ではありません");
+            StringAssert.Contains(Check((double.NaN, -2, 2)), "根入部 第1層: 上端・下端の標高が数値ではありません");
+            StringAssert.Contains(Check((-2, 0, 2)), "根入部 第1層: 上端 (-2.000 m) が下端 (0.000 m) より高くありません");
+            StringAssert.Contains(Check((0, -2, 3)), "根入部 第1層: 上端と下端の差 (2.000 m) が層厚 (3.000 m) と合いません");
+            StringAssert.Contains(Check((0, -2, 2), (-2.5, -6, 3.5)), "根入部 第1層と第2層の間に 0.500 m の隙間があります");
+            StringAssert.Contains(Check((0, -2, 2), (-1.5, -6, 4.5)), "根入部 第1層と第2層が 0.500 m 重なっています");
+            // 1 つ目の誤りで止めず、すべての層を見る
+            string both = Check((0, -2, 0), (-2, -6, -1));
+            StringAssert.Contains(both, "第1層: 層厚");
+            StringAssert.Contains(both, "第2層: 層厚");
+        }
+
+        /// <summary>同梱の例題は、根入部の新しい検査を通ること (正しい入力を止めない)。</summary>
+        [TestMethod]
+        public void BundledExamplesPassTheEmbedmentCheck()
+        {
+            int checkedFiles = 0, withEmbedment = 0;
+            foreach (var file in TestSource.ExampleFiles("PileExample*.json", 10))
+            {
+                string pileName = System.IO.Path.GetFileNameWithoutExtension(file);
+                string groundName = "Example" + pileName["PileExample".Length..];
+                if (TestSource.ExamplePath(groundName + ".json") == null) continue;
+                var (input, error) = IntegrationTests.BuildExampleInputModel(groundName, pileName);
+                Assert.IsNotNull(input, $"{pileName}: {error}");
+                checkedFiles++;
+                if ((input.EmbedmentInput?.EmbedmentLayersCount ?? 0) > 0) withEmbedment++;
+                Assert.AreEqual("", CheckInputData.CheckSoilEmbedment(input, ""), $"{pileName}: 根入部の検査が正しい例題を止めています");
+            }
+            TestSource.AssertScanned(checkedFiles, 10, "杭の例題");
+            Assert.IsTrue(withEmbedment >= 1, "(前提) 根入部のある例題がありません");
         }
     }
 }

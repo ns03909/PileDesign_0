@@ -466,8 +466,23 @@ namespace PileDesign.Services
                     message += $"根入部で選択された地盤番号{groundNo}の地盤がありません (地盤は {groundCount} 個)。根入部の地盤を選び直してください。\n";
                     return message;
                 }
-                if ((inputModel.EmbedmentInput.EmbedmentLayers?.Count ?? 0) == 0)
+                // 層数の欄と層の一覧は別々に持たれている。食い違ったまま進むと、根入部を考慮するか (層数で判断) と
+                // どの層を使うか (一覧) が合わない。以前は一覧が空なら黙って検査を終えていた
+                int layerRows = inputModel.EmbedmentInput.EmbedmentLayers?.Count ?? 0;
+                if (layerRows != inputModel.EmbedmentInput.EmbedmentLayersCount)
+                {
+                    message += $"根入部の層数 ({inputModel.EmbedmentInput.EmbedmentLayersCount}) と層の入力 ({layerRows} 行) が合いません。"
+                             + "根入部の層数と表を確認してください。\n";
                     return message;
+                }
+
+                string layerGeometry = DescribeEmbedmentLayerGeometry(inputModel.EmbedmentInput);
+                if (layerGeometry.Length > 0)
+                {
+                    // 形の壊れた層では下の地盤との比較も意味を持たないので、ここで止める
+                    message += layerGeometry;
+                    return message;
+                }
 
                 if ((inputModel.GroundsInput![groundNo - 1].GroundLayers?.Count ?? 0) == 0)
                 {
@@ -494,6 +509,54 @@ namespace PileDesign.Services
                 }
             }
             return message;
+        }
+
+        /// <summary>
+        /// 根入部の各層の形の誤り (無ければ空文字)。層は上から並ぶ。
+        ///
+        /// 解析は各層の上端・下端の標高をそのまま使う (<see cref="InputModel"/> の根入部の分割)。上端・下端は
+        /// 層厚と根入部の下端から画面側で求めるが、ファイルを手で直したときなどは食い違いうる。以前は根入部全体の
+        /// 上端・下端と地盤の範囲しか見ておらず、厚さが 0 以下・数でない・上下が逆・隣の層との隙間や重なりがあっても
+        /// 計算に進んだ。
+        /// </summary>
+        internal static string DescribeEmbedmentLayerGeometry(EmbedmentInput embedment)
+        {
+            const double tol = NumericalConstants.COORDINATE_TOLERANCE;
+            var layers = embedment.EmbedmentLayers;
+            if (layers == null || layers.Count == 0) return "";
+
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < layers.Count; i++)
+            {
+                var layer = layers[i];
+                if (layer == null)
+                {
+                    sb.Append($"根入部 第{i + 1}層: 層のデータがありません。\n");
+                    continue;
+                }
+                if (!IsPositive(layer.LayerThickness))
+                    sb.Append($"根入部 第{i + 1}層: 層厚が 0 以下か数値ではありません ({layer.LayerThickness}).\n");
+                if (!double.IsFinite(layer.TopAltitude) || !double.IsFinite(layer.BottomAltitude))
+                {
+                    sb.Append($"根入部 第{i + 1}層: 上端・下端の標高が数値ではありません (上端 {layer.TopAltitude} / 下端 {layer.BottomAltitude}).\n");
+                    continue;
+                }
+                if (!(layer.TopAltitude > layer.BottomAltitude))
+                    sb.Append($"根入部 第{i + 1}層: 上端 ({layer.TopAltitude:F3} m) が下端 ({layer.BottomAltitude:F3} m) より高くありません。\n");
+                else if (IsPositive(layer.LayerThickness)
+                         && Math.Abs(layer.TopAltitude - layer.BottomAltitude - layer.LayerThickness) > tol)
+                    sb.Append($"根入部 第{i + 1}層: 上端と下端の差 ({layer.TopAltitude - layer.BottomAltitude:F3} m) が層厚 ({layer.LayerThickness:F3} m) と合いません。\n");
+
+                if (i + 1 < layers.Count && layers[i + 1] is { } below && double.IsFinite(below.TopAltitude))
+                {
+                    double gap = layer.BottomAltitude - below.TopAltitude;
+                    if (gap > tol)
+                        sb.Append($"根入部 第{i + 1}層と第{i + 2}層の間に {gap:F3} m の隙間があります (第{i + 1}層の下端 {layer.BottomAltitude:F3} m / 第{i + 2}層の上端 {below.TopAltitude:F3} m)。\n");
+                    else if (gap < -tol)
+                        sb.Append($"根入部 第{i + 1}層と第{i + 2}層が {-gap:F3} m 重なっています (第{i + 1}層の下端 {layer.BottomAltitude:F3} m / 第{i + 2}層の上端 {below.TopAltitude:F3} m)。\n");
+                }
+            }
+            return sb.ToString();
         }
 
         // 杭要素分割が済んでいないことは、ここでは注意にしない。
