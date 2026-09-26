@@ -488,7 +488,7 @@
                 <!-- 使用限界支持力時杭頭沈下量 -->
                 <TextBlock Grid.Row="31" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=使用限界支持力時杭頭沈下量, FallbackValue=使用限界支持力時杭頭沈下量}" Foreground="{StaticResource ServiceLimitBrush}"/>
                 <TextBox Grid.Row="31" Grid.Column="2"
-                             Text="{Binding SoilPile.SettlementAtR_SLS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
+                             Text="{Binding SoilPile.SettlementAtR_SLSText, Mode=OneWay}" IsReadOnly="True"
                         Foreground="{StaticResource ServiceLimitBrush}"
                         HorizontalContentAlignment="Right"/>
                 <TextBlock Grid.Row="31" Grid.Column="3" Text="mm" Foreground="{StaticResource ServiceLimitBrush}"/>
@@ -496,7 +496,7 @@
                 <!-- 損傷限界支持力時杭頭沈下量 -->
                 <TextBlock Grid.Row="32" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding Converter={StaticResource LimitStateLabelConverter}, ConverterParameter=損傷限界支持力時杭頭沈下量, FallbackValue=損傷限界支持力時杭頭沈下量}" Foreground="{StaticResource DamageLimitBrush}"/>
                 <TextBox Grid.Row="32" Grid.Column="2"
-                             Text="{Binding SoilPile.SettlementAtR_DLS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
+                             Text="{Binding SoilPile.SettlementAtR_DLSText, Mode=OneWay}" IsReadOnly="True"
                         Foreground="{StaticResource DamageLimitBrush}"
                         HorizontalContentAlignment="Right"/>
                 <TextBlock Grid.Row="32" Grid.Column="3" Text="mm" Foreground="{StaticResource DamageLimitBrush}"/>
@@ -504,7 +504,7 @@
                 <!-- 終局限界支持力時杭頭沈下量 -->
                 <TextBlock Grid.Row="33" Grid.Column="0" Grid.ColumnSpan="2" Text="終局限界支持力時杭頭沈下量" Foreground="{StaticResource UltimateLimitBrush}"/>
                 <TextBox Grid.Row="33" Grid.Column="2"
-                             Text="{Binding SoilPile.SettlementAtR_ULS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
+                             Text="{Binding SoilPile.SettlementAtR_ULSText, Mode=OneWay}" IsReadOnly="True"
                         Foreground="{StaticResource UltimateLimitBrush}"
                         HorizontalContentAlignment="Right"/>
                 <TextBlock Grid.Row="33" Grid.Column="3" Text="mm" Foreground="{StaticResource UltimateLimitBrush}"/>

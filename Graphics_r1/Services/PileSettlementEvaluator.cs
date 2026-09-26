@@ -54,6 +54,12 @@ namespace PileDesign.Services
                 double group_mm = pgs?.SettlementOf(pile.PileNo) ?? 0.0;
                 double response = single_mm + group_mm;
 
+                // 単杭沈下量が荷重-沈下曲線の範囲外の軸力で求めた値なら、それは下限 (実際はもっと沈む)。
+                // 下限で許容値を超えていれば NG と言えるが、超えていなければ OK とは言えない
+                string? unavailable = pile.SinglePileSettlementVLBeyondCurve && !(response > limit)
+                    ? DescribeBeyondCurve(pile.PileNo)
+                    : null;
+
                 items.Add(new EvaluationItem
                 {
                     Kind = EvaluationKind.PileSettlement,
@@ -67,11 +73,17 @@ namespace PileDesign.Services
                     Response = response,
                     Limit = limit,
                     Unit = Unit,
-                    IsOk = !(response > limit),
+                    UnavailableReason = unavailable,
+                    IsOk = unavailable == null && !(response > limit),
                 });
             }
 
             return items;
         }
+
+        /// <summary>単杭沈下量が曲線の範囲外で、許容値以下と言えないときの理由。</summary>
+        internal static string DescribeBeyondCurve(int pileNo)
+            => $"杭No.{pileNo} の常時軸力が単杭沈下の荷重-沈下曲線の範囲を超えています。"
+             + "沈下量は曲線の端の値 (下限) で、許容値以下とは言えません";
     }
 }

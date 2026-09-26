@@ -187,34 +187,7 @@ namespace PileDesign.ViewModels
                     foreach (var pileLayoutItem in InputModel.PileLayoutItems)
                     {
                         if (pileLayoutItem.SoilPileAltNo == soilPileNo)
-                        {
-                            double force = pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional;
-                            var settlementVector = vtm.GetDisplacementForGivenLoad(force);
-                            if (settlementVector != null)
-                            {
-                                pileLayoutItem.SinglePileSettlementVL = settlementVector[0];
-                            }
-
-                            for (int j = 0; j < pileLayoutItem.AxialForceLevel1s.Count; j++)
-                            {
-                                var axialForce = pileLayoutItem.AxialForceLevel1s[j];
-                                settlementVector = vtm.GetDisplacementForGivenLoad(axialForce);
-                                if (settlementVector != null)
-                                {
-                                    pileLayoutItem.SinglePileSettlementLevel1s[j] = settlementVector[0];
-                                }
-                            }
-
-                            for (int j = 0; j < pileLayoutItem.AxialForceLevel2s.Count; j++)
-                            {
-                                var axialForce = pileLayoutItem.AxialForceLevel2s[j];
-                                settlementVector = vtm.GetDisplacementForGivenLoad(axialForce);
-                                if (settlementVector != null)
-                                {
-                                    pileLayoutItem.SinglePileSettlementLevel2s[j] = settlementVector[0];
-                                }
-                            }
-                        }
+                            WriteSinglePileSettlements(pileLayoutItem, vtm);
                     }
                     // 曲線の精度が落ちた/範囲外の軸力があった杭を集める (沈下量の取り出しの後で見る)
                     foreach (var w in vtm.Warnings)
@@ -231,6 +204,52 @@ namespace PileDesign.ViewModels
             finally
             {
                 Mouse.OverrideCursor = null;
+            }
+        }
+
+        /// <summary>
+        /// 杭の単杭沈下量 (常時・レベル1・レベル2) を荷重-沈下曲線から求めて杭に書き、曲線の範囲外だったかも残す。
+        /// 求めた (軸力, 沈下量 [m]) を返す (グラフの点)。引けなかった値は書かない (前回値が残る。理由は Warnings)。
+        ///
+        /// <para>以前は解析後の書き込みとグラフの更新に同じ処理が 2 つあった (写し)。範囲外の印を片方にだけ
+        /// 足すと取り残されるので 1 つにした。</para>
+        /// </summary>
+        internal static (List<(double Force, double Settlement)> VL, List<(double Force, double Settlement)> Level1,
+            List<(double Force, double Settlement)> Level2) WriteSinglePileSettlements(PileLayoutDataItem pile, VerticalLoadTransferMethod vtm)
+        {
+            var vl = new List<(double, double)>();
+            var l1 = new List<(double, double)>();
+            var l2 = new List<(double, double)>();
+
+            double force = pile.AxialForceVL0 + pile.AxialForceVLAdditional;
+            var v = vtm.GetDisplacementForGivenLoad(force, out bool beyond);
+            if (v != null)
+            {
+                pile.SinglePileSettlementVL = v[0];
+                pile.SinglePileSettlementVLBeyondCurve = beyond;
+                vl.Add((force, v[0]));
+            }
+
+            pile.SinglePileSettlementLevel1sBeyondCurve = LevelSettlements(pile.AxialForceLevel1s, pile.SinglePileSettlementLevel1s,
+                pile.SinglePileSettlementLevel1sBeyondCurve, l1);
+            pile.SinglePileSettlementLevel2sBeyondCurve = LevelSettlements(pile.AxialForceLevel2s, pile.SinglePileSettlementLevel2s,
+                pile.SinglePileSettlementLevel2sBeyondCurve, l2);
+            return (vl, l1, l2);
+
+            System.Collections.ObjectModel.ObservableCollection<bool> LevelSettlements(
+                IList<double> forces, IList<double> settlements, IList<bool>? oldFlags, List<(double, double)> points)
+            {
+                var flags = new System.Collections.ObjectModel.ObservableCollection<bool>(
+                    Enumerable.Range(0, forces.Count).Select(j => PileLayoutDataItem.BeyondAt(oldFlags, j)));
+                for (int j = 0; j < forces.Count; j++)
+                {
+                    var sv = vtm.GetDisplacementForGivenLoad(forces[j], out bool b);
+                    if (sv == null || j >= settlements.Count) continue;
+                    settlements[j] = sv[0];
+                    flags[j] = b;
+                    points.Add((forces[j], sv[0]));
+                }
+                return flags;
             }
         }
 
@@ -707,40 +726,10 @@ namespace PileDesign.ViewModels
 
                 if (pileLayoutItem.SoilPileAltNo == SoilPileNo)
                 {
-                    int no = pileLayoutItem.No;
-                    double force = pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional;
-
-                    Vector<double>? settlementVector = VerticalLoadTransferMethod.GetDisplacementForGivenLoad(force);
-                    if (settlementVector != null)
-                    {
-                        pileLayoutItem.SinglePileSettlementVL = settlementVector[0];
-                        forcesVL.Add(force);
-                        settlementsVL.Add(settlementVector[0] * 1000);
-                    }
-
-                    for (int i = 0; i < pileLayoutItem.AxialForceLevel1s.Count; i++)
-                    {
-                        var axialForce = pileLayoutItem.AxialForceLevel1s[i];
-                        settlementVector = VerticalLoadTransferMethod.GetDisplacementForGivenLoad(axialForce);
-                        if (settlementVector != null)
-                        {
-                            pileLayoutItem.SinglePileSettlementLevel1s[i] = settlementVector[0];
-                            forcesLevel1.Add(axialForce);
-                            settlementsLevel1.Add(settlementVector[0] * 1000);
-                        }
-                    }
-
-                    for (int i = 0; i < pileLayoutItem.AxialForceLevel2s.Count; i++)
-                    {
-                        var axialForce = pileLayoutItem.AxialForceLevel2s[i];
-                        settlementVector = VerticalLoadTransferMethod.GetDisplacementForGivenLoad(axialForce);
-                        if (settlementVector != null)
-                        {
-                            pileLayoutItem.SinglePileSettlementLevel2s[i] = settlementVector[0];
-                            forcesLevel2.Add(axialForce);
-                            settlementsLevel2.Add(settlementVector[0] * 1000);
-                        }
-                    }
+                    var points = WriteSinglePileSettlements(pileLayoutItem, VerticalLoadTransferMethod);
+                    foreach (var (force, s) in points.VL) { forcesVL.Add(force); settlementsVL.Add(s * 1000); }
+                    foreach (var (force, s) in points.Level1) { forcesLevel1.Add(force); settlementsLevel1.Add(s * 1000); }
+                    foreach (var (force, s) in points.Level2) { forcesLevel2.Add(force); settlementsLevel2.Add(s * 1000); }
                 }
             }
 

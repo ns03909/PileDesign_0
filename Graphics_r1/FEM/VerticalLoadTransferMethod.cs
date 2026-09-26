@@ -1222,7 +1222,16 @@ namespace PileDesign.FEM
         /// LoadDisplacementsの結果から線形補間して求める（荷重制御解析結果を利用）
         /// </summary>
         public Vector<double>? GetDisplacementForGivenLoad(double pileTopForce)
+            => GetDisplacementForGivenLoad(pileTopForce, out _);
+
+        /// <summary>
+        /// <see cref="GetDisplacementForGivenLoad(double)"/> に、軸力が曲線の範囲の外だったか
+        /// (<paramref name="beyondCurve"/>) を添えたもの。範囲外のときは曲線の端の値を返すので、実際の沈下はそれより大きい
+        /// (下限)。呼び出し側は結果にこの状態を残し、表示・検定で明示すること。
+        /// </summary>
+        public Vector<double>? GetDisplacementForGivenLoad(double pileTopForce, out bool beyondCurve)
         {
+            beyondCurve = false;
             // LoadDisplacementsから補間して沈下量を求める
             if (LoadDisplacements == null || LoadDisplacements.Count < 2)
             {
@@ -1240,7 +1249,8 @@ namespace PileDesign.FEM
             // 範囲外チェック
             if (pileTopForce <= sortedList[0].PileTopLoad)
             {
-                // 最小荷重以下の場合は最小値を返す
+                // 最小荷重以下の場合は最小値を返す (最小荷重より小さければ範囲外 = 引抜き側の端の値)
+                beyondCurve = pileTopForce < sortedList[0].PileTopLoad;
                 var result = Vector<double>.Build.Dense(nodesCount);
                 result[0] = sortedList[0].DD0s / 1000.0; // mm -> m
                 result[^2] = sortedList[0].DDns / 1000.0; // mm -> m
@@ -1253,6 +1263,7 @@ namespace PileDesign.FEM
                 // 沈下量を小さく見積もるので、端の値を使ったことは Warnings で知らせる
                 if (pileTopForce > sortedList[^1].PileTopLoad)
                 {
+                    beyondCurve = true;
                     string note = $"軸力 {pileTopForce:F0} kN は荷重-沈下曲線の範囲 (最大 {sortedList[^1].PileTopLoad:F0} kN) を超えています。曲線の端の沈下量を使いました。";
                     if (!Warnings.Contains(note)) Warnings.Add(note);
                 }

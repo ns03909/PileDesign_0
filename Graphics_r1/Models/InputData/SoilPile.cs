@@ -417,50 +417,83 @@ namespace PileDesign.Models.InputData
 
         // 使用限界支持力 kN
         /// <summary>
-        /// 指定した杭頭荷重（絶対値, kN）に対応する杭頭沈下量（mm, 絶対値）を
-        /// LoadDisplacements から線形補間で返す。未解析・曲線範囲外は 0 を返す。
+        /// 指定した押込み荷重 (kN, 正) に対応する杭頭沈下量 (mm, 絶対値) を、荷重-沈下曲線の<b>圧縮側</b>
+        /// (杭頭荷重が 0 以上の点) から線形補間で返す。未解析は 0。
+        ///
+        /// <para>曲線は圧縮・引抜きの両方向を 1 つに記録している (圧縮が正の荷重)。以前は荷重を絶対値にしてから
+        /// 補間したので、同じ大きさの荷重に引抜き側の点があるとその変位を拾った。限界支持力は押込みの値なので、
+        /// 圧縮側の点だけを使う。</para>
+        ///
+        /// <para>荷重が曲線の最大荷重を超えるとき (曲線が極限の手前で終わっている) は、端の沈下量を返し
+        /// <c>BeyondCurve</c> を立てる。実際の沈下はそれより大きいので、値は<b>下限</b>として扱うこと。</para>
         /// </summary>
-        private double InterpolateD0sForLoadMagnitude(double targetForceMagnitude)
+        internal (double Value, bool BeyondCurve) CompressionSettlementAt(double targetLoad)
         {
-            if (LoadDisplacements == null || LoadDisplacements.Count == 0 || targetForceMagnitude <= 0)
-                return 0;
+            if (LoadDisplacements == null || LoadDisplacements.Count == 0 || !(targetLoad > 0))
+                return (0, false);
 
             var pts = LoadDisplacements
-                .Where(ld => !double.IsNaN(ld.PileTopLoad) && !double.IsNaN(ld.D0s))
-                .Select(ld => (load: Math.Abs(ld.PileTopLoad), disp: Math.Abs(ld.D0s)))
+                .Where(ld => double.IsFinite(ld.PileTopLoad) && double.IsFinite(ld.D0s) && ld.PileTopLoad >= 0)
+                .Select(ld => (load: ld.PileTopLoad, disp: Math.Abs(ld.D0s)))
                 .OrderBy(p => p.load)
                 .ToList();
-            if (pts.Count < 2) return 0;
+            if (pts.Count < 2) return (0, false);
 
-            if (targetForceMagnitude >= pts[^1].load) return pts[^1].disp;
-            if (targetForceMagnitude <= pts[0].load) return pts[0].disp;
+            if (targetLoad > pts[^1].load) return (pts[^1].disp, true);
+            if (targetLoad <= pts[0].load) return (pts[0].disp, false);
 
             for (int i = 0; i < pts.Count - 1; i++)
             {
-                if (targetForceMagnitude >= pts[i].load && targetForceMagnitude <= pts[i + 1].load)
+                if (targetLoad >= pts[i].load && targetLoad <= pts[i + 1].load)
                 {
                     double span = pts[i + 1].load - pts[i].load;
-                    if (span <= 1e-12) return pts[i].disp;
-                    double t = (targetForceMagnitude - pts[i].load) / span;
-                    return pts[i].disp * (1 - t) + pts[i + 1].disp * t;
+                    if (span <= 1e-12) return (pts[i].disp, false);
+                    double t = (targetLoad - pts[i].load) / span;
+                    return (pts[i].disp * (1 - t) + pts[i + 1].disp * t, false);
                 }
             }
-            return 0;
+            return (0, false);
         }
+
+        /// <summary>範囲外の沈下量の表示 (下限であることを示す)。範囲内は数値だけ。</summary>
+        internal static string DescribeSettlement((double Value, bool BeyondCurve) s)
+            => s.BeyondCurve ? $"≧{s.Value:N1}（曲線の範囲外）" : s.Value.ToString("N1");
 
         // [JsonIgnore]: LoadDisplacements を補間する computed プロパティ。保存対象ではない
         // (ElementDivision.SoilPiles 経由でシリアライズされるため明示的に除外)
-        /// <summary>使用限界支持力 R_SLS 時の杭頭沈下量 [mm]</summary>
+        /// <summary>使用限界支持力 R_SLS 時の杭頭沈下量 [mm]。曲線の範囲外なら端の値 (下限。<see cref="SettlementAtR_SLSText"/> 参照)</summary>
         [System.Text.Json.Serialization.JsonIgnore]
-        public double SettlementAtR_SLS => InterpolateD0sForLoadMagnitude(R_SLS);
+        public double SettlementAtR_SLS => CompressionSettlementAt(R_SLS).Value;
 
         /// <summary>損傷限界支持力 R_DLS 時の杭頭沈下量 [mm]</summary>
         [System.Text.Json.Serialization.JsonIgnore]
-        public double SettlementAtR_DLS => InterpolateD0sForLoadMagnitude(R_DLS);
+        public double SettlementAtR_DLS => CompressionSettlementAt(R_DLS).Value;
 
         /// <summary>終局限界支持力 R_ULS 時の杭頭沈下量 [mm]</summary>
         [System.Text.Json.Serialization.JsonIgnore]
-        public double SettlementAtR_ULS => InterpolateD0sForLoadMagnitude(R_ULS);
+        public double SettlementAtR_ULS => CompressionSettlementAt(R_ULS).Value;
+
+        /// <summary>使用限界支持力時の沈下量の表示。曲線の範囲外なら下限であることを示す。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string SettlementAtR_SLSText => DescribeSettlement(CompressionSettlementAt(R_SLS));
+
+        /// <summary>損傷限界支持力時の沈下量の表示。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string SettlementAtR_DLSText => DescribeSettlement(CompressionSettlementAt(R_DLS));
+
+        /// <summary>終局限界支持力時の沈下量の表示。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string SettlementAtR_ULSText => DescribeSettlement(CompressionSettlementAt(R_ULS));
+
+        private void RaiseLimitSettlementsChanged()
+        {
+            OnPropertyChanged(nameof(SettlementAtR_SLS));
+            OnPropertyChanged(nameof(SettlementAtR_DLS));
+            OnPropertyChanged(nameof(SettlementAtR_ULS));
+            OnPropertyChanged(nameof(SettlementAtR_SLSText));
+            OnPropertyChanged(nameof(SettlementAtR_DLSText));
+            OnPropertyChanged(nameof(SettlementAtR_ULSText));
+        }
 
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
@@ -550,11 +583,7 @@ namespace PileDesign.Models.InputData
             set
             {
                 if (SetProperty(ref _loadDisplacements, value))
-                {
-                    OnPropertyChanged(nameof(SettlementAtR_SLS));
-                    OnPropertyChanged(nameof(SettlementAtR_DLS));
-                    OnPropertyChanged(nameof(SettlementAtR_ULS));
-                }
+                    RaiseLimitSettlementsChanged();
             }
         }
 
@@ -736,9 +765,7 @@ namespace PileDesign.Models.InputData
             OnPropertyChanged(nameof(R_SLS));
             OnPropertyChanged(nameof(R_DLS));
             OnPropertyChanged(nameof(R_ULS));
-            OnPropertyChanged(nameof(SettlementAtR_SLS));
-            OnPropertyChanged(nameof(SettlementAtR_DLS));
-            OnPropertyChanged(nameof(SettlementAtR_ULS));
+            RaiseLimitSettlementsChanged();
         }
 
         // PileBottomAltitude更新メソッド

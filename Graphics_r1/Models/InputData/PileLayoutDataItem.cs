@@ -458,6 +458,26 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _singlePileSettlementVL, value);
         }
 
+        // 単杭沈下量が、荷重-沈下曲線の範囲の外の軸力で求めた値か (曲線の端の値 = 実際の沈下の下限)。
+        // 以前は端の値を普通の計算値と同じに扱い、警告を 1 度出すだけだった。沈下量の検定・変形角・表で明示する
+        private bool _singlePileSettlementVLBeyondCurve;
+        /// <summary>常時の単杭沈下量が荷重-沈下曲線の範囲外 (値は下限) か。</summary>
+        public bool SinglePileSettlementVLBeyondCurve
+        {
+            get => _singlePileSettlementVLBeyondCurve;
+            set => SetProperty(ref _singlePileSettlementVLBeyondCurve, value);
+        }
+
+        /// <summary>レベル1 の荷重ケースごとに、単杭沈下量が曲線の範囲外か (<see cref="SinglePileSettlementLevel1s"/> と同じ並び)。</summary>
+        public ObservableCollection<bool> SinglePileSettlementLevel1sBeyondCurve { get; set; } = [];
+
+        /// <summary>レベル2 の荷重ケースごとに、単杭沈下量が曲線の範囲外か (<see cref="SinglePileSettlementLevel2s"/> と同じ並び)。</summary>
+        public ObservableCollection<bool> SinglePileSettlementLevel2sBeyondCurve { get; set; } = [];
+
+        /// <summary>並びの位置 <paramref name="i"/> の範囲外の印 (無ければ false)。</summary>
+        internal static bool BeyondAt(System.Collections.Generic.IList<bool>? flags, int i)
+            => flags != null && i >= 0 && i < flags.Count && flags[i];
+
         // レベル1地震時単杭沈下
         private ObservableCollection<double> _singlePileSettlementLevel1s;
         public ObservableCollection<double> SinglePileSettlementLevel1s
@@ -746,6 +766,7 @@ namespace PileDesign.Models.InputData
                 AxialForceVL0 = this.AxialForceVL0,
                 AxialForceVLAdditional = this.AxialForceVLAdditional,
                 SinglePileSettlementVL = this.SinglePileSettlementVL,
+                SinglePileSettlementVLBeyondCurve = this.SinglePileSettlementVLBeyondCurve,
                 Rf = this.Rf,
                 Rp = this.Rp,
                 Ru = this.Ru,
@@ -762,6 +783,8 @@ namespace PileDesign.Models.InputData
             copy.AxialForceLevel2s = new ObservableCollection<double>(this.AxialForceLevel2s);
             copy.SinglePileSettlementLevel1s = new ObservableCollection<double>(this.SinglePileSettlementLevel1s);
             copy.SinglePileSettlementLevel2s = new ObservableCollection<double>(this.SinglePileSettlementLevel2s);
+            copy.SinglePileSettlementLevel1sBeyondCurve = new ObservableCollection<bool>(this.SinglePileSettlementLevel1sBeyondCurve ?? []);
+            copy.SinglePileSettlementLevel2sBeyondCurve = new ObservableCollection<bool>(this.SinglePileSettlementLevel2sBeyondCurve ?? []);
             copy.IsFrontPiles = new ObservableCollection<bool>(this.IsFrontPiles);
 
             return copy;

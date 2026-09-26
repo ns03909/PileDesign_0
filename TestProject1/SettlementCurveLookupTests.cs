@@ -119,5 +119,43 @@ namespace TestProject1
             Assert.AreEqual(1, vtm.Warnings.Count,
                 "同じ警告が積み上がっている (杭 × 荷重ケースの数だけ出る): " + string.Join(" / ", vtm.Warnings));
         }
+
+        /// <summary>
+        /// 軸力が曲線の範囲の外なら、そのことを返す (端の値を普通の計算値と区別する)。
+        /// 引抜き側の端より小さい軸力も範囲外。
+        /// </summary>
+        [TestMethod]
+        public void ItTellsWhetherTheForceWasBeyondTheCurve()
+        {
+            var vtm = BuildWithCurve();
+            if (vtm == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            Assert.IsNotNull(vtm.GetDisplacementForGivenLoad(500, out bool inside));
+            Assert.IsFalse(inside);
+            Assert.IsNotNull(vtm.GetDisplacementForGivenLoad(5000, out bool above));
+            Assert.IsTrue(above, "最大荷重を超えた軸力を範囲外としていません");
+            Assert.IsNotNull(vtm.GetDisplacementForGivenLoad(-10, out bool below));
+            Assert.IsTrue(below, "最小荷重より小さい軸力を範囲外としていません");
+        }
+
+        /// <summary>杭へ書く単杭沈下量に、範囲外の印も一緒に残すこと (常時・レベル1・レベル2)。</summary>
+        [TestMethod]
+        public void TheOutOfRangeStateIsStoredWithThePileSettlement()
+        {
+            var vtm = BuildWithCurve();
+            if (vtm == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            var pile = new PileLayoutDataItem { AxialForceVL0 = 5000 };
+            pile.AxialForceLevel1s[0] = 500;
+            pile.AxialForceLevel1s[1] = 5000;
+
+            var points = PileDesign.ViewModels.SettlementViewModel.WriteSinglePileSettlements(pile, vtm);
+
+            Assert.IsTrue(pile.SinglePileSettlementVLBeyondCurve, "常時の軸力が範囲外なのに印がありません");
+            Assert.AreEqual(0.005, pile.SinglePileSettlementVL, 1e-9, "値は曲線の端 (下限) を書く");
+            Assert.IsFalse(PileLayoutDataItem.BeyondAt(pile.SinglePileSettlementLevel1sBeyondCurve, 0));
+            Assert.IsTrue(PileLayoutDataItem.BeyondAt(pile.SinglePileSettlementLevel1sBeyondCurve, 1));
+            Assert.AreEqual(1, points.VL.Count);
+        }
     }
 }

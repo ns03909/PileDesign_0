@@ -47,6 +47,12 @@ namespace PileDesign.Services
                 if (HasSinglePileSettlement(inputModel, pile))
                     singleByPileNo[pile.PileNo] = pile.SinglePileSettlementVL;
 
+            // 単杭沈下量が荷重-沈下曲線の範囲外 (下限) の杭。変形角は 2 点の差なので、下限では上にも下にも抑えられない
+            var beyondCurve = piles.Where(p => singleByPileNo.ContainsKey(p.PileNo) && p.SinglePileSettlementVLBeyondCurve)
+                .Select(p => p.PileNo).OrderBy(n => n).ToList();
+            string? beyondReason = beyondCurve.Count == 0 ? null
+                : $"単杭沈下量が荷重-沈下曲線の範囲外 (曲線の端の値 = 下限) の杭があり、変形角を求められません: 杭No.{string.Join(", ", beyondCurve)}";
+
             var groupRecords = inputModel.PileGroupSettlement?.CaseRecords?
                 .Where(r => r?.PileSettlements_mm != null && r.PileSettlements_mm.Count > 0).ToList() ?? [];
 
@@ -91,6 +97,11 @@ namespace PileDesign.Services
 
             void AddItem(List<(int PileNo, double X, double Y, double Uz)> heads, string caseName, string typeName, string missing)
             {
+                if (beyondReason != null)
+                {
+                    items.Add(Unavailable(caseName, beyondReason));
+                    return;
+                }
                 var max = PileHeadDeformationAngle.Max(heads);
                 if (max == null)
                 {

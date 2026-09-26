@@ -63,6 +63,9 @@ namespace PileDesign.Services
             copy.SinglePileSettlementVL = 0;
             copy.SinglePileSettlementLevel1s = new ObservableCollection<double>(Enumerable.Repeat(0.0, source.SinglePileSettlementLevel1s?.Count ?? 0));
             copy.SinglePileSettlementLevel2s = new ObservableCollection<double>(Enumerable.Repeat(0.0, source.SinglePileSettlementLevel2s?.Count ?? 0));
+            copy.SinglePileSettlementVLBeyondCurve = false;
+            copy.SinglePileSettlementLevel1sBeyondCurve = [];
+            copy.SinglePileSettlementLevel2sBeyondCurve = [];
             copy.Rf = 0;
             copy.Rp = 0;
             copy.Ru = 0;

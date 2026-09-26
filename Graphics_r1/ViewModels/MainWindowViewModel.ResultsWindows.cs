@@ -771,7 +771,12 @@ namespace PileDesign.ViewModels
             public string LoadCaseName { get; set; } = "";
             public double AxialForce_kN { get; set; }
             public double Settlement_mm { get; set; }
+            /// <summary>荷重-沈下曲線の範囲外の軸力なら、その旨 (沈下量は曲線の端の値 = 下限)。</summary>
+            public string Note { get; set; } = "";
         }
+
+        /// <summary>曲線の範囲外で求めた沈下量の備考。</summary>
+        internal const string BeyondCurveNote = "曲線の範囲外 (端の値 = 下限)";
 
         /// <summary>
         /// 単杭沈下解析の結果テーブル。
@@ -859,12 +864,13 @@ namespace PileDesign.ViewModels
                         LoadCaseName = "VL",
                         AxialForce_kN = pile.AxialForceVL0 + pile.AxialForceVLAdditional,
                         Settlement_mm = pile.SinglePileSettlementVL * 1000.0,   // m → mm
+                        Note = pile.SinglePileSettlementVLBeyondCurve ? BeyondCurveNote : "",
                     });
 
                     AddLevelRows(pileRows, pile, loadCases?.LoadCasesLevel1,
-                        pile.SinglePileSettlementLevel1s, pile.AxialForceLevel1s);
+                        pile.SinglePileSettlementLevel1s, pile.AxialForceLevel1s, pile.SinglePileSettlementLevel1sBeyondCurve);
                     AddLevelRows(pileRows, pile, loadCases?.LoadCasesLevel2,
-                        pile.SinglePileSettlementLevel2s, pile.AxialForceLevel2s);
+                        pile.SinglePileSettlementLevel2s, pile.AxialForceLevel2s, pile.SinglePileSettlementLevel2sBeyondCurve);
                 }
 
                 tables.Add(new ResultTable
@@ -880,6 +886,8 @@ namespace PileDesign.ViewModels
                         new() { Header = "荷重ケース", Order = 3, Property = typeof(SinglePileSettlementPileRow).GetProperty(nameof(SinglePileSettlementPileRow.LoadCaseName))! },
                         new() { Header = "軸力 (kN)", Order = 4, Property = typeof(SinglePileSettlementPileRow).GetProperty(nameof(SinglePileSettlementPileRow.AxialForce_kN))!, Format = "N1" },
                         new() { Header = "沈下量 (mm)", Order = 5, Property = typeof(SinglePileSettlementPileRow).GetProperty(nameof(SinglePileSettlementPileRow.Settlement_mm))!, Format = "N3" },
+                        new() { Header = "備考", Order = 6, Property = typeof(SinglePileSettlementPileRow).GetProperty(nameof(SinglePileSettlementPileRow.Note))!,
+                                Tooltip = "軸力が荷重-沈下曲線の範囲を超えているとき、沈下量は曲線の端の値で、実際の沈下の下限です" },
                     ],
                     Rows = pileRows,
                 });
@@ -897,7 +905,8 @@ namespace PileDesign.ViewModels
             List<object> rows, Models.InputData.PileLayoutDataItem pile,
             System.Collections.Generic.IList<Models.InputData.LoadCase>? cases,
             System.Collections.Generic.IList<double>? settlements_m,
-            System.Collections.Generic.IList<double>? axialForces_kN)
+            System.Collections.Generic.IList<double>? axialForces_kN,
+            System.Collections.Generic.IList<bool>? beyondCurve = null)
         {
             if (cases == null || settlements_m == null) return;
 
@@ -912,6 +921,7 @@ namespace PileDesign.ViewModels
                     LoadCaseName = cases[i]?.LoadName ?? "",
                     AxialForce_kN = (axialForces_kN != null && i < axialForces_kN.Count) ? axialForces_kN[i] : 0.0,
                     Settlement_mm = settlements_m[i] * 1000.0,   // m → mm
+                    Note = Models.InputData.PileLayoutDataItem.BeyondAt(beyondCurve, i) ? BeyondCurveNote : "",
                 });
             }
         }
