@@ -16,6 +16,14 @@ namespace PileDesign.Models.Results
         public bool IsLiquefaction { get; init; }
 
         /// <summary>
+        /// 表示中の荷重条件の結果が無くて省いた行の数。名前に添えて知らせる。
+        ///
+        /// 以前は結果が無いと要素・節点・ばね本体の「現在の値」を出していた。それは最後に解いた
+        /// 別の荷重条件の値かもしれず、表の荷重条件の名前と数値が食い違った。
+        /// </summary>
+        public int OmittedRowCount { get; init; }
+
+        /// <summary>
         /// 1 つの荷重条件ではなく<b>全条件をまたぐ</b>表か。
         ///
         /// 検定結果のように、荷重ケース・組合せ・液状化を横断して 1 枚にまとめる表がこれ。
@@ -39,6 +47,7 @@ namespace PileDesign.Models.Results
             LoadCombinationName = LoadCombinationName,
             IsLiquefaction = IsLiquefaction,
             SpansAllConditions = SpansAllConditions,
+            OmittedRowCount = OmittedRowCount,
         };
 
         /// <summary>
@@ -58,7 +67,8 @@ namespace PileDesign.Models.Results
                     parts.Add(LoadCaseName);
                 if (!string.IsNullOrEmpty(LoadCombinationName))
                     parts.Add(LoadCombinationName);
-                return string.Join(" / ", parts);
+                string name = string.Join(" / ", parts);
+                return OmittedRowCount > 0 ? name + $"（結果の無い {OmittedRowCount} 行は省略）" : name;
             }
         }
     }

@@ -63,9 +63,13 @@ namespace PileDesign.Services
                     (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
                     (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
 
+            // 表示する荷重条件の結果が無い要素・節点・ばねは行を省き、省いた数を表の名前に添える。
+            // 以前は要素・節点・ばね本体の CumulativeForce / CumulativeDisp (最後に解いた状態) を出していたので、
+            // それが別の荷重条件の値だと、表の荷重条件と数値が食い違った。0 を出すのも「応答が 0」と読めるので使わない。
             if (beams.Count > 0 || rotSprings.Count > 0)
             {
                 var forceRows = new List<object>();
+                int omitted = 0;
 
                 // 梁要素
                 for (int idx = 0; idx < beams.Count; idx++)
@@ -73,8 +77,8 @@ namespace PileDesign.Services
                     var beam = beams[idx];
                     int n1 = nodes.IndexOf(beam.NodeI) + 1;
                     int n2 = nodes.IndexOf(beam.NodeJ) + 1;
-                    var result = FindBeamResult(beam);
-                    var bf = result?.CumulativeForce ?? beam.CumulativeForce ?? new BeamForce(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    var bf = FindBeamResult(beam)?.CumulativeForce;
+                    if (bf == null) { omitted++; continue; }
                     forceRows.Add(ElementSectionForceRow.From(idx + 1, n1, n2, beam, bf));
                 }
 
@@ -84,8 +88,8 @@ namespace PileDesign.Services
                     var rs = rotSprings[idx];
                     int n1 = nodes.IndexOf(rs.NodeI) + 1;
                     int n2 = nodes.IndexOf(rs.NodeJ) + 1;
-                    var result = FindRotSpringResult(rs);
-                    var bf = result?.CumulativeForce ?? rs.CumulativeForce ?? new BeamForce(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    var bf = FindRotSpringResult(rs)?.CumulativeForce;
+                    if (bf == null) { omitted++; continue; }
                     forceRows.Add(ElementSectionForceRow.FromSpring(beams.Count + idx + 1, n1, n2, rs, bf));
                 }
 
@@ -97,13 +101,15 @@ namespace PileDesign.Services
                     Rows = forceRows,
                     LoadCaseName = loadCase?.LoadName ?? "",
                     LoadCombinationName = loadCombination?.Name ?? "",
-                    IsLiquefaction = isLiquefaction
+                    IsLiquefaction = isLiquefaction,
+                    OmittedRowCount = omitted,
                 });
             }
 
             if (beams.Count > 0 || rotSprings.Count > 0)
             {
                 var dispRows = new List<object>();
+                int omitted = 0;
 
                 // 梁要素
                 for (int idx = 0; idx < beams.Count; idx++)
@@ -111,8 +117,8 @@ namespace PileDesign.Services
                     var beam = beams[idx];
                     int n1 = nodes.IndexOf(beam.NodeI) + 1;
                     int n2 = nodes.IndexOf(beam.NodeJ) + 1;
-                    var result = FindBeamResult(beam);
-                    var bd = result?.CumulativeDisp ?? beam.CumulativeDisp ?? new BeamDisp(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    var bd = FindBeamResult(beam)?.CumulativeDisp;
+                    if (bd == null) { omitted++; continue; }
                     dispRows.Add(ElementSectionDispRow.From(idx + 1, n1, n2, beam, bd));
                 }
 
@@ -122,8 +128,8 @@ namespace PileDesign.Services
                     var rs = rotSprings[idx];
                     int n1 = nodes.IndexOf(rs.NodeI) + 1;
                     int n2 = nodes.IndexOf(rs.NodeJ) + 1;
-                    var result = FindRotSpringResult(rs);
-                    var bd = result?.CumulativeDisp ?? rs.CumulativeDisp ?? new BeamDisp(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    var bd = FindRotSpringResult(rs)?.CumulativeDisp;
+                    if (bd == null) { omitted++; continue; }
                     dispRows.Add(ElementSectionDispRow.FromSpring(beams.Count + idx + 1, n1, n2, rs, bd));
                 }
 
@@ -135,7 +141,8 @@ namespace PileDesign.Services
                     Rows = dispRows,
                     LoadCaseName = loadCase?.LoadName ?? "",
                     LoadCombinationName = loadCombination?.Name ?? "",
-                    IsLiquefaction = isLiquefaction
+                    IsLiquefaction = isLiquefaction,
+                    OmittedRowCount = omitted,
                 });
             }
 
@@ -143,13 +150,15 @@ namespace PileDesign.Services
             if (beams.Count > 0)
             {
                 var pileHeadRows = new List<object>();
-                int pileNo = 0;
+                int omitted = 0;
                 foreach (var beam in beams)
                 {
                     if (!beam.IsPileHeadElement) continue;
-                    pileNo++;
-                    var result = FindBeamResult(beam);
-                    var bf = result?.CumulativeForce ?? beam.CumulativeForce ?? new BeamForce(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    // 杭番号は杭頭要素の i 端 (杭節点-{杭番号}-0) から取る。以前は杭頭要素を見つけた順に 1, 2, … と
+                    // 数えていたので、要素の並びが杭の順と違うと別の杭の番号が付いた。
+                    int? pileNo = PileNoOfPileNode(beam.NodeI);
+                    var bf = FindBeamResult(beam)?.CumulativeForce;
+                    if (pileNo == null || bf == null) { omitted++; continue; }
 
                     // 要素座標系 → 全体座標系に変換
                     var f_local = bf.GetVector();
@@ -160,36 +169,35 @@ namespace PileDesign.Services
                         f_global[0], f_global[1], f_global[2], f_global[3], f_global[4], f_global[5],
                         f_global[6], f_global[7], f_global[8], f_global[9], f_global[10], f_global[11]);
 
-                    pileHeadRows.Add(PileHeadForceRow.FromBeamIEnd(pileNo, beam, bfGlobal));
+                    pileHeadRows.Add(PileHeadForceRow.FromBeamIEnd(pileNo.Value, beam, bfGlobal));
                 }
 
-                if (pileHeadRows.Count > 0)
+                if (pileHeadRows.Count > 0 || omitted > 0)
                 {
                     tables.Add(new ResultTable
                     {
                         Name = "杭頭応力",
                         Category = "PileHeadForce",
                         Columns = ResultColumnReflectionCache.GetColumns(typeof(PileHeadForceRow)),
-                        Rows = pileHeadRows,
+                        Rows = pileHeadRows.OrderBy(r => ((PileHeadForceRow)r).PileNo).ToList(),
                         LoadCaseName = loadCase?.LoadName ?? "",
                         LoadCombinationName = loadCombination?.Name ?? "",
-                        IsLiquefaction = isLiquefaction
+                        IsLiquefaction = isLiquefaction,
+                        OmittedRowCount = omitted,
                     });
                 }
             }
 
             if (nodes.Count > 0)
             {
-                var nodeDispRows = nodes
-                    .Select((node, idx) =>
-                    {
-                        // 保存された結果から取得、なければ現在の値を使用
-                        var result = FindNodeResult(node);
-                        var disp = result?.CumulativeDisp ?? node.CumulativeDisp ?? new NodeDisp(0, 0, 0, 0, 0, 0);
-                        return NodeDisplacementRow.From(idx + 1, node, disp);
-                    })
-                    .Cast<object>()
-                    .ToList();
+                var nodeDispRows = new List<object>();
+                int omitted = 0;
+                for (int idx = 0; idx < nodes.Count; idx++)
+                {
+                    var disp = FindNodeResult(nodes[idx])?.CumulativeDisp;
+                    if (disp == null) { omitted++; continue; }
+                    nodeDispRows.Add(NodeDisplacementRow.From(idx + 1, nodes[idx], disp));
+                }
 
                 tables.Add(new ResultTable
                 {
@@ -199,7 +207,8 @@ namespace PileDesign.Services
                     Rows = nodeDispRows,
                     LoadCaseName = loadCase?.LoadName ?? "",
                     LoadCombinationName = loadCombination?.Name ?? "",
-                    IsLiquefaction = isLiquefaction
+                    IsLiquefaction = isLiquefaction,
+                    OmittedRowCount = omitted,
                 });
             }
 
@@ -212,18 +221,18 @@ namespace PileDesign.Services
                         r.IsLiquefaction == isLiquefaction &&
                         r.Step == step &&
                         (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                        (loadCombination == null || r.LoadCombination?.No == loadCombination.No));
+                        (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
 
                 var soilSpringRows = new List<object>();
+                int omitted = 0;
                 for (int idx = 0; idx < soilSprings.Count; idx++)
                 {
                     var spring = soilSprings[idx];
                     int n1 = nodes.IndexOf(spring.NodeI) + 1;
                     int n2 = nodes.IndexOf(spring.NodeJ) + 1;
                     var result = FindSoilSpringResult(spring);
-                    var bf = result?.CumulativeForce ?? spring.CumulativeForce ?? new BeamForce(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-                    var bd = result?.CumulativeDisp ?? spring.CumulativeDisp ?? new BeamDisp(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-                    soilSpringRows.Add(SoilSpringForceRow.From(idx + 1, n1, n2, spring, bf, bd, model));
+                    if (result?.CumulativeForce == null || result.CumulativeDisp == null) { omitted++; continue; }
+                    soilSpringRows.Add(SoilSpringForceRow.From(idx + 1, n1, n2, spring, result.CumulativeForce, result.CumulativeDisp, model));
                 }
 
                 tables.Add(new ResultTable
@@ -234,7 +243,8 @@ namespace PileDesign.Services
                     Rows = soilSpringRows,
                     LoadCaseName = loadCase?.LoadName ?? "",
                     LoadCombinationName = loadCombination?.Name ?? "",
-                    IsLiquefaction = isLiquefaction
+                    IsLiquefaction = isLiquefaction,
+                    OmittedRowCount = omitted,
                 });
             }
 
@@ -247,16 +257,12 @@ namespace PileDesign.Services
                 var pileBeamCounter = new Dictionary<int, int>(); // 杭No → 要素カウンタ
                 foreach (var b in beams)
                 {
-                    if (b.NodeI?.Name != null && b.NodeI.Name.StartsWith("杭節点-"))
+                    if (PileNoOfPileNode(b.NodeI) is int pNo)
                     {
-                        var parts = b.NodeI.Name.Split('-');
-                        if (parts.Length >= 3 && int.TryParse(parts[1], out int pNo))
-                        {
-                            if (!pileBeamCounter.TryGetValue(pNo, out int cnt)) cnt = 0;
-                            cnt++;
-                            pileBeamCounter[pNo] = cnt;
-                            beamPileInfo[b] = (pNo, cnt);
-                        }
+                        if (!pileBeamCounter.TryGetValue(pNo, out int cnt)) cnt = 0;
+                        cnt++;
+                        pileBeamCounter[pNo] = cnt;
+                        beamPileInfo[b] = (pNo, cnt);
                     }
                 }
 
@@ -280,8 +286,8 @@ namespace PileDesign.Services
                     }
                     if (phis == null || moments == null || phis.Count < 2) continue;
 
-                    // -Fxi: 圧縮が正になるよう符号反転
-                    double analysisAxialN = -(result?.CumulativeForce?.Fxi ?? beam.CumulativeForce?.Fxi ?? 0);
+                    // -Fxi: 圧縮が正になるよう符号反転。この荷重条件の結果が無ければ NaN (要素の現在値は別の条件のものかもしれない)
+                    double analysisAxialN = result?.CumulativeForce != null ? -result.CumulativeForce.Fxi : double.NaN;
 
                     beamPileInfo.TryGetValue(beam, out var pileInfo);
 
@@ -499,6 +505,7 @@ namespace PileDesign.Services
             // 外力・反力サマリーテーブル
             {
                 var summaryRows = new List<object>();
+                int summaryOmitted = 0;
 
                 // 1. 代表節点慣性力（ActionPoint = Nodes[0]）
                 if (nodes.Count > 0)
@@ -508,8 +515,9 @@ namespace PileDesign.Services
                         r.IsLiquefaction == isLiquefaction && r.Step == step &&
                         (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
                         (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
-                    var apLoad = apResult?.CumulativedLoad ?? ap.CumulativedLoad;
-                    if (apLoad != null)
+                    var apLoad = apResult?.CumulativedLoad;
+                    if (apLoad == null) summaryOmitted++;
+                    else
                     {
                         summaryRows.Add(new ForceSummaryRow
                         {
@@ -520,50 +528,45 @@ namespace PileDesign.Services
                     }
                 }
 
-                // 2. 杭周地盤水平反力の合計（HorizontalSoilSpring: NodeJ名が杭地盤節点-で始まるもの）
+                // ばね反力の合計。この荷重条件の結果のあるばねだけを足し、欠けていれば項目名に本数を添える
+                // (以前は結果の無いばねに本体の現在値を足していた)。1 本も無ければ行を省く。
+                void AddSpringSum(string item, List<HorizontalSoilSpring> springs)
                 {
+                    if (springs.Count == 0) return;
                     double sumFx = 0, sumFy = 0, sumFz = 0;
-                    var pileSoilSprings = model.HorizontalSoilSprings?.Where(s =>
-                        s.NodeJ?.Name.StartsWith("杭地盤節点-") == true) ?? [];
-                    foreach (var spring in pileSoilSprings)
+                    int found = 0;
+                    foreach (var spring in springs)
                     {
-                        var sr = spring.HorizontalSpringResults?.FirstOrDefault(r =>
+                        var bf = spring.HorizontalSpringResults?.FirstOrDefault(r =>
                             r.IsLiquefaction == isLiquefaction && r.Step == step &&
                             (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                            (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
-                        var bf = sr?.CumulativeForce ?? spring.CumulativeForce;
+                            (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)))
+                            ?.CumulativeForce;
                         if (bf == null) continue;
+                        found++;
                         sumFx += bf.Fxi; sumFy += bf.Fyi; sumFz += bf.Fzi;
                     }
+                    if (found == 0) { summaryOmitted++; return; }
                     summaryRows.Add(new ForceSummaryRow
                     {
-                        Item = "杭周地盤反力合計",
+                        Item = found < springs.Count ? $"{item}（結果のあるばね {found}/{springs.Count} 本）" : item,
                         Fx = sumFx, Fy = sumFy, Fz = sumFz,
                         Fh = System.Math.Sqrt(sumFx * sumFx + sumFy * sumFy)
                     });
                 }
 
+                // 2. 杭周地盤水平反力の合計（HorizontalSoilSpring: NodeJ名が杭地盤節点-で始まるもの）
+                {
+                    var pileSoilSprings = model.HorizontalSoilSprings?.Where(s =>
+                        s.NodeJ?.Name.StartsWith("杭地盤節点-") == true).ToList() ?? [];
+                    AddSpringSum("杭周地盤反力合計", pileSoilSprings);
+                }
+
                 // 4. 土圧合力ばね水平反力の合計（NodeI名が根入部節点のばね）
                 {
-                    double sumFx = 0, sumFy = 0, sumFz = 0;
                     var dgbSprings = model.HorizontalSoilSprings?.Where(s =>
-                        s.NodeI?.Name == "根入部節点") ?? [];
-                    foreach (var spring in dgbSprings)
-                    {
-                        var sr = spring.HorizontalSpringResults?.FirstOrDefault(r =>
-                            r.IsLiquefaction == isLiquefaction && r.Step == step &&
-                            (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                            (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
-                        var bf = sr?.CumulativeForce ?? spring.CumulativeForce;
-                        if (bf == null) continue;
-                        sumFx += bf.Fxi; sumFy += bf.Fyi; sumFz += bf.Fzi;
-                    }
-                    summaryRows.Add(new ForceSummaryRow
-                    {
-                        Item = "土圧合力ばね反力合計",
-                        Fx = sumFx, Fy = sumFy, Fz = sumFz,
-                        Fh = System.Math.Sqrt(sumFx * sumFx + sumFy * sumFy)
-                    });
+                        s.NodeI?.Name == "根入部節点").ToList() ?? [];
+                    AddSpringSum("土圧合力ばね反力合計", dgbSprings);
                 }
 
                 if (summaryRows.Count > 0)
@@ -576,12 +579,26 @@ namespace PileDesign.Services
                         Rows = summaryRows,
                         LoadCaseName = loadCase?.LoadName ?? "",
                         LoadCombinationName = loadCombination?.Name ?? "",
-                        IsLiquefaction = isLiquefaction
+                        IsLiquefaction = isLiquefaction,
+                        OmittedRowCount = summaryOmitted,
                     });
                 }
             }
 
             return tables;
+        }
+
+        /// <summary>
+        /// 杭節点 (名前 <c>杭節点-{杭番号}-{節点順}</c>、<see cref="AnalysisModelling"/> が付ける) の杭番号。杭節点でなければ null。
+        /// 杭番号は解析モデルを組んだときの杭配置の番号 (解析の前に 1 から連番に揃えている)。
+        /// </summary>
+        internal static int? PileNoOfPileNode(Node? node)
+        {
+            string? name = node?.Name;
+            if (name == null || !name.StartsWith("杭節点-", System.StringComparison.Ordinal)) return null;
+            var parts = name.Split('-');
+            return parts.Length >= 3 && int.TryParse(parts[1], System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out int no) ? no : null;
         }
 
         /// <summary>隣接点間の傾きを計算</summary>
