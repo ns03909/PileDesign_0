@@ -145,6 +145,14 @@ namespace PileDesign.Services
                 catch (Exception ex) { Log.Warning(ex, "[Save] NaN・無限大の箇所を調べられませんでした"); }
             }
 
+            // 解析結果として保存するもの。水平解析のモデルだけでなく、単杭・群杭沈下と基礎梁の鉛直解析の結果も
+            // 別の節に保存する (水平解析の結果を保存しない設定でも沈下の結果は保存する)
+            var singlePileSettlement = Models.Results.SinglePileSettlementResult.Capture(inputToSave);
+            var groupSettlement = inputToSave?.PileGroupSettlement?.Result is { HasResults: true } gsr ? gsr : null;
+            var verticalBeam = verticalBeamCaseResults != null && verticalBeamCaseResults.Count > 0
+                ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults) : null;
+            bool savesAnyResult = anaModel != null || singlePileSettlement != null || groupSettlement != null || verticalBeam != null;
+
             var projectData = new ProjectData
             {
                 FormatVersion = 2,  // v2: PileLayoutItems[*].Z = 接合節点 Z (旧 v1 = 杭頭 Z)
@@ -155,16 +163,18 @@ namespace PileDesign.Services
                     : null!,
                 // 単杭沈下の荷重-沈下曲線も入力の中ではなくこの節に 1 回だけ書く。
                 // SoilPile 側は [JsonIgnore] なので、ここで書かないと保存されない。
-                SinglePileSettlementResult = Models.Results.SinglePileSettlementResult.Capture(inputToSave),
+                SinglePileSettlementResult = singlePileSettlement,
                 // 群杭沈下の結果は入力の中ではなく、この節に 1 回だけ書く。
                 // 入力モデルは結果への参照を持つだけ ([JsonIgnore]) なので、ここで書かないと保存されない。
                 // 水平解析の結果を保存しない設定でも沈下の結果は保存する (従来と同じ)。
-                GroupSettlementResult = inputToSave?.PileGroupSettlement?.Result is { HasResults: true } gsr
-                    ? gsr : null,
-                // 解析結果を保存しないときはスナップショットも不要
-                ResultInputSnapshot = anaModel != null ? resultInputSnapshot : null,
-                ResultCapturedAt = anaModel != null ? resultCapturedAt : null,
-                InputChangedSinceAnalysis = anaModel != null ? inputChangedSinceAnalysis : null,
+                GroupSettlementResult = groupSettlement,
+                // 解析時の入力は、<b>どれかの解析結果を保存するなら</b>書く。以前は水平解析のモデルがあるときだけ書いたので、
+                // 沈下・基礎梁の鉛直解析だけを解いてから入力を編集して保存すると、読み直したとき結果が編集後の入力に
+                // 対応付けられた (解析したときと違う入力で結果を表示・計算書に出す)。
+                ResultInputSnapshot = savesAnyResult ? resultInputSnapshot : null,
+                ResultCapturedAt = savesAnyResult ? resultCapturedAt : null,
+                InputChangedSinceAnalysis = savesAnyResult ? inputChangedSinceAnalysis : null,
+                // 杭と FEM 要素の対応表は水平解析のモデルの要素番号なので、モデルを保存するときだけ
                 PileFemLinks = anaModel != null ? pileFemLinks : null,
                 IsElementSplit = isElementSplit,
                 // 自動保存・緊急保存だけが渡す。復元したあとの保存先を確定するために使う。

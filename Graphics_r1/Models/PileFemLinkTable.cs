@@ -63,34 +63,82 @@ namespace PileDesign.Models
 
         /// <summary>
         /// インデックス表から関連を張り直す。表が無い（旧ファイル）場合は何もしない。
+        /// 張り直せなかったもの (利用者向けの文) を返す。無ければ空。
+        ///
+        /// 以前は範囲の外の番号を黙って飛ばし、同じ杭番号が 2 回あれば後のもので上書きしていた。
+        /// 杭の結果が一部だけ欠けた (あるいは別の杭の要素を指す) まま表示され、気づく手掛かりが無かった。
+        /// 範囲の外の番号は従来どおり張らずに知らせる。杭番号が重なる対応はどちらが正しいか決められないので、
+        /// その杭には張らずに知らせる。対応の無い杭も知らせる。
         /// </summary>
-        public static void Apply(PileFemLinkTable? table, InputModel? input, AnaModel? model)
+        public static IReadOnlyList<string> Apply(PileFemLinkTable? table, InputModel? input, AnaModel? model)
         {
-            if (table?.Piles == null || input?.PileLayoutItems == null || model == null) return;
+            var problems = new List<string>();
+            if (table?.Piles == null || input?.PileLayoutItems == null || model == null) return problems;
 
             var byNo = new Dictionary<int, PileFemLink>();
+            var duplicated = new SortedSet<int>();
             foreach (var link in table.Piles)
-                byNo[link.PileNo] = link;
+            {
+                if (link == null) continue;
+                if (!byNo.TryAdd(link.PileNo, link)) duplicated.Add(link.PileNo);
+            }
+            foreach (int no in duplicated)
+            {
+                byNo.Remove(no);
+                problems.Add($"杭 No.{no}: 解析結果との対応が重複しているため、結び付けませんでした");
+            }
 
             foreach (var pile in input.PileLayoutItems)
             {
-                if (pile == null || !byNo.TryGetValue(pile.No, out var link)) continue;
+                if (pile == null || duplicated.Contains(pile.No)) continue;
+                if (!byNo.TryGetValue(pile.No, out var link))
+                {
+                    problems.Add($"杭 No.{pile.No}: 解析結果との対応がありません");
+                    continue;
+                }
 
-                pile.PileNodes = FromIndices(link.PileNodeIndices, model.Nodes);
-                pile.SoilNodes = FromIndices(link.SoilNodeIndices, model.Nodes);
-                pile.Beams = FromIndices(link.BeamIndices, model.Beams);
+                var outOfRange = new List<string>();
+                pile.PileNodes = FromIndices(link.PileNodeIndices, model.Nodes, "杭節点", outOfRange);
+                pile.SoilNodes = FromIndices(link.SoilNodeIndices, model.Nodes, "地盤節点", outOfRange);
+                pile.Beams = FromIndices(link.BeamIndices, model.Beams, "杭要素", outOfRange);
                 pile.HorizontalSoilSprings =
-                    FromIndices(link.HorizontalSoilSpringIndices, model.HorizontalSoilSprings);
+                    FromIndices(link.HorizontalSoilSpringIndices, model.HorizontalSoilSprings, "水平地盤ばね", outOfRange);
                 pile.VerticalNodeSprings =
-                    [.. FromIndices(link.VerticalNodeSpringIndices, model.HorizontalSoilSprings)];
+                    [.. FromIndices(link.VerticalNodeSpringIndices, model.HorizontalSoilSprings, "鉛直地盤ばね", outOfRange)];
 
-                pile.PileTopRotationalSpring =
-                    link.RotationalSpringIndex >= 0
-                    && model.RotationalSprings != null
-                    && link.RotationalSpringIndex < model.RotationalSprings.Count
-                        ? model.RotationalSprings[link.RotationalSpringIndex]
-                        : null;
+                int rotationalCount = model.RotationalSprings?.Count ?? 0;
+                if (link.RotationalSpringIndex >= 0 && link.RotationalSpringIndex < rotationalCount)
+                {
+                    pile.PileTopRotationalSpring = model.RotationalSprings![link.RotationalSpringIndex];
+                }
+                else
+                {
+                    pile.PileTopRotationalSpring = null;
+                    // -1 は「杭頭回転ばねが無い」の意味で正常
+                    if (link.RotationalSpringIndex != -1)
+                        outOfRange.Add($"杭頭回転ばね {link.RotationalSpringIndex} (全 {rotationalCount} 個)");
+                }
+
+                if (outOfRange.Count > 0)
+                    problems.Add($"杭 No.{pile.No}: 解析結果に無い要素を指しています ({string.Join(", ", outOfRange)})");
             }
+
+            // 入力に無い杭の対応 (解析のあとに杭を減らしたなど)
+            var inputNos = new HashSet<int>(input.PileLayoutItems.Where(p => p != null).Select(p => p.No));
+            foreach (int no in byNo.Keys.Where(no => !inputNos.Contains(no)).OrderBy(no => no))
+                problems.Add($"杭 No.{no}: 解析結果の対応はありますが、解析時の入力にこの杭がありません");
+
+            return problems;
+        }
+
+        /// <summary>読込時に対応表を張り直せなかったことを知らせる文 (多いときは先頭 10 件と件数)。</summary>
+        public static string DescribeProblems(IReadOnlyList<string> problems)
+        {
+            const int shown = 10;
+            return "読み込んだ水平解析の結果の一部を、杭に結び付けられませんでした。\n"
+                 + "該当する杭の結果 (杭ごとのグラフ・限界線・計算書など) は欠けて表示されます。再解析すると揃います。\n\n"
+                 + string.Join("\n", problems.Take(shown))
+                 + (problems.Count > shown ? $"\nほか {problems.Count - shown} 件" : "");
         }
 
         private static Dictionary<T, int> BuildIndex<T>(IList<T>? source) where T : class
@@ -112,12 +160,17 @@ namespace PileDesign.Models
             return result;
         }
 
-        private static ObservableCollection<T> FromIndices<T>(List<int>? indices, IList<T>? source) where T : class
+        private static ObservableCollection<T> FromIndices<T>(List<int>? indices, IList<T>? source,
+            string what, List<string> outOfRange) where T : class
         {
             var result = new ObservableCollection<T>();
-            if (indices == null || source == null) return result;
+            if (indices == null) return result;
+            int count = source?.Count ?? 0;
             foreach (int i in indices)
-                if (i >= 0 && i < source.Count) result.Add(source[i]);
+            {
+                if (i >= 0 && i < count) result.Add(source![i]);
+                else outOfRange.Add($"{what} {i} (全 {count} 個)");
+            }
             return result;
         }
     }

@@ -563,6 +563,15 @@ namespace PileDesign.ViewModels
                 MessageService.Show(DescribeRenamedLoadCases(renamed), "荷重ケース名", MessageBoxButton.OK, MessageBoxImage.Information);
             }
 
+            // 杭と FEM 要素の対応表を張り直せなかったもの (結果が一部欠けて表示される)
+            if (_pileFemLinkProblemsOnLoad.Count > 0)
+            {
+                Serilog.Log.Warning("[読込] 杭と解析結果の対応を張り直せませんでした: {Problems}", string.Join(" / ", _pileFemLinkProblemsOnLoad));
+                MessageService.Show(Models.PileFemLinkTable.DescribeProblems(_pileFemLinkProblemsOnLoad),
+                    "解析結果の読込", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _pileFemLinkProblemsOnLoad = [];
+            }
+
             // 荷重組合せの表示名の重なり (画面の選択で見分けられない)。表示名は係数から決まり付け直せないので知らせるだけ
             var duplicateCombinations = CurrentInputModel.LoadCasesInput?.DescribeDuplicateCombinationNames() ?? [];
             if (duplicateCombinations.Count > 0)
@@ -826,6 +835,9 @@ namespace PileDesign.ViewModels
         /// 結果が現在の入力を基準に描かれ、混在表示に戻ってしまう。
         /// 旧ファイル（スナップショットなし）は現在の入力で代用する（従来と同じ挙動）。
         /// </summary>
+        /// <summary>直近の読込で、杭と FEM 要素の対応表を張り直せなかったもの (読込の仕上げで知らせて空にする)。</summary>
+        private IReadOnlyList<string> _pileFemLinkProblemsOnLoad = [];
+
         private void RestoreAnalysisResultSet(Models.ProjectData projectData)
         {
             bool hasResults = IsHorizontalAnalysisDone || IsVerticalAnalysisDone
@@ -870,7 +882,8 @@ namespace PileDesign.ViewModels
 
             // 杭 → FEM 要素の関連も [JsonIgnore] で落ちるので、保存した対応表から張り直す。
             // これが無いと杭ごとに結果を引く表示 (M-φ グラフ・限界線など) が空になる。
-            Models.PileFemLinkTable.Apply(projectData.PileFemLinks, snapshot, projectData.AnaModel);
+            // 張り直せなかったものは読込の仕上げで知らせる (ApplyPostLoadProtocol)
+            _pileFemLinkProblemsOnLoad = Models.PileFemLinkTable.Apply(projectData.PileFemLinks, snapshot, projectData.AnaModel);
 
             var set = new Models.AnalysisResultSet
             {
