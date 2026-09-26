@@ -37,6 +37,23 @@ namespace TestProject1
             Assert.IsTrue(created, $"{name} が生成されなかった");
         }
 
+        /// <summary>
+        /// 個別矩形（基礎梁考慮）の反復沈下解析ウィンドウ。収束しなかったケースの注意 (赤字) と、
+        /// ケース一覧の表示名 (「(未収束)」を付ける) のバインディングを足したので、パースを踏む。
+        /// </summary>
+        [TestMethod]
+        public void GroupSettlementWithBeamWindow_XamlParses_WithoutException()
+        {
+            AssertWindowParses("GroupSettlementWithBeamWindow", () =>
+            {
+                var mainVm = new PileDesign.ViewModels.MainWindowViewModel();
+                return new PileDesign.Views.GroupSettlementWithBeamWindow
+                {
+                    DataContext = new PileDesign.ViewModels.GroupSettlementWithBeamCalculationViewModel(mainVm),
+                };
+            });
+        }
+
         /// <summary>グラフウィンドウ（断面の基準切替の RadioButton / BoolEqualsConverter を含む）。</summary>
         [TestMethod]
         public void GraphWindow_XamlParses_WithoutException()

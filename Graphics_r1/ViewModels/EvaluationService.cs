@@ -392,6 +392,8 @@ namespace PileDesign.ViewModels
                         TargetName = $"FoundationBeam-{beamNo}",
                         FoundationBeamNo = beamNo,
                         LoadCaseName = rec.LoadCaseName ?? "",
+                        // 反復が収束しなかったケースは判定しない (釣り合っていない沈下の傾斜角なので「未収束」)
+                        CaseConvergence = rec.IsConverged ? FEM.StepStatus.Converged : FEM.StepStatus.Unconverged,
                         // 反復沈下解析には液状化の区別が無い (null のまま)
                         Response = inclination,
                         Limit = inclinationLimit,
@@ -434,8 +436,10 @@ namespace PileDesign.ViewModels
                         EvaluationTextFormatter.AppendItem(sb, item);
                 }
 
-                int caseOk = caseItems.Count(i => i.IsOk);
-                int caseNg = caseItems.Count - caseOk;
+                if (caseItems.Any(i => i.IsFromUnconvergedCase))
+                    sb.AppendLine("  ※ このケースは反復が収束していないため、OK / NG を判定していません (再計算してください)。");
+                int caseOk = caseItems.Count(i => i.IsJudged && i.IsOk);
+                int caseNg = caseItems.Count(i => i.IsJudged && !i.IsOk);
                 var worst = caseItems.OrderByDescending(i => i.Response).First();
                 string maxBeamName = worst.Response > 0 ? worst.TargetName : "";
 

@@ -84,6 +84,32 @@ namespace TestProject1
             StringAssert.Contains(group[0].UnavailableReason, "群杭沈下の結果がありません");
         }
 
+        /// <summary>
+        /// 基礎梁を考慮した反復が収束しなかったケースの沈下からは、変形角を判定しないこと (「未収束」)。
+        /// 反復しない解析の記録は収束状態を持たないので、そのまま判定する。
+        /// </summary>
+        [TestMethod]
+        public void AnUnconvergedIterativeCaseIsNotJudged()
+        {
+            var input = SettlementModel(includesGroup: true, [true, true, true], [0, 0, 0]);
+            input.PileGroupSettlement = new PileGroupSettlement();
+            input.PileGroupSettlement.CaseRecords.Add(new PileDesign.Models.Results.GroupSettlementCaseRecord
+            {
+                LoadCaseName = "VL", LoadingType = "個別矩形（基礎梁考慮）", IsBeamAware = true, IsConverged = false,
+                PileSettlements_mm = new() { [1] = 1, [2] = 3, [3] = 9 },
+            });
+            input.PileGroupSettlement.CaseRecords.Add(new PileDesign.Models.Results.GroupSettlementCaseRecord
+            {
+                LoadCaseName = "VL", LoadingType = "個別十字", IsBeamAware = false,
+                PileSettlements_mm = new() { [1] = 1, [2] = 3, [3] = 9 },
+            });
+
+            var items = SettlementDeformationAngleEvaluator.Evaluate(input);
+            Assert.AreEqual(2, items.Count);
+            Assert.IsTrue(items[0].IsFromUnconvergedCase && !items[0].IsJudged, "収束しなかった反復のケースを判定しています");
+            Assert.IsTrue(items[1].IsJudged, "反復しない解析の記録まで未収束扱いにしています");
+        }
+
         /// <summary>沈下による変形角は、水平解析の検定 (低減前・低減後) には入れない (以前は両方に同じ項目が並んだ)。</summary>
         [TestMethod]
         public void TheSettlementAngleIsNotPartOfTheHorizontalEvaluation()

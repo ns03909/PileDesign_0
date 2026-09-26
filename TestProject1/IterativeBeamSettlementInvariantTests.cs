@@ -34,6 +34,42 @@ namespace TestProject1
     {
         private const double Tol = 1e-3;
 
+        /// <summary>
+        /// 反復の上限に達したとき、返す矩形荷重・沈下量・残差が<b>同じ回</b>のものであること。
+        /// 以前は上限の回でも次の回用に荷重 (Pi) を更新してから抜けたので、返す荷重だけが 1 回先の値になった。
+        /// 返した矩形荷重で地盤側の沈下を計算し直し、返した S1 と一致することで確かめる。
+        /// </summary>
+        [TestMethod]
+        public void AtTheIterationLimit_TheReturnedLoadsAndSettlementsAreFromTheSameRound()
+        {
+            var (model, ppi) = Scene();
+            if (model == null) return;
+
+            var result = IterativeBeamSettlementService.Run(model, ppi, "検査", maxIter: 1, tol: 1e-15);
+            Assert.IsFalse(result.Converged, "(前提) 1 回では収束しないこと");
+            Assert.AreEqual(1, result.IterationCount);
+
+            var loads = new System.Collections.ObjectModel.ObservableCollection<RectLoad>(result.ConvergedRectLoads);
+            foreach (var pile in model.PileLayoutItems.Where(p => result.SteinbrennerSettlement.ContainsKey(p.PileNo)))
+            {
+                double recomputed = Steinnbrener.CalcSettlement(
+                    new System.Windows.Point(pile.Point3D.X, pile.Point3D.Y), loads, model.PileGroupSettlement.SettlementSoilLayers);
+                Assert.AreEqual(result.SteinbrennerSettlement[pile.PileNo], recomputed, 1e-12 * Math.Max(1, Math.Abs(recomputed)),
+                    $"杭 {pile.PileNo}: 返した矩形荷重から求めた沈下が、返した S1 と違います (荷重だけ次の回の値?)");
+                Assert.AreEqual(result.PileReactions[pile.PileNo], loads.First(r => r.LinkedPileNo == pile.PileNo).QA, 1e-9);
+            }
+        }
+
+        /// <summary>比べられる杭が 1 本も無いときは、差 0 として収束扱いにしないこと。</summary>
+        [TestMethod]
+        public void NoComparedPilesIsNotConvergence()
+        {
+            string src = TestSource.Read("Graphics_r1", "Services", "IterativeBeamSettlementService.cs");
+            int check = src.IndexOf("if (compared == 0)", StringComparison.Ordinal);
+            int judge = src.IndexOf("if (residual < tol)", StringComparison.Ordinal);
+            Assert.IsTrue(check > 0 && check < judge, "比べた杭の数を確かめる前に、収束を判定しています");
+        }
+
         /// <summary>反復沈下解析が入力の杭番号を書き換えないこと (以前は 1〜N に振り直していた)。</summary>
         [TestMethod]
         public void ItDoesNotRewriteThePileNumbers()

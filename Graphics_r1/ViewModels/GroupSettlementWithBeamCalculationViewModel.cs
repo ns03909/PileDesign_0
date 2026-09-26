@@ -106,6 +106,19 @@ namespace PileDesign.ViewModels
 
         private void SaveAndClose()
         {
+            // 反復が収束しなかったケースは、沈下・コンタを設計値として使えない。確定する前に知らせて選んでもらう
+            // (以前は収束状態を記録するだけで、確定した結果として黙って保存していた)
+            var unconverged = CaseResults.Where(c => !c.IsConverged).Select(c => c.LoadCaseName).ToList();
+            if (unconverged.Count > 0)
+            {
+                var answer = Services.MessageService.Show(
+                    "次のケースは反復が収束していません。\n\n" + string.Join("\n", unconverged.Select(n => "・" + n))
+                    + "\n\nこのケースの沈下量・コンタ図・検定は設計値として使えません (検定は「未収束」として判定しません)。"
+                    + "最大反復回数・収束許容誤差を見直して再計算することを勧めます。\n\nこのまま確定しますか？",
+                    "未収束のケースがあります", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+                if (answer != System.Windows.MessageBoxResult.Yes) return;
+            }
+
             if (InputModel?.PileGroupSettlement != null && CaseResults.Count > 0)
             {
                 const string thisLoadingType = "個別矩形（基礎梁考慮）";
@@ -548,6 +561,13 @@ namespace PileDesign.ViewModels
     {
         public string LoadCaseName { get; set; } = "";
         public bool IsConverged { get; set; }
+
+        /// <summary>ケースの一覧に出す名前。収束しなかったケースには「(未収束)」を付ける (一覧だけで分かるように)。</summary>
+        public string DisplayName => IsConverged ? LoadCaseName : $"{LoadCaseName} (未収束)";
+
+        /// <summary>収束しなかったときの注意 (画面に赤字で出す)。収束していれば空。</summary>
+        public string ConvergenceWarning => IsConverged ? ""
+            : "反復が収束していません。このケースの沈下量・コンタ図は設計値として使えません。最大反復回数・収束許容誤差を見直して再計算してください。";
         public int IterationCount { get; set; }
         public double FinalResidual { get; set; }
         public ObservableCollection<GroupSettlementWithBeamPileResult> PileResults { get; set; } = [];

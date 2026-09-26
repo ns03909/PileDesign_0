@@ -121,8 +121,12 @@
                         <TextBlock Text="荷重ケース:" Margin="0,2"/>
                         <ComboBox ItemsSource="{Binding CaseResults}"
                                   SelectedItem="{Binding SelectedCaseResult}"
-                                  DisplayMemberPath="LoadCaseName"
+                                  DisplayMemberPath="DisplayName"
                                   Margin="0,2,0,8"/>
+                        <!-- 反復が収束しなかったケースの注意 (設計値として使わないよう目立たせる) -->
+                        <TextBlock Text="{Binding SelectedCaseResult.ConvergenceWarning}"
+                                   Foreground="#C00000" FontWeight="Bold" TextWrapping="Wrap" MaxWidth="260"
+                                   Margin="0,0,0,8"/>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>

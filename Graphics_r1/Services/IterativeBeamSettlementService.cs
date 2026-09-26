@@ -288,11 +288,22 @@ namespace PileDesign.Services
                 double maxS2 = S2.Values.DefaultIfEmpty(0).Max(s => Math.Abs(s));
                 double maxAbs = Math.Max(maxS1, maxS2);
                 double maxDiff = 0;
+                int compared = 0;
                 foreach (var pile in piles)
                 {
                     if (!S1.ContainsKey(pile.PileNo) || !S2.ContainsKey(pile.PileNo)) continue;
+                    compared++;
                     double d = Math.Abs(S2[pile.PileNo] - S1[pile.PileNo]);
                     if (d > maxDiff) maxDiff = d;
+                }
+                // 比べられた杭が 1 本も無ければ、差が 0 なのではなく比べていない。収束とは言えないので打ち切る。
+                // 以前は差 0 → 残差 0 となり、何も比べずに「収束」と判定し得た
+                if (compared == 0)
+                {
+                    residual = double.NaN;
+                    result.Log.Add($"  iter {iter,3}: [ERROR] 地盤側 (S1) と梁側 (S2) の沈下を比べられる杭がありません "
+                        + "(矩形寸法か、基礎梁との接合節点が無い)。収束を判定できません。");
+                    break;
                 }
                 residual = maxAbs > 1e-12 ? maxDiff / maxAbs : 0.0;
 
@@ -307,6 +318,10 @@ namespace PileDesign.Services
                     result.Converged = true;
                     break;
                 }
+
+                // 反復の上限に達したら Pi を更新しない。更新すると、返す矩形荷重 (Pi) だけが次の回の値になり、
+                // 返す沈下量 S1・S2・残差・ばね ki (この回の値) と食い違う (以前はそうなっていた)
+                if (iter == maxIter) break;
 
                 // 次ステップの Pi = ki · S2
                 foreach (var pile in piles)
