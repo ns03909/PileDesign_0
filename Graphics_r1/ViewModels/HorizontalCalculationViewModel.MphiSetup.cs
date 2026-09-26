@@ -408,14 +408,15 @@ namespace PileDesign.ViewModels
         // 接線剛性用: 端部回転から要素中央曲率を評価し、dM/dφ を EI_eff として KTan（倍率）に反映
         // useRelaxation=false: Full NR（正確なヤコビアンで2次収束）
         // useRelaxation=true:  Modified NR の初期反復（安定化のためダンピング）
-        private static void UpdateBeamMPhiTangent(AnaModel model, bool useRelaxation = false)
-            => UpdateBeamMPhi(model, isTangent: true, useRelaxation: useRelaxation);
+        // biaxialCoupling=true: 合成 M–φ の接線の非対角項 (二方向曲げの連成) も剛性に入れる (Beam.EIyzTan 参照)
+        private static void UpdateBeamMPhiTangent(AnaModel model, bool useRelaxation = false, bool biaxialCoupling = false)
+            => UpdateBeamMPhi(model, isTangent: true, useRelaxation: useRelaxation, biaxialCoupling: biaxialCoupling);
 
         // 割線剛性用（必要なら接線と同手順でKsecも更新）
         private static void UpdateBeamMPhiSecant(AnaModel model) => UpdateBeamMPhi(model, isTangent: false);
 
         // 統合されたM-φ更新メソッド: 接線剛性と割線剛性の両方に対応
-        private static void UpdateBeamMPhi(AnaModel model, bool isTangent, bool useRelaxation = false)
+        private static void UpdateBeamMPhi(AnaModel model, bool isTangent, bool useRelaxation = false, bool biaxialCoupling = false)
         {
             int beamIdx = 0;
             foreach (var beam in model.Beams)
@@ -502,12 +503,22 @@ namespace PileDesign.ViewModels
                         double newKz = (prevKz > 0.01) ? prevKz * (1 - RELAXATION) + ratioZ * RELAXATION : ratioZ;
                         beam.KTan_y = newKy;
                         beam.KTan_z = newKz;
+                        beam.EIyzTan = biaxialCoupling
+                            ? beam.EIyzTan * (1 - RELAXATION) + BiaxialCouplingWithinLimit(beam, phiY, phiZ, EI0y, EI0z) * RELAXATION
+                            : 0.0;
                     }
                     else
                     {
                         // Full NR: 正確なヤコビアン（2次収束に必要）
                         beam.KTan_y = ratioY;
                         beam.KTan_z = ratioZ;
+                        beam.EIyzTan = biaxialCoupling ? BiaxialCouplingWithinLimit(beam, phiY, phiZ, EI0y, EI0z) : 0.0;
+                    }
+                    // 対角 (上下限で切った後) と組み合わせても正定値に保つ
+                    if (beam.EIyzTan != 0.0)
+                    {
+                        double lim = 0.999 * Math.Sqrt(beam.KTan_y * EI0y * beam.KTan_z * EI0z);
+                        beam.EIyzTan = Math.Clamp(beam.EIyzTan, -lim, lim);
                     }
                     beam.SetKe(true); // KeTan 再構築
                 }
@@ -521,6 +532,16 @@ namespace PileDesign.ViewModels
                     beam.SetKe(false); // KeSec 再構築
                 }
             }
+        }
+
+        /// <summary>
+        /// 二方向曲げの連成項 (<see cref="Beam.EvaluateEIyzTangent"/>)。正定値に保つ上限は呼び出し側で掛ける
+        /// (対角の上下限と緩和を掛けた後の値で決まるため)。
+        /// </summary>
+        private static double BiaxialCouplingWithinLimit(Beam beam, double phiY, double phiZ, double EI0y, double EI0z)
+        {
+            double eiyz = beam.EvaluateEIyzTangent(phiY, phiZ);
+            return double.IsFinite(eiyz) && EI0y > 0 && EI0z > 0 ? eiyz : 0.0;
         }
 
         //private static (IList<double> Phis, IList<double> Moments)? TryCallMPhiRelationship(object pileSection, double axialN)

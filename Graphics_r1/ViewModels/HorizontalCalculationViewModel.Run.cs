@@ -725,7 +725,7 @@ namespace PileDesign.ViewModels
                             // Full NR: ダンピングなし（正確なヤコビアンで2次収束）
                             // Modified NR の初期反復: ダンピングあり（安定化）
                             bool relaxTangent = UseModifiedNewtonRaphson;
-                            UpdateBeamMPhiTangent(caseModel, useRelaxation: relaxTangent);
+                            UpdateBeamMPhiTangent(caseModel, useRelaxation: relaxTangent, biaxialCoupling: UseBiaxialTangentCoupling);
                         }
 
                         // KTan 組立（戻り値で springK の min/max を受け取る）

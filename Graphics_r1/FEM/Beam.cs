@@ -279,6 +279,18 @@ namespace PileDesign.FEM
         [JsonIgnore]
         public int PreviousMPhiSegmentIndex { get; set; } = -1;
 
+        /// <summary>
+        /// 接線剛性の二方向曲げの連成項 dMy/dφz = dMz/dφy (kN·m²)。既定 0 (連成なし)。
+        ///
+        /// 合成 M–φ 曲線 (曲率の合成値 φres で評価) の真の接線は、曲率の向き θ (cosθ = φy/φres) に対して
+        /// <c>D = [[t·c² + s·s², (t−s)·c·s], [(t−s)·c·s, t·s² + s·c²]]</c> (t = EI_tan, s = EI_sec)。
+        /// 対角は <see cref="KTan_y"/> / <see cref="KTan_z"/> に反映しているが、非対角は反映していなかった。
+        /// 二方向に曲げを受けて塑性化した要素では、非対角が対角の 3〜6 割に達する (2026-09-26 測定)。
+        /// 内力は割線剛性で求めるので、この項が変えるのは反復の進み方 (収束) だけで、収束した答えは変えない。
+        /// <see cref="SetKe"/> が接線剛性に y 面と z 面の曲げの連成ブロックとして足す。
+        /// </summary>
+        public double EIyzTan { get; set; }
+
         [JsonIgnore]
         public Matrix<double> KeTan { get; set; }
         [JsonIgnore]
@@ -412,12 +424,70 @@ namespace PileDesign.FEM
 
             if (isTan)
             {
+                AddBiaxialCoupling(ke, EIyzTan);
                 KeTan = ke;
             }
             else
             {
                 KeSec = ke;
             }
+        }
+
+        /// <summary>
+        /// 二方向曲げの連成項 <paramref name="eiyz"/> (= dMy/dφz) を、要素剛性の y 面・z 面の曲げの連成ブロックとして足す。
+        ///
+        /// 曲率は Hermite の形状関数で <c>φz = v″</c>、<c>φy = dθy/dx = −w″</c> (θy = −w′)。要素内で一定の接線 D に対し
+        /// <c>K = ∫ Bᵀ D B dx</c> の非対角ブロックは <c>Dyz ∫ By_a Bz_b dx</c> で、By は z 面と同じ形状関数に
+        /// (w1, θy1, w2, θy2) の符号 (−, +, −, +) を掛けたもの。既存の y 面・z 面の対角ブロックもこの規約と一致する。
+        /// 端部の回転ばね係数が剛 (1) でない要素は、連成の形が変わるので足さない (現状すべて 1)。
+        /// </summary>
+        internal void AddBiaxialCoupling(Matrix<double> ke, double eiyz)
+        {
+            if (eiyz == 0.0 || !double.IsFinite(eiyz)) return;
+            if (Ryi_tan != 1.0 || Ryj_tan != 1.0 || Rzi_tan != 1.0 || Rzj_tan != 1.0) return;
+
+            double L = Length, L2 = L * L, L3 = L2 * L;
+            // ∫ N_a″ N_b″ dx (Hermite, 自由度の並び: 端 i の変位, 端 i の回転, 端 j の変位, 端 j の回転)
+            double[,] u =
+            {
+                { 12 / L3,  6 / L2, -12 / L3,  6 / L2 },
+                {  6 / L2,  4 / L,   -6 / L2,  2 / L  },
+                { -12 / L3, -6 / L2, 12 / L3, -6 / L2 },
+                {  6 / L2,  2 / L,   -6 / L2,  4 / L  },
+            };
+            int[] yDof = { 2, 4, 8, 10 };           // w_i, θy_i, w_j, θy_j
+            int[] zDof = { 1, 5, 7, 11 };           // v_i, θz_i, v_j, θz_j
+            double[] ySign = { -1.0, 1.0, -1.0, 1.0 };
+            for (int a = 0; a < 4; a++)
+            {
+                for (int b = 0; b < 4; b++)
+                {
+                    double k = eiyz * ySign[a] * u[a, b];
+                    ke[yDof[a], zDof[b]] += k;
+                    ke[zDof[b], yDof[a]] += k;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 合成 M–φ 曲線の接線の非対角項 dMy/dφz = (EI_tan − EI_sec)·cosθ·sinθ (kN·m²)。
+        /// 合成曲線が無い・曲率がほぼ 0 (向きが決まらない) ときは 0。フォールバックは <see cref="EvaluateEIeff"/> と揃える。
+        /// </summary>
+        public double EvaluateEIyzTangent(double phiY, double phiZ)
+        {
+            if (_combinedCurve == null) return 0.0;
+            double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
+            if (phiRes < 1e-15) return 0.0;
+
+            double EI0 = 0.0;
+            if (Section?.Material != null)
+                EI0 = Section.Material.E * (Section.IY > 0 ? Section.IY : Section.IZ);
+            double EItan = _combinedCurve.EvaluateTangent(phiRes);
+            double EIsec = _combinedCurve.EvaluateSecant(phiRes);
+            if (!double.IsFinite(EItan) || EItan <= 0.0) EItan = 0.001 * EI0;
+            if (!double.IsFinite(EIsec) || EIsec <= 0.0) EIsec = EI0;
+
+            return (EItan - EIsec) * (phiY / phiRes) * (phiZ / phiRes);
         }
 
         // 座標変換マトリクスのキャッシュ（解析中ノード座標は不変）
@@ -575,6 +645,7 @@ namespace PileDesign.FEM
                 Rzj_sec = this.Rzj_sec,
                 KTan_y = this.KTan_y,
                 KTan_z = this.KTan_z,
+                EIyzTan = this.EIyzTan,
                 KSec_y = this.KSec_y,
                 KSec_z = this.KSec_z,
                 EA_multiplier = this.EA_multiplier,
