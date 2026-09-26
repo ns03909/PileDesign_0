@@ -87,79 +87,67 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<LoadCase> LoadCasesLevel1
         {
             get => _loadCasesLevel1;
-            set
-            {
-                // 古いコレクションのイベント解除
-                UnsubscribeLoadCaseEvents(_loadCasesLevel1);
-
-                if (SetProperty(ref _loadCasesLevel1, value))
-                {
-                    // 新しいコレクションのイベント購読
-                    SubscribeLoadCaseEvents(_loadCasesLevel1);
-                    RaiseAllLoadCasesChanged();
-                }
-            }
+            set => ReplaceLoadCaseCollection(ref _loadCasesLevel1, value);
         }
 
         private ObservableCollection<LoadCase> _loadCasesLevel2;
         public ObservableCollection<LoadCase> LoadCasesLevel2
         {
             get => _loadCasesLevel2;
-            set
-            {
-                // 古いコレクションのイベント解除
-                UnsubscribeLoadCaseEvents(_loadCasesLevel2);
-
-                if (SetProperty(ref _loadCasesLevel2, value))
-                {
-                    // 新しいコレクションのイベント購読
-                    SubscribeLoadCaseEvents(_loadCasesLevel2);
-                    RaiseAllLoadCasesChanged();
-                }
-            }
+            set => ReplaceLoadCaseCollection(ref _loadCasesLevel2, value);
         }
 
-        // LoadCase の IsApplicable 変更を監視するためのヘルパーメソッド
-        private void SubscribeLoadCaseEvents(ObservableCollection<LoadCase> collection)
-        {
-            if (collection == null) return;
-            foreach (var lc in collection)
-            {
-                lc.PropertyChanged += LoadCase_PropertyChanged;
-            }
-            collection.CollectionChanged += LoadCasesCollection_Changed;
-        }
+        // 購読中の荷重ケース (IsApplicable・IsAnalysisTarget の変更を監視する)。
+        // 一覧の変更のたびに「いまレベル 1・2 のどちらかの一覧にあるもの」へ揃える (SyncLoadCaseSubscriptions)。
+        // 変更の通知の OldItems / NewItems で出し入れしていたときは、Clear() などの Reset (OldItems が無い) で
+        // 除かれたケースの購読が残り、そのケースを後から変えると画面へ要らない通知が飛んだ。
+        private HashSet<LoadCase> _subscribedLoadCases = new(ReferenceEqualityComparer.Instance);
 
-        private void UnsubscribeLoadCaseEvents(ObservableCollection<LoadCase> collection)
+        /// <summary>
+        /// 荷重ケースの一覧を差し替える。参照が変わるときだけ古い一覧の購読を外して新しい一覧を購読する。
+        ///
+        /// 以前は先に購読を外してから SetProperty を呼んでいたので、同じ一覧を設定し直すと SetProperty が
+        /// 「変更なし」と判定して再購読されず、以後その一覧の追加・削除が通知されなくなった。
+        /// </summary>
+        private void ReplaceLoadCaseCollection(ref ObservableCollection<LoadCase> field, ObservableCollection<LoadCase> value,
+            [System.Runtime.CompilerServices.CallerMemberName] string propertyName = "")
         {
-            if (collection == null) return;
-            foreach (var lc in collection)
-            {
-                lc.PropertyChanged -= LoadCase_PropertyChanged;
-            }
-            collection.CollectionChanged -= LoadCasesCollection_Changed;
+            if (ReferenceEquals(field, value)) return;
+            if (field != null) field.CollectionChanged -= LoadCasesCollection_Changed;
+            SetProperty(ref field, value, propertyName);
+            if (field != null) field.CollectionChanged += LoadCasesCollection_Changed;
+            SyncLoadCaseSubscriptions();
+            RaiseAllLoadCasesChanged();
         }
 
         private void LoadCasesCollection_Changed(object sender, NotifyCollectionChangedEventArgs e)
         {
-            // 削除されたアイテムのイベント解除
-            if (e.OldItems != null)
-            {
-                foreach (LoadCase lc in e.OldItems)
-                {
-                    lc.PropertyChanged -= LoadCase_PropertyChanged;
-                }
-            }
-            // 追加されたアイテムのイベント購読
-            if (e.NewItems != null)
-            {
-                foreach (LoadCase lc in e.NewItems)
-                {
-                    lc.PropertyChanged += LoadCase_PropertyChanged;
-                }
-            }
+            // 追加・削除・置換・Reset のどれでも、今の一覧の中身に購読を揃える
+            SyncLoadCaseSubscriptions();
             RaiseAllLoadCasesChanged();
         }
+
+        /// <summary>荷重ケースの購読を、いまレベル 1・2 の一覧にあるケースにちょうど揃える。</summary>
+        private void SyncLoadCaseSubscriptions()
+        {
+            var current = new HashSet<LoadCase>(ReferenceEqualityComparer.Instance);
+            foreach (var list in new[] { _loadCasesLevel1, _loadCasesLevel2 })
+                if (list != null)
+                    foreach (var lc in list)
+                        if (lc != null) current.Add(lc);
+
+            foreach (var lc in _subscribedLoadCases.Where(lc => !current.Contains(lc)).ToList())
+            {
+                lc.PropertyChanged -= LoadCase_PropertyChanged;
+                _subscribedLoadCases.Remove(lc);
+            }
+            foreach (var lc in current)
+                if (_subscribedLoadCases.Add(lc))
+                    lc.PropertyChanged += LoadCase_PropertyChanged;
+        }
+
+        /// <summary>購読中の荷重ケースの数 (テスト用)。</summary>
+        internal int SubscribedLoadCaseCount => _subscribedLoadCases.Count;
 
         private void LoadCase_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
@@ -473,6 +461,8 @@ namespace PileDesign.Models.InputData
         public LoadCasesInput DeepCopy()
         {
             var copy = (LoadCasesInput)this.MemberwiseClone();
+            // 購読の控えは複製と共有しない (共有すると、複製の一覧の差し替えが元の購読の控えを書き換える)
+            copy._subscribedLoadCases = new(ReferenceEqualityComparer.Instance);
 
             // null のコレクションは null のまま写す。
             //
