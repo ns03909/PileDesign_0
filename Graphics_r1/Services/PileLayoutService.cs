@@ -35,6 +35,43 @@ namespace PileDesign.Services
         }
 
         /// <summary>
+        /// 杭をコピーした新しい杭。入力条件はすべて引き継ぎ、識別・位置・解析の産物だけを新しい杭用にする。
+        ///
+        /// 以前は座標と群杭係数・杭間隔比だけを渡していたので、杭体番号・地盤番号・接合高さの差 ΔZc・軸力・
+        /// 前方杭の判定が既定値に戻り、コピーした杭だけ元の杭と違う条件で解析された。
+        /// <list type="bullet">
+        /// <item>引き継ぐ: 杭体番号・地盤番号・ΔZc・群杭係数・杭間隔比・長期/地震時軸力・前方杭の判定・表示</item>
+        /// <item>新しくする: 固有 ID・番号 (呼び出し側が振り直す)・選択・一般節点との対応</item>
+        /// <item>写さない: 土層-杭セットとの対応 (作り直しで付く)・沈下と支持力の結果・解析中の軸力。
+        ///   いずれも元の杭の位置・杭頭で求めたもので、コピーした杭の値ではない</item>
+        /// </list>
+        /// </summary>
+        internal static PileLayoutDataItem CopyForNewPile(PileLayoutDataItem source, double dx, double dy, double dz)
+        {
+            var copy = source.QuickClone();
+
+            copy.UniqueId = Guid.NewGuid();
+            copy.No = 0;
+            copy.PileNo = 0;
+            copy.LinkedPileNo = null;
+            copy.IsSelected = false;
+            copy.X = source.X + dx;
+            copy.Y = source.Y + dy;
+            copy.Z = source.Z + dz;
+
+            copy.SoilPileAltNo = 0;
+            copy.SinglePileSettlementVL = 0;
+            copy.SinglePileSettlementLevel1s = new ObservableCollection<double>(Enumerable.Repeat(0.0, source.SinglePileSettlementLevel1s?.Count ?? 0));
+            copy.SinglePileSettlementLevel2s = new ObservableCollection<double>(Enumerable.Repeat(0.0, source.SinglePileSettlementLevel2s?.Count ?? 0));
+            copy.Rf = 0;
+            copy.Rp = 0;
+            copy.Ru = 0;
+            copy.AxialForce = 0;
+            copy.AxialForceIncrement = 0;
+            return copy;
+        }
+
+        /// <summary>
         /// 選択された杭をコピー（同期版）
         /// </summary>
         /// <param name="pileLayoutItems">杭配置アイテムのコレクション</param>
@@ -66,17 +103,7 @@ namespace PileDesign.Services
             {
                 for (int i = 0; i < repetitionNumber; i++)
                 {
-                    var newItem = new PileLayoutDataItem
-                    {
-                        X = pile.X + deltaX * (i + 1),
-                        Y = pile.Y + deltaY * (i + 1),
-                        Z = pile.Z + deltaZ * (i + 1),
-                        // 群杭係数 ξ・杭間隔比 R/B は複製元から引き継ぐ。
-                        // 解析の地盤ばねに効くようになったので、既定値 (ξ=1・R/B 未設定) に
-                        // 戻ると複製した杭だけ群杭の影響が消える (2026-09-12)。
-                        GroupPileFactor = pile.GroupPileFactor,
-                        PileSpacingFactor = pile.PileSpacingFactor,
-                    };
+                    var newItem = CopyForNewPile(pile, deltaX * (i + 1), deltaY * (i + 1), deltaZ * (i + 1));
                     viewModelSetter(newItem);
                     newItems.Add(newItem);
                 }

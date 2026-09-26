@@ -861,26 +861,9 @@ namespace PileDesign.ViewModels
 
             SaveUndoState();
 
-            var beams = CurrentInputModel.FoundationBeamInput.Beams;
-            var toRemove = new List<FoundationBeam>();
-            // 既に確認済みのペアを記録（順序なし）
-            var seenPairs = new HashSet<(NodeReferenceType, Guid, NodeReferenceType, Guid)>();
-
-            foreach (var beam in beams)
-            {
-                // 順序を正規化して比較（I,J と J,I を同一視）
-                var key1 = (beam.NodeI_Type, beam.NodeI_Id, beam.NodeJ_Type, beam.NodeJ_Id);
-                var key2 = (beam.NodeJ_Type, beam.NodeJ_Id, beam.NodeI_Type, beam.NodeI_Id);
-
-                if (seenPairs.Contains(key1) || seenPairs.Contains(key2))
-                {
-                    toRemove.Add(beam);
-                }
-                else
-                {
-                    seenPairs.Add(key1);
-                }
-            }
+            var fbInput = CurrentInputModel.FoundationBeamInput;
+            var beams = fbInput.Beams;
+            var (toRemove, differing) = FindDuplicateBeams(beams);
 
             foreach (var beam in toRemove)
                 beams.Remove(beam);
@@ -888,12 +871,70 @@ namespace PileDesign.ViewModels
             RenumberFoundationBeams();
             RequestUpdateWindow();
 
+            // 番号は消したあとの並びで示す (画面の表と同じ番号)
+            string message = $"{toRemove.Count} 個の重複要素を削除しました。";
+            if (differing.Count > 0)
+            {
+                const int shown = 10;
+                var pairs = differing.Take(shown)
+                    .Select(d => $"梁 No.{beams.IndexOf(d.Kept) + 1} と No.{beams.IndexOf(d.Other) + 1}");
+                message += $"\n\n同じ節点を結ぶが、断面・材料などが違う梁が {differing.Count} 組あります。"
+                         + "違う梁は削除せずに残しました。確認してください:\n"
+                         + string.Join("\n", pairs)
+                         + (differing.Count > shown ? $"\nほか {differing.Count - shown} 組" : "");
+            }
             PileDesign.Services.MessageService.Show(
-                $"{toRemove.Count} 個の重複要素を削除しました。",
+                message,
                 "重複削除完了",
                 System.Windows.MessageBoxButton.OK,
-                System.Windows.MessageBoxImage.Information);
+                differing.Count > 0 ? System.Windows.MessageBoxImage.Warning : System.Windows.MessageBoxImage.Information);
         }
+
+        /// <summary>
+        /// 重複した基礎梁を探す。同じ節点を結ぶ (向きは問わない) 梁のうち、<b>属性もすべて同じ</b>ものは後の方を消す対象にし、
+        /// 属性が違うものは消さずに組で返す (確認してもらう)。
+        ///
+        /// 以前は両端の節点だけで判断し、断面番号・材料番号の違う梁まで後の方を消していた。
+        /// </summary>
+        internal static (List<FoundationBeam> ToRemove, List<(FoundationBeam Kept, FoundationBeam Other)> Differing)
+            FindDuplicateBeams(IEnumerable<FoundationBeam> beams)
+        {
+            var toRemove = new List<FoundationBeam>();
+            var differing = new List<(FoundationBeam, FoundationBeam)>();
+            var keptByPair = new Dictionary<(NodeReferenceType, Guid, NodeReferenceType, Guid), List<FoundationBeam>>();
+
+            foreach (var beam in beams)
+            {
+                if (beam == null) continue;
+                // 向きを揃えた両端 (I,J と J,I を同一視)
+                var a = (beam.NodeI_Type, beam.NodeI_Id);
+                var b = (beam.NodeJ_Type, beam.NodeJ_Id);
+                var key = Comparer<(NodeReferenceType, Guid)>.Default.Compare(a, b) <= 0
+                    ? (a.Item1, a.Item2, b.Item1, b.Item2)
+                    : (b.Item1, b.Item2, a.Item1, a.Item2);
+
+                if (!keptByPair.TryGetValue(key, out var kept))
+                {
+                    keptByPair[key] = [beam];
+                    continue;
+                }
+                var same = kept.FirstOrDefault(k => BeamAttributes(k) == BeamAttributes(beam));
+                if (same != null)
+                {
+                    toRemove.Add(beam);
+                }
+                else
+                {
+                    differing.Add((kept[0], beam));
+                    kept.Add(beam);
+                }
+            }
+            return (toRemove, differing);
+        }
+
+        /// <summary>重複の判断に使う基礎梁の属性 (両端以外の入力すべて)。</summary>
+        private static (int, int, string, double, double, double, double, double, double?) BeamAttributes(FoundationBeam b)
+            => (b.MaterialNo, b.SectionNo, b.SectionName ?? "", b.Width, b.Height, b.YoungModulus, b.ShearModulus, b.AngleBeta, b.MemberAngle);
 
         // 自動梁要素生成（X同一・Y同一の杭配置を基礎梁で連結）
         [RelayCommand]
