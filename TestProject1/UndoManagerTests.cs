@@ -36,6 +36,100 @@ namespace TestProject1
             m.PushAction(() => box.Value = from, () => box.Value = to, $"{from}→{to}");
         }
 
+        // ---- 分岐: 戻したあとに新しい手を積んだら、両方式ともやり直せない ----
+
+        /// <summary>
+        /// アクションを戻したあとに控えを積んだら、戻したアクションはやり直せないこと。
+        /// 以前は控えを積んでもアクションのやり直し (_redo) が残り、分岐前の手を新しい編集の上に重ねられた。
+        /// </summary>
+        [TestMethod]
+        public void ANewSnapshotDiscardsTheActionRedo()
+        {
+            var m = new UndoManager();
+            var box = new Box { Value = 1 };
+            m.SaveState("初期");
+            PushSet(m, box, 1, 2);
+            m.Undo();
+            Assert.AreEqual(1, box.Value);
+
+            m.SaveState("別の編集");
+            Assert.IsFalse(m.CanRedo, "新しい編集のあとも、戻したアクションをやり直せます");
+            m.Redo();
+            Assert.AreEqual(1, box.Value, "分岐前のアクションがやり直されました");
+        }
+
+        /// <summary>控えを戻したあとにアクションを積んだら、戻した控えへはやり直せないこと。</summary>
+        [TestMethod]
+        public void ANewActionDiscardsTheSnapshotFuture()
+        {
+            var m = new UndoManager();
+            var box = new Box { Value = 1 };
+            m.SaveState("A");
+            m.SaveState("B");
+            m.Undo();
+            Assert.AreEqual("A", m.CurrentState);
+
+            PushSet(m, box, 1, 5);
+            Assert.IsFalse(m.CanRedo, "新しい編集のあとも、戻した控えへやり直せます");
+            Assert.AreEqual(1, m.History.Count, "分岐前の控えが履歴に残っています");
+            m.Undo();
+            Assert.AreEqual(1, box.Value, "新しいアクションが戻りません");
+        }
+
+        // ---- 戻せなかった手 ----
+
+        /// <summary>
+        /// 値を戻せなかったアクションは、成功扱いにせず、履歴の位置を動かさずに知らせること。
+        /// 以前はプロパティの変更が失敗を握りつぶし、値は戻らないのに履歴の位置だけが進んだ。
+        /// </summary>
+        [TestMethod]
+        public void AFailedUndoKeepsTheHistoryPosition()
+        {
+            bool unattended = PileDesign.Services.MessageService.IsUnattended;
+            PileDesign.Services.MessageService.IsUnattended = true;
+            try
+            {
+                var m = new UndoManager();
+                var box = new Box { Value = 2 };
+                // double の項目へ数に直せない値を戻そうとする (グリッドから文字で返ってきた値が壊れていた場合)
+                m.Push(new PropertyChangeAction(box, nameof(Box.Value), "数ではない", 2.0));
+
+                m.Undo();
+                Assert.AreEqual(2, box.Value);
+                Assert.AreEqual(1, m.UndoCount, "戻せなかったのに、履歴の位置が進みました");
+                Assert.AreEqual(0, m.RedoCount, "戻せなかった手が、やり直しの側へ移りました");
+            }
+            finally
+            {
+                PileDesign.Services.MessageService.IsUnattended = unattended;
+            }
+        }
+
+        /// <summary>まとめた手は、途中で失敗したら全部戻さない (半分だけ戻った状態を残さない)。</summary>
+        [TestMethod]
+        public void AFailedCompositeUndoLeavesNothingHalfDone()
+        {
+            bool unattended = PileDesign.Services.MessageService.IsUnattended;
+            PileDesign.Services.MessageService.IsUnattended = true;
+            try
+            {
+                var m = new UndoManager();
+                var box = new Box { Value = 2, Name = "新" };
+                m.BeginScope("2 つまとめて");
+                m.Push(new PropertyChangeAction(box, nameof(Box.Value), "数ではない", 2.0));   // 先に積んだ方 = 最後に戻す
+                m.Push(new PropertyChangeAction(box, nameof(Box.Name), "旧", "新"));
+                m.EndScope();
+
+                m.Undo();
+                Assert.AreEqual("新", box.Name, "まとめた手の一部だけが戻っています");
+                Assert.AreEqual(1, m.UndoCount);
+            }
+            finally
+            {
+                PileDesign.Services.MessageService.IsUnattended = unattended;
+            }
+        }
+
         // ---- アクション方式 ----
 
         [TestMethod]

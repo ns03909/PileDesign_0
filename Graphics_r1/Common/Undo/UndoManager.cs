@@ -97,8 +97,46 @@ public sealed class UndoManager
     private void PushCore(IUndoAction action)
     {
         _undo.Push(new Pushed(action, ++_seq));
-        _redo.Clear();
+        DiscardFuture();
         RaiseHistoryChanged();
+    }
+
+    /// <summary>
+    /// 新しい手を積んだときに、やり直せる手を<b>両方式とも</b>捨てる。
+    ///
+    /// 以前は控えを積むと控えの未来だけを、アクションを積むとアクションの未来 (_redo) だけを捨てていた。
+    /// 両方式が混ざる画面では、戻したあとに別の編集をしても、もう一方の方式の古い手をやり直せてしまい、
+    /// 新しい編集の上に分岐前の手が重なった。
+    /// </summary>
+    private void DiscardFuture()
+    {
+        _redo.Clear();
+        if (_currentIndex >= 0 && _currentIndex < _history.Count - 1)
+            _history.RemoveRange(_currentIndex + 1, _history.Count - _currentIndex - 1);
+    }
+
+    /// <summary>
+    /// アクションの戻し・やり直しを実行する。失敗したら false を返し、利用者に知らせる。
+    ///
+    /// 呼び出し側は失敗したとき<b>履歴の位置を動かさない</b>。以前はアクションが失敗を握りつぶしていたので、
+    /// 値は戻っていないのに履歴の位置だけが進み、画面の値と履歴が食い違った。
+    /// </summary>
+    private static bool TryRun(Action run, IUndoAction action, string verb)
+    {
+        try
+        {
+            run();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "[Undo] {Verb}に失敗: {Description}", verb, action.Description);
+            PileDesign.Services.MessageService.Show(
+                $"「{action.Description ?? "直前の操作"}」を{verb}ことができませんでした。値は変えていません (履歴もそのままです)。\n\n{ex.Message}",
+                verb == "元に戻す" ? "元に戻す" : "やり直し",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return false;
+        }
     }
 
     /// <summary>
@@ -129,8 +167,9 @@ public sealed class UndoManager
             return;
         }
 
-        var a = _undo.Pop();
-        a.Action.Undo();
+        var a = _undo.Peek();
+        if (!TryRun(a.Action.Undo, a.Action, "元に戻す")) return;   // 失敗したら位置を動かさない
+        _undo.Pop();
         _redo.Push(a);
         RaiseHistoryChanged();
     }
@@ -152,8 +191,9 @@ public sealed class UndoManager
             return;
         }
 
-        var a = _redo.Pop();
-        a.Action.Redo();
+        var a = _redo.Peek();
+        if (!TryRun(a.Action.Redo, a.Action, "やり直す")) return;   // 失敗したら位置を動かさない
+        _redo.Pop();
         _undo.Push(a);
         RaiseHistoryChanged();
     }
@@ -209,11 +249,8 @@ public sealed class UndoManager
     {
         if (state == null) return;
 
-        // 現在位置より後ろの履歴を削除
-        if (_currentIndex < _history.Count - 1)
-        {
-            _history.RemoveRange(_currentIndex + 1, _history.Count - _currentIndex - 1);
-        }
+        // 現在位置より後ろの履歴と、アクションのやり直しを捨てる (新しい手を積んだら分岐前の手はやり直せない)
+        DiscardFuture();
 
         _history.Add(new HistoryEntry(state, description, DateTime.Now, ++_seq));
         _currentIndex = _history.Count - 1;

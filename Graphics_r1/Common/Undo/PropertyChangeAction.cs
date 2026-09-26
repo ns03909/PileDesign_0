@@ -92,13 +92,36 @@ public sealed class CompositeUndoAction : IUndoAction
     /// <summary>まとめた件数。0 件なら積んでも Ctrl+Z が無反応になるだけ。</summary>
     public int Count => _actions.Count;
 
+    /// <summary>
+    /// まとめた手を逆順に戻す。<b>途中で失敗したら、戻し終えた手をやり直してから</b>例外を伝える
+    /// (半分だけ戻った状態を残さない。履歴の位置は <see cref="UndoManager"/> が動かさない)。
+    /// </summary>
     public void Undo()
     {
-        for (int i = _actions.Count - 1; i >= 0; i--) _actions[i].Undo();
+        int i = _actions.Count - 1;
+        try
+        {
+            for (; i >= 0; i--) _actions[i].Undo();
+        }
+        catch
+        {
+            for (int j = i + 1; j < _actions.Count; j++) _actions[j].Redo();
+            throw;
+        }
     }
 
+    /// <summary>まとめた手を順にやり直す。途中で失敗したら、やり直し終えた手を戻してから例外を伝える。</summary>
     public void Redo()
     {
-        for (int i = 0; i < _actions.Count; i++) _actions[i].Redo();
+        int i = 0;
+        try
+        {
+            for (; i < _actions.Count; i++) _actions[i].Redo();
+        }
+        catch
+        {
+            for (int j = i - 1; j >= 0; j--) _actions[j].Undo();
+            throw;
+        }
     }
 }

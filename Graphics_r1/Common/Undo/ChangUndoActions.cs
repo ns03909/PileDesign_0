@@ -33,6 +33,13 @@ namespace PileDesign.Common.Undo
             SetValue(_newValue);
         }
 
+        /// <summary>
+        /// 値を入れる。変換や設定に失敗したら、どの項目・どの値かを添えて例外を伝える。
+        ///
+        /// 以前は失敗を握りつぶしていた。<see cref="UndoManager"/> は成功したものとして履歴の位置を進めるので、
+        /// 画面の値は戻っていないのに履歴だけが戻り、値と履歴が食い違った。いまは <see cref="UndoManager"/> が
+        /// 失敗を受けて履歴の位置を動かさず、利用者に知らせる。
+        /// </summary>
         private void SetValue(object? v)
         {
             try
@@ -45,11 +52,13 @@ namespace PileDesign.Common.Undo
                 if (_pi.PropertyType.IsAssignableFrom(v.GetType()))
                     _pi.SetValue(_target, v);
                 else
-                    _pi.SetValue(_target, Convert.ChangeType(v, _pi.PropertyType));
+                    _pi.SetValue(_target, Convert.ChangeType(v, Nullable.GetUnderlyingType(_pi.PropertyType) ?? _pi.PropertyType,
+                        System.Globalization.CultureInfo.InvariantCulture));
             }
-            catch
+            catch (Exception ex)
             {
-                // 変換失敗は無視（安全側）
+                var inner = ex is TargetInvocationException { InnerException: { } i } ? i : ex;
+                throw new InvalidOperationException($"{_pi.Name} に「{v}」を入れられませんでした ({inner.Message})", inner);
             }
         }
     }
