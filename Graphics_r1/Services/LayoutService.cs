@@ -72,7 +72,8 @@ namespace PileDesign.Services
                 {
                     WriteIndented = true
                 });
-                File.WriteAllText(_dataGridSettingsFilePath, json);
+                // 一時ファイルに書き切ってから差し替える (途中で終了しても前の設定を壊さない)
+                FileOperationService.WriteAtomically(_dataGridSettingsFilePath, stream => stream.Write(System.Text.Encoding.UTF8.GetBytes(json)));
             }
             catch
             {
@@ -98,39 +99,47 @@ namespace PileDesign.Services
                 if (!allSettings.ContainsKey(dataGridName))
                     return false;
 
-                var columnSettings = allSettings[dataGridName];
-
-                // 列数が一致しない場合は復元しない
-                if (columnSettings.Count != dataGrid.Columns.Count)
-                    return false;
-
-                // 列設定を適用
-                foreach (var setting in columnSettings)
-                {
-                    if (setting.Index >= 0 && setting.Index < dataGrid.Columns.Count)
-                    {
-                        var column = dataGrid.Columns[setting.Index];
-
-                        // 幅を復元
-                        if (setting.Width > 0)
-                        {
-                            column.Width = new DataGridLength(setting.Width);
-                        }
-
-                        // 表示順を復元
-                        if (setting.DisplayIndex >= 0 && setting.DisplayIndex < dataGrid.Columns.Count)
-                        {
-                            column.DisplayIndex = setting.DisplayIndex;
-                        }
-                    }
-                }
-
-                return true;
+                return ApplyColumnSettings(allSettings[dataGridName], dataGrid);
             }
             catch
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 保存した列設定を表に当てる。<b>列番号と見出しの両方が一致する列</b>にだけ当てる。1 列でも当てたら true。
+        ///
+        /// 以前は列数が同じなら列番号だけで当てていた。更新で列の並びや中身が変わると (列数は同じまま)、
+        /// 別の列に幅と表示順が当たった。一致しない列は既定のままにする。表示順は、全列が一致したときだけ当てる
+        /// (一部の列だけ表示順を動かすと、ほかの列の並びが押し出されて崩れる)。
+        /// </summary>
+        internal static bool ApplyColumnSettings(IReadOnlyList<DataGridColumnSetting> settings, DataGrid dataGrid)
+        {
+            var matched = new List<(DataGridColumn Column, DataGridColumnSetting Setting)>();
+            foreach (var setting in settings)
+            {
+                if (setting == null || setting.Index < 0 || setting.Index >= dataGrid.Columns.Count) continue;
+                var column = dataGrid.Columns[setting.Index];
+                if (!string.Equals(PileDesign.Common.DataGridHeaderText.From(column), setting.Header ?? "", StringComparison.Ordinal))
+                    continue;
+                matched.Add((column, setting));
+            }
+            if (matched.Count == 0) return false;
+
+            foreach (var (column, setting) in matched)
+                if (setting.Width > 0 && double.IsFinite(setting.Width))
+                    column.Width = new DataGridLength(setting.Width);
+
+            bool allMatched = matched.Count == dataGrid.Columns.Count && settings.Count == dataGrid.Columns.Count;
+            if (allMatched)
+            {
+                // 目標の表示順の小さい列から当てる (当てるたびにほかの列が押し出されるため)
+                foreach (var (column, setting) in matched.OrderBy(m => m.Setting.DisplayIndex))
+                    if (setting.DisplayIndex >= 0 && setting.DisplayIndex < dataGrid.Columns.Count)
+                        column.DisplayIndex = setting.DisplayIndex;
+            }
+            return true;
         }
 
         /// <summary>

@@ -2046,6 +2046,25 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 最近使ったファイルが見つからないとき、一覧から消すかを利用者に選んでもらう。
+        ///
+        /// 以前は黙って一覧から消していた。ネットワークドライブや外付けドライブが一時的に使えないだけでも
+        /// 履歴が恒久的に消えたので、消すのは利用者が選んだときだけにする。残すと「現在アクセスできません」と出る。
+        /// </summary>
+        private void AskToRemoveMissingFromMru(string? filePath)
+        {
+            var answer = MessageService.Show(
+                $"ファイルが見つかりません。\n{filePath}\n\n"
+                + "ネットワークドライブや外付けドライブが一時的に使えないだけなら、つなぎ直すと開けます。\n"
+                + "「最近使ったファイル」の一覧から削除しますか？",
+                "ファイルが見つかりません", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer == MessageBoxResult.Yes && !string.IsNullOrEmpty(filePath))
+                _mruService.RemoveFile(filePath);
+            else
+                _mruService.RefreshAccessibility();
+        }
+
+        /// <summary>
         /// MRUリスト変更時のイベントハンドラ
         /// </summary>
         private void OnMruListChanged(object? sender, EventArgs e)
@@ -2067,8 +2086,7 @@ namespace PileDesign.ViewModels
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             {
-                MessageService.Show($"ファイルが見つかりません。\n{filePath}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                _mruService.RemoveFile(filePath);
+                AskToRemoveMissingFromMru(filePath);
                 return;
             }
 
@@ -2170,12 +2188,12 @@ namespace PileDesign.ViewModels
                 message = $"読込に失敗しました。\n{ex.Message}";
             }
 
-            MessageService.Show(message, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-
             if (removeFromMru && !string.IsNullOrEmpty(filePath))
             {
-                _mruService.RemoveFile(filePath);
+                AskToRemoveMissingFromMru(filePath);
+                return;
             }
+            MessageService.Show(message, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         /// <summary>

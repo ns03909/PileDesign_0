@@ -13,7 +13,7 @@ namespace PileDesign.Services
     /// - 最近使用したファイルのリストを保持
     /// - リストの保存・読み込み（JSON形式）
     /// - ファイルの追加・削除
-    /// - 存在しないファイルの自動削除
+    /// - 見つからないファイルは「現在アクセスできません」と示す (起動時に消さない)
     /// </summary>
     public class MruService
     {
@@ -44,6 +44,13 @@ namespace PileDesign.Services
             _mruFilePath = Path.Combine(appFolder, "mru.json");
 
             // 起動時に読み込み
+            Load();
+        }
+
+        /// <summary>一覧ファイルの場所を指定して作る (テスト用。利用者の一覧に触れないため)。</summary>
+        internal MruService(string mruFilePath)
+        {
+            _mruFilePath = mruFilePath;
             Load();
         }
 
@@ -109,7 +116,17 @@ namespace PileDesign.Services
         }
 
         /// <summary>
-        /// 存在しないファイルをリストから削除
+        /// 各項目のファイルにいまアクセスできるかを調べ直す (表示用。一覧からは消さない)。
+        /// </summary>
+        public void RefreshAccessibility()
+        {
+            foreach (var item in _mruItems)
+                item.IsAccessible = MruItem.Exists(item.FilePath);
+            MruListChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 存在しないファイルをリストから削除 (利用者が選んだときだけ使う。起動時には呼ばない)
         /// </summary>
         public void RemoveNonExistentFiles()
         {
@@ -129,11 +146,12 @@ namespace PileDesign.Services
         {
             try
             {
-                var json = JsonSerializer.Serialize(_mruItems, new JsonSerializerOptions
+                var json = JsonSerializer.SerializeToUtf8Bytes(_mruItems, new JsonSerializerOptions
                 {
                     WriteIndented = true
                 });
-                File.WriteAllText(_mruFilePath, json);
+                // 一時ファイルに書き切ってから差し替える (途中で終了しても一覧を壊さない)
+                FileOperationService.WriteAtomically(_mruFilePath, stream => stream.Write(json));
             }
             catch
             {
@@ -158,8 +176,11 @@ namespace PileDesign.Services
                         _mruItems.Clear();
                         _mruItems.AddRange(items);
 
-                        // 存在しないファイルを削除
-                        RemoveNonExistentFiles();
+                        // 見つからないファイルも一覧に残し、「現在アクセスできません」と示す。
+                        // 以前は起動時に消して保存していたので、ネットワークドライブや外付けドライブが
+                        // 一時的に使えないだけでも履歴が恒久的に消えた。消すかは開こうとしたときに利用者が選ぶ
+                        foreach (var item in _mruItems)
+                            item.IsAccessible = MruItem.Exists(item.FilePath);
                     }
                 }
             }
@@ -241,5 +262,20 @@ namespace PileDesign.Services
         /// ファイル名のみ
         /// </summary>
         public string FileName => Path.GetFileName(FilePath);
+
+        /// <summary>いまファイルにアクセスできるか (表示用。保存しない)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsAccessible { get; set; } = true;
+
+        /// <summary>アクセスできないときの注記 (一覧に出す)。アクセスできれば空。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string AccessNote => IsAccessible ? "" : "現在アクセスできません (ドライブが外れている・移動した可能性があります)";
+
+        /// <summary>ファイルがあるか。調べられない (権限・パスの形) ときもアクセスできないとみなす。</summary>
+        internal static bool Exists(string path)
+        {
+            try { return File.Exists(path); }
+            catch (Exception) { return false; }
+        }
     }
 }
