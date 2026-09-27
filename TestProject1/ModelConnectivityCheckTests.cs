@@ -183,5 +183,67 @@ namespace TestProject1
             StringAssert.Contains(warn, "ModelConnectivityCheck.CollectWarnings(inputModel)",
                 "警告の集約がつながりを見ていない");
         }
+
+        // ── 識別子の重複・数値でない座標 (2026-09-27) ────────────────
+
+        /// <summary>
+        /// 同じ種類の節点に同じ識別子が 2 つあると、参照の検査は通るのに座標をどちらから引くか決まらない。入力の誤りにする。
+        /// </summary>
+        [TestMethod]
+        public void DuplicateIdsWithinAKindAreErrors()
+        {
+            var m = MakeModel();
+            var p1 = AddPile(m, 1, 0);
+            var p2 = AddPile(m, 2, 5);
+            var n1 = AddNode(m, 1, 0, 3);
+            var n2 = AddNode(m, 2, 5, 3);
+            n2.UniqueId = n1.UniqueId;   // 一般節点の識別子が重なる
+            AddBeam(m, NodeReferenceType.PileLayout, p1.UniqueId, NodeReferenceType.PileLayout, p2.UniqueId);
+            AddBeam(m, NodeReferenceType.GeneralNode, n1.UniqueId, NodeReferenceType.PileLayout, p2.UniqueId);
+
+            var errors = ModelConnectivityCheck.CollectErrors(m);
+            Assert.IsTrue(errors.Any(e => e.Contains("一般節点 No.1・No.2 が同じ識別子")), string.Join(" / ", errors));
+
+            p2.UniqueId = p1.UniqueId;   // 杭配置の識別子も重なる
+            errors = ModelConnectivityCheck.CollectErrors(m);
+            Assert.IsTrue(errors.Any(e => e.Contains("杭配置 No.1・No.2 が同じ識別子")), string.Join(" / ", errors));
+        }
+
+        [TestMethod]
+        public void DuplicateFoundationNodeIdsAreErrors()
+        {
+            var m = MakeModel();
+            var p1 = AddPile(m, 1, 0);
+            var id = Guid.NewGuid();
+            m.FoundationBeamInput.Nodes.Add(new FoundationNode { Id = id, No = 1, X = 3 });
+            m.FoundationBeamInput.Nodes.Add(new FoundationNode { Id = id, No = 2, X = 6 });
+            AddBeam(m, NodeReferenceType.PileLayout, p1.UniqueId, NodeReferenceType.FoundationNode, id);
+
+            StringAssert.Contains(string.Join(" / ", ModelConnectivityCheck.CollectErrors(m)), "基礎梁節点 No.1・No.2 が同じ識別子");
+        }
+
+        /// <summary>
+        /// 端点の座標が数値でない (NaN・無限大) と、長さの比較 (&lt; 1e-6) が偽になって素通りしていた。
+        /// 梁番号と端点を示して止める。
+        /// </summary>
+        [TestMethod]
+        public void NonFiniteEndpointCoordinatesAreNamed()
+        {
+            // 一般節点・杭配置は座標の設定で NaN を拒むが、基礎梁節点は受け取ってしまう
+            var m = MakeModel();
+            var p1 = AddPile(m, 1, 0);
+            var n = new FoundationNode { No = 7, X = double.NaN, Y = 3 };
+            m.FoundationBeamInput.Nodes.Add(n);
+            AddBeam(m, NodeReferenceType.PileLayout, p1.UniqueId, NodeReferenceType.FoundationNode, n.Id);
+
+            var errors = ModelConnectivityCheck.CollectErrors(m);
+            var error = errors.SingleOrDefault(e => e.Contains("座標が数値ではありません"));
+            Assert.IsNotNull(error, "座標が NaN の基礎梁を見逃しています: " + string.Join(" / ", errors));
+            StringAssert.Contains(error, "基礎梁 No.1");
+            StringAssert.Contains(error, "終点 (基礎梁節点 No.7)");
+
+            n.X = double.PositiveInfinity;
+            Assert.IsTrue(ModelConnectivityCheck.CollectErrors(m).Any(e => e.Contains("座標が数値ではありません")), "座標が無限大の基礎梁を見逃しています");
+        }
     }
 }

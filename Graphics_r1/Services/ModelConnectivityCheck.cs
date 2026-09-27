@@ -16,7 +16,8 @@ namespace PileDesign.Services
     ///
     /// <list type="bullet">
     /// <item>基礎梁の端点が実在しない (参照先を消したあと)</item>
-    /// <item>長さが 0 の基礎梁</item>
+    /// <item>同じ種類の節点に同じ識別子が 2 つ以上ある (端点がどちらを指すか決まらない)</item>
+    /// <item>長さが 0 の基礎梁・端点の座標が数値でない基礎梁</item>
     /// <item>杭につながっていない、基礎梁だけの島</item>
     /// <item>同じ位置に複数の杭</item>
     /// </list>
@@ -35,6 +36,16 @@ namespace PileDesign.Services
             var fb = inputModel.FoundationBeamInput;
             var beams = fb?.Beams;
             if (beams == null || beams.Count == 0) return errors;
+
+            // ── 0. 識別子の重複 ──
+            // 基礎梁の端点は「種類 + 識別子」で引く。同じ種類に同じ識別子が 2 つあると、参照は一覧の検査を通るのに、
+            // 座標を引くときはどちらか一方 (先に見つかった方) を黙って使う。ファイルを手で直した・複製の不具合などで起きる。
+            AddDuplicateIdErrors(errors, "一般節点",
+                (inputModel.InputNodes ?? []).Where(n => n != null).Select(n => (n.UniqueId, n.No)));
+            AddDuplicateIdErrors(errors, "基礎梁節点",
+                (fb!.Nodes ?? []).Where(n => n != null).Select(n => (n.Id, n.No)));
+            AddDuplicateIdErrors(errors, "杭配置",
+                (inputModel.PileLayoutItems ?? []).Where(p => p != null).Select(p => (p.UniqueId, p.No)));
 
             // 実在する端点の一覧
             var generalIds = new HashSet<Guid>(
@@ -79,10 +90,21 @@ namespace PileDesign.Services
                 var pj = inputModel.GetNodeCoordinates(b.NodeJ_Type, b.NodeJ_Id);
                 if (pi.HasValue && pj.HasValue)
                 {
+                    // 座標が数値でない (NaN・無限大) と、下の長さの比較は偽になって素通りする。先に端点ごとに見る
+                    bool badI = !IsFinite(pi.Value), badJ = !IsFinite(pj.Value);
+                    if (badI || badJ)
+                    {
+                        if (badI) errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 始点 ({DescribeEndpoint(inputModel, b.NodeI_Type, b.NodeI_Id)}) の座標が数値ではありません {Format(pi.Value)}。");
+                        if (badJ) errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 終点 ({DescribeEndpoint(inputModel, b.NodeJ_Type, b.NodeJ_Id)}) の座標が数値ではありません {Format(pj.Value)}。");
+                        continue;
+                    }
                     double dx = pi.Value.X - pj.Value.X;
                     double dy = pi.Value.Y - pj.Value.Y;
                     double dz = pi.Value.Z - pj.Value.Z;
-                    if (Math.Sqrt(dx * dx + dy * dy + dz * dz) < 1.0e-6)
+                    double length = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                    if (!double.IsFinite(length))
+                        errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 長さが数値になりません (始点 {DescribeEndpoint(inputModel, b.NodeI_Type, b.NodeI_Id)} / 終点 {DescribeEndpoint(inputModel, b.NodeJ_Type, b.NodeJ_Id)})。");
+                    else if (length < 1.0e-6)
                         errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 始点と終点が同じ位置にあります (長さ 0)。");
                 }
             }
@@ -97,6 +119,34 @@ namespace PileDesign.Services
 
             return errors;
         }
+
+        /// <summary>同じ種類の節点に同じ識別子が 2 つ以上あれば、番号を並べて入力の誤りにする。</summary>
+        private static void AddDuplicateIdErrors(List<string> errors, string kind, IEnumerable<(Guid Id, int No)> items)
+        {
+            foreach (var group in items.GroupBy(i => i.Id).Where(g => g.Count() > 1))
+            {
+                string nos = string.Join("・", group.Select(i => $"No.{i.No}"));
+                errors.Add($"{kind} {nos} が同じ識別子を持っています。基礎梁の端点がどれを指すか決まらないため解析できません"
+                         + " (ファイルを手で直したか、複製の不具合の可能性があります。どれかを消して入力し直してください)。");
+            }
+        }
+
+        private static bool IsFinite((double X, double Y, double Z) p)
+            => double.IsFinite(p.X) && double.IsFinite(p.Y) && double.IsFinite(p.Z);
+
+        private static string Format((double X, double Y, double Z) p) => $"(X={p.X}, Y={p.Y}, Z={p.Z})";
+
+        /// <summary>端点の種類と番号 (メッセージ用)。</summary>
+        private static string DescribeEndpoint(InputModel input, NodeReferenceType type, Guid id) => type switch
+        {
+            NodeReferenceType.GeneralNode =>
+                $"一般節点 No.{input.InputNodes?.FirstOrDefault(n => n?.UniqueId == id)?.No}",
+            NodeReferenceType.FoundationNode =>
+                $"基礎梁節点 No.{input.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n?.Id == id)?.No}",
+            NodeReferenceType.PileLayout =>
+                $"杭配置 No.{input.PileLayoutItems?.FirstOrDefault(p => p?.UniqueId == id)?.No}",
+            _ => "不明な節点",
+        };
 
         /// <summary>止めるほどではないが、意図しない入力の可能性が高いもの。</summary>
         public static List<string> CollectWarnings(InputModel inputModel)
