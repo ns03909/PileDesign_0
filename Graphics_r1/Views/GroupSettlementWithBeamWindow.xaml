@@ -53,6 +53,9 @@
                                   IsChecked="{Binding AnalyzeLevel2}"
                                   IsEnabled="{Binding IsAxialSource}"
                                   Margin="0,2"/>
+                        <!-- 解くケースの件数と名前 (地震時は「解析対象」で「適用」するケースだけ) -->
+                        <TextBlock Text="{Binding PlannedCasesText}" TextWrapping="Wrap" MaxWidth="260"
+                                   Foreground="{StaticResource MutedTextBrush}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </GroupBox>
 
@@ -125,6 +128,10 @@
                                   Margin="0,2,0,8"/>
                         <!-- 反復が収束しなかったケースの注意 (設計値として使わないよう目立たせる) -->
                         <TextBlock Text="{Binding SelectedCaseResult.ConvergenceWarning}"
+                                   Foreground="#C00000" FontWeight="Bold" TextWrapping="Wrap" MaxWidth="260"
+                                   Margin="0,0,0,8"/>
+                        <!-- 杭の結果が欠けたケース (0 として扱わず、確定できない) -->
+                        <TextBlock Text="{Binding SelectedCaseResult.MissingWarning}"
                                    Foreground="#C00000" FontWeight="Bold" TextWrapping="Wrap" MaxWidth="260"
                                    Margin="0,0,0,8"/>
                     </StackPanel>

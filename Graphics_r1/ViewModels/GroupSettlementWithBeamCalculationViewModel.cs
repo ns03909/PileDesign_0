@@ -106,6 +106,18 @@ namespace PileDesign.ViewModels
 
         private void SaveAndClose()
         {
+            // 杭の結果が欠けたケースは確定しない。欠けた値を 0 kN・0 mm として保存すると、本当に 0 の結果と区別できない
+            var incomplete = CaseResults.Where(c => c.MissingPileNos.Count > 0).ToList();
+            if (incomplete.Count > 0)
+            {
+                Services.MessageService.Show(
+                    "次のケースは一部の杭の結果が得られていないため、確定できません。\n\n"
+                    + string.Join("\n", incomplete.Select(c => $"・{c.LoadCaseName}: 杭No.{string.Join(", ", c.MissingPileNos)}"))
+                    + "\n\n杭の土層-杭セット・単杭沈下の結果・基礎梁との接続を確認して、再計算してください。",
+                    "結果が欠けているケースがあります", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
             // 反復が収束しなかったケースは、沈下・コンタを設計値として使えない。確定する前に知らせて選んでもらう
             // (以前は収束状態を記録するだけで、確定した結果として黙って保存していた)
             var unconverged = CaseResults.Where(c => !c.IsConverged).Select(c => c.LoadCaseName).ToList();
@@ -275,6 +287,7 @@ namespace PileDesign.ViewModels
                 AnalyzeLevel2 = false;
             }
             OnPropertyChanged(nameof(IsAxialSource));
+            OnPropertyChanged(nameof(PlannedCasesText));
         }
 
         public bool IsAxialSource => LoadSource == "杭軸力";
@@ -444,6 +457,11 @@ namespace PileDesign.ViewModels
                     return "レベル 1 荷重ケースが未定義です。";
                 if (AnalyzeLevel2 && (InputModel.LoadCasesInput?.LoadCasesLevel2?.Count ?? 0) == 0)
                     return "レベル 2 荷重ケースが未定義です。";
+                var planned = PlannedSeismicCases();
+                if (AnalyzeLevel1 && !planned.Any(c => c.Level == 1))
+                    return "レベル 1 に解析対象の荷重ケースがありません (荷重ケースの「解析対象」「適用」を確認してください)。";
+                if (AnalyzeLevel2 && !planned.Any(c => c.Level == 2))
+                    return "レベル 2 に解析対象の荷重ケースがありません (荷重ケースの「解析対象」「適用」を確認してください)。";
             }
             return null;
         }
@@ -474,34 +492,58 @@ namespace PileDesign.ViewModels
                 var ppi = piles.ToDictionary(p => p.PileNo, p => p.AxialForceVL);
                 list.Add(("杭軸力 VL", ppi));
             }
-            if (AnalyzeLevel1)
+            // 地震時は、水平解析と同じく「解析対象」の荷重ケースだけ (適用しないケースも除く)。
+            // 以前はレベルの荷重ケースをすべて並べ、解析対象・適用を外したケースまで解いていた
+            foreach (var lc in PlannedSeismicCases())
             {
-                var l1 = InputModel.LoadCasesInput.LoadCasesLevel1;
-                for (int i = 0; i < l1.Count; i++)
+                int idx = lc.No - 1;   // 杭の地震時軸力は荷重ケースの並び (= 番号 - 1) に対応する
+                var ppi = piles.ToDictionary(p => p.PileNo, p =>
                 {
-                    int idx = i;
-                    var ppi = piles.ToDictionary(
-                        p => p.PileNo,
-                        p => (idx < (p.AxialForceLevel1s?.Count ?? 0)) ? p.AxialForceLevel1s[idx] : 0.0);
-                    list.Add(($"L1-{i + 1}: {l1[i].LoadName}", ppi));
-                }
-            }
-            if (AnalyzeLevel2)
-            {
-                var l2 = InputModel.LoadCasesInput.LoadCasesLevel2;
-                for (int i = 0; i < l2.Count; i++)
-                {
-                    int idx = i;
-                    var ppi = piles.ToDictionary(
-                        p => p.PileNo,
-                        p => (idx < (p.AxialForceLevel2s?.Count ?? 0)) ? p.AxialForceLevel2s[idx] : 0.0);
-                    list.Add(($"L2-{i + 1}: {l2[i].LoadName}", ppi));
-                }
+                    var forces = lc.Level == 1 ? p.AxialForceLevel1s : p.AxialForceLevel2s;
+                    return idx >= 0 && idx < (forces?.Count ?? 0) ? forces![idx] : 0.0;
+                });
+                list.Add((CaseLabel(lc), ppi));
             }
             return list;
         }
 
-        private GroupSettlementWithBeamCaseResult ToCaseResult(string label,
+        private static string CaseLabel(LoadCase lc) => $"L{lc.Level}-{lc.No}: {lc.LoadName}";
+
+        /// <summary>
+        /// 解く地震時の荷重ケース。選んだレベルのうち、解析対象 (IsAnalysisTarget) で適用する (IsApplicable) もの。
+        /// 杭軸力を荷重にするときだけ (矩形荷重は VL 1 ケース)。
+        /// </summary>
+        internal List<LoadCase> PlannedSeismicCases()
+        {
+            var cases = new List<LoadCase>();
+            if (LoadSource != "杭軸力" || InputModel?.LoadCasesInput == null) return cases;
+            foreach (var lc in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
+            {
+                if (lc == null || !lc.IsApplicable) continue;
+                if ((lc.Level == 1 && AnalyzeLevel1) || (lc.Level == 2 && AnalyzeLevel2)) cases.Add(lc);
+            }
+            return cases;
+        }
+
+        /// <summary>実行前に出す、これから解くケースの件数と名前。</summary>
+        public string PlannedCasesText
+        {
+            get
+            {
+                var names = new List<string>();
+                if (LoadSource == "矩形荷重") names.Add("矩形荷重 (VL)");
+                else if (AnalyzeVL) names.Add("杭軸力 VL");
+                names.AddRange(PlannedSeismicCases().Select(CaseLabel));
+                return names.Count == 0 ? "解くケースがありません"
+                    : $"解くケース {names.Count} 件: " + string.Join(" / ", names);
+            }
+        }
+
+        partial void OnAnalyzeVLChanged(bool value) => OnPropertyChanged(nameof(PlannedCasesText));
+        partial void OnAnalyzeLevel1Changed(bool value) => OnPropertyChanged(nameof(PlannedCasesText));
+        partial void OnAnalyzeLevel2Changed(bool value) => OnPropertyChanged(nameof(PlannedCasesText));
+
+        internal GroupSettlementWithBeamCaseResult ToCaseResult(string label,
             Dictionary<int, double> ppi, IterativeBeamSettlementResult sr)
         {
             var caseResult = new GroupSettlementWithBeamCaseResult
@@ -520,13 +562,25 @@ namespace PileDesign.ViewModels
             {
                 int pileNo = pile.PileNo;
                 double inputLoad = ppi.TryGetValue(pileNo, out double pp) ? pp : 0;
-                double reaction = sr.PileReactions.TryGetValue(pileNo, out double pi) ? pi : 0;
-                double s2_m = sr.BeamSettlement.TryGetValue(pileNo, out double s2) ? s2 : 0;
-                double s1_m = sr.SteinbrennerSettlement.TryGetValue(pileNo, out double s1) ? s1 : 0;
-                double k = sr.SpringStiffness.TryGetValue(pileNo, out double kv) ? kv : 0;
+                // 解析が返さなかった値は 0 で埋めない (0 kN・0 mm と読めて、本当に 0 の結果と区別できない)。
+                // 欠けた杭は NaN にして記録し、確定を止める (SaveAndClose)
+                bool hasReaction = sr.PileReactions.TryGetValue(pileNo, out double reaction);
+                bool hasBeam = sr.BeamSettlement.TryGetValue(pileNo, out double s2_m);
+                bool hasGround = sr.SteinbrennerSettlement.TryGetValue(pileNo, out double s1_m);
+                bool hasSpring = sr.SpringStiffness.TryGetValue(pileNo, out double k);
+                bool missing = !(hasReaction && hasBeam && hasGround && hasSpring);
+                if (missing)
+                {
+                    caseResult.MissingPileNos.Add(pileNo);
+                    if (!hasReaction) reaction = double.NaN;
+                    if (!hasBeam) s2_m = double.NaN;
+                    if (!hasGround) s1_m = double.NaN;
+                    if (!hasSpring) k = double.NaN;
+                }
 
                 caseResult.PileResults.Add(new GroupSettlementWithBeamPileResult
                 {
+                    IsMissing = missing,
                     PileNo = pileNo,
                     X = pile.Point3D.X,
                     Y = pile.Point3D.Y,
@@ -545,6 +599,8 @@ namespace PileDesign.ViewModels
     public class GroupSettlementWithBeamPileResult : ObservableObject
     {
         public int PileNo { get; set; }
+        /// <summary>この杭の結果 (反力・沈下・ばね剛性) の一部が解析から得られなかったか。欠けた値は NaN。</summary>
+        public bool IsMissing { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
         public double InputLoad_kN { get; set; }
@@ -559,8 +615,20 @@ namespace PileDesign.ViewModels
         public string LoadCaseName { get; set; } = "";
         public bool IsConverged { get; set; }
 
-        /// <summary>ケースの一覧に出す名前。収束しなかったケースには「(未収束)」を付ける (一覧だけで分かるように)。</summary>
-        public string DisplayName => IsConverged ? LoadCaseName : $"{LoadCaseName} (未収束)";
+        /// <summary>
+        /// 結果が欠けた杭 (反力・沈下・ばね剛性の一部を解析が返さなかった)。空でなければ確定しない。
+        /// 以前は欠けた値を 0 で埋め、「反力 0 kN・沈下 0 mm」として保存し得た。
+        /// </summary>
+        public List<int> MissingPileNos { get; set; } = [];
+
+        /// <summary>ケースの一覧に出す名前。収束しなかった・結果が欠けたケースには印を付ける (一覧だけで分かるように)。</summary>
+        public string DisplayName => LoadCaseName
+            + (IsConverged ? "" : " (未収束)")
+            + (MissingPileNos.Count > 0 ? " (結果欠損)" : "");
+
+        /// <summary>結果が欠けた杭の注意 (画面に赤字で出す)。無ければ空。</summary>
+        public string MissingWarning => MissingPileNos.Count == 0 ? ""
+            : $"杭No.{string.Join(", ", MissingPileNos)} の結果が得られていません (0 として扱わず、このケースは確定できません)。";
 
         /// <summary>収束しなかったときの注意 (画面に赤字で出す)。収束していれば空。</summary>
         public string ConvergenceWarning => IsConverged ? ""
