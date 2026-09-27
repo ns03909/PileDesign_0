@@ -943,7 +943,37 @@ namespace PileDesign.ViewModels
             if (CurrentInputModel?.PileLayoutItems == null ||
                 CurrentInputModel?.FoundationBeamInput?.Beams == null) return;
 
-            string message = "梁要素を自動生成しますか？\n\n選択中の杭配置について、X成分・Y成分がそれぞれ同一の隣り合う杭配置の接合節点を基礎梁で連結します。";
+            var piles = CurrentInputModel.PileLayoutItems;
+            if (piles.Count < 2) return;
+
+            // 対象の杭: 選んでいればその杭だけ、選んでいなければ全ての杭。確認文にどちらかを書く。
+            // 以前は「選択中の杭配置について」と案内しながら、選択を見ずに全ての杭を連結していた
+            var selected = piles.Where(p => p != null && p.IsSelected).ToList();
+            if (selected.Count == 1)
+            {
+                MessageService.Show(
+                    "杭配置を 2 本以上選ぶか、選択を外して全ての杭配置を対象にしてください。",
+                    "自動梁要素生成", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            bool useSelection = selected.Count >= 2;
+            var targets = useSelection ? selected : piles.Where(p => p != null).ToList();
+
+            // 追加する梁を先に求める。1 本も無ければ、解析結果を消さず・履歴も積まずに終える
+            // (以前は結果を消してから探したので、すべて連結済みでも結果を失って「0 本生成」になった)
+            var beams = CurrentInputModel.FoundationBeamInput.Beams;
+            var newBeams = FindAutoFoundationBeams(piles, targets, beams);
+            string scope = useSelection ? $"選択中の杭配置 ({targets.Count} 本)" : $"全ての杭配置 ({targets.Count} 本。杭を選んでいないため)";
+            if (newBeams.Count == 0)
+            {
+                MessageService.Show(
+                    $"{scope}の間に、追加する基礎梁はありません (隣り合う杭配置はすでに連結されています)。",
+                    "自動梁要素生成", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            string message = $"梁要素を自動生成しますか？\n\n{scope}について、X成分・Y成分がそれぞれ同一の隣り合う杭配置の"
+                           + $"接合節点を基礎梁で連結します ({newBeams.Count} 本を追加)。";
             if (HasAnyAnalysisResult)
                 message += "\n\n※ 既存の解析結果は消去されます。";
 
@@ -956,87 +986,7 @@ namespace PileDesign.ViewModels
 
             if (!CheckAndResetAnalysisResults()) return;
 
-            var piles = CurrentInputModel.PileLayoutItems;
-            if (piles.Count < 2) return;
-
             TrySaveUndoSnapshotSafely();
-
-            var beams = CurrentInputModel.FoundationBeamInput.Beams;
-            const double tolerance = 1e-3; // 座標一致の許容誤差 (m)
-
-            // 既存ビームのペアセット（重複チェック用）
-            var existingPairs = new HashSet<(Guid, Guid)>();
-            foreach (var b in beams)
-            {
-                if (b.NodeI_Type == NodeReferenceType.PileLayout && b.NodeJ_Type == NodeReferenceType.PileLayout)
-                {
-                    existingPairs.Add((b.NodeI_Id, b.NodeJ_Id));
-                    existingPairs.Add((b.NodeJ_Id, b.NodeI_Id));
-                }
-            }
-
-            // 新規要素を一時リストに蓄積（ObservableCollection への逐次Add を回避）
-            var newBeams = new List<FoundationBeam>();
-
-            // X座標が同一の杭をグルーピング → Y座標昇順でソートし隣接杭間にビーム生成
-            var xGroups = piles
-                .GroupBy(p => Math.Round(p.X / tolerance) * tolerance)
-                .Where(g => g.Count() >= 2);
-
-            foreach (var group in xGroups)
-            {
-                var sorted = group.OrderBy(p => p.Y).ToList();
-                for (int i = 0; i < sorted.Count - 1; i++)
-                {
-                    var p1 = sorted[i];
-                    var p2 = sorted[i + 1];
-                    var pair = (p1.UniqueId, p2.UniqueId);
-                    if (existingPairs.Contains(pair)) continue;
-
-                    newBeams.Add(new FoundationBeam
-                    {
-                        NodeI_Type = NodeReferenceType.PileLayout,
-                        NodeI_Id = p1.UniqueId,
-                        NodeJ_Type = NodeReferenceType.PileLayout,
-                        NodeJ_Id = p2.UniqueId,
-                        MaterialNo = 1,
-                        SectionNo = 1,
-                        AngleBeta = 0.0
-                    });
-                    existingPairs.Add(pair);
-                    existingPairs.Add((p2.UniqueId, p1.UniqueId));
-                }
-            }
-
-            // Y座標が同一の杭をグルーピング → X座標昇順でソートし隣接杭間にビーム生成
-            var yGroups = piles
-                .GroupBy(p => Math.Round(p.Y / tolerance) * tolerance)
-                .Where(g => g.Count() >= 2);
-
-            foreach (var group in yGroups)
-            {
-                var sorted = group.OrderBy(p => p.X).ToList();
-                for (int i = 0; i < sorted.Count - 1; i++)
-                {
-                    var p1 = sorted[i];
-                    var p2 = sorted[i + 1];
-                    var pair = (p1.UniqueId, p2.UniqueId);
-                    if (existingPairs.Contains(pair)) continue;
-
-                    newBeams.Add(new FoundationBeam
-                    {
-                        NodeI_Type = NodeReferenceType.PileLayout,
-                        NodeI_Id = p1.UniqueId,
-                        NodeJ_Type = NodeReferenceType.PileLayout,
-                        NodeJ_Id = p2.UniqueId,
-                        MaterialNo = 1,
-                        SectionNo = 1,
-                        AngleBeta = 0.0
-                    });
-                    existingPairs.Add(pair);
-                    existingPairs.Add((p2.UniqueId, p1.UniqueId));
-                }
-            }
 
             int addedCount = newBeams.Count;
 
@@ -1061,6 +1011,67 @@ namespace PileDesign.ViewModels
                 "自動梁要素生成完了",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
+        }
+
+        /// <summary>
+        /// 自動生成で追加する基礎梁。X 成分 (または Y 成分) が同じ杭配置を並べ、<b>全ての杭の中で</b>隣り合う 2 本を結ぶ。
+        /// そのうち両端が <paramref name="targets"/> にある梁だけを返す。既に杭配置どうしを結んでいる組は除く。
+        ///
+        /// 隣り合いは全ての杭で決める。選んだ杭だけで決めると、間にある選んでいない杭を飛び越える梁ができる。
+        /// </summary>
+        internal static List<FoundationBeam> FindAutoFoundationBeams(
+            IEnumerable<PileLayoutDataItem> allPiles, IEnumerable<PileLayoutDataItem> targets, IEnumerable<FoundationBeam> existing)
+        {
+            const double tolerance = 1e-3; // 座標一致の許容誤差 (m)
+            var piles = allPiles.Where(p => p != null).ToList();
+            var targetIds = new HashSet<Guid>(targets.Where(p => p != null).Select(p => p.UniqueId));
+
+            // 既存ビームのペアセット（重複チェック用）
+            var existingPairs = new HashSet<(Guid, Guid)>();
+            foreach (var b in existing)
+            {
+                if (b == null) continue;
+                if (b.NodeI_Type == NodeReferenceType.PileLayout && b.NodeJ_Type == NodeReferenceType.PileLayout)
+                {
+                    existingPairs.Add((b.NodeI_Id, b.NodeJ_Id));
+                    existingPairs.Add((b.NodeJ_Id, b.NodeI_Id));
+                }
+            }
+
+            var newBeams = new List<FoundationBeam>();
+            void Connect(IEnumerable<IGrouping<double, PileLayoutDataItem>> groups, Func<PileLayoutDataItem, double> along)
+            {
+                foreach (var group in groups.Where(g => g.Count() >= 2))
+                {
+                    var sorted = group.OrderBy(along).ToList();
+                    for (int i = 0; i < sorted.Count - 1; i++)
+                    {
+                        var p1 = sorted[i];
+                        var p2 = sorted[i + 1];
+                        if (!targetIds.Contains(p1.UniqueId) || !targetIds.Contains(p2.UniqueId)) continue;
+                        if (existingPairs.Contains((p1.UniqueId, p2.UniqueId))) continue;
+
+                        newBeams.Add(new FoundationBeam
+                        {
+                            NodeI_Type = NodeReferenceType.PileLayout,
+                            NodeI_Id = p1.UniqueId,
+                            NodeJ_Type = NodeReferenceType.PileLayout,
+                            NodeJ_Id = p2.UniqueId,
+                            MaterialNo = 1,
+                            SectionNo = 1,
+                            AngleBeta = 0.0
+                        });
+                        existingPairs.Add((p1.UniqueId, p2.UniqueId));
+                        existingPairs.Add((p2.UniqueId, p1.UniqueId));
+                    }
+                }
+            }
+
+            // X座標が同一の杭をグルーピング → Y座標昇順で隣接杭間にビーム生成
+            Connect(piles.GroupBy(p => Math.Round(p.X / tolerance) * tolerance), p => p.Y);
+            // Y座標が同一の杭をグルーピング → X座標昇順で隣接杭間にビーム生成
+            Connect(piles.GroupBy(p => Math.Round(p.Y / tolerance) * tolerance), p => p.X);
+            return newBeams;
         }
 
         // 基礎梁節点番号振り直し
