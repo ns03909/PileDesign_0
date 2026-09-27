@@ -94,5 +94,85 @@ namespace TestProject1
             vm.Update();
             Assert.IsFalse(ground.HasResponseSpectrumWarning, "算定法を変えたのに、注意書きが残っています");
         }
+
+        // ── 等価線形化の収束 (2026-09-27) ─────────────────────────────
+
+        /// <summary>
+        /// 反復の上限に達しても収束しなかったら、その状態と最後の変化率を結果に残すこと。
+        /// 以前は収束しなくても普通の結果として返した。上限 1 回にすると初回の G の更新で必ず上限に達する。
+        /// </summary>
+        [TestMethod]
+        public void HittingTheIterationLimitIsRecorded()
+        {
+            var masses = new List<GroundMassDataInput> { Mass(), Mass(), Mass(bedrock: true) };
+            var limited = GroundResponseSpectrumCalc.Compute(masses, 19.0, 400.0, "砂質土", 1.0, maxIterations: 1);
+
+            Assert.IsFalse(double.IsNaN(limited.T1), "上限に達した時点の値は返すこと");
+            Assert.IsFalse(limited.Converged, "収束していないのに収束扱いです");
+            Assert.AreEqual(1, limited.Iterations);
+            Assert.IsTrue(limited.FinalChange > 1e-3, $"最後の変化率が記録されていません ({limited.FinalChange})");
+
+            var normal = GroundResponseSpectrumCalc.Compute(masses, 19.0, 400.0, "砂質土", 1.0);
+            Assert.IsTrue(normal.Converged, $"普通の地盤で収束していません ({normal.Iterations} 回、変化率 {normal.FinalChange})");
+            Assert.IsTrue(normal.FinalChange < 1e-3);
+        }
+
+        // ── 物性値の検査 (2026-09-27) ────────────────────────────────
+
+        /// <summary>
+        /// 基盤の単位体積重量・VS が正の有限の数でなければ入力の誤り。以前は 0 でもインピーダンス比 0 として増幅率を計算した。
+        /// </summary>
+        [TestMethod]
+        public void BedrockPropertiesMustBePositiveFiniteNumbers()
+        {
+            var masses = new List<GroundMassDataInput> { Mass(), Mass(), Mass(bedrock: true) };
+            foreach (var (density, vs) in new[] { (0.0, 400.0), (19.0, 0.0), (double.NaN, 400.0), (19.0, double.PositiveInfinity) })
+            {
+                var r = GroundResponseSpectrumCalc.Compute(masses, density, vs, "砂質土", 1.0);
+                Assert.IsTrue(double.IsNaN(r.T1), $"基盤 ({density}, {vs}) で計算しています");
+                Assert.IsTrue(r.IsInputProblem);
+                StringAssert.Contains(r.Failure, "工学的基盤");
+            }
+        }
+
+        /// <summary>層厚・単位体積重量・VS・質量の NaN・無限大も入力の誤りにする (「0 以下」の比較は NaN を通す)。</summary>
+        [TestMethod]
+        public void NonFiniteLayerValuesAreInputProblems()
+        {
+            var nanThickness = GroundResponseSpectrumCalc.Compute([Mass(), Mass(h: double.NaN), Mass(bedrock: true)], 19.0, 400.0, "砂質土", 1.0);
+            StringAssert.Contains(nanThickness.Failure, "質点 2 の層厚が数値ではありません");
+
+            var infVs = GroundResponseSpectrumCalc.Compute([Mass(vs: double.PositiveInfinity), Mass(), Mass(bedrock: true)], 19.0, 400.0, "砂質土", 1.0);
+            StringAssert.Contains(infVs.Failure, "質点 1 の単位体積重量・VS・質量が数値ではありません");
+            Assert.IsTrue(infVs.IsInputProblem);
+        }
+
+        /// <summary>地盤ウィンドウに、基盤の誤りと収束しなかったレベルを出すこと。</summary>
+        [TestMethod]
+        public void TheGroundWindowShowsBedrockProblems()
+        {
+            var ground = new GroundInput
+            {
+                GroundTopAltitude = 0.0,
+                BedrockDensity = 0.0,
+                BedrockShearWaveVelocity = 400.0,
+                ShallowSoilType = "砂質土",
+                CalculationMethod = "a1(b1)",
+            };
+            ground.GroundLayers = [new GroundLayerInput
+            {
+                No = 1, BottomGLDepth = -10.0, LayerThickness = 10.0, BottomAltitude = -10.0,
+                Name = "砂質土", GranularityClass = "砂質土", Density = 18.0, NValue = 10.0, Vs = 180.0, Es = 7000.0,
+            }];
+            ground.GroundMassesData = [];
+            for (int i = 1; i <= 5; i++)
+                ground.GroundMassesData.Add(new GroundMassDataInput { No = i, GLDepth = -i, H = 1.0, NValue = 10.0, VS0 = 180.0, Fc = 20.0 });
+
+            var vm = new GroundLayerViewModel(new MainWindowViewModel()) { GroundInput = ground };
+            vm.Update();
+
+            Assert.IsTrue(ground.HasResponseSpectrumWarning, "基盤の単位体積重量が 0 なのに知らせていません (略算法でも 0 割りになる)");
+            StringAssert.Contains(ground.ResponseSpectrumWarning, "工学的基盤の単位体積重量");
+        }
     }
 }

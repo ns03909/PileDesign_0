@@ -50,6 +50,33 @@ namespace PileDesign.Services
             /// 失敗が入力の不備によるものか (true: 利用者が直す入力がある / false: 計算の途中で行き詰まった・例外)。
             /// </summary>
             public bool IsInputProblem { get; init; }
+
+            /// <summary>
+            /// 等価線形化の反復が収束したか。反復の上限に達しても収束しなかったときは false で、値は上限に達した時点のもの。
+            /// 以前は収束しなくても普通の結果として返し、区別する手掛かりが無かった。
+            /// </summary>
+            public bool Converged { get; init; } = true;
+
+            /// <summary>最後の反復での G の最大変化率 (収束判定に使う量)。</summary>
+            public double FinalChange { get; init; }
+
+            /// <summary>行った反復の回数。</summary>
+            public int Iterations { get; init; }
+        }
+
+        /// <summary>
+        /// 工学的基盤の物性値の誤り (無ければ null)。単位体積重量・VS が正の有限の数でないと、インピーダンス比が
+        /// 0 や無限大になって増幅率がそのまま計算されていた。応答スペクトル法・略算法のどちらも使う値なので、共通で確かめる。
+        /// </summary>
+        internal static string? DescribeBedrockProblem(double bedrockDensity, double bedrockVs)
+        {
+            bool badDensity = !(double.IsFinite(bedrockDensity) && bedrockDensity > 0);
+            bool badVs = !(double.IsFinite(bedrockVs) && bedrockVs > 0);
+            if (!badDensity && !badVs) return null;
+            var what = new List<string>();
+            if (badDensity) what.Add($"単位体積重量 ({bedrockDensity})");
+            if (badVs) what.Add($"せん断波速度 VS ({bedrockVs})");
+            return $"工学的基盤の{string.Join("・", what)}が正の数ではありません。地盤の工学的基盤の値を入力してください。";
         }
 
         /// <summary>
@@ -64,10 +91,14 @@ namespace PileDesign.Services
         internal static LevelResult Compute(
             IReadOnlyList<GroundMassDataInput> masses,
             double bedrockDensity, double bedrockVs,
-            string shallowSoilType, double L, double Z = 1.0)
+            string shallowSoilType, double L, double Z = 1.0, int maxIterations = MaxIter)
         {
             try
             {
+                // 基盤の物性値は計算の最後 (インピーダンス比) で使うが、誤りなら最初に止める
+                string? bedrockProblem = DescribeBedrockProblem(bedrockDensity, bedrockVs);
+                if (bedrockProblem != null) return Fail(bedrockProblem, isInputProblem: true);
+
                 int firstBedrockIdx = masses.Count;
                 for (int i = 0; i < masses.Count; i++)
                 {
@@ -91,17 +122,23 @@ namespace PileDesign.Services
                 {
                     var md = masses[i];
                     double h = md.H.GetValueOrDefault();
+                    // 数値でない値 (NaN・無限大) は「0 以下」の比較をすり抜けるので先に見る
+                    if (!double.IsFinite(h))
+                        return Fail($"質点 {i + 1} の層厚が数値ではありません ({h})。", isInputProblem: true);
                     if (h <= 0)
                         return Fail($"質点 {i + 1} の層厚が 0 以下です。", isInputProblem: true);
+                    if (!double.IsFinite(md.Density) || !double.IsFinite(md.VS0) || !double.IsFinite(md.Mass))
+                        return Fail($"質点 {i + 1} の単位体積重量・VS・質量が数値ではありません "
+                                  + $"(単位体積重量 {md.Density} / VS {md.VS0} / 質量 {md.Mass})。", isInputProblem: true);
                     H[i] = h;
                     rhoMass[i] = md.Density / Gravity;
                     G0[i] = rhoMass[i] * md.VS0 * md.VS0;
                     m[i] = md.Mass;
-                    if (m[i] <= 0 || G0[i] <= 0)
+                    if (m[i] <= 0 || G0[i] <= 0 || !(md.Density > 0))
                         return Fail($"質点 {i + 1} の質量または VS が 0 以下です (単位体積重量・層厚・VS を確かめてください)。", isInputProblem: true);
-                    // 0 以下なら ShallowSoilType デフォルト (旧データの互換性)
-                    gamma05[i] = (md.Gamma05 > 0) ? md.Gamma05 : gamma05Fallback;
-                    hMax[i] = (md.HMax > 0) ? md.HMax : HMaxDefault;
+                    // 0 以下・数値でないなら ShallowSoilType デフォルト (旧データの互換性)
+                    gamma05[i] = (double.IsFinite(md.Gamma05) && md.Gamma05 > 0) ? md.Gamma05 : gamma05Fallback;
+                    hMax[i] = (double.IsFinite(md.HMax) && md.HMax > 0) ? md.HMax : HMaxDefault;
                 }
 
                 // 反復ループ初期値
@@ -114,9 +151,14 @@ namespace PileDesign.Services
                 double T1 = double.NaN;
                 double T2Period = double.NaN;
                 double Beta = 0;
+                // 収束の記録 (上限に達しても収束しなかったら結果に残す)
+                bool converged = false;
+                double finalChange = double.NaN;
+                int iterations = 0;
 
-                for (int iter = 0; iter < MaxIter; iter++)
+                for (int iter = 0; iter < maxIterations; iter++)
                 {
+                    iterations = iter + 1;
                     // 質量行列 M^(-1/2) (diagonal)
                     // 一般化固有値問題 K Φ = ω² M Φ を、A = M^(-1/2) K M^(-1/2) の標準固有値問題に変換。
                     // Ψ = M^(1/2) Φ → A Ψ = ω² Ψ
@@ -252,8 +294,9 @@ namespace PileDesign.Services
 
                     G = Gnew;
                     xiE = xiEnew;
+                    finalChange = maxRelChange;
 
-                    if (maxRelChange < Tol) break;
+                    if (maxRelChange < Tol) { converged = true; break; }
                 }
 
                 if (double.IsNaN(T1))
@@ -277,8 +320,8 @@ namespace PileDesign.Services
                 double bedrockRhoMass = bedrockDensity / Gravity;
                 double rhoE = (sumH > 0) ? sumRhoH / sumH : 0.0;
                 double VsE = (sumHoverVs > 1e-12) ? sumH / sumHoverVs : 0.0;
-                double bedrockImpedance = bedrockRhoMass * bedrockVs;
-                double alphaE = (bedrockImpedance > 1e-12) ? rhoE * VsE / bedrockImpedance : 0.0;
+                double bedrockImpedance = bedrockRhoMass * bedrockVs;   // 入口で正の有限の数を確かめてある
+                double alphaE = rhoE * VsE / bedrockImpedance;
 
                 // 地盤増幅率 (論文式 (9)):
                 //   Gs1 = 1 / (αE + 1.57·ξe) — 1 次モード (T1 近傍) の増幅率
@@ -286,7 +329,15 @@ namespace PileDesign.Services
                 double Gs1 = (alphaE + 1.57 * xiE > 0) ? 1.0 / (alphaE + 1.57 * xiE) : 0.0;
                 double Gs2 = (alphaE + 4.71 * xiE > 0) ? 1.0 / (alphaE + 4.71 * xiE) : 0.0;
 
-                return new LevelResult(T1, T2Period, xiE, Beta, alphaE, Gs1, Gs2, G, phiU0, dispMm);
+                if (!converged)
+                    Serilog.Log.Warning("[応答スペクトル法] 等価線形化が {Iter} 回で収束せず (最後の変化率 {Change:P2}, L={L})",
+                        iterations, finalChange, L);
+                return new LevelResult(T1, T2Period, xiE, Beta, alphaE, Gs1, Gs2, G, phiU0, dispMm)
+                {
+                    Converged = converged,
+                    FinalChange = finalChange,
+                    Iterations = iterations,
+                };
             }
             catch (Exception ex)
             {

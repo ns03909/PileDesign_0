@@ -2183,6 +2183,11 @@ namespace PileDesign.ViewModels
 
             // 応答スペクトル法で計算できずに略算法へ切り替えたレベルと理由 (画面に出す)
             var spectrumFailures = new List<string>();
+            // 応答スペクトル法の等価線形化が収束しなかったレベル (値は上限に達した時点のもの。画面に出す)
+            var spectrumUnconverged = new List<string>();
+            // 工学的基盤の物性値の誤り。どちらの算定法もインピーダンス比に使うので、誤りなら計算しない
+            string? bedrockProblem = PileDesign.Services.GroundResponseSpectrumCalc.DescribeBedrockProblem(
+                bedrockDensity, bedrockShearWaveVelocity);
 
             for (int levelIndex = 0; levelIndex < 2; levelIndex++)
             {
@@ -2208,6 +2213,8 @@ namespace PileDesign.ViewModels
                         shallowSoilType, L, Z);
                     if (!double.IsNaN(rs.T1))
                     {
+                        if (!rs.Converged)
+                            spectrumUnconverged.Add($"レベル{levelIndex + 1}: {rs.Iterations} 回で収束せず (最後の G の変化率 {rs.FinalChange:P1})");
                         // T0 (初期周期) は UI 互換のため別途計算
                         double T0Init = 0.0;
                         double SigmaHInit = 0.0;
@@ -2259,6 +2266,9 @@ namespace PileDesign.ViewModels
                     Serilog.Log.Warning("[応答スペクトル法] レベル{Level} を計算できず略算法 (a2(b2)) で代用: {Reason} (入力の不備: {Input})",
                         levelIndex + 1, reason, rs.IsInputProblem);
                 }
+
+                // 基盤の物性値が誤っていると、略算法もインピーダンス比が 0 や無限大になる。計算せずに抜ける (理由は画面に出す)
+                if (bedrockProblem != null) continue;
 
                 // 表層の土質の動的変形特性から決まる定数
                 double CAlpha = (shallowSoilType == "粘性土") ? 25.0 : 40.0;
@@ -2414,9 +2424,16 @@ namespace PileDesign.ViewModels
             }
 
             // 応答スペクトル法を選んでいて計算できなかったレベルがあれば、地盤ウィンドウに知らせる
-            GroundInput.ResponseSpectrumWarning = spectrumFailures.Count == 0 ? null
-                : "応答スペクトル法で計算できなかったため、略算法 (a2(b2)) で代用しています。"
-                  + string.Join(" ", spectrumFailures);
+            var warningParts = new List<string>();
+            if (bedrockProblem != null)
+                warningParts.Add(bedrockProblem + "地盤変位は計算していません。");
+            else if (spectrumFailures.Count > 0)
+                warningParts.Add("応答スペクトル法で計算できなかったため、略算法 (a2(b2)) で代用しています。"
+                                 + string.Join(" ", spectrumFailures));
+            if (spectrumUnconverged.Count > 0)
+                warningParts.Add("応答スペクトル法の等価線形化が収束しませんでした (値は反復の上限に達した時点のものです)。"
+                                 + string.Join(" ", spectrumUnconverged));
+            GroundInput.ResponseSpectrumWarning = warningParts.Count == 0 ? null : string.Join(" ", warningParts);
         }
 
         public void DataGridGroundLayer_CellEditEnding()
