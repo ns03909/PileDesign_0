@@ -72,6 +72,11 @@ namespace PileDesign.Services
             double ySpacing,
             ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults = null)
         {
+            // コンタ図の格子。間隔が 0 以下だと格子が 1 点に潰れ、小さすぎると点の数が膨らむ。作る前に止める
+            string? gridProblem = DescribeGridProblem(xMin, xMax, yMin, yMax, xOffset, yOffset, xSpacing, ySpacing, gridXItems, gridYItems);
+            if (gridProblem != null)
+                return new SettlementAnalysisResult { Success = false, ErrorMessage = gridProblem };
+
             // 土層が0の場合は警告を出して処理を中断
             if (pileGroupSettlement.SettlementSoilLayers == null ||
                 pileGroupSettlement.SettlementSoilLayers.Count == 0)
@@ -371,6 +376,44 @@ namespace PileDesign.Services
                 byPileNo[pilesArr[i].PileNo] = settlementsMm[i];
             }
             return byPileNo;
+        }
+
+        /// <summary>コンタ図の格子点の上限。各点で全矩形荷重・全土層の Steinbrenner を解くので、時間とメモリを抑える。</summary>
+        internal const long MaxGridPoints = 100_000;
+
+        /// <summary>
+        /// コンタ図の格子の入力の誤り (無ければ null)。沈下を解く前に呼ぶ。
+        /// <list type="bullet">
+        /// <item>X・Y 間隔が正の有限の数でない: 以前は格子を最小値の 1 点だけにして解き、コンタ図の範囲が黙って消えた</item>
+        /// <item>余裕 (オフセット) が数値でない</item>
+        /// <item>格子点が <see cref="MaxGridPoints"/> を超える: 間隔が小さすぎると点の数の積が膨らみ、時間・メモリが急増する
+        ///   (点の配列を一度に確保するので、int では桁あふれもしうる)。目安の間隔を添える</item>
+        /// </list>
+        /// </summary>
+        internal static string? DescribeGridProblem(double xMin, double xMax, double yMin, double yMax,
+            double xOffset, double yOffset, double xSpacing, double ySpacing,
+            IEnumerable<GridDataItem>? gridXItems, IEnumerable<GridDataItem>? gridYItems)
+        {
+            var problems = new List<string>();
+            if (!(double.IsFinite(xSpacing) && xSpacing > 0))
+                problems.Add($"コンタ図の格子の X 間隔が 0 以下か数値ではありません ({xSpacing})。群杭沈下の「X間隔(m)」を正の数にしてください。");
+            if (!(double.IsFinite(ySpacing) && ySpacing > 0))
+                problems.Add($"コンタ図の格子の Y 間隔が 0 以下か数値ではありません ({ySpacing})。群杭沈下の「Y間隔(m)」を正の数にしてください。");
+            if (!double.IsFinite(xOffset) || !double.IsFinite(yOffset))
+                problems.Add($"コンタ図の格子の余裕が数値ではありません (X {xOffset} / Y {yOffset})。");
+            if (problems.Count > 0) return string.Join("\n", problems);
+
+            double nx = PileGroupSettlement.EstimateCoordCount(xMin, xMax, xOffset, xSpacing, gridXItems);
+            double ny = PileGroupSettlement.EstimateCoordCount(yMin, yMax, yOffset, ySpacing, gridYItems);
+            double points = nx * ny;
+            if (!(points <= MaxGridPoints))
+            {
+                // 点の数は間隔にほぼ反比例するので、両方の間隔を √(点数/上限) 倍すれば上限に収まる
+                double factor = Math.Sqrt(points / MaxGridPoints);
+                return $"コンタ図の格子点が多すぎます (X {nx:N0} 点 × Y {ny:N0} 点 = {points:N0} 点、上限 {MaxGridPoints:N0} 点)。"
+                     + $"群杭沈下の X・Y 間隔を広げてください (目安: X 間隔 {xSpacing * factor:F2} m 以上、Y 間隔 {ySpacing * factor:F2} m 以上)。";
+            }
+            return null;
         }
 
         /// <summary>

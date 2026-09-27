@@ -95,6 +95,12 @@ namespace PileDesign.Views
             double xSpacing = viewModel.GroupPileSettlementXSpacing;
             double ySpacing = viewModel.GroupPileSettlementYSpacing;
 
+            // 間隔が使えない・格子点が多すぎるときは描かない (間隔が小さすぎると点を作るだけで画面が止まる)。
+            // 理由は解析を実行したときに示す
+            if (Services.SettlementAnalysisService.DescribeGridProblem(xmin, xmax, ymin, ymax, xOffset, yOffset, xSpacing, ySpacing,
+                    viewModel.ResultInputModel.GridXItems, viewModel.ResultInputModel.GridYItems) != null)
+                return;
+
             ObservableCollection<double> xs = PileGroupSettlement.GetCoord(
                 xmin, xmax, xOffset, xSpacing, viewModel.ResultInputModel.GridXItems
                 );

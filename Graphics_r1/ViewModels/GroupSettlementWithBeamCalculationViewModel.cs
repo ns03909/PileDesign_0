@@ -440,6 +440,13 @@ namespace PileDesign.ViewModels
             if (InputModel.PileGroupSettlement?.SettlementSoilLayers == null
                 || InputModel.PileGroupSettlement.SettlementSoilLayers.Count == 0)
                 return "群杭沈下用土層が 1 層以上必要です。";
+            // 確定するときにコンタ図の格子を作るので、格子の入力も解く前に確かめる
+            var m = _mainWindowViewModel;
+            string? gridProblem = SettlementAnalysisService.DescribeGridProblem(
+                m.GroupPileSettlementXMin, m.GroupPileSettlementXMax, m.GroupPileSettlementYMin, m.GroupPileSettlementYMax,
+                m.GroupPileSettlementXOffset, m.GroupPileSettlementYOffset, m.GroupPileSettlementXSpacing, m.GroupPileSettlementYSpacing,
+                InputModel.GridXItems, InputModel.GridYItems);
+            if (gridProblem != null) return gridProblem;
 
             if (LoadSource == "矩形荷重")
             {

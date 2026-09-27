@@ -348,6 +348,26 @@ namespace PileDesign.Models.InputData
             SettlementGridY = GetCoord(ymin, ymax, yOffset, ySpacing, gridItems);
         }
 
+        /// <summary>
+        /// <see cref="GetCoord"/> が作る格子点の数の見積もり (点を作らずに数える)。間隔が小さすぎると点の数が膨らむので、
+        /// 作る前にこれで確かめる (<c>SettlementAnalysisService.DescribeGridProblem</c>)。間隔が使えない値なら NaN。
+        /// </summary>
+        public static double EstimateCoordCount(double min, double max, double offset, double spacing, IEnumerable<GridDataItem>? gridItems)
+        {
+            if (!(double.IsFinite(spacing) && spacing > 0)) return double.NaN;
+            var xs = new List<double> { min - offset, max + offset };
+            if (gridItems != null) xs.AddRange(gridItems.Where(g => g != null).Select(g => g.Coord));
+            xs = [.. xs.Where(double.IsFinite).Distinct().OrderBy(x => x)];
+            if (xs.Count <= 1) return 1;
+            double count = 1;
+            for (int i = 0; i < xs.Count - 1; i++)
+            {
+                double gap = xs[i + 1] - xs[i];
+                count += gap > spacing ? Math.Ceiling(gap / spacing) : 1;
+            }
+            return count;
+        }
+
         public static ObservableCollection<double> GetCoord(double min, double max, double offset, double spacing, ObservableCollection<GridDataItem> gridItems)
         {
             // spacingが0以下、またはminとmaxが等しい場合は1点のみ返す
