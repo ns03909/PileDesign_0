@@ -37,8 +37,26 @@ namespace PileDesign.Services
             if (fundamental?.EvaluateSettlement != true) return items;
 
             double limit = fundamental.AllowableSettlement_mm;
-            // 0 や負、数値でない許容値では比べようがない。黙って OK を出すより検定しない
-            if (!(limit > 0)) return items;
+            // 正の有限の数でない許容値では比べようがない。以前は「0 より大きい」だけを見ていたので、
+            // 無限大が通って有限の沈下量がすべて許容値以下になった。0 以下・数値でない値は黙って検定を
+            // 省いていた。検定を有効にしているのに何も出ないと気づけないので、入力箇所を示す項目を 1 件出す
+            if (!(double.IsFinite(limit) && limit > 0))
+            {
+                items.Add(new EvaluationItem
+                {
+                    Kind = EvaluationKind.PileSettlement,
+                    Level = 0,
+                    Category = "杭の沈下量",
+                    LimitName = LimitName,
+                    TargetName = LimitName,
+                    LoadCaseName = "VL",
+                    Response = double.NaN,
+                    Limit = double.NaN,
+                    Unit = Unit,
+                    UnavailableReason = DescribeUnusableAllowable(limit),
+                });
+                return items;
+            }
 
             var piles = inputModel!.PileLayoutItems;
             if (piles == null) return items;
@@ -48,6 +66,28 @@ namespace PileDesign.Services
             foreach (var pile in piles)
             {
                 if (pile == null) continue;
+
+                // 単杭沈下量は解析していなくても 0 を持つ。値ではなく、その杭の単杭沈下の結果 (荷重-沈下曲線) が
+                // あるかで見る。以前は未計算の杭を 0 mm・OK と出していた
+                if (!SettlementDeformationAngleEvaluator.HasSinglePileSettlement(inputModel, pile))
+                {
+                    items.Add(new EvaluationItem
+                    {
+                        Kind = EvaluationKind.PileSettlement,
+                        Level = 0,
+                        Category = "杭の沈下量",
+                        LimitName = LimitName,
+                        TargetName = $"Pile-{pile.PileNo}",
+                        PileNo = pile.PileNo,
+                        PileBodyNo = pile.PileBodyNo,
+                        LoadCaseName = "VL",
+                        Response = double.NaN,
+                        Limit = limit,
+                        Unit = Unit,
+                        UnavailableReason = DescribeNoSinglePileResult(pile.PileNo),
+                    });
+                    continue;
+                }
 
                 // 単杭沈下は m で持たれている。群杭沈下は mm。画面のグラフと同じ組み方
                 double single_mm = pile.SinglePileSettlementVL * 1000.0;
@@ -80,6 +120,14 @@ namespace PileDesign.Services
 
             return items;
         }
+
+        /// <summary>許容沈下量が使えない値のときの理由 (入力箇所を示す)。</summary>
+        internal static string DescribeUnusableAllowable(double limit)
+            => $"基本設定の「許容沈下量」が正の数ではありません ({limit})。基本設定で入力し直してください";
+
+        /// <summary>単杭沈下の結果が無い杭の理由。</summary>
+        internal static string DescribeNoSinglePileResult(int pileNo)
+            => $"杭No.{pileNo} の単杭沈下解析の結果がありません。単杭沈下解析を実行してください (0 mm として判定しません)";
 
         /// <summary>単杭沈下量が曲線の範囲外で、許容値以下と言えないときの理由。</summary>
         internal static string DescribeBeyondCurve(int pileNo)

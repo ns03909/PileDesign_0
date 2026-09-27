@@ -80,11 +80,13 @@ namespace TestProject1
             PileLayoutDataItem Pile(int no, double settlement_m, bool beyond) => new()
             {
                 PileNo = no, SinglePileSettlementVL = settlement_m, SinglePileSettlementVLBeyondCurve = beyond,
+                SoilPileAltNo = 1,   // 単杭沈下の結果 (曲線) を持つ土層-杭セット
             };
             var input = new InputModel
             {
                 FundamentalInput = new FundamentalInput { EvaluateSettlement = true, AllowableSettlement_mm = 20 },
                 PileLayoutItems = [Pile(1, 0.010, beyond: true), Pile(2, 0.030, beyond: true), Pile(3, 0.010, beyond: false)],
+                ElementDivision = new ElementDivision { SoilPiles = [PileWithTwoSidedCurve()] },
             };
 
             var items = PileDesign.Services.PileSettlementEvaluator.Evaluate(input);

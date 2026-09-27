@@ -22,7 +22,7 @@ namespace TestProject1
         /// 杭 2 本と沈下量を持つ入力を作る。沈下量は m で持たれている。
         /// 杭配置の追加はハンドラが親 ViewModel を要るので、先に結び付けておく。
         /// </summary>
-        private static InputModel Build(double single1_m, double single2_m, double group_mm = 0.0)
+        private static InputModel Build(double single1_m, double single2_m, double group_mm = 0.0, bool withSingleResults = true)
         {
             var input = new InputModel();
             input.AttachViewModel(new PileDesign.ViewModels.MainWindowViewModel { CurrentInputModel = input });
@@ -33,6 +33,17 @@ namespace TestProject1
             { PileNo = 1, No = 1, PileBodyNo = 1, SinglePileSettlementVL = single1_m });
             input.PileLayoutItems.Add(new PileLayoutDataItem
             { PileNo = 2, No = 2, PileBodyNo = 1, SinglePileSettlementVL = single2_m });
+
+            // 単杭沈下の結果 = 土層-杭セットの荷重-沈下曲線 (沈下量の 0 と「未計算」を区別する手掛かり)
+            if (withSingleResults)
+            {
+                var soilPile = new SoilPile();
+                soilPile.LoadDisplacements.Add(new PileDesign.FEM.VerticalLoadTransferMethod.LoadDisplacement { PileTopLoad = 0, D0s = 0 });
+                soilPile.LoadDisplacements.Add(new PileDesign.FEM.VerticalLoadTransferMethod.LoadDisplacement { PileTopLoad = 1000, D0s = 5 });
+                input.ElementDivision ??= new ElementDivision();
+                input.ElementDivision.SoilPiles = [soilPile];
+                foreach (var p in input.PileLayoutItems) p.SoilPileAltNo = 1;
+            }
 
             if (group_mm != 0.0)
             {
@@ -140,18 +151,42 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 許容値が 0 や負なら検定しない。黙って OK を出すより、項目を作らないほうがよい。
+        /// 許容値が正の有限の数でなければ判定しない。検定を有効にしているので黙って省かず、入力箇所を示す項目を 1 件出す。
+        /// 以前は「0 より大きい」だけを見ていたので、無限大が通って有限の沈下量がすべて OK になった。
         /// </summary>
         [TestMethod]
-        public void AnUnusableAllowableMeansNoEvaluation()
+        public void AnUnusableAllowableIsReportedInsteadOfJudged()
         {
-            foreach (double bad in new[] { 0.0, -5.0, double.NaN })
+            foreach (double bad in new[] { 0.0, -5.0, double.NaN, double.PositiveInfinity })
             {
                 var input = Build(0.030, 0.010);
                 Enable(input, allowable_mm: bad);
-                Assert.AreEqual(0, PileSettlementEvaluator.Evaluate(input).Count,
-                    $"許容値 {bad} で検定している");
+                var items = PileSettlementEvaluator.Evaluate(input);
+                Assert.AreEqual(1, items.Count, $"許容値 {bad}: 杭ごとに判定しています");
+                Assert.IsTrue(items[0].IsUnavailable && !items[0].IsOk, $"許容値 {bad} で判定しています");
+                StringAssert.Contains(items[0].UnavailableReason, "許容沈下量");
+                StringAssert.Contains(items[0].UnavailableReason, "基本設定");
             }
+        }
+
+        /// <summary>
+        /// 単杭沈下の結果が無い杭は 0 mm・OK にせず、検定不能にする (沈下量は未計算でも 0 を持つ)。
+        /// 本当に 0 mm の結果がある杭は判定する。
+        /// </summary>
+        [TestMethod]
+        public void APileWithoutSingleSettlementResultsIsNotJudged()
+        {
+            var input = Build(0.0, 0.0, withSingleResults: false);
+            Enable(input, allowable_mm: 20.0);
+            var items = PileSettlementEvaluator.Evaluate(input);
+            Assert.AreEqual(2, items.Count);
+            Assert.IsTrue(items.All(i => i.IsUnavailable && !i.IsJudged), "未計算の杭を 0 mm・OK と判定しています");
+            StringAssert.Contains(items[0].UnavailableReason, "単杭沈下解析の結果がありません");
+
+            var computedZero = Build(0.0, 0.0, withSingleResults: true);
+            Enable(computedZero, allowable_mm: 20.0);
+            Assert.IsTrue(PileSettlementEvaluator.Evaluate(computedZero).All(i => i.IsJudged && i.IsOk),
+                "結果のある 0 mm まで判定をやめています");
         }
 
         /// <summary>
