@@ -199,6 +199,36 @@ namespace PileDesign.ViewModels
         /// </summary>
         public InputModel ResultInputModel => _currentResultSet?.InputSnapshot ?? CurrentInputModel;
 
+        /// <summary>
+        /// 検定に使う解析結果 (<see cref="CurrentModel"/>) と入力 (<see cref="ResultInputModel"/>) が 1 組になっていなければ、
+        /// その理由 (利用者向けの文)。組になっていれば null。
+        ///
+        /// <para>検定は解析モデルの応答と、解析したときの入力 (杭の断面・軸力) を突き合わせる。2 つは別々に持っていて、
+        /// 組が崩れても計算は進み、別の条件の入力で限界値を引いた検定になる。</para>
+        /// <list type="bullet">
+        /// <item>控えがあるのに、表示中の解析モデルが控えのものと違う (別の解析の結果と控えが組になっている)。</item>
+        /// <item>控えが無い (控えを持たない古いファイル・控えの失敗) のに、解析のあとにモデル側の入力が編集されている。
+        ///   控えが無いときは編集中の入力で代用するので、編集後の入力と解析時の結果を突き合わせることになる。
+        ///   沈下の入力だけの編集は水平解析の検定に効かないので止めない。</item>
+        /// </list>
+        /// </summary>
+        internal string? DescribeEvaluationPairingProblem()
+        {
+            var model = CurrentModel;
+            if (model == null) return null;
+            var set = _currentResultSet;
+            if (set != null)
+            {
+                return set.AnaModel != null && !ReferenceEquals(set.AnaModel, model)
+                    ? "表示中の解析結果と、解析したときの入力の控えが別の解析のものです。再解析してから検定してください。"
+                    : null;
+            }
+            return _horizontalInputChanged
+                ? "解析したときの入力の控えが無く、解析のあとに入力が編集されています。"
+                  + "編集後の入力と解析結果を突き合わせることになるため、再解析してから検定してください。"
+                : null;
+        }
+
         private bool _inputChangedSinceAnalysis;
 
         /// <summary>解析後に入力が編集されたか（表示中の結果が現在の入力と一致しない）。</summary>

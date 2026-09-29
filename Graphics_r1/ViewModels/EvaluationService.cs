@@ -67,8 +67,15 @@ namespace PileDesign.ViewModels
         {
             var service = new EvaluationService(mainVm) { DisplayFilter = 2 };
             service.RunEvaluation(factored);
+            // 解析結果と入力が組になっていないときは、空の結果 (= 検定対象なし・NG なし) を返さずに止める。
+            // 受け手 (計算書・まとめ・結果の表) は組めなかったこととして扱う
+            if (service.PairingProblem != null)
+                throw new InvalidOperationException(service.PairingProblem);
             return service.Result;
         }
+
+        /// <summary>解析結果と解析時の入力が組になっていなかったときの理由 (検定していない)。</summary>
+        private string? PairingProblem { get; set; }
 
         private void RunEvaluation(bool factored)
         {
@@ -83,6 +90,17 @@ namespace PileDesign.ViewModels
             if (model == null || inputModel == null)
             {
                 sb.AppendLine("解析結果がありません。水平解析を実行してください。");
+                EvaluationText = sb.ToString();
+                Result = new EvaluationResult([]);
+                return;
+            }
+
+            // 解析結果と、それを解いたときの入力が 1 組か。組でなければ検定しない (別の条件の限界値で判定することになる)
+            PairingProblem = _mainVm.DescribeEvaluationPairingProblem();
+            if (PairingProblem != null)
+            {
+                Serilog.Log.Warning("[検定] 解析結果と入力が組になっていないため検定しません: {Reason}", PairingProblem);
+                sb.AppendLine("検定できません。" + PairingProblem);
                 EvaluationText = sb.ToString();
                 Result = new EvaluationResult([]);
                 return;
