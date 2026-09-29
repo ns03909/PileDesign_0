@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
@@ -38,6 +38,9 @@ namespace PileDesign.ViewModels
         private double? _pileGroupFactor;
 
         [ObservableProperty]
+        private string _validationMessage = "";
+
+        [ObservableProperty]
         private string _crosshairPositionText;
 
         public WpfPlot WpfPlot { get; set; }
@@ -61,6 +64,8 @@ namespace PileDesign.ViewModels
             _mainWindowViewModel = mainWindowViewModel;
 
             CloseCommand = new ToolkitRelayCommand(OnClose);
+            UndoCommand = new ToolkitRelayCommand(OnUndo, CanUndo);
+            RedoCommand = new ToolkitRelayCommand(OnRedo, CanRedo);
 
             ApplyModelsPileNumberCommand =
                 new ToolkitRelayCommand(OnApplyModelsPileNumber);
@@ -77,6 +82,8 @@ namespace PileDesign.ViewModels
         private void OnUndo()
         {
             _undoManager.Undo();
+            ComputePileGroupFactor();
+            ChartUpdate();
             NotifyUndoRedoChanged();
         }
 
@@ -84,6 +91,8 @@ namespace PileDesign.ViewModels
         private void OnRedo()
         {
             _undoManager.Redo();
+            ComputePileGroupFactor();
+            ChartUpdate();
             NotifyUndoRedoChanged();
         }
 
@@ -154,19 +163,60 @@ namespace PileDesign.ViewModels
         // 群杭係数をセットするメソッド
         public void ComputePileGroupFactor()
         {
-            if (!PileSpacingDiaRatio.HasValue || !TotalPileCount.HasValue)
+            if (!TotalPileCount.HasValue || TotalPileCount.Value <= 0)
             {
+                PileGroupFactor = null;
+                ValidationMessage = "杭総本数を正の整数で入力してください。";
                 return;
             }
-            PileGroupFactor = PileDesign.Services.PileGroupFactor.GetPileGroupFactor(TotalPileCount.Value, PileSpacingDiaRatio.Value);
+            if (!PileSpacingDiaRatio.HasValue ||
+                !PileDesign.Services.PileGroupFactor.IsValidSpacingRatio(PileSpacingDiaRatio.Value))
+            {
+                PileGroupFactor = null;
+                ValidationMessage = "杭間隔比 R/B を正の有限値で入力してください。";
+                return;
+            }
+            if (!PileDesign.Services.PileGroupFactor.TryGetPileGroupFactor(
+                TotalPileCount.Value, PileSpacingDiaRatio.Value, out double factor))
+            {
+                PileGroupFactor = null;
+                ValidationMessage = "群杭係数を計算できません。杭総本数と R/B を確認してください。";
+                return;
+            }
+            PileGroupFactor = factor;
+            ValidationMessage = "";
+        }
+
+        public void UpdateRatioFromDimensions()
+        {
+            PileSpacingDiaRatio = PileSpacing is double spacing && PileDia is double diameter
+                && PileDesign.Services.PileGroupFactor.IsValidSpacingRatio(spacing)
+                && PileDesign.Services.PileGroupFactor.IsValidSpacingRatio(diameter)
+                ? spacing / diameter : null;
+            if (PileSpacingDiaRatio.HasValue &&
+                !PileDesign.Services.PileGroupFactor.IsValidSpacingRatio(PileSpacingDiaRatio.Value))
+                PileSpacingDiaRatio = null;
+            ComputePileGroupFactor();
+            ChartUpdate();
         }
 
         // チャート更新
         public void ChartUpdate()
         {
             // PileSpacingDiaRatioとTotalPileCountがnullでないことを確認
-            if (!PileSpacingDiaRatio.HasValue || !TotalPileCount.HasValue) return;
             if (WpfPlot == null) return;
+
+            if (!PileSpacingDiaRatio.HasValue || !PileDesign.Services.PileGroupFactor.IsValidSpacingRatio(PileSpacingDiaRatio.Value)
+                || !PileGroupFactor.HasValue || !PileDesign.Services.PileGroupFactor.IsValidFactor(PileGroupFactor.Value))
+            {
+                if (MyScatter != null)
+                {
+                    WpfPlot.Plot.Remove(MyScatter);
+                    MyScatter = null;
+                    WpfPlot.Refresh();
+                }
+                return;
+            }
 
             if (PileSpacingDiaRatio.HasValue && PileGroupFactor != null)
             {
@@ -200,6 +250,8 @@ namespace PileDesign.ViewModels
 
             // 変更を適用
             TotalPileCount = newValue;
+            ComputePileGroupFactor();
+            ChartUpdate();
 
             // Undo アクションを登録
             var undoAction = new DelegateUndoAction(
@@ -213,36 +265,34 @@ namespace PileDesign.ViewModels
 
         public void OnApplyPileDistanceFactorToModelsAllPiles()
         {
-            if (PileSpacingDiaRatio.HasValue)
+            if (!PileSpacingDiaRatio.HasValue ||
+                !PileDesign.Services.PileGroupFactor.IsValidSpacingRatio(PileSpacingDiaRatio.Value))
             {
-                // メインのUndoスタックに保存
-                _mainWindowViewModel.SaveUndoState();
-
-                double newValue = PileSpacingDiaRatio.Value;
-
-                // 変更を適用
-                foreach (var item in InputModel.PileLayoutItems)
-                {
-                    item.PileSpacingFactor = newValue;
-                }
+                ValidationMessage = "杭間隔比 R/B を正の有限値で入力してから適用してください。";
+                return;
             }
+            ValidationMessage = "";
+            double newValue = PileSpacingDiaRatio.Value;
+            _mainWindowViewModel.TryApplyInputEdit(InputModel.PileLayoutItems.Any(p => p.PileSpacingFactor != newValue), () =>
+            {
+                foreach (var item in InputModel.PileLayoutItems) item.PileSpacingFactor = newValue;
+            });
         }
 
         public void OnApplyPileGroupFactorToModelsAllPiles()
         {
-            if (PileGroupFactor.HasValue)
+            if (!PileGroupFactor.HasValue ||
+                !PileDesign.Services.PileGroupFactor.IsValidFactor(PileGroupFactor.Value))
             {
-                // メインのUndoスタックに保存
-                _mainWindowViewModel.SaveUndoState();
-
-                double newValue = PileGroupFactor.Value;
-
-                // 変更を適用
-                foreach (var item in InputModel.PileLayoutItems)
-                {
-                    item.GroupPileFactor = newValue;
-                }
+                ValidationMessage = "群杭係数は 0 より大きく 1 以下の有限値にしてください。";
+                return;
             }
+            ValidationMessage = "";
+            double newValue = PileGroupFactor.Value;
+            _mainWindowViewModel.TryApplyInputEdit(InputModel.PileLayoutItems.Any(p => p.GroupPileFactor != newValue), () =>
+            {
+                foreach (var item in InputModel.PileLayoutItems) item.GroupPileFactor = newValue;
+            });
         }
     }
 

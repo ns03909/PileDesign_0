@@ -11,6 +11,7 @@ namespace PileDesign.Views
     public partial class GroupPileFactorWindow : Window
     {
         private bool _isClosingHandled = false;
+        private bool _updatingRatio;
 
         // コンストラクタ
         public GroupPileFactorWindow(MainWindowViewModel _mainWindowViewModel)
@@ -44,52 +45,47 @@ namespace PileDesign.Views
         // 全杭本数を入力した場合のメソッド
         private void TextBoxPileNumberTextChanged(object sender, TextChangedEventArgs e)
         {
-            GroupPileFactorViewModel viewModel = DataContext as GroupPileFactorViewModel;
-            if (viewModel.TotalPileCount > 0 &&
-                viewModel.PileSpacingDiaRatio.HasValue && viewModel.PileSpacingDiaRatio > 0)
-            {
-                viewModel.ComputePileGroupFactor();
-                viewModel.ChartUpdate();
-            }
+            if (DataContext is not GroupPileFactorViewModel viewModel) return;
+            viewModel.ComputePileGroupFactor();
+            viewModel.ChartUpdate();
         }
 
         // 杭間隔を入力した場合のメソッド
         private void TextBoxPileSpacingTextChanged(object sender, TextChangedEventArgs e)
         {
-            GroupPileFactorViewModel viewModel = DataContext as GroupPileFactorViewModel;
-            if (viewModel.PileDia.HasValue && viewModel.PileDia > 0 &&
-                viewModel.PileSpacing.HasValue && viewModel.PileSpacing > 0)
-            {
-                viewModel.PileSpacingDiaRatio = viewModel.PileSpacing / viewModel.PileDia;
-            }
+            UpdateRatioFromDimensions();
         }
 
         // 杭径を入力した場合のメソッド
         private void TextBoxPileDiaTextChanged(object sender, TextChangedEventArgs e)
         {
-            GroupPileFactorViewModel viewModel = DataContext as GroupPileFactorViewModel;
-            if (viewModel.PileDia.HasValue && viewModel.PileDia > 0 &&
-                viewModel.PileSpacing.HasValue && viewModel.PileSpacing > 0)
-            {
-                viewModel.PileSpacingDiaRatio = viewModel.PileSpacing / viewModel.PileDia;
-            }
+            UpdateRatioFromDimensions();
+        }
+
+        private void UpdateRatioFromDimensions()
+        {
+            if (_updatingRatio || DataContext is not GroupPileFactorViewModel viewModel) return;
+            _updatingRatio = true;
+            try { viewModel.UpdateRatioFromDimensions(); }
+            finally { _updatingRatio = false; }
         }
 
         // 杭間隔比を入力した場合のメソッド
         private void TextBoxPileSpacingDiaRatioTextChanged(object sender, TextChangedEventArgs e)
         {
-            GroupPileFactorViewModel viewModel = DataContext as GroupPileFactorViewModel;
-            if (viewModel.PileSpacingDiaRatio != viewModel.PileSpacing / viewModel.PileDia)
+            if (_updatingRatio || DataContext is not GroupPileFactorViewModel viewModel) return;
+            _updatingRatio = true;
+            try
             {
-                TextBoxPileDia.Text = null;
-                TextBoxPileSpacing.Text = null;
-            }
-
-            if (viewModel.PileSpacingDiaRatio.HasValue && viewModel.PileSpacingDiaRatio > 0)
-            {
+                if (viewModel.PileSpacingDiaRatio != viewModel.PileSpacing / viewModel.PileDia)
+                {
+                    viewModel.PileDia = null;
+                    viewModel.PileSpacing = null;
+                }
                 viewModel.ComputePileGroupFactor();
                 viewModel.ChartUpdate();
             }
+            finally { _updatingRatio = false; }
         }
 
         // 群杭係数を入力した場合のメソッド
