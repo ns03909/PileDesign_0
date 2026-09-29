@@ -283,4 +283,45 @@ public class ReferenceIntegrityTests
         StringAssert.Contains(text, "・地盤の入力画面で直す (1 件)");
         Assert.IsNull(DiagnosticSelection.DescribeRemedies([Diagnostic.Input(DiagnosticTarget.Nowhere, "場所不明")]));
     }
+
+    // ── 6. 再解析が要る理由 ──
+
+    [TestMethod]
+    public void TheStatus_NamesTheEditsBehindEachRerun()
+    {
+        string text = MainWindowViewModel.BuildResultSetStatusText("2026-09-30 10:00", horizontalStale: true, settlementStale: true,
+            materialOptionsChanged: false, horizontalEdits: ["杭体 編集", "杭 追加"], settlementEdits: ["矩形荷重 編集"]);
+        StringAssert.Contains(text, "水平解析に効く変更: 杭体 編集・杭 追加");
+        StringAssert.Contains(text, "沈下解析に効く変更: 矩形荷重 編集");
+
+        // 陳腐化していない解析については書かない
+        string fresh = MainWindowViewModel.BuildResultSetStatusText("2026-09-30 10:00", horizontalStale: false, settlementStale: false,
+            materialOptionsChanged: false, horizontalEdits: ["杭体 編集"], settlementEdits: ["矩形荷重 編集"]);
+        Assert.IsFalse(fresh.Contains("効く変更"));
+    }
+
+    /// <summary>編集した項目は効く解析ごとに控え、その解析の結果が最新に戻ったら消す。</summary>
+    [TestMethod]
+    public void EditedItems_AreKeptPerAnalysis_AndClearedWhenCurrent()
+    {
+        var input = Example();
+        var vm = new MainWindowViewModel { CurrentInputModel = input };
+        input.AttachViewModel(vm);
+        var modelling = new AnalysisModelling(input);
+        vm.CurrentModel = new AnaModel(input, modelling.Nodes, modelling.Beams, modelling.DummyBeams,
+            modelling.RigidBodies, modelling.HorizontalSoilSprings, modelling.RotationalSprings);
+        vm.IsHorizontalAnalysisDone = true;
+        vm.CaptureAnalysisResultSet();
+
+        vm.MarkInputChangedSinceAnalysis(MainWindowViewModel.AnalysisInputScope.All, "杭体 編集");
+        vm.MarkInputChangedSinceAnalysis(MainWindowViewModel.AnalysisInputScope.Settlement, "矩形荷重 編集");
+        CollectionAssert.AreEqual(new[] { "杭体 編集" }, vm.EditsSinceHorizontal.ToArray(), "沈下だけの編集を水平解析の理由にしています");
+        CollectionAssert.AreEqual(new[] { "杭体 編集", "矩形荷重 編集" }, vm.EditsSinceSettlement.ToArray());
+        StringAssert.Contains(vm.ResultSetStatusText, "水平解析に効く変更: 杭体 編集");
+
+        vm.RestoreInputChangedSinceAnalysis(false);   // 解析をやり直した (水平解析が最新)
+        Assert.AreEqual(0, vm.EditsSinceHorizontal.Count);
+        vm.MarkSettlementResultsCurrent();
+        Assert.AreEqual(0, vm.EditsSinceSettlement.Count);
+    }
 }

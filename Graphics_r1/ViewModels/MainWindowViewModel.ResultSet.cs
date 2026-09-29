@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Models;
@@ -147,12 +148,12 @@ namespace PileDesign.ViewModels
             string? current = InputSignature(CurrentInputModel);
             if (current == null) return;
 
-            bool horizontalChanged = checkHorizontal ? current != _analysisInputSignature : _horizontalInputChanged;
-            if (checkSettlement) _settlementInputChanged = current != _settlementInputSignature;
+            bool horizontalChanged = checkHorizontal ? current != _analysisInputSignature : HorizontalInputChanged;
+            if (checkSettlement) SettlementInputChanged = current != _settlementInputSignature;
 
             bool stale = (holdsResults && horizontalChanged) || SettlementResultsAreStale;
             InputChangedSinceAnalysis = stale;          // false なら水平の印もここで降りる
-            _horizontalInputChanged = horizontalChanged && stale;
+            HorizontalInputChanged = horizontalChanged && stale;
             OnPropertyChanged(nameof(ResultSetStatusText));
         }
 
@@ -166,7 +167,7 @@ namespace PileDesign.ViewModels
             {
                 string? current = InputSignature(CurrentInputModel);
                 _analysisInputSignature = HasAnalysisResultSet ? current : null;
-                _settlementInputSignature = _settlementInputChanged ? null : current;
+                _settlementInputSignature = SettlementInputChanged ? null : current;
             }
             else
             {
@@ -223,7 +224,7 @@ namespace PileDesign.ViewModels
                     ? "表示中の解析結果と、解析したときの入力の控えが別の解析のものです。再解析してから検定してください。"
                     : null;
             }
-            return _horizontalInputChanged
+            return HorizontalInputChanged
                 ? "解析したときの入力の控えが無く、解析のあとに入力が編集されています。"
                   + "編集後の入力と解析結果を突き合わせることになるため、再解析してから検定してください。"
                 : null;
@@ -306,7 +307,7 @@ namespace PileDesign.ViewModels
                     OnPropertyChanged(nameof(ResultSetStatusText));
                     OnPropertyChanged(nameof(ResultsMixedWithEditedInput));
                 }
-                if (!value) _horizontalInputChanged = false;
+                if (!value) HorizontalInputChanged = false;
             }
         }
 
@@ -328,8 +329,35 @@ namespace PileDesign.ViewModels
             All = Model | Settlement,
         }
 
-        /// <summary>水平解析の結果が陳腐化しているか (モデル側の入力が編集された)。</summary>
+        /// <summary>水平解析の結果が陳腐化しているか (モデル側の入力が編集された)。降ろすと編集した項目の控えも消す。</summary>
+        private bool HorizontalInputChanged
+        {
+            get => _horizontalInputChanged;
+            set
+            {
+                _horizontalInputChanged = value;
+                if (!value) _editsSinceHorizontal.Clear();
+            }
+        }
+        // テスト (EvaluationPairingTests など) がリフレクションでこの名前のフィールドを読み書きする。名前を変えないこと
         private bool _horizontalInputChanged;
+
+        // ── 解析のあとに編集した項目 (履歴の呼び名。出た順・重複なし) ──
+        // どの解析のやり直しが要るかを、何を編集したからかと一緒に状態表示に出す。
+        // 効く範囲 (AnalysisInputScope) は編集の入口が申告したものをそのまま使う (項目ごとの表を別に持たない)。
+        private readonly List<string> _editsSinceHorizontal = [];
+        private readonly List<string> _editsSinceSettlement = [];
+
+        /// <summary>水平解析のあとに編集した、水平解析に効く項目。</summary>
+        internal IReadOnlyList<string> EditsSinceHorizontal => _editsSinceHorizontal;
+
+        /// <summary>沈下解析のあとに編集した、沈下に効く項目。</summary>
+        internal IReadOnlyList<string> EditsSinceSettlement => _editsSinceSettlement;
+
+        private static void AddEdit(List<string> edits, string? item)
+        {
+            if (!string.IsNullOrEmpty(item) && !edits.Contains(item)) edits.Add(item);
+        }
 
         /// <summary>
         /// 沈下の結果が陳腐化しているか (沈下解析のあとに入力が編集された)。
@@ -343,13 +371,23 @@ namespace PileDesign.ViewModels
         /// <para>解析を実行したときではなく、<b>沈下解析を実行したとき</b>に降ろす
         /// (<see cref="MarkSettlementResultsCurrent"/>)。</para>
         /// </summary>
+        private bool SettlementInputChanged
+        {
+            get => _settlementInputChanged;
+            set
+            {
+                _settlementInputChanged = value;
+                if (!value) _editsSinceSettlement.Clear();
+            }
+        }
+        // テスト (PriorityEditingFixTests) がリフレクションでこの名前のフィールドを読む。名前を変えないこと
         private bool _settlementInputChanged;
 
         /// <summary>
         /// 表示・出力に使える沈下の結果があり、それが入力変更前のものか。
         /// 解析の入口で「古い沈下の結果を入力として使ってよいか」を尋ねるのに使う。
         /// </summary>
-        public bool SettlementResultsAreStale => _settlementInputChanged && HasSettlementResults();
+        public bool SettlementResultsAreStale => SettlementInputChanged && HasSettlementResults();
 
         /// <summary>
         /// 沈下解析が終わった (または読み込んだ結果が入力と整合している) ことを記録する。
@@ -359,8 +397,8 @@ namespace PileDesign.ViewModels
         {
             // 沈下解析をしたときの入力 (元に戻したときに比べる相手)
             _settlementInputSignature = InputSignature(CurrentInputModel);
-            if (!_settlementInputChanged) return;
-            _settlementInputChanged = false;
+            if (!SettlementInputChanged) return;
+            SettlementInputChanged = false;
             OnPropertyChanged(nameof(ResultSetStatusText));
         }
 
@@ -386,10 +424,12 @@ namespace PileDesign.ViewModels
 
                 return BuildResultSetStatusText(
                     _currentResultSet.CapturedAt.ToString("yyyy-MM-dd HH:mm"),
-                    horizontalStale: _horizontalInputChanged && IsHorizontalAnalysisDone,
+                    horizontalStale: HorizontalInputChanged && IsHorizontalAnalysisDone,
                     settlementStale: SettlementResultsAreStale,
                     materialOptionsChanged: MaterialOptionsChangedSinceAnalysis,
-                    settlementFromOtherInput: SettlementSolvedFromOtherInput);
+                    settlementFromOtherInput: SettlementSolvedFromOtherInput,
+                    horizontalEdits: _editsSinceHorizontal,
+                    settlementEdits: _editsSinceSettlement);
             }
         }
 
@@ -409,9 +449,12 @@ namespace PileDesign.ViewModels
         /// <param name="horizontalStale">水平解析の結果を持っていて、それが陳腐化しているか。</param>
         /// <param name="settlementStale">沈下の結果を持っていて、それが陳腐化しているか。</param>
         /// <param name="materialOptionsChanged">材料モデル化オプションが解析後に変わったか。</param>
+        /// <param name="horizontalEdits">水平解析のあとに編集した、水平解析に効く項目 (陳腐化しているときだけ書く)。</param>
+        /// <param name="settlementEdits">沈下解析のあとに編集した、沈下に効く項目 (同上)。</param>
         internal static string BuildResultSetStatusText(
             string stamp, bool horizontalStale, bool settlementStale, bool materialOptionsChanged,
-            bool settlementFromOtherInput = false)
+            bool settlementFromOtherInput = false,
+            IReadOnlyList<string>? horizontalEdits = null, IReadOnlyList<string>? settlementEdits = null)
         {
             string baseText =
                 horizontalStale && settlementStale
@@ -421,6 +464,10 @@ namespace PileDesign.ViewModels
                 : settlementStale
                     ? $"解析結果: {stamp} 実行／沈下解析の結果は入力変更前のものです（沈下解析の再実行が必要です）"
                     : $"解析結果: {stamp} 実行";
+
+            // 何を編集したから、どの解析をやり直すのか (項目は履歴の呼び名)
+            if (horizontalStale && DescribeEdits(horizontalEdits) is { } h) baseText += $"／水平解析に効く変更: {h}";
+            if (settlementStale && DescribeEdits(settlementEdits) is { } s) baseText += $"／沈下解析に効く変更: {s}";
 
             // 沈下だけをやり直した (水平解析は前の入力のまま) ときは、表示中の沈下は最新の沈下解析の結果。
             // 水平解析とは解いた入力の時点が違うことを言う
@@ -433,6 +480,10 @@ namespace PileDesign.ViewModels
                     + "（限界曲線は変更後のオプションで描かれます。再解析が必要です）"
                 : baseText;
         }
+
+        private static string? DescribeEdits(IReadOnlyList<string>? edits)
+            => edits == null || edits.Count == 0 ? null
+               : string.Join("・", edits.Take(5)) + (edits.Count > 5 ? $" ほか {edits.Count - 5} 件" : "");
 
         /// <summary>控えを作れなかったときの状態表示。入力を編集したあとは、結果と入力が混ざっていることを言う。</summary>
         internal static string DescribeResultSnapshotStatus(bool inputEdited) => inputEdited
@@ -469,7 +520,7 @@ namespace PileDesign.ViewModels
             // ファイルには「どの範囲が変わったか」まで持たせていないので、
             // 変更ありなら安全側 (モデル全体) に倒す。
             InputChangedSinceAnalysis = changed;
-            _horizontalInputChanged = changed;
+            HorizontalInputChanged = changed;
         }
 
         /// <summary>
@@ -485,7 +536,8 @@ namespace PileDesign.ViewModels
         /// (群杭沈下の入力だけを触る画面) からのみ狭い値を渡すこと。
         /// 誤って狭く申告すると、陳腐化した結果に「最新」の顔をさせてしまう。
         /// </summary>
-        public void MarkInputChangedSinceAnalysis(AnalysisInputScope scope)
+        /// <param name="editedItem">編集した項目 (履歴の呼び名)。状態表示に「何を変えたから、どの解析をやり直すか」を出す。</param>
+        public void MarkInputChangedSinceAnalysis(AnalysisInputScope scope, string? editedItem = null)
         {
             if (scope == AnalysisInputScope.None) return;
 
@@ -498,13 +550,15 @@ namespace PileDesign.ViewModels
             //   縛ると、その状態で入力を編集しても印が立たず、次の解析が古い曲線を黙って使う。
             // ・沈下の結果がまだ無い段階でも印だけ立てておき、沈下解析が終わったときに降ろす。
             //   実際に効くのは SettlementResultsAreStale (結果を持っているときだけ真)。
-            _settlementInputChanged = true;
+            SettlementInputChanged = true;
+            AddEdit(_editsSinceSettlement, editedItem);
 
             // 控えを作れなかった結果は、編集中の入力を解析時の入力の代わりに見ている。
             // 編集した時点で結果と入力が混ざるので、そのことを記録する (結果セットが無くても)
             if (_currentResultSet == null && ResultSnapshotFailed)
             {
-                _horizontalInputChanged = true;
+                HorizontalInputChanged = true;
+                AddEdit(_editsSinceHorizontal, editedItem);
                 InputChangedSinceAnalysis = true;
                 OnPropertyChanged(nameof(ResultSetStatusText));
                 return;
@@ -514,7 +568,8 @@ namespace PileDesign.ViewModels
 
             if (scope.HasFlag(AnalysisInputScope.Model))
             {
-                _horizontalInputChanged = true;
+                HorizontalInputChanged = true;
+                AddEdit(_editsSinceHorizontal, editedItem);
             }
 
             else if (!IsGroupPileSettlementAnalysisDone)
@@ -553,7 +608,7 @@ namespace PileDesign.ViewModels
             // 沈下の入力しか触っていないなら、取り直しても水平解析の結果と食い違わない
             // (水平解析は PileGroupSettlement を読まない)。取り直すほうが、
             // コンタの格子など「入力側に置かれた解析の産物」も一緒に新しくなって都合がよい。
-            if (_horizontalInputChanged && horizontalIsStillTheCapturedOne)
+            if (HorizontalInputChanged && horizontalIsStillTheCapturedOne)
             {
                 // 沈下の結果はスナップショットと同じインスタンスを共有しているので、
                 // ここで写す必要はない (以前は入力モデルの中にあり、写し忘れると
@@ -641,8 +696,8 @@ namespace PileDesign.ViewModels
             ResultSnapshotFailed = false;
             bool changed = set != null && changedSinceAnalysis;
             InputChangedSinceAnalysis = changed;
-            _horizontalInputChanged = changed;   // 範囲は保存していないので安全側
-            _settlementInputChanged = changed;
+            HorizontalInputChanged = changed;   // 範囲は保存していないので安全側
+            SettlementInputChanged = changed;
         }
 
         /// <summary>

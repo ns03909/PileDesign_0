@@ -177,7 +177,7 @@ namespace PileDesign.ViewModels
                 // 入力が編集された = 表示中の解析結果は現在の入力と一致しない。
                 // 結果は破棄しない (解析時の入力ごと切り離してあるため表示は整合している)。
                 // ここは DataGrid のセル確定 (SaveUndoStateDebounced 経由) も含む全編集の集約点。
-                MarkInputChangedSinceAnalysis(scope);
+                MarkInputChangedSinceAnalysis(scope, FormatHistoryDescription(description));
             }
         }
 
@@ -218,8 +218,8 @@ namespace PileDesign.ViewModels
             }
             else
             {
-                // 2 回目以降でも「効く範囲」だけは記録する
-                MarkInputChangedSinceAnalysis(scope);
+                // 2 回目以降でも「効く範囲」と編集した項目は記録する
+                MarkInputChangedSinceAnalysis(scope, FormatHistoryDescription(description));
             }
 
             // 既存タイマーがあれば破棄、新規タイマーで debounceMs 後にセッション終了

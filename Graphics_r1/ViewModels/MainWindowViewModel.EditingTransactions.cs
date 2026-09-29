@@ -35,7 +35,7 @@ public partial class MainWindowViewModel
         _undoManager.SaveSnapshotEdit(before, CurrentInputModel.DeepCopy(), FormatHistoryDescription(description));
         MarkUnsavedWork();
         InputEditVersion++;
-        MarkInputChangedSinceAnalysis(scope);
+        MarkInputChangedSinceAnalysis(scope, FormatHistoryDescription(description));
         RaiseUndoStateChanged();
         RequestUpdateWindow();
     }
