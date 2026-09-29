@@ -324,4 +324,24 @@ public class ReferenceIntegrityTests
         vm.MarkSettlementResultsCurrent();
         Assert.AreEqual(0, vm.EditsSinceSettlement.Count);
     }
+
+    // ── 8. ログのモデルの識別子 ──
+
+    [TestMethod]
+    public void TheModelIdentity_IsStableAndHidesThePath()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "顧客A", "案件.pdjson");
+        string id = ModelIdentity.Of(path);
+        Assert.AreEqual(8, id.Length);
+        StringAssert.Matches(id, new Regex("^[0-9A-F]{8}$"));
+        Assert.AreEqual(id, ModelIdentity.Of(path.ToLowerInvariant()), "大文字小文字で別のモデルになっています");
+        Assert.AreNotEqual(id, ModelIdentity.Of(path + "2"));
+        Assert.AreEqual(ModelIdentity.Unsaved, ModelIdentity.Of(null));
+
+        var vm = new MainWindowViewModel { CurrentFilePath = path };
+        Assert.AreEqual(id, ModelIdentity.Current);
+        StringAssert.Contains(Diagnostic.Input(DiagnosticTarget.Pile(1), "x").ToLogLine(), $"model={id}");
+        vm.CurrentFilePath = null;
+        Assert.AreEqual(ModelIdentity.Unsaved, ModelIdentity.Current);
+    }
 }

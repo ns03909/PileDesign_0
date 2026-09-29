@@ -39,6 +39,10 @@ namespace PileDesign.ViewModels
             var ctx = await PrepareRunAsync(progress, additive);
             if (ctx == null) return;
 
+            // 解析の開始時刻 (止まったときのログに、モデルの識別子と一緒に残す)
+            AnalysisStartedAt = DateTime.Now;
+            Serilog.Log.Information("[解析] 水平解析を始めます (モデル {Model})", PileDesign.Common.ModelIdentity.Current);
+
             // 規模別の所要時間・メモリの記録 (PerfLog)。遅くなる条件を杭・要素・ケースの数で見分ける
             using var perf = PileDesign.Common.PerfLog.Measure("水平解析", TotalCalculationCount, "ケース",
                 PileDesign.Common.PerfLog.Conditions(

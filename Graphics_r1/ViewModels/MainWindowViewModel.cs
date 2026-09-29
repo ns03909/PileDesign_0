@@ -581,6 +581,9 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _currentFilePath, value))
                 {
+                    // ログに添えるモデルの識別子 (場所そのものではなく、その SHA-256 の先頭 8 桁)
+                    PileDesign.Common.ModelIdentity.SetFromPath(value);
+                    Serilog.Log.Information("[モデル] 識別子 {Model} のモデルを扱います", PileDesign.Common.ModelIdentity.Current);
                     // 実ファイルへの保存/読込が確定した時点で例題名は不要 (タイトルバー優先順位的にも下位扱い)
                     if (!string.IsNullOrEmpty(value))
                         _loadedExampleName = null;

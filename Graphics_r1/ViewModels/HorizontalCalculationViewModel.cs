@@ -168,6 +168,9 @@ namespace PileDesign.ViewModels
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
 
+        /// <summary>直近の水平解析を始めた時刻 (止まったときのログに、モデルの識別子と一緒に残す)。</summary>
+        internal DateTime? AnalysisStartedAt { get; private set; }
+
         // DataGrid上の選択中のGroundLayerデータ
         private GroundLayerInput _selectedGroundLayerOnDataGrid;
         public GroundLayerInput SelectedGroundLayerOnDataGrid
@@ -2137,7 +2140,8 @@ namespace PileDesign.ViewModels
                 await AddLogAsync(description);
                 await AddLogAsync($"スタックトレース: {ex.StackTrace}");
                 foreach (var p in problems) Serilog.Log.Warning("[解析] {Diagnostic}", p.ToLogLine());
-                Serilog.Log.Error(ex, "[解析] 途中で止まりました");
+                Serilog.Log.Error(ex, "[解析] 途中で止まりました (モデル {Model}・解析の開始 {Started:yyyy-MM-dd HH:mm:ss})",
+                    PileDesign.Common.ModelIdentity.Current, AnalysisStartedAt);
 
                 Application.Current?.Dispatcher.Invoke(() =>
                 {

@@ -186,8 +186,11 @@ namespace PileDesign.Common
             _ => "",
         };
 
-        /// <summary>ログに残す 1 行 (段階・重さ・場所の番号を項目に分けて書く)。</summary>
-        public string ToLogLine() => $"[{OriginLabel(Origin)}・{SeverityLabel(Severity)}] {Target.ToLogFields()} : {Message}";
+        /// <summary>
+        /// ログに残す 1 行 (段階・重さ・場所の番号を項目に分けて書く)。モデルの識別子 (<see cref="ModelIdentity"/>。
+        /// ファイルの場所そのものではない) も添え、別のモデルの記録と区別する。
+        /// </summary>
+        public string ToLogLine() => $"[{OriginLabel(Origin)}・{SeverityLabel(Severity)}] model={ModelIdentity.Current} {Target.ToLogFields()} : {Message}";
     }
 
     /// <summary>
