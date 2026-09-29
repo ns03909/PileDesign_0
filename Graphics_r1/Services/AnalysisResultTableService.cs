@@ -473,11 +473,13 @@ namespace PileDesign.Services
                         // CombinedXY: θ = √(dRx² + dRy²), M = √(Mx² + My²)
                         double dRx = bd.Rxi - bd.Rxj;
                         double dRy = bd.Ryi - bd.Ryj;
-                        double thetaRes = System.Math.Sqrt(dRx * dRx + dRy * dRy);
-                        double mRes = System.Math.Sqrt(bf.Mxi * bf.Mxi + bf.Myi * bf.Myi);
+                        double thetaRes = Resultant(dRx, dRy);
+                        double mRes = Resultant(bf.Mxi, bf.Myi);
+                        // 数値でない結果 (NaN・無限大) は曲線上の位置も剛性も決まらない。正常な値に見せず、そう書く
+                        bool resultFinite = double.IsFinite(thetaRes) && double.IsFinite(mRes);
 
-                        string status = FindSegmentStatus(thetas, thetaRes);
-                        double kthRes = CalcSlopeAtValue(thetas, moms, thetaRes);
+                        string status = resultFinite ? FindSegmentStatus(thetas, thetaRes) : NonFiniteResultText;
+                        double kthRes = resultFinite ? CalcSlopeAtValue(thetas, moms, thetaRes) : double.NaN;
                         mthetaRows.Add(new MThetaCurveRow
                         {
                             SpringIndex = idx + 1,
@@ -526,11 +528,13 @@ namespace PileDesign.Services
                     if (apLoad == null) summaryOmitted++;
                     else
                     {
+                        double fh = Resultant(apLoad.Fx, apLoad.Fy);
+                        bool finite = double.IsFinite(apLoad.Fx) && double.IsFinite(apLoad.Fy) && double.IsFinite(apLoad.Fz) && double.IsFinite(fh);
                         summaryRows.Add(new ForceSummaryRow
                         {
-                            Item = "代表節点慣性力",
+                            Item = finite ? "代表節点慣性力" : $"代表節点慣性力（{NonFiniteResultText}）",
                             Fx = apLoad.Fx, Fy = apLoad.Fy, Fz = apLoad.Fz,
-                            Fh = System.Math.Sqrt(apLoad.Fx * apLoad.Fx + apLoad.Fy * apLoad.Fy)
+                            Fh = fh,
                         });
                     }
                 }
@@ -540,26 +544,16 @@ namespace PileDesign.Services
                 void AddSpringSum(string item, List<HorizontalSoilSpring> springs)
                 {
                     if (springs.Count == 0) return;
-                    double sumFx = 0, sumFy = 0, sumFz = 0;
-                    int found = 0;
-                    foreach (var spring in springs)
-                    {
-                        var bf = spring.HorizontalSpringResults?.FirstOrDefault(r =>
+                    var forces = springs.Select(spring => spring.HorizontalSpringResults?.FirstOrDefault(r =>
                             r.IsLiquefaction == isLiquefaction && r.Step == step &&
                             (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
                             (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)))
-                            ?.CumulativeForce;
-                        if (bf == null) continue;
-                        found++;
-                        sumFx += bf.Fxi; sumFy += bf.Fyi; sumFz += bf.Fzi;
-                    }
-                    if (found == 0) { summaryOmitted++; return; }
-                    summaryRows.Add(new ForceSummaryRow
-                    {
-                        Item = found < springs.Count ? $"{item}（結果のあるばね {found}/{springs.Count} 本）" : item,
-                        Fx = sumFx, Fy = sumFy, Fz = sumFz,
-                        Fh = System.Math.Sqrt(sumFx * sumFx + sumFy * sumFy)
-                    });
+                            ?.CumulativeForce is { } bf
+                        ? ((double Fx, double Fy, double Fz)?)(bf.Fxi, bf.Fyi, bf.Fzi)
+                        : null).ToList();
+                    var row = SumSpringForces(item, forces);
+                    if (row == null) { summaryOmitted++; return; }
+                    summaryRows.Add(row);
                 }
 
                 // 2. 杭周地盤水平反力の合計（HorizontalSoilSpring: NodeJ名が杭地盤節点-で始まるもの）
@@ -594,6 +588,47 @@ namespace PileDesign.Services
             }
 
             return tables;
+        }
+
+        /// <summary>数値でない結果を表に出すときの印 (正常な値と見分けるため、項目名や状態の欄に添える)。</summary>
+        internal const string NonFiniteResultText = "結果が数値ではありません";
+
+        /// <summary>
+        /// 2 成分の合成 √(x² + y²)。二乗してから足すと、大きな有限の値 (1e155 程度より大きい) で途中が無限大になる。
+        /// 大きさをそろえてから計算する <see cref="double.Hypot"/> を使う。数値でない成分があれば数値でない値を返す。
+        /// </summary>
+        internal static double Resultant(double x, double y) => double.Hypot(x, y);
+
+        /// <summary>
+        /// ばね反力の合計の行を作る。<paramref name="forces"/> はばねごとの反力 (結果が無いばねは null)。
+        /// 結果のあるばねが 1 本も無ければ null (行を省く)。
+        ///
+        /// <para>欠けたばねがあれば項目名に本数を添える。数値でない反力を含むばね・合計が数値の範囲を超えたときも
+        /// 項目名にそう書く。以前は結果の数だけを見ており、合計が無限大・NaN になっても普通の行として並んでいた。</para>
+        /// </summary>
+        internal static ForceSummaryRow? SumSpringForces(string item, IReadOnlyList<(double Fx, double Fy, double Fz)?> forces)
+        {
+            var found = forces.Where(f => f.HasValue).Select(f => f!.Value).ToList();
+            if (found.Count == 0) return null;
+
+            int nonFinite = found.Count(f => !double.IsFinite(f.Fx) || !double.IsFinite(f.Fy) || !double.IsFinite(f.Fz));
+            double sumFx = PileDesign.Common.StableNumerics.Sum(found.Select(f => f.Fx));
+            double sumFy = PileDesign.Common.StableNumerics.Sum(found.Select(f => f.Fy));
+            double sumFz = PileDesign.Common.StableNumerics.Sum(found.Select(f => f.Fz));
+            double fh = Resultant(sumFx, sumFy);
+
+            var notes = new List<string>();
+            if (found.Count < forces.Count) notes.Add($"結果のあるばね {found.Count}/{forces.Count} 本");
+            if (nonFinite > 0) notes.Add($"数値でない反力を含むばね {nonFinite} 本");
+            else if (!double.IsFinite(sumFx) || !double.IsFinite(sumFy) || !double.IsFinite(sumFz) || !double.IsFinite(fh))
+                notes.Add("合計が数値の範囲を超えています");
+
+            return new ForceSummaryRow
+            {
+                Item = notes.Count == 0 ? item : $"{item}（{string.Join("・", notes)}）",
+                Fx = sumFx, Fy = sumFy, Fz = sumFz,
+                Fh = fh,
+            };
         }
 
         /// <summary>
