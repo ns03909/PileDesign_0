@@ -342,7 +342,7 @@ public class DiagnosticTests
     {
         var d = Diagnostic.InputAt(DiagnosticTarget.PileBodySegment(2, 3), "Ec が 0 以下");
         string line = d.ToLogLine();
-        StringAssert.StartsWith(line, "[入力] kind=PileBodySegment pileBody=2 segment=3 : 杭体2 区間3: Ec が 0 以下");
+        StringAssert.StartsWith(line, "[入力・解析を止める] kind=PileBodySegment pileBody=2 segment=3 : 杭体2 区間3: Ec が 0 以下");
     }
 
     /// <summary>解析結果の数値でない値は、段階「解析」の問題として杭とケースを持つ。</summary>

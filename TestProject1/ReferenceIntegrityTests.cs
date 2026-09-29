@@ -242,4 +242,45 @@ public class ReferenceIntegrityTests
         var after = DiagnosticSelection.Resolve([Diagnostic.InputAt(DiagnosticTarget.PileBody(byBody.Key), "x")], input);
         Assert.IsFalse(after.Piles.Contains(moved));
     }
+
+    // ── 4. 重さと推奨する操作 ──
+
+    [TestMethod]
+    public void Warnings_CarrySeverityAndRemedy_AndAreOrderedBySeverity()
+    {
+        var input = Example();
+        input.PileLayoutItems[0].GroupPileFactor = 1.2;                       // 結果に影響
+        input.InputNodes.Add(new InputNode { No = 99, X = 50, Y = 50, Z = 0 }); // 情報 (解析では無視)
+
+        var warnings = CheckInputData.CollectInputWarningDiagnostics(input);
+        var xi = warnings.Single(w => w.Message.Contains("群杭係数 ξ"));
+        Assert.AreEqual(DiagnosticSeverity.Warning, xi.Severity);
+        Assert.AreEqual(DiagnosticTarget.Pile(input.PileLayoutItems[0].No), xi.Target);
+        var node = warnings.Single(w => w.Message.Contains("一般節点 No.99"));
+        Assert.AreEqual(DiagnosticSeverity.Info, node.Severity);
+
+        var lines = CheckInputData.DescribeInputWarnings(input);
+        int xiLine = lines.FindIndex(l => l.Contains("群杭係数 ξ"));
+        int nodeLine = lines.FindIndex(l => l.Contains("一般節点 No.99"));
+        Assert.IsTrue(xiLine >= 0 && xiLine < nodeLine, "重い順に並んでいません");
+        StringAssert.StartsWith(lines[xiLine], "【結果に影響】");
+        StringAssert.Contains(lines[xiLine], "→ 杭配置の表で、その杭の値を直す");
+        StringAssert.StartsWith(lines[nodeLine], "【情報】");
+
+        // 文だけを返す従来の形は変えない
+        CollectionAssert.Contains(CheckInputData.CollectInputWarnings(input), xi.Message);
+    }
+
+    [TestMethod]
+    public void Blockers_AreSummarisedByRemedy()
+    {
+        var text = DiagnosticSelection.DescribeRemedies([
+            Diagnostic.InputAt(DiagnosticTarget.PileBodySegment(1, 1), "a"),
+            Diagnostic.InputAt(DiagnosticTarget.PileBodySegment(2, 1), "b"),
+            Diagnostic.InputAt(DiagnosticTarget.GroundLayer(1, 2), "c"),
+        ]);
+        StringAssert.Contains(text, "・杭体の入力画面で直す (2 件)");
+        StringAssert.Contains(text, "・地盤の入力画面で直す (1 件)");
+        Assert.IsNull(DiagnosticSelection.DescribeRemedies([Diagnostic.Input(DiagnosticTarget.Nowhere, "場所不明")]));
+    }
 }

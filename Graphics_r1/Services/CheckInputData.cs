@@ -21,24 +21,39 @@ namespace PileDesign.Services
     class CheckInputData
     {
         /// <summary>
-        /// 解析実行は止めないがユーザーに確認させたい「注意レベル」の入力警告を収集する。
-        /// プリフライトダイアログから呼び出され、サマリと並んで表示される。
-        /// ・ΔZc &lt;= 0 (接合点が杭頭より下または同位置 = ジオメトリ異常)
-        /// ・地盤側の既存 ValidateForAnalysis 由来の注意 (Es=0 / 粘性土で Cu=0 / 深度順序逆 / 土質点 N=0 等)
+        /// 解析実行は止めないがユーザーに確認させたい「注意レベル」の入力警告を収集する (文だけ)。
+        /// 重さ・場所・推奨する操作つきは <see cref="CollectInputWarningDiagnostics"/>。
         /// </summary>
         public static List<string> CollectInputWarnings(InputModel inputModel)
-        {
-            var warnings = new List<string>();
-            if (inputModel == null) return warnings;
+            => CollectInputWarningDiagnostics(inputModel).Select(d => d.Message).ToList();
 
+        /// <summary>
+        /// 解析前の確認の一覧に出す行。重い順 (結果に影響 → 情報) に並べ、行ごとに重さと推奨する操作を付ける。
+        /// </summary>
+        public static List<string> DescribeInputWarnings(InputModel inputModel)
+            => DiagnosticSelection.BySeverity(CollectInputWarningDiagnostics(inputModel)).Select(DiagnosticSelection.FormatForList).ToList();
+
+        /// <summary>
+        /// 解析実行は止めないがユーザーに確認させたい入力の注意を、重さ・場所・推奨する操作つきで集める。
+        /// <list type="bullet">
+        /// <item>結果に影響 (<see cref="DiagnosticSeverity.Warning"/>): 支持条件・地盤反力・適用範囲など、計算の値が変わるもの。</item>
+        /// <item>情報 (<see cref="DiagnosticSeverity.Info"/>): 解析では無視する・慣例と違うだけで、結果は変わらないもの。</item>
+        /// </list>
+        /// </summary>
+        public static List<Diagnostic> CollectInputWarningDiagnostics(InputModel inputModel)
+        {
+            var warnings = new List<Diagnostic>();
+            if (inputModel == null) return warnings;
+            const DiagnosticSeverity affects = DiagnosticSeverity.Warning;
 
             // 杭の鉛直地盤ばね (P-S ばね) を入力のとおりに付けられない杭。
             // 付けられないとモデル作成は杭先端を鉛直に固定して続けるので、支持条件が変わることを先に知らせる
             foreach (var problem in PileDesign.FEM.AnalysisModelling.DescribeVerticalSpringProblems(inputModel))
-                warnings.Add("鉛直地盤ばね: " + problem);
+                warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.Nowhere, "鉛直地盤ばね: " + problem,
+                    "杭体の先端の入力と、地盤の支持層の入力を確かめる"));
 
-            // 杭体の形状の注意 (節杭が最上段にある等)。解析は止めない
-            warnings.AddRange(DescribePileBodyNotices(inputModel));
+            // 杭体の形状・材料の注意 (節杭が最上段にある・Ec が低め等)。解析は止めない
+            warnings.AddRange(CollectPileBodyNotices(inputModel));
 
             // 各杭の ΔZc (接合点 − 杭頭オフセット)
             if (inputModel.PileLayoutItems != null)
@@ -47,17 +62,19 @@ namespace PileDesign.Services
                 {
                     var p = inputModel.PileLayoutItems[i];
                     if (p == null) continue;
+                    var at = DiagnosticTarget.Pile(p.No);
                     if (p.FoundationBeamDeltaZc <= 0)
-                        warnings.Add($"杭 No.{p.No}: 接合-杭頭 ΔZc = {p.FoundationBeamDeltaZc:N3} (>0 で接合点が杭頭の上に来るのが正常)。");
+                        warnings.Add(Diagnostic.Notice(affects, at,
+                            $"杭 No.{p.No}: 接合-杭頭 ΔZc = {p.FoundationBeamDeltaZc:N3} (>0 で接合点が杭頭の上に来るのが正常)。"));
 
                     // 群杭係数 ξ は kh0 に、杭間隔比 R/B は後方杭の py に効く。
                     // どちらも杭配置の入力で、入れ忘れると群杭の影響が消えたまま計算が通る。
                     if (p.GroupPileFactor > 1.0)
-                        warnings.Add($"杭 No.{p.No}: 群杭係数 ξ = {p.GroupPileFactor:N3} が 1 を超えています " +
-                                     "(群杭は水平地盤反力を下げる側なので 1 以下が通常)。");
+                        warnings.Add(Diagnostic.Notice(affects, at, $"杭 No.{p.No}: 群杭係数 ξ = {p.GroupPileFactor:N3} が 1 を超えています " +
+                                     "(群杭は水平地盤反力を下げる側なので 1 以下が通常)。"));
                     if (!(p.PileSpacingFactor > 0))
-                        warnings.Add($"杭 No.{p.No}: 杭間隔比 R/B が未入力です。" +
-                                     "後方杭の塑性水平地盤反力 py は群杭の影響を考えない (単杭と同じ) 扱いで計算します。");
+                        warnings.Add(Diagnostic.Notice(affects, at, $"杭 No.{p.No}: 杭間隔比 R/B が未入力です。" +
+                                     "後方杭の塑性水平地盤反力 py は群杭の影響を考えない (単杭と同じ) 扱いで計算します。"));
                 }
             }
 
@@ -74,7 +91,7 @@ namespace PileDesign.Services
                         {
                             var t = raw.TrimStart('-', ' ', '\t');
                             if (!string.IsNullOrWhiteSpace(t))
-                                warnings.Add($"地盤 {i + 1}: {t.Trim()}");
+                                warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.Ground(i + 1), $"地盤 {i + 1}: {t.Trim()}"));
                         }
                     }
                 }
@@ -88,10 +105,12 @@ namespace PileDesign.Services
                 foreach (var soilPile in soilPiles)
                 {
                     if (soilPile == null) continue;
+                    var at = DiagnosticTarget.PileBody(soilPile.PileBodyNo);
+                    const string clamp = "適用範囲の上下限に丸めた値で計算しています。杭体・地盤の入力を確かめる";
                     foreach (var w in soilPile.ValidateSmartMagnumRange())
-                        warnings.Add($"Smart-MAGNUM {w}");
+                        warnings.Add(Diagnostic.Notice(affects, at, $"Smart-MAGNUM {w}", clamp));
                     foreach (var w in soilPile.ValidateHybridKneadingRange())
-                        warnings.Add($"Hybridニーディング {w}");
+                        warnings.Add(Diagnostic.Notice(affects, at, $"Hybridニーディング {w}", clamp));
                 }
             }
 
@@ -99,25 +118,27 @@ namespace PileDesign.Services
             // 範囲外でも計算は止めず、警告として出す。
             if (ConcreteModelOptions.FollowsKctbEvaluation && inputModel.PileBodies != null)
             {
-                foreach (var pileBody in inputModel.PileBodies)
+                for (int i = 0; i < inputModel.PileBodies.Count; i++)
                 {
-                    foreach (var w in KctbApplicableRange.Validate(pileBody))
-                        warnings.Add($"BCJ評定-FD0356-08 {w}");
+                    foreach (var w in KctbApplicableRange.Validate(inputModel.PileBodies[i]))
+                        warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.PileBody(i + 1), $"BCJ評定-FD0356-08 {w}"));
                 }
             }
 
             // どこにもつながっていない一般節点。
-            // 解析モデルからは取り除いて計算を続けるので、エラーではなく警告。
+            // 解析モデルからは取り除いて計算を続けるので、結果には影響しない (情報)。
             // 節点を作ったあとに基礎梁を消した (まだ作っていない) 場合に出る。
             foreach (var n in inputModel.GetUnconnectedGeneralNodes())
             {
-                warnings.Add($"一般節点 No.{n.No} (X={n.X:N3}, Y={n.Y:N3}, Z={n.Z:N3}): "
-                           + "どの基礎梁にもつながっていません。解析では無視します。");
+                warnings.Add(Diagnostic.Notice(DiagnosticSeverity.Info, DiagnosticTarget.Nowhere,
+                    $"一般節点 No.{n.No} (X={n.X:N3}, Y={n.Y:N3}, Z={n.Z:N3}): どの基礎梁にもつながっていません。解析では無視します。",
+                    "不要なら一般節点を消す"));
             }
 
             // 意図しない入力の可能性が高いもの (同じ位置に複数の杭など)。
             // 解析は通るので警告にとどめる。
-            warnings.AddRange(ModelConnectivityCheck.CollectWarnings(inputModel));
+            foreach (var w in ModelConnectivityCheck.CollectWarnings(inputModel))
+                warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.Nowhere, w, "杭配置・基礎梁の配置を確かめる"));
 
             return warnings;
         }
@@ -172,6 +193,7 @@ namespace PileDesign.Services
 
             string text = $"{what}に以下の問題があります。{analysisName}を中止します。\n\n"
                         + string.Join("\n", problems.Select(p => p.Message));
+            if (DiagnosticSelection.DescribeRemedies(problems) is { } remedies) text += "\n\n" + remedies;
             if (DiagnosticSelection.DescribeSelection(selection) is { } scope) text += "\n\n" + scope;
 
             var destination = DiagnosticSelection.FirstNavigable(problems);
@@ -502,8 +524,12 @@ namespace PileDesign.Services
         /// 以前は解析を止めるエラーの一覧に入れていたので、注意のつもりの項目で解析できなかった。
         /// </summary>
         internal static List<string> DescribePileBodyNotices(InputModel inputModel)
+            => CollectPileBodyNotices(inputModel).Select(d => d.Message).ToList();
+
+        /// <summary><see cref="DescribePileBodyNotices"/> の重さ・場所つきの形。</summary>
+        internal static List<Diagnostic> CollectPileBodyNotices(InputModel inputModel)
         {
-            var notices = new List<string>();
+            var notices = new List<Diagnostic>();
             if (inputModel?.PileBodies == null) return notices;
             for (int i = 0; i < inputModel.PileBodies.Count; i++)
             {
@@ -513,16 +539,21 @@ namespace PileDesign.Services
                 {
                     var sec = segments[j]?.PileSection;
                     if (sec == null) continue;
-                    // Ec が止めるほどではないが低い (軽量・低強度など理由がありうる)
+                    var at = DiagnosticTarget.PileBodySegment(i + 1, j + 1);
+                    // Ec が止めるほどではないが低い (軽量・低強度など理由がありうる)。剛性に効くので結果に影響する
                     if (UsesConcrete(sec) && sec.ConcreteE >= MinConcreteE && sec.ConcreteE < LowConcreteE)
-                        notices.Add($"杭体{i + 1} 区間{j + 1}: コンクリートのヤング係数 Ec が {sec.ConcreteE:N0} N/mm² と低めです "
-                                    + $"({LowConcreteE:N0} N/mm² 未満)。単位体積重量 γ・設計基準強度 Fc・ξ を確認してください。");
+                        notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, at,
+                            $"杭体{i + 1} 区間{j + 1}: コンクリートのヤング係数 Ec が {sec.ConcreteE:N0} N/mm² と低めです "
+                            + $"({LowConcreteE:N0} N/mm² 未満)。単位体積重量 γ・設計基準強度 Fc・ξ を確認してください。"));
                     if (!sec.IsNodularPile) continue;
+                    // 節杭が最上段にあるのは慣例と違うだけで、計算はそのまま成り立つ (情報)
                     if (j == 0)
-                        notices.Add($"杭体{i + 1} 区間{j + 1}: {sec.PileSectionType} が最上段の区間にあります " +
-                                    "(節杭は上杭に継手で接合する下杭として使うのが一般的です)。");
+                        notices.Add(Diagnostic.Notice(DiagnosticSeverity.Info, at,
+                            $"杭体{i + 1} 区間{j + 1}: {sec.PileSectionType} が最上段の区間にあります " +
+                            "(節杭は上杭に継手で接合する下杭として使うのが一般的です)。"));
+                    // 拡頭径が合わないと標準タイプとして扱う (断面が変わるので結果に影響する)
                     if (!string.IsNullOrEmpty(sec.NodularHeadNote) && sec.NodularHeadNote.Contains("一致する拡頭径がありません"))
-                        notices.Add($"杭体{i + 1} 区間{j + 1}: {sec.NodularHeadNote}。");
+                        notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, at, $"杭体{i + 1} 区間{j + 1}: {sec.NodularHeadNote}。"));
                 }
             }
             return notices;

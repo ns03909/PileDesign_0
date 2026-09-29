@@ -1769,7 +1769,8 @@ namespace PileDesign.ViewModels
                 ? $"L1={level1Count} / L2={level2Count} (液状化: あり/なし両方)"
                 : $"L1={level1Count} / L2={level2Count}";
 
-            var inputWarnings = PileDesign.Services.CheckInputData.CollectInputWarnings(InputModel);
+            // 重い順に、重さと推奨する操作を付けて並べる
+            var inputWarnings = PileDesign.Services.CheckInputData.DescribeInputWarnings(InputModel);
 
             return new Views.AnalysisPreflightSummary(
                 AnalysisName: "水平解析",

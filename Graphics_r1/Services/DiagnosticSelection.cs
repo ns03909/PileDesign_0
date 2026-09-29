@@ -139,6 +139,36 @@ namespace PileDesign.Services
             _ => "",
         };
 
+        /// <summary>推奨する操作。<see cref="Diagnostic.Remedy"/> があればそれ、無ければ場所から決める (場所不明なら null)。</summary>
+        public static string? RemedyOf(Diagnostic diagnostic) => diagnostic.Remedy ?? diagnostic.Target.Kind switch
+        {
+            DiagnosticTargetKind.Pile => "杭配置の表で、その杭の値を直す",
+            DiagnosticTargetKind.PileBody or DiagnosticTargetKind.PileBodySegment => "杭体の入力画面で直す",
+            DiagnosticTargetKind.Ground or DiagnosticTargetKind.GroundLayer => "地盤の入力画面で直す",
+            DiagnosticTargetKind.Embedment => "根入部の入力で直す",
+            DiagnosticTargetKind.LoadCase => "荷重条件の入力画面で直す",
+            DiagnosticTargetKind.FoundationBeam => "基礎梁を描き直す・つなぎ直す",
+            DiagnosticTargetKind.SettlementLayer => "群杭沈下の「土層」タブで直す",
+            _ => null,
+        };
+
+        /// <summary>一覧の 1 行 (【重さ】文 → 推奨する操作)。</summary>
+        public static string FormatForList(Diagnostic diagnostic)
+            => $"【{Diagnostic.SeverityLabel(diagnostic.Severity)}】{diagnostic.Message}"
+               + (RemedyOf(diagnostic) is { } remedy ? $" → {remedy}" : "");
+
+        /// <summary>重い順 (同じ重さの中は出た順) に並べる。</summary>
+        public static List<Diagnostic> BySeverity(IEnumerable<Diagnostic> diagnostics)
+            => (diagnostics ?? []).Select((d, i) => (d, i)).OrderBy(x => x.d.Severity).ThenBy(x => x.i).Select(x => x.d).ToList();
+
+        /// <summary>対処のまとめ (推奨する操作ごとの件数)。操作が 1 つも無ければ null。</summary>
+        public static string? DescribeRemedies(IEnumerable<Diagnostic> diagnostics)
+        {
+            var groups = (diagnostics ?? []).Select(RemedyOf).Where(r => r != null).GroupBy(r => r!).ToList();
+            if (groups.Count == 0) return null;
+            return "対処:\n" + string.Join("\n", groups.Select(g => $"・{g.Key} ({g.Count()} 件)"));
+        }
+
         /// <summary>最初に直しに行く場所 (入力画面を開ける最初の問題)。無ければ null。</summary>
         public static DiagnosticTarget? FirstNavigable(IEnumerable<Diagnostic> diagnostics)
             => (diagnostics ?? []).Select(d => d.Target).FirstOrDefault(t => DestinationOf(t) != InputDestination.None);

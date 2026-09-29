@@ -17,6 +17,17 @@ namespace PileDesign.Common
         Output,
     }
 
+    /// <summary>問題の重さ。知らせの一覧で、どれから対処するかを決めるのに使う (重い順)。</summary>
+    public enum DiagnosticSeverity
+    {
+        /// <summary>解析を止める (このままでは解けない・解いても意味が無い)。</summary>
+        Error,
+        /// <summary>計算はできるが、結果に影響する (値を確かめてほしい)。</summary>
+        Warning,
+        /// <summary>知らせるだけ (結果には影響しない)。</summary>
+        Info,
+    }
+
     /// <summary>問題の場所の種類。直しに行く入力画面と、メイン画面で選ぶ杭の決め方がこれで決まる。</summary>
     public enum DiagnosticTargetKind
     {
@@ -129,6 +140,28 @@ namespace PileDesign.Common
         /// <summary>1 行の問題がほかの場所にも及ぶとき、その場所 (同じ杭体・地盤・杭頭の高さの杭をまとめた行など)。</summary>
         public IReadOnlyList<DiagnosticTarget> MoreTargets { get; init; } = [];
 
+        /// <summary>重さ。既定は解析を止める問題。</summary>
+        public DiagnosticSeverity Severity { get; init; } = DiagnosticSeverity.Error;
+
+        /// <summary>
+        /// 推奨する操作 (「杭体の入力画面で直す」など)。与えなければ場所から決まるもの
+        /// (<c>DiagnosticSelection.RemedyOf</c>) を使う。
+        /// </summary>
+        public string? Remedy { get; init; }
+
+        /// <summary>重さの名前 (知らせ・ログで同じ呼び方にする)。</summary>
+        public static string SeverityLabel(DiagnosticSeverity severity) => severity switch
+        {
+            DiagnosticSeverity.Error => "解析を止める",
+            DiagnosticSeverity.Warning => "結果に影響",
+            DiagnosticSeverity.Info => "情報",
+            _ => "",
+        };
+
+        /// <summary>入力の注意 (解析は止めない)。</summary>
+        public static Diagnostic Notice(DiagnosticSeverity severity, DiagnosticTarget target, string message, string? remedy = null)
+            => new(DiagnosticOrigin.Input, target, message) { Severity = severity, Remedy = remedy };
+
         /// <summary>この問題の場所すべて (<see cref="Target"/> と <see cref="MoreTargets"/>)。</summary>
         public IEnumerable<DiagnosticTarget> Targets => MoreTargets.Count == 0 ? [Target] : MoreTargets.Prepend(Target);
 
@@ -153,8 +186,8 @@ namespace PileDesign.Common
             _ => "",
         };
 
-        /// <summary>ログに残す 1 行 (段階・場所の番号を項目に分けて書く)。</summary>
-        public string ToLogLine() => $"[{OriginLabel(Origin)}] {Target.ToLogFields()} : {Message}";
+        /// <summary>ログに残す 1 行 (段階・重さ・場所の番号を項目に分けて書く)。</summary>
+        public string ToLogLine() => $"[{OriginLabel(Origin)}・{SeverityLabel(Severity)}] {Target.ToLogFields()} : {Message}";
     }
 
     /// <summary>
