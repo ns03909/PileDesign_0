@@ -2066,7 +2066,9 @@ namespace PileDesign.ViewModels
                 // 断面計算が既定値で代替された件数は、解析ログとログファイルにだけ残す。
                 // 完了ダイアログには出さない (実装都合の用語で、読んでも次の操作が決まらないため)。
                 long fallbackCount = PileDesign.Common.CalcFallbackTracker.TotalCount;
-                string doneMessage = "計算が終了しました。";
+                // ケースごとの状態 (収束・緩和・未収束・物理的未収束) と、続けた失敗をまとめて出す
+                string doneMessage = PileDesign.Services.AnalysisRunOutcome.Describe(
+                    AnaModels.Count > 0 ? AnaModels[^1].AnalysisStepResults : null, _caseNotices.ToArray(), out bool runNeedsAttention);
                 if (fallbackCount > 0)
                 {
                     string fallbackSummary = PileDesign.Common.CalcFallbackTracker.BuildSummary();
@@ -2074,7 +2076,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // 結果を表示・保存・検定に渡す前に、全体に数値でない値が無いかを 1 回調べる
-                MessageBoxImage? doneIconOverride = null;
+                MessageBoxImage? doneIconOverride = runNeedsAttention ? MessageBoxImage.Warning : null;
                 if (AnaModels.Count > 0)
                 {
                     var nonFinite = PileDesign.Services.AnalysisResultValidator.FindNonFinite(AnaModels[^1], out int nonFiniteTotal);

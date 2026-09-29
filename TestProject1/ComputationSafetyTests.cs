@@ -128,4 +128,40 @@ public class ComputationSafetyTests
 
         Assert.IsNull(AnalysisResultValidator.Describe(AnalysisResultValidator.FindNonFinite(new AnaModel(), out int none), none));
     }
+
+    // ── ケースの状態の知らせ ──
+
+    [TestMethod]
+    public void RunOutcome_ListsUnconvergedCasesAndContinuedFailures()
+    {
+        var a = new LoadCase { LoadName = "L1", Level = 1, No = 1 };
+        var b = new LoadCase { LoadName = "L2", Level = 2, No = 1 };
+        var steps = new[]
+        {
+            new AnalysisStepResult { LoadCase = a, Step = 1, Status = StepStatus.Converged },
+            new AnalysisStepResult { LoadCase = b, Step = 1, Status = StepStatus.Converged },
+            new AnalysisStepResult { LoadCase = b, Step = 2, Status = StepStatus.Unconverged },
+        };
+        string text = AnalysisRunOutcome.Describe(steps, ["L2: 軸剛性を 0 にできませんでした"], out bool attention);
+        Assert.IsTrue(attention);
+        StringAssert.Contains(text, "2 ケースのうち、収束 1");
+        StringAssert.Contains(text, "未収束: L2");
+        StringAssert.Contains(text, "軸剛性を 0 にできませんでした");
+
+        string clean = AnalysisRunOutcome.Describe(steps.Take(1), [], out bool none);
+        Assert.IsFalse(none);
+        StringAssert.Contains(clean, "全 1 ケースが収束しました");
+    }
+
+    // ── 結果の前提の記録 ──
+
+    [TestMethod]
+    public void AnalysisConditions_AreNullWithoutAnalysis_AndMentionEditsAfterIt()
+    {
+        var vm = new MainWindowViewModel { CurrentInputModel = new InputModel() };
+        Assert.IsNull(vm.DescribeAnalysisConditions());
+        vm.CurrentModel = new AnaModel();
+        vm.RestoreInputChangedSinceAnalysis(true);
+        StringAssert.Contains(vm.DescribeAnalysisConditions(), "解析のあとに入力が編集されています");
+    }
 }

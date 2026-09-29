@@ -212,6 +212,12 @@ namespace PileDesign.ViewModels
         /// </summary>
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _caseStages = new();
 
+        /// <summary>
+        /// 解析は続けたが失敗した処理 (ケース名つき)。完了の知らせにまとめて出す (<see cref="PileDesign.Services.AnalysisRunOutcome"/>)。
+        /// 実行のたびに空にする。
+        /// </summary>
+        internal readonly System.Collections.Concurrent.ConcurrentQueue<string> _caseNotices = new();
+
         private async Task SolveOneCaseAsync(
             CancellationToken token,
             IProgress<Models.AnalysisProgress>? progress,
@@ -322,6 +328,8 @@ namespace PileDesign.ViewModels
                 {
                     Log.Warning(ex, "[ApplyAxialReleaseAtPileHeads] 失敗: {CaseTag}", caseTag);
                     await AddLogAsync($"  {caseTag} ⚠ 軸剛性 0 適用に失敗: {ex.Message}");
+                    // 解析は続ける。完了の知らせにも出す (ログだけだと、全体が「完了」に見える)
+                    _caseNotices.Enqueue($"{caseTag}: 引張軸力の杭の杭頭で軸剛性を 0 にできませんでした ({ex.Message.Split('\n')[0].Trim()})");
                 }
             }
 
@@ -2046,6 +2054,8 @@ namespace PileDesign.ViewModels
         /// </summary>
         private async Task<RunContext?> PrepareRunAsync(IProgress<Models.AnalysisProgress>? progress, bool additive)
         {
+            _caseNotices.Clear();
+            _caseStages.Clear();
             // === 追加実行モード用: 既存ケースキー集合 ===
             // RunAsync 開始時に 1 回スナップショットを取り、ループ内で skip 判定に使用。
             // 並列ループ実行中は targetModel.AnalysisStepResults へ append が走るため

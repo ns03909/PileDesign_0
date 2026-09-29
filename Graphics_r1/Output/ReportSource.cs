@@ -36,5 +36,11 @@ namespace PileDesign.Output
 
         /// <summary>検定を組めなかったときの例外 (計算書のその位置に注記する)。</summary>
         public Exception? FactoredEvaluationError { get; init; }
+
+        /// <summary>
+        /// 結果の前提 (解析の時刻・解析したときの入力の識別・解いたケースの数)。表紙に書き、あとから
+        /// どの解析の結果かを追えるようにする。解析していなければ null。
+        /// </summary>
+        public string? AnalysisConditions { get; init; }
     }
 }

@@ -257,7 +257,28 @@ namespace PileDesign.ViewModels
                 CoverMatchesReportInput = ReferenceEquals(reportInput, CurrentInputModel) || !InputChangedSinceAnalysis,
                 FactoredEvaluation = evaluation,
                 FactoredEvaluationError = evaluationError,
+                AnalysisConditions = DescribeAnalysisConditions(),
             };
+        }
+
+        /// <summary>
+        /// 結果の前提を 1 行にする (計算書の表紙に書く)。解析の時刻・解析したときの入力の識別 (入力の署名の先頭 12 文字。
+        /// 同じ入力なら同じ値になる)・水平解析で解いたケースの数。解析していなければ null。
+        /// </summary>
+        internal string? DescribeAnalysisConditions()
+        {
+            if (CurrentModel == null && _currentResultSet == null) return null;
+            var parts = new System.Collections.Generic.List<string>();
+            if (_currentResultSet != null) parts.Add($"解析の実行: {_currentResultSet.CapturedAt:yyyy/MM/dd HH:mm}");
+            if (!string.IsNullOrEmpty(_analysisInputSignature))
+                parts.Add($"解析したときの入力の識別: {_analysisInputSignature[..Math.Min(12, _analysisInputSignature.Length)]}");
+            int cases = 0;
+            try { cases = CurrentModel?.BuildCaseConvergenceMap().Count ?? 0; }
+            catch (Exception ex) { Serilog.Log.Debug(ex, "[計算書] ケースの数を数えられませんでした"); }
+            if (cases > 0) parts.Add($"水平解析のケース: {cases} 件");
+            if (ResultsMixedWithEditedInput || (_currentResultSet == null && InputChangedSinceAnalysis))
+                parts.Add("解析のあとに入力が編集されています");
+            return parts.Count == 0 ? null : string.Join("　", parts);
         }
 
         private bool _inputChangedSinceAnalysis;

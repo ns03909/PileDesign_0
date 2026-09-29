@@ -373,6 +373,9 @@ namespace PileDesign.Output
         {
             AddText(body, $"杭検討プログラム ver {(System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString())}", "center");
             AddTitle(body, "基礎ぐいの検討書");
+            // どの解析の結果かを追えるように、結果の前提を書く
+            if (_source.AnalysisConditions is { } conditions)
+                AddText(body, conditions, "center");
 
             // モデル図（アイソメトリック）
             if (modelImageBytes != null && modelImageBytes.Length > 0)
