@@ -153,7 +153,9 @@ namespace PileDesign.ViewModels
                     {
                         if (!selected[i]) continue;
                         if (!double.IsFinite(moment) || !double.IsFinite(cases[i].LoadAngle)) throw new ArgumentException("転倒モーメントと荷重方向には有限の数値が必要です。");
-                        var reactions = InputModel.GetReactionForUnitMoment(cases[i].LoadAngle);
+                        // 計算できないときは理由 (どの杭の座標か・範囲外か) を示す
+                        if (!InputModel.TryGetReactionForUnitMoment(cases[i].LoadAngle, out var reactions, out var problem))
+                            throw new ArgumentException("反力を計算できませんでした。" + problem);
                         if (reactions.Count != InputModel.PileLayoutItems.Count || reactions.Any(r => !double.IsFinite(r)))
                             throw new ArgumentException("反力を計算できませんでした。杭配置を確認してください。");
                         if (moment != 0 && reactions.All(r => r == 0)) throw new ArgumentException("指定方向の転倒モーメントを負担できる杭間隔がありません。");

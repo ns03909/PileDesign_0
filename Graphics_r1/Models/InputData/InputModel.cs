@@ -1194,38 +1194,71 @@ namespace PileDesign.Models.InputData
             return (otmX, otmY);
         }
 
-        // 単位転倒モーメントに対する反力を返すメソッド
+        // 単位転倒モーメントに対する反力を返すメソッド。計算できなければ空 (理由は TryGetReactionForUnitMoment)
         public List<double> GetReactionForUnitMoment(double angle) // degree
+            => TryGetReactionForUnitMoment(angle, out var reactions, out _) ? reactions : [];
+
+        /// <summary>
+        /// 単位転倒モーメント (1 kNm 相当の係数) に対する各杭の反力 = 腕の長さ / Σ腕の長さ²。
+        /// 腕の長さは、杭の図心から荷重方向へ測った距離。計算できなければ false と理由 (利用者向けの文) を返す。
+        ///
+        /// <para>以前は腕の長さの二乗をそのまま足していた。座標が大きいと二乗が無限大になり、反力が
+        /// すべて 0 になって「杭間隔がない」と誤った理由で止まった。座標に数値でない値 (NaN・無限大) があると、
+        /// 図心は原点で代用され (記録だけ残る)、反力は数値でない値のまま返っていた。いまは腕の長さを最大値で
+        /// 割ってから二乗して足し (値の大きさによらず範囲内に収まる)、数値でない座標・結果は理由を示して止める。</para>
+        /// </summary>
+        internal bool TryGetReactionForUnitMoment(double angle, out List<double> reactions, out string? problem)
         {
-            try
+            reactions = [];
+            problem = null;
+            var piles = PileLayoutItems;
+            if (piles == null || piles.Count == 0) { problem = PileDesign.Services.GuardMessages.NoPileLayout; return false; }
+            if (!double.IsFinite(angle)) { problem = $"荷重方向が数値ではありません ({angle})。"; return false; }
+
+            var badPiles = piles.Where(p => !double.IsFinite(p.X) || !double.IsFinite(p.Y)).Select(p => p.PileNo).ToList();
+            if (badPiles.Count > 0)
             {
-                if (PileLayoutItems == null || PileLayoutItems.Count == 0)
-                    return [];
+                problem = $"杭No.{string.Join(", ", badPiles)} の座標 (X・Y) が数値ではありません。杭配置を確認してください。";
+                return false;
+            }
 
-                double radian = angle * Math.PI / 180;
-                double c = Math.Cos(radian);
-                double s = Math.Sin(radian);
-                Point3D centroid = GetCentroid();
+            double radian = angle * Math.PI / 180;
+            double c = Math.Cos(radian);
+            double s = Math.Sin(radian);
+            // 図心は数値でない座標を上で除いたので、原点で代用されることはない
+            double centerX = PileDesign.Common.StableNumerics.Mean(piles.Select(p => p.X));
+            double centerY = PileDesign.Common.StableNumerics.Mean(piles.Select(p => p.Y));
 
-                var raw = new List<double>();
-                double otm = 0;
-                foreach (var item in PileLayoutItems)
+            var arms = new double[piles.Count];
+            for (int i = 0; i < piles.Count; i++)
+            {
+                arms[i] = c * (piles[i].X - centerX) + s * (piles[i].Y - centerY);
+                if (!double.IsFinite(arms[i]))
                 {
-                    double arm = c * (item.X - centroid.X) + s * (item.Y - centroid.Y);
-                    raw.Add(arm);
-                    otm += arm * arm;
+                    problem = $"杭No.{piles[i].PileNo} の図心からの距離が数値の範囲を超えています。杭の座標を確認してください。";
+                    return false;
                 }
-
-                if (otm <= 1e-12) // ほぼゼロ
-                    return [.. raw.Select(_ => 0.0)];
-
-                return [.. raw.Select(r => r / otm)];
             }
-            catch (Exception ex)
+
+            // Σ腕² = scale² Σ(腕/scale)²。最大値で割ってから二乗するので、足し合わせは 1〜本数 の範囲に収まる
+            double scale = arms.Max(a => Math.Abs(a));
+            double sumSquares = scale == 0 ? 0 : PileDesign.Common.StableNumerics.Sum(arms.Select(a => (a / scale) * (a / scale)));
+            // 腕の長さの二乗和がほぼ 0 (以前の閾値 1e-12 と同じ) なら、この方向の転倒モーメントを負担できない
+            if (scale == 0 || scale * Math.Sqrt(sumSquares) <= 1e-6)
             {
-                Log.Warning(ex, "[InputModel.GetReactionForUnitMoment] angle={Angle}", angle);
-                return [];
+                reactions = [.. arms.Select(_ => 0.0)];
+                return true;
             }
+
+            // 反力 = 腕 / Σ腕² = (腕/scale) / Σ(腕/scale)² / scale
+            reactions = [.. arms.Select(a => (a / scale) / sumSquares / scale)];
+            if (reactions.Any(r => !double.IsFinite(r)))
+            {
+                problem = "反力が数値の範囲を超えました。杭の座標を確認してください。";
+                reactions = [];
+                return false;
+            }
+            return true;
         }
 
         private static readonly JsonSerializerOptions _jsonOptions = new()
