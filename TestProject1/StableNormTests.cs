@@ -68,4 +68,35 @@ public class StableNormTests
         string src = TestSource.Read("Graphics_r1", "Services", "ModelConnectivityCheck.cs");
         StringAssert.Contains(src, "double length = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);");
     }
+
+    // ── 杭位置の重なりの警告 (座標を mm の整数に丸めて比べる) ──
+
+    [TestMethod]
+    public void PositionKey_RejectsCoordinatesThatCannotBeRounded()
+    {
+        Assert.IsTrue(ModelConnectivityCheck.TryPositionKey(1.2344, -5, out var key));
+        Assert.AreEqual((1234L, -5000L), key);
+        Assert.IsFalse(ModelConnectivityCheck.TryPositionKey(double.NaN, 0, out _));
+        Assert.IsFalse(ModelConnectivityCheck.TryPositionKey(0, double.PositiveInfinity, out _));
+        Assert.IsFalse(ModelConnectivityCheck.TryPositionKey(1e17, 0, out _), "long に収まらない座標を丸めている");
+    }
+
+    /// <summary>
+    /// <b>本題。</b> 丸められない座標の杭どうしを「同じ位置」と言わないこと。
+    /// 以前は範囲外の double を long にしていて、値が決まらず、離れた杭が同じ位置になり得た。
+    /// </summary>
+    [TestMethod]
+    public void HugeCoordinates_AreReported_NotTreatedAsTheSamePosition()
+    {
+        var input = new PileDesign.Models.InputData.InputModel();
+        input.AttachViewModel(new PileDesign.ViewModels.MainWindowViewModel { CurrentInputModel = input });
+        input.PileLayoutItems ??= [];
+        input.PileLayoutItems.Add(new PileDesign.Models.InputData.PileLayoutDataItem { No = 1, PileNo = 1, X = 1e17, Y = 0 });
+        input.PileLayoutItems.Add(new PileDesign.Models.InputData.PileLayoutDataItem { No = 2, PileNo = 2, X = -3e17, Y = 0 });
+
+        var warnings = ModelConnectivityCheck.CollectWarnings(input);
+
+        Assert.IsFalse(warnings.Any(w => w.Contains("同じ位置")), "離れた杭を同じ位置としている");
+        Assert.AreEqual(2, warnings.Count(w => w.Contains("重なりを判定できません")));
+    }
 }

@@ -161,13 +161,36 @@ namespace PileDesign.Services
             foreach (var p in piles)
             {
                 if (p == null) continue;
-                var key = ((long)Math.Round(p.X * 1000.0), (long)Math.Round(p.Y * 1000.0));
+                // 位置は mm に丸めた整数で比べる。数値でない座標・long に収まらない座標は丸められない
+                // (範囲外の double を long にすると値が決まらず、離れた杭どうしが「同じ位置」になり得た)
+                if (!TryPositionKey(p.X, p.Y, out var key))
+                {
+                    warnings.Add($"杭 No.{p.No}: 座標が数値でないか大きすぎるため、ほかの杭との重なりを判定できません (X={p.X}, Y={p.Y})。");
+                    continue;
+                }
                 if (seen.TryGetValue(key, out int firstNo))
                     warnings.Add($"杭 No.{p.No}: 杭 No.{firstNo} と同じ位置にあります (X={p.X:N3}, Y={p.Y:N3})。");
                 else
                     seen[key] = p.No;
             }
             return warnings;
+        }
+
+        /// <summary>
+        /// 杭の平面位置を mm に丸めた整数の組にする。数値でない・long に収まらない座標は false。
+        /// long の範囲 (約 ±9.2e18) の境目は double で正確に表せないので、少し内側 (±9.0e18) で切る。
+        /// </summary>
+        internal static bool TryPositionKey(double x, double y, out (long X, long Y) key)
+        {
+            const double limit = 9.0e18;
+            double mx = Math.Round(x * 1000.0), my = Math.Round(y * 1000.0);
+            if (!double.IsFinite(mx) || !double.IsFinite(my) || Math.Abs(mx) > limit || Math.Abs(my) > limit)
+            {
+                key = default;
+                return false;
+            }
+            key = ((long)mx, (long)my);
+            return true;
         }
 
         /// <summary>
