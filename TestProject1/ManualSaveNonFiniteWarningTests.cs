@@ -85,16 +85,15 @@ namespace TestProject1
                 () => service.SaveProjectDataAsync(Path.Combine(_dir, "model.pdj"), ModelWithNaN(), null));
         }
 
-        /// <summary>画面の 2 つの保存の経路 (上書き保存・名前を付けて保存) が、保存のあとで警告を出すこと。</summary>
+        /// <summary>
+        /// 画面の 2 つの保存の経路 (上書き保存・名前を付けて保存) が、保存のあとで警告を出すこと。
+        /// 2 つは共通の本体 (SaveProjectToAsync) を通るので、そこを見る (通っていることは SaveWhileEditingTests が見る)。
+        /// </summary>
         [TestMethod]
         public void BothSaveCommandsWarnAfterSaving()
         {
             string src = TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs");
-            foreach (var signature in new[]
-                     {
-                         "internal async Task<bool> SaveInputModelFileAsCoreAsync()",
-                         "internal async Task<bool> SaveInputModelFileCoreAsync()",
-                     })
+            foreach (var signature in new[] { "internal async Task<bool> SaveProjectToAsync(string path)" })
             {
                 string body = TestSource.MethodBody(src, signature);
                 int saved = body.IndexOf("string? nonFinite = await _fileOperationService.SaveProjectDataAsync(", StringComparison.Ordinal);

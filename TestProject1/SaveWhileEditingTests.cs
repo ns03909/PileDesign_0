@@ -221,11 +221,22 @@ namespace TestProject1
         public void BothSavePathsCompareTheGenerationAndCommitThePathAfterWriting()
         {
             string src = TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs");
-            foreach (string signature in new[]
+
+            // 2 つの経路は共通の本体を通る (写しを持つと、成功したあとの扱いが食い違う。以前は上書き保存だけ
+            // 「最近使ったファイル」に足さず、自動保存も始め直さなかった)
+            foreach (var entry in new[]
                      {
-                         "internal async Task<bool> SaveInputModelFileAsCoreAsync()",
-                         "internal async Task<bool> SaveInputModelFileCoreAsync()",
+                         ("internal async Task<bool> SaveInputModelFileAsCoreAsync()", "return await SaveProjectToAsync(saveFileDialog.FileName);"),
+                         ("internal async Task<bool> SaveInputModelFileCoreAsync()", "return await SaveProjectToAsync(CurrentFilePath);"),
                      })
+            {
+                string entryBody = TestSource.MethodBody(src, entry.Item1);
+                StringAssert.Contains(entryBody, entry.Item2, $"{entry.Item1}: 共通の本体を通っていません");
+                Assert.IsFalse(entryBody.Contains("SaveProjectDataAsync(", StringComparison.Ordinal),
+                    $"{entry.Item1}: 保存の手順を写し持っています");
+            }
+
+            foreach (string signature in new[] { "internal async Task<bool> SaveProjectToAsync(string path)" })
             {
                 string body = TestSource.MethodBody(src, signature);
                 int captured = body.IndexOf("int generationAtSaveStart = UnsavedWorkGeneration;", StringComparison.Ordinal);
@@ -240,11 +251,15 @@ namespace TestProject1
                     $"{signature}: 保存の完了で無条件に「保存済み」にしています");
             }
 
-            string saveAs = TestSource.MethodBody(src, "internal async Task<bool> SaveInputModelFileAsCoreAsync()");
-            int write = saveAs.IndexOf("SaveProjectDataAsync(newPath", StringComparison.Ordinal);
-            int commit = saveAs.IndexOf("CurrentFilePath = newPath;", StringComparison.Ordinal);
+            string core = TestSource.MethodBody(src, "internal async Task<bool> SaveProjectToAsync(string path)");
+            int write = core.IndexOf("SaveProjectDataAsync(path", StringComparison.Ordinal);
+            int commit = core.IndexOf("CurrentFilePath = path;", StringComparison.Ordinal);
             Assert.IsTrue(write >= 0 && commit > write,
-                "名前を付けて保存が、書き込みの前に保存先を切り替えています (失敗しても切り替わったままになる)");
+                "保存が、書き込みの前に保存先を切り替えています (失敗しても切り替わったままになる)");
+            int mru = core.IndexOf("_mruService.AddFile(CurrentFilePath);", StringComparison.Ordinal);
+            int autoSave = core.IndexOf("_autoSaveService.Start(CurrentFilePath", StringComparison.Ordinal);
+            Assert.IsTrue(mru > commit && autoSave > commit,
+                "保存に成功したあと、「最近使ったファイル」と自動保存の保存先を揃えていません");
         }
     }
 }

@@ -58,50 +58,8 @@ namespace PileDesign.ViewModels
             if (saveFileDialog.ShowDialog() != true)
                 return false;   // 保存ダイアログをキャンセル
 
-            // 保存先は書き込みが成功してから切り替える。
-            // 以前は書き込みの前に CurrentFilePath を新しいパスにし、失敗しても戻していなかった。
-            // 次の上書き保存・自動保存・タイトルが、書けなかった保存先を「いまのファイル」として扱った。
-            string newPath = saveFileDialog.FileName;
-            int generationAtSaveStart = UnsavedWorkGeneration;
-            int projectAtSaveStart = ProjectGeneration;
-            Mouse.OverrideCursor = Cursors.Wait;
-            try
-            {
-                StatusMessage = "保存中...";
-                // 解析結果保存フラグ OFF の場合は AnaModel/VerticalBeamCaseResults を null にして
-                // 入力のみの軽量ファイルとして保存する
-                var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
-                var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
-                string? nonFinite = await _fileOperationService.SaveProjectDataAsync(newPath, CurrentInputModel, anaModelToSave, vbcrToSave,
-                    CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
-                    Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
-                    IsElementSplit,
-                    InputChangedSinceAnalysis);
-                if (ProjectReplacedDuringSave(projectAtSaveStart, newPath))
-                    return false;
-                CurrentFilePath = newPath;
-                ShowToast("保存が完了しました。");
-                WarnIfSavedNonFinite(nonFinite);
-                // 保存を始めたあとの編集・解析はファイルに入っていないので、あれば未保存のまま残す
-                MarkWorkSavedAsOf(generationAtSaveStart);
-
-                // MRUに追加
-                _mruService.AddFile(CurrentFilePath);
-
-                // 自動保存を開始 (自動保存は常に入力のみ = 軽量。結果は含めない)
-                _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                MessageService.ShowError($"保存に失敗しました。", ex, "エラー");
-                return false;
-            }
-            finally
-            {
-                StatusMessage = "準備完了";
-                Mouse.OverrideCursor = null;
-            }
+            // 保存先は書き込みが成功してから切り替える (SaveProjectToAsync 参照)
+            return await SaveProjectToAsync(saveFileDialog.FileName);
         }
 
         [RelayCommand]
@@ -115,40 +73,65 @@ namespace PileDesign.ViewModels
         {
             if (string.IsNullOrEmpty(CurrentFilePath))
                 return await SaveInputModelFileAsCoreAsync();
-            else
+            return await SaveProjectToAsync(CurrentFilePath);
+        }
+
+        /// <summary>
+        /// 手動保存 (上書き保存・名前を付けて保存) の共通の本体。成功・失敗のあとの状態の動かし方を 1 か所に置く。
+        ///
+        /// <para>以前は 2 つの保存がそれぞれ同じ手順を写し持っていて、成功したあとの扱いが食い違っていた。
+        /// 名前を付けて保存は「最近使ったファイル」に足して自動保存を新しい保存先で始め直すのに、上書き保存は
+        /// どちらもしなかった (自動保存から復元して上書き保存したファイルが、一覧に載らなかった)。</para>
+        ///
+        /// <para>成功したとき (この順で):</para>
+        /// <list type="number">
+        /// <item>保存のあいだにプロジェクトが差し替わっていたら何もしない (<see cref="ProjectReplacedDuringSave"/>)。</item>
+        /// <item>保存先を切り替える (書き込みが成功してから。先に切り替えると、書けなかった保存先を
+        ///   次の上書き保存・自動保存・タイトルが「いまのファイル」として扱う)。</item>
+        /// <item>保存を始めた時点までの作業を保存済みにする (そのあとの編集・解析は未保存のまま)。</item>
+        /// <item>「最近使ったファイル」の先頭に置き、自動保存をこの保存先で始め直す (自動保存は常に入力のみ)。</item>
+        /// </list>
+        /// <para>失敗したときは保存先も未保存の印も動かさず、理由を知らせる。自動保存・緊急保存は
+        /// <see cref="AutoSaveService"/> が同じ役割 (成功・失敗・次の試行の知らせ) を受け持つ。</para>
+        /// </summary>
+        internal async Task<bool> SaveProjectToAsync(string path)
+        {
+            int generationAtSaveStart = UnsavedWorkGeneration;
+            int projectAtSaveStart = ProjectGeneration;
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
             {
-                int generationAtSaveStart = UnsavedWorkGeneration;
-                int projectAtSaveStart = ProjectGeneration;
-                string pathAtSaveStart = CurrentFilePath;
-                Mouse.OverrideCursor = Cursors.Wait;
-                try
-                {
-                    StatusMessage = "保存中...";
-                    var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
-                    var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
-                    string? nonFinite = await _fileOperationService.SaveProjectDataAsync(pathAtSaveStart, CurrentInputModel, anaModelToSave, vbcrToSave,
-                        CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
-                        Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
-                        IsElementSplit,
-                        InputChangedSinceAnalysis);
-                    if (ProjectReplacedDuringSave(projectAtSaveStart, pathAtSaveStart))
-                        return false;
-                    ShowToast("保存が完了しました。");
-                    WarnIfSavedNonFinite(nonFinite);
-                    // 保存を始めたあとの編集・解析はファイルに入っていないので、あれば未保存のまま残す
-                    MarkWorkSavedAsOf(generationAtSaveStart);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MessageService.ShowError($"保存に失敗しました。", ex, "エラー");
+                StatusMessage = "保存中...";
+                // 解析結果保存フラグ OFF の場合は AnaModel/VerticalBeamCaseResults を null にして
+                // 入力のみの軽量ファイルとして保存する
+                var anaModelToSave = IsSaveAnalysisResultsManual ? CurrentModel : null;
+                var vbcrToSave = IsSaveAnalysisResultsManual ? VerticalBeamCaseResults : null;
+                string? nonFinite = await _fileOperationService.SaveProjectDataAsync(path, CurrentInputModel, anaModelToSave, vbcrToSave,
+                    CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
+                    Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
+                    IsElementSplit,
+                    InputChangedSinceAnalysis);
+                if (ProjectReplacedDuringSave(projectAtSaveStart, path))
                     return false;
-                }
-                finally
-                {
-                    StatusMessage = "準備完了";
-                    Mouse.OverrideCursor = null;
-                }
+                CurrentFilePath = path;
+                ShowToast("保存が完了しました。");
+                WarnIfSavedNonFinite(nonFinite);
+                // 保存を始めたあとの編集・解析はファイルに入っていないので、あれば未保存のまま残す
+                MarkWorkSavedAsOf(generationAtSaveStart);
+
+                _mruService.AddFile(CurrentFilePath);
+                _autoSaveService.Start(CurrentFilePath, CurrentInputModel, null, null);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageService.ShowError($"保存に失敗しました。", ex, "エラー");
+                return false;
+            }
+            finally
+            {
+                StatusMessage = "準備完了";
+                Mouse.OverrideCursor = null;
             }
         }
 
