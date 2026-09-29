@@ -47,26 +47,7 @@ namespace PileDesign.ViewModels
     /// </summary>
     public partial class MainWindowViewModel
     {
-        // イベントの宣言
-        public event EventHandler<DataGridCellEditEndingEventArgs> DataGridSettlementSoilLayersCellEditEnding;
-
-        // イベントを発火するメソッド
-        public virtual void OnDataGridSettlementSoilLayersCellEditEnding(DataGridCellEditEndingEventArgs e)
-        {
-            DataGridSettlementSoilLayersCellEditEnding?.Invoke(this, e);
-        }
-
-        private ICommand _dataGridSettlementSoilLayersCellEditEndingCommand;
         private Action zoomFitAction;
-
-        public ICommand DataGridSettlementSoilLayersCellEditEndingCommand
-        {
-            get
-            {
-                _dataGridSettlementSoilLayersCellEditEndingCommand ??= new RelayCommand<DataGridCellEditEndingEventArgs>(OnDataGridSettlementSoilLayersCellEditEnding);
-                return _dataGridSettlementSoilLayersCellEditEndingCommand;
-            }
-        }
 
         public Action? ZoomFitAction { get => zoomFitAction; set => zoomFitAction = value; }
         public Action<double, double>? AnimateViewAnglesAction { get; set; }
@@ -83,30 +64,6 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void ShowToast(string message, int type = 0) => ShowToastAction?.Invoke(message, type);
 
-
-        private void HandleDataGridSettlementSoilLayersCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
-        {
-            if (e.Column is DataGridTextColumn && e.Column.Header.ToString().Contains("下端Z"))
-            {
-                var dataGrid = sender as DataGrid;
-                var editedItem = e.Row.Item as SettlementSoilLayer; // SettlementSoilLayer は適切なモデルクラスに置き換えてください
-                var editedTextBox = e.EditingElement as TextBox;
-
-                if (PileDesign.Common.NumericText.TryParse(editedTextBox.Text, out double newValue))
-                {
-                    int rowIndex = dataGrid.Items.IndexOf(editedItem);
-                    if (rowIndex > 0)
-                    {
-                        var previousItem = dataGrid.Items[rowIndex - 1] as SettlementSoilLayer; // SettlementSoilLayer は適切なモデルクラスに置き換えてください
-                        if (newValue >= previousItem.BottomAltitude)
-                        {
-                            MessageService.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                            e.Cancel = true;
-                        }
-                    }
-                }
-            }
-        }
 
         public ICommand OpenDoatsuGoryokuBaneWindowCommand { get; }
         public ICommand ComboBoxLabelSize_OnSelectionChangedCommand { get; }
@@ -358,9 +315,55 @@ namespace PileDesign.ViewModels
         }
 
 
-        private void DataGridSettlementSoilLayers_OnCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        /// <summary>
+        /// 沈下用土層の表のセル編集を確定する (群杭沈下ウィンドウの表から呼ばれる)。
+        ///
+        /// <para><b>値が変わらない確定では何もしない</b> (Undo の履歴・「再解析が必要」の印・解析結果の破棄の確認)。
+        /// セルに入って出ただけ・同じ値を打ち直しただけで履歴が 1 段増えると、Ctrl+Z を押しても何も戻らない段が挟まる。
+        /// 比べるのは確定の前後の値で、確定の前に控えを取り、書き込んだあとで値が同じなら控えを捨てる。</para>
+        ///
+        /// <para>以前はこの表の編集は画面側で受けており、Undo の履歴を作っていなかった (Ctrl+Z で戻らない)。
+        /// 層厚の計算もバインディングの書き込みより前で、打ち込んだ下端の値ではなく 1 つ前の値で計算していた。
+        /// ここにあった同名の処理 (値を比べずに毎回履歴を作る) はどこからも呼ばれていなかった。</para>
+        /// </summary>
+        internal void CommitSettlementSoilLayerCellEdit(DataGridCellEditEndingEventArgs e)
         {
             if (e.EditAction != DataGridEditAction.Commit) return;
+            if (e.Row?.Item is not SettlementSoilLayer layer) return;
+            if (e.EditingElement is not TextBox box) return;
+            var binding = box.GetBindingExpression(TextBox.TextProperty);
+            var property = binding?.ParentBinding?.Path?.Path is { } path
+                ? typeof(SettlementSoilLayer).GetProperty(path)
+                : null;
+            if (binding == null || property == null || !property.CanWrite) return;
+
+            object? oldValue = property.GetValue(layer);
+            var culture = binding.ParentBinding.ConverterCulture
+                          ?? box.Language?.GetSpecificCulture()
+                          ?? System.Globalization.CultureInfo.InvariantCulture;
+
+            // 触っていない (表示のまま) なら変わらない。表示は丸めてある (例: 変形係数は整数・3 桁区切り) ので、
+            // そのまま書き戻すと値が丸められる。元の値を丸めずに書き戻すようにしてから抜ける
+            if (oldValue is double oldNumber
+                && box.Text == FormatCellText(oldNumber, binding.ParentBinding.StringFormat, culture))
+            {
+                box.Text = oldNumber.ToString("R", culture);
+                return;
+            }
+            if (IsSameCellValue(oldValue, ParseCellText(box.Text, property.PropertyType))) return;
+
+            // 下端Z は 1 つ上の層の下端より下でなければならない (上下は表の並びではなく土層の並び。表は並べ替えできる)
+            var layers = CurrentInputModel?.PileGroupSettlement?.SettlementSoilLayers;
+            if (property.Name == nameof(SettlementSoilLayer.BottomAltitude)
+                && NumericText.TryParse(box.Text, out double newBottom)
+                && layers != null && layers.IndexOf(layer) is int index and > 0
+                && !(newBottom < layers[index - 1].BottomAltitude))
+            {
+                MessageService.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                box.Text = FormatCellText(layer.BottomAltitude, binding.ParentBinding.StringFormat, culture);
+                e.Cancel = true;
+                return;
+            }
 
             // 解析結果が保存されている場合は警告 (土層は両ルート共通入力)
             if (!ConfirmAnalysisConditionChange("両方", "土層 (編集)"))
@@ -369,38 +372,46 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // 「下端Z」列はバリデーションが必要 (一つ上のセル値より小さい必要あり)。
-            // バリデーションは TextBox.Text から先に行い、不正値ならコミットせず Undo にも残さない。
-            if (e.Column is DataGridTextColumn && e.Column.Header.ToString().Contains("下端Z"))
-            {
-                var dataGrid = sender as DataGrid;
-                var editedItem = e.Row.Item as SettlementSoilLayer;
-                var editedTextBox = e.EditingElement as TextBox;
+            var before = CaptureInputEdit();
+            binding.UpdateSource();
+            // 読めない文字などで書き込めなかったときも、値は変わっていないので履歴を作らない
+            if (IsSameCellValue(oldValue, property.GetValue(layer))) return;
 
-                if (editedTextBox != null && PileDesign.Common.NumericText.TryParse(editedTextBox.Text, out double newValue))
-                {
-                    int rowIndex = dataGrid?.Items.IndexOf(editedItem) ?? -1;
-                    if (rowIndex > 0
-                        && dataGrid.Items[rowIndex - 1] is SettlementSoilLayer previousItem
-                        && newValue >= previousItem.BottomAltitude)
-                    {
-                        MessageService.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                        e.Cancel = true;
-                        return; // commit せず Undo にも残さない
-                    }
-                }
-            }
-
-            // pre-edit 状態を Undo スナップショットに保存 (binding.UpdateSource より前に実行)
+            // 層厚は下端から決まる。書き込んだあとの値で計算する
+            UpdateSettlementSoilLayer();
+            IsGroupPileSettlementAnalysisDone = false;
             // 沈下用の土層は群杭沈下だけが読む。水平解析の結果は陳腐化しない
-            SaveUndoState(AnalysisInputScope.Settlement);
-
-            // バインディングソースの更新 (= コミット)
-            var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
-            binding?.UpdateSource();
-
-            // 変更後の UI 更新
-            RequestUpdateWindow();
+            CompleteInputEdit(before, "沈下用土層の編集", AnalysisInputScope.Settlement);
         }
+
+        /// <summary>セルの表示と同じ書式で値を文字にする (バインディングの StringFormat の規則に合わせる)。</summary>
+        internal static string FormatCellText(double value, string? stringFormat, System.Globalization.CultureInfo culture)
+        {
+            if (string.IsNullOrEmpty(stringFormat)) return value.ToString(culture);
+            string format = stringFormat.Contains('{') ? stringFormat : "{0:" + stringFormat + "}";
+            return string.Format(culture, format, value);
+        }
+
+        /// <summary>セルに打ち込まれた文字を、書き込まれる値として読む (読めなければ null = 比べられない)。</summary>
+        internal static object? ParseCellText(string? text, Type type)
+        {
+            if (type == typeof(string)) return text ?? "";
+            if (type == typeof(double)) return NumericText.TryParse(text, out double d) ? d : null;
+            if (type == typeof(int)) return NumericText.TryParse(text, out int i) ? i : null;
+            return null;
+        }
+
+        /// <summary>
+        /// セルの値が同じか。数値でない値 (NaN) どうしは同じとみなす。文字列は空と null を区別しない
+        /// (空のセルを確定すると null が空文字になるが、利用者には同じに見える)。
+        /// 比べられない (null) ときは変わったものとして扱う (安全側)。
+        /// </summary>
+        internal static bool IsSameCellValue(object? oldValue, object? newValue) => (oldValue, newValue) switch
+        {
+            (double a, double b) => a == b || (double.IsNaN(a) && double.IsNaN(b)),
+            (string or null, string s) => (oldValue as string ?? "") == s,
+            (_, null) => false,
+            _ => Equals(oldValue, newValue),
+        };
     }
 }

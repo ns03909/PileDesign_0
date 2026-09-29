@@ -100,72 +100,8 @@ namespace PileDesign.Views
 
         internal void DataGridSettlementSoilLayers_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
-            if (e.EditAction != DataGridEditAction.Commit) return;
-
-            var path = GetBindingPath(e.Column);
-            if (string.IsNullOrEmpty(path)) return;
-            var item = e.Row.Item;
-
-            if (e.Column is DataGridTextColumn textColumn)
-            {
-                if (textColumn.Header is StackPanel headerPanel)
-                {
-                    foreach (var child in headerPanel.Children)
-                    {
-                        if (child is TextBlock textBlock && textBlock.Text.Contains("下端Z"))
-                        {
-                            var dataGrid = sender as DataGrid;
-                            var editedItem = e.Row.Item as SettlementSoilLayer;
-                            var editedTextBox = e.EditingElement as TextBox;
-
-                            if (PileDesign.Common.NumericText.TryParse(editedTextBox.Text, out double newValue))
-                            {
-                                int rowIndex = dataGrid.Items.IndexOf(editedItem);
-                                if (rowIndex > 0)
-                                {
-                                    var previousItem = dataGrid.Items[rowIndex - 1] as SettlementSoilLayer;
-                                    if (newValue >= previousItem.BottomAltitude)
-                                    {
-                                        MessageService.Show("下端Zは一つ上のセルの値より小さくなければなりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                                        e.Cancel = true;
-
-                                        editedTextBox.Text = editedItem.BottomAltitude.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-
-            RecalculateThickness();
-
-            var viewModel = DataContext as MainWindowViewModel;
-            viewModel.IsGroupPileSettlementAnalysisDone = false;
-        }
-
-        private void RecalculateThickness()
-        {
-            if (DataContext is not MainWindowViewModel viewModel) return;
-
-            var settlementSoilLayers = viewModel.CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
-            if (settlementSoilLayers == null || settlementSoilLayers.Count == 0) return;
-
-            // 厚さは「土層上端 (SoilLayersTopAltitude)」基準で算出
-            double topAltitude = viewModel.CurrentInputModel.PileGroupSettlement.SoilLayersTopAltitude;
-
-            for (int i = 0; i < settlementSoilLayers.Count; i++)
-            {
-                if (i == 0)
-                {
-                    settlementSoilLayers[i].Thickness = topAltitude - settlementSoilLayers[i].BottomAltitude;
-                }
-                else
-                {
-                    settlementSoilLayers[i].Thickness = settlementSoilLayers[i - 1].BottomAltitude - settlementSoilLayers[i].BottomAltitude;
-                }
-            }
+            // 検査・Undo の履歴・層厚の計算は ViewModel 側でまとめて行う (値が変わらない確定では何もしない)
+            (DataContext as MainWindowViewModel)?.CommitSettlementSoilLayerCellEdit(e);
         }
 
         private void DataGridPileAxialForce_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)

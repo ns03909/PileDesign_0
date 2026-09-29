@@ -245,8 +245,6 @@ namespace PileDesign.ViewModels
 
             CanvasThreeDView = new CanvasThreeDView();
 
-            DataGridSettlementSoilLayersCellEditEnding += HandleDataGridSettlementSoilLayersCellEditEnding;
-
             // 初期化処理
             StatusMessage = "準備完了";
 
