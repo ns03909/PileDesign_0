@@ -158,9 +158,7 @@ namespace PileDesign.Services
         /// </summary>
         internal static bool HasSinglePileSettlement(InputModel inputModel, PileLayoutDataItem pile)
         {
-            var soilPiles = inputModel.ElementDivision?.SoilPiles;
-            if (soilPiles == null || pile.SoilPileAltNo < 1 || pile.SoilPileAltNo > soilPiles.Count) return false;
-            return (soilPiles[pile.SoilPileAltNo - 1]?.LoadDisplacements?.Count ?? 0) > 0;
+            return (pile.SoilPileAt(inputModel)?.LoadDisplacements?.Count ?? 0) > 0;
         }
 
         private static string MissingPiles(List<PileLayoutDataItem> piles, IEnumerable<int> withResult, string what)

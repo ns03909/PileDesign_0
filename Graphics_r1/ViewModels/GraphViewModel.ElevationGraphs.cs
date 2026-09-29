@@ -444,13 +444,8 @@ namespace PileDesign.ViewModels
                 // (地盤セグメント定義) を取得。SoilPileAltNo が無効な場合は reactions を null にして
                 // フォールバック (division スキップ、= 旧挙動の kN/kN/m を表示)
                 List<Models.InputData.HorizontalSoilReactionItem>? reactions = null;
-                if (pileLayoutDataItem.SoilPileAltNo > 0
-                    && pileLayoutDataItem.SoilPileAltNo <= InputModel.ElementDivision.SoilPiles.Count)
-                {
-                    var sp = InputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
-                    if (sp?.HorizontalSoilReactions != null && sp.HorizontalSoilReactions.Count > 0)
-                        reactions = sp.HorizontalSoilReactions.ToList();
-                }
+                if (SoilPileOrNote(pileLayoutDataItem) is { HorizontalSoilReactions.Count: > 0 } reactionSoilPile)
+                    reactions = reactionSoilPile.HorizontalSoilReactions.ToList();
 
                 foreach (LoadCase loadCase in GetSelectedLoadCases())
                 {
@@ -506,7 +501,7 @@ namespace PileDesign.ViewModels
                                 // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B) も解析と同じものを使う
                                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pileLayoutDataItem);
                                 // 液状化の低減率 βL も要素ごとに解析と同じ値を使う
-                                var graphGround = InputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1].GroundInput;
+                                var graphGround = InputModel.RequireSoilPile(pileLayoutDataItem).GroundInput;
                                 bool applyBeta = isLiquefaction && graphGround != null;
                                 double BetaAt(int e) => applyBeta && e >= 0 && e < reactions.Count
                                     ? graphGround!.LiquefactionReductionAt(reactions[e].ZTop, reactions[e].ZBtm, loadCase.Level - 1)

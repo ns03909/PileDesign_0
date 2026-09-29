@@ -210,7 +210,7 @@ namespace PileDesign.Views
         private void AddPileToeGeometry3D(
             Models.InputData.PileLayoutDataItem pileLocation, double x, double y, double zToe, double pileDia)
         {
-            var body = InputModel.PileBodies[pileLocation.PileBodyNo - 1];
+            if (InputModel.PileBodyAt(pileLocation.PileBodyNo) is not { } body) return;   // 参照の切れた杭は描かない
             double pileToeDia = body.PileToeDia / 1000.0;
             string ctype = body.PileConstructionType;
 

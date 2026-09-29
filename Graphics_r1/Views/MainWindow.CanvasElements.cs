@@ -120,20 +120,19 @@ namespace PileDesign.Views
 
             if (viewModel.CurrentInputModel.PileBodies.Count == 0) return;
 
-            if (pileLocation.PileBodyNo <= 0 ||
-            pileLocation.PileBodyNo > viewModel.CurrentInputModel.PileBodies.Count)
+            // 参照の切れた杭は描かない (解析前の検査・ファイルを開いたときの検査で知らせる)
+            if (viewModel.CurrentInputModel.PileBodyAt(pileLocation.PileBodyNo) is not { } pileBody)
             {
                 return;
             }
 
             ObservableCollection<PileBodySegment> pileBodySegments;
-            PileBodyInput pileBody = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1];
             var zs = new List<double>();
 
             if (!viewModel.IsElementSplit) // 要素未分割の場合
             {
                 // v2 セマンティクス: 杭体描画の起点は杭頭 Z (= pile.Z - ΔZc)
-                pileBodySegments = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileBodySegments;
+                pileBodySegments = pileBody.PileBodySegments;
                 double pileTopZ = pileLocation.PileHeadZ;
                 zs.Add(pileTopZ);
                 foreach (var segment in pileBodySegments)
@@ -144,12 +143,10 @@ namespace PileDesign.Views
 
             else // 杭要素分割済の場合
             {
-                if (pileLocation.SoilPileAltNo <= 0 ||
-                pileLocation.SoilPileAltNo > viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count)
+                if (pileLocation.SoilPileAt(viewModel.CurrentInputModel) is not { } soilPile)
                 {
                     return;
                 }
-                var soilPile = viewModel.CurrentInputModel.ElementDivision.SoilPiles[pileLocation.SoilPileAltNo - 1];
                 pileBodySegments = soilPile.PileBodySegments;
                 zs = soilPile.ZDataItems.Select(zDataItem => zDataItem.Z).ToList();
             }
@@ -182,7 +179,7 @@ namespace PileDesign.Views
                 var headMarkCenter = new Point(pointT.X, pointT.Y - headRadiusY - 2.0);
                 AddEllipseFigure(_pileRatioHeadPath, headMarkCenter, headRadius, headRadiusY);
             }
-            double pileToeDia = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileToeDia / 1000.0;
+            double pileToeDia = pileBody.PileToeDia / 1000.0;
             double pileToeAngle = pileBody.InsituPileToeAngle;
             double pileToeHeight = pileBody.InsituPileToeHeight / 1000.0;
             double pileToeHeightRatio = pileBody.PrecastConcretePileToeHeightRatio;
@@ -192,7 +189,7 @@ namespace PileDesign.Views
             //   - 既製コンクリート杭の埋込み杭: 拡大根固め球根の頂点まで (PileToeDia × PileToeHeightRatio)
             //   - 回転貫入杭: 拡張形状 (拡底等) が存在しないため、杭体は zs[^1] (真の杭先端) まで描画
             //   - Smart-MAGNUM: 根固め部上端は杭先端の 2m 上で固定 (根固め部径×高さ径比ではない)
-            var _bodyForToe = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1];
+            var _bodyForToe = pileBody;
             string _ctypeForToe = _bodyForToe.PileConstructionType;
             bool _isSmartMagnum = PileConstructionTypeNames.IsSmartMagnum(_ctypeForToe);
             bool _isHybrid = PileConstructionTypeNames.IsHybridKneading(_ctypeForToe);
@@ -267,7 +264,7 @@ namespace PileDesign.Views
                     AddNodularPilePositionGeometry(
                         x, y, bandZ1, nodularZ2, zToeTop, pileBodySegments[i], pileDia2D, flattening);
 
-                    var ctype = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType;
+                    var ctype = pileBody.PileConstructionType;
                     if (ctype == "場所打ちコンクリート杭")
                     {
                         if (i == zs.Count - 2 && pileToeDia > pileDia)

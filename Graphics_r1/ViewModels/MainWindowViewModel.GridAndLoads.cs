@@ -173,8 +173,8 @@ namespace PileDesign.ViewModels
                 foreach (var pile in piles)
                 {
                     double radius = 0;
-                    if (soilPiles != null && pile.SoilPileAltNo - 1 >= 0 && pile.SoilPileAltNo - 1 < soilPiles.Count)
-                        radius = soilPiles[pile.SoilPileAltNo - 1].GroupPileLoadDia * 0.5;
+                    if (pile.SoilPileIn(soilPiles) is { } soilPile)
+                        radius = soilPile.GroupPileLoadDia * 0.5;
                     if (!double.IsFinite(radius) || radius < 0)
                         throw new ArgumentException("荷重面等価径は有限の0以上の値にしてください。矩形荷重は変更しません。");
                     double side = radius > 0 ? Math.Sqrt(Math.PI) * radius : 2.0;

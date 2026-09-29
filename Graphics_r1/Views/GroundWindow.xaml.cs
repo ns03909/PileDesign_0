@@ -1146,7 +1146,7 @@ namespace PileDesign.Views
                 // 選択されたアイテムが正しい型であることを確認する
                 if (DataGridGroundMass.SelectedItem is GroundMassDataInput selectedItem)
                 {
-                    InputModel.GroundsInput[viewModel.GroundNo - 1].GroundMassesData.Remove(selectedItem);
+                    InputModel.GroundAt(viewModel.GroundNo)?.GroundMassesData.Remove(selectedItem);
                 }
                 else
                 {
@@ -1168,7 +1168,7 @@ namespace PileDesign.Views
                 // 選択されたアイテムが正しい型であることを確認する
                 if (DataGridGroundLayer.SelectedItem is GroundLayerInput selectedItem)
                 {
-                    InputModel.GroundsInput[viewModel.GroundNo - 1].GroundLayers.Remove(selectedItem);
+                    InputModel.GroundAt(viewModel.GroundNo)?.GroundLayers.Remove(selectedItem);
                 }
                 else
                 {

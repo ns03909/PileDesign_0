@@ -322,15 +322,31 @@ namespace PileDesign.Output
 
         /// <summary>
         /// 図・表 <paramref name="what"/> を作成できずに省いたことを記録し、その位置に赤字の注記を入れる。
-        /// 注記は本文の流れの中に入るので、計算書を読む人が欠けに気付ける。理由 (例外) はログにだけ残す。
+        /// 注記は本文の流れの中に入るので、計算書を読む人が欠けに気付ける。
+        ///
+        /// <para>入力の参照が切れた (杭体番号の杭体が無いなど) ときのように、理由が場所つきの問題
+        /// (<see cref="Common.DiagnosticException"/>) なら、注記と省いた一覧にその理由 (杭番号・杭体番号) も書く。
+        /// 直す場所が分かるので。それ以外の例外 (実装の都合の文) はログにだけ残す。</para>
+        ///
+        /// <para>方針: 入力が一部壊れていても計算書全体は止めず、作れない図表だけを省いて理由を示す。</para>
         /// </summary>
         internal static void NoteOmitted(Body? body, string what, Exception ex)
         {
             Log.Warning(ex, "[計算書] {What} を作成できず、省いて続けました", what);
-            lock (_omittedLock) _omitted.Add(what);
+            string? reason = DescribeOmissionReason(ex);
+            lock (_omittedLock) _omitted.Add(reason == null ? what : $"{what} ({reason})");
             body?.AppendChild(new Paragraph(new Run(
                 new RunProperties(new Bold(), new DocumentFormat.OpenXml.Wordprocessing.Color { Val = "C00000" }),
-                new Text($"（{what}を作成できませんでした。理由はログに記録しています）"))));
+                new Text(reason == null
+                    ? $"（{what}を作成できませんでした。理由はログに記録しています）"
+                    : $"（{what}を作成できませんでした。{reason}）"))));
+        }
+
+        /// <summary>省いた理由のうち、利用者に見せてよいもの (場所つきの問題の文)。無ければ null。</summary>
+        internal static string? DescribeOmissionReason(Exception ex)
+        {
+            var problems = Common.DiagnosticException.CollectFrom(ex);
+            return problems.Count == 0 ? null : string.Join(" ", problems.Select(p => p.Message).Distinct());
         }
 
         /// <summary>計算書の本体を <paramref name="tempPath"/> に書く (<see cref="CreateWordDocument"/> が一時ファイルのパスを渡す)。</summary>

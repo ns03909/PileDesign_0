@@ -720,8 +720,8 @@ namespace PileDesign.ViewModels
             SelectedHorizontalSoilReactions.Clear();
 
             var soilPile = SoilPiles[SelectedSoilPileNo - 1];
-            GroundInput groundInput = InputModel.GroundsInput[soilPile.GroundNo - 1];
-            PileBodyInput pileBody = InputModel.PileBodies[soilPile.PileBodyNo - 1];
+            GroundInput groundInput = InputModel.RequireGround(soilPile);
+            PileBodyInput pileBody = InputModel.RequirePileBody(soilPile);
 
             // 解析と同じ組み立て (SoilPile.BuildReaction) を通す。ここに写しを持つと、杭径・土層の
             // フォールバックや地表の標高の受け渡しが取り残される (2026-09-12 まで実際にそうだった)。
@@ -790,7 +790,7 @@ namespace PileDesign.ViewModels
             if (SoilEmbedment == null)
             { return; }
 
-            GroundInput groundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1];
+            GroundInput groundInput = InputModel.RequireGround(SoilEmbedment.GroundNo, "根入部");
 
             for (int i = 0; i < EmbedmentZsCollection.Count - 1; i++)
             {
@@ -1438,7 +1438,7 @@ namespace PileDesign.ViewModels
                         {
                             Z = originalList[i].Z - step * j,
                             IsChangeable = true,
-                            GroundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1],
+                            GroundInput = InputModel.RequireGround(SoilEmbedment.GroundNo, "根入部"),
                         };
 
                         // SetSoilDisplacementを呼び出す
@@ -1619,7 +1619,7 @@ namespace PileDesign.ViewModels
                         Z = averageValue,
                         IsChangeable = true,
                         //GroundLayerNo = SoilEmbedment.GroundNo
-                        GroundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1]
+                        GroundInput = InputModel.RequireGround(SoilEmbedment.GroundNo, "根入部")
                     };
 
                     // 選択された行の下に新しい行を追加
@@ -1835,7 +1835,7 @@ namespace PileDesign.ViewModels
                         // 杭側と同じ理由で、保存されている値を引き継ぐ
                         IsChangeable = SoilEmbedment.ZDataItems[j].IsChangeable,
                         //GroundLayerNo = SoilEmbedment.GroundNo,
-                        GroundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1],
+                        GroundInput = InputModel.RequireGround(SoilEmbedment.GroundNo, "根入部"),
                         GroundDisp1 = SoilEmbedment.ZDataItems[j].GroundDisp1, // レベル1地盤変位
                         GroundDisp2 = SoilEmbedment.ZDataItems[j].GroundDisp2, // レベル2地盤変位
                         GroundDisp1L = SoilEmbedment.ZDataItems[j].GroundDisp1L, // レベル1液状化地盤変位
@@ -2010,16 +2010,8 @@ namespace PileDesign.ViewModels
             if (CanvasEmbedment == null) return;
 
             // 安全に GroundInput を取得
-            GroundInput groundInput;
-            try
-            {
-                groundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1];
-            }
-            catch
-            {
-                // 範囲外や別の問題があれば描画中止
-                return;
-            }
+            // 参照の切れた地盤なら描画中止
+            if (InputModel.GroundAt(SoilEmbedment.GroundNo) is not { } groundInput) return;
 
             // Z 座標列を安全に作成
             var zs = EmbedmentZsCollection

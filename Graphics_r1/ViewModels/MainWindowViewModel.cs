@@ -1133,20 +1133,71 @@ namespace PileDesign.ViewModels
         /// </summary>
         internal PileDesign.Common.DiagnosticTarget? InputFocus { get; set; }
 
-        internal void RequestInputNavigation(PileDesign.Common.DiagnosticTarget target) => PendingInputNavigation = target;
+        /// <summary>頼まれたときに、場所の番号が指していた実体 (杭体・区間・地盤・土層)。開くときに同じかを確かめる。</summary>
+        private object? _pendingNavigationSubject;
 
-        /// <summary>頼まれていた入力画面を開く (解析のウィンドウを閉じたあとに呼ぶ)。</summary>
+        internal void RequestInputNavigation(PileDesign.Common.DiagnosticTarget target)
+        {
+            PendingInputNavigation = target;
+            _pendingNavigationSubject = SubjectOf(target);
+        }
+
+        /// <summary>
+        /// 場所の番号が<b>いま</b>指している実体。杭体・区間・地盤・土層のときだけ (それ以外は null)。
+        /// 番号は並び順なので、杭体・区間を足したり消したりすると同じ番号が別のものを指す。
+        /// </summary>
+        internal object? SubjectOf(PileDesign.Common.DiagnosticTarget target)
+        {
+            var input = CurrentInputModel;
+            if (input == null) return null;
+            return target.Kind switch
+            {
+                PileDesign.Common.DiagnosticTargetKind.PileBody => input.PileBodyAt(target.PileBodyNo ?? 0),
+                PileDesign.Common.DiagnosticTargetKind.PileBodySegment =>
+                    input.PileBodyAt(target.PileBodyNo ?? 0)?.PileBodySegments?.ElementAtOrDefault((target.SegmentNo ?? 0) - 1),
+                PileDesign.Common.DiagnosticTargetKind.Ground => input.GroundAt(target.GroundNo ?? 0),
+                PileDesign.Common.DiagnosticTargetKind.GroundLayer =>
+                    input.GroundAt(target.GroundNo ?? 0)?.GroundLayers?.ElementAtOrDefault((target.LayerNo ?? 0) - 1),
+                _ => null,
+            };
+        }
+
+        /// <summary>
+        /// 頼まれていた入力画面を開く (解析のウィンドウを閉じたあとに呼ぶ)。
+        ///
+        /// <para>頼んだときと番号が指す実体が変わっていたら (そのあいだに杭体・区間を足した・消したなど)、
+        /// 違うものを選んで直させないよう、選ばずに開いて選び直しを促す。</para>
+        /// </summary>
         internal void OpenPendingInputNavigation()
         {
             var target = PendingInputNavigation;
+            var subject = _pendingNavigationSubject;
             PendingInputNavigation = null;
-            if (target != null) OpenInputFor(target);
+            _pendingNavigationSubject = null;
+            if (target == null) return;
+            if (!IsSameSubject(target, subject))
+            {
+                Serilog.Log.Information("[診断] {Target} の指す対象が変わっていたので、選ばずに入力画面を開きます", target.ToLogFields());
+                MessageService.Show(DescribeChangedSubject(target), "入力画面を開く", MessageBoxButton.OK, MessageBoxImage.Information);
+                OpenInputFor(target, focus: false);
+                return;
+            }
+            OpenInputFor(target);
         }
 
-        /// <summary>問題の場所の入力画面を開く。開く画面が無い場所なら false。</summary>
-        internal bool OpenInputFor(PileDesign.Common.DiagnosticTarget target)
+        /// <summary>番号がいまも頼んだときと同じ実体を指しているか (実体を控えていない場所は同じとみなす)。</summary>
+        internal bool IsSameSubject(PileDesign.Common.DiagnosticTarget target, object? subjectAtRequest)
+            => subjectAtRequest == null || ReferenceEquals(SubjectOf(target), subjectAtRequest);
+
+        internal static string DescribeChangedSubject(PileDesign.Common.DiagnosticTarget target)
+            => $"問題を見つけたあとに入力が変わり、「{target.Label}」が指すものが変わっています "
+               + "(杭体・区間・地盤・土層を足した・消した・並べ替えたなど)。\n"
+               + "違うものを直さないよう、入力画面は選ばずに開きます。直す対象を選び直してから、もう一度解析してください。";
+
+        /// <summary>問題の場所の入力画面を開く。開く画面が無い場所なら false。<paramref name="focus"/> が false なら対象を選ばずに開く。</summary>
+        internal bool OpenInputFor(PileDesign.Common.DiagnosticTarget target, bool focus = true)
         {
-            InputFocus = target;
+            InputFocus = focus ? target : null;
             try
             {
                 switch (PileDesign.Services.DiagnosticSelection.DestinationOf(target))
@@ -1206,7 +1257,14 @@ namespace PileDesign.ViewModels
                 var force = pileLayout.AxialForceVL;
                 var pileNo = pileLayout.PileNo;
 
-                var pileBody = CurrentInputModel.PileBodies[pileLayout.PileBodyNo - 1];
+                var pileBody = CurrentInputModel.PileBodyAt(pileLayout.PileBodyNo);
+                if (pileBody == null)
+                {
+                    // 参照の切れた杭は飛ばさずに知らせる (以前は範囲外で例外になった)
+                    hasWarning = true;
+                    warningMessage += $"杭 No.{pileLayout.No}: 杭体番号 {pileLayout.PileBodyNo} の杭体がないため、軸力を確認できません。\n";
+                    continue;
+                }
                 for (int i = 0; i < pileBody.PileBodySegments.Count; i++)
                 {
                     var pileSection = pileBody.PileBodySegments[i].PileSection;

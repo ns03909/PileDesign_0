@@ -682,10 +682,9 @@ namespace PileDesign.Output
                 // 直径 (m) を決めるオプションセレクタ（安全に null チェック）
                 double diameterSelector(PileLayoutDataItem pli)
                 {
-                    if (inputModel?.PileBodies == null) return 1.0;
-                    int bodyNo = pli?.PileBodyNo ?? 0;
-                    if (bodyNo <= 0 || bodyNo > inputModel.PileBodies.Count) return 1.0;
-                    var pb = inputModel.PileBodies[bodyNo - 1];
+                    if (inputModel?.PileBodies == null || pli == null) return 1.0;
+                    // 参照の切れた杭は径を仮に置かず、図ごと省いて理由 (杭番号・杭体番号) を書く
+                    var pb = inputModel.RequirePileBody(pli);
                     var seg = pb?.PileBodySegments?.FirstOrDefault();
                     if (seg?.PileSection == null) return 1.0;
                     // 元実装では PileDiameter は mm 単位で扱っているため m に変換
@@ -1399,7 +1398,7 @@ diameterSelector,
             const double btmMargin = 5; // m
             const double horMargin = 1; // m
 
-            PileBodyInput pileBody = inputModel.PileBodies[soilPile.PileBodyNo - 1];
+            PileBodyInput pileBody = inputModel.RequirePileBody(soilPile);
 
             // mm→px変換
             //int widthPx = (int)Math.Round(widthMm * dpi / 25.4);
@@ -1882,7 +1881,7 @@ diameterSelector,
             {
                 var locX = pileLayoutItem.Point3D.X;
                 var locY = pileLayoutItem.Point3D.Y;
-                var dia = inputModel.PileBodies[pileLayoutItem.PileBodyNo - 1].PileBodySegments[0].PileSection?.PileDiameter ?? 0;
+                var dia = inputModel.RequirePileBody(pileLayoutItem).PileBodySegments[0].PileSection?.PileDiameter ?? 0;
                 maxX = Math.Max(maxX, locX);
                 minX = Math.Min(minX, locX);
                 maxY = Math.Max(maxY, locY);
@@ -1919,7 +1918,7 @@ diameterSelector,
                 {
                     var locX = pileLayoutItem.Point3D.X;
                     var locY = pileLayoutItem.Point3D.Y;
-                    var pileBody = inputModel.PileBodies[pileLayoutItem.PileBodyNo - 1];
+                    var pileBody = inputModel.RequirePileBody(pileLayoutItem);
                     var dia = (pileBody.PileBodySegments[0].PileSection?.PileDiameter ?? 0) * 0.001;
                     var toeDia = pileBody.PileToeDia * 0.001;
                     // 円

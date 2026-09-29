@@ -735,13 +735,57 @@ namespace PileDesign.ViewModels
                 // グラフの種類ごとに所要時間・メモリを記録する (PerfLog)。件数は杭の本数
                 using var perf = PileDesign.Common.PerfLog.Measure($"グラフ ({SelectedGraphOption})",
                     InputModel?.PileLayoutItems?.Count ?? 0, "本の杭");
-                UpdateGraphCore();
+                _missingReferences.Clear();
+                try
+                {
+                    UpdateGraphCore();
+                }
+                catch (PileDesign.Common.DiagnosticException ex)
+                {
+                    // 入力の参照が切れていて描けない (どの杭・杭体かを持っている)。グラフの窓に理由を出し、落とさない
+                    Serilog.Log.Warning("[グラフ] {Graph} を描けません: {Diagnostic}", SelectedGraphOption,
+                        string.Join(" / ", ex.Diagnostics.Select(d => d.ToLogLine())));
+                    GraphErrorMessage = $"このグラフを描けません。{ex.Message}";
+                }
+                // 参照が切れた杭を飛ばして描いたときは、空欄が正常な結果に見えないよう、飛ばした杭を書く
+                if (DescribeMissingReferences(_missingReferences) is { } missing)
+                    GraphInfoMessage = string.IsNullOrEmpty(GraphInfoMessage) ? missing : GraphInfoMessage + "\n" + missing;
             }
             finally
             {
                 _isUpdatingGraph = false;
             }
         }
+
+        // ── 番号の参照が切れた杭 (描かずに飛ばした杭) ──
+        private readonly List<string> _missingReferences = [];
+
+        /// <summary>杭の杭体。無ければ飛ばした杭として記録して null。</summary>
+        private PileBodyInput? PileBodyOrNote(PileLayoutDataItem pile)
+        {
+            var body = InputModel?.PileBodyAt(pile.PileBodyNo);
+            if (body == null) NoteMissing($"杭 No.{pile.No} (杭体番号 {pile.PileBodyNo} の杭体がありません)");
+            return body;
+        }
+
+        /// <summary>杭の土層-杭セット。無ければ飛ばした杭として記録して null。</summary>
+        private SoilPile? SoilPileOrNote(PileLayoutDataItem pile)
+        {
+            var soilPile = pile.SoilPileAt(InputModel);
+            if (soilPile == null) NoteMissing($"杭 No.{pile.No} (土層-杭セットがありません)");
+            return soilPile;
+        }
+
+        private void NoteMissing(string text)
+        {
+            if (!_missingReferences.Contains(text)) _missingReferences.Add(text);
+        }
+
+        /// <summary>飛ばした杭の知らせ (無ければ null)。</summary>
+        internal static string? DescribeMissingReferences(IReadOnlyCollection<string> missing)
+            => missing.Count == 0 ? null
+               : "入力の番号の参照が切れているため、次の杭は描いていません (杭配置で杭体・地盤を選び直すか、要素分割をやり直してください): "
+                 + string.Join("、", missing.Take(10)) + (missing.Count > 10 ? $" ほか {missing.Count - 10} 本" : "");
 
         private void UpdateGraphCore()
         {
@@ -1151,7 +1195,7 @@ namespace PileDesign.ViewModels
                 {
                     foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
                     {
-                        if (InputModel.PileBodies[pileLayoutDataItem.PileBodyNo - 1].PileBodyRef != SelectedPileBodyRef)
+                        if (PileBodyOrNote(pileLayoutDataItem)?.PileBodyRef != SelectedPileBodyRef)
                         {
                             continue;
                         }
@@ -1190,7 +1234,7 @@ namespace PileDesign.ViewModels
                 {
                     foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
                     {
-                        if (InputModel.PileBodies[pileLayoutDataItem.PileBodyNo - 1].PileBodyRef != SelectedPileBodyRef)
+                        if (PileBodyOrNote(pileLayoutDataItem)?.PileBodyRef != SelectedPileBodyRef)
                         {
                             continue;
                         }
@@ -1212,7 +1256,7 @@ namespace PileDesign.ViewModels
 
                                     // PileBodySegmentループ
                                     bool isAllSegs = SelectedPileSegmentNo <= 0;
-                                    var soilPile = InputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                                    var soilPile = InputModel.RequireSoilPile(pileLayoutDataItem);
                                     for (int i = 0; i < soilPile.PileBodySegments.Count; i++)
                                     {
                                         var pileBodySegment = soilPile.PileBodySegments[i];
@@ -1340,7 +1384,7 @@ namespace PileDesign.ViewModels
 
                 foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
                 {
-                    if (InputModel.PileBodies[pileLayoutDataItem.PileBodyNo - 1].PileBodyRef != SelectedPileBodyRef)
+                    if (PileBodyOrNote(pileLayoutDataItem)?.PileBodyRef != SelectedPileBodyRef)
                         continue;
 
                     foreach (LoadCase loadCase in GetSelectedLoadCases())
@@ -1526,7 +1570,7 @@ namespace PileDesign.ViewModels
                     // 常時荷重: せん断力=0
                     foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
                     {
-                        if (InputModel.PileBodies[pileLayoutDataItem.PileBodyNo - 1].PileBodyRef != SelectedPileBodyRef)
+                        if (PileBodyOrNote(pileLayoutDataItem)?.PileBodyRef != SelectedPileBodyRef)
                             continue;
 
                         double axialForce = SelectedLoadCaseOption == "VL0" ? pileLayoutDataItem.AxialForceVL0
@@ -1548,7 +1592,7 @@ namespace PileDesign.ViewModels
 
                     foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
                     {
-                        if (InputModel.PileBodies[pileLayoutDataItem.PileBodyNo - 1].PileBodyRef != SelectedPileBodyRef)
+                        if (PileBodyOrNote(pileLayoutDataItem)?.PileBodyRef != SelectedPileBodyRef)
                             continue;
 
                         foreach (LoadCase loadCase in GetSelectedLoadCases())
@@ -1566,7 +1610,7 @@ namespace PileDesign.ViewModels
                                     double analysisFxi = 0; // 解析結果の軸力
 
                                     bool isAllSegsQ = SelectedPileSegmentNo <= 0;
-                                    var soilPile = InputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                                    var soilPile = InputModel.RequireSoilPile(pileLayoutDataItem);
                                     for (int i = 0; i < soilPile.PileBodySegments.Count; i++)
                                     {
                                         var pileBodySegment = soilPile.PileBodySegments[i];

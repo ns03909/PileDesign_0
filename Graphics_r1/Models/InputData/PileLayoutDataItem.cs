@@ -516,12 +516,23 @@ namespace PileDesign.Models.InputData
         /// 対応する土層-杭セット (<see cref="SoilPileAltNo"/> の位置)。対応が無い (0・範囲外) なら null。
         /// 番号でそのまま配列を引く箇所は、範囲の外で例外になるので、これを通す。
         /// </summary>
-        public SoilPile? SoilPileAt(InputModel? inputModel)
+        public SoilPile? SoilPileAt(InputModel? inputModel) => SoilPileIn(inputModel?.ElementDivision?.SoilPiles);
+
+        /// <summary>土層-杭セットの一覧を直接受け取る処理 (群杭沈下の荷重づくりなど) 用。対応が無ければ null。</summary>
+        public SoilPile? SoilPileIn(IList<SoilPile>? soilPiles)
         {
-            var soilPiles = inputModel?.ElementDivision?.SoilPiles;
             int i = SoilPileAltNo - 1;
             return soilPiles != null && i >= 0 && i < soilPiles.Count ? soilPiles[i] : null;
         }
+
+        /// <summary>
+        /// 土層-杭セット。対応が無ければ杭番号を持った例外 (<see cref="Common.DiagnosticException"/>)。
+        /// 続けられない処理 (荷重づくり・解析) 用。
+        /// </summary>
+        internal SoilPile RequireSoilPileIn(IList<SoilPile>? soilPiles)
+            => SoilPileIn(soilPiles) ?? throw new Common.DiagnosticException(new Common.Diagnostic(Common.DiagnosticOrigin.Input,
+                   Common.DiagnosticTarget.Pile(No),
+                   $"杭 No.{No}: この杭の土層-杭セットがありません。杭配置・地盤・杭体の入力を確定し、要素分割をやり直してください。"));
 
         // 杭先端 N 値の入力は置かない。どこからも読まれておらず (支持力は地盤の土質データから
         // 杭先端位置の N 値を引く)、画面にも出ていなかったため 2026-09-18 に撤去した。

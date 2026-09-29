@@ -60,12 +60,9 @@ namespace PileDesign.ViewModels
             if (SelectedGraphOption == "水平地盤反力度p-y")
             {
                 var firstPile = GetSelectedPileLayouts().FirstOrDefault();
-                if (firstPile != null
-                    && firstPile.SoilPileAltNo > 0
-                    && firstPile.SoilPileAltNo <= InputModel.ElementDivision.SoilPiles.Count)
+                if (firstPile?.SoilPileAt(InputModel) is { } firstSoilPile)
                 {
-                    count = InputModel.ElementDivision.SoilPiles[firstPile.SoilPileAltNo - 1]
-                        .HorizontalSoilReactions?.Count ?? 0;
+                    count = firstSoilPile.HorizontalSoilReactions?.Count ?? 0;
                 }
             }
             else
@@ -110,8 +107,7 @@ namespace PileDesign.ViewModels
             var reactionPiles = new List<Models.InputData.PileLayoutDataItem>();
             foreach (var pile in GetSelectedPileLayouts())
             {
-                if (pile.SoilPileAltNo <= 0 || pile.SoilPileAltNo > InputModel.ElementDivision.SoilPiles.Count) continue;
-                var sp = InputModel.ElementDivision.SoilPiles[pile.SoilPileAltNo - 1];
+                var sp = pile.SoilPileAt(InputModel);
                 if (sp?.HorizontalSoilReactions == null) continue;
                 if (idx < 0 || idx >= sp.HorizontalSoilReactions.Count) continue;
                 reactions.Add(sp.HorizontalSoilReactions[idx]);

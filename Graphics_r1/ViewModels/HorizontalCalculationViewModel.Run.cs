@@ -918,13 +918,13 @@ namespace PileDesign.ViewModels
                             foreach (var pli in InputModel.PileLayoutItems)
                             {
                                 if (pli.PileNodes == null || pli.SoilNodes == null) continue;
-                                var reactions = InputModel.ElementDivision?.SoilPiles?[pli.SoilPileAltNo - 1]?.HorizontalSoilReactions;
+                                var reactions = pli.SoilPileAt(InputModel)?.HorizontalSoilReactions;
                                 if (reactions == null) continue;
                                 // VL ケースは iLC=-1 となるため >=0 チェック必須
                                 bool isFront = pli.IsFrontAt(iLC);
                                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pli);
                                 // 液状化の低減率 βL は要素ごと。ばねの組立 (PrepareKmat) と同じ値を使う
-                                var pliGround = InputModel.ElementDivision?.SoilPiles?[pli.SoilPileAltNo - 1]?.GroundInput;
+                                var pliGround = pli.SoilPileAt(InputModel)?.GroundInput;
                                 bool applyBeta = isLiquefaction && pliGround != null;
                                 double BetaAt(int e) => applyBeta && e >= 0 && e < reactions.Count
                                     ? pliGround!.LiquefactionReductionAt(reactions[e].ZTop, reactions[e].ZBtm, loadCase.Level - 1)

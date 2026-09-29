@@ -258,7 +258,7 @@ namespace PileDesign.Services
 
                 foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
                 {
-                    SoilPile soilPile = soilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                    SoilPile soilPile = pileLayoutDataItem.RequireSoilPileIn(soilPiles);
                     double radius = soilPile.GroupPileLoadDia * 0.5;
                     if (radius <= 0) { skipped.Add(pileLayoutDataItem.No); continue; }
                     double qa = pileLayoutDataItem.AxialForceVL0 + pileLayoutDataItem.AxialForceVLAdditional;
@@ -293,7 +293,7 @@ namespace PileDesign.Services
             {
                 foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
                 {
-                    SoilPile soilPile = soilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                    SoilPile soilPile = pileLayoutDataItem.RequireSoilPileIn(soilPiles);
                     double radius = soilPile.GroupPileLoadDia * 0.5;
                     if (radius <= 0) { skipped.Add(pileLayoutDataItem.No); continue; } // 荷重面等価径未入力の杭はスキップ（NaN/重複点回避）
                     Point point = new() { X = pileLayoutDataItem.Point3D.X, Y = pileLayoutDataItem.Point3D.Y };
@@ -318,7 +318,7 @@ namespace PileDesign.Services
 
                 foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
                 {
-                    SoilPile soilPile = soilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                    SoilPile soilPile = pileLayoutDataItem.RequireSoilPileIn(soilPiles);
                     double radius = soilPile.GroupPileLoadDia * 0.5;
                     if (radius <= 0) { skipped.Add(pileLayoutDataItem.No); continue; }
 
@@ -358,7 +358,7 @@ namespace PileDesign.Services
                 var noReaction = new List<int>();
                 foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
                 {
-                    SoilPile soilPile = soilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                    SoilPile soilPile = pileLayoutDataItem.RequireSoilPileIn(soilPiles);
                     double radius = soilPile.GroupPileLoadDia * 0.5;
                     if (radius <= 0) { skipped.Add(pileLayoutDataItem.No); continue; } // 荷重面等価径未入力の杭はスキップ
                     Point point = new() { X = pileLayoutDataItem.Point3D.X, Y = pileLayoutDataItem.Point3D.Y };

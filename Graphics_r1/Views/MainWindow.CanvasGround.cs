@@ -24,30 +24,24 @@ namespace PileDesign.Views
                 if (!pileLocation.IsVisible)
                 { continue; }
 
-                int pileBodyIndex = pileLocation.PileBodyNo - 1;
-                int groundIndex = pileLocation.GroundNo - 1;
-
-                // インデックス範囲チェック
-                if (pileBodyIndex < 0 || pileBodyIndex >= viewModel.CurrentInputModel.PileBodies.Count)
-                    continue; // またはエラー通知
-
-                if (groundIndex < 0 || groundIndex >= viewModel.CurrentInputModel.GroundsInput.Count)
-                    continue; // またはエラー通知
+                // 参照の切れた杭は描かない (ファイルを開いたとき・解析前の検査で知らせる)
+                if (viewModel.CurrentInputModel.PileBodyAt(pileLocation.PileBodyNo) is not { } pileBody) continue;
+                if (viewModel.CurrentInputModel.GroundAt(pileLocation.GroundNo) is not { } ground) continue;
 
                 // 地盤dia: PileToeDia × 2 を土層柱径とする
                 // (拡底杭・拡大根固め杭・回転貫入杭いずれも、杭先端域の地盤撹乱範囲を 2×PileToeDia で可視化)
                 double soilDia;
-                if (viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileToeDia == 0)
+                if (pileBody.PileToeDia == 0)
                 {
                     soilDia = 2.0 * viewModel.CanvasThreeDView.Scale;
                 }
                 else
                 {
-                    soilDia = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileToeDia / 1000.0 * 2.0 * viewModel.CanvasThreeDView.Scale;
+                    soilDia = pileBody.PileToeDia / 1000.0 * 2.0 * viewModel.CanvasThreeDView.Scale;
                 }
 
                 // 地表
-                double groundTopAltitude = viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundTopAltitude;
+                double groundTopAltitude = ground.GroundTopAltitude;
                 Point3D loc1 = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, groundTopAltitude);
                 Point coord1 = viewModel.CanvasThreeDView.Transformation(loc1);
 
@@ -55,14 +49,14 @@ namespace PileDesign.Views
                 viewModel.CanvasGeometry.PathGeoPileSoils.AddGeometry(ellipse1);
 
                 // 地下水位
-                double groundWaterTableAltitude = viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundWaterTableAltitude;
+                double groundWaterTableAltitude = ground.GroundWaterTableAltitude;
                 Point3D loc3 = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, groundWaterTableAltitude);
                 Point coord3 = viewModel.CanvasThreeDView.Transformation(loc3);
 
                 EllipseGeometry ellipse3 = new(coord3, soilDia * 0.5, soilDia * 0.5 * flattening);
                 viewModel.CanvasGeometry.PathGeoPileGroundWater.AddGeometry(ellipse3);
 
-                foreach (GroundLayerInput groundLayerInput in viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundLayers)
+                foreach (GroundLayerInput groundLayerInput in ground.GroundLayers)
                 {
                     double zBtm = groundLayerInput.BottomAltitude;
                     double zTop = groundLayerInput.LayerThickness + zBtm;

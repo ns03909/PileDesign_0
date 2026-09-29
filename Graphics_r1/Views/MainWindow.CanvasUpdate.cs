@@ -167,9 +167,10 @@ namespace PileDesign.Views
                 {
                     // 未分割: 埋設領域の中心 (EmbedmentLayer[0] の中心) で地盤土質点列を使用
                     int groundNo = vm.CurrentInputModel.EmbedmentInput.GroundNo;
-                    var groundInput = vm.CurrentInputModel.GroundsInput[groundNo - 1];
-                    var masses = groundInput.GroundMassesData;
-                    if (masses.Count >= 2)
+                    // 参照の切れた地盤は描かない
+                    var groundInput = vm.CurrentInputModel.GroundAt(groundNo);
+                    var masses = groundInput?.GroundMassesData;
+                    if (groundInput != null && masses != null && masses.Count >= 2)
                     {
                         var layer0 = vm.CurrentInputModel.EmbedmentInput.EmbedmentLayers[0];
                         double x = (layer0.X1 + layer0.X2) * 0.5;
@@ -221,7 +222,7 @@ namespace PileDesign.Views
                 {
                     // 未分割: GroundMassesData 列
                     int groundNo = pile.GroundNo;
-                    var groundInput2 = vm.CurrentInputModel.GroundsInput[groundNo - 1];
+                    if (vm.CurrentInputModel.GroundAt(groundNo) is not { } groundInput2) continue;   // 参照の切れた杭は描かない
                     var masses = groundInput2.GroundMassesData;
                     double[] tops = groundInput2.MassTopAltitudes();   // 変位の位置 = 層の上端 (解析と同じ)
                     for (int j = 0; j < masses.Count - 1; j++)
@@ -308,10 +309,7 @@ namespace PileDesign.Views
                     if (!pile.IsVisible) continue;
                     if (vm.IsElementSplit)
                     {
-                        var soilPile = vm.CurrentInputModel.ElementDivision?.SoilPiles != null
-                            && pile.SoilPileAltNo >= 1
-                            && pile.SoilPileAltNo <= vm.CurrentInputModel.ElementDivision.SoilPiles.Count
-                            ? vm.CurrentInputModel.ElementDivision.SoilPiles[pile.SoilPileAltNo - 1] : null;
+                        var soilPile = pile.SoilPileAt(vm.CurrentInputModel);
                         if (soilPile?.ZDataItems == null) continue;
                         foreach (var z in soilPile.ZDataItems)
                         {

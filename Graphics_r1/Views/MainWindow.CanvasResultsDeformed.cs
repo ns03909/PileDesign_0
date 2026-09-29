@@ -555,12 +555,7 @@ namespace PileDesign.Views
 
                 // 杭要素分割後のセグメント情報を取得（SoilPile経由）
                 ObservableCollection<PileBodySegment> soilPileSegments = null;
-                if (pile.SoilPileAltNo > 0 &&
-                    pile.SoilPileAltNo <= viewModel.ResultInputModel.ElementDivision.SoilPiles.Count)
-                {
-                    soilPileSegments = viewModel.ResultInputModel.ElementDivision
-                        .SoilPiles[pile.SoilPileAltNo - 1].PileBodySegments;
-                }
+                soilPileSegments = pile.SoilPileAt(viewModel.ResultInputModel)?.PileBodySegments;
 
                 // 杭全体の左右輪郭線用ポイントリスト
                 var leftPoints = new List<Point>();

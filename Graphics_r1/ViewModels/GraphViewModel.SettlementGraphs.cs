@@ -200,8 +200,7 @@ namespace PileDesign.ViewModels
             if (piles == null) return;
             PileLayoutDataItem? pile = piles.FirstOrDefault();
             if (pile == null) return;
-            if (pile.SoilPileAltNo <= 0 || pile.SoilPileAltNo > InputModel.ElementDivision.SoilPiles.Count) return;
-            var sp = InputModel.ElementDivision.SoilPiles[pile.SoilPileAltNo - 1];
+            var sp = SoilPileOrNote(pile);
             if (sp?.HorizontalSoilReactions == null || sp.HorizontalSoilReactions.Count == 0) return;
 
             var reactions = sp.HorizontalSoilReactions;

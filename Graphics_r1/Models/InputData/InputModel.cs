@@ -757,6 +757,53 @@ namespace PileDesign.Models.InputData
             return result;
         }
 
+        // ── 番号から杭体・地盤・土層-杭セットを引く ──
+        //
+        // 杭配置・土層-杭セットは杭体・地盤を番号 (1 から) で指す。番号でそのまま一覧を引くと、保存データの
+        // 食い違い・削除したあとの古い番号で範囲外になり、グラフ・計算書・画面を開いたときに初めて例外で落ちた
+        // (それも「インデックスが範囲外です」としか出ず、どの杭かが分からない)。番号から引くときはここを通す。
+        //   ・…At(no)      : 無ければ null (描画など、その杭を飛ばして続けるところ)
+        //   ・Require…(…) : 無ければ杭番号・杭体番号を持った DiagnosticException (図表・解析など、続けられないところ)
+
+        /// <summary>番号 (1 から) の杭体。範囲外・空なら null。</summary>
+        public PileBodyInput? PileBodyAt(int pileBodyNo)
+            => PileBodies != null && pileBodyNo >= 1 && pileBodyNo <= PileBodies.Count ? PileBodies[pileBodyNo - 1] : null;
+
+        /// <summary>番号 (1 から) の地盤。範囲外・空なら null。</summary>
+        public GroundInput? GroundAt(int groundNo)
+            => GroundsInput != null && groundNo >= 1 && groundNo <= GroundsInput.Count ? GroundsInput[groundNo - 1] : null;
+
+        /// <summary>杭の杭体。無ければ杭番号と杭体番号を持った例外。</summary>
+        internal PileBodyInput RequirePileBody(PileLayoutDataItem pile)
+            => PileBodyAt(pile.PileBodyNo) ?? throw MissingReference(Common.DiagnosticTarget.Pile(pile.No, pile.PileBodyNo),
+                   $"杭 No.{pile.No}: 杭体番号 {pile.PileBodyNo} の杭体がありません (杭体は {PileBodies?.Count ?? 0} 個)。杭配置で杭体を選び直してください。");
+
+        /// <summary>杭の地盤。無ければ杭番号と地盤番号を持った例外。</summary>
+        internal GroundInput RequireGround(PileLayoutDataItem pile)
+            => GroundAt(pile.GroundNo) ?? throw MissingReference(Common.DiagnosticTarget.Pile(pile.No),
+                   $"杭 No.{pile.No}: 地盤番号 {pile.GroundNo} の地盤がありません (地盤は {GroundsInput?.Count ?? 0} 個)。杭配置で地盤を選び直してください。");
+
+        /// <summary>杭の土層-杭セット。無ければ杭番号を持った例外。</summary>
+        internal SoilPile RequireSoilPile(PileLayoutDataItem pile) => pile.RequireSoilPileIn(ElementDivision?.SoilPiles);
+
+        /// <summary>番号の地盤。無ければ地盤番号を持った例外。<paramref name="owner"/> は番号を持っていたもの (「根入部」など)。</summary>
+        internal GroundInput RequireGround(int groundNo, string owner)
+            => GroundAt(groundNo) ?? throw MissingReference(Common.DiagnosticTarget.Ground(groundNo),
+                   $"{owner}: 地盤番号 {groundNo} の地盤がありません (地盤は {GroundsInput?.Count ?? 0} 個)。{owner}の地盤を選び直してください。");
+
+        /// <summary>土層-杭セットの地盤。無ければ地盤番号を持った例外。</summary>
+        internal GroundInput RequireGround(SoilPile soilPile)
+            => GroundAt(soilPile.GroundNo) ?? throw MissingReference(Common.DiagnosticTarget.Ground(soilPile.GroundNo),
+                   $"地盤番号 {soilPile.GroundNo} の地盤がありません (地盤は {GroundsInput?.Count ?? 0} 個)。要素分割をやり直してください。");
+
+        /// <summary>土層-杭セットの杭体。無ければ杭体番号を持った例外 (その杭体を使う杭すべてに効く)。</summary>
+        internal PileBodyInput RequirePileBody(SoilPile soilPile)
+            => PileBodyAt(soilPile.PileBodyNo) ?? throw MissingReference(Common.DiagnosticTarget.PileBody(soilPile.PileBodyNo),
+                   $"杭体番号 {soilPile.PileBodyNo} の杭体がありません (杭体は {PileBodies?.Count ?? 0} 個)。要素分割をやり直してください。");
+
+        private static Common.DiagnosticException MissingReference(Common.DiagnosticTarget target, string message)
+            => new(new Common.Diagnostic(Common.DiagnosticOrigin.Input, target, message));
+
         /// <summary>
         /// 問題の場所 (杭・基礎梁) をメイン画面で選ぶ (直す場所へ案内する)。画面に結び付いていなければ何もしない。
         /// 解析前の検査 (<c>CheckInputData</c>) は画面を知らないので、ここを通す。
@@ -1715,7 +1762,7 @@ namespace PileDesign.Models.InputData
                         PileZDataItem pileZDataItem = new()
                         {
                             Z = sortedZ,
-                            GroundInput = GroundsInput[pileLayoutDataItem.GroundNo - 1],
+                            GroundInput = GroundAt(pileLayoutDataItem.GroundNo),
                         };
                         pileZDataItem.SetSoilDisplacement();
                         pileZDataItems.Add(pileZDataItem);
@@ -1899,7 +1946,7 @@ namespace PileDesign.Models.InputData
                 EmbedmentZDataItem embedmentZDataItem = new()
                 {
                     Z = sortedZ,
-                    GroundInput = GroundsInput[EmbedmentInput.GroundNo - 1],
+                    GroundInput = GroundAt(EmbedmentInput.GroundNo),
                 };
                 embedmentZDataItem.SetSoilDisplacement();
                 zDataItems.Add(embedmentZDataItem);

@@ -594,6 +594,25 @@ namespace PileDesign.ViewModels
                 MessageService.Show(DescribeRenumberedLoadCases(renumbered, hasResults: CurrentModel != null),
                     "荷重ケースの番号", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
+
+            // 杭配置・土層-杭セット・杭体・地盤のあいだの番号の参照。グラフ・計算書を開いたときに初めて落ちる前に知らせる
+            ShowReferenceProblemsIfAny();
+        }
+
+        /// <summary>
+        /// 番号の参照の食い違いを知らせ、関係する杭を選ぶ。直し方 (選び直す / 要素分割をやり直す) を分けて書く。
+        /// データは書き換えない。問題が無ければ何もしない。
+        /// </summary>
+        internal PileDesign.Services.ReferenceIntegrityReport ShowReferenceProblemsIfAny()
+        {
+            var report = PileDesign.Services.ReferenceIntegrity.Check(CurrentInputModel);
+            if (report.Describe() is not { } text) return report;
+            foreach (var d in report.All) Serilog.Log.Warning("[読込] 番号の参照: {Diagnostic}", d.ToLogLine());
+            var selection = PileDesign.Services.DiagnosticSelection.Resolve(report.All, CurrentInputModel);
+            SelectForReview(selection);
+            if (PileDesign.Services.DiagnosticSelection.DescribeSelection(selection) is { } scope) text += "\n\n" + scope;
+            MessageService.Show(text, "入力の番号の参照", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return report;
         }
 
         /// <summary>荷重ケース名を付け直したことを知らせる文面。</summary>

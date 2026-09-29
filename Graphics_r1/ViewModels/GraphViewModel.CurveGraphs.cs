@@ -223,11 +223,8 @@ namespace PileDesign.ViewModels
             foreach (var pileLayout in targetPiles)
             {
                 // 杭体取得
-                if (pileLayout.PileBodyNo <= 0 || pileLayout.PileBodyNo > InputModel.PileBodies.Count)
-                {
-                    continue;
-                }
-                var pileBody = InputModel.PileBodies[pileLayout.PileBodyNo - 1];
+                var pileBody = PileBodyOrNote(pileLayout);
+                if (pileBody == null) continue;
                 if (pileBody.PileBodyRef != SelectedPileBodyRef)
                 {
                     continue;
@@ -236,16 +233,7 @@ namespace PileDesign.ViewModels
                 // 対応するBeam要素を見つける
                 // SoilPileの杭要素分割（地層境界・0.5D分割）でBeam数 > 入力セグメント数のため、
                 // SegmentIndexからSoilPileのセグメント番号で逆引きする
-                SoilPile soilPile = null;
-                {
-                    int soilPileAltNo = pileLayout.SoilPileAltNo;
-                    if (InputModel.ElementDivision?.SoilPiles != null
-                        && soilPileAltNo - 1 >= 0
-                        && soilPileAltNo - 1 < InputModel.ElementDivision.SoilPiles.Count)
-                    {
-                        soilPile = InputModel.ElementDivision.SoilPiles[soilPileAltNo - 1];
-                    }
-                }
+                SoilPile? soilPile = SoilPileOrNote(pileLayout);
 
                 bool isAllSegments = SelectedPileSegmentNo <= 0;
                 var matchedBeams = new List<Beam>();
@@ -521,8 +509,8 @@ namespace PileDesign.ViewModels
 
             foreach (var pileLayout in targetPiles)
             {
-                if (pileLayout.PileBodyNo <= 0 || pileLayout.PileBodyNo > InputModel.PileBodies.Count) continue;
-                var pileBody = InputModel.PileBodies[pileLayout.PileBodyNo - 1];
+                var pileBody = PileBodyOrNote(pileLayout);
+                if (pileBody == null) continue;
                 if (pileBody.PileTopType?.Contains(targetType) != true) continue;
 
                 var pileTop = pileBody.PileTop;
@@ -734,10 +722,9 @@ namespace PileDesign.ViewModels
                                     marker.LegendText = rigidLegend;
                                     marker.MarkerSize = 0;
                                     // 説明用に杭体/杭頭タイプ組合せを蓄積 (Window 下部にまとめて表示)
-                                    if (pileLayout.PileBodyNo > 0 && pileLayout.PileBodyNo <= InputModel.PileBodies.Count)
+                                    if (InputModel.PileBodyAt(pileLayout.PileBodyNo) is { } rigidBody)
                                     {
-                                        var pbody = InputModel.PileBodies[pileLayout.PileBodyNo - 1];
-                                        string combo = $"{pbody.PileBodyType} + {pbody.PileTopType}";
+                                        string combo = $"{rigidBody.PileBodyType} + {rigidBody.PileTopType}";
                                         rigidPileInfos.Add($"杭 #{pileLayout.No} ({combo})");
                                     }
                                     else
@@ -764,9 +751,8 @@ namespace PileDesign.ViewModels
                             double pileHeadZ = pileLayout.PileNodes != null && pileLayout.PileNodes.Count > 0
                                 ? pileLayout.PileNodes[0].Coord.Z : double.NaN;
                             string headSectionDesc = "";
-                            if (pileLayout.PileBodyNo > 0 && pileLayout.PileBodyNo <= InputModel.PileBodies.Count)
+                            if (InputModel.PileBodyAt(pileLayout.PileBodyNo) is { } pbody)
                             {
-                                var pbody = InputModel.PileBodies[pileLayout.PileBodyNo - 1];
                                 if (pbody?.PileBodySegments != null && pbody.PileBodySegments.Count > 0)
                                     headSectionDesc = pbody.PileBodySegments[0].PileSection?.PileDescription ?? "";
                             }
@@ -932,9 +918,8 @@ namespace PileDesign.ViewModels
 
             foreach (var pileLayout in targetPiles)
             {
-                int altNo = pileLayout.SoilPileAltNo;
-                if (altNo <= 0 || altNo > InputModel.ElementDivision.SoilPiles.Count) continue;
-                var soilPile = InputModel.ElementDivision.SoilPiles[altNo - 1];
+                var soilPile = SoilPileOrNote(pileLayout);
+                if (soilPile == null) continue;
                 var reactions = soilPile.HorizontalSoilReactions;
                 if (reactions == null || reactions.Count == 0) continue;
 

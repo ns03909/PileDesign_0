@@ -485,9 +485,9 @@ namespace PileDesign.Services
         {
             int bodies = inputModel.PileBodies?.Count ?? 0;
             int grounds = inputModel.GroundsInput?.Count ?? 0;
-            if (pile.PileBodyNo < 1 || pile.PileBodyNo > bodies || inputModel.PileBodies![pile.PileBodyNo - 1] == null)
+            if (inputModel.PileBodyAt(pile.PileBodyNo) == null)
                 return $"杭 No.{pile.No}: 杭体番号 {pile.PileBodyNo} の杭体がありません (杭体は {bodies} 個)。杭配置で杭体を選び直してください。";
-            if (pile.GroundNo < 1 || pile.GroundNo > grounds || inputModel.GroundsInput![pile.GroundNo - 1] == null)
+            if (inputModel.GroundAt(pile.GroundNo) == null)
                 return $"杭 No.{pile.No}: 地盤番号 {pile.GroundNo} の地盤がありません (地盤は {grounds} 個)。杭配置で地盤を選び直してください。";
             return null;
         }

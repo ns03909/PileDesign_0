@@ -135,7 +135,7 @@ namespace PileDesign.ViewModels
             if (index < 0 || index >= SoilPiles.Count) return;
             SoilPileNo = index + 1;
             SoilPile = SoilPiles[index];
-            PileBody = InputModel.PileBodies[SoilPile.PileBodyNo - 1];
+            PileBody = InputModel.RequirePileBody(SoilPile);
             OnPropertyChanged(nameof(UsesPileToeEta));
             OnPropertyChanged(nameof(SettlePileToeDiaM));
             AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
@@ -383,7 +383,7 @@ namespace PileDesign.ViewModels
                 _prevPileBodies.Add(pb?.DeepCopy());
             }
 
-            PileBody = InputModel.PileBodies[SoilPile.PileBodyNo - 1];
+            PileBody = InputModel.RequirePileBody(SoilPile);
 
             // 先端平均N値が0の場合に警告メッセージを表示
             if (SoilPile.PileToeNValue == 0)
@@ -457,10 +457,7 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            PileBody = bodies != null && SoilPile != null
-                && SoilPile.PileBodyNo >= 1 && SoilPile.PileBodyNo <= bodies.Count
-                ? bodies[SoilPile.PileBodyNo - 1]
-                : PileBody;
+            PileBody = (SoilPile != null ? InputModel.PileBodyAt(SoilPile.PileBodyNo) : null) ?? PileBody;
 
             DrawShapes();
         }
@@ -949,19 +946,20 @@ namespace PileDesign.ViewModels
             var selectedPresetParameter = sender as string;
             if (string.IsNullOrEmpty(selectedPresetParameter)) return;
 
-            foreach (PileBodyInput.PileTipSettlementPresetParameter parameter in InputModel.PileBodies[SoilPile.PileBodyNo - 1].PileTipSettlementPresetParameters)
+            var presetBody = InputModel.RequirePileBody(SoilPile);
+            foreach (PileBodyInput.PileTipSettlementPresetParameter parameter in presetBody.PileTipSettlementPresetParameters)
             {
                 if (selectedPresetParameter.Contains(parameter.Name) && selectedPresetParameter.Contains(parameter.SoilType))
                 {
-                    InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha = parameter.Alpha;
-                    InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleN = parameter.N;
+                    presetBody.SettleAlpha = parameter.Alpha;
+                    presetBody.SettleN = parameter.N;
                     break;
                 }
             }
             // ユーザーが手動で選択したので初期化済みマーク
             if (SoilPile == null) return;
             SoilPile.IsSettlementPresetInitialized = true;
-            AddComponent(InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha, InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleN);
+            AddComponent(presetBody.SettleAlpha, presetBody.SettleN);
             // プリセット変更時に自動で解析実行
             _ = ExecuteAnalysis();
         }
@@ -1023,7 +1021,7 @@ namespace PileDesign.ViewModels
             string name = mapped.Value.Name;
             string soilType = mapped.Value.SoilType;
 
-            var pileBody = InputModel.PileBodies[SoilPile.PileBodyNo - 1];
+            var pileBody = InputModel.RequirePileBody(SoilPile);
             foreach (var parameter in pileBody.PileTipSettlementPresetParameters)
             {
                 if (parameter.Name == name && parameter.SoilType == soilType)
@@ -1247,7 +1245,7 @@ namespace PileDesign.ViewModels
                 PileBody.PrecastConcretePileToeHeightRatio,
                 SoilPile.PileConstructionType,
                 SoilPile.Z,
-                InputModel.GroundsInput[SoilPile.GroundNo - 1],
+                InputModel.GroundAt(SoilPile.GroundNo),
                 false,           // isElementDivision
                 null,            // zs
                 null,            // selectedZ
