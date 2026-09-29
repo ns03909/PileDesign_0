@@ -293,7 +293,7 @@ namespace PileDesign.Services
         internal static void ReplaceAtomically(string filePath, Action<string> writeToPath)
         {
             var gate = GateFor(filePath);
-            gate.Wait();
+            EnterGate(gate, filePath);
             try
             {
                 string tempPath = TempPathFor(filePath);
@@ -327,6 +327,39 @@ namespace PileDesign.Services
 
         internal static System.Threading.SemaphoreSlim GateFor(string filePath)
             => _saveGates.GetOrAdd(Path.GetFullPath(filePath), _ => new System.Threading.SemaphoreSlim(1, 1));
+
+        /// <summary>画面のスレッドで、同じ保存先への別の書き込みが終わるのを待つ上限。</summary>
+        internal static TimeSpan UiThreadGateTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <summary>いまのスレッドが画面のスレッドか (試験で差し替える)。</summary>
+        internal static Func<bool> IsUiThread { get; set; } =
+            () => System.Windows.Application.Current?.Dispatcher?.CheckAccess() == true;
+
+        /// <summary>
+        /// 同期の書き出し (<see cref="ReplaceAtomically"/>) が保存先の排他に入る。
+        ///
+        /// <para>同期の書き出しを呼ぶのは、計算書・DXF・3dm・CSV・画像・MGT の書き出しと設定ファイルで、
+        /// ほとんどが画面のスレッドから呼ばれる。同じ保存先へ別の書き込み (バックグラウンドで進む上書き保存など)
+        /// が走っていると、以前は <c>Wait()</c> で終わるまで待ち、そのあいだ画面が固まった。
+        /// 画面のスレッドでは上限 (<see cref="UiThreadGateTimeout"/>) を置き、超えたら理由を示して失敗させる
+        /// (呼び出し側は書き出しの失敗として知らせる)。バックグラウンドのスレッドは従来どおり待つ。</para>
+        ///
+        /// <para>保存ファイルの上書き保存は非同期 (<see cref="SaveProjectDataAsync"/> の <c>WaitAsync</c>)、
+        /// 自動保存・緊急保存は毎回別の名前のファイルに書くので、ここで待つことはほとんど無い。</para>
+        /// </summary>
+        private static void EnterGate(System.Threading.SemaphoreSlim gate, string filePath)
+        {
+            if (gate.Wait(0)) return;
+            if (!IsUiThread())
+            {
+                gate.Wait();
+                return;
+            }
+            Serilog.Log.Information("[保存] 同じ保存先への別の書き込みを待ちます: {File}", Path.GetFileName(filePath));
+            if (!gate.Wait(UiThreadGateTimeout))
+                throw new IOException(
+                    $"同じファイルへの別の保存がまだ終わっていないため、書き出せませんでした。しばらく待ってからやり直してください。\n{filePath}");
+        }
 
         /// <summary>
         /// 保存 1 回ぶんの一時ファイルの名前 (保存先と同じフォルダ、<c>保存先.xxxxxxxx.saving</c>)。
