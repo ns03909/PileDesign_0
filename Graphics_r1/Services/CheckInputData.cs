@@ -145,8 +145,11 @@ namespace PileDesign.Services
 
             if (message.Length == 0) return true; // OK: ダイアログなしで続行
 
+            // 知らせに出てきた杭 (杭番号・杭体) をメイン画面で選び、直す場所へ案内する
+            int selected = inputModel?.SelectPilesForReview(AnalysisFailure.PileNosIn(message, inputModel)) ?? 0;
             MessageService.Show(
-                $"入力データに以下の問題があります。{analysisName}を中止します。\n\n{message}",
+                $"入力データに以下の問題があります。{analysisName}を中止します。\n\n{message}"
+                + (selected > 0 ? $"\n関係する杭 {selected} 本をメイン画面で選択しています。" : ""),
                 $"{analysisName} 入力エラー",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);

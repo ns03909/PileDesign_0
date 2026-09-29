@@ -757,6 +757,13 @@ namespace PileDesign.Models.InputData
             return result;
         }
 
+        /// <summary>
+        /// 知らせに出てきた杭をメイン画面で選ぶ (直す場所へ案内する)。画面に結び付いていなければ何もしない。
+        /// 解析前の検査 (<c>CheckInputData</c>) は画面を知らないので、ここを通す。
+        /// </summary>
+        internal int SelectPilesForReview(IReadOnlyList<int> pileNos)
+            => _mainWindowViewModel?.SelectPilesForReview(pileNos) ?? 0;
+
         public void SetMainWindowViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));

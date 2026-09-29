@@ -732,6 +732,9 @@ namespace PileDesign.ViewModels
             _isUpdatingGraph = true;
             try
             {
+                // グラフの種類ごとに所要時間・メモリを記録する (PerfLog)。件数は杭の本数
+                using var perf = PileDesign.Common.PerfLog.Measure($"グラフ ({SelectedGraphOption})",
+                    InputModel?.PileLayoutItems?.Count ?? 0, "本の杭");
                 UpdateGraphCore();
             }
             finally

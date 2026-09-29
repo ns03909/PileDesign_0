@@ -49,6 +49,20 @@ namespace PileDesign.Services
             return nos;
         }
 
+        /// <summary>
+        /// 知らせの文から、関係する杭の番号を拾う。杭番号 (「杭No.n」「杭節点-n-」) と、杭体 (「杭体n」) を使っている杭。
+        /// 解析前の検査の知らせから、直す場所 (杭) へ案内するのに使う。
+        /// </summary>
+        public static IReadOnlyList<int> PileNosIn(string? text, Models.InputData.InputModel? input)
+        {
+            var nos = PileNosIn(new Exception(text ?? "")).ToList();
+            var bodies = Regex.Matches(text ?? "", @"杭体\s*(\d+)")
+                .Select(m => int.TryParse(m.Groups[1].Value, out int b) ? b : -1).Where(b => b > 0).ToHashSet();
+            foreach (var pile in input?.PileLayoutItems ?? [])
+                if (pile != null && bodies.Contains(pile.PileBodyNo) && !nos.Contains(pile.PileNo)) nos.Add(pile.PileNo);
+            return nos;
+        }
+
         /// <summary>止まったケースの例外を探す (並列に解いたときは AggregateException に包まれる)。</summary>
         public static AnalysisCaseFailedException? FindCaseFailure(Exception ex)
         {
