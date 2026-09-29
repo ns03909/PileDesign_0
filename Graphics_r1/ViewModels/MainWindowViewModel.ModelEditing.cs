@@ -1526,7 +1526,7 @@ namespace PileDesign.ViewModels
             if (!double.IsFinite(e.Angle) || e.Angle <= 0 || e.Angle >= 90 || e.IsChecked == null || e.IsChecked.Count < 4)
             { e.Cancel = true; RejectSplit("前面杭の角度・荷重ケースの指定を確認してください。"); return; }
             var changes = new List<(PileLayoutDataItem Pile, int Index, bool Value)>();
-            double cosAlpha = Math.Cos(e.Angle * Math.PI / 180.0);
+            double cosAlpha = Math.Cos(PileDesign.Common.Units.DegToRad(e.Angle));
             for (int i = 0; i < 4; i++)
             {
                 if (!e.IsChecked[i]) continue;

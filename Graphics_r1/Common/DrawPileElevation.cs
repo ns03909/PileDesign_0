@@ -463,7 +463,7 @@ namespace PileDesign.Common
             double angle)
         {
             // 場所打ち拡底杭の点群を生成
-            double height = (pileToeDiaInMeters - bottomSegmentDia) * 0.5 * Math.Tan(angle * Math.PI / 180);
+            double height = (pileToeDiaInMeters - bottomSegmentDia) * 0.5 * Math.Tan(PileDesign.Common.Units.DegToRad(angle));
             var points = new PointCollection
             {
                 new Point(canvasWidth * 0.5 - bottomSegmentDia * 0.5 * ratio, (pileLength - pileToeElevation - height) * ratio + topMargin),
@@ -497,7 +497,7 @@ namespace PileDesign.Common
                     StrokeDashArray = [2],
                     X1 = canvasWidth * 0.5 + bottomSegmentDia * 0.5 * ratio * i,
                     X2 = canvasWidth * 0.5 + bottomSegmentDia * 0.5 * ratio * i,
-                    Y1 = (pileLength - pileToeElevation - (pileToeDiaInMeters - bottomSegmentDia) * 0.5 * Math.Tan(angle * Math.PI / 180)) * ratio + topMargin,
+                    Y1 = (pileLength - pileToeElevation - (pileToeDiaInMeters - bottomSegmentDia) * 0.5 * Math.Tan(PileDesign.Common.Units.DegToRad(angle))) * ratio + topMargin,
                     Y2 = pileLength * ratio + topMargin
                 };
                 canvas.Children.Add(dashedLine);

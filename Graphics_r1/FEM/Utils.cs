@@ -35,8 +35,8 @@ namespace PileDesign.FEM
         // 3x3座標変換行列を生成
         private static Matrix<double> CreateTransform3x3(double dx, double dy, double dz, double coordAngle = 0.0)
         {
-            double cos = Math.Cos(coordAngle / 180 * Math.PI);
-            double sin = Math.Sin(coordAngle / 180 * Math.PI);
+            double cos = Math.Cos(PileDesign.Common.Units.DegToRad(coordAngle));
+            double sin = Math.Sin(PileDesign.Common.Units.DegToRad(coordAngle));
             double errorValue = 1.0E-10;
             double length = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
             double lx = dx / length, mx = dy / length, nx = dz / length;

@@ -1222,7 +1222,7 @@ namespace PileDesign.Models.InputData
                 return false;
             }
 
-            double radian = angle * Math.PI / 180;
+            double radian = PileDesign.Common.Units.DegToRad(angle);
             double c = Math.Cos(radian);
             double s = Math.Sin(radian);
             // 図心は数値でない座標を上で除いたので、原点で代用されることはない

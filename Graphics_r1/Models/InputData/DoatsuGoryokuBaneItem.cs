@@ -53,7 +53,7 @@ namespace PileDesign.Models.InputData
 
         // 導出値はプロパティで動的計算（デシリアライズ後の再計算不要）
         [JsonIgnore]
-        public double Kp => Math.Pow(Math.Tan((45 + Phi * 0.5) * Math.PI / 180), 2);
+        public double Kp => Math.Pow(Math.Tan(PileDesign.Common.Units.DegToRad(45 + Phi * 0.5)), 2);
 
         [JsonIgnore]
         public double Q { get; set; } // (kN/m2) 深さZaでの上載圧（public set にしておく）

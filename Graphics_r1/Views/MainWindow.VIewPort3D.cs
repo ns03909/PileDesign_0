@@ -336,7 +336,7 @@ namespace PileDesign.Views
 
             // 円錐台高さ。側面角度は鉛直からの傾きで、杭姿図の tan(90° − 角度) と等価
             double angle = toeAngleDeg > 0 ? toeAngleDeg : 12.0;
-            double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(angle * Math.PI / 180.0);
+            double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(PileDesign.Common.Units.DegToRad(angle));
 
             // 円錐台起点（円柱終点からさらに同方向へ伸ばす）
             Point3D coneOrigin = cylEnd;
@@ -507,7 +507,7 @@ namespace PileDesign.Views
             // AngleBeta による梁軸周りの回転を適用
             if (Math.Abs(angleBetaDeg) > 1e-9)
             {
-                double rad = angleBetaDeg * Math.PI / 180.0;
+                double rad = PileDesign.Common.Units.DegToRad(angleBetaDeg);
                 double cosB = Math.Cos(rad);
                 double sinB = Math.Sin(rad);
 

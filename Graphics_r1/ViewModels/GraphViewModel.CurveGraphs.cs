@@ -78,7 +78,7 @@ namespace PileDesign.ViewModels
                             // 表示したいので、内部力を符号反転して "soil resistance toward load direction"
                             // として扱う。これで X (相対変位の大きさ) と Y (反力合計) が
                             // 通常の P-y 曲線と同じ Q1 (両方正) に来る。
-                            double radA = loadCase.LoadAngle * Math.PI / 180.0;
+                            double radA = PileDesign.Common.Units.DegToRad(loadCase.LoadAngle);
                             double cosA = Math.Cos(radA);
                             double sinA = Math.Sin(radA);
                             double totalForce = -(sumFx * cosA + sumFy * sinA);
@@ -157,7 +157,7 @@ namespace PileDesign.ViewModels
                         var dgb = InputModel.ElementDivision?.DoatsuGoryokuBane;
                         if (dgb != null && dgb.Items.Count > 0 && dgb.DeltaP > 0 && seriesMax > 0)
                         {
-                            double radT = loadCase.LoadAngle * Math.PI / 180.0;
+                            double radT = PileDesign.Common.Units.DegToRad(loadCase.LoadAngle);
                             double cosT = Math.Cos(radT);
                             double sinT = Math.Sin(radT);
                             double theorMaxM = seriesMax * 1.5 / 1000.0; // mm→m、1.5倍

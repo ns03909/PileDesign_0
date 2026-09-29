@@ -311,8 +311,8 @@ namespace PileDesign.Views
                     break;
             }
 
-            x -= Math.Cos(textAngle / 180 * Math.PI) * dx - Math.Sin(textAngle / 180 * Math.PI) * dy;
-            y -= Math.Sin(textAngle / 180 * Math.PI) * dx + Math.Cos(textAngle / 180 * Math.PI) * dy;
+            x -= Math.Cos(PileDesign.Common.Units.DegToRad(textAngle)) * dx - Math.Sin(PileDesign.Common.Units.DegToRad(textAngle)) * dy;
+            y -= Math.Sin(PileDesign.Common.Units.DegToRad(textAngle)) * dx + Math.Cos(PileDesign.Common.Units.DegToRad(textAngle)) * dy;
             return new Point(x, y);
         }
 

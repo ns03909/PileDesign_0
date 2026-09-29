@@ -9,7 +9,7 @@ namespace PileDesign.Converters
         public static Vector ConvertAngleToUnitVector(double angleInDegrees)
         {
             // 角度をラジアンに変換
-            double angleInRadians = angleInDegrees * (Math.PI / 180.0);
+            double angleInRadians = PileDesign.Common.Units.DegToRad(angleInDegrees);
 
             // 単位ベクトルのx成分とy成分を計算
             double x = Math.Cos(angleInRadians);

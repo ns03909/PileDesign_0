@@ -59,8 +59,8 @@ namespace PileDesign.Views
 
                 double force = selectedLoadCase.UpperMassForce * selectedLoadCombination.Beta1
                     + selectedLoadCase.FoundationMassForce * selectedLoadCombination.Beta2;
-                double forceX = force * Math.Cos(selectedLoadCase.LoadAngle * Math.PI / 180);
-                double forceY = force * Math.Sin(selectedLoadCase.LoadAngle * Math.PI / 180);
+                double forceX = force * Math.Cos(PileDesign.Common.Units.DegToRad(selectedLoadCase.LoadAngle));
+                double forceY = force * Math.Sin(PileDesign.Common.Units.DegToRad(selectedLoadCase.LoadAngle));
 
                 valueVectors.Add(new(forceX, forceY, 0));
                 values.Add(new Vector3D(forceX, forceY, 0).Length);
@@ -260,7 +260,7 @@ namespace PileDesign.Views
             double cosTheta = dotProduct / vectorLength;
 
             // 角度をラジアンから度に変換
-            double angle = Math.Acos(cosTheta) * 180 / Math.PI;
+            double angle = PileDesign.Common.Units.RadToDeg(Math.Acos(cosTheta));
 
             // y成分が負の場合、角度を反転
             if (vector.Y < 0)

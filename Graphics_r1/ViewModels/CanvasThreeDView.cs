@@ -66,7 +66,7 @@ namespace PileDesign.ViewModels
         }
 
         // 扁平率
-        public double Flattening => Math.Sin(Math.Abs(Phi) * Math.PI / 180.0);
+        public double Flattening => Math.Sin(PileDesign.Common.Units.DegToRad(Math.Abs(Phi)));
 
         private double _dv;
         public double Dv
@@ -180,7 +180,7 @@ namespace PileDesign.ViewModels
 
         private static double DegreesToRadians(double degrees)
         {
-            return degrees * Math.PI / 180;
+            return PileDesign.Common.Units.DegToRad(degrees);
         }
 
         // 節点の変換

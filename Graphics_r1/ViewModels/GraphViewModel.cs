@@ -919,7 +919,7 @@ namespace PileDesign.ViewModels
                                     }
                                 }
                                 // 載荷方向への射影
-                                double radLC = loadCase.LoadAngle * Math.PI / 180.0;
+                                double radLC = PileDesign.Common.Units.DegToRad(loadCase.LoadAngle);
                                 double cosLC = Math.Cos(radLC);
                                 double sinLC = Math.Sin(radLC);
                                 pileSoilForces.Add(pileSumFx * cosLC + pileSumFy * sinLC);

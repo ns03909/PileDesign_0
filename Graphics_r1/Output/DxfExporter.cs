@@ -191,7 +191,7 @@ namespace PileDesign.Output
 
             // 円錐台
             double toeAngle = toeAngleDeg > 0 ? toeAngleDeg : 12.0;
-            double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(toeAngle * Math.PI / 180.0);
+            double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(PileDesign.Common.Units.DegToRad(toeAngle));
             if (coneHeight < 1e-9) return;
 
             double coneTopZ = cylBottomZ;
@@ -382,7 +382,7 @@ namespace PileDesign.Output
             // AngleBeta 回転
             if (Math.Abs(angleBetaDeg) > 1e-9)
             {
-                double rad = angleBetaDeg * Math.PI / 180.0;
+                double rad = PileDesign.Common.Units.DegToRad(angleBetaDeg);
                 double cosB = Math.Cos(rad);
                 double sinB = Math.Sin(rad);
                 var newY = new XYZ(

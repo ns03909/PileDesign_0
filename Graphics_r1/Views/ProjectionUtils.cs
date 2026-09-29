@@ -76,7 +76,7 @@ namespace PileDesign.Views
             // 角度は x 軸から反時計回り（ラジアン）
             double angleRad = Math.Atan2(uy, ux);
 
-            double angleDeg = angleRad * 180.0 / Math.PI;
+            double angleDeg = PileDesign.Common.Units.RadToDeg(angleRad);
 
             return (center2D, major, minor, angleDeg);
         }

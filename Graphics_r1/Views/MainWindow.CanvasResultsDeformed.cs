@@ -466,7 +466,7 @@ namespace PileDesign.Views
                     // AngleBeta 回転
                     if (Math.Abs(angleBetaDeg) > 1e-9)
                     {
-                        double rad = angleBetaDeg * Math.PI / 180.0;
+                        double rad = PileDesign.Common.Units.DegToRad(angleBetaDeg);
                         double cosB = Math.Cos(rad);
                         double sinB = Math.Sin(rad);
                         Vector3D newY = cosB * localY + sinB * localZ;
@@ -760,7 +760,7 @@ namespace PileDesign.Views
             PathGeometry pathGeo, Point center, Vector tangent, double radius2D, double flattening)
         {
             // 梁軸の角度を求め、楕円の長軸を直交方向に配置するため +90°
-            double angle = Math.Atan2(tangent.Y, tangent.X) * 180.0 / Math.PI + 90.0;
+            double angle = PileDesign.Common.Units.RadToDeg(Math.Atan2(tangent.Y, tangent.X)) + 90.0;
 
             var ellipse = new EllipseGeometry(center, radius2D, radius2D * flattening);
             ellipse.Transform = new RotateTransform(angle, center.X, center.Y);
@@ -808,7 +808,7 @@ namespace PileDesign.Views
 
                 if (Math.Abs(angleBetaDeg) > 1e-9)
                 {
-                    double rad = angleBetaDeg * Math.PI / 180.0;
+                    double rad = PileDesign.Common.Units.DegToRad(angleBetaDeg);
                     double cosB = Math.Cos(rad);
                     double sinB = Math.Sin(rad);
                     Vector3D newY = cosB * localY + sinB * localZ;

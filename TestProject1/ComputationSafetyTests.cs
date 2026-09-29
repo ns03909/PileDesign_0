@@ -164,4 +164,34 @@ public class ComputationSafetyTests
         vm.RestoreInputChangedSinceAnalysis(true);
         StringAssert.Contains(vm.DescribeAnalysisConditions(), "解析のあとに入力が編集されています");
     }
+
+    // ── 単位の換算 ──
+
+    [TestMethod]
+    public void AngleConversions_AreConsistent()
+    {
+        Assert.AreEqual(Math.PI, Units.DegToRad(180), 1e-15);
+        Assert.AreEqual(90.0, Units.RadToDeg(Math.PI / 2), 1e-12);
+        Assert.AreEqual(1.5, Units.MmToM(1500), 0.0);
+        Assert.AreEqual(2.0, Units.NToKn(2000), 0.0);
+    }
+
+    /// <summary>角度の換算を式の中に直接書かないこと (Units を通す。書き方が揃わないと漏れ・二重の換算を見つけにくい)。</summary>
+    [TestMethod]
+    public void AngleConversions_GoThroughUnits()
+    {
+        var raw = new Regex(@"Math\.PI\s*/\s*180|180(\.0)?\s*\*\s*Math\.PI|180(\.0)?\s*/\s*Math\.PI");
+        char sep = Path.DirectorySeparatorChar;
+        var files = Directory.GetFiles(TestSource.Dir("Graphics_r1"), "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{sep}obj{sep}") && !f.Contains($"{sep}bin{sep}")
+                     && Path.GetFileName(f) != "Units.cs"
+                     && !Path.GetFileName(f).StartsWith("MgtExporter", StringComparison.Ordinal))   // MGT の書き出しは対象外
+            .ToList();
+        TestSource.AssertScanned(files.Count, 300, "アプリのソース");
+        var hits = files.SelectMany(f => File.ReadAllLines(f).Select((l, i) => (File: Path.GetFileName(f), Line: i + 1, Text: l)))
+            .Where(l => !l.Text.TrimStart().StartsWith("//") && raw.IsMatch(l.Text))
+            .Select(l => $"{l.File}:{l.Line}  {l.Text.Trim()}")
+            .ToList();
+        Assert.AreEqual(0, hits.Count, "角度の換算を直接書いています。Units.DegToRad / RadToDeg を使ってください:\n  " + string.Join("\n  ", hits));
+    }
 }

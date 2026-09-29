@@ -612,7 +612,7 @@ namespace PileDesign.ViewModels
             if (selectedLC != null && selectedComb != null && Changs.Count > 0)
             {
                 double force = selectedLC.UpperMassForce * selectedComb.Beta1 + selectedLC.FoundationMassForce * selectedComb.Beta2;
-                double angleRad = selectedLC.LoadAngle * Math.PI / 180.0;
+                double angleRad = PileDesign.Common.Units.DegToRad(selectedLC.LoadAngle);
                 double forceX = force * Math.Cos(angleRad);
                 TotalHorizontalLoad = Math.Abs(forceX);
 

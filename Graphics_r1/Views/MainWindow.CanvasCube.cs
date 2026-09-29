@@ -187,7 +187,7 @@ namespace PileDesign.Views
             if (!isSeismic) return;
 
             double deg = vm.SelectedDirection + 180.0; // 既存仕様：反転＋180°
-            double rad = deg * Math.PI / 180.0;
+            double rad = PileDesign.Common.Units.DegToRad(deg);
 
             // 3D上 (XY平面 Z=0) の外径側=底辺中心, 内径側=頂点
             var p3A = new Point3D(ringOuterR * Math.Cos(rad), ringOuterR * Math.Sin(rad), 0.0); // 底辺中心
@@ -552,14 +552,14 @@ namespace PileDesign.Views
                         int sx = Sgn(p.X), sy = Sgn(p.Y), sz = Sgn(p.Z);
 
                         // 頂点
-                        if (sx == +1 && sy == +1 && sz == +1) { tht = 45; phi = Math.Atan(1 / Math.Sqrt(2)) * 180 / Math.PI; return true; } // (+X,+Y,+Z)
-                        if (sx == +1 && sy == +1 && sz == -1) { tht = 45; phi = -Math.Atan(1 / Math.Sqrt(2)) * 180 / Math.PI; return true; } // (+X,+Y,-Z)
-                        if (sx == +1 && sy == -1 && sz == +1) { tht = 315; phi = Math.Atan(1 / Math.Sqrt(2)) * 180 / Math.PI; return true; } // (+X,-Y,+Z)
-                        if (sx == +1 && sy == -1 && sz == -1) { tht = 315; phi = -Math.Atan(1 / Math.Sqrt(2)) * 180 / Math.PI; return true; } // (+X,-Y,-Z)
-                        if (sx == -1 && sy == +1 && sz == +1) { tht = 135; phi = Math.Atan(1 / Math.Sqrt(2)) * 180 / Math.PI; return true; } // (-X,+Y,+Z)
-                        if (sx == -1 && sy == +1 && sz == -1) { tht = 135; phi = -Math.Atan(1 / Math.Sqrt(2)) * 180 / Math.PI; return true; } // (-X,+Y,-Z)
-                        if (sx == -1 && sy == -1 && sz == +1) { tht = 225; phi = Math.Atan(1 / Math.Sqrt(2)) * 180 / Math.PI; return true; } // (-X,-Y,+Z)
-                        if (sx == -1 && sy == -1 && sz == -1) { tht = 225; phi = -Math.Atan(1 / Math.Sqrt(2)) * 180 / Math.PI; return true; } // (-X,-Y,-Z)
+                        if (sx == +1 && sy == +1 && sz == +1) { tht = 45; phi = PileDesign.Common.Units.RadToDeg(Math.Atan(1 / Math.Sqrt(2))); return true; } // (+X,+Y,+Z)
+                        if (sx == +1 && sy == +1 && sz == -1) { tht = 45; phi = -PileDesign.Common.Units.RadToDeg(Math.Atan(1 / Math.Sqrt(2))); return true; } // (+X,+Y,-Z)
+                        if (sx == +1 && sy == -1 && sz == +1) { tht = 315; phi = PileDesign.Common.Units.RadToDeg(Math.Atan(1 / Math.Sqrt(2))); return true; } // (+X,-Y,+Z)
+                        if (sx == +1 && sy == -1 && sz == -1) { tht = 315; phi = -PileDesign.Common.Units.RadToDeg(Math.Atan(1 / Math.Sqrt(2))); return true; } // (+X,-Y,-Z)
+                        if (sx == -1 && sy == +1 && sz == +1) { tht = 135; phi = PileDesign.Common.Units.RadToDeg(Math.Atan(1 / Math.Sqrt(2))); return true; } // (-X,+Y,+Z)
+                        if (sx == -1 && sy == +1 && sz == -1) { tht = 135; phi = -PileDesign.Common.Units.RadToDeg(Math.Atan(1 / Math.Sqrt(2))); return true; } // (-X,+Y,-Z)
+                        if (sx == -1 && sy == -1 && sz == +1) { tht = 225; phi = PileDesign.Common.Units.RadToDeg(Math.Atan(1 / Math.Sqrt(2))); return true; } // (-X,-Y,+Z)
+                        if (sx == -1 && sy == -1 && sz == -1) { tht = 225; phi = -PileDesign.Common.Units.RadToDeg(Math.Atan(1 / Math.Sqrt(2))); return true; } // (-X,-Y,-Z)
                         break;
                     }
             }
@@ -642,8 +642,8 @@ namespace PileDesign.Views
         {
             if (dir.Length == 0) return (0.0, 0.0);
             dir.Normalize();
-            double tht = -Math.Atan2(dir.Y, dir.X) * 180.0 / Math.PI;
-            double phi = Math.Atan2(dir.Z, PileDesign.Common.StableNumerics.Norm(dir.X, dir.Y)) * 180.0 / Math.PI;
+            double tht = -PileDesign.Common.Units.RadToDeg(Math.Atan2(dir.Y, dir.X));
+            double phi = PileDesign.Common.Units.RadToDeg(Math.Atan2(dir.Z, PileDesign.Common.StableNumerics.Norm(dir.X, dir.Y)));
             return (tht, phi);
         }
 

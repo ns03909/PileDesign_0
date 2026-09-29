@@ -434,7 +434,7 @@ namespace PileDesign.ViewModels
             {
                 double groundDisp = (level == 1 ? displacement1 : displacement2) * alpha1 / nStep / 1000.0;
 
-                double rad = loadAngle * Math.PI / 180.0;
+                double rad = PileDesign.Common.Units.DegToRad(loadAngle);
                 double groundDisplacementX = groundDisp * Math.Cos(rad);
                 double groundDisplacementY = groundDisp * Math.Sin(rad);
                 return new NodeDisp(groundDisplacementX, groundDisplacementY, 0.0, 0.0, 0.0, 0.0);
@@ -498,8 +498,8 @@ namespace PileDesign.ViewModels
 
             double force = beta1 * upperMassForce + beta2 * foundationMassForce; // 上部構造質量荷重 + 基礎構造質量荷重[kN]
             double deltaForce = force / nStep; // 増分荷重 [kN]
-            double x = deltaForce * Math.Cos(loadAngle * Math.PI / 180.0); // x方向の増分荷重 [kN]
-            double y = deltaForce * Math.Sin(loadAngle * Math.PI / 180.0); // y方向の増分荷重 [kN]
+            double x = deltaForce * Math.Cos(PileDesign.Common.Units.DegToRad(loadAngle)); // x方向の増分荷重 [kN]
+            double y = deltaForce * Math.Sin(PileDesign.Common.Units.DegToRad(loadAngle)); // y方向の増分荷重 [kN]
 
             targetModel.Nodes[0].SetIncrementalLoad(new(x, y, 0.0, 0.0, 0.0, 0.0)); // 増分荷重ベクトル [kN]
             // 案 Z (P-S 非線形ばね 有効時): 杭軸力 (ケース別) を各杭の接合節点 Z 方向に下向き外力として段階適用。

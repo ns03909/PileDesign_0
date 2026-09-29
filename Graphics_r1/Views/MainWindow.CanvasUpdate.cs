@@ -397,7 +397,7 @@ namespace PileDesign.Views
                 return false;
 
             loadCombination = vm.CurrentInputModel.LoadCasesInput.LoadCombinations[loadCombinationIndex];
-            double ang = loadCase.LoadAngle * Math.PI / 180.0;
+            double ang = PileDesign.Common.Units.DegToRad(loadCase.LoadAngle);
             cos = Math.Cos(ang);
             sin = Math.Sin(ang);
             level = loadCase.Level;

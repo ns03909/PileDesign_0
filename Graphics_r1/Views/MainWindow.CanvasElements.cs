@@ -205,7 +205,7 @@ namespace PileDesign.Views
 
             double zToeTop = pileToeDia <= pileBottomDia && !_isSmartMagnum && !_isHybrid ? zs[^1] :
                 (_ctypeForToe == "場所打ちコンクリート杭"
-                ? zs[^1] + (pileToeDia - pileBottomDia) * 0.5 / Math.Tan(pileToeAngle * Math.PI / 180) + pileToeHeight
+                ? zs[^1] + (pileToeDia - pileBottomDia) * 0.5 / Math.Tan(PileDesign.Common.Units.DegToRad(pileToeAngle)) + pileToeHeight
                 : _ctypeForToe == "回転貫入杭"
                 ? zs[^1]
                 : _isSmartMagnum
@@ -559,9 +559,9 @@ namespace PileDesign.Views
 
             double pileToeDia2D = pileToeDia * viewModel.CanvasThreeDView.Scale;
             double pileDia2D = pileDia * viewModel.CanvasThreeDView.Scale;
-            double phiRad = Math.Abs(viewModel.CanvasThreeDView.Phi) * Math.PI / 180.0;
+            double phiRad = PileDesign.Common.Units.DegToRad(Math.Abs(viewModel.CanvasThreeDView.Phi));
             double factoredToeCylinderHeight2D = Math.Cos(phiRad) * insituPileToeHeight * viewModel.CanvasThreeDView.Scale;
-            double coneHeight = (pileToeDia - pileDia) * 0.5 / Math.Tan(insituPileToeAngle * Math.PI / 180);
+            double coneHeight = (pileToeDia - pileDia) * 0.5 / Math.Tan(PileDesign.Common.Units.DegToRad(insituPileToeAngle));
             double factoredConeHeight2D = Math.Cos(phiRad) * coneHeight * viewModel.CanvasThreeDView.Scale;
 
             var ellipseBtm = new EllipseGeometry(pointBtm, pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening);
@@ -617,7 +617,7 @@ namespace PileDesign.Views
 
             double pileToeDia2D = pileToeDia * viewModel.CanvasThreeDView.Scale;
             double pileDia2D = pileDia * viewModel.CanvasThreeDView.Scale;
-            double phiRad = Math.Abs(viewModel.CanvasThreeDView.Phi) * Math.PI / 180.0;
+            double phiRad = PileDesign.Common.Units.DegToRad(Math.Abs(viewModel.CanvasThreeDView.Phi));
             double factoredHeight2D = Math.Cos(phiRad) * bulbHeight * viewModel.CanvasThreeDView.Scale;
 
             // 杭先端より下に張り出す分だけ根固め部の底面を下げる (2D では Y が増える向き)
@@ -998,7 +998,7 @@ namespace PileDesign.Views
             // AngleBeta 回転
             if (Math.Abs(angleBetaDeg) > 1e-9)
             {
-                double rad = angleBetaDeg * Math.PI / 180.0;
+                double rad = PileDesign.Common.Units.DegToRad(angleBetaDeg);
                 double cosB = Math.Cos(rad);
                 double sinB = Math.Sin(rad);
                 Vector3D newY = cosB * localY + sinB * localZ;

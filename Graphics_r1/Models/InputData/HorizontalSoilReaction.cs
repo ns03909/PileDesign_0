@@ -357,7 +357,7 @@ namespace PileDesign.Models.InputData
             if (soilType == "砂質土" || soilType == "礫質土")
             {
                 double kappa = GetKappa(isFront, rOnB, phi);
-                double Kp = (1 + Math.Sin(phi * Math.PI / 180)) / (1 - Math.Sin(phi * Math.PI / 180));
+                double Kp = (1 + Math.Sin(PileDesign.Common.Units.DegToRad(phi))) / (1 - Math.Sin(PileDesign.Common.Units.DegToRad(phi)));
 
                 return kappa * Kp * sigmaZPrime;
             }
