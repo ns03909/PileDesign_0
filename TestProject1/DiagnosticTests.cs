@@ -296,6 +296,39 @@ public class DiagnosticTests
         Assert.IsNull(WordDocument.DescribeNonFinite(null, 0));
     }
 
+    // ── 6. 性能の記録 ──
+
+    [TestMethod]
+    public void PerfRecords_KeepTheModelScaleAndConditions()
+    {
+        PerfLog.Reset();
+        try
+        {
+            string conditions = PerfLog.Conditions(piles: 12, elements: 340, cases: 8, format: "Word (docx)");
+            Assert.AreEqual("杭 12 本・要素 340・荷重ケース 8・出力 Word (docx)", conditions);
+            PerfLog.Record("計算書の出力", TimeSpan.FromMilliseconds(40), 12, "本の杭", conditions);
+            PerfLog.Record("計算書の出力", TimeSpan.FromMilliseconds(10), 3, "本の杭", PerfLog.Conditions(piles: 3));
+            Assert.AreEqual(conditions, PerfLog.Summary().Single().ConditionsAtMax, "最も遅かったときの条件を残していません");
+            PerfLog.WriteSummary();
+        }
+        finally { PerfLog.Reset(); }
+    }
+
+    /// <summary>解析・保存・計算書の出力・結果の表は、規模と条件を添えて記録する。</summary>
+    [TestMethod]
+    public void HeavyOperations_RecordTheirConditions()
+    {
+        var sites = new[]
+        {
+            ("ViewModels", "HorizontalCalculationViewModel.Run.cs"),
+            ("ViewModels", "MainWindowViewModel.FileIO.cs"),
+            ("Output", "WordDocument.cs"),
+            ("Services", "AnalysisResultTableService.cs"),
+        };
+        var missing = sites.Where(s => !TestSource.Read("Graphics_r1", s.Item1, s.Item2).Contains("PerfLog.Conditions(")).Select(s => s.Item2).ToList();
+        Assert.AreEqual(0, missing.Count, "規模・条件を添えずに記録しています: " + string.Join(", ", missing));
+    }
+
     // ── 7. 途中の結果の扱い ──
 
     [TestMethod]

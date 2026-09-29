@@ -222,6 +222,11 @@ namespace PileDesign.Output
             bool wantsEvaluation = mainWindowViewModel?.DocxOutput?.IncludeHorizontal_NGReport == true;
             _source = mainWindowViewModel?.CaptureReportSource(inputModel, wantsEvaluation) ?? new ReportSource();
 
+            // 規模と出力の形式を添えて所要時間・メモリを記録する (PerfLog)
+            using var perf = PileDesign.Common.PerfLog.Measure("計算書の出力", inputModel.PileLayoutItems?.Count ?? 0, "本の杭",
+                PileDesign.Common.PerfLog.Conditions(piles: inputModel.PileLayoutItems?.Count ?? 0,
+                    cases: _source.HorizontalCaseCount > 0 ? _source.HorizontalCaseCount : null, format: "Word (docx)"));
+
             var sw = new System.Diagnostics.Stopwatch();
             void StartSection() => sw.Restart();
             void EndSection(string label) { sw.Stop(); Log.Information("[Docx]   {Section}: {Elapsed:N2}s", label, sw.Elapsed.TotalSeconds); }

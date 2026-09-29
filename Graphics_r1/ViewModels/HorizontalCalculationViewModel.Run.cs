@@ -40,7 +40,10 @@ namespace PileDesign.ViewModels
             if (ctx == null) return;
 
             // 規模別の所要時間・メモリの記録 (PerfLog)。遅くなる条件を杭・要素・ケースの数で見分ける
-            using var perf = PileDesign.Common.PerfLog.Measure("水平解析", TotalCalculationCount, "ケース");
+            using var perf = PileDesign.Common.PerfLog.Measure("水平解析", TotalCalculationCount, "ケース",
+                PileDesign.Common.PerfLog.Conditions(
+                    piles: _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?.Count ?? 0,
+                    elements: ctx.TargetModel?.Beams?.Count ?? 0, cases: TotalCalculationCount, parallelism: ctx.CaseMdop));
             Serilog.Log.Information("[性能] 水平解析の規模: 杭 {Piles} 本・要素 {Beams}・節点 {Nodes}・ケース {Cases}・並列 {Mdop}",
                 _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?.Count ?? 0,
                 ctx.TargetModel?.Beams?.Count ?? 0, ctx.TargetModel?.Nodes?.Count ?? 0, TotalCalculationCount, ctx.CaseMdop);

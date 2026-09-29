@@ -38,7 +38,8 @@ namespace PileDesign.Services
             var beams = model.Beams?.ToList() ?? [];
             var nodes = model.Nodes?.ToList() ?? [];
             var rotSprings = model.RotationalSprings?.ToList() ?? [];
-            using var perf = PileDesign.Common.PerfLog.Measure("結果の表の作成", beams.Count + nodes.Count, "要素・節点");
+            using var perf = PileDesign.Common.PerfLog.Measure("結果の表の作成", beams.Count + nodes.Count, "要素・節点",
+                PileDesign.Common.PerfLog.Conditions(piles: inputModel?.PileLayoutItems?.Count, elements: beams.Count, format: "画面の表"));
 
             // 結果検索用のヘルパー: BeamResultsから該当する結果を取得
             BeamResult? FindBeamResult(Beam beam) =>

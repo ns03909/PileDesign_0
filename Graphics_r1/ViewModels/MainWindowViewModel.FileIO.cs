@@ -96,7 +96,9 @@ namespace PileDesign.ViewModels
         /// </summary>
         internal async Task<bool> SaveProjectToAsync(string path)
         {
-            using var perf = PileDesign.Common.PerfLog.Measure("保存", CurrentInputModel?.PileLayoutItems?.Count ?? 0, "本の杭");
+            using var perf = PileDesign.Common.PerfLog.Measure("保存", CurrentInputModel?.PileLayoutItems?.Count ?? 0, "本の杭",
+                PileDesign.Common.PerfLog.Conditions(piles: CurrentInputModel?.PileLayoutItems?.Count ?? 0,
+                    elements: CurrentModel?.Beams?.Count, format: "プロジェクトファイル (JSON)"));
             int generationAtSaveStart = UnsavedWorkGeneration;
             int projectAtSaveStart = ProjectGeneration;
             Mouse.OverrideCursor = Cursors.Wait;
