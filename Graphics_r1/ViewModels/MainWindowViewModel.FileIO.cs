@@ -1012,6 +1012,11 @@ namespace PileDesign.ViewModels
                     if (doc.OmittedItems.Count > 0)
                         MessageService.Show(DescribeOmittedReportItems(doc.OmittedItems),
                             "計算書の作成 (一部を省きました)", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    // 省いてはいないが読み手に知らせること (表紙の図を載せなかった・数値でない値を含む表)
+                    if (doc.Warnings.Count > 0)
+                        MessageService.Show("計算書は作成しましたが、次の点を確認してください。\n\n"
+                            + string.Join("\n\n", doc.Warnings.Select(w => "・" + w)),
+                            "計算書の作成 (確認してください)", MessageBoxButton.OK, MessageBoxImage.Warning);
 
                     // 「目次を F9 で更新」は出力後に必ず要る手順なので、
                     // 数秒で消える Toast だけに載せず、ステータスバーにも残す。

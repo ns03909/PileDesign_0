@@ -215,6 +215,7 @@ namespace PileDesign.Output
             // ここで既定値に落ちた箇所は今まで誰にも見えていなかった (2026-09-19)。
             PileDesign.Common.CalcFallbackTracker.Reset();
             lock (_omittedLock) _omitted.Clear();
+            _warnings.Clear();
 
             var sw = new System.Diagnostics.Stopwatch();
             void StartSection() => sw.Restart();
@@ -234,6 +235,7 @@ namespace PileDesign.Output
             }
 
             lock (_omittedLock) OmittedItems = [.. _omitted];
+            Warnings = [.. _warnings];
             Log.Debug("Word文書を出力しました。Word で開き、目次上をクリック → F9 でフィールド更新してください。");
         }
 
@@ -246,6 +248,40 @@ namespace PileDesign.Output
 
         /// <summary>この計算書で、作成できずに省いた図・表 (出力の順)。<see cref="CreateWordDocument"/> のあとに見る。</summary>
         public IReadOnlyList<string> OmittedItems { get; private set; } = [];
+
+        /// <summary>
+        /// この計算書について、省いたわけではないが読み手に知らせること (表紙の図を載せなかった・数値でない値を含む表)。
+        /// <see cref="CreateWordDocument"/> のあとに見る。
+        /// </summary>
+        public IReadOnlyList<string> Warnings { get; private set; } = [];
+        private readonly List<string> _warnings = [];
+
+        /// <summary>表のセルの文字が数値でない値 (NaN・無限大) の表記か。書式を付けても "NaN"・"∞" のまま出る。</summary>
+        internal static bool IsNonFiniteText(string? text)
+            => (text?.Trim().TrimStart('+', '-', '−')) is "NaN" or "∞" or "Infinity" or "非数値";
+
+        /// <summary>
+        /// 文書の表の中に数値でない値があれば、どの表か (直前の見出し・表題) と件数を書いた文を返す。無ければ null。
+        /// </summary>
+        internal static string? DescribeNonFiniteTableCells(OpenXmlElement body)
+        {
+            var hits = new List<(string Table, int Cells)>();
+            foreach (var table in body.Descendants<Table>())
+            {
+                int cells = table.Descendants<TableCell>().Count(c => IsNonFiniteText(c.InnerText));
+                if (cells == 0) continue;
+                // 表題は表の直前の段落にある (AddAutoFigureCaption)。無ければ番号で示す
+                string title = table.ElementsBefore().OfType<Paragraph>().LastOrDefault()?.InnerText?.Trim() ?? "";
+                if (title.Length == 0) title = "(表題の無い表)";
+                if (title.Length > 40) title = title[..40] + "…";
+                hits.Add((title, cells));
+            }
+            if (hits.Count == 0) return null;
+            return $"数値でない値 (NaN・無限大) を含む表が {hits.Count} 個あります (計 {hits.Sum(h => h.Cells)} か所)。"
+                 + "解析の収束や入力を確認してください: "
+                 + string.Join("、", hits.Take(5).Select(h => $"「{h.Table}」{h.Cells} か所"))
+                 + (hits.Count > 5 ? $" ほか {hits.Count - 5} 個" : "");
+        }
 
         /// <summary>
         /// 図・表 <paramref name="what"/> を作成できずに省いたことを記録し、その位置に赤字の注記を入れる。
@@ -297,6 +333,14 @@ namespace PileDesign.Output
 
                 // 表の行がページ境界で上下に割れないようにする（全表に一括で適用）
                 PreventTableRowsFromSplittingAcrossPages(body);
+
+                // 出す直前の共通の検査: 表の中の数値でない値 (NaN・無限大)。表ごとに書き方がばらばらで、
+                // 以前はどの表に出ても気付く手掛かりが無かった
+                if (DescribeNonFiniteTableCells(body) is { } nonFinite)
+                {
+                    Log.Warning("[計算書] {Warning}", nonFinite);
+                    _warnings.Add(nonFinite);
+                }
 
                 // まとめて追加
                 StartSection();

@@ -38,6 +38,34 @@ namespace PileDesign.Models.Results
         public string LiquefactionLabel => IsLiquefaction ? "有" : "無";
 
         /// <summary>
+        /// 数値の列にある数値でない値 (NaN・無限大) の数。画面に出す直前の共通の検査。
+        ///
+        /// 表ごとに行を組む処理がばらばらで、どの表でも数値でない値がそのまま「NaN」「∞」と並び、
+        /// 気付く手掛かりは各セルを見ることしかなかった。数えて表の名前に添える。
+        /// </summary>
+        public int NonFiniteCellCount => _nonFiniteCellCount ??= CountNonFiniteCells(Columns, Rows);
+        private int? _nonFiniteCellCount;
+
+        internal static int CountNonFiniteCells(IReadOnlyList<ResultColumnDescriptor>? columns, IReadOnlyList<object>? rows)
+        {
+            if (columns == null || rows == null) return 0;
+            int count = 0;
+            foreach (var column in columns)
+            {
+                var type = column.Property?.PropertyType;
+                if (type != typeof(double) && type != typeof(double?) && type != typeof(float) && type != typeof(float?)) continue;
+                foreach (var row in rows)
+                {
+                    if (row == null || !column.Property!.DeclaringType!.IsInstanceOfType(row)) continue;
+                    object? value = column.Property.GetValue(row);
+                    double v = value switch { double d => d, float f => f, _ => 0 };
+                    if (!double.IsFinite(v)) count++;
+                }
+            }
+            return count;
+        }
+
+        /// <summary>
         /// 行だけ差し替えた複製。条件フィルタで行を絞った表を作るのに使う。
         /// </summary>
         public ResultTable WithRows(IReadOnlyList<object> rows) => new()
@@ -63,7 +91,8 @@ namespace PileDesign.Models.Results
             get
             {
                 // 全条件をまたぐ表は液状化の有無を持たないので、名前だけにする
-                if (SpansAllConditions) return Name;
+                if (SpansAllConditions)
+                    return NonFiniteCellCount > 0 ? Name + $"（数値でない値 {NonFiniteCellCount} か所）" : Name;
 
                 // 液状化状態を先頭に表示（ListBoxで切れても区別できるように）
                 var parts = new List<string> { $"[{LiquefactionLabel}]", Name };
@@ -72,7 +101,8 @@ namespace PileDesign.Models.Results
                 if (!string.IsNullOrEmpty(LoadCombinationName))
                     parts.Add(LoadCombinationName);
                 string name = string.Join(" / ", parts);
-                return OmittedRowCount > 0 ? name + $"（結果の無い {OmittedRowCount} 行は省略）" : name;
+                if (OmittedRowCount > 0) name += $"（結果の無い {OmittedRowCount} 行は省略）";
+                return NonFiniteCellCount > 0 ? name + $"（数値でない値 {NonFiniteCellCount} か所）" : name;
             }
         }
     }
