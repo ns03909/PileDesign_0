@@ -1,4 +1,4 @@
-using PileDesign.Models.InputData;
+﻿using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -107,7 +107,7 @@ namespace PileDesign.Services
         public static void ApplyToInputModel(
             InputModel inputModel,
             GroupSettlementExampleData data,
-            MainWindowViewModel viewModel)
+            MainWindowViewModel? viewModel)
         {
             // 群杭沈下解析結果をクリア（バッチ置換でスレッド安全）
             inputModel.PileGroupSettlement.SettlementGridData = new ObservableCollection<SettlementGridDataItem>();
@@ -256,7 +256,7 @@ namespace PileDesign.Services
                     };
                     if (data.FoundationBeamDeltaZc.HasValue)
                         item.FoundationBeamDeltaZc = data.FoundationBeamDeltaZc.Value;
-                    item.SetMainWindowViewModel(viewModel);
+                if (viewModel != null) item.SetMainWindowViewModel(viewModel);
                     pileLayoutList.Add(item);
                 }
                 inputModel.PileLayoutItems = new ObservableCollection<PileLayoutDataItem>(pileLayoutList);
@@ -398,6 +398,15 @@ namespace PileDesign.Services
             }
 
             // 沈下解析オフセットを設定（ある場合はJSONから、ない場合はデフォルト値）
+            if (viewModel != null) ApplySettlementOffsets(viewModel, data);
+
+            // 根入れ部を無効化（バッチ置換でスレッド安全）
+            inputModel.EmbedmentInput.EmbedmentLayers = new ObservableCollection<EmbedmentDataItem>();
+            inputModel.ElementDivision.SoilEmbedment = null;
+        }
+
+        internal static void ApplySettlementOffsets(MainWindowViewModel viewModel, GroupSettlementExampleData data)
+        {
             if (data.SettlementOffsets != null)
             {
                 viewModel.GroupPileSettlementXOffset = data.SettlementOffsets.XOffset;
@@ -412,10 +421,6 @@ namespace PileDesign.Services
                 viewModel.GroupPileSettlementXSpacing = 1.0;
                 viewModel.GroupPileSettlementYSpacing = 1.0;
             }
-
-            // 根入れ部を無効化（バッチ置換でスレッド安全）
-            inputModel.EmbedmentInput.EmbedmentLayers = new ObservableCollection<EmbedmentDataItem>();
-            inputModel.ElementDivision.SoilEmbedment = null;
         }
 
         /// <summary>

@@ -7,7 +7,7 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:MoveCopyViewModel}"
-        Title="移動・複製" Height="200" Width="450"
+        Title="移動・複製" Height="270" Width="450"
         PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
@@ -61,20 +61,20 @@
 
             <StackPanel Orientation="Horizontal">
                 <Label Content="dX" Width="50" HorizontalContentAlignment="Right"/>
-                <TextBox Text="{Binding DX, StringFormat={}{0:+0.00;-0.00;+0.00}}" Width="50" HorizontalContentAlignment="Right"
+                <TextBox x:Name="DeltaXInput" Text="{Binding DX, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat={}{0:+0.00;-0.00;+0.00}}" Width="50" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
                 <Label Content="dY" Width="50" HorizontalContentAlignment="Right"/>
-                <TextBox Text="{Binding DY, StringFormat={}{0:+0.00;-0.00;+0.00}}" Width="50" HorizontalContentAlignment="Right"
+                <TextBox x:Name="DeltaYInput" Text="{Binding DY, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat={}{0:+0.00;-0.00;+0.00}}" Width="50" HorizontalContentAlignment="Right"
                        GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
                 <Label Content="dZ" Width="50" HorizontalContentAlignment="Right"/>
-                <TextBox Text="{Binding DZ, StringFormat={}{0:+0.00;-0.00;+0.00}}" Width="50" HorizontalContentAlignment="Right"
+                <TextBox x:Name="DeltaZInput" Text="{Binding DZ, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat={}{0:+0.00;-0.00;+0.00}}" Width="50" HorizontalContentAlignment="Right"
                        GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
 
                 <StackPanel Orientation="Horizontal" Visibility="{Binding IsCopySelected, 
                     Converter={StaticResource BooleanToVisibilityConverter}, UpdateSourceTrigger=PropertyChanged}">
                     <Label Content="回数" Width="50" HorizontalContentAlignment="Right" />
-                    <TextBox x:Name="TextBoxRepetitionNumber" Text="{Binding RepetitionNumber}"
-                             Width="50" HorizontalContentAlignment="Right" TextChanged="TextBoxRepetitionNumber_TextChanged"
+                    <TextBox x:Name="TextBoxRepetitionNumber" Text="{Binding RepetitionNumber, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                             Width="50" HorizontalContentAlignment="Right"
                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
                 </StackPanel>
                 
@@ -94,6 +94,10 @@
            Foreground="Orange"
            Margin="4"
            Visibility="{Binding IsNodePairSelectionMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>-->
+            <TextBlock Foreground="Firebrick" Text="{Binding ElementName=DeltaXInput, Path=(Validation.Errors)[0].ErrorContent}" TextWrapping="Wrap"/>
+            <TextBlock Foreground="Firebrick" Text="{Binding ElementName=DeltaYInput, Path=(Validation.Errors)[0].ErrorContent}" TextWrapping="Wrap"/>
+            <TextBlock Foreground="Firebrick" Text="{Binding ElementName=DeltaZInput, Path=(Validation.Errors)[0].ErrorContent}" TextWrapping="Wrap"/>
+            <TextBlock Foreground="Firebrick" Text="{Binding ElementName=TextBoxRepetitionNumber, Path=(Validation.Errors)[0].ErrorContent}" TextWrapping="Wrap"/>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal"  HorizontalAlignment="Right" Grid.Row="1">

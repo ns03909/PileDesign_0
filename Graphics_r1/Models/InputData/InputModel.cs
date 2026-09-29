@@ -1107,72 +1107,24 @@ namespace PileDesign.Models.InputData
 
         // VLadd重心を返すメソッド
         // v2 セマンティクス: item.Z = 接合節点 Z なので、Z 重心は接合節点平均 (荷重作用点としての重心)
-        public Point3D GetVLaddGravityCenter()
+        public Point3D GetVLaddGravityCenter() => GetStableWeightedCenter(p => p.AxialForceVLAdditional);
+
+        public Point3D GetVLGravityCenter() => GetStableWeightedCenter(p => p.AxialForceVL0);
+
+        public Point3D GetVLplusVLaddGravityCenter() => GetStableWeightedCenter((PileLayoutItems ?? [])
+            .SelectMany(p => new[] { (p.Point3D, p.AxialForceVL0), (p.Point3D, p.AxialForceVLAdditional) }));
+
+        private Point3D GetStableWeightedCenter(Func<PileLayoutDataItem, double> weight)
+            => GetStableWeightedCenter((PileLayoutItems ?? []).Select(p => (p.Point3D, weight(p))));
+
+        private static Point3D GetStableWeightedCenter(IEnumerable<(Point3D Position, double Weight)> values)
         {
-            double sumW = 0;
-            double sumMX = 0, sumMY = 0, sumMZ = 0;
-            foreach (var item in PileLayoutItems)
+            try { return PileDesign.Common.StableNumerics.WeightedCenter(values); }
+            catch (Exception ex) when (ex is ArgumentException or ArithmeticException or InvalidOperationException)
             {
-                sumW += item.AxialForceVLAdditional;
-                sumMX += item.X * item.AxialForceVLAdditional;
-                sumMY += item.Y * item.AxialForceVLAdditional;
-                sumMZ += item.Z * item.AxialForceVLAdditional;
+                PileDesign.Common.CalcFallbackTracker.Report("杭群の荷重重心（原点で継続）", ex);
+                return new Point3D();
             }
-            if (PileLayoutItems.Count == 0 || sumW == 0)
-            {
-                // 要素が無い、または合計荷重が0の場合は原点を返す
-                return new Point3D(0, 0, 0);
-            }
-            return new Point3D(sumMX / sumW, sumMY / sumW, sumMZ / sumW);
-        }
-
-        // VL重心を返すメソッド
-        public Point3D GetVLGravityCenter()
-        {
-            double sumW = 0;
-
-            double sumMX = 0;
-            double sumMY = 0;
-            double sumMZ = 0;
-
-            foreach (var item in PileLayoutItems)
-            {
-                sumW += item.AxialForceVL0;
-
-                sumMX += item.X * item.AxialForceVL0;
-                sumMY += item.Y * item.AxialForceVL0;
-                sumMZ += item.Z * item.AxialForceVL0;
-            }
-            if (PileLayoutItems.Count == 0 || sumW == 0)
-            {
-                // 要素が無い、または合計荷重が0の場合は原点を返す
-                return new Point3D(0, 0, 0);
-            }
-            return new Point3D(sumMX / sumW, sumMY / sumW, sumMZ / sumW);
-        }
-
-        public Point3D GetVLplusVLaddGravityCenter()
-        {
-            double sumW = 0;
-
-            double sumMX = 0;
-            double sumMY = 0;
-            double sumMZ = 0;
-
-            foreach (var item in PileLayoutItems)
-            {
-                sumW += item.AxialForceVL0 + item.AxialForceVLAdditional;
-
-                sumMX += item.X * (item.AxialForceVL0 + item.AxialForceVLAdditional);
-                sumMY += item.Y * (item.AxialForceVL0 + item.AxialForceVLAdditional);
-                sumMZ += item.Z * (item.AxialForceVL0 + item.AxialForceVLAdditional);
-            }
-            if (PileLayoutItems.Count == 0 || sumW == 0)
-            {
-                // 要素が無い、または合計荷重が0の場合は原点を返す
-                return new Point3D(0, 0, 0);
-            }
-            return new Point3D(sumMX / sumW, sumMY / sumW, sumMZ / sumW);
         }
 
         public Point3D GetCentroid()
@@ -1182,22 +1134,11 @@ namespace PileDesign.Models.InputData
                 if (PileLayoutItems == null || PileLayoutItems.Count == 0)
                     return new Point3D(0, 0, 0);
 
-                double sumX = 0;
-                double sumY = 0;
-                double sumZ = 0;
-                foreach (var item in PileLayoutItems)
-                {
-                    sumX += item.X;
-                    sumY += item.Y;
-                    sumZ += item.Z;
-                }
-
-                int count = PileLayoutItems.Count;
-                if (count == 0) return new Point3D(0, 0, 0);
-
-                return new Point3D(sumX / count, sumY / count, sumZ / count);
+                return new Point3D(PileDesign.Common.StableNumerics.Mean(PileLayoutItems.Select(p => p.X)),
+                    PileDesign.Common.StableNumerics.Mean(PileLayoutItems.Select(p => p.Y)),
+                    PileDesign.Common.StableNumerics.Mean(PileLayoutItems.Select(p => p.Z)));
             }
-            catch (Exception ex) when (ex is DivideByZeroException or InvalidOperationException)
+            catch (Exception ex) when (ex is ArgumentException or ArithmeticException or InvalidOperationException)
             {
                 // 重心が原点に落ちると荷重の分布が変わる。黙って 0 を返さない。
                 // (InvalidOperationException は、数え上げ中に杭配置が変わったとき)

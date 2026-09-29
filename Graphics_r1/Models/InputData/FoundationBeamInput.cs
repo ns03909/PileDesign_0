@@ -258,6 +258,15 @@ namespace PileDesign.Models.InputData
     /// </summary>
     public class FoundationBeam : BaseModel
     {
+        /// <summary>Creates a new segment with the same input properties; analysis results are recalculated.</summary>
+        public FoundationBeam CreateSegment(NodeReferenceType typeI, Guid idI, NodeReferenceType typeJ, Guid idJ) => new()
+        {
+            NodeI_Type = typeI, NodeI_Id = idI, NodeJ_Type = typeJ, NodeJ_Id = idJ,
+            MaterialNo = MaterialNo, SectionNo = SectionNo, SectionName = SectionName,
+            Width = Width, Height = Height, YoungModulus = YoungModulus,
+            ShearModulus = ShearModulus, AngleBeta = AngleBeta, IsVisible = IsVisible,
+        };
+
         // No プロパティは廃止。番号は所属コレクション (Beams) 内の位置 (1-based) として扱う。
         // 必要なときは FoundationBeamInput.GetBeamNo(this) で取得する。
 

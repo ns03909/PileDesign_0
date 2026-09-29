@@ -60,6 +60,7 @@ namespace PileDesign.Services
                         Index = i,
                         Header = PileDesign.Common.DataGridHeaderText.From(column),
                         Width = column.Width.Value,
+                        WidthUnit = column.Width.UnitType,
                         DisplayIndex = column.DisplayIndex
                     });
                 }
@@ -116,6 +117,14 @@ namespace PileDesign.Services
         /// </summary>
         internal static bool ApplyColumnSettings(IReadOnlyList<DataGridColumnSetting> settings, DataGrid dataGrid)
         {
+            if (settings == null || settings.Any(s => s == null) ||
+                settings.Select(s => s.Index).Distinct().Count() != settings.Count ||
+                settings.Select(s => s.DisplayIndex).Distinct().Count() != settings.Count ||
+                settings.Any(s => s.Index < 0 || s.DisplayIndex < 0 || s.DisplayIndex >= settings.Count)) return false;
+            foreach (var s in settings)
+                if (!Enum.IsDefined(typeof(DataGridLengthUnitType), s.WidthUnit) ||
+                    !double.IsFinite(s.Width) || s.Width < 0 ||
+                    (s.WidthUnit == DataGridLengthUnitType.Star && s.Width <= 0)) return false;
             var matched = new List<(DataGridColumn Column, DataGridColumnSetting Setting)>();
             foreach (var setting in settings)
             {
@@ -128,8 +137,7 @@ namespace PileDesign.Services
             if (matched.Count == 0) return false;
 
             foreach (var (column, setting) in matched)
-                if (setting.Width > 0 && double.IsFinite(setting.Width))
-                    column.Width = new DataGridLength(setting.Width);
+                column.Width = new DataGridLength(setting.Width, setting.WidthUnit);
 
             bool allMatched = matched.Count == dataGrid.Columns.Count && settings.Count == dataGrid.Columns.Count;
             if (allMatched)
@@ -200,6 +208,8 @@ namespace PileDesign.Services
         /// 列幅
         /// </summary>
         public double Width { get; set; }
+        // Missing in old JSON files: preserve the former pixel interpretation.
+        public DataGridLengthUnitType WidthUnit { get; set; } = DataGridLengthUnitType.Pixel;
 
         /// <summary>
         /// 表示順

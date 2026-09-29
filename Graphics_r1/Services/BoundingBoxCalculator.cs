@@ -1,6 +1,7 @@
 using PileDesign.Models.InputData;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace PileDesign.Services
 {
@@ -31,6 +32,7 @@ namespace PileDesign.Services
         /// <returns>計算された境界ボックス</returns>
         public static BoundingBox Calculate(IEnumerable<PileLayoutDataItem> pileLayoutItems, double margin = 0.0)
         {
+            if (!double.IsFinite(margin) || margin < 0) throw new ArgumentException("余白は有限の0以上の値にしてください。", nameof(margin));
             if (pileLayoutItems == null || !pileLayoutItems.Any())
             {
                 return new BoundingBox
@@ -51,6 +53,7 @@ namespace PileDesign.Services
             {
                 double x = pileLayoutDataItem.Point3D.X;
                 double y = pileLayoutDataItem.Point3D.Y;
+                if (!double.IsFinite(x) || !double.IsFinite(y)) throw new ArgumentException("杭の平面座標は有限の値にしてください。");
 
                 if (x > maxX) maxX = x;
                 if (x < minX) minX = x;
@@ -58,13 +61,17 @@ namespace PileDesign.Services
                 if (y < minY) minY = y;
             }
 
-            return new BoundingBox
+            var result = new BoundingBox
             {
                 MinX = minX - margin,
                 MaxX = maxX + margin,
                 MinY = minY - margin,
                 MaxY = maxY + margin
             };
+            if (!double.IsFinite(result.MinX) || !double.IsFinite(result.MaxX) || !double.IsFinite(result.MinY) || !double.IsFinite(result.MaxY) ||
+                !double.IsFinite(result.Width) || !double.IsFinite(result.Height) || result.Width < 0 || result.Height < 0)
+                throw new ArgumentException("平面範囲の計算が数値の範囲外です。");
+            return result;
         }
 
         /// <summary>

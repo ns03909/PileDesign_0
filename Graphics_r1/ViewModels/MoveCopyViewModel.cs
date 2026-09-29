@@ -44,8 +44,7 @@ namespace PileDesign.ViewModels
                 if (value <= 0)
                 {
                     // 入力された値が自然数でない場合
-                    MessageService.Show("回数は自然数で入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
+                    throw new System.ArgumentOutOfRangeException(nameof(value), "回数は正の整数で入力してください。");
                 }
 
                 // 自然数の場合は値をセット

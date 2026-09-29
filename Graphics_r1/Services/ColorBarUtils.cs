@@ -45,7 +45,7 @@ namespace PileDesign.Services
                 };
             }
 
-            steps = Math.Max(1, steps);
+            steps = Math.Clamp(steps, 1, 256);
 
             // 区切りの良いステップ幅を計算
             double rawSpan = (max - min) / steps;
@@ -55,15 +55,18 @@ namespace PileDesign.Services
             double niceMin = Math.Floor(min / niceSpan) * niceSpan;
             double niceMax = Math.Ceiling(max / niceSpan) * niceSpan;
             // 実際のステップ数を再計算
-            int niceSteps = Math.Max(1, (int)Math.Round((niceMax - niceMin) / niceSpan));
-            // ステップ数が多すぎる場合は制限
-            if (niceSteps > steps * 2) { niceSteps = steps; niceSpan = (niceMax - niceMin) / niceSteps; }
+            double count = (niceMax - niceMin) / niceSpan;
+            bool fallback = !double.IsFinite(niceSpan) || niceSpan <= 0 ||
+                !double.IsFinite(niceMin) || !double.IsFinite(niceMax) ||
+                !double.IsFinite(count) || count < 1 || count > 256;
+            int niceSteps = fallback ? steps : Math.Max(1, (int)Math.Round(count));
+            if (fallback) { niceMin = min; niceMax = max; }
 
             var geoms = new List<ColorBaredGeometry>(niceSteps);
             double maxAbs = Math.Max(Math.Abs(niceMin), Math.Abs(niceMax));
 
             // 正負両方の値が存在するかチェック（Divergingモード自動判定用）
-            bool hasBothSigns = niceMin < -1e-12 && niceMax > 1e-12;
+            bool hasBothSigns = niceMin < 0 && niceMax > 0;
 
             // Divergingモードで正負両方ない場合はRainbowにフォールバック
             if (mode == ColorBarMode.Diverging && !hasBothSigns)
@@ -75,28 +78,28 @@ namespace PileDesign.Services
 
             for (int i = 0; i < niceSteps; i++)
             {
-                double b = niceMin + i * niceSpan;
-                double t = (i == niceSteps - 1) ? niceMax : (niceMin + (i + 1) * niceSpan);
-                double mid = (b + t) * 0.5;
+                double b = fallback ? Blend(niceMin, niceMax, (double)i / niceSteps) : niceMin + i * niceSpan;
+                double t = (i == niceSteps - 1) ? niceMax : (fallback ? Blend(niceMin, niceMax, (double)(i + 1) / niceSteps) : niceMin + (i + 1) * niceSpan);
+                if (t <= b) continue;
 
                 Color col;
 
                 if (mode == ColorBarMode.Rainbow)
                 {
-                    double ratio = (niceMax - niceMin) > 1e-15 ? (mid - niceMin) / (niceMax - niceMin) : 0.5;
+                    double ratio = (i + 0.5) / niceSteps;
                     ratio = Math.Max(0.0, Math.Min(1.0, ratio));
                     col = ColorBar.GetColor(ratio);
                 }
                 else
                 {
                     // Diverging: 0 をグレー、負は青へ、正は赤へ
-                    if (Math.Abs(maxAbs) <= 1e-12)
+                    if (maxAbs == 0)
                     {
                         col = gray;
                     }
                     else
                     {
-                        double v = mid / maxAbs;
+                        double v = (b / maxAbs) * 0.5 + (t / maxAbs) * 0.5;
                         v = Math.Max(-1.0, Math.Min(1.0, v));
 
                         if (Math.Abs(v) < 1e-9)
@@ -128,9 +131,16 @@ namespace PileDesign.Services
         /// <summary>
         /// 区切りの良いステップ幅を返す（1, 2, 2.5, 5 × 10^n の系列）
         /// </summary>
+        private static double Blend(double min, double max, double fraction)
+        {
+            if (fraction == 0) return min;
+            if (fraction == 1) return max;
+            return min * (1 - fraction) + max * fraction;
+        }
+
         private static double NiceStep(double rawStep)
         {
-            if (rawStep <= 0) return 1;
+            if (!double.IsFinite(rawStep) || rawStep <= 0) return double.NaN;
             double exponent = Math.Floor(Math.Log10(rawStep));
             double fraction = rawStep / Math.Pow(10, exponent);
 

@@ -1,4 +1,4 @@
-using PileDesign.Constants;
+﻿using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
@@ -52,7 +52,7 @@ namespace PileDesign.Services
         public static void ApplyToInputModel(
             InputModel inputModel,
             PileExampleData data,
-            MainWindowViewModel viewModel)
+            MainWindowViewModel? viewModel)
         {
             // LoadCasesLevel1 設定
             for (int i = 0; i < inputModel.LoadCasesInput.LoadCasesLevel1.Count; i++)
@@ -264,7 +264,7 @@ namespace PileDesign.Services
                 };
                 if (layoutDto.DeltaZc.HasValue)
                     item.FoundationBeamDeltaZc = layoutDto.DeltaZc.Value;
-                item.SetMainWindowViewModel(viewModel);
+                if (viewModel != null) item.SetMainWindowViewModel(viewModel);
                 pileLayoutList.Add(item);
             }
             inputModel.PileLayoutItems = new ObservableCollection<PileLayoutDataItem>(pileLayoutList);

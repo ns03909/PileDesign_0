@@ -52,50 +52,15 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OpenMaterialWizard()
         {
-            if (CurrentInputModel.FoundationBeamInput == null)
-            {
-                CurrentInputModel.FoundationBeamInput = new FoundationBeamInput();
-            }
-
-            var wizard = new Views.BeamMaterialWizardWindow(CurrentInputModel.FoundationBeamInput.Materials);
+            var wizard = new Views.BeamMaterialWizardWindow(
+                CurrentInputModel.FoundationBeamInput?.Materials ?? new ObservableCollection<BeamMaterial>());
 
             bool continueEditing = true;
             while (continueEditing)
             {
                 if (wizard.ShowDialog() == true)
                 {
-                    int? addedMaterialNo = null;
-
-                    if (wizard.SelectedMaterialNo.HasValue)
-                    {
-                        // 既存材料の編集 (SelectedMaterialNo は 1-based の位置インデックス)
-                        var material = wizard.SelectedMaterialNo.Value >= 1
-                            ? CurrentInputModel.FoundationBeamInput.Materials.ElementAtOrDefault(wizard.SelectedMaterialNo.Value - 1)
-                            : null;
-                        if (material != null)
-                        {
-                            material.Name = wizard.Result.Name;
-                            material.YoungModulus = wizard.Result.YoungModulus;
-                            material.ShearModulus = wizard.Result.ShearModulus;
-                            material.PoissonRatio = wizard.Result.PoissonRatio;
-                        }
-                    }
-                    else
-                    {
-                        // 新規材料の追加 (No プロパティは廃止: 位置 = ID)
-                        var newMaterial = new BeamMaterial
-                        {
-                            Name = wizard.Result.Name,
-                            YoungModulus = wizard.Result.YoungModulus,
-                            ShearModulus = wizard.Result.ShearModulus,
-                            PoissonRatio = wizard.Result.PoissonRatio
-                        };
-                        CurrentInputModel.FoundationBeamInput.Materials.Add(newMaterial);
-                        addedMaterialNo = CurrentInputModel.FoundationBeamInput.Materials.Count;
-                    }
-
-                    SaveUndoState();
-                    RequestUpdateWindow();
+                    if (!ApplyBeamMaterial(wizard.SelectedMaterialNo, wizard.Result, out int? addedMaterialNo)) return;
 
                     // Applyボタンが押された場合は編集を継続
                     if (wizard.IsApplyClicked)
@@ -135,9 +100,10 @@ namespace PileDesign.ViewModels
             if (CurrentInputModel?.FoundationBeamInput?.Sections == null ||
                 CurrentInputModel.FoundationBeamInput.Sections.Count == 0) return;
 
-            if (!CheckAndResetAnalysisResults()) return;
+            if (CurrentInputModel.FoundationBeamInput.Sections.All(s => s.IxxFactor == 0 && s.TorsionalMoment == 0)) return;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
 
-            TrySaveUndoSnapshotSafely();
+            var before = CaptureInputEdit();
 
             foreach (var section in CurrentInputModel.FoundationBeamInput.Sections)
             {
@@ -146,79 +112,22 @@ namespace PileDesign.ViewModels
                 section.TorsionalMoment = 0.0;
             }
 
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         // 断面ウィザードコマンド
         [RelayCommand]
         private void OpenSectionWizard()
         {
-            if (CurrentInputModel.FoundationBeamInput == null)
-            {
-                CurrentInputModel.FoundationBeamInput = new FoundationBeamInput();
-            }
-
-            var wizard = new Views.BeamSectionWizardWindow(CurrentInputModel.FoundationBeamInput.Sections);
+            var wizard = new Views.BeamSectionWizardWindow(
+                CurrentInputModel.FoundationBeamInput?.Sections ?? new ObservableCollection<BeamSection>());
 
             bool continueEditing = true;
             while (continueEditing)
             {
                 if (wizard.ShowDialog() == true)
                 {
-                    int? addedSectionNo = null;
-
-                    if (wizard.SelectedSectionNo.HasValue)
-                    {
-                        // 既存断面の編集 (SelectedSectionNo は 1-based の位置インデックス)
-                        var section = wizard.SelectedSectionNo.Value >= 1
-                            ? CurrentInputModel.FoundationBeamInput.Sections.ElementAtOrDefault(wizard.SelectedSectionNo.Value - 1)
-                            : null;
-                        if (section != null)
-                        {
-                            section.Name = wizard.Result.Name;
-                            section.Width = wizard.Result.Width;
-                            section.Height = wizard.Result.Height;
-                            section.Area = wizard.Result.Area;
-                            section.ShearAreaY = wizard.Result.ShearAreaY;
-                            section.ShearAreaZ = wizard.Result.ShearAreaZ;
-                            section.TorsionalMoment = wizard.Result.TorsionalMoment;
-                            section.MomentOfInertiaYY = wizard.Result.MomentOfInertiaYY;
-                            section.MomentOfInertiaZZ = wizard.Result.MomentOfInertiaZZ;
-                            section.AFactor = wizard.Result.AFactor;
-                            section.AyFactor = wizard.Result.AyFactor;
-                            section.AzFactor = wizard.Result.AzFactor;
-                            section.IxxFactor = wizard.Result.IxxFactor;
-                            section.IyyFactor = wizard.Result.IyyFactor;
-                            section.IzzFactor = wizard.Result.IzzFactor;
-                        }
-                    }
-                    else
-                    {
-                        // 新規断面の追加 (No プロパティは廃止: 位置 = ID)
-                        var newSection = new BeamSection
-                        {
-                            Name = wizard.Result.Name,
-                            Width = wizard.Result.Width,
-                            Height = wizard.Result.Height,
-                            Area = wizard.Result.Area,
-                            ShearAreaY = wizard.Result.ShearAreaY,
-                            ShearAreaZ = wizard.Result.ShearAreaZ,
-                            TorsionalMoment = wizard.Result.TorsionalMoment,
-                            MomentOfInertiaYY = wizard.Result.MomentOfInertiaYY,
-                            MomentOfInertiaZZ = wizard.Result.MomentOfInertiaZZ,
-                            AFactor = wizard.Result.AFactor,
-                            AyFactor = wizard.Result.AyFactor,
-                            AzFactor = wizard.Result.AzFactor,
-                            IxxFactor = wizard.Result.IxxFactor,
-                            IyyFactor = wizard.Result.IyyFactor,
-                            IzzFactor = wizard.Result.IzzFactor
-                        };
-                        CurrentInputModel.FoundationBeamInput.Sections.Add(newSection);
-                        addedSectionNo = CurrentInputModel.FoundationBeamInput.Sections.Count;
-                    }
-
-                    SaveUndoState();
-                    RequestUpdateWindow();
+                    if (!ApplyBeamSection(wizard.SelectedSectionNo, wizard.Result, out int? addedSectionNo)) return;
 
                     // Applyボタンが押された場合は編集を継続
                     if (wizard.IsApplyClicked)
@@ -261,6 +170,7 @@ namespace PileDesign.ViewModels
 
             // 使用中かチェック (1-based 位置インデックス基準)
             int materialNo = CurrentInputModel.FoundationBeamInput.GetMaterialNo(material);
+            if (materialNo < 1) return;
             bool isUsed = CurrentInputModel.FoundationBeamInput.Beams.Any(b => b.MaterialNo == materialNo);
             if (isUsed)
             {
@@ -272,12 +182,12 @@ namespace PileDesign.ViewModels
                 return;
             }
 
+            var before = CaptureInputEdit();
             int deletedNo = materialNo;
             CurrentInputModel.FoundationBeamInput.Materials.Remove(material);
             // 残存材料を再採番し、梁要素の MaterialNo 参照を新しい番号に追従させる
             RenumberMaterialsAndUpdateReferences(deletedNo);
-            SaveUndoState();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         // 断面削除コマンド
@@ -291,6 +201,7 @@ namespace PileDesign.ViewModels
 
             // 使用中かチェック (1-based 位置インデックス基準)
             int sectionNo = CurrentInputModel.FoundationBeamInput.GetSectionNo(section);
+            if (sectionNo < 1) return;
             bool isUsed = CurrentInputModel.FoundationBeamInput.Beams.Any(b => b.SectionNo == sectionNo);
             if (isUsed)
             {
@@ -302,12 +213,12 @@ namespace PileDesign.ViewModels
                 return;
             }
 
+            var before = CaptureInputEdit();
             int deletedNo = sectionNo;
             CurrentInputModel.FoundationBeamInput.Sections.Remove(section);
             // 残存断面を再採番し、梁要素の SectionNo 参照を新しい番号に追従させる
             RenumberSectionsAndUpdateReferences(deletedNo);
-            SaveUndoState();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         // 材料削除後の梁要素 MaterialNo 参照調整。
@@ -343,8 +254,6 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void EditBeamElements()
         {
-            if (!CheckAndResetAnalysisResults()) return;
-
             // 選択された一般梁要素がない場合はメッセージを表示
             var selectedBeams = CurrentInputModel?.FoundationBeamInput?.Beams?.Where(b => b.IsSelected).ToList();
             if (selectedBeams == null || selectedBeams.Count == 0)
@@ -368,25 +277,111 @@ namespace PileDesign.ViewModels
             var window = new Views.EditBeamElementWindow(viewModel);
             if (window.ShowDialog() == true)
             {
-                var result = window.Result;
-
-                // 選択された梁要素のプロパティを一括変更
-                foreach (var beam in selectedBeams)
-                {
-                    if (result.IsApplicableMaterialNo && result.MaterialNo.HasValue)
-                    {
-                        beam.MaterialNo = result.MaterialNo.Value;
-                    }
-
-                    if (result.IsApplicableSectionNo && result.SectionNo.HasValue)
-                    {
-                        beam.SectionNo = result.SectionNo.Value;
-                    }
-                }
-
-                SaveUndoState();
-                RequestUpdateWindow();
+                ApplyBeamElementEdit(selectedBeams, window.Result);
             }
         }
+        internal bool ApplyBeamMaterial(int? selectedNo, Views.BeamMaterialWizardWindow.MaterialWizardResult result, out int? addedNo)
+        {
+            addedNo = null;
+            var input = CurrentInputModel.FoundationBeamInput;
+            var material = selectedNo.HasValue && selectedNo.Value >= 1
+                ? input?.Materials.ElementAtOrDefault(selectedNo.Value - 1) : null;
+            if (selectedNo.HasValue && material == null) return false;
+            if (material != null && material.Name == result.Name &&
+                material.YoungModulus == result.YoungModulus &&
+                material.ShearModulus == result.ShearModulus &&
+                material.PoissonRatio == result.PoissonRatio) return true;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return false;
+            var before = CaptureInputEdit();
+            if (input == null) CurrentInputModel.FoundationBeamInput = input = new FoundationBeamInput();
+            bool isNew = material == null;
+            material ??= new BeamMaterial();
+            material.Name = result.Name;
+            material.YoungModulus = result.YoungModulus;
+            material.ShearModulus = result.ShearModulus;
+            material.PoissonRatio = result.PoissonRatio;
+            if (isNew)
+            {
+                input.Materials.Add(material);
+                addedNo = input.Materials.Count;
+            }
+            CompleteInputEdit(before);
+            return true;
+        }
+
+        internal bool ApplyBeamSection(int? selectedNo, Views.BeamSectionWizardWindow.SectionWizardResult result, out int? addedNo)
+        {
+            addedNo = null;
+            var input = CurrentInputModel.FoundationBeamInput;
+            var section = selectedNo.HasValue && selectedNo.Value >= 1
+                ? input?.Sections.ElementAtOrDefault(selectedNo.Value - 1) : null;
+            if (selectedNo.HasValue && section == null) return false;
+            if (section != null && section.Name == result.Name &&
+                section.Width == result.Width &&
+                section.Height == result.Height &&
+                section.Area == result.Area &&
+                section.ShearAreaY == result.ShearAreaY &&
+                section.ShearAreaZ == result.ShearAreaZ &&
+                section.TorsionalMoment == result.TorsionalMoment &&
+                section.MomentOfInertiaYY == result.MomentOfInertiaYY &&
+                section.MomentOfInertiaZZ == result.MomentOfInertiaZZ &&
+                section.AFactor == result.AFactor &&
+                section.AyFactor == result.AyFactor &&
+                section.AzFactor == result.AzFactor &&
+                section.IxxFactor == result.IxxFactor &&
+                section.IyyFactor == result.IyyFactor &&
+                section.IzzFactor == result.IzzFactor) return true;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return false;
+            var before = CaptureInputEdit();
+            if (input == null) CurrentInputModel.FoundationBeamInput = input = new FoundationBeamInput();
+            bool isNew = section == null;
+            section ??= new BeamSection();
+            section.Name = result.Name;
+            section.Width = result.Width;
+            section.Height = result.Height;
+            section.Area = result.Area;
+            section.ShearAreaY = result.ShearAreaY;
+            section.ShearAreaZ = result.ShearAreaZ;
+            section.TorsionalMoment = result.TorsionalMoment;
+            section.MomentOfInertiaYY = result.MomentOfInertiaYY;
+            section.MomentOfInertiaZZ = result.MomentOfInertiaZZ;
+            section.AFactor = result.AFactor;
+            section.AyFactor = result.AyFactor;
+            section.AzFactor = result.AzFactor;
+            section.IxxFactor = result.IxxFactor;
+            section.IyyFactor = result.IyyFactor;
+            section.IzzFactor = result.IzzFactor;
+            if (isNew)
+            {
+                input.Sections.Add(section);
+                addedNo = input.Sections.Count;
+            }
+            CompleteInputEdit(before);
+            return true;
+        }
+
+        internal bool ApplyBeamElementEdit(IReadOnlyList<FoundationBeam> selectedBeams,
+            Views.EditBeamElementWindow.BeamElementEditResult result)
+        {
+            var input = CurrentInputModel.FoundationBeamInput;
+            if (input == null || selectedBeams.Count == 0 || selectedBeams.Any(b => !input.Beams.Contains(b))) return false;
+            int? materialNo = result.IsApplicableMaterialNo ? result.MaterialNo : null;
+            int? sectionNo = result.IsApplicableSectionNo ? result.SectionNo : null;
+            if ((result.IsApplicableMaterialNo && (!materialNo.HasValue || materialNo < 1 || materialNo > input.Materials.Count)) ||
+                (result.IsApplicableSectionNo && (!sectionNo.HasValue || sectionNo < 1 || sectionNo > input.Sections.Count))) return false;
+            if (!selectedBeams.Any(b => (materialNo.HasValue && b.MaterialNo != materialNo.Value) ||
+                (sectionNo.HasValue && b.SectionNo != sectionNo.Value))) return false;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return false;
+            var before = CaptureInputEdit();
+            foreach (var beam in selectedBeams)
+            {
+                if (materialNo.HasValue) beam.MaterialNo = materialNo.Value;
+                if (sectionNo.HasValue) beam.SectionNo = sectionNo.Value;
+            }
+            CompleteInputEdit(before);
+            return true;
+        }
+
+
     }
 }

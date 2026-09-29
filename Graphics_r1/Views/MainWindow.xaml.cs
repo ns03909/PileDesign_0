@@ -33,6 +33,12 @@ namespace PileDesign.Views
     /// </summary>
     public partial class MainWindow : Fluent.RibbonWindow, INotifyPropertyChanged
     {
+        private void EditDistanceInput_ValidationError(object sender, ValidationErrorEventArgs e)
+        {
+            if (sender is TextBox field && DataContext is MainWindowViewModel vm)
+                vm.ObserveEditDistanceInputValidation(field, e);
+        }
+
         // クラス内フィールドを追加
         private readonly Dictionary<(object item, string path), object?> _dgOldValues = [];
 
@@ -177,6 +183,12 @@ namespace PileDesign.Views
         }
 
         // 選択アイテムが変更されたときのイベントハンドラ
+        private void GridSelectionDistance_ValidationError(object sender, ValidationErrorEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm && sender is TextBox field)
+                vm.GridSelectionDistanceInputHasError = Validation.GetHasError(field);
+        }
+
         private void SelectedPileLayoutItems_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             {

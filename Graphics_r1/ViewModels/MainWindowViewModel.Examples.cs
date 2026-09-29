@@ -55,7 +55,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         /// <param name="pileJsonFileName">杭例題JSONファイル名（拡張子なし）</param>
         /// <param name="displayName">表示名（メッセージボックス用）</param>
-        private async Task LoadPileExampleAsync(string pileJsonFileName, string displayName)
+        private async Task LoadPileExampleAsync(string pileJsonFileName, string displayName, string? settlementConditionsFile = null)
         {
             // 読み込みの確認は、失うものがあるときだけ出す。
             // 起動直後や計算例を読み込んだ直後は、捨てて困るものが無い。
@@ -76,93 +76,77 @@ namespace PileDesign.ViewModels
             CloseBackstage();
 
             // UI を一度描画させる（カーソル表示と Backstage 閉じる動作のため一度 yield）
+            int generation = ProjectGeneration, version = InputEditVersion;
             await Task.Yield();
 
-            // Undoポイントを追加（バックグラウンドでDeepCopy）
-            var undoCopy = await Task.Run(() => CurrentInputModel.DeepCopy());
-            _undoManager.SaveState(undoCopy, $"計算例ロード: {displayName}");
+            // ファイルの読み込みを先に済ませる。入力モデルのコピーと適用はUIスレッドで行う。
+            var pileData = await Task.Run(() => PileExampleLoader.LoadFromFile(pileJsonFileName));
+            GroupSettlementExampleData? settlementData = settlementConditionsFile == null ? null :
+                await Task.Run(() => GroupSettlementExampleLoader.LoadFromFile(settlementConditionsFile));
+            var groundInputCopies = new System.Collections.Generic.List<GroundInput>();
+            groundInputCopies.Add(await PrepareExampleGroundAsync(pileData.GroundExampleName, generation, version));
+            if (pileData.AdditionalGroundExampleNames != null)
+                foreach (var name in pileData.AdditionalGroundExampleNames)
+                    if (!string.IsNullOrEmpty(name)) groundInputCopies.Add(await PrepareExampleGroundAsync(name, generation, version));
 
-            // SoilPile再生成通知を抑制（読み込み完了後に一括で行う）
-            CurrentInputModel.SuppressNotifications();
-
-            // 新規作成状態にリセット（UI更新はデータ読み込み後にまとめて実行）
-            CurrentFilePath = null;
-            ClearAllAnalysisState(includeElementSplit: true);
-
-            // JSON読み込み＋地盤データ準備をバックグラウンドで実行（UIバインド済みコレクションには触れない）
-            var (pileData, groundInputCopies) = await Task.Run(() =>
+            if (generation != ProjectGeneration || version != InputEditVersion)
+                throw new System.InvalidOperationException("計算例の読み込み中に入力が変更されました。もう一度読み込んでください。");
+            var undoCopy = CurrentInputModel.DeepCopy();
+            var prepared = undoCopy.DeepCopy();
+            prepared.SuppressNotifications();
+            try
             {
-                // JSONから杭例題データを読み込む
-                var pd = PileExampleLoader.LoadFromFile(pileJsonFileName);
 
-                // 地盤例題を読み込む (Ground No1)
-                var copies = new System.Collections.Generic.List<GroundInput>();
 
-                var glvm = new GroundLayerViewModel(this);
-                var groundData = GroundExampleLoader.LoadFromFile(pd.GroundExampleName);
-                GroundExampleLoader.ApplyToGroundInput(glvm.GroundInput, groundData);
-                glvm.Update();
-                copies.Add(glvm.GroundInput.DeepCopy());
+                // モデルへの適用はUIスレッドで実行（CollectionView のスレッド制約を回避）
+                prepared.GroundsInput[0] = groundInputCopies[0];
+                // 追加地盤は GroundsInput に Add (Index 1 以降)
+                while (prepared.GroundsInput.Count > 1)
+                    prepared.GroundsInput.RemoveAt(prepared.GroundsInput.Count - 1);
+                for (int i = 1; i < groundInputCopies.Count; i++)
+                    prepared.GroundsInput.Add(groundInputCopies[i]);
 
-                // 追加地盤 (Ground No2 以降)
-                if (pd.AdditionalGroundExampleNames != null)
+                // 杭例題データを適用
+                PileExampleLoader.ApplyToInputModel(prepared, pileData, null);
+                if (settlementData != null) GroupSettlementExampleLoader.ApplySettlementConditionsOnly(prepared, settlementData);
+
+                // 例題 JSON は v1 (= 杭頭 Z) で書かれているため v2 (= 接合節点 Z) にマイグレート。
+                // GenerateSoilPiles より前に実行する (SoilPile 計算は v2 セマンティクスの pile.Z を前提)。
+                prepared.MigratePileZSemantics_v1_to_v2();
+
+                // 各 PileSection を再計算してプロパティ反映
+                foreach (var pb in prepared.PileBodies)
                 {
-                    foreach (var name in pd.AdditionalGroundExampleNames)
+                    foreach (var seg in pb.PileBodySegments)
                     {
-                        if (string.IsNullOrEmpty(name)) continue;
-                        var glvm2 = new GroundLayerViewModel(this);
-                        var data2 = GroundExampleLoader.LoadFromFile(name);
-                        GroundExampleLoader.ApplyToGroundInput(glvm2.GroundInput, data2);
-                        glvm2.Update();
-                        copies.Add(glvm2.GroundInput.DeepCopy());
+                        var sec = seg.PileSection;
+                        if (!string.IsNullOrWhiteSpace(sec.SelectedPrecastPile?.Name))
+                        {
+                            sec.RecalculateSelectedPrecastPile();
+                        }
+                        sec.RecalculatePileDia();
+                        sec.RecalculateConcreteE();
+                        sec.SetSpecs();
                     }
                 }
 
-                return (pd, copies);
-            });
+                // 杭体数リストを更新（UIのコンボボックス用）
+                prepared.UpdateCountLists();
 
-            // モデルへの適用はUIスレッドで実行（CollectionView のスレッド制約を回避）
-            CurrentInputModel.GroundsInput[0] = groundInputCopies[0];
-            // 追加地盤は GroundsInput に Add (Index 1 以降)
-            while (CurrentInputModel.GroundsInput.Count > 1)
-                CurrentInputModel.GroundsInput.RemoveAt(CurrentInputModel.GroundsInput.Count - 1);
-            for (int i = 1; i < groundInputCopies.Count; i++)
-                CurrentInputModel.GroundsInput.Add(groundInputCopies[i]);
+                // SoilPile を一括再生成（SuppressNotifications で抑制していた分）
+                prepared.LoadCasesInput?.NormalizeLoadCaseNames();
+                prepared.GenerateSoilPiles();
+                ClearSettlementResultsIn(prepared);
 
-            // 杭例題データを適用
-            PileExampleLoader.ApplyToInputModel(CurrentInputModel, pileData, this);
-
-            // 例題 JSON は v1 (= 杭頭 Z) で書かれているため v2 (= 接合節点 Z) にマイグレート。
-            // GenerateSoilPiles より前に実行する (SoilPile 計算は v2 セマンティクスの pile.Z を前提)。
-            CurrentInputModel.MigratePileZSemantics_v1_to_v2();
-
-            // 各 PileSection を再計算してプロパティ反映
-            foreach (var pb in CurrentInputModel.PileBodies)
-            {
-                foreach (var seg in pb.PileBodySegments)
-                {
-                    var sec = seg.PileSection;
-                    if (!string.IsNullOrWhiteSpace(sec.SelectedPrecastPile?.Name))
-                    {
-                        sec.RecalculateSelectedPrecastPile();
-                    }
-                    sec.RecalculatePileDia();
-                    sec.RecalculateConcreteE();
-                    sec.SetSpecs();
-                }
             }
+            finally { prepared.ResumeNotificationsQuiet(); }
 
-            // 杭体数リストを更新（UIのコンボボックス用）
-            CurrentInputModel.UpdateCountLists();
-
-            // バイリニアコンクリート・オプションを同期し M-φ/NM キャッシュを破棄
+            _undoManager.SaveSnapshotEdit(undoCopy, prepared.DeepCopy(), $"計算例ロード: {displayName}");
+            CurrentInputModel = prepared;
+            ClearAllAnalysisState(includeElementSplit: true);
             ApplyConcreteModelOptions();
+            RaiseUndoStateChanged();
 
-            // SoilPile を一括再生成（SuppressNotifications で抑制していた分）
-            CurrentInputModel.GenerateSoilPiles();
-
-            // 通知を再開（ここでは再描画をトリガーしない）
-            CurrentInputModel.ResumeNotificationsQuiet();
 
             // ステータスバーの杭本数を更新（バッチ代入ではCollectionChangedが発火しないため）
             OnPropertyChanged(nameof(PileCountText));
@@ -239,81 +223,73 @@ namespace PileDesign.ViewModels
             CloseBackstage();
 
             // UI を一度描画させる（カーソル表示と Backstage 閉じる動作のため一度 yield）
+            int generation = ProjectGeneration, version = InputEditVersion;
             await Task.Yield();
 
-            // Undoポイントを追加（バックグラウンドでDeepCopy）
-            var undoCopy = await Task.Run(() => CurrentInputModel.DeepCopy());
-            _undoManager.SaveState(undoCopy, $"計算例ロード: {displayName}");
+            // ファイルの読み込みを先に済ませる。入力モデルのコピーと適用はUIスレッドで行う。
+            var data = await Task.Run(() => GroupSettlementExampleLoader.LoadFromFile(jsonFileName));
+            GroundInput? groundInputCopy = string.IsNullOrEmpty(data.GroundExampleName) ? null :
+                await PrepareExampleGroundAsync(data.GroundExampleName, generation, version);
 
-            // SoilPile再生成通知を抑制（読み込み完了後に一括で行う）
-            CurrentInputModel.SuppressNotifications();
-
-            // 杭要素分割・解析状態をリセット
-            // (以前はここでフラグを 4 つ消すだけで、群杭沈下の結果と結果セットが残っていた)
-            ClearAllAnalysisState(includeElementSplit: true);
-
-            // JSON読み込み＋地盤データ準備をバックグラウンドで実行（UIバインド済みコレクションには触れない）
-            var (data, groundInputCopy) = await Task.Run(() =>
+            if (generation != ProjectGeneration || version != InputEditVersion)
+                throw new System.InvalidOperationException("計算例の読み込み中に入力が変更されました。もう一度読み込んでください。");
+            var undoCopy = CurrentInputModel.DeepCopy();
+            var prepared = undoCopy.DeepCopy();
+            prepared.SuppressNotifications();
+            try
             {
-                // JSONから群杭沈下解析例題データを読み込む
-                var d = GroupSettlementExampleLoader.LoadFromFile(jsonFileName);
 
-                // 地盤例題を読み込む（指定がある場合）
-                GroundInput? gi = null;
-                if (!string.IsNullOrEmpty(d.GroundExampleName))
+
+                // モデルへの適用はUIスレッドで実行（CollectionView のスレッド制約を回避）
+                if (groundInputCopy != null)
+                    prepared.GroundsInput[0] = groundInputCopy;
+
+                // 例題データを適用
+                GroupSettlementExampleLoader.ApplyToInputModel(prepared, data, null);
+
+                // 例題 JSON は v1 (= 杭頭 Z) で書かれているため v2 (= 接合節点 Z) にマイグレート。
+                // GenerateSoilPiles より前に実行する。
+                prepared.MigratePileZSemantics_v1_to_v2();
+
+                // 各 PileSection を再計算してプロパティ反映
+                foreach (var pb in prepared.PileBodies)
                 {
-                    var groundLayerViewModel = new GroundLayerViewModel(this);
-                    var groundData = GroundExampleLoader.LoadFromFile(d.GroundExampleName);
-                    GroundExampleLoader.ApplyToGroundInput(groundLayerViewModel.GroundInput, groundData);
-                    groundLayerViewModel.Update(); // 土層プロパティを再計算
-                    gi = groundLayerViewModel.GroundInput.DeepCopy();
-                }
-
-                return (d, gi);
-            });
-
-            // モデルへの適用はUIスレッドで実行（CollectionView のスレッド制約を回避）
-            if (groundInputCopy != null)
-                CurrentInputModel.GroundsInput[0] = groundInputCopy;
-
-            // 例題データを適用
-            GroupSettlementExampleLoader.ApplyToInputModel(CurrentInputModel, data, this);
-
-            // 例題 JSON は v1 (= 杭頭 Z) で書かれているため v2 (= 接合節点 Z) にマイグレート。
-            // GenerateSoilPiles より前に実行する。
-            CurrentInputModel.MigratePileZSemantics_v1_to_v2();
-
-            // 各 PileSection を再計算してプロパティ反映
-            foreach (var pb in CurrentInputModel.PileBodies)
-            {
-                foreach (var seg in pb.PileBodySegments)
-                {
-                    var sec = seg.PileSection;
-                    if (!string.IsNullOrWhiteSpace(sec.SelectedPrecastPile?.Name))
+                    foreach (var seg in pb.PileBodySegments)
                     {
-                        sec.RecalculateSelectedPrecastPile();
+                        var sec = seg.PileSection;
+                        if (!string.IsNullOrWhiteSpace(sec.SelectedPrecastPile?.Name))
+                        {
+                            sec.RecalculateSelectedPrecastPile();
+                        }
+                        sec.RecalculatePileDia();
+                        sec.RecalculateConcreteE();
+                        sec.SetSpecs();
                     }
-                    sec.RecalculatePileDia();
-                    sec.RecalculateConcreteE();
-                    sec.SetSpecs();
                 }
+
+                // 杭体数リストを更新（UIのコンボボックス用）
+                prepared.UpdateCountLists();
+
+
+
+                // SoilPile を一括再生成（SuppressNotifications で抑制していた分）
+                prepared.LoadCasesInput?.NormalizeLoadCaseNames();
+                prepared.GenerateSoilPiles();
+                ClearSettlementResultsIn(prepared);
+
+
+
             }
+            finally { prepared.ResumeNotificationsQuiet(); }
 
-            // 杭体数リストを更新（UIのコンボボックス用）
-            CurrentInputModel.UpdateCountLists();
-
+            _undoManager.SaveSnapshotEdit(undoCopy, prepared.DeepCopy(), $"計算例ロード: {displayName}");
+            CurrentInputModel = prepared;
+            ClearAllAnalysisState(includeElementSplit: true);
+            ApplyConcreteModelOptions();
+            RaiseUndoStateChanged();
+            GroupSettlementExampleLoader.ApplySettlementOffsets(this, data);
             UpdatePileLayoutNo();
 
-            // バイリニアコンクリート・オプションを同期し M-φ/NM キャッシュを破棄
-            ApplyConcreteModelOptions();
-
-            // SoilPile を一括再生成（SuppressNotifications で抑制していた分）
-            CurrentInputModel.GenerateSoilPiles();
-
-            IsGroupPileSettlementAnalysisDone = false;
-
-            // 通知を再開（ここでは再描画をトリガーしない）
-            CurrentInputModel.ResumeNotificationsQuiet();
 
             // ステータスバーの杭本数を更新（バッチ代入ではCollectionChangedが発火しないため）
             OnPropertyChanged(nameof(PileCountText));
@@ -344,6 +320,17 @@ namespace PileDesign.ViewModels
             // 張り替えないと、直前に開いていたプロジェクト名のまま計算例が自動保存され、
             // 次回起動で「そのプロジェクトの自動保存」として復元候補に出てしまう。
             _autoSaveService.Start(null, CurrentInputModel, null, null);
+        }
+
+        private async Task<GroundInput> PrepareExampleGroundAsync(string name, int generation, int version)
+        {
+            var data = await Task.Run(() => GroundExampleLoader.LoadFromFile(name));
+            if (generation != ProjectGeneration || version != InputEditVersion)
+                throw new System.InvalidOperationException("計算例の読み込み中に入力が変更されました。もう一度読み込んでください。");
+            var ground = new GroundLayerViewModel(this);
+            GroundExampleLoader.ApplyToGroundInput(ground.GroundInput, data);
+            ground.Update();
+            return ground.GroundInput.DeepCopy();
         }
 
         // 設計例集3.1
@@ -521,12 +508,7 @@ namespace PileDesign.ViewModels
             if (!TryStartExample(nameof(Example5Pile))) return;
             try
             {
-                await LoadPileExampleAsync("PileExample5", "基礎指針'19 計算例5");
-
-                // 群杭沈下検討用条件のみを追加ロード（PileBodies / PileLayout 等は上書きしない）
-                var groupData = await Task.Run(() => GroupSettlementExampleLoader.LoadFromFile("GroupSettlement5"));
-                GroupSettlementExampleLoader.ApplySettlementConditionsOnly(CurrentInputModel, groupData);
-                UpdateWindowImmediate();
+                await LoadPileExampleAsync("PileExample5", "基礎指針'19 計算例5", "GroupSettlement5");
             }
             finally
             {

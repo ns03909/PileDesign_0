@@ -49,8 +49,9 @@ namespace PileDesign.ViewModels
         /// </summary>
         private bool CheckAndResetAnalysisResults()
         {
+            if (!ConfirmDiscardInvalidatedByInputChange(includeElementSplit: true)) return false;
             MarkInputChangedSinceAnalysis();
-            return ConfirmDiscardInvalidatedByInputChange(includeElementSplit: true);
+            return true;
         }
 
         /// <summary>

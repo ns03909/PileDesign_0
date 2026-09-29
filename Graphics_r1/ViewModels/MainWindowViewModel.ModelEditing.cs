@@ -5,6 +5,7 @@ using PileDesign.Common;
 using PileDesign.Common.Undo;
 using PileDesign.Constants;
 using PileDesign.FEM;
+using PileDesign.Models;
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
 using PileDesign.Services;
@@ -40,10 +41,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnAddPile()
         {
-            if (!CheckAndResetAnalysisResults()) return;
 
             // スナップショットを保存
-            TrySaveUndoSnapshotSafely();
 
             Point3D nextPoint3D = new();
             if (CurrentInputModel.PileLayoutItems.Count != 0)
@@ -52,6 +51,9 @@ namespace PileDesign.ViewModels
                 nextPoint3D = CurrentInputModel.PileLayoutItems.Last().Point3D + new Vector3D() { X = 7.2 };
             }
 
+            if (!IsFinitePosition(nextPoint3D)) { RejectSplit("追加する杭の座標が数値の範囲外です。"); return; }
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
+            var before = CaptureInputEdit();
             // UIスレッドから呼ばれるため直接実行
             CurrentInputModel.PileLayoutItems.Add(new PileLayoutDataItem() { X = nextPoint3D.X, Y = nextPoint3D.Y, Z = nextPoint3D.Z });
             CurrentInputModel.PileLayoutItems[^1].SetMainWindowViewModel(this);
@@ -60,8 +62,8 @@ namespace PileDesign.ViewModels
                 RequestGenerateSoilPiles();
 
             // 変更後（以下の箇所で適用）
-            RequestUpdateWindow();
             UpdatePileLayoutNo();
+            CompleteInputEdit(before);
         }
 
         // 群杭係数 ξ・杭間隔比 R/B の自動計算コマンドは置かない。
@@ -89,14 +91,19 @@ namespace PileDesign.ViewModels
         {
             var col = CurrentInputModel.PileLayoutItems;
             if (col.Count == 0) return;
-            if (!CheckAndResetAnalysisResults()) return;
-            TrySaveUndoSnapshotSafely();
 
             // 旧No→新Noマッピングを構築
             var sorted = orderFunc(col).ToList();
+            if (col.SequenceEqual(sorted)) return;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
+            var before = CaptureInputEdit();
             var oldToNewNo = new Dictionary<int, int>();
+            var oldPileToNewNo = new Dictionary<int, int>();
             for (int i = 0; i < sorted.Count; i++)
+            {
                 oldToNewNo[sorted[i].No] = i + 1;
+                oldPileToNewNo[sorted[i].PileNo] = i + 1;
+            }
 
             // Move方式: Clear+Addの大量イベント発火を回避
             for (int i = 0; i < sorted.Count; i++)
@@ -118,7 +125,10 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            RequestUpdateWindow();
+            foreach (var load in CurrentInputModel.PileGroupSettlement?.RectLoads ?? [])
+                if (load.LinkedPileNo > 0 && oldPileToNewNo.TryGetValue(load.LinkedPileNo, out int newPileNo))
+                    load.LinkedPileNo = newPileNo;
+            CompleteInputEdit(before);
         }
 
         /// <summary>一般節点: X優先整列</summary>
@@ -140,10 +150,11 @@ namespace PileDesign.ViewModels
         {
             var col = CurrentInputModel.InputNodes;
             if (col == null || col.Count == 0) return;
-            if (!CheckAndResetAnalysisResults()) return;
-            TrySaveUndoSnapshotSafely();
 
             var sorted = orderFunc(col).ToList();
+            if (col.SequenceEqual(sorted)) return;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
+            var before = CaptureInputEdit();
 
             // Move方式: Clear+Addの大量イベント発火を回避
             for (int i = 0; i < sorted.Count; i++)
@@ -157,21 +168,12 @@ namespace PileDesign.ViewModels
             for (int i = 0; i < col.Count; i++)
                 col[i].No = i + 1;
 
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
-        /// <summary>梁要素: 要素番号昇順で整列（表示順のみ変更、解析結果に影響なし）</summary>
+        /// <summary>旧コマンドとの互換用。梁番号は一覧順から決まるため、番号順の整列は不要。</summary>
         [RelayCommand]
-        private void SortBeamsByNo()
-        {
-            var beams = CurrentInputModel.FoundationBeamInput?.Beams;
-            if (beams == null || beams.Count == 0) return;
-            TrySaveUndoSnapshotSafelyOptimized();
-
-            // 旧 No プロパティ廃止につき、現状並びを維持 (No-op)。
-            // 将来この整列コマンドが必要な場合は別の基準 (Node 順等) に基づいて実装する。
-            RequestUpdateWindow();
-        }
+        private void SortBeamsByNo() { }
 
         /// <summary>
         /// 梁要素: 選択要素（無選択なら全要素）の I/J 節点参照を入れ替える。
@@ -186,7 +188,7 @@ namespace PileDesign.ViewModels
             var targets = beams.Where(b => b.IsSelected).ToList();
             if (targets.Count == 0) targets = beams.ToList();
 
-            TrySaveUndoSnapshotSafelyOptimized();
+            var before = CaptureInputEdit();
 
             foreach (var b in targets)
             {
@@ -197,7 +199,7 @@ namespace PileDesign.ViewModels
                 b.AngleBeta = ((180.0 - b.AngleBeta) % 360.0 + 360.0) % 360.0;
             }
 
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         /// <summary>梁要素: I端節点→J端節点昇順で整列（表示順のみ変更、解析結果に影響なし）</summary>
@@ -206,12 +208,13 @@ namespace PileDesign.ViewModels
         {
             var beams = CurrentInputModel.FoundationBeamInput?.Beams;
             if (beams == null || beams.Count == 0) return;
-            TrySaveUndoSnapshotSafelyOptimized();
 
             var sorted = beams
                 .OrderBy(b => CurrentInputModel.GetNodeDisplayNo(b.NodeI_Type, b.NodeI_Id))
                 .ThenBy(b => CurrentInputModel.GetNodeDisplayNo(b.NodeJ_Type, b.NodeJ_Id))
                 .ToList();
+            if (beams.SequenceEqual(sorted)) return;
+            var before = CaptureInputEdit();
             for (int i = 0; i < sorted.Count; i++)
             {
                 int cur = beams.IndexOf(sorted[i]);
@@ -219,7 +222,7 @@ namespace PileDesign.ViewModels
             }
             // 旧 No プロパティは廃止: 番号 = 位置インデックスとして自動的に追従
 
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         // 要素の節点位置での分割
@@ -229,21 +232,29 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OnSplitElementsByNodes()
         {
+            if (!ValidateEditDistanceThreshold()) return;
             var fb = CurrentInputModel?.FoundationBeamInput;
             if (fb?.Beams == null) return;
 
             // Undoポイントを追加
-            TrySaveUndoSnapshotSafely();
+
 
             var beams = fb.Beams;
             double tolerance = EditDistanceThreshold;
 
             // 候補ノード一覧 (Type + Guid + 位置) を共通ヘルパで列挙 (PileLayout / GeneralNode / FoundationNode 全種)
+            var selected = beams.Where(b => b.IsSelected).ToList();
+            if (!ValidateSplitBeams(selected)) return;
             var candidates = EnumerateAllCandidateNodes(includeFoundationNodes: true).ToList();
+            if (candidates.Any(c => !IsFinitePosition(c.Pos)))
+            {
+                RejectSplit("分割候補の節点に有限ではない座標があります。");
+                return;
+            }
 
             var newBeams = new List<FoundationBeam>();
             var toRemove = new List<FoundationBeam>();
-            const double endEps = 1e-6;
+            const double endEps = SplitPointDistanceTolerance;
 
             foreach (var beam in beams.Where(b => b.IsSelected).ToList())
             {
@@ -267,11 +278,18 @@ namespace PileDesign.ViewModels
 
                     Vector3D v = cand.Pos - pI;
                     double t = Vector3D.DotProduct(v, line) / lineLengthSq;
-                    if (t <= endEps || t >= 1.0 - endEps) continue;
+                    if (!double.IsFinite(t)) { RejectSplit("分割位置の計算が数値の範囲外です。"); return; }
+                    if (t <= 0 || t >= 1 || t * Math.Sqrt(lineLengthSq) <= endEps || (1 - t) * Math.Sqrt(lineLengthSq) <= endEps) continue;
 
                     Point3D projection = pI + t * line;
                     double dist = (cand.Pos - projection).Length;
-                    if (dist > tolerance) continue;
+                    if (!IsFinitePosition(projection) || !double.IsFinite(dist)) { RejectSplit("分割距離の計算が数値の範囲外です。"); return; }
+                    bool Within(double value, double projected, double origin, double delta) =>
+                        Math.Abs(value - projected) <= 8 * 2.2204460492503131e-16 *
+                        (Math.Abs(value) + Math.Abs(origin) + Math.Abs(t * delta));
+                    if (dist > tolerance && !(Within(cand.Pos.X, projection.X, posI.Value.X, line.X) &&
+                        Within(cand.Pos.Y, projection.Y, posI.Value.Y, line.Y) &&
+                        Within(cand.Pos.Z, projection.Z, posI.Value.Z, line.Z))) continue;
 
                     splits.Add((cand.Type, cand.Id, t));
                 }
@@ -279,13 +297,19 @@ namespace PileDesign.ViewModels
                 if (splits.Count == 0) continue;
 
                 // t の昇順でソート
-                splits.Sort((a, b) => a.T.CompareTo(b.T));
+                splits.Sort((a, b) =>
+                {
+                    int order = a.T.CompareTo(b.T);
+                    if (order != 0) return order;
+                    order = ((int)b.Type).CompareTo((int)a.Type);
+                    return order != 0 ? order : a.Id.CompareTo(b.Id);
+                });
 
-                // 同一 t に近い候補は重複扱い (杭頭+ΔZc と一般節点が同位置にある場合等)
+                // 梁上の実距離で重複判定する。長い梁でも離れた分割点を残す。
                 var dedupedSplits = new List<(NodeReferenceType Type, Guid Id, double T)>();
                 foreach (var s in splits)
                 {
-                    if (dedupedSplits.Count > 0 && Math.Abs(dedupedSplits[^1].T - s.T) < endEps)
+                    if (dedupedSplits.Count > 0 && Math.Abs(dedupedSplits[^1].T - s.T) * Math.Sqrt(lineLengthSq) <= endEps)
                         continue;
                     dedupedSplits.Add(s);
                 }
@@ -301,33 +325,24 @@ namespace PileDesign.ViewModels
 
                 for (int i = 0; i < endpoints.Count - 1; i++)
                 {
-                    newBeams.Add(new FoundationBeam
-                    {
-                        NodeI_Type = endpoints[i].Type,
-                        NodeI_Id = endpoints[i].Id,
-                        NodeJ_Type = endpoints[i + 1].Type,
-                        NodeJ_Id = endpoints[i + 1].Id,
-                        MaterialNo = beam.MaterialNo,
-                        SectionNo = beam.SectionNo,
-                        SectionName = beam.SectionName,
-                        Width = beam.Width,
-                        Height = beam.Height,
-                        YoungModulus = beam.YoungModulus,
-                        ShearModulus = beam.ShearModulus,
-                        AngleBeta = beam.AngleBeta,
-                        IsVisible = beam.IsVisible,
-                    });
+                    newBeams.Add(beam.CreateSegment(endpoints[i].Type, endpoints[i].Id, endpoints[i + 1].Type, endpoints[i + 1].Id));
                 }
                 toRemove.Add(beam);
             }
 
+            if (toRemove.Count == 0)
+            {
+                ShowToast("選択要素上に分割できる中間節点が見つかりませんでした。", 2);
+                return;
+            }
+            if (!CommitSplitEdit(out var before)) return;
             foreach (var beam in toRemove)
                 beams.Remove(beam);
             foreach (var beam in newBeams)
                 beams.Add(beam);
 
             RenumberFoundationBeams();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
 
             if (toRemove.Count == 0)
             {
@@ -350,7 +365,7 @@ namespace PileDesign.ViewModels
             var beams = CurrentInputModel?.FoundationBeamInput?.Beams;
             if (beams == null) return;
 
-            if (!CheckAndResetAnalysisResults()) return;
+
 
             var selectedBeams = beams.Where(b => b.IsSelected).ToList();
             if (selectedBeams.Count == 0)
@@ -359,9 +374,16 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            SaveUndoState();
+
 
             int n = EqualDivisionCount;
+            if (!ValidateSplitBeams(selectedBeams)) return;
+            if (MoveCopyValidation.DescribeSplitCountProblem(selectedBeams.Count, n) is string countProblem)
+            {
+                RejectSplit(countProblem);
+                return;
+            }
+            var plannedNodes = new List<InputNode>();
             var toRemove = new List<FoundationBeam>();
             var toAdd = new List<FoundationBeam>();
 
@@ -379,81 +401,42 @@ namespace PileDesign.ViewModels
                     double t = (double)i / n;
                     var newNode = new InputNode
                     {
-                        No = CurrentInputModel.InputNodes.Count + divisionNodes.Count + 1,
+                        No = CurrentInputModel.InputNodes.Count + plannedNodes.Count + divisionNodes.Count + 1,
                         Type = NodeType.General,
                         X = coordsI.Value.X + (coordsJ.Value.X - coordsI.Value.X) * t,
                         Y = coordsI.Value.Y + (coordsJ.Value.Y - coordsI.Value.Y) * t,
                         Z = coordsI.Value.Z + (coordsJ.Value.Z - coordsI.Value.Z) * t
                     };
+                    if (!IsFinitePosition(new Point3D(newNode.X, newNode.Y, newNode.Z)))
+                    { RejectSplit("生成する節点の座標が数値の範囲外です。"); return; }
                     divisionNodes.Add(newNode);
                 }
 
-                foreach (var node in divisionNodes)
-                    CurrentInputModel.InputNodes.Add(node);
+                plannedNodes.AddRange(divisionNodes);
 
                 // 分割ビームを生成（I → div1 → div2 → ... → J）
                 // 最初のセグメント: 元のNodeI → 最初の分割節点
-                toAdd.Add(new FoundationBeam
-                {
-                    NodeI_Type = beam.NodeI_Type,
-                    NodeI_Id = beam.NodeI_Id,
-                    NodeJ_Type = NodeReferenceType.GeneralNode,
-                    NodeJ_Id = divisionNodes[0].UniqueId,
-                    MaterialNo = beam.MaterialNo,
-                    SectionNo = beam.SectionNo,
-                    AngleBeta = beam.AngleBeta,
-                    Width = beam.Width,
-                    Height = beam.Height,
-                    YoungModulus = beam.YoungModulus,
-                    ShearModulus = beam.ShearModulus,
-                    SectionName = beam.SectionName
-                });
+                toAdd.Add(beam.CreateSegment(beam.NodeI_Type, beam.NodeI_Id, NodeReferenceType.GeneralNode, divisionNodes[0].UniqueId));
 
                 // 中間セグメント
                 for (int i = 0; i < divisionNodes.Count - 1; i++)
                 {
-                    toAdd.Add(new FoundationBeam
-                    {
-                        NodeI_Type = NodeReferenceType.GeneralNode,
-                        NodeI_Id = divisionNodes[i].UniqueId,
-                        NodeJ_Type = NodeReferenceType.GeneralNode,
-                        NodeJ_Id = divisionNodes[i + 1].UniqueId,
-                        MaterialNo = beam.MaterialNo,
-                        SectionNo = beam.SectionNo,
-                        AngleBeta = beam.AngleBeta,
-                        Width = beam.Width,
-                        Height = beam.Height,
-                        YoungModulus = beam.YoungModulus,
-                        ShearModulus = beam.ShearModulus,
-                        SectionName = beam.SectionName
-                    });
+                    toAdd.Add(beam.CreateSegment(NodeReferenceType.GeneralNode, divisionNodes[i].UniqueId, NodeReferenceType.GeneralNode, divisionNodes[i + 1].UniqueId));
                 }
 
                 // 最後のセグメント: 最後の分割節点 → 元のNodeJ
-                toAdd.Add(new FoundationBeam
-                {
-                    NodeI_Type = NodeReferenceType.GeneralNode,
-                    NodeI_Id = divisionNodes.Last().UniqueId,
-                    NodeJ_Type = beam.NodeJ_Type,
-                    NodeJ_Id = beam.NodeJ_Id,
-                    MaterialNo = beam.MaterialNo,
-                    SectionNo = beam.SectionNo,
-                    AngleBeta = beam.AngleBeta,
-                    Width = beam.Width,
-                    Height = beam.Height,
-                    YoungModulus = beam.YoungModulus,
-                    ShearModulus = beam.ShearModulus,
-                    SectionName = beam.SectionName
-                });
+                toAdd.Add(beam.CreateSegment(NodeReferenceType.GeneralNode, divisionNodes.Last().UniqueId, beam.NodeJ_Type, beam.NodeJ_Id));
 
                 toRemove.Add(beam);
             }
 
+            if (toRemove.Count == 0 || !CommitSplitEdit(out var before)) return;
+            foreach (var node in plannedNodes) CurrentInputModel.InputNodes.Add(node);
             foreach (var beam in toRemove) beams.Remove(beam);
             foreach (var beam in toAdd) beams.Add(beam);
 
             RenumberFoundationBeams();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
 
             MessageService.Show(
                 $"{toRemove.Count} 個の要素を {n} 等分しました（{toAdd.Count} 個の要素、{toRemove.Count * (n - 1)} 個の節点を生成）。",
@@ -512,18 +495,7 @@ namespace PileDesign.ViewModels
 
             for (int i = 0; i < allSplitNodes.Count - 1; i++)
             {
-                result.Add(new FoundationBeam
-                {
-                    NodeI_Type = NodeReferenceType.FoundationNode,
-                    NodeI_Id = allSplitNodes[i].Id,
-                    NodeJ_Type = NodeReferenceType.FoundationNode,
-                    NodeJ_Id = allSplitNodes[i + 1].Id,
-                    Width = beam.Width,
-                    Height = beam.Height,
-                    YoungModulus = beam.YoungModulus,
-                    ShearModulus = beam.ShearModulus,
-                    SectionName = beam.SectionName
-                });
+                result.Add(beam.CreateSegment(NodeReferenceType.FoundationNode, allSplitNodes[i].Id, NodeReferenceType.FoundationNode, allSplitNodes[i + 1].Id));
             }
 
             return result;
@@ -573,9 +545,10 @@ namespace PileDesign.ViewModels
         /// 端点同士の交差（t≈0,1 or s≈0,1）は除外する。
         /// </summary>
         /// <returns>交差点と各線分上のパラメータ t, s。交差しない場合は null。</returns>
-        private (Point3D point, double t, double s)? FindSegmentIntersection(
-            Point3D p1, Point3D p2, Point3D p3, Point3D p4, double tolerance)
+        private static (Point3D point, double t, double s)? FindSegmentIntersection(
+            Point3D p1, Point3D p2, Point3D p3, Point3D p4, double tolerance, out string? problem)
         {
+            problem = null;
             var d1 = p2 - p1; // 線分Aの方向ベクトル
             var d2 = p4 - p3; // 線分Bの方向ベクトル
             var r = p1 - p3;
@@ -590,23 +563,27 @@ namespace PileDesign.ViewModels
             double b = Vector3D.DotProduct(d1, d2);
             double c = Vector3D.DotProduct(d1, r);
             double denom = a * e - b * b;
+            if (!new[] { a, e, f, b, c, denom }.All(double.IsFinite))
+            { problem = "交差判定の計算が数値の範囲外です。"; return null; }
 
             // 平行（または非常に近い）線分
             if (Math.Abs(denom) < 1e-12) return null;
 
             double t = (b * f - c * e) / denom;
             double s = (a * f - b * c) / denom;
+            if (!double.IsFinite(t) || !double.IsFinite(s))
+            { problem = "交差位置の計算が数値の範囲外です。"; return null; }
 
             // 端点付近は除外（端点での接続は交差ではない）
-            const double endEps = 1e-6;
-            if (t <= endEps || t >= 1.0 - endEps) return null;
-            if (s <= endEps || s >= 1.0 - endEps) return null;
+            if (t <= 0 || t >= 1 || t * Math.Sqrt(a) <= SplitPointDistanceTolerance || (1 - t) * Math.Sqrt(a) <= SplitPointDistanceTolerance) return null;
+            if (s <= 0 || s >= 1 || s * Math.Sqrt(e) <= SplitPointDistanceTolerance || (1 - s) * Math.Sqrt(e) <= SplitPointDistanceTolerance) return null;
 
             // 最近接点
             var closestA = p1 + t * d1;
             var closestB = p3 + s * d2;
             double dist = (closestA - closestB).Length;
 
+            if (!double.IsFinite(dist)) { problem = "交差距離の計算が数値の範囲外です。"; return null; }
             if (dist > tolerance) return null;
 
             // 交差点は両最近接点の中点
@@ -615,6 +592,7 @@ namespace PileDesign.ViewModels
                 (closestA.Y + closestB.Y) * 0.5,
                 (closestA.Z + closestB.Z) * 0.5);
 
+            if (!IsFinitePosition(intersection)) { problem = "交差点の座標が数値の範囲外です。"; return null; }
             return (intersection, t, s);
         }
 
@@ -623,80 +601,54 @@ namespace PileDesign.ViewModels
         /// </summary>
         private List<FoundationBeam> SplitBeamAtPoints(
             FoundationBeam beam,
-            List<(InputNode node, double t)> splitPoints)
+            List<(NodeReferenceType Type, Guid Id, double t)> splitPoints, Dictionary<(NodeReferenceType Type, Guid Id), Point3D>? plannedPositions = null, System.Threading.CancellationToken token = default, int maxSegments = MoveCopyValidation.MaxGeneratedItems)
         {
-            if (splitPoints.Count == 0) return [beam];
-
-            // tの昇順にソート
-            var sorted = splitPoints.OrderBy(sp => sp.t).ToList();
-
-            var result = new List<FoundationBeam>();
-
-            // 最初のセグメント: 元のNodeI → 最初の分割節点
-            result.Add(new FoundationBeam
-            {
-                NodeI_Type = beam.NodeI_Type,
-                NodeI_Id = beam.NodeI_Id,
-                NodeJ_Type = NodeReferenceType.GeneralNode,
-                NodeJ_Id = sorted[0].node.UniqueId,
-                MaterialNo = beam.MaterialNo,
-                SectionNo = beam.SectionNo,
-                AngleBeta = beam.AngleBeta,
-                Width = beam.Width,
-                Height = beam.Height,
-                YoungModulus = beam.YoungModulus,
-                ShearModulus = beam.ShearModulus,
-                SectionName = beam.SectionName
-            });
-
-            // 中間セグメント
-            for (int i = 0; i < sorted.Count - 1; i++)
-            {
-                result.Add(new FoundationBeam
+            var endpoints = new List<(NodeReferenceType Type, Guid Id)>
+            { (beam.NodeI_Type, beam.NodeI_Id) };
+            Point3D? Position(NodeReferenceType type, Guid id) =>
+                plannedPositions != null && plannedPositions.TryGetValue((type, id), out var known) ? known : GetNodeAttachPosition(type, id);
+            var lastPosition = Position(beam.NodeI_Type, beam.NodeI_Id);
+            var endPosition = Position(beam.NodeJ_Type, beam.NodeJ_Id);
+            if (!lastPosition.HasValue || !endPosition.HasValue) return [beam];
+            int sortChecks = 0;
+            var orderedPoints = MaterializeForSplit(() => splitPoints.OrderBy(p => p.t,
+                Comparer<double>.Create((a,b) =>
                 {
-                    NodeI_Type = NodeReferenceType.GeneralNode,
-                    NodeI_Id = sorted[i].node.UniqueId,
-                    NodeJ_Type = NodeReferenceType.GeneralNode,
-                    NodeJ_Id = sorted[i + 1].node.UniqueId,
-                    MaterialNo = beam.MaterialNo,
-                    SectionNo = beam.SectionNo,
-                    AngleBeta = beam.AngleBeta,
-                    Width = beam.Width,
-                    Height = beam.Height,
-                    YoungModulus = beam.YoungModulus,
-                    ShearModulus = beam.ShearModulus,
-                    SectionName = beam.SectionName
-                });
-            }
-
-            // 最後のセグメント: 最後の分割節点 → 元のNodeJ
-            result.Add(new FoundationBeam
+                    if ((++sortChecks & 1023) == 0) token.ThrowIfCancellationRequested();
+                    return a.CompareTo(b);
+                })).ToArray(), token);
+            foreach (var point in orderedPoints)
             {
-                NodeI_Type = NodeReferenceType.GeneralNode,
-                NodeI_Id = sorted.Last().node.UniqueId,
-                NodeJ_Type = beam.NodeJ_Type,
-                NodeJ_Id = beam.NodeJ_Id,
-                MaterialNo = beam.MaterialNo,
-                SectionNo = beam.SectionNo,
-                AngleBeta = beam.AngleBeta,
-                Width = beam.Width,
-                Height = beam.Height,
-                YoungModulus = beam.YoungModulus,
-                ShearModulus = beam.ShearModulus,
-                SectionName = beam.SectionName
-            });
-
+                token.ThrowIfCancellationRequested();
+                var position = Position(point.Type, point.Id);
+                if (!double.IsFinite(point.t) || point.t <= 0 || point.t >= 1 || !position.HasValue) continue;
+                if ((position.Value - lastPosition.Value).Length <= SplitPointDistanceTolerance ||
+                    (position.Value - endPosition.Value).Length <= SplitPointDistanceTolerance) continue;
+                if (endpoints.Count >= maxSegments)
+                    throw new ArgumentException("分割で生成する梁・節点は合計10万件以下にしてください。");
+                endpoints.Add((point.Type, point.Id));
+                lastPosition = position;
+            }
+            if (endpoints.Count == 1) return [beam];
+            endpoints.Add((beam.NodeJ_Type, beam.NodeJ_Id));
+            var result = new List<FoundationBeam>();
+            for (int i = 0; i < endpoints.Count - 1; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                result.Add(beam.CreateSegment(endpoints[i].Type, endpoints[i].Id,
+                    endpoints[i + 1].Type, endpoints[i + 1].Id));
+            }
             return result;
         }
 
-        // 交差点で杭要素分割
         [RelayCommand]
         private void SplitElementsAtIntersections()
         {
+            if (!ValidateEditDistanceThreshold()) return;
             var beams = CurrentInputModel?.FoundationBeamInput?.Beams;
             if (beams == null) return;
 
-            if (!CheckAndResetAnalysisResults()) return;
+
 
             var selectedBeams = beams.Where(b => b.IsSelected).ToList();
             if (selectedBeams.Count < 2)
@@ -706,7 +658,12 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            SaveUndoState();
+            if (!ValidateSplitBeams(selectedBeams)) return;
+            var candidateNodes = EnumerateAllCandidateNodes(includeFoundationNodes: true).ToList();
+            if (candidateNodes.Any(n => !IsFinitePosition(n.Pos)))
+            { RejectSplit("分割候補の節点に有限ではない座標があります。"); return; }
+            var plannedNodes = new List<InputNode>();
+            var plannedPositions = candidateNodes.GroupBy(n => (n.Type, n.Id)).ToDictionary(g => g.Key, g => g.First().Pos);
 
             double tolerance = EditDistanceThreshold;
 
@@ -722,85 +679,120 @@ namespace PileDesign.ViewModels
             }
 
             // 各要素ごとの分割点リスト
-            var beamSplitPoints = new Dictionary<FoundationBeam, List<(InputNode node, double t)>>();
+            var beamSplitPoints = new Dictionary<FoundationBeam, List<(NodeReferenceType Type, Guid Id, double t)>>();
 
             // 全ペアの交差判定
             var beamList = beamCoords.Keys.ToList();
-            int intersectionCount = 0;
+            var intersectionNodes = new HashSet<(NodeReferenceType Type, Guid Id)>();
 
-            for (int i = 0; i < beamList.Count; i++)
+            var originals = beamList.ToArray();
+            beamList = originals.Select(b => b.CreateSegment(b.NodeI_Type, b.NodeI_Id, b.NodeJ_Type, b.NodeJ_Id)).ToList();
+            var originalBySnapshot = beamList.Select((b,i) => (b,i)).ToDictionary(x => x.b, x => originals[x.i]);
+            foreach (var beam in originals)
             {
-                for (int j = i + 1; j < beamList.Count; j++)
-                {
-                    var beamA = beamList[i];
-                    var beamB = beamList[j];
-                    var (pi1, pi2) = beamCoords[beamA];
-                    var (pj1, pj2) = beamCoords[beamB];
-
-                    var result = FindSegmentIntersection(pi1, pi2, pj1, pj2, tolerance);
-                    if (result == null) continue;
-
-                    var (point, tA, tB) = result.Value;
-
-                    // 同座標に既存節点があるかチェック（重複防止）
-                    bool alreadyExists = false;
-
-                    // 既にこの要素ペアで同じ位置に分割点が登録されていないかチェック
-                    if (beamSplitPoints.TryGetValue(beamA, out var existingA))
-                    {
-                        if (existingA.Any(sp => (new Point3D(sp.node.X, sp.node.Y, sp.node.Z) - point).Length < tolerance))
-                            alreadyExists = true;
-                    }
-
-                    if (alreadyExists) continue;
-
-                    // 交差点に一般節点を生成
-                    var newNode = new InputNode
-                    {
-                        No = CurrentInputModel.InputNodes.Count + 1,
-                        Type = NodeType.General,
-                        X = point.X,
-                        Y = point.Y,
-                        Z = point.Z
-                    };
-                    CurrentInputModel.InputNodes.Add(newNode);
-
-                    // 要素Aの分割点リストに追加
-                    if (!beamSplitPoints.ContainsKey(beamA))
-                        beamSplitPoints[beamA] = [];
-                    beamSplitPoints[beamA].Add((newNode, tA));
-
-                    // 要素Bの分割点リストに追加
-                    if (!beamSplitPoints.ContainsKey(beamB))
-                        beamSplitPoints[beamB] = [];
-                    beamSplitPoints[beamB].Add((newNode, tB));
-
-                    intersectionCount++;
-                }
+                plannedPositions[(beam.NodeI_Type, beam.NodeI_Id)] = beamCoords[beam].pi;
+                plannedPositions[(beam.NodeJ_Type, beam.NodeJ_Id)] = beamCoords[beam].pj;
             }
-
-            if (intersectionCount == 0)
-            {
-                ShowToast("選択要素間に交差点が見つかりませんでした。", 2); // Warning
-                return;
-            }
-
-            // 交差が検出された要素を分割
+            int inputNodeCount = CurrentInputModel.InputNodes.Count;
+            var segments = originals.Select(b => (beamCoords[b].pi, beamCoords[b].pj)).ToArray();
             var toRemove = new List<FoundationBeam>();
             var toAdd = new List<FoundationBeam>();
-
-            foreach (var (beam, splitPoints) in beamSplitPoints)
+            List<InputNode> nodesToAdd = [];
+            int intersectionCount = 0;
+            try
             {
-                var splitBeams = SplitBeamAtPoints(beam, splitPoints);
-                toRemove.Add(beam);
-                toAdd.AddRange(splitBeams);
-            }
+                RunIntersectionWork(beamList.Count, (token, progress) =>
+                {
+                    var intersections = SearchBeamIntersections(segments, tolerance, token, new SplitSearchProgress(progress));
+                    var nodeIndex = new NodePositionIndex(candidateNodes, token);
+                    int processed = 0;
+                    foreach (var intersection in intersections)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if ((processed++ & 255) == 0)
+                            progress?.Report(new AnalysisProgress { Percentage = 60, CurrentStep = "交差点の節点を照合しています" });
+                        var beamA = beamList[intersection.A];
+                        var beamB = beamList[intersection.B];
+                        var (point, tA, tB) = (intersection.Point, intersection.TA, intersection.TB);
+                        var match = nodeIndex.Find(point, Math.Max(tolerance, 1e-9), token);
+                        NodeReferenceType type;
+                        Guid id;
+                        if (match.HasValue)
+                        {
+                            type = match.Value.Type;
+                            id = match.Value.Id;
+                        }
+                        else
+                        {
+                            if (plannedNodes.Count >= MoveCopyValidation.MaxGeneratedItems)
+                                throw new ArgumentException("分割で生成する梁・節点は合計10万件以下にしてください。");
+                            var node = new InputNode
+                            {
+                                No = inputNodeCount + plannedNodes.Count + 1, Type = NodeType.General,
+                                X = point.X, Y = point.Y, Z = point.Z
+                            };
+                            plannedNodes.Add(node);
+                            plannedPositions[(NodeReferenceType.GeneralNode, node.UniqueId)] = point;
+                            nodeIndex.Add((NodeReferenceType.GeneralNode, node.UniqueId, point));
+                            type = NodeReferenceType.GeneralNode;
+                            id = node.UniqueId;
+                        }
+                        foreach (var (beam, t) in new[] { (beamA, tA), (beamB, tB) })
+                        {
+                            if (!beamSplitPoints.TryGetValue(beam, out var points))
+                                beamSplitPoints[beam] = points = [];
+                            if (!points.Any(p => p.Type == type && p.Id == id))
+                                points.Add((type, id, t));
+                        }
+                        intersectionNodes.Add((type, id));
+                    }
 
+                    intersectionCount = intersectionNodes.Count;
+                    processed = 0;
+                    var plannedNodeIds = plannedNodes.Select(n => n.UniqueId).ToHashSet();
+                    var usedPlannedIds = new HashSet<Guid>();
+                    foreach (var (beam, splitPoints) in beamSplitPoints)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if ((processed++ & 255) == 0) progress?.Report(new AnalysisProgress { Percentage = 60 + 40.0 * toRemove.Count / Math.Max(1, beamSplitPoints.Count), CurrentStep = "梁の分割案を作成しています" });
+                        var splitBeams = SplitBeamAtPoints(beam, splitPoints, plannedPositions, token, MoveCopyValidation.MaxGeneratedItems - toAdd.Count);
+                        if (splitBeams.Count == 1 && ReferenceEquals(splitBeams[0], beam)) continue;
+                        toRemove.Add(originalBySnapshot[beam]);
+                        foreach (var splitBeam in splitBeams)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (plannedNodeIds.Contains(splitBeam.NodeI_Id)) usedPlannedIds.Add(splitBeam.NodeI_Id);
+                            if (plannedNodeIds.Contains(splitBeam.NodeJ_Id)) usedPlannedIds.Add(splitBeam.NodeJ_Id);
+                            if ((long)toAdd.Count + 1 + usedPlannedIds.Count > MoveCopyValidation.MaxGeneratedItems)
+                                throw new ArgumentException("分割で生成する梁・節点は合計10万件以下にしてください。");
+                            toAdd.Add(splitBeam);
+                        }
+                    }
+
+                    var used = toAdd.SelectMany(b => new[] { b.NodeI_Id, b.NodeJ_Id }).ToHashSet();
+                    nodesToAdd = plannedNodes.Where(n => used.Contains(n.UniqueId)).ToList();
+                    token.ThrowIfCancellationRequested();
+                    if ((long)toAdd.Count + nodesToAdd.Count > MoveCopyValidation.MaxGeneratedItems)
+                        throw new ArgumentException("分割で生成する梁・節点は合計10万件以下にしてください。");
+                    progress?.Report(new AnalysisProgress { Percentage = 100, CurrentStep = "分割案の作成が完了しました" });
+                    return true;
+                });
+            }
+            catch (OperationCanceledException) { ShowToast("交差点分割を中断しました。入力は変更されていません。", 2); return; }
+            catch (ArgumentException ex) { RejectSplit(ex.Message); return; }
+            if (intersectionCount == 0) { ShowToast("選択要素間に交差点が見つかりませんでした。", 2); return; }
+            if ((long)toAdd.Count + nodesToAdd.Count > MoveCopyValidation.MaxGeneratedItems)
+            { RejectSplit("分割で生成する梁・節点は合計10万件以下にしてください。"); return; }
+            if (toRemove.Count > 0 && selectedBeams.Count >= 100 &&
+                MessageService.Show($"交差点 {intersectionCount:N0} 件で、梁 {toRemove.Count:N0} 本を {toAdd.Count:N0} 本に分割します。\n新規一般節点は {nodesToAdd.Count:N0} 個です。\n\n反映しますか？",
+                    "交差点分割の確認", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (toRemove.Count == 0 || !CommitSplitEdit(out var before)) return;
+            foreach (var node in nodesToAdd) CurrentInputModel.InputNodes.Add(node);
             foreach (var beam in toRemove) beams.Remove(beam);
             foreach (var beam in toAdd) beams.Add(beam);
 
             RenumberFoundationBeams();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
 
             ShowToast($"{intersectionCount} 個の交差点で {toRemove.Count} → {toAdd.Count} 要素に分割");
         }
@@ -816,11 +808,12 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel?.FoundationBeamInput?.Beams == null) return;
 
-            TrySaveUndoSnapshotSafely();
+            if (beam == null || !CurrentInputModel.FoundationBeamInput.Beams.Contains(beam)) return;
+            var before = CaptureInputEdit();
             CurrentInputModel.FoundationBeamInput.Beams.Remove(beam);
             RemoveOrphanFoundationNodes();
             RenumberFoundationBeams();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         /// <summary>
@@ -859,17 +852,18 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel?.FoundationBeamInput?.Beams == null) return;
 
-            SaveUndoState();
-
             var fbInput = CurrentInputModel.FoundationBeamInput;
             var beams = fbInput.Beams;
             var (toRemove, differing) = FindDuplicateBeams(beams);
 
-            foreach (var beam in toRemove)
-                beams.Remove(beam);
-
-            RenumberFoundationBeams();
-            RequestUpdateWindow();
+            if (toRemove.Count > 0)
+            {
+                var before = CaptureInputEdit();
+                foreach (var beam in toRemove)
+                    beams.Remove(beam);
+                RenumberFoundationBeams();
+                CompleteInputEdit(before);
+            }
 
             // 番号は消したあとの並びで示す (画面の表と同じ番号)
             string message = $"{toRemove.Count} 個の重複要素を削除しました。";
@@ -932,9 +926,9 @@ namespace PileDesign.ViewModels
             return (toRemove, differing);
         }
 
-        /// <summary>重複の判断に使う基礎梁の属性 (両端以外の入力すべて)。</summary>
-        private static (int, int, string, double, double, double, double, double, double?) BeamAttributes(FoundationBeam b)
-            => (b.MaterialNo, b.SectionNo, b.SectionName ?? "", b.Width, b.Height, b.YoungModulus, b.ShearModulus, b.AngleBeta, b.MemberAngle);
+        /// <summary>重複判定に使う入力属性と表示状態。解析結果と選択状態は含めない。</summary>
+        private static (int, int, string, double, double, double, double, double, bool) BeamAttributes(FoundationBeam b)
+            => (b.MaterialNo, b.SectionNo, b.SectionName ?? "", b.Width, b.Height, b.YoungModulus, b.ShearModulus, b.AngleBeta, b.IsVisible);
 
         // 自動梁要素生成（X同一・Y同一の杭配置を基礎梁で連結）
         [RelayCommand]
@@ -962,7 +956,9 @@ namespace PileDesign.ViewModels
             // 追加する梁を先に求める。1 本も無ければ、解析結果を消さず・履歴も積まずに終える
             // (以前は結果を消してから探したので、すべて連結済みでも結果を失って「0 本生成」になった)
             var beams = CurrentInputModel.FoundationBeamInput.Beams;
-            var newBeams = FindAutoFoundationBeams(piles, targets, beams);
+            List<FoundationBeam> newBeams;
+            try { newBeams = FindAutoFoundationBeams(piles, targets, beams); }
+            catch (ArgumentException ex) { RejectSplit(ex.Message); return; }
             string scope = useSelection ? $"選択中の杭配置 ({targets.Count} 本)" : $"全ての杭配置 ({targets.Count} 本。杭を選んでいないため)";
             if (newBeams.Count == 0)
             {
@@ -975,7 +971,7 @@ namespace PileDesign.ViewModels
             string message = $"梁要素を自動生成しますか？\n\n{scope}について、X成分・Y成分がそれぞれ同一の隣り合う杭配置の"
                            + $"接合節点を基礎梁で連結します ({newBeams.Count} 本を追加)。";
             if (HasAnyAnalysisResult)
-                message += "\n\n※ 既存の解析結果は消去されます。";
+                message += "\n\n※ 既存の解析結果は保持されますが、再解析が必要になります。";
 
             var result = PileDesign.Services.MessageService.Show(
                 message,
@@ -984,9 +980,9 @@ namespace PileDesign.ViewModels
                 System.Windows.MessageBoxImage.Question);
             if (result != System.Windows.MessageBoxResult.Yes) return;
 
-            if (!CheckAndResetAnalysisResults()) return;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
 
-            TrySaveUndoSnapshotSafely();
+            var before = CaptureInputEdit();
 
             int addedCount = newBeams.Count;
 
@@ -1004,7 +1000,7 @@ namespace PileDesign.ViewModels
             // 個別矩形（基礎梁考慮）の表示可否を即座に再評価 (Beams コレクション置換後の保険)
             OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
             OpenVerticalBeamCalculationCommand?.NotifyCanExecuteChanged();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
 
             MessageService.Show(
                 $"{addedCount} 本の基礎梁を自動生成しました。",
@@ -1024,6 +1020,8 @@ namespace PileDesign.ViewModels
         {
             const double tolerance = 1e-3; // 座標一致の許容誤差 (m)
             var piles = allPiles.Where(p => p != null).ToList();
+            if (piles.Any(p => !IsFinitePosition(new Point3D(p.X, p.Y, p.Z))))
+                throw new ArgumentException("自動梁生成の対象に有限ではない接合節点の座標があります。");
             var targetIds = new HashSet<Guid>(targets.Where(p => p != null).Select(p => p.UniqueId));
 
             // 既存ビームのペアセット（重複チェック用）
@@ -1050,6 +1048,10 @@ namespace PileDesign.ViewModels
                         var p2 = sorted[i + 1];
                         if (!targetIds.Contains(p1.UniqueId) || !targetIds.Contains(p2.UniqueId)) continue;
                         if (existingPairs.Contains((p1.UniqueId, p2.UniqueId))) continue;
+
+                        double length = (new Point3D(p2.X, p2.Y, p2.Z) - new Point3D(p1.X, p1.Y, p1.Z)).Length;
+                        if (!double.IsFinite(length)) throw new ArgumentException("生成する梁の長さが数値の範囲外です。");
+                        if (length <= 1e-9) continue;
 
                         newBeams.Add(new FoundationBeam
                         {
@@ -1132,18 +1134,24 @@ namespace PileDesign.ViewModels
             }
 
             // Undoポイントを追加
-            TrySaveUndoSnapshotSafelyOptimized();
+
 
             // BoundingBoxCalculator を使用して境界を計算
-            var boundingBox = BoundingBoxCalculator.Calculate(
-                CurrentInputModel.PileLayoutItems,
-                RectLoadPileDistance
-            );
+            if (CurrentInputModel?.PileGroupSettlement == null || CurrentInputModel.PileLayoutItems?.Count == 0) return;
+            BoundingBoxCalculator.BoundingBox boundingBox;
+            try { boundingBox = BoundingBoxCalculator.Calculate(CurrentInputModel.PileLayoutItems, RectLoadPileDistance); }
+            catch (ArgumentException ex) { MessageService.ShowInputRejected(ex); return; }
+            if (!double.IsFinite(boundingBox.Width * boundingBox.Height) || boundingBox.Width * boundingBox.Height <= 0)
+            { MessageService.Show("平面範囲の幅・高さは0より大きくしてください。"); return; }
 
             // 全杭のVL軸力合計を荷重として設定
             double totalVL = 0;
             foreach (var pile in CurrentInputModel.PileLayoutItems)
+            {
                 totalVL += pile.AxialForceVL;
+                if (!double.IsFinite(totalVL)) { MessageService.Show("杭の軸力合計が数値の範囲外です。荷重面は追加しません。"); return; }
+            }
+            var before = CaptureInputEdit();
 
             CurrentInputModel.PileGroupSettlement.RectLoads.Add(new RectLoad()
             {
@@ -1160,7 +1168,7 @@ namespace PileDesign.ViewModels
 
             IsGroupPileSettlementAnalysisDone = false;
 
-            UpdateWindowImmediate();
+            CompleteInputEdit(before, scope: AnalysisInputScope.Settlement);
         }
 
 
@@ -1170,7 +1178,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnAdjustEmbedmentPlan()
         {
-            if (!CheckAndResetAnalysisResults()) return;
+
 
             if (CurrentInputModel.PileLayoutItems.Count == 0)
             {
@@ -1191,10 +1199,13 @@ namespace PileDesign.ViewModels
             }
 
             // BoundingBoxCalculator を使用して境界を計算
-            var boundingBox = BoundingBoxCalculator.Calculate(
-                CurrentInputModel.PileLayoutItems,
-                EmbedmentPileDistance
-            );
+            BoundingBoxCalculator.BoundingBox boundingBox;
+            try { boundingBox = BoundingBoxCalculator.Calculate(CurrentInputModel.PileLayoutItems, EmbedmentPileDistance); }
+            catch (ArgumentException ex) { MessageService.ShowInputRejected(ex); return; }
+            if (!double.IsFinite(boundingBox.Width * boundingBox.Height) || boundingBox.Width * boundingBox.Height <= 0)
+            { MessageService.Show("平面範囲の幅・高さは0より大きくしてください。"); return; }
+            if (!ConfirmDiscardInvalidatedByInputChange(true, "根入部の平面調整")) return;
+            var before = CaptureInputEdit();
 
             foreach (var embedmentDataItem in CurrentInputModel.EmbedmentInput.EmbedmentLayers)
             {
@@ -1205,14 +1216,13 @@ namespace PileDesign.ViewModels
             }
 
             // 変更後（以下の箇所で適用）
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         // 慣性力作用点をすべての接合節点の図心に移動するメソッド
         [RelayCommand]
         private void OnMoveForceActionPointToAverageCenter()
         {
-            if (!CheckAndResetAnalysisResults()) return;
 
             if (CurrentInputModel.PileLayoutItems.Count == 0)
             {
@@ -1220,13 +1230,24 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            TrySaveUndoSnapshotSafely();
 
             // 接合節点（接合節点 = pile.Z）の図心を計算 (v2 セマンティクス)
             var piles = CurrentInputModel.PileLayoutItems;
-            double centerX = piles.Average(p => p.X);
-            double centerY = piles.Average(p => p.Y);
-            double centerZ = piles.Average(p => p.Z);
+            double centerX, centerY, centerZ;
+            try
+            {
+                centerX = FiniteMean(piles.Select(p => p.X));
+                centerY = FiniteMean(piles.Select(p => p.Y));
+                centerZ = FiniteMean(piles.Select(p => p.Z));
+            }
+            catch (ArgumentException ex) { RejectSplit(ex.Message); return; }
+            var cases = CurrentInputModel.LoadCasesInput;
+            bool Same(double x, double y, double z) => x == centerX && y == centerY && z == centerZ;
+            if (Same(cases.LoadCaseLevel1Common.ForceActionPointX, cases.LoadCaseLevel1Common.ForceActionPointY, cases.LoadCaseLevel1Common.ForceActionPointAltitude) &&
+                Same(cases.LoadCaseLevel2Common.ForceActionPointX, cases.LoadCaseLevel2Common.ForceActionPointY, cases.LoadCaseLevel2Common.ForceActionPointAltitude) &&
+                cases.LoadCasesLevel1.Concat(cases.LoadCasesLevel2).All(c => Same(c.ForceActionPointX,c.ForceActionPointY,c.ForceActionPointAltitude))) return;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
+            var before = CaptureInputEdit();
 
             CurrentInputModel.LoadCasesInput.LoadCaseLevel1Common.ForceActionPointX = centerX;
             CurrentInputModel.LoadCasesInput.LoadCaseLevel1Common.ForceActionPointY = centerY;
@@ -1251,22 +1272,17 @@ namespace PileDesign.ViewModels
             }
 
             // 変更後（以下の箇所で適用）
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         [RelayCommand]
         private void AutoIsFrontPiles()
         {
-            if (!CheckAndResetAnalysisResults()) return;
 
-            TrySaveUndoSnapshotSafely();
 
-            var viewModel = new AutoIsFrontPileViewModel();
             var autoIsFrontPilesWindow = new AutoIsFrontPilesWindow();
             autoIsFrontPilesWindow.AutoIsFrontPileCompleted += AutoIsFrontPilesWindow_AutoIsFrontPileCompleted;
             autoIsFrontPilesWindow.ShowDialog();
-            IsFrontPileLabelVisible = true;
-            RequestUpdateWindow();
         }
 
         //群杭係数ウィンドウを開くメソッド
@@ -1507,22 +1523,28 @@ namespace PileDesign.ViewModels
         // 自動前方杭設定の処理メソッド
         private void AutoIsFrontPilesWindow_AutoIsFrontPileCompleted(object sender, AutoIsFrontEventArgs e)
         {
-            double cosAlpha = Math.Cos((e.Angle * Math.PI / 180.0));
-
+            if (!double.IsFinite(e.Angle) || e.Angle <= 0 || e.Angle >= 90 || e.IsChecked == null || e.IsChecked.Count < 4)
+            { e.Cancel = true; RejectSplit("前面杭の角度・荷重ケースの指定を確認してください。"); return; }
+            var changes = new List<(PileLayoutDataItem Pile, int Index, bool Value)>();
+            double cosAlpha = Math.Cos(e.Angle * Math.PI / 180.0);
             for (int i = 0; i < 4; i++)
             {
-                if (e.IsChecked[i])
+                if (!e.IsChecked[i]) continue;
+                foreach (var pile in CurrentInputModel.PileLayoutItems)
                 {
-                    LoadCase loadCase = CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
-
-                    foreach (PileLayoutDataItem pileLayout0 in CurrentInputModel.PileLayoutItems)
-                    {
-                        // 前方杭かどうかを判定
-                        pileLayout0.IsFrontPiles[i] = IsFrontPile(pileLayout0, loadCase, cosAlpha);
-                    }
+                    bool value = IsFrontPile(pile, CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i], cosAlpha);
+                    if (pile.IsFrontPiles[i] != value) changes.Add((pile,i,value));
                 }
             }
+            if (changes.Count == 0) return;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) { e.Cancel = true; return; }
+            var before = CaptureInputEdit();
+            foreach (var change in changes) change.Pile.IsFrontPiles[change.Index] = change.Value;
+            IsFrontPileLabelVisible = true;
+            CompleteInputEdit(before);
         }
+
+        internal static double FiniteMean(IEnumerable<double> values) => PileDesign.Common.StableNumerics.Mean(values);
 
         /// <summary>
         /// 指定された杭が前方杭かどうかを判定

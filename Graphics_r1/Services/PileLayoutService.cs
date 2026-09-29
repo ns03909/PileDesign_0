@@ -97,7 +97,9 @@ namespace PileDesign.Services
                 throw new ArgumentNullException(nameof(viewModelSetter));
 
             var selectedItems = pileLayoutItems.Where(p => p.IsSelected).ToList();
-            int totalCount = selectedItems.Count * repetitionNumber;
+            var countProblem = MoveCopyValidation.DescribeCopyCountProblem(selectedItems.Count, repetitionNumber);
+            if (countProblem != null) throw new ArgumentException(countProblem, nameof(repetitionNumber));
+            int totalCount = checked(selectedItems.Count * repetitionNumber);
 
             // 一時リストに事前にすべて作成（容量を事前確保して高速化）
             var newItems = new List<PileLayoutDataItem>(totalCount);
@@ -164,12 +166,97 @@ namespace PileDesign.Services
         /// </summary>
         /// <param name="pileLayoutItems">杭配置アイテムのコレクション</param>
         /// <param name="options">編集オプション</param>
+        public static string? DescribeBulkEditProblem(IEnumerable<PileLayoutDataItem> piles, BulkEditOptions options)
+        {
+            static double Value(double current, double input, bool add) => add ? current + input : input;
+            if (options.ApplyLevel1?.Length != 4 || options.IsAddLevel1?.Length != 4 || options.Level1Values?.Length != 4 ||
+                options.ApplyLevel2?.Length != 4 || options.IsAddLevel2?.Length != 4 || options.Level2Values?.Length != 4)
+                return "荷重の一括編集データは各4項目が必要です。";
+            foreach (var pile in piles.Where(p => p.IsSelected))
+            {
+                var values = new List<(string Name, double Value)>();
+                var level1 = pile.AxialForceLevel1s?.ToArray() ?? [];
+                var level2 = pile.AxialForceLevel2s?.ToArray() ?? [];
+                double vl0 = pile.AxialForceVL0, additional = pile.AxialForceVLAdditional;
+                double vl = vl0 + additional;
+                bool ProjectVl(double next)
+                {
+                    if (!double.IsFinite(next) || !double.IsFinite(vl)) return false;
+                    if (next == vl) return true;
+                    if (Common.AxialForceModeContext.IsVariationMode)
+                    {
+                        double delta = next - vl;
+                        if (!double.IsFinite(delta)) return false;
+                        for (int i = 0; i < level1.Length; i++) level1[i] += delta;
+                        for (int i = 0; i < level2.Length; i++) level2[i] += delta;
+                        if (level1.Concat(level2).Any(v => !double.IsFinite(v))) return false;
+                    }
+                    else if (level1.Concat(level2).Any(v => !double.IsFinite(v - next))) return false;
+                    vl = next;
+                    return true;
+                }
+                if (options.ApplyAxialForceVL)
+                {
+                    vl0 = Value(vl0, options.AxialForceVL, options.IsAddAxialForceVL);
+                    if (!ProjectVl(vl0 + additional)) return $"杭 {pile.PileNo} の常時軸力または連動する荷重が数値の範囲外です。";
+                }
+                if (options.ApplyAxialForceVLAdditional)
+                {
+                    additional = Value(additional, options.AxialForceVLAdditional, options.IsAddAxialForceVLAdditional);
+                    if (!ProjectVl(vl0 + additional)) return $"杭 {pile.PileNo} の付加軸力または連動する荷重が数値の範囲外です。";
+                }
+                if (options.ApplyPileTopLevel)
+                {
+                    values.Add(("X", pile.Point3D.X));
+                    values.Add(("Y", pile.Point3D.Y));
+                    values.Add(("Z", Value(pile.Point3D.Z, options.PileTopLevel, options.IsAddPileTopLevel)));
+                }
+                if (options.ApplyFoundationBeamDeltaZc)
+                    values.Add(("接合節点ΔZc", Value(pile.FoundationBeamDeltaZc, options.FoundationBeamDeltaZc, options.IsAddFoundationBeamDeltaZc)));
+                if (options.ApplyPileTopLevel || options.ApplyFoundationBeamDeltaZc)
+                {
+                    double z = options.ApplyPileTopLevel ? Value(pile.Point3D.Z, options.PileTopLevel, options.IsAddPileTopLevel) : pile.Point3D.Z;
+                    double delta = options.ApplyFoundationBeamDeltaZc ? Value(pile.FoundationBeamDeltaZc, options.FoundationBeamDeltaZc, options.IsAddFoundationBeamDeltaZc) : pile.FoundationBeamDeltaZc;
+                    values.Add(("杭頭Z", z - delta));
+                }
+                if (options.ApplyAxialForceVL)
+                    values.Add(("常時軸力", Value(pile.AxialForceVL0, options.AxialForceVL, options.IsAddAxialForceVL)));
+                if (options.ApplyAxialForceVLAdditional)
+                    values.Add(("付加軸力", Value(pile.AxialForceVLAdditional, options.AxialForceVLAdditional, options.IsAddAxialForceVLAdditional)));
+                for (int i = 0; i < 4; i++)
+                {
+                    if (options.ApplyLevel1[i])
+                    {
+                        if (pile.AxialForceLevel1s == null || pile.AxialForceLevel1s.Count <= i) return $"杭 {pile.PileNo} のレベル1荷重が不足しています。";
+                        double next = Value(level1[i], options.Level1Values[i], options.IsAddLevel1[i]);
+                        values.Add(($"レベル1荷重 {i + 1}", next));
+                        values.Add(($"レベル1変動荷重 {i + 1}", next - vl));
+                    }
+                    if (options.ApplyLevel2[i])
+                    {
+                        if (pile.AxialForceLevel2s == null || pile.AxialForceLevel2s.Count <= i) return $"杭 {pile.PileNo} のレベル2荷重が不足しています。";
+                        double next = Value(level2[i], options.Level2Values[i], options.IsAddLevel2[i]);
+                        values.Add(($"レベル2荷重 {i + 1}", next));
+                        values.Add(($"レベル2変動荷重 {i + 1}", next - vl));
+                    }
+                }
+                foreach (var entry in values)
+                    if (!double.IsFinite(entry.Value)) return $"杭 {pile.PileNo} の{entry.Name}の変更後の値が有限ではありません。";
+                if (options.ApplyPileGroupFactor && !PileGroupFactor.IsValidFactor(Value(pile.GroupPileFactor, options.PileGroupFactor, options.IsAddPileGroupFactor)))
+                    return $"杭 {pile.PileNo} の変更後の群杭係数は0より大きく1以下にしてください。";
+            }
+            return null;
+        }
+
         public void BulkEditSelectedPiles(ObservableCollection<PileLayoutDataItem> pileLayoutItems, BulkEditOptions options)
         {
             if (pileLayoutItems == null)
                 throw new ArgumentNullException(nameof(pileLayoutItems));
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
+
+            var problem = DescribeBulkEditProblem(pileLayoutItems, options);
+            if (problem != null) throw new ArgumentException(problem, nameof(options));
 
             var selectedItems = pileLayoutItems.Where(p => p.IsSelected).ToList();
 

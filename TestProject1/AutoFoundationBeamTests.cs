@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
@@ -15,6 +15,21 @@ namespace TestProject1
     [TestClass]
     public class AutoFoundationBeamTests
     {
+        [TestMethod]
+        public void CoincidentConnectionNodesDoNotGenerateZeroLengthBeams()
+        {
+            var piles = new[] { new PileLayoutDataItem { X=0,Y=0,Z=2 }, new PileLayoutDataItem { X=0,Y=0,Z=2 } };
+            Assert.AreEqual(0, MainWindowViewModel.FindAutoFoundationBeams(piles,piles,[]).Count);
+            piles[1].Z = 3;
+            Assert.AreEqual(1, MainWindowViewModel.FindAutoFoundationBeams(piles,piles,[]).Count);
+        }
+
+        [TestMethod]
+        public void OverflowingGeneratedLengthIsRejected()
+        {
+            var piles = new[] { new PileLayoutDataItem { X=0,Y=-double.MaxValue }, new PileLayoutDataItem { X=0,Y=double.MaxValue } };
+            Assert.ThrowsException<ArgumentException>(() => MainWindowViewModel.FindAutoFoundationBeams(piles,piles,[]));
+        }
         /// <summary>X 方向に 3 本 (0, 5, 10 m) 並んだ杭。</summary>
         private static List<PileLayoutDataItem> Row()
             => [.. new[] { 0.0, 5.0, 10.0 }.Select((x, i) => new PileLayoutDataItem { No = i + 1, PileNo = i + 1, X = x, Y = 0 })];
@@ -61,8 +76,8 @@ namespace TestProject1
                 "private void OnAutoGenerateFoundationBeams()");
             int find = body.IndexOf("FindAutoFoundationBeams(", StringComparison.Ordinal);
             int empty = body.IndexOf("if (newBeams.Count == 0)", StringComparison.Ordinal);
-            int reset = body.IndexOf("CheckAndResetAnalysisResults()", StringComparison.Ordinal);
-            int undo = body.IndexOf("TrySaveUndoSnapshotSafely()", StringComparison.Ordinal);
+            int reset = body.IndexOf("ConfirmDiscardInvalidatedByInputChange(true)", StringComparison.Ordinal);
+            int undo = body.IndexOf("CaptureInputEdit()", StringComparison.Ordinal);
             Assert.IsTrue(find >= 0 && empty > find, "追加する梁を先に求めていません");
             Assert.IsTrue(reset > empty, "追加する梁が無いのに解析結果を消しています");
             Assert.IsTrue(undo > empty, "追加する梁が無いのに元に戻すの履歴を積んでいます");

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 
 namespace PileDesign.Services
@@ -83,6 +84,42 @@ namespace PileDesign.Services
 
             Show($"{summary}\n{ex.Message}\n\n詳細はログに記録しています（ヘルプ タブ → バージョン情報 → ログフォルダを開く）。",
                  caption, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        /// <summary>
+        /// 入力の検査が理由を添えて投げた <see cref="ArgumentException"/> を、入力の確認として出す。
+        ///
+        /// <para>検査の文言は利用者向けに書いてあるので、そのまま警告として出す。ただし引数名を渡した例外は
+        /// 文言の末尾に「 (Parameter 'value')」が付くので外す (内部の名前を見せない)。
+        /// 利用者向けに書かれていない例外 (日本語を含まない・既定の文言) は、想定外の失敗として
+        /// <see cref="ShowError(string, Exception, string)"/> に回す (ログにも残る)。</para>
+        /// </summary>
+        public static void ShowInputRejected(ArgumentException ex, string caption = "入力の確認")
+        {
+            string text = UserFacingText(ex);
+            if (text.Length == 0)
+            {
+                ShowError("入力を反映できませんでした。", ex, caption);
+                return;
+            }
+            Serilog.Log.Information("[{Caption}] {Message}", caption, text);
+            Show(text, caption, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        /// <summary>
+        /// 例外の文言のうち利用者に見せる部分。引数名の添え書きを外し、日本語を含まなければ (利用者向けでない) 空を返す。
+        /// </summary>
+        internal static string UserFacingText(ArgumentException ex)
+        {
+            string text = ex.Message ?? "";
+            if (!string.IsNullOrEmpty(ex.ParamName))
+            {
+                string suffix = $" (Parameter '{ex.ParamName}')";
+                if (text.EndsWith(suffix, StringComparison.Ordinal)) text = text[..^suffix.Length];
+            }
+            text = text.Trim();
+            // ひらがな・カタカナ・漢字を含むものだけを利用者向けの文とみなす
+            return text.Any(c => c is >= '぀' and <= 'ヿ' or >= '一' and <= '鿿') ? text : "";
         }
 
         /// <summary>

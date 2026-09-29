@@ -24,51 +24,32 @@ namespace PileDesign.Views
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
-            SetReactions();
-            Close();
+            if (!CommitNumericInputs()) return;
+            if (viewModel.TryApplyReactions()) Close();
         }
 
-        private void SetReactions()
+        internal bool CommitNumericInputs()
         {
-            for (int i = 0; i < viewModel.InputModel.LoadCasesInput.LoadCasesLevel1.Count; i++)
+            bool valid = true;
+            void Visit(System.Windows.DependencyObject parent)
             {
-                if (viewModel.IsApplicableE1s[i])
+                for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
                 {
-                    var loadCase = viewModel.InputModel.LoadCasesInput.LoadCasesLevel1[i];
-                    List<double> reactions = [.. viewModel.InputModel.GetReactionForUnitMoment(loadCase.LoadAngle).Select(r => r * viewModel.OverturningMoment1 * 1000)];
-
-                    for (int j = 0; j < viewModel.InputModel.PileLayoutItems.Count; j++)
+                    var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                    if (child is System.Windows.Controls.TextBox field)
                     {
-                        var pileLocation = viewModel.InputModel.PileLayoutItems[j];
-                        pileLocation.AxialForceLevel1s[i] = reactions[j];
-
-                        if (viewModel.IsApplicableVL)
+                        var binding = field.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty);
+                        if (binding?.ParentBinding.Mode != BindingMode.OneWay)
                         {
-                            pileLocation.AxialForceLevel1s[i] += pileLocation.AxialForceVL0;
+                            binding?.UpdateSource();
+                            if (System.Windows.Controls.Validation.GetHasError(field)) valid = false;
                         }
                     }
+                    Visit(child);
                 }
             }
-
-            for (int i = 0; i < viewModel.InputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
-            {
-                if (viewModel.IsApplicableE2s[i])
-                {
-                    var loadCase = viewModel.InputModel.LoadCasesInput.LoadCasesLevel2[i];
-                    List<double> reactions = [.. viewModel.InputModel.GetReactionForUnitMoment(loadCase.LoadAngle).Select(r => r * viewModel.OverturningMoment2 * 1000)];
-
-                    for (int j = 0; j < viewModel.InputModel.PileLayoutItems.Count; j++)
-                    {
-                        var pileLocation = viewModel.InputModel.PileLayoutItems[j];
-                        pileLocation.AxialForceLevel2s[i] = reactions[j];
-
-                        if (viewModel.IsApplicableVL)
-                        {
-                            pileLocation.AxialForceLevel2s[i] += pileLocation.AxialForceVL0;
-                        }
-                    }
-                }
-            }
+            Visit(this);
+            return valid;
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)

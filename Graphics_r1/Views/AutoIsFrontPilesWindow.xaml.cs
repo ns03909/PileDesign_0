@@ -27,6 +27,7 @@ namespace PileDesign.Views
 
         public class AutoIsFrontEventArgs : EventArgs
         {
+            public bool Cancel { get; set; }
             public double Angle { get; set; }
             public ObservableCollection<bool> IsChecked { get; set; }
         }
@@ -49,7 +50,7 @@ namespace PileDesign.Views
             };
 
             AutoIsFrontPileCompleted?.Invoke(this, args);
-            Close();
+            if (!args.Cancel) Close();
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)

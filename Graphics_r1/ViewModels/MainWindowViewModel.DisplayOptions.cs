@@ -3029,10 +3029,17 @@ namespace PileDesign.ViewModels
 
         // マージ対象限界距離
         private double _editDistanceThreshold = 0.005;
+        private string? _editDistanceThresholdProblem;
         public double EditDistanceThreshold
         {
             get => _editDistanceThreshold;
-            set => SetProperty(ref _editDistanceThreshold, value);
+            set
+            {
+                var problem = PileDesign.Services.MoveCopyValidation.DescribeToleranceProblem(value);
+                _editDistanceThresholdProblem = problem;
+                if (problem != null) throw new System.ArgumentOutOfRangeException(nameof(value), problem);
+                SetProperty(ref _editDistanceThreshold, value);
+            }
         }
 
         // 等分割数

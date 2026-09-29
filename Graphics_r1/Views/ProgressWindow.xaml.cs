@@ -11,12 +11,14 @@ namespace PileDesign.Views
     {
         private readonly ProgressViewModel _viewModel;
         private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly string _cancellationMessage;
 
-        public ProgressWindow(CancellationTokenSource cancellationTokenSource)
+        public ProgressWindow(CancellationTokenSource cancellationTokenSource, string? cancellationMessage = null)
         {
             InitializeComponent();
 
             _cancellationTokenSource = cancellationTokenSource ?? throw new ArgumentNullException(nameof(cancellationTokenSource));
+            _cancellationMessage = cancellationMessage ?? "計算を中断しますか？\n\n中断すると、ここまでの計算結果は破棄されます。";
             _viewModel = new ProgressViewModel();
             DataContext = _viewModel;
         }
@@ -47,7 +49,7 @@ namespace PileDesign.Views
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             var result = MessageService.Show(
-                "計算を中断しますか？\n\n中断すると、ここまでの計算結果は破棄されます。",
+                _cancellationMessage,
                 "確認",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);

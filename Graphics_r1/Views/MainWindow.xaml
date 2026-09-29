@@ -2576,10 +2576,6 @@
                                                         ToolTip="自動梁要素生成 (Ctrl + 0)　選択中の杭配置について、x成分、y成分がそれぞれ同一の隣り合う杭配置の接合節点を基礎梁（材料No.1、断面No.1）で連結します。" AutomationProperties.Name="自動梁要素生成 (Ctrl + 0)　選択中の杭配置について、x成分、y成分がそれぞれ同一の隣り合う杭配置の接合節点を基礎梁（材料No.1、断面No.1）で連結します。">
                                                     <svgc:SvgViewbox Source="/Icons/AutoBeamGeneration.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
-                                                <Button ToolTip="要素番号昇順で整列"
-                                                        Command="{Binding SortBeamsByNoCommand}" AutomationProperties.Name="要素番号昇順で整列">
-                                                    <svgc:SvgViewbox Source="/Icons/SortNo.svg" Style="{StaticResource SvgIconStyle24}"/>
-                                                </Button>
                                                 <Button ToolTip="I端節点昇順→J端節点昇順で整列"
                                                         Command="{Binding SortBeamsByNodeCommand}" AutomationProperties.Name="I端節点昇順→J端節点昇順で整列">
                                                     <svgc:SvgViewbox Source="/Icons/SortIJ.svg" Style="{StaticResource SvgIconStyle24}"/>
@@ -2603,7 +2599,7 @@
                                                     <svgc:SvgViewbox Source="/Icons/SplitElementByNodes.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                                 <TextBlock Text="距離(m)" VerticalAlignment="Center" Margin="4,0,2,0"/>
-                                                <TextBox Text="{Binding EditDistanceThreshold, UpdateSourceTrigger=LostFocus}"
+                                                <TextBox Validation.Error="EditDistanceInput_ValidationError" Text="{Binding EditDistanceThreshold, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, NotifyOnValidationError=True}"
                                                          Width="50" HorizontalContentAlignment="Right" VerticalAlignment="Center"
                                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                          KeyDown="TextBox_KeyDown">
@@ -4110,7 +4106,7 @@
 
                                                 <TextBlock Text="地盤番号" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"/>
                                                 <ComboBox x:Name="ComboBoxEmbedmentGroundNo" Grid.Row="0" Grid.Column="1" Margin="4,2"
-                                                          SelectedItem="{Binding CurrentInputModel.EmbedmentInput.GroundNo, UpdateSourceTrigger=LostFocus}"
+                                                          SelectedItem="{Binding EmbedmentGroundNo, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
                                                           PreviewMouseDown="ComboBoxEmbedmentGroundNo_PreviewMouseDown"
                                                           ItemsSource="{Binding CurrentInputModel.GroundsInputCountList}"/>
 
@@ -4118,19 +4114,18 @@
                                                 <TextBox x:Name="TextBoxEmbedmentBottomAltitude" Grid.Row="1" Grid.Column="1" Margin="4,2"
                                                          HorizontalContentAlignment="Right"
                                                          GotFocus="TextBox_GotFocus"
-                                                         TextChanged="TextBoxAltitude_TextChanged"
                                                          PreviewMouseDown="TextBoxBottomAltitude_PreviewMouseDown"
                                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                          KeyDown="TextBox_KeyDown">
-                                                    <Binding Path="CurrentInputModel.EmbedmentInput.BottomAltitude" UpdateSourceTrigger="LostFocus"
+                                                    <Binding Path="EmbedmentBottomAltitude" UpdateSourceTrigger="LostFocus" ValidatesOnExceptions="True"
                                                         StringFormat="{}{0:+0.00;-0.00;+0.00}" />
                                                 </TextBox>
 
                                                 <TextBlock Text="区分数" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"/>
                                                 <ComboBox x:Name="ComboBoxEmbedmentNums" Grid.Row="2" Grid.Column="1" Margin="4,2"
-                                                          SelectedItem="{Binding CurrentInputModel.EmbedmentInput.EmbedmentLayersCount, UpdateSourceTrigger=LostFocus}"
+                                                          SelectedItem="{Binding EmbedmentLayerCount, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
                                                           PreviewMouseDown="ComboBoxEmbedmentNums_PreviewMouseDown"
-                                                          SelectionChanged="ComboBoxEmbedmentNums_SelectionChanged">
+>
                                                     <ComboBox.ItemsSource>
                                                         <x:Array Type="{x:Type sys:Int32}">
                                                             <sys:Int32>0</sys:Int32>
@@ -4311,8 +4306,8 @@
                                     <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Vertical" Margin="4,2,4,2">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="選択対象距離" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                            <TextBox Width="60" HorizontalContentAlignment="Right"
-                                                     Text="{Binding GridSelectionDistance, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                            <TextBox Width="60" HorizontalContentAlignment="Right" Validation.Error="GridSelectionDistance_ValidationError"
+                                                     Text="{Binding GridSelectionDistance, StringFormat=N3, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, NotifyOnValidationError=True}"
                                                      ToolTip="通り心選択ボタンで対象とするオブジェクトまでの距離 (m)"/>
                                             <TextBlock Text="m" VerticalAlignment="Center" Margin="4,0,0,0"/>
                                         </StackPanel>
@@ -4376,7 +4371,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding Spacing, StringFormat=N3}" Width="*" MinWidth="50">
+                                            <DataGridTextColumn Binding="{Binding Spacing, StringFormat=N3, ValidatesOnExceptions=True}" Width="*" MinWidth="50">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="dX" TextAlignment="Center"/>
@@ -4396,7 +4391,7 @@
                                             </DataGridTextColumn>
 
                                             <!-- Column for Coord -->
-                                            <DataGridTextColumn Binding="{Binding Coord, StringFormat=N3}"
+                                            <DataGridTextColumn Binding="{Binding Coord, StringFormat=N3, ValidatesOnExceptions=True}"
                                                                 Width="*"
                                                                 MinWidth="50">
                                                 <DataGridTextColumn.Header>
@@ -4498,7 +4493,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding Spacing, StringFormat=N3}" Width="*" MinWidth="50">
+                                            <DataGridTextColumn Binding="{Binding Spacing, StringFormat=N3, ValidatesOnExceptions=True}" Width="*" MinWidth="50">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="dY" TextAlignment="Center"/>
@@ -4516,7 +4511,7 @@
                                                 </DataGridTextColumn.ElementStyle>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn  Binding="{Binding Coord, StringFormat=N3}" Width="*"
+                                            <DataGridTextColumn  Binding="{Binding Coord, StringFormat=N3, ValidatesOnExceptions=True}" Width="*"
                                                                  MinWidth="50">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>

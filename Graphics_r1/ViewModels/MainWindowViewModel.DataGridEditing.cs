@@ -236,34 +236,13 @@ namespace PileDesign.ViewModels
 
         [RelayCommand]
         private void ComboBoxEmbedmentNums_OnPreviewMouseDown(MouseButtonEventArgs e)
-        {
-            if (!CheckAndResetElementSplit("根入部"))
-            {
-                e.Handled = true;
-                return;
-            }
-            SaveUndoState("根入部 区分数切替");
-        }
+        { }
         [RelayCommand]
         private void ComboBoxEmbedmentGroundNo_OnPreviewMouseDown(MouseButtonEventArgs e)
-        {
-            if (!CheckAndResetElementSplit("根入部"))
-            {
-                e.Handled = true;
-                return;
-            }
-            SaveUndoState("根入部 地盤番号切替");
-        }
+        { }
         [RelayCommand]
         private void TextBoxBottomAltitude_OnPreviewMouseDown(MouseButtonEventArgs e)
-        {
-            if (!CheckAndResetElementSplit("根入部"))
-            {
-                e.Handled = true;
-                return;
-            }
-            SaveUndoState("根入部 下端Z変更");
-        }
+        { }
         [RelayCommand]
         private void DataGridEmbedment_OnBeginningEdit(DataGridBeginningEditEventArgs e)
         {

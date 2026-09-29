@@ -29,14 +29,14 @@ namespace PileDesign.Models.InputData
         public double Coord
         {
             get => _coord;
-            set => SetProperty(ref _coord, value);
+            set { if (!double.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(value), "座標には有限の数値を入力してください。"); SetProperty(ref _coord, value); }
         }
 
         private double _spacing;
         public double Spacing
         {
             get => _spacing;
-            set => SetProperty(ref _spacing, value);
+            set { if (!double.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(value), "間隔には有限の数値を入力してください。"); SetProperty(ref _spacing, value); }
         }
 
         private Brush _spacingForeground = Brushes.Black; // 初期値を設定

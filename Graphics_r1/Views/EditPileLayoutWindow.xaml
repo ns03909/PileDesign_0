@@ -38,7 +38,7 @@
             
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBoxPileTopLevel" Content="接合節点Z (m)" Width="150" IsChecked="{Binding IsApplicablePileTopLevel}" ToolTip="チェックすると接合節点 (基礎梁レベル) の Z 座標を一括変更します"></CheckBox>
-                <TextBox x:Name="TextBoxPileTopLevel" Text="{Binding PileTopLevel, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBoxPileTopLevel" Text="{Binding PileTopLevel, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxPileTopLevel_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="PileTopLevel" IsChecked="{Binding IsReplacePileTopLevel}"></RadioButton>
@@ -47,7 +47,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBoxFoundationBeamDeltaZc" Content="接合節点ΔZc (m)" Width="150" IsChecked="{Binding IsApplicableFoundationBeamDeltaZc}" ToolTip="杭頭から基礎梁接合節点までの高さ差"></CheckBox>
-                <TextBox x:Name="TextBoxFoundationBeamDeltaZc" Text="{Binding FoundationBeamDeltaZc, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBoxFoundationBeamDeltaZc" Text="{Binding FoundationBeamDeltaZc, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxFoundationBeamDeltaZc_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="FoundationBeamDeltaZc" IsChecked="{Binding IsReplaceFoundationBeamDeltaZc}"></RadioButton>
@@ -56,7 +56,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBoxGroupPileFactor" Content="群杭係数" Width="150" IsChecked="{Binding IsApplicablePileGroupFactor}" ToolTip="水平地盤反力係数の低減係数（群杭効果）"></CheckBox>
-                <TextBox x:Name="TextBoxGroupPileFactor" Text="{Binding PileGroupFactor, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBoxGroupPileFactor" Text="{Binding PileGroupFactor, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxGroupPileFactor_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="PileGroup" IsChecked="{Binding IsReplacePileGroupFactor}"></RadioButton>
@@ -65,7 +65,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBoxVL" Content="軸力 VL (kN)" Width="150" IsChecked="{Binding IsApplicableVL}" ToolTip="長期軸力（下向き正）"></CheckBox>
-                <TextBox x:Name="TextBoxVL" Text="{Binding VL, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBoxVL" Text="{Binding VL, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxVL_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="VL" IsChecked="{Binding IsReplaceVL}"></RadioButton>
@@ -74,7 +74,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBoxVLadd" Content="軸力 VLadd (kN)" Width="150" IsChecked="{Binding IsApplicableVLadd}"></CheckBox>
-                <TextBox x:Name="TextBoxVLadd" Text="{Binding VLadd, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBoxVLadd" Text="{Binding VLadd, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxVLadd_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="VLadd" IsChecked="{Binding IsReplaceVLadd}"></RadioButton>
@@ -83,7 +83,7 @@
 
             <!--<StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBoxE1" Content="軸力 E1 (kN)" Width="150"  IsChecked="{Binding IsApplicableE1}"></CheckBox>
-                <TextBox x:Name="TextBoxE1" Text="{Binding E1, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBoxE1" Text="{Binding E1, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxE1_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="E1" IsChecked="{Binding IsReplaceE1}"></RadioButton>
@@ -92,7 +92,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBoxE2" Content="軸力 E2 (kN)" Width="150" IsChecked="{Binding IsApplicableE2}"></CheckBox>
-                <TextBox x:Name="TextBoxE2" Text="{Binding E2, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBoxE2" Text="{Binding E2, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxE2_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="E2" IsChecked="{Binding IsReplaceE2}"></RadioButton>
@@ -102,7 +102,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBox1_1" Content="軸力 1-1 (kN)" Width="150" IsChecked="{Binding IsApplicableE1_1}"></CheckBox>
-                <TextBox x:Name="TextBox1_1" Text="{Binding E1_1, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBox1_1" Text="{Binding E1_1, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBox1_1_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="E1_1" IsChecked="{Binding IsReplaceE1_1}"></RadioButton>
@@ -111,7 +111,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBox1_2" Content="軸力 1-2 (kN)" Width="150" IsChecked="{Binding IsApplicableE1_2}"></CheckBox>
-                <TextBox x:Name="TextBox1_2" Text="{Binding E1_2, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBox1_2" Text="{Binding E1_2, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBox1_2_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="E1_2" IsChecked="{Binding IsReplaceE1_2}"></RadioButton>
@@ -120,7 +120,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBox1_3" Content="軸力 1-3 (kN)" Width="150" IsChecked="{Binding IsApplicableE1_3}"></CheckBox>
-                <TextBox x:Name="TextBox1_3" Text="{Binding E1_3, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBox1_3" Text="{Binding E1_3, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBox1_3_TextChanged" ></TextBox>
                 <RadioButton Content="変更" GroupName="E1_3" IsChecked="{Binding IsReplaceE1_3}"></RadioButton>
@@ -129,7 +129,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBox1_4" Content="軸力 1-4 (kN)" Width="150" IsChecked="{Binding IsApplicableE1_4}"></CheckBox>
-                <TextBox x:Name="TextBox1_4" Text="{Binding E1_4, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBox1_4" Text="{Binding E1_4, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBox1_4_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="E1_4" IsChecked="{Binding IsReplaceE1_4}"></RadioButton>
@@ -138,7 +138,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBox2_1" Content="軸力 2-1 (kN)" Width="150" IsChecked="{Binding IsApplicableE2_1}"></CheckBox>
-                <TextBox x:Name="TextBox2_1" Text="{Binding E2_1, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBox2_1" Text="{Binding E2_1, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBox2_1_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="E2_1" IsChecked="{Binding IsReplaceE2_1}"></RadioButton>
@@ -147,7 +147,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBox2_2" Content="軸力 2-2 (kN)" Width="150" IsChecked="{Binding IsApplicableE2_2}"></CheckBox>
-                <TextBox x:Name="TextBox2_2" Text="{Binding E2_2, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBox2_2" Text="{Binding E2_2, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBox2_2_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="E2_2" IsChecked="{Binding IsReplaceE2_2}"></RadioButton>
@@ -156,7 +156,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBox2_3" Content="軸力 2-3 (kN)" Width="150" IsChecked="{Binding IsApplicableE2_3}"></CheckBox>
-                <TextBox x:Name="TextBox2_3" Text="{Binding E2_3, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBox2_3" Text="{Binding E2_3, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBox2_3_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="E2_3" IsChecked="{Binding IsReplaceE2_3}"></RadioButton>
@@ -165,7 +165,7 @@
 
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBox2_4" Content="軸力 2-4 (kN)" Width="150" IsChecked="{Binding IsApplicableE2_4}"></CheckBox>
-                <TextBox x:Name="TextBox2_4" Text="{Binding E2_4, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
+                <TextBox x:Name="TextBox2_4" Text="{Binding E2_4, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBox2_4_TextChanged"></TextBox>
                 <RadioButton Content="変更" GroupName="E2_4" IsChecked="{Binding IsReplaceE2_4}"></RadioButton>

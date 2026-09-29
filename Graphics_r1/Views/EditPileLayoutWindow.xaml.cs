@@ -34,6 +34,7 @@ namespace PileDesign.Views
 
         public class EditPileLayoutEventArgs : EventArgs
         {
+            public bool Cancel { get; set; }
             public bool IsApplicablePileRefNo = false;
             public int SelectedPileRefNo = 1;
 
@@ -126,6 +127,7 @@ namespace PileDesign.Views
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!CommitNumericInputs()) return;
             EditPileLayoutEventArgs args = new()
             {
                 IsApplicablePileRefNo = viewModel.IsApplicablePileRefNo,
@@ -217,8 +219,38 @@ namespace PileDesign.Views
             };
 
             EditPileLayoutCompleted?.Invoke(this, args);
+            if (args.Cancel) return;
             viewModel.ResetStatus();
             Close();
+        }
+
+        internal bool CommitNumericInputs()
+        {
+            var inputs = new (CheckBox Check, TextBox Field)[]
+            {
+                (CheckBoxPileTopLevel, TextBoxPileTopLevel),
+                (CheckBoxFoundationBeamDeltaZc, TextBoxFoundationBeamDeltaZc),
+                (CheckBoxGroupPileFactor, TextBoxGroupPileFactor),
+                (CheckBoxVL, TextBoxVL),
+                (CheckBoxVLadd, TextBoxVLadd),
+                (CheckBox1_1, TextBox1_1),
+                (CheckBox1_2, TextBox1_2),
+                (CheckBox1_3, TextBox1_3),
+                (CheckBox1_4, TextBox1_4),
+                (CheckBox2_1, TextBox2_1),
+                (CheckBox2_2, TextBox2_2),
+                (CheckBox2_3, TextBox2_3),
+                (CheckBox2_4, TextBox2_4),
+            };
+            var enabled = System.Linq.Enumerable.Where(inputs, input => input.Check.IsChecked == true);
+            foreach (var input in enabled) input.Field.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            foreach (var input in enabled)
+                if (Validation.GetHasError(input.Field))
+                {
+                    input.Field.Focus();
+                    return false;
+                }
+            return true;
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)

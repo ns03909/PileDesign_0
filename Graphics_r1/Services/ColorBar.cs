@@ -37,6 +37,11 @@ namespace PileDesign.Services
 
     public class ColorBar
     {
+        private static readonly Color[] Palette =
+        [ Color.FromRgb(31,63,203), Color.FromRgb(31,159,232), Color.FromRgb(31,203,111),
+          Color.FromRgb(232,232,31), Color.FromRgb(232,159,31), Color.FromRgb(203,31,31) ];
+        private static readonly double[] PalettePositions = [0, 0.2, 0.4, 0.6, 0.8, 1];
+
         // カラーバーからのカラー取得メソッド
         public static Color GetColor(double valueToInterpolate)
         {
@@ -47,26 +52,11 @@ namespace PileDesign.Services
             // 旧 5 色 (#000088→#0000FF→#00FFFF→#FFFF00→#FF0000) は低値域が
             // 濃い indigo で潰れて変化が分かりにくかったため、起点を彩度の高い青に変更し
             // 中間に緑 (#1FCB6F) を挿入して 1/3 ずつのレンジで色相が切替わるようにした。
-            List<Color> colors =
-            [
-                (Color)ColorConverter.ConvertFromString("#1F3FCB"),  // 鮮青
-                (Color)ColorConverter.ConvertFromString("#1F9FE8"),  // シアン青
-                (Color)ColorConverter.ConvertFromString("#1FCB6F"),  // 緑
-                (Color)ColorConverter.ConvertFromString("#E8E81F"),  // 黄
-                (Color)ColorConverter.ConvertFromString("#E89F1F"),  // 橙
-                (Color)ColorConverter.ConvertFromString("#CB1F1F"),  // 赤
-            ];
-
-            List<double> points = [];
-            for (int i = 0; i < colors.Count; i++)
-            {
-                points.Add((double)i / (colors.Count - 1));
-            }
-            return InterpolateColor(points, colors, valueToInterpolate);
+            return InterpolateColor(PalettePositions, Palette, valueToInterpolate);
         }
 
         // 内挿
-        static Color InterpolateColor(List<double> points, List<Color> colors, double value)
+        static Color InterpolateColor(IReadOnlyList<double> points, IReadOnlyList<Color> colors, double value)
         {
             for (int i = 0; i < points.Count - 1; i++)
             {

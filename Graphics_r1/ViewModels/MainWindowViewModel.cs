@@ -75,6 +75,9 @@ namespace PileDesign.ViewModels
     /// <item><term>.SettlementGridCache.cs</term><description>沈下グリッドの描画キャッシュ</description></item>
     /// <item><term>.ConfirmDeleteAnalysisModel.cs</term><description>解析モデルを捨てる前の確認</description></item>
     /// <item><term>.Improvements.cs</term><description>速度改善のための細工</description></item>
+    /// <item><term>.EditingTransactions.cs</term><description>入力の編集を 1 段の Undo にまとめる入口と、パネルの値の検査</description></item>
+    /// <item><term>.IntersectionSearch.cs</term><description>基礎梁どうしの交点の探索 (分割の準備)</description></item>
+    /// <item><term>.SplitValidation.cs</term><description>梁の分割・移動距離の入力の検査</description></item>
     /// </list>
     ///
     /// <b>この一覧は増えたら足すこと。</b> 名前と中身が合っていないと、
@@ -486,6 +489,8 @@ namespace PileDesign.ViewModels
                 // SetProperty は ObservableObject のユーティリティ（CommunityToolkit）
                 if (SetProperty(ref _currentInputModel, value))
                 {
+                    Common.AxialForceModeContext.IsVariationMode = value?.IsAxialForceVariationMode ?? false;
+                    OnPropertyChanged(nameof(IsAxialForceVariationMode));
                     if (previous?.PileLayoutItems is { } previousPiles)
                     {
                         previousPiles.CollectionChanged -= PileLayoutItems_CollectionChanged;
@@ -550,6 +555,7 @@ namespace PileDesign.ViewModels
                     // CurrentInputModel 置換でこれも新インスタンスになるため、再アタッチしないと
                     // 沈下コンターキャッシュ無効化・荷重面標高/LoadingType の UI プロキシ更新が止まる。
                     SubscribeSettlementChanged();
+                    NotifyEmbedmentInputs();
 
                     // 注: UpdateWindowImmediate() はここでは呼ばない。
                     // 全ての代入元（ファイル読込、Undo/Redo等）がフラグリセット後に
@@ -925,7 +931,7 @@ namespace PileDesign.ViewModels
             var window = new TWindow { DataContext = viewModel };
 
             var appMain = Application.Current?.MainWindow;
-            if (appMain != null)
+            if (appMain != null && appMain != window)
             {
                 try { window.Owner = appMain; }
                 catch (InvalidOperationException) { }
@@ -1691,17 +1697,18 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void GroundInputCopyToSettlementGroundLayers()
         {
-            if (SelectedGroundInputModelNo == 0)
+            if (SelectedGroundInputModelNo < 1 || SelectedGroundInputModelNo > (CurrentInputModel.GroundsInput?.Count ?? 0))
             {
                 MessageService.Show("地盤データが存在しません。");
                 return;
             }
 
             // 沈下用の土層は群杭沈下だけが読む。水平解析の結果は陳腐化しない
-            SaveUndoState(AnalysisInputScope.Settlement);
 
             var groundInput = CurrentInputModel.GroundsInput[SelectedGroundInputModelNo - 1];
             double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+            if (groundInput.GroundLayers == null || groundInput.GroundLayers.Any(layer => !double.IsFinite(layer.BottomAltitude)))
+            { MessageService.Show("地盤の層境界に有限の標高が必要です。土層は変更しません。"); return; }
 
             // バッチ構築（1件ずつAddするとCollectionChanged連発で遅い）
             var list = new List<SettlementSoilLayer>();
@@ -1729,12 +1736,22 @@ namespace PileDesign.ViewModels
                     : list[i - 1].BottomAltitude - list[i].BottomAltitude;
             }
 
+            if (!double.IsFinite(loadingPlaneAltitude) || list.Any(layer =>
+                !double.IsFinite(layer.BottomAltitude) || !double.IsFinite(layer.Thickness) || layer.Thickness <= 0 ||
+                !double.IsFinite(layer.Ek) || layer.Ek <= 0 || !double.IsFinite(layer.PoissonsRatio)))
+            { MessageService.Show("コピーする土層の層厚・変形係数・ポアソン比を確認してください。土層は変更しません。"); return; }
+            var existing = CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
+            if (existing != null && existing.Count == list.Count && existing.Zip(list).All(pair =>
+                pair.First.BottomAltitude == pair.Second.BottomAltitude && pair.First.Thickness == pair.Second.Thickness &&
+                pair.First.Ek == pair.Second.Ek && pair.First.PoissonsRatio == pair.Second.PoissonsRatio &&
+                pair.First.Note == pair.Second.Note && pair.First.GranularityClass == pair.Second.GranularityClass)) return;
+            var before = CaptureInputEdit();
             // 一括代入（CollectionChanged は1回だけ）
             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers =
                 new ObservableCollection<SettlementSoilLayer>(list);
 
             // 変更: 即時実行
-            UpdateWindowImmediate();
+            CompleteInputEdit(before, scope: AnalysisInputScope.Settlement);
         }
 
         // 備考文字列: 元地盤層の Es0 と νs を記載
@@ -1751,12 +1768,11 @@ namespace PileDesign.ViewModels
         private void AutoOverturningMoment()
         {
             // Undoポイントを追加
-            SaveUndoState();
 
             var window = new AutoOverturningMomentWindow(this);
 
             var appMain = Application.Current?.MainWindow;
-            if (appMain != null)
+            if (appMain != null && appMain != window)
             {
                 try { window.Owner = appMain; }
                 catch (InvalidOperationException) { }
@@ -1794,11 +1810,13 @@ namespace PileDesign.ViewModels
             {
                 if (CurrentInputModel == null) return;
                 if (CurrentInputModel.IsAxialForceVariationMode == value) return;
+                var before = CaptureInputEdit();
                 CurrentInputModel.IsAxialForceVariationMode = value;
                 Common.AxialForceModeContext.IsVariationMode = value;
                 OnPropertyChanged();
                 // プロパティパネルの軸力ラベル/値表記が絶対⇔変動で切り替わるため再構築
                 UpdatePropertyPanel();
+                CompleteInputEdit(before, scope: AnalysisInputScope.None);
             }
         }
 
@@ -1843,14 +1861,15 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DeletePiles()
         {
-            if (!CheckAndResetAnalysisResults()) return;
 
             var col = CurrentInputModel.PileLayoutItems;
             var itemsToRemove = col.Where(x => x.IsSelected).ToList();
             if (itemsToRemove.Count == 0) return;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
+            var oldNumbers = col.ToDictionary(p => p.UniqueId, p => (p.No, p.PileNo));
 
             // Undoポイントを追加
-            SaveUndoState();
+            var before = CaptureInputEdit();
 
             // 削除対象の杭に接合された梁要素も同時に削除
             var beams = CurrentInputModel.FoundationBeamInput?.Beams;
@@ -1870,8 +1889,9 @@ namespace PileDesign.ViewModels
             foreach (var item in itemsToRemove)
                 col.Remove(item);
 
+            RemapRemainingPileLinks(oldNumbers);
             UpdatePileLayoutNo();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         /// <summary>
@@ -1893,20 +1913,20 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DeleteBeams()
         {
-            if (!CheckAndResetAnalysisResults()) return;
 
             var beams = CurrentInputModel?.FoundationBeamInput?.Beams;
             if (beams == null) return;
             var toRemove = beams.Where(b => b.IsSelected).ToList();
             if (toRemove.Count == 0) return;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
 
-            SaveUndoState();
+            var before = CaptureInputEdit();
             foreach (var beam in toRemove)
                 beams.Remove(beam);
 
             // 旧 No プロパティ廃止: 番号 = 位置インデックスで自動的に追従
 
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         /// <summary>
@@ -1929,7 +1949,6 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void ConvertNodeType()
         {
-            if (!CheckAndResetAnalysisResults()) return;
 
             var selectedPiles = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
             var selectedNodes = CurrentInputModel.InputNodes?
@@ -1938,7 +1957,11 @@ namespace PileDesign.ViewModels
 
             if (selectedPiles.Count == 0 && selectedNodes.Count == 0) return;
 
-            SaveUndoState();
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
+            var before = CaptureInputEdit();
+            var oldNumbers = CurrentInputModel.PileLayoutItems.ToDictionary(p => p.UniqueId, p => (p.No, p.PileNo));
+            var replacements = new Dictionary<(NodeReferenceType Type, Guid Id), (NodeReferenceType Type, Guid Id)>();
+            var deltaZc = GetMostCommonDeltaZc();
 
             // 杭接合節点 → 一般節点: 接合節点位置 (= pile.Z) に一般節点を配置 (v2 セマンティクス)
             foreach (var pile in selectedPiles)
@@ -1952,13 +1975,13 @@ namespace PileDesign.ViewModels
                     Z = pile.Z,
                 };
 
+                replacements[(NodeReferenceType.PileLayout, pile.UniqueId)] = (NodeReferenceType.GeneralNode, newNode.UniqueId);
                 CurrentInputModel.PileLayoutItems.Remove(pile);
                 CurrentInputModel.InputNodes.Add(newNode);
             }
 
             // 一般節点 → 杭接合節点: 一般節点 (X,Y,Z) をそのまま接合節点とする (v2 セマンティクス)
             // ΔZc は既存杭配置の最頻値を使用（杭配置がない場合はデフォルト 1.0）
-            var deltaZc = GetMostCommonDeltaZc();
             foreach (var node in selectedNodes)
             {
                 var newPile = new PileLayoutDataItem
@@ -1972,13 +1995,21 @@ namespace PileDesign.ViewModels
                 };
                 newPile.SetMainWindowViewModel(this);
 
+                replacements[(NodeReferenceType.GeneralNode, node.UniqueId)] = (NodeReferenceType.PileLayout, newPile.UniqueId);
                 CurrentInputModel.InputNodes.Remove(node);
                 CurrentInputModel.PileLayoutItems.Add(newPile);
             }
 
+            foreach (var beam in CurrentInputModel.FoundationBeamInput?.Beams ?? [])
+            {
+                if (replacements.TryGetValue((beam.NodeI_Type, beam.NodeI_Id), out var i)) (beam.NodeI_Type, beam.NodeI_Id) = i;
+                if (replacements.TryGetValue((beam.NodeJ_Type, beam.NodeJ_Id), out var j)) (beam.NodeJ_Type, beam.NodeJ_Id) = j;
+            }
+            RemapRemainingPileLinks(oldNumbers);
             UpdatePileLayoutNo();
+            for (int i = 0; i < CurrentInputModel.InputNodes.Count; i++) CurrentInputModel.InputNodes[i].No = i + 1;
             if (selectedNodes.Count > 0) RequestGenerateSoilPiles();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         /// <summary>
@@ -2317,7 +2348,6 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel?.InputNodes == null) return;
 
-            if (!CheckAndResetAnalysisResults()) return;
 
             // 次の節点位置を決定
             Point3D nextPoint3D;
@@ -2342,9 +2372,10 @@ namespace PileDesign.ViewModels
                 Z = nextPoint3D.Z
             };
 
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
+            var before = CaptureInputEdit();
             CurrentInputModel.InputNodes.Add(newNode);
-            SaveUndoState();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         /// <summary>
@@ -2355,31 +2386,11 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel?.InputNodes == null) return;
 
-            if (!CheckAndResetAnalysisResults()) return;
 
             const double tol = 1e-6;
             var nodes = CurrentInputModel.InputNodes;
-            var toRemove = new List<InputNode>();
-            // 削除される節点 → 残す節点 のマッピング
-            var mergeMap = new Dictionary<Guid, Guid>();
-
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                if (toRemove.Contains(nodes[i])) continue;
-
-                for (int j = i + 1; j < nodes.Count; j++)
-                {
-                    if (toRemove.Contains(nodes[j])) continue;
-
-                    if (Math.Abs(nodes[i].X - nodes[j].X) < tol &&
-                        Math.Abs(nodes[i].Y - nodes[j].Y) < tol &&
-                        Math.Abs(nodes[i].Z - nodes[j].Z) < tol)
-                    {
-                        mergeMap[nodes[j].UniqueId] = nodes[i].UniqueId;
-                        toRemove.Add(nodes[j]);
-                    }
-                }
-            }
+            var mergeMap = DuplicateNodePlanner.Build(nodes.ToArray(), tol);
+            var toRemove = nodes.Where(n => mergeMap.ContainsKey(n.UniqueId)).ToList();
 
             if (toRemove.Count == 0)
             {
@@ -2387,7 +2398,13 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            SaveUndoState();
+            Guid Resolve(Guid id) => mergeMap.GetValueOrDefault(id, id);
+            foreach (var beam in CurrentInputModel.FoundationBeamInput?.Beams ?? [])
+                if (beam.NodeI_Type == NodeReferenceType.GeneralNode && beam.NodeJ_Type == NodeReferenceType.GeneralNode &&
+                    beam.NodeI_Id != beam.NodeJ_Id && Resolve(beam.NodeI_Id) == Resolve(beam.NodeJ_Id))
+                { MessageService.Show("節点を統合すると長さ0の梁が発生します。接続を確認してください。節点は変更しません。"); return; }
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
+            var before = CaptureInputEdit();
 
             // 梁要素の参照を付け替え
             var beams = CurrentInputModel.FoundationBeamInput?.Beams;
@@ -2416,7 +2433,7 @@ namespace PileDesign.ViewModels
             for (int i = 0; i < nodes.Count; i++)
                 nodes[i].No = i + 1;
 
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
 
             MessageService.Show(
                 $"{toRemove.Count} 個の重複一般節点を削除しました。",
@@ -2429,7 +2446,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void CopyInputNode(InputNode? sourceNode)
         {
-            if (sourceNode == null) return;
+            if (sourceNode == null || !CurrentInputModel.InputNodes.Contains(sourceNode)) return;
 
             var newNode = new InputNode
             {
@@ -2441,9 +2458,10 @@ namespace PileDesign.ViewModels
                 LinkedPileNo = sourceNode.LinkedPileNo
             };
 
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
+            var before = CaptureInputEdit();
             CurrentInputModel.InputNodes.Add(newNode);
-            SaveUndoState();
-            RequestUpdateWindow();
+            CompleteInputEdit(before);
         }
 
         /// <summary>
@@ -2452,7 +2470,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DeleteInputNode(InputNode? node)
         {
-            if (node == null) return;
+            if (node == null || !CurrentInputModel.InputNodes.Contains(node)) return;
 
             // 接続されている一般梁要素を抽出 (NodeI/J_Type=GeneralNode かつ Id が一致するもの)
             var beams = CurrentInputModel.FoundationBeamInput?.Beams;
@@ -2487,7 +2505,8 @@ namespace PileDesign.ViewModels
             {
                 // Undo スナップショットは「削除前」の状態を保存する必要があるため、
                 // 実際の Remove 操作より先に呼ぶ。
-                SaveUndoState();
+                if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
+                var before = CaptureInputEdit();
 
                 // 接続梁を先に除去 → 節点を除去
                 if (beams != null)
@@ -2496,7 +2515,7 @@ namespace PileDesign.ViewModels
                         beams.Remove(beam);
                 }
                 CurrentInputModel.InputNodes.Remove(node);
-                RequestUpdateWindow();
+                CompleteInputEdit(before);
             }
         }
 

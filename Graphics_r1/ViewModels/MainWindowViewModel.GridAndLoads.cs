@@ -52,7 +52,21 @@ namespace PileDesign.ViewModels
         public double GridSelectionDistance
         {
             get => _gridSelectionDistance;
-            set => SetProperty(ref _gridSelectionDistance, value);
+            set
+            {
+                _gridSelectionDistanceProblem = !double.IsFinite(value) || value < 0 ? "選択距離には有限の0以上の数値を入力してください。" : null;
+                if (_gridSelectionDistanceProblem != null) throw new ArgumentOutOfRangeException(nameof(value), _gridSelectionDistanceProblem);
+                SetProperty(ref _gridSelectionDistance, value);
+            }
+        }
+
+        private string? _gridSelectionDistanceProblem;
+        internal bool GridSelectionDistanceInputHasError { get; set; }
+        private bool ValidateGridSelection(GridDataItem grid)
+        {
+            if (GridSelectionDistanceInputHasError || _gridSelectionDistanceProblem != null || !double.IsFinite(grid.Coord))
+            { MessageService.Show("通り心の座標・選択距離の入力を確認してください。選択は変更しません。"); return false; }
+            return true;
         }
 
         // GridX追加メソッド
@@ -60,7 +74,6 @@ namespace PileDesign.ViewModels
         private void AddGridX()
         {
             // Undoポイントを追加（1回の追加を1ステップで戻せるようにする）
-            TrySaveUndoSnapshotSafely();
 
             // 防波堤: null の場合はここで生成
             CurrentInputModel.GridXItems ??= [];
@@ -72,7 +85,6 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AddGridY()
         {
-            TrySaveUndoSnapshotSafely();
             CurrentInputModel.GridYItems ??= [];
             AddGrid(CurrentInputModel.GridYItems, "Y1", 7.2);
             OnPropertyChanged(nameof(CurrentInputModel.GridYItems));
@@ -81,47 +93,48 @@ namespace PileDesign.ViewModels
         // Grid追加メソッド
         private void AddGrid(ObservableCollection<GridDataItem> collection, string name, double spacing)
         {
-            collection.Add(new GridDataItem());
-            if (collection.Count == 1)
-                collection[^1].Name = name;
-            // 複数のアイテムがある場合、前のアイテムの設定をコピー
-            else if (collection.Count == 2)
+            var added = new GridDataItem
             {
-                collection[^1].Spacing = spacing;
-                collection[^1].Name = StringTransformer.TransformLastCharacter(collection[^2].Name);
-            }
-            else if (collection.Count >= 3)
-            {
-                collection[^1].Spacing = collection[^2].Spacing;
-                collection[^1].Name = StringTransformer.TransformLastCharacter(collection[^2].Name);
-            }
+                Name = collection.Count == 0 ? name : StringTransformer.TransformLastCharacter(collection[^1].Name),
+                Spacing = collection.Count < 2 ? spacing : collection[^1].Spacing
+            };
+            try { CalculateGridCoordinates(collection.Concat(new[] { added }).ToArray()); }
+            catch (ArgumentException ex) { MessageService.ShowInputRejected(ex); return; }
+            var before = CaptureInputEdit();
+            collection.Add(added);
             RecalculateGrid(collection);
-            // 変更後（以下の箇所で適用）
-            RequestUpdateWindow();
+            CompleteInputEdit(before, scope: AnalysisInputScope.None);
         }
 
-        private void RecalculateGrid(Collection<GridDataItem> collection)
+        internal static double[] CalculateGridCoordinates(IReadOnlyList<GridDataItem> items)
         {
+            var coordinates = new double[items.Count];
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (!double.IsFinite(items[i].Coord) || !double.IsFinite(items[i].Spacing))
+                    throw new ArgumentException("通り心の座標・間隔には有限の数値を入力してください。");
+                coordinates[i] = i == 0 ? items[i].Coord : coordinates[i-1] + items[i].Spacing;
+                if (!double.IsFinite(coordinates[i])) throw new ArgumentException("通り心の累積座標が数値の範囲外です。座標は更新しません。");
+            }
+            return coordinates;
+        }
+
+        private bool RecalculateGrid(Collection<GridDataItem> collection)
+        {
+            double[] coordinates;
+            try { coordinates = CalculateGridCoordinates(collection.ToArray()); }
+            catch (ArgumentException ex) { MessageService.ShowInputRejected(ex); return false; }
             for (int i = 0; i < collection.Count; i++)
             {
-                if (i == 0)
-                {
-                    collection[i].Spacing = 0;
-                    collection[i].SpacingForeground = Brushes.Gray;
-                    collection[i].CoordForeground = Brushes.Black;
-                }
-                else
-                {
-                    collection[i].Coord = collection[i - 1].Coord + collection[i].Spacing;
-                    collection[i].SpacingForeground = Brushes.Black;
-                    collection[i].CoordForeground = Brushes.Gray;
-                }
+                collection[i].Coord = coordinates[i];
+                if (i == 0) collection[i].Spacing = 0;
+                collection[i].SpacingForeground = i == 0 ? Brushes.Gray : Brushes.Black;
+                collection[i].CoordForeground = i == 0 ? Brushes.Black : Brushes.Gray;
             }
-            // 変更: デバウンス付きで更新
             RequestUpdateWindow();
+            return true;
         }
 
-        // 矩形荷重追加メソッド
         [RelayCommand]
         private void AddRectLoad()
         {
@@ -129,7 +142,7 @@ namespace PileDesign.ViewModels
             if (!ConfirmAnalysisConditionChange("両方", "矩形荷重 (追加)")) return;
 
             // Undoポイントを追加
-            TrySaveUndoSnapshotSafely();
+            var before = CaptureInputEdit();
 
             CurrentInputModel.PileGroupSettlement.RectLoads.Add(new RectLoad());
 
@@ -137,7 +150,7 @@ namespace PileDesign.ViewModels
             SwitchToAnyRectIfCrossType();
 
             IsGroupPileSettlementAnalysisDone = false;
-            RequestUpdateWindow();
+            CompleteInputEdit(before, scope: AnalysisInputScope.Settlement);
         }
 
         /// <summary>
@@ -153,6 +166,38 @@ namespace PileDesign.ViewModels
             var piles = CurrentInputModel?.PileLayoutItems;
             if (pgs == null || piles == null || piles.Count == 0) return;
 
+            var soilPiles = CurrentInputModel.ElementDivision?.SoilPiles;
+            var newList = new System.Collections.ObjectModel.ObservableCollection<RectLoad>();
+            try
+            {
+                foreach (var pile in piles)
+                {
+                    double radius = 0;
+                    if (soilPiles != null && pile.SoilPileAltNo - 1 >= 0 && pile.SoilPileAltNo - 1 < soilPiles.Count)
+                        radius = soilPiles[pile.SoilPileAltNo - 1].GroupPileLoadDia * 0.5;
+                    if (!double.IsFinite(radius) || radius < 0)
+                        throw new ArgumentException("荷重面等価径は有限の0以上の値にしてください。矩形荷重は変更しません。");
+                    double side = radius > 0 ? Math.Sqrt(Math.PI) * radius : 2.0;
+                    double half = side * 0.5;
+                    double qa = pile.AxialForceVL0 + pile.AxialForceVLAdditional;
+                    var load = new RectLoad
+                    {
+                        X1 = pile.Point3D.X - half,
+                        X2 = pile.Point3D.X + half,
+                        Y1 = pile.Point3D.Y - half,
+                        Y2 = pile.Point3D.Y + half,
+                        QA = qa,
+                        LinkedPileNo = pile.PileNo,
+                    };
+                    if (!double.IsFinite(qa) || !double.IsFinite(load.X1) || !double.IsFinite(load.X2) ||
+                        !double.IsFinite(load.Y1) || !double.IsFinite(load.Y2) ||
+                        !double.IsFinite(load.A) || load.DX <= 0 || load.DY <= 0 || load.A <= 0 || !double.IsFinite(load.Q))
+                        throw new ArgumentException("生成する矩形荷重の座標・寸法・荷重が数値の範囲外です。矩形荷重は変更しません。");
+                    newList.Add(load);
+                }
+            }
+            catch (ArgumentException ex) { MessageService.ShowInputRejected(ex); return; }
+
             int existingCount = pgs.RectLoads?.Count ?? 0;
             if (existingCount > 0)
             {
@@ -164,35 +209,14 @@ namespace PileDesign.ViewModels
                 if (res != MessageBoxResult.OK) return;
             }
 
-            TrySaveUndoSnapshotSafely();
-
-            var soilPiles = CurrentInputModel.ElementDivision?.SoilPiles;
-            var newList = new System.Collections.ObjectModel.ObservableCollection<RectLoad>();
-            foreach (var pile in piles)
-            {
-                double radius = 0;
-                if (soilPiles != null && pile.SoilPileAltNo - 1 >= 0 && pile.SoilPileAltNo - 1 < soilPiles.Count)
-                    radius = soilPiles[pile.SoilPileAltNo - 1].GroupPileLoadDia * 0.5;
-                double side = radius > 0 ? Math.Sqrt(Math.PI) * radius : 2.0;
-                double half = side * 0.5;
-                double qa = pile.AxialForceVL0 + pile.AxialForceVLAdditional;
-                newList.Add(new RectLoad
-                {
-                    X1 = pile.Point3D.X - half,
-                    X2 = pile.Point3D.X + half,
-                    Y1 = pile.Point3D.Y - half,
-                    Y2 = pile.Point3D.Y + half,
-                    QA = qa,
-                    LinkedPileNo = pile.PileNo,
-                });
-            }
+            var before = CaptureInputEdit();
             pgs.RectLoads = newList;
 
             // 反復解析タブ用に LoadingType を「個別矩形（基礎梁考慮）」へ確定
             pgs.LoadingType = "個別矩形（基礎梁考慮）";
 
             IsGroupPileSettlementAnalysisDone = false;
-            RequestUpdateWindow();
+            CompleteInputEdit(before, scope: AnalysisInputScope.Settlement);
             ShowToast($"矩形荷重をリセットしました ({newList.Count} 件)。");
         }
 
@@ -222,6 +246,14 @@ namespace PileDesign.ViewModels
             var piles = CurrentInputModel.PileLayoutItems;
             var soilPiles = CurrentInputModel.ElementDivision?.SoilPiles;
             if (piles == null || piles.Count == 0 || soilPiles == null || soilPiles.Count == 0) return;
+
+            var duplicateLoadProblem = SettlementAnalysisService.DescribeDuplicateLinkedLoads(
+                CurrentInputModel.PileGroupSettlement);
+            if (duplicateLoadProblem != null)
+            {
+                StatusMessage = duplicateLoadProblem;
+                return;
+            }
 
             var generated = SettlementAnalysisService.BuildAutoCrossRectLoads(
                 CurrentInputModel.PileGroupSettlement, piles, soilPiles, VerticalBeamCaseResults);
@@ -260,7 +292,7 @@ namespace PileDesign.ViewModels
         {
             if (!ConfirmAnalysisConditionChange("両方", "土層 (追加)")) return;
 
-            TrySaveUndoSnapshotSafely();
+            var before = CaptureInputEdit();
 
             double bottomAlt;
             double ek;
@@ -293,7 +325,7 @@ namespace PileDesign.ViewModels
             UpdateSettlementSoilLayer(); // 更新
 
             // 変更後（以下の箇所で適用）
-            RequestUpdateWindow();
+            CompleteInputEdit(before, scope: AnalysisInputScope.Settlement);
         }
 
         // 全土層削除メソッド
@@ -304,7 +336,7 @@ namespace PileDesign.ViewModels
             if (settlement == null)
                 return;
 
-            TrySaveUndoSnapshotSafely();
+            var before = CaptureInputEdit();
 
             // 土層コレクションをクリア
             settlement.SettlementSoilLayers?.Clear();
@@ -334,19 +366,21 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(CurrentInputModel));
 
             // 変更後（以下の箇所で適用）
-            RequestUpdateWindow();
+            CompleteInputEdit(before, scope: AnalysisInputScope.Settlement);
         }
 
         // 群杭沈下検討用検討用土層削除メソッド
         [RelayCommand]
         private void DeleteSettlementSoilLayer(object sender)
         {
+            var layers = CurrentInputModel?.PileGroupSettlement?.SettlementSoilLayers;
+            if (sender is not SettlementSoilLayer layer || layers == null || !layers.Contains(layer)) return;
             if (!ConfirmAnalysisConditionChange("両方", "土層 (削除)")) return;
 
-            DeleteCollectionItem(
-                sender,
-                CurrentInputModel.PileGroupSettlement.SettlementSoilLayers,
-                () => UpdateSettlementSoilLayer());
+            var before = CaptureInputEdit();
+            layers.Remove(layer);
+            UpdateSettlementSoilLayer();
+            CompleteInputEdit(before, scope: AnalysisInputScope.Settlement);
         }
 
         // 群杭沈下検討用検討用土層データグリッド更新メソッド
@@ -392,31 +426,16 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
-        private void DeleteGridX(object sender)
-        {
-            // Undoポイント
-            TrySaveUndoSnapshotSafely();
+        private void DeleteGridX(object sender) => DeleteGridWithHistory(sender, CurrentInputModel.GridXItems);
 
-            DeleteGridItem(sender, CurrentInputModel.GridXItems);
-            RecalculateGrid(CurrentInputModel.GridXItems);
-            // 変更後（以下の箇所で適用）
-            RequestUpdateWindow();
-        }
         [RelayCommand]
-        private void DeleteGridY(object sender)
-        {
-            // Undoポイント
-            TrySaveUndoSnapshotSafely();
+        private void DeleteGridY(object sender) => DeleteGridWithHistory(sender, CurrentInputModel.GridYItems);
 
-            DeleteGridItem(sender, CurrentInputModel.GridYItems);
-            RecalculateGrid(CurrentInputModel.GridYItems);
-            // 変更後（以下の箇所で適用）
-            RequestUpdateWindow();
-        }
         [RelayCommand]
         private void SelectGridX(object parameter)
         {
             if (parameter is not GridDataItem gridItem) return;
+            if (!ValidateGridSelection(gridItem)) return;
             double coord = gridItem.Coord;
             double tolerance = GridSelectionDistance;
 
@@ -452,6 +471,7 @@ namespace PileDesign.ViewModels
         private void SelectGridY(object parameter)
         {
             if (parameter is not GridDataItem gridItem) return;
+            if (!ValidateGridSelection(gridItem)) return;
             double coord = gridItem.Coord;
             double tolerance = GridSelectionDistance;
 
@@ -539,24 +559,30 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private static void DeleteGridItem(object sender, ObservableCollection<GridDataItem> collection)
+        private void DeleteGridWithHistory(object sender, ObservableCollection<GridDataItem> collection)
         {
-            // sender が GridDataItem であることを確認
-            if (sender is not GridDataItem itemToDelete) return;
-
-            // コレクションから削除
-            collection.Remove(itemToDelete);
+            if (sender is not GridDataItem item || collection == null || !collection.Contains(item)) return;
+            try { CalculateGridCoordinates(collection.Where(g => !ReferenceEquals(g,item)).ToArray()); }
+            catch (ArgumentException ex) { MessageService.ShowInputRejected(ex); return; }
+            var before = CaptureInputEdit();
+            collection.Remove(item);
+            RecalculateGrid(collection);
+            CompleteInputEdit(before, scope: AnalysisInputScope.None);
         }
 
         [RelayCommand]
         private void DeleteRectLoad(object sender)
         {
+            var loads = CurrentInputModel?.PileGroupSettlement?.RectLoads;
+            if (sender is not RectLoad load || loads == null || !loads.Contains(load)) return;
             // 解析結果が保存されている場合は警告 (両ルートとも RectLoads を共有するため両方破棄)
             if (!ConfirmAnalysisConditionChange("両方", "矩形荷重 (削除)")) return;
 
-            DeleteCollectionItem(sender, CurrentInputModel.PileGroupSettlement.RectLoads, immediate: true);
+            var before = CaptureInputEdit();
+            if (!loads.Remove(load)) return;
             // ユーザ手動削除時は個別十字系から「任意矩形」に切替
             SwitchToAnyRectIfCrossType();
+            CompleteInputEdit(before, scope: AnalysisInputScope.Settlement);
         }
     }
 }

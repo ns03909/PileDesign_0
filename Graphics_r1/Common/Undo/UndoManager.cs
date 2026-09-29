@@ -264,6 +264,18 @@ public sealed class UndoManager
     /// </summary>
     public void PushState(object state) => SaveState(state, null);
 
+    /// <summary>Records one complete edit, including its baseline and resulting state.</summary>
+    public void SaveSnapshotEdit(object before, object after, string? description = null)
+    {
+        if (before == null || after == null) return;
+        DiscardFuture();
+        if (_currentIndex >= 0)
+            _history[_currentIndex] = _history[_currentIndex] with { State = before };
+        else
+            SaveState(before, description);
+        SaveState(after, description);
+    }
+
     /// <summary>
     /// 履歴の特定インデックスへジャンプします (D.16 HistoryPanel から呼ばれる)。
     /// _currentIndex のみ更新するので、呼び出し側は CurrentState を参照して

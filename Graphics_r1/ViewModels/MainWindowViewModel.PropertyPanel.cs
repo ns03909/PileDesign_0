@@ -268,16 +268,14 @@ namespace PileDesign.ViewModels
                         "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
+                if (!ValidatePanelValue(item, newVal)) { item.SetValueSilent(getter().ToString(format)); return; }
                 var oldVal = getter();
                 if (Math.Abs(newVal - oldVal) < 1e-9) return;
-                if (!CheckAndResetAnalysisResults())
+                if (!TryApplyInputEdit(true, () => setter(newVal), confirmElementSplit: true))
                 {
                     item.SetValueSilent(oldVal.ToString(format));
                     return;
                 }
-                SaveUndoState();
-                setter(newVal);
-                RequestUpdateWindow();
             };
         }
 
@@ -292,15 +290,13 @@ namespace PileDesign.ViewModels
                     item.SetValueSilent(getter().ToString());
                     return;
                 }
+                if (item.Options != null && !item.Options.Contains(newVal.ToString())) { item.SetValueSilent(getter().ToString()); return; }
                 if (newVal == getter()) return;
-                if (!CheckAndResetAnalysisResults())
+                if (!TryApplyInputEdit(true, () => setter(newVal), confirmElementSplit: true))
                 {
                     item.SetValueSilent(getter().ToString());
                     return;
                 }
-                SaveUndoState();
-                setter(newVal);
-                RequestUpdateWindow();
             };
         }
 
@@ -528,11 +524,13 @@ namespace PileDesign.ViewModels
                 "", PropertyInputType.ComboBox,
                 (item, rawValue) =>
                 {
-                    if (!int.TryParse(rawValue, out var newVal)) return;
-                    if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(commonPileBodyNo.Count == 1 ? commonPileBodyNo[0].ToString() : ""); return; }
-                    SaveUndoState();
+                    if (!int.TryParse(rawValue, out int newVal)) return;
+                    if (item.Options != null && !item.Options.Contains(newVal.ToString())) { item.SetValueSilent(CommonOrVarious(piles.Select(p => p.PileBodyNo))); return; }
+                    if (piles.All(p => p.PileBodyNo == newVal)) return;
+                    if (!ConfirmDiscardInvalidatedByInputChange(true)) { item.SetValueSilent(commonPileBodyNo.Count == 1 ? commonPileBodyNo[0].ToString() : ""); return; }
+                    var before = CaptureInputEdit();
                     foreach (var p in piles) p.PileBodyNo = newVal;
-                    RequestUpdateWindow();
+                    CompleteInputEdit(before);
                 }, pileBodyOptions,
                 description: pileBodyDesc));
 
@@ -548,11 +546,13 @@ namespace PileDesign.ViewModels
                 "", PropertyInputType.ComboBox,
                 (item, rawValue) =>
                 {
-                    if (!int.TryParse(rawValue, out var newVal)) return;
-                    if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(commonGroundNo.Count == 1 ? commonGroundNo[0].ToString() : ""); return; }
-                    SaveUndoState();
+                    if (!int.TryParse(rawValue, out int newVal)) return;
+                    if (item.Options != null && !item.Options.Contains(newVal.ToString())) { item.SetValueSilent(CommonOrVarious(piles.Select(p => p.GroundNo))); return; }
+                    if (piles.All(p => p.GroundNo == newVal)) return;
+                    if (!ConfirmDiscardInvalidatedByInputChange(true)) { item.SetValueSilent(commonGroundNo.Count == 1 ? commonGroundNo[0].ToString() : ""); return; }
+                    var before = CaptureInputEdit();
                     foreach (var p in piles) p.GroundNo = newVal;
-                    RequestUpdateWindow();
+                    CompleteInputEdit(before);
                 }, groundOptions,
                 description: groundDesc));
 
@@ -563,10 +563,12 @@ namespace PileDesign.ViewModels
                 (item, rawValue) =>
                 {
                     if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))); return; }
-                    if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))); return; }
-                    SaveUndoState();
+                    if (!ValidatePanelValue(item, newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))); return; }
+                    if (piles.All(p => p.GroupPileFactor == newVal)) return;
+                    if (!ConfirmDiscardInvalidatedByInputChange(true)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))); return; }
+                    var before = CaptureInputEdit();
                     foreach (var p in piles) p.GroupPileFactor = newVal;
-                    RequestUpdateWindow();
+                    CompleteInputEdit(before);
                 }));
 
             // 杭間隔比（読み取り専用）
@@ -579,10 +581,12 @@ namespace PileDesign.ViewModels
                 (item, rawValue) =>
                 {
                     if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc))); return; }
-                    if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc))); return; }
-                    SaveUndoState();
+                    if (!ValidatePanelValue(item, newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc))); return; }
+                    if (piles.All(p => p.FoundationBeamDeltaZc == newVal)) return;
+                    if (!ConfirmDiscardInvalidatedByInputChange(true)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc))); return; }
+                    var before = CaptureInputEdit();
                     foreach (var p in piles) p.FoundationBeamDeltaZc = newVal;
-                    RequestUpdateWindow();
+                    CompleteInputEdit(before);
                 }));
 
             // 軸力 VL (total/each 切替、読み取り専用) — ディープブルー
@@ -623,10 +627,12 @@ namespace PileDesign.ViewModels
                         (item, rawValue) =>
                         {
                             if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
-                            if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
-                            SaveUndoState();
+                    if (!ValidatePanelValue(item, newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                    if (piles.All(p => getter(p) == newVal)) return;
+                            if (!ConfirmDiscardInvalidatedByInputChange(true)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                            var before = CaptureInputEdit();
                             foreach (var p in piles) setter(p, newVal);
-                            RequestUpdateWindow();
+                            CompleteInputEdit(before);
                         },
                         nameColor: "#238966"));
                 }
@@ -658,10 +664,12 @@ namespace PileDesign.ViewModels
                         (item, rawValue) =>
                         {
                             if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
-                            if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
-                            SaveUndoState();
+                    if (!ValidatePanelValue(item, newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                    if (piles.All(p => getter(p) == newVal)) return;
+                            if (!ConfirmDiscardInvalidatedByInputChange(true)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                            var before = CaptureInputEdit();
                             foreach (var p in piles) setter(p, newVal);
-                            RequestUpdateWindow();
+                            CompleteInputEdit(before);
                         },
                         nameColor: "#E95541"));
                 }

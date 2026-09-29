@@ -296,38 +296,26 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
-                // Undoポイントを追加
-                SaveUndoState();
-
                 // MoveWindowをインスタンス化して表示
                 MoveCopyWindow moveCopyWindow = new();
 
-                var tcs = new TaskCompletionSource<bool>();
-                bool operationExecuted = false;
+                Task? operationTask = null;
 
-                moveCopyWindow.MoveCopyCompleted += async (sender, e) =>
+                moveCopyWindow.MoveCopyCompleted += (sender, e) =>
                 {
-                    operationExecuted = true;
-                    await MoveCopyWindow_MoveCopyCompletedAsync(sender, e);
-                    tcs.TrySetResult(true);
-                };
-
-                // ウィンドウが閉じられたら（キャンセル含む）TaskCompletionSourceを完了させる
-                moveCopyWindow.Closed += (sender, e) =>
-                {
-                    tcs.TrySetResult(false);
+                    operationTask = MoveCopyWindow_MoveCopyCompletedAsync(sender, e);
                 };
 
                 moveCopyWindow.ShowDialog(); // モーダルダイアログとして表示
 
                 // 操作が実行された場合のみ待機と更新を行う
-                if (operationExecuted)
+                if (operationTask != null)
                 {
                     // ★ 待機カーソルを表示
                     Mouse.OverrideCursor = Cursors.Wait;
                     try
                     {
-                        await tcs.Task; // 非同期に完了を待つ
+                        await operationTask;
 
                         // コレクション自体の変更通知
                         OnPropertyChanged(nameof(GroupPileSettlementXMin));
@@ -353,19 +341,87 @@ namespace PileDesign.ViewModels
             }
         }
 
+        internal string? DescribeMoveCopyProblem(MoveCopyEventArgs e)
+        {
+            if (e.IsBeamsIncluded && EditDistanceInputHasError) return "距離欄の入力エラーを修正してください。";
+            if (e.IsBeamsIncluded && (_editDistanceThresholdProblem ?? MoveCopyValidation.DescribeToleranceProblem(EditDistanceThreshold)) is string toleranceProblem)
+                return toleranceProblem;
+            var positions = new List<Point3D>();
+            if (e.IsInputNodesIncluded)
+                positions.AddRange((CurrentInputModel.InputNodes ?? []).Where(n => n.IsSelected).Select(n => n.Point3D));
+            if (e.IsPileLayoutIncluded)
+                positions.AddRange((CurrentInputModel.PileLayoutItems ?? []).Where(p => p.IsSelected).Select(p => p.Point3D));
+            if (e.IsBeamsIncluded)
+                foreach (var beam in CurrentInputModel.FoundationBeamInput?.Beams?.Where(b => b.IsSelected) ?? [])
+                {
+                    var i = GetNodeAttachPosition(beam.NodeI_Type, beam.NodeI_Id);
+                    var j = GetNodeAttachPosition(beam.NodeJ_Type, beam.NodeJ_Id);
+                    if (!i.HasValue || !j.HasValue)
+                    {
+                        int beamNo = CurrentInputModel.FoundationBeamInput.Beams.IndexOf(beam) + 1;
+                        string endpoints = !i.HasValue && !j.HasValue ? "I・J" : !i.HasValue ? "I" : "J";
+                        return $"梁 {beamNo} の端点 {endpoints} の参照先が存在しません。接続先を修正してから移動・コピーしてください。";
+                    }
+                    if (i.HasValue) positions.Add(i.Value);
+                    if (j.HasValue) positions.Add(j.Value);
+                }
+            if (e.IsCopy)
+            {
+                long itemsPerRepetition = (e.IsInputNodesIncluded ? (long)(CurrentInputModel.InputNodes?.Count(n => n.IsSelected) ?? 0) : 0)
+                    + (e.IsPileLayoutIncluded ? (long)(CurrentInputModel.PileLayoutItems?.Count(p => p.IsSelected) ?? 0) : 0)
+                    + (e.IsBeamsIncluded ? 3L * (CurrentInputModel.FoundationBeamInput?.Beams?.Count(b => b.IsSelected) ?? 0) : 0);
+                var countProblem = MoveCopyValidation.DescribeCopyCountProblem(itemsPerRepetition, e.RepetitionNumber);
+                if (countProblem != null) return countProblem;
+            }
+            return MoveCopyValidation.DescribeProblem(positions, e.DX, e.DY, e.DZ, e.IsCopy ? e.RepetitionNumber : 1);
+        }
+
+        private bool ValidateEditDistanceThreshold()
+        {
+            var problem = EditDistanceInputHasError ? "距離欄の入力エラーを修正してください。" : _editDistanceThresholdProblem ?? MoveCopyValidation.DescribeToleranceProblem(EditDistanceThreshold);
+            if (problem == null) return true;
+            MessageService.Show(problem, "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
         private async Task MoveCopyWindow_MoveCopyCompletedAsync(object sender, MoveCopyEventArgs e)
         {
+            var problem = DescribeMoveCopyProblem(e);
+            if (problem != null)
+            {
+                e.Cancel = true;
+                MessageService.Show(problem, "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if ((!e.IsMove && !e.IsCopy) || (e.DX == 0 && e.DY == 0 && e.DZ == 0))
+            {
+                e.Cancel = true;
+                return;
+            }
+            if (!ConfirmDiscardInvalidatedByInputChange(includeElementSplit: true, reason: "移動・コピー"))
+            {
+                e.Cancel = true;
+                return;
+            }
+            var beamPositions = new Dictionary<FoundationBeam, (Point3D? I, Point3D? J)>();
+            if (e.IsBeamsIncluded)
+                foreach (var beam in CurrentInputModel.FoundationBeamInput?.Beams?.Where(b => b.IsSelected) ?? [])
+                    beamPositions[beam] = (GetNodeAttachPosition(beam.NodeI_Type, beam.NodeI_Id),
+                        GetNodeAttachPosition(beam.NodeJ_Type, beam.NodeJ_Id));
+            // Confirmed edits alone create an Undo entry and mark results as stale.
+            var before = CaptureInputEdit();
             // 新しいウィンドウでの操作の結果を処理する
             if (e.IsMove)
             {
                 MoveNodes(e.DX, e.DY, e.DZ, e.IsInputNodesIncluded, e.IsPileLayoutIncluded);
-                if (e.IsBeamsIncluded) MoveBeams(e.DX, e.DY, e.DZ, EditDistanceThreshold);
+                if (e.IsBeamsIncluded) MoveBeams(e.DX, e.DY, e.DZ, EditDistanceThreshold, beamPositions);
             }
             else if (e.IsCopy)
             {
                 await CopyNodesAsync(e.DX, e.DY, e.DZ, e.RepetitionNumber, e.IsInputNodesIncluded, e.IsPileLayoutIncluded);
                 if (e.IsBeamsIncluded) CopyBeams(e.DX, e.DY, e.DZ, e.RepetitionNumber, EditDistanceThreshold);
             }
+            CompleteInputEdit(before);
         }
 
         // ───────── 梁要素の移動・コピー (端点ノード解決ロジック付き) ─────────
@@ -379,23 +435,24 @@ namespace PileDesign.ViewModels
         //   杭頭節点は移動しない (杭自体は元位置のまま)。
         // コピー (Copy): 同じロジックで新規 FoundationBeam を生成して追加。
 
-        private void MoveBeams(double dX, double dY, double dZ, double tolerance)
+        private void MoveBeams(double dX, double dY, double dZ, double tolerance,
+            Dictionary<FoundationBeam, (Point3D? I, Point3D? J)> originalPositions)
         {
             var fb = CurrentInputModel?.FoundationBeamInput;
             if (fb?.Beams == null) return;
             var selectedBeams = fb.Beams.Where(b => b.IsSelected).ToList();
             if (selectedBeams.Count == 0) return;
 
+            var nodeIndex = new NodePositionIndex(EnumerateAllCandidateNodes(includeFoundationNodes: false));
             foreach (var beam in selectedBeams)
             {
-                var posI = GetNodeAttachPosition(beam.NodeI_Type, beam.NodeI_Id);
-                var posJ = GetNodeAttachPosition(beam.NodeJ_Type, beam.NodeJ_Id);
+                var (posI, posJ) = originalPositions[beam];
                 if (posI == null || posJ == null) continue;
 
                 var destI = new Point3D { X = posI.Value.X + dX, Y = posI.Value.Y + dY, Z = posI.Value.Z + dZ };
                 var destJ = new Point3D { X = posJ.Value.X + dX, Y = posJ.Value.Y + dY, Z = posJ.Value.Z + dZ };
-                var (typeI, idI) = ResolveOrCreateNodeAt(destI, tolerance);
-                var (typeJ, idJ) = ResolveOrCreateNodeAt(destJ, tolerance);
+                var (typeI, idI) = ResolveOrCreateNodeAt(destI, tolerance, nodeIndex);
+                var (typeJ, idJ) = ResolveOrCreateNodeAt(destJ, tolerance, nodeIndex);
 
                 beam.NodeI_Type = typeI;
                 beam.NodeI_Id = idI;
@@ -411,18 +468,20 @@ namespace PileDesign.ViewModels
             var selectedBeams = fb.Beams.Where(b => b.IsSelected).ToList();
             if (selectedBeams.Count == 0) return;
 
+            var nodeIndex = new NodePositionIndex(EnumerateAllCandidateNodes(includeFoundationNodes: false));
             foreach (var beam in selectedBeams)
             {
                 var posI = GetNodeAttachPosition(beam.NodeI_Type, beam.NodeI_Id);
                 var posJ = GetNodeAttachPosition(beam.NodeJ_Type, beam.NodeJ_Id);
                 if (posI == null || posJ == null) continue;
 
-                for (int rep = 1; rep <= repetitionNumber; rep++)
+                for (int index = 0; index < repetitionNumber; index++)
                 {
+                    int rep = index + 1;
                     var destI = new Point3D { X = posI.Value.X + dX * rep, Y = posI.Value.Y + dY * rep, Z = posI.Value.Z + dZ * rep };
                     var destJ = new Point3D { X = posJ.Value.X + dX * rep, Y = posJ.Value.Y + dY * rep, Z = posJ.Value.Z + dZ * rep };
-                    var (typeI, idI) = ResolveOrCreateNodeAt(destI, tolerance);
-                    var (typeJ, idJ) = ResolveOrCreateNodeAt(destJ, tolerance);
+                    var (typeI, idI) = ResolveOrCreateNodeAt(destI, tolerance, nodeIndex);
+                    var (typeJ, idJ) = ResolveOrCreateNodeAt(destJ, tolerance, nodeIndex);
 
                     var newBeam = new FoundationBeam
                     {
@@ -518,14 +577,11 @@ namespace PileDesign.ViewModels
         /// 優先順位: PileLayout (杭頭+ΔZc) → GeneralNode → 新規 InputNode 生成。
         /// FoundationNode は対象外 (snap 先として基礎梁節点を選ぶのは利用シーンとして想定外のため)。
         /// </summary>
-        private (NodeReferenceType type, Guid id) ResolveOrCreateNodeAt(Point3D pos, double tolerance)
+        private (NodeReferenceType type, Guid id) ResolveOrCreateNodeAt(Point3D pos, double tolerance, NodePositionIndex? nodeIndex = null)
         {
-            foreach (var (type, id, candPos) in EnumerateAllCandidateNodes(includeFoundationNodes: false))
-            {
-                if (Distance3D(candPos.X, candPos.Y, candPos.Z, pos.X, pos.Y, pos.Z) <= tolerance)
-                    return (type, id);
-            }
-            // 該当なし → 新規 InputNode を生成
+            nodeIndex ??= new NodePositionIndex(EnumerateAllCandidateNodes(includeFoundationNodes: false));
+            var match = nodeIndex.Find(pos, tolerance);
+            if (match.HasValue) return (match.Value.Type, match.Value.Id);
             var newNode = new InputNode
             {
                 No = (CurrentInputModel?.InputNodes?.Count ?? 0) + 1,
@@ -539,6 +595,7 @@ namespace PileDesign.ViewModels
             {
                 CurrentInputModel.InputNodes ??= [];
                 CurrentInputModel.InputNodes.Add(newNode);
+                nodeIndex.Add((NodeReferenceType.GeneralNode, newNode.UniqueId, pos));
             }
             return (NodeReferenceType.GeneralNode, newNode.UniqueId);
         }
@@ -558,7 +615,10 @@ namespace PileDesign.ViewModels
             var selectedInputNodes = isInputNodesIncluded
                 ? (CurrentInputModel.InputNodes?.Where(n => n.IsSelected).ToList() ?? new List<InputNode>())
                 : new List<InputNode>();
-            int totalCount = (selectedItems.Count + selectedInputNodes.Count) * repetitionNumber;
+            long itemsPerRepetition = (long)selectedItems.Count + selectedInputNodes.Count;
+            var countProblem = MoveCopyValidation.DescribeCopyCountProblem(itemsPerRepetition, repetitionNumber);
+            if (countProblem != null) throw new ArgumentException(countProblem, nameof(repetitionNumber));
+            long totalCount = itemsPerRepetition * repetitionNumber;
 
             // ★ 大量コピー時は待機カーソルを表示
             bool showWaitCursor = totalCount > 10;
@@ -568,13 +628,13 @@ namespace PileDesign.ViewModels
             try
             {
                 // サービスを使ってコピー実行
-                var combined = _pileLayoutService.CopySelectedPiles(
+                var combined = isPileLayoutIncluded ? _pileLayoutService.CopySelectedPiles(
                     CurrentInputModel.PileLayoutItems,
                     dX,
                     dY,
                     dZ,
                     repetitionNumber,
-                    item => item.SetMainWindowViewModel(this));
+                    item => item.SetMainWindowViewModel(this)) : CurrentInputModel.PileLayoutItems;
 
                 // InputNodes（一般節点）のコピー
                 var newInputNodes = new List<InputNode>();
@@ -597,13 +657,16 @@ namespace PileDesign.ViewModels
                 }
 
                 // ★ UIスレッドで一括置換（CollectionChangedを1回だけ発火）
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+                void ApplyCopies()
                 {
                     // コレクション全体を置換（CollectionChangedは1回のみ）
-                    CurrentInputModel.PileLayoutItems = combined;
-                    CurrentInputModel.PileLayoutItems.CollectionChanged -= PileLayoutItems_CollectionChanged;
-                    CurrentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
-                    OnPropertyChanged(nameof(PileCountText));
+                    if (isPileLayoutIncluded)
+                    {
+                        CurrentInputModel.PileLayoutItems = combined;
+                        CurrentInputModel.PileLayoutItems.CollectionChanged -= PileLayoutItems_CollectionChanged;
+                        CurrentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
+                        OnPropertyChanged(nameof(PileCountText));
+                    }
 
                     // InputNodes を追加
                     foreach (var newNode in newInputNodes)
@@ -612,12 +675,15 @@ namespace PileDesign.ViewModels
                     }
 
                     // SoilPiles を1回だけ再生成
-                    if (!IsElementSplit)
+                    if (isPileLayoutIncluded && !IsElementSplit)
                         RequestGenerateSoilPiles();
 
-                    UpdatePileLayoutNo();
+                    if (isPileLayoutIncluded) UpdatePileLayoutNo();
                     NotifyUIChanged();
-                });
+                }
+                var dispatcher = Application.Current?.Dispatcher;
+                if (dispatcher == null || dispatcher.CheckAccess()) ApplyCopies();
+                else await dispatcher.InvokeAsync(ApplyCopies);
             }
             finally
             {
@@ -738,6 +804,27 @@ namespace PileDesign.ViewModels
                 ]
             };
 
+            var problem = PileLayoutService.DescribeBulkEditProblem(CurrentInputModel.PileLayoutItems, options);
+            if (problem != null)
+            {
+                e.Cancel = true;
+                MessageService.Show(problem, "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var targets = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
+            if (targets.Count == 0)
+            {
+                e.Cancel = true;
+                MessageService.Show("編集する杭を選択してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if ((options.ApplyPileBodyNo || options.ApplyGroundNo || options.ApplyPileTopLevel || options.ApplyFoundationBeamDeltaZc) &&
+                !ConfirmDiscardInvalidatedByInputChange(true, "杭の一括編集"))
+            {
+                e.Cancel = true;
+                return;
+            }
+            var before = CaptureInputEdit();
             _pileLayoutService.BulkEditSelectedPiles(CurrentInputModel.PileLayoutItems, options);
 
             // IsFrontPile フラグの処理
@@ -746,6 +833,7 @@ namespace PileDesign.ViewModels
                 selectedItems,
                 [e.IsApplicableIsFrontPile1, e.IsApplicableIsFrontPile2, e.IsApplicableIsFrontPile3, e.IsApplicableIsFrontPile4],
                 [e.IsFrontPile1, e.IsFrontPile2, e.IsFrontPile3, e.IsFrontPile4]);
+            CompleteInputEdit(before);
         }
 
     }
