@@ -466,10 +466,17 @@ namespace TestProject1
             Assert.IsTrue(find >= 0 && add > find && add < body.IndexOf("MessageService.Show(", StringComparison.Ordinal),
                 "扱った候補を除かずに次の候補を探しています。印を付けられないと、同じ候補の確認が繰り返されます");
 
-            // 復元に失敗したら、その 1 件だけを見送って次の候補へ進む (まとめて見送らない)
-            int failed = body.IndexOf("!TryRestoreAutoSave(candidate)", StringComparison.Ordinal);
-            int single = body.IndexOf("_autoSaveService.DismissRestoreCandidate(candidate);", StringComparison.Ordinal);
-            int next = body.IndexOf("continue;", StringComparison.Ordinal);
+            // 復元に失敗したら、その 1 件だけを見送って次の候補へ進む (まとめて見送らない)。
+            // 尋ねる前の点検で読めなかった候補も同じ (その 1 件だけ見送って続ける)
+            int inspected = body.IndexOf("if (!inspection.CanRestore)", StringComparison.Ordinal);
+            int skipSingle = body.IndexOf("_autoSaveService.DismissRestoreCandidate(candidate);", inspected, StringComparison.Ordinal);
+            int skipNext = body.IndexOf("continue;", skipSingle, StringComparison.Ordinal);
+            Assert.IsTrue(inspected >= 0 && skipSingle > inspected && skipNext > skipSingle
+                          && skipNext < body.IndexOf("MessageService.Show(DescribeRestoreQuestion", StringComparison.Ordinal),
+                "読めない候補を尋ねる前に見送って次へ進んでいません");
+            int failed = body.IndexOf("!TryRestoreAutoSave(candidate, inspection.Data)", StringComparison.Ordinal);
+            int single = body.IndexOf("_autoSaveService.DismissRestoreCandidate(candidate);", failed, StringComparison.Ordinal);
+            int next = body.IndexOf("continue;", single, StringComparison.Ordinal);
             int bulk = body.IndexOf("_autoSaveService.DismissRestoreCandidatesUpTo(candidate)", StringComparison.Ordinal);
             Assert.IsTrue(failed >= 0 && single > failed && next > single && bulk > next,
                 "復元に失敗したときに、その 1 件だけを見送って次の候補へ進んでいません");

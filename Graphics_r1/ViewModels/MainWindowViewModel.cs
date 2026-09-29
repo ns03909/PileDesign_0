@@ -2248,6 +2248,9 @@ namespace PileDesign.ViewModels
         /// 以前は失敗しても古い候補をまとめて見送っていたので、最新の自動保存が壊れていると、
         /// 読める古い自動保存まで二度と案内されなくなった。扱った候補はこの起動の中では二度と選ばないので
         /// (見送りの印を付けられなくても)、壊れた候補が何件あっても必ず終わる。
+        ///
+        /// <para><b>尋ねる前に候補を読み込んで調べ終える</b> (<see cref="RestoreCandidateInspector"/>)。
+        /// 読めない候補は尋ねずに見送り、理由を最後にまとめて知らせる。読める候補は、戻る中身と注意を添えて尋ねる。</para>
         /// </summary>
         public void CheckAutoSaveRestore()
         {
@@ -2255,38 +2258,65 @@ namespace PileDesign.ViewModels
             // 付けられない。そのとき同じ候補が選ばれ直し、エラーと確認が延々と繰り返されないよう、
             // 印を付けられたかどうかに関わらず、ここで除いて次へ進む
             var handled = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            while (true)
+            // 読めずに候補から外したもの (最後にまとめて知らせる)
+            var skipped = new List<(string File, string Problem)>();
+            try
             {
-                var candidate = _autoSaveService.FindRestoreCandidate(handled);
-                if (candidate == null)
-                    return;
-                handled.Add(candidate.FilePath);
-
-                var result = MessageService.Show(
-                    $"自動保存されたファイルが見つかりました。\n\n" +
-                    $"保存日時: {candidate.SavedAt:yyyy/MM/dd HH:mm:ss}\n" +
-                    $"ファイル: {System.IO.Path.GetFileName(candidate.FilePath)}\n" +
-                    $"場所: {System.IO.Path.GetDirectoryName(candidate.FilePath)}\n" +
-                    (string.IsNullOrEmpty(candidate.SourceFilePath) ? "" : $"元のファイル: {candidate.SourceFilePath}\n") +
-                    $"\nこのファイルを復元しますか？\n" +
-                    $"（この作業のこれより前の自動保存は、次回から案内しません）",
-                    "自動保存ファイルの復元",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-
-                if (result == MessageBoxResult.Yes && !TryRestoreAutoSave(candidate))
+                while (true)
                 {
-                    // 読めなかった 1 件だけを見送り、同じ作業の古い候補は残して続けて案内する
-                    _autoSaveService.DismissRestoreCandidate(candidate);
-                    continue;
-                }
+                    var candidate = _autoSaveService.FindRestoreCandidate(handled);
+                    if (candidate == null)
+                        return;
+                    handled.Add(candidate.FilePath);
 
-                // いいえ、または復元できた: この候補と同じ作業の古い候補をまとめて見送る
-                // (データは残すので手動復元可能)。1 件だけだと、次の起動で 1 つ古いものを勧め続ける。
-                _autoSaveService.DismissRestoreCandidatesUpTo(candidate);
-                return;
+                    var inspection = RestoreCandidateInspector.Inspect(_fileOperationService, candidate.FilePath);
+                    if (!inspection.CanRestore)
+                    {
+                        // 尋ねても復元できない。この 1 件だけを見送り、同じ作業の古い候補を続けて調べる
+                        skipped.Add((candidate.FilePath, inspection.Problem ?? "読み込めませんでした。"));
+                        _autoSaveService.DismissRestoreCandidate(candidate);
+                        continue;
+                    }
+
+                    var result = MessageService.Show(DescribeRestoreQuestion(candidate, inspection),
+                        "自動保存ファイルの復元",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes && !TryRestoreAutoSave(candidate, inspection.Data))
+                    {
+                        // 読めなかった 1 件だけを見送り、同じ作業の古い候補は残して続けて案内する
+                        _autoSaveService.DismissRestoreCandidate(candidate);
+                        continue;
+                    }
+
+                    // いいえ、または復元できた: この候補と同じ作業の古い候補をまとめて見送る
+                    // (データは残すので手動復元可能)。1 件だけだと、次の起動で 1 つ古いものを勧め続ける。
+                    _autoSaveService.DismissRestoreCandidatesUpTo(candidate);
+                    return;
+                }
+            }
+            finally
+            {
+                if (skipped.Count > 0)
+                    MessageService.Show(RestoreCandidateInspector.DescribeSkipped(skipped),
+                        "自動保存ファイルの復元", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
+
+        /// <summary>復元を尋ねる文。戻る中身と、開く前に分かっている注意を添える。</summary>
+        internal static string DescribeRestoreQuestion(AutoSaveService.RestoreCandidate candidate,
+            RestoreCandidateInspector.Inspection inspection)
+            => $"自動保存されたファイルが見つかりました。\n\n" +
+               $"保存日時: {candidate.SavedAt:yyyy/MM/dd HH:mm:ss}\n" +
+               $"ファイル: {System.IO.Path.GetFileName(candidate.FilePath)}\n" +
+               $"場所: {System.IO.Path.GetDirectoryName(candidate.FilePath)}\n" +
+               (string.IsNullOrEmpty(candidate.SourceFilePath) ? "" : $"元のファイル: {candidate.SourceFilePath}\n") +
+               "\n復元できる内容:\n" + string.Join("\n", inspection.Contents.Select(c => "・" + c)) + "\n" +
+               (inspection.Cautions.Count == 0 ? ""
+                   : "\n注意:\n" + string.Join("\n", inspection.Cautions.Select(c => "・" + c)) + "\n") +
+               $"\nこのファイルを復元しますか？\n" +
+               $"（この作業のこれより前の自動保存は、次回から案内しません）";
 
         /// <summary>
         /// 自動保存ファイルを読み込んで復元する。できなければ理由を知らせて false。
@@ -2296,11 +2326,12 @@ namespace PileDesign.ViewModels
         /// 「保存しますか？」が出ず、正常終了の後始末でこのセッションの自動保存も確認済みになった。
         /// 復元した内容はどこにも正式には保存されておらず (元ファイルは古いまま)、そのまま消えていた。
         /// </summary>
-        internal bool TryRestoreAutoSave(AutoSaveService.RestoreCandidate candidate)
+        /// <param name="preloaded">起動時の確認で読み込んで調べ終えた中身 (あれば読み直さない)。</param>
+        internal bool TryRestoreAutoSave(AutoSaveService.RestoreCandidate candidate, Models.ProjectData? preloaded = null)
         {
             try
             {
-                var projectData = _fileOperationService.LoadProjectData(candidate.FilePath);
+                var projectData = preloaded ?? _fileOperationService.LoadProjectData(candidate.FilePath);
                 if (projectData?.InputModel != null)
                 {
                     // 復元後の保存先は、自動保存ファイルに記録した元ファイルのフルパスを使う。

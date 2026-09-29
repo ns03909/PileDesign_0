@@ -264,9 +264,12 @@ namespace TestProject1
         [TestMethod]
         public void Restore_DoesNotBuildAFilePathFromTheAutoSaveFileName()
         {
-            var body = ExtractMethodBody(
-                ReadSource("Graphics_r1", "ViewModels", "MainWindowViewModel.cs"),
-                "public void CheckAutoSaveRestore()");
+            // 尋ねる文は DescribeRestoreQuestion (式の本体) に分けてある。両方を見る
+            var source = ReadSource("Graphics_r1", "ViewModels", "MainWindowViewModel.cs");
+            int question = source.IndexOf("internal static string DescribeRestoreQuestion(", StringComparison.Ordinal);
+            Assert.IsTrue(question >= 0, "復元を尋ねる文が見つかりません (テストの前提が崩れている)");
+            var body = ExtractMethodBody(source, "public void CheckAutoSaveRestore()")
+                     + source.Substring(question, Math.Min(1500, source.Length - question));
 
             StringAssert.Contains(body, "SourceFilePath",
                 "復元が、自動保存ファイルに記録した元ファイルのパスを見ていない");
