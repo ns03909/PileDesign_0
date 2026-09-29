@@ -524,6 +524,8 @@ namespace PileDesign.Views
         private void DataGridPileLayout_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (isSelectionChanging) return;
+            // 分割前は選ぶたびに土層-杭セットを作り直す (下)。杭が多いと重いので測る
+            using var perf = PileDesign.Common.PerfLog.Measure("選択 (杭配置の表)", DataGridPileLayout.Items.Count, "行");
             UpdateSelectedPileLayoutItems(DataGridPileLayout);
 
             if (this.DataContext is MainWindowViewModel viewModel)

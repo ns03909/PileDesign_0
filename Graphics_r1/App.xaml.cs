@@ -211,6 +211,8 @@ namespace PileDesign
         protected override void OnExit(ExitEventArgs e)
         {
             Log.Information("App exiting (code={Code})", e.ApplicationExitCode);
+            // 操作ごとの所要時間の集計 (遅い操作の見当を付けるため)
+            try { PileDesign.Common.PerfLog.WriteSummary(); } catch (Exception ex) { Log.Warning(ex, "性能の集計を書けませんでした"); }
             AppLog.Close();
             base.OnExit(e);
         }

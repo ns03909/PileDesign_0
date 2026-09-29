@@ -24,12 +24,14 @@ public partial class MainWindowViewModel
     internal InputModel CaptureInputEdit()
     {
         if (_undoBatchActive) FlushPendingUndoSnapshot();
+        using var perf = PileDesign.Common.PerfLog.Measure("編集の控え (変更前)", CurrentInputModel?.PileLayoutItems?.Count ?? 0, "本の杭");
         return CurrentInputModel.DeepCopy();
     }
 
     internal void CompleteInputEdit(InputModel before,
         [System.Runtime.CompilerServices.CallerMemberName] string? description = null, AnalysisInputScope scope = AnalysisInputScope.All)
     {
+        using var perf = PileDesign.Common.PerfLog.Measure("編集の確定", CurrentInputModel?.PileLayoutItems?.Count ?? 0, "本の杭");
         _undoManager.SaveSnapshotEdit(before, CurrentInputModel.DeepCopy(), FormatHistoryDescription(description));
         MarkUnsavedWork();
         InputEditVersion++;

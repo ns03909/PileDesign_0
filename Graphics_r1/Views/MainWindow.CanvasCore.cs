@@ -188,6 +188,8 @@ namespace PileDesign.Views
                 }
 
                 if (DataContext is not MainWindowViewModel viewModel) return;
+                using var perf = PileDesign.Common.PerfLog.Measure(isLightweightDrawing ? "描画 (軽量)" : "描画",
+                    viewModel.CurrentInputModel?.PileLayoutItems?.Count ?? 0, "本の杭");
 
                 viewModel.CanvasGeometry.Clear();
                 TextBlockInfos.Clear();
