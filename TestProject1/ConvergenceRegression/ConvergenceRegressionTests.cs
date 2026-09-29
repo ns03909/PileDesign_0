@@ -151,7 +151,7 @@ namespace TestProject1
 
             // UPDATE_SNAPSHOTS=1 のときはスナップショットを書き出して終了
             // 非決定的な変動を吸収するため、3 回実行して per-case の MAX を採用 (反復数のみ)。
-            // 物理量 (変位 / 反力) は最後の実行値を採用 (相対 1% 許容で検出十分)。
+            // 物理量 (変位 / 反力 / 曲げモーメント) は最後の実行値を採用 (相対 5% 許容で検出十分)。
             // 1 ケースも走らなかったら失敗にする。
             //
             // AssertCompatible はケース数の一致から始まるので、期待値も実測も 0 なら
@@ -243,7 +243,7 @@ namespace TestProject1
                 }
 
                 // A1: 物理量比較 (代表点変位 + 最大反力)
-                // 「収束はするが値が変わった」サイレントな数値退化を検出。相対 1% 許容。
+                // 「収束はするが値が変わった」サイレントな数値退化を検出。相対 5% 許容 (PHYSICS_REL_TOLERANCE)。
                 AssertPhysicsClose(exampleName, exp.CaseKey, "AP.Ux", exp.ApUx, act.ApUx);
                 AssertPhysicsClose(exampleName, exp.CaseKey, "AP.Uy", exp.ApUy, act.ApUy);
                 AssertPhysicsClose(exampleName, exp.CaseKey, "AP.Uz", exp.ApUz, act.ApUz);
@@ -254,12 +254,15 @@ namespace TestProject1
                     exp.MaxAbsHorizDisp, act.MaxAbsHorizDisp);
                 AssertPhysicsClose(exampleName, exp.CaseKey, "MaxAbsHorizSpringReaction",
                     exp.MaxAbsHorizSpringReaction, act.MaxAbsHorizSpringReaction);
+                // 杭の曲げモーメント (検定値を決める断面力)。記録を持つスナップショットだけ比べる
+                if (exp.MaxAbsPileMoment is double expMoment)
+                    AssertPhysicsClose(exampleName, exp.CaseKey, "MaxAbsPileMoment", expMoment, act.MaxAbsPileMoment ?? double.NaN);
             }
         }
 
         /// <summary>
         /// 複数回の実行結果から、per-case で「最悪 (反復数 max / 残差 max)」を採用したスナップショットを返す。
-        /// 物理量 (変位 / 反力) は最後の実行のものを採用 (相対 1% 許容で十分検出できる)。
+        /// 物理量 (変位 / 反力 / 曲げモーメント) は最後の実行のものを採用 (相対 5% 許容で十分検出できる)。
         /// </summary>
         private static ConvergenceSnapshot MergeWorstCase(List<ConvergenceSnapshot> snaps)
         {
@@ -297,7 +300,7 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 物理量の退化判定: 両値とも微小 (&lt; 1e-9) ならスキップ、それ以外は相対 1% 以内を要求。
+        /// 物理量の退化判定: 両値とも微小 (&lt; 1e-9) ならスキップ、それ以外は相対 5% (PHYSICS_REL_TOLERANCE) 以内を要求。
         /// </summary>
         private static void AssertPhysicsClose(string exampleName, string caseKey, string fieldName,
             double expected, double actual)

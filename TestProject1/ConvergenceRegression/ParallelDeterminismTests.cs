@@ -159,6 +159,8 @@ namespace TestProject1
                     exp.MaxAbsHorizDisp, act.MaxAbsHorizDisp);
                 AssertBitIdentical(groundName, act.CaseKey, "MaxAbsHorizSpringReaction",
                     exp.MaxAbsHorizSpringReaction, act.MaxAbsHorizSpringReaction);
+                AssertBitIdentical(groundName, act.CaseKey, "MaxAbsPileMoment",
+                    exp.MaxAbsPileMoment ?? double.NaN, act.MaxAbsPileMoment ?? double.NaN);
             }
         }
 

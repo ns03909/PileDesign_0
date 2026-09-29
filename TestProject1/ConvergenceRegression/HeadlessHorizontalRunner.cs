@@ -257,6 +257,20 @@ namespace TestProject1.ConvergenceRegression
                     }
                 }
 
+                // 杭要素の最大絶対曲げモーメント (検定値を決める断面力の代表値)
+                double maxAbsPileMoment = 0;
+                foreach (var beam in anaModel?.Beams ?? [])
+                {
+                    if (beam?.NodeI?.Name == null || !beam.NodeI.Name.StartsWith("杭節点-", StringComparison.Ordinal)) continue;
+                    var br = beam.BeamResults?.LastOrDefault(r =>
+                        r.LoadCase != null && r.LoadCase.Level == grp.Key.Level && r.LoadCase.No == grp.Key.LoadCaseNo &&
+                        r.LoadCombination != null && r.LoadCombination.No == grp.Key.ComboNo &&
+                        r.IsLiquefaction == grp.Key.IsLiquefaction);
+                    if (br?.CumulativeForce is not { } f) continue;
+                    // 両端の合成モーメント (結果の表・検定と同じ BeamForce.Mi / Mj)
+                    maxAbsPileMoment = Math.Max(maxAbsPileMoment, Math.Max(f.Mi, f.Mj));
+                }
+
                 snapshot.Cases.Add(new CaseRecord
                 {
                     CaseKey = caseKey,
@@ -274,6 +288,7 @@ namespace TestProject1.ConvergenceRegression
                     ApRx = apRx, ApRy = apRy, ApRz = apRz,
                     MaxAbsHorizDisp = maxAbsHorizDisp,
                     MaxAbsHorizSpringReaction = maxAbsHorizSpringReaction,
+                    MaxAbsPileMoment = maxAbsPileMoment,
                 });
             }
 

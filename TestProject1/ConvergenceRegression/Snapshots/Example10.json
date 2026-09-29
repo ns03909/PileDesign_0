@@ -30,7 +30,8 @@
       "apRy": 3.842906091942876E-06,
       "apRz": 0.000204792028571316,
       "maxAbsHorizDisp": 0.10142609028454873,
-      "maxAbsHorizSpringReaction": 521.6505509243983
+      "maxAbsHorizSpringReaction": 521.6505509243983,
+      "maxAbsPileMoment": 2651.952246628662
     },
     {
       "caseKey": "L2-1.C1.Liq",
@@ -51,7 +52,8 @@
       "apRy": 5.9358191082238075E-06,
       "apRz": 0.00047893656846086395,
       "maxAbsHorizDisp": 0.3130816476400181,
-      "maxAbsHorizSpringReaction": 748.969352543736
+      "maxAbsHorizSpringReaction": 748.969352543736,
+      "maxAbsPileMoment": 4357.030949163095
     }
   ],
   "summary": {
