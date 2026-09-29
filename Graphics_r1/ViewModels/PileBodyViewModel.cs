@@ -254,9 +254,12 @@ namespace PileDesign.ViewModels
             PileBody = PileBodies[PileBodyNo - 1];
 
 
-            // 初期選択を設定
+            // 初期選択を設定。入力の問題から開いたときは、その杭体を選んでおく
             if (PileBodiesCountPlusOneList != null && PileBodiesCountPlusOneList.Count > 0)
-                SelectedPileBodyNoItem = PileBodiesCountPlusOneList[0];
+            {
+                int focus = mainWindowViewModel.InputFocus?.PileBodyNo ?? 0;
+                SelectedPileBodyNoItem = PileBodiesCountPlusOneList[focus >= 1 && focus <= PileBodies.Count ? focus - 1 : 0];
+            }
 
 
             // xaml

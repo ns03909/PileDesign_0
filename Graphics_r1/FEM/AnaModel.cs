@@ -753,7 +753,14 @@ namespace PileDesign.FEM
                           $"問題のある自由度:\n{string.Join("\n", details)}";
                 if (problematicDofs.Count > 20)
                     msg += $"\n  ...他{problematicDofs.Count - 20}件";
-                throw new InvalidOperationException(msg);
+                // 杭節点なら杭を場所として持たせる (受け取った側が文を解かずに杭を選べるように)
+                var piles = problematicDofs.Select(d => PileNodeNaming.PileNoOf(d.nodeName))
+                    .Where(no => no.HasValue).Select(no => PileDesign.Common.DiagnosticTarget.Pile(no!.Value)).Distinct().ToList();
+                var problem = new PileDesign.Common.Diagnostic(PileDesign.Common.DiagnosticOrigin.Analysis,
+                    piles.Count > 0 ? piles[0] : PileDesign.Common.DiagnosticTarget.Nowhere,
+                    $"剛性マトリクスにゼロ/負の対角成分が{problematicDofs.Count}個あります (モデルが不安定です)")
+                    { MoreTargets = piles.Skip(1).ToList() };
+                throw new PileDesign.Common.DiagnosticException(msg, [problem]);
             }
 
             // 2. 固有値チェック（オプション: CountFree ≤ 2000 の場合のみ実行）

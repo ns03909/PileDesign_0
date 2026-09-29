@@ -105,7 +105,7 @@ namespace TestProject1
         {
             string body = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.cs"),
                 "private async Task OnExecuteAnalysisCore(bool additive)");
-            int check = body.IndexOf("DescribeCustomDisplacementProblems(", System.StringComparison.Ordinal);
+            int check = body.IndexOf("CollectCustomDisplacementProblems(", System.StringComparison.Ordinal);
             int running = body.IndexOf("IsAnalysisRunning = true", System.StringComparison.Ordinal);
             Assert.IsTrue(check >= 0, "水平解析の前に任意入力の地盤変位を検査していません");
             Assert.IsTrue(check < running, "解析を始めてから検査しています");

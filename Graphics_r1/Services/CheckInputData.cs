@@ -1,4 +1,5 @@
-﻿using PileDesign.Constants;
+﻿using PileDesign.Common;
+using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
@@ -129,32 +130,64 @@ namespace PileDesign.Services
         /// </summary>
         public static bool ValidateForAnalysis(InputModel inputModel, string analysisName = "解析")
         {
-            string message = "";
-            message = CheckSoilPile(inputModel, message);
-            message = CheckSoilEmbedment(inputModel, message);
-            message = CheckPileBodyGeometry(inputModel, message);
-            message = CheckGroundLayerGeometry(inputModel, message);
-            message = CheckGroupPileFactor(inputModel, message);
-            message = CheckLoadCombinations(inputModel, message);
+            var problems = CollectAnalysisBlockers(inputModel);
+            if (problems.Count == 0) return true; // OK: ダイアログなしで続行
+            ShowBlockers(inputModel, problems, analysisName, "入力データ");
+            return false;
+        }
+
+        /// <summary>
+        /// 解析を止める入力の問題をすべて集める (場所つき)。<see cref="ValidateForAnalysis"/> の中身。
+        /// </summary>
+        internal static List<Diagnostic> CollectAnalysisBlockers(InputModel inputModel)
+        {
+            var problems = new List<Diagnostic>();
+            problems.AddRange(CollectSoilPileProblems(inputModel));
+            problems.AddRange(CollectEmbedmentProblems(inputModel));
+            problems.AddRange(CollectPileBodyGeometryProblems(inputModel));
+            problems.AddRange(CollectGroundLayerGeometryProblems(inputModel));
+            problems.AddRange(CollectGroupPileFactorProblems(inputModel));
+            problems.AddRange(CollectLoadCombinationProblems(inputModel));
 
             // モデルの「つながり」。剛性行列を組んでから初めて分かる不安定は、
             // 利用者に原因が読み取れない (「対角成分がゼロ」としか出ない)。
             // 入力の段階で分かるものは、ここで名指しで止める。
-            foreach (var e in ModelConnectivityCheck.CollectErrors(inputModel))
-                message += "・" + e + Environment.NewLine;
-
-            if (message.Length == 0) return true; // OK: ダイアログなしで続行
-
-            // 知らせに出てきた杭 (杭番号・杭体) をメイン画面で選び、直す場所へ案内する
-            int selected = inputModel?.SelectPilesForReview(AnalysisFailure.PileNosIn(message, inputModel)) ?? 0;
-            MessageService.Show(
-                $"入力データに以下の問題があります。{analysisName}を中止します。\n\n{message}"
-                + (selected > 0 ? $"\n関係する杭 {selected} 本をメイン画面で選択しています。" : ""),
-                $"{analysisName} 入力エラー",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-            return false;
+            problems.AddRange(ModelConnectivityCheck.CollectErrorDiagnostics(inputModel));
+            return problems;
         }
+
+        /// <summary>
+        /// 解析を止めた入力の問題を知らせる。問題の場所 (番号は文から拾わず <see cref="Diagnostic.Target"/> から) で
+        /// メイン画面の杭を選び、その範囲 (特定の杭か、共有の杭体・地盤を使う杭すべてか) を書く。
+        /// 入力画面を開ける場所なら、解析のウィンドウを閉じたあとに開くかを訊く
+        /// (解析のウィンドウを開いたまま入力を直すと、要素分割が済んだ前提が崩れるので、閉じてから開く)。
+        /// </summary>
+        internal static void ShowBlockers(InputModel? inputModel, IReadOnlyList<Diagnostic> problems, string analysisName, string what)
+        {
+            foreach (var p in problems)
+                Serilog.Log.Warning("[入力の検査] {AnalysisName}: {Diagnostic}", analysisName, p.ToLogLine());
+
+            var selection = DiagnosticSelection.Resolve(problems, inputModel);
+            inputModel?.SelectForReview(selection);
+
+            string text = $"{what}に以下の問題があります。{analysisName}を中止します。\n\n"
+                        + string.Join("\n", problems.Select(p => p.Message));
+            if (DiagnosticSelection.DescribeSelection(selection) is { } scope) text += "\n\n" + scope;
+
+            var destination = DiagnosticSelection.FirstNavigable(problems);
+            if (destination == null || inputModel == null)
+            {
+                MessageService.Show(text, $"{analysisName} 入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            string where = DiagnosticSelection.DestinationName(DiagnosticSelection.DestinationOf(destination));
+            text += $"\n\n「はい」を押すと、このウィンドウを閉じたあとに{where} ({destination.Label}) を開きます。";
+            if (MessageService.Show(text, $"{analysisName} 入力エラー", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                inputModel.RequestInputNavigation(destination);
+        }
+
+        /// <summary>問題の文を 1 行ずつ並べる (文字列で返す旧来の検査の形)。</summary>
+        private static string Lines(IEnumerable<Diagnostic> problems) => string.Concat(problems.Select(p => p.Message + "\n"));
 
         /// <summary>
         /// 任意入力の地盤変位の検査。水平解析の前に、これから解く荷重レベル・液状化の別について見る。
@@ -168,8 +201,13 @@ namespace PileDesign.Services
         /// </summary>
         internal static List<string> DescribeCustomDisplacementProblems(
             InputModel inputModel, IEnumerable<(int Level, bool IsLiquefaction)> cases)
+            => CollectCustomDisplacementProblems(inputModel, cases).Select(p => p.Message).ToList();
+
+        /// <summary><see cref="DescribeCustomDisplacementProblems"/> の場所つきの形 (地盤)。</summary>
+        internal static List<Diagnostic> CollectCustomDisplacementProblems(
+            InputModel inputModel, IEnumerable<(int Level, bool IsLiquefaction)> cases)
         {
-            var problems = new List<string>();
+            var problems = new List<Diagnostic>();
             var grounds = inputModel?.GroundsInput;
             if (grounds == null || grounds.Count == 0) return problems;
 
@@ -191,13 +229,14 @@ namespace PileDesign.Services
                 {
                     string where = $"地盤 {groundNo} の任意入力の地盤変位 [{CustomDisplacementProfile.CaseName(ci)}]";
                     var profile = custom.GetProfile(ci);
+                    var target = DiagnosticTarget.Ground(groundNo);
                     if (profile == null || profile.Count == 0)
                     {
-                        problems.Add($"{where}: 点が入力されていません。このまま解くと地盤変位を 0 として計算します");
+                        problems.Add(Diagnostic.Input(target, $"{where}: 点が入力されていません。このまま解くと地盤変位を 0 として計算します"));
                         continue;
                     }
                     foreach (var problem in CustomDisplacementProfile.DescribeProblems(profile))
-                        problems.Add($"{where}: {problem}");
+                        problems.Add(Diagnostic.Input(target, $"{where}: {problem}"));
                 }
             }
             return problems;
@@ -213,20 +252,25 @@ namespace PileDesign.Services
         /// (<see cref="CollectInputWarnings"/>) にとどめる。
         /// </summary>
         public static string CheckGroupPileFactor(InputModel inputModel, string message)
+            => message + Lines(CollectGroupPileFactorProblems(inputModel));
+
+        internal static List<Diagnostic> CollectGroupPileFactorProblems(InputModel inputModel)
         {
-            if (inputModel?.PileLayoutItems == null) return message;
+            var problems = new List<Diagnostic>();
+            if (inputModel?.PileLayoutItems == null) return problems;
 
             foreach (var p in inputModel.PileLayoutItems)
             {
                 if (p == null) continue;
                 if (!(p.GroupPileFactor > 0) || !double.IsFinite(p.GroupPileFactor))
                 {
-                    message += $"杭 No.{p.No}: 群杭係数 ξ = {p.GroupPileFactor} です " +
-                               "(0 より大きく 1 以下で入力してください)。" +
-                               "ξ は基準水平地盤反力係数 kh0 に掛かるため、0 以下だと水平地盤ばねが無くなります。\n";
+                    problems.Add(Diagnostic.InputAt(DiagnosticTarget.Pile(p.No),
+                        $"群杭係数 ξ = {p.GroupPileFactor} です " +
+                        "(0 より大きく 1 以下で入力してください)。" +
+                        "ξ は基準水平地盤反力係数 kh0 に掛かるため、0 以下だと水平地盤ばねが無くなります。"));
                 }
             }
-            return message;
+            return problems;
         }
 
         /// <summary>
@@ -250,14 +294,18 @@ namespace PileDesign.Services
         /// 止める理由が無くなります (<see cref="ResidualReferenceMode"/>)。</para>
         /// </summary>
         public static string CheckLoadCombinations(InputModel inputModel, string message)
+            => message + Lines(CollectLoadCombinationProblems(inputModel));
+
+        internal static List<Diagnostic> CollectLoadCombinationProblems(InputModel inputModel)
         {
+            var problems = new List<Diagnostic>();
             var loadCases = inputModel?.LoadCasesInput?.AnalysisTargetSeismicLoadCases;
             var combinations = inputModel?.LoadCasesInput?.AllLoadCombinations;
-            if (loadCases == null || combinations == null) return message;
+            if (loadCases == null || combinations == null) return problems;
 
             // 収束判定の基準値が外力以外なら、慣性力 0 でも判定が成り立つので止めない
             var reference = inputModel?.FundamentalInput?.ResidualReference ?? ResidualReferenceModes.Default;
-            if (reference.WorksWithoutInertia()) return message;
+            if (reference.WorksWithoutInertia()) return problems;
 
             foreach (var lc in loadCases)
             {
@@ -274,13 +322,14 @@ namespace PileDesign.Services
                     bool foundationZero = comb.Beta2 * lc.FoundationMassForce == 0;
                     if (!upperZero || !foundationZero) continue;
 
-                    message += $"レベル{lc.Level} 荷重ケース No.{lc.No} × 組合せ {comb.Name}: " +
-                               "βU と βL で慣性力が 0 になり、収束判定 (残差/外力) が成り立ちません。" +
-                               "荷重条件の組合せ係数を 0.5〜1.0 にしてください " +
-                               "(基本設定で収束判定の基準値を変えれば、慣性力 0 でも解けます)。\n";
+                    string caseName = $"レベル{lc.Level} 荷重ケース No.{lc.No} × 組合せ {comb.Name}";
+                    problems.Add(Diagnostic.InputAt(DiagnosticTarget.LoadCase(caseName),
+                        "βU と βL で慣性力が 0 になり、収束判定 (残差/外力) が成り立ちません。" +
+                        "荷重条件の組合せ係数を 0.5〜1.0 にしてください " +
+                        "(基本設定で収束判定の基準値を変えれば、慣性力 0 でも解けます)。"));
                 }
             }
-            return message;
+            return problems;
         }
 
         /// <summary>
@@ -292,8 +341,12 @@ namespace PileDesign.Services
         /// 不整合があれば message に追記して返す。
         /// </summary>
         public static string CheckPileBodyGeometry(InputModel inputModel, string message)
+            => message + Lines(CollectPileBodyGeometryProblems(inputModel));
+
+        internal static List<Diagnostic> CollectPileBodyGeometryProblems(InputModel inputModel)
         {
-            if (inputModel?.PileBodies == null) return message;
+            var problems = new List<Diagnostic>();
+            if (inputModel?.PileBodies == null) return problems;
 
             for (int i = 0; i < inputModel.PileBodies.Count; i++)
             {
@@ -305,13 +358,13 @@ namespace PileDesign.Services
                 {
                     var seg = pb.PileBodySegments[j];
                     if (seg == null) continue;
-                    int segNo = j + 1;
+                    var at = DiagnosticTarget.PileBodySegment(pbNo, j + 1);
                     var sec = seg.PileSection;
 
                     // 数値でない値 (NaN・無限大) も拒む。「0 以下」の比較は NaN で偽になり、素通りする
                     // (入力欄は NaN を受け付けないが、古いファイル・手で編集したファイル・計算途中の値から入りうる)
                     if (!IsPositive(seg.SegmentLength))
-                        message += $"杭体{pbNo} 区間{segNo}: 区間長が 0 以下か数値ではありません ({seg.SegmentLength}).\n";
+                        problems.Add(Diagnostic.InputAt(at, $"区間長が 0 以下か数値ではありません ({seg.SegmentLength})."));
 
                     if (sec == null) continue;
 
@@ -325,78 +378,79 @@ namespace PileDesign.Services
                     if (isInsituRC)
                     {
                         if (!IsPositive(sec.ConcreteOutDia))
-                            message += $"杭体{pbNo} 区間{segNo}: コンクリート外径が 0 以下か数値ではありません ({sec.ConcreteOutDia}).\n";
+                            problems.Add(Diagnostic.InputAt(at, $"コンクリート外径が 0 以下か数値ではありません ({sec.ConcreteOutDia})."));
                         if (sec.MainBarNum > 0 && IsPositive(sec.ConcreteOutDia)
                             && !(IsPositive(sec.MainBarDr) && sec.MainBarDr < sec.ConcreteOutDia))
                         {
-                            message += $"杭体{pbNo} 区間{segNo}: 主筋配置直径 (MainBarDr={sec.MainBarDr}) が外径 ({sec.ConcreteOutDia}) との関係で不正です " +
-                                        $"(0 < MainBarDr < 外径 を満たすこと).\n";
+                            problems.Add(Diagnostic.InputAt(at, $"主筋配置直径 (MainBarDr={sec.MainBarDr}) が外径 ({sec.ConcreteOutDia}) との関係で不正です " +
+                                        $"(0 < MainBarDr < 外径 を満たすこと)."));
                         }
                         // 耐力・剛性の式に入る値。範囲外だと √ の中が負 (せん断補強筋の √(pw·σwy))、
                         // 0 で割る (ヤング係数比 n = Er/Ec) などで、耐力・剛性が数値でなくなる
-                        message += DescribeInsituRcMaterialProblems(sec, $"杭体{pbNo} 区間{segNo}");
+                        problems.AddRange(CollectInsituRcMaterialProblems(sec, at));
                     }
 
                     // 断面の剛性 (解析の入力そのもの)。数値でないまま進むと、剛性行列や結果に数値でない値が混ざる
-                    message += DescribeSectionStiffnessProblems(sec, $"杭体{pbNo} 区間{segNo}");
+                    problems.AddRange(CollectSectionStiffnessProblems(sec, at));
 
                     if (!IsPositive(sec.ConcreteFc)
                         && sec.PileBodyType != PileTypeNames.SteelPipe  // 純鋼管杭は Fc 不要
                         && !(sec.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && sec.PileSectionType == PileTypeNames.SteelPipeSection))
                     {
-                        message += $"杭体{pbNo} 区間{segNo}: コンクリート設計基準強度 Fc が 0 以下か数値ではありません ({sec.ConcreteFc}).\n";
+                        problems.Add(Diagnostic.InputAt(at, $"コンクリート設計基準強度 Fc が 0 以下か数値ではありません ({sec.ConcreteFc})."));
                     }
                 }
             }
-            return message;
+            return problems;
         }
 
         /// <summary>
-        /// 場所打ち RC の材料の値の範囲外 (無ければ空)。ヤング係数・強度は正の数、せん断補強筋比・強度は 0 以上、
+        /// 場所打ち RC の材料の値の範囲外。ヤング係数・強度は正の数、せん断補強筋比・強度は 0 以上、
         /// せん断補強筋があるならピッチは正の数。
         /// </summary>
-        internal static string DescribeInsituRcMaterialProblems(PileSection sec, string where)
+        internal static List<Diagnostic> CollectInsituRcMaterialProblems(PileSection sec, DiagnosticTarget at)
         {
-            string message = "";
+            var problems = new List<Diagnostic>();
+            void Add(string detail) => problems.Add(Diagnostic.InputAt(at, detail));
             if (!IsPositive(sec.ConcreteE))
-                message += $"{where}: コンクリートのヤング係数 Ec が 0 以下か数値ではありません ({sec.ConcreteE}).\n";
+                Add($"コンクリートのヤング係数 Ec が 0 以下か数値ではありません ({sec.ConcreteE}).");
             if (!IsPositive(sec.ConcreteGsi))
-                message += $"{where}: コンクリートの強度の有効係数 ξ が 0 以下か数値ではありません ({sec.ConcreteGsi}).\n";
+                Add($"コンクリートの強度の有効係数 ξ が 0 以下か数値ではありません ({sec.ConcreteGsi}).");
             if (sec.MainBarNum > 0)
             {
                 if (!IsPositive(sec.MainBarEr))
-                    message += $"{where}: 主筋のヤング係数 Er が 0 以下か数値ではありません ({sec.MainBarEr}).\n";
+                    Add($"主筋のヤング係数 Er が 0 以下か数値ではありません ({sec.MainBarEr}).");
                 if (!IsPositive(sec.MainBarAg))
-                    message += $"{where}: 主筋の断面積が 0 以下か数値ではありません ({sec.MainBarAg}).\n";
+                    Add($"主筋の断面積が 0 以下か数値ではありません ({sec.MainBarAg}).");
             }
             if (!(double.IsFinite(sec.HoopPw) && sec.HoopPw >= 0))
-                message += $"{where}: せん断補強筋比 pw が 0 未満か数値ではありません ({sec.HoopPw}).\n";
+                Add($"せん断補強筋比 pw が 0 未満か数値ではありません ({sec.HoopPw}).");
             if (!(double.IsFinite(sec.HoopSigmay) && sec.HoopSigmay >= 0))
-                message += $"{where}: せん断補強筋の降伏強度が 0 未満か数値ではありません ({sec.HoopSigmay}).\n";
+                Add($"せん断補強筋の降伏強度が 0 未満か数値ではありません ({sec.HoopSigmay}).");
             if (double.IsFinite(sec.HoopBarArea) && sec.HoopBarArea > 0 && !IsPositive(sec.HoopSpacing))
-                message += $"{where}: せん断補強筋のピッチが 0 以下か数値ではありません ({sec.HoopSpacing}).\n";
-            return message;
+                Add($"せん断補強筋のピッチが 0 以下か数値ではありません ({sec.HoopSpacing}).");
+            return problems;
         }
 
         /// <summary>
-        /// 断面の軸剛性 EA・曲げ剛性 EI が正の有限の数にならなければ、その値 (無ければ空)。
+        /// 断面の軸剛性 EA・曲げ剛性 EI が正の有限の数にならなければ、その値。
         /// 入力の個々の値が範囲内でも、組み合わせ (腐食代が肉厚以上など) で 0 以下・数値でなくなることがある。
         /// 断面の計算そのものが失敗したときも、例外で解析を止めずにここで知らせる。
         /// </summary>
-        internal static string DescribeSectionStiffnessProblems(PileSection sec, string where)
+        internal static List<Diagnostic> CollectSectionStiffnessProblems(PileSection sec, DiagnosticTarget at)
         {
             try
             {
-                string message = "";
+                var problems = new List<Diagnostic>();
                 if (!IsPositive(sec.EA))
-                    message += $"{where}: 断面の軸剛性 EA が正の数になりません ({sec.EA})。断面の寸法・材料を確認してください.\n";
+                    problems.Add(Diagnostic.InputAt(at, $"断面の軸剛性 EA が正の数になりません ({sec.EA})。断面の寸法・材料を確認してください."));
                 if (!IsPositive(sec.EI))
-                    message += $"{where}: 断面の曲げ剛性 EI が正の数になりません ({sec.EI})。断面の寸法・材料を確認してください.\n";
-                return message;
+                    problems.Add(Diagnostic.InputAt(at, $"断面の曲げ剛性 EI が正の数になりません ({sec.EI})。断面の寸法・材料を確認してください."));
+                return problems;
             }
             catch (Exception ex) when (ex is ArgumentException or ArithmeticException or InvalidOperationException)
             {
-                return $"{where}: 断面の剛性を計算できません ({ex.Message.Split('\n')[0].Trim()}).\n";
+                return [Diagnostic.InputAt(at, $"断面の剛性を計算できません ({ex.Message.Split('\n')[0].Trim()}).")];
             }
         }
 
@@ -453,216 +507,231 @@ namespace PileDesign.Services
         ///   - 各 GroundLayer の LayerThickness が 0 以下なら指摘
         /// </summary>
         public static string CheckGroundLayerGeometry(InputModel inputModel, string message)
+            => message + Lines(CollectGroundLayerGeometryProblems(inputModel));
+
+        internal static List<Diagnostic> CollectGroundLayerGeometryProblems(InputModel inputModel)
         {
-            if (inputModel?.GroundsInput == null) return message;
+            var problems = new List<Diagnostic>();
+            if (inputModel?.GroundsInput == null) return problems;
             for (int g = 0; g < inputModel.GroundsInput.Count; g++)
             {
                 var gi = inputModel.GroundsInput[g];
                 if (gi?.GroundLayers == null) continue;
-                int gNo = g + 1;
                 for (int li = 0; li < gi.GroundLayers.Count; li++)
                 {
                     var layer = gi.GroundLayers[li];
                     if (layer == null) continue;
+                    var at = DiagnosticTarget.GroundLayer(g + 1, li + 1);
                     if (!IsPositive(layer.LayerThickness))
-                        message += $"地盤{gNo} 層{li + 1}: 層厚が 0 以下か数値ではありません ({layer.LayerThickness}).\n";
+                        problems.Add(Diagnostic.InputAt(at, $"層厚が 0 以下か数値ではありません ({layer.LayerThickness})."));
                     if (!double.IsFinite(layer.BottomAltitude))
-                        message += $"地盤{gNo} 層{li + 1}: 層の下端の標高が数値ではありません ({layer.BottomAltitude}).\n";
+                        problems.Add(Diagnostic.InputAt(at, $"層の下端の標高が数値ではありません ({layer.BottomAltitude})."));
                 }
             }
-            return message;
+            return problems;
         }
 
         // 杭のすべての高さ内で土質が定義されているかをチェック
         public static string CheckSoilPile(InputModel inputModel, string message)
+            => message + Lines(CollectSoilPileProblems(inputModel));
+
+        /// <summary>
+        /// 杭配置の各杭が、杭体・地盤・土層-杭セットを引けて、杭の全長が地盤の範囲に入っているか。
+        ///
+        /// <para>杭そのものの問題 (番号の範囲外・杭頭の高さ・土層-杭セット) は<b>その杭</b>を指す。
+        /// 杭体・地盤の中身の問題 (区間・土層が無い) は<b>その杭体・地盤</b>を指す (使う杭すべてに効く)。
+        /// 杭と地盤の上下の関係は、同じ杭体・地盤・杭頭の高さの杭で 1 行にまとめ、その杭をすべて指す。</para>
+        /// </summary>
+        internal static List<Diagnostic> CollectSoilPileProblems(InputModel inputModel)
         {
+            var problems = new List<Diagnostic>();
             if (inputModel.PileLayoutItems == null || inputModel.PileLayoutItems.Count == 0)
             {
-                message += $"杭配置にデータがありません。\n";
-                return message;
+                problems.Add(Diagnostic.Input(DiagnosticTarget.Nowhere, "杭配置にデータがありません。"));
+                return problems;
             }
 
+            // 杭体・地盤・杭頭の高さが同じ杭は、地盤との上下の関係も同じ。まとめて 1 回だけ見る
+            var groups = new List<((int Ground, int Body, double Top) Key, List<PileLayoutDataItem> Piles)>();
 
-            ObservableCollection<(int, int, double)> UsedGroundNosPileBodyNosPileTopAltitudes = [];
-
-            foreach (PileLayoutDataItem pileLayoutDataItem in inputModel.PileLayoutItems)
+            foreach (PileLayoutDataItem pile in inputModel.PileLayoutItems)
             {
-                if (pileLayoutDataItem == null) continue;
-                int pileBodyNo = pileLayoutDataItem.PileBodyNo;
-                int groundNo = pileLayoutDataItem.GroundNo;
+                if (pile == null) continue;
+                var at = DiagnosticTarget.Pile(pile.No);
 
                 // 番号の範囲を先に見る。以前は番号でそのまま配列を引いていたので、古いファイルなどで範囲の外の番号があると、
                 // 入力の問題を知らせる前に例外で落ちた
-                string? badReference = DescribeBadPileReference(inputModel, pileLayoutDataItem);
+                string? badReference = DescribeBadPileReference(inputModel, pile);
                 if (badReference != null)
                 {
-                    message += badReference + "\n";
+                    problems.Add(Diagnostic.Input(at, badReference));
                     continue;
                 }
-                if (!double.IsFinite(pileLayoutDataItem.PileHeadZ))
+                if (!double.IsFinite(pile.PileHeadZ))
                 {
-                    message += $"杭 No.{pileLayoutDataItem.No}: 杭頭の高さが数値ではありません ({pileLayoutDataItem.PileHeadZ}).\n";
+                    problems.Add(Diagnostic.InputAt(at, $"杭頭の高さが数値ではありません ({pile.PileHeadZ})."));
                     continue;
                 }
                 // 解析は杭ごとの土層-杭セットを SoilPileAltNo で引く。対応が無いまま進むと、範囲の外を引いて落ちる
-                if (pileLayoutDataItem.SoilPileAt(inputModel) == null)
+                if (pile.SoilPileAt(inputModel) == null)
                 {
-                    message += $"杭 No.{pileLayoutDataItem.No}: この杭の土層-杭セットがまだ作られていません。"
-                             + "杭配置・地盤・杭体の入力を確定してから、もう一度実行してください。\n";
+                    problems.Add(Diagnostic.InputAt(at, "この杭の土層-杭セットがまだ作られていません。"
+                             + "杭配置・地盤・杭体の入力を確定してから、もう一度実行してください。"));
                     continue;
                 }
-                // pileTopAltitude は杭頭高さ。v2 セマンティクスでは pile.Z は接合節点 Z なので PileHeadZ を使う。
+                // 杭頭高さ。v2 セマンティクスでは pile.Z は接合節点 Z なので PileHeadZ を使う。
                 // SoilPile キャッシュ (杭頭基準) との整合のためにも PileHeadZ で揃える。
-                double pileTopAltitude = pileLayoutDataItem.PileHeadZ;
-
-                (int, int, double) groundNoPileBodyNoPileTopAltitude = (groundNo, pileBodyNo, pileTopAltitude);
-
-                // UsedPileBodyNos内にpileBodyNoが含まれているかチェック
-                if (!UsedGroundNosPileBodyNosPileTopAltitudes.Contains(groundNoPileBodyNoPileTopAltitude))
-                {
-                    // pileBodyNoがUsedPileBodyNosに含まれていない場合の処理
-                    UsedGroundNosPileBodyNosPileTopAltitudes.Add(groundNoPileBodyNoPileTopAltitude);
-
-                    if ((inputModel.PileBodies[pileBodyNo - 1].PileBodySegments?.Count ?? 0) == 0)
-                    {
-                        // 杭体データが空の場合のメッセージ
-                        message += $"杭体番号{pileBodyNo}に杭区間データがありません。\n";
-                        continue; // 次の杭体へスキップ
-                    }
-
-                    if ((inputModel.GroundsInput[groundNo - 1].GroundLayers?.Count ?? 0) == 0)
-                    {
-                        // 杭体データが空の場合のメッセージ
-                        message += $"地盤番号{groundNo}に土層データがありません。\n";
-                        continue; // 次の杭体へスキップ
-                    }
-
-                    double pileBottomAltitude = pileTopAltitude - inputModel.PileBodies[pileBodyNo - 1].PileBodySegments[^1].SegmentDepth;
-
-                    ObservableCollection<GroundLayerInput> groundLayerDataItems = inputModel.GroundsInput[groundNo - 1].GroundLayers;
-                    double groundTopAltitude = inputModel.GroundsInput[groundNo - 1].GroundLayers[0].BottomAltitude
-                            + inputModel.GroundsInput[groundNo - 1].GroundLayers[0].LayerThickness;
-                    double groundBottomAltitude = inputModel.GroundsInput[groundNo - 1].GroundLayers[^1].BottomAltitude;
-
-                    if (groundTopAltitude < pileTopAltitude)
-                    {
-                        message += $"杭体番号{pileBodyNo}の最上部が地盤番号{groundNo}の最上部よりも浅いです。\n";
-                    }
-
-                    if (pileBottomAltitude < groundBottomAltitude)
-                    {
-                        message += $"杭体番号{pileBodyNo}の最下部が地盤番号{groundNo}の最下部よりも深いです。\n";
-                    }
-                }
+                var key = (pile.GroundNo, pile.PileBodyNo, pile.PileHeadZ);
+                int index = groups.FindIndex(g => g.Key == key);
+                if (index < 0) groups.Add((key, [pile]));
+                else groups[index].Piles.Add(pile);
             }
-            return message;
+
+            var reportedBodies = new HashSet<int>();
+            var reportedGrounds = new HashSet<int>();
+            foreach (var ((groundNo, pileBodyNo, pileTopAltitude), piles) in groups)
+            {
+                var body = inputModel.PileBodies[pileBodyNo - 1];
+                var ground = inputModel.GroundsInput[groundNo - 1];
+                if ((body.PileBodySegments?.Count ?? 0) == 0)
+                {
+                    if (reportedBodies.Add(pileBodyNo))
+                        problems.Add(Diagnostic.Input(DiagnosticTarget.PileBody(pileBodyNo), $"杭体{pileBodyNo}に杭区間データがありません。"));
+                    continue;
+                }
+                if ((ground.GroundLayers?.Count ?? 0) == 0)
+                {
+                    if (reportedGrounds.Add(groundNo))
+                        problems.Add(Diagnostic.Input(DiagnosticTarget.Ground(groundNo), $"地盤{groundNo}に土層データがありません。"));
+                    continue;
+                }
+
+                double pileBottomAltitude = pileTopAltitude - body.PileBodySegments[^1].SegmentDepth;
+                double groundTopAltitude = ground.GroundLayers[0].BottomAltitude + ground.GroundLayers[0].LayerThickness;
+                double groundBottomAltitude = ground.GroundLayers[^1].BottomAltitude;
+
+                // 杭頭の高さは杭ごとの入力なので、指すのは杭 (同じ杭体を使うほかの杭ではない)
+                string who = "杭 No." + string.Join("・", piles.Take(10).Select(p => p.No))
+                           + (piles.Count > 10 ? $" ほか {piles.Count - 10} 本" : "");
+                if (groundTopAltitude < pileTopAltitude)
+                    problems.Add(PileGroupProblem(piles, $"{who} (杭体{pileBodyNo}・地盤{groundNo}): 杭の最上部が地盤の最上部よりも浅いです。"));
+                if (pileBottomAltitude < groundBottomAltitude)
+                    problems.Add(PileGroupProblem(piles, $"{who} (杭体{pileBodyNo}・地盤{groundNo}): 杭の最下部が地盤の最下部よりも深いです。"));
+            }
+            return problems;
         }
+
+        /// <summary>複数の杭にまたがる 1 行の問題 (最初の杭を場所にし、残りの杭も指す)。</summary>
+        private static Diagnostic PileGroupProblem(IReadOnlyList<PileLayoutDataItem> piles, string message)
+            => Diagnostic.Input(DiagnosticTarget.Pile(piles[0].No), message) with
+            {
+                MoreTargets = piles.Skip(1).Select(p => DiagnosticTarget.Pile(p.No)).ToList(),
+            };
 
         //根入れのすべての高さ内で土質が定義されているかをチェック
         public static string CheckSoilEmbedment(InputModel inputModel, string message)
+            => message + Lines(CollectEmbedmentProblems(inputModel));
+
+        internal static List<Diagnostic> CollectEmbedmentProblems(InputModel inputModel)
         {
+            var problems = new List<Diagnostic>();
+            var embedment = inputModel.EmbedmentInput;
             // 根入なし (EmbedmentInput 未初期化) なら検証スキップ
-            if (inputModel.EmbedmentInput == null) return message;
-            if (inputModel.EmbedmentInput.EmbedmentLayersCount != 0)
+            if (embedment == null || embedment.EmbedmentLayersCount == 0) return problems;
+
+            int groundNo = embedment.GroundNo;
+            int groundCount = inputModel.GroundsInput?.Count ?? 0;
+            if (groundNo < 1 || groundNo > groundCount)
             {
-                int groundNo = inputModel.EmbedmentInput.GroundNo;
-                int groundCount = inputModel.GroundsInput?.Count ?? 0;
-                if (groundNo < 1 || groundNo > groundCount)
-                {
-                    message += $"根入部で選択された地盤番号{groundNo}の地盤がありません (地盤は {groundCount} 個)。根入部の地盤を選び直してください。\n";
-                    return message;
-                }
-                // 層数の欄と層の一覧は別々に持たれている。食い違ったまま進むと、根入部を考慮するか (層数で判断) と
-                // どの層を使うか (一覧) が合わない。以前は一覧が空なら黙って検査を終えていた
-                int layerRows = inputModel.EmbedmentInput.EmbedmentLayers?.Count ?? 0;
-                if (layerRows != inputModel.EmbedmentInput.EmbedmentLayersCount)
-                {
-                    message += $"根入部の層数 ({inputModel.EmbedmentInput.EmbedmentLayersCount}) と層の入力 ({layerRows} 行) が合いません。"
-                             + "根入部の層数と表を確認してください。\n";
-                    return message;
-                }
-
-                string layerGeometry = DescribeEmbedmentLayerGeometry(inputModel.EmbedmentInput);
-                if (layerGeometry.Length > 0)
-                {
-                    // 形の壊れた層では下の地盤との比較も意味を持たないので、ここで止める
-                    message += layerGeometry;
-                    return message;
-                }
-
-                if ((inputModel.GroundsInput![groundNo - 1].GroundLayers?.Count ?? 0) == 0)
-                {
-                    // 杭体データが空の場合のメッセージ
-                    message += $"根入部で選択された地盤番号{groundNo}に土層データがありません。\n";
-                }
-                else
-                {
-                    double groundTopAltitude = inputModel.GroundsInput[groundNo - 1].GroundLayers[0].BottomAltitude
-                            + inputModel.GroundsInput[groundNo - 1].GroundLayers[0].LayerThickness;
-                    double groundBottomAltitude = inputModel.GroundsInput[groundNo - 1].GroundLayers[^1].BottomAltitude;
-
-                    double embedmentTopAltitude = inputModel.EmbedmentInput.EmbedmentLayers[0].TopAltitude;
-                    double embedmentBottomAltitude = inputModel.EmbedmentInput.EmbedmentLayers[^1].BottomAltitude;
-                    if (groundTopAltitude < embedmentTopAltitude)
-                    {
-                        message += $"根入部の最上部が地盤番号{groundNo}の最上部よりも浅いです。\n";
-                    }
-
-                    if (embedmentBottomAltitude < groundBottomAltitude)
-                    {
-                        message += $"根入部の最下部が地盤番号{groundNo}の最下部よりも深いです。\n";
-                    }
-                }
+                problems.Add(Diagnostic.Input(DiagnosticTarget.Embedment(),
+                    $"根入部で選択された地盤番号{groundNo}の地盤がありません (地盤は {groundCount} 個)。根入部の地盤を選び直してください。"));
+                return problems;
             }
-            return message;
+            // 層数の欄と層の一覧は別々に持たれている。食い違ったまま進むと、根入部を考慮するか (層数で判断) と
+            // どの層を使うか (一覧) が合わない。以前は一覧が空なら黙って検査を終えていた
+            int layerRows = embedment.EmbedmentLayers?.Count ?? 0;
+            if (layerRows != embedment.EmbedmentLayersCount)
+            {
+                problems.Add(Diagnostic.Input(DiagnosticTarget.Embedment(),
+                    $"根入部の層数 ({embedment.EmbedmentLayersCount}) と層の入力 ({layerRows} 行) が合いません。"
+                    + "根入部の層数と表を確認してください。"));
+                return problems;
+            }
+
+            var layerGeometry = CollectEmbedmentLayerGeometryProblems(embedment);
+            if (layerGeometry.Count > 0)
+            {
+                // 形の壊れた層では下の地盤との比較も意味を持たないので、ここで止める
+                problems.AddRange(layerGeometry);
+                return problems;
+            }
+
+            var ground = inputModel.GroundsInput![groundNo - 1];
+            if ((ground.GroundLayers?.Count ?? 0) == 0)
+            {
+                problems.Add(Diagnostic.Input(DiagnosticTarget.Ground(groundNo), $"根入部で選択された地盤番号{groundNo}に土層データがありません。"));
+                return problems;
+            }
+
+            double groundTopAltitude = ground.GroundLayers[0].BottomAltitude + ground.GroundLayers[0].LayerThickness;
+            double groundBottomAltitude = ground.GroundLayers[^1].BottomAltitude;
+            double embedmentTopAltitude = embedment.EmbedmentLayers[0].TopAltitude;
+            double embedmentBottomAltitude = embedment.EmbedmentLayers[^1].BottomAltitude;
+            if (groundTopAltitude < embedmentTopAltitude)
+                problems.Add(Diagnostic.Input(DiagnosticTarget.Embedment(), $"根入部の最上部が地盤番号{groundNo}の最上部よりも浅いです。"));
+            if (embedmentBottomAltitude < groundBottomAltitude)
+                problems.Add(Diagnostic.Input(DiagnosticTarget.Embedment(), $"根入部の最下部が地盤番号{groundNo}の最下部よりも深いです。"));
+            return problems;
         }
 
         /// <summary>
-        /// 根入部の各層の形の誤り (無ければ空文字)。層は上から並ぶ。
+        /// 根入部の各層の形の誤り。層は上から並ぶ。
         ///
         /// 解析は各層の上端・下端の標高をそのまま使う (<see cref="InputModel"/> の根入部の分割)。上端・下端は
         /// 層厚と根入部の下端から画面側で求めるが、ファイルを手で直したときなどは食い違いうる。以前は根入部全体の
         /// 上端・下端と地盤の範囲しか見ておらず、厚さが 0 以下・数でない・上下が逆・隣の層との隙間や重なりがあっても
         /// 計算に進んだ。
         /// </summary>
-        internal static string DescribeEmbedmentLayerGeometry(EmbedmentInput embedment)
+        internal static List<Diagnostic> CollectEmbedmentLayerGeometryProblems(EmbedmentInput embedment)
         {
             const double tol = NumericalConstants.COORDINATE_TOLERANCE;
+            var problems = new List<Diagnostic>();
             var layers = embedment.EmbedmentLayers;
-            if (layers == null || layers.Count == 0) return "";
+            if (layers == null || layers.Count == 0) return problems;
 
-            var sb = new System.Text.StringBuilder();
             for (int i = 0; i < layers.Count; i++)
             {
+                var at = DiagnosticTarget.Embedment(i + 1);
+                void Add(string message) => problems.Add(Diagnostic.Input(at, message));
                 var layer = layers[i];
                 if (layer == null)
                 {
-                    sb.Append($"根入部 第{i + 1}層: 層のデータがありません。\n");
+                    Add($"根入部 第{i + 1}層: 層のデータがありません。");
                     continue;
                 }
                 if (!IsPositive(layer.LayerThickness))
-                    sb.Append($"根入部 第{i + 1}層: 層厚が 0 以下か数値ではありません ({layer.LayerThickness}).\n");
+                    Add($"根入部 第{i + 1}層: 層厚が 0 以下か数値ではありません ({layer.LayerThickness}).");
                 if (!double.IsFinite(layer.TopAltitude) || !double.IsFinite(layer.BottomAltitude))
                 {
-                    sb.Append($"根入部 第{i + 1}層: 上端・下端の標高が数値ではありません (上端 {layer.TopAltitude} / 下端 {layer.BottomAltitude}).\n");
+                    Add($"根入部 第{i + 1}層: 上端・下端の標高が数値ではありません (上端 {layer.TopAltitude} / 下端 {layer.BottomAltitude}).");
                     continue;
                 }
                 if (!(layer.TopAltitude > layer.BottomAltitude))
-                    sb.Append($"根入部 第{i + 1}層: 上端 ({layer.TopAltitude:F3} m) が下端 ({layer.BottomAltitude:F3} m) より高くありません。\n");
+                    Add($"根入部 第{i + 1}層: 上端 ({layer.TopAltitude:F3} m) が下端 ({layer.BottomAltitude:F3} m) より高くありません。");
                 else if (IsPositive(layer.LayerThickness)
                          && Math.Abs(layer.TopAltitude - layer.BottomAltitude - layer.LayerThickness) > tol)
-                    sb.Append($"根入部 第{i + 1}層: 上端と下端の差 ({layer.TopAltitude - layer.BottomAltitude:F3} m) が層厚 ({layer.LayerThickness:F3} m) と合いません。\n");
+                    Add($"根入部 第{i + 1}層: 上端と下端の差 ({layer.TopAltitude - layer.BottomAltitude:F3} m) が層厚 ({layer.LayerThickness:F3} m) と合いません。");
 
                 if (i + 1 < layers.Count && layers[i + 1] is { } below && double.IsFinite(below.TopAltitude))
                 {
                     double gap = layer.BottomAltitude - below.TopAltitude;
                     if (gap > tol)
-                        sb.Append($"根入部 第{i + 1}層と第{i + 2}層の間に {gap:F3} m の隙間があります (第{i + 1}層の下端 {layer.BottomAltitude:F3} m / 第{i + 2}層の上端 {below.TopAltitude:F3} m)。\n");
+                        Add($"根入部 第{i + 1}層と第{i + 2}層の間に {gap:F3} m の隙間があります (第{i + 1}層の下端 {layer.BottomAltitude:F3} m / 第{i + 2}層の上端 {below.TopAltitude:F3} m)。");
                     else if (gap < -tol)
-                        sb.Append($"根入部 第{i + 1}層と第{i + 2}層が {-gap:F3} m 重なっています (第{i + 1}層の下端 {layer.BottomAltitude:F3} m / 第{i + 2}層の上端 {below.TopAltitude:F3} m)。\n");
+                        Add($"根入部 第{i + 1}層と第{i + 2}層が {-gap:F3} m 重なっています (第{i + 1}層の下端 {layer.BottomAltitude:F3} m / 第{i + 2}層の上端 {below.TopAltitude:F3} m)。");
                 }
             }
-            return sb.ToString();
+            return problems;
         }
 
         // 杭要素分割が済んでいないことは、ここでは注意にしない。

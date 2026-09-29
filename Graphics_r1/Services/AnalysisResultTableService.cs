@@ -636,14 +636,7 @@ namespace PileDesign.Services
         /// 杭節点 (名前 <c>杭節点-{杭番号}-{節点順}</c>、<see cref="AnalysisModelling"/> が付ける) の杭番号。杭節点でなければ null。
         /// 杭番号は解析モデルを組んだときの杭配置の番号 (解析の前に 1 から連番に揃えている)。
         /// </summary>
-        internal static int? PileNoOfPileNode(Node? node)
-        {
-            string? name = node?.Name;
-            if (name == null || !name.StartsWith("杭節点-", System.StringComparison.Ordinal)) return null;
-            var parts = name.Split('-');
-            return parts.Length >= 3 && int.TryParse(parts[1], System.Globalization.NumberStyles.Integer,
-                System.Globalization.CultureInfo.InvariantCulture, out int no) ? no : null;
-        }
+        internal static int? PileNoOfPileNode(Node? node) => PileNodeNaming.PileNoOf(node?.Name);
 
         /// <summary>隣接点間の傾きを計算</summary>
         private static double CalcSegmentSlope(List<double> xs, List<double> ys, int j)

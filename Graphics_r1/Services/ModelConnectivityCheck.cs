@@ -1,3 +1,4 @@
+using PileDesign.Common;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
@@ -29,8 +30,12 @@ namespace PileDesign.Services
     {
         /// <summary>解析を止めるべき問題。</summary>
         public static List<string> CollectErrors(InputModel inputModel)
+            => CollectErrorDiagnostics(inputModel).Select(d => d.Message).ToList();
+
+        /// <summary>解析を止めるべき問題 (場所つき。基礎梁の番号・杭の番号)。</summary>
+        public static List<Diagnostic> CollectErrorDiagnostics(InputModel inputModel)
         {
-            var errors = new List<string>();
+            var errors = new List<Diagnostic>();
             if (inputModel == null) return errors;
 
             var fb = inputModel.FoundationBeamInput;
@@ -41,11 +46,11 @@ namespace PileDesign.Services
             // 基礎梁の端点は「種類 + 識別子」で引く。同じ種類に同じ識別子が 2 つあると、参照は一覧の検査を通るのに、
             // 座標を引くときはどちらか一方 (先に見つかった方) を黙って使う。ファイルを手で直した・複製の不具合などで起きる。
             AddDuplicateIdErrors(errors, "一般節点",
-                (inputModel.InputNodes ?? []).Where(n => n != null).Select(n => (n.UniqueId, n.No)));
+                (inputModel.InputNodes ?? []).Where(n => n != null).Select(n => (n.UniqueId, n.No)), _ => DiagnosticTarget.Nowhere);
             AddDuplicateIdErrors(errors, "基礎梁節点",
-                (fb!.Nodes ?? []).Where(n => n != null).Select(n => (n.Id, n.No)));
+                (fb!.Nodes ?? []).Where(n => n != null).Select(n => (n.Id, n.No)), _ => DiagnosticTarget.Nowhere);
             AddDuplicateIdErrors(errors, "杭配置",
-                (inputModel.PileLayoutItems ?? []).Where(p => p != null).Select(p => (p.UniqueId, p.No)));
+                (inputModel.PileLayoutItems ?? []).Where(p => p != null).Select(p => (p.UniqueId, p.No)), no => DiagnosticTarget.Pile(no));
 
             // 実在する端点の一覧
             var generalIds = new HashSet<Guid>(
@@ -70,9 +75,9 @@ namespace PileDesign.Services
             {
                 if (b == null) continue;
                 if (!Exists(b.NodeI_Type, b.NodeI_Id))
-                    errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 始点の参照先が見つかりません。参照先を消していないか確認してください。");
+                    errors.Add(BeamProblem(fb.GetBeamNo(b), $"基礎梁 No.{fb.GetBeamNo(b)}: 始点の参照先が見つかりません。参照先を消していないか確認してください。"));
                 if (!Exists(b.NodeJ_Type, b.NodeJ_Id))
-                    errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 終点の参照先が見つかりません。参照先を消していないか確認してください。");
+                    errors.Add(BeamProblem(fb.GetBeamNo(b), $"基礎梁 No.{fb.GetBeamNo(b)}: 終点の参照先が見つかりません。参照先を消していないか確認してください。"));
             }
 
             // ── 2. 長さが 0 の基礎梁 ──
@@ -82,7 +87,7 @@ namespace PileDesign.Services
                 if (b == null) continue;
                 if (b.NodeI_Type == b.NodeJ_Type && b.NodeI_Id == b.NodeJ_Id)
                 {
-                    errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 始点と終点が同じ点です。");
+                    errors.Add(BeamProblem(fb.GetBeamNo(b), $"基礎梁 No.{fb.GetBeamNo(b)}: 始点と終点が同じ点です。"));
                     continue;
                 }
 
@@ -94,8 +99,8 @@ namespace PileDesign.Services
                     bool badI = !IsFinite(pi.Value), badJ = !IsFinite(pj.Value);
                     if (badI || badJ)
                     {
-                        if (badI) errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 始点 ({DescribeEndpoint(inputModel, b.NodeI_Type, b.NodeI_Id)}) の座標が数値ではありません {Format(pi.Value)}。");
-                        if (badJ) errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 終点 ({DescribeEndpoint(inputModel, b.NodeJ_Type, b.NodeJ_Id)}) の座標が数値ではありません {Format(pj.Value)}。");
+                        if (badI) errors.Add(BeamProblem(fb.GetBeamNo(b), $"基礎梁 No.{fb.GetBeamNo(b)}: 始点 ({DescribeEndpoint(inputModel, b.NodeI_Type, b.NodeI_Id)}) の座標が数値ではありません {Format(pi.Value)}。"));
+                        if (badJ) errors.Add(BeamProblem(fb.GetBeamNo(b), $"基礎梁 No.{fb.GetBeamNo(b)}: 終点 ({DescribeEndpoint(inputModel, b.NodeJ_Type, b.NodeJ_Id)}) の座標が数値ではありません {Format(pj.Value)}。"));
                         continue;
                     }
                     double dx = pi.Value.X - pj.Value.X;
@@ -103,9 +108,9 @@ namespace PileDesign.Services
                     double dz = pi.Value.Z - pj.Value.Z;
                     double length = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
                     if (!double.IsFinite(length))
-                        errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 長さが数値になりません (始点 {DescribeEndpoint(inputModel, b.NodeI_Type, b.NodeI_Id)} / 終点 {DescribeEndpoint(inputModel, b.NodeJ_Type, b.NodeJ_Id)})。");
+                        errors.Add(BeamProblem(fb.GetBeamNo(b), $"基礎梁 No.{fb.GetBeamNo(b)}: 長さが数値になりません (始点 {DescribeEndpoint(inputModel, b.NodeI_Type, b.NodeI_Id)} / 終点 {DescribeEndpoint(inputModel, b.NodeJ_Type, b.NodeJ_Id)})。"));
                     else if (PileDesign.Common.GeometryTolerance.IsZeroLength(length))
-                        errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 始点と終点が同じ位置にあります (長さ 0)。");
+                        errors.Add(BeamProblem(fb.GetBeamNo(b), $"基礎梁 No.{fb.GetBeamNo(b)}: 始点と終点が同じ位置にあります (長さ 0)。"));
                 }
             }
 
@@ -115,21 +120,27 @@ namespace PileDesign.Services
             // 杭を 1 本も含まない一群は、どこにも支えが無い。
             // (剛床のときは水平 3 成分だけが代表節点に従うので、鉛直と回転はやはり自由)
             foreach (var island in FindIslandsWithoutPiles(fb, pileIds))
-                errors.Add($"基礎梁 {island}: どの杭にもつながっていません。支えが無いため解析できません。");
+                errors.Add(Diagnostic.Input(DiagnosticTarget.FoundationBeam(), $"基礎梁 {island}: どの杭にもつながっていません。支えが無いため解析できません。"));
 
             return errors;
         }
 
         /// <summary>同じ種類の節点に同じ識別子が 2 つ以上あれば、番号を並べて入力の誤りにする。</summary>
-        private static void AddDuplicateIdErrors(List<string> errors, string kind, IEnumerable<(Guid Id, int No)> items)
+        private static void AddDuplicateIdErrors(List<Diagnostic> errors, string kind, IEnumerable<(Guid Id, int No)> items,
+            Func<int, DiagnosticTarget> targetOf)
         {
             foreach (var group in items.GroupBy(i => i.Id).Where(g => g.Count() > 1))
             {
                 string nos = string.Join("・", group.Select(i => $"No.{i.No}"));
-                errors.Add($"{kind} {nos} が同じ識別子を持っています。基礎梁の端点がどれを指すか決まらないため解析できません"
-                         + " (ファイルを手で直したか、複製の不具合の可能性があります。どれかを消して入力し直してください)。");
+                var targets = group.Select(i => targetOf(i.No)).ToList();
+                errors.Add(Diagnostic.Input(targets[0], $"{kind} {nos} が同じ識別子を持っています。基礎梁の端点がどれを指すか決まらないため解析できません"
+                         + " (ファイルを手で直したか、複製の不具合の可能性があります。どれかを消して入力し直してください)。")
+                         with { MoreTargets = targets.Skip(1).ToList() });
             }
         }
+
+        private static Diagnostic BeamProblem(int beamNo, string message)
+            => Diagnostic.Input(DiagnosticTarget.FoundationBeam(beamNo), message);
 
         private static bool IsFinite((double X, double Y, double Z) p)
             => double.IsFinite(p.X) && double.IsFinite(p.Y) && double.IsFinite(p.Z);

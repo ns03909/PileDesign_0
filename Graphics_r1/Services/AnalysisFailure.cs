@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
+using PileDesign.Common;
 
 namespace PileDesign.Services
 {
@@ -28,40 +28,32 @@ namespace PileDesign.Services
         public string? Stage { get; }
     }
 
-    /// <summary>解析が止まったことを利用者に知らせる文と、問題の杭の手掛かり。</summary>
+    /// <summary>
+    /// 解析が止まったことを利用者に知らせる文と、問題の場所。
+    ///
+    /// <para>場所は例外の文から拾わず、例外が持つ問題 (<see cref="DiagnosticException"/>) から取る。以前は
+    /// 文の中の「杭No.n」「杭節点-n-」を正規表現で拾っていて、文の書き方が変わると黙って外れた。
+    /// 場所の分からない例外 (連立方程式が解けないなど) は、止まったケースと段階からログで追うよう案内する。</para>
+    /// </summary>
     public static class AnalysisFailure
     {
-        /// <summary>
-        /// 例外 (包まれたものを含む) の文から、関係する杭の番号を拾う。
-        /// 杭要素の節点名 (<c>杭節点-{杭番号}-{順}</c>) と「杭No.{番号}」の書き方に当たる。重複は除き、出た順。
-        /// </summary>
-        public static IReadOnlyList<int> PileNosIn(Exception ex)
+        /// <summary>例外が持つ問題 (場所つき)。止まったケース・段階を、場所を持たない問題にも添える。</summary>
+        public static IReadOnlyList<Diagnostic> DiagnosticsIn(Exception ex)
         {
-            var nos = new List<int>();
-            for (var e = ex; e != null; e = e.InnerException)
-            {
-                foreach (Match m in Regex.Matches(e.Message ?? "", @"杭節点-(\d+)-|杭\s*No\.\s*(\d+)"))
-                {
-                    string digits = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value;
-                    if (int.TryParse(digits, out int no) && !nos.Contains(no)) nos.Add(no);
-                }
-            }
-            return nos;
+            var found = DiagnosticException.CollectFrom(ex);
+            var failure = FindCaseFailure(ex);
+            if (failure == null) return found;
+            // 場所の分からない問題には止まったケース・段階を場所として添える (ログのどこを見ればよいか)
+            return found.Select(d => d.Target.Kind == DiagnosticTargetKind.None
+                ? d with { Target = DiagnosticTarget.LoadCase(failure.CaseTag, failure.Stage) }
+                : d).ToList();
         }
 
-        /// <summary>
-        /// 知らせの文から、関係する杭の番号を拾う。杭番号 (「杭No.n」「杭節点-n-」) と、杭体 (「杭体n」) を使っている杭。
-        /// 解析前の検査の知らせから、直す場所 (杭) へ案内するのに使う。
-        /// </summary>
-        public static IReadOnlyList<int> PileNosIn(string? text, Models.InputData.InputModel? input)
-        {
-            var nos = PileNosIn(new Exception(text ?? "")).ToList();
-            var bodies = Regex.Matches(text ?? "", @"杭体\s*(\d+)")
-                .Select(m => int.TryParse(m.Groups[1].Value, out int b) ? b : -1).Where(b => b > 0).ToHashSet();
-            foreach (var pile in input?.PileLayoutItems ?? [])
-                if (pile != null && bodies.Contains(pile.PileBodyNo) && !nos.Contains(pile.PileNo)) nos.Add(pile.PileNo);
-            return nos;
-        }
+        /// <summary>例外が持つ問題に出てくる杭の番号 (重複なし・出た順)。</summary>
+        public static IReadOnlyList<int> PileNosIn(Exception ex)
+            => DiagnosticsIn(ex).SelectMany(d => d.Targets)
+                .Where(t => t.Kind == DiagnosticTargetKind.Pile && t.PileNo.HasValue)
+                .Select(t => t.PileNo!.Value).Distinct().ToList();
 
         /// <summary>止まったケースの例外を探す (並列に解いたときは AggregateException に包まれる)。</summary>
         public static AnalysisCaseFailedException? FindCaseFailure(Exception ex)
@@ -76,12 +68,14 @@ namespace PileDesign.Services
         }
 
         /// <summary>
-        /// 解析が止まったことを知らせる文。止まった荷重ケース・段階・理由、関係する杭、次にすること。
+        /// 解析が止まったことを知らせる文。止まった荷重ケース・段階・理由、関係する場所、途中の結果の扱い、次にすること。
+        /// <paramref name="selection"/> はメイン画面で選んだ範囲 (<see cref="DiagnosticSelection.Resolve"/>)。
         /// </summary>
-        public static string Describe(Exception ex)
+        public static string Describe(Exception ex, ReviewSelection? selection = null)
         {
             var failure = FindCaseFailure(ex);
             var reason = failure?.InnerException ?? ex;
+            var diagnostics = DiagnosticsIn(ex);
             var lines = new List<string> { "解析が途中で止まりました。" };
             if (failure != null)
             {
@@ -89,13 +83,29 @@ namespace PileDesign.Services
                 if (!string.IsNullOrEmpty(failure.Stage)) lines.Add($"段階: {failure.Stage}");
             }
             lines.Add($"理由: {FirstLine(reason.Message)}");
-            var piles = PileNosIn(ex);
-            if (piles.Count > 0)
-                lines.Add($"関係する杭: No.{string.Join(", ", piles.Take(10))}"
-                          + (piles.Count > 10 ? $" ほか {piles.Count - 10} 本" : "")
-                          + " (メイン画面で選択しています)");
+
+            var located = diagnostics.SelectMany(d => d.Targets).Where(t => t.Kind is not (DiagnosticTargetKind.None or DiagnosticTargetKind.LoadCase))
+                                     .Select(t => t.Label).Distinct().ToList();
+            if (located.Count > 0)
+                lines.Add("関係する場所: " + string.Join("、", located.Take(10)) + (located.Count > 10 ? $" ほか {located.Count - 10} か所" : ""));
+            if (selection != null && DiagnosticSelection.DescribeSelection(selection) is { } scope)
+                lines.Add(scope);
+
             lines.Add("");
-            lines.Add("解析ウィンドウのログの最後に、止まるまでの経過が残っています。詳細はログファイルにも記録しています。");
+            lines.Add("途中までの結果はメイン画面に登録していません。メイン画面の結果は、前に登録した解析のまま (あれば) です。");
+            if (located.Count == 0)
+            {
+                // 場所の分からない止まり方は、止まった位置 (ケース・段階) からログで追う
+                lines.Add(failure != null
+                    ? $"止まった場所を入力の番号で特定できませんでした。解析ウィンドウのログで、荷重ケース「{failure.CaseTag}」"
+                      + (string.IsNullOrEmpty(failure.Stage) ? "" : $"の「{failure.Stage}」") + " の直前の記録を確認してください。"
+                    : "止まった場所を入力の番号で特定できませんでした。解析ウィンドウのログの最後 (モデルの作成・準備の記録) を確認してください。");
+            }
+            else
+            {
+                lines.Add("解析ウィンドウのログの最後に、止まるまでの経過が残っています。");
+            }
+            lines.Add("詳細はログファイルにも記録しています。");
             return string.Join("\n", lines);
         }
 

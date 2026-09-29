@@ -42,5 +42,14 @@ namespace PileDesign.Output
         /// どの解析の結果かを追えるようにする。解析していなければ null。
         /// </summary>
         public string? AnalysisConditions { get; init; }
+
+        /// <summary>水平解析で解いたケースの数 (解析していなければ 0)。性能の記録に添える。</summary>
+        public int HorizontalCaseCount { get; init; }
+
+        /// <summary>
+        /// 水平解析の結果そのものにある数値でない値の数 (<c>AnalysisResultValidator.FindNonFinite</c>)。
+        /// 計算書の表に数値でない値が出たとき、解析で生じたのか表を作る段階で生じたのかを分けて書くのに使う。
+        /// </summary>
+        public int AnalysisNonFiniteCount { get; init; }
     }
 }

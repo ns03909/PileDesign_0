@@ -1422,6 +1422,11 @@ namespace PileDesign.ViewModels
             if (pgs.SettlementSoilLayers == null || pgs.SettlementSoilLayers.Count == 0)
                 return ("群杭沈下解析用の土層が1層以上必要です。\n「土層」タブで土層を追加してください。", GroupSettlementInputTab.SoilLayers);
 
+            // 土層の値 (層厚・変形係数・ポアソン比)。解析の中でも止めるが、押す前に理由を出し、直す場所 (土層タブ) を開く
+            var layerProblems = Steinnbrener.DescribeLayerProblems(pgs.SettlementSoilLayers);
+            if (layerProblems.Count > 0)
+                return (string.Join("\n", layerProblems) + "\n「土層」タブで直してください。", GroupSettlementInputTab.SoilLayers);
+
             // 荷重面が土層の範囲に入っていること
             double topAlt = pgs.SoilLayersTopAltitude;
             double loadAlt = pgs.LoadingPlaneAltitude;

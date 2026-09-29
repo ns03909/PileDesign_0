@@ -1038,6 +1038,7 @@ namespace PileDesign.ViewModels
             (OpenLogWindowCommand as CommunityToolkit.Mvvm.Input.IRelayCommand)?.NotifyCanExecuteChanged();
             (OpenTableWindowCommand as ToolkitRelayCommand)?.NotifyCanExecuteChanged();
             (OpenGraphWindowCommand as ToolkitRelayCommand)?.NotifyCanExecuteChanged();
+            OpenPendingInputNavigation();
         }
 
         /// <summary>
@@ -1116,6 +1117,55 @@ namespace PileDesign.ViewModels
         // 水平解析ウィンドウで選ぶ。専用の窓は 2026-02-14 にリボンのボタンだけが外され、
         // 窓・ViewModel・コマンドが 7 か月ぶん取り残されていたので 2026-09-18 に撤去した
         // (同じデータに編集経路が 2 つあると、片方だけ直して食い違う)。
+
+        // ── 問題の場所の入力画面へ ──
+        //
+        // 解析前の検査で止めたとき、問題の場所 (杭体・地盤・荷重ケース・沈下用土層) の入力画面を開く。
+        // 解析のウィンドウは開いたまま入力を直せない (要素分割が済んだ前提で開いている) ので、
+        // 解析のウィンドウからは「閉じたあとに開く」ことだけを頼み、閉じたところでここが開く。
+
+        /// <summary>解析のウィンドウから頼まれた、閉じたあとに開く入力画面の場所。</summary>
+        internal PileDesign.Common.DiagnosticTarget? PendingInputNavigation { get; private set; }
+
+        /// <summary>
+        /// 入力画面を開くときに最初に選んでおく場所 (杭体・地盤の番号)。入力画面の ViewModel が作られるときに読む。
+        /// 開いているあいだだけ立つ。
+        /// </summary>
+        internal PileDesign.Common.DiagnosticTarget? InputFocus { get; set; }
+
+        internal void RequestInputNavigation(PileDesign.Common.DiagnosticTarget target) => PendingInputNavigation = target;
+
+        /// <summary>頼まれていた入力画面を開く (解析のウィンドウを閉じたあとに呼ぶ)。</summary>
+        internal void OpenPendingInputNavigation()
+        {
+            var target = PendingInputNavigation;
+            PendingInputNavigation = null;
+            if (target != null) OpenInputFor(target);
+        }
+
+        /// <summary>問題の場所の入力画面を開く。開く画面が無い場所なら false。</summary>
+        internal bool OpenInputFor(PileDesign.Common.DiagnosticTarget target)
+        {
+            InputFocus = target;
+            try
+            {
+                switch (PileDesign.Services.DiagnosticSelection.DestinationOf(target))
+                {
+                    case PileDesign.Services.InputDestination.PileBodyWindow: OpenPileBodyWindow(); return true;
+                    case PileDesign.Services.InputDestination.GroundWindow: OpenGroundWindow(); return true;
+                    case PileDesign.Services.InputDestination.LoadCaseWindow: OpenLoadCaseWindow(); return true;
+                    case PileDesign.Services.InputDestination.SettlementLayers:
+                        if (ActivateGroupSettlementInputTabAction == null) return false;
+                        ActivateGroupSettlementInputTabAction(GroupSettlementInputTab.SoilLayers);
+                        return true;
+                    default: return false;
+                }
+            }
+            finally
+            {
+                InputFocus = null;
+            }
+        }
 
         // 杭体ウィンドウを開くメソッド
         [RelayCommand]
@@ -1399,6 +1449,7 @@ namespace PileDesign.ViewModels
             if (!EnsureElementSplit("単杭沈下解析")) return;
 
             OpenDialogWindow<SettlementViewModel, SettlementWindow>(this);
+            OpenPendingInputNavigation();
         }
 
         // 水平荷重解析ウィンドウを開くメソッド
@@ -1468,6 +1519,9 @@ namespace PileDesign.ViewModels
 
                         // 変更: 即時実行
                         UpdateWindowImmediate();
+
+                        // 入力の検査で止めたときに頼まれた入力画面を開く
+                        OpenPendingInputNavigation();
 
                     }
                 }
@@ -1675,6 +1729,7 @@ namespace PileDesign.ViewModels
                 Serilog.Log.Error(ex, "ダイアログの表示に失敗");
                             MessageService.Show(GuardMessages.WindowOpenFailed("ウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+            OpenPendingInputNavigation();
         }
 
         // 解析準備ができているかを確認するメソッド

@@ -113,6 +113,17 @@ namespace PileDesign.Services
             return string.Join("\n", lines);
         }
 
+        /// <summary>
+        /// 見つかった値を問題 (段階は「解析」) にする。杭の要素・節点なら杭を、そうでなければケースを場所にする。
+        /// 杭の選択・ログは文を解かずにこちらを使う。
+        /// </summary>
+        public static List<Common.Diagnostic> ToDiagnostics(IEnumerable<Finding> findings)
+            => findings.Select(f => new Common.Diagnostic(Common.DiagnosticOrigin.Analysis,
+                    f.PileNo is int no
+                        ? Common.DiagnosticTarget.Pile(no) with { CaseName = f.CaseName }
+                        : Common.DiagnosticTarget.LoadCase(f.CaseName),
+                    $"{f.CaseName}: {f.Target} の{f.Quantity}が数値ではありません")).ToList();
+
         /// <summary>見つかった値に関係する杭の番号 (重複なし・出た順)。</summary>
         public static IReadOnlyList<int> PileNos(IEnumerable<Finding> findings)
             => findings.Where(f => f.PileNo.HasValue).Select(f => f.PileNo!.Value).Distinct().ToList();

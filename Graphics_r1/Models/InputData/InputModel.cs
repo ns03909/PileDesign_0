@@ -758,11 +758,17 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 知らせに出てきた杭をメイン画面で選ぶ (直す場所へ案内する)。画面に結び付いていなければ何もしない。
+        /// 問題の場所 (杭・基礎梁) をメイン画面で選ぶ (直す場所へ案内する)。画面に結び付いていなければ何もしない。
         /// 解析前の検査 (<c>CheckInputData</c>) は画面を知らないので、ここを通す。
         /// </summary>
-        internal int SelectPilesForReview(IReadOnlyList<int> pileNos)
-            => _mainWindowViewModel?.SelectPilesForReview(pileNos) ?? 0;
+        internal int SelectForReview(Services.ReviewSelection selection)
+            => _mainWindowViewModel?.SelectForReview(selection) ?? 0;
+
+        /// <summary>
+        /// 解析のウィンドウを閉じたあとに、問題の場所の入力画面を開くよう頼む。画面に結び付いていなければ何もしない。
+        /// </summary>
+        internal void RequestInputNavigation(Common.DiagnosticTarget target)
+            => _mainWindowViewModel?.RequestInputNavigation(target);
 
         public void SetMainWindowViewModel(MainWindowViewModel mainWindowViewModel)
         {

@@ -174,9 +174,12 @@ namespace TestProject1
         {
             var source = TestSource.Read("Graphics_r1", "Services", "CheckInputData.cs");
 
+            // 解析前の検査の中身は CollectAnalysisBlockers (場所つきの問題を集める)
             var gate = TestSource.MethodBody(source,
                 "public static bool ValidateForAnalysis(InputModel inputModel, string analysisName");
-            StringAssert.Contains(gate, "ModelConnectivityCheck.CollectErrors(inputModel)",
+            StringAssert.Contains(gate, "CollectAnalysisBlockers(inputModel)", "解析前の検査が問題を集めていない");
+            var blockers = TestSource.MethodBody(source, "internal static List<Diagnostic> CollectAnalysisBlockers(InputModel inputModel)");
+            StringAssert.Contains(blockers, "ModelConnectivityCheck.CollectErrorDiagnostics(inputModel)",
                 "解析前の検査がつながりを見ていない");
 
             var warn = TestSource.MethodBody(source, "public static List<string> CollectInputWarnings(InputModel inputModel)");

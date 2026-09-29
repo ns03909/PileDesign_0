@@ -261,12 +261,26 @@ namespace PileDesign.FEM
             }
         }
 
+        /// <summary>
+        /// 杭の要素を作れないときの例外。断面の値の誤りは杭体の問題 (その杭体を使う杭すべて)、
+        /// 区間の数・長さの誤りはその杭の問題として場所を持たせる。
+        /// </summary>
+        private static PileDesign.Common.DiagnosticException PileElementError(PileLayoutDataItem pile, SoilPile soilPile, bool bodyWide, string message)
+        {
+            var target = bodyWide
+                ? PileDesign.Common.DiagnosticTarget.PileBody(soilPile.PileBodyNo)
+                : PileDesign.Common.DiagnosticTarget.Pile(pile.No, soilPile.PileBodyNo);
+            string first = message.Split('\n')[0].Replace("杭要素作成エラー: ", "");
+            return new PileDesign.Common.DiagnosticException(message,
+                [PileDesign.Common.Diagnostic.AnalysisAt(target, $"杭 No.{pile.No} の要素を作れません ({first})")]);
+        }
+
         // 杭要素の追加（接続ノードを明示引数に）- キャッシュ対応版
-        private Beam CreatePileElement(SoilPile soilPile, int segIndex, Node upperNode, Node lowerNode)
+        private Beam CreatePileElement(PileLayoutDataItem pile, SoilPile soilPile, int segIndex, Node upperNode, Node lowerNode)
         {
             // PileBodySegments の範囲チェック
             if (segIndex < 0 || segIndex >= soilPile.PileBodySegments.Count)
-                throw new InvalidOperationException(
+                throw PileElementError(pile, soilPile, bodyWide: false,
                     $"杭要素作成エラー: segIndex={segIndex} が PileBodySegments.Count={soilPile.PileBodySegments.Count} の範囲外です。" +
                     $"\n上端: {upperNode.Name} ({upperNode.Coord.X:F3},{upperNode.Coord.Y:F3},{upperNode.Coord.Z:F3})" +
                     $"\n下端: {lowerNode.Name} ({lowerNode.Coord.X:F3},{lowerNode.Coord.Y:F3},{lowerNode.Coord.Z:F3})");
@@ -276,7 +290,7 @@ namespace PileDesign.FEM
 
             // ConcreteE の妥当性チェック
             if (!double.IsFinite(concreteE) || concreteE <= 0)
-                throw new InvalidOperationException(
+                throw PileElementError(pile, soilPile, bodyWide: true,
                     $"杭要素作成エラー: ConcreteE={concreteE} が無効です (segIndex={segIndex})。" +
                     $"\n上端: {upperNode.Name}, 下端: {lowerNode.Name}");
 
@@ -288,7 +302,7 @@ namespace PileDesign.FEM
 
             // 断面値の妥当性チェック
             if (!double.IsFinite(ea) || ea <= 0 || !double.IsFinite(ei) || ei <= 0 || !double.IsFinite(gj) || gj <= 0)
-                throw new InvalidOperationException(
+                throw PileElementError(pile, soilPile, bodyWide: true,
                     $"杭要素作成エラー: 断面値が無効です (segIndex={segIndex})。" +
                     $"\nEA={ea}, EI={ei}, GJ={gj}, ConcreteE={concreteE}" +
                     $"\n上端: {upperNode.Name}, 下端: {lowerNode.Name}");
@@ -300,7 +314,7 @@ namespace PileDesign.FEM
             // ゼロ長さビームのチェック
             double beamLength = Utils.GetLengthBetweenTwoNodes(upperNode, lowerNode);
             if (PileDesign.Common.GeometryTolerance.IsZeroLength(beamLength))
-                throw new InvalidOperationException(
+                throw PileElementError(pile, soilPile, bodyWide: false,
                     $"杭要素作成エラー: ビーム長さがゼロです (L={beamLength:E3}, segIndex={segIndex})。" +
                     $"\n上端: {upperNode.Name} ({upperNode.Coord.X:F3},{upperNode.Coord.Y:F3},{upperNode.Coord.Z:F3})" +
                     $"\n下端: {lowerNode.Name} ({lowerNode.Coord.X:F3},{lowerNode.Coord.Y:F3},{lowerNode.Coord.Z:F3})");
@@ -615,7 +629,9 @@ namespace PileDesign.FEM
                 soilPileAltNo - 1 < 0 ||
                 soilPileAltNo - 1 >= InputModel.ElementDivision.SoilPiles.Count)
             {
-                throw new InvalidOperationException("対応するSoilPileが存在しません。");
+                throw new PileDesign.Common.DiagnosticException("対応するSoilPileが存在しません。",
+                    [PileDesign.Common.Diagnostic.AnalysisAt(PileDesign.Common.DiagnosticTarget.Pile(pile.No),
+                        "この杭の土層-杭セットがありません。杭配置・地盤・杭体の入力を確定してから、もう一度実行してください。")]);
             }
 
             SoilPile soilPile = InputModel.ElementDivision.SoilPiles[soilPileAltNo - 1];
@@ -688,7 +704,7 @@ namespace PileDesign.FEM
                 else if (i != nodeCount - 1)
                 {
                     // 杭中間
-                    var beam = CreatePileElement(soilPile, i - 1, prevPileNode!, pileNode);
+                    var beam = CreatePileElement(pile, soilPile, i - 1, prevPileNode!, pileNode);
                     beam.PileBodyNo = soilPile.PileBodyNo;
                     beam.SegmentIndex = i - 1;
                     // 要素下端が0.5D境界以上であれば杭頭部とする
@@ -703,7 +719,7 @@ namespace PileDesign.FEM
                 else
                 {
                     // 先端
-                    var beam = CreatePileElement(soilPile, i - 1, prevPileNode!, pileNode);
+                    var beam = CreatePileElement(pile, soilPile, i - 1, prevPileNode!, pileNode);
                     beam.PileBodyNo = soilPile.PileBodyNo;
                     beam.SegmentIndex = i - 1;
                     if (z >= pileTopZoneBottom - NumericalConstants.COORDINATE_TOLERANCE)
@@ -978,7 +994,8 @@ namespace PileDesign.FEM
                     string detail = $"基礎梁{beamNo}の節点が見つかりません。\n" +
                         $"I端: Type={fbBeam.NodeI_Type}, Id={fbBeam.NodeI_Id} → {(nodeI != null ? nodeI.Name : "未解決")}\n" +
                         $"J端: Type={fbBeam.NodeJ_Type}, Id={fbBeam.NodeJ_Id} → {(nodeJ != null ? nodeJ.Name : "未解決")}";
-                    throw new InvalidOperationException(detail);
+                    throw new PileDesign.Common.DiagnosticException(detail,
+                        [PileDesign.Common.Diagnostic.AnalysisAt(PileDesign.Common.DiagnosticTarget.FoundationBeam(beamNo), "端の節点が見つかりません")]);
                 }
 
                 // Section を作成

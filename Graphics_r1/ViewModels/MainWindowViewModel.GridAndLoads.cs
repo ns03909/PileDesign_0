@@ -546,13 +546,35 @@ namespace PileDesign.ViewModels
         internal int SelectPilesForReview(IReadOnlyList<int> pileNos)
         {
             if (pileNos == null || pileNos.Count == 0 || CurrentInputModel?.PileLayoutItems == null) return 0;
+            // 杭は杭配置の番号 (No。解析モデルの杭節点の名前もこの番号) で引く
+            var piles = CurrentInputModel.PileLayoutItems.Where(p => p != null && pileNos.Contains(p.No)).ToList();
+            return SelectForReview(new PileDesign.Services.ReviewSelection(piles, [], []));
+        }
+
+        /// <summary>
+        /// 問題の場所 (<see cref="PileDesign.Services.DiagnosticSelection.Resolve"/> が決めた杭・基礎梁) を選ぶ。
+        /// 選んだ数を返す。何も無ければ選択を変えない。
+        /// </summary>
+        internal int SelectForReview(PileDesign.Services.ReviewSelection selection)
+        {
+            if (selection == null || selection.IsEmpty || CurrentInputModel?.PileLayoutItems == null) return 0;
             ClearAllSelections();
             int selected = 0;
             foreach (var pile in CurrentInputModel.PileLayoutItems)
             {
-                if (pile == null || !pileNos.Contains(pile.PileNo)) continue;
+                if (pile == null || !selection.Piles.Contains(pile)) continue;
                 pile.IsSelected = true;
                 selected++;
+            }
+            var fb = CurrentInputModel.FoundationBeamInput;
+            if (fb?.Beams != null)
+            {
+                foreach (var beam in fb.Beams)
+                {
+                    if (beam == null || !selection.BeamNos.Contains(fb.GetBeamNo(beam))) continue;
+                    beam.IsSelected = true;
+                    selected++;
+                }
             }
             RequestUpdateWindow();
             return selected;

@@ -258,7 +258,21 @@ namespace PileDesign.ViewModels
                 FactoredEvaluation = evaluation,
                 FactoredEvaluationError = evaluationError,
                 AnalysisConditions = DescribeAnalysisConditions(),
+                HorizontalCaseCount = CountHorizontalCases(),
+                AnalysisNonFiniteCount = IsHorizontalAnalysisDone && CurrentModel != null ? CountNonFiniteResults(CurrentModel) : 0,
             };
+        }
+
+        private int CountHorizontalCases()
+        {
+            try { return CurrentModel?.BuildCaseConvergenceMap().Count ?? 0; }
+            catch (Exception ex) { Serilog.Log.Debug(ex, "[計算書] ケースの数を数えられませんでした"); return 0; }
+        }
+
+        private static int CountNonFiniteResults(PileDesign.FEM.AnaModel model)
+        {
+            PileDesign.Services.AnalysisResultValidator.FindNonFinite(model, out int total, limit: 0);
+            return total;
         }
 
         /// <summary>
@@ -272,9 +286,7 @@ namespace PileDesign.ViewModels
             if (_currentResultSet != null) parts.Add($"解析の実行: {_currentResultSet.CapturedAt:yyyy/MM/dd HH:mm}");
             if (!string.IsNullOrEmpty(_analysisInputSignature))
                 parts.Add($"解析したときの入力の識別: {_analysisInputSignature[..Math.Min(12, _analysisInputSignature.Length)]}");
-            int cases = 0;
-            try { cases = CurrentModel?.BuildCaseConvergenceMap().Count ?? 0; }
-            catch (Exception ex) { Serilog.Log.Debug(ex, "[計算書] ケースの数を数えられませんでした"); }
+            int cases = CountHorizontalCases();
             if (cases > 0) parts.Add($"水平解析のケース: {cases} 件");
             if (ResultsMixedWithEditedInput || (_currentResultSet == null && InputChangedSinceAnalysis))
                 parts.Add("解析のあとに入力が編集されています");

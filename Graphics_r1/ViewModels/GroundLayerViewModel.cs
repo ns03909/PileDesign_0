@@ -87,6 +87,10 @@ namespace PileDesign.ViewModels
 
             UpdateGroundsCountPlusOneList();
 
+            // 入力の問題から開いたときは、その地盤を選んでおく
+            if (mainWindowViewModel.InputFocus?.GroundNo is int focus && focus >= 1 && focus <= GroundsInput.Count)
+                GroundNo = focus;
+
             // ここで GroundInput セッターを通す（購読される）
             GroundInput = GroundsInput[Math.Clamp(GroundNo - 1, 0, GroundsInput.Count - 1)];
 

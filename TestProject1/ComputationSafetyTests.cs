@@ -195,19 +195,5 @@ public class ComputationSafetyTests
         Assert.AreEqual(0, hits.Count, "角度の換算を直接書いています。Units.DegToRad / RadToDeg を使ってください:\n  " + string.Join("\n  ", hits));
     }
 
-    // ── 解析前の誤りからの案内 ──
-
-    [TestMethod]
-    public void ErrorText_PointsToPilesByNumberAndByPileBody()
-    {
-        var input = new InputModel();
-        input.AttachViewModel(new MainWindowViewModel { CurrentInputModel = input });
-        input.PileLayoutItems ??= [];
-        input.PileLayoutItems.Add(new PileLayoutDataItem { PileNo = 1, No = 1, PileBodyNo = 2 });
-        input.PileLayoutItems.Add(new PileLayoutDataItem { PileNo = 2, No = 2, PileBodyNo = 1 });
-        input.PileLayoutItems.Add(new PileLayoutDataItem { PileNo = 3, No = 3, PileBodyNo = 2 });
-
-        var nos = AnalysisFailure.PileNosIn("杭体2 区間1: コンクリートのヤング係数 Ec が 0 以下です.\n杭 No.2: 地盤がありません", input);
-        CollectionAssert.AreEquivalent(new[] { 1, 2, 3 }, nos.ToArray());
-    }
+    // 解析前の誤りからの案内 (選ぶ杭・入力画面) は DiagnosticTests が受け持つ (文ではなく場所の番号から決める)
 }

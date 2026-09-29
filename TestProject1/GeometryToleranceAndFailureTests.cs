@@ -52,11 +52,14 @@ public class GeometryToleranceAndFailureTests
 
     // ── 解析が止まったときの知らせ ──
 
+    /// <summary>杭の番号は、例外が持つ問題 (<see cref="DiagnosticException"/>) から取る。包まれていても辿る。</summary>
     [TestMethod]
-    public void PileNumbers_AreFoundInNodeNamesAndPileNos()
+    public void PileNumbers_AreTakenFromTheDiagnostics()
     {
-        var ex = new InvalidOperationException("杭要素作成エラー: 上端: 杭節点-12-3 下端: 杭節点-12-4",
-            new ArgumentException("杭No.7 の断面が不正です"));
+        var ex = new InvalidOperationException("モデル作成に失敗しました",
+            new DiagnosticException("杭要素作成エラー", [
+                Diagnostic.AnalysisAt(DiagnosticTarget.Pile(12), "a"),
+                Diagnostic.AnalysisAt(DiagnosticTarget.Pile(7), "b")]));
         CollectionAssert.AreEqual(new[] { 12, 7 }, AnalysisFailure.PileNosIn(ex).ToArray());
         Assert.AreEqual(0, AnalysisFailure.PileNosIn(new Exception("行列が特異です")).Count);
     }
@@ -68,24 +71,26 @@ public class GeometryToleranceAndFailureTests
     [TestMethod]
     public void Describe_ShowsCaseStageReasonAndPiles()
     {
-        var inner = new InvalidOperationException("剛性行列が特異です (杭節点-3-10)\n詳細");
+        var inner = new DiagnosticException("剛性行列が特異です (杭節点-3-10)\n詳細",
+            [Diagnostic.AnalysisAt(DiagnosticTarget.Pile(3), "剛性行列が特異です")]);
         var failed = new AnalysisCaseFailedException("L2 X+ 液状化無", "荷重ステップ 4/12 の反復", inner);
         string text = AnalysisFailure.Describe(new AggregateException(failed));
 
         StringAssert.Contains(text, "荷重ケース: L2 X+ 液状化無");
         StringAssert.Contains(text, "段階: 荷重ステップ 4/12 の反復");
         StringAssert.Contains(text, "理由: 剛性行列が特異です (杭節点-3-10)");
-        StringAssert.Contains(text, "関係する杭: No.3");
+        StringAssert.Contains(text, "関係する場所: 杭 No.3");
         Assert.IsFalse(text.Contains("詳細\n"), "例外の 2 行目以降まで出している");
     }
 
-    /// <summary>ケースの外 (モデル作成など) で止まったときも、理由と杭は出す (ケースと段階は無い)。</summary>
+    /// <summary>ケースの外 (モデル作成など) で止まったときも、理由は出す (ケースと段階は無い)。場所が無ければログへ案内する。</summary>
     [TestMethod]
     public void Describe_WithoutACase_StillShowsTheReason()
     {
         string text = AnalysisFailure.Describe(new InvalidOperationException("杭No.5 の地盤が見つかりません"));
         StringAssert.Contains(text, "理由: 杭No.5 の地盤が見つかりません");
         Assert.IsFalse(text.Contains("荷重ケース:"));
+        StringAssert.Contains(text, "特定できませんでした");
     }
 
     /// <summary>関係する杭をメイン画面で選ぶ (直す場所へ案内する)。ほかの選択は外す。</summary>

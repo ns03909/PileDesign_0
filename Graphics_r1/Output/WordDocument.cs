@@ -288,6 +288,30 @@ namespace PileDesign.Output
                  + (hits.Count > 5 ? $" ほか {hits.Count - 5} 個" : "");
         }
 
+        /// <summary>
+        /// 数値でない値の知らせ。どの段階で生じたかを分けて書く (直す場所が違う)。
+        /// <list type="bullet">
+        /// <item>解析結果そのものにある (<paramref name="analysisNonFinite"/> &gt; 0) — 段階は「解析」。解析の完了の知らせ・ログで場所を見る。</item>
+        /// <item>解析結果には無いのに表にある — 段階は「結果の出力」。表を作る計算 (断面・検定の算定) で生じている。</item>
+        /// </list>
+        /// 入力の値の範囲外は解析の前の検査 (段階は「入力」) で止めているので、ここには来ない。どちらも無ければ null。
+        /// </summary>
+        internal static string? DescribeNonFinite(string? tableFinding, int analysisNonFinite)
+        {
+            string analysis = Common.Diagnostic.OriginLabel(Common.DiagnosticOrigin.Analysis);
+            string output = Common.Diagnostic.OriginLabel(Common.DiagnosticOrigin.Output);
+            if (tableFinding == null)
+                return analysisNonFinite > 0
+                    ? $"解析結果に数値でない値 (NaN・無限大) が {analysisNonFinite} か所あります (生じた段階: {analysis})。"
+                      + "計算書の表には出ていませんが、解析の完了の知らせと解析ログで場所を確認してください。"
+                    : null;
+            return analysisNonFinite > 0
+                ? tableFinding + $" 解析結果そのものに {analysisNonFinite} か所あり、解析で生じています (生じた段階: {analysis})。"
+                  + "解析の完了の知らせと解析ログで場所を確認してください。"
+                : tableFinding + $" 解析結果には数値でない値が無いので、表を作る計算で生じています (生じた段階: {output})。"
+                  + "表の算定に使う断面・検定の条件を確認してください。";
+        }
+
         /// <summary>出力を始めた時点の画面の状態 (<see cref="ReportSource"/>)。<see cref="CreateWordDocument"/> が最初に取る。</summary>
         private ReportSource _source = new();
 
@@ -352,7 +376,7 @@ namespace PileDesign.Output
 
                 // 出す直前の共通の検査: 表の中の数値でない値 (NaN・無限大)。表ごとに書き方がばらばらで、
                 // 以前はどの表に出ても気付く手掛かりが無かった
-                if (DescribeNonFiniteTableCells(body) is { } nonFinite)
+                if (DescribeNonFinite(DescribeNonFiniteTableCells(body), _source.AnalysisNonFiniteCount) is { } nonFinite)
                 {
                     Log.Warning("[計算書] {Warning}", nonFinite);
                     _warnings.Add(nonFinite);

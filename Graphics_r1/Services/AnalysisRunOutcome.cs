@@ -42,7 +42,8 @@ namespace PileDesign.Services
                     if (unconverged.Count > 0) lines.Add("未収束: " + List(unconverged));
                     if (physical.Count > 0) lines.Add("物理的未収束 (耐力を超えている可能性): " + List(physical));
                     if (unconverged.Count > 0 || physical.Count > 0)
-                        lines.Add("収束していないケースの検定は「未収束」として判定しません。");
+                        lines.Add("収束していないケースの結果も登録します (表・グラフで見られます) が、"
+                                  + "検定では「未収束」として OK にも NG にも数えません。");
                 }
             }
 
