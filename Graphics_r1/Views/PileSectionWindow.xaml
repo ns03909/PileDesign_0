@@ -31,6 +31,7 @@
     <Window.Resources>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
         <conv:MultiplyConverter x:Key="MultiplyConverter"/>
+        <conv:ModulusDisplayConverter x:Key="ModulusDisplayConverter"/>
         <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
 
@@ -315,7 +316,7 @@
                                                 <TextBlock Width="150"  HorizontalAlignment="Right"><Run Text="単位体積重量γ (kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                 <TextBox Text="{Binding PileSection.ConcreteGamma, UpdateSourceTrigger=LostFocus}"
                                                           Width="50"
-                                                          Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.1" common:NumericInput.Max="100"
+                                                          Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="10" common:NumericInput.Max="100"
                                                           GotFocus="TextBox_GotFocus"
                                                           PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                           PreviewKeyDown="TextBox_PreviewKeyDown"
@@ -343,7 +344,7 @@
 
                                                 </TextBox>
                                                 <TextBlock Width="150"  HorizontalAlignment="Right"><Run Text="縦弾性係数 (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
-                                                <TextBox Text="{Binding PileSection.ConcreteE, StringFormat='{}{0:N0}'}" Width="50"
+                                                <TextBox Text="{Binding PileSection.ConcreteE, Mode=OneWay, Converter={StaticResource ModulusDisplayConverter}}" Width="50"
                                                          TextAlignment="Right" Foreground="{StaticResource ReadOnlyBrush}" IsReadOnly="True"
                                                          PreviewKeyDown="TextBox_PreviewKeyDown"
                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
@@ -387,7 +388,7 @@
                                                               LostFocus="TextBox_LostFocus"/>
                                                     <TextBlock Width="150"  HorizontalAlignment="Right"><Run Text="単位体積重量γ (kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     <TextBox Text="{Binding PileSection.ConcreteGamma, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.1" common:NumericInput.Max="100"
+                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="10" common:NumericInput.Max="100"
                                                               GotFocus="TextBox_GotFocus"
                                                               PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
@@ -415,7 +416,7 @@
                                                         </TextBox.Text>
                                                     </TextBox>
                                                     <TextBlock Width="150"  HorizontalAlignment="Right"><Run Text="縦弾性係数 (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
-                                                    <TextBox  Text="{Binding PileSection.ConcreteE, StringFormat='{}{0:N0}'}" Width="50" TextAlignment="Right" Foreground="Gray"
+                                                    <TextBox  Text="{Binding PileSection.ConcreteE, Mode=OneWay, Converter={StaticResource ModulusDisplayConverter}}" Width="50" TextAlignment="Right" Foreground="Gray"
                                                               IsReadOnly="True"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
@@ -447,7 +448,7 @@
                                                               LostFocus="TextBox_LostFocus"/>
                                                     <TextBlock Width="150"  HorizontalAlignment="Right"><Run Text="単位体積重量γ (kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     <TextBox Text="{Binding PileSection.ConcreteGamma, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.1" common:NumericInput.Max="100"
+                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="10" common:NumericInput.Max="100"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
@@ -474,7 +475,7 @@
                                                         </TextBox.Text>
                                                     </TextBox>
                                                     <TextBlock Width="150"  HorizontalAlignment="Right"><Run Text="縦弾性係数 (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
-                                                    <TextBox Text="{Binding PileSection.ConcreteE, StringFormat=N0, UpdateSourceTrigger=LostFocus}" Width="50"
+                                                    <TextBox Text="{Binding PileSection.ConcreteE, Mode=OneWay, Converter={StaticResource ModulusDisplayConverter}}" Width="50"
                                                              TextAlignment="Right" Foreground="{StaticResource ReadOnlyBrush}" IsReadOnly="True"/>
                                                 </StackPanel>
                                             </StackPanel>
@@ -763,7 +764,7 @@
                                                               LostFocus="TextBox_LostFocus"/>
                                                     <TextBlock Width="150" HorizontalAlignment="Right"><Run Text="単位体積重量γ (kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     <TextBox Text="{Binding PileSection.ConcreteGamma, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.1" common:NumericInput.Max="100"
+                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="10" common:NumericInput.Max="100"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
@@ -772,7 +773,7 @@
                                                 </StackPanel>
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Width="150" HorizontalAlignment="Right"><Run Text="縦弾性係数 (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
-                                                    <TextBox Text="{Binding PileSection.ConcreteE, StringFormat=N0}" Width="50"
+                                                    <TextBox Text="{Binding PileSection.ConcreteE, Mode=OneWay, Converter={StaticResource ModulusDisplayConverter}}" Width="50"
                                                              TextAlignment="Right" Foreground="{StaticResource ReadOnlyBrush}" IsReadOnly="True"/>
                                                 </StackPanel>
                                             </StackPanel>

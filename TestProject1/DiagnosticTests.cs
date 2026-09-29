@@ -64,6 +64,81 @@ public class DiagnosticTests
         StringAssert.StartsWith(layer.Message, "地盤1 層2: ");
     }
 
+    // ── コンクリートのヤング係数の妥当性 ──
+
+    /// <summary>
+    /// <b>本題。</b> γ を下限にすると Ec ≈ 0.4 N/mm² になり、「0 以下」の検査を通って解析が走った。
+    /// 杭のコンクリートとしてありえない Ec は、杭体・区間を示して止める。
+    /// </summary>
+    [TestMethod]
+    public void ANearZeroYoungsModulus_StopsTheAnalysis()
+    {
+        var (input, error) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+        if (input == null) { Assert.Inconclusive(error); return; }
+        var section = input.PileBodies[0].PileBodySegments[0].PileSection;
+        section.ConcreteGamma = 0.1;
+        section.RecalculateConcreteE();
+        Assert.IsTrue(section.ConcreteE > 0 && section.ConcreteE < 1, $"(前提) Ec = {section.ConcreteE}");
+
+        var problem = CheckInputData.CollectAnalysisBlockers(input).SingleOrDefault(p => p.Message.Contains("小さすぎます"));
+        Assert.IsNotNull(problem, "ほぼ 0 の Ec で解析を止めていません");
+        Assert.AreEqual(DiagnosticTarget.PileBodySegment(1, 1), problem.Target);
+        StringAssert.Contains(problem.Message, "Ec が 0.");   // 「0」に丸めずに値を示す
+    }
+
+    /// <summary>止めるほどではないが低い Ec (1,000〜10,000 N/mm²) は、解析を止めずに警告する。</summary>
+    [TestMethod]
+    public void ALowYoungsModulus_IsOnlyAWarning()
+    {
+        var (input, error) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+        if (input == null) { Assert.Inconclusive(error); return; }
+        input.PileBodies[0].PileBodySegments[0].PileSection.ConcreteE = 5_000;
+
+        Assert.IsFalse(CheckInputData.CollectAnalysisBlockers(input).Any(p => p.Message.Contains("ヤング係数 Ec")), "警告で済む Ec で止めています");
+        Assert.IsTrue(CheckInputData.CollectInputWarnings(input).Any(w => w.StartsWith("杭体1 区間1:") && w.Contains("低め")),
+            "低い Ec を警告していません");
+    }
+
+    /// <summary>同梱の杭の例題は、Ec の下限・警告に掛からないこと (正しい入力を止めない・騒がない)。</summary>
+    [TestMethod]
+    public void BundledExamples_HaveARealisticYoungsModulus()
+    {
+        int checkedFiles = 0;
+        foreach (var file in TestSource.ExampleFiles("PileExample*.json", 10))
+        {
+            string pileName = Path.GetFileNameWithoutExtension(file);
+            string groundName = "Example" + pileName["PileExample".Length..];
+            if (TestSource.ExamplePath(groundName + ".json") == null) continue;
+            var (input, error) = IntegrationTests.BuildExampleInputModel(groundName, pileName);
+            Assert.IsNotNull(input, $"{pileName}: {error}");
+            checkedFiles++;
+            Assert.IsFalse(CheckInputData.CollectAnalysisBlockers(input).Any(p => p.Message.Contains("ヤング係数 Ec")), $"{pileName}: Ec で止めています");
+            Assert.IsFalse(CheckInputData.CollectInputWarnings(input).Any(w => w.Contains("低め")), $"{pileName}: Ec を低めと警告しています");
+        }
+        TestSource.AssertScanned(checkedFiles, 10, "杭の例題");
+    }
+
+    /// <summary>単位体積重量 γ の入力欄は、杭のコンクリートとしてありうる値 (10 kN/m³ 以上) に限る。</summary>
+    [TestMethod]
+    public void TheUnitWeightInput_HasARealisticFloor()
+    {
+        var lines = TestSource.Read("Graphics_r1", "Views", "PileSectionWindow.xaml").Split('\n');
+        var floors = lines.Select((l, i) => (l, i)).Where(x => x.l.Contains("Binding PileSection.ConcreteGamma"))
+            .Select(x => string.Join(" ", lines.Skip(x.i).Take(3))).ToList();
+        TestSource.AssertScanned(floors.Count, 4, "γ の入力欄");
+        Assert.IsTrue(floors.All(f => f.Contains("NumericInput.Min=\"10\"")), "γ の入力欄の下限が 10 kN/m³ になっていません");
+    }
+
+    /// <summary>ヤング係数の表示は、0 でない 1 未満の値を「0」に丸めない。</summary>
+    [TestMethod]
+    public void ModulusDisplay_DoesNotRoundASmallValueToZero()
+    {
+        Assert.AreEqual((0.437).ToString("G3"), NumberDisplay.Modulus(0.437));
+        Assert.AreNotEqual("0", NumberDisplay.Modulus(0.0004));
+        Assert.AreEqual((25743.4).ToString("N0"), NumberDisplay.Modulus(25743.4));
+        Assert.AreEqual("0", NumberDisplay.Modulus(0));
+    }
+
     [TestMethod]
     public void PileReferenceProblems_PointAtThePile()
     {

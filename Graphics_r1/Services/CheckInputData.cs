@@ -393,11 +393,18 @@ namespace PileDesign.Services
                     // 断面の剛性 (解析の入力そのもの)。数値でないまま進むと、剛性行列や結果に数値でない値が混ざる
                     problems.AddRange(CollectSectionStiffnessProblems(sec, at));
 
-                    if (!IsPositive(sec.ConcreteFc)
-                        && sec.PileBodyType != PileTypeNames.SteelPipe  // 純鋼管杭は Fc 不要
-                        && !(sec.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && sec.PileSectionType == PileTypeNames.SteelPipeSection))
+                    if (!IsPositive(sec.ConcreteFc) && UsesConcrete(sec))
                     {
                         problems.Add(Diagnostic.InputAt(at, $"コンクリート設計基準強度 Fc が 0 以下か数値ではありません ({sec.ConcreteFc})."));
+                    }
+
+                    // Ec は正でも、杭のコンクリートとしてありえないほど小さければ止める。
+                    // γ を下限 (以前は 0.1 kN/m³) にすると Ec ≈ 0.4 N/mm² になり、「0 以下」の検査を通って
+                    // 曲げ剛性が通常の約 7 万分の 1 のまま解析が走った (画面の Ec は整数表示で「0」に見えた)
+                    if (UsesConcrete(sec) && IsPositive(sec.ConcreteE) && sec.ConcreteE < MinConcreteE)
+                    {
+                        problems.Add(Diagnostic.InputAt(at, $"コンクリートのヤング係数 Ec が {PileDesign.Common.NumberDisplay.Modulus(sec.ConcreteE)} N/mm² で、"
+                            + $"杭のコンクリートとしては小さすぎます ({MinConcreteE:N0} N/mm² 未満)。単位体積重量 γ・設計基準強度 Fc・ξ を確認してください."));
                     }
                 }
             }
@@ -454,6 +461,20 @@ namespace PileDesign.Services
             }
         }
 
+        /// <summary>
+        /// コンクリートのヤング係数 Ec の下限 [N/mm²]。これ未満は杭のコンクリートとしてありえないので解析を止める
+        /// (普通コンクリートで 2〜4 万、軽量・低強度でも 1 万前後)。
+        /// </summary>
+        internal const double MinConcreteE = 1_000;
+
+        /// <summary>これ未満の Ec は、止めないが警告で知らせる [N/mm²] (軽量・低強度など理由がありうる範囲)。</summary>
+        internal const double LowConcreteE = 10_000;
+
+        /// <summary>断面がコンクリートを持つか (純鋼管杭と、場所打ち鋼管コンクリート杭の鋼管部は持たない)。</summary>
+        private static bool UsesConcrete(PileSection sec)
+            => sec.PileBodyType != PileTypeNames.SteelPipe
+               && !(sec.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && sec.PileSectionType == PileTypeNames.SteelPipeSection);
+
         /// <summary>正の有限の数か (NaN・無限大・0 以下は false)。「0 以下」の比較は NaN を素通りさせるので、こちらで判定する。</summary>
         private static bool IsPositive(double value) => value > 0 && double.IsFinite(value);
 
@@ -491,7 +512,12 @@ namespace PileDesign.Services
                 for (int j = 0; j < segments.Count; j++)
                 {
                     var sec = segments[j]?.PileSection;
-                    if (sec == null || !sec.IsNodularPile) continue;
+                    if (sec == null) continue;
+                    // Ec が止めるほどではないが低い (軽量・低強度など理由がありうる)
+                    if (UsesConcrete(sec) && sec.ConcreteE >= MinConcreteE && sec.ConcreteE < LowConcreteE)
+                        notices.Add($"杭体{i + 1} 区間{j + 1}: コンクリートのヤング係数 Ec が {sec.ConcreteE:N0} N/mm² と低めです "
+                                    + $"({LowConcreteE:N0} N/mm² 未満)。単位体積重量 γ・設計基準強度 Fc・ξ を確認してください。");
+                    if (!sec.IsNodularPile) continue;
                     if (j == 0)
                         notices.Add($"杭体{i + 1} 区間{j + 1}: {sec.PileSectionType} が最上段の区間にあります " +
                                     "(節杭は上杭に継手で接合する下杭として使うのが一般的です)。");

@@ -3371,7 +3371,7 @@ namespace PileDesign.Models.InputData
                 SelectedPileSectionSpecification.Add(
                     new Spec("コンクリート単位体積重量", "γc", $"{ConcreteGamma:N1}", "kN/m3"));
                 SelectedPileSectionSpecification.Add(
-                    new Spec("コンクリート縦弾性係数", "Ec", $"{ConcreteE:N0}", "N/mm2"));
+                    new Spec("コンクリート縦弾性係数", "Ec", PileDesign.Common.NumberDisplay.Modulus(ConcreteE), "N/mm2"));
             }
 
             if (PileBodyType == PileTypeNames.InsituRc || PileBodyType == PileTypeNames.InsituSteelPipeConcrete)
