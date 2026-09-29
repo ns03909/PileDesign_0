@@ -95,6 +95,12 @@ namespace PileDesign.Services
                 result.Log.Add("[ERROR] 群杭沈下用土層がありません。");
                 return result;
             }
+            var layerProblems = Steinnbrener.DescribeLayerProblems(pgs.SettlementSoilLayers);
+            if (layerProblems.Count > 0)
+            {
+                foreach (var problem in layerProblems) result.Log.Add("[ERROR] " + problem);
+                return result;
+            }
             if (inputModel.FoundationBeamInput?.Beams == null || inputModel.FoundationBeamInput.Beams.Count == 0)
             {
                 result.Log.Add("[ERROR] 基礎梁が定義されていません。");

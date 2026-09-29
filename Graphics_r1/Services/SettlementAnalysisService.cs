@@ -91,6 +91,10 @@ namespace PileDesign.Services
                     ErrorMessage = "群杭沈下解析用の土層が1層以上必要です。"
                 };
             }
+            // 土層の値 (層厚・変形係数・ポアソン比)。範囲外だと無限大・負の沈下が普通の結果として出た
+            var layerProblems = Steinnbrener.DescribeLayerProblems(pileGroupSettlement.SettlementSoilLayers);
+            if (layerProblems.Count > 0)
+                return new SettlementAnalysisResult { Success = false, ErrorMessage = string.Join("\n", layerProblems) };
 
             // 「個別十字（基礎梁反力）」は基礎梁考慮鉛直解析の常時 (VL) ケースの杭反力を荷重にする。
             // 以前は VL ケースが見つからないと先頭のケースを返していたので、別のケースの反力で沈下を求め得た。

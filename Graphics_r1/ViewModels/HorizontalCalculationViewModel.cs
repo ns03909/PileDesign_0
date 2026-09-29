@@ -2073,13 +2073,29 @@ namespace PileDesign.ViewModels
                     await AddLogAsync($"断面計算を既定値で代替した箇所: {fallbackCount} 件\n{fallbackSummary}");
                 }
 
+                // 結果を表示・保存・検定に渡す前に、全体に数値でない値が無いかを 1 回調べる
+                MessageBoxImage? doneIconOverride = null;
+                if (AnaModels.Count > 0)
+                {
+                    var nonFinite = PileDesign.Services.AnalysisResultValidator.FindNonFinite(AnaModels[^1], out int nonFiniteTotal);
+                    if (PileDesign.Services.AnalysisResultValidator.Describe(nonFinite, nonFiniteTotal) is { } nonFiniteText)
+                    {
+                        Serilog.Log.Warning("[解析] {Text}", nonFiniteText);
+                        await AddLogAsync(nonFiniteText);
+                        doneMessage += "\n\n" + nonFiniteText;
+                        doneIconOverride = MessageBoxImage.Warning;
+                        var piles = PileDesign.Services.AnalysisResultValidator.PileNos(nonFinite);
+                        Application.Current?.Dispatcher.Invoke(() => _mainWindowViewModel.SelectPilesForReview(piles));
+                    }
+                }
+
                 // 計算完了通知（UIスレッドで直接表示）
                 // owner を HorizontalCalculationWindow に明示固定して、解析完了直後にフォーカスが
                 // MainWindow に移っていてもダイアログが水平解析ウィンドウの上に表示されるようにする。
                 // 閉じた窓の完了通知は出さない (利用者は既に解析から離れている)
                 if (!BypassUiPromptsForTesting && !IsWindowClosed)
                 {
-                    var doneIcon = MessageBoxImage.Information;
+                    var doneIcon = doneIconOverride ?? MessageBoxImage.Information;
                     var horizontalWindow = System.Windows.Application.Current?.Windows
                         .Cast<System.Windows.Window>()
                         .FirstOrDefault(w => ReferenceEquals(w.DataContext, this));

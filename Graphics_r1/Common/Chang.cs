@@ -336,14 +336,60 @@ namespace PileDesign.Common
         }
 
 
+        /// <summary>
+        /// 計算できなかった・結果を使えない理由 (表の「注意」の列に出す)。問題が無ければ空。
+        ///
+        /// 以前は入力が範囲外でもそのまま計算し、反復が収束しない・地表面変位が正にならないときは
+        /// 黙って初期の kh で計算した値を出していた。どちらも普通の結果と見分けがつかなかった。
+        /// </summary>
+        public string Problem
+        {
+            get => _problem;
+            private set
+            {
+                if (_problem == value) return;
+                _problem = value;
+                OnPropertyChanged(nameof(Problem));
+            }
+        }
+        private string _problem = "";
+
+        /// <summary>
+        /// 入力の範囲外 (無ければ null)。EI・kh0・β0 は正の有限の数、杭頭の固定度 αr は 0〜1、
+        /// 水平荷重と地上高は有限の数 (地上高は 0 以上) でなければ式の前提が崩れる。
+        /// </summary>
+        internal string? DescribeInputProblem()
+        {
+            var problems = new System.Collections.Generic.List<string>();
+            if (!(double.IsFinite(EI) && EI > 0)) problems.Add($"曲げ剛性 EI が正の数ではありません ({EI})");
+            if (!(double.IsFinite(Kh0) && Kh0 > 0)) problems.Add($"基準の地盤反力係数 kh0 が正の数ではありません ({Kh0})");
+            if (!(double.IsFinite(Beta0) && Beta0 > 0)) problems.Add($"β0 が正の数ではありません ({Beta0}。杭径・EI・kh0 を確認してください)");
+            if (!(double.IsFinite(Ar) && Ar >= 0 && Ar <= 1)) problems.Add($"杭頭の固定度 αr が 0〜1 ではありません ({Ar})");
+            if (!double.IsFinite(HorizontalLoad)) problems.Add($"水平荷重が数値ではありません ({HorizontalLoad})");
+            if (!(double.IsFinite(H) && H >= 0)) problems.Add($"地上高が 0 以上の数ではありません ({H})");
+            return problems.Count == 0 ? null : string.Join("。", problems) + "。";
+        }
+
         public void Update()
         {
             // 反復して Kh と Beta を求める（GroundSurfaceDisplacement を使う関係のため）
             const int maxIter = 500;
             const double tol = 1e-6;
 
+            // 入力が範囲外なら計算しない (結果は数値でない値にして、普通の結果に見せない)
+            if (DescribeInputProblem() is { } inputProblem)
+            {
+                Problem = inputProblem;
+                PileHeadDisplacement = GroundSurfaceDisplacement = PileHeadMoment
+                    = MaxBendingMoment = DepthOfMaxBendingMoment = double.NaN;
+                NotifyDependents();
+                return;
+            }
+
             double beta = Math.Max(1e-12, Beta0); // 初期値
             double kh = Kh0; // 初期値
+            string problem = "";
+            bool converged = false;
 
             for (int iter = 0; iter < maxIter; iter++)
             {
@@ -352,9 +398,12 @@ namespace PileDesign.Common
 
                 if (!(double.IsFinite(groundDisp) && groundDisp > 0.0))
                 {
-                    // 安全装置: 収束不能なら既定値で終了
+                    // 地表面変位が正にならないと kh を低減できない。初期の kh で計算し、そのことを示す
                     kh = Kh0;
                     beta = Beta0;
+                    converged = true;
+                    if (!(groundDisp == 0.0 && HorizontalLoad == 0.0))
+                        problem = "地表面変位が正にならないため、地盤反力係数を変位で低減していません (kh0 のままの値)。";
                     break;
                 }
 
@@ -370,8 +419,10 @@ namespace PileDesign.Common
                 double relChange = Math.Abs(newBeta - beta) / (Math.Abs(beta) + 1e-12);
                 beta = newBeta;
                 kh = newKh;
-                if (relChange <= tol) break;
+                if (relChange <= tol) { converged = true; break; }
             }
+            if (!converged)
+                problem = $"地盤反力係数の反復が {maxIter} 回で収束しませんでした (値は最後の反復のもの)。";
             Kh = kh;
             Beta = beta;
             // 収束した beta を用いてキャッシュを計算して格納
@@ -380,6 +431,11 @@ namespace PileDesign.Common
             PileHeadMoment = ComputePileHeadMoment(beta);
             MaxBendingMoment = ComputeMaxBendingMoment(beta);
             DepthOfMaxBendingMoment = ComputeDepthOfMaxBendingMoment(beta);
+
+            if (!double.IsFinite(PileHeadDisplacement) || !double.IsFinite(GroundSurfaceDisplacement)
+                || !double.IsFinite(PileHeadMoment) || !double.IsFinite(MaxBendingMoment) || !double.IsFinite(DepthOfMaxBendingMoment))
+                problem = (problem + " 結果に数値でない値があります。入力を確認してください。").Trim();
+            Problem = problem;
 
             // Notify UI
             NotifyDependents();
@@ -428,11 +484,11 @@ namespace PileDesign.Common
             if (beta == 0.0) return double.NaN;
             if (H == 0)
             {
-                return -HorizontalLoad / (2 * Beta) * Math.Sqrt((1 - Ar) * (1 - Ar) + 1) * Math.Exp(-Math.Atan(1 / (1 - Ar)));
+                return -HorizontalLoad / (2 * beta) * Math.Sqrt((1 - Ar) * (1 - Ar) + 1) * Math.Exp(-Math.Atan(1 / (1 - Ar)));
             }
             else
             {
-                return -HorizontalLoad / (2 * Beta) * Math.Sqrt(Math.Pow(((1 + 2 * Beta * H) - (1 + Beta * H) * Ar), 2) + 1) * Math.Exp(-Math.Atan(1 / (1 + 2 * Beta * H - (1 + Beta * H) * Ar)));
+                return -HorizontalLoad / (2 * beta) * Math.Sqrt(Math.Pow(((1 + 2 * beta * H) - (1 + beta * H) * Ar), 2) + 1) * Math.Exp(-Math.Atan(1 / (1 + 2 * beta * H - (1 + beta * H) * Ar)));
             }
         }
 
@@ -440,7 +496,7 @@ namespace PileDesign.Common
         {
             if (beta == 0.0) return double.NaN;
             if (H == 0) return 1 / beta * Math.Atan(1 / (1 - Ar));
-            return 1 / beta * Math.Atan(1 / (1 + 2 * Beta * H - (1 + Beta * H) * Ar));
+            return 1 / beta * Math.Atan(1 / (1 + 2 * beta * H - (1 + beta * H) * Ar));
         }
 
         // たわみ曲線

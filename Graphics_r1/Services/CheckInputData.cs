@@ -329,7 +329,13 @@ namespace PileDesign.Services
                             message += $"杭体{pbNo} 区間{segNo}: 主筋配置直径 (MainBarDr={sec.MainBarDr}) が外径 ({sec.ConcreteOutDia}) との関係で不正です " +
                                         $"(0 < MainBarDr < 外径 を満たすこと).\n";
                         }
+                        // 耐力・剛性の式に入る値。範囲外だと √ の中が負 (せん断補強筋の √(pw·σwy))、
+                        // 0 で割る (ヤング係数比 n = Er/Ec) などで、耐力・剛性が数値でなくなる
+                        message += DescribeInsituRcMaterialProblems(sec, $"杭体{pbNo} 区間{segNo}");
                     }
+
+                    // 断面の剛性 (解析の入力そのもの)。数値でないまま進むと、剛性行列や結果に数値でない値が混ざる
+                    message += DescribeSectionStiffnessProblems(sec, $"杭体{pbNo} 区間{segNo}");
 
                     if (!IsPositive(sec.ConcreteFc)
                         && sec.PileBodyType != PileTypeNames.SteelPipe  // 純鋼管杭は Fc 不要
@@ -340,6 +346,55 @@ namespace PileDesign.Services
                 }
             }
             return message;
+        }
+
+        /// <summary>
+        /// 場所打ち RC の材料の値の範囲外 (無ければ空)。ヤング係数・強度は正の数、せん断補強筋比・強度は 0 以上、
+        /// せん断補強筋があるならピッチは正の数。
+        /// </summary>
+        internal static string DescribeInsituRcMaterialProblems(PileSection sec, string where)
+        {
+            string message = "";
+            if (!IsPositive(sec.ConcreteE))
+                message += $"{where}: コンクリートのヤング係数 Ec が 0 以下か数値ではありません ({sec.ConcreteE}).\n";
+            if (!IsPositive(sec.ConcreteGsi))
+                message += $"{where}: コンクリートの強度の有効係数 ξ が 0 以下か数値ではありません ({sec.ConcreteGsi}).\n";
+            if (sec.MainBarNum > 0)
+            {
+                if (!IsPositive(sec.MainBarEr))
+                    message += $"{where}: 主筋のヤング係数 Er が 0 以下か数値ではありません ({sec.MainBarEr}).\n";
+                if (!IsPositive(sec.MainBarAg))
+                    message += $"{where}: 主筋の断面積が 0 以下か数値ではありません ({sec.MainBarAg}).\n";
+            }
+            if (!(double.IsFinite(sec.HoopPw) && sec.HoopPw >= 0))
+                message += $"{where}: せん断補強筋比 pw が 0 未満か数値ではありません ({sec.HoopPw}).\n";
+            if (!(double.IsFinite(sec.HoopSigmay) && sec.HoopSigmay >= 0))
+                message += $"{where}: せん断補強筋の降伏強度が 0 未満か数値ではありません ({sec.HoopSigmay}).\n";
+            if (double.IsFinite(sec.HoopBarArea) && sec.HoopBarArea > 0 && !IsPositive(sec.HoopSpacing))
+                message += $"{where}: せん断補強筋のピッチが 0 以下か数値ではありません ({sec.HoopSpacing}).\n";
+            return message;
+        }
+
+        /// <summary>
+        /// 断面の軸剛性 EA・曲げ剛性 EI が正の有限の数にならなければ、その値 (無ければ空)。
+        /// 入力の個々の値が範囲内でも、組み合わせ (腐食代が肉厚以上など) で 0 以下・数値でなくなることがある。
+        /// 断面の計算そのものが失敗したときも、例外で解析を止めずにここで知らせる。
+        /// </summary>
+        internal static string DescribeSectionStiffnessProblems(PileSection sec, string where)
+        {
+            try
+            {
+                string message = "";
+                if (!IsPositive(sec.EA))
+                    message += $"{where}: 断面の軸剛性 EA が正の数になりません ({sec.EA})。断面の寸法・材料を確認してください.\n";
+                if (!IsPositive(sec.EI))
+                    message += $"{where}: 断面の曲げ剛性 EI が正の数になりません ({sec.EI})。断面の寸法・材料を確認してください.\n";
+                return message;
+            }
+            catch (Exception ex) when (ex is ArgumentException or ArithmeticException or InvalidOperationException)
+            {
+                return $"{where}: 断面の剛性を計算できません ({ex.Message.Split('\n')[0].Trim()}).\n";
+            }
         }
 
         /// <summary>正の有限の数か (NaN・無限大・0 以下は false)。「0 以下」の比較は NaN を素通りさせるので、こちらで判定する。</summary>

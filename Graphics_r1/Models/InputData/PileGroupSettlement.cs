@@ -730,6 +730,31 @@ namespace PileDesign.Models.InputData
         public Steinnbrener()
         { }
 
+        /// <summary>
+        /// 沈下用土層の値の誤り (無ければ空)。層厚と変形係数は正の有限の数、ポアソン比は 0〜0.5。
+        ///
+        /// Steinbrenner の式は層ごとに q·B·Is/E を足し引きする。変形係数が 0 以下だと無限大・負の沈下になり、
+        /// ポアソン比が範囲外だと影響係数の符号が変わる。以前は土層が 1 層以上あるかだけを見ていて、
+        /// そのまま計算した値がコンタ図・杭の沈下量・検定に渡っていた。
+        /// </summary>
+        public static System.Collections.Generic.List<string> DescribeLayerProblems(System.Collections.Generic.IEnumerable<SettlementSoilLayer>? soilLayers)
+        {
+            var problems = new System.Collections.Generic.List<string>();
+            int no = 0;
+            foreach (var layer in soilLayers ?? [])
+            {
+                no++;
+                if (layer == null) { problems.Add($"沈下用土層 {no} 層目が空です。"); continue; }
+                if (!(double.IsFinite(layer.Thickness) && layer.Thickness > 0))
+                    problems.Add($"沈下用土層 {no} 層目の層厚が正の数ではありません ({layer.Thickness})。下端の標高を確認してください。");
+                if (!(double.IsFinite(layer.Ek) && layer.Ek > 0))
+                    problems.Add($"沈下用土層 {no} 層目の変形係数が正の数ではありません ({layer.Ek})。");
+                if (!(double.IsFinite(layer.PoissonsRatio) && layer.PoissonsRatio >= 0 && layer.PoissonsRatio <= 0.5))
+                    problems.Add($"沈下用土層 {no} 層目のポアソン比が 0〜0.5 ではありません ({layer.PoissonsRatio})。");
+            }
+            return problems;
+        }
+
         // 多層地盤における矩形載荷面隅角部の沈下量の計算
         private static double Steinbrenner(ObservableCollection<SettlementSoilLayer> soilLayers, double q, double dx, double dy)
         {
@@ -797,6 +822,10 @@ namespace PileDesign.Models.InputData
                     sE -= q * b * Is2 / soilLayers[i].Ek;
                 }
             }
+            // 入口で土層の値を確かめていても、荷重・寸法の組み合わせで数値でなくなることがある。黙って渡さない
+            if (!double.IsFinite(sE))
+                throw new InvalidOperationException(
+                    $"Steinbrenner の沈下量が数値になりません (荷重 q={q}、載荷面 {dx}×{dy} m)。土層と荷重を確認してください。");
             return sE;
         }
 

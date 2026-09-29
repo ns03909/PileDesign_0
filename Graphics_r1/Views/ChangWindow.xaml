@@ -923,6 +923,21 @@
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
+
+                                                <!-- 計算できなかった・結果を使えない理由 (入力の範囲外・反復の未収束・数値でない結果) -->
+                                                <DataGridTextColumn
+                                                    HeaderStyle="{StaticResource DeepBlueHeaderStyle}"
+                                                    Binding="{Binding Problem, Mode=OneWay}"
+                                                    IsReadOnly="True" MinWidth="120" Width="*" Foreground="Firebrick">
+                                                    <DataGridTextColumn.ElementStyle>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="TextWrapping" Value="Wrap"/>
+                                                        </Style>
+                                                    </DataGridTextColumn.ElementStyle>
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="注意" HorizontalAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
                                             </DataGrid.Columns>
                                         </common:EnhancedDataGrid>
                                     </Grid>
