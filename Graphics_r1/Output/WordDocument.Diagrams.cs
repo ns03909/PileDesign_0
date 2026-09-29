@@ -831,6 +831,10 @@ diameterSelector,
                 + "」に設定されている。設計値は"
                 + (includesGroup ? "合計沈下量" : "単杭沈下量")
                 + "の列。杭頭変形角の検定もこの値の差で求めている。");
+
+            // 旧形式から復元した群杭沈下量は、計算して得た値と区別して書く
+            if (inputModel.PileGroupSettlement?.ActiveRecord?.IsConvergenceUnknown == true)
+                AddTableNote(body, "※ " + PileDesign.Services.LegacySettlementMigration.UnknownConvergenceReason + "。");
         }
 
         /// <summary>

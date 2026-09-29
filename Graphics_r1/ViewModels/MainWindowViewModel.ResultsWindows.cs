@@ -650,6 +650,8 @@ namespace PileDesign.ViewModels
             foreach (var rec in pgs.CaseRecords.Where(r => !r.IsBeamAware))
             {
                 string caseName = rec.LoadCaseName ?? "";
+                // 旧形式から復元した結果は、計算して得た結果と見分けられるように表の名前に出す
+                string title = rec.IsConvergenceUnknown ? $"{prefix}（旧形式から復元・収束状態 {rec.ConvergenceLabel}）" : prefix;
 
                 // 杭結果: 杭ごとの 沈下量 (反力やばねは無いが LinkedPileNo に紐付く矩形荷重 QA を表示)
                 if (ResultInputModel.PileLayoutItems != null && rec.PileSettlements_mm.Count > 0)
@@ -682,7 +684,7 @@ namespace PileDesign.ViewModels
                     }
                     tables.Add(new ResultTable
                     {
-                        Name = $"{prefix} 杭結果",
+                        Name = $"{title} 杭結果",
                         Category = category,
                         Columns =
                         [
@@ -712,7 +714,7 @@ namespace PileDesign.ViewModels
                     }
                     tables.Add(new ResultTable
                     {
-                        Name = $"{prefix} 節点変位",
+                        Name = $"{title} 節点変位",
                         Category = category,
                         Columns =
                         [
@@ -731,7 +733,7 @@ namespace PileDesign.ViewModels
                 if (rec.SettlementGridData?.Count > 0)
                 {
                     tables.Add(BuildSettlementGridTable(
-                        $"{prefix} 土層グリッド変位",
+                        $"{title} 土層グリッド変位",
                         category, caseName, rec.SettlementGridData));
                 }
             }

@@ -441,10 +441,16 @@ namespace PileDesign.ViewModels
                 foreach (var sp in loadedSoilPiles) sp?.MigrateLegacyLoadDisplacements();
             }
 
+            // 杭配置番号の同期（PileNo が未設定・重複した旧ファイルに備える）。
+            // 旧形式の群杭沈下量は杭ごとに持っていて、下の移行が杭番号で引ける形に移す。
+            // 振り直す前に移すと、重なった番号の値を決められず、ずれた番号の杭に別の杭の値が付く。
+            _duplicatePileNosOnLoad = DescribeDuplicatePileNos(CurrentInputModel.PileLayoutItems);
+            UpdatePileLayoutNo();
+
             // 群杭沈下の結果を入力モデルへ結び付け、旧データの互換マイグレーションを走らせる。
             // 結果は入力とは別の節にある。旧ファイルはこの節が無く、入力側の "CaseRecords"
             // に入っているので、移行がそれを結果側へ移して受け取り口を空にする。
-            PileDesign.Services.LegacySettlementMigration.AttachResultAndMigrate(
+            _legacySettlementNoticesOnLoad = PileDesign.Services.LegacySettlementMigration.AttachResultAndMigrate(
                 CurrentInputModel, projectData?.GroupSettlementResult);
 
             // 梁要素 ComboBox 用の節点候補リストを再構築 (deserialize 直後は空のため)
@@ -460,9 +466,6 @@ namespace PileDesign.ViewModels
             CurrentInputModel.UpdateCountLists();
             // バイリニアコンクリート・オプションを同期し M-φ/NM キャッシュを破棄
             ApplyConcreteModelOptions();
-
-            // 杭配置番号の同期（PileNo が未設定の旧ファイルに備える）
-            UpdatePileLayoutNo();
 
             // 地震時軸力モード (絶対 / 変動) を InputModel から復元し、AxialForceModeContext + UI に反映。
             // VL/L1/L2 の値は既にロード済みなので、Context フラグの設定で即時に変動列の表示も切替可能。
@@ -572,6 +575,23 @@ namespace PileDesign.ViewModels
                 MessageService.Show(Models.PileFemLinkTable.DescribeProblems(_pileFemLinkProblemsOnLoad),
                     "解析結果の読込", MessageBoxButton.OK, MessageBoxImage.Warning);
                 _pileFemLinkProblemsOnLoad = [];
+            }
+
+            // 杭番号の重なり (並び順に振り直した)。杭番号で引く保存済みの結果は、別の杭の値になっている恐れがある
+            if (_duplicatePileNosOnLoad != null)
+            {
+                Serilog.Log.Warning("[読込] 杭番号が重なっていたので並び順に振り直しました: {Duplicates}", _duplicatePileNosOnLoad);
+                MessageService.Show(_duplicatePileNosOnLoad, "杭番号", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _duplicatePileNosOnLoad = null;
+            }
+
+            // 旧形式の群杭沈下の結果を移したときの知らせ (収束状態が不明・移せなかった杭)
+            if (_legacySettlementNoticesOnLoad.Count > 0)
+            {
+                Serilog.Log.Warning("[読込] 旧形式の群杭沈下の結果: {Notices}", string.Join(" / ", _legacySettlementNoticesOnLoad));
+                MessageService.Show(string.Join("\n\n", _legacySettlementNoticesOnLoad),
+                    "群杭沈下の結果の読込", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _legacySettlementNoticesOnLoad = [];
             }
 
             // 荷重組合せの表示名の重なり (画面の選択で見分けられない)。表示名は係数から決まり付け直せないので知らせるだけ
@@ -839,6 +859,29 @@ namespace PileDesign.ViewModels
         /// </summary>
         /// <summary>直近の読込で、杭と FEM 要素の対応表を張り直せなかったもの (読込の仕上げで知らせて空にする)。</summary>
         private IReadOnlyList<string> _pileFemLinkProblemsOnLoad = [];
+
+        /// <summary>直近の読込で、旧形式の群杭沈下の結果を移したときの知らせ (読込の仕上げで知らせて空にする)。</summary>
+        private IReadOnlyList<string> _legacySettlementNoticesOnLoad = [];
+
+        /// <summary>直近の読込で、杭番号が重なっていたときの知らせ (無ければ null)。</summary>
+        private string? _duplicatePileNosOnLoad;
+
+        /// <summary>
+        /// 杭番号が重なっていれば、振り直すことを知らせる文面 (重なりが無ければ null)。
+        /// 手で直したファイルなどで起きる。読込では杭番号を並び順に振り直すので、杭番号で引く保存済みの結果
+        /// (群杭沈下の杭ごとの沈下量など) は別の杭の値になっている恐れがある。
+        /// </summary>
+        internal static string? DescribeDuplicatePileNos(IEnumerable<Models.InputData.PileLayoutDataItem>? piles)
+        {
+            var duplicates = (piles ?? []).Where(p => p != null).GroupBy(p => p.PileNo)
+                .Where(g => g.Count() > 1).OrderBy(g => g.Key)
+                .Select(g => $"No.{g.Key} ({g.Count()} 本)").ToList();
+            if (duplicates.Count == 0) return null;
+            return "同じ杭番号が複数の杭に付いていたので、杭番号を並び順に振り直しました: "
+                 + string.Join("・", duplicates) + "。\n"
+                 + "杭番号で対応付けて保存されていた結果 (群杭沈下の杭ごとの沈下量など) は、別の杭の値になっている恐れがあります。"
+                 + "解析をやり直してください。";
+        }
 
         private void RestoreAnalysisResultSet(Models.ProjectData projectData)
         {

@@ -86,6 +86,12 @@ namespace PileDesign.Services
                 }
                 string caseName = string.IsNullOrEmpty(rec.LoadCaseName) ? "群杭沈下" : rec.LoadCaseName;
                 string typeName = string.IsNullOrEmpty(rec.LoadingType) ? "" : $"（{rec.LoadingType}）";
+                // 旧形式から復元した結果は、どの解析で得た値か確かめられない。収束した結果と同じには判定しない
+                if (rec.IsConvergenceUnknown)
+                {
+                    items.Add(Unavailable(caseName, LegacySettlementMigration.UnknownConvergenceReason));
+                    continue;
+                }
                 int before = items.Count;
                 AddItem(heads, caseName, typeName, MissingPiles(piles, rec.PileSettlements_mm.Keys, "群杭沈下"));
                 // 基礎梁を考慮した反復が収束しなかったケースは判定しない (反復しない解析の記録は IsConverged を持たないので対象外) (釣り合っていない沈下の変形角なので「未収束」)

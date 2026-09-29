@@ -62,6 +62,8 @@ namespace PileDesign.Services
             if (piles == null) return items;
 
             var pgs = inputModel.PileGroupSettlement;
+            // 群杭沈下の結果が旧形式から復元したもの (収束状態が不明) なら、合計沈下量を判定に使わない
+            bool groupUnknown = pgs?.ActiveRecord?.IsConvergenceUnknown == true;
 
             foreach (var pile in piles)
             {
@@ -96,9 +98,11 @@ namespace PileDesign.Services
 
                 // 単杭沈下量が荷重-沈下曲線の範囲外の軸力で求めた値なら、それは下限 (実際はもっと沈む)。
                 // 下限で許容値を超えていれば NG と言えるが、超えていなければ OK とは言えない
-                string? unavailable = pile.SinglePileSettlementVLBeyondCurve && !(response > limit)
-                    ? DescribeBeyondCurve(pile.PileNo)
-                    : null;
+                string? unavailable = groupUnknown
+                    ? LegacySettlementMigration.UnknownConvergenceReason
+                    : pile.SinglePileSettlementVLBeyondCurve && !(response > limit)
+                        ? DescribeBeyondCurve(pile.PileNo)
+                        : null;
 
                 items.Add(new EvaluationItem
                 {

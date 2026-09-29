@@ -162,6 +162,20 @@ namespace PileDesign.Models.Results
         /// <summary>各杭の沈下量 [mm]。Key = PileLayoutDataItem.PileNo</summary>
         public Dictionary<int, double> PileSettlements_mm { get; set; } = [];
 
+        /// <summary>
+        /// 収束状態が分からない (旧形式のファイルの複製から復元した結果)。
+        ///
+        /// 旧形式は沈下のコンタと杭ごとの沈下量しか残しておらず、どの解析 (反復したか・収束したか・どの条件か) で
+        /// 得た値かを確かめられない。以前は復元のときに <see cref="IsConverged"/> を true にしており、
+        /// 計算して収束した結果と見分けがつかなかった。true のとき <see cref="IsConverged"/> は false で、
+        /// 表示は「不明」、この結果による沈下の検定は行わない (検定不能)。
+        /// </summary>
+        public bool IsConvergenceUnknown { get; set; }
+
+        /// <summary>収束状態の表示 (「収束」「未収束」「不明」)。</summary>
+        [JsonIgnore]
+        public string ConvergenceLabel => IsConvergenceUnknown ? "不明" : IsConverged ? "収束" : "未収束";
+
         // ── 基礎梁考慮の場合のみ ──
         public bool IsConverged { get; set; }
         public int IterationCount { get; set; }
