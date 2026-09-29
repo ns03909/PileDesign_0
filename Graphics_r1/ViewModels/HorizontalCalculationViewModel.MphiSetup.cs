@@ -477,7 +477,7 @@ namespace PileDesign.ViewModels
                 ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, RATIO_MIN, 1.0);
 
                 // 要素中央の曲率を保存（合成値）- 接線/割線の両方で更新
-                double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
+                double phiRes = PileDesign.Common.StableNumerics.Norm(phiY, phiZ);
                 beam.CurrentCurvature = phiRes;
 
                 // 要素中央のモーメント（M-φ曲線から直接評価）

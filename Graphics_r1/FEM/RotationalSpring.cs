@@ -500,7 +500,7 @@ namespace PileDesign.FEM
 
             double mx = CumulativeForce?.Mxj ?? 0.0;
             double my = CumulativeForce?.Myj ?? 0.0;
-            double mRes = Math.Sqrt(mx * mx + my * my);
+            double mRes = PileDesign.Common.StableNumerics.Norm(mx, my);
 
             if (!_committedHasCrackedXY)
             {
@@ -542,7 +542,7 @@ namespace PileDesign.FEM
         public void MarkCracked(double mx, double my)
         {
             HasCrackedXY = true;
-            double norm = Math.Sqrt(mx * mx + my * my);
+            double norm = PileDesign.Common.StableNumerics.Norm(mx, my);
             if (norm > 1e-15)
             {
                 CrackNx = mx / norm;

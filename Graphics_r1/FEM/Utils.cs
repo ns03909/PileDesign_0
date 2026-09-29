@@ -16,7 +16,7 @@ namespace PileDesign.FEM
             double lengthX = Math.Abs(nodeI.Coord.X - nodeJ.Coord.X);
             double lengthY = Math.Abs(nodeI.Coord.Y - nodeJ.Coord.Y);
             double lengthZ = Math.Abs(nodeI.Coord.Z - nodeJ.Coord.Z);
-            double length = Math.Sqrt(lengthX * lengthX + lengthY * lengthY + lengthZ * lengthZ);
+            double length = PileDesign.Common.StableNumerics.Norm(lengthX, lengthY, lengthZ);
             return length;
         }
 
@@ -38,10 +38,10 @@ namespace PileDesign.FEM
             double cos = Math.Cos(coordAngle / 180 * Math.PI);
             double sin = Math.Sin(coordAngle / 180 * Math.PI);
             double errorValue = 1.0E-10;
-            double length = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            double length = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
             double lx = dx / length, mx = dy / length, nx = dz / length;
-            double lambda = Math.Sqrt(lx * lx + mx * mx);
-            double horzLength = Math.Sqrt(dx * dx + dy * dy);
+            double lambda = PileDesign.Common.StableNumerics.Norm(lx, mx);
+            double horzLength = PileDesign.Common.StableNumerics.Norm(dx, dy);
 
             double ly, my, ny, lz, mz, nz;
             if (horzLength > errorValue)

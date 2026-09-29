@@ -167,7 +167,7 @@ namespace PileDesign.FEM
             // 合成曲線があれば合成で評価
             if (_combinedCurve != null)
             {
-                double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
+                double phiRes = PileDesign.Common.StableNumerics.Norm(phiY, phiZ);
                 double EItan = _combinedCurve.EvaluateTangent(phiRes);
                 double EIsec = _combinedCurve.EvaluateSecant(phiRes);
 
@@ -228,7 +228,7 @@ namespace PileDesign.FEM
             // 合成曲線があれば合成で評価
             if (_combinedCurve != null)
             {
-                double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
+                double phiRes = PileDesign.Common.StableNumerics.Norm(phiY, phiZ);
                 double EIeff = _combinedCurve.EvaluateSecant(phiRes);
                 if (!double.IsFinite(EIeff) || EIeff <= 0.0) EIeff = (EI0y > 0.0 ? EI0y : EI0z);
                 return (EIeff, EIeff);
@@ -476,7 +476,7 @@ namespace PileDesign.FEM
         public double EvaluateEIyzTangent(double phiY, double phiZ)
         {
             if (_combinedCurve == null) return 0.0;
-            double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
+            double phiRes = PileDesign.Common.StableNumerics.Norm(phiY, phiZ);
             if (phiRes < 1e-15) return 0.0;
 
             double EI0 = 0.0;

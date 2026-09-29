@@ -8,13 +8,13 @@ namespace PileDesign.Common
         // 2点間の距離を返すメソッド
         public static double BetweenTwoPoint3Ds(Point3D p1, Point3D p2)
         {
-            return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2) + Math.Pow(p1.Z - p2.Z, 2));
+            return StableNumerics.Norm(p1.X - p2.X, p1.Y - p2.Y, p1.Z - p2.Z);
         }
 
         // 2点間の距離を返すメソッド
         public static double BetweenTwoNodes(Point p1, Point p2)
         {
-            return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
+            return StableNumerics.Norm(p1.X - p2.X, p1.Y - p2.Y);
         }
 
         // 点と直線の距離を返すメソッド

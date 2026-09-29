@@ -322,7 +322,7 @@ namespace PileDesign.FEM
                 double dx = node.Coord.X - x;
                 double dy = node.Coord.Y - y;
                 double dz = node.Coord.Z - z;
-                double dist = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                double dist = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
 
                 if (dist < minDist)
                 {

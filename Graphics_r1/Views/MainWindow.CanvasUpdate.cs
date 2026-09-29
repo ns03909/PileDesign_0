@@ -1734,7 +1734,7 @@ namespace PileDesign.Views
         // 2点間の距離を返すメソッド
         private static double GetDistanceBetweenTwoNodes(Point p1, Point p2)
         {
-            return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
+            return PileDesign.Common.StableNumerics.Norm(p1.X - p2.X, p1.Y - p2.Y);
         }
         private static double GetDistanceBetweenNodeAndLine(Point lineStart, Point lineEnd, Point p)
         {

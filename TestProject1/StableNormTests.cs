@@ -40,19 +40,54 @@ public class StableNormTests
     }
 
     /// <summary>
-    /// 結果・表示・計算書・検査の側に、二乗してから足す形が戻っていないこと。
+    /// <b>普通の大きさの値では、従来の式 (二乗して足した平方根) と 1 ビットも違わないこと。</b>
+    /// 解析 (要素の長さ・曲率・モーメントの合成) にも使うので、結果を動かさないことをここで固定する。
     /// </summary>
     [TestMethod]
-    public void TheDisplaySideUsesTheStableNorm()
+    public void OrdinaryValues_AreBitIdenticalToTheOldFormula()
+    {
+        var random = new System.Random(20260930);
+        for (int i = 0; i < 20000; i++)
+        {
+            double Pick() => (random.NextDouble() - 0.5) * System.Math.Pow(10, random.Next(-60, 60));
+            double x = Pick(), y = Pick(), z = Pick();
+            Assert.AreEqual(System.Math.Sqrt(x * x + y * y), StableNumerics.Norm(x, y), 0.0, $"2 成分 x={x:R} y={y:R}");
+            Assert.AreEqual(System.Math.Sqrt(x * x + y * y + z * z), StableNumerics.Norm(x, y, z), 0.0, $"3 成分 x={x:R} y={y:R} z={z:R}");
+            Assert.AreEqual(System.Math.Sqrt(x * x + y * y + z * z), StableNumerics.Norm(new[] { x, y, z }), 0.0, "任意の数の成分");
+        }
+    }
+
+    [TestMethod]
+    public void NormOfManyComponents_HandlesExtremes()
+    {
+        Assert.AreEqual(3e200, StableNumerics.Norm(new[] { 1e200, 2e200, 0, -2e200, 0, 0 }), 3e200 * 1e-15);
+        Assert.IsTrue(double.IsNaN(StableNumerics.Norm(new[] { 1.0, double.NaN, 3.0 })));
+        Assert.AreEqual(0.0, StableNumerics.Norm(new double[6]));
+    }
+
+    /// <summary>
+    /// アプリ全体に、二乗してから足す形 (Math.Sqrt(x*x + y*y)・Math.Sqrt(Math.Pow(x, 2) + ...)) が戻っていないこと。
+    /// 解析・表示・計算書・検査で同じ計算を使う (共通の関数の中だけは除く)。
+    /// </summary>
+    [TestMethod]
+    public void TheWholeAppUsesTheStableNorm()
     {
         const string e = @"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*|\[[^\[\]]+\])*";
-        var squared = new Regex(@"Math\.Sqrt\(\s*(" + e + @")\s*\*\s*\1\s*\+");
-        var files = new[] { "Views", "Output", "Services", Path.Combine("Models", "Results") }
-            .SelectMany(d => Directory.GetFiles(TestSource.Dir("Graphics_r1", d), "*.cs", SearchOption.AllDirectories))
-            .Concat(new[] { "NodeLoad.cs", "NodeDisp.cs", "BeamForce.cs", "BeamDisp.cs" }
-                .Select(f => Path.Combine(TestSource.Dir("Graphics_r1", "FEM"), f)))
+        var squared = new Regex(@"Math\.Sqrt\(\s*(" + e + @")\s*\*\s*\1\s*\+|Math\.Sqrt\(\s*Math\.Pow\(");
+        char sep = Path.DirectorySeparatorChar;
+        // 式の中の無次元の項で、ベクトルの大きさではないもの (値の大きさが限られ、変えると沈下・断面の結果に直に効く)
+        var formulaFiles = new[]
+        {
+            "Chang.cs",                // Chang の式の √(a² + 1)
+            "PileGroupSettlement.cs",  // Steinbrenner の式の √(l² + d² + 1) など
+            "PrecastPileSection.cs",   // 二乗の差 (大きさではない)
+        };
+        var files = Directory.GetFiles(TestSource.Dir("Graphics_r1"), "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{sep}obj{sep}") && !f.Contains($"{sep}bin{sep}")
+                     && Path.GetFileName(f) != "StableNumerics.cs"
+                     && !formulaFiles.Contains(Path.GetFileName(f)))
             .ToList();
-        TestSource.AssertScanned(files.Count, 100, "結果・表示・計算書・検査の側のソース");
+        TestSource.AssertScanned(files.Count, 300, "アプリのソース");
         var hits = files.SelectMany(f => File.ReadAllLines(f).Select((l, i) => (File: Path.GetFileName(f), Line: i + 1, Text: l)))
             .Where(l => !l.Text.TrimStart().StartsWith("//") && squared.IsMatch(l.Text))
             .Select(l => $"{l.File}:{l.Line}  {l.Text.Trim()}")

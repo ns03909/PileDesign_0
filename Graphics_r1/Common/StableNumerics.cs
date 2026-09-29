@@ -19,21 +19,55 @@ internal static class StableNumerics
         return sum + correction;
     }
 
-    /// <summary>
-    /// 2 成分の大きさ √(x² + y²)。二乗してから足すと、大きな有限の値 (1e155 程度より大きい) で途中が無限大になり、
-    /// 小さな値 (1e-155 程度より小さい) では 0 に潰れる。大きさをそろえてから計算する <see cref="double.Hypot"/> を使う。
-    /// 数値でない成分があれば数値でない値を返す (隠さない)。
-    /// </summary>
-    internal static double Norm(double x, double y) => double.Hypot(x, y);
+    // ── ベクトルの大きさ ──
+    //
+    // 二乗してから足すと、大きな有限の値 (1e155 程度より大きい) で途中が無限大になり、
+    // 小さな値 (1e-155 程度より小さい) では 0 に潰れる。
+    //
+    // <b>普通の大きさの値では、従来と同じ式 (二乗して足した平方根) で求める。</b> 丸めまで同じなので、
+    // 解析 (要素の長さ・曲率・モーメントの合成) に使っても結果は 1 ビットも動かない。二乗の和が
+    // 安全な範囲 (NormSafeMin〜double.MaxValue) を外れたときだけ、大きさをそろえてから計算し直す。
+    // 数値でない成分があれば数値でない値を返す (隠さない)。
 
-    /// <summary>3 成分の大きさ √(x² + y² + z²)。最大の成分で割ってから二乗して足す (<see cref="Norm(double, double)"/> と同じ理由)。</summary>
+    /// <summary>二乗の和がこれより小さいと、非正規化数になって桁が落ちる (成分でおよそ 1e-140 以下)。</summary>
+    private const double NormSafeMin = 1e-280;
+
+    /// <summary>2 成分の大きさ √(x² + y²)。</summary>
+    internal static double Norm(double x, double y)
+    {
+        double s = x * x + y * y;
+        if (s >= NormSafeMin && s <= double.MaxValue) return Math.Sqrt(s);
+        return double.Hypot(x, y);
+    }
+
+    /// <summary>3 成分の大きさ √(x² + y² + z²)。</summary>
     internal static double Norm(double x, double y, double z)
     {
+        double s = x * x + y * y + z * z;
+        if (s >= NormSafeMin && s <= double.MaxValue) return Math.Sqrt(s);
         if (double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z)) return double.NaN;
         double scale = Math.Max(Math.Abs(x), Math.Max(Math.Abs(y), Math.Abs(z)));
         if (scale == 0 || double.IsInfinity(scale)) return scale;
         double a = x / scale, b = y / scale, c = z / scale;
         return scale * Math.Sqrt(a * a + b * b + c * c);
+    }
+
+    /// <summary>任意の数の成分の大きさ (変位・回転の 6 成分など)。</summary>
+    internal static double Norm(params double[] components)
+    {
+        double s = 0;
+        foreach (double c in components) s += c * c;
+        if (s >= NormSafeMin && s <= double.MaxValue) return Math.Sqrt(s);
+        double scale = 0;
+        foreach (double c in components)
+        {
+            if (double.IsNaN(c)) return double.NaN;
+            scale = Math.Max(scale, Math.Abs(c));
+        }
+        if (scale == 0 || double.IsInfinity(scale)) return scale;
+        double sum = 0;
+        foreach (double c in components) { double a = c / scale; sum += a * a; }
+        return scale * Math.Sqrt(sum);
     }
 
     internal static double Mean(IEnumerable<double> values)

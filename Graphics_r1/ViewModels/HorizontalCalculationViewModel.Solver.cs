@@ -778,8 +778,7 @@ namespace PileDesign.ViewModels
                     var di = ps.NodeI.CumulativeDisp;
                     var dj = ps.NodeJ.CumulativeDisp;
 
-                    double relDisp = Math.Sqrt(
-                        Math.Pow(di.Ux - dj.Ux, 2) + Math.Pow(di.Uy - dj.Uy, 2) + Math.Pow(di.Uz - dj.Uz, 2));
+                    double relDisp = PileDesign.Common.StableNumerics.Norm(di.Ux - dj.Ux, di.Uy - dj.Uy, di.Uz - dj.Uz);
                     if (maxGlobalDisp > 1e-15 && relDisp / maxGlobalDisp > threshold)
                         warnings.Add($"{ps.Name}: 相対変位={relDisp:E3} ({relDisp / maxGlobalDisp * 100:F2}%)");
                 }
@@ -915,7 +914,7 @@ namespace PileDesign.ViewModels
                     var relDisplacement = pileNode.CumulativeDisp - soilNode.CumulativeDisp;
                     // NaN防止
                     double abs = (double.IsFinite(relDisplacement.Ux) && double.IsFinite(relDisplacement.Uy))
-                        ? Math.Sqrt(relDisplacement.Ux * relDisplacement.Ux + relDisplacement.Uy * relDisplacement.Uy)
+                        ? PileDesign.Common.StableNumerics.Norm(relDisplacement.Ux, relDisplacement.Uy)
                         : 0.0;
 
                     // 接線・割線両方を蓄積（2D Jacobian 用にどちらも必要）
@@ -1131,7 +1130,7 @@ namespace PileDesign.ViewModels
                         else
                         {
                             // 未クラック / 他杭種: 従来の等方モデル (2D Jacobian)
-                            double theta = Math.Sqrt(dRx * dRx + dRy * dRy);
+                            double theta = PileDesign.Common.StableNumerics.Norm(dRx, dRy);
                             double kTanIso, kSecIso;
                             if (rxy.CurveXY != null)
                             {

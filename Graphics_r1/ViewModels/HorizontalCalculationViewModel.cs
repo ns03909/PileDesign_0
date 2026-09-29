@@ -2322,7 +2322,7 @@ namespace PileDesign.ViewModels
 
                 // VL 重心からの距離 (参考情報)
                 double dxVL = apX - vlCx, dyVL = apY - vlCy;
-                double eVL = Math.Sqrt(dxVL * dxVL + dyVL * dyVL);
+                double eVL = PileDesign.Common.StableNumerics.Norm(dxVL, dyVL);
 
                 // 偏心率 Re (剛心ベース、基準法施行令 82 条の 6)
                 double reX = 0, reY = 0;
@@ -2355,7 +2355,7 @@ namespace PileDesign.ViewModels
             {
                 double bboxW = maxX - minX;
                 double bboxH = maxY - minY;
-                double lChar = Math.Sqrt(bboxW * bboxW + bboxH * bboxH);
+                double lChar = PileDesign.Common.StableNumerics.Norm(bboxW, bboxH);
                 if (lChar < 1e-6 || maxEVLDist / lChar < 0.10) return true;
                 string fmsg =
                     $"慣性力中心が VL 重心から離れています。\n\n" +

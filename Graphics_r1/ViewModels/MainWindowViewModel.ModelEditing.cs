@@ -1049,7 +1049,7 @@ namespace PileDesign.ViewModels
                         if (!targetIds.Contains(p1.UniqueId) || !targetIds.Contains(p2.UniqueId)) continue;
                         if (existingPairs.Contains((p1.UniqueId, p2.UniqueId))) continue;
 
-                        double length = (new Point3D(p2.X, p2.Y, p2.Z) - new Point3D(p1.X, p1.Y, p1.Z)).Length;
+                        double length = PileDesign.Common.StableNumerics.Norm(p2.X - p1.X, p2.Y - p1.Y, p2.Z - p1.Z);
                         if (!double.IsFinite(length)) throw new ArgumentException("生成する梁の長さが数値の範囲外です。");
                         if (length <= 1e-9) continue;
 

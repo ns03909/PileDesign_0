@@ -63,10 +63,8 @@ namespace PileDesign.Common
         {
             var points = new List<Point3D>(nDiv + 1);
 
-            double L = Math.Sqrt(
-                (coordJ.X - coordI.X) * (coordJ.X - coordI.X) +
-                (coordJ.Y - coordI.Y) * (coordJ.Y - coordI.Y) +
-                (coordJ.Z - coordI.Z) * (coordJ.Z - coordI.Z));
+            double L = PileDesign.Common.StableNumerics.Norm(
+                coordJ.X - coordI.X, coordJ.Y - coordI.Y, coordJ.Z - coordI.Z);
             if (L < 1e-12)
             {
                 points.Add(new Point3D(

@@ -340,13 +340,7 @@ namespace PileDesign.Views
                 var nr = n.GetNodeResult(anaModel, lc, lcomb, viewModel.IsLiquefaction);
                 if (nr?.CumulativeDisp == null) continue;
                 var nd = nr.CumulativeDisp;
-                double val = Math.Sqrt(
-                    Math.Pow(nd.Ux * effectiveVector[0], 2) +
-                    Math.Pow(nd.Uy * effectiveVector[1], 2) +
-                    Math.Pow(nd.Uz * effectiveVector[2], 2) +
-                    Math.Pow(nd.Rx * effectiveVector[3], 2) +
-                    Math.Pow(nd.Ry * effectiveVector[4], 2) +
-                    Math.Pow(nd.Rz * effectiveVector[5], 2));
+                double val = PileDesign.Common.StableNumerics.Norm(nd.Ux * effectiveVector[0], nd.Uy * effectiveVector[1], nd.Uz * effectiveVector[2], nd.Rx * effectiveVector[3], nd.Ry * effectiveVector[4], nd.Rz * effectiveVector[5]);
                 map[n] = val * multiplier;
             }
 

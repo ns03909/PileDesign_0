@@ -845,7 +845,7 @@ namespace PileDesign.ViewModels
                                 if (rs?.McrXY is null || rs.HasCrackedXY) continue;
                                 double mx = rs.CumulativeForce?.Mxj ?? 0.0;
                                 double my = rs.CumulativeForce?.Myj ?? 0.0;
-                                double mRes = Math.Sqrt(mx * mx + my * my);
+                                double mRes = PileDesign.Common.StableNumerics.Norm(mx, my);
                                 if (mRes >= rs.McrXY.Value * 0.999)
                                 {
                                     // v28 アプローチ I: クラック発生時点のモーメント方向 (= 回転方向) を記録
@@ -902,7 +902,7 @@ namespace PileDesign.ViewModels
                                     var sn = pliSoilNodes[i];
                                     if (pn?.CumulativeDisp is null || sn?.CumulativeDisp is null) continue;
                                     var rel = pn.CumulativeDisp - sn.CumulativeDisp;
-                                    double abs = Math.Sqrt(rel.Ux * rel.Ux + rel.Uy * rel.Uy);
+                                    double abs = PileDesign.Common.StableNumerics.Norm(rel.Ux, rel.Uy);
                                     // i-1 (bottom side) と i (top side) の 2 層
                                     if (i > 0 && i - 1 < reactions.Count && reactions[i - 1].IsYieldedAtY(abs, isTop: false, isFront, groupPileEffect.WithLiquefaction(BetaAt(i - 1)), loadCase.SoilNonlinearityMode))
                                     {

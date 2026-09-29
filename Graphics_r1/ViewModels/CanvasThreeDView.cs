@@ -166,7 +166,7 @@ namespace PileDesign.ViewModels
             }
 
             Point3D w = new(xMax - xMin, yMax - yMin, zMax - zMin);
-            Dv0 = 5 * Math.Sqrt(w.X * w.X + w.Y * w.Y + w.Z * w.Z);
+            Dv0 = 5 * PileDesign.Common.StableNumerics.Norm(w.X, w.Y, w.Z);
 
             // 注視点の計算
             Ct = new Point3D((xMax + xMin) / 2, (yMax + yMin) / 2, (zMax + zMin) / 2);

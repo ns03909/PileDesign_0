@@ -861,13 +861,7 @@ namespace PileDesign.Views
                     if (nr == null) continue;
                     var nd = nr.CumulativeDisp;
                     // 値の抽出（effectiveVector に従う）
-                    double val = Math.Sqrt(
-                        Math.Pow(nd.Ux * effectiveVector[0], 2) +
-                        Math.Pow(nd.Uy * effectiveVector[1], 2) +
-                        Math.Pow(nd.Uz * effectiveVector[2], 2) +
-                        Math.Pow(nd.Rx * effectiveVector[3], 2) +
-                        Math.Pow(nd.Ry * effectiveVector[4], 2) +
-                        Math.Pow(nd.Rz * effectiveVector[5], 2));
+                    double val = PileDesign.Common.StableNumerics.Norm(nd.Ux * effectiveVector[0], nd.Uy * effectiveVector[1], nd.Uz * effectiveVector[2], nd.Rx * effectiveVector[3], nd.Ry * effectiveVector[4], nd.Rz * effectiveVector[5]);
                     if (!double.IsFinite(val)) continue; // NaN/Infinity防止
                     allValues.Add(Math.Abs(val) * multiplier);
                 }
@@ -904,20 +898,8 @@ namespace PileDesign.Views
 
                             var ndI = nrI.CumulativeDisp;
                             var ndJ = nrJ.CumulativeDisp;
-                            double origI = Math.Sqrt(
-                                Math.Pow(ndI.Ux * effectiveVector[0], 2) +
-                                Math.Pow(ndI.Uy * effectiveVector[1], 2) +
-                                Math.Pow(ndI.Uz * effectiveVector[2], 2) +
-                                Math.Pow(ndI.Rx * effectiveVector[3], 2) +
-                                Math.Pow(ndI.Ry * effectiveVector[4], 2) +
-                                Math.Pow(ndI.Rz * effectiveVector[5], 2));
-                            double origJ = Math.Sqrt(
-                                Math.Pow(ndJ.Ux * effectiveVector[0], 2) +
-                                Math.Pow(ndJ.Uy * effectiveVector[1], 2) +
-                                Math.Pow(ndJ.Uz * effectiveVector[2], 2) +
-                                Math.Pow(ndJ.Rx * effectiveVector[3], 2) +
-                                Math.Pow(ndJ.Ry * effectiveVector[4], 2) +
-                                Math.Pow(ndJ.Rz * effectiveVector[5], 2));
+                            double origI = PileDesign.Common.StableNumerics.Norm(ndI.Ux * effectiveVector[0], ndI.Uy * effectiveVector[1], ndI.Uz * effectiveVector[2], ndI.Rx * effectiveVector[3], ndI.Ry * effectiveVector[4], ndI.Rz * effectiveVector[5]);
+                            double origJ = PileDesign.Common.StableNumerics.Norm(ndJ.Ux * effectiveVector[0], ndJ.Uy * effectiveVector[1], ndJ.Uz * effectiveVector[2], ndJ.Rx * effectiveVector[3], ndJ.Ry * effectiveVector[4], ndJ.Rz * effectiveVector[5]);
 
                             // 変位量をモデル座標でスケール（最大変位で正規化、比率×ModelExtentを適用）
                             Point3D nI = dummyBeam.NodeI.Coord;
@@ -977,20 +959,8 @@ namespace PileDesign.Views
                         var ndI = nrI.CumulativeDisp;
                         var ndJ = nrJ.CumulativeDisp;
 
-                        double origI = Math.Sqrt(
-                            Math.Pow(ndI.Ux * effectiveVector[0], 2) +
-                            Math.Pow(ndI.Uy * effectiveVector[1], 2) +
-                            Math.Pow(ndI.Uz * effectiveVector[2], 2) +
-                            Math.Pow(ndI.Rx * effectiveVector[3], 2) +
-                            Math.Pow(ndI.Ry * effectiveVector[4], 2) +
-                            Math.Pow(ndI.Rz * effectiveVector[5], 2));
-                        double origJ = Math.Sqrt(
-                            Math.Pow(ndJ.Ux * effectiveVector[0], 2) +
-                            Math.Pow(ndJ.Uy * effectiveVector[1], 2) +
-                            Math.Pow(ndJ.Uz * effectiveVector[2], 2) +
-                            Math.Pow(ndJ.Rx * effectiveVector[3], 2) +
-                            Math.Pow(ndJ.Ry * effectiveVector[4], 2) +
-                            Math.Pow(ndJ.Rz * effectiveVector[5], 2));
+                        double origI = PileDesign.Common.StableNumerics.Norm(ndI.Ux * effectiveVector[0], ndI.Uy * effectiveVector[1], ndI.Uz * effectiveVector[2], ndI.Rx * effectiveVector[3], ndI.Ry * effectiveVector[4], ndI.Rz * effectiveVector[5]);
+                        double origJ = PileDesign.Common.StableNumerics.Norm(ndJ.Ux * effectiveVector[0], ndJ.Uy * effectiveVector[1], ndJ.Uz * effectiveVector[2], ndJ.Rx * effectiveVector[3], ndJ.Ry * effectiveVector[4], ndJ.Rz * effectiveVector[5]);
 
                         Point3D nodeI3D = beam.NodeI.Coord;
                         Point3D nodeJ3D = beam.NodeJ.Coord;

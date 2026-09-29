@@ -1312,7 +1312,7 @@ namespace PileDesign.FEM
                                 // M-θ状態も出力
                                 double dRx = (rs.NodeJ.CumulativeDisp?.Rx ?? 0) - (rs.NodeI.CumulativeDisp?.Rx ?? 0);
                                 double dRy = (rs.NodeJ.CumulativeDisp?.Ry ?? 0) - (rs.NodeI.CumulativeDisp?.Ry ?? 0);
-                                double theta = Math.Sqrt(dRx * dRx + dRy * dRy);
+                                double theta = PileDesign.Common.StableNumerics.Norm(dRx, dRy);
                                 double kSec = rs.KeSec?[10, 10] ?? 0;  // NodeJ Ry diagonal
                                 double kTan = rs.KeTan?[10, 10] ?? 0;
                                 log.AppendLine($"    RotSpring[{rs.Name}]: T→{contrib:E4}  θ={theta:E4} dRx={dRx:E4} dRy={dRy:E4} kSec={kSec:E3} kTan={kTan:E3}");
