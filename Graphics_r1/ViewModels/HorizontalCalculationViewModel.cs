@@ -1478,6 +1478,8 @@ namespace PileDesign.ViewModels
             catch (InvalidOperationException ex)
             {
                 MessageService.ShowError("解析モデルを作成できませんでした。", ex, "モデル作成エラー");
+                // 理由に杭の番号があれば、メイン画面で選んで直す場所へ案内する
+                _mainWindowViewModel.SelectPilesForReview(PileDesign.Services.AnalysisFailure.PileNosIn(ex));
                 return false;
             }
 
@@ -2103,13 +2105,17 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                await AddLogAsync($"解析中にエラーが発生しました: {ex.Message}");
+                // どのケースのどの段階で止まったか・関係する杭を添えて知らせ、杭はメイン画面で選ぶ (直す場所へ案内する)
+                string description = PileDesign.Services.AnalysisFailure.Describe(ex);
+                await AddLogAsync(description);
                 await AddLogAsync($"スタックトレース: {ex.StackTrace}");
+                Serilog.Log.Error(ex, "[解析] 途中で止まりました");
 
                 Application.Current?.Dispatcher.Invoke(() =>
                 {
                     _mainWindowViewModel.SetLatestAnalysisLogs(CalculationLog);
-                    MessageService.ShowError($"解析中にエラーが発生しました", ex, "エラー");
+                    _mainWindowViewModel.SelectPilesForReview(PileDesign.Services.AnalysisFailure.PileNosIn(ex));
+                    MessageService.Show(description, "解析の中断", MessageBoxButton.OK, MessageBoxImage.Error);
                 });
 
                 IsAnalysisExecuted = false;

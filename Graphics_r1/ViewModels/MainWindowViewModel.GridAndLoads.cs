@@ -541,6 +541,24 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 解析が止まった理由に出てきた杭を選ぶ (問題の場所へ案内する)。選んだ本数を返す。番号が無ければ何もしない。
+        /// </summary>
+        internal int SelectPilesForReview(IReadOnlyList<int> pileNos)
+        {
+            if (pileNos == null || pileNos.Count == 0 || CurrentInputModel?.PileLayoutItems == null) return 0;
+            ClearAllSelections();
+            int selected = 0;
+            foreach (var pile in CurrentInputModel.PileLayoutItems)
+            {
+                if (pile == null || !pileNos.Contains(pile.PileNo)) continue;
+                pile.IsSelected = true;
+                selected++;
+            }
+            RequestUpdateWindow();
+            return selected;
+        }
+
+        /// <summary>
         /// すべての選択状態をクリアするヘルパー
         /// </summary>
         private void ClearAllSelections()

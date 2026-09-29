@@ -49,4 +49,58 @@ public class GeometryToleranceAndFailureTests
         Assert.AreEqual(0, missing.Count, "長さ 0 の判定に共通の基準を使っていません: " + string.Join(", ", missing));
         Assert.AreEqual(GeometryTolerance.MinMemberLength, MainWindowViewModel.SplitPointDistanceTolerance);
     }
+
+    // ── 解析が止まったときの知らせ ──
+
+    [TestMethod]
+    public void PileNumbers_AreFoundInNodeNamesAndPileNos()
+    {
+        var ex = new InvalidOperationException("杭要素作成エラー: 上端: 杭節点-12-3 下端: 杭節点-12-4",
+            new ArgumentException("杭No.7 の断面が不正です"));
+        CollectionAssert.AreEqual(new[] { 12, 7 }, AnalysisFailure.PileNosIn(ex).ToArray());
+        Assert.AreEqual(0, AnalysisFailure.PileNosIn(new Exception("行列が特異です")).Count);
+    }
+
+    /// <summary>
+    /// <b>本題。</b> 止まったケース・段階・理由・関係する杭を知らせること。
+    /// ケースは並列に解くので AggregateException に包まれていても辿る。
+    /// </summary>
+    [TestMethod]
+    public void Describe_ShowsCaseStageReasonAndPiles()
+    {
+        var inner = new InvalidOperationException("剛性行列が特異です (杭節点-3-10)\n詳細");
+        var failed = new AnalysisCaseFailedException("L2 X+ 液状化無", "荷重ステップ 4/12 の反復", inner);
+        string text = AnalysisFailure.Describe(new AggregateException(failed));
+
+        StringAssert.Contains(text, "荷重ケース: L2 X+ 液状化無");
+        StringAssert.Contains(text, "段階: 荷重ステップ 4/12 の反復");
+        StringAssert.Contains(text, "理由: 剛性行列が特異です (杭節点-3-10)");
+        StringAssert.Contains(text, "関係する杭: No.3");
+        Assert.IsFalse(text.Contains("詳細\n"), "例外の 2 行目以降まで出している");
+    }
+
+    /// <summary>ケースの外 (モデル作成など) で止まったときも、理由と杭は出す (ケースと段階は無い)。</summary>
+    [TestMethod]
+    public void Describe_WithoutACase_StillShowsTheReason()
+    {
+        string text = AnalysisFailure.Describe(new InvalidOperationException("杭No.5 の地盤が見つかりません"));
+        StringAssert.Contains(text, "理由: 杭No.5 の地盤が見つかりません");
+        Assert.IsFalse(text.Contains("荷重ケース:"));
+    }
+
+    /// <summary>関係する杭をメイン画面で選ぶ (直す場所へ案内する)。ほかの選択は外す。</summary>
+    [TestMethod]
+    public void SelectPilesForReview_SelectsOnlyThosePiles()
+    {
+        var input = new InputModel();
+        var vm = new MainWindowViewModel { CurrentInputModel = input };
+        input.PileLayoutItems ??= [];
+        for (int i = 1; i <= 4; i++) input.PileLayoutItems.Add(new PileLayoutDataItem { No = i, PileNo = i, X = i });
+        input.PileLayoutItems[0].IsSelected = true;
+
+        Assert.AreEqual(2, vm.SelectPilesForReview([2, 4]));
+        CollectionAssert.AreEqual(new[] { false, true, false, true },
+            input.PileLayoutItems.Select(p => p.IsSelected).ToArray());
+        Assert.AreEqual(0, vm.SelectPilesForReview([]), "杭の番号が無いのに選択を変えている");
+    }
 }

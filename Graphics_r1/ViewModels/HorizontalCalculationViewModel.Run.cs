@@ -113,9 +113,22 @@ namespace PileDesign.ViewModels
                         // MDOP>1 では Task.Run に投げて semaphore で throttle する。
                         // foreach 変数 (loadCase, loadCombination, isLiquefaction, iLC, iLCOM, level) は
                         // C# 5.0 以降の仕様により各反復で fresh な変数として cap される。
-                        Task RunThisCaseAsync() => SolveOneCaseAsync(
-                            token, progress, ctx, loadCase, iLC, level, isVLCase,
-                            loadCombination, iLCOM, isLiquefaction);
+                        // 止まったときは、どのケースのどの段階かを添えて包む (AnalysisCaseFailedException)
+                        async Task RunThisCaseAsync()
+                        {
+                            string tag = BuildCaseTag(loadCase, level, iLC, iLCOM, isLiquefaction);
+                            _caseStages[tag] = "準備 (解析モデルの複製・荷重の設定)";
+                            try
+                            {
+                                await SolveOneCaseAsync(
+                                    token, progress, ctx, loadCase, iLC, level, isVLCase,
+                                    loadCombination, iLCOM, isLiquefaction);
+                            }
+                            catch (Exception ex) when (ex is not OperationCanceledException and not AnalysisCaseFailedException)
+                            {
+                                throw new AnalysisCaseFailedException(tag, _caseStages.TryGetValue(tag, out var stage) ? stage : null, ex);
+                            }
+                        }
 
                         // E3c-3-enable: MDOP>1 なら Task.Run に投げ semaphore で throttle、
                         // MDOP=1 なら直接 await して逐次挙動を維持
@@ -188,6 +201,11 @@ namespace PileDesign.ViewModels
         /// 切り出す前は RunAsync 内のローカル関数 RunThisCaseAsync だった。捕捉していた値は
         /// 引数で渡している (いずれもケース本体では書き換えていないので、捕捉と同じ意味になる)。
         /// </remarks>
+        /// <summary>
+        /// ケースごとの、いま進めている段階 (止まったときに知らせる)。ケースは並列に解くので、ケースの表示名で分けて持つ。
+        /// </summary>
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _caseStages = new();
+
         private async Task SolveOneCaseAsync(
             CancellationToken token,
             IProgress<Models.AnalysisProgress>? progress,
@@ -458,6 +476,7 @@ namespace PileDesign.ViewModels
                 {
                     int stepDisplay = step + 1;
                     int nStepDisplay = nStep;
+                    _caseStages[caseTag] = $"荷重ステップ {stepDisplay}/{nStepDisplay} の反復";
                     System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
                     {
                         monitorItem.CurrentStep = stepDisplay;
