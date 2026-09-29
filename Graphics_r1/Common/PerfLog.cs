@@ -28,6 +28,7 @@ namespace PileDesign.Common
             public double MaxMs;
             public int CountAtMax;
             public string Unit = "";
+            public long MaxManagedBytes;
         }
 
         private static readonly object _lock = new();
@@ -60,26 +61,29 @@ namespace PileDesign.Common
         internal static void Record(string operation, TimeSpan elapsed, int count, string unit)
         {
             double ms = elapsed.TotalMilliseconds;
+            // 操作を終えた時点の管理ヒープの使用量 (回収は促さない)。規模とメモリの関係の見当に使う
+            long managed = GC.GetTotalMemory(forceFullCollection: false);
             lock (_lock)
             {
                 if (!_stats.TryGetValue(operation, out var stat)) _stats[operation] = stat = new Stat { Unit = unit };
                 stat.Calls++;
                 stat.TotalMs += ms;
                 if (ms > stat.MaxMs) { stat.MaxMs = ms; stat.CountAtMax = count; }
+                if (managed > stat.MaxManagedBytes) stat.MaxManagedBytes = managed;
             }
             string size = count >= 0 ? $" ({count} {unit})" : "";
             if (elapsed >= SlowThreshold)
-                Log.Information("[性能] {Operation}: {Elapsed:N0} ms{Size}", operation, ms, size);
+                Log.Information("[性能] {Operation}: {Elapsed:N0} ms{Size}・メモリ {Memory:N0} MB", operation, ms, size, managed / 1048576.0);
             else
                 Log.Debug("[性能] {Operation}: {Elapsed:N1} ms{Size}", operation, ms, size);
         }
 
         /// <summary>操作ごとの集計 (合計の多い順)。</summary>
-        internal static IReadOnlyList<(string Operation, int Calls, double TotalMs, double MaxMs, int CountAtMax, string Unit)> Summary()
+        internal static IReadOnlyList<(string Operation, int Calls, double TotalMs, double MaxMs, int CountAtMax, string Unit, long MaxManagedBytes)> Summary()
         {
             lock (_lock)
             {
-                return [.. _stats.Select(kv => (kv.Key, kv.Value.Calls, kv.Value.TotalMs, kv.Value.MaxMs, kv.Value.CountAtMax, kv.Value.Unit))
+                return [.. _stats.Select(kv => (kv.Key, kv.Value.Calls, kv.Value.TotalMs, kv.Value.MaxMs, kv.Value.CountAtMax, kv.Value.Unit, kv.Value.MaxManagedBytes))
                               .OrderByDescending(s => s.TotalMs)];
             }
         }
@@ -95,8 +99,8 @@ namespace PileDesign.Common
             foreach (var s in summary.Take(15))
             {
                 string size = s.CountAtMax >= 0 ? $" (最大のときは {s.CountAtMax} {s.Unit})" : "";
-                Log.Information("[性能] 集計 {Operation}: {Calls} 回・合計 {Total:N0} ms・平均 {Average:N1} ms・最大 {Max:N0} ms{Size}",
-                    s.Operation, s.Calls, s.TotalMs, s.TotalMs / s.Calls, s.MaxMs, size);
+                Log.Information("[性能] 集計 {Operation}: {Calls} 回・合計 {Total:N0} ms・平均 {Average:N1} ms・最大 {Max:N0} ms{Size}・メモリ最大 {Memory:N0} MB",
+                    s.Operation, s.Calls, s.TotalMs, s.TotalMs / s.Calls, s.MaxMs, size, s.MaxManagedBytes / 1048576.0);
             }
         }
     }

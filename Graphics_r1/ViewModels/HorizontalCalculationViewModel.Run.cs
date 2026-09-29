@@ -39,6 +39,12 @@ namespace PileDesign.ViewModels
             var ctx = await PrepareRunAsync(progress, additive);
             if (ctx == null) return;
 
+            // 規模別の所要時間・メモリの記録 (PerfLog)。遅くなる条件を杭・要素・ケースの数で見分ける
+            using var perf = PileDesign.Common.PerfLog.Measure("水平解析", TotalCalculationCount, "ケース");
+            Serilog.Log.Information("[性能] 水平解析の規模: 杭 {Piles} 本・要素 {Beams}・節点 {Nodes}・ケース {Cases}・並列 {Mdop}",
+                _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?.Count ?? 0,
+                ctx.TargetModel?.Beams?.Count ?? 0, ctx.TargetModel?.Nodes?.Count ?? 0, TotalCalculationCount, ctx.CaseMdop);
+
             // 以下の別名は、切り出す前と同じ名前で本体を読めるようにするためのもの。
             var preTargetModel = ctx.PreTargetModel;
             var targetModel = ctx.TargetModel;
