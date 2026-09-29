@@ -53,4 +53,14 @@ public class RobustnessFollowUpTests
         }
         finally { auto.Stop(); }
     }
+
+    /// <summary>解析結果の控えを作れなかったとき、知らせに理由を書くこと (以前は「ログに記録しています」だけ)。</summary>
+    [TestMethod]
+    public void SnapshotFailureMessage_IncludesTheReason()
+    {
+        string text = MainWindowViewModel.DescribeResultSnapshotFailure(new InvalidOperationException("循環参照を複製できません\n詳細"));
+        StringAssert.Contains(text, "理由: 循環参照を複製できません");
+        Assert.IsFalse(text.Contains("詳細\n"), "例外の 2 行目以降まで出している");
+        Assert.IsFalse(MainWindowViewModel.DescribeResultSnapshotFailure().Contains("理由:"));
+    }
 }

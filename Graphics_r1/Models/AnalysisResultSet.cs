@@ -72,7 +72,26 @@ namespace PileDesign.Models
             bool hasGroupPileSettlement,
             bool hasVerticalBeam,
             bool isElementSplit)
+            => Capture(liveInput, anaModel, verticalBeamCaseResults, hasHorizontal, hasVertical,
+                       hasGroupPileSettlement, hasVerticalBeam, isElementSplit, out _);
+
+        /// <summary>
+        /// <see cref="Capture(InputModel, AnaModel?, List{VerticalBeamCaseResult}?, bool, bool, bool, bool, bool)"/> と同じ。
+        /// 作れなかったときは <paramref name="failure"/> に理由 (例外) を返す。
+        /// 以前は理由をログにだけ残し、画面の知らせは「詳細はログに記録しています」だけだった。
+        /// </summary>
+        public static AnalysisResultSet? Capture(
+            InputModel liveInput,
+            AnaModel? anaModel,
+            List<VerticalBeamCaseResult>? verticalBeamCaseResults,
+            bool hasHorizontal,
+            bool hasVertical,
+            bool hasGroupPileSettlement,
+            bool hasVerticalBeam,
+            bool isElementSplit,
+            out Exception? failure)
         {
+            failure = null;
             if (liveInput == null) return null;
 
             try
@@ -93,7 +112,11 @@ namespace PileDesign.Models
 
                 string json = JsonSerializer.Serialize(payload, options);
                 var copy = JsonSerializer.Deserialize<ProjectData>(json, options);
-                if (copy?.InputModel == null) return null;
+                if (copy?.InputModel == null)
+                {
+                    failure = new InvalidOperationException("入力を複製できませんでした (複製の結果が空でした)。");
+                    return null;
+                }
 
                 var set = new AnalysisResultSet
                 {
@@ -133,6 +156,7 @@ namespace PileDesign.Models
             catch (Exception ex)
             {
                 Log.Warning(ex, "[AnalysisResultSet] 解析結果のスナップショット作成に失敗しました");
+                failure = ex;
                 return null;
             }
         }

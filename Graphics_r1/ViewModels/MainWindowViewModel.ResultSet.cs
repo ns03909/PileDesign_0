@@ -407,8 +407,10 @@ namespace PileDesign.ViewModels
             : "解析結果の控えを作れませんでした（入力を編集すると、結果と編集後の入力が混ざります）";
 
         /// <summary>控えを作れなかったときに利用者へ知らせる文。</summary>
-        internal static string DescribeResultSnapshotFailure() =>
-            "解析結果の控え（解析したときの入力の写し）を作れませんでした。詳細はログに記録しています。\n\n"
+        internal static string DescribeResultSnapshotFailure(Exception? cause = null) =>
+            "解析結果の控え（解析したときの入力の写し）を作れませんでした。"
+            + (cause == null ? "" : $"\n理由: {cause.Message.Split('\n')[0].Trim()}")
+            + "\n詳細はログに記録しています。\n\n"
             + "結果はこのまま表示できますが、このあと入力を編集すると、結果と編集後の入力が混ざって表示されます。"
             + "入力を編集する前に結果を確認・出力してください。編集した場合は、計算書を出す前に再解析してください。";
 
@@ -538,11 +540,12 @@ namespace PileDesign.ViewModels
                 IsVerticalAnalysisDone,
                 IsGroupPileSettlementAnalysisDone,
                 IsVerticalBeamAnalysisDone,
-                IsElementSplit);
+                IsElementSplit,
+                out var failure);
 
             if (set == null)
             {
-                OnResultSnapshotFailed();
+                OnResultSnapshotFailed(failure);
                 return;
             }
 
@@ -563,7 +566,7 @@ namespace PileDesign.ViewModels
         /// 組になって表示される。今の解析は今の入力で解いたばかりなので、編集された印は降ろす
         /// (このあと編集すると <see cref="MarkInputChangedSinceAnalysis(AnalysisInputScope)"/> が立てる)。
         /// </summary>
-        internal void OnResultSnapshotFailed()
+        internal void OnResultSnapshotFailed(Exception? cause = null)
         {
             if (_currentResultSet != null && !ReferenceEquals(_currentResultSet.AnaModel, CurrentModel))
                 CurrentResultSet = null;
@@ -572,7 +575,7 @@ namespace PileDesign.ViewModels
             // 控えは無いが、今の入力で解いたばかり。元に戻したときに比べる相手にはなる
             _analysisInputSignature = InputSignature(CurrentInputModel);
             Serilog.Log.Warning("[結果セット] 解析結果の控えを作れませんでした。結果表示は編集中の入力を見ます");
-            PileDesign.Services.MessageService.Show(DescribeResultSnapshotFailure(), "解析結果の控え",
+            PileDesign.Services.MessageService.Show(DescribeResultSnapshotFailure(cause), "解析結果の控え",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
 

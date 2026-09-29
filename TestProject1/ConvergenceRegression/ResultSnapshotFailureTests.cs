@@ -71,10 +71,10 @@ namespace TestProject1.ConvergenceRegression
         {
             string capture = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.ResultSet.cs"),
                 "public void CaptureAnalysisResultSet()");
-            StringAssert.Contains(capture, "OnResultSnapshotFailed();", "控えを作れなかったときに黙って続けています");
+            StringAssert.Contains(capture, "OnResultSnapshotFailed(failure);", "控えを作れなかったときに黙って続けています (理由も渡すこと)");
 
             string failure = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.ResultSet.cs"),
-                "internal void OnResultSnapshotFailed()");
+                "internal void OnResultSnapshotFailed(");
             StringAssert.Contains(failure, "MessageService.Show(", "控えを作れなかったことを画面で知らせていません");
             StringAssert.Contains(failure, "CurrentResultSet = null", "前の解析の控えを新しい結果と組にしたまま残しています");
         }
