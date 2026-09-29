@@ -76,9 +76,12 @@ namespace PileDesign.ViewModels
             return false;
         }
 
+        /// <summary>
+        /// 逆変換は使わない (比べた結果の真偽から元の数値は作れない)。表示の切り替え (DataTrigger) で片方向にだけ使う。
+        /// 以前は NotImplementedException を投げていたので、束縛を双方向に変えると画面の操作で例外になった。
+        /// 書き戻さないことを表す <see cref="System.Windows.Data.Binding.DoNothing"/> を返す。
+        /// </summary>
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
+            => System.Windows.Data.Binding.DoNothing;
     }
 }
