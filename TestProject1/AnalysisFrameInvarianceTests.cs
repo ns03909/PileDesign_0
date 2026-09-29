@@ -178,6 +178,84 @@ namespace TestProject1
                 + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", offenders));
         }
 
+        /// <summary>
+        /// 極端な座標: 原点から 1,000 km 離しても応答が変わらないこと。
+        ///
+        /// 座標の差から長さ・向きを求める処理 (要素の長さ・座標変換・図心) は、座標が大きいと差の桁落ちや
+        /// 二乗の和の扱いで崩れやすい。ベクトルの大きさの計算を共通の関数にそろえた (2026-09-30) ので、
+        /// 大きな座標でも同じ応答になることを確かめておく。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("Example9", "PileExample9")]
+        public void TranslatingTheModelFarAway_DoesNotChangeTheResponse(string groundName, string pileName)
+        {
+            ConvergenceSnapshot home, far;
+            int piles = 0;
+            try
+            {
+                home = HeadlessHorizontalRunner.RunExample(groundName, pileName, Options());
+                far = HeadlessHorizontalRunner.RunExample(groundName, pileName,
+                    Options(m => { piles = Translate(m, 1.0e6, -7.5e5); }));
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("例題ロード失敗"))
+            {
+                Assert.Inconclusive(ex.Message);
+                return;
+            }
+
+            TestSource.AssertScanned(piles, 1, $"{groundName} で遠くへ動かした杭");
+            AssertSameMagnitudes(home, far, groundName,
+                "原点から遠く離しただけで応答が変わります。座標の大きさで精度を失う処理があります");
+        }
+
+        /// <summary>
+        /// 90° 回転: 杭の配置 (X, Y) → (-Y, X)・荷重の作用点も同じく回し、荷重の向きを +90° すると、
+        /// 応答の大きさは変わらないこと。鏡映では X と Y の扱いの違いは分からないので、X と Y を入れ替える形で見る。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("Example9", "PileExample9")]
+        public void RotatingTheModel90Degrees_KeepsTheResponseMagnitude(string groundName, string pileName)
+        {
+            ConvergenceSnapshot home, rotated;
+            int piles = 0;
+            try
+            {
+                home = HeadlessHorizontalRunner.RunExample(groundName, pileName, Options());
+                rotated = HeadlessHorizontalRunner.RunExample(groundName, pileName,
+                    Options(m => { piles = Rotate90(m); }));
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("例題ロード失敗"))
+            {
+                Assert.Inconclusive(ex.Message);
+                return;
+            }
+
+            TestSource.AssertScanned(piles, 1, $"{groundName} で回した杭");
+            AssertSameMagnitudes(home, rotated, groundName,
+                "90° 回しただけで応答の大きさが変わります。X と Y で扱いが違う処理があります");
+        }
+
+        /// <summary>モデル全体を原点まわりに 90° 回す。杭の位置・荷重の作用点・一般節点を回し、荷重の向きを +90° する。</summary>
+        private static int Rotate90(InputModel model)
+        {
+            int moved = 0;
+            foreach (var p in model.PileLayoutItems ?? [])
+            {
+                (p.X, p.Y) = (-p.Y, p.X);
+                moved++;
+            }
+            foreach (var lc in model.LoadCasesInput?.AllLoadCases ?? [])
+            {
+                (lc.ForceActionPointX, lc.ForceActionPointY) = (-lc.ForceActionPointY, lc.ForceActionPointX);
+                lc.LoadAngle += 90.0;
+            }
+            foreach (var n in model.InputNodes ?? [])
+            {
+                (n.X, n.Y) = (-n.Y, n.X);
+            }
+            return moved;
+        }
+
         /// <summary>ケースごとに応答の大きさが一致すること。</summary>
         private static void AssertSameMagnitudes(
             ConvergenceSnapshot a, ConvergenceSnapshot b, string groundName, string why)
