@@ -438,7 +438,7 @@ namespace PileDesign.ViewModels
             double dx = ci.Value.X - cj.Value.X;
             double dy = ci.Value.Y - cj.Value.Y;
             double dz = ci.Value.Z - cj.Value.Z;
-            return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            return PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
         }
 
         private double? CalcPileLength(PileLayoutDataItem pile)

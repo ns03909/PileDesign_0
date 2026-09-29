@@ -76,7 +76,7 @@ namespace PileDesign.Services
                 {
                     double dx = heads[i].X - heads[j].X;
                     double dy = heads[i].Y - heads[j].Y;
-                    double span = Math.Sqrt(dx * dx + dy * dy);
+                    double span = PileDesign.Common.StableNumerics.Norm(dx, dy);
                     if (!double.IsFinite(span))
                     {
                         invalidReason = $"杭No.{heads[i].PileNo} と杭No.{heads[j].PileNo} の水平距離が有限値ではありません";

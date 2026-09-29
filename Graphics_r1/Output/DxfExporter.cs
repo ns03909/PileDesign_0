@@ -352,7 +352,7 @@ namespace PileDesign.Output
             XYZ p1, XYZ p2, double width, double height, double angleBetaDeg)
         {
             double dx = p2.X - p1.X, dy = p2.Y - p1.Y, dz = p2.Z - p1.Z;
-            double length = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            double length = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
             if (length < 1e-9) return;
 
             // 局所座標系（ViewPort3D.cs:362-400 に準拠）
@@ -367,7 +367,7 @@ namespace PileDesign.Output
             else
             {
                 localZ = new XYZ(up.X - dot * localX.X, up.Y - dot * localX.Y, up.Z - dot * localX.Z);
-                double lzLen = Math.Sqrt(localZ.X * localZ.X + localZ.Y * localZ.Y + localZ.Z * localZ.Z);
+                double lzLen = PileDesign.Common.StableNumerics.Norm(localZ.X, localZ.Y, localZ.Z);
                 localZ = new XYZ(localZ.X / lzLen, localZ.Y / lzLen, localZ.Z / lzLen);
             }
 
@@ -376,7 +376,7 @@ namespace PileDesign.Output
                 localZ.Y * localX.Z - localZ.Z * localX.Y,
                 localZ.Z * localX.X - localZ.X * localX.Z,
                 localZ.X * localX.Y - localZ.Y * localX.X);
-            double lyLen = Math.Sqrt(localY.X * localY.X + localY.Y * localY.Y + localY.Z * localY.Z);
+            double lyLen = PileDesign.Common.StableNumerics.Norm(localY.X, localY.Y, localY.Z);
             localY = new XYZ(localY.X / lyLen, localY.Y / lyLen, localY.Z / lyLen);
 
             // AngleBeta 回転

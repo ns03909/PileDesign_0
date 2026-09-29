@@ -390,7 +390,7 @@ namespace PileDesign.ViewModels
 
                     double dx = coordsJ.Value.X - coordsI.Value.X;
                     double dy = coordsJ.Value.Y - coordsI.Value.Y;
-                    double L = Math.Sqrt(dx * dx + dy * dy);
+                    double L = PileDesign.Common.StableNumerics.Norm(dx, dy);
                     if (L < 1e-6) continue;
 
                     string nameI = ResolveFemNodeName(inputModel, fbBeam.NodeI_Type, fbBeam.NodeI_Id);
@@ -711,14 +711,10 @@ namespace PileDesign.ViewModels
                 }
 
                 // i端モーメント |M| = √(Myi² + Mzi²)
-                double mI = Math.Sqrt(
-                    result.CumulativeForce.Myi * result.CumulativeForce.Myi +
-                    result.CumulativeForce.Mzi * result.CumulativeForce.Mzi);
+                double mI = PileDesign.Common.StableNumerics.Norm(result.CumulativeForce.Myi, result.CumulativeForce.Mzi);
 
                 // j端モーメント |M| = √(Myj² + Mzj²)
-                double mJ = Math.Sqrt(
-                    result.CumulativeForce.Myj * result.CumulativeForce.Myj +
-                    result.CumulativeForce.Mzj * result.CumulativeForce.Mzj);
+                double mJ = PileDesign.Common.StableNumerics.Norm(result.CumulativeForce.Myj, result.CumulativeForce.Mzj);
 
                 // i端チェック (判定は従来どおり「超えたら NG」)
                 found.Add(MakeMomentItem(mI, allowableM, "i端"));
@@ -1383,7 +1379,7 @@ namespace PileDesign.ViewModels
                 // CombinedXY: θ = √(dRx² + dRy²)
                 double dRx = rsResult.CumulativeDisp.Rxi - rsResult.CumulativeDisp.Rxj;
                 double dRy = rsResult.CumulativeDisp.Ryi - rsResult.CumulativeDisp.Ryj;
-                double theta = Math.Sqrt(dRx * dRx + dRy * dRy);
+                double theta = PileDesign.Common.StableNumerics.Norm(dRx, dRy);
 
                 // 判定は従来どおり「超えたら NG」
                 found.Add(new EvaluationItem

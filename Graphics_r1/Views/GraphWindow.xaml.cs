@@ -127,7 +127,7 @@ namespace PileDesign.Views
                 if (!pt.IsReal) continue;
                 double dx = pt.Coordinates.X - mouseLocation.X;
                 double dy = pt.Coordinates.Y - mouseLocation.Y;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
+                double dist = PileDesign.Common.StableNumerics.Norm(dx, dy);
                 if (dist < minDist)
                 {
                     minDist = dist;

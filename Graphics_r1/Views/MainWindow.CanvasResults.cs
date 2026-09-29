@@ -441,8 +441,8 @@ namespace PileDesign.Views
                             double MzI = beamResult.CumulativeForce.GetByIndex(5);
                             double MyJ = beamResult.CumulativeForce.GetByIndex(10);
                             double MzJ = beamResult.CumulativeForce.GetByIndex(11);
-                            originalForceI = Math.Sqrt(MyI * MyI + MzI * MzI);
-                            originalForceJ = -Math.Sqrt(MyJ * MyJ + MzJ * MzJ);
+                            originalForceI = PileDesign.Common.StableNumerics.Norm(MyI, MzI);
+                            originalForceJ = -PileDesign.Common.StableNumerics.Norm(MyJ, MzJ);
                         }
                         else // "Fh"
                         {
@@ -450,8 +450,8 @@ namespace PileDesign.Views
                             double FzI = beamResult.CumulativeForce.GetByIndex(2);
                             double FyJ = beamResult.CumulativeForce.GetByIndex(7);
                             double FzJ = beamResult.CumulativeForce.GetByIndex(8);
-                            originalForceI = Math.Sqrt(FyI * FyI + FzI * FzI);
-                            originalForceJ = -Math.Sqrt(FyJ * FyJ + FzJ * FzJ);
+                            originalForceI = PileDesign.Common.StableNumerics.Norm(FyI, FzI);
+                            originalForceJ = -PileDesign.Common.StableNumerics.Norm(FyJ, FzJ);
                         }
                     }
                     else
@@ -1090,7 +1090,7 @@ namespace PileDesign.Views
                         switch (viewModel.AnalysisResultNodeDisplacementType)
                         {
                             case "θH":
-                                rot = Math.Sqrt(nd.Rx * nd.Rx + nd.Ry * nd.Ry);
+                                rot = PileDesign.Common.StableNumerics.Norm(nd.Rx, nd.Ry);
                                 axis = new Vector3D(nd.Rx, nd.Ry, 0);
                                 break;
                             case "θX":

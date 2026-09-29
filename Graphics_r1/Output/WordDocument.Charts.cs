@@ -713,7 +713,7 @@ namespace PileDesign.Output
                                                 {
                                                     double dRy = beamResultForCurve.CumulativeDisp.Ryj - beamResultForCurve.CumulativeDisp.Ryi;
                                                     double dRz = beamResultForCurve.CumulativeDisp.Rzj - beamResultForCurve.CumulativeDisp.Rzi;
-                                                    phiFinal = Math.Sqrt(dRy * dRy + dRz * dRz) / length;
+                                                    phiFinal = PileDesign.Common.StableNumerics.Norm(dRy, dRz) / length;
                                                 }
                                             }
 
@@ -945,9 +945,8 @@ namespace PileDesign.Output
                                             }
                                             else
                                             {
-                                                thetaFinal = Math.Sqrt(dRx * dRx + dRy * dRy);
-                                                mFinal = Math.Sqrt(rsResult.CumulativeForce.Mxi * rsResult.CumulativeForce.Mxi +
-                                                                   rsResult.CumulativeForce.Myi * rsResult.CumulativeForce.Myi);
+                                                thetaFinal = PileDesign.Common.StableNumerics.Norm(dRx, dRy);
+                                                mFinal = PileDesign.Common.StableNumerics.Norm(rsResult.CumulativeForce.Mxi, rsResult.CumulativeForce.Myi);
                                             }
                                         }
                                         else

@@ -643,7 +643,7 @@ namespace PileDesign.Views
             if (dir.Length == 0) return (0.0, 0.0);
             dir.Normalize();
             double tht = -Math.Atan2(dir.Y, dir.X) * 180.0 / Math.PI;
-            double phi = Math.Atan2(dir.Z, Math.Sqrt(dir.X * dir.X + dir.Y * dir.Y)) * 180.0 / Math.PI;
+            double phi = Math.Atan2(dir.Z, PileDesign.Common.StableNumerics.Norm(dir.X, dir.Y)) * 180.0 / Math.PI;
             return (tht, phi);
         }
 

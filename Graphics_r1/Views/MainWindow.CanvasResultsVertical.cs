@@ -959,10 +959,10 @@ namespace PileDesign.Views
                     "Mx" => (br.Mxi, br.Mxj),
                     "My" => (br.Myi, br.Myj),
                     "Mz" => (br.Mzi, br.Mzj),
-                    "Fh" => (Math.Sqrt(br.Qyi * br.Qyi + br.Qzi * br.Qzi),
-                             -Math.Sqrt(br.Qyj * br.Qyj + br.Qzj * br.Qzj)),
-                    "Mh" => (Math.Sqrt(br.Myi * br.Myi + br.Mzi * br.Mzi),
-                             -Math.Sqrt(br.Myj * br.Myj + br.Mzj * br.Mzj)),
+                    "Fh" => (PileDesign.Common.StableNumerics.Norm(br.Qyi, br.Qzi),
+                             -PileDesign.Common.StableNumerics.Norm(br.Qyj, br.Qzj)),
+                    "Mh" => (PileDesign.Common.StableNumerics.Norm(br.Myi, br.Mzi),
+                             -PileDesign.Common.StableNumerics.Norm(br.Myj, br.Mzj)),
                     _ => (br.Myi, br.Myj),
                 };
             }

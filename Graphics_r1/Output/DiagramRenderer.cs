@@ -132,7 +132,7 @@ namespace PileDesign.Output
         {
             double dx = b.X - a.X;
             double dy = b.Y - a.Y;
-            double length = Math.Sqrt(dx * dx + dy * dy);
+            double length = PileDesign.Common.StableNumerics.Norm(dx, dy);
             if (zigCount < 1 || length < 1.0)
             {
                 dc.DrawLine(pen, a, b);

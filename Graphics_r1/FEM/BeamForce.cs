@@ -20,10 +20,10 @@ namespace PileDesign.FEM
         public double Myj { get; set; } = myj;
         public double Mzj { get; set; } = mzj;
 
-        public double Fi => Math.Sqrt(Fyi * Fyi + Fzi * Fzi);
-        public double Mi => Math.Sqrt(Myi * Myi + Mzi * Mzi);
-        public double Fj => Math.Sqrt(Fyj * Fyj + Fzj * Fzj);
-        public double Mj => Math.Sqrt(Myj * Myj + Mzj * Mzj);
+        public double Fi => PileDesign.Common.StableNumerics.Norm(Fyi, Fzi);
+        public double Mi => PileDesign.Common.StableNumerics.Norm(Myi, Mzi);
+        public double Fj => PileDesign.Common.StableNumerics.Norm(Fyj, Fzj);
+        public double Mj => PileDesign.Common.StableNumerics.Norm(Myj, Mzj);
 
         public double FabsMax => Math.Max(Fi, Fj);
         public double MabsMax => Math.Max(Mi, Mj);

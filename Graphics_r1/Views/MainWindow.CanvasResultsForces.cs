@@ -520,7 +520,7 @@ namespace PileDesign.Views
                     if (springType == "RH")
                     {
                         // 水平合反力のみ描画 (Z は別タイプ RZ で表示する)
-                        double tipRH = Math.Sqrt(tipFx * tipFx + tipFy * tipFy);
+                        double tipRH = PileDesign.Common.StableNumerics.Norm(tipFx, tipFy);
                         if (double.IsFinite(tipRH) && tipRH > 1e-15)
                             components.Add((tipRH, new System.Windows.Media.Media3D.Vector3D(tipFx, tipFy, 0)));
                     }
@@ -531,7 +531,7 @@ namespace PileDesign.Views
                     }
                     else // R
                     {
-                        double tipR = Math.Sqrt(tipFx * tipFx + tipFy * tipFy + tipFz * tipFz);
+                        double tipR = PileDesign.Common.StableNumerics.Norm(tipFx, tipFy, tipFz);
                         if (double.IsFinite(tipR) && tipR > 1e-15)
                             components.Add((tipR, new System.Windows.Media.Media3D.Vector3D(tipFx, tipFy, tipFz)));
                     }
@@ -638,13 +638,13 @@ namespace PileDesign.Views
                 "RX" => fx,
                 "RY" => fy,
                 "RZ" => fz,
-                "RH" => Math.Sqrt(fx * fx + fy * fy),  // 水平合反力 (絶対値、Z 成分は除外、MH と整合)
-                "R" => Math.Sqrt(fx * fx + fy * fy + fz * fz),  // 全合反力 (絶対値、3D)
+                "RH" => PileDesign.Common.StableNumerics.Norm(fx, fy),  // 水平合反力 (絶対値、Z 成分は除外、MH と整合)
+                "R" => PileDesign.Common.StableNumerics.Norm(fx, fy, fz),  // 全合反力 (絶対値、3D)
                 "MX" => mx,
                 "MY" => my,
                 "MZ" => mz,
-                "MH" => Math.Sqrt(mx * mx + my * my),  // 水平モーメント（絶対値）
-                _ => Math.Sqrt(fx * fx + fy * fy)      // デフォルトは RH
+                "MH" => PileDesign.Common.StableNumerics.Norm(mx, my),  // 水平モーメント（絶対値）
+                _ => PileDesign.Common.StableNumerics.Norm(fx, fy)      // デフォルトは RH
             };
         }
 
@@ -764,8 +764,8 @@ namespace PileDesign.Views
                         "RX" => fx,
                         "RY" => fy,
                         "RZ" => fz,
-                        "RH" => Math.Sqrt(fx * fx + fy * fy),  // 水平合反力 (絶対値)
-                        _ => Math.Sqrt(fx * fx + fy * fy),
+                        "RH" => PileDesign.Common.StableNumerics.Norm(fx, fy),  // 水平合反力 (絶対値)
+                        _ => PileDesign.Common.StableNumerics.Norm(fx, fy),
                     };
                     double valuePerM = signed / tributary;  // kN/m
                     if (!double.IsFinite(valuePerM)) continue;
@@ -953,7 +953,7 @@ namespace PileDesign.Views
                     vy = f_global[1]; // Fyi_global
                 }
 
-                double mag = Math.Sqrt(vx * vx + vy * vy);
+                double mag = PileDesign.Common.StableNumerics.Norm(vx, vy);
                 if (!double.IsFinite(mag)) continue;
 
                 entries.Add((node.Coord, vx, vy, mag));
@@ -1151,7 +1151,7 @@ namespace PileDesign.Views
                     vy = f_global[1]; // Fyi_global
                 }
 
-                double mag = Math.Sqrt(vx * vx + vy * vy);
+                double mag = PileDesign.Common.StableNumerics.Norm(vx, vy);
                 if (!double.IsFinite(mag)) continue;
 
                 entries.Add((drawLoc, vx, vy, mag));

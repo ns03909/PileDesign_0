@@ -286,7 +286,7 @@ namespace PileDesign.Views
                 double mzJ = bf.GetByIndex(11);
                 double interpMy = myI * (1 - t) + (-myJ) * t;
                 double interpMz = mzI * (1 - t) + (-mzJ) * t;
-                double interpMh = Math.Sqrt(interpMy * interpMy + interpMz * interpMz);
+                double interpMh = PileDesign.Common.StableNumerics.Norm(interpMy, interpMz);
                 return $"Mh: {interpMh:F1} kNm\nMy: {interpMy:F1} kNm\nMz: {interpMz:F1} kNm\nZ: {depth:F2} m";
             }
 
@@ -299,7 +299,7 @@ namespace PileDesign.Views
                 double fzJ = bf.GetByIndex(8);
                 double interpFy = fyI * (1 - t) + (-fyJ) * t;
                 double interpFz = fzI * (1 - t) + (-fzJ) * t;
-                double interpFh = Math.Sqrt(interpFy * interpFy + interpFz * interpFz);
+                double interpFh = PileDesign.Common.StableNumerics.Norm(interpFy, interpFz);
                 return $"Fh: {interpFh:F1} kN\nFy: {interpFy:F1} kN\nFz: {interpFz:F1} kN\nZ: {depth:F2} m";
             }
 
@@ -344,8 +344,8 @@ namespace PileDesign.Views
                     double MzI = bf.GetByIndex(5);
                     double MyJ = bf.GetByIndex(10);
                     double MzJ = bf.GetByIndex(11);
-                    valueI = Math.Sqrt(MyI * MyI + MzI * MzI);
-                    valueJ = Math.Sqrt(MyJ * MyJ + MzJ * MzJ);
+                    valueI = PileDesign.Common.StableNumerics.Norm(MyI, MzI);
+                    valueJ = PileDesign.Common.StableNumerics.Norm(MyJ, MzJ);
                     unit = "kNm";
                     break;
                 case "Fh":
@@ -353,8 +353,8 @@ namespace PileDesign.Views
                     double FzI = bf.GetByIndex(2);
                     double FyJ = bf.GetByIndex(7);
                     double FzJ = bf.GetByIndex(8);
-                    valueI = Math.Sqrt(FyI * FyI + FzI * FzI);
-                    valueJ = Math.Sqrt(FyJ * FyJ + FzJ * FzJ);
+                    valueI = PileDesign.Common.StableNumerics.Norm(FyI, FzI);
+                    valueJ = PileDesign.Common.StableNumerics.Norm(FyJ, FzJ);
                     unit = "kN";
                     break;
                 default:
@@ -390,14 +390,14 @@ namespace PileDesign.Views
             switch (typeName)
             {
                 case "UH":
-                    valueI = Math.Sqrt(ndI.Ux * ndI.Ux + ndI.Uy * ndI.Uy);
-                    valueJ = Math.Sqrt(ndJ.Ux * ndJ.Ux + ndJ.Uy * ndJ.Uy);
+                    valueI = PileDesign.Common.StableNumerics.Norm(ndI.Ux, ndI.Uy);
+                    valueJ = PileDesign.Common.StableNumerics.Norm(ndJ.Ux, ndJ.Uy);
                     multiplier = 1000;
                     unit = "mm";
                     break;
                 case "U":
-                    valueI = Math.Sqrt(ndI.Ux * ndI.Ux + ndI.Uy * ndI.Uy + ndI.Uz * ndI.Uz);
-                    valueJ = Math.Sqrt(ndJ.Ux * ndJ.Ux + ndJ.Uy * ndJ.Uy + ndJ.Uz * ndJ.Uz);
+                    valueI = PileDesign.Common.StableNumerics.Norm(ndI.Ux, ndI.Uy, ndI.Uz);
+                    valueJ = PileDesign.Common.StableNumerics.Norm(ndJ.Ux, ndJ.Uy, ndJ.Uz);
                     multiplier = 1000;
                     unit = "mm";
                     break;
@@ -420,8 +420,8 @@ namespace PileDesign.Views
                     unit = "mm";
                     break;
                 case "θH":
-                    valueI = Math.Sqrt(ndI.Rx * ndI.Rx + ndI.Ry * ndI.Ry);
-                    valueJ = Math.Sqrt(ndJ.Rx * ndJ.Rx + ndJ.Ry * ndJ.Ry);
+                    valueI = PileDesign.Common.StableNumerics.Norm(ndI.Rx, ndI.Ry);
+                    valueJ = PileDesign.Common.StableNumerics.Norm(ndJ.Rx, ndJ.Ry);
                     unit = "rad";
                     break;
                 case "θX":
@@ -657,7 +657,7 @@ namespace PileDesign.Views
             double dx = coordsJ.X - coordsI.X;
             double dy = coordsJ.Y - coordsI.Y;
             double dz = coordsJ.Z - coordsI.Z;
-            double beamLength = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            double beamLength = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
             if (beamLength < 1e-6) { HideBeamResultTooltip(); return; }
 
             double angle = (uzI - uzJ) / beamLength;
@@ -750,7 +750,7 @@ namespace PileDesign.Views
                 double dx = coordsJ.Value.X - coordsI.Value.X;
                 double dy = coordsJ.Value.Y - coordsI.Value.Y;
                 double dz = coordsJ.Value.Z - coordsI.Value.Z;
-                double beamLength = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                double beamLength = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
                 if (beamLength < 1e-6) continue;
 
                 double angle = (uzI - uzJ) / beamLength;

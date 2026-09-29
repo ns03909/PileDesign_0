@@ -95,7 +95,7 @@ namespace PileDesign.ViewModels
                             {
                                 double dx = topResult.CumulativeDisp.Dxi - topResult.CumulativeDisp.Dxj;
                                 double dy = topResult.CumulativeDisp.Dyi - topResult.CumulativeDisp.Dyj;
-                                topRelDisps.Add(Math.Sqrt(dx * dx + dy * dy) * 1000.0);
+                                topRelDisps.Add(PileDesign.Common.StableNumerics.Norm(dx, dy) * 1000.0);
                             }
                             else topRelDisps.Add(0);
 
@@ -109,7 +109,7 @@ namespace PileDesign.ViewModels
                             {
                                 double dx = btmResult.CumulativeDisp.Dxi - btmResult.CumulativeDisp.Dxj;
                                 double dy = btmResult.CumulativeDisp.Dyi - btmResult.CumulativeDisp.Dyj;
-                                btmRelDisps.Add(Math.Sqrt(dx * dx + dy * dy) * 1000.0);
+                                btmRelDisps.Add(PileDesign.Common.StableNumerics.Norm(dx, dy) * 1000.0);
                             }
                             else btmRelDisps.Add(0);
                         }
@@ -453,7 +453,7 @@ namespace PileDesign.ViewModels
                                         // 正しい曲率計算: 各成分の差から合成
                                         double dRyi = beamResultForCurve.CumulativeDisp.Ryj - beamResultForCurve.CumulativeDisp.Ryi;
                                         double dRzi = beamResultForCurve.CumulativeDisp.Rzj - beamResultForCurve.CumulativeDisp.Rzi;
-                                        phiFinal = Math.Sqrt(dRyi * dRyi + dRzi * dRzi) / length;
+                                        phiFinal = PileDesign.Common.StableNumerics.Norm(dRyi, dRzi) / length;
                                     }
                                 }
 
@@ -585,10 +585,8 @@ namespace PileDesign.ViewModels
 
                             double dRx = rsResult.CumulativeDisp.Rxj - rsResult.CumulativeDisp.Rxi;
                             double dRy = rsResult.CumulativeDisp.Ryj - rsResult.CumulativeDisp.Ryi;
-                            double thetaFinal = Math.Sqrt(dRx * dRx + dRy * dRy);
-                            double mFinal = Math.Sqrt(
-                                rsResult.CumulativeForce.Mxi * rsResult.CumulativeForce.Mxi +
-                                rsResult.CumulativeForce.Myi * rsResult.CumulativeForce.Myi);
+                            double thetaFinal = PileDesign.Common.StableNumerics.Norm(dRx, dRy);
+                            double mFinal = PileDesign.Common.StableNumerics.Norm(rsResult.CumulativeForce.Mxi, rsResult.CumulativeForce.Myi);
 
                             if (double.IsFinite(thetaFinal) && double.IsFinite(mFinal) && thetaFinal > 0)
                             {
@@ -830,8 +828,8 @@ namespace PileDesign.ViewModels
                                         }
                                         else
                                         {
-                                            thetaFinal = Math.Sqrt(dRx * dRx + dRy * dRy);
-                                            mFinal = Math.Sqrt(mxi * mxi + myi * myi);
+                                            thetaFinal = PileDesign.Common.StableNumerics.Norm(dRx, dRy);
+                                            mFinal = PileDesign.Common.StableNumerics.Norm(mxi, myi);
                                         }
                                     }
                                     else
@@ -1064,7 +1062,7 @@ namespace PileDesign.ViewModels
 
                                 double relDispX = result.CumulativeDisp.Dxi - result.CumulativeDisp.Dxj;
                                 double relDispY = result.CumulativeDisp.Dyi - result.CumulativeDisp.Dyj;
-                                double relDisp = Math.Sqrt(relDispX * relDispX + relDispY * relDispY);
+                                double relDisp = PileDesign.Common.StableNumerics.Norm(relDispX, relDispY);
                                 double relDispMm = relDisp * 1000.0;
 
                                 // Y軸は理論値（P-y曲線上の値）。βL はこのケースのものを使う

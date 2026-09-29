@@ -12,8 +12,8 @@ namespace PileDesign.FEM
         public double Ry { get; set; } = ry;
         public double Rz { get; set; } = rz;
 
-        public double Uh => Math.Sqrt(Ux * Ux + Uy * Uy);
-        public double Th => Math.Sqrt(Rx * Rx + Ry * Ry);
+        public double Uh => PileDesign.Common.StableNumerics.Norm(Ux, Uy);
+        public double Th => PileDesign.Common.StableNumerics.Norm(Rx, Ry);
 
         public double GetByIndex(int index) => index switch
         {

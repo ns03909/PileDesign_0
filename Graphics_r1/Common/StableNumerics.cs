@@ -19,6 +19,23 @@ internal static class StableNumerics
         return sum + correction;
     }
 
+    /// <summary>
+    /// 2 成分の大きさ √(x² + y²)。二乗してから足すと、大きな有限の値 (1e155 程度より大きい) で途中が無限大になり、
+    /// 小さな値 (1e-155 程度より小さい) では 0 に潰れる。大きさをそろえてから計算する <see cref="double.Hypot"/> を使う。
+    /// 数値でない成分があれば数値でない値を返す (隠さない)。
+    /// </summary>
+    internal static double Norm(double x, double y) => double.Hypot(x, y);
+
+    /// <summary>3 成分の大きさ √(x² + y² + z²)。最大の成分で割ってから二乗して足す (<see cref="Norm(double, double)"/> と同じ理由)。</summary>
+    internal static double Norm(double x, double y, double z)
+    {
+        if (double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z)) return double.NaN;
+        double scale = Math.Max(Math.Abs(x), Math.Max(Math.Abs(y), Math.Abs(z)));
+        if (scale == 0 || double.IsInfinity(scale)) return scale;
+        double a = x / scale, b = y / scale, c = z / scale;
+        return scale * Math.Sqrt(a * a + b * b + c * c);
+    }
+
     internal static double Mean(IEnumerable<double> values)
     {
         var data = values.ToArray();

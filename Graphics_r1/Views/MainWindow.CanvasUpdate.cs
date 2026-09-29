@@ -287,8 +287,8 @@ namespace PileDesign.Views
                         if (d == null) continue;
                         double val = vm.AnalysisResultNodeDisplacementType switch
                         {
-                            "UH" => Math.Sqrt(d.Ux * d.Ux + d.Uy * d.Uy),
-                            "U" => Math.Sqrt(d.Ux * d.Ux + d.Uy * d.Uy + d.Uz * d.Uz),
+                            "UH" => PileDesign.Common.StableNumerics.Norm(d.Ux, d.Uy),
+                            "U" => PileDesign.Common.StableNumerics.Norm(d.Ux, d.Uy, d.Uz),
                             "UX" => Math.Abs(d.Ux),
                             "UY" => Math.Abs(d.Uy),
                             "UZ" => Math.Abs(d.Uz),
@@ -565,7 +565,7 @@ namespace PileDesign.Views
         {
             double dx = b.X - a.X;
             double dy = b.Y - a.Y;
-            double distance = Math.Sqrt(dx * dx + dy * dy);
+            double distance = PileDesign.Common.StableNumerics.Norm(dx, dy);
 
             return distance < Math.Pow(10, -5) ?
                 new Point(0, 0) : new Point { X = dx / distance, Y = dy / distance };

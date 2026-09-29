@@ -1090,7 +1090,7 @@ namespace PileDesign.Output
                 sumFy += r.CumulativeForce.Fyi;
                 found++;
             }
-            return (Math.Sqrt(sumFx * sumFx + sumFy * sumFy), found);
+            return (PileDesign.Common.StableNumerics.Norm(sumFx, sumFy), found);
         }
 
         /// <summary>反力合計のセルの 1 行。欠けたばねがあれば「※ (結果のあった本数/全本数)」を添え、1 本も無ければ「結果なし」。</summary>

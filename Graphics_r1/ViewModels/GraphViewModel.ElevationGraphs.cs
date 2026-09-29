@@ -494,10 +494,10 @@ namespace PileDesign.ViewModels
                                     hasResult[k] = true;
                                     double dx = res.CumulativeDisp.Dxi - res.CumulativeDisp.Dxj;
                                     double dy = res.CumulativeDisp.Dyi - res.CumulativeDisp.Dyj;
-                                    nodeRelDisps[k] = Math.Sqrt(dx * dx + dy * dy);
+                                    nodeRelDisps[k] = PileDesign.Common.StableNumerics.Norm(dx, dy);
                                     double fx = res.CumulativeForce.Fxi;
                                     double fy = res.CumulativeForce.Fyi;
-                                    nodeActualForces[k] = Math.Sqrt(fx * fx + fy * fy);
+                                    nodeActualForces[k] = PileDesign.Common.StableNumerics.Norm(fx, fy);
                                 }
 
                                 // isFront: 当該荷重ケースでのこの杭の前後判定 (p-y 計算に影響)
@@ -592,12 +592,12 @@ namespace PileDesign.ViewModels
                                     // 相対変位（杭節点 - 地盤節点）のX,Y合成
                                     double relDispX = result.CumulativeDisp.Dxi - result.CumulativeDisp.Dxj;
                                     double relDispY = result.CumulativeDisp.Dyi - result.CumulativeDisp.Dyj;
-                                    double relDisp = Math.Sqrt(relDispX * relDispX + relDispY * relDispY);
+                                    double relDisp = PileDesign.Common.StableNumerics.Norm(relDispX, relDispY);
 
                                     // ばね反力 (resultant) [kN]
                                     double forceX = result.CumulativeForce.Fxi;
                                     double forceY = result.CumulativeForce.Fyi;
-                                    double force = Math.Sqrt(forceX * forceX + forceY * forceY);
+                                    double force = PileDesign.Common.StableNumerics.Norm(forceX, forceY);
 
                                     // ばね全体剛性 [kN/m] = 反力 [kN] / 変位 [m]
                                     double springStiffness = relDisp > 1e-10 ? force / relDisp : 0;

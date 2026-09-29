@@ -13,8 +13,8 @@ namespace PileDesign.FEM
         public double My { get; set; } = my;
         public double Mz { get; set; } = mz;
 
-        public double Fh => Math.Sqrt(Fx * Fx + Fy * Fy);
-        public double Mh => Math.Sqrt(Mx * Mx + My * My);
+        public double Fh => PileDesign.Common.StableNumerics.Norm(Fx, Fy);
+        public double Mh => PileDesign.Common.StableNumerics.Norm(Mx, My);
 
         public Vector<double> GetVector()
         {
@@ -80,7 +80,7 @@ namespace PileDesign.FEM
 
         public double GetHorizontalAbsLoad()
         {
-            return Math.Sqrt(Fx * Fx + Fy * Fy);
+            return PileDesign.Common.StableNumerics.Norm(Fx, Fy);
         }
     }
 }

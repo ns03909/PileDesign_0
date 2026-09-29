@@ -1238,7 +1238,7 @@ diameterSelector,
 
             double dx = end.X - start.X;
             double dy = end.Y - start.Y;
-            double length = Math.Sqrt(dx * dx + dy * dy);
+            double length = PileDesign.Common.StableNumerics.Norm(dx, dy);
 
             if (length < 2 * endSegmentLength || zigzagCount < 1)
             {
@@ -1311,7 +1311,7 @@ diameterSelector,
             // 線分の方向ベクトル
             double dx = end.X - start.X;
             double dy = end.Y - start.Y;
-            double length = Math.Sqrt(dx * dx + dy * dy);
+            double length = PileDesign.Common.StableNumerics.Norm(dx, dy);
 
             if (length < 2 * endSegmentLength || zigzagCount < 1)
             {

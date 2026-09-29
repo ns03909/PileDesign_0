@@ -96,7 +96,7 @@ namespace PileDesign.Views
                 var nr = node?.GetNodeResult(anaModelDef, lc, lcomb, viewModel.IsLiquefaction);
                 if (nr?.CumulativeDisp == null) continue;
                 var nd = nr.CumulativeDisp;
-                double uh = Math.Sqrt(nd.Ux * nd.Ux + nd.Uy * nd.Uy + nd.Uz * nd.Uz);
+                double uh = PileDesign.Common.StableNumerics.Norm(nd.Ux, nd.Uy, nd.Uz);
                 if (uh > maxDisp) maxDisp = uh;
             }
             double ds = _sharedDispScaleMtoModel > 1e-15

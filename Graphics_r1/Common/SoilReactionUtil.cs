@@ -31,7 +31,7 @@ namespace PileDesign.Common
                 double dx = beam.NodeI.Coord.X - beam.NodeJ.Coord.X;
                 double dy = beam.NodeI.Coord.Y - beam.NodeJ.Coord.Y;
                 double dz = beam.NodeI.Coord.Z - beam.NodeJ.Coord.Z;
-                double L = System.Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                double L = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
                 if (L > 0) tributary += L * 0.5;
             }
             return tributary;

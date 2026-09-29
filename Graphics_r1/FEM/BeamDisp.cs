@@ -20,10 +20,10 @@ namespace PileDesign.FEM
         public double Ryj { get; set; } = ryj;
         public double Rzj { get; set; } = rzj;
 
-        public double Di => Math.Sqrt(Dyi * Dyi + Dzi * Dzi);
-        public double Ri => Math.Sqrt(Ryi * Ryi + Rzi * Rzi);
-        public double Dj => Math.Sqrt(Dyj * Dyj + Dzj * Dzj);
-        public double Rj => Math.Sqrt(Ryj * Ryj + Rzj * Rzj);
+        public double Di => PileDesign.Common.StableNumerics.Norm(Dyi, Dzi);
+        public double Ri => PileDesign.Common.StableNumerics.Norm(Ryi, Rzi);
+        public double Dj => PileDesign.Common.StableNumerics.Norm(Dyj, Dzj);
+        public double Rj => PileDesign.Common.StableNumerics.Norm(Ryj, Rzj);
 
         public Vector<double> GetVector()
         {

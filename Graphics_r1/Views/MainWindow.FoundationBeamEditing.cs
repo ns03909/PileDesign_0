@@ -180,7 +180,7 @@ namespace PileDesign.Views
             {
                 double dx = pile.X - finalPos.X;
                 double dy = pile.Y - finalPos.Y;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
+                double dist = PileDesign.Common.StableNumerics.Norm(dx, dy);
 
                 // スナップした杭が見つかった場合（XY座標が一致）
                 if (dist < 0.01) // 1cm以内なら一致とみなす
@@ -437,7 +437,7 @@ namespace PileDesign.Views
             {
                 double dx = pile.X - rawPos.X;
                 double dy = pile.Y - rawPos.Y;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
+                double dist = PileDesign.Common.StableNumerics.Norm(dx, dy);
 
                 if (dist < minDist && dist < tolerance)
                 {
@@ -470,7 +470,7 @@ namespace PileDesign.Views
 
                 double dx = screenPos.X - mousePos.X;
                 double dy = screenPos.Y - mousePos.Y;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
+                double dist = PileDesign.Common.StableNumerics.Norm(dx, dy);
 
                 if (dist <= hitRadius)
                 {
@@ -501,7 +501,7 @@ namespace PileDesign.Views
 
                 double dx = screenPos.X - mousePos.X;
                 double dy = screenPos.Y - mousePos.Y;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
+                double dist = PileDesign.Common.StableNumerics.Norm(dx, dy);
 
                 if (dist <= hitRadius)
                 {
@@ -533,7 +533,7 @@ namespace PileDesign.Views
 
                 double dx = screenPos.X - mousePos.X;
                 double dy = screenPos.Y - mousePos.Y;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
+                double dist = PileDesign.Common.StableNumerics.Norm(dx, dy);
 
                 if (dist <= hitRadius)
                 {

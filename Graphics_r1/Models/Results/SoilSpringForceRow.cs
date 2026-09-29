@@ -46,7 +46,7 @@ namespace PileDesign.Models.Results
 
             double tributary = SoilReactionUtil.GetNodeTributaryLength(spring?.NodeI, anaModel);
             double inv = tributary > 1e-9 ? 1.0 / tributary : 0;
-            double fhAbs = System.Math.Sqrt(bf.Fxi * bf.Fxi + bf.Fyi * bf.Fyi);
+            double fhAbs = PileDesign.Common.StableNumerics.Norm(bf.Fxi, bf.Fyi);
 
             return new SoilSpringForceRow
             {
@@ -61,7 +61,7 @@ namespace PileDesign.Models.Results
                 Fy = bf.Fyi,
                 Fz = bf.Fzi,
                 FhAbs = fhAbs,
-                RelUhAbs = System.Math.Sqrt(relUx * relUx + relUy * relUy),
+                RelUhAbs = PileDesign.Common.StableNumerics.Norm(relUx, relUy),
                 TributaryLength = tributary,
                 FxPerLt = bf.Fxi * inv,
                 FyPerLt = bf.Fyi * inv,

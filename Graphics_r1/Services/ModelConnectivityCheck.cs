@@ -101,7 +101,7 @@ namespace PileDesign.Services
                     double dx = pi.Value.X - pj.Value.X;
                     double dy = pi.Value.Y - pj.Value.Y;
                     double dz = pi.Value.Z - pj.Value.Z;
-                    double length = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                    double length = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
                     if (!double.IsFinite(length))
                         errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 長さが数値になりません (始点 {DescribeEndpoint(inputModel, b.NodeI_Type, b.NodeI_Id)} / 終点 {DescribeEndpoint(inputModel, b.NodeJ_Type, b.NodeJ_Id)})。");
                     else if (length < 1.0e-6)

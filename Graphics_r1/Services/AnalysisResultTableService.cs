@@ -598,7 +598,7 @@ namespace PileDesign.Services
         /// 2 成分の合成 √(x² + y²)。二乗してから足すと、大きな有限の値 (1e155 程度より大きい) で途中が無限大になる。
         /// 大きさをそろえてから計算する <see cref="double.Hypot"/> を使う。数値でない成分があれば数値でない値を返す。
         /// </summary>
-        internal static double Resultant(double x, double y) => double.Hypot(x, y);
+        internal static double Resultant(double x, double y) => PileDesign.Common.StableNumerics.Norm(x, y);
 
         /// <summary>
         /// ばね反力の合計の行を作る。<paramref name="forces"/> はばねごとの反力 (結果が無いばねは null)。

@@ -603,7 +603,7 @@ namespace PileDesign.ViewModels
         private static double Distance3D(double x1, double y1, double z1, double x2, double y2, double z2)
         {
             double dx = x1 - x2, dy = y1 - y2, dz = z1 - z2;
-            return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            return PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
         }
 
         private async Task CopyNodesAsync(double dX, double dY, double dZ, int repetitionNumber, bool isInputNodesIncluded, bool isPileLayoutIncluded)
