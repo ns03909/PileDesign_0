@@ -82,7 +82,7 @@ namespace PileDesign.Services
                         invalidReason = $"杭No.{heads[i].PileNo} と杭No.{heads[j].PileNo} の水平距離が有限値ではありません";
                         return false;
                     }
-                    if (span < 1e-9) continue;   // 同じ位置の杭 (重なり) は角が定義できない
+                    if (PileDesign.Common.GeometryTolerance.IsZeroLength(span)) continue;   // 同じ位置の杭 (重なり) は角が定義できない
 
                     double angle = Math.Abs(heads[i].Uz - heads[j].Uz) / span;
                     if (!double.IsFinite(angle))

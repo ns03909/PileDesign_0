@@ -14,7 +14,7 @@ namespace PileDesign.ViewModels;
 
 public partial class MainWindowViewModel
 {
-    internal const double SplitPointDistanceTolerance = 1e-6; // metres, independent of beam length
+    internal const double SplitPointDistanceTolerance = PileDesign.Common.GeometryTolerance.MinMemberLength; // 分割点が端から近すぎれば分割しない (部材の長さの下限と同じ)
     private const int MaxIntersectionPairs = 1_000_000;
     internal readonly record struct BeamIntersection(int A, int B, Point3D Point, double TA, double TB);
     private sealed class SplitSearchProgress(IProgress<AnalysisProgress>? target) : IProgress<AnalysisProgress>

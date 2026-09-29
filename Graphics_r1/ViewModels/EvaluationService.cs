@@ -391,7 +391,7 @@ namespace PileDesign.ViewModels
                     double dx = coordsJ.Value.X - coordsI.Value.X;
                     double dy = coordsJ.Value.Y - coordsI.Value.Y;
                     double L = PileDesign.Common.StableNumerics.Norm(dx, dy);
-                    if (L < 1e-6) continue;
+                    if (PileDesign.Common.GeometryTolerance.IsZeroLength(L)) continue;
 
                     string nameI = ResolveFemNodeName(inputModel, fbBeam.NodeI_Type, fbBeam.NodeI_Id);
                     string nameJ = ResolveFemNodeName(inputModel, fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);

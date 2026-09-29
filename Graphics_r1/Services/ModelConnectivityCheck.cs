@@ -104,7 +104,7 @@ namespace PileDesign.Services
                     double length = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
                     if (!double.IsFinite(length))
                         errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 長さが数値になりません (始点 {DescribeEndpoint(inputModel, b.NodeI_Type, b.NodeI_Id)} / 終点 {DescribeEndpoint(inputModel, b.NodeJ_Type, b.NodeJ_Id)})。");
-                    else if (length < 1.0e-6)
+                    else if (PileDesign.Common.GeometryTolerance.IsZeroLength(length))
                         errors.Add($"基礎梁 No.{fb.GetBeamNo(b)}: 始点と終点が同じ位置にあります (長さ 0)。");
                 }
             }

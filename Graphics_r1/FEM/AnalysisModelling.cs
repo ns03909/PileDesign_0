@@ -299,7 +299,7 @@ namespace PileDesign.FEM
 
             // ゼロ長さビームのチェック
             double beamLength = Utils.GetLengthBetweenTwoNodes(upperNode, lowerNode);
-            if (beamLength < 1e-10)
+            if (PileDesign.Common.GeometryTolerance.IsZeroLength(beamLength))
                 throw new InvalidOperationException(
                     $"杭要素作成エラー: ビーム長さがゼロです (L={beamLength:E3}, segIndex={segIndex})。" +
                     $"\n上端: {upperNode.Name} ({upperNode.Coord.X:F3},{upperNode.Coord.Y:F3},{upperNode.Coord.Z:F3})" +
@@ -1527,7 +1527,7 @@ namespace PileDesign.FEM
                     continue;
                 }
                 double len = beam.Length;
-                if (len < 1e-10)
+                if (PileDesign.Common.GeometryTolerance.IsZeroLength(len))
                 {
                     errors.Add($"要素 '{beam.Name}': 要素長がゼロです " +
                         $"(NodeI={beam.NodeI.Name} [{beam.NodeI.Coord.X:F3},{beam.NodeI.Coord.Y:F3},{beam.NodeI.Coord.Z:F3}], " +

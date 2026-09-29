@@ -1051,7 +1051,7 @@ namespace PileDesign.ViewModels
 
                         double length = PileDesign.Common.StableNumerics.Norm(p2.X - p1.X, p2.Y - p1.Y, p2.Z - p1.Z);
                         if (!double.IsFinite(length)) throw new ArgumentException("生成する梁の長さが数値の範囲外です。");
-                        if (length <= 1e-9) continue;
+                        if (PileDesign.Common.GeometryTolerance.IsZeroLength(length)) continue;   // 検査 (ModelConnectivityCheck) と同じ基準
 
                         newBeams.Add(new FoundationBeam
                         {

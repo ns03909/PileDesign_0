@@ -658,7 +658,7 @@ namespace PileDesign.Views
             double dy = coordsJ.Y - coordsI.Y;
             double dz = coordsJ.Z - coordsI.Z;
             double beamLength = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
-            if (beamLength < 1e-6) { HideBeamResultTooltip(); return; }
+            if (PileDesign.Common.GeometryTolerance.IsZeroLength(beamLength)) { HideBeamResultTooltip(); return; }
 
             double angle = (uzI - uzJ) / beamLength;
 
@@ -751,7 +751,7 @@ namespace PileDesign.Views
                 double dy = coordsJ.Value.Y - coordsI.Value.Y;
                 double dz = coordsJ.Value.Z - coordsI.Value.Z;
                 double beamLength = PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
-                if (beamLength < 1e-6) continue;
+                if (PileDesign.Common.GeometryTolerance.IsZeroLength(beamLength)) continue;
 
                 double angle = (uzI - uzJ) / beamLength;
 
