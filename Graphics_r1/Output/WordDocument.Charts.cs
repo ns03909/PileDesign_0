@@ -109,7 +109,7 @@ namespace PileDesign.Output
                     List<double> momentResultsLevel2 = [];
 
                     // 解析済みの場合のみ散布点を作成
-                    if (mainWindowViewModel?.IsHorizontalAnalysisDone == true &&
+                    if (_source.IsHorizontalAnalysisDone &&
                         inputModel.PileLayoutItems != null &&
                         inputModel.LoadCasesInput != null)
                     {
@@ -244,7 +244,7 @@ namespace PileDesign.Output
                 }
 
                 // 縦断図（各レベルで最大曲げモーメントのケースを可視化）
-                if (mainWindowViewModel?.IsHorizontalAnalysisDone == true)
+                if (_source.IsHorizontalAnalysisDone)
                 {
                     for (int k = 0; k < 2; k++)
                     {
@@ -427,7 +427,7 @@ namespace PileDesign.Output
                     List<double> shearResultsLevel2 = [];
 
                     // 解析済みの場合のみ散布点を作成
-                    if (mainWindowViewModel?.IsHorizontalAnalysisDone == true &&
+                    if (_source.IsHorizontalAnalysisDone &&
                         inputModel.PileLayoutItems != null &&
                         inputModel.LoadCasesInput != null)
                     {

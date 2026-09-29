@@ -217,6 +217,11 @@ namespace PileDesign.Output
             lock (_omittedLock) _omitted.Clear();
             _warnings.Clear();
 
+            // 画面の状態から読むものは、ここ (画面のメッセージを回す前) で 1 つの時点に固定する (ReportSource 参照)。
+            // 検定を求めるかは、解析を済ませたかと合わせて画面の側が決める (ここで _source を見ると、取る前の値を見る)
+            bool wantsEvaluation = mainWindowViewModel?.DocxOutput?.IncludeHorizontal_NGReport == true;
+            _source = mainWindowViewModel?.CaptureReportSource(inputModel, wantsEvaluation) ?? new ReportSource();
+
             var sw = new System.Diagnostics.Stopwatch();
             void StartSection() => sw.Restart();
             void EndSection(string label) { sw.Stop(); Log.Information("[Docx]   {Section}: {Elapsed:N2}s", label, sw.Elapsed.TotalSeconds); }
@@ -283,6 +288,9 @@ namespace PileDesign.Output
                  + (hits.Count > 5 ? $" ほか {hits.Count - 5} 個" : "");
         }
 
+        /// <summary>出力を始めた時点の画面の状態 (<see cref="ReportSource"/>)。<see cref="CreateWordDocument"/> が最初に取る。</summary>
+        private ReportSource _source = new();
+
         /// <summary>
         /// 図・表 <paramref name="what"/> を作成できずに省いたことを記録し、その位置に赤字の注記を入れる。
         /// 注記は本文の流れの中に入るので、計算書を読む人が欠けに気付ける。理由 (例外) はログにだけ残す。
@@ -316,7 +324,15 @@ namespace PileDesign.Output
 
                 // モデル図をキャプチャ（UIスレッド上で実行）
                 StartSection();
-                byte[]? modelImageBytes = mainWindowViewModel?.CaptureIsometricModelImageBytes();
+                // 画面は編集中の入力を描く。計算書の入力 (解析時の控え) と中身が違えば写さない (表紙だけ別の時点になる)
+                byte[]? modelImageBytes = null;
+                if (_source.CoverMatchesReportInput)
+                    modelImageBytes = mainWindowViewModel?.CaptureIsometricModelImageBytes();
+                else
+                {
+                    Log.Information("[計算書] 解析のあとに入力が編集されているため、表紙のモデル図を載せません");
+                    _warnings.Add("表紙のモデル図は載せていません。解析のあとに入力が編集されていて、画面の図と計算書の入力 (解析したときの入力) が違うためです。");
+                }
                 EndSection("CaptureIsometricModelImage (UI)");
 
                 StartSection();
@@ -515,7 +531,7 @@ namespace PileDesign.Output
             if (mainWindowViewModel.DocxOutput.IncludeVertical)
             {
                 Time("Vertical (支持力+沈下+杭モデル図)", () => {
-                    if (mainWindowViewModel.IsVerticalAnalysisDone)
+                    if (_source.IsVerticalAnalysisDone)
                     {
                         AddHeader1(body, "杭の支持力", 1);
                         AddPileResistanceDescription(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
@@ -611,7 +627,7 @@ namespace PileDesign.Output
                     AddLoadCombinationTable(mainPart, body);
                 });
 
-                if (mainWindowViewModel.IsHorizontalAnalysisDone
+                if (_source.IsHorizontalAnalysisDone
                     && anaModel?.HorizontalSoilSprings != null
                     && anaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == "根入部節点"))
                 {
@@ -640,7 +656,7 @@ namespace PileDesign.Output
                         }
                     });
 
-                    if (mainWindowViewModel.IsHorizontalAnalysisDone)
+                    if (_source.IsHorizontalAnalysisDone)
                     {
                         TimeH("PileForceSummaryTable", () => AddPileForceSummaryTable(mainPart, body));
                         if (mainWindowViewModel.DocxOutput.IncludeHorizontal_NMinT)
@@ -664,7 +680,7 @@ namespace PileDesign.Output
                 }
             }
             if ((mainWindowViewModel.DocxOutput.IncludeHorizontal_Bending || mainWindowViewModel.DocxOutput.IncludeHorizontal_Shear)
-                && mainWindowViewModel.IsHorizontalAnalysisDone && anaModel != null)
+                && _source.IsHorizontalAnalysisDone && anaModel != null)
             {
                 Time("AllPileStressDiagrams (M/Q ダイアグラム)", () => AddAllPileStressDiagrams(mainPart, body,
                     mainWindowViewModel.DocxOutput.IncludeHorizontal_Bending,
@@ -692,7 +708,7 @@ namespace PileDesign.Output
             if (mainWindowViewModel.DocxOutput.IncludePileHeadShearMap)
                 Time("PileHeadShearMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileTopShearForceMark); AddAutoFigureCaption(body, "杭頭せん断力マップ", "図"); });
             if (mainWindowViewModel.DocxOutput.IncludeHorizontal_NGReport
-                && mainWindowViewModel.IsHorizontalAnalysisDone
+                && _source.IsHorizontalAnalysisDone
                 && anaModel != null)
             {
                 Time("HorizontalEvaluationReport (NG)", () => AddHorizontalEvaluationReport(body, factored: true));
@@ -700,7 +716,7 @@ namespace PileDesign.Output
             if (mainWindowViewModel.DocxOutput.IncludeSettlement)
             {
                 Time("Settlement (単杭の沈下)", () => {
-                    if (mainWindowViewModel.IsVerticalAnalysisDone)
+                    if (_source.IsVerticalAnalysisDone)
                     {
                         AddPageBreak(body);
                         AddHeader1(body, "単杭の沈下", 1);
@@ -726,7 +742,7 @@ namespace PileDesign.Output
             if (mainWindowViewModel.DocxOutput.IncludeVerticalBeamResults)
             {
                 Time("VerticalBeamResults", () => {
-                    if (mainWindowViewModel.IsVerticalBeamAnalysisDone && mainWindowViewModel.VerticalBeamCaseResults != null)
+                    if (_source.IsVerticalBeamAnalysisDone && _source.VerticalBeamCaseResults != null)
                     {
                         AddPageBreak(body);
                         AddHeader1(body, "単杭沈下解析（基礎梁考慮）結果", 1);

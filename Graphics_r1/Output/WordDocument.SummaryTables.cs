@@ -1108,10 +1108,17 @@ namespace PileDesign.Output
 
             // 画面の検定テキスト (罫線を並べた等幅の固定行) をそのまま貼るのをやめ、
             // 構造化した結果から Word の表として組む。テキスト側は画面と golden が使うので触らない。
-            Models.Results.EvaluationResult result;
+            // 低減後の結果は出力を始めた時点で求めてある (ReportSource)。その場で求めると、途中で画面の
+            // メッセージが回ったときに別の時点の解析結果で検定することがある
+            Models.Results.EvaluationResult? result;
             try
             {
-                result = ViewModels.EvaluationService.BuildEvaluationResult(mainWindowViewModel, factored);
+                // 出力の開始時に求めていなければ黙って省かず、省いたことを記す
+                result = factored
+                    ? _source.FactoredEvaluation ?? throw (_source.FactoredEvaluationError is { } error
+                        ? new InvalidOperationException(error.Message, error)
+                        : new InvalidOperationException("検定の結果を出力の開始時に求めていません。"))
+                    : ViewModels.EvaluationService.BuildEvaluationResult(mainWindowViewModel, factored);
             }
             catch (Exception ex)
             {

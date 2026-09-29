@@ -842,7 +842,7 @@ diameterSelector,
         /// </summary>
         private void AddVerticalBeamResultTables(Body body)
         {
-            var caseResults = mainWindowViewModel.VerticalBeamCaseResults;
+            var caseResults = _source.VerticalBeamCaseResults;
             if (caseResults == null || caseResults.Count == 0) return;
 
             double fontSize = 8;

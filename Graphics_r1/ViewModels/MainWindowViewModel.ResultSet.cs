@@ -229,6 +229,37 @@ namespace PileDesign.ViewModels
                 : null;
         }
 
+        /// <summary>
+        /// 計算書の元データのうち画面の状態から読むものを、いまの時点でまとめる (<see cref="Output.ReportSource"/>)。
+        /// 計算書は出力の開始時にこれを 1 回だけ取り、途中では画面を読み直さない。
+        /// </summary>
+        /// <param name="reportInput">計算書の入力 (解析時の控え)。</param>
+        /// <param name="wantsFactoredEvaluation">
+        /// 低減後の水平解析の検定を計算書に載せる設定か。載せる設定で、水平解析を済ませているときだけ求める。
+        /// </param>
+        internal Output.ReportSource CaptureReportSource(InputModel reportInput, bool wantsFactoredEvaluation)
+        {
+            Models.Results.EvaluationResult? evaluation = null;
+            Exception? evaluationError = null;
+            if (wantsFactoredEvaluation && IsHorizontalAnalysisDone && CurrentModel != null)
+            {
+                try { evaluation = EvaluationService.BuildEvaluationResult(this, factored: true); }
+                catch (Exception ex) { evaluationError = ex; }
+            }
+
+            return new Output.ReportSource
+            {
+                IsHorizontalAnalysisDone = IsHorizontalAnalysisDone,
+                IsVerticalAnalysisDone = IsVerticalAnalysisDone,
+                IsVerticalBeamAnalysisDone = IsVerticalBeamAnalysisDone,
+                VerticalBeamCaseResults = VerticalBeamCaseResults?.ToList(),
+                // 画面は編集中の入力を描く。計算書の入力がそれ自体か、解析のあとに編集していなければ中身は同じ
+                CoverMatchesReportInput = ReferenceEquals(reportInput, CurrentInputModel) || !InputChangedSinceAnalysis,
+                FactoredEvaluation = evaluation,
+                FactoredEvaluationError = evaluationError,
+            };
+        }
+
         private bool _inputChangedSinceAnalysis;
 
         /// <summary>解析後に入力が編集されたか（表示中の結果が現在の入力と一致しない）。</summary>
