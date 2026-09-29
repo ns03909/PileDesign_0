@@ -183,6 +183,30 @@ namespace PileDesign.Services
                 return;
             }
 
+            // 前の書き出しがまだ終わっていなければ見送る (次の発火で保存する)。
+            // Tick は async void で、書き出しが間隔より長くかかると次の Tick が重なる。書き出し自体は錠で
+            // 1 本ずつになるが、同じ中身の自動保存が余分に増え、完了の知らせの順も入れ替わりうる
+            if (System.Threading.Interlocked.CompareExchange(ref _tickInProgress, 1, 0) != 0)
+            {
+                Log.Information("[AutoSave] 前の自動保存の書き出しが終わっていないため、今回は見送ります");
+                return;
+            }
+            try
+            {
+                await RunTickAsync();
+            }
+            finally
+            {
+                System.Threading.Volatile.Write(ref _tickInProgress, 0);
+            }
+        }
+
+        /// <summary>自動保存の Tick の処理が進行中なら 1 (<see cref="OnAutoSaveTimer"/> が重ならないようにする)。</summary>
+        private int _tickInProgress;
+
+        /// <summary>Tick 1 回ぶんの処理 (中身の確定 → 書き出し)。</summary>
+        private async Task RunTickAsync()
+        {
             // 保存する中身は<b>画面のスレッドで</b>確定させる (写しから直列化まで)。
             // Task.Run の中で取ると、写す処理そのものが元のコレクションを列挙するので、
             // そのあいだの編集で列挙が壊れる。直列化をバックグラウンドで行うと、保存の途中で

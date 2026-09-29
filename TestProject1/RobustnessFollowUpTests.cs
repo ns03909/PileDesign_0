@@ -28,4 +28,29 @@ public class RobustnessFollowUpTests
         Assert.AreSame(System.Windows.Data.Binding.DoNothing,
             converter.ConvertBack(true, typeof(double), "1", CultureInfo.InvariantCulture));
     }
+
+    /// <summary>
+    /// 前の自動保存の書き出しが終わっていなければ、次の発火は見送る (失敗としては数えない)。
+    /// Tick は async void で、書き出しが間隔より長くかかると重なり、同じ中身の自動保存が余分に増えた。
+    /// </summary>
+    [TestMethod]
+    public void AutoSaveTick_IsSkippedWhileThePreviousOneIsRunning()
+    {
+        var auto = new AutoSaveService(new FileOperationService(new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.Preserve }));
+        try
+        {
+            auto.Start(null, new InputModel(), null);
+            auto.LiveStateProvider = () => throw new InvalidOperationException("呼ばれてはいけない");
+            int raised = 0;
+            auto.AutoSaveCompleted += (_, _) => raised++;
+
+            var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+            typeof(AutoSaveService).GetField("_tickInProgress", flags)!.SetValue(auto, 1);   // 前の書き出しが進行中
+            typeof(AutoSaveService).GetMethod("OnAutoSaveTimer", flags)!.Invoke(auto, [null, EventArgs.Empty]);
+
+            Assert.AreEqual(0, raised, "前の書き出しの最中に、次の自動保存を始めている");
+            Assert.AreEqual(0, auto.ConsecutiveFailures, "見送りを失敗として数えている");
+        }
+        finally { auto.Stop(); }
+    }
 }
