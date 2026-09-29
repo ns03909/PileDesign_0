@@ -134,8 +134,19 @@ namespace PileDesign.Services
             if (!_autoSaveTimer.IsEnabled)
             {
                 _autoSaveTimer.Start();
+                _lastTickAt = DateTime.Now;   // 次の試行はここから数える
             }
         }
+
+        /// <summary>直近のタイマーの発火 (または開始) の時刻。次の試行の時刻を出すのに使う。</summary>
+        private DateTime? _lastTickAt;
+
+        /// <summary>
+        /// 次に自動保存を試みる時刻 (止まっていれば null)。失敗を知らせるときに添える
+        /// (「いつまた試すのか」が画面に出ないと、失敗が続いているのか直ったのか分からない)。
+        /// </summary>
+        public DateTime? NextAttemptAt =>
+            _autoSaveTimer.IsEnabled && _lastTickAt is { } last ? last + _autoSaveTimer.Interval : null;
 
         /// <summary>
         /// 自動保存を停止
@@ -155,6 +166,7 @@ namespace PileDesign.Services
         /// </summary>
         private async void OnAutoSaveTimer(object? sender, EventArgs e)
         {
+            _lastTickAt = DateTime.Now;
             // モーダルの入力ウィンドウが開いているあいだは見送る。
             //
             // DispatcherTimer.Tick は ShowDialog の入れ子ディスパッチャでも発火するので、
@@ -199,7 +211,9 @@ namespace PileDesign.Services
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "AutoSave timer task failed");
+                // 書き出しの中の失敗は PerformAutoSave が数えるので、ここへ来るのはその外で落ちたとき。
+                // 以前はログだけで、連続失敗の回数も画面の表示も動かなかった
+                ReportFailure(ex, "task");
             }
         }
 
@@ -219,9 +233,12 @@ namespace PileDesign.Services
         /// 指している場面でも写してしまい、保存ファイルの $ref の畳まれ方が変わる。
         /// 元ファイルのパスは復元後の保存先としてファイルの中に残すので、中身と同じ瞬間に取る。
         /// </summary>
-        private PreparedState? PrepareState()
+        private PreparedState? PrepareState() => PrepareStateCore(allowStaleFallback: false);
+
+        /// <summary><see cref="PrepareState"/> の本体。緊急保存だけが、最新の状態を取れないときの代用を許す。</summary>
+        private PreparedState? PrepareStateCore(bool allowStaleFallback)
         {
-            var (input, filePath, ana, vbcr) = ResolveState();
+            var (input, filePath, ana, vbcr) = ResolveState(allowStaleFallback);
             if (input == null) return null;
 
             // NaN 検査も直列化と同じ時点でここで行う (書く JSON と同じ値を検査する)。
@@ -237,12 +254,23 @@ namespace PileDesign.Services
         /// </summary>
         // 保存対象の状態を解決する。LiveStateProvider があればそれを優先 (最新状態 + チェックボックス反映)。
         // 無ければ Start 時にキャプチャした参照にフォールバック。
-        private (InputModel? input, string? filePath, AnaModel? ana, IList<FEM.VerticalBeamCaseResult>? vbcr) ResolveState()
+        //
+        // 最新の状態を取れなかったとき、定期の自動保存は失敗として知らせる。以前は開始したときに取った参照で
+        // 代用しており、その後に開き直した・新規にした作業ではなく<b>前の作業</b>を書いたうえで「成功」と出していた。
+        // 緊急保存 (落ちる直前) だけは、何も残さないより残すほうがよいので代用を許す。
+        private (InputModel? input, string? filePath, AnaModel? ana, IList<FEM.VerticalBeamCaseResult>? vbcr) ResolveState(bool allowStaleFallback)
         {
             if (LiveStateProvider != null)
             {
                 try { return LiveStateProvider(); }
-                catch (Exception ex) { Log.Warning(ex, "AutoSave LiveStateProvider failed; fallback to captured refs"); }
+                catch (Exception ex) when (allowStaleFallback)
+                {
+                    Log.Warning(ex, "AutoSave LiveStateProvider failed; fallback to captured refs");
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("保存する作業の状態を取得できませんでした。", ex);
+                }
             }
             return (_currentInputModel, _currentFilePath, _currentModel, _verticalBeamCaseResults);
         }
@@ -264,7 +292,8 @@ namespace PileDesign.Services
                     FilePath = path,
                     Success = true,
                     Timestamp = LastAutoSaveTime.Value,
-                    ConsecutiveFailures = 0
+                    ConsecutiveFailures = 0,
+                    NextAttemptAt = NextAttemptAt,
                 });
             }
             catch (Exception ex)
@@ -319,7 +348,8 @@ namespace PileDesign.Services
                 Success = false,
                 ErrorMessage = ex.Message,
                 Timestamp = DateTime.Now,
-                ConsecutiveFailures = count
+                ConsecutiveFailures = count,
+                NextAttemptAt = NextAttemptAt,
             });
         }
 
@@ -342,7 +372,8 @@ namespace PileDesign.Services
             {
                 // 緊急保存はその場で写す。落ちる直前なので、画面のスレッドかどうかを
                 // 選べない。列挙が壊れる危険は残るが、何も残さないより残すほうがよい。
-                var prepared = PrepareState();
+                // 最新の状態を取れなければ、開始したときの参照で代用する (同じ理由)。
+                var prepared = PrepareStateCore(allowStaleFallback: true);
                 if (prepared == null) return null;
 
                 var path = SaveSnapshot(tag: "emergency", prepared.Value);
@@ -858,5 +889,8 @@ namespace PileDesign.Services
         /// 連続失敗回数 (成功時は 0)。閾値超過で UI 側がエスカレーション通知に使う。
         /// </summary>
         public int ConsecutiveFailures { get; set; }
+
+        /// <summary>次に自動保存を試みる時刻。止まっていれば null。</summary>
+        public DateTime? NextAttemptAt { get; set; }
     }
 }

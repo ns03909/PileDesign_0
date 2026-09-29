@@ -2055,25 +2055,36 @@ namespace PileDesign.ViewModels
         {
             // StatusMessage は他の一過性メッセージ用に温存。AutoSave 状態は専用の
             // LastAutoSaveText に出すことで衝突を避ける。
-            if (e.Success)
-            {
-                LastAutoSaveText = $"自動保存: {e.Timestamp:HH:mm:ss}";
-                LastAutoSaveBrush = Brushes.Gray;
-            }
-            else
-            {
-                LastAutoSaveText = $"自動保存失敗 ({e.Timestamp:HH:mm:ss})";
-                LastAutoSaveBrush = Brushes.Red;
+            LastAutoSaveText = DescribeAutoSaveStatus(e);
+            LastAutoSaveToolTip = DescribeAutoSaveToolTip(e);
+            LastAutoSaveBrush = e.Success ? Brushes.Gray : Brushes.Red;
 
-                // 連続失敗が 3 回以上に達したら Toast でエスカレーション通知。
-                // 3 分間隔 × 3 回 = ~9 分間 AutoSave が動作していない計算で、ユーザーに気付かせるべきタイミング。
-                if (e.ConsecutiveFailures >= 3)
-                {
-                    ShowToast(
-                        $"自動保存が {e.ConsecutiveFailures} 回連続で失敗しています。\n{e.ErrorMessage}",
-                        type: 2);  // Warning
-                }
-            }
+            // 連続失敗が 3 回以上に達したら Toast でエスカレーション通知。
+            // 3 分間隔 × 3 回 = ~9 分間 AutoSave が動作していない計算で、ユーザーに気付かせるべきタイミング。
+            if (!e.Success && e.ConsecutiveFailures >= 3)
+                ShowToast(DescribeAutoSaveToolTip(e), type: 2);  // Warning
+        }
+
+        /// <summary>
+        /// ステータスバーの自動保存の表示。失敗は連続の回数と次に試みる時刻を添える
+        /// (以前は時刻だけで、失敗が続いているのか、次にいつ試すのかが分からなかった)。
+        /// </summary>
+        internal static string DescribeAutoSaveStatus(AutoSaveEventArgs e)
+        {
+            if (e.Success) return $"自動保存: {e.Timestamp:HH:mm:ss}";
+            string next = e.NextAttemptAt is { } at ? $"・次は {at:HH:mm} に再試行" : "・自動保存は停止中";
+            return $"自動保存失敗 ({e.Timestamp:HH:mm:ss}・{e.ConsecutiveFailures} 回連続{next})";
+        }
+
+        /// <summary>自動保存の表示の説明 (ツールチップ・トースト)。失敗は理由と次の試行を書く。</summary>
+        internal static string DescribeAutoSaveToolTip(AutoSaveEventArgs e)
+        {
+            if (e.Success) return $"自動保存の最終結果: {e.Timestamp:HH:mm:ss} に保存しました。";
+            string next = e.NextAttemptAt is { } at
+                ? $"次は {at:HH:mm} に自動で再試行します。"
+                : "自動保存は止まっています。";
+            return $"自動保存が {e.ConsecutiveFailures} 回連続で失敗しています。{next}\n"
+                 + $"理由: {e.ErrorMessage}\n作業を失わないよう、上書き保存 (Ctrl+S) をお勧めします。";
         }
 
         /// <summary>

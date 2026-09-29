@@ -5522,7 +5522,7 @@
                 <TextBlock Text="{Binding LastAnalysisTimeText}" Foreground="{StaticResource NikkenDeepBlueBrush}" Margin="0,0,16,0"
                            ToolTip="直近で完了した解析の時刻"/>
                 <TextBlock Text="{Binding LastAutoSaveText}" Foreground="{Binding LastAutoSaveBrush}" Margin="0,0,16,0"
-                           ToolTip="自動保存の最終結果（失敗時は赤）"/>
+                           ToolTip="{Binding LastAutoSaveToolTip}"/>
                 <TextBlock Text="{Binding MouseCoordinateText}" Foreground="#555" Margin="0,0,16,0"/>
                 <TextBlock Text="{Binding ZoomText}" Foreground="Gray" Margin="0,0,0,0"/>
             </StackPanel>

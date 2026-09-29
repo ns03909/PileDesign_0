@@ -262,6 +262,14 @@ namespace PileDesign.ViewModels
             private set => SetProperty(ref _lastAutoSaveText, value);
         }
 
+        private string _lastAutoSaveToolTip = "自動保存の最終結果（失敗時は赤）";
+        /// <summary>自動保存の表示のツールチップ。失敗時は理由と次の試行を出す。</summary>
+        public string LastAutoSaveToolTip
+        {
+            get => _lastAutoSaveToolTip;
+            private set => SetProperty(ref _lastAutoSaveToolTip, value);
+        }
+
         private Brush _lastAutoSaveBrush = Brushes.Gray;
         public Brush LastAutoSaveBrush
         {
