@@ -1,14 +1,33 @@
 using System.Collections.Generic;
+using System.Linq;
+using PileDesign.Models.InputData;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
 namespace PileDesign.ViewModels
 {
-    public record SettlementGridFingerprint(
-        int Nx, int Ny, int Nitems,
-        double MinS, double MaxS,
-        double Z, double Multiplier,
-        double SumX, double SumY, double SumS);
+    /// <summary>各格子点の位置と沈下量を値で保持し、入れ替えも変更として検出する。</summary>
+    public sealed class SettlementGridFingerprint : System.IEquatable<SettlementGridFingerprint>
+    {
+        private readonly (double X, double Y, double Settlement)[] _points;
+        private readonly double _z;
+        private readonly double _multiplier;
+
+        public SettlementGridFingerprint(IEnumerable<SettlementGridDataItem> items, double z, double multiplier)
+        {
+            _points = items.Select(p => (p.X, p.Y, p.Settlement)).ToArray();
+            _z = z;
+            _multiplier = multiplier;
+        }
+
+        public bool Equals(SettlementGridFingerprint? other) =>
+            other != null && _z.Equals(other._z) && _multiplier.Equals(other._multiplier) &&
+            _points.SequenceEqual(other._points);
+
+        public override bool Equals(object? obj) => Equals(obj as SettlementGridFingerprint);
+
+        public override int GetHashCode() => System.HashCode.Combine(_z, _multiplier, _points.Length);
+    }
 
     public class SettlementIsoBand
     {

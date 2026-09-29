@@ -37,6 +37,22 @@ namespace TestProject1
         }
 
         [TestMethod]
+        public void EditingTheExistingCollection_RebuildsTheAxes()
+        {
+            var rec = MakeRecord();
+            Assert.AreEqual(3, rec.GridX.Count);
+            Assert.AreEqual(2, rec.GridY.Count);
+
+            rec.SettlementGridData.Add(new SettlementGridDataItem { X = 4, Y = 3 });
+            CollectionAssert.AreEqual(new List<double> { 0, 1, 2, 4 }, rec.GridX);
+            CollectionAssert.AreEqual(new List<double> { 0, 1, 3 }, rec.GridY);
+
+            rec.SettlementGridData.RemoveAt(rec.SettlementGridData.Count - 1);
+            CollectionAssert.AreEqual(new List<double> { 0, 1, 2 }, rec.GridX);
+            CollectionAssert.AreEqual(new List<double> { 0, 1 }, rec.GridY);
+        }
+
+        [TestMethod]
         public void TheAxesComeFromTheRecordItself()
         {
             var result = new GroupSettlementResult();

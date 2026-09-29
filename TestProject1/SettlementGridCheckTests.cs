@@ -17,7 +17,15 @@ namespace TestProject1
         private static ObservableCollection<GridDataItem> Grid(params double[] coords)
         {
             var items = new ObservableCollection<GridDataItem>();
-            foreach (var c in coords) items.Add(new GridDataItem { Coord = c });
+            foreach (var c in coords)
+            {
+                var item = new GridDataItem();
+                // 座標のセッターは数値でない値を拒む。解析側の守りを確かめるため、そのときはフィールドへ直接入れる
+                if (double.IsFinite(c)) item.Coord = c;
+                else typeof(GridDataItem).GetField("_coord", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                         .SetValue(item, c);
+                items.Add(item);
+            }
             return items;
         }
 
@@ -40,6 +48,22 @@ namespace TestProject1
 
         private static string? Check(double xSpacing, double ySpacing)
             => SettlementAnalysisService.DescribeGridProblem(0, 20, 0, 20, 2, 2, xSpacing, ySpacing, Grid(), Grid());
+
+        [TestMethod]
+        public void NonFiniteRangeOrGridLineIsRejectedBeforeCounting()
+        {
+            string? badRange = SettlementAnalysisService.DescribeGridProblem(
+                double.NaN, 20, 0, 20, 2, 2, 1, 1, Grid(), Grid());
+            StringAssert.Contains(badRange, "X 範囲");
+
+            string? badLine = SettlementAnalysisService.DescribeGridProblem(
+                0, 20, 0, 20, 2, 2, 1, 1, Grid(3, double.PositiveInfinity), Grid());
+            StringAssert.Contains(badLine, "X 通り芯 2 番目");
+            Assert.IsTrue(double.IsNaN(PileGroupSettlement.EstimateCoordCount(
+                0, 20, 2, 1, Grid(3, double.PositiveInfinity))));
+            Assert.ThrowsException<ArgumentException>(() => PileGroupSettlement.GetCoord(
+                0, 20, 2, 1, Grid(3, double.PositiveInfinity)));
+        }
 
         [TestMethod]
         public void ANonPositiveSpacingIsAnInputError()

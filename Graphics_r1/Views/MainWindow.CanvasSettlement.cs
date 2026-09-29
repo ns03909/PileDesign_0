@@ -295,22 +295,23 @@ namespace PileDesign.Views
             if (xs.Count == 0 || ys.Count == 0 || items.Count == 0)
             {
                 // データが空 (荷重ケース不一致や 1回/反復切替で結果なし) → 既存コンタを消す
-                viewModel.SettlementWorldCache = new PileDesign.ViewModels.SettlementGridRenderCache();
-                viewModel.CanvasGeometry.PathGeoSettlementGrid = new PathGeometry();
+                ClearSettlementGridDrawing(viewModel);
+                return;
+            }
+
+            if (!SettlementGridDataValidator.TryBuildGrid(items, xs, ys, out var grid, out var gridError))
+            {
+                ClearSettlementGridDrawing(viewModel);
+                viewModel.StatusMessage = $"沈下コンタを表示できません: {gridError}";
+                Serilog.Log.Warning("[沈下コンタ] {Reason}", gridError);
                 return;
             }
 
             // フィンガープリント作成（データ変更検知）
             double minS = items.Min(it => it.Settlement);
             double maxS = items.Max(it => it.Settlement);
-            double sumX = items.Sum(it => it.X);
-            double sumY = items.Sum(it => it.Y);
-            double sumS = items.Sum(it => it.Settlement);
             var fp = new PileDesign.ViewModels.SettlementGridFingerprint(
-                xs.Count, ys.Count, items.Count,
-                minS, maxS,
-                z, viewModel.DisplacementDiagramRatio * viewModel.ModelExtent,
-                sumX, sumY, sumS);
+                items, z, viewModel.DisplacementDiagramRatio * viewModel.ModelExtent);
 
             bool needRebuild = viewModel.SettlementWorldCache.Fingerprint == null ||
                                !viewModel.SettlementWorldCache.Fingerprint.Equals(fp);
@@ -336,15 +337,6 @@ namespace PileDesign.Views
                     .ToList();
 
                 cache.ColorBands = colorBands;
-
-                // 2次元配列化（ix,iy必須）
-                var grid = new SettlementGridDataItem[xs.Count, ys.Count];
-                foreach (var it in items)
-                {
-                    int ix = xs.IndexOf(it.X);
-                    int iy = ys.IndexOf(it.Y);
-                    if (ix >= 0 && iy >= 0) grid[ix, iy] = it;
-                }
 
                 // 変形グリッド線分（3D）: Y方向
                 for (int ix = 0; ix < xs.Count; ix++)
@@ -675,6 +667,18 @@ namespace PileDesign.Views
             }
         }
 
+        private void ClearSettlementGridDrawing(MainWindowViewModel viewModel)
+        {
+            viewModel.SettlementWorldCache = new SettlementGridRenderCache();
+            viewModel.CanvasGeometry.PathGeoSettlementGrid = new PathGeometry();
+            foreach (var path in _settlementBandPaths.Values)
+                Canvas3DLayout.Children.Remove(path);
+            _settlementBandPaths.Clear();
+            if (_settlementContoursPath != null)
+                _settlementContoursPath.Data = new PathGeometry();
+            ColorBarCanvas.Children.Clear();
+        }
+
         // 時計回り整列メソッド
         private List<Point> SortClockwise(List<Point> points)
         {
@@ -704,9 +708,7 @@ namespace PileDesign.Views
             // 沈下データが存在するか確認
             var pileGroupSettlement = viewModel.ResultInputModel?.PileGroupSettlement;
             if (pileGroupSettlement == null ||
-                pileGroupSettlement.ActiveSettlementGridData.Count == 0 ||
-                pileGroupSettlement.SettlementGridX == null ||
-                pileGroupSettlement.SettlementGridY == null)
+                pileGroupSettlement.ActiveSettlementGridData.Count == 0)
             {
                 HideSettlementTooltip();
                 return;
@@ -758,6 +760,8 @@ namespace PileDesign.Views
             var xs = pileGroupSettlement.ActiveGridX;
             var ys = pileGroupSettlement.ActiveGridY;
             var items = pileGroupSettlement.ActiveSettlementGridData;
+            if (!SettlementGridDataValidator.TryBuildGrid(items, xs, ys, out var grid, out _))
+                return null;
 
             // x, yを含むセルを探す
             int ix = -1, iy = -1;
@@ -780,13 +784,11 @@ namespace PileDesign.Views
 
             if (ix < 0 || iy < 0) return null;
 
-            // 4隅の点を取得
-            var p00 = items.FirstOrDefault(p => Math.Abs(p.X - xs[ix]) < 0.001 && Math.Abs(p.Y - ys[iy]) < 0.001);
-            var p10 = items.FirstOrDefault(p => Math.Abs(p.X - xs[ix + 1]) < 0.001 && Math.Abs(p.Y - ys[iy]) < 0.001);
-            var p01 = items.FirstOrDefault(p => Math.Abs(p.X - xs[ix]) < 0.001 && Math.Abs(p.Y - ys[iy + 1]) < 0.001);
-            var p11 = items.FirstOrDefault(p => Math.Abs(p.X - xs[ix + 1]) < 0.001 && Math.Abs(p.Y - ys[iy + 1]) < 0.001);
-
-            if (p00 == null || p10 == null || p01 == null || p11 == null) return null;
+            // 描画と同じ検証済み格子の4隅を使う。
+            var p00 = grid![ix, iy];
+            var p10 = grid[ix + 1, iy];
+            var p01 = grid[ix, iy + 1];
+            var p11 = grid[ix + 1, iy + 1];
 
             // 双線形補間
             double tx = (x - xs[ix]) / (xs[ix + 1] - xs[ix]);

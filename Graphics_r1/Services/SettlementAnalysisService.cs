@@ -77,6 +77,10 @@ namespace PileDesign.Services
             if (gridProblem != null)
                 return new SettlementAnalysisResult { Success = false, ErrorMessage = gridProblem };
 
+            string? pileNumberProblem = DescribeDuplicatePileNumbers(pileLayoutItems);
+            if (pileNumberProblem != null)
+                return new SettlementAnalysisResult { Success = false, ErrorMessage = pileNumberProblem };
+
             // 土層が0の場合は警告を出して処理を中断
             if (pileGroupSettlement.SettlementSoilLayers == null ||
                 pileGroupSettlement.SettlementSoilLayers.Count == 0)
@@ -102,6 +106,10 @@ namespace PileDesign.Services
                 };
             }
 
+            var duplicateLoadProblem = DescribeDuplicateLinkedLoads(pileGroupSettlement);
+            if (duplicateLoadProblem != null)
+                return new SettlementAnalysisResult { Success = false, ErrorMessage = duplicateLoadProblem };
+
             // 矩形荷重の生成
             var notes = new List<string>();
             ObservableCollection<RectLoad> rectLoads = GenerateRectLoadsInternal(
@@ -109,7 +117,7 @@ namespace PileDesign.Services
                 pileLayoutItems,
                 soilPiles,
                 verticalBeamCaseResults,
-                notes);
+                notes, cloneExisting: true);
 
             // 荷重が 1 つも無ければ沈下はどこも 0 になる。正常な結果として出さず、理由を返す
             if (rectLoads == null || rectLoads.Count == 0)
@@ -144,6 +152,10 @@ namespace PileDesign.Services
                 pileGroupSettlement.SettlementGridY,
                 rectLoads,
                 effectiveLayers);
+
+            // 計算が完了してから、更新した中心座標・荷重を入力とケース記録の元へ反映する。
+            if (pileGroupSettlement.LoadingType is "個別矩形" or "個別矩形（基礎梁考慮）")
+                pileGroupSettlement.RectLoads = rectLoads;
 
             return new SettlementAnalysisResult
             {
@@ -182,21 +194,54 @@ namespace PileDesign.Services
         /// <summary>「個別十字（基礎梁反力）」の荷重タイプ名。</summary>
         private const string BeamReactionLoadingType = "個別十字（基礎梁反力）";
 
+        internal static string? DescribeDuplicatePileNumbers(IEnumerable<PileLayoutDataItem> piles)
+        {
+            var duplicates = piles.Where(p => p != null)
+                .GroupBy(p => p.PileNo)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .OrderBy(no => no)
+                .ToList();
+            return duplicates.Count == 0 ? null
+                : "杭番号が重複しています。杭No." + string.Join(", ", duplicates)
+                  + " を一意にしてから群杭沈下解析を実行してください。";
+        }
+
+        internal static string? DescribeDuplicateLinkedLoads(PileGroupSettlement settlement)
+        {
+            if (settlement.LoadingType is not ("個別矩形" or "個別矩形（基礎梁考慮）")) return null;
+            var duplicates = (settlement.RectLoads ?? [])
+                .Where(r => r != null && r.LinkedPileNo > 0)
+                .GroupBy(r => r.LinkedPileNo)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .OrderBy(no => no)
+                .ToList();
+            return duplicates.Count == 0 ? null
+                : "同じ杭に紐付く矩形荷重が複数あります。杭No." + string.Join(", ", duplicates)
+                  + " の荷重を確認してください。";
+        }
+
         /// <param name="notes">知らせたいこと (荷重を作らなかった杭など) を足す先。要らなければ null</param>
         private static ObservableCollection<RectLoad> GenerateRectLoadsInternal(
             PileGroupSettlement pileGroupSettlement,
             ObservableCollection<PileLayoutDataItem> pileLayoutItems,
             ObservableCollection<SoilPile> soilPiles,
             ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults,
-            List<string>? notes = null)
+            List<string>? notes = null,
+            bool cloneExisting = false)
         {
+            var duplicateProblem = DescribeDuplicateLinkedLoads(pileGroupSettlement);
+            if (duplicateProblem != null) throw new InvalidOperationException(duplicateProblem);
             ObservableCollection<RectLoad> rectLoads = [];
             // 荷重面等価径が未入力 (0 以下) で荷重を作らなかった杭
             var skipped = new List<int>();
 
             if (pileGroupSettlement.LoadingType == "任意矩形")
             {
-                rectLoads = pileGroupSettlement.RectLoads;
+                rectLoads = cloneExisting
+                    ? new ObservableCollection<RectLoad>(pileGroupSettlement.RectLoads.Select(r => r.Clone()))
+                    : pileGroupSettlement.RectLoads;
             }
             else if (pileGroupSettlement.LoadingType == "個別矩形")
             {
@@ -216,6 +261,7 @@ namespace PileDesign.Services
 
                     if (existingByPileNo.TryGetValue(pileLayoutDataItem.PileNo, out var existing))
                     {
+                        if (cloneExisting) existing = existing.Clone();
                         // 既存矩形: 中心を杭位置に追従、QA は更新、DX/DY (寸法) は維持
                         existing.CenterX = pileLayoutDataItem.Point3D.X;
                         existing.CenterY = pileLayoutDataItem.Point3D.Y;
@@ -274,6 +320,7 @@ namespace PileDesign.Services
 
                     if (existingByPileNo.TryGetValue(pileLayoutDataItem.PileNo, out var existing))
                     {
+                        if (cloneExisting) existing = existing.Clone();
                         // QA は触らない (反復実装後は ki·S2 で更新される)
                         existing.CenterX = pileLayoutDataItem.Point3D.X;
                         existing.CenterY = pileLayoutDataItem.Point3D.Y;
@@ -401,7 +448,31 @@ namespace PileDesign.Services
                 problems.Add($"コンタ図の格子の Y 間隔が 0 以下か数値ではありません ({ySpacing})。群杭沈下の「Y間隔(m)」を正の数にしてください。");
             if (!double.IsFinite(xOffset) || !double.IsFinite(yOffset))
                 problems.Add($"コンタ図の格子の余裕が数値ではありません (X {xOffset} / Y {yOffset})。");
+            if (!double.IsFinite(xMin) || !double.IsFinite(xMax) || xMin > xMax)
+                problems.Add($"コンタ図の X 範囲が不正です (最小 {xMin} / 最大 {xMax})。");
+            if (!double.IsFinite(yMin) || !double.IsFinite(yMax) || yMin > yMax)
+                problems.Add($"コンタ図の Y 範囲が不正です (最小 {yMin} / 最大 {yMax})。");
+            if (double.IsFinite(xMin) && double.IsFinite(xMax) && double.IsFinite(xOffset)
+                && (!double.IsFinite(xMin - xOffset) || !double.IsFinite(xMax + xOffset)))
+                problems.Add("コンタ図の X 範囲と余裕の合計が数値の範囲外です。");
+            if (double.IsFinite(yMin) && double.IsFinite(yMax) && double.IsFinite(yOffset)
+                && (!double.IsFinite(yMin - yOffset) || !double.IsFinite(yMax + yOffset)))
+                problems.Add("コンタ図の Y 範囲と余裕の合計が数値の範囲外です。");
+            AddInvalidGridItems(gridXItems, "X");
+            AddInvalidGridItems(gridYItems, "Y");
             if (problems.Count > 0) return string.Join("\n", problems);
+
+            void AddInvalidGridItems(IEnumerable<GridDataItem>? items, string axis)
+            {
+                if (items == null) return;
+                int index = 0;
+                foreach (var item in items)
+                {
+                    index++;
+                    if (item == null || !double.IsFinite(item.Coord))
+                        problems.Add($"コンタ図の {axis} 通り芯 {index} 番目の座標が数値ではありません。");
+                }
+            }
 
             double nx = PileGroupSettlement.EstimateCoordCount(xMin, xMax, xOffset, xSpacing, gridXItems);
             double ny = PileGroupSettlement.EstimateCoordCount(yMin, yMax, yOffset, ySpacing, gridYItems);

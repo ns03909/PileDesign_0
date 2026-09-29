@@ -734,6 +734,13 @@ diameterSelector,
                 // 沈下だけ再実行した場合に計算書のコンタだけ古い軸で描かれてしまう。
                 var gridXs = pgs?.ActiveGridX?.ToList();
                 var gridYs = pgs?.ActiveGridY?.ToList();
+                if (!PileDesign.Services.SettlementGridDataValidator.TryBuildGrid(
+                    settlementData, gridXs ?? [], gridYs ?? [], out _, out var gridError))
+                {
+                    NoteOmitted(body, "群杭沈下の分布図",
+                        new System.IO.InvalidDataException(gridError));
+                    return;
+                }
 
                 // 杭位置リスト
                 var pilePositions = inputModel?.PileLayoutItems?
@@ -755,7 +762,8 @@ diameterSelector,
                 if (pngBytes != null && pngBytes.Length > 0)
                 {
                     WordDrawingBuilder.AddPngBytesToBody(mainDocumentPart, body, pngBytes, widthMm, heightMm);
-                    AddAutoFigureCaption(body, "群杭沈下コンタ図", "図");
+                    AddAutoFigureCaption(body,
+                        "群杭沈下コンタ図" + PileDesign.Services.GroupSettlementCaseLabel.Describe(pgs?.ActiveRecord), "図");
                 }
             }
             catch (Exception ex)
@@ -773,7 +781,9 @@ diameterSelector,
             if (pileLayoutItems == null || pileLayoutItems.Count == 0) return;
 
             AddLineBreak(body);
-            AddAutoFigureCaption(body, "各杭位置の沈下量一覧", "表");
+            AddAutoFigureCaption(body,
+                "各杭位置の沈下量一覧" + PileDesign.Services.GroupSettlementCaseLabel.Describe(
+                    inputModel?.PileGroupSettlement?.ActiveRecord), "表");
 
             double fontSize = 8;
             Table table = CreateTableWithBorders();
@@ -790,25 +800,28 @@ diameterSelector,
             table.Append(headerRow);
 
             // データ行
-            int no = 0;
             foreach (var pli in pileLayoutItems)
             {
-                no++;
-                double singleSettle = pli.SinglePileSettlementVL;
-                double groupSettle = inputModel.PileGroupSettlement.SettlementOf(pli.PileNo);
-                double totalSettle = singleSettle + groupSettle;
+                bool hasSingle = PileDesign.Services.SettlementDeformationAngleEvaluator.HasSinglePileSettlement(inputModel, pli);
+                var groupValues = inputModel.PileGroupSettlement?.ActiveRecord?.PileSettlements_mm;
+                double groupMm = 0;
+                bool hasGroup = groupValues?.TryGetValue(pli.PileNo, out groupMm) == true;
+                var values = PileDesign.Services.PileSettlementTableValues.Build(
+                    hasSingle, pli.SinglePileSettlementVL, hasGroup, groupMm);
+                static string Display(double? value) => value.HasValue ? value.Value.ToString("N3") : "—";
 
                 TableRow dataRow = new();
-                dataRow.Append(CreateTableCell([$"{no}"], fontSize, "center"));
+                dataRow.Append(CreateTableCell([$"{pli.PileNo}"], fontSize, "center"));
                 dataRow.Append(CreateTableCell([$"{pli.Point3D.X:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pli.Point3D.Y:N3}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{singleSettle:N3}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{groupSettle:N3}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{totalSettle:N3}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([Display(values.SingleMm)], fontSize, "right"));
+                dataRow.Append(CreateTableCell([Display(values.GroupMm)], fontSize, "right"));
+                dataRow.Append(CreateTableCell([Display(values.TotalMm)], fontSize, "right"));
                 table.Append(dataRow);
             }
 
             body.Append(table);
+            AddTableNote(body, "※ — は未計算または結果なし。単杭・群杭の両結果がある場合だけ合計を表示する。");
 
             // どの列を設計値として扱うかは基本設定で決まる。表に 3 列並ぶだけでは読み手が判断できない。
             bool includesGroup = inputModel.FundamentalInput?.SettlementDesignIncludesGroup ?? true;

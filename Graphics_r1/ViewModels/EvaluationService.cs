@@ -1159,8 +1159,14 @@ namespace PileDesign.ViewModels
                 heads.Add((pile.PileNo, pile.Point3D.X, pile.Point3D.Y, nr.CumulativeDisp.Uz));
             }
 
-            var max = MaxDeformationAngle(heads);
+            PileHeadDeformationAngle.TryMax(heads, out var max, out var invalidReason);
             string limitName = LimitStateName(limit);
+            if (invalidReason != null)
+            {
+                items.Add(UnavailableItem(EvaluationKind.PileHeadDeformationAngle, $"杭頭変形角 ({limitName})", limitName,
+                    "杭頭 2 点間", 0, null, null, stepResult, lcName, combName, "rad", invalidReason));
+                return items;
+            }
             if (max == null)
             {
                 // 杭が 1 本なら対象外。2 本以上あるのに杭頭の変位が 2 本ぶん取れなければ検定不能

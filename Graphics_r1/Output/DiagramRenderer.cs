@@ -2,6 +2,7 @@
 using PileDesign.Graphics.Abstractions;
 using PileDesign.Graphics.Implementations;
 using PileDesign.Models.InputData;
+using PileDesign.Services;
 using ScottPlot.WPF;
 using System;
 using System.Collections.Generic;
@@ -1339,6 +1340,8 @@ namespace PileDesign.Output
                 // グリッド座標の決定
                 var xs = gridXs ?? data.Select(d => d.X).Distinct().OrderBy(v => v).ToList();
                 var ys = gridYs ?? data.Select(d => d.Y).Distinct().OrderBy(v => v).ToList();
+                if (!SettlementGridDataValidator.TryBuildGrid(data, xs, ys, out var validatedGrid, out var gridError))
+                    throw new InvalidDataException($"群杭沈下コンタの格子データが不正です: {gridError}");
 
                 double minX = xs.Min();
                 double maxX = xs.Max();
@@ -1346,15 +1349,6 @@ namespace PileDesign.Output
                 double maxY = ys.Max();
                 double minS = data.Min(d => d.Settlement);
                 double maxS = data.Max(d => d.Settlement);
-
-                // 2次元配列化
-                var grid = new double?[xs.Count, ys.Count];
-                foreach (var item in data)
-                {
-                    int ix = xs.IndexOf(item.X);
-                    int iy = ys.IndexOf(item.Y);
-                    if (ix >= 0 && iy >= 0) grid[ix, iy] = item.Settlement;
-                }
 
                 // マージン設定（右側にカラーバー用スペース）
                 // キャンバスは scale 倍の画素で作る。ここを 1 倍のまま書くと、
@@ -1425,17 +1419,16 @@ namespace PileDesign.Output
                             int ix = colCell[px];
                             if (ix < 0) continue;
 
-                            double? v00 = grid[ix, iy];
-                            double? v10 = grid[ix + 1, iy];
-                            double? v01 = grid[ix, iy + 1];
-                            double? v11 = grid[ix + 1, iy + 1];
-                            if (v00 == null || v10 == null || v01 == null || v11 == null) continue;
+                            double v00 = validatedGrid![ix, iy].Settlement;
+                            double v10 = validatedGrid[ix + 1, iy].Settlement;
+                            double v01 = validatedGrid[ix, iy + 1].Settlement;
+                            double v11 = validatedGrid[ix + 1, iy + 1].Settlement;
 
                             double tx = colT[px];
-                            double val = (1 - tx) * (1 - ty) * v00.Value
-                                       + tx * (1 - ty) * v10.Value
-                                       + (1 - tx) * ty * v01.Value
-                                       + tx * ty * v11.Value;
+                            double val = (1 - tx) * (1 - ty) * v00
+                                       + tx * (1 - ty) * v10
+                                       + (1 - tx) * ty * v01
+                                       + tx * ty * v11;
 
                             double ratio = maxS > minS ? (val - minS) / (maxS - minS) : 0.5;
                             var color = DrawingHelper.GetRainbowColor(ratio);

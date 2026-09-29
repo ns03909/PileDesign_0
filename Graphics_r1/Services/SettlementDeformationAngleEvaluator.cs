@@ -102,7 +102,12 @@ namespace PileDesign.Services
                     items.Add(Unavailable(caseName, beyondReason));
                     return;
                 }
-                var max = PileHeadDeformationAngle.Max(heads);
+                PileHeadDeformationAngle.TryMax(heads, out var max, out var invalidReason);
+                if (invalidReason != null)
+                {
+                    items.Add(Unavailable(caseName, invalidReason));
+                    return;
+                }
                 if (max == null)
                 {
                     items.Add(Unavailable(caseName, $"沈下量が 2 本以上の杭で得られません ({missing})"));

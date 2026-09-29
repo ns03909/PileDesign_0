@@ -354,10 +354,14 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public static double EstimateCoordCount(double min, double max, double offset, double spacing, IEnumerable<GridDataItem>? gridItems)
         {
-            if (!(double.IsFinite(spacing) && spacing > 0)) return double.NaN;
+            if (!(double.IsFinite(spacing) && spacing > 0) ||
+                !double.IsFinite(min) || !double.IsFinite(max) || !double.IsFinite(offset) ||
+                !double.IsFinite(min - offset) || !double.IsFinite(max + offset) ||
+                (gridItems != null && gridItems.Any(g => g == null || !double.IsFinite(g.Coord))))
+                return double.NaN;
             var xs = new List<double> { min - offset, max + offset };
             if (gridItems != null) xs.AddRange(gridItems.Where(g => g != null).Select(g => g.Coord));
-            xs = [.. xs.Where(double.IsFinite).Distinct().OrderBy(x => x)];
+            xs = [.. xs.Distinct().OrderBy(x => x)];
             if (xs.Count <= 1) return 1;
             double count = 1;
             for (int i = 0; i < xs.Count - 1; i++)
@@ -370,6 +374,11 @@ namespace PileDesign.Models.InputData
 
         public static ObservableCollection<double> GetCoord(double min, double max, double offset, double spacing, ObservableCollection<GridDataItem> gridItems)
         {
+            if (!double.IsFinite(min) || !double.IsFinite(max) || !double.IsFinite(offset) ||
+                !double.IsFinite(min - offset) || !double.IsFinite(max + offset) ||
+                !double.IsFinite(spacing) || gridItems == null ||
+                gridItems.Any(g => g == null || !double.IsFinite(g.Coord)))
+                throw new ArgumentException("格子の範囲・間隔・通り芯座標は有限の数値で指定してください。");
             // spacingが0以下、またはminとmaxが等しい場合は1点のみ返す
             if (spacing <= 0 /*|| Math.Abs(max - min) < 1e-8*/)
             {

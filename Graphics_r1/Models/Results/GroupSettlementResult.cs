@@ -137,31 +137,27 @@ namespace PileDesign.Models.Results
             set
             {
                 _settlementGridData = value ?? [];
-                _gridX = null;
-                _gridY = null;
             }
         }
         private ObservableCollection<SettlementGridDataItem> _settlementGridData = [];
 
         /// <summary>
-        /// コンタ格子の X 座標 (昇順・重複なし)。<b>この記録の沈下値から作る。</b>
+        /// コンタ格子の X 座標 (昇順・重複なし)。<b>この記録の沈下値から毎回作る。</b>
         ///
         /// 以前は入力モデルの <c>PileGroupSettlement.SettlementGridX</c> を読んでいた。
         /// あれは解析が<b>現在の入力</b>に書くもので、解析時のスナップショットには移らない。
         /// そのため沈下だけ再実行したときに軸が古いまま (または空のまま) になり、
         /// コンタが描かれない・点が落ちる、という食い違いが出ていた。
-        /// 軸は沈下値そのものから決まるので、持たずに引き出す。
+        /// 軸は沈下値そのものから決まる。コレクション内の追加・削除でも古くならないよう毎回引き出す。
         /// </summary>
         [JsonIgnore]
         public List<double> GridX =>
-            _gridX ??= [.. SettlementGridData.Select(d => d.X).Distinct().OrderBy(v => v)];
-        private List<double>? _gridX;
+            [.. SettlementGridData.Select(d => d.X).Distinct().OrderBy(v => v)];
 
         /// <summary>コンタ格子の Y 座標 (昇順・重複なし)。<see cref="GridX"/> と同じ理由でここから引く。</summary>
         [JsonIgnore]
         public List<double> GridY =>
-            _gridY ??= [.. SettlementGridData.Select(d => d.Y).Distinct().OrderBy(v => v)];
-        private List<double>? _gridY;
+            [.. SettlementGridData.Select(d => d.Y).Distinct().OrderBy(v => v)];
 
         /// <summary>各杭の沈下量 [mm]。Key = PileLayoutDataItem.PileNo</summary>
         public Dictionary<int, double> PileSettlements_mm { get; set; } = [];

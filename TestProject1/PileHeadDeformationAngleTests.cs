@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using PileDesign.ViewModels;
+using PileDesign.Services;
 
 namespace TestProject1
 {
@@ -16,6 +17,20 @@ namespace TestProject1
     {
         /// <summary>(杭No, X[m], Y[m], 鉛直変位[m])。</summary>
         private static (int, double, double, double) P(int no, double x, double y, double uz) => (no, x, y, uz);
+
+        [TestMethod]
+        public void NonFiniteHeadMakesTheWholeEvaluationUnavailable()
+        {
+            var heads = new List<(int PileNo, double X, double Y, double Uz)>
+            {
+                P(1, 0, 0, 0), P(2, 5, 0, 0.001), P(3, 10, 0, double.NaN),
+            };
+
+            Assert.IsFalse(PileHeadDeformationAngle.TryMax(heads, out var max, out var reason));
+            Assert.IsNull(max);
+            StringAssert.Contains(reason, "杭No.3");
+            Assert.IsNull(PileHeadDeformationAngle.Max(heads));
+        }
 
         [TestMethod]
         public void PicksTheLargestAngleAmongAllPairs()

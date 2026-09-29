@@ -30,6 +30,63 @@ namespace TestProject1
         private static VerticalBeamCaseResult Case(string name, double reaction)
             => new() { LoadCaseName = name, PileResults = [new VerticalBeamPileResult { PileNo = 1, Reaction_kN = reaction }, new VerticalBeamPileResult { PileNo = 2, Reaction_kN = reaction }] };
 
+        [TestMethod]
+        public void DuplicatePileNumbersDoNotOverwriteSettlementResults()
+        {
+            var piles = new ObservableCollection<PileLayoutDataItem> { Pile(1, 0), Pile(1, 3) };
+            var pgs = new PileGroupSettlement
+            {
+                LoadingType = "任意矩形",
+                RectLoads = [new RectLoad { X1 = -1, X2 = 1, Y1 = -1, Y2 = 1, QA = 100 }],
+            };
+
+            var result = Run(pgs, piles, 1.0);
+            Assert.IsFalse(result.Success);
+            StringAssert.Contains(result.ErrorMessage, "杭No.1");
+            Assert.AreEqual(0, result.PileSettlements_mm.Count);
+        }
+
+        [TestMethod]
+        public void DuplicateLinkedLoadsReturnAnInputError()
+        {
+            var pgs = new PileGroupSettlement
+            {
+                LoadingType = "個別矩形",
+                RectLoads =
+                [
+                    new RectLoad { LinkedPileNo = 1, X1 = 0, X2 = 1, Y1 = 0, Y2 = 1 },
+                    new RectLoad { LinkedPileNo = 1, X1 = 1, X2 = 2, Y1 = 0, Y2 = 1 },
+                ],
+            };
+
+            var result = Run(pgs, [Pile(1, 0)], 1.0);
+            Assert.IsFalse(result.Success);
+            StringAssert.Contains(result.ErrorMessage, "杭No.1");
+        }
+
+        [TestMethod]
+        public void AnalysisCommitsRectangularLoadOnlyAfterSuccess()
+        {
+            var original = new RectLoad
+            {
+                LinkedPileNo = 1, X1 = -1, X2 = 1, Y1 = -1, Y2 = 1, QA = 50,
+            };
+            var pgs = new PileGroupSettlement
+            {
+                LoadingType = "個別矩形",
+                RectLoads = [original],
+            };
+
+            var result = Run(pgs, [Pile(1, 5)], 1.0);
+            Assert.IsTrue(result.Success, result.ErrorMessage);
+            Assert.AreEqual(0.0, original.CenterX, 1e-12);
+            Assert.AreEqual(50.0, original.QA, 1e-12);
+            Assert.AreEqual(1, pgs.RectLoads.Count);
+            Assert.AreNotSame(original, pgs.RectLoads[0]);
+            Assert.AreEqual(5.0, pgs.RectLoads[0].CenterX, 1e-12);
+            Assert.AreEqual(1000.0, pgs.RectLoads[0].QA, 1e-12);
+        }
+
         /// <summary>
         /// 「個別十字（基礎梁反力）」で常時 (VL) ケースの結果が無ければ、別のケースの反力を使わずに止めること。
         /// 以前は先頭のケース (地震時など) の反力で沈下を求めていた。

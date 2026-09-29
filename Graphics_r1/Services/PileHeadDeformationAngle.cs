@@ -45,7 +45,27 @@ namespace PileDesign.Services
         public static (double Angle, int PileNoA, int PileNoB)? Max(
             IReadOnlyList<(int PileNo, double X, double Y, double Uz)> heads)
         {
-            if (heads.Count < 2) return null;
+            TryMax(heads, out var result, out _);
+            return result;
+        }
+
+        /// <summary>異常値を検出した場合は理由を返し、検定値を返さない。</summary>
+        public static bool TryMax(
+            IReadOnlyList<(int PileNo, double X, double Y, double Uz)> heads,
+            out (double Angle, int PileNoA, int PileNoB)? result,
+            out string? invalidReason)
+        {
+            result = null;
+            invalidReason = null;
+            foreach (var head in heads)
+            {
+                if (!double.IsFinite(head.X) || !double.IsFinite(head.Y) || !double.IsFinite(head.Uz))
+                {
+                    invalidReason = $"杭No.{head.PileNo} の座標または杭頭鉛直変位が有限値ではありません";
+                    return false;
+                }
+            }
+            if (heads.Count < 2) return false;
 
             double maxAngle = -1.0;
             int a = 0, b = 0;
@@ -57,9 +77,19 @@ namespace PileDesign.Services
                     double dx = heads[i].X - heads[j].X;
                     double dy = heads[i].Y - heads[j].Y;
                     double span = Math.Sqrt(dx * dx + dy * dy);
+                    if (!double.IsFinite(span))
+                    {
+                        invalidReason = $"杭No.{heads[i].PileNo} と杭No.{heads[j].PileNo} の水平距離が有限値ではありません";
+                        return false;
+                    }
                     if (span < 1e-9) continue;   // 同じ位置の杭 (重なり) は角が定義できない
 
                     double angle = Math.Abs(heads[i].Uz - heads[j].Uz) / span;
+                    if (!double.IsFinite(angle))
+                    {
+                        invalidReason = $"杭No.{heads[i].PileNo} と杭No.{heads[j].PileNo} の変形角が有限値ではありません";
+                        return false;
+                    }
                     if (angle > maxAngle)
                     {
                         maxAngle = angle;
@@ -69,7 +99,8 @@ namespace PileDesign.Services
                 }
             }
 
-            return maxAngle < 0 ? null : (maxAngle, a, b);
+            result = maxAngle < 0 ? null : (maxAngle, a, b);
+            return result != null;
         }
     }
 }
