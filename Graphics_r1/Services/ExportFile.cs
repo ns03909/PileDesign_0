@@ -44,21 +44,46 @@ namespace PileDesign.Services
         /// (<paramref name="what"/> は「グラフの CSV」など、何を書き出していたか)。
         /// </summary>
         public static string? TryWriteText(string path, string text, ExportFormat format, string what)
+            => TryWriteText(path, text, format, what, ChooseAnotherPath);
+
+        /// <summary>
+        /// <paramref name="chooseAnotherPath"/> は、失敗したあとに別の保存先を選ばせる (null を返せばやめる)。
+        /// 書き出す中身は手元に持ったままなので、保存先を変えて何度でも書き直せる。
+        /// </summary>
+        internal static string? TryWriteText(string path, string text, ExportFormat format, string what, Func<string, ExportFormat, string?> chooseAnotherPath)
         {
-            string target = EnsureExtension(path, format);
-            try
+            string? target = EnsureExtension(path, format);
+            while (target != null)
             {
-                WriteText(target, text, format);
-                Serilog.Log.Information("[書き出し] {What} を書き出しました ({Format})", what, format.Label);
-                return target;
+                try
+                {
+                    WriteText(target, text, format);
+                    Serilog.Log.Information("[書き出し] {What} を書き出しました ({Format})", what, format.Label);
+                    return target;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+                {
+                    Serilog.Log.Warning(ex, "[書き出し] {What} を書き出せませんでした", what);
+                    var answer = MessageService.Show(DescribeFailure(ex, what) + "\n\n別の場所 (または名前) を選んで、いま書き出し直しますか？",
+                        $"{what}の書き出し", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+                    if (answer != System.Windows.MessageBoxResult.Yes) return null;
+                    target = chooseAnotherPath(target, format) is { } next ? EnsureExtension(next, format) : null;
+                }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+            return null;
+        }
+
+        /// <summary>保存先を選び直させる (前の場所・名前を初期値にする)。やめたら null。</summary>
+        private static string? ChooseAnotherPath(string previous, ExportFormat format)
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
             {
-                Serilog.Log.Warning(ex, "[書き出し] {What} を書き出せませんでした", what);
-                MessageService.Show(DescribeFailure(ex, what), $"{what}の書き出し",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return null;
-            }
+                FileName = Path.GetFileName(previous),
+                InitialDirectory = Path.GetDirectoryName(previous),
+                DefaultExt = format.Extension,
+                Filter = $"{format.Label} (*{format.Extension})|*{format.Extension}|すべてのファイル (*.*)|*.*",
+            };
+            return dialog.ShowDialog() == true ? dialog.FileName : null;
         }
 
         /// <summary>文字列を書き出す (失敗は例外のまま)。一時ファイルに書き切ってから差し替える。</summary>

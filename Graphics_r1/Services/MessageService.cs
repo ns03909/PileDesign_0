@@ -30,9 +30,16 @@ namespace PileDesign.Services
         public static bool IsUnattended { get; set; }
 
         /// <summary>無人実行モードでの答え。ボタンの並びごとに「進めない側」を返す。</summary>
+        /// <summary>
+        /// 無人実行での答えを差し替える (試験で「はい」の経路を通すため)。null を返せば既定の答え。
+        /// 使ったら必ず null に戻すこと (プロセス全体で共有される)。
+        /// </summary>
+        internal static Func<string, MessageBoxButton, MessageBoxResult?>? UnattendedAnswer { get; set; }
+
         private static MessageBoxResult UnattendedResult(string text, string caption, MessageBoxButton button)
         {
             Serilog.Log.Information("[無人実行] ダイアログを表示せずに進めます: [{Caption}] {Text}", caption, text);
+            if (UnattendedAnswer?.Invoke(text, button) is { } answer) return answer;
             return button switch
             {
                 MessageBoxButton.OKCancel => MessageBoxResult.Cancel,
