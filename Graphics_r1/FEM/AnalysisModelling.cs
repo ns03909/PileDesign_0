@@ -324,18 +324,14 @@ namespace PileDesign.FEM
             var material = _materialCache.GetOrAdd((youngsModulus, pilePoissonRatio),
                 k => new Material(k.E, k.Nu));
 
-            // Section キャッシュ（丸め誤差を考慮して5桁で丸める）
+            // Section キャッシュ。鍵は値そのもの (丸めない)。
+            // 以前は m²・m⁴ のまま小数 5 桁 (1e-5) に丸めていた。細い杭の I は 3〜10×10⁻⁴ m⁴ なので
+            // 1〜3% 違う断面が同じ鍵になりうる (PHC-300 の B 種と C 種は I の鍵が同じ 3.6×10⁻⁴ になる)。
+            // 鍵が同じだと、あとの杭が<b>先に作った断面の剛性</b>で黙って解かれる。同じ断面なら値はビット単位で
+            // 同じなので、丸めなくても使い回しは効く。
             // 杭はせん断断面積に断面積をそのまま使う (基礎梁は (5/6)bh)。両者が同じキャッシュを
             // 共有するので、せん断断面積も鍵に入れる。
-            var sectionKey = (
-                Math.Round(area, 5),
-                Math.Round(torsionalInertia, 5),
-                Math.Round(inertia, 5),
-                Math.Round(inertia, 5),
-                Math.Round(youngsModulus, 0),
-                Math.Round(area, 5),
-                Math.Round(area, 5)
-            );
+            var sectionKey = (area, torsionalInertia, inertia, inertia, youngsModulus, area, area);
             var section = _sectionCache.GetOrAdd(sectionKey, _ => new Section(material, area, area, area, torsionalInertia, inertia, inertia));
 
             var beam = new Beam("beam", section, upperNode, lowerNode, 1.0, 1.0)
@@ -1121,16 +1117,8 @@ namespace PileDesign.FEM
             var material = _materialCache.GetOrAdd((youngsModulus, poissonRatio),
                 k => new Material(k.E, k.Nu));
 
-            // Section キャッシュ
-            var sectionKey = (
-                Math.Round(area, 5),
-                Math.Round(torsionalMoment, 5),
-                Math.Round(iy, 5),
-                Math.Round(iz, 5),
-                Math.Round(youngsModulus, 0),
-                Math.Round(shearAreaY, 5),
-                Math.Round(shearAreaZ, 5)
-            );
+            // Section キャッシュ。鍵は値そのもの (丸めない。理由は杭の要素の Section キャッシュと同じ)
+            var sectionKey = (area, torsionalMoment, iy, iz, youngsModulus, shearAreaY, shearAreaZ);
             var section = _sectionCache.GetOrAdd(sectionKey, _ => new Section(material, area, shearAreaY, shearAreaZ, torsionalMoment, iy, iz));
 
             return section;
