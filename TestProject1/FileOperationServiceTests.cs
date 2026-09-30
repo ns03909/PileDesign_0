@@ -124,6 +124,41 @@ namespace TestProject1
             Assert.IsTrue(loaded.DescribeSettings().Contains("反復上限 100", StringComparison.Ordinal));
         }
 
+        /// <summary>
+        /// <b>本題。</b> 新しい版のファイルは、モデルを復元する前に版で止める。新しい版は形が変わっていることがあり、
+        /// 先に復元すると「ファイルが破損している」と出て、プログラムを更新すれば開けることが伝わらなかった。
+        /// </summary>
+        [TestMethod]
+        public void LoadProjectData_ChecksTheFormatVersionBeforeRestoringTheModel()
+        {
+            var svc = new FileOperationService(MakeOptions());
+            var file = Path.Combine(_tempDir, "future.json");
+            // 今の版では復元できない形 (入力が一覧になっている)
+            File.WriteAllText(file, """{"FormatVersion":3,"InputModel":[1,2,3],"AnaModel":"新しい形"}""");
+
+            var ex = Assert.ThrowsException<InvalidOperationException>(() => svc.LoadProjectData(file));
+            StringAssert.Contains(ex.Message, "新しいバージョン（v3）");
+            StringAssert.Contains(ex.Message, "プログラムを更新してください");
+            Assert.IsFalse(ex.Message.Contains("破損", StringComparison.Ordinal), ex.Message);
+
+            // 今の版の形で壊れているファイルは、従来どおり「破損」と言う
+            File.WriteAllText(file, """{"FormatVersion":2,"InputModel":[1,2,3]}""");
+            var broken = Assert.ThrowsException<InvalidOperationException>(() => svc.LoadProjectData(file));
+            StringAssert.Contains(broken.Message, "JSON形式が不正");
+        }
+
+        [TestMethod]
+        public void PeekFormatVersion_ReadsOnlyTheTopLevel()
+        {
+            Assert.AreEqual(3, FileOperationService.PeekFormatVersion("""{"InputModel":{"FormatVersion":9},"FormatVersion":3}"""),
+                "入れ子の同名の項目を版と読んでいます");
+            Assert.AreEqual(2, FileOperationService.PeekFormatVersion("""{"FormatVersion":2,"InputModel":{}}"""));
+            Assert.IsNull(FileOperationService.PeekFormatVersion("""{"InputModel":{}}"""), "版の欄が無い旧ファイル");
+            Assert.IsNull(FileOperationService.PeekFormatVersion("""{"FormatVersion":"3"}"""));
+            Assert.IsNull(FileOperationService.PeekFormatVersion("壊れた"));
+            Assert.IsNull(FileOperationService.PeekFormatVersion("""{"FormatVersion":"""));
+        }
+
         [TestMethod]
         public void SaveAndLoad_NumericCoordinatesAreCultureIndependent()
         {

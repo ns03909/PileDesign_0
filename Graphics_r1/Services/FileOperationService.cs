@@ -619,6 +619,10 @@ namespace PileDesign.Services
                 throw new IOException($"ファイルの読込に失敗しました。\n別のプロセスで使用中の可能性があります。\n{filePath}", ex);
             }
 
+            // 版は復元より先に見る。新しい版のファイルは形が変わっていることがあり、先に復元すると
+            // 「ファイルが破損している」と出て、プログラムを更新すれば開けることが伝わらなかった。
+            ThrowIfNewerFormat(PeekFormatVersion(json));
+
             ProjectData? projectData;
             try
             {
@@ -637,19 +641,50 @@ namespace PileDesign.Services
             try { projectData.InputPropertyNamesInFile = LoadCompatibilityReport.CollectPropertyNames(json, "InputModel"); }
             catch (System.Text.Json.JsonException ex) { Serilog.Log.Debug(ex, "[読込] 項目名を集められませんでした"); }
 
+            // 先読みで版を読めなかったとき (版の欄が数でないなど) のために、復元したあとにも見る
+            ThrowIfNewerFormat(projectData.FormatVersion);
+
+            return projectData;
+        }
+
+        /// <summary>新しい版の形式なら、プログラムの更新を促して止める。</summary>
+        private static void ThrowIfNewerFormat(int? formatVersion)
+        {
             // バージョン0はFormatVersionプロパティ追加前の旧ファイル → 互換あり
             // v1: 初期形式
             // v2: PileLayoutItems[*].Z のセマンティクスを「杭頭節点」→「接合節点」に変更 (2026-05 改修)
             //     v1 ファイルはロード時に MigratePileZSemantics_v1_to_v2 で内部的に v2 化される
-            const int currentVersion = 2;
-            if (projectData.FormatVersion > currentVersion)
+            const int currentVersion = LoadCompatibilityReport.CurrentFormatVersion;
+            if (formatVersion > currentVersion)
             {
                 throw new InvalidOperationException(
-                    $"このファイルは新しいバージョン（v{projectData.FormatVersion}）で保存されています。\n" +
+                    $"このファイルは新しいバージョン（v{formatVersion}）で保存されています。\n" +
                     $"現在のプログラム（v{currentVersion}）では読み込めません。プログラムを更新してください。");
             }
+        }
 
-            return projectData;
+        /// <summary>
+        /// 保存ファイルの先頭の階層から形式の版 (FormatVersion) だけを読む。モデルは復元しない (ほかの項目は読み飛ばす)。
+        /// 読めなければ (JSON でない・版の欄が無い・数でない) null。そのときは続く復元がそれぞれの理由で知らせる。
+        /// </summary>
+        internal static int? PeekFormatVersion(string json)
+        {
+            try
+            {
+                var reader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(json),
+                    new JsonReaderOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
+                if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject) return null;
+                while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    bool isVersion = reader.ValueTextEquals("FormatVersion");
+                    if (!reader.Read()) return null;
+                    if (isVersion)
+                        return reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int v) ? v : null;
+                    reader.Skip();
+                }
+            }
+            catch (JsonException) { }
+            return null;
         }
 
         /// <summary>
