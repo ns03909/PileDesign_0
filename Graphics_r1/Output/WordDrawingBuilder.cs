@@ -14,6 +14,7 @@ namespace PileDesign.Output
             if (mainPart == null) throw new ArgumentNullException(nameof(mainPart));
             if (body == null) throw new ArgumentNullException(nameof(body));
             if (imageBytes == null || imageBytes.Length == 0) return;
+            WordDocument.Checkpoint();
 
             // Add image part and feed data
             var imagePart = mainPart.AddImagePart(DocumentFormat.OpenXml.Packaging.ImagePartType.Png);

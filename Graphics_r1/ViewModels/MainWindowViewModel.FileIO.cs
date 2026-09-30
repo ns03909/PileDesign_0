@@ -1072,9 +1072,6 @@ namespace PileDesign.ViewModels
             if (saveFileDialog.ShowDialog() == true)
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                // 砂時計カーソル + ステータス更新で「ビジー中」を可視化
-                var prevCursor = System.Windows.Input.Mouse.OverrideCursor;
-                System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
                 try
                 {
                     StatusMessage = "計算書作成中... (大規模モデルでは数十秒〜数分かかる場合があります)";
@@ -1084,7 +1081,14 @@ namespace PileDesign.ViewModels
                     // 入力もそちらに合わせないと「変位は解析時・断面は編集後」の計算書になる。
                     var inputForReport = ResultInputModel;
                     var doc = new Output.WordDocument(inputForReport, CurrentModel, this);
-                    doc.CreateWordDocument(inputForReport, saveFileDialog.FileName);
+                    // 進み具合と「中止」の窓を出して作る。止めたときは作りかけを残さない (前に出力した計算書はそのまま)
+                    if (!RunCancellableReport(run => doc.CreateWordDocument(inputForReport, saveFileDialog.FileName, run)))
+                    {
+                        sw.Stop();
+                        Serilog.Log.Information("[Docx] 中止 ({Elapsed:N1}秒経過時点)", sw.Elapsed.TotalSeconds);
+                        ShowToast("計算書の作成を中止しました。ファイルは作成・変更していません。");
+                        return;
+                    }
 
                     sw.Stop();
                     Serilog.Log.Information("[Docx] 完了: {Elapsed:N1} 秒, ファイル: {File}",
@@ -1122,7 +1126,6 @@ namespace PileDesign.ViewModels
                 }
                 finally
                 {
-                    System.Windows.Input.Mouse.OverrideCursor = prevCursor;
                     StatusMessage = "準備完了";
                 }
             }

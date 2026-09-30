@@ -202,7 +202,11 @@ namespace PileDesign.Output
         private const bool RunTexParserSelfTest = false;
 
         // Word文書作成メソッド
-        public void CreateWordDocument(InputModel inputModel, string fileName)
+        /// <param name="run">
+        /// 途中で止める・進み具合を知らせるための受け口 (<see cref="ReportRunControl"/>)。止められたときは
+        /// <see cref="OperationCanceledException"/> を投げ、作りかけの計算書は残さない (同じ名前の前の計算書はそのまま)。
+        /// </param>
+        public void CreateWordDocument(InputModel inputModel, string fileName, ReportRunControl? run = null)
         {
 
             ArgumentNullException.ThrowIfNull(inputModel);
@@ -231,17 +235,27 @@ namespace PileDesign.Output
             void StartSection() => sw.Restart();
             void EndSection(string label) { sw.Stop(); Log.Information("[Docx]   {Section}: {Elapsed:N2}s", label, sw.Elapsed.TotalSeconds); }
 
+            BeginRun(run);
             try
             {
                 // 一時ファイルに書き切ってから差し替える。計算書は組み立てに時間がかかり、途中で失敗すると
-                // 以前は前に出力した計算書が壊れた (作りかけの docx で上書きされる)
+                // 以前は前に出力した計算書が壊れた (作りかけの docx で上書きされる)。止められたときも同じく差し替えない
                 PileDesign.Services.FileOperationService.ReplaceAtomically(fileName, tempPath =>
                     BuildWordDocument(inputModel, tempPath, StartSection, EndSection));
+            }
+            catch (OperationCanceledException) when (run?.Token.IsCancellationRequested == true)
+            {
+                Log.Information("[Docx] 作成を中止しました (出力先は変更していません)");
+                throw;
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "Word 出力中にエラー");
                 throw;
+            }
+            finally
+            {
+                EndRun();
             }
 
             lock (_omittedLock) OmittedItems = [.. _omitted];
@@ -332,6 +346,8 @@ namespace PileDesign.Output
         /// </summary>
         internal static void NoteOmitted(Body? body, string what, Exception ex)
         {
+            // 止められたときは省いて続けず、そのまま抜ける (呼び出し元は図表 1 つの失敗として受け止めている)
+            if (IsCancellation(ex)) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
             Log.Warning(ex, "[計算書] {What} を作成できず、省いて続けました", what);
             string? reason = DescribeOmissionReason(ex);
             lock (_omittedLock) _omitted.Add(reason == null ? what : $"{what} ({reason})");
@@ -356,6 +372,7 @@ namespace PileDesign.Output
                 using var wordDocument = WordprocessingDocument.Create(tempPath, WordprocessingDocumentType.Document);
                 MainDocumentPart mainPart = wordDocument.AddMainDocumentPart();
 
+                Checkpoint("解析結果の整理", 0);
                 StartSection();
                 BuildResultLookupCaches();
                 EndSection("BuildResultLookupCaches");
@@ -368,6 +385,7 @@ namespace PileDesign.Output
                 Body body = new();
 
                 // モデル図をキャプチャ（UIスレッド上で実行）
+                Checkpoint("表紙のモデル図", 1);
                 StartSection();
                 // 画面は編集中の入力を描く。計算書の入力 (解析時の控え) と中身が違えば写さない (表紙だけ別の時点になる)
                 byte[]? modelImageBytes = null;
@@ -384,10 +402,12 @@ namespace PileDesign.Output
                 AddFrontMatter(mainPart, body, inputModel, modelImageBytes);
                 EndSection("AddFrontMatter");
 
+                Checkpoint("入力データの章", 2);
                 StartSection();
                 AddInputDataSection(mainPart, body, inputModel);
                 EndSection("AddInputDataSection");
 
+                Checkpoint("荷重と解析結果の章", 3);
                 StartSection();
                 AddLoadCombinationAndFigureSection(mainPart, body, inputModel);
                 EndSection("AddLoadCombinationAndFigureSection");
@@ -404,6 +424,7 @@ namespace PileDesign.Output
                 }
 
                 // まとめて追加
+                Checkpoint("ファイルへの書き出し", 4);
                 StartSection();
                 doc.Append(body);
                 mainPart.Document = doc;
@@ -1429,6 +1450,7 @@ namespace PileDesign.Output
 
         public void AddAutoFigureCaption(Body body, string captionText, string label = "図", double fontSize = 10.5)
         {
+            Checkpoint();
             // コード側で番号をインクリメント（SEQ の F9 更新に依存しない）
             int number;
             if (label == "図") number = ++_figureCounter;

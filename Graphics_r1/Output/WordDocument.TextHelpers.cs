@@ -59,6 +59,7 @@ namespace PileDesign.Output
         // 章タイトルを追加するメソッド（$...$ 内を TeX 数式として処理できるように拡張）
         public static void AddHeader1(Body body, string header1Title, int outlineLevel = 0, double fontSize = 12)
         {
+            Checkpoint();
             if (body == null) return;
 
             int headingLevel = Math.Clamp(outlineLevel <= 0 ? 1 : outlineLevel, 1, 9);
@@ -89,6 +90,7 @@ namespace PileDesign.Output
         // 見出し2（$...$ を TeX として処理・<^x>/< _x> の簡易上付下付も維持）
         public static void AddHeader2(Body body, string header2Title, int outlineLevel = 1, double fontSize = 12)
         {
+            Checkpoint();
             if (body == null) return;
 
             int outline = Math.Max(0, outlineLevel);
@@ -116,6 +118,7 @@ namespace PileDesign.Output
         // 見出し3（$...$ を TeX として処理・<^x>/< _x> の簡易上付下付も維持）
         public static void AddHeader3(Body body, string header3Title, int outlineLevel = 1, double fontSize = 12)
         {
+            Checkpoint();
             if (body == null) return;
 
             int outline = Math.Max(0, outlineLevel);

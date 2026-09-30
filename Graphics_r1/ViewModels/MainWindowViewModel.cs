@@ -66,6 +66,7 @@ namespace PileDesign.ViewModels
     /// <item><term>.BeamMaterialsAndSections.cs</term><description>基礎梁の材料と断面</description></item>
     /// <item><term>.ModelEditing.cs</term><description>杭・梁・節点の追加と削除</description></item>
     /// <item><term>.FileIO.cs</term><description>新規・開く・保存・書き出し</description></item>
+    /// <item><term>.ReportProgress.cs</term><description>計算書の作成の進み具合と中止</description></item>
     /// <item><term>.Examples.cs</term><description>計算例の読み込み</description></item>
     /// <item><term>.ResultsWindows.cs</term><description>結果を見るウィンドウ</description></item>
     /// <item><term>.ToolWindowsAndMoveCopy.cs</term><description>道具のウィンドウと移動・複写</description></item>
