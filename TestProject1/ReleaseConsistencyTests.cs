@@ -64,4 +64,28 @@ public class ReleaseConsistencyTests
         Assert.IsTrue(raw.Length > 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF,
             "release-check.ps1 が BOM 付き UTF-8 ではありません (Windows PowerShell 5.1 で日本語が化けます)");
     }
+
+    /// <summary>
+    /// 単一ファイル発行の設定は管理下にあり、発行先はプロジェクトからの相対。
+    /// 以前は「*.pubxml」を管理の外にしていて、しかも発行先がこの PC の絶対パスだった。ほかの PC・ほかの置き場所では
+    /// 発行の設定が無い (単一ファイルでない発行になる) か、発行先がありもしない場所になり、リリースの確認が通らなかった。
+    /// </summary>
+    [TestMethod]
+    public void ThePublishProfile_IsTrackedAndRelative()
+    {
+        string path = Path.Combine(TestSource.Dir(), "Graphics_r1", "Properties", "PublishProfiles", "FolderProfile.pubxml");
+        Assert.IsTrue(File.Exists(path), "(前提) 発行の設定がありません");
+        var doc = System.Xml.Linq.XDocument.Load(path);
+        string? dir = doc.Descendants("PublishDir").Select(e => e.Value).SingleOrDefault();
+        Assert.IsFalse(string.IsNullOrWhiteSpace(dir), "発行先がありません");
+        Assert.IsFalse(Path.IsPathRooted(dir), $"発行先が絶対パスです: {dir}");
+        Assert.AreEqual("true", doc.Descendants("PublishSingleFile").Single().Value);
+        Assert.AreEqual("true", doc.Descendants("SelfContained").Single().Value);
+
+        string gitignore = File.ReadAllText(Path.Combine(TestSource.Dir(), ".gitignore"));
+        StringAssert.Contains(gitignore, "!Graphics_r1/Properties/PublishProfiles/FolderProfile.pubxml",
+            "発行の設定が管理の外です (*.pubxml を無視している)");
+        string script = File.ReadAllText(Path.Combine(TestSource.Dir(), "tools", "release-check.ps1"));
+        StringAssert.Contains(script, "IsPathRooted($publishDir)", "release-check.ps1 が相対の発行先を解決していません");
+    }
 }

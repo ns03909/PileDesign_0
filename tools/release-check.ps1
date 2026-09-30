@@ -78,6 +78,8 @@ Ok "単一ファイル発行"
 # ── 4. 発行した exe の版 ──
 $pubxml = [xml](Get-Content (Join-Path $root "Graphics_r1\Properties\PublishProfiles\FolderProfile.pubxml") -Encoding UTF8)
 $publishDir = $pubxml.Project.PropertyGroup.PublishDir
+# 発行先はプロジェクトからの相対で書いてある (MSBuild と同じく、プロジェクトの場所から数える)
+if (-not [System.IO.Path]::IsPathRooted($publishDir)) { $publishDir = Join-Path (Join-Path $root "Graphics_r1") $publishDir }
 $exe = Join-Path $publishDir "PileDesign.exe"
 if (-not (Test-Path $exe)) { Fail "発行した exe が見つかりません: $exe" }
 $product = (Get-Item $exe).VersionInfo.ProductVersion
