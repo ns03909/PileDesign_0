@@ -173,11 +173,12 @@ namespace PileDesign.Output
             }
 
             // 4. OpenXML Drawing要素を生成
-            string imagePartId = "rId" + Guid.NewGuid().ToString("N");
+            // 関係の番号は足した順に振る (以前は乱数で作っていて、同じ結果から出しても計算書の中身が毎回変わった)
             var mainPart = mainDocumentPart;
-            var imagePart = mainPart.AddImagePart(ImagePartType.Png, imagePartId);
+            var imagePart = WordDrawingBuilder.AddImagePartInOrder(mainPart, ImagePartType.Png);
             using (var stream = new MemoryStream(imageBytes))
                 imagePart.FeedData(stream);
+            string imagePartId = mainPart.GetIdOfPart(imagePart);
 
             // 5. Drawing要素を返す
             // mm→EMU変換

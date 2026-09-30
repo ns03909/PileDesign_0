@@ -83,7 +83,7 @@ namespace PileDesign.Output
                 long widthEmu = (long)(widthMm * 36_000);// * 96 / dpi);
                 long heightEmu = (long)(heightMm * 36_000);// * 96 / dpi);
 
-                var imagePart = mainPart.AddImagePart(
+                var imagePart = WordDrawingBuilder.AddImagePartInOrder(mainPart,
                     imagePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
                         ? ImagePartType.Png
                         : ImagePartType.Jpeg
@@ -100,13 +100,14 @@ namespace PileDesign.Output
                     new Inline(
                         new Extent() { Cx = widthEmu, Cy = heightEmu },
                         new EffectExtent() { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
-                        new DocProperties() { Id = (UInt32Value)1U, Name = System.IO.Path.GetFileName(imagePath) },
+                        // 名前は固定 (図の一時ファイルの名前は乱数なので、使うと同じ結果から出しても計算書の中身が毎回変わる)
+                        new DocProperties() { Id = (UInt32Value)1U, Name = "図" },
                         new DocumentFormat.OpenXml.Drawing.Wordprocessing.NonVisualGraphicFrameDrawingProperties(new GraphicFrameLocks() { NoChangeAspect = true }),
                         new Graphic(
                             new GraphicData(
                                 new DocumentFormat.OpenXml.Drawing.Pictures.Picture(
                                     new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureProperties(
-                                        new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualDrawingProperties() { Id = (UInt32Value)0U, Name = System.IO.Path.GetFileName(imagePath) },
+                                        new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualDrawingProperties() { Id = (UInt32Value)0U, Name = "図" },
                                         new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureDrawingProperties()
                                     ),
                                     new DocumentFormat.OpenXml.Drawing.Pictures.BlipFill(
@@ -141,7 +142,7 @@ namespace PileDesign.Output
             {
                 // 図 1 枚の失敗で計算書全体を止めない。その位置に注記を入れ、出力の最後にまとめて知らせる
                 // (以前は図ごとにダイアログを出していた。大量に失敗すると出力が止まったように見えた)。
-                WordDocument.NoteOmitted(body, $"図 ({System.IO.Path.GetFileNameWithoutExtension(imagePath)})", ex);
+                WordDocument.NoteOmitted(body, "図", ex);
             }
         }
 

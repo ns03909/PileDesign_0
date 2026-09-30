@@ -3,11 +3,24 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System;
 using System.IO;
+using System.Linq;
 
 namespace PileDesign.Output
 {
     internal static class WordDrawingBuilder
     {
+        /// <summary>
+        /// 図の部品を足す。<b>計算書の図はすべてここを通す。</b>関係の番号は足した順に振る
+        /// (番号を渡さないと部品が乱数で振り、同じ解析結果から出しても計算書の中身が毎回変わる)。
+        /// </summary>
+        internal static ImagePart AddImagePartInOrder(MainDocumentPart mainPart, PartTypeInfo type)
+        {
+            int n = mainPart.ImageParts.Count() + 1;
+            string id;
+            do { id = $"rIdImg{n++}"; } while (mainPart.Parts.Any(p => p.RelationshipId == id));
+            return mainPart.AddImagePart(type, id);
+        }
+
         // imageBytes: PNG bytes
         public static void AddPngBytesToBody(MainDocumentPart mainPart, Body body, byte[] imageBytes, double widthMm, double heightMm)
         {
@@ -17,7 +30,7 @@ namespace PileDesign.Output
             WordDocument.Checkpoint();
 
             // Add image part and feed data
-            var imagePart = mainPart.AddImagePart(DocumentFormat.OpenXml.Packaging.ImagePartType.Png);
+            var imagePart = AddImagePartInOrder(mainPart, ImagePartType.Png);
             using (var ms = new MemoryStream(imageBytes))
             {
                 imagePart.FeedData(ms);

@@ -218,6 +218,7 @@ namespace PileDesign.Output
             // 水平解析は解析ログに出しているが、計算書の生成でも断面を作り直すので、
             // ここで既定値に落ちた箇所は今まで誰にも見えていなかった (2026-09-19)。
             PileDesign.Common.CalcFallbackTracker.Reset();
+            _outputDate = FixedOutputDate ?? DateTime.Now;
             lock (_omittedLock) _omitted.Clear();
             _warnings.Clear();
 
@@ -333,6 +334,12 @@ namespace PileDesign.Output
 
         /// <summary>出力を始めた時点の画面の状態 (<see cref="ReportSource"/>)。<see cref="CreateWordDocument"/> が最初に取る。</summary>
         private ReportSource _source = new();
+
+        /// <summary>計算書に書く出力日 (作成を始めたときに 1 回だけ決める)。</summary>
+        private DateTime _outputDate = DateTime.Now;
+
+        /// <summary>出力日を固定する (試験で、同じ結果から出した計算書を突き合わせるため)。null なら作成を始めた時刻。</summary>
+        internal DateTime? FixedOutputDate { get; set; }
 
         /// <summary>
         /// 図・表 <paramref name="what"/> を作成できずに省いたことを記録し、その位置に赤字の注記を入れる。
@@ -487,7 +494,7 @@ namespace PileDesign.Output
             void Time(string label, Action a) { sw.Restart(); a(); sw.Stop(); Log.Information("[Docx]     {Section}: {Elapsed:N2}s", label, sw.Elapsed.TotalSeconds); }
 
             AddText(body, $"杭検討プログラム ver {(System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString())}", "center");
-            AddText(body, DateTime.Now.ToString("yyyy/MM/dd"), "center");
+            AddText(body, _outputDate.ToString("yyyy/MM/dd"), "center");
 
             if (mainWindowViewModel.DocxOutput.IncludeFundamental)
             {
@@ -1315,7 +1322,8 @@ namespace PileDesign.Output
             if (abstractNum == null)
             {
                 abstractNum = new AbstractNum(
-                    new Nsid { Val = Guid.NewGuid().ToString("N")[..8] },
+                    // 番号の定義の識別は定義の番号から決める (乱数だと、同じ結果から出しても計算書の中身が毎回変わる)
+                    new Nsid { Val = (0x5D000000 + abstractNumId).ToString("X8") },
                     new MultiLevelType { Val = MultiLevelValues.SingleLevel },
                     new TemplateCode { Val = "0409001D" },
                     new Level(
