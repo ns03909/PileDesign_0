@@ -72,9 +72,13 @@ public class ReportSourceTests
         vm.SetRestoredResultSet(resultSet, changedSinceAnalysis: false);
         var source = vm.CaptureReportSource(input, wantsFactoredEvaluation: false);
 
-        StringAssert.Contains(source.AnalysisConditions, "収束安定化 ラインサーチ");
-        StringAssert.Contains(source.AnalysisConditions, "反復上限 100");
-        Assert.AreEqual("L1 X方向 (地震時)・収束", source.AnalysisCaseList);
+        // 実行条件は表紙の 1 行ではなく、「計算条件・仮定」の章の表に書く (出力の開始時の写しを渡す)
+        Assert.AreEqual(1, source.RunRecords.Count);
+        var rows = source.RunRecords[0].DescribeRows();
+        CollectionAssert.Contains(rows, ("収束安定化", "ラインサーチ"));
+        CollectionAssert.Contains(rows, ("反復上限", "100"));
+        CollectionAssert.Contains(rows, ("解いたケース", "L1 X方向 (地震時)・収束"));
+        Assert.IsFalse(source.AnalysisConditions?.Contains("ラインサーチ") == true, "表紙に実行条件が並んでいます");
     }
 
     /// <summary>

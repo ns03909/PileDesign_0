@@ -47,7 +47,55 @@ namespace PileDesign.Output
             WarnIfAnalysisConditionsChanged(body, inputModel);
             NoteSteelPipeColumnBuckling(body, inputModel);
 
+            AddRunRecordsSection(body);
+
             AddLineBreak(body);
+        }
+
+        /// <summary>
+        /// 解析の実行条件を、解析の種類ごとの表で書く (解析プログラムの版・収束の手法と基準・ステップ数・解いたケースなど)。
+        /// 同じ入力で結果が変わったときに、条件の差かプログラムの差かを切り分ける記録。
+        ///
+        /// <para>以前は表紙に並べていたが、文字で埋まってモデル図が押し出され、どの条件がどの解析のものかも読みにくかった。
+        /// 表紙には解析の時刻と入力の識別だけを残す。解析していなければ節を出さない。記録を持たない版で解析した結果なら、そう書く。</para>
+        /// </summary>
+        private void AddRunRecordsSection(Body body)
+        {
+            bool analyzed = _source.IsHorizontalAnalysisDone || _source.IsVerticalAnalysisDone || _source.IsVerticalBeamAnalysisDone
+                            || _source.RunRecords.Count > 0;
+            if (!analyzed) return;
+
+            AddHeader2(body, "解析の実行条件");
+            if (_source.RunRecords.Count == 0)
+            {
+                AddText(body, "解析の実行条件の記録はない (実行条件を記録しない版で解析した結果である)。", fontSize: 9);
+                return;
+            }
+            AddText(body, "解析を再現・照合するための、解析の種類ごとの実行条件を示す。", fontSize: 9);
+            foreach (var record in _source.RunRecords)
+            {
+                AddTableCaption(body, "解析の実行条件: " + record.Heading());
+                AddItemValueTable(body, record.DescribeRows());
+            }
+        }
+
+        /// <summary>項目・値の 2 列の表 (解析の実行条件・検定の根拠)。</summary>
+        internal static void AddItemValueTable(Body body, IEnumerable<(string Item, string Value)> rows)
+        {
+            const double fontSize = 8;
+            int w1 = 3200, w2 = 6800;
+            Table table = CreateTableWithBordersAndWidths(w1, w2);
+            table.Append(CreateHeaderRow(
+                CreateTableCellWithWidth("項目", "center", w1, fontSize),
+                CreateTableCellWithWidth("値", "center", w2, fontSize)));
+            foreach (var (item, value) in rows)
+            {
+                TableRow row = new();
+                row.Append(CreateTableCellWithWidth(item, "left", w1, fontSize));
+                row.Append(CreateTableCellWithWidth(value, "left", w2, fontSize));
+                table.Append(row);
+            }
+            body.Append(table);
         }
 
         /// <summary>

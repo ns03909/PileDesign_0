@@ -67,33 +67,37 @@ public sealed class AnalysisRunMetadata
         _ => kind.ToString(),
     };
 
-    /// <summary>計算書の表紙に載せる 1 行 (「【水平解析 2026/09/30 10:00】 解析プログラム …」)。</summary>
-    public string Describe()
-    {
-        string when = ExecutedAt is { } t ? $" {t:yyyy/MM/dd HH:mm}" : "";
-        string settings = DescribeSettings();
-        return $"【{KindLabel(Kind)}{when}】" + (settings.Length > 0 ? " " + settings : "");
-    }
+    /// <summary>表の見出し (「水平解析（2026/09/30 10:00 実行）」)。</summary>
+    public string Heading()
+        => ExecutedAt is { } t ? $"{KindLabel(Kind)}（{t:yyyy/MM/dd HH:mm} 実行）" : KindLabel(Kind);
 
-    /// <summary>計算書表紙に載せる簡潔な設定説明。</summary>
-    public string DescribeSettings()
+    /// <summary>
+    /// 条件を項目と値の組で並べる (計算書の「解析の実行条件」の表の行)。記録の無い項目は出さない。
+    /// 1 行の説明 (<see cref="DescribeSettings"/>) もここから作る (並びと書き方を 1 か所にする)。
+    /// </summary>
+    public List<(string Item, string Value)> DescribeRows()
     {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(ApplicationVersion)) parts.Add($"解析プログラム {ApplicationVersion}");
-        if (!string.IsNullOrWhiteSpace(ConvergenceMethod)) parts.Add($"収束安定化 {ConvergenceMethod}");
-        if (Level1Steps > 0 || Level2Steps > 0) parts.Add($"解析ステップ L1={Level1Steps}, L2={Level2Steps}");
-        if (CaseParallelism > 0) parts.Add($"ケース並列数 {CaseParallelism}");
-        if (MaximumIterations > 0) parts.Add($"反復上限 {MaximumIterations}");
-        if (BaseResidualTolerance > 0) parts.Add($"基本収束基準 {BaseResidualTolerance:G}");
-        if (RelaxedResidualTolerance > 0) parts.Add($"緩和収束基準 {RelaxedResidualTolerance:G}");
-        if (InitialRelaxationFactor > 0) parts.Add($"初期緩和係数 {InitialRelaxationFactor:G}");
-        if (LinearSolverResidualTolerance > 0) parts.Add($"線形ソルバー残差基準 {LinearSolverResidualTolerance:G}");
+        var rows = new List<(string, string)>();
+        if (!string.IsNullOrWhiteSpace(ApplicationVersion)) rows.Add(("解析プログラムの版", ApplicationVersion));
+        if (!string.IsNullOrWhiteSpace(ConvergenceMethod)) rows.Add(("収束安定化", ConvergenceMethod));
+        if (Level1Steps > 0 || Level2Steps > 0) rows.Add(("解析ステップ", $"L1={Level1Steps}, L2={Level2Steps}"));
+        if (CaseParallelism > 0) rows.Add(("ケース並列数", $"{CaseParallelism}"));
+        if (MaximumIterations > 0) rows.Add(("反復上限", $"{MaximumIterations}"));
+        if (BaseResidualTolerance > 0) rows.Add(("基本収束基準", $"{BaseResidualTolerance:G}"));
+        if (RelaxedResidualTolerance > 0) rows.Add(("緩和収束基準", $"{RelaxedResidualTolerance:G}"));
+        if (InitialRelaxationFactor > 0) rows.Add(("初期緩和係数", $"{InitialRelaxationFactor:G}"));
+        if (LinearSolverResidualTolerance > 0) rows.Add(("線形ソルバー残差基準", $"{LinearSolverResidualTolerance:G}"));
         foreach (var c in Conditions ?? [])
         {
-            if (c != null && !string.IsNullOrWhiteSpace(c.Name)) parts.Add($"{c.Name} {c.Value}");
+            if (c != null && !string.IsNullOrWhiteSpace(c.Name)) rows.Add((c.Name, c.Value));
         }
-        return string.Join("　", parts);
+        if (DescribeCases() is { Length: > 0 } cases) rows.Add(("解いたケース", cases));
+        return rows;
     }
+
+    /// <summary>条件の 1 行の説明 (ケースの一覧は含めない。ログ・試験用)。</summary>
+    public string DescribeSettings()
+        => string.Join("　", DescribeRows().Where(r => r.Item != "解いたケース").Select(r => $"{r.Item} {r.Value}"));
 
     /// <summary>ケース名は空欄・重複しうるため、番号と液状化条件も含む一覧を作る。</summary>
     public string DescribeCases()

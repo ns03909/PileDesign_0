@@ -113,7 +113,8 @@ namespace TestProject1
             var loaded = records.Single(r => r.Kind == AnalysisKind.Horizontal);
             var loadedSettlement = records.Single(r => r.Kind == AnalysisKind.GroupSettlement);
             Assert.AreEqual(settlement.ExecutedAt, loadedSettlement.ExecutedAt);
-            Assert.AreEqual("【群杭沈下解析 2026/09/30 10:15】 荷重の置き方 全体矩形", loadedSettlement.Describe());
+            Assert.AreEqual("群杭沈下解析（2026/09/30 10:15 実行）", loadedSettlement.Heading());
+            Assert.AreEqual("荷重の置き方 全体矩形", loadedSettlement.DescribeSettings());
             StringAssert.Matches(File.ReadAllText(file), new System.Text.RegularExpressions.Regex("\"Kind\":\\s*\"GroupSettlement\""),
                 "種類は名前で書く (番号だと並びを変えたときに別の種類として読まれる)");
             Assert.AreEqual(metadata.ApplicationVersion, loaded.ApplicationVersion);

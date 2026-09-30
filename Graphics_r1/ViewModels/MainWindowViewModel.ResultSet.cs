@@ -259,7 +259,7 @@ namespace PileDesign.ViewModels
                 FactoredEvaluation = evaluation,
                 FactoredEvaluationError = evaluationError,
                 AnalysisConditions = DescribeAnalysisConditions(),
-                AnalysisCaseList = CurrentResultSet?.RecordOf(AnalysisKind.Horizontal)?.DescribeCases(),
+                RunRecords = [.. (CurrentResultSet?.RunRecords ?? []).Where(r => r != null)],
                 HorizontalCaseCount = CountHorizontalCases(),
                 AnalysisNonFiniteCount = IsHorizontalAnalysisDone && CurrentModel != null ? CountNonFiniteResults(CurrentModel) : 0,
             };
@@ -278,9 +278,9 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 結果の前提 (計算書の表紙に書く)。1 行目は控えを取った時刻・解析したときの入力の識別 (入力の署名の先頭 12 文字。
-        /// 同じ入力なら同じ値になる)・水平解析で解いたケースの数。2 行目からは解析の種類ごとに 1 行ずつ、実行した時刻と条件。
-        /// 種類ごとに時刻も条件も違うので、1 行に並べると条件がどの解析のものか読めない。行は改行で区切る。解析していなければ null。
+        /// 結果の前提を 1 行にする (計算書の表紙に書く)。控えを取った時刻・解析したときの入力の識別 (入力の署名の先頭 12 文字。
+        /// 同じ入力なら同じ値になる)・水平解析で解いたケースの数・解析のあとの編集。解析していなければ null。
+        /// 解析の種類ごとの実行条件は表紙に並べず、「計算条件・仮定」の章に表で書く (<see cref="Output.ReportSource.RunRecords"/>)。
         /// </summary>
         internal string? DescribeAnalysisConditions()
         {
@@ -294,13 +294,7 @@ namespace PileDesign.ViewModels
             if (ResultsMixedWithEditedInput || (_currentResultSet == null && InputChangedSinceAnalysis))
                 parts.Add("解析のあとに入力が編集されています");
 
-            var lines = new System.Collections.Generic.List<string>();
-            if (parts.Count > 0) lines.Add(string.Join("　", parts));
-            foreach (var record in _currentResultSet?.RunRecords ?? [])
-            {
-                if (record != null) lines.Add(record.Describe());
-            }
-            return lines.Count == 0 ? null : string.Join("\n", lines);
+            return parts.Count == 0 ? null : string.Join("　", parts);
         }
 
         private bool _inputChangedSinceAnalysis;

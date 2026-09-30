@@ -439,13 +439,9 @@ namespace PileDesign.Output
         {
             AddText(body, $"杭検討プログラム ver {(System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString())}", "center");
             AddTitle(body, "基礎ぐいの検討書");
-            // どの解析の結果かを追えるように、結果の前提を書く
-            // 結果の前提は改行で区切った複数行 (解析の種類ごとの条件は 1 行ずつ。並べて 1 行にすると、どの解析の条件か読めない)
+            // どの解析の結果かを追えるように、結果の前提を書く (解析の種類ごとの実行条件は「計算条件・仮定」の章に置く)
             if (_source.AnalysisConditions is { } conditions)
-                foreach (var line in conditions.Split('\n'))
-                    AddText(body, line, "center");
-            if (_source.AnalysisCaseList is { Length: > 0 } caseList)
-                AddText(body, $"水平解析ケース: {caseList}", "center");
+                AddText(body, conditions, "center");
 
             // モデル図（アイソメトリック）
             if (modelImageBytes != null && modelImageBytes.Length > 0)

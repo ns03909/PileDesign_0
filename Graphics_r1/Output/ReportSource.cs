@@ -38,13 +38,16 @@ namespace PileDesign.Output
         public Exception? FactoredEvaluationError { get; init; }
 
         /// <summary>
-        /// 結果の前提 (解析の時刻・解析したときの入力の識別・解いたケースの数と、解析の種類ごとの条件)。表紙に書き、あとから
-        /// どの解析の結果かを追えるようにする。改行で区切った複数行 (種類ごとに 1 行)。解析していなければ null。
+        /// 結果の前提 (解析の時刻・解析したときの入力の識別・解いたケースの数・解析のあとの編集)。表紙に 1 行で書き、
+        /// あとからどの解析の結果かを追えるようにする。解析していなければ null。
         /// </summary>
         public string? AnalysisConditions { get; init; }
 
-        /// <summary>解析時点の水平解析ケース一覧。旧ファイル・水平解析なしの場合は null。</summary>
-        public string? AnalysisCaseList { get; init; }
+        /// <summary>
+        /// 解析の種類ごとの実行条件 (出力の開始時の写し)。「計算条件・仮定」の章の「解析の実行条件」に種類ごとの表で書く。
+        /// 表紙に並べると文字で埋まり、どの条件がどの解析のものか読みにくかった。記録の無い旧ファイルでは空。
+        /// </summary>
+        public IReadOnlyList<Models.AnalysisRunMetadata> RunRecords { get; init; } = [];
 
         /// <summary>水平解析で解いたケースの数 (解析していなければ 0)。性能の記録に添える。</summary>
         public int HorizontalCaseCount { get; init; }

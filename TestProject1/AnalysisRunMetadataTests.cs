@@ -124,19 +124,37 @@ public class AnalysisRunMetadataTests
     }
 
     /// <summary>
-    /// 計算書の表紙: 条件は解析の種類ごとに 1 行 (種類の名前と実行した時刻を添える)。1 行に並べると、どの条件がどの解析のものか読めない。
+    /// 計算書: 実行条件は表紙に並べず、「計算条件・仮定」の章に解析の種類ごとの表で書く (表の題に種類と実行した時刻)。
+    /// 表紙に並べると文字で埋まってモデル図が押し出され、どの条件がどの解析のものかも読みにくかった。
+    /// 表紙に残すのは解析の時刻・入力の識別・解いたケースの数・解析のあとの編集だけ。
     /// </summary>
     [TestMethod]
-    public void TheReportShowsConditionsPerAnalysisKind()
+    public void TheReportShowsConditionsPerAnalysisKind_InTheAssumptionsChapter()
     {
         var vm = HorizontalDone(out _);
         vm.IsGroupPileSettlementAnalysisDone = true;
         vm.CaptureAnalysisResultSet(Settlement());
 
-        var lines = vm.DescribeAnalysisConditions()!.Split('\n');
-        Assert.IsTrue(lines.Any(l => l.StartsWith("【水平解析】") && l.Contains("収束安定化 ラインサーチ")), string.Join(" / ", lines));
-        Assert.IsTrue(lines.Any(l => l.StartsWith("【群杭沈下解析】") && l.Contains("荷重の置き方 全体矩形")), string.Join(" / ", lines));
-        Assert.IsFalse(lines.Any(l => l.Contains("ラインサーチ") && l.Contains("荷重の置き方")), "別の解析の条件が同じ行に並んでいます");
+        string cover = vm.DescribeAnalysisConditions()!;
+        Assert.IsFalse(cover.Contains("ラインサーチ") || cover.Contains("荷重の置き方") || cover.Contains('\n'),
+            "表紙に実行条件が並んでいます: " + cover);
+
+        var source = vm.CaptureReportSource(vm.CurrentInputModel!, wantsFactoredEvaluation: false);
+        CollectionAssert.AreEqual(new[] { PileDesign.Models.AnalysisKind.Horizontal, PileDesign.Models.AnalysisKind.GroupSettlement },
+            source.RunRecords.Select(r => r.Kind).ToArray());
+
+        // 種類ごとの表: 行は項目と値に分かれ、ほかの種類の条件は混ざらない
+        var body = new DocumentFormat.OpenXml.Wordprocessing.Body();
+        PileDesign.Output.WordDocument.AddItemValueTable(body, source.RunRecords[1].DescribeRows());
+        var cells = body.Descendants<DocumentFormat.OpenXml.Wordprocessing.TableCell>().Select(c => c.InnerText).ToList();
+        CollectionAssert.AreEqual(new[] { "項目", "値", "荷重の置き方", "全体矩形" }, cells);
+
+        string assumptions = TestSource.Read("Graphics_r1", "Output", "WordDocument.Assumptions.cs");
+        StringAssert.Contains(TestSource.MethodBody(assumptions, "private void AddCalculationAssumptionsSection("), "AddRunRecordsSection(body);");
+        StringAssert.Contains(TestSource.MethodBody(assumptions, "private void AddRunRecordsSection("),
+            "AddTableCaption(body, \"解析の実行条件: \" + record.Heading());");
+        string cover2 = TestSource.MethodBody(TestSource.Read("Graphics_r1", "Output", "WordDocument.cs"), "private void AddFrontMatter(");
+        Assert.IsFalse(cover2.Contains("RunRecords"), "表紙に実行条件を書いています");
     }
 
     /// <summary>水平解析以外の解析も、実行した箇所で条件を渡す (渡し忘れると、その解析の条件だけが残らない)。</summary>
