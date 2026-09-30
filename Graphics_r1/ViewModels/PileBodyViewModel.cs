@@ -254,7 +254,7 @@ namespace PileDesign.ViewModels
 
             UpdatePileBodiesCountPlusOneList();
 
-            PileBody = PileBodies[PileBodyNo - 1];
+            PileBody = CurrentBody;
 
 
             // 初期選択を設定。入力の問題から開いたときは、その杭体を選んでおく
@@ -309,13 +309,23 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>
+        /// 選択中の杭体 (画面が持つ一覧を、選択中の杭体番号で引く)。番号を一覧の範囲に丸めて引くので、範囲の外で落ちない。
+        /// 番号は削除・元に戻すのたびに範囲へ戻している (<see cref="KeepSelectionInRange"/>) ので、丸めが効くのは想定外の状態だけ。
+        /// 杭体は最後の 1 つを消せないので、一覧は空にならない。
+        /// </summary>
+        internal PileBodyInput CurrentBody => PileBodies[Math.Clamp(PileBodyNo, 1, PileBodies.Count) - 1];
+
+        /// <summary>番号 (1 から) の杭体。範囲の外なら null。</summary>
+        private PileBodyInput? BodyAt(int no) => no >= 1 && no <= PileBodies.Count ? PileBodies[no - 1] : null;
+
         /// <summary>選択中の杭体番号を、いまの杭体の数の範囲に戻し、選択中の杭体を合わせる。</summary>
         private void KeepSelectionInRange()
         {
             UpdatePileBodiesCountPlusOneList();
             if (PileBodies.Count == 0) { PileBody = null; return; }
             if (PileBodyNo > PileBodies.Count) PileBodyNo = PileBodies.Count;
-            PileBody = PileBodies[PileBodyNo - 1];
+            PileBody = CurrentBody;
         }
 
         [RelayCommand]
@@ -434,7 +444,7 @@ namespace PileDesign.ViewModels
                 if (PileBodies.Count > 0)
                 {
                     PileBodyNo = Math.Min(PileBodyNo, PileBodies.Count);
-                    PileBody = PileBodies[PileBodyNo - 1];
+                    PileBody = CurrentBody;
                 }
                 else
                 {
@@ -586,9 +596,9 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AddSegment()
         {
-            PileBodies[PileBodyNo - 1].PileBodySegments.Add(new PileBodySegment() { No = 1, });
-            PileSection pileSection = PileBodies[PileBodyNo - 1].PileBodySegments[^1].PileSection;
-            pileSection.PileBodyType = PileBodies[PileBodyNo - 1].PileBodyType;
+            CurrentBody.PileBodySegments.Add(new PileBodySegment() { No = 1, });
+            PileSection pileSection = CurrentBody.PileBodySegments[^1].PileSection;
+            pileSection.PileBodyType = CurrentBody.PileBodyType;
             pileSection.ResetSectionProperties();
             RecalculateDataGridPileBody();
             DrawShapes();
@@ -632,16 +642,16 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void EditPileHead(object parameter)
         {
-            if (PileBodies[PileBodyNo - 1].PileBodySegments.Count > 0)
+            if (CurrentBody.PileBodySegments.Count > 0)
             {
                 var pileTopWindow = new PileTopWindow(
                     _mainWindowViewModel,
-                    PileBodies[PileBodyNo - 1].PileTop,
+                    CurrentBody.PileTop,
                     PileBodyNo,
-                    PileBodies[PileBodyNo - 1].PileBodyType,
-                    PileBodies[PileBodyNo - 1].PileTopType,
-                    PileBodies[PileBodyNo - 1].PileConstructionType,
-                    PileBodies[PileBodyNo - 1].PileBodySegments[0].PileSection);
+                    CurrentBody.PileBodyType,
+                    CurrentBody.PileTopType,
+                    CurrentBody.PileConstructionType,
+                    CurrentBody.PileBodySegments[0].PileSection);
                 pileTopWindow.ShowDialog();
             }
             else
@@ -662,7 +672,7 @@ namespace PileDesign.ViewModels
                 PileTypeNames.SteelPipe
             };
 
-            var pileBody = PileBodies[PileBodyNo - 1];
+            var pileBody = CurrentBody;
             if (!allowedTypes.Contains(pileBody.PileBodyType)) return;
             if (parameter is not PileBodySegment segment) return;
 
@@ -749,39 +759,39 @@ namespace PileDesign.ViewModels
         private void RecalculateTipNonPermability(object parameter)
         {
             // PileBodyTypeプロパティが存在するかどうかを確認する
-            if (PileBodies[PileBodyNo - 1].PileBodyType == PileTypeNames.PrecastConcrete &&
-                PileBodies[PileBodyNo - 1].PileConstructionType == "打込み杭")
+            if (CurrentBody.PileBodyType == PileTypeNames.PrecastConcrete &&
+                CurrentBody.PileConstructionType == "打込み杭")
             {
-                if (PileBodies[PileBodyNo - 1].PileTipStyle == "閉端杭")
+                if (CurrentBody.PileTipStyle == "閉端杭")
                 {
-                    PileBodies[PileBodyNo - 1].TipNonPermability = 1.0;
+                    CurrentBody.TipNonPermability = 1.0;
                 }
-                else if (PileBodies[PileBodyNo - 1].PileTipStyle == "開端杭")
+                else if (CurrentBody.PileTipStyle == "開端杭")
                 {
-                    double _lB = PileBodies[PileBodyNo - 1].EmbedmentIntoBearingSoil;
-                    double _dI = PileBodies[PileBodyNo - 1].PileInnerDia;
+                    double _lB = CurrentBody.EmbedmentIntoBearingSoil;
+                    double _dI = CurrentBody.PileInnerDia;
                     if (_dI < 0.01) { _dI = 0.01; }
                     if (_lB < 0.01) { _lB = 0.01; }
                     if (_lB / _dI <= 5)
                     {
-                        PileBodies[PileBodyNo - 1].TipNonPermability = 0.16 * (_lB / _dI);
+                        CurrentBody.TipNonPermability = 0.16 * (_lB / _dI);
                     }
                     else
                     {
-                        PileBodies[PileBodyNo - 1].TipNonPermability = 0.80;
+                        CurrentBody.TipNonPermability = 0.80;
                     }
                 }
             }
-            if (PileBodies[PileBodyNo - 1].PileBodyType == PileTypeNames.SteelPipe &&
-                PileBodies[PileBodyNo - 1].PileConstructionType == "回転貫入杭")
+            if (CurrentBody.PileBodyType == PileTypeNames.SteelPipe &&
+                CurrentBody.PileConstructionType == "回転貫入杭")
             {
-                if (PileBodies[PileBodyNo - 1].PileTipStyle == "閉端杭")
+                if (CurrentBody.PileTipStyle == "閉端杭")
                 {
-                    PileBodies[PileBodyNo - 1].TipNonPermability = 1.0;
+                    CurrentBody.TipNonPermability = 1.0;
                 }
-                else if (PileBodies[PileBodyNo - 1].PileTipStyle == "開端杭")
+                else if (CurrentBody.PileTipStyle == "開端杭")
                 {
-                    PileBodies[PileBodyNo - 1].TipNonPermability = 0.80;
+                    CurrentBody.TipNonPermability = 0.80;
                 }
             }
         }
@@ -800,7 +810,7 @@ namespace PileDesign.ViewModels
 
         //    if (previousSelectedPileBodyNo != -1)
         //    {
-        //        PileBody = PileBodies[PileBodyNo - 1];
+        //        PileBody = CurrentBody;
         //    }
 
         //    DrawShapes();
@@ -846,7 +856,7 @@ namespace PileDesign.ViewModels
         public void OnPileBodyTypeSelectionChanged(object parameter)
         {
             // すべての杭区間を削除
-            PileBodies[PileBodyNo - 1].PileBodySegments.Clear();
+            CurrentBody.PileBodySegments.Clear();
 
             SetPileTopTypeAndConstruction();
             AddSegment(); // 1区間追加
@@ -857,7 +867,7 @@ namespace PileDesign.ViewModels
         {
             if (parameter is PileBodySegment selectedItem)
             {
-                PileBodies[PileBodyNo - 1].PileBodySegments.Remove(selectedItem);
+                CurrentBody.PileBodySegments.Remove(selectedItem);
                 RecalculateDataGridPileBody();
                 DrawShapes();
                 UpdateTemporarySoilPile();
@@ -876,7 +886,7 @@ namespace PileDesign.ViewModels
         // 杭頭タイプと工法のセット
         private void SetPileTopTypeAndConstruction()
         {
-            switch (PileBodies[PileBodyNo - 1].PileBodyType)
+            switch (CurrentBody.PileBodyType)
             {
                 case PileTypeNames.InsituRc:
                     UpdatePileOptions(PileBodyInput.InsituReinforcedConcretePileTopTypeOption,
@@ -903,7 +913,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         private void SyncPileTopTypeOption()
         {
-            var body = PileBodies[PileBodyNo - 1];
+            var body = CurrentBody;
             var correctOption = body.PileBodyType switch
             {
                 PileTypeNames.InsituRc => PileBodyInput.InsituReinforcedConcretePileTopTypeOption,
@@ -941,16 +951,16 @@ namespace PileDesign.ViewModels
         private void UpdatePileOptions(ObservableCollection<string> topTypeOption,
             ObservableCollection<string> constructionTypeOption)
         {
-            if (PileBodies[PileBodyNo - 1].PileTopTypeOption != topTypeOption)
+            if (CurrentBody.PileTopTypeOption != topTypeOption)
             {
-                PileBodies[PileBodyNo - 1].PileTopTypeOption = topTypeOption;
-                PileBodies[PileBodyNo - 1].PileTopType = topTypeOption[0];
+                CurrentBody.PileTopTypeOption = topTypeOption;
+                CurrentBody.PileTopType = topTypeOption[0];
             }
 
-            if (PileBodies[PileBodyNo - 1].PileConstructionTypeOption != constructionTypeOption)
+            if (CurrentBody.PileConstructionTypeOption != constructionTypeOption)
             {
-                PileBodies[PileBodyNo - 1].PileConstructionTypeOption = constructionTypeOption;
-                PileBodies[PileBodyNo - 1].PileConstructionType = constructionTypeOption[0];
+                CurrentBody.PileConstructionTypeOption = constructionTypeOption;
+                CurrentBody.PileConstructionType = constructionTypeOption[0];
             }
         }
 
@@ -964,12 +974,12 @@ namespace PileDesign.ViewModels
             var selectedTopType = PileBody?.PileTopType;
             if (string.IsNullOrEmpty(selectedTopType)) return;
 
-            PileBodies[pileBodyNo - 1].PileTop.PileTopType = selectedTopType;
+            BodyAt(pileBodyNo)!.PileTop.PileTopType = selectedTopType;
 
             // キャプテンパイル工法選択時にCaptainPileを作成してPCリングを自動選定
             if (selectedTopType == "キャプテンパイル工法")
             {
-                var pileTop = PileBodies[pileBodyNo - 1].PileTop;
+                var pileTop = BodyAt(pileBodyNo)!.PileTop;
                 // CaptainPileが存在しない場合は作成
                 if (pileTop.CaptainPile == null)
                 {
@@ -980,7 +990,7 @@ namespace PileDesign.ViewModels
             // FT-Pile構法選択時にFTPileを作成してFTキャップを自動選定
             else if (selectedTopType == "FT-Pile構法")
             {
-                var pileTop = PileBodies[pileBodyNo - 1].PileTop;
+                var pileTop = BodyAt(pileBodyNo)!.PileTop;
                 // FTPileが存在しない場合は作成
                 if (pileTop.FTPile == null)
                 {
@@ -996,7 +1006,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         private void AutoSelectPCRing(int pileBodyNo)
         {
-            var pileBody = PileBodies[pileBodyNo - 1];
+            var pileBody = BodyAt(pileBodyNo)!;
             if (pileBody.PileBodySegments == null || pileBody.PileBodySegments.Count == 0)
                 return;
 
@@ -1050,7 +1060,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         private void AutoSelectFTCap(int pileBodyNo)
         {
-            var pileBody = PileBodies[pileBodyNo - 1];
+            var pileBody = BodyAt(pileBodyNo)!;
             if (pileBody.PileBodySegments == null || pileBody.PileBodySegments.Count == 0)
                 return;
 
@@ -1115,17 +1125,17 @@ namespace PileDesign.ViewModels
             if (string.IsNullOrEmpty(selectedPresetParameter)) return;
 
             foreach (PileBodyInput.PileTipSettlementPresetParameter parameter in
-                PileBodies[PileBodyNo - 1].PileTipSettlementPresetParameters)
+                CurrentBody.PileTipSettlementPresetParameters)
             {
                 if (selectedPresetParameter.Contains(parameter.Name) &&
                     selectedPresetParameter.Contains(parameter.SoilType))
                 {
-                    PileBodies[PileBodyNo - 1].SettleAlpha = parameter.Alpha;
-                    PileBodies[PileBodyNo - 1].SettleN = parameter.N;
+                    CurrentBody.SettleAlpha = parameter.Alpha;
+                    CurrentBody.SettleN = parameter.N;
                     break;
                 }
             }
-            //AddComponent(PileBodies[PileBodyNo - 1].SettleAlpha, PileBodies[PileBodyNo - 1].SettleN);
+            //AddComponent(CurrentBody.SettleAlpha, CurrentBody.SettleN);
             //DrawShapes(Canvas);
         }
 
@@ -1139,11 +1149,11 @@ namespace PileDesign.ViewModels
         public void RecalculateDataGridPileBody()
         {
             double _sum = 0;
-            for (int i = 0; i < PileBodies[PileBodyNo - 1].PileBodySegments.Count; i++)
+            for (int i = 0; i < CurrentBody.PileBodySegments.Count; i++)
             {
-                _sum += PileBodies[PileBodyNo - 1].PileBodySegments[i].SegmentLength;
-                PileBodies[PileBodyNo - 1].PileBodySegments[i].SegmentDepth = _sum;
-                PileBodies[PileBodyNo - 1].PileBodySegments[i].No = i + 1;
+                _sum += CurrentBody.PileBodySegments[i].SegmentLength;
+                CurrentBody.PileBodySegments[i].SegmentDepth = _sum;
+                CurrentBody.PileBodySegments[i].No = i + 1;
             }
             OnRecalculateDataGridPileBodyCompleted(EventArgs.Empty); // イベントを発生させる
         }
@@ -1174,24 +1184,24 @@ namespace PileDesign.ViewModels
 
             ShapeDrawer.DrawPileElevation(
                 Canvas,
-                PileBodies[PileBodyNo - 1].PileBodySegments,
-                PileBodies[PileBodyNo - 1].PileToeDia,
-                PileBodies[PileBodyNo - 1].InsituPileToeHeight,
-                PileBodies[PileBodyNo - 1].InsituPileToeAngle,
-                PileBodies[PileBodyNo - 1].PrecastConcretePileToeHeightRatio,
-                PileBodies[PileBodyNo - 1].PileConstructionType,
+                CurrentBody.PileBodySegments,
+                CurrentBody.PileToeDia,
+                CurrentBody.InsituPileToeHeight,
+                CurrentBody.InsituPileToeAngle,
+                CurrentBody.PrecastConcretePileToeHeightRatio,
+                CurrentBody.PileConstructionType,
                 pileTopAltitude,
                 groundInput,
                 showLiquefactionFL: IsLiquefactionFLVisible,
                 showGroundDisplacement: IsGroundDisplacementVisible,
                 seismicLevelIndex: SelectedSeismicLevelIndex,
                 displacementWithLiquefaction: IsDisplacementWithLiquefaction,
-                smartMagnumLL: PileBodies[PileBodyNo - 1].SmartMagnumLL,
-                smartMagnumDes: PileBodies[PileBodyNo - 1].SmartMagnumDes,
-                smartMagnumWingLength: PileBodies[PileBodyNo - 1].SmartMagnumWingLength,
-                hybridE: PileBodies[PileBodyNo - 1].HybridExpansionRatio,
-                hybridEs: PileBodies[PileBodyNo - 1].HybridExcavationRatio,
-                hybridLu: PileBodies[PileBodyNo - 1].HybridPileBelowLength);
+                smartMagnumLL: CurrentBody.SmartMagnumLL,
+                smartMagnumDes: CurrentBody.SmartMagnumDes,
+                smartMagnumWingLength: CurrentBody.SmartMagnumWingLength,
+                hybridE: CurrentBody.HybridExpansionRatio,
+                hybridEs: CurrentBody.HybridExcavationRatio,
+                hybridLu: CurrentBody.HybridPileBelowLength);
         }
     }
 }

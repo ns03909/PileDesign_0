@@ -1218,7 +1218,7 @@ namespace PileDesign.ViewModels
         {
             if (previousSelectedSoilPileNo != -1)
             {
-                SoilPile = SoilPiles[SoilPileNo - 1];
+                SoilPile = SoilPiles[Math.Clamp(SoilPileNo, 1, SoilPiles.Count) - 1];   // 選択番号を一覧の範囲に丸める
                 OnPropertyChanged(nameof(UsesPileToeEta));
                 // 切替先 SoilPile が未初期化なら既定プリセットを適用
                 TryApplyDefaultSettlementPreset();

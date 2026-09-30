@@ -650,8 +650,8 @@ namespace PileDesign.Services
             var reportedGrounds = new HashSet<int>();
             foreach (var ((groundNo, pileBodyNo, pileTopAltitude), piles) in groups)
             {
-                var body = inputModel.PileBodies[pileBodyNo - 1];
-                var ground = inputModel.GroundsInput[groundNo - 1];
+                var body = inputModel.PileBodyAt(pileBodyNo)!;
+                var ground = inputModel.GroundAt(groundNo)!;
                 if ((body.PileBodySegments?.Count ?? 0) == 0)
                 {
                     if (reportedBodies.Add(pileBodyNo))
@@ -725,7 +725,7 @@ namespace PileDesign.Services
                 return problems;
             }
 
-            var ground = inputModel.GroundsInput![groundNo - 1];
+            var ground = inputModel.GroundAt(groundNo)!;
             if ((ground.GroundLayers?.Count ?? 0) == 0)
             {
                 problems.Add(Diagnostic.Input(DiagnosticTarget.Ground(groundNo), $"根入部で選択された地盤番号{groundNo}に土層データがありません。"));

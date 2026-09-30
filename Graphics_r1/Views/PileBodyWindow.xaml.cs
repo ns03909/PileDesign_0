@@ -104,7 +104,7 @@ namespace PileDesign.Views
             if (e.EditAction == DataGridEditAction.Commit)
             {
                 var viewModel = (PileBodyViewModel)DataContext;
-                viewModel.PileBodies[viewModel.PileBodyNo - 1].PileBodySegmentsUpdate();
+                viewModel.CurrentBody.PileBodySegmentsUpdate();
                 viewModel.DrawShapes();
                 viewModel.UpdateTemporarySoilPile();
             }

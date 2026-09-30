@@ -141,7 +141,7 @@ namespace PileDesign.FEM
                     soilPileAltNo - 1 >= 0 &&
                     soilPileAltNo - 1 < InputModel.ElementDivision.SoilPiles.Count)
                 {
-                    avgNodesPerPile = Math.Max(avgNodesPerPile, InputModel.ElementDivision.SoilPiles[soilPileAltNo - 1].ZDataItems.Count);
+                    avgNodesPerPile = Math.Max(avgNodesPerPile, pile.SoilPileAt(InputModel)!.ZDataItems.Count);
                 }
             }
 
@@ -634,7 +634,7 @@ namespace PileDesign.FEM
                         "この杭の土層-杭セットがありません。杭配置・地盤・杭体の入力を確定してから、もう一度実行してください。")]);
             }
 
-            SoilPile soilPile = InputModel.ElementDivision.SoilPiles[soilPileAltNo - 1];
+            SoilPile soilPile = pile.SoilPileAt(InputModel)!;
 
             // Cap Node
             double z0 = soilPile.ZDataItems[0].Z;

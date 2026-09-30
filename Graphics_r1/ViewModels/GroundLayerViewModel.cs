@@ -213,12 +213,18 @@ namespace PileDesign.ViewModels
         /// 選択中の地盤番号を、いまの地盤の数の範囲に戻し、選択中の地盤を合わせる。
         /// 以前は範囲の外のとき選択中の地盤だけを先頭に替え、番号は範囲の外のまま残していた (次の操作で落ちる)。
         /// </summary>
+        /// <summary>
+        /// 選択中の地盤 (画面が持つ一覧を、選択中の地盤番号で引く)。番号を一覧の範囲に丸めて引くので、範囲の外で落ちない。
+        /// 地盤は最後の 1 つを消せず、開いたときに空なら 1 つ足すので、一覧は空にならない。
+        /// </summary>
+        private GroundInput CurrentGround => GroundsInput[Math.Clamp(GroundNo, 1, GroundsInput.Count) - 1];
+
         private void KeepSelectionInRange()
         {
             UpdateGroundsCountPlusOneList();
             if (GroundsInput.Count == 0) { GroundInput = null; return; }
             if (GroundNo < 1 || GroundNo > GroundsInput.Count) GroundNo = Math.Clamp(GroundNo, 1, GroundsInput.Count);
-            GroundInput = GroundsInput[GroundNo - 1];
+            GroundInput = CurrentGround;
         }
 
         [RelayCommand]
@@ -607,7 +613,7 @@ namespace PileDesign.ViewModels
                 if (GroundsInput.Count > 0)
                 {
                     GroundNo = Math.Min(GroundNo, GroundsInput.Count);
-                    GroundInput = GroundsInput[GroundNo - 1];
+                    GroundInput = CurrentGround;
                 }
                 else
                 {

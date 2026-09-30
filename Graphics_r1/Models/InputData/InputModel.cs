@@ -1660,9 +1660,9 @@ namespace PileDesign.Models.InputData
                     if (pileBodyNo - 1 < 0 || pileBodyNo - 1 >= PileBodies.Count) continue;
                     if (groundNo - 1 < 0 || groundNo - 1 >= GroundsInput.Count) continue;
 
-                    PileBodies[pileBodyNo - 1].PileBodySegmentsUpdate();
-                    var pileBodySegments = PileBodies[pileBodyNo - 1].PileBodySegments;
-                    var groundLayerDataItems = GroundsInput[groundNo - 1].GroundLayers;
+                    PileBodyAt(pileBodyNo)!.PileBodySegmentsUpdate();
+                    var pileBodySegments = PileBodyAt(pileBodyNo)!.PileBodySegments;
+                    var groundLayerDataItems = GroundAt(groundNo)!.GroundLayers;
 
                     // O(1) 重複チェック（座標を離散化してHashSetで判定）
                     long zKey = (long)Math.Round(pileTopAltitude / NumericalConstants.COORDINATE_TOLERANCE);
@@ -1679,7 +1679,7 @@ namespace PileDesign.Models.InputData
 
                     // 場所打ち鋼管コンクリート杭の場合、杭頭から0.5Dの位置に分割点を追加
                     // （杭頭部と杭中間部で異なるM-φ関係を適用するため）
-                    if (PileBodies[pileBodyNo - 1].PileBodyType == PileTypeNames.InsituSteelPipeConcrete)
+                    if (PileBodyAt(pileBodyNo)!.PileBodyType == PileTypeNames.InsituSteelPipeConcrete)
                     {
                         // 杭頭区間（鋼管コンクリート部）の杭径を取得
                         var topSection = pileBodySegments
@@ -1700,7 +1700,7 @@ namespace PileDesign.Models.InputData
 
                     // 鋼管杭 + 鉄筋定着工法 の場合、杭頭から D (杭径) の位置に分割点を追加
                     // (杭頭部=コンクリート充填鋼管部 ≒ 杭径分の長さ、それ以下=鋼管部 として M-φ 切替)
-                    if (PileBodies[pileBodyNo - 1].PileBodyType == PileTypeNames.SteelPipe)
+                    if (PileBodyAt(pileBodyNo)!.PileBodyType == PileTypeNames.SteelPipe)
                     {
                         var topSection = pileBodySegments
                             .Select(s => s.PileSection)
@@ -1720,7 +1720,7 @@ namespace PileDesign.Models.InputData
                     // 鋼管杭の座屈長 = この杭が通る液状化区間の長さ。
                     // レベル1・レベル2 で液状化する範囲が違うので、長い方 (=厳しい方) を採る。
                     {
-                        var ground = GroundsInput[groundNo - 1];
+                        var ground = GroundAt(groundNo)!;
                         double lk = 0.0;
                         for (int levelIndex = 0; levelIndex < 2; levelIndex++)
                         {
@@ -1773,9 +1773,9 @@ namespace PileDesign.Models.InputData
                     {
                         No = newPiles.Count + 1,
                         GroundNo = groundNo,
-                        GroundInput = GroundsInput[groundNo - 1],
+                        GroundInput = GroundAt(groundNo)!,
                         PileBodyNo = pileBodyNo,
-                        PileBodyInput = PileBodies[pileBodyNo - 1],
+                        PileBodyInput = PileBodyAt(pileBodyNo)!,
                         Z = pileTopAltitude,
                         ZDataItems = pileZDataItems
                     };
@@ -1918,7 +1918,7 @@ namespace PileDesign.Models.InputData
                 throw new ArgumentOutOfRangeException(nameof(groundNo), "Ground number is out of range.");
             }
 
-            ObservableCollection<GroundLayerInput> groundLayerDataItems = GroundsInput[groundNo - 1].GroundLayers;
+            ObservableCollection<GroundLayerInput> groundLayerDataItems = GroundAt(groundNo)!.GroundLayers;
 
             foreach (GroundLayerInput groundLayerDataItem in groundLayerDataItems)
             {

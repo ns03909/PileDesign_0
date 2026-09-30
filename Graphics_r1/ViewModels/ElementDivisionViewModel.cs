@@ -402,7 +402,7 @@ namespace PileDesign.ViewModels
                         IsChangeable = true,
                         //GroundLayerNo = PileGroundNo,
                         //GroundInput = InputModel.GroundsInput[PileGroundNo - 1],
-                        GroundInput = SoilPiles[SelectedSoilPileNo - 1].GroundInput,
+                        GroundInput = CurrentSoilPile!.GroundInput,
                     };
 
                     // 選択された行の下に新しい行を追加
@@ -420,6 +420,15 @@ namespace PileDesign.ViewModels
         public event EventHandler RequestClose;
 
         private ObservableCollection<SoilPile> PrevSoilPiles { get; set; }
+
+        /// <summary>
+        /// 選択中の土層-杭セット (選択番号を一覧の範囲に丸めて引く。範囲の外で落ちない)。一覧が空なら null。
+        /// この画面は土層-杭セットがあるときにしか開かないので、使う側は空を想定していない。
+        /// </summary>
+        private SoilPile? CurrentSoilPile => SoilPiles is { Count: > 0 } list ? list[Math.Clamp(SelectedSoilPileNo, 1, list.Count) - 1] : null;
+
+        /// <summary>番号 (1 から) の土層-杭セット。範囲の外なら null。</summary>
+        private SoilPile? SoilPileAt(int no) => SoilPiles is { } list && no >= 1 && no <= list.Count ? list[no - 1] : null;
         private SoilEmbedment PrevSoilEmbedment { get; set; }
 
         private double originalValue;
@@ -641,7 +650,7 @@ namespace PileDesign.ViewModels
                 {
                     int no = Math.Clamp(SelectedSoilPileNo, 1, SoilPiles.Count);
                     SelectedZDataItems = new ObservableCollection<PileZDataItem>(
-                        SoilPiles[no - 1].ZDataItems.Select(item => item.DeepCopy()));
+                        SoilPileAt(no)!.ZDataItems.Select(item => item.DeepCopy()));
                 }
 
                 OnZDataItemsChanged();
@@ -719,7 +728,7 @@ namespace PileDesign.ViewModels
 
             SelectedHorizontalSoilReactions.Clear();
 
-            var soilPile = SoilPiles[SelectedSoilPileNo - 1];
+            var soilPile = CurrentSoilPile!;
             GroundInput groundInput = InputModel.RequireGround(soilPile);
             PileBodyInput pileBody = InputModel.RequirePileBody(soilPile);
 
@@ -753,7 +762,7 @@ namespace PileDesign.ViewModels
             SaveUndoSnapshot();
 
             // モデル側（解析が参照する SoilPile.HorizontalSoilReactions）を再構築
-            SoilPiles[SelectedSoilPileNo - 1].SetKh0Override(editedItem.Name, newValue);
+            CurrentSoilPile!.SetKh0Override(editedItem.Name, newValue);
             // 表示側を再構築
             SetHorizontalSoilReaction();
         }
@@ -767,7 +776,7 @@ namespace PileDesign.ViewModels
             if (string.IsNullOrEmpty(SelectedLayeronDataGrid.Name)) return;
 
             SaveUndoSnapshot();
-            SoilPiles[SelectedSoilPileNo - 1].ClearKh0Override(SelectedLayeronDataGrid.Name);
+            CurrentSoilPile!.ClearKh0Override(SelectedLayeronDataGrid.Name);
             SetHorizontalSoilReaction();
         }
 
@@ -778,7 +787,7 @@ namespace PileDesign.ViewModels
             if (SoilPiles == null || SelectedSoilPileNo < 1 || SelectedSoilPileNo > SoilPiles.Count) return;
 
             SaveUndoSnapshot();
-            SoilPiles[SelectedSoilPileNo - 1].ClearAllKh0Overrides();
+            CurrentSoilPile!.ClearAllKh0Overrides();
             SetHorizontalSoilReaction();
         }
 
@@ -1244,7 +1253,7 @@ namespace PileDesign.ViewModels
                         {
                             Z = original[i].Z - step * j,
                             IsChangeable = true,
-                            GroundInput = SoilPiles[SelectedSoilPileNo - 1].GroundInput
+                            GroundInput = CurrentSoilPile!.GroundInput
                         };
                         // 必要なら局所的に土の変位を計算（軽量）
                         newItem.SetSoilDisplacement();
@@ -1263,7 +1272,7 @@ namespace PileDesign.ViewModels
                 {
                     Z = merged[0].Z - FirstDistance,
                     IsChangeable = true,
-                    GroundInput = SoilPiles[SelectedSoilPileNo - 1].GroundInput
+                    GroundInput = CurrentSoilPile!.GroundInput
                 }
                ;
                 firstInsert.SetSoilDisplacement();
@@ -1370,7 +1379,7 @@ namespace PileDesign.ViewModels
 
             // 現在表示中の杭の UI を更新
             _suppressUndoSave = true;
-            var currentPile = SoilPiles[SelectedSoilPileNo - 1];
+            var currentPile = CurrentSoilPile!;
             SelectedZDataItems = new ObservableCollection<PileZDataItem>(
                 currentPile.ZDataItems.Select(item => item.DeepCopy()));
             _suppressUndoSave = false;
@@ -1501,7 +1510,7 @@ namespace PileDesign.ViewModels
             if (SoilPiles == null || SoilPiles.Count == 0) return;
             if (SelectedSoilPileNo < 1 || SelectedSoilPileNo > SoilPiles.Count) return;
 
-            var selectedSoilPile = SoilPiles[SelectedSoilPileNo - 1];
+            var selectedSoilPile = CurrentSoilPile!;
 
             if (selectedSoilPile == null) return;
             if (ElementDivisionWindowInstance == null || ElementDivisionWindowInstance.DataGridZs == null) return;
@@ -1527,14 +1536,14 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            SoilPiles[SelectedSoilPileNo - 1].ZDataItems = new ObservableCollection<PileZDataItem>
+            CurrentSoilPile!.ZDataItems = new ObservableCollection<PileZDataItem>
                     (SelectedZDataItems.Select(item => item.DeepCopy()));
-            SoilPiles[SelectedSoilPileNo - 1].OnZDataItemsChanged(SoilPiles[SelectedSoilPileNo - 1].ZDataItems); // SoilPileのプロパティ更新を委譲
+            CurrentSoilPile!.OnZDataItemsChanged(CurrentSoilPile!.ZDataItems); // SoilPileのプロパティ更新を委譲
 
-            PileGroundNo = SoilPiles[SelectedSoilPileNo - 1].GroundNo;
-            PileBodyNo = SoilPiles[SelectedSoilPileNo - 1].PileBodyNo;
-            Z = SoilPiles[SelectedSoilPileNo - 1].Z;
-            PileBottomAltitude = SoilPiles[SelectedSoilPileNo - 1].PileBottomAltitude;
+            PileGroundNo = CurrentSoilPile!.GroundNo;
+            PileBodyNo = CurrentSoilPile!.PileBodyNo;
+            Z = CurrentSoilPile!.Z;
+            PileBottomAltitude = CurrentSoilPile!.PileBottomAltitude;
 
             // DataGrid の行ヘッダ再番号付けは可能な限り一度だけ行う
             AutoNumberingDataGrid(ElementDivisionWindowInstance.DataGridZs);
@@ -1748,7 +1757,7 @@ namespace PileDesign.ViewModels
                 PreviousSelectedSoilPileNo = oldValue ?? _selectedSoilPileNo;
                 SelectedSoilPileNo = newValue.Value;
 
-                var selectedSoilPile = SoilPiles[newValue.Value - 1];
+                if (SoilPileAt(newValue.Value) is not { } selectedSoilPile) return;
                 SelectedZDataItems = new ObservableCollection<PileZDataItem>
                     (selectedSoilPile.ZDataItems.Select(item => item.DeepCopy()));
 
@@ -1761,11 +1770,13 @@ namespace PileDesign.ViewModels
 
         public void SetZdataItemsAndHorizontalSoilReactionItems(int soilPileNo)
         {
+            if (SoilPileAt(soilPileNo) is not { } target) return;
+
             // ZDataItemsの更新
-            SoilPiles[soilPileNo - 1].ZDataItems = new ObservableCollection<PileZDataItem>
+            target.ZDataItems = new ObservableCollection<PileZDataItem>
                 (SelectedZDataItems.Select(item => item.DeepCopy()));
 
-            SoilPiles[soilPileNo - 1].OnZDataItemsChanged(SoilPiles[soilPileNo - 1].ZDataItems);
+            target.OnZDataItemsChanged(target.ZDataItems);
 
             // 水平地盤反力は書き戻さない。
             //
@@ -1917,7 +1928,7 @@ namespace PileDesign.ViewModels
             if (SoilPiles == null || SoilPiles.Count == 0 || SelectedSoilPileNo < 1 || SelectedSoilPileNo > SoilPiles.Count)
             { return; }
 
-            var selectedSoilPile = SoilPiles[SelectedSoilPileNo - 1];
+            var selectedSoilPile = CurrentSoilPile!;
             if (selectedSoilPile == null)
             { return; }
 
@@ -1962,9 +1973,10 @@ namespace PileDesign.ViewModels
 
         public void DrawShapes()
         {
-            GroundInput groundInput = SoilPiles[SelectedSoilPileNo - 1].GroundInput;
+            // 選択中の土層-杭セットと、その杭体 (参照が切れていれば描かない)
+            if (CurrentSoilPile is not { } drawnSoilPile || InputModel.PileBodyAt(PileBodyNo) is not { } drawnBody) return;
+            GroundInput groundInput = drawnSoilPile.GroundInput;
             double pileTopAltitude = Z;
-            if (SoilPiles == null) return;
 
             List<double> zs = [];
             foreach (var selectedZDataItem in SelectedZDataItems)
@@ -1976,23 +1988,23 @@ namespace PileDesign.ViewModels
 
             ShapeDrawer.DrawPileElevation(
                 Canvas,
-                SoilPiles[SelectedSoilPileNo - 1].PileBodySegments,
-                SoilPiles[SelectedSoilPileNo - 1].D * 1000,
-                InputModel.PileBodies[PileBodyNo - 1].InsituPileToeHeight,
-                InputModel.PileBodies[PileBodyNo - 1].InsituPileToeAngle,
-                InputModel.PileBodies[PileBodyNo - 1].PrecastConcretePileToeHeightRatio,
-                SoilPiles[SelectedSoilPileNo - 1].PileConstructionType,
+                CurrentSoilPile!.PileBodySegments,
+                CurrentSoilPile!.D * 1000,
+                drawnBody.InsituPileToeHeight,
+                drawnBody.InsituPileToeAngle,
+                drawnBody.PrecastConcretePileToeHeightRatio,
+                CurrentSoilPile!.PileConstructionType,
                 pileTopAltitude,
                 groundInput,
                 true,
                 zs,
                 selectedZ,
-                smartMagnumLL: InputModel.PileBodies[PileBodyNo - 1].SmartMagnumLL,
-                smartMagnumDes: InputModel.PileBodies[PileBodyNo - 1].SmartMagnumDes,
-                smartMagnumWingLength: InputModel.PileBodies[PileBodyNo - 1].SmartMagnumWingLength,
-                hybridE: InputModel.PileBodies[PileBodyNo - 1].HybridExpansionRatio,
-                hybridEs: InputModel.PileBodies[PileBodyNo - 1].HybridExcavationRatio,
-                hybridLu: InputModel.PileBodies[PileBodyNo - 1].HybridPileBelowLength);
+                smartMagnumLL: drawnBody.SmartMagnumLL,
+                smartMagnumDes: drawnBody.SmartMagnumDes,
+                smartMagnumWingLength: drawnBody.SmartMagnumWingLength,
+                hybridE: drawnBody.HybridExpansionRatio,
+                hybridEs: drawnBody.HybridExcavationRatio,
+                hybridLu: drawnBody.HybridPileBelowLength);
 
             // 現在表示した土層-杭セットのランプを点灯
             MarkPileAsShown(SelectedSoilPileNo - 1);

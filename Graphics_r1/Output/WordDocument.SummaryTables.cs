@@ -62,7 +62,7 @@ namespace PileDesign.Output
             // 杭検討結果まとめ一覧
             for (int selectedPileBodyNo = 1; selectedPileBodyNo <= inputModel.PileBodies.Count; selectedPileBodyNo++)
             {
-                var pileBody = inputModel.PileBodies[selectedPileBodyNo - 1];
+                var pileBody = inputModel.PileBodyAt(selectedPileBodyNo)!;
 
                 if (pileBody.PileConstructionType == "場所打ちコンクリート杭")
                 {
@@ -480,7 +480,7 @@ namespace PileDesign.Output
 
             for (int pileBodyNo = 1; pileBodyNo <= inputModel.PileBodies.Count; pileBodyNo++)
             {
-                var pileBody = inputModel.PileBodies[pileBodyNo - 1];
+                var pileBody = inputModel.PileBodyAt(pileBodyNo)!;
                 if (pileBody?.PileBodySegments == null) continue;
 
                 // この杭体の区間ごとの行 (区間番号 → 行)

@@ -1378,8 +1378,8 @@ namespace PileDesign.ViewModels
                 if (groundNo < 1 || groundNo > CurrentInputModel.GroundsInput.Count) continue;
                 if (pileBodyNo < 1 || pileBodyNo > CurrentInputModel.PileBodies.Count) continue;
 
-                var groundInput = CurrentInputModel.GroundsInput[groundNo - 1];
-                var pileBody = CurrentInputModel.PileBodies[pileBodyNo - 1];
+                var groundInput = CurrentInputModel.GroundAt(groundNo)!;
+                var pileBody = CurrentInputModel.PileBodyAt(pileBodyNo)!;
 
                 // 杭下端標高を計算 (v2 セマンティクス: pile.Z は接合節点 Z なので、杭頭は PileHeadZ)
                 double pileTopAltitude = pileLayout.PileHeadZ;
@@ -1438,7 +1438,7 @@ namespace PileDesign.ViewModels
                 }
                 else
                 {
-                    var embGround = CurrentInputModel.GroundsInput[embGroundNo - 1];
+                    var embGround = CurrentInputModel.GroundAt(embGroundNo)!;
                     double embTop = embedment.EmbedmentLayers[0].TopAltitude;
                     double embBottom = embedment.EmbedmentLayers[^1].BottomAltitude;
 
@@ -1821,7 +1821,7 @@ namespace PileDesign.ViewModels
 
             // 沈下用の土層は群杭沈下だけが読む。水平解析の結果は陳腐化しない
 
-            var groundInput = CurrentInputModel.GroundsInput[SelectedGroundInputModelNo - 1];
+            var groundInput = CurrentInputModel.GroundAt(SelectedGroundInputModelNo)!;
             double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
             if (groundInput.GroundLayers == null || groundInput.GroundLayers.Any(layer => !double.IsFinite(layer.BottomAltitude)))
             { MessageService.Show("地盤の層境界に有限の標高が必要です。土層は変更しません。"); return; }

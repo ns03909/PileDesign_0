@@ -235,7 +235,7 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                var pileBody = InputModel.PileBodies[pb - 1];
+                var pileBody = InputModel.PileBodyAt(pb)!;
                 // ステップ毎に呼ぶため、(杭体, 軸力) でキャッシュする。
                 // 軸力は 1kN に丸め、キーと計算の両方で同じ丸め値を使う
                 // (丸めた値をキーにしながら生の値で計算すると、同じキーに入る曲線が
