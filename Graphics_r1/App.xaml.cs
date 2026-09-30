@@ -100,6 +100,15 @@ namespace PileDesign
                 //   PileDesign.exe project.pdj            (位置引数、ファイル関連付け用)
                 //   .json (旧形式) も同様に受け付ける
                 StartupFilePath = ParseStartupFilePath(e.Args);
+
+                // 起動の確認 (--self-check): 例題を開く・解析する・計算書を出すまでを通して終了コードで返す。
+                // リリースの確認が、発行した exe をこれで起動する。確認のあいだはダイアログを出さない
+                SelfCheckDirectory = PileDesign.ViewModels.SelfCheckRunner.ParseDirectory(e.Args);
+                if (SelfCheckDirectory != null)
+                {
+                    PileDesign.Services.MessageService.IsUnattended = true;
+                    Log.Information("起動の確認を行います: 出力先 {Dir}", SelfCheckDirectory);
+                }
                 if (!string.IsNullOrEmpty(StartupFilePath))
                 {
                     Log.Information("Startup file requested: {Path}", StartupFilePath);
@@ -110,7 +119,8 @@ namespace PileDesign
                 // のみサイレントに再登録する。未登録なら何もしない (勝手な登録は避ける)。
                 try
                 {
-                    if (FileAssociationService.IsRegistered() &&
+                    // 起動の確認では関連付けを書き換えない (発行先の一時的な exe を登録してしまう)
+                    if (!IsSelfCheck && FileAssociationService.IsRegistered() &&
                         !FileAssociationService.IsRegisteredPathCurrent())
                     {
                         if (FileAssociationService.Register())
@@ -131,9 +141,27 @@ namespace PileDesign
 
                 Log.Information("MainWindow shown");
 
+                if (SelfCheckDirectory is { } selfCheckDir)
+                {
+                    // 画面の読み込みが済んでから通す (例題の読み込みは画面の入口を使う)
+                    mainWindow.Dispatcher.BeginInvoke(new Action(async () =>
+                    {
+                        int code = 1;
+                        try
+                        {
+                            if (mainWindow.DataContext is PileDesign.ViewModels.MainWindowViewModel vm)
+                                code = await PileDesign.ViewModels.SelfCheckRunner.RunAsync(vm, selfCheckDir);
+                            else
+                                Log.Error("起動の確認: 画面の ViewModel がありません");
+                        }
+                        catch (Exception ex) { Log.Error(ex, "起動の確認で例外"); }
+                        Log.Information("起動の確認を終えました (終了コード {Code})", code);
+                        Shutdown(code);
+                    }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                }
                 // 起動時の案内。ファイルを指定して起動した場合 (関連付けからのダブルクリック等) は
                 // やりたいことが決まっているので邪魔をしない。
-                if (string.IsNullOrEmpty(StartupFilePath))
+                else if (string.IsNullOrEmpty(StartupFilePath))
                 {
                     TryShowWelcomeDialog(mainWindow);
                 }
@@ -143,6 +171,12 @@ namespace PileDesign
                 HandleFatalException(ex, source: "OnStartup");
             }
         }
+
+        /// <summary>起動の確認 (<c>--self-check</c>) の出力先。通常の起動では null。</summary>
+        public static string? SelfCheckDirectory { get; private set; }
+
+        /// <summary>起動の確認として起動したか。</summary>
+        public static bool IsSelfCheck => SelfCheckDirectory != null;
 
         /// <summary>
         /// 起動時の案内ダイアログを表示し、選ばれた入口へ送る。

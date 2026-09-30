@@ -14,6 +14,9 @@
       4. 発行した exe の版が csproj の版と一致するか
       5. 計算書のレイアウト (tools/report-layout-check.ps1)。1 で作った代表の計算書を Word で描画して PDF にし、
          見出しだけのページ・図と図の題 / 表題と表の泣き別れ・はみ出し・省いた図を調べる。Word が要る
+      6. 発行した exe の起動の確認 (PileDesign.exe --self-check)。例題を開く・水平解析する・検定する・計算書を出すまでを
+         画面と同じ入口で通し、終了コードで合否を見る。単一ファイル・自己完結の形で初めて出る問題 (同梱の例題・フォント・
+         ネイティブのライブラリが見つからないなど) は、ビルドと全体テストでは見えない
 
     版を上げる手順そのもの (CHANGELOG の [Unreleased] を版の節へ改名する・csproj の版・add-changelog.py の目印)
     は行わない。上げたあとに、取り残しが無いかをこれで確かめる。
@@ -101,6 +104,20 @@ $product = (Get-Item $exe).VersionInfo.ProductVersion
 # ProductVersion には "+コミットの識別" が付くことがあるので、その前で比べる
 if (($product -split '\+')[0] -ne $version) { Fail "発行した exe の版 ($product) が csproj の版 ($version) と違います。" }
 Ok "発行した exe の版 ($product)"
+
+# ── 6. 発行した exe の起動の確認 ──
+$selfCheckDir = Join-Path $root "TestProject1\TestResults\self-check"
+if (Test-Path $selfCheckDir) { Remove-Item -Recurse -Force $selfCheckDir }
+Write-Host "発行した exe を起動して確かめています (例題を開く・解析する・計算書を出す)..." -ForegroundColor Cyan
+$proc = Start-Process -FilePath $exe -ArgumentList "--self-check", "`"$selfCheckDir`"" -PassThru
+if (-not $proc.WaitForExit(15 * 60 * 1000)) {
+    try { $proc.Kill() } catch { }
+    Fail "発行した exe の起動の確認が 15 分で終わりません。"
+}
+$selfCheckResult = Join-Path $selfCheckDir "self-check-result.txt"
+if (Test-Path $selfCheckResult) { Get-Content $selfCheckResult -Encoding UTF8 | ForEach-Object { Write-Host "    $_" } }
+if ($proc.ExitCode -ne 0) { Fail "発行した exe の起動の確認が通りません (終了コード $($proc.ExitCode))。上の結果とログを見てください。" }
+Ok "発行した exe の起動の確認 (例題を開く・解析する・検定する・計算書を出す)"
 
 Write-Host ""
 Write-Host "リリースの確認がすべて通りました (版 $version)。発行先: $publishDir" -ForegroundColor Green

@@ -708,7 +708,8 @@ namespace PileDesign.Views
             // 自動保存ファイルの復元チェック
             // ダブルクリック等で起動ファイル指定がある場合はスキップ
             // (ユーザーは明示的に X を開こうとしているのに、別ファイル Y の autosave を提案するのを防ぐ)
-            if (string.IsNullOrEmpty(App.StartupFilePath))
+            // 起動の確認 (--self-check) では出さない (確認が復元の窓で止まる)
+            if (string.IsNullOrEmpty(App.StartupFilePath) && !App.IsSelfCheck)
             {
                 viewModel.CheckAutoSaveRestore();
             }
