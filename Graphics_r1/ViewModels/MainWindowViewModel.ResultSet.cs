@@ -259,7 +259,7 @@ namespace PileDesign.ViewModels
                 FactoredEvaluation = evaluation,
                 FactoredEvaluationError = evaluationError,
                 AnalysisConditions = DescribeAnalysisConditions(),
-                AnalysisCaseList = CurrentResultSet?.RunMetadata?.DescribeCases(),
+                AnalysisCaseList = CurrentResultSet?.RecordOf(AnalysisKind.Horizontal)?.DescribeCases(),
                 HorizontalCaseCount = CountHorizontalCases(),
                 AnalysisNonFiniteCount = IsHorizontalAnalysisDone && CurrentModel != null ? CountNonFiniteResults(CurrentModel) : 0,
             };
@@ -278,23 +278,29 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 結果の前提を 1 行にする (計算書の表紙に書く)。解析の時刻・解析したときの入力の識別 (入力の署名の先頭 12 文字。
-        /// 同じ入力なら同じ値になる)・水平解析で解いたケースの数。解析していなければ null。
+        /// 結果の前提 (計算書の表紙に書く)。1 行目は控えを取った時刻・解析したときの入力の識別 (入力の署名の先頭 12 文字。
+        /// 同じ入力なら同じ値になる)・水平解析で解いたケースの数。2 行目からは解析の種類ごとに 1 行ずつ、実行した時刻と条件。
+        /// 種類ごとに時刻も条件も違うので、1 行に並べると条件がどの解析のものか読めない。行は改行で区切る。解析していなければ null。
         /// </summary>
         internal string? DescribeAnalysisConditions()
         {
             if (CurrentModel == null && _currentResultSet == null) return null;
             var parts = new System.Collections.Generic.List<string>();
             if (_currentResultSet != null) parts.Add($"解析の実行: {_currentResultSet.CapturedAt:yyyy/MM/dd HH:mm}");
-            if (_currentResultSet?.RunMetadata?.DescribeSettings() is { Length: > 0 } settings)
-                parts.Add(settings);
             if (!string.IsNullOrEmpty(_analysisInputSignature))
                 parts.Add($"解析したときの入力の識別: {_analysisInputSignature[..Math.Min(12, _analysisInputSignature.Length)]}");
             int cases = CountHorizontalCases();
             if (cases > 0) parts.Add($"水平解析のケース: {cases} 件");
             if (ResultsMixedWithEditedInput || (_currentResultSet == null && InputChangedSinceAnalysis))
                 parts.Add("解析のあとに入力が編集されています");
-            return parts.Count == 0 ? null : string.Join("　", parts);
+
+            var lines = new System.Collections.Generic.List<string>();
+            if (parts.Count > 0) lines.Add(string.Join("　", parts));
+            foreach (var record in _currentResultSet?.RunRecords ?? [])
+            {
+                if (record != null) lines.Add(record.Describe());
+            }
+            return lines.Count == 0 ? null : string.Join("\n", lines);
         }
 
         private bool _inputChangedSinceAnalysis;
@@ -593,9 +599,15 @@ namespace PileDesign.ViewModels
         /// 以降 <see cref="CurrentModel"/> は切り離された複製を指し、
         /// 結果表示系は <see cref="ResultInputModel"/> を見る。
         /// </summary>
+        /// <param name="runMetadata">
+        /// いま実行した解析の条件。同じ種類の前の記録と差し替え、ほかの種類の記録は結果が残っている限り引き継ぐ
+        /// (控えは解析のたびに取り直すので、引き継がないと水平解析のあとに沈下解析を実行したとき水平解析の条件が消える)。
+        /// </param>
         public void CaptureAnalysisResultSet(AnalysisRunMetadata? runMetadata = null)
         {
             if (CurrentInputModel == null) return;
+
+            var runRecords = AnalysisRunMetadata.Merge(_currentResultSet?.RunRecords, runMetadata, HasResultOf);
 
             // 水平解析の結果が前回のスナップショットのままで、そのあと入力が編集されている場合は
             // 取り直さない。取り直すと「編集後の入力」と「解析時の結果」が 1 組に組み直され、
@@ -617,6 +629,8 @@ namespace PileDesign.ViewModels
                 // ここで写す必要はない (以前は入力モデルの中にあり、写し忘れると
                 // 結果表示に沈下が出なかった)。念のため結び付けだけ確かめておく。
                 EnsureSettlementResultSharedWithSnapshot();
+                // 控えは取り直さないが、いま実行した解析の条件は記録する
+                _currentResultSet!.RunRecords = runRecords;
                 Serilog.Log.Information(
                     "[結果セット] 入力が編集済みのためスナップショットは取り直さない "
                     + "(水平解析結果は解析時のまま。沈下の結果は共有しているのでそのまま出る)");
@@ -633,7 +647,7 @@ namespace PileDesign.ViewModels
                 IsVerticalBeamAnalysisDone,
                 IsElementSplit,
                 out var failure,
-                runMetadata);
+                runRecords);
 
             if (set == null)
             {
@@ -650,6 +664,16 @@ namespace PileDesign.ViewModels
             ResultSnapshotFailed = false;
             _analysisInputSignature = InputSignature(CurrentInputModel);
         }
+
+        /// <summary>その種類の解析の結果がいまあるか (実行条件の記録を引き継ぐかの判定)。</summary>
+        private bool HasResultOf(AnalysisKind kind) => kind switch
+        {
+            AnalysisKind.Horizontal => IsHorizontalAnalysisDone,
+            AnalysisKind.SingleSettlement => IsVerticalAnalysisDone,
+            AnalysisKind.VerticalBeam => IsVerticalBeamAnalysisDone,
+            AnalysisKind.GroupSettlement => IsGroupPileSettlementAnalysisDone,
+            _ => false,
+        };
 
         /// <summary>
         /// 解析結果の控えを作れなかったときの後始末。

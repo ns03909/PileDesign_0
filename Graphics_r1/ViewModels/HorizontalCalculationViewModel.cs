@@ -3186,6 +3186,8 @@ namespace PileDesign.ViewModels
         /// </summary>
         internal Models.AnalysisRunMetadata CaptureRunSettings() => new()
         {
+            Kind = Models.AnalysisKind.Horizontal,
+            ExecutedAt = DateTime.Now,
             ApplicationVersion = MainWindowViewModel.AppVersion,
             ConvergenceMethod = SelectedConvergenceMethod switch
             {

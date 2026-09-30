@@ -481,6 +481,20 @@ namespace PileDesign.ViewModels
             ApplyUndoState();
         }
 
+        /// <summary>
+        /// 単杭沈下解析の条件 (結果と一緒に保存し、計算書の表紙に書く)。荷重-沈下曲線は杭セットごとの工法と
+        /// 杭先端径で決まるので、それを杭セットごとに残す。
+        /// </summary>
+        internal static Models.AnalysisRunMetadata DescribeRun(IEnumerable<SoilPile>? soilPiles) => new()
+        {
+            Kind = Models.AnalysisKind.SingleSettlement,
+            ExecutedAt = DateTime.Now,
+            ApplicationVersion = MainWindowViewModel.AppVersion,
+            Conditions = [.. (soilPiles ?? []).Where(p => p != null).Select(p => new Models.AnalysisConditionEntry(
+                $"杭セット{p.No}",
+                $"{(string.IsNullOrWhiteSpace(p.PileConstructionType) ? "工法未設定" : p.PileConstructionType)}・杭先端径 {p.Dp:0.###} mm"))],
+        };
+
         [RelayCommand]
         private void OnOk()
         {
@@ -493,7 +507,7 @@ namespace PileDesign.ViewModels
             {
                 mainWindowViewModel.IsVerticalAnalysisDone = true;
                 mainWindowViewModel.MarkSettlementResultsCurrent();
-                mainWindowViewModel.CaptureAnalysisResultSet();
+                mainWindowViewModel.CaptureAnalysisResultSet(DescribeRun(InputModel.ElementDivision.SoilPiles));
             }
             RequestClose?.Invoke(this, EventArgs.Empty);
         }

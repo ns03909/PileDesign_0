@@ -82,6 +82,29 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _relaxationFactor, Math.Clamp(value, 0.1, 1.0));
         }
 
+        /// <summary>解析の条件 (結果と一緒に保存し、計算書の表紙に書く)。</summary>
+        internal Models.AnalysisRunMetadata CaptureRunSettings()
+        {
+            var cases = new List<string>();
+            if (AnalyzeVL) cases.Add("VL");
+            if (AnalyzeLevel1) cases.Add("L1");
+            if (AnalyzeLevel2) cases.Add("L2");
+            return new Models.AnalysisRunMetadata
+            {
+                Kind = Models.AnalysisKind.VerticalBeam,
+                ExecutedAt = DateTime.Now,
+                ApplicationVersion = MainWindowViewModel.AppVersion,
+                MaximumIterations = MaxIterations,
+                BaseResidualTolerance = ConvergenceTolerance,
+                InitialRelaxationFactor = RelaxationFactor,
+                Conditions =
+                [
+                    new("荷重ステップ数", LoadStepsCount.ToString()),
+                    new("荷重", cases.Count > 0 ? string.Join("・", cases) : "なし"),
+                ],
+            };
+        }
+
         // ── 荷重ケース選択 ──
 
         private bool _analyzeVL = true;
@@ -226,6 +249,8 @@ namespace PileDesign.ViewModels
             CaseResults.Clear();
             CalculationLog.Clear();
             _cancellationTokenSource = new CancellationTokenSource();
+            // 条件は解析を始めるときに取る (記録するのは解析に使った値)
+            var runSettings = CaptureRunSettings();
 
             try
             {
@@ -236,7 +261,7 @@ namespace PileDesign.ViewModels
                 IsAnalysisExecuted = true;
                 _mainWindowViewModel.IsVerticalBeamAnalysisDone = true;
                 _mainWindowViewModel.MarkSettlementResultsCurrent();
-                _mainWindowViewModel.CaptureAnalysisResultSet();
+                _mainWindowViewModel.CaptureAnalysisResultSet(runSettings);
 
                 if (CaseResults.Count > 0)
                 {

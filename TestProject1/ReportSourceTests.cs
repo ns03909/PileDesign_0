@@ -65,7 +65,7 @@ public class ReportSourceTests
         var resultSet = PileDesign.Models.AnalysisResultSet.Capture(
             input, model, null, hasHorizontal: true, hasVertical: false,
             hasGroupPileSettlement: false, hasVerticalBeam: false, isElementSplit: false,
-            runMetadata: metadata);
+            runRecords: [metadata]);
         Assert.IsNotNull(resultSet);
 
         var vm = new MainWindowViewModel { CurrentInputModel = input };

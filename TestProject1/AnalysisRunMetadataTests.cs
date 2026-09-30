@@ -50,6 +50,129 @@ public class AnalysisRunMetadataTests
         Assert.IsNull(new AnalysisRunSnapshot().AppVersion, "(前提) 以前の版の結果は版の記録を持たない");
     }
 
+    private static MainWindowViewModel HorizontalDone(out PileDesign.Models.AnalysisRunMetadata horizontal)
+    {
+        var input = new PileDesign.Models.InputData.InputModel();
+        var vm = new MainWindowViewModel { CurrentInputModel = input };
+        input.AttachViewModel(vm);
+        vm.CurrentModel = new AnaModel();
+        vm.IsHorizontalAnalysisDone = true;
+        horizontal = new PileDesign.Models.AnalysisRunMetadata
+        {
+            Kind = PileDesign.Models.AnalysisKind.Horizontal, ConvergenceMethod = "ラインサーチ", MaximumIterations = 100,
+        };
+        vm.CaptureAnalysisResultSet(horizontal);
+        return vm;
+    }
+
+    private static PileDesign.Models.AnalysisRunMetadata Settlement() => new()
+    {
+        Kind = PileDesign.Models.AnalysisKind.GroupSettlement,
+        Conditions = [new("荷重の置き方", "全体矩形")],
+    };
+
+    /// <summary>
+    /// <b>本題。</b> 水平解析のあとに沈下解析を実行しても、水平解析の条件の記録は残る。
+    /// 控えは解析のたびに取り直すので、以前は取り直した控えに水平解析の記録が引き継がれず消えていた
+    /// (沈下解析の条件は、もともと記録していなかった)。
+    /// </summary>
+    [TestMethod]
+    public void RunningSettlementAfterHorizontal_KeepsTheHorizontalRecord()
+    {
+        var vm = HorizontalDone(out var horizontal);
+        vm.IsGroupPileSettlementAnalysisDone = true;
+        vm.CaptureAnalysisResultSet(Settlement());
+
+        var set = vm.CurrentResultSet!;
+        Assert.AreSame(horizontal, set.RecordOf(PileDesign.Models.AnalysisKind.Horizontal), "水平解析の条件が消えた");
+        Assert.IsNotNull(set.RecordOf(PileDesign.Models.AnalysisKind.GroupSettlement));
+
+        // 同じ種類をもう一度実行したら差し替える (並べない)
+        var again = Settlement();
+        vm.CaptureAnalysisResultSet(again);
+        Assert.AreEqual(2, vm.CurrentResultSet!.RunRecords.Count);
+        Assert.AreSame(again, vm.CurrentResultSet.RecordOf(PileDesign.Models.AnalysisKind.GroupSettlement));
+    }
+
+    /// <summary>
+    /// 水平解析の入力を編集してから沈下だけ再実行すると、控えは取り直さない (解析時の結果と編集後の入力を組にしない)。
+    /// その経路でも、いま実行した沈下解析の条件は記録する。
+    /// </summary>
+    [TestMethod]
+    public void SettlementRecordIsKept_EvenWhenTheSnapshotIsNotRetaken()
+    {
+        var vm = HorizontalDone(out var horizontal);
+        var before = vm.CurrentResultSet;
+        vm.MarkInputChangedSinceAnalysis(MainWindowViewModel.AnalysisInputScope.Model);
+        vm.IsGroupPileSettlementAnalysisDone = true;
+        vm.CaptureAnalysisResultSet(Settlement());
+
+        Assert.AreSame(before, vm.CurrentResultSet, "(前提) 控えは取り直さない経路");
+        Assert.AreSame(horizontal, vm.CurrentResultSet!.RecordOf(PileDesign.Models.AnalysisKind.Horizontal));
+        Assert.IsNotNull(vm.CurrentResultSet.RecordOf(PileDesign.Models.AnalysisKind.GroupSettlement), "沈下解析の条件が記録されていない");
+    }
+
+    /// <summary>結果が消えた種類の記録は引き継がない (結果の無い解析の条件を計算書に書かない)。</summary>
+    [TestMethod]
+    public void RecordsOfKindsWithoutResults_AreDropped()
+    {
+        var vm = HorizontalDone(out _);
+        vm.IsHorizontalAnalysisDone = false;
+        vm.IsGroupPileSettlementAnalysisDone = true;
+        vm.CaptureAnalysisResultSet(Settlement());
+        Assert.IsNull(vm.CurrentResultSet!.RecordOf(PileDesign.Models.AnalysisKind.Horizontal));
+    }
+
+    /// <summary>
+    /// 計算書の表紙: 条件は解析の種類ごとに 1 行 (種類の名前と実行した時刻を添える)。1 行に並べると、どの条件がどの解析のものか読めない。
+    /// </summary>
+    [TestMethod]
+    public void TheReportShowsConditionsPerAnalysisKind()
+    {
+        var vm = HorizontalDone(out _);
+        vm.IsGroupPileSettlementAnalysisDone = true;
+        vm.CaptureAnalysisResultSet(Settlement());
+
+        var lines = vm.DescribeAnalysisConditions()!.Split('\n');
+        Assert.IsTrue(lines.Any(l => l.StartsWith("【水平解析】") && l.Contains("収束安定化 ラインサーチ")), string.Join(" / ", lines));
+        Assert.IsTrue(lines.Any(l => l.StartsWith("【群杭沈下解析】") && l.Contains("荷重の置き方 全体矩形")), string.Join(" / ", lines));
+        Assert.IsFalse(lines.Any(l => l.Contains("ラインサーチ") && l.Contains("荷重の置き方")), "別の解析の条件が同じ行に並んでいます");
+    }
+
+    /// <summary>水平解析以外の解析も、実行した箇所で条件を渡す (渡し忘れると、その解析の条件だけが残らない)。</summary>
+    [TestMethod]
+    public void EveryAnalysisPassesItsConditions()
+    {
+        string vb = TestSource.Read("Graphics_r1", "ViewModels", "VerticalBeamCalculationViewModel.cs");
+        StringAssert.Contains(vb, "_mainWindowViewModel.CaptureAnalysisResultSet(runSettings);");
+        StringAssert.Contains(TestSource.Read("Graphics_r1", "ViewModels", "SettlementViewModel.cs"),
+            "mainWindowViewModel.CaptureAnalysisResultSet(DescribeRun(InputModel.ElementDivision.SoilPiles));");
+        StringAssert.Contains(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.ModelEditing.cs"),
+            "CaptureAnalysisResultSet(DescribeGroupSettlementRun(pgs));");
+
+        // 本体で引数なしに呼んでいる箇所が無いこと (呼ぶと、その解析の条件だけが記録されない)
+        int scanned = 0;
+        foreach (var file in System.IO.Directory.EnumerateFiles(TestSource.Dir("Graphics_r1"), "*.cs", System.IO.SearchOption.AllDirectories))
+        {
+            if (file.Contains($"{System.IO.Path.DirectorySeparatorChar}obj{System.IO.Path.DirectorySeparatorChar}")) continue;
+            scanned++;
+            Assert.IsFalse(System.IO.File.ReadAllText(file).Contains("CaptureAnalysisResultSet();"),
+                $"{System.IO.Path.GetFileName(file)}: 解析の条件を渡さずに結果の控えを取っています");
+        }
+        TestSource.AssertScanned(scanned, 100, "本体のソース");
+
+        var vm = new VerticalBeamCalculationViewModel(new MainWindowViewModel()) { AnalyzeLevel2 = false, LoadStepsCount = 7 };
+        var record = vm.CaptureRunSettings();
+        Assert.AreEqual(PileDesign.Models.AnalysisKind.VerticalBeam, record.Kind);
+        StringAssert.Contains(record.DescribeSettings(), "荷重ステップ数 7");
+        StringAssert.Contains(record.DescribeSettings(), "荷重 VL・L1");
+
+        var single = SettlementViewModel.DescribeRun([new PileDesign.Models.InputData.SoilPile { No = 2, Dp = 1200 }]);
+        Assert.AreEqual(PileDesign.Models.AnalysisKind.SingleSettlement, single.Kind);
+        StringAssert.Contains(single.DescribeSettings(), "杭セット2");
+        StringAssert.Contains(single.DescribeSettings(), "杭先端径 1200 mm");
+    }
+
     /// <summary>
     /// 計算書: 解析した版といま出力している版が違えば注意する (応答値は解析した版、限界曲線はいまの版になる)。
     /// 版の記録の無い以前の結果では言わない (比べようがない)。

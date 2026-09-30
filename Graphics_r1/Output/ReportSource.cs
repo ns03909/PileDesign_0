@@ -38,8 +38,8 @@ namespace PileDesign.Output
         public Exception? FactoredEvaluationError { get; init; }
 
         /// <summary>
-        /// 結果の前提 (解析の時刻・解析したときの入力の識別・解いたケースの数)。表紙に書き、あとから
-        /// どの解析の結果かを追えるようにする。解析していなければ null。
+        /// 結果の前提 (解析の時刻・解析したときの入力の識別・解いたケースの数と、解析の種類ごとの条件)。表紙に書き、あとから
+        /// どの解析の結果かを追えるようにする。改行で区切った複数行 (種類ごとに 1 行)。解析していなければ null。
         /// </summary>
         public string? AnalysisConditions { get; init; }
 

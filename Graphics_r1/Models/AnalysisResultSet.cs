@@ -51,8 +51,14 @@ namespace PileDesign.Models
         public bool HasGroupPileSettlement { get; init; }
         public bool HasVerticalBeam { get; init; }
         public bool IsElementSplit { get; init; }
-        /// <summary>水平解析結果の実行条件 (旧ファイル・他解析のみの場合は null)。</summary>
-        public AnalysisRunMetadata? RunMetadata { get; init; }
+        /// <summary>
+        /// 解析の種類ごとの実行条件 (1 種類 1 件)。旧ファイルでは空。
+        /// 控えを取り直さずに沈下だけ再実行したときは、この一覧だけを差し替える (そのため変更できる一覧)。
+        /// </summary>
+        public List<AnalysisRunMetadata> RunRecords { get; set; } = [];
+
+        /// <summary>指定した種類の実行条件 (記録が無ければ null)。</summary>
+        public AnalysisRunMetadata? RecordOf(AnalysisKind kind) => RunRecords?.Find(r => r?.Kind == kind);
 
         /// <summary>
         /// 現在の入力と結果を 1 組に複製して切り離す。
@@ -74,9 +80,9 @@ namespace PileDesign.Models
             bool hasGroupPileSettlement,
             bool hasVerticalBeam,
             bool isElementSplit,
-            AnalysisRunMetadata? runMetadata = null)
+            List<AnalysisRunMetadata>? runRecords = null)
             => Capture(liveInput, anaModel, verticalBeamCaseResults, hasHorizontal, hasVertical,
-                       hasGroupPileSettlement, hasVerticalBeam, isElementSplit, out _, runMetadata);
+                       hasGroupPileSettlement, hasVerticalBeam, isElementSplit, out _, runRecords);
 
         /// <summary>
         /// <see cref="Capture(InputModel, AnaModel?, List{VerticalBeamCaseResult}?, bool, bool, bool, bool, bool)"/> と同じ。
@@ -93,7 +99,7 @@ namespace PileDesign.Models
             bool hasVerticalBeam,
             bool isElementSplit,
             out Exception? failure,
-            AnalysisRunMetadata? runMetadata = null)
+            List<AnalysisRunMetadata>? runRecords = null)
         {
             failure = null;
             if (liveInput == null) return null;
@@ -133,7 +139,7 @@ namespace PileDesign.Models
                     HasGroupPileSettlement = hasGroupPileSettlement,
                     HasVerticalBeam = hasVerticalBeam,
                     IsElementSplit = isElementSplit,
-                    RunMetadata = runMetadata,
+                    RunRecords = runRecords ?? [],
                 };
 
                 // 単杭沈下の荷重-沈下曲線も [JsonIgnore] なので往復で落ちる。

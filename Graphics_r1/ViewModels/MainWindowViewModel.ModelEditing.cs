@@ -1439,6 +1439,21 @@ namespace PileDesign.ViewModels
             return null;
         }
 
+        /// <summary>群杭沈下解析の条件 (結果と一緒に保存し、計算書の表紙に書く)。荷重の置き方・荷重面の高さ・土層の数・格子の間隔。</summary>
+        internal Models.AnalysisRunMetadata DescribeGroupSettlementRun(PileGroupSettlement pgs) => new()
+        {
+            Kind = Models.AnalysisKind.GroupSettlement,
+            ExecutedAt = DateTime.Now,
+            ApplicationVersion = AppVersion,
+            Conditions =
+            [
+                new("荷重の置き方", string.IsNullOrWhiteSpace(pgs?.LoadingType) ? "未設定" : pgs!.LoadingType),
+                new("荷重面の標高", $"{pgs?.LoadingPlaneAltitude:0.###} m"),
+                new("土層", $"{pgs?.SettlementSoilLayers?.Count ?? 0} 層"),
+                new("格子の間隔", $"X {GroupPileSettlementXSpacing:0.###} m・Y {GroupPileSettlementYSpacing:0.###} m"),
+            ],
+        };
+
         [RelayCommand(CanExecute = nameof(CanPileGroupSettlementAnalysis))]
         private void PileGroupSettlementAnalysis()
         {
@@ -1518,7 +1533,7 @@ namespace PileDesign.ViewModels
             IsGroupPileGridDeformationVisible = true;
             IsGroupPileSettlementAnalysisDone = true;
             MarkSettlementResultsCurrent();
-            CaptureAnalysisResultSet();
+            CaptureAnalysisResultSet(DescribeGroupSettlementRun(pgs));
             //IsAnalysisResultVisible = true;
             IsBubbleVisible = true;
             IsArrowVisible = true;

@@ -74,7 +74,7 @@ namespace TestProject1
         }
 
         [TestMethod]
-        public void SaveProjectData_PreservesAnalysisRunMetadata()
+        public void SaveProjectData_PreservesAnalysisRunRecordsPerKind()
         {
             var svc = new FileOperationService(MakeOptions());
             var file = Path.Combine(_tempDir, "run-metadata.json");
@@ -98,10 +98,24 @@ namespace TestProject1
                 }],
             };
 
-            svc.SaveProjectData(file, new InputModel(), new AnaModel(), analysisRunMetadata: metadata);
-            var loaded = svc.LoadProjectData(file).AnalysisRunMetadata;
+            var settlement = new AnalysisRunMetadata
+            {
+                Kind = AnalysisKind.GroupSettlement,
+                ExecutedAt = new DateTime(2026, 9, 30, 10, 15, 0),
+                Conditions = [new("荷重の置き方", "全体矩形")],
+            };
 
-            Assert.IsNotNull(loaded);
+            svc.SaveProjectData(file, new InputModel(), new AnaModel(), analysisRunRecords: [metadata, settlement]);
+            var records = svc.LoadProjectData(file).AnalysisRunRecords;
+
+            Assert.IsNotNull(records);
+            Assert.AreEqual(2, records.Count, "解析の種類ごとの記録がすべて残る");
+            var loaded = records.Single(r => r.Kind == AnalysisKind.Horizontal);
+            var loadedSettlement = records.Single(r => r.Kind == AnalysisKind.GroupSettlement);
+            Assert.AreEqual(settlement.ExecutedAt, loadedSettlement.ExecutedAt);
+            Assert.AreEqual("【群杭沈下解析 2026/09/30 10:15】 荷重の置き方 全体矩形", loadedSettlement.Describe());
+            StringAssert.Matches(File.ReadAllText(file), new System.Text.RegularExpressions.Regex("\"Kind\":\\s*\"GroupSettlement\""),
+                "種類は名前で書く (番号だと並びを変えたときに別の種類として読まれる)");
             Assert.AreEqual(metadata.ApplicationVersion, loaded.ApplicationVersion);
             Assert.AreEqual(metadata.ConvergenceMethod, loaded.ConvergenceMethod);
             Assert.AreEqual(metadata.Level1Steps, loaded.Level1Steps);

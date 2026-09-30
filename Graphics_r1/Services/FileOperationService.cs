@@ -51,7 +51,7 @@ namespace PileDesign.Services
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
             PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
             bool inputChangedSinceAnalysis = false, string? sourceFilePath = null,
-            Models.AnalysisRunMetadata? analysisRunMetadata = null)
+            IReadOnlyList<Models.AnalysisRunMetadata>? analysisRunRecords = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -66,7 +66,7 @@ namespace PileDesign.Services
             //  どのフィールドかを伝えることを見ている)
             var prepared = PrepareSave(inputModel, anaModel, verticalBeamCaseResults, resultInputSnapshot,
                 resultCapturedAt, pileFemLinks, isElementSplit, inputChangedSinceAnalysis, sourceFilePath,
-                validateFinite: true, analysisRunMetadata: analysisRunMetadata);
+                validateFinite: true, analysisRunRecords: analysisRunRecords);
             WritePrepared(filePath, prepared);
         }
 
@@ -118,7 +118,7 @@ namespace PileDesign.Services
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
             PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
             bool inputChangedSinceAnalysis = false, string? sourceFilePath = null, string? autoSaveSessionId = null,
-            bool validateFinite = false, Models.AnalysisRunMetadata? analysisRunMetadata = null)
+            bool validateFinite = false, IReadOnlyList<Models.AnalysisRunMetadata>? analysisRunRecords = null)
         {
             // 編集できるコレクションだけ写した器を先に作る (理由は SnapshotForSaving)。
             // 自動保存では呼び出し側がすでに写していることがあり、二重になるが、
@@ -176,7 +176,7 @@ namespace PileDesign.Services
                 ResultInputSnapshot = savesAnyResult ? resultInputSnapshot : null,
                 ResultCapturedAt = savesAnyResult ? resultCapturedAt : null,
                 InputChangedSinceAnalysis = savesAnyResult ? inputChangedSinceAnalysis : null,
-                AnalysisRunMetadata = savesAnyResult ? analysisRunMetadata : null,
+                AnalysisRunRecords = savesAnyResult && analysisRunRecords is { Count: > 0 } ? [.. analysisRunRecords] : null,
                 // 杭と FEM 要素の対応表は水平解析のモデルの要素番号なので、モデルを保存するときだけ
                 PileFemLinks = anaModel != null ? pileFemLinks : null,
                 IsElementSplit = isElementSplit,
@@ -401,7 +401,7 @@ namespace PileDesign.Services
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
             PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
             bool inputChangedSinceAnalysis = false, string? sourceFilePath = null,
-            Models.AnalysisRunMetadata? analysisRunMetadata = null)
+            IReadOnlyList<Models.AnalysisRunMetadata>? analysisRunRecords = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -413,7 +413,7 @@ namespace PileDesign.Services
             var swSer = Stopwatch.StartNew();
             var prepared = PrepareSave(inputModel, anaModel, verticalBeamCaseResults, resultInputSnapshot,
                 resultCapturedAt, pileFemLinks, isElementSplit, inputChangedSinceAnalysis, sourceFilePath,
-                validateFinite: ValidateFiniteBeforeSave, analysisRunMetadata: analysisRunMetadata);
+                validateFinite: ValidateFiniteBeforeSave, analysisRunRecords: analysisRunRecords);
             swSer.Stop();
             long tSerialize = swSer.ElapsedMilliseconds;
 
