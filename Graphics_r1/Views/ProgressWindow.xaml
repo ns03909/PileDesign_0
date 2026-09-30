@@ -3,13 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:common="clr-namespace:PileDesign.Common"
         Title="計算中..."
-        Height="200"
+        SizeToContent="Height"
         Width="500"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         common:EscapeKeyBehavior.Enable="False">
 
+    <!-- 高さは中身に合わせる。固定 (200) だと表題の帯の分だけ足りず、キャンセルのボタンが下で切れて押せなかった -->
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

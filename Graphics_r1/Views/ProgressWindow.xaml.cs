@@ -24,6 +24,12 @@ namespace PileDesign.Views
         }
 
         /// <summary>
+        /// 残り時間の見込みを出すか。進み具合が時間に比例しない処理 (段階ごとの長さが大きく違う計算書の作成など) では、
+        /// 見込みが当てにならないので出さない。
+        /// </summary>
+        public bool ShowsRemainingTime { get; init; } = true;
+
+        /// <summary>
         /// 進捗を更新
         /// </summary>
         public void UpdateProgress(Models.AnalysisProgress progress)
@@ -40,7 +46,7 @@ namespace PileDesign.Views
             _viewModel.Percentage = progress.Percentage;
             _viewModel.CurrentStep = progress.CurrentStep;
             _viewModel.PercentageText = $"{progress.Percentage:F1}% ({progress.CurrentStepNumber}/{progress.TotalSteps})";
-            _viewModel.EstimatedRemainingTimeText = progress.EstimatedRemainingTimeText;
+            _viewModel.EstimatedRemainingTimeText = ShowsRemainingTime ? progress.EstimatedRemainingTimeText : "";
         }
 
         /// <summary>

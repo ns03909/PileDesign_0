@@ -36,7 +36,7 @@ public partial class MainWindowViewModel
 
         using var cancellation = new CancellationTokenSource();
         var owner = app.MainWindow?.IsVisible == true ? app.MainWindow : null;
-        var window = new ProgressWindow(cancellation, ReportCancelConfirmation) { Title = "計算書の作成", Owner = owner };
+        var window = new ProgressWindow(cancellation, ReportCancelConfirmation) { Title = "計算書の作成", Owner = owner, ShowsRemainingTime = false };
         var startedAt = DateTime.Now;
         window.UpdateProgress(new AnalysisProgress { CurrentStep = "準備しています...", TotalSteps = Output.WordDocument.ReportStepCount, StartTime = startedAt });
 
