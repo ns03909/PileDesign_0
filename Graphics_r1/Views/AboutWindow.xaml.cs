@@ -113,6 +113,32 @@ namespace PileDesign.Views
             MainWindowViewModel.OpenHelpWindowAt(ReleaseNotesAnchor, "プログラム更新履歴概要");
         }
 
+        /// <summary>
+        /// 共有用のログを書き出す。ユーザー名・PC 名・フォルダの場所を伏せ (<see cref="LogSanitizer"/>)、
+        /// 一時ファイルに書き切ってから差し替える (<see cref="PileDesign.Services.ExportFile"/>)。
+        /// </summary>
+        private void ButtonExportShareableLog_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "テキスト (*.txt)|*.txt",
+                DefaultExt = ".txt",
+                FileName = $"PileDesign-共有用ログ-{DateTime.Now:yyyyMMdd-HHmm}.txt",
+            };
+            if (dialog.ShowDialog(this) != true) return;
+            string text;
+            try
+            {
+                text = LogSanitizer.BuildShareableLog(MainWindowViewModel.AppVersion);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                PileDesign.Services.MessageService.ShowSaveFailed("共有用のログ", ex);
+                return;
+            }
+            PileDesign.Services.ExportFile.TryWriteText(dialog.FileName, text, PileDesign.Services.ExportFormat.Text, "共有用のログ");
+        }
+
         private void ButtonOpenLogFolder_Click(object sender, RoutedEventArgs e)
         {
             try

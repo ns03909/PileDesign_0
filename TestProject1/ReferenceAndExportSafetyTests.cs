@@ -223,4 +223,45 @@ public class ReferenceAndExportSafetyTests
         if (timedOut) { Assert.Inconclusive("時間切れ"); return; }
         Assert.IsNull(captured, captured?.ToString());
     }
+
+    // ── 7. 共有用のログ ──
+
+    /// <summary><b>本題。</b> ユーザー名・PC 名・フォルダの場所を伏せ、診断・規模・ファイル名・モデルの識別子は残す。</summary>
+    [TestMethod]
+    public void TheShareableLog_HidesPersonalPathsButKeepsTheFacts()
+    {
+        string log = string.Join("\n",
+            @"2026-09-30 10:00:00.000 [INF] 読込: C:\Users\taro\Documents\顧客A 案件\杭基礎.pdjson",
+            @"2026-09-30 10:00:01.000 [INF] [性能] 水平解析の規模: 杭 12 本・要素 340・ケース 8・並列 4",
+            @"2026-09-30 10:00:02.000 [WRN] [入力・結果に影響] model=1A2B3C4D kind=Pile pile=3 : 杭 No.3: 群杭係数",
+            @"2026-09-30 10:00:03.000 [INF] 共有フォルダ \\SERVER01\共有\設計\a.docx を taro が TARO-PC で出力",
+            @"2026-09-30 10:00:04.000 [INF] taroko さんの記録は伏せない");
+        string s = LogSanitizer.Sanitize(log, userProfile: @"C:\Users\taro", userName: "taro", machineName: "TARO-PC");
+
+        Assert.IsFalse(s.Contains(@"C:\Users"), s);
+        Assert.IsFalse(s.Contains("顧客A"), "フォルダ名 (案件名) を残しています: " + s);
+        Assert.IsFalse(s.Contains("SERVER01"), s);
+        Assert.IsFalse(Regex.IsMatch(s, @"(?<!\w)taro(?!\w)", RegexOptions.IgnoreCase), "ユーザー名を残しています: " + s);
+        Assert.IsFalse(s.Contains("TARO-PC"), s);
+        StringAssert.Contains(s, @"…\杭基礎.pdjson", "ファイル名まで消しています");
+        StringAssert.Contains(s, "杭 12 本・要素 340・ケース 8");
+        StringAssert.Contains(s, "model=1A2B3C4D");
+        StringAssert.Contains(s, "taroko", "名前を含む別の語まで伏せています");
+    }
+
+    [TestMethod]
+    public void TheShareableLog_HasAHeaderAndReadsTheDailyFiles()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"pd_logs_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, $"PileDesign-{DateTime.Now:yyyyMMdd}.log"), "今日の記録\n");
+            string text = LogSanitizer.BuildShareableLog("1.0.34-beta", days: 2, logDirectory: dir);
+            StringAssert.Contains(text, "版: 1.0.34-beta");
+            StringAssert.Contains(text, "今日の記録");
+            StringAssert.Contains(text, "伏せています");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

@@ -84,6 +84,10 @@
                         Height="30" MinWidth="140" Margin="0,0,8,0"
                         ToolTip="不具合をお知らせいただくときに、このフォルダの内容が手掛かりになります。"
                         Click="ButtonOpenLogFolder_Click"/>
+                <Button x:Name="ButtonExportShareableLog" Content="共有用のログを書き出す(_S)"
+                        Height="30" MinWidth="170" Margin="0,0,8,0"
+                        ToolTip="直近 2 日のログを 1 つのファイルにまとめます。ユーザー名・PC 名・フォルダの場所は伏せ、診断・版・モデルの規模は残します。問い合わせのときに添えてください。"
+                        Click="ButtonExportShareableLog_Click"/>
                 <Button x:Name="ButtonClose" Content="閉じる(_C)"
                         Height="30" MinWidth="100"
                         IsDefault="True" IsCancel="True"
