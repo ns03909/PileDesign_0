@@ -21,6 +21,9 @@ namespace TestProject1
     [TestClass]
     public class ReportDeterminismTests
     {
+        /// <summary>代表の計算書の名前 (TestResults/report-sample/ に置く。tools/report-layout-check.ps1 が読む)。</summary>
+        internal const string SampleReportFileName = "sample-report.docx";
+
         /// <summary>docx の部品ごとの中身の指紋 (部品の場所 → SHA-256)。zip の時刻などの入れ物の違いは見ない。</summary>
         internal static SortedDictionary<string, string> PartDigests(string path)
         {
@@ -125,6 +128,11 @@ namespace TestProject1
                     Assert.AreEqual(0, differing.Count,
                         "同じ解析結果から出した計算書の中身が違います: " + string.Join(", ", differing)
                         + "\n" + FirstBodyDifference(paths[0], paths[1]));
+
+                    // 代表の計算書として残す。レイアウトの検査 (tools/report-layout-check.ps1) が Word で描画して調べる
+                    string sampleDir = Path.Combine(TestSource.Dir("TestProject1"), "TestResults", "report-sample");
+                    Directory.CreateDirectory(sampleDir);
+                    File.Copy(paths[0], Path.Combine(sampleDir, SampleReportFileName), overwrite: true);
                 }
                 finally { Directory.Delete(dir, recursive: true); }
             }

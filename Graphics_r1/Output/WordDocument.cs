@@ -1294,6 +1294,11 @@ namespace PileDesign.Output
                     Left = (outline * 420).ToString(),
                     Hanging = "420"
                 });
+                // 見出しは次の段落と同じページに置く。無いと、見出しがページの最後に残り、本文や図が次のページから
+                // 始まることがあった (Word で描画して調べるレイアウトの検査 tools/report-layout-check.ps1 で見つかった)。
+                // 型つきの設定で付ける (子要素の並びの決まりを守る)
+                pPr.KeepNext = new KeepNext();
+                pPr.KeepLines = new KeepLines();
 
                 style.Append(pPr);
                 styles.Append(style);
@@ -1466,7 +1471,11 @@ namespace PileDesign.Output
                 ParagraphProperties = new ParagraphProperties
                 {
                     Justification = new Justification { Val = JustificationValues.Center },
-                    ParagraphStyleId = new ParagraphStyleId { Val = "Caption" }
+                    ParagraphStyleId = new ParagraphStyleId { Val = "Caption" },
+                    // 表題は表の直前に置くので、表と同じページに置く。無いと表題だけがページの最後に残り、
+                    // 表が次のページから始まった (Word で描画して調べるレイアウトの検査で見つかった)。
+                    // 図の題は図の直後なので付けない (付けると題が次の段落へ引っ張られる)
+                    KeepNext = label == "表" ? new KeepNext() : null,
                 }
             };
 
