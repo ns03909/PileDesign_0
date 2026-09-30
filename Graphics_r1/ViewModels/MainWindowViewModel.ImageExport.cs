@@ -179,7 +179,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    PileDesign.Services.MessageService.ShowError($"画像の保存に失敗しました", ex, "エラー");
+                    PileDesign.Services.MessageService.ShowSaveFailed("画像", ex);
                 }
             }
         }

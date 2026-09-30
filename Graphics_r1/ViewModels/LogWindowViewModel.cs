@@ -247,14 +247,16 @@ namespace PileDesign.ViewModels
 
                 if (dialog.ShowDialog() == true)
                 {
-                    File.WriteAllLines(dialog.FileName, LogLines, Encoding.UTF8);
-                    StatusText = $"Log exported to: {Path.GetFileName(dialog.FileName)}";
+                    // 一時ファイルに書き切ってから差し替える。失敗したら原因と、もう一度できることを知らせる
+                    string text = string.Join(Environment.NewLine, LogLines) + Environment.NewLine;
+                    string? written = PileDesign.Services.ExportFile.TryWriteText(dialog.FileName, text, PileDesign.Services.ExportFormat.Text, "解析のログ");
+                    StatusText = written != null ? $"ログを {Path.GetFileName(written)} に書き出しました" : "ログを書き出せませんでした";
                 }
             }
             catch (Exception ex)
             {
-                MessageService.ShowError($"Error exporting log", ex, "Export Error");
-                StatusText = "Export failed";
+                MessageService.ShowError("ログを書き出せませんでした。", ex, "ログの書き出し");
+                StatusText = "ログを書き出せませんでした";
             }
         }
 

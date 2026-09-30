@@ -154,16 +154,9 @@ namespace PileDesign.ViewModels
                 FileName = $"AnalysisSummary_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
             };
             if (dialog.ShowDialog() != true) return;
-            try
-            {
-                // Excel での文字化け回避のため UTF-8 BOM 付きで保存
-                System.IO.File.WriteAllText(dialog.FileName, text, new System.Text.UTF8Encoding(true));
-                StatusMessage = $"サマリーを {System.IO.Path.GetFileName(dialog.FileName)} に保存しました";
-            }
-            catch (Exception ex)
-            {
-                MessageService.ShowError($"CSV 保存に失敗しました", ex, "エラー");
-            }
+            // Excel での文字化け回避のため UTF-8 BOM 付き (ExportFormat.Csv)。一時ファイルに書き切ってから差し替える
+            if (PileDesign.Services.ExportFile.TryWriteText(dialog.FileName, text, PileDesign.Services.ExportFormat.Csv, "解析のサマリー") is { } written)
+                StatusMessage = $"サマリーを {System.IO.Path.GetFileName(written)} に保存しました";
         }
 
         /// <summary>

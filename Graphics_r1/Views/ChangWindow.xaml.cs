@@ -208,11 +208,11 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                MessageService.ShowError(this, "CSV 出力に失敗しました。", ex);
+                MessageService.ShowSaveFailed("CSV", ex);
             }
         }
         // Save / Load ハンドラ（JSON）
-        private async void SaveChangData_Click(object sender, RoutedEventArgs e)
+        private void SaveChangData_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is not ChangViewModel vm)
             {
@@ -281,7 +281,8 @@ namespace PileDesign.Views
                 };
 
                 string json = JsonSerializer.Serialize(payload, opts);
-                await File.WriteAllTextAsync(sfd.FileName, json, System.Text.Encoding.UTF8);
+                // 一時ファイルに書き切ってから差し替える。失敗したら原因と、もう一度できることを知らせる
+                PileDesign.Services.ExportFile.TryWriteText(sfd.FileName, json, PileDesign.Services.ExportFormat.Json, "Chang の式のデータ");
 
                 // 保存完了（SaveFileDialogで選択済みのため、追加の通知は不要）
             }

@@ -78,6 +78,23 @@ namespace PileDesign.Services
         /// <param name="summary">何ができなかったか。利用者向けの文で書く。</param>
         /// <param name="ex">記録する例外。</param>
         /// <param name="caption">ダイアログのタイトル。</param>
+        /// <summary>
+        /// 書き出し・保存に失敗したことを知らせる。ファイルの問題 (使用中・権限・空き容量・場所) なら、
+        /// 原因と、もう一度できること・既存のファイルと計算結果が失われていないことを書く
+        /// (<see cref="ExportFile.DescribeFailure"/>)。それ以外の例外は <see cref="ShowError(string, Exception, string)"/> と同じ。
+        /// </summary>
+        /// <param name="what">何を書き出していたか (「計算書 (Word)」など)。</param>
+        public static void ShowSaveFailed(string what, Exception ex)
+        {
+            if (ex is System.IO.IOException or UnauthorizedAccessException)
+            {
+                Serilog.Log.Warning(ex, "[書き出し] {What} を書き出せませんでした", what);
+                Show(ExportFile.DescribeFailure(ex, what), $"{what}の書き出し", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            ShowError($"{what}を書き出せませんでした。", ex, $"{what}の書き出し");
+        }
+
         public static void ShowError(string summary, Exception ex, string caption = "エラー")
         {
             Serilog.Log.Error(ex, "[{Caption}] {Summary}", caption, summary);

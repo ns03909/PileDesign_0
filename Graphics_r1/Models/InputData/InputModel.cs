@@ -1332,7 +1332,8 @@ namespace PileDesign.Models.InputData
         public void SaveToFile(string filePath)
         {
             string jsonString = System.Text.Json.JsonSerializer.Serialize(this, _jsonOptions);
-            File.WriteAllText(filePath, jsonString);
+            // 一時ファイルに書き切ってから差し替える (途中で失敗しても既存のファイルは壊れない)
+            PileDesign.Services.ExportFile.WriteText(filePath, jsonString, PileDesign.Services.ExportFormat.Json);
         }
 
         // データの読み込み

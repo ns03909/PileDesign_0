@@ -128,7 +128,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageService.ShowError($"保存に失敗しました。", ex, "エラー");
+                MessageService.ShowSaveFailed("プロジェクトファイル", ex);
                 return false;
             }
             finally
@@ -1056,7 +1056,7 @@ namespace PileDesign.ViewModels
                 {
                     sw.Stop();
                     Serilog.Log.Warning(ex, "[Docx] 失敗 ({Elapsed:N1}秒経過時点)", sw.Elapsed.TotalSeconds);
-                    MessageService.ShowError($"Word出力に失敗しました。", ex, "エラー");
+                    MessageService.ShowSaveFailed("計算書 (Word)", ex);
                 }
                 finally
                 {
@@ -1089,7 +1089,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.ShowError($"3dm出力に失敗しました。", ex, "エラー");
+                    MessageService.ShowSaveFailed("3dm", ex);
                 }
             }
         }
@@ -1117,7 +1117,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.ShowError($"DXF出力に失敗しました。", ex, "エラー");
+                    MessageService.ShowSaveFailed("DXF", ex);
                 }
             }
         }
@@ -1144,7 +1144,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.ShowError($"伏図DXF出力に失敗しました。", ex, "エラー");
+                    MessageService.ShowSaveFailed("伏図の DXF", ex);
                 }
             }
         }
@@ -1189,7 +1189,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageService.ShowError($"MGT出力に失敗しました。", ex, "エラー");
+                    MessageService.ShowSaveFailed("MGT", ex);
                 }
             }
         }

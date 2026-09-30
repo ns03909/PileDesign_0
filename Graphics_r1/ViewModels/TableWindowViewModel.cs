@@ -233,7 +233,9 @@ namespace PileDesign.ViewModels
             };
             if (dlg.ShowDialog() != true) return;
 
-            using var writer = new StreamWriter(dlg.FileName, false, Encoding.UTF8);
+            // 文字列に組んでから、一時ファイルに書き切って差し替える (途中で失敗しても既存のファイルは壊れない。
+            // 以前は保存先を直接開いて書いていて、失敗は受け止めていなかった)
+            using var writer = new StringWriter(CultureInfo.InvariantCulture);
 
             // 荷重条件のメタ列は、表 1 枚が 1 つの荷重条件に対応する場合だけ出す。
             // 全条件をまたぐ表 (検定結果) では表そのものが荷重条件を持たず、
@@ -270,6 +272,7 @@ namespace PileDesign.ViewModels
 
                 writer.WriteLine(string.Join(",", metaValues.Concat(valuePart)));
             }
+            PileDesign.Services.ExportFile.TryWriteText(dlg.FileName, writer.ToString(), PileDesign.Services.ExportFormat.Csv, "結果の表の CSV");
         }
 
         private static string Escape(string s) =>

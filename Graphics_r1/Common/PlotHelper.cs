@@ -389,13 +389,23 @@ namespace PileDesign.Common
             {
                 try
                 {
-                    wpfPlot.Plot.Save(dlg.FileName, (int)wpfPlot.ActualWidth * 2, (int)wpfPlot.ActualHeight * 2);
-                    MessageService.Show($"画像を保存しました:\n{dlg.FileName}", "保存完了",
+                    // 以前は保存先へ直接書いていた (途中で失敗すると既存のファイルが壊れる)。
+                    // 画像を組んでから、一時ファイルに書き切って差し替える。形式は保存先の拡張子で決める
+                    string path = System.IO.Path.HasExtension(dlg.FileName) ? dlg.FileName : dlg.FileName + ".png";
+                    var format = System.IO.Path.GetExtension(path).ToLowerInvariant() switch
+                    {
+                        ".jpg" or ".jpeg" => ImageFormat.Jpeg,
+                        ".bmp" => ImageFormat.Bmp,
+                        _ => ImageFormat.Png,
+                    };
+                    byte[] bytes = wpfPlot.Plot.GetImageBytes((int)wpfPlot.ActualWidth * 2, (int)wpfPlot.ActualHeight * 2, format);
+                    PileDesign.Services.FileOperationService.WriteAtomically(path, stream => stream.Write(bytes));
+                    MessageService.Show($"画像を保存しました:\n{path}", "保存完了",
                         MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageService.ShowError($"画像の保存に失敗しました", ex, "エラー");
+                    MessageService.ShowSaveFailed("グラフの画像", ex);
                 }
             }
         }
@@ -509,15 +519,9 @@ namespace PileDesign.Common
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                try
-                {
-                    string csv = BuildCsvString(plot, ",");
-                    File.WriteAllText(saveFileDialog.FileName, csv, Encoding.UTF8);
-                }
-                catch (Exception ex)
-                {
-                    MessageService.ShowError($"CSVの保存に失敗しました", ex, "エラー");
-                }
+                // 一時ファイルに書き切ってから差し替える。失敗したら原因と、もう一度できることを知らせる
+                string csv = BuildCsvString(plot, ",");
+                PileDesign.Services.ExportFile.TryWriteText(saveFileDialog.FileName, csv, PileDesign.Services.ExportFormat.Csv, "グラフの CSV");
             }
         }
     }

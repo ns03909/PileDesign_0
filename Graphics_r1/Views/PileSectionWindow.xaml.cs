@@ -411,7 +411,8 @@ namespace PileDesign.Views
             };
             if (dlg.ShowDialog() == true)
             {
-                System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
+                // 一時ファイルに書き切ってから差し替える。失敗したら原因と、もう一度できることを知らせる
+                PileDesign.Services.ExportFile.TryWriteText(dlg.FileName, sb.ToString(), PileDesign.Services.ExportFormat.Csv, "断面の CSV");
             }
         }
 

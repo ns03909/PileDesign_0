@@ -100,4 +100,85 @@ public class ReferenceAndExportSafetyTests
         input.PileBodyAt(bodyNo)!.PileBodySegments.Clear();
         Assert.IsTrue(ReferenceIntegrity.Check(input).NeedsReview.Any(d => d.Target == DiagnosticTarget.PileBody(bodyNo)));
     }
+
+    // ── 3・4・5. 書き出し ──
+
+    /// <summary>
+    /// <b>本題。</b> 保存先がほかのアプリで開かれていて差し替えられなくても、既存のファイルは壊れない
+    /// (一時ファイルに書き切ってから差し替える)。失敗は知らせて null を返す。
+    /// </summary>
+    [TestMethod]
+    public void AFailedExport_LeavesTheExistingFileIntact()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"pd_export_{Guid.NewGuid():N}.csv");
+        File.WriteAllText(path, "old");
+        try
+        {
+            using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None))   // 使用中
+            {
+                Assert.IsNull(ExportFile.TryWriteText(path, "new", ExportFormat.Csv, "試験の CSV"));
+            }
+            Assert.AreEqual("old", File.ReadAllText(path), "失敗した書き出しが既存のファイルを壊しています");
+            Assert.AreEqual(0, Directory.GetFiles(Path.GetDirectoryName(path)!, Path.GetFileName(path) + ".*.saving").Length,
+                "一時ファイルが残っています");
+
+            Assert.AreEqual(path, ExportFile.TryWriteText(path, "new", ExportFormat.Csv, "試験の CSV"));
+            Assert.AreEqual("new", File.ReadAllText(path));
+        }
+        finally { File.Delete(path); }
+    }
+
+    /// <summary>形式ごとの約束: 拡張子を補う・CSV とテキストは BOM 付き・JSON は BOM 無し。</summary>
+    [TestMethod]
+    public void ExportFormats_FixExtensionAndEncoding()
+    {
+        Assert.AreEqual(@"C:\a\表.csv", ExportFile.EnsureExtension(@"C:\a\表", ExportFormat.Csv));
+        Assert.AreEqual(@"C:\a\表.txt", ExportFile.EnsureExtension(@"C:\a\表.txt", ExportFormat.Csv), "選んだ拡張子を変えています");
+
+        string dir = Path.Combine(Path.GetTempPath(), $"pd_fmt_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            ExportFile.WriteText(Path.Combine(dir, "a.csv"), "x", ExportFormat.Csv);
+            ExportFile.WriteText(Path.Combine(dir, "a.json"), "{}", ExportFormat.Json);
+            var csv = File.ReadAllBytes(Path.Combine(dir, "a.csv"));
+            var json = File.ReadAllBytes(Path.Combine(dir, "a.json"));
+            CollectionAssert.AreEqual(new byte[] { 0xEF, 0xBB, 0xBF, (byte)'x' }, csv, "CSV に BOM がありません (Excel で文字化けする)");
+            Assert.AreEqual((byte)'{', json[0], "JSON に BOM を付けています");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    /// <summary>失敗の原因ごとに、利用者にできることを書き、既存のファイル・計算結果が失われていないことを添える。</summary>
+    [TestMethod]
+    public void FailureMessages_NameTheCauseAndTheWayBack()
+    {
+        string busy = ExportFile.DescribeFailure(new IOException("x", unchecked((int)0x80070020)), "計算書 (Word)");
+        StringAssert.Contains(busy, "ほかのアプリ");
+        StringAssert.Contains(ExportFile.DescribeFailure(new IOException("x", unchecked((int)0x80070070)), "CSV"), "空き容量");
+        StringAssert.Contains(ExportFile.DescribeFailure(new UnauthorizedAccessException("x"), "CSV"), "権限");
+        StringAssert.Contains(ExportFile.DescribeFailure(new DirectoryNotFoundException("x"), "CSV"), "フォルダが見つかりません");
+        StringAssert.Contains(busy, "既存のファイルはそのまま残っています");
+        StringAssert.Contains(busy, "もう一度書き出せます");
+    }
+
+    /// <summary>画面からの書き出しは、保存先を直接開いて書かない (一時ファイルに書き切ってから差し替える)。</summary>
+    [TestMethod]
+    public void ScreenExports_DoNotWriteTheDestinationDirectly()
+    {
+        var direct = new Regex(@"File\.(WriteAllText|WriteAllLines|WriteAllBytes|WriteAllTextAsync)\s*\(|new\s+StreamWriter\s*\(\s*\w+\.FileName|\.Plot\.Save\s*\(");
+        char sep = Path.DirectorySeparatorChar;
+        var files = new[] { "ViewModels", "Views" }
+            .SelectMany(d => Directory.GetFiles(TestSource.Dir("Graphics_r1", d), "*.cs", SearchOption.AllDirectories))
+            .Append(Path.Combine(TestSource.Dir("Graphics_r1", "Common"), "PlotHelper.cs"))
+            .Where(f => !f.Contains($"{sep}obj{sep}"))
+            .ToList();
+        TestSource.AssertScanned(files.Count, 100, "画面のソース");
+        var hits = files.SelectMany(f => File.ReadAllLines(f).Select((l, i) => (File: Path.GetFileName(f), Line: i + 1, Text: l)))
+            .Where(l => !l.Text.TrimStart().StartsWith("//") && direct.IsMatch(l.Text))
+            .Select(l => $"{l.File}:{l.Line}  {l.Text.Trim()}")
+            .ToList();
+        Assert.AreEqual(0, hits.Count, "保存先を直接書いています。ExportFile.TryWriteText / FileOperationService.WriteAtomically を使ってください:\n  "
+            + string.Join("\n  ", hits));
+    }
 }
