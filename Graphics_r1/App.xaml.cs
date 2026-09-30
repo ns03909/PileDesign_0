@@ -51,6 +51,11 @@ namespace PileDesign
 
         public App()
         {
+            // 地域設定を最初に決める。以降に作る数値の文字列・読み取り・画面の書式がどの PC でも同じになるように
+            // (小数点がカンマの地域・小数点を変えた PC で、表示と読み取りが食い違っていた。AppCulture 参照)
+            PileDesign.Common.AppCulture.Apply();
+            PileDesign.Common.AppCulture.ApplyToWpf();
+
             // ロギングを最優先で初期化 (それ自身が失敗しても続行)
             AppLog.Initialize();
 

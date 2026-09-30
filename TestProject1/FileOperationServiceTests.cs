@@ -4,6 +4,7 @@ using PileDesign.Models.InputData;
 using PileDesign.Services;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 
@@ -13,6 +14,7 @@ namespace TestProject1
     /// FileOperationService（ProjectData 保存/読込、コレクション変換）のテスト。
     /// </summary>
     [TestClass]
+    [DoNotParallelize]
     public class FileOperationServiceTests
     {
         private static JsonSerializerOptions MakeOptions() => new()
@@ -106,6 +108,35 @@ namespace TestProject1
             Assert.AreEqual(metadata.CaseParallelism, loaded.CaseParallelism);
             Assert.AreEqual("L2 X方向 (地震時)・液状化・収束", loaded.DescribeCases());
             Assert.IsTrue(loaded.DescribeSettings().Contains("反復上限 100", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void SaveAndLoad_NumericCoordinatesAreCultureIndependent()
+        {
+            var previousCulture = CultureInfo.CurrentCulture;
+            try
+            {
+                CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+                var input = new InputModel();
+                // 杭を足すには画面の ViewModel に結び付けておく必要がある (新しい入力では一覧も null)
+                input.AttachViewModel(new PileDesign.ViewModels.MainWindowViewModel { CurrentInputModel = input });
+                input.PileLayoutItems ??= [];
+                input.PileLayoutItems.Add(new PileLayoutDataItem { PileNo = 1, X = 1.5, Y = -2.25 });
+                var file = Path.Combine(_tempDir, "culture-independent.json");
+                var svc = new FileOperationService(MakeOptions());
+
+                svc.SaveProjectData(file, input, new AnaModel());
+                var json = File.ReadAllText(file);
+                var loaded = svc.LoadProjectData(file);
+
+                StringAssert.Contains(json, "1.5", "JSON の数値を de-DE の小数点カンマで書いています。");
+                Assert.AreEqual(1.5, loaded.InputModel.PileLayoutItems[0].X);
+                Assert.AreEqual(-2.25, loaded.InputModel.PileLayoutItems[0].Y);
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = previousCulture;
+            }
         }
 
         [TestMethod]

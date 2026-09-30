@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Converters;
 using PileDesign.Output;
 using System;
@@ -309,6 +309,45 @@ namespace TestProject1
                 var lines = File.ReadAllLines(path, Encoding.UTF8);
                 CollectionAssert.AreEqual(new[] { "R,WR,WR", "C,B,A", "x,2,1", "y,4,3" }, lines,
                     "CSV の列が画面の並びになっていません (見出し・R/WR・データの 3 つとも揃えること)");
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestMethod]
+        public void CreateCsv_NumericFormattingIsIndependentOfOperatingSystemCulture()
+        {
+            string path = Path.Combine(Path.GetTempPath(), $"DataGridCsvCulture_{Guid.NewGuid():N}.csv");
+            try
+            {
+                OnSta(() =>
+                {
+                    var oldCulture = CultureInfo.CurrentCulture;
+                    try
+                    {
+                        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+                        var grid = new DataGrid { AutoGenerateColumns = false };
+                        grid.Columns.Add(new DataGridTextColumn
+                        {
+                            Header = "値",
+                            Binding = new Binding(nameof(Row.Displacement)) { StringFormat = "N2" },
+                        });
+                        var rows = new[] { new Row { Displacement = 1234.5 } };
+                        DataGridCsv.CreateCsv(rows, grid, path, includeEditableRow: false);
+                    }
+                    finally
+                    {
+                        CultureInfo.CurrentCulture = oldCulture;
+                    }
+                });
+
+                var lines = File.ReadAllLines(path, Encoding.UTF8);
+                // CSV は読み込ませる側 (Excel・ほかのプログラム) のためのものなので、数値は地域設定に依らず
+                // 桁区切りなし・小数点はピリオドで書く (画面の表示の桁区切りは付けない。de-DE の「1.234,50」にもしない)
+                CollectionAssert.AreEqual(new[] { "値", "1234.50" }, lines,
+                    "CSV の数値が地域設定に左右されています。実際: " + string.Join(" | ", lines));
             }
             finally
             {
