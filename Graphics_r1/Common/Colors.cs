@@ -34,6 +34,12 @@ namespace PileDesign.Common
         public static readonly SolidColorBrush PileSteelFill = Freeze(new(Color.FromRgb(0xD8, 0xE7, 0xF3)));
 
         private static SolidColorBrush Freeze(SolidColorBrush brush) { brush.Freeze(); return brush; }
+
+        /// <summary>
+        /// 凍結した単色のブラシ。<b>静的なフィールドに置くブラシはこれで作る。</b>凍結していないブラシは作ったスレッドの
+        /// ものになり、別のスレッドで描くと例外になる (計算書を画面と別のスレッドで作ると、杭姿図が作れずに省かれた)。
+        /// </summary>
+        public static SolidColorBrush Frozen(Color color) => Freeze(new SolidColorBrush(color));
     }
 
     public static class NikkenSKColor

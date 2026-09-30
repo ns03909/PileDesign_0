@@ -119,6 +119,10 @@ namespace TestProject1
                             FixedOutputDate = new DateTime(2026, 9, 30),
                         };
                         doc.CreateWordDocument(input, path);
+                        // 省いた図・表が無いこと。静的なブラシを凍結していなかったとき、全体テストの並び順しだいで
+                        // 杭姿図が作れずに省かれていた (別のスレッドで先に作られたブラシを使えない)
+                        CollectionAssert.AreEqual(Array.Empty<string>(), doc.OmittedItems.ToArray(),
+                            "作成できずに省いた図・表があります: " + string.Join(", ", doc.OmittedItems));
                         paths.Add(path);
                     }
 

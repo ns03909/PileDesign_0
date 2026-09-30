@@ -16,10 +16,10 @@ namespace PileDesign.Converters
     /// </summary>
     public class LoadCaseNameToColorConverter : IMultiValueConverter
     {
-        private static readonly Brush SkyBlueBrush = new SolidColorBrush(Color.FromRgb(0x62, 0xB0, 0xE2));
-        private static readonly Brush DeepBlueBrush = new SolidColorBrush(Color.FromRgb(0x32, 0x71, 0xAD));
-        private static readonly Brush Level1Brush = new SolidColorBrush(Color.FromRgb(0x23, 0x89, 0x66));
-        private static readonly Brush Level2Brush = new SolidColorBrush(Color.FromRgb(0xE9, 0x55, 0x41));
+        private static readonly Brush SkyBlueBrush = PileDesign.Common.NikkenBrush.Frozen(Color.FromRgb(0x62, 0xB0, 0xE2));
+        private static readonly Brush DeepBlueBrush = PileDesign.Common.NikkenBrush.Frozen(Color.FromRgb(0x32, 0x71, 0xAD));
+        private static readonly Brush Level1Brush = PileDesign.Common.NikkenBrush.Frozen(Color.FromRgb(0x23, 0x89, 0x66));
+        private static readonly Brush Level2Brush = PileDesign.Common.NikkenBrush.Frozen(Color.FromRgb(0xE9, 0x55, 0x41));
         private static readonly Brush DefaultBrush = Brushes.Black;
 
         static LoadCaseNameToColorConverter()

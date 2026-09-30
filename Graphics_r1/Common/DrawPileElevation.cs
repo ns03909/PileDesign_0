@@ -705,7 +705,7 @@ namespace PileDesign.Common
 
 
         // 土層 N 値のステップ図描画用ブラシ (土質点N値の灰色折れ線と区別)
-        private static readonly SolidColorBrush LayerNStrokeBrush = new(Color.FromRgb(60, 60, 60)); // 濃い灰
+        private static readonly SolidColorBrush LayerNStrokeBrush = NikkenBrush.Frozen(Color.FromRgb(60, 60, 60)); // 濃い灰
 
         // N値描画メソッド (土質点 N 値の折れ線 + 土層 N 値の階段図)
         private static void DrawNValues(
@@ -828,10 +828,10 @@ namespace PileDesign.Common
         }
 
         // 落ち着いた色のブラシ (再利用)
-        private static readonly SolidColorBrush FLStrokeBrush = new(Color.FromRgb(160, 80, 70));     // 落ち着いた赤茶 (Sienna 系)
-        private static readonly SolidColorBrush FLGridBrush   = new(Color.FromArgb(48, 160, 80, 70));
-        private static readonly SolidColorBrush DispStrokeBrush = new(Color.FromRgb(70, 110, 150));  // 落ち着いた青 (SteelBlue 系)
-        private static readonly SolidColorBrush DispGridBrush   = new(Color.FromArgb(48, 70, 110, 150));
+        private static readonly SolidColorBrush FLStrokeBrush = NikkenBrush.Frozen(Color.FromRgb(160, 80, 70));     // 落ち着いた赤茶 (Sienna 系)
+        private static readonly SolidColorBrush FLGridBrush   = NikkenBrush.Frozen(Color.FromArgb(48, 160, 80, 70));
+        private static readonly SolidColorBrush DispStrokeBrush = NikkenBrush.Frozen(Color.FromRgb(70, 110, 150));  // 落ち着いた青 (SteelBlue 系)
+        private static readonly SolidColorBrush DispGridBrush   = NikkenBrush.Frozen(Color.FromArgb(48, 70, 110, 150));
 
         // 液状化FL描画メソッド (杭姿図右側に重ね描き、FL=0..2 スケール、左→右で値が増加)
         private static void DrawFLValues(
@@ -1015,8 +1015,8 @@ namespace PileDesign.Common
 
         // 一軸圧縮強度 qu (= 2 Cu) 描画メソッド (杭姿図右側に重ね描き、auto-scale、左→右で値が増加)
         // 粘性土層の Cu (kN/m²) を 2 倍した qu を、層境で階段状に表示する。
-        private static readonly SolidColorBrush QuStrokeBrush = new(Color.FromRgb(120, 80, 130)); // 落ち着いた紫系
-        private static readonly SolidColorBrush QuGridBrush   = new(Color.FromArgb(48, 120, 80, 130));
+        private static readonly SolidColorBrush QuStrokeBrush = NikkenBrush.Frozen(Color.FromRgb(120, 80, 130)); // 落ち着いた紫系
+        private static readonly SolidColorBrush QuGridBrush   = NikkenBrush.Frozen(Color.FromArgb(48, 120, 80, 130));
 
         private static void DrawQuValues(
             Canvas canvas, GroundInput groundInput, double pileTopAltitude, double ratio, double topMargin)

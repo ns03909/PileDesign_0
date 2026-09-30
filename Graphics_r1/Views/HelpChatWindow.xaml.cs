@@ -15,13 +15,13 @@ namespace PileDesign.Views
     /// </summary>
     public partial class HelpChatWindow : Window
     {
-        private static readonly Brush UserBubbleBrush = new SolidColorBrush(Color.FromRgb(0xE6, 0xF0, 0xFB));
+        private static readonly Brush UserBubbleBrush = PileDesign.Common.NikkenBrush.Frozen(Color.FromRgb(0xE6, 0xF0, 0xFB));
         private static readonly Brush BotBubbleBrush = Brushes.White;
-        private static readonly Brush BorderBrushColor = new SolidColorBrush(Color.FromRgb(0xDC, 0xDC, 0xE0));
-        private static readonly Brush MutedBrush = new SolidColorBrush(Color.FromRgb(0x77, 0x77, 0x80));
-        private static readonly Brush SnippetBrush = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x60));
-        private static readonly Brush LinkBrush = new SolidColorBrush(Color.FromRgb(0x10, 0x55, 0xC9));
-        private static readonly Brush PathBrush = new SolidColorBrush(Color.FromRgb(0x90, 0x90, 0x96));
+        private static readonly Brush BorderBrushColor = PileDesign.Common.NikkenBrush.Frozen(Color.FromRgb(0xDC, 0xDC, 0xE0));
+        private static readonly Brush MutedBrush = PileDesign.Common.NikkenBrush.Frozen(Color.FromRgb(0x77, 0x77, 0x80));
+        private static readonly Brush SnippetBrush = PileDesign.Common.NikkenBrush.Frozen(Color.FromRgb(0x55, 0x55, 0x60));
+        private static readonly Brush LinkBrush = PileDesign.Common.NikkenBrush.Frozen(Color.FromRgb(0x10, 0x55, 0xC9));
+        private static readonly Brush PathBrush = PileDesign.Common.NikkenBrush.Frozen(Color.FromRgb(0x90, 0x90, 0x96));
 
         public HelpChatWindow()
         {
