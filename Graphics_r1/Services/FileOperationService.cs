@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -629,6 +630,10 @@ namespace PileDesign.Services
             if (projectData == null)
                 throw new InvalidOperationException("ファイル形式が不正です。");
 
+            // 今の版で読み込みに使わなかった項目を、あとで見つけるために控える (入力の節だけ)
+            try { projectData.InputPropertyNamesInFile = LoadCompatibilityReport.CollectPropertyNames(json, "InputModel"); }
+            catch (System.Text.Json.JsonException ex) { Serilog.Log.Debug(ex, "[読込] 項目名を集められませんでした"); }
+
             // バージョン0はFormatVersionプロパティ追加前の旧ファイル → 互換あり
             // v1: 初期形式
             // v2: PileLayoutItems[*].Z のセマンティクスを「杭頭節点」→「接合節点」に変更 (2026-05 改修)
@@ -647,6 +652,26 @@ namespace PileDesign.Services
         /// <summary>
         /// JSON ファイルから ProjectData を非同期読み込み（UIスレッドをブロックしない）
         /// </summary>
+        /// <summary>
+        /// 読み込んだファイルの入力の節にあったが、いまの入力を書き出すと出てこない項目名 (= 読み込みで使わなかった項目)。
+        /// いまの入力を同じ設定で書き出して比べる。比べられなければ空。
+        /// </summary>
+        internal IReadOnlyList<string> FindUnusedInputProperties(ProjectData projectData, InputModel input)
+        {
+            if (projectData?.InputPropertyNamesInFile is not { Count: > 0 } inFile || input == null) return [];
+            try
+            {
+                using var perf = PileDesign.Common.PerfLog.Measure("読込の互換の点検", inFile.Count, "項目名");
+                var written = LoadCompatibilityReport.CollectPropertyNames(JsonSerializer.Serialize(input, _jsonOptions));
+                return inFile.Where(n => !written.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).ToList();
+            }
+            catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException)
+            {
+                Serilog.Log.Debug(ex, "[読込] 使わなかった項目を比べられませんでした");
+                return [];
+            }
+        }
+
         public async Task<ProjectData> LoadProjectDataAsync(string filePath)
         {
             if (string.IsNullOrEmpty(filePath))

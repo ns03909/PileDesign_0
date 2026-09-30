@@ -264,4 +264,68 @@ public class ReferenceAndExportSafetyTests
         }
         finally { Directory.Delete(dir, true); }
     }
+
+    // ── 8. 古い形式の読み込みの記録 ──
+
+    private static FileOperationService Service() => new(new JsonSerializerOptions
+    {
+        WriteIndented = false,
+        ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve,
+        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
+    });
+
+    /// <summary>
+    /// <b>本題。</b> ファイルにあって今の版で使わない項目 (保存し直すと消える) を見つける。
+    /// 今の版で保存したファイルでは何も出ない (騒がない)。
+    /// </summary>
+    [TestMethod]
+    public void UnusedProperties_AreFound_AndACurrentFileIsQuiet()
+    {
+        var input = Example();
+        var service = Service();
+        string path = Path.Combine(Path.GetTempPath(), $"pd_compat_{Guid.NewGuid():N}.pdjson");
+        try
+        {
+            service.SaveProjectData(path, input, null);
+            var clean = service.LoadProjectData(path);
+            CollectionAssert.AreEqual(Array.Empty<string>(), service.FindUnusedInputProperties(clean, clean.InputModel).ToArray(),
+                "今の版で保存したファイルで、使わなかった項目があると言っています");
+
+            string json = File.ReadAllText(path);
+            var m = Regex.Match(json, @"""InputModel"":\{""\$id"":""\d+"",");
+            Assert.IsTrue(m.Success, "(前提) 入力の節が見つかりません");
+            File.WriteAllText(path, json.Insert(m.Index + m.Length, @"""ObsoleteSetting"":1,"));
+            var old = service.LoadProjectData(path);
+            CollectionAssert.AreEqual(new[] { "ObsoleteSetting" }, service.FindUnusedInputProperties(old, old.InputModel).ToArray());
+        }
+        finally { File.Delete(path); }
+    }
+
+    [TestMethod]
+    public void TheCompatibilityReport_GroupsEntries_AndFeedsTheDiagnosticList()
+    {
+        var report = new LoadCompatibilityReport(formatVersion: 1);
+        report.Add(CompatibilityKind.Filled, "通り心 (X) の一覧が無かったので、空の一覧で補いました。");
+        report.Add(CompatibilityKind.Converted, "杭配置の Z を読み替えました。");
+        report.Add(CompatibilityKind.Unused, "「ObsoleteSetting」");
+        string text = report.Describe()!;
+        StringAssert.Contains(text, "古い形式 (v1)");
+        StringAssert.Contains(text, "■ 既定値で補ったもの");
+        StringAssert.Contains(text, "■ 置き換えたもの");
+        StringAssert.Contains(text, "■ 読み込みで使わなかったもの");
+        StringAssert.Contains(text, "名前を付けて保存");
+        Assert.IsTrue(report.NeedsNotice(new System.Collections.Generic.HashSet<string>()));
+
+        var current = new LoadCompatibilityReport(LoadCompatibilityReport.CurrentFormatVersion);
+        Assert.IsTrue(current.IsEmpty);
+        current.Add(CompatibilityKind.Converted, "荷重ケースの番号を振り直しました (1 件)。");
+        Assert.IsFalse(current.NeedsNotice(new System.Collections.Generic.HashSet<string> { "荷重ケースの番号を振り直しました (1 件)。" }),
+            "個別のダイアログで知らせたものを、もう一度知らせています");
+
+        var vm = new MainWindowViewModel { CurrentInputModel = Example() };
+        vm.ShowLoadCompatibilityIfAny(report, new System.Collections.Generic.HashSet<string>());
+        var rows = new DiagnosticListViewModel(vm).Rows;
+        Assert.IsTrue(rows.Any(r => r.Message.StartsWith("読込 (読み込みで使わなかった): 「ObsoleteSetting」") && r.Diagnostic.Severity == DiagnosticSeverity.Info));
+        Assert.IsTrue(LoadCompatibilityReport.CollectPropertyNames(@"{""$id"":""1"",""A"":{""B"":[{""C"":1}]}}").SetEquals(new[] { "A", "B", "C" }));
+    }
 }

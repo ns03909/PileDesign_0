@@ -50,10 +50,10 @@ namespace PileDesign.ViewModels
         private string _statusText = "";
 
         /// <summary>いまの入力の指摘をすべて集める (重い順・同じ文は 1 つ)。</summary>
-        internal static List<Diagnostic> Collect(Models.InputData.InputModel? input)
+        internal static List<Diagnostic> Collect(Models.InputData.InputModel? input, IEnumerable<Diagnostic>? extra = null)
         {
             if (input == null) return [];
-            var all = new List<Diagnostic>();
+            var all = new List<Diagnostic>(extra ?? []);
             all.AddRange(ReferenceIntegrity.Check(input).All);
             all.AddRange(CheckInputData.CollectAnalysisBlockers(input));
             all.AddRange(CheckInputData.CollectInputWarningDiagnostics(input));
@@ -66,7 +66,8 @@ namespace PileDesign.ViewModels
         public void Recheck()
         {
             var before = Rows.Select(r => r.Message).ToHashSet();
-            var now = Collect(_main.CurrentInputModel);
+            // 直近に開いたファイルの互換の記録も「情報」として並べる (保存し直す前に確かめられるように)
+            var now = Collect(_main.CurrentInputModel, _main.LastLoadCompatibility?.AsDiagnostics());
             Rows.Clear();
             foreach (var d in now) Rows.Add(new DiagnosticRow(d));
 

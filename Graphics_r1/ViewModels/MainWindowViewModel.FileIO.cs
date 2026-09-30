@@ -393,7 +393,14 @@ namespace PileDesign.ViewModels
             // ObservableCollection 変換（idempotent なので既に ObservableCollection なら維持）
             _fileOperationService.ConvertToObservableCollections(CurrentInputModel);
 
+            // 互換の記録 (既定値で補った・置き換えた・使わなかった項目)。最後にまとめて知らせる
+            var compat = new PileDesign.Services.LoadCompatibilityReport(projectData?.FormatVersion ?? 0);
+            var notifiedSeparately = new System.Collections.Generic.HashSet<string>();
+
             // 旧データとの互換性マイグレーション
+            if (CurrentInputModel.InputNodes == null) compat.Add(PileDesign.Services.CompatibilityKind.Filled, "一般節点の一覧が無かったので、空の一覧で補いました。");
+            if (CurrentInputModel.GridXItems == null) compat.Add(PileDesign.Services.CompatibilityKind.Filled, "通り心 (X) の一覧が無かったので、空の一覧で補いました。");
+            if (CurrentInputModel.GridYItems == null) compat.Add(PileDesign.Services.CompatibilityKind.Filled, "通り心 (Y) の一覧が無かったので、空の一覧で補いました。");
             CurrentInputModel.InputNodes ??= [];
             CurrentInputModel.GridXItems ??= [];
             CurrentInputModel.GridYItems ??= [];
@@ -403,6 +410,7 @@ namespace PileDesign.ViewModels
             // 許容圧縮と許容せん断の規準は同じもの 1 つになった。別々に選べた時期のファイルは圧縮側に揃える。
             if (CurrentInputModel.FundamentalInput?.NormalizeNotification1113() == true)
             {
+                compat.Add(PileDesign.Services.CompatibilityKind.Converted, "許容圧縮と許容せん断の規準が食い違っていたので、圧縮側に揃えました (今は 1 つの設定です)。");
                 Serilog.Log.Information("[読込] 許容圧縮と許容せん断の規準が食い違っていたので、圧縮側 ({Std}) に揃えました",
                     CurrentInputModel.FundamentalInput.UseNotification1113 ? "告示1113(第8)" : "基礎部材の強度と変形性能");
             }
@@ -412,6 +420,7 @@ namespace PileDesign.ViewModels
             if (projectData == null || projectData.FormatVersion < 2)
             {
                 CurrentInputModel.MigratePileZSemantics_v1_to_v2();
+                compat.Add(PileDesign.Services.CompatibilityKind.Converted, "杭配置の Z を「杭頭の高さ」から「接合節点の高さ」の意味に読み替えました (形式 v1 → v2)。");
             }
 
             // 単杭沈下の荷重-沈下曲線を土層-杭セットへ戻す。
@@ -431,6 +440,12 @@ namespace PileDesign.ViewModels
             // 旧形式の群杭沈下量は杭ごとに持っていて、下の移行が杭番号で引ける形に移す。
             // 振り直す前に移すと、重なった番号の値を決められず、ずれた番号の杭に別の杭の値が付く。
             _duplicatePileNosOnLoad = DescribeDuplicatePileNos(CurrentInputModel.PileLayoutItems);
+            if (_duplicatePileNosOnLoad != null)
+            {
+                const string duplicated = "重なっていた杭番号を、並び順に振り直しました。";
+                compat.Add(PileDesign.Services.CompatibilityKind.Converted, duplicated);
+                notifiedSeparately.Add(duplicated);
+            }
             UpdatePileLayoutNo();
 
             // 群杭沈下の結果を入力モデルへ結び付け、旧データの互換マイグレーションを走らせる。
@@ -438,6 +453,12 @@ namespace PileDesign.ViewModels
             // に入っているので、移行がそれを結果側へ移して受け取り口を空にする。
             _legacySettlementNoticesOnLoad = PileDesign.Services.LegacySettlementMigration.AttachResultAndMigrate(
                 CurrentInputModel, projectData?.GroupSettlementResult);
+            if (_legacySettlementNoticesOnLoad.Count > 0)
+            {
+                const string legacySettlement = "旧形式の群杭沈下の結果を、今の形 (入力とは別の節) へ移しました。";
+                compat.Add(PileDesign.Services.CompatibilityKind.Converted, legacySettlement);
+                notifiedSeparately.Add(legacySettlement);
+            }
 
             // 梁要素 ComboBox 用の節点候補リストを再構築 (deserialize 直後は空のため)
             CurrentInputModel.RefreshAvailableNodeReferenceOptions();
@@ -520,6 +541,18 @@ namespace PileDesign.ViewModels
 
             // 荷重ケース名の空欄・重複も付け直す (画面の荷重ケースの選択が名前で行われるため。NormalizeLoadCaseNames 参照)
             var renamed = CurrentInputModel.LoadCasesInput?.NormalizeLoadCaseNames() ?? [];
+            if (renumbered.Count > 0)
+            {
+                string text = $"荷重ケースの番号を並び順に振り直しました ({renumbered.Count} 件)。";
+                compat.Add(PileDesign.Services.CompatibilityKind.Converted, text);
+                notifiedSeparately.Add(text);
+            }
+            if (renamed.Count > 0)
+            {
+                string text = $"荷重ケース名の空欄・重複を付け直しました ({renamed.Count} 件)。";
+                compat.Add(PileDesign.Services.CompatibilityKind.Converted, text);
+                notifiedSeparately.Add(text);
+            }
             if (ResultInputModel != null && !ReferenceEquals(ResultInputModel, CurrentInputModel))
                 ResultInputModel.LoadCasesInput?.NormalizeLoadCaseNames();
 
@@ -595,8 +628,31 @@ namespace PileDesign.ViewModels
                     "荷重ケースの番号", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
 
+            // 今の版で読み込みに使わなかった項目 (保存し直すと消える)
+            if (projectData != null)
+            {
+                foreach (var name in _fileOperationService.FindUnusedInputProperties(projectData, CurrentInputModel))
+                    compat.Add(PileDesign.Services.CompatibilityKind.Unused, $"「{name}」(今の版では使っていない項目です)");
+            }
+            ShowLoadCompatibilityIfAny(compat, notifiedSeparately);
+
             // 杭配置・土層-杭セット・杭体・地盤のあいだの番号の参照。グラフ・計算書を開いたときに初めて落ちる前に知らせる
             ShowReferenceProblemsIfAny();
+        }
+
+        /// <summary>直近に開いたファイルの互換の記録 (入力の診断の一覧に「情報」として出す)。</summary>
+        internal PileDesign.Services.LoadCompatibilityReport? LastLoadCompatibility { get; private set; }
+
+        /// <summary>
+        /// 互換の記録を残し、個別のダイアログで知らせていないもの (古い形式・既定値の補完・使わなかった項目) があれば
+        /// まとめて知らせる。保存し直す前に確かめられるように。
+        /// </summary>
+        internal void ShowLoadCompatibilityIfAny(PileDesign.Services.LoadCompatibilityReport compat, System.Collections.Generic.ISet<string> notifiedSeparately)
+        {
+            LastLoadCompatibility = compat.IsEmpty ? null : compat;
+            foreach (var e in compat.Entries) Serilog.Log.Information("[読込] 互換 ({Kind}): {Text}", e.Kind, e.Text);
+            if (compat.NeedsNotice(notifiedSeparately) && compat.Describe() is { } text)
+                MessageService.Show(text, "古い形式からの読み込み", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         /// <summary>

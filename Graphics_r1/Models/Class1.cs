@@ -15,6 +15,13 @@ namespace PileDesign.Models
         /// </summary>
         public int FormatVersion { get; set; } = 1;
 
+        /// <summary>
+        /// 読み込んだファイルの「InputModel」の節にあった項目名 (読込のときだけ。保存しない)。
+        /// 今の版で読み込みに使わなかった項目を見つけるのに使う (<c>LoadCompatibilityReport</c>)。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        internal HashSet<string>? InputPropertyNamesInFile { get; set; }
+
         public InputModel InputModel { get; set; }
         public AnaModel AnaModel { get; set; }
 
