@@ -1,7 +1,9 @@
 using PileDesign.Models.InputData;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 
@@ -35,8 +37,96 @@ namespace PileDesign.Services
             }
 
             var json = File.ReadAllText(filePath);
-            return JsonSerializer.Deserialize<GroundExampleData>(json, _jsonOptions)
+            var data = JsonSerializer.Deserialize<GroundExampleData>(json, _jsonOptions)
                 ?? throw new InvalidOperationException($"JSONのデシリアライズに失敗しました: {filePath}");
+
+            // 地盤に当てる前に中身を確かめる。当てる処理は地層・地盤質量を丸ごと差し替えるので、
+            // 途中で止まったり、おかしな値のまま当てたりすると、画面の地盤が半端に書き換わる。
+            var problems = Validate(data);
+            if (problems.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"例題ファイルの内容に問題があるため読み込みませんでした (地盤は変更していません)。\n{filePath}\n"
+                    + string.Join("\n", problems.Take(10).Select(p => "・" + p))
+                    + (problems.Count > 10 ? $"\n…ほか {problems.Count - 10} 件" : ""));
+            }
+            return data;
+        }
+
+        /// <summary>
+        /// 例題の中身の点検。地層が 1 層以上あること・数値が有限であること・地層の下端が浅い方から深い方へ並ぶこと・
+        /// 層厚・単位体積重量・せん断波速度が正であること。問題が無ければ空。
+        ///
+        /// <para>下端の並びは地盤質量の点を地層に割り当てるときの前提 (<see cref="ApplyLayerValuesToMasses"/>)。
+        /// 崩れていると、点が別の地層の値で上書きされる。</para>
+        /// </summary>
+        public static IReadOnlyList<string> Validate(GroundExampleData? data)
+        {
+            var problems = new List<string>();
+            if (data == null) { problems.Add("例題の中身が空です。"); return problems; }
+
+            void Finite(double value, string what)
+            {
+                if (!double.IsFinite(value)) problems.Add($"{what} が数ではありません ({value})。");
+            }
+            void FiniteOpt(double? value, string what)
+            {
+                if (value is { } v) Finite(v, what);
+            }
+
+            Finite(data.GroundTopAltitude, "地盤天端の標高");
+            Finite(data.GroundWaterGLDepth, "地下水位");
+            Finite(data.StressGLDepth, "応力の基準深さ");
+            Finite(data.GroundAcceleration1, "地表面加速度");
+            FiniteOpt(data.BedrockDensity, "基盤の単位体積重量");
+            FiniteOpt(data.BedrockShearWaveVelocity, "基盤のせん断波速度");
+
+            if (data.GroundLayers == null || data.GroundLayers.Count == 0)
+            {
+                problems.Add("地層が 1 層もありません。");
+            }
+            else
+            {
+                for (int i = 0; i < data.GroundLayers.Count; i++)
+                {
+                    var layer = data.GroundLayers[i];
+                    string name = $"地層 {i + 1}";
+                    if (layer == null) { problems.Add($"{name} が空です。"); continue; }
+                    Finite(layer.BottomGLDepth, $"{name} の下端深さ");
+                    Finite(layer.NValue, $"{name} の N 値");
+                    Finite(layer.Cohesive, $"{name} の粘着力");
+                    Finite(layer.Es, $"{name} の変形係数");
+                    if (!(layer.LayerThickness > 0)) problems.Add($"{name} の層厚が正ではありません ({layer.LayerThickness})。");
+                    if (!(layer.Density > 0)) problems.Add($"{name} の単位体積重量が正ではありません ({layer.Density})。");
+                    if (!(layer.Vs > 0)) problems.Add($"{name} のせん断波速度が正ではありません ({layer.Vs})。");
+                    var previous = i > 0 ? data.GroundLayers[i - 1] : null;
+                    if (previous != null && !(layer.BottomGLDepth < previous.BottomGLDepth))
+                        problems.Add($"{name} の下端深さ ({layer.BottomGLDepth}) が上の地層 ({previous.BottomGLDepth}) より深くありません (浅い方から順に並べてください)。");
+                }
+            }
+
+            if (data.GroundMassesData == null)
+            {
+                problems.Add("地盤質量の一覧がありません。");
+            }
+            else
+            {
+                for (int i = 0; i < data.GroundMassesData.Count; i++)
+                {
+                    var mass = data.GroundMassesData[i];
+                    string name = $"地盤質量の点 {i + 1}";
+                    if (mass == null) { problems.Add($"{name} が空です。"); continue; }
+                    Finite(mass.GLDepth, $"{name} の深さ");
+                    Finite(mass.NValue, $"{name} の N 値");
+                    Finite(mass.Fc, $"{name} の細粒分含有率");
+                    Finite(mass.Density, $"{name} の単位体積重量");
+                    Finite(mass.VS0, $"{name} のせん断波速度");
+                    FiniteOpt(mass.H, $"{name} の減衰定数");
+                    FiniteOpt(mass.Gamma05, $"{name} の基準ひずみ");
+                    FiniteOpt(mass.HMax, $"{name} の最大減衰定数");
+                }
+            }
+            return problems;
         }
 
         /// <summary>
