@@ -7,7 +7,7 @@ namespace PileDesign.Services
 {
     /// <summary>番号の参照の検査の結果。</summary>
     /// <param name="NeedsReview">手で選び直す必要があるもの (杭が指す杭体・地盤が無いなど)。</param>
-    /// <param name="Repairable">要素分割をやり直せば直るもの (土層-杭セットは杭配置・杭体・地盤から作る派生データ)。</param>
+    /// <param name="Repairable">作り直せば直るもの (土層-杭セット・土質点の層番号など、入力から作る派生データ)。</param>
     public sealed record ReferenceIntegrityReport(IReadOnlyList<Diagnostic> NeedsReview, IReadOnlyList<Diagnostic> Repairable)
     {
         public bool IsClean => NeedsReview.Count == 0 && Repairable.Count == 0;
@@ -29,7 +29,7 @@ namespace PileDesign.Services
             if (Repairable.Count > 0)
             {
                 lines.Add("");
-                lines.Add("■ 要素分割をやり直せば直るもの (土層-杭セットは杭配置・杭体・地盤から作り直せます。解析の前にも作り直します):");
+                lines.Add("■ 作り直せば直るもの (入力から作る派生データです。要素分割のやり直し・地盤の画面の確定で作り直されます):");
                 lines.AddRange(Repairable.Take(10).Select(d => "・" + d.Message));
                 if (Repairable.Count > 10) lines.Add($"…ほか {Repairable.Count - 10} 件");
             }
@@ -92,6 +92,52 @@ namespace PileDesign.Services
                         repairable.Add(Diagnostic.Input(DiagnosticTarget.Ground(sp.GroundNo),
                             $"土層-杭セット {i + 1}: 地盤番号 {sp.GroundNo} の地盤がありません。"));
                 }
+            }
+
+            // 杭体の区間。杭が使う杭体に区間が 1 つも無いと、杭の長さも断面も決まらない
+            var usedBodies = (input.PileLayoutItems ?? []).Where(p => p != null).Select(p => p.PileBodyNo).Distinct().OrderBy(n => n);
+            foreach (int bodyNo in usedBodies)
+            {
+                if (input.PileBodyAt(bodyNo) is { } body && (body.PileBodySegments?.Count ?? 0) == 0)
+                    needsReview.Add(Diagnostic.Input(DiagnosticTarget.PileBody(bodyNo), $"杭体{bodyNo}: 区間が 1 つもありません。杭体の入力画面で区間を足してください。"));
+            }
+
+            if (hasSoilPiles)
+            {
+                for (int i = 0; i < soilPiles!.Count; i++)
+                {
+                    var sp = soilPiles[i];
+                    if (sp == null) continue;
+                    // 土層-杭セットの節点が指す杭体の区間番号 (要素分割で振る派生データ)
+                    int segments = input.PileBodyAt(sp.PileBodyNo)?.PileBodySegments?.Count ?? -1;
+                    if (segments >= 0 && sp.ZDataItems?.Any(z => z?.SegmentNo is int s && (s < 1 || s > segments)) == true)
+                        repairable.Add(Diagnostic.Input(DiagnosticTarget.PileBody(sp.PileBodyNo),
+                            $"土層-杭セット {i + 1}: 杭体{sp.PileBodyNo} に無い区間番号を指す節点があります (区間は {segments} 個)。"));
+
+                    // kh0 の手入力は土層名で引く。地盤に同じ名前の土層が無いと、手入力が黙って効かない
+                    var layerNames = input.GroundAt(sp.GroundNo)?.GroundLayers?.Where(l => l != null).Select(l => l.Name).ToHashSet();
+                    if (layerNames == null) continue;
+                    foreach (var o in sp.Kh0LayerOverrides ?? [])
+                    {
+                        if (o != null && !string.IsNullOrEmpty(o.LayerName) && !layerNames.Contains(o.LayerName))
+                            needsReview.Add(Diagnostic.Input(DiagnosticTarget.Ground(sp.GroundNo),
+                                $"土層-杭セット {i + 1}: kh0 の手入力「{o.LayerName}」に当たる土層が地盤{sp.GroundNo}にないため、この手入力は効いていません。"
+                                + "要素分割の画面で入れ直すか、土層名を確かめてください。"));
+                    }
+                }
+            }
+
+            // 土質点が属する土層の番号 (地盤の画面の更新で付け直す派生データ)
+            for (int g = 0; g < (input.GroundsInput?.Count ?? 0); g++)
+            {
+                var ground = input.GroundsInput![g];
+                if (ground?.GroundMassesData == null) continue;
+                int layers = ground.GroundLayers?.Count ?? 0;
+                int bad = ground.GroundMassesData.Count(m => m?.LayerNo is int l && (l < 1 || l > layers));
+                if (bad > 0)
+                    repairable.Add(Diagnostic.Input(DiagnosticTarget.Ground(g + 1),
+                        $"地盤{g + 1}: 土質点 {bad} 点が、無い土層の番号を指しています (土層は {layers} 層)。"
+                        + "地盤の入力画面を開いて OK で閉じると付け直されます。"));
             }
 
             var embedment = input.EmbedmentInput;

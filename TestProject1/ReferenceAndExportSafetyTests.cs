@@ -73,4 +73,31 @@ public class ReferenceAndExportSafetyTests
         var body = new PileBodyInput { NoAtEditStart = 4 };
         Assert.AreEqual(4, body.DeepCopy().NoAtEditStart, "元に戻す (複製) で開いたときの番号が消えます");
     }
+
+    // ── 2. 開いたときの検査: 区間・層・kh0 の参照 ──
+
+    [TestMethod]
+    public void SegmentLayerAndKh0References_AreChecked()
+    {
+        var input = Example();
+        var sp = input.ElementDivision.SoilPiles[0];
+        int segments = input.PileBodyAt(sp.PileBodyNo)!.PileBodySegments.Count;
+        sp.ZDataItems[0].SegmentNo = segments + 5;                                 // 無い区間
+        sp.Kh0LayerOverrides = [new Kh0LayerOverride { LayerName = "存在しない土層", Kh0 = 1000 }];
+        input.GroundsInput[0].GroundMassesData[0].LayerNo = 99;                   // 無い土層
+
+        var report = ReferenceIntegrity.Check(input);
+        Assert.IsTrue(report.Repairable.Any(d => d.Message.Contains("無い区間番号")));
+        Assert.IsTrue(report.NeedsReview.Any(d => d.Message.Contains("「存在しない土層」") && d.Message.Contains("効いていません")));
+        Assert.IsTrue(report.Repairable.Any(d => d.Target == DiagnosticTarget.Ground(1) && d.Message.Contains("無い土層の番号")));
+    }
+
+    [TestMethod]
+    public void ABodyWithoutSegments_NeedsReview()
+    {
+        var input = Example();
+        int bodyNo = input.PileLayoutItems[0].PileBodyNo;
+        input.PileBodyAt(bodyNo)!.PileBodySegments.Clear();
+        Assert.IsTrue(ReferenceIntegrity.Check(input).NeedsReview.Any(d => d.Target == DiagnosticTarget.PileBody(bodyNo)));
+    }
 }

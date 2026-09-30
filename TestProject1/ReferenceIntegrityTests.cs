@@ -141,7 +141,7 @@ public class ReferenceIntegrityTests
         Assert.IsTrue(report.Repairable.Any(d => d.Target.PileNo == piles[1].No && d.Message.Contains("対応がありません")));
         string text = report.Describe()!;
         StringAssert.Contains(text, "選び直しが必要なもの");
-        StringAssert.Contains(text, "要素分割をやり直せば直るもの");
+        StringAssert.Contains(text, "作り直せば直るもの");
         Assert.AreEqual(500, piles[1].SoilPileAltNo, "検査がデータを書き換えています");
         piles[1].SoilPileAltNo = altBefore;
     }
