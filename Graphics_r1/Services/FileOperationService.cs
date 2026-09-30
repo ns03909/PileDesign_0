@@ -663,7 +663,8 @@ namespace PileDesign.Services
             => CompareInputProperties(projectData, input).Unused;
 
         /// <summary>
-        /// 読み込んだファイルの入力の節と、いまの入力を同じ設定で書き出したときの項目名を比べる。
+        /// 読み込んだファイルの入力の節と、いまの入力を同じ設定で書き出したときの項目を、階層込みの経路で比べる
+        /// (名前だけだと、同じ名前がほかの階層にあると見逃す。<see cref="LoadCompatibilityReport.CollectPropertyNames"/>)。
         /// <list type="bullet">
         /// <item>Unused: ファイルにあったが書き出されない = 読み込みで使わなかった (保存し直すと消える)</item>
         /// <item>Missing: 書き出されるがファイルに無かった = 既定値で補った</item>

@@ -331,6 +331,60 @@ public class ReferenceAndExportSafetyTests
         vm.ShowLoadCompatibilityIfAny(report, new System.Collections.Generic.HashSet<string>());
         var rows = new DiagnosticListViewModel(vm).Rows;
         Assert.IsTrue(rows.Any(r => r.Message.StartsWith("読込 (読み込みで使わなかった): 「ObsoleteSetting」") && r.Diagnostic.Severity == DiagnosticSeverity.Info));
-        Assert.IsTrue(LoadCompatibilityReport.CollectPropertyNames(@"{""$id"":""1"",""A"":{""B"":[{""C"":1}]}}").SetEquals(new[] { "A", "B", "C" }));
+        Assert.IsTrue(LoadCompatibilityReport.CollectPropertyNames(@"{""$id"":""1"",""A"":{""B"":[{""C"":1}]}}").SetEquals(new[] { "A", "A.B", "A.B[].C" }));
+    }
+
+    /// <summary>
+    /// <b>本題。</b> 項目は階層込みで比べる。以前は名前だけを比べていたので、同じ名前の項目がほかの階層にあると
+    /// (No・Name・X など、どこにでもある名前)、ある階層で使わなくなった項目も、既定値で補った項目も見逃した。
+    /// </summary>
+    [TestMethod]
+    public void Compatibility_ComparesPaths_NotJustNames()
+    {
+        var input = Example();
+        var service = Service();
+        string path = Path.Combine(Path.GetTempPath(), $"pd_compat_{Guid.NewGuid():N}.pdjson");
+        try
+        {
+            service.SaveProjectData(path, input, null);
+            string json = File.ReadAllText(path);
+            Assert.IsTrue(LoadCompatibilityReport.CollectPropertyNames(json, "InputModel").Contains("PileLayoutItems[].No"),
+                "(前提) 杭配置に No がある");
+            var m = Regex.Match(json, @"""InputModel"":\{""\$id"":""\d+"",");
+            Assert.IsTrue(m.Success, "(前提) 入力の節が見つかりません");
+            // 入力の直下に、ほかの階層にある名前の項目を置く (今の版は入力の直下に No を持たない)
+            File.WriteAllText(path, json.Insert(m.Index + m.Length, @"""No"":1,"));
+            var old = service.LoadProjectData(path);
+            CollectionAssert.AreEqual(new[] { "No" }, service.FindUnusedInputProperties(old, old.InputModel).ToArray(),
+                "ほかの階層に同じ名前があるので、使わなかったことを見逃しています");
+        }
+        finally { File.Delete(path); }
+
+        // 既定値で補った側も同じ: ファイルの杭配置に No が無ければ、入力の直下に No があっても「無かった」と言う
+        var inFile = LoadCompatibilityReport.CollectPropertyNames(@"{""No"":1,""Piles"":[{""X"":0}]}");
+        var written = LoadCompatibilityReport.CollectPropertyNames(@"{""Piles"":[{""X"":0,""No"":1}]}");
+        CollectionAssert.AreEquivalent(new[] { "Piles[].No" }, written.Where(n => !inFile.Contains(n)).ToArray());
+        CollectionAssert.AreEquivalent(new[] { "No" }, inFile.Where(n => !written.Contains(n)).ToArray());
+    }
+
+    /// <summary>
+    /// 参照の保存の形は読み解く: 一覧の「$values」は一覧として、「$ref」は参照先の中身をその場所にあるものとして数える。
+    /// 同じ物がどこに先に書かれるかは保存したときの並びで変わるので、参照の印のままだと、書かれた場所の違いを項目の違いと取り違える。
+    /// 循環する参照でも止まる。
+    /// </summary>
+    [TestMethod]
+    public void Compatibility_ResolvesPreservedReferences()
+    {
+        // 杭体が先に「Bodies」に書かれ、杭は参照だけを持つ / 逆の並び。どちらも同じ経路の集まりになる
+        var first = LoadCompatibilityReport.CollectPropertyNames(
+            @"{""$id"":""1"",""Bodies"":{""$id"":""2"",""$values"":[{""$id"":""3"",""D"":1}]},""Piles"":{""$id"":""4"",""$values"":[{""$id"":""5"",""Body"":{""$ref"":""3""}}]}}");
+        var second = LoadCompatibilityReport.CollectPropertyNames(
+            @"{""$id"":""1"",""Piles"":{""$id"":""4"",""$values"":[{""$id"":""5"",""Body"":{""$id"":""3"",""D"":1}}]},""Bodies"":{""$id"":""2"",""$values"":[{""$ref"":""3""}]}}");
+        CollectionAssert.AreEquivalent(new[] { "Bodies", "Bodies[].D", "Piles", "Piles[].Body", "Piles[].Body.D" }, first.ToArray());
+        Assert.IsTrue(first.SetEquals(second), string.Join(", ", second));
+
+        // 循環: 親を指し返す参照
+        var cyclic = LoadCompatibilityReport.CollectPropertyNames(@"{""$id"":""1"",""Child"":{""$id"":""2"",""Parent"":{""$ref"":""1""}}}");
+        CollectionAssert.AreEquivalent(new[] { "Child", "Child.Parent" }, cyclic.ToArray());
     }
 }
