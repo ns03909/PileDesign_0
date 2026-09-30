@@ -16,7 +16,10 @@ namespace TestProject1
     [TestClass]
     public class ReferenceCatalogTests
     {
-        /// <summary>ヘルプのタイルに出ている文献は、カタログにもあること。</summary>
+        /// <summary>
+        /// ヘルプのタイルに出ている文献は、カタログにもあること。
+        /// 同梱の計算例の出典 (<see cref="ExampleSourcesOnlyInHelp"/>) はヘルプのタイルにだけ置く。
+        /// </summary>
         [TestMethod]
         public void TheHelpTilesAndTheCatalogAgree()
         {
@@ -32,8 +35,6 @@ namespace TestProject1
             {
                 ("建築基礎構造設計指針", "建築基礎構造設計指針"),
                 ("基礎部材の強度と変形性能", "基礎部材の強度と変形性能"),
-                ("建築基礎構造設計例集", "建築基礎構造設計例集"),
-                ("基礎構造の設計　学びやすい構造設計", "学びやすい構造設計"),
                 ("キャプテンパイル工法 (場所打ち杭用杭頭半固定構法) 設計・施工マニュアル", "キャプテンパイル工法"),
                 ("F.T.Pile構法既製コンクリート杭　設計・施工指針【暫定版】", "F.T.Pile構法"),
                 ("キャプリングパイル工法 設計マニュアル", "キャプリングパイル工法"),
@@ -52,6 +53,25 @@ namespace TestProject1
 
             Assert.AreEqual(0, missing.Count,
                 "ヘルプと計算書の参考文献が食い違っています:\n  " + string.Join("\n  ", missing));
+        }
+
+        /// <summary>同梱の計算例の出典。算定には用いていないので計算書の参考文献には載せず、ヘルプのタイルにだけ置く。</summary>
+        private static readonly string[] ExampleSourcesOnlyInHelp = ["建築基礎構造設計例集", "学びやすい構造設計"];
+
+        /// <summary>
+        /// 計算書の参考文献は算定に用いた文献だけ。同梱の計算例の出典は、照合に使っただけで算定には用いていないので
+        /// 載せない (載せると、何に依った計算書なのかが読めなくなる)。照合の対象と結果は「文献検証」画面にある。
+        /// </summary>
+        [TestMethod]
+        public void ExampleSources_AreNotInTheReportReferences()
+        {
+            string help = TestSource.Read("Graphics_r1", "Help", "help.html");
+            foreach (var keyword in ExampleSourcesOnlyInHelp)
+            {
+                Assert.IsFalse(ReferenceCatalog.All().Any(r => r.Title.Contains(keyword, System.StringComparison.Ordinal)),
+                    $"計算例の出典「{keyword}」が計算書の参考文献に入っています");
+                StringAssert.Contains(help, keyword, "(前提) ヘルプのタイルには計算例の出典として残す");
+            }
         }
 
         /// <summary>
@@ -85,7 +105,7 @@ namespace TestProject1
         public void MethodReferencesAreNotAlwaysListed()
         {
             var always = ReferenceCatalog.Always().ToList();
-            Assert.IsTrue(always.Count >= 6, "常に載せる文献が少なすぎます");
+            Assert.IsTrue(always.Count >= 4, "常に載せる文献が少なすぎます");
             Assert.IsFalse(always.Any(r => r.Kind == ReferenceKind.Method),
                 "工法の文献が常時掲載に混ざっています");
 
