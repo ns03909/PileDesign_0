@@ -450,6 +450,15 @@ namespace PileDesign.Models.InputData
         }
 
         // 深いコピーを作成するメソッド
+        /// <summary>
+        /// 地盤の画面で編集を始めたときの地盤番号 (1 から)。画面を開いてから足した地盤は 0。保存しない。
+        /// 杭配置・根入部の地盤番号は、画面を OK で閉じたときにこれを手掛かりに付け直す
+        /// (<c>GroundLayerViewModel.RenumberGroundReferences</c>)。複製はメンバーの写しから始めるので、元に戻したあとも残る。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        internal int NoAtEditStart { get; set; }
+
         public GroundInput DeepCopy()
         {
             var copy = CloneWithoutSubscribers<GroundInput>();

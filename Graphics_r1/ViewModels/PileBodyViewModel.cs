@@ -542,28 +542,11 @@ namespace PileDesign.ViewModels
         /// 付け直せなかった杭 (指す杭体を消した) の説明を返す (杭体の削除は参照中なら断るので、通常は空)。
         /// </summary>
         internal static List<string> RenumberPileLayout(IEnumerable<PileLayoutDataItem>? piles, IList<PileBodyInput> editedBodies)
-        {
-            var unresolved = new List<string>();
-            var newNoByOrigin = new Dictionary<int, int>();
-            for (int i = 0; i < editedBodies.Count; i++)
-            {
-                int origin = editedBodies[i]?.NoAtEditStart ?? 0;
-                if (origin > 0 && !newNoByOrigin.ContainsKey(origin)) newNoByOrigin[origin] = i + 1;
-            }
-            foreach (var pile in piles ?? [])
-            {
-                if (pile == null) continue;
-                if (newNoByOrigin.TryGetValue(pile.PileBodyNo, out int newNo))
-                {
-                    if (pile.PileBodyNo != newNo) pile.PileBodyNo = newNo;
-                }
-                else
-                {
-                    unresolved.Add($"杭 No.{pile.No} (杭体番号 {pile.PileBodyNo} の杭体がありません)");
-                }
-            }
-            return unresolved;
-        }
+            => PileDesign.Services.EditRenumbering.Apply(
+                (piles ?? []).Where(p => p != null).Select(p => new PileDesign.Services.EditRenumbering.Reference(
+                    $"杭 No.{p.No}", () => p.PileBodyNo, n => p.PileBodyNo = n)),
+                PileDesign.Services.EditRenumbering.NewNumberByOrigin(editedBodies.Select(b => b?.NoAtEditStart ?? 0)),
+                "杭体");
 
         /// <summary>
         /// 場所打ち鋼管コンクリート杭の最上段区間が「鉄筋コンクリート部」になっている杭体を抽出する。

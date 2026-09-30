@@ -82,6 +82,9 @@ namespace PileDesign.ViewModels
 
             if (GroundsInput.Count == 0)
                 GroundsInput.Add(new GroundInput());
+            // 開いたときの地盤番号を控える。杭配置・根入部の地盤番号は、OK で閉じたときにこれで付け直す
+            for (int i = 0; i < GroundsInput.Count; i++)
+                if (GroundsInput[i] != null && InputModel.GroundsInput.Count > i) GroundsInput[i].NoAtEditStart = i + 1;
 
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
@@ -206,6 +209,18 @@ namespace PileDesign.ViewModels
             Update();
         }
 
+        /// <summary>
+        /// 選択中の地盤番号を、いまの地盤の数の範囲に戻し、選択中の地盤を合わせる。
+        /// 以前は範囲の外のとき選択中の地盤だけを先頭に替え、番号は範囲の外のまま残していた (次の操作で落ちる)。
+        /// </summary>
+        private void KeepSelectionInRange()
+        {
+            UpdateGroundsCountPlusOneList();
+            if (GroundsInput.Count == 0) { GroundInput = null; return; }
+            if (GroundNo < 1 || GroundNo > GroundsInput.Count) GroundNo = Math.Clamp(GroundNo, 1, GroundsInput.Count);
+            GroundInput = GroundsInput[GroundNo - 1];
+        }
+
         [RelayCommand]
         public void Undo()
         {
@@ -219,12 +234,7 @@ namespace PileDesign.ViewModels
             if (_undoManager.CurrentState is IEnumerable<GroundInput> state)
             {
                 GroundsInput = new ObservableCollection<GroundInput>(state.Select(x => x.DeepCopy()));
-                if (GroundNo > 0 && GroundNo <= GroundsInput.Count)
-                    GroundInput = GroundsInput[GroundNo - 1];
-                else if (GroundsInput.Count > 0)
-                    GroundInput = GroundsInput[0];
-                else
-                    GroundInput = null;
+                KeepSelectionInRange();
 
                 Update();
             }
@@ -237,12 +247,7 @@ namespace PileDesign.ViewModels
             if (_undoManager.CurrentState is IEnumerable<GroundInput> state)
             {
                 GroundsInput = new ObservableCollection<GroundInput>(state.Select(x => x.DeepCopy()));
-                if (GroundNo > 0 && GroundNo <= GroundsInput.Count)
-                    GroundInput = GroundsInput[GroundNo - 1];
-                else if (GroundsInput.Count > 0)
-                    GroundInput = GroundsInput[0];
-                else
-                    GroundInput = null;
+                KeepSelectionInRange();
 
                 Update();
             }
@@ -528,9 +533,20 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // 杭配置からの参照チェック (使用中なら削除を拒否)
+            // 杭配置・根入部からの参照チェック (使用中なら削除を拒否)。
+            // 杭配置・根入部はまだ「開いたときの番号」で地盤を指している (付け直すのは OK で閉じたとき) ので、
+            // 画面の番号ではなく開いたときの番号で照合する。画面で足した地盤 (0) を指すものは無い
+            int originNo = GroundsInput[index]?.NoAtEditStart ?? 0;
+            var embedment = _mainWindowViewModel?.CurrentInputModel?.EmbedmentInput;
+            if (originNo > 0 && embedment != null && embedment.EmbedmentLayersCount > 0 && embedment.GroundNo == originNo)
+            {
+                MessageService.Show(
+                    $"地盤番号 {GroundNo} は根入部が参照中のため削除できません。\n先に根入部の地盤を別の番号に変えてから削除してください。",
+                    "削除不可", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             var referencingPiles = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?
-                .Where(p => p != null && p.GroundNo == GroundNo)
+                .Where(p => p != null && originNo > 0 && p.GroundNo == originNo)
                 .Select(p => p.PileNo)
                 .OrderBy(no => no)
                 .ToList();
@@ -551,7 +567,7 @@ namespace PileDesign.ViewModels
             // 1 つずれて意味が変わる (旧 #3 → 新 #2)。アラートで通知し、自動リナンバリングする
             // か削除中止かをユーザーに選択させる。
             var shiftingPiles = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?
-                .Where(p => p != null && p.GroundNo > GroundNo)
+                .Where(p => p != null && originNo > 0 && p.GroundNo > originNo)
                 .Select(p => p.PileNo)
                 .OrderBy(no => no)
                 .ToList();
@@ -561,7 +577,7 @@ namespace PileDesign.ViewModels
                 if (shiftingPiles.Count > 20) list += $" ほか {shiftingPiles.Count - 20} 件";
                 var shiftResult = MessageService.Show(
                     $"地盤番号 {GroundNo} を削除すると、より大きい地盤番号を参照している杭配置 {list} の番号が 1 つずれます。\n\n" +
-                    $"・OK: 該当する杭配置の地盤番号を自動的に 1 つ下げて削除します\n" +
+                    $"・OK: 該当する杭配置の地盤番号を自動的に 1 つ下げて削除します (このウィンドウを OK で閉じたときに付け直します)\n" +
                     $"・キャンセル: 削除を中止します",
                     "番号シフトの確認",
                     MessageBoxButton.OKCancel,
@@ -581,17 +597,9 @@ namespace PileDesign.ViewModels
                 // 変更前の状態を保存
                 _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
-                // 後続の GroundNo を持つ PileLayoutItem を 1 つ下げる (リナンバリング)
-                var liveItems = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems;
-                if (liveItems != null)
-                {
-                    foreach (var p in liveItems)
-                    {
-                        if (p != null && p.GroundNo > GroundNo)
-                            p.GroundNo -= 1;
-                    }
-                }
-
+                // 杭配置・根入部の地盤番号はここでは書き換えない。以前はここで下げていたので、このあと
+                // キャンセル・× で閉じる、または「元に戻す」で地盤を戻すと、杭が黙って別の地盤を指した。
+                // OK で閉じたときに開いたときの番号 (NoAtEditStart) から付け直す (RenumberGroundReferences)。
                 GroundsInput.RemoveAt(index);
                 UpdateGroundsCountPlusOneList();
 
@@ -1423,6 +1431,10 @@ namespace PileDesign.ViewModels
                     }
                 }
 
+                // 杭配置・根入部の地盤番号を、画面で消した・並びが変わった地盤に合わせて付け直す
+                foreach (var u in RenumberGroundReferences(InputModel, GroundsInput))
+                    Serilog.Log.Warning("[地盤] 地盤番号を付け直せません: {Reference}", u);
+
                 // 深いコピーを作成して代入
                 InputModel.GroundsInput.Clear();
 
@@ -1432,6 +1444,21 @@ namespace PileDesign.ViewModels
                 }
             }
             RequestClose?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 杭配置・根入部の地盤番号を、編集後の地盤の並びに合わせて付け直す (開いたときの番号 → いまの番号)。
+        /// 付け直せなかった参照の説明を返す (地盤の削除は参照中なら断るので、通常は空)。
+        /// </summary>
+        internal static List<string> RenumberGroundReferences(InputModel input, IList<GroundInput> editedGrounds)
+        {
+            var references = (input.PileLayoutItems ?? []).Where(p => p != null)
+                .Select(p => new PileDesign.Services.EditRenumbering.Reference($"杭 No.{p.No}", () => p.GroundNo, n => p.GroundNo = n))
+                .ToList();
+            if (input.EmbedmentInput is { EmbedmentLayersCount: > 0 } embedment)
+                references.Add(new("根入部", () => embedment.GroundNo, n => embedment.GroundNo = n));
+            return PileDesign.Services.EditRenumbering.Apply(references,
+                PileDesign.Services.EditRenumbering.NewNumberByOrigin(editedGrounds.Select(g => g?.NoAtEditStart ?? 0)), "地盤");
         }
 
         [RelayCommand]
