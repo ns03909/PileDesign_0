@@ -46,6 +46,14 @@ namespace PileDesign.Services
     /// </summary>
     public static class ReferenceIntegrity
     {
+        /// <summary>選び直す候補 (いまある番号と名前。多ければ先頭の 5 つ)。候補が無ければ空。</summary>
+        internal static string DescribeCandidates(IEnumerable<string?>? names, string kind)
+        {
+            var list = (names ?? []).Select((n, i) => string.IsNullOrWhiteSpace(n) ? $"{kind}{i + 1}" : $"{kind}{i + 1} {n}").ToList();
+            if (list.Count == 0) return "";
+            return " 選び直す候補: " + string.Join("・", list.Take(5)) + (list.Count > 5 ? $" ほか {list.Count - 5} 個" : "") + "。";
+        }
+
         public static ReferenceIntegrityReport Check(InputModel? input)
         {
             var needsReview = new List<Diagnostic>();
@@ -60,12 +68,15 @@ namespace PileDesign.Services
                 if (pile == null) continue;
                 bool bodyOk = input.PileBodyAt(pile.PileBodyNo) != null;
                 bool groundOk = input.GroundAt(pile.GroundNo) != null;
+                // 自動では付け替えない (誤った杭体・地盤に結び付ける恐れがある)。選び直す候補を示し、利用者が選ぶ
                 if (!bodyOk)
                     needsReview.Add(Diagnostic.Input(DiagnosticTarget.Pile(pile.No, pile.PileBodyNo),
-                        $"杭 No.{pile.No}: 杭体番号 {pile.PileBodyNo} の杭体がありません (杭体は {input.PileBodies?.Count ?? 0} 個)。"));
+                        $"杭 No.{pile.No}: 杭体番号 {pile.PileBodyNo} の杭体がありません (杭体は {input.PileBodies?.Count ?? 0} 個)。"
+                        + DescribeCandidates(input.PileBodies?.Select(b => b?.PileBodyRef), "杭体")));
                 if (!groundOk)
                     needsReview.Add(Diagnostic.Input(DiagnosticTarget.Pile(pile.No),
-                        $"杭 No.{pile.No}: 地盤番号 {pile.GroundNo} の地盤がありません (地盤は {input.GroundsInput?.Count ?? 0} 個)。"));
+                        $"杭 No.{pile.No}: 地盤番号 {pile.GroundNo} の地盤がありません (地盤は {input.GroundsInput?.Count ?? 0} 個)。"
+                        + DescribeCandidates(input.GroundsInput?.Select(g => g?.GroundRef), "地盤")));
 
                 // 土層-杭セットとの対応は、セットを作ったあとだけ見る (作る前は対応が無いのが普通)
                 if (!hasSoilPiles || !bodyOk || !groundOk) continue;

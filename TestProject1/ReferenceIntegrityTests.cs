@@ -264,7 +264,7 @@ public class ReferenceIntegrityTests
         int nodeLine = lines.FindIndex(l => l.Contains("一般節点 No.99"));
         Assert.IsTrue(xiLine >= 0 && xiLine < nodeLine, "重い順に並んでいません");
         StringAssert.StartsWith(lines[xiLine], "【結果に影響】");
-        StringAssert.Contains(lines[xiLine], "→ 杭配置の表で、その杭の値を直す");
+        StringAssert.Contains(lines[xiLine], "→ その杭を選んで「選択杭の一括変換」で直す");
         StringAssert.StartsWith(lines[nodeLine], "【情報】");
 
         // 文だけを返す従来の形は変えない

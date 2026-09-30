@@ -8,8 +8,10 @@ namespace PileDesign.Services
     /// <summary>問題を直しに行く入力画面。</summary>
     public enum InputDestination
     {
-        /// <summary>開く画面が無い (メイン画面で杭を選ぶだけ、または解析のログで追う)。</summary>
+        /// <summary>開く画面が無い (解析のログで追う)。</summary>
         None,
+        /// <summary>選択杭の一括変換 (杭をメイン画面で選んでから開く。杭体番号・地盤番号・ΔZc・群杭係数などを直す)。</summary>
+        PileLayoutEdit,
         PileBodyWindow,
         GroundWindow,
         LoadCaseWindow,
@@ -122,6 +124,7 @@ namespace PileDesign.Services
         /// <summary>場所から、直しに行く入力画面。</summary>
         public static InputDestination DestinationOf(DiagnosticTarget target) => target.Kind switch
         {
+            DiagnosticTargetKind.Pile => InputDestination.PileLayoutEdit,
             DiagnosticTargetKind.PileBody or DiagnosticTargetKind.PileBodySegment => InputDestination.PileBodyWindow,
             DiagnosticTargetKind.Ground or DiagnosticTargetKind.GroundLayer => InputDestination.GroundWindow,
             DiagnosticTargetKind.LoadCase => InputDestination.LoadCaseWindow,
@@ -132,6 +135,7 @@ namespace PileDesign.Services
         /// <summary>入力画面の名前 (知らせに書く)。</summary>
         public static string DestinationName(InputDestination destination) => destination switch
         {
+            InputDestination.PileLayoutEdit => "選択杭の一括変換",
             InputDestination.PileBodyWindow => "杭体の入力画面",
             InputDestination.GroundWindow => "地盤の入力画面",
             InputDestination.LoadCaseWindow => "荷重条件の入力画面",
@@ -142,7 +146,7 @@ namespace PileDesign.Services
         /// <summary>推奨する操作。<see cref="Diagnostic.Remedy"/> があればそれ、無ければ場所から決める (場所不明なら null)。</summary>
         public static string? RemedyOf(Diagnostic diagnostic) => diagnostic.Remedy ?? diagnostic.Target.Kind switch
         {
-            DiagnosticTargetKind.Pile => "杭配置の表で、その杭の値を直す",
+            DiagnosticTargetKind.Pile => "その杭を選んで「選択杭の一括変換」で直す",
             DiagnosticTargetKind.PileBody or DiagnosticTargetKind.PileBodySegment => "杭体の入力画面で直す",
             DiagnosticTargetKind.Ground or DiagnosticTargetKind.GroundLayer => "地盤の入力画面で直す",
             DiagnosticTargetKind.Embedment => "根入部の入力で直す",

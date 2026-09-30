@@ -212,11 +212,13 @@ public class DiagnosticTests
         Assert.AreEqual(InputDestination.GroundWindow, DiagnosticSelection.DestinationOf(DiagnosticTarget.GroundLayer(1, 2)));
         Assert.AreEqual(InputDestination.LoadCaseWindow, DiagnosticSelection.DestinationOf(DiagnosticTarget.LoadCase("L1")));
         Assert.AreEqual(InputDestination.SettlementLayers, DiagnosticSelection.DestinationOf(DiagnosticTarget.SettlementLayer(2)));
-        Assert.AreEqual(InputDestination.None, DiagnosticSelection.DestinationOf(DiagnosticTarget.Pile(1)));
+        // 杭の問題は、その杭を選んで「選択杭の一括変換」を開く (杭体番号・地盤番号・ΔZc・群杭係数を直せる)
+        Assert.AreEqual(InputDestination.PileLayoutEdit, DiagnosticSelection.DestinationOf(DiagnosticTarget.Pile(1)));
+        Assert.AreEqual(InputDestination.None, DiagnosticSelection.DestinationOf(DiagnosticTarget.Nowhere));
 
-        // 画面を開ける最初の問題
+        // 画面を開ける最初の問題 (場所の無い問題は飛ばす)
         var first = DiagnosticSelection.FirstNavigable([
-            Diagnostic.InputAt(DiagnosticTarget.Pile(1), "a"),
+            Diagnostic.InputAt(DiagnosticTarget.Nowhere, "a"),
             Diagnostic.InputAt(DiagnosticTarget.GroundLayer(2, 1), "b"),
         ]);
         Assert.AreEqual(DiagnosticTarget.GroundLayer(2, 1), first);

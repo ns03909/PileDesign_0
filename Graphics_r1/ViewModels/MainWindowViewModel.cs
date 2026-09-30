@@ -1246,11 +1246,19 @@ namespace PileDesign.ViewModels
         /// <summary>問題の場所の入力画面を開く。開く画面が無い場所なら false。<paramref name="focus"/> が false なら対象を選ばずに開く。</summary>
         internal bool OpenInputFor(PileDesign.Common.DiagnosticTarget target, bool focus = true)
         {
+            // 無人実行 (試験など) では入力画面を開かない (モーダルの画面は閉じる人がいないと止まる)
+            if (MessageService.IsUnattended) return false;
             InputFocus = focus ? target : null;
             try
             {
                 switch (PileDesign.Services.DiagnosticSelection.DestinationOf(target))
                 {
+                    case PileDesign.Services.InputDestination.PileLayoutEdit:
+                        // 一括変換は選んだ杭に効くので、その杭だけを選んでから開く (杭体・地盤は利用者が一覧から選び直す)
+                        SelectForReview(PileDesign.Services.DiagnosticSelection.Resolve(
+                            [PileDesign.Common.Diagnostic.Input(target, "")], CurrentInputModel));
+                        EditAddPiles();
+                        return true;
                     case PileDesign.Services.InputDestination.PileBodyWindow: OpenPileBodyWindow(); return true;
                     case PileDesign.Services.InputDestination.GroundWindow: OpenGroundWindow(); return true;
                     case PileDesign.Services.InputDestination.LoadCaseWindow: OpenLoadCaseWindow(); return true;
