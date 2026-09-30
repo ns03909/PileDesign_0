@@ -1178,6 +1178,15 @@ namespace PileDesign.ViewModels
             PendingInputNavigation = null;
             _pendingNavigationSubject = null;
             if (target == null) return;
+            if (!IsSameSubject(target, subject) && RelocateSubject(target, subject) is { } moved)
+            {
+                // 番号は変わったが同じものが残っている (前に杭体・区間を足した・並べ替えた)。いまの番号でそれを開く
+                Serilog.Log.Information("[診断] {Before} は {After} に移っていたので、そちらを開きます", target.Label, moved.Label);
+                MessageService.Show($"問題を見つけたあとに番号が変わったので、「{target.Label}」だったものを「{moved.Label}」として開きます。",
+                    "入力画面を開く", MessageBoxButton.OK, MessageBoxImage.Information);
+                OpenInputFor(moved);
+                return;
+            }
             if (!IsSameSubject(target, subject))
             {
                 Serilog.Log.Information("[診断] {Target} の指す対象が変わっていたので、選ばずに入力画面を開きます", target.ToLogFields());
@@ -1186,6 +1195,43 @@ namespace PileDesign.ViewModels
                 return;
             }
             OpenInputFor(target);
+        }
+
+        /// <summary>
+        /// 控えた実体 (杭体・区間・地盤・土層) が、いまの入力のどこにあるかを探し、その番号の場所を返す。
+        /// 番号は並び順なので、足した・並べ替えただけなら同じものが別の番号で残っている。消されていれば null。
+        /// </summary>
+        internal PileDesign.Common.DiagnosticTarget? RelocateSubject(PileDesign.Common.DiagnosticTarget target, object? subject)
+        {
+            var input = CurrentInputModel;
+            if (input == null || subject == null) return null;
+            var bodies = input.PileBodies ?? [];
+            var grounds = input.GroundsInput ?? [];
+            switch (target.Kind)
+            {
+                case PileDesign.Common.DiagnosticTargetKind.PileBody:
+                    int b = bodies.IndexOf((PileBodyInput)subject);
+                    return b < 0 ? null : target with { PileBodyNo = b + 1 };
+                case PileDesign.Common.DiagnosticTargetKind.PileBodySegment:
+                    for (int i = 0; i < bodies.Count; i++)
+                    {
+                        int s = bodies[i]?.PileBodySegments?.IndexOf((PileBodySegment)subject) ?? -1;
+                        if (s >= 0) return target with { PileBodyNo = i + 1, SegmentNo = s + 1 };
+                    }
+                    return null;
+                case PileDesign.Common.DiagnosticTargetKind.Ground:
+                    int g = grounds.IndexOf((GroundInput)subject);
+                    return g < 0 ? null : target with { GroundNo = g + 1 };
+                case PileDesign.Common.DiagnosticTargetKind.GroundLayer:
+                    for (int i = 0; i < grounds.Count; i++)
+                    {
+                        int l = grounds[i]?.GroundLayers?.IndexOf((GroundLayerInput)subject) ?? -1;
+                        if (l >= 0) return target with { GroundNo = i + 1, LayerNo = l + 1 };
+                    }
+                    return null;
+                default:
+                    return null;
+            }
         }
 
         /// <summary>番号がいまも頼んだときと同じ実体を指しているか (実体を控えていない場所は同じとみなす)。</summary>
