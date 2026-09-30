@@ -26,6 +26,9 @@ namespace PileDesign.Output
         public void Export(string filePath)
         {
             var file = new File3dm();
+            // 座標はメートルで書くので、モデルの単位もメートルにする。既定はミリメートルで、
+            // 以前は設定していなかったので、Rhino で開くとモデルが 1000 分の 1 の大きさになった
+            file.Settings.ModelUnitSystem = Rhino.UnitSystem.Meters;
 
             // レイヤー作成
             int pileLayerIdx = AddLayer(file, "杭", System.Drawing.Color.SteelBlue);

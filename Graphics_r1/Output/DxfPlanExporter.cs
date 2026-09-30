@@ -28,6 +28,8 @@ namespace PileDesign.Output
         public void Export(string filePath)
         {
             var doc = new CadDocument();
+            // 座標はメートルで書くので、単位もメートルと記録する (記録しないと単位なしになり、CAD が mm と見なすことがある)
+            doc.Header.InsUnits = ACadSharp.Types.Units.UnitsType.Meters;
 
             // レイヤー作成
             var pileLayer = CreateLayer(doc, "杭", new Color(0, 0, 255));
