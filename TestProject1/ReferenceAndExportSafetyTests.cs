@@ -293,6 +293,8 @@ public class ReferenceAndExportSafetyTests
             var clean = service.LoadProjectData(path);
             CollectionAssert.AreEqual(Array.Empty<string>(), service.FindUnusedInputProperties(clean, clean.InputModel).ToArray(),
                 "今の版で保存したファイルで、使わなかった項目があると言っています");
+            CollectionAssert.AreEqual(Array.Empty<string>(), service.CompareInputProperties(clean, clean.InputModel).Missing.ToArray(),
+                "今の版で保存したファイルで、既定値で補った項目があると言っています");
 
             string json = File.ReadAllText(path);
             var m = Regex.Match(json, @"""InputModel"":\{""\$id"":""\d+"",");

@@ -344,9 +344,9 @@ namespace TestProject1
                 var source = ReadSource("Graphics_r1", "ViewModels", file);
 
                 // 入口自身の本体は当然この代入を持つので、走査の対象から外す
-                if (source.Contains("private void ApplyLoadedProjectData("))
+                if (source.Contains("internal void ApplyLoadedProjectData("))
                     source = source.Replace(
-                        ExtractMethodBody(source, "private void ApplyLoadedProjectData("), "");
+                        ExtractMethodBody(source, "internal void ApplyLoadedProjectData("), "");
 
                 foreach (var raw in source.Split('\n'))
                 {
@@ -372,7 +372,7 @@ namespace TestProject1
         {
             var body = ExtractMethodBody(
                 ReadSource("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs"),
-                "private void ApplyLoadedProjectData(");
+                "internal void ApplyLoadedProjectData(");
 
             StringAssert.Contains(body, "projectData.InputModel == null",
                 "入力データの有無を検査していない");

@@ -612,6 +612,8 @@ namespace PileDesign.Services
 
             // 杭体・地盤・杭頭の高さが同じ杭は、地盤との上下の関係も同じ。まとめて 1 回だけ見る
             var groups = new List<((int Ground, int Body, double Top) Key, List<PileLayoutDataItem> Piles)>();
+            var reportedBodies = new HashSet<int>();
+            var reportedGrounds = new HashSet<int>();
 
             foreach (PileLayoutDataItem pile in inputModel.PileLayoutItems)
             {
@@ -631,6 +633,13 @@ namespace PileDesign.Services
                     problems.Add(Diagnostic.InputAt(at, $"杭頭の高さが数値ではありません ({pile.PileHeadZ})."));
                     continue;
                 }
+                // 杭体に区間が無ければ、土層-杭セットもできない。セットの有無より先に、元の原因 (杭体) を示す
+                if ((inputModel.PileBodyAt(pile.PileBodyNo)!.PileBodySegments?.Count ?? 0) == 0)
+                {
+                    if (reportedBodies.Add(pile.PileBodyNo))
+                        problems.Add(Diagnostic.Input(DiagnosticTarget.PileBody(pile.PileBodyNo), $"杭体{pile.PileBodyNo}に杭区間データがありません。"));
+                    continue;
+                }
                 // 解析は杭ごとの土層-杭セットを SoilPileAltNo で引く。対応が無いまま進むと、範囲の外を引いて落ちる
                 if (pile.SoilPileAt(inputModel) == null)
                 {
@@ -646,8 +655,6 @@ namespace PileDesign.Services
                 else groups[index].Piles.Add(pile);
             }
 
-            var reportedBodies = new HashSet<int>();
-            var reportedGrounds = new HashSet<int>();
             foreach (var ((groundNo, pileBodyNo, pileTopAltitude), piles) in groups)
             {
                 var body = inputModel.PileBodyAt(pileBodyNo)!;

@@ -657,18 +657,30 @@ namespace PileDesign.Services
         /// いまの入力を同じ設定で書き出して比べる。比べられなければ空。
         /// </summary>
         internal IReadOnlyList<string> FindUnusedInputProperties(ProjectData projectData, InputModel input)
+            => CompareInputProperties(projectData, input).Unused;
+
+        /// <summary>
+        /// 読み込んだファイルの入力の節と、いまの入力を同じ設定で書き出したときの項目名を比べる。
+        /// <list type="bullet">
+        /// <item>Unused: ファイルにあったが書き出されない = 読み込みで使わなかった (保存し直すと消える)</item>
+        /// <item>Missing: 書き出されるがファイルに無かった = 既定値で補った</item>
+        /// </list>
+        /// 比べられなければ両方空。
+        /// </summary>
+        internal (IReadOnlyList<string> Unused, IReadOnlyList<string> Missing) CompareInputProperties(ProjectData projectData, InputModel input)
         {
-            if (projectData?.InputPropertyNamesInFile is not { Count: > 0 } inFile || input == null) return [];
+            if (projectData?.InputPropertyNamesInFile is not { Count: > 0 } inFile || input == null) return ([], []);
             try
             {
                 using var perf = PileDesign.Common.PerfLog.Measure("読込の互換の点検", inFile.Count, "項目名");
                 var written = LoadCompatibilityReport.CollectPropertyNames(JsonSerializer.Serialize(input, _jsonOptions));
-                return inFile.Where(n => !written.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).ToList();
+                return (inFile.Where(n => !written.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).ToList(),
+                        written.Where(n => !inFile.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).ToList());
             }
             catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException)
             {
-                Serilog.Log.Debug(ex, "[読込] 使わなかった項目を比べられませんでした");
-                return [];
+                Serilog.Log.Debug(ex, "[読込] 項目を比べられませんでした");
+                return ([], []);
             }
         }
 

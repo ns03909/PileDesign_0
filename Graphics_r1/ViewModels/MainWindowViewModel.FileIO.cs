@@ -353,7 +353,7 @@ namespace PileDesign.ViewModels
         /// という形で<b>読込に失敗すると編集中の作業まで失われて</b>いた。
         /// ここで先に中身を検査し、失敗したら読込前の入力へ戻す。
         /// </summary>
-        private void ApplyLoadedProjectData(Models.ProjectData projectData, string? filePath, string successMessage)
+        internal void ApplyLoadedProjectData(Models.ProjectData projectData, string? filePath, string successMessage)
         {
             if (projectData.InputModel == null)
                 throw new InvalidOperationException("ファイル形式が不正です。入力データが含まれていません。");
@@ -631,8 +631,12 @@ namespace PileDesign.ViewModels
             // 今の版で読み込みに使わなかった項目 (保存し直すと消える)
             if (projectData != null)
             {
-                foreach (var name in _fileOperationService.FindUnusedInputProperties(projectData, CurrentInputModel))
+                var (unused, missing) = _fileOperationService.CompareInputProperties(projectData, CurrentInputModel);
+                foreach (var name in unused)
                     compat.Add(PileDesign.Services.CompatibilityKind.Unused, $"「{name}」(今の版では使っていない項目です)");
+                // ファイルに無かった項目は、作ったときの既定値で埋まっている (null の一覧を補ったものは上で記録済み)
+                foreach (var name in missing)
+                    compat.Add(PileDesign.Services.CompatibilityKind.Filled, $"「{name}」(ファイルに無かったので既定値にしました)");
             }
             ShowLoadCompatibilityIfAny(compat, notifiedSeparately);
 
