@@ -927,6 +927,17 @@ namespace PileDesign.Models.InputData
             return PileHeadRotationDef.Rigid();
         }
 
+        /// <summary>
+        /// 杭体の画面で編集を始めたときの杭体番号 (1 から)。画面を開いてから足した杭体は 0。保存しない。
+        ///
+        /// <para>画面の中で杭体を消す・元に戻すと、並び順 (= 杭体番号) が変わる。杭配置の杭体番号は、
+        /// 画面を OK で閉じたときにこれを手掛かりに付け直す (<c>PileBodyViewModel.RenumberPileLayout</c>)。
+        /// 複製 (<see cref="DeepCopy"/>) はメンバーの写しから始めるので、元に戻したあとも残る。</para>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        internal int NoAtEditStart { get; set; }
+
         // 深いコピーを作成するメソッド
         public PileBodyInput DeepCopy()
         //{

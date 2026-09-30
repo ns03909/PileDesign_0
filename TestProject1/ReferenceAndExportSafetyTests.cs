@@ -1,0 +1,76 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PileDesign.Common;
+using PileDesign.Common.Logging;
+using PileDesign.Models.InputData;
+using PileDesign.Services;
+using PileDesign.ViewModels;
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+
+namespace TestProject1;
+
+/// <summary>
+/// 参照切れと出力の安全策: 杭体画面の番号の付け直し、開いたときの区間・層・kh0 の参照の検査、
+/// 書き出しの原子的な置換と失敗の知らせ、診断の一覧、共有用のログ、古い形式の読み込みの記録。
+/// </summary>
+[TestClass]
+[DoNotParallelize]
+public class ReferenceAndExportSafetyTests
+{
+    private bool _unattended;
+    [TestInitialize] public void Init() { _unattended = MessageService.IsUnattended; MessageService.IsUnattended = true; }
+    [TestCleanup] public void Cleanup() => MessageService.IsUnattended = _unattended;
+
+    private static InputModel Example()
+    {
+        var (input, error) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+        if (input == null) Assert.Inconclusive(error);
+        return input!;
+    }
+
+    // ── 1. 杭体の画面: 杭配置の杭体番号は OK で閉じたときに付け直す ──
+
+    /// <summary>
+    /// <b>本題。</b> 杭体 2 を消した (1・3 が残り、新しい杭体を足した) 画面を OK で閉じると、杭配置の杭体番号は
+    /// 開いたときの番号から付け直される (3 → 2)。消した杭体を指す杭は付け直さずに知らせる。
+    /// </summary>
+    [TestMethod]
+    public void PileLayout_IsRenumberedFromTheBodiesAtEditStart()
+    {
+        var b1 = new PileBodyInput { NoAtEditStart = 1 };
+        var b3 = new PileBodyInput { NoAtEditStart = 3 };
+        var added = new PileBodyInput();   // 画面で足した杭体 (0)
+        var piles = new[]
+        {
+            new PileLayoutDataItem { No = 1, PileBodyNo = 1 },
+            new PileLayoutDataItem { No = 2, PileBodyNo = 3 },
+            new PileLayoutDataItem { No = 3, PileBodyNo = 2 },   // 消した杭体
+        };
+
+        var unresolved = PileBodyViewModel.RenumberPileLayout(piles, [b1, b3, added]);
+        CollectionAssert.AreEqual(new[] { 1, 2, 2 }, piles.Select(p => p.PileBodyNo).ToArray());
+        StringAssert.Contains(unresolved.Single(), "杭 No.3");
+    }
+
+    /// <summary>
+    /// 杭体を消した時点では杭配置を書き換えない (キャンセル・× で閉じる・元に戻すと、杭体の一覧だけ戻って杭が
+    /// 別の杭体を指した)。付け直すのは OK だけ。開いたときの番号は複製 (元に戻す) でも残る。
+    /// </summary>
+    [TestMethod]
+    public void DeletingABody_DoesNotTouchThePileLayoutUntilOk()
+    {
+        string source = TestSource.Read("Graphics_r1", "ViewModels", "PileBodyViewModel.cs");
+        string delete = TestSource.MethodBody(source, "public void DeletePileBody()");
+        // 画面自身の選択 (PileBodyNo = …) は範囲に戻すので書き換えてよい。杭配置の杭 (p.PileBodyNo) は書き換えない
+        Assert.IsFalse(Regex.IsMatch(delete, @"\w+\.PileBodyNo\s*(-=|\+=|=(?!=))"), "杭体を消した時点で杭配置の番号を書き換えています");
+        StringAssert.Contains(TestSource.MethodBody(source, "private void OnOk()"), "RenumberPileLayout(");
+        Assert.IsFalse(TestSource.MethodBody(source, "private void OnCancel()").Contains("PileBodyNo"));
+
+        var body = new PileBodyInput { NoAtEditStart = 4 };
+        Assert.AreEqual(4, body.DeepCopy().NoAtEditStart, "元に戻す (複製) で開いたときの番号が消えます");
+    }
+}

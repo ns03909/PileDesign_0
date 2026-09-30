@@ -248,6 +248,9 @@ namespace PileDesign.ViewModels
             PileBodies = new ObservableCollection<PileBodyInput>(
                 InputModel.PileBodies.Select(pileBody => pileBody.DeepCopy())
                 );
+            // 開いたときの杭体番号を控える。杭配置の杭体番号は、OK で閉じたときにこれで付け直す
+            for (int i = 0; i < PileBodies.Count; i++)
+                if (PileBodies[i] != null) PileBodies[i].NoAtEditStart = i + 1;
 
             UpdatePileBodiesCountPlusOneList();
 
@@ -306,6 +309,15 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>選択中の杭体番号を、いまの杭体の数の範囲に戻し、選択中の杭体を合わせる。</summary>
+        private void KeepSelectionInRange()
+        {
+            UpdatePileBodiesCountPlusOneList();
+            if (PileBodies.Count == 0) { PileBody = null; return; }
+            if (PileBodyNo > PileBodies.Count) PileBodyNo = PileBodies.Count;
+            PileBody = PileBodies[PileBodyNo - 1];
+        }
+
         [RelayCommand]
         public void Undo()
         {
@@ -319,9 +331,8 @@ namespace PileDesign.ViewModels
             {
                 // 深いコピーで反映
                 PileBodies = new ObservableCollection<PileBodyInput>(state.Select(pb => pb.DeepCopy()));
-                // 選択状態も復元
-                if (PileBodies.Count >= PileBodyNo)
-                    PileBody = PileBodies[PileBodyNo - 1];
+                // 選択状態も復元。杭体の数が変わっていれば、選択を範囲内に戻す (範囲外のままだと次の操作で落ちる)
+                KeepSelectionInRange();
                 DrawShapes();
                 UpdateTemporarySoilPile();
             }
@@ -334,8 +345,7 @@ namespace PileDesign.ViewModels
             if (_undoManager.CurrentState is ObservableCollection<PileBodyInput> state)
             {
                 PileBodies = new ObservableCollection<PileBodyInput>(state.Select(pb => pb.DeepCopy()));
-                if (PileBodies.Count >= PileBodyNo)
-                    PileBody = PileBodies[PileBodyNo - 1];
+                KeepSelectionInRange();
                 DrawShapes();
                 UpdateTemporarySoilPile();
             }
@@ -360,9 +370,12 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // 杭配置からの参照チェック (使用中なら削除を拒否)
+            // 杭配置からの参照チェック (使用中なら削除を拒否)。
+            // 杭配置はまだ「開いたときの番号」で杭体を指している (付け直すのは OK で閉じたとき) ので、
+            // 画面の番号ではなく開いたときの番号で照合する。画面で足した杭体 (0) を指す杭は無い
+            int originNo = PileBodies[index]?.NoAtEditStart ?? 0;
             var referencingPiles = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?
-                .Where(p => p != null && p.PileBodyNo == PileBodyNo)
+                .Where(p => p != null && originNo > 0 && p.PileBodyNo == originNo)
                 .Select(p => p.PileNo)
                 .OrderBy(no => no)
                 .ToList();
@@ -383,7 +396,7 @@ namespace PileDesign.ViewModels
             // 1 つずれて意味が変わる (旧 #3 → 新 #2)。アラートで通知し、自動リナンバリングする
             // か削除中止かをユーザーに選択させる。
             var shiftingPiles = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?
-                .Where(p => p != null && p.PileBodyNo > PileBodyNo)
+                .Where(p => p != null && originNo > 0 && p.PileBodyNo > originNo)
                 .Select(p => p.PileNo)
                 .OrderBy(no => no)
                 .ToList();
@@ -393,7 +406,7 @@ namespace PileDesign.ViewModels
                 if (shiftingPiles.Count > 20) list += $" ほか {shiftingPiles.Count - 20} 件";
                 var shiftResult = MessageService.Show(
                     $"杭体番号 {PileBodyNo} を削除すると、より大きい杭体番号を参照している杭配置 {list} の番号が 1 つずれます。\n\n" +
-                    $"・OK: 該当する杭配置の杭体番号を自動的に 1 つ下げて削除します\n" +
+                    $"・OK: 該当する杭配置の杭体番号を自動的に 1 つ下げて削除します (このウィンドウを OK で閉じたときに付け直します)\n" +
                     $"・キャンセル: 削除を中止します",
                     "番号シフトの確認",
                     MessageBoxButton.OKCancel,
@@ -410,17 +423,10 @@ namespace PileDesign.ViewModels
 
             if (result == MessageBoxResult.Yes)
             {
-                // 後続の PileBodyNo を持つ PileLayoutItem を 1 つ下げる (リナンバリング)
-                var liveItems = _mainWindowViewModel?.CurrentInputModel?.PileLayoutItems;
-                if (liveItems != null)
-                {
-                    foreach (var p in liveItems)
-                    {
-                        if (p != null && p.PileBodyNo > PileBodyNo)
-                            p.PileBodyNo -= 1;
-                    }
-                }
-
+                // 杭配置の杭体番号はここでは書き換えない。以前はここで下げていたので、このあと
+                // キャンセル・× で閉じる、または「元に戻す」で杭体を戻すと、杭体の一覧は元のままなのに
+                // 杭配置だけ番号が下がり、杭が<b>黙って別の杭体を指した</b>。OK で閉じたときに
+                // 開いたときの番号 (NoAtEditStart) から付け直す (RenumberPileLayout)。
                 PileBodies.RemoveAt(index);
                 UpdatePileBodiesCountPlusOneList();
 
@@ -523,8 +529,40 @@ namespace PileDesign.ViewModels
                 if (result != MessageBoxResult.Yes) return;
             }
 
+            // 杭配置の杭体番号を、画面で消した・並びが変わった杭体に合わせて付け直す
+            var unresolved = RenumberPileLayout(_mainWindowViewModel?.CurrentInputModel?.PileLayoutItems, PileBodies);
+            foreach (var u in unresolved) Serilog.Log.Warning("[杭体] 杭配置の杭体番号を付け直せません: {Pile}", u);
             InputModel.PileBodies = PileBodies;
             RequestClose?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 杭配置の杭体番号を、編集後の杭体の並びに合わせて付け直す。杭配置は開いたときの番号で杭体を指しているので、
+        /// その番号を持つ杭体 (<see cref="PileBodyInput.NoAtEditStart"/>) のいまの位置へ移す。
+        /// 付け直せなかった杭 (指す杭体を消した) の説明を返す (杭体の削除は参照中なら断るので、通常は空)。
+        /// </summary>
+        internal static List<string> RenumberPileLayout(IEnumerable<PileLayoutDataItem>? piles, IList<PileBodyInput> editedBodies)
+        {
+            var unresolved = new List<string>();
+            var newNoByOrigin = new Dictionary<int, int>();
+            for (int i = 0; i < editedBodies.Count; i++)
+            {
+                int origin = editedBodies[i]?.NoAtEditStart ?? 0;
+                if (origin > 0 && !newNoByOrigin.ContainsKey(origin)) newNoByOrigin[origin] = i + 1;
+            }
+            foreach (var pile in piles ?? [])
+            {
+                if (pile == null) continue;
+                if (newNoByOrigin.TryGetValue(pile.PileBodyNo, out int newNo))
+                {
+                    if (pile.PileBodyNo != newNo) pile.PileBodyNo = newNo;
+                }
+                else
+                {
+                    unresolved.Add($"杭 No.{pile.No} (杭体番号 {pile.PileBodyNo} の杭体がありません)");
+                }
+            }
+            return unresolved;
         }
 
         /// <summary>
