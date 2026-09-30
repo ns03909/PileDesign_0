@@ -1364,6 +1364,17 @@
                     </Fluent:Button>
                 </Fluent:RibbonGroupBox>
 
+                <!-- 入力の指摘を一覧にして、場所へ移動・再検査する (モードレス)。解析前の知らせは 1 回きりのダイアログなので、
+                     複数の指摘を順に直すときはこちらで追う -->
+                <Fluent:RibbonGroupBox Header="入力の診断" ToolTip="入力の診断">
+                    <Fluent:Button Header="入力の&#x0A;診断"
+                             ToolTipService.ShowOnDisabled="True"
+                             ToolTip="解析を止める問題・結果に影響する注意・番号の参照の食い違いを一覧にし、選んだ指摘の場所へ移動します。直したら再検査して確かめられます。"
+                             Command="{Binding OpenDiagnosticListCommand}"
+                             LargeIcon="pack://application:,,,/Icons/Check.png"
+                             Icon="pack://application:,,,/Icons/Check.png" AutomationProperties.Name="入力の診断"/>
+                </Fluent:RibbonGroupBox>
+
                 <Fluent:RibbonGroupBox Header="水平解析" ToolTip="水平解析">
                     <!-- **塞がない。**前提はコマンドが確かめ、済んでいなければその場で訊く。
                          塞ぐとボタンは押しても何も返らず、キーだけが理由を出す状態になる

@@ -181,4 +181,46 @@ public class ReferenceAndExportSafetyTests
         Assert.AreEqual(0, hits.Count, "保存先を直接書いています。ExportFile.TryWriteText / FileOperationService.WriteAtomically を使ってください:\n  "
             + string.Join("\n  ", hits));
     }
+
+    // ── 6. 診断の一覧 ──
+
+    /// <summary><b>本題。</b> 一覧は重い順に並び、直してから再検査すると解消した件数を知らせて一覧から除く。</summary>
+    [TestMethod]
+    public void TheDiagnosticList_RechecksAndDropsResolvedItems()
+    {
+        var input = Example();
+        var vm = new MainWindowViewModel { CurrentInputModel = input };
+        input.AttachViewModel(vm);
+        input.PileLayoutItems[0].GroupPileFactor = 0;      // 解析を止める
+        input.PileLayoutItems[1].GroupPileFactor = 1.2;    // 結果に影響
+
+        var list = new DiagnosticListViewModel(vm);
+        int errorRow = list.Rows.ToList().FindIndex(r => r.Diagnostic.Severity == DiagnosticSeverity.Error && r.Message.Contains("群杭係数"));
+        int warnRow = list.Rows.ToList().FindIndex(r => r.Diagnostic.Severity == DiagnosticSeverity.Warning && r.Message.Contains("群杭係数"));
+        Assert.IsTrue(errorRow >= 0 && errorRow < warnRow, "重い順に並んでいません");
+
+        // 移動: 杭の指摘は、その杭だけを選ぶ (開く画面は無い)
+        list.SelectedRow = list.Rows[errorRow];
+        list.GoTo();
+        Assert.IsTrue(input.PileLayoutItems[0].IsSelected);
+        Assert.AreEqual(1, input.PileLayoutItems.Count(p => p.IsSelected));
+
+        input.PileLayoutItems[0].GroupPileFactor = 1.0;    // 直した
+        list.Recheck();
+        Assert.IsFalse(list.Rows.Any(r => r.Diagnostic.Severity == DiagnosticSeverity.Error && r.Message.Contains("群杭係数")));
+        StringAssert.Contains(list.StatusText, "1 件が解消しました");
+    }
+
+    [TestMethod]
+    public void TheDiagnosticListWindow_Opens()
+    {
+        var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
+        {
+            var vm = new MainWindowViewModel();
+            var window = new PileDesign.Views.DiagnosticListWindow(new DiagnosticListViewModel(vm));
+            window.Close();
+        }, out bool timedOut);
+        if (timedOut) { Assert.Inconclusive("時間切れ"); return; }
+        Assert.IsNull(captured, captured?.ToString());
+    }
 }

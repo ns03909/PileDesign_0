@@ -233,6 +233,29 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>開いている入力の診断のウィンドウ (1 つだけ開く)。</summary>
+        private DiagnosticListWindow? _diagnosticListWindow;
+
+        /// <summary>
+        /// 入力の診断の一覧を開く (モードレス。メイン画面を操作しながら直せる)。開いていれば検査し直して前に出す。
+        /// </summary>
+        [RelayCommand]
+        public void OpenDiagnosticList()
+        {
+            if (_diagnosticListWindow is { IsLoaded: true } open)
+            {
+                (open.DataContext as DiagnosticListViewModel)?.Recheck();
+                open.Activate();
+                return;
+            }
+            var window = new DiagnosticListWindow(new DiagnosticListViewModel(this));
+            if (Application.Current?.MainWindow is { IsLoaded: true } owner && !ReferenceEquals(owner, window))
+                window.Owner = owner;
+            window.Closed += (_, _) => _diagnosticListWindow = null;
+            _diagnosticListWindow = window;
+            window.Show();
+        }
+
         [RelayCommand]
         public static void OpenShortcutKeysWindow()
         {

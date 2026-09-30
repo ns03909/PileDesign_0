@@ -195,6 +195,8 @@ namespace PileDesign.Services
                         + string.Join("\n", problems.Select(p => p.Message));
             if (DiagnosticSelection.DescribeRemedies(problems) is { } remedies) text += "\n\n" + remedies;
             if (DiagnosticSelection.DescribeSelection(selection) is { } scope) text += "\n\n" + scope;
+            if (problems.Count > 1)
+                text += "\n\n「解析条件/解析」タブの「入力の診断」で、指摘を一覧にして順に直し、再検査できます。";
 
             var destination = DiagnosticSelection.FirstNavigable(problems);
             if (destination == null || inputModel == null)
