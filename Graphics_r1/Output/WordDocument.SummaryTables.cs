@@ -1252,6 +1252,7 @@ namespace PileDesign.Output
                     ? "判定できた検定項目は、すべて限界値を下回っている（NG 項目なし）。"
                       + "収束しなかったケース・算定式の適用範囲の外の項目・検定できなかった項目については、上記のとおり判定していない。"
                     : "すべての検定項目が限界値を下回っている（NG 項目なし）。");
+                AddEvaluationBasisSection(body, result);
                 return;
             }
 
@@ -1306,6 +1307,65 @@ namespace PileDesign.Output
                 "※ 検定比 = 応答値 / 限界値。1.00 を超えるものを NG として挙げている。"
                 + "軸力は限界値を求めるのに使った値、M/(Q·d) はせん断耐力の算定に使った値で、"
                 + "いずれも杭ごと・荷重ケースごとに求めている。");
+
+            AddEvaluationBasisSection(body, result);
+        }
+
+        /// <summary>計算書に根拠を載せる検定項目の数の上限 (NG が多いと根拠の表だけで何十ページにもなる)。</summary>
+        internal const int MaxEvaluationBasisItems = 10;
+
+        /// <summary>
+        /// 検定の根拠: 最大検定比の項目と NG の項目について、限界値・応答値を<b>どの入力・曲線・式・係数から求めたか</b>を示す。
+        /// 照合・レビューで、表の数値から入力と式まで辿れるようにする。計算値は変えない (検定したときの値を書くだけ)。
+        ///
+        /// <para>i端・j端は限界値の根拠が同じなので、杭・要素・荷重条件ごとに 1 つにまとめる。
+        /// せん断は、断面の種類ごとの式と係数の内訳と、式で求めた値を曲線の補間値と並べて書く。</para>
+        /// </summary>
+        private void AddEvaluationBasisSection(Body body, Models.Results.EvaluationResult result)
+        {
+            var candidates = new List<Models.Results.EvaluationItem>();
+            if (result.Governing is { } governing) candidates.Add(governing);
+            candidates.AddRange(result.ByRatioDescending.Where(i => i.IsJudged && !i.IsOk));
+
+            var targets = candidates
+                .Where(i => i.Basis.Count > 0)
+                .GroupBy(i => (i.Kind, i.Category, i.PileNo, i.PileBodyNo, i.SegmentIndex, i.TargetName,
+                               i.LoadCaseNo, i.LoadCombinationNo, i.IsLiquefaction))
+                .Select(g => g.First())
+                .ToList();
+            if (targets.Count == 0) return;
+
+            AddHeader2(body, "検定の根拠");
+            AddText(body,
+                "最大検定比の項目と NG の項目について、限界値・応答値を求めた根拠（参照した入力値・限界曲線・補間した区間・"
+                + "M/(Q·d) の内訳・式と係数）を示す。i端・j端は限界値の根拠が同じなので 1 つにまとめている。", fontSize: 9);
+
+            foreach (var item in targets.Take(MaxEvaluationBasisItems))
+            {
+                string liq = item.LiquefactionLabel;
+                string load = string.IsNullOrEmpty(liq) ? item.LoadCaseName : $"{item.LoadCaseName}（{liq}）";
+                AddTableCaption(body, $"検定の根拠: {item.Category} {item.TargetDescription} "
+                    + $"{(item.Level > 0 ? $"L{item.Level} " : "")}{load} {item.LoadCombinationName}");
+
+                var rows = new List<(string, string)>
+                {
+                    ("応答値・限界値", $"{item.ResponseText} / {item.LimitText} {item.Unit}"
+                        + (item.Ratio is { } r ? $"（検定比 {r:F2}）" : "")),
+                };
+                rows.AddRange(item.Basis.Select(b => (b.Item, b.Value)));
+                if (item.DescribeShearFormula() is { } formula)
+                {
+                    rows.Add(("式", formula.Formula));
+                    rows.AddRange(formula.Terms);
+                    rows.Add(("式による値", $"{formula.ValueN / 1000:N1} kN（限界値は曲線の補間値 {item.LimitText} kN）"));
+                }
+                AddItemValueTable(body, rows);
+            }
+            if (targets.Count > MaxEvaluationBasisItems)
+            {
+                AddTableNote(body,
+                    $"※ ほか {targets.Count - MaxEvaluationBasisItems} 項目の根拠は省略した。すべての項目の根拠は、解析結果テーブルの検定の表の「根拠」列にある。");
+            }
         }
 
         /// <summary>

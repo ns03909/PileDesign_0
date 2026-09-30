@@ -293,9 +293,15 @@ namespace PileDesign.Models.InputData
         /// 使用限界せん断力。β 低減前の値は内訳メソッドに集約している
         /// (Q-N 図に重ねる内訳と同じ値を使う)。
         /// </summary>
+        /// <summary>既製杭 (PHC・PRC) のせん断の低減係数 β1。</summary>
+        private protected const double PrecastShearBeta1 = 1.0;
+
+        /// <summary>既製杭 (PHC・PRC) のせん断の低減係数 β2 (損傷限界のレベル2・安全限界)。</summary>
+        private protected const double PrecastShearBeta2 = 0.65;
+
         private protected double GetServiceLimitShear(double MonQd, bool isFactored, double sigma0E)
         {
-            double beta1 = 1.0;
+            double beta1 = PrecastShearBeta1;
             var (diagonal, web) = GetServiceLimitShearComponents(MonQd, sigma0E);
             double Qs = Math.Min(diagonal, web);
             return isFactored ? beta1 * Qs : Qs;
@@ -304,8 +310,8 @@ namespace PileDesign.Models.InputData
         /// <summary>損傷限界せん断力。L1 は β2 を乗じない。L2 は β1×β2。</summary>
         private protected double GetDamageLimitShear(double MonQd, bool isFactored, double sigma0E, int level = 2)
         {
-            double beta1 = 1.0;
-            double beta2 = 0.65;
+            double beta1 = PrecastShearBeta1;
+            double beta2 = PrecastShearBeta2;
             double beta = level == 1 ? beta1 : beta1 * beta2;
             var (diagonal, web) = GetDamageLimitShearComponents(MonQd, sigma0E);
             double Qd = Math.Min(diagonal, web);
@@ -315,11 +321,64 @@ namespace PileDesign.Models.InputData
         /// <summary>安全限界せん断力。</summary>
         private protected double GetUltimateLimitShear(double MonQd, bool isFactored, double sigma0E)
         {
-            double beta1 = 1.0;
-            double beta2 = 0.65;
+            double beta1 = PrecastShearBeta1;
+            double beta2 = PrecastShearBeta2;
             var (diagonal, web) = GetUltimateLimitShearComponents(MonQd, sigma0E);
             double Qu = Math.Min(diagonal, web);
             return isFactored ? beta1 * beta2 * Qu : Qu;
+        }
+
+        /// <summary>
+        /// 既製杭 (PHC・PRC) のせん断の内訳。斜めひび割れと縦ひび割れの 2 式の小さい方を採る。
+        /// 値は曲線と同じ関数 (GetXxxLimitShear) で求め、2 式の値は曲線に重ねる内訳と同じ関数から取る。
+        /// </summary>
+        internal override ShearLimitBasis? DescribeShearLimit(SectionLimitState limit, int damageLevel, bool isFactored,
+            double monQd, double axialN, double pw, double sigmaWy)
+        {
+            double s0e = Sigma0EFor(axialN);
+            var (k, sigmaT, webFactor) = limit switch
+            {
+                SectionLimitState.Service => (0.6, 1.2, "(2/3)·τV"),
+                SectionLimitState.Damage => (0.6, 1.8, "τV"),
+                _ => (0.75, 1.8, "τV"),
+            };
+            var (diagonal, web) = limit switch
+            {
+                SectionLimitState.Service => GetServiceLimitShearComponents(monQd, s0e),
+                SectionLimitState.Damage => GetDamageLimitShearComponents(monQd, s0e),
+                _ => GetUltimateLimitShearComponents(monQd, s0e),
+            };
+            double value = limit switch
+            {
+                SectionLimitState.Service => GetServiceLimitShear(monQd, isFactored, s0e),
+                SectionLimitState.Damage => GetDamageLimitShear(monQd, isFactored, s0e, damageLevel),
+                _ => GetUltimateLimitShear(monQd, isFactored, s0e),
+            };
+            string beta = limit switch
+            {
+                SectionLimitState.Service => BetaText(isFactored, F3(PrecastShearBeta1)),
+                SectionLimitState.Damage when damageLevel == 1 => BetaText(isFactored, $"{F3(PrecastShearBeta1)} (レベル1 は β2 を掛けない)"),
+                _ => BetaText(isFactored, $"β1·β2 = {F3(PrecastShearBeta1)} × {F3(PrecastShearBeta2)}"),
+            };
+            var rows = new List<(string, string)>
+            {
+                ("σe (有効プレストレス)", $"{F3(SigmaE)} N/mm²"),
+                ("σ0e = N/Ae", $"{F3(s0e)} N/mm² (N = {F3(axialN / 1000)} kN, Ae = {F3(Ae)} mm²)"),
+                ("α = min(max(4/(M/(Q·d) + 1), 1), 2)", $"{F3(ShearAlpha(monQd))} (M/(Q·d) = {F3(monQd)})"),
+                ("t (肉厚)", $"{F3(ShearT)} mm"),
+                ("I", $"{F3(I)} mm⁴"),
+                ("s0 = (2/3)·(Ro³ − Ri³)", $"{F3(ShearS0)} mm³"),
+                ("σt (引張応力度の限界)", $"{F3(sigmaT)} N/mm²"),
+                ("η1 = (t − 15)/t", F3(ShearEta1)),
+                ("τV = 1.9·Fc^0.323", $"{F3(ShearTauV)} N/mm² (Fc = {F3(Fc)})"),
+                ("斜めひび割れで決まる値", $"{F3(diagonal / 1000)} kN"),
+                ("縦ひび割れで決まる値", $"{F3(web / 1000)} kN"),
+                ("β", beta),
+            };
+            return new ShearLimitBasis(
+                $"Q = β × min(斜めひび割れ, 縦ひび割れ)。斜めひび割れ = {F3(k)}·α·2t·I/s0·½√((σG + 2σt)² − σG²)、σG = σe + σ0e、"
+                + $"縦ひび割れ = {F3(k)}·α·η1·2t·I/s0·{webFactor}",
+                rows, value);
         }
 
         /// <summary>
@@ -1676,10 +1735,16 @@ namespace PileDesign.Models.InputData
         /// <see cref="GetUltimateLimitShear"/> の η = N/Ny だけ。
         /// この依存関係は <c>ShearAxialDependenceTableTests</c> で表として固定している。
         /// </summary>
+        /// <summary>SC 杭のせん断の低減係数 β1 (使用限界・損傷限界)。</summary>
+        private const double ScShearBeta1 = 1.0;
+
+        /// <summary>SC 杭のせん断の形状係数 κs (鋼管の平均せん断応力度を最大値に直す)。</summary>
+        private const double ScShearKappa = 2.0;
+
         private double GetServiceLimitShear(bool isFactored)
         {
-            double beta1 = 1.0;
-            double kappaS = 2.0;
+            double beta1 = ScShearBeta1;
+            double kappaS = ScShearKappa;
             double fs = PrecastSteelPipe.F / (1.5 * Math.Sqrt(3));
             double As = PrecastSteelPipe.As;
 
@@ -1692,8 +1757,8 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private double GetDamageLimitShear(bool isFactored)
         {
-            double beta1 = 1.0;
-            double kappaS = 2.0;
+            double beta1 = ScShearBeta1;
+            double kappaS = ScShearKappa;
             double fd = PrecastSteelPipe.F / (Math.Sqrt(3));
             double As = PrecastSteelPipe.As;
 
@@ -1787,6 +1852,41 @@ namespace PileDesign.Models.InputData
                     PrecastSteelPipe.As, nud);
 
             return isFactored ? UltimateShearBeta * unfactoredQu : unfactoredQu;
+        }
+
+        /// <summary>SC 杭のせん断の内訳。鋼管のせん断降伏で決まる。値は曲線と同じ関数で求める。</summary>
+        internal override ShearLimitBasis? DescribeShearLimit(SectionLimitState limit, int damageLevel, bool isFactored,
+            double monQd, double axialN, double pw, double sigmaWy)
+        {
+            var rows = new List<(string, string)>
+            {
+                ("F (鋼管の基準強度)", $"{F3(PrecastSteelPipe.F)} N/mm²"),
+                ("As (鋼管の断面積)", $"{F3(PrecastSteelPipe.As)} mm²"),
+            };
+            switch (limit)
+            {
+                case SectionLimitState.Service:
+                    rows.Add(("fs = F/(1.5·√3)", $"{F3(PrecastSteelPipe.F / (1.5 * Math.Sqrt(3)))} N/mm²"));
+                    rows.Add(("κs", F3(ScShearKappa)));
+                    rows.Add(("β1", BetaText(isFactored, F3(ScShearBeta1))));
+                    return new ShearLimitBasis("Q = β1/κs·fs·As (軸力に依らない)", rows, GetServiceLimitShear(isFactored));
+                case SectionLimitState.Damage:
+                    rows.Add(("fd = F/√3", $"{F3(PrecastSteelPipe.F / Math.Sqrt(3))} N/mm²"));
+                    rows.Add(("κs", F3(ScShearKappa)));
+                    rows.Add(("β1", BetaText(isFactored, F3(ScShearBeta1))));
+                    return new ShearLimitBasis("Q = β1/κs·fd·As (軸力に依らない)", rows, GetDamageLimitShear(isFactored));
+                default:
+                {
+                    double aOverD = ShearSpanRatio(monQd);
+                    rows.Add(("a/D = 0.9·M/(Q·d)", $"{F3(aOverD)} (M/(Q·d) = {F3(monQd)})"));
+                    rows.Add(("N", $"{F3(axialN / 1000)} kN"));
+                    rows.Add(("β = β1·β2", BetaText(isFactored, F3(UltimateShearBeta))));
+                    string formula = aOverD <= 1.0
+                        ? "Qu = β·sQun。a/D ≦ 1.0 なので sQun はコンクリート充填鋼管構造設計施工指針の円形鋼管のせん断強度式"
+                        : $"Qu = β·sQun。a/D > 1.0 なので sQun = {F3(SteelPipeContribution)} × (8.26) 式 (鋼管部分のみが抵抗、その半分程度を鋼管寄与分とする)";
+                    return new ShearLimitBasis(formula, rows, GetUltimateLimitShear(monQd, axialN, isFactored));
+                }
+            }
         }
 
         // ── SC 杭の Q-N は、軸力の範囲もせん断耐力の式も他の既製杭と違う ──

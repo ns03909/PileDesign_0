@@ -28,7 +28,7 @@ namespace TestProject1
         // ── 代表断面の作り方（断面タイプ → PileSection）────────────────────────
         // 製品ライブラリを持つ杭種は先頭の製品を使う（名前を固定すると製品の入れ替えで壊れるため）。
 
-        private static readonly Dictionary<string, Func<PileSection>> Recipes = new()
+        internal static readonly Dictionary<string, Func<PileSection>> Recipes = new()
         {
             [PileTypeNames.RcSection] = () => InsituRc(PileTypeNames.InsituRc),
             [PileTypeNames.SteelPipeConcreteSection] = Sprc,
@@ -44,7 +44,7 @@ namespace TestProject1
         };
 
         /// <summary>断面計算オブジェクトを持たない断面タイプ（理由付きで明示的に除外する）。</summary>
-        private static readonly Dictionary<string, string> NoCalculator = new()
+        internal static readonly Dictionary<string, string> NoCalculator = new()
         {
             [PileTypeNames.SteelPipeSection] = "純鋼管区間は M-φ を持たない（CreateSectionCalculator が null を返す設計）",
         };

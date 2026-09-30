@@ -3897,11 +3897,20 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public static double InterpolateLimitAtAxialForce(
             List<double>? ns, List<double>? values, double targetN)
-        {
-            if (ns == null || values == null) return double.NaN;
-            if (ns.Count < 2 || ns.Count != values.Count) return double.NaN;
+            => LocateLimitAtAxialForce(ns, values, targetN).Value;
 
-            double best = double.NaN;
+        /// <summary>
+        /// <see cref="InterpolateLimitAtAxialForce"/> と同じ値に加え、採った曲線の区間 (両端の軸力と値) を返す。
+        /// 検定の根拠に「曲線のどの 2 点のあいだを補間したか」を書くために使う。範囲外なら値は NaN。
+        /// </summary>
+        public static (double Value, double N0, double V0, double N1, double V1) LocateLimitAtAxialForce(
+            List<double>? ns, List<double>? values, double targetN)
+        {
+            var none = (double.NaN, double.NaN, double.NaN, double.NaN, double.NaN);
+            if (ns == null || values == null) return none;
+            if (ns.Count < 2 || ns.Count != values.Count) return none;
+
+            var best = none;
             for (int i = 0; i < ns.Count - 1; i++)
             {
                 double n0 = ns[i], n1 = ns[i + 1];
@@ -3913,9 +3922,30 @@ namespace PileDesign.Models.InputData
                     ? Math.Max(v0, v1)                       // 垂直な区間 (軸力制限の境界)
                     : v0 + (v1 - v0) * (targetN - n0) / dn;
 
-                if (double.IsNaN(best) || v > best) best = v;
+                if (double.IsNaN(best.Item1) || v > best.Item1) best = (v, n0, v0, n1, v1);
             }
             return best;
+        }
+
+        /// <summary>
+        /// 軸力 <paramref name="axialKN"/> [kN] のときのせん断の限界値を、式と係数の内訳つきで返す (検定の根拠)。
+        /// 断面の種類ごとの式 (場所打ち RC・その工法・場所打ち鋼管コンクリート・PHC・PRC・SC) の内訳を返す。作れなければ null。
+        /// 断面の計算をやり直すので重い。検定の全行ではなく、計算書に載せる行だけで呼ぶこと。
+        /// </summary>
+        public ShearLimitBasis? DescribeShearLimit(SectionLimitState limit, int damageLevel, bool isFactored, double monQd, double axialKN)
+        {
+            try
+            {
+                return CreateSectionCalculator() is AbstractPileSection calculator
+                    ? calculator.DescribeShearLimit(limit, damageLevel, isFactored, monQd, axialKN * 1e3, HoopPw, HoopSigmay)
+                    : null;
+            }
+            catch (Exception ex)
+            {
+                PileDesign.Common.CalcFallbackTracker.Report("せん断の限界値の根拠 (→なし)", ex,
+                    $"PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
+                return null;
+            }
         }
 
         /// <summary>

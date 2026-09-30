@@ -1,5 +1,8 @@
-﻿using System;
+﻿using PileDesign.Models.InputData;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace PileDesign.Models.Results
 {
@@ -239,6 +242,26 @@ namespace PileDesign.Models.Results
         /// </summary>
         [ResultColumn("せん断割増", 15, "N2", "設計用せん断力の割増係数。応答値はこの係数を掛けたあとの値（空欄は割増なし）")]
         public double? ShearMagnification { get; init; }
+
+        /// <summary>
+        /// 限界値・応答値の根拠 (参照した入力値・限界曲線・補間した区間・M/(Q·d) の内訳・割増)。杭体の曲げ・せん断のみ。
+        /// 照合・レビューで「どの入力と曲線からこの値になったか」を辿れるようにする。計算値そのものは変えない。
+        /// </summary>
+        public IReadOnlyList<EvaluationBasisEntry> Basis { get; init; } = [];
+
+        /// <summary>根拠を 1 行にしたもの (表の列)。</summary>
+        [ResultColumn("根拠", 17, tooltip: "限界値・応答値の根拠。参照した入力値 (軸力とその出所)・限界曲線・補間した曲線上の区間・M/(Q·d) の内訳・割増")]
+        public string BasisText => string.Join("／", Basis.Select(b => $"{b.Item}: {b.Value}"));
+
+        /// <summary>
+        /// せん断の限界値を式と係数の内訳に分けるための材料 (杭体のせん断のみ)。内訳は断面の計算をやり直すので重く、
+        /// 全行では作らない。計算書に載せる行だけ <see cref="DescribeShearFormula"/> で作る。
+        /// </summary>
+        internal ShearFormulaSource? ShearFormula { get; init; }
+
+        /// <summary>せん断の限界値の式と係数の内訳 (断面の種類ごとの式。作れなければ null)。</summary>
+        public ShearLimitBasis? DescribeShearFormula()
+            => ShearFormula is { } s ? s.Section.DescribeShearLimit(s.Limit, s.DamageLevel, s.IsFactored, s.MonQd, s.AxialKN) : null;
 
         /// <summary>基礎梁の長さ (m)。傾斜角のみ。</summary>
         public double? BeamLength { get; init; }

@@ -214,12 +214,50 @@ namespace PileDesign.Models.InputData
         private double PipeShearArea =>
             Math.PI * (InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus) * InsituSteelPipe.TMinus;
 
+        /// <summary>鋼管のせん断の形状係数 κ (平均せん断応力度を最大値に直す)。</summary>
+        private const double PipeShearKappa = 2.0;
+
+        /// <summary>
+        /// せん断の内訳 (鋼管のせん断で決まる)。値は曲線と同じ関数で求める。低減係数はいずれも 1.0 (低減の前後で同じ値)。
+        /// </summary>
+        internal override ShearLimitBasis? DescribeShearLimit(SectionLimitState limit, int damageLevel, bool isFactored,
+            double monQd, double axialN, double pw, double sigmaWy)
+        {
+            var rows = new List<(string, string)>
+            {
+                ("F (鋼管の基準強度)", $"{F3(InsituSteelPipe.F)} N/mm²"),
+                ("A = π·(D − t)·t (腐食代を除いた鋼管)", $"{F3(PipeShearArea)} mm² (D = {F3(InsituSteelPipe.OutDiaMinus)} mm, t = {F3(InsituSteelPipe.TMinus)} mm)"),
+            };
+            switch (limit)
+            {
+                case SectionLimitState.Service:
+                    rows.Add(("sfs = F/(1.5·√3)", $"{F3(InsituSteelPipe.F / 1.5 / Math.Sqrt(3))} N/mm²"));
+                    rows.Add(("κ", F3(PipeShearKappa)));
+                    return new ShearLimitBasis("Q = A/κ·sfs (軸力に依らない。低減係数 1.0)", rows, GetServiceLimitShear());
+                case SectionLimitState.Damage:
+                    rows.Add(("sfd = F/√3", $"{F3(InsituSteelPipe.F / Math.Sqrt(3))} N/mm²"));
+                    rows.Add(("κ", F3(PipeShearKappa)));
+                    return new ShearLimitBasis("Q = A/κ·sfd (軸力に依らない。低減係数 1.0)", rows, GetDamageLimitShear(damageLevel));
+                default:
+                    rows.Add(("N", $"{F3(axialN / 1000)} kN"));
+                    if (ConcreteModelOptions.UseInsituUltimateEFunction)
+                        return new ShearLimitBasis(
+                            "Qu = sQ0·√(1 − η²)·(scMu/sMu)、sQ0 = 2·t·(D − t)·sσy/√3、η = N/(sσy·sA)、sMu = sMu0·cos(πη/2)",
+                            rows, GetUltimateLimitShear(axialN));
+                    rows.Add(("fcy = 1.1F", $"{F3(1.1 * InsituSteelPipe.F)} N/mm²"));
+                    rows.Add(("ξ·Fc·Ac", $"{F3(InsituConcrete.Gsi * InsituConcrete.Fc * InsituConcrete.Ac / 1000)} kN"));
+                    return new ShearLimitBasis(
+                        "Qu = (2/3)·π·t·(D − t)·fcy/√3·√(1 − p²)、p = Ns/(fcy·A)、Ns = N·fcy·A/(ξFc·Ac + fcy·A) (N ≧ 0。引張は Ns = N)。低減係数 1.0",
+                        rows, GetUltimateLimitShear(axialN));
+            }
+        }
+
         private double GetServiceLimitShear()
         {
             double beta1 = 1.0;
 
             double area = PipeShearArea;
-            double kappa = 2.0;
+            double kappa = PipeShearKappa;
             double sfss = InsituSteelPipe.F / 1.5 / Math.Sqrt(3);
             return beta1 * area / kappa * sfss;
         }
@@ -233,7 +271,7 @@ namespace PileDesign.Models.InputData
             double beta2 = 1.0;
             double beta = level == 1 ? beta1 : beta1 * beta2;
             double area = PipeShearArea;
-            double kappa = 2.0;
+            double kappa = PipeShearKappa;
             double sfsd = InsituSteelPipe.F / Math.Sqrt(3);
             return beta * area / kappa * sfsd;   // level 別の beta を反映（従来 beta1 固定で level 引数が無効だった）
         }

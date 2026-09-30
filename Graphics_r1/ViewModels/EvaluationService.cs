@@ -683,15 +683,11 @@ namespace PileDesign.ViewModels
                 var section = soilPile.PileBodySegments[seg].PileSection;
 
                 // 軸力: 荷重ケースに応じたユーザー入力値 (kN)。
-                double axialN_kN = 0.0;
-                if (pileItem != null)
-                {
-                    int lcNo = stepResult.LoadCase?.No ?? 0;
-                    int level = stepResult.LoadCase?.Level ?? 1;
-                    // 地震時軸力優先・未入力 (0) / 範囲外は常時軸力。
-                    // グラフ・計算書の限界線と同じ軸力を使う (食い違うと判定が一致しない)。
-                    axialN_kN = pileItem.GetDesignAxialForce(lcNo, level);
-                }
+                // 地震時軸力優先・未入力 (0) / 範囲外は常時軸力。
+                // グラフ・計算書の限界線と同じ軸力を使う (食い違うと判定が一致しない)。
+                var (axialN_kN, axialSource) = pileItem != null
+                    ? pileItem.ResolveDesignAxialForce(stepResult.LoadCase?.No ?? 0, stepResult.LoadCase?.Level ?? 1)
+                    : (0.0, "杭を特定できないため 0");
 
                 // NM相関曲線をキャッシュから取得 (ConcurrentDictionary、初回のみ計算)
                 int loadCaseLevel = stepResult.LoadCase?.Level ?? 1;
@@ -702,8 +698,9 @@ namespace PileDesign.ViewModels
                     Unavailable($"{limitName}の N-M 曲線を作れませんでした (断面の入力を確認してください)"); return;
                 }
 
-                // NM相関曲線から許容モーメントを補間
-                double allowableM = InterpolateAllowableMoment(nmCurve.Ns, nmCurve.Ms, axialN_kN);
+                // NM相関曲線から許容モーメントを補間 (採った区間も控えて根拠に書く)
+                var located = PileSection.LocateLimitAtAxialForce(nmCurve.Ns, nmCurve.Ms, axialN_kN);
+                double allowableM = located.Value;
                 // 範囲外の軸力では NaN が返る (NaN <= 0 は false なので、必ず > 0 で判定すること)
                 if (!(allowableM > 0))
                 {
@@ -715,6 +712,14 @@ namespace PileDesign.ViewModels
 
                 // j端モーメント |M| = √(Myj² + Mzj²)
                 double mJ = PileDesign.Common.StableNumerics.Norm(result.CumulativeForce.Myj, result.CumulativeForce.Mzj);
+
+                var basis = new List<EvaluationBasisEntry>
+                {
+                    new("限界曲線", $"{limitName}の N-M 曲線 ({CurveDescription(factored, momentLimit, loadCaseLevel)})"),
+                    new("軸力 N", $"{axialN_kN:N1} kN ({axialSource})"),
+                    new("補間", InterpolationDescription(located, "M", "kN·m")),
+                    new("応答", "要素端の曲げモーメント |M| = √(My² + Mz²)"),
+                };
 
                 // i端チェック (判定は従来どおり「超えたら NG」)
                 found.Add(MakeMomentItem(mI, allowableM, "i端"));
@@ -745,6 +750,7 @@ namespace PileDesign.ViewModels
                     Unit = "kN·m",
                     AxialForce = axialN_kN,
                     IsOk = !(response > limit),
+                    Basis = basis,
                 };
             });
 
@@ -802,22 +808,44 @@ namespace PileDesign.ViewModels
         /// 解析した断面力から求める。求められないとき (せん断力が 0、有効せいが不明、
         /// その荷重ケースの結果が無い) だけ既定値に落とす。
         /// </summary>
-        private static double ResolveMonQd(
+        /// <returns>M/(Q·d) と、その求め方 (検定の根拠に書く。既定値に落ちたときは理由)。</returns>
+        private static (double Value, string Basis) ResolveMonQd(
             PileLayoutDataItem? pile, string caseKey, PileSection section,
             Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)> maxForces)
         {
-            if (pile == null) return PileSection.DefaultMonQd;
+            string Default(string why) => $"既定値 {PileSection.DefaultMonQd:0.0} ({why})";
+            if (pile == null) return (PileSection.DefaultMonQd, Default("杭を特定できないため"));
 
             double d = section.EffectiveDepth;   // [mm]
-            if (!(d > 0)) return PileSection.DefaultMonQd;
+            if (!(d > 0)) return (PileSection.DefaultMonQd, Default("有効せい d が不明のため"));
 
-            if (!maxForces.TryGetValue((pile, caseKey), out var mf)) return PileSection.DefaultMonQd;
-            if (!(mf.MaxQ > 0)) return PileSection.DefaultMonQd;
+            if (!maxForces.TryGetValue((pile, caseKey), out var mf)) return (PileSection.DefaultMonQd, Default("この荷重ケースの断面力がないため"));
+            if (!(mf.MaxQ > 0)) return (PileSection.DefaultMonQd, Default("せん断力が 0 のため"));
 
             // M [kNm] → [N·mm] は ×1e6、Q [kN] → [N] は ×1e3
             double monQd = mf.MaxM * 1e6 / (mf.MaxQ * 1e3 * d);
-            return double.IsFinite(monQd) && monQd > 0 ? monQd : PileSection.DefaultMonQd;
+            if (!(double.IsFinite(monQd) && monQd > 0)) return (PileSection.DefaultMonQd, Default("断面力から求めた値が正の数でないため"));
+            return (monQd, $"Mmax / (Qmax·d) = {mf.MaxM:N1} kN·m / ({mf.MaxQ:N1} kN × {d:N0} mm) = {monQd:0.###} "
+                           + "(この杭・この荷重ケースの最大断面力)");
         }
+
+        /// <summary>限界曲線の種類の説明 (低減の有無・損傷限界のレベル)。</summary>
+        private static string CurveDescription(bool factored, LimitState limit, int level)
+            => (factored ? "低減後" : "低減前") + (limit == LimitState.Damage ? $"・レベル{level}" : "");
+
+        /// <summary>曲線のどの 2 点のあいだを補間したか (検定の根拠)。</summary>
+        private static string InterpolationDescription(
+            (double Value, double N0, double V0, double N1, double V1) located, string symbol, string unit)
+            => Math.Abs(located.N1 - located.N0) < 1e-10
+                ? $"曲線の N = {located.N0:N1} kN の垂直な区間 ({symbol} = {located.V0:N1}〜{located.V1:N1} {unit}) の大きい方 {located.Value:N1} {unit}"
+                : $"曲線上の N = {located.N0:N1}〜{located.N1:N1} kN の区間 ({symbol} = {located.V0:N1}〜{located.V1:N1} {unit}) を直線補間して {located.Value:N1} {unit}";
+
+        private static SectionLimitState ToSectionLimit(LimitState limit) => limit switch
+        {
+            LimitState.Service => SectionLimitState.Service,
+            LimitState.Damage => SectionLimitState.Damage,
+            _ => SectionLimitState.Ultimate,
+        };
 
         // ── 検定できなかった項目 ─────────────────────────────
 
@@ -955,13 +983,9 @@ namespace PileDesign.ViewModels
                 var section = soilPile.PileBodySegments[seg].PileSection;
 
                 // 軸力: 曲げと同じ値を使う (食い違うと同じ断面で限界線の前提が 2 通りになる)
-                double axialN_kN = 0.0;
-                if (pileItem != null)
-                {
-                    int lcNo = stepResult.LoadCase?.No ?? 0;
-                    int lcLevel = stepResult.LoadCase?.Level ?? 1;
-                    axialN_kN = pileItem.GetDesignAxialForce(lcNo, lcLevel);
-                }
+                var (axialN_kN, axialSource) = pileItem != null
+                    ? pileItem.ResolveDesignAxialForce(stepResult.LoadCase?.No ?? 0, stepResult.LoadCase?.Level ?? 1)
+                    : (0.0, "杭を特定できないため 0");
 
                 // 損傷限界はレベルで低減係数が変わる (レベル1: β2 なし / レベル2: β1×β2)。
                 // グラフ・計算書と同じ規則で曲線を選ぶ。
@@ -972,8 +996,8 @@ namespace PileDesign.ViewModels
                 // 丸めた値をキーにするなら曲線もその丸めた値で作ること。
                 // 生の値で作ると、同じキーに丸められる 2 つの値のうち先にキャッシュへ入れたほうが
                 // 採用され、結果が実行ごとに変わる (安全限界せん断が 0.1 kN 揺れた)。
-                double monQd = Math.Round(
-                    ResolveMonQd(pileItem, CaseKeyOf(stepResult.LoadCase), section, maxForcesByPileCase), 3);
+                var (monQdRaw, monQdBasis) = ResolveMonQd(pileItem, CaseKeyOf(stepResult.LoadCase), section, maxForcesByPileCase);
+                double monQd = Math.Round(monQdRaw, 3);
 
                 var nqCurve = nqCache.GetOrAdd((pb, seg, factored, shearLimit, damageLevel, monQd),
                     _ => GetNQCurve(section, factored, shearLimit, damageLevel, monQd));
@@ -982,7 +1006,8 @@ namespace PileDesign.ViewModels
                     Unavailable($"{limitName}の Q-N 曲線を作れませんでした (断面の入力を確認してください)"); return;
                 }
 
-                double allowableQ = InterpolateAllowableMoment(nqCurve.Ns, nqCurve.Qs, axialN_kN);
+                var located = PileSection.LocateLimitAtAxialForce(nqCurve.Ns, nqCurve.Qs, axialN_kN);
+                double allowableQ = located.Value;
                 // 範囲外の軸力では NaN が返る (NaN <= 0 は false なので、必ず > 0 で判定すること)
                 if (!(allowableQ > 0))
                 {
@@ -1025,6 +1050,18 @@ namespace PileDesign.ViewModels
                         elementTopDepthM: element.SegmentDepth - element.SegmentLength);
                 }
 
+                var basis = new List<EvaluationBasisEntry>
+                {
+                    new("限界曲線", $"{limitName}の Q-N 曲線 ({CurveDescription(factored, shearLimit, damageLevel)}・M/(Q·d) = {monQd:0.###})"),
+                    new("軸力 N", $"{axialN_kN:N1} kN ({axialSource})"),
+                    new("M/(Q·d)", monQdBasis),
+                    new("補間", InterpolationDescription(located, "Q", "kN")),
+                    new("応答", magnification != 1.0
+                        ? $"要素端のせん断力 |Q| × 設計用せん断力の割増 {magnification:0.##}"
+                        : "要素端のせん断力 |Q|"),
+                };
+                var formula = new Models.Results.ShearFormulaSource(section, ToSectionLimit(shearLimit), damageLevel, factored, monQd, axialN_kN);
+
                 found.Add(MakeShearItem(qI * magnification, allowableQ, "i端", magnification));
                 found.Add(MakeShearItem(qJ * magnification, allowableQ, "j端", magnification));
 
@@ -1057,6 +1094,8 @@ namespace PileDesign.ViewModels
                     // 判定は曲げと同じ「超えたら NG」
                     IsOk = !(response > limit),
                     OutOfScopeReason = outOfScope,
+                    Basis = basis,
+                    ShearFormula = formula,
                 };
             });
 
@@ -1440,13 +1479,5 @@ namespace PileDesign.ViewModels
                 return (null, null);
             }
         }
-
-        /// <summary>
-        /// 限界曲線から軸力に対応する限界値を補間する。
-        /// 実装は <see cref="PileSection.InterpolateLimitAtAxialForce"/> に一本化してある
-        /// (計算書の限界線がここと違う補間をしており、同じ軸力で違う限界値になっていた)。
-        /// </summary>
-        private static double InterpolateAllowableMoment(List<double> ns, List<double> ms, double targetN)
-            => PileSection.InterpolateLimitAtAxialForce(ns, ms, targetN);
     }
 }

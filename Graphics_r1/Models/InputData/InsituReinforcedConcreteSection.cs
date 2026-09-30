@@ -235,6 +235,15 @@ namespace PileDesign.Models.InputData
         // M-φ の折線終点は別の値 (0.95 / 0.80) を使う。同じ記号だが出所が違うので、
         // ここにまとめず各所に置いてある。
 
+        /// <summary>低減係数 β1 (使用限界・損傷限界)。</summary>
+        private const double ShearBeta1ServiceDamage = 0.9;
+
+        /// <summary>低減係数 β1 (安全限界)。</summary>
+        private const double ShearBeta1Ultimate = 0.8;
+
+        /// <summary>引張鉄筋比 pt (%) = 100·(主筋の全断面積 / Ac) / 4。安全限界せん断の式に入る。</summary>
+        private double ShearPt => 100 * (MainBarArea / InsituConcrete.Ac) / 4.0;
+
         /// <summary>繰り返しによる耐力低下を見込む係数 β2。軸応力度で 2 段。</summary>
         private double ShearBeta2(double sigma0)
             => sigma0 <= 1.0 / 3.0 * InsituConcrete.Gsi * InsituConcrete.Fc ? 0.75 : 0.65;
@@ -244,7 +253,7 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private double GetServiceLimitShear(double MonQd, double sigma0, bool isFactored)
         {
-            double beta1 = 0.9;
+            double beta1 = ShearBeta1ServiceDamage;
             double kc = ShearKc;
             double b = ShearB;
             double j = ShearJ;
@@ -274,7 +283,7 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private double GetDamageLimitShear(double MonQd, double sigma0, int level, bool isFactored)
         {
-            double beta1 = 0.9;
+            double beta1 = ShearBeta1ServiceDamage;
             double beta2 = ShearBeta2(sigma0);
             // 地震動レベルは 1 か 2 のどちらか (画面のラジオボタン)。L1 は β2 を掛けない。
             // 以前は「L2 のとき β1·β2、それ以外も β1·β2」と同じ式を二度書いており、
@@ -297,11 +306,137 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private double GetUltimateLimitShear(double MonQd, double sigma0, double pt, double pw, double sigmaWy, bool isFactored)
         {
-            double beta1 = 0.8;
+            double beta1 = ShearBeta1Ultimate;
             double beta2 = ShearBeta2(sigma0);
             double b = ShearB;
             double j = ShearJ;
             return (isFactored ? beta1 * beta2 : 1.0) * (0.053 * Math.Pow(pt, 0.23) * (18 + InsituConcrete.Gsi * InsituConcrete.Fc) / (MonQd + 0.12) + 0.85 * Math.Sqrt(pw * sigmaWy) + 0.1 * sigma0) * b * j;
+        }
+
+        /// <summary>
+        /// 軸力 <paramref name="axialN"/> [N]・M/(Q·d) のときのせん断の限界値を、式と係数の内訳つきで返す (検定の根拠)。
+        /// 値は曲線の点を作るのと<b>同じ関数</b>で求める (写しを持たないので、内訳と検定の値がずれない)。
+        /// 工法の式を使う断面は null (内訳は未対応。検定の根拠には式の名前だけを書く)。
+        /// </summary>
+        internal override ShearLimitBasis? DescribeShearLimit(SectionLimitState limit, int damageLevel, bool isFactored,
+            double monQd, double axialN, double pw, double sigmaWy)
+        {
+            if (ShearMethod != null) return DescribeMethodShearLimit(ShearMethod, limit, isFactored, monQd, axialN, pw);
+
+            double sigma0 = axialN / Ae;
+            double b = ShearB, j = ShearJ;
+            double xi = InsituConcrete.Gsi, fc = InsituConcrete.Fc;
+            var rows = new List<(string, string)>();
+
+            if (limit != SectionLimitState.Ultimate && ConcreteModelOptions.UseNotification1113Shear)
+            {
+                double fs = GetNotification1113LongTermShearStress();
+                bool shortTerm = limit == SectionLimitState.Damage;
+                rows.Add(("fs (長期許容せん断応力度)", $"{F3(fs)} N/mm²"
+                    + (ConcreteModelOptions.Notification1113CompressionCase == 2 ? " = min(Fc/45, 0.75·(0.49 + Fc/100))" : " = min(Fc/40, 0.75·(0.49 + Fc/100))")));
+                rows.Add(("Fc", $"{F3(fc)} N/mm²"));
+                rows.Add(("b = πD/4", $"{F3(b)} mm"));
+                rows.Add(("j = (7/8)·0.9D", $"{F3(j)} mm"));
+                double v1113 = limit == SectionLimitState.Service
+                    ? GetServiceLimitShear(monQd, sigma0, isFactored)
+                    : GetDamageLimitShear(monQd, sigma0, damageLevel, isFactored);
+                return new ShearLimitBasis(
+                    shortTerm ? "告示1113号(第8): Q = 1.5·fs·b·j (短期)" : "告示1113号(第8): Q = fs·b·j (長期)", rows, v1113);
+            }
+
+            rows.Add(("σ0 = N/Ae", $"{F3(sigma0)} N/mm² (N = {F3(axialN / 1000)} kN, Ae = {F3(Ae)} mm²)"));
+            rows.Add(("ξ·Fc", $"{F3(xi)} × {F3(fc)} = {F3(xi * fc)} N/mm²"));
+            rows.Add(("M/(Q·d)", F3(monQd)));
+            rows.Add(("b = πD/4", $"{F3(b)} mm"));
+            rows.Add(("j = (7/8)·0.9D", $"{F3(j)} mm"));
+
+            switch (limit)
+            {
+                case SectionLimitState.Service:
+                    rows.Add(("kc", F3(ShearKc)));
+                    rows.Add(("β1", isFactored ? F3(ShearBeta1ServiceDamage) : "1 (低減前)"));
+                    return new ShearLimitBasis(
+                        "Q = β1 × (2/3) × 0.065·kc·(49 + ξFc) / (M/(Q·d) + 1.7) × (1 + σ0/14.7) × b·j",
+                        rows, GetServiceLimitShear(monQd, sigma0, isFactored));
+
+                case SectionLimitState.Damage:
+                    rows.Add(("kc", F3(ShearKc)));
+                    if (!isFactored) rows.Add(("β", "1 (低減前)"));
+                    else if (damageLevel == 1) rows.Add(("β = β1 (レベル1 は β2 を掛けない)", F3(ShearBeta1ServiceDamage)));
+                    else rows.Add(("β = β1·β2", $"{F3(ShearBeta1ServiceDamage)} × {F3(ShearBeta2(sigma0))} (β2: σ0 ≦ ξFc/3 = {F3(xi * fc / 3)} なら 0.75、超えれば 0.65)"));
+                    return new ShearLimitBasis(
+                        "Q = β × 0.065·kc·(49 + ξFc) / (M/(Q·d) + 1.7) × (1 + σ0/14.7) × b·j",
+                        rows, GetDamageLimitShear(monQd, sigma0, damageLevel, isFactored));
+
+                default:
+                    rows.Add(("pt = 100·(主筋の断面積/Ac)/4", $"{F3(ShearPt)} %"));
+                    rows.Add(("pw", F3(pw)));
+                    rows.Add(("σwy", $"{F3(sigmaWy)} N/mm²"));
+                    rows.Add(("β1·β2", isFactored
+                        ? $"{F3(ShearBeta1Ultimate)} × {F3(ShearBeta2(sigma0))} (β2: σ0 ≦ ξFc/3 = {F3(xi * fc / 3)} なら 0.75、超えれば 0.65)"
+                        : "1 (低減前)"));
+                    return new ShearLimitBasis(
+                        "Q = β1·β2 × {0.053·pt^0.23·(18 + ξFc) / (M/(Q·d) + 0.12) + 0.85·√(pw·σwy) + 0.1·σ0} × b·j",
+                        rows, GetUltimateLimitShear(monQd, sigma0, ShearPt, pw, sigmaWy, isFactored));
+            }
+        }
+
+        /// <summary>工法の式の内訳 (<see cref="DescribeShearLimit"/>)。値は曲線と同じ工法の関数で求める。</summary>
+        private ShearLimitBasis DescribeMethodShearLimit(ShearReinforcementMethodSpec spec, SectionLimitState limit, bool isFactored,
+            double monQd, double axialN, double pw)
+        {
+            double fs = GetNotification1113LongTermShearStress();
+            var rows = new List<(string, string)>
+            {
+                ("工法", spec.Name),
+                ("Fc", $"{F3(InsituConcrete.Fc)} N/mm²"),
+                ("Ac (コンクリート全断面)", $"{F3(InsituConcrete.Ac)} mm²"),
+                ("b = (D/2)·√π", $"{F3(MethodB)} mm"),
+                ("d = b − dt", $"{F3(MethodD)} mm (dt = {F3(MethodDt)} mm)"),
+                ("j = (7/8)·d", $"{F3(MethodJ)} mm"),
+            };
+            switch (limit)
+            {
+                case SectionLimitState.Service:
+                    rows.Add(("Lfs (告示1113号の長期許容せん断応力度)", $"{F3(fs)} N/mm²"));
+                    rows.Add(("κ", F3(MethodKappa)));
+                    return new ShearLimitBasis("QAL = Lfs·Ac/κ", rows, GetMethodServiceLimitShear());
+
+                case SectionLimitState.Damage:
+                {
+                    bool includesHoop = spec.DamageIncludesHoop
+                        || HoopDamageFormula == ShearReinforcementMethods.DamageFormulaSafetyShortTerm;
+                    rows.Add(("sfs = 1.5·Lfs", $"{F3(1.5 * fs)} N/mm²"));
+                    if (!includesHoop)
+                    {
+                        rows.Add(("κ", F3(MethodKappa)));
+                        return new ShearLimitBasis("QAs = sfs·Ac/κ (せん断補強筋は効かない)", rows, GetMethodDamageLimitShear(spec, pw));
+                    }
+                    rows.Add(("pw (頭打ち後)", $"{F3(Math.Min(pw, spec.DamagePwCap))} (入力 {F3(pw)}、上限 {F3(spec.DamagePwCap)})"));
+                    rows.Add(("wft", $"{F3(spec.ShortTermTensileStress)} N/mm²"));
+                    return new ShearLimitBasis("QA = b·j·{sfs + 0.5·wft·(pw − 0.001)}", rows, GetMethodDamageLimitShear(spec, pw));
+                }
+
+                default:
+                    rows.Add(("pw (頭打ち後)", $"{F3(Math.Min(pw, spec.UltimatePwCap))} (入力 {F3(pw)}、上限 {F3(spec.UltimatePwCap)})"));
+                    rows.Add(("σwy", $"{F3(spec.UltimateSigmaWy)} N/mm²"));
+                    if (HoopUltimateFormula == ShearReinforcementMethods.UltimateFormulaTrussArch)
+                    {
+                        rows.Add(("jt (主筋重心間距離)", $"{F3(MethodJt)} mm"));
+                        return new ShearLimitBasis(
+                            "Qsu2 = b·jt·pw·σwy (アーチ項は安全側に 0)、ただし ≦ (ν·Fc/3)·b·jt、ν = 0.7 − Fc/200",
+                            rows, GetMethodTrussArchUltimateShear(spec, pw));
+                    }
+                    rows.Add(("pt (一辺の主筋)", $"{F3(MethodPt)} %"));
+                    rows.Add(("M/(Q·d) (頭打ち後)", F3(Math.Clamp(monQd, spec.UltimateMonQdMin, spec.UltimateMonQdMax))));
+                    rows.Add(("σ0 = N/Ac", $"{F3(InsituConcrete.Ac > 0 ? axialN / InsituConcrete.Ac : 0)} N/mm² (引張側は 0、上限は工法の規定)"));
+                    rows.Add(("η (寸法効果)", F3(spec.SizeEffectEta(PileDia))));
+                    rows.Add(("c (補強筋の項の係数)", F3(spec.UltimateHoopCoefficient)));
+                    rows.Add(("β", BetaText(isFactored, F3(spec.UltimateBeta))));
+                    return new ShearLimitBasis(
+                        "Qsu = β·{η·0.053·pt^0.23·(Fc + 18)/(M/(Q·d) + 0.12) + c·√(pw·σwy) + 0.1·σ0}·b·j (大野・荒川 min 式)",
+                        rows, GetMethodUltimateShear(spec, monQd, axialN, pw, isFactored));
+            }
         }
 
         // ── 高強度せん断補強筋の工法の式 ───────────────────────────────
@@ -564,8 +699,7 @@ namespace PileDesign.Models.InputData
             List<double> qs = [];
             double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
-            double pg = MainBarArea / InsituConcrete.Ac;
-            double pt = 100 * pg / 4.0;
+            double pt = ShearPt;
             // β2 は σ0=(1/3)ξFc で 0.75→0.65 に切り替わる。閾値をまたぐ区間では
             // 同一 N の 2 点 (切替前値・切替後値) を挿入し、低減後曲線の段差を
             // 斜めでなく垂直に描く (NM 曲線の複製点方式と同じ)。

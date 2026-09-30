@@ -9,6 +9,20 @@ namespace PileDesign.Models.InputData
     // 杭断面抽象クラス
     internal abstract class AbstractPileSection : IPileSectionCalculation
     {
+        /// <summary>
+        /// 軸力 <paramref name="axialN"/> [N]・M/(Q·d) のときのせん断の限界値を、式と係数の内訳つきで返す (検定の根拠)。
+        /// 値は曲線の点を作るのと<b>同じ関数</b>で求めること (写しを持たないので、内訳と検定の値がずれない)。
+        /// 内訳を持たない断面は null。<paramref name="pw"/>・<paramref name="sigmaWy"/> は場所打ち RC 杭だけが使う。
+        /// </summary>
+        internal virtual ShearLimitBasis? DescribeShearLimit(SectionLimitState limit, int damageLevel, bool isFactored,
+            double monQd, double axialN, double pw, double sigmaWy) => null;
+
+        /// <summary>根拠に書く数値の書式 (有効数字の目安で小数 3 桁まで)。</summary>
+        private protected static string F3(double v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+        /// <summary>低減係数の書き方 (低減前なら「1 (低減前)」)。</summary>
+        private protected static string BetaText(bool isFactored, string value) => isFactored ? value : "1 (低減前)";
+
         public double CurvatureMaxServiceLimit { get; protected set; }
         public double CurvatureMaxDamageLimit { get; protected set; }
         public double CurvatureMaxUltimateLimit { get; protected set; }

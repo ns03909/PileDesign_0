@@ -864,12 +864,20 @@ namespace PileDesign.Models.InputData
         /// 限界線が実際の耐力とずれる (2026-08-21 まで、FEM の要素端力の平均 = 恒等的に 0 を
         /// 使っていた。場所打ちRC 1200φ で安全 M が 39% 過小、鋼管の充填鋼管部では 61% 過大)。
         /// </summary>
-        public double GetDesignAxialForce(int loadCaseNo, int level)
+        public double GetDesignAxialForce(int loadCaseNo, int level) => ResolveDesignAxialForce(loadCaseNo, level).N;
+
+        /// <summary>
+        /// <see cref="GetDesignAxialForce"/> の値と、それがどの入力か (検定の根拠に書く)。判定はここ 1 か所。
+        /// </summary>
+        public (double N, string Source) ResolveDesignAxialForce(int loadCaseNo, int level)
         {
+            // 長期 (常時) は常時軸力 (GetSeismicAxialForce もレベル 0 では常時軸力を返す)
+            if (level == 0) return (AxialForceVL, "杭配置の常時軸力 (長期)");
             try
             {
                 double n = GetSeismicAxialForce(loadCaseNo, level);
-                if (double.IsFinite(n) && n != 0.0) return n;
+                if (double.IsFinite(n) && n != 0.0)
+                    return (n, $"杭配置の地震時軸力 (レベル{level}・荷重ケース No.{loadCaseNo})");
             }
             catch (ArgumentOutOfRangeException ex)
             {
@@ -880,8 +888,9 @@ namespace PileDesign.Models.InputData
                 PileDesign.Common.CalcFallbackTracker.Report(
                     "設計軸力（常時軸力で継続）", ex,
                     $"荷重ケース={loadCaseNo}, レベル={level}");
+                return (AxialForceVL, "杭配置の常時軸力 (その荷重ケースの地震時軸力の欄がないため)");
             }
-            return AxialForceVL;
+            return (AxialForceVL, "杭配置の常時軸力 (地震時軸力が未入力のため)");
         }
 
 
