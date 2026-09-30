@@ -162,13 +162,16 @@ public class ReferenceAndExportSafetyTests
         StringAssert.Contains(busy, "もう一度書き出せます");
     }
 
-    /// <summary>画面からの書き出しは、保存先を直接開いて書かない (一時ファイルに書き切ってから差し替える)。</summary>
+    /// <summary>
+    /// 画面・計算書の書き出しは、保存先を直接開いて書かない (一時ファイルに書き切ってから差し替える)。
+    /// 計算書の図 (Output) も対象 (一時ファイルでも同じ形にそろえる)。
+    /// </summary>
     [TestMethod]
     public void ScreenExports_DoNotWriteTheDestinationDirectly()
     {
-        var direct = new Regex(@"File\.(WriteAllText|WriteAllLines|WriteAllBytes|WriteAllTextAsync)\s*\(|new\s+StreamWriter\s*\(\s*\w+\.FileName|\.Plot\.Save\s*\(");
+        var direct = new Regex(@"File\.(WriteAllText|WriteAllLines|WriteAllBytes|WriteAllTextAsync)\s*\(|new\s+StreamWriter\s*\(\s*\w+\.FileName|\.Plot\.Save\s*\(|new\s+FileStream\s*\([^,]+,\s*FileMode\.Create\s*\)");
         char sep = Path.DirectorySeparatorChar;
-        var files = new[] { "ViewModels", "Views" }
+        var files = new[] { "ViewModels", "Views", "Output" }
             .SelectMany(d => Directory.GetFiles(TestSource.Dir("Graphics_r1", d), "*.cs", SearchOption.AllDirectories))
             .Append(Path.Combine(TestSource.Dir("Graphics_r1", "Common"), "PlotHelper.cs"))
             .Where(f => !f.Contains($"{sep}obj{sep}"))
