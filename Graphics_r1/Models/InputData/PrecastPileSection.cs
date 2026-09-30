@@ -232,7 +232,12 @@ namespace PileDesign.Models.InputData
         private double ShearS0 => 2.0 * (Math.Pow(Ro, 3) - Math.Pow(Ri, 3)) / 3.0;
 
         /// <summary>肉厚 t。</summary>
-        private double ShearT => (Ro - Ri) / 2.0;
+        /// <remarks>
+        /// Ro・Ri は半径なので、肉厚は Ro − Ri。以前は (Ro − Ri)/2 (肉厚の半分) としていて、せん断耐力の式の
+        /// 2t (両側の壁の厚さ) が半分になり、PHC・PRC 杭のせん断の限界値がすべて半分だった (η1 = (t − 15)/t も小さくなっていた)。
+        /// カタログの許容せん断力 (節杭 JP-NPH85 440-300 の Qal = 58 kN・Qas = 76 kN) は肉厚で再現できる。
+        /// </remarks>
+        private double ShearT => Ro - Ri;
 
         /// <summary>せん断スパン比による割増 α（1.0〜2.0）。</summary>
         private protected static double ShearAlpha(double monQd)
