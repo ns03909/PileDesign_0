@@ -25,6 +25,10 @@ namespace PileDesign.ViewModels
     // HorizontalCalculationViewModel partial: 解析実行本体 RunAsync（ステップ/ケースループ・NR 反復・収束判定・cut-back retry）
     public partial class HorizontalCalculationViewModel
     {
+        internal const double BaseConvergenceTolerance = 1e-6;
+        internal const double RelaxedResidualTolerance = 1e-5;
+        internal const int MaximumNewtonIterations = 100;
+
         // v21 Phase 3 prep: ばね剛性 min/max はインスタンスフィールドを廃し、
         // FindK / PrepareKmat の戻り値（out パラメータ）で局所管理する。
 
@@ -244,7 +248,7 @@ namespace PileDesign.ViewModels
             int _caseMDOP = ctx.CaseMdop;
 
             // 収束判定の基準。切り出す前は RunAsync の局所定数で、使うのはこのケース本体だけ。
-            const double alpha = 1e-6;
+            const double alpha = BaseConvergenceTolerance;
 
             // E3c-3 tune (2026-04-23): inner Task.Run ネスト回避用ヘルパー。
             // MDOP=1 (逐次): 従来通り Task.Run に投げて UI をブロックしない。
@@ -611,7 +615,7 @@ namespace PileDesign.ViewModels
                 caseModel.SetR();
 
                 // 反復なし簡易法の場合は1回で終了
-                int maxIterations = SkipIteration ? 1 : 100;
+                int maxIterations = SkipIteration ? 1 : MaximumNewtonIterations;
                 // 適応的緩和係数の初期化
                 double currentRelaxFactor = SkipIteration ? 1.0 : RelaxationFactor; // 簡易法は緩和なし
                 double prevResidual = caseModel.NormsROnNormsFint;
@@ -620,7 +624,7 @@ namespace PileDesign.ViewModels
                 // v11: 停滞検出用の変数
                 int stagnationCount = 0;           // 停滞カウント（残差がほぼ変化しない回数）
                                                    // 閾値回数と残差比は UpdateStagnationRelaxation が持つ
-                const double RELAXED_ALPHA = 1e-5; // 停滞時の緩和収束基準
+                const double RELAXED_ALPHA = RelaxedResidualTolerance; // 停滞時の緩和収束基準
                 double effectiveAlpha = alpha;     // 実効収束基準（停滞時に緩和）
 
                 // v12: 発散検出用の変数
@@ -1931,6 +1935,8 @@ namespace PileDesign.ViewModels
                     snap.ExecutedCaseKeys = executed.ToList();
                     preTargetModel.LastRunConfig = snap;
                 }
+                // 結果と組にして残す解析の条件は、実行したときのもの (登録するまでに画面の設定を変えても変わらない)
+                _settingsAtLastRun = CaptureRunSettings();
                 RefreshCompletedCaseKeys();
             }
 

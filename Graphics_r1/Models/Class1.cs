@@ -99,6 +99,9 @@ namespace PileDesign.Models
         /// </summary>
         public bool? IsElementSplit { get; set; }
 
+        /// <summary>水平解析結果に対応する版・収束条件・荷重ケース一覧。旧ファイルでは null。</summary>
+        public AnalysisRunMetadata? AnalysisRunMetadata { get; set; }
+
         /// <summary>
         /// このファイルが写し取った「元のファイル」のフルパス。自動保存・緊急保存だけが書く。
         ///

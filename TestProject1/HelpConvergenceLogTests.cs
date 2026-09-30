@@ -65,7 +65,8 @@ namespace TestProject1
         }
 
         /// <summary>収束の許容値 (残差ノルム比)。</summary>
-        private static double Tolerance() => Const(Run(), "alpha");
+        // 収束の基準・上限は名前つきの定数 (解析の条件の記録 AnalysisRunMetadata も同じものを書く)
+        private static double Tolerance() => Const(Run(), "BaseConvergenceTolerance");
 
         [TestMethod]
         public void TheIterationLinesCompareAgainstTheTolerance()
@@ -127,7 +128,7 @@ namespace TestProject1
         public void TheRelaxationExamplesStartFromTheTolerance()
         {
             string from = Tolerance().ToString("E2", Inv);
-            double floor = Const(Run(), "RELAXED_ALPHA");
+            double floor = Const(Run(), "RelaxedResidualTolerance");
 
             var examples = Regex.Matches(Help(), @"収束基準を緩和します \((" + Num + ")→(" + Num + @")\)");
             TestSource.AssertScanned(examples.Count, 2, "ヘルプの緩和ログの例");
@@ -146,12 +147,14 @@ namespace TestProject1
             string src = Run();
             string help = Help();
 
-            var max = Regex.Match(src, @"maxIterations\s*=\s*SkipIteration\s*\?\s*1\s*:\s*(\d+)\s*;");
-            Assert.IsTrue(max.Success, "最大反復回数が実装に見つかりません (書き方が変わった?)");
+            // 反復の上限は名前つきの定数。反復なし簡易法のときだけ 1 回にする
+            StringAssert.Contains(src, "maxIterations = SkipIteration ? 1 : MaximumNewtonIterations;",
+                "最大反復回数の決め方が実装に見つかりません (書き方が変わった?)");
+            int max = Count(src, "MaximumNewtonIterations");
 
             foreach (var (expected, what) in new[]
             {
-                ($"最大反復回数 {max.Groups[1].Value} に到達", "最大反復回数"),
+                ($"最大反復回数 {max} に到達", "最大反復回数"),
                 ($"(許容値={Tolerance().ToString("E3", Inv)})", "未収束ログの許容値"),
                 ($"停滞検出: {Count(src, "STAGNATION_LIMIT")}回連続", "停滞の回数"),
                 ($"緩やかな発散検出: {Count(src, "SLOW_DIVERGENCE_LIMIT")}回連続", "緩やかな発散の回数"),

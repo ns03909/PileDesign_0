@@ -113,7 +113,8 @@ namespace PileDesign.ViewModels
                     CurrentResultSet?.InputSnapshot, CurrentResultSet?.CapturedAt,
                     Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
                     IsElementSplit,
-                    InputChangedSinceAnalysis);
+                    InputChangedSinceAnalysis,
+                    analysisRunMetadata: CurrentResultSet?.RunMetadata);
                 if (ProjectReplacedDuringSave(projectAtSaveStart, path))
                     return false;
                 CurrentFilePath = path;
@@ -1001,6 +1002,7 @@ namespace PileDesign.ViewModels
                 AnaModel = projectData.AnaModel,
                 VerticalBeamCaseResults = projectData.VerticalBeamCaseResults,
                 CapturedAt = projectData.ResultCapturedAt ?? DateTime.Now,
+                RunMetadata = projectData.AnalysisRunMetadata,
                 HasHorizontal = IsHorizontalAnalysisDone,
                 HasVertical = IsVerticalAnalysisDone,
                 HasGroupPileSettlement = IsGroupPileSettlementAnalysisDone,

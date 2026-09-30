@@ -606,10 +606,8 @@ namespace PileDesign.ViewModels
         }
 
         // アセンブリからバージョン文字列を取得
-        private static readonly string _appVersion =
-            System.Reflection.Assembly.GetExecutingAssembly()
-                .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
-                ?.InformationalVersion?.Split('+')[0] ?? "不明";
+        // 版の求め方は Common.AppInfo に 1 つだけ置く (解析の条件の記録・計算書も同じ値を使う)
+        private static readonly string _appVersion = PileDesign.Common.AppInfo.Version;
 
         /// <summary>アプリケーションバージョン（他のクラスからも参照可能）</summary>
         public static string AppVersion => _appVersion;

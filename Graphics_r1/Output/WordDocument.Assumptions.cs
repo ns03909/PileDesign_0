@@ -137,7 +137,7 @@ namespace PileDesign.Output
         /// 照合するのは「切り替えても解析結果が破棄されない」設定に限る。破棄される
         /// 設定なら、そもそも古い結果が残らないので照合は要らない。
         ///
-        /// <para><b>照合する 3 つ</b>（いずれも <see cref="AnalysisRunSnapshot"/> に記録され、
+        /// <para><b>照合する 3 つと、解析したプログラムの版</b>（いずれも <see cref="AnalysisRunSnapshot"/> に記録され、
         /// 切り替えても <c>MarkInputChangedSinceAnalysis</c> を通らない）:</para>
         /// <list type="bullet">
         /// <item><c>RestrainFoundationTorsion</c> … 基礎のねじれ拘束</item>
@@ -167,6 +167,13 @@ namespace PileDesign.Output
         {
             var diffs = new List<string>();
             if (runConfig == null) return diffs;
+
+            // 解析したプログラムの版。いまの版と違えば、応答値は解析したときの版、検定の限界曲線・耐力はいまの版で
+            // 求めることになり、1 冊の中で混ざる。版の記録の無い以前の結果は、比べようがないので言わない
+            if (runConfig.AppVersion is { } analysedWith && analysedWith != PileDesign.Common.AppInfo.Version)
+            {
+                diffs.Add($"解析プログラムの版（解析時: {analysedWith}、出力時: {PileDesign.Common.AppInfo.Version}）");
+            }
 
             if (runConfig.RestrainFoundationTorsion != (inputModel?.RestrainFoundationTorsion ?? false))
             {

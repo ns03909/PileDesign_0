@@ -43,6 +43,9 @@ namespace PileDesign.Output
         /// </summary>
         public string? AnalysisConditions { get; init; }
 
+        /// <summary>解析時点の水平解析ケース一覧。旧ファイル・水平解析なしの場合は null。</summary>
+        public string? AnalysisCaseList { get; init; }
+
         /// <summary>水平解析で解いたケースの数 (解析していなければ 0)。性能の記録に添える。</summary>
         public int HorizontalCaseCount { get; init; }
 

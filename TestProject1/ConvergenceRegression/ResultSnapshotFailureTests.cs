@@ -70,7 +70,7 @@ namespace TestProject1.ConvergenceRegression
         public void TheCaptureReportsTheFailureInsteadOfContinuingSilently()
         {
             string capture = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.ResultSet.cs"),
-                "public void CaptureAnalysisResultSet()");
+                "public void CaptureAnalysisResultSet(");
             StringAssert.Contains(capture, "OnResultSnapshotFailed(failure);", "控えを作れなかったときに黙って続けています (理由も渡すこと)");
 
             string failure = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.ResultSet.cs"),

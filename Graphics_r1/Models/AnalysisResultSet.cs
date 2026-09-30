@@ -51,6 +51,8 @@ namespace PileDesign.Models
         public bool HasGroupPileSettlement { get; init; }
         public bool HasVerticalBeam { get; init; }
         public bool IsElementSplit { get; init; }
+        /// <summary>水平解析結果の実行条件 (旧ファイル・他解析のみの場合は null)。</summary>
+        public AnalysisRunMetadata? RunMetadata { get; init; }
 
         /// <summary>
         /// 現在の入力と結果を 1 組に複製して切り離す。
@@ -71,9 +73,10 @@ namespace PileDesign.Models
             bool hasVertical,
             bool hasGroupPileSettlement,
             bool hasVerticalBeam,
-            bool isElementSplit)
+            bool isElementSplit,
+            AnalysisRunMetadata? runMetadata = null)
             => Capture(liveInput, anaModel, verticalBeamCaseResults, hasHorizontal, hasVertical,
-                       hasGroupPileSettlement, hasVerticalBeam, isElementSplit, out _);
+                       hasGroupPileSettlement, hasVerticalBeam, isElementSplit, out _, runMetadata);
 
         /// <summary>
         /// <see cref="Capture(InputModel, AnaModel?, List{VerticalBeamCaseResult}?, bool, bool, bool, bool, bool)"/> と同じ。
@@ -89,7 +92,8 @@ namespace PileDesign.Models
             bool hasGroupPileSettlement,
             bool hasVerticalBeam,
             bool isElementSplit,
-            out Exception? failure)
+            out Exception? failure,
+            AnalysisRunMetadata? runMetadata = null)
         {
             failure = null;
             if (liveInput == null) return null;
@@ -129,6 +133,7 @@ namespace PileDesign.Models
                     HasGroupPileSettlement = hasGroupPileSettlement,
                     HasVerticalBeam = hasVerticalBeam,
                     IsElementSplit = isElementSplit,
+                    RunMetadata = runMetadata,
                 };
 
                 // 単杭沈下の荷重-沈下曲線も [JsonIgnore] なので往復で落ちる。

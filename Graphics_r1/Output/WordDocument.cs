@@ -421,6 +421,8 @@ namespace PileDesign.Output
             // どの解析の結果かを追えるように、結果の前提を書く
             if (_source.AnalysisConditions is { } conditions)
                 AddText(body, conditions, "center");
+            if (_source.AnalysisCaseList is { Length: > 0 } caseList)
+                AddText(body, $"水平解析ケース: {caseList}", "center");
 
             // モデル図（アイソメトリック）
             if (modelImageBytes != null && modelImageBytes.Length > 0)

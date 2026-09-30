@@ -259,6 +259,7 @@ namespace PileDesign.ViewModels
                 FactoredEvaluation = evaluation,
                 FactoredEvaluationError = evaluationError,
                 AnalysisConditions = DescribeAnalysisConditions(),
+                AnalysisCaseList = CurrentResultSet?.RunMetadata?.DescribeCases(),
                 HorizontalCaseCount = CountHorizontalCases(),
                 AnalysisNonFiniteCount = IsHorizontalAnalysisDone && CurrentModel != null ? CountNonFiniteResults(CurrentModel) : 0,
             };
@@ -285,6 +286,8 @@ namespace PileDesign.ViewModels
             if (CurrentModel == null && _currentResultSet == null) return null;
             var parts = new System.Collections.Generic.List<string>();
             if (_currentResultSet != null) parts.Add($"解析の実行: {_currentResultSet.CapturedAt:yyyy/MM/dd HH:mm}");
+            if (_currentResultSet?.RunMetadata?.DescribeSettings() is { Length: > 0 } settings)
+                parts.Add(settings);
             if (!string.IsNullOrEmpty(_analysisInputSignature))
                 parts.Add($"解析したときの入力の識別: {_analysisInputSignature[..Math.Min(12, _analysisInputSignature.Length)]}");
             int cases = CountHorizontalCases();
@@ -590,7 +593,7 @@ namespace PileDesign.ViewModels
         /// 以降 <see cref="CurrentModel"/> は切り離された複製を指し、
         /// 結果表示系は <see cref="ResultInputModel"/> を見る。
         /// </summary>
-        public void CaptureAnalysisResultSet()
+        public void CaptureAnalysisResultSet(AnalysisRunMetadata? runMetadata = null)
         {
             if (CurrentInputModel == null) return;
 
@@ -629,7 +632,8 @@ namespace PileDesign.ViewModels
                 IsGroupPileSettlementAnalysisDone,
                 IsVerticalBeamAnalysisDone,
                 IsElementSplit,
-                out var failure);
+                out var failure,
+                runMetadata);
 
             if (set == null)
             {

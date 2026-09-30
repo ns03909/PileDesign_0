@@ -36,6 +36,11 @@ namespace PileDesign.FEM
         /// 追加実行は、今の入力の署名がこれと一致するときだけできる。無い (以前の版の結果) ときもできない。
         /// </summary>
         public string? InputModelHash { get; set; }
+        /// <summary>
+        /// 解析したプログラムの版。追加実行は、今の版と一致するときだけできる (版が違えば同じ入力でも結果が変わりうる)。
+        /// 無い (以前の版の結果) ときもできない。
+        /// </summary>
+        public string? AppVersion { get; set; }
 
         /// <summary>
         /// 1 ケース 1 件を表す識別子。荷重レベル・荷重ケース番号・荷重組合せ番号・液状化の別。

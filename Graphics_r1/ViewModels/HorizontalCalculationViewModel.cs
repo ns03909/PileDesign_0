@@ -1392,7 +1392,11 @@ namespace PileDesign.ViewModels
                 vm.IsHorizontalAnalysisDone = this.CurrentModel != null;
                 // 入力ごと複製して切り離す。以降 vm.CurrentModel は複製を指し、
                 // 入力を編集しても結果は影響を受けない。
-                vm.CaptureAnalysisResultSet();
+                // 解析の条件は、解析を実行したときのもの (登録するまでに画面の設定を変えても、それは使っていない)。
+                // ケースの状態は、登録するいまの結果から取る (追加実行で足したケースも入る)
+                var runMetadata = _settingsAtLastRun ?? CaptureRunSettings();
+                runMetadata.Cases = CasesOf(this.CurrentModel);
+                vm.CaptureAnalysisResultSet(runMetadata);
                 vm.RefreshResultTablesFromLastStep(); // 追加
 
                 // 解析した 1 つ目の荷重ケースをメイン画面で選択状態にする
@@ -3169,8 +3173,57 @@ namespace PileDesign.ViewModels
                 RestrainFoundationTorsion = RestrainFoundationTorsion,
                 ExecutedCaseKeys = new List<FEM.AnalysisRunSnapshot.CaseKey>(),
                 InputModelHash = HorizontalInputSignature(InputModel),
+                AppVersion = MainWindowViewModel.AppVersion,
             };
         }
+
+        /// <summary>直近の解析を実行したときの条件 (解析を終えたときに取る。登録のときに結果と組にする)。</summary>
+        private Models.AnalysisRunMetadata? _settingsAtLastRun;
+
+        /// <summary>
+        /// いまの解析の条件 (版・収束の手法・ステップ数・並列数・収束の基準・反復の上限)。ケースの一覧は入れない。
+        /// 同じ入力で結果が変わったときに、条件の差かプログラムの差かを切り分けるために結果と一緒に残す。
+        /// </summary>
+        internal Models.AnalysisRunMetadata CaptureRunSettings() => new()
+        {
+            ApplicationVersion = MainWindowViewModel.AppVersion,
+            ConvergenceMethod = SelectedConvergenceMethod switch
+            {
+                ConvergenceMethod.FixedRelaxation => "固定緩和",
+                ConvergenceMethod.AdaptiveRelaxation => "適応的緩和",
+                _ => "ラインサーチ",
+            },
+            Level1Steps = Level1CalculationStepsCount,
+            Level2Steps = Level2CalculationStepsCount,
+            CaseParallelism = MaxCaseDegreeOfParallelism,
+            InitialRelaxationFactor = RelaxationFactor,
+            BaseResidualTolerance = BaseConvergenceTolerance,
+            RelaxedResidualTolerance = RelaxedResidualTolerance,
+            MaximumIterations = SkipIteration ? 1 : MaximumNewtonIterations,
+            LinearSolverResidualTolerance = CsparseLinearSolver.ResidualTolerance,
+        };
+
+        /// <summary>結果にあるケースと、それぞれの最も悪いステップの状態 (荷重レベル・ケース・組合せ・液状化の順)。</summary>
+        internal static List<Models.AnalysisCaseMetadata> CasesOf(AnaModel? model)
+            => model?.AnalysisStepResults?
+                .GroupBy(r => AnaModel.CaseConvergenceKey(r.LoadCase, r.LoadCombination, r.IsLiquefaction))
+                .Select(g =>
+                {
+                    var last = g.OrderByDescending(r => r.Status).First();
+                    return new Models.AnalysisCaseMetadata
+                    {
+                        Level = last.LoadCase?.Level ?? 0,
+                        LoadCaseNo = last.LoadCase?.No ?? 0,
+                        LoadCaseName = last.LoadCase?.LoadName ?? "",
+                        LoadCombinationNo = last.LoadCombination?.No ?? 0,
+                        LoadCombinationName = last.LoadCombination?.Name ?? "",
+                        IsLiquefaction = last.IsLiquefaction,
+                        Status = last.Status.ToString(),
+                    };
+                })
+                .OrderBy(c => c.Level).ThenBy(c => c.LoadCaseNo)
+                .ThenBy(c => c.LoadCombinationNo).ThenBy(c => c.IsLiquefaction)
+                .ToList() ?? [];
 
         /// <summary>
         /// 水平解析に効く入力の署名。追加実行は、前回の解析のときとこれが一致するときだけ許す。
@@ -3256,6 +3309,10 @@ namespace PileDesign.ViewModels
 
             var diffs = new List<string>();
 
+            // 解析プログラムの版が違えば、同じ入力・設定でも結果が変わりうる。別の版の結果を 1 つのモデルに並べない
+            // (版の記録が無い以前の結果も、どの版か分からないので足さない)
+            if (prev.AppVersion != MainWindowViewModel.AppVersion)
+                diffs.Add($"解析プログラムの版 {prev.AppVersion ?? "(記録なし)"}→{MainWindowViewModel.AppVersion}");
             if (prev.Level1StepsCount != Level1CalculationStepsCount)
                 diffs.Add($"レベル1ステップ数 {prev.Level1StepsCount}→{Level1CalculationStepsCount}");
             if (prev.Level2StepsCount != Level2CalculationStepsCount)

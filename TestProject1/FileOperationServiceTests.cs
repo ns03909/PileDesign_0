@@ -72,6 +72,43 @@ namespace TestProject1
         }
 
         [TestMethod]
+        public void SaveProjectData_PreservesAnalysisRunMetadata()
+        {
+            var svc = new FileOperationService(MakeOptions());
+            var file = Path.Combine(_tempDir, "run-metadata.json");
+            var metadata = new AnalysisRunMetadata
+            {
+                ApplicationVersion = "1.0.34-beta",
+                ConvergenceMethod = "ラインサーチ",
+                Level1Steps = 4,
+                Level2Steps = 16,
+                CaseParallelism = 8,
+                InitialRelaxationFactor = 0.7,
+                BaseResidualTolerance = 1e-6,
+                RelaxedResidualTolerance = 1e-5,
+                MaximumIterations = 100,
+                LinearSolverResidualTolerance = 1e-6,
+                Cases = [new AnalysisCaseMetadata
+                {
+                    Level = 2, LoadCaseNo = 3, LoadCaseName = "X方向",
+                    LoadCombinationNo = 5, LoadCombinationName = "地震時",
+                    IsLiquefaction = true, Status = "Converged",
+                }],
+            };
+
+            svc.SaveProjectData(file, new InputModel(), new AnaModel(), analysisRunMetadata: metadata);
+            var loaded = svc.LoadProjectData(file).AnalysisRunMetadata;
+
+            Assert.IsNotNull(loaded);
+            Assert.AreEqual(metadata.ApplicationVersion, loaded.ApplicationVersion);
+            Assert.AreEqual(metadata.ConvergenceMethod, loaded.ConvergenceMethod);
+            Assert.AreEqual(metadata.Level1Steps, loaded.Level1Steps);
+            Assert.AreEqual(metadata.CaseParallelism, loaded.CaseParallelism);
+            Assert.AreEqual("L2 X方向 (地震時)・液状化・収束", loaded.DescribeCases());
+            Assert.IsTrue(loaded.DescribeSettings().Contains("反復上限 100", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
         public void SaveProjectData_WithVerticalBeamResults_PersistsList()
         {
             var svc = new FileOperationService(MakeOptions());

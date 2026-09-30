@@ -42,6 +42,41 @@ public class ReportSourceTests
         Assert.AreEqual(1, source.VerticalBeamCaseResults!.Count, "結果の一覧が取ったあとの追加を追っている");
     }
 
+    [TestMethod]
+    public void AnalysisRunMetadata_IsIncludedInTheCapturedReportSource()
+    {
+        var input = new InputModel();
+        var model = new PileDesign.FEM.AnaModel();
+        var metadata = new PileDesign.Models.AnalysisRunMetadata
+        {
+            ApplicationVersion = "1.0.34-beta",
+            ConvergenceMethod = "ラインサーチ",
+            Level1Steps = 4,
+            Level2Steps = 16,
+            CaseParallelism = 8,
+            MaximumIterations = 100,
+            BaseResidualTolerance = 1e-6,
+            Cases = [new PileDesign.Models.AnalysisCaseMetadata
+            {
+                Level = 1, LoadCaseNo = 2, LoadCaseName = "X方向",
+                LoadCombinationNo = 4, LoadCombinationName = "地震時", Status = "Converged",
+            }],
+        };
+        var resultSet = PileDesign.Models.AnalysisResultSet.Capture(
+            input, model, null, hasHorizontal: true, hasVertical: false,
+            hasGroupPileSettlement: false, hasVerticalBeam: false, isElementSplit: false,
+            runMetadata: metadata);
+        Assert.IsNotNull(resultSet);
+
+        var vm = new MainWindowViewModel { CurrentInputModel = input };
+        vm.SetRestoredResultSet(resultSet, changedSinceAnalysis: false);
+        var source = vm.CaptureReportSource(input, wantsFactoredEvaluation: false);
+
+        StringAssert.Contains(source.AnalysisConditions, "収束安定化 ラインサーチ");
+        StringAssert.Contains(source.AnalysisConditions, "反復上限 100");
+        Assert.AreEqual("L1 X方向 (地震時)・収束", source.AnalysisCaseList);
+    }
+
     /// <summary>
     /// 表紙のモデル図は画面 (編集中の入力) を写す。計算書の入力が解析時の控えで、解析のあとに編集していれば写さない。
     /// </summary>
