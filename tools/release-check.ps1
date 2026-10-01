@@ -17,6 +17,8 @@
       6. 発行した exe の起動の確認 (PileDesign.exe --self-check)。例題を開く・水平解析する・検定する・計算書を出すまでを
          画面と同じ入口で通し、終了コードで合否を見る。単一ファイル・自己完結の形で初めて出る問題 (同梱の例題・フォント・
          ネイティブのライブラリが見つからないなど) は、ビルドと全体テストでは見えない
+      7. 代表モデルの性能 (tools/perf-check.ps1)。水平解析・計算書の出力・保存の所要時間と最大メモリを基準
+         (tools/perf-baseline.json) と比べる。基準を取った PC と違う PC では測って記録するだけ
 
     版を上げる手順そのもの (CHANGELOG の [Unreleased] を版の節へ改名する・csproj の版・add-changelog.py の目印)
     は行わない。上げたあとに、取り残しが無いかをこれで確かめる。
@@ -26,6 +28,9 @@
 
 .PARAMETER SkipReportLayout
     計算書のレイアウトの検査を行わない (Word が無い PC)。行わなかったことを最後に書く。
+
+.PARAMETER SkipPerformance
+    代表モデルの性能の確認を行わない (数分かかる)。
 
 .EXAMPLE
     powershell -NoProfile -ExecutionPolicy Bypass -File tools/release-check.ps1
@@ -37,7 +42,8 @@
 [CmdletBinding()]
 param(
     [switch]$AllowUnreleased,
-    [switch]$SkipReportLayout
+    [switch]$SkipReportLayout,
+    [switch]$SkipPerformance
 )
 
 $ErrorActionPreference = "Stop"
@@ -118,6 +124,15 @@ $selfCheckResult = Join-Path $selfCheckDir "self-check-result.txt"
 if (Test-Path $selfCheckResult) { Get-Content $selfCheckResult -Encoding UTF8 | ForEach-Object { Write-Host "    $_" } }
 if ($proc.ExitCode -ne 0) { Fail "発行した exe の起動の確認が通りません (終了コード $($proc.ExitCode))。上の結果とログを見てください。" }
 Ok "発行した exe の起動の確認 (例題を開く・解析する・検定する・計算書を出す)"
+
+# ── 7. 代表モデルの性能 ──
+if ($SkipPerformance) {
+    Write-Host "注意: 代表モデルの性能の確認を行いません (-SkipPerformance)" -ForegroundColor Yellow
+} else {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "perf-check.ps1")
+    if ($LASTEXITCODE -ne 0) { Fail "代表モデルの性能が基準を超えました。上の一覧を見てください (意図した変化なら tools/perf-check.ps1 -Update)。" }
+    Ok "代表モデルの性能 (水平解析・計算書の出力・保存の時間と最大メモリ)"
+}
 
 Write-Host ""
 Write-Host "リリースの確認がすべて通りました (版 $version)。発行先: $publishDir" -ForegroundColor Green
