@@ -991,9 +991,27 @@ namespace PileDesign.Models.InputData
         // ファイバーモデル M-φ（GetMPhiRelationshipFiber）は AbstractPileSection の共通実装を使用。
         // 掃引終点は既定（安全限界ソルバ、εc=0.003）、材料はガードにより常にバイリニア。
 
-        //// ある軸力時のM-θ関係を得るメソッド
-        /// 4点折線: [0, 極小値, θy, θu]
-        /// 極小値(1e-8)により初期勾配 Mcr/1e-8 ≈ 実質剛体
+        /// <summary>
+        /// ひび割れ後の M–θ 曲線の最初の区間 (原点→Mcr) の剛性を、降伏点の割線剛性 My/θy の何倍にするか。
+        /// <see cref="GetMThetaRelationship"/> 参照。
+        /// </summary>
+        internal const double PostCrackInitialStiffnessFactor = 10.0;
+
+        /// <summary>
+        /// ある軸力時の M–θ 関係。4 点の折線 [0, θcr, θy, θu] / [0, Mcr, My, β1·Mu0]。
+        ///
+        /// <para>杭頭はひび割れるまで剛として解く (解析側で、ひび割れを検出するまでは剛性 10¹⁰ の剛ばね)。
+        /// この曲線が使われるのはひび割れた後で、そのときの最初の区間 (原点→Mcr) の剛性を
+        /// K0 = <see cref="PostCrackInitialStiffnessFactor"/>·My/θy とする (θcr = Mcr/K0)。</para>
+        ///
+        /// <para>以前は θcr = 1e-8 (実質剛) だった。ひび割れた後に回転が 0 付近へ戻る反復で、割線剛性が
+        /// 「ほぼ剛 (Mcr/1e-8)」と「ひび割れ後」の間で何桁も跳ね、解析は反復中に回転の最大値を引き上げて
+        /// 除荷の扱いにすることで収束させていた。その代わりに収束点が行き過ぎた点からの除荷の線に乗り、
+        /// 答えが反復の経路 (要素分割・荷重の段数) に依存した (計算例8 の杭頭回転角が 0.62〜1.13)。
+        /// 有限の K0 にすると跳びが小さくなり、回転の最大値をステップの収束時にだけ更新する (経路に依らない) 形で
+        /// 収束する。係数は 5〜20 で結果が小数第 3 位まで同じ、100 以上では収束しない (2026-10-02 に計算例8 で確認)。
+        /// Mcr での回転は θcr ≈ 4×10⁻⁵ rad 程度 (限界値 1/100 の 0.4%) で、ひび割れ前は剛のままなので結果への影響は小さい。</para>
+        /// </summary>
         internal (List<double>, List<double>) GetMThetaRelationship(double Ntarget, double alpha = 32)
         {
             bool prevForceBilinear = _forceBilinearUltimate;
@@ -1012,8 +1030,11 @@ namespace PileDesign.Models.InputData
             // θu = 1/100 rad（固定）
             double thetaU = 1.0 / 100.0;
 
-            // θ[1] は初期勾配を十分大きくするための固定微小値
+            // θ[1]: ひび割れ後の最初の区間の剛性 K0 = 係数·My/θy から決める (θcr = Mcr/K0)。
+            // 値が求まらない (降伏点が無い等) ときは従来の微小値
             double thetaSmall = 1e-8;
+            if (thetaY > 0 && MY > 0 && MCr > 0 && double.IsFinite(MCr / MY))
+                thetaSmall = Math.Min(MCr / (PostCrackInitialStiffnessFactor * MY / thetaY), 0.5 * thetaY);
 
             // 安全ガード
             if (thetaY <= thetaSmall) thetaY = thetaSmall * 1.5;

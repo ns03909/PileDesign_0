@@ -166,12 +166,13 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
-        /// post-crack 接線剛性: Points[0]→Points[1] の急勾配 (penalty 近似の剛結区間) をスキップする。
+        /// post-crack 接線剛性: Points[0]→Points[1] の急勾配 (原点→Mcr の区間) をスキップする。
         /// Mcr 同期 Mode 切替 (ヒステリシス付き) で HasCrackedXY == true になった後、
         /// θ が小さくても Points[1]→Points[2] の傾きを返すことで、K1 ≫ K2 の急変を回避する。
+        /// (場所打ち RC 杭の Points[1] は θcr = Mcr/K0、K0 = 10·My/θy。InsituReinforcedConcreteSection.GetMThetaRelationship)
         ///
-        /// Points[0] == (0, 0), Points[1] == (θ_small, Mcr) を前提:
-        ///   |θ| ≤ Points[1].Theta  → Points[1]→Points[2] の傾き ((My - Mcr)/(θy - θ_small))
+        /// Points[0] == (0, 0), Points[1] == (θcr, Mcr) を前提:
+        ///   |θ| ≤ Points[1].Theta  → Points[1]→Points[2] の傾き ((My - Mcr)/(θy - θcr))
         ///   |θ| in [Points[1], Points[2]] → 同じ傾き (同一セグメント)
         ///   |θ| in [Points[2], Points[3]] → Points[2]→Points[3] の傾き
         ///   |θ| > Points[3]        → 0 (plateau)

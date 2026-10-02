@@ -1062,8 +1062,12 @@ namespace PileDesign.ViewModels
                             // n 方向への投影 (符号付き): forward なら +、reverse なら -
                             double thetaProj = dRx * nx + dRy * ny;
 
-                            // ヒステリシス: θ_proj_max の更新 (前進時のみ大きくなる)
-                            if (thetaProj > rxy.ThetaProjMax) rxy.ThetaProjMax = thetaProj;
+                            // ヒステリシス: θ_proj 最大値は反復中には上げない。ステップが収束したときに、収束した状態から
+                            // 確定する (RotationalSpring.CommitFromConvergedState)。反復中に上げると、行き過ぎた反復の値が残り、
+                            // 収束点が行き過ぎた点からの除荷の線に乗って答えが反復の経路に依存した (2026-10-02 に修正。
+                            // 計算例8 の杭頭回転角が要素分割で 0.62〜1.13 と行き来した)。以前は反復中に上げないと収束しなかったが、
+                            // ひび割れ後の M–θ の最初の区間に有限の剛性を持たせたので収束する
+                            // (InsituReinforcedConcreteSection.PostCrackInitialStiffnessFactor)。
 
                             // 2026-05-06 (A): forward / unloading branch の K_tan が境界 (thetaProj = thetaMax) で
                             // 100× ジャンプして Newton 方向を毎反復激変させる問題の対策。
