@@ -395,8 +395,8 @@ namespace TestProject1
             var gi = new GroundInput();
             gi.GroundLayers = new ObservableCollection<GroundLayerInput>
             {
-                new() { No = 1, BottomGLDepth = -5, Es = 10000, GranularityClass = "砂質土" },
-                new() { No = 2, BottomGLDepth = -10, Es = 15000, GranularityClass = "砂質土" }
+                new() { No = 1, BottomGLDepth = -5, Es = 10000, GranularityClass = "砂質土", NValue = 10 },
+                new() { No = 2, BottomGLDepth = -10, Es = 15000, GranularityClass = "砂質土", NValue = 20 }
             };
             gi.GroundMassesData = new ObservableCollection<GroundMassDataInput>
             {

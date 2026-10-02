@@ -489,6 +489,13 @@ namespace PileDesign.Models.InputData
                         hasWarning = true;
                         warningMessage += $"- 層番号 {groundLayer.No}: 変形係数が0です。\n";
                     }
+                    // 土層の N 値は砂質土・礫質土の周面摩擦力度 τ2 などに使う。0 のままだとその層の周面抵抗が 0 になる。
+                    // 以前は土質点の N 値だけを見ていて、土層の N 値が 0 でも何も知らせなかった
+                    if (groundLayer.NValue == 0)
+                    {
+                        hasWarning = true;
+                        warningMessage += $"- 層番号 {groundLayer.No}: N値が0です。\n";
+                    }
                     if (groundLayer.GranularityClass == "粘性土" && groundLayer.Cohesive == 0)
                     {
                         hasWarning = true;

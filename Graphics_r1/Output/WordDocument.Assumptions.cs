@@ -46,6 +46,7 @@ namespace PileDesign.Output
             AddAssumptionTable(body, "項目", "設定", "内容", BuildDesignConditionRows(inputModel));
             WarnIfAnalysisConditionsChanged(body, inputModel);
             NoteSteelPipeColumnBuckling(body, inputModel);
+            NoteInputWarnings(body, inputModel);
 
             AddRunRecordsSection(body);
 
@@ -108,6 +109,38 @@ namespace PileDesign.Output
         ///
         /// 鋼管杭が無い計算書には出さない。
         /// </summary>
+        /// <summary>計算書に書く入力の注意の上限 (これを超えたぶんは件数だけ書く)。</summary>
+        internal const int MaxInputNoticeLines = 30;
+
+        /// <summary>
+        /// 計算書に書く入力の注意: 解析前の入力の検査が「結果に影響する」として知らせたもの (解析は止めない)。
+        /// 情報 (結果に影響しない) は書かない。
+        /// </summary>
+        internal static List<string> InputNoticeLines(InputModel inputModel)
+            => PileDesign.Services.CheckInputData.CollectInputWarningDiagnostics(inputModel)
+                .Where(d => d.Severity == PileDesign.Common.DiagnosticSeverity.Warning)
+                .Select(d => d.Message.Trim())
+                .Distinct()
+                .ToList();
+
+        /// <summary>
+        /// 解析前の入力の検査で「結果に影響する」とした事項を、計算書にも書く。
+        ///
+        /// <para>以前は解析の前の確認の画面に出すだけで、計算書には残らなかった (確認の画面は利用者が切ることもできる)。
+        /// 計算書を読む人は、群杭係数が 1 を超えている・杭間隔比が未入力のまま、といった前提を知る手段がなかった。</para>
+        /// </summary>
+        private void NoteInputWarnings(Body body, InputModel inputModel)
+        {
+            var lines = InputNoticeLines(inputModel);
+            if (lines.Count == 0) return;
+            AddHeader2(body, "入力についての注意");
+            AddText(body, "解析の前の入力の検査で、結果に影響するとした事項を示す (解析は止めていない)。", fontSize: 9);
+            foreach (var line in lines.Take(MaxInputNoticeLines))
+                AddText(body, "・" + line, fontSize: 9);
+            if (lines.Count > MaxInputNoticeLines)
+                AddText(body, $"ほか {lines.Count - MaxInputNoticeLines} 件。", fontSize: 9);
+        }
+
         private void NoteSteelPipeColumnBuckling(Body body, InputModel inputModel)
         {
             // 杭体番号は一覧の並び順 (1 始まり)。杭体自身は番号を持たない。
