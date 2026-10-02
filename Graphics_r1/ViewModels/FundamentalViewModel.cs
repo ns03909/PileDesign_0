@@ -296,6 +296,22 @@ namespace PileDesign.ViewModels
         public IReadOnlyList<ResidualReferenceMode> ResidualReferenceOptions => ResidualReferenceModes.All;
 
         /// <summary>
+        /// 基礎梁の曲げにせん断変形を含めるか。<b>既定は含める。</b>
+        /// 解析の剛性が変わるので、変更すると表示中の解析結果は「再解析が必要」の扱いになる。
+        /// </summary>
+        [ObservableProperty]
+        private bool _includeFoundationBeamShearDeformation = true;
+
+        partial void OnIncludeFoundationBeamShearDeformationChanged(bool value)
+        {
+            HandleAnalysisOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.IncludeFoundationBeamShearDeformation,
+                v => InputModel.FundamentalInput.IncludeFoundationBeamShearDeformation = v,
+                value ? "基礎梁のせん断変形を含める へ変更" : "基礎梁のせん断変形を含めない へ変更");
+        }
+
+        /// <summary>
         /// 杭の沈下量を検定するか。<b>既定は なし。</b>
         ///
         /// 許容沈下量は設計者が決める量なので、プログラムが勝手に合否を出さない。
@@ -680,6 +696,7 @@ namespace PileDesign.ViewModels
             ConsiderSteelPipeColumnBuckling = InputModel.FundamentalInput.ConsiderSteelPipeColumnBuckling;
             Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
             ResidualReference = InputModel.FundamentalInput.ResidualReference;
+            IncludeFoundationBeamShearDeformation = InputModel.FundamentalInput.IncludeFoundationBeamShearDeformation;
             EvaluateSettlement = InputModel.FundamentalInput.EvaluateSettlement;
             AllowableSettlement_mm = InputModel.FundamentalInput.AllowableSettlement_mm;
             ScUltimateShearBeta1 = InputModel.FundamentalInput.ScUltimateShearBeta1;
@@ -805,6 +822,9 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.ResidualReference):
                     ResidualReference = InputModel.FundamentalInput.ResidualReference;
+                    break;
+                case nameof(FundamentalInput.IncludeFoundationBeamShearDeformation):
+                    IncludeFoundationBeamShearDeformation = InputModel.FundamentalInput.IncludeFoundationBeamShearDeformation;
                     break;
                 case nameof(FundamentalInput.EvaluateSettlement):
                     EvaluateSettlement = InputModel.FundamentalInput.EvaluateSettlement;

@@ -254,6 +254,16 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _residualReference, value);
         }
 
+        // 基礎梁の曲げにせん断変形を含めるか (既定 含める)。含めると基礎梁を Timoshenko 梁として解く
+        // (せん断断面積は (5/6)bh、または基礎梁の断面の入力)。梁せいがスパンに比べて大きい基礎梁ほど効く。
+        // 以前の版は含めていなかった。旧い保存ファイルを開くと既定 (含める) になるので、再解析すると結果が動く。
+        private bool _includeFoundationBeamShearDeformation = true;
+        public bool IncludeFoundationBeamShearDeformation
+        {
+            get => _includeFoundationBeamShearDeformation;
+            set => SetProperty(ref _includeFoundationBeamShearDeformation, value);
+        }
+
         // 杭の沈下量を検定するか (既定 なし)。
         // 許容沈下量は構造・基礎形式・上部構造が許せる変形から設計者が決める量で、
         // 規準が一意の値を与えるわけではない。プログラムが勝手に値を置いて合否を出すと

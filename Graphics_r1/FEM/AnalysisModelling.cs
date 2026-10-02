@@ -1001,6 +1001,9 @@ namespace PileDesign.FEM
 
                 // Beam 要素を作成 (識別名は 1-based の位置インデックスを使用)
                 var beam = new Beam($"FoundationBeam-{InputModel.FoundationBeamInput.GetBeamNo(fbBeam)}", section, nodeI, nodeJ, 1.0, 1.0);
+                // 基礎梁のせん断変形 (基本設定。既定は含める)
+                if (InputModel.FundamentalInput?.IncludeFoundationBeamShearDeformation ?? true)
+                    beam.EnableShearDeformation();
                 Beams.Add(beam);
             }
         }

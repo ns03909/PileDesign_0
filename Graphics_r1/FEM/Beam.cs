@@ -301,6 +301,21 @@ namespace PileDesign.FEM
         public HorizontalSoilReactionItem HorizontalSoilReactionItem { get; set; }
         public System.Collections.Generic.List<BeamResult> BeamResults { get; set; } = [];
 
+        /// <summary>
+        /// 曲げにせん断変形を含める (Timoshenko 梁。せん断断面積 AY・AZ とせん断弾性係数 G を使う)。
+        /// 基礎梁で、基本設定の「基礎梁のせん断変形」が「含める」のとき立てる (<see cref="EnableShearDeformation"/>)。
+        /// 杭の要素は含めない (M-φ の非線形と組み合わせていない)。
+        /// </summary>
+        public bool IncludeShearDeformation { get; set; }
+
+        /// <summary>曲げにせん断変形を含め、要素剛性を組み直す。</summary>
+        public void EnableShearDeformation()
+        {
+            IncludeShearDeformation = true;
+            SetKe(true);
+            SetKe(false);
+        }
+
         // パラメータなしコンストラクタ（必須）
         public Beam() { }
 
@@ -422,15 +437,81 @@ namespace PileDesign.FEM
                     0.0, -6.0 * eIz_per_L2_RM2, 0.0, 0.0, 0.0, 6.0 * eIz_per_L1_RM2 } // 11
                 });
 
+            if (IncludeShearDeformation)
+            {
+                // 曲げの成分を、せん断変形を含めたもので置き換える。z 軸まわりの曲げ (変位は y 方向) は AY、
+                // y 軸まわり (変位は z 方向) は AZ のせん断剛性を使う。y 面は回転の向きの規約が逆 (θy = −w′) なので、
+                // 変位と回転の組の成分の符号を返す
+                double g = Section.Material.G;
+                double eiz = Section.Material.E * Section.IZ * k_z, eiy = Section.Material.E * Section.IY * k_y;
+                double phiZ = Section.AY > 0 && g > 0 ? 12.0 * eiz / (g * Section.AY * Length * Length) : 0.0;
+                double phiY = Section.AZ > 0 && g > 0 ? 12.0 * eiy / (g * Section.AZ * Length * Length) : 0.0;
+                PlaceBending(ke, PlaneBendingStiffness(eiz, Length, phiZ, rzi, rzj), [1, 5, 7, 11], [1.0, 1.0, 1.0, 1.0]);
+                PlaceBending(ke, PlaneBendingStiffness(eiy, Length, phiY, ryi, ryj), [2, 4, 8, 10], [1.0, -1.0, 1.0, -1.0]);
+            }
+
             if (isTan)
             {
-                AddBiaxialCoupling(ke, EIyzTan);
+                // 二方向曲げの連成はせん断変形を含めない形 (Hermite) で足すので、含めた要素には足さない (基礎梁は連成を持たない)
+                if (!IncludeShearDeformation)
+                    AddBiaxialCoupling(ke, EIyzTan);
                 KeTan = ke;
             }
             else
             {
                 KeSec = ke;
             }
+        }
+
+        private static void PlaceBending(Matrix<double> ke, double[,] k, int[] dof, double[] sign)
+        {
+            for (int a = 0; a < 4; a++)
+                for (int b = 0; b < 4; b++)
+                    ke[dof[a], dof[b]] = sign[a] * sign[b] * k[a, b];
+        }
+
+        /// <summary>
+        /// 1 つの面の曲げの剛性 (自由度の並び: 端 i の変位, 端 i の回転, 端 j の変位, 端 j の回転)。
+        /// せん断変形を含める (Timoshenko 梁、<paramref name="phi"/> = 12EI / (G·As·L²)。0 なら曲げのみ)。
+        ///
+        /// <para>端の固定度 <paramref name="ri"/>・<paramref name="rj"/> (1 = 剛、0 = ピン) は、外の回転と梁の端の回転の間の
+        /// 回転ばね k = 6EI·r / (L(1 − r)) として入れ、梁の端の回転を消去する。φ = 0 のとき、せん断変形を含めない
+        /// <see cref="SetKe"/> の式と一致する (試験で確かめている)。</para>
+        /// </summary>
+        internal static double[,] PlaneBendingStiffness(double ei, double length, double phi, double ri, double rj)
+        {
+            double L = length, c = ei / (L * L * L * (1.0 + phi));
+            double[,] kt =
+            {
+                { 12 * c,      6 * L * c,               -12 * c,     6 * L * c },
+                { 6 * L * c,   (4 + phi) * L * L * c,   -6 * L * c,  (2 - phi) * L * L * c },
+                { -12 * c,     -6 * L * c,              12 * c,      -6 * L * c },
+                { 6 * L * c,   (2 - phi) * L * L * c,   -6 * L * c,  (4 + phi) * L * L * c },
+            };
+            var springs = new System.Collections.Generic.List<(int Dof, double K)>(2);
+            if (ri < 1.0) springs.Add((1, ri <= 0.0 ? 0.0 : 6.0 * ei * ri / (L * (1.0 - ri))));
+            if (rj < 1.0) springs.Add((3, rj <= 0.0 ? 0.0 : 6.0 * ei * rj / (L * (1.0 - rj))));
+            if (springs.Count == 0) return kt;
+
+            // 外の 4 自由度 + 梁の端の回転 (ばねのある端)。梁の端の回転を消去する
+            int n = 4 + springs.Count;
+            int[] map = { 0, 1, 2, 3 };
+            for (int s = 0; s < springs.Count; s++) map[springs[s].Dof] = 4 + s;
+            var k = Matrix<double>.Build.Dense(n, n);
+            for (int a = 0; a < 4; a++)
+                for (int b = 0; b < 4; b++)
+                    k[map[a], map[b]] += kt[a, b];
+            for (int s = 0; s < springs.Count; s++)
+            {
+                int e = springs[s].Dof, i = 4 + s;
+                double ks = springs[s].K;
+                k[e, e] += ks; k[i, i] += ks; k[e, i] -= ks; k[i, e] -= ks;
+            }
+            var kaa = k.SubMatrix(0, 4, 0, 4);
+            var kab = k.SubMatrix(0, 4, 4, springs.Count);
+            var kbb = k.SubMatrix(4, springs.Count, 4, springs.Count);
+            var condensed = kaa - kab * kbb.Solve(kab.Transpose());
+            return condensed.ToArray();
         }
 
         /// <summary>
@@ -634,6 +715,7 @@ namespace PileDesign.FEM
                 // "skippedNoPileBody" として弾かれ M-φ 曲線がセットされず K 行列が divergence していた
                 PileBodyNo = this.PileBodyNo,
                 SegmentIndex = this.SegmentIndex,
+                IncludeShearDeformation = this.IncludeShearDeformation,
                 Length = this.Length,
                 Ryi_tan = this.Ryi_tan,
                 Rzi_tan = this.Rzi_tan,

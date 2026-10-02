@@ -207,6 +207,9 @@ namespace PileDesign.FEM
 
                 var section = CreateFoundationBeamSection(fbBeam);
                 var beam = new Beam($"FoundationBeam-{_inputModel.FoundationBeamInput.GetBeamNo(fbBeam)}", section, nodeI, nodeJ, 1.0, 1.0);
+                // 基礎梁のせん断変形 (基本設定。既定は含める。水平解析のモデルと同じ)
+                if (_inputModel.FundamentalInput?.IncludeFoundationBeamShearDeformation ?? true)
+                    beam.EnableShearDeformation();
                 Beams.Add(beam);
             }
         }

@@ -399,6 +399,18 @@ namespace PileDesign.Output
                     ? "全杭頭を代表点に対して全 6 自由度で剛体拘束する（詳細は「検討方針」章）"
                     : "水平変位と鉛直軸回転のみ剛体拘束し、鉛直・回転は基礎梁が負担する（詳細は「検討方針」章）"));
 
+            // 基礎梁のせん断変形。基礎梁があるときだけ書く
+            if (inputModel?.FoundationBeamInput?.Beams?.Count > 0)
+            {
+                bool beamShear = inputModel.FundamentalInput?.IncludeFoundationBeamShearDeformation ?? true;
+                rows.Add(("基礎梁のせん断変形",
+                    beamShear ? "含める" : "含めない",
+                    beamShear
+                        ? "基礎梁を、せん断変形を含めた梁（Timoshenko 梁、φ = 12EI / (G·As·L²)）として解く。"
+                          + "せん断断面積 As は (5/6)bh（断面を入力した基礎梁はその値）"
+                        : "基礎梁のたわみを曲げ変形だけで求める"));
+            }
+
             // 既定 (拘束しない) のときは行を出さない。仮定一覧が長くなるうえ、
             // 「従来どおり」を毎回書いても読み手の判断材料にならない。
             if (inputModel?.RestrainFoundationTorsion == true)

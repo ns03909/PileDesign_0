@@ -2954,6 +2954,19 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     変更すると解析のやり直しが必要になります（上記のとおり）。</li>
             </ul>
 
+            <h4 style="font-weight: bold;">基礎梁のせん断変形</h4>
+            <ul>
+                <li id="fund-opt-beam-shear"><strong>基礎梁の曲げにせん断変形を含める</strong>:
+                    既定は<strong>含める</strong>です。基礎梁を、せん断変形を含めた梁（Timoshenko 梁）として解きます。
+                    曲げの剛性に $\phi = 12EI / (G A_s L^2)$ を入れ、たとえば両端固定の梁の端のせん断剛性は
+                    $12EI / \{L^3 (1 + \phi)\}$ になります。せん断断面積 $A_s$ は矩形断面の $(5/6)bh$
+                    （基礎梁の断面を入力した場合はその値）、せん断弾性係数 $G = E / \{2(1 + \nu)\}$ です。
+                    梁せいがスパンに比べて大きいほど効き、梁せい 1 m・スパン 10 m で、たわみやすさが 3% ほど大きくなります。
+                    水平解析と、基礎梁を考えた沈下の解析の両方に効きます。杭の要素には効きません。
+                    「含めない」は曲げ変形だけで解き、1.0.34-beta 以前の版と同じです。
+                </li>
+            </ul>
+
             <h4 style="font-weight: bold;">収束判定の基準値</h4>
             <ul>
                 <li id="fund-opt-residual-reference"><strong>残差を割る基準値</strong>:

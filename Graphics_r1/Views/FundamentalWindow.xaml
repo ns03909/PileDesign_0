@@ -339,6 +339,21 @@
                 </StackPanel>
             </GroupBox>
 
+            <!-- 基礎梁のせん断変形 -->
+            <GroupBox Header="基礎梁のせん断変形" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+                    <ctrl:MaterialOptionRadioPair
+                        Header="基礎梁の曲げにせん断変形を含める" HelpAnchor="fund-opt-beam-shear" GroupName="OptBeamShear"
+                        IsAlternativeSelected="{Binding IncludeFoundationBeamShearDeformation, Mode=TwoWay}"
+                        DefaultText="含めない（曲げのみ）"
+                        DefaultFormula="基礎梁を曲げ変形だけの梁として解く"
+                        DefaultToolTip="基礎梁のたわみを曲げ変形だけで求めます。1.0.34-beta 以前の版と同じです。&#x0a;以前の版の結果と比べるときに選びます。"
+                        AlternativeText="含める（既定）"
+                        AlternativeFormula="φ = 12EI / (G·As·L²)、せん断断面積 As = (5/6)bh（断面の入力があればその値）"
+                        AlternativeToolTip="基礎梁を、せん断変形を含めた梁（Timoshenko 梁）として解きます。&#x0a;梁せいがスパンに比べて大きいほど効きます（梁せい 1 m・スパン 10 m で、たわみやすさが 3% ほど大きくなります）。&#x0a;水平解析と、基礎梁を考えた沈下の解析の両方に効きます。杭の要素には効きません。&#x0a;変更すると、表示中の解析結果は「再解析が必要」の扱いになります。"/>
+                </StackPanel>
+            </GroupBox>
+
             <!-- 収束判定の基準値 (残差を何で割るか) -->
             <GroupBox Header="収束判定の基準値" Margin="0,6,0,0">
                 <StackPanel Margin="6,4,6,4">
