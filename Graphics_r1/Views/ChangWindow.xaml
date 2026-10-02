@@ -16,7 +16,8 @@
         xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         PreviewKeyDown="Window_PreviewKeyDown"
-        Title="杭頭水平力を受ける一様地盤中の長い杭の状態計算" Height="450" Width="800">
+        Title="杭頭水平力を受ける一様地盤中の長い杭の状態計算" Height="450" Width="800"
+        common:EscapeKeyBehavior.Enable="True">
 
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />

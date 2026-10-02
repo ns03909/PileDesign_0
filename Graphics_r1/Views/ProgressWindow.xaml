@@ -55,8 +55,10 @@
         </Grid>
 
         <!-- キャンセルボタン -->
+        <!-- Esc でも同じ (止めるかを訊く)。Esc でウィンドウを閉じる共通の動き (EscapeKeyBehavior) は切ってある -->
         <Button Grid.Row="6"
                 Content="キャンセル"
+                IsCancel="True"
                 Width="100"
                 Height="30"
                 HorizontalAlignment="Right"
