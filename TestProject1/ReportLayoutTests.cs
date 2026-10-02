@@ -74,5 +74,27 @@ namespace TestProject1
             StringAssert.Contains(script, "$doc.SaveAs2([string]$pdf, [int]$wdExportFormatPDF)");
             StringAssert.Contains(script, "$word.Documents.Open([string]$Docx");
         }
+
+        /// <summary>
+        /// 環境の違いを見る基準: 図・表の数 (環境に依らない) と、環境ごとのページ数、計算書が指定するフォント。
+        /// 検査は、フォントがその PC に入っているかを英語名・日本語名の両方で照らす (「游明朝」は英語名では Yu Mincho)。
+        /// </summary>
+        [TestMethod]
+        public void TheLayoutBaseline_CoversCountsPagesAndFonts()
+        {
+            string path = Path.Combine(TestSource.Dir(), "tools", "report-layout-baseline.json");
+            Assert.IsTrue(File.Exists(path), "計算書のレイアウトの基準がありません (tools/report-layout-check.ps1 -Update で作る)");
+            using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+            var root = json.RootElement;
+            Assert.IsTrue(root.GetProperty("Figures").GetInt32() > 0, "図の数");
+            Assert.IsTrue(root.GetProperty("Tables").GetInt32() > 0, "表の数");
+            TestSource.AssertScanned(root.GetProperty("PagesByEnvironment").EnumerateObject().Count(), 1, "ページ数の基準の環境");
+            TestSource.AssertScanned(root.GetProperty("Fonts").GetArrayLength(), 1, "計算書が指定するフォント");
+
+            string script = File.ReadAllText(Path.Combine(TestSource.Dir(), "tools", "report-layout-check.ps1"));
+            StringAssert.Contains(script, "report-layout-baseline.json");
+            StringAssert.Contains(script, "InstalledFontCollection");
+            StringAssert.Contains(script, "GetName(1041)");
+        }
     }
 }

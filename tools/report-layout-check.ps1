@@ -12,6 +12,12 @@
     - 複数ページにまたがる表で見出し行を繰り返していない (注意として出す)
   PDF も書き出すので、目でも確かめられる。
 
+  環境の違い (PC・Word の版・フォント) で崩れていないかも見る。
+    - 計算書が使うフォント (docx のフォント表) がこの PC に入っているか。無いと Word が別のフォントに
+      置き換えて描くので、文字の幅が変わってページ送りが崩れる
+    - 図・表の数を基準 (tools/report-layout-baseline.json) と比べる。数は環境に依らないので、違えば失敗
+    - ページ数は環境 (PC と Word の版) ごとに基準を持ち、同じ環境なら ±5% まで。初めての環境では記録するだけ
+
   代表の計算書は全体テスト (ReportDeterminismTests) が TestProject1\TestResults\report-sample\ に作る。
   Word が要るので、普段の全体テストではなくリリースの確認 (tools/release-check.ps1) で使う。
 
@@ -20,10 +26,14 @@
 
 .PARAMETER WarnOnly
   問題があっても失敗にしない (一覧だけ出す)。
+
+.PARAMETER Update
+  この環境のページ数と、図・表の数を基準に書き込む (計算書の構成を意図して変えたとき・新しい環境で初めて測ったとき)。
 #>
 param(
     [string]$Docx = "",
-    [switch]$WarnOnly
+    [switch]$WarnOnly,
+    [switch]$Update
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,6 +52,28 @@ $reportPath = Join-Path $outDir ($baseName + "-layout.txt")
 
 $problems = New-Object System.Collections.Generic.List[string]
 $notes = New-Object System.Collections.Generic.List[string]
+$baselinePath = Join-Path $PSScriptRoot "report-layout-baseline.json"
+
+# ── フォント: 計算書が指定するフォント (書式・本文の rFonts) が、この PC に入っているか ──
+# 計算書はフォント表 (fontTable.xml) を持たないので、各部品の rFonts の指定から集める
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+Add-Type -AssemblyName System.Drawing
+$usedFonts = New-Object System.Collections.Generic.SortedSet[string]
+$zip = [IO.Compression.ZipFile]::OpenRead($Docx)
+try {
+    foreach ($entry in $zip.Entries) {
+        if ($entry.FullName -notmatch "^word/.*\.xml$") { continue }
+        $reader = New-Object IO.StreamReader($entry.Open())
+        try { $xmlText = $reader.ReadToEnd() } finally { $reader.Close() }
+        foreach ($m in [regex]::Matches($xmlText, 'w:(?:ascii|hAnsi|eastAsia|cs)="([^"]+)"')) { [void]$usedFonts.Add($m.Groups[1].Value) }
+    }
+}
+finally { $zip.Dispose() }
+$usedFonts = @($usedFonts)
+# フォントの名前は表示の言語で変わる (「游明朝」は英語名では Yu Mincho)。英語名と日本語名の両方で照らす
+$installed = @((New-Object Drawing.Text.InstalledFontCollection).Families | ForEach-Object { $_.Name; $_.GetName(1033); $_.GetName(1041) })
+$missingFonts = @($usedFonts | Where-Object { $installed -notcontains $_ })
+foreach ($f in $missingFonts) { $problems.Add("計算書が使うフォント「$f」がこの PC にありません (Word が別のフォントで描くので、ページ送りが崩れます)") }
 $wdActiveEndPageNumber = 3
 $wdWithInTable = 12
 $wdStatisticPages = 2
@@ -69,6 +101,7 @@ try {
     foreach ($toc in $doc.TablesOfContents) { [void]$toc.Update() }
     $doc.Repaginate()
 
+    $wordVersion = "$($word.Build)"
     $ps = $doc.PageSetup
     $usable = $ps.PageWidth - $ps.LeftMargin - $ps.RightMargin
     $pages = $doc.ComputeStatistics($wdStatisticPages)
@@ -187,8 +220,44 @@ finally {
     if ($myWord -and -not $myWord.WaitForExit(10000)) { Stop-Process -Id $myWord.Id -Force -ErrorAction SilentlyContinue }
 }
 
+# ── 基準との比較: 図・表の数 (環境に依らない) と、同じ環境でのページ数 ──
+$environment = "$env:COMPUTERNAME / Word $wordVersion"
+$baseline = $null
+if (Test-Path $baselinePath) { $baseline = Get-Content $baselinePath -Raw -Encoding UTF8 | ConvertFrom-Json }
+if ($Update) {
+    $pagesByEnv = @{}
+    if ($baseline -and $baseline.PagesByEnvironment) {
+        foreach ($p in $baseline.PagesByEnvironment.PSObject.Properties) { $pagesByEnv[$p.Name] = $p.Value }
+    }
+    $pagesByEnv[$environment] = $pages
+    $newBaseline = [ordered]@{ Figures = $shapeCount; Tables = $tableCount; PagesByEnvironment = $pagesByEnv; Fonts = @($usedFonts) }
+    # BOM 付き UTF-8 (Windows PowerShell 5.1 で日本語の名前を読み書きするため)
+    [IO.File]::WriteAllText($baselinePath, ($newBaseline | ConvertTo-Json -Depth 4), (New-Object Text.UTF8Encoding($true)))
+    $notes.Add("基準を書き込みました: $baselinePath ($environment)")
+}
+elseif (-not $baseline) {
+    $problems.Add("レイアウトの基準がありません: $baselinePath (-Update で作る)")
+}
+else {
+    if ($shapeCount -ne $baseline.Figures) { $problems.Add("図の数が基準と違います: $shapeCount / 基準 $($baseline.Figures) (計算書の構成を変えたなら -Update)") }
+    if ($tableCount -ne $baseline.Tables) { $problems.Add("表の数が基準と違います: $tableCount / 基準 $($baseline.Tables) (計算書の構成を変えたなら -Update)") }
+    $basePages = $null
+    if ($baseline.PagesByEnvironment) { $basePages = $baseline.PagesByEnvironment.PSObject.Properties | Where-Object { $_.Name -eq $environment } | Select-Object -First 1 }
+    if ($basePages) {
+        $limit = [math]::Ceiling($basePages.Value * 0.05)
+        if ([math]::Abs($pages - $basePages.Value) -gt $limit) {
+            $problems.Add("ページ数が基準と違います: $pages / 基準 $($basePages.Value) (同じ環境 $environment、許容 ±$limit)")
+        }
+    }
+    else {
+        $others = @($baseline.PagesByEnvironment.PSObject.Properties | ForEach-Object { "$($_.Name): $($_.Value)" }) -join "、"
+        $notes.Add("この環境 ($environment) のページ数の基準はまだありません ($pages ページ。ほかの環境: $others)。-Update で記録できます")
+    }
+}
+
 $lines = New-Object System.Collections.Generic.List[string]
 $lines.Add("計算書のレイアウトの検査: $Docx")
+$lines.Add("環境: $environment / フォント $($usedFonts.Count) 種 (無いもの $($missingFonts.Count))")
 $lines.Add("ページ $pages / 図 $shapeCount / 表 $tableCount / 所要 $([math]::Round($sw.Elapsed.TotalSeconds)) 秒")
 $lines.Add("PDF: $pdf")
 $lines.Add("")
