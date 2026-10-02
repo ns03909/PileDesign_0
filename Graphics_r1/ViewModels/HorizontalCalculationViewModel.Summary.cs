@@ -307,7 +307,10 @@ namespace PileDesign.ViewModels
                         StepStatus.PhysicallyUnconverged => "⛔ 物理的未収束",
                         _ => "?"
                     };
-                    emit($"    {s.CaseTag} step {s.Step}/{s.NStep} (試行#{s.BisectionAttempt})  {statusStr}  残差={s.FinalResidual:E2}  max|δu|={s.MaxDisp:E2}m");
+                    emit($"    {s.CaseTag} step {s.Step}/{s.NStep} (試行#{s.BisectionAttempt})  {statusStr}  反復={s.Iterations}  残差={s.FinalResidual:E2}  max|δu|={s.MaxDisp:E2}m");
+                    if (s.Diagnosis != null)
+                        foreach (var line in s.Diagnosis.DescribeLines())
+                            emit("        " + line);
                 }
             }
             emit(bottomRule);

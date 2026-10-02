@@ -86,7 +86,9 @@ namespace PileDesign.ViewModels
             int KRebuildCount = 0, int KReuseCount = 0,
             // 2026-09-26: このステップで解いた連立方程式のうち、解の相対残差が 1e-6 を超えた数。
             //   解は差し替えずに使う (CsparseLinearSolver.ResidualTolerance)。条件の悪いモデルに気づく手掛かり
-            long LargeResidualSolves = 0);
+            long LargeResidualSolves = 0,
+            // 収束しなかったステップの手掛かり (理由・残差の推移・残差の大きい箇所)。収束したステップは null
+            UnconvergedDiagnosis? Diagnosis = null);
         private readonly System.Collections.Concurrent.ConcurrentBag<StepSummary> _stepSummaries = new();
 
         /// <summary>
@@ -95,6 +97,12 @@ namespace PileDesign.ViewModels
         /// </summary>
         public System.Collections.Generic.IReadOnlyList<StepSummary> StepSummariesSnapshot()
             => _stepSummaries.ToArray();
+
+        /// <summary>
+        /// テスト用: ニュートン法の反復の上限を差し替える (null なら通常どおり)。
+        /// 未収束の経路 (手掛かりの記録・レポート) を確実に通すために使う。画面からは設定しない。
+        /// </summary>
+        internal int? MaximumIterationsForTesting { get; set; }
 
         /// <summary>
         /// テスト用フラグ: true に設定すると OnExecuteAnalysisCore 内の UI 確認ダイアログ

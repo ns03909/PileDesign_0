@@ -616,6 +616,7 @@ namespace PileDesign.ViewModels
 
                 // 反復なし簡易法の場合は1回で終了
                 int maxIterations = SkipIteration ? 1 : MaximumNewtonIterations;
+                if (MaximumIterationsForTesting is int forcedMax) maxIterations = forcedMax;
                 // 適応的緩和係数の初期化
                 double currentRelaxFactor = SkipIteration ? 1.0 : RelaxationFactor; // 簡易法は緩和なし
                 double prevResidual = caseModel.NormsROnNormsFint;
@@ -662,6 +663,8 @@ namespace PileDesign.ViewModels
                 const double SLOW_IMPROVEMENT_THRESHOLD = 0.10; // 30 反復で 10% 未満の減少なら停滞
                 const double SLOW_IMPROVEMENT_RELAX_CAP = 1e-2; // この残差を超えていたら緩和しない (発散領域なので)
                 var residualHistory = new Queue<double>();
+                // 未収束の手掛かり用に、このステップの残差の推移を全部残す (residualHistory は緩和で消える)
+                var residualTrend = new List<double>();
 
                 // v17: 長時間反復時の収束基準緩和（40反復以上 + 残差≦RELAXED_ALPHA で緩和）
 
@@ -1283,6 +1286,7 @@ namespace PileDesign.ViewModels
                     // 「微減し続ける」ケース (毎反復 minSeen 更新でも改善が遅い) を救済する。
                     // 過去 SLOW_IMPROVEMENT_WINDOW 反復前の残差と比較し、改善率が閾値未満で停滞判定。
                     residualHistory.Enqueue(currentResidual);
+                    residualTrend.Add(currentResidual);
                     if (residualHistory.Count > SLOW_IMPROVEMENT_WINDOW)
                     {
                         double residualPast = residualHistory.Dequeue();
@@ -1544,6 +1548,21 @@ namespace PileDesign.ViewModels
                         : (effectiveAlpha > RELAXED_ALPHA ? StepStatus.ConvergedRelaxed
                             : StepStatus.Converged));
 
+                // 収束しなかったステップは、理由・残差の推移・残差の大きい箇所 (杭・深さ・ばね) を残す。
+                // 以前は最終残差だけで、どこで釣り合わないのかは開発用のログにしか出なかった
+                UnconvergedDiagnosis? diagnosis = null;
+                if (stepStatus >= StepStatus.Unconverged)
+                {
+                    double finalResidual = caseModel.NormsROnNormsFint;
+                    if (residualTrend.Count == 0 || residualTrend[^1] != finalResidual) residualTrend.Add(finalResidual);
+                    string reason = !converged
+                        ? stepJudge.UnconvergedReason ?? "収束しなかった"
+                        : $"緩めた基準 {effectiveAlpha:E2} でも、物理的未収束の目安を超えた (耐力超過の可能性)";
+                    diagnosis = UnconvergedDiagnosis.Build(reason, residualTrend, ResidualHotspots.Top(caseModel, UnconvergedDiagnosis.HotspotCount));
+                    if (diagnosis.Hotspots.Count > 0)
+                        await AddLogAsync($"    残差の推移の傾向: {diagnosis.TrendLabel}。残差の最も大きい箇所: {diagnosis.Hotspots[0].Describe()}");
+                }
+
                 // v29 (2026-04-27): ステップ単位の収束サマリー記録 (解析終了時にレポート出力)
                 {
                     StepStatus _status = stepStatus;
@@ -1565,7 +1584,8 @@ namespace PileDesign.ViewModels
                         ElapsedSec: _elapsedSec,
                         KRebuildCount: kRebuildCount,
                         KReuseCount: kReuseCount,
-                        LargeResidualSolves: caseModel.SolverCache.LargeResidualCount - largeResidualAtStepStart));
+                        LargeResidualSolves: caseModel.SolverCache.LargeResidualCount - largeResidualAtStepStart,
+                        Diagnosis: diagnosis));
                 }
 
                 // v21 Phase 3 prep: 自動ライン探索はステップ局所の effectiveUseLineSearch で
