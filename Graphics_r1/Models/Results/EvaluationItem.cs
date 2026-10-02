@@ -249,6 +249,12 @@ namespace PileDesign.Models.Results
         /// </summary>
         public IReadOnlyList<EvaluationBasisEntry> Basis { get; init; } = [];
 
+        /// <summary>
+        /// 杭頭回転角で、杭頭の回転ばねが降伏後の枝にある (回転角が曲線の降伏点 θy を超えている)。
+        /// 降伏後の回転角はモーメントのわずかな差で大きく変わり、杭頭付近の要素分割で 1 割程度動くことがある。画面と計算書で知らせる。
+        /// </summary>
+        public bool IsPileHeadBeyondYield { get; init; }
+
         /// <summary>根拠を 1 行にしたもの (表の列)。</summary>
         [ResultColumn("根拠", 17, tooltip: "限界値・応答値の根拠。参照した入力値 (軸力とその出所)・限界曲線・補間した曲線上の区間・M/(Q·d) の内訳・割増")]
         public string BasisText => string.Join("／", Basis.Select(b => $"{b.Item}: {b.Value}"));

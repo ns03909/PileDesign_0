@@ -288,6 +288,15 @@ namespace PileDesign.ViewModels
                     sb.AppendLine($"  ・{g.Key.Category}: {g.Key.Reason} … {g.Count()} 件");
             }
 
+            // 杭頭のばねが降伏後の枝にある杭頭回転角があったときだけ足す (無ければ従来と 1 文字も変わらない)。
+            int beyondYieldCount = longTermItems.Concat(level1Items).Concat(level2Items).Count(i => i.IsPileHeadBeyondYield);
+            if (beyondYieldCount > 0)
+            {
+                sb.AppendLine($"杭頭のばねが降伏後の枝にある杭頭回転角: {beyondYieldCount} 件");
+                sb.AppendLine("  降伏後の回転角はモーメントのわずかな差で大きく変わり、杭頭付近の要素分割で 1 割程度動くことがあります。");
+                sb.AppendLine("  杭頭付近の要素分割を変えて解き直し、結果の幅を確かめてください。");
+            }
+
             // ── 個別矩形（基礎梁考慮）反復解析の傾斜角検定 ──
             AppendInclinationSection(sb, inclinationItems);
 
@@ -1420,6 +1429,18 @@ namespace PileDesign.ViewModels
                 double dRy = rsResult.CumulativeDisp.Ryi - rsResult.CumulativeDisp.Ryj;
                 double theta = PileDesign.Common.StableNumerics.Norm(dRx, dRy);
 
+                // 杭頭のばねが降伏後の枝にあるか。曲線は解析したケースの控えを使い、無ければ設計の軸力で作る
+                double? thetaYield = PileHeadYieldRotation(rs, stepResult, soilPile.PileBodyInput, axialN_kN);
+                bool beyondYield = thetaYield is double ty && theta > ty;
+                var basis = thetaYield is double tyb
+                    ? new List<EvaluationBasisEntry>
+                    {
+                        new("杭頭のばね", beyondYield
+                            ? $"降伏後 (θy = {tyb:E2} rad を超える。要素分割に敏感)"
+                            : $"降伏前 (θy = {tyb:E2} rad)"),
+                    }
+                    : new List<EvaluationBasisEntry>();
+
                 // 判定は従来どおり「超えたら NG」
                 found.Add(new EvaluationItem
                 {
@@ -1440,6 +1461,8 @@ namespace PileDesign.ViewModels
                     Unit = "rad",
                     AxialForce = pileItem != null ? axialN_kN : null,
                     IsOk = !(theta > criterion.Limit),
+                    IsPileHeadBeyondYield = beyondYield,
+                    Basis = basis,
                 });
                 perItem[idx] = found;
             });
@@ -1450,6 +1473,33 @@ namespace PileDesign.ViewModels
                 if (perItem[i] != null) items.AddRange(perItem[i]);
             }
             return items;
+        }
+
+        /// <summary>
+        /// 杭頭の回転ばねの降伏点の回転角。解析したケースの M–θ の控え (<see cref="RotationalSpring.CaseMThetaSnapshots"/>) を使い、
+        /// 無ければ設計の軸力で曲線を作る。曲線を持たない (剛・線形の) ばねは null。
+        /// </summary>
+        private static double? PileHeadYieldRotation(RotationalSpring rs, AnalysisStepResult stepResult, PileBodyInput? body, double axialN_kN)
+        {
+            string key = RotationalSpring.MakeCaseKey(stepResult.LoadCase, stepResult.LoadCombination?.No ?? 0, stepResult.IsLiquefaction);
+            MomentRotationCurve? curve = rs.CaseMThetaSnapshots.TryGetValue(key, out var snapshot) ? snapshot.CurveXY : null;
+            if (curve == null && body != null)
+            {
+                try { curve = body.GetMThetaRelationship(axialN_kN)?.CurveXY; }
+                catch (Exception) { curve = null; }
+            }
+            return YieldRotationOf(curve);
+        }
+
+        /// <summary>
+        /// M–θ 曲線の降伏点の回転角: 原点を除いた折れ点が 3 つ以上あるとき、終点の 1 つ手前。
+        /// 場所打ち RC 杭の杭頭固定は (0, 微小値, θy, θu) なので θy になる。折れ点が足りない (線形・剛) ものは null。
+        /// </summary>
+        internal static double? YieldRotationOf(MomentRotationCurve? curve)
+        {
+            if (curve == null) return null;
+            var thetas = curve.Points.Select(p => p.Theta).Where(t => t > 0 && double.IsFinite(t)).OrderBy(t => t).ToList();
+            return thetas.Count >= 3 ? thetas[^2] : null;
         }
 
         /// <summary>

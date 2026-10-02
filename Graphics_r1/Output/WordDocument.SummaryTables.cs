@@ -1235,6 +1235,15 @@ namespace PileDesign.Output
                 AddText(body, "緩和受理を含む荷重ケース: " + string.Join(" / ", relaxedCases));
             }
 
+            // 杭頭のばねが降伏後の枝にある杭頭回転角。降伏後の回転角は要素分割に敏感なので、読む人に知らせる
+            if (result.PileHeadBeyondYieldCount > 0)
+            {
+                AddText(body,
+                    $"杭頭回転角のうち {result.PileHeadBeyondYieldCount} 件は、杭頭の回転ばねが降伏後の枝にある（根拠の欄に「降伏後」と示す）。"
+                    + "降伏後の回転角はモーメントのわずかな差で大きく変わり、杭頭付近の要素分割で 1 割程度動くことがある。"
+                    + "杭頭付近の要素分割を変えて結果の幅を確かめたうえで判断すること。");
+            }
+
             if (!includeLongTerm && longTermCount > 0)
             {
                 AddTableNote(body,

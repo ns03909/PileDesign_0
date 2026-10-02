@@ -53,6 +53,9 @@ namespace PileDesign.Models.Results
         /// </summary>
         public int RelaxedCount => Items.Count(i => i.IsFromRelaxedCase);
 
+        /// <summary>杭頭回転角のうち、杭頭の回転ばねが降伏後の枝にあるものの数。</summary>
+        public int PileHeadBeyondYieldCount => Items.Count(i => i.IsPileHeadBeyondYield);
+
         public bool IsEmpty => Items.Count == 0;
 
         /// <summary>
