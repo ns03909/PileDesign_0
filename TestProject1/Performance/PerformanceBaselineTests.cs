@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Services;
 using PileDesign.ViewModels;
 using System;
@@ -78,6 +78,37 @@ namespace TestProject1.Performance
             return new Measurement { Seconds = Math.Round(sw.Elapsed.TotalSeconds, 2), PeakWorkingSetMb = Math.Round(peak / 1024.0 / 1024.0, 0) };
         }
 
+        /// <summary>合成モデルで計算例9 の杭 (18 本) を何組並べるか。72 本と 144 本。</summary>
+        internal static readonly int[] SyntheticCopies = [4, 8];
+
+        internal const int SyntheticBasePiles = 18;
+
+        internal static string SyntheticCaseName(int copies) => $"水平解析 合成 (計算例9 の杭を {copies} 組・杭{copies * SyntheticBasePiles}本)";
+
+        /// <summary>
+        /// 時間の伸び方の上限: 杭の本数を 2 倍にしたときの時間の比を 2^k と見て、k がこれを超えたら知らせる。
+        /// 2026-10-02 の実測は 72 → 144 本で 1.88〜1.92 (時間がほぼ本数の 2 乗で伸びる)。これを悪くしないための上限で 2.3。
+        /// 比は PC に依らないので、基準を取った PC と違う PC でも確かめる。
+        /// </summary>
+        internal const double MaxScalingExponent = 2.3;
+
+        /// <summary>
+        /// 杭配置を X 方向にずらして <paramref name="copies"/> 組に増やす (画面の「杭のコピー」と同じ写し方)。
+        /// 杭体・地盤・荷重はそのまま。杭の番号は振り直し、土層-杭セットを作り直す。
+        /// </summary>
+        internal static void ReplicatePiles(PileDesign.Models.InputData.InputModel model, int copies)
+        {
+            var originals = model.PileLayoutItems.ToList();
+            double width = originals.Max(p => p.X) - originals.Min(p => p.X);
+            double dx = width + 5.0;
+            for (int k = 1; k < copies; k++)
+                foreach (var p in originals)
+                    model.PileLayoutItems.Add(PileDesign.Services.PileLayoutService.CopyForNewPile(p, k * dx, 0, 0));
+            int no = 1;
+            foreach (var p in model.PileLayoutItems) { p.No = no; p.PileNo = no; no++; }
+            model.GenerateSoilPiles();
+        }
+
         private static HeadlessHorizontalRunner.RunOptions Options(int l1, int l2) => new()
         {
             Level1Steps = l1,
@@ -133,6 +164,16 @@ namespace TestProject1.Performance
                     // レベル2 のステップが多い例題: 計算例10 (場所打ち杭・液状化)
                     cases["水平解析 計算例10 (L2 16ステップ)"] = Measure(() =>
                         HeadlessHorizontalRunner.RunExampleForViewModel("Example10", "PileExample10", Options(4, 16)));
+
+                    // 大きなモデル: 計算例9 (杭 18 本) の杭を並べ増やした合成モデル。同梱の例題は最大でも杭 42 本で、
+                    // 実務の 100〜200 本で時間・メモリがどう伸びるかが見えなかった
+                    foreach (int copies in SyntheticCopies)
+                    {
+                        var options = Options(4, 8);
+                        options.Customize = m => ReplicatePiles(m, copies);
+                        cases[SyntheticCaseName(copies)] = Measure(() =>
+                            HeadlessHorizontalRunner.RunExampleForViewModel("Example9", "PileExample9", options));
+                    }
                 }
                 catch (Exception ex) { failure = ex; }
             });
@@ -152,6 +193,20 @@ namespace TestProject1.Performance
             Directory.CreateDirectory(Path.GetDirectoryName(ResultPath)!);
             File.WriteAllText(ResultPath, JsonSerializer.Serialize(actual, json));
             foreach (var (name, m) in cases) Console.WriteLine($"{name}: {m.Seconds:N1} 秒・最大 {m.PeakWorkingSetMb:N0} MB");
+
+            // 伸び方は PC に依らないので、基準を取り直すときも、基準と違う PC でも確かめる
+            var scaling = new List<string>();
+            for (int i = 1; i < SyntheticCopies.Length; i++)
+            {
+                var small = cases[SyntheticCaseName(SyntheticCopies[i - 1])];
+                var large = cases[SyntheticCaseName(SyntheticCopies[i])];
+                double exponent = Math.Log(large.Seconds / small.Seconds) / Math.Log((double)SyntheticCopies[i] / SyntheticCopies[i - 1]);
+                Console.WriteLine($"杭 {SyntheticCopies[i - 1] * SyntheticBasePiles} → {SyntheticCopies[i] * SyntheticBasePiles} 本: 時間 {small.Seconds:N1} → {large.Seconds:N1} 秒 (本数の {exponent:F2} 乗)、" +
+                    $"最大メモリ {small.PeakWorkingSetMb:N0} → {large.PeakWorkingSetMb:N0} MB");
+                if (exponent > MaxScalingExponent)
+                    scaling.Add($"杭 {SyntheticCopies[i - 1] * SyntheticBasePiles} → {SyntheticCopies[i] * SyntheticBasePiles} 本で時間が本数の {exponent:F2} 乗で伸びています (上限 {MaxScalingExponent:F1} 乗)");
+            }
+            Assert.AreEqual(0, scaling.Count, "大きなモデルで時間の伸び方が大きすぎます:\n  " + string.Join("\n  ", scaling));
 
             if (Environment.GetEnvironmentVariable("PERF_UPDATE") == "1")
             {

@@ -26,6 +26,24 @@ namespace TestProject1.Performance
             }
             foreach (var kind in new[] { "水平解析", "計算書の出力", "保存" })
                 Assert.IsTrue(baseline.Cases.Keys.Any(k => k.StartsWith(kind)), $"「{kind}」の基準がありません");
+            foreach (int copies in PerformanceBaselineTests.SyntheticCopies)
+                Assert.IsTrue(baseline.Cases.ContainsKey(PerformanceBaselineTests.SyntheticCaseName(copies)),
+                    $"大きな合成モデル ({copies} 組) の基準がありません (tools/perf-check.ps1 -Update で取り直す)");
+        }
+
+        /// <summary>合成モデルは、杭を並べ増やし、増やした杭にも土層-杭セットが付いた (解析できる) モデルになる。</summary>
+        [TestMethod]
+        public void TheSyntheticModel_HasAllPilesReadyForAnalysis()
+        {
+            var (model, error) = IntegrationTests.BuildExampleInputModel("Example9", "PileExample9");
+            if (model == null) { Assert.Inconclusive(error); return; }
+            Assert.AreEqual(PerformanceBaselineTests.SyntheticBasePiles, model.PileLayoutItems.Count, "計算例9 の杭の本数が変わりました");
+
+            PerformanceBaselineTests.ReplicatePiles(model, 4);
+            Assert.AreEqual(4 * PerformanceBaselineTests.SyntheticBasePiles, model.PileLayoutItems.Count);
+            CollectionAssert.AllItemsAreUnique(model.PileLayoutItems.Select(p => (p.X, p.Y)).ToList(), "同じ位置に杭が重なっています");
+            CollectionAssert.AreEqual(Enumerable.Range(1, model.PileLayoutItems.Count).ToList(), model.PileLayoutItems.Select(p => p.No).ToList());
+            Assert.AreEqual(0, PileDesign.Services.CheckInputData.CollectAnalysisBlockers(model).Count, "合成モデルが解析の前の検査を通りません");
         }
 
         [TestMethod]
