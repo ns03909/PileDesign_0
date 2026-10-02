@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
 using PileDesign.ViewModels;
@@ -82,6 +82,8 @@ namespace TestProject1
         [DataTestMethod]
         [DataRow("Example9", "PileExample9")]   // 場所打ち RC 杭 18 本
         [DataRow("ExampleK8", "PileExampleK8")] // 関東支部 計算例8
+        [DataRow("Example3_4", "PileExample3_4")]
+        [DataRow("Example3_8_1", "PileExample3_8")]
         public void TranslatingTheWholeModel_DoesNotChangeTheEvaluation(string ground, string pile)
         {
             var original = Evaluate(ground, pile, null);

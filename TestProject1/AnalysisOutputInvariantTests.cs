@@ -89,7 +89,7 @@ namespace TestProject1
         /// 断面は複製して同じものを持たせる (参照を共有すると、一方の再計算が
         /// もう一方に及ぶ)。
         /// </summary>
-        private static int RefinePileSegments(InputModel model)
+        internal static int RefinePileSegments(InputModel model)
         {
             if (model.PileBodies == null) return 0;
 
@@ -128,7 +128,7 @@ namespace TestProject1
             return added;
         }
 
-        private static HeadlessHorizontalRunner.RunOptions LinearOptions(
+        internal static HeadlessHorizontalRunner.RunOptions LinearOptions(
             Action<InputModel>? extra = null) => new()
             {
                 Level1Steps = 2,
