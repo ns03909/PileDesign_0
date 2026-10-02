@@ -940,11 +940,13 @@ namespace PileDesign.Models.InputData
                     "粘性土" => Math.Min(150 * PileToeEta * PileToeNValue, 9000 * PileToeEta),
                     _ => Qpu
                 },
+                // 打込み杭: qp = 300·η·N̄ (基礎指針'19 表6.3.1)。以前は係数が 3 で、先端支持力が 100 分の 1 になっていた。
+                // N̄ は 60 で頭打ちなので 300·η·N̄ ≤ 18,000η となり、上限 18,000 は η ≤ 1 では効かない
                 PileConstructionTypeNames.Driven => PileToeGranularityClass switch
                 {
-                    "砂質土" => Math.Min(3 * PileToeEta * PileToeNValue, 18000),
-                    "礫質土" => Math.Min(3 * PileToeEta * PileToeNValue, 18000),
-                    "粘性土" => Math.Min(3 * PileToeEta * PileToeNValue, 18000),
+                    "砂質土" => Math.Min(300 * PileToeEta * PileToeNValue, 18000),
+                    "礫質土" => Math.Min(300 * PileToeEta * PileToeNValue, 18000),
+                    "粘性土" => Math.Min(300 * PileToeEta * PileToeNValue, 18000),
                     _ => Qpu
                 },
                 _ => Qpu
