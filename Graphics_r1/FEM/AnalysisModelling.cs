@@ -43,8 +43,10 @@ namespace PileDesign.FEM
         /// 杭は「せん断断面積 = 断面積」、基礎梁は (5/6)bh と作り方が違うのに
         /// 同じキャッシュを共有している。鍵に無いと、断面積・断面二次モーメントが一致した
         /// 組合せで一方のせん断断面積がもう一方に使われる。
+        /// 材料も<b>材料そのもの</b> (E とポアソン比で使い回したもの) を鍵にする。E だけだと、
+        /// 寸法と E が同じでポアソン比だけ違う基礎梁が、先に作った材料 (せん断弾性係数) で解かれる。
         /// </summary>
-        private readonly ConcurrentDictionary<(double, double, double, double, double, double, double), Section> _sectionCache = new();
+        private readonly ConcurrentDictionary<(Material, double, double, double, double, double, double), Section> _sectionCache = new();
 
         // 最適化用: 共通Boundaryオブジェクト（毎回newしない）
         private static readonly Boundary SoilNodeBoundary = new(false, false, true, true, true, true);
@@ -331,7 +333,7 @@ namespace PileDesign.FEM
             // 同じなので、丸めなくても使い回しは効く。
             // 杭はせん断断面積に断面積をそのまま使う (基礎梁は (5/6)bh)。両者が同じキャッシュを
             // 共有するので、せん断断面積も鍵に入れる。
-            var sectionKey = (area, torsionalInertia, inertia, inertia, youngsModulus, area, area);
+            var sectionKey = (material, area, torsionalInertia, inertia, inertia, area, area);
             var section = _sectionCache.GetOrAdd(sectionKey, _ => new Section(material, area, area, area, torsionalInertia, inertia, inertia));
 
             var beam = new Beam("beam", section, upperNode, lowerNode, 1.0, 1.0)
@@ -1118,7 +1120,7 @@ namespace PileDesign.FEM
                 k => new Material(k.E, k.Nu));
 
             // Section キャッシュ。鍵は値そのもの (丸めない。理由は杭の要素の Section キャッシュと同じ)
-            var sectionKey = (area, torsionalMoment, iy, iz, youngsModulus, shearAreaY, shearAreaZ);
+            var sectionKey = (material, area, torsionalMoment, iy, iz, shearAreaY, shearAreaZ);
             var section = _sectionCache.GetOrAdd(sectionKey, _ => new Section(material, area, shearAreaY, shearAreaZ, torsionalMoment, iy, iz));
 
             return section;
@@ -1166,8 +1168,7 @@ namespace PileDesign.FEM
             //   軸変位は 10000 kN 載荷時 0.06mm 程度に抑えられ、剛体扱いとして実用上問題なし。
             var rigidLinkMat = _materialCache.GetOrAdd((FemConstants.RigidLinkYoungModulus, 0.2),
                 k => new Material(k.E, k.Nu));
-            var rigidLinkSecKey = (1.0, 0.14, Math.Round(1.0 / 12.0, 5), Math.Round(1.0 / 12.0, 5),
-                FemConstants.RigidLinkYoungModulus, 1.0, 1.0);
+            var rigidLinkSecKey = (rigidLinkMat, 1.0, 0.14, 1.0 / 12.0, 1.0 / 12.0, 1.0, 1.0);
             var rigidLinkSec = _sectionCache.GetOrAdd(rigidLinkSecKey,
                 _ => new Section(rigidLinkMat, 1.0, 1.0, 1.0, 0.14, 1.0 / 12.0, 1.0 / 12.0));
 

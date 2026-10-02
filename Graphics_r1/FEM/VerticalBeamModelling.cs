@@ -46,9 +46,9 @@ namespace PileDesign.FEM
         private Dictionary<Guid, string> _pileGuidToFemName = [];
 
         // Material/Section キャッシュ
-        // 鍵の取り方は AnalysisModelling と同じ理由 (E だけ / せん断断面積抜きだと取り違える)
+        // 鍵の取り方は AnalysisModelling と同じ (材料そのもの・せん断断面積も入れ、丸めない)
         private readonly ConcurrentDictionary<(double E, double Nu), Material> _materialCache = new();
-        private readonly ConcurrentDictionary<(double, double, double, double, double, double, double), Section> _sectionCache = new();
+        private readonly ConcurrentDictionary<(Material, double, double, double, double, double, double), Section> _sectionCache = new();
 
         // 鉛直解析の共通Boundary
         private static readonly Boundary VerticalFreeBoundary = new(true, true, false, false, false, true);  // Ux,Uy,Rz固定, Uz,Rx,Ry自由
@@ -385,15 +385,8 @@ namespace PileDesign.FEM
 
             var material = _materialCache.GetOrAdd((youngsModulus, poissonRatio),
                 k => new Material(k.E, k.Nu));
-            var sectionKey = (
-                Math.Round(area, 5),
-                Math.Round(torsionalMoment, 5),
-                Math.Round(iy, 5),
-                Math.Round(iz, 5),
-                Math.Round(youngsModulus, 0),
-                Math.Round(shearAreaY, 5),
-                Math.Round(shearAreaZ, 5)
-            );
+            // 鍵は値そのもの (丸めない)。AnalysisModelling の鍵は丸めをやめたが、この写しだけ丸めたまま残っていた
+            var sectionKey = (material, area, torsionalMoment, iy, iz, shearAreaY, shearAreaZ);
             var section = _sectionCache.GetOrAdd(sectionKey, _ => new Section(material, area, shearAreaY, shearAreaZ, torsionalMoment, iy, iz));
 
             return section;

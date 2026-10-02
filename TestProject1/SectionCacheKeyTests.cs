@@ -39,15 +39,24 @@ namespace TestProject1
             TestSource.AssertScanned(checkedBeams, 50, "杭の要素");
         }
 
-        /// <summary>断面の使い回しの鍵は値そのもの (丸めると、違う断面が同じ鍵になる)。</summary>
-        [TestMethod]
-        public void SectionCacheKeys_AreNotRounded()
+        /// <summary>
+        /// 断面の使い回しの鍵は値そのもの (丸めると、違う断面が同じ鍵になる)。材料は材料そのものを鍵にする
+        /// (E だけだと、ポアソン比だけ違う梁が先に作った材料で解かれる)。
+        /// 基礎梁の鉛直の解析 (VerticalBeamModelling) は AnalysisModelling の写しで、こちらだけ丸めたまま残っていた。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("AnalysisModelling.cs", 2)]
+        [DataRow("VerticalBeamModelling.cs", 1)]
+        public void SectionCacheKeys_AreNotRounded_AndHoldTheMaterial(string file, int expected)
         {
-            string src = TestSource.Read("Graphics_r1", "FEM", "AnalysisModelling.cs");
+            string src = TestSource.Read("Graphics_r1", "FEM", file);
             var keys = Regex.Matches(src, @"var sectionKey = \(([^;]*)\);");
-            TestSource.AssertScanned(keys.Count, 2, "断面の使い回しの鍵");
+            TestSource.AssertScanned(keys.Count, expected, "断面の使い回しの鍵");
             foreach (Match k in keys)
-                Assert.IsFalse(k.Groups[1].Value.Contains("Math.Round"), "断面の使い回しの鍵を丸めています: " + k.Value);
+            {
+                Assert.IsFalse(k.Groups[1].Value.Contains("Math.Round"), $"{file}: 断面の使い回しの鍵を丸めています: " + k.Value);
+                StringAssert.StartsWith(k.Groups[1].Value.Trim(), "material", $"{file}: 断面の使い回しの鍵に材料が入っていません: " + k.Value);
+            }
         }
     }
 }
