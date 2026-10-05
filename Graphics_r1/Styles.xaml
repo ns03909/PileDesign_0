@@ -3,6 +3,7 @@
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
                     xmlns:common="clr-namespace:PileDesign.Common"
+                    xmlns:conv="clr-namespace:PileDesign.Converters"
                     xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
                     xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
                     xmlns:wpfMath="clr-namespace:WpfMath.Controls;assembly=WpfMath"
@@ -332,7 +333,26 @@
          赤縁になり ToolTip にエラーメッセージが出る。
          opt-in (StaticResource 参照) なので既存 TextBox には影響しない。
     -->
+    <!-- 検証エラーの文を欄の直下に出す。以前は赤縁とツールチップだけで、
+         何がいけないのかはマウスを載せないと分からなかった。
+         数値に読めない (WPF の英語の変換エラー) は日本語に言い換える (ValidationErrorMessageConverter)。
+         NumericInput の欄は、自前のテンプレートが無ければこれを自動で付ける。 -->
+    <conv:ValidationErrorMessageConverter x:Key="ValidationErrorMessage"/>
+    <ControlTemplate x:Key="InlineValidationErrorTemplate">
+        <StackPanel>
+            <!-- 赤縁は欄の側 (ValidatedTextBoxStyle のトリガー) が付ける -->
+            <AdornedElementPlaceholder x:Name="Placeholder"/>
+            <Border Background="#FFF5F5" BorderBrush="{StaticResource ErrorBrush}" BorderThickness="1"
+                    Padding="4,1" Margin="0,1,0,0" HorizontalAlignment="Left" IsHitTestVisible="False">
+                <TextBlock Text="{Binding /, Converter={StaticResource ValidationErrorMessage}}"
+                           Foreground="{StaticResource ErrorBrush}" FontSize="11"
+                           TextWrapping="Wrap" MaxWidth="320"/>
+            </Border>
+        </StackPanel>
+    </ControlTemplate>
+
     <Style x:Key="ValidatedTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Validation.ErrorTemplate" Value="{StaticResource InlineValidationErrorTemplate}"/>
         <Style.Triggers>
             <Trigger Property="Validation.HasError" Value="True">
                 <Setter Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>

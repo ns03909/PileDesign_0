@@ -307,7 +307,7 @@
                                                 <TextBlock Width="150" HorizontalAlignment="Right"><Run Text="設計基準強度F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                 <TextBox Text="{Binding PileSection.ConcreteFc, UpdateSourceTrigger=LostFocus}"
                                                           Width="50"
-                                                          Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="1" common:NumericInput.Max="200"
+                                                          Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="12" common:NumericInput.Max="200"
                                                           GotFocus="TextBox_GotFocus"
                                                           PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                           PreviewKeyDown="TextBox_PreviewKeyDown"
@@ -380,7 +380,7 @@
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Width="150" HorizontalAlignment="Right"><Run Text="設計基準強度F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     <TextBox Text="{Binding PileSection.ConcreteFc, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="1" common:NumericInput.Max="200"
+                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="12" common:NumericInput.Max="200"
                                                               GotFocus="TextBox_GotFocus"
                                                               PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
@@ -440,7 +440,7 @@
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Width="150" HorizontalAlignment="Right"><Run Text="設計基準強度F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     <TextBox Text="{Binding PileSection.ConcreteFc, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="1" common:NumericInput.Max="200"
+                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="12" common:NumericInput.Max="200"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
@@ -587,7 +587,7 @@
                                                            SelectionChanged="ComboBox_SelectionChanged"/>
                                                 <TextBlock Text ="@" Width="20"/>
                                                 <TextBox Text="{Binding PileSection.HoopSpacing, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                          Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="1" common:NumericInput.Max="1000"
+                                                          Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="10" common:NumericInput.Max="1000"
                                                           GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                           PreviewKeyDown="TextBox_PreviewKeyDown"
                                                           PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
@@ -663,7 +663,7 @@
                                                                SelectionChanged="ComboBox_SelectionChanged"/>
                                                     <TextBlock Text ="@" Width="20"/>
                                                     <TextBox Text="{Binding PileSection.HoopSpacing, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="1" common:NumericInput.Max="1000"
+                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="10" common:NumericInput.Max="1000"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
@@ -756,7 +756,7 @@
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Width="150" HorizontalAlignment="Right"><Run Text="設計基準強度F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     <TextBox Text="{Binding PileSection.ConcreteFc, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="1" common:NumericInput.Max="200"
+                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="12" common:NumericInput.Max="200"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"

@@ -64,7 +64,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="安全限界回転角 θu (rad)" Grid.Column="0" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding InsituRcUltimateRotationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
+                        <TextBox Style="{StaticResource ValidatedTextBoxStyle}" Text="{Binding InsituRcUltimateRotationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
                                  Grid.Column="1" Margin="0,0,0,4"/>
                     </Grid>
                 </StackPanel>
@@ -99,15 +99,15 @@
                         </Grid.RowDefinitions>
 
                         <TextBlock Text="使用限界変形角 (rad)" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding ServiceDeformationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
+                        <TextBox Style="{StaticResource ValidatedTextBoxStyle}" Text="{Binding ServiceDeformationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
                                  Grid.Row="0" Grid.Column="1" Margin="0,0,0,4"/>
 
                         <TextBlock Text="損傷限界変形角 (rad)" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding DamageDeformationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
+                        <TextBox Style="{StaticResource ValidatedTextBoxStyle}" Text="{Binding DamageDeformationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
                                  Grid.Row="1" Grid.Column="1" Margin="0,0,0,4"/>
 
                         <TextBlock Text="終局限界変形角 (rad)" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center"/>
-                        <TextBox Text="{Binding UltimateDeformationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
+                        <TextBox Style="{StaticResource ValidatedTextBoxStyle}" Text="{Binding UltimateDeformationAngleLimit, StringFormat={}{0:0.#####}, UpdateSourceTrigger=LostFocus}"
                                  Grid.Row="2" Grid.Column="1" Margin="0,0,0,4"/>
                     </Grid>
 
@@ -392,7 +392,7 @@
                               ToolTip="各杭の沈下量（単杭沈下 + 群杭沈下、長期）を許容沈下量と比べます。&#x0a;既定は検定なしです。群杭沈下解析を実行していない場合、応答値は単杭沈下量に等しくなります。"/>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="許容沈下量" VerticalAlignment="Center" Width="150"/>
-                        <TextBox Width="90" Text="{Binding AllowableSettlement_mm, Mode=TwoWay, StringFormat=N1}"
+                        <TextBox Style="{StaticResource ValidatedTextBoxStyle}" Width="90" Text="{Binding AllowableSettlement_mm, Mode=TwoWay, StringFormat=N1}"
                                  IsEnabled="{Binding CanEditAllowableSettlement}"
                                  ToolTipService.ShowOnDisabled="True"
                                  ToolTip="設計者が定める許容沈下量です。初期値 20.0 mm は入力を促すための値で、規準値ではありません。"/>
@@ -489,11 +489,11 @@
                         </Grid.RowDefinitions>
                         <TextBlock Text="β1（設計式の信頼性）" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"
                                    ToolTip="設計式の信頼性に基づく低減係数です。1.0 以下の値とします。"/>
-                        <TextBox Text="{Binding ScUltimateShearBeta1, StringFormat={}{0:0.00}, UpdateSourceTrigger=LostFocus}"
+                        <TextBox Style="{StaticResource ValidatedTextBoxStyle}" Text="{Binding ScUltimateShearBeta1, StringFormat={}{0:0.00}, UpdateSourceTrigger=LostFocus}"
                                  Grid.Row="0" Grid.Column="1" Margin="0,0,0,4"/>
                         <TextBlock Text="β2（変形性能・軸力保持性能）" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"
                                    ToolTip="杭の変形性能および軸力保持性能に基づく低減係数です。1.0 以下の値とします。&#x0a;コンクリートの圧縮破壊や鋼管の座屈が変形性能に影響を与える場合は 0.75 以下とすることが望ましい、とされています。"/>
-                        <TextBox Text="{Binding ScUltimateShearBeta2, StringFormat={}{0:0.00}, UpdateSourceTrigger=LostFocus}"
+                        <TextBox Style="{StaticResource ValidatedTextBoxStyle}" Text="{Binding ScUltimateShearBeta2, StringFormat={}{0:0.00}, UpdateSourceTrigger=LostFocus}"
                                  Grid.Row="1" Grid.Column="1" Margin="0,0,0,4"/>
                     </Grid>
                     <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
