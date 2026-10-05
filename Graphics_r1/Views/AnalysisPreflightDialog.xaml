@@ -7,6 +7,9 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="White">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="PreflightBoolToVisibility"/>
+    </Window.Resources>
     <Window.Triggers>
         <EventTrigger RoutedEvent="Window.Loaded">
             <BeginStoryboard>
@@ -87,35 +90,57 @@
                                FontWeight="SemiBold" Foreground="#8A6200"
                                VerticalAlignment="Center"/>
                 </StackPanel>
-                <ItemsControl x:Name="WarningList">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="0,1">
-                                <TextBlock Text="&#x2022;" Foreground="#8A6200" Margin="0,0,6,0"/>
-                                <TextBlock Text="{Binding}" Foreground="#5C4500" TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <!-- 警告が多いと画面が縦に伸び、実行・キャンセルのボタンが画面の外に出ていた。高さに上限を置いてスクロールする -->
+                <ScrollViewer x:Name="WarningScroller" MaxHeight="260" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                    <ItemsControl x:Name="WarningList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="&#x2022;" Foreground="#8A6200" Margin="0,0,6,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Text}" Foreground="#5C4500" TextWrapping="Wrap"/>
+                                    <!-- 警告の場所の入力画面へ移る (解析は取りやめ、このウィンドウと解析のウィンドウを閉じてから開く) -->
+                                    <Button Grid.Column="2" Content="入力を確認" Margin="8,0,0,0" Padding="6,0" VerticalAlignment="Top"
+                                            Click="NavigateButton_Click" Tag="{Binding}"
+                                            ToolTip="{Binding NavigateToolTip}"
+                                            Visibility="{Binding CanNavigate, Converter={StaticResource PreflightBoolToVisibility}}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
                 <TextBlock Text="このまま実行することもできますが、必要に応じて入力を見直してください。"
                            Foreground="#8A6200" FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
 
         <!-- フッター -->
+        <!-- チェックは 1 行を使う。ボタンと同じ行だと文言が長くて切れ、キャンセルのボタンに重なった (実機で確認) -->
         <Grid Grid.Row="4" Margin="0,16,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <CheckBox Grid.Column="0" x:Name="DoNotShowAgainCheckBox"
-                      Content="次回から表示しない" Foreground="#888"
-                      VerticalAlignment="Center"/>
-            <Button Grid.Column="1" x:Name="CancelButton" Content="キャンセル(_C)" IsCancel="True"
+            <!-- 省略するのは警告がないときだけ。警告があるときは、この設定に関係なく必ず表示する
+                 (以前は警告があっても確認ごと出なくなり、警告を見ずに解析が始まった) -->
+            <CheckBox Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,10" x:Name="DoNotShowAgainCheckBox"
+                      Content="警告がないときは、次回からこの確認を省略する" Foreground="#888"
+                      VerticalAlignment="Center" TextBlock.FontSize="11"
+                      ToolTip="入力に注意点 (警告) があるときは、この設定に関係なく表示します"/>
+            <Button Grid.Row="1" Grid.Column="1" x:Name="CancelButton" Content="キャンセル(_C)" IsCancel="True"
                     Style="{StaticResource DialogCancelButtonStyle}"
                     ToolTip="Esc / Alt+C / Tab で選択して Space"/>
-            <Button Grid.Column="2" x:Name="OkButton" Content="実行(_E)" IsDefault="True"
+            <Button Grid.Row="1" Grid.Column="2" x:Name="OkButton" Content="実行(_E)" IsDefault="True"
                     Click="OkButton_Click"
                     Style="{StaticResource PrimaryDialogButtonStyle}"
                     ToolTip="Enter / Alt+E / Tab で選択して Space"/>

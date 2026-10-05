@@ -1785,7 +1785,8 @@ namespace PileDesign.ViewModels
                 : $"L1={level1Count} / L2={level2Count}";
 
             // 重い順に、重さと推奨する操作を付けて並べる
-            var inputWarnings = PileDesign.Services.CheckInputData.DescribeInputWarnings(InputModel);
+            var inputWarnings = PileDesign.Services.DiagnosticSelection.BySeverity(
+                PileDesign.Services.CheckInputData.CollectInputWarningDiagnostics(InputModel));
 
             return new Views.AnalysisPreflightSummary(
                 AnalysisName: "水平解析",
@@ -2049,8 +2050,16 @@ namespace PileDesign.ViewModels
                 var summary = BuildPreflightSummary();
                 var owner = Application.Current?.Windows.OfType<System.Windows.Window>().FirstOrDefault(w => w.IsActive)
                             ?? Application.Current?.MainWindow;
-                if (!Views.AnalysisPreflightDialog.Confirm(owner, summary))
+                if (!Views.AnalysisPreflightDialog.Confirm(owner, summary, out var navigateTo))
+                {
+                    // 警告の「入力を確認」: 解析のウィンドウを閉じたあとに、その入力画面を開く
+                    if (navigateTo != null)
+                    {
+                        InputModel.RequestInputNavigation(navigateTo);
+                        RequestClose?.Invoke(this, EventArgs.Empty);
+                    }
                     return;
+                }
             }
 
             IsAnalysisRunning = true;
