@@ -3288,10 +3288,13 @@ namespace PileDesign.Models.InputData
                     (PileSectionType == PileTypeNames.SteelPipeConcreteSection && PipeTs < 6) ? "([強度と変形性能]4.1,3)6未満" :
                     (PileSectionType == PileTypeNames.SteelPipe && PipeTs > 6) ? "([強度と変形性能]8.1.4(2))6未満" : "";
 
+                // 1 mm 未満の肉厚が「0」に見えないよう、端数は 2 桁まで出す
                 SelectedPileSectionSpecification.Add(
-                    new Spec("鋼管厚", "Ts", $"{PipeTs:N0}", "mm", notePipeTs));
+                    new Spec("鋼管厚", "Ts", $"{PipeTs:#,0.##}", "mm", notePipeTs));
+                // 肉厚が腐食代以下だと、腐食を考えた鋼管の断面積が負になる (入力の診断でも止める)
+                string noteCorrosion = CorrosionDepth >= PipeTs ? "肉厚 Ts 以上 (腐食後の肉厚が 0 以下)" : "";
                 SelectedPileSectionSpecification.Add(
-                    new Spec("腐食代", "", $"{CorrosionDepth:N1}", "mm"));
+                    new Spec("腐食代", "", $"{CorrosionDepth:N1}", "mm", noteCorrosion));
                 string noteDonTs =
                     (PileSectionType == PileTypeNames.SteelPipeConcreteSection && PipeDia / PipeTs > 125) ? "([強度と変形性能]4.1,3)125より大" :
                     (PileSectionType == PileTypeNames.SteelPipe && PipeDia / PipeTs > 100) ? "([強度と変形性能]8.1.4(2))100より大" : "";

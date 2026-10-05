@@ -240,90 +240,18 @@ namespace PileDesign.ViewModels
         {
             try
             {
-                // 対象施工タイプであり、PileSection が渡されている場合のみ処理
-                if (string.Equals(PileBodyType, PileTypeNames.InsituSteelPipeConcrete, StringComparison.Ordinal) && PileSection != null)
-                {
-                    // 杭径（表示は最上段の杭径 + 200mm）
-                    double baseDia = 0.0;
-                    try { baseDia = PileSection.PileDiameter; } catch { baseDia = 0.0; }
+                // 杭頭部の値 (コンクリート径・杭体側の主筋など) は最上段の杭断面から導く。
+                // 導き方はモデル側 (PileTop.SyncFromTopSection) に置き、解析の入口と読み込みの仕上げからも同じものを呼ぶ。
+                // 以前はここにだけあり、この画面を開くまで値が入らなかった (鋼管杭 + 鉄筋定着工法は開くまで剛接合、
+                // 杭断面の径を変えても開き直すまで杭頭部は古い径のまま)。
+                PileTop.SyncFromTopSection(PileBodyType, PileSection);
 
-                    PileTop.ConcreteOutDia = Math.Round(baseDia + 200.0, 3);
-                    PileTop.MainBarCenterCover2 = PileSection.MainBarCenterCover + 100;
-
-                    // 主筋情報（存在するフィールドを安全に参照）
-                    try { PileTop.MainBarSize2 = PileSection.MainBarSize ?? string.Empty; } catch { PileTop.MainBarSize2 = string.Empty; }
-                    try { PileTop.MainBarNum2 = PileSection.MainBarNum; } catch { PileTop.MainBarNum2 = 0; }
-                    try { PileTop.MainBarSpec2 = PileSection.MainBarSpec; } catch { PileTop.MainBarSpec2 = "SD390"; }
-
-                    // 鋼管情報（場所打ち鋼管コンクリート杭向け）
-                    try { DisplayTopSectionPipeDia = PileSection.PipeDia; } catch { DisplayTopSectionPipeDia = 0.0; }
-                    try { DisplayTopSectionPipeTs = PileSection.PipeTs; } catch { DisplayTopSectionPipeTs = 0.0; }
-                }
-                else if (string.Equals(PileBodyType, PileTypeNames.PrecastConcrete, StringComparison.Ordinal) && PileSection != null)
-                {
-                    // 杭径（表示は最上段の杭径 + 200mm）
-                    double baseDia = 0.0;
-                    try { baseDia = PileSection.PileDiameter; } catch { baseDia = 0.0; }
-                    PileTop.ConcreteOutDia = Math.Round(baseDia, 3);
-                    double thickness = 0.0;
-                    try { thickness = PileSection.ConcreteThickness; } catch { thickness = 0.0; }
-
-                    PileTop.ConcreteThickness = Math.Round(thickness, 3);
-                    PileTop.MainBarCenterCover2 = PileSection.MainBarCenterCover;
-
-                    // 主筋情報（存在するフィールドを安全に参照）
-                    PileTop.MainBarSize2 = string.Empty;
-                    PileTop.MainBarNum2 = 0;
-                    PileTop.MainBarSpec2 = "SD390";
-
-                    //// 鋼管情報（場所打ち鋼管コンクリート杭向け）
-                    //try { DisplayTopSectionPipeDia = PileSection.PipeDia; } catch { DisplayTopSectionPipeDia = 0.0; }
-                    //try { DisplayTopSectionPipeTs = PileSection.PipeTs; } catch { DisplayTopSectionPipeTs = 0.0; }
-                }
-                else if (string.Equals(PileBodyType, PileTypeNames.InsituRc, StringComparison.Ordinal) && PileSection != null)
-                {
-                    // 場所打ち鉄筋コンクリート杭 (キャプテンパイル工法 等の半固定接合で使用)
-                    // 杭径は最上段の杭径をそのまま表示
-                    double baseDia = 0.0;
-                    try { baseDia = PileSection.PileDiameter; } catch { baseDia = 0.0; }
-                    PileTop.ConcreteOutDia = Math.Round(baseDia, 3);
-
-                    try { PileTop.MainBarCenterCover2 = PileSection.MainBarCenterCover; } catch { PileTop.MainBarCenterCover2 = 0; }
-                    PileTop.MainBarSize2 = string.Empty;
-                    PileTop.MainBarNum2 = 0;
-                    PileTop.MainBarSpec2 = "SD390";
-                }
-                else if (string.Equals(PileBodyType, PileTypeNames.SteelPipe, StringComparison.Ordinal) && PileSection != null)
-                {
-                    // 鋼管杭 + 鉄筋定着工法
-                    // 杭径 (= 下層 RC 径) は SteelPipePileLowerRcDiameter 公式で自動算定
-                    // (PileSection.PileDiameter は腐食代考慮済みの有効径)
-                    double baseDia = 0.0;
-                    try { baseDia = PileSection.PileDiameter; } catch { baseDia = 0.0; }
-                    PileTop.ConcreteOutDia = Math.Round(PileTop.SteelPipePileLowerRcDiameter(baseDia), 3);
-
-                    // 鋼管情報を表示
-                    try { DisplayTopSectionPipeDia = PileSection.PipeDia; } catch { DisplayTopSectionPipeDia = 0.0; }
-                    try { DisplayTopSectionPipeTs = PileSection.PipeTs; } catch { DisplayTopSectionPipeTs = 0.0; }
-
-                    // 主筋 (MainBars2) は editable のため初期値のみセット (既存値があれば残す)。
-                    // 鋼管杭の杭体には鉄筋情報は持たないため PileSection からは引かない。
-                    if (PileTop.MainBarNum2 == 0 && string.IsNullOrEmpty(PileTop.MainBarSize2))
-                    {
-                        PileTop.MainBarSize2 = "D29";
-                        PileTop.MainBarSpec2 = "SD390";
-                        PileTop.MainBarCenterCover2 = 300;
-                    }
-                }
-                else
-                {
-                    // 非該当時は初期化（表示を消したいとき）
-                    PileTop.ConcreteOutDia = 0.0;
-                    PileTop.MainBarSize2 = string.Empty;
-                    PileTop.MainBarNum2 = 0;
-                    DisplayTopSectionPipeDia = 0.0;
-                    DisplayTopSectionPipeTs = 0.0;
-                }
+                // 鋼管の表示 (表示だけの値)
+                bool showsPipe = PileSection != null
+                    && (string.Equals(PileBodyType, PileTypeNames.InsituSteelPipeConcrete, StringComparison.Ordinal)
+                        || string.Equals(PileBodyType, PileTypeNames.SteelPipe, StringComparison.Ordinal));
+                DisplayTopSectionPipeDia = showsPipe ? PileSection!.PipeDia : 0.0;
+                DisplayTopSectionPipeTs = showsPipe ? PileSection!.PipeTs : 0.0;
 
                 // 鉄筋定着工法 のとき諸元 (SelectedPileTopSpecification) を再構築
                 if (string.Equals(PileTopType, "鉄筋定着工法", StringComparison.Ordinal))

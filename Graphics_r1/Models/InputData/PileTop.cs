@@ -698,6 +698,57 @@ namespace PileDesign.Models.InputData
         /// 「戻したつもりで戻っていない」形で静かに間違える。
         /// (<c>DeepCopyIsActuallyDeepTests</c> が見張る)
         /// </summary>
+        /// <summary>
+        /// 杭頭部の値のうち、最上段の杭断面から導くもの (コンクリート径・肉厚・杭体側の主筋) を入れ直す。
+        ///
+        /// 以前は杭頭部ウィンドウを開いたとき (ViewModel の生成時) にだけ導いていたので、
+        ///   ・一度も開いていない杭体は値が 0 のまま解析された (鋼管杭 + 鉄筋定着工法は回転ばねを組めず剛接合。設計例集 3.5)
+        ///   ・杭断面の径を変えても、開き直すまで杭頭部は古い径のまま解析された
+        /// 画面・解析の入口 (<see cref="Services.CheckInputData.ValidateForAnalysis"/>)・読み込みの仕上げから同じものを呼ぶ。
+        /// 導き方は画面にあったものと同じ (画面を開けば以前から必ずこの値になっていた)。
+        /// </summary>
+        internal void SyncFromTopSection(string? pileBodyType, PileSection? section)
+        {
+            if (section == null) return;
+            double baseDia = section.PileDiameter;
+            switch (pileBodyType)
+            {
+                case PileTypeNames.InsituSteelPipeConcrete:
+                    // 杭頭部の径は最上段の杭径 + 200mm。杭体側の主筋は最上段の主筋
+                    ConcreteOutDia = Math.Round(baseDia + 200.0, 3);
+                    MainBarCenterCover2 = section.MainBarCenterCover + 100;
+                    MainBarSize2 = section.MainBarSize ?? string.Empty;
+                    MainBarNum2 = section.MainBarNum;
+                    MainBarSpec2 = section.MainBarSpec;
+                    break;
+                case PileTypeNames.PrecastConcrete:
+                    ConcreteOutDia = Math.Round(baseDia, 3);
+                    ConcreteThickness = Math.Round(section.ConcreteThickness, 3);
+                    MainBarCenterCover2 = section.MainBarCenterCover;
+                    MainBarSize2 = string.Empty;
+                    MainBarNum2 = 0;
+                    MainBarSpec2 = "SD390";
+                    break;
+                case PileTypeNames.InsituRc:
+                    ConcreteOutDia = Math.Round(baseDia, 3);
+                    MainBarCenterCover2 = section.MainBarCenterCover;
+                    MainBarSize2 = string.Empty;
+                    MainBarNum2 = 0;
+                    MainBarSpec2 = "SD390";
+                    break;
+                case PileTypeNames.SteelPipe:
+                    // 下層 RC 径は公式で導く (杭径は腐食代を考えた有効径)。杭体側の主筋は入力なので、空のときだけ初期値
+                    ConcreteOutDia = Math.Round(SteelPipePileLowerRcDiameter(baseDia), 3);
+                    if (MainBarNum2 == 0 && string.IsNullOrEmpty(MainBarSize2))
+                    {
+                        MainBarSize2 = "D29";
+                        MainBarSpec2 = "SD390";
+                        MainBarCenterCover2 = 300;
+                    }
+                    break;
+            }
+        }
+
         public PileTop DeepCopy()
         {
             var copy = CloneWithoutSubscribers<PileTop>();

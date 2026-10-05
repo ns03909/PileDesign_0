@@ -550,6 +550,10 @@ namespace PileDesign.Models.InputData
 
         public PileTop PileTop = new();
 
+        /// <summary>杭頭部の、最上段の杭断面から導く値を入れ直す (<see cref="PileTop.SyncFromTopSection"/>)。</summary>
+        internal void SyncPileTopFromTopSection()
+            => PileTop?.SyncFromTopSection(PileBodyType, PileBodySegments?.FirstOrDefault()?.PileSection);
+
         //public string PileBodyType { get; set; }
         private string _pileBodyType;
         public string PileBodyType

@@ -217,12 +217,16 @@ namespace PileDesign.Services
                             segment.PileSection.ConcreteOutDia = segDto.ConcreteOutDia.Value;
                         if (segDto.ConcreteThickness.HasValue)
                             segment.PileSection.ConcreteThickness = segDto.ConcreteThickness.Value;
-                        if (segDto.MainBarDr.HasValue)
-                            segment.PileSection.MainBarDr = segDto.MainBarDr.Value;
                         if (segDto.PipeTs.HasValue)
                             segment.PileSection.PipeTs = segDto.PipeTs.Value;
                         if (segDto.PipeDia.HasValue)
                             segment.PileSection.PipeDia = segDto.PipeDia.Value;
+                        // 主筋の配置直径は鋼管の寸法より後に入れる。配置直径を入れると、その時点のコンクリート径から
+                        // 重心かぶり厚を逆算して持つ (以後は配置直径をかぶり厚から導く)。鋼管の寸法より先に入れると、
+                        // 既定の鋼管 (1200×16、コンクリート径 1168) からかぶり厚を逆算してしまい、
+                        // 設計例集 3.8 の鋼管コンクリート部はかぶり厚 −366 mm・配置直径 2894 mm (コンクリート径 2162 mm の外) になっていた
+                        if (segDto.MainBarDr.HasValue)
+                            segment.PileSection.MainBarDr = segDto.MainBarDr.Value;
                         if (segDto.MainBarNum.HasValue)
                             segment.PileSection.MainBarNum = segDto.MainBarNum.Value;
                         if (!string.IsNullOrEmpty(segDto.MainBarSize))
@@ -237,6 +241,8 @@ namespace PileDesign.Services
                     pileBodyList.Add(pileBody);
                 }
                 inputModel.PileBodies = new ObservableCollection<PileBodyInput>(pileBodyList);
+                // 杭頭部の、杭断面から導く値 (例題の読み込みは読み込みの仕上げを通らない)
+                inputModel.SyncPileTopsFromSections();
             }
             else
             {

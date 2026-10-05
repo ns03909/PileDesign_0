@@ -1522,6 +1522,16 @@ namespace PileDesign.Models.InputData
         /// 旧データとの互換性: IsAnalysisTarget が全て false の場合、
         /// IsApplicable の値をコピーして互換動作を維持する
         /// </summary>
+        /// <summary>
+        /// すべての杭体の杭頭部について、最上段の杭断面から導く値を入れ直す (<see cref="PileTop.SyncFromTopSection"/>)。
+        /// 解析の入口と読み込みの仕上げから呼ぶ。以前は杭頭部ウィンドウを開いたときにしか入らなかった。
+        /// </summary>
+        internal void SyncPileTopsFromSections()
+        {
+            if (PileBodies == null) return;
+            foreach (var pb in PileBodies) pb?.SyncPileTopFromTopSection();
+        }
+
         internal void EnsureAnalysisTargetDefaults()
         {
             if (LoadCasesInput == null) return;

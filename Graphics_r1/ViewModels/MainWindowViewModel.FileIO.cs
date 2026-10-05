@@ -407,6 +407,8 @@ namespace PileDesign.ViewModels
             CurrentInputModel.GridYItems ??= [];
             CurrentInputModel.EnsureFoundationBeamDefaults();
             CurrentInputModel.EnsureAnalysisTargetDefaults();
+            // 杭頭部の、杭断面から導く値 (以前は杭頭部ウィンドウを開くまで入らなかった)
+            CurrentInputModel.SyncPileTopsFromSections();
 
             // 許容圧縮と許容せん断の規準は同じもの 1 つになった。別々に選べた時期のファイルは圧縮側に揃える。
             if (CurrentInputModel.FundamentalInput?.NormalizeNotification1113() == true)

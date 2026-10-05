@@ -55,6 +55,9 @@ namespace PileDesign.Services
             // 杭体の形状・材料の注意 (節杭が最上段にある・Ec が低め等)。解析は止めない
             warnings.AddRange(CollectPileBodyNotices(inputModel));
 
+            // 鋼管杭 + 鉄筋定着工法 の杭頭接合部を組めない杭体 (剛接合として続ける)
+            warnings.AddRange(CollectSteelPileHeadJointNotices(inputModel));
+
             // 各杭の ΔZc (接合点 − 杭頭オフセット)
             if (inputModel.PileLayoutItems != null)
             {
@@ -151,6 +154,10 @@ namespace PileDesign.Services
         /// </summary>
         public static bool ValidateForAnalysis(InputModel inputModel, string analysisName = "解析")
         {
+            // 解析の入口: 杭頭部の、杭断面から導く値を入れ直す。以前は杭頭部ウィンドウを開いたときにしか入らず、
+            // 開いていない杭体は値が 0 や古い径のまま解析された (検査より前に行う。検査もこの値を見る)
+            inputModel?.SyncPileTopsFromSections();
+
             var problems = CollectAnalysisBlockers(inputModel);
             if (problems.Count == 0) return true; // OK: ダイアログなしで続行
             ShowBlockers(inputModel, problems, analysisName, "入力データ");
@@ -403,16 +410,16 @@ namespace PileDesign.Services
                     {
                         if (!IsPositive(sec.ConcreteOutDia))
                             problems.Add(Diagnostic.InputAt(at, $"コンクリート外径が 0 以下か数値ではありません ({sec.ConcreteOutDia})."));
-                        if (sec.MainBarNum > 0 && IsPositive(sec.ConcreteOutDia)
-                            && !(IsPositive(sec.MainBarDr) && sec.MainBarDr < sec.ConcreteOutDia))
-                        {
-                            problems.Add(Diagnostic.InputAt(at, $"主筋配置直径 (MainBarDr={sec.MainBarDr}) が外径 ({sec.ConcreteOutDia}) との関係で不正です " +
-                                        $"(0 < MainBarDr < 外径 を満たすこと)."));
-                        }
                         // 耐力・剛性の式に入る値。範囲外だと √ の中が負 (せん断補強筋の √(pw·σwy))、
                         // 0 で割る (ヤング係数比 n = Er/Ec) などで、耐力・剛性が数値でなくなる
                         problems.AddRange(CollectInsituRcMaterialProblems(sec, at));
                     }
+
+                    // 鋼管の肉厚と腐食代の関係
+                    problems.AddRange(CollectCorrosionProblems(sec, at));
+
+                    // 主筋の配置がコンクリートの内側に収まるか
+                    problems.AddRange(CollectMainBarPlacementProblems(sec, at));
 
                     // 断面の剛性 (解析の入力そのもの)。数値でないまま進むと、剛性行列や結果に数値でない値が混ざる
                     problems.AddRange(CollectSectionStiffnessProblems(sec, at));
@@ -460,6 +467,86 @@ namespace PileDesign.Services
                 Add($"せん断補強筋の降伏強度が 0 未満か数値ではありません ({sec.HoopSigmay}).");
             if (double.IsFinite(sec.HoopBarArea) && sec.HoopBarArea > 0 && !IsPositive(sec.HoopSpacing))
                 Add($"せん断補強筋のピッチが 0 以下か数値ではありません ({sec.HoopSpacing}).");
+            return problems;
+        }
+
+        /// <summary>
+        /// 主筋を入力で配置する断面 (場所打ち RC・場所打ち鋼管コンクリート杭の鉄筋コンクリート部と鋼管コンクリート部) で、
+        /// 主筋の配置径がコンクリートの内側に収まらなければ、その説明。
+        /// 以前は場所打ち RC と鉄筋コンクリート部だけを見ており、鋼管コンクリート部は重心かぶり厚が負
+        /// (−366 mm) で主筋が鋼管の外に出たまま計算が進んだ (杭断面ウィンドウで実機確認)。
+        /// </summary>
+        internal static List<Diagnostic> CollectMainBarPlacementProblems(PileSection sec, DiagnosticTarget at)
+        {
+            bool placesBars =
+                sec.PileBodyType == PileTypeNames.InsituRc
+                || (sec.PileBodyType == PileTypeNames.InsituSteelPipeConcrete
+                    && sec.PileSectionType is PileTypeNames.RcSection or PileTypeNames.SteelPipeConcreteSection);
+            if (!placesBars || sec.MainBarNum <= 0 || !IsPositive(sec.ConcreteOutDia)) return [];
+            if (IsPositive(sec.MainBarDr) && sec.MainBarDr < sec.ConcreteOutDia) return [];
+            return [Diagnostic.InputAt(at, $"主筋の重心かぶり厚 ({sec.MainBarCenterCover:0.#} mm) では、主筋の配置径 ({sec.MainBarDr:0.#} mm) が"
+                + $"コンクリート径 ({sec.ConcreteOutDia:0.#} mm) の内側に収まりません。"
+                + $"重心かぶり厚は 0 より大きく、コンクリートの半径 ({sec.ConcreteOutDia / 2:0.#} mm) より小さくしてください.")];
+        }
+
+        /// <summary>
+        /// 鋼管杭 + 鉄筋定着工法 で、杭頭接合部の回転ばね Kθ を組めない杭体。
+        ///
+        /// 定着筋の本数・径・規格、パイルキャップの Fc、コンクリート径が足りないか、定着筋の配置径が
+        /// コンクリート径の内側に収まらないと、接合部の断面を組めない。そのとき杭頭は<b>剛接合として</b>
+        /// 解析を続けるが、これまでは記録 (デバッグ) にしか残らず、利用者は回転ばねが入っていないことに気づけなかった。
+        /// </summary>
+        internal static List<Diagnostic> CollectSteelPileHeadJointNotices(InputModel inputModel)
+        {
+            var notices = new List<Diagnostic>();
+            if (inputModel?.PileBodies == null) return notices;
+            for (int i = 0; i < inputModel.PileBodies.Count; i++)
+            {
+                var pb = inputModel.PileBodies[i];
+                if (pb?.PileTop == null) continue;
+                if (!(pb.PileBodyType ?? "").Contains(PileTypeNames.SteelPipe)
+                    || (pb.PileBodyType ?? "").Contains(PileTypeNames.InsituSteelPipeConcrete)
+                    || !(pb.PileTopType ?? "").Contains("鉄筋定着工法")) continue;
+                PileTop.SteelPilePileHeadJointInfo? info = null;
+                // 解析の入口で杭断面から導き直すので、同じ形に導いた写しで判定する (検査は入力を書き換えない)
+                var top = pb.PileTop.DeepCopy();
+                top.SyncFromTopSection(pb.PileBodyType, pb.PileBodySegments?.FirstOrDefault()?.PileSection);
+                try { info = top.GetSteelPilePileHeadJointInfo(0.0); }
+                catch (Exception ex) when (ex is ArgumentException or ArithmeticException or InvalidOperationException) { }
+                if (info != null && double.IsFinite(info.Ktheta) && info.Ktheta > 0) continue;
+                notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
+                    $"杭体 {i + 1}: 鋼管杭の杭頭接合部 (鉄筋定着工法) の回転ばねを組めないため、杭頭を剛接合として計算します。"
+                    + "定着筋の本数・径・規格・重心かぶり厚、パイルキャップの Fc を確かめてください。",
+                    "杭頭部の画面で定着筋とパイルキャップの入力を確かめる"));
+            }
+            return notices;
+        }
+
+        /// <summary>断面が鋼管を持つか (鋼管杭・場所打ち鋼管コンクリート杭の鉄筋コンクリート部以外・SC 杭)。</summary>
+        internal static bool HasSteelPipe(PileSection sec)
+            => sec.PileBodyType == PileTypeNames.SteelPipe
+               || (sec.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && sec.PileSectionType != PileTypeNames.RcSection)
+               || sec.PileBodyType == PileTypeNames.Sc || sec.PileSectionType == PileTypeNames.Sc;
+
+        /// <summary>
+        /// 鋼管の肉厚が腐食代以下なら、その説明。
+        /// 腐食を考えた肉厚 (t − 腐食代) が 0 以下になり、腐食を考えた鋼管の断面積が負になる。
+        /// コンクリートを持つ断面では EA・EI はコンクリートの分で正のまま残るので、剛性の検査
+        /// (<see cref="CollectSectionStiffnessProblems"/>) では捕まらず、負の鋼管断面積のまま耐力が計算されていた
+        /// (杭断面ウィンドウで管厚 0.1 mm・腐食代 1.0 mm のとき As' = −3,390 mm²)。
+        /// </summary>
+        internal static List<Diagnostic> CollectCorrosionProblems(PileSection sec, DiagnosticTarget at)
+        {
+            if (!HasSteelPipe(sec)) return [];
+            var problems = new List<Diagnostic>();
+            if (!(sec.PipeTs > sec.CorrosionDepth && double.IsFinite(sec.PipeTs)))
+                problems.Add(Diagnostic.InputAt(at, $"鋼管の肉厚 ({sec.PipeTs:0.##} mm) が腐食代 ({sec.CorrosionDepth:0.##} mm) 以下です。"
+                    + "腐食を考えた肉厚が 0 以下になり、鋼管の断面積が負になります。肉厚か腐食代を見直してください."));
+            // 外径と肉厚は欄ごとには範囲に収めているが、組み合わせは見ていなかった (外径 100・肉厚 60 など)。
+            // 中のコンクリートの径 (外径 − 2·肉厚) が 0 以下になり、コンクリートの断面がなくなる
+            if (IsPositive(sec.PipeDia) && !(sec.PipeDia > 2 * sec.PipeTs))
+                problems.Add(Diagnostic.InputAt(at, $"鋼管の肉厚 ({sec.PipeTs:0.##} mm) が外径 ({sec.PipeDia:0.##} mm) の半分以上です。"
+                    + "鋼管の内径が 0 以下になります。外径か肉厚を見直してください."));
             return problems;
         }
 
@@ -585,8 +672,33 @@ namespace PileDesign.Services
                         problems.Add(Diagnostic.InputAt(at, $"層厚が 0 以下か数値ではありません ({layer.LayerThickness})."));
                     if (!double.IsFinite(layer.BottomAltitude))
                         problems.Add(Diagnostic.InputAt(at, $"層の下端の標高が数値ではありません ({layer.BottomAltitude})."));
+                    // 物性値の欄は入力の範囲を持たず、負の値もそのまま解析に入っていた。
+                    // 0 は「未入力」として既存の注意 (変形係数 0 など) に任せ、ここでは負と範囲外だけを止める
+                    problems.AddRange(CollectSoilPropertyProblems(layer, at));
                 }
             }
+            return problems;
+        }
+
+        /// <summary>
+        /// 土層の物性値が、物理的にありえない値なら、その説明。
+        /// 単位体積重量・せん断波速度・変形係数・粘着力は負にならない。ポアソン比は 0 以上 0.5 未満
+        /// (0.5 で体積弾性係数が無限大になり、群杭沈下の式の 1 − 2ν で 0 割りになる)。
+        /// </summary>
+        internal static List<Diagnostic> CollectSoilPropertyProblems(GroundLayerInput layer, DiagnosticTarget at)
+        {
+            var problems = new List<Diagnostic>();
+            void Negative(string name, double value, string unit)
+            {
+                if (value < 0 || double.IsNaN(value) || double.IsInfinity(value))
+                    problems.Add(Diagnostic.InputAt(at, $"{name}が負か数値ではありません ({value:0.###} {unit})."));
+            }
+            Negative("単位体積重量", layer.Density, "kN/m³");
+            Negative("せん断波速度 Vs", layer.Vs, "m/s");
+            Negative("変形係数 Es", layer.Es, "kN/m²");
+            Negative("粘着力", layer.Cohesive, "kN/m²");
+            if (!(layer.PoissonsRatio >= 0 && layer.PoissonsRatio < 0.5))
+                problems.Add(Diagnostic.InputAt(at, $"ポアソン比が 0 以上 0.5 未満の範囲にありません ({layer.PoissonsRatio:0.###})."));
             return problems;
         }
 
