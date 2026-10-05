@@ -112,5 +112,15 @@ namespace TestProject1
             Assert.AreEqual("解析: 2026/10/04 14:30　／　表示の更新: 15:02:11", ResultDashboardWindow.FormatTimes(analyzed, refreshed));
             Assert.AreEqual("解析: 未実施　／　表示の更新: 15:02:11", ResultDashboardWindow.FormatTimes(null, refreshed));
         }
+
+        /// <summary>起動画面のリンクは、Tab で選んだときもマウスを合わせたときと同じく強調する。</summary>
+        [TestMethod]
+        public void WelcomeLinks_ShowKeyboardFocus()
+        {
+            string xaml = TestSource.Read("Graphics_r1", "Views", "WelcomeDialog.xaml");
+            string style = xaml.Substring(xaml.IndexOf("<Style x:Key=\"LinkButtonStyle\"", StringComparison.Ordinal));
+            style = style.Substring(0, style.IndexOf("</Style>", StringComparison.Ordinal));
+            StringAssert.Contains(style, "<Trigger Property=\"IsKeyboardFocused\" Value=\"True\">");
+        }
     }
 }

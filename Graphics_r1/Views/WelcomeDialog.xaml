@@ -40,6 +40,13 @@
                                 <Setter TargetName="text" Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
                                 <Setter TargetName="text" Property="TextDecorations" Value="Underline"/>
                             </Trigger>
+                            <!-- Tab で選んだときも、マウスを合わせたときと同じく強調する
+                                 (独自テンプレートなので、既定の細い点線しか出ず、どこにいるか分かりにくかった) -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="text" Property="Foreground" Value="{StaticResource NikkenDeepBlueBrush}"/>
+                                <Setter TargetName="text" Property="TextDecorations" Value="Underline"/>
+                                <Setter TargetName="text" Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="text" Property="Foreground" Value="{StaticResource PrimaryAccentBrush}"/>
                             </Trigger>
