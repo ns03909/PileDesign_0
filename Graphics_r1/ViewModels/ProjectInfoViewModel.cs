@@ -20,7 +20,7 @@ namespace PileDesign.ViewModels
     ///
     /// 保存先は <see cref="FundamentalInput"/> のままで、基本設定と同じインスタンスを共有する。
     /// </summary>
-    public partial class ProjectInfoViewModel : ObservableObject, ICloseable
+    public partial class ProjectInfoViewModel : ObservableObject, ICloseable, IDialogAppliedState
     {
         private readonly UndoManager _undoManager = new();
         private readonly MainWindowViewModel _mainWindowViewModel;
@@ -154,8 +154,15 @@ namespace PileDesign.ViewModels
             CloseWindowCommand = new ToolkitRelayCommand(() => RequestClose?.Invoke(this, EventArgs.Empty));
         }
 
+        // キャンセルで閉じたら「何も適用していない」と呼び出し側へ伝える (IDialogAppliedState)。
+        // 以前は実装しておらず、キャンセルでも「再解析が必要」が立ち、入力変更後の帯に「…編集」と出た。
+        // キャンセル以外 (× など) は従来どおり適用した扱いにする。
+        private bool _cancelled;
+        public bool AppliedChanges => !_cancelled;
+
         private void OnCancel()
         {
+            _cancelled = true;
             InputModel.FundamentalInput = PrevFundamentalInput.ShallowCopy();
             RequestClose?.Invoke(this, EventArgs.Empty);
         }

@@ -13,7 +13,7 @@ using PileDesign.Common;
 namespace PileDesign.ViewModels
 
 {
-    public partial class LoadCaseViewModel : BaseViewModel, PileDesign.Common.Undo.ISnapshotUndoHost
+    public partial class LoadCaseViewModel : BaseViewModel, PileDesign.Common.Undo.ISnapshotUndoHost, IDialogAppliedState
     {
         private readonly UndoManager _undoManager = new();
 
@@ -349,9 +349,16 @@ namespace PileDesign.ViewModels
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
+        // キャンセルで閉じたら「何も適用していない」と呼び出し側へ伝える (IDialogAppliedState)。
+        // 以前は実装しておらず、キャンセルでも「再解析が必要」が立ち、入力変更後の帯に「…編集」と出た。
+        // キャンセル以外 (× など) は従来どおり適用した扱いにする。
+        private bool _cancelled;
+        public bool AppliedChanges => !_cancelled;
+
         [RelayCommand]
         private void OnCancel()
         {
+            _cancelled = true;
             InputModel.LoadCasesInput = PrevLoadCasesInput.DeepCopy();
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
