@@ -23,10 +23,14 @@ namespace PileDesign.ViewModels
     /// <summary>
     ///    PileBodyViewModelクラス
     /// </summary>
-    public partial class PileBodyViewModel : ObservableObject, ICloseable
+    public partial class PileBodyViewModel : ObservableObject, ICloseable, PileDesign.Common.Undo.ISnapshotUndoHost
     {
 
         public readonly UndoManager _undoManager = new();
+
+        // 窓の段で控えを取る仕組み (UndoCapture) に、履歴と控えの取り方を渡す
+        UndoManager PileDesign.Common.Undo.ISnapshotUndoHost.UndoManager => _undoManager;
+        object PileDesign.Common.Undo.ISnapshotUndoHost.CaptureUndoSnapshot() => new ObservableCollection<PileBodyInput>(PileBodies.Select(pb => pb.DeepCopy()));
 
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;

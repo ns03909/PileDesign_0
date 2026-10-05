@@ -18,7 +18,9 @@
         Title="杭体" WindowState="Maximized"
         Loaded="PileBodyWindow_Loaded"
         Closing="Window_Closing"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        common:UndoKeys.RouteFromTextBoxes="True"
+        common:UndoCapture.Enabled="True">
 
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
@@ -146,8 +148,7 @@
                          HorizontalAlignment="Left" VerticalAlignment="Center" 
                          Text="{Binding PileBody.PileBodyRef, UpdateSourceTrigger=LostFocus}"
                          PreviewKeyDown="TextBox_PreviewKeyDown"
-                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus">
+                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
                     <i:Interaction.Triggers>
                         <i:EventTrigger EventName="TextChanged">
                             <i:InvokeCommandAction Command="{Binding PileBodyTextChangedCommand}"
@@ -328,7 +329,6 @@
                         <TextBox x:Name="TextBoxPileToeDia"
                                  Width="100" HorizontalContentAlignment="Right"
                                  PreviewKeyDown="TextBox_PreviewKeyDown"
-                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                  PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
 
                             <!-- Hybridニーディングの根固め部径 D3 は e×D1 の導出値なので手入力させない -->
@@ -712,7 +712,6 @@
                                     <TextBlock Text="杭の内径dI(m)" Width="200" HorizontalAlignment="Right"/>
                                     <TextBox x:Name="TextBoxPileInnerDia"  Text="{Binding PileBody.PileInnerDia}" Width="100" HorizontalContentAlignment="Right"
                                              PreviewKeyDown="TextBox_PreviewKeyDown"
-                                             PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
                                         <i:Interaction.Triggers>
                                             <i:EventTrigger EventName="TextChanged">
@@ -987,7 +986,6 @@
                             Text="{Binding TemporarySoilPile.D, Mode=OneWay, StringFormat=N3}"
                             IsReadOnly="True" Foreground="Gray"
                             HorizontalContentAlignment="Right"
-                            PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
                         <TextBlock Grid.Row="8" Grid.Column="3" Text="m"/>
 

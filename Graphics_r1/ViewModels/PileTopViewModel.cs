@@ -22,11 +22,15 @@ using Fonts = ScottPlot.Fonts;
 using Serilog;
 namespace PileDesign.ViewModels
 {
-    public partial class PileTopViewModel : ObservableObject
+    public partial class PileTopViewModel : ObservableObject, PileDesign.Common.Undo.ISnapshotUndoHost
     {
         public PileTopWindow PileTopWindowInstance { get; set; }
 
         public readonly UndoManager _undoManager = new();
+
+        // 窓の段で控えを取る仕組み (UndoCapture) に、履歴と控えの取り方を渡す
+        UndoManager PileDesign.Common.Undo.ISnapshotUndoHost.UndoManager => _undoManager;
+        object PileDesign.Common.Undo.ISnapshotUndoHost.CaptureUndoSnapshot() => PileTop.DeepCopy();
 
         public string PileTopType { get; set; }
 
@@ -268,23 +272,22 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 戻した状態を、画面と<b>モデルの両方</b>に反映する。
+        /// 戻した状態を、この画面が編集している杭頭部の<b>実体へ中身ごと</b>写す。
         ///
-        /// この画面は <c>PileBodies[n].PileTop</c> を参照で受け取り、
-        /// <c>{Binding PileTop.PileCapFc}</c> で直接書き換える。ViewModel 側の
-        /// プロパティを差し替えるだけでは<b>モデルには何も起きない</b>ので、
-        /// キャンセルも元に戻すも効いていなかった。
+        /// この画面は杭体ウィンドウの作業用の写し (<c>CurrentBody.PileTop</c>) を参照で受け取り、
+        /// <c>{Binding PileTop.PileCapFc}</c> で直接書き換える。以前は戻した状態を別の実体として
+        /// <b>確定済みの入力の</b>杭頭部へ差し替えていたので、編集している実体には編集が残り
+        /// (杭体ウィンドウの OK でそのまま確定)、杭体ウィンドウのキャンセルも確定済みの側に効かなかった。
         /// </summary>
         private void ApplyPileTop(PileTop restored)
         {
-            if (restored == null) return;
-            PileTop = restored;
+            if (restored == null || PileTop == null) return;
+            PileTop.RestoreFrom(restored);
 
-            var bodies = _mainWindowViewModel?.CurrentInputModel?.PileBodies;
-            if (bodies != null && PileBodyNo >= 1 && PileBodyNo <= bodies.Count)
-            {
-                bodies[PileBodyNo - 1].PileTop = restored;
-            }
+            // 差し替えていたときにセッターが行っていた表示の更新
+            RefreshTopSectionDisplayFromProvidedSection();
+            try { RedrawShapes(); } catch (Exception ex) { Log.Warning(ex, "[PileTopVM] RedrawShapes"); }
+            ChartUpdate();
         }
 
         [RelayCommand]

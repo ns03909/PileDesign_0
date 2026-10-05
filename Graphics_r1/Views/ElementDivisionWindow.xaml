@@ -17,7 +17,9 @@
         Title="杭要素分割" Height="650" Width="650"
         Loaded="ElementDivisionWindow_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown"
-        common:EscapeKeyBehavior.Enable="True">
+        common:EscapeKeyBehavior.Enable="True"
+        common:UndoKeys.RouteFromTextBoxes="True"
+        common:UndoCapture.Enabled="True">
 
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />

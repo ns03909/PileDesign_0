@@ -22,11 +22,15 @@ using PileDesign.Services;
 
 namespace PileDesign.ViewModels
 {
-    public partial class ElementDivisionViewModel : ObservableObject, ICloseable
+    public partial class ElementDivisionViewModel : ObservableObject, ICloseable, PileDesign.Common.Undo.ISnapshotUndoHost
     {
         const double epsilon = 1e-5; // 許容誤差（必要に応じて調整）
 
         private readonly UndoManager _undoManager = new();
+
+        // 窓の段で控えを取る仕組み (UndoCapture) に、履歴と控えの取り方を渡す
+        UndoManager PileDesign.Common.Undo.ISnapshotUndoHost.UndoManager => _undoManager;
+        object PileDesign.Common.Undo.ISnapshotUndoHost.CaptureUndoSnapshot() => CaptureUndoState();
 
         private bool _suppressUndoSave = false;
         public ElementDivisionWindow ElementDivisionWindowInstance { get; set; }
@@ -613,15 +617,22 @@ namespace PileDesign.ViewModels
         // 以前は同じ履歴へ別々の形で積んでいたが、戻す側は
         // List&lt;SoilPile&gt; しか見ていなかった。根入れ部をいじってから Ctrl+Z すると
         // 何も起きないまま履歴の位置だけ進み、根入れ部は Undo で戻らなかった。
+        //
+        // 分割の間隔 (初期距離・最大間隔・根入れ部の最大間隔) も入れる。以前は入っておらず、
+        // 間隔を変えて Ctrl+Z をしても間隔は戻らなかった。
         private sealed record ElementDivisionUndoState(
             IList<SoilPile> SoilPiles,
-            IList<EmbedmentZDataItem> EmbedmentZs);
+            IList<EmbedmentZDataItem> EmbedmentZs,
+            double FirstDistance,
+            double MaxPileSpacing,
+            double MaxEmbedmentSpacing);
 
         // 控えを取る。**形を組み立てるのはここだけ。**
         private ElementDivisionUndoState CaptureUndoState()
             => new(
                 (SoilPiles ?? []).Select(p => p.DeepCopy()).ToList(),
-                (EmbedmentZsCollection ?? []).Select(z => z.DeepCopy()).ToList());
+                (EmbedmentZsCollection ?? []).Select(z => z.DeepCopy()).ToList(),
+                FirstDistance, MaxPileSpacing, MaxEmbedmentSpacing);
 
         // 履歴へ 1 段積む。
         private void SaveUndoSnapshot() => _undoManager.SaveState(CaptureUndoState());
@@ -641,6 +652,9 @@ namespace PileDesign.ViewModels
             _suppressUndoSave = true;
             try
             {
+                FirstDistance = state.FirstDistance;
+                MaxPileSpacing = state.MaxPileSpacing;
+                MaxEmbedmentSpacing = state.MaxEmbedmentSpacing;
                 SoilPiles = new ObservableCollection<SoilPile>(
                     state.SoilPiles.Select(p => p.DeepCopy()));
                 EmbedmentZsCollection = new ObservableCollection<EmbedmentZDataItem>(

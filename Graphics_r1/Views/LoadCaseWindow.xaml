@@ -18,7 +18,9 @@
         Title="荷重" Height="700" Width="1000" WindowState="Maximized"
         SizeChanged="Window_SizeChanged"
         Closing="Window_Closing"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        common:UndoKeys.RouteFromTextBoxes="True"
+        common:UndoCapture.Enabled="True">
 
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />

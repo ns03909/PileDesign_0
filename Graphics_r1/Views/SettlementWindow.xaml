@@ -16,7 +16,9 @@
         xmlns:models="clr-namespace:PileDesign.Models"
         Title="単杭沈下解析" Height="600" Width="800"
         Closing="Window_Closing"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        common:UndoKeys.RouteFromTextBoxes="True"
+        common:UndoCapture.Enabled="True">
 
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />

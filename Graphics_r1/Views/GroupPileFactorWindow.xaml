@@ -11,7 +11,8 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:GroupPileFactorViewModel}"
         Title="基礎指針'19　群杭係数" Height="700" Width="500"
-        common:EscapeKeyBehavior.Enable="True">
+        common:EscapeKeyBehavior.Enable="True"
+        common:UndoKeys.RouteFromTextBoxes="True">
     
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />

@@ -14,7 +14,8 @@
         mc:Ignorable="d"
         Title="水平解析" Height="700" Width="1200" WindowState="Maximized"
         x:Name="LateralCalcWin"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        common:UndoKeys.RouteFromTextBoxes="True">
     
     <!-- TextBoxの標準機能でCtrl+A（全選択）/ Ctrl+C（コピー）が動作 -->
 

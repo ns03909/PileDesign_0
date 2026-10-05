@@ -36,6 +36,9 @@ namespace PileDesign.ViewModels
             // 検定（NM 曲線の選択：損傷限界 / 安全限界）の規則だけが変わるため、
             // 解析結果の削除は行わない（次回の検定で自動的に新しいルールが適用される）。
             var oldValue = InputModel.FundamentalInput.SeismicGrade;
+            // 値が変わらないとき (開いたときの初期値の代入・戻しの追随) は手を積まない。
+            // 積むと、押しても何も起きない「元に戻す」が混ざる
+            if (oldValue == value) return;
 
             _undoManager.PushAction(
                 () => InputModel.FundamentalInput.SeismicGrade = oldValue,

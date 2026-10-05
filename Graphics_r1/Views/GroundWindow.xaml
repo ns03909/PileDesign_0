@@ -14,7 +14,8 @@
         Title="地盤" WindowState="Maximized"
         Closing="Window_Closing"
         xmlns:common="clr-namespace:PileDesign.Common"
-        PreviewKeyDown="GroundWindow_PreviewKeyDown">
+        PreviewKeyDown="GroundWindow_PreviewKeyDown"
+        common:UndoCapture.Enabled="True">
     
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />

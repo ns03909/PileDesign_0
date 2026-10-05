@@ -13,9 +13,13 @@ using PileDesign.Common;
 namespace PileDesign.ViewModels
 
 {
-    public partial class LoadCaseViewModel : BaseViewModel
+    public partial class LoadCaseViewModel : BaseViewModel, PileDesign.Common.Undo.ISnapshotUndoHost
     {
         private readonly UndoManager _undoManager = new();
+
+        // 窓の段で控えを取る仕組み (UndoCapture) に、履歴と控えの取り方を渡す
+        UndoManager PileDesign.Common.Undo.ISnapshotUndoHost.UndoManager => _undoManager;
+        object PileDesign.Common.Undo.ISnapshotUndoHost.CaptureUndoSnapshot() => CaptureUndoState();
         private readonly MainWindowViewModel _mainWindowViewModel;
         // ViewModelにView参照用プロパティを追加
         public LoadCaseWindow LoadCaseWindowInstance { get; set; }
@@ -138,8 +142,13 @@ namespace PileDesign.ViewModels
         public void PushUndoState()
         {
             if (_suppressUndoSave) return;
+            _undoManager.SaveState(CaptureUndoState());
+        }
 
-            var currentState = new LoadCaseState
+        // 控えを取る。形を組み立てるのはここだけ
+        private LoadCaseState CaptureUndoState()
+        {
+            return new LoadCaseState
             {
                 LoadCasesLevel1 = new ObservableCollection<LoadCase>(LoadCasesLevel1.Select(x => x.DeepCopy())),
                 LoadCasesLevel2 = new ObservableCollection<LoadCase>(LoadCasesLevel2.Select(x => x.DeepCopy())),
@@ -149,7 +158,6 @@ namespace PileDesign.ViewModels
                 LoadCasesLevel1Common = new ObservableCollection<LoadCaseCommon>(LoadCasesLevel1Common.Select(x => x.DeepCopy())),
                 LoadCasesLevel2Common = new ObservableCollection<LoadCaseCommon>(LoadCasesLevel2Common.Select(x => x.DeepCopy()))
             };
-            _undoManager.SaveState(currentState);
         }
 
         // 状態を復元

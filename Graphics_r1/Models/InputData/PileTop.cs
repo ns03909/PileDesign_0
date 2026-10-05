@@ -749,6 +749,32 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 他の杭頭部の状態を、この杭頭部に<b>そのまま</b>書き戻す (杭頭部ウィンドウの「元に戻す」と「キャンセル」)。
+        ///
+        /// 以前は戻した状態を<b>別の実体として差し替え</b>、しかも差し替え先が画面の編集している実体
+        /// (杭体ウィンドウの作業用の写しの杭頭部) ではなく、確定済みの入力の杭頭部だった。そのため
+        ///   ・キャンセル・Ctrl+Z をしても、作業用の写しには編集が残り、杭体ウィンドウの OK でそのまま確定した
+        ///   ・杭体ウィンドウをキャンセルしても、確定済みの入力の杭頭部は差し替わったまま残った
+        /// 実体はそのままに中身だけを写す (杭断面の <see cref="PileSection.RestoreFrom"/> と同じ形)。
+        /// 写すのは<b>整合した過去の状態</b>なので、フィールドを直に写して派生値を計算し直させない。
+        /// 呼び出し側は使い捨ての複製 (<see cref="DeepCopy"/>) を渡すこと (入れ子の 3 モデルを共有するため)。
+        /// </summary>
+        internal void RestoreFrom(PileTop other)
+        {
+            if (other == null) return;
+            foreach (var f in typeof(PileTop).GetFields(
+                System.Reflection.BindingFlags.Instance
+                | System.Reflection.BindingFlags.Public
+                | System.Reflection.BindingFlags.NonPublic))
+            {
+                if (f.IsInitOnly) continue;
+                if (typeof(Delegate).IsAssignableFrom(f.FieldType)) continue;
+                f.SetValue(this, f.GetValue(other));
+            }
+            OnPropertyChanged(string.Empty);
+        }
+
         public PileTop DeepCopy()
         {
             var copy = CloneWithoutSubscribers<PileTop>();

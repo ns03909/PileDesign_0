@@ -12,7 +12,8 @@
         Title="基本設定" Height="700" Width="560"
         MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         WindowStartupLocation="CenterScreen"
-        Closing="Window_Closing">
+        Closing="Window_Closing"
+        common:UndoKeys.RouteFromTextBoxes="True">
     
     <Window.Resources>
         <conv:BoolEqualsConverter x:Key="BoolEqualsConverter"/>

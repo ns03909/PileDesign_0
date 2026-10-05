@@ -15,7 +15,9 @@
         d:DataContext="{d:DesignInstance Type=local:PileSectionViewModel}"
         Title="杭断面" Height="800" Width="1300" WindowState="Maximized"
         Closing="Window_Closing"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        common:UndoKeys.RouteFromTextBoxes="True"
+        common:UndoCapture.Enabled="True">
     <!--Loaded="PileSectionWindow_Loaded"-->
     <!---->
     <!--削除-->
@@ -298,7 +300,6 @@
                                                          GotFocus="TextBox_GotFocus"
                                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                          PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                          TextChanged="TextBox_TextChanged"
                                                          LostFocus="TextBox_LostFocus"/>
                                             </StackPanel>
@@ -320,7 +321,6 @@
                                                           GotFocus="TextBox_GotFocus"
                                                           PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                           PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                           TextChanged="TextBox_TextChanged"
                                                           LostFocus="TextBox_LostFocus"/>
                                             </StackPanel>
@@ -331,7 +331,6 @@
                                                          Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="1"
                                                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                          PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                          TextChanged="TextBox_TextChanged">
                                                     <TextBox.Text>
                                                         <Binding Path="PileSection.ConcreteGsi" StringFormat='{}{0:N2}' UpdateSourceTrigger="LostFocus" >
@@ -347,7 +346,6 @@
                                                 <TextBox Text="{Binding PileSection.ConcreteE, Mode=OneWay, Converter={StaticResource ModulusDisplayConverter}}" Width="50"
                                                          TextAlignment="Right" Foreground="{StaticResource ReadOnlyBrush}" IsReadOnly="True"
                                                          PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                          TextChanged="TextBox_TextChanged"
                                                          LostFocus="TextBox_LostFocus"/>
 
@@ -372,7 +370,6 @@
                                                              GotFocus="TextBox_GotFocus"
                                                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                              PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                             PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                              TextChanged="TextBox_TextChanged"
                                                              LostFocus="TextBox_LostFocus"/>
                                                 </StackPanel>
@@ -392,7 +389,6 @@
                                                               GotFocus="TextBox_GotFocus"
                                                               PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                               TextChanged="TextBox_TextChanged"
                                                               LostFocus="TextBox_LostFocus"/>
                                                 </StackPanel>
@@ -403,7 +399,6 @@
                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="1"
                                                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                              PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                             PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                              TextChanged="TextBox_TextChanged"
                                                              LostFocus="TextBox_LostFocus">
                                                         <TextBox.Text>
@@ -419,7 +414,6 @@
                                                     <TextBox  Text="{Binding PileSection.ConcreteE, Mode=OneWay, Converter={StaticResource ModulusDisplayConverter}}" Width="50" TextAlignment="Right" Foreground="Gray"
                                                               IsReadOnly="True"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                               TextChanged="TextBox_TextChanged"
                                                               LostFocus="TextBox_LostFocus"/>
                                                 </StackPanel>
@@ -443,7 +437,6 @@
                                                               Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="12" common:NumericInput.Max="200"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                               TextChanged="TextBox_TextChanged"
                                                               LostFocus="TextBox_LostFocus"/>
                                                     <TextBlock Width="150"  HorizontalAlignment="Right"><Run Text="単位体積重量γ (kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
@@ -451,7 +444,6 @@
                                                               Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="10" common:NumericInput.Max="100"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                               TextChanged="TextBox_TextChanged"
                                                               LostFocus="TextBox_LostFocus"/>
                                                 </StackPanel>
@@ -462,7 +454,6 @@
                                                              Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="1"
                                                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                              PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                             PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                              TextChanged="TextBox_TextChanged"
                                                              LostFocus="TextBox_LostFocus">
                                                         <TextBox.Text>
@@ -493,7 +484,6 @@
                                                           Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="500"
                                                           GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                           PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                           TextChanged="TextBox_TextChanged"
                                                           LostFocus="TextBox_LostFocus"/>
                                                 <TextBlock Text ="-" Width="20"  HorizontalAlignment="Center"/>
@@ -514,7 +504,6 @@
                                                           Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="1000"
                                                           GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                           PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                           TextChanged="TextBox_TextChanged"
                                                           LostFocus="TextBox_LostFocus"/>
                                             </StackPanel>
@@ -534,7 +523,6 @@
                                                               Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="500"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                               TextChanged="TextBox_TextChanged"
                                                               LostFocus="TextBox_LostFocus"/>
                                                     <TextBlock Text ="-" Width="20"  HorizontalAlignment="Center"/>
@@ -556,7 +544,6 @@
                                                               Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="1000"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                               TextChanged="TextBox_TextChanged"
                                                               LostFocus="TextBox_LostFocus"/>
                                                 </StackPanel>
@@ -590,7 +577,6 @@
                                                           Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="10" common:NumericInput.Max="1000"
                                                           GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                           PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                           TextChanged="TextBox_TextChanged"
                                                           LostFocus="TextBox_LostFocus"/>
                                             </StackPanel>
@@ -610,7 +596,6 @@
                                                           Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="1000"
                                                           GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                           PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                           TextChanged="TextBox_TextChanged"
                                                           LostFocus="TextBox_LostFocus"/>
                                             </StackPanel>
@@ -666,7 +651,6 @@
                                                               Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="10" common:NumericInput.Max="1000"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                               TextChanged="TextBox_TextChanged"
                                                               LostFocus="TextBox_LostFocus"/>
                                                 </StackPanel>
@@ -683,8 +667,7 @@
                                                     <TextBox Text="{Binding PileSection.HoopCenterCover, UpdateSourceTrigger=LostFocus}" Width="50"
                                                               Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="1000"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                                              PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                              PreviewKeyDown="TextBox_PreviewKeyDown"/>
                                                 </StackPanel>
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text ="損傷限界の式" Width="100"  HorizontalAlignment="Right"/>
@@ -759,7 +742,6 @@
                                                               Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="12" common:NumericInput.Max="200"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                               TextChanged="TextBox_TextChanged"
                                                               LostFocus="TextBox_LostFocus"/>
                                                     <TextBlock Width="150" HorizontalAlignment="Right"><Run Text="単位体積重量γ (kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
@@ -767,7 +749,6 @@
                                                               Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="10" common:NumericInput.Max="100"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                               TextChanged="TextBox_TextChanged"
                                                               LostFocus="TextBox_LostFocus"/>
                                                 </StackPanel>
@@ -1546,7 +1527,6 @@
                                                  Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="1" common:NumericInput.Max="3"
                                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                  PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                  TextChanged="TextBox_TextChanged"
                                                  LostFocus="TextBox_LostFocus"/>
                                     </StackPanel>

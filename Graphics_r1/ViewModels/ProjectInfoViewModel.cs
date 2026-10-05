@@ -33,6 +33,9 @@ namespace PileDesign.ViewModels
         partial void OnProjectNoChanged(string value)
         {
             var oldValue = InputModel.FundamentalInput.ProjectNo;
+            // 値が変わらないとき (開いたときの初期値の代入・戻しの追随) は手を積まない。
+            // 積むと、押しても何も起きない「元に戻す」が混ざる
+            if (oldValue == value) return;
             _undoManager.PushAction(
                 () => InputModel.FundamentalInput.ProjectNo = oldValue,
                 () => InputModel.FundamentalInput.ProjectNo = value,
@@ -46,6 +49,9 @@ namespace PileDesign.ViewModels
         partial void OnProjectNameChanged(string value)
         {
             var oldValue = InputModel.FundamentalInput.ProjectName;
+            // 値が変わらないとき (開いたときの初期値の代入・戻しの追随) は手を積まない。
+            // 積むと、押しても何も起きない「元に戻す」が混ざる
+            if (oldValue == value) return;
             _undoManager.PushAction(
                 () => InputModel.FundamentalInput.ProjectName = oldValue,
                 () => InputModel.FundamentalInput.ProjectName = value,
@@ -59,6 +65,9 @@ namespace PileDesign.ViewModels
         partial void OnRefLevelChanged(string value)
         {
             var oldValue = InputModel.FundamentalInput.RefLevel;
+            // 値が変わらないとき (開いたときの初期値の代入・戻しの追随) は手を積まない。
+            // 積むと、押しても何も起きない「元に戻す」が混ざる
+            if (oldValue == value) return;
             _undoManager.PushAction(
                 () => InputModel.FundamentalInput.RefLevel = oldValue,
                 () => InputModel.FundamentalInput.RefLevel = value,

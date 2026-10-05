@@ -24,11 +24,15 @@ using PileDesign.Services;
 
 namespace PileDesign.ViewModels
 {
-    public partial class SettlementViewModel : ObservableObject
+    public partial class SettlementViewModel : ObservableObject, PileDesign.Common.Undo.ISnapshotUndoHost
     {
         public SettlementWindow SettlementWindowInstance { get; set; } // SettlementWindow のインスタンスを保持するプロパティを追加
 
         private readonly UndoManager _undoManager = new();
+
+        // 窓の段で控えを取る仕組み (UndoCapture) に、履歴と控えの取り方を渡す
+        UndoManager PileDesign.Common.Undo.ISnapshotUndoHost.UndoManager => _undoManager;
+        object PileDesign.Common.Undo.ISnapshotUndoHost.CaptureUndoSnapshot() => CaptureUndoState();
         public UndoManager UndoManager => _undoManager;
 
         private readonly MainWindowViewModel _mainWindowViewModel;

@@ -28,9 +28,13 @@ namespace PileDesign.ViewModels
     /// <summary>
     /// GroundLayerViewModelクラス
     /// </summary>
-    public partial class GroundLayerViewModel : ObservableObject, ICloseable
+    public partial class GroundLayerViewModel : ObservableObject, ICloseable, PileDesign.Common.Undo.ISnapshotUndoHost
     {
         public readonly UndoManager _undoManager = new();
+
+        // 窓の段で控えを取る仕組み (UndoCapture) に、履歴と控えの取り方を渡す
+        UndoManager PileDesign.Common.Undo.ISnapshotUndoHost.UndoManager => _undoManager;
+        object PileDesign.Common.Undo.ISnapshotUndoHost.CaptureUndoSnapshot() => GroundsInput.Select(x => x.DeepCopy()).ToList();
 
         public GroundWindow GroundWindowInstance { get; set; } // GroundWindow のインスタンスを保持するプロパティを追加
         private readonly MainWindowViewModel _mainWindowViewModel;

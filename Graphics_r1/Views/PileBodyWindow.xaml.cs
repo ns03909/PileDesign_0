@@ -1,4 +1,5 @@
 ﻿using PileDesign.Models.InputData;
+using PileDesign.Common;
 using PileDesign.ViewModels;
 using Serilog;
 using System;
@@ -295,13 +296,8 @@ namespace PileDesign.Views
         }
 
 
-        private void TextBox_PreviewLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
-        {
-            var viewModel = (PileBodyViewModel)DataContext;
-            viewModel._undoManager.SaveState(new ObservableCollection<PileBodyInput>(
-                viewModel.PileBodies.Select(pb => pb.DeepCopy())
-            ));
-        }
+        // 元に戻すための控えは、窓の段でまとめて取る (XAML の common:UndoCapture.Enabled)。
+        // 欄ごとに付けていたときは根入れ・杭頭の標高に付け忘れがあり、その欄の編集は Ctrl+Z で戻らなかった。
 
         private void TextBox_GotFocus(object sender, RoutedEventArgs e)
         {

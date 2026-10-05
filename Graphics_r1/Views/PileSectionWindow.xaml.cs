@@ -446,11 +446,7 @@ namespace PileDesign.Views
             }
         }
 
-        private void TextBox_PreviewLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
-        {
-            var viewModel = (PileSectionViewModel)DataContext;
-            viewModel._undoManager.SaveState(viewModel.PileSection.DeepCopy());
-        }
+
 
         // ContextMenuが開かれたときにDataGridをCommandParameterに設定するイベントハンドラ
         private void ContextMenu_Opened(object sender, RoutedEventArgs e)

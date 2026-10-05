@@ -86,6 +86,8 @@ public sealed class UndoManager
 
     public void Push(IUndoAction action)
     {
+        // 戻し・やり直しの最中に起きた変更は、新しい手として積まない (<see cref="_replaying"/>)
+        if (_replaying) return;
         if (_scope != null)
         {
             _scope.Add(action);
@@ -121,10 +123,11 @@ public sealed class UndoManager
     /// 呼び出し側は失敗したとき<b>履歴の位置を動かさない</b>。以前はアクションが失敗を握りつぶしていたので、
     /// 値は戻っていないのに履歴の位置だけが進み、画面の値と履歴が食い違った。
     /// </summary>
-    private static bool TryRun(Action run, IUndoAction action, string verb)
+    private bool TryRun(Action run, IUndoAction action, string verb)
     {
         try
         {
+            _replaying = true;
             run();
             return true;
         }
@@ -137,7 +140,21 @@ public sealed class UndoManager
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
             return false;
         }
+        finally
+        {
+            _replaying = false;
+        }
     }
+
+    /// <summary>
+    /// アクションの戻し・やり直しを実行している最中か。
+    ///
+    /// 戻す処理がモデルの値を書き換えると、画面側の変更通知 (ViewModel の On…Changed) が
+    /// それを新しい編集として積み直していた (プロジェクト情報・基本設定)。積み直された手は
+    /// 戻した手の上に乗るので、次の Ctrl+Z は空振りし、やり直しの手は新しい手を積んだ時点で
+    /// 捨てられたうえで取り出されて例外になった。最中の Push / SaveState は捨てる。
+    /// </summary>
+    private bool _replaying;
 
     /// <summary>
     /// 1 手戻す。<b>入口はこれ 1 つ</b>。
@@ -247,7 +264,12 @@ public sealed class UndoManager
     /// </summary>
     public void SaveState(object state, string? description = null)
     {
-        if (state == null) return;
+        if (state == null || _replaying) return;
+
+        // いまの位置の控えと同じ状態なら積まない (<see cref="StateFingerprint"/>)。
+        // やり直しの手を捨てる (DiscardFuture) より前に判定する。後ろで判定すると、
+        // 戻したあとにフォーカスを移しただけで、やり直せる手が消える
+        if (IsSameAsCurrent(state)) return;
 
         // 現在位置より後ろの履歴と、アクションのやり直しを捨てる (新しい手を積んだら分岐前の手はやり直せない)
         DiscardFuture();
@@ -257,6 +279,23 @@ public sealed class UndoManager
 
         TrimHistory();
         RaiseHistoryChanged();
+    }
+
+    /// <summary>
+    /// 控えの「中身の指紋」を返す関数。設定すると、いまの位置の控えと指紋が同じ状態は積まない。
+    ///
+    /// 控えを取る契機 (フォーカスが移る・ドロップダウンを開く・クリックする) では、まだ何も
+    /// 変わっていないことが多い。同じ状態を積むと、Ctrl+Z を押しても見た目が変わらない手が混ざる。
+    /// null を返したら「比べられない」として積む。
+    /// </summary>
+    public Func<object, string?>? StateFingerprint { get; set; }
+
+    private bool IsSameAsCurrent(object state)
+    {
+        if (StateFingerprint == null || _currentIndex < 0 || _currentIndex >= _history.Count) return false;
+        string? now = StateFingerprint(state);
+        if (now == null) return false;
+        return now == StateFingerprint(_history[_currentIndex].State);
     }
 
     /// <summary>
