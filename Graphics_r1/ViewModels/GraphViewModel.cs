@@ -23,6 +23,9 @@ namespace PileDesign.ViewModels
 
         private readonly MainWindowViewModel _mainWindowViewModel;
 
+        /// <summary>メイン画面の VM (結果が古いことを知らせる帯が読む)。</summary>
+        public MainWindowViewModel MainVm => _mainWindowViewModel;
+
         /// <summary>
         /// グラフが基準にする入力。
         ///

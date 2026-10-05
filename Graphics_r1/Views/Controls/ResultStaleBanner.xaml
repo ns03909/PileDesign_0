@@ -1,0 +1,25 @@
+<UserControl x:Class="PileDesign.Views.Controls.ResultStaleBanner"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <!-- 結果を表示する画面の上部に出す帯。DataContext は MainWindowViewModel。
+         表示中の結果が、解析のあとに変更された入力の前のものであることを、解析した日時と一緒に知らせる。
+         画面下端の状態表示 (ResultSetStatusText) は小さく、結果の画面からは見えないため。 -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
+    <Border Visibility="{Binding HasResultStaleNotice, Converter={StaticResource BoolToVisibility}}"
+            Background="#FFF4E0" BorderBrush="#E0A040" BorderThickness="0,0,0,1" Padding="10,6">
+        <DockPanel LastChildFill="True">
+            <!-- 解析を走らせるのではなく、水平解析のウィンドウを開く (段数などを確かめてから実行する) -->
+            <Button DockPanel.Dock="Right" Content="水平解析を開く(_A)…" Margin="10,0,0,0" Padding="10,2" VerticalAlignment="Center"
+                    Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
+                    Visibility="{Binding IsHorizontalResultStale, Converter={StaticResource BoolToVisibility}}"
+                    ToolTip="水平解析のウィンドウを開きます (F5 と同じ)。解析はそこで実行します"/>
+            <TextBlock Text="⚠" FontSize="14" Foreground="#B06000" Margin="0,0,8,0" VerticalAlignment="Top"/>
+            <TextBlock Text="{Binding ResultStaleNotice}" TextWrapping="Wrap" Foreground="#6A4000" VerticalAlignment="Center"/>
+        </DockPanel>
+    </Border>
+</UserControl>

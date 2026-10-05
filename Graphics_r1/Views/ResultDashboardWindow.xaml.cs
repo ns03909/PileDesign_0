@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 
 namespace PileDesign.Views
@@ -20,7 +21,7 @@ namespace PileDesign.Views
     /// 設計の判断に直接は要らないので「解析の詳細」に畳んだ。
     ///
     /// 解析中の数値ではなく、解析完了後に呼び出す前提のスナップショット表示。
-    /// 「再計算」ボタンで開いたまま現在の状態を再読込できる。
+    /// 「表示を更新」ボタンで開いたまま現在の状態を再読込できる (解析はやり直さない)。
     /// </summary>
     public partial class ResultDashboardWindow : Window
     {
@@ -58,13 +59,21 @@ namespace PileDesign.Views
         private void RefreshButton_Click(object sender, RoutedEventArgs e) => Refresh();
 
         /// <summary>
-        /// 再計算。リボンから開き直したときと、テスト (Loaded は Show しないと来ない) から呼ぶ。
+        /// 表示を作り直す。リボンから開き直したときと、テスト (Loaded は Show しないと来ない) から呼ぶ。
         /// </summary>
         internal void RefreshNow() => Refresh();
 
+        /// <summary>
+        /// 解析した日時と、表示を作り直した時刻を分けて書く。
+        /// 以前は「更新: 時刻」だけで、それは表示を作り直した時刻だった。いつ計算した結果なのかが読み取れなかった。
+        /// </summary>
+        internal static string FormatTimes(DateTime? analyzedAt, DateTime refreshedAt)
+            => (analyzedAt is { } a ? $"解析: {a:yyyy/MM/dd HH:mm}" : "解析: 未実施")
+               + $"　／　表示の更新: {refreshedAt:HH:mm:ss}";
+
         private void Refresh()
         {
-            LastUpdateText.Text = $"更新: {DateTime.Now:HH:mm:ss}";
+            LastUpdateText.Text = FormatTimes(_vm.HorizontalAnalyzedAt, DateTime.Now);
 
             PileEvaluationSummary summary;
             try
@@ -248,7 +257,7 @@ namespace PileDesign.Views
 
             if (failedParts.Count > 0)
                 return new Verdict("判定できません", VerdictKind.CannotJudge,
-                    failedNote + " OK / NG を判定できません。再計算するか、解析をやり直してください"
+                    failedNote + " OK / NG を判定できません。表示を更新するか、解析をやり直してください"
                     + "（詳しい理由はログに記録しています）。");
 
             if (unconvergedCount > 0)
@@ -339,6 +348,42 @@ namespace PileDesign.Views
             PileBandCountsText.FontWeight = FontWeights.Normal;
 
             PileRatioGrid.ItemsSource = piles.Select(ToRow).ToList();
+        }
+
+        // ---- 杭の行から移る ------------------------------------------------
+        private int? SelectedPileNo => PileRatioGrid.SelectedItem is PileRow row ? row.PileNo : null;
+
+        private void ShowPileButton_Click(object sender, RoutedEventArgs e) => ShowSelectedPile();
+
+        // 行を選んでいるときだけ、杭へ移るボタンを使えるようにする
+        private void PileRatioGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            bool any = SelectedPileNo != null;
+            ShowPileButton.IsEnabled = any;
+            OpenPileEvaluationButton.IsEnabled = any;
+        }
+
+        private void PileRatioGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // 見出しや空き領域のダブルクリックでは移らない (行の上だけ)
+            if (e.OriginalSource is DependencyObject d && ItemsControl.ContainerFromElement(PileRatioGrid, d) is DataGridRow)
+                ShowSelectedPile();
+        }
+
+        private void ShowSelectedPile()
+        {
+            if (SelectedPileNo is not int no) return;
+            if (_vm.ShowPileOnPlan(no) == 0)
+            {
+                MessageService.ShowInfo($"杭 No.{no} が杭配置に見つかりません (解析のあとに杭を消したか、番号を変えた可能性があります)。");
+                return;
+            }
+            Owner?.Activate();
+        }
+
+        private void OpenPileEvaluationButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedPileNo is int no) _vm.OpenEvaluationForPile(no);
         }
 
         private static PileRow ToRow(PileEvaluationEntry e)

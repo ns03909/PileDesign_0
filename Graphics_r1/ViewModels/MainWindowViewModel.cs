@@ -71,6 +71,7 @@ namespace PileDesign.ViewModels
     /// <item><term>.ResultsWindows.cs</term><description>結果を見るウィンドウ</description></item>
     /// <item><term>.ToolWindowsAndMoveCopy.cs</term><description>道具のウィンドウと移動・複写</description></item>
     /// <item><term>.ResultSet.cs</term><description>解析結果の入れ物と、再解析が必要かの判断</description></item>
+    /// <item><term>.Workflow.cs</term><description>工程の帯 (入力 → 杭要素分割 → 解析 → 検定 → 計算書)</description></item>
     /// <item><term>.EvaluationColoring.cs</term><description>検定結果の色分け</description></item>
     /// <item><term>.CameraViews.cs</term><description>視点の切り替え</description></item>
     /// <item><term>.SettlementGridCache.cs</term><description>沈下グリッドの描画キャッシュ</description></item>

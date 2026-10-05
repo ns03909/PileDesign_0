@@ -1,6 +1,7 @@
 ﻿<Window x:Class="PileDesign.Views.GraphWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctrl="clr-namespace:PileDesign.Views.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
@@ -29,6 +30,9 @@
         <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
     </Window.Resources>
 
+    <DockPanel>
+        <!-- 表示中の結果が入力変更前のものなら、解析した日時と一緒に知らせる -->
+        <ctrl:ResultStaleBanner DockPanel.Dock="Top" DataContext="{Binding MainVm}"/>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -346,4 +350,5 @@
                     Width="100" Command="{Binding CloseCommand}"/>
         </StackPanel>
     </Grid>
+    </DockPanel>
 </Window>

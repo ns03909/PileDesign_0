@@ -1,0 +1,68 @@
+<UserControl x:Class="PileDesign.Views.Controls.WorkflowStrip"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:PileDesign.ViewModels"
+             mc:Ignorable="d">
+    <!-- 工程の帯。DataContext は MainWindowViewModel (WorkflowSteps)。
+         初めて使うときに次に何をすればよいかが分かるよう、工程と完了の状態を並べ、押すとその工程の画面を開く。 -->
+    <Border Background="#F4F6F9" BorderBrush="#D5DBE3" BorderThickness="0,0,0,1" Padding="8,3">
+        <ItemsControl ItemsSource="{Binding WorkflowSteps}" Focusable="False">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:WorkflowStep}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="Arrow" Text="→" Foreground="#8A96A8" VerticalAlignment="Center" Margin="4,0"/>
+                        <Button Command="{Binding Command}" ToolTip="{Binding ToolTip}" Padding="8,1" Cursor="Hand"
+                                AutomationProperties.Name="{Binding Name}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Chip" CornerRadius="10" Padding="{TemplateBinding Padding}" BorderThickness="1"
+                                            Background="#FFFFFF" BorderBrush="#C3CBD6">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Chip" Property="BorderBrush" Value="#1F4E79"/>
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Chip" Property="BorderBrush" Value="#1F4E79"/>
+                                            <Setter TargetName="Chip" Property="BorderThickness" Value="2"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="Mark" Text="{Binding Mark}" FontWeight="Bold" Margin="0,0,4,0" Foreground="#8A96A8"/>
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                <TextBlock x:Name="State" Text="{Binding StateText}" Margin="6,0,0,0" Foreground="#5A6678"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <DataTemplate.Triggers>
+                        <!-- 先頭の工程の前には矢印を出さない -->
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
+                            <Setter TargetName="Arrow" Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Status}" Value="{x:Static vm:WorkflowStepStatus.Done}">
+                            <Setter TargetName="Mark" Property="Foreground" Value="#2E7D32"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Status}" Value="{x:Static vm:WorkflowStepStatus.NeedsRedo}">
+                            <Setter TargetName="Mark" Property="Foreground" Value="#C26A00"/>
+                            <Setter TargetName="State" Property="Foreground" Value="#C26A00"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Status}" Value="{x:Static vm:WorkflowStepStatus.Next}">
+                            <Setter TargetName="Mark" Property="Foreground" Value="#1F4E79"/>
+                            <Setter TargetName="State" Property="Foreground" Value="#1F4E79"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Border>
+</UserControl>

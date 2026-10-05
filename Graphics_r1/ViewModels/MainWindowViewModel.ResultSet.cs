@@ -417,6 +417,80 @@ namespace PileDesign.ViewModels
             CurrentModel?.ConcreteOptionsSignature is string recorded
             && recorded != ConcreteModelOptions.Signature();
 
+        /// <summary>
+        /// 表示中の水平解析の結果が、解析のあとに変更された (水平解析に効く) 入力の前のものか。
+        /// 群杭沈下だけに効く入力の変更では立たない (<see cref="AnalysisInputScope"/>)。
+        /// </summary>
+        public bool IsHorizontalResultStale => HorizontalInputChanged && IsHorizontalAnalysisDone;
+
+        /// <summary>
+        /// 結果を表示する画面の上部の帯に出す文 (無ければ null)。表示中の結果が、解析のあとに変更された入力の前の
+        /// ものであることを、解析した日時と一緒に書く。画面下端の状態表示 (<see cref="ResultSetStatusText"/>) は小さく、
+        /// グラフ・結果の表・ダッシュボードからは見えないので、そちらにも出す
+        /// (<see cref="Views.Controls.ResultStaleBanner"/>)。
+        /// </summary>
+        /// <summary>表示中の水平解析の結果を解析した日時 (未解析なら null)。ダッシュボードが「表示の更新」と分けて出す。</summary>
+        public DateTime? HorizontalAnalyzedAt
+            => IsHorizontalAnalysisDone && _currentResultSet != null
+                ? _currentResultSet.RecordOf(AnalysisKind.Horizontal)?.ExecutedAt ?? _currentResultSet.CapturedAt
+                : null;
+
+        public string? ResultStaleNotice
+        {
+            get
+            {
+                if (_currentResultSet == null) return null;
+                DateTime? Executed(params AnalysisKind[] kinds) => kinds
+                    .Select(k => _currentResultSet.RecordOf(k)?.ExecutedAt)
+                    .Where(t => t != null).DefaultIfEmpty(null).Max();
+                return BuildResultStaleNotice(
+                    IsHorizontalResultStale, Executed(AnalysisKind.Horizontal) ?? _currentResultSet.CapturedAt, _editsSinceHorizontal,
+                    SettlementResultsAreStale, Executed(AnalysisKind.SingleSettlement, AnalysisKind.VerticalBeam, AnalysisKind.GroupSettlement),
+                    _editsSinceSettlement);
+            }
+        }
+
+        /// <summary>帯を出すか。</summary>
+        public bool HasResultStaleNotice => ResultStaleNotice != null;
+
+        /// <summary>
+        /// 帯の文を組む (純粋関数)。古くなった結果だけを名指しし、いつ解析したものか・何を変えたかを書く。
+        /// </summary>
+        internal static string? BuildResultStaleNotice(
+            bool horizontalStale, DateTime? horizontalAt, IReadOnlyList<string> horizontalEdits,
+            bool settlementStale, DateTime? settlementAt, IReadOnlyList<string> settlementEdits)
+        {
+            static string When(DateTime? at) => at is DateTime t ? $" ({t:yyyy/MM/dd HH:mm} に解析)" : "";
+            static string What(IReadOnlyList<string> edits)
+                => edits.Count == 0 ? "" : "（" + string.Join("・", edits.Take(3)) + (edits.Count > 3 ? $" ほか {edits.Count - 3} 件" : "") + "）";
+
+            var lines = new List<string>();
+            if (horizontalStale)
+                lines.Add($"表示中の水平解析の結果{When(horizontalAt)}は、そのあとに変更された入力{What(horizontalEdits)}の前のものです。いまの入力に対する結果ではありません。");
+            if (settlementStale)
+                lines.Add($"表示中の沈下の結果{When(settlementAt)}は、そのあとに変更された入力{What(settlementEdits)}の前のものです。");
+            return lines.Count == 0 ? null : string.Join("\n", lines);
+        }
+
+        /// <summary>
+        /// 帯の文は状態表示と同じ材料から作るので、状態表示が変わったとき (と、解析の有無が変わったとき) に知らせる。
+        /// 状態表示の通知は 8 か所にあり、そこへ 1 つずつ足すと取り残すので、ここで受ける。
+        /// </summary>
+        protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            base.OnPropertyChanged(e);
+            if (e.PropertyName is nameof(ResultSetStatusText) or nameof(IsHorizontalAnalysisDone) or nameof(CurrentResultSet))
+            {
+                base.OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(IsHorizontalResultStale)));
+                base.OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(ResultStaleNotice)));
+                base.OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(HasResultStaleNotice)));
+            }
+            // 工程の帯 (MainWindowViewModel.Workflow.cs) も同じ印から決まる。杭の本数は PileCountText の通知で知る
+            if (e.PropertyName is nameof(ResultSetStatusText) or nameof(IsHorizontalAnalysisDone) or nameof(CurrentResultSet)
+                or nameof(IsElementSplit) or nameof(CurrentInputModel) or nameof(PileCountText))
+                base.OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(WorkflowSteps)));
+        }
+
         /// <summary>結果セットの状態表示（ステータスバー等）。</summary>
         public string ResultSetStatusText
         {

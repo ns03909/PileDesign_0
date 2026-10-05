@@ -50,6 +50,9 @@ namespace PileDesign.ViewModels
         private Action zoomFitAction;
 
         public Action? ZoomFitAction { get => zoomFitAction; set => zoomFitAction = value; }
+
+        /// <summary>平面図で指定した杭を画面の中央に寄せる (倍率は変えない)。メイン画面が設定する。</summary>
+        public Action<IReadOnlyList<PileLayoutDataItem>>? CenterOnPilesAction { get; set; }
         public Action<double, double>? AnimateViewAnglesAction { get; set; }
         public Action? ActivateSettlementSoilTabAction { get; set; }
 

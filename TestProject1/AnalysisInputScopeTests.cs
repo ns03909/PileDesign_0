@@ -24,7 +24,7 @@ namespace TestProject1
     [TestClass]
     public class AnalysisInputScopeTests
     {
-        private static (MainWindowViewModel vm, InputModel input)? BuildAnalyzed()
+        internal static (MainWindowViewModel vm, InputModel input)? BuildAnalyzed()
         {
             var (input, _) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
             if (input == null) return null;

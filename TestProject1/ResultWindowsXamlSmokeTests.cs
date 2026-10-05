@@ -90,6 +90,53 @@ namespace TestProject1
             });
         }
 
+        /// <summary>
+        /// 解析結果テーブル。入力変更後の帯 (ResultStaleBanner) と杭の絞り込みの帯を足したので、
+        /// 両方が出ている状態でパースを踏む。
+        /// </summary>
+        [TestMethod]
+        public void TableWindow_XamlParses_WithStaleBannerAndPileFilter()
+        {
+            if (AnalysisInputScopeTests.BuildAnalyzed() == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            AssertWindowParses("TableWindow", () =>
+            {
+                var mainVm = AnalysisInputScopeTests.BuildAnalyzed()!.Value.vm;
+                mainVm.MarkInputChangedSinceAnalysis(PileDesign.ViewModels.MainWindowViewModel.AnalysisInputScope.Model, "杭配置");
+                var vm = new PileDesign.ViewModels.TableWindowViewModel { MainVm = mainVm };
+                vm.PileNoFilter = 1;
+                return new PileDesign.Views.TableWindow { DataContext = vm };
+            });
+        }
+
+        /// <summary>
+        /// メイン画面の工程の帯。MainWindow 自体はここで開けない (下の注記) ので、帯だけを窓に載せてパースを踏む。
+        /// x:Static の列挙値 (WorkflowStepStatus) と PreviousData の DataTrigger を含む。
+        /// </summary>
+        [TestMethod]
+        public void WorkflowStrip_XamlParses_AndShowsFiveSteps()
+        {
+            if (AnalysisInputScopeTests.BuildAnalyzed() == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            int shown = -1;
+            AssertWindowParses("WorkflowStrip", () =>
+            {
+                var mainVm = AnalysisInputScopeTests.BuildAnalyzed()!.Value.vm;
+                mainVm.MarkInputChangedSinceAnalysis(PileDesign.ViewModels.MainWindowViewModel.AnalysisInputScope.Model, "杭配置");
+                var strip = new PileDesign.Views.Controls.WorkflowStrip { DataContext = mainVm };
+                var window = new System.Windows.Window { Content = strip };
+                strip.ApplyTemplate();
+                strip.Measure(new System.Windows.Size(1200, 40));
+                // バインディングはディスパッチャー経由で付くので、一度回してから数える
+                var frame = new System.Windows.Threading.DispatcherFrame();
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background, () => frame.Continue = false);
+                System.Windows.Threading.Dispatcher.PushFrame(frame);
+                var items = (System.Windows.Controls.ItemsControl)((System.Windows.Controls.Border)strip.Content).Child;
+                shown = items.Items.Count;
+                return window;
+            });
+            Assert.AreEqual(5, shown, "工程の帯に 5 つの工程が並んでいません");
+        }
+
         // 検定ウィンドウは廃止した (検定は解析結果テーブルから見る)。
 
         // MainWindow は他のテストが別 STA スレッドで作った WPF の静的オブジェクトに触れてしまい、

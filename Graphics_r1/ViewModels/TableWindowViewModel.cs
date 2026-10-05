@@ -21,6 +21,9 @@ namespace PileDesign.ViewModels
         public const string LoadCaseFilterLevel1 = "L1 (地震荷重レベル1)";
         public const string LoadCaseFilterLevel2 = "L2 (地震荷重レベル2)";
 
+        /// <summary>メイン画面の VM (結果が古いことを知らせる帯が読む)。表を作ったあとに入力を変えても帯は追随する。</summary>
+        public MainWindowViewModel? MainVm { get; set; }
+
         // 全テーブル
         public ObservableCollection<ResultTable> AllTables { get; } = [];
         // フィルタ後
@@ -65,6 +68,24 @@ namespace PileDesign.ViewModels
         private string _selectedLiquefactionFilter = UiText.All;
 
         partial void OnSelectedLiquefactionFilterChanged(string value) => ApplyFilters();
+
+        /// <summary>
+        /// 杭で絞り込む (杭配置の PileNo。null なら絞り込まない)。絞り込んでいる間は、杭ごとの行を持つ表 (検定) だけを、
+        /// その杭の行に絞って出す。ダッシュボードの「この杭の検定を開く」が使う。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(PileFilterText))]
+        [NotifyPropertyChangedFor(nameof(IsPileFiltered))]
+        private int? _pileNoFilter;
+
+        partial void OnPileNoFilterChanged(int? value) => ApplyFilters();
+
+        public bool IsPileFiltered => PileNoFilter != null;
+
+        public string PileFilterText => PileNoFilter is int no ? $"杭 No.{no} の検定だけに絞り込んでいます" : "";
+
+        [CommunityToolkit.Mvvm.Input.RelayCommand]
+        private void ClearPileFilter() => PileNoFilter = null;
 
         public ICommand ExportCsvCommand { get; }
 
@@ -149,6 +170,17 @@ namespace PileDesign.ViewModels
 
             foreach (var t in AllTables)
             {
+                if (PileNoFilter is int pileNo)
+                {
+                    // 杭で絞るときは、杭ごとの行を持つ表 (検定) だけを、その杭の行に絞る
+                    if (!t.SpansAllConditions) continue;
+                    var pileRows = t.Rows.Where(r => r is PileDesign.Models.Results.EvaluationItem e && e.PileNo == pileNo)
+                                         .Where(RowMatchesConditionFilters).ToList();
+                    if (pileRows.Count == 0) continue;
+                    FilteredTables.Add(t.WithRows(pileRows));
+                    continue;
+                }
+
                 if (SelectedTableCategoryFilter != UiText.All
                     && Converters.TableCategoryConverter.CategoryOf(t) != SelectedTableCategoryFilter)
                     continue;

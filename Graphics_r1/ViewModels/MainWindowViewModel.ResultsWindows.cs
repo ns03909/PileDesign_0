@@ -254,11 +254,32 @@ namespace PileDesign.ViewModels
 
         public ICommand OpenTableWindowCommand { get; private set; }
 
-        private void OpenTableWindow()
+        private void OpenTableWindow() => OpenTableWindow(pileNoFilter: null);
+
+        /// <summary>
+        /// 検定の結果から杭へ移る: 杭番号 (杭配置の PileNo。検定の項目と同じ番号) の杭を選び、平面図でその杭を
+        /// 画面の中央に寄せる。選んだ本数を返す (その番号の杭が無ければ 0)。
+        /// </summary>
+        public int ShowPileOnPlan(int pileNo)
+        {
+            var piles = CurrentInputModel?.PileLayoutItems?.Where(p => p != null && p.PileNo == pileNo).ToList() ?? [];
+            if (piles.Count == 0) return 0;
+            int selected = SelectForReview(new PileDesign.Services.ReviewSelection(piles, [], []));
+            CenterOnPilesAction?.Invoke(piles);
+            return selected;
+        }
+
+        /// <summary>
+        /// 検定の結果から杭へ移る: 結果のテーブルを、検定の表をその杭の行だけに絞って開く
+        /// (支配ケースを含む全条件の検定が、検定比の降順で並ぶ)。
+        /// </summary>
+        public void OpenEvaluationForPile(int pileNo) => OpenTableWindow(pileNoFilter: pileNo);
+
+        private void OpenTableWindow(int? pileNoFilter)
         {
             try
             {
-                var vm = new TableWindowViewModel();
+                var vm = new TableWindowViewModel { MainVm = this };
                 vm.AllSeismicLoadCases = CurrentInputModel.LoadCasesInput.AllSeismicLoadCases;
                 vm.AnaModel = CurrentModel;
 
@@ -277,6 +298,7 @@ namespace PileDesign.ViewModels
                 // 検定結果 (検定比の降順)
                 allTables.AddRange(BuildEvaluationTables());
                 vm.LoadTables(allTables);
+                vm.PileNoFilter = pileNoFilter;
 
                 var w = new Views.TableWindow { DataContext = vm };
                 w.Show();

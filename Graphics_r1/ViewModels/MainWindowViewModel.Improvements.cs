@@ -110,6 +110,8 @@ namespace PileDesign.ViewModels
             UpdateWindowAction = null;
             UpdateCanvas3DAction = null;
             ZoomFitAction = null;
+            CenterOnPilesAction = null;
+            OpenResultDashboardAction = null;
             AnimateViewAnglesAction = null;
 
             _lastUndoSnapshotHash = null;

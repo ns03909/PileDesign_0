@@ -147,5 +147,19 @@ namespace TestProject1
             StringAssert.Contains(dashboard, "PileEvaluationSummary.WholePart",
                 "ダッシュボードがまとめを組めなかったとき、失敗を「検定なし」として扱っています");
         }
+
+        /// <summary>
+        /// 表示を作り直すだけのボタンは「表示を更新」と呼ぶ。以前は「再計算」で、解析をやり直す操作と取り違えやすかった
+        /// (「再計算」はヘルプでは解析のやり直しの意味でも使うので、引退語の一覧には入れず、ダッシュボードで見張る)。
+        /// </summary>
+        [TestMethod]
+        public void TheRefreshButton_SaysItOnlyRefreshesTheView()
+        {
+            string xaml = TestSource.Read("Graphics_r1", "Views", "ResultDashboardWindow.xaml");
+            string code = TestSource.Read("Graphics_r1", "Views", "ResultDashboardWindow.xaml.cs");
+            StringAssert.Contains(xaml, "Content=\"表示を更新(_R)\" Click=\"RefreshButton_Click\"");
+            Assert.IsFalse(xaml.Contains("再計算", StringComparison.Ordinal) || code.Contains("再計算", StringComparison.Ordinal),
+                "ダッシュボードに「再計算」が残っています (表示を作り直すだけの操作を、解析のやり直しと取り違えます)");
+        }
     }
 }

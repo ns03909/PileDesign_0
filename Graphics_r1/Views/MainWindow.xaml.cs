@@ -114,6 +114,8 @@ namespace PileDesign.Views
 
             // 追加: ZoomFitAction をコードビハインド実装に接続
             viewModel.ZoomFitAction = ZoomFit;
+            viewModel.CenterOnPilesAction = CenterOnPiles;
+            viewModel.OpenResultDashboardAction = () => OpenResultDashboard_Click(this, new RoutedEventArgs());
 
             // 沈下土層ON時: 群杭沈下ウィンドウの土層タブを表示
             viewModel.ActivateSettlementSoilTabAction = () =>
@@ -1040,6 +1042,24 @@ namespace PileDesign.Views
                 e.Handled = true;
             }
 
+        }
+
+        /// <summary>
+        /// 指定した杭 (の重心) を平面図の中央に寄せる。倍率は変えない。検定の結果から杭へ移るときに使う。
+        /// </summary>
+        private void CenterOnPiles(IReadOnlyList<PileLayoutDataItem> piles)
+        {
+            if (DataContext is not MainWindowViewModel viewModel || piles == null || piles.Count == 0) return;
+            var points = piles.Select(p => viewModel.CanvasThreeDView.Transformation(p.Point3D)).ToList();
+            double cx = points.Average(p => p.X), cy = points.Average(p => p.Y);
+            double offsetX = Canvas3DLayout.ActualWidth / 2 - cx;
+            double offsetY = Canvas3DLayout.ActualHeight / 2 - cy;
+            if (!double.IsFinite(offsetX) || !double.IsFinite(offsetY)) return;
+            viewModel.CanvasThreeDView.ViewTransition = new Point(
+                viewModel.CanvasThreeDView.ViewTransition.X + offsetX,
+                viewModel.CanvasThreeDView.ViewTransition.Y + offsetY);
+            UpdateCanvas3D();
+            Activate();
         }
 
         // ズームフィット

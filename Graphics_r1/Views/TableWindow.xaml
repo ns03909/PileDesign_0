@@ -1,6 +1,7 @@
 ﻿<Window x:Class="PileDesign.Views.TableWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctrl="clr-namespace:PileDesign.Views.Controls" 
         xmlns:viewmodels="clr-namespace:PileDesign.ViewModels" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -37,6 +38,27 @@
         <conv:TableCategoryConverter x:Key="TableCategoryConverter"/>
     </Window.Resources>
     
+    <DockPanel>
+        <!-- 表示中の結果が入力変更前のものなら、解析した日時と一緒に知らせる -->
+        <ctrl:ResultStaleBanner DockPanel.Dock="Top" DataContext="{Binding MainVm}"/>
+        <!-- ダッシュボードの「この杭の検定を開く」から来たとき: 杭で絞り込んでいることと解除 -->
+        <Border DockPanel.Dock="Top" Background="#EAF3E8" BorderBrush="#9DB4CC" BorderThickness="0,0,0,1" Padding="10,4">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsPileFiltered}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="絞り込みを解除(_U)" Command="{Binding ClearPileFilterCommand}" Padding="10,1"
+                        ToolTip="すべての表を出します"/>
+                <TextBlock Text="{Binding PileFilterText}" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="220" MinWidth="120"/>
@@ -234,4 +256,5 @@
             </DataGrid.ColumnHeaderStyle>
         </common:EnhancedDataGrid>
     </Grid>
+    </DockPanel>
 </Window>
