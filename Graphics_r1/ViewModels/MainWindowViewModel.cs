@@ -800,7 +800,7 @@ namespace PileDesign.ViewModels
             //  ダイアログでなくトーストで通知)
             if (HasGroupSettlementBeamAwareCases)
             {
-                InvalidateBeamAwareResultsSilently("基礎梁の変更により、群杭沈下解析（反復）の結果を破棄しました。");
+                InvalidateBeamAwareResultsSilently("基礎梁の変更により、群杭沈下解析（基礎梁あり）の結果を破棄しました。");
             }
         }
 
@@ -821,7 +821,7 @@ namespace PileDesign.ViewModels
 
             if (HasGroupSettlementBeamAwareCases)
             {
-                InvalidateBeamAwareResultsSilently("基礎梁の変更により、群杭沈下解析（反復）の結果を破棄しました。");
+                InvalidateBeamAwareResultsSilently("基礎梁の変更により、群杭沈下解析（基礎梁あり）の結果を破棄しました。");
             }
         }
 
@@ -1001,11 +1001,6 @@ namespace PileDesign.ViewModels
         [RelayCommand(CanExecute = nameof(CanOpenGroupSettlementWithBeamWindow))]
         public void OpenGroupSettlementWithBeamWindow()
         {
-            // 反復解析の荷重面標高を採用 (per-route フィールドから現在値にコピー)
-            var pgs = CurrentInputModel?.PileGroupSettlement;
-            if (pgs != null && !double.IsNaN(pgs.LoadingPlaneAltitudeBeamAware))
-                pgs.LoadingPlaneAltitude = pgs.LoadingPlaneAltitudeBeamAware;
-
             var vm = new GroupSettlementWithBeamCalculationViewModel(this);
             var win = new GroupSettlementWithBeamWindow
             {

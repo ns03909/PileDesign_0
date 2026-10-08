@@ -439,13 +439,9 @@ namespace PileDesign.ViewModels
                 }
 
                 // 例題ロード等で外部から荷重面標高が変わったら、TextBox バインド先 (プロキシ) を更新
-                if (e.PropertyName == nameof(PileGroupSettlement.LoadingPlaneAltitudeNonBeam))
+                if (e.PropertyName == nameof(PileGroupSettlement.LoadingPlaneAltitude))
                 {
-                    OnPropertyChanged(nameof(LoadingPlaneAltitudeNonBeamProxy));
-                }
-                if (e.PropertyName == nameof(PileGroupSettlement.LoadingPlaneAltitudeBeamAware))
-                {
-                    OnPropertyChanged(nameof(LoadingPlaneAltitudeBeamAwareProxy));
+                    OnPropertyChanged(nameof(LoadingPlaneAltitudeProxy));
                 }
             };
             pgs.PropertyChanged -= _pileGroupSettlementHandler;

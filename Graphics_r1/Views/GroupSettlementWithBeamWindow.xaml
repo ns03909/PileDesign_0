@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:common="clr-namespace:PileDesign.Common"
         mc:Ignorable="d"
-        Title="群杭沈下解析（基礎梁考慮・反復）" Height="700" Width="1100"
+        Title="群杭沈下解析（基礎梁あり）" Height="700" Width="1100"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
 

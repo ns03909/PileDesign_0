@@ -57,12 +57,8 @@ namespace PileDesign.Services
             inputModel.PileGroupSettlement.SettlementGridX = new ObservableCollection<double>();
             inputModel.PileGroupSettlement.SettlementGridY = new ObservableCollection<double>();
 
-            // 載荷面標高 (旧: 単一値, 新: per-route で個別指定可能)
-            inputModel.PileGroupSettlement.LoadingPlaneAltitude = data.LoadingPlaneAltitude;
-            inputModel.PileGroupSettlement.LoadingPlaneAltitudeNonBeam
-                = data.LoadingPlaneAltitudeNonBeam ?? data.LoadingPlaneAltitude;
-            inputModel.PileGroupSettlement.LoadingPlaneAltitudeBeamAware
-                = data.LoadingPlaneAltitudeBeamAware ?? data.LoadingPlaneAltitude;
+            // 荷重面標高 (基礎梁なし・ありで 1 つ。例題が解析ごとに持っていたら基礎梁なしの値)
+            inputModel.PileGroupSettlement.LoadingPlaneAltitude = data.LoadingPlaneAltitudeNonBeam ?? data.LoadingPlaneAltitude;
 
             // 矩形荷重
             var rectLoadList = new List<RectLoad>(data.RectLoads?.Count ?? 0);
@@ -136,12 +132,8 @@ namespace PileDesign.Services
                 }
             }
 
-            // 載荷面標高を設定 (per-route 対応)
-            inputModel.PileGroupSettlement.LoadingPlaneAltitude = data.LoadingPlaneAltitude;
-            inputModel.PileGroupSettlement.LoadingPlaneAltitudeNonBeam
-                = data.LoadingPlaneAltitudeNonBeam ?? data.LoadingPlaneAltitude;
-            inputModel.PileGroupSettlement.LoadingPlaneAltitudeBeamAware
-                = data.LoadingPlaneAltitudeBeamAware ?? data.LoadingPlaneAltitude;
+            // 荷重面標高 (基礎梁なし・ありで 1 つ。例題が解析ごとに持っていたら基礎梁なしの値)
+            inputModel.PileGroupSettlement.LoadingPlaneAltitude = data.LoadingPlaneAltitudeNonBeam ?? data.LoadingPlaneAltitude;
 
             // 矩形荷重を設定（バッチ化）
             var rectLoadList = new List<RectLoad>(data.RectLoads.Count);

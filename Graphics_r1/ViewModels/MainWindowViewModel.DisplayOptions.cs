@@ -211,9 +211,9 @@ namespace PileDesign.ViewModels
 
                 var pgs = CurrentInputModel?.PileGroupSettlement;
                 if (pgs?.CaseRecords?.Any(r => !r.IsBeamAware) == true)
-                    items.Add(new() { Text = "群杭沈下解析（一般） ✓", Color = "Warning" });
+                    items.Add(new() { Text = "群杭沈下解析（基礎梁なし） ✓", Color = "Warning" });
                 if (pgs?.CaseRecords?.Any(r => r.IsBeamAware) == true)
-                    items.Add(new() { Text = "群杭沈下解析（反復） ✓", Color = "Warning" });
+                    items.Add(new() { Text = "群杭沈下解析（基礎梁あり） ✓", Color = "Warning" });
                 return items;
             }
         }
@@ -2638,6 +2638,17 @@ namespace PileDesign.ViewModels
         public bool IsManualRectLoadEditingEnabled
             => CurrentInputModel?.PileGroupSettlement?.LoadingType != "個別矩形（基礎梁考慮）";
 
+        /// <summary>
+        /// 群杭沈下ウィンドウの「解析」タブで、基礎梁ありの解析を選んでいるか (画面の状態。保存しない)。
+        /// 基礎梁ありのときだけ、反復の条件と注意を出す。
+        /// </summary>
+        private bool _isGroupSettlementWithBeamSelected;
+        public bool IsGroupSettlementWithBeamSelected
+        {
+            get => _isGroupSettlementWithBeamSelected;
+            set => SetProperty(ref _isGroupSettlementWithBeamSelected, value);
+        }
+
         /// <summary>基礎梁考慮反復の CaseRecord が 1 件以上あるか。</summary>
         public bool HasGroupSettlementBeamAwareCases
         {
@@ -2673,53 +2684,23 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 一般解析タブの 荷重面Z 入力用プロキシ。値変更時、非 beam-aware 解析結果が
-        /// 保存されている場合は警告ダイアログを表示し、OK で結果を削除してから値を反映する。
+        /// 荷重条件の 荷重面Z 入力用プロキシ。基礎梁なし・ありの両方の解析が使う 1 つの値。
+        /// 値を変えるとき、どちらかの解析結果が保存されていれば確かめ、OK で結果を削除してから値を反映する。
         /// </summary>
-        public double LoadingPlaneAltitudeNonBeamProxy
+        public double LoadingPlaneAltitudeProxy
         {
-            get => CurrentInputModel?.PileGroupSettlement?.LoadingPlaneAltitudeNonBeam ?? 0.0;
+            get => CurrentInputModel?.PileGroupSettlement?.LoadingPlaneAltitude ?? 0.0;
             set
             {
                 var pgs = CurrentInputModel?.PileGroupSettlement;
                 if (pgs == null) return;
-                double current = pgs.LoadingPlaneAltitudeNonBeam;
-                if (Math.Abs(current - value) < 1e-9) return;
-                if (!ConfirmAnalysisConditionChange("一般", "荷重面Z (一般)")) {
-                    OnPropertyChanged(nameof(LoadingPlaneAltitudeNonBeamProxy));
+                if (Math.Abs(pgs.LoadingPlaneAltitude - value) < 1e-9) return;
+                if (!ConfirmAnalysisConditionChange("両方", "荷重面Z")) {
+                    OnPropertyChanged(nameof(LoadingPlaneAltitudeProxy));
                     return;
                 }
-                pgs.LoadingPlaneAltitudeNonBeam = value;
-                // アクティブが 一般 ルートなら Canvas 表示用 LoadingPlaneAltitude も同期
-                if (pgs.ActiveLoadingType != "個別矩形（基礎梁考慮）")
-                    pgs.LoadingPlaneAltitude = value;
-                OnPropertyChanged(nameof(LoadingPlaneAltitudeNonBeamProxy));
-                UpdateCanvas3DAction?.Invoke();
-            }
-        }
-
-        /// <summary>
-        /// 反復解析タブの 荷重面Z 入力用プロキシ。値変更時、beam-aware 解析結果が
-        /// 保存されている場合は警告ダイアログを表示し、OK で結果を削除してから値を反映する。
-        /// </summary>
-        public double LoadingPlaneAltitudeBeamAwareProxy
-        {
-            get => CurrentInputModel?.PileGroupSettlement?.LoadingPlaneAltitudeBeamAware ?? 0.0;
-            set
-            {
-                var pgs = CurrentInputModel?.PileGroupSettlement;
-                if (pgs == null) return;
-                double current = pgs.LoadingPlaneAltitudeBeamAware;
-                if (Math.Abs(current - value) < 1e-9) return;
-                if (!ConfirmAnalysisConditionChange("反復", "荷重面Z (反復)")) {
-                    OnPropertyChanged(nameof(LoadingPlaneAltitudeBeamAwareProxy));
-                    return;
-                }
-                pgs.LoadingPlaneAltitudeBeamAware = value;
-                // アクティブが 反復 ルートなら Canvas 表示用 LoadingPlaneAltitude も同期
-                if (pgs.ActiveLoadingType == "個別矩形（基礎梁考慮）")
-                    pgs.LoadingPlaneAltitude = value;
-                OnPropertyChanged(nameof(LoadingPlaneAltitudeBeamAwareProxy));
+                pgs.LoadingPlaneAltitude = value;
+                OnPropertyChanged(nameof(LoadingPlaneAltitudeProxy));
                 UpdateCanvas3DAction?.Invoke();
             }
         }
@@ -2790,11 +2771,15 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 群杭沈下「一般 / 反復」切替 ComboBox 用 (表示メニュー荷重ケースグループ + 右ペイン用)。
+        /// 群杭沈下「基礎梁なし / 基礎梁あり」切替 ComboBox 用 (表示メニュー荷重ケースグループ + 右ペイン用)。
         /// 解析有無に関わらず両方の選択肢を常に表示 (荷重描画ルートの切替にも使うため)。
+        /// 以前の「一般 / 反復」は計算方法の名前で、何を選んでいるか (基礎梁を考えるか) が読み取れなかった。
         /// </summary>
         public ObservableCollection<string> GroupSettlementRouteOptions { get; }
-            = ["一般", "反復"];
+            = [RouteWithoutBeam, RouteWithBeam];
+
+        internal const string RouteWithoutBeam = "基礎梁なし";
+        internal const string RouteWithBeam = "基礎梁あり";
 
         /// <summary>
         /// 群杭沈下「一般 / 反復」切替の SelectedItem。内部 ActiveLoadingType と双方向マッピング。
@@ -2805,7 +2790,7 @@ namespace PileDesign.ViewModels
             get
             {
                 var lt = CurrentInputModel?.PileGroupSettlement?.ActiveLoadingType ?? "";
-                return lt == "個別矩形（基礎梁考慮）" ? "反復" : "一般";
+                return lt == "個別矩形（基礎梁考慮）" ? RouteWithBeam : RouteWithoutBeam;
             }
             set
             {
@@ -2813,7 +2798,7 @@ namespace PileDesign.ViewModels
                 string current = GroupSettlementRouteSelector;
                 if (current == value) return;
 
-                if (value == "反復")
+                if (value == RouteWithBeam)
                 {
                     SelectedActiveLoadingType = "個別矩形（基礎梁考慮）";
                 }
@@ -2845,13 +2830,6 @@ namespace PileDesign.ViewModels
 
                 // 反復解析は pgs.RectLoads を上書きしないので、入力を退避する必要は無い。
                 pgs.ActiveLoadingType = value ?? "";
-
-                // ルート別 LoadingPlaneAltitude を Canvas 表示用 (legacy) に同期
-                bool newIsBeamAware = pgs.ActiveLoadingType == "個別矩形（基礎梁考慮）";
-                if (newIsBeamAware && !double.IsNaN(pgs.LoadingPlaneAltitudeBeamAware))
-                    pgs.LoadingPlaneAltitude = pgs.LoadingPlaneAltitudeBeamAware;
-                else if (!newIsBeamAware && !double.IsNaN(pgs.LoadingPlaneAltitudeNonBeam))
-                    pgs.LoadingPlaneAltitude = pgs.LoadingPlaneAltitudeNonBeam;
 
                 // 新タイプの中から SelectedLoadCaseName に対応するケースを探して切替。
                 // 一致するケースが無ければコンタを消去 (1回解析の結果を地震時ケースに誤って表示しないため)。

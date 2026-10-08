@@ -266,10 +266,11 @@ namespace PileDesign.Services
                     if (existingByPileNo.TryGetValue(pileLayoutDataItem.PileNo, out var existing))
                     {
                         if (cloneExisting) existing = existing.Clone();
-                        // 既存矩形: 中心を杭位置に追従、QA は更新、DX/DY (寸法) は維持
+                        // 既存矩形: 中心を杭位置に追従、DX/DY (寸法) は維持。
+                        // QA は軸力から決める。ただし手で入れた値は上書きしない (以前は解析のたびに軸力で上書きしていた)
                         existing.CenterX = pileLayoutDataItem.Point3D.X;
                         existing.CenterY = pileLayoutDataItem.Point3D.Y;
-                        existing.QA = qa;
+                        if (!existing.IsQaManual) existing.QA = qa;
                         rectLoads.Add(existing);
                     }
                     else

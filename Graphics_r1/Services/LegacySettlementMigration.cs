@@ -59,7 +59,7 @@ namespace PileDesign.Services
         /// (1) "個別十字（基礎梁考慮）" → "個別十字（基礎梁反力）" の名称変更
         /// (2) CaseRecord.LoadingType が空文字のレコードを IsBeamAware から推定して補完
         /// (3) ActiveLoadingType が空ならアクティブレコード or 先頭レコードから推定
-        /// (4) LoadingPlaneAltitudeNonBeam / BeamAware が NaN (新フィールド未設定) なら旧 LoadingPlaneAltitude をコピー
+        /// (4) 解析ごとの荷重面 (LoadingPlaneAltitudeNonBeam / BeamAware) を 1 つ (LoadingPlaneAltitude) にまとめる
         /// (5) 入力の中に入っていたケース記録 (旧 "CaseRecords") を結果の型へ移す
         /// </summary>
         public static IReadOnlyList<string> Apply(
@@ -88,11 +88,9 @@ namespace PileDesign.Services
             if (pgs.LoadingType == oldName) pgs.LoadingType = newName;
             if (pgs.ActiveLoadingType == oldName) pgs.ActiveLoadingType = newName;
 
-            // (4) 荷重面標高の per-route フィールド初期化 (旧データ互換)
-            if (double.IsNaN(pgs.LoadingPlaneAltitudeNonBeam))
-                pgs.LoadingPlaneAltitudeNonBeam = pgs.LoadingPlaneAltitude;
-            if (double.IsNaN(pgs.LoadingPlaneAltitudeBeamAware))
-                pgs.LoadingPlaneAltitudeBeamAware = pgs.LoadingPlaneAltitude;
+            // (4) 解析ごとに持っていた荷重面 (旧ファイル) を 1 つにまとめる。基礎梁なし (一般) の値を残し、
+            //     基礎梁あり (反復) の値が違っていたら知らせる
+            if (pgs.UnifyLoadingPlane() is { } planeNotice) notices.Add(planeNotice);
 
             // (5) CaseRecords を持たない旧ファイル: 複製しか残っていないので、そこから 1 件復元する。
             //     表示系は ActiveRecord を読むようになったため、これが無いと旧ファイルの

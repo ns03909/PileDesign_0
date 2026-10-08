@@ -550,8 +550,8 @@ namespace PileDesign.ViewModels
             var pgs = ResultInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords == null) return tables;
 
-            const string category = "群杭沈下解析（反復）";
-            const string prefix = "群杭沈下解析（反復）";
+            const string category = "群杭沈下解析（基礎梁あり）";
+            const string prefix = "群杭沈下解析（基礎梁あり）";
 
             foreach (var rec in pgs.CaseRecords.Where(r => r.IsBeamAware))
             {
@@ -666,8 +666,8 @@ namespace PileDesign.ViewModels
             var pgs = ResultInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords == null) return tables;
 
-            const string category = "群杭沈下解析（一般）";
-            const string prefix = "群杭沈下解析（一般）";
+            const string category = "群杭沈下解析（基礎梁なし）";
+            const string prefix = "群杭沈下解析（基礎梁なし）";
 
             foreach (var rec in pgs.CaseRecords.Where(r => !r.IsBeamAware))
             {
@@ -1046,7 +1046,7 @@ namespace PileDesign.ViewModels
             {
                 foreach (var rec in pgs.CaseRecords.Where(r => r.IsBeamAware && r.IterationLog?.Count > 0))
                 {
-                    logSources[$"群杭沈下解析（反復） [{rec.LoadCaseName}]"] = rec.IterationLog;
+                    logSources[$"群杭沈下解析（基礎梁あり） [{rec.LoadCaseName}]"] = rec.IterationLog;
                 }
             }
 

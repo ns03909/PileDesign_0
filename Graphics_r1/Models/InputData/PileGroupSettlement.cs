@@ -13,9 +13,14 @@ namespace PileDesign.Models.InputData
 {
     public class PileGroupSettlement : BaseModel
     {
-        // 解析サービスで使用される「現在の」荷重面標高。一回解析 / 反復解析 を実行する直前に
-        // 該当ルートの値 (LoadingPlaneAltitudeNonBeam / LoadingPlaneAltitudeBeamAware) からコピーされる。
-        // UI 表示・TreeView などのレガシー参照とも互換を保つため残す。
+        /// <summary>
+        /// 荷重面の標高 [m]。基礎梁を考えない解析・考える解析の<b>両方</b>がこの 1 つの値を使う。
+        ///
+        /// 以前は解析ごとに別の値 (<see cref="LoadingPlaneAltitudeNonBeam"/> / <see cref="LoadingPlaneAltitudeBeamAware"/>)
+        /// を持ち、画面の 2 つのタブで別々に入力していた。どちらを変えるとどの解析に効くのかが画面から分からず、
+        /// しかも基礎梁を考える解析 (反復) は荷重面を計算に使っていなかった (図にだけ効いていた)。
+        /// 荷重面は基礎の底の位置で、基礎梁を考えるかどうかで変わるものではないので 1 つにした。
+        /// </summary>
         private double _loadingPlaneAltitude;
         public double LoadingPlaneAltitude
         {
@@ -23,20 +28,44 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _loadingPlaneAltitude, value);
         }
 
-        // 一回解析 (基礎梁無し Steinbrenner) 用の荷重面標高。一回解析タブで編集。
-        private double _loadingPlaneAltitudeNonBeam = double.NaN;
+        // 以下の 2 つは保存ファイルの互換のためだけに残す。画面からは編集しない。
+        // ・読み込み: 旧ファイルの値を受け取るだけ (読み込みの仕上げ UnifyLoadingPlane で 1 つにまとめる)
+        // ・保存: いつも荷重面 (LoadingPlaneAltitude) を返す (古い版で開いても同じ荷重面になる)
+        // 荷重面のセッターでこちらへ写すと、ファイル内の並び順で読み込み結果が変わる (先に来たほうが後のほうに消される)。
+        private double _legacyPlaneNonBeam = double.NaN;
+        private double _legacyPlaneBeamAware = double.NaN;
+
+        /// <summary>保存ファイルの互換の項目。一回解析 (基礎梁なし) 用だった荷重面標高。</summary>
         public double LoadingPlaneAltitudeNonBeam
         {
-            get => _loadingPlaneAltitudeNonBeam;
-            set => SetProperty(ref _loadingPlaneAltitudeNonBeam, value);
+            get => _loadingPlaneAltitude;
+            set => _legacyPlaneNonBeam = value;
         }
 
-        // 反復解析 (基礎梁考慮) 用の荷重面標高。反復解析タブで編集。
-        private double _loadingPlaneAltitudeBeamAware = double.NaN;
+        /// <summary>保存ファイルの互換の項目。反復解析 (基礎梁あり) 用だった荷重面標高。</summary>
         public double LoadingPlaneAltitudeBeamAware
         {
-            get => _loadingPlaneAltitudeBeamAware;
-            set => SetProperty(ref _loadingPlaneAltitudeBeamAware, value);
+            get => _loadingPlaneAltitude;
+            set => _legacyPlaneBeamAware = value;
+        }
+
+        /// <summary>
+        /// 解析ごとに持っていた荷重面 (旧ファイル) を 1 つにまとめる。一般 (基礎梁なし) の値を残す。
+        /// 反復 (基礎梁あり) の値が違っていたら、その知らせを返す (違わなければ null)。
+        /// 一般の値を残すのは、それが計算に効いていた値だから (反復は荷重面を計算に使っていなかった)。
+        /// 受け取った旧い値は使い終えたら捨てる (あとで呼び直しても、その後の編集を巻き戻さない)。
+        /// </summary>
+        internal string? UnifyLoadingPlane()
+        {
+            double nonBeam = _legacyPlaneNonBeam, beamAware = _legacyPlaneBeamAware;
+            _legacyPlaneNonBeam = _legacyPlaneBeamAware = double.NaN;
+            if (double.IsNaN(nonBeam)) return null;
+            string? notice = null;
+            if (!double.IsNaN(beamAware) && Math.Abs(beamAware - nonBeam) > 1e-9)
+                notice = $"群杭沈下の荷重面Z は、基礎梁なし・ありで 1 つの値になりました。基礎梁なし (一般) の値 {nonBeam:0.###} m にそろえ、"
+                       + $"基礎梁あり (反復) の値 {beamAware:0.###} m は使いません。基礎梁ありの解析は、荷重面より上の土層を除いて計算し直してください。";
+            LoadingPlaneAltitude = nonBeam;
+            return notice;
         }
 
         // 土層上端 (ボーリング孔口レベル相当)。SettlementSoilLayers の第1層上端として使う
@@ -582,10 +611,50 @@ namespace PileDesign.Models.InputData
                 {
                     _qA = value;
                     OnPropertyChanged(nameof(QA));
+                    OnPropertyChanged(nameof(QAInput));
                     OnPropertyChanged(nameof(Q));
                 }
             }
         }
+
+        /// <summary>
+        /// 荷重 QA を利用者が手で入れたか。
+        ///
+        /// 個別矩形の QA は既定では杭の軸力 (VL 時) から決めるが、以前は手で入れた値も解析のたびに軸力で上書きしていた
+        /// (与えた荷重と、プログラムが決めた値の区別がつかなかった)。手で入れた矩形は軸力で上書きしない。
+        /// 「軸力から作り直す」でこの印を外し、軸力の値に戻す。
+        /// </summary>
+        private bool _isQaManual;
+        public bool IsQaManual
+        {
+            get => _isQaManual;
+            set
+            {
+                if (SetProperty(ref _isQaManual, value)) OnPropertyChanged(nameof(QASource));
+            }
+        }
+
+        /// <summary>
+        /// 画面の表が編集する荷重 (QA と同じ値)。表から入れた値は「手入力」の印を付ける。
+        /// プログラムが軸力から決めるときは <see cref="QA"/> へ直接入れるので、印は付かない。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double QAInput
+        {
+            get => QA;
+            set
+            {
+                if (QA.Equals(value)) return;
+                QA = value;
+                IsQaManual = true;
+            }
+        }
+
+        /// <summary>表に出す荷重の出所 (杭に紐付く矩形だけ。紐付かない任意の矩形は空)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public string QASource => LinkedPileNo <= 0 ? "" : IsQaManual ? "手入力" : "軸力";
 
         /// <summary>
         /// 個別矩形 (LoadingType=個別矩形) で杭と紐づける場合の杭番号 (PileLayoutDataItem.PileNo)。
@@ -595,7 +664,7 @@ namespace PileDesign.Models.InputData
         public int LinkedPileNo
         {
             get => _linkedPileNo;
-            set => SetProperty(ref _linkedPileNo, value);
+            set { if (SetProperty(ref _linkedPileNo, value)) OnPropertyChanged(nameof(QASource)); }
         }
 
         /// <summary>X 中心 (= (X1+X2)/2)。set すると DX を保ったまま X1/X2 を平行移動する。</summary>
@@ -661,7 +730,7 @@ namespace PileDesign.Models.InputData
         public RectLoad Clone() => new()
         {
             X1 = X1, X2 = X2, Y1 = Y1, Y2 = Y2,
-            QA = QA, LinkedPileNo = LinkedPileNo,
+            QA = QA, LinkedPileNo = LinkedPileNo, IsQaManual = IsQaManual,
         };
 
         [System.Text.Json.Serialization.JsonIgnore]

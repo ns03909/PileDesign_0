@@ -20,6 +20,7 @@
     <Window.Resources>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <conv:BoolEqualsConverter x:Key="BoolEqualsConverter" />
         <DataTemplate x:Key="LoadingTypeItemTemplate">
             <StackPanel Orientation="Horizontal">
                 <svgc:SvgViewbox Width="24" Height="24" Stretch="Uniform">
@@ -419,8 +420,11 @@
                                             </StackPanel>
                                         </TabItem>
 
-                                        <TabItem Header="解析（一般）" x:Name="TabItemLoadNonBeam"
-                                                 ToolTip="基礎梁を考慮しない単発スタインブレナー解析。任意矩形 / 個別矩形 / 個別十字 などの荷重定義で 1 回計算。">
+                                        <!-- 荷重条件: 基礎梁なし・ありの両方の解析が使う 1 組の荷重 (荷重面・荷重タイプ・矩形荷重)。
+                                             以前は「解析（一般）」「解析（反復）」の 2 つのタブにそれぞれ荷重面と矩形荷重の表があり、
+                                             荷重面は別々・矩形荷重は共通という食い違った形で、どちらを変えるとどの解析に効くのか分からなかった -->
+                                        <TabItem Header="荷重条件" x:Name="TabItemLoadNonBeam"
+                                                 ToolTip="荷重面・荷重タイプ・矩形荷重を設定します。基礎梁なし・ありの両方の解析がこの荷重を使います。">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="1*" />
@@ -448,9 +452,9 @@
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
 
-                                                    <!-- 一回解析 用の荷重面標高 -->
+                                                    <!-- 荷重面標高 (基礎梁なし・ありの両方の解析が使う) -->
                                                     <TextBlock Text="荷重面 Z (m)" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,4,2"/>
-                                                    <TextBox Text="{Binding LoadingPlaneAltitudeNonBeamProxy, StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
+                                                    <TextBox Text="{Binding LoadingPlaneAltitudeProxy, StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
                                                              Grid.Row="0" Grid.Column="1"
                                                              Width="150" HorizontalContentAlignment="Right" Margin="0,2"
                                                              GotFocus="TextBox_GotFocus"
@@ -458,7 +462,7 @@
                                                              KeyDown="TextBox_KeyDown">
                                                         <TextBox.ToolTip>
                                                             <TextBlock>
-                                                                <Run Text="一回解析 (基礎梁無し) で使用される荷重面標高。"/>
+                                                                <Run Text="基礎梁なし・ありの両方の解析で使う荷重面の標高。荷重面より上の土層は沈下に数えません。"/>
                                                                 <LineBreak/>
                                                                 <Run Text="杭周面抵抗に対する荷重面の例：杭先端から(1/3)Lの高さ"/>
                                                                 <LineBreak/>
@@ -473,7 +477,7 @@
                                                              Width="150" HorizontalContentAlignment="Right" Margin="0,2">
                                                         <TextBox.Text>
                                                             <MultiBinding StringFormat="{}{0:+0.00;-0.00;+0.00}" Mode="OneWay">
-                                                                <Binding Path="CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitudeNonBeam"/>
+                                                                <Binding Path="CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude"/>
                                                                 <Binding Path="CurrentInputModel.FundamentalInput.ReferenceAltitude"/>
                                                                 <MultiBinding.Converter>
                                                                     <conv:SumConverter/>
@@ -486,7 +490,7 @@
 
                                                     <ComboBox x:Name="ComboBoxLoadingType"
                                                           Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3"
-                                                          ItemsSource="{Binding AvailableLoadingTypeOptionsNonBeam}"
+                                                          ItemsSource="{Binding AvailableLoadingTypeOptions}"
                                                           SelectedItem="{Binding CurrentInputModel.PileGroupSettlement.LoadingType, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                           ItemTemplate="{StaticResource LoadingTypeItemTemplate}"
                                                           MinWidth="200" HorizontalAlignment="Left" Margin="0,2"
@@ -556,13 +560,43 @@
                                                         </Grid>
                                                     </GroupBox>
 
-                                                    <Button Grid.Row="1" Padding="0" HorizontalAlignment="Left"
-                                                        Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="矩形荷重面追加 (個別矩形（基礎梁考慮）では無効)"
-                                                        Command="{Binding AddRectLoadCommand}"
-                                                        IsEnabled="{Binding IsManualRectLoadEditingEnabled}">
-                                                        <svgc:SvgViewbox Source="/Icons/AddRectLoad.svg" Style="{StaticResource SvgIconStyle24}"/>
-                                                    </Button>
+                                                    <StackPanel Grid.Row="1">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Button Padding="0" HorizontalAlignment="Left"
+                                                                Style="{StaticResource LargeIconToolTipButtonStyle}"
+                                                                Tag="矩形荷重面追加 (個別矩形（基礎梁考慮）では無効)"
+                                                                Command="{Binding AddRectLoadCommand}"
+                                                                IsEnabled="{Binding IsManualRectLoadEditingEnabled}">
+                                                                <svgc:SvgViewbox Source="/Icons/AddRectLoad.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                            </Button>
+                                                            <!-- 杭に紐付く矩形の荷重を軸力に戻す (手入力の印も外す) -->
+                                                            <Button Margin="8,2,0,2" Padding="8,2" VerticalAlignment="Center"
+                                                                    Command="{Binding RebuildRectLoadsFromAxialForceCommand}"
+                                                                    Content="荷重を軸力から作り直す"
+                                                                    ToolTip="杭に紐付く矩形荷重の荷重 (kN) を、杭の VL 時の軸力 (常時軸力 + 付加軸力) に戻します。&#x0A;手で入れた荷重も軸力に戻ります。矩形の位置・大きさは変えません。"
+                                                                    Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType,
+                                                                        Converter={StaticResource VisibilityConverter},
+                                                                        ConverterParameter='個別矩形,個別矩形（基礎梁考慮）'}"/>
+                                                            <!-- 杭ごとの矩形を作り直す (基礎梁ありの解析は、杭ごとに 1 つの矩形を使う) -->
+                                                            <Button Margin="8,2,0,2" Padding="8,2" VerticalAlignment="Center"
+                                                                    Command="{Binding ResetBeamAwareRectLoadsCommand}"
+                                                                    Content="杭ごとの矩形を作り直す (基礎梁ありの解析用)"
+                                                                    ToolTip="現在の矩形荷重を破棄し、各杭に対して矩形 (1 矩形/杭) を作り直します。荷重タイプは「個別矩形（基礎梁考慮）」になります。&#x0A;大きさは荷重面等価径から、荷重は VL 時の軸力から決めます。">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding CurrentInputModel.FoundationBeamInput.Beams.Count}" Value="0">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                            </Button>
+                                                        </StackPanel>
+                                                        <TextBlock Margin="4,2,4,4" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+                                                                   Text="杭に紐付く矩形の荷重は、既定で杭の VL 時の軸力から決めます (出所「軸力」)。表で入れた荷重は「手入力」とし、解析で軸力に戻しません。&#x0A;基礎梁ありの解析は、この荷重を初期値として杭の荷重を再配分します。収束した荷重は解析結果として別に保存し、この表の値は変えません。"/>
+                                                    </StackPanel>
 
                                                     <common:EnhancedDataGrid Grid.Row="2" ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.RectLoads, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
                                                         AutoGenerateColumns="False"
@@ -665,7 +699,7 @@
                                                                 </DataGridTextColumn.Header>
                                                             </DataGridTextColumn>
 
-                                                            <DataGridTextColumn Width="*" Binding="{Binding QA, StringFormat=N0}"
+                                                            <DataGridTextColumn Width="*" Binding="{Binding QAInput, StringFormat=N0}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
@@ -677,6 +711,10 @@
                                                                     </StackPanel>
                                                                 </DataGridTextColumn.Header>
                                                             </DataGridTextColumn>
+
+                                                            <!-- 荷重の出所: 軸力から自動 / 手入力 (杭に紐付かない任意の矩形は空) -->
+                                                            <DataGridTextColumn Width="*" Binding="{Binding QASource, Mode=OneWay}" Header="出所"
+                                                                        MinWidth="50" IsReadOnly="True" Foreground="Gray"/>
 
                                                             <DataGridTextColumn Width="*" Binding="{Binding DX, StringFormat=N3}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
@@ -873,90 +911,60 @@
                                                     </common:EnhancedDataGrid>
                                                 </StackPanel>
 
-                                                <!-- 一回解析実行ボタン -->
-                                                <Button Grid.Row="3" Width="240" HorizontalAlignment="Left" Margin="0,8,0,0"
+                                            </Grid>
+                                        </TabItem>
+
+
+                                        <!-- 解析: 荷重条件の荷重で、基礎梁を考慮しない / する解析を選んで実行する。
+                                             以前の「一般 / 反復」は計算方法の名前で、利用者が選んでいるもの (基礎梁を考えるか) が読み取れなかった -->
+                                        <TabItem Header="解析" x:Name="TabItemLoadBeamAware"
+                                                 ToolTip="基礎梁を考慮しない解析 / 考慮する解析を選んで実行します。どちらも荷重条件タブの荷重を使います。">
+                                            <StackPanel Margin="8">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                    <RadioButton Content="基礎梁なし" GroupName="GroupSettlementBeam" Margin="0,0,16,0"
+                                                                 IsChecked="{Binding IsGroupSettlementWithBeamSelected, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=False}"/>
+                                                    <RadioButton Content="基礎梁あり" GroupName="GroupSettlementBeam"
+                                                                 IsChecked="{Binding IsGroupSettlementWithBeamSelected, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=True}"/>
+                                                </StackPanel>
+
+                                                <!-- 基礎梁なし -->
+                                                <StackPanel Visibility="{Binding IsGroupSettlementWithBeamSelected, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                                                               Text="基礎梁を考慮せず、荷重条件の矩形荷重から各杭の位置とグリッドの沈下をスタインブレナー法で 1 回計算します。"/>
+                                                <!-- 基礎梁なしの解析の実行 (リボンの「群杭沈下 解析（基礎梁なし）」と同じ) -->
+                                                <Button Width="240" HorizontalAlignment="Left" Margin="0,8,0,0"
                                                         Command="{Binding PileGroupSettlementAnalysisCommand}"
                                                         ToolTipService.ShowOnDisabled="True"
                                                         ToolTip="{Binding GroupSettlementAnalysisToolTip}">
                                                     <StackPanel Orientation="Horizontal">
                                                         <svgc:SvgViewbox Source="/Icons/GroupPileSettlement.svg"
                                                                          Style="{StaticResource SvgIconStyle24}" Margin="0,0,6,0"/>
-                                                        <TextBlock Text="一般解析実行" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="基礎梁なしで解析" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
-                                            </Grid>
-                                        </TabItem>
+                                                </StackPanel>
 
-                                        <!-- 解析（反復）サブタブ: 基礎梁の剛性を考慮した反復スタインブレナー解析 -->
-                                        <TabItem Header="解析（反復）" x:Name="TabItemLoadBeamAware"
-                                                 ToolTip="基礎梁を含むモデルで、矩形荷重 (個別矩形) を反復で再分配しながらスタインブレナー沈下を解く解析です。">
-                                            <Grid Margin="8">
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="*"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-
+                                                <!-- 基礎梁あり: 反復の条件と注意はこちらだけに出す -->
+                                                <StackPanel Visibility="{Binding IsGroupSettlementWithBeamSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <!-- 重要: 適用範囲の注記 -->
-                                                <Border Grid.Row="0" Margin="0,0,0,8" Padding="8,6"
+                                                <Border Margin="0,0,0,8" Padding="8,6"
                                                         Background="#FFFFF4D6" BorderBrush="#FFE3B341" BorderThickness="1"
                                                         CornerRadius="2">
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="⚠" FontSize="14" Foreground="#FFC97A00"
                                                                    VerticalAlignment="Top" Margin="0,0,6,0"/>
                                                         <TextBlock TextWrapping="Wrap" Foreground="#FF6B4A00">
-                                                            <Run FontWeight="Bold" Text="解析（反復）"/>
+                                                            <Run FontWeight="Bold" Text="基礎梁ありの解析"/>
                                                             <Run Text="は、基礎指針'19 図5.3.2 連続梁・格子梁モデルによる沈下量の算定例の方法です。"/>
                                                             <LineBreak/>
                                                             <Run Text="杭基礎の計算では使いません。"/>
                                                         </TextBlock>
                                                     </StackPanel>
                                                 </Border>
-
-                                                <!-- 反復解析 用の荷重面標高 -->
-                                                <Grid Grid.Row="1" Margin="0,0,0,8">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="荷重面 Z (m)" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,4,2"/>
-                                                    <TextBox Text="{Binding LoadingPlaneAltitudeBeamAwareProxy, StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
-                                                             Grid.Column="1"
-                                                             Width="150" HorizontalContentAlignment="Right" Margin="0,2"
-                                                             GotFocus="TextBox_GotFocus"
-                                                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                                             KeyDown="TextBox_KeyDown">
-                                                        <TextBox.ToolTip>
-                                                            <TextBlock Text="反復解析 (基礎梁考慮) で使用される荷重面標高。一回解析と独立に設定できます。"/>
-                                                        </TextBox.ToolTip>
-                                                    </TextBox>
-                                                    <TextBlock Text="標高 (m)" Grid.Column="2" VerticalAlignment="Center" Margin="8,2,4,2"/>
-                                                    <TextBox Grid.Column="3" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                             Width="150" HorizontalContentAlignment="Right" Margin="0,2">
-                                                        <TextBox.Text>
-                                                            <MultiBinding StringFormat="{}{0:+0.00;-0.00;+0.00}" Mode="OneWay">
-                                                                <Binding Path="CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitudeBeamAware"/>
-                                                                <Binding Path="CurrentInputModel.FundamentalInput.ReferenceAltitude"/>
-                                                                <MultiBinding.Converter>
-                                                                    <conv:SumConverter/>
-                                                                </MultiBinding.Converter>
-                                                            </MultiBinding>
-                                                        </TextBox.Text>
-                                                    </TextBox>
-                                                </Grid>
-
-                                                <TextBlock Grid.Row="2" TextWrapping="Wrap" Margin="0,0,0,8"
-                                                           Text="基礎梁を考慮した群杭沈下解析 (反復スタインブレナー法) を実行します。&#x0A;荷重タイプは「個別矩形」固定で、矩形荷重は反復計算により自動収束されます (DX/DY/QA は事前に手動上書き可)。"/>
-
+                                                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                                                               Text="基礎梁を考慮し、荷重条件の矩形荷重 (杭ごとの矩形) を初期値に、杭の荷重を基礎梁で再配分しながら反復で沈下を求めます (反復スタインブレナー法)。&#x0A;収束した荷重・杭の反力・梁の断面力は解析結果として保存し、荷重条件の値は変えません。&#x0A;矩形荷重が杭ごとになっていないときは、荷重条件タブの「杭ごとの矩形を作り直す」で作ってください。"/>
                                                 <!-- 基礎梁が無い場合の注意書き -->
-                                                <TextBlock Grid.Row="3" Margin="0,4" Foreground="{StaticResource ErrorBrush}"
+                                                <TextBlock Margin="0,4" Foreground="{StaticResource ErrorBrush}"
                                                            Text="※ 基礎梁が定義されていません。梁要素タブで基礎梁を追加してから実行してください。">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
@@ -969,91 +977,23 @@
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-
                                                 <!-- 保存中の解析結果の有無 -->
-                                                <TextBlock Grid.Row="4" Margin="0,8,0,0"
+                                                <TextBlock Margin="0,8,0,0"
                                                            Visibility="{Binding HasGroupSettlementBeamAwareCases, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                            Foreground="{StaticResource PrimaryAccentDarkBrush}"
                                                            Text="✓ 基礎梁考慮の解析結果が保存されています (詳細は 解析結果 → 沈下量タブ → 結果タイプ で確認)。"/>
-
-                                                <!-- 矩形荷重 (DX/DY/QA は編集可、X1/Y1/X2/Y2 と 連結杭No は派生値のため読取専用) -->
-                                                <GroupBox Grid.Row="5" Header="矩形荷重 (個別矩形)" Margin="0,8,0,0">
-                                                    <Grid>
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto"/>
-                                                            <RowDefinition Height="Auto"/>
-                                                            <RowDefinition Height="*"/>
-                                                        </Grid.RowDefinitions>
-                                                        <TextBlock Grid.Row="0" Margin="4" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
-                                                                   Text="X1/Y1/X2/Y2、DX/DY、QA いずれも編集できます。DX/DY を編集すると中心位置を保ったまま X1/X2/Y1/Y2 が対称に再計算されます。&#x0A;行番号は杭 No と一致します。反復解析を実行すると QA は収束値で更新されます。"/>
-
-                                                        <!-- リセットボタン: 個別矩形 (杭ごとに1矩形) を再生成 -->
-                                                        <Button Grid.Row="1" HorizontalAlignment="Left" Margin="4,2,4,4" Padding="8,2"
-                                                                Command="{Binding ResetBeamAwareRectLoadsCommand}"
-                                                                ToolTip="現在の矩形荷重を破棄し、各杭に対して個別矩形 (1 矩形/杭) を再生成します。&#x0A;DX/DY は荷重面等価径から、QA は VL 軸力から自動算出。" AutomationProperties.Name="現在の矩形荷重を破棄し、各杭に対して個別矩形 (1 矩形/杭) を再生成します。&#x0A;DX/DY は荷重面等価径から、QA は VL 軸力から自動算出。">
-                                                            <StackPanel Orientation="Horizontal">
-                                                                <svgc:SvgViewbox Source="/Icons/CreateAutoUniformlyDistributedLoad.svg" Style="{StaticResource SvgIconStyle24}" Margin="0,0,4,0"/>
-                                                                <TextBlock Text="リセット (個別矩形を再生成)" VerticalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Button>
-                                                        <common:EnhancedDataGrid Grid.Row="2"
-                                                                ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.RectLoads, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                                                                AutoGenerateColumns="False"
-                                                                CanUserAddRows="False"
-                                                                CanUserSortColumns="False"
-                                                                LoadingRow="DataGrid_LoadingRow_Numbering"
-                                                                CellEditEnding="DataGridRectLoads_CellEditEnding"
-                                                                EnableRowVirtualization="True"
-                                                                ScrollViewer.CanContentScroll="True"
-                                                                CellStyle="{StaticResource CustomDataGridCellStyle}">
-                                                            <DataGrid.ContextMenu>
-                                                                <StaticResource ResourceKey="CommonDataGridContextMenu"/>
-                                                            </DataGrid.ContextMenu>
-                                                            <DataGrid.ColumnHeaderStyle>
-                                                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}"/>
-                                                                </Style>
-                                                            </DataGrid.ColumnHeaderStyle>
-                                                            <DataGrid.Columns>
-                                                                <DataGridTextColumn Header="X1 (m)" Binding="{Binding X1, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                                    EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="*" MinWidth="60"/>
-                                                                <DataGridTextColumn Header="Y1 (m)" Binding="{Binding Y1, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                                    EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="*" MinWidth="60"/>
-                                                                <DataGridTextColumn Header="X2 (m)" Binding="{Binding X2, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                                    EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="*" MinWidth="60"/>
-                                                                <DataGridTextColumn Header="Y2 (m)" Binding="{Binding Y2, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                                    EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="*" MinWidth="60"/>
-                                                                <DataGridTextColumn Header="DX (m)" Binding="{Binding DX, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                                    EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="*" MinWidth="60"/>
-                                                                <DataGridTextColumn Header="DY (m)" Binding="{Binding DY, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                                    EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="*" MinWidth="60"/>
-                                                                <DataGridTextColumn Header="QA (kN)" Binding="{Binding QA, StringFormat=N1, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                                    EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="*" MinWidth="70"/>
-                                                                <!-- 連結杭 No 列は撤去: 反復解析タブでは行番号 = 杭 No と一致するため冗長 (内部データは LinkedPileNo として保持) -->
-                                                            </DataGrid.Columns>
-                                                        </common:EnhancedDataGrid>
-                                                    </Grid>
-                                                </GroupBox>
-
-                                                <!-- 反復解析実行ボタン (タブ最下段) -->
-                                                <Button Grid.Row="6" Width="240" HorizontalAlignment="Left" Margin="0,8,0,0"
+                                                <!-- 基礎梁ありの解析の実行 (リボンの「群杭沈下 解析（基礎梁あり）」と同じ) -->
+                                                <Button Width="240" HorizontalAlignment="Left" Margin="0,8,0,0"
                                                         Command="{Binding OpenGroupSettlementWithBeamWindowCommand}"
                                                         ToolTip="基礎梁の剛性を考慮した反復スタインブレナー解析を実行します。" AutomationProperties.Name="基礎梁の剛性を考慮した反復スタインブレナー解析を実行します。">
                                                     <StackPanel Orientation="Horizontal">
                                                         <svgc:SvgViewbox Source="/Icons/GroupPileSettlementWithBeamWindow.svg"
                                                                          Style="{StaticResource SvgIconStyle24}" Margin="0,0,6,0"/>
-                                                        <TextBlock Text="反復解析実行" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="基礎梁ありで解析" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
-                                            </Grid>
+                                                </StackPanel>
+                                            </StackPanel>
                                         </TabItem>
 
 

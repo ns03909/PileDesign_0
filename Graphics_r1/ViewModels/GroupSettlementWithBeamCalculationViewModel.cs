@@ -246,8 +246,10 @@ namespace PileDesign.ViewModels
                 _mainWindowViewModel.GroupPileSettlementYOffset,
                 _mainWindowViewModel.GroupPileSettlementYSpacing,
                 InputModel.GridYItems);
-            return SettlementAnalysisService.CalculateGridSettlementsPublic(
-                xs, ys, rects, pgs.SettlementSoilLayers);
+            // コンタも各杭の沈下と同じく、荷重面より上の土層を除いて計算する
+            var effectiveLayers = PileGroupSettlement.GetEffectiveLayersForAnalysis(
+                pgs.SoilLayersTopAltitude, pgs.LoadingPlaneAltitude, pgs.SettlementSoilLayers);
+            return SettlementAnalysisService.CalculateGridSettlementsPublic(xs, ys, rects, effectiveLayers);
         }
 
 

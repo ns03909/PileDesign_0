@@ -170,7 +170,9 @@ namespace PileDesign.Views
                     }
                 }
 
-                if (selectedTab.Header?.ToString() == "荷重")
+                // 荷重条件のタブを開いたら、平面図に荷重を表示する (以前は「荷重」という名前のタブを探しており、
+                // そのタブは無かったので一度も働いていなかった)
+                if (selectedTab.Header?.ToString() == "荷重条件")
                 {
                     // ViewModel取得
                     if (this.DataContext is PileDesign.ViewModels.MainWindowViewModel vm)

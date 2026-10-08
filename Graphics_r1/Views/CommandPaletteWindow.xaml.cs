@@ -199,7 +199,7 @@ namespace PileDesign.Views
                 vm.OpenSettlementWindowCommand);
             Add(list, "単杭沈下解析（基礎梁考慮）を開く", "基礎梁の剛性を考慮した単杭沈下解析", "Shift + F6", "vertical beam 鉛直 解析 基礎梁 単杭沈下",
                 vm.OpenVerticalBeamCalculationCommand);
-            Add(list, "群杭沈下解析", "群杭沈下解析（一般）", "F7", "group pile settlement 群杭",
+            Add(list, "群杭沈下解析", "群杭沈下解析（基礎梁なし）", "F7", "group pile settlement 群杭",
                 vm.PileGroupSettlementAnalysisCommand);
             Add(list, "杭要素分割ウィンドウ", "杭の要素分割設定", "F4", "element division 要素 分割",
                 vm.OpenElementDivisionWindowCommand);

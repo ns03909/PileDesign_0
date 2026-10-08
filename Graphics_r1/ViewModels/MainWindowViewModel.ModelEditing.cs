@@ -1342,7 +1342,7 @@ namespace PileDesign.ViewModels
             if (DescribeGroupSettlementBlocker() is not { } blocker) return false;
 
             ActivateGroupSettlementInputTabAction?.Invoke(blocker.Tab);
-            MessageService.Show(blocker.User, "群杭沈下解析（一般）",
+            MessageService.Show(blocker.User, "群杭沈下解析（基礎梁なし）",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return true;
         }
@@ -1385,9 +1385,9 @@ namespace PileDesign.ViewModels
             {
                 case "任意矩形":
                     if (rectLoads == null || rectLoads.Count == 0)
-                        return ("群杭荷重（矩形荷重）が定義されていません。\n「解析（一般）」タブで矩形荷重を追加してください。", GroupSettlementInputTab.GeneralAnalysis);
+                        return ("群杭荷重（矩形荷重）が定義されていません。\n「荷重条件」タブで矩形荷重を追加してください。", GroupSettlementInputTab.GeneralAnalysis);
                     if (rectLoads.All(r => r.QA == 0))
-                        return ("値が0の群杭荷重（矩形荷重）しか定義されていません。\n「解析（一般）」タブで荷重値を設定してください。", GroupSettlementInputTab.GeneralAnalysis);
+                        return ("値が0の群杭荷重（矩形荷重）しか定義されていません。\n「荷重条件」タブで荷重値を設定してください。", GroupSettlementInputTab.GeneralAnalysis);
                     break;
 
                 case "個別十字":
@@ -1416,7 +1416,7 @@ namespace PileDesign.ViewModels
                     break;
 
                 default:
-                    return ("荷重タイプが設定されていません。\n「解析（一般）」タブで荷重タイプを選択してください。", GroupSettlementInputTab.GeneralAnalysis);
+                    return ("荷重タイプが設定されていません。\n「荷重条件」タブで荷重タイプを選択してください。", GroupSettlementInputTab.GeneralAnalysis);
             }
 
             if (pgs.SettlementSoilLayers == null || pgs.SettlementSoilLayers.Count == 0)
@@ -1470,11 +1470,6 @@ namespace PileDesign.ViewModels
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            // 一回解析 (基礎梁無し) の荷重面標高を採用 (per-route フィールドから現在値にコピー)
-            // ※ 個別矩形（基礎梁考慮）は別ルート (反復解析) で OpenGroupSettlementWithBeamWindow が起動時にコピー
-            string loadingTypeNow = pgs.LoadingType ?? "";
-            if (loadingTypeNow != "個別矩形（基礎梁考慮）" && !double.IsNaN(pgs.LoadingPlaneAltitudeNonBeam))
-                pgs.LoadingPlaneAltitude = pgs.LoadingPlaneAltitudeNonBeam;
 
             // 個別矩形（基礎梁考慮）は反復解析ウィンドウで実行 → 確定後に Steinbrenner グリッドコンタを更新
             if (loadingType == "個別矩形（基礎梁考慮）")

@@ -306,7 +306,7 @@ namespace TestProject1
         /// 順序を変えると、杭 Z の意味の移行 (v1→v2) や土層-杭セットの生成が
         /// 噛み合わなくなる。</para>
         /// </summary>
-        private static (InputModel?, Dictionary<int, double>) Scene()
+        internal static (InputModel?, Dictionary<int, double>) Scene()
         {
             var vm = new MainWindowViewModel();
             var model = vm.CurrentInputModel;

@@ -101,6 +101,10 @@ namespace PileDesign.Services
                 foreach (var problem in layerProblems) result.Log.Add("[ERROR] " + problem);
                 return result;
             }
+            // 荷重面より上の土層を除いた、解析に使う土層 (基礎梁なしの解析と同じ切り詰め)
+            var effectiveLayers = PileGroupSettlement.GetEffectiveLayersForAnalysis(
+                pgs.SoilLayersTopAltitude, pgs.LoadingPlaneAltitude, pgs.SettlementSoilLayers);
+
             if (inputModel.FoundationBeamInput?.Beams == null || inputModel.FoundationBeamInput.Beams.Count == 0)
             {
                 result.Log.Add("[ERROR] 基礎梁が定義されていません。");
@@ -213,12 +217,14 @@ namespace PileDesign.Services
                 }
 
                 // 2. Steinbrenner で各杭位置の沈下 S1
+                //    荷重面より上の土層は除く (基礎梁なしの解析と同じ)。以前は除いておらず、荷重面が土層の上端より
+                //    下にあると、荷重面より上の土層まで沈下に数えていた (荷重面Z は図にしか効いていなかった)
                 S1.Clear();
                 foreach (var pile in piles)
                 {
                     if (!halfDx.ContainsKey(pile.PileNo)) continue;
                     var pt = new Point(pile.Point3D.X, pile.Point3D.Y);
-                    S1[pile.PileNo] = Steinnbrener.CalcSettlement(pt, rectLoads, pgs.SettlementSoilLayers);
+                    S1[pile.PileNo] = Steinnbrener.CalcSettlement(pt, rectLoads, effectiveLayers);
                 }
 
                 // 3. ki = Pi / S1 (零除算・負ばね対策のクランプ)

@@ -643,7 +643,7 @@ namespace PileDesign.Views
                         Color = b.Color
                     }).ToList();
 
-                string routeLabel = viewModel.IsGroupSettlementActiveCaseBeamAware ? "反復" : "一般";
+                string routeLabel = viewModel.IsGroupSettlementActiveCaseBeamAware ? "基礎梁あり" : "基礎梁なし";
                 ColorBar.DrawStepColorBar(
                     ColorBarCanvas,
                     cb,

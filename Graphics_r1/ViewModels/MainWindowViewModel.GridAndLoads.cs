@@ -220,6 +220,41 @@ namespace PileDesign.ViewModels
             ShowToast($"矩形荷重をリセットしました ({newList.Count} 件)。");
         }
 
+        /// <summary>
+        /// 杭に紐付く矩形荷重の QA を、杭の軸力 (VL 時の常時軸力 + 付加軸力) から作り直す。手入力の印も外す。
+        /// 個別矩形の QA は既定で軸力から決め、手で入れた値は解析で上書きしない。手で入れた値をやめて
+        /// 軸力に戻したいときの入口。矩形の位置・寸法と、杭に紐付かない矩形は変えない。
+        /// </summary>
+        [RelayCommand]
+        private void RebuildRectLoadsFromAxialForce()
+        {
+            var pgs = CurrentInputModel?.PileGroupSettlement;
+            var piles = CurrentInputModel?.PileLayoutItems;
+            if (pgs?.RectLoads == null || piles == null) return;
+            var byPileNo = piles.GroupBy(p => p.PileNo).ToDictionary(g => g.Key, g => g.First());
+            var linked = pgs.RectLoads.Where(r => r.LinkedPileNo > 0 && byPileNo.ContainsKey(r.LinkedPileNo)).ToList();
+            if (linked.Count == 0)
+            {
+                MessageService.ShowInfo("杭に紐付いた矩形荷重がありません (任意矩形の荷重は軸力から作れません)。");
+                return;
+            }
+            if (!ConfirmAnalysisConditionChange("両方", "矩形荷重 (軸力から作り直す)")) return;
+
+            var before = CaptureInputEdit();
+            int manual = linked.Count(r => r.IsQaManual);
+            foreach (var r in linked)
+            {
+                var pile = byPileNo[r.LinkedPileNo];
+                r.QA = pile.AxialForceVL0 + pile.AxialForceVLAdditional;
+                r.IsQaManual = false;
+            }
+            IsGroupPileSettlementAnalysisDone = false;
+            CompleteInputEdit(before, scope: AnalysisInputScope.Settlement);
+            ShowToast(manual > 0
+                ? $"矩形荷重 {linked.Count} 件の荷重を杭の軸力から作り直しました (手入力 {manual} 件を軸力に戻しました)。"
+                : $"矩形荷重 {linked.Count} 件の荷重を杭の軸力から作り直しました。");
+        }
+
         // 自動生成による RectLoads 置換中のフラグ（ユーザ編集と区別するため）
         private bool _suppressRectLoadAutoSwitch;
 

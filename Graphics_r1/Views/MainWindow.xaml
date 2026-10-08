@@ -1467,12 +1467,12 @@
                      ToolTip="スタインブレナー近似式による即時沈下量を計算します。「群杭沈下」ウィンドウで荷重面・土層を設定してください。" AutomationProperties.Name="スタインブレナー近似式による即時沈下量を計算します。「群杭沈下」ウィンドウで荷重面・土層を設定してください。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
-                                <Setter Property="Header" Value="群杭沈下&#x0A;解析（一般）"/>
+                                <Setter Property="Header" Value="群杭沈下&#x0A;解析（基礎梁なし）"/>
                                 <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
                                 <Setter Property="Icon" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
-                                        <Setter Property="Header" Value="群杭沈下&#x0A;解析（一般） ✓"/>
+                                        <Setter Property="Header" Value="群杭沈下&#x0A;解析（基礎梁なし） ✓"/>
                                         <Setter Property="Foreground" Value="{StaticResource StatusWarningDarkBrush}"/>
                                         <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
                                         <Setter Property="Icon" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
@@ -1488,12 +1488,12 @@
                                    ToolTip="基礎梁の剛性を考慮して、矩形荷重 (個別矩形) を反復で再分配しながらスタインブレナー沈下を解く解析です。基礎梁が定義されているモデルで実行可能となります。" AutomationProperties.Name="基礎梁の剛性を考慮して、矩形荷重 (個別矩形) を反復で再分配しながらスタインブレナー沈下を解く解析です。基礎梁が定義されているモデルで実行可能となります。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
-                                <Setter Property="Header" Value="群杭沈下&#x0A;解析（反復）"/>
+                                <Setter Property="Header" Value="群杭沈下&#x0A;解析（基礎梁あり）"/>
                                 <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/GroupPileSettlementWithBeamWindow.png"/>
                                 <Setter Property="Icon" Value="pack://application:,,,/Icons/GroupPileSettlementWithBeamWindow.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding HasGroupSettlementBeamAwareCases}" Value="True">
-                                        <Setter Property="Header" Value="群杭沈下&#x0A;解析（反復） ✓"/>
+                                        <Setter Property="Header" Value="群杭沈下&#x0A;解析（基礎梁あり） ✓"/>
                                         <Setter Property="Foreground" Value="{StaticResource StatusWarningDarkBrush}"/>
                                         <Setter Property="LargeIcon" Value="pack://application:,,,/Icons/GroupPileSettlementWithBeamWindowDone.png"/>
                                         <Setter Property="Icon" Value="pack://application:,,,/Icons/GroupPileSettlementWithBeamWindowDone.png"/>
