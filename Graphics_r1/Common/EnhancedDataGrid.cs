@@ -50,11 +50,59 @@ namespace PileDesign.Common
 
             // ヘッダー高さを全列の最大に固定（列仮想化ON時の横スクロールでのガタつき防止）
             Loaded += OnDataGridLoaded;
+            Unloaded += OnDataGridUnloaded;
         }
+
+        private Window? _hostWindow;
 
         private void OnDataGridLoaded(object sender, RoutedEventArgs e)
         {
             FixColumnHeaderHeight();
+            var window = Window.GetWindow(this);
+            if (!ReferenceEquals(window, _hostWindow))
+            {
+                if (_hostWindow != null) _hostWindow.Closed -= OnHostWindowClosed;
+                _hostWindow = window;
+                if (_hostWindow != null) _hostWindow.Closed += OnHostWindowClosed;
+            }
+        }
+
+        private void OnDataGridUnloaded(object sender, RoutedEventArgs e) => EndPendingRowEdit();
+
+        private void OnHostWindowClosed(object? sender, EventArgs e)
+        {
+            if (_hostWindow != null) _hostWindow.Closed -= OnHostWindowClosed;
+            _hostWindow = null;
+            EndPendingRowEdit();
+        }
+
+        /// <summary>
+        /// 行の編集が終わっていなければ終わらせる (ウィンドウを閉じたとき・表が画面から外れたとき)。
+        ///
+        /// <para>セルを Tab / Esc で抜けても、行の編集 (コレクションの EditItem) は続いている。
+        /// そのまま閉じると、モデルのコレクションの<b>既定のビュー</b> (同じコレクションを出す表すべてが共有する) が
+        /// 編集中のまま残り、次に同じコレクションを表に出すウィンドウが組み立ての途中で落ちていた
+        /// (「'DeferRefresh' は、AddNew トランザクションまたは EditItem トランザクションの実行中は許可されません」)。</para>
+        ///
+        /// <para>確定していないセルの入力は捨てる (以前も閉じれば値に入らなかった)。確定したセルの値はすでにモデルに入っているので、
+        /// 行は確定で閉じる (行のデータは IEditableObject を持たず、取り消しても値は戻らない)。</para>
+        /// </summary>
+        internal void EndPendingRowEdit()
+        {
+            try
+            {
+                if (Items is not System.ComponentModel.IEditableCollectionView view) return;
+                if (!view.IsEditingItem && !view.IsAddingNew) return;
+                CancelEdit(DataGridEditingUnit.Cell);
+                CommitEdit(DataGridEditingUnit.Row, true);
+                // 表の側で終えられなかったとき (行がもう表に無いなど) はビューを直接閉じる
+                if (view.IsEditingItem) view.CommitEdit();
+                if (view.IsAddingNew) view.CancelNew();
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Warning(ex, "表の行の編集を終えられませんでした");
+            }
         }
 
         /// <summary>
