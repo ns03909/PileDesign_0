@@ -21,6 +21,15 @@
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <conv:BoolEqualsConverter x:Key="BoolEqualsConverter" />
+        <!-- 矩形荷重の位置 (X1〜Y2)。杭ごとの矩形は杭の位置が中心で、位置は書き換えられない (寸法と荷重は書き換えられる) -->
+        <Style x:Key="RectPositionCellStyle" TargetType="DataGridCell" BasedOn="{StaticResource CustomDataGridCellStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCenteredOnPile}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource ReadOnlyBrush}"/>
+                    <Setter Property="ToolTip" Value="杭ごとの矩形は杭の位置が中心です。位置は変えられません (寸法 DX・DY と荷重は変えられます)。"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
         <DataTemplate x:Key="LoadingTypeItemTemplate">
             <StackPanel Orientation="Horizontal">
                 <svgc:SvgViewbox Width="24" Height="24" Stretch="Uniform">
@@ -595,7 +604,7 @@
                                                             </Button>
                                                         </StackPanel>
                                                         <TextBlock Margin="4,2,4,4" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
-                                                                   Text="杭に紐付く矩形の荷重は、既定で杭の VL 時の軸力から決めます (出所「軸力」)。表で入れた荷重は「手入力」とし、解析で軸力に戻しません。&#x0A;基礎梁ありの解析は、この荷重を初期値として杭の荷重を再配分します。収束した荷重は解析結果として別に保存し、この表の値は変えません。"/>
+                                                                   Text="杭に紐付く矩形は杭の位置が中心です (位置は変えられません。寸法 DX・DY は変えられます)。荷重は、既定で杭の VL 時の軸力から決めます (出所「軸力」)。表で入れた荷重は「手入力」とし、解析で軸力に戻しません。&#x0A;基礎梁ありの解析は、この荷重を初期値として杭の荷重を再配分します。収束した荷重は解析結果として別に保存し、この表の値は変えません。"/>
                                                     </StackPanel>
 
                                                     <common:EnhancedDataGrid Grid.Row="2" ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.RectLoads, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
@@ -647,7 +656,8 @@
                                                             </DataGridTemplateColumn>
 
                                                             <DataGridTextColumn Width="*" Binding="{Binding X1, StringFormat=N3}"
-                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50"
+                                                                        CellStyle="{StaticResource RectPositionCellStyle}">
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
                                                                         <TextBlock Text="X1"
@@ -660,7 +670,8 @@
                                                             </DataGridTextColumn>
 
                                                             <DataGridTextColumn Width="*" Binding="{Binding Y1, StringFormat=N3}"
-                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50"
+                                                                        CellStyle="{StaticResource RectPositionCellStyle}">
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
                                                                         <TextBlock Text="Y1"
@@ -673,7 +684,8 @@
                                                             </DataGridTextColumn>
 
                                                             <DataGridTextColumn Width="*" Binding="{Binding X2, StringFormat=N3}"
-                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50"
+                                                                        CellStyle="{StaticResource RectPositionCellStyle}">
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
                                                                         <TextBlock Text="X2"
@@ -687,7 +699,8 @@
 
 
                                                             <DataGridTextColumn Width="*" Binding="{Binding Y2, StringFormat=N3}"
-                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50"
+                                                                        CellStyle="{StaticResource RectPositionCellStyle}">
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
                                                                         <TextBlock Text="Y2"

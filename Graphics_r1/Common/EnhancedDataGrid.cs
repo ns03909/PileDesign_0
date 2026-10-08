@@ -227,6 +227,32 @@ namespace PileDesign.Common
         /// ここで明示的に編集を開始し、打鍵文字を編集 TextBox に直接流し込むことで
         /// 「1 打目から入力データとして受け付ける」(Excel 風の上書き入力) を実現する。
         /// </summary>
+        /// <summary>
+        /// この行のこの列が書き換えられないときの理由 (列が読み取り専用なら空文字)。書き換えられるなら null。
+        /// 行データが <see cref="IRowReadOnlyMembers"/> なら、その行だけの読み取り専用も見る。
+        /// </summary>
+        internal static string? CellReadOnlyReason(object? item, DataGridColumn? column)
+        {
+            if (column == null) return null;
+            if (column.IsReadOnly) return string.Empty;
+            if (item is not IRowReadOnlyMembers rowRules) return null;
+            if (!TryGetBindingInfo(item, column, out var path, out _, out _) || string.IsNullOrEmpty(path)) return null;
+            return rowRules.ReadOnlyReason(path);
+        }
+
+        /// <summary>行ごとの読み取り専用のセルは、編集に入らない (ダブルクリック・F2・打鍵のどれでも)。理由を伝える。</summary>
+        protected override void OnBeginningEdit(DataGridBeginningEditEventArgs e)
+        {
+            if (!e.Cancel && e.Row?.Item is IRowReadOnlyMembers
+                && CellReadOnlyReason(e.Row.Item, e.Column) is { Length: > 0 } reason)
+            {
+                e.Cancel = true;
+                MessageService.Show(OwnerWindow, reason, "このセルは編集できません", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            base.OnBeginningEdit(e);
+        }
+
         protected override void OnPreviewTextInput(TextCompositionEventArgs e)
         {
             if (TryBeginEditWithFirstChar(e))
@@ -730,6 +756,8 @@ namespace PileDesign.Common
                         var col = displayOrderedCols[startDisplayIndex + c];
                         if (col.IsReadOnly)
                             return FailFormat(r, c, "この列は読み取り専用です (計算で決まる値など)。", col);
+                        if (CellReadOnlyReason(item, col) is { Length: > 0 } rowReason)
+                            return FailFormat(r, c, rowReason, col);
 
                         if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind))
                             return FailFormat(r, c, "この列には貼り付けられません (ボタンや、値を直接持たない列です)。", col);
@@ -919,7 +947,7 @@ namespace PileDesign.Common
                 bool anyWritable = false;
                 foreach (var (item, col) in uniqueTargets)
                 {
-                    if (col.IsReadOnly) continue;
+                    if (CellReadOnlyReason(item, col) != null) continue;
                     if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind)) continue;
                     if (!CanConvert(cellText, targetType, columnKind))
                     {
@@ -944,7 +972,7 @@ namespace PileDesign.Common
                 {
                     foreach (var (item, col) in uniqueTargets)
                     {
-                        if (col.IsReadOnly) continue;
+                        if (CellReadOnlyReason(item, col) != null) continue;
                         if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind)) continue;
                         object? converted = ConvertValue(cellText, targetType, columnKind);
                         TrySetValueByPath(item, path, converted);
@@ -996,7 +1024,7 @@ namespace PileDesign.Common
                 {
                     foreach (var (item, col) in uniqueTargets)
                     {
-                        if (col.IsReadOnly) continue;
+                        if (CellReadOnlyReason(item, col) != null) continue;
                         if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind)) continue;
                         // ComboBox (選択値/選択アイテム) は null 化で不整合になりやすいためクリア対象外
                         if (columnKind is ColumnKind.ComboSelectedItem or ColumnKind.ComboSelectedValue) continue;

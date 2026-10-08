@@ -228,6 +228,50 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 杭ごとの矩形は杭の位置が中心で、位置 (X1〜Y2) は表から書き換えられない。寸法と荷重は書き換えられる。
+        /// 以前は位置を書き換えられたが、どちらの解析も中心を杭の位置に置き直して解き、
+        /// 基礎梁なしの解析は入力の矩形まで杭の位置へ戻していた (動かした位置が計算に入らず、黙って消えた)。
+        /// </summary>
+        [TestMethod]
+        public void ThePositionOfAPileRect_CannotBeEditedInAnyWay()
+        {
+            var linked = new RectLoad { X1 = 0, X2 = 1, Y1 = 0, Y2 = 1, LinkedPileNo = 3 };
+            var free = new RectLoad { X1 = 0, X2 = 1, Y1 = 0, Y2 = 1 };
+            var rules = (PileDesign.Common.IRowReadOnlyMembers)linked;
+            foreach (var p in new[] { "X1", "X2", "Y1", "Y2", "CenterX", "CenterY" })
+            {
+                Assert.IsNotNull(rules.ReadOnlyReason(p), $"杭ごとの矩形の {p} を書き換えられます");
+                Assert.IsNull(((PileDesign.Common.IRowReadOnlyMembers)free).ReadOnlyReason(p), $"任意矩形の {p} まで書き換えられなくなっています");
+            }
+            foreach (var p in new[] { "DX", "DY", "QAInput" })
+                Assert.IsNull(rules.ReadOnlyReason(p), $"杭ごとの矩形の {p} (寸法・荷重) が書き換えられなくなっています");
+
+            // 表の列から見ても同じ (列のバインドのパスで引く)
+            var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
+            {
+                var x1 = new System.Windows.Controls.DataGridTextColumn { Binding = new System.Windows.Data.Binding("X1") };
+                var dx = new System.Windows.Controls.DataGridTextColumn { Binding = new System.Windows.Data.Binding("DX") };
+                Assert.IsNotNull(PileDesign.Common.EnhancedDataGrid.CellReadOnlyReason(linked, x1));
+                Assert.IsNull(PileDesign.Common.EnhancedDataGrid.CellReadOnlyReason(free, x1));
+                Assert.IsNull(PileDesign.Common.EnhancedDataGrid.CellReadOnlyReason(linked, dx));
+            }, out bool timedOut);
+            if (timedOut) { Assert.Inconclusive("60 秒以内に終わらなかったためスキップ"); return; }
+            if (captured != null) Assert.Fail($"{captured.GetType().Name}: {captured.Message}\n{captured.StackTrace}");
+
+            // 編集・貼り付け・塗り潰し・クリアのどれも、行ごとの読み取り専用を見る (1 つでも列の IsReadOnly だけだと、そこから書き換わる)
+            string grid = TestSource.Read("Graphics_r1", "Common", "EnhancedDataGrid.cs");
+            StringAssert.Contains(grid, "protected override void OnBeginningEdit(");
+            Assert.AreEqual(0, Regex.Matches(grid, Regex.Escape("if (col.IsReadOnly) continue;")).Count,
+                "列の IsReadOnly だけを見て書き込む箇所が残っています (行ごとの読み取り専用を飛ばす)");
+            Assert.IsTrue(Regex.Matches(grid, Regex.Escape("CellReadOnlyReason(item, col)")).Count >= 4,
+                "貼り付け・塗り潰し (2 か所)・クリアのどこかで行ごとの読み取り専用を見ていません");
+
+            string xaml = TestSource.Read("Graphics_r1", "Views", "GroupSettlementWindow.xaml");
+            Assert.AreEqual(4, Regex.Matches(xaml, Regex.Escape("CellStyle=\"{StaticResource RectPositionCellStyle}\"")).Count,
+                "X1〜Y2 の列が、杭ごとの矩形を読み取り専用として見せていません");
+        }
+
+        /// <summary>
         /// 基礎梁ありの解析は、同じ杭に紐付く矩形が複数あれば解かずに止める (荷重の出所に関わらず)。
         /// 以前は荷重を合算し、寸法は先頭の矩形のものを黙って使っていた。
         /// </summary>

@@ -531,7 +531,7 @@ namespace PileDesign.Models.InputData
         }
     }
 
-    public class RectLoad : BaseModel
+    public class RectLoad : BaseModel, PileDesign.Common.IRowReadOnlyMembers
     {
         private double _x1;
         public double X1
@@ -664,8 +664,35 @@ namespace PileDesign.Models.InputData
         public int LinkedPileNo
         {
             get => _linkedPileNo;
-            set { if (SetProperty(ref _linkedPileNo, value)) OnPropertyChanged(nameof(QASource)); }
+            set
+            {
+                if (SetProperty(ref _linkedPileNo, value))
+                {
+                    OnPropertyChanged(nameof(QASource));
+                    OnPropertyChanged(nameof(IsCenteredOnPile));
+                }
+            }
         }
+
+        /// <summary>
+        /// 杭に紐付く矩形 (杭ごとの矩形) か。紐付く矩形は<b>杭の位置が中心</b>で、位置 (X1〜Y2) は表から書き換えられない。
+        ///
+        /// <para>基礎梁なし・ありのどちらの解析も、杭に紐付く矩形は寸法 (DX/DY) だけを読み、中心を杭の位置に置き直して解く。
+        /// 以前は表で X1〜Y2 を書き換えられたので、矩形を動かしても計算は杭の位置のままで、
+        /// 基礎梁なしの解析は解いたあとで入力の矩形まで杭の位置へ戻していた (動かした位置が黙って消えた)。</para>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsCenteredOnPile => LinkedPileNo > 0;
+
+        /// <summary>杭に紐付く矩形の位置を表で書き換えようとしたときに伝えること。</summary>
+        public const string CenteredOnPileReason =
+            "杭ごとの矩形は、杭の位置を中心にして解析します。表では寸法 (DX・DY) と荷重だけを変えられます。\n"
+            + "位置を自由に決めるときは、荷重タイプを「任意矩形」にして矩形を足してください (任意矩形は基礎梁なしの解析だけで使えます)。";
+
+        string? PileDesign.Common.IRowReadOnlyMembers.ReadOnlyReason(string propertyPath)
+            => IsCenteredOnPile && propertyPath is nameof(X1) or nameof(X2) or nameof(Y1) or nameof(Y2) or nameof(CenterX) or nameof(CenterY)
+                ? CenteredOnPileReason : null;
 
         /// <summary>X 中心 (= (X1+X2)/2)。set すると DX を保ったまま X1/X2 を平行移動する。</summary>
         [System.Text.Json.Serialization.JsonIgnore]
