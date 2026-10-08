@@ -24,9 +24,7 @@ namespace PileDesign.Common.Logging
     public static class CrashReporter
     {
         /// <summary>クラッシュレポート保存先 (%LocalAppData%\PileDesign\CrashReports)。</summary>
-        public static string ReportDirectory => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PileDesign", "CrashReports");
+        public static string ReportDirectory => PileDesign.Common.AppDataPaths.Sub("CrashReports");
 
         /// <summary>
         /// クラッシュレポート zip を作成して返す。失敗時は null を返す (例外を投げない)。

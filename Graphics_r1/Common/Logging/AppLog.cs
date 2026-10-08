@@ -25,9 +25,7 @@ namespace PileDesign.Common.Logging
         {
             try
             {
-                var logDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "PileDesign", "Logs");
+                var logDir = LogDirectory;
                 Directory.CreateDirectory(logDir);
 
                 _logger = new LoggerConfiguration()
@@ -73,8 +71,6 @@ namespace PileDesign.Common.Logging
         }
 
         /// <summary>ログ出力先ディレクトリ。診断ダイアログ等で表示する用。</summary>
-        public static string LogDirectory => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PileDesign", "Logs");
+        public static string LogDirectory => PileDesign.Common.AppDataPaths.Sub("Logs");
     }
 }

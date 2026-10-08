@@ -49,8 +49,7 @@ namespace PileDesign.Services
 
         public UserSettingsService()
         {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var appFolder = Path.Combine(appDataPath, "PileDesign");
+            var appFolder = PileDesign.Common.AppDataPaths.Root;
             Directory.CreateDirectory(appFolder);
             _filePath = Path.Combine(appFolder, "user_settings.json");
 

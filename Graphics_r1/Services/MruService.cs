@@ -38,8 +38,7 @@ namespace PileDesign.Services
         public MruService()
         {
             // MRUファイルのパスを設定
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var appFolder = Path.Combine(appDataPath, "PileDesign");
+            var appFolder = PileDesign.Common.AppDataPaths.Root;
             Directory.CreateDirectory(appFolder);
             _mruFilePath = Path.Combine(appFolder, "mru.json");
 

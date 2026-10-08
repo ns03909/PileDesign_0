@@ -52,7 +52,7 @@ namespace PileDesign.Services
         internal string SessionId { get; } = Guid.NewGuid().ToString("N");
 
         /// <summary>
-        /// 自動保存フォルダのパス（AppData/Local/PileDesign/AutoSave/）
+        /// 自動保存フォルダのパス（既定は AppData/Local/PileDesign/AutoSave/。<see cref="PileDesign.Common.AppDataPaths"/>）
         /// </summary>
         public string AutoSaveFolder { get; }
 
@@ -97,8 +97,7 @@ namespace PileDesign.Services
             _fileOperationService = fileOperationService;
 
             // 自動保存フォルダのパスを設定
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            AutoSaveFolder = Path.Combine(appDataPath, "PileDesign", "AutoSave");
+            AutoSaveFolder = PileDesign.Common.AppDataPaths.Sub("AutoSave");
 
             // フォルダが存在しなければ作成
             Directory.CreateDirectory(AutoSaveFolder);

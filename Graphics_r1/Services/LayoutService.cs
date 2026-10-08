@@ -27,8 +27,7 @@ namespace PileDesign.Services
         public LayoutService()
         {
             // レイアウトファイルのパスを設定
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var appFolder = Path.Combine(appDataPath, "PileDesign");
+            var appFolder = PileDesign.Common.AppDataPaths.Root;
             Directory.CreateDirectory(appFolder);
 
             _dataGridSettingsFilePath = Path.Combine(appFolder, "datagrid_settings.json");

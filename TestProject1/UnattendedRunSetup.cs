@@ -19,10 +19,25 @@ namespace TestProject1
     [TestClass]
     public static class UnattendedRunSetup
     {
+        /// <summary>この実行でアプリの利用者ファイル (自動保存・ログ・設定など) を置く一時フォルダ。</summary>
+        internal static string AppDataRoot { get; private set; } = "";
+
         [AssemblyInitialize]
         public static void Initialize(TestContext context)
         {
             MessageService.IsUnattended = true;
+            // 利用者の実際のフォルダ (%LocalAppData%\PileDesign) に書かない。
+            // 以前は自動保存のテストが利用者の自動保存フォルダに書き、古いファイルの掃除まで走らせていた
+            AppDataRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "PileDesignTests", System.Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(AppDataRoot);
+            PileDesign.Common.AppDataPaths.OverrideRootForTests(AppDataRoot);
+        }
+
+        [AssemblyCleanup]
+        public static void Cleanup()
+        {
+            try { System.IO.Directory.Delete(AppDataRoot, recursive: true); }
+            catch { /* ログが開いたままなど。一時フォルダなので残っても害はない */ }
         }
     }
 
@@ -30,6 +45,38 @@ namespace TestProject1
     [TestClass]
     public class UnattendedRunSetupTests
     {
+        /// <summary>
+        /// テストは利用者の実際のフォルダ (自動保存・ログ・設定) に書かない。
+        /// 書き先はすべて <see cref="PileDesign.Common.AppDataPaths"/> を通す (自分で %LocalAppData% を組み立てる箇所を作らない)。
+        /// </summary>
+        [TestMethod]
+        public void TheRunDoesNotWriteToTheUsersAppDataFolder()
+        {
+            string real = System.IO.Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "PileDesign");
+            Assert.AreEqual(UnattendedRunSetup.AppDataRoot, PileDesign.Common.AppDataPaths.Root);
+            Assert.AreNotEqual(System.IO.Path.GetFullPath(real), System.IO.Path.GetFullPath(PileDesign.Common.AppDataPaths.Root));
+
+            var auto = new AutoSaveService(new FileOperationService(new System.Text.Json.JsonSerializerOptions()));
+            StringAssert.StartsWith(auto.AutoSaveFolder, UnattendedRunSetup.AppDataRoot, "自動保存が利用者のフォルダを向いています");
+            StringAssert.StartsWith(PileDesign.Common.Logging.AppLog.LogDirectory, UnattendedRunSetup.AppDataRoot);
+            StringAssert.StartsWith(PileDesign.Common.Logging.CrashReporter.ReportDirectory, UnattendedRunSetup.AppDataRoot);
+
+            var offenders = new System.Collections.Generic.List<string>();
+            int scanned = 0;
+            foreach (var file in System.IO.Directory.GetFiles(System.IO.Path.Combine(TestSource.Root(), "Graphics_r1"), "*.cs", System.IO.SearchOption.AllDirectories))
+            {
+                if (file.Contains(System.IO.Path.DirectorySeparatorChar + "obj" + System.IO.Path.DirectorySeparatorChar)
+                    || file.Contains(System.IO.Path.DirectorySeparatorChar + "bin" + System.IO.Path.DirectorySeparatorChar)) continue;
+                scanned++;
+                if (file.EndsWith("AppDataPaths.cs")) continue;
+                if (System.IO.File.ReadAllText(file).Contains("SpecialFolder.LocalApplicationData"))
+                    offenders.Add(System.IO.Path.GetFileName(file));
+            }
+            TestSource.AssertScanned(scanned, 100, "本体のソース");
+            Assert.AreEqual(0, offenders.Count, "AppDataPaths を通さずに利用者のフォルダを組み立てています: " + string.Join(", ", offenders));
+        }
+
         [TestMethod]
         public void DialogsAreSuppressedDuringTheRun()
         {

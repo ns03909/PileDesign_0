@@ -29,9 +29,7 @@ namespace PileDesign.Common
     internal static class WebViewHardening
     {
         /// <summary>ブラウザの作業フォルダ。実行ファイルの隣ではなく利用者のローカル領域に置く。</summary>
-        internal static string UserDataFolder => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PileDesign", "WebView2");
+        internal static string UserDataFolder => AppDataPaths.Sub("WebView2");
 
         /// <summary>
         /// 表示先を設定する<b>前に</b>呼ぶこと。作業フォルダは初期化のときにしか効かない。

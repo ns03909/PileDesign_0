@@ -104,9 +104,7 @@ namespace PileDesign.Views
             }
         }
 
-        private static string AutoSaveFolder() => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PileDesign", "AutoSave");
+        private static string AutoSaveFolder() => PileDesign.Common.AppDataPaths.Sub("AutoSave");
 
         private void ButtonReleaseNotes_Click(object sender, RoutedEventArgs e)
         {

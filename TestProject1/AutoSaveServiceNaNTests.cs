@@ -84,7 +84,7 @@ namespace TestProject1
 
         /// <summary>
         /// 各テストで AutoSaveFolder に残った前回テストのファイルを削除する。
-        /// AutoSaveService は %LocalAppData%\PileDesign\AutoSave という共有フォルダを使うため、
+        /// AutoSaveService はテストの実行で共有する自動保存フォルダ (実行の最初に一時フォルダへ向けてある) を使うため、
         /// 過去の test run のゴミが「ファイルが残っているか」検証を撹乱する。
         /// </summary>
         private static void CleanupAutoSaveFolder(AutoSaveService auto, string filePrefix)
