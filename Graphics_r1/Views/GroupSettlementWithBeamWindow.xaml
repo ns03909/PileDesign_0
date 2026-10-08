@@ -27,14 +27,14 @@
         <ScrollViewer Grid.Row="0" Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="8">
             <StackPanel>
                 <!-- 荷重源 -->
-                <GroupBox Header="荷重源 (Pi)" Margin="0,0,0,8">
+                <GroupBox Header="荷重の出所" Margin="0,0,0,8">
                     <StackPanel Margin="4">
                         <ComboBox ItemsSource="{Binding LoadSourceOptions}"
                                   SelectedItem="{Binding LoadSource}"
                                   Margin="0,2"/>
-                        <TextBlock Text="矩形荷重: 各 RectLoad の QA を Pi として使用 (VL のみ)"
+                        <TextBlock Text="荷重条件の矩形荷重: 群杭沈下ウィンドウの「荷重条件」タブの杭ごとの矩形の荷重 (QA) を、その杭の荷重にします (VL のみ)。"
                                    FontSize="10" Foreground="Gray" TextWrapping="Wrap" Margin="0,4,0,0"/>
-                        <TextBlock Text="杭軸力: 各杭の AxialForce を Pi として使用 (VL/L1/L2 選択可)"
+                        <TextBlock Text="杭の軸力: 杭配置の軸力を各杭の荷重にします (VL・レベル1・レベル2 を選べます)。荷重条件タブの矩形荷重 (手入力の荷重を含む) は使いません。"
                                    FontSize="10" Foreground="Gray" TextWrapping="Wrap" Margin="0,2,0,0"/>
                     </StackPanel>
                 </GroupBox>
@@ -90,6 +90,11 @@
                                  Width="80" HorizontalAlignment="Right" Margin="0,2"/>
                     </Grid>
                 </GroupBox>
+
+                <!-- これから解く内容のまとめ (解析方法・荷重の出所・対象ケース・荷重合計) -->
+                <Border BorderBrush="{StaticResource MutedTextBrush}" BorderThickness="1" Padding="6" Margin="0,0,0,4">
+                    <TextBlock Text="{Binding RunSummaryText}" TextWrapping="Wrap"/>
+                </Border>
 
                 <!-- 実行ボタン -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8">

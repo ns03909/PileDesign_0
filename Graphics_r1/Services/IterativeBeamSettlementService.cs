@@ -57,6 +57,28 @@ namespace PileDesign.Services
     public static class IterativeBeamSettlementService
     {
         /// <summary>
+        /// 同じ杭に紐付く矩形が複数あるときの理由 (杭番号と、それぞれの寸法・荷重)。なければ null。
+        /// 基礎梁ありの解析は杭 1 本に矩形 1 つで荷重を与える。
+        /// </summary>
+        internal static string? DescribeDuplicatePileRects(IEnumerable<RectLoad>? rects)
+        {
+            var groups = (rects ?? [])
+                .Where(r => r != null && r.LinkedPileNo > 0)
+                .GroupBy(r => r.LinkedPileNo)
+                .Where(g => g.Count() > 1)
+                .OrderBy(g => g.Key)
+                .ToList();
+            if (groups.Count == 0) return null;
+            var lines = new List<string> { "同じ杭に紐付く矩形荷重が複数あります。基礎梁ありの解析は杭 1 本に矩形 1 つで荷重を与えるので、解析できません。" };
+            foreach (var g in groups.Take(5))
+                lines.Add($"・杭No.{g.Key}: " + string.Join(" / ", g.Select(r => $"{r.DX:F3}×{r.DY:F3} m・{r.QA:F1} kN")));
+            if (groups.Count > 5) lines.Add($"・ほか {groups.Count - 5} 本");
+            lines.Add("");
+            lines.Add("余分な矩形を削除するか、群杭沈下ウィンドウの「荷重条件」タブで「杭ごとの矩形を作り直す」を押してください。");
+            return string.Join("\n", lines);
+        }
+
+        /// <summary>
         /// 個別矩形（基礎梁考慮）の反復沈下解析を実行する。
         /// </summary>
         /// <param name="inputModel">入力モデル (杭配置・基礎梁・群杭沈下用土層が必須)</param>
@@ -108,6 +130,14 @@ namespace PileDesign.Services
             if (inputModel.FoundationBeamInput?.Beams == null || inputModel.FoundationBeamInput.Beams.Count == 0)
             {
                 result.Log.Add("[ERROR] 基礎梁が定義されていません。");
+                return result;
+            }
+
+            // 同じ杭に紐付く矩形が複数あると、荷重は合算するのに寸法は 1 つしか使えない (入力した荷重分布にならない)。
+            // 以前は先頭の矩形の寸法を黙って使っていた。画面でも実行前に止めているが、ここでも受け付けない
+            if (DescribeDuplicatePileRects(pgs.RectLoads) is { } duplicate)
+            {
+                result.Log.Add("[ERROR] " + duplicate);
                 return result;
             }
 

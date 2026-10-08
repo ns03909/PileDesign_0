@@ -275,24 +275,32 @@ namespace PileDesign.ViewModels
 
         // ── 解析パラメータ ──
 
-        [ObservableProperty]
-        private string _loadSource = "矩形荷重"; // "矩形荷重" or "杭軸力"
+        /// <summary>荷重の出所: 群杭沈下ウィンドウの「荷重条件」タブの矩形荷重 (杭ごと)。VL 1 ケースだけ。</summary>
+        public const string SourceRectLoads = "荷重条件の矩形荷重（VL）";
+        /// <summary>荷重の出所: 杭配置の軸力。荷重条件の矩形荷重は使わない。</summary>
+        public const string SourceAxialForce = "杭の軸力（VL・L1・L2）";
 
-        public string[] LoadSourceOptions { get; } = ["矩形荷重", "杭軸力"];
+        // 以前の呼び名は「矩形荷重 / 杭軸力」。「杭軸力」を選ぶと荷重条件タブの荷重を使わないことが名前から読めず、
+        // 荷重条件で入れた荷重が効いていると思い込めた。どこの荷重を使うかを名前に入れる
+        [ObservableProperty]
+        private string _loadSource = SourceRectLoads;
+
+        public string[] LoadSourceOptions { get; } = [SourceRectLoads, SourceAxialForce];
 
         partial void OnLoadSourceChanged(string value)
         {
-            // 矩形荷重ソースは VL 1 ケースのみ対応 (RectLoad は荷重ケース別に持たない)
-            if (value == "矩形荷重")
+            // 矩形荷重は VL 1 ケースのみ対応 (RectLoad は荷重ケース別に持たない)
+            if (value == SourceRectLoads)
             {
                 AnalyzeLevel1 = false;
                 AnalyzeLevel2 = false;
             }
             OnPropertyChanged(nameof(IsAxialSource));
             OnPropertyChanged(nameof(PlannedCasesText));
+            OnPropertyChanged(nameof(RunSummaryText));
         }
 
-        public bool IsAxialSource => LoadSource == "杭軸力";
+        public bool IsAxialSource => LoadSource == SourceAxialForce;
 
         [ObservableProperty]
         private bool _analyzeVL = true;
@@ -433,7 +441,7 @@ namespace PileDesign.ViewModels
 
         // ── 入力検証 ──
 
-        private string ValidateInput()
+        internal string ValidateInput()
         {
             if (InputModel?.PileLayoutItems == null || InputModel.PileLayoutItems.Count == 0)
                 return "杭配置データが定義されていません。";
@@ -449,16 +457,20 @@ namespace PileDesign.ViewModels
                 m.GroupPileSettlementXOffset, m.GroupPileSettlementYOffset, m.GroupPileSettlementXSpacing, m.GroupPileSettlementYSpacing,
                 InputModel.GridXItems, InputModel.GridYItems);
             if (gridProblem != null) return gridProblem;
+            // 荷重の出所に関わらず見る (杭の軸力でも、矩形の寸法は荷重条件の矩形から読む)
+            if (IterativeBeamSettlementService.DescribeDuplicatePileRects(InputModel.PileGroupSettlement.RectLoads) is { } duplicate)
+                return duplicate;
 
-            if (LoadSource == "矩形荷重")
+            if (LoadSource == SourceRectLoads)
             {
                 var rects = InputModel.PileGroupSettlement.RectLoads;
                 if (rects == null || rects.Count == 0 || rects.All(r => r.QA == 0))
-                    return "矩形荷重が定義されていません (または全て 0)。";
+                    return "荷重条件の矩形荷重が定義されていません (または全て 0)。";
+                if (DescribeRectLoadLinkProblem() is { } linkProblem) return linkProblem;
                 if (!AnalyzeVL)
-                    return "矩形荷重ソースでは VL ケースのみ対象です。VL を ON にしてください。";
+                    return "荷重条件の矩形荷重を使うときは VL のケースだけを解きます。VL を ON にしてください。";
             }
-            else // 杭軸力
+            else // 杭の軸力
             {
                 if (!AnalyzeVL && !AnalyzeLevel1 && !AnalyzeLevel2)
                     return "少なくとも 1 つの荷重ケースを選択してください。";
@@ -471,8 +483,82 @@ namespace PileDesign.ViewModels
                     return "レベル 1 に解析対象の荷重ケースがありません (荷重ケースの「解析対象」「適用」を確認してください)。";
                 if (AnalyzeLevel2 && !planned.Any(c => c.Level == 2))
                     return "レベル 2 に解析対象の荷重ケースがありません (荷重ケースの「解析対象」「適用」を確認してください)。";
+                if (DescribeZeroAxialCases() is { } zero) return zero;
             }
             return null;
+        }
+
+        /// <summary>
+        /// 荷重条件の矩形荷重が杭と 1 対 1 に対応していなければ、その理由。対応していれば null。
+        ///
+        /// <para>基礎梁ありの解析は荷重を杭ごとに与える (杭に紐付いた矩形の QA をその杭の荷重にする)。
+        /// 以前は紐付かない矩形 (任意矩形・建物全体の矩形など) を黙って捨て、紐付く矩形が 1 つもなければ
+        /// 荷重 0 のまま解いていた。一部だけを使うと荷重の合計が入力と食い違うので、まとめて止める。</para>
+        /// </summary>
+        internal string? DescribeRectLoadLinkProblem()
+        {
+            var rects = InputModel?.PileGroupSettlement?.RectLoads;
+            var piles = InputModel?.PileLayoutItems;
+            if (rects == null || piles == null) return null;
+            var pileNos = piles.Select(p => p.PileNo).ToHashSet();
+            var unlinked = rects.Where(r => !pileNos.Contains(r.LinkedPileNo)).ToList();
+            var linkedNos = rects.Where(r => pileNos.Contains(r.LinkedPileNo)).Select(r => r.LinkedPileNo).ToHashSet();
+            var withoutRect = piles.Where(p => !linkedNos.Contains(p.PileNo)).Select(p => p.PileNo).ToList();
+            if (unlinked.Count == 0 && withoutRect.Count == 0) return null;
+
+            var lines = new List<string> { "基礎梁ありの解析は、荷重を杭ごとの矩形で与えます。荷重条件の矩形荷重が杭と対応していないので、解析できません。" };
+            if (unlinked.Count > 0)
+                lines.Add($"・杭に対応しない矩形が {unlinked.Count} 件あります (荷重の合計 {unlinked.Sum(r => r.QA):F1} kN)。この荷重は解析に入りません。");
+            if (withoutRect.Count > 0)
+                lines.Add($"・矩形のない杭が {withoutRect.Count} 本あります (杭No. {string.Join(", ", withoutRect.Take(10))}{(withoutRect.Count > 10 ? " ほか" : "")})。この杭には荷重がかかりません。");
+            lines.Add("");
+            // 杭の軸力が入っていないモデルで軸力へ切り替えさせると、荷重 0 の解析へ案内することになる
+            bool hasAxial = piles.Any(p => Math.Abs(p.AxialForceVL) > 1e-9);
+            lines.Add("群杭沈下ウィンドウの「荷重条件」タブで「杭ごとの矩形を作り直す」を押すと、杭ごとの矩形 (荷重は軸力から) に置き換わります。"
+                + (hasAxial ? "または、荷重の出所を「" + SourceAxialForce + "」にしてください。"
+                            : "ただし杭の軸力が入っていないので、作り直す前に杭配置の「軸力」タブで軸力を入れてください。"));
+            return string.Join("\n", lines);
+        }
+
+        /// <summary>
+        /// 杭の軸力を荷重にするとき、杭の軸力の合計が 0 のケースがあればその理由。なければ null。
+        ///
+        /// <para>以前は軸力を入れていないモデル (群杭沈下の例題など) でも解き、荷重 0 のまま 1 回で「収束」して
+        /// 全杭 0 の結果を保存できた。0 であることは計算ログの [WARN] 1 行でしか分からなかった
+        /// (荷重条件の矩形荷重のほうは、すべて 0 なら実行前に止めている)。</para>
+        /// </summary>
+        internal string? DescribeZeroAxialCases()
+        {
+            var zero = BuildCaseList().Where(c => c.Ppi.Values.All(v => Math.Abs(v) < 1e-9)).Select(c => c.Label).ToList();
+            if (zero.Count == 0) return null;
+            return $"杭の軸力の合計が 0 のケースがあります ({string.Join(" / ", zero.Take(5))}{(zero.Count > 5 ? " ほか" : "")})。荷重 0 では沈下を求められないので、解析できません。\n\n"
+                + "杭配置の「軸力」タブで杭の軸力を入れるか、荷重の出所を「" + SourceRectLoads + "」にしてください。";
+        }
+
+        /// <summary>実行ボタンの上に出す、これから解く内容のまとめ (解析方法・荷重の出所・対象ケース・荷重合計)。</summary>
+        public string RunSummaryText
+        {
+            get
+            {
+                var lines = new List<string> { "解析方法: 基礎梁あり (基礎梁と杭頭ばねの釣り合いを反復)" };
+                lines.Add("荷重の出所: " + LoadSource);
+                if (IsAxialSource) lines.Add("　※ 荷重条件タブの矩形荷重 (手入力の荷重を含む) は使いません");
+                lines.Add(PlannedCasesText);
+                var piles = InputModel?.PileLayoutItems;
+                if (piles != null)
+                {
+                    if (!IsAxialSource)
+                    {
+                        var pileNos = piles.Select(p => p.PileNo).ToHashSet();
+                        var rects = InputModel!.PileGroupSettlement?.RectLoads;
+                        double used = rects?.Where(r => pileNos.Contains(r.LinkedPileNo)).Sum(r => r.QA) ?? 0;
+                        lines.Add($"荷重合計 (VL): {used:F1} kN");
+                    }
+                    else if (AnalyzeVL)
+                        lines.Add($"荷重合計 (VL): {piles.Sum(p => p.AxialForceVL):F1} kN");
+                }
+                return string.Join("\n", lines);
+            }
         }
 
         // ── 荷重ケース構築 ──
@@ -482,7 +568,7 @@ namespace PileDesign.ViewModels
             var list = new List<(string, Dictionary<int, double>)>();
             var piles = InputModel.PileLayoutItems;
 
-            if (LoadSource == "矩形荷重")
+            if (LoadSource == SourceRectLoads)
             {
                 // 各 RectLoad の LinkedPileNo (= pile.PileNo) → QA を集約
                 var ppi = piles.ToDictionary(p => p.PileNo, p => 0.0);
@@ -525,7 +611,7 @@ namespace PileDesign.ViewModels
         internal List<LoadCase> PlannedSeismicCases()
         {
             var cases = new List<LoadCase>();
-            if (LoadSource != "杭軸力" || InputModel?.LoadCasesInput == null) return cases;
+            if (LoadSource != SourceAxialForce || InputModel?.LoadCasesInput == null) return cases;
             foreach (var lc in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
             {
                 if (lc == null || !lc.IsApplicable) continue;
@@ -540,7 +626,7 @@ namespace PileDesign.ViewModels
             get
             {
                 var names = new List<string>();
-                if (LoadSource == "矩形荷重") names.Add("矩形荷重 (VL)");
+                if (LoadSource == SourceRectLoads) names.Add("矩形荷重 (VL)");
                 else if (AnalyzeVL) names.Add("杭軸力 VL");
                 names.AddRange(PlannedSeismicCases().Select(CaseLabel));
                 return names.Count == 0 ? "解くケースがありません"
@@ -548,9 +634,9 @@ namespace PileDesign.ViewModels
             }
         }
 
-        partial void OnAnalyzeVLChanged(bool value) => OnPropertyChanged(nameof(PlannedCasesText));
-        partial void OnAnalyzeLevel1Changed(bool value) => OnPropertyChanged(nameof(PlannedCasesText));
-        partial void OnAnalyzeLevel2Changed(bool value) => OnPropertyChanged(nameof(PlannedCasesText));
+        partial void OnAnalyzeVLChanged(bool value) { OnPropertyChanged(nameof(PlannedCasesText)); OnPropertyChanged(nameof(RunSummaryText)); }
+        partial void OnAnalyzeLevel1Changed(bool value) { OnPropertyChanged(nameof(PlannedCasesText)); OnPropertyChanged(nameof(RunSummaryText)); }
+        partial void OnAnalyzeLevel2Changed(bool value) { OnPropertyChanged(nameof(PlannedCasesText)); OnPropertyChanged(nameof(RunSummaryText)); }
 
         internal GroupSettlementWithBeamCaseResult ToCaseResult(string label,
             Dictionary<int, double> ppi, IterativeBeamSettlementResult sr)

@@ -146,6 +146,154 @@ namespace TestProject1
                 "基礎梁なしの結果を「個別矩形（基礎梁考慮）」として記録すると、基礎梁ありの結果と取り違えます");
         }
 
+        private static GroupSettlementWithBeamCalculationViewModel BeamVm(InputModel model)
+            => new(new MainWindowViewModel { CurrentInputModel = model });
+
+        /// <summary>
+        /// 基礎梁ありの解析は、杭に対応しない矩形 (任意矩形・建物全体の矩形) や矩形のない杭があれば解かずに止める。
+        /// 以前は対応しない矩形を黙って捨て、1 つも対応しなければ荷重 0 のまま解いていた。
+        /// </summary>
+        [TestMethod]
+        public void TheBeamAnalysis_StopsWhenRectLoadsDoNotMatchThePiles()
+        {
+            var (model, _) = IterativeBeamSettlementInvariantTests.Scene();
+            if (model == null) return;
+            foreach (var sp in model.ElementDivision.SoilPiles) sp.GroupPileLoadDia = 1.0;
+            var pgs = model.PileGroupSettlement;
+            pgs.LoadingType = "個別矩形";
+            var vm = BeamVm(model);
+            Assert.AreEqual(GroupSettlementWithBeamCalculationViewModel.SourceRectLoads, vm.LoadSource, "既定は荷重条件の矩形荷重");
+            Assert.IsNull(vm.ValidateInput(), "前提: 杭ごとの矩形なら解ける");
+
+            // 杭に対応しない矩形 (任意矩形で足したもの)
+            var extra = new RectLoad { X1 = 0, X2 = 1, Y1 = 0, Y2 = 1, QA = 500 };
+            pgs.RectLoads.Add(extra);
+            string? error = vm.ValidateInput();
+            Assert.IsNotNull(error, "杭に対応しない矩形の荷重を黙って捨てて解こうとしています");
+            StringAssert.Contains(error, "杭に対応しない矩形が 1 件");
+            StringAssert.Contains(error, "500.0 kN");
+            StringAssert.Contains(error, "杭ごとの矩形を作り直す");
+            // 杭の軸力が入っていないとき (アプリで開く計算例5 がそう)、軸力へ切り替える案内は荷重 0 の解析へ案内することになるので出さない
+            foreach (var pile in model.PileLayoutItems) { pile.AxialForceVL0 = 0; pile.AxialForceVLAdditional = 0; }
+            error = vm.ValidateInput()!;
+            Assert.IsFalse(error.Contains("荷重の出所を「" + GroupSettlementWithBeamCalculationViewModel.SourceAxialForce),
+                "軸力が 0 なのに、杭の軸力へ切り替えるよう案内しています");
+            StringAssert.Contains(error, "杭の軸力が入っていない");
+            pgs.RectLoads.Remove(extra);
+
+            // 矩形のない杭
+            var dropped = pgs.RectLoads.First(r => r.LinkedPileNo > 0);
+            pgs.RectLoads.Remove(dropped);
+            error = vm.ValidateInput();
+            Assert.IsNotNull(error, "矩形のない杭を荷重 0 として解こうとしています");
+            StringAssert.Contains(error, $"矩形のない杭が 1 本あります (杭No. {dropped.LinkedPileNo})");
+
+            // 任意矩形だけ (杭に 1 つも対応しない) なら、荷重 0 で解かない
+            pgs.RectLoads.Clear();
+            pgs.RectLoads.Add(extra);
+            Assert.IsNotNull(vm.ValidateInput(), "杭に対応する矩形が 1 つもないのに、荷重 0 のまま解こうとしています");
+
+            // 杭の軸力を荷重にするときは荷重条件の矩形を見ない。ただし軸力が 0 なら解かない
+            vm.LoadSource = GroupSettlementWithBeamCalculationViewModel.SourceAxialForce;
+            error = vm.ValidateInput();
+            Assert.IsNotNull(error, "杭の軸力が 0 のまま、荷重 0 で解こうとしています");
+            StringAssert.Contains(error, "杭の軸力の合計が 0 のケースがあります (杭軸力 VL)");
+            foreach (var pile in model.PileLayoutItems) pile.AxialForceVL0 = 1000;
+            Assert.IsNull(vm.ValidateInput(), "杭の軸力が入っていれば、荷重条件の矩形に関わらず解ける");
+        }
+
+        /// <summary>杭の軸力を荷重にするとき、地震時のケースも軸力の合計が 0 なら解かない (ケース名を示す)。</summary>
+        [TestMethod]
+        public void TheBeamAnalysis_StopsWhenASeismicCaseHasNoAxialForce()
+        {
+            var (model, _) = IterativeBeamSettlementInvariantTests.Scene();
+            if (model == null) return;
+            var vm = BeamVm(model);
+            model.LoadCasesInput.LoadCasesLevel1 = new System.Collections.ObjectModel.ObservableCollection<LoadCase>(
+                [new LoadCase { Level = 1, No = 1, LoadName = "E1", IsAnalysisTarget = true, IsApplicable = true }]);
+            foreach (var pile in model.PileLayoutItems)
+            {
+                pile.AxialForceVL0 = 1000;
+                pile.AxialForceLevel1s = [0.0];
+            }
+            vm.LoadSource = GroupSettlementWithBeamCalculationViewModel.SourceAxialForce;
+            vm.AnalyzeLevel1 = true;
+            string? error = vm.ValidateInput();
+            Assert.IsNotNull(error, "地震時の軸力が 0 のケースを解こうとしています");
+            StringAssert.Contains(error, "L1-1: E1");
+            Assert.IsFalse(error.Contains("杭軸力 VL"), "軸力の入っている VL まで 0 として挙げています");
+
+            foreach (var pile in model.PileLayoutItems) pile.AxialForceLevel1s = [800.0];
+            Assert.IsNull(vm.ValidateInput());
+        }
+
+        /// <summary>
+        /// 基礎梁ありの解析は、同じ杭に紐付く矩形が複数あれば解かずに止める (荷重の出所に関わらず)。
+        /// 以前は荷重を合算し、寸法は先頭の矩形のものを黙って使っていた。
+        /// </summary>
+        [TestMethod]
+        public void TheBeamAnalysis_StopsWhenAPileHasTwoRects()
+        {
+            var (model, ppi) = IterativeBeamSettlementInvariantTests.Scene();
+            if (model == null) return;
+            foreach (var sp in model.ElementDivision.SoilPiles) sp.GroupPileLoadDia = 1.0;
+            var pgs = model.PileGroupSettlement;
+            pgs.LoadingType = "個別矩形";
+            var vm = BeamVm(model);
+            Assert.IsNull(vm.ValidateInput(), "前提: 杭ごとの矩形なら解ける");
+
+            var original = pgs.RectLoads.First(r => r.LinkedPileNo > 0);
+            var copy = original.Clone();
+            copy.DX = original.DX * 2;
+            pgs.RectLoads.Add(copy);
+
+            string? error = vm.ValidateInput();
+            Assert.IsNotNull(error, "同じ杭の矩形が 2 つあるのに解こうとしています");
+            StringAssert.Contains(error, $"杭No.{original.LinkedPileNo}");
+            StringAssert.Contains(error, $"{copy.DX:F3}×", "それぞれの寸法を示していません");
+
+            vm.LoadSource = GroupSettlementWithBeamCalculationViewModel.SourceAxialForce;
+            StringAssert.Contains(vm.ValidateInput(), "同じ杭に紐付く矩形荷重が複数あります",
+                "杭の軸力でも、矩形の寸法は荷重条件から読むので止めること");
+
+            var result = IterativeBeamSettlementService.Run(model, ppi, "検査");
+            Assert.IsFalse(result.Converged);
+            Assert.IsTrue(result.Log.Any(l => l.StartsWith("[ERROR] 同じ杭に紐付く矩形荷重が複数あります")),
+                "解析の側でも受け付けていません (画面を通らない呼び出し)");
+        }
+
+        /// <summary>実行の前に、解析方法・荷重の出所・対象ケース・荷重合計をまとめて示す。杭の軸力では荷重条件の荷重を使わないと書く。</summary>
+        [TestMethod]
+        public void TheBeamWindow_SummarizesWhatItWillSolve()
+        {
+            var (model, _) = IterativeBeamSettlementInvariantTests.Scene();
+            if (model == null) return;
+            foreach (var sp in model.ElementDivision.SoilPiles) sp.GroupPileLoadDia = 1.0;
+            model.PileGroupSettlement.LoadingType = "個別矩形";
+            var vm = BeamVm(model);
+            double total = model.PileGroupSettlement.RectLoads.Where(r => r.LinkedPileNo > 0).Sum(r => r.QA);
+
+            string s = vm.RunSummaryText;
+            StringAssert.Contains(s, "解析方法: 基礎梁あり");
+            StringAssert.Contains(s, "荷重の出所: 荷重条件の矩形荷重（VL）");
+            StringAssert.Contains(s, "解くケース 1 件");
+            StringAssert.Contains(s, $"荷重合計 (VL): {total:F1} kN");
+            Assert.IsFalse(s.Contains("使いません"));
+
+            var raised = new System.Collections.Generic.List<string?>();
+            vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+            vm.LoadSource = GroupSettlementWithBeamCalculationViewModel.SourceAxialForce;
+            CollectionAssert.Contains(raised, nameof(vm.RunSummaryText), "荷重の出所を変えてもまとめが更新されません");
+            s = vm.RunSummaryText;
+            StringAssert.Contains(s, "荷重の出所: 杭の軸力（VL・L1・L2）");
+            StringAssert.Contains(s, "荷重条件タブの矩形荷重 (手入力の荷重を含む) は使いません");
+            StringAssert.Contains(s, $"荷重合計 (VL): {model.PileLayoutItems.Sum(p => p.AxialForceVL):F1} kN");
+
+            string xaml = TestSource.Read("Graphics_r1", "Views", "GroupSettlementWithBeamWindow.xaml");
+            StringAssert.Contains(xaml, "Text=\"{Binding RunSummaryText}\"");
+            Assert.IsTrue(xaml.IndexOf("RunSummaryText") < xaml.IndexOf("ExecuteAnalysisCommand"), "まとめは実行ボタンの上に置く");
+        }
+
         [TestMethod]
         public void TheWindow_HasOneLoadConditionTab_AndAnAnalysisTabWithBeamChoice()
         {
@@ -160,7 +308,8 @@ namespace TestProject1
             StringAssert.Contains(xaml, "Content=\"基礎梁なし\"");
             StringAssert.Contains(xaml, "Content=\"基礎梁あり\"");
             StringAssert.Contains(xaml, "<TextBlock Text=\"基礎梁なしで解析\"");
-            StringAssert.Contains(xaml, "<TextBlock Text=\"基礎梁ありで解析\"");
+            // 基礎梁ありはこのボタンで解析画面を開くだけ (荷重の出所・ケースを選んでから実行する)。「で解析」だと押すと解けると読める
+            StringAssert.Contains(xaml, "<TextBlock Text=\"基礎梁ありの解析設定へ…\"");
             Assert.IsFalse(xaml.Contains("QA は収束値で更新されます") || xaml.Contains("反復計算により自動収束されます"),
                 "反復解析が入力の荷重を書き換えるという古い説明が残っています (1.0.33-beta から入力と結果を分けて持っている)");
 

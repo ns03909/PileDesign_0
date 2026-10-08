@@ -989,7 +989,7 @@
                                                     <StackPanel Orientation="Horizontal">
                                                         <svgc:SvgViewbox Source="/Icons/GroupPileSettlementWithBeamWindow.svg"
                                                                          Style="{StaticResource SvgIconStyle24}" Margin="0,0,6,0"/>
-                                                        <TextBlock Text="基礎梁ありで解析" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="基礎梁ありの解析設定へ…" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
                                                 </StackPanel>

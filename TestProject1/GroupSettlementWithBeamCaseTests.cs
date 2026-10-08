@@ -94,7 +94,7 @@ namespace TestProject1
             level1[1].IsAnalysisTarget = false;   // 解析対象から外す
             level1[2].IsApplicable = false;       // 適用しない
 
-            vm.LoadSource = "杭軸力";
+            vm.LoadSource = GroupSettlementWithBeamCalculationViewModel.SourceAxialForce;
             vm.AnalyzeLevel1 = true;
             vm.AnalyzeLevel2 = false;
 
