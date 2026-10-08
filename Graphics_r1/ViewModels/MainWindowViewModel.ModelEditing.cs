@@ -1471,14 +1471,10 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // 個別矩形（基礎梁考慮）は反復解析ウィンドウで実行 → 確定後に Steinbrenner グリッドコンタを更新
-            if (loadingType == "個別矩形（基礎梁考慮）")
-            {
-                OpenGroupSettlementWithBeamWindow();
-                // ウィンドウが OK で閉じられた場合は確定された RectLoads / 杭沈下が反映済みなので
-                // 後続のグリッドコンター生成へ進む。Cancel された場合は IsSaved=false → 何もせず終了。
-                // 簡略化のため確定/破棄に関わらず後続フローを継続 (Cancel 時は元の RectLoads が残る)。
-            }
+            // 基礎梁なしの解析は、荷重タイプに関わらず基礎梁を考えずに 1 回計算する。
+            // 以前は荷重タイプが「個別矩形（基礎梁考慮）」 (「杭ごとの矩形を作り直す」で入る) だと基礎梁ありの画面を開き、
+            // その画面をキャンセルしても続けてこの計算へ進んでいた。解析方法は「基礎梁なし / あり」の選択だけで決める。
+            // 「個別矩形（基礎梁考慮）」の矩形 (杭ごと) は、そのままの荷重で使う。
 
             var result = _settlementAnalysisService.PerformSettlementAnalysis(
                 CurrentInputModel.PileGroupSettlement,
@@ -1511,11 +1507,12 @@ namespace PileDesign.ViewModels
             // (PileGroupSettlement.SettlementGridData) は旧ファイルを開くためだけに残してあり、
             // ここへ書くと保存ファイルにコンタが二重に入る。表示は ActiveSettlementGridData を読む。
 
-            // 個別矩形（基礎梁考慮）以外の解析結果を CaseRecord として永続化
-            // (個別矩形（基礎梁考慮）は OpenGroupSettlementWithBeamWindow 側で既に保存済み)
-            if (loadingType != "個別矩形（基礎梁考慮）")
+            // 基礎梁なしの結果として保存する。荷重タイプが「個別矩形（基礎梁考慮）」でも、結果は基礎梁なしのもの。
+            // そのまま記録すると、結果の表示の切り替え (荷重タイプで基礎梁あり / なしを見分ける) が基礎梁ありの結果と取り違えるので、
+            // 同じ形 (杭ごとの矩形) の「個別矩形」として記録する
+            string recordedType = loadingType == "個別矩形（基礎梁考慮）" ? "個別矩形" : loadingType;
             {
-                UpsertNonBeamAwareCaseRecord(loadingType, result.SettlementGridData, result.PileSettlements_mm);
+                UpsertNonBeamAwareCaseRecord(recordedType, result.SettlementGridData, result.PileSettlements_mm);
                 // 一般解析は VL ケース 1 件のみ保存するため、解析直後は表示荷重ケースを VL に切替えて
                 // 結果コンタを表示する。setter 経由で ActiveCase 同期 + 再描画が走るが、既に VL を
                 // 選択中の場合は setter が発火しないため、明示的にも同期しておく。

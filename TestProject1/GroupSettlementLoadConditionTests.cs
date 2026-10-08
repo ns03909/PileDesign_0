@@ -108,6 +108,44 @@ namespace TestProject1
             Assert.AreEqual(2, rendered);
         }
 
+        /// <summary>
+        /// 基礎梁なしの解析は、荷重タイプが「個別矩形（基礎梁考慮）」でも基礎梁ありの画面を開かず、基礎梁なしの結果として記録する。
+        /// 以前はこの荷重タイプだと基礎梁ありの画面を開き、そこでキャンセルしても続けて基礎梁なしの計算へ進んでいた。
+        /// </summary>
+        [TestMethod]
+        public void TheNonBeamAnalysis_DoesNotOpenTheBeamWindow_EvenForTheBeamAwareLoadingType()
+        {
+            string src = TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.ModelEditing.cs");
+            int start = src.IndexOf("private void PileGroupSettlementAnalysis()");
+            Assert.IsTrue(start > 0, "前提: 基礎梁なしの解析の入口が見つかりません");
+            int end = src.IndexOf("\n        private ", start + 10);
+            Assert.IsFalse(src[start..end].Contains("OpenGroupSettlementWithBeamWindow"),
+                "基礎梁なしの解析から基礎梁ありの画面を開いています");
+
+            var (model, _) = IterativeBeamSettlementInvariantTests.Scene();
+            if (model == null) return;
+            foreach (var sp in model.ElementDivision.SoilPiles) sp.GroupPileLoadDia = 1.0;
+            var pgs = model.PileGroupSettlement;
+            pgs.LoadingType = "個別矩形（基礎梁考慮）";
+            pgs.CaseRecords = [];
+
+            bool unattended = MessageService.IsUnattended;
+            MessageService.IsUnattended = true;
+            try
+            {
+                var vm = new MainWindowViewModel { CurrentInputModel = model };
+                Assert.IsTrue(vm.PileGroupSettlementAnalysisCommand.CanExecute(null), vm.GroupSettlementAnalysisDisabledReason);
+                vm.PileGroupSettlementAnalysisCommand.Execute(null);
+            }
+            finally { MessageService.IsUnattended = unattended; }
+
+            var rec = pgs.CaseRecords.SingleOrDefault();
+            Assert.IsNotNull(rec, "基礎梁なしの結果が記録されていません");
+            Assert.IsFalse(rec.IsBeamAware);
+            Assert.AreEqual("個別矩形", rec.LoadingType,
+                "基礎梁なしの結果を「個別矩形（基礎梁考慮）」として記録すると、基礎梁ありの結果と取り違えます");
+        }
+
         [TestMethod]
         public void TheWindow_HasOneLoadConditionTab_AndAnAnalysisTabWithBeamChoice()
         {
