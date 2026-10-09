@@ -448,7 +448,7 @@ namespace PileDesign.ViewModels
 
             sb.AppendLine();
             sb.AppendLine(new string('=', 60));
-            sb.AppendLine("【個別矩形（基礎梁考慮）反復解析 傾斜角検定】");
+            sb.AppendLine("【群杭沈下解析（基礎梁あり） 傾斜角検定】");
             sb.AppendLine($"許容傾斜角: 1/300 = {inclinationLimit:E3} (rad)");
             sb.AppendLine();
 
@@ -633,6 +633,14 @@ namespace PileDesign.ViewModels
         /// 各梁要素のi端・j端のモーメントが限界状態のNM相関曲線を超えるかチェック
         /// 軸力は荷重ケースに応じたユーザー入力値（AxialForceLevel1s/AxialForceLevel2s）を使用
         /// </summary>
+        /// <summary>梁 (杭の要素) の断面を引く土層-杭セット。杭が分かればその杭のセット、分からなければ杭体番号の最初のセット。</summary>
+        private SoilPile? SoilPileForBeam(PileLayoutDataItem? pileItem, int pileBodyNo, Dictionary<int, SoilPile> soilPileByPileBodyNo)
+            => pileItem?.SoilPileAt(_mainVm.ResultInputModel)
+               ?? (soilPileByPileBodyNo.TryGetValue(pileBodyNo, out var first) ? first : null);
+
+        /// <summary>曲線のキャッシュの鍵に使う、断面を引いたセットの識別 (番号が無ければ杭体番号を負で)。</summary>
+        private static int SectionOwnerKey(SoilPile soilPile, int pileBodyNo) => soilPile.No > 0 ? soilPile.No : -pileBodyNo;
+
         private List<EvaluationItem> CheckMPhiLimitForBeams(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
@@ -683,7 +691,11 @@ namespace PileDesign.ViewModels
                 if (result?.CumulativeForce == null) { Unavailable(NoResultReason); return; }
 
                 // SoilPileからPileSectionを取得
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)
+                // 断面は、その杭の土層-杭セットの要素から引く (解析の SegmentIndex はその杭自身のセットの要素番号)。
+                // 以前は杭体番号ごとに最初のセットで引いており、地盤や杭頭の高さが違う杭が同じ杭体を共有すると
+                // 要素の深さがずれ、断面の切り替わりの前後で別の配筋・鋼管厚の耐力で判定していた
+                var soilPile = SoilPileForBeam(pileItem, pb, soilPileByPileBodyNo);
+                if (soilPile == null
                     || soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count
                     || soilPile.PileBodySegments[seg].PileSection == null)
                 {
@@ -700,7 +712,8 @@ namespace PileDesign.ViewModels
 
                 // NM相関曲線をキャッシュから取得 (ConcurrentDictionary、初回のみ計算)
                 int loadCaseLevel = stepResult.LoadCase?.Level ?? 1;
-                var cacheKey = (pb, seg, factored, momentLimit, loadCaseLevel);
+                // 鍵は断面を引いた土層-杭セット (杭体番号では、同じ杭体の別のセットの曲線と取り違える)
+                var cacheKey = (SectionOwnerKey(soilPile, pb), seg, factored, momentLimit, loadCaseLevel);
                 var nmCurve = nmCache.GetOrAdd(cacheKey, _ => GetNMCurve(section, factored, momentLimit, loadCaseLevel));
                 if (nmCurve.Ns == null || nmCurve.Ms == null || nmCurve.Ns.Count < 2)
                 {
@@ -983,7 +996,11 @@ namespace PileDesign.ViewModels
 
                 if (result?.CumulativeForce == null) { Unavailable(NoResultReason); return; }
 
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)
+                // 断面は、その杭の土層-杭セットの要素から引く (解析の SegmentIndex はその杭自身のセットの要素番号)。
+                // 以前は杭体番号ごとに最初のセットで引いており、地盤や杭頭の高さが違う杭が同じ杭体を共有すると
+                // 要素の深さがずれ、断面の切り替わりの前後で別の配筋・鋼管厚の耐力で判定していた
+                var soilPile = SoilPileForBeam(pileItem, pb, soilPileByPileBodyNo);
+                if (soilPile == null
                     || soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count
                     || soilPile.PileBodySegments[seg].PileSection == null)
                 {
@@ -1008,7 +1025,7 @@ namespace PileDesign.ViewModels
                 var (monQdRaw, monQdBasis) = ResolveMonQd(pileItem, CaseKeyOf(stepResult.LoadCase), section, maxForcesByPileCase);
                 double monQd = Math.Round(monQdRaw, 3);
 
-                var nqCurve = nqCache.GetOrAdd((pb, seg, factored, shearLimit, damageLevel, monQd),
+                var nqCurve = nqCache.GetOrAdd((SectionOwnerKey(soilPile, pb), seg, factored, shearLimit, damageLevel, monQd),
                     _ => GetNQCurve(section, factored, shearLimit, damageLevel, monQd));
                 if (nqCurve.Ns == null || nqCurve.Qs == null || nqCurve.Ns.Count < 2)
                 {

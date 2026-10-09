@@ -503,14 +503,51 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 荷重ケース (0 始まりの番号) での前方杭判定。解析・グラフ・結果の説明はすべてここを通す。
+        /// レベル2 の荷重ケースでの前方杭・後方杭 (方向1〜4)。<see cref="IsFrontPiles"/> はレベル1。
+        ///
+        /// <para>以前は 1 つの一覧をレベル1・2 で共有し、自動選別もレベル1 の荷重方向で判定していたので、
+        /// レベル2 の荷重方向がレベル1 と違うと、レベル2 のケースは違う方向の前後判定で解いていた (警告もなかった)。
+        /// この項目が無い旧ファイルは、読み込みの仕上げでレベル1 の値を写す (それまでの結果を変えない)。</para>
+        /// </summary>
+        private ObservableCollection<bool> _isFrontPilesLevel2 = [true, true, true, true];
+        public ObservableCollection<bool> IsFrontPilesLevel2
+        {
+            get => _isFrontPilesLevel2;
+            set
+            {
+                _isFrontPilesLevel2Assigned = true;
+                SetProperty(ref _isFrontPilesLevel2, value);
+            }
+        }
+
+        // ファイルにレベル2 の前後判定があったか (無い旧ファイルはレベル1 を写す)
+        private bool _isFrontPilesLevel2Assigned;
+
+        /// <summary>
+        /// レベル2 の前後判定を持たない旧ファイルなら、レベル1 の値を写す (読み込みの仕上げで呼ぶ)。写したら true。
+        /// </summary>
+        internal bool FillLevel2FrontFlagsFromLevel1IfMissing()
+        {
+            if (_isFrontPilesLevel2Assigned) return false;
+            IsFrontPilesLevel2 = new ObservableCollection<bool>(IsFrontPiles ?? [true, true, true, true]);
+            return true;
+        }
+
+        /// <summary>
+        /// 荷重ケース (レベルと 0 始まりの番号) での前方杭判定。解析・グラフ・結果の説明はすべてここを通す。
         /// 範囲外 (鉛直ケースの -1 を含む)・未設定は後方杭として扱う。
         /// </summary>
-        public bool IsFrontAt(int loadCaseIndex)
-            => IsFrontPiles != null && loadCaseIndex >= 0 && loadCaseIndex < IsFrontPiles.Count && IsFrontPiles[loadCaseIndex];
+        public bool IsFrontAt(int level, int loadCaseIndex)
+        {
+            var flags = level == 2 ? IsFrontPilesLevel2 : IsFrontPiles;
+            return flags != null && loadCaseIndex >= 0 && loadCaseIndex < flags.Count && flags[loadCaseIndex];
+        }
 
-        /// <summary>荷重ケースでの前方杭判定 (<see cref="IsFrontAt"/>。ケース番号 - 1 番目の値)。</summary>
-        public bool IsFrontFor(LoadCase loadCase) => IsFrontAt(loadCase.No - 1);
+        /// <summary>レベル1 の荷重ケースでの前方杭判定 (<see cref="IsFrontAt(int, int)"/>)。</summary>
+        public bool IsFrontAt(int loadCaseIndex) => IsFrontAt(1, loadCaseIndex);
+
+        /// <summary>荷重ケースでの前方杭判定 (そのケースのレベルの、ケース番号 - 1 番目の値)。</summary>
+        public bool IsFrontFor(LoadCase loadCase) => IsFrontAt(loadCase.Level, loadCase.No - 1);
 
         /// <summary>
         /// 対応する土層-杭セット (<see cref="SoilPileAltNo"/> の位置)。対応が無い (0・範囲外) なら null。
@@ -797,6 +834,7 @@ namespace PileDesign.Models.InputData
             copy.SinglePileSettlementLevel1sBeyondCurve = new ObservableCollection<bool>(this.SinglePileSettlementLevel1sBeyondCurve ?? []);
             copy.SinglePileSettlementLevel2sBeyondCurve = new ObservableCollection<bool>(this.SinglePileSettlementLevel2sBeyondCurve ?? []);
             copy.IsFrontPiles = new ObservableCollection<bool>(this.IsFrontPiles);
+            copy.IsFrontPilesLevel2 = new ObservableCollection<bool>(this.IsFrontPilesLevel2 ?? this.IsFrontPiles ?? []);
 
             return copy;
         }

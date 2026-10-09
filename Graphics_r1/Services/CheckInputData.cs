@@ -157,6 +157,8 @@ namespace PileDesign.Services
             // 解析の入口: 杭頭部の、杭断面から導く値を入れ直す。以前は杭頭部ウィンドウを開いたときにしか入らず、
             // 開いていない杭体は値が 0 や古い径のまま解析された (検査より前に行う。検査もこの値を見る)
             inputModel?.SyncPileTopsFromSections();
+            // 鋼管杭の座屈長も今の杭配置・地盤から求め直す (分割済みだと土層-杭セットと一緒には作り直されない)
+            inputModel?.RefreshSteelPipeBucklingLengths();
 
             var problems = CollectAnalysisBlockers(inputModel);
             if (problems.Count == 0) return true; // OK: ダイアログなしで続行
@@ -176,6 +178,7 @@ namespace PileDesign.Services
             problems.AddRange(CollectGroundLayerGeometryProblems(inputModel));
             problems.AddRange(CollectGroupPileFactorProblems(inputModel));
             problems.AddRange(CollectLoadCombinationProblems(inputModel));
+            problems.AddRange(CollectFoundationBeamPropertyProblems(inputModel));
 
             // モデルの「つながり」。剛性行列を組んでから初めて分かる不安定は、
             // 利用者に原因が読み取れない (「対角成分がゼロ」としか出ない)。
@@ -285,6 +288,43 @@ namespace PileDesign.Services
         public static string CheckGroupPileFactor(InputModel inputModel, string message)
             => message + Lines(CollectGroupPileFactorProblems(inputModel));
 
+        /// <summary>
+        /// 基礎梁の材料・断面の値の検査 (解析が使う値: 材料・断面の表。表に無い番号なら梁の旧い値)。
+        /// ヤング係数・断面積・断面二次モーメント・ねじり定数は正の有限の数、ポアソン比は 0〜0.5。
+        /// 以前は端点と長さしか見ておらず、幅や E が 0 だと剛性行列の段階で「対角成分がゼロ」としか出なかった。
+        /// </summary>
+        internal static List<Diagnostic> CollectFoundationBeamPropertyProblems(InputModel inputModel)
+        {
+            var problems = new List<Diagnostic>();
+            var fbi = inputModel?.FoundationBeamInput;
+            if (fbi?.Beams == null) return problems;
+            static bool Positive(double v) => double.IsFinite(v) && v > 0;
+            foreach (var beam in fbi.Beams)
+            {
+                if (beam == null) continue;
+                int beamNo = fbi.GetBeamNo(beam);
+                var target = DiagnosticTarget.FoundationBeam(beamNo);
+                var material = beam.MaterialNo >= 1 ? fbi.Materials?.ElementAtOrDefault(beam.MaterialNo - 1) : null;
+                var section = beam.SectionNo >= 1 ? fbi.Sections?.ElementAtOrDefault(beam.SectionNo - 1) : null;
+                double e = material?.YoungModulus ?? beam.YoungModulus;
+                if (!Positive(e))
+                    problems.Add(Diagnostic.InputAt(target, $"基礎梁 {beamNo} のヤング係数が正の数ではありません ({e})。材料の表を確認してください。"));
+                if (material != null && !(material.PoissonRatio >= 0 && material.PoissonRatio <= 0.5))
+                    problems.Add(Diagnostic.InputAt(target, $"基礎梁 {beamNo} の材料のポアソン比が 0〜0.5 ではありません ({material.PoissonRatio})。"));
+                if (section != null)
+                {
+                    if (!Positive(section.Area) || !Positive(section.MomentOfInertiaYY) || !Positive(section.MomentOfInertiaZZ) || !Positive(section.TorsionalMoment))
+                        problems.Add(Diagnostic.InputAt(target,
+                            $"基礎梁 {beamNo} の断面「{section.Name}」の断面積・断面二次モーメント・ねじり定数のどれかが正の数ではありません。断面の表 (幅・高さ・増減係数) を確認してください。"));
+                }
+                else if (!Positive(beam.Width) || !Positive(beam.Height))
+                {
+                    problems.Add(Diagnostic.InputAt(target, $"基礎梁 {beamNo} の幅・高さが正の数ではありません。"));
+                }
+            }
+            return problems;
+        }
+
         internal static List<Diagnostic> CollectGroupPileFactorProblems(InputModel inputModel)
         {
             var problems = new List<Diagnostic>();
@@ -385,6 +425,17 @@ namespace PileDesign.Services
                 if (pb?.PileBodySegments == null) continue;
                 int pbNo = i + 1;
 
+                // 杭先端径。0 以下だと先端の支持力・沈下用の面積が 0 になり、先端ばねが無いまま解いていた (ファイル・例題から入りうる)
+                if (!IsPositive(pb.PileToeDia))
+                    problems.Add(Diagnostic.InputAt(DiagnosticTarget.PileBody(pbNo), $"杭先端径が 0 以下か数値ではありません ({pb.PileToeDia})."));
+
+                // 半剛接合の杭頭 (キャプテンパイル・F.T.Pile・キャプリングパイル) はパイルキャップのコンクリートの Ec から回転剛性を求める。
+                // γ を打ち間違えると (23 のつもりの 2.3 など) Ec が桁で小さくなり、杭頭がほぼピンとして解かれていた
+                if (pb.PileTopType is "キャプテンパイル工法" or "FT-Pile構法" or "キャプリングパイル工法"
+                    && pb.PileTop != null && !(pb.PileTop.PileCapEc >= MinConcreteE))
+                    problems.Add(Diagnostic.InputAt(DiagnosticTarget.PileBody(pbNo),
+                        $"パイルキャップのコンクリートのヤング係数が {PileDesign.Common.NumberDisplay.Modulus(pb.PileTop.PileCapEc)} N/mm² で、小さすぎます ({MinConcreteE:N0} N/mm² 未満)。杭頭部のパイルキャップの単位体積重量 γ・Fc を確認してください."));
+
                 for (int j = 0; j < pb.PileBodySegments.Count; j++)
                 {
                     var seg = pb.PileBodySegments[j];
@@ -412,6 +463,12 @@ namespace PileDesign.Services
                             problems.Add(Diagnostic.InputAt(at, $"コンクリート外径が 0 以下か数値ではありません ({sec.ConcreteOutDia})."));
                         // 耐力・剛性の式に入る値。範囲外だと √ の中が負 (せん断補強筋の √(pw·σwy))、
                         // 0 で割る (ヤング係数比 n = Er/Ec) などで、耐力・剛性が数値でなくなる
+                        problems.AddRange(CollectInsituRcMaterialProblems(sec, at));
+                    }
+                    else if (sec.PileBodyType == PileTypeNames.InsituSteelPipeConcrete && sec.PileSectionType == PileTypeNames.SteelPipeConcreteSection)
+                    {
+                        // 鋼管コンクリート部も充填コンクリートの Ec・ξ を使う (限界ひずみ・ヤング係数比)。
+                        // 以前は鉄筋コンクリート部にしか検査が無く、ξ=0 (Ec=0) が通って N-M の限界曲線が数値でなくなった
                         problems.AddRange(CollectInsituRcMaterialProblems(sec, at));
                     }
 

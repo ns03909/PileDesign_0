@@ -790,7 +790,8 @@ namespace PileDesign.Models.InputData
                 // ファイル読込の 1 か所だけなので、キャッシュの正しさは鍵の完全性だけに
                 // 依存する。抜けていると γ を変えても古い曲線が返る
                 // (MphiCacheKeyCompletenessTests が検出)。
-                _ => $"OTHER|{PileBodyType}|{PileSectionType}|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{ConcreteGamma}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|lk={BucklingLength:F3}|N={axialNRounded}"
+                // コンクリート充填鋼管部の杭頭 M-φ (SteelPipeSection) は合成 EI から作るので、Ec・主筋の断面積・鋼管の E も効く (2026-10-08)
+                _ => $"OTHER|{PileBodyType}|{PileSectionType}|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{ConcreteGamma}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|Ec={ConcreteE:R}|Ag={MainBarAg:R}|Er={MainBarEr:R}|Es={PipeEs:R}|lk={EffectiveBucklingLength:F3}|N={axialNRounded}"
             };
 
             return $"{key}|{cmo}";
@@ -880,12 +881,36 @@ namespace PileDesign.Models.InputData
                 }
                 else
                 {
+                    // 鋼管杭のコンクリート充填鋼管部 (杭頭接合部): 杭断面ウィンドウと同じ SteelPipeSection の杭頭 M-φ
+                    // (0 → (φMd, Md) → (φMu', Mu) → (φu, Mu)。ひび割れモーメントの概念を用いず、M-N 図の Md・Mu と整合) を使う。
+                    // 以前の解析は断面計算 (場所打ち鋼管コンクリート杭の式。Mcr → My → Mu) の折線を使い、
+                    // 利用者が画面で確かめる曲線と解析に入る曲線が別の式だった。ファイバー M-φ オプションのときは従来どおりファイバー曲線
+                    if (!ConcreteModelOptions.UseFiberMPhi
+                        && PileBodyType == PileTypeNames.SteelPipe && PileSectionType == PileTypeNames.CftSection
+                        && TryCreateSteelPipeSection() is { } headSps)
+                    {
+                        try
+                        {
+                            var (hphi, hm) = headSps.GetMPhiRelationshipHead(axialN_inN);
+                            if (hphi != null && hm != null && hphi.Count >= 2 && hm.Count == hphi.Count)
+                                (phisRaw, msRaw) = MakeMonotonicForAnalysis(hphi, hm);
+                        }
+                        catch (Exception ex)
+                        {
+                            Serilog.Log.Debug($"[GetMPhiRelationship] SteelPipeSection.GetMPhiRelationshipHead 例外: {ex.Message}");
+                        }
+                    }
+
                     // ファイバーモデル M-φ オプション。
                     // 対応断面: 場所打ちRC / 場所打ち鋼管コンクリート（RC部・鋼管コンクリート部）/
                     //           PHC / PRC / SC / コンクリート充填鋼管部（すべて AbstractPileSection 系）。
                     // 鋼管杭の鋼管部は SteelPipeSection（別系統、section == null パス）のため対象外。
                     // 解けない場合（軸力が耐力範囲外等）は従来ポリリニアへフォールバック。
-                    if (ConcreteModelOptions.UseFiberMPhi
+                    if (phisRaw != null)
+                    {
+                        // 上の杭頭 M-φ (鋼管杭のコンクリート充填鋼管部) を使う
+                    }
+                    else if (ConcreteModelOptions.UseFiberMPhi
                         && section is AbstractPileSection fiberSection
                         && fiberSection.GetMPhiRelationshipFiber(axialN_inN) is { } fiber)
                     {
@@ -1327,6 +1352,11 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _pileDiameter, value))
                 {
                     RecalculatePileDia();
+                    // 既製杭では杭径そのものが断面を決める。派生値の再計算で
+                    // ConcreteOutDia 等が変わらない場合にも曲線を捨てる
+                    // (以前は「カタログ経路が最後に捨てる」前提で捨てていなかったが、
+                    // その経路は実際には捨てていなかった)。
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1920,6 +1950,15 @@ namespace PileDesign.Models.InputData
         // 同じ杭体を複数の杭が使い、それぞれ別の地盤に居ることがある。その場合は
         // <b>最も長い座屈長</b>を採る (どの杭でも成り立つ耐力にするため)。
         private double _bucklingLength;
+
+        /// <summary>
+        /// 耐力の計算に使う座屈長。基本設定で鋼管杭の柱座屈を考慮しないなら 0 (低減しない)。
+        /// 設定は使う時点で見る (<see cref="BucklingLength"/> には設定に関わらず液状化区間の長さを持つ)。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double EffectiveBucklingLength
+            => ConcreteModelOptions.ConsiderSteelPipeColumnBuckling ? BucklingLength : 0.0;
+
         public double BucklingLength
         {
             get => _bucklingLength;
@@ -1966,11 +2005,20 @@ namespace PileDesign.Models.InputData
         }
 
         // コンクリートプレストレス
+        //
+        // 有効プレストレス σe はひび割れ・降伏・N-M・N-Q の曲線に効く。以前はセッターで
+        // キャッシュを捨てておらず、σe だけが違う製品 (PHC の B 種 → C 種など) に
+        // 切り替えても前の製品の曲線が残っていた。M-φ はキーに σe を含むので解析値は
+        // 正しく、検定と図だけが古いまま出ていた。
         private double _prestress;
         public double Prestress
         {
             get => _prestress;
-            set => SetProperty(ref _prestress, value);
+            set
+            {
+                if (SetProperty(ref _prestress, value))
+                    InvalidateAllCaches();
+            }
         }
 
         // コンクリート単位体積重量
@@ -2011,10 +2059,18 @@ namespace PileDesign.Models.InputData
         // 読み込みの仕上げ (OnDeserialized) で導き直す。
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
+        //
+        // 製品の転記 (RecalculateSelectedPrecastPile) はカタログの Ec を直に入れるので、
+        // RecalculateConcreteE を通らない。セッター側でも曲線を捨てないと、
+        // Ec の違う製品へ切り替えても前の Ec の曲線が残る。
         public double ConcreteE
         {
             get => _concreteE;
-            set => SetProperty(ref _concreteE, value);
+            set
+            {
+                if (SetProperty(ref _concreteE, value))
+                    InvalidateAllCaches();
+            }
         }
         private double _concreteE;
 
@@ -2024,6 +2080,10 @@ namespace PileDesign.Models.InputData
             // Ec 算定用 ξ: オプション時は 1.0（強度側 Gsi·Fc 等は実 Gsi のまま）
             double gsiForEc = ConcreteModelOptions.UseUnitGsiForConcreteE ? 1.0 : ConcreteGsi;
             double e = 3.35 * Math.Pow(10, 4) * Math.Pow(ConcreteGamma / 24.0, 2.0) * Math.Pow(gsiForEc * ConcreteFc / 60.0, 1.0 / 3.0);
+            // 既製杭の製品を選んでいれば、カタログの Ec (例 40,000) を使う。
+            // 以前は製品を選んだときだけカタログの値が入り、保存して開き直すと (読込の仕上げでここを通るので)
+            // 式の値 (Fc85・γ26 で約 44,150) に変わって、EA・EI が 8〜10% 動いていた。計算例の読込も式の値だった
+            if (CatalogConcreteE is double catalogEc) e = catalogEc;
             if (ConcreteE == e) return;
 
             ConcreteE = e;
@@ -2033,6 +2093,15 @@ namespace PileDesign.Models.InputData
             // 済んでいることがある。ここで捨てないと、新しい Ec が曲線に出ない。
             InvalidateComputedCaches();
         }
+
+        /// <summary>
+        /// 選んだ既製杭の製品のカタログの Ec。既製杭で製品を選んでいて、カタログに Ec があるときだけ値を返す。
+        /// </summary>
+        private double? CatalogConcreteE
+            => PileBodyType == PileTypeNames.PrecastConcrete
+               && !string.IsNullOrEmpty(SelectedPrecastPile?.Name)
+               && SelectedPrecastPile.Ec is double ec && ec > 0 && double.IsFinite(ec)
+                ? ec : null;
 
         // コンクリートプレストレス N/mm2
         private double _concreteSigmaE;
@@ -2269,6 +2338,13 @@ namespace PileDesign.Models.InputData
             {
                 Serilog.Log.Debug($"Error: SelectedPrecastPile.Name '{SelectedPrecastPile.Name}' not found in precastPiles.");
             }
+
+            // 最後に曲線を捨てる。杭断面ウィンドウはこのメソッドを直に呼ぶ
+            // (SetSelectedPrecastPileByName を通らない) ので、ここで捨てないと
+            // 寸法・Fc の同じ製品どうし (σe と Ap だけが違う PHC の B 種と C 種など) では
+            // 捨てる契機が一つもなく、前の製品の曲線がそのまま出ていた。
+            // セッター側でも捨てているが、転記の途中で曲線が読まれても最後に必ず捨て直す。
+            InvalidateAllCaches();
         }
 
         // 選択したS杭
@@ -2309,12 +2385,20 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        // PC 鋼材の諸元 (Ap・Dp・降伏/引張強さ・Ep) はどれも曲線に効く。
+        // 以前はセッターで曲線を捨てておらず、製品を切り替えても前の製品の
+        // N-M・N-Q・ひび割れ・降伏の曲線が残っていた (Prestress と同じ)。
+
         // PC鋼線断面積
         private double _tendonAp;
         public double TendonAp
         {
             get => _tendonAp;
-            set => SetProperty(ref _tendonAp, value);
+            set
+            {
+                if (SetProperty(ref _tendonAp, value))
+                    InvalidateAllCaches();
+            }
         }
 
         // PC鋼線配置直径断面積
@@ -2322,7 +2406,11 @@ namespace PileDesign.Models.InputData
         public double TendonDp
         {
             get => _tendonDp;
-            set => SetProperty(ref _tendonDp, value);
+            set
+            {
+                if (SetProperty(ref _tendonDp, value))
+                    InvalidateAllCaches();
+            }
         }
 
         // PC鋼線降伏強さ
@@ -2330,7 +2418,11 @@ namespace PileDesign.Models.InputData
         public double TendonSigmaPy
         {
             get => _tendonSigmaPy;
-            set => SetProperty(ref _tendonSigmaPy, value);
+            set
+            {
+                if (SetProperty(ref _tendonSigmaPy, value))
+                    InvalidateAllCaches();
+            }
         }
 
         // PC鋼線引張強さ
@@ -2338,7 +2430,11 @@ namespace PileDesign.Models.InputData
         public double TendonSigmaPu
         {
             get => _tendonSigmaPu;
-            set => SetProperty(ref _tendonSigmaPu, value);
+            set
+            {
+                if (SetProperty(ref _tendonSigmaPu, value))
+                    InvalidateAllCaches();
+            }
         }
 
         // PC鋼線縦弾性係数
@@ -2346,7 +2442,11 @@ namespace PileDesign.Models.InputData
         public double TendonEp
         {
             get => _tendonEp;
-            set => SetProperty(ref _tendonEp, value);
+            set
+            {
+                if (SetProperty(ref _tendonEp, value))
+                    InvalidateAllCaches();
+            }
         }
 
         // 鉄筋径
@@ -3050,12 +3150,28 @@ namespace PileDesign.Models.InputData
         // 杭全断面積(mm2)
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double A0 => Ac + MainBarAg + TendonAp + PipeAs;
+        public double A0 => Ac + RebarAgInSection + TendonAp + PipeAs;
+
+        /// <summary>
+        /// コンクリート (と鉄筋) を持つ断面か。鋼管杭の「鋼管部」(コンクリートを充填しない区間) は持たない。
+        ///
+        /// <para>鋼管杭の区間は「コンクリート充填鋼管部」として作られ、充填コンクリートの径 (ConcreteOutDia) と厚さが入る。
+        /// 鋼管部へ切り替えてもそれらは残るので、以前は存在しないコンクリートが EI・EA・自重 W・GJ に入っていた
+        /// (M-φ は鋼管だけから作るので、要素の初期剛性と M-φ の勾配も食い違った)。入力の値は残し、断面の量で除く。</para>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasConcreteCore => !(PileBodyType == PileTypeNames.SteelPipe && PileSectionType != PileTypeNames.CftSection);
+
+        /// <summary>断面の量に入れる主筋の断面積 (鋼管部では 0)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        private double RebarAgInSection => HasConcreteCore ? MainBarAg : 0.0;
 
         // 杭コンクリート断面積(mm2)
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double Ac => (ConcreteOutDia - ConcreteThickness) * Math.PI * ConcreteThickness - MainBarAg - TendonAp;
+        public double Ac => HasConcreteCore ? (ConcreteOutDia - ConcreteThickness) * Math.PI * ConcreteThickness - MainBarAg - TendonAp : 0.0;
 
         // 杭単位長さ重量 (kN/m)
         //
@@ -3073,7 +3189,7 @@ namespace PileDesign.Models.InputData
         [Newtonsoft.Json.JsonIgnore]
         public double W => IsNodularPile && CatalogMassPerM > 0
             ? CatalogMassPerM * UnitConversion.TON_TO_KN   // t/m -> kN/m
-            : ((MainBarAg + TendonAp + PipeAs) * UnitConversion.STEEL_UNIT_WEIGHT + Ac * ConcreteGamma) * Math.Pow(10, -6);
+            : ((RebarAgInSection + TendonAp + PipeAs) * UnitConversion.STEEL_UNIT_WEIGHT + Ac * ConcreteGamma) * Math.Pow(10, -6);
 
         // 軸剛性 (kN)
         // 合成断面: コンクリート + 主筋 + PC鋼材 + 鋼管（Es·As）。鋼管を持たない断面では PipeAs=0 のため影響なし。
@@ -3085,7 +3201,7 @@ namespace PileDesign.Models.InputData
         // 公称寸法 (腐食代を見込まない) の軸剛性 (kN)。諸元表の「腐食非考慮」欄だけが使う
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double EANominal => (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAs) * 0.001;
+        public double EANominal => (ConcreteE * Ac + MainBarEr * RebarAgInSection + TendonEp * TendonAp + PipeEs * PipeAs) * 0.001;
 
         /// <summary>
         /// 「基礎部材の強度と変形性能」のヤング係数を使う設定のとき、
@@ -3099,6 +3215,24 @@ namespace PileDesign.Models.InputData
         /// E = n·Ec として与える。Ec が 40,000 以外（Fc 105 級など）でも n が 5 に保たれる。
         /// 鋼管は E = 205,000 の直接指定。
         /// </summary>
+        /// <summary>
+        /// 既製杭の製品を選んでいれば、鋼材のヤング係数 (PC 鋼材 Ep・鉄筋 Er・鋼管 Es) をカタログの値へ戻し、
+        /// 基本設定の「鋼材のヤング係数を指針値に」が有効なら指針値を当て直す。
+        ///
+        /// 以前は製品を選んだときにしか当てておらず、あとで設定を切り替えても入力済みの断面は変わらなかった
+        /// (どちらの設定のときに選んだかで値が決まり、指針値を外してもカタログの値へ戻る経路が無かった)。
+        /// 材料モデルの設定を当てるとき (<c>ApplyConcreteModelOptions</c>) に呼ぶ。
+        /// </summary>
+        internal void ReapplyPrecastSteelYoungsModulus()
+        {
+            if (CatalogConcreteE == null) return;
+            var product = SelectedPrecastPile;
+            if (product.Ep > 0 && TendonAp > 0) TendonEp = product.Ep;
+            if (product.Er > 0 && MainBarAg > 0) MainBarEr = product.Er;
+            if (product.Es > 0 && PileSectionType == PileTypeNames.Sc) PipeEs = product.Es;
+            ApplyGuideYoungsModulusIfEnabled();
+        }
+
         private void ApplyGuideYoungsModulusIfEnabled()
         {
             if (!ConcreteModelOptions.UseGuideYoungsModulus) return;
@@ -3168,7 +3302,7 @@ namespace PileDesign.Models.InputData
         // 公称寸法 (腐食代を見込まない) の曲げ剛性 (kNm2)。諸元表の「腐食非考慮」欄だけが使う
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double EINominal => (ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent)
+        public double EINominal => ((HasConcreteCore ? ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent) : 0.0)
             + PipeEs * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 64.0) * Math.Pow(10, -9);
 
         // ===== 腐食代考慮の断面諸量 =====
@@ -3188,7 +3322,7 @@ namespace PileDesign.Models.InputData
         // 腐食考慮 杭全断面積 (mm2)
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double A0Corroded => Ac + MainBarAg + TendonAp + PipeAsCorroded;
+        public double A0Corroded => Ac + RebarAgInSection + TendonAp + PipeAsCorroded;
 
         // 腐食考慮 杭単位長さ重量 (kN/m)
         [System.Text.Json.Serialization.JsonIgnore]
@@ -3200,13 +3334,13 @@ namespace PileDesign.Models.InputData
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
         public double EACorroded =>
-            (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp + PipeEs * PipeAsCorroded) * 0.001;
+            (ConcreteE * Ac + MainBarEr * RebarAgInSection + TendonEp * TendonAp + PipeEs * PipeAsCorroded) * 0.001;
 
         // 腐食考慮 曲げ剛性 (kNm2) — 鋼管項のみ腐食後外径で置換
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
         // 鋼管の無い断面 (PipeDia = 0) では、腐食後外径が −2×腐食代になって偽の鋼管項が出るので足さない
-        public double EICorroded => (ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent)
+        public double EICorroded => ((HasConcreteCore ? ConcreteE * (ConcreteI + TendonIEquivalent + MainBarIEquivalent) : 0.0)
             + (PipeDia > 0
                 ? PipeEs * Math.PI * (Math.Pow(CorrodedPipeOuterDiaDisp, 4) - Math.Pow(PipeInnerDiaDisp, 4)) / 64.0
                 : 0.0)) * Math.Pow(10, -9);
@@ -3218,7 +3352,7 @@ namespace PileDesign.Models.InputData
         // 曲げの断面二次モーメント I = π(D^4 - d^4)/64 を使っていたため 2 倍過小だった。
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double GJ => (GetG(ConcreteE, 0.2) * Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 32.0 +
+        public double GJ => ((HasConcreteCore ? GetG(ConcreteE, 0.2) * Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 32.0 : 0.0) +
             GetG(PipeEs, 0.3) * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 32.0) * Math.Pow(10, -9);
 
         // せん断剛性
@@ -4183,15 +4317,11 @@ namespace PileDesign.Models.InputData
                 copy.SelectedPileSectionSpecification = [];
             }
 
-            // キャッシュ系はコピーせず再計算させる（安全のため null にしておく）
-            copy._unfactoredServiceNMCache = null;
-            copy._unfactoredDamageNMCache = null;
-            copy._unfactoredUltimateNMCache = null;
-            copy._factoredServiceNMCache = null;
-            copy._factoredDamageNMCache = null;
-            copy._factoredUltimateNMCache = null;
-            copy._steelYieldNMRawCache = null;
-            copy._crackNMRawCache = null;
+            // キャッシュ系はコピーせず再計算させる。
+            // 以前はここでキャッシュを 1 つずつ null にしており、後から足した
+            // レベル1 の損傷 N-M と N-Q 6 本が漏れて、元の断面の曲線を共有したままだった。
+            // 捨てる一覧は InvalidateAllCaches の 1 か所だけに持つ。
+            copy.InvalidateAllCaches();
 
             return copy;
         }
@@ -4242,7 +4372,7 @@ namespace PileDesign.Models.InputData
                 fc: fcForSection,
                 sigmaB: sigmaU,
                 e: 205000.0,
-                bucklingLength: BucklingLength)
+                bucklingLength: EffectiveBucklingLength)
             {
                 // 杭頭部 (コンクリート充填鋼管部) の合成 EI は杭断面の EI (腐食後) を使う。kNm² → N·mm²
                 CompositeHeadEI = PileSectionType == PileTypeNames.CftSection ? EI * 1e9 : null,

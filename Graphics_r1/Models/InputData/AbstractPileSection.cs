@@ -280,6 +280,8 @@ namespace PileDesign.Models.InputData
                     M = forceAndMoment.Item2;
                     iter++;
                 }
+                // 抜け方 (上限・Δ≈0・NaN) ではなく状態で確かめる。外れていたら記録する (値は従来どおり返す)
+                ReportIfAxialNotMatched("許容曲げモーメントの算定 (軸力が合っていない)", N, NTarget, $"limitStateNo={limitStateNo}");
                 return M;
             }
             catch (Exception ex)
@@ -287,6 +289,19 @@ namespace PileDesign.Models.InputData
                 PileDesign.Common.CalcFallbackTracker.Report("許容曲げモーメントの算定（→0）", ex, $"limitStateNo={limitStateNo}, NTarget={NTarget:F0}");
                 return 0.0;
             }
+        }
+
+        /// <summary>
+        /// 「軸力 N に合わせる」反復を抜けたあとで、軸力が合っているかを確かめ、外れていれば記録する。
+        /// 反復は上限・Δ≈0 の break・NaN (比較が偽になる) のどれでも抜けるが、以前は抜け方に関わらず
+        /// その時点の M を正常な耐力として返し、何も残さなかった。値は変えない (記録だけ)。
+        /// </summary>
+        private static void ReportIfAxialNotMatched(string source, double n, double nTarget, string? detail)
+        {
+            double residual = Math.Abs(n - nTarget);
+            if (double.IsFinite(n) && residual <= SectionSolverTolerances.ULTIMATE_AXIAL_RESIDUAL_N * 100) return;
+            PileDesign.Common.CalcFallbackTracker.Report(source, null,
+                $"N={n:G6}, 目標 N={nTarget:G6}, 差={residual:G3}" + (detail == null ? "" : ", " + detail));
         }
 
         // 特定の軸力時の安全限界曲げモーメントを返すメソッド
@@ -341,6 +356,8 @@ namespace PileDesign.Models.InputData
                     iter++;
                 }
 
+                // 抜け方ではなく状態で確かめる。外れていたら記録する (値は従来どおり返す)
+                ReportIfAxialNotMatched("安全限界曲げモーメントの算定 (軸力が合っていない)", N, NTarget, null);
                 return (M, curvature);
             }
             catch (Exception ex)

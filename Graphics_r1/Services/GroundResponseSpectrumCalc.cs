@@ -284,11 +284,13 @@ namespace PileDesign.Services
                     }
                     double xiEnew = (xiDen > 0) ? xiNumerator / xiDen : XiInitial;
 
-                    // 収束判定
+                    // 収束判定。NaN の層は「変化が最大」として扱う (比較 rel > max は NaN で偽になり、
+                    // 全層 NaN でも変化 0 = 収束と判定されていた。判定は状態で書く)
                     double maxRelChange = 0;
                     for (int i = 0; i < n; i++)
                     {
                         double rel = Math.Abs(Gnew[i] - G[i]) / G[i];
+                        if (!double.IsFinite(rel)) { maxRelChange = double.PositiveInfinity; break; }
                         if (rel > maxRelChange) maxRelChange = rel;
                     }
 

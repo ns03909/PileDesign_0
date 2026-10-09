@@ -1,6 +1,7 @@
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PileDesign.Services
 {
@@ -12,8 +13,9 @@ namespace PileDesign.Services
     /// 構造種別に応じて定めるとする)。プログラムが勝手に値を置いて合否を出すと、
     /// 根拠の無い判定が計算書に残る。基本設定で明示的に有効にしたときだけ検定する。</para>
     ///
-    /// <para>応答値は<b>単杭沈下 + 群杭沈下</b>の合計。画面のグラフ「沈下 単杭+群杭」と同じ組み方で、
-    /// 群杭沈下を実行していなければ群杭ぶんは 0 になる (単杭だけの沈下量と等しい)。</para>
+    /// <para>応答値は<b>単杭沈下 + 群杭沈下 (常時 VL の記録)</b>の合計。画面のグラフ「沈下 単杭＋群杭（基礎梁なし）」と同じ組み方で、
+    /// 群杭沈下を実行していなければ群杭ぶんは 0 になる (単杭だけの沈下量と等しい)。基本設定の「沈下検討の対象」が
+    /// 単杭沈下だけなら群杭ぶんは足さない。常時の記録が基礎梁なし・ありの 2 つあれば、それぞれについて項目を作る。</para>
     ///
     /// <para>対象は<b>長期 (VL) だけ</b>。許容沈下量は常時の沈下に対して定める量で、
     /// 地震時の沈下量と比べる根拠が無い。地震動レベルは 0 で持つ
@@ -62,8 +64,19 @@ namespace PileDesign.Services
             if (piles == null) return items;
 
             var pgs = inputModel.PileGroupSettlement;
-            // 群杭沈下の結果が旧形式から復元したもの (収束状態が不明) なら、合計沈下量を判定に使わない
-            bool groupUnknown = pgs?.ActiveRecord?.IsConvergenceUnknown == true;
+            // 群杭沈下は常時 (VL) の記録を使う。基本設定の「沈下検討の対象」が単杭沈下だけなら足さない。
+            // 以前は画面で表示中のケース (ActiveRecord) の値を足していたので、表示を地震時のケースへ切り替えると
+            // 地震時の群杭沈下 (または 0) を「常時」として足し、合否が表示の切り替えで変わった。
+            // 「沈下検討の対象」も見ておらず、単杭沈下だけを選んでも群杭ぶんを足していた
+            bool includesGroup = fundamental.SettlementDesignIncludesGroup;
+            var vlRecords = includesGroup
+                ? (pgs?.CaseRecords ?? []).Where(r => r?.PileSettlements_mm is { Count: > 0 } && r.IsLongTerm).ToList()
+                : [];
+            // 群杭沈下を実行していなければ、群杭ぶんは 0 (単杭だけの沈下量)。以前からの扱い
+            var groupCases = vlRecords.Count > 0
+                ? vlRecords.Select(r => (Record: (GroupSettlementCaseRecord?)r,
+                    Suffix: vlRecords.Count > 1 ? $"（{(r.IsBeamAware ? "群杭 基礎梁あり" : "群杭 基礎梁なし")}）" : "")).ToList()
+                : [((GroupSettlementCaseRecord?)null, "")];
 
             foreach (var pile in piles)
             {
@@ -93,33 +106,43 @@ namespace PileDesign.Services
 
                 // 単杭沈下は m で持たれている。群杭沈下は mm。画面のグラフと同じ組み方
                 double single_mm = pile.SinglePileSettlementVL * 1000.0;
-                double group_mm = pgs?.SettlementOf(pile.PileNo) ?? 0.0;
-                double response = single_mm + group_mm;
-
-                // 単杭沈下量が荷重-沈下曲線の範囲外の軸力で求めた値なら、それは下限 (実際はもっと沈む)。
-                // 下限で許容値を超えていれば NG と言えるが、超えていなければ OK とは言えない
-                string? unavailable = groupUnknown
-                    ? LegacySettlementMigration.UnknownConvergenceReason
-                    : pile.SinglePileSettlementVLBeyondCurve && !(response > limit)
-                        ? DescribeBeyondCurve(pile.PileNo)
-                        : null;
-
-                items.Add(new EvaluationItem
+                foreach (var (rec, suffix) in groupCases)
                 {
-                    Kind = EvaluationKind.PileSettlement,
-                    Level = 0,   // 常時。水平解析の地震動レベルとは別軸
-                    Category = "杭の沈下量",
-                    LimitName = LimitName,
-                    TargetName = $"Pile-{pile.PileNo}",
-                    PileNo = pile.PileNo,
-                    PileBodyNo = pile.PileBodyNo,
-                    LoadCaseName = "VL",
-                    Response = response,
-                    Limit = limit,
-                    Unit = Unit,
-                    UnavailableReason = unavailable,
-                    IsOk = unavailable == null && !(response > limit),
-                });
+                    double group_mm = 0.0;
+                    string? groupProblem = null;
+                    if (rec != null)
+                    {
+                        if (rec.IsConvergenceUnknown)
+                            groupProblem = LegacySettlementMigration.UnknownConvergenceReason;   // 旧形式から復元 (収束状態が不明)
+                        else if (!rec.PileSettlements_mm!.TryGetValue(pile.PileNo, out group_mm))
+                            groupProblem = $"群杭沈下 (常時) の結果に杭No.{pile.PileNo} がありません (群杭沈下解析をやり直してください)";
+                    }
+                    double response = single_mm + group_mm;
+
+                    // 単杭沈下量が荷重-沈下曲線の範囲外の軸力で求めた値なら、それは下限 (実際はもっと沈む)。
+                    // 下限で許容値を超えていれば NG と言えるが、超えていなければ OK とは言えない
+                    string? unavailable = groupProblem
+                        ?? (pile.SinglePileSettlementVLBeyondCurve && !(response > limit) ? DescribeBeyondCurve(pile.PileNo) : null);
+
+                    items.Add(new EvaluationItem
+                    {
+                        Kind = EvaluationKind.PileSettlement,
+                        Level = 0,   // 常時。水平解析の地震動レベルとは別軸
+                        Category = "杭の沈下量",
+                        LimitName = LimitName,
+                        TargetName = $"Pile-{pile.PileNo}",
+                        PileNo = pile.PileNo,
+                        PileBodyNo = pile.PileBodyNo,
+                        LoadCaseName = "VL" + suffix,
+                        Response = groupProblem != null ? double.NaN : response,
+                        Limit = limit,
+                        Unit = Unit,
+                        UnavailableReason = unavailable,
+                        IsOk = unavailable == null && !(response > limit),
+                        // 基礎梁ありの反復が収束しなかった記録の沈下は、釣り合っていない値 (変形角の検定と同じ扱い)
+                        CaseConvergence = rec is { IsBeamAware: true, IsConverged: false } ? PileDesign.FEM.StepStatus.Unconverged : PileDesign.FEM.StepStatus.Converged,
+                    });
+                }
             }
 
             return items;

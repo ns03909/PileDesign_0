@@ -882,7 +882,8 @@ namespace PileDesign.ViewModels
                     ?? throw new InvalidOperationException($"杭 No.{pileLayoutItem.No}: 土層-杭セットがありません");
                 var horizontalReactions = pileSoilPile.HorizontalSoilReactions;
                 // VL ケースは iLC=-1 となるため安全アクセス
-                var isFrontPile = pileLayoutItem.IsFrontAt(iLC);
+                // 前後判定はケースのレベルごと (以前はレベル2 もレベル1 の判定で解いていた)
+                var isFrontPile = pileLayoutItem.IsFrontAt(model.CaseLevel, iLC);
 
                 // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B) はこの杭配置の入力から。
                 // 土層-杭セットは複数の杭で共有されるので、反力項目には保存されていない。

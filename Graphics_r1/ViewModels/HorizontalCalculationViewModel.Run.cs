@@ -73,6 +73,18 @@ namespace PileDesign.ViewModels
             {
             var casesToRun = BuildCasesToRun();
 
+            // そのレベルの地盤変位 (非液状化・液状化のどちらか) が 1 点でも 0 でないか。杭と根入部の両方を見る
+            bool HasGroundDisplacement(int lv)
+            {
+                static bool NonZero(double v) => double.IsFinite(v) && v != 0.0;
+                bool Any(System.Collections.Generic.IEnumerable<Models.InputData.ZDataItem>? items)
+                    => items?.Any(z => z != null && (lv == 1
+                        ? NonZero(z.GroundDisp1) || NonZero(z.GroundDisp1L)
+                        : NonZero(z.GroundDisp2) || NonZero(z.GroundDisp2L))) == true;
+                var ed = InputModel.ElementDivision;
+                return (ed?.SoilPiles?.Any(sp => Any(sp?.ZDataItems)) == true) || Any(ed?.SoilEmbedment?.ZDataItems);
+            }
+
             foreach (var loadCaseItem in casesToRun)
             {
                 LoadCase loadCase = loadCaseItem;
@@ -80,10 +92,15 @@ namespace PileDesign.ViewModels
                 int level = loadCaseItem.Level;
                 bool isVLCase = loadCase.LoadName == "VL";
 
-                // 荷重がゼロの場合はスキップ (VL ケースは水平荷重 0 でも実行)
-                if (!isVLCase && loadCase.UpperMassForce == 0 && loadCase.FoundationMassForce == 0)
+                // 慣性力も地盤変位も無いケースはスキップ (VL ケースは水平荷重 0 でも実行)。
+                // 以前は慣性力が 0 なら地盤変位があっても飛ばしていたので、地盤変位だけを与えるケース
+                // (慣性力 0・α1 > 0) が解かれず、結果にも出なかった
+                bool noInertia = loadCase.UpperMassForce == 0 && loadCase.FoundationMassForce == 0;
+                bool hasGroundDisplacement = HasGroundDisplacement(level);
+                if (!isVLCase && noInertia
+                    && !(hasGroundDisplacement && InputModel.LoadCasesInput.AllLoadCombinations.Any(c => c != null && c.Alpha1 != 0)))
                 {
-                    await AddLogAsync($"レベル{level}-{iLC + 1}: 荷重がゼロのためスキップ");
+                    await AddLogAsync($"レベル{level}-{iLC + 1}: 慣性力・地盤変位ともゼロのためスキップ");
                     continue;
                 }
 
@@ -97,6 +114,13 @@ namespace PileDesign.ViewModels
                 foreach (var loadCombination in combosToRun)
                 {
                     int iLCOM = loadCombination.No - 1;
+
+                    // 慣性力の無いケースは、地盤変位を与えない組合せ (α1 = 0) では荷重が何も無い
+                    if (!isVLCase && noInertia && loadCombination.Alpha1 == 0)
+                    {
+                        await AddLogAsync($"レベル{level}-{iLC + 1} 組合せ{iLCOM + 1}: 慣性力が 0 で地盤変位の係数 α1 も 0 のためスキップ");
+                        continue;
+                    }
 
                     IEnumerable<bool> liquefactionCases = isVLCase
                         ? new[] { false }
@@ -309,6 +333,11 @@ namespace PileDesign.ViewModels
 
                 caseModel = targetModel.DeepCopy();
             }
+
+            // 慣性力の作用点は、そのケースの慣性力中心に置く (モデルはレベル1 の 1 番目のケースの位置で作られている)。
+            // 以前は全ケースをその 1 点で解いており、ケースごとに入れた慣性力中心が解析に入っていなかった
+            if (caseModel.RelocateActionPoint(loadCase.ForceActionPointX, loadCase.ForceActionPointY, loadCase.ForceActionPointAltitude))
+                await AddLogAsync($"  {caseTag} 慣性力中心 ({loadCase.ForceActionPointX:F3}, {loadCase.ForceActionPointY:F3}, {loadCase.ForceActionPointAltitude:F3}) に作用点を置きました");
 
             // 地盤 (p-y) 非線形モードはケース単位の設定。PrepareKmat が caseModel から読む。
             caseModel.SoilNonlinearityMode = loadCase.SoilNonlinearityMode;
@@ -932,7 +961,7 @@ namespace PileDesign.ViewModels
                                 var reactions = pli.SoilPileAt(InputModel)?.HorizontalSoilReactions;
                                 if (reactions == null) continue;
                                 // VL ケースは iLC=-1 となるため >=0 チェック必須
-                                bool isFront = pli.IsFrontAt(iLC);
+                                bool isFront = pli.IsFrontAt(caseModel.CaseLevel, iLC);
                                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pli);
                                 // 液状化の低減率 βL は要素ごと。ばねの組立 (PrepareKmat) と同じ値を使う
                                 var pliGround = pli.SoilPileAt(InputModel)?.GroundInput;

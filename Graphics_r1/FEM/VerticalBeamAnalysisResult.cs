@@ -164,6 +164,20 @@ namespace PileDesign.FEM
         public List<VerticalBeamStepResult> StepResults { get; set; } = [];
         public bool IsConverged { get; set; }
 
+        /// <summary>
+        /// ケースは収束扱いだが、基準を満たさずに受理したステップ (残差が基準の 1000 倍以内) を含む。
+        /// 以前はログにしか残らず、計算書には「収束」とだけ出ていた (水平解析は緩和受理を計算書まで出している)。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool HasRelaxedSteps => IsConverged && (StepResults?.Any(s => !s.IsConverged) ?? false);
+
+        /// <summary>計算書・結果表に出す収束状態。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public string ConvergenceLabel => !IsConverged ? "未収束"
+            : HasRelaxedSteps ? "収束 (一部のステップは残差が基準の 1000 倍以内で受理)" : "収束";
+
         // 入力荷重と杭反力の合計（平衡の確認用）
         public double TotalInputLoad_kN => PileResults?.Sum(p => p.InputLoad_kN) ?? 0;
         public double TotalReaction_kN => PileResults?.Sum(p => p.Reaction_kN) ?? 0;

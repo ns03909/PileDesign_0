@@ -521,6 +521,34 @@ namespace PileDesign.Models.InputData
                         hasWarning = true;
                         warningMessage += $"- 土質点番号 {groundMassData.No}: 深度が直上層の深度より高いです。\n";
                     }
+                    // 以下は以前どこも検査しておらず、数値でない値・0 が黙って地盤変位・液状化の判定に入っていた (2026-10-09)
+                    if (groundMassData.H is double h && !(double.IsFinite(h) && h > 0))
+                    {
+                        hasWarning = true;
+                        warningMessage += $"- 土質点番号 {groundMassData.No}: 受け持つ層厚 H が正の数ではありません ({h:0.###})。下端深度を確認してください。\n";
+                    }
+                    if (!(double.IsFinite(groundMassData.VS0) && groundMassData.VS0 > 0))
+                    {
+                        hasWarning = true;
+                        warningMessage += $"- 土質点番号 {groundMassData.No}: せん断波速度 VS0 が正の数ではありません。略算法の地盤変位が 0 になります。\n";
+                    }
+                    // σz' は地盤ウィンドウが求める派生値で、求める前は 0。負 (水中重量を全重量の欄に入れたなど) と数値でないものだけを止める
+                    if (groundMassData.GLDepth < -1e-9 && !(groundMassData.SigmaZPrime >= 0))
+                    {
+                        hasWarning = true;
+                        warningMessage += $"- 土質点番号 {groundMassData.No}: 有効上載圧 σz' が負か数値ではありません ({groundMassData.SigmaZPrime:0.##})。"
+                            + "地下水位と単位体積重量 (水中重量ではなく全重量) を確認してください。液状化の判定と地盤ばねが正しく求まりません。\n";
+                    }
+                    if (groundMassData.NValue < 0)
+                    {
+                        hasWarning = true;
+                        warningMessage += $"- 土質点番号 {groundMassData.No}: N値が負です。\n";
+                    }
+                    if (!(groundMassData.Fc >= 0 && groundMassData.Fc <= 100))
+                    {
+                        hasWarning = true;
+                        warningMessage += $"- 土質点番号 {groundMassData.No}: 細粒分含有率 Fc が 0〜100% ではありません ({groundMassData.Fc:0.##})。\n";
+                    }
                     // 最下層より深い土質点は、どの土層からも密度などを写せない。密度 0 のまま地盤の
                     // 計算に入ると、せん断ばね剛性が 0 になってその下の地盤変位が求まらない
                     // (地盤変位はその位置から下を 0 として扱う)。土層データの入力漏れなので警告する。

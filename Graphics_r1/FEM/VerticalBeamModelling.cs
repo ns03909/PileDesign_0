@@ -207,6 +207,8 @@ namespace PileDesign.FEM
 
                 var section = CreateFoundationBeamSection(fbBeam);
                 var beam = new Beam($"FoundationBeam-{_inputModel.FoundationBeamInput.GetBeamNo(fbBeam)}", section, nodeI, nodeJ, 1.0, 1.0);
+                // 断面の回し (角度β)。以前は解析に渡っていなかった
+                beam.CoordAngle = fbBeam.AngleBeta;
                 // 基礎梁のせん断変形 (基本設定。既定は含める。水平解析のモデルと同じ)
                 if (_inputModel.FundamentalInput?.IncludeFoundationBeamShearDeformation ?? true)
                     beam.EnableShearDeformation();
@@ -381,9 +383,7 @@ namespace PileDesign.FEM
                 shearAreaZ = (5.0 / 6.0) * b * h;
                 iy = b * h * h * h / 12.0;
                 iz = h * b * b * b / 12.0;
-                double a = Math.Max(b, h);
-                double c = Math.Min(b, h);
-                torsionalMoment = a * c * c * c * (1.0 / 3.0 - 0.21 * c / a * (1 - c * c * c * c / (12 * a * a * a * a)));
+                torsionalMoment = Models.InputData.BeamSection.RectangularTorsionConstant(b, h);
             }
 
             var material = _materialCache.GetOrAdd((youngsModulus, poissonRatio),

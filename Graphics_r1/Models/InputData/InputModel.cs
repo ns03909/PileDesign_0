@@ -220,6 +220,18 @@ namespace PileDesign.Models.InputData
         private readonly Dictionary<(int groundNo, int pileBodyNo, double z), SoilPile> _soilPileCache = [];
         [System.Text.Json.Serialization.JsonIgnore]
         private bool _soilPileCacheValid = false;
+        // キャッシュを作ったときの SoilPiles の入れ物と件数。
+        //
+        // 以前は GenerateSoilPiles の経路でしか捨てておらず、要素分割・沈下のウィンドウが
+        // OK で ElementDivision.SoilPiles を<b>新しいコレクションに差し替える</b>と、
+        // LookupSoilPile (= PileLayoutDataItem.SoilPile) が差し替え前の SoilPile を返し続けた。
+        // 鉛直解析のモデル化・検定の総括・杭配置表の支持力欄が古い組を読む。
+        // 差し替える側はモデルの外 (ViewModel) に何か所もあり、そこで捨てさせる形は
+        // 取り残されるので、引く側で入れ物が同じかを見て自分で古さを判定する。
+        [System.Text.Json.Serialization.JsonIgnore]
+        private object? _soilPileCacheSource;
+        [System.Text.Json.Serialization.JsonIgnore]
+        private int _soilPileCacheSourceCount = -1;
         // _soilPileCache / _soilPileCacheValid の同時アクセス保護用 lock。
         // LookupSoilPile は UI binding / docx 出力 / AutoSave / 解析からも呼ばれうるため、
         // 複数スレッドからの並行呼出で Dictionary が破損 (ConcurrentOperationsNotSupported) する
@@ -280,15 +292,20 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private void RebuildSoilPileCacheIfNeeded_NoLock()
         {
-            if (_soilPileCacheValid) return;
+            var source = ElementDivision?.SoilPiles;
+            if (_soilPileCacheValid
+                && ReferenceEquals(source, _soilPileCacheSource)
+                && (source?.Count ?? -1) == _soilPileCacheSourceCount) return;
 
             _soilPileCache.Clear();
-            if (ElementDivision?.SoilPiles == null) return;
+            _soilPileCacheSource = source;
+            _soilPileCacheSourceCount = source?.Count ?? -1;
+            if (source == null) return;
 
             // ObservableCollection の列挙中に別スレッドが SoilPiles を書き換えると
             // System.InvalidOperationException (collection was modified) が出るため、
             // スナップショットを取ってから列挙する。
-            var snapshot = ElementDivision.SoilPiles.ToList();
+            var snapshot = source.ToList();
             foreach (var sp in snapshot)
             {
                 if (sp == null) continue;
@@ -961,6 +978,15 @@ namespace PileDesign.Models.InputData
         // Reset 内の ElementDivision 生成後に購読をセット
         public void Reset()
         {
+            // 解析の条件 (画面の「水平解析」などで選ぶもの) も既定に戻す。以前は戻しておらず、
+            // 新規作成しても前のプロジェクトの杭軸力の扱い・P-S ばね・常時ケース・ねじれ拘束が残った
+            UseAnalysisAxialForce = false;
+            IsAxialForceVariationMode = false;
+            UsePsSpringAtPileTip = false;
+            PsSpringSource = PsSpringSourceMode.Normal;
+            IsVLAnalysisEnabled = false;
+            RestrainFoundationTorsion = false;
+
             FundamentalInput = new FundamentalInput();
             LoadCasesInput = new LoadCasesInput();
             LoadCasesInput.SetMainWindowViewModel(_mainWindowViewModel);
@@ -1864,9 +1890,40 @@ namespace PileDesign.Models.InputData
         /// 許容曲げ座屈応力度 sfc2 は断面が持つ量なので、ここで書き込む。
         /// 鋼管杭以外は sfc2 を使わないため 0 のままでよい（無駄なキャッシュ破棄も避ける）。
         ///
-        /// 基本設定で柱座屈を考慮しない選択にしているときは 0 を配る
-        /// （= この項目を入れる前と同じ耐力になる）。
+        /// 基本設定の「柱座屈を考慮」に関わらず、求めた長さをそのまま配る。考慮するかは使う側
+        /// (<see cref="PileSection.EffectiveBucklingLength"/>) が設定を見て決める。
+        /// 以前は考慮しないときに 0 を書き込んでいたので、あとで設定を切り替えても杭要素分割をやり直すまで
+        /// 長さが戻らず (分割済みだと作り直されない)、切り替える前の耐力のまま検定していた。
         /// </summary>
+        /// <summary>
+        /// 鋼管杭の座屈長 (この杭が通る液状化区間の長さ) を、杭配置・地盤から求め直して断面へ配る。
+        /// 杭要素分割 (<see cref="GenerateSoilPiles"/>) と同じ求め方。分割済みで土層-杭セットを作り直さないときにも
+        /// 座屈長を今の入力に合わせるため、解析の入口と材料モデルの設定を当てたときに呼ぶ
+        /// (以前の版で「考慮しない」のまま保存したファイルは 0 が入っている)。
+        /// </summary>
+        internal void RefreshSteelPipeBucklingLengths()
+        {
+            if (PileLayoutItems == null || PileBodies == null || GroundsInput == null) return;
+            if (!PileBodies.Any(pb => pb?.PileBodyType == PileTypeNames.SteelPipe)) return;
+            var byPileBody = new Dictionary<int, double>();
+            foreach (var pile in PileLayoutItems)
+            {
+                var pileBody = PileBodyAt(pile.PileBodyNo);
+                var ground = GroundAt(pile.GroundNo);
+                if (pileBody?.PileBodyType != PileTypeNames.SteelPipe || ground == null) continue;
+                var segments = pileBody.PileBodySegments;
+                if (segments == null || segments.Count == 0) continue;
+                double top = pile.PileHeadZ;
+                double bottom = Math.Min(top, segments.Min(s => top - s.SegmentDepth));
+                double lk = 0.0;
+                for (int levelIndex = 0; levelIndex < 2; levelIndex++)
+                    lk = Math.Max(lk, SteelPipeBuckling.ComputeBucklingLength(
+                        ground.GroundMassesData, ground.GroundTopAltitude, levelIndex, top, bottom));
+                byPileBody[pile.PileBodyNo] = Math.Max(byPileBody.GetValueOrDefault(pile.PileBodyNo), lk);
+            }
+            ApplyBucklingLengthToSections(byPileBody);
+        }
+
         private void ApplyBucklingLengthToSections(Dictionary<int, double> bucklingLengthByPileBody)
         {
             if (PileBodies == null) return;
@@ -1877,9 +1934,7 @@ namespace PileDesign.Models.InputData
                 if (pileBody?.PileBodySegments == null) continue;
                 if (pileBody.PileBodyType != PileTypeNames.SteelPipe) continue;
 
-                double lk = ConcreteModelOptions.ConsiderSteelPipeColumnBuckling
-                    ? bucklingLengthByPileBody.GetValueOrDefault(i + 1)
-                    : 0.0;
+                double lk = bucklingLengthByPileBody.GetValueOrDefault(i + 1);
 
                 foreach (var segment in pileBody.PileBodySegments)
                 {
@@ -2062,6 +2117,11 @@ namespace PileDesign.Models.InputData
                 {
                     copy.ElementDivision.SetSoilPilesSilently(savedSoilPiles);
                 }
+
+                // 杭体番号・地盤番号のコンボの選択肢 (派生の一覧で保存も複製もしない) を作っておく。
+                // 以前は空のままだったので、元に戻す・やり直しで差し替えた入力を画面が結んだ時点で選択肢が無く、
+                // 杭配置表の杭体番号の欄が空欄に見えた (2026-10-09 に実機で確認)
+                copy.UpdateCountLists();
 
                 return copy;
             }

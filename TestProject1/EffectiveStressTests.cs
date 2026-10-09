@@ -21,8 +21,9 @@ namespace TestProject1
     {
         private static double EffectiveStress(GroundInput ground, double z)
         {
+            // 起点の標高を指定する多重定義もある (土圧合力ばねは地表面から数える) ので、引数の形で選ぶ
             var m = typeof(SoilPile).GetMethod("GetEffectiveStress",
-                BindingFlags.Static | BindingFlags.NonPublic)
+                BindingFlags.Static | BindingFlags.NonPublic, null, [typeof(GroundInput), typeof(double)], null)
                 ?? throw new InvalidOperationException("GetEffectiveStress が見つかりません");
             return (double)m.Invoke(null, [ground, z])!;
         }

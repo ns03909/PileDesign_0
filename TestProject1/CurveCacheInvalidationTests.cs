@@ -13,8 +13,7 @@ namespace TestProject1
     ///
     /// N-M / N-Q / ひび割れ / 鉄筋降伏の曲線は断面ごとの入れ物に貯めており、
     /// M-φ と違って<b>鍵を持たない</b>。ただの nullable なフィールドで、
-    /// セッターが <c>InvalidateAllCaches()</c> を呼んで捨てる仕組みになっている
-    /// (呼び出しは 30 か所)。
+    /// セッターが <c>InvalidateAllCaches()</c> を呼んで捨てる仕組みになっている。
     ///
     /// つまり<b>捨て忘れがそのまま古い曲線になる</b>。鍵のように「入れ忘れ」を
     /// 目で追える形ではなく、セッターを 1 つ足して呼び忘れれば静かに漏れる。
@@ -28,73 +27,16 @@ namespace TestProject1
     [TestClass]
     public class CurveCacheInvalidationTests
     {
-        /// <summary>
-        /// 捨てられなくてよい諸元と、その理由。<b>増やすときは理由を書くこと。</b>
-        ///
-        /// ここに挙げるのは「セッターが捨てていないが、<b>到達できない</b>」もの。
-        /// 免除そのものが手書きの一覧なので、前提が崩れていないかを
-        /// <see cref="ExemptedProperties_AreStillUnreachable"/> が検査する。
-        /// </summary>
-        private static readonly Dictionary<string, string> Exempt = new(StringComparer.Ordinal)
-        {
-            // 既製杭の断面を決める値。書き込むのは製品カタログを当てる経路
-            // (SetSelectedPrecastPileByName → RecalculateSelectedPrecastPile) だけで、
-            // その経路は最後に InvalidateAllCaches() を呼ぶ。画面にも束縛されておらず、
-            // PileSection.cs の外から書かれてもいないので、古い曲線には到達できない。
-            ["PileDiameter"] = "カタログ経路のみが書く (最後に破棄する)",
-            ["Prestress"] = "カタログ経路のみが書く",
-            ["TendonAp"] = "カタログ経路のみが書く",
-            ["TendonDp"] = "カタログ経路のみが書く",
-            ["TendonSigmaPy"] = "カタログ経路のみが書く",
-            ["TendonSigmaPu"] = "カタログ経路のみが書く",
-        };
-
-        /// <summary>
-        /// 免除した諸元が、いまも「到達できない」ままであること。
-        ///
-        /// 免除の根拠は<b>書き込む道がカタログ経路しかない</b>こと。画面に束縛されたり、
-        /// 別のクラスから代入されたりすれば前提が崩れ、免除は誤りになる。
-        /// そこを見張らないと、免除が「調べずに黙らせる仕掛け」になってしまう。
-        /// </summary>
-        [TestMethod]
-        public void ExemptedProperties_AreStillUnreachable()
-        {
-            var offenders = new List<string>();
-
-            foreach (var name in Exempt.Keys)
-            {
-                // 画面に束縛されていないこと
-                foreach (var xaml in System.IO.Directory.GetFiles(
-                    System.IO.Path.Combine(TestSource.Root(), "Graphics_r1", "Views"), "*.xaml"))
-                {
-                    string text = System.IO.File.ReadAllText(xaml);
-                    if (text.Contains($"PileSection.{name}", StringComparison.Ordinal))
-                        offenders.Add($"{name}: {System.IO.Path.GetFileName(xaml)} で画面に束縛されています");
-                }
-
-                // PileSection.cs の外から代入されていないこと
-                foreach (var cs in System.IO.Directory.GetFiles(
-                    System.IO.Path.Combine(TestSource.Root(), "Graphics_r1"), "*.cs",
-                    System.IO.SearchOption.AllDirectories))
-                {
-                    if (cs.Contains(System.IO.Path.DirectorySeparatorChar + "obj"
-                                    + System.IO.Path.DirectorySeparatorChar)) continue;
-                    if (System.IO.Path.GetFileName(cs) == "PileSection.cs") continue;
-
-                    string text = System.IO.File.ReadAllText(cs);
-                    if (System.Text.RegularExpressions.Regex.IsMatch(
-                            text, @"\.\s*" + System.Text.RegularExpressions.Regex.Escape(name) + @"\s*=(?!=)"))
-                        offenders.Add($"{name}: {System.IO.Path.GetFileName(cs)} から代入されています");
-                }
-            }
-
-            TestSource.AssertScanned(Exempt.Count, 1, "免除した諸元");
-
-            Assert.AreEqual(0, offenders.Count,
-                "免除の前提が崩れています。書き込む道が増えたので、"
-                + "セッターで InvalidateAllCaches() を呼ぶか、免除の理由を書き直してください:"
-                + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", offenders));
-        }
+        // 以前はここに「捨てられなくてよい諸元」の免除一覧があった
+        // (PileDiameter・Prestress・TendonAp/Dp/SigmaPy/SigmaPu)。
+        // 根拠は「書き込むのはカタログ経路だけで、その経路は最後に InvalidateAllCaches() を呼ぶ」
+        // だったが、<b>杭断面ウィンドウは RecalculateSelectedPrecastPile() を直に呼び</b>、
+        // そちらは最後に捨てていなかった。寸法・Fc が同じで σe と Ap だけが違う製品
+        // (PHC-600-標準-85-B → 85-C) に切り替えると、前の製品の N-M・N-Q が残っていた。
+        // 免除の検査は「画面に束縛されていない・他のクラスから代入されていない」しか見ておらず、
+        // 同じクラスの中の経路の取りこぼしは捕まえられなかった。
+        // セッターで捨てるようにしたので免除は不要になった。製品の切り替えそのものは
+        // SwitchingPrecastProduct_* が見張る。
 
         [DataTestMethod]
         [DataRow("Example9", "PileExample9")]        // 場所打ちRC
@@ -157,7 +99,7 @@ namespace TestProject1
                     {
                         // この諸元は曲線に効く。ならば変えた直後も本来の値でなければならない
                         checkedProps++;
-                        if (asRead != fresh && !Exempt.ContainsKey(p.Name))
+                        if (asRead != fresh)
                             offenders.Add($"{what}: {p.Name} ({before} → {after})");
                     }
 
@@ -174,6 +116,123 @@ namespace TestProject1
                 + "古い曲線がそのまま使われます (値は正しく見えるので気づきにくい)。"
                 + "セッターで InvalidateAllCaches() を呼んでください:"
                 + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", offenders.Take(20)));
+        }
+
+        /// <summary>
+        /// 寸法・Fc・Ec・dp が同じで σe と Ap だけが違う製品に切り替えたとき、
+        /// 耐力曲線 (N-M・N-Q) が新しい製品のものになること。
+        ///
+        /// 杭断面ウィンドウの製品の ComboBox は <c>SelectedPrecastPile.Name</c> を書いて
+        /// <c>RecalculateSelectedPrecastPile()</c> を直に呼ぶ。以前はこの経路が曲線を
+        /// 捨てておらず、σe と Ap のセッターも捨てていなかったので、B 種の曲線が残っていた。
+        /// 曲線を先に読んでキャッシュを埋めてから切り替えるのが要点。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("PHC-600-標準-85-B", "PHC-600-標準-85-C")]
+        [DataRow("PHC-600-標準-85-C", "PHC-600-標準-85-B")]
+        public void SwitchingPrecastProduct_ViaWindowPath_RefreshesCurves(string from, string to)
+        {
+            var section = Phc(from);
+            string nmBefore = Fingerprint(section.UnfactoredUltimateNM);
+            string nqBefore = Fingerprint(section.UnfactoredUltimateNQ);
+            string nmL1Before = Fingerprint(section.FactoredDamageNMLevel1);
+
+            // 画面と同じ書き方 (ComboBox_PileSectionSelectionChanged)
+            section.SelectedPrecastPile.Name = to;
+            section.RecalculateSelectedPrecastPile();
+            Assert.AreEqual(to, section.SelectedPrecastPile.Name, "製品が切り替わっていません");
+
+            AssertMatchesFresh(section, to, nmBefore, nqBefore, nmL1Before);
+        }
+
+        /// <summary>名前で当てる経路 (SetSelectedPrecastPileByName) でも同じであること。</summary>
+        [TestMethod]
+        public void SwitchingPrecastProduct_ByName_RefreshesCurves()
+        {
+            var section = Phc("PHC-600-標準-85-B");
+            string nmBefore = Fingerprint(section.UnfactoredUltimateNM);
+            string nqBefore = Fingerprint(section.UnfactoredUltimateNQ);
+            string nmL1Before = Fingerprint(section.FactoredDamageNMLevel1);
+
+            section.SetSelectedPrecastPileByName("PHC-600-標準-85-C");
+
+            AssertMatchesFresh(section, "PHC-600-標準-85-C", nmBefore, nqBefore, nmL1Before);
+        }
+
+        /// <summary>
+        /// 複製 (DeepCopy) が元の断面の曲線を持ち越さないこと。
+        ///
+        /// 以前の DeepCopy はキャッシュを 1 つずつ null にしており、レベル1 の損傷 N-M と
+        /// N-Q 6 本が漏れていた。複製側で σe を変えても、それらは元の曲線のままだった。
+        /// </summary>
+        [TestMethod]
+        public void DeepCopy_DoesNotCarryOverCurves()
+        {
+            var original = Phc("PHC-600-標準-85-B");
+            string nqBefore = Fingerprint(original.UnfactoredUltimateNQ);
+            string nmL1Before = Fingerprint(original.FactoredDamageNMLevel1);
+
+            var copy = original.DeepCopy();
+
+            // 複製の曲線キャッシュは空であること (フィールドを直に見る)
+            var cacheFields = typeof(PileSection)
+                .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+                .Where(f => f.Name.EndsWith("Cache", StringComparison.Ordinal)
+                            && Nullable.GetUnderlyingType(f.FieldType) is { IsValueType: true } u
+                            && u.IsGenericType
+                            && u.GetGenericArguments().All(a => a == typeof(List<double>)))
+                .ToList();
+            TestSource.AssertScanned(cacheFields.Count, 14, "曲線キャッシュのフィールド");
+            var leftovers = cacheFields.Where(f => f.GetValue(copy) != null).Select(f => f.Name).ToList();
+            Assert.AreEqual(0, leftovers.Count,
+                "複製が元の断面の曲線を持ち越しています: " + string.Join(", ", leftovers));
+
+            // 曲線に効く値を変えれば、複製の曲線は変わる
+            copy.Prestress *= 1.25;
+            Assert.AreNotEqual(nqBefore, Fingerprint(copy.UnfactoredUltimateNQ), "N-Q が元のまま");
+            Assert.AreNotEqual(nmL1Before, Fingerprint(copy.FactoredDamageNMLevel1), "レベル1 の N-M が元のまま");
+        }
+
+        private static PileSection Phc(string product)
+        {
+            var s = new PileSection
+            {
+                PileBodyType = PileDesign.Constants.PileTypeNames.PrecastConcrete,
+                PileSectionType = PileDesign.Constants.PileTypeNames.Phc,
+            };
+            s.SelectedPrecastPile.Name = product;
+            s.RecalculateSelectedPrecastPile();
+            Assert.AreEqual(product, s.SelectedPrecastPile.Name, $"{product} がライブラリにありません");
+            return s;
+        }
+
+        /// <summary>切り替え後の曲線が、同じ製品を新しく組んだ断面の曲線と一致し、かつ前の製品と違うこと。</summary>
+        private static void AssertMatchesFresh(PileSection section, string product,
+            string nmBefore, string nqBefore, string nmL1Before)
+        {
+            var fresh = Phc(product);
+
+            string nm = Fingerprint(section.UnfactoredUltimateNM);
+            string nq = Fingerprint(section.UnfactoredUltimateNQ);
+            string nmL1 = Fingerprint(section.FactoredDamageNMLevel1);
+
+            // 前提: σe と Ap が違うので曲線は変わるはず (変わらなければ検査が空振りする)
+            Assert.AreNotEqual(nmBefore, Fingerprint(fresh.UnfactoredUltimateNM), "前提: 2 製品の N-M が同じです");
+            Assert.AreNotEqual(nqBefore, Fingerprint(fresh.UnfactoredUltimateNQ), "前提: 2 製品の N-Q が同じです");
+
+            Assert.AreEqual(Fingerprint(fresh.UnfactoredUltimateNM), nm, "N-M が前の製品のまま残っています");
+            Assert.AreEqual(Fingerprint(fresh.UnfactoredUltimateNQ), nq, "N-Q が前の製品のまま残っています");
+            Assert.AreEqual(Fingerprint(fresh.FactoredDamageNMLevel1), nmL1, "レベル1 の N-M が前の製品のまま残っています");
+            Assert.AreNotEqual(nmL1Before, nmL1, "レベル1 の N-M が変わっていません");
+        }
+
+        private static string Fingerprint((List<double> A, List<double> B) curve)
+        {
+            Assert.IsNotNull(curve.A, "曲線が作れません");
+            Assert.IsTrue(curve.A.Count > 0, "曲線が空です");
+            return string.Join(",", curve.A.Select(x => x.ToString("G10", CultureInfo.InvariantCulture)))
+                + "|"
+                + string.Join(",", curve.B.Select(x => x.ToString("G10", CultureInfo.InvariantCulture)));
         }
 
         private static IEnumerable<PropertyInfo> Perturbable()

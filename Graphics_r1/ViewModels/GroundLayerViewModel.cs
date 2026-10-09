@@ -124,11 +124,12 @@ namespace PileDesign.ViewModels
             nameof(GroundInput.StressAltitude),
             nameof(GroundInput.GroundWaterGLDepth),
             nameof(GroundInput.StressGLDepth),
-            // 必要なら加速度や方法変更も足せる:
-            // nameof(GroundInput.GroundAcceleration1),
-            // nameof(GroundInput.GroundAcceleration2),
-            // nameof(GroundInput.ShallowSoilType),
-            // nameof(GroundInput.CalculationMethod),
+            // 地表面加速度と算定法も FL・βL・地盤変位に効く。以前は監視しておらず、Enter を押さずに
+            // (クリックで) 確定すると再計算されないまま保存され、古い βL・地盤変位で水平解析が走った
+            nameof(GroundInput.GroundAcceleration1),
+            nameof(GroundInput.GroundAcceleration2),
+            nameof(GroundInput.ShallowSoilType),
+            nameof(GroundInput.CalculationMethod),
         ];
 
         // 相互換算（標高ZとGL深さ）の同期
@@ -736,7 +737,7 @@ namespace PileDesign.ViewModels
                 double si;
                 if (groundMassData.GranularityClass == "粘性土")
                 { si = 1.0; }
-                else if (groundMassData.GranularityClass == "砂質土" || groundMassData.GranularityClass == "砂礫土")
+                else if (groundMassData.GranularityClass == "砂質土")
                 { si = 1.1; }
                 else if (groundMassData.GranularityClass == "礫質土")
                 { si = 1.4; }
@@ -1211,13 +1212,18 @@ namespace PileDesign.ViewModels
 
             foreach (GroundLayerInput groundLayerDataItem in GroundInput.GroundLayers)
             {
-                if (groundLayerDataItem.GranularityClass == "砂質土" || groundLayerDataItem.GranularityClass == "砂礫土")
+                // 土質の選択肢は 粘性土・砂質土・礫質土。以前は存在しない「砂礫土」で判定しており、礫質土を飛ばしていた
+                if (groundLayerDataItem.GranularityClass == "砂質土" || groundLayerDataItem.GranularityClass == "礫質土")
                 {
                     groundLayerDataItem.Es = groundLayerDataItem.NValue * 700;
                 }
             }
             Update(); // グラフを更新
         }
+
+        /// <summary>沖積粘性土の粘着力 Cu = 10 + 2Z (kN/m²)。Z は層中央の深さ (m、正)。bottomGLDepth は下端の GL からの深さ (負)。</summary>
+        internal static double CohesionAlluvialClay(double bottomGLDepth, double layerThickness)
+            => 10.0 + 2.0 * (-bottomGLDepth - layerThickness / 2.0);
 
         // 土層データ　Cu=12.5N, 25Nを代入する
         [RelayCommand]
@@ -1230,7 +1236,9 @@ namespace PileDesign.ViewModels
             {
                 if (groundLayerDataItem.GranularityClass == "粘性土" && groundLayerDataItem.AgeCategory == "沖積層")
                 {
-                    groundLayerDataItem.Cohesive = 20 - groundLayerDataItem.BottomGLDepth * 2.0 - groundLayerDataItem.LayerThickness / 2.0;
+                    // Cu = 10 + 2Z (Z: 層中央の深さ m、正)。BottomGLDepth は負の値。
+                    // 以前は 20 − 2·(下端) − H/2 で、ラベルの式より 10 + H/2 だけ大きかった (GL0〜−4 m の層で 14 のところ 26)
+                    groundLayerDataItem.Cohesive = CohesionAlluvialClay(groundLayerDataItem.BottomGLDepth, groundLayerDataItem.LayerThickness);
                 }
                 else if (groundLayerDataItem.GranularityClass == "粘性土" && groundLayerDataItem.AgeCategory == "洪積層")
                 {
@@ -1248,7 +1256,8 @@ namespace PileDesign.ViewModels
 
             foreach (var groundMassDataItem in GroundInput.GroundMassesData)
             {
-                if (groundMassDataItem.GranularityClass == "砂質土" || groundMassDataItem.GranularityClass == "砂礫土")
+                // 土質の選択肢は 粘性土・砂質土・礫質土。以前は存在しない「砂礫土」で判定しており、礫質土を飛ばしていた
+                if (groundMassDataItem.GranularityClass == "砂質土" || groundMassDataItem.GranularityClass == "礫質土")
                 {
                     groundMassDataItem.Fc = 10;
                 }
@@ -1306,8 +1315,9 @@ namespace PileDesign.ViewModels
             {
                 newDepths[i] = (masses[i].GLDepth + masses[i + 1].GLDepth) / 2.0;
             }
-            // 最下行 = 最下層 BottomGLDepth を負方向に直して採用
-            newDepths[n - 1] = -layers[layers.Count - 1].BottomGLDepth;
+            // 最下行 = 最下層の下端深度。BottomGLDepth はもともと負の値 (GL より下)。
+            // 以前は符号を反転しており (−20 → +20)、最下の土質点の層厚 H が負になって、地盤変位・固有周期が前回の値のまま残っていた
+            newDepths[n - 1] = layers[layers.Count - 1].BottomGLDepth;
 
             // 連続する下端深度差から H を導出して反映 (標高ベース: H = prev − current)
             // H が 0 / 負になっても下端深度GL は上書きし、整合性は順序エラー (赤セル) で示す。
@@ -1392,11 +1402,45 @@ namespace PileDesign.ViewModels
             return !hasWarning;
         }
 
+        /// <summary>
+        /// 粘性土なのに細粒分含有率 Fc が 0 (未入力) の土質点があれば、その知らせ。なければ null。
+        /// 液状化の判定は Fc だけを見る (土質は見ない) ので、Fc を入れ忘れると粘性土が液状化層になる。
+        /// </summary>
+        internal static string? DescribeClayWithZeroFc(IEnumerable<GroundInput>? grounds)
+        {
+            if (grounds == null) return null;
+            var lines = new List<string>();
+            int groundNo = 0;
+            foreach (var g in grounds)
+            {
+                groundNo++;
+                var points = (g?.GroundMassesData ?? [])
+                    .Where(p => p != null && p.GranularityClass == "粘性土" && !(p.Fc > 0))
+                    .ToList();
+                if (points.Count == 0) continue;
+                string depths = string.Join("、", points.Take(5).Select(p => $"GL{p.GLDepth:+0.00;-0.00} m"));
+                lines.Add($"・地盤番号{groundNo}: {points.Count} 点 ({depths}{(points.Count > 5 ? " ほか" : "")})");
+            }
+            if (lines.Count == 0) return null;
+            return "粘性土で細粒分含有率 Fc が 0 の土質点があります。\n" + string.Join("\n", lines) + "\n\n"
+                + "液状化の判定は Fc が 35% 以下の層を対象にするので、このままだと地下水位以下・GL-20 m 以浅の粘性土が液状化層になり、"
+                + "水平地盤反力係数と地盤ばねが βL で低減されます。粘性土の Fc を入力してください (粘性土なら通常 35% を超えます)。";
+        }
+
         [RelayCommand]
         private void OnOk()
         {
             if (GroundsInput != null)
             {
+                // 入力の変更で予約した再計算 (少し遅らせて走る) が残っていれば、保存する前に済ませる。
+                // 残したまま写すと、FL・βL・地盤変位が入力と合わないまま保存される
+                if (_updateDebounceTimer != null)
+                {
+                    _updateDebounceTimer.Stop();
+                    _updateDebounceTimer = null;
+                    Update();
+                }
+
                 if (!_mainWindowViewModel.CheckAndResetElementSplit("地盤"))
                     return; // キャンセル時は処理中断
 
@@ -1417,6 +1461,15 @@ namespace PileDesign.ViewModels
                     warningMessage += "\n状態を保存してウィンドウを閉じますか？";
                     MessageBoxResult result = MessageService.Show(warningMessage, "警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
                     if (result == MessageBoxResult.Cancel) return;
+                }
+
+                // 細粒分含有率 Fc が 0 の粘性土の土質点。Fc の既定は 0 で、液状化の判定は Fc (35% 以下が対象) と深さ・水位だけを見るので、
+                // Fc を入れ忘れた粘性土は地下水位以下・20m 以浅で液状化層になり、βL で kh0・py が大きく下がる
+                if (DescribeClayWithZeroFc(GroundsInput) is { } zeroFc)
+                {
+                    MessageBoxResult fcResult = MessageService.Show(zeroFc + "\n\n状態を保存してウィンドウを閉じますか？",
+                        "細粒分含有率の確認", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+                    if (fcResult == MessageBoxResult.Cancel) return;
                 }
 
                 // 任意地盤変位のバリデーション

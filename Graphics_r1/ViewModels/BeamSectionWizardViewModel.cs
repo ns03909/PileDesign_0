@@ -113,27 +113,8 @@ namespace PileDesign.ViewModels
             // Az = (5/6) × b × h
             ShearAreaZ = (5.0 / 6.0) * Width * Height * AzFactor;
 
-            // 断面ねじりモーメント Ixx（矩形断面の場合）
-            // Ixx = β × b × h³
-            // β は b/h の比に依存（簡略化のため、標準的な値を使用）
-            double ratio = Width / Height;
-            double beta;
-            if (ratio <= 1.0)
-            {
-                beta = (1.0 / 3.0) - 0.21 * ratio * (1.0 - Math.Pow(ratio, 4) / 12.0);
-            }
-            else
-            {
-                double invRatio = Height / Width;
-                beta = (1.0 / 3.0) - 0.21 * invRatio * (1.0 - Math.Pow(invRatio, 4) / 12.0);
-                // 入れ替え: Ixx = β × h × b³
-                TorsionalMoment = beta * Height * Math.Pow(Width, 3) * IxxFactor;
-                MomentOfInertiaYY = Width * Math.Pow(Height, 3) / 12.0 * IyyFactor;
-                MomentOfInertiaZZ = Height * Math.Pow(Width, 3) / 12.0 * IzzFactor;
-                return;
-            }
-
-            TorsionalMoment = beta * Width * Math.Pow(Height, 3) * IxxFactor;
+            // 断面ねじりモーメント Ixx（矩形断面。長辺 a・短辺 b で β·a·b³。式は断面の表と同じものを使う）
+            TorsionalMoment = Models.InputData.BeamSection.RectangularTorsionConstant(Width, Height) * IxxFactor;
 
             // 断面二次モーメント
             // Iyy = b × h³ / 12（y軸周り、z方向の曲げ）

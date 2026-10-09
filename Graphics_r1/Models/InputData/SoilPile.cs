@@ -196,12 +196,56 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<PileCircumVertical> PileCircumVerticals { get; set; }
 
 
-        // 群杭荷重円径
+        // 群杭荷重円径 (荷重面等価径) m。0 以下は「未入力」で、杭先端径を使う (EffectiveGroupPileLoadDia)
         private double _groupPileLoadDia;
         public double GroupPileLoadDia
         {
             get => _groupPileLoadDia;
-            set => SetProperty(ref _groupPileLoadDia, value);
+            set
+            {
+                if (SetProperty(ref _groupPileLoadDia, value)) RaiseGroupPileLoadDiaDerived();
+            }
+        }
+
+        /// <summary>
+        /// 計算に使う荷重面等価径 m。入力 (<see cref="GroupPileLoadDia"/>) が 0 以下なら杭先端径 (<see cref="D"/>)。
+        ///
+        /// <para>以前は未入力 (0) の杭を群杭沈下の個別十字・個別矩形で黙って飛ばし、荷重タイプを選んでも
+        /// 矩形荷重の表が空のままになった。既定を杭先端径にし、入れた値はこれまでどおり優先する。
+        /// 杭先端径は杭体から決まるので、杭体を変えれば追従する (値を写し取らない)。</para>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double EffectiveGroupPileLoadDia => _groupPileLoadDia > 0 ? _groupPileLoadDia : Math.Max(0.0, D);
+
+        /// <summary>荷重面等価径が未入力で、杭先端径を使っているか (表で灰色に出す)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsGroupPileLoadDiaFromToe => !(_groupPileLoadDia > 0);
+
+        /// <summary>
+        /// 表の「荷重面等価径」列。計算に使う値を見せ、入れた値を <see cref="GroupPileLoadDia"/> に書く (0 を入れると杭先端径に戻る)。
+        /// 杭先端径を使っているセルを触っただけで表示の値 (3 桁に丸めたもの) が書き戻され、手入力に変わらないよう、
+        /// 未入力のまま表示と同じ値が来たら書かない。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double GroupPileLoadDiaInput
+        {
+            get => EffectiveGroupPileLoadDia;
+            set
+            {
+                if (!double.IsFinite(value) || value < 0) return;
+                if (IsGroupPileLoadDiaFromToe && Math.Abs(value - EffectiveGroupPileLoadDia) < 5e-4) return;
+                GroupPileLoadDia = value;
+            }
+        }
+
+        private void RaiseGroupPileLoadDiaDerived()
+        {
+            OnPropertyChanged(nameof(EffectiveGroupPileLoadDia));
+            OnPropertyChanged(nameof(IsGroupPileLoadDiaFromToe));
+            OnPropertyChanged(nameof(GroupPileLoadDiaInput));
         }
 
         // 杭先端N値
@@ -372,7 +416,11 @@ namespace PileDesign.Models.InputData
         public double D
         {
             get => _d;
-            set => SetProperty(ref _d, value);
+            set
+            {
+                // 荷重面等価径が未入力のときは杭先端径を使うので、その表示も追従させる
+                if (SetProperty(ref _d, value)) RaiseGroupPileLoadDiaDerived();
+            }
         }
 
         // 沈下検討用杭先端径 mm (PileBodyInput.SettlePileToeDia と同期。FEM 側は /1000 で m 換算)
@@ -1290,8 +1338,18 @@ namespace PileDesign.Models.InputData
         // 有効応力を得るメソッド
         // 杭要素分割ウィンドウの表示も同じものを使う (写しを持つと直したときに取り残される)
         internal static double GetEffectiveStress(GroundInput groundInput, double z)
+            => GetEffectiveStress(groundInput, z, groundInput.StressAltitude);
+
+        /// <summary>
+        /// 標高 <paramref name="topLevel"/> から下の土被りで数えた有効応力 (水圧も同じ面より下の水柱だけ引く)。
+        /// 杭は地中応力計算用標高 (<see cref="GroundInput.StressAltitude"/>) から数える。
+        /// 根入部の土圧合力ばねは地下外壁の外側に残る地盤の土圧なので、地表面
+        /// (<see cref="GroundInput.GroundTopAltitude"/>) から数える
+        /// (根切り底に応力計算面を置くと、外壁の土圧が 0 になってしまうため)。
+        /// </summary>
+        internal static double GetEffectiveStress(GroundInput groundInput, double z, double topLevel)
         {
-            double stressLevel = groundInput.StressAltitude;
+            double stressLevel = topLevel;
             double waterLevel = groundInput.GroundWaterTableAltitude;
 
             double effectiveStress = 0;

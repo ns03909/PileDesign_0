@@ -1926,13 +1926,25 @@ namespace PileDesign.Models.InputData
                 n => GetUltimateLimitShear(MonQd, n, isFactored), iCount);
 
         // IPileSectionCalculation インターフェース実装（親クラスのオーバーライド）
+        /// <summary>
+        /// 解析用 M-φ の終局点に掛ける β1・β2。検定の曲げの低減係数 (解説表 2.6・2.7、SC 杭の曲げは安全限界 β1 = 1.0・β2 = 1.0) と同じ値。
+        /// PHC・PRC の M-φ が表の値 (β1 = 0.8、β2 = 0.75/0.65) を掛けているのと同じ考え方。
+        ///
+        /// 以前は β1 = 0.9・β2 = 0.75 を固定で掛けていた。場所打ち RC の値 (曲げの使用・損傷限界 β1 = 0.9、
+        /// せん断の β2 = 0.75) と同じ数字で、SC 杭の表には無い値だった。検定では 1.0 で耐力を見るのに、
+        /// 解析の骨格曲線だけが終局点を 0.9 倍 (圧縮降伏が先行する側は 0.675 倍) に下げていた。
+        /// </summary>
+        internal const double MPhiBeta1 = 1.0;
+        /// <inheritdoc cref="MPhiBeta1"/>
+        internal const double MPhiBeta2 = 1.0;
+
         public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
         {
-            return GetMPhiRelationshipInternal(axialN, 0.9);
+            return GetMPhiRelationshipInternal(axialN, MPhiBeta1);
         }
 
         // ある軸力時のM-φ関係を得るメソッド（内部実装）
-        internal (List<double>, List<double>) GetMPhiRelationshipInternal(double Ntarget, double beta1 = 0.9)
+        internal (List<double>, List<double>) GetMPhiRelationshipInternal(double Ntarget, double beta1 = MPhiBeta1)
         {
             (double MCr, double phiCr) = GetCrackMoment(Ntarget);
             (double MYT, double phiYT) = GetMomentCurvatureForN(Ntarget, "SteelPipeTensionYield");
@@ -1955,7 +1967,7 @@ namespace PileDesign.Models.InputData
             {
                 // コンクリート圧縮縁がεcuに達するときのMu0とその曲率phiU
                 phiD = phiU;
-                double beta2 = 0.75;
+                double beta2 = MPhiBeta2;
                 phis = [0.0, beta2 * phiD];
                 Ms = [0.0, beta1 * beta2 * Mu0];
             }
@@ -2010,7 +2022,7 @@ namespace PileDesign.Models.InputData
                 double denom = MYC - MCr;
                 if (Math.Abs(denom) < 1e-6) denom = Math.Sign(denom) * 1e-6;
                 phiD = phiCr + (phiYC - phiCr) * (beta1 * Mu0 - MCr) / denom;
-                double beta2 = 0.75;
+                double beta2 = MPhiBeta2;
                 if (beta1 * beta2 * Mu0 < MYT)
                 {
                     double denom2 = MYT - MCr;
@@ -2052,7 +2064,7 @@ namespace PileDesign.Models.InputData
             {
                 double ratioYC = (phiYC > 1e-12) ? MYC / phiYC : 1e6;
                 phiD = beta1 * Mu0 / ratioYC;
-                double beta2 = 0.75;
+                double beta2 = MPhiBeta2;
                 if (beta1 * beta2 * Mu0 < MYC)
                 {
                     // 元のポリリニア形状を維持（2点の線形曲線）
@@ -2074,7 +2086,7 @@ namespace PileDesign.Models.InputData
                 double EcIe = PrecastConcrete.Ec * Ie;
                 if (EcIe < 1e-6) EcIe = 1e6;
                 phiD = beta1 * Mu0 / EcIe;
-                double beta2 = 0.75;
+                double beta2 = MPhiBeta2;
                 phis = [0.0, beta2 * phiD];
                 Ms = [0.0, beta1 * beta2 * Mu0];
             }

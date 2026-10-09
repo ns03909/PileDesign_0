@@ -65,6 +65,14 @@ namespace TestProject1
             }
         }
 
+        private static double EffectiveBucklingLength(InputModel model) =>
+            model.PileBodies
+                .Where(pb => (pb?.PileBodyType ?? "").Contains(PileTypeNames.SteelPipe))
+                .SelectMany(pb => pb.PileBodySegments)
+                .Select(seg => seg?.PileSection?.EffectiveBucklingLength ?? 0.0)
+                .DefaultIfEmpty(0.0)
+                .Max();
+
         private static double SectionBucklingLength(InputModel model) =>
             model.PileBodies
                 .Where(pb => (pb?.PileBodyType ?? "").Contains(PileTypeNames.SteelPipe))
@@ -141,6 +149,11 @@ namespace TestProject1
             Assert.IsTrue(section.BucklingLength > 0, "座屈長が付いていません");
         }
 
+        /// <summary>
+        /// 考慮しない設定では、耐力に使う座屈長 (EffectiveBucklingLength) が 0。
+        /// 求めた液状化区間の長さ (BucklingLength) は設定に関わらず持ち、設定を戻せば杭要素分割をやり直さずに効く。
+        /// (以前は考慮しないときに 0 を書き込み、切り替えても分割をやり直すまで戻らなかった。2026-10-09)
+        /// </summary>
         [TestMethod]
         public void OptionOff_KeepsTheBucklingLengthAtZero()
         {
@@ -155,8 +168,20 @@ namespace TestProject1
                 ConcreteModelOptions.ConsiderSteelPipeColumnBuckling = false;
                 model.GenerateSoilPiles();
 
-                Assert.AreEqual(0.0, SectionBucklingLength(model), 1e-9,
-                    "考慮しない設定なのに座屈長が付いています");
+                Assert.AreEqual(0.0, EffectiveBucklingLength(model), 1e-9,
+                    "考慮しない設定なのに耐力に座屈長を使っています");
+                double stored = SectionBucklingLength(model);
+                Assert.IsTrue(stored > 0, "液状化区間の長さを持っていません (設定を戻したときに効かない)");
+
+                // 分割をやり直さずに設定を戻すと、そのまま効く
+                ConcreteModelOptions.ConsiderSteelPipeColumnBuckling = true;
+                Assert.AreEqual(stored, EffectiveBucklingLength(model), 1e-9);
+
+                // 以前の版で 0 を書き込んで保存したファイルも、求め直せば長さが戻る
+                foreach (var seg in model.PileBodies.SelectMany(pb => pb.PileBodySegments))
+                    if (seg?.PileSection != null) seg.PileSection.BucklingLength = 0.0;
+                model.RefreshSteelPipeBucklingLengths();
+                Assert.AreEqual(stored, SectionBucklingLength(model), 1e-9, "座屈長を入力から求め直せません");
             }
             finally
             {

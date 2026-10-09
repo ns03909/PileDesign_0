@@ -55,16 +55,38 @@ namespace PileDesign.Models.InputData
         [JsonIgnore]
         public double Kp => Math.Pow(Math.Tan(PileDesign.Common.Units.DegToRad(45 + Phi * 0.5)), 2);
 
+        // (kN/m2) 地表面に載る上載荷重 q。各区間の土被り圧に一様に足す。
+        // 根入部の入力に上載荷重の欄はないので、現状は常に 0 (呼び出し側が与えたときだけ効く)。
         [JsonIgnore]
-        public double Q { get; set; } // (kN/m2) 深さZaでの上載圧（public set にしておく）
+        public double Q { get; set; }
 
-        // P0, Pp 等は状態に基づき動的計算する
+        /// <summary>
+        /// 区間の代表の鉛直有効応力 σv' (kN/m2)。区間の上端・下端の有効土被り圧の平均。
+        /// <para>
+        /// StressTop / StressBtm は地表面から数えた有効土被り圧 (地下水位以下は水圧を引く。
+        /// <see cref="SoilPile.GetEffectiveStress(GroundInput, double, double)"/>)。
+        /// 区間が 1 つの土層の中にあれば土被り圧は深さに線形なので、両端の平均は区間中央の値に等しく、
+        /// 基礎指針'19 (4.3.21)(4.3.22) の合力 ½γB(zb²−za²)K を区間厚 (zb−za) と B で割った
+        /// γ·(za+zb)/2·K と一致する (za, zb は地表面からの深さ)。
+        /// </para>
+        /// </summary>
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double P0 => (Q + Gamma * (ZTop - ZBtm)) * K0; // kN/m2 p484
+        public double StressMid => (StressTop + StressBtm) * 0.5;
+
+        // P0, Pp 等は状態に基づき動的計算する (kN/m2)。基礎指針'19 (4.3.21)(4.3.22) を区間の圧力度にしたもの。
+        //
+        // 以前は土被り圧を γ·(ZTop−ZBtm)、つまり<b>区間の厚さ</b>で数えていた。
+        // 深さによらず厚さだけで決まるので、同じ厚さの区間は浅くても深くても同じ土圧になり、
+        // 深い区間ほど土圧を過小に (厚い区間は浅くても過大に) 見ていた。
+        // 文献の z は地表面からの深さなので、区間の代表深さの土被り圧 (StressMid) を使う。
+        // また上載荷重 q (Q) は式にはあったが設定されず常に 0 だった (入力欄がないため。いまも 0)。
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double Pp => (Q + Gamma * (ZTop - ZBtm)) * Kp + 2 * C * Math.Sqrt(Kp); // kN/m2 p484
+        public double P0 => (Q + StressMid) * K0;
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double Pp => (Q + StressMid) * Kp + 2 * C * Math.Sqrt(Kp);
 
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]

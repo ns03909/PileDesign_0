@@ -571,12 +571,26 @@ namespace PileDesign.FEM
             return (EItan - EIsec) * (phiY / phiRes) * (phiZ / phiRes);
         }
 
+        /// <summary>
+        /// 部材軸まわりのコードアングル (度)。基礎梁の「角度β」(断面の回し) を渡す。杭は 0。
+        ///
+        /// <para>以前は FEM に渡しておらず、角度β は描画・DXF/3dm 書き出しにだけ効いていた
+        /// (梁を β=90° に寝かせても、剛性の軸は β=0 のまま)。描画・書き出しと同じ向き
+        /// (局所 y' = cosβ·y + sinβ·z) で座標変換に入れる。</para>
+        /// </summary>
+        public double CoordAngle
+        {
+            get => _coordAngle;
+            set { _coordAngle = value; _cachedCoordTransform = null; }
+        }
+        private double _coordAngle;
+
         // 座標変換マトリクスのキャッシュ（解析中ノード座標は不変）
         private Matrix<double> _cachedCoordTransform;
 
         public Matrix<double> GetCachedCoordTransform()
         {
-            return _cachedCoordTransform ??= Utils.GetTransformMatrix(NodeI, NodeJ);
+            return _cachedCoordTransform ??= Utils.GetTransformMatrix(NodeI, NodeJ, CoordAngle);
         }
 
         public void ClearCachedCoordTransform() => _cachedCoordTransform = null;
@@ -621,7 +635,7 @@ namespace PileDesign.FEM
 
             // 節点の変位ベクトル（要素座標系）
 
-            Matrix<double> t = Utils.GetTransformMatrix(NodeI, NodeJ); //double[,] t = Utils.GetTransformMatrix(nodeI, nodeJ);
+            Matrix<double> t = Utils.GetTransformMatrix(NodeI, NodeJ, CoordAngle);
             Vector<double> d = t * disp; //double[] d = Utils.MatrixVectorMultiply(t, disp);
             // 要素応力 f = k * d
             Matrix<double> k = (isTan ? KeTan : KeSec) ?? throw new InvalidOperationException("Stiffness matrix is not initialized. Call SetKe() before CalcInternalForce().");
@@ -731,6 +745,7 @@ namespace PileDesign.FEM
                 KSec_y = this.KSec_y,
                 KSec_z = this.KSec_z,
                 EA_multiplier = this.EA_multiplier,
+                CoordAngle = this.CoordAngle,
                 EA_Multiplier = this.EA_Multiplier,
                 CurrentCurvature = this.CurrentCurvature,
                 CurrentMoment = this.CurrentMoment,

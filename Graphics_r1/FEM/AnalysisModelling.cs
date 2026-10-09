@@ -1001,6 +1001,8 @@ namespace PileDesign.FEM
 
                 // Beam 要素を作成 (識別名は 1-based の位置インデックスを使用)
                 var beam = new Beam($"FoundationBeam-{InputModel.FoundationBeamInput.GetBeamNo(fbBeam)}", section, nodeI, nodeJ, 1.0, 1.0);
+                // 断面の回し (角度β)。以前は解析に渡っていなかった
+                beam.CoordAngle = fbBeam.AngleBeta;
                 // 基礎梁のせん断変形 (基本設定。既定は含める)
                 if (InputModel.FundamentalInput?.IncludeFoundationBeamShearDeformation ?? true)
                     beam.EnableShearDeformation();
@@ -1113,9 +1115,7 @@ namespace PileDesign.FEM
                 shearAreaZ = (5.0 / 6.0) * b * h;
                 iy = b * h * h * h / 12.0;
                 iz = h * b * b * b / 12.0;
-                double a = Math.Max(b, h);
-                double c = Math.Min(b, h);
-                torsionalMoment = a * c * c * c * (1.0 / 3.0 - 0.21 * c / a * (1 - c * c * c * c / (12 * a * a * a * a)));
+                torsionalMoment = Models.InputData.BeamSection.RectangularTorsionConstant(b, h);
             }
 
             // Material キャッシュ (基礎梁は利用者が入力したポアソン比)

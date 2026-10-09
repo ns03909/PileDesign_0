@@ -121,6 +121,15 @@ namespace PileDesign.Models.Results
     {
         public string LoadCaseName { get; set; } = "";
 
+        /// <summary>
+        /// 常時 (VL) の記録か。基礎梁なしの記録は "VL"、基礎梁ありの記録は「矩形荷重 (VL)」「杭軸力 VL」という名前で持つ。
+        /// 以前は沈下量の検定が "VL" との完全一致で探しており、基礎梁ありの記録を拾えずに群杭ぶんを 0 として判定していた。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsLongTerm => LoadCaseName == "VL" || LoadCaseName.EndsWith("(VL)", System.StringComparison.Ordinal)
+                                  || LoadCaseName.EndsWith(" VL", System.StringComparison.Ordinal);
+
         /// <summary>このレコードを生成した解析タイプ ("任意矩形" / "個別矩形" / "個別十字" / "個別十字（基礎梁反力）" / "個別矩形（基礎梁考慮）")。空文字 = 旧データ。</summary>
         public string LoadingType { get; set; } = "";
 

@@ -856,8 +856,11 @@ namespace PileDesign.ViewModels
                         cohesive = groundLayer.Cohesive;
                         //phi = Math.Min(Math.Sqrt(20 * groundLayer.NValue) + 15, 40); // 大崎式
 
-                        stressTop = SoilPile.GetEffectiveStress(groundInput,zTop);
-                        stressBtm = SoilPile.GetEffectiveStress(groundInput,zBtm);
+                        // 土圧は地下外壁の外側に残る地盤のものなので、地表面から数える
+                        // (以前は杭と同じく地中応力計算用標高から数えており、根切り底に置くと外壁の土圧が 0 になった)。
+                        // この値が土圧 p0・pp の土被り圧 (DoatsuGoryokuBaneItem.StressMid) と内部摩擦角の両方に使われる。
+                        stressTop = SoilPile.GetEffectiveStress(groundInput, zTop, groundInput.GroundTopAltitude);
+                        stressBtm = SoilPile.GetEffectiveStress(groundInput, zBtm, groundInput.GroundTopAltitude);
                         phi = groundInput.GetFrictionAngle(groundLayer.NValue, (stressTop + stressBtm) * 0.5);
                         name = groundLayer.Name;
                         break;
@@ -1681,10 +1684,14 @@ namespace PileDesign.ViewModels
                             {
                                 if (PileDesign.Common.NumericText.TryParse(textBox.Text, out double newValue))
                                 {
-                                    // SelectedZDataItemsを直接使用（ItemsSourceのキャストは型の不一致でnullになる可能性がある）
-                                    var items = SelectedZDataItems;
+                                    // 杭の表と根入部の表がこのハンドラを共有している。編集した行の種類で並びを選ぶ。
+                                    // 以前は杭の並びだけを見ており、根入部の行は見つからずに抜けて「直上より小さく」の検査が素通りした
+                                    // (逆順や層境界をまたぐ分割点から、γ・c・φ が 0 の土圧合力ばねが黙って作られた)
+                                    System.Collections.Generic.IList<ZDataItem>? items = editedElement is EmbedmentZDataItem
+                                        ? EmbedmentZsCollection?.Cast<ZDataItem>().ToList()
+                                        : SelectedZDataItems?.Cast<ZDataItem>().ToList();
                                     if (items == null) return;
-                                    int index = items.IndexOf(editedElement as PileZDataItem);
+                                    int index = items.IndexOf(editedElement);
                                     if (index < 0) return; // アイテムが見つからない場合は終了
 
                                     if (index > 0 && newValue >= items[index - 1].Z)

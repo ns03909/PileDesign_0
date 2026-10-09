@@ -1836,7 +1836,7 @@ namespace PileDesign.ViewModels
             if (pileGroundErrors.Count > 0)
             {
                 var msg = "以下の杭は地盤と重なっていないため、水平解析を実行できません。\n" +
-                          "基本設定の「Z=0 の標高」を確認するか、杭頭 Z を見直してください。\n\n" +
+                          "リボンの「プロジェクト 情報」で「Z=0 の標高」を確認するか、杭頭 Z を見直してください。\n\n" +
                           string.Join("\n", pileGroundErrors);
                 MessageService.Show(msg, "杭-地盤位置の不整合", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
@@ -2040,6 +2040,11 @@ namespace PileDesign.ViewModels
                         MessageBoxResult.Yes);
                     if (choice != MessageBoxResult.Yes) return;
                     additive = false;
+                    // 新規実行に切り替えたら、計算モデルも作り直す。ねじれ拘束・接続方式・杭先端 P-S ばねなどは
+                    // モデルを作るときにしか読まれない。以前は作り直さず、相違として挙げた変更前の境界条件のまま全ケースを解き、
+                    // 実行条件の記録には変更後の値が残っていた
+                    if (!TryCreateAnalysisModel())
+                        return;
                 }
             }
 

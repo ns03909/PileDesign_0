@@ -66,8 +66,35 @@ namespace PileDesign.Models.InputData
     /// <summary>
     /// 梁断面（幅、高さ、断面性能）
     /// </summary>
-    public class BeamSection : BaseModel
+    public class BeamSection : BaseModel, System.Text.Json.Serialization.IJsonOnDeserialized
     {
+        /// <summary>
+        /// 矩形断面のねじり定数 J = β·a·b³ (a: 長辺、b: 短辺、β = 1/3 − 0.21·(b/a)·(1 − (b/a)⁴/12))。
+        /// 断面の表・断面ウィザード・断面の無い梁要素のフォールバック (水平解析・鉛直解析) の 4 か所がこれを使う。
+        ///
+        /// 以前は断面の表とウィザードの 2 か所が長辺と短辺を取り違え (a³·b)、幅 0.5 m・せい 1.0 m の梁で
+        /// J を約 4 倍大きく見積もっていた。断面の無い梁要素のフォールバックだけが正しい式だった。
+        /// </summary>
+        public static double RectangularTorsionConstant(double width, double height)
+        {
+            double a = Math.Max(width, height);
+            double c = Math.Min(width, height);
+            return a * c * c * c * (1.0 / 3.0 - 0.21 * c / a * (1 - c * c * c * c / (12 * a * a * a * a)));
+        }
+
+        /// <summary>
+        /// 読込の直後に断面諸元を幅・高さ・係数から求め直す (どれも読み取り専用の派生値)。
+        /// ねじり定数の式を直す前に保存したファイルの値を、正しい式の値にそろえるため。
+        /// </summary>
+        void System.Text.Json.Serialization.IJsonOnDeserialized.OnDeserialized() => RecalculateProperties();
+
+        /// <summary>
+        /// 既定の幅・高さから断面諸元を求めておく。以前は丸めた既定値 (J = 1.597 など) を直に持っており、
+        /// 既定と同じ幅・高さを代入しても求め直されず (値が変わらないので)、複製 (読込で求め直す) と値が食い違った
+        /// (元に戻すのあとに入力の署名が変わり「再解析が必要」が誤って付いた。J は取り違えた式の値でもあった)。
+        /// </summary>
+        public BeamSection() => RecalculateProperties();
+
         // No プロパティは廃止。番号は所属コレクション内の位置 (1-based) として扱う。
 
         private string _name = "";
@@ -91,48 +118,48 @@ namespace PileDesign.Models.InputData
             set { if (SetProperty(ref _height, value)) RecalculateProperties(); }
         }
 
-        // 断面積 (m²) — デフォルト: 0.8 * 2.0 = 1.6
-        private double _area = 1.6;
+        // 断面積 (m²)。既定値はコンストラクタで幅・高さから求める
+        private double _area;
         public double Area
         {
             get => _area;
             set => SetProperty(ref _area, value);
         }
 
-        // せん断断面積 Y方向 (m²) — デフォルト: 1.6 * 5/6 ≈ 1.333
-        private double _shearAreaY = 1.333;
+        // せん断断面積 Y方向 (m²)
+        private double _shearAreaY;
         public double ShearAreaY
         {
             get => _shearAreaY;
             set => SetProperty(ref _shearAreaY, value);
         }
 
-        // せん断断面積 Z方向 (m²) — デフォルト: 1.6 * 5/6 ≈ 1.333
-        private double _shearAreaZ = 1.333;
+        // せん断断面積 Z方向 (m²)
+        private double _shearAreaZ;
         public double ShearAreaZ
         {
             get => _shearAreaZ;
             set => SetProperty(ref _shearAreaZ, value);
         }
 
-        // 断面ねじりモーメント (m⁴) — デフォルト: beta(0.4) * 0.8 * 2.0^3 ≈ 1.597
-        private double _torsionalMoment = 1.597;
+        // 断面ねじりモーメント (m⁴)
+        private double _torsionalMoment;
         public double TorsionalMoment
         {
             get => _torsionalMoment;
             set => SetProperty(ref _torsionalMoment, value);
         }
 
-        // 断面二次モーメント Y軸周り (m⁴) — デフォルト: 0.8 * 2.0^3 / 12 ≈ 0.5333
-        private double _momentOfInertiaYY = 0.5333;
+        // 断面二次モーメント Y軸周り (m⁴)
+        private double _momentOfInertiaYY;
         public double MomentOfInertiaYY
         {
             get => _momentOfInertiaYY;
             set => SetProperty(ref _momentOfInertiaYY, value);
         }
 
-        // 断面二次モーメント Z軸周り (m⁴) — デフォルト: 2.0 * 0.8^3 / 12 ≈ 0.0853
-        private double _momentOfInertiaZZ = 0.0853;
+        // 断面二次モーメント Z軸周り (m⁴)
+        private double _momentOfInertiaZZ;
         public double MomentOfInertiaZZ
         {
             get => _momentOfInertiaZZ;
@@ -194,20 +221,8 @@ namespace PileDesign.Models.InputData
             ShearAreaY = (5.0 / 6.0) * Width * Height * AyFactor;
             ShearAreaZ = (5.0 / 6.0) * Width * Height * AzFactor;
 
-            // 断面ねじりモーメント Ixx（矩形断面）
-            double ratio = Width / Height;
-            double beta;
-            if (ratio <= 1.0)
-            {
-                beta = (1.0 / 3.0) - 0.21 * ratio * (1.0 - Math.Pow(ratio, 4) / 12.0);
-                TorsionalMoment = beta * Width * Math.Pow(Height, 3) * IxxFactor;
-            }
-            else
-            {
-                double invRatio = Height / Width;
-                beta = (1.0 / 3.0) - 0.21 * invRatio * (1.0 - Math.Pow(invRatio, 4) / 12.0);
-                TorsionalMoment = beta * Height * Math.Pow(Width, 3) * IxxFactor;
-            }
+            // 断面ねじりモーメント Ixx（矩形断面。長辺 a・短辺 b で β·a·b³）
+            TorsionalMoment = RectangularTorsionConstant(Width, Height) * IxxFactor;
 
             // 断面二次モーメント
             MomentOfInertiaYY = Width * Math.Pow(Height, 3) / 12.0 * IyyFactor;

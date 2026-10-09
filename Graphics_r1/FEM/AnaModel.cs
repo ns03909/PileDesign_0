@@ -262,6 +262,29 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
+        /// 慣性力の作用点 (代表点 "ActionPoint") を、その荷重ケースの慣性力中心へ動かす。動かしたら true。
+        ///
+        /// <para>計算モデルは作用点を 1 つだけ持ち、作るときにレベル1 の 1 番目のケースの慣性力中心に置く。
+        /// 荷重ケースごとに慣性力中心を入力できるのに、以前は全ケースをこの 1 点で解いていた
+        /// (偏心率の警告と計算書の入力表はケースごとの値を示していた)。ケースのモデル (DeepCopy 済み) に対して呼ぶ。</para>
+        ///
+        /// <para>作用点は剛体連結の master なので、動かしたら slave の腕 (master→slave のベクトル) と
+        /// 転送行列、拘束の連鎖を作り直す (<see cref="ApplyAxialReleaseAtPileHeads"/> と同じ作り直し)。</para>
+        /// </summary>
+        public bool RelocateActionPoint(double x, double y, double z)
+        {
+            var actionNode = Nodes?.FirstOrDefault(n => n.Name == "ActionPoint");
+            if (actionNode == null) return false;
+            if (!double.IsFinite(x) || !double.IsFinite(y) || !double.IsFinite(z)) return false;
+            var c = actionNode.Coord;
+            if (Math.Abs(c.X - x) < 1e-9 && Math.Abs(c.Y - y) < 1e-9 && Math.Abs(c.Z - z) < 1e-9) return false;
+            actionNode.SetNodeInfo(actionNode.Name, x, y, z);
+            SetSlaveNodes();
+            BuildDofsAndChains();
+            return true;
+        }
+
+        /// <summary>
         /// Nodes の Boundary / MasterNodes に基づき、方程式番号の付け直し・F/DF/D ベクトル
         /// 再確保・Master-Slave チェーン (ResolvedDofMap) の再計算を行う。
         /// コンストラクタから呼ばれるほか、ケース別に杭頭の master-slave を変更した後の
