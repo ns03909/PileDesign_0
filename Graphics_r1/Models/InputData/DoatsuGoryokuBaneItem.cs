@@ -55,11 +55,6 @@ namespace PileDesign.Models.InputData
         [JsonIgnore]
         public double Kp => Math.Pow(Math.Tan(PileDesign.Common.Units.DegToRad(45 + Phi * 0.5)), 2);
 
-        // (kN/m2) 地表面に載る上載荷重 q。各区間の土被り圧に一様に足す。
-        // 根入部の入力に上載荷重の欄はないので、現状は常に 0 (呼び出し側が与えたときだけ効く)。
-        [JsonIgnore]
-        public double Q { get; set; }
-
         /// <summary>
         /// 区間の代表の鉛直有効応力 σv' (kN/m2)。区間の上端・下端の有効土被り圧の平均。
         /// <para>
@@ -80,13 +75,13 @@ namespace PileDesign.Models.InputData
         // 深さによらず厚さだけで決まるので、同じ厚さの区間は浅くても深くても同じ土圧になり、
         // 深い区間ほど土圧を過小に (厚い区間は浅くても過大に) 見ていた。
         // 文献の z は地表面からの深さなので、区間の代表深さの土被り圧 (StressMid) を使う。
-        // また上載荷重 q (Q) は式にはあったが設定されず常に 0 だった (入力欄がないため。いまも 0)。
+        // 上載荷重 q の項もあったが、文献の式 (4.3.21)(4.3.22) に無く、設定もされず常に 0 だったので外した。
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double P0 => (Q + StressMid) * K0;
+        public double P0 => StressMid * K0;
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double Pp => (Q + StressMid) * Kp + 2 * C * Math.Sqrt(Kp);
+        public double Pp => StressMid * Kp + 2 * C * Math.Sqrt(Kp);
 
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
@@ -132,7 +127,6 @@ namespace PileDesign.Models.InputData
             StressTop = StressBtm = 0;
             DeltaP = 0;
             Ysp = 0;
-            Q = 0;
             K0 = 0.5;
         }
 
@@ -159,7 +153,6 @@ namespace PileDesign.Models.InputData
             StressTop = stressTop;
             StressBtm = stressBtm;
 
-            // Q は呼び出し側でセットされる想定のためここでは触らない
             // P0/Pp 等は動的プロパティで計算される
         }
 

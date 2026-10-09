@@ -9925,7 +9925,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
             <div class="formula-block">
                 <div class="formula-left">
-                    $$p_0 = (q + \sigma_z')K_0, \quad p_p = (q + \sigma_z')K_p + 2c\sqrt{K_p}, \quad \sigma_z' = \frac{\sigma_{za}' + \sigma_{zb}'}{2}$$
+                    $$p_0 = \sigma_z' K_0, \quad p_p = \sigma_z' K_p + 2c\sqrt{K_p}, \quad \sigma_z' = \frac{\sigma_{za}' + \sigma_{zb}'}{2}$$
                 </div>
                 <div class="formula-right"></div>
             </div>
@@ -9933,7 +9933,6 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <ul class="symbol-list">
                 <li class="symbol-intro">ここに、</li>
                 <li><span class="symbol-label">$\sigma_{za}'$, $\sigma_{zb}'$</span>区間の上端・下端の有効土被り圧。地表面から各土層の単位体積重量で積み上げ、地下水位以下は水圧を除きます（地中応力計算用標高ではなく地表面から数えます。地下外壁の外側の地盤は掘削されないためです）</li>
-                <li><span class="symbol-label">$q$</span>地表面の上載荷重。入力欄がないため 0 として扱います</li>
             </ul>
 
             <p>

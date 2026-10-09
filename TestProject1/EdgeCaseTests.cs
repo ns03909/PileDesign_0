@@ -498,7 +498,7 @@ namespace TestProject1
         private static DoatsuGoryokuBaneItem BuildTestItem()
         {
             // Pp - P0 が既知の値になるパラメータを用意
-            // P0 = (Q + σz') · K0、Pp = (Q + σz') · Kp + 2·C·√Kp、σz' = (StressTop + StressBtm)/2
+            // P0 = σz' · K0、Pp = σz' · Kp + 2·C·√Kp、σz' = (StressTop + StressBtm)/2
             // (土被り圧は区間の厚さではなく、区間の上端・下端の有効土被り圧の平均。2026-10-09)
             // σz'=10 (5 と 15 の平均), Q=0, K0=0.5, Φ=30°(Kp=3), C=0
             //   → P0 = 5, Pp = 30, Pp-P0 = 25
@@ -512,7 +512,6 @@ namespace TestProject1
                 StressTop = 5,
                 StressBtm = 15,
                 K0 = 0.5,
-                Q = 0,
             };
             item.SetDeltaPAndYsp(deltaP: 0.01, ysp: 0.005);
             return item;

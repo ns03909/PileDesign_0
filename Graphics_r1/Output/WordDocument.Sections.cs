@@ -349,8 +349,8 @@ namespace PileDesign.Output
             // 合力を区間厚と B で割ると γ(za+zb)/2·K となり、一様な土層ではこの平均と一致する。
             AddInlineMathParagraph(body, [Tex(@"\left|y\right| < \Delta_{p}"), "の場合:　 ", Tex(@"\p_{E} = \frac{(p_{p}-p_{0}) \left(\Delta_{p}-y_{sp}\right) y}{2\Delta_{p}y_{sp} + \left(\Delta_{p}-3y_{sp}\right)\left|y\right|}")]);
             AddInlineMathParagraph(body, [Tex(@"\left|y\right| \ge \Delta_{p}"), "の場合:　 ", Tex(@"\p_{E} = p_{p} - p_{0}")]);
-            AddInlineMathParagraph(body, [Tex(@"\p_{0} = \left(q + \sigma_{z}'\right) K_{0}")]);
-            AddInlineMathParagraph(body, [Tex(@"\p_{p} = \left(q + \sigma_{z}'\right) K_{p} + 2c\sqrt{K_{p}}")]);
+            AddInlineMathParagraph(body, [Tex(@"\p_{0} = \sigma_{z}' K_{0}")]);
+            AddInlineMathParagraph(body, [Tex(@"\p_{p} = \sigma_{z}' K_{p} + 2c\sqrt{K_{p}}")]);
             AddInlineMathParagraph(body, [Tex(@"\sigma_{z}' = \frac{\sigma_{za}' + \sigma_{zb}'}{2}"), "（一様な土層で地下水位より上では ", Tex(@"\sigma_{z}' = \gamma\frac{z_{a}+z_{b}}{2}"), "）"]);
             AddInlineMathParagraph(body, [Tex(@"\K_{p} = \tan^{2}\left(45^{\circ} + \frac{\phi}{2}\right)"), "、", Tex(@"\K_{0} = 0.5")]);
             AddInlineMathParagraph(body, [Tex(@"\Delta_{p} = 0.05\,D_{f}"), "、", Tex(@"\y_{sp} = 0.1\,\Delta_{p}")]);
@@ -359,7 +359,7 @@ namespace PileDesign.Output
             const double tabDg = 15; // mm (symbolDescTabPosition と同値)
             AddText(body, "記号");
             AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"\p_{E}"), ": 土圧合力ばねの抵抗土圧度 [kN/m<^2>]、", Tex(@"\P_{Et}"), ": 区間の土圧合力 [kN]、", Tex(@"y"), ": 杭と地盤の相対変位 [m]"]);
-            AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"\p_{0}, \p_{p}"), ": 静止土圧度・受働土圧度 [kN/m<^2>]、", Tex(@"q"), ": 地表面の上載荷重 [kN/m<^2>]（入力欄がないため 0 として扱う）"]);
+            AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"\p_{0}, \p_{p}"), ": 静止土圧度・受働土圧度 [kN/m<^2>]"]);
             AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"\sigma_{z}'"), ": 区間の代表深さの有効土被り圧 [kN/m<^2>]、", Tex(@"\sigma_{za}', \sigma_{zb}'"), ": 区間の上端・下端の有効土被り圧 [kN/m<^2>]（地表面から数え、地下水位以下は水圧を除く）"]);
             AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"z_{a}, z_{b}"), ": 区間の上端・下端の地表面からの深さ [m]、", Tex(@"\gamma"), ": 土の単位体積重量 [kN/m<^3>]、", Tex(@"h"), ": 区間の厚さ [m]"]);
             AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"c"), ": 粘着力 [kN/m<^2>]、", Tex(@"\phi"), ": 内部摩擦角 [°]"]);

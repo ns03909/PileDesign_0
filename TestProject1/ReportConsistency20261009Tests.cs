@@ -120,8 +120,8 @@ namespace TestProject1
             StringAssert.Contains(src, @"\left(\Delta_{p}-3y_{sp}\right)\left|y\right|");
             // 土被り圧は区間の厚さ γh ではなく、区間の代表深さの有効土被り圧 σz' (2026-10-09 修正。
             // EarthPressureSpringDepth20261009Tests)
-            StringAssert.Contains(src, @"\p_{p} = \left(q + \sigma_{z}'\right) K_{p} + 2c\sqrt{K_{p}}");
-            Assert.IsFalse(src.Contains(@"q + \gamma h"), "土被り圧が区間の厚さ (γh) のままです");
+            StringAssert.Contains(src, @"\p_{p} = \sigma_{z}' K_{p} + 2c\sqrt{K_{p}}");
+            Assert.IsFalse(src.Contains(@"\gamma h\right"), "土被り圧が区間の厚さ (γh) のままです");
 
             // 書いた式で実装の値を再現できること (式と実装の照合)
             // 地表面から深さ 0〜2 m の区間 (γ=18、地下水位より上): σz' = (0 + 36)/2 = 18

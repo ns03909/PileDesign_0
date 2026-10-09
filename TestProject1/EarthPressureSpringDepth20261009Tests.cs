@@ -14,7 +14,7 @@ namespace TestProject1
     /// 同じ厚さの区間は浅くても深くても同じ土圧になり、深い区間の抵抗を過小に見ていた。
     /// 基礎指針'19 (4.3.21)(4.3.22) の合力 ½γB(zb²−za²)K を区間厚と B で割ると γ(za+zb)/2·K で、
     /// z は地表面からの深さ。いまは区間の上端・下端の有効土被り圧 (地表面から数える) の平均を使う。
-    /// また上載荷重 q は式にあるが入力欄がなく、常に 0 のまま (呼び出し側が与えれば効く)。
+    /// 上載荷重 q の項は文献の式に無く、設定もされていなかったので外した。
     /// </summary>
     [TestClass]
     public class EarthPressureSpringDepth20261009Tests
@@ -62,17 +62,6 @@ namespace TestProject1
             Assert.AreEqual(ppBook, item.Pp * h, 1e-9, "(4.3.22) と合いません");
         }
 
-        [TestMethod]
-        public void Surcharge_AddsToTheOverburdenOfEverySegment()
-        {
-            var item = Item(-2.0, -4.0, 18, 30, 0);
-            double p0 = item.P0, pp = item.Pp;
-            Assert.AreEqual(0.0, item.Q, "上載荷重の既定は 0 (入力欄がない)");
-
-            item.Q = 20;
-            Assert.AreEqual(p0 + 20 * 0.5, item.P0, 1e-9, "q が静止土圧に K0 倍で足されていません");
-            Assert.AreEqual(pp + 20 * item.Kp, item.Pp, 1e-9, "q が受働土圧に Kp 倍で足されていません");
-        }
 
         // ===== 画面で組み立てた土圧合力ばね (ElementDivisionViewModel.SetDoatsuGoryokuBane) =====
 
@@ -129,7 +118,6 @@ namespace TestProject1
             Assert.AreEqual(a.DZ, b.DZ, 1e-9);
             Assert.IsTrue(b.P0 > a.P0 && b.Pp - b.P0 > a.Pp - a.P0,
                 $"深い区間の土圧が大きくなっていません (浅 p0={a.P0:F2}, pp−p0={a.Pp - a.P0:F2} / 深 p0={b.P0:F2}, pp−p0={b.Pp - b.P0:F2})");
-            Assert.AreEqual(0.0, a.Q, "上載荷重は入力欄がないので 0");
         }
 
         /// <summary>
