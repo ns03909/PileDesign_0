@@ -260,7 +260,7 @@ namespace PileDesign.ViewModels
 
         // 水平解析完了時に HorizontalCalculationViewModel が cache する解析サマリーテキスト
         // (docx 出力で先頭の "━━━ 解析サマリーレポート ━━━" ブロックを再利用するため)
-        public string LastAnalysisSummaryText { get; set; }
+        public string? LastAnalysisSummaryText { get; set; }
 
         // 液状化有無の出力オプション
         [ObservableProperty] private bool includeOutputLiquefactionYes = true;

@@ -1038,8 +1038,10 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
+                // 以前は空の配列を返して握りつぶしていたので、計算書には見出しとキャプションだけが残り、
+                // 図が無い理由がどこにも出なかった。呼び出し側 (WordDocument) が NoteOmitted で省いたことを書く
                 Log.Warning(ex, "RenderPilingLayoutPngBytes error");
-                return Array.Empty<byte>();
+                throw;
             }
         }
 
@@ -1624,8 +1626,10 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
+                // 握りつぶして空の配列を返すと、計算書に図の無い見出し・キャプションが残る (理由も出ない)。
+                // 呼び出し側 (WordDocument) が NoteOmitted で省いたことを書く。中止 (OperationCanceledException) もここを通す
                 Log.Warning(ex, "DiagramRenderer error");
-                return [];
+                throw;
             }
         }
 

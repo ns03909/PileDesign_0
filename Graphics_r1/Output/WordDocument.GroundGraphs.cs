@@ -1,4 +1,4 @@
-using DocumentFormat.OpenXml.Packaging;
+﻿using DocumentFormat.OpenXml.Packaging;
 using PileDesign.Common;
 using PileDesign.Models.InputData;
 using ScottPlot;
@@ -63,7 +63,7 @@ namespace PileDesign.Output
             }
         }
 
-        // ---- 任意地盤変位グラフ (DmaxUStar L1/L2) -------------------------------------
+        // ---- 地盤変位グラフ (自動計算: DmaxUStar / DmaxUStarSigmaGammaCyH の L1/L2、任意入力: CustomDisplacementProfile) ----
 
         private void AddGroundDisplacementGraph(MainDocumentPart mainPart, Body body, GroundInput ground, string groundLabel)
         {
@@ -98,15 +98,19 @@ namespace PileDesign.Output
                 }
                 else
                 {
-                    // 自動計算モード: DmaxU* から L1/L2 を描画 (旧挙動)
-                    hasAny  = AddDispScatter(plot, ground, depths, 0, NikkenSKColor.SkyBlue, "L1");
-                    hasAny |= AddDispScatter(plot, ground, depths, 1, NikkenSKColor.DeepBlue, "L2");
+                    // 自動計算モード: 非液状化は DmaxUStar、液状化は DmaxUStarSigmaGammaCyH から L1/L2 を描画。
+                    // 解析は液状化を考慮するケースで後者を使う (ZDataItem.GroundDisp1L/2L)。以前は非液状化の 2 本だけを
+                    // 描いていたので、液状化ケースの解析に入った地盤変位が計算書のどこにも無かった。
+                    hasAny  = AddDispScatter(plot, ground, depths, 0, NikkenSKColor.SkyBlue, "L1 非液状化", isLiq: false);
+                    hasAny |= AddDispScatter(plot, ground, depths, 0, NikkenSKColor.SkyBlue, "L1 液状化", isLiq: true);
+                    hasAny |= AddDispScatter(plot, ground, depths, 1, NikkenSKColor.DeepBlue, "L2 非液状化", isLiq: false);
+                    hasAny |= AddDispScatter(plot, ground, depths, 1, NikkenSKColor.DeepBlue, "L2 液状化", isLiq: true);
                 }
                 if (!hasAny) return;
 
                 string title = isCustom
                     ? $"地盤変位 (任意入力) — {groundLabel}"
-                    : $"地盤変位 — {groundLabel}";
+                    : $"地盤変位 (自動計算) — {groundLabel}";
                 plot.Axes.Title.Label.Text = title;
                 plot.Axes.Title.Label.FontName = Fonts.Detect(title);
                 plot.Axes.Bottom.Label.Text = "地盤変位 (mm)";
@@ -118,7 +122,8 @@ namespace PileDesign.Output
                 plot.Axes.AutoScale();
                 plot.Axes.AutoScaleExpandY();
 
-                string captionMode = isCustom ? "任意地盤変位 (任意入力)" : "任意地盤変位";
+                // 自動計算の図を「任意地盤変位」と題していた (任意入力と取り違える)
+                string captionMode = GroundDisplacementCaptionMode(isCustom);
                 SavePlotAndAddToBody(mainPart, body, plot, $"{captionMode} ({groundLabel})");
             }
             catch (Exception ex)
@@ -127,25 +132,43 @@ namespace PileDesign.Output
             }
         }
 
-        private static bool AddDispScatter(Plot plot, GroundInput ground, double[] depths, int level, SKColor skColor, string legend)
+        /// <summary>地盤変位の図の表題 (キャプション) の種類。自動計算と任意入力を取り違えない。</summary>
+        internal static string GroundDisplacementCaptionMode(bool isCustom)
+            => isCustom ? "地盤変位 (任意入力)" : "地盤変位 (自動計算)";
+
+        /// <summary>
+        /// 自動計算の地盤変位 (土質点ごと) を 1 本描く。値は解析と同じ出所
+        /// (非液状化 = DmaxUStar、液状化 = DmaxUStarSigmaGammaCyH。<see cref="GroundInput.AutoMassDisplacement"/> と ZDataItem)。
+        /// 液状化は全点 0 (液状化を算定していない地盤) なら描かない。
+        /// </summary>
+        internal static (double[] Xs, double[] Ys) CollectAutoDisplacement(GroundInput ground, double[] depths, int level, bool isLiq)
         {
-            if (ground.GroundMassesData == null) return false;
             var xs = new List<double>();
             var ys = new List<double>();
-            for (int i = 0; i < ground.GroundMassesData.Count; i++)
+            if (ground?.GroundMassesData == null) return ([], []);
+            for (int i = 0; i < ground.GroundMassesData.Count && i < depths.Length; i++)
             {
                 var data = ground.GroundMassesData[i];
-                if (data.DmaxUStar == null || data.DmaxUStar.Count <= level) continue;
-                double v = data.DmaxUStar[level];
+                var values = isLiq ? data.DmaxUStarSigmaGammaCyH : data.DmaxUStar;
+                if (values == null || values.Count <= level) continue;
+                double v = values[level];
                 if (double.IsNaN(v)) continue;
                 xs.Add(v);
                 ys.Add(depths[i]);
             }
-            if (xs.Count == 0) return false;
+            if (isLiq && xs.All(v => v == 0.0)) return ([], []);
+            return (xs.ToArray(), ys.ToArray());
+        }
 
-            var scatter = plot.Add.Scatter(xs.ToArray(), ys.ToArray());
+        private static bool AddDispScatter(Plot plot, GroundInput ground, double[] depths, int level, SKColor skColor, string legend, bool isLiq)
+        {
+            var (xs, ys) = CollectAutoDisplacement(ground, depths, level, isLiq);
+            if (xs.Length == 0) return false;
+
+            var scatter = plot.Add.Scatter(xs, ys);
             scatter.Color = ScottPlot.Color.FromSKColor(skColor);
             scatter.LineWidth = 2;
+            if (isLiq) scatter.LinePattern = LinePattern.Dashed;
             scatter.LegendText = legend;
             return true;
         }
@@ -174,6 +197,7 @@ namespace PileDesign.Output
             var scatter = plot.Add.Scatter(xs.ToArray(), ys.ToArray());
             scatter.Color = ScottPlot.Color.FromSKColor(skColor);
             scatter.LineWidth = 2;
+            if (isLiq) scatter.LinePattern = LinePattern.Dashed;   // 自動計算の図と同じく液状化は破線
             scatter.LegendText = legend;
             return true;
         }

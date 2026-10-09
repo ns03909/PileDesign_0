@@ -53,15 +53,15 @@ namespace PileDesign.Output
 
             AddText(body, "最大引抜き抵抗力", "left");
             //AddEquation_RTU(body);
-            AddEq(body, @"R_{TU} = \left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + W");
+            AddEq(body, @"R_{TU} = \left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) \psi + W");
 
             AddText(body, "残留引抜き抵抗力", "left");
             //AddEquation_RTR(body);
-            AddEq(body, @"R_{TR} = \frac{1}{1.2}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + W");
+            AddEq(body, @"R_{TR} = \frac{1}{1.2}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) \psi + W");
 
             AddText(body, "降伏引抜き抵抗力", "left");
             //AddEquation_RTY(body);
-            AddEq(body, @"R_{TY} = \frac{2}{3}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + W");
+            AddEq(body, @"R_{TY} = \frac{2}{3}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) \psi + W");
 
             AddText(body, "砂質土の引抜き時の最大周面抵抗力", "left");
             //AddEquation_TauSti(body);
@@ -73,15 +73,17 @@ namespace PileDesign.Output
 
             AddText(body, ConcreteModelOptions.MapLimitStateText("使用限界引抜力"), "left");
             //AddEquation_Rdt_SLS(body);
-            AddEq(body, @"R_{d} = \phi_{R} R_{TU} = \frac{1}{3} R_{TU} = \frac{1}{3}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + \frac{1}{3}W");
+            AddEq(body, @"R_{d} = \phi_{R} R_{TU} = \frac{1}{3} R_{TU} = \frac{1}{3}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) \psi + \frac{1}{3}W");
 
             AddText(body, ConcreteModelOptions.MapLimitStateText("損傷限界引抜力"), "left");
             //AddEquation_Rdt_DLS(body);
-            AddEq(body, @"R_{d} = \phi_{R} R_{TY} = \frac{1}{3} R_{TY} = \frac{2}{9}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + \frac{1}{3}W");
+            // 実装 (SoilPile.CalculateResistances) は Rt_DLS = Rty で、1/3 は掛けていない。
+            // ヘルプと検定表 (SummaryTables) も R_TY のまま。式だけが 1/3·R_TY と書いていた。
+            AddEq(body, @"R_{d} = R_{TY} = \frac{2}{3}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) \psi + W");
 
             AddText(body, "終局限界引抜力", "left");
             //AddEquation_Rdt_ULS(body);
-            AddEq(body, @"R_{d} = \phi_{R} R_{TR} = R_{TR} = \frac{1}{1.2}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + W");
+            AddEq(body, @"R_{d} = R_{TR} = \frac{1}{1.2}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) \psi + W");
 
             // 記号定義 (この節だけ記号説明がなかったため追加。static メソッドのためタブ位置は定数)
             const double tab = 15; // mm (symbolDescTabPosition と同値)
@@ -339,15 +341,29 @@ namespace PileDesign.Output
             //    Tex(@"\P_{p} = 2c(z_{b}-z_{a})B\sqrt{K_{p}}+\tfrac{1}{2}\gamma B \left(z_{b}^{2} - z_{a}^{2}\right) K_{p}");
             AddText(body, "土圧合力ばね", "left");
 
-            AddInlineMathParagraph(body, [Tex(@"y < \Delta_{p}"), "の場合:　 ", Tex(@"\P_{Et} = \frac{(P_{p}-P_{0}) \left(\Delta_{p}-y_{sp}\right) y}{2\Delta_{p}y_{sp} + (\Delta_{p}-3)y_{sp} + \left|y\right|}")]);
-            AddInlineMathParagraph(body, [Tex(@"y \ge \Delta_{p}"), "の場合:　 ", Tex(@"\P_{Et} = P_{p} - P_{0}")]);
-            AddInlineMathParagraph(body, [Tex(@"\P_{0} = \tfrac{1}{2}\gamma B z^{2} K_{0}")]);
-            AddInlineMathParagraph(body, [Tex(@"\P_{p} = 2czB\sqrt{K_{p}} + \tfrac{1}{2}\gamma B z^{2} K_{0}")]);
+            // 式は実装 (DoatsuGoryokuBaneItem.GetPressure / P0 / Pp と DoatsuGoryokuBane.UpdateDeltaPYsp) に合わせる。
+            // 以前は分母が (Δp−3)·ysp + |y| (正: (Δp−3·ysp)·|y|)、Pp の土被り項が K0 (正: Kp) で、
+            // 合力 (½γBz²) の形と実装の圧力度 (kN/m²) の形が混在していた。
+            // 土被り圧は区間の上端・下端の有効土被り圧 (地表面から数える) の平均。以前は実装も式も γh (h は区間の厚さ) で、
+            // 同じ厚さの区間は深さによらず同じ土圧になっていた (2026-10-09 修正)。基礎指針'19 (4.3.21)(4.3.22) の
+            // 合力を区間厚と B で割ると γ(za+zb)/2·K となり、一様な土層ではこの平均と一致する。
+            AddInlineMathParagraph(body, [Tex(@"\left|y\right| < \Delta_{p}"), "の場合:　 ", Tex(@"\p_{E} = \frac{(p_{p}-p_{0}) \left(\Delta_{p}-y_{sp}\right) y}{2\Delta_{p}y_{sp} + \left(\Delta_{p}-3y_{sp}\right)\left|y\right|}")]);
+            AddInlineMathParagraph(body, [Tex(@"\left|y\right| \ge \Delta_{p}"), "の場合:　 ", Tex(@"\p_{E} = p_{p} - p_{0}")]);
+            AddInlineMathParagraph(body, [Tex(@"\p_{0} = \left(q + \sigma_{z}'\right) K_{0}")]);
+            AddInlineMathParagraph(body, [Tex(@"\p_{p} = \left(q + \sigma_{z}'\right) K_{p} + 2c\sqrt{K_{p}}")]);
+            AddInlineMathParagraph(body, [Tex(@"\sigma_{z}' = \frac{\sigma_{za}' + \sigma_{zb}'}{2}"), "（一様な土層で地下水位より上では ", Tex(@"\sigma_{z}' = \gamma\frac{z_{a}+z_{b}}{2}"), "）"]);
+            AddInlineMathParagraph(body, [Tex(@"\K_{p} = \tan^{2}\left(45^{\circ} + \frac{\phi}{2}\right)"), "、", Tex(@"\K_{0} = 0.5")]);
+            AddInlineMathParagraph(body, [Tex(@"\Delta_{p} = 0.05\,D_{f}"), "、", Tex(@"\y_{sp} = 0.1\,\Delta_{p}")]);
+            AddInlineMathParagraph(body, [Tex(@"\P_{Et} = p_{E}\,B\,h"), "（区間の上端・下端の節点に 1/2 ずつ作用させる）"]);
 
-            AddInlineMathParagraph(body, [Tex(@"\P_{0} = \tfrac{1}{2}\gamma B \left(z_{b}^{2} - z_{a}^{2}\right) K_{0}")]);
-            AddInlineMathParagraph(body, [Tex(@"\P_{p} = 2c(z_{b}-z_{a})B\sqrt{K_{p}}+\tfrac{1}{2}\gamma B \left(z_{b}^{2} - z_{a}^{2}\right) K_{p}")]);
-
-            AddInlineMathParagraph(body, [Tex(@"\K_{p} = \tan^{2}\left(45^{\circ} + \frac{\phi}{2}\right)")]);
+            const double tabDg = 15; // mm (symbolDescTabPosition と同値)
+            AddText(body, "記号");
+            AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"\p_{E}"), ": 土圧合力ばねの抵抗土圧度 [kN/m<^2>]、", Tex(@"\P_{Et}"), ": 区間の土圧合力 [kN]、", Tex(@"y"), ": 杭と地盤の相対変位 [m]"]);
+            AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"\p_{0}, \p_{p}"), ": 静止土圧度・受働土圧度 [kN/m<^2>]、", Tex(@"q"), ": 地表面の上載荷重 [kN/m<^2>]（入力欄がないため 0 として扱う）"]);
+            AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"\sigma_{z}'"), ": 区間の代表深さの有効土被り圧 [kN/m<^2>]、", Tex(@"\sigma_{za}', \sigma_{zb}'"), ": 区間の上端・下端の有効土被り圧 [kN/m<^2>]（地表面から数え、地下水位以下は水圧を除く）"]);
+            AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"z_{a}, z_{b}"), ": 区間の上端・下端の地表面からの深さ [m]、", Tex(@"\gamma"), ": 土の単位体積重量 [kN/m<^3>]、", Tex(@"h"), ": 区間の厚さ [m]"]);
+            AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"c"), ": 粘着力 [kN/m<^2>]、", Tex(@"\phi"), ": 内部摩擦角 [°]"]);
+            AddSymbolDescriptionWithTab(body, tabDg, [Tex(@"B"), ": 根入れ部の受圧幅 [m]、", Tex(@"\D_{f}"), ": 根入れ深さ [m]"]);
         }
 
         // 部材の性能 (internal: オプション分岐の出力内容をテストで検証するため)
@@ -814,6 +830,11 @@ namespace PileDesign.Output
 
             const double fs = 8;
 
+            // SC 杭の安全限界せん断の β1・β2 は基本設定の値 (ConcreteModelOptions.ScUltimateShearBeta1/2)。
+            // 以前は 1.0 と書いていたが、計算は既定で β2 = 0.75 を掛けている (PrecastPileSection.UltimateShearBeta)。
+            string scShearBeta1U = ConcreteModelOptions.ScUltimateShearBeta1.ToString("F2");
+            string scShearBeta2U = ConcreteModelOptions.ScUltimateShearBeta2.ToString("F2");
+
             AddText(body, "低減係数 β1（解説表2.6）", "left", 9);
             int w0 = 2800, w1 = 1200, w2 = 2000;
             Table t1 = CreateTableWithBordersAndWidths(w0, w1, w2, w2, w2);
@@ -834,7 +855,7 @@ namespace PileDesign.Output
                 (PileTypeNames.Prc, "曲げ", "0.8", "0.8", "0.8"),
                 (PileTypeNames.Prc, "せん断", "1.0", "1.0", "1.0"),
                 (PileTypeNames.Sc, "曲げ", "1.0", "1.0", "1.0"),
-                (PileTypeNames.Sc, "せん断", "1.0", "1.0", "1.0"),
+                (PileTypeNames.Sc, "せん断", "1.0", "1.0", scShearBeta1U),
             ];
             foreach (var r in beta1Rows)
             {
@@ -866,7 +887,7 @@ namespace PileDesign.Output
                 (PileTypeNames.Prc, "曲げ", "σe+σ0e≤10 N/mm²: 0.75、σe+σ0e>10 N/mm²: 0.65"),
                 (PileTypeNames.Prc, "せん断", "0.65"),
                 (PileTypeNames.Sc, "曲げ", "1.0"),
-                (PileTypeNames.Sc, "せん断", "1.0"),
+                (PileTypeNames.Sc, "せん断", ConcreteModelOptions.MapLimitStateText($"使用限界・損傷限界: 1.0、安全限界: {scShearBeta2U}")),
             ];
             foreach (var r in beta2Rows)
             {
@@ -879,7 +900,20 @@ namespace PileDesign.Output
             body.Append(t2);
 
             AddText(body, "出典: 日本建築学会「基礎部材の強度と変形性能」（第1版、2022年）解説表2.6・2.7", "left", 8);
+
+            // SC 杭の M-φ (解析用の曲げモーメント～曲率関係) も、PHC・PRC と同じく上の表の曲げの β (安全限界) を終局点に掛ける
+            // (SCSection.MPhiBeta1/2 = 1.0)。以前は M-φ だけが 0.9・0.75 を掛けていたので、ここに書き添えていた。
+            AddTableNote(body, $"※ {PileTypeNames.Sc}の安全限界せん断の β1・β2 は基本設定の値である。"
+                + (ConcreteModelOptions.UseFiberMPhi ? "" :
+                    $"既製コンクリート杭の解析用 M-φ 関係は、表の曲げの安全限界の β1・β2 を乗じた β1·β2·Mu0 を終局点とする"
+                    + $"（{PileTypeNames.Sc}は β1 = {ScMPhiBeta1:F1}、β2 = {ScMPhiBeta2:F1}）。"));
         }
+
+        /// <summary>SC 杭の M-φ の終局点に掛ける β1 (計算と同じ値)。</summary>
+        internal const double ScMPhiBeta1 = SCSection.MPhiBeta1;
+
+        /// <summary>SC 杭の M-φ の終局点に掛ける β2 (計算と同じ値)。</summary>
+        internal const double ScMPhiBeta2 = SCSection.MPhiBeta2;
 
         // 荷重条件の表を追加するメソッド
         private static void AddTrilinearCircumResistanceTable(Body body)

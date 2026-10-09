@@ -431,9 +431,9 @@ namespace PileDesign.Output
             var rows = CollectPileForceSummary();
 
             // レベルごとに解析結果が存在するか判定（実際にデータが収集されたかで判定）
-            bool hasLevel1Results = (inputModel.LoadCasesInput?.LoadCasesLevel1?.Any(x => x.IsApplicable) ?? false)
+            bool hasLevel1Results = (inputModel.LoadCasesInput?.LoadCasesLevel1?.Any(x => x.IsReported) ?? false)
                 && rows.Any(r => r.Qmax[0] != null || r.Mmax[0] != null);
-            bool hasLevel2Results = (inputModel.LoadCasesInput?.LoadCasesLevel2?.Any(x => x.IsApplicable) ?? false)
+            bool hasLevel2Results = (inputModel.LoadCasesInput?.LoadCasesLevel2?.Any(x => x.IsReported) ?? false)
                 && rows.Any(r => r.Qmax[1] != null || r.Mmax[1] != null);
 
             BuildAnalysisResultSummaryTable(body, rows, hasLevel1Results, hasLevel2Results);
@@ -470,6 +470,29 @@ namespace PileDesign.Output
         /// で集めるので、1 区間が何要素に分かれていても、その区間のすべての要素が最大値に入る。
         /// 節点の変位が取れない要素は変位の最大値に入れない (以前は 0 として入れていた)。
         /// </summary>
+        /// <summary>
+        /// 杭検討結果まとめの N_Max / N_Min に入れる軸力 (入力値)。計算書に載せる地震時ケースだけを、
+        /// ケース番号で引いて返す。値は検定の設計軸力 (<see cref="PileLayoutDataItem.ResolveDesignAxialForce"/>) と
+        /// 同じ決め方で、地震時軸力が未入力 (0) か欄が無いケースは常時軸力とする。
+        /// ResolveDesignAxialForce を直に呼ばないのは、欄の無いケースを代替の記録 (CalcFallbackTracker) に
+        /// 数え直さないため (検定の側で既に数えている)。
+        /// </summary>
+        internal static IEnumerable<(int Level, double N)> ReportedSeismicAxialForces(
+            PileLayoutDataItem pile, IEnumerable<LoadCase>? seismicCases)
+        {
+            if (pile == null || seismicCases == null) yield break;
+            foreach (var loadCase in seismicCases)
+            {
+                if (loadCase == null || !loadCase.IsReported) continue;
+                if (loadCase.Level is not (1 or 2)) continue;
+                double n;
+                try { n = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level); }
+                catch (ArgumentOutOfRangeException) { n = pile.AxialForceVL; }
+                if (!double.IsFinite(n) || n == 0.0) n = pile.AxialForceVL;
+                yield return (loadCase.Level, n);
+            }
+        }
+
         internal List<PileForceSummaryRow> CollectPileForceSummary()
         {
             var rows = new List<PileForceSummaryRow>();
@@ -503,18 +526,17 @@ namespace PileDesign.Output
                 {
                     if (pile == null || pile.PileBodyNo != pileBodyNo) continue;
 
-                    // 軸力 (入力値) は区間によらない
-                    foreach (var row in rowBySegment.Values)
+                    // 軸力 (入力値) は区間によらない。
+                    // 計算書に載せるケース (他の列と同じ IsReported の地震時ケース) の軸力だけを集める。
+                    // 以前は入力欄の全セル (使っていないケースの列・未入力の 0 を含む) から最大・最小を取っていたので、
+                    // 載せていないケースの軸力や 0 が N_Max / N_Min に出た。
+                    foreach (var (level, n) in ReportedSeismicAxialForces(pile, inputModel.LoadCasesInput.AllSeismicLoadCases))
                     {
-                        if (pile.AxialForceLevel1s is { Count: > 0 } n1)
+                        int k = level - 1;
+                        foreach (var row in rowBySegment.Values)
                         {
-                            row.NMax[0] = Max(row.NMax[0], n1.Max());
-                            row.NMin[0] = Min(row.NMin[0], n1.Min());
-                        }
-                        if (pile.AxialForceLevel2s is { Count: > 0 } n2)
-                        {
-                            row.NMax[1] = Max(row.NMax[1], n2.Max());
-                            row.NMin[1] = Min(row.NMin[1], n2.Min());
+                            row.NMax[k] = Max(row.NMax[k], n);
+                            row.NMin[k] = Min(row.NMin[k], n);
                         }
                     }
 
@@ -536,7 +558,8 @@ namespace PileDesign.Output
                         {
                             int k = loadCase.Level - 1;
                             if (k < 0 || k > 1) continue;
-                            foreach (LoadCombination loadCombination in inputModel.LoadCasesInput.AllLoadCombinations)
+                            if (!loadCase.IsReported) continue;   // 計算書出力ウィンドウで外したケース
+                            foreach (LoadCombination loadCombination in inputModel.LoadCasesInput.ReportedLoadCombinations)
                             {
                                 foreach (var isLiquefaction in liqPatterns)
                                 {
@@ -1406,9 +1429,11 @@ namespace PileDesign.Output
             AddPageBreak(body);
             AddHeader1(body, "杭の鉛直支持力 検定", 1);
 
-            int ng = items.Count(i => !i.IsOk);
+            // 検定できなかった項目は NG に数えない (以前は数えており、検定不能が NG として計上された)。件数は別に書く
+            var judged = items.Where(i => i.IsJudged).ToList();
+            int ng = judged.Count(i => !i.IsOk);
             AddText(body,
-                $"検定項目 {items.Count} 件（OK {items.Count - ng} 件 / NG {ng} 件）。"
+                $"検定項目 {items.Count} 件（OK {judged.Count - ng} 件 / NG {ng} 件{UnjudgedNote(items.Count - judged.Count)}）。"
                 + "応答値は入力した杭軸力、限界値は地盤と杭体から定まる支持力・引抜き抵抗力である。");
             AddText(body,
                 "限界状態の対応は杭体断面の検定と同じで、長期は使用限界（極限支持力の 1/3）、"
@@ -1534,11 +1559,12 @@ namespace PileDesign.Output
             AddPageBreak(body);
             AddHeader1(body, "杭の沈下量 検定", 1);
 
-            int ng = items.Count(i => !i.IsOk);
+            var judged = items.Where(i => i.IsJudged).ToList();
+            int ng = judged.Count(i => !i.IsOk);
             double limit = inputModel.FundamentalInput?.AllowableSettlement_mm ?? 0.0;
             AddText(body,
-                $"検定項目 {items.Count} 件（OK {items.Count - ng} 件 / NG {ng} 件）。"
-                + $"応答値は沈下解析が求めた各杭の沈下量（単杭沈下 + 群杭沈下、長期）、"
+                $"検定項目 {items.Count} 件（OK {judged.Count - ng} 件 / NG {ng} 件{UnjudgedNote(items.Count - judged.Count)}）。"
+                + $"応答値は沈下解析が求めた各杭の沈下量（{inputModel.FundamentalInput?.SettlementDesignBasisName ?? "単杭＋群杭沈下"}、長期）、"
                 + $"限界値は入力した許容沈下量 {limit:0.###} mm である。");
             AddText(body,
                 "許容沈下量は、上部構造が許せる変形から設計者が定める値である"
@@ -1579,5 +1605,7 @@ namespace PileDesign.Output
             AddTableNote(body, "※ 検定比 = 沈下量 / 許容沈下量。");
         }
 
+        /// <summary>検定できなかった項目の件数の注記 (0 件なら空)。</summary>
+        private static string UnjudgedNote(int count) => count > 0 ? $" / 検定できなかった項目 {count} 件" : "";
     }
 }

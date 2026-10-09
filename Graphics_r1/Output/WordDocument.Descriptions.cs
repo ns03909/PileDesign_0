@@ -70,16 +70,16 @@ namespace PileDesign.Output
             AddText(body, "ⅲ)", "left");
             AddInlineMathParagraph(body, [Tex(@"N_{c} = N")]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"A_{p}"), ": 支圧面積（杭頭面積）[m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"A_{p}"), ": 支圧面積（杭頭面積）[mm<^2>]"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\phi_{c}"), ": 支圧係数"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"F_{c}"), ": パイルキャップコンクリートの設計基準強度[N/mm<^2>]"]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\delta_{a}"), ": 鋼棒の許容伸び[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\delta_{a}"), ": 鋼棒の許容伸び[mm]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\epsilon_{a}"), ": 鋼棒の許容ひずみ"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"f_{t}"), ": 鋼棒の短期許容応力度[N/mm<^2>]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{s}"), ": 鋼棒の弾性係数[N/mm<^2>]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"L_{s}"), ": 鋼棒の有効長さ[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"L_{s}"), ": 鋼棒の有効長さ[mm]"]);
 
             AddHeader1(body, "短期許容せん断力の算定", 2);
 
@@ -91,7 +91,7 @@ namespace PileDesign.Output
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"Q_{a}"), ": 杭頭接合部の短期許容せん断力[kN]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\mu_{a}"), ": 許容摩擦係数(=0.2)"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{s}"), ": 鋼棒の配置距離[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{s}"), ": 鋼棒の配置距離[mm]"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"Q_{ha}"), ": パイルキャップの短期許容せん断抵抗[kN]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\sigma_{ct}"), ": コンクリートの引張抵抗[N/mm<^2>]"]);
@@ -135,8 +135,8 @@ namespace PileDesign.Output
             AddInlineMathParagraph(body, [Tex(@"M_{c} = \frac{D_{1}^{2} + D_{2}^{2}}{8 D_{1}} \cdot N")]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\theta_{c}"), ": 浮き上がり回転角[rad]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{1}"), ": 杭の外径[m]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{2}"), ": 杭の内径[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{1}"), ": 杭の外径[mm]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{2}"), ": 杭の内径[mm]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{0}"), ": 初期回転剛性(kNm/rad)"]);
 
             AddInlineMathParagraph(body, [Tex(@"\theta_{f} = \frac{M_{max} - M_{c}}{K_{0}}")]);
@@ -154,8 +154,8 @@ namespace PileDesign.Output
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\nu"), ": ポアソン比"]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{1}"), ": 杭の外径[m]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{2}"), ": 杭の内径[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{1}"), ": 杭の外径[mm]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{2}"), ": 杭の内径[mm]"]);
 
             AddInlineMathParagraph(body, [Tex(@"K_{0} = \frac{M_{a}}{\theta_{a}}")]);
 
@@ -168,13 +168,13 @@ namespace PileDesign.Output
 
             AddInlineMathParagraph(body, [Tex(@"\theta_{a} = \frac{\delta_{a}}{D_{s}}")]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\theta_{a}"), ": 許容回転角[rad]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\delta_{a}"), ": 鋼棒の許容伸び[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\delta_{a}"), ": 鋼棒の許容伸び[mm]"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\epsilon_{a}"), ": 鋼棒の許容ひずみ"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"f_{t}"), ": 鋼棒の短期許容応力度[N/mm<^2>]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{s}"), ": 鋼棒の弾性係数[N/mm<^2>]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"L_{s}"), ": 鋼棒の有効長さ[m]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{s}"), ": 鋼棒の配置距離[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"L_{s}"), ": 鋼棒の有効長さ[mm]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{s}"), ": 鋼棒の配置距離[mm]"]);
 
             AddHeader1(body, "最大抵抗モーメント$M_{max}$の設定方法", 2);
 
@@ -197,14 +197,14 @@ namespace PileDesign.Output
             AddInlineMathParagraph(body, [Tex(@"M_{e} = 0.5N \cdot D_{1}")]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"N"), ": 軸力[kN]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{1}"), ": 杭の外径[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{1}"), ": 杭の外径[mm]"]);
 
             AddInlineMathParagraph(body, [Tex(@"M_{e} = 5\times 10^{-4}a_{g}\cdot f_{u}\cdot D_{s} + 0.5N\cdot D_{s}")]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"a_{g}"), ": 鋼棒の全断面積(mm<^2>)"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"f_{u}"), ": 鋼棒の短期許容応力度[N/mm<^2>]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"N"), ": 軸力[kN]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{s}"), ": 鋼棒の配置距離[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{s}"), ": 鋼棒の配置距離[mm]"]);
         }
 
         // キャプテンパイル工法説明

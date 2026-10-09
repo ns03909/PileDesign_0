@@ -471,8 +471,12 @@ namespace PileDesign.Output
             dc.DrawGeometry(null, new Pen(NikkenBrush.SkyBlue, 1), geometry);
         }
 
+        /// <summary>図の画像が空のときに NoteOmitted へ渡す例外 (描画は例外を出さずに空を返すことがある)。</summary>
+        internal static Exception EmptyDiagramImage() => new InvalidOperationException("図の画像を作成できませんでした (空の画像)");
+
         // 水平力検討用杭ダイヤグラム挿入メソッド
-        private static void AddPileForceDiagramByMm(
+        /// <returns>図を置いたら true。置けなかったときは省いたことを本文に書いて false (呼び出し側はキャプション・注記を付けない)。</returns>
+        private static bool AddPileForceDiagramByMm(
             MainDocumentPart mainDocumentPart,
             Body body,
             double widthMm,
@@ -496,12 +500,18 @@ namespace PileDesign.Output
                 var pngBytes = DiagramRenderer.RenderPileForceElevationPngBytes(
                     soilPile, springType, style, widthMm, heightMm,
                     dpi: Layout.BaseDpi, scale: Layout.HiResScale);
-                if (pngBytes != null && pngBytes.Length > 0)
-                    WordDrawingBuilder.AddPngBytesToBody(mainDocumentPart, body, pngBytes, widthMm, heightMm);
+                if (pngBytes == null || pngBytes.Length == 0)
+                {
+                    NoteOmitted(body, "杭に作用する力の図", EmptyDiagramImage());
+                    return false;
+                }
+                WordDrawingBuilder.AddPngBytesToBody(mainDocumentPart, body, pngBytes, widthMm, heightMm);
+                return true;
             }
             catch (Exception ex)
             {
                 NoteOmitted(body, "杭に作用する力の図", ex);
+                return false;
             }
         }
         //{
@@ -512,7 +522,8 @@ namespace PileDesign.Output
         //}
 
         // 杭伏図ダイヤグラム挿入メソッド
-        private void AddPilingLayoutDiagramByMm(
+        /// <returns>図を置いたら true。置けなかったときは省いたことを本文に書いて false (呼び出し側はキャプションを付けない)。</returns>
+        private bool AddPilingLayoutDiagramByMm(
             MainDocumentPart mainDocumentPart,
             Body body,
             double widthMm,
@@ -550,12 +561,18 @@ diameterSelector,
                     scale: Layout.HiResScale
                 );
 
-                if (pngBytes != null && pngBytes.Length > 0)
-                    WordDrawingBuilder.AddPngBytesToBody(mainDocumentPart, body, pngBytes, widthMm, heightMm);
+                if (pngBytes == null || pngBytes.Length == 0)
+                {
+                    NoteOmitted(body, "杭配置図", EmptyDiagramImage());
+                    return false;
+                }
+                WordDrawingBuilder.AddPngBytesToBody(mainDocumentPart, body, pngBytes, widthMm, heightMm);
+                return true;
             }
             catch (Exception ex)
             {
                 NoteOmitted(body, "杭配置図", ex);
+                return false;
             }
         }
 
@@ -575,7 +592,11 @@ diameterSelector,
                 // ケースを切り替えたのに計算書だけ古い図が出る。
                 var settlementData = pgs?.ActiveSettlementGridData;
                 if (settlementData == null || settlementData.Count == 0)
+                {
+                    // 以前は黙って抜けていたので、「群杭の沈下」の見出しの下に図が無い理由が出なかった
+                    AddTableNote(body, "※ 群杭沈下の分布図は、表示中のケースに格子点の沈下量がないため省略した。");
                     return;
+                }
 
                 // 格子は表示中のケースの沈下値から引く (画面と同じ)。
                 // 入力側の SettlementGridX/Y は解析時のスナップショットに移らないので、
@@ -607,12 +628,14 @@ diameterSelector,
                     colorBandCount: 12
                 );
 
-                if (pngBytes != null && pngBytes.Length > 0)
+                if (pngBytes == null || pngBytes.Length == 0)
                 {
-                    WordDrawingBuilder.AddPngBytesToBody(mainDocumentPart, body, pngBytes, widthMm, heightMm);
-                    AddAutoFigureCaption(body,
-                        "群杭沈下コンタ図" + PileDesign.Services.GroupSettlementCaseLabel.Describe(pgs?.ActiveRecord), "図");
+                    NoteOmitted(body, "群杭沈下の分布図", EmptyDiagramImage());
+                    return;
                 }
+                WordDrawingBuilder.AddPngBytesToBody(mainDocumentPart, body, pngBytes, widthMm, heightMm);
+                AddAutoFigureCaption(body,
+                    "群杭沈下コンタ図" + PileDesign.Services.GroupSettlementCaseLabel.Describe(pgs?.ActiveRecord), "図");
             }
             catch (Exception ex)
             {
@@ -766,7 +789,7 @@ diameterSelector,
                 {
                     var lastStep = caseResult.StepResults[^1];
                     AddText(body,
-                        $"収束状態: {(caseResult.IsConverged ? "収束" : "未収束")}　" +
+                        $"収束状態: {caseResult.ConvergenceLabel}　" +
                         $"ステップ数: {lastStep.Step}　反復回数: {lastStep.Iterations}　残差: {lastStep.Residual:E2}",
                         "left");
                 }
@@ -807,7 +830,7 @@ diameterSelector,
                 for (int i = 0; i < cnt; i++)
                 {
                     var lc = loadCases[i];
-                    if (lc?.IsApplicable != true) continue;
+                    if (lc?.IsReported != true) continue;
 
                     var res = GetBeamResultCached(beam, lc, loadCombination, isLiquefaction)?.CumulativeForce;
                     if (res == null) continue;
@@ -922,7 +945,7 @@ diameterSelector,
 
             var level1 = loadCasesInput.LoadCasesLevel1 ?? [];
             var level2 = loadCasesInput.LoadCasesLevel2 ?? [];
-            var allCombinations = loadCasesInput.AllLoadCombinations;
+            var allCombinations = loadCasesInput.ReportedLoadCombinations;   // 計算書で外した組合せは載せない
 
             var combos = (allCombinations != null && allCombinations.Count > 0)
                 ? [.. allCombinations.Cast<LoadCombination?>()]
@@ -938,7 +961,7 @@ diameterSelector,
                 for (int idx = 0; idx < casesToShow; idx++)
                 {
                     var lc = lcList[idx];
-                    if (lc == null || !lc.IsApplicable)
+                    if (lc == null || !lc.IsReported)
                     {
                         mark += $"\nケース{idx + 1}: -";
                         continue;
@@ -1032,7 +1055,7 @@ diameterSelector,
                 for (int i = 0; i < cnt; i++)
                 {
                     var lc = loadCases[i];
-                    if (lc?.IsApplicable != true) continue;
+                    if (lc?.IsReported != true) continue;
                     double axialForce = axialLoads[i];
                     mark += $"\n{lc.LoadName}:{axialForce:N1}";
                 }
@@ -1051,13 +1074,13 @@ diameterSelector,
 
             void AddIsFronts(ObservableCollection<LoadCase> loadCases)
             {
-                if (loadCases == null || pileLayoutItem.IsFrontPiles == null) return;
-                int cnt = Math.Min(pileLayoutItem.IsFrontPiles.Count, loadCases.Count);
-                for (int i = 0; i < cnt; i++)
+                if (loadCases == null) return;
+                for (int i = 0; i < loadCases.Count; i++)
                 {
                     var lc = loadCases[i];
-                    if (lc?.IsApplicable != true) continue;
-                    bool isFrontPile = pileLayoutItem.IsFrontPiles[i];
+                    if (lc?.IsReported != true) continue;
+                    // そのケースのレベルの判定 (以前はレベル2 もレベル1 の一覧を引いていた)
+                    bool isFrontPile = pileLayoutItem.IsFrontFor(lc);
                     mark += $"\n{lc.LoadName}:{(isFrontPile ? "前方杭" : "後方杭")}";
                 }
             }

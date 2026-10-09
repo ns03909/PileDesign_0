@@ -576,6 +576,10 @@ namespace PileDesign.Output
             }
         }
 
+        /// <summary>杭体諸元表の「杭先端径」欄の文字列 [mm]。支持力の表と同じ PileToeDia を使う。</summary>
+        internal static string FormatPileToeDiameter(PileBodyInput pileBodyInput)
+            => pileBodyInput != null && pileBodyInput.PileToeDia > 0 ? $"{pileBodyInput.PileToeDia:N0}" : "-";
+
         // 杭体の詳細情報を含む表を追加するメソッド
         public void AddPileBodyDetailedTable(Body body, PileBodyInput pileBodyInput, int pileBodyNo)
         {
@@ -589,16 +593,9 @@ namespace PileDesign.Output
                 new Text($"杭体No.{pileBodyNo}") { Space = SpaceProcessingModeValues.Preserve }));
             body.Append(headerPara);
 
-            // 杭先端径（最後のセグメントから取得）
-            string tipDiameter = "-";
-            if (pileBodyInput.PileBodySegments != null && pileBodyInput.PileBodySegments.Count > 0)
-            {
-                var lastSegment = pileBodyInput.PileBodySegments[^1];
-                if (lastSegment?.PileSection != null)
-                {
-                    tipDiameter = $"{lastSegment.PileSection.PileDiameter:N0}";
-                }
-            }
+            // 杭先端径。支持力の表・杭の姿図と同じ PileBodyInput.PileToeDia (拡底・根固め部の径) を書く。
+            // 以前は最下区間の断面の杭径を書いていたので、拡底杭・根固め杭では支持力の表の先端径と食い違った。
+            string tipDiameter = FormatPileToeDiameter(pileBodyInput);
 
             // 杭体基本情報テーブル（杭体符号、杭体タイプ、杭頭接合タイプ、杭工法、杭先端径）
             AddTableCaption(body, $"杭体No.{pileBodyNo} の諸元");
@@ -839,7 +836,7 @@ namespace PileDesign.Output
         {
             AddIntroText(body,
                 "加力方向に対して前面側に位置する杭を前方杭（前）、その背後に位置する杭を後方杭（後）とし、" +
-                "加力方向（方向1〜4）ごとに設定する。この区分は群杭の塑性水平地盤反力 py の係数 κ・μ・λ の" +
+                "加力方向（方向1〜4）ごとに、レベル1・レベル2 それぞれ設定する。この区分は群杭の塑性水平地盤反力 py の係数 κ・μ・λ の" +
                 "選択に用いられ、後方杭には前方杭より小さい κ（杭間隔比 R/B と内部摩擦角 φ に依存）が適用される" +
                 "（詳細は「杭の水平抵抗」章）。");
 
@@ -852,10 +849,14 @@ namespace PileDesign.Output
             CreateTableCell(["X", "[m]"], fontSize, "center"),
             CreateTableCell(["Y", "[m]"], fontSize, "center"),
 
-            CreateTableCell(["方向1"], fontSize, "center"),
-            CreateTableCell(["方向2"], fontSize, "center"),
-            CreateTableCell(["方向3"], fontSize, "center"),
-            CreateTableCell(["方向4"], fontSize, "center")
+            CreateTableCell(["L1", "方向1"], fontSize, "center"),
+            CreateTableCell(["L1", "方向2"], fontSize, "center"),
+            CreateTableCell(["L1", "方向3"], fontSize, "center"),
+            CreateTableCell(["L1", "方向4"], fontSize, "center"),
+            CreateTableCell(["L2", "方向1"], fontSize, "center"),
+            CreateTableCell(["L2", "方向2"], fontSize, "center"),
+            CreateTableCell(["L2", "方向3"], fontSize, "center"),
+            CreateTableCell(["L2", "方向4"], fontSize, "center")
             );
 
             table.Append(headerRow);
@@ -874,6 +875,8 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([FrontMark(pileLayoutData.IsFrontPiles, 1)], fontSize, "center"));
                 dataRow.Append(CreateTableCell([FrontMark(pileLayoutData.IsFrontPiles, 2)], fontSize, "center"));
                 dataRow.Append(CreateTableCell([FrontMark(pileLayoutData.IsFrontPiles, 3)], fontSize, "center"));
+                for (int d = 0; d < 4; d++)
+                    dataRow.Append(CreateTableCell([FrontMark(pileLayoutData.IsFrontPilesLevel2, d)], fontSize, "center"));
                 table.Append(dataRow);
             }
 

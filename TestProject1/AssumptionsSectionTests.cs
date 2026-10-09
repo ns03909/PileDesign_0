@@ -71,14 +71,15 @@ namespace TestProject1
         }
 
         [TestMethod]
-        public void BuildMaterialOptionRows_Defaults_Returns15RowsWithDefaultChoices()
+        public void BuildMaterialOptionRows_Defaults_Returns16RowsWithDefaultChoices()
         {
             using var _ = OptionsScope.AllDefaults();
 
             var rows = WordDocument.BuildMaterialOptionRows();
 
             // 2026-09-08: 許容圧縮・許容せん断の規準を 1 つにまとめたので、付録1-3 の行と圧縮・せん断の 2 行が 1 行になった (17 → 15)
-            Assert.AreEqual(15, rows.Count, "材料モデル化オプションの行数");
+            // 2026-10-09: SC杭の安全限界せん断の β1・β2 (基本設定) の行を足した (15 → 16)
+            Assert.AreEqual(16, rows.Count, "材料モデル化オプションの行数");
             Assert.IsTrue(rows[0].Choice.Contains("基礎部材") && rows[0].Choice.Contains("既定"), "許容応力度の規準は既定 (基礎部材) 表示のはず");
             Assert.IsTrue(rows.Count(r => r.Choice.Contains("既定")) >= 8,
                 "全既定なら大半の行に（既定）表記が付くはず");
@@ -137,7 +138,8 @@ namespace TestProject1
 
             var rows = WordDocument.BuildDesignConditionRows(inputModel);
 
-            Assert.AreEqual(4, rows.Count, "設計条件の行数（グレード/接続/腐食代/kh0）");
+            // 2026-10-09: 杭軸力の扱い・杭先端の鉛直ばねの 2 行を足した (4 → 6)
+            Assert.AreEqual(7, rows.Count, "設計条件の行数（グレード/接続/杭軸力/未入力の地震時軸力/杭先端の鉛直ばね/腐食代/kh0）");
             Assert.IsTrue(rows[0].Item.Contains("グレード"));
             Assert.IsTrue(rows[1].Value is "剛体連結" or "剛床連結");
             var kh0Row = rows.Single(r => r.Item.Contains("kh0"));

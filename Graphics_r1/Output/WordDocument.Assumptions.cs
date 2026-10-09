@@ -191,9 +191,10 @@ namespace PileDesign.Output
         /// <summary>
         /// 解析を実行したときの条件と、いま計算書に書いている条件が食い違っていないか照合する。
         ///
-        /// 「設計条件」の表は<b>現在の入力</b>を読む。一方、解析条件のいくつか
+        /// 「設計条件」の表は計算書に渡された入力 (<c>ResultInputModel</c>。解析時の控えがあればそれ、
+        /// 無ければ編集中の入力) を読む。解析条件のいくつか
         /// (接続方式・基礎のねじれ拘束・杭軸力モード) は切り替えても解析結果が破棄されないので、
-        /// 「解析 → 設定変更 → 計算書出力」の順に操作すると、
+        /// 控えの無いまま「解析 → 設定変更 → 計算書出力」の順に操作すると、
         /// 解析に使った条件と計算書の記載がずれる。材料モデル化オプションには
         /// 同じ照合が既にある (ConcreteOptionsSignature)。
         /// </summary>
@@ -402,6 +403,16 @@ namespace PileDesign.Output
                       "（ジャパンパイル Technical Note Vol.1-5。BCJ評定-FD0356-08 に規定は無い）"
                     : "断面内の全材料のうち最初に許容ひずみに達したもので限界状態を決める"));
 
+            // SC 杭の安全限界せん断 Qu = β1·β2·sQun の β は基本設定の値 (PrecastPileSection.UltimateShearBeta)。
+            // 既定の β2 = 0.75 は「低減しない」ではないので、計算に使った値を必ず書く。
+            double scBeta1 = ConcreteModelOptions.ScUltimateShearBeta1;
+            double scBeta2 = ConcreteModelOptions.ScUltimateShearBeta2;
+            rows.Add(("SC杭の安全限界せん断の低減係数 β1・β2",
+                FormatScShearBeta(scBeta1, scBeta2),
+                $"Qu = β1·β2·sQun（「基礎部材の強度と変形性能」(7.8)）。β = {scBeta1 * scBeta2:F3}。"
+                + "β2 は、コンクリートの圧縮破壊や鋼管の座屈が変形性能に影響する場合 0.75 以下が望ましいとされる。"
+                + ConcreteModelOptions.MapLimitStateText("使用限界・損傷限界のせん断は β1 = 1.0")));
+
             rows.Add(("限界状態の呼称",
                 ConcreteModelOptions.UseAllowableStressLabels ? "長期許容・短期許容" : "使用限界・損傷限界（既定）",
                 ConcreteModelOptions.UseAllowableStressLabels
@@ -411,8 +422,17 @@ namespace PileDesign.Output
             return rows;
         }
 
+        /// <summary>SC 杭の安全限界せん断の β1・β2 を「β1 = 1.00、β2 = 0.75（既定）」の形にする。</summary>
+        internal static string FormatScShearBeta(double beta1, double beta2)
+        {
+            bool isDefault = beta1 == ConcreteModelOptions.DefaultScUltimateShearBeta1
+                          && beta2 == ConcreteModelOptions.DefaultScUltimateShearBeta2;
+            return $"β1 = {beta1:F2}、β2 = {beta2:F2}" + (isDefault ? "（既定）" : "");
+        }
+
         /// <summary>
-        /// 設計条件（性能グレード・杭頭接続・腐食代・kh0 手入力）の一覧行を作成する。
+        /// 設計条件（性能グレード・杭頭接続・杭軸力・杭先端の鉛直ばね・腐食代・kh0 手入力）の一覧行を作成する。
+        /// 読むのは計算書に渡された入力 (解析時の控え) で、画面の編集中の入力ではない。
         /// </summary>
         internal static List<(string Item, string Value, string Note)> BuildDesignConditionRows(InputModel inputModel)
         {
@@ -431,6 +451,32 @@ namespace PileDesign.Output
                 mode == FoundationBeamConnectionMode.RigidBody
                     ? "全杭頭を代表点に対して全 6 自由度で剛体拘束する（詳細は「検討方針」章）"
                     : "水平変位と鉛直軸回転のみ剛体拘束し、鉛直・回転は基礎梁が負担する（詳細は「検討方針」章）"));
+
+            // 杭軸力の扱いと杭先端の鉛直境界。どちらも M-φ の軸力・鉛直の支持を変える解析条件で、
+            // 計算書に載っていなかった (画面の「水平解析」で選ぶ)。
+            bool useAnalysisAxial = inputModel?.UseAnalysisAxialForce ?? false;
+            rows.Add(("杭軸力の扱い",
+                useAnalysisAxial ? "入力値＋応力解析結果" : "入力値",
+                useAnalysisAxial
+                    ? "M-φ 関係に用いる杭軸力に、入力した軸力に解析で得られた杭の軸力を加えた値を用いる（各荷重ステップの開始時に更新）"
+                    : "M-φ 関係に用いる杭軸力に、入力した軸力（常時から地震時まで荷重ステップごとに漸増）を用いる"));
+
+            // 地震時軸力が未入力 (0) の杭の扱い。解析と検定で違うが、意図した扱い (2026-10-09 利用者確認)。
+            // 計算書の読み手が食い違いと受け取らないように書いておく
+            rows.Add(("地震時軸力が未入力の杭",
+                "解析: 杭頭荷重なし／検定: 常時軸力",
+                "荷重ケースの地震時軸力が 0（未入力）の杭は、水平解析では杭頭に軸力を与えず、"
+                + "曲げ・せん断の検定では常時軸力 VL を設計軸力とする"));
+
+            bool psSpring = inputModel?.UsePsSpringAtPileTip ?? false;
+            string psSource = inputModel?.PsSpringSource == PsSpringSourceMode.Ultimate ? "極限" : "常時";
+            rows.Add(("杭先端の鉛直ばね",
+                psSpring ? $"P-S 非線形ばね（{psSource}）" : "杭先端支持",
+                psSpring
+                    ? $"沈下解析の荷重～沈下量関係（{psSource}）から、杭の各節点に非線形の鉛直ばねを設ける。"
+                      + "杭軸力は各杭の接合節点に外力として作用させる"
+                      + (inputModel?.IsVLAnalysisEnabled == true ? "。常時 (VL) のみのケースも解析している" : "")
+                    : "杭先端の鉛直変位を固定する。杭周面・杭先端の鉛直抵抗は考慮しない"));
 
             // 基礎梁のせん断変形。基礎梁があるときだけ書く
             if (inputModel?.FoundationBeamInput?.Beams?.Count > 0)
@@ -578,7 +624,10 @@ namespace PileDesign.Output
                 return "自動算定";
             }
 
-            note = "以下の土層は要素分割ウィンドウで手入力した kh0 を用いている（記載のない土層は自動算定）";
+            // 手入力値は自動算定の kh0 を置き換えるだけで、解析では群杭係数 ξ と液状化による低減率 βL を
+            // その上に掛ける (HorizontalSoilReactionItem: Kh0 × GroupPileEffect.Kh0Factor = ξ·βL)。
+            note = "以下の土層は要素分割ウィンドウで手入力した kh0 を用いている（記載のない土層は自動算定）。"
+                 + "手入力した kh0 にも、群杭係数 ξ と、液状化を考慮するケースでは液状化による低減率 βL を乗じている";
             return string.Join("\n", entries);
         }
 

@@ -114,7 +114,7 @@ namespace PileDesign.Output
                         inputModel.LoadCasesInput != null)
                     {
                         var allSeismicLoadCases = inputModel.LoadCasesInput.AllSeismicLoadCases ?? [];
-                        var allLoadCombinations = inputModel.LoadCasesInput.AllLoadCombinations ?? [];
+                        var allLoadCombinations = inputModel.LoadCasesInput.ReportedLoadCombinations;
 
                         foreach (var pli in inputModel.PileLayoutItems)
                         {
@@ -138,8 +138,10 @@ namespace PileDesign.Output
 
                             foreach (var loadCase in allSeismicLoadCases)
                             {
-                                if (loadCase == null || !loadCase.IsApplicable) continue;
-                                double axialForce = pli.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                if (loadCase == null || !loadCase.IsReported) continue;
+                                // 杭配置にこのケースの地震時軸力の欄が無いと範囲外の例外になる。ここは try の外だったので、
+                                // 1 本の杭の入力の欠けで計算書の出力全体が止まっていた。そのケースだけ飛ばす (描く軸力は変えない)
+                                if (!TryGetSeismicAxialForce(pli, loadCase, out double axialForce)) continue;
 
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
@@ -432,7 +434,7 @@ namespace PileDesign.Output
                         inputModel.LoadCasesInput != null)
                     {
                         var allSeismicLoadCases = inputModel.LoadCasesInput.AllSeismicLoadCases ?? [];
-                        var allLoadCombinations = inputModel.LoadCasesInput.AllLoadCombinations ?? [];
+                        var allLoadCombinations = inputModel.LoadCasesInput.ReportedLoadCombinations;
 
                         foreach (var pli in inputModel.PileLayoutItems)
                         {
@@ -456,8 +458,10 @@ namespace PileDesign.Output
 
                             foreach (var loadCase in allSeismicLoadCases)
                             {
-                                if (loadCase == null || !loadCase.IsApplicable) continue;
-                                double axialForce = pli.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                if (loadCase == null || !loadCase.IsReported) continue;
+                                // 杭配置にこのケースの地震時軸力の欄が無いと範囲外の例外になる。ここは try の外だったので、
+                                // 1 本の杭の入力の欠けで計算書の出力全体が止まっていた。そのケースだけ飛ばす (描く軸力は変えない)
+                                if (!TryGetSeismicAxialForce(pli, loadCase, out double axialForce)) continue;
 
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
@@ -559,7 +563,7 @@ namespace PileDesign.Output
             if (anaModel == null) return;
 
             var allSeismicLoadCases = inputModel.LoadCasesInput?.AllSeismicLoadCases ?? [];
-            var allLoadCombinations = inputModel.LoadCasesInput?.AllLoadCombinations ?? [];
+            var allLoadCombinations = inputModel.LoadCasesInput?.ReportedLoadCombinations ?? [];
 
             foreach (var pileBody in inputModel.PileBodies)
             {
@@ -616,7 +620,7 @@ namespace PileDesign.Output
                         {
                             foreach (var loadCase in allSeismicLoadCases)
                             {
-                                if (loadCase == null || !loadCase.IsApplicable) continue;
+                                if (loadCase == null || !loadCase.IsReported) continue;
 
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
@@ -770,7 +774,7 @@ namespace PileDesign.Output
                 return;
 
             var allSeismicLoadCases = inputModel.LoadCasesInput?.AllSeismicLoadCases ?? [];
-            var allLoadCombinations = inputModel.LoadCasesInput?.AllLoadCombinations ?? [];
+            var allLoadCombinations = inputModel.LoadCasesInput?.ReportedLoadCombinations ?? [];
 
             // 回転ばね → 杭レイアウトのマッピングを構築
             var rsToLayout = new Dictionary<RotationalSpring, PileLayoutDataItem>();
@@ -809,18 +813,16 @@ namespace PileDesign.Output
                 List<double> thetaResultsLevel2 = [];
                 List<double> momentResultsLevel2 = [];
 
-                // pileBody.GetMThetaRelationship(axialN) は場所打ち RC 杭で
-                // 断面の完全 M-θ 解析を行うため非常に重い。曲線は (pileBody, axialN) に
-                // のみ依存するので、axialN を 10kN 単位でバケット化してキャッシュする。
-                var mThetaInputDefCache = new Dictionary<int, PileDesign.FEM.PileHeadRotationDef>();
-                // ケース別の控えが無く、理論曲線を描けなかった (杭, ケース)。図の下に知らせる
+                // ケース別の控えが無く、曲線を描けなかった (杭, ケース)。図の下に知らせる
                 var casesWithoutCurve = new SortedSet<string>(StringComparer.Ordinal);
+                // 杭頭が剛結 (控えの Kθ が剛の印) で M-θ 関係の無い杭。図の下に知らせる
+                var rigidPiles = new SortedSet<string>(StringComparer.Ordinal);
 
                 foreach (var (rs, pileLayout) in springsForBody)
                 {
                     foreach (var loadCase in allSeismicLoadCases)
                     {
-                        if (loadCase == null || !loadCase.IsApplicable) continue;
+                        if (loadCase == null || !loadCase.IsReported) continue;
 
                         foreach (var loadCombination in allLoadCombinations)
                         {
@@ -840,13 +842,14 @@ namespace PileDesign.Output
                                 if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
                                     axialN = pileLayout.AxialForce;
 
-                                // 曲線取得 (優先順位):
-                                // 1) 入力データ (pileBody.GetMThetaRelationship) — IsPileNonLinear=false で
-                                //    FEM が CurveXY を null にリセットする問題を回避
-                                // 2) 解析中に取ったこのケースの控え (CaseMThetaSnapshots) の曲線
-                                // 3) 同じ控えの線形 Kθ
+                                // 曲線はグラフ画面 (GraphViewModel.CurveGraphs) と同じく、解析中に取ったこのケースの控え
+                                // (CaseMThetaSnapshots) だけから取る:
+                                // 1) 控えの曲線 (CombinedXY / SingleDof)
+                                // 2) 控えの線形 Kθ。ただし K ≥ 1e9 は剛結の印 (KBig = 1e10) なので曲線は描かず、図の下で知らせる
+                                // 以前は入力からの理論曲線 (pileBody.GetMThetaRelationship) を最優先にしていたので、
+                                // 解析で使った曲線 (軸力・ひび割れの扱いが違うことがある) と画面と違う曲線が計算書に載った。
                                 // ばね本体の CurveXY / Curve / Kθ は使わない。最後に解いた<b>別のケース</b>のものが残っていることがある
-                                // (M–θ 曲線は軸力で変わる)。控えも無ければ理論曲線は描かず、図の下で知らせる。
+                                // (M–θ 曲線は軸力で変わる)。控えも無ければ曲線は描かず、図の下で知らせる。
                                 double[] thetas = [];
                                 double[] moments = [];
                                 string modeTag = "";
@@ -854,20 +857,7 @@ namespace PileDesign.Output
                                 rs.CaseMThetaSnapshots.TryGetValue(snapKey, out var caseSnapshot);
                                 int lastStep = GetLastStepCached(loadCase, loadCombination, isLiquefaction);
 
-                                int axialNCacheKey = (int)Math.Round(axialN / 10.0);
-                                if (!mThetaInputDefCache.TryGetValue(axialNCacheKey, out var inputDef))
-                                {
-                                    try { inputDef = pileBody.GetMThetaRelationship(axialN); }
-                                    catch { inputDef = null; }
-                                    mThetaInputDefCache[axialNCacheKey] = inputDef;
-                                }
-
-                                if (inputDef?.CurveXY != null)
-                                {
-                                    (thetas, moments) = inputDef.CurveXY.ToArrays();
-                                    modeTag = "XY";
-                                }
-                                else if (caseSnapshot is { Mode: RotationalSpringMode.CombinedXY, CurveXY: not null })
+                                if (caseSnapshot is { Mode: RotationalSpringMode.CombinedXY, CurveXY: not null })
                                 {
                                     (thetas, moments) = caseSnapshot.CurveXY.ToArrays();
                                     modeTag = "XY";
@@ -880,6 +870,12 @@ namespace PileDesign.Output
                                 else if (caseSnapshot != null)
                                 {
                                     double? k = caseSnapshot.Mode == RotationalSpringMode.CombinedXY ? caseSnapshot.KthetaXY : caseSnapshot.Ktheta;
+                                    if (k is double kv && IsRigidMThetaStiffness(kv))
+                                    {
+                                        // 剛結 (M-θ 関係なし)。K·θ の直線を描くと非物理的な値になる (画面も描かない)
+                                        rigidPiles.Add($"杭No.{pileLayout.PileNo}");
+                                        continue;
+                                    }
                                     if (k is > 0.0)
                                     {
                                         const double thetaMax = 0.02;
@@ -983,6 +979,8 @@ namespace PileDesign.Output
                 {
                     if (casesWithoutCurve.Count > 0)
                         AddTableNote(body, "※ " + DescribeCasesWithoutMThetaCurve(pileBody.PileBodyRef, casesWithoutCurve));
+                    if (rigidPiles.Count > 0)
+                        AddTableNote(body, "※ " + DescribeRigidMThetaPiles(pileBody.PileBodyRef, rigidPiles));
                     continue;
                 }
 
@@ -1005,8 +1003,43 @@ namespace PileDesign.Output
                     "図");
                 if (casesWithoutCurve.Count > 0)
                     AddTableNote(body, "※ " + DescribeCasesWithoutMThetaCurve(pileBody.PileBodyRef, casesWithoutCurve));
+                if (rigidPiles.Count > 0)
+                    AddTableNote(body, "※ " + DescribeRigidMThetaPiles(pileBody.PileBodyRef, rigidPiles));
             }
         }
+
+        /// <summary>
+        /// 杭配置のこのケースの地震時軸力 (<see cref="PileLayoutDataItem.GetSeismicAxialForce"/>)。
+        /// 欄が無ければ false (計算書の出力を止めず、省いたものとして記録する)。
+        /// </summary>
+        internal static bool TryGetSeismicAxialForce(PileLayoutDataItem pli, LoadCase loadCase, out double axialForce)
+        {
+            try
+            {
+                axialForce = pli.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                return true;
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                // 黙って外さず、計算書の「省いたもの」の一覧に載せる (本文には段落を足さない)
+                NoteOmitted(null, $"杭No.{pli?.PileNo} 荷重ケース {loadCase?.LoadName} の N-M・N-Q 図の点（地震時軸力の欄がない）", ex);
+                axialForce = 0.0;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 杭頭の回転ばねの Kθ が剛結の印か。解析は剛結を K = 1e10 (KBig) で表すので、その 1 桁下を閾値にする
+        /// (グラフ画面 GraphViewModel.CurveGraphs の KRigidThreshold と同じ値)。
+        /// </summary>
+        internal static bool IsRigidMThetaStiffness(double k) => k >= MThetaRigidThreshold;
+
+        /// <summary>剛結とみなす Kθ の下限 [kN·m/rad]。</summary>
+        internal const double MThetaRigidThreshold = 1e9;
+
+        /// <summary>杭頭が剛結で M-θ 曲線の無い杭の注記。</summary>
+        internal static string DescribeRigidMThetaPiles(string pileBodyRef, IEnumerable<string> piles)
+            => $"杭体符号 {pileBodyRef} の {string.Join("、", piles)} は、杭頭を剛結として解析しているため M-θ 関係はない（曲線は描いていない）。";
 
         /// <summary>ケース別の M-θ 曲線の控えが無く、理論曲線を描けなかったケースの注記 (多いときは先頭 8 件と件数)。</summary>
         internal static string DescribeCasesWithoutMThetaCurve(string pileBodyRef, IReadOnlyCollection<string> cases)
@@ -1026,8 +1059,10 @@ namespace PileDesign.Output
         {
             if (anaModel == null) return;
 
-            var loadCases = inputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases;
-            var loadCombinations = inputModel.LoadCasesInput.AllLoadCombinations;
+            // 計算書出力ウィンドウで外したケース・組合せは載せない (ほかの図表と同じ絞り込み)
+            var loadCases = new System.Collections.ObjectModel.ObservableCollection<LoadCase>(
+                inputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases.Where(lc => lc.IsReported));
+            var loadCombinations = inputModel.LoadCasesInput.ReportedLoadCombinations;
             if (loadCases == null || loadCases.Count == 0) return;
             if (loadCombinations == null || loadCombinations.Count == 0) return;
 

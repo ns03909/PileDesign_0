@@ -107,9 +107,18 @@ namespace PileDesign.Output
         private readonly AnaModel anaModel = _anaModel;
 
         // FTPile有無判定ヘルパ
-        private bool HasFTPile()
-            => inputModel?.PileBodies != null
-               && inputModel.PileBodies.Any(pb => pb?.PileTop?.FTPile != null);
+        private bool HasFTPile() => HasFTPile(inputModel);
+
+        /// <summary>
+        /// F.T.Pile 構法の杭頭を使っている杭体があるか。
+        /// 他の 2 つ (キャプテン・キャプリング) と同じく杭頭の種類も見る。
+        /// 以前は FTPile の実体だけを見ていたので、杭頭の種類を別の構法に替えたあとも
+        /// 実体が残っている杭体があると、使っていない F.T.Pile の説明が計算書に載った。
+        /// </summary>
+        internal static bool HasFTPile(InputModel? input)
+            => input?.PileBodies != null
+               && input.PileBodies.Any(pb => pb?.PileTop?.FTPile != null
+                   && (pb.PileTopType?.Contains("FT-Pile構法") ?? false));
 
         // FTPile有無判定ヘルパ
         private bool HasCaptainPile()
@@ -636,11 +645,14 @@ namespace PileDesign.Output
                         {
                             // 図がほぼ 1 ページ分の高さなので、途中で切れないよう改ページしてから置く
                             AddPageBreak(body);
-                            AddPileForceDiagramByMm(mainPart, body,
+                            // 図を置けなかったときは省いたことを書き、図の無いキャプション・注記は付けない
+                            if (AddPileForceDiagramByMm(mainPart, body,
                                 widthMm: Layout.PileElevationWidthMm,
-                                heightMm: Layout.PileElevationHeightMm, soilPile, "vertical");
-                            AddAutoFigureCaption(body, $"沈下解析杭モデル{DescribeSoilPile(soilPile)}", "図");
-                            AddTableNote(body, "※ 図中の土層諸元は抜粋です。薄い層は表示を省いています。全層の値は「地盤情報」の土層表を参照してください。横方向は模式図で、縮尺は縦方向のみです。");
+                                heightMm: Layout.PileElevationHeightMm, soilPile, "vertical"))
+                            {
+                                AddAutoFigureCaption(body, $"沈下解析杭モデル{DescribeSoilPile(soilPile)}", "図");
+                                AddTableNote(body, "※ 図中の土層諸元は抜粋です。薄い層は表示を省いています。全層の値は「地盤情報」の土層表を参照してください。横方向は模式図で、縮尺は縦方向のみです。");
+                            }
                             // 注記の下に次章が食い込むので、ここで切る。図・キャプション・注記で 1 ページ
                             AddPageBreak(body);
 
@@ -697,7 +709,7 @@ namespace PileDesign.Output
                 AddSymbolDescriptionWithTab(body, symbolDescTabPosition,
                     [Tex(@"\beta_{U}"), ": 上部構造慣性力 ", Tex(@"\P_{s}"), " に乗じる係数"]);
                 AddSymbolDescriptionWithTab(body, symbolDescTabPosition,
-                    [Tex(@"\beta_{L}"), ": 基礎部慣性力 ", Tex(@"\P_{f}"), " に乗じる係数（杭頭位置に ", Tex(@"\beta_{U} P_{s} + \beta_{L} P_{f}"), " の水平力を作用させる）"]);
+                    [Tex(@"\beta_{L}"), ": 基礎部慣性力 ", Tex(@"\P_{f}"), " に乗じる係数（荷重ケースごとに入力した慣性力中心（X・Y・標高）に ", Tex(@"\beta_{U} P_{s} + \beta_{L} P_{f}"), " の水平力を作用させ、杭頭の接続仮定による拘束を介して各杭頭に伝える）"]);
                 TimeH("LoadCombinationTable", () => {
                     AddTableCaption(body, "作用の組合せ");
                     AddLoadCombinationTable(mainPart, body);
@@ -722,11 +734,14 @@ namespace PileDesign.Output
                         {
                             // 図がほぼ 1 ページ分の高さなので、途中で切れないよう改ページしてから置く
                             AddPageBreak(body);
-                            AddPileForceDiagramByMm(mainPart, body,
+                            // 図を置けなかったときは省いたことを書き、図の無いキャプション・注記は付けない
+                            if (AddPileForceDiagramByMm(mainPart, body,
                                 widthMm: Layout.PileElevationWidthMm,
-                                heightMm: Layout.PileElevationHeightMm, soilPile, "horizontal");
-                            AddAutoFigureCaption(body, $"水平抵抗解析杭モデル{DescribeSoilPile(soilPile)}", "図");
-                            AddTableNote(body, "※ 図中の土層諸元は抜粋です。薄い層は表示を省いています。全層の値は「地盤情報」の土層表を参照してください。横方向は模式図で、縮尺は縦方向のみです。");
+                                heightMm: Layout.PileElevationHeightMm, soilPile, "horizontal"))
+                            {
+                                AddAutoFigureCaption(body, $"水平抵抗解析杭モデル{DescribeSoilPile(soilPile)}", "図");
+                                AddTableNote(body, "※ 図中の土層諸元は抜粋です。薄い層は表示を省いています。全層の値は「地盤情報」の土層表を参照してください。横方向は模式図で、縮尺は縦方向のみです。");
+                            }
                             // 注記の下に次章が食い込むので、ここで切る。図・キャプション・注記で 1 ページ
                             AddPageBreak(body);
                         }
@@ -774,15 +789,15 @@ namespace PileDesign.Output
                 AddHeader1(body, "杭配置・応力マップ", 1);
             }
             if (mainWindowViewModel.DocxOutput.IncludePileLocationMap)
-                Time("PileLocationMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileBasicMark); AddAutoFigureCaption(body, "杭配置マップ", "図"); });
+                Time("PileLocationMap", () => { if (AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileBasicMark)) AddAutoFigureCaption(body, "杭配置マップ", "図"); });
             if (mainWindowViewModel.DocxOutput.IncludePileAxialLoadMap)
-                Time("PileAxialLoadMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileAxialForceMark); AddAutoFigureCaption(body, "杭軸力マップ", "図"); });
+                Time("PileAxialLoadMap", () => { if (AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileAxialForceMark)) AddAutoFigureCaption(body, "杭軸力マップ", "図"); });
             if (mainWindowViewModel.DocxOutput.IncludeIsFrontMap)
-                Time("IsFrontMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileIsFront); AddAutoFigureCaption(body, "杭前後方杭マップ", "図"); });
+                Time("IsFrontMap", () => { if (AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileIsFront)) AddAutoFigureCaption(body, "杭前後方杭マップ", "図"); });
             if (mainWindowViewModel.DocxOutput.IncludePileHeadMomentMap)
-                Time("PileHeadMomentMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileTopBendingMomentMark); AddAutoFigureCaption(body, "杭頭モーメントマップ", "図"); });
+                Time("PileHeadMomentMap", () => { if (AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileTopBendingMomentMark)) AddAutoFigureCaption(body, "杭頭モーメントマップ", "図"); });
             if (mainWindowViewModel.DocxOutput.IncludePileHeadShearMap)
-                Time("PileHeadShearMap", () => { AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileTopShearForceMark); AddAutoFigureCaption(body, "杭頭せん断力マップ", "図"); });
+                Time("PileHeadShearMap", () => { if (AddPilingLayoutDiagramByMm(mainPart, body, 150, 200, GetPileTopShearForceMark)) AddAutoFigureCaption(body, "杭頭せん断力マップ", "図"); });
             if (mainWindowViewModel.DocxOutput.IncludeHorizontal_NGReport
                 && _source.IsHorizontalAnalysisDone
                 && anaModel != null)
@@ -973,15 +988,26 @@ namespace PileDesign.Output
 
                 // 拘束自由度の表
                 AddConnectionModeTable(body, isRigidBody: false);
+            }
 
-                // 一般梁要素の入力データ
-                if (fbInput != null)
+            // 一般梁要素の入力データ。
+            // 以前は剛床連結のときだけ書いていたが、基礎梁は接続仮定によらず水平解析のモデルに入り
+            // (AnalysisModelling: 両モード共通)、基礎梁を考慮する鉛直解析 (単杭・群杭の沈下) でも使う。
+            // 剛体連結の計算書だけ、解析に使った梁の諸元が載っていなかった。
+            if (ShouldOutputFoundationBeamTables(fbInput))
+            {
+                AddHeader2(body, "一般梁要素");
+                if (mode == FoundationBeamConnectionMode.RigidBody)
                 {
-                    AddHeader2(body, "一般梁要素");
-                    AddFoundationBeamInputTables(body, fbInput, inputModel);
+                    AddText(body, "基礎梁は、剛体連結の水平解析のモデルに含めるほか、基礎梁を考慮する鉛直解析（沈下）に用いる。");
                 }
+                AddFoundationBeamInputTables(body, fbInput!, inputModel);
             }
         }
+
+        /// <summary>一般梁要素 (基礎梁) の入力表を書くか。梁要素が 1 本でもあれば、接続仮定によらず書く。</summary>
+        internal static bool ShouldOutputFoundationBeamTables(FoundationBeamInput? fbInput)
+            => fbInput?.Beams is { Count: > 0 };
 
         // 接続モードの拘束自由度テーブル
         private static void AddConnectionModeTable(Body body, bool isRigidBody)
@@ -1076,8 +1102,9 @@ namespace PileDesign.Output
             if (fbInput.Sections != null && fbInput.Sections.Count > 0)
             {
                 AddText(body, "断面");
-                int wNo = 800, wName = 1800, wB = 1400, wH = 1400, wA = 1800, wIy = 2200, wIz = 2200;
-                Table secTable = CreateTableWithBordersAndWidths(wNo, wName, wB, wH, wA, wIy, wIz);
+                // せん断断面積 Ay・Az とねじり定数 J も解析 (CreateFoundationBeamSection) に渡る値なので載せる
+                int wNo = 600, wName = 1400, wB = 1000, wH = 1000, wA = 1100, wAy = 1100, wAz = 1100, wJ = 1200, wIy = 1200, wIz = 1200;
+                Table secTable = CreateTableWithBordersAndWidths(wNo, wName, wB, wH, wA, wAy, wAz, wJ, wIy, wIz);
 
                 TableRow secHeader = CreateHeaderRow(
                     CreateTableCellWithWidth("No", "center", wNo, fs),
@@ -1085,6 +1112,9 @@ namespace PileDesign.Output
                     CreateTableCellWithWidth("幅 [m]", "center", wB, fs),
                     CreateTableCellWithWidth("高さ [m]", "center", wH, fs),
                     CreateTableCellWithWidth("A (m²)", "center", wA, fs),
+                    CreateTableCellWithWidth("Ay (m²)", "center", wAy, fs),
+                    CreateTableCellWithWidth("Az (m²)", "center", wAz, fs),
+                    CreateTableCellWithWidth("J (m⁴)", "center", wJ, fs),
                     CreateTableCellWithWidth("Iy (m⁴)", "center", wIy, fs),
                     CreateTableCellWithWidth("Iz (m⁴)", "center", wIz, fs)
                 );
@@ -1100,6 +1130,9 @@ namespace PileDesign.Output
                         CreateTableCellWithWidth($"{sec.Width:N3}", "right", wB, fs),
                         CreateTableCellWithWidth($"{sec.Height:N3}", "right", wH, fs),
                         CreateTableCellWithWidth($"{sec.Area:N4}", "right", wA, fs),
+                        CreateTableCellWithWidth($"{sec.ShearAreaY:N4}", "right", wAy, fs),
+                        CreateTableCellWithWidth($"{sec.ShearAreaZ:N4}", "right", wAz, fs),
+                        CreateTableCellWithWidth($"{sec.TorsionalMoment:N4}", "right", wJ, fs),
                         CreateTableCellWithWidth($"{sec.MomentOfInertiaYY:N4}", "right", wIy, fs),
                         CreateTableCellWithWidth($"{sec.MomentOfInertiaZZ:N4}", "right", wIz, fs)
                     );
@@ -1112,13 +1145,15 @@ namespace PileDesign.Output
             if (fbInput.Beams != null && fbInput.Beams.Count > 0)
             {
                 AddText(body, "梁要素");
-                int wNo = 1200, wMat = 2000, wSec = 2000, wNI = 3000, wNJ = 3000;
-                Table beamTable = CreateTableWithBordersAndWidths(wNo, wMat, wSec, wNI, wNJ);
+                // 断面の回し β も解析に渡る (Beam.CoordAngle)
+                int wNo = 1000, wMat = 1600, wSec = 1600, wBeta = 1600, wNI = 2800, wNJ = 2800;
+                Table beamTable = CreateTableWithBordersAndWidths(wNo, wMat, wSec, wBeta, wNI, wNJ);
 
                 TableRow beamHeader = CreateHeaderRow(
                     CreateTableCellWithWidth("No", "center", wNo, fs),
                     CreateTableCellWithWidth("材料No", "center", wMat, fs),
                     CreateTableCellWithWidth("断面No", "center", wSec, fs),
+                    CreateTableCellWithWidth("β (°)", "center", wBeta, fs),
                     CreateTableCellWithWidth("I端", "center", wNI, fs),
                     CreateTableCellWithWidth("J端", "center", wNJ, fs)
                 );
@@ -1138,6 +1173,7 @@ namespace PileDesign.Output
                         CreateTableCellWithWidth($"{beamIdx + 1}", "center", wNo, fs),
                         CreateTableCellWithWidth($"{beam.MaterialNo}", "center", wMat, fs),
                         CreateTableCellWithWidth($"{beam.SectionNo}", "center", wSec, fs),
+                        CreateTableCellWithWidth($"{beam.AngleBeta:N1}", "right", wBeta, fs),
                         CreateTableCellWithWidth(nodeIStr, "left", wNI, fs),
                         CreateTableCellWithWidth(nodeJStr, "left", wNJ, fs)
                     );
