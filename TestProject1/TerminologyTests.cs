@@ -43,7 +43,20 @@ namespace TestProject1
             ("解析（一般）",         "解析（基礎梁なし）"),
             ("解析（反復）",         "解析（基礎梁あり）"),
             ("基礎梁考慮・反復",     "基礎梁あり"),
+            ("一般 / 反復",          "基礎梁なし / 基礎梁あり"),
         };
+
+        /// <summary>
+        /// 画面とヘルプでだけ引退した呼び名。コードの中では保存の値として使い続けるので、C# の文字列は見ない。
+        /// 荷重タイプは保存の値「個別十字」「個別矩形」のまま、画面では「杭十字」「杭矩形」と呼ぶ (LoadingTypeDisplayName)。
+        /// </summary>
+        private static readonly (string Retired, string Use)[] RetiredDisplayNames =
+        {
+            ("個別十字",             "杭十字"),
+            ("個別矩形",             "杭矩形"),
+        };
+
+        private static IEnumerable<(string Retired, string Use)> RetiredOnScreen => RetiredNames.Concat(RetiredDisplayNames);
 
         /// <summary>ソリューションのルート。探し方は <see cref="TestSource.Root"/> に 1 つだけ置いてある。</summary>
         private static string FindSolutionRoot() => TestSource.Root();
@@ -73,7 +86,7 @@ namespace TestProject1
                     foreach (Match m in DisplayAttribute.Matches(line))
                     {
                         string text = m.Groups[1].Value;
-                        foreach (var (retired, use) in RetiredNames)
+                        foreach (var (retired, use) in RetiredOnScreen)
                         {
                             if (text.Contains(retired, StringComparison.Ordinal))
                                 hits.Add($"{Path.GetFileName(xaml)}:{lineNo}  \"{text}\"  → 「{use}」を使う");
@@ -92,7 +105,7 @@ namespace TestProject1
             string root = FindSolutionRoot();
             string help = File.ReadAllText(Path.Combine(root, "Graphics_r1", "Help", "help.html"));
 
-            var hits = RetiredNames
+            var hits = RetiredOnScreen
                 .Where(p => help.Contains(p.Retired, StringComparison.Ordinal))
                 .Select(p => $"「{p.Retired}」 → 「{p.Use}」を使う")
                 .ToList();

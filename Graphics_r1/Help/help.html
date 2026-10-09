@@ -1260,7 +1260,7 @@
                 <li>基礎指針の設計例を参考にすると、入力項目の理解が早まる可能性があります。</li>
                 <li>この場合、「ファイルメニュー」で計算例ファイルを開きます。</li>
                 <li>リボンメニュー「解析条件/解析(S)」タブの<img class="button-icon" src="icons/FundamentalWindow.svg" alt="">「基本 設定」(Ctrl+E) で、
-                    Z=0 の標高や材料モデルの扱いなど、プロジェクト全体にかかわる設定をします。</li>
+                    材料モデルの扱いなど、プロジェクト全体にかかわる設定をします (Z=0 の標高はリボンの「プロジェクト 情報」で入れます)。</li>
             </ol>
 
             <h3 id="h-Step-2-荷重条件の設定"><img class="heading-icon" src="icons/LoadCaseWindow.svg" alt="">Step 2: 荷重条件の設定</h3>
@@ -2211,7 +2211,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     <tr><td>群杭沈下ウィンドウを開く</td><td>F8</td></tr>
                     <tr><td>解析実行（水平解析ウィンドウ内）</td><td>F5</td></tr>
                     <tr><td>追加解析実行（水平解析ウィンドウ内）</td><td>Ctrl+F5</td></tr>
-                    <tr><td><img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">群杭沈下解析（基礎梁あり）</td><td>(リボン / サブタブから起動)</td></tr>
+                    <tr><td><img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">群杭沈下解析（基礎梁あり）</td><td>(リボン、または群杭沈下ウィンドウの「解析」タブから起動)</td></tr>
 
                     <tr><td rowspan="8">編集</td><td><img class="button-icon" src="icons/Undo.svg" alt="">元に戻す（Undo）</td><td>Ctrl+Z</td></tr>
                     <tr><td>やり直し（Redo）</td><td>Ctrl+Y</td></tr>
@@ -2550,7 +2550,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     <span style="color:#62B0E2; font-weight:bold;">スカイブルー</span> = 杭要素分割、
                     <span style="color:#2E7D32; font-weight:bold;">緑</span> = 水平解析、
                     <span style="color:#1565C0; font-weight:bold;">青</span> = 単杭沈下解析 / 単杭沈下解析（基礎梁考慮）、
-                    <span style="color:#E65100; font-weight:bold;">橙</span> = 群杭沈下解析（一般 / 反復）。
+                    <span style="color:#E65100; font-weight:bold;">橙</span> = 群杭沈下解析（基礎梁なし / 基礎梁あり）。
                     未実施項目は表示されず、すべて未実施なら「未解析」と表示されます。
                 </li>
             </ul>
@@ -2870,7 +2870,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
 
             <p><img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">「群杭沈下」ボタン（F8）で
             <strong>群杭沈下ウィンドウ</strong>を開きます。沈下計算用の土層・グリッド・荷重面と、
-            一般 / 反復それぞれの解析の設定をまとめてあります。詳しくは
+            基礎梁なし / 基礎梁ありそれぞれの解析の設定をまとめてあります。詳しくは
             <a href="#data-group-settlement-tab">「群杭沈下」ウィンドウ</a>を参照してください。</p>
 
             <h4 id="fund-options" style="font-weight: bold;">モデル化オプション（ラジオボタン選択）</h4>
@@ -3029,7 +3029,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     入力欄の初期値 20.0 mm は入力を促すための値で、規準値ではありません。
                     <ul>
                         <li><strong>応答値</strong>: 単杭沈下量と群杭沈下量の和（長期）。
-                            画面のグラフ「沈下 単杭+群杭」と同じ組み方です。
+                            画面のグラフ「沈下 単杭＋群杭（基礎梁なし）」と同じ組み方です。
                             群杭沈下解析を実行していない場合、応答値は単杭沈下量に等しくなります。</li>
                         <li><strong>対象は長期（VL）だけ</strong>です。許容沈下量は常時の沈下に対して
                             定める量で、地震時の沈下量と比べる根拠がないためです。
@@ -5112,7 +5112,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             </ul>
             <p>
                 <strong>荷重面 Z は 1 つの値</strong>で、基礎梁なし・ありのどちらの解析も、荷重面より上の土層を沈下に数えません。
-                標高 (m) 表示は基本設定の Z=0 標高との和として自動計算されます。
+                標高 (m) 表示はプロジェクト情報の Z=0 の標高との和として自動計算されます。
                 (1.0.35-beta までは解析ごとに別の荷重面 Z を持っていました。その形のファイルを開くと基礎梁なしの値にそろえ、
                 基礎梁ありの値が違っていたときは読み込みの知らせに出します。また、基礎梁ありの解析は荷重面 Z を計算に使っていませんでした。)
             </p>
@@ -5136,7 +5136,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 データグリッドの各層厚さは「土層上端 Z 基準」で自動算出されます (第 1 層厚さ = 土層上端 Z − 第 1 層下端 Z、以降は前層下端からの差)。
             </p>
             <p>
-                各テキストボックスの右側には <strong>標高 (m)</strong>（= Z + 基本設定の Z=0 標高）が編集不可で表示されます。
+                各テキストボックスの右側には <strong>標高 (m)</strong>（= Z + プロジェクト情報の Z=0 の標高）が編集不可で表示されます。
                 土層データグリッドにも「下端標高」列があります。
             </p>
             <p>
@@ -5198,7 +5198,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     </tr>
                     <tr>
                         <td>下端標高 (m)</td>
-                        <td>下端 Z + Z=0 標高（基本設定）の絶対標高表示</td>
+                        <td>下端 Z + Z=0 の標高（プロジェクト情報）の絶対標高表示</td>
                         <td style="text-align: center">✗</td>
                     </tr>
                     <tr>
@@ -5243,7 +5243,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             <h4>荷重条件</h4>
             <p>
                 <strong>荷重面 Z</strong>・<strong>荷重タイプ</strong>・<strong>矩形荷重</strong>を設定します。基礎梁なし・ありの両方の解析がこの荷重を使います。
-                杭に紐付く矩形 (個別矩形) の荷重は、既定で杭の VL 時の軸力 (常時軸力 + 付加軸力) から決め、表の「出所」に「軸力」と出ます。
+                杭に紐付く矩形 (杭矩形) の荷重は、既定で杭の VL 時の軸力 (常時軸力 + 付加軸力) から決め、表の「出所」に「軸力」と出ます。
                 表で荷重を入れると「手入力」となり、解析で軸力に戻しません。「<strong>荷重を軸力から作り直す</strong>」で軸力の値に戻せます。
                 杭に紐付く矩形は<strong>杭の位置が中心</strong>で、位置 (X1〜Y2) は変えられません (寸法 DX・DY と荷重は変えられます)。位置を自由に決めるときは「任意矩形」を使います (任意矩形は基礎梁なしの解析だけで使えます)。
                 基礎梁ありの解析は杭ごとの矩形を使うので、そうなっていないときは「<strong>杭ごとの矩形を作り直す (基礎梁ありの解析用)</strong>」で作ります。
@@ -5252,17 +5252,18 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             <h4>解析</h4>
             <p>
                 「基礎梁なし」「基礎梁あり」を選び、それぞれの実行ボタンで解析します。
-                基礎梁なしは Steinbrenner 近似式で 1 回計算します (= リボンの「群杭沈下解析（基礎梁なし）」F7)。
+                基礎梁なしは Steinbrenner 近似式で 1 回計算します (F7 でも実行できます)。
                 解析完了後、コンタ凡例は「<strong>沈下量 (基礎梁なし)</strong>」と表示されます。詳細手順は <a href="#section-settlement-group">「群杭沈下解析（基礎梁なし）」</a> を参照。
             </p>
 
             <h5>荷重定義</h5>
             <p>矩形荷重を定義します。</p>
-            <p>荷重タイプコンボボックスで、<img class="button-icon" src="icons/AnyFormPressure.svg" alt="">「任意矩形」、<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「個別十字」、<img class="button-icon" src="icons/BeamedCrossFormPressure.svg" alt="">「個別十字（基礎梁反力）」のいずれかを選択します。</p>
+            <p>荷重タイプコンボボックスで、<img class="button-icon" src="icons/AnyFormPressure.svg" alt="">「任意矩形」、<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「杭十字」、<img class="button-icon" src="icons/BeamedCrossFormPressure.svg" alt="">「杭十字（基礎梁反力）」、<img class="button-icon" src="icons/SquareFormPressure.svg" alt="">「杭矩形」、<img class="button-icon" src="icons/BeamedSquareFormPressure.svg" alt="">「杭矩形（基礎梁考慮）」、「なし」から選択します。
+                「杭十字（基礎梁反力）」は単杭沈下解析（基礎梁考慮）の実行後に、「杭矩形（基礎梁考慮）」は基礎梁があるときに選べます。</p>
             <p>
-                <img class="button-icon" src="icons/BeamedCrossFormPressure.svg" alt="">「個別十字（基礎梁反力）」は、<strong>単杭沈下解析（基礎梁考慮）</strong>（Shift + F6）が実行済みの場合にのみ選択肢に表示されます。
+                <img class="button-icon" src="icons/BeamedCrossFormPressure.svg" alt="">「杭十字（基礎梁反力）」は、<strong>単杭沈下解析（基礎梁考慮）</strong>（Shift + F6）が実行済みの場合にのみ選択肢に表示されます。
             </p>
-            <p><img class="button-icon" src="icons/AddRectLoad.svg" alt="">「矩形荷重面追加」ボタンをクリックすると、矩形荷重面を 1 件追加します。荷重タイプが「任意矩形」のときに使用し、追加された行に X1, Y1, X2, Y2 と荷重強度を入力します。荷重タイプが「個別十字」「個別十字（基礎梁反力）」のときは杭配置から自動生成される矩形が使用されるため、手動追加は通常不要です。</p>
+            <p><img class="button-icon" src="icons/AddRectLoad.svg" alt="">「矩形荷重面追加」ボタンをクリックすると、矩形荷重面を 1 件追加します。荷重タイプが「任意矩形」のときに使用し、追加された行に X1, Y1, X2, Y2 と荷重強度を入力します。荷重タイプが「杭十字」「杭十字（基礎梁反力）」のときは杭配置から自動生成される矩形が使用されるため、手動追加は通常不要です。</p>
             <p><img class="button-icon" src="icons/CreateAutoUniformlyDistributedLoad.svg" alt="">「建物下面全体矩形荷重自動生成」ボタンをクリックすると、すべての杭配置点を内包する最小外接矩形からマージンを取った矩形荷重面を自動生成し、荷重タイプを「任意矩形」に切り替えて 1 件のみのデータグリッドに置き換えます。基礎指針'19 6.3 節「等価荷重面法」による即時沈下計算で建物範囲全体に分布荷重を与えたい場合の初期入力に便利です。</p>
             <h5><img class="heading-icon" src="icons/AnyFormPressure.svg" alt="">任意矩形</h5>
             <p>「任意矩形」タイプでは、任意の矩形荷重を定義できます。
@@ -5332,9 +5333,9 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
 
 
 
-            <h5><img class="heading-icon" src="icons/CrossFormPressure.svg" alt="">個別十字</h5>
+            <h5><img class="heading-icon" src="icons/CrossFormPressure.svg" alt="">杭十字</h5>
             <p>
-                「個別十字」タイプでは、杭ごとに円形の等分布荷重面を想定し、<br>
+                「杭十字」タイプでは、杭ごとに円形の等分布荷重面を想定し、<br>
                 面積が等価な5つの矩形荷重として自動生成します。<br>
                 荷重の大きさは、<strong>VL（VL<sub>0</sub>+VL<sub>add</sub>）</strong>を使用します。
             </p>
@@ -5342,9 +5343,9 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 選択時の挙動:
             </p>
             <ul>
-                <li>荷重タイプを<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「個別十字」に切り替えた時点で、<strong>矩形荷重データグリッドが自動生成値で置き換わります</strong>。</li>
+                <li>荷重タイプを<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「杭十字」に切り替えた時点で、<strong>矩形荷重データグリッドが自動生成値で置き換わります</strong>。</li>
                 <li>下段の補助テーブル（地盤・杭・レベルセット毎）で <strong>荷重面等価径</strong>（GroupPileLoadDia）を編集すると、その瞬間に矩形荷重が再生成されます。</li>
-                <li>生成される矩形数は <em>杭本数 × 5</em> です（中央 a×a 1枚＋上下左右 b×c 4枚）。ただし <strong>荷重面等価径が 0 の杭はスキップ</strong>されるため、初期状態では空のグリッドとなります。径を入力すると即座に対応する 5 矩形が現れます。</li>
+                <li>生成される矩形数は <em>杭本数 × 5</em> です（中央 a×a 1枚＋上下左右 b×c 4枚）。<strong>荷重面等価径の既定は杭先端径</strong>です (未入力の杭は表に灰色で杭先端径を出します)。値を入れるとその値を使い、0 を入れると杭先端径に戻ります。荷重面等価径も杭先端径も 0 の杭は矩形を作らず、表の下にその杭を示します。</li>
                 <li>各矩形の単位面積荷重は、全体の和が杭軸力と一致するよう面積比例配分されます。</li>
                 <li>ユーザが矩形荷重データグリッドを編集・追加・削除すると、自動的に荷重タイプが「任意矩形」に切り替わります。以降はユーザ編集値が保持されます。</li>
             </ul>
@@ -5352,7 +5353,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 下段の補助テーブルには、杭ごとの <strong>荷重面等価径</strong>（ = <em>GroupPileLoadDia</em> ）が表示されます。</p>
 
             <table class="table-doc">
-                <caption style="text-align: center">個別十字荷重面入力データグリッド</caption>
+                <caption style="text-align: center">杭十字荷重面入力データグリッド</caption>
                 <thead>
                     <tr>
                         <th style="text-align: center">項目</th>
@@ -5395,11 +5396,11 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             </table>
 
             <div class="tip" style="border:1px solid #B0BEC5; background:#ECEFF1; padding:8px 12px; margin:8px 0;">
-                <strong>💡 使い方のコツ — 個別十字 → 任意矩形 への切替えで自由編集</strong><br>
-                個別十字 (または 個別十字（基礎梁反力）) で大まかな十字形荷重を <strong>初期値として自動生成</strong> させた後、
+                <strong>💡 使い方のコツ — 杭十字 → 任意矩形 への切替えで自由編集</strong><br>
+                杭十字 (または 杭十字（基礎梁反力）) で大まかな十字形荷重を <strong>初期値として自動生成</strong> させた後、
                 荷重タイプを <strong>「任意矩形」に切り替える</strong> ことで、生成された矩形荷重をそのまま自由に変更・追加・削除できます。
                 <ul>
-                    <li>「個別十字」のまま矩形荷重データグリッドを直接編集すると、自動的に「任意矩形」に切替わるため、
+                    <li>「杭十字」のまま矩形荷重データグリッドを直接編集すると、自動的に「任意矩形」に切替わるため、
                         切替えを意識せず編集を始めれば結果として同じ状態になります。</li>
                     <li>建物形状に合わせて細かく荷重面を調整したい場合や、特定の杭まわりだけ径を変更して再生成したい場合に有効です。</li>
                     <li>切替え後は元の十字形配置を残したままユーザ編集が反映されるので、ゼロから矩形荷重を入力するより手早く所望の配置を作成できます。</li>
@@ -5407,22 +5408,22 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             </div>
 
 
-            <h5><img class="heading-icon" src="icons/BeamedCrossFormPressure.svg" alt="">個別十字（基礎梁反力）</h5>
+            <h5><img class="heading-icon" src="icons/BeamedCrossFormPressure.svg" alt="">杭十字（基礎梁反力）</h5>
             <p>
-                「個別十字（基礎梁反力）」タイプは、<strong>単杭沈下解析（基礎梁考慮）が実行済み</strong>の場合にのみ利用可能な荷重タイプです。<br>
-                「個別十字」と同様に杭ごとに 5 矩形を自動生成しますが、<strong>荷重の値には単杭沈下解析（基礎梁考慮）の VL ケース杭反力（Reaction_kN）を使用</strong>します。<br>
+                「杭十字（基礎梁反力）」タイプは、<strong>単杭沈下解析（基礎梁考慮）が実行済み</strong>の場合にのみ利用可能な荷重タイプです。<br>
+                「杭十字」と同様に杭ごとに 5 矩形を自動生成しますが、<strong>荷重の値には単杭沈下解析（基礎梁考慮）の VL ケース杭反力（Reaction_kN）を使用</strong>します。<br>
                 基礎梁との連成によって再分配された杭反力を沈下計算に反映できます。
             </p>
             <p>動作上の注意:</p>
             <ul>
                 <li>VL ケースは LoadCaseName が <code>VL</code> で始まる結果（例: "VL", "VL (常時+追加)" 等）の先頭を使用します。</li>
-                <li><img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「個別十字」と同様、矩形荷重データグリッドを編集すると自動的に<img class="button-icon" src="icons/AnyFormPressure.svg" alt="">「任意矩形」に切り替わります。</li>
-                <li>単杭沈下解析（基礎梁考慮）の結果をクリアしたり未実行に戻すと、この選択肢は自動的にコンボボックスから消え、選択中だった場合は<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「個別十字」にフォールバックします。</li>
+                <li><img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「杭十字」と同様、矩形荷重データグリッドを編集すると自動的に<img class="button-icon" src="icons/AnyFormPressure.svg" alt="">「任意矩形」に切り替わります。</li>
+                <li>単杭沈下解析（基礎梁考慮）の結果をクリアしたり未実行に戻すと、この選択肢は自動的にコンボボックスから消え、選択中だった場合は<img class="button-icon" src="icons/CrossFormPressure.svg" alt="">「杭十字」にフォールバックします。</li>
             </ul>
 
             <h5>基礎梁なしの解析の実行と結果表示</h5>
             <p>
-                解析タブで「基礎梁なし」を選び、<img class="button-icon" src="icons/Play.svg" alt="">「<strong>基礎梁なしで解析</strong>」ボタン (リボンの <img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">「群杭沈下解析（基礎梁なし）」F7 と同等) で解析を実行します。
+                解析タブで「基礎梁なし」を選び、<img class="button-icon" src="icons/Play.svg" alt="">「<strong>基礎梁なしで解析</strong>」ボタン (F7 と同等) で解析を実行します。リボンの <img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">「群杭沈下 解析（基礎梁なし）」ボタンは群杭沈下ウィンドウを開きます。
                 完了後、コンタ凡例は「<strong>沈下量 (基礎梁なし)</strong>」と表示され、各杭位置での沈下量はグリッド計算結果テーブルに表示されます。
             </p>
 
@@ -6497,7 +6498,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 <strong>実行前チェック</strong>:
             </p>
             <ul>
-                <li>荷重タイプが「個別十字」「個別十字（基礎梁反力）」の場合は杭配置と軸力が必須。「任意矩形」では矩形荷重 1 件以上＋荷重値非ゼロが必須</li>
+                <li>荷重タイプが「杭十字」「杭十字（基礎梁反力）」の場合は杭配置と軸力が必須。「任意矩形」では矩形荷重 1 件以上＋荷重値非ゼロが必須</li>
                 <li>土層 1 層以上が必須</li>
                 <li>荷重面 Z &gt; 土層上端 Z または 荷重面 Z &lt; 最下層下端 Z の場合はエラーで中断</li>
                 <li>荷重面 Z が土層内にある場合は、その層を荷重面で切り詰めた仮想最上層を作って多層地盤として解析</li>
@@ -6718,8 +6719,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
             <h4 style="font-weight: bold;">ステータスバーの解析状態表示</h4>
             <p>
-                画面下部のステータスバーには、<strong>完了した解析項目のみ</strong>「<strong>項目名 ✓</strong>」形式で並びます。
-                未実施項目は表示されず、すべて未実施の場合は「未解析」と表示されます。
+                画面下部のステータスバーには、解析の状態が並びます。<strong>杭要素分割と水平解析</strong>は、未完了でも灰色で常に並び (次に何をすればよいかが分かるように)、
+                完了すると「<strong>項目名 ✓</strong>」になります。沈下系の解析は、実行したものだけが「項目名 ✓」で並びます。
                 各項目の色はリボンの ✓ 表示と同じ色分けです。
             </p>
             <ul>
@@ -6740,13 +6741,13 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 マウスを重ねると ToolTip で不足項目や前提が表示されるため、何が足りないかを確認できます。
             </p>
             <ul>
-                <li><img class="button-icon" src="icons/LateralLoadAnalysisWindow.svg" alt=""><strong>水平解析の解析実行</strong>（水平解析ウィンドウ内、F9）：杭配置・解析対象荷重ケース・適用される荷重組合せのいずれかが未設定／0 件の場合は灰色化。</li>
-                <li><img class="button-icon" src="icons/SettlementWindow.svg" alt=""><strong>単杭沈下解析</strong>（F6）：杭要素分割が完了しているときのみ活性化。</li>
+                <li><img class="button-icon" src="icons/LateralLoadAnalysisWindow.svg" alt=""><strong>水平解析の解析実行</strong>（水平解析ウィンドウ内、F5）：杭配置・解析対象荷重ケース・適用される荷重組合せのいずれかが未設定／0 件の場合は灰色化。</li>
+                <li><img class="button-icon" src="icons/SettlementWindow.svg" alt=""><strong>単杭沈下解析</strong>（F6）：いつでも押せます。杭要素分割が済んでいなければ、その場で実行するかを訊きます。</li>
                 <li><img class="button-icon" src="icons/SettlementWithBeamWindow.svg" alt=""><strong>単杭沈下解析（基礎梁考慮）</strong>（Shift + F6）：杭配置 ＋ 基礎梁定義 ＋ 単杭沈下解析の完了をすべて満たした場合のみ活性化。</li>
             </ul>
             <p>
                 なお、リボンの「水平解析（F5）」ボタン自体には事前条件による灰色化は設けていません。
-                <img class="button-icon" src="icons/GroupPileSettlement.svg" alt="">「群杭沈下解析（基礎梁なし）」（F7）は、
+                群杭沈下解析（基礎梁なし）の実行 (F7、および画面右のアイコン) は、
                 実行できないとき灰色になり、ボタンにマウスを載せると理由（矩形荷重が無い・土層が無い 等）が出ます。
                 <img class="button-icon" src="icons/GroupPileSettlementWithBeamWindow.svg" alt="">「群杭沈下解析（基礎梁あり）」は <strong>基礎梁が 1 件以上定義されているとき</strong> のみ活性化されます。
                 ウィンドウを開いた後の解析実行ボタン側、または解析実行時のバリデーションメッセージで不足項目が示されます。
@@ -7576,6 +7577,10 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 具体的には、レベル1荷重ケースに対してはレベル1地震時軸力、レベル2荷重ケースに対してはレベル2地震時軸力が適用されます。
                 ケース別の軸力が未入力（0）の場合は常時軸力 $V_L$ を用います。
             </p>
+            <p>
+                なお、水平解析では、ケース別の軸力が未入力（0）の杭には杭頭の軸力（外力）を与えません。
+                解析は杭頭荷重を入力せず、検定は常時軸力 $V_L$ を考慮する、という扱いです（意図した扱いで、食い違いではありません）。
+            </p>
 
             <h4>低減前と低減後の違い</h4>
             <p>
@@ -7585,7 +7590,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             </p>
             <h3 id="h-沈下コンター表示"><img class="heading-icon" src="icons/GroupPileContorVisible.svg" alt="">沈下コンター表示</h3>
             <p>
-                群杭沈下解析（一般 / 反復）後、メインビューの「グリッド変位表示」チェックボックスをONにすると、
+                群杭沈下解析（基礎梁なし / 基礎梁あり）後、メインビューの「グリッド変位表示」チェックボックスをONにすると、
                 沈下量のコンター図が表示されます。
                 マウスカーソル位置の沈下量がツールチップで表示されます。
             </p>
@@ -7945,7 +7950,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <h4>パネルグループ</h4>
             <p>画面左側・右側のパネル群の表示/非表示を個別に切り替えます。</p>
             <ul>
-                <li><img class="button-icon" src="icons/DataTabVisible.svg" alt=""><strong>データタブ</strong>: 画面左側のデータタブパネル（一般節点・梁要素・杭・根入部・通り心・群杭沈下）の表示/非表示を切り替えます。
+                <li><img class="button-icon" src="icons/DataTabVisible.svg" alt=""><strong>データタブ</strong>: 画面左側のデータタブパネル（一般節点・梁要素・杭・根入部・通り心）の表示/非表示を切り替えます。
                     非表示にすると、メインビューの描画領域が広がります。</li>
                 <li><img class="button-icon" src="icons/PropertyVisible.svg" alt=""><strong>プロパティ</strong>: 画面右上のプロパティパネルの表示/非表示を切り替えます。
                     杭や梁要素を選択すると、そのアイテムの詳細情報（座標、材料、断面、解析結果など）が表示されます。</li>
@@ -8201,7 +8206,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 <li><strong>杭要素分割データ</strong>: FEMモデルの節点・梁要素・地盤ばね等</li>
                 <li><strong>水平解析結果</strong>: 各荷重ケースの梁応力・節点変位・地盤反力等</li>
                 <li><strong>単杭沈下解析結果</strong>: 各杭の荷重-沈下関係</li>
-                <li><strong>群杭沈下解析結果（一般 / 反復）</strong>: 群杭沈下グリッドデータ + 各杭頭沈下量 + 反復のとき梁節点変位/梁応力 (CaseRecord として複数ケース保存)</li>
+                <li><strong>群杭沈下解析結果（基礎梁なし / 基礎梁あり）</strong>: 群杭沈下グリッドデータ + 各杭頭沈下量 + 反復のとき梁節点変位/梁応力 (CaseRecord として複数ケース保存)</li>
                 <li><strong>単杭沈下解析（基礎梁考慮）結果</strong>: 杭反力・節点変位・梁応力等</li>
             </ul>
             <p>
@@ -8219,7 +8224,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
             <h3 id="h-解析結果の保護">解析結果の保護</h3>
             <p>
-                水平解析・単杭沈下解析・群杭沈下解析（一般 / 反復）・単杭沈下解析（基礎梁考慮）の実行後にモデルを変更する操作（杭の追加・削除、梁要素の生成・分割、節点の追加・変換、群杭係数の再計算など）を行うと、
+                水平解析・単杭沈下解析・群杭沈下解析（基礎梁なし / 基礎梁あり）・単杭沈下解析（基礎梁考慮）の実行後にモデルを変更する操作（杭の追加・削除、梁要素の生成・分割、節点の追加・変換、群杭係数の再計算など）を行うと、
                 「解析結果が削除されます。続けますか？」という確認ダイアログが表示されます。
             </p>
             <ul>
@@ -9911,6 +9916,31 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 </div>
                 <div class="formula-right">基礎指針'19(4.3.22)</div>
             </div>
+
+            <p>
+                ここに、$z$、$z_a$、$z_b$ は<strong>地表面からの深さ</strong>（$z_a$・$z_b$ は区間の上端・下端）です。
+                本プログラムでは根入部を区間に分け、(4.3.21)(4.3.22) を区間の厚さ $h = z_b - z_a$ と受圧幅 $B$ で割った
+                土圧度で各区間のばねを定めます。
+            </p>
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$p_0 = (q + \sigma_z')K_0, \quad p_p = (q + \sigma_z')K_p + 2c\sqrt{K_p}, \quad \sigma_z' = \frac{\sigma_{za}' + \sigma_{zb}'}{2}$$
+                </div>
+                <div class="formula-right"></div>
+            </div>
+
+            <ul class="symbol-list">
+                <li class="symbol-intro">ここに、</li>
+                <li><span class="symbol-label">$\sigma_{za}'$, $\sigma_{zb}'$</span>区間の上端・下端の有効土被り圧。地表面から各土層の単位体積重量で積み上げ、地下水位以下は水圧を除きます（地中応力計算用標高ではなく地表面から数えます。地下外壁の外側の地盤は掘削されないためです）</li>
+                <li><span class="symbol-label">$q$</span>地表面の上載荷重。入力欄がないため 0 として扱います</li>
+            </ul>
+
+            <p>
+                一様な土層で地下水位より上の区間では $\sigma_z' = \gamma (z_a + z_b)/2$ となり、(4.3.21)(4.3.22) の合力を区間ごとに足したものと一致します。
+                区間の合力は $P_{Et} = p_E B h$（$p_E$ は (4.3.16)(4.3.17) の $P_p - P_0$ を $p_p - p_0$ に置き換えた土圧度）とし、
+                区間の上端・下端の節点に 1/2 ずつ作用させます。$\Delta_p = 0.05D_f$、$y_{sp} = 0.1\Delta_p$ です（$D_f$ は根入れ深さ）。
+            </p>
 
             <h3 id="h-杭の水平地盤反力係数">杭の水平地盤反力係数</h3>
 
@@ -12763,8 +12793,8 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
 
                     <h4>群杭沈下検討への反映</h4>
                     <p>
-                        群杭沈下検討で荷重タイプを <strong>「個別十字」</strong> とした場合、各杭の荷重には VL を用います。
-                        <strong>「個別十字（基礎梁反力）」</strong> の場合は、単杭沈下解析（基礎梁考慮）（Shift + F6）で再分配された杭反力（<code>Reaction_kN</code>）を用います。
+                        群杭沈下検討で荷重タイプを <strong>「杭十字」</strong> とした場合、各杭の荷重には VL を用います。
+                        <strong>「杭十字（基礎梁反力）」</strong> の場合は、単杭沈下解析（基礎梁考慮）（Shift + F6）で再分配された杭反力（<code>Reaction_kN</code>）を用います。
                     </p>
 
                     <h3 id="h-水平解析モードでの鉛直ばね統合-P-S-非線形ばね" style="font-weight: bold; font-size: 1.2em;">水平解析モードでの鉛直ばね統合 (P-S 非線形ばね)</h3>
@@ -15735,7 +15765,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
 
                     <p><strong>表示と扱い</strong>:</p>
                     <ul>
-                        <li>3D ビュー上では杭体応力ダイアグラムと同様に描画されます。リボン「解析結果」タブの「杭応力 非表示」チェックボックスで杭体・他の RigidLink と一括非表示にできます (基礎梁応力ダイアグラムだけを上面図で見るときに有用)。</li>
+                        <li>3D ビュー上では杭体応力ダイアグラムと同様に描画されます。リボン「解析結果」タブ「テキスト・値表示」の応力表示「杭」のチェックを外すと、杭体と杭頭の剛域の応力と一緒に非表示にできます (基礎梁応力ダイアグラムだけを上面図で見るときに有用)。</li>
                         <li>計算書 (docx) 出力では杭体応力ダイアグラムと同じ図に重ねて描画されますが、限界状態判定の対象外です。</li>
                     </ul>
                 </dd>
