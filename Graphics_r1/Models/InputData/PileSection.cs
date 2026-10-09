@@ -3327,8 +3327,12 @@ namespace PileDesign.Models.InputData
         // 腐食考慮 杭単位長さ重量 (kN/m)
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public double WCorroded =>
-            ((MainBarAg + TendonAp + PipeAsCorroded) * UnitConversion.STEEL_UNIT_WEIGHT + Ac * ConcreteGamma) * Math.Pow(10, -6);
+        // 公称の W と同じ鋼材量で数え、鋼管だけを腐食後の断面積にする (諸元表の「腐食考慮」欄だけが使う)。
+        // 以前は主筋に MainBarAg を使っており、鋼管部のようにコンクリートの無い区間でも残った主筋の重量を足し、
+        // 節杭のカタログ重量も見ていなかったので、公称の欄と腐食考慮の欄で鋼管以外の項が食い違った
+        public double WCorroded => IsNodularPile && CatalogMassPerM > 0
+            ? W
+            : ((RebarAgInSection + TendonAp + PipeAsCorroded) * UnitConversion.STEEL_UNIT_WEIGHT + Ac * ConcreteGamma) * Math.Pow(10, -6);
 
         // 腐食考慮 軸剛性 (kN)
         [System.Text.Json.Serialization.JsonIgnore]

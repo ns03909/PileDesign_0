@@ -74,6 +74,16 @@ namespace TestProject1
                         var info = new FileInfo(path);
                         Assert.IsTrue(info.Exists && info.Length > 10_000,
                             $"{i} 回目の docx が生成されていない/小さすぎる ({(info.Exists ? info.Length : 0)} bytes)");
+
+                        // 図の枠 (wp:docPr) の Id は文書の中で重ならないこと。以前は全部 1 で、Word が修復を求めることがあった
+                        using (var word = DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(path, false))
+                        {
+                            var ids = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select(
+                                word.MainDocumentPart!.Document!.Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties>(),
+                                d => d.Id!.Value));
+                            Assert.IsTrue(ids.Count > 1, "(前提) 図がありません");
+                            Assert.AreEqual(ids.Count, System.Linq.Enumerable.Count(System.Linq.Enumerable.Distinct(ids)), "図の Id が重なっています");
+                        }
                     }
                 }
                 catch (Exception ex)

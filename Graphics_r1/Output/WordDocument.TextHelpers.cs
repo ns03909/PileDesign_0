@@ -273,6 +273,18 @@ namespace PileDesign.Output
         /// 行を作る箇所が多数に散っているので、組み上がった本文に対して一度だけ通す。
         /// （1 行だけで 1 ページに収まらない場合は、Word がこの指定を無視して分割する）
         /// </summary>
+        /// <summary>
+        /// 図の枠 (wp:docPr) の Id を、出てくる順に 1 から振り直す。文書の中で重ならないこと (ECMA-376) が求められる。
+        /// 以前は図を作る 3 か所がすべて Id = 1 を書いており、Word が「読み取れない内容」として修復を求めることがあった。
+        /// 出てくる順に振るので、同じ結果から作れば同じ番号になる (計算書の中身が実行ごとに変わらない)。
+        /// </summary>
+        internal static void AssignUniqueDrawingIds(Body body)
+        {
+            uint id = 0;
+            foreach (var docPr in body.Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties>())
+                docPr.Id = ++id;
+        }
+
         internal static void PreventTableRowsFromSplittingAcrossPages(Body body)
         {
             foreach (var row in body.Descendants<TableRow>())

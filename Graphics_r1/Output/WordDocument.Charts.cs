@@ -139,9 +139,8 @@ namespace PileDesign.Output
                             foreach (var loadCase in allSeismicLoadCases)
                             {
                                 if (loadCase == null || !loadCase.IsReported) continue;
-                                // 杭配置にこのケースの地震時軸力の欄が無いと範囲外の例外になる。ここは try の外だったので、
-                                // 1 本の杭の入力の欠けで計算書の出力全体が止まっていた。そのケースだけ飛ばす (描く軸力は変えない)
-                                if (!TryGetSeismicAxialForce(pli, loadCase, out double axialForce)) continue;
+                                // 点の軸力は検定と同じ設計軸力 (CheckAxialForce)
+                                double axialForce = CheckAxialForce(pli, loadCase);
 
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
@@ -193,9 +192,9 @@ namespace PileDesign.Output
                                         // 「解析軸力を使う」を画面の MNINT と同じ扱いにする。
                                         // Fxi は圧縮が負なので符号を反転して足す。
                                         // 反映しないと、同じ図なのに画面と計算書で点が横にずれる。
-                                        double plotAxialForce = inputModel.UseAnalysisAxialForce
-                                            ? axialForce - analysisFxi
-                                            : axialForce;
+                                        // 点の軸力は検定と同じ (入力値＋応力解析結果では解析と同じく杭頭の要素の軸力を足す)
+                                        double plotAxialForce = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, loadCase.No, loadCase.Level,
+                                            ViewModels.EvaluationService.PileHeadBeam(pli) is { } head ? GetBeamResultCached(head, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi : null).N;
 
                                         if (loadCase.Level == 1)
                                         {
@@ -459,9 +458,8 @@ namespace PileDesign.Output
                             foreach (var loadCase in allSeismicLoadCases)
                             {
                                 if (loadCase == null || !loadCase.IsReported) continue;
-                                // 杭配置にこのケースの地震時軸力の欄が無いと範囲外の例外になる。ここは try の外だったので、
-                                // 1 本の杭の入力の欠けで計算書の出力全体が止まっていた。そのケースだけ飛ばす (描く軸力は変えない)
-                                if (!TryGetSeismicAxialForce(pli, loadCase, out double axialForce)) continue;
+                                // 点の軸力は検定と同じ設計軸力 (CheckAxialForce)
+                                double axialForce = CheckAxialForce(pli, loadCase);
 
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
@@ -508,9 +506,9 @@ namespace PileDesign.Output
                                         if (maxShearInPile == double.MinValue) continue;
 
                                         // 横軸は N-M 図と同じ扱いにする (画面の QNINT も同じ)
-                                        double plotAxialForce = inputModel.UseAnalysisAxialForce
-                                            ? axialForce - analysisFxi
-                                            : axialForce;
+                                        // 点の軸力は検定と同じ (入力値＋応力解析結果では解析と同じく杭頭の要素の軸力を足す)
+                                        double plotAxialForce = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, loadCase.No, loadCase.Level,
+                                            ViewModels.EvaluationService.PileHeadBeam(pli) is { } head ? GetBeamResultCached(head, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi : null).N;
 
                                         if (loadCase.Level == 1)
                                         {
@@ -1009,24 +1007,14 @@ namespace PileDesign.Output
         }
 
         /// <summary>
-        /// 杭配置のこのケースの地震時軸力 (<see cref="PileLayoutDataItem.GetSeismicAxialForce"/>)。
-        /// 欄が無ければ false (計算書の出力を止めず、省いたものとして記録する)。
+        /// N-M・N-Q 図の点の軸力。曲げ・せん断の検定と同じ設計軸力
+        /// (<see cref="PileLayoutDataItem.GetDesignAxialForce"/>: 地震時軸力。未入力 (0)・欄が無いときは常時軸力 VL)。
+        ///
+        /// 以前は地震時軸力をそのまま使っていたので、未入力の杭は図だけが N = 0 に点を打ち、検定 (VL で判定) と
+        /// 違う位置に出た。欄が無いと範囲外の例外で計算書の出力が止まっていたのも、設計軸力は常時軸力へ落とすので起きない。
         /// </summary>
-        internal static bool TryGetSeismicAxialForce(PileLayoutDataItem pli, LoadCase loadCase, out double axialForce)
-        {
-            try
-            {
-                axialForce = pli.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-                return true;
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                // 黙って外さず、計算書の「省いたもの」の一覧に載せる (本文には段落を足さない)
-                NoteOmitted(null, $"杭No.{pli?.PileNo} 荷重ケース {loadCase?.LoadName} の N-M・N-Q 図の点（地震時軸力の欄がない）", ex);
-                axialForce = 0.0;
-                return false;
-            }
-        }
+        internal static double CheckAxialForce(PileLayoutDataItem pli, LoadCase loadCase)
+            => pli.GetDesignAxialForce(loadCase.No, loadCase.Level);
 
         /// <summary>
         /// 杭頭の回転ばねの Kθ が剛結の印か。解析は剛結を K = 1e10 (KBig) で表すので、その 1 桁下を閾値にする
@@ -1274,6 +1262,7 @@ namespace PileDesign.Output
 
             var soilPile = pli.SoilPile;
             if (soilPile?.PileBodySegments == null) return (shearXs, shearZs, momentXs, momentZs, limitName);
+            bool shearMagnified = false;
 
             foreach (var beam in pli.Beams)
             {
@@ -1309,14 +1298,22 @@ namespace PileDesign.Output
                     momentXs.Add(mLim); momentZs.Add(beam.NodeJ.Coord.Z);
                 }
 
-                // せん断限界。曲げと同じく荷重レベルの曲線を使う
-                var qnLevel = pileSection.GetQNCurvesForLevel(lc.Level == 1 ? 1 : 2);
+                // せん断限界。曲げと同じく荷重レベルの曲線を使い、M/(Q·d) と設計用せん断力の割増は検定と同じにする
+                // (EvaluationService.EvaluatePileSectionShear)。以前は M/(Q·d) = 3.0 の既定値で描き、割増も見ていなかったので、
+                // 図では線の内側なのに検定は NG (またはその逆) になることがあった。
+                // 割増は検定では応答に掛けるので、図では限界値を割増で割って描く (比は検定と同じになる)。
+                _maxForcesByPileCase ??= ViewModels.EvaluationService.BuildMaxForcesByPileCase(inputModel);
+                var (monQdRaw, _) = ViewModels.EvaluationService.ResolveMonQd(
+                    pli, ViewModels.EvaluationService.CaseKeyOf(lc), pileSection, _maxForcesByPileCase);
+                var qnLevel = pileSection.GetQNCurvesForLevel(lc.Level == 1 ? 1 : 2, Math.Round(monQdRaw, 3));
                 var (nQs, qVals) = isLongTerm
                     ? (qnLevel.FactoredService.N, qnLevel.FactoredService.Q)
                     : useDamage
                         ? (qnLevel.FactoredDamage.N, qnLevel.FactoredDamage.Q)
                         : (qnLevel.FactoredUltimate.N, qnLevel.FactoredUltimate.Q);
-                double qLim = InterpolateLimitFromNCurve(nQs, qVals, axialN);
+                double magnification = !isLongTerm && useDamage ? pileSection.ShearDesignMagnification : 1.0;
+                if (magnification != 1.0) shearMagnified = true;
+                double qLim = InterpolateLimitFromNCurve(nQs, qVals, axialN) / magnification;
                 if (!double.IsNaN(qLim) && qLim > 0)
                 {
                     shearXs.Add(qLim); shearZs.Add(beam.NodeI.Coord.Z);
@@ -1324,6 +1321,7 @@ namespace PileDesign.Output
                 }
             }
 
+            if (shearMagnified) limitName += "・せん断は設計用せん断力の割増で除した値";
             return (shearXs, shearZs, momentXs, momentZs, limitName);
         }
 

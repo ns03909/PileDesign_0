@@ -703,11 +703,11 @@ namespace PileDesign.ViewModels
                 }
                 var section = soilPile.PileBodySegments[seg].PileSection;
 
-                // 軸力: 荷重ケースに応じたユーザー入力値 (kN)。
-                // 地震時軸力優先・未入力 (0) / 範囲外は常時軸力。
-                // グラフ・計算書の限界線と同じ軸力を使う (食い違うと判定が一致しない)。
+                // 軸力: 解析と同じ規則 (ResolveCheckAxialForce)。グラフ・計算書の点と限界線も同じ軸力を使う
+                // (食い違うと判定が一致しない)
                 var (axialN_kN, axialSource) = pileItem != null
-                    ? pileItem.ResolveDesignAxialForce(stepResult.LoadCase?.No ?? 0, stepResult.LoadCase?.Level ?? 1)
+                    ? ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, stepResult.LoadCase?.No ?? 0, stepResult.LoadCase?.Level ?? 1,
+                        HeadFxi(pileItem, stepResult))
                     : (0.0, "杭を特定できないため 0");
 
                 // NM相関曲線をキャッシュから取得 (ConcurrentDictionary、初回のみ計算)
@@ -792,7 +792,7 @@ namespace PileDesign.ViewModels
         /// 要素ごとの M/Q を使うと、モーメントの反曲点付近で Q だけが大きい要素の
         /// M/(Q·d) が 0 に近づき、せん断耐力が跳ね上がる。
         /// </summary>
-        private static Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)>
+        internal static Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)>
             BuildMaxForcesByPileCase(InputModel inputModel)
         {
             var map = new Dictionary<(PileLayoutDataItem, string), (double MaxM, double MaxQ)>();
@@ -831,7 +831,7 @@ namespace PileDesign.ViewModels
         /// その荷重ケースの結果が無い) だけ既定値に落とす。
         /// </summary>
         /// <returns>M/(Q·d) と、その求め方 (検定の根拠に書く。既定値に落ちたときは理由)。</returns>
-        private static (double Value, string Basis) ResolveMonQd(
+        internal static (double Value, string Basis) ResolveMonQd(
             PileLayoutDataItem? pile, string caseKey, PileSection section,
             Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)> maxForces)
         {
@@ -909,8 +909,61 @@ namespace PileDesign.ViewModels
             UnavailableReason = reason,
         };
 
+        /// <summary>
+        /// 杭頭の要素 (各杭の最上段)。「入力値＋応力解析結果」の軸力で解析が読む要素
+        /// (HorizontalCalculationViewModel.UpdateAxialForceFromAnalysis と同じ)。
+        /// </summary>
+        internal static Beam? PileHeadBeam(PileLayoutDataItem pile)
+            => pile.Beams?.FirstOrDefault(b => b?.IsPileHeadElement == true) ?? pile.Beams?.FirstOrDefault();
+
+        /// <summary>
+        /// 曲げ・せん断の検定と、N-M・N-Q 図の点に使う杭の軸力 (kN、圧縮が正) と、その求め方。
+        ///
+        /// <list type="bullet">
+        /// <item>入力値の軸力 (既定): 杭配置の設計軸力 (<see cref="PileLayoutDataItem.ResolveDesignAxialForce"/>。
+        ///   地震時軸力が未入力 (0) なら常時軸力 VL — 解析は杭頭荷重を入れず、検定は VL を考える、という扱い)</item>
+        /// <item>入力値＋応力解析結果: 解析と同じく、杭頭の要素の軸力 (−Fxi) を足す。
+        ///   杭先端の P-S ばねのときは、解析が地震時軸力を外力として与えていて Fxi にすでに含まれるので、その分を引く</item>
+        /// </list>
+        /// 以前は検定が入力値の軸力だけを使い、解析の M-φ (入力＋解析の軸力) と図 (最大モーメントの要素の Fxi を足す) と
+        /// 3 通りに食い違っていた。
+        /// </summary>
+        /// <param name="headFxi">杭頭の要素のこのケース・組合せ・ステップの軸力 Fxi (圧縮が負)。無ければ null (入力値の軸力だけ)。</param>
+        internal static (double N, string Source) ResolveCheckAxialForce(
+            InputModel? input, PileLayoutDataItem pile, int loadCaseNo, int level, double? headFxi)
+        {
+            var (n, source) = pile.ResolveDesignAxialForce(loadCaseNo, level);
+            if (input?.UseAnalysisAxialForce != true || level == 0 || headFxi is not double fxi || !double.IsFinite(fxi))
+                return (n, source);
+
+            double appliedAsLoad = 0.0;
+            if (input.UsePsSpringAtPileTip)
+            {
+                try { appliedAsLoad = pile.GetSeismicAxialForce(loadCaseNo, level); }
+                catch (ArgumentOutOfRangeException) { appliedAsLoad = 0.0; }
+                if (!double.IsFinite(appliedAsLoad)) appliedAsLoad = 0.0;
+            }
+            double total = n - appliedAsLoad - fxi;
+            string detail = $"{source} + 解析で得た杭頭の軸力 {-fxi:N1} kN"
+                + (appliedAsLoad != 0.0 ? $" − 解析に外力として与えた地震時軸力 {appliedAsLoad:N1} kN" : "");
+            return (total, detail);
+        }
+
+        /// <summary>杭頭の要素の、指定したケース・組合せ・ステップの軸力 Fxi。無ければ null。</summary>
+        private static double? HeadFxi(PileLayoutDataItem? pile, AnalysisStepResult stepResult)
+        {
+            if (pile == null) return null;
+            var head = PileHeadBeam(pile);
+            var r = head?.BeamResults?.FirstOrDefault(x =>
+                x.IsLiquefaction == stepResult.IsLiquefaction &&
+                x.Step == stepResult.Step &&
+                (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(x.LoadCase, stepResult.LoadCase)) &&
+                (stepResult.LoadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(x.LoadCombination, stepResult.LoadCombination)));
+            return r?.CumulativeForce?.Fxi;
+        }
+
         /// <summary>最大断面力の表の鍵にする荷重ケースの識別 (レベル-番号)。</summary>
-        private static string CaseKeyOf(LoadCase? loadCase) => loadCase == null ? "" : $"L{loadCase.Level}-{loadCase.No}";
+        internal static string CaseKeyOf(LoadCase? loadCase) => loadCase == null ? "" : $"L{loadCase.Level}-{loadCase.No}";
 
         /// <summary>
         /// 梁が属する杭を返す。
@@ -1010,7 +1063,8 @@ namespace PileDesign.ViewModels
 
                 // 軸力: 曲げと同じ値を使う (食い違うと同じ断面で限界線の前提が 2 通りになる)
                 var (axialN_kN, axialSource) = pileItem != null
-                    ? pileItem.ResolveDesignAxialForce(stepResult.LoadCase?.No ?? 0, stepResult.LoadCase?.Level ?? 1)
+                    ? ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, stepResult.LoadCase?.No ?? 0, stepResult.LoadCase?.Level ?? 1,
+                        HeadFxi(pileItem, stepResult))
                     : (0.0, "杭を特定できないため 0");
 
                 // 損傷限界はレベルで低減係数が変わる (レベル1: β2 なし / レベル2: β1×β2)。

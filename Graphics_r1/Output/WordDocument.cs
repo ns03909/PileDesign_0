@@ -106,6 +106,9 @@ namespace PileDesign.Output
         private readonly InputModel inputModel = _inputModel;
         private readonly AnaModel anaModel = _anaModel;
 
+        /// <summary>杭・荷重ケースごとの最大断面力 (せん断の限界線の M/(Q·d) を検定と同じに求めるため)。初めて要るときに作る。</summary>
+        private Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)>? _maxForcesByPileCase;
+
         // FTPile有無判定ヘルパ
         private bool HasFTPile() => HasFTPile(inputModel);
 
@@ -430,6 +433,7 @@ namespace PileDesign.Output
 
                 // 表の行がページ境界で上下に割れないようにする（全表に一括で適用）
                 PreventTableRowsFromSplittingAcrossPages(body);
+                AssignUniqueDrawingIds(body);
 
                 // 出す直前の共通の検査: 表の中の数値でない値 (NaN・無限大)。表ごとに書き方がばらばらで、
                 // 以前はどの表に出ても気付く手掛かりが無かった

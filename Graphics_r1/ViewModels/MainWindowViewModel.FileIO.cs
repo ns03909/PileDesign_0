@@ -1161,8 +1161,21 @@ namespace PileDesign.ViewModels
                     // 計算書に載せるケースの選択は、計算書出力ウィンドウで今の入力に対して行っている。解析時の入力へ写す
                     inputForReport?.LoadCasesInput?.CopyReportSelectionFrom(CurrentInputModel?.LoadCasesInput);
                     var doc = new Output.WordDocument(inputForReport, CurrentModel, this);
-                    // 進み具合と「中止」の窓を出して作る。止めたときは作りかけを残さない (前に出力した計算書はそのまま)
-                    if (!RunCancellableReport(run => doc.CreateWordDocument(inputForReport, saveFileDialog.FileName, run)))
+                    // 材料モデルのオプション (プロセス共有) は、作っている間だけ解析したときの入力のものにする。
+                    // 以前は今の基本設定のまま作っていたので、解析のあとに設定を変えると、本文は「本計算に適用したもの」と
+                    // 書きながら、材料モデル化の表と N-M などの限界値が変更後の設定で出た
+                    bool completed;
+                    SyncStaticOptionsFor(inputForReport ?? CurrentInputModel);
+                    try
+                    {
+                        // 進み具合と「中止」の窓を出して作る。止めたときは作りかけを残さない (前に出力した計算書はそのまま)
+                        completed = RunCancellableReport(run => doc.CreateWordDocument(inputForReport, saveFileDialog.FileName, run));
+                    }
+                    finally
+                    {
+                        SyncStaticOptionsFor(CurrentInputModel);
+                    }
+                    if (!completed)
                     {
                         sw.Stop();
                         Serilog.Log.Information("[Docx] 中止 ({Elapsed:N1}秒経過時点)", sw.Elapsed.TotalSeconds);

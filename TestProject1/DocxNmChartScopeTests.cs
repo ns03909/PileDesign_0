@@ -94,14 +94,14 @@ namespace TestProject1
             string docx = File.ReadAllText(docxPath);
             string screen = File.ReadAllText(Path.Combine(root, "Graphics_r1", "ViewModels", "GraphViewModel.cs"));
 
-            // 画面側の式。これが変わったら計算書側も見直す必要がある
-            StringAssert.Contains(screen, "UseAnalysisAxialForce",
-                "画面の軸力オプションが見つかりません (名前が変わった可能性)");
-            Assert.IsTrue(Regex.Matches(screen, Regex.Escape("axialForce - analysisFxi")).Count >= 3,
-                "画面で解析軸力を反映していない図があります (NMINT / QNINT / 杭頭)");
+            // 画面・計算書とも、検定と同じ軸力の関数 (EvaluationService.ResolveCheckAxialForce) を通す
+            // (2026-10-09。以前は図ごとに「入力 − 最大モーメントの要素の Fxi」を書いており、検定・解析と食い違っていた)
+            Assert.IsTrue(Regex.Matches(screen, Regex.Escape("EvaluationService.ResolveCheckAxialForce(")).Count >= 3,
+                "画面で検定と同じ軸力を使っていない図があります (NMINT / QNINT / 杭頭)");
+            Assert.IsFalse(screen.Contains("axialForce - analysisFxi"), "画面に図ごとの軸力の式が残っています");
 
-            Assert.AreEqual(2, Regex.Matches(docx, Regex.Escape("inputModel.UseAnalysisAxialForce")).Count,
-                "計算書で解析軸力を反映していない図があります (N-M と Q-N の 2 つのはず)");
+            Assert.AreEqual(2, Regex.Matches(docx, Regex.Escape("EvaluationService.ResolveCheckAxialForce(")).Count,
+                "計算書で検定と同じ軸力を使っていない図があります (N-M と Q-N の 2 つのはず)");
 
             // 生の axialForce を直接積んでいる箇所が残っていないこと
             foreach (Match m in Regex.Matches(docx, @"axialForceResultsLevel[12]\.Add\(([^)]*)\);"))
