@@ -162,7 +162,10 @@ public class AnalysisRunMetadataTests
     public void EveryAnalysisPassesItsConditions()
     {
         string vb = TestSource.Read("Graphics_r1", "ViewModels", "VerticalBeamCalculationViewModel.cs");
-        StringAssert.Contains(vb, "_mainWindowViewModel.CaptureAnalysisResultSet(runSettings);");
+        // 基礎梁考慮の単杭沈下は、保存して閉じたときにメイン側が記録する (保存せずに閉じた結果を「最新」にしない)
+        StringAssert.Contains(vb, "LastRunSettings = runSettings;");
+        StringAssert.Contains(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.cs"),
+            "CaptureAnalysisResultSet(viewModel.LastRunSettings);");
         StringAssert.Contains(TestSource.Read("Graphics_r1", "ViewModels", "SettlementViewModel.cs"),
             "mainWindowViewModel.CaptureAnalysisResultSet(DescribeRun(InputModel.ElementDivision.SoilPiles));");
         StringAssert.Contains(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.ModelEditing.cs"),

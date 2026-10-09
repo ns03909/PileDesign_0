@@ -691,7 +691,7 @@ namespace PileDesign.Views
                 {
                     encoder.Save(fileStream);
                 }
-                MessageService.Show($"Image saved to {saveFileDialog.FileName}", "Save Image", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageService.Show($"画像を保存しました。\n{saveFileDialog.FileName}", "画像の保存", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 

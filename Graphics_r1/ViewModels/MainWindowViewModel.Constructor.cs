@@ -213,6 +213,20 @@ namespace PileDesign.ViewModels
                 IsSaveAnalysisResultsAutoSave ? CurrentModel : null,
                 IsSaveAnalysisResultsAutoSave ? VerticalBeamCaseResults : null);
 
+            // 解析したときの入力の控え・「再解析が必要」の記録・杭要素分割の有無も、手動保存 (SaveProjectToAsync) と
+            // 同じものを渡す。以前は渡しておらず、沈下の結果 (設定にかかわらず保存する) が自動保存から復元すると
+            // 編集後の入力に結び付き、「再解析が必要」と杭要素分割済みの状態が消えていた。
+            // 杭と FEM 要素の対応表は水平解析のモデルを保存するときしか書かれないので、そのときだけ作る
+            _autoSaveService.LiveResultContextProvider = () => new AutoSaveResultContext(
+                CurrentResultSet?.InputSnapshot,
+                CurrentResultSet?.CapturedAt,
+                IsSaveAnalysisResultsAutoSave && CurrentModel != null
+                    ? Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel)
+                    : null,
+                IsElementSplit,
+                InputChangedSinceAnalysis,
+                CurrentResultSet?.RunRecords);
+
             // 自動保存イベントの購読
             _autoSaveService.AutoSaveCompleted += OnAutoSaveCompleted;
 
@@ -429,12 +443,10 @@ namespace PileDesign.ViewModels
                     UpdateSettlementSoilLayer();
                 }
 
-                // LoadingType が外部から変更されたら 2 段 ComboBox プロキシを更新
+                // 荷重タイプが変わったら、選択肢 (現在の値を必ず含める) と手入力の可否を更新
                 if (e.PropertyName == nameof(PileGroupSettlement.LoadingType))
                 {
-                    OnPropertyChanged(nameof(GroupSettlementBeamSelector));
-                    OnPropertyChanged(nameof(GroupSettlementLoadType));
-                    OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
+                    OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
                     OnPropertyChanged(nameof(IsManualRectLoadEditingEnabled));
                 }
 

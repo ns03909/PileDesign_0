@@ -171,6 +171,10 @@ public sealed class UndoManager
     /// </summary>
     public void Undo()
     {
+        // 最後の控えより後の編集 (まだ控えに入っていない) があれば、先に 1 手として残す。
+        // 残さずに戻すと、その編集はやり直しでも戻らなくなる
+        RecordUnsavedLiveEdit();
+
         bool hasSnapshot = _currentIndex > 0;
         bool hasAction = _undo.Count > 0;
         if (!hasSnapshot && !hasAction) return;
@@ -197,6 +201,10 @@ public sealed class UndoManager
     /// </summary>
     public void Redo()
     {
+        // 戻したあとに編集していたら、やり直さない。その編集を新しい手として残し、やり直せる手は捨てる
+        // (<see cref="RecordUnsavedLiveEdit"/>)
+        if (CanRedo && RecordUnsavedLiveEdit()) return;
+
         bool hasSnapshot = _currentIndex >= 0 && _currentIndex < _history.Count - 1;
         bool hasAction = _redo.Count > 0;
         if (!hasSnapshot && !hasAction) return;
@@ -296,6 +304,44 @@ public sealed class UndoManager
         string? now = StateFingerprint(state);
         if (now == null) return false;
         return now == StateFingerprint(_history[_currentIndex].State);
+    }
+
+    /// <summary>
+    /// いまの (画面に出ている) 入力の控えを返す関数。控え方式の子ウィンドウでは、窓の段で控えを取る仕組み
+    /// (<see cref="PileDesign.Common.UndoCapture"/>) が ViewModel の控えの取り方を渡す。
+    ///
+    /// <para><b>なぜ要るか。</b>控えは操作の直前 (フォーカスが入る・マウスを押す) と欄から外れるときに取る。
+    /// 戻したあとにコンボボックスで値を選ぶと、直前の控えは「戻した状態」と同じなので積まれず
+    /// (やり直しを残すための規則、<see cref="SaveState"/>)、選んだ値はまだ控えに入っていない。
+    /// そのままフォーカスを動かさずに Ctrl+Y を押すと、以前は古い手をやり直し、選んだ値を黙って上書きしていた
+    /// (編集 → C、Ctrl+Z → B、D を選ぶ、Ctrl+Y → C になり D が消える)。
+    /// 戻す・やり直すの入口でいまの入力を見て、控えと違えば新しい手として残す。</para>
+    /// </summary>
+    public Func<object?>? LiveStateProvider { get; set; }
+
+    /// <summary>
+    /// いまの入力が、いまの位置の控えと違えば (控えに入っていない編集があれば)、新しい手として積む。積んだら true。
+    /// 新しい手を積むので、やり直せる手は捨てる (<see cref="DiscardFuture"/>)。
+    /// いまの入力を取れない・指紋で比べられないときは何もしない (以前の動き)。
+    /// </summary>
+    private bool RecordUnsavedLiveEdit()
+    {
+        if (_replaying || LiveStateProvider == null || StateFingerprint == null) return false;
+        if (_currentIndex < 0 || _currentIndex >= _history.Count) return false;
+        object? live;
+        try { live = LiveStateProvider(); }
+        catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException or ArgumentException)
+        {
+            Serilog.Log.Debug(ex, "[Undo] いまの入力の控えを取れませんでした");
+            return false;
+        }
+        if (live == null) return false;
+        string? now = StateFingerprint(live);
+        string? current = StateFingerprint(_history[_currentIndex].State);
+        if (now == null || current == null || now == current) return false;
+
+        SaveState(live);
+        return true;
     }
 
     /// <summary>

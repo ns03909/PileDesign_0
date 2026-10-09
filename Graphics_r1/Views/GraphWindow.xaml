@@ -26,6 +26,7 @@
         <conv:LoadCombinationAnalyzedConverter x:Key="LoadCombinationAnalyzedConverter"/>
         <conv:LiquefactionAnalyzedConverter x:Key="LiquefactionAnalyzedConverter"/>
         <conv:GraphCategoryConverter x:Key="GraphCategoryConverter"/>
+        <common:SettlementTypeDisplayConverter x:Key="SettlementTypeDisplayConverter"/>
         <conv:BoolEqualsConverter x:Key="BoolEqualsConverter"/>
         <conv:LimitStateLabelConverter x:Key="LimitStateLabelConverter"/>
     </Window.Resources>
@@ -79,6 +80,12 @@
                         </GroupStyle.HeaderTemplate>
                     </GroupStyle>
                 </ComboBox.GroupStyle>
+                <!-- 沈下のグラフは、単杭か群杭か・どの解析かが分かる名前で出す (コードの中の値は変えない) -->
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Converter={StaticResource SettlementTypeDisplayConverter}, ConverterParameter=Graph}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
             </ComboBox>
 
             <!-- 断面性状グラフ (N-M 相関 / M-φ) の基準。

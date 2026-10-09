@@ -51,6 +51,30 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 計算例を組み立てる土台。<b>新規作成 (起動直後) と同じ白紙の入力</b>を返す。
+        ///
+        /// <para>以前は画面の入力の複製の上に計算例を書き込んでいた。計算例のファイルが持たない項目
+        /// (基本設定の材料オプション・荷重ケースの非線形の指定と荷重角度・荷重の組合せ・杭先端の P-S ばね・
+        /// 基礎のねじれ拘束・群杭沈下の条件など) は前のプロジェクトの値がそのまま残り、
+        /// 同じ計算例でも直前に開いていたものによって結果が変わった。さらに複製は土層-杭セットを
+        /// 共有するので、GenerateSoilPiles が (地盤番号・杭体番号・杭頭 Z) の一致で
+        /// 前のプロジェクトの kh0 の手入力や荷重面等価径を計算例へ持ち込んでいた。
+        /// 確認のダイアログは「現状の入力内容は削除されます」と言っている。</para>
+        ///
+        /// <para>起動時と同じく画面に結び付けて初期化し、その<b>複製</b>を返す。複製は画面への結び付きを
+        /// 持たないので、前のプロジェクトの「杭要素分割済み」で GenerateSoilPiles が止まることもない
+        /// (以前の経路も複製を組み立てていた)。</para>
+        ///
+        /// <para>InputModel.Reset は一部の設定 (P-S ばね・ねじれ拘束など) を戻さないので使わない。</para>
+        /// </summary>
+        private InputModel CreateBlankInputForExample()
+        {
+            var blank = new InputModel();
+            blank.SetMainWindowViewModel(this);
+            return blank.DeepCopy();
+        }
+
+        /// <summary>
         /// 杭例題データをJSONから読み込んで適用する共通ヘルパーメソッド
         /// </summary>
         /// <param name="pileJsonFileName">杭例題JSONファイル名（拡張子なし）</param>
@@ -92,7 +116,10 @@ namespace PileDesign.ViewModels
             if (generation != ProjectGeneration || version != InputEditVersion)
                 throw new System.InvalidOperationException("計算例の読み込み中に入力が変更されました。もう一度読み込んでください。");
             var undoCopy = CurrentInputModel.DeepCopy();
-            var prepared = undoCopy.DeepCopy();
+            // 計算例は新規作成と同じ白紙の入力から組み立てる (CreateBlankInputForExample の説明を参照)
+            var prepared = CreateBlankInputForExample();
+            // 断面の諸元を計算する前に、材料のオプションなどを白紙の入力のものへそろえる
+            SyncStaticOptionsFor(prepared);
             prepared.SuppressNotifications();
             try
             {
@@ -139,6 +166,12 @@ namespace PileDesign.ViewModels
                 ClearSettlementResultsIn(prepared);
 
             }
+            catch
+            {
+                // 組み立てに失敗したら画面の入力はそのまま残る。そろえたオプションを画面の入力へ戻す
+                SyncStaticOptionsFor(CurrentInputModel);
+                throw;
+            }
             finally { prepared.ResumeNotificationsQuiet(); }
 
             _undoManager.SaveSnapshotEdit(undoCopy, prepared.DeepCopy(), $"計算例ロード: {displayName}");
@@ -157,11 +190,6 @@ namespace PileDesign.ViewModels
             // 群杭荷重「基礎梁:有/無」セレクタなど基礎梁有無に連動する UI を再評価
             // (例題ロードは PropertyChanged が抑制された経路を通るため明示的に通知)
             OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
-            OnPropertyChanged(nameof(AvailableLoadingTypeOptionsNonBeam));
-            OnPropertyChanged(nameof(GroupSettlementBeamSelectorOptions));
-            OnPropertyChanged(nameof(GroupSettlementBeamSelector));
-            OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
-            OnPropertyChanged(nameof(GroupSettlementLoadType));
             OnPropertyChanged(nameof(IsManualRectLoadEditingEnabled));
             OnPropertyChanged(nameof(GroupSettlementRouteOptions));
             OnPropertyChanged(nameof(GroupSettlementRouteSelector));
@@ -234,7 +262,10 @@ namespace PileDesign.ViewModels
             if (generation != ProjectGeneration || version != InputEditVersion)
                 throw new System.InvalidOperationException("計算例の読み込み中に入力が変更されました。もう一度読み込んでください。");
             var undoCopy = CurrentInputModel.DeepCopy();
-            var prepared = undoCopy.DeepCopy();
+            // 計算例は新規作成と同じ白紙の入力から組み立てる (CreateBlankInputForExample の説明を参照)
+            var prepared = CreateBlankInputForExample();
+            // 断面の諸元を計算する前に、材料のオプションなどを白紙の入力のものへそろえる
+            SyncStaticOptionsFor(prepared);
             prepared.SuppressNotifications();
             try
             {
@@ -279,6 +310,12 @@ namespace PileDesign.ViewModels
 
 
 
+            }
+            catch
+            {
+                // 組み立てに失敗したら画面の入力はそのまま残る。そろえたオプションを画面の入力へ戻す
+                SyncStaticOptionsFor(CurrentInputModel);
+                throw;
             }
             finally { prepared.ResumeNotificationsQuiet(); }
 

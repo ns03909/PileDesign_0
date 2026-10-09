@@ -21,18 +21,33 @@ public partial class MainWindowViewModel
         return true;
     }
 
+    /// <summary>基礎梁の材料・断面の中身を比べるための文字列 (値が変わったかどうかだけを見る)。</summary>
+    internal string BeamMaterialFingerprint()
+    {
+        var beams = CurrentInputModel?.FoundationBeamInput;
+        if (beams == null) return "";
+        try
+        {
+            return System.Text.Json.JsonSerializer.Serialize(new { beams.Materials, beams.Sections });
+        }
+        catch (Exception)
+        {
+            return Guid.NewGuid().ToString();   // 比べられなければ「変わった」として扱う (印を付け損ねない側)
+        }
+    }
+
     internal InputModel CaptureInputEdit()
     {
         if (_undoBatchActive) FlushPendingUndoSnapshot();
         using var perf = PileDesign.Common.PerfLog.Measure("編集の控え (変更前)", CurrentInputModel?.PileLayoutItems?.Count ?? 0, "本の杭");
-        return CurrentInputModel.DeepCopy();
+        return RememberElementSplit(CurrentInputModel.DeepCopy());
     }
 
     internal void CompleteInputEdit(InputModel before,
         [System.Runtime.CompilerServices.CallerMemberName] string? description = null, AnalysisInputScope scope = AnalysisInputScope.All)
     {
         using var perf = PileDesign.Common.PerfLog.Measure("編集の確定", CurrentInputModel?.PileLayoutItems?.Count ?? 0, "本の杭");
-        _undoManager.SaveSnapshotEdit(before, CurrentInputModel.DeepCopy(), FormatHistoryDescription(description));
+        _undoManager.SaveSnapshotEdit(before, RememberElementSplit(CurrentInputModel.DeepCopy()), FormatHistoryDescription(description));
         MarkUnsavedWork();
         InputEditVersion++;
         MarkInputChangedSinceAnalysis(scope, FormatHistoryDescription(description));

@@ -676,6 +676,37 @@ namespace PileDesign.ViewModels
             // ShallowCopyメソッドを使用して値渡し
             PrevFundamentalInput = InputModel.FundamentalInput.ShallowCopy();
 
+            LoadFromModel();
+
+            InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
+
+
+            // ToolkitRelayCommand (パラメータ無し Action / Func<bool> 対応)
+            UndoCommand = new ToolkitRelayCommand(Undo, () => _undoManager.CanUndo);
+            RedoCommand = new ToolkitRelayCommand(Redo, () => _undoManager.CanRedo);
+            OkCommand = new ToolkitRelayCommand(OnOk);
+            CancelCommand = new ToolkitRelayCommand(OnCancel);
+            CloseWindowCommand = new ToolkitRelayCommand(() => RequestClose?.Invoke(this, EventArgs.Empty));
+        }
+
+        private void Undo() => _undoManager.Undo();
+        private void Redo() => _undoManager.Redo();
+
+
+        /// <summary>
+        /// 解析結果と辻褄が合わなくなる変更をしたか。理由は確認ダイアログに出す。
+        /// </summary>
+        private readonly List<string> _pendingDiscardReasons = [];
+
+        private void NoteAnalysisResultsWillBeDiscarded(string reason)
+        {
+            if (!_pendingDiscardReasons.Contains(reason))
+                _pendingDiscardReasons.Add(reason);
+        }
+
+        /// <summary>入力欄を、いまの基本設定 (<see cref="InputModel"/> の FundamentalInput) の値で埋める。開いたときと戻したときに使う。</summary>
+        private void LoadFromModel()
+        {
             Point3D0 = InputModel.FundamentalInput.Point3D0;
             SeismicGrade = InputModel.FundamentalInput.SeismicGrade;
             SettlementDesignIncludesGroup = InputModel.FundamentalInput.SettlementDesignIncludesGroup;
@@ -704,37 +735,33 @@ namespace PileDesign.ViewModels
             AllowableSettlement_mm = InputModel.FundamentalInput.AllowableSettlement_mm;
             ScUltimateShearBeta1 = InputModel.FundamentalInput.ScUltimateShearBeta1;
             ScUltimateShearBeta2 = InputModel.FundamentalInput.ScUltimateShearBeta2;
-
-            InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
-
-
-            // ToolkitRelayCommand (パラメータ無し Action / Func<bool> 対応)
-            UndoCommand = new ToolkitRelayCommand(Undo, () => _undoManager.CanUndo);
-            RedoCommand = new ToolkitRelayCommand(Redo, () => _undoManager.CanRedo);
-            OkCommand = new ToolkitRelayCommand(OnOk);
-            CancelCommand = new ToolkitRelayCommand(OnCancel);
-            CloseWindowCommand = new ToolkitRelayCommand(() => RequestClose?.Invoke(this, EventArgs.Empty));
         }
-
-        private void Undo() => _undoManager.Undo();
-        private void Redo() => _undoManager.Redo();
-
 
         /// <summary>
-        /// 解析結果と辻褄が合わなくなる変更をしたか。理由は確認ダイアログに出す。
+        /// 元の設定へ戻し、静的オプションを再同期する。
+        ///
+        /// <para>戻すと基本設定は<b>別の実体</b>に差し替わる (開いた時点の写し)。以前は差し替えただけで、
+        /// 入力欄は戻す前の値のまま、変更の追随 (PropertyChanged) も前の実体に付いたままだった。
+        /// OK で「結果を破棄しますか」を断って戻すと、画面には変更後の値が残るのにモデルは元の値になり、
+        /// もう一度 OK を押しても画面の値は適用されなかった (値が変わらない扱いになる)。
+        /// 新しい実体に付け替え、入力欄を読み直す。ウィンドウの中の元に戻す・やり直しの履歴も捨てる
+        /// (取り下げた変更を、やり直しで確認なしに戻せてしまう)。</para>
         /// </summary>
-        private readonly List<string> _pendingDiscardReasons = [];
-
-        private void NoteAnalysisResultsWillBeDiscarded(string reason)
-        {
-            if (!_pendingDiscardReasons.Contains(reason))
-                _pendingDiscardReasons.Add(reason);
-        }
-
-        /// <summary>元の設定へ戻し、静的オプションを再同期する。</summary>
         private void RestorePreviousSettings()
         {
+            InputModel.FundamentalInput.PropertyChanged -= FundamentalInput_PropertyChanged;
             InputModel.FundamentalInput = PrevFundamentalInput.ShallowCopy();
+            InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
+
+            // 入力欄を読み直す。モデルと同じ値を入れるだけなので、変更の処理 (確認・履歴) は動かさない
+            _suppressConcreteOptionConfirm = true;
+            try { LoadFromModel(); }
+            finally { _suppressConcreteOptionConfirm = false; }
+
+            _undoManager.Clear();
+            UndoCommand?.NotifyCanExecuteChanged();
+            RedoCommand?.NotifyCanExecuteChanged();
+
             _mainWindowViewModel.ApplyConcreteModelOptions();
             _pendingDiscardReasons.Clear();
         }

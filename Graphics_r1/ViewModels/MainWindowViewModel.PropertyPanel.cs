@@ -413,10 +413,15 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("J端節点No", CurrentInputModel.GetNodeReferenceDisplayString(beam.NodeJ_Type, beam.NodeJ_Id)));
             SelectedItemProperties.Add(new("材料No",    $"{beam.MaterialNo}"));
             SelectedItemProperties.Add(new("断面No",    $"{beam.SectionNo}"));
-            SelectedItemProperties.Add(new("幅",        $"{beam.Width:F3}", "m"));
-            SelectedItemProperties.Add(new("高さ",      $"{beam.Height:F3}", "m"));
-            SelectedItemProperties.Add(new("ヤング率",   $"{beam.YoungModulus / 1000.0:N0}", "N/mm²"));
-            SelectedItemProperties.Add(new("横弾性係数", $"{beam.ShearModulus / 1000.0:N0}", "N/mm²"));
+            // 解析が使う材料・断面の表の値を出す (表に無い番号のときだけ梁の旧い値。解析の CreateFoundationBeamSection と同じ順)。
+            // 以前は梁の旧い値 (幅・高さ・ヤング率) をいつも出しており、表で直した断面・材料と違う値が見えていた
+            var fbi = CurrentInputModel.FoundationBeamInput;
+            var material = beam.MaterialNo >= 1 ? fbi?.Materials?.ElementAtOrDefault(beam.MaterialNo - 1) : null;
+            var section = beam.SectionNo >= 1 ? fbi?.Sections?.ElementAtOrDefault(beam.SectionNo - 1) : null;
+            SelectedItemProperties.Add(new("幅",        $"{(section?.Width ?? beam.Width):F3}", "m"));
+            SelectedItemProperties.Add(new("高さ",      $"{(section?.Height ?? beam.Height):F3}", "m"));
+            SelectedItemProperties.Add(new("ヤング率",   $"{(material?.YoungModulus ?? beam.YoungModulus) / 1000.0:N0}", "N/mm²"));
+            SelectedItemProperties.Add(new("横弾性係数", $"{(material?.ShearModulus ?? beam.ShearModulus) / 1000.0:N0}", "N/mm²"));
 
             // 角度β のみ編集可能
             SelectedItemProperties.Add(new("角度β", $"{beam.AngleBeta:F1}", "°",

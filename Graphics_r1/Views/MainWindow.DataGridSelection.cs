@@ -305,14 +305,17 @@ namespace PileDesign.Views
         //杭レイアウトコレクションが変化した場合のメソッド
         private void PileLayoutCollection_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            if (e.Action == NotifyCollectionChangedAction.Remove)
-            { }
+            if (e.Action == NotifyCollectionChangedAction.Add) return;
 
-            if (e.Action != NotifyCollectionChangedAction.Add)
+            // 行番号を振り直すための Refresh は、変更の通知が済んでから行う。
+            // 杭配置・軸力・前後杭の 3 つの表は同じ一覧の既定のビューを共有しており、どれかで行の編集が終わっていないと
+            // Refresh は例外になる (削除の途中で止まり、杭が一部だけ消える)。編集中なら見送る (編集を終えたときに番号は描き直される)
+            Dispatcher.BeginInvoke(() =>
             {
+                if (DataGridPileLayout.Items is System.ComponentModel.IEditableCollectionView view
+                    && (view.IsEditingItem || view.IsAddingNew)) return;
                 DataGridPileLayout.Items.Refresh();
-                //DataGridElements.Items.Refresh();
-            }
+            }, System.Windows.Threading.DispatcherPriority.Background);
         }
 
         // 杭レイアウトデータグリッドがロードされた場合のメソッド
@@ -320,6 +323,8 @@ namespace PileDesign.Views
         {
             if (DataGridPileLayout.ItemsSource is ObservableCollection<PileLayoutDataItem> observableCollection)
             {
+                // Loaded はタブを行き来するたびに来る。重ねて購読しない (重なると変更のたびに Refresh が何度も走った)
+                observableCollection.CollectionChanged -= PileLayoutCollection_CollectionChanged;
                 observableCollection.CollectionChanged += PileLayoutCollection_CollectionChanged;
             }
         }
@@ -333,19 +338,9 @@ namespace PileDesign.Views
             // ボタンのTagから対象アイテムを取得
             if (sender is Button button && button.Tag is PileLayoutDataItem selectedItem)
             {
-                var col = input.PileLayoutItems;
-                int index = col.IndexOf(selectedItem);
-                if (index < 0) return;
-
-                // Undo は VM のスナップショット履歴に積む。
-                // ここは UndoService (ChangWindow 専用の別スタック) に積んでいたため、
-                // メイン画面の Ctrl+Z では戻せず、ChangWindow の Ctrl+Z で戻ってしまっていた。
-                // 大規模操作なので変更前に 1 段保存する (杭の追加・分割等と同じ扱い)。
-                viewModel.SaveUndoState("杭配置 削除");
-
-                col.RemoveAt(index);
-                viewModel.UpdatePileLayoutNo();
-                UpdateWindow();
+                // 削除コマンド・Delete キーと同じ入口を通す (前後を履歴に積む・つながった梁要素も消す・対応杭の番号を付け直す)
+                if (viewModel.DeleteInputItems([selectedItem], null, null, "杭配置 削除"))
+                    UpdateWindow();
             }
             else
             {
@@ -361,17 +356,12 @@ namespace PileDesign.Views
             // ボタンのTagから対象アイテムを取得
             if (sender is Button button && button.Tag is InputNode selectedItem)
             {
-                var col = input.InputNodes;
-                if (col == null) return;
-
-                int index = col.IndexOf(selectedItem);
-                if (index < 0) return;
-
-                // Undo は VM のスナップショット履歴に積む (杭配置の削除と同じ理由)。
-                viewModel.SaveUndoState("節点 削除");
-
-                col.RemoveAt(index);
-                UpdateWindow();
+                // 杭配置の削除と同じ入口を通す (前後を履歴に積む・つながった梁要素も消す)
+                if (viewModel.DeleteInputItems(null, [selectedItem], null, "節点 削除"))
+                {
+                    DataGridFoundationBeams?.Items.Refresh();
+                    UpdateWindow();
+                }
             }
             else
             {

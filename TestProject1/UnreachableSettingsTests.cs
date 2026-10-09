@@ -31,11 +31,6 @@ namespace TestProject1
         /// <summary>画面に出ていないと分かっている選択肢と、その事情。</summary>
         private static readonly Dictionary<string, string> Known = new(StringComparer.Ordinal)
         {
-            ["GroupSettlementBeamSelectorOptions"] =
-                "群杭沈下の「基礎梁:有/無」。独立ウィンドウへの移設で、"
-                + "区別が荷重タイプの名前とタブへ移ったため浮いた",
-            ["GroupSettlementLoadTypeOptions"] =
-                "同上。移設先は AvailableLoadingTypeOptionsNonBeam を使っている",
             ["ElementTypeOption"] =
                 "中身が [\"ダミー\"] のまま。対になる ElementType も誰も読んでいない",
         };

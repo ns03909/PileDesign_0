@@ -205,7 +205,7 @@ namespace PileDesign.Views
                 vm.OpenElementDivisionWindowCommand);
 
             // ── 入力ウィンドウ ────────────────────────────────────────
-            Add(list, "基本条件 ウィンドウ", "Z=0 標高など基本設定", null, "fundamental basic 基本",
+            Add(list, "基本設定 ウィンドウ", "性能グレードと材料モデルの設定", null, "fundamental basic 基本",
                 vm.OpenFundamentalWindowCommand);
             Add(list, "地盤 ウィンドウ", "地盤入力ウィンドウ", null, "ground soil 地盤",
                 vm.OpenGroundWindowCommand);

@@ -358,7 +358,7 @@ namespace PileDesign.Views
                     DrawBubbleAndArrow(
                         _pendingSettlementPoints,
                         _pendingSettlementValues,
-                        _pendingSettlementTitle ?? "沈下",
+                        PileDesign.Common.SettlementTypeNames.Title(_pendingSettlementTitle ?? "沈下"),
                         _pendingSettlementUnit ?? "mm");
 
                     _pendingSettlementPoints = null;

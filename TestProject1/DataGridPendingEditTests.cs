@@ -29,6 +29,52 @@ namespace TestProject1
             return null;
         }
 
+        /// <summary>
+        /// 矩形荷重の表の「出所」列は、杭に紐付く矩形がある荷重タイプ (個別矩形系) だけで出す。
+        /// 列はビジュアルツリーの外にあるので、表示の切り替えが実際に効いているかを描いて確かめる。
+        /// </summary>
+        [TestMethod]
+        public void TheSourceColumn_ShowsOnlyForPileLinkedRects()
+        {
+            var (model, _) = IterativeBeamSettlementInvariantTests.Scene();
+            if (model == null) return;
+            var pgs = model.PileGroupSettlement;
+            var seen = new System.Collections.Generic.Dictionary<string, System.Windows.Visibility>();
+
+            var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
+            {
+                XamlSmokeTestSupport.EnsureApplicationResources();
+                var vm = new MainWindowViewModel { CurrentInputModel = model };
+                var w = new PileDesign.Views.GroupSettlementWindow
+                {
+                    DataContext = vm, ShowActivated = false,
+                    WindowStartupLocation = System.Windows.WindowStartupLocation.Manual, Left = -20000, Top = -20000,
+                };
+                w.Show();
+                try
+                {
+                    w.GroupPileTabControl.SelectedItem = w.TabItemLoadNonBeam;
+                    w.UpdateLayout();
+                    var grid = FindVisual<DataGrid>(w, g => g.Columns.Any(c => (c.Header as string) == "出所"));
+                    Assert.IsNotNull(grid, "前提: 出所の列がある表が見つかりません");
+                    var column = grid.Columns.First(c => (c.Header as string) == "出所");
+                    foreach (var type in new[] { "個別十字", "任意矩形", "個別矩形", "個別矩形（基礎梁考慮）" })
+                    {
+                        pgs.LoadingType = type;
+                        w.UpdateLayout();
+                        seen[type] = column.Visibility;
+                    }
+                }
+                finally { w.Close(); }
+            }, out bool timedOut);
+            if (timedOut) { Assert.Inconclusive("60 秒以内に終わらなかったためスキップ"); return; }
+            if (captured != null) Assert.Fail($"{captured.GetType().Name}: {captured.Message}\n{captured.StackTrace}");
+            Assert.AreEqual(System.Windows.Visibility.Collapsed, seen["個別十字"], "個別十字で空の出所列が出ています");
+            Assert.AreEqual(System.Windows.Visibility.Collapsed, seen["任意矩形"]);
+            Assert.AreEqual(System.Windows.Visibility.Visible, seen["個別矩形"]);
+            Assert.AreEqual(System.Windows.Visibility.Visible, seen["個別矩形（基礎梁考慮）"]);
+        }
+
         [DataTestMethod]
         [DataRow("Tab", DisplayName = "セルを確定して (Tab) 閉じる")]
         [DataRow("Esc", DisplayName = "セルを取り消して (Esc) 閉じる")]

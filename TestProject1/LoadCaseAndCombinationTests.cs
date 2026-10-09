@@ -56,12 +56,19 @@ namespace TestProject1
             Assert.IsFalse(lc.IsApplicable, "IsAnalyzed=false 時は IsApplicable を変えてはいけない");
         }
 
+        /// <summary>
+        /// 計算書出力ウィンドウのチェックは「計算書に載せるか」だけを変え、解析の適用 (IsApplicable) は変えない (2026-10-09)。
+        /// 以前はここで IsApplicable を書き換えており、計算書から外したケースが次の解析の対象からも外れた。
+        /// </summary>
         [TestMethod]
-        public void IsApplicableForDocxDisplay_Setter_UpdatesIsApplicableWhenAnalyzed()
+        public void IsApplicableForDocxDisplay_Setter_ChangesOnlyTheReportSelection()
         {
-            var lc = new LoadCase { IsApplicable = false, IsAnalyzed = true };
+            var lc = new LoadCase { IsApplicable = true, IsAnalyzed = true };
+            lc.IsApplicableForDocxDisplay = false;
+            Assert.IsTrue(lc.IsApplicable, "計算書のチェックで解析の適用を変えています");
+            Assert.IsFalse(lc.IsIncludedInReport);
             lc.IsApplicableForDocxDisplay = true;
-            Assert.IsTrue(lc.IsApplicable);
+            Assert.IsTrue(lc.IsIncludedInReport);
         }
 
         [TestMethod]

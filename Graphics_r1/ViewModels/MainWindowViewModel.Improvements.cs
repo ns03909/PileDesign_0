@@ -63,7 +63,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // スナップショットを保存し、最後のハッシュを更新
-                _undoManager.SaveState(snapshot, FormatHistoryDescription(description));
+                _undoManager.SaveState(RememberElementSplit(snapshot), FormatHistoryDescription(description));
                 _lastUndoSnapshotHash = hash;
             }
             catch (Exception ex)

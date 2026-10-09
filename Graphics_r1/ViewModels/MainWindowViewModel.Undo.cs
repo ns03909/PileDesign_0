@@ -157,6 +157,26 @@ namespace PileDesign.ViewModels
         /// 群杭沈下の入力しか触らない画面は <see cref="AnalysisInputScope.Settlement"/> を渡す。
         /// 既定 (<see cref="AnalysisInputScope.All"/>) は水平解析の結果も陳腐化させる。
         /// </summary>
+        /// <summary>
+        /// 履歴の各状態を積んだときの「杭要素分割済み」の印。印は入力モデルの外 (この ViewModel) にあるので、
+        /// 状態と一緒に控えておき、Undo・Redo で当て直す (<see cref="ApplyCurrentUndoSnapshot"/>)。
+        ///
+        /// 以前は当て直しておらず、杭要素分割の OK を Ctrl+Z で戻すと、土層-杭セットは分割前に戻るのに印は「分割済み」のままで、
+        /// 未分割の注意が出ずに粗い要素のまま解析でき (応答が 10〜27% 過大)、杭を編集しても土層-杭セットが作り直されなかった。
+        /// </summary>
+        private readonly System.Runtime.CompilerServices.ConditionalWeakTable<InputModel, object> _undoElementSplitFlags = new();
+
+        /// <summary>履歴に積む状態に、その時点の「杭要素分割済み」の印を添える (<paramref name="split"/> を省けば今の印)。</summary>
+        internal InputModel RememberElementSplit(InputModel snapshot, bool? split = null)
+        {
+            if (snapshot != null) _undoElementSplitFlags.AddOrUpdate(snapshot, split ?? IsElementSplit);
+            return snapshot!;
+        }
+
+        /// <summary>履歴の状態に添えた「杭要素分割済み」の印。添えていなければ null。</summary>
+        private bool? RememberedElementSplit(InputModel state)
+            => _undoElementSplitFlags.TryGetValue(state, out var v) && v is bool b ? b : null;
+
         public void SaveUndoState(AnalysisInputScope scope,
             [System.Runtime.CompilerServices.CallerMemberName] string? description = null)
         {
@@ -167,6 +187,7 @@ namespace PileDesign.ViewModels
             var copy = CurrentInputModel.DeepCopy();
             if (copy != null)
             {
+                RememberElementSplit(copy);
                 _undoManager.SaveState(copy, FormatHistoryDescription(description));
                 RaiseUndoStateChanged();
 
@@ -297,7 +318,7 @@ namespace PileDesign.ViewModels
                 // 矩形荷重
                 "AddRectLoad" => "矩形荷重 追加",
                 "DeleteRectLoad" => "矩形荷重 削除",
-                "ResetBeamAwareRectLoads" => "基礎梁考慮矩形荷重 再生成",
+                "ResetBeamAwareRectLoads" => "杭ごとの矩形を作り直す",
                 "AdjustRectLoadPlan" => "矩形荷重 平面調整",
 
                 // 沈下層

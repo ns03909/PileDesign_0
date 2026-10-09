@@ -363,8 +363,9 @@ namespace PileDesign.ViewModels
             {
                 return result;
             }
-            // 変換できない場合は例外をスローするか、適切な処理を行う
-            throw new ArgumentException("入力文字列に数字が含まれていません。");
+            // 変換できない場合は 0 を返す (画面側 PileTopViewModel.ExtractNumber と同じ。引張定着筋・PC リングが未選択のとき)。
+            // 以前ここだけ例外を投げており、計算書の杭頭上面図が「省略」になっていた
+            return 0;
         }
     }
 }

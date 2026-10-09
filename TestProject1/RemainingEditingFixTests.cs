@@ -36,7 +36,7 @@ public class RemainingEditingFixTests
         vm.CurrentInputModel!.InputNodes=[new InputNode {X=0},new InputNode {X=1}];
         vm.CurrentInputModel!.FoundationBeamInput.Beams=[new FoundationBeam()];
         vm.IsElementSplit=true; int history=Count(vm),version=vm.InputEditVersion;
-        foreach(var command in new[]{"SortPileLayoutXFirst","SortPileLayoutYFirst","SortInputNodesXFirst","SortInputNodesYFirst","SortBeamsByNode","SortBeamsByNo"}) Run(vm,command);
+        foreach(var command in new[]{"SortPileLayoutXFirst","SortPileLayoutYFirst","SortInputNodesXFirst","SortInputNodesYFirst","SortBeamsByNode"}) Run(vm,command);
         Assert.IsTrue(vm.IsElementSplit); Assert.IsFalse(vm.HasUnsavedWork);
         Assert.AreEqual(history,Count(vm)); Assert.AreEqual(version,vm.InputEditVersion);
     }

@@ -72,6 +72,23 @@ namespace PileDesign.ViewModels
         /// <summary>解析結果の控えを取ったとき (= 最後に解析したとき) の入力の署名。分からなければ null。</summary>
         private string? _analysisInputSignature;
 
+        /// <summary>
+        /// 解析結果の控えを取ったときの入力の、<b>水平解析に効く部分だけの</b>署名 (群杭沈下の入力を除く)。分からなければ null。
+        ///
+        /// <para>元に戻す・やり直しで水平解析の印を決め直すのに使う。以前は群杭沈下の入力も含む
+        /// <see cref="_analysisInputSignature"/> と比べていたので、群杭沈下の入力だけの編集を元に戻す・やり直すと、
+        /// 水平解析の結果まで「再解析が必要」になった (編集したときは沈下だけに印が立つのと食い違う)。
+        /// 水平解析の追加実行の照合 (<c>HorizontalCalculationViewModel.HorizontalInputSignature</c>) も同じ理由で除いている。</para>
+        /// </summary>
+        private string? _horizontalInputSignature;
+
+        /// <summary>水平解析の印を決め直すときに署名から除く名前 (水平解析は群杭沈下の入力を読まない)。</summary>
+        private static readonly string[] HorizontalSignatureIgnoredNames = ["PileGroupSettlement"];
+
+        /// <summary>水平解析に効く部分だけの入力の署名 (<see cref="_horizontalInputSignature"/>)。</summary>
+        internal static string? HorizontalOnlyInputSignature(InputModel? input)
+            => InputSignature(input, alsoIgnore: HorizontalSignatureIgnoredNames);
+
         /// <summary>沈下解析をしたときの入力の署名。沈下の結果は水平解析と別に陳腐化するので別に持つ。</summary>
         private string? _settlementInputSignature;
 
@@ -141,14 +158,16 @@ namespace PileDesign.ViewModels
         internal void RecheckInputAgainstAnalysis()
         {
             bool holdsResults = _currentResultSet != null || ResultSnapshotFailed;
-            bool checkHorizontal = holdsResults && _analysisInputSignature != null;
+            bool checkHorizontal = holdsResults && _horizontalInputSignature != null;
             bool checkSettlement = _settlementInputSignature != null && HasSettlementResults();
             if (!checkHorizontal && !checkSettlement) return;
 
-            string? current = InputSignature(CurrentInputModel);
-            if (current == null) return;
+            // 水平解析は群杭沈下の入力を除いた署名で比べる (理由は _horizontalInputSignature)
+            string? currentHorizontal = checkHorizontal ? HorizontalOnlyInputSignature(CurrentInputModel) : null;
+            string? current = checkSettlement ? InputSignature(CurrentInputModel) : null;
+            if ((checkHorizontal && currentHorizontal == null) || (checkSettlement && current == null)) return;
 
-            bool horizontalChanged = checkHorizontal ? current != _analysisInputSignature : HorizontalInputChanged;
+            bool horizontalChanged = checkHorizontal ? currentHorizontal != _horizontalInputSignature : HorizontalInputChanged;
             if (checkSettlement) SettlementInputChanged = current != _settlementInputSignature;
 
             bool stale = (holdsResults && horizontalChanged) || SettlementResultsAreStale;
@@ -167,13 +186,15 @@ namespace PileDesign.ViewModels
             {
                 string? current = InputSignature(CurrentInputModel);
                 _analysisInputSignature = HasAnalysisResultSet ? current : null;
+                _horizontalInputSignature = HasAnalysisResultSet ? HorizontalOnlyInputSignature(CurrentInputModel) : null;
                 _settlementInputSignature = SettlementInputChanged ? null : current;
             }
             else
             {
                 var snapshot = _currentResultSet?.InputSnapshot;
-                _analysisInputSignature = snapshot != null && !ReferenceEquals(snapshot, CurrentInputModel)
-                    ? InputSignature(snapshot) : null;
+                bool separate = snapshot != null && !ReferenceEquals(snapshot, CurrentInputModel);
+                _analysisInputSignature = separate ? InputSignature(snapshot) : null;
+                _horizontalInputSignature = separate ? HorizontalOnlyInputSignature(snapshot) : null;
                 _settlementInputSignature = null;
             }
         }
@@ -601,6 +622,24 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 読込の仕上げで、沈下の「編集された」記録をファイルから復元した値 (<paramref name="settlementChanged"/>) へ戻す。
+        /// <see cref="RestoreInputChangedSinceAnalysis"/> のあとに呼ぶ。
+        ///
+        /// <para>読込の最後の <c>SaveUndoState</c> は沈下の印も立て、変更した項目として読込の処理の名前
+        /// (ApplyPostLoadProtocol) を記録する。以前は水平解析の印だけを戻していたので、沈下の結果を持つ
+        /// ファイルを開いただけで「沈下解析の結果は入力変更前のもの」と出て、その名前が変更した項目として並んでいた。
+        /// ファイルには変更した項目を保存していないので、項目の記録はどちらも空に戻す。</para>
+        /// </summary>
+        internal void RestoreSettlementInputChanged(bool settlementChanged)
+        {
+            _editsSinceHorizontal.Clear();
+            SettlementInputChanged = false;   // 項目の記録も空になる
+            SettlementInputChanged = settlementChanged;
+            if (SettlementResultsAreStale) InputChangedSinceAnalysis = true;
+            OnPropertyChanged(nameof(ResultSetStatusText));
+        }
+
+        /// <summary>
         /// 入力が編集されたことを記録する。結果は破棄しない。
         /// 入力を変更するコマンド／編集ハンドラから呼ぶ。
         /// </summary>
@@ -671,6 +710,26 @@ namespace PileDesign.ViewModels
         /// いま実行した解析の条件。同じ種類の前の記録と差し替え、ほかの種類の記録は結果が残っている限り引き継ぐ
         /// (控えは解析のたびに取り直すので、引き継がないと水平解析のあとに沈下解析を実行したとき水平解析の条件が消える)。
         /// </param>
+        /// <summary>
+        /// 杭ごとの単杭沈下量 (VL・レベル1・2 と曲線の範囲外の印) を、杭番号で対応づけて写す。
+        /// 曲線だけを写すと、控えの杭の沈下量は古いまま (初回なら 0) で、沈下量の検定が「0 mm・OK」を出しえた。
+        /// </summary>
+        private static void CopyPileSettlements(InputModel from, InputModel? to)
+        {
+            if (to?.PileLayoutItems == null || from?.PileLayoutItems == null) return;
+            var byNo = from.PileLayoutItems.Where(p => p != null).GroupBy(p => p.PileNo).ToDictionary(g => g.Key, g => g.First());
+            foreach (var pile in to.PileLayoutItems)
+            {
+                if (pile == null || !byNo.TryGetValue(pile.PileNo, out var src)) continue;
+                pile.SinglePileSettlementVL = src.SinglePileSettlementVL;
+                pile.SinglePileSettlementVLBeyondCurve = src.SinglePileSettlementVLBeyondCurve;
+                pile.SinglePileSettlementLevel1s = new System.Collections.ObjectModel.ObservableCollection<double>(src.SinglePileSettlementLevel1s ?? []);
+                pile.SinglePileSettlementLevel2s = new System.Collections.ObjectModel.ObservableCollection<double>(src.SinglePileSettlementLevel2s ?? []);
+                pile.SinglePileSettlementLevel1sBeyondCurve = new System.Collections.ObjectModel.ObservableCollection<bool>(src.SinglePileSettlementLevel1sBeyondCurve ?? []);
+                pile.SinglePileSettlementLevel2sBeyondCurve = new System.Collections.ObjectModel.ObservableCollection<bool>(src.SinglePileSettlementLevel2sBeyondCurve ?? []);
+            }
+        }
+
         public void CaptureAnalysisResultSet(AnalysisRunMetadata? runMetadata = null)
         {
             if (CurrentInputModel == null) return;
@@ -681,8 +740,8 @@ namespace PileDesign.ViewModels
             // 取り直さない。取り直すと「編集後の入力」と「解析時の結果」が 1 組に組み直され、
             // 変位は解析時・断面は編集後という混在に戻ってしまう。この仕組みが防ぐはずのものそのもの。
             //
-            // 沈下だけ再実行したときにこれが起きていた。沈下の結果は入力モデルの中にあり、
-            // 表示も現在の入力を見るので、取り直さなくても沈下の結果は出る。
+            // 沈下だけ再実行したときにこれが起きていた。群杭沈下の結果は控えと共有し、単杭沈下の曲線は下で控えへ写すので、
+            // 取り直さなくても沈下の結果は出る (沈下の結果はいつも最新、水平解析の結果は解析時のまま)。
             // 併せて「入力が変更された」の記録も残るので、陳腐化した水平解析結果の警告が消えない。
             bool horizontalIsStillTheCapturedOne =
                 _currentResultSet?.AnaModel != null
@@ -697,6 +756,11 @@ namespace PileDesign.ViewModels
                 // ここで写す必要はない (以前は入力モデルの中にあり、写し忘れると
                 // 結果表示に沈下が出なかった)。念のため結び付けだけ確かめておく。
                 EnsureSettlementResultSharedWithSnapshot();
+                // 単杭沈下の結果 (土層-杭セットの荷重-沈下曲線) は控えと共有していないので写す。
+                // 計算書・画面のグラフ・沈下量の検定は控え (ResultInputModel) の曲線を読む。以前は写しておらず、
+                // 水平解析のあとに入力を直して単杭沈下をやり直すと、古い曲線 (初回なら空) が出ていた
+                Models.Results.SinglePileSettlementResult.CopyCurves(CurrentInputModel, _currentResultSet!.InputSnapshot);
+                CopyPileSettlements(CurrentInputModel, _currentResultSet.InputSnapshot);
                 // 控えは取り直さないが、いま実行した解析の条件は記録する
                 _currentResultSet!.RunRecords = runRecords;
                 Serilog.Log.Information(
@@ -731,6 +795,7 @@ namespace PileDesign.ViewModels
             InputChangedSinceAnalysis = false;
             ResultSnapshotFailed = false;
             _analysisInputSignature = InputSignature(CurrentInputModel);
+            _horizontalInputSignature = HorizontalOnlyInputSignature(CurrentInputModel);
         }
 
         /// <summary>その種類の解析の結果がいまあるか (実行条件の記録を引き継ぐかの判定)。</summary>
@@ -758,6 +823,7 @@ namespace PileDesign.ViewModels
             ResultSnapshotFailed = true;
             // 控えは無いが、今の入力で解いたばかり。元に戻したときに比べる相手にはなる
             _analysisInputSignature = InputSignature(CurrentInputModel);
+            _horizontalInputSignature = HorizontalOnlyInputSignature(CurrentInputModel);
             Serilog.Log.Warning("[結果セット] 解析結果の控えを作れませんでした。結果表示は編集中の入力を見ます");
             PileDesign.Services.MessageService.Show(DescribeResultSnapshotFailure(cause), "解析結果の控え",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
@@ -807,6 +873,7 @@ namespace PileDesign.ViewModels
             InputChangedSinceAnalysis = false;
             ResultSnapshotFailed = false;
             _analysisInputSignature = null;
+            _horizontalInputSignature = null;
         }
 
         /// <summary>
@@ -839,6 +906,8 @@ namespace PileDesign.ViewModels
 
             VerticalBeamCaseResults = null;
             CurrentModel = null;
+            // 水平解析のサマリーの文も結果の一部。残すと、結果を捨てたあと (新規・別のファイル) の計算書に前の解析の表が載る
+            if (DocxOutput != null) DocxOutput.LastAnalysisSummaryText = null;
 
             ClearAnalysisResultSetState();
             ClearSettlementResults();

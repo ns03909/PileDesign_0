@@ -160,7 +160,7 @@ namespace PileDesign.Views
             viewModel.ShowToastAction = (msg, type) => ShowToast(msg, (ToastType)type);
 
             // 群杭沈下の入力タブを開く (実行できない理由を出すときに、直す場所を見せる)
-            viewModel.ActivateGroupSettlementInputTabAction = ShowGroupSettlementWindow;
+            viewModel.ActivateGroupSettlementInputTabAction = tab => ShowGroupSettlementWindow(tab);
 
             // データグリッドの選択変更イベントを設定
             DataGridPileLayout.SelectionChanged += DataGridPileLayout_SelectionChanged;
@@ -899,8 +899,23 @@ namespace PileDesign.Views
             return false;
         }
 
+        /// <summary>
+        /// 文字を編集しているか (テキストボックス・表のセルの編集中・編集できるコンボ)。
+        /// このときの Delete / F2 は文字の編集に使う。メイン画面のショートカット (選択中の杭・節点・梁の削除など) を走らせない。
+        /// </summary>
+        internal static bool IsEditingText(DependencyObject? focused)
+            => focused is System.Windows.Controls.Primitives.TextBoxBase or PasswordBox
+               || (focused is ComboBox { IsEditable: true });
+
         private void HandleKeyDown(KeyEventArgs e)
         {
+            // 文字の編集中の Delete・F2 は、そのテキストボックス・セルに任せる。
+            // 以前はメイン画面全体で横取りしており、表のセルを編集中に Delete を押すと、
+            // 文字ではなく選択中の杭 (とつながる基礎梁) が消えた。F2 で表のセルの編集に入ることもできなかった。
+            if ((e.Key == Key.Delete && IsEditingText(Keyboard.FocusedElement as DependencyObject))
+                || (e.Key == Key.F2 && Keyboard.Modifiers == ModifierKeys.None && IsFocusInDataGrid()))
+                return;
+
             // 解析のキーが効かないときは理由を出す (実行は InputBindings が行う)。
             // <b>PreviewKeyDown 側に置く。</b>F2・Delete・Alt+数字がここで拾えている以上、
             // この経路はキーが確実に届く。バブリングの KeyDown は途中で握り潰されうる。
@@ -1296,72 +1311,12 @@ namespace PileDesign.Views
             var vm = _mainWindowViewModel;
             var input = vm.CurrentInputModel;
 
-            // 削除対象の収集
+            // 削除対象の収集 (つながった梁要素の追加・履歴・番号の付け直しは VM の DeleteInputItems が行う)
             var pilesToRemove = input.PileLayoutItems.Where(x => x.IsSelected).ToList();
             var inputNodesToRemove = input.InputNodes?.Where(x => x.IsSelected && x.Type == NodeType.General).ToList() ?? [];
             var beamsToRemove = input.FoundationBeamInput?.Beams?.Where(x => x.IsSelected).ToList() ?? [];
-
-            // 削除対象の一般節点のUniqueIdを収集（接続要素の検索用）
-            var deletedNodeIds = new HashSet<Guid>(inputNodesToRemove.Select(n => n.UniqueId));
-            // 削除対象の杭のUniqueIdも収集
-            var deletedPileIds = new HashSet<Guid>(pilesToRemove.Select(p => p.UniqueId));
-
-            // 削除される節点/杭に接続された基礎梁を追加
-            if (input.FoundationBeamInput?.Beams != null && (deletedNodeIds.Count > 0 || deletedPileIds.Count > 0))
-            {
-                foreach (var beam in input.FoundationBeamInput.Beams)
-                {
-                    if (beamsToRemove.Contains(beam)) continue;
-
-                    bool connected = false;
-                    // 一般節点参照のチェック
-                    if (beam.NodeI_Type == NodeReferenceType.GeneralNode && deletedNodeIds.Contains(beam.NodeI_Id))
-                        connected = true;
-                    if (beam.NodeJ_Type == NodeReferenceType.GeneralNode && deletedNodeIds.Contains(beam.NodeJ_Id))
-                        connected = true;
-                    // 杭参照のチェック
-                    if (beam.NodeI_Type == NodeReferenceType.PileLayout && deletedPileIds.Contains(beam.NodeI_Id))
-                        connected = true;
-                    if (beam.NodeJ_Type == NodeReferenceType.PileLayout && deletedPileIds.Contains(beam.NodeJ_Id))
-                        connected = true;
-
-                    if (connected) beamsToRemove.Add(beam);
-                }
-            }
-
-            // 削除するものがなければ何もしない
-            if (pilesToRemove.Count == 0 && inputNodesToRemove.Count == 0 &&
-                beamsToRemove.Count == 0)
-                return;
-
-            // Undoスナップショットを保存（削除前の状態）
-            vm.SaveUndoState();
-
-            // 実削除
-            foreach (var item in pilesToRemove)
-                input.PileLayoutItems.Remove(item);
-
-            if (input.InputNodes != null)
-            {
-                foreach (var node in inputNodesToRemove)
-                    input.InputNodes.Remove(node);
-            }
-
-            if (input.FoundationBeamInput?.Beams != null)
-            {
-                foreach (var beam in beamsToRemove)
-                    input.FoundationBeamInput.Beams.Remove(beam);
-            }
-
-            // 杭番号を更新
-            if (pilesToRemove.Count > 0)
-                vm.UpdatePileLayoutNo();
-
-            // LoadingRow ベースの行番号は Remove 時に再評価されないため、
-            // 関連 DataGrid を強制リフレッシュして即時再描画する。
-            if (beamsToRemove.Count > 0)
-                DataGridFoundationBeams?.Items.Refresh();
-
+            if (!vm.DeleteInputItems(pilesToRemove, inputNodesToRemove, beamsToRemove, "選択要素 削除")) return;
+            DataGridFoundationBeams?.Items.Refresh();
             UpdateWindow();
         }
 
@@ -1639,9 +1594,10 @@ namespace PileDesign.Views
 
         private void ButtonGroupPileSettlement_Click(object sender, RoutedEventArgs e)
         {
-            // 入力は群杭沈下ウィンドウに集約。基礎梁無し用の「解析（一般）」タブを開く。
-            // 基礎梁有りの反復解析は別リボンボタン (OpenGroupSettlementWithBeamWindowCommand) から起動。
-            ShowGroupSettlementWindow(MainWindowViewModel.GroupSettlementInputTab.GeneralAnalysis);
+            // 入力は群杭沈下ウィンドウに集約。初めて開くときは入力の順の最初 (土層) を出し、
+            // 開いていれば前面に出すだけでタブは変えない (以前は毎回「荷重条件」タブへ切り替えていた)。
+            // 基礎梁ありの解析は別リボンボタン (OpenGroupSettlementWithBeamWindowCommand) から起動。
+            ShowGroupSettlementWindow(MainWindowViewModel.GroupSettlementInputTab.SoilLayers, keepTabIfOpen: true);
         }
 
         /// <summary>
@@ -1660,7 +1616,9 @@ namespace PileDesign.Views
         /// メイン画面の図 (グリッド・荷重面) を見ながら編集できるようモードレスで開く。
         /// 二重に開かず、既に開いていれば前面に出してタブだけ切り替える。
         /// </summary>
-        internal void ShowGroupSettlementWindow(MainWindowViewModel.GroupSettlementInputTab tab)
+        /// <param name="keepTabIfOpen">true: 既に開いていればタブを変えない (ただ開くだけのボタン用)。
+        /// 直す場所を見せるときは false (開いていても指定のタブへ移る)。</param>
+        internal void ShowGroupSettlementWindow(MainWindowViewModel.GroupSettlementInputTab tab, bool keepTabIfOpen = false)
         {
             if (DataContext is not MainWindowViewModel vm) return;
 
@@ -1674,6 +1632,7 @@ namespace PileDesign.Views
             else
             {
                 _groupSettlementWindow.Activate();
+                if (keepTabIfOpen) return;
             }
 
             _groupSettlementWindow.SelectTab(tab);
@@ -1743,18 +1702,8 @@ namespace PileDesign.Views
             var (ok, oldVal) = TryGetPropertyValue(item, path);
             if (ok) _dgOldValues[(item, path)] = oldVal;
 
-            if (this.DataContext is PileDesign.ViewModels.MainWindowViewModel vm)
-            {
-                if (!vm.CheckAndResetElementSplit("杭軸力"))
-                {
-                    e.Cancel = true;
-                    return;
-                }
-
-                // Undo はセル単位とするためデバウンスは使用しない。
-                // CellEditEnding (DataGridPileAxialForce_OnCellEditEnding) で SaveUndoState が
-                // セル毎に呼ばれるため、Ctrl+Z で 1 セルずつ巻き戻し可能。
-            }
+            // 軸力は土層-杭セットに関わらないので、杭要素分割は取り消さない (以前は入っただけで全結果を消すかを尋ねていた)。
+            // Undo はセル単位。CellEditEnding (DataGridPileAxialForce_OnCellEditEnding) が変更の前後を積む。
         }
 
         private void DataGridIsFrontPile_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
@@ -1765,13 +1714,7 @@ namespace PileDesign.Views
             var (ok, oldVal) = TryGetPropertyValue(item, path);
             if (ok) _dgOldValues[(item, path)] = oldVal;
 
-            if (this.DataContext is PileDesign.ViewModels.MainWindowViewModel vm)
-            {
-                if (!vm.CheckAndResetElementSplit("前後方杭"))
-                {
-                    e.Cancel = true;
-                }
-            }
+            // 前後杭の判定は土層-杭セットに関わらないので、杭要素分割は取り消さない
         }
 
         internal void TextBox_KeyDown(object sender, KeyEventArgs e)

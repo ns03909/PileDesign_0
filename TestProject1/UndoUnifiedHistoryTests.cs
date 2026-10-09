@@ -139,7 +139,7 @@ namespace TestProject1
 
                 // 積み方は画面によって呼び名が違う (_undoManager / UndoStack など) ので、
                 // 変数名ではなくメソッド名で見る
-                bool pushes = Regex.IsMatch(text, @"\.(Push|PushAction|PushState|SaveState)\s*\(");
+                bool pushes = Regex.IsMatch(text, @"\.(Push|PushAction|PushState|SaveState|SaveSnapshotEdit)\s*\(");
                 if (!pushes) offenders.Add(Path.GetFileName(file));
             }
 

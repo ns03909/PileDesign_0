@@ -77,6 +77,8 @@ namespace PileDesign.Common
             if (window.DataContext is not ISnapshotUndoHost host) return;
             var manager = host.UndoManager;
             manager.StateFingerprint ??= Fingerprint;
+            // 戻す・やり直すの入口で、控えに入っていない編集 (戻したあとにコンボボックスで選んだ値など) を見つけるため
+            manager.LiveStateProvider ??= host.CaptureUndoSnapshot;
             object? state;
             try { state = host.CaptureUndoSnapshot(); }
             catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException or ArgumentException)

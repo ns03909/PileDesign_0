@@ -171,10 +171,6 @@ namespace PileDesign.ViewModels
             CompleteInputEdit(before);
         }
 
-        /// <summary>旧コマンドとの互換用。梁番号は一覧順から決まるため、番号順の整列は不要。</summary>
-        [RelayCommand]
-        private void SortBeamsByNo() { }
-
         /// <summary>
         /// 梁要素: 選択要素（無選択なら全要素）の I/J 節点参照を入れ替える。
         /// 併せて AngleBeta を (180° − β) に反転し、局所 y 軸の世界空間向きを保つ。
@@ -1106,7 +1102,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnAdjustRectLoadPlan()
         {
-            // 荷重面等価径 (GroupPileLoadDia) が 0 の地盤・杭・レベルセットがある場合は警告。
+            // 荷重面等価径が 0 (未入力で杭先端径も 0) の地盤・杭・レベルセットがある場合は警告。
             // 0 のものは群杭沈下解析でスキップされるため、ユーザーに気付かせる。
             // ただし任意矩形モードでは GroupPileLoadDia は使われないため警告不要。
             var loadingType = CurrentInputModel?.PileGroupSettlement?.LoadingType;
@@ -1115,7 +1111,7 @@ namespace PileDesign.ViewModels
             var soilPiles = CurrentInputModel?.ElementDivision?.SoilPiles;
             if (needsGroupPileLoadDia && soilPiles != null && soilPiles.Count > 0)
             {
-                var zeroDiaPiles = soilPiles.Where(sp => sp.GroupPileLoadDia <= 0.0).ToList();
+                var zeroDiaPiles = soilPiles.Where(sp => sp.EffectiveGroupPileLoadDia <= 0.0).ToList();
                 if (zeroDiaPiles.Count > 0)
                 {
                     var sampleLines = zeroDiaPiles
@@ -1124,7 +1120,7 @@ namespace PileDesign.ViewModels
                     var moreNote = zeroDiaPiles.Count > 10
                         ? $"\n  …他 {zeroDiaPiles.Count - 10} 件"
                         : "";
-                    var msg = $"荷重面等価径 (GroupPileLoadDia) が 0 (未入力) の地盤・杭・レベルセットが {zeroDiaPiles.Count} 件あります:\n" +
+                    var msg = $"荷重面等価径が 0 (未入力で、杭先端径も 0) の地盤・杭・レベルセットが {zeroDiaPiles.Count} 件あります:\n" +
                               string.Join("\n", sampleLines) + moreNote +
                               "\n\n対象の杭は群杭沈下解析でスキップされます。\n続行しますか?";
                     var result = MessageService.Show(msg, "荷重面等価径未入力の確認",
@@ -1321,7 +1317,7 @@ namespace PileDesign.ViewModels
             SoilLayers,
             /// <summary>グリッド。</summary>
             Grid,
-            /// <summary>解析（一般）。荷重面・荷重タイプ・矩形荷重はここ。</summary>
+            /// <summary>荷重条件。荷重面・荷重タイプ・矩形荷重はここ (名前は旧「解析（一般）」タブの名残)。</summary>
             GeneralAnalysis,
         }
 
@@ -1396,7 +1392,7 @@ namespace PileDesign.ViewModels
                     if (piles == null || piles.Count == 0)
                         return (GuardMessages.NoPileLayout, GroupSettlementInputTab.GeneralAnalysis);
                     if (piles.All(p => (p.AxialForceVL0 + p.AxialForceVLAdditional) == 0))
-                        return ("全ての杭の軸力（VL0+VLadd）が0です。\n杭タブで軸力を設定してください。", GroupSettlementInputTab.GeneralAnalysis);
+                        return ("すべての杭で VL 時の軸力 (常時軸力 + 付加軸力) が 0 です。\nメイン画面の「杭」→「軸力」タブで軸力を入力してください。", GroupSettlementInputTab.GeneralAnalysis);
                     break;
 
                 case "個別十字（基礎梁反力）":
@@ -1410,7 +1406,7 @@ namespace PileDesign.ViewModels
                     if (piles == null || piles.Count == 0)
                         return (GuardMessages.NoPileLayout, GroupSettlementInputTab.GeneralAnalysis);
                     if (CurrentInputModel?.FoundationBeamInput?.Beams is not { Count: > 0 })
-                        return ("基礎梁が定義されていません。\n基礎梁を入力してください。", GroupSettlementInputTab.GeneralAnalysis);
+                        return (GuardMessages.NoFoundationBeam, GroupSettlementInputTab.GeneralAnalysis);
                     if (rectLoads == null || rectLoads.Count == 0 || rectLoads.All(r => r.QA == 0))
                         return ("矩形荷重が定義されていません (または全て 0)。\n荷重面等価径を入力すると自動生成されます。", GroupSettlementInputTab.GeneralAnalysis);
                     break;
@@ -1427,14 +1423,17 @@ namespace PileDesign.ViewModels
             if (layerProblems.Count > 0)
                 return (string.Join("\n", layerProblems) + "\n「土層」タブで直してください。", GroupSettlementInputTab.SoilLayers);
 
-            // 荷重面が土層の範囲に入っていること
-            double topAlt = pgs.SoilLayersTopAltitude;
-            double loadAlt = pgs.LoadingPlaneAltitude;
-            double bottomAlt = pgs.SettlementSoilLayers[^1].BottomAltitude;
-            if (loadAlt > topAlt + NumericalConstants.NEAR_ZERO_EPSILON)
-                return ($"荷重面 Z ({loadAlt:N3} m) が土層上端 Z ({topAlt:N3} m) より高くなっています。\n荷重面を土層上端以下に設定してください。", GroupSettlementInputTab.GeneralAnalysis);
-            if (loadAlt < bottomAlt - NumericalConstants.NEAR_ZERO_EPSILON)
-                return ($"荷重面 Z ({loadAlt:N3} m) が最下層下端 Z ({bottomAlt:N3} m) より低くなっています。\n荷重面を最下層下端以上に設定してください。", GroupSettlementInputTab.GeneralAnalysis);
+            var thicknessProblems = pgs.DescribeLayerThicknessMismatch();
+            if (thicknessProblems.Count > 0)
+                return (string.Join("\n", thicknessProblems) + "\n「土層」タブで直してください。", GroupSettlementInputTab.SoilLayers);
+
+            // 荷重面が土層の範囲に入っていること (基礎梁ありの解析と同じ検査)
+            if (pgs.DescribeLoadingPlaneProblem() is { } planeProblem)
+                return (planeProblem, GroupSettlementInputTab.GeneralAnalysis);
+
+            var shapeProblems = PileGroupSettlement.DescribeRectLoadShapeProblems(pgs.RectLoads);
+            if (shapeProblems.Count > 0)
+                return (string.Join("\n", shapeProblems.Take(10)) + "\n「荷重条件」タブで直してください。", GroupSettlementInputTab.GeneralAnalysis);
 
             return null;
         }
@@ -1447,7 +1446,7 @@ namespace PileDesign.ViewModels
             ApplicationVersion = AppVersion,
             Conditions =
             [
-                new("荷重の置き方", string.IsNullOrWhiteSpace(pgs?.LoadingType) ? "未設定" : pgs!.LoadingType),
+                new("荷重タイプ", string.IsNullOrWhiteSpace(pgs?.LoadingType) ? "未設定" : PileGroupSettlement.LoadingTypeDisplayName(pgs!.LoadingType)),
                 new("荷重面の標高", $"{pgs?.LoadingPlaneAltitude:0.###} m"),
                 new("土層", $"{pgs?.SettlementSoilLayers?.Count ?? 0} 層"),
                 new("格子の間隔", $"X {GroupPileSettlementXSpacing:0.###} m・Y {GroupPileSettlementYSpacing:0.###} m"),
@@ -1537,21 +1536,29 @@ namespace PileDesign.ViewModels
         {
             if (!double.IsFinite(e.Angle) || e.Angle <= 0 || e.Angle >= 90 || e.IsChecked == null || e.IsChecked.Count < 4)
             { e.Cancel = true; RejectSplit("前面杭の角度・荷重ケースの指定を確認してください。"); return; }
-            var changes = new List<(PileLayoutDataItem Pile, int Index, bool Value)>();
+            var changes = new List<(PileLayoutDataItem Pile, int Level, int Index, bool Value)>();
             double cosAlpha = Math.Cos(PileDesign.Common.Units.DegToRad(e.Angle));
-            for (int i = 0; i < 4; i++)
+            // レベルごとに、そのレベルの荷重方向で判定する (以前はレベル1 の方向だけで判定し、レベル2 も同じ判定を使っていた)
+            foreach (var (level, cases) in new[] { (1, CurrentInputModel.LoadCasesInput.LoadCasesLevel1), (2, CurrentInputModel.LoadCasesInput.LoadCasesLevel2) })
             {
-                if (!e.IsChecked[i]) continue;
-                foreach (var pile in CurrentInputModel.PileLayoutItems)
+                if (cases == null) continue;
+                for (int i = 0; i < 4 && i < cases.Count; i++)
                 {
-                    bool value = IsFrontPile(pile, CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i], cosAlpha);
-                    if (pile.IsFrontPiles[i] != value) changes.Add((pile,i,value));
+                    if (!e.IsChecked[i]) continue;
+                    foreach (var pile in CurrentInputModel.PileLayoutItems)
+                    {
+                        var flags = level == 2 ? pile.IsFrontPilesLevel2 : pile.IsFrontPiles;
+                        if (flags == null || i >= flags.Count) continue;
+                        bool value = IsFrontPile(pile, cases[i], cosAlpha);
+                        if (flags[i] != value) changes.Add((pile, level, i, value));
+                    }
                 }
             }
             if (changes.Count == 0) return;
             if (!ConfirmDiscardInvalidatedByInputChange(true)) { e.Cancel = true; return; }
             var before = CaptureInputEdit();
-            foreach (var change in changes) change.Pile.IsFrontPiles[change.Index] = change.Value;
+            foreach (var change in changes)
+                (change.Level == 2 ? change.Pile.IsFrontPilesLevel2 : change.Pile.IsFrontPiles)[change.Index] = change.Value;
             IsFrontPileLabelVisible = true;
             CompleteInputEdit(before);
         }

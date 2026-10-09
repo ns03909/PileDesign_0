@@ -59,7 +59,7 @@ namespace PileDesign.ViewModels
         public int InputEditVersion { get; private set; }
 
         private PileEvaluationSummary? _evaluationSummaryCache;
-        private (object? Model, object? Input, DateTime? Time, bool Done, int Edit) _evaluationSummaryKey;
+        private (object? Model, object? Input, DateTime? Time, bool Done, int Edit, object? Current, long Options) _evaluationSummaryKey;
 
         /// <summary>
         /// 検定サマリーを返す。
@@ -74,7 +74,12 @@ namespace PileDesign.ViewModels
                 (object?)ResultInputModel,
                 LastAnalysisTime,
                 IsHorizontalAnalysisDone,
-                InputEditVersion);
+                InputEditVersion,
+                // Undo・Redo・計算例の読込は入力の実体を差し替えるが、編集の番号を進めない。材料モデルのオプションは
+                // 耐力に効くが入力の編集として数えない。以前はこの 2 つを鍵に入れておらず、解析前の色分け (支持力) が
+                // Undo のあとも古い比のまま残った
+                (object?)CurrentInputModel,
+                (long)PileDesign.Models.InputData.ConcreteModelOptions.Version);
 
             if (!force && _evaluationSummaryCache != null && _evaluationSummaryKey.Equals(key))
                 return _evaluationSummaryCache;

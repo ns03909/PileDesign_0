@@ -216,13 +216,20 @@ namespace PileDesign.ViewModels
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
-                // 編集確定の直前に Undo スナップショットを保存
-                // (binding.UpdateSource() より前 = まだモデルは旧値のため pre-edit が捕捉される)
-                // useDebouncedUndo=true の場合、連続編集セッションの最初の 1 回のみ DeepCopy 実行 (Phase A)
                 if (useDebouncedUndo)
+                {
+                    // 連続編集を 1 手にまとめる経路 (変更前だけを積み、まとめ終わりで変更後を積む)
                     SaveUndoStateDebounced(scope, undoDescription);
-                else
-                    SaveUndoState(scope, undoDescription);
+                    e.EditingElement.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+                    customAction?.Invoke();
+                    NotifyUIChanged();
+                    return true;
+                }
+
+                // 変更の前後を 1 手として積む (他の編集と同じ CaptureInputEdit / CompleteInputEdit)。
+                // 以前は変更前の状態だけを積んでいたので、Ctrl+Y で最後の編集に戻らず、続けて 2 つ編集してから
+                // Ctrl+Z を押すと 2 つとも消えた (変更後が履歴に無く、次の編集の「変更前」でしか残らなかった)。
+                var before = CaptureInputEdit();
 
                 // バインディングソースの更新
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
@@ -233,6 +240,15 @@ namespace PileDesign.ViewModels
 
                 // UI更新
                 NotifyUIChanged();
+
+                // 文字の欄はここで値が入っている。チェックボックス・コンボの欄は、DataGrid がこのあと値を書くので、
+                // 書き終えてから変更後を取る
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (e.EditingElement is TextBox || dispatcher == null)
+                    CompleteInputEdit(before, undoDescription, scope);
+                else
+                    dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,
+                        new Action(() => CompleteInputEdit(before, undoDescription, scope)));
 
                 return true;
             }
@@ -300,11 +316,16 @@ namespace PileDesign.ViewModels
             // 「入力が変更されています。再解析が必要です」の状態を控えておく。
             // ダイアログが何も適用しなかった (キャンセル) 場合に戻すため。
             bool changedBefore = InputChangedSinceAnalysis;
+            // 杭断面ウィンドウの材料モデルのオプションは、確定を待たずに基本設定へ直接書かれる (曲線を見ながら効きを確かめるため)。
+            // 外側のウィンドウをキャンセルしても戻らないので、変わっていれば「適用した」として扱う。
+            // 以前はキャンセルで「再解析が必要」の印を開く前に戻し、オプションは変わったまま帯だけが消えていた
+            string optionsBefore = ConcreteModelOptions.Signature();
 
             // ダイアログを開く
             var dialogViewModel = OpenDialogWindow<TViewModel, TWindow>(this);
 
-            bool applied = DialogAppliedChanges(dialogViewModel);
+            bool applied = DialogAppliedChanges(dialogViewModel)
+                || ConcreteModelOptions.Signature() != optionsBefore;
 
             if (applied)
             {
@@ -352,6 +373,9 @@ namespace PileDesign.ViewModels
                     foreach (var item in selectedItems)
                     {
                         item.IsFrontPiles[i] = values[i];
+                        // 以前は 1 つの一覧がレベル1・2 を兼ねていた。まとめて設定は両方に効かせる
+                        if (item.IsFrontPilesLevel2 != null && i < item.IsFrontPilesLevel2.Count)
+                            item.IsFrontPilesLevel2[i] = values[i];
                     }
                 }
             }
@@ -733,6 +757,21 @@ namespace PileDesign.ViewModels
 
                 CurrentInputModel = state.DeepCopy();
                 CurrentInputModel.AttachViewModel(this);
+                // 「杭要素分割済み」の印も、その状態を積んだときのものに戻す (土層-杭セットと食い違わせない)
+                if (RememberedElementSplit(state) is bool split)
+                {
+                    IsElementSplit = split;
+                    if (split)
+                    {
+                        // 分割済みの土層-杭セットを、差し替えで頼まれた作り直しで上書きしない
+                        _generateSoilPilesDebounceTimer?.Stop();
+                        _generateSoilPilesDebounceTimer = null;
+                        _soilPilesGenerationPending = false;
+                    }
+                }
+                // 材料モデルの選択 (基本設定) は、解析が静的な設定 (ConcreteModelOptions) から読む。入力を戻したら合わせ直す。
+                // 以前はファイルの読込でだけ合わせており、基本設定の変更を Undo すると、画面は戻るのに解析は変更後の設定のまま走った
+                ApplyConcreteModelOptions();
                 if (settlementResult != null && CurrentInputModel.PileGroupSettlement != null)
                     CurrentInputModel.PileGroupSettlement.Result = settlementResult;
 
@@ -760,9 +799,6 @@ namespace PileDesign.ViewModels
             OpenGroupSettlementWithBeamWindowCommand?.NotifyCanExecuteChanged();
             // 個別矩形（基礎梁考慮）の表示可否は基礎梁の有無に連動するため再評価
             OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
-            OnPropertyChanged(nameof(GroupSettlementBeamSelectorOptions));
-            OnPropertyChanged(nameof(GroupSettlementBeamSelector));
-            OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
 
             // 追加・削除された梁要素の PropertyChanged 購読を更新
             if (e.OldItems != null)
@@ -817,6 +853,10 @@ namespace PileDesign.ViewModels
             // ComboBox SelectedValuePath 用の派生キーは Type/Id 変更時にも別途発火するためスキップ
             if (e.PropertyName == nameof(Models.InputData.FoundationBeam.NodeI_Key)
                 || e.PropertyName == nameof(Models.InputData.FoundationBeam.NodeJ_Key))
+                return;
+            // 選択・表示の切り替えは入力の変更ではない。以前は梁をクリックしただけで基礎梁ありの結果を捨てていた
+            if (e.PropertyName == nameof(Models.InputData.FoundationBeam.IsSelected)
+                || e.PropertyName == nameof(Models.InputData.FoundationBeam.IsVisible))
                 return;
 
             if (HasGroupSettlementBeamAwareCases)
@@ -876,9 +916,6 @@ namespace PileDesign.ViewModels
             OpenGroupSettlementWithBeamWindowCommand?.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
             // 群杭荷重の「基礎梁:有/無」セレクタも基礎梁有無で内容が変わるため再評価
-            OnPropertyChanged(nameof(GroupSettlementBeamSelectorOptions));
-            OnPropertyChanged(nameof(GroupSettlementBeamSelector));
-            OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
         }
 
         [RelayCommand]
@@ -1383,6 +1420,7 @@ namespace PileDesign.ViewModels
                     // Undo用DeepCopyをダイアログ表示前に完了させる
                     // （DeepCopy内のSoilPiles一時退避finallyがダイアログ中のSoilPiles変更と競合するのを防ぐ）
                     var undoCopy = await Task.Run(() => CurrentInputModel.DeepCopy());
+                    bool splitBefore = IsElementSplit;
 
                     // ウィンドウを即座に表示（重い初期化はContentRenderedイベントで実行）
                     var window = new ElementDivisionWindow(this);
@@ -1395,9 +1433,12 @@ namespace PileDesign.ViewModels
                     {
                         MarkPossiblyEdited();
 
+                        // 変更の前後を 1 手として積む。以前は変更前の写しだけを積んでいたので、
+                        // Ctrl+Z の行き先が分割の前にならず (1 つ前の編集まで戻るか、戻らない)、Ctrl+Y でも分割後に戻れなかった
                         if (undoCopy != null)
                         {
-                            _undoManager.SaveState(undoCopy, "杭要素分割");
+                            _undoManager.SaveSnapshotEdit(RememberElementSplit(undoCopy, splitBefore),
+                                RememberElementSplit(CurrentInputModel.DeepCopy()), "杭要素分割");
                             RaiseUndoStateChanged();
                         }
                     }
@@ -1453,7 +1494,7 @@ namespace PileDesign.ViewModels
                     // 完全に交差しない場合（杭が地盤の完全に上 or 下）
                     if (pileBottomAltitude >= groundTopAltitude || pileTopAltitude <= groundBottomAltitude)
                     {
-                        errors.AppendLine($"杭配置No.{pileLayout.PileNo}: 杭 Z 範囲 [{pileBottomAltitude:F2}〜{pileTopAltitude:F2}] が地盤 Z 範囲 [{groundBottomAltitude:F2}〜{groundTopAltitude:F2}] と全く重なっていません。基本設定の「Z=0 の標高」を確認してください。");
+                        errors.AppendLine($"杭配置No.{pileLayout.PileNo}: 杭 Z 範囲 [{pileBottomAltitude:F2}〜{pileTopAltitude:F2}] が地盤 Z 範囲 [{groundBottomAltitude:F2}〜{groundTopAltitude:F2}] と全く重なっていません。リボンの「プロジェクト 情報」で「Z=0 の標高」を確認してください。");
                     }
                 }
                 else
@@ -1779,7 +1820,7 @@ namespace PileDesign.ViewModels
 
             if (CurrentInputModel.FoundationBeamInput?.Beams == null || CurrentInputModel.FoundationBeamInput.Beams.Count == 0)
             {
-                MessageService.Show("基礎梁が定義されていません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageService.Show(GuardMessages.NoFoundationBeam, "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1801,6 +1842,9 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
+            // 杭頭ばねは単杭沈下の荷重-沈下曲線から作る。曲線が入力の変更より前のものなら、使うか尋ねる
+            if (!anyMissing && !ConfirmUsingStaleSettlementResults("単杭沈下解析（基礎梁考慮）", "杭頭ばね"))
+                return;
             if (anyMissing)
             {
                 MessageService.Show("単杭沈下解析が未実行の杭があります。\n\n" +
@@ -1826,6 +1870,9 @@ namespace PileDesign.ViewModels
                 {
                     VerticalBeamCaseResults = new ObservableCollection<FEM.VerticalBeamCaseResult>(viewModel.CaseResults);
                     IsVerticalBeamAnalysisDone = true;
+                    // 受け取った結果だけを「最新」とする (保存せずに閉じたときは、前の結果の印を変えない)
+                    MarkSettlementResultsCurrent();
+                    CaptureAnalysisResultSet(viewModel.LastRunSettings);
 
                     // 計算ログを別途保存
                     SetVerticalBeamAnalysisLogs(viewModel.CalculationLog);
@@ -2025,38 +2072,57 @@ namespace PileDesign.ViewModels
         /// </summary>
         [RelayCommand]
         private void DeletePiles()
+            => DeleteInputItems(CurrentInputModel.PileLayoutItems.Where(x => x.IsSelected).ToList(), null, null, "杭配置 削除");
+
+        /// <summary>
+        /// 杭・一般節点・梁要素を削除する (杭配置表の行の削除ボタン・Delete キー・削除コマンドの共通の入口)。
+        /// 消える杭・節点につながる梁要素も消し、残る杭を指す番号 (一般節点・矩形荷重の対応杭) を付け直す。
+        /// 杭を消すときは杭要素分割を取り消す (確認を出す)。削除の前後を 1 手として履歴に積み、再解析が必要の印を付ける。
+        ///
+        /// 以前は入口ごとに別の書き方で、行の削除ボタンと Delete キーは削除前の状態しか積まず (Ctrl+Y で戻らない)、
+        /// 番号の付け直しも杭要素分割の取り消しもしていなかった。消した杭より後ろの杭に対応付けた矩形荷重・一般節点が
+        /// 1 つ後ろの別の杭を指し、分割済みのまま古い土層-杭セットで解いていた。行の削除ボタンは、つながった梁要素も消していなかった。
+        /// </summary>
+        /// <returns>削除したら true (対象が無い・確認で断ったら false)。</returns>
+        internal bool DeleteInputItems(IReadOnlyCollection<PileLayoutDataItem>? piles, IReadOnlyCollection<InputNode>? nodes,
+            IReadOnlyCollection<FoundationBeam>? beams, string description)
         {
+            var input = CurrentInputModel;
+            if (input == null) return false;
+            var pilesToRemove = (piles ?? []).Where(p => p != null && input.PileLayoutItems.Contains(p)).Distinct().ToList();
+            var nodesToRemove = (nodes ?? []).Where(n => n != null && (input.InputNodes?.Contains(n) ?? false)).Distinct().ToList();
+            var beamsToRemove = (beams ?? []).Where(b => b != null && (input.FoundationBeamInput?.Beams?.Contains(b) ?? false)).Distinct().ToList();
 
-            var col = CurrentInputModel.PileLayoutItems;
-            var itemsToRemove = col.Where(x => x.IsSelected).ToList();
-            if (itemsToRemove.Count == 0) return;
-            if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
-            var oldNumbers = col.ToDictionary(p => p.UniqueId, p => (p.No, p.PileNo));
-
-            // Undoポイントを追加
-            var before = CaptureInputEdit();
-
-            // 削除対象の杭に接合された梁要素も同時に削除
-            var beams = CurrentInputModel.FoundationBeamInput?.Beams;
-            if (beams != null)
+            // 消える杭・節点につながる梁要素も消す (端点の無い梁を残さない)
+            var pileIds = new HashSet<Guid>(pilesToRemove.Select(p => p.UniqueId));
+            var nodeIds = new HashSet<Guid>(nodesToRemove.Select(n => n.UniqueId));
+            foreach (var beam in input.FoundationBeamInput?.Beams ?? [])
             {
-                var pileIds = new HashSet<Guid>(itemsToRemove.Select(p => p.UniqueId));
-                var beamsToRemove = beams.Where(b =>
-                    (b.NodeI_Type == Models.InputData.NodeReferenceType.PileLayout && pileIds.Contains(b.NodeI_Id)) ||
-                    (b.NodeJ_Type == Models.InputData.NodeReferenceType.PileLayout && pileIds.Contains(b.NodeJ_Id))
-                ).ToList();
-
-                foreach (var beam in beamsToRemove)
-                    beams.Remove(beam);
+                if (beamsToRemove.Contains(beam)) continue;
+                bool connected =
+                    (beam.NodeI_Type == NodeReferenceType.PileLayout && pileIds.Contains(beam.NodeI_Id)) ||
+                    (beam.NodeJ_Type == NodeReferenceType.PileLayout && pileIds.Contains(beam.NodeJ_Id)) ||
+                    (beam.NodeI_Type == NodeReferenceType.GeneralNode && nodeIds.Contains(beam.NodeI_Id)) ||
+                    (beam.NodeJ_Type == NodeReferenceType.GeneralNode && nodeIds.Contains(beam.NodeJ_Id));
+                if (connected) beamsToRemove.Add(beam);
             }
+            if (pilesToRemove.Count == 0 && nodesToRemove.Count == 0 && beamsToRemove.Count == 0) return false;
 
-            // 杭の実削除
-            foreach (var item in itemsToRemove)
-                col.Remove(item);
+            // 杭が変われば土層-杭セットが変わるので、杭要素分割は成り立たない
+            if (!ConfirmDiscardInvalidatedByInputChange(pilesToRemove.Count > 0)) return false;
+            var oldNumbers = input.PileLayoutItems.ToDictionary(p => p.UniqueId, p => (p.No, p.PileNo));
 
-            RemapRemainingPileLinks(oldNumbers);
-            UpdatePileLayoutNo();
-            CompleteInputEdit(before);
+            var before = CaptureInputEdit();
+            foreach (var beam in beamsToRemove) input.FoundationBeamInput!.Beams.Remove(beam);
+            foreach (var node in nodesToRemove) input.InputNodes!.Remove(node);
+            foreach (var pile in pilesToRemove) input.PileLayoutItems.Remove(pile);
+            if (pilesToRemove.Count > 0)
+            {
+                RemapRemainingPileLinks(oldNumbers);
+                UpdatePileLayoutNo();
+            }
+            CompleteInputEdit(before, description);
+            return true;
         }
 
         /// <summary>

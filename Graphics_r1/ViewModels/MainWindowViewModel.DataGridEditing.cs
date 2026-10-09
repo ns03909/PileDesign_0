@@ -155,42 +155,52 @@ namespace PileDesign.ViewModels
         // 杭配置表編集開始時メソッド
         // 編集開始時の処理は code-behind の DataGrid のイベントで行う (旧 DataGridPileLayout_OnBeginningEdit は参照が無かったので 2026-09-19 に撤去)。
 
-        // 杭要素分割解除確認メソッド
+        /// <summary>
+        /// 杭要素分割を取り消してよいかを確かめる (杭・地盤・杭体・杭断面・杭頭部・根入部・一般節点・梁要素の編集の入口)。
+        /// 取り消すのは杭要素分割だけで、解析結果は残して「再解析が必要」の印を付ける (プロパティパネルの編集と同じ扱い)。
+        ///
+        /// 以前は OK で解析結果をすべて消していた。軸力・前後杭のように分割と関係の無い表のセルに入っただけでも
+        /// 全結果を消すかを尋ね、入れ子の杭断面・杭頭部の OK で消したあと、外側の杭体ウィンドウでキャンセルしても結果は戻らなかった。
+        /// </summary>
         public bool CheckAndResetElementSplit(string text)
-        {
-            if (IsElementSplit == true)
-            {
-                MessageBoxResult result = MessageService.Show(
-                    $"{text}を編集、確定するには、入力済みの杭要素分割および、" +
-                    $"\n解析結果が存在する場合は解析結果を削除する必要があります。" +
-                    $"\nよろしいですか。",
-                    "確認",
-                    MessageBoxButton.OKCancel,
-                    MessageBoxImage.Warning);
+            => ConfirmDiscardInvalidatedByInputChange(true, $"{text}の編集");
 
-                if (result == MessageBoxResult.Cancel)
-                    return false;
-                else
-                {
-                    // 群杭沈下・結果セット・入力モデル内の沈下結果まで含めて捨てる。
-                    // フラグ 4 つだけ消していた頃は、消えたはずの結果が残っていた。
-                    ClearAllAnalysisState(includeElementSplit: true);
-                    // 変更後（以下の箇所で適用）
-                    RequestUpdateWindow();
-                }
+        /// <summary>
+        /// 表の Ctrl+V / Delete (範囲の一括クリア) で値を書いたあと。書き終えた状態を履歴に積み、再解析が必要の印を付ける。
+        /// 直前の履歴の位置が書く前の状態なので (セルの確定・ダイアログはどれも変更後を積む)、ここで変更後を積めば前後の 1 手になる。
+        /// 杭の形 (位置・杭体・地盤・根入部) が変わりうる表は、セルの確定と同じく杭要素分割を取り消して土層-杭セットを作り直す。
+        /// </summary>
+        internal void CompleteGridPaste(string description, bool changesPileGeometry, AnalysisInputScope scope = AnalysisInputScope.All)
+        {
+            if (changesPileGeometry)
+            {
+                IsElementSplit = false;
+                RequestGenerateSoilPiles();
             }
+            SaveUndoState(scope, description);
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 杭配置表の「杭体番号」「地盤番号」のコンボから書く。プロパティパネルの杭体No・地盤No と同じく、
+        /// 杭要素分割の取り消しを確かめ、変更の前後を履歴に積み、再解析が必要の印を付ける。
+        ///
+        /// 以前はコンボが直接書いていたので、履歴にも印にも残らず、杭要素分割済みだと土層-杭セットが作り直されないまま
+        /// 次の水平解析が変更前の杭体・地盤で解いていた。
+        /// </summary>
+        /// <returns>書いたら true。同じ値・確認で断ったら false (呼び出し側はコンボの表示を戻す)。</returns>
+        internal bool TrySetPileLayoutReference(PileLayoutDataItem pile, bool isPileBody, int value)
+        {
+            if (pile == null) return false;
+            if ((isPileBody ? pile.PileBodyNo : pile.GroundNo) == value) return false;
+            if (!ConfirmDiscardInvalidatedByInputChange(true)) return false;
+            var before = CaptureInputEdit();
+            if (isPileBody) pile.PileBodyNo = value;
+            else pile.GroundNo = value;
+            CompleteInputEdit(before, isPileBody ? "杭体番号 変更" : "地盤番号 変更");
             return true;
         }
 
-        // 杭配置表マウス右ボタン押メソッド
-        [RelayCommand]
-        private static void DataGridPileLayout_OnMouseRightButtonDown(MouseButtonEventArgs e)
-        {
-            if (e.RightButton == MouseButtonState.Pressed)
-            {
-                // マウス位置で ContextMenu を表示
-            }
-        }
         // 列の自動生成の扱いは MainWindow.xaml.cs の同名ハンドラが持つ (XAML の AutoGeneratingColumn が指すのはそちら)。
         // ViewModel 側にあった写しは 2026-09-19 に撤去。
 
@@ -270,7 +280,9 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DataGridSoilPile_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
-            HandleDataGridCellEditEnding(e, () =>
+            // 書けるのは荷重面等価径だけで、群杭沈下 (基礎梁なし・あり) しか読まない。水平解析の結果を陳腐化させない
+            // (以前は範囲を指定せず、水平解析にも「再解析が必要」が付いた)
+            HandleDataGridCellEditEnding(e, scope: AnalysisInputScope.Settlement, customAction: () =>
             {
                 // GroupPileLoadDia 等の編集後、個別十字系なら矩形荷重を再生成
                 RebuildAutoCrossRectLoadsIfNeeded();

@@ -220,7 +220,6 @@ namespace PileDesign.ViewModels
             _autoSaveService.Stop();
 
             CurrentInputModel.Reset();
-            MarkProjectReplaced();
 
             // 解析に由来する状態をすべて捨てる。CurrentModel だけ null にしていた頃は、
             // 解析済みフラグと結果セットが残り、新規作成したのに前のモデルの結果が
@@ -238,8 +237,17 @@ namespace PileDesign.ViewModels
             // 緊急保存も対象外になる (落ちると全部消える)。
             _autoSaveService.Start(null, CurrentInputModel, null, null);
 
-            // ここで初期状態をUndoスタックに積む
+            // 前のプロジェクトの履歴を捨て、初期状態を Undo の起点にする (読込と同じ)。
+            // 以前は履歴を残したので、新規作成のあとの「元に戻す」で前のプロジェクトの入力が戻ってきた。
+            _undoManager.Clear();
             SaveUndoState();
+
+            // 新規作成の直後は失うものが無い。SaveUndoState は全編集の集約点で未保存と「再解析が必要」の印を立てるので、
+            // そのあとで戻す。以前は戻す処理 (MarkProjectReplaced) を先に呼んでいたので、作ったばかりの新規を
+            // 閉じる・開き直すだけで「現在のデータを保存しますか？」と聞いていた
+            MarkProjectReplaced();
+            RestoreInputChangedSinceAnalysis(false);
+            RestoreSettlementInputChanged(false);
 
             UpdateWindowImmediate();
         }
@@ -280,9 +288,15 @@ namespace PileDesign.ViewModels
         /// 値を反映するには M-φ 静的キャッシュと各断面の NM/降伏/ひび割れキャッシュの両方をクリアする必要がある。
         /// モデル読込・新規作成・例題読込・基本設定での変更時に呼ぶ。
         /// </summary>
-        public void ApplyConcreteModelOptions()
+        /// <summary>
+        /// 入力モデルの設定から決まるプロセス共有の状態 (材料のオプション・地震時軸力の入力モード) を、指定した入力のものへそろえる。
+        /// 対応表はここ 1 か所。計算例の組み立ても、画面の入力へ差し替える前の断面計算のためにこれを使う
+        /// (写しを持つと、オプションを足したときに片方だけ取り残される)。
+        /// </summary>
+        internal static void SyncStaticOptionsFor(InputModel? input)
         {
-            var f = CurrentInputModel?.FundamentalInput;
+            Common.AxialForceModeContext.IsVariationMode = input?.IsAxialForceVariationMode ?? false;
+            var f = input?.FundamentalInput;
             Models.InputData.ConcreteModelOptions.IgnoreTensileStrength = f?.IgnoreConcreteTensileStrength ?? false;
             Models.InputData.ConcreteModelOptions.UseReducedCompression = f?.UseReducedConcreteCompressiveStrength ?? false;
             Models.InputData.ConcreteModelOptions.RebarYieldAt11F = f?.RebarYieldAt11F ?? false;
@@ -309,6 +323,11 @@ namespace PileDesign.ViewModels
 
             // M-φ 静的キャッシュ（全断面共有）
             PileSection.ClearMphiCache();
+        }
+
+        public void ApplyConcreteModelOptions()
+        {
+            SyncStaticOptionsFor(CurrentInputModel);
 
             // 各断面の Ec と諸元。曲線のキャッシュは断面が自分で捨てる
             // (ConcreteModelOptions.Version の判定)。ここでたどれるのは現在の入力モデルだけで、
@@ -329,9 +348,20 @@ namespace PileDesign.ViewModels
                             sec.RecalculateConcreteE();
                             sec.SetSpecs();
                         }
+                        else
+                        {
+                            // 既製杭: 鋼材のヤング係数をカタログの値・指針値の設定に合わせ直す
+                            // (以前は製品を選んだときにしか当てておらず、設定を切り替えても入力済みの断面は変わらなかった)
+                            sec.ReapplyPrecastSteelYoungsModulus();
+                            sec.SetSpecs();
+                        }
                     }
                 }
             }
+
+            // 鋼管杭の座屈長 (液状化区間の長さ) を今の入力から求め直す。以前の版で「柱座屈を考慮しない」のまま
+            // 保存したファイルは 0 が入っており、設定を切り替えても杭要素分割をやり直すまで戻らなかった
+            CurrentInputModel?.RefreshSteelPipeBucklingLengths();
 
             // 解析済みの結果を表示したままオプションを変えると、応答値は解析時・限界曲線は今の
             // オプション、という混ざった表示になる。ステータスに出して気付けるようにする。
@@ -363,6 +393,17 @@ namespace PileDesign.ViewModels
             var previousAnaModel = CurrentModel;
             var previousFilePath = CurrentFilePath;
             var previousResultSet = CurrentResultSet;
+            // 解析の状態と「再解析が必要」の記録も読込の途中で書き換わる (RestoreAnalysisState・読込の仕上げ)。
+            // 以前は入力と結果セットだけを戻していたので、失敗すると前の作業が杭要素分割済みでなくなったり、
+            // 開こうとしたファイルの解析済みの印が前の作業に残ったりした
+            var previousAnalysisState = (
+                ElementSplit: IsElementSplit, Horizontal: IsHorizontalAnalysisDone, Vertical: IsVerticalAnalysisDone,
+                Group: IsGroupPileSettlementAnalysisDone, VerticalBeam: IsVerticalBeamAnalysisDone,
+                VerticalBeamResults: VerticalBeamCaseResults,
+                Changed: InputChangedSinceAnalysis, HorizontalChanged: HorizontalInputChanged, SettlementChanged: SettlementInputChanged,
+                HorizontalEdits: _editsSinceHorizontal.ToList(), SettlementEdits: _editsSinceSettlement.ToList(),
+                AnalysisSignature: _analysisInputSignature, HorizontalSignature: _horizontalInputSignature,
+                SettlementSignature: _settlementInputSignature);
 
             try
             {
@@ -378,6 +419,21 @@ namespace PileDesign.ViewModels
                 CurrentModel = previousAnaModel;
                 CurrentFilePath = previousFilePath;
                 CurrentResultSet = previousResultSet;
+                var s = previousAnalysisState;
+                IsElementSplit = s.ElementSplit;
+                IsHorizontalAnalysisDone = s.Horizontal;
+                IsVerticalAnalysisDone = s.Vertical;
+                IsGroupPileSettlementAnalysisDone = s.Group;
+                IsVerticalBeamAnalysisDone = s.VerticalBeam;
+                VerticalBeamCaseResults = s.VerticalBeamResults;
+                InputChangedSinceAnalysis = s.Changed;
+                HorizontalInputChanged = s.HorizontalChanged;
+                SettlementInputChanged = s.SettlementChanged;
+                _editsSinceHorizontal.Clear(); _editsSinceHorizontal.AddRange(s.HorizontalEdits);
+                _editsSinceSettlement.Clear(); _editsSinceSettlement.AddRange(s.SettlementEdits);
+                _analysisInputSignature = s.AnalysisSignature;
+                _horizontalInputSignature = s.HorizontalSignature;
+                _settlementInputSignature = s.SettlementSignature;
                 if (previousInput != null)
                 {
                     // 静的な材料オプションと軸力モードは InputModel の外にあるので、明示的に戻す。
@@ -402,15 +458,34 @@ namespace PileDesign.ViewModels
             if (CurrentInputModel.InputNodes == null) compat.Add(PileDesign.Services.CompatibilityKind.Filled, "一般節点の一覧が無かったので、空の一覧で補いました。");
             if (CurrentInputModel.GridXItems == null) compat.Add(PileDesign.Services.CompatibilityKind.Filled, "通り心 (X) の一覧が無かったので、空の一覧で補いました。");
             if (CurrentInputModel.GridYItems == null) compat.Add(PileDesign.Services.CompatibilityKind.Filled, "通り心 (Y) の一覧が無かったので、空の一覧で補いました。");
-            CurrentInputModel.InputNodes ??= [];
-            CurrentInputModel.GridXItems ??= [];
-            CurrentInputModel.GridYItems ??= [];
-            CurrentInputModel.EnsureFoundationBeamDefaults();
-            CurrentInputModel.EnsureAnalysisTargetDefaults();
-            // 杭頭部の、杭断面から導く値 (以前は杭頭部ウィンドウを開くまで入らなかった)
-            CurrentInputModel.SyncPileTopsFromSections();
+            // 前のファイルの水平解析のサマリーを、開いたファイルの計算書に載せない
+            DocxOutput.LastAnalysisSummaryText = null;
+
+            // 解析したときの入力の控え (別の実体のとき)。結果表示・計算書・検定はこちらを読むので、
+            // 今の版の形に整える処理は現在の入力と<b>同じものを</b>かける。以前は現在の入力にだけかけていて、
+            // 結果を保存した 1.0.35-beta のファイルを開くと、控えの杭はレベル2 の前後判定が補われないまま
+            // (既定の「すべて前方杭」) 計算書の表に出ていた。互換の記録は現在の入力の分だけ書く (同じことを二度言わない)
+            var loadedSnapshot = projectData?.ResultInputSnapshot is { } loadedSnap && !ReferenceEquals(loadedSnap, CurrentInputModel)
+                ? loadedSnap : null;
+            if (loadedSnapshot != null)
+                _fileOperationService.ConvertToObservableCollections(loadedSnapshot);
+            foreach (var model in new[] { CurrentInputModel, loadedSnapshot })
+            {
+                if (model == null) continue;
+                model.InputNodes ??= [];
+                // レベル2 の前後判定が無い旧ファイルは、レベル1 の値を写す (それまでレベル1 の判定で解いていたので、結果を変えない)
+                foreach (var pile in model.PileLayoutItems ?? [])
+                    pile?.FillLevel2FrontFlagsFromLevel1IfMissing();
+                model.GridXItems ??= [];
+                model.GridYItems ??= [];
+                model.EnsureFoundationBeamDefaults();
+                model.EnsureAnalysisTargetDefaults();
+                // 杭頭部の、杭断面から導く値 (以前は杭頭部ウィンドウを開くまで入らなかった)
+                model.SyncPileTopsFromSections();
+            }
 
             // 許容圧縮と許容せん断の規準は同じもの 1 つになった。別々に選べた時期のファイルは圧縮側に揃える。
+            loadedSnapshot?.FundamentalInput?.NormalizeNotification1113();
             if (CurrentInputModel.FundamentalInput?.NormalizeNotification1113() == true)
             {
                 compat.Add(PileDesign.Services.CompatibilityKind.Converted, "許容圧縮と許容せん断の規準が食い違っていたので、圧縮側に揃えました (今は 1 つの設定です)。");
@@ -423,6 +498,8 @@ namespace PileDesign.ViewModels
             if (projectData == null || projectData.FormatVersion < 2)
             {
                 CurrentInputModel.MigratePileZSemantics_v1_to_v2();
+                // 控えも同じ形式で書かれているので同じ読み替えをする (現在の入力とだけ食い違わないように)
+                loadedSnapshot?.MigratePileZSemantics_v1_to_v2();
                 compat.Add(PileDesign.Services.CompatibilityKind.Converted, "杭配置の Z を「杭頭の高さ」から「接合節点の高さ」の意味に読み替えました (形式 v1 → v2)。");
             }
 
@@ -509,11 +586,6 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(GroupSettlementRouteSelector));
             // 群杭荷重「基礎梁:有/無」セレクタも基礎梁有無に連動するため再評価
             OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
-            OnPropertyChanged(nameof(AvailableLoadingTypeOptionsNonBeam));
-            OnPropertyChanged(nameof(GroupSettlementBeamSelectorOptions));
-            OnPropertyChanged(nameof(GroupSettlementBeamSelector));
-            OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
-            OnPropertyChanged(nameof(GroupSettlementLoadType));
             OnPropertyChanged(nameof(IsManualRectLoadEditingEnabled));
 
             // 基礎梁考慮 群杭沈下解析リボンボタン等の CanExecute を再評価
@@ -563,6 +635,9 @@ namespace PileDesign.ViewModels
             // SaveUndoState は全編集の集約点なので、解析後に編集した記録も立ってしまう。
             // ファイルから復元した値を控えておき、あとで戻す。
             bool changedSinceAnalysisOnLoad = InputChangedSinceAnalysis;
+            // 沈下の記録も同じく控えて戻す。以前は水平解析の印だけを戻していたので、沈下の結果を持つファイルを
+            // 開いただけで「沈下解析の結果は入力変更前のもの」と出て、変更した項目に読込の処理の名前まで並んでいた
+            bool settlementChangedOnLoad = SettlementInputChanged;
             // 番号を振り直したら、読み込んだ解析結果は別のケースの軸力で解いた恐れがある。再解析を促す
             if (renumbered.Count > 0 && CurrentModel != null)
                 changedSinceAnalysisOnLoad = true;
@@ -573,6 +648,7 @@ namespace PileDesign.ViewModels
             // (直前の SaveUndoState で編集扱いになるため、その後に戻す)
             MarkProjectReplaced();
             RestoreInputChangedSinceAnalysis(changedSinceAnalysisOnLoad);
+            RestoreSettlementInputChanged(settlementChangedOnLoad);
             // 元に戻したときに比べる相手 (解析したときの入力の署名)。荷重ケースの番号・名前を揃えたあとに取る
             CaptureInputSignaturesAfterLoad();
 
@@ -1082,6 +1158,8 @@ namespace PileDesign.ViewModels
                     // CurrentModel は CaptureAnalysisResultSet で既にスナップショット側を指している。
                     // 入力もそちらに合わせないと「変位は解析時・断面は編集後」の計算書になる。
                     var inputForReport = ResultInputModel;
+                    // 計算書に載せるケースの選択は、計算書出力ウィンドウで今の入力に対して行っている。解析時の入力へ写す
+                    inputForReport?.LoadCasesInput?.CopyReportSelectionFrom(CurrentInputModel?.LoadCasesInput);
                     var doc = new Output.WordDocument(inputForReport, CurrentModel, this);
                     // 進み具合と「中止」の窓を出して作る。止めたときは作りかけを残さない (前に出力した計算書はそのまま)
                     if (!RunCancellableReport(run => doc.CreateWordDocument(inputForReport, saveFileDialog.FileName, run)))

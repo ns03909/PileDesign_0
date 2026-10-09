@@ -112,6 +112,27 @@ namespace PileDesign.Views
 
             var vm = this.DataContext as PileDesign.ViewModels.MainWindowViewModel;
 
+            // 利用者が選んだときだけ効かせる。選択はフォーカスが外れるまでモデルへ書かない (UpdateSourceTrigger=LostFocus) ので、
+            // 選んだ値がもうモデルの値と同じなら、変化はモデルの側から来ている (Undo・Redo・履歴・ファイルを開く・コードからの切替)。
+            // 以前はこれも利用者の切替として扱い、Undo で戻した矩形荷重 (手で直した寸法・荷重) を確認のうえ作り直し、
+            // キャンセルすると画面だけ古い荷重タイプを出してモデルと食い違った
+            if (selectedItem != null && selectedItem == vm?.CurrentInputModel?.PileGroupSettlement?.LoadingType)
+            {
+                _prevLoadingType = selectedItem;
+                return;
+            }
+
+            // 群杭沈下の結果があれば、消してよいかを確かめる (荷重が変われば結果は合わない)。
+            // 以前は確かめず、旧荷重の結果が「最新」のまま残った
+            if (vm != null && selectedItem != null && !vm.ConfirmAnalysisConditionChange("両方", "荷重タイプ"))
+            {
+                if (_prevLoadingType != null) comboBox!.SelectedItem = _prevLoadingType;
+                return;
+            }
+            // 変更の前後を 1 手として履歴に積む (矩形荷重の作り直しも含めて Ctrl+Z で戻る)。
+            // 選択はフォーカスが外れるまでモデルへ書かれないので、控えはまだ古い荷重タイプの状態
+            var before = vm?.CaptureInputEdit();
+
             // 個別十字系・個別矩形系に切り替わった場合は RectLoads を自動生成で置換
             if (vm != null && (selectedItem == "個別十字" || selectedItem == "個別十字（基礎梁反力）"
                             || selectedItem == "個別矩形" || selectedItem == "個別矩形（基礎梁考慮）"))
@@ -121,12 +142,12 @@ namespace PileDesign.Views
                 int existingCount = existingRectLoads?.Count ?? 0;
                 if (existingCount > 0)
                 {
-                    var prevName = _prevLoadingType as string ?? "(以前の荷重タイプ)";
+                    var prevName = _prevLoadingType is string prev ? PileDesign.Models.InputData.PileGroupSettlement.LoadingTypeDisplayName(prev) : "(以前の荷重タイプ)";
                     string shapeDesc = (selectedItem == "個別矩形" || selectedItem == "個別矩形（基礎梁考慮）")
                         ? "杭頭ごとの正方形荷重"
                         : "杭頭ごとの十字形矩形荷重";
                     var msg = $"現在「{prevName}」で {existingCount} 件の矩形荷重が登録されています。\n\n" +
-                              $"「{selectedItem}」へ切替えると、これらは破棄され、{shapeDesc}で上書きされます。\n\n" +
+                              $"「{PileDesign.Models.InputData.PileGroupSettlement.LoadingTypeDisplayName(selectedItem)}」へ切替えると、これらは破棄され、{shapeDesc}で上書きされます。\n\n" +
                               "切替えを続行しますか? (キャンセルで元の荷重タイプに戻ります)";
                     var result = PileDesign.Services.MessageService.Show(
                         msg, "荷重タイプ切替確認",
@@ -145,6 +166,13 @@ namespace PileDesign.Views
                 // まだ古い値の可能性 → 先にソース更新してから再生成
                 comboBox?.GetBindingExpression(ComboBox.SelectedItemProperty)?.UpdateSource();
                 vm.RebuildAutoCrossRectLoadsIfNeeded();
+            }
+
+            if (vm != null && before != null)
+            {
+                // ほかの荷重タイプでも、ここでモデルへ書いてから変更後を積む
+                comboBox?.GetBindingExpression(ComboBox.SelectedItemProperty)?.UpdateSource();
+                vm.CompleteInputEdit(before, "荷重タイプ 変更", PileDesign.ViewModels.MainWindowViewModel.AnalysisInputScope.Settlement);
             }
 
             // 群杭表示

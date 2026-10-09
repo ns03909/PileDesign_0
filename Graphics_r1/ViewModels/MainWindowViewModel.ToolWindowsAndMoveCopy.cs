@@ -63,10 +63,21 @@ namespace PileDesign.ViewModels
                         return;
                     }
 
+                    // 起動中 (スレッドは動いているが、ウィンドウはまだ作られていない)。
+                    // ウィンドウと Dispatcher を控えるのは新しいスレッドの中なので、その前に 2 度目が来ると
+                    // もう 1 本スレッドを立てて 2 枚開き、先に閉じたほうが控えを消して残りを管理から外していた (F1 の長押し・ダブルクリック)
+                    if (host.Thread is { IsAlive: true }) return;
+
                     host.Thread = new System.Threading.Thread(() =>
                     {
                         try
                         {
+                            // このスレッドの例外はアプリ全体の処理に届かない。記録して握り、応答しないウィンドウを残さない
+                            System.Windows.Threading.Dispatcher.CurrentDispatcher.UnhandledException += (_, args) =>
+                            {
+                                Log.Error(args.Exception, "[{errorPrefix}Thread] 未処理の例外", errorPrefix);
+                                args.Handled = true;
+                            };
                             var window = factory();
                             host.Window = window;
                             host.Dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;

@@ -115,7 +115,7 @@ namespace PileDesign.ViewModels
             LoadCasesLevel1Common = [LoadCaseLevel1Common];
             LoadCasesLevel2Common = [LoadCaseLevel2Common];
 
-            LoadCombinations = GetCombinations(_loadCombinationFactor);
+            LoadCombinations = KeepCombinationSelection(GetCombinations(_loadCombinationFactor));
             LoadCombinationsPlus = GetCombinationsPlus(_loadCombinationFactor);
 
             SetAllLoadCases();
@@ -311,12 +311,28 @@ namespace PileDesign.ViewModels
             RefreshDataGrids();
         }
 
-        partial void OnLoadCombinationFactorChanged(double value)
+        // 割増係数を変える<b>前に</b>控えを取る (係数と荷重組合せが揃った姿)。
+        // 以前は変えたあと・組合せを作り直す前に取っていたので、控えは「新しい係数・古い組合せ」という
+        // どの時点にも無かった組み合わせになり、ウィンドウの中の Ctrl+Z がそれを戻していた。
+        // この画面の控えは「編集の直前の姿」(セルの編集と同じ)。作り直しの途中の組合せの代入
+        // (OnLoadCombinationsChanged) でも控えない。代入の時点ではまだ LoadCombinationsPlus が古い係数のもので、
+        // やはり揃っていない。作り直したあとの姿は、Ctrl+Z の時点で Undo が積む
+        partial void OnLoadCombinationFactorChanging(double value)
         {
             PushUndoState();
-            LoadCombinationFactor = value;
-            LoadCombinations = GetCombinations(value);
-            LoadCombinationsPlus = GetCombinationsPlus(value);
+        }
+
+        partial void OnLoadCombinationFactorChanged(double value)
+        {
+            bool previous = _suppressUndoSave;
+            _suppressUndoSave = true;
+            try
+            {
+                LoadCombinationFactor = value;
+                LoadCombinations = KeepCombinationSelection(GetCombinations(value));
+                LoadCombinationsPlus = GetCombinationsPlus(value);
+            }
+            finally { _suppressUndoSave = previous; }
             SetTotalMassForces();
             // 依存プロパティの更新通知を追加
             OnPropertyChanged(nameof(LoadCombinations)); // 追加
@@ -366,9 +382,28 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void SliderValueChanged()
         {
-            LoadCombinations = GetCombinations(LoadCombinationFactor);
+            LoadCombinations = KeepCombinationSelection(GetCombinations(LoadCombinationFactor));
             LoadCombinationsPlus = GetCombinationsPlus(LoadCombinationFactor);
             SetTotalMassForces();
+        }
+
+        /// <summary>
+        /// 作り直した荷重組合せに、それまでの「対象」(IsApplicable) と「計算書に載せるか」を番号で引き継ぐ。
+        /// 以前は開くたびに組合せを作り直して「対象」を既定 (ON) に戻しており、水平解析ウィンドウで外した組合せが、
+        /// 荷重の画面で別の値を直して OK しただけで全部戻り、次の解析で黙って解かれた。
+        /// </summary>
+        private ObservableCollection<LoadCombination> KeepCombinationSelection(ObservableCollection<LoadCombination> fresh)
+        {
+            var previous = LoadCombinations ?? InputModel?.LoadCasesInput?.LoadCombinations;
+            if (previous == null) return fresh;
+            foreach (var c in fresh)
+            {
+                var old = previous.FirstOrDefault(p => p != null && p.No == c.No);
+                if (old == null) continue;
+                c.IsApplicable = old.IsApplicable;
+                c.IsIncludedInReport = old.IsIncludedInReport;
+            }
+            return fresh;
         }
 
         public static ObservableCollection<LoadCombination> GetCombinations(double factor)

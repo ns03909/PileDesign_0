@@ -301,6 +301,29 @@ namespace PileDesign.Common
             base.OnBeginningEdit(e);
         }
 
+        /// <summary>
+        /// 編集を始めたときのセルの文字を覚える。触らずに確定したとき、表示用に丸めた値を書き戻さないため
+        /// (<see cref="CellDisplayRoundTrip"/>)。
+        /// </summary>
+        protected override void OnPreparingCellForEdit(DataGridPreparingCellForEditEventArgs e)
+        {
+            CellDisplayRoundTrip.Remember(e.EditingElement);
+            base.OnPreparingCellForEdit(e);
+        }
+
+        /// <summary>
+        /// 確定するとき、文字が編集を始めたときのままなら、元の値を丸めずに書き戻す (<see cref="CellDisplayRoundTrip"/>)。
+        ///
+        /// <para><b>画面ごとの CellEditEnding の処理より先に</b>差し替える。画面側の処理には、確定の前後の値を比べて
+        /// 履歴を作るものや、自分で書き戻しを行うものがあり、後で差し替えると丸めた値がすでに書き込まれている。</para>
+        /// </summary>
+        protected override void OnCellEditEnding(DataGridCellEditEndingEventArgs e)
+        {
+            if (e.EditAction == DataGridEditAction.Commit)
+                CellDisplayRoundTrip.KeepOriginalIfUntouched(e.EditingElement);
+            base.OnCellEditEnding(e);
+        }
+
         protected override void OnPreviewTextInput(TextCompositionEventArgs e)
         {
             if (TryBeginEditWithFirstChar(e))

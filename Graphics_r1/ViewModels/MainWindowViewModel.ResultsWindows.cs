@@ -113,22 +113,6 @@ namespace PileDesign.ViewModels
             DocxOutput.IncludeOutputLiquefactionNo = DocxOutput.IsLiquefactionNoAnalyzed;
         }
 
-        // オプション表示メソッド
-        [RelayCommand]
-        private static void OpenOptionWindow()
-        {
-            try
-            {
-                var optionWindow = new OptionWindow();
-                optionWindow.Show();
-            }
-            catch (Exception ex)
-            {
-                Serilog.Log.Error(ex, "オプションウィンドウ の表示に失敗", "オプションウィンドウ");
-                MessageService.Show(GuardMessages.WindowOpenFailed("オプションウィンドウ"), "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
         // 解析結果が1つでも存在するか（バインド用プロパティ）
         // 反復解析 (HasGroupSettlementBeamAwareCases) も含めて判定する
         public bool HasAnyAnalysisResult

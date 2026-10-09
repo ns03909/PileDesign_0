@@ -160,7 +160,9 @@ namespace PileDesign.Views
                     Z = 1.0, // デフォルトΔZc
                     Name = "Node-1"
                 };
+                var beforeFirst = vm.CaptureInputEdit();
                 nodes.Add(firstNode);
+                vm.CompleteInputEdit(beforeFirst, "基礎梁の節点 追加");
                 vm.RequestUpdateWindow();
                 return true;
             }
@@ -201,10 +203,10 @@ namespace PileDesign.Views
                 Name = $"Node-{nodes.Count + 1}"
             };
 
+            // 追加の前後を 1 手として履歴に積む (以前は「今後実装」のままで、Ctrl+Z で消せなかった)
+            var before = vm.CaptureInputEdit();
             nodes.Add(newNode);
-
-            // Undo登録（今後実装）
-            // _undoManager.RegisterAction(new AddNodeAction(newNode));
+            vm.CompleteInputEdit(before, "基礎梁の節点 追加");
 
             // 3D更新
             vm.RequestUpdateWindow();
@@ -317,17 +319,19 @@ namespace PileDesign.Views
                     ShearModulus = 1.04e7
                 };
 
+                // 追加の前後を 1 手として履歴に積み、再解析が必要の印を付ける
+                // (以前は「今後実装」のままで、作図した梁要素は Ctrl+Z で消せず、閉じるときに保存の確認も出なかった)
+                var before = vm.CaptureInputEdit();
                 beams.Add(newBeam);
 
                 // 参照先 (MaterialNo / SectionNo) のデフォルトを保証
                 vm.CurrentInputModel.FoundationBeamInput.EnsureDefaultMaterialAndSection();
+                vm.CompleteInputEdit(before, "梁要素 追加");
 
                 // リセット
                 vm.TempStartNode = null;
                 vm.StatusMessage = string.Empty;
                 ClearFoundationBeamPreview(); // プレビュー線をクリア
-
-                // Undo登録（今後実装）
 
                 // 3D更新
                 vm.RequestUpdateWindow();
@@ -361,6 +365,9 @@ namespace PileDesign.Views
             var nodes = vm.CurrentInputModel.FoundationBeamInput.Nodes;
             var beams = vm.CurrentInputModel.FoundationBeamInput.Beams;
 
+            // 削除の前後を 1 手として履歴に積む (以前は「今後実装」のままで、Ctrl+Z で戻せなかった)
+            var before = vm.CaptureInputEdit();
+
             // 接続されている要素を削除（カスケード削除）
             var beamsToRemove = beams.Where(b =>
                 (b.NodeI_Type == NodeReferenceType.FoundationNode && b.NodeI_Id == hitNode.Id) ||
@@ -379,8 +386,7 @@ namespace PileDesign.Views
             {
                 nodes[i].No = i + 1;
             }
-
-            // Undo登録（今後実装）
+            vm.CompleteInputEdit(before, "基礎梁の節点 削除");
 
             // 3D更新
             vm.RequestUpdateWindow();

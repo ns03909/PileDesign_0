@@ -20,7 +20,19 @@
     <Window.Resources>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <!-- 表の列はビジュアルツリーの外にあり DataContext を引けないので、ウィンドウの DataContext を渡す -->
+        <common:BindingProxy x:Key="WindowDataProxy" Data="{Binding}"/>
         <conv:BoolEqualsConverter x:Key="BoolEqualsConverter" />
+        <!-- 荷重面等価径。未入力 (0) のときは杭先端径を使い、灰色で出す。0 を入れると杭先端径に戻る -->
+        <Style x:Key="LoadDiaCellStyle" TargetType="DataGridCell" BasedOn="{StaticResource CustomDataGridCellStyle}">
+            <Setter Property="ToolTip" Value="入れた値を使います。0 を入れると杭先端径に戻ります。"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsGroupPileLoadDiaFromToe}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource ReadOnlyBrush}"/>
+                    <Setter Property="ToolTip" Value="未入力なので杭先端径を使っています。値を入れるとその値を使います。"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
         <!-- 矩形荷重の位置 (X1〜Y2)。杭ごとの矩形は杭の位置が中心で、位置は書き換えられない (寸法と荷重は書き換えられる) -->
         <Style x:Key="RectPositionCellStyle" TargetType="DataGridCell" BasedOn="{StaticResource CustomDataGridCellStyle}">
             <Style.Triggers>
@@ -30,6 +42,7 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+        <conv:LoadingTypeDisplayConverter x:Key="LoadingTypeDisplayConverter"/>
         <DataTemplate x:Key="LoadingTypeItemTemplate">
             <StackPanel Orientation="Horizontal">
                 <svgc:SvgViewbox Width="24" Height="24" Stretch="Uniform">
@@ -58,7 +71,7 @@
                         </Style>
                     </svgc:SvgViewbox.Style>
                 </svgc:SvgViewbox>
-                <TextBlock Text="{Binding}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Converter={StaticResource LoadingTypeDisplayConverter}}" Margin="6,0,0,0" VerticalAlignment="Center"/>
             </StackPanel>
         </DataTemplate>
     <ContextMenu x:Key="CommonDataGridContextMenu" Opened="ContextMenu_Opened">
@@ -519,7 +532,7 @@
                                                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="任意矩形"/>
                                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="："/>
                                                                 <TextBlock Grid.Row="0" Grid.Column="2" Text="任意の大きさの矩形荷重を任意の位置に配置します。"/>
-                                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="個別十字"/>
+                                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="杭十字"/>
                                                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="："/>
                                                                 <TextBlock Grid.Row="1" Grid.Column="2" Text="それぞれの杭に円形の等分布荷重面を想定し、合計面積が等しい5つの矩形荷重でモデル化します。"/>
                                                             </Grid>
@@ -573,7 +586,7 @@
                                                         <StackPanel Orientation="Horizontal">
                                                             <Button Padding="0" HorizontalAlignment="Left"
                                                                 Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                                Tag="矩形荷重面追加 (個別矩形（基礎梁考慮）では無効)"
+                                                                Tag="矩形荷重面追加 (杭矩形（基礎梁考慮）では無効)"
                                                                 Command="{Binding AddRectLoadCommand}"
                                                                 IsEnabled="{Binding IsManualRectLoadEditingEnabled}">
                                                                 <svgc:SvgViewbox Source="/Icons/AddRectLoad.svg" Style="{StaticResource SvgIconStyle24}"/>
@@ -590,7 +603,7 @@
                                                             <Button Margin="8,2,0,2" Padding="8,2" VerticalAlignment="Center"
                                                                     Command="{Binding ResetBeamAwareRectLoadsCommand}"
                                                                     Content="杭ごとの矩形を作り直す (基礎梁ありの解析用)"
-                                                                    ToolTip="現在の矩形荷重を破棄し、各杭に対して矩形 (1 矩形/杭) を作り直します。荷重タイプは「個別矩形（基礎梁考慮）」になります。&#x0A;大きさは荷重面等価径から、荷重は VL 時の軸力から決めます。">
+                                                                    ToolTip="現在の矩形荷重を破棄し、各杭に対して矩形 (1 矩形/杭) を作り直します。荷重タイプは「杭矩形（基礎梁考慮）」になります。&#x0A;大きさは荷重面等価径から、荷重は VL 時の軸力から決めます。">
                                                                 <Button.Style>
                                                                     <Style TargetType="Button">
                                                                         <Setter Property="Visibility" Value="Visible"/>
@@ -603,7 +616,9 @@
                                                                 </Button.Style>
                                                             </Button>
                                                         </StackPanel>
+                                                        <!-- 杭に紐付く矩形 (個別矩形系) の説明。個別十字・任意矩形の矩形は杭に紐付かないので出さない -->
                                                         <TextBlock Margin="4,2,4,4" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+                                                                   Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType, Converter={StaticResource VisibilityConverter}, ConverterParameter='個別矩形,個別矩形（基礎梁考慮）'}"
                                                                    Text="杭に紐付く矩形は杭の位置が中心です (位置は変えられません。寸法 DX・DY は変えられます)。荷重は、既定で杭の VL 時の軸力から決めます (出所「軸力」)。表で入れた荷重は「手入力」とし、解析で軸力に戻しません。&#x0A;基礎梁ありの解析は、この荷重を初期値として杭の荷重を再配分します。収束した荷重は解析結果として別に保存し、この表の値は変えません。"/>
                                                     </StackPanel>
 
@@ -725,9 +740,11 @@
                                                                 </DataGridTextColumn.Header>
                                                             </DataGridTextColumn>
 
-                                                            <!-- 荷重の出所: 軸力から自動 / 手入力 (杭に紐付かない任意の矩形は空) -->
+                                                            <!-- 荷重の出所: 軸力から自動 / 手入力。杭に紐付く矩形 (個別矩形系) だけの話なので、ほかの荷重タイプでは列ごと隠す
+                                                                 (以前は個別十字・任意矩形でも空の列が並んでいた) -->
                                                             <DataGridTextColumn Width="*" Binding="{Binding QASource, Mode=OneWay}" Header="出所"
-                                                                        MinWidth="50" IsReadOnly="True" Foreground="Gray"/>
+                                                                        MinWidth="50" IsReadOnly="True" Foreground="Gray"
+                                                                        Visibility="{Binding Data.CurrentInputModel.PileGroupSettlement.LoadingType, Source={StaticResource WindowDataProxy}, Converter={StaticResource VisibilityConverter}, ConverterParameter='個別矩形,個別矩形（基礎梁考慮）'}"/>
 
                                                             <DataGridTextColumn Width="*" Binding="{Binding DX, StringFormat=N3}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
@@ -906,8 +923,9 @@
                                                                 </DataGridTextColumn.Header>
                                                             </DataGridTextColumn>
 
-                                                            <DataGridTextColumn Width="*" Binding="{Binding GroupPileLoadDia, StringFormat=N3}"
-                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                            <DataGridTextColumn Width="*" Binding="{Binding GroupPileLoadDiaInput, StringFormat=N3}"
+                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50"
+                                                                    CellStyle="{StaticResource LoadDiaCellStyle}">
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
                                                                         <TextBlock Text="荷重面"
@@ -922,6 +940,19 @@
                                                             </DataGridTextColumn>
                                                         </DataGrid.Columns>
                                                     </common:EnhancedDataGrid>
+                                                    <!-- 荷重面等価径が 0 で矩形を作らなかった杭など (以前は何も出さず、表が空のままだった) -->
+                                                    <TextBlock Text="{Binding AutoRectLoadNote}" TextWrapping="Wrap" Margin="4,4,4,4"
+                                                               Foreground="{StaticResource WarningBrush}" FontWeight="Bold">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding AutoRectLoadNote}" Value="">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
                                                 </StackPanel>
 
                                             </Grid>
@@ -994,11 +1025,11 @@
                                                 <TextBlock Margin="0,8,0,0"
                                                            Visibility="{Binding HasGroupSettlementBeamAwareCases, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                            Foreground="{StaticResource PrimaryAccentDarkBrush}"
-                                                           Text="✓ 基礎梁考慮の解析結果が保存されています (詳細は 解析結果 → 沈下量タブ → 結果タイプ で確認)。"/>
+                                                           Text="✓ 基礎梁ありの解析結果が保存されています (メイン画面のリボン「表示」→「群杭沈下」で「基礎梁あり」を選ぶと表示されます)。"/>
                                                 <!-- 基礎梁ありの解析の実行 (リボンの「群杭沈下 解析（基礎梁あり）」と同じ) -->
                                                 <Button Width="240" HorizontalAlignment="Left" Margin="0,8,0,0"
                                                         Command="{Binding OpenGroupSettlementWithBeamWindowCommand}"
-                                                        ToolTip="基礎梁の剛性を考慮した反復スタインブレナー解析を実行します。" AutomationProperties.Name="基礎梁の剛性を考慮した反復スタインブレナー解析を実行します。">
+                                                        ToolTip="基礎梁ありの解析の画面を開きます。荷重の出所と対象ケースを選んでから実行します。" AutomationProperties.Name="基礎梁ありの解析の画面を開きます。荷重の出所と対象ケースを選んでから実行します。">
                                                     <StackPanel Orientation="Horizontal">
                                                         <svgc:SvgViewbox Source="/Icons/GroupPileSettlementWithBeamWindow.svg"
                                                                          Style="{StaticResource SvgIconStyle24}" Margin="0,0,6,0"/>

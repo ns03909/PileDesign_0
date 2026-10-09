@@ -93,7 +93,7 @@ namespace PileDesign.ViewModels
             if (SelectedLogCategory != null && _logSources.TryGetValue(SelectedLogCategory, out var source))
             {
                 foreach (var line in source) LogLines.Add(line);
-                StatusText = $"{LogLines.Count} log entries";
+                StatusText = $"全 {LogLines.Count} 行";
 
                 // ソースが ObservableCollection なら新規エントリをライブ追従
                 if (source is INotifyCollectionChanged notify)
@@ -149,7 +149,7 @@ namespace PileDesign.ViewModels
                             foreach (var s in src2) LogLines.Add(s);
                         break;
                 }
-                StatusText = $"{LogLines.Count} log entries";
+                StatusText = $"全 {LogLines.Count} 行";
                 RequestScrollToEnd();
             }
             catch

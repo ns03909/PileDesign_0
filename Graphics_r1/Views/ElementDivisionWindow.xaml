@@ -100,7 +100,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:LampState}">
-                        <Button Width="18" Height="18" Margin="2" Click="EmbedmentLamp_Click" ToolTip="土層-根入れセットを開く" AutomationProperties.Name="土層-根入れセットを開く">
+                        <Button Width="18" Height="18" Margin="2" Click="EmbedmentLamp_Click" ToolTip="土層-根入部セットを開く" AutomationProperties.Name="土層-根入部セットを開く">
                             <Ellipse Width="14" Height="14" Fill="{Binding IsOn, Converter={StaticResource BoolToBrushConverter}}" Stroke="Black" StrokeThickness="0.5"/>
                         </Button>
                     </DataTemplate>
@@ -625,7 +625,7 @@
                 </avalonDock:DockingManager>
                 </Grid>
             </TabItem>
-            <TabItem Header="土層-根入れセット" Visibility="{Binding IsDoatsuGoryokuBaneVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TabItem Header="土層-根入部セット" Visibility="{Binding IsDoatsuGoryokuBaneVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <avalonDock:DockingManager Background="White">
                     <avalonDock:LayoutRoot>
                         <avalonDock:LayoutPanel Orientation="Horizontal">

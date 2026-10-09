@@ -382,6 +382,37 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>計算書に載せる荷重組合せ (適用され、計算書出力ウィンドウで外していない)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public ObservableCollection<LoadCombination> ReportedLoadCombinations
+            => new(LoadCombinations?.Where(x => x.IsReported) ?? []);
+
+        /// <summary>
+        /// 計算書に載せるかの選択 (<see cref="LoadCase.IsIncludedInReport"/>) を、別のインスタンス (解析時の入力) から写す。
+        /// 計算書は解析時の入力で作るが、選択は計算書出力ウィンドウで今の入力に対して行うので、出力の前に写す。
+        /// ケースはレベルと番号、組合せは番号で対応づける。
+        /// </summary>
+        public void CopyReportSelectionFrom(LoadCasesInput? source)
+        {
+            if (source == null || ReferenceEquals(source, this)) return;
+            foreach (var (mine, theirs) in new[] { (LoadCasesLevel1, source.LoadCasesLevel1), (LoadCasesLevel2, source.LoadCasesLevel2) })
+            {
+                if (mine == null || theirs == null) continue;
+                foreach (var lc in mine)
+                {
+                    var match = theirs.FirstOrDefault(t => t != null && t.Level == lc.Level && t.No == lc.No);
+                    if (match != null) lc.IsIncludedInReport = match.IsIncludedInReport;
+                }
+            }
+            if (LoadCombinations != null && source.LoadCombinations != null)
+                foreach (var c in LoadCombinations)
+                {
+                    var match = source.LoadCombinations.FirstOrDefault(t => t != null && LoadCombination.IsSameCombination(t, c));
+                    if (match != null) c.IsIncludedInReport = match.IsIncludedInReport;
+                }
+        }
+
         // コンストラクタ
         public LoadCasesInput()
         {

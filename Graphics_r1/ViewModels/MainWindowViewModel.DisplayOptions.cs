@@ -1569,9 +1569,9 @@ namespace PileDesign.ViewModels
             get => _isAnalysisResultVisible;
             set
             {
-                if (value && !IsVerticalAnalysisDone && !IsHorizontalAnalysisDone && !IsGroupPileSettlementAnalysisDone && !IsVerticalBeamAnalysisDone)
+                if (value && !IsVerticalAnalysisDone && !IsHorizontalAnalysisDone && !IsGroupPileSettlementAnalysisDone && !IsVerticalBeamAnalysisDone && !HasGroupSettlementBeamAwareCases)
                 {
-                    MessageService.Show("水平解析、単杭沈下解析、群杭沈下解析、単杭沈下解析（基礎梁考慮）のいずれかを実行後でないと解析結果表示はできません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageService.Show("解析結果がまだありません。\nリボン「解析条件/解析」で水平解析・単杭沈下解析・群杭沈下解析のいずれかを実行してください。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                     SetProperty(ref _isAnalysisResultVisible, false); // 明示的に戻す
                     return;
                 }
@@ -2431,173 +2431,13 @@ namespace PileDesign.ViewModels
                 var all = CurrentInputModel?.PileGroupSettlement?.LoadingTypeOptions;
                 if (all == null) return [];
                 bool hasFoundationBeams = (CurrentInputModel?.FoundationBeamInput?.Beams?.Count ?? 0) > 0;
+                var current = CurrentInputModel?.PileGroupSettlement?.LoadingType;
+                // 現在の値は条件を満たさなくても残す (基礎梁を消したあとなど)。外すと ComboBox が null を書き戻す
                 return [.. all.Where(o =>
-                    (o != "個別十字（基礎梁反力）" || IsVerticalBeamAnalysisDone) &&
-                    (o != "個別矩形（基礎梁考慮）" || hasFoundationBeams))];
+                    o == current ||
+                    ((o != "個別十字（基礎梁反力）" || IsVerticalBeamAnalysisDone) &&
+                     (o != "個別矩形（基礎梁考慮）" || hasFoundationBeams)))];
             }
-        }
-
-        /// <summary>
-        /// 基礎梁無し用の群杭沈下解析ウィンドウ専用 LoadingType リスト。
-        /// 「個別矩形（基礎梁考慮）」は基礎梁考慮ウィンドウ専用なのでここからは除外する。
-        /// </summary>
-        public List<string> AvailableLoadingTypeOptionsNonBeam
-            => [.. AvailableLoadingTypeOptions.Where(o => o != "個別矩形（基礎梁考慮）")];
-
-        /// <summary>
-        /// 群杭沈下「基礎梁:有/無」ComboBox 用の2択リスト。
-        /// 「有」は基礎梁が定義されている場合のみ含める。
-        /// </summary>
-        public List<string> GroupSettlementBeamSelectorOptions
-        {
-            get
-            {
-                bool hasFoundationBeams = (CurrentInputModel?.FoundationBeamInput?.Beams?.Count ?? 0) > 0;
-                return hasFoundationBeams ? new List<string> { "無し", "有り" } : new List<string> { "無し" };
-            }
-        }
-
-        /// <summary>
-        /// 群杭沈下「基礎梁:有/無」ComboBox 用プロパティ。
-        /// 内部 LoadingType (canonical) から有り/無しを判定し、setter で対応する LoadingType に切替える。
-        /// </summary>
-        public string GroupSettlementBeamSelector
-        {
-            get
-            {
-                var lt = CurrentInputModel?.PileGroupSettlement?.LoadingType ?? "";
-                return lt == "個別矩形（基礎梁考慮）" ? "有り" : "無し";
-            }
-            set
-            {
-                var pgs = CurrentInputModel?.PileGroupSettlement;
-                if (pgs == null) return;
-                bool wantBeam = value == "有り";
-                bool currentBeam = GroupSettlementBeamSelector == "有り";
-                if (wantBeam == currentBeam) return;
-
-                if (wantBeam)
-                {
-                    // 無し → 有り: 個別矩形（基礎梁考慮）に切替
-                    if (!TrySetLoadingTypeWithWarning("個別矩形（基礎梁考慮）"))
-                    {
-                        OnPropertyChanged(nameof(GroupSettlementBeamSelector));
-                        return;
-                    }
-                }
-                else
-                {
-                    // 有り → 無し: 基礎梁無しスロットの既存 LoadingType か、なければ任意矩形
-                    string target = pgs.CaseRecords?
-                        .FirstOrDefault(r => !r.IsBeamAware && !string.IsNullOrEmpty(r.LoadingType))?.LoadingType
-                        ?? "任意矩形";
-                    if (!TrySetLoadingTypeWithWarning(target))
-                    {
-                        OnPropertyChanged(nameof(GroupSettlementBeamSelector));
-                        return;
-                    }
-                }
-                OnPropertyChanged(nameof(GroupSettlementBeamSelector));
-                OnPropertyChanged(nameof(GroupSettlementLoadTypeOptions));
-                OnPropertyChanged(nameof(GroupSettlementLoadType));
-            }
-        }
-
-        /// <summary>
-        /// 群杭沈下「荷重タイプ」ComboBox 用の絞込リスト (基礎梁有無で内容が変わる)。
-        /// 基礎梁=有り の場合は「個別矩形（基礎梁考慮）」(フルネーム) を返し、
-        /// LoadingTypeItemTemplate の DataTrigger により BeamedSquareFormPressure アイコンが表示される。
-        /// </summary>
-        public List<string> GroupSettlementLoadTypeOptions
-        {
-            get
-            {
-                bool isBeam = GroupSettlementBeamSelector == "有り";
-                if (isBeam)
-                {
-                    return [.. new List<string> { "個別矩形（基礎梁考慮）" }];
-                }
-                var list = new List<string> { "任意矩形", "個別矩形", "個別十字" };
-                if (IsVerticalBeamAnalysisDone) list.Add("個別十字（基礎梁反力）");
-                list.Add("なし");
-                return list;
-            }
-        }
-
-        /// <summary>
-        /// 群杭沈下「荷重タイプ」ComboBox 用プロパティ。
-        /// 内部 LoadingType をそのまま返す (基礎梁=有り のときは "個別矩形（基礎梁考慮）" がそのまま表示される)。
-        /// </summary>
-        public string GroupSettlementLoadType
-        {
-            get => CurrentInputModel?.PileGroupSettlement?.LoadingType ?? "";
-            set
-            {
-                if (string.IsNullOrEmpty(value)) return;
-                if (value == (CurrentInputModel?.PileGroupSettlement?.LoadingType ?? "")) return;
-                if (!TrySetLoadingTypeWithWarning(value))
-                {
-                    OnPropertyChanged(nameof(GroupSettlementLoadType));
-                    return;
-                }
-                OnPropertyChanged(nameof(GroupSettlementLoadType));
-            }
-        }
-
-        /// <summary>
-        /// LoadingType を変更する。同じ「基礎梁有無スロット」の解析結果が既存なら、
-        /// MessageBox で警告し、削除確認後に変更を適用する。
-        /// 戻り値: true=適用された / false=ユーザーがキャンセル
-        /// </summary>
-        private bool TrySetLoadingTypeWithWarning(string newLoadingType)
-        {
-            var pgs = CurrentInputModel?.PileGroupSettlement;
-            if (pgs == null) return false;
-            string oldLoadingType = pgs.LoadingType ?? "";
-            if (oldLoadingType == newLoadingType) return true;
-
-            bool oldIsBeamAware = oldLoadingType == "個別矩形（基礎梁考慮）";
-            bool newIsBeamAware = newLoadingType == "個別矩形（基礎梁考慮）";
-
-            // 削除対象: 同スロット (基礎梁無し or 基礎梁有り) の既存 record で、新 LoadingType と異なるもの
-            // 異スロット (有↔無) への切替は両スロット独立保持なので何も削除しない
-            if (oldIsBeamAware == newIsBeamAware && pgs.CaseRecords != null)
-            {
-                var doomed = pgs.CaseRecords
-                    .Where(r => r.IsBeamAware == newIsBeamAware && r.LoadingType != newLoadingType)
-                    .ToList();
-                if (doomed.Count > 0)
-                {
-                    string oldNames = string.Join(" / ", doomed.Select(r => r.LoadingType).Distinct());
-                    var msg = $"現在保存されている {oldNames} の群杭沈下解析結果が削除されます。\n続行しますか？";
-                    var res = PileDesign.Services.MessageService.Show(msg, "解析結果の削除確認",
-                        System.Windows.MessageBoxButton.OKCancel, System.Windows.MessageBoxImage.Warning);
-                    if (res != System.Windows.MessageBoxResult.OK) return false;
-
-                    // 結果の中身は書き換えず、除いた新しい結果に差し替える (実行ごとに固定)
-                    pgs.Result = pgs.Result.Without(doomed);
-                    EnsureSettlementResultSharedWithSnapshot();
-
-                    if (pgs.ActiveCaseIndex >= pgs.CaseRecords.Count)
-                        pgs.ActiveCaseIndex = pgs.CaseRecords.Count - 1;
-                    if (pgs.ActiveCaseIndex < 0)
-                    {
-                        pgs.SettlementGridData = [];
-                        if (CurrentInputModel?.PileLayoutItems != null)
-                            foreach (var pile in CurrentInputModel.PileLayoutItems) pile.NotifyGroupPileSettlementChanged();
-                    }
-                }
-            }
-
-            // LoadingType を確定 (XAML 側 binding は LoadingType に直接張られているのでこれで反映)
-            pgs.LoadingType = newLoadingType;
-
-            OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
-            OnPropertyChanged(nameof(IsGroupSettlementActiveCaseBeamAware));
-            OnPropertyChanged(nameof(HasGroupSettlementBeamAwareCases));
-            OnPropertyChanged(nameof(AvailableActiveLoadingTypes));
-            OnPropertyChanged(nameof(SelectedActiveLoadingType));
-            return true;
         }
 
         /// <summary>
@@ -2686,6 +2526,7 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 荷重条件の 荷重面Z 入力用プロキシ。基礎梁なし・ありの両方の解析が使う 1 つの値。
         /// 値を変えるとき、どちらかの解析結果が保存されていれば確かめ、OK で結果を削除してから値を反映する。
+        /// 変更の前後は履歴に積み、群杭沈下の結果に再解析が必要の印を付ける (以前は履歴にも未保存の印にも残らなかった)。
         /// </summary>
         public double LoadingPlaneAltitudeProxy
         {
@@ -2699,7 +2540,9 @@ namespace PileDesign.ViewModels
                     OnPropertyChanged(nameof(LoadingPlaneAltitudeProxy));
                     return;
                 }
+                var before = CaptureInputEdit();
                 pgs.LoadingPlaneAltitude = value;
+                CompleteInputEdit(before, "荷重面Z 変更", AnalysisInputScope.Settlement);
                 OnPropertyChanged(nameof(LoadingPlaneAltitudeProxy));
                 UpdateCanvas3DAction?.Invoke();
             }
@@ -2711,7 +2554,7 @@ namespace PileDesign.ViewModels
         /// <param name="route">対象ルート: "一般"=非beam-aware, "反復"=beam-aware, "両方"=両ルート (土層やグリッドなど共通入力)</param>
         /// <param name="itemLabel">変更対象の項目名 (ダイアログメッセージに使用)</param>
         /// <returns>true=変更を続行, false=ユーザーがキャンセル</returns>
-        private bool ConfirmAnalysisConditionChange(string route, string itemLabel)
+        internal bool ConfirmAnalysisConditionChange(string route, string itemLabel)
         {
             var pgs = CurrentInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords == null) return true;
@@ -2729,8 +2572,8 @@ namespace PileDesign.ViewModels
             if (doomed.Count == 0) return true; // 該当結果なし → そのまま続行
 
             var res = PileDesign.Services.MessageService.Show(
-                $"土層解析結果が保存されています。\n" +
-                $"「{itemLabel}」を変更するには、解析結果を削除する必要があります。\n\n" +
+                $"{(route == "両方" ? "群杭沈下解析" : route == "反復" ? "群杭沈下解析（基礎梁あり）" : "群杭沈下解析（基礎梁なし）")}の結果が保存されています。\n" +
+                $"「{itemLabel}」を変えると、この結果は使えなくなるため削除します。\n\n" +
                 $"続けますか？",
                 "解析条件変更の確認",
                 System.Windows.MessageBoxButton.OKCancel,

@@ -380,6 +380,9 @@
         </Style>
 
         <!-- LoadingType 用アイコン付きアイテムテンプレート -->
+        <conv:LoadingTypeDisplayConverter x:Key="LoadingTypeDisplayConverter"/>
+        <!-- 沈下種別の表示名 (コードの中の値は変えない。SettlementTypeNames) -->
+        <common:SettlementTypeDisplayConverter x:Key="SettlementTypeDisplayConverter"/>
         <DataTemplate x:Key="LoadingTypeItemTemplate">
             <StackPanel Orientation="Horizontal">
                 <svgc:SvgViewbox Width="24" Height="24" Stretch="Uniform">
@@ -408,7 +411,7 @@
                         </Style>
                     </svgc:SvgViewbox.Style>
                 </svgc:SvgViewbox>
-                <TextBlock Text="{Binding}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Converter={StaticResource LoadingTypeDisplayConverter}}" Margin="6,0,0,0" VerticalAlignment="Center"/>
             </StackPanel>
         </DataTemplate>
 
@@ -862,7 +865,7 @@
                     <Fluent:ComboBox Header="群杭沈下" Width="120"
                                      ItemsSource="{Binding GroupSettlementRouteOptions}"
                                      SelectedItem="{Binding GroupSettlementRouteSelector}"
-                                     ToolTip="一般 / 反復 解析の切替 (荷重描画 + 解析結果 共通)"/>
+                                     ToolTip="群杭沈下の 基礎梁なし / 基礎梁あり を切り替えます (荷重面の描画と解析結果の両方に効きます)"/>
                 </Fluent:RibbonGroupBox>
 
                 <!-- 目盛・通り心 -->
@@ -1228,7 +1231,7 @@
                                        ToolTip="応力表示"/>
                                 <CheckBox Content="杭"
                                           IsChecked="{Binding IsPileStressVisible}"
-                                          ToolTip="杭体・RigidLink の応力ダイアグラムを表示。OFF で非表示 (上面図モードと併用で基礎梁応力だけが見える)。"
+                                          ToolTip="杭体と杭頭の剛域の応力ダイアグラムを表示します。OFF で非表示 (上面図モードと併用で基礎梁応力だけが見える)。"
                                           Margin="0,0,6,0"/>
                                 <CheckBox Content="基礎梁"
                                           IsChecked="{Binding IsFoundationBeamStressVisible}"
@@ -1464,7 +1467,7 @@
                 <Fluent:RibbonGroupBox Header="群杭沈下解析" ToolTip="群杭沈下解析">
                     <Fluent:Button x:Name="RibbonButtonGroupPileSettlement"
                      Click="ButtonGroupPileSettlement_Click"
-                     ToolTip="スタインブレナー近似式による即時沈下量を計算します。「群杭沈下」ウィンドウで荷重面・土層を設定してください。" AutomationProperties.Name="スタインブレナー近似式による即時沈下量を計算します。「群杭沈下」ウィンドウで荷重面・土層を設定してください。">
+                     ToolTip="群杭沈下ウィンドウを開きます (F8)。土層・荷重面・荷重を設定し、解析タブで実行します (基礎梁なしの解析は F7 でも実行できます)。" AutomationProperties.Name="群杭沈下ウィンドウを開きます (F8)。土層・荷重面・荷重を設定し、解析タブで実行します (基礎梁なしの解析は F7 でも実行できます)。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <Setter Property="Header" Value="群杭沈下&#x0A;解析（基礎梁なし）"/>
@@ -1485,7 +1488,7 @@
                     <Fluent:Button x:Name="RibbonButtonGroupPileSettlementWithBeam"
                                    Command="{Binding OpenGroupSettlementWithBeamWindowCommand}"
                                    ToolTipService.ShowOnDisabled="True"
-                                   ToolTip="基礎梁の剛性を考慮して、矩形荷重 (個別矩形) を反復で再分配しながらスタインブレナー沈下を解く解析です。基礎梁が定義されているモデルで実行可能となります。" AutomationProperties.Name="基礎梁の剛性を考慮して、矩形荷重 (個別矩形) を反復で再分配しながらスタインブレナー沈下を解く解析です。基礎梁が定義されているモデルで実行可能となります。">
+                                   ToolTip="基礎梁の剛性を考慮して、矩形荷重 (杭矩形) を反復で再分配しながらスタインブレナー沈下を解く解析です。基礎梁が定義されているモデルで実行可能となります。" AutomationProperties.Name="基礎梁の剛性を考慮して、矩形荷重 (杭矩形) を反復で再分配しながらスタインブレナー沈下を解く解析です。基礎梁が定義されているモデルで実行可能となります。">
                         <Fluent:Button.Style>
                             <Style TargetType="Fluent:Button">
                                 <Setter Property="Header" Value="群杭沈下&#x0A;解析（基礎梁あり）"/>
@@ -1550,9 +1553,15 @@
                     </Fluent:ComboBox>
 
                     <!-- 沈下種別 -->
-                    <Fluent:ComboBox Header="沈下種別" Width="100"
+                    <Fluent:ComboBox Header="沈下種別" Width="260"
                           ItemsSource="{Binding AnalysisResultSettlementOption}"
-                          SelectedItem="{Binding AnalysisResultSettlementType}">
+                          SelectedItem="{Binding AnalysisResultSettlementType}"
+                          IsEditable="False">
+                        <Fluent:ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource SettlementTypeDisplayConverter}}"/>
+                            </DataTemplate>
+                        </Fluent:ComboBox.ItemTemplate>
                         <Fluent:ComboBox.Style>
                             <Style TargetType="ComboBox">
                                 <!-- 既定は非表示 -->
@@ -1901,7 +1910,7 @@
                                        ToolTip="応力表示"/>
                                 <CheckBox Content="杭"
                                           IsChecked="{Binding IsPileStressVisible}"
-                                          ToolTip="杭体・RigidLink の応力ダイアグラムを表示。OFF で非表示 (上面図モードと併用で基礎梁応力だけが見える)。"
+                                          ToolTip="杭体と杭頭の剛域の応力ダイアグラムを表示します。OFF で非表示 (上面図モードと併用で基礎梁応力だけが見える)。"
                                           Margin="0,0,6,0"/>
                                 <CheckBox Content="基礎梁"
                                           IsChecked="{Binding IsFoundationBeamStressVisible}"
@@ -2074,7 +2083,7 @@
                 <Fluent:RibbonGroupBox Header="パネル" ToolTip="パネル">
                     <Fluent:ToggleButton x:Name="LeftTabsToggle"
                                          Header="データ タブ"
-                                         ToolTip="データタブ（一般節点～群杭荷重）の表示/非表示"
+                                         ToolTip="データタブ（一般節点～通り心）の表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleLeftTabs_Click"
                                          LargeIcon="pack://application:,,,/Icons/DataTabVisible.png"
@@ -2224,7 +2233,7 @@
                                                Text="※杭と梁要素（基礎梁）との連結部には一般節点は使いません。杭配置のΔZcオフセットされた接合節点に梁要素（基礎梁）をつなげてください。"/>
 
                                     <!-- DataGrid -->
-                                    <common:EnhancedDataGrid x:Name="DataGridInputNodes" CanUserSortColumns="False"
+                                    <common:EnhancedDataGrid x:Name="DataGridInputNodes" PasteCompleted="DataGridInput_PasteCompleted" CanUserSortColumns="False"
                                               Grid.Row="2"
                                               ItemsSource="{Binding CurrentInputModel.InputNodes, UpdateSourceTrigger=LostFocus}"
                                               SelectionChanged="DataGridInputNodes_SelectionChanged"
@@ -2341,11 +2350,12 @@
 
                                             <!-- 材料一覧DataGrid -->
                                             <GroupBox Grid.Row="1" Header="材料一覧" Margin="2">
-                                        <common:EnhancedDataGrid x:Name="DataGridBeamMaterials" CanUserSortColumns="False"
+                                        <common:EnhancedDataGrid x:Name="DataGridBeamMaterials" PasteCompleted="DataGridInput_PasteCompleted" CanUserSortColumns="False"
                                                 ItemsSource="{Binding CurrentInputModel.FoundationBeamInput.Materials, UpdateSourceTrigger=PropertyChanged}"
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="True"
                                                 LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                BeginningEdit="DataGridBeamMaterialsOrSections_BeginningEdit"
                                                 CellEditEnding="DataGridBeamMaterialsOrSections_CellEditEnding"
                                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
                                                 >
@@ -2444,11 +2454,12 @@
 
 
                                             <GroupBox Grid.Row="1" Header="断面一覧" Margin="2">
-                                        <common:EnhancedDataGrid x:Name="DataGridBeamSections" CanUserSortColumns="False"
+                                        <common:EnhancedDataGrid x:Name="DataGridBeamSections" PasteCompleted="DataGridInput_PasteCompleted" CanUserSortColumns="False"
                                                 ItemsSource="{Binding CurrentInputModel.FoundationBeamInput.Sections, UpdateSourceTrigger=PropertyChanged}"
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="True"
                                                 LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                BeginningEdit="DataGridBeamMaterialsOrSections_BeginningEdit"
                                                 CellEditEnding="DataGridBeamMaterialsOrSections_CellEditEnding"
                                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
                                                                                                 HorizontalScrollBarVisibility="Auto"
@@ -2661,7 +2672,7 @@
 
                                         <!-- 梁要素一覧DataGrid -->
                                         <GroupBox Grid.Row="1" Header="梁要素一覧" Margin="2">
-                                        <common:EnhancedDataGrid x:Name="DataGridFoundationBeams" CanUserSortColumns="False"
+                                        <common:EnhancedDataGrid x:Name="DataGridFoundationBeams" PasteCompleted="DataGridInput_PasteCompleted" CanUserSortColumns="False"
                                                 ItemsSource="{Binding CurrentInputModel.FoundationBeamInput.Beams, UpdateSourceTrigger=PropertyChanged}"
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="False"
@@ -2694,7 +2705,7 @@
                                                     </DataGridTemplateColumn.Header>
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
-                                                            <ComboBox DisplayMemberPath="Display"
+                                                            <ComboBox SelectionChanged="FoundationBeamCombo_SelectionChanged" DisplayMemberPath="Display"
                                                                       SelectedValuePath="Key"
                                                                       SelectedValue="{Binding NodeI_Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                       BorderThickness="0" Background="Transparent"
@@ -2717,7 +2728,7 @@
                                                     </DataGridTemplateColumn.Header>
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
-                                                            <ComboBox DisplayMemberPath="Display"
+                                                            <ComboBox SelectionChanged="FoundationBeamCombo_SelectionChanged" DisplayMemberPath="Display"
                                                                       SelectedValuePath="Key"
                                                                       SelectedValue="{Binding NodeJ_Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                       BorderThickness="0" Background="Transparent"
@@ -2740,7 +2751,7 @@
                                                     </DataGridTemplateColumn.Header>
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
-                                                            <ComboBox ItemsSource="{Binding DataContext.CurrentInputModel.FoundationBeamInput.MaterialNoOptions, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            <ComboBox SelectionChanged="FoundationBeamCombo_SelectionChanged" ItemsSource="{Binding DataContext.CurrentInputModel.FoundationBeamInput.MaterialNoOptions, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                       SelectedItem="{Binding MaterialNo, UpdateSourceTrigger=PropertyChanged}"
                                                                       BorderThickness="0" Background="Transparent"
                                                                       HorizontalContentAlignment="Right" VerticalAlignment="Center"
@@ -2755,7 +2766,7 @@
                                                     </DataGridTemplateColumn.Header>
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
-                                                            <ComboBox ItemsSource="{Binding DataContext.CurrentInputModel.FoundationBeamInput.SectionNoOptions, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            <ComboBox SelectionChanged="FoundationBeamCombo_SelectionChanged" ItemsSource="{Binding DataContext.CurrentInputModel.FoundationBeamInput.SectionNoOptions, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                       SelectedItem="{Binding SectionNo, UpdateSourceTrigger=PropertyChanged}"
                                                                       BorderThickness="0" Background="Transparent"
                                                                       HorizontalContentAlignment="Right" VerticalAlignment="Center"
@@ -3051,7 +3062,8 @@
                                                         </DataGridTemplateColumn.Header>
                                                         <DataGridTemplateColumn.CellTemplate>
                                                             <DataTemplate>
-                                                                <ComboBox SelectedItem="{Binding PileBodyNo, UpdateSourceTrigger=PropertyChanged}"
+                                                                <ComboBox SelectedItem="{Binding PileBodyNo, Mode=OneWay}" Tag="PileBody"
+                                                                          SelectionChanged="PileLayoutReferenceCombo_SelectionChanged"
                                                                           ItemsSource="{Binding DataContext.CurrentInputModel.PileBodiesCountList, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                           HorizontalContentAlignment="Right"
                                                                           BorderThickness="0" Background="Transparent"
@@ -3073,7 +3085,8 @@
                                                         </DataGridTemplateColumn.Header>
                                                         <DataGridTemplateColumn.CellTemplate>
                                                             <DataTemplate>
-                                                                <ComboBox SelectedItem="{Binding GroundNo, UpdateSourceTrigger=PropertyChanged}"
+                                                                <ComboBox SelectedItem="{Binding GroundNo, Mode=OneWay}" Tag="Ground"
+                                                                          SelectionChanged="PileLayoutReferenceCombo_SelectionChanged"
                                                                           ItemsSource="{Binding DataContext.CurrentInputModel.GroundsInputCountList, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                           HorizontalContentAlignment="Right"
                                                                           BorderThickness="0" Background="Transparent"
@@ -4005,7 +4018,7 @@
                                                 </StackPanel>
                                             </Border>
 
-                                            <common:EnhancedDataGrid x:Name="DataGridIsFrontPile" CanUserSortColumns="False"
+                                            <common:EnhancedDataGrid x:Name="DataGridIsFrontPile" PasteCompleted="DataGridInput_PasteCompleted" CanUserSortColumns="False"
                                                                     ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
                                                                     SelectionChanged="DataGridIsFrontPile_SelectionChanged"
                                                                     AutoGenerateColumns="False"
@@ -4064,10 +4077,15 @@
                                                             </StackPanel>
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
-                                                    <DataGridCheckBoxColumn Header="方向1" Width="50" Binding="{Binding IsFrontPiles[0]}" MinWidth="50"/>
-                                                    <DataGridCheckBoxColumn Header="方向2" Width="50" Binding="{Binding IsFrontPiles[1]}" MinWidth="50"/>
-                                                    <DataGridCheckBoxColumn Header="方向3" Width="50" Binding="{Binding IsFrontPiles[2]}" MinWidth="50"/>
-                                                    <DataGridCheckBoxColumn Header="方向4" Width="50" Binding="{Binding IsFrontPiles[3]}" MinWidth="50"/>
+                                                    <DataGridCheckBoxColumn Header="L1 方向1" Width="60" Binding="{Binding IsFrontPiles[0]}" MinWidth="60"/>
+                                                    <DataGridCheckBoxColumn Header="L1 方向2" Width="60" Binding="{Binding IsFrontPiles[1]}" MinWidth="60"/>
+                                                    <DataGridCheckBoxColumn Header="L1 方向3" Width="60" Binding="{Binding IsFrontPiles[2]}" MinWidth="60"/>
+                                                    <DataGridCheckBoxColumn Header="L1 方向4" Width="60" Binding="{Binding IsFrontPiles[3]}" MinWidth="60"/>
+                                                    <!-- レベル2 は別に持つ (荷重方向がレベル1 と違ってよい) -->
+                                                    <DataGridCheckBoxColumn Header="L2 方向1" Width="60" Binding="{Binding IsFrontPilesLevel2[0]}" MinWidth="60"/>
+                                                    <DataGridCheckBoxColumn Header="L2 方向2" Width="60" Binding="{Binding IsFrontPilesLevel2[1]}" MinWidth="60"/>
+                                                    <DataGridCheckBoxColumn Header="L2 方向3" Width="60" Binding="{Binding IsFrontPilesLevel2[2]}" MinWidth="60"/>
+                                                    <DataGridCheckBoxColumn Header="L2 方向4" Width="60" Binding="{Binding IsFrontPilesLevel2[3]}" MinWidth="60"/>
                                                 </DataGrid.Columns>
                                             </common:EnhancedDataGrid>
                                         </Grid>
@@ -4178,7 +4196,7 @@
                                         <!--</ToolBar>-->
                                     </StackPanel>
 
-                                    <common:EnhancedDataGrid x:Name="DataGridEmbedment" CanUserSortColumns="False" ItemsSource="{Binding CurrentInputModel.EmbedmentInput.EmbedmentLayers, Mode=TwoWay,
+                                    <common:EnhancedDataGrid x:Name="DataGridEmbedment" PasteCompleted="DataGridInput_PasteCompleted" CanUserSortColumns="False" ItemsSource="{Binding CurrentInputModel.EmbedmentInput.EmbedmentLayers, Mode=TwoWay,
                                         UpdateSourceTrigger=LostFocus}"
                                         HorizontalAlignment="Left"
                                         AutoGenerateColumns="False"
@@ -5051,7 +5069,7 @@
                                                                      HorizontalAlignment="Stretch"
                                                                      ItemsSource="{Binding GroupSettlementRouteOptions}"
                                                                      SelectedItem="{Binding GroupSettlementRouteSelector, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                     ToolTip="一般 / 反復 解析の切替 (荷重描画 + 解析結果 共通)"
+                                                                     ToolTip="群杭沈下の 基礎梁なし / 基礎梁あり を切り替えます (荷重面の描画と解析結果の両方に効きます)"
                                                                      Margin="0,4,0,0"/>
 
                                                     <!-- 解析結果表示トグル (Primary Action: アクセント色で目立たせる) -->
@@ -5105,7 +5123,13 @@
                                                         <Fluent:ComboBox Header="沈下種別" 
                                                               ItemsSource="{Binding AnalysisResultSettlementOption}"
                                                               SelectedItem="{Binding AnalysisResultSettlementType}"
+                                                              IsEditable="False"
                                                               Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=沈下量|沈下部材角|沈下反力（地盤）|沈下反力（杭頭集約）|沈下応力}">
+                                                            <Fluent:ComboBox.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <TextBlock Text="{Binding Converter={StaticResource SettlementTypeDisplayConverter}}"/>
+                                                                </DataTemplate>
+                                                            </Fluent:ComboBox.ItemTemplate>
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>

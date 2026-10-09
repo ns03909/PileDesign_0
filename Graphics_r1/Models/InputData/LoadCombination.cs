@@ -120,23 +120,45 @@ namespace PileDesign.Models.InputData
             }
         }
 
+
+        private bool _isIncludedInReport = true;
         /// <summary>
-        /// DocxOutputWindow の CheckBox 表示専用プロパティ。
-        /// 未解析時は IsApplicable=true でも未チェック表示にする (UX)。
-        /// 実体 (_isApplicable) は変更しないので CanExecuteAnalysis 等の解析ロジックに影響しない。
+        /// 計算書に載せるか (計算書出力ウィンドウのチェック)。解析の対象・適用 (<see cref="IsApplicable"/>) とは別に持つ。
+        ///
+        /// <para>以前は計算書出力ウィンドウのチェックが <see cref="IsApplicable"/> を書き換えており、
+        /// 計算書から外したつもりのケースが次の水平解析の対象からも静かに外れた。しかも計算書は解析時の入力
+        /// (別のインスタンス) の IsApplicable で絞り込むので、解析後に外したケースは計算書に載ったままだった。</para>
+        /// </summary>
+        public bool IsIncludedInReport
+        {
+            get => _isIncludedInReport;
+            set
+            {
+                if (_isIncludedInReport != value)
+                {
+                    _isIncludedInReport = value;
+                    OnPropertyChanged(nameof(IsIncludedInReport));
+                    OnPropertyChanged(nameof(IsApplicableForDocxDisplay));
+                }
+            }
+        }
+
+        /// <summary>計算書に載せるケースか (適用され、計算書から外していない)。計算書の絞り込みはこれを使う。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsReported => IsApplicable && IsIncludedInReport;
+
+        /// <summary>
+        /// 計算書出力ウィンドウの CheckBox。未解析なら未チェックで出す。
+        /// 書き込むのは「計算書に載せるか」(<see cref="IsIncludedInReport"/>) だけで、解析の対象・適用は変えない。
         /// </summary>
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsApplicableForDocxDisplay
         {
-            get => _isApplicable && _isAnalyzed;
+            get => _isApplicable && _isAnalyzed && _isIncludedInReport;
             set
             {
-                if (_isAnalyzed && _isApplicable != value)
-                {
-                    _isApplicable = value;
-                    OnPropertyChanged(nameof(IsApplicable));
-                    OnPropertyChanged(nameof(IsApplicableForDocxDisplay));
-                }
+                if (_isAnalyzed) IsIncludedInReport = value;
             }
         }
 
@@ -165,6 +187,7 @@ namespace PileDesign.Models.InputData
         {
             _isApplicable = _isApplicable,
             _isAnalyzed = _isAnalyzed,
+            _isIncludedInReport = _isIncludedInReport,
         };
     }
 

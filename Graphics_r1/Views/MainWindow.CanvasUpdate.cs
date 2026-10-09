@@ -1408,8 +1408,7 @@ namespace PileDesign.Views
                             {
                                 if (PileDesign.Models.InputData.LoadCase.IsSameCase(list[i], selected))
                                 {
-                                    if (i < pileLocation.IsFrontPiles.Count)
-                                        sb.Append(pileLocation.IsFrontPiles[i] ? "前, " : "後, ");
+                                    sb.Append(pileLocation.IsFrontFor(selected) ? "前, " : "後, ");
                                     break;
                                 }
                             }
@@ -1424,8 +1423,7 @@ namespace PileDesign.Views
                             {
                                 if (PileDesign.Models.InputData.LoadCase.IsSameCase(list[i], selected))
                                 {
-                                    if (i < pileLocation.IsFrontPiles.Count)
-                                        sb.Append(pileLocation.IsFrontPiles[i] ? "前, " : "後, ");
+                                    sb.Append(pileLocation.IsFrontFor(selected) ? "前, " : "後, ");
                                     break;
                                 }
                             }

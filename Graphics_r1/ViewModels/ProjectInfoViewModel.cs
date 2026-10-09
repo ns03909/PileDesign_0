@@ -163,6 +163,13 @@ namespace PileDesign.ViewModels
         private void OnCancel()
         {
             _cancelled = true;
+            // Z=0 の標高は変えるたびに地盤の Z をその場でずらしている (OnReferenceAltitudeChanged)。
+            // 以前のキャンセルは基本設定の値だけを開いた時点へ戻し、地盤の Z はずれたまま残った
+            // (標高の基準は元に戻るのに地盤だけが動く)。開いた時点からずらした分をまとめて戻す。
+            // 元に戻す・やり直しも標高と地盤を対で動かすので、今の標高と開いた時点の標高の差がずらした分
+            double shifted = InputModel.FundamentalInput.ReferenceAltitude - PrevFundamentalInput.ReferenceAltitude;
+            if (shifted != 0.0)
+                InputModel.ShiftGroundZByDelta(+shifted);
             InputModel.FundamentalInput = PrevFundamentalInput.ShallowCopy();
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
