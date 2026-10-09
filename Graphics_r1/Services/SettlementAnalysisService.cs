@@ -105,7 +105,7 @@ namespace PileDesign.Services
                 return new SettlementAnalysisResult
                 {
                     Success = false,
-                    ErrorMessage = "「個別十字（基礎梁反力）」は、単杭沈下解析（基礎梁考慮）の常時 (VL) ケースの杭反力を荷重にします。"
+                    ErrorMessage = "「杭十字（基礎梁反力）」は、単杭沈下解析（基礎梁考慮）の常時 (VL) ケースの杭反力を荷重にします。"
                         + "その結果がありません。単杭沈下解析（基礎梁考慮）を実行してから、群杭沈下解析をやり直してください。",
                 };
             }
@@ -174,13 +174,15 @@ namespace PileDesign.Services
         /// 「個別十字」系および「個別矩形」系の荷重タイプに対し、杭ごとの矩形荷重を自動生成する公開ヘルパー。
         /// 荷重タイプが自動生成系でない場合は既存 RectLoads を返す (任意矩形)。
         /// </summary>
+        /// <param name="notes">荷重を作らなかった杭など、知らせたいことを足す先。要らなければ null</param>
         public static ObservableCollection<RectLoad> BuildAutoCrossRectLoads(
             PileGroupSettlement pileGroupSettlement,
             ObservableCollection<PileLayoutDataItem> pileLayoutItems,
             ObservableCollection<SoilPile> soilPiles,
-            ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults)
+            ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults,
+            List<string>? notes = null)
         {
-            return GenerateRectLoadsInternal(pileGroupSettlement, pileLayoutItems, soilPiles, verticalBeamCaseResults);
+            return GenerateRectLoadsInternal(pileGroupSettlement, pileLayoutItems, soilPiles, verticalBeamCaseResults, notes);
         }
 
         /// <summary>
@@ -249,7 +251,7 @@ namespace PileDesign.Services
             }
             else if (pileGroupSettlement.LoadingType == "個別矩形")
             {
-                // 個別矩形: 杭ごとに 1 矩形 (一辺 = √π · GroupPileLoadDia/2、円と等価面積)
+                // 個別矩形: 杭ごとに 1 矩形 (一辺 = √π · 荷重面等価径/2、円と等価面積。等価径の既定は杭先端径)
                 // 自動生成後はユーザが DX/DY を変更可能 (DX/DY セッターは中心を保持)
                 // 既存 RectLoads に LinkedPileNo が設定されたものがあれば再利用 (DX/DY 編集を温存)
                 var existingByPileNo = pileGroupSettlement.RectLoads
@@ -259,7 +261,7 @@ namespace PileDesign.Services
                 foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
                 {
                     SoilPile soilPile = pileLayoutDataItem.RequireSoilPileIn(soilPiles);
-                    double radius = soilPile.GroupPileLoadDia * 0.5;
+                    double radius = soilPile.EffectiveGroupPileLoadDia * 0.5;
                     if (radius <= 0) { skipped.Add(pileLayoutDataItem.No); continue; }
                     double qa = pileLayoutDataItem.AxialForceVL0 + pileLayoutDataItem.AxialForceVLAdditional;
 
@@ -295,7 +297,7 @@ namespace PileDesign.Services
                 foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
                 {
                     SoilPile soilPile = pileLayoutDataItem.RequireSoilPileIn(soilPiles);
-                    double radius = soilPile.GroupPileLoadDia * 0.5;
+                    double radius = soilPile.EffectiveGroupPileLoadDia * 0.5;
                     if (radius <= 0) { skipped.Add(pileLayoutDataItem.No); continue; } // 荷重面等価径未入力の杭はスキップ（NaN/重複点回避）
                     Point point = new() { X = pileLayoutDataItem.Point3D.X, Y = pileLayoutDataItem.Point3D.Y };
                     double qa = pileLayoutDataItem.AxialForceVL0 + pileLayoutDataItem.AxialForceVLAdditional;
@@ -309,8 +311,8 @@ namespace PileDesign.Services
             }
             else if (pileGroupSettlement.LoadingType == "個別矩形（基礎梁考慮）")
             {
-                // 個別矩形（基礎梁考慮）: 反復アルゴリズム (Steinbrenner ↔ 線形ばね基礎梁) 実装までは
-                // 個別矩形と同等の挙動。Pi 初期値は矩形荷重そのもの (既存 QA を維持)。
+                // 個別矩形（基礎梁考慮）を基礎梁なしで解くとき (杭ごとの矩形をそのまま使う)。
+                // 基礎梁ありの反復 (Steinbrenner ↔ 線形ばね基礎梁) は IterativeBeamSettlementService が別に解く。
                 //  - 既存矩形 (LinkedPileNo 付き): QA・DX・DY を維持、中心のみ杭位置に追従
                 //  - 既存矩形なし: 一辺=√π·r、QA=AxialForceVL0+VLAdditional を初期値として生成
                 var existingByPileNo = pileGroupSettlement.RectLoads
@@ -320,13 +322,13 @@ namespace PileDesign.Services
                 foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
                 {
                     SoilPile soilPile = pileLayoutDataItem.RequireSoilPileIn(soilPiles);
-                    double radius = soilPile.GroupPileLoadDia * 0.5;
+                    double radius = soilPile.EffectiveGroupPileLoadDia * 0.5;
                     if (radius <= 0) { skipped.Add(pileLayoutDataItem.No); continue; }
 
                     if (existingByPileNo.TryGetValue(pileLayoutDataItem.PileNo, out var existing))
                     {
                         if (cloneExisting) existing = existing.Clone();
-                        // QA は触らない (反復実装後は ki·S2 で更新される)
+                        // QA は触らない (この型の荷重は軸力から作り直さない。基礎梁ありの解析は収束した荷重を結果として別に持つ)
                         existing.CenterX = pileLayoutDataItem.Point3D.X;
                         existing.CenterY = pileLayoutDataItem.Point3D.Y;
                         rectLoads.Add(existing);
@@ -360,7 +362,7 @@ namespace PileDesign.Services
                 foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
                 {
                     SoilPile soilPile = pileLayoutDataItem.RequireSoilPileIn(soilPiles);
-                    double radius = soilPile.GroupPileLoadDia * 0.5;
+                    double radius = soilPile.EffectiveGroupPileLoadDia * 0.5;
                     if (radius <= 0) { skipped.Add(pileLayoutDataItem.No); continue; } // 荷重面等価径未入力の杭はスキップ
                     Point point = new() { X = pileLayoutDataItem.Point3D.X, Y = pileLayoutDataItem.Point3D.Y };
                     // 反力が存在しない杭は 0 として扱う (黙らず知らせる)
@@ -378,7 +380,7 @@ namespace PileDesign.Services
             }
 
             if (skipped.Count > 0)
-                notes?.Add($"荷重面等価径が未入力 (0 以下) の杭 {PileList(skipped)} は、荷重を作っていません (群杭沈下の入力で荷重面等価径を入れてください)。");
+                notes?.Add($"荷重面等価径も杭先端径も 0 の杭 {PileList(skipped)} は、荷重を作っていません (荷重面等価径を入れるか、杭体で杭先端径を入れてください)。");
             return rectLoads;
 
             static string PileList(List<int> nos)

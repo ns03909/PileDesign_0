@@ -62,7 +62,7 @@ namespace PileDesign.Models.InputData
             if (double.IsNaN(nonBeam)) return null;
             string? notice = null;
             if (!double.IsNaN(beamAware) && Math.Abs(beamAware - nonBeam) > 1e-9)
-                notice = $"群杭沈下の荷重面Z は、基礎梁なし・ありで 1 つの値になりました。基礎梁なし (一般) の値 {nonBeam:0.###} m にそろえ、"
+                notice = $"群杭沈下の荷重面Z は、基礎梁なし・ありで 1 つの値になりました。基礎梁なしの値 {nonBeam:0.###} m にそろえ、"
                        + $"基礎梁あり (反復) の値 {beamAware:0.###} m は使いません。基礎梁ありの解析は、荷重面より上の土層を除いて計算し直してください。";
             LoadingPlaneAltitude = nonBeam;
             return notice;
@@ -76,13 +76,92 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _soilLayersTopAltitude, value);
         }
 
+        /// <summary>
+        /// 矩形荷重の形の誤り (X1 &lt; X2・Y1 &lt; Y2 でない、数値でない)。無ければ空。
+        /// 以前はどこも検査しておらず、片方だけ逆だと面積が負で荷重が 0 になり、両方逆だと 1 象限だけが残って
+        /// (正しい値のおよそ 1/4) 黙って解いていた。
+        /// </summary>
+        public static System.Collections.Generic.List<string> DescribeRectLoadShapeProblems(System.Collections.Generic.IEnumerable<RectLoad>? rects)
+        {
+            var problems = new System.Collections.Generic.List<string>();
+            int no = 0;
+            foreach (var r in rects ?? [])
+            {
+                no++;
+                if (r == null) continue;
+                bool finite = double.IsFinite(r.X1) && double.IsFinite(r.X2) && double.IsFinite(r.Y1) && double.IsFinite(r.Y2);
+                if (!finite || !(r.X1 < r.X2) || !(r.Y1 < r.Y2))
+                    problems.Add($"矩形荷重 {no} 行目: X1 < X2・Y1 < Y2 になっていません (X1={r.X1}, X2={r.X2}, Y1={r.Y1}, Y2={r.Y2})。");
+            }
+            return problems;
+        }
+
+        /// <summary>
+        /// 荷重面が沈下用土層の範囲に入っているか。入っていなければ理由、入っていれば null。
+        /// 荷重面が最下層の下端ちょうど (以下) のときは、荷重面より下に土層が無いので解けない。
+        /// 以前は基礎梁なしの解析にしか検査が無く、最下層下端ちょうどは通って全層で計算し、
+        /// 基礎梁ありは範囲外でも全層を荷重面より下とみなして解いていた。
+        /// </summary>
+        public string? DescribeLoadingPlaneProblem()
+        {
+            var layers = SettlementSoilLayers;
+            if (layers == null || layers.Count == 0) return null;   // 土層が無いことは別に知らせる
+            double eps = PileDesign.Constants.NumericalConstants.NEAR_ZERO_EPSILON;
+            double bottom = layers[^1].BottomAltitude;
+            if (LoadingPlaneAltitude > SoilLayersTopAltitude + eps)
+                return $"荷重面 Z ({LoadingPlaneAltitude:N3} m) が土層上端 Z ({SoilLayersTopAltitude:N3} m) より高くなっています。荷重面を土層上端以下に設定してください。";
+            if (LoadingPlaneAltitude <= bottom + eps)
+                return $"荷重面 Z ({LoadingPlaneAltitude:N3} m) が最下層下端 Z ({bottom:N3} m) 以下です。荷重面より下に沈下用土層がありません。";
+            return null;
+        }
+
+        /// <summary>
+        /// 沈下用土層の層厚が下端 Z の差と合っているか (上から順に、上端 = 土層上端 Z)。合っていなければ理由の一覧。
+        /// 表への貼り付け・Delete は下端 Z だけを書き換え、層厚を計算し直さない。沈下の深さは層厚を足して決めるので、
+        /// 食い違ったまま解くと、表の下端 Z と違う深さで解いていた。
+        /// </summary>
+        public System.Collections.Generic.List<string> DescribeLayerThicknessMismatch()
+        {
+            var problems = new System.Collections.Generic.List<string>();
+            double top = SoilLayersTopAltitude;
+            int no = 0;
+            foreach (var layer in SettlementSoilLayers ?? [])
+            {
+                no++;
+                if (layer == null) continue;
+                double expected = top - layer.BottomAltitude;
+                if (!(expected > 0))
+                    problems.Add($"沈下用土層 {no} 層目の下端 Z ({layer.BottomAltitude:N3} m) が上の層の下端より下になっていません。");
+                else if (Math.Abs(expected - layer.Thickness) > 1e-3)
+                    problems.Add($"沈下用土層 {no} 層目の層厚 ({layer.Thickness:N3} m) が下端 Z から求めた層厚 ({expected:N3} m) と合っていません。下端 Z を入れ直してください。");
+                top = layer.BottomAltitude;
+            }
+            return problems;
+        }
+
+        /// <summary>
+        /// 荷重タイプの画面に出す名前。保存ファイルとコードの中の値 (「個別十字」「個別矩形」…) は変えず、表示だけ
+        /// 「杭十字」「杭矩形」と呼ぶ (「個別」が何についての個別か読み取れなかった)。
+        /// </summary>
+        public static string LoadingTypeDisplayName(string? loadingType)
+            => (loadingType ?? "").Replace("個別十字", "杭十字").Replace("個別矩形", "杭矩形");
+
+        // 選択肢の一覧はコードが持つ。保存しない (以前は保存しており、開いたファイルの古い一覧がコードの一覧を上書きして、
+        // 新しい荷重タイプが選べない・引退した名前が選べる状態になった。古いファイルに入っている一覧は読み捨てる)
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public List<string> LoadingTypeOptions { get; set; } = ["任意矩形", "個別矩形", "個別矩形（基礎梁考慮）", "個別十字", "個別十字（基礎梁反力）", "なし"];
 
         private string _loadingType;
         public string LoadingType
         {
             get => _loadingType;
-            set => SetProperty(ref _loadingType, value);
+            set
+            {
+                // 空は受け付けない。選択肢から現在値が外れた ComboBox が null を書き戻すと、荷重タイプが消えて保存された
+                if (string.IsNullOrWhiteSpace(value)) return;
+                SetProperty(ref _loadingType, value);
+            }
         }
 
         private ObservableCollection<RectLoad> _rectLoads;
@@ -305,8 +384,9 @@ namespace PileDesign.Models.InputData
         public PileGroupSettlement()
         {
             LoadingPlaneAltitude = -5.0; /// 5m
-            LoadingPlaneAltitudeNonBeam = -5.0;
-            LoadingPlaneAltitudeBeamAware = -5.0;
+            // 旧ファイル互換の 2 項目 (LoadingPlaneAltitudeNonBeam / BeamAware) には既定値を入れない。
+            // 入れると、それらを持たない旧ファイル (荷重面Z だけを持つ) を開いたとき、読み込みの仕上げ (UnifyLoadingPlane) が
+            // 既定値 -5 m で荷重面Z を上書きしていた。ファイルに無ければ NaN のままにし、まとめる処理を素通りさせる
             SoilLayersTopAltitude = 0.0;
             LoadingType = "任意矩形";
             RectLoads = [];

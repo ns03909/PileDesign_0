@@ -63,7 +63,7 @@ namespace PileDesign.Services
         /// <summary>解析対象の荷重ケースが選ばれていない。</summary>
         public const string NoAnalysisTargetLoadCase =
             "解析対象の荷重ケースが 1 件もありません。\n" +
-            "リボンの「荷重条件」で、対象にしたいケースの「解析対象」にチェックを入れてください。";
+            "リボンの「荷重」で、対象にしたいケースの「解析対象」にチェックを入れてください。";
 
         /// <summary>
         /// ウィンドウを開けなかったときの案内。
@@ -80,7 +80,7 @@ namespace PileDesign.Services
 
         /// <summary>基礎梁が定義されていない。</summary>
         public const string NoFoundationBeam =
-            "基礎梁が定義されていません。\n" +
-            "メイン画面の「基礎梁」タブで梁を追加してください。";
+            "基礎梁 (梁要素) が 1 本もありません。\n" +
+            "メイン画面の「梁要素」タブで梁要素を追加するか、リボンの「自動梁要素生成」を使ってください。";
     }
 }

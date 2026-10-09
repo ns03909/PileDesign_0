@@ -17,7 +17,11 @@ namespace TestProject1
             };
 
             StringAssert.Contains(GroupSettlementCaseLabel.Describe(record), "L2");
-            StringAssert.Contains(GroupSettlementCaseLabel.Describe(record), "個別矩形（基礎梁考慮）");
+            // 計算書には保存の値 (個別矩形…) ではなく画面と同じ名前で出す
+            StringAssert.Contains(GroupSettlementCaseLabel.Describe(record), "荷重タイプ: 杭矩形（基礎梁考慮）");
+            Assert.IsFalse(GroupSettlementCaseLabel.Describe(record).Contains("個別"), "保存の値がそのまま計算書に出ます");
+            record.IsBeamAware = true;
+            StringAssert.Contains(GroupSettlementCaseLabel.Describe(record), "基礎梁あり");
             StringAssert.Contains(GroupSettlementCaseLabel.Describe(null), "未計算");
         }
     }

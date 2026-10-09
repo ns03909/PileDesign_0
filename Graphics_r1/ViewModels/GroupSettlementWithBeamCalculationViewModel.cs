@@ -353,10 +353,8 @@ namespace PileDesign.ViewModels
         private async Task ExecuteAnalysisAsync()
         {
             // 入力データの整合性ゲート (杭体・地盤・寸法・配筋など)
-            // 杭頭ばねは単杭沈下の荷重-沈下曲線を入力として読む。古いまま使わないか尋ねる
-            if (_mainWindowViewModel?.ConfirmUsingStaleSettlementResults(
-                    "基礎梁を考慮した沈下解析", "杭頭ばね") == false)
-                return;
+            // この解析 (群杭沈下・基礎梁あり) は線形ばねの反復で、単杭沈下の荷重-沈下曲線を使わない。
+            // 古い曲線を使うかの確認は、曲線を杭頭ばねに使う単杭沈下解析（基礎梁考慮）の入口にある (以前はここに付け間違えていた)
 
             if (!PileDesign.Services.CheckInputData.ValidateForAnalysis(InputModel, "群杭沈下解析"))
                 return;
@@ -457,6 +455,26 @@ namespace PileDesign.ViewModels
                 m.GroupPileSettlementXOffset, m.GroupPileSettlementYOffset, m.GroupPileSettlementXSpacing, m.GroupPileSettlementYSpacing,
                 InputModel.GridXItems, InputModel.GridYItems);
             if (gridProblem != null) return gridProblem;
+            // 土層の値・荷重面の範囲・矩形の形・反復の設定は、基礎梁なしの解析と同じ検査を通す。
+            // 以前は土層の誤りが計算ログにしか出ず、全杭の結果が欠けてから見当違いの理由で止まり、
+            // 荷重面が土層の範囲外でも全層を荷重面より下とみなして解いていた
+            var pgs = InputModel.PileGroupSettlement;
+            var layerProblems = Steinnbrener.DescribeLayerProblems(pgs.SettlementSoilLayers);
+            layerProblems.AddRange(pgs.DescribeLayerThicknessMismatch());
+            if (layerProblems.Count > 0)
+                return string.Join("\n", layerProblems) + "\n群杭沈下ウィンドウの「土層」タブで直してください。";
+            if (pgs.DescribeLoadingPlaneProblem() is { } planeProblem)
+                return planeProblem;
+            var shapeProblems = PileGroupSettlement.DescribeRectLoadShapeProblems(pgs.RectLoads);
+            if (shapeProblems.Count > 0)
+                return string.Join("\n", shapeProblems.Take(10)) + "\n群杭沈下ウィンドウの「荷重条件」タブで直してください。";
+            if (MaxIterations < 1)
+                return "最大反復回数は 1 以上にしてください。";
+            if (!(double.IsFinite(ConvergenceTolerance) && ConvergenceTolerance > 0 && ConvergenceTolerance < 0.1))
+                return "収束許容誤差は 0 より大きく 0.1 より小さい値にしてください (大きいと 1 回目で「収束」になります)。";
+            if (!(double.IsFinite(KMin) && double.IsFinite(KMax) && KMin > 0 && KMin <= KMax))
+                return "ばねの下限・上限は 0 < 下限 ≤ 上限 にしてください。";
+
             // 荷重の出所に関わらず見る (杭の軸力でも、矩形の寸法は荷重条件の矩形から読む)
             if (IterativeBeamSettlementService.DescribeDuplicatePileRects(InputModel.PileGroupSettlement.RectLoads) is { } duplicate)
                 return duplicate;
@@ -465,7 +483,7 @@ namespace PileDesign.ViewModels
             {
                 var rects = InputModel.PileGroupSettlement.RectLoads;
                 if (rects == null || rects.Count == 0 || rects.All(r => r.QA == 0))
-                    return "荷重条件の矩形荷重が定義されていません (または全て 0)。";
+                    return "荷重条件の矩形荷重が定義されていません (または全て 0)。\n群杭沈下ウィンドウの「荷重条件」タブで「杭ごとの矩形を作り直す」を押すか、荷重を入力してください。";
                 if (DescribeRectLoadLinkProblem() is { } linkProblem) return linkProblem;
                 if (!AnalyzeVL)
                     return "荷重条件の矩形荷重を使うときは VL のケースだけを解きます。VL を ON にしてください。";
@@ -475,9 +493,9 @@ namespace PileDesign.ViewModels
                 if (!AnalyzeVL && !AnalyzeLevel1 && !AnalyzeLevel2)
                     return "少なくとも 1 つの荷重ケースを選択してください。";
                 if (AnalyzeLevel1 && (InputModel.LoadCasesInput?.LoadCasesLevel1?.Count ?? 0) == 0)
-                    return "レベル 1 荷重ケースが未定義です。";
+                    return "レベル 1 の荷重ケースがありません。リボンの「荷重」で追加するか、レベル 1 のチェックを外してください。";
                 if (AnalyzeLevel2 && (InputModel.LoadCasesInput?.LoadCasesLevel2?.Count ?? 0) == 0)
-                    return "レベル 2 荷重ケースが未定義です。";
+                    return "レベル 2 の荷重ケースがありません。リボンの「荷重」で追加するか、レベル 2 のチェックを外してください。";
                 var planned = PlannedSeismicCases();
                 if (AnalyzeLevel1 && !planned.Any(c => c.Level == 1))
                     return "レベル 1 に解析対象の荷重ケースがありません (荷重ケースの「解析対象」「適用」を確認してください)。";
@@ -516,7 +534,7 @@ namespace PileDesign.ViewModels
             bool hasAxial = piles.Any(p => Math.Abs(p.AxialForceVL) > 1e-9);
             lines.Add("群杭沈下ウィンドウの「荷重条件」タブで「杭ごとの矩形を作り直す」を押すと、杭ごとの矩形 (荷重は軸力から) に置き換わります。"
                 + (hasAxial ? "または、荷重の出所を「" + SourceAxialForce + "」にしてください。"
-                            : "ただし杭の軸力が入っていないので、作り直す前に杭配置の「軸力」タブで軸力を入れてください。"));
+                            : "ただし杭の軸力が入っていないので、作り直す前にメイン画面の「杭」→「軸力」タブで軸力を入れてください。"));
             return string.Join("\n", lines);
         }
 
@@ -532,7 +550,7 @@ namespace PileDesign.ViewModels
             var zero = BuildCaseList().Where(c => c.Ppi.Values.All(v => Math.Abs(v) < 1e-9)).Select(c => c.Label).ToList();
             if (zero.Count == 0) return null;
             return $"杭の軸力の合計が 0 のケースがあります ({string.Join(" / ", zero.Take(5))}{(zero.Count > 5 ? " ほか" : "")})。荷重 0 では沈下を求められないので、解析できません。\n\n"
-                + "杭配置の「軸力」タブで杭の軸力を入れるか、荷重の出所を「" + SourceRectLoads + "」にしてください。";
+                + "メイン画面の「杭」→「軸力」タブで杭の軸力を入れるか、荷重の出所を「" + SourceRectLoads + "」にしてください。";
         }
 
         /// <summary>実行ボタンの上に出す、これから解く内容のまとめ (解析方法・荷重の出所・対象ケース・荷重合計)。</summary>

@@ -174,7 +174,7 @@ namespace PileDesign.ViewModels
                 {
                     double radius = 0;
                     if (pile.SoilPileIn(soilPiles) is { } soilPile)
-                        radius = soilPile.GroupPileLoadDia * 0.5;
+                        radius = soilPile.EffectiveGroupPileLoadDia * 0.5;
                     if (!double.IsFinite(radius) || radius < 0)
                         throw new ArgumentException("荷重面等価径は有限の0以上の値にしてください。矩形荷重は変更しません。");
                     double side = radius > 0 ? Math.Sqrt(Math.PI) * radius : 2.0;
@@ -202,7 +202,7 @@ namespace PileDesign.ViewModels
             if (existingCount > 0)
             {
                 var res = MessageService.Show(
-                    $"現在の矩形荷重 ({existingCount} 件) を破棄し、各杭に対して個別矩形を再生成します。\n続行しますか?",
+                    $"現在の矩形荷重 ({existingCount} 件) を破棄し、各杭に対して杭矩形を作り直します。\n続行しますか?",
                     "矩形荷重リセット確認",
                     MessageBoxButton.OKCancel,
                     MessageBoxImage.Warning);
@@ -255,6 +255,17 @@ namespace PileDesign.ViewModels
                 : $"矩形荷重 {linked.Count} 件の荷重を杭の軸力から作り直しました。");
         }
 
+        /// <summary>
+        /// 杭ごとの矩形を自動で作ったときに知らせること (荷重面等価径が 0 で作らなかった杭など)。無ければ空。
+        /// 群杭沈下ウィンドウの荷重面等価径の表の下に出す。
+        /// </summary>
+        public string AutoRectLoadNote
+        {
+            get => _autoRectLoadNote;
+            private set => SetProperty(ref _autoRectLoadNote, value);
+        }
+        private string _autoRectLoadNote = "";
+
         // 自動生成による RectLoads 置換中のフラグ（ユーザ編集と区別するため）
         private bool _suppressRectLoadAutoSwitch;
 
@@ -265,6 +276,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void RebuildAutoCrossRectLoadsIfNeeded()
         {
+            AutoRectLoadNote = "";
             if (CurrentInputModel?.PileGroupSettlement == null) return;
             var lt = CurrentInputModel.PileGroupSettlement.LoadingType;
             if (lt != "個別十字" && lt != "個別十字（基礎梁反力）"
@@ -275,6 +287,7 @@ namespace PileDesign.ViewModels
             if (lt == "個別十字（基礎梁反力）"
                 && (!IsVerticalBeamAnalysisDone || VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0))
             {
+                AutoRectLoadNote = "「杭十字（基礎梁反力）」は単杭沈下解析（基礎梁考慮）の杭反力から荷重を作ります。先にその解析を実行してください。";
                 return;
             }
 
@@ -290,8 +303,12 @@ namespace PileDesign.ViewModels
                 return;
             }
 
+            // 荷重面等価径が 0 の杭は矩形を作らない。以前はそれを何も知らせず、
+            // 等価径が未入力のまま荷重タイプを選ぶと表が空のまま (または一部の杭だけ) になった
+            var notes = new List<string>();
             var generated = SettlementAnalysisService.BuildAutoCrossRectLoads(
-                CurrentInputModel.PileGroupSettlement, piles, soilPiles, VerticalBeamCaseResults);
+                CurrentInputModel.PileGroupSettlement, piles, soilPiles, VerticalBeamCaseResults, notes);
+            AutoRectLoadNote = string.Join("\n", notes);
 
             _suppressRectLoadAutoSwitch = true;
             try
@@ -339,7 +356,7 @@ namespace PileDesign.ViewModels
             if (CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Count == 0)
             {
                 bottomAlt = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude - 10.0;
-                ek = 100_000_000;
+                ek = 100_000;   // kN/m² (100 MPa 相当)。以前は 1e8 (= 100 GPa、単位の取り違え) で、直し忘れると沈下がほぼ 0 になった
                 poissonsRatio = 0.3;
             }
             else

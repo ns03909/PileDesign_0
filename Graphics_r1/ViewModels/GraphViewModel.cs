@@ -588,7 +588,7 @@ namespace PileDesign.ViewModels
             }
             if (_mainWindowViewModel.HasGroupSettlementBeamAwareCases)
             {
-                GraphOptions.Add("沈下 個別矩形(基礎梁考慮)");
+                GraphOptions.Add("沈下 杭矩形(基礎梁考慮)");
             }
 
             if (GraphOptions.Count > 0 && string.IsNullOrEmpty(SelectedGraphOption))
@@ -749,6 +749,12 @@ namespace PileDesign.ViewModels
                     Serilog.Log.Warning("[グラフ] {Graph} を描けません: {Diagnostic}", SelectedGraphOption,
                         string.Join(" / ", ex.Diagnostics.Select(d => d.ToLogLine())));
                     GraphErrorMessage = $"このグラフを描けません。{ex.Message}";
+                }
+                catch (NullReferenceException) when (AnaModel == null)
+                {
+                    // 開いたままの間に解析結果が無くなった (新規作成・別のファイルを開く・結果の破棄)。
+                    // 以前はここで例外がアプリ全体まで届き、「予期しないエラー」になった
+                    GraphErrorMessage = "解析結果がありません (新規作成・ファイルを開く・入力の変更などで結果が無くなりました)。解析をやり直してから開き直してください。";
                 }
                 // 参照が切れた杭を飛ばして描いたときは、空欄が正常な結果に見えないよう、飛ばした杭を書く
                 if (DescribeMissingReferences(_missingReferences) is { } missing)
@@ -1741,7 +1747,7 @@ namespace PileDesign.ViewModels
                 SelectedGraphOption == "沈下 単杭+群杭" ||
                 SelectedGraphOption == "沈下 基礎梁考慮単杭" ||
                 SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭" ||
-                SelectedGraphOption == "沈下 個別矩形(基礎梁考慮)")
+                SelectedGraphOption == "沈下 杭矩形(基礎梁考慮)")
             {
                 if (GridOptions.Count == 0)
                 {
@@ -1979,7 +1985,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         private IEnumerable<SettlementGridDataItem> GetSettlementGridForCurrentOption()
         {
-            if (SelectedGraphOption == "沈下 個別矩形(基礎梁考慮)")
+            if (SelectedGraphOption == "沈下 杭矩形(基礎梁考慮)")
             {
                 var rec = ResolveBeamAwareCaseRecord(SelectedLoadCaseOption);
                 if (rec?.SettlementGridData != null && rec.SettlementGridData.Count > 0)

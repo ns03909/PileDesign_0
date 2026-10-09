@@ -79,12 +79,61 @@ namespace PileDesign.ViewModels
                 {
                     double valueInMm = value * 1000.0;
                     PileBody.SettlePileToeDia = valueInMm;
-                    if (SoilPile != null) SoilPile.Dp = valueInMm;
+                    // 沈下検討用杭先端径は杭体の値で、土層-杭セットの Dp はその写し (解析は Dp を読む)。
+                    // 以前は表示中のセットの Dp だけを書き換えていたので、同じ杭体の別のセット
+                    // (地盤や杭頭の高さが違う杭) は古い径のまま残り、OK でそのまま確定していた。
+                    // 同じ杭体のセットすべてへ写し、表示していないセットは曲線を解き直す。
+                    var others = PropagateSettlePileToeDia(valueInMm);
                     OnPropertyChanged(nameof(SettlePileToeDiaM));
                     DrawShapes();
+                    ReanalyzeSoilPiles(others);
                     _ = ExecuteAnalysis();
                 }
             }
+        }
+
+        /// <summary>
+        /// 沈下検討用杭先端径を、表示中のセットと<b>同じ杭体のセットすべて</b>の Dp へ写す。
+        /// 写したセットのうち表示中でないものの位置を返す (曲線を解き直す対象)。
+        /// </summary>
+        internal List<int> PropagateSettlePileToeDia(double valueInMm)
+        {
+            var others = new List<int>();
+            if (SoilPile == null || SoilPiles == null) return others;
+            int pileBodyNo = SoilPile.PileBodyNo;
+            for (int i = 0; i < SoilPiles.Count; i++)
+            {
+                var sp = SoilPiles[i];
+                if (sp == null || sp.PileBodyNo != pileBodyNo) continue;
+                sp.Dp = valueInMm;
+                if (!ReferenceEquals(sp, SoilPile)) others.Add(i);
+            }
+            return others;
+        }
+
+        /// <summary>
+        /// 指定したセットの荷重-沈下曲線を解き直す (表示中のセットは呼び出し側が解く)。
+        /// 曲線が変わったので、利用者が確かめ直せるようランプを消す。
+        /// </summary>
+        private void ReanalyzeSoilPiles(IReadOnlyCollection<int> indices)
+        {
+            if (indices.Count == 0) return;
+            if (!PileDesign.Services.CheckInputData.ValidateForAnalysis(InputModel, "単杭沈下解析")) return;
+            var warnings = new List<string>();
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+                foreach (int i in indices)
+                {
+                    AnalyzeSoilPileAt(i, warnings);
+                    if (i < SoilPileLampStates.Count) SoilPileLampStates[i].IsOn = false;
+                }
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+            ShowAnalysisWarnings(warnings);
         }
 
         // 地盤杭体数+1リスト
@@ -164,39 +213,7 @@ namespace PileDesign.ViewModels
                 var warnings = new List<string>();
 
                 for (int i = 0; i < SoilPiles.Count; i++)
-                {
-                    var soilPile = SoilPiles[i];
-
-                    // 各SoilPileに対してVerticalLoadTransferMethodを作成・解析
-                    var vtm = new VerticalLoadTransferMethod(InputModel, soilPile);
-
-                    // SoilPileに計算結果を保存（ViewModel内コピー）
-                    soilPile.LoadDisplacements = vtm.LoadDisplacements;
-                    soilPile.LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
-                    soilPile.NodeDisplacements = vtm.Ds;
-                    soilPile.NodeReactions = vtm.Rs;
-
-                    // 元のElementDivision.SoilPilesにも結果を反映
-                    var originalSoilPiles = InputModel.ElementDivision?.SoilPiles;
-                    if (originalSoilPiles != null && i < originalSoilPiles.Count)
-                    {
-                        originalSoilPiles[i].LoadDisplacements = vtm.LoadDisplacements;
-                        originalSoilPiles[i].LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
-                        originalSoilPiles[i].NodeDisplacements = vtm.Ds;
-                        originalSoilPiles[i].NodeReactions = vtm.Rs;
-                    }
-
-                    // 該当するPileLayoutItemの沈下量を計算
-                    int soilPileNo = i + 1;
-                    foreach (var pileLayoutItem in InputModel.PileLayoutItems)
-                    {
-                        if (pileLayoutItem.SoilPileAltNo == soilPileNo)
-                            WriteSinglePileSettlements(pileLayoutItem, vtm);
-                    }
-                    // 曲線の精度が落ちた/範囲外の軸力があった杭を集める (沈下量の取り出しの後で見る)
-                    foreach (var w in vtm.Warnings)
-                        warnings.Add($"杭体 {soilPileNo}: {w}");
-                }
+                    AnalyzeSoilPileAt(i, warnings);
 
                 // 現在選択中のSoilPileのVerticalLoadTransferMethodも更新
                 VerticalLoadTransferMethod = new VerticalLoadTransferMethod(InputModel, SoilPile);
@@ -209,6 +226,43 @@ namespace PileDesign.ViewModels
             {
                 Mouse.OverrideCursor = null;
             }
+        }
+
+        // 1 つのセットの荷重-沈下曲線を解き、結果を写しと元の両方、そのセットを使う杭の沈下量へ書く。
+        // 全セットの一括解析と、杭先端径の変更で同じ杭体のセットを解き直すときの両方から呼ぶ。
+        private void AnalyzeSoilPileAt(int i, List<string> warnings)
+        {
+            var soilPile = SoilPiles[i];
+
+            // 各SoilPileに対してVerticalLoadTransferMethodを作成・解析
+            var vtm = new VerticalLoadTransferMethod(InputModel, soilPile);
+
+            // SoilPileに計算結果を保存（ViewModel内コピー）
+            soilPile.LoadDisplacements = vtm.LoadDisplacements;
+            soilPile.LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
+            soilPile.NodeDisplacements = vtm.Ds;
+            soilPile.NodeReactions = vtm.Rs;
+
+            // 元のElementDivision.SoilPilesにも結果を反映
+            var originalSoilPiles = InputModel.ElementDivision?.SoilPiles;
+            if (originalSoilPiles != null && i < originalSoilPiles.Count)
+            {
+                originalSoilPiles[i].LoadDisplacements = vtm.LoadDisplacements;
+                originalSoilPiles[i].LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
+                originalSoilPiles[i].NodeDisplacements = vtm.Ds;
+                originalSoilPiles[i].NodeReactions = vtm.Rs;
+            }
+
+            // 該当するPileLayoutItemの沈下量を計算
+            int soilPileNo = i + 1;
+            foreach (var pileLayoutItem in InputModel.PileLayoutItems)
+            {
+                if (pileLayoutItem.SoilPileAltNo == soilPileNo)
+                    WriteSinglePileSettlements(pileLayoutItem, vtm);
+            }
+            // 曲線の精度が落ちた/範囲外の軸力があった杭を集める (沈下量の取り出しの後で見る)
+            foreach (var w in vtm.Warnings)
+                warnings.Add($"杭体 {soilPileNo}: {w}");
         }
 
         /// <summary>
@@ -509,6 +563,12 @@ namespace PileDesign.ViewModels
             // MainWindowViewModelのインスタンスにアクセスしてIsElementSplitをtrueに設定
             if (Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainWindowViewModel)
             {
+                // 入力の編集として記録する (杭体の α・n・沈下検討用の杭先端径などを変えている)。
+                // 以前は記録しておらず、Undo に載らないうえ、杭先端 P-S ばねを使う水平解析の結果が古いばねのまま
+                // 「最新」の入力と組にされていた。P-S ばねを使うなら水平解析にも「再解析が必要」を立てる
+                mainWindowViewModel.SaveUndoState(
+                    InputModel.UsePsSpringAtPileTip ? MainWindowViewModel.AnalysisInputScope.All : MainWindowViewModel.AnalysisInputScope.Settlement,
+                    "単杭沈下 編集");
                 mainWindowViewModel.IsVerticalAnalysisDone = true;
                 mainWindowViewModel.MarkSettlementResultsCurrent();
                 mainWindowViewModel.CaptureAnalysisResultSet(DescribeRun(InputModel.ElementDivision.SoilPiles));
@@ -844,13 +904,20 @@ namespace PileDesign.ViewModels
 
                 else if (textBox.Name == "TextBoxPileToeDiaD" && PileDesign.Common.NumericText.TryParse(textBox.Text, out double pileToeDiaD))
                 {
+                    // 値が変わっていなければ何もしない。以前は欄を通過するだけで沈下検討用の極限先端支持力度を Qpu に戻しており、
+                    // 手で入れた値が消え、Smart-MAGNUM・Hybrid ニーディングでは SettleRpu が Rpu の (Den/Don)² 倍になって
+                    // 先端の荷重-沈下曲線が硬すぎる形のまま OK で解析モデルに書き戻されていた
+                    if (Math.Abs(pileToeDiaD - SoilPile.D) < 1e-12) return;
                     // 杭先端径D(m)を更新
                     SoilPile.D = pileToeDiaD;
                     // PileBodyのPileToeDia(mm)も同期
                     PileBody.PileToeDia = pileToeDiaD * 1000.0;
                     // Apが変わるのでRpuの計算に反映される（プロパティで自動計算）
-                    // 沈下検討用極限先端支持力度も更新（デフォルトでQpuと同じ）
-                    SoilPile.SettleQpu = SoilPile.Qpu;
+                    // 沈下検討用極限先端支持力度は、杭先端の諸量を決めるときと同じ規則で決め直す
+                    // (Smart-MAGNUM・Hybrid ニーディングは SettleRpu = Rpu になるように、それ以外は Qpu)
+                    SoilPile.SettleQpu = (SoilPile.IsSmartMagnum || SoilPile.IsHybridKneading)
+                        ? (SoilPile.SettleAp > 0 ? SoilPile.Rpu / SoilPile.SettleAp : 0)
+                        : SoilPile.Qpu;
                     OnPropertyChanged(nameof(SoilPile));
                     DrawShapes();
                     // 支持力の再計算と解析実行
@@ -950,11 +1017,6 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
-        }
-
-        [RelayCommand]
-        public static void OnTextBoxLostFocus(object sender)
-        {
         }
 
         [RelayCommand]

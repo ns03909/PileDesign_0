@@ -59,6 +59,9 @@ namespace PileDesign.Services
 
             // 荷重面標高 (基礎梁なし・ありで 1 つ。例題が解析ごとに持っていたら基礎梁なしの値)
             inputModel.PileGroupSettlement.LoadingPlaneAltitude = data.LoadingPlaneAltitudeNonBeam ?? data.LoadingPlaneAltitude;
+            // 例題の土層の層厚は荷重面を上端として作られている。土層上端を前のプロジェクトから引き継がない
+            // (引き継ぐと、荷重面が土層上端より高いと止まり、セルを 1 つ編集すると第 1 層の層厚が変わった)
+            inputModel.PileGroupSettlement.SoilLayersTopAltitude = inputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
             // 矩形荷重
             var rectLoadList = new List<RectLoad>(data.RectLoads?.Count ?? 0);
@@ -134,6 +137,9 @@ namespace PileDesign.Services
 
             // 荷重面標高 (基礎梁なし・ありで 1 つ。例題が解析ごとに持っていたら基礎梁なしの値)
             inputModel.PileGroupSettlement.LoadingPlaneAltitude = data.LoadingPlaneAltitudeNonBeam ?? data.LoadingPlaneAltitude;
+            // 例題の土層の層厚は荷重面を上端として作られている。土層上端を前のプロジェクトから引き継がない
+            // (引き継ぐと、荷重面が土層上端より高いと止まり、セルを 1 つ編集すると第 1 層の層厚が変わった)
+            inputModel.PileGroupSettlement.SoilLayersTopAltitude = inputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
             // 矩形荷重を設定（バッチ化）
             var rectLoadList = new List<RectLoad>(data.RectLoads.Count);

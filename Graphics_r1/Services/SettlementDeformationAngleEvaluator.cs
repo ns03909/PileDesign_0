@@ -85,7 +85,7 @@ namespace PileDesign.Services
                     heads.Add((pile.PileNo, pile.Point3D.X, pile.Point3D.Y, pile.SinglePileSettlementVL + group_mm * 1e-3));
                 }
                 string caseName = string.IsNullOrEmpty(rec.LoadCaseName) ? "群杭沈下" : rec.LoadCaseName;
-                string typeName = string.IsNullOrEmpty(rec.LoadingType) ? "" : $"（{rec.LoadingType}）";
+                string typeName = string.IsNullOrEmpty(rec.LoadingType) ? "" : $"（{PileGroupSettlement.LoadingTypeDisplayName(rec.LoadingType)}）";
                 // 旧形式から復元した結果は、どの解析で得た値か確かめられない。収束した結果と同じには判定しない
                 if (rec.IsConvergenceUnknown)
                 {

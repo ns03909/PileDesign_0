@@ -9,8 +9,10 @@ namespace PileDesign.Services
         {
             if (record == null) return "（群杭沈下: 未計算）";
             string caseName = string.IsNullOrWhiteSpace(record.LoadCaseName) ? "未設定" : record.LoadCaseName.Trim();
-            string loadingType = string.IsNullOrWhiteSpace(record.LoadingType) ? "未設定" : record.LoadingType.Trim();
-            return $"（ケース: {caseName}／解析方式: {loadingType}）";
+            string loadingType = record.IsBeamAware ? "基礎梁あり"
+                : string.IsNullOrWhiteSpace(record.LoadingType) ? "未設定"
+                : PileDesign.Models.InputData.PileGroupSettlement.LoadingTypeDisplayName(record.LoadingType.Trim());
+            return $"（ケース: {caseName}／荷重タイプ: {loadingType}）";
         }
     }
 }

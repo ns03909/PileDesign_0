@@ -105,7 +105,7 @@ namespace PileDesign.ViewModels
                         vbSettle += GroupSettlementOf(pile);
                     ys.Add(vbSettle);
                 }
-                else if (SelectedGraphOption == "沈下 個別矩形(基礎梁考慮)")
+                else if (SelectedGraphOption == "沈下 杭矩形(基礎梁考慮)")
                 {
                     ys.Add(GetBeamAwareCaseSettlement(pile, SelectedLoadCaseOption));
                 }
@@ -131,7 +131,7 @@ namespace PileDesign.ViewModels
 
             if (SelectedGraphOption == "沈下 群杭" || SelectedGraphOption == "沈下 単杭+群杭" ||
                 SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭" ||
-                SelectedGraphOption == "沈下 個別矩形(基礎梁考慮)")
+                SelectedGraphOption == "沈下 杭矩形(基礎梁考慮)")
             {
                 List<double> xsGround = [];
                 List<double> ysGround = [];

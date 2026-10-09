@@ -82,6 +82,9 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _relaxationFactor, Math.Clamp(value, 0.1, 1.0));
         }
 
+        /// <summary>最後に解き終えた解析の条件。保存して閉じたとき、メイン側が結果と一緒に記録する。</summary>
+        internal Models.AnalysisRunMetadata? LastRunSettings { get; private set; }
+
         /// <summary>解析の条件 (結果と一緒に保存し、計算書の表紙に書く)。</summary>
         internal Models.AnalysisRunMetadata CaptureRunSettings()
         {
@@ -259,9 +262,9 @@ namespace PileDesign.ViewModels
                     await RunAsync(_cancellationTokenSource.Token);
                 });
                 IsAnalysisExecuted = true;
-                _mainWindowViewModel.IsVerticalBeamAnalysisDone = true;
-                _mainWindowViewModel.MarkSettlementResultsCurrent();
-                _mainWindowViewModel.CaptureAnalysisResultSet(runSettings);
+                // メイン側の「解析済み・沈下結果は最新」の印は、保存して閉じたときにメイン側が付ける (LastRunSettings を使う)。
+                // 以前はここで付けており、保存せずに閉じても古い結果が「最新」と記録され、陳腐化の警告が消えた
+                LastRunSettings = runSettings;
 
                 if (CaseResults.Count > 0)
                 {

@@ -338,6 +338,23 @@ namespace TestProject1
             Assert.IsTrue(xaml.IndexOf("RunSummaryText") < xaml.IndexOf("ExecuteAnalysisCommand"), "まとめは実行ボタンの上に置く");
         }
 
+        /// <summary>
+        /// 群杭沈下ウィンドウを開くボタン (F8 も) は、初めて開くときは土層タブを出し、開いていればタブを変えない。
+        /// 直す場所を見せるとき (実行できない理由を出す前) は、開いていても指定のタブへ移る。
+        /// </summary>
+        [TestMethod]
+        public void OpeningTheWindow_StartsOnTheSoilLayersTab()
+        {
+            string src = TestSource.Read("Graphics_r1", "Views", "MainWindow.xaml.cs");
+            int start = src.IndexOf("private void ButtonGroupPileSettlement_Click(");
+            Assert.IsTrue(start > 0, "前提: 開くボタンの処理が見つかりません");
+            string body = src[start..src.IndexOf("}", start)];
+            StringAssert.Contains(body, "ShowGroupSettlementWindow(MainWindowViewModel.GroupSettlementInputTab.SoilLayers, keepTabIfOpen: true)");
+            StringAssert.Contains(src, "if (keepTabIfOpen) return;");
+            StringAssert.Contains(src, "ActivateGroupSettlementInputTabAction = tab => ShowGroupSettlementWindow(tab);",
+                "直す場所を見せるときは、開いていても指定のタブへ移ること");
+        }
+
         [TestMethod]
         public void TheWindow_HasOneLoadConditionTab_AndAnAnalysisTabWithBeamChoice()
         {
@@ -348,6 +365,9 @@ namespace TestProject1
             Assert.AreEqual(1, Regex.Matches(xaml, Regex.Escape("ItemsSource=\"{Binding CurrentInputModel.PileGroupSettlement.RectLoads")).Count,
                 "矩形荷重の表が 1 つではありません (同じ荷重を 2 か所で編集させない)");
             StringAssert.Contains(xaml, "Binding=\"{Binding QASource, Mode=OneWay}\" Header=\"出所\"");
+            // 出所の列と杭ごとの矩形の説明は、杭に紐付く矩形がある荷重タイプ (個別矩形系) だけで出す
+            Assert.AreEqual(2, Regex.Matches(xaml, Regex.Escape("Converter={StaticResource VisibilityConverter}, ConverterParameter='個別矩形,個別矩形（基礎梁考慮）'")).Count,
+                "出所の列か杭ごとの矩形の説明が、個別十字・任意矩形でも出ます");
             StringAssert.Contains(xaml, "Command=\"{Binding RebuildRectLoadsFromAxialForceCommand}\"");
             StringAssert.Contains(xaml, "Content=\"基礎梁なし\"");
             StringAssert.Contains(xaml, "Content=\"基礎梁あり\"");

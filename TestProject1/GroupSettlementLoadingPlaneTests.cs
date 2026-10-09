@@ -61,6 +61,25 @@ namespace TestProject1
             Assert.IsFalse(LegacySettlementMigration.Apply(same).Any(n => n.Contains("荷重面Z")), "同じ値なのに知らせています");
         }
 
+        /// <summary>
+        /// 荷重面Z だけを持つ旧ファイル (解析ごとの 2 項目が無い) を開いても、荷重面Z は保存した値のまま。
+        /// 以前はコンストラクタが 2 項目に既定値 -5 m を入れており、読み込みの仕上げがそれで荷重面Z を上書きした。
+        /// </summary>
+        [TestMethod]
+        public void OldFilesWithOnlyOnePlane_KeepTheirValue()
+        {
+            string json = "{\"LoadingPlaneAltitude\": -1.75, \"SoilLayersTopAltitude\": 0}";
+            var pgs = System.Text.Json.JsonSerializer.Deserialize<PileGroupSettlement>(json)!;
+            var notices = LegacySettlementMigration.Apply(pgs);
+            Assert.AreEqual(-1.75, pgs.LoadingPlaneAltitude, "旧ファイルの荷重面Z が既定値で上書きされました");
+            Assert.IsFalse(notices.Any(n => n.Contains("荷重面Z")));
+
+            // 新しく作ったモデルも、読み込みの仕上げで荷重面Z が変わらない
+            var fresh = new PileGroupSettlement { LoadingPlaneAltitude = -3.0 };
+            LegacySettlementMigration.Apply(fresh);
+            Assert.AreEqual(-3.0, fresh.LoadingPlaneAltitude);
+        }
+
         /// <summary>画面の荷重面Z は 1 つの値 (LoadingPlaneAltitude) を編集する。解析ごとの値を編集する入口は残さない。</summary>
         [TestMethod]
         public void TheWindow_EditsOneLoadingPlane()

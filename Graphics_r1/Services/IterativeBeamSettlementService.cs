@@ -144,7 +144,7 @@ namespace PileDesign.Services
             // 各杭の矩形寸法 (DX/DY 半値) を事前計算。
             // 優先順位:
             //  (1) 既存 RectLoad に LinkedPileNo が一致するエントリがあれば、その DX/DY を採用 (ユーザー編集を尊重)
-            //  (2) なければ SoilPile の GroupPileLoadDia から (一辺=√π·r) で正方形として算出
+            //  (2) なければ SoilPile の荷重面等価径 (未入力なら杭先端径) から (一辺=√π·r) で正方形として算出
             // どちらも取得不可の杭はスキップ。
             var halfDx = new Dictionary<int, double>();
             var halfDy = new Dictionary<int, double>();
@@ -163,10 +163,10 @@ namespace PileDesign.Services
                 }
                 int sIdx = pile.SoilPileAltNo - 1;
                 if (sIdx < 0 || sIdx >= soilPiles.Count) continue;
-                double radius = soilPiles[sIdx].GroupPileLoadDia * 0.5;
+                double radius = soilPiles[sIdx].EffectiveGroupPileLoadDia * 0.5;
                 if (radius <= 0)
                 {
-                    result.Log.Add($"[WARN] 杭No.{pile.PileNo}: 矩形寸法が取得できません (RectLoad と GroupPileLoadDia の両方が未設定)。スキップ");
+                    result.Log.Add($"[WARN] 杭No.{pile.PileNo}: 矩形寸法が取得できません (矩形荷重も、荷重面等価径・杭先端径もありません)。スキップ");
                     continue;
                 }
                 double side = Math.Sqrt(Math.PI) * radius;
@@ -175,7 +175,7 @@ namespace PileDesign.Services
             }
             if (halfDx.Count == 0)
             {
-                result.Log.Add("[ERROR] 全杭で矩形寸法が取得できません。反復解析タブの「リセット」ボタンで個別矩形を生成してください。");
+                result.Log.Add("[ERROR] 全杭で矩形寸法が取得できません。荷重条件タブの「杭ごとの矩形を作り直す」で杭矩形を作ってください。");
                 return result;
             }
 
@@ -210,8 +210,8 @@ namespace PileDesign.Services
             }
 
             string header = string.IsNullOrEmpty(caseLabel)
-                ? "個別矩形（基礎梁考慮）反復沈下解析"
-                : $"個別矩形（基礎梁考慮）反復沈下解析 [{caseLabel}]";
+                ? "群杭沈下解析（基礎梁あり）"
+                : $"群杭沈下解析（基礎梁あり） [{caseLabel}]";
             result.Log.Add(header);
             result.Log.Add($"  杭本数 = {piles.Count}, 基礎梁本数 = {inputModel.FoundationBeamInput.Beams.Count}");
             result.Log.Add($"  最大反復 = {maxIter}, 収束許容 = {tol:E2}, ばね剛性レンジ = [{kMin:E2}, {kMax:E2}] kN/m");

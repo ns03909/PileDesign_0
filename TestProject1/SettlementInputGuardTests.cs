@@ -116,8 +116,8 @@ namespace TestProject1
             var piles = new ObservableCollection<PileLayoutDataItem> { Pile(1, 0), Pile(2, 3) };
 
             var none = Run(new PileGroupSettlement { LoadingType = "個別十字" }, piles, loadDia: 0);
-            Assert.IsFalse(none.Success, "荷重面等価径が未入力で荷重が 1 つも無いのに、成功扱いにしています");
-            StringAssert.Contains(none.ErrorMessage, "荷重面等価径が未入力");
+            Assert.IsFalse(none.Success, "荷重面等価径も杭先端径も 0 で荷重が 1 つも無いのに、成功扱いにしています");
+            StringAssert.Contains(none.ErrorMessage, "荷重面等価径も杭先端径も 0");   // 荷重面等価径の既定は杭先端径
             StringAssert.Contains(none.ErrorMessage, "No.1, 2");
 
             var arbitrary = Run(new PileGroupSettlement { LoadingType = "任意矩形", RectLoads = [] }, piles, 1.0);
