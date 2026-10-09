@@ -11,8 +11,17 @@ using System.Numerics;
 namespace PileDesign.Models
 {
     // CaptainPileクラス
-    public class CaptainPile : BaseModel
+    public class CaptainPile : BaseModel, System.Text.Json.Serialization.IJsonOnDeserialized
     {
+        /// <summary>
+        /// 読込の直後にカタログ (PC リング・引張定着筋 PCD) を読み直す。選んだ PC リング (<see cref="PCRing"/>) は保存した値のまま使う
+        /// (解析したときの値を変えない)。派生値は PileTop の読込の仕上げで Update() が求め直す。
+        /// </summary>
+        void System.Text.Json.Serialization.IJsonOnDeserialized.OnDeserialized()
+        {
+            if (PCRings == null || PCRings.Count == 0) LoadPCRingOptions();
+            if (CaptainPileTensionBarPCDsSquare == null || CaptainPileTensionBarPCDsSquare.Count == 0) LoadCaptainPileTensionBarPCDs();
+        }
         // ───────── 定数 ─────────
         /// <summary>
         /// 限界回転角 (rad)。杭頭接合部実験で確認した値。
@@ -150,10 +159,14 @@ namespace PileDesign.Models
             set => SetProperty(ref _nu, value);
         }
 
+        [System.Text.Json.Serialization.JsonIgnore] // 選択肢 (get のみ)。保存しない
         public double[] ContractionRatioOption { get; } = [1.00, 0.85, 0.70];        // 絞り率
         private readonly CaptainPileTensionBarPCDLoader _captainPileTensionBarPCDLoader = new();
 
         private List<CaptainPileTensionBarPCD> _captainPileTensionBarPCDsSquare = [];
+        // カタログ (CSV から読む選択肢) なので保存しない。読込後に読み直す (OnDeserialized)。
+        // 保存すると杭体ごとにカタログの写しが入り、ファイルの半分ほどを占めていた
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<CaptainPileTensionBarPCD> CaptainPileTensionBarPCDsSquare
         {
             get => _captainPileTensionBarPCDsSquare;
@@ -161,6 +174,7 @@ namespace PileDesign.Models
         }
 
         private List<CaptainPileTensionBarPCD> _captainPileTensionBarPCDsCircle = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<CaptainPileTensionBarPCD> CaptainPileTensionBarPCDsCircle
         {
             get => _captainPileTensionBarPCDsCircle;
@@ -168,6 +182,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<string> _PCD_squareOption = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<string> PCD_squareOption
         {
             get => _PCD_squareOption;
@@ -175,6 +190,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<string> _PCD_circleOption = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<string> PCD_circleOption
         {
             get => _PCD_circleOption;
@@ -182,6 +198,9 @@ namespace PileDesign.Models
         }
 
         private double _ep;
+        // ここから ThetasMs までは Update() (SetBasicProperties・GetNMThetaRelationship) が PC リング・絞り率・パイルキャップから求める派生値なので保存しない。
+        // 読込後は PileTop の読込の仕上げで Update() が走って求め直す (保存すると、ファイルの値が求め直した値で塗り潰される)
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ep
         {
             get => _ep;
@@ -189,6 +208,7 @@ namespace PileDesign.Models
         }
 
         private double _ip;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ip
         {
             get => _ip;
@@ -196,6 +216,7 @@ namespace PileDesign.Models
         }
 
         private double _hp;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Hp
         {
             get => _hp;
@@ -203,6 +224,7 @@ namespace PileDesign.Models
         }
 
         private double _ec;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ec
         {
             get => _ec;
@@ -210,6 +232,7 @@ namespace PileDesign.Models
         }
 
         private double _ic;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ic
         {
             get => _ic;
@@ -217,6 +240,7 @@ namespace PileDesign.Models
         }
 
         private double _hc;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Hc
         {
             get => _hc;
@@ -224,6 +248,7 @@ namespace PileDesign.Models
         }
 
         private double _eb;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Eb
         {
             get => _eb;
@@ -231,6 +256,7 @@ namespace PileDesign.Models
         }
 
         private double _ib;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ib
         {
             get => _ib;
@@ -238,6 +264,7 @@ namespace PileDesign.Models
         }
 
         private double _hb;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Hb
         {
             get => _hb;
@@ -245,6 +272,7 @@ namespace PileDesign.Models
         }
 
         private double _ae;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ae
         {
             get => _ae;
@@ -252,6 +280,7 @@ namespace PileDesign.Models
         }
 
         private double _z;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Z
         {
             get => _z;
@@ -259,6 +288,7 @@ namespace PileDesign.Models
         }
 
         private double _ke;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ke
         {
             get => _ke;
@@ -266,6 +296,7 @@ namespace PileDesign.Models
         }
 
         private double _yieldMaxCurvature;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double YieldMaxCurvature
         {
             get => _yieldMaxCurvature;
@@ -273,6 +304,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<double> _yieldMs;
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> YieldMs
         {
             get => _yieldMs;
@@ -280,6 +312,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<double> _yieldNs;
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> YieldNs
         {
             get => _yieldNs;
@@ -287,6 +320,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<double> _yieldEpsilon0s;
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> YieldEpsilon0s
         {
             get => _yieldEpsilon0s;
@@ -294,6 +328,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<double> _yieldCurvatures;
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> YieldCurvatures
         {
             get => _yieldCurvatures;
@@ -301,6 +336,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<double> _ultimateMs;
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> UltimateMs
         {
             get => _ultimateMs;
@@ -308,6 +344,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<double> _ultimateNs;
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> UltimateNs
         {
             get => _ultimateNs;
@@ -315,6 +352,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<double> _ultimateEpsilon0s;
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> UltimateEpsilon0s
         {
             get => _ultimateEpsilon0s;
@@ -322,6 +360,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<double> _ultimateCurvatures;
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> UltimateCurvatures
         {
             get => _ultimateCurvatures;
@@ -329,6 +368,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<double> _Ns;
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> Ns
         {
             get => _Ns;
@@ -336,6 +376,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> _thetasMs;
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> ThetasMs
         {
             get => _thetasMs;
@@ -344,6 +385,7 @@ namespace PileDesign.Models
 
         // PCリングオプション
         private ObservableCollection<string> _pcRingOption = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<string> PCRingOption
         {
             get => _pcRingOption;
@@ -351,6 +393,7 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<PCRing> _pcRings = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<PCRing> PCRings
         {
             get => _pcRings;
@@ -364,6 +407,10 @@ namespace PileDesign.Models
             set => SetProperty(ref _pcRing, value);
         }
 
+        // Update() がパイルキャップの Fc・絞り率・径から作り直す派生値なので保存しない
+        // (引数付きコンストラクタしか無く、保存すると読み戻せずファイルが開けなくなる)。
+        // 読込後は PileTop の読込の仕上げ (ApplyPileCapConcrete → SetPileCapConcrete → Update) で作り直す
+        [System.Text.Json.Serialization.JsonIgnore]
         public CTPConcrete CTPConcrete { get; set; }
         public CTPTensionRebars CTPTensionRebars { get; set; } = new CTPTensionRebars();
 
@@ -1252,9 +1299,13 @@ namespace PileDesign.Models
 
         /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
         public CTPTensionRebars DeepCopy() => CloneWithoutSubscribers<CTPTensionRebars>();
+        // SigmaY・EpsilonY・BarArea・Ag は Update() が規格・径・本数から求める派生値なので保存しない
+        [System.Text.Json.Serialization.JsonIgnore]
         public double SigmaY { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public double EpsilonY { get; set; }
         public double Es { get; set; } = 205_000;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double BarArea { get; set; }
 
         private double _TDorTBmax;
@@ -1292,12 +1343,15 @@ namespace PileDesign.Models
             set => SetProperty(ref _isSquareArrangement, value);
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ag { get; set; }
 
         // 引張鉄筋材質
+        [System.Text.Json.Serialization.JsonIgnore]
         public string[] TensionAnchorGradeOption { get; } = ["SD390", "SD490", "SD685"];
 
         // 引張鉄筋径
+        [System.Text.Json.Serialization.JsonIgnore]
         public string[] TensionAnchorDiaOption { get; } = ["D38", "D41",];
 
         // 円形配置引張鉄筋本数オプション

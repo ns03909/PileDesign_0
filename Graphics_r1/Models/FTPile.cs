@@ -12,21 +12,32 @@ namespace PileDesign.Models
         /// <summary>値だけを持つので MemberwiseClone で十分。参照型のメンバは持たない。</summary>
         public FTPileTensionBars DeepCopy() => CloneWithoutSubscribers<FTPileTensionBars>();
         // 引張鉄筋
+        [System.Text.Json.Serialization.JsonIgnore]
         public string[] TensionAnchorGradeOption { get; private set; } =
         [
             "φ11, SBPR785/1030",
             "φ11, SBPR1080/1230",
         ];
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ft { get; private set; } // 鋼棒の短期許容応力度(N/mm2)
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Fu { get; private set; } // 鋼棒の引張耐力（N/mm2）
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ag { get; private set; } // 引抜き抵抗用鋼棒の全断面積（mm2）
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ag1 { get; private set; } // 引抜き抵抗用鋼棒の全断面積（mm2）
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Es { get; } = 205_000.0; // 鋼棒の弾性係数（N/mm2）
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ls { get; } = 600.0; // 鋼棒の有効長さ（m）600 - 2000
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ds { get; } = 500.0;// 引抜き抵抗用鋼棒の配置距離（m）
+        [System.Text.Json.Serialization.JsonIgnore]
         public double EpsilonA { get; private set; } // 鋼棒の許容ひずみ
+        [System.Text.Json.Serialization.JsonIgnore]
         public double DeltaA { get; private set; } // 鋼棒の許容伸び(m)
+        [System.Text.Json.Serialization.JsonIgnore]
         public double ThetaAS { get; private set; }
         public int TensionAnchorNum { get; set; } = 8; // 引抜き抵抗用鋼棒の配置距離（m）
         public string SelectedTensionAnchorGrade { get; set; } = "φ11, SBPR1080/1230";// 引抜き抵抗用鋼棒の配置距離（m）
@@ -72,8 +83,11 @@ namespace PileDesign.Models
         public double Fc { get; private set; } = 24.0;// パイルキャップのコンクリートの設計基準強度(N/mm2)
         [System.Text.Json.Serialization.JsonInclude]
         public double E { get; private set; } = 33_500.0 * Math.Pow(23.0 / 24.0, 2.0) * Math.Pow(24.0 / 60, 1.0 / 3.0); // パイルキャップコンクリートの弾性係数（N/mm2）
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Density { get; private set; } = 23.0;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Nu { get; private set; } = 0.2; // パイルキャップコンクリートのポアソン比
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ac { get; private set; } // 支承面積（パイルキャップ面積）(m2)
 
         // パラメータなしコンストラクタ（System.Text.Json デシリアライズ用）。
@@ -146,13 +160,32 @@ namespace PileDesign.Models
     }
 
     // FTパイルクラス
-    public class FTPile : BaseModel
+    public class FTPile : BaseModel, System.Text.Json.Serialization.IJsonOnDeserialized
     {
+        /// <summary>
+        /// 読込の直後に、カタログ (FT キャップ) を読み直し、保存しない派生値 ([JsonIgnore] を付けたもの。どれも入力から求め直せる) (支圧係数 PhiC・K0・N-M-θ 表。private set なので復元されない) を組み直す。
+        /// 組み直さないと PhiC=0 のまま、パイルキャップの Fc・杭径が変わらない限り Update が走らず、
+        /// θ の上限 (0.03 − 0.05·σN/(PhiC·Fc)) が 0 除算で数値でなくなる。
+        /// </summary>
+        void System.Text.Json.Serialization.IJsonOnDeserialized.OnDeserialized()
+        {
+            if (FTCaps == null || FTCaps.Count == 0) LoadFTCaps();
+            if (FTPileCap == null || FTPilePile == null || FTPileTensionBars == null) return;
+            // 引張鉄筋の派生値 (Ft・Ag・θas など) も保存しないので、規格・本数から求め直す
+            try { FTPileTensionBars.Update(); Update(); }
+            catch (Exception ex) { Serilog.Log.Warning(ex, "[FTPile] 読込後の組み直しに失敗しました"); }
+        }
+
         public FTPilePile FTPilePile { get; set; } = new(); // FTパイル杭体
         public FTPileCap FTPileCap { get; set; } // FTパイルキャップ
         public FTPileTensionBars FTPileTensionBars { get; set; } = new(); // FTパイル引張鉄筋
-        public FTCap FTCap = new();
+        /// <summary>選んだ FT キャップ。以前は公開フィールドで保存されず、開き直すと既定 (寸法 0) に戻っていた。</summary>
+        public FTCap FTCap { get; set; } = new();
+        // カタログ (CSV から読む選択肢) なので保存しない。読込後に読み直す (OnDeserialized)。
+        // 保存すると杭体ごとにカタログの写しが入り、ファイルの半分ほどを占めていた
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<FTCap> FTCaps { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<string> FTCapOption { get; set; } = [];
 
         /// <summary>
@@ -185,9 +218,13 @@ namespace PileDesign.Models
             set => SetProperty(ref _selectedFTCapName, value);
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public double PhiC { get; private set; } // 支圧係数
+        [System.Text.Json.Serialization.JsonIgnore]
         public double K0 { get; private set; } // 杭頭接合部の初期回転剛性
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> Ns { get; private set; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> ThetasMs { get; private set; }
 
         // パラメータなしコンストラクタ（System.Text.Json デシリアライズ用）。

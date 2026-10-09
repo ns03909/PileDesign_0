@@ -548,7 +548,13 @@ namespace PileDesign.Models.InputData
         // 新しいプロパティを追加
         public ObservableCollection<string> PileTipSettlementPresetParameterNames { get; set; }
 
-        public PileTop PileTop = new();
+        /// <summary>
+        /// 杭頭部の入力 (パイルキャップ・定着筋・半剛接合 3 工法の選択)。
+        /// 以前は公開フィールドで、保存の設定 (フィールドを含めない) では書き出されず、開き直すと既定値に戻っていた
+        /// (キャプテンパイルの PC リングが無くなって杭頭が剛接合で解かれ、杭頭の N-M は既定の D41×16 で検定された)。
+        /// Undo の写しはフィールドも含めるので、保存してから開き直すまで気づけなかった。
+        /// </summary>
+        public PileTop PileTop { get; set; } = new();
 
         /// <summary>杭頭部の、最上段の杭断面から導く値を入れ直す (<see cref="PileTop.SyncFromTopSection"/>)。</summary>
         internal void SyncPileTopFromTopSection()

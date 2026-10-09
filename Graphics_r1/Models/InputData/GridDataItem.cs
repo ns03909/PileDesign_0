@@ -55,6 +55,11 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _coordForeground, value);
         }
 
+        // 通り心上の杭。グラフ (沈下の通り心断面) を開くたびに SetPiles で杭配置から作り直す
+        // 描画用の一時データなので書き出さない。
+        // 以前は書き出しており、最後にグラフを開いたあとで削除した杭まで
+        // (杭配置には無いのに) 保存ファイルに残っていた。
+        [JsonIgnore]
         public List<PileLayoutDataItem> Piles { get; set; } = [];
 
         public void SetPiles(ObservableCollection<PileLayoutDataItem> piles, double axisAngle, double distance = 0.1)

@@ -11,8 +11,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _items, value);
         }
 
-        public double DeltaP;
-        public double Ysp;
+        // 地盤反力が上限に達する変位 ΔP と降伏変位 ysp。土圧抵抗ばね図の理論曲線に使う。
+        //
+        // 以前は公開<b>フィールド</b>だった。保存 (System.Text.Json) はフィールドを書き出さないので、
+        // 保存して開き直すと 0 に戻り、理論曲線が描かれなくなっていた。
+        // Undo の複製 (DeepCopyUtil は IncludeFields) では写っていたため、
+        // 編集中は正しく見えて保存往復でだけ消えた。
+        public double DeltaP { get; set; }
+        public double Ysp { get; set; }
 
         // DeltaPYspの更新メソッド
         public void UpdateDeltaPYsp(double deltaPonEmbedmentDepth)

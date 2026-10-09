@@ -6,8 +6,18 @@ using System.Collections.ObjectModel;
 
 namespace PileDesign.Models.InputData
 {
-    public class PileTop : BaseModel
+    public class PileTop : BaseModel, System.Text.Json.Serialization.IJsonOnDeserialized
     {
+        /// <summary>
+        /// 読込の直後に、半剛接合の 3 工法へパイルキャップの Fc・Ec を配り直す。
+        /// キャプテンパイルの Fc・Ec は保存しない (private) ので読込直後は 0 で、ここで入って派生値 (CTPConcrete・N-M) が組み直される。
+        /// </summary>
+        void System.Text.Json.Serialization.IJsonOnDeserialized.OnDeserialized()
+        {
+            try { ApplyPileCapConcrete(); }
+            catch (Exception ex) { Serilog.Log.Warning(ex, "[PileTop] 読込後の組み直しに失敗しました"); }
+        }
+
         // フィールド
         private int _pileBodyNo;
         public int PileBodyNo
@@ -99,9 +109,12 @@ namespace PileDesign.Models.InputData
 
         // PCリングオプション
         //public ObservableCollection<string> PCRingOption { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<string> FTCapOption { get; set; }
 
         //public List<PCRing> PCRings { get; set; }
+        // 画面表示用の説明文。値を持たない (要素がタプルで、保存しても {} の羅列になる)
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<(int, string, string)> Description { get; set; }
 
         // FTパイルオプション
@@ -379,13 +392,15 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _concreteThickness, value);
         }
 
-        // 鉄筋径
+        // 鉄筋径 (選択肢。保存しない)
+        [System.Text.Json.Serialization.JsonIgnore]
         public string[] MainBarSizeOption { get; } =
         [
             "D10","D13","D16","D19","D22","D25","D29","D32","D35","D38","D41"
         ];
 
-        // 鉄筋規格
+        // 鉄筋規格 (選択肢。保存しない)
+        [System.Text.Json.Serialization.JsonIgnore]
         public string[] MainBarSpecOption { get; } =
         [
             "SD295", "SD345", "SD390", "SD490"

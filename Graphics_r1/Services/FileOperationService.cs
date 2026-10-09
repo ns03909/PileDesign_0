@@ -706,6 +706,36 @@ namespace PileDesign.Services
         /// </list>
         /// 比べられなければ両方空。
         /// </summary>
+        /// <summary>
+        /// 以前は保存していたが、わざと読み捨てるようにした項目 (利用者の入力ではないので「使わなかった」と知らせない)。
+        /// </summary>
+        private static readonly string[] DeliberatelyDroppedProperties =
+        [
+            // 荷重タイプの選択肢の一覧。コードが持つ (古いファイルの一覧がコードの一覧を上書きしていた。2026-10-08)
+            "PileGroupSettlement.LoadingTypeOptions",
+        ];
+
+        private static bool IsDeliberatelyDropped(string path)
+            => DeliberatelyDroppedProperties.Any(d => path == d || path.StartsWith(d + ".", StringComparison.Ordinal));
+
+        /// <summary>
+        /// 経路が、ファイルでは空だった一覧の要素の項目か (例: 「FoundationBeamInput.Materials[].Name」で、ファイルの Materials が [])。
+        /// 一覧の要素の項目が無いのは、項目を補ったのではなく要素が無かったからなので、「既定値で補った」に数えない。
+        /// 以前は数えており、基礎梁の無い計算例を保存して開き直すと、読込の仕上げで足した既定の材料・断面の項目が
+        /// 1 つずつ「ファイルに無かった」と並んで、今の版で保存したファイルなのに「古い形式からの読み込み」が出た。
+        /// </summary>
+        private static bool IsUnderEmptyListInFile(string path, IReadOnlySet<string> inFile)
+        {
+            for (int at = path.IndexOf("[]", StringComparison.Ordinal); at >= 0; at = path.IndexOf("[]", at + 2, StringComparison.Ordinal))
+            {
+                string list = path[..at];
+                string elementPrefix = path[..(at + 2)] + ".";
+                if (inFile.Contains(list) && !inFile.Any(n => n.StartsWith(elementPrefix, StringComparison.Ordinal)))
+                    return true;
+            }
+            return false;
+        }
+
         internal (IReadOnlyList<string> Unused, IReadOnlyList<string> Missing) CompareInputProperties(ProjectData projectData, InputModel input)
         {
             if (projectData?.InputPropertyNamesInFile is not { Count: > 0 } inFile || input == null) return ([], []);
@@ -713,8 +743,8 @@ namespace PileDesign.Services
             {
                 using var perf = PileDesign.Common.PerfLog.Measure("読込の互換の点検", inFile.Count, "項目名");
                 var written = LoadCompatibilityReport.CollectPropertyNames(JsonSerializer.Serialize(input, _jsonOptions));
-                return (inFile.Where(n => !written.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).ToList(),
-                        written.Where(n => !inFile.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).ToList());
+                return (inFile.Where(n => !written.Contains(n) && !IsDeliberatelyDropped(n)).OrderBy(n => n, StringComparer.Ordinal).ToList(),
+                        written.Where(n => !inFile.Contains(n) && !IsUnderEmptyListInFile(n, inFile)).OrderBy(n => n, StringComparer.Ordinal).ToList());
             }
             catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException)
             {

@@ -45,6 +45,20 @@ namespace PileDesign.Services
         public Func<(InputModel? input, string? filePath, AnaModel? ana, IList<FEM.VerticalBeamCaseResult>? vbcr)>? LiveStateProvider { get; set; }
 
         /// <summary>
+        /// 解析結果の扱いに要る状態 (解析したときの入力の控え・「再解析が必要」の記録・杭要素分割の有無など) を、
+        /// <see cref="LiveStateProvider"/> と同じ瞬間に取るプロバイダ。手動保存が <see cref="FileOperationService.PrepareSave"/>
+        /// に渡しているものと同じものを返すこと。
+        ///
+        /// <para>以前は自動保存がこれらを渡していなかった。<c>PrepareSave</c> は沈下の結果を設定にかかわらず書き、
+        /// 控えが無いと「解析後に編集していない」として書くので、単杭沈下のあとに入力を編集して自動保存から
+        /// 復元すると、結果が編集後の入力に結び付き「再解析が必要」も出ず、杭要素分割済みの状態も消えていた。</para>
+        ///
+        /// <para>最新の状態を取れずに開始したときの参照で代用した (緊急保存だけ) ときは使わない
+        /// (別の時点の入力に、いまの記録を組み合わせることになる)。</para>
+        /// </summary>
+        public Func<AutoSaveResultContext>? LiveResultContextProvider { get; set; }
+
+        /// <summary>
         /// このアプリの起動ごとの印。自動保存・緊急保存のファイルの中に記録する
         /// (<c>ProjectData.AutoSaveSessionId</c>)。起動時の復元の確認に答えたとき、
         /// 同じ作業の古い自動保存だけを見送るために使う (名前の無いプロジェクトは元ファイルで結べないため)。
@@ -261,14 +275,34 @@ namespace PileDesign.Services
         /// <summary><see cref="PrepareState"/> の本体。緊急保存だけが、最新の状態を取れないときの代用を許す。</summary>
         private PreparedState? PrepareStateCore(bool allowStaleFallback)
         {
-            var (input, filePath, ana, vbcr) = ResolveState(allowStaleFallback);
+            var (input, filePath, ana, vbcr, isLive) = ResolveState(allowStaleFallback);
             if (input == null) return null;
+
+            // 解析結果の扱いに要る状態も手動保存と同じものを渡す (理由は LiveResultContextProvider)。
+            // 入力と同じ瞬間のものでなければ組み合わせないので、ライブ状態を取れたときだけ
+            AutoSaveResultContext? context = null;
+            if (isLive && LiveResultContextProvider != null)
+            {
+                try { context = LiveResultContextProvider(); }
+                catch (Exception ex) when (allowStaleFallback)
+                {
+                    // 緊急保存は、記録を取れなくても入力だけは残す (何も残さないより残すほうがよい)
+                    Log.Warning(ex, "AutoSave LiveResultContextProvider failed; saving without result context");
+                }
+            }
 
             // NaN 検査も直列化と同じ時点でここで行う (書く JSON と同じ値を検査する)。
             // 自動保存は<b>あとで復元する元</b>なので、NaN を含んだまま書くと、壊れたファイルしか
             // 残っていない状態で復元することになる
-            var save = _fileOperationService.PrepareSave(input, ana, vbcr, sourceFilePath: filePath,
-                autoSaveSessionId: SessionId, validateFinite: true);
+            var save = _fileOperationService.PrepareSave(input, ana, vbcr,
+                resultInputSnapshot: context?.ResultInputSnapshot,
+                resultCapturedAt: context?.ResultCapturedAt,
+                pileFemLinks: context?.PileFemLinks,
+                isElementSplit: context?.IsElementSplit,
+                inputChangedSinceAnalysis: context?.InputChangedSinceAnalysis ?? false,
+                sourceFilePath: filePath,
+                autoSaveSessionId: SessionId, validateFinite: true,
+                analysisRunRecords: context?.AnalysisRunRecords);
             return new PreparedState(save, filePath);
         }
 
@@ -281,11 +315,16 @@ namespace PileDesign.Services
         // 最新の状態を取れなかったとき、定期の自動保存は失敗として知らせる。以前は開始したときに取った参照で
         // 代用しており、その後に開き直した・新規にした作業ではなく<b>前の作業</b>を書いたうえで「成功」と出していた。
         // 緊急保存 (落ちる直前) だけは、何も残さないより残すほうがよいので代用を許す。
-        private (InputModel? input, string? filePath, AnaModel? ana, IList<FEM.VerticalBeamCaseResult>? vbcr) ResolveState(bool allowStaleFallback)
+        // isLive は最新の状態を取れたか (開始したときの参照で代用したら false)。
+        private (InputModel? input, string? filePath, AnaModel? ana, IList<FEM.VerticalBeamCaseResult>? vbcr, bool isLive) ResolveState(bool allowStaleFallback)
         {
             if (LiveStateProvider != null)
             {
-                try { return LiveStateProvider(); }
+                try
+                {
+                    var (input, filePath, ana, vbcr) = LiveStateProvider();
+                    return (input, filePath, ana, vbcr, true);
+                }
                 catch (Exception ex) when (allowStaleFallback)
                 {
                     Log.Warning(ex, "AutoSave LiveStateProvider failed; fallback to captured refs");
@@ -295,7 +334,7 @@ namespace PileDesign.Services
                     throw new InvalidOperationException("保存する作業の状態を取得できませんでした。", ex);
                 }
             }
-            return (_currentInputModel, _currentFilePath, _currentModel, _verticalBeamCaseResults);
+            return (_currentInputModel, _currentFilePath, _currentModel, _verticalBeamCaseResults, false);
         }
 
         private void PerformAutoSave(PreparedState prepared)
@@ -916,4 +955,16 @@ namespace PileDesign.Services
         /// <summary>次に自動保存を試みる時刻。止まっていれば null。</summary>
         public DateTime? NextAttemptAt { get; set; }
     }
+
+    /// <summary>
+    /// 自動保存に渡す、解析結果の扱いに要る状態 (<see cref="AutoSaveService.LiveResultContextProvider"/>)。
+    /// 中身は手動保存が <see cref="FileOperationService.PrepareSave"/> に渡すものと同じ。
+    /// </summary>
+    public sealed record AutoSaveResultContext(
+        InputModel? ResultInputSnapshot,
+        DateTime? ResultCapturedAt,
+        PileDesign.Models.PileFemLinkTable? PileFemLinks,
+        bool? IsElementSplit,
+        bool InputChangedSinceAnalysis,
+        IReadOnlyList<PileDesign.Models.AnalysisRunMetadata>? AnalysisRunRecords);
 }

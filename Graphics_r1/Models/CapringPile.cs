@@ -15,8 +15,17 @@ namespace PileDesign.Models
     ///   ③ 定着筋あり × 引張: 楕円相互作用で Ki, Mu = Mr·(1 - |N|/Ny)
     /// 単位系: 入力 N [N], 出力 M [N·mm], θ [rad], K [N·mm/rad] (CaptainPile と同じ)
     /// </summary>
-    public class CapringPile : BaseModel
+    public class CapringPile : BaseModel, System.Text.Json.Serialization.IJsonOnDeserialized
     {
+        /// <summary>
+        /// 読込の直後にカタログ (PC リング・引張定着筋) を読み直す。選んだもの (<see cref="PCRing"/>・<see cref="TensionBar"/>) は保存した値のまま使う。
+        /// 派生値は PileTop の読込の仕上げで Update() が求め直す。
+        /// </summary>
+        void System.Text.Json.Serialization.IJsonOnDeserialized.OnDeserialized()
+        {
+            if (PCRings == null || PCRings.Count == 0) LoadPCRingOptions();
+            if (TensionBars == null || TensionBars.Count == 0) LoadTensionBarOptions();
+        }
         // ───────── 定数 ─────────
         /// <summary>
         /// 限界回転角 (rad)。
@@ -87,9 +96,13 @@ namespace PileDesign.Models
 
         // ───────── PC リング ─────────
         private ObservableCollection<CapringPCRing> _pcRings = [];
+        // カタログ (CSV から読む選択肢) なので保存しない。読込後に読み直す (OnDeserialized)。
+        // 保存すると杭体ごとにカタログの写しが入り、ファイルの半分ほどを占めていた
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<CapringPCRing> PCRings { get => _pcRings; set => SetProperty(ref _pcRings, value); }
 
         private ObservableCollection<string> _pcRingOption = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<string> PCRingOption { get => _pcRingOption; set => SetProperty(ref _pcRingOption, value); }
 
         private CapringPCRing _pcRing = new();
@@ -100,11 +113,15 @@ namespace PileDesign.Models
 
         // ───────── PC リング内コンクリート ─────────
         private double _ec;
+        // [System.Text.Json.Serialization.JsonIgnore] を付けたものは Update() が求める派生値か、PileTop がパイルキャップの Fc・Ec を配るもの。保存しない
+        // (読込後は PileTop の読込の仕上げ ApplyPileCapConcrete → SetPileCapConcrete → Update で求め直す)
         /// <summary>PC リング内コンクリートのヤング係数 (N/mm²)、パイルキャップと同じ</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ec { get => _ec; set => SetProperty(ref _ec, value); }
 
         private double _ic;
         /// <summary>PC リング内側コンクリートの断面二次モーメント (mm⁴)</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ic { get => _ic; set => SetProperty(ref _ic, value); }
 
         private double _hc;
@@ -114,14 +131,17 @@ namespace PileDesign.Models
         // ───────── パイルキャップ仮想円柱 ─────────
         private double _eb;
         /// <summary>パイルキャップコンクリートのヤング係数 (N/mm²)、Eb = Ec</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Eb { get => _eb; set => SetProperty(ref _eb, value); }
 
         private double _ib;
         /// <summary>仮想円柱の断面二次モーメント (mm⁴)、Ib = Ic</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ib { get => _ib; set => SetProperty(ref _ib, value); }
 
         private double _hb;
         /// <summary>仮想円柱の高さ (mm)、Hb = D/2</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Hb { get => _hb; set => SetProperty(ref _hb, value); }
 
         // ───────── 引張定着筋 ─────────
@@ -137,9 +157,11 @@ namespace PileDesign.Models
         }
 
         private ObservableCollection<CapringTensionBar> _tensionBars = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<CapringTensionBar> TensionBars { get => _tensionBars; set => SetProperty(ref _tensionBars, value); }
 
         private ObservableCollection<string> _tensionBarOption = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<string> TensionBarOption { get => _tensionBarOption; set => SetProperty(ref _tensionBarOption, value); }
 
         private CapringTensionBar _tensionBar = new();
@@ -162,6 +184,7 @@ namespace PileDesign.Models
         /// 例外ルール: 配筋 3-D19 を杭径 D ≥ 400 mm に適用する場合、配置径は 180 mm
         /// (CSV 表の既定値 110 mm を上書き)。それ以外は CSV 表の値をそのまま返す。
         /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double EffectiveDc
         {
             get
@@ -180,6 +203,7 @@ namespace PileDesign.Models
         /// <summary>
         /// 引張定着筋の有効帯筋外径 (mm)。3-D19 + D ≥ 400 で 220 mm、それ以外は CSV 表の値。
         /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double EffectiveHoopOutDia
         {
             get
@@ -199,6 +223,7 @@ namespace PileDesign.Models
         /// 引張定着筋の適用可能最小杭径が実際の杭径より大きい場合の警告メッセージ。
         /// 警告がない場合は空文字列。XAML 側で TextBlock の Text にバインドして赤字表示する。
         /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public string TensionBarWarning
         {
             get
@@ -224,12 +249,15 @@ namespace PileDesign.Models
             set => SetProperty(ref _tensionBarGrade, value);
         }
 
+        [System.Text.Json.Serialization.JsonIgnore] // 選択肢 (get のみ)。保存しない
         public ObservableCollection<string> TensionBarGradeOption { get; } = ["SD345", "SD390"];
 
         /// <summary>定着筋鋼材ヤング係数 (N/mm²)</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Es => EsRebar;
 
         /// <summary>定着筋規格降伏強度 (N/mm²)</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double SigmaY => TensionBarGrade switch
         {
             "SD390" => 390.0,
@@ -256,12 +284,15 @@ namespace PileDesign.Models
         // ───────── 計算結果 ─────────
         private double _ke;
         /// <summary>等価初期回転剛性 Ke (N·mm/rad) — 圧縮時 Ki と等しい</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ke { get => _ke; set => SetProperty(ref _ke, value); }
 
         private ObservableCollection<double> _Ns = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<double> Ns { get => _Ns; set => SetProperty(ref _Ns, value); }
 
         private ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> _thetasMs = [];
+        [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> ThetasMs
         {
             get => _thetasMs;
@@ -270,6 +301,7 @@ namespace PileDesign.Models
 
         // ───────── パイルキャップ参照 ─────────
         private double _pileCapEc;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double PileCapEc { get => _pileCapEc; set => SetProperty(ref _pileCapEc, value); }
 
         // ───────── コンストラクタ ─────────
@@ -664,6 +696,7 @@ namespace PileDesign.Models
         }
 
         private double _pileCapFc;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double PileCapFc { get => _pileCapFc; set => SetProperty(ref _pileCapFc, value); }
     }
 }

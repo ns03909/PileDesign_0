@@ -29,6 +29,7 @@ namespace PileDesign.Models.PileLibrary
         /// <summary>適用可能最小杭径 (mm)</summary>
         public double MinPileDia { get; set; }
 
+        [System.Text.Json.Serialization.JsonIgnore] // 本数と径から作る表示名。保存しない
         public string Name => $"{BarNum}-{BarSize}";
 
         public ObservableCollection<Spec> GetSpecs()
