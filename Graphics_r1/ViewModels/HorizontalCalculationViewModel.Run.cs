@@ -73,18 +73,6 @@ namespace PileDesign.ViewModels
             {
             var casesToRun = BuildCasesToRun();
 
-            // そのレベルの地盤変位 (非液状化・液状化のどちらか) が 1 点でも 0 でないか。杭と根入部の両方を見る
-            bool HasGroundDisplacement(int lv)
-            {
-                static bool NonZero(double v) => double.IsFinite(v) && v != 0.0;
-                bool Any(System.Collections.Generic.IEnumerable<Models.InputData.ZDataItem>? items)
-                    => items?.Any(z => z != null && (lv == 1
-                        ? NonZero(z.GroundDisp1) || NonZero(z.GroundDisp1L)
-                        : NonZero(z.GroundDisp2) || NonZero(z.GroundDisp2L))) == true;
-                var ed = InputModel.ElementDivision;
-                return (ed?.SoilPiles?.Any(sp => Any(sp?.ZDataItems)) == true) || Any(ed?.SoilEmbedment?.ZDataItems);
-            }
-
             foreach (var loadCaseItem in casesToRun)
             {
                 LoadCase loadCase = loadCaseItem;
@@ -95,10 +83,8 @@ namespace PileDesign.ViewModels
                 // 慣性力も地盤変位も無いケースはスキップ (VL ケースは水平荷重 0 でも実行)。
                 // 以前は慣性力が 0 なら地盤変位があっても飛ばしていたので、地盤変位だけを与えるケース
                 // (慣性力 0・α1 > 0) が解かれず、結果にも出なかった
-                bool noInertia = loadCase.UpperMassForce == 0 && loadCase.FoundationMassForce == 0;
-                bool hasGroundDisplacement = HasGroundDisplacement(level);
-                if (!isVLCase && noInertia
-                    && !(hasGroundDisplacement && InputModel.LoadCasesInput.AllLoadCombinations.Any(c => c != null && c.Alpha1 != 0)))
+                // 判定は件数の数え方と共有する (HasLoadToRun)
+                if (!isVLCase && !HasLoadToRun(loadCase, null))
                 {
                     await AddLogAsync($"レベル{level}-{iLC + 1}: 慣性力・地盤変位ともゼロのためスキップ");
                     continue;
@@ -116,7 +102,7 @@ namespace PileDesign.ViewModels
                     int iLCOM = loadCombination.No - 1;
 
                     // 慣性力の無いケースは、地盤変位を与えない組合せ (α1 = 0) では荷重が何も無い
-                    if (!isVLCase && noInertia && loadCombination.Alpha1 == 0)
+                    if (!isVLCase && !HasLoadToRun(loadCase, loadCombination))
                     {
                         await AddLogAsync($"レベル{level}-{iLC + 1} 組合せ{iLCOM + 1}: 慣性力が 0 で地盤変位の係数 α1 も 0 のためスキップ");
                         continue;

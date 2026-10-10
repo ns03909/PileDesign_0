@@ -104,7 +104,10 @@ namespace TestProject1
         public void ZeroInertiaCase_IsSolvedWhenThereIsGroundDisplacement()
         {
             string run = TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.Run.cs");
-            StringAssert.Contains(run, "HasGroundDisplacement(level)");
+            // 判定は HasLoadToRun に出してあり、件数の数え方と共有する (WholeProgramAudit20261010Tests)
+            StringAssert.Contains(run, "!HasLoadToRun(loadCase, null)");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.cs"),
+                "if (!HasGroundDisplacementAt(loadCase.Level)) return false;");
             StringAssert.Contains(run, "慣性力・地盤変位ともゼロのためスキップ");
             Assert.IsFalse(run.Contains("荷重がゼロのためスキップ"), "慣性力だけで飛ばす古い判定が残っています");
         }

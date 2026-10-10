@@ -169,7 +169,8 @@ namespace TestProject1
             input.PsSpringSource = PsSpringSourceMode.Ultimate;
             rows = WordDocument.BuildDesignConditionRows(input);
             Assert.AreEqual("入力値＋応力解析結果", rows.Single(r => r.Item == "杭軸力の扱い").Value);
-            Assert.AreEqual("P-S 非線形ばね（極限）", rows.Single(r => r.Item == "杭先端の鉛直ばね").Value);
+            // 解析は PsSpringSource を使わない (常に単杭沈下解析の各節点の履歴)。計算書も書き分けない
+            Assert.AreEqual("P-S 非線形ばね", rows.Single(r => r.Item == "杭先端の鉛直ばね").Value);
         }
 
         [TestMethod]

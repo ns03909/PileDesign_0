@@ -112,6 +112,36 @@ namespace PileDesign.ViewModels
         public bool BypassUiPromptsForTesting { get; set; } = false;
 
         /// <summary>
+        /// FT キャップを選ぶ画面の代わり (テスト用)。null なら画面を出す。選んで続けるなら true を返す。
+        /// </summary>
+        internal Func<IReadOnlyList<PileDesign.Services.FTCapSelectionRow>, bool>? FTCapSelectorForTesting { get; set; }
+
+        /// <summary>
+        /// F.T.Pile 構法で FT キャップを選んでいない杭体があれば、知らせてその場で選ばせる。
+        /// 選んで続けるなら反映して編集として記録し true、取りやめなら false。未選択の杭体が無ければ何もせず true。
+        /// 画面を出せないテストの実行では、選ぶ手段 (<see cref="FTCapSelectorForTesting"/>) が無ければ取りやめる (黙って選ばない)。
+        /// </summary>
+        internal bool EnsureFTCapsSelected()
+        {
+            var input = _mainWindowViewModel.CurrentInputModel;
+            var rows = PileDesign.Services.FTCapSelection.FindUnselected(input);
+            if (rows.Count == 0 || input == null) return true;
+
+            bool proceed = FTCapSelectorForTesting != null
+                ? FTCapSelectorForTesting(rows)
+                : !BypassUiPromptsForTesting
+                  && Views.FTCapSelectionDialog.Select(System.Windows.Application.Current?.Windows
+                        .OfType<System.Windows.Window>().FirstOrDefault(w => w.IsActive), rows);
+            if (!proceed) return false;
+
+            int applied = PileDesign.Services.FTCapSelection.Apply(input, rows);
+            if (applied > 0)
+                _mainWindowViewModel.SaveUndoState(MainWindowViewModel.AnalysisInputScope.Model, "FT キャップを選定");
+            // 選べなかった (カタログに無い等) 杭体が残れば取りやめる
+            return PileDesign.Services.FTCapSelection.FindUnselected(input).Count == 0;
+        }
+
+        /// <summary>
         /// テストモード時は <paramref name="defaultForTest"/> を返す。本番モードは MessageService.Show をそのまま実行。
         /// </summary>
         private System.Windows.MessageBoxResult ConfirmOrDefault(
@@ -729,12 +759,9 @@ namespace PileDesign.ViewModels
                 // 液状化オプション: あり=1, なし=1, 両方=2
                 int liquefactionFactor = LiquefactionOption == LiquefactionOptionType.Both ? 2 : 1;
 
-                // 解析対象の荷重ケース1, 2の数（荷重ゼロのケースを除外）
-                int level1Count = InputModel.LoadCasesInput.LoadCasesLevel1?.Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
-                int level2Count = InputModel.LoadCasesInput.LoadCasesLevel2?.Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
-
-                // 適用されている荷重組合せの数
-                int combinationCount = InputModel.LoadCasesInput.AllLoadCombinations?.Count(x => x.IsApplicable) ?? 0;
+                // 解く (ケース, 組合せ) の数 (荷重の無いものを除く。ケースループと同じ判定 HasLoadToRun)
+                int level1Count = CountCaseCombinationsToRun(1);
+                int level2Count = CountCaseCombinationsToRun(2);
 
                 // 1荷重あたりレベル1解析計算ステップ数
                 int level1Steps = Level1CalculationStepsCount;
@@ -743,7 +770,7 @@ namespace PileDesign.ViewModels
                 int level2Steps = Level2CalculationStepsCount;
 
                 // 計算式（基本 + 再試行分）
-                int baseTotal = liquefactionFactor * (level1Count * level1Steps + level2Count * level2Steps) * combinationCount;
+                int baseTotal = liquefactionFactor * (level1Count * level1Steps + level2Count * level2Steps);
 
                 // VL 単独擬似ケース (P-S 非線形ばね有効 + VL 単独解析オプション ON)
                 // 構成: 1 ケース × 1 組合せ (先頭固定) × 液状化 false 固定 (1) × Level1 ステップ数
@@ -765,10 +792,7 @@ namespace PileDesign.ViewModels
             get
             {
                 int liquefactionFactor = LiquefactionOption == LiquefactionOptionType.Both ? 2 : 1;
-                int level1Count = InputModel.LoadCasesInput.LoadCasesLevel1?.Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
-                int level2Count = InputModel.LoadCasesInput.LoadCasesLevel2?.Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
-                int combinationCount = InputModel.LoadCasesInput.AllLoadCombinations?.Count(x => x.IsApplicable) ?? 0;
-                int total = liquefactionFactor * (level1Count + level2Count) * combinationCount;
+                int total = liquefactionFactor * (CountCaseCombinationsToRun(1) + CountCaseCombinationsToRun(2));
                 // VL 単独擬似ケース: 1 ケース × 1 組合せ × 液状化 false 固定 → +1
                 if (InputModel?.UsePsSpringAtPileTip == true && InputModel?.IsVLAnalysisEnabled == true)
                     total += 1;
@@ -1405,6 +1429,8 @@ namespace PileDesign.ViewModels
                 var runMetadata = _settingsAtLastRun ?? CaptureRunSettings();
                 runMetadata.Cases = CasesOf(this.CurrentModel);
                 vm.CaptureAnalysisResultSet(runMetadata);
+                // 計算書のサマリーも、登録するこの結果のものにする (解析を完了しただけでは書かない)
+                vm.DocxOutput.LastAnalysisSummaryText = LastRunSummaryText;
                 vm.RefreshResultTablesFromLastStep(); // 追加
 
                 // 解析した 1 つ目の荷重ケースをメイン画面で選択状態にする
@@ -1761,10 +1787,11 @@ namespace PileDesign.ViewModels
         /// </summary>
         private Views.AnalysisPreflightSummary BuildPreflightSummary()
         {
+            // 解く荷重ケースの数 (ケースループと同じ判定。慣性力 0 でも地盤変位を与えるケースは数える)
             int level1Count = InputModel.LoadCasesInput.LoadCasesLevel1?
-                .Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
+                .Count(x => x.IsAnalysisTarget && HasLoadToRun(x, null)) ?? 0;
             int level2Count = InputModel.LoadCasesInput.LoadCasesLevel2?
-                .Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
+                .Count(x => x.IsAnalysisTarget && HasLoadToRun(x, null)) ?? 0;
             int liquefactionFactor = LiquefactionOption == LiquefactionOptionType.Both ? 2 : 1;
 
             int combinationCount = InputModel.LoadCasesInput.AllLoadCombinations?
@@ -1804,6 +1831,11 @@ namespace PileDesign.ViewModels
             // 入力データの整合性ゲート (杭体・地盤・寸法・配筋など)
             if (!PileDesign.Services.CheckInputData.ValidateForAnalysis(
                     _mainWindowViewModel.CurrentInputModel, "水平解析"))
+                return;
+
+            // F.T.Pile 構法で FT キャップを選んでいない杭体: 知らせて、その場で選ぶ。キャップが無いと支圧係数 φc が 0 になり、
+            // 杭頭の M-θ と許容回転角が数値にならない (以前は知らせずに解析し、検定が「判定できない」になった)
+            if (!EnsureFTCapsSelected())
                 return;
 
             // 任意入力の地盤変位: これから解く荷重レベル・液状化の別の曲線が空・並びの誤りなら止める
@@ -1860,9 +1892,10 @@ namespace PileDesign.ViewModels
                     return;
             }
 
-            // 荷重がゼロの荷重ケースをチェック
+            // 荷重がゼロの荷重ケースをチェック (ケースループと同じ判定 HasLoadToRun。慣性力 0 でも地盤変位を与えるケースは解く。
+            // 以前はここも慣性力だけを見ており、地盤変位だけのケースを「スキップ」と知らせ、全部そうなら止めていた)
             var zeroForceLoadCases = InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases
-                .Where(lc => lc.UpperMassForce == 0 && lc.FoundationMassForce == 0)
+                .Where(lc => !HasLoadToRun(lc, null))
                 .ToList();
 
             if (zeroForceLoadCases.Count > 0)
@@ -1870,8 +1903,8 @@ namespace PileDesign.ViewModels
                 var levelNames = zeroForceLoadCases
                     .Select(lc => $"レベル{lc.Level}-{lc.No}")
                     .Distinct();
-                var message = $"以下の荷重ケースで荷重がゼロのため解析をスキップします:\n{string.Join(", ", levelNames)}\n\n" +
-                               "荷重ケースウィンドウで上部構造質量荷重または基礎構造質量荷重を設定してください。";
+                var message = $"以下の荷重ケースは慣性力も地盤変位も無いため解析をスキップします:\n{string.Join(", ", levelNames)}\n\n" +
+                               "荷重ケースウィンドウで上部構造質量荷重または基礎構造質量荷重を設定するか、地盤変位を与えてください。";
                 ShowInfoOrSkip(message, "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
 
                 // すべての荷重ケースがゼロの場合は解析を中止
@@ -3291,6 +3324,48 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// そのレベルの地盤変位 (非液状化・液状化のどちらか) が 1 点でも 0 でないか。杭と根入部の両方を見る。
+        /// </summary>
+        internal bool HasGroundDisplacementAt(int level)
+        {
+            static bool NonZero(double v) => double.IsFinite(v) && v != 0.0;
+            bool Any(IEnumerable<Models.InputData.ZDataItem>? items)
+                => items?.Any(z => z != null && (level == 1
+                    ? NonZero(z.GroundDisp1) || NonZero(z.GroundDisp1L)
+                    : NonZero(z.GroundDisp2) || NonZero(z.GroundDisp2L))) == true;
+            var ed = InputModel.ElementDivision;
+            return (ed?.SoilPiles?.Any(sp => Any(sp?.ZDataItems)) == true) || Any(ed?.SoilEmbedment?.ZDataItems);
+        }
+
+        /// <summary>
+        /// 地震時の荷重ケース (と組合せ) に、解くべき荷重があるか。慣性力が無くても、地盤変位があり、
+        /// それを与える組合せ (α1 ≠ 0) なら解く。<paramref name="combination"/> が null ならどれかの組合せで解くか。
+        /// ケースループ (Run.cs) と件数の数え方 (総ステップ数・ケース数・実行前の確認・追加実行の未計算件数) で共有する。
+        /// 以前は数える側が慣性力だけを見ており、地盤変位だけのケースしかないと「解析する計算が 1 件もありません」で
+        /// 実行できず、混ざっているときは進捗・件数が実際と合わなかった。
+        /// </summary>
+        internal bool HasLoadToRun(LoadCase loadCase, LoadCombination? combination)
+        {
+            if (loadCase.UpperMassForce != 0 || loadCase.FoundationMassForce != 0) return true;
+            if (!HasGroundDisplacementAt(loadCase.Level)) return false;
+            return combination != null
+                ? combination.Alpha1 != 0
+                : InputModel.LoadCasesInput.AllLoadCombinations.Any(c => c != null && c.Alpha1 != 0);
+        }
+
+        /// <summary>そのレベルで解く (解析対象の荷重ケース, 適用する組合せ) の組の数。</summary>
+        private int CountCaseCombinationsToRun(int level)
+        {
+            var cases = level == 1 ? InputModel.LoadCasesInput.LoadCasesLevel1 : InputModel.LoadCasesInput.LoadCasesLevel2;
+            var combos = InputModel.LoadCasesInput.AllLoadCombinations?.Where(c => c != null && c.IsApplicable).ToList() ?? [];
+            int n = 0;
+            foreach (var lc in cases ?? [])
+                if (lc != null && lc.IsAnalysisTarget)
+                    n += combos.Count(c => HasLoadToRun(lc, c));
+            return n;
+        }
+
+        /// <summary>
         /// 「実行予定 (現在選択中) だが既存結果にない」ケースの件数。
         /// 追加実行モードの TotalPlannedCaseCount 表示用。
         /// </summary>
@@ -3299,9 +3374,10 @@ namespace PileDesign.ViewModels
             int n = 0;
             foreach (var lc in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
             {
-                if (lc.UpperMassForce == 0 && lc.FoundationMassForce == 0) continue;
+                if (!HasLoadToRun(lc, null)) continue;
                 foreach (var com in InputModel.LoadCasesInput.AllLoadCombinations)
                 {
+                    if (!HasLoadToRun(lc, com)) continue;
                     foreach (var liq in EnumerateLiquefactionCases())
                     {
                         var k = FEM.AnalysisRunSnapshot.CaseKey.Of(lc, com, liq);

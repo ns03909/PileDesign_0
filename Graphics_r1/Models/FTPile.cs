@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace PileDesign.Models
 {
@@ -287,6 +288,30 @@ namespace PileDesign.Models
         /// 変えても届かず、既定の φ600 / φ400 のまま耐力 (Ap 経由) と初期回転剛性
         /// K0 (D1³ − D2³) を計算していた。解析の入口からも呼ぶ。
         /// </summary>
+        /// <summary>
+        /// FT キャップを選んでいないか (キャップの杭径 Phi が 0)。未選択だと支圧係数 φc が 0 になり、
+        /// 杭頭の M-θ と許容回転角が数値にならない。
+        /// </summary>
+        public bool IsCapUnselected() => FTCap == null || !(FTCap.Phi > 0);
+
+        /// <summary>杭径に合う FT キャップ (キャップの杭径 Phi = 杭径)。カタログに無ければ null。</summary>
+        public FTCap? CapForPileDiameter(double pileDiameter)
+            => FTCaps?.FirstOrDefault(c => c != null && Math.Abs(c.Phi - pileDiameter) < 0.5);
+
+        /// <summary>
+        /// FT キャップを選ぶ (キャップの杭径 Phi で指定)。カタログに無ければ何もせず false。
+        /// 杭頭部の画面と、解析の前に未選択を知らせて選ぶ画面の両方から使う。
+        /// </summary>
+        public bool SelectCap(double phi)
+        {
+            var cap = FTCaps?.FirstOrDefault(c => c != null && Math.Abs(c.Phi - phi) < 0.5);
+            if (cap == null) return false;
+            FTCap = cap;
+            SelectedFTCapName = $"{cap.Phi}";
+            Update();
+            return true;
+        }
+
         internal void SetDimensionsFromSection(double pileDiameter, double concreteThickness)
         {
             if (FTPilePile == null || pileDiameter <= 0.0) return;

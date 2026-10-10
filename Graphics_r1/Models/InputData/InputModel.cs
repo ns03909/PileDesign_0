@@ -2055,6 +2055,8 @@ namespace PileDesign.Models.InputData
                     // なってからは保存でも消えていた (SaveLoadRoundTripTests が検出)。
                     UsePsSpringAtPileTip = this.UsePsSpringAtPileTip,
                     IsVLAnalysisEnabled = this.IsVLAnalysisEnabled,
+                    // 保存ファイルの値を落とさないために写す (解析は使っていない。元に戻すと既定へ落ち、保存で消えていた)
+                    PsSpringSource = this.PsSpringSource,
                     // 基礎のねじれ拘束。写し忘れていた。
                     // AnalysisModelling が代表節点の Rz 拘束に使う<b>解析に効く設定</b>で、
                     // 元に戻す操作でこれだけ既定 (拘束しない) へ落ちていた。

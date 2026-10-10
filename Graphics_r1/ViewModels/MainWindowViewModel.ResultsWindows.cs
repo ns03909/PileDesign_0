@@ -90,21 +90,23 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // 解析済み荷重ケース名のセット
-            var analyzedLoadCaseNames = new HashSet<string>(
-                results.Where(r => r.LoadCase != null).Select(r => r.LoadCase.LoadName));
+            // 解析済みの荷重ケース・組合せは番号で照合する (計算書へ写す CopyReportSelectionFrom と同じ)。
+            // 以前は名前で照合していた。組合せの名前は係数の文字列なので、解析後に係数を変えると解析済みの組合せが
+            // 「未解析」になって画面では外せないのに計算書には載り、係数が近い 2 つは片方だけ解いても両方「解析済み」になった。
+            // 荷重ケースも解析後に名前を変えると同じことが起きた
+            var analyzedCases = new HashSet<(int Level, int No)>(
+                results.Where(r => r.LoadCase != null).Select(r => (r.LoadCase.Level, r.LoadCase.No)));
 
             foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel1)
-                lc.IsAnalyzed = analyzedLoadCaseNames.Contains(lc.LoadName);
+                lc.IsAnalyzed = analyzedCases.Contains((lc.Level, lc.No));
             foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel2)
-                lc.IsAnalyzed = analyzedLoadCaseNames.Contains(lc.LoadName);
+                lc.IsAnalyzed = analyzedCases.Contains((lc.Level, lc.No));
 
-            // 解析済み荷重組合せ名のセット
-            var analyzedCombNames = new HashSet<string>(
-                results.Where(r => r.LoadCombination != null).Select(r => r.LoadCombination.Name));
+            var analyzedCombNos = new HashSet<int>(
+                results.Where(r => r.LoadCombination != null).Select(r => r.LoadCombination.No));
 
             foreach (var comb in CurrentInputModel.LoadCasesInput.LoadCombinations)
-                comb.IsAnalyzed = analyzedCombNames.Contains(comb.Name);
+                comb.IsAnalyzed = analyzedCombNos.Contains(comb.No);
 
             // 液状化条件
             DocxOutput.IsLiquefactionYesAnalyzed = results.Any(r => r.IsLiquefaction);

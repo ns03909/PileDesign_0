@@ -163,6 +163,9 @@ namespace PileDesign.ViewModels
         /// v29: 解析終了時にステップ単位の収束サマリーをレポート出力する。
         /// 全ステップ (再試行含む) を表形式で表示し、未収束件数を集計表示。
         /// </summary>
+        /// <summary>直近に完了した解析のステップ収束サマリー。OK で結果を登録するときに計算書へ渡す。</summary>
+        internal string? LastRunSummaryText { get; private set; }
+
         private async Task OutputStepSummaryReport()
         {
             var snapshot = _stepSummaries.ToArray();
@@ -170,7 +173,9 @@ namespace PileDesign.ViewModels
 
             // テキスト全体を 1 度ビルド → ログとキャッシュに出す (docx 出力用)
             string summaryText = BuildStepSummaryReportText(snapshot);
-            _mainWindowViewModel.DocxOutput.LastAnalysisSummaryText = summaryText;
+            // 計算書へは OK で結果を登録するときに渡す (OnOk)。ここで直接書くと、OK を押さずに閉じた解析のサマリーが
+            // 登録済みの前の結果と並んで計算書に載った
+            LastRunSummaryText = summaryText;
             foreach (var line in summaryText.Split('\n'))
             {
                 // BuildStepSummaryReportText は \r\n を出さない前提

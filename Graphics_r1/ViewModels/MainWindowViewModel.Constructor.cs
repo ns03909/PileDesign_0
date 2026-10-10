@@ -152,7 +152,18 @@ namespace PileDesign.ViewModels
             {
                 int cur = live.IndexOf(desired[i]);
                 if (cur < 0) continue;          // 並べ替えの間に消えた
-                if (cur != i) live.Move(cur, i);
+                if (cur == i) continue;
+                try
+                {
+                    live.Move(cur, i);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    // 位置を調べてから動かすまでの間に候補が減った (この lock を通らない書き手がいる。
+                    // EnsureAnalysisResultContentOrder の説明を参照)。並べ替えはやり直せるので諦める。
+                    // 以前はここで例外が外へ出て、Dispatcher の未処理例外になっていた (2026-10-10 の全体テストで発生)
+                    return;
+                }
             }
         }
 

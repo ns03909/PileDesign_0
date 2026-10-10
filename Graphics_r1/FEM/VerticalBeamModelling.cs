@@ -123,9 +123,16 @@ namespace PileDesign.FEM
             if (_inputModel.InputNodes == null)
                 return;
 
+            // 基礎梁につながっていない一般節点は入れない (水平解析の AnalysisModelling と同じ判定)。
+            // 入れると剛性が 1 つも入らない自由な節点になり、剛性行列が特異になって
+            // 単杭沈下 (基礎梁考慮)・群杭沈下 (基礎梁あり) が「連立方程式の求解に失敗」で止まっていた。
+            // 何も負担していないので、除いても結果は変わらない
+            var skip = new HashSet<Guid>(_inputModel.GetUnconnectedGeneralNodes().Select(n => n.UniqueId));
+
             foreach (var inputNode in _inputModel.InputNodes)
             {
                 if (inputNode.Type != NodeType.General) continue;
+                if (skip.Contains(inputNode.UniqueId)) continue;
 
                 var node = new Node();
                 node.SetNodeInfo($"InputNode-{inputNode.No}", inputNode.X, inputNode.Y, inputNode.Z);

@@ -118,6 +118,10 @@ namespace PileDesign.Models
                 {
                     // WriteIndented は付けない（複製にはコストだけで意味が無い）
                     ReferenceHandler = ReferenceHandler.Preserve,
+                    // 保存・DeepCopy と同じく NaN・∞ を書けるようにする。以前は無く、結果か入力に NaN が 1 つでもあると
+                    // 書き出しが例外になって控えを作れず、結果が編集中の入力で描かれ、編集すると計算書を出せなくなった
+                    // (再解析しても同じ NaN で失敗し、抜け出せなかった)
+                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
                 };
 
                 string json = JsonSerializer.Serialize(payload, options);

@@ -468,12 +468,13 @@ namespace PileDesign.Output
                 "荷重ケースの地震時軸力が 0（未入力）の杭は、水平解析では杭頭に軸力を与えず、"
                 + "曲げ・せん断の検定では常時軸力 VL を設計軸力とする"));
 
+            // 解析は単杭沈下解析の各節点の (相対変位, 地盤反力) の履歴からばねを作る (AnalysisModelling.BuildVerticalNodeSprings)。
+            // 以前は使われていない設定 PsSpringSource から「常時」「極限」と書き分けており、極限と書いても解析は使っていなかった
             bool psSpring = inputModel?.UsePsSpringAtPileTip ?? false;
-            string psSource = inputModel?.PsSpringSource == PsSpringSourceMode.Ultimate ? "極限" : "常時";
             rows.Add(("杭先端の鉛直ばね",
-                psSpring ? $"P-S 非線形ばね（{psSource}）" : "杭先端支持",
+                psSpring ? "P-S 非線形ばね" : "杭先端支持",
                 psSpring
-                    ? $"沈下解析の荷重～沈下量関係（{psSource}）から、杭の各節点に非線形の鉛直ばねを設ける。"
+                    ? "単杭沈下解析で得た各節点の地盤反力と相対変位の関係から、杭の各節点に非線形の鉛直ばねを設ける。"
                       + "杭軸力は各杭の接合節点に外力として作用させる"
                       + (inputModel?.IsVLAnalysisEnabled == true ? "。常時 (VL) のみのケースも解析している" : "")
                     : "杭先端の鉛直変位を固定する。杭周面・杭先端の鉛直抵抗は考慮しない"));
