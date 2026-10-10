@@ -1074,56 +1074,8 @@ namespace PileDesign.ViewModels
             var pileBody = BodyAt(pileBodyNo)!;
             if (pileBody.PileBodySegments == null || pileBody.PileBodySegments.Count == 0)
                 return;
-
-            // セグメント0の杭径を取得
-            var segment0 = pileBody.PileBodySegments[0];
-            double pileDia = segment0.PileSection?.PileDiameter ?? 0;
-            if (pileDia <= 0) return;
-
-            // FTPileのFTCapsから該当するFTCapを選択
-            var ftPile = pileBody.PileTop?.FTPile;
-            if (ftPile?.FTCaps == null || ftPile.FTCaps.Count == 0)
-                return;
-
-            // 杭径に一致するFTキャップを検索（FTキャップは300-1200mm）
-            // 完全一致がなければ、杭径以上で最小のものを選択
-            var targetFTCap = ftPile.FTCaps.FirstOrDefault(c => Math.Abs(c.Phi - pileDia) < 1);
-            if (targetFTCap == null)
-            {
-                // 完全一致がない場合、杭径以上で最小のものを選択
-                targetFTCap = ftPile.FTCaps
-                    .Where(c => c.Phi >= pileDia)
-                    .OrderBy(c => c.Phi)
-                    .FirstOrDefault();
-            }
-            // それでもない場合、最大のものを選択
-            if (targetFTCap == null)
-            {
-                targetFTCap = ftPile.FTCaps.OrderByDescending(c => c.Phi).FirstOrDefault();
-            }
-
-            if (targetFTCap != null && pileBody.PileTop != null)
-            {
-                // FTCapを設定
-                ftPile.FTCap = targetFTCap;
-                ftPile.SelectedFTCapName = targetFTCap.Phi.ToString();
-                pileBody.PileTop.SelectedFTCap = (int)targetFTCap.Phi;
-
-                // 杭の寸法を設定（外径と内径）
-                // 杭径は杭断面から。導出は FTPile.DimensionsFromSection に集約
-                ftPile.SetDimensionsFromSection(
-                    pileDia, segment0.PileSection?.ConcreteThickness ?? 0.0);
-
-                // FTPileを更新
-                ftPile.Update();
-
-                // 諸元表示を更新
-                pileBody.PileTop.SelectedPileTopSpecification = targetFTCap.GetSpecs();
-
-            }
-            else
-            {
-            }
+            // 杭径から FT キャップを決める (PileTop.AutoSelectFTCap に一本化)
+            pileBody.PileTop?.AutoSelectFTCap(pileBody.PileBodySegments[0].PileSection);
         }
 
         [RelayCommand]

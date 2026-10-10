@@ -647,48 +647,8 @@ namespace PileDesign.Views
         /// </summary>
         private static void AutoSelectFTCap(PileTopViewModel viewModel, PileSection pileSection)
         {
-            if (pileSection == null) return;
-
-            var ftPile = viewModel.PileTop?.FTPile;
-            if (ftPile?.FTCaps == null || ftPile.FTCaps.Count == 0) return;
-
-            // 杭径を取得
-            double pileDia = pileSection.PileDiameter;
-            if (pileDia <= 0) return;
-
-            // 杭径に一致するFTキャップを検索（FTキャップは300-1200mm）
-            // 完全一致がなければ、杭径以上で最小のものを選択
-            var targetFTCap = ftPile.FTCaps.FirstOrDefault(c => System.Math.Abs(c.Phi - pileDia) < 1);
-            if (targetFTCap == null)
-            {
-                // 完全一致がない場合、杭径以上で最小のものを選択
-                targetFTCap = ftPile.FTCaps
-                    .Where(c => c.Phi >= pileDia)
-                    .OrderBy(c => c.Phi)
-                    .FirstOrDefault();
-            }
-            // それでもない場合、最大のものを選択
-            if (targetFTCap == null)
-            {
-                targetFTCap = ftPile.FTCaps.OrderByDescending(c => c.Phi).FirstOrDefault();
-            }
-
-            if (targetFTCap != null && viewModel.PileTop != null)
-            {
-                // FTCapを設定
-                ftPile.FTCap = targetFTCap;
-                ftPile.SelectedFTCapName = targetFTCap.Phi.ToString();
-                viewModel.PileTop.SelectedFTCap = (int)targetFTCap.Phi;
-
-                // 杭の寸法を設定（外径と内径）。導出は FTPile 側に集約
-                ftPile.SetDimensionsFromSection(pileDia, pileSection.ConcreteThickness);
-
-                // FTPileを更新
-                ftPile.Update();
-
-                // 諸元表示を更新 (FTキャップ + 引張鉄筋の合成)
-                viewModel.PileTop.SelectedPileTopSpecification = ftPile.GetCombinedSpecs();
-            }
+            // 杭径から FT キャップを決める (PileTop.AutoSelectFTCap に一本化)
+            viewModel.PileTop?.AutoSelectFTCap(pileSection);
         }
         private void ContextMenu_Opened(object sender, RoutedEventArgs e)
         {

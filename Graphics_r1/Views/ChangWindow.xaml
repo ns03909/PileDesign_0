@@ -513,7 +513,7 @@
                                                         <DataTemplate>
                                                             <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='FT-Pile構法'}">
                                                                 <ComboBox Width="100"
-                                                                      ItemsSource="{Binding DataContext.PileTop.FTPile.FTCapOption, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                      ItemsSource="{Binding DataContext.PileTop.FTPile.FTCapOption, RelativeSource={RelativeSource AncestorType=Window}}" IsEnabled="False" ToolTip="FT キャップは杭径から自動で決めます"
                                                                       SelectedItem="{Binding DataContext.PileTop.SelectedFTCap, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                       SelectionChanged="ComboBoxFTCapChanged"
                                                                       HorizontalContentAlignment="Right"/>

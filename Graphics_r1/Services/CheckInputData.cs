@@ -58,11 +58,10 @@ namespace PileDesign.Services
             // 鋼管杭 + 鉄筋定着工法 の杭頭接合部を組めない杭体 (剛接合として続ける)
             warnings.AddRange(CollectSteelPileHeadJointNotices(inputModel));
 
-            // F.T.Pile 構法で FT キャップを選んでいない杭体 (水平解析の前に、その場で選ぶ画面も出す)
-            foreach (var row in FTCapSelection.FindUnselected(inputModel))
-                warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.PileBody(row.PileBodyIndex + 1),
-                    $"{row.PileBodyName}: F.T.Pile 構法の FT キャップが選ばれていません。杭頭の曲げモーメント－回転角関係と許容回転角を求められません。",
-                    "杭頭部の画面で FT キャップを選ぶ (水平解析の前にも選べます)"));
+            // F.T.Pile 構法で、杭径に合う FT キャップがカタログに無い杭体 (キャップは杭径から自動で決める。無ければ解析を止める)
+            foreach (var (index, message) in FTCapSelection.FindWithoutCatalogCap(inputModel))
+                warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.PileBody(index + 1), message,
+                    "杭体の杭径を FT キャップのある杭径 (300〜1200 mm) にする"));
 
             // 各杭の ΔZc (接合点 − 杭頭オフセット)
             if (inputModel.PileLayoutItems != null)

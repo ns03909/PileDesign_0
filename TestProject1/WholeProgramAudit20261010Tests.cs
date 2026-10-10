@@ -347,87 +347,85 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// FT キャップを選んでいない杭体を見つけ、杭径に合うキャップを最初から選んでおき、反映すると許容回転角が求まる。
-        /// 入力の注意の一覧にも出す。
+        /// FT キャップは杭径から自動で決める (杭径と一致するキャップ。カタログに無ければ未選択にして知らせる)。
+        /// 未選択・違う径のキャップは、水平解析の前に決め直して続ける。カタログに杭径が無ければ止める。
         /// </summary>
         [TestMethod]
-        public void FTCap_Unselected_IsFoundSuggestedAndApplied()
+        public void FTCap_IsChosenFromThePileDiameter()
         {
             var built = FTPileWithoutCap();
             if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
             var (input, body) = built.Value;
             var ft = body.PileTop.FTPile;
+            var section = body.PileBodySegments[0].PileSection;
+            double diameter = section.PileDiameter;
+            Assert.IsNotNull(ft.CapForPileDiameter(diameter), "前提: 例題の杭径のキャップがカタログにある");
 
-            StringAssert.Contains(string.Join(Environment.NewLine, PileDesign.Services.CheckInputData.CollectInputWarnings(input)),
-                "FT キャップが選ばれていません", "入力の注意の一覧に出ていません");
+            // 杭頭部の自動選定: 杭径と一致するキャップ
+            Assert.IsTrue(body.PileTop.AutoSelectFTCap(section));
+            Assert.AreEqual(diameter, ft.FTCap.Phi, 1e-9);
+            Assert.IsTrue(double.IsFinite(ft.GetAllowableRotationAngle(1_000_000.0)), "キャップを決めても許容回転角が求まりません");
 
-            var rows = PileDesign.Services.FTCapSelection.FindUnselected(input);
-            Assert.AreEqual(1, rows.Count);
-            var row = rows[0];
-            double diameter = body.PileBodySegments[0].PileSection.PileDiameter;
-            Assert.AreEqual(diameter, row.PileDiameter, 1e-9);
-            Assert.AreEqual(ft.CapForPileDiameter(diameter)?.Phi, row.SelectedPhi, "杭径に合うキャップを最初から選んでいません");
-            Assert.IsTrue(row.Options.Count > 0, "選べるキャップがありません");
-            row.SelectedPhi ??= row.Options[0];
+            // 違う径のキャップを持っていたら、解析の前に杭径へ決め直して続ける
+            Assert.IsTrue(ft.SelectCap(ft.FTCaps.First(c => System.Math.Abs(c.Phi - diameter) > 1).Phi));
+            Assert.AreEqual(1, PileDesign.Services.FTCapSelection.FindMismatched(input).Count, "杭径と違うキャップを見つけていません");
+            var mainVm = new PileDesign.ViewModels.MainWindowViewModel { CurrentInputModel = input };
+            var vm = new PileDesign.ViewModels.HorizontalCalculationViewModel(mainVm) { BypassUiPromptsForTesting = true };
+            Assert.IsTrue(vm.EnsureFTCapsMatchPileDiameter());
+            Assert.AreEqual(diameter, ft.FTCap.Phi, 1e-9, "解析の前に杭径のキャップへ決め直していません");
+            Assert.AreEqual(0, PileDesign.Services.FTCapSelection.FindMismatched(input).Count);
 
-            Assert.AreEqual(1, PileDesign.Services.FTCapSelection.Apply(input, rows));
-            Assert.IsFalse(ft.IsCapUnselected(), "選んだキャップが反映されていません");
-            Assert.AreEqual(row.SelectedPhi!.Value, ft.FTCap.Phi, 1e-9);
-            Assert.AreEqual($"{ft.FTCap.Phi}", ft.SelectedFTCapName, "杭頭部の画面の選択欄と食い違います");
-            Assert.IsTrue(double.IsFinite(ft.GetAllowableRotationAngle(1_000_000.0)), "キャップを選んでも許容回転角が求まりません");
-            Assert.AreEqual(0, PileDesign.Services.FTCapSelection.FindUnselected(input).Count);
+            StringAssert.Contains(TestSource.MethodBody(
+                TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.cs"), "private async Task OnExecuteAnalysisCore(bool additive)"),
+                "EnsureFTCapsMatchPileDiameter()", "解析の入口で FT キャップを確かめていません");
         }
 
-        /// <summary>水平解析の前の確認: 取りやめたら解析しない (黙って選ばない)、選んだら反映して続ける。</summary>
+        /// <summary>杭径に合う FT キャップがカタログに無ければ、別の径で黙って計算せず、未選択にして解析を止める。</summary>
         [TestMethod]
-        public void FTCap_Unselected_IsAskedBeforeTheHorizontalAnalysis()
+        public void FTCap_MissingFromTheCatalog_StopsTheAnalysis()
         {
             var built = FTPileWithoutCap();
             if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
             var (input, body) = built.Value;
+            var section = body.PileBodySegments[0].PileSection;
+            section.PileDiameter = 1500.0;   // FT キャップは 300〜1200 mm
+            Assert.IsNull(body.PileTop.FTPile.CapForPileDiameter(1500.0), "前提: 杭径 1500 のキャップは無い");
+
+            Assert.IsFalse(body.PileTop.AutoSelectFTCap(section));
+            Assert.IsTrue(body.PileTop.FTPile.IsCapUnselected(), "カタログに無いのに別の径のキャップを選んでいます");
+            StringAssert.Contains(string.Join(Environment.NewLine, PileDesign.Services.CheckInputData.CollectInputWarnings(input)),
+                "FT キャップがカタログにありません", "入力の注意の一覧に出ていません");
+
             var mainVm = new PileDesign.ViewModels.MainWindowViewModel { CurrentInputModel = input };
             var vm = new PileDesign.ViewModels.HorizontalCalculationViewModel(mainVm) { BypassUiPromptsForTesting = true };
-
-            // 画面を出せないテストの実行で、選ぶ手段が無ければ取りやめる
-            Assert.IsFalse(vm.EnsureFTCapsSelected(), "選ばずに解析を続けています");
-            Assert.IsTrue(body.PileTop.FTPile.IsCapUnselected(), "黙ってキャップを選んでいます");
-
-            // 取りやめ
-            int asked = 0;
-            vm.FTCapSelectorForTesting = rows => { asked++; return false; };
-            Assert.IsFalse(vm.EnsureFTCapsSelected());
-            Assert.AreEqual(1, asked);
-            Assert.IsTrue(body.PileTop.FTPile.IsCapUnselected());
-
-            // 選んで続ける
-            vm.FTCapSelectorForTesting = rows => { foreach (var r in rows) r.SelectedPhi ??= r.Options[0]; return true; };
-            Assert.IsTrue(vm.EnsureFTCapsSelected());
-            Assert.IsFalse(body.PileTop.FTPile.IsCapUnselected());
-
-            StringAssert.Contains(TestSource.MethodBody(
-                TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.cs"), "private async Task OnExecuteAnalysisCore(bool additive)"),
-                "EnsureFTCapsSelected()", "解析の入口で FT キャップを確かめていません");
+            Assert.IsFalse(vm.EnsureFTCapsMatchPileDiameter(), "キャップを決められないのに解析を続けています");
         }
 
-        /// <summary>FT キャップを選ぶ画面が開ける (StaticResource・バインドの誤りはビルドを通る)。</summary>
+        /// <summary>FT キャップの選び方は 1 か所 (PileTop.AutoSelectFTCap)。杭頭部の画面の選択欄は表示だけ。</summary>
         [TestMethod]
-        public void FTCapSelectionDialog_Opens()
+        public void FTCap_SelectionLivesInOnePlace()
         {
-            var error = XamlSmokeTestSupport.RunOnStaThread(() =>
+            foreach (var (dir, file) in new[] { ("ViewModels", "PileBodyViewModel.cs"), ("Views", "PileTopWindow.xaml.cs") })
             {
-                XamlSmokeTestSupport.EnsureApplicationResources();
-                var rows = new[] { new PileDesign.Services.FTCapSelectionRow(0, "杭体 1", 600.0, [500.0, 600.0]) { SelectedPhi = 500.0 } };
-                var window = new PileDesign.Views.FTCapSelectionDialog(rows) { ShowActivated = false };
-                try
-                {
-                    window.Show();
-                    window.UpdateLayout();
-                    Assert.IsTrue(rows[0].DiffersFromPileDiameter, "杭径と違うキャップを知らせる印が立ちません");
-                }
-                finally { window.Close(); }
-            }, out bool timedOut);
-            Assert.IsFalse(timedOut);
-            Assert.IsNull(error, error?.ToString());
+                string src = TestSource.Read("Graphics_r1", dir, file);
+                StringAssert.Contains(src, "AutoSelectFTCap(", file);
+                Assert.IsFalse(src.Contains(".Where(c => c.Phi >= pileDia)", StringComparison.Ordinal), $"{file}: キャップの選び方の写しが残っています");
+            }
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Views", "PileTopWindow.xaml"), "IsEnabled=\"False\" ToolTip=\"FT キャップは杭径ごとの製品");
+        }
+
+        /// <summary>
+        /// 鋼管杭の引張軸力側の耐力は、原文どおり圧縮側の量で計算しているが、原文の誤りの可能性がある (2026-10-10 利用者の判断)。
+        /// 他の文献で確認して直すまで、ヘルプとコードに「要注意」を残す。直したら、このテストと注記を一緒に消すこと。
+        /// </summary>
+        [TestMethod]
+        public void SteelPipeTensionSide_CautionIsDocumentedUntilFixed()
+        {
+            string help = TestSource.Read("Graphics_r1", "Help", "help.html");
+            StringAssert.Contains(help, "id=\"steel-pipe-tension-caution\"", "ヘルプの要注意の注記が消えています");
+            StringAssert.Contains(help, "href=\"#steel-pipe-tension-caution\"");
+            string code = TestSource.Read("Graphics_r1", "Models", "InputData", "SteelPipeSection.cs");
+            Assert.AreEqual(2, System.Text.RegularExpressions.Regex.Matches(code, @"要注意 \(引張軸力側\)").Count, "コードの要注意の注記が消えています");
         }
     }
 }

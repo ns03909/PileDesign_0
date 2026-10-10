@@ -228,6 +228,8 @@ namespace PileDesign.Models.InputData
         /// 損傷限界モーメント (杭中間部・杭下部、コンクリート充填なし)。
         /// Md = β1 × (1.5 sfc1 − |Ndd|/sAp) × sZe
         /// </summary>
+        // 要注意 (引張軸力側): 引張でも局部座屈で低減した Sfc1 を使う (原文どおり)。引張側は sft を使うべき原文の誤りの
+        // 可能性がある (使用限界 GetServiceLimitMoment は引張側に sft)。他の文献で確認でき次第直す (ヘルプ steel-pipe-tension-caution)
         internal double GetDamageLimitMomentMiddle(double Ndd)
         {
             return Beta1 * (1.5 * Sfc1 - Math.Abs(Ndd) / sAp) * sZe;
@@ -431,6 +433,9 @@ namespace PileDesign.Models.InputData
         /// |Nud|/sNuc ≤ 0.2 のとき: Mu = β1 β2 × sσCy1 × sZp (塑性モーメント、軸力依存なし)
         /// 0.2 境界で連続 (どちらも sZp を使用する)。
         /// </summary>
+        // 要注意 (引張軸力側): 引張でも圧縮側の量 (局部座屈の sσCy1、柱座屈を含む sNuc) を使う (原文 (8.23) どおり)。
+        // 引張は座屈しないので sσTy と sNut を使うべき原文の誤りの可能性がある。他の文献で確認でき次第直す
+        // (ヘルプ steel-pipe-tension-caution。2026-10-10 利用者の判断: 原文のまま計算し、ヘルプに要注意と書く)
         internal double GetUltimateLimitMomentMiddle(double Nud)
         {
             const double beta2 = 1.0;

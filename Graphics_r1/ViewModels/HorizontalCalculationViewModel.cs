@@ -112,33 +112,25 @@ namespace PileDesign.ViewModels
         public bool BypassUiPromptsForTesting { get; set; } = false;
 
         /// <summary>
-        /// FT キャップを選ぶ画面の代わり (テスト用)。null なら画面を出す。選んで続けるなら true を返す。
+        /// F.T.Pile 構法の FT キャップを杭径から決め直す (キャップは杭径ごとの製品で、利用者が選ぶのは引張定着筋だけ)。
+        /// 杭径と合っていない (未選択・違う径の) 杭体があれば決め直して編集として記録し、続ける。
+        /// 杭径に合うキャップがカタログに無ければ知らせて false (解析を止める)。キャップが無いと支圧係数 φc が 0 になり、
+        /// 杭頭の M-θ と許容回転角が数値にならない (以前は知らせずに解析し、検定が「判定できない」になった)。
         /// </summary>
-        internal Func<IReadOnlyList<PileDesign.Services.FTCapSelectionRow>, bool>? FTCapSelectorForTesting { get; set; }
-
-        /// <summary>
-        /// F.T.Pile 構法で FT キャップを選んでいない杭体があれば、知らせてその場で選ばせる。
-        /// 選んで続けるなら反映して編集として記録し true、取りやめなら false。未選択の杭体が無ければ何もせず true。
-        /// 画面を出せないテストの実行では、選ぶ手段 (<see cref="FTCapSelectorForTesting"/>) が無ければ取りやめる (黙って選ばない)。
-        /// </summary>
-        internal bool EnsureFTCapsSelected()
+        internal bool EnsureFTCapsMatchPileDiameter()
         {
             var input = _mainWindowViewModel.CurrentInputModel;
-            var rows = PileDesign.Services.FTCapSelection.FindUnselected(input);
-            if (rows.Count == 0 || input == null) return true;
+            if (input == null) return true;
+            if (PileDesign.Services.FTCapSelection.FindMismatched(input).Count == 0) return true;
 
-            bool proceed = FTCapSelectorForTesting != null
-                ? FTCapSelectorForTesting(rows)
-                : !BypassUiPromptsForTesting
-                  && Views.FTCapSelectionDialog.Select(System.Windows.Application.Current?.Windows
-                        .OfType<System.Windows.Window>().FirstOrDefault(w => w.IsActive), rows);
-            if (!proceed) return false;
+            var (changed, unavailable) = PileDesign.Services.FTCapSelection.AutoSelect(input);
+            if (changed > 0)
+                _mainWindowViewModel.SaveUndoState(MainWindowViewModel.AnalysisInputScope.Model, "FT キャップを杭径に合わせる");
+            if (unavailable.Count == 0) return true;
 
-            int applied = PileDesign.Services.FTCapSelection.Apply(input, rows);
-            if (applied > 0)
-                _mainWindowViewModel.SaveUndoState(MainWindowViewModel.AnalysisInputScope.Model, "FT キャップを選定");
-            // 選べなかった (カタログに無い等) 杭体が残れば取りやめる
-            return PileDesign.Services.FTCapSelection.FindUnselected(input).Count == 0;
+            ShowInfoOrSkip(string.Join("\n", unavailable) + "\n\n杭体の杭径を、FT キャップのある杭径 (300〜1200 mm) にしてください。",
+                "F.T.Pile 構法の FT キャップ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return false;
         }
 
         /// <summary>
@@ -1833,9 +1825,8 @@ namespace PileDesign.ViewModels
                     _mainWindowViewModel.CurrentInputModel, "水平解析"))
                 return;
 
-            // F.T.Pile 構法で FT キャップを選んでいない杭体: 知らせて、その場で選ぶ。キャップが無いと支圧係数 φc が 0 になり、
-            // 杭頭の M-θ と許容回転角が数値にならない (以前は知らせずに解析し、検定が「判定できない」になった)
-            if (!EnsureFTCapsSelected())
+            // F.T.Pile 構法の FT キャップを杭径から決め直す。カタログに杭径が無ければ止める
+            if (!EnsureFTCapsMatchPileDiameter())
                 return;
 
             // 任意入力の地盤変位: これから解く荷重レベル・液状化の別の曲線が空・並びの誤りなら止める

@@ -120,6 +120,25 @@ namespace PileDesign.Models.InputData
         // FTパイルオプション
         public int SelectedFTCap { get; set; }
 
+        /// <summary>
+        /// F.T.Pile 構法の FT キャップを杭径から決める (FT キャップは杭径ごとの製品で、カタログの杭径は杭の外径)。
+        /// 杭の寸法を杭断面から入れ、杭径と一致するキャップを選ぶ。カタログに無ければ未選択にして false
+        /// (以前は「杭径以上で最小 → 最大」のキャップを黙って選んでいた。選び方の写しが杭体の画面と杭頭部の画面に 2 つあり、
+        /// 諸元表示の作り方も食い違っていた)。
+        /// </summary>
+        internal bool AutoSelectFTCap(PileSection? section)
+        {
+            var ft = FTPile;
+            if (ft == null || section == null || !(section.PileDiameter > 0)) return false;
+            ft.SetDimensionsFromSection(section.PileDiameter, section.ConcreteThickness);
+            var cap = ft.CapForPileDiameter(section.PileDiameter);
+            bool selected = cap != null && ft.SelectCap(cap.Phi);
+            if (!selected) ft.ClearCap();
+            SelectedFTCap = selected ? (int)cap!.Phi : 0;
+            SelectedPileTopSpecification = ft.GetCombinedSpecs();
+            return selected;
+        }
+
         private FTPile _FTPile;
         public FTPile FTPile
         {

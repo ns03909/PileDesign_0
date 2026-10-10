@@ -625,6 +625,7 @@
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="FTキャップ"/>
                                                 <ComboBox x:Name="ComboBoxFTCap" Width="100" HorizontalContentAlignment="Right"
+                                                    IsEnabled="False" ToolTip="FT キャップは杭径ごとの製品なので、杭径から自動で決めます (選ぶのは引張定着筋だけです)"
                                                     ItemsSource="{Binding PileTop.FTPile.FTCapOption}"
                                                     SelectedItem="{Binding PileTop.FTPile.SelectedFTCapName, UpdateSourceTrigger=PropertyChanged}"
                                                     SelectionChanged="ComboBoxFTCapChanged" />

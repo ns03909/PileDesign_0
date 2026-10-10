@@ -312,6 +312,13 @@ namespace PileDesign.Models
             return true;
         }
 
+        /// <summary>FT キャップを未選択にする (杭径に合うキャップがカタログに無いとき。別の径のキャップで黙って計算しない)。</summary>
+        public void ClearCap()
+        {
+            FTCap = new FTCap();
+            SelectedFTCapName = null!;
+        }
+
         internal void SetDimensionsFromSection(double pileDiameter, double concreteThickness)
         {
             if (FTPilePile == null || pileDiameter <= 0.0) return;
