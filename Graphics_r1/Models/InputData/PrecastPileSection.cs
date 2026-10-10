@@ -127,6 +127,21 @@ namespace PileDesign.Models.InputData
             return (bestM, bestCurv);
         }
 
+        /// <summary>
+        /// 安全限界の曲げモーメント Mu0 = min(Mu1, Mu2) (断面の曲げ解析による値)。
+        /// Mu1: 圧縮縁のコンクリートが εcu に達するとき、Mu2: PC 鋼材が破断ひずみ εpu (= 0.02) に達するとき。
+        /// <paramref name="mu2"/> は軸力が合っている (その状態が実際に起きる) ときだけ使う
+        /// (ソルバーは解けなくても最良近似を返すので、軸力の残差で確かめる)。
+        /// </summary>
+        private protected static (double Mu0, double Phi) MinUltimateMoment(
+            (double M, double Phi) mu1, (double M, double Phi) mu2, Func<double, (double N, double M)> evalMu2, double nTarget)
+        {
+            bool mu2Valid = double.IsFinite(mu2.M) && mu2.M > 0 && double.IsFinite(mu2.Phi) && mu2.Phi > 0
+                && Math.Abs(evalMu2(mu2.Phi).N - nTarget) <= PileDesign.Constants.SectionSolverTolerances.ULTIMATE_AXIAL_RESIDUAL_N * 100;
+            if (mu2Valid && (!(mu1.M > 0) || mu2.M < mu1.M)) return (mu2.M, mu2.Phi);
+            return mu1;
+        }
+
         //public double PileDia { get; protected set; }
         public double Ro { get; protected set; } // 外半径
         public double Ri { get; protected set; } // 内半径
@@ -649,7 +664,11 @@ namespace PileDesign.Models.InputData
             double phiD;
             if (phiCr < phiY && phiY < phiCf) // a. コンクリートのひび割れの後にPC鋼材の降伏が発生する場合
             {
-                double Mu0 = Math.Min(MCf, MY);
+                // Mu0 = min(Mu1, Mu2): コンクリート圧壊 (εcu) と PC 鋼材の破断 (εpu = 0.02) の小さい方 (断面の曲げ解析)。
+                // 以前は min(MCf, MY) で、この経路では必ず鋼材の降伏モーメント MY になり、M-φ の天井が
+                // 検定の耐力より 1〜2.5 割低かった (ひび割れ点と降伏点を結ぶ線を β1·Mu0 まで延ばす作図式が延長にならなかった)
+                var (Mu0, _) = MinUltimateMoment((MCf, phiCf), GetMomentCurvatureForN(Ntarget, "TendonTensileFailure"),
+                    GetTendonTensileFailureForceAndMoment, Ntarget);
                 // ひび割れ前に低減後の安全限界へ達する → 弾性線で頭打ち（折線が折り返すのを防ぐ）
                 if (MCr > 0 && MCr >= beta1 * beta2 * Mu0)
                     return ElasticUpToReducedUltimate(beta1 * beta2 * Mu0);
@@ -705,7 +724,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        private double GetBeta2(double Ntarget)
+        internal double GetBeta2(double Ntarget)
         {
             double sigma0e = Ntarget / Ae;
             return (SigmaE + sigma0e) < 10 ? 0.75 : 0.65;
@@ -728,9 +747,12 @@ namespace PileDesign.Models.InputData
         // 反復本体は共通ドライバ SolveMomentCurvatureForAxial（フラグは PHC 旧挙動を再現）。
         internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)
         {
-            Func<double, (double N, double M)> eval = type == "TendonYield"
-                ? GetYieldForceAndMoment
-                : GetCompressiveFailureForceAndMoment;
+            Func<double, (double N, double M)> eval = type switch
+            {
+                "TendonYield" => GetYieldForceAndMoment,
+                "TendonTensileFailure" => GetTendonTensileFailureForceAndMoment,
+                _ => GetCompressiveFailureForceAndMoment,
+            };
 
             // 初期曲率（0以上に保つ）
             double initialCurvature = Math.Max(1e-12, Tendons.EpsilonPy / (PileDia * 0.5 + Tendons.PCD * 0.5));
@@ -748,6 +770,13 @@ namespace PileDesign.Models.InputData
             double N, M;
             (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
             return (N, M);
+        }
+
+        // 最外縁の PC 鋼材が破断ひずみ εpu に達するときの N、M (安全限界 Mu2)
+        internal (double, double) GetTendonTensileFailureForceAndMoment(double curvature)
+        {
+            double epsilonC = -Tendons.EpsilonPu + curvature * (PileDia * 0.5 + Tendons.PCD * 0.5) - Prestrains[1];
+            return GetUltimateForceAndMoment(epsilonC, curvature);
         }
 
         // コンクリートが圧壊するときのN,Mを返すメソッド
@@ -1158,7 +1187,10 @@ namespace PileDesign.Models.InputData
             double beta2 = GetBeta2(Ntarget);
 
             // 安全限界曲げモーメント、曲率を取得
-            (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
+            // Mu0 = min(Mu1, Mu2): コンクリート圧壊 (εcu) と PC 鋼材の破断 (εpu = 0.02) の小さい方 (断面の曲げ解析)。
+            // 以前は Mu1 (コンクリート圧壊) だけで、PC 鋼材の破断を見ていなかった (強い引張軸力側で終点が N-M 曲線を上回った)
+            var (Mu0, _) = MinUltimateMoment(GetUltimateMomentForSpecificN(Ntarget), GetMomentCurvatureForN(Ntarget, "TendonTensileFailure"),
+                GetTendonTensileFailureForceAndMoment, Ntarget);
 
             double phiD;
             List<double> phis;

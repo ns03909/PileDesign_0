@@ -415,6 +415,129 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 杭周面の引抜き側: 単杭の荷重伝達法は押込みと同じ τ-s (τ2 まで) で、杭全体の引抜き荷重を τT から求めた Rt で止める。
+        /// 水平解析の P-S ばねは荷重を止めないので、τT で頭打ちにする (勾配 τ1/S1 で sT = |τT|·S1/τ1 まで、その先は一定)。
+        /// 以前は P-S ばねも τ2 まで上がり、引き抜かれる杭の抵抗が Rtu を超えていた (2026-10-10 利用者の指示)。
+        /// 沈下の画面の τ-s 図は単杭の荷重伝達法と同じ形に描く。
+        /// </summary>
+        [TestMethod]
+        public void PilePerimeter_UpliftSide_CappedAtTauTOnlyForThePsSpring()
+        {
+            const double tau1 = 40, tau2 = 50, tauT = -33.3, S1 = 0.005, S2 = 0.020, psiL = 1.0;
+            double Force(string state, double s, double t) => VerticalLoadTransferMethod.GetSecantStiffnessPilePerimeter(
+                state, s, true, true, tau1, tau2, S1, S2, psiL, t) * s;
+
+            // P-S ばね (τT を渡す): 引抜き 4 mm は勾配 τ1/S1 の上 (32)、20 mm は |τT| で頭打ち
+            Assert.AreEqual(-32.0, Force("negative", -0.004, tauT), 1e-9);
+            Assert.AreEqual(-33.3, Force("negative", -0.020, tauT), 1e-9, "P-S ばねの引抜き側が |τT| で頭打ちになっていません");
+            // 単杭の荷重伝達法 (τT を渡さない): 押込みと同じ曲線で τ2 まで
+            Assert.AreEqual(-50.0, Force("negative", -0.030, double.NaN), 1e-9, "単杭の荷重伝達法の引抜き側が押込みと同じ曲線ではありません");
+            Assert.AreEqual(50.0, Force("positive", 0.030, double.NaN), 1e-9);
+
+            string vlt = TestSource.Read("Graphics_r1", "FEM", "VerticalLoadTransferMethod.cs");
+            StringAssert.Contains(vlt, "GetTangentStiffnessPilePerimeter(state, s, aPC, aPT, tau1, tau2, S1, S2, psiL);",
+                "単杭の荷重伝達法が τT を渡しています (元のコードのとおり、荷重を Rt で止める)");
+            StringAssert.Contains(vlt, "GetSecantStiffnessPilePerimeter(state, s, aPC, aPT, tau1, tau2, S1, S2, psiL) * s;");
+            Assert.AreEqual(2, System.Text.RegularExpressions.Regex.Matches(
+                TestSource.Read("Graphics_r1", "FEM", "PileVerticalSoilSpringModel.cs"), @"psiLHalf, pcv\.TauT\)").Count,
+                "水平解析の P-S ばねが τT を渡していません");
+
+            // τ-s 図: 引抜き側は押込み側を反転した形 (τT で頭打ちに描かない)
+            var pcv = new PileDesign.Models.InputData.PileCircumVertical
+            {
+                Tau1 = tau1, Tau2 = tau2, TauT = tauT, S1 = 5, S2 = 20,
+                PileBodySegment = new PileDesign.Models.InputData.PileBodySegment { PileSection = new PileDesign.Models.InputData.PileSection { PileDiameter = 1000.0 } },
+            };
+            var pts = PileDesign.ViewModels.SettlementViewModel.CircumCurvePoints(pcv);
+            double psi = pcv.Psi;
+            CollectionAssert.Contains(pts, (-20.0, -tau2 * psi), "τ-s 図の引抜き側が単杭の荷重伝達法と同じ形ではありません");
+            CollectionAssert.Contains(pts, (-5.0, -tau1 * psi));
+            Assert.IsTrue(psi > 0, "前提: 周長がある");
+            Assert.IsFalse(pts.Any(p => p.X < 0 && System.Math.Abs(p.Y - tauT * psi) < 1e-9),
+                "τ-s 図の曲線を τT で頭打ちに描いています");
+        }
+
+        /// <summary>
+        /// 水平解析の P-S ばねで剛性が 0 (引抜き抵抗を外した層で引き抜かれる等) のときは、抵抗しない (行列を特異にしない下限だけ)。
+        /// 以前は押込みの初期剛性に置き換え、外した層や杭先端が引抜きに抵抗していた。
+        /// </summary>
+        [TestMethod]
+        public void PsSpring_ZeroStiffness_StaysNearZero()
+        {
+            string solver = TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.Solver.cs");
+            Assert.IsFalse(solver.Contains("kz = md.InitialTangentStiffness;", StringComparison.Ordinal), "剛性 0 を押込みの初期剛性に置き換えています");
+            StringAssert.Contains(solver, "kz = Math.Max(md.InitialTangentStiffness * 1e-6, 1e-3);");
+        }
+
+        /// <summary>
+        /// 基礎梁の傾斜角の限界値は設計者が決める値 (基本設定「杭頭 2 点間の変形角の限界値」)。記録のレベルに応じて、
+        /// 常時は使用限界、レベル1 は損傷限界、レベル2 は安全限界。以前は全記録を固定の 1/300 で常時として判定していた。
+        /// </summary>
+        [TestMethod]
+        public void FoundationBeamInclination_UsesTheDesignersLimitsByLevel()
+        {
+            var f = new FundamentalInput { ServiceDeformationAngleLimit = 0.002, DamageDeformationAngleLimit = 0.004, UltimateDeformationAngleLimit = 0.008 };
+            PileDesign.Models.Results.GroupSettlementCaseRecord Rec(string name) => new() { LoadCaseName = name, IsBeamAware = true };
+            Assert.AreEqual((0, "使用限界", 0.002), PileDesign.ViewModels.EvaluationService.InclinationLimitFor(Rec("杭軸力 VL"), f));
+            Assert.AreEqual((1, "損傷限界", 0.004), PileDesign.ViewModels.EvaluationService.InclinationLimitFor(Rec("L1-1: 杭軸力"), f));
+            Assert.AreEqual((2, "安全限界", 0.008), PileDesign.ViewModels.EvaluationService.InclinationLimitFor(Rec("L2-3: 杭軸力"), f));
+            Assert.IsFalse(TestSource.Read("Graphics_r1", "ViewModels", "EvaluationService.cs").Contains("1.0 / 300.0", StringComparison.Ordinal),
+                "固定の 1/300 が残っています");
+        }
+
+        /// <summary>
+        /// PHC 杭の M-φ で、PC 鋼材がコンクリート圧壊より先に降伏する経路 (a) の終点は β1·β2·Mu0、
+        /// Mu0 = min(Mu1, Mu2) (Mu1: コンクリートが εcu、Mu2: PC 鋼材が εpu = 0.02、断面の曲げ解析)。
+        /// 以前は Mu0 = min(MCf, MY) = MY (鋼材の降伏) で、天井が検定の耐力より低かった (2026-10-10 利用者の指示)。
+        /// </summary>
+        [TestMethod]
+        public void PhcMPhi_PathA_EndsAtTheMinimumOfConcreteCrushAndTendonRupture()
+        {
+            var section = new PileSection { PileBodyType = PileDesign.Constants.PileTypeNames.PrecastConcrete, PileSectionType = PileDesign.Constants.PileTypeNames.Phc };
+            section.SelectedPrecastPile.Name = "PHC-600-標準-85-A";
+            section.RecalculateSelectedPrecastPile();
+            if (section.CreateSectionCalculator() is not PHCSection phc) { Assert.Inconclusive("PHC の断面を組めません"); return; }
+
+            const double n = 0.0;
+            var (my, phiY) = phc.GetMomentCurvatureForN(n, "TendonYield");
+            var (mcf, phiCf) = phc.GetMomentCurvatureForN(n, "ConcreteCompressiveFailure");
+            var (mu2, _) = phc.GetMomentCurvatureForN(n, "TendonTensileFailure");
+            var (_, phiCr) = phc.GetCrackMoment(n);
+            if (!(phiCr < phiY && phiY < phiCf)) { Assert.Inconclusive("前提: 経路 a (ひび割れ → PC 鋼材の降伏 → 圧壊) の断面"); return; }
+
+            double mu0 = Math.Min(mcf, mu2);
+            Assert.IsTrue(mu0 > my, "前提: Mu0 は鋼材の降伏モーメントより大きい");
+            var (_, ms) = phc.GetMPhiRelationshipInternal(n, 0.8);
+            Assert.AreEqual(0.8 * phc.GetBeta2(n) * mu0, ms[^1], 1e-6 * mu0,
+                "M-φ の終点が β1·β2·min(Mu1, Mu2) ではありません (鋼材の降伏モーメントで頭打ち?)");
+        }
+
+        /// <summary>
+        /// せん断耐力の M/(Q·d) は、杭・荷重ケース・液状化の考慮/非考慮ごとの最大 M・最大 Q で求める (荷重組合せはまたぐ)。
+        /// 以前は液状化の考慮・非考慮を混ぜて最大を取っていた (2026-10-10 利用者の指示)。
+        /// </summary>
+        [TestMethod]
+        public void MonQd_IsResolvedSeparatelyForLiquefaction()
+        {
+            var lc = new LoadCase { No = 1, Level = 2 };
+            var beam = new Beam();
+            BeamResult R(bool liq, double m, double q) => new()
+            {
+                LoadCase = lc, IsLiquefaction = liq,
+                CumulativeForce = new BeamForce(0, q, 0, 0, 0, m, 0, 0, 0, 0, 0, 0),
+            };
+            beam.BeamResults = [R(true, 900, 100), R(false, 300, 400)];
+            var pile = new PileLayoutDataItem { No = 1, PileNo = 1, Beams = [beam] };
+            var input = new InputModel { PileLayoutItems = [pile] };
+
+            var map = PileDesign.ViewModels.EvaluationService.BuildMaxForcesByPileCase(input);
+            var liq = map[(pile, PileDesign.ViewModels.EvaluationService.MaxForceKeyOf(lc, true))];
+            var dry = map[(pile, PileDesign.ViewModels.EvaluationService.MaxForceKeyOf(lc, false))];
+            Assert.AreEqual((900.0, 100.0), liq, "液状化考慮の最大断面力に、非考慮の Q が混ざっています");
+            Assert.AreEqual((300.0, 400.0), dry, "液状化非考慮の最大断面力に、考慮の M が混ざっています");
+        }
+
+        /// <summary>
         /// 鋼管杭の引張軸力側の耐力は、原文どおり圧縮側の量で計算しているが、原文の誤りの可能性がある (2026-10-10 利用者の判断)。
         /// 他の文献で確認して直すまで、ヘルプとコードに「要注意」を残す。直したら、このテストと注記を一緒に消すこと。
         /// </summary>

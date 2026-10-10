@@ -176,7 +176,7 @@ namespace PileDesign.ViewModels
                                         // 割増は検定では応答に掛けるので、図では限界値を割増で割って描く (比は検定と同じ)
                                         maxForcesByPileCase ??= EvaluationService.BuildMaxForcesByPileCase(InputModel);
                                         var (monQd, _) = EvaluationService.ResolveMonQd(
-                                            pileLayoutDataItem, EvaluationService.CaseKeyOf(loadCase), pileSection, maxForcesByPileCase);
+                                            pileLayoutDataItem, EvaluationService.MaxForceKeyOf(loadCase, isLiquefaction), pileSection, maxForcesByPileCase);
                                         var (nValues, qValues) = GetLimitStateNQCurve(pileSection, SelectedLimitState, loadCase.Level, Math.Round(monQd, 3));
                                         if (nValues == null || qValues == null || nValues.Count == 0) continue;
                                         double magnification = SelectedLimitState.Contains("損傷限界", StringComparison.Ordinal)

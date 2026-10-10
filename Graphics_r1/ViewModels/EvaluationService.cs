@@ -368,7 +368,10 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// 個別矩形（基礎梁考慮）反復解析の結果から、各基礎梁の傾斜角を検定する。
-        /// 傾斜角 = (Uz_j - Uz_i) / L、許容値 1/300 (基礎指針) を既定値として比較。
+        /// 傾斜角 = (Uz_j - Uz_i) / L を、記録の荷重レベルに応じた限界値と比べる。限界値は基本設定の
+        /// 「杭頭 2 点間の変形角の限界値」(設計者が決める値。常時は使用限界、レベル1 は損傷限界、レベル2 は安全限界)。
+        /// 傾斜角も 2 点間の鉛直変位の差 ÷ 水平距離で、同じ量。
+        /// 以前は全記録 (地震時も) を固定の 1/300 で、常時として判定していた (出典を確かめられない値だった)。
         /// </summary>
         private List<EvaluationItem> EvaluateBeamAwareInclination()
         {
@@ -383,11 +386,10 @@ namespace PileDesign.ViewModels
             if (inputModel?.FoundationBeamInput?.Beams == null
                 || inputModel.FoundationBeamInput.Beams.Count == 0) return items;
 
-            const double inclinationLimit = 1.0 / 300.0;
-
             foreach (var rec in beamAwareCases)
             {
                 if (rec.NodeResults == null || rec.NodeResults.Count == 0) continue;
+                var (level, limitName, inclinationLimit) = InclinationLimitFor(rec, inputModel.FundamentalInput);
 
                 var uzByName = rec.NodeResults.ToDictionary(n => n.NodeName, n => n.Uz_mm);
 
@@ -414,8 +416,9 @@ namespace PileDesign.ViewModels
                     items.Add(new EvaluationItem
                     {
                         Kind = EvaluationKind.FoundationBeamInclination,
-                        Level = 0,   // 水平解析の地震動レベルとは別軸
+                        Level = level,
                         Category = "基礎梁の傾斜角",
+                        LimitName = limitName,
                         TargetName = $"FoundationBeam-{beamNo}",
                         FoundationBeamNo = beamNo,
                         LoadCaseName = rec.LoadCaseName ?? "",
@@ -436,6 +439,21 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 基礎梁の傾斜角の記録のレベルと限界値。常時 (VL) は使用限界、レベル1 (「L1-…」) は損傷限界、
+        /// レベル2 (「L2-…」) は安全限界 (基本設定「杭頭 2 点間の変形角の限界値」)。
+        /// </summary>
+        internal static (int Level, string LimitName, double Limit) InclinationLimitFor(
+            PileDesign.Models.Results.GroupSettlementCaseRecord rec, FundamentalInput? fundamental)
+        {
+            string name = rec.LoadCaseName ?? "";
+            if (name.StartsWith("L2-", StringComparison.Ordinal))
+                return (2, "安全限界", PileDesign.Services.PileHeadDeformationAngle.UltimateLimit(fundamental));
+            if (name.StartsWith("L1-", StringComparison.Ordinal))
+                return (1, "損傷限界", PileDesign.Services.PileHeadDeformationAngle.DamageLimit(fundamental));
+            return (0, "使用限界", PileDesign.Services.PileHeadDeformationAngle.ServiceLimit(fundamental));
+        }
+
+        /// <summary>
         /// 傾斜角検定の本文。ケースごとにまとめ、末尾に合計と最大傾斜角を出す。
         /// 最大傾斜角は<b>表示フィルタに関係なく</b>そのケースの全項目から求める
         /// (従来の実装と同じ)。
@@ -444,17 +462,16 @@ namespace PileDesign.ViewModels
         {
             if (items.Count == 0) return;
 
-            const double inclinationLimit = 1.0 / 300.0;
-
             sb.AppendLine();
             sb.AppendLine(new string('=', 60));
             sb.AppendLine("【群杭沈下解析（基礎梁あり） 傾斜角検定】");
-            sb.AppendLine($"許容傾斜角: 1/300 = {inclinationLimit:E3} (rad)");
+            sb.AppendLine("限界傾斜角: 基本設定「杭頭 2 点間の変形角の限界値」(常時 = 使用限界、レベル1 = 損傷限界、レベル2 = 安全限界)");
             sb.AppendLine();
 
             foreach (var caseGroup in items.GroupBy(i => i.LoadCaseName))
             {
-                sb.AppendLine($"--- ケース: {caseGroup.Key} ---");
+                var first = caseGroup.First();
+                sb.AppendLine($"--- ケース: {caseGroup.Key} ({first.LimitName} {first.Limit:E3} rad) ---");
 
                 var caseItems = caseGroup.ToList();
                 foreach (var item in caseItems)
@@ -786,7 +803,10 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 杭・荷重ケースごとの最大断面力 (|M|, |Q|) を集める。M/(Q·d) の算定に使う。
+        /// 杭・荷重ケース・液状化の考慮/非考慮ごとの最大断面力 (|M|, |Q|) を集める。M/(Q·d) の算定に使う
+        /// (鍵の文字列は <see cref="MaxForceKeyOf"/>)。荷重組合せはまたいで最大を取る。
+        /// 以前は液状化の考慮・非考慮も混ぜており、液状化ありで M が大きくなしで Q が大きいと、どちらの状態にも対応しない
+        /// M/(Q·d) を両方のせん断耐力に使っていた (2026-10-10 利用者の指示で分けた)。
         ///
         /// 杭 1 本ぶんの最大値から求めるのは、無効化されていた検定比の実装と同じ扱い。
         /// 要素ごとの M/Q を使うと、モーメントの反曲点付近で Q だけが大きい要素の
@@ -811,7 +831,7 @@ namespace PileDesign.ViewModels
 
                         // 荷重ケースはレベルと番号で分ける。名前で分けていたので、名前が空欄・重複だと
                         // レベル1 とレベル2 の最大断面力が混ざり、M/(Q·d) (せん断耐力) が別のレベルの断面力で決まっていた
-                        var key = (pile, CaseKeyOf(r.LoadCase));
+                        var key = (pile, MaxForceKeyOf(r.LoadCase, r.IsLiquefaction));
                         double m = force.MabsMax;   // max(Mi, Mj) [kNm]
                         double q = force.FabsMax;   // max(Qi, Qj) [kN]
                         if (map.TryGetValue(key, out var prev))
@@ -848,7 +868,7 @@ namespace PileDesign.ViewModels
             double monQd = mf.MaxM * 1e6 / (mf.MaxQ * 1e3 * d);
             if (!(double.IsFinite(monQd) && monQd > 0)) return (PileSection.DefaultMonQd, Default("断面力から求めた値が正の数でないため"));
             return (monQd, $"Mmax / (Qmax·d) = {mf.MaxM:N1} kN·m / ({mf.MaxQ:N1} kN × {d:N0} mm) = {monQd:0.###} "
-                           + "(この杭・この荷重ケースの最大断面力)");
+                           + "(この杭・この荷重ケース・この液状化の扱いの最大断面力)");
         }
 
         /// <summary>限界曲線の種類の説明 (低減の有無・損傷限界のレベル)。</summary>
@@ -965,6 +985,10 @@ namespace PileDesign.ViewModels
         /// <summary>最大断面力の表の鍵にする荷重ケースの識別 (レベル-番号)。</summary>
         internal static string CaseKeyOf(LoadCase? loadCase) => loadCase == null ? "" : $"L{loadCase.Level}-{loadCase.No}";
 
+        /// <summary>最大断面力の表 (<see cref="BuildMaxForcesByPileCase"/>) の鍵: 荷重ケース (レベル-番号) と液状化の考慮/非考慮。</summary>
+        internal static string MaxForceKeyOf(LoadCase? loadCase, bool isLiquefaction)
+            => $"{CaseKeyOf(loadCase)}|{(isLiquefaction ? "液状化考慮" : "液状化非考慮")}";
+
         /// <summary>
         /// 梁が属する杭を返す。
         ///
@@ -1076,7 +1100,7 @@ namespace PileDesign.ViewModels
                 // 丸めた値をキーにするなら曲線もその丸めた値で作ること。
                 // 生の値で作ると、同じキーに丸められる 2 つの値のうち先にキャッシュへ入れたほうが
                 // 採用され、結果が実行ごとに変わる (安全限界せん断が 0.1 kN 揺れた)。
-                var (monQdRaw, monQdBasis) = ResolveMonQd(pileItem, CaseKeyOf(stepResult.LoadCase), section, maxForcesByPileCase);
+                var (monQdRaw, monQdBasis) = ResolveMonQd(pileItem, MaxForceKeyOf(stepResult.LoadCase, stepResult.IsLiquefaction), section, maxForcesByPileCase);
                 double monQd = Math.Round(monQdRaw, 3);
 
                 var nqCurve = nqCache.GetOrAdd((SectionOwnerKey(soilPile, pb), seg, factored, shearLimit, damageLevel, monQd),

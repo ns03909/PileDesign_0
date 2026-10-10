@@ -1306,7 +1306,7 @@ namespace PileDesign.Output
                 // 割増は検定では応答に掛けるので、図では限界値を割増で割って描く (比は検定と同じになる)。
                 _maxForcesByPileCase ??= ViewModels.EvaluationService.BuildMaxForcesByPileCase(inputModel);
                 var (monQdRaw, _) = ViewModels.EvaluationService.ResolveMonQd(
-                    pli, ViewModels.EvaluationService.CaseKeyOf(lc), pileSection, _maxForcesByPileCase);
+                    pli, ViewModels.EvaluationService.MaxForceKeyOf(lc, isLiq), pileSection, _maxForcesByPileCase);
                 var qnLevel = pileSection.GetQNCurvesForLevel(lc.Level == 1 ? 1 : 2, Math.Round(monQdRaw, 3));
                 var (nQs, qVals) = isLongTerm
                     ? (qnLevel.FactoredService.N, qnLevel.FactoredService.Q)

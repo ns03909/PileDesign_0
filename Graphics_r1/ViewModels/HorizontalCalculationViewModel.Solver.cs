@@ -1018,7 +1018,10 @@ namespace PileDesign.ViewModels
                         if (md != null)
                         {
                             kz = isTan ? md.GetTangentStiffness(s_rel) : md.GetSecantStiffness(s_rel);
-                            if (!(double.IsFinite(kz) && kz > 0)) kz = md.InitialTangentStiffness;
+                            // 剛性 0 (引抜き抵抗を外した層で引き抜かれる、杭先端が引き抜かれる等) は、抵抗しないのが正しい。
+                            // 行列を特異にしないための下限 (押込みの初期剛性の 10⁻⁶) だけを残す。以前は押込みの初期剛性に置き換えており、
+                            // 利用者が引抜き抵抗を外した層や、杭先端 (先端支持のばねまで含む) が引抜きに抵抗していた
+                            if (!(double.IsFinite(kz) && kz > 0)) kz = Math.Max(md.InitialTangentStiffness * 1e-6, 1e-3);
                         }
                         else
                         {

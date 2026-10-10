@@ -28,7 +28,7 @@ namespace PileDesign.Models.Results
         /// </summary>
         PileHeadDeformationAngle,
 
-        /// <summary>基礎梁の傾斜角。応答 = |ΔUz|/L、限界 = 1/300。</summary>
+        /// <summary>基礎梁の傾斜角。応答 = |ΔUz|/L、限界 = 基本設定「杭頭 2 点間の変形角の限界値」(記録のレベルに応じる)。</summary>
         FoundationBeamInclination,
 
         /// <summary>
@@ -194,7 +194,7 @@ namespace PileDesign.Models.Results
         ///   モーメント・せん断力 (kN·m, kN) … 小数 1 桁
         ///   杭頭回転角 (rad)                  … 小数 3 桁 (限界 0.010 と比べられる桁)
         ///   基礎梁の傾斜角 (rad)              … 小数 5 桁
-        ///     限界 1/300 = 0.00333 なので、3 桁だと限界と応答が同じ 0.003 に潰れる
+        ///     限界 (使用限界の既定 1/1000 = 0.001) が小さいので、3 桁だと限界と応答が潰れる
         /// </summary>
         public string ValueFormat => Kind switch
         {

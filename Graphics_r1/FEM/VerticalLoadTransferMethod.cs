@@ -307,6 +307,8 @@ namespace PileDesign.FEM
                     double S2 = soilPile.PileCircumVerticals[j].S2 / 1000.0; // m
                     double psiL = soilPile.PileCircumVerticals[j].PsiL * 0.5; // m
 
+                    // 単杭の荷重伝達法: 引抜き側も押込みと同じ τ-s (τT で頭打ちにしない)。杭全体の引抜き荷重は
+                    // τT から求めた Rt で止める (IsWithinLoadRange)。水平解析の P-S ばねは荷重を止めないので τT で頭打ちにする
                     stiffness += GetTangentStiffnessPilePerimeter(state, s, aPC, aPT, tau1, tau2, S1, S2, psiL);
                 }
 
@@ -357,6 +359,7 @@ namespace PileDesign.FEM
                     double S2 = soilPile.PileCircumVerticals[j].S2 / 1000.0; // m
                     double psiL = soilPile.PileCircumVerticals[j].PsiL * 0.5; // m
 
+                    // 引抜き側も押込みと同じ τ-s (上の GetTangentSoilStiffness の説明を参照)
                     soilReaction += GetSecantStiffnessPilePerimeter(state, s, aPC, aPT, tau1, tau2, S1, S2, psiL) * s;
                 }
 
@@ -483,8 +486,13 @@ namespace PileDesign.FEM
 
         // 杭周面の接線剛性を返すメソッド
         // internal 化: 水平解析 (PileVerticalSoilSpringModel) からも呼ぶため
+        /// <param name="tauT">極限引抜き周面抵抗 τT [kN/m²] (負で持つ。大きさを使う)。渡すと、引抜き側 ("negative") は勾配 τ1/S1 で
+        /// sT = |τT|·S1/τ1 まで上がり、その先は |τT| で一定。<b>水平解析の P-S ばね (PileVerticalSoilSpringModel) だけが渡す。</b>
+        /// 単杭の荷重伝達法は渡さない (NaN): 引抜き側も押込みと同じ τ1→τ2 の曲線で、杭全体の引抜き荷重を τT から求めた Rt で止める。
+        /// 水平解析には荷重を止める仕組みが無いので、τT で頭打ちにしないと引抜き抵抗が Σ τ2·ψ·L まで上がり Rtu を超える。</param>
         internal static double GetTangentStiffnessPilePerimeter(
-            string state, double s, bool aPC, bool aPT, double tau1, double tau2, double S1, double S2, double psiL)
+            string state, double s, bool aPC, bool aPT, double tau1, double tau2, double S1, double S2, double psiL,
+            double tauT = double.NaN)
         {
             //double PI = Math.PI;
             double ktan;
@@ -505,6 +513,13 @@ namespace PileDesign.FEM
             else if (state == "negative" && aPT == false)
             {
                 ktan = 0;
+            }
+            else if (state == "negative" && double.IsFinite(tauT))
+            {
+                // 引抜き: 勾配 τ1/S1 で sT = |τT|·S1/τ1 まで、その先は |τT| で一定 (剛性は極小値を残す)
+                double capT = Math.Abs(tauT);
+                double sT = tau1 > 0 ? capT * safeS1 / tau1 : 0.0;
+                ktan = Math.Abs(s) <= sT ? tau1 / safeS1 * psiL : tau1 / safeS1 * psiL * 0.001;
             }
             else if (Math.Abs(s) <= safeS1)
             {
@@ -528,7 +543,8 @@ namespace PileDesign.FEM
         // 杭周面の割線剛性を返すメソッド
         // internal 化: 水平解析 (PileVerticalSoilSpringModel) からも呼ぶため
         internal static double GetSecantStiffnessPilePerimeter(
-            string state, double s, bool aPC, bool aPT, double tau1, double tau2, double S1, double S2, double psiL)
+            string state, double s, bool aPC, bool aPT, double tau1, double tau2, double S1, double S2, double psiL,
+            double tauT = double.NaN)
         {
             double ksec;
 
@@ -548,6 +564,14 @@ namespace PileDesign.FEM
             else if (state == "negative" && aPT == false)
             {
                 ksec = 0;
+            }
+            else if (state == "negative" && double.IsFinite(tauT))
+            {
+                // 引抜き: 勾配 τ1/S1 で sT = |τT|·S1/τ1 まで、その先は |τT| で一定
+                double capT = Math.Abs(tauT);
+                double sT = tau1 > 0 ? capT * safeS1 / tau1 : 0.0;
+                double absS = Math.Max(Math.Abs(s), minS * 1e-6);   // 0除算防止
+                ksec = Math.Abs(s) <= sT ? tau1 / safeS1 * psiL : capT / absS * psiL;
             }
             else if (Math.Abs(s) <= safeS1)
             {

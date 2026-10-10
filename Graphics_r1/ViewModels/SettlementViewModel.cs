@@ -1188,6 +1188,47 @@ namespace PileDesign.ViewModels
             wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_PileToe", "Rₚ/Aₚ / (Rₚ/Aₚ)ᵤ", "Sₚ/dₚ");
         }
 
+        /// <summary>
+        /// 土層の τ-s 曲線の点列 (相対変位 mm, 単位長さ当たりの抵抗 kN/m)。単杭の荷重伝達法 (VerticalLoadTransferMethod) と同じ形:
+        /// 押込み側は τ1/S1 → τ2/S2 で τ2 一定、引抜き側は押込み側を反転した形 (引抜き側も τ2 まで。杭全体の引抜き荷重は
+        /// τT から求めた Rt で止める)。以前の図は引抜き側を τT で頭打ちに描いており、計算と違う形だった。
+        /// </summary>
+        internal static List<(double X, double Y)> CircumCurvePoints(PileCircumVertical pcv)
+        {
+            double psi = pcv.Psi, tau1 = pcv.Tau1, tau2 = pcv.Tau2, s1 = pcv.S1, s2 = pcv.S2;
+            return
+            [
+                (-50.0, -tau2 * psi),
+                (-s2, -tau2 * psi),
+                (-s1, -tau1 * psi),
+                (0.0, 0.0),
+                (s1, tau1 * psi),
+                (s2, tau2 * psi),
+                (50.0, tau2 * psi),
+            ];
+        }
+
+        /// <summary>土層の τ-s 曲線と、引抜きの極限 τT の目安 (破線) を描く。</summary>
+        private static void AddCircumCurve(ScottPlot.WPF.WpfPlot wpf, PileCircumVertical pcv, float lineWidth)
+        {
+            var points = CircumCurvePoints(pcv);
+            var scatter = wpf.Plot.Add.Scatter(points.Select(p => p.X).ToArray(), points.Select(p => p.Y).ToArray());
+            scatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
+            scatter.LineWidth = lineWidth;
+            scatter.MarkerSize = 0;
+
+            // 引抜きの極限 τT (杭全体の引抜き荷重の上限 Rt のもと)。曲線は τT で頭打ちにしない (単杭の荷重伝達法と同じ)
+            double tauTLine = -Math.Abs(pcv.TauT) * pcv.Psi;
+            if (tauTLine < 0)
+            {
+                var limit = wpf.Plot.Add.Scatter(new[] { -50.0, 0.0 }, new[] { tauTLine, tauTLine });
+                limit.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
+                limit.LineWidth = Math.Max(1f, lineWidth / 2f);
+                limit.LinePattern = LinePattern.Dashed;
+                limit.MarkerSize = 0;
+            }
+        }
+
         // 杭周更新メソッド
         public void UpdateCircumstanceSeries()
         {
@@ -1200,65 +1241,10 @@ namespace PileDesign.ViewModels
 
             List<Point> textPositions = [];
             for (int i = 0; i < SoilPile.PileCircumVerticals.Count; i++)
-            {
-                var pileCircumstanceVertical = SoilPile.PileCircumVerticals[i];
-                double psi = pileCircumstanceVertical.Psi;
-                double tauT = pileCircumstanceVertical.TauT;
-                double tau1 = pileCircumstanceVertical.Tau1;
-                double tau2 = pileCircumstanceVertical.Tau2;
-                double s1 = pileCircumstanceVertical.S1;
-                double s2 = pileCircumstanceVertical.S2;
-                // tau1が0の場合のゼロ除算を回避
-                double sT = (tauT == 0 || tau1 == 0) ? 0 : tauT * s1 / tau1;
-
-                // 点を(x, y)のペアとして作成し、x座標でソート
-                var points = new List<(double x, double y)>
-                {
-                    (-50.0, tauT * psi),
-                    (sT, tauT * psi),
-                    (s1, tau1 * psi),
-                    (s2, tau2 * psi),
-                    (50.0, tau2 * psi)
-                };
-                points.Sort((a, b) => a.x.CompareTo(b.x));
-
-                var scatter = wpf.Plot.Add.Scatter(
-                    points.Select(p => p.x).ToArray(),
-                    points.Select(p => p.y).ToArray());
-                scatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
-                scatter.LineWidth = 2;
-                scatter.MarkerSize = 0;
-            }
+                AddCircumCurve(wpf, SoilPile.PileCircumVerticals[i], lineWidth: 2);
 
             if (SelectedPileCircumstanceVertical != null)
-            {
-                double selectedPsi = SelectedPileCircumstanceVertical.Psi;
-                double selectedTauT = SelectedPileCircumstanceVertical.TauT;
-                double selectedTau1 = SelectedPileCircumstanceVertical.Tau1;
-                double selectedTau2 = SelectedPileCircumstanceVertical.Tau2;
-                double selectedS1 = SelectedPileCircumstanceVertical.S1;
-                double selectedS2 = SelectedPileCircumstanceVertical.S2;
-                // tau1が0の場合のゼロ除算を回避
-                double selectedST = (selectedTauT == 0 || selectedTau1 == 0) ? 0 : selectedTauT * selectedS1 / selectedTau1;
-
-                // 点を(x, y)のペアとして作成し、x座標でソート
-                var selectedPoints = new List<(double x, double y)>
-                {
-                    (-50.0, selectedTauT * selectedPsi),
-                    (selectedST, selectedTauT * selectedPsi),
-                    (selectedS1, selectedTau1 * selectedPsi),
-                    (selectedS2, selectedTau2 * selectedPsi),
-                    (50.0, selectedTau2 * selectedPsi)
-                };
-                selectedPoints.Sort((a, b) => a.x.CompareTo(b.x));
-
-                var selectedScatter = wpf.Plot.Add.Scatter(
-                    selectedPoints.Select(p => p.x).ToArray(),
-                    selectedPoints.Select(p => p.y).ToArray());
-                selectedScatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
-                selectedScatter.LineWidth = 6;
-                selectedScatter.MarkerSize = 0;
-            }
+                AddCircumCurve(wpf, SelectedPileCircumstanceVertical, lineWidth: 6);
 
             string title = "土層の杭周面抵抗力";
             wpf.Plot.Axes.Title.Label.Text = title;

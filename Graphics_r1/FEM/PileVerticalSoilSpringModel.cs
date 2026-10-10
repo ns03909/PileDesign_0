@@ -92,7 +92,7 @@ namespace PileDesign.FEM
                     state, s, pcv.IsPositiveCircumResistance, pcv.IsNegativeCircumResistance,
                     pcv.Tau1, pcv.Tau2,
                     pcv.S1 / 1000.0, pcv.S2 / 1000.0,
-                    psiLHalf);
+                    psiLHalf, pcv.TauT);
             }
             if (_isToe && state == "positive")
             {
@@ -114,7 +114,7 @@ namespace PileDesign.FEM
                     state, s, pcv.IsPositiveCircumResistance, pcv.IsNegativeCircumResistance,
                     pcv.Tau1, pcv.Tau2,
                     pcv.S1 / 1000.0, pcv.S2 / 1000.0,
-                    psiLHalf);
+                    psiLHalf, pcv.TauT);
             }
             if (_isToe && state == "positive")
             {
