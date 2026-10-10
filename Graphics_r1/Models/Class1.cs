@@ -22,8 +22,9 @@ namespace PileDesign.Models
         [System.Text.Json.Serialization.JsonIgnore]
         internal HashSet<string>? InputPropertyNamesInFile { get; set; }
 
-        public InputModel InputModel { get; set; }
-        public AnaModel AnaModel { get; set; }
+        public InputModel InputModel { get; set; } = null!;   // 読込か保存の組み立てで入る
+        /// <summary>解析結果。解析結果を持たないファイルでは null。</summary>
+        public AnaModel? AnaModel { get; set; }
 
         /// <summary>
         /// 群杭沈下解析の結果。<b>入力とは別の節</b>に持つ。
@@ -45,7 +46,7 @@ namespace PileDesign.Models
         public Results.SinglePileSettlementResult? SinglePileSettlementResult { get; set; }
 
         /// <summary>基礎梁鉛直解析結果</summary>
-        public List<VerticalBeamCaseResult> VerticalBeamCaseResults { get; set; }
+        public List<VerticalBeamCaseResult>? VerticalBeamCaseResults { get; set; }
 
         /// <summary>
         /// 解析結果と整合する「解析を実行した時点の入力」。

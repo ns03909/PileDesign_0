@@ -39,7 +39,7 @@ namespace PileDesign.Models.InputData
                 }
 
                 using StreamReader reader = new(csvFilePath, Encoding.UTF8);
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     string[] parts = line.Split(',');
@@ -83,7 +83,7 @@ namespace PileDesign.Models.InputData
         [OnDeserialized]
         internal void OnDeserializedHandler(StreamingContext _) => _suppressChildSync = false;
 
-        private ObservableCollection<PileBodySegment> _pileBodySegments;
+        private ObservableCollection<PileBodySegment> _pileBodySegments = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<PileBodySegment> PileBodySegments
         {
@@ -97,7 +97,7 @@ namespace PileDesign.Models.InputData
                     _pileBodySegments.CollectionChanged -= PileBodySegments_CollectionChanged;
 
                 // 値を設定（SetProperty を使って通知）
-                SetProperty(ref _pileBodySegments, value);
+                SetProperty(ref _pileBodySegments!, value);
 
                 // 新しいコレクションに購読を追加し、既存アイテムに親タイプを反映
                 if (_pileBodySegments != null)
@@ -182,7 +182,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        private string _pileBodyRef;
+        private string _pileBodyRef = null!;   // コンストラクタで既定値が入る
         public string PileBodyRef
         {
             get => _pileBodyRef;
@@ -197,7 +197,7 @@ namespace PileDesign.Models.InputData
             PileTypeNames.SteelPipe
         ];
 
-        private string _pileConstructionType;
+        private string _pileConstructionType = null!;   // コンストラクタで既定値が入る
         public string PileConstructionType
         {
             get => _pileConstructionType;
@@ -208,7 +208,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 施工タイプオプション
-        private ObservableCollection<string> _pileConstructionTypeOption;
+        private ObservableCollection<string> _pileConstructionTypeOption = null!;   // コンストラクタで入る
         public ObservableCollection<string> PileConstructionTypeOption
         {
             get => _pileConstructionTypeOption;
@@ -239,7 +239,7 @@ namespace PileDesign.Models.InputData
         ];
 
         // 杭頭タイプ
-        private string _pileTopType;
+        private string _pileTopType = null!;   // コンストラクタで既定値が入る
         public string PileTopType
         {
             get => _pileTopType;
@@ -275,7 +275,7 @@ namespace PileDesign.Models.InputData
         ];
 
         // 杭頭タイプオプション
-        private ObservableCollection<string> _pileTopTypeOption;
+        private ObservableCollection<string> _pileTopTypeOption = null!;   // コンストラクタで入る
         public ObservableCollection<string> PileTopTypeOption
         {
             get => _pileTopTypeOption;
@@ -485,7 +485,7 @@ namespace PileDesign.Models.InputData
         ["開端杭", "閉端杭",];
 
         // 杭先端スタイル
-        private string _pileTipStyle;
+        private string _pileTipStyle = null!;   // コンストラクタで既定値が入る
         public string PileTipStyle
         {
             get => _pileTipStyle;
@@ -561,7 +561,7 @@ namespace PileDesign.Models.InputData
             => PileTop?.SyncFromTopSection(PileBodyType, PileBodySegments?.FirstOrDefault()?.PileSection);
 
         //public string PileBodyType { get; set; }
-        private string _pileBodyType;
+        private string _pileBodyType = null!;   // コンストラクタで既定値が入る
         public string PileBodyType
         {
             get => _pileBodyType;
@@ -766,7 +766,7 @@ namespace PileDesign.Models.InputData
                     var topSec = PileBodySegments?.FirstOrDefault()?.PileSection;
                     if (topSec != null)
                     {
-                        bool isSp = (pileBodyType ?? "").Contains(PileTypeNames.SteelPipe);
+                        bool isSp = pileBodyType.Contains(PileTypeNames.SteelPipe);
                         double dia = (isSp && topSec.PipeDia > 0) ? topSec.PipeDia : topSec.PileDiameter;
                         if (dia > 0)
                         {
@@ -804,7 +804,7 @@ namespace PileDesign.Models.InputData
                     // 入らず、あとから断面を変えても届かなかった。ここで揃える。
                     var topSec = PileBodySegments?.FirstOrDefault()?.PileSection;
                     cpr.SetSteelPipeFromSection(
-                        (pileBodyType ?? "").Contains(PileTypeNames.SteelPipe),
+                        pileBodyType.Contains(PileTypeNames.SteelPipe),
                         topSec?.PipeTs ?? 0.0);
 
                     try
@@ -1027,7 +1027,7 @@ namespace PileDesign.Models.InputData
                     this.PileBodySegments.Select(segment => segment.DeepCopy())
                 );
                 copy._suppressChildSync = false;
-                copy.PileTop = this.PileTop?.DeepCopy();
+                copy.PileTop = this.PileTop?.DeepCopy()!;   // 元が null なら null のまま写す
                 if (this.PileTipSettlementPresetParameterNames != null)
                     copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);
                 else
@@ -1037,7 +1037,8 @@ namespace PileDesign.Models.InputData
             catch (Exception ex)
             {
                 Log.Warning(ex, "[PileBodyInput.DeepCopy]");
-                return null;
+                // 従来どおり null を返す (戻り値の宣言は null 非許容のまま。呼び出し側は null を想定していない)
+                return null!;
             }
         }
 

@@ -30,7 +30,7 @@
         }
 
         // 要素断面
-        private PileSection _pileSection;
+        private PileSection _pileSection = null!;   // コンストラクタで入る
         public PileSection PileSection
         {
             get => _pileSection;

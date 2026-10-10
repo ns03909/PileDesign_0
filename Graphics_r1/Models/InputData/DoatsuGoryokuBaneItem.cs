@@ -96,21 +96,21 @@ namespace PileDesign.Models.InputData
         [Newtonsoft.Json.JsonIgnore]
         public double PpBtm => Kp * StressBtm;
 
-        // ランタイム参照はシリアライズ対象外にする
+        // ランタイム参照はシリアライズ対象外にする (解析モデルを組むまでは null)
         [JsonIgnore]
-        public FEM.Node TopEmbedmentNode { get; set; }
+        public FEM.Node? TopEmbedmentNode { get; set; }
         [JsonIgnore]
-        public FEM.Node BtmEmbedmentNode { get; set; }
+        public FEM.Node? BtmEmbedmentNode { get; set; }
 
         [JsonIgnore]
-        public FEM.Node TopSoilNode { get; set; }
+        public FEM.Node? TopSoilNode { get; set; }
         [JsonIgnore]
-        public FEM.Node BtmSoilNode { get; set; }
+        public FEM.Node? BtmSoilNode { get; set; }
 
         [JsonIgnore]
-        public HorizontalSoilSpring TopHorizontalSoilSpring { get; set; }
+        public HorizontalSoilSpring? TopHorizontalSoilSpring { get; set; }
         [JsonIgnore]
-        public HorizontalSoilSpring BtmHorizontalSoilSpring { get; set; }
+        public HorizontalSoilSpring? BtmHorizontalSoilSpring { get; set; }
 
         // パラメータレスコンストラクタ（System.Text.Json が使えるように）
         public DoatsuGoryokuBaneItem()

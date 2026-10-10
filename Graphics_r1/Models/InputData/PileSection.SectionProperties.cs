@@ -261,7 +261,7 @@ namespace PileDesign.Models.InputData
                                     "製品選択では鋼管規格は切り替わりません。規格の選択をご確認ください";
                 }
                 SelectedPileSectionSpecification.Add(
-                    new Spec("鋼管規格", "", PipeGrade, "", noteGrade));
+                    new Spec("鋼管規格", "", PipeGrade!, "", noteGrade));   // PipeGrade は null 非許容の宣言 (上の ?? は保険)
                 SelectedPileSectionSpecification.Add(
                     new Spec("鋼管ヤング係数", "Es", $"{PipeEs:N0}", "N/mm2"));
             }

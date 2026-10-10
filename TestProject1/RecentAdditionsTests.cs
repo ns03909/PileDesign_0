@@ -493,8 +493,8 @@ namespace TestProject1
             Assert.IsNotNull(result.SettlementGridData);
 
             // 逐次再計算してビット同等を検証
-            var xs = pgs.SettlementGridX;
-            var ys = pgs.SettlementGridY;
+            var xs = pgs.SettlementGridX!;   // 解析が格子を作っている (上の Success)
+            var ys = pgs.SettlementGridY!;
             var layers = pgs.SettlementSoilLayers;
             int idx = 0;
             foreach (var x in xs)

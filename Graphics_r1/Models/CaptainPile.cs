@@ -63,8 +63,8 @@ namespace PileDesign.Models
             set => SetProperty(ref _d, value);
         }
 
-        private string _shearResistanceType;
-        public string ShearResistanceType
+        private string? _shearResistanceType;
+        public string? ShearResistanceType
         {
             get => _shearResistanceType;
             set => SetProperty(ref _shearResistanceType, value);
@@ -303,81 +303,82 @@ namespace PileDesign.Models
             set => SetProperty(ref _yieldMaxCurvature, value);
         }
 
-        private ObservableCollection<double> _yieldMs;
+        // Yield* / Ultimate* / Ns / ThetasMs は Update() で入る。それまでは null
+        private ObservableCollection<double>? _yieldMs;
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<double> YieldMs
+        public ObservableCollection<double>? YieldMs
         {
             get => _yieldMs;
             set => SetProperty(ref _yieldMs, value);
         }
 
-        private ObservableCollection<double> _yieldNs;
+        private ObservableCollection<double>? _yieldNs;
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<double> YieldNs
+        public ObservableCollection<double>? YieldNs
         {
             get => _yieldNs;
             set => SetProperty(ref _yieldNs, value);
         }
 
-        private ObservableCollection<double> _yieldEpsilon0s;
+        private ObservableCollection<double>? _yieldEpsilon0s;
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<double> YieldEpsilon0s
+        public ObservableCollection<double>? YieldEpsilon0s
         {
             get => _yieldEpsilon0s;
             set => SetProperty(ref _yieldEpsilon0s, value);
         }
 
-        private ObservableCollection<double> _yieldCurvatures;
+        private ObservableCollection<double>? _yieldCurvatures;
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<double> YieldCurvatures
+        public ObservableCollection<double>? YieldCurvatures
         {
             get => _yieldCurvatures;
             set => SetProperty(ref _yieldCurvatures, value);
         }
 
-        private ObservableCollection<double> _ultimateMs;
+        private ObservableCollection<double>? _ultimateMs;
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<double> UltimateMs
+        public ObservableCollection<double>? UltimateMs
         {
             get => _ultimateMs;
             set => SetProperty(ref _ultimateMs, value);
         }
 
-        private ObservableCollection<double> _ultimateNs;
+        private ObservableCollection<double>? _ultimateNs;
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<double> UltimateNs
+        public ObservableCollection<double>? UltimateNs
         {
             get => _ultimateNs;
             set => SetProperty(ref _ultimateNs, value);
         }
 
-        private ObservableCollection<double> _ultimateEpsilon0s;
+        private ObservableCollection<double>? _ultimateEpsilon0s;
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<double> UltimateEpsilon0s
+        public ObservableCollection<double>? UltimateEpsilon0s
         {
             get => _ultimateEpsilon0s;
             set => SetProperty(ref _ultimateEpsilon0s, value);
         }
 
-        private ObservableCollection<double> _ultimateCurvatures;
+        private ObservableCollection<double>? _ultimateCurvatures;
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<double> UltimateCurvatures
+        public ObservableCollection<double>? UltimateCurvatures
         {
             get => _ultimateCurvatures;
             set => SetProperty(ref _ultimateCurvatures, value);
         }
 
-        private ObservableCollection<double> _Ns;
+        private ObservableCollection<double>? _Ns;
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<double> Ns
+        public ObservableCollection<double>? Ns
         {
             get => _Ns;
             set => SetProperty(ref _Ns, value);
         }
 
-        private ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> _thetasMs;
+        private ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)>? _thetasMs;
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> ThetasMs
+        public ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)>? ThetasMs
         {
             get => _thetasMs;
             set => SetProperty(ref _thetasMs, value);
@@ -411,11 +412,11 @@ namespace PileDesign.Models
         // (引数付きコンストラクタしか無く、保存すると読み戻せずファイルが開けなくなる)。
         // 読込後は PileTop の読込の仕上げ (ApplyPileCapConcrete → SetPileCapConcrete → Update) で作り直す
         [System.Text.Json.Serialization.JsonIgnore]
-        public CTPConcrete CTPConcrete { get; set; }
+        public CTPConcrete CTPConcrete { get; set; } = null!;   // Update() で入る
         public CTPTensionRebars CTPTensionRebars { get; set; } = new CTPTensionRebars();
 
-        private string _selectedPCRingName;
-        public string SelectedPCRingName
+        private string? _selectedPCRingName;
+        public string? SelectedPCRingName
         {
             get => _selectedPCRingName;
             set => SetProperty(ref _selectedPCRingName, value);
@@ -793,8 +794,9 @@ namespace PileDesign.Models
                 double factor2 = 1.0 - factor1;
 
                 N = YieldNs[seg - 1] * factor1 + YieldNs[seg] * factor2;
-                M = YieldMs[seg - 1] * factor1 + YieldMs[seg] * factor2;
-                curvature = YieldCurvatures[seg - 1] * factor1 + YieldCurvatures[seg] * factor2;
+                // YieldMs・YieldCurvatures は YieldNs と同じ代入でそろって入る
+                M = YieldMs![seg - 1] * factor1 + YieldMs[seg] * factor2;
+                curvature = YieldCurvatures![seg - 1] * factor1 + YieldCurvatures[seg] * factor2;
                 deltaCurvature = Math.Max(1e-12, (YieldCurvatures[seg] - YieldCurvatures[seg - 1]) / 100.0);
 
                 // 圧縮/引張側の判定ロジックは現仕様を踏襲
@@ -855,8 +857,9 @@ namespace PileDesign.Models
                 double factor2 = 1.0 - factor1;
 
                 N = UltimateNs[seg - 1] * factor1 + UltimateNs[seg] * factor2;
-                M = UltimateMs[seg - 1] * factor1 + UltimateMs[seg] * factor2;
-                curvature = UltimateCurvatures[seg - 1] * factor1 + UltimateCurvatures[seg] * factor2; // ← 修正
+                // UltimateMs・UltimateCurvatures は UltimateNs と同じ代入でそろって入る
+                M = UltimateMs![seg - 1] * factor1 + UltimateMs[seg] * factor2;
+                curvature = UltimateCurvatures![seg - 1] * factor1 + UltimateCurvatures[seg] * factor2; // ← 修正
                 deltaCurvature = Math.Max(1e-12, (UltimateCurvatures[seg] - UltimateCurvatures[seg - 1]) / 100.0);
 
                 int maxIter = 200;

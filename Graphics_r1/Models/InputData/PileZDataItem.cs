@@ -44,8 +44,8 @@
         }
 
         // 土層分類
-        private string _selectedLayerClass;
-        public string SelectedLayerClass
+        private string? _selectedLayerClass;
+        public string? SelectedLayerClass
         {
             get => _selectedLayerClass;
             set => SetProperty(ref _selectedLayerClass, value);

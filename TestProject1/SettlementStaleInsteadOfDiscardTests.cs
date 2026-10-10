@@ -80,7 +80,7 @@ namespace TestProject1
             Assert.AreEqual(1, input.PileGroupSettlement.CaseRecords!.Count, "群杭沈下の記録が消えている");
             Assert.AreEqual(7.5, input.PileGroupSettlement.SettlementOf(1), 1e-9, "各杭の沈下量が消えている");
             Assert.AreEqual(2, sp.LoadDisplacements.Count, "単杭沈下の曲線が消えている");
-            Assert.AreEqual(2, sp.NodeDisplacements.Count, "節点別の履歴が消えている");
+            Assert.AreEqual(2, sp.NodeDisplacements!.Count, "節点別の履歴が消えている");
         }
 
         /// <summary>
@@ -199,7 +199,7 @@ namespace TestProject1
 
             Assert.AreEqual(0, input.PileGroupSettlement.CaseRecords?.Count ?? 0);
             Assert.AreEqual(0, sp.LoadDisplacements.Count);
-            Assert.AreEqual(0, sp.NodeDisplacements.Count);
+            Assert.AreEqual(0, sp.NodeDisplacements!.Count);
             Assert.IsFalse(vm.HasSettlementResultsForTest());
         }
     }

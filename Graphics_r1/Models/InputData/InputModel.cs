@@ -29,10 +29,12 @@ namespace PileDesign.Models.InputData
 
     public partial class InputModel : BaseModel
     {
-        private MainWindowViewModel _mainWindowViewModel;
+        // 画面に結ぶまで (SetMainWindowViewModel / AttachViewModel の前) は null
+        private MainWindowViewModel? _mainWindowViewModel;
 
         // 基本設定
-        private FundamentalInput _foundationInput;
+        // 以下の入力は Reset() か読込で入る
+        private FundamentalInput _foundationInput = null!;
         public FundamentalInput FundamentalInput
         {
             get => _foundationInput;
@@ -40,7 +42,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 荷重ケース
-        private LoadCasesInput _loadCasesInput;
+        private LoadCasesInput _loadCasesInput = null!;
         public LoadCasesInput LoadCasesInput
         {
             get => _loadCasesInput;
@@ -48,7 +50,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 地盤情報
-        private ObservableCollection<GroundInput> _groundsInput;
+        private ObservableCollection<GroundInput> _groundsInput = null!;
         public ObservableCollection<GroundInput> GroundsInput
         {
             get => _groundsInput;
@@ -74,7 +76,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭体
-        private ObservableCollection<PileBodyInput> _pileBodies;
+        private ObservableCollection<PileBodyInput> _pileBodies = null!;
         public ObservableCollection<PileBodyInput> PileBodies
         {
             get => _pileBodies;
@@ -100,7 +102,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭配置
-        private ObservableCollection<PileLayoutDataItem> _pileLayoutItems;
+        private ObservableCollection<PileLayoutDataItem> _pileLayoutItems = null!;
         public ObservableCollection<PileLayoutDataItem> PileLayoutItems
         {
             get => _pileLayoutItems;
@@ -115,7 +117,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 根入
-        private EmbedmentInput _embedmentInput;
+        private EmbedmentInput _embedmentInput = null!;
         public EmbedmentInput EmbedmentInput
         {
             get => _embedmentInput;
@@ -123,7 +125,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 基礎梁
-        private FoundationBeamInput _foundationBeamInput;
+        private FoundationBeamInput _foundationBeamInput = null!;
         public FoundationBeamInput FoundationBeamInput
         {
             get => _foundationBeamInput;
@@ -190,7 +192,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 一般節点
-        private ObservableCollection<InputNode> _inputNodes;
+        private ObservableCollection<InputNode> _inputNodes = null!;   // Reset() か読込で入る
         public ObservableCollection<InputNode> InputNodes
         {
             get => _inputNodes;
@@ -453,7 +455,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭要素分割
-        private ElementDivision _elementDivision;
+        private ElementDivision _elementDivision = null!;   // Reset() か読込で入る
         public ElementDivision ElementDivision
         {
             get => _elementDivision;
@@ -511,7 +513,8 @@ namespace PileDesign.Models.InputData
             {
                 foreach (var it in e.NewItems.OfType<PileLayoutDataItem>())
                 {
-                    it.SetMainWindowViewModel(_mainWindowViewModel);
+                    // 杭が足されるのは画面に結んだあと (null なら従来どおり SetMainWindowViewModel が例外を投げる)
+                    it.SetMainWindowViewModel(_mainWindowViewModel!);
                     it.PropertyChanged += OnPileLayoutItemPropertyChanged;
                 }
             }
@@ -872,7 +875,7 @@ namespace PileDesign.Models.InputData
         /// <para><b>配線の入口は 2 つある</b> (<c>SetMainWindowViewModel</c> は新規作成、
         /// <c>AttachViewModel</c> は読込・Undo)。ここへ寄せて、片方だけ直すのを防ぐ。</para>
         /// </summary>
-        private void WireLoadCases(MainWindowViewModel mainWindowViewModel)
+        private void WireLoadCases(MainWindowViewModel? mainWindowViewModel)
         {
             if (LoadCasesInput == null) return;
 
@@ -989,7 +992,8 @@ namespace PileDesign.Models.InputData
 
             FundamentalInput = new FundamentalInput();
             LoadCasesInput = new LoadCasesInput();
-            LoadCasesInput.SetMainWindowViewModel(_mainWindowViewModel);
+            // Reset は SetMainWindowViewModel のあとに呼ばれる (null なら従来どおり SetMainWindowViewModel が例外を投げる)
+            LoadCasesInput.SetMainWindowViewModel(_mainWindowViewModel!);
             WireLoadCases(_mainWindowViewModel);
             GroundsInput = [new GroundInput()];
             PileBodies = [new PileBodyInput()];
@@ -1029,7 +1033,7 @@ namespace PileDesign.Models.InputData
         }
 
 
-        private PileGroupSettlement _pileGroupSettlement;
+        private PileGroupSettlement _pileGroupSettlement = null!;   // Reset() か読込で入る
         public PileGroupSettlement PileGroupSettlement
         {
             get => _pileGroupSettlement;
@@ -1037,7 +1041,7 @@ namespace PileDesign.Models.InputData
         }
 
         // グリッド
-        private ObservableCollection<GridDataItem> _gridXItems;
+        private ObservableCollection<GridDataItem> _gridXItems = null!;   // Reset() か読込で入る
         //[JsonIgnore]
         public ObservableCollection<GridDataItem> GridXItems
         {
@@ -1045,7 +1049,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _gridXItems, value);
         }
 
-        private ObservableCollection<GridDataItem> _gridYItems;
+        private ObservableCollection<GridDataItem> _gridYItems = null!;   // Reset() か読込で入る
         //[JsonIgnore]
         public ObservableCollection<GridDataItem> GridYItems
         {
@@ -1836,7 +1840,8 @@ namespace PileDesign.Models.InputData
                 }
 
                 // バッチでObservableCollectionを更新（個別Addの通知コストを回避）
-                ElementDivision.SoilPiles = new ObservableCollection<SoilPile>(newPiles);
+                // ElementDivision は Reset() か読込で入る (上の ?. は保険)
+                ElementDivision!.SoilPiles = new ObservableCollection<SoilPile>(newPiles);
                 // 差し替えた一覧の変更も受け取る。購読は ElementDivision を設定したときにしか付けていなかったので、
                 // 差し替え後の一覧は誰も見ていなかった
                 AttachElementDivisionHandlers();
@@ -2055,7 +2060,7 @@ namespace PileDesign.Models.InputData
             // 以前は元の SoilPiles を一時的に空へ差し替えて finally で戻しており、DeepCopy は Task.Run でも走るので、
             // その間に画面・自動保存が空の一覧を読みえた。
             // 共有するのは中身があるときだけ (以前と同じ)。空のコレクションを共有すると、あとで元へ足したセットが控えにも入る
-            ObservableCollection<SoilPile> savedSoilPiles = ElementDivision?.SoilPiles is { Count: > 0 } sp ? sp : null;
+            ObservableCollection<SoilPile>? savedSoilPiles = ElementDivision?.SoilPiles is { Count: > 0 } sp ? sp : null;
             try
             {
 
@@ -2080,14 +2085,15 @@ namespace PileDesign.Models.InputData
                 long tStart = swTotal.ElapsedMilliseconds;
 
                 // ── 既存の手書き DeepCopy を使う型 ──
-                copy.FundamentalInput = this.FundamentalInput?.ShallowCopy();
-                copy.LoadCasesInput = this.LoadCasesInput?.DeepCopy();
+                // 元が null (未設定) なら null のまま写す
+                copy.FundamentalInput = this.FundamentalInput?.ShallowCopy()!;
+                copy.LoadCasesInput = this.LoadCasesInput?.DeepCopy()!;
                 copy.PileBodies = this.PileBodies != null
                     ? new ObservableCollection<PileBodyInput>(this.PileBodies.Select(p => p.DeepCopy()))
-                    : null;
+                    : null!;
                 copy.GroundsInput = this.GroundsInput != null
                     ? new ObservableCollection<GroundInput>(this.GroundsInput.Select(g => g.DeepCopy()))
-                    : null;
+                    : null!;
                 long tHand = swTotal.ElapsedMilliseconds - tStart;
 
                 // ── PileLayoutItems は QuickClone (高速) ──
@@ -2104,11 +2110,12 @@ namespace PileDesign.Models.InputData
                 // 複製できなければ例外で知らせる (欠けた写しを成功として返さない)。履歴・解析結果の控えに欠けた写しを
                 // 積むと、あとで「データが消えた状態」を復元することになる。以前は CloneJson が失敗で null を返し、
                 // コレクションは失敗した要素を黙って除いていた
-                copy.ElementDivision = this.ElementDivision == null ? null
+                // 元が null (未設定) なら null のまま写す
+                copy.ElementDivision = this.ElementDivision == null ? null!
                     : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.ElementDivision.ShellWithoutSoilPiles());
-                copy.EmbedmentInput = this.EmbedmentInput == null ? null : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.EmbedmentInput);
-                copy.FoundationBeamInput = this.FoundationBeamInput == null ? null : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.FoundationBeamInput);
-                copy.PileGroupSettlement = this.PileGroupSettlement == null ? null : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.PileGroupSettlement);
+                copy.EmbedmentInput = this.EmbedmentInput == null ? null! : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.EmbedmentInput);
+                copy.FoundationBeamInput = this.FoundationBeamInput == null ? null! : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.FoundationBeamInput);
+                copy.PileGroupSettlement = this.PileGroupSettlement == null ? null! : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.PileGroupSettlement);
                 copy.InputNodes = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJsonOrThrow(this.InputNodes);
                 copy.GridXItems = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJsonOrThrow(this.GridXItems);
                 copy.GridYItems = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJsonOrThrow(this.GridYItems);
@@ -2234,7 +2241,7 @@ namespace PileDesign.Models.InputData
                     // インデクサ等パラメータ付きプロパティはスキップ
                     if (p.GetIndexParameters().Length > 0) continue;
                     if (!p.CanRead) continue;
-                    object val;
+                    object? val;
                     try { val = p.GetValue(target); } catch { continue; }
 
                     if (val is double d)

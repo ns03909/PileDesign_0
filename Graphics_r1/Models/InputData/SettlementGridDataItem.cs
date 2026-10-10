@@ -11,8 +11,8 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _no, value);
         }
 
-        private string _name;
-        public string Name
+        private string? _name;
+        public string? Name
         {
             get => _name;
             set => SetProperty(ref _name, value);

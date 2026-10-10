@@ -57,6 +57,7 @@ namespace PileDesign.Models.InputData
         /// 同じ要素を指す新しい入れ物を返す。null は null のまま
         /// (空の入れ物に置き換えると保存ファイルの中身が変わる)。
         /// </summary>
+        [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(source))]
         private static ObservableCollection<T>? Shallow<T>(ObservableCollection<T>? source)
             => source == null ? null : new ObservableCollection<T>(source);
     }

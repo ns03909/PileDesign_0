@@ -24,15 +24,16 @@ namespace PileDesign.Models.InputData
         }
 
         // 節点
-        private ObservableCollection<EmbedmentZDataItem> _zDataItems;
-        public ObservableCollection<EmbedmentZDataItem> ZDataItems
+        // 引数付きコンストラクタか読込で入る。引数なしで作ったときは null
+        private ObservableCollection<EmbedmentZDataItem>? _zDataItems;
+        public ObservableCollection<EmbedmentZDataItem>? ZDataItems
         {
             get => _zDataItems;
             set => SetProperty(ref _zDataItems, value);
         }
 
         // 土層(総数：節点数-1)
-        public ObservableCollection<GroundLayerInput> GroundLayers { get; set; }
+        public ObservableCollection<GroundLayerInput>? GroundLayers { get; set; }
 
         // ★★ ここを追加（パラメータなしコンストラクタ）★★
         public SoilEmbedment() { }
@@ -61,9 +62,9 @@ namespace PileDesign.Models.InputData
         {
             var copy = CloneWithoutSubscribers<SoilEmbedment>();
             copy.ZDataItems = ZDataItems == null
-                ? null! : [.. ZDataItems.Select(z => z.DeepCopy())];
+                ? null : [.. ZDataItems.Select(z => z.DeepCopy())];
             copy.GroundLayers = GroundLayers == null
-                ? null! : [.. GroundLayers];
+                ? null : [.. GroundLayers];
             return copy;
         }
     }

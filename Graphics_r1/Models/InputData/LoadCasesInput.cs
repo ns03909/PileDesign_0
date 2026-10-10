@@ -12,7 +12,7 @@ namespace PileDesign.Models.InputData
     {
         // フィールド
 
-        private MainWindowViewModel _mainWindowViewModel;
+        private MainWindowViewModel? _mainWindowViewModel;
 
         private double _loadCombinationFactor;
         public double LoadCombinationFactor
@@ -21,7 +21,8 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _loadCombinationFactor, value);
         }
 
-        private ObservableCollection<LoadCombination> _loadCombinations;
+        // 以下の一覧と荷重ケースは SetMainWindowViewModel か読込で入る
+        private ObservableCollection<LoadCombination> _loadCombinations = null!;
         public ObservableCollection<LoadCombination> LoadCombinations
         {
             get => _loadCombinations;
@@ -35,7 +36,7 @@ namespace PileDesign.Models.InputData
         }
 
         //画面表示用4つのデータをもつ
-        private ObservableCollection<LoadCombination> _loadCombinationsPlus;
+        private ObservableCollection<LoadCombination> _loadCombinationsPlus = null!;
         public ObservableCollection<LoadCombination> LoadCombinationsPlus
         {
             get => _loadCombinationsPlus;
@@ -48,49 +49,49 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        private LoadCase _loadCaseVL0;
+        private LoadCase _loadCaseVL0 = null!;
         public LoadCase LoadCaseVL0
         {
             get => _loadCaseVL0;
             set => SetProperty(ref _loadCaseVL0, value);
         }
 
-        private LoadCase _loadCaseVLadd;
+        private LoadCase _loadCaseVLadd = null!;
         public LoadCase LoadCaseVLadd
         {
             get => _loadCaseVLadd;
             set => SetProperty(ref _loadCaseVLadd, value);
         }
 
-        private LoadCase _loadCaseVL;
+        private LoadCase _loadCaseVL = null!;
         public LoadCase LoadCaseVL
         {
             get => _loadCaseVL;
             set => SetProperty(ref _loadCaseVL, value);
         }
 
-        private LoadCaseCommon _loadCaseLevel1Common;
+        private LoadCaseCommon _loadCaseLevel1Common = null!;
         public LoadCaseCommon LoadCaseLevel1Common
         {
             get => _loadCaseLevel1Common;
             set => SetProperty(ref _loadCaseLevel1Common, value);
         }
 
-        private LoadCaseCommon _loadCaseLevel2Common;
+        private LoadCaseCommon _loadCaseLevel2Common = null!;
         public LoadCaseCommon LoadCaseLevel2Common
         {
             get => _loadCaseLevel2Common;
             set => SetProperty(ref _loadCaseLevel2Common, value);
         }
 
-        private ObservableCollection<LoadCase> _loadCasesLevel1;
+        private ObservableCollection<LoadCase> _loadCasesLevel1 = null!;
         public ObservableCollection<LoadCase> LoadCasesLevel1
         {
             get => _loadCasesLevel1;
             set => ReplaceLoadCaseCollection(ref _loadCasesLevel1, value);
         }
 
-        private ObservableCollection<LoadCase> _loadCasesLevel2;
+        private ObservableCollection<LoadCase> _loadCasesLevel2 = null!;
         public ObservableCollection<LoadCase> LoadCasesLevel2
         {
             get => _loadCasesLevel2;
@@ -114,13 +115,13 @@ namespace PileDesign.Models.InputData
         {
             if (ReferenceEquals(field, value)) return;
             if (field != null) field.CollectionChanged -= LoadCasesCollection_Changed;
-            SetProperty(ref field, value, propertyName);
+            SetProperty(ref field!, value, propertyName);
             if (field != null) field.CollectionChanged += LoadCasesCollection_Changed;
             SyncLoadCaseSubscriptions();
             RaiseAllLoadCasesChanged();
         }
 
-        private void LoadCasesCollection_Changed(object sender, NotifyCollectionChangedEventArgs e)
+        private void LoadCasesCollection_Changed(object? sender, NotifyCollectionChangedEventArgs e)
         {
             // 追加・削除・置換・Reset のどれでも、今の一覧の中身に購読を揃える
             SyncLoadCaseSubscriptions();
@@ -149,7 +150,7 @@ namespace PileDesign.Models.InputData
         /// <summary>購読中の荷重ケースの数 (テスト用)。</summary>
         internal int SubscribedLoadCaseCount => _subscribedLoadCases.Count;
 
-        private void LoadCase_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        private void LoadCase_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(LoadCase.IsApplicable))
             {

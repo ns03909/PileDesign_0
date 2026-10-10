@@ -69,7 +69,7 @@ namespace PileDesign.Models.InputData
 
 
         // 土層名
-        private string _name;
+        private string _name = null!;   // コンストラクタで既定値が入る
         public string Name
         {
             get => _name;
@@ -78,7 +78,7 @@ namespace PileDesign.Models.InputData
 
 
         // 土層分類
-        private string _granularityClass;
+        private string _granularityClass = null!;   // コンストラクタで既定値が入る
         public string GranularityClass
         {
             get => _granularityClass;
@@ -148,7 +148,7 @@ namespace PileDesign.Models.InputData
         ];
 
         // 選択土層年代
-        private string _ageCategory;
+        private string _ageCategory = null!;   // コンストラクタで既定値が入る
         public string AgeCategory
         {
             get => _ageCategory;

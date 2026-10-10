@@ -18,7 +18,7 @@ namespace PileDesign.Common
         ///   - 端部節点 (片側のみ):              L_片側 / 2
         ///   - 反力アイテムが付かない梁は除外 (杭頭リジッドリンク等)。
         /// </summary>
-        public static double GetNodeTributaryLength(Node node, AnaModel anaModel)
+        public static double GetNodeTributaryLength(Node? node, AnaModel? anaModel)
         {
             if (node == null || anaModel?.Beams == null) return 0;
             double tributary = 0;

@@ -24,7 +24,7 @@ namespace PileDesign.Models.InputData
             set
             {
                 if (_materials != null) _materials.CollectionChanged -= OnMaterialsChanged;
-                SetProperty(ref _materials, value);
+                SetProperty(ref _materials!, value);
                 if (_materials != null) _materials.CollectionChanged += OnMaterialsChanged;
                 RefreshMaterialNoOptions();
             }
@@ -37,7 +37,7 @@ namespace PileDesign.Models.InputData
             set
             {
                 if (_sections != null) _sections.CollectionChanged -= OnSectionsChanged;
-                SetProperty(ref _sections, value);
+                SetProperty(ref _sections!, value);
                 if (_sections != null) _sections.CollectionChanged += OnSectionsChanged;
                 RefreshSectionNoOptions();
             }

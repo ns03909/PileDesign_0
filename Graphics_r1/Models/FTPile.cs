@@ -178,14 +178,14 @@ namespace PileDesign.Models
         }
 
         public FTPilePile FTPilePile { get; set; } = new(); // FTパイル杭体
-        public FTPileCap FTPileCap { get; set; } // FTパイルキャップ
+        public FTPileCap FTPileCap { get; set; } = null!; // FTパイルキャップ (引数付きコンストラクタか読込で入る)
         public FTPileTensionBars FTPileTensionBars { get; set; } = new(); // FTパイル引張鉄筋
         /// <summary>選んだ FT キャップ。以前は公開フィールドで保存されず、開き直すと既定 (寸法 0) に戻っていた。</summary>
         public FTCap FTCap { get; set; } = new();
         // カタログ (CSV から読む選択肢) なので保存しない。読込後に読み直す (OnDeserialized)。
         // 保存すると杭体ごとにカタログの写しが入り、ファイルの半分ほどを占めていた
         [System.Text.Json.Serialization.JsonIgnore]
-        public List<FTCap> FTCaps { get; set; }
+        public List<FTCap>? FTCaps { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<string> FTCapOption { get; set; } = [];
 
@@ -212,8 +212,8 @@ namespace PileDesign.Models
             return combined;
         }
 
-        private string _selectedFTCapName;
-        public string SelectedFTCapName
+        private string? _selectedFTCapName;
+        public string? SelectedFTCapName
         {
             get => _selectedFTCapName;
             set => SetProperty(ref _selectedFTCapName, value);
@@ -224,9 +224,9 @@ namespace PileDesign.Models
         [System.Text.Json.Serialization.JsonIgnore]
         public double K0 { get; private set; } // 杭頭接合部の初期回転剛性
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<double> Ns { get; private set; }
+        public ObservableCollection<double>? Ns { get; private set; }   // Update() で入る。それまでは null
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> ThetasMs { get; private set; }
+        public ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)>? ThetasMs { get; private set; }
 
         // パラメータなしコンストラクタ（System.Text.Json デシリアライズ用）。
         // CSV テーブル読込・再計算は LoadFTCaps() と Update() を明示的に呼ぶこと。
@@ -316,7 +316,7 @@ namespace PileDesign.Models
         public void ClearCap()
         {
             FTCap = new FTCap();
-            SelectedFTCapName = null!;
+            SelectedFTCapName = null;
         }
 
         internal void SetDimensionsFromSection(double pileDiameter, double concreteThickness)

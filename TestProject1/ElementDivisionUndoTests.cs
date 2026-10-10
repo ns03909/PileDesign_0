@@ -46,7 +46,7 @@ namespace TestProject1
                     i => !string.IsNullOrEmpty(i.Name));
                 Assert.IsNotNull(layer,
                     "水平地盤反力係数の行が作られていません (網が空振りします)");
-                string name = layer.Name;
+                string name = layer.Name!;   // 上の FirstOrDefault で名前のある行だけを選んでいる
 
                 // 手入力で kh0 を上書き (控えが 1 段積まれる)
                 vm.ApplyKh0Edit(layer, 12345.0);

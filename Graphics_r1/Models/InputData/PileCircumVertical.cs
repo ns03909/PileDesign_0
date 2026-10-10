@@ -7,8 +7,8 @@ namespace PileDesign.Models.InputData
     {
         public double Top { get; set; }
         public double Bottom { get; set; }
-        public PileBodySegment PileBodySegment { get; set; }
-        public GroundLayerInput GroundLayer { get; set; }
+        public PileBodySegment PileBodySegment { get; set; } = null!;   // SoilPile が作るときに入る
+        public GroundLayerInput GroundLayer { get; set; } = null!;   // SoilPile が作るときに入る
 
 
         // 第1折点変位

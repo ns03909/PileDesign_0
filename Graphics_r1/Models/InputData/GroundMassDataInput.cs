@@ -95,7 +95,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 名称
-        private string _name;
+        private string _name = null!;   // コンストラクタで既定値が入る
         public string Name
         {
             get => _name;
@@ -111,16 +111,16 @@ namespace PileDesign.Models.InputData
         }
 
         // 年代分類
-        private string _ageCategory;
-        public string AgeCategory
+        private string? _ageCategory;
+        public string? AgeCategory
         {
             get => _ageCategory;
             set => SetProperty(ref _ageCategory, value);
         }
 
         //土層分類
-        private string _granularityClass;
-        public string GranularityClass
+        private string? _granularityClass;
+        public string? GranularityClass
         {
             get => _granularityClass;
             set => SetProperty(ref _granularityClass, value);
@@ -199,7 +199,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 繰り返しせん断応力比
-        private ObservableCollection<double?> _tauDonSigmaZPrime;
+        private ObservableCollection<double?> _tauDonSigmaZPrime = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double?> TauDonSigmaZPrime
         {
@@ -208,7 +208,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 液状化安全率;
-        private ObservableCollection<double?> _fL;
+        private ObservableCollection<double?> _fL = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double?> FL
         {
@@ -217,7 +217,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 低減率
-        private ObservableCollection<double?> _betaL;
+        private ObservableCollection<double?> _betaL = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double?> BetaL
         {
@@ -226,7 +226,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 繰り返しせん断ひずみ
-        private ObservableCollection<double?> _gammaCy;
+        private ObservableCollection<double?> _gammaCy = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double?> GammaCy
         {
@@ -235,7 +235,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 液状化水平変位
-        private ObservableCollection<double> _sigmaGammaCyH;
+        private ObservableCollection<double> _sigmaGammaCyH = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> SigmaGammaCyH
         {
@@ -286,7 +286,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 等価S波速度
-        private ObservableCollection<double> _vSE;
+        private ObservableCollection<double> _vSE = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> VSE
         {
@@ -295,7 +295,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 等価せん断ばね剛性
-        private ObservableCollection<double> _k;
+        private ObservableCollection<double> _k = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> K
         {
@@ -304,7 +304,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 仮の無次元化水平変位
-        private ObservableCollection<double> _u;
+        private ObservableCollection<double> _u = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> U
         {
@@ -313,7 +313,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 調整後無次元化水平変位
-        private ObservableCollection<double> _uStar;
+        private ObservableCollection<double> _uStar = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> UStar
         {
@@ -322,7 +322,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 水平変位
-        private ObservableCollection<double> _dmaxUStar;
+        private ObservableCollection<double> _dmaxUStar = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> DmaxUStar
         {
@@ -347,7 +347,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 水平変位
-        private ObservableCollection<double> _dmaxUStarSigmaGammaCyH;
+        private ObservableCollection<double> _dmaxUStarSigmaGammaCyH = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> DmaxUStarSigmaGammaCyH
         {

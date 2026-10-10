@@ -298,7 +298,7 @@ namespace TestProject1
             cp.Nu = 1.0;
             cp.CTPTensionRebars.HasTensionRebars = false;
             cp.Update();
-            Assert.IsTrue(cp.UltimateNs.Count > 2, "前提: N-M 曲線がある");
+            Assert.IsTrue(cp.UltimateNs!.Count > 2, "前提: N-M 曲線がある");
             Assert.AreEqual(0.0, cp.UltimateNs[0], 1e-6, "前提: 定着筋なしの引張側の端は 0");
             Assert.IsTrue(cp.UltimateNs.Zip(cp.UltimateNs.Skip(1)).All(p => p.First <= p.Second), "前提: N-M 曲線は引張側から並ぶ");
 
@@ -356,7 +356,7 @@ namespace TestProject1
             var built = FTPileWithoutCap();
             if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
             var (input, body) = built.Value;
-            var ft = body.PileTop.FTPile;
+            var ft = body.PileTop.FTPile!;
             var section = body.PileBodySegments[0].PileSection;
             double diameter = section.PileDiameter;
             Assert.IsNotNull(ft.CapForPileDiameter(diameter), "前提: 例題の杭径のキャップがカタログにある");
@@ -389,7 +389,7 @@ namespace TestProject1
             var (input, body) = built.Value;
             var section = body.PileBodySegments[0].PileSection;
             section.PileDiameter = 1500.0;   // FT キャップは 300〜1200 mm
-            Assert.IsNull(body.PileTop.FTPile.CapForPileDiameter(1500.0), "前提: 杭径 1500 のキャップは無い");
+            Assert.IsNull(body.PileTop.FTPile!.CapForPileDiameter(1500.0), "前提: 杭径 1500 のキャップは無い");
 
             Assert.IsFalse(body.PileTop.AutoSelectFTCap(section));
             Assert.IsTrue(body.PileTop.FTPile.IsCapUnselected(), "カタログに無いのに別の径のキャップを選んでいます");

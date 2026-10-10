@@ -166,7 +166,7 @@ namespace TestProject1
             }
 
             Assert.IsNotNull(loaded.ResultInputSnapshot, "スナップショットが復元されていない");
-            Assert.IsNotNull(loaded.AnaModel.InputModel, "AnaModel の入力が復元されていない");
+            Assert.IsNotNull(loaded.AnaModel!.InputModel, "AnaModel の入力が復元されていない");
             Assert.AreSame(loaded.AnaModel.InputModel, loaded.ResultInputSnapshot,
                 "同じ実体だったものが復元後に別インスタンスになっている");
             Assert.AreNotSame(loaded.InputModel, loaded.ResultInputSnapshot,
@@ -204,7 +204,7 @@ namespace TestProject1
                 FormatVersion = 2, InputModel = input, AnaModel = ana, ResultInputSnapshot = input,
             });
 
-            var db = loaded.AnaModel.DummyBeams.LastOrDefault(d => d.Name == "dummy-test");
+            var db = loaded.AnaModel!.DummyBeams.LastOrDefault(d => d.Name == "dummy-test");
             Assert.IsNotNull(db, "ダミー梁が復元されていない");
             Assert.IsNotNull(db!.NodeI, "ダミー梁の NodeI が復元されていない ($ref が捨てられている)");
             Assert.IsNotNull(db.NodeJ, "ダミー梁の NodeJ が復元されていない");
@@ -307,7 +307,7 @@ namespace TestProject1
                 FormatVersion = 2, InputModel = snapshot, AnaModel = ana, ResultInputSnapshot = snapshot,
             });
 
-            Assert.IsNotNull(loaded.AnaModel.InputModel,
+            Assert.IsNotNull(loaded.AnaModel!.InputModel,
                 "AnaModel の入力が往復で失われている（$ref の解決も壊れる）");
 
             // 別の入力を明示的に結び付け直せること

@@ -57,7 +57,7 @@ namespace PileDesign.Models.InputData
         public bool IsSmartMagnum => PileConstructionTypeNames.IsSmartMagnum(PileConstructionType);
 
         /// <summary>杭先端土質が粘土質か（Smart-MAGNUM の式は砂質・礫質 / 粘土質 の 2 分岐）。</summary>
-        private static bool IsCohesive(string granularityClass) => granularityClass == "粘性土";
+        private static bool IsCohesive(string? granularityClass) => granularityClass == "粘性土";
 
         /// <summary>
         /// 周面摩擦・先端支持力の算定に使う杭径 (m)。
@@ -268,7 +268,8 @@ namespace PileDesign.Models.InputData
 
             var (wingBottom, wingTop) = SmartMagnumWingRange;
             // 区間が拡翼掘削範囲に少しでも掛かっていれば拡大比を適用する
-            if (pcv.Top <= wingBottom || pcv.Bottom >= wingTop) return SmartMagnumOmegaMin;
+            // section が null でないので pcv も null でない
+            if (pcv!.Top <= wingBottom || pcv.Bottom >= wingTop) return SmartMagnumOmegaMin;
 
             double dss = SmartMagnumStandardExcavationDia(NodeOrShaftDiameterM(section));
             return dss > 0 ? ClampOmega(des / dss) : SmartMagnumOmegaMin;

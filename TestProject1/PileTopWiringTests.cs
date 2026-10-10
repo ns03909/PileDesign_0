@@ -296,9 +296,9 @@ namespace TestProject1
             live.CapringPile.SetSteelPipeFromSection(true, 19.0);
 
             Assert.AreEqual(DefaultFc, snapshot.PileCapFc, 1e-9);
-            Assert.AreEqual(1000.0, snapshot.FTPile.FTPilePile.D1, 1e-9,
+            Assert.AreEqual(1000.0, snapshot.FTPile!.FTPilePile.D1, 1e-9,
                 "FT-Pile の杭径がスナップショットでも動いています。元に戻せません");
-            Assert.AreEqual(12.0, snapshot.CapringPile.SteelPipeWallThickness, 1e-9,
+            Assert.AreEqual(12.0, snapshot.CapringPile!.SteelPipeWallThickness, 1e-9,
                 "キャプリングの鋼管厚がスナップショットでも動いています");
             Assert.AreNotSame(live.FTPile, snapshot.FTPile);
             Assert.AreNotSame(live.CapringPile, snapshot.CapringPile);

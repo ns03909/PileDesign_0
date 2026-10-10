@@ -26,15 +26,15 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _pileBodyNo, value);
         }
 
-        private string _pileBodyType;
-        public string PileBodyType
+        private string? _pileBodyType;
+        public string? PileBodyType
         {
             get => _pileBodyType;
             set => SetProperty(ref _pileBodyType, value);
         }
 
-        private string _pileTopType;
-        public string PileTopType
+        private string? _pileTopType;
+        public string? PileTopType
         {
             get => _pileTopType;
             set => SetProperty(ref _pileTopType, value);
@@ -99,8 +99,8 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        private ObservableCollection<Spec> _selectedPileTopSpecification;
-        public ObservableCollection<Spec> SelectedPileTopSpecification
+        private ObservableCollection<Spec>? _selectedPileTopSpecification;
+        public ObservableCollection<Spec>? SelectedPileTopSpecification
         {
             get => _selectedPileTopSpecification;
             set => SetProperty(ref _selectedPileTopSpecification, value);
@@ -110,12 +110,12 @@ namespace PileDesign.Models.InputData
         // PCリングオプション
         //public ObservableCollection<string> PCRingOption { get; }
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<string> FTCapOption { get; set; }
+        public ObservableCollection<string>? FTCapOption { get; set; }
 
         //public List<PCRing> PCRings { get; set; }
         // 画面表示用の説明文。値を持たない (要素がタプルで、保存しても {} の羅列になる)
         [System.Text.Json.Serialization.JsonIgnore]
-        public ObservableCollection<(int, string, string)> Description { get; set; }
+        public ObservableCollection<(int, string, string)>? Description { get; set; }
 
         // FTパイルオプション
         public int SelectedFTCap { get; set; }
@@ -139,22 +139,24 @@ namespace PileDesign.Models.InputData
             return selected;
         }
 
-        private FTPile _FTPile;
-        public FTPile FTPile
+        // その工法を選ぶまでは null
+        private FTPile? _FTPile;
+        public FTPile? FTPile
         {
             get => _FTPile;
             set => SetProperty(ref _FTPile, value);
         }
 
-        private CaptainPile _captainPile;
+        private CaptainPile _captainPile = null!;   // コンストラクタで入る
         public CaptainPile CaptainPile
         {
             get => _captainPile;
             set => SetProperty(ref _captainPile, value);
         }
 
-        private CapringPile _capringPile;
-        public CapringPile CapringPile
+        // その工法を選ぶまでは null
+        private CapringPile? _capringPile;
+        public CapringPile? CapringPile
         {
             get => _capringPile;
             set => SetProperty(ref _capringPile, value);
@@ -813,10 +815,10 @@ namespace PileDesign.Models.InputData
         {
             var copy = CloneWithoutSubscribers<PileTop>();
             copy.CaptainPile = this.CaptainPile?.DeepCopy()!;
-            copy.FTPile = this.FTPile?.DeepCopy()!;
-            copy.CapringPile = this.CapringPile?.DeepCopy()!;
+            copy.FTPile = this.FTPile?.DeepCopy();
+            copy.CapringPile = this.CapringPile?.DeepCopy();
             copy.SelectedPileTopSpecification = this.SelectedPileTopSpecification == null
-                ? null! : [.. this.SelectedPileTopSpecification];
+                ? null : [.. this.SelectedPileTopSpecification];
             return copy;
         }
     }

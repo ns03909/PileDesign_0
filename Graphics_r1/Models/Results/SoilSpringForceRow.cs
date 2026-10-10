@@ -38,7 +38,7 @@ namespace PileDesign.Models.Results
             HorizontalSoilSpring spring,
             BeamForce bf,
             BeamDisp bd,
-            AnaModel anaModel = null)
+            AnaModel? anaModel = null)
         {
             double relUx = (bd.Dxi - bd.Dxj) * 1000.0; // m → mm
             double relUy = (bd.Dyi - bd.Dyj) * 1000.0;
@@ -51,7 +51,7 @@ namespace PileDesign.Models.Results
             return new SoilSpringForceRow
             {
                 SpringIndex = springIndex,
-                SpringName = spring.Name,
+                SpringName = spring!.Name,   // spring は null 非許容の引数 (上の ?. は保険)
                 Node1Index = node1Index,
                 Node2Index = node2Index,
                 RelUx = relUx,

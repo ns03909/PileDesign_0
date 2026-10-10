@@ -88,7 +88,7 @@ namespace PileDesign.Output
         }
 
         private static void AddGridSymbol(CadDocument doc, Layer layer,
-            double x, double y, double z, string name)
+            double x, double y, double z, string? name)
         {
             doc.Entities.Add(new Circle
             {

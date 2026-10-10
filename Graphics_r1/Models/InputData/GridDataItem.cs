@@ -18,7 +18,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _no, value);
         }
 
-        private string _name;
+        private string _name = null!;   // 作るときの初期化子か読込で入る
         public string Name
         {
             get => _name;

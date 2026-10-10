@@ -85,8 +85,8 @@ namespace TestProject1
 
             vm.ClearSettlementResultsForTest();
 
-            Assert.AreEqual(0, sp.NodeDisplacements.Count, "節点変位の履歴が残っている");
-            Assert.AreEqual(0, sp.NodeReactions.Count, "節点反力の履歴が残っている");
+            Assert.AreEqual(0, sp.NodeDisplacements!.Count, "節点変位の履歴が残っている");
+            Assert.AreEqual(0, sp.NodeReactions!.Count, "節点反力の履歴が残っている");
         }
 
         /// <summary>
@@ -203,11 +203,11 @@ namespace TestProject1
         public void ClearingReplacesTheListInsteadOfEmptyingItInPlace()
         {
             var (vm, _, sp) = Build();
-            var sharedList = sp.NodeDisplacements;   // 写し先が共有しているつもりのリスト
+            var sharedList = sp.NodeDisplacements!;   // 写し先が共有しているつもりのリスト
 
             vm.ClearSettlementResultsForTest();
 
-            Assert.AreEqual(0, sp.NodeDisplacements.Count, "こちらは消えていること");
+            Assert.AreEqual(0, sp.NodeDisplacements!.Count, "こちらは消えていること");
             Assert.AreEqual(2, sharedList.Count,
                 "共有しているリストの中身まで消えている (Clear() ではなく入れ直しであること)");
             Assert.AreNotSame(sharedList, sp.NodeDisplacements);

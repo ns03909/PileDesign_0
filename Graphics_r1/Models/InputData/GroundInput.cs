@@ -22,7 +22,7 @@ namespace PileDesign.Models.InputData
         public bool IsErrorStressGLDepth => StressGLDepth > 0;
 
         // 地盤参照
-        private string _groundRef;
+        private string _groundRef = null!;   // コンストラクタで既定値が入る
         public string GroundRef
         {
             get => _groundRef;
@@ -126,7 +126,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 浅層地盤のタイプ
-        private string _shallowSoilType;
+        private string _shallowSoilType = null!;   // コンストラクタで既定値が入る
         public string ShallowSoilType
         {
             get => _shallowSoilType;
@@ -156,7 +156,7 @@ namespace PileDesign.Models.InputData
         public bool HasResponseSpectrumWarning => !string.IsNullOrEmpty(ResponseSpectrumWarning);
 
         // 算定法
-        private string _calculationMethod;
+        private string _calculationMethod = null!;   // コンストラクタで既定値が入る
         public string CalculationMethod
         {
             get => _calculationMethod;
@@ -180,7 +180,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 土層データ（デシリアライズ時はコンストラクタのデフォルト値を上書きする）
-        private ObservableCollection<GroundLayerInput> _groundLayers;
+        private ObservableCollection<GroundLayerInput> _groundLayers = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<GroundLayerInput> GroundLayers
         {
@@ -189,7 +189,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 土質点データ（デシリアライズ時はコンストラクタのデフォルト値を上書きする）
-        private ObservableCollection<GroundMassDataInput> _groundMassesData;
+        private ObservableCollection<GroundMassDataInput> _groundMassesData = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<GroundMassDataInput> GroundMassesData
         {

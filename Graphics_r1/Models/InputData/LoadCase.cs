@@ -299,7 +299,7 @@ namespace PileDesign.Models.InputData
         }
 
         // MainWindowViewModelを後からセットするメソッド
-        public void SetMainWindowViewModel(MainWindowViewModel mainWindowViewModel)
+        public void SetMainWindowViewModel(MainWindowViewModel? mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel;
         }

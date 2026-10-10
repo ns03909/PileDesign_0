@@ -7,7 +7,7 @@ namespace PileDesign.Models.InputData
 {
     public class ElementDivision : ObservableModel
     {
-        private ObservableCollection<SoilPile> _soilPiles;
+        private ObservableCollection<SoilPile> _soilPiles = null!;   // コンストラクタで入る
         public ObservableCollection<SoilPile> SoilPiles
         {
             get => _soilPiles;
@@ -41,8 +41,8 @@ namespace PileDesign.Models.InputData
             SoilPileNumberOption = new ObservableCollection<int>(Enumerable.Range(1, SoilPiles.Count));
         }
 
-        private ObservableCollection<int> _soilPileNumberOption;
-        public ObservableCollection<int> SoilPileNumberOption
+        private ObservableCollection<int>? _soilPileNumberOption;
+        public ObservableCollection<int>? SoilPileNumberOption
         {
             get => _soilPileNumberOption;
             set => SetProperty(ref _soilPileNumberOption, value);

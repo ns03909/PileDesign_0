@@ -107,7 +107,7 @@ namespace TestProject1
 
             // 絞った一覧で配線すると、適用外の荷重ケースが親を持たないまま残る
             string helper = Regex.Replace(
-                TestSource.MethodBody(src, "private void WireLoadCases(MainWindowViewModel mainWindowViewModel)"),
+                TestSource.MethodBody(src, "private void WireLoadCases(MainWindowViewModel? mainWindowViewModel)"),
                 "//.*", "");
             StringAssert.Contains(helper, "EveryLoadCase",
                 "配線が絞った一覧 (AllLoadCases) を使っています。"

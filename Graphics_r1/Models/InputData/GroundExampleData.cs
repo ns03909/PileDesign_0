@@ -12,13 +12,13 @@ namespace PileDesign.Models.InputData
         /// 例題名（表示用）
         /// </summary>
         [JsonPropertyName("displayName")]
-        public string DisplayName { get; set; }
+        public string DisplayName { get; set; } = null!;   // 例題 JSON から入る
 
         /// <summary>
         /// 地盤参照名
         /// </summary>
         [JsonPropertyName("groundRef")]
-        public string GroundRef { get; set; }
+        public string GroundRef { get; set; } = null!;   // 例題 JSON から入る
 
         /// <summary>
         /// 地盤天端標高
@@ -60,13 +60,13 @@ namespace PileDesign.Models.InputData
         /// 浅層土質種別
         /// </summary>
         [JsonPropertyName("shallowSoilType")]
-        public string ShallowSoilType { get; set; }
+        public string? ShallowSoilType { get; set; }
 
         /// <summary>
         /// 地盤変位算定法（"a1(b1)" または "a2(b2)"）
         /// </summary>
         [JsonPropertyName("calculationMethod")]
-        public string CalculationMethod { get; set; }
+        public string? CalculationMethod { get; set; }
 
         /// <summary>
         /// 地盤変位を「考慮しない」モード。true の場合、水平解析で地盤強制変位を全層 0 として扱う。
@@ -106,16 +106,16 @@ namespace PileDesign.Models.InputData
         public double BottomAltitude { get; set; }
 
         [JsonPropertyName("name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;   // 例題 JSON から入る
 
         [JsonPropertyName("granularityClass")]
-        public string GranularityClass { get; set; }
+        public string GranularityClass { get; set; } = null!;   // 例題 JSON から入る
 
         [JsonPropertyName("density")]
         public double Density { get; set; }
 
         [JsonPropertyName("ageCategory")]
-        public string AgeCategory { get; set; }
+        public string AgeCategory { get; set; } = null!;   // 例題 JSON から入る
 
         [JsonPropertyName("isEngineeringBedrock")]
         public bool IsEngineeringBedrock { get; set; }

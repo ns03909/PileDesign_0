@@ -7,7 +7,7 @@ namespace PileDesign.Models.InputData
     public class FundamentalInput : ObservableModel
     {
         // プロジェクト番号
-        private string _projectNo;
+        private string _projectNo = null!;   // コンストラクタで既定値が入る
         public string ProjectNo
         {
             get => _projectNo;
@@ -15,7 +15,7 @@ namespace PileDesign.Models.InputData
         }
 
         // プロジェクト名
-        private string _projectName;
+        private string _projectName = null!;   // コンストラクタで既定値が入る
         public string ProjectName
         {
             get => _projectName;
@@ -23,7 +23,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 参照レベル（docx 出力ラベル専用、例: "TP"）
-        private string _refLevel;
+        private string _refLevel = null!;   // コンストラクタで既定値が入る
         public string RefLevel
         {
             get => _refLevel;
@@ -41,7 +41,7 @@ namespace PileDesign.Models.InputData
         public double ToAbsolute(double z) => z + ReferenceAltitude;
 
         // 耐震グレード
-        private string _seismicGrade;
+        private string _seismicGrade = null!;   // コンストラクタで既定値が入る
         public string SeismicGrade
         {
             get => _seismicGrade;

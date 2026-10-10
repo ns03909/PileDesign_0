@@ -59,8 +59,8 @@ namespace PileDesign.Models.InputData
         //}
 
         // 土層番号
-        private GroundInput _groundInput;
-        public GroundInput GroundInput
+        private GroundInput? _groundInput;
+        public GroundInput? GroundInput
         {
             get => _groundInput;
             set

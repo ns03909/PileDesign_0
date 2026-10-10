@@ -497,8 +497,9 @@ namespace PileDesign.FEM
             Models.InputData.SoilPile soilPile,
             PileProcessingResult result)
         {
-            var disps = soilPile.NodeDisplacements;
-            var reacts = soilPile.NodeReactions;
+            // ShouldApplyVerticalSpringsToPile で null でないことを確かめてから呼ばれる
+            var disps = soilPile.NodeDisplacements!;
+            var reacts = soilPile.NodeReactions!;
             int steps = Math.Min(disps.Count, reacts.Count);
             if (steps < 2) throw new InvalidOperationException("沈下解析の履歴ステップが不足 (< 2)。");
 

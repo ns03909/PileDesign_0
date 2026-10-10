@@ -9,10 +9,11 @@ namespace PileDesign.Models.PileLibrary
     public class PrecastPile
     {
         public int No { get; set; }
-        public string ThicknessType { get; set; }
-        public string PrestressType { get; set; }
-        public string Name { get; set; }
-        public string PileType { get; set; }
+        // 文字列の項目はカタログの読込 (初期化子) で入る
+        public string ThicknessType { get; set; } = null!;
+        public string PrestressType { get; set; } = null!;
+        public string Name { get; set; } = null!;
+        public string PileType { get; set; } = null!;
         public double PileDiameter { get; set; }
         public double PileThickness { get; set; }
         public double Fc { get; set; }
@@ -27,7 +28,7 @@ namespace PileDesign.Models.PileLibrary
         public double Ep { get; set; }
         public bool HasReinf { get; set; }
         public int Nr { get; set; }
-        public string RDesignation { get; set; }
+        public string RDesignation { get; set; } = null!;
         public double Ag { get; set; }
         public double Dr { get; set; }
         public double Ftr { get; set; }
@@ -52,13 +53,14 @@ namespace PileDesign.Models.PileLibrary
                 {
                     while (csv.Read())
                     {
+                        // GetField<string> は欄が無ければ例外を投げ、null は返さない
                         var precastPile = new PrecastPile
                         {
                             No = csv.GetField<int>(0),
-                            ThicknessType = csv.GetField<string>(1),
-                            PrestressType = csv.GetField<string>(2),
-                            Name = csv.GetField<string>(3),
-                            PileType = csv.GetField<string>(4),
+                            ThicknessType = csv.GetField<string>(1)!,
+                            PrestressType = csv.GetField<string>(2)!,
+                            Name = csv.GetField<string>(3)!,
+                            PileType = csv.GetField<string>(4)!,
                             PileDiameter = csv.GetField<double>(5), // 杭径
                             PileThickness = csv.GetField<double>(6), //肉厚
                             Fc = csv.GetField<double>(7), // コンクリート強度
@@ -73,7 +75,7 @@ namespace PileDesign.Models.PileLibrary
                             Ep = csv.GetField<double>(16), // PC鋼線E
                             HasReinf = csv.GetField<bool>(17),
                             Nr = csv.GetField<int>(18), // 鉄筋数
-                            RDesignation = csv.GetField<string>(19), // 鉄筋径
+                            RDesignation = csv.GetField<string>(19)!, // 鉄筋径
                             Ag = csv.GetField<double>(20), // 鉄筋断面積
                             Dr = csv.GetField<double>(21), // 鉄筋配置径
                             Ftr = csv.GetField<double>(22),

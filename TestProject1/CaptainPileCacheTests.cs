@@ -48,7 +48,7 @@ namespace TestProject1
         public void ChangingThePileCapStrength_ChangesTheUltimateCurve()
         {
             var changed = Build(nu: 1.00, fc: 24.0);
-            Assert.IsTrue(changed.UltimateMs.Count > 2, "N-M 曲線が作れていません");
+            Assert.IsTrue(changed.UltimateMs!.Count > 2, "N-M 曲線が作れていません");
 
             changed.SetPileCapConcrete(42.0, 26000.0);   // Update() まで走る
 

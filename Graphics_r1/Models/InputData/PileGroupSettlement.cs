@@ -152,7 +152,7 @@ namespace PileDesign.Models.InputData
         [Newtonsoft.Json.JsonIgnore]
         public List<string> LoadingTypeOptions { get; set; } = ["任意矩形", "個別矩形", "個別矩形（基礎梁考慮）", "個別十字", "個別十字（基礎梁反力）", "なし"];
 
-        private string _loadingType;
+        private string _loadingType = null!;   // コンストラクタで既定値が入る
         public string LoadingType
         {
             get => _loadingType;
@@ -164,7 +164,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        private ObservableCollection<RectLoad> _rectLoads;
+        private ObservableCollection<RectLoad> _rectLoads = null!;   // コンストラクタで入る
         public ObservableCollection<RectLoad> RectLoads
         {
             get => _rectLoads;
@@ -172,7 +172,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 一般モード (基礎梁無し) のユーザー入力 RectLoads スナップショット。
-        private ObservableCollection<SettlementSoilLayer> _settlementSoilLayers;
+        private ObservableCollection<SettlementSoilLayer> _settlementSoilLayers = null!;   // コンストラクタで入る
         public ObservableCollection<SettlementSoilLayer> SettlementSoilLayers
         {
             get => _settlementSoilLayers;
@@ -198,7 +198,7 @@ namespace PileDesign.Models.InputData
         /// 中身が要るのは読込時の変換と旧ファイルの移行だけで、
         /// <see cref="LegacySettlementGridData"/> から読む。
         /// </summary>
-        private ObservableCollection<SettlementGridDataItem> _settlementGridData;
+        private ObservableCollection<SettlementGridDataItem> _settlementGridData = null!;   // コンストラクタで入る
         public ObservableCollection<SettlementGridDataItem> SettlementGridData
         {
             get => _settlementGridData;
@@ -365,16 +365,16 @@ namespace PileDesign.Models.InputData
         }
 
         // グリッドX
-        private ObservableCollection<double> _settlementGridX;
-        public ObservableCollection<double> SettlementGridX
+        private ObservableCollection<double>? _settlementGridX;
+        public ObservableCollection<double>? SettlementGridX
         {
             get => _settlementGridX;
             set => SetProperty(ref _settlementGridX, value);
         }
 
         // グリッドY
-        private ObservableCollection<double> _settlementGridY;
-        public ObservableCollection<double> SettlementGridY
+        private ObservableCollection<double>? _settlementGridY;
+        public ObservableCollection<double>? SettlementGridY
         {
             get => _settlementGridY;
             set => SetProperty(ref _settlementGridY, value);
@@ -400,10 +400,11 @@ namespace PileDesign.Models.InputData
         /// 新規 SettlementSoilLayer として最上層を作り、その下の層は元の参照のまま返す。
         /// 荷重面が土層上端と一致する場合は元のコレクションを返す。
         /// </summary>
-        public static ObservableCollection<SettlementSoilLayer> GetEffectiveLayersForAnalysis(
+        [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(layers))]
+        public static ObservableCollection<SettlementSoilLayer>? GetEffectiveLayersForAnalysis(
             double soilLayersTopAltitude,
             double loadingPlaneAltitude,
-            ObservableCollection<SettlementSoilLayer> layers)
+            ObservableCollection<SettlementSoilLayer>? layers)
         {
             if (layers == null || layers.Count == 0) return layers;
 
@@ -446,12 +447,14 @@ namespace PileDesign.Models.InputData
         }
 
         //
+        [System.Diagnostics.CodeAnalysis.MemberNotNull(nameof(SettlementGridX))]
         public void SetGridX(double xmin, double xmax, double xOffset, double xSpacing, ObservableCollection<GridDataItem> gridItems)
         {
             SettlementGridX = GetCoord(xmin, xmax, xOffset, xSpacing, gridItems);
         }
 
         //
+        [System.Diagnostics.CodeAnalysis.MemberNotNull(nameof(SettlementGridY))]
         public void SetGridY(double ymin, double ymax, double yOffset, double ySpacing, ObservableCollection<GridDataItem> gridItems)
         {
             SettlementGridY = GetCoord(ymin, ymax, yOffset, ySpacing, gridItems);
@@ -880,8 +883,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 備考 (土層コピー時に土層名・分類・Vs を自動記載)
-        private string _note;
-        public string Note
+        private string? _note;
+        public string? Note
         {
             get => _note;
             set => SetProperty(ref _note, value);

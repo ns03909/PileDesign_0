@@ -1900,7 +1900,7 @@ namespace PileDesign.FEM
         }
 
         /// <summary>DoatsuGoryokuBane Item の TopSoilNode を取得 (case-local 対応)。</summary>
-        public Node GetDoatsuTopSoilNode(DoatsuGoryokuBaneItem item)
+        public Node? GetDoatsuTopSoilNode(DoatsuGoryokuBaneItem item)
         {
             if (CaseLocalState != null && CaseLocalState.DoatsuTopSoilNodes.TryGetValue(item, out var n))
                 return n;
@@ -1908,7 +1908,7 @@ namespace PileDesign.FEM
         }
 
         /// <summary>DoatsuGoryokuBane Item の BtmSoilNode を取得 (case-local 対応)。</summary>
-        public Node GetDoatsuBtmSoilNode(DoatsuGoryokuBaneItem item)
+        public Node? GetDoatsuBtmSoilNode(DoatsuGoryokuBaneItem item)
         {
             if (CaseLocalState != null && CaseLocalState.DoatsuBtmSoilNodes.TryGetValue(item, out var n))
                 return n;
@@ -1916,7 +1916,7 @@ namespace PileDesign.FEM
         }
 
         /// <summary>DoatsuGoryokuBane Item の TopEmbedmentNode を取得 (case-local 対応)。</summary>
-        public Node GetDoatsuTopEmbedmentNode(DoatsuGoryokuBaneItem item)
+        public Node? GetDoatsuTopEmbedmentNode(DoatsuGoryokuBaneItem item)
         {
             if (CaseLocalState != null && CaseLocalState.DoatsuTopEmbedmentNodes.TryGetValue(item, out var n))
                 return n;
@@ -1924,7 +1924,7 @@ namespace PileDesign.FEM
         }
 
         /// <summary>DoatsuGoryokuBane Item の BtmEmbedmentNode を取得 (case-local 対応)。</summary>
-        public Node GetDoatsuBtmEmbedmentNode(DoatsuGoryokuBaneItem item)
+        public Node? GetDoatsuBtmEmbedmentNode(DoatsuGoryokuBaneItem item)
         {
             if (CaseLocalState != null && CaseLocalState.DoatsuBtmEmbedmentNodes.TryGetValue(item, out var n))
                 return n;

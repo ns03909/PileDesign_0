@@ -41,7 +41,7 @@ namespace TestProject1
             var ed = new ElementDivision();
             ed.SoilPiles = [];
             ed.UpdateSoilPileNumberOption();
-            Assert.AreEqual(0, ed.SoilPileNumberOption.Count);
+            Assert.AreEqual(0, ed.SoilPileNumberOption!.Count);
         }
 
         [TestMethod]

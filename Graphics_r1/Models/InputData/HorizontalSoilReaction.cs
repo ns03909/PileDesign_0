@@ -4,7 +4,7 @@ namespace PileDesign.Models.InputData
 {
     public class HorizontalSoilReactionItem
     {
-        public string SoilType { get; set; }
+        public string? SoilType { get; set; }   // SetParameters で入る
         public double B { get; set; }
         public double ZTop { get; set; }
         public double ZBtm { get; set; }
@@ -14,7 +14,7 @@ namespace PileDesign.Models.InputData
         public double NValue { get; set; }
         public double Cu { get; set; }
 
-        public string Name { get; set; }
+        public string? Name { get; set; }   // SetParameters で入る
         public double SigmaZPrimeTop { get; set; }
         public double SigmaZPrimeBtm { get; set; }
 
@@ -350,7 +350,7 @@ namespace PileDesign.Models.InputData
         /// <paramref name="groundTopAltitude"/> − z で求める (地表が Z=0 でない地盤で標高を深さ扱いしていた
         /// のを 2026-09-12 に直した。SoilReactionContinuityTests)。</param>
         /// <param name="groundTopAltitude">地表面の標高 [m]。省略時 0 (= 標高がそのまま深さの符号違い)。</param>
-        public static double GetPy(string soilType, bool isFront, double b, double z, double rOnB, double phi, double cu, double sigmaZPrime,
+        public static double GetPy(string? soilType, bool isFront, double b, double z, double rOnB, double phi, double cu, double sigmaZPrime,
             double groundTopAltitude = 0.0)
         {
 
@@ -485,7 +485,7 @@ namespace PileDesign.Models.InputData
     /// </summary>
     public class Kh0LayerOverride
     {
-        public string LayerName { get; set; }
+        public string? LayerName { get; set; }
         public double Kh0 { get; set; }
 
         public Kh0LayerOverride DeepCopy()

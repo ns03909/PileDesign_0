@@ -103,7 +103,7 @@ namespace PileDesign.Models.InputData
         ///
         /// FL ≥ 1 で液状化に至らない場合は β = 1 が入る (低減なし)。
         /// </summary>
-        private static bool IsLiquefied(GroundMassDataInput mass, int levelIndex)
+        private static bool IsLiquefied(GroundMassDataInput? mass, int levelIndex)
         {
             if (mass == null || !mass.IsLiquefactionLayer) return false;
 

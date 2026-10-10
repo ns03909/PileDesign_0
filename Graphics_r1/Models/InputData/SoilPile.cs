@@ -21,7 +21,7 @@ namespace PileDesign.Models.InputData
 
 
         // 地盤
-        private GroundInput _groundInput;
+        private GroundInput _groundInput = null!;   // 生成時 (初期化子・Initialize) か読込で入る
         public GroundInput GroundInput
         {
             get => _groundInput;
@@ -29,7 +29,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭体
-        private PileBodyInput _pileBodyInput;
+        private PileBodyInput _pileBodyInput = null!;   // 生成時 (初期化子・Initialize) か読込で入る
         public PileBodyInput PileBodyInput
         {
             get => _pileBodyInput;
@@ -94,7 +94,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 節点 (ZDataItems.Z: Z)
-        private ObservableCollection<PileZDataItem> _zDataItems;
+        private ObservableCollection<PileZDataItem> _zDataItems = null!;   // 生成時 (初期化子・Initialize) か読込で入る
         public ObservableCollection<PileZDataItem> ZDataItems
         {
             get => _zDataItems;
@@ -113,7 +113,7 @@ namespace PileDesign.Models.InputData
 
         // 土層(総数：節点数-1 = 要素数分)
         //public ObservableCollection<GroundLayerInput> GroundLayers { get; set; }
-        private ObservableCollection<GroundLayerInput> _groundLayers;
+        private ObservableCollection<GroundLayerInput> _groundLayers = null!;   // コンストラクタで入る
         public ObservableCollection<GroundLayerInput> GroundLayers
         {
             get => _groundLayers;
@@ -121,7 +121,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭断面(総数：節点数-1 = 要素数分)
-        private ObservableCollection<PileBodySegment> _pileBodySegments;
+        private ObservableCollection<PileBodySegment> _pileBodySegments = null!;   // コンストラクタで入る
         public ObservableCollection<PileBodySegment> PileBodySegments
         {
             get => _pileBodySegments;
@@ -392,7 +392,7 @@ namespace PileDesign.Models.InputData
         public double SettleRpu => SettleQpu * SettleAp;
 
         // 杭工法
-        private string _pileConstructionType;
+        private string _pileConstructionType = null!;   // UpdateProperties (生成時に呼ぶ) か読込で入る
         public string PileConstructionType
         {
             get => _pileConstructionType;
@@ -400,8 +400,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 杭先端土質
-        private string _pileToeGranularityClass;
-        public string PileToeGranularityClass
+        private string? _pileToeGranularityClass;
+        public string? PileToeGranularityClass
         {
             get => _pileToeGranularityClass;
             set => SetProperty(ref _pileToeGranularityClass, value);
@@ -673,15 +673,15 @@ namespace PileDesign.Models.InputData
 
         // 全節点変位・反力（各荷重ステップ）— DeepCopy/JSON保存から除外
         [JsonIgnore]
-        public List<Vector<double>> NodeDisplacements { get; set; }
+        public List<Vector<double>>? NodeDisplacements { get; set; }   // 単杭沈下解析のあとに入る
 
         [JsonIgnore]
-        public List<Vector<double>> NodeReactions { get; set; }
+        public List<Vector<double>>? NodeReactions { get; set; }
 
         /// <summary>
         /// 指定した杭頭荷重に対する全節点変位ベクトルを線形補間で返す（単位: m）
         /// </summary>
-        public Vector<double> GetFullDisplacementForLoad(double pileTopForce)
+        public Vector<double>? GetFullDisplacementForLoad(double pileTopForce)
         {
             return InterpolateNodeVector(NodeDisplacements, pileTopForce);
         }
@@ -689,12 +689,12 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 指定した杭頭荷重に対する全節点反力ベクトルを線形補間で返す（単位: kN）
         /// </summary>
-        public Vector<double> GetFullReactionForLoad(double pileTopForce)
+        public Vector<double>? GetFullReactionForLoad(double pileTopForce)
         {
             return InterpolateNodeVector(NodeReactions, pileTopForce);
         }
 
-        private Vector<double> InterpolateNodeVector(List<Vector<double>> vectors, double pileTopForce)
+        private Vector<double>? InterpolateNodeVector(List<Vector<double>>? vectors, double pileTopForce)
         {
             if (vectors == null || LoadDisplacements == null ||
                 vectors.Count != LoadDisplacements.Count || vectors.Count < 2)
@@ -1227,7 +1227,7 @@ namespace PileDesign.Models.InputData
                 if (Math.Abs(b) < epsilon && segments.Count > 0)
                 {
                     double midDepth = (upper + lower) * 0.5;
-                    PileBodySegment closest = null;
+                    PileBodySegment? closest = null;
                     double closestDist = double.MaxValue;
                     foreach (var seg in segments)
                     {
@@ -1298,7 +1298,7 @@ namespace PileDesign.Models.InputData
             if (!groundFound && groundInput?.GroundLayers != null && groundInput.GroundLayers.Count > 0)
             {
                 double midZ = (zTop + zBtm) * 0.5;
-                GroundLayerInput closest = null;
+                GroundLayerInput? closest = null;
                 double closestDist = double.MaxValue;
                 foreach (var gl in groundInput.GroundLayers)
                 {

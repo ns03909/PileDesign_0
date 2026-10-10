@@ -39,7 +39,7 @@ namespace PileDesign.Models
     {
         public new event PropertyChangedEventHandler? PropertyChanged;
 
-        public new virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
+        public new virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace PileDesign.Models
             return copy;
         }
 
-        protected new bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+        protected new bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
         {
             if (EqualityComparer<T>.Default.Equals(field, value)) return false;
             field = value;
@@ -87,8 +87,10 @@ namespace PileDesign.Models
 
         public IEnumerable GetErrors(string? propertyName)
         {
-            if (string.IsNullOrEmpty(propertyName)) return null;
-            return _errors.TryGetValue(propertyName, out var list) ? list : null;
+            // エラーが無いときは null を返す (WPF は null を「エラーなし」として扱う)。
+            // INotifyDataErrorInfo の宣言は null 非許容なので、従来の戻り値のまま注釈だけ抑える
+            if (string.IsNullOrEmpty(propertyName)) return null!;
+            return _errors.TryGetValue(propertyName, out var list) ? list : null!;
         }
 
         protected void AddError(string propertyName, string message)
@@ -114,18 +116,20 @@ namespace PileDesign.Models
             double value,
             double fallback = 0.0,
             bool recordError = true,
-            [CallerMemberName] string propertyName = null)
+            [CallerMemberName] string? propertyName = null)
         {
+            // CallerMemberName が呼び出し元のプロパティ名を入れる
+            string name = propertyName!;
             bool invalid = double.IsNaN(value) || double.IsInfinity(value);
             if (invalid)
             {
                 value = fallback;
                 if (recordError)
-                    AddError(propertyName, "非有限値 (NaN/Infinity) を検出し既定値へ置換しました。");
+                    AddError(name, "非有限値 (NaN/Infinity) を検出し既定値へ置換しました。");
             }
             else
             {
-                if (recordError) ClearErrors(propertyName);
+                if (recordError) ClearErrors(name);
             }
             return SetProperty(ref field, value, propertyName);
         }
@@ -138,27 +142,29 @@ namespace PileDesign.Models
             double max = double.PositiveInfinity,
             double fallback = 0.0,
             bool recordError = true,
-            [CallerMemberName] string propertyName = null)
+            [CallerMemberName] string? propertyName = null)
         {
+            // CallerMemberName が呼び出し元のプロパティ名を入れる
+            string name = propertyName!;
             bool invalid = double.IsNaN(value) || double.IsInfinity(value);
             bool clamped = false;
             if (invalid)
             {
                 value = fallback;
                 if (recordError)
-                    AddError(propertyName, "非有限値を検出し既定値へ置換しました。");
+                    AddError(name, "非有限値を検出し既定値へ置換しました。");
             }
             if (value < min || value > max)
             {
                 value = Math.Min(Math.Max(value, min), max);
                 clamped = true;
                 if (recordError)
-                    AddError(propertyName, $"許容範囲 [{min}, {max}] 外のため補正しました。");
+                    AddError(name, $"許容範囲 [{min}, {max}] 外のため補正しました。");
             }
             // invalid でもクランプでもなく、過去のエラーが残っているなら解消通知
-            if (recordError && !invalid && !clamped && _errors.ContainsKey(propertyName))
+            if (recordError && !invalid && !clamped && _errors.ContainsKey(name))
             {
-                ClearErrors(propertyName);
+                ClearErrors(name);
             }
             return SetProperty(ref field, value, propertyName);
         }

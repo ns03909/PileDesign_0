@@ -120,7 +120,7 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            static string CommonStr(IEnumerable<string> vals)
+            static string CommonStr(IEnumerable<string?> vals)
             {
                 var list = vals.ToList();
                 return list.All(v => v == list[0]) ? (list[0] ?? "") : "—";

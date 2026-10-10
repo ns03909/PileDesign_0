@@ -11,7 +11,7 @@ namespace PileDesign.Models.InputData
 {
     public class PileLayoutDataItem : InputNode
     {
-        private MainWindowViewModel _mainWindowViewModel;
+        private MainWindowViewModel? _mainWindowViewModel;
 
         // この杭が属する InputModel。InputModel.AttachViewModel が設定する。
         // 解析結果のスナップショット (解析時の入力の複製) に属する杭が、
@@ -22,7 +22,7 @@ namespace PileDesign.Models.InputData
 
         // [JsonIgnore]: InputModel への back-reference は循環参照を生むため JSON シリアライズ対象外
         [JsonIgnore]
-        public InputModel InputModel => _owner ?? _mainWindowViewModel?.CurrentInputModel;
+        public InputModel? InputModel => _owner ?? _mainWindowViewModel?.CurrentInputModel;
 
         /// <summary>属する InputModel を明示的に設定する (スナップショットとの取り違え防止)。</summary>
         internal void SetOwner(InputModel? owner) => _owner = owner;
@@ -252,7 +252,7 @@ namespace PileDesign.Models.InputData
         public double AxialForceVL => AxialForceVL0 + AxialForceVLAdditional;
 
         // レベル1地震時軸力 (絶対値、ファイル保存対象)
-        private ObservableCollection<double> _axialForceLevel1s;
+        private ObservableCollection<double> _axialForceLevel1s = null!;   // コンストラクタで入る
         public ObservableCollection<double> AxialForceLevel1s
         {
             get => _axialForceLevel1s;
@@ -260,7 +260,7 @@ namespace PileDesign.Models.InputData
             {
                 if (_axialForceLevel1s != null)
                     _axialForceLevel1s.CollectionChanged -= OnAbsoluteL1Changed;
-                if (SetProperty(ref _axialForceLevel1s, value))
+                if (SetProperty(ref _axialForceLevel1s!, value))
                 {
                     if (_axialForceLevel1s != null)
                         _axialForceLevel1s.CollectionChanged += OnAbsoluteL1Changed;
@@ -275,7 +275,7 @@ namespace PileDesign.Models.InputData
         }
 
         // レベル2地震時軸力 (絶対値、ファイル保存対象)
-        private ObservableCollection<double> _axialForceLevel2s;
+        private ObservableCollection<double> _axialForceLevel2s = null!;   // コンストラクタで入る
         public ObservableCollection<double> AxialForceLevel2s
         {
             get => _axialForceLevel2s;
@@ -283,7 +283,7 @@ namespace PileDesign.Models.InputData
             {
                 if (_axialForceLevel2s != null)
                     _axialForceLevel2s.CollectionChanged -= OnAbsoluteL2Changed;
-                if (SetProperty(ref _axialForceLevel2s, value))
+                if (SetProperty(ref _axialForceLevel2s!, value))
                 {
                     if (_axialForceLevel2s != null)
                         _axialForceLevel2s.CollectionChanged += OnAbsoluteL2Changed;
@@ -312,7 +312,7 @@ namespace PileDesign.Models.InputData
             {
                 if (_axialForceVariationLevel1s != null)
                     _axialForceVariationLevel1s.CollectionChanged -= OnVariationL1Changed;
-                if (SetProperty(ref _axialForceVariationLevel1s, value))
+                if (SetProperty(ref _axialForceVariationLevel1s!, value))
                 {
                     if (_axialForceVariationLevel1s != null)
                         _axialForceVariationLevel1s.CollectionChanged += OnVariationL1Changed;
@@ -329,7 +329,7 @@ namespace PileDesign.Models.InputData
             {
                 if (_axialForceVariationLevel2s != null)
                     _axialForceVariationLevel2s.CollectionChanged -= OnVariationL2Changed;
-                if (SetProperty(ref _axialForceVariationLevel2s, value))
+                if (SetProperty(ref _axialForceVariationLevel2s!, value))
                 {
                     if (_axialForceVariationLevel2s != null)
                         _axialForceVariationLevel2s.CollectionChanged += OnVariationL2Changed;
@@ -337,7 +337,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        private void OnAbsoluteL1Changed(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        private void OnAbsoluteL1Changed(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             if (_isSyncingAxial) return;
             _isSyncingAxial = true;
@@ -345,7 +345,7 @@ namespace PileDesign.Models.InputData
             finally { _isSyncingAxial = false; }
         }
 
-        private void OnAbsoluteL2Changed(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        private void OnAbsoluteL2Changed(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             if (_isSyncingAxial) return;
             _isSyncingAxial = true;
@@ -353,7 +353,7 @@ namespace PileDesign.Models.InputData
             finally { _isSyncingAxial = false; }
         }
 
-        private void OnVariationL1Changed(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        private void OnVariationL1Changed(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             if (_isSyncingAxial) return;
             _isSyncingAxial = true;
@@ -361,7 +361,7 @@ namespace PileDesign.Models.InputData
             finally { _isSyncingAxial = false; }
         }
 
-        private void OnVariationL2Changed(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        private void OnVariationL2Changed(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             if (_isSyncingAxial) return;
             _isSyncingAxial = true;
@@ -500,7 +500,7 @@ namespace PileDesign.Models.InputData
             => flags != null && i >= 0 && i < flags.Count && flags[i];
 
         // レベル1地震時単杭沈下
-        private ObservableCollection<double> _singlePileSettlementLevel1s;
+        private ObservableCollection<double> _singlePileSettlementLevel1s = null!;   // コンストラクタで入る
         public ObservableCollection<double> SinglePileSettlementLevel1s
         {
             get => _singlePileSettlementLevel1s;
@@ -508,7 +508,7 @@ namespace PileDesign.Models.InputData
         }
 
         // レベル1地震時単杭沈下
-        private ObservableCollection<double> _singlePileSettlementLevel2s;
+        private ObservableCollection<double> _singlePileSettlementLevel2s = null!;   // コンストラクタで入る
         public ObservableCollection<double> SinglePileSettlementLevel2s
         {
             get => _singlePileSettlementLevel2s;
@@ -516,7 +516,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 前方杭後方杭
-        private ObservableCollection<bool> _isFrontPiles;
+        private ObservableCollection<bool> _isFrontPiles = null!;   // コンストラクタで入る
         public ObservableCollection<bool> IsFrontPiles
         {
             get => _isFrontPiles;
@@ -692,9 +692,9 @@ namespace PileDesign.Models.InputData
         public List<FEM.PileVerticalSoilSpringModel> VerticalNodeSpringModels { get; set; } = [];
 
         // 解析杭頭回転ばね (FEM 解析ランタイム状態)
-        private RotationalSpring pileTopRotationalSpring;
+        private RotationalSpring? pileTopRotationalSpring;   // 解析モデルを組むまでは null
         [JsonIgnore]
-        public RotationalSpring PileTopRotationalSpring
+        public RotationalSpring? PileTopRotationalSpring
         {
             get => pileTopRotationalSpring;
             set => SetProperty(ref pileTopRotationalSpring, value);
