@@ -50,7 +50,9 @@ namespace PileDesign.FEM
                 CumulativedLoad = this.CumulativedLoad.Clone(),
                 CumulativeDisp = this.CumulativeDisp.Clone(),
                 CumulativeReaction = this.CumulativeReaction.Clone(),
-                SoilDisp = this.SoilDisp!.Clone()
+                // 地盤変位の無い結果 (生成時に節点が持っていなかった) もそのまま写す。以前は ! で逆参照して落ちていた
+                // (生成用コンストラクタ・Node.DeepCopy は null を写すのに、ここだけ食い違っていた)
+                SoilDisp = this.SoilDisp?.Clone()
             };
             nodeDummy.SetNodeInfo("dummy", 0, 0, 0);
 

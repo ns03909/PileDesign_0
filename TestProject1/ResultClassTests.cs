@@ -138,6 +138,20 @@ namespace TestProject1
             Assert.IsNull(r.SoilDisp);
         }
 
+        /// <summary>地盤変位の無い結果も写せる (以前は DeepCopy だけが null を逆参照して落ちた)。</summary>
+        [TestMethod]
+        public void DeepCopy_NullSoilDisp_RemainsNull()
+        {
+            var node = MakeNode();
+            node.SoilDisp = null;
+            var r = new NodeResult(MakeLoadCase(), MakeLoadCombo(), false, 0, node);
+
+            var copy = r.DeepCopy();
+
+            Assert.IsNull(copy.SoilDisp);
+            Assert.AreEqual(r.CumulativeDisp.Ux, copy.CumulativeDisp.Ux);
+        }
+
         [TestMethod]
         public void MutatingSourceNode_DoesNotAffectClonedResult()
         {
