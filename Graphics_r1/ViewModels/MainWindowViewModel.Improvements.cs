@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 
 using Serilog;
 namespace PileDesign.ViewModels
@@ -10,67 +7,16 @@ namespace PileDesign.ViewModels
     /// MainWindowViewModel.Improvements.cs
     ///
     /// 責任範囲:
-    /// - Undoスナップショット重複保存防止（ハッシュ比較）
     /// - IDisposable実装（リソース解放）
     ///
     /// コマンドの CanExecute 一括更新と長時間操作のキャンセルは、どこからも呼ばれて
-    /// いなかったので 2026-09-11 に削除した。
+    /// いなかったので 2026-09-11 に削除した。ハッシュで重複を省く Undo の積み方も
+    /// 呼び出し元が無かったので 2026-10-10 に削除した。
     /// </summary>
     public partial class MainWindowViewModel : IDisposable
     {
         // --- Fields for improvements ---
         private bool _disposed = false;
-
-        // Undo スナップショット重複保存防止のためのハッシュ
-        private string? _lastUndoSnapshotHash;
-
-        // 軽量なシリアライズオプション（Undo 専用: 参照保存しない）
-        private static readonly JsonSerializerOptions _undoHashJsonOptions = new()
-        {
-            WriteIndented = false,
-            ReferenceHandler = null,
-            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
-        };
-
-        /// <summary>
-        /// Undoスナップショットを安全に保存（最適化版）
-        /// ハッシュ比較により重複保存を防止し、パフォーマンスを向上
-        /// </summary>
-        public void TrySaveUndoSnapshotSafelyOptimized([System.Runtime.CompilerServices.CallerMemberName] string? description = null)
-        {
-            try
-            {
-                var snapshot = CurrentInputModel?.DeepCopy();
-                if (snapshot == null)
-                {
-                    return;
-                }
-
-                // シリアライズしたスナップショットからSHA256ハッシュを生成
-                string json = JsonSerializer.Serialize(snapshot, _undoHashJsonOptions);
-                string hash;
-                using (var sha = SHA256.Create())
-                {
-                    var bytes = Encoding.UTF8.GetBytes(json);
-                    var hashed = sha.ComputeHash(bytes);
-                    hash = Convert.ToBase64String(hashed);
-                }
-
-                if (hash == _lastUndoSnapshotHash)
-                {
-                    // 以前に取得したハッシュと同一なら重複保存をスキップ
-                    return;
-                }
-
-                // スナップショットを保存し、最後のハッシュを更新
-                _undoManager.SaveState(RememberElementSplit(snapshot), FormatHistoryDescription(description));
-                _lastUndoSnapshotHash = hash;
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "[Undo] スナップショット保存失敗");
-            }
-        }
 
 
         /// <summary>
@@ -113,8 +59,6 @@ namespace PileDesign.ViewModels
             CenterOnPilesAction = null;
             OpenResultDashboardAction = null;
             AnimateViewAnglesAction = null;
-
-            _lastUndoSnapshotHash = null;
 
             _disposed = true;
             GC.SuppressFinalize(this);

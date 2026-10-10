@@ -256,38 +256,6 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// コレクションからアイテムを削除する共通処理
-        /// </summary>
-        /// <typeparam name="T">アイテムの型</typeparam>
-        /// <param name="sender">削除対象のアイテム</param>
-        /// <param name="collection">削除元のコレクション</param>
-        /// <param name="postDeleteAction">削除後のカスタム処理（オプション）</param>
-        /// <param name="saveUndo">Undo保存するか（デフォルト: false）</param>
-        /// <param name="immediate">即座に実行するか（デフォルト: false）</param>
-        /// <returns>削除に成功した場合true</returns>
-        private bool DeleteCollectionItem<T>(
-            object sender,
-            ObservableCollection<T> collection,
-            Action postDeleteAction = null,
-            bool saveUndo = false,
-            bool immediate = false)
-        {
-            if (sender is not T itemToDelete)
-                return false;
-
-            if (saveUndo)
-                TrySaveUndoSnapshotSafely();
-
-            collection.Remove(itemToDelete);
-
-            postDeleteAction?.Invoke();
-
-            NotifyUIChanged(immediate);
-
-            return true;
-        }
-
-        /// <summary>
         /// ダイアログウィンドウを開く共通処理（Undo保存付き）
         /// </summary>
         /// <typeparam name="TViewModel">ViewModelの型</typeparam>
@@ -760,7 +728,7 @@ namespace PileDesign.ViewModels
                 InputModel restored;
                 try
                 {
-                    restored = state.DeepCopy();
+                    restored = state.CopyForHistory();
                 }
                 catch (Exception ex)
                 {
@@ -1436,7 +1404,7 @@ namespace PileDesign.ViewModels
                     // 写しを作れなければ、分割は行えるが履歴には積まない (欠けた写しを積まない)
                     var sourceForUndo = CurrentInputModel;
                     InputModel? undoCopy;
-                    try { undoCopy = await Task.Run(() => sourceForUndo.DeepCopy()); }
+                    try { undoCopy = await Task.Run(() => sourceForUndo.CopyForHistory()); }
                     catch (Exception ex)
                     {
                         Serilog.Log.Error(ex, "杭要素分割: 変更前の入力の写しを作れませんでした");

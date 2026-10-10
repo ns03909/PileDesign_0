@@ -121,10 +121,10 @@ namespace TestProject1
         {
             var input = new PileDesign.ViewModels.MainWindowViewModel().CurrentInputModel!;
             string? original = PileDesign.ViewModels.MainWindowViewModel.InputSignature(input);
-            var copy = input.DeepCopy();
+            var copy = input.CopyForHistory();
             Assert.IsNotNull(original);
             Assert.AreEqual(original, PileDesign.ViewModels.MainWindowViewModel.InputSignature(copy), "複製すると署名が変わります");
-            Assert.AreEqual(original, PileDesign.ViewModels.MainWindowViewModel.InputSignature(copy.DeepCopy()));
+            Assert.AreEqual(original, PileDesign.ViewModels.MainWindowViewModel.InputSignature(copy.CopyForHistory()));
         }
 
         /// <summary>新規作成 (Reset) は解析の条件も既定に戻す (以前は前のプロジェクトの P-S ばね・ねじれ拘束などが残った)。</summary>

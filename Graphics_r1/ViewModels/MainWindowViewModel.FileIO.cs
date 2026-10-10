@@ -252,26 +252,6 @@ namespace PileDesign.ViewModels
             UpdateWindowImmediate();
         }
 
-        private void TrySaveUndoSnapshotSafely([System.Runtime.CompilerServices.CallerMemberName] string? description = null)
-        {
-            try
-            {
-                var snapshot = CurrentInputModel?.DeepCopy();
-                if (snapshot != null)
-                {
-                    _undoManager.SaveState(snapshot, FormatHistoryDescription(description));
-                    RaiseUndoStateChanged();
-                }
-                else
-                {
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Debug($"[TrySaveUndoSnapshotSafely] Exception: {ex.GetType().Name}: {ex.Message}");
-            }
-        }
-
         /// <summary>
         /// ファイル読込後の共通プロトコル。CurrentInputModel と CurrentModel を事前に設定してから呼ぶ。
         /// ProjectData 経由/InputModel 単体の両パスで同一のセットアップを実行することで

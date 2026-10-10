@@ -154,12 +154,12 @@ namespace TestProject1
         }
 
         [TestMethod]
-        public void InputModel_DeepCopy_ReturnsIndependentInstance()
+        public void InputModel_CopyForHistory_ReturnsIndependentInstance()
         {
-            // InputModel.DeepCopy も DeepCopyUtil.CloneJson 経由に移行済み。
+            // InputModel.CopyForHistory (旧 DeepCopy) も DeepCopyUtil.CloneJson 経由に移行済み。
             // 最低限の smoke test として、空の InputModel が deep copy できることを確認する。
             var source = new InputModel();
-            var copy = source.DeepCopy();
+            var copy = source.CopyForHistory();
             Assert.IsNotNull(copy);
             Assert.AreNotSame(source, copy);
         }

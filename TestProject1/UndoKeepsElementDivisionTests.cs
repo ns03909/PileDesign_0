@@ -6,7 +6,7 @@ namespace TestProject1
     /// <summary>
     /// Undo で<b>杭要素分割 (SoilPiles) が消えない</b>こと。
     ///
-    /// <c>InputModel.DeepCopy</c> は SoilPiles を JSON 直列化から外している (重いため)。
+    /// <c>InputModel.CopyForHistory</c> は SoilPiles を JSON 直列化から外している (重いため)。
     /// ところが複製側へ入れ直しておらず、<b>複製の SoilPiles が空</b>になっていた。
     /// Undo はこの複製を現在の入力に差し替えるので、一度でも Undo すると
     /// <list type="bullet">
@@ -34,7 +34,7 @@ namespace TestProject1
             input.ElementDivision.SoilPiles.Add(MakeSoilPile());
             input.ElementDivision.SoilPiles.Add(MakeSoilPile());
 
-            var copy = input.DeepCopy();
+            var copy = input.CopyForHistory();
 
             Assert.AreEqual(2, copy?.ElementDivision?.SoilPiles?.Count ?? -1,
                 "複製に土層-杭セットが入っていません (Undo すると杭要素分割が消えます)");
@@ -54,7 +54,7 @@ namespace TestProject1
             var input = new InputModel { ElementDivision = new ElementDivision() };
             input.ElementDivision.SoilPiles.Add(sp);
 
-            var copy = input.DeepCopy();
+            var copy = input.CopyForHistory();
             var copied = copy!.ElementDivision.SoilPiles[0];
 
             Assert.AreEqual(1, copied.LoadDisplacements.Count,
@@ -79,7 +79,7 @@ namespace TestProject1
             var input = new InputModel { ElementDivision = new ElementDivision() };
             input.ElementDivision.SoilPiles.Add(sp);
 
-            var copy = input.DeepCopy();
+            var copy = input.CopyForHistory();
 
             Assert.AreSame(sp, copy!.ElementDivision.SoilPiles[0],
                 "土層-杭セットを複製しています。写し損ねた値で解析されます");
@@ -95,7 +95,7 @@ namespace TestProject1
             var input = new InputModel { ElementDivision = new ElementDivision() };
             input.ElementDivision.SoilPiles.Add(MakeSoilPile());
 
-            var copy = input.DeepCopy();
+            var copy = input.CopyForHistory();
 
             Assert.IsNotNull(copy, "複製に失敗しました");
             Assert.AreEqual(1, copy!.ElementDivision.SoilPiles.Count);

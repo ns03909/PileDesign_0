@@ -133,7 +133,7 @@ namespace TestProject1
             int moved = ModelPerturbation.PerturbAll(inputModel);
             TestSource.AssertScanned(moved, 200, $"{groundName} で動かした値");
 
-            var copy = inputModel.DeepCopy();
+            var copy = inputModel.CopyForHistory();
 
             var diffs = new System.Collections.Generic.List<string>();
             int compared = ModelPerturbation.CompareScalars(inputModel, copy, diffs);

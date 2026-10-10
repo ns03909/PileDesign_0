@@ -2020,7 +2020,24 @@ namespace PileDesign.Models.InputData
             ElementDivision.SoilEmbedment = new(EmbedmentInput.GroundNo, embedmentTopAltitude, zDataItems);
         }
 
-        public InputModel DeepCopy()
+        /// <summary>
+        /// 元に戻す操作の履歴に積む入力の写し。<b>土層-杭セットだけは写さず、元と同じ一覧を共有する</b> (下の説明)。
+        /// 複製できなければ例外を投げる (欠けた写しを返さない)。画面から呼ぶときは
+        /// MainWindowViewModel.TryCopyForHistory を通す (失敗したら履歴に積まずに知らせる)。
+        ///
+        /// <para>入力の写しは目的ごとに 3 種類あり、取り違えると静かに壊れる。</para>
+        /// <list type="bullet">
+        /// <item><b>履歴</b>: この関数。地盤の一覧を型ごとの複製で、要素分割を JSON の往復で写すので、
+        ///   共有していた実体が分かれる (保存ファイルの形が変わる)。</item>
+        /// <item><b>保存</b>: <see cref="SnapshotForSaving"/>。入れ物だけを新しくし、中身は元を指したまま
+        ///   (保存ファイルの $id/$ref の畳まれ方を変えない)。</item>
+        /// <item><b>解析結果の控え</b>: AnalysisResultSet.Capture。入力と解析モデルを 1 回の JSON の往復でまとめて写す
+        ///   (両者の間の参照を保つ。土層-杭セットも写す)。</item>
+        /// </list>
+        /// 以前の名前は DeepCopy だったが、セットを共有するので深い複製ではなく、保存に使えば保存ファイルの形が変わる
+        /// (2026-09-09 に実測。DeepCopyIsSaveEquivalentTests)。名前で用途が読めるよう 2026-10-10 に改名した。
+        /// </summary>
+        public InputModel CopyForHistory()
         {
             var swTotal = System.Diagnostics.Stopwatch.StartNew();
 
@@ -2100,7 +2117,7 @@ namespace PileDesign.Models.InputData
                 // パフォーマンス監視用ログ (Verbose レベル: 通常は出力されない)。
                 // 大規模モデルで遅さが気になる場合は Serilog の MinimumLevel を Verbose に下げて確認。
                 Serilog.Log.Verbose(
-                    "InputModel.DeepCopy total={Total}ms (hand={Hand}, quickClone={Qc}, json-rest={Json}) piles={Piles}",
+                    "InputModel.CopyForHistory total={Total}ms (hand={Hand}, quickClone={Qc}, json-rest={Json}) piles={Piles}",
                     swTotal.ElapsedMilliseconds, tHand, tQc, tJsonRest, _pileLayoutItems?.Count ?? 0);
 
                 // SoilPiles は JSON から外してあるので、複製側へも明示的に持たせる。

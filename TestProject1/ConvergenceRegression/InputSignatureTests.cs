@@ -53,7 +53,7 @@ namespace TestProject1.ConvergenceRegression
             });
             Console.WriteLine($"署名の元の大きさ: {json.Length / 1024} KB");
 
-            Assert.AreEqual(original, MainWindowViewModel.InputSignature(input.DeepCopy()),
+            Assert.AreEqual(original, MainWindowViewModel.InputSignature(input.CopyForHistory()),
                 "中身が同じ複製 (元に戻すが作る入力) で署名が変わります");
 
             input.PileLayoutItems[0].IsSelected = !input.PileLayoutItems[0].IsSelected;

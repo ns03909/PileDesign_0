@@ -38,7 +38,7 @@ namespace TestProject1
             var vm = new MainWindowViewModel { CurrentInputModel = model };
             model.SetMainWindowViewModel(vm);
 
-            var snapshot = model.DeepCopy();
+            var snapshot = model.CopyForHistory();
             snapshot.SetMainWindowViewModel(vm);
 
             // 画面が持っているのは生の方

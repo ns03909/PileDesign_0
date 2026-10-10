@@ -24,9 +24,9 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 土層-杭セットを空にした浅い写し (変更通知の購読者は写さない)。InputModel.DeepCopy が、
+        /// 土層-杭セットを空にした浅い写し (変更通知の購読者は写さない)。InputModel.CopyForHistory が、
         /// 土層-杭セットを除いて JSON で複製するために使う。<b>元は書き換えない。</b>
-        /// 以前は元の SoilPiles を一時的に空へ差し替えて複製しており、DeepCopy は Task.Run でも走るので、
+        /// 以前は元の SoilPiles を一時的に空へ差し替えて複製しており、複製は Task.Run でも走るので、
         /// その間に画面・自動保存が空の一覧を読みえた。
         /// </summary>
         internal ElementDivision ShellWithoutSoilPiles()

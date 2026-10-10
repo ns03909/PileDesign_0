@@ -71,7 +71,7 @@ namespace PileDesign.ViewModels
         {
             var blank = new InputModel();
             blank.SetMainWindowViewModel(this);
-            return blank.DeepCopy();
+            return blank.CopyForHistory();
         }
 
         /// <summary>
@@ -115,7 +115,7 @@ namespace PileDesign.ViewModels
 
             if (generation != ProjectGeneration || version != InputEditVersion)
                 throw new System.InvalidOperationException("計算例の読み込み中に入力が変更されました。もう一度読み込んでください。");
-            var undoCopy = CurrentInputModel.DeepCopy();
+            var undoCopy = CurrentInputModel.CopyForHistory();
             // 計算例は新規作成と同じ白紙の入力から組み立てる (CreateBlankInputForExample の説明を参照)
             var prepared = CreateBlankInputForExample();
             // 断面の諸元を計算する前に、材料のオプションなどを白紙の入力のものへそろえる
@@ -174,7 +174,7 @@ namespace PileDesign.ViewModels
             }
             finally { prepared.ResumeNotificationsQuiet(); }
 
-            _undoManager.SaveSnapshotEdit(undoCopy, prepared.DeepCopy(), $"計算例ロード: {displayName}");
+            _undoManager.SaveSnapshotEdit(undoCopy, prepared.CopyForHistory(), $"計算例ロード: {displayName}");
             CurrentInputModel = prepared;
             ClearAllAnalysisState(includeElementSplit: true);
             ApplyConcreteModelOptions();
@@ -261,7 +261,7 @@ namespace PileDesign.ViewModels
 
             if (generation != ProjectGeneration || version != InputEditVersion)
                 throw new System.InvalidOperationException("計算例の読み込み中に入力が変更されました。もう一度読み込んでください。");
-            var undoCopy = CurrentInputModel.DeepCopy();
+            var undoCopy = CurrentInputModel.CopyForHistory();
             // 計算例は新規作成と同じ白紙の入力から組み立てる (CreateBlankInputForExample の説明を参照)
             var prepared = CreateBlankInputForExample();
             // 断面の諸元を計算する前に、材料のオプションなどを白紙の入力のものへそろえる
@@ -319,7 +319,7 @@ namespace PileDesign.ViewModels
             }
             finally { prepared.ResumeNotificationsQuiet(); }
 
-            _undoManager.SaveSnapshotEdit(undoCopy, prepared.DeepCopy(), $"計算例ロード: {displayName}");
+            _undoManager.SaveSnapshotEdit(undoCopy, prepared.CopyForHistory(), $"計算例ロード: {displayName}");
             CurrentInputModel = prepared;
             ClearAllAnalysisState(includeElementSplit: true);
             ApplyConcreteModelOptions();

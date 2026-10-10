@@ -188,7 +188,7 @@ namespace TestProject1
             Assert.IsTrue(count > 0, "前提: 土層-杭セットがある");
 
             using var stop = new CancellationTokenSource();
-            var copier = Task.Run(() => { while (!stop.IsCancellationRequested) model.DeepCopy(); });
+            var copier = Task.Run(() => { while (!stop.IsCancellationRequested) model.CopyForHistory(); });
             var seen = new List<string>();
             var until = DateTime.UtcNow.AddSeconds(2);
             int reads = 0;
@@ -210,7 +210,7 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 5. 複製に失敗したら、欠けた写しを成功として返さない (例外で知らせる)。InputModel.DeepCopy はこの形だけを使い、
+        /// 5. 複製に失敗したら、欠けた写しを成功として返さない (例外で知らせる)。InputModel.CopyForHistory はこの形だけを使い、
         /// 履歴は写しを作れなければ記録しない (欠けた写しを積まない)。
         /// </summary>
         [TestMethod]
@@ -221,9 +221,9 @@ namespace TestProject1
             Assert.AreEqual(0, PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(new[] { new Unserializable() }).Count,
                 "前提: 欠けてよい用途の複製は黙って除く");
 
-            string src = TestSource.MethodBody(TestSource.Read("Graphics_r1", "Models", "InputData", "InputModel.cs"), "public InputModel DeepCopy()");
+            string src = TestSource.MethodBody(TestSource.Read("Graphics_r1", "Models", "InputData", "InputModel.cs"), "public InputModel CopyForHistory()");
             Assert.IsFalse(System.Text.RegularExpressions.Regex.IsMatch(src, @"DeepCopyUtil\.CloneJson\(|CloneCollectionViaJson\("),
-                "InputModel.DeepCopy が、失敗を黙って null・欠けで返す複製を使っています");
+                "InputModel.CopyForHistory が、失敗を黙って null・欠けで返す複製を使っています");
             Assert.IsFalse(src.Contains("ElementDivision.SetSoilPilesSilently([])", StringComparison.Ordinal), "元の土層-杭セットを一時的に空にしています");
 
             string undo = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.Undo.cs"), "public void SaveUndoState(AnalysisInputScope scope,");

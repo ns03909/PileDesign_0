@@ -121,7 +121,7 @@ namespace TestProject1
             using var vm = Create();
             vm.CurrentInputModel!.PileBodies = [new PileBodyInput(), new PileBodyInput(), new PileBodyInput()];
             vm.CurrentInputModel!.UpdateCountLists();
-            var copy = vm.CurrentInputModel!.DeepCopy();
+            var copy = vm.CurrentInputModel!.CopyForHistory();
             CollectionAssert.AreEqual(new[] { 1, 2, 3 }, copy.PileBodiesCountList.ToArray(), "複製に杭体番号の選択肢がありません");
             Assert.IsTrue(copy.GroundsInputCountList.Count >= 1);
         }

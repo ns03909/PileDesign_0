@@ -12,7 +12,7 @@ namespace TestProject1
     /// <summary>
     /// 入力モデルの複製が、設定項目を写し忘れていないこと。
     ///
-    /// <c>InputModel.DeepCopy</c> は元に戻す操作の土台で、写し忘れた項目は
+    /// <c>InputModel.CopyForHistory</c> は元に戻す操作の土台で、写し忘れた項目は
     /// <b>元に戻した瞬間に既定値へ落ちる</b>。手書きなので足し忘れが起きやすい。
     /// 「元と複製を直列化した結果が一致する」ことで機械的に確かめる。
     /// 実際に杭先端の P-S 非線形ばねと VL 単独解析の 2 つが写されていなかった。
@@ -38,7 +38,7 @@ namespace TestProject1
 
         private static void AssertSaveEquivalent(InputModel original, string what)
         {
-            var copy = original.DeepCopy();
+            var copy = original.CopyForHistory();
 
             // InputNode.Id は読込のたびに振り直される runtime-only な番号で、
             // 永続識別子は UniqueId。ここでは比較の対象外にする
@@ -113,7 +113,7 @@ namespace TestProject1
                 input.LoadCasesInput.LoadCasesLevel2 = null!;
             }
 
-            var copy = input.DeepCopy();   // 例外が出ないこと
+            var copy = input.CopyForHistory();   // 例外が出ないこと
 
             Assert.IsNotNull(copy, "複製できない");
             Assert.IsNull(copy.LoadCasesInput?.LoadCombinationsPlus,

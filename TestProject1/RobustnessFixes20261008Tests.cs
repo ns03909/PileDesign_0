@@ -100,7 +100,7 @@ namespace TestProject1
         {
             var (model, _) = IterativeBeamSettlementInvariantTests.Scene();
             if (model == null) return;
-            var replaced = model.DeepCopy();
+            var replaced = model.CopyForHistory();
             replaced.PileGroupSettlement.LoadingType = "個別十字";
             replaced.PileGroupSettlement.RectLoads = [new RectLoad { X1 = 0, X2 = 1, Y1 = 0, Y2 = 1, QA = 123 }];
             int rectCount = -1;

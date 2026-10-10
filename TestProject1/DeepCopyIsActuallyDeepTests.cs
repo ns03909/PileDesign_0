@@ -47,6 +47,14 @@ namespace TestProject1
             "SoilPile.PileBodyInput",
         };
 
+        /// <summary>入力全体の複製 (履歴用) も検査の対象に入っていること (名前で探しているので、改名で黙って外れる)。</summary>
+        [TestMethod]
+        public void TheWholeInputCopy_IsScanned()
+        {
+            Assert.IsNotNull(CopyMethodOf(typeof(PileDesign.Models.InputData.InputModel)),
+                "InputModel の複製の関数が見つかりません。改名したら CopyMethodOf に足してください");
+        }
+
         [TestMethod]
         public void EveryDeepCopy_ActuallyCopiesItsChildren()
         {
@@ -62,8 +70,7 @@ namespace TestProject1
                     || !type.Namespace.StartsWith("PileDesign.Models", StringComparison.Ordinal))
                     continue;
 
-                var deepCopy = type.GetMethod("DeepCopy", BindingFlags.Public | BindingFlags.Instance,
-                                              binder: null, types: Type.EmptyTypes, modifiers: null);
+                var deepCopy = CopyMethodOf(type);
                 if (deepCopy == null || !type.IsAssignableFrom(deepCopy.ReturnType)) continue;
                 if (type.GetConstructor(Type.EmptyTypes) == null)
                 {
@@ -145,9 +152,22 @@ namespace TestProject1
             }
         }
 
-        private static bool HasDeepCopy(Type t)
-            => t.GetMethod("DeepCopy", BindingFlags.Public | BindingFlags.Instance,
-                           binder: null, types: Type.EmptyTypes, modifiers: null) != null;
+        private static bool HasDeepCopy(Type t) => CopyMethodOf(t) != null;
+
+        /// <summary>
+        /// 複製の関数。入力全体 (InputModel) の複製は用途を名前に出して CopyForHistory と呼ぶ (2026-10-10 に改名)。
+        /// 名前で探しているので、改名すると黙ってこの検査から外れる。改名したらここにも足すこと。
+        /// </summary>
+        private static MethodInfo? CopyMethodOf(Type t)
+        {
+            foreach (var name in new[] { "DeepCopy", "CopyForHistory" })
+            {
+                var m = t.GetMethod(name, BindingFlags.Public | BindingFlags.Instance,
+                                    binder: null, types: Type.EmptyTypes, modifiers: null);
+                if (m != null) return m;
+            }
+            return null;
+        }
 
         private static Type? ElementOf(Type t)
         {

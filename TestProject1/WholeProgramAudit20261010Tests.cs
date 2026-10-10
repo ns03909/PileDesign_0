@@ -115,7 +115,7 @@ namespace TestProject1
         public void PsSpringSource_SurvivesDeepCopy_AndTheReportDoesNotClaimIt()
         {
             var input = new InputModel { PsSpringSource = PsSpringSourceMode.Ultimate, UsePsSpringAtPileTip = true };
-            Assert.AreEqual(PsSpringSourceMode.Ultimate, input.DeepCopy().PsSpringSource, "複製で既定へ落ちています");
+            Assert.AreEqual(PsSpringSourceMode.Ultimate, input.CopyForHistory().PsSpringSource, "複製で既定へ落ちています");
             var row = PileDesign.Output.WordDocument.BuildDesignConditionRows(input).Single(r => r.Item == "杭先端の鉛直ばね");
             Assert.IsFalse(row.Value.Contains("極限", System.StringComparison.Ordinal), "解析が使っていない「極限」を計算書に書いています");
         }

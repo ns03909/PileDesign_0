@@ -207,14 +207,14 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// 履歴 (元に戻す) に積む入力の写し。作れなければ null を返し、記録しなかったことを知らせる。
-        /// InputModel.DeepCopy は複製に失敗すると例外を投げる (欠けた写しを返さない)。
+        /// InputModel.CopyForHistory は複製に失敗すると例外を投げる (欠けた写しを返さない)。
         /// </summary>
         internal InputModel? TryCopyForHistory(InputModel? source, string? description)
         {
             if (source == null) return null;
             try
             {
-                return source.DeepCopy();
+                return source.CopyForHistory();
             }
             catch (Exception ex)
             {
