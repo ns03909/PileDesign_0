@@ -43,7 +43,7 @@ namespace PileDesign.FEM
 
     public class Node : BaseModel
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = null!; // SetNodeInfo と読込 (JSON) で入る
         public Point3D Coord { get; set; }
 
         public Boundary Boundary { get; set; } = new(false, false, false, false, false, false); // 拘束条件
@@ -68,8 +68,8 @@ namespace PileDesign.FEM
         public NodeReaction CumulativeReaction { get; set; } = new(0, 0, 0, 0, 0, 0);   // 節点累積反力
 
         // 地盤変位
-        public NodeDisp SoilDisp { get; set; } // 基準変位ベクトル
-        public NodeDisp SoilDispIncrement { get; set; } // 基準変位ベクトル
+        public NodeDisp? SoilDisp { get; set; } // 基準変位ベクトル (InitializeSoilDisp / SetSoilDisp までは null)
+        public NodeDisp? SoilDispIncrement { get; set; } // 基準変位ベクトル (InitializeSoilDisp / SetSoilDispIncrement までは null)
 
         // マスター
         public Node[] MasterNodes { get; set; } = new Node[6];
@@ -117,12 +117,12 @@ namespace PileDesign.FEM
         /// null の場合は未解決（従来の MasterNodes ロジックにフォールバック）。
         /// </summary>
         [JsonIgnore]
-        public DofTerm[][] ResolvedDofMap { get; set; }
+        public DofTerm[][]? ResolvedDofMap { get; set; }
 
         public System.Collections.Generic.List<NodeResult> NodeResults { get; set; } = [];
 
         // 
-        public NodeResult GetNodeResult(AnaModel anaModel, LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step = -1)
+        public NodeResult? GetNodeResult(AnaModel anaModel, LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step = -1)
         {
             if (step == -1)
             {

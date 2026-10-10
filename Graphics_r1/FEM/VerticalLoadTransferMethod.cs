@@ -594,6 +594,7 @@ namespace PileDesign.FEM
 
 
         // 杭体要素剛性の取得メソッド
+        [System.Diagnostics.CodeAnalysis.MemberNotNull(nameof(BeamStiffnesses))]
         public void SetBeamStiffnesses()
         {
             BeamStiffnesses = [];

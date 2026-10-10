@@ -14,8 +14,8 @@ namespace PileDesign.FEM
     internal static class NaNDiagnostics
     {
         private static readonly object _lock = new();
-        private static StreamWriter _writer;
-        private static string _logPath;
+        private static StreamWriter? _writer; // Begin で開き End で閉じる。その外では null
+        private static string? _logPath; // Begin までは null
         private static int _iteration;
         private static bool _nanDetected;
 
@@ -23,7 +23,7 @@ namespace PileDesign.FEM
         public static bool NaNDetected => _nanDetected;
 
         /// <summary>ログファイルのパス</summary>
-        public static string LogPath => _logPath;
+        public static string? LogPath => _logPath;
 
         /// <summary>解析開始時に呼び出し、ログファイルを初期化</summary>
         public static void Begin()
@@ -83,7 +83,7 @@ namespace PileDesign.FEM
         }
 
         /// <summary>ベクトルのNaN/Inf検査。NaN/Infが見つかった場合、該当インデックスをログ出力</summary>
-        public static bool CheckVector(Vector<double> vec, string name, AnaModel model = null)
+        public static bool CheckVector(Vector<double>? vec, string name, AnaModel? model = null)
         {
             if (vec == null) { Log($"{name}: null"); return false; }
             var badIndices = new List<int>();
@@ -110,7 +110,7 @@ namespace PileDesign.FEM
         }
 
         /// <summary>行列の対角要素のNaN/Inf検査</summary>
-        public static bool CheckMatrixDiag(Matrix<double> mat, string name, AnaModel model = null)
+        public static bool CheckMatrixDiag(Matrix<double>? mat, string name, AnaModel? model = null)
         {
             if (mat == null) { Log($"{name}: null"); return false; }
             var badIndices = new List<int>();
@@ -138,7 +138,7 @@ namespace PileDesign.FEM
         }
 
         /// <summary>行列全体のNaN/Inf件数を検査（対角だけでなく全要素）</summary>
-        public static int CountMatrixNaN(Matrix<double> mat)
+        public static int CountMatrixNaN(Matrix<double>? mat)
         {
             if (mat == null) return 0;
             int count = 0;
@@ -210,7 +210,7 @@ namespace PileDesign.FEM
         }
 
         /// <summary>NormsROnNormsFintの計算をトレースする診断版</summary>
-        public static void DiagnoseResidual(Vector<double> vectorF, Vector<double> vectorT, Vector<double> vectorR, double normsROnNormsFint)
+        public static void DiagnoseResidual(Vector<double>? vectorF, Vector<double>? vectorT, Vector<double>? vectorR, double normsROnNormsFint)
         {
             double normF = vectorF?.L2Norm() ?? 0;
             double normT = vectorT?.L2Norm() ?? 0;

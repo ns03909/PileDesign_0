@@ -6,15 +6,15 @@ namespace PileDesign.FEM
     //{
     public class NodeResult
     {
-        public LoadCase LoadCase { get; set; }
-        public LoadCombination LoadCombination { get; set; }
+        public LoadCase LoadCase { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public LoadCombination LoadCombination { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
         public bool IsLiquefaction { get; set; }
         public int Step { get; set; }
 
-        public NodeLoad CumulativedLoad { get; set; }
-        public NodeDisp CumulativeDisp { get; set; }
-        public NodeReaction CumulativeReaction { get; set; }
-        public NodeDisp SoilDisp { get; set; }
+        public NodeLoad CumulativedLoad { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public NodeDisp CumulativeDisp { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public NodeReaction CumulativeReaction { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public NodeDisp? SoilDisp { get; set; } // 節点の地盤変位が未設定なら null
         //public LoadCase LoadCase { get; } = loadCase;
         //public LoadCombination LoadCombination { get; } = loadCombination;
         //public bool IsLiquefaction { get; } = isLiquefaction;
@@ -35,9 +35,9 @@ namespace PileDesign.FEM
             IsLiquefaction = isLiquefaction;
             Step = step;
 
-            CumulativedLoad = node.CumulativedLoad?.Clone();
-            CumulativeDisp = node.CumulativeDisp?.Clone();
-            CumulativeReaction = node.CumulativeReaction?.Clone();
+            CumulativedLoad = node.CumulativedLoad?.Clone()!;
+            CumulativeDisp = node.CumulativeDisp?.Clone()!;
+            CumulativeReaction = node.CumulativeReaction?.Clone()!;
             SoilDisp = node.SoilDisp?.Clone();
         }
 
@@ -50,7 +50,7 @@ namespace PileDesign.FEM
                 CumulativedLoad = this.CumulativedLoad.Clone(),
                 CumulativeDisp = this.CumulativeDisp.Clone(),
                 CumulativeReaction = this.CumulativeReaction.Clone(),
-                SoilDisp = this.SoilDisp.Clone()
+                SoilDisp = this.SoilDisp!.Clone()
             };
             nodeDummy.SetNodeInfo("dummy", 0, 0, 0);
 

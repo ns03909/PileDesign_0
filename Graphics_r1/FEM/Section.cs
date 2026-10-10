@@ -22,7 +22,7 @@
     //}
     public class Section
     {
-        public Material Material { get; set; }
+        public Material Material { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
         public double AX { get; set; }
         public double AY { get; set; }
         public double AZ { get; set; }

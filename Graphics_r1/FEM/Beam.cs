@@ -11,10 +11,10 @@ namespace PileDesign.FEM
 {
     public class Beam
     {
-        public string Name { get; set; }
-        public Section Section { get; set; }
-        public Node NodeI { get; set; }
-        public Node NodeJ { get; set; }
+        public string Name { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public Section Section { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public Node NodeI { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public Node NodeJ { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
         public double Length { get; set; }
         /// <summary>
         /// 杭頭部ゾーン判定（場所打ち鋼管コンクリート杭の鋼管コンクリート部において、
@@ -291,14 +291,16 @@ namespace PileDesign.FEM
         /// </summary>
         public double EIyzTan { get; set; }
 
+        // KeTan / KeSec は SetKe (生成用コンストラクタから呼ぶ) で入る。読込 (JSON) 直後は null
         [JsonIgnore]
-        public Matrix<double> KeTan { get; set; }
+        public Matrix<double> KeTan { get; set; } = null!;
         [JsonIgnore]
-        public Matrix<double> KeSec { get; set; }
+        public Matrix<double> KeSec { get; set; } = null!;
         [JsonIgnore]
-        public Vector<double> Curve { get; set; }
+        public Vector<double>? Curve { get; set; }
 
-        public HorizontalSoilReactionItem HorizontalSoilReactionItem { get; set; }
+        // 地盤の水平反力を持つ杭の要素だけが持つ。それ以外は null
+        public HorizontalSoilReactionItem? HorizontalSoilReactionItem { get; set; }
         public System.Collections.Generic.List<BeamResult> BeamResults { get; set; } = [];
 
         /// <summary>
@@ -586,7 +588,7 @@ namespace PileDesign.FEM
         private double _coordAngle;
 
         // 座標変換マトリクスのキャッシュ（解析中ノード座標は不変）
-        private Matrix<double> _cachedCoordTransform;
+        private Matrix<double>? _cachedCoordTransform;
 
         public Matrix<double> GetCachedCoordTransform()
         {
@@ -671,7 +673,7 @@ namespace PileDesign.FEM
         }
 
         // 梁要素の解析結果を取得する
-        public BeamResult GetBeamResult(AnaModel anaModel, LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step = -1)
+        public BeamResult? GetBeamResult(AnaModel anaModel, LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step = -1)
         {
             if (step == -1)
             {
@@ -720,7 +722,7 @@ namespace PileDesign.FEM
             var nodeJCopy = NodeJ?.DeepCopy();
             var soilReactionCopy = HorizontalSoilReactionItem?.DeepCopy();
 
-            var copy = new Beam(Name, sectionCopy, nodeICopy, nodeJCopy, Ryi_tan, Ryj_tan)
+            var copy = new Beam(Name, sectionCopy!, nodeICopy!, nodeJCopy!, Ryi_tan, Ryj_tan)
             {
                 IsPileTop = this.IsPileTop,
                 IsPileHeadElement = this.IsPileHeadElement,
@@ -751,12 +753,12 @@ namespace PileDesign.FEM
                 CurrentMoment = this.CurrentMoment,
                 CurrentMPhiSegmentIndex = this.CurrentMPhiSegmentIndex,
                 PreviousMPhiSegmentIndex = this.PreviousMPhiSegmentIndex,
-                IncrementalDisp = this.IncrementalDisp?.Clone(),
-                CumulativeDisp = this.CumulativeDisp?.Clone(),
-                IncrementalForce = this.IncrementalForce?.Clone(),
-                CumulativeForce = this.CumulativeForce?.Clone(),
-                KeTan = this.KeTan?.Clone(),
-                KeSec = this.KeSec?.Clone(),
+                IncrementalDisp = this.IncrementalDisp?.Clone()!,
+                CumulativeDisp = this.CumulativeDisp?.Clone()!,
+                IncrementalForce = this.IncrementalForce?.Clone()!,
+                CumulativeForce = this.CumulativeForce?.Clone()!,
+                KeTan = this.KeTan?.Clone()!,
+                KeSec = this.KeSec?.Clone()!,
                 Curve = this.Curve?.Clone(),
                 HorizontalSoilReactionItem = soilReactionCopy,
                 BeamResults = [.. this.BeamResults.Select(r => r.DeepCopy())]

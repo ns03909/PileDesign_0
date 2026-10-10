@@ -6,12 +6,13 @@ namespace PileDesign.FEM
     public abstract class TwoNodeSpringElement
     {
         // シリアライズ/デザイナのため public set を許容
-        public string Name { get; set; }
-        public Node NodeI { get; set; }
-        public Node NodeJ { get; set; }
+        public string Name { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public Node NodeI { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public Node NodeJ { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
 
-        public Matrix<double> KeTan { get; protected set; }
-        public Matrix<double> KeSec { get; protected set; }
+        // SetKe で入る。それまで (読込 (JSON) 直後を含む) は null
+        public Matrix<double> KeTan { get; protected set; } = null!;
+        public Matrix<double> KeSec { get; protected set; } = null!;
 
         // シリアライザ用（後から Name/NodeI/NodeJ をセット可能）
         protected TwoNodeSpringElement() { }
@@ -135,7 +136,7 @@ namespace PileDesign.FEM
             return ke * disp;
         }
 
-        public void SetBeamDispAndForce(bool isTan = false, BeamDisp cumulativeDisp = null, BeamForce cumulativeForce = null)
+        public void SetBeamDispAndForce(bool isTan = false, BeamDisp? cumulativeDisp = null, BeamForce? cumulativeForce = null)
         {
             var dI = NodeI.CumulativeDisp.GetVector();
             var dJ = NodeJ.CumulativeDisp.GetVector();

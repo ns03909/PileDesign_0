@@ -812,12 +812,12 @@ namespace PileDesign.FEM
             var nodeICopy = NodeI?.DeepCopy();
             var nodeJCopy = NodeJ?.DeepCopy();
 
-            var copy = new RotationalSpring(Name, nodeICopy, nodeJCopy)
+            var copy = new RotationalSpring(Name, nodeICopy!, nodeJCopy!)
             {
-                IncrementalDisp = this.IncrementalDisp?.Clone(),
-                CumulativeDisp = this.CumulativeDisp?.Clone(),
-                IncrementalForce = this.IncrementalForce?.Clone(),
-                CumulativeForce = this.CumulativeForce?.Clone(),
+                IncrementalDisp = this.IncrementalDisp?.Clone()!,
+                CumulativeDisp = this.CumulativeDisp?.Clone()!,
+                IncrementalForce = this.IncrementalForce?.Clone()!,
+                CumulativeForce = this.CumulativeForce?.Clone()!,
                 Mode = this.Mode,
                 Dof = this.Dof,
                 Curve = this.Curve,            // 参照そのまま（必要ならDeepCopyへ拡張）

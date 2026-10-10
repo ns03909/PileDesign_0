@@ -40,8 +40,8 @@ namespace PileDesign.FEM
 
     public class AnalysisStepResult
     {
-        public LoadCase LoadCase { get; set; }
-        public LoadCombination LoadCombination { get; set; }
+        public LoadCase LoadCase { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public LoadCombination LoadCombination { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
         public bool IsLiquefaction { get; set; }
         public int Step { get; set; }
         public int Iteration { get; set; }
@@ -82,8 +82,8 @@ namespace PileDesign.FEM
         public AnalysisStepResult DeepCopy()
         {
             return new AnalysisStepResult(
-                this.LoadCase?.DeepCopy(),
-                this.LoadCombination?.DeepCopy(),
+                this.LoadCase?.DeepCopy()!,
+                this.LoadCombination?.DeepCopy()!,
                 this.IsLiquefaction,
                 this.Step,
                 this.Iteration,

@@ -86,7 +86,7 @@ namespace PileDesign.FEM
             InputModel.FoundationBeamInput.Beams.Count > 0;
 
         // Guid→FEM節点名のルックアップ（AddFoundationBeamNodesで構築）
-        private Dictionary<Guid, string> _pileGuidToFemName;
+        private Dictionary<Guid, string>? _pileGuidToFemName;
 
         private void Initialize()
         {
@@ -520,15 +520,15 @@ namespace PileDesign.FEM
             for (int k = 0; k < mapCount; k++)
             {
                 double w = 0.0;
-                if (pcvCount > 0)
+                if (pcvCount > 0) // pcvCount > 0 なら pcvList は null ではない
                 {
                     if (k == 0)
-                        w = pcvList[0].PileBodySegment.PileSection.W * pcvList[0].L * 0.5;
+                        w = pcvList![0].PileBodySegment.PileSection.W * pcvList[0].L * 0.5;
                     else if (k < pcvCount)
-                        w = pcvList[k - 1].PileBodySegment.PileSection.W * pcvList[k - 1].L * 0.5
+                        w = pcvList![k - 1].PileBodySegment.PileSection.W * pcvList[k - 1].L * 0.5
                           + pcvList[k].PileBodySegment.PileSection.W * pcvList[k].L * 0.5;
                     else // k == pcvCount (= 先端)
-                        w = pcvList[pcvCount - 1].PileBodySegment.PileSection.W * pcvList[pcvCount - 1].L * 0.5;
+                        w = pcvList![pcvCount - 1].PileBodySegment.PileSection.W * pcvList[pcvCount - 1].L * 0.5;
                 }
                 weights.Add(w);
             }
@@ -1024,7 +1024,7 @@ namespace PileDesign.FEM
             }
 
             // 方法1b: Type+Guid から FEM節点名を生成して検索
-            string femName = GetFemNodeName(type, id);
+            string? femName = GetFemNodeName(type, id);
             if (femName != null)
             {
                 var node = Nodes.FirstOrDefault(n => n.Name == femName);
@@ -1044,7 +1044,7 @@ namespace PileDesign.FEM
         // 座標に最も近い FoundationNode-* / InputNode-* ノードを検索
         private Node? FindClosestFoundationNode(double x, double y, double z)
         {
-            Node closest = null;
+            Node? closest = null;
             double minDist = double.MaxValue;
             const double tolerance = 0.01; // 10mm以内
 

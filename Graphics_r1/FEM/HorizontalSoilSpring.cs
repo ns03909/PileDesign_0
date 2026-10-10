@@ -184,12 +184,12 @@ namespace PileDesign.FEM
             var nodeICopy = NodeI?.DeepCopy();
             var nodeJCopy = NodeJ?.DeepCopy();
 
-            var copy = new HorizontalSoilSpring(Name, nodeICopy, nodeJCopy)
+            var copy = new HorizontalSoilSpring(Name, nodeICopy!, nodeJCopy!)
             {
-                IncrementalDisp = this.IncrementalDisp?.Clone(),
-                CumulativeDisp = this.CumulativeDisp?.Clone(),
-                IncrementalForce = this.IncrementalForce?.Clone(),
-                CumulativeForce = this.CumulativeForce?.Clone(),
+                IncrementalDisp = this.IncrementalDisp?.Clone()!,
+                CumulativeDisp = this.CumulativeDisp?.Clone()!,
+                IncrementalForce = this.IncrementalForce?.Clone()!,
+                CumulativeForce = this.CumulativeForce?.Clone()!,
                 // KeTan/KeSec はベースに保持されるのでクローン
                 // null 許容
             };

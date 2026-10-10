@@ -73,7 +73,7 @@ namespace PileDesign.FEM
 
     public class AnaModel
     {
-        private InputModel _inputModel;
+        private InputModel _inputModel = null!; // 生成用コンストラクタと読込 (JSON) で入る
 
         /// <summary>
         /// この解析モデルが対象とする入力。
@@ -168,12 +168,13 @@ namespace PileDesign.FEM
         public double AveragedInternalFluxNorm
             => InternalFluxNormCount > 0 ? InternalFluxNormSum / InternalFluxNormCount : 0.0;
 
-        public List<Node> Nodes { get; set; }
-        public List<Beam> Beams { get; set; }
-        public List<DummyBeam> DummyBeams { get; set; }
-        public List<RigidBody> RigidBodies { get; set; }
-        public List<HorizontalSoilSpring> HorizontalSoilSprings { get; set; }
-        public List<RotationalSpring> RotationalSprings { get; set; }
+        // 要素の一覧は生成用コンストラクタと読込 (JSON) で入る
+        public List<Node> Nodes { get; set; } = null!;
+        public List<Beam> Beams { get; set; } = null!;
+        public List<DummyBeam> DummyBeams { get; set; } = null!;
+        public List<RigidBody> RigidBodies { get; set; } = null!;
+        public List<HorizontalSoilSpring> HorizontalSoilSprings { get; set; } = null!;
+        public List<RotationalSpring> RotationalSprings { get; set; } = null!;
         public List<HorizontalSoilSpring> PenaltySprings { get; set; } = [];  // ConnectionNode↔CapNodeペナルティばね
         public List<AnalysisStepResult> AnalysisStepResults { get; set; } = []; // 解析ステップ結果のリスト
 
@@ -193,22 +194,27 @@ namespace PileDesign.FEM
         public int CountFree { get; set; }
         public int CountFix { get; set; }
 
-        public Vector<double> VectorF { get; private set; } // 荷重ベクトル
-        public Vector<double> VectorDF { get; private set; } // 荷重増分ベクトル
-        public Vector<double> VectorD { get; private set; } // 変位ベクトル
-        public Vector<double> VectorDD { get; private set; } // 変位増分ベクトル
-        public Vector<double> VectorT { get; private set; } // 内力ベクトル
-        public Vector<double> VectorR { get; private set; } // 残差ベクトル
+        // VectorF / VectorDF / VectorD は BuildDofsAndChains (生成用コンストラクタから呼ぶ) で入る。
+        // VectorR は InitializeVectorR で入る。
+        // いずれも読込 (JSON) 直後は null。参照箇所が多いので null 非許容のまま置く
+        public Vector<double> VectorF { get; private set; } = null!; // 荷重ベクトル
+        public Vector<double> VectorDF { get; private set; } = null!; // 荷重増分ベクトル
+        public Vector<double> VectorD { get; private set; } = null!; // 変位ベクトル
+        public Vector<double>? VectorDD { get; private set; } // 変位増分ベクトル (変位をセットするまでは null)
+        public Vector<double>? VectorT { get; private set; } // 内力ベクトル (SetT までは null)
+        public Vector<double> VectorR { get; private set; } = null!; // 残差ベクトル
 
-        public Matrix<double> KAA_tan { get; private set; }
-        public Matrix<double> KBA_tan { get; private set; }
-        public Matrix<double> KAB_tan { get; private set; }
-        public Matrix<double> KBB_tan { get; private set; }
+        // 剛性の組立 (MapOnKmat) で入る。それまでは null。
+        // KAA_tan は参照箇所が多いので null 非許容のまま置く
+        public Matrix<double> KAA_tan { get; private set; } = null!;
+        public Matrix<double>? KBA_tan { get; private set; }
+        public Matrix<double>? KAB_tan { get; private set; }
+        public Matrix<double>? KBB_tan { get; private set; }
 
-        public Matrix<double> KAA_sec { get; private set; }
-        public Matrix<double> KBA_sec { get; private set; }
-        public Matrix<double> KAB_sec { get; private set; }
-        public Matrix<double> KBB_sec { get; private set; }
+        public Matrix<double>? KAA_sec { get; private set; }
+        public Matrix<double>? KBA_sec { get; private set; }
+        public Matrix<double>? KAB_sec { get; private set; }
+        public Matrix<double>? KBB_sec { get; private set; }
 
         /// <summary>
         /// Cholesky factor の case-local キャッシュ。MapOnKmat 冒頭で Invalidate() を呼び、
@@ -284,7 +290,7 @@ namespace PileDesign.FEM
             // ConnectionNode / InputNode / FoundationNode)。どれも腕は「節点 − 作用点」なので作り直す。
             // 以前は剛体連結の slave だけを作り直し、これらは作ったときの作用点からの腕のまま残っていた。
             // 杭頭とキャップ節点を結ぶ拘束ばねが偽のねじり剛性になり、偏心のねじれがほぼ止まっていた
-            foreach (var node in Nodes)
+            foreach (var node in Nodes!) // actionNode が見つかったので Nodes は null ではない
             {
                 if (node == null || ReferenceEquals(node, actionNode)) continue;
                 if (!node.MasterNodes.Any(m => ReferenceEquals(m, actionNode))) continue;
@@ -376,7 +382,7 @@ namespace PileDesign.FEM
                 if (pileHeadNode == null) continue;
 
                 // Uz の master-slave を解放 (PileNode.Uz → AP の連鎖を切る)
-                pileHeadNode.SetMasterNode((int)Dof.Uz, null);
+                pileHeadNode.SetMasterNode((int)Dof.Uz, null!); // MasterNodes の null は「未拘束」
 
                 // Uz の境界条件を free にする (新たに方程式番号を付与するため)
                 if (pileHeadNode.Boundary != null)
@@ -395,7 +401,7 @@ namespace PileDesign.FEM
             // ステップ間で再利用される他のベクトル/状態も無効化 (サイズが変わった可能性)
             VectorDD = null;
             VectorT = null;
-            VectorR = null;
+            VectorR = null!; // 次の InitializeVectorR で入る
         }
 
         // コンストラクタ
@@ -525,7 +531,7 @@ namespace PileDesign.FEM
                         if (Math.Abs(armVal) < 1e-15) continue;
 
                         // master の crossDof の写像を取得
-                        DofTerm[] crossMap = master.ResolvedDofMap?[crossDof];
+                        DofTerm[]? crossMap = master.ResolvedDofMap?[crossDof];
                         if (crossMap == null || crossMap.Length == 0) continue;
 
                         foreach (var ct in crossMap)
@@ -719,7 +725,7 @@ namespace PileDesign.FEM
             for (int i = 0; i < CountFree; i++)
             {
                 double v = matrixKAA[i, i];
-                string nodeDofName = null;
+                string? nodeDofName = null;
 
                 // この方程式番号に対応するノードと自由度を特定
                 foreach (var node in Nodes)
@@ -1081,6 +1087,7 @@ namespace PileDesign.FEM
         {
             // 呼び出し側保証: nodeI/nodeJ は通常 non-null。null の場合は何もせず帰る。
             if (nodeI == null || nodeJ == null) return;
+            var vectorT = VectorT!; // SetT で作ってから呼ぶ
 
             bool useResolvedMap = nodeI.ResolvedDofMap != null && nodeJ.ResolvedDofMap != null;
             if (useResolvedMap)
@@ -1096,7 +1103,7 @@ namespace PileDesign.FEM
                     foreach (var term in terms)
                     {
                         if (term.Eq >= 0)
-                            VectorT[term.Eq] += term.Coeff * fval;
+                            vectorT[term.Eq] += term.Coeff * fval;
                     }
                 }
             }
@@ -1123,7 +1130,7 @@ namespace PileDesign.FEM
                 for (int i = 0; i < 12; i++)
                 {
                     if (eq[i] >= 0)
-                        VectorT[eq[i]] += f_transformed[i];
+                        vectorT[eq[i]] += f_transformed[i];
                 }
             }
         }
@@ -1171,12 +1178,13 @@ namespace PileDesign.FEM
         private int _findRCallCount = 0;
         public void FindR()
         {
+            var vectorT = VectorT!; // SetT で組み立ててから呼ぶ
             VectorR.Clear();
             for (int i = 0; i < CountFree; i++)
             {
                 if (VectorDOFForcedDisp[i] == false)
                 {
-                    VectorR[i] = VectorF[i] - VectorT[i];
+                    VectorR[i] = VectorF[i] - vectorT[i];
                 }
                 else // 強制変位の自由度は残余力をゼロにする
                 {
@@ -1190,7 +1198,7 @@ namespace PileDesign.FEM
             for (int i = 0; i < CountFree; i++)
             {
                 if (VectorDOFForcedDisp[i])
-                    normsqForcedReaction += VectorT[i] * VectorT[i];
+                    normsqForcedReaction += vectorT[i] * vectorT[i];
             }
 
             double normsqR = VectorR.L2Norm() * VectorR.L2Norm();
@@ -1198,7 +1206,7 @@ namespace PileDesign.FEM
             double averagedFlux = AveragedInternalFluxNorm;
             NormsROnNormsFint = ResidualRatio(
                 ResidualReference, normsqR, normsqF, normsqForcedReaction,
-                averagedFlux > 0.0 ? averagedFlux : VectorT.L2Norm());
+                averagedFlux > 0.0 ? averagedFlux : vectorT.L2Norm());
 
             // NaN診断
             // NaNDiagnostics.DiagnoseResidual(VectorF, VectorT, VectorR, NormsROnNormsFint);
@@ -1211,14 +1219,14 @@ namespace PileDesign.FEM
                 var log = new System.Text.StringBuilder();
                 log.AppendLine($"=== FindR 診断 (呼び出し#{_findRCallCount}) ===");
                 log.AppendLine($"‖R‖²/‖基準‖² = {NormsROnNormsFint:E3} (基準: {ResidualReferenceModes.ToText(ResidualReference)})");
-                log.AppendLine($"||F|| = {VectorF.L2Norm():E3}, ||T|| = {VectorT.L2Norm():E3}, ||R|| = {VectorR.L2Norm():E3}");
+                log.AppendLine($"||F|| = {VectorF.L2Norm():E3}, ||T|| = {vectorT.L2Norm():E3}, ||R|| = {VectorR.L2Norm():E3}");
 
                 // 残差の大きいDOFトップ10
                 var residuals = new List<(int eq, double r, double f, double t)>();
                 for (int i = 0; i < CountFree; i++)
                 {
                     if (!VectorDOFForcedDisp[i])
-                        residuals.Add((i, VectorR[i], VectorF[i], VectorT[i]));
+                        residuals.Add((i, VectorR[i], VectorF[i], vectorT[i]));
                 }
                 residuals.Sort((a, b) => Math.Abs(b.r).CompareTo(Math.Abs(a.r)));
 
@@ -1254,7 +1262,7 @@ namespace PileDesign.FEM
                 for (int i = 0; i < CountFree; i++)
                 {
                     if (Math.Abs(VectorF[i]) > NumericalConstants.NEAR_ZERO_EPSILON) fNonZero++;
-                    if (Math.Abs(VectorT[i]) > NumericalConstants.NEAR_ZERO_EPSILON) tNonZero++;
+                    if (Math.Abs(vectorT[i]) > NumericalConstants.NEAR_ZERO_EPSILON) tNonZero++;
                 }
                 log.AppendLine($"F≠0のDOF数: {fNonZero}, T≠0のDOF数: {tNonZero}, 全自由度: {CountFree}");
 
@@ -1266,7 +1274,7 @@ namespace PileDesign.FEM
 
                     // DOF特定
                     string nodeDof2 = "?";
-                    Node targetNode = null;
+                    Node? targetNode = null;
                     int targetDof = -1;
                     foreach (var node in Nodes)
                     {
@@ -1627,7 +1635,7 @@ namespace PileDesign.FEM
 
             // ---- Step 3: 要素コピー + NodeI/J 参照 fixup ----
             // 並行して Step 6 用の要素マップも構築 (Step 6 で再 iterate を回避)
-            Node MapNode(Node n) => (n != null && nodeMap.TryGetValue(n, out var nn)) ? nn : n;
+            Node MapNode(Node n) => (n != null && nodeMap.TryGetValue(n, out var nn)) ? nn : n!;
 
             int beamCount = this.Beams.Count;
             var beams = new List<Beam>(beamCount);
@@ -1738,7 +1746,7 @@ namespace PileDesign.FEM
                     if (pli.PileNodes != null)
                     {
                         foreach (var n in pli.PileNodes)
-                            pileNodeList.Add(n != null && nodeMap.TryGetValue(n, out var nn) ? nn : n);
+                            pileNodeList.Add(n != null && nodeMap.TryGetValue(n, out var nn) ? nn : n!);
                     }
                     snap.PileNodes[pli] = pileNodeList;
 
@@ -1746,7 +1754,7 @@ namespace PileDesign.FEM
                     if (pli.SoilNodes != null)
                     {
                         foreach (var n in pli.SoilNodes)
-                            soilNodeList.Add(n != null && nodeMap.TryGetValue(n, out var nn) ? nn : n);
+                            soilNodeList.Add(n != null && nodeMap.TryGetValue(n, out var nn) ? nn : n!);
                     }
                     snap.SoilNodes[pli] = soilNodeList;
 
@@ -1766,7 +1774,7 @@ namespace PileDesign.FEM
                     if (pli.HorizontalSoilSprings != null)
                     {
                         foreach (var s in pli.HorizontalSoilSprings)
-                            hsList.Add(s != null && hsSpringMap.TryGetValue(s, out var nn) ? nn : s);
+                            hsList.Add(s != null && hsSpringMap.TryGetValue(s, out var nn) ? nn : s!);
                     }
                     snap.PileHorizontalSoilSprings[pli] = hsList;
 
@@ -1775,7 +1783,7 @@ namespace PileDesign.FEM
                     if (pli.Beams != null)
                     {
                         foreach (var b in pli.Beams)
-                            bList.Add(b != null && beamMap.TryGetValue(b, out var nn) ? nn : b);
+                            bList.Add(b != null && beamMap.TryGetValue(b, out var nn) ? nn : b!);
                     }
                     snap.PileBeams[pli] = bList;
 
@@ -1784,7 +1792,7 @@ namespace PileDesign.FEM
                     if (pli.VerticalNodeSprings != null)
                     {
                         foreach (var sp in pli.VerticalNodeSprings)
-                            vList.Add(sp != null && hsSpringMap.TryGetValue(sp, out var nn) ? nn : sp);
+                            vList.Add(sp != null && hsSpringMap.TryGetValue(sp, out var nn) ? nn : sp!);
                     }
                     snap.VerticalNodeSprings[pli] = vList;
                 }

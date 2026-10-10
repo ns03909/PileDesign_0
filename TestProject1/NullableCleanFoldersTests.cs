@@ -21,8 +21,8 @@ namespace TestProject1
     [TestClass]
     public class NullableCleanFoldersTests
     {
-        /// <summary>Null 許容の警告が 0 件のフォルダー (Graphics_r1 からの相対)。2026-10-10: Services・Output。</summary>
-        private static readonly string[] CleanFolders = ["Services", "Output"];
+        /// <summary>Null 許容の警告が 0 件のフォルダー (Graphics_r1 からの相対)。2026-10-10: Services・Output・FEM。</summary>
+        private static readonly string[] CleanFolders = ["Services", "Output", "FEM"];
 
         /// <summary>本体で警告のまま許している Null 許容の警告 (PileDesign.csproj の WarningsNotAsErrors と同じ)。</summary>
         private static readonly HashSet<string> NullableWarnings = new(StringComparer.Ordinal)

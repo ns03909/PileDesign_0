@@ -6,9 +6,9 @@ namespace PileDesign.FEM
 {
     public class RigidBody
     {
-        public Node MasterNode { get; set; }
-        public List<Node> SlaveNodes { get; set; }
-        public bool[] Dofs { get; set; }
+        public Node MasterNode { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public List<Node> SlaveNodes { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public bool[] Dofs { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
 
         // スレーブ節点の元境界を保持して復元するためのマップ
         private readonly Dictionary<Node, Boundary> _savedBoundaries = [];
@@ -106,7 +106,7 @@ namespace PileDesign.FEM
                 {
                     if (slaveNode.MasterNodes != null && slaveNode.MasterNodes[i] == MasterNode)
                     {
-                        slaveNode.MasterNodes[i] = null;
+                        slaveNode.MasterNodes[i] = null!; // MasterNodes の null は「未拘束」
                     }
                 }
 
@@ -160,10 +160,10 @@ namespace PileDesign.FEM
         {
             // MasterNode, SlaveNodesをDeepCopy
             var masterNodeCopy = MasterNode?.DeepCopy();
-            var slaveNodesCopy = SlaveNodes.Select(n => n?.DeepCopy()).ToList();
+            var slaveNodesCopy = SlaveNodes.Select(n => n?.DeepCopy()!).ToList();
             var dofsCopy = (bool[])Dofs.Clone();
 
-            var copy = new RigidBody(masterNodeCopy, dofsCopy)
+            var copy = new RigidBody(masterNodeCopy!, dofsCopy)
             {
                 SlaveNodes = slaveNodesCopy
             };

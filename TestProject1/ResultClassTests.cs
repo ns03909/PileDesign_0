@@ -124,7 +124,7 @@ namespace TestProject1
             Assert.AreEqual(node.CumulativeReaction.Fx, r.CumulativeReaction.Fx);
             Assert.AreNotSame(node.CumulativeReaction, r.CumulativeReaction);
 
-            Assert.AreEqual(node.SoilDisp.Ux, r.SoilDisp.Ux);
+            Assert.AreEqual(node.SoilDisp!.Ux, r.SoilDisp!.Ux);
             Assert.AreNotSame(node.SoilDisp, r.SoilDisp);
         }
 

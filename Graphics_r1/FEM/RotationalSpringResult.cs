@@ -4,13 +4,13 @@ namespace PileDesign.FEM
 {
     public class RotationalSpringResult
     {
-        public LoadCase LoadCase { get; set; }
-        public LoadCombination LoadCombination { get; set; }
+        public LoadCase LoadCase { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public LoadCombination LoadCombination { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
         public bool IsLiquefaction { get; set; }
         public int Step { get; set; }
 
-        public BeamDisp CumulativeDisp { get; set; }
-        public BeamForce CumulativeForce { get; set; }
+        public BeamDisp CumulativeDisp { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public BeamForce CumulativeForce { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
 
         // v28 アプローチ I: post-crack 方向ロック状態のスナップショット。
         // HasCracked=true のとき CrackNx/CrackNy は単位ベクトル (|n|=1)。
@@ -31,8 +31,8 @@ namespace PileDesign.FEM
             LoadCombination = loadCombination;
             IsLiquefaction = isLiquefaction;
             Step = step;
-            CumulativeDisp = rotationalSpring.CumulativeDisp?.Clone();
-            CumulativeForce = rotationalSpring.CumulativeForce?.Clone();
+            CumulativeDisp = rotationalSpring.CumulativeDisp?.Clone()!;
+            CumulativeForce = rotationalSpring.CumulativeForce?.Clone()!;
             HasCracked = rotationalSpring.HasCrackedXY;
             CrackNx = rotationalSpring.CrackNx;
             CrackNy = rotationalSpring.CrackNy;
@@ -43,12 +43,12 @@ namespace PileDesign.FEM
         {
             var copy = new RotationalSpringResult()
             {
-                LoadCase = this.LoadCase?.DeepCopy(),
-                LoadCombination = this.LoadCombination?.DeepCopy(),
+                LoadCase = this.LoadCase?.DeepCopy()!,
+                LoadCombination = this.LoadCombination?.DeepCopy()!,
                 IsLiquefaction = this.IsLiquefaction,
                 Step = this.Step,
-                CumulativeDisp = this.CumulativeDisp?.Clone(),
-                CumulativeForce = this.CumulativeForce?.Clone(),
+                CumulativeDisp = this.CumulativeDisp?.Clone()!,
+                CumulativeForce = this.CumulativeForce?.Clone()!,
                 HasCracked = this.HasCracked,
                 CrackNx = this.CrackNx,
                 CrackNy = this.CrackNy,

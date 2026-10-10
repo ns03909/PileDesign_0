@@ -205,7 +205,7 @@ namespace PileDesign.FEM
                     if (!CheckResidual(K, b, xCached, SolverKind.Cholesky, cache))
                         throw new InvalidOperationException("再利用した Cholesky 因子の解の残差が大きい");
                     LastSuccessfulSolver = SolverKind.Cholesky; if (cache != null) cache.Diagnostics.LastSolver = SolverKind.Cholesky;
-                    cache.Diagnostics.CholeskyReuseCount++;
+                    cache!.Diagnostics.CholeskyReuseCount++; // 冒頭の cache != null で入った分岐
                     return xCached;
                 }
                 catch

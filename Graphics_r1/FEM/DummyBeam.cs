@@ -11,9 +11,9 @@ namespace PileDesign.FEM
         // 「Reference metadata is not supported when deserializing constructor parameters」で失敗する。
         // Node は他所と共有される (= 2 回目以降は $ref になる) ため、必ず setter 経由で復元させる。
         // Beam も同じ理由で既定コンストラクタ + setter の形になっている。
-        public string Name { get; set; }
-        public Node NodeI { get; set; }
-        public Node NodeJ { get; set; }
+        public string Name { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public Node NodeI { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public Node NodeJ { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
         public double Length { get; set; }
         public ObservableCollection<DummyBeamResult> DummyBeamResults { get; set; } = [];
 

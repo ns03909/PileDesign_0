@@ -6,12 +6,12 @@ namespace PileDesign.FEM
 {
     public class BeamResult
     {
-        public LoadCase LoadCase { get; set; }
-        public LoadCombination LoadCombination { get; set; }
+        public LoadCase LoadCase { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public LoadCombination LoadCombination { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
         public bool IsLiquefaction { get; set; }
         public int Step { get; set; }
-        public BeamDisp CumulativeDisp { get; set; }
-        public BeamForce CumulativeForce { get; set; }
+        public BeamDisp CumulativeDisp { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
+        public BeamForce CumulativeForce { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
 
         // 要素中央の曲率 [rad/m]
         public double Curvature { get; set; }
@@ -19,9 +19,9 @@ namespace PileDesign.FEM
         // 要素中央のモーメント [kNm]（M-φ曲線から直接評価した値）
         public double Moment { get; set; }
 
-        // M-φ曲線データ（グラフ表示用）
-        public List<double> MPhiCurve_Phis { get; set; }
-        public List<double> MPhiCurve_Moments { get; set; }
+        // M-φ曲線データ（グラフ表示用）。曲線が無い (点が 2 つ未満) ときは null
+        public List<double>? MPhiCurve_Phis { get; set; }
+        public List<double>? MPhiCurve_Moments { get; set; }
 
         // パラメータなしコンストラクタ（必須）
         public BeamResult() { }
@@ -33,8 +33,8 @@ namespace PileDesign.FEM
             LoadCombination = loadCombination;
             IsLiquefaction = isLiquefaction;
             Step = step;
-            CumulativeDisp = beam.CumulativeDisp?.Clone();
-            CumulativeForce = beam.CumulativeForce?.Clone();
+            CumulativeDisp = beam.CumulativeDisp?.Clone()!;
+            CumulativeForce = beam.CumulativeForce?.Clone()!;
             Curvature = beam.CurrentCurvature;
             Moment = beam.CurrentMoment;
 
@@ -51,12 +51,12 @@ namespace PileDesign.FEM
         {
             var copy = new BeamResult()
             {
-                LoadCase = this.LoadCase?.DeepCopy(),
-                LoadCombination = this.LoadCombination?.DeepCopy(),
+                LoadCase = this.LoadCase?.DeepCopy()!,
+                LoadCombination = this.LoadCombination?.DeepCopy()!,
                 IsLiquefaction = this.IsLiquefaction,
                 Step = this.Step,
-                CumulativeDisp = this.CumulativeDisp?.Clone(),
-                CumulativeForce = this.CumulativeForce?.Clone(),
+                CumulativeDisp = this.CumulativeDisp?.Clone()!,
+                CumulativeForce = this.CumulativeForce?.Clone()!,
                 Curvature = this.Curvature,
                 Moment = this.Moment,
                 MPhiCurve_Phis = this.MPhiCurve_Phis?.ToList(),

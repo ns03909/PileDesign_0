@@ -287,7 +287,7 @@ namespace PileDesign.FEM
             }
 
             // 方法1b: Type+GuidからFEM節点名を生成して検索
-            string femName = GetFemNodeName(type, id);
+            string? femName = GetFemNodeName(type, id);
             if (femName != null)
             {
                 var node = Nodes.FirstOrDefault(n => n.Name == femName);
@@ -322,7 +322,7 @@ namespace PileDesign.FEM
 
         private Node? FindClosestNode(double x, double y, double z)
         {
-            Node closest = null;
+            Node? closest = null;
             double minDist = double.MaxValue;
             const double tolerance = 0.01;
 

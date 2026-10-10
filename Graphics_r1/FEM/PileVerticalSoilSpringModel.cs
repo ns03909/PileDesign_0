@@ -50,7 +50,7 @@ namespace PileDesign.FEM
         /// <param name="n">先端 R-S 曲線パラメータ n</param>
         /// <param name="weight">この節点に集約される自重 [kN]</param>
         public PileVerticalSoilSpringModel(
-            IList<PileCircumVertical> circumVerticals,
+            IList<PileCircumVertical>? circumVerticals,
             int nodeIndex,
             bool isToe,
             double dp,
@@ -69,7 +69,7 @@ namespace PileDesign.FEM
             for (int j = nodeIndex - 1; j <= nodeIndex; j++)
             {
                 if (j < 0 || j >= count) continue;
-                _perimeterContribs.Add(circumVerticals[j]);
+                _perimeterContribs.Add(circumVerticals![j]); // j < count なので null ではない
             }
 
             _isToe = isToe;
