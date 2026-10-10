@@ -681,6 +681,13 @@ namespace PileDesign.Models
                 thetas.Add(thetaU);
 
             }
+            else if (!(Mu > 0)) // 引張で曲げを負担できない (定着筋なし等): M ≡ 0 (ピン)
+            {
+                Ms.Add(0.0);
+                Ms.Add(0.0);
+                thetas.Add(0.0);
+                thetas.Add(thetaU);
+            }
             else //if (N < 0) 引張
             {
                 double thetaYD = Math.Min(GetThetaYDonTensionSide(My, Mu, thetaY), thetaU);
@@ -767,6 +774,10 @@ namespace PileDesign.Models
                 double x = -CTPConcrete.D * Nu * 0.5;
                 double epsilon = CTPConcrete.Epsilon085;
 
+                // 曲線の引張側の端 (定着筋なしなら 0、ありなら純引張) より引張側は、曲げを負担できない。
+                // 以前は端の区間を外挿して負の My を返していた
+                if (NTarget < YieldNs[0]) return (0.0, 0.0);
+
                 int seg = -1;
                 for (int i = 1; i < YieldNs.Count; i++)
                 {
@@ -828,6 +839,10 @@ namespace PileDesign.Models
                 double N = 0.0, M = 0.0;
                 double curvature = 1.0e-6;
                 double deltaCurvature = curvature / 500.0;
+
+                // 曲線の引張側の端 (定着筋なしなら 0、ありなら純引張) より引張側は、曲げを負担できない (Mu = 0)。
+                // 以前は端の区間を外挿して負の Mu を返し、M-θ が負の曲線になって、割線剛性で杭頭モーメントが残っていた
+                if (NTarget < UltimateNs[0]) return 0.0;
 
                 int seg = -1;
                 for (int i = 1; i < UltimateNs.Count; i++)
@@ -1548,16 +1563,11 @@ namespace PileDesign.Models
                 z = -TB * 0.5 + TB * i / (NumDot / 4.0);
                 epsilon = epsilon0 - curvature * z;
                 sigma = material.GetStress(epsilon);
-                if (i == 0 || i == NumDot / 4.0)
-                {
-                    axialForce += sigma * Area * (NumDot / 4.0 + 1);
-                    bendingMoment += sigma * Area * (NumDot / 4.0 + 1) * -z;
-                }
-                else
-                {
-                    axialForce += sigma * Area;
-                    bendingMoment += sigma * Area * -z;
-                }
+                // 外周の 2 辺 (曲げの軸に平行) は n/4+1 本ずつ、その間の列は両側の辺に 1 本ずつの 2 本 (合計 n 本)。
+                // 以前は間の列を 1 本と数え、12 本で 10 本、16 本で 13 本として耐力を求めていた
+                double count = (i == 0 || i == NumDot / 4.0) ? NumDot / 4.0 + 1 : 2.0;
+                axialForce += sigma * Area * count;
+                bendingMoment += sigma * Area * count * -z;
             }
             return (axialForce, bendingMoment);
         }

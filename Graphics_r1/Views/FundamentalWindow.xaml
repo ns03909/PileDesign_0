@@ -355,6 +355,21 @@
                 </StackPanel>
             </GroupBox>
 
+            <!-- 場所打ち杭・鋼管杭の杭頭回転角 -->
+            <GroupBox Header="場所打ち杭・鋼管杭の杭頭回転角" Margin="0,6,0,0">
+                <StackPanel Margin="6,4,6,4">
+                    <ctrl:MaterialOptionRadioPair
+                        Header="杭頭回転角（杭頭の M-θ）を考慮する" HelpAnchor="fund-opt-pile-head-rotation" GroupName="OptPileHeadRotation"
+                        IsAlternativeSelected="{Binding ConsiderPileHeadRotation, Mode=TwoWay}"
+                        DefaultText="考慮しない（杭頭を剛接合とする）"
+                        DefaultFormula="杭頭の回転ばねを剛（回転しない）とする"
+                        DefaultToolTip="鉄筋定着工法の場所打ちRC杭・鋼管杭の杭頭を剛接合（回転固定）として解きます。&#x0a;杭体の線形・非線形によりません。"
+                        AlternativeText="考慮する（既定）"
+                        AlternativeFormula="場所打ちRC杭: (0,0)-(θcr, Mcr)-(θy, My)-(θu, β₁·Mu0) のトリリニア（ひび割れまでは剛）／鋼管杭: 接合部の回転剛性 Kθ"
+                        AlternativeToolTip="鉄筋定着工法の場所打ちRC杭は杭頭 M-θ のトリリニア、鋼管杭は接合部の回転剛性 Kθ の線形ばねで解きます。&#x0a;杭体の線形・非線形（荷重ケースの「杭の非線形」）によらず考慮します。&#x0a;半剛接合の工法（キャプテンパイル・F.T.Pile・キャプリング）と、剛接合の杭頭は対象外です。&#x0a;変更すると、表示中の解析結果は「再解析が必要」の扱いになります。"/>
+                </StackPanel>
+            </GroupBox>
+
             <!-- 収束判定の基準値 (残差を何で割るか) -->
             <GroupBox Header="収束判定の基準値" Margin="0,6,0,0">
                 <StackPanel Margin="6,4,6,4">

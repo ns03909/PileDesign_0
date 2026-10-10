@@ -262,18 +262,26 @@ namespace PileDesign.ViewModels
                 //     $"[SetupMTheta] {spring.Name}: IsPileNonLinear={loadCase.IsPileNonLinear}, " +
                 //     $"def.Mode={def.Mode}, axialN={axialN:F1}kN");
 
-                // 非線形OFF: つねに剛体相当
-                if (!loadCase.IsPileNonLinear)
+                // 杭頭の M-θ を使うか。鉄筋定着工法の場所打ちRC杭・鋼管杭は、杭体の線形・非線形によらず
+                // 基本設定「場所打ち杭・鋼管杭の杭頭回転角」に従う (以前は杭の非線形 OFF で剛になり、Kθ が消えた)。
+                // それ以外の杭頭は従来どおり、杭の非線形 OFF なら剛
+                bool selectable = pileBody.HasSelectablePileHeadRotation();
+                bool useHeadRotation = selectable
+                    ? (InputModel.FundamentalInput?.ConsiderPileHeadRotation ?? true)
+                    : loadCase.IsPileNonLinear;
+                if (!useHeadRotation)
                 {
                     spring.Mode = RotationalSpringMode.CombinedXY;
                     spring.CurveXY = null;
                     spring.KthetaXY = KBig;
-                    spring.McrXY = null; // Mode 切替は非線形ケースでのみ有効
-                    spring.LastSetupReason = $"Rigid(IsPileNonLinear=false, axialN={axialN:F0}kN)";
+                    spring.McrXY = null;
+                    spring.LastSetupReason = selectable
+                        ? $"Rigid(基本設定: 杭頭回転角を考慮しない, axialN={axialN:F0}kN)"
+                        : $"Rigid(IsPileNonLinear=false, axialN={axialN:F0}kN)";
                     continue;
                 }
 
-                // 非線形ON
+                // 杭頭の M-θ を使う
                 switch (def.Mode)
                 {
                     case PileHeadRotationMode.Rigid:

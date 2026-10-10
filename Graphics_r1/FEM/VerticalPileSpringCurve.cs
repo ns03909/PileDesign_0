@@ -22,6 +22,17 @@ namespace PileDesign.FEM
         // 最小剛性フロア値（初期剛性の1%）
         private double _minStiffness;
 
+        // 引抜き側 (浮き上がり) の曲線: (浮き上がり量 [m, 正], 引抜き抵抗 [kN, 正]) のソート済みリスト。
+        // 単杭沈下解析の荷重～沈下量関係 (LoadDisplacements) から作るときだけ持つ (引抜き側の点が無ければ空)。
+        // null は「引抜き側を持たない」作り方 (節点別の点列。水平解析が使う) で、従来どおり押込みの初期剛性を返す。
+        private readonly List<(double Uplift_m, double Force_kN)>? _tension;
+
+        // 引抜き側の最小剛性 (引抜き側の初期剛性の 1%、引抜き抵抗が無ければ 1 kN/m)
+        private double _minTensionStiffness = 1.0;
+
+        /// <summary>引抜き側の初期接線剛性 [kN/m]。引抜き側の曲線が無ければ 0。</summary>
+        public double InitialTensionStiffness { get; private set; }
+
         public VerticalPileSpringCurve(
             ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> loadDisplacements)
         {
@@ -36,7 +47,62 @@ namespace PileDesign.FEM
                 .Select(ld => (Settlement_m: ld.DD0s / 1000.0, Force_kN: ld.PileTopLoad))
                 .ToList();
 
+            // 引抜き側 (DD0s < 0・杭頭荷重が引張) も同じ解析で求めてある。浮き上がる杭はこちらの剛性で抵抗する。
+            // 以前は押込み側だけを使い、浮き上がると押込みの初期剛性で抵抗させたうえ、報告する反力は 0 だった
+            _tension = loadDisplacements
+                .Where(ld => ld.DD0s < 0 && double.IsFinite(ld.DD0s) && double.IsFinite(ld.PileTopLoad))
+                .Select(ld => (Uplift_m: -ld.DD0s / 1000.0, Force_kN: Math.Max(-ld.PileTopLoad, 0.0)))
+                .OrderBy(p => p.Uplift_m)
+                .ToList();
+
             FinalizeCurveSetup();
+            FinalizeTensionSetup();
+        }
+
+        private void FinalizeTensionSetup()
+        {
+            if (_tension == null) return;
+            _tension.Insert(0, (0.0, 0.0));
+            for (int i = _tension.Count - 1; i > 0; i--)
+                if (_tension[i].Uplift_m - _tension[i - 1].Uplift_m < 1e-15)
+                    _tension.RemoveAt(i);
+            InitialTensionStiffness = _tension.Count >= 2 && _tension[1].Uplift_m > 1e-15
+                ? Math.Max(_tension[1].Force_kN / _tension[1].Uplift_m, 0.0)
+                : 0.0;
+            _minTensionStiffness = Math.Max(InitialTensionStiffness * 0.01, 1.0);
+        }
+
+        /// <summary>浮き上がり量 [m, 正] での引抜き抵抗 [kN, 正]。曲線の端より先は端の値 (引抜き抵抗の限界) で一定。</summary>
+        private double TensionForce(double uplift_m)
+        {
+            var t = _tension!;
+            if (t.Count < 2) return 0.0;
+            for (int i = 0; i < t.Count - 1; i++)
+            {
+                if (uplift_m <= t[i + 1].Uplift_m)
+                {
+                    double dD = t[i + 1].Uplift_m - t[i].Uplift_m;
+                    double ratio = dD > 1e-15 ? (uplift_m - t[i].Uplift_m) / dD : 1.0;
+                    return t[i].Force_kN + ratio * (t[i + 1].Force_kN - t[i].Force_kN);
+                }
+            }
+            return t[^1].Force_kN;
+        }
+
+        /// <summary>浮き上がり量 [m, 正] での引抜き側の接線剛性 [kN/m]。</summary>
+        private double TensionTangent(double uplift_m)
+        {
+            var t = _tension!;
+            for (int i = 0; i < t.Count - 1; i++)
+            {
+                if (uplift_m <= t[i + 1].Uplift_m)
+                {
+                    double dD = t[i + 1].Uplift_m - t[i].Uplift_m;
+                    if (dD < 1e-15) return _minTensionStiffness;
+                    return Math.Max((t[i + 1].Force_kN - t[i].Force_kN) / dD, _minTensionStiffness);
+                }
+            }
+            return _minTensionStiffness;   // 引抜き抵抗の限界を超えた
         }
 
         /// <summary>
@@ -97,6 +163,9 @@ namespace PileDesign.FEM
         /// <returns>杭頭荷重 [kN]（正=圧縮）</returns>
         public double GetForce(double settlement_m)
         {
+            // 浮き上がり: 引抜き側の曲線 (引張なので負)。引抜き側を持たない作り方は従来どおり 0
+            if (settlement_m < 0 && _tension != null)
+                return -Math.Max(TensionForce(-settlement_m), _minTensionStiffness * -settlement_m);
             if (settlement_m <= 0) return 0.0;
             if (_curve.Count < 2) return 0.0;
 
@@ -126,6 +195,7 @@ namespace PileDesign.FEM
         /// </summary>
         public double GetTangentStiffness(double settlement_m)
         {
+            if (settlement_m < 0 && _tension != null) return TensionTangent(-settlement_m);
             if (settlement_m <= 0) return InitialTangentStiffness;
             if (_curve.Count < 2) return InitialTangentStiffness;
 
@@ -155,6 +225,9 @@ namespace PileDesign.FEM
         /// </summary>
         public double GetSecantStiffness(double settlement_m)
         {
+            // 浮き上がり: 引抜き側の割線剛性。要素の内力 (割線 × 変位) と報告する反力 (GetForce) が一致する
+            if (settlement_m < -1e-12 && _tension != null)
+                return -GetForce(settlement_m) / -settlement_m;
             if (settlement_m <= 1e-12) return InitialTangentStiffness;
 
             double force = GetForce(settlement_m);

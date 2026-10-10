@@ -479,6 +479,17 @@ namespace PileDesign.Output
                       + (inputModel?.IsVLAnalysisEnabled == true ? "。常時 (VL) のみのケースも解析している" : "")
                     : "杭先端の鉛直変位を固定する。杭周面・杭先端の鉛直抵抗は考慮しない"));
 
+            // 場所打ち杭・鋼管杭の杭頭回転角。対象の杭頭 (鉄筋定着工法の場所打ちRC杭・鋼管杭) があるときだけ書く
+            if (inputModel?.PileBodies?.Any(b => b != null && b.HasSelectablePileHeadRotation()) == true)
+            {
+                bool headRotation = inputModel.FundamentalInput?.ConsiderPileHeadRotation ?? true;
+                rows.Add(("場所打ち杭・鋼管杭の杭頭回転角",
+                    headRotation ? "考慮する" : "考慮しない（剛接合）",
+                    headRotation
+                        ? "鉄筋定着工法の場所打ちRC杭は杭頭 M-θ のトリリニア、鋼管杭は接合部の回転剛性 Kθ で解く。杭体の線形・非線形によらない"
+                        : "鉄筋定着工法の場所打ちRC杭・鋼管杭の杭頭を剛接合 (回転固定) として解く"));
+            }
+
             // 基礎梁のせん断変形。基礎梁があるときだけ書く
             if (inputModel?.FoundationBeamInput?.Beams?.Count > 0)
             {

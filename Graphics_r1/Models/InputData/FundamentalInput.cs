@@ -264,6 +264,17 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _includeFoundationBeamShearDeformation, value);
         }
 
+        // 場所打ち杭・鋼管杭の杭頭回転角を考慮するか (既定 考慮する)。対象は鉄筋定着工法の場所打ちRC杭 (杭頭 M-θ のトリリニア) と
+        // 鋼管杭 (接合部の回転剛性 Kθ)。杭体の線形・非線形によらずこの設定に従う。
+        // 以前は荷重ケースの「杭の非線形」に従い、OFF だと杭頭が剛になっていた (杭体を線形で解くと Kθ が消えた)。
+        // 半剛接合の工法 (キャプテンパイル・F.T.Pile・キャプリング) と、剛接合の杭頭は対象外。
+        private bool _considerPileHeadRotation = true;
+        public bool ConsiderPileHeadRotation
+        {
+            get => _considerPileHeadRotation;
+            set => SetProperty(ref _considerPileHeadRotation, value);
+        }
+
         // 杭の沈下量を検定するか (既定 なし)。
         // 許容沈下量は構造・基礎形式・上部構造が許せる変形から設計者が決める量で、
         // 規準が一意の値を与えるわけではない。プログラムが勝手に値を置いて合否を出すと

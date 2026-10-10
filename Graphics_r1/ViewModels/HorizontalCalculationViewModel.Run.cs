@@ -372,7 +372,9 @@ namespace PileDesign.ViewModels
             //   - Forward (βU × βL ≥ 0): configured nStep で開始、retry 最大 3
             //   - CounterLoading (βU × βL < 0): 基本 ×2 (min 12) で開始、retry 最大 2
             bool isSoilNonLinear = loadCase.SoilNonlinearityMode.IsNonLinear();
-            int configuredNStep = (!isSoilNonLinear && !loadCase.IsPileNonLinear) ? 1 :
+            // 杭体が線形でも、杭頭の M-θ がトリリニア (鉄筋定着工法の場所打ちRC杭で、基本設定で考慮する) なら非線形として刻む
+            bool isHeadNonLinear = !loadCase.IsPileNonLinear && UsesSelectablePileHeadRotation(nonlinearOnly: true);
+            int configuredNStep = (!isSoilNonLinear && !loadCase.IsPileNonLinear && !isHeadNonLinear) ? 1 :
                 // VL は Level=0 (常時) だが、鉛直軸力を段階的に載せるので
                 // 1 ステップでは収束しない。レベル1 と同じ分割数を使う。
                 isVLCase ? Level1CalculationStepsCount :
@@ -382,7 +384,7 @@ namespace PileDesign.ViewModels
             var loadDirection = ClassifyLoadCombinationDirection(loadCase, loadCombination, isLiquefaction);
             int baseNStep = configuredNStep;
             int MAX_STEP_BISECTIONS = 3;
-            if (isSoilNonLinear || loadCase.IsPileNonLinear)
+            if (isSoilNonLinear || loadCase.IsPileNonLinear || isHeadNonLinear)
             {
                 // 非線形ケースのみ事前検出を適用
                 switch (loadDirection)
@@ -624,6 +626,12 @@ namespace PileDesign.ViewModels
                 if (loadCase.IsPileNonLinear)
                 {
                     SetupMPhiByCurrentAxialForMiddleBeam(caseModel);
+                    UpdateMThetaByCurrentAxialForLoadCase(caseModel, loadCase);
+                }
+                else if (UsesSelectablePileHeadRotation())
+                {
+                    // 杭体は線形でも、基本設定で杭頭回転角を考慮する杭 (鉄筋定着工法の場所打ちRC杭・鋼管杭) の
+                    // M-θ は軸力で変わるので、杭の非線形 ON と同じく現ステップの軸力で作り直す
                     UpdateMThetaByCurrentAxialForLoadCase(caseModel, loadCase);
                 }
 

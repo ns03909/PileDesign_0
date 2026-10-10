@@ -1407,7 +1407,8 @@ namespace PileDesign.ViewModels
                 if (level == 2 && !applyToLevel2) return null;
 
                 // θa は軸力で変わる (θac に圧縮合力による軸応力度が入る)。
-                double thetaA = pileBody?.PileTop?.FTPile?.GetAllowableRotationAngle(axialN_kN) ?? 0.0;
+                // FTPile は軸力を N で受け取る (σN = N / Ap、Ap は mm²)。以前は kN のまま渡し、軸応力度が 1/1000 になっていた
+                double thetaA = pileBody?.PileTop?.FTPile?.GetAllowableRotationAngle(axialN_kN * 1000.0) ?? 0.0;
                 if (!(thetaA > 0) || !double.IsFinite(thetaA)) return null;
 
                 return new RotationCriterion(

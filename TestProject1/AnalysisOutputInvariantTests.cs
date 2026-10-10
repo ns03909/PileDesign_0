@@ -53,6 +53,10 @@ namespace TestProject1
             }
             model.GenerateSoilPiles();
 
+            // 杭頭も剛にする。鉄筋定着工法の場所打ちRC杭の杭頭 M-θ はトリリニア (ひび割れで剛性が落ちる) で、
+            // 基本設定「場所打ち杭・鋼管杭の杭頭回転角」(既定 考慮する) は杭の非線形 OFF でも効く (2026-10-10)
+            if (model.FundamentalInput != null) model.FundamentalInput.ConsiderPileHeadRotation = false;
+
             if (model.LoadCasesInput == null) return;
             foreach (var lc in model.LoadCasesInput.AllLoadCases)
             {

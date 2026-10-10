@@ -120,7 +120,195 @@ namespace TestProject1
             Assert.IsFalse(row.Value.Contains("極限", System.StringComparison.Ordinal), "解析が使っていない「極限」を計算書に書いています");
         }
 
+        // ── 2026-10-10 利用者の指示で足した設定・扱い ─────────────────
 
+        /// <summary>
+        /// 単杭沈下 (基礎梁考慮) の杭ばねは、浮き上がる (沈下が負) と単杭沈下解析の引抜き側の曲線で抵抗する。
+        /// 以前は押込みの初期剛性で抵抗し、報告する反力は 0 だった (要素の内力と反力が食い違った)。
+        /// </summary>
+        [TestMethod]
+        public void VerticalPileSpring_UsesTheTensionSideWhenUplifted()
+        {
+            static PileDesign.FEM.VerticalLoadTransferMethod.LoadDisplacement P(double dd0s_mm, double load_kN)
+                => new() { DD0s = dd0s_mm, PileTopLoad = load_kN };
+            var curve = new VerticalPileSpringCurve(new ObservableCollection<PileDesign.FEM.VerticalLoadTransferMethod.LoadDisplacement>
+            {
+                P(0, 0), P(1, 100), P(2, 180), P(-1, -50), P(-3, -80),
+            });
+
+            // 押込み側は従来どおり
+            Assert.AreEqual(100.0, curve.GetForce(0.001), 1e-9);
+            Assert.AreEqual(100_000.0, curve.InitialTangentStiffness, 1e-6);
+
+            // 引抜き側: 曲線の上で補間 (浮き上がり 2 mm → 50 + 0.5×30 = 65 kN の引張)
+            Assert.AreEqual(-65.0, curve.GetForce(-0.002), 1e-9, "浮き上がったときの反力が引抜き側の曲線になっていません");
+            Assert.AreEqual(15_000.0, curve.GetTangentStiffness(-0.002), 1e-6, "引抜き側の接線剛性 (30 kN / 2 mm) ではありません");
+            Assert.AreEqual(65.0 / 0.002, curve.GetSecantStiffness(-0.002), 1e-6);
+            Assert.AreEqual(curve.GetSecantStiffness(-0.002) * -0.002, curve.GetForce(-0.002), 1e-9,
+                "要素の内力 (割線 × 変位) と報告する反力が食い違っています");
+            Assert.AreNotEqual(curve.InitialTangentStiffness, curve.GetTangentStiffness(-0.0005), "浮き上がりに押込みの初期剛性を使っています");
+
+            // 引抜き抵抗の限界を超えたら力は一定
+            Assert.AreEqual(-80.0, curve.GetForce(-0.010), 1e-6);
+
+            // 引抜き側の点が無い (引抜き抵抗なし) なら、ほとんど抵抗しない
+            var noTension = new VerticalPileSpringCurve(new ObservableCollection<PileDesign.FEM.VerticalLoadTransferMethod.LoadDisplacement>
+            {
+                P(0, 0), P(1, 100),
+            });
+            Assert.IsTrue(noTension.GetTangentStiffness(-0.001) <= 1.0, "引抜き抵抗が無いのに浮き上がりに抵抗しています");
+            Assert.AreEqual(noTension.GetSecantStiffness(-0.001) * -0.001, noTension.GetForce(-0.001), 1e-12);
+        }
+
+        /// <summary>
+        /// 基本設定「場所打ち杭・鋼管杭の杭頭回転角」: 鉄筋定着工法の場所打ちRC杭・鋼管杭の杭頭 M-θ は、
+        /// 杭の非線形の ON/OFF によらずこの設定に従う。以前は杭の非線形 OFF で剛になり、鋼管杭の Kθ が消えた。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("Example3_5", "PileExample3_5")]
+        [DataRow("Example10", "PileExample10")]
+        [DataRow("Example9", "PileExample9")]
+        public void PileHeadRotation_FollowsTheFundamentalSetting_NotThePileNonlinearity(string ground, string pileName)
+        {
+            var (input, _) = IntegrationTests.BuildExampleInputModel(ground, pileName);
+            if (input == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            if (input.PileBodies.All(b => b == null || !b.HasSelectablePileHeadRotation()))
+            {
+                Assert.Inconclusive($"{ground} に鉄筋定着工法の場所打ちRC杭・鋼管杭が無い");
+                return;
+            }
+
+            var mainVm = new PileDesign.ViewModels.MainWindowViewModel { CurrentInputModel = input };
+            var vm = new PileDesign.ViewModels.HorizontalCalculationViewModel(mainVm) { BypassUiPromptsForTesting = true };
+            var modelling = new AnalysisModelling(input);
+            var model = new AnaModel(input, modelling.Nodes, modelling.Beams, modelling.DummyBeams,
+                modelling.RigidBodies, modelling.HorizontalSoilSprings, modelling.RotationalSprings);
+            model.InitializeStates();
+            var lc = input.LoadCasesInput.AnalysisTargetSeismicLoadCases.First();
+
+            const double KBig = 1e10;
+            int Check(bool nonlinear, bool consider)
+            {
+                lc.IsPileNonLinear = nonlinear;
+                input.FundamentalInput.ConsiderPileHeadRotation = consider;
+                vm.SetupNonlinearMThetaForLoadCase(model, lc);
+                int n = 0;
+                foreach (var spring in model.RotationalSprings)
+                {
+                    var body = spring.PileBodyNo is int pb ? input.PileBodyAt(pb) : null;
+                    if (body == null || !body.HasSelectablePileHeadRotation()) continue;
+                    bool rigid = spring.CurveXY == null && spring.KthetaXY >= KBig;
+                    if (consider)
+                    {
+                        // 軸力が範囲外の場所打ちRC杭は指針どおり剛 (GetMThetaRelationship)。それ以外は M-θ が付く
+                        if (spring.LastSetupReason?.StartsWith("Rigid(def.Mode=Rigid", System.StringComparison.Ordinal) == true) continue;
+                        Assert.IsFalse(rigid, $"{ground} {spring.Name}: 杭の非線形 {(nonlinear ? "ON" : "OFF")} で、考慮するのに杭頭が剛です ({spring.LastSetupReason})");
+                    }
+                    else
+                    {
+                        Assert.IsTrue(rigid, $"{ground} {spring.Name}: 杭の非線形 {(nonlinear ? "ON" : "OFF")} で、考慮しないのに杭頭が剛ではありません ({spring.LastSetupReason})");
+                    }
+                    n++;
+                }
+                return n;
+            }
+
+            TestSource.AssertScanned(Check(nonlinear: false, consider: true), 1, "杭体線形・考慮する");
+            TestSource.AssertScanned(Check(nonlinear: true, consider: true), 1, "杭体非線形・考慮する");
+            TestSource.AssertScanned(Check(nonlinear: false, consider: false), 1, "杭体線形・考慮しない");
+            TestSource.AssertScanned(Check(nonlinear: true, consider: false), 1, "杭体非線形・考慮しない");
+        }
+
+        [TestMethod]
+        public void PileHeadRotation_DefaultsToConsidered()
+            => Assert.IsTrue(new FundamentalInput().ConsiderPileHeadRotation, "既定は「考慮する」");
+
+        // ── 杭頭接合部 (2026-10-10 利用者の了解) ─────────────────
+
+        /// <summary>F.T.Pile (引抜き対応タイプ) の Me は鋼棒の項を N・mm 系の係数 0.5 で持つ。以前は 5×10⁻⁴ で 1/1000 だった。</summary>
+        [TestMethod]
+        public void FTPile_TensionType_KeepsTheTensionBarMoment()
+        {
+            var ft = new PileDesign.Models.FTPile(36.0, 28_000.0);
+            ft.SetDimensionsFromSection(600.0, 100.0);
+            ft.FTPileTensionBars.IsTensionType = true;
+            var bars = ft.FTPileTensionBars;
+            Assert.IsTrue(bars.Ag > 0 && bars.Fu > 0, "前提: 引抜き抵抗用鋼棒がある");
+
+            // 引張 100 kN でも鋼棒が曲げを負担する (以前は Me ≒ 0 で M ≡ 0)
+            double nTension = -100_000.0;   // N
+            var (_, ms) = ft.GetMThetaRelationship(nTension);
+            double barTerm = 0.5 * bars.Ag * bars.Fu * bars.Ds + 0.5 * nTension * bars.Ds;   // N·mm
+            Assert.IsTrue(barTerm > 0, "前提");
+            Assert.IsTrue(ms.Max() > 0.05 * barTerm, $"引張時の M-θ が鋼棒の分を持っていません (最大 {ms.Max():E3} N·mm、鋼棒の項 {barTerm:E3})");
+        }
+
+        /// <summary>
+        /// F.T.Pile の許容回転角 θa: 標準タイプは θac、引抜き対応タイプは min(θac, θas)。
+        /// 検定は軸力を N で渡す (σN = N/Ap、Ap は mm²)。
+        /// </summary>
+        [TestMethod]
+        public void FTPile_AllowableRotation_FollowsTheType()
+        {
+            var ft = new PileDesign.Models.FTPile(36.0, 28_000.0);
+            ft.SetDimensionsFromSection(600.0, 100.0);
+            // キャップを選ぶ (画面ではカタログから選ぶ。未選択だと Phi = 0 で支圧係数 φc が 0 になる)
+            Assert.IsTrue(ft.FTCaps?.Count > 0, "前提: FT キャップのカタログが読める");
+            ft.FTCap = ft.FTCaps.First(c => c.Phi > 0);
+            ft.Update();
+            double thetaAs = ft.FTPileTensionBars.ThetaAS;
+            Assert.IsTrue(thetaAs > 0 && thetaAs < 0.03, "前提: 鋼棒の既定値から θas が決まっている");
+
+            ft.FTPileTensionBars.IsTensionType = false;
+            Assert.AreEqual(0.03, ft.GetAllowableRotationAngle(0.0), 1e-12, "標準タイプが鋼棒の θas で頭打ちになっています");
+            ft.FTPileTensionBars.IsTensionType = true;
+            Assert.AreEqual(Math.Min(0.03, thetaAs), ft.GetAllowableRotationAngle(0.0), 1e-12);
+
+            string body = TestSource.Read("Graphics_r1", "ViewModels", "EvaluationService.cs");
+            StringAssert.Contains(body, "GetAllowableRotationAngle(axialN_kN * 1000.0)", "検定が軸力を kN のまま渡しています");
+        }
+
+        private sealed class ConstantStress(double sigma) : PileDesign.Models.CTPMaterial
+        {
+            public override double GetStress(double epsilon) => sigma;
+        }
+
+        /// <summary>キャプテンパイルの正方形配置は、n 本の定着筋をすべて数える (以前は中間の列を 1 本と数えた)。</summary>
+        [DataTestMethod]
+        [DataRow(4)]
+        [DataRow(8)]
+        [DataRow(12)]
+        [DataRow(16)]
+        public void CaptainPile_SquareArrangement_CountsEveryBar(int n)
+        {
+            var section = new PileDesign.Models.CTPSquareDotSection(400.0, n, 100.0);
+            var (axial, _) = section.GetForceAndMoment(new ConstantStress(1.0), 0.0, 0.0);
+            Assert.AreEqual(n * 100.0, axial, 1e-9, $"{n} 本の正方形配置で、数えた本数が {axial / 100.0} 本です");
+        }
+
+        /// <summary>キャプテンパイル (定着筋なし) で引張なら、曲げを負担しない (Mu = 0、M-θ ≡ 0)。以前は負の外挿値だった。</summary>
+        [TestMethod]
+        public void CaptainPile_WithoutTensionBars_CarriesNoMomentInTension()
+        {
+            var cp = new PileDesign.Models.CaptainPile(24.0, 22669.0);
+            var ring = cp.PCRings.FirstOrDefault(r => (r.Name ?? "").EndsWith("N")) ?? cp.PCRings.FirstOrDefault();
+            Assert.IsNotNull(ring, "PC リングのカタログが読めていません");
+            cp.PCRing = ring;
+            cp.D = ring.D;
+            cp.Nu = 1.0;
+            cp.CTPTensionRebars.HasTensionRebars = false;
+            cp.Update();
+            Assert.IsTrue(cp.UltimateNs.Count > 2, "前提: N-M 曲線がある");
+            Assert.AreEqual(0.0, cp.UltimateNs[0], 1e-6, "前提: 定着筋なしの引張側の端は 0");
+            Assert.IsTrue(cp.UltimateNs.Zip(cp.UltimateNs.Skip(1)).All(p => p.First <= p.Second), "前提: N-M 曲線は引張側から並ぶ");
+
+            Assert.AreEqual(0.0, cp.GetMu(-300_000.0), 1e-9, "引張なのに Mu が 0 ではありません");
+            var (thetas, ms) = cp.GetMThetaRelationship(-300_000.0);
+            Assert.IsTrue(ms.All(m => m == 0.0), "引張で曲げを負担できないのに M-θ に曲げがあります");
+            Assert.IsTrue(thetas.Zip(thetas.Skip(1)).All(p => p.First < p.Second), "M-θ の回転角が増えていきません");
+
+            Assert.IsTrue(cp.GetMu(1_000_000.0) > 0, "圧縮では曲げを負担する");
+        }
 
         /// <summary>動かす瞬間に項目を 1 つ消すコレクション (別の書き手とのすれ違いの再現)。</summary>
         private sealed class ShrinksOnMove : ObservableCollection<string>

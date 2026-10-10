@@ -315,6 +315,23 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 場所打ち杭・鋼管杭の杭頭回転角を考慮するか。<b>既定は考慮する。</b>
+        /// 対象は鉄筋定着工法の場所打ちRC杭 (杭頭 M-θ のトリリニア) と鋼管杭 (Kθ)。杭体の線形・非線形によらず従う。
+        /// 解析の剛性が変わるので、変更すると表示中の解析結果は「再解析が必要」の扱いになる。
+        /// </summary>
+        [ObservableProperty]
+        private bool _considerPileHeadRotation = true;
+
+        partial void OnConsiderPileHeadRotationChanged(bool value)
+        {
+            HandleAnalysisOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.ConsiderPileHeadRotation,
+                v => InputModel.FundamentalInput.ConsiderPileHeadRotation = v,
+                value ? "場所打ち杭・鋼管杭の杭頭回転角を考慮する へ変更" : "場所打ち杭・鋼管杭の杭頭回転角を考慮しない へ変更");
+        }
+
+        /// <summary>
         /// 杭の沈下量を検定するか。<b>既定は なし。</b>
         ///
         /// 許容沈下量は設計者が決める量なので、プログラムが勝手に合否を出さない。
@@ -731,6 +748,7 @@ namespace PileDesign.ViewModels
             Notification1113CompressionCase = InputModel.FundamentalInput.Notification1113CompressionCase;
             ResidualReference = InputModel.FundamentalInput.ResidualReference;
             IncludeFoundationBeamShearDeformation = InputModel.FundamentalInput.IncludeFoundationBeamShearDeformation;
+            ConsiderPileHeadRotation = InputModel.FundamentalInput.ConsiderPileHeadRotation;
             EvaluateSettlement = InputModel.FundamentalInput.EvaluateSettlement;
             AllowableSettlement_mm = InputModel.FundamentalInput.AllowableSettlement_mm;
             ScUltimateShearBeta1 = InputModel.FundamentalInput.ScUltimateShearBeta1;
@@ -855,6 +873,9 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.IncludeFoundationBeamShearDeformation):
                     IncludeFoundationBeamShearDeformation = InputModel.FundamentalInput.IncludeFoundationBeamShearDeformation;
+                    break;
+                case nameof(FundamentalInput.ConsiderPileHeadRotation):
+                    ConsiderPileHeadRotation = InputModel.FundamentalInput.ConsiderPileHeadRotation;
                     break;
                 case nameof(FundamentalInput.EvaluateSettlement):
                     EvaluateSettlement = InputModel.FundamentalInput.EvaluateSettlement;

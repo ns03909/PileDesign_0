@@ -3324,6 +3324,17 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 基本設定で杭頭回転角を考慮する杭頭 (鉄筋定着工法の場所打ちRC杭・鋼管杭) を持つ杭体があるか。
+        /// <paramref name="nonlinearOnly"/> なら M-θ が非線形 (トリリニア) のもの (場所打ちRC杭) だけを見る。
+        /// </summary>
+        internal bool UsesSelectablePileHeadRotation(bool nonlinearOnly = false)
+        {
+            if (!(InputModel.FundamentalInput?.ConsiderPileHeadRotation ?? true)) return false;
+            return InputModel.PileBodies?.Any(b => b != null
+                && (nonlinearOnly ? b.HasNonlinearSelectablePileHeadRotation() : b.HasSelectablePileHeadRotation())) == true;
+        }
+
+        /// <summary>
         /// そのレベルの地盤変位 (非液状化・液状化のどちらか) が 1 点でも 0 でないか。杭と根入部の両方を見る。
         /// </summary>
         internal bool HasGroundDisplacementAt(int level)

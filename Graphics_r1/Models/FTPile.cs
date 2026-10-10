@@ -426,7 +426,11 @@ namespace PileDesign.Models
         // 許容回転角を返すメソッド
         private double GetThetaA(double N)
         {
-            double thetaA = Math.Min(GetThetaAc(N), FTPileTensionBars.ThetaAS);
+            // 標準タイプは θac、引抜き対応タイプは min(θac, θas) (表4-3-1。M-θ を作る GetMThetaRelationship と同じ)。
+            // 以前は標準タイプでも、使わない鋼棒の既定値から求めた θas (≈0.0063) との最小をとり、照査が数倍厳しくなっていた
+            double thetaA = GetThetaAc(N);
+            if (FTPileTensionBars.IsTensionType)
+                thetaA = Math.Min(thetaA, FTPileTensionBars.ThetaAS);
             return thetaA;
         }
 
@@ -538,7 +542,9 @@ namespace PileDesign.Models
             }
             else
             {
-                Me = Math.Max(5.0 * Math.Pow(10, -4) * FTPileTensionBars.Ag * FTPileTensionBars.Fu * FTPileTensionBars.Ds + 0.5 * N * FTPileTensionBars.Ds, 0.0);
+                // 指針の 5×10⁻⁴·ag·fu·Ds は kN·m 系の係数。この実装は N・mm 系なので 0.5 (GetMa の 3.75×10⁻⁴ → 0.375 と同じ換算)。
+                // 以前は 5×10⁻⁴ のままで鋼棒の項が 1/1000 になり、引張になると Me ≒ 0 で杭頭がピンと同じになっていた
+                Me = Math.Max(0.5 * FTPileTensionBars.Ag * FTPileTensionBars.Fu * FTPileTensionBars.Ds + 0.5 * N * FTPileTensionBars.Ds, 0.0);
             }
             return Me;
         }

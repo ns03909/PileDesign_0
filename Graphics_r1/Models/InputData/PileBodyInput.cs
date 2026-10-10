@@ -644,6 +644,19 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 杭頭回転角 (杭頭の M-θ) を基本設定「場所打ち杭・鋼管杭の杭頭回転角」で考慮するか選べる杭頭か。
+        /// 鉄筋定着工法の場所打ちRC杭 (トリリニア) と鋼管杭 (線形の Kθ)。<see cref="GetMThetaRelationship"/> の分岐と同じ。
+        /// </summary>
+        internal bool HasSelectablePileHeadRotation()
+            => (PileTopType ?? "").Contains("鉄筋定着工法")
+               && ((PileBodyType ?? "").Contains(PileTypeNames.InsituRc) || (PileBodyType ?? "").Contains(PileTypeNames.SteelPipe))
+               && !(PileBodyType ?? "").Contains(PileTypeNames.InsituSteelPipeConcrete);
+
+        /// <summary>選べる杭頭のうち、M-θ が非線形 (トリリニア) のもの (鉄筋定着工法の場所打ちRC杭)。</summary>
+        internal bool HasNonlinearSelectablePileHeadRotation()
+            => HasSelectablePileHeadRotation() && (PileBodyType ?? "").Contains(PileTypeNames.InsituRc);
+
         public virtual PileHeadRotationDef GetMThetaRelationship(double axialN)
         {
             // 単位系の説明:
