@@ -216,7 +216,7 @@ namespace PileDesign.ViewModels
             string pileBodyType,
             string pileTopType,
             string pileConstructionType,
-            PileSection pileSection
+            PileSection? pileSection
             )
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));

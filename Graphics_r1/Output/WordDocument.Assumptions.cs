@@ -434,7 +434,7 @@ namespace PileDesign.Output
         /// 設計条件（性能グレード・杭頭接続・杭軸力・杭先端の鉛直ばね・腐食代・kh0 手入力）の一覧行を作成する。
         /// 読むのは計算書に渡された入力 (解析時の控え) で、画面の編集中の入力ではない。
         /// </summary>
-        internal static List<(string Item, string Value, string Note)> BuildDesignConditionRows(InputModel inputModel)
+        internal static List<(string Item, string Value, string Note)> BuildDesignConditionRows(InputModel? inputModel)
         {
             var rows = new List<(string, string, string)>();
 
@@ -513,7 +513,7 @@ namespace PileDesign.Output
             // 高強度せん断補強筋の工法は、使っている杭体があるときだけ出す。
             // 工法を選ぶとせん断耐力の算定式が替わるので、どの区間がどの工法かを
             // 計算書から追えるようにしておく (既定の「標準」しか無いときは書かない)。
-            string hoopMethods = BuildHoopMethodSummary(inputModel, out string hoopMethodNote);
+            string? hoopMethods = BuildHoopMethodSummary(inputModel, out string hoopMethodNote);
             if (hoopMethods != null)
             {
                 rows.Add(("せん断補強筋の工法", hoopMethods, hoopMethodNote));
@@ -530,7 +530,7 @@ namespace PileDesign.Output
         /// 高強度せん断補強筋の工法を杭体・区間ごとに要約する。
         /// 使っている区間が 1 つも無ければ null を返す (行自体を出さない)。
         /// </summary>
-        private static string? BuildHoopMethodSummary(InputModel inputModel, out string note)
+        private static string? BuildHoopMethodSummary(InputModel? inputModel, out string note)
         {
             var entries = new List<string>();
             var methods = new SortedSet<string>(System.StringComparer.Ordinal);
@@ -587,7 +587,7 @@ namespace PileDesign.Output
         }
 
         /// <summary>鋼管系断面の腐食代を杭体・区間ごとに要約する。</summary>
-        private static string BuildCorrosionSummary(InputModel inputModel, out string note)
+        private static string BuildCorrosionSummary(InputModel? inputModel, out string note)
         {
             var entries = new List<string>();
             int pileBodyNo = 0;
@@ -619,7 +619,7 @@ namespace PileDesign.Output
         }
 
         /// <summary>kh0 手入力オーバーライドの有無と内容を要約する。</summary>
-        private static string BuildKh0OverrideSummary(InputModel inputModel, out string note)
+        private static string BuildKh0OverrideSummary(InputModel? inputModel, out string note)
         {
             var entries = new List<string>();
             foreach (var soilPile in inputModel?.ElementDivision?.SoilPiles ?? [])

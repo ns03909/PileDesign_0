@@ -161,9 +161,9 @@ namespace PileDesign.Services
         {
             // 解析の入口: 杭頭部の、杭断面から導く値を入れ直す。以前は杭頭部ウィンドウを開いたときにしか入らず、
             // 開いていない杭体は値が 0 や古い径のまま解析された (検査より前に行う。検査もこの値を見る)
-            inputModel?.SyncPileTopsFromSections();
+            inputModel.SyncPileTopsFromSections();
             // 鋼管杭の座屈長も今の杭配置・地盤から求め直す (分割済みだと土層-杭セットと一緒には作り直されない)
-            inputModel?.RefreshSteelPipeBucklingLengths();
+            inputModel.RefreshSteelPipeBucklingLengths();
 
             var problems = CollectAnalysisBlockers(inputModel);
             if (problems.Count == 0) return true; // OK: ダイアログなしで続行
@@ -833,22 +833,22 @@ namespace PileDesign.Services
             {
                 var body = inputModel.PileBodyAt(pileBodyNo)!;
                 var ground = inputModel.GroundAt(groundNo)!;
-                if ((body.PileBodySegments?.Count ?? 0) == 0)
+                if (body.PileBodySegments is not { Count: > 0 } segments)
                 {
                     if (reportedBodies.Add(pileBodyNo))
                         problems.Add(Diagnostic.Input(DiagnosticTarget.PileBody(pileBodyNo), $"杭体{pileBodyNo}に杭区間データがありません。"));
                     continue;
                 }
-                if ((ground.GroundLayers?.Count ?? 0) == 0)
+                if (ground.GroundLayers is not { Count: > 0 } layers)
                 {
                     if (reportedGrounds.Add(groundNo))
                         problems.Add(Diagnostic.Input(DiagnosticTarget.Ground(groundNo), $"地盤{groundNo}に土層データがありません。"));
                     continue;
                 }
 
-                double pileBottomAltitude = pileTopAltitude - body.PileBodySegments[^1].SegmentDepth;
-                double groundTopAltitude = ground.GroundLayers[0].BottomAltitude + ground.GroundLayers[0].LayerThickness;
-                double groundBottomAltitude = ground.GroundLayers[^1].BottomAltitude;
+                double pileBottomAltitude = pileTopAltitude - segments[^1].SegmentDepth;
+                double groundTopAltitude = layers[0].BottomAltitude + layers[0].LayerThickness;
+                double groundBottomAltitude = layers[^1].BottomAltitude;
 
                 // 杭頭の高さは杭ごとの入力なので、指すのは杭 (同じ杭体を使うほかの杭ではない)
                 string who = "杭 No." + string.Join("・", piles.Take(10).Select(p => p.No))
@@ -889,8 +889,9 @@ namespace PileDesign.Services
             }
             // 層数の欄と層の一覧は別々に持たれている。食い違ったまま進むと、根入部を考慮するか (層数で判断) と
             // どの層を使うか (一覧) が合わない。以前は一覧が空なら黙って検査を終えていた
-            int layerRows = embedment.EmbedmentLayers?.Count ?? 0;
-            if (layerRows != embedment.EmbedmentLayersCount)
+            var embedmentLayers = embedment.EmbedmentLayers;
+            int layerRows = embedmentLayers?.Count ?? 0;
+            if (embedmentLayers == null || layerRows != embedment.EmbedmentLayersCount)
             {
                 problems.Add(Diagnostic.Input(DiagnosticTarget.Embedment(),
                     $"根入部の層数 ({embedment.EmbedmentLayersCount}) と層の入力 ({layerRows} 行) が合いません。"
@@ -907,16 +908,16 @@ namespace PileDesign.Services
             }
 
             var ground = inputModel.GroundAt(groundNo)!;
-            if ((ground.GroundLayers?.Count ?? 0) == 0)
+            if (ground.GroundLayers is not { Count: > 0 } groundLayers)
             {
                 problems.Add(Diagnostic.Input(DiagnosticTarget.Ground(groundNo), $"根入部で選択された地盤番号{groundNo}に土層データがありません。"));
                 return problems;
             }
 
-            double groundTopAltitude = ground.GroundLayers[0].BottomAltitude + ground.GroundLayers[0].LayerThickness;
-            double groundBottomAltitude = ground.GroundLayers[^1].BottomAltitude;
-            double embedmentTopAltitude = embedment.EmbedmentLayers[0].TopAltitude;
-            double embedmentBottomAltitude = embedment.EmbedmentLayers[^1].BottomAltitude;
+            double groundTopAltitude = groundLayers[0].BottomAltitude + groundLayers[0].LayerThickness;
+            double groundBottomAltitude = groundLayers[^1].BottomAltitude;
+            double embedmentTopAltitude = embedmentLayers[0].TopAltitude;
+            double embedmentBottomAltitude = embedmentLayers[^1].BottomAltitude;
             if (groundTopAltitude < embedmentTopAltitude)
                 problems.Add(Diagnostic.Input(DiagnosticTarget.Embedment(), $"根入部の最上部が地盤番号{groundNo}の最上部よりも浅いです。"));
             if (embedmentBottomAltitude < groundBottomAltitude)

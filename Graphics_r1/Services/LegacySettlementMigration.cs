@@ -110,7 +110,7 @@ namespace PileDesign.Services
                         IsConverged = false,
                         IsConvergenceUnknown = true,
                         RectLoads = [.. (pgs.RectLoads ?? []).Select(r => r.Clone())],
-                        SettlementGridData = [.. pgs.LegacySettlementGridData.Select(g => g.Clone())],
+                        SettlementGridData = [.. (pgs.LegacySettlementGridData ?? []).Select(g => g.Clone())],
                         // 杭ごとの沈下量も複製から拾う。これが無いと SettlementOf() が
                         // 常に 0 を返し、旧ファイルでは杭配置グリッドの沈下量が空になる。
                         PileSettlements_mm = pileSettlements,

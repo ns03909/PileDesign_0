@@ -13,6 +13,11 @@
 	     CS0162 CS0649 CS4014 は既に 0 件だったので許容から外しただけ。
 	     CS8605 CS8612 CS8629 は 16 箇所を直して 0 件にした (うち 1 件は既定引数で必ず落ちる死にコード)。-->
 	<WarningsNotAsErrors>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8619;CS8622;CS8625;NU1701</WarningsNotAsErrors>
+	<!-- コンパイラの診断をすべてファイルに書き出す。上の Null 許容の警告は全体では許しているが、片付け終えたフォルダー
+	     (Services・Output) で増えたら NullableCleanFoldersTests が落とす。.editorconfig で該当フォルダーだけ
+	     error にする方法は効かない (WarningsNotAsErrors が警告へ戻し、外すと TreatWarningsAsErrors が全体をエラーにする)。
+	     WPF の一時プロジェクト (_wpftmp) は書かない (毎回違う名前で obj に溜まる)。-->
+	<ErrorLog Condition="!$(MSBuildProjectName.EndsWith('_wpftmp'))">$(MSBuildProjectDirectory)\obj\$(MSBuildProjectName).sarif,version=2.1</ErrorLog>
     <OutputType>WinExe</OutputType>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>

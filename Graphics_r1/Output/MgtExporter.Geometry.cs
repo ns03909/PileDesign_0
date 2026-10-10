@@ -153,7 +153,7 @@ namespace PileDesign.Output
 
                 int nodeI = ctx.NodeIdMap[beam.NodeI!];
                 int nodeJ = ctx.NodeIdMap[beam.NodeJ!];
-                int mId = ctx.MaterialIdMap[beam.Section!.Material];
+                int mId = ctx.MaterialIdMap[beam.Section!.Material!];
                 int sId = ctx.SectionIdMap[beam.Section];
                 writer.WriteLine($"   {elemId,5}, BEAM  , {mId,4}, {sId,5}, {nodeI,5}, {nodeJ,5}, {0,5}, {0,5}");
                 elemId++;

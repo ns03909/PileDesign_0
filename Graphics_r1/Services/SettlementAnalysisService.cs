@@ -21,8 +21,10 @@ namespace PileDesign.Services
         public class SettlementAnalysisResult
         {
             public bool Success { get; set; }
-            public string ErrorMessage { get; set; }
-            public ObservableCollection<SettlementGridDataItem> SettlementGridData { get; set; }
+            /// <summary>失敗の理由。成功したときは null。</summary>
+            public string? ErrorMessage { get; set; }
+            /// <summary>格子点の沈下量。失敗したときは null。</summary>
+            public ObservableCollection<SettlementGridDataItem>? SettlementGridData { get; set; }
 
             /// <summary>
             /// 各杭の沈下量 [mm]。Key = <c>PileLayoutDataItem.PileNo</c>。
@@ -70,7 +72,7 @@ namespace PileDesign.Services
             double yOffset,
             double xSpacing,
             double ySpacing,
-            ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults = null)
+            ObservableCollection<VerticalBeamCaseResult>? verticalBeamCaseResults = null)
         {
             // コンタ図の格子。間隔が 0 以下だと格子が 1 点に潰れ、小さすぎると点の数が膨らむ。作る前に止める
             string? gridProblem = DescribeGridProblem(xMin, xMax, yMin, yMax, xOffset, yOffset, xSpacing, ySpacing, gridXItems, gridYItems);
@@ -233,7 +235,7 @@ namespace PileDesign.Services
             PileGroupSettlement pileGroupSettlement,
             ObservableCollection<PileLayoutDataItem> pileLayoutItems,
             ObservableCollection<SoilPile> soilPiles,
-            ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults,
+            ObservableCollection<VerticalBeamCaseResult>? verticalBeamCaseResults,
             List<string>? notes = null,
             bool cloneExisting = false)
         {
@@ -498,15 +500,16 @@ namespace PileDesign.Services
         /// 任意の RectLoads から沈下グリッドを計算する公開ヘルパー (基礎梁考慮反復用)。
         /// </summary>
         public static ObservableCollection<SettlementGridDataItem> CalculateGridSettlementsPublic(
-            ObservableCollection<double> xs,
-            ObservableCollection<double> ys,
-            ObservableCollection<RectLoad> rectLoads,
-            ObservableCollection<SettlementSoilLayer> settlementSoilLayers)
+            ObservableCollection<double>? xs,
+            ObservableCollection<double>? ys,
+            ObservableCollection<RectLoad>? rectLoads,
+            ObservableCollection<SettlementSoilLayer>? settlementSoilLayers)
         {
-            int nx = xs?.Count ?? 0;
-            int ny = ys?.Count ?? 0;
             var result = new ObservableCollection<SettlementGridDataItem>();
-            if (nx == 0 || ny == 0 || rectLoads == null || settlementSoilLayers == null) return result;
+            if (xs == null || ys == null || rectLoads == null || settlementSoilLayers == null) return result;
+            int nx = xs.Count;
+            int ny = ys.Count;
+            if (nx == 0 || ny == 0) return result;
 
             var xArray = xs.ToArray();
             var yArray = ys.ToArray();

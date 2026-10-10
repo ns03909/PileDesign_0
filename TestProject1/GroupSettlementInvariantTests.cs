@@ -195,7 +195,7 @@ namespace TestProject1
             var (gs, piles) = Scene();
             var result = Run(gs, piles);
 
-            Assert.IsTrue(result.SettlementGridData.Count > 0, "グリッドの結果がありません");
+            Assert.IsTrue(result.SettlementGridData is { Count: > 0 }, "グリッドの結果がありません");
 
             int compared = 0;
             foreach (var p in piles)

@@ -159,8 +159,7 @@ namespace PileDesign.Output
 
             foreach (var soilPile in soilPiles)
             {
-                var items = soilPile?.HorizontalSoilReactions?.ToList();
-                if (items == null || items.Count == 0) continue;
+                if (soilPile?.HorizontalSoilReactions is not { Count: > 0 }) continue;
 
                 try
                 {

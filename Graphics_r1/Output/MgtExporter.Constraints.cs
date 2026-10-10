@@ -67,7 +67,7 @@ namespace PileDesign.Output
         /// master-slaveの連鎖（A→B→C）を解決してA→Cの直接関係に折り畳む。
         /// midasは master が slave としても使われる形式を許可しないため。
         /// </summary>
-        private static Node ResolveRootMaster(Node slave, int dof)
+        private static Node? ResolveRootMaster(Node slave, int dof)
         {
             if (slave?.MasterNodes?[dof] == null) return null;
 

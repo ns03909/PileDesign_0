@@ -324,8 +324,8 @@ namespace PileDesign.Services
         // パスに通すコストが無駄。図形が無いセクション (例: 根入れ非表示時の PathGeoEmbedment*)
         // はそのまま追加すらしない。
         private static void AddPath(Canvas canvas, PathGeometry data, Brush stroke,
-            double thickness, string name = "Path", DoubleCollection dashArray = null,
-            Brush fill = null, bool isHitTestVisible = true)
+            double thickness, string name = "Path", DoubleCollection? dashArray = null,
+            Brush? fill = null, bool isHitTestVisible = true)
         {
             if (data == null || data.Figures.Count == 0) return;
             var p = new Path
@@ -874,11 +874,12 @@ namespace PileDesign.Services
 
     public class TextBlockInfo
     {
-        public TextBlock TextBlock { get; set; }
+        // TextBlock か軽量フィールドのどちらかを持つ (使う側は Text ?? TextBlock?.Text と両方を見る)
+        public TextBlock? TextBlock { get; set; }
         // 軽量フィールド（TextBlock不要時に使用）
-        public string Text { get; set; }
+        public string? Text { get; set; }
         public double FontSize { get; set; }
-        public Brush Foreground { get; set; }
+        public Brush? Foreground { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
         public double TextAngle { get; set; }

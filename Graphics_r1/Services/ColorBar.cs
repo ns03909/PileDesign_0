@@ -204,7 +204,7 @@ namespace PileDesign.Services
 
             // 重複するフォーマット済みラベルを除去（全値同一時に同じ値が並ぶのを防ぐ）
             // max/minラベルは別途描画されるため、tick側で重複する場合もスキップ
-            string prevLabelText = null;
+            string? prevLabelText = null;
             for (int i = 0; i < numberOfTicks; i++)
             {
                 double value = revBoundaries[i];

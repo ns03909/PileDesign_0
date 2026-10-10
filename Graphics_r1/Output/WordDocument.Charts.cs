@@ -640,11 +640,11 @@ namespace PileDesign.Output
                                             axialN = pli.AxialForce;
 
                                         // M-φ曲線取得（GraphWindow と同一優先順位）
-                                        List<double> phis = null;
-                                        List<double> moments = null;
+                                        List<double>? phis = null;
+                                        List<double>? moments = null;
 
                                         int lastStep = GetLastStepCached(loadCase, loadCombination, isLiquefaction);
-                                        BeamResult beamResultForCurve = null;
+                                        BeamResult? beamResultForCurve = null;
                                         if (lastStep >= 0)
                                         {
                                             beamResultForCurve = GetBeamResultCached(targetBeam, loadCase, loadCombination, isLiquefaction, lastStep);
@@ -1253,7 +1253,7 @@ namespace PileDesign.Output
 
             if (anaModel == null || pli?.Beams == null) return (shearXs, shearZs, momentXs, momentZs, "限界状態");
 
-            string seismicGrade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
+            string seismicGrade = inputModel.FundamentalInput?.SeismicGrade ?? "A";
             // 常時 (VL, Level=0) は使用限界で見る。検定 (EvaluationService.EvaluateLongTerm) と同じ。
             bool isLongTerm = lc.Level == 0;
             bool useDamage = lc.Level == 1 || (lc.Level == 2 && seismicGrade == "S");

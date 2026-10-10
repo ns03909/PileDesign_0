@@ -251,7 +251,7 @@ namespace PileDesign.Output
                 // 地表 (Gs1 > 0 の場合のみ)
                 bool hasSurface = ground.Gs1Levels != null && ground.Gs1Levels.Count >= 2
                     && (ground.Gs1Levels[0] > 0 || ground.Gs1Levels[1] > 0);
-                if (hasSurface && ground.Gs2Levels != null && ground.NaturalPeriods != null && ground.T2Levels != null)
+                if (hasSurface && ground.Gs1Levels != null && ground.Gs2Levels != null && ground.NaturalPeriods != null && ground.T2Levels != null)
                 {
                     for (int level = 0; level < 2; level++)
                     {

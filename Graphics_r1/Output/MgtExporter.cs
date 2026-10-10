@@ -32,12 +32,12 @@ namespace PileDesign.Output
         /// </summary>
         private sealed class ExportContext
         {
-            public Dictionary<Node, int> NodeIdMap { get; init; }
-            public Dictionary<Material, int> MaterialIdMap { get; init; }
-            public Dictionary<Section, int> SectionIdMap { get; init; }
-            public HashSet<Node> SoilBoundaryNodes { get; init; }
-            public Dictionary<HorizontalSoilSpring, int> SpringFunctionIds { get; init; }
-            public Dictionary<HorizontalSoilSpring, int> SpringYNodeIds { get; init; }
+            public required Dictionary<Node, int> NodeIdMap { get; init; }
+            public required Dictionary<Material, int> MaterialIdMap { get; init; }
+            public required Dictionary<Section, int> SectionIdMap { get; init; }
+            public required HashSet<Node> SoilBoundaryNodes { get; init; }
+            public required Dictionary<HorizontalSoilSpring, int> SpringFunctionIds { get; init; }
+            public required Dictionary<HorizontalSoilSpring, int> SpringYNodeIds { get; init; }
         }
 
         private ExportContext BuildContext()

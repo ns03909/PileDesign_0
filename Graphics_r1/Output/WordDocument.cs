@@ -1488,8 +1488,8 @@ namespace PileDesign.Output
             var soilPiles = inputModel?.ElementDivision?.SoilPiles;
             if (soilPiles == null || soilPiles.Count <= 1) return string.Empty;
 
-            string ground = soilPile?.GroundInput?.GroundRef;
-            string pileBody = soilPile?.PileBodyInput?.PileBodyRef;
+            string? ground = soilPile?.GroundInput?.GroundRef;
+            string? pileBody = soilPile?.PileBodyInput?.PileBodyRef;
             var parts = new List<string>();
             if (!string.IsNullOrWhiteSpace(ground)) parts.Add($"地盤 {ground}");
             if (!string.IsNullOrWhiteSpace(pileBody)) parts.Add($"杭体 {pileBody}");
@@ -1837,7 +1837,7 @@ namespace PileDesign.Output
                     if (xs.Length > 0 && ys.Length > 0)
                     {
                         var pl = plot.Add.ScatterLine(xs, ys);
-                        pl.LegendText = i < lineLegends.Count ? lineLegends[i] : null;
+                        if (i < lineLegends.Count) pl.LegendText = lineLegends[i];
                         pl.MarkerSize = 0;
 
                         // 体裁の明示指定があればそれに従う。無い場合は従来どおり、
@@ -1876,7 +1876,7 @@ namespace PileDesign.Output
                         var sc = plot.Add.Scatter(xs, ys);
                         sc.MarkerSize = 6;
                         sc.LineWidth = 0;
-                        sc.LegendText = i < scatterLegends.Count ? scatterLegends[i] : null;
+                        if (i < scatterLegends.Count) sc.LegendText = scatterLegends[i];
                         if (i < scatterColors.Length)
                             sc.MarkerColor = scatterColors[i];
                     }
@@ -1991,7 +1991,7 @@ namespace PileDesign.Output
                         if (xs.Length > 0 && ys.Length > 0)
                         {
                             var pl = wpf.Plot.Add.ScatterLine(xs, ys);
-                            pl.LegendText = i < legends.Count ? legends[i] : null;
+                            if (i < legends.Count) pl.LegendText = legends[i];
                         }
                     }
 

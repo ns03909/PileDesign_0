@@ -648,13 +648,12 @@ diameterSelector,
         /// </summary>
         private void AddPileSettlementTable(Body body)
         {
-            var pileLayoutItems = inputModel?.PileLayoutItems;
-            if (pileLayoutItems == null || pileLayoutItems.Count == 0) return;
+            if (inputModel?.PileLayoutItems is not { Count: > 0 } pileLayoutItems) return;
 
             AddLineBreak(body);
             AddAutoFigureCaption(body,
                 "各杭位置の沈下量一覧" + PileDesign.Services.GroupSettlementCaseLabel.Describe(
-                    inputModel?.PileGroupSettlement?.ActiveRecord), "表");
+                    inputModel.PileGroupSettlement?.ActiveRecord), "表");
 
             double fontSize = 8;
             Table table = CreateTableWithBorders();
@@ -1102,7 +1101,7 @@ diameterSelector,
             Point end,
             int zigzagCount = 8,
             double zigzagSegmentLength = 30, // 斜辺長
-            Pen pen = null,
+            Pen? pen = null,
             double endSegmentLength = 20)
         {
             pen ??= new Pen(Brushes.Black, 2);
@@ -1174,7 +1173,7 @@ diameterSelector,
             Point end,
             int zigzagCount = 8,
             double amplitude = 10,
-            Pen pen = null,
+            Pen? pen = null,
             double endSegmentLength = 20)
         {
             pen ??= new Pen(Brushes.Black, 2);

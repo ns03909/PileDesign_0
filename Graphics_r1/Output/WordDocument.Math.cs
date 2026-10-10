@@ -309,7 +309,7 @@ namespace PileDesign.Output
                         paragraph.Append(oxEl);
                         break;
                     default:
-                        AppendString(part.ToString());
+                        AppendString(part.ToString() ?? "");
                         break;
                 }
 

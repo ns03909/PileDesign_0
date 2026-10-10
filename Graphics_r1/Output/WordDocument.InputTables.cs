@@ -19,10 +19,10 @@ namespace PileDesign.Output
     {
         // 液状化判定リスト（FL/βL/γcy 等）が null や長さ不足でもセルを "-" にして、
         // 表全体が例外で欠落しないよう安全に取得するヘルパー。
-        private static string SafeListCell(IReadOnlyList<double?> list, int idx, string fmt)
+        private static string SafeListCell(IReadOnlyList<double?>? list, int idx, string fmt)
             => (list != null && idx >= 0 && idx < list.Count && list[idx].HasValue)
                 ? list[idx]!.Value.ToString(fmt) : "-";
-        private static string SafeListCell(IReadOnlyList<double> list, int idx, string fmt)
+        private static string SafeListCell(IReadOnlyList<double>? list, int idx, string fmt)
             => (list != null && idx >= 0 && idx < list.Count) ? list[idx].ToString(fmt) : "-";
 
         // 基本設定の表を追加するメソッド

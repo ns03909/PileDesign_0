@@ -271,7 +271,7 @@ namespace PileDesign.Output
             }
         }
 
-        private byte[] RenderPileTopViewViaDrawer(PileBodyInput pileBody, PileSection firstSection, int pileBodyNo)
+        private byte[] RenderPileTopViewViaDrawer(PileBodyInput pileBody, PileSection? firstSection, int pileBodyNo)
         {
             double dipW = PileTopViewSizeMm * 96.0 / 25.4;
             double dipH = PileTopViewSizeMm * 96.0 / 25.4;
@@ -335,8 +335,7 @@ namespace PileDesign.Output
             for (int i = 0; i < inputModel.PileBodies.Count; i++)
             {
                 var pileBody = inputModel.PileBodies[i];
-                var pileTop = pileBody?.PileTop;
-                if (pileTop == null) continue;
+                if (pileBody?.PileTop is not { } pileTop) continue;
 
                 // SelectedPileTopSpecification が空 (PileTopWindow を開かずに F9→計算書出力した等) の場合、
                 // 工法別ライブラリから動的に諸元を生成する。
@@ -441,7 +440,7 @@ namespace PileDesign.Output
         }
 
         // 損傷限界・安全限界の軸力閾値を「閾値定義」付きで一覧化
-        private static void AddAxialLimitTable(Body body, PileSection section, string pileBodyType, string pileSectionType)
+        private static void AddAxialLimitTable(Body body, PileSection section, string? pileBodyType, string? pileSectionType)
         {
             // PileSection.DamageLimit/UltimateLimitAxialForceThresholds は NM 曲線計算
             // (GetNMRaw) の副作用として更新される。docx 出力時に UI 未表示の場合に
@@ -490,7 +489,7 @@ namespace PileDesign.Output
         }
 
         // インデックスの意味を型別に解決 (PileSectionWindow の AxialLimitTab の表記と一致させる)
-        private static string GetAxialLimitMeaning(string pileBodyType, string pileSectionType, bool isUltimate, int index)
+        private static string GetAxialLimitMeaning(string? pileBodyType, string? pileSectionType, bool isUltimate, int index)
         {
             // 場所打ち RC 系: 場所打ち鉄筋コンクリート杭, 場所打ち鋼管コンクリート杭(鉄筋コンクリート部)
             bool isInsituRcLike = pileBodyType == PileTypeNames.InsituRc

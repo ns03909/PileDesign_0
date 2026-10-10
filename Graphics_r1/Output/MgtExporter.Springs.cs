@@ -58,7 +58,7 @@ namespace PileDesign.Output
             foreach (var (spring, fid) in funcIds)
             {
                 // 地盤反力情報を取得
-                HorizontalSoilReactionItem reaction = null;
+                HorizontalSoilReactionItem? reaction = null;
                 if (spring.NodeI != null) reactionByNode.TryGetValue(spring.NodeI, out reaction);
 
                 var effect = GroupPileEffect.None;

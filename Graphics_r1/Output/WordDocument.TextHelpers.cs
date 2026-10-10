@@ -436,7 +436,7 @@ namespace PileDesign.Output
         {
             try
             {
-                TableGrid tableGrid = table.GetFirstChild<TableGrid>();
+                TableGrid? tableGrid = table.GetFirstChild<TableGrid>();
                 if (tableGrid == null)
                 {
                     tableGrid = new TableGrid();

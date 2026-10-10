@@ -48,8 +48,9 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _soilPileNumberOption, value);
         }
 
-        private SoilEmbedment _soilEmbedment;
-        public SoilEmbedment SoilEmbedment
+        // 根入部が無いとき (計算例の読込で根入れを外したときなど) は null
+        private SoilEmbedment? _soilEmbedment;
+        public SoilEmbedment? SoilEmbedment
         {
             get => _soilEmbedment;
             set => SetProperty(ref _soilEmbedment, value);
@@ -105,8 +106,9 @@ namespace PileDesign.Models.InputData
         }
 
 
-        private DoatsuGoryokuBane _doatsuGoryokuBane;
-        public DoatsuGoryokuBane DoatsuGoryokuBane
+        // 根入部が無いときは null (SoilEmbedment と同じ)
+        private DoatsuGoryokuBane? _doatsuGoryokuBane;
+        public DoatsuGoryokuBane? DoatsuGoryokuBane
         {
             get => _doatsuGoryokuBane;
             set => SetProperty(ref _doatsuGoryokuBane, value);
