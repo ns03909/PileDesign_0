@@ -183,22 +183,44 @@ namespace PileDesign.ViewModels
             // 直接呼出は「大規模操作」を意味するため、進行中のデバウンスセッションを終了させる
             // (これ以降の編集は新しい Undo ステップに割り当てられる)
             if (_undoBatchActive) FlushPendingUndoSnapshot();
+            if (CurrentInputModel == null) return;
 
-            var copy = CurrentInputModel.DeepCopy();
+            // 写しを作れなければ履歴に積まない (欠けた写しを積むと、元に戻したときにデータが消える)。
+            // 編集そのものは入っているので、編集済み・再解析が必要の印は付ける
+            var copy = TryCopyForHistory(CurrentInputModel, description);
             if (copy != null)
             {
                 RememberElementSplit(copy);
                 _undoManager.SaveState(copy, FormatHistoryDescription(description));
                 RaiseUndoStateChanged();
+            }
 
-                // 編集が入ったので、以降は破棄・保存の確認を出す。
-                MarkUnsavedWork();
-                InputEditVersion++;
+            // 編集が入ったので、以降は破棄・保存の確認を出す。
+            MarkUnsavedWork();
+            InputEditVersion++;
 
-                // 入力が編集された = 表示中の解析結果は現在の入力と一致しない。
-                // 結果は破棄しない (解析時の入力ごと切り離してあるため表示は整合している)。
-                // ここは DataGrid のセル確定 (SaveUndoStateDebounced 経由) も含む全編集の集約点。
-                MarkInputChangedSinceAnalysis(scope, FormatHistoryDescription(description));
+            // 入力が編集された = 表示中の解析結果は現在の入力と一致しない。
+            // 結果は破棄しない (解析時の入力ごと切り離してあるため表示は整合している)。
+            // ここは DataGrid のセル確定 (SaveUndoStateDebounced 経由) も含む全編集の集約点。
+            MarkInputChangedSinceAnalysis(scope, FormatHistoryDescription(description));
+        }
+
+        /// <summary>
+        /// 履歴 (元に戻す) に積む入力の写し。作れなければ null を返し、記録しなかったことを知らせる。
+        /// InputModel.DeepCopy は複製に失敗すると例外を投げる (欠けた写しを返さない)。
+        /// </summary>
+        internal InputModel? TryCopyForHistory(InputModel? source, string? description)
+        {
+            if (source == null) return null;
+            try
+            {
+                return source.DeepCopy();
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "履歴用の入力の写しを作れませんでした ({Description})", description);
+                ShowToast($"入力の写しを作れなかったため、この操作 ({FormatHistoryDescription(description)}) は元に戻す操作に記録していません", 1);
+                return null;
             }
         }
 

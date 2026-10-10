@@ -450,6 +450,27 @@ namespace PileDesign.Models.InputData
             finally { _isSyncingAxial = false; }
         }
 
+        /// <summary>単杭沈下の結果 (沈下量と、荷重-沈下曲線の範囲外の印) の控え。単杭沈下の画面のキャンセルで戻すために使う。</summary>
+        internal sealed record SinglePileSettlementState(
+            double VL, bool VLBeyondCurve, double[]? Level1s, bool[]? Level1sBeyondCurve, double[]? Level2s, bool[]? Level2sBeyondCurve);
+
+        /// <summary>単杭沈下の結果を控える (一覧は中身を写す。画面は一覧の中身をその場で書き換えるため)。</summary>
+        internal SinglePileSettlementState CaptureSinglePileSettlement() => new(
+            SinglePileSettlementVL, SinglePileSettlementVLBeyondCurve,
+            SinglePileSettlementLevel1s?.ToArray(), SinglePileSettlementLevel1sBeyondCurve?.ToArray(),
+            SinglePileSettlementLevel2s?.ToArray(), SinglePileSettlementLevel2sBeyondCurve?.ToArray());
+
+        /// <summary>控えた単杭沈下の結果へ戻す。</summary>
+        internal void RestoreSinglePileSettlement(SinglePileSettlementState state)
+        {
+            SinglePileSettlementVL = state.VL;
+            SinglePileSettlementVLBeyondCurve = state.VLBeyondCurve;
+            SinglePileSettlementLevel1s = state.Level1s == null ? null! : new ObservableCollection<double>(state.Level1s);
+            SinglePileSettlementLevel1sBeyondCurve = state.Level1sBeyondCurve == null ? [] : new ObservableCollection<bool>(state.Level1sBeyondCurve);
+            SinglePileSettlementLevel2s = state.Level2s == null ? null! : new ObservableCollection<double>(state.Level2s);
+            SinglePileSettlementLevel2sBeyondCurve = state.Level2sBeyondCurve == null ? [] : new ObservableCollection<bool>(state.Level2sBeyondCurve);
+        }
+
         // 常時単杭沈下
         private double _singlePileSettlementVL;
         public double SinglePileSettlementVL

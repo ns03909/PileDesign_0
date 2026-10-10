@@ -65,6 +65,18 @@ namespace PileDesign.ViewModels
         // 地盤杭セットを切り替えると PileBody も変わるので、全件控える。
         private readonly List<PileBodyInput> _prevPileBodies = [];
 
+        // 開いた時点の各杭の単杭沈下の結果の控え。キャンセルで戻すために使う。
+        // 単杭沈下量は解析・グラフの更新のたびに杭 (入力の実体) へ書くので、控えないとキャンセルしても
+        // 変更後の入力で解いた沈下量が残った (入力は戻るのに結果は戻らない)。土層-杭セットの結果は写しにだけ書き、
+        // OK のときにまとめて反映する
+        private readonly List<(PileLayoutDataItem Pile, PileLayoutDataItem.SinglePileSettlementState State)> _prevPileSettlements = [];
+
+        // 非同期の解析 (ExecuteAnalysis) の世代。土層-杭セットごとに、後から始めた解析があれば古い結果は捨てる。
+        // 画面を閉じたら (_closed) 何も反映しない
+        private readonly Dictionary<SoilPile, int> _analysisGenerations = new(ReferenceEqualityComparer.Instance);
+        private int _runningAnalyses;
+        private bool _closed;
+
         // 杭先端閉塞率を使用する工法かどうか
         public bool UsesPileToeEta => SoilPile?.PileConstructionType == "回転貫入杭"
                                     || SoilPile?.PileConstructionType == "打込み杭";
@@ -183,6 +195,10 @@ namespace PileDesign.ViewModels
         }
 
         // ランプクリック時に該当SoilPileを選択（ユーザー確認＝ランプ点灯）
+        /// <summary>
+        /// 土層-杭セットを選ぶ (ランプのクリックとコンボボックスの両方から)。セット・杭体・派生の表示・グラフをまとめて切り替える。
+        /// 以前はコンボボックスの経路がセットだけを切り替え、杭体 (α・n・杭体記号などの入力欄の対象) が前のセットのままだった。
+        /// </summary>
         public void SelectSoilPileIndex(int index)
         {
             if (index < 0 || index >= SoilPiles.Count) return;
@@ -191,6 +207,8 @@ namespace PileDesign.ViewModels
             PileBody = InputModel.RequirePileBody(SoilPile);
             OnPropertyChanged(nameof(UsesPileToeEta));
             OnPropertyChanged(nameof(SettlePileToeDiaM));
+            // 切替先 SoilPile が未初期化なら既定プリセットを適用
+            TryApplyDefaultSettlementPreset();
             AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
             _ = ExecuteAnalysis();
             DrawShapes();
@@ -233,28 +251,27 @@ namespace PileDesign.ViewModels
         private void AnalyzeSoilPileAt(int i, List<string> warnings)
         {
             var soilPile = SoilPiles[i];
-
             // 各SoilPileに対してVerticalLoadTransferMethodを作成・解析
             var vtm = new VerticalLoadTransferMethod(InputModel, soilPile);
+            ApplyAnalysisResult(soilPile, vtm, warnings);
+        }
 
-            // SoilPileに計算結果を保存（ViewModel内コピー）
+        /// <summary>
+        /// 1 つの土層-杭セットの解析結果を、画面の写しのセットと、そのセットを使う杭の単杭沈下量へ書く。
+        /// <b>元の入力の土層-杭セットへは書かない</b> (OK のときに写しをまとめて反映する。キャンセルで捨てられるように)。
+        /// 以前は元のセットへも直接書いており、キャンセルしても結果だけが変更後のものに残った。
+        /// 杭の単杭沈下量は入力の実体へ書くので、キャンセルでは開いたときの控えへ戻す (<see cref="OnCancel"/>)。
+        /// </summary>
+        private void ApplyAnalysisResult(SoilPile soilPile, VerticalLoadTransferMethod vtm, List<string> warnings)
+        {
             soilPile.LoadDisplacements = vtm.LoadDisplacements;
             soilPile.LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
             soilPile.NodeDisplacements = vtm.Ds;
             soilPile.NodeReactions = vtm.Rs;
 
-            // 元のElementDivision.SoilPilesにも結果を反映
-            var originalSoilPiles = InputModel.ElementDivision?.SoilPiles;
-            if (originalSoilPiles != null && i < originalSoilPiles.Count)
-            {
-                originalSoilPiles[i].LoadDisplacements = vtm.LoadDisplacements;
-                originalSoilPiles[i].LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
-                originalSoilPiles[i].NodeDisplacements = vtm.Ds;
-                originalSoilPiles[i].NodeReactions = vtm.Rs;
-            }
-
-            // 該当するPileLayoutItemの沈下量を計算
-            int soilPileNo = i + 1;
+            // 該当するPileLayoutItemの沈下量を計算 (セットの番号は一覧の位置 + 1)
+            int soilPileNo = SoilPiles.IndexOf(soilPile) + 1;
+            if (soilPileNo <= 0) return;
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
                 if (pileLayoutItem.SoilPileAltNo == soilPileNo)
@@ -440,6 +457,9 @@ namespace PileDesign.ViewModels
             {
                 _prevPileBodies.Add(pb?.DeepCopy());
             }
+            // 各杭の単杭沈下の結果も、開いたときの一括解析より前に控える
+            foreach (var pile in InputModel.PileLayoutItems ?? [])
+                if (pile != null) _prevPileSettlements.Add((pile, pile.CaptureSinglePileSettlement()));
 
             PileBody = InputModel.RequirePileBody(SoilPile);
 
@@ -556,6 +576,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnOk()
         {
+            _closed = true;
             // 逆操作: ViewModelのSoilPilesをモデルに反映
             InputModel.ElementDivision.SoilPiles = new ObservableCollection<SoilPile>(
                 SoilPiles.Select(pile => pile.DeepCopy())
@@ -579,6 +600,11 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnCancel()
         {
+            _closed = true;
+            // 各杭の単杭沈下の結果を、開いたときの値へ戻す (解析・グラフの更新で入力の実体へ書いているため)
+            foreach (var (pile, state) in _prevPileSettlements)
+                pile.RestoreSinglePileSettlement(state);
+
             // SoilPiles は DeepCopy を編集しているので捨てるだけでよい。
             // 杭体入力は実体を編集しているため、開いた時点の値へ戻す。
             // 戻す項目は並べない (PileBodyInput.RestoreScalarsFrom の説明を参照)。
@@ -639,47 +665,71 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public async Task ExecuteAnalysis()
         {
-            // 入力データの整合性ゲート
-            if (!PileDesign.Services.CheckInputData.ValidateForAnalysis(InputModel, "単杭沈下解析"))
-                return;
-
+            // 投げ放し (_ = ExecuteAnalysis()) で呼ばれるので、ここで例外を外へ出さない
             try
             {
-                // 砂時計カーソルを表示
-                Mouse.OverrideCursor = Cursors.Wait;
+                await ExecuteAnalysisCore(runner: AnalysisRunnerForTesting);
+            }
+            catch (Exception ex)
+            {
+                if (_closed) Serilog.Log.Error(ex, "単杭沈下解析に失敗しました (画面を閉じたあと)");
+                else MessageService.ShowError("単杭沈下解析に失敗しました。", ex, "単杭沈下解析");
+            }
+        }
+
+        /// <summary>解析の代わり (テスト用)。設定すると、選択の切り替えなどから走る解析もこれを使う。</summary>
+        internal Func<InputModel, SoilPile, Task<VerticalLoadTransferMethod>>? AnalysisRunnerForTesting { get; set; }
+
+        /// <summary>
+        /// 表示中の土層-杭セットを解く。解く対象と入力は<b>開始時点で固定</b>し、結果はそのセットへ書く
+        /// (以前は完了時に選ばれているセットへ書いており、解析中に別のセットへ切り替えると、A の結果を B へ書いた)。
+        /// 同じセットで後から始めた解析があれば、古い解析の結果は捨てる (完了の順が逆転しても新しい結果を上書きしない)。
+        /// 画面を閉じたあとは何も反映しない。
+        /// </summary>
+        /// <param name="runner">解析の代わり (テスト用)。null なら荷重伝達法を Task.Run で解く。</param>
+        internal async Task ExecuteAnalysisCore(Func<InputModel, SoilPile, Task<VerticalLoadTransferMethod>>? runner)
+        {
+            // 入力データの整合性ゲート
+            if (runner == null && !PileDesign.Services.CheckInputData.ValidateForAnalysis(InputModel, "単杭沈下解析"))
+                return;
+
+            var inputModelRef = InputModel;
+            var soilPileRef = SoilPile;
+            if (soilPileRef == null) return;
+            int generation = _analysisGenerations.TryGetValue(soilPileRef, out int g) ? g + 1 : 1;
+            _analysisGenerations[soilPileRef] = generation;
+
+            _runningAnalyses++;
+            try
+            {
+                // 砂時計カーソルを表示 (テストの実行では画面が無い)
+                if (runner == null) Mouse.OverrideCursor = Cursors.Wait;
 
                 // バックグラウンドで解析実行（UIスレッドブロッキング防止）
-                var inputModelRef = InputModel;
-                var soilPileRef = SoilPile;
+                var vtm = runner != null
+                    ? await runner(inputModelRef, soilPileRef)
+                    : await Task.Run(() => new VerticalLoadTransferMethod(inputModelRef, soilPileRef));
 
-                var vtm = await Task.Run(() => new VerticalLoadTransferMethod(inputModelRef, soilPileRef));
-                VerticalLoadTransferMethod = vtm;
+                // 閉じたあと・同じセットで後から始めた解析があるときは反映しない
+                if (_closed || _analysisGenerations[soilPileRef] != generation) return;
 
-                // UIスレッドでチャートと結果を更新
-                UpdateSettlementChart();
-                UpdateCircumstanceSeries();
+                var warnings = new List<string>();
+                ApplyAnalysisResult(soilPileRef, vtm, warnings);
 
-                SoilPile.LoadDisplacements = VerticalLoadTransferMethod.LoadDisplacements;
-                SoilPile.LoadDisplacementsLimit = VerticalLoadTransferMethod.LoadDisplacementsLimit;
-                SoilPile.NodeDisplacements = VerticalLoadTransferMethod.Ds;
-                SoilPile.NodeReactions = VerticalLoadTransferMethod.Rs;
-
-                // 元のElementDivision.SoilPilesにも結果を反映
-                int spIdx = SoilPileNo - 1;
-                var originalSoilPiles = InputModel.ElementDivision?.SoilPiles;
-                if (originalSoilPiles != null && spIdx >= 0 && spIdx < originalSoilPiles.Count)
+                // 表示中のセットのときだけ、グラフを描き直す
+                if (ReferenceEquals(SoilPile, soilPileRef))
                 {
-                    originalSoilPiles[spIdx].LoadDisplacements = VerticalLoadTransferMethod.LoadDisplacements;
-                    originalSoilPiles[spIdx].LoadDisplacementsLimit = VerticalLoadTransferMethod.LoadDisplacementsLimit;
-                    originalSoilPiles[spIdx].NodeDisplacements = VerticalLoadTransferMethod.Ds;
-                    originalSoilPiles[spIdx].NodeReactions = VerticalLoadTransferMethod.Rs;
+                    VerticalLoadTransferMethod = vtm;
+                    UpdateSettlementChart();
+                    UpdateCircumstanceSeries();
                 }
 
-                ShowAnalysisWarnings(vtm.Warnings);
+                if (runner == null) ShowAnalysisWarnings(vtm.Warnings);
             }
             finally
             {
-                Mouse.OverrideCursor = null;
+                _runningAnalyses--;
+                if (_runningAnalyses == 0 && runner == null) Mouse.OverrideCursor = null;
             }
         }
 
@@ -1284,12 +1334,13 @@ namespace PileDesign.ViewModels
         {
             if (previousSelectedSoilPileNo != -1)
             {
-                SoilPile = SoilPiles[Math.Clamp(SoilPileNo, 1, SoilPiles.Count) - 1];   // 選択番号を一覧の範囲に丸める
-                OnPropertyChanged(nameof(UsesPileToeEta));
-                // 切替先 SoilPile が未初期化なら既定プリセットを適用
-                TryApplyDefaultSettlementPreset();
-                // ユーザーが確認したのでランプを点灯
-                MarkPileAsAnalyzed(SoilPileNo - 1);
+                int index = Math.Clamp(SoilPileNo, 1, SoilPiles.Count) - 1;   // 選択番号を一覧の範囲に丸める
+                // ランプと同じ選択の処理を通す (杭体・派生の表示・グラフも切り替える)。
+                // ランプのクリックはこのコンボボックスの選択も変えるので、すでに切り替え済みなら解き直さない
+                if (!ReferenceEquals(SoilPile, SoilPiles[index]) || !ReferenceEquals(PileBody, InputModel.PileBodyAt(SoilPiles[index].PileBodyNo)))
+                    SelectSoilPileIndex(index);
+                else
+                    MarkPileAsAnalyzed(index);
             }
 
             DrawShapes();

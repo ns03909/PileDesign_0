@@ -739,14 +739,16 @@ namespace PileDesign.ViewModels
         private void Undo()
         {
             _undoManager.UndoSnapshot();
-            ApplyCurrentUndoSnapshot();
+            // 控えを写せなければ入力は差し替えない。履歴の位置も元へ戻す (位置だけ動いて入力が食い違わないように)
+            if (!ApplyCurrentUndoSnapshot()) _undoManager.RedoSnapshot();
         }
 
         /// <summary>
         /// UndoManager の CurrentState を取り込んで CurrentInputModel を再構築する。
         /// Undo / Redo 共通処理 + D.16 HistoryPanel からの任意ジャンプにも使う。
         /// </summary>
-        public void ApplyCurrentUndoSnapshot()
+        /// <returns>差し替えたら true。控えを写せなければ入力を変えずに false (呼び出し側が履歴の位置を戻す)。</returns>
+        public bool ApplyCurrentUndoSnapshot()
         {
             if (_undoManager.CurrentState is InputModel state)
             {
@@ -755,7 +757,19 @@ namespace PileDesign.ViewModels
                 // 「入力を 1 つ直して戻したら沈下の結果が消えた」になる。
                 var settlementResult = CurrentInputModel?.PileGroupSettlement?.Result;
 
-                CurrentInputModel = state.DeepCopy();
+                InputModel restored;
+                try
+                {
+                    restored = state.DeepCopy();
+                }
+                catch (Exception ex)
+                {
+                    Serilog.Log.Error(ex, "元に戻す: 控えの入力を写せませんでした");
+                    MessageService.Show("控えの入力を写せなかったため、元に戻す (やり直す) 操作を取りやめました。入力は変わっていません。",
+                        "元に戻す", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+                CurrentInputModel = restored;
                 CurrentInputModel.AttachViewModel(this);
                 // 「杭要素分割済み」の印も、その状態を積んだときのものに戻す (土層-杭セットと食い違わせない)
                 if (RememberedElementSplit(state) is bool split)
@@ -787,6 +801,7 @@ namespace PileDesign.ViewModels
 
             // 解析したときと同じ入力へ戻ったら「再解析が必要」を降ろし、違う入力へ移ったら立てる (中身で判定)
             RecheckInputAgainstAnalysis();
+            return true;
         }
 
         /// <summary>D.16 HistoryPanel が UndoManager 参照を取得するためのアクセサ。</summary>
@@ -922,7 +937,7 @@ namespace PileDesign.ViewModels
         private void Redo()
         {
             _undoManager.RedoSnapshot();
-            ApplyCurrentUndoSnapshot();
+            if (!ApplyCurrentUndoSnapshot()) _undoManager.UndoSnapshot();
         }
 
         public void DeleteDuplicatedPiles()
@@ -1417,9 +1432,16 @@ namespace PileDesign.ViewModels
                         return;
                     }
 
-                    // Undo用DeepCopyをダイアログ表示前に完了させる
-                    // （DeepCopy内のSoilPiles一時退避finallyがダイアログ中のSoilPiles変更と競合するのを防ぐ）
-                    var undoCopy = await Task.Run(() => CurrentInputModel.DeepCopy());
+                    // Undo用DeepCopyをダイアログ表示前に完了させる (変更前の写し)。
+                    // 写しを作れなければ、分割は行えるが履歴には積まない (欠けた写しを積まない)
+                    var sourceForUndo = CurrentInputModel;
+                    InputModel? undoCopy;
+                    try { undoCopy = await Task.Run(() => sourceForUndo.DeepCopy()); }
+                    catch (Exception ex)
+                    {
+                        Serilog.Log.Error(ex, "杭要素分割: 変更前の入力の写しを作れませんでした");
+                        undoCopy = null;
+                    }
                     bool splitBefore = IsElementSplit;
 
                     // ウィンドウを即座に表示（重い初期化はContentRenderedイベントで実行）
@@ -1435,11 +1457,16 @@ namespace PileDesign.ViewModels
 
                         // 変更の前後を 1 手として積む。以前は変更前の写しだけを積んでいたので、
                         // Ctrl+Z の行き先が分割の前にならず (1 つ前の編集まで戻るか、戻らない)、Ctrl+Y でも分割後に戻れなかった
-                        if (undoCopy != null)
+                        var afterCopy = undoCopy == null ? null : TryCopyForHistory(CurrentInputModel, "杭要素分割");
+                        if (undoCopy != null && afterCopy != null)
                         {
                             _undoManager.SaveSnapshotEdit(RememberElementSplit(undoCopy, splitBefore),
-                                RememberElementSplit(CurrentInputModel.DeepCopy()), "杭要素分割");
+                                RememberElementSplit(afterCopy), "杭要素分割");
                             RaiseUndoStateChanged();
+                        }
+                        else
+                        {
+                            ShowToast("入力の写しを作れなかったため、杭要素分割は元に戻す操作に記録していません", 1);
                         }
                     }
 

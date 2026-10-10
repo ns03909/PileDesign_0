@@ -2265,11 +2265,11 @@ namespace PileDesign.ViewModels
                 if (value)
                 {
                     if (!AnalysisResultContentOption.Contains(settlementLabel))
-                        AnalysisResultContentOption.Add(settlementLabel);
+                        AddAnalysisContentOption(settlementLabel);
                 }
                 else
                 {
-                    AnalysisResultContentOption.Remove(settlementLabel);
+                    RemoveAnalysisContentOption(settlementLabel);
                 }
 
                 // ステータスバー更新
@@ -2297,11 +2297,11 @@ namespace PileDesign.ViewModels
                 if (condition)
                 {
                     if (!AnalysisResultContentOption.Contains(label))
-                        AnalysisResultContentOption.Add(label);
+                        AddAnalysisContentOption(label);
                 }
                 else
                 {
-                    AnalysisResultContentOption.Remove(label);
+                    RemoveAnalysisContentOption(label);
                 }
             }
 
@@ -2372,11 +2372,11 @@ namespace PileDesign.ViewModels
                     if (value)
                     {
                         if (!AnalysisResultContentOption.Contains(settlementLabel))
-                            AnalysisResultContentOption.Add(settlementLabel);
+                            AddAnalysisContentOption(settlementLabel);
                     }
                     else
                     {
-                        AnalysisResultContentOption.Remove(settlementLabel);
+                        RemoveAnalysisContentOption(settlementLabel);
                     }
 
                     RebuildSettlementTypeOptions();
@@ -2795,33 +2795,33 @@ namespace PileDesign.ViewModels
                     {
                         // true: がなければ追加
                         if (!AnalysisResultContentOption.Contains(beamForceLabel))
-                            AnalysisResultContentOption.Add(beamForceLabel);
+                            AddAnalysisContentOption(beamForceLabel);
                         if (!AnalysisResultContentOption.Contains(nodeDisplacementLabel))
-                            AnalysisResultContentOption.Add(nodeDisplacementLabel);
+                            AddAnalysisContentOption(nodeDisplacementLabel);
                         if (!AnalysisResultContentOption.Contains(nodeSoilSpringLabel))
-                            AnalysisResultContentOption.Add(nodeSoilSpringLabel);
+                            AddAnalysisContentOption(nodeSoilSpringLabel);
                         if (!AnalysisResultContentOption.Contains(nodeSoilSpringDistLabel))
-                            AnalysisResultContentOption.Add(nodeSoilSpringDistLabel);
+                            AddAnalysisContentOption(nodeSoilSpringDistLabel);
                         if (!AnalysisResultContentOption.Contains(pileHeadMLabel))
-                            AnalysisResultContentOption.Add(pileHeadMLabel);
+                            AddAnalysisContentOption(pileHeadMLabel);
                         if (!AnalysisResultContentOption.Contains(pileHeadQLabel))
-                            AnalysisResultContentOption.Add(pileHeadQLabel);
+                            AddAnalysisContentOption(pileHeadQLabel);
                         if (!AnalysisResultContentOption.Contains(connectionMLabel))
-                            AnalysisResultContentOption.Add(connectionMLabel);
+                            AddAnalysisContentOption(connectionMLabel);
                         if (!AnalysisResultContentOption.Contains(connectionQLabel))
-                            AnalysisResultContentOption.Add(connectionQLabel);
+                            AddAnalysisContentOption(connectionQLabel);
                     }
                     else
                     {
                         // false: があれば削除
-                        AnalysisResultContentOption.Remove(beamForceLabel);
-                        AnalysisResultContentOption.Remove(nodeDisplacementLabel);
-                        AnalysisResultContentOption.Remove(nodeSoilSpringLabel);
-                        AnalysisResultContentOption.Remove(nodeSoilSpringDistLabel);
-                        AnalysisResultContentOption.Remove(pileHeadMLabel);
-                        AnalysisResultContentOption.Remove(pileHeadQLabel);
-                        AnalysisResultContentOption.Remove(connectionMLabel);
-                        AnalysisResultContentOption.Remove(connectionQLabel);
+                        RemoveAnalysisContentOption(beamForceLabel);
+                        RemoveAnalysisContentOption(nodeDisplacementLabel);
+                        RemoveAnalysisContentOption(nodeSoilSpringLabel);
+                        RemoveAnalysisContentOption(nodeSoilSpringDistLabel);
+                        RemoveAnalysisContentOption(pileHeadMLabel);
+                        RemoveAnalysisContentOption(pileHeadQLabel);
+                        RemoveAnalysisContentOption(connectionMLabel);
+                        RemoveAnalysisContentOption(connectionQLabel);
                     }
 
                     // 解析済みインジケータ更新

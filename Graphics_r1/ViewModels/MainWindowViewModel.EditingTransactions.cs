@@ -36,18 +36,23 @@ public partial class MainWindowViewModel
         }
     }
 
-    internal InputModel CaptureInputEdit()
+    /// <summary>変更前の写し。作れなければ null (この編集は履歴に積まない。<see cref="TryCopyForHistory"/>)。</summary>
+    internal InputModel? CaptureInputEdit()
     {
         if (_undoBatchActive) FlushPendingUndoSnapshot();
         using var perf = PileDesign.Common.PerfLog.Measure("編集の控え (変更前)", CurrentInputModel?.PileLayoutItems?.Count ?? 0, "本の杭");
-        return RememberElementSplit(CurrentInputModel.DeepCopy());
+        var before = TryCopyForHistory(CurrentInputModel, "編集の控え");
+        return before == null ? null : RememberElementSplit(before);
     }
 
-    internal void CompleteInputEdit(InputModel before,
+    internal void CompleteInputEdit(InputModel? before,
         [System.Runtime.CompilerServices.CallerMemberName] string? description = null, AnalysisInputScope scope = AnalysisInputScope.All)
     {
         using var perf = PileDesign.Common.PerfLog.Measure("編集の確定", CurrentInputModel?.PileLayoutItems?.Count ?? 0, "本の杭");
-        _undoManager.SaveSnapshotEdit(before, RememberElementSplit(CurrentInputModel.DeepCopy()), FormatHistoryDescription(description));
+        // 前後どちらかの写しが作れなければ履歴に積まない (編集済み・再解析が必要の印は付ける)
+        var after = before == null ? null : TryCopyForHistory(CurrentInputModel, description);
+        if (before != null && after != null)
+            _undoManager.SaveSnapshotEdit(before, RememberElementSplit(after), FormatHistoryDescription(description));
         MarkUnsavedWork();
         InputEditVersion++;
         MarkInputChangedSinceAnalysis(scope, FormatHistoryDescription(description));

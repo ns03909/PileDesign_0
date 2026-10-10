@@ -2034,17 +2034,13 @@ namespace PileDesign.Models.InputData
             // 大きな InputModel 全体 1 回の JSON serialize (~200ms) を、各サブツリーへの分割で大幅高速化。
             // 解析結果系 (SoilPiles) は ElementDivision 内で個別退避してシリアライズから除外。
 
-            ObservableCollection<SoilPile> savedSoilPiles = null;
+            // 土層-杭セットは JSON で複製しない (下の説明)。元を書き換えずに、セットを除いた殻を複製する。
+            // 以前は元の SoilPiles を一時的に空へ差し替えて finally で戻しており、DeepCopy は Task.Run でも走るので、
+            // その間に画面・自動保存が空の一覧を読みえた。
+            // 共有するのは中身があるときだけ (以前と同じ)。空のコレクションを共有すると、あとで元へ足したセットが控えにも入る
+            ObservableCollection<SoilPile> savedSoilPiles = ElementDivision?.SoilPiles is { Count: > 0 } sp ? sp : null;
             try
             {
-                // PropertyChanged を発火しないよう SetSoilPilesSilently 経由で退避・復元する。
-                // 公開セッター経由だと DataGrid (ItemsSource バインディング) の再構築が走り、
-                // セル編集中の値が 0 にリセットされる問題が発生する (SoilPile.GroupPileLoadDia 編集問題)。
-                if (ElementDivision?.SoilPiles != null && ElementDivision.SoilPiles.Count > 0)
-                {
-                    savedSoilPiles = ElementDivision.SoilPiles;
-                    ElementDivision.SetSoilPilesSilently([]);
-                }
 
                 var copy = new InputModel
                 {
@@ -2088,13 +2084,17 @@ namespace PileDesign.Models.InputData
                 long tQc = swTotal.ElapsedMilliseconds - tStart - tHand;
 
                 // ── DeepCopy 未実装型は per-item JSON でクローン ──
-                copy.ElementDivision = PileDesign.Common.DeepCopyUtil.CloneJson(this.ElementDivision);
-                copy.EmbedmentInput = PileDesign.Common.DeepCopyUtil.CloneJson(this.EmbedmentInput);
-                copy.FoundationBeamInput = PileDesign.Common.DeepCopyUtil.CloneJson(this.FoundationBeamInput);
-                copy.PileGroupSettlement = PileDesign.Common.DeepCopyUtil.CloneJson(this.PileGroupSettlement);
-                copy.InputNodes = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.InputNodes);
-                copy.GridXItems = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.GridXItems);
-                copy.GridYItems = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJson(this.GridYItems);
+                // 複製できなければ例外で知らせる (欠けた写しを成功として返さない)。履歴・解析結果の控えに欠けた写しを
+                // 積むと、あとで「データが消えた状態」を復元することになる。以前は CloneJson が失敗で null を返し、
+                // コレクションは失敗した要素を黙って除いていた
+                copy.ElementDivision = this.ElementDivision == null ? null
+                    : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.ElementDivision.ShellWithoutSoilPiles());
+                copy.EmbedmentInput = this.EmbedmentInput == null ? null : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.EmbedmentInput);
+                copy.FoundationBeamInput = this.FoundationBeamInput == null ? null : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.FoundationBeamInput);
+                copy.PileGroupSettlement = this.PileGroupSettlement == null ? null : PileDesign.Common.DeepCopyUtil.CloneJsonOrThrow(this.PileGroupSettlement);
+                copy.InputNodes = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJsonOrThrow(this.InputNodes);
+                copy.GridXItems = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJsonOrThrow(this.GridXItems);
+                copy.GridYItems = PileDesign.Common.DeepCopyUtil.CloneCollectionViaJsonOrThrow(this.GridYItems);
                 long tJsonRest = swTotal.ElapsedMilliseconds - tStart - tHand - tQc;
 
                 // パフォーマンス監視用ログ (Verbose レベル: 通常は出力されない)。
@@ -2129,11 +2129,6 @@ namespace PileDesign.Models.InputData
             }
             finally
             {
-                // 退避した SoilPiles を Silent 復元 (PropertyChanged を発火させない)
-                if (savedSoilPiles != null && ElementDivision != null)
-                {
-                    ElementDivision.SetSoilPilesSilently(savedSoilPiles);
-                }
                 swTotal.Stop();
             }
         }

@@ -81,8 +81,10 @@ namespace PileDesign.Views
             if (HistoryListBox.SelectedItem is not HistoryRow row) return;
             if (row.Index == _undoManager.CurrentIndex) return;
 
+            int previous = _undoManager.CurrentIndex;
             _undoManager.JumpToIndex(row.Index);
-            _vm.ApplyCurrentUndoSnapshot();
+            // 控えを写せなければ入力は変わらないので、履歴の位置も戻す
+            if (!_vm.ApplyCurrentUndoSnapshot()) _undoManager.JumpToIndex(previous);
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();

@@ -39,17 +39,14 @@ jobs:
           # CI でも同じ厳しさで build
           DOTNET_CLI_TELEMETRY_OPTOUT: 1
 
-      # 通常テスト (収束リグレッション系 + その他 ~800 件)
+      # 通常テスト (遅いテストを除く)。ローカルと同じスクリプトを通し、実行件数の下限・意図しないスキップ・
+      # 画面スレッドで拾われなかった例外 (dispatcher-exceptions.log) まで見る。
+      # 以前は dotnet test を直接呼んでおり、件数が途中で減っても「成功」で通っていた
       - name: Test (excluding slow)
         run: |
-          dotnet test TestProject1/TestProject1.csproj `
-            --no-build --configuration Debug `
-            --filter "TestCategory!=Slow" `
-            --logger "trx;LogFileName=test-results.trx" `
-            --logger "console;verbosity=minimal" `
-            --nologo
+          ./tools/run-tests.ps1 -NoBuild -Filter "TestCategory!=Slow" -EnforceMinimum
         shell: pwsh
-        timeout-minutes: 15
+        timeout-minutes: 25
 
       # 結果をアーティファクトとして残す (失敗時のデバッグ用)
       - name: Upload test results
@@ -57,7 +54,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: TestProject1/TestResults/*.trx
+          path: |
+            TestProject1/TestResults/*.trx
+            TestProject1/TestResults/dispatcher-exceptions.log
           retention-days: 14
 
       # 収束リグレッションのスナップショット差分があった場合 (UPDATE_SNAPSHOTS なしで失敗)

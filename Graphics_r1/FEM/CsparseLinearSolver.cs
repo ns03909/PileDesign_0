@@ -46,6 +46,31 @@ namespace PileDesign.FEM
         /// モデル (荷重ケース) ごとに持つので、ケースを並列に解いても混ざらない。解析のログ・サマリーに出す。
         /// </summary>
         public long LargeResidualCount;
+
+        /// <summary>
+        /// このモデルの求解の診断情報 (解法・各フェーズの時間・因子の再利用回数)。ステップの始めに Reset し、終わりに読む。
+        /// 以前は static で持っており、ケースを並列に解くと他のケースのリセット・加算・読み取りが混ざって、
+        /// ログの解法名や時間が別のケースのものになった (加算も競合した)。モデル (荷重ケース) ごとに持てば混ざらない。
+        /// </summary>
+        public SolverDiagnostics Diagnostics { get; } = new();
+    }
+
+    /// <summary>求解の診断情報 (モデルごと)。<see cref="CholeskySolverCache.Diagnostics"/> を参照。</summary>
+    internal sealed class SolverDiagnostics
+    {
+        public CsparseLinearSolver.SolverKind LastSolver { get; set; } = CsparseLinearSolver.SolverKind.None;
+        public long CscBuildTicks { get; set; }
+        public long FactorizeTicks { get; set; }
+        public long SolveBackSubTicks { get; set; }
+        public long CholeskyReuseCount { get; set; }
+
+        public void Reset()
+        {
+            CscBuildTicks = 0;
+            FactorizeTicks = 0;
+            SolveBackSubTicks = 0;
+            CholeskyReuseCount = 0;
+        }
     }
 
     /// <summary>
@@ -59,25 +84,17 @@ namespace PileDesign.FEM
     /// </summary>
     internal static class CsparseLinearSolver
     {
-        /// <summary>Cholesky factor を再利用した回数 (ステップ局所で読み取り→リセット)。</summary>
-        public static long CholeskyReuseCount { get; private set; }
-        public static void ResetReuseCount() { CholeskyReuseCount = 0; }
 
-        /// <summary>前回成功した solver 種別 (診断用)。</summary>
+        /// <summary>solver 種別 (診断用)。</summary>
         public enum SolverKind { None, Cholesky, LDL, LU, QR }
-        public static SolverKind LastSuccessfulSolver { get; private set; } = SolverKind.None;
 
-        /// <summary>内部フェーズごとの累積 tick (ステップ局所で読み取り→リセット)。</summary>
-        public static long CscBuildTicks { get; private set; }
-        public static long FactorizeTicks { get; private set; }
-        public static long SolveBackSubTicks { get; private set; }
-        public static void ResetInternalTimers()
-        {
-            CscBuildTicks = 0;
-            FactorizeTicks = 0;
-            SolveBackSubTicks = 0;
-            CholeskyReuseCount = 0;
-        }
+        /// <summary>
+        /// この<b>スレッド</b>で直前に成功した solver 種別 (テスト・単発の求解の確認用)。
+        /// 解析のログはモデルごとの <see cref="CholeskySolverCache.Diagnostics"/> を読むこと
+        /// (ケースを並列に解いても混ざらない)。
+        /// </summary>
+        public static SolverKind LastSuccessfulSolver { get => _lastSolver; private set => _lastSolver = value; }
+        [ThreadStatic] private static SolverKind _lastSolver;
 
         /// <summary>
         /// 解の相対残差 ‖K x − b‖ / ‖b‖ がこれを超えたら記録する (<see cref="LargeResidualCount"/>・ログ)。
@@ -182,13 +199,13 @@ namespace PileDesign.FEM
                     var xCached = new double[n];
                     long _tsSubReuse = System.Diagnostics.Stopwatch.GetTimestamp();
                     cachedFactor.Solve(rhsCached, xCached);
-                    SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSubReuse;
+                    if (cache != null) cache.Diagnostics.SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSubReuse;
                     // 使い回した因子が今の K と合っているかを残差で確かめ、大きければ作り直す
                     // (K が変わったのに因子が古いままなら、作り直すと正しい解になる。同じ K なら作り直しても同じ解)
                     if (!CheckResidual(K, b, xCached, SolverKind.Cholesky, cache))
                         throw new InvalidOperationException("再利用した Cholesky 因子の解の残差が大きい");
-                    LastSuccessfulSolver = SolverKind.Cholesky;
-                    CholeskyReuseCount++;
+                    LastSuccessfulSolver = SolverKind.Cholesky; if (cache != null) cache.Diagnostics.LastSolver = SolverKind.Cholesky;
+                    cache.Diagnostics.CholeskyReuseCount++;
                     return xCached;
                 }
                 catch
@@ -242,7 +259,7 @@ namespace PileDesign.FEM
             var rhs = b.ToArray();
             var x = new double[n];
 
-            CscBuildTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsCsc;
+            if (cache != null) cache.Diagnostics.CscBuildTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsCsc;
 
             // --- 2. 分解+代入フェーズ (計測) ---
             // FEM 剛性行列は通常 SPD なので Cholesky が最速 (QR の ~3-5 倍)。
@@ -259,14 +276,14 @@ namespace PileDesign.FEM
                 {
                     long _tsFact = System.Diagnostics.Stopwatch.GetTimestamp();
                     var chol = SparseCholesky.Create(A, ColumnOrdering.MinimumDegreeAtPlusA);
-                    FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
+                    if (cache != null) cache.Diagnostics.FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
 
                     long _tsSub = System.Diagnostics.Stopwatch.GetTimestamp();
                     chol.Solve(rhs, x);
-                    SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
+                    if (cache != null) cache.Diagnostics.SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
                     CheckResidual(K, b, x, SolverKind.Cholesky, cache);
-                    LastSuccessfulSolver = SolverKind.Cholesky;
+                    LastSuccessfulSolver = SolverKind.Cholesky; if (cache != null) cache.Diagnostics.LastSolver = SolverKind.Cholesky;
                     cache?.Store(chol); // 成功した Cholesky 因子のみキャッシュ
                     return x;
                 }
@@ -283,14 +300,14 @@ namespace PileDesign.FEM
                 {
                     long _tsFact = System.Diagnostics.Stopwatch.GetTimestamp();
                     var ldl = SparseLDL.Create(A, ColumnOrdering.MinimumDegreeAtPlusA);
-                    FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
+                    if (cache != null) cache.Diagnostics.FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
 
                     long _tsSub = System.Diagnostics.Stopwatch.GetTimestamp();
                     ldl.Solve(rhs, x);
-                    SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
+                    if (cache != null) cache.Diagnostics.SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
                     CheckResidual(K, b, x, SolverKind.LDL, cache);
-                    LastSuccessfulSolver = SolverKind.LDL;
+                    LastSuccessfulSolver = SolverKind.LDL; if (cache != null) cache.Diagnostics.LastSolver = SolverKind.LDL;
                     return x;
                 }
                 catch
@@ -304,14 +321,14 @@ namespace PileDesign.FEM
             {
                 long _tsFact = System.Diagnostics.Stopwatch.GetTimestamp();
                 var lu = SparseLU.Create(A, ColumnOrdering.MinimumDegreeAtA, 1.0);
-                FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
+                if (cache != null) cache.Diagnostics.FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
 
                 long _tsSub = System.Diagnostics.Stopwatch.GetTimestamp();
                 lu.Solve(rhs, x);
-                SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
+                if (cache != null) cache.Diagnostics.SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
                 CheckResidual(K, b, x, SolverKind.LU, cache);
-                LastSuccessfulSolver = SolverKind.LU;
+                LastSuccessfulSolver = SolverKind.LU; if (cache != null) cache.Diagnostics.LastSolver = SolverKind.LU;
                 return x;
             }
             catch
@@ -324,14 +341,14 @@ namespace PileDesign.FEM
             {
                 long _tsFact = System.Diagnostics.Stopwatch.GetTimestamp();
                 var qr = SparseQR.Create(A, ColumnOrdering.MinimumDegreeAtA);
-                FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
+                if (cache != null) cache.Diagnostics.FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
 
                 long _tsSub = System.Diagnostics.Stopwatch.GetTimestamp();
                 qr.Solve(rhs, x);
-                SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
+                if (cache != null) cache.Diagnostics.SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
                 CheckResidual(K, b, x, SolverKind.QR, cache);
-                LastSuccessfulSolver = SolverKind.QR;
+                LastSuccessfulSolver = SolverKind.QR; if (cache != null) cache.Diagnostics.LastSolver = SolverKind.QR;
                 return x;
             }
             catch (Exception ex)
@@ -342,14 +359,14 @@ namespace PileDesign.FEM
                     "[CsparseLinearSolver] MinimumDegreeAtA で分解できず、Natural で解き直します");
                 long _tsFact = System.Diagnostics.Stopwatch.GetTimestamp();
                 var qr = SparseQR.Create(A, ColumnOrdering.Natural);
-                FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
+                if (cache != null) cache.Diagnostics.FactorizeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFact;
 
                 long _tsSub = System.Diagnostics.Stopwatch.GetTimestamp();
                 qr.Solve(rhs, x);
-                SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
+                if (cache != null) cache.Diagnostics.SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
                 CheckResidual(K, b, x, SolverKind.QR, cache);
-                LastSuccessfulSolver = SolverKind.QR;
+                LastSuccessfulSolver = SolverKind.QR; if (cache != null) cache.Diagnostics.LastSolver = SolverKind.QR;
                 return x;
             }
         }

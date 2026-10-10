@@ -142,6 +142,25 @@ namespace PileDesign.Common
         /// 個々の item が CloneJson に失敗 (null 返却) した場合は除外する。
         /// source が null のとき、null を返す。
         /// </summary>
+        public static System.Collections.ObjectModel.ObservableCollection<T> CloneCollectionViaJsonOrThrow<T>(
+            System.Collections.Generic.IEnumerable<T> source) where T : class
+        {
+            if (source is null) return null;
+            var result = new System.Collections.ObjectModel.ObservableCollection<T>();
+            int index = 0;
+            foreach (var item in source)
+            {
+                if (item != null) result.Add(CloneJsonOrThrow(item));
+                else result.Add(null!);
+                index++;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// <see cref="CloneCollectionViaJsonOrThrow{T}"/> と違い、複製できなかった要素を<b>黙って除く</b>。
+        /// 欠けてよい用途 (表示用の一時的な写しなど) だけに使う。履歴・解析結果の控えには使わないこと。
+        /// </summary>
         public static System.Collections.ObjectModel.ObservableCollection<T> CloneCollectionViaJson<T>(
             System.Collections.Generic.IEnumerable<T> source) where T : class
         {

@@ -601,8 +601,8 @@ namespace PileDesign.ViewModels
                 int profLineSearchTrialsMax = 0;          // 2026-05-13: 1 反復あたり LS trial の最大値
                 int profPlateauRefreshCount = 0;          // 2026-05-13: プラトー検知発動回数
 
-                // v28 F-new: CsparseLinearSolver の内部タイマー (CSC 変換 / 分解 / 代入) をリセット
-                FEM.CsparseLinearSolver.ResetInternalTimers();
+                // v28 F-new: 求解の内部タイマー (CSC 変換 / 分解 / 代入) をリセット。ケースのモデルごとに持つので並列でも混ざらない
+                caseModel.SolverCache.Diagnostics.Reset();
                 // このステップで残差の大きい解がいくつ出たかを、ケースのモデルの数え上げの差で見る (並列でも混ざらない)
                 long largeResidualAtStepStart = caseModel.SolverCache.LargeResidualCount;
 
@@ -1507,11 +1507,12 @@ namespace PileDesign.ViewModels
                     double _findTMs = profFindTTicks * _tickToMs;
                     double _lsTrialAvg = profLineSearchCalls > 0 ? profLineSearchTrialsTotal / (double)profLineSearchCalls : 0.0;
                     double _totalSec = profStepTimer.Elapsed.TotalSeconds;
-                    string _solverTag = $"[{FEM.CsparseLinearSolver.LastSuccessfulSolver}]";
-                    double _cscMs = FEM.CsparseLinearSolver.CscBuildTicks * _tickToMs;
-                    double _factMs = FEM.CsparseLinearSolver.FactorizeTicks * _tickToMs;
-                    double _backSubMs = FEM.CsparseLinearSolver.SolveBackSubTicks * _tickToMs;
-                    long _cholReuse = FEM.CsparseLinearSolver.CholeskyReuseCount;
+                    var _diag = caseModel.SolverCache.Diagnostics;
+                    string _solverTag = $"[{_diag.LastSolver}]";
+                    double _cscMs = _diag.CscBuildTicks * _tickToMs;
+                    double _factMs = _diag.FactorizeTicks * _tickToMs;
+                    double _backSubMs = _diag.SolveBackSubTicks * _tickToMs;
+                    long _cholReuse = _diag.CholeskyReuseCount;
                     string lsOrFindT = profLineSearchCalls > 0
                         ? $"LS {_lsMs:F0}ms×{profLineSearchCalls} (avg {_lsTrialAvg:F1}, max {profLineSearchTrialsMax})"
                         : $"FindT {_findTMs:F0}ms";

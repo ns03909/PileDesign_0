@@ -29,6 +29,17 @@
 .PARAMETER Clean
     obj と bin を消してから組み直す。件数が前回と違うときはこれ。
 
+.PARAMETER NoBuild
+    ビルドしない (CI のように、先にソリューションを組んであるとき)。アプリ起動中の確認もしない。
+
+.PARAMETER EnforceMinimum
+    -Filter を付けても件数の下限を検査する (CI は遅いテストを除いて走らせるが、件数は見たい)。
+
+.PARAMETER MaxSkipped
+    実行されなかった (スキップ・結論なし) テストの許容件数。既定 2
+    (アイコンの作り直しと性能の基準。どちらも全体実行では走らせない)。超えたら失敗にする。
+    意図しないスキップ (例題が見つからず Inconclusive になる等) を、緑のまま通さないため。
+
 .EXAMPLE
     powershell -NoProfile -ExecutionPolicy Bypass -File tools/run-tests.ps1
     powershell -NoProfile -ExecutionPolicy Bypass -File tools/run-tests.ps1 -Filter "FullyQualifiedName~PrecastShearQNTests"
@@ -42,7 +53,10 @@
 param(
     [int]$Minimum = 2800,
     [string]$Filter = "",
-    [switch]$Clean
+    [switch]$Clean,
+    [switch]$NoBuild,
+    [switch]$EnforceMinimum,
+    [int]$MaxSkipped = 2
 )
 
 $ErrorActionPreference = "Stop"
@@ -58,7 +72,7 @@ function Fail($message) {
 
 # アプリ起動中は出力先が掴まれていてビルドできない (MSB3021)。
 # 先に見て、分かる形で止める。エラーの山を読ませない。
-$running = Get-Process -Name "PileDesign" -ErrorAction SilentlyContinue
+$running = if ($NoBuild) { $null } else { Get-Process -Name "PileDesign" -ErrorAction SilentlyContinue }
 if ($running) {
     Fail "PileDesign が起動しています (PID $($running.Id -join ', '))。閉じてからやり直してください。"
 }
@@ -74,13 +88,15 @@ if ($Clean) {
 # 本体を先に。テスト側から先に組むと _wpftmp の CS2001 が間欠的に出る。
 # 出力はそのまま流す。native の stderr を 2>&1 すると、Windows PowerShell では
 # NativeCommandError に包まれて、ビルドエラーの代わりに PowerShell の例外が出る。
-Write-Host "本体をビルドしています..." -ForegroundColor Cyan
-& dotnet build $app
-if ($LASTEXITCODE -ne 0) { Fail "本体のビルドに失敗しました。上の error を見てください。" }
+if (-not $NoBuild) {
+    Write-Host "本体をビルドしています..." -ForegroundColor Cyan
+    & dotnet build $app
+    if ($LASTEXITCODE -ne 0) { Fail "本体のビルドに失敗しました。上の error を見てください。" }
 
-Write-Host "テストをビルドしています..." -ForegroundColor Cyan
-& dotnet build $tests
-if ($LASTEXITCODE -ne 0) { Fail "テストのビルドに失敗しました。上の error を見てください。" }
+    Write-Host "テストをビルドしています..." -ForegroundColor Cyan
+    & dotnet build $tests
+    if ($LASTEXITCODE -ne 0) { Fail "テストのビルドに失敗しました。上の error を見てください。" }
+}
 
 Write-Host "テストを実行しています..." -ForegroundColor Cyan
 
@@ -138,6 +154,7 @@ if (-not $counters) { Fail "テストの結果ファイルを読み取れませ�
 $total = [int]$counters.total
 $failed = [int]$counters.failed
 $passed = [int]$counters.passed
+$skipped = $total - [int]$counters.executed + [int]$counters.inconclusive
 
 if ($failed -gt 0) {
     Write-Host ""
@@ -167,7 +184,19 @@ if (Test-Path $strayLog) {
           "`n     拾わずにいると実行が途中で止まります。")
 }
 
-if ($Filter) {
+# 実行されなかったテスト (スキップ・結論なし)。例題が見つからない等で静かに Inconclusive になると、緑のまま通る
+if (-not $Filter -or $EnforceMinimum) {
+    if ($skipped -gt $MaxSkipped) {
+        $trx.TestRun.Results.UnitTestResult |
+            Where-Object { $_.outcome -ne "Passed" -and $_.outcome -ne "Failed" } |
+            Select-Object -First 20 |
+            ForEach-Object { Write-Host ("  " + $_.outcome + " " + $_.testName) -ForegroundColor Yellow }
+        Fail ("実行されなかったテストが $skipped 件あります（許容 $MaxSkipped 件）。" +
+              "`n     例題ファイルが見つからない・前提が満たされない等で、確かめていないまま緑になっています。")
+    }
+}
+
+if ($Filter -and -not $EnforceMinimum) {
     Write-Host ""
     Write-Host "OK: $total 件合格（絞り込み実行のため件数の検査は行いません）" -ForegroundColor Green
     exit 0

@@ -51,6 +51,28 @@ namespace PileDesign.ViewModels
         // クロススレッドで AnalysisResultContentOption を変更したときに CollectionView が例外を出すのを防ぐための同期ロック
         private readonly object _analysisResultContentOptionLock = new();
 
+        /// <summary>
+        /// 解析結果の表示内容の候補を足す (無ければ)。並べ替え (<see cref="EnsureAnalysisResultContentOrder"/>) と同じロックを通す。
+        /// 以前は解析済みの旗のセッターがロックを通らずに足し引きしており、別のスレッドの並べ替えとすれ違って
+        /// 添字外れの例外が出た (2026-10-10 の全体テストで発生)。
+        /// </summary>
+        private void AddAnalysisContentOption(string label)
+        {
+            lock (_analysisResultContentOptionLock)
+            {
+                if (!AnalysisResultContentOption.Contains(label)) AnalysisResultContentOption.Add(label);
+            }
+        }
+
+        /// <summary>解析結果の表示内容の候補を消す (あれば)。<see cref="AddAnalysisContentOption"/> と同じロックを通す。</summary>
+        private void RemoveAnalysisContentOption(string label)
+        {
+            lock (_analysisResultContentOptionLock)
+            {
+                AnalysisResultContentOption.Remove(label);
+            }
+        }
+
         // コンストラクタ //
         /// <summary>
         /// 解析結果コンテンツの正規並び順（水平解析→沈下解析）。
@@ -159,7 +181,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (ArgumentOutOfRangeException)
                 {
-                    // 位置を調べてから動かすまでの間に候補が減った (この lock を通らない書き手がいる。
+                    // 位置を調べてから動かすまでの間に候補が減った (書き手は Add/RemoveAnalysisContentOption で同じ lock を通すが、念のため。
                     // EnsureAnalysisResultContentOrder の説明を参照)。並べ替えはやり直せるので諦める。
                     // 以前はここで例外が外へ出て、Dispatcher の未処理例外になっていた (2026-10-10 の全体テストで発生)
                     return;
