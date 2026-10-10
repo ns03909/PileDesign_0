@@ -1018,28 +1018,23 @@ namespace PileDesign.Models.InputData
         //    return copy;
         //}
         {
-            try
-            {
-                var copy = CloneWithoutSubscribers<PileBodyInput>();
-                copy.PileBodyType = this.PileBodyType;
-                copy._suppressChildSync = true;
-                copy.PileBodySegments = new ObservableCollection<PileBodySegment>(
-                    this.PileBodySegments.Select(segment => segment.DeepCopy())
-                );
-                copy._suppressChildSync = false;
-                copy.PileTop = this.PileTop?.DeepCopy()!;   // 元が null なら null のまま写す
-                if (this.PileTipSettlementPresetParameterNames != null)
-                    copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);
-                else
-                    copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>();
-                return copy;
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "[PileBodyInput.DeepCopy]");
-                // 従来どおり null を返す (戻り値の宣言は null 非許容のまま。呼び出し側は null を想定していない)
-                return null!;
-            }
+            // 複製できなければ例外のまま知らせる (欠けた写しを返さない)。以前は例外を握り潰して null を返しており、
+            // 呼び出し側 (元に戻す操作の控え・履歴の写し・単杭沈下の画面の控え) はそれを杭体の一覧へそのまま入れるので、
+            // 戻したときに杭体が null になって別の場所で落ちた。InputModel.CopyForHistory と同じ方針
+            // (履歴の写しは TryCopyForHistory が受けて、その操作を記録しないで知らせる)
+            var copy = CloneWithoutSubscribers<PileBodyInput>();
+            copy.PileBodyType = this.PileBodyType;
+            copy._suppressChildSync = true;
+            copy.PileBodySegments = new ObservableCollection<PileBodySegment>(
+                this.PileBodySegments.Select(segment => segment.DeepCopy())
+            );
+            copy._suppressChildSync = false;
+            copy.PileTop = this.PileTop?.DeepCopy()!;   // 元が null なら null のまま写す
+            if (this.PileTipSettlementPresetParameterNames != null)
+                copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);
+            else
+                copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>();
+            return copy;
         }
 
         /// <summary>

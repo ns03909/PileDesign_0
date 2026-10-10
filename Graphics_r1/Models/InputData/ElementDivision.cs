@@ -24,6 +24,17 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 解析モデルに土圧合力ばね (根入部と地盤をつなぐ節点とばね) を入れるか。
+        /// 根入部 (SoilEmbedment) と土圧合力ばねの区間 (DoatsuGoryokuBane) の<b>両方</b>があるときだけ入れる。
+        ///
+        /// <para>モデルを組む側 (AnalysisModelling.AddDoatsuGoryokuBane) と剛性を入れる側
+        /// (HorizontalCalculationViewModel.PrepareKmat) が別々に条件を書いており、組む側は両方を見るのに
+        /// 入れる側は区間だけを見ていた。根入部だけが無いとき (群杭沈下の計算例の読込が根入部だけを外す)、
+        /// 節点の無い区間の節点を読んで NullReferenceException になった。条件をここ 1 か所にした。</para>
+        /// </summary>
+        internal bool HasEarthPressureSprings() => SoilEmbedment != null && DoatsuGoryokuBane != null;
+
+        /// <summary>
         /// 土層-杭セットを空にした浅い写し (変更通知の購読者は写さない)。InputModel.CopyForHistory が、
         /// 土層-杭セットを除いて JSON で複製するために使う。<b>元は書き換えない。</b>
         /// 以前は元の SoilPiles を一時的に空へ差し替えて複製しており、複製は Task.Run でも走るので、

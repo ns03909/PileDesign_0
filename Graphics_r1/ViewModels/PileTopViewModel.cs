@@ -597,11 +597,12 @@ namespace PileDesign.ViewModels
         }
 
 
+        // 曲線がまだ無い (キャプテンパイルで杭径が 0 など、諸元を計算していない) ときは null を受け、軸だけを描く
         public void UpdateChartMNSeries(
-            ObservableCollection<double> yieldNs,
-            ObservableCollection<double> yieldMs,
-            ObservableCollection<double> ultimateNs,
-            ObservableCollection<double> ultimateMs)
+            ObservableCollection<double>? yieldNs,
+            ObservableCollection<double>? yieldMs,
+            ObservableCollection<double>? ultimateNs,
+            ObservableCollection<double>? ultimateMs)
         {
             // 計算書出力経路では PileTopWindowInstance が null
             if (PileTopWindowInstance == null) return;
@@ -623,7 +624,7 @@ namespace PileDesign.ViewModels
 
             wpf.Plot.Legend.FontName = Fonts.Detect(yLabel);
 
-            if (yieldMs != null && yieldMs.Count > 0)
+            if (yieldNs != null && yieldMs != null && yieldMs.Count > 0)
             {
                 List<double> xs = [];
                 List<double> ys = [];
@@ -641,7 +642,7 @@ namespace PileDesign.ViewModels
                 scatter.LegendText = legend;
                 wpf.Plot.Legend.FontName = Fonts.Detect(legend);
             }
-            if (ultimateMs != null && ultimateMs.Count > 0)
+            if (ultimateNs != null && ultimateMs != null && ultimateMs.Count > 0)
             {
                 List<double> xs = [];
                 List<double> ys = [];
@@ -674,8 +675,8 @@ namespace PileDesign.ViewModels
         }
 
         public void UpdateChartThetaMSeries(
-            ObservableCollection<double> axialForces,
-            ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> thetasMs)
+            ObservableCollection<double>? axialForces,
+            ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)>? thetasMs)
         {
             // 計算書出力経路 (RenderPileTopViewViaDrawer) では PileTopWindowInstance が null。
             // この場合チャート描画ターゲットが無いので何もせず return する。
@@ -698,7 +699,7 @@ namespace PileDesign.ViewModels
 
             wpf.Plot.Legend.FontName = Fonts.Detect(yLabel);
 
-            if (axialForces != null && axialForces.Count > 0)
+            if (axialForces != null && thetasMs != null && axialForces.Count > 0)
             {
                 for (int i = axialForces.Count - 1; i >= 0; i--)
                 {

@@ -822,13 +822,15 @@ namespace PileDesign.ViewModels
             //
             // 修正: 一旦各ユニークスプリングへの寄与を (kx, ky) ペアで集計し、最後に 1 回だけ SetKe する。
             // これで内部節点は「上層の下半分 + 下層の上半分」の寄与を正しく合算できる。
-            if (InputModel.ElementDivision.DoatsuGoryokuBane != null)
+            // モデルを組む側 (AnalysisModelling.AddDoatsuGoryokuBane) と同じ条件。以前は区間だけを見ており、
+            // 根入部が無くて節点が作られていない区間の節点を読んで落ちた
+            if (InputModel.ElementDivision.HasEarthPressureSprings())
             {
-                var items = InputModel.ElementDivision.DoatsuGoryokuBane.Items;
+                var items = InputModel.ElementDivision.DoatsuGoryokuBane!.Items;
                 // ユニークスプリング → 累積 (kx, ky)
                 var accum = new Dictionary<FEM.HorizontalSoilSpring, (double kx, double ky)>(ReferenceEqualityComparer.Instance);
 
-                void AddContribution(FEM.HorizontalSoilSpring spring, double kx, double ky)
+                void AddContribution(FEM.HorizontalSoilSpring? spring, double kx, double ky)
                 {
                     if (spring == null) return;
                     if (accum.TryGetValue(spring, out var prev))
@@ -841,11 +843,12 @@ namespace PileDesign.ViewModels
                 {
                     var item = items[i];
 
-                    // E3b: case-local な Node/Spring を取得 (主モデルでは item.TopEmbedmentNode などと同一参照)
-                    var topEmb = model.GetDoatsuTopEmbedmentNode(item);
-                    var topSoil = model.GetDoatsuTopSoilNode(item);
-                    var btmEmb = model.GetDoatsuBtmEmbedmentNode(item);
-                    var btmSoil = model.GetDoatsuBtmSoilNode(item);
+                    // E3b: case-local な Node/Spring を取得 (主モデルでは item.TopEmbedmentNode などと同一参照)。
+                    // 上の条件でモデルを組む側が全区間に節点を作っているので null ではない
+                    var topEmb = model.GetDoatsuTopEmbedmentNode(item)!;
+                    var topSoil = model.GetDoatsuTopSoilNode(item)!;
+                    var btmEmb = model.GetDoatsuBtmEmbedmentNode(item)!;
+                    var btmSoil = model.GetDoatsuBtmSoilNode(item)!;
                     var topHs = model.GetDoatsuTopHorizontalSoilSpring(item);
                     var btmHs = model.GetDoatsuBtmHorizontalSoilSpring(item);
 

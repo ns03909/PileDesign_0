@@ -205,10 +205,10 @@ namespace PileDesign.FEM
         // 土圧合力ばねの追加
         private void AddDoatsuGoryokuBane()
         {
-            if (InputModel.ElementDivision.SoilEmbedment == null || InputModel.ElementDivision.DoatsuGoryokuBane == null)
-                return;
+            // 剛性を入れる側 (PrepareKmat) と同じ条件 (ElementDivision.HasEarthPressureSprings の説明を参照)
+            if (!InputModel.ElementDivision.HasEarthPressureSprings()) return;
 
-            var doatsuGoryokuBane = InputModel.ElementDivision.DoatsuGoryokuBane;
+            var doatsuGoryokuBane = InputModel.ElementDivision.DoatsuGoryokuBane!;
 
             // ノード生成・初期化
             (Node embedmentNode, Node soilNode, HorizontalSoilSpring spring) CreateDGBNodesAndSpring(double x, double y, double z)
