@@ -57,25 +57,12 @@ namespace PileDesign.ViewModels
             private set => SetProperty(ref _pileBody, value);
         }
 
-        // 開いた時点の杭体入力の控え。キャンセルで戻すために使う。
-        //
-        // このウィンドウは SoilPiles は DeepCopy を編集するが、杭体入力 (PileBody) は
-        // InputModel.PileBodies の実体をそのまま編集する。控えを取らないと、
-        // 先端径・α・N・杭体記号・非排水率がキャンセルしても残る。
-        // 地盤杭セットを切り替えると PileBody も変わるので、全件控える。
-        private readonly List<PileBodyInput> _prevPileBodies = [];
+        // 解析の実行・結果の反映・開いた時点の控えとキャンセルでの戻しは、画面を持たないサービスに任せる
+        // (Services.SingleSettlementSession の説明を参照)。このビューモデルは選択・グラフ・カーソル・知らせだけを受け持つ
+        private readonly PileDesign.Services.SingleSettlementSession _session;
 
-        // 開いた時点の各杭の単杭沈下の結果の控え。キャンセルで戻すために使う。
-        // 単杭沈下量は解析・グラフの更新のたびに杭 (入力の実体) へ書くので、控えないとキャンセルしても
-        // 変更後の入力で解いた沈下量が残った (入力は戻るのに結果は戻らない)。土層-杭セットの結果は写しにだけ書き、
-        // OK のときにまとめて反映する
-        private readonly List<(PileLayoutDataItem Pile, PileLayoutDataItem.SinglePileSettlementState State)> _prevPileSettlements = [];
-
-        // 非同期の解析 (ExecuteAnalysis) の世代。土層-杭セットごとに、後から始めた解析があれば古い結果は捨てる。
-        // 画面を閉じたら (_closed) 何も反映しない
-        private readonly Dictionary<SoilPile, int> _analysisGenerations = new(ReferenceEqualityComparer.Instance);
+        // 走っている非同期の解析の数 (砂時計のカーソルを戻す時機)
         private int _runningAnalyses;
-        private bool _closed;
 
         // 杭先端閉塞率を使用する工法かどうか
         public bool UsesPileToeEta => SoilPile?.PileConstructionType == "回転貫入杭"
@@ -137,7 +124,7 @@ namespace PileDesign.ViewModels
                 Mouse.OverrideCursor = Cursors.Wait;
                 foreach (int i in indices)
                 {
-                    AnalyzeSoilPileAt(i, warnings);
+                    _session.AnalyzeAt(i, warnings);
                     if (i < SoilPileLampStates.Count) SoilPileLampStates[i].IsOn = false;
                 }
             }
@@ -231,7 +218,7 @@ namespace PileDesign.ViewModels
                 var warnings = new List<string>();
 
                 for (int i = 0; i < SoilPiles.Count; i++)
-                    AnalyzeSoilPileAt(i, warnings);
+                    _session.AnalyzeAt(i, warnings);
 
                 // 現在選択中のSoilPileのVerticalLoadTransferMethodも更新
                 VerticalLoadTransferMethod = new VerticalLoadTransferMethod(InputModel, SoilPile);
@@ -246,87 +233,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 1 つのセットの荷重-沈下曲線を解き、結果を写しと元の両方、そのセットを使う杭の沈下量へ書く。
-        // 全セットの一括解析と、杭先端径の変更で同じ杭体のセットを解き直すときの両方から呼ぶ。
-        private void AnalyzeSoilPileAt(int i, List<string> warnings)
-        {
-            var soilPile = SoilPiles[i];
-            // 各SoilPileに対してVerticalLoadTransferMethodを作成・解析
-            var vtm = new VerticalLoadTransferMethod(InputModel, soilPile);
-            ApplyAnalysisResult(soilPile, vtm, warnings);
-        }
-
-        /// <summary>
-        /// 1 つの土層-杭セットの解析結果を、画面の写しのセットと、そのセットを使う杭の単杭沈下量へ書く。
-        /// <b>元の入力の土層-杭セットへは書かない</b> (OK のときに写しをまとめて反映する。キャンセルで捨てられるように)。
-        /// 以前は元のセットへも直接書いており、キャンセルしても結果だけが変更後のものに残った。
-        /// 杭の単杭沈下量は入力の実体へ書くので、キャンセルでは開いたときの控えへ戻す (<see cref="OnCancel"/>)。
-        /// </summary>
-        private void ApplyAnalysisResult(SoilPile soilPile, VerticalLoadTransferMethod vtm, List<string> warnings)
-        {
-            soilPile.LoadDisplacements = vtm.LoadDisplacements;
-            soilPile.LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
-            soilPile.NodeDisplacements = vtm.Ds;
-            soilPile.NodeReactions = vtm.Rs;
-
-            // 該当するPileLayoutItemの沈下量を計算 (セットの番号は一覧の位置 + 1)
-            int soilPileNo = SoilPiles.IndexOf(soilPile) + 1;
-            if (soilPileNo <= 0) return;
-            foreach (var pileLayoutItem in InputModel.PileLayoutItems)
-            {
-                if (pileLayoutItem.SoilPileAltNo == soilPileNo)
-                    WriteSinglePileSettlements(pileLayoutItem, vtm);
-            }
-            // 曲線の精度が落ちた/範囲外の軸力があった杭を集める (沈下量の取り出しの後で見る)
-            foreach (var w in vtm.Warnings)
-                warnings.Add($"杭体 {soilPileNo}: {w}");
-        }
-
-        /// <summary>
-        /// 杭の単杭沈下量 (常時・レベル1・レベル2) を荷重-沈下曲線から求めて杭に書き、曲線の範囲外だったかも残す。
-        /// 求めた (軸力, 沈下量 [m]) を返す (グラフの点)。引けなかった値は書かない (前回値が残る。理由は Warnings)。
-        ///
-        /// <para>以前は解析後の書き込みとグラフの更新に同じ処理が 2 つあった (写し)。範囲外の印を片方にだけ
-        /// 足すと取り残されるので 1 つにした。</para>
-        /// </summary>
-        internal static (List<(double Force, double Settlement)> VL, List<(double Force, double Settlement)> Level1,
-            List<(double Force, double Settlement)> Level2) WriteSinglePileSettlements(PileLayoutDataItem pile, VerticalLoadTransferMethod vtm)
-        {
-            var vl = new List<(double, double)>();
-            var l1 = new List<(double, double)>();
-            var l2 = new List<(double, double)>();
-
-            double force = pile.AxialForceVL0 + pile.AxialForceVLAdditional;
-            var v = vtm.GetDisplacementForGivenLoad(force, out bool beyond);
-            if (v != null)
-            {
-                pile.SinglePileSettlementVL = v[0];
-                pile.SinglePileSettlementVLBeyondCurve = beyond;
-                vl.Add((force, v[0]));
-            }
-
-            pile.SinglePileSettlementLevel1sBeyondCurve = LevelSettlements(pile.AxialForceLevel1s, pile.SinglePileSettlementLevel1s,
-                pile.SinglePileSettlementLevel1sBeyondCurve, l1);
-            pile.SinglePileSettlementLevel2sBeyondCurve = LevelSettlements(pile.AxialForceLevel2s, pile.SinglePileSettlementLevel2s,
-                pile.SinglePileSettlementLevel2sBeyondCurve, l2);
-            return (vl, l1, l2);
-
-            System.Collections.ObjectModel.ObservableCollection<bool> LevelSettlements(
-                IList<double> forces, IList<double> settlements, IList<bool>? oldFlags, List<(double, double)> points)
-            {
-                var flags = new System.Collections.ObjectModel.ObservableCollection<bool>(
-                    Enumerable.Range(0, forces.Count).Select(j => PileLayoutDataItem.BeyondAt(oldFlags, j)));
-                for (int j = 0; j < forces.Count; j++)
-                {
-                    var sv = vtm.GetDisplacementForGivenLoad(forces[j], out bool b);
-                    if (sv == null || j >= settlements.Count) continue;
-                    settlements[j] = sv[0];
-                    flags[j] = b;
-                    points.Add((forces[j], sv[0]));
-                }
-                return flags;
-            }
-        }
 
         /// <summary>
         /// 荷重-沈下解析で静かに起きたこと (緩めた基準での受理・初期状態の未収束・範囲外の軸力) を
@@ -452,14 +358,8 @@ namespace PileDesign.ViewModels
             // 件数チェックして参照を安全に取得
             SoilPile = SoilPiles.Count > 0 ? SoilPiles[Math.Clamp(SoilPileNo - 1, 0, SoilPiles.Count - 1)] : throw new InvalidOperationException("SoilPiles が空です。");
 
-            // 杭体入力は実体を編集するので、キャンセルで戻せるように先に控える。
-            foreach (var pb in InputModel.PileBodies)
-            {
-                _prevPileBodies.Add(pb?.DeepCopy());
-            }
-            // 各杭の単杭沈下の結果も、開いたときの一括解析より前に控える
-            foreach (var pile in InputModel.PileLayoutItems ?? [])
-                if (pile != null) _prevPileSettlements.Add((pile, pile.CaptureSinglePileSettlement()));
+            // 杭体入力と各杭の単杭沈下の結果は実体を編集するので、開いたときの一括解析より前に控える (サービスが持つ)
+            _session = new PileDesign.Services.SingleSettlementSession(InputModel, () => SoilPiles);
 
             PileBody = InputModel.RequirePileBody(SoilPile);
 
@@ -576,11 +476,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnOk()
         {
-            _closed = true;
-            // 逆操作: ViewModelのSoilPilesをモデルに反映
-            InputModel.ElementDivision.SoilPiles = new ObservableCollection<SoilPile>(
-                SoilPiles.Select(pile => pile.DeepCopy())
-            );
+            // 写しの土層-杭セットを元の入力へまとめて反映する (閉じたあとの解析の結果は反映しない)
+            InputModel.ElementDivision.SoilPiles = _session.CommitCopies();
             // MainWindowViewModelのインスタンスにアクセスしてIsElementSplitをtrueに設定
             if (Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainWindowViewModel)
             {
@@ -600,22 +497,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnCancel()
         {
-            _closed = true;
-            // 各杭の単杭沈下の結果を、開いたときの値へ戻す (解析・グラフの更新で入力の実体へ書いているため)
-            foreach (var (pile, state) in _prevPileSettlements)
-                pile.RestoreSinglePileSettlement(state);
-
-            // SoilPiles は DeepCopy を編集しているので捨てるだけでよい。
-            // 杭体入力は実体を編集しているため、開いた時点の値へ戻す。
-            // 戻す項目は並べない (PileBodyInput.RestoreScalarsFrom の説明を参照)。
-            var bodies = InputModel.PileBodies;
-            if (bodies != null && bodies.Count == _prevPileBodies.Count)
-            {
-                for (int i = 0; i < bodies.Count; i++)
-                {
-                    bodies[i]?.RestoreScalarsFrom(_prevPileBodies[i]);
-                }
-            }
+            // 各杭の単杭沈下の結果と杭体の入力を、開いたときの値へ戻す。写しの土層-杭セットは捨てるだけ
+            _session.Cancel();
 
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
@@ -672,7 +555,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                if (_closed) Serilog.Log.Error(ex, "単杭沈下解析に失敗しました (画面を閉じたあと)");
+                if (_session.IsClosed) Serilog.Log.Error(ex, "単杭沈下解析に失敗しました (画面を閉じたあと)");
                 else MessageService.ShowError("単杭沈下解析に失敗しました。", ex, "単杭沈下解析");
             }
         }
@@ -693,11 +576,8 @@ namespace PileDesign.ViewModels
             if (runner == null && !PileDesign.Services.CheckInputData.ValidateForAnalysis(InputModel, "単杭沈下解析"))
                 return;
 
-            var inputModelRef = InputModel;
             var soilPileRef = SoilPile;
             if (soilPileRef == null) return;
-            int generation = _analysisGenerations.TryGetValue(soilPileRef, out int g) ? g + 1 : 1;
-            _analysisGenerations[soilPileRef] = generation;
 
             _runningAnalyses++;
             try
@@ -705,26 +585,19 @@ namespace PileDesign.ViewModels
                 // 砂時計カーソルを表示 (テストの実行では画面が無い)
                 if (runner == null) Mouse.OverrideCursor = Cursors.Wait;
 
-                // バックグラウンドで解析実行（UIスレッドブロッキング防止）
-                var vtm = runner != null
-                    ? await runner(inputModelRef, soilPileRef)
-                    : await Task.Run(() => new VerticalLoadTransferMethod(inputModelRef, soilPileRef));
-
-                // 閉じたあと・同じセットで後から始めた解析があるときは反映しない
-                if (_closed || _analysisGenerations[soilPileRef] != generation) return;
-
-                var warnings = new List<string>();
-                ApplyAnalysisResult(soilPileRef, vtm, warnings);
+                // 解く対象は開始時点で固定する。古い解析・閉じたあとは反映されない (null)
+                var outcome = await _session.RunAsync(soilPileRef, runner);
+                if (outcome is not { } done) return;
 
                 // 表示中のセットのときだけ、グラフを描き直す
                 if (ReferenceEquals(SoilPile, soilPileRef))
                 {
-                    VerticalLoadTransferMethod = vtm;
+                    VerticalLoadTransferMethod = done.Result;
                     UpdateSettlementChart();
                     UpdateCircumstanceSeries();
                 }
 
-                if (runner == null) ShowAnalysisWarnings(vtm.Warnings);
+                if (runner == null) ShowAnalysisWarnings(done.Result.Warnings);
             }
             finally
             {
@@ -851,7 +724,7 @@ namespace PileDesign.ViewModels
 
                 if (pileLayoutItem.SoilPileAltNo == SoilPileNo)
                 {
-                    var points = WriteSinglePileSettlements(pileLayoutItem, VerticalLoadTransferMethod);
+                    var points = PileDesign.Services.SingleSettlementSession.WriteSinglePileSettlements(pileLayoutItem, VerticalLoadTransferMethod);
                     foreach (var (force, s) in points.VL) { forcesVL.Add(force); settlementsVL.Add(s * 1000); }
                     foreach (var (force, s) in points.Level1) { forcesLevel1.Add(force); settlementsLevel1.Add(s * 1000); }
                     foreach (var (force, s) in points.Level2) { forcesLevel2.Add(force); settlementsLevel2.Add(s * 1000); }

@@ -111,13 +111,18 @@ namespace TestProject1
         [TestMethod]
         public void TheCancel_RestoresThePileBodies()
         {
-            string src = TestSource.Read("Graphics_r1", "ViewModels", "SettlementViewModel.cs");
-            string body = TestSource.MethodBody(src, "private void OnCancel()");
+            // 画面のキャンセルはサービスのキャンセルを呼び、戻す処理はサービスにある (2026-10-10 に移した)
+            string vm = TestSource.Read("Graphics_r1", "ViewModels", "SettlementViewModel.cs");
+            string onCancel = Regex.Replace(TestSource.MethodBody(vm, "private void OnCancel()"), @"//[^\n]*", "");
+            StringAssert.Contains(onCancel, "_session.Cancel()",
+                "沈下ウィンドウのキャンセルが、開いた時点の控えへ戻すサービスを呼んでいません");
+
+            string src = TestSource.Read("Graphics_r1", "Services", "SingleSettlementSession.cs");
+            string body = TestSource.MethodBody(src, "public void Cancel()");
 
             // コメントを落としてから見る。落とさないと、説明文に名前が出ているだけで
             // 通ってしまう (実際にここで空振りした)。
-            body = Regex.Replace(body, @"//[^
-]*", "");
+            body = Regex.Replace(body, @"//[^\n]*", "");
 
             StringAssert.Contains(body, "RestoreScalarsFrom(",
                 "沈下ウィンドウのキャンセルが杭体入力を戻していません。"

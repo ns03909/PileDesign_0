@@ -149,7 +149,7 @@ namespace TestProject1
             pile.AxialForceLevel1s[0] = 500;
             pile.AxialForceLevel1s[1] = 5000;
 
-            var points = PileDesign.ViewModels.SettlementViewModel.WriteSinglePileSettlements(pile, vtm);
+            var points = PileDesign.Services.SingleSettlementSession.WriteSinglePileSettlements(pile, vtm);
 
             Assert.IsTrue(pile.SinglePileSettlementVLBeyondCurve, "常時の軸力が範囲外なのに印がありません");
             Assert.AreEqual(0.005, pile.SinglePileSettlementVL, 1e-9, "値は曲線の端 (下限) を書く");
