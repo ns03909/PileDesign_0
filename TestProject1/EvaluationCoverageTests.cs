@@ -35,7 +35,8 @@ namespace TestProject1
             for (int i = 0; i < 3; i++)
             {
                 var sp = new SoilPile();
-                if (singleDone[i]) sp.LoadDisplacements = [new VerticalLoadTransferMethod.LoadDisplacement()];
+                // 沈下量は曲線を補間して求めるので、結果ありは 2 点以上の曲線
+                if (singleDone[i]) sp.LoadDisplacements = [new VerticalLoadTransferMethod.LoadDisplacement(), new VerticalLoadTransferMethod.LoadDisplacement()];
                 soilPiles.Add(sp);
                 piles.Add(new PileLayoutDataItem { No = i + 1, PileNo = i + 1, X = 5.0 * i, Y = 0, SoilPileAltNo = i + 1, SinglePileSettlementVL = single_m[i] });
             }
@@ -82,6 +83,61 @@ namespace TestProject1
             Assert.AreEqual(1, group.Count);
             Assert.IsTrue(group[0].IsUnavailable);
             StringAssert.Contains(group[0].UnavailableReason, "群杭沈下の結果がありません");
+        }
+
+        /// <summary>
+        /// 結果が欠けた杭が 1 本でもあれば、残りの杭で判定せず「判定不可」にする。欠けた杭の番号を理由に書く。
+        /// 以前は残りの杭 (2 本以上) で OK / NG を出しており、欠けた杭を含む最大の変形角は分からないままだった (2026-10-11 外部レビュー)。
+        /// </summary>
+        [TestMethod]
+        public void AnyMissingPileMakesTheAngleUnavailable()
+        {
+            // 単杭沈下のみ: 3 本のうち 1 本の結果が無い (残る 2 本は差が小さく、以前は OK)
+            var single = SettlementDeformationAngleEvaluator.Evaluate(SettlementModel(false, [true, true, false], [0.001, 0.001, 0]));
+            Assert.AreEqual(1, single.Count);
+            Assert.IsTrue(single[0].IsUnavailable, "結果の無い杭を除いて判定しています");
+            StringAssert.Contains(single[0].UnavailableReason, "No.3");
+
+            // 単杭＋群杭: 単杭沈下はどの杭にも無く、群杭沈下だけが同じ値でそろう (以前は単杭沈下を 0 として足し、変形角 0 で OK)
+            var groupOnly = SettlementModel(true, [false, false, false], [0, 0, 0]);
+            groupOnly.PileGroupSettlement = new PileGroupSettlement();
+            groupOnly.PileGroupSettlement.CaseRecords.Add(new PileDesign.Models.Results.GroupSettlementCaseRecord
+            {
+                LoadCaseName = "VL", LoadingType = "個別十字", IsBeamAware = false,
+                PileSettlements_mm = new() { [1] = 5, [2] = 5, [3] = 5 },
+            });
+            var g = SettlementDeformationAngleEvaluator.Evaluate(groupOnly);
+            Assert.AreEqual(1, g.Count);
+            Assert.IsTrue(g[0].IsUnavailable, "単杭沈下の無い杭を 0 として足して判定しています");
+            StringAssert.Contains(g[0].UnavailableReason, "単杭沈下");
+
+            // 単杭＋群杭: 群杭沈下の記録に無い杭がある
+            var groupMissing = SettlementModel(true, [true, true, true], [0.001, 0.001, 0.001]);
+            groupMissing.PileGroupSettlement = new PileGroupSettlement();
+            groupMissing.PileGroupSettlement.CaseRecords.Add(new PileDesign.Models.Results.GroupSettlementCaseRecord
+            {
+                LoadCaseName = "VL", LoadingType = "個別十字", IsBeamAware = false,
+                PileSettlements_mm = new() { [1] = 5, [2] = 5 },
+            });
+            var m = SettlementDeformationAngleEvaluator.Evaluate(groupMissing);
+            Assert.AreEqual(1, m.Count);
+            Assert.IsTrue(m[0].IsUnavailable, "群杭沈下の記録に無い杭を除いて判定しています");
+            StringAssert.Contains(m[0].UnavailableReason, "No.3");
+        }
+
+        /// <summary>
+        /// 荷重-沈下曲線が 1 点しかない杭は、結果なしとして扱う。沈下量は曲線を補間して求めるので 1 点では求められず、
+        /// 沈下量は前回の値のまま残る。以前は 1 点でも結果ありとし、前回の値で検定していた。
+        /// </summary>
+        [TestMethod]
+        public void AOnePointCurveIsNotAResult()
+        {
+            var input = SettlementModel(false, [true, true, true], [0.001, 0.002, 0.003]);
+            input.ElementDivision.SoilPiles[2].LoadDisplacements = [new VerticalLoadTransferMethod.LoadDisplacement()];
+            Assert.IsFalse(SettlementDeformationAngleEvaluator.HasSinglePileSettlement(input, input.PileLayoutItems[2]));
+            var items = SettlementDeformationAngleEvaluator.Evaluate(input);
+            Assert.AreEqual(1, items.Count);
+            Assert.IsTrue(items[0].IsUnavailable, "1 点の曲線 (前回の沈下量が残っている杭) で判定しています");
         }
 
         /// <summary>

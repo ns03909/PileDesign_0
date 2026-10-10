@@ -78,6 +78,47 @@ namespace PileDesign.Services
             return string.Join("\n", lines);
         }
 
+        /// <summary>釣合いの相対誤差の許容値。線形の連立方程式を解き切っていれば丸め誤差の大きさに収まる。</summary>
+        internal const double EquilibriumTolerance = 1e-6;
+
+        /// <summary>
+        /// 杭頭の荷重と杭のばねの反力の釣合い (鉛直力の合計、杭の重心まわりの X・Y 軸のモーメント) を確かめる。
+        /// 釣り合っていなければ理由を返す。荷重のある杭にばね剛性か梁側の沈下が無いときは確かめられないので null
+        /// (矩形寸法・接合節点の欠けは別に知らせている)。
+        /// </summary>
+        internal static string? CheckEquilibrium(
+            IReadOnlyList<PileLayoutDataItem> piles, IReadOnlyDictionary<int, double> loads,
+            IReadOnlyDictionary<int, double> springK, IReadOnlyDictionary<int, double> beamSettlement)
+        {
+            var rows = new List<(double X, double Y, double P, double R)>();
+            foreach (var pile in piles)
+            {
+                double p = loads.TryGetValue(pile.PileNo, out double v) ? v : 0.0;
+                bool hasK = springK.TryGetValue(pile.PileNo, out double k);
+                bool hasS = beamSettlement.TryGetValue(pile.PileNo, out double s);
+                if (!hasK || !hasS)
+                {
+                    if (p != 0.0) return null;
+                    continue;
+                }
+                rows.Add((pile.Point3D.X, pile.Point3D.Y, p, k * s));
+            }
+            double sumP = rows.Sum(r => r.P);
+            double scaleP = rows.Sum(r => Math.Abs(r.P));
+            if (rows.Count == 0 || scaleP <= 0) return null;
+
+            double cx = rows.Sum(r => r.X) / rows.Count, cy = rows.Sum(r => r.Y) / rows.Count;
+            double arm = Math.Max(1.0, rows.Max(r => Math.Max(Math.Abs(r.X - cx), Math.Abs(r.Y - cy))));
+            double sumR = rows.Sum(r => r.R);
+            double force = Math.Abs(sumR - sumP) / scaleP;
+            double momentX = Math.Abs(rows.Sum(r => (r.Y - cy) * (r.R - r.P))) / (scaleP * arm);
+            double momentY = Math.Abs(rows.Sum(r => (r.X - cx) * (r.R - r.P))) / (scaleP * arm);
+            if (!(force <= EquilibriumTolerance) || !(momentX <= EquilibriumTolerance) || !(momentY <= EquilibriumTolerance))
+                return $"杭頭の荷重と杭の反力が釣り合っていません (荷重の合計 {sumP:F1} kN、反力の合計 {sumR:F1} kN、"
+                    + $"相対誤差 力 {force:E2}・モーメント {Math.Max(momentX, momentY):E2})。";
+            return null;
+        }
+
         /// <summary>
         /// 個別矩形（基礎梁考慮）の反復沈下解析を実行する。
         /// </summary>
@@ -88,6 +129,8 @@ namespace PileDesign.Services
         /// <param name="tol">収束許容誤差 (= max|ΔS| / max|S|)</param>
         /// <param name="kMin">ばね剛性の下限 (kN/m)。Pi/S1 が負・微小になるときの保護</param>
         /// <param name="kMax">ばね剛性の上限 (kN/m)。S1≈0 のときの暴走防止</param>
+        /// <param name="cancellationToken">取り消し。反復ごとに確かめ、取り消されたら OperationCanceledException を投げる
+        /// (以前は渡されておらず、画面で取り消しても始まった反復は最後まで回った)。</param>
         public static IterativeBeamSettlementResult Run(
             InputModel inputModel,
             Dictionary<int, double> initialPpi,
@@ -95,7 +138,8 @@ namespace PileDesign.Services
             int maxIter = 30,
             double tol = 1e-3,
             double kMin = 1e3,
-            double kMax = 1e10)
+            double kMax = 1e10,
+            System.Threading.CancellationToken cancellationToken = default)
         {
             var result = new IterativeBeamSettlementResult();
             var piles = inputModel.PileLayoutItems;
@@ -229,6 +273,7 @@ namespace PileDesign.Services
 
             for (iter = 1; iter <= maxIter; iter++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 // 1. 矩形荷重 (Pi を QA とする) を生成
                 var rectLoads = new ObservableCollection<RectLoad>();
                 foreach (var pile in piles)
@@ -307,9 +352,9 @@ namespace PileDesign.Services
                 anaModel.InitializeNormsqR_onNormsqFint();
                 anaModel.SetR();
 
-                // 線形ソルブ
+                // 線形ソルブ。1 回で解き切るので、非線形の反復向けの変位増分の頭打ちは掛けない (掛けると力が釣り合わない)
                 anaModel.MapOnKtanMat();
-                Solver.SolveDisp(anaModel, 1.0);
+                Solver.SolveDisp(anaModel, 1.0, limitIncrement: false);
 
                 // 梁・ばねの内部力 (節点変位から再計算) を更新
                 foreach (var beam in anaModel.Beams)
@@ -360,6 +405,17 @@ namespace PileDesign.Services
                     break;
                 }
                 residual = maxAbs > 1e-12 ? maxDiff / maxAbs : 0.0;
+
+                // 力とモーメントの釣合い: 杭頭に作用させた荷重 Ppi と、杭のばねの反力 ki·S2 が釣り合っていること。
+                // 沈下の一致 (S1 ≈ S2) だけでは、梁側の解が釣り合っていなくても収束と判定してしまう
+                // (以前は線形ソルブに変位の頭打ちが掛かり、荷重 10 倍でも反力の合計が変わらないまま「収束」していた)
+                string? imbalance = CheckEquilibrium(piles, initialPpi, ki, S2);
+                if (imbalance != null)
+                {
+                    residual = double.NaN;
+                    result.Log.Add($"  iter {iter,3}: [ERROR] {imbalance} 収束とは判定しません。");
+                    break;
+                }
 
                 double avgS1mm = S1.Values.DefaultIfEmpty(0).Average() * 1000.0;
                 double avgS2mm = S2.Values.DefaultIfEmpty(0).Average() * 1000.0;

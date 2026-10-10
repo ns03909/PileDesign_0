@@ -372,6 +372,7 @@ namespace PileDesign.ViewModels
             CaseResults.Clear();
             CalculationLog.Clear();
             _cancellationTokenSource = new CancellationTokenSource();
+            var token = _cancellationTokenSource.Token;
 
             try
             {
@@ -386,15 +387,18 @@ namespace PileDesign.ViewModels
 
                 for (int i = 0; i < total; i++)
                 {
-                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    token.ThrowIfCancellationRequested();
                     var (label, ppi) = cases[i];
                     StatusText = $"反復解析: {label} ({i + 1}/{total})";
 
+                    // 取り消しは計算の中 (反復ごと) まで渡す。取り消されたあとに終わった計算の結果は載せない
+                    // (以前は渡しておらず、最後のケースの計算中に取り消すと、その結果を載せて「解析完了」にしていた)
                     var serviceResult = await Task.Run(() =>
                         IterativeBeamSettlementService.Run(
                             InputModel, ppi, label,
-                            MaxIterations, ConvergenceTolerance, KMin, KMax),
-                        _cancellationTokenSource.Token);
+                            MaxIterations, ConvergenceTolerance, KMin, KMax, token),
+                        token);
+                    token.ThrowIfCancellationRequested();
 
                     foreach (var line in serviceResult.Log)
                         AddLog(line);
@@ -406,6 +410,7 @@ namespace PileDesign.ViewModels
                     CurrentProgress = (i + 1.0) / total * 100;
                 }
 
+                token.ThrowIfCancellationRequested();
                 IsAnalysisExecuted = true;
                 StatusText = "解析完了";
                 Application.Current?.Dispatcher.Invoke(() =>

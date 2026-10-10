@@ -33,6 +33,10 @@ namespace PileDesign.Services
         // 非同期の解析の世代 (土層-杭セットごと)
         private readonly Dictionary<SoilPile, int> _generations = new(ReferenceEqualityComparer.Instance);
 
+        // 結果が今の入力に追いついていないセット (解き直しを始めた・入力の検査で止まった・解析に失敗した)。
+        // 解析が成功して結果を書いたら外す。OK はこれが空のときだけ確定する (<see cref="StaleSetNumbers"/>)
+        private readonly HashSet<SoilPile> _stale = new(ReferenceEqualityComparer.Instance);
+
         /// <param name="input">編集する入力 (杭体・杭配置は実体を編集する)。</param>
         /// <param name="workingSets">画面の写しの土層-杭セットの一覧 (画面の元に戻す操作で差し替わるので、その時点の一覧を返す)。</param>
         public SingleSettlementSession(InputModel input, Func<IList<SoilPile>> workingSets)
@@ -50,6 +54,23 @@ namespace PileDesign.Services
         /// <summary>OK かキャンセルで閉じたか。閉じたあとは解析の結果を反映しない。</summary>
         public bool IsClosed { get; private set; }
 
+        /// <summary>
+        /// セットの結果が今の入力に追いついていない印を付ける。入力を変えて解き直すとき、<b>解き始める前</b>
+        /// (入力の検査より前) に呼ぶ。検査で止まった・解析に失敗した・まだ終わっていないセットは印が残る。
+        /// </summary>
+        public void MarkStale(SoilPile soilPile) => _stale.Add(soilPile);
+
+        /// <summary>
+        /// 結果が今の入力に追いついていないセットの番号 (一覧の位置 + 1、昇順)。空でなければ OK で確定しない
+        /// (以前は解析中・失敗のあとでも OK で古い曲線を確定し、画面は結果を「最新」と記録していた)。
+        /// 元に戻す操作で一覧が差し替わったときは、今の一覧にあるセットだけを数える。
+        /// </summary>
+        public List<int> StaleSetNumbers()
+        {
+            var sets = _workingSets();
+            return [.. Enumerable.Range(0, sets.Count).Where(i => sets[i] != null && _stale.Contains(sets[i])).Select(i => i + 1)];
+        }
+
         /// <summary>1 つの土層-杭セットを解く (同期)。</summary>
         public VerticalLoadTransferMethod Solve(SoilPile soilPile) => new(_input, soilPile);
 
@@ -66,6 +87,7 @@ namespace PileDesign.Services
         /// </summary>
         public void Apply(SoilPile soilPile, VerticalLoadTransferMethod vtm, List<string> warnings)
         {
+            _stale.Remove(soilPile);
             soilPile.LoadDisplacements = vtm.LoadDisplacements;
             soilPile.LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
             soilPile.NodeDisplacements = vtm.Ds;

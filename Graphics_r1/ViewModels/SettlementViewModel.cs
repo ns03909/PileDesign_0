@@ -82,11 +82,10 @@ namespace PileDesign.ViewModels
                     // 以前は表示中のセットの Dp だけを書き換えていたので、同じ杭体の別のセット
                     // (地盤や杭頭の高さが違う杭) は古い径のまま残り、OK でそのまま確定していた。
                     // 同じ杭体のセットすべてへ写し、表示していないセットは曲線を解き直す。
-                    var others = PropagateSettlePileToeDia(valueInMm);
+                    PropagateSettlePileToeDia(valueInMm);
                     OnPropertyChanged(nameof(SettlePileToeDiaM));
                     DrawShapes();
-                    ReanalyzeSoilPiles(others);
-                    _ = ExecuteAnalysis();
+                    ReanalyzeAfterPileBodyChange();
                 }
             }
         }
@@ -111,12 +110,40 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 表示中のセットと同じ杭体を使う、ほかのセットの位置。
+        /// </summary>
+        internal List<int> OtherSetsOfSameBody()
+        {
+            var others = new List<int>();
+            if (SoilPile == null || SoilPiles == null) return others;
+            for (int i = 0; i < SoilPiles.Count; i++)
+            {
+                var sp = SoilPiles[i];
+                if (sp != null && sp.PileBodyNo == SoilPile.PileBodyNo && !ReferenceEquals(sp, SoilPile)) others.Add(i);
+            }
+            return others;
+        }
+
+        /// <summary>
+        /// 杭体の値 (α・n・閉塞率・沈下検討用杭先端径) を変えたあとに、同じ杭体を使う<b>セットすべて</b>を解き直す。
+        /// 以前は表示中のセットだけを解き直しており、同じ杭体で地盤や杭頭の高さが違うセットには変更前の曲線と
+        /// 沈下量が残ったまま OK で確定していた (杭先端径だけはほかのセットも解き直していた)。
+        /// </summary>
+        private void ReanalyzeAfterPileBodyChange()
+        {
+            ReanalyzeSoilPiles(OtherSetsOfSameBody());
+            _ = ExecuteAnalysis();
+        }
+
+        /// <summary>
         /// 指定したセットの荷重-沈下曲線を解き直す (表示中のセットは呼び出し側が解く)。
         /// 曲線が変わったので、利用者が確かめ直せるようランプを消す。
         /// </summary>
         private void ReanalyzeSoilPiles(IReadOnlyCollection<int> indices)
         {
             if (indices.Count == 0) return;
+            // 入力を変えたセットは、解き終えるまで OK で確定しない (検査で止まったら印が残る)
+            foreach (int i in indices) _session.MarkStale(SoilPiles[i]);
             if (!PileDesign.Services.CheckInputData.ValidateForAnalysis(InputModel, "単杭沈下解析")) return;
             var warnings = new List<string>();
             try
@@ -194,9 +221,10 @@ namespace PileDesign.ViewModels
             PileBody = InputModel.RequirePileBody(SoilPile);
             OnPropertyChanged(nameof(UsesPileToeEta));
             OnPropertyChanged(nameof(SettlePileToeDiaM));
-            // 切替先 SoilPile が未初期化なら既定プリセットを適用
-            TryApplyDefaultSettlementPreset();
+            // 切替先 SoilPile が未初期化なら既定プリセットを適用 (杭体の α・n が変わるので、同じ杭体の他のセットも解き直す)
+            bool presetApplied = TryApplyDefaultSettlementPreset();
             AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
+            if (presetApplied) ReanalyzeSoilPiles(OtherSetsOfSameBody());
             _ = ExecuteAnalysis();
             DrawShapes();
             // ユーザーが確認したのでランプを点灯
@@ -437,6 +465,11 @@ namespace PileDesign.ViewModels
 
             PileBody = (SoilPile != null ? InputModel.PileBodyAt(SoilPile.PileBodyNo) : null) ?? PileBody;
 
+            // 曲線・各杭の単杭沈下量・曲線の範囲外の印を、戻した入力から解き直す。以前は入力と曲線だけが戻り、
+            // 各杭の沈下量は編集後の値が残って食い違った。控えに沈下量を持たせると、控えを取った時点で解析が
+            // 終わっていない (入力だけ新しい) ことがあるので、戻した入力から解き直して組をそろえる
+            AnalyzeAllSoilPiles();
+            OnPropertyChanged(nameof(SettlePileToeDiaM));
             DrawShapes();
         }
 
@@ -476,6 +509,22 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnOk()
         {
+            // 結果が入力に追いついていなければ確定しない。以前は解析の完了を待たずに今の曲線を写して閉じ、
+            // あとから終わった解析の結果は捨て、そのうえ結果を「最新」と記録していた (解析に失敗したあとも同じ)
+            if (_runningAnalyses > 0)
+            {
+                MessageService.ShowWarning("単杭沈下の解析が終わっていません。解析が終わってから OK を押してください。", "単杭沈下解析");
+                return;
+            }
+            var stale = _session.StaleSetNumbers();
+            if (stale.Count > 0)
+            {
+                MessageService.ShowWarning(
+                    $"杭セット {string.Join(", ", stale)} の荷重-沈下曲線が今の入力で解けていません (入力の検査で止まったか、解析に失敗しました)。"
+                    + "入力を直して解き直してから OK を押すか、キャンセルしてください。", "単杭沈下解析");
+                return;
+            }
+
             // 写しの土層-杭セットを元の入力へまとめて反映する (閉じたあとの解析の結果は反映しない)
             InputModel.ElementDivision.SoilPiles = _session.CommitCopies();
             // MainWindowViewModelのインスタンスにアクセスしてIsElementSplitをtrueに設定
@@ -572,12 +621,15 @@ namespace PileDesign.ViewModels
         /// <param name="runner">解析の代わり (テスト用)。null なら荷重伝達法を Task.Run で解く。</param>
         internal async Task ExecuteAnalysisCore(Func<InputModel, SoilPile, Task<VerticalLoadTransferMethod>>? runner)
         {
+            var soilPileRef = SoilPile;
+            if (soilPileRef == null) return;
+
+            // 解き終えるまで、このセットの結果は OK で確定しない (検査で止まった・失敗したときは印が残る)
+            _session.MarkStale(soilPileRef);
+
             // 入力データの整合性ゲート
             if (runner == null && !PileDesign.Services.CheckInputData.ValidateForAnalysis(InputModel, "単杭沈下解析"))
                 return;
-
-            var soilPileRef = SoilPile;
-            if (soilPileRef == null) return;
 
             _runningAnalyses++;
             try
@@ -820,8 +872,8 @@ namespace PileDesign.ViewModels
                 else if (textBox.Name == "TextBoxPileTipNonPermeability" && PileDesign.Common.NumericText.TryParse(textBox.Text, out double tipNonPermeability))
                 {
                     PileBody.TipNonPermability = tipNonPermeability;
-                    // 閉塞率変更時に解析実行
-                    _ = ExecuteAnalysis();
+                    // 閉塞率は杭体の値なので、同じ杭体のセットすべてを解き直す
+                    ReanalyzeAfterPileBodyChange();
                     return;
                 }
 
@@ -862,9 +914,9 @@ namespace PileDesign.ViewModels
                     PileBody.SettleAlpha = settleAlpha;
                     ComboBoxPresetSettlementParameters.SelectedIndex = -1;
                     if (SoilPile != null) SoilPile.IsSettlementPresetInitialized = true;
-                    // チャート要素更新と解析実行
+                    // チャート要素更新と解析実行 (α・n は杭体の値なので、同じ杭体のセットすべて)
                     AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
-                    _ = ExecuteAnalysis();
+                    ReanalyzeAfterPileBodyChange();
                     return;
                 }
 
@@ -873,9 +925,9 @@ namespace PileDesign.ViewModels
                     PileBody.SettleN = settleN;
                     ComboBoxPresetSettlementParameters.SelectedIndex = -1;
                     if (SoilPile != null) SoilPile.IsSettlementPresetInitialized = true;
-                    // チャート要素更新と解析実行
+                    // チャート要素更新と解析実行 (α・n は杭体の値なので、同じ杭体のセットすべて)
                     AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
-                    _ = ExecuteAnalysis();
+                    ReanalyzeAfterPileBodyChange();
                     return;
                 }
 
@@ -902,10 +954,10 @@ namespace PileDesign.ViewModels
                     // チャート要素クリアコマンド
                     AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
 
-                    // パラメータ変更時に自動で解析実行
+                    // パラメータ変更時に自動で解析実行 (同じ杭体のセットすべて)
                     if (parameterChanged)
                     {
-                        _ = ExecuteAnalysis();
+                        ReanalyzeAfterPileBodyChange();
                     }
                 }
             }
@@ -963,8 +1015,8 @@ namespace PileDesign.ViewModels
             if (SoilPile == null) return;
             SoilPile.IsSettlementPresetInitialized = true;
             AddComponent(presetBody.SettleAlpha, presetBody.SettleN);
-            // プリセット変更時に自動で解析実行
-            _ = ExecuteAnalysis();
+            // プリセット変更時に自動で解析実行 (α・n は杭体の値なので、同じ杭体のセットすべて)
+            ReanalyzeAfterPileBodyChange();
         }
 
         /// <summary>
@@ -1009,28 +1061,31 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 現在の SoilPile について、未初期化なら杭工法と杭先端土質に応じたプリセットを適用する。
         /// </summary>
-        public void TryApplyDefaultSettlementPreset()
+        /// <returns>杭体の α・n を書き換えたか。</returns>
+        public bool TryApplyDefaultSettlementPreset()
         {
-            if (SoilPile == null) return;
-            if (SoilPile.IsSettlementPresetInitialized) return;
+            if (SoilPile == null) return false;
+            if (SoilPile.IsSettlementPresetInitialized) return false;
 
             var mapped = MapDefaultSettlementPreset(SoilPile.PileConstructionType, SoilPile.PileToeGranularityClass);
             if (!mapped.HasValue)
             {
                 // マッピング不可の場合も初期化済みマークして再試行を抑止
                 SoilPile.IsSettlementPresetInitialized = true;
-                return;
+                return false;
             }
             string name = mapped.Value.Name;
             string soilType = mapped.Value.SoilType;
 
             var pileBody = InputModel.RequirePileBody(SoilPile);
+            bool applied = false;
             foreach (var parameter in pileBody.PileTipSettlementPresetParameters)
             {
                 if (parameter.Name == name && parameter.SoilType == soilType)
                 {
                     pileBody.SettleAlpha = parameter.Alpha;
                     pileBody.SettleN = parameter.N;
+                    applied = true;
 
                     // ComboBox の選択を同期
                     if (ComboBoxPresetSettlementParameters != null && pileBody.PileTipSettlementPresetParameterNames != null)
@@ -1049,6 +1104,7 @@ namespace PileDesign.ViewModels
                 }
             }
             SoilPile.IsSettlementPresetInitialized = true;
+            return applied;
         }
 
 

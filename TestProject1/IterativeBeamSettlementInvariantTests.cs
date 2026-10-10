@@ -266,6 +266,88 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 沈下が 50 mm を超える荷重でも、杭反力の合計が荷重の合計と釣り合い、沈下が荷重に比例すること。
+        /// 以前は線形ソルブに非線形の反復向けの変位の頭打ち (0.05) が掛かり、荷重を 10 倍・100 倍にしても梁側の
+        /// 最大沈下が 50 mm で止まり、反力の合計が変わらないまま「収束」していた (2026-10-11 外部レビュー)。
+        /// 2 倍の検査 (上) は沈下が 50 mm に届かないので捕まえられなかった。
+        /// </summary>
+        [TestMethod]
+        public void LargeLoads_StayInEquilibrium_AndSettleInProportion()
+        {
+            var results = new List<(double Factor, IterativeBeamSettlementResult Result, double Load)>();
+            foreach (double factor in new[] { 1.0, 10.0, 100.0 })
+            {
+                var (model, ppi) = Scene();
+                if (model == null) return;
+                foreach (int key in ppi.Keys.ToList()) ppi[key] *= factor;
+                var r = IterativeBeamSettlementService.Run(model, ppi, "検査", tol: Tol);
+                results.Add((factor, r, ppi.Values.Sum()));
+            }
+
+            foreach (var (factor, r, load) in results)
+            {
+                Assert.IsTrue(r.Converged, $"荷重 {factor} 倍で収束しませんでした");
+                double reaction = r.PileReactions.Values.Sum();
+                Assert.AreEqual(load, reaction, load * 1e-6, $"荷重 {factor} 倍: 杭反力の合計 {reaction:F1} kN が荷重の合計 {load:F1} kN と釣り合っていません");
+            }
+
+            double s1 = results[0].Result.BeamSettlement.Values.Max();
+            double s100 = results[2].Result.BeamSettlement.Values.Max();
+            Assert.IsTrue(s100 > 0.05, $"(前提) 100 倍の荷重で沈下が 50 mm を超えること ({s100 * 1000:F1} mm)");
+            for (int i = 1; i < results.Count; i++)
+            {
+                double s = results[i].Result.BeamSettlement.Values.Max();
+                Assert.AreEqual(s1 * results[i].Factor, s, s1 * results[i].Factor * 2 * Tol,
+                    $"荷重 {results[i].Factor} 倍で梁側の最大沈下が {s * 1000:F2} mm (1 倍の {s1 * 1000:F3} mm の {results[i].Factor} 倍になっていません)");
+            }
+        }
+
+        /// <summary>
+        /// 取り消しは反復の中まで届き、取り消されたあとに終わった計算の結果を「解析完了」として載せない。
+        /// 以前は取り消しを計算へ渡しておらず、始まった反復は最後まで回り、最後のケースの計算中に取り消すと
+        /// その結果を載せて完了にしていた (2026-10-11 外部レビュー)。
+        /// </summary>
+        [TestMethod]
+        public void Cancellation_ReachesTheIterations_AndIsCheckedAfterEachCase()
+        {
+            var (model, ppi) = Scene();
+            if (model == null) return;
+            using var cts = new System.Threading.CancellationTokenSource();
+            cts.Cancel();
+            Assert.ThrowsException<OperationCanceledException>(
+                () => IterativeBeamSettlementService.Run(model, ppi, "検査", tol: Tol, cancellationToken: cts.Token),
+                "取り消したのに反復が回りました");
+
+            string vm = TestSource.Read("Graphics_r1", "ViewModels", "GroupSettlementWithBeamCalculationViewModel.cs");
+            string body = TestSource.MethodBody(vm, "private async Task ExecuteAnalysisAsync()");
+            StringAssert.Contains(body, "KMin, KMax, token)", "取り消しを計算へ渡していません");
+            int awaited = body.IndexOf("await Task.Run(", StringComparison.Ordinal);
+            int checkAfter = body.IndexOf("token.ThrowIfCancellationRequested();", awaited, StringComparison.Ordinal);
+            int add = body.IndexOf("CaseResults.Add(", awaited, StringComparison.Ordinal);
+            Assert.IsTrue(awaited > 0 && checkAfter > awaited && checkAfter < add,
+                "計算が終わってから結果を載せるまでの間に、取り消しを確かめていません");
+            int done = body.IndexOf("IsAnalysisExecuted = true;", StringComparison.Ordinal);
+            Assert.IsTrue(body.LastIndexOf("token.ThrowIfCancellationRequested();", done, StringComparison.Ordinal) > add,
+                "最後のケースのあと、完了にする前に取り消しを確かめていません");
+        }
+
+        /// <summary>釣合いの確かめ: 力・モーメントのどちらがずれても理由を返し、釣り合っていれば null。</summary>
+        [TestMethod]
+        public void TheEquilibriumCheck_CatchesForceAndMomentImbalance()
+        {
+            PileLayoutDataItem Pile(int no, double x) => new() { PileNo = no, X = x, Y = 0 };
+            var piles = new List<PileLayoutDataItem> { Pile(1, 0), Pile(2, 10) };
+            var loads = new Dictionary<int, double> { [1] = 100, [2] = 100 };
+            var k = new Dictionary<int, double> { [1] = 1e4, [2] = 1e4 };
+
+            Assert.IsNull(IterativeBeamSettlementService.CheckEquilibrium(piles, loads, k, new Dictionary<int, double> { [1] = 0.01, [2] = 0.01 }));
+            Assert.IsNotNull(IterativeBeamSettlementService.CheckEquilibrium(piles, loads, k, new Dictionary<int, double> { [1] = 0.005, [2] = 0.005 }),
+                "反力の合計が荷重の半分なのに、釣り合っていると判定しました");
+            Assert.IsNotNull(IterativeBeamSettlementService.CheckEquilibrium(piles, loads, k, new Dictionary<int, double> { [1] = 0.015, [2] = 0.005 }),
+                "合計は合うがモーメントが釣り合っていないのに、釣り合っていると判定しました");
+        }
+
+        /// <summary>
         /// 地盤を硬くしたら沈下は増えないこと。かつ、硬さが効いていること。
         /// </summary>
         [TestMethod]

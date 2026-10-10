@@ -7,8 +7,17 @@ namespace PileDesign.FEM
     // (旧 PileDesign.Cli / PileDesign.Mcp prototype は 2026-05-19 廃止済)
     public class Solver
     {
-        // ソルバ（緩和係数対応版）
-        public static void SolveDisp(AnaModel anaModel, double relaxationFactor = 1.0)
+        /// <summary>
+        /// K Δd = R を解いて変位増分を節点へ書く (緩和係数対応版)。
+        /// </summary>
+        /// <param name="limitIncrement">
+        /// 変位増分の最大値を 0.05 で頭打ちにする (非線形の反復の発散止め。並進 [m] と回転角 [rad] を区別しない)。
+        /// 反復で残差を詰める解析 (水平解析・基礎梁考慮の単杭沈下) のためのもので、<b>1 回で解き切る線形の解析では
+        /// false にすること</b>。頭打ちにすると K Δd = R が成り立たない (力が釣り合わない) 解になる。
+        /// 群杭沈下 (基礎梁あり) は毎回初期状態から 1 回で解くのに頭打ちが掛かっており、沈下が 50 mm を超える荷重で
+        /// 変位が 50 mm で止まり、外力と杭反力が釣り合わないまま「収束」していた (2026-10-11 外部レビュー)。
+        /// </param>
+        public static void SolveDisp(AnaModel anaModel, double relaxationFactor = 1.0, bool limitIncrement = true)
         {
             anaModel.SetForcedDispOnLoadVectorAndStiffnessMatrix(true); // KAA_tanとVectorRを取得
 
@@ -83,7 +92,7 @@ namespace PileDesign.FEM
             // 注意：制限が厳しすぎると収束を妨げる可能性あり
             const double maxDispIncrement = 0.05; // 最大増分 50mm = 0.05m に緩和
             double maxAbsIncrement = incrementalDispVector.AbsoluteMaximum();
-            if (maxAbsIncrement > maxDispIncrement)
+            if (limitIncrement && maxAbsIncrement > maxDispIncrement)
             {
                 double scaleFactor = maxDispIncrement / maxAbsIncrement;
                 incrementalDispVector = incrementalDispVector * scaleFactor;

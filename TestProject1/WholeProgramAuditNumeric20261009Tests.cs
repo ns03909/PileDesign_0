@@ -85,7 +85,7 @@ namespace TestProject1
             var piles = new ObservableCollection<PileLayoutDataItem>();
             for (int i = 0; i < 3; i++)
             {
-                var sp = new SoilPile { LoadDisplacements = [new VerticalLoadTransferMethod.LoadDisplacement()] };
+                var sp = new SoilPile { LoadDisplacements = [new VerticalLoadTransferMethod.LoadDisplacement(), new VerticalLoadTransferMethod.LoadDisplacement()] };
                 soilPiles.Add(sp);
                 piles.Add(new PileLayoutDataItem { No = i + 1, PileNo = i + 1, X = 5.0 * i, Y = 0, SoilPileAltNo = i + 1 });
             }

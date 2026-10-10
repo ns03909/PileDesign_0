@@ -61,10 +61,19 @@ namespace PileDesign.Services
             // 沈下解析を何も実行していなければ対象外 (未実施)
             if (singleByPileNo.Count == 0 && groupRecords.Count == 0) return items;
 
+            // 単杭沈下の結果が無い杭が 1 本でもあれば判定しない。変形角は全杭の組の最大なので、欠けた杭を除いて
+            // 求めた値は最大とは言えない。以前は残りの杭 (2 本以上) で OK / NG を出していた
+            string? singleMissing = singleByPileNo.Count == piles.Count ? null
+                : MissingPiles(piles, singleByPileNo.Keys, "単杭沈下") + "。全杭の結果がそろわないと、最大の変形角を求められません";
+
             if (!includesGroup)
             {
-                var heads = piles.Where(p => singleByPileNo.ContainsKey(p.PileNo))
-                    .Select(p => (p.PileNo, p.Point3D.X, p.Point3D.Y, Uz: singleByPileNo[p.PileNo])).ToList();
+                if (singleMissing != null)
+                {
+                    items.Add(Unavailable("VL", singleMissing));
+                    return items;
+                }
+                var heads = piles.Select(p => (p.PileNo, p.Point3D.X, p.Point3D.Y, Uz: singleByPileNo[p.PileNo])).ToList();
                 AddItem(heads, "VL", "", MissingPiles(piles, singleByPileNo.Keys, "単杭沈下"));
                 return items;
             }
@@ -78,15 +87,26 @@ namespace PileDesign.Services
 
             foreach (var rec in groupRecords)
             {
-                // 単杭沈下 [m] + 群杭沈下 [mm→m]。単杭沈下を実行していない杭は 0 として足す
-                // (沈下量の検定・画面のグラフ「沈下 単杭+群杭」と同じ組み方。以前からこの扱い)
-                var heads = new List<(int PileNo, double X, double Y, double Uz)>();
-                foreach (var pile in piles)
-                {
-                    if (!rec.PileSettlements_mm!.TryGetValue(pile.PileNo, out double group_mm)) continue;
-                    heads.Add((pile.PileNo, pile.Point3D.X, pile.Point3D.Y, pile.SinglePileSettlementVL + group_mm * 1e-3));
-                }
                 string caseName = string.IsNullOrEmpty(rec.LoadCaseName) ? "群杭沈下" : rec.LoadCaseName;
+
+                // 単杭沈下 [m] + 群杭沈下 [mm→m]。どちらかが欠けた杭があれば判定しない。
+                // 以前は単杭沈下を実行していない杭を 0 として足し (単杭沈下が無く群杭沈下だけがそろうと変形角 0 で OK)、
+                // 群杭沈下の記録に無い杭は黙って除いていた。沈下量の検定 (PileSettlementEvaluator) は単杭沈下が無い杭を
+                // 判定不能にしており、それとも食い違っていた
+                if (singleMissing != null)
+                {
+                    items.Add(Unavailable(caseName, singleMissing));
+                    continue;
+                }
+                var groupMissing = piles.Where(p => !rec.PileSettlements_mm!.ContainsKey(p.PileNo)).ToList();
+                if (groupMissing.Count > 0)
+                {
+                    items.Add(Unavailable(caseName,
+                        MissingPiles(piles, rec.PileSettlements_mm!.Keys, "群杭沈下") + "。群杭沈下解析をやり直してください"));
+                    continue;
+                }
+                var heads = piles.Select(pile => (pile.PileNo, pile.Point3D.X, pile.Point3D.Y,
+                    Uz: singleByPileNo[pile.PileNo] + rec.PileSettlements_mm![pile.PileNo] * 1e-3)).ToList();
                 string typeName = string.IsNullOrEmpty(rec.LoadingType) ? "" : $"（{PileGroupSettlement.LoadingTypeDisplayName(rec.LoadingType)}）";
                 // 旧形式から復元した結果は、どの解析で得た値か確かめられない。収束した結果と同じには判定しない
                 if (rec.IsConvergenceUnknown)
@@ -157,10 +177,14 @@ namespace PileDesign.Services
         /// 杭の単杭沈下解析の結果があるか。単杭沈下量 (<see cref="PileLayoutDataItem.SinglePileSettlementVL"/>) は
         /// 解析していなくても 0 を持つので、0 と「未実施」を区別できない。土層-杭セットの荷重-沈下曲線の有無で見る
         /// (保存・読込でも残る)。
+        ///
+        /// <para>曲線は<b>2 点以上</b>要る。沈下量は曲線を補間して求めるので、1 点では求められず
+        /// (VerticalLoadTransferMethod.GetDisplacementForGivenLoad が null を返し)、沈下量は前回の値のまま残る。
+        /// 以前は 1 点でも「結果あり」とし、前回の値で検定していた。</para>
         /// </summary>
         internal static bool HasSinglePileSettlement(InputModel inputModel, PileLayoutDataItem pile)
         {
-            return (pile.SoilPileAt(inputModel)?.LoadDisplacements?.Count ?? 0) > 0;
+            return (pile.SoilPileAt(inputModel)?.LoadDisplacements?.Count ?? 0) >= 2;
         }
 
         private static string MissingPiles(List<PileLayoutDataItem> piles, IEnumerable<int> withResult, string what)
