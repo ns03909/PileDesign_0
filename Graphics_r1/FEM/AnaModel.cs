@@ -280,6 +280,20 @@ namespace PileDesign.FEM
             if (Math.Abs(c.X - x) < 1e-9 && Math.Abs(c.Y - y) < 1e-9 && Math.Abs(c.Z - z) < 1e-9) return false;
             actionNode.SetNodeInfo(actionNode.Name, x, y, z);
             SetSlaveNodes();
+            // 剛体連結の slave 以外にも、作用点を直接 master に持つ節点がある (杭頭節点、剛床連結の
+            // ConnectionNode / InputNode / FoundationNode)。どれも腕は「節点 − 作用点」なので作り直す。
+            // 以前は剛体連結の slave だけを作り直し、これらは作ったときの作用点からの腕のまま残っていた。
+            // 杭頭とキャップ節点を結ぶ拘束ばねが偽のねじり剛性になり、偏心のねじれがほぼ止まっていた
+            foreach (var node in Nodes)
+            {
+                if (node == null || ReferenceEquals(node, actionNode)) continue;
+                if (!node.MasterNodes.Any(m => ReferenceEquals(m, actionNode))) continue;
+                var arm = node.Coord - actionNode.Coord;
+                node.SetArmVector(0, arm);
+                node.SetArmVector(1, arm);
+                node.SetArmVector(2, arm);
+                node.SetTransferMatrix();
+            }
             BuildDofsAndChains();
             return true;
         }
@@ -361,7 +375,7 @@ namespace PileDesign.FEM
                 var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"杭節点-{pileNo}-0");
                 if (pileHeadNode == null) continue;
 
-                // Uz の master-slave を解放 (PileNode.Uz → CapNode.Uz の連鎖を切る)
+                // Uz の master-slave を解放 (PileNode.Uz → AP の連鎖を切る)
                 pileHeadNode.SetMasterNode((int)Dof.Uz, null);
 
                 // Uz の境界条件を free にする (新たに方程式番号を付与するため)

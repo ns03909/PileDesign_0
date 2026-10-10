@@ -48,7 +48,19 @@ namespace PileDesign.ViewModels
             int skippedNoCurve = 0;
             int successCount = 0;
 
-            // SoilPileをPileBodyNoでキャッシュ（同じPileBodyNoを持つ最初のSoilPileを使用）
+            // 要素が属する杭。断面は杭自身の土層-杭セットから、軸力は杭自身の値から引く
+            // (要素の剛性 (AnalysisModelling) と検定 (EvaluationService.SoilPileForBeam) も杭自身のセットを使う)。
+            // 以前は杭体番号ごとに最初のセット・最初の杭で代表しており、同じ杭体を地層の違う地盤に置くと、
+            // 区間の番号の振り方が違うため別の区間の M-φ が付いた (範囲外なら曲線が付かず線形のまま)
+            var pileByBeam = new Dictionary<Beam, PileLayoutDataItem>(ReferenceEqualityComparer.Instance);
+            foreach (var p in InputModel.PileLayoutItems ?? [])
+            {
+                if (p == null) continue;
+                foreach (var b in model.GetPileBeams(p))
+                    if (b != null) pileByBeam.TryAdd(b, p);
+            }
+
+            // 杭が特定できない要素のための代表 (同じPileBodyNoを持つ最初のSoilPile)
             var soilPileByPileBodyNo = new Dictionary<int, SoilPile>();
             if (InputModel.ElementDivision?.SoilPiles != null)
             {
@@ -83,8 +95,10 @@ namespace PileDesign.ViewModels
                     continue;
                 }
 
-                // SoilPileを取得（PileBodyNoで検索）
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile))
+                // SoilPileを取得（要素が属する杭のセット。杭が特定できなければ PileBodyNo で検索）
+                pileByBeam.TryGetValue(beam, out var ownerPile);
+                var soilPile = ownerPile?.SoilPileAt(InputModel);
+                if (soilPile == null && !soilPileByPileBodyNo.TryGetValue(pb, out soilPile))
                 {
                     skippedNoSoilPile++;
                     continue;
@@ -114,7 +128,8 @@ namespace PileDesign.ViewModels
                 // (per-step の SetupMPhiByCurrentAxialForMiddleBeam がステップごとに再解決するため、
                 //  ここでの値は step 0 の K 行列構築時に効く)
                 double axialN_kN = 0.0;
-                if (pileByPileBodyNo.TryGetValue(pb, out var pile))
+                var pile = ownerPile ?? (pileByPileBodyNo.TryGetValue(pb, out var firstPile) ? firstPile : null);
+                if (pile != null)
                 {
                     try
                     {
@@ -584,7 +599,7 @@ namespace PileDesign.ViewModels
         {
             if (model == null) return;
 
-            // SoilPileをPileBodyNoでキャッシュ（初期M-φ設定と同じマッチ済みセグメントを使用）
+            // 杭が自身のセットを引けないときの代表 (PileBodyNo ごとに最初の SoilPile)
             var soilPileByPileBodyNo = new Dictionary<int, SoilPile>();
             if (InputModel.ElementDivision?.SoilPiles != null)
             {
@@ -619,8 +634,10 @@ namespace PileDesign.ViewModels
                 // M-φ が 24% 程度過小評価される単位バグがあった (検証: PileSectionMPhiUnitTests)。
                 double axialN_kN = model.GetAxialForce(pile);
 
+                // 断面は杭自身の土層-杭セットから引く (ケース開始時の SetupMPhiFromPileSectionForLoadCase と同じ)
                 int pb = pile.PileBodyNo;
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) continue;
+                var soilPile = pile.SoilPileAt(InputModel);
+                if (soilPile == null && !soilPileByPileBodyNo.TryGetValue(pb, out soilPile)) continue;
 
                 foreach (var beam in model.GetPileBeams(pile))
                 {

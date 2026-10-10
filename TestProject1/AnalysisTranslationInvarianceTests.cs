@@ -17,12 +17,17 @@ namespace TestProject1
     /// 作用点や剛体の中心を原点基準で決めている、座標の一部 (通り心・基礎梁の節点) だけをずらし忘れた計算がある、
     /// といった誤りを、正解の値を用意せずに捕まえる。</para>
     ///
-    /// <para>座標の丸めの違いで非線形の反復の経路がわずかに変わりうるので、検定比は相対 1e-4 まで許す。</para>
+    /// <para>座標の丸めの違いで非線形の反復の経路がわずかに変わりうるので、検定比は相対 1e-3 まで許す。
+    /// 収束の許容は残差の二乗比 1e-6 (力の比で 1e-3) なので、収束した解どうしもこの程度は違いうる。
+    /// 2026-10-09 に杭頭の転倒の腕を直したところ (ロッキングが柔らかくなり反復が増えた)、ExampleK8 で 2e-4〜8e-4 の差が出た。
+    /// 収束の許容を 1e-12 に締めると 4 例題とも 1e-4 の内に収まったので、座標への依存ではなく反復の揺らぎ。</para>
     /// </summary>
     [TestClass]
     public class AnalysisTranslationInvarianceTests
     {
         private const double Dx = 37.5, Dy = -12.25;
+        /// <summary>検定比の相対の許容 (収束の許容の力の比 1e-3 に合わせる。上の説明を参照)。</summary>
+        private const double Tol = 1e-3;
 
         /// <summary>
         /// 平面の座標を持つ入力をすべてずらす。同じ物は 1 回だけ。
@@ -107,15 +112,15 @@ namespace TestProject1
                 if (!after.TryGetValue(key, out var r))
                 {
                     bool sameValueElsewhere = after.Any(a => WithoutTarget(a.Key) == WithoutTarget(key)
-                        && Math.Abs(a.Value - ratio) <= 1e-4 * Math.Max(Math.Abs(ratio), 1e-3));
+                        && Math.Abs(a.Value - ratio) <= Tol * Math.Max(Math.Abs(ratio), 1e-3));
                     if (!sameValueElsewhere) problems.Add($"平行移動すると無くなった: {key}");
                     continue;
                 }
-                if (!(Math.Abs(r - ratio) <= 1e-4 * Math.Max(Math.Abs(ratio), 1e-3)))
+                if (!(Math.Abs(r - ratio) <= Tol * Math.Max(Math.Abs(ratio), 1e-3)))
                     problems.Add($"{key}: 検定比 {ratio:F6} → {r:F6}");
             }
             if (original.Governing is { } g && moved.Governing is { } h && Identity(g) != Identity(h)
-                && Math.Abs((g.Ratio) - (h.Ratio)) > 1e-4 * Math.Abs(g.Ratio))
+                && Math.Abs((g.Ratio) - (h.Ratio)) > Tol * Math.Abs(g.Ratio))
                 problems.Add($"支配ケース: {Identity(g)} → {Identity(h)}");
 
             Assert.AreEqual(0, problems.Count,

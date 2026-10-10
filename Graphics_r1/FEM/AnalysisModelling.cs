@@ -692,7 +692,7 @@ namespace PileDesign.FEM
                         PileBodyNo = pile.PileBodyNo,
                         TieUx = true,
                         TieUy = true,
-                        TieUz = false,  // Uz は master-slave チェーン（PileNode→CapNode→AP）で厳密拘束
+                        TieUz = false,  // Uz は master-slave（PileNode→AP。CapNode と同じ写像）で厳密拘束
                         TieRz = true,
                         Kbig = FemConstants.KbigRotation  // CapNode-PileNode間のペナルティ剛性（Ux/Uy用、Uzはmaster-slaveで不要）
                     };
@@ -1470,22 +1470,22 @@ namespace PileDesign.FEM
 
             var actionPoint = RigidBodies[0].MasterNode;
 
-            // Uz を CapNode の slave にする。ResolvedDofMap のチェーン解決により
-            // PileNode.Uz → CapNode.Uz → AP.Uz + AP.Rx×ΔY - AP.Ry×ΔX と解決される。
+            // Uz も AP の slave にする: PileNode.Uz = AP.Uz + AP.Rx×ΔY - AP.Ry×ΔX (CapNode.Uz と同じ)。
+            // 以前は Uz の master を CapNode にしていた。腕 (SlaveArm) は 1 つのベクトルで、Ux/Uy 用に
+            // AP からの腕 (ΔX, ΔY) を持たせるので、CapNode の写像 (転倒の項を含む) に同じ腕の項をもう一度足し、
+            // 転倒の腕を 2 倍に数えていた (杭の軸力が転倒モーメントの半分しか受けず、ロッキング剛性が 4 倍)。
             // Rx, Ry は free（M-θ 用）。
             pileHeadNode.SetBoundary(new Boundary(true, true, true, false, false, true));
             pileHeadNode.SetMasterNode(0, actionPoint); // Ux → AP
             pileHeadNode.SetMasterNode(1, actionPoint); // Uy → AP
-            pileHeadNode.SetMasterNode(2, capNode);     // Uz → CapNode（チェーン→AP）
+            pileHeadNode.SetMasterNode(2, actionPoint); // Uz → AP
             pileHeadNode.SetMasterNode(5, actionPoint); // Rz → AP
             // Rx, Ry は free（M-θ 用）
 
             var armToAP = pileHeadNode.Coord - actionPoint.Coord;
             pileHeadNode.SetArmVector(0, armToAP);
             pileHeadNode.SetArmVector(1, armToAP);
-            // Uz の arm は CapNode→AP 間の距離（PileNode と CapNode は co-located なので同一）
-            var armCapToAP = capNode.Coord - actionPoint.Coord;
-            pileHeadNode.SetArmVector(2, armCapToAP);
+            pileHeadNode.SetArmVector(2, armToAP);
             pileHeadNode.SetTransferMatrix();
         }
 

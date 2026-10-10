@@ -53,8 +53,10 @@ namespace PileDesign.Services
             string? beyondReason = beyondCurve.Count == 0 ? null
                 : $"単杭沈下量が荷重-沈下曲線の範囲外 (曲線の端の値 = 下限) の杭があり、変形角を求められません: 杭No.{string.Join(", ", beyondCurve)}";
 
+            // 常時 (VL) の記録だけを使う (沈下量の検定 PileSettlementEvaluator と同じ)。この検定は常時・使用限界。
+            // 以前は基礎梁ありで L1/L2 も解いた記録 ("L1-1: …") まで常時の限界で判定し、根拠のない NG を出していた
             var groupRecords = inputModel.PileGroupSettlement?.CaseRecords?
-                .Where(r => r?.PileSettlements_mm != null && r.PileSettlements_mm.Count > 0).ToList() ?? [];
+                .Where(r => r?.PileSettlements_mm != null && r.PileSettlements_mm.Count > 0 && r.IsLongTerm).ToList() ?? [];
 
             // 沈下解析を何も実行していなければ対象外 (未実施)
             if (singleByPileNo.Count == 0 && groupRecords.Count == 0) return items;

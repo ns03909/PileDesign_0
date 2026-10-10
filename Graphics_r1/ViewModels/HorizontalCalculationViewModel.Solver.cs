@@ -409,8 +409,10 @@ namespace PileDesign.ViewModels
                         if (resetCumulative) sn.SetCumulativeForcedDisp(zero);
                     }
                 }
+                // 区間が 1 つでも根入部の節点とばねは作られる (AnalysisModelling)。以前は > 1 で、根入れが 1 層だと
+                // 地盤変位を与えず、根入部の地盤節点が 0 のまま基礎の動きに抵抗していた
                 if (InputModel.ElementDivision.DoatsuGoryokuBane != null &&
-                    InputModel.ElementDivision.DoatsuGoryokuBane.Items.Count > 1 &&
+                    InputModel.ElementDivision.DoatsuGoryokuBane.Items.Count > 0 &&
                     InputModel.ElementDivision.SoilEmbedment != null)
                 {
                     for (int i = 0; i < InputModel.ElementDivision.SoilEmbedment.ZDataItems.Count; i++)
@@ -460,8 +462,10 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            // 区間が 1 つでも根入部の地盤節点に地盤変位を与える (以前は > 1 で、根入れが 1 層だと与えていなかった)
             if (InputModel.ElementDivision.DoatsuGoryokuBane != null &&
-                InputModel.ElementDivision.DoatsuGoryokuBane.Items.Count > 1)
+                InputModel.ElementDivision.DoatsuGoryokuBane.Items.Count > 0 &&
+                InputModel.ElementDivision.SoilEmbedment != null)
             {
                 for (int i = 0; i < InputModel.ElementDivision.SoilEmbedment.ZDataItems.Count; i++)
                 {
