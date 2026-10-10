@@ -34,7 +34,7 @@ namespace TestProject1
         /// <summary>組み立てを許す場所 (相対パスの接頭辞)。</summary>
         private static readonly string[] Allowed =
         [
-            "Models/InputData/PileSection.cs",                              // 杭体のファクトリ CreateSectionCalculator
+            "Models/InputData/PileSection.SectionCalculator.cs",            // 杭体のファクトリ CreateSectionCalculator
             "Models/InputData/PileTop.cs",                                  // 杭頭部 (パイルキャップのコンクリートで組む)
             "Models/InputData/AbstractPileSection.cs",                      // 断面クラス自身
             "Models/InputData/InsituReinforcedConcreteSection.cs",

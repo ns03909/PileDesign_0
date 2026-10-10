@@ -25,7 +25,8 @@ namespace TestProject1
         /// <summary>定義そのものと、レベル別の入口を持つファイル。</summary>
         private static readonly string[] AllowedFiles =
         {
-            "PileSection.cs",        // 定義と GetFactoredDamageNM / GetQNCurvesForLevel
+            "PileSection.cs",        // 定義 (2026-10-10 に責務ごとのファイルへ分けた)
+            "PileSection.Curves.cs", // GetFactoredDamageNM / GetQNCurvesForLevel
             "PrecastPileSection.cs", // 断面側の組み立て
             // 杭頭部の断面はレベル別の曲線を持たない (FactoredDamageNMLevel1 = FactoredDamageNM)
             // ので、レベル抜きで読んでも曲線は変わらない。

@@ -48,7 +48,7 @@ namespace TestProject1
         /// <summary><c>PileSection.GetMPhiCacheKey</c> が並べている諸元名。</summary>
         private static System.Collections.Generic.HashSet<string> PropertiesOfMPhiKey()
         {
-            string src = TestSource.Read("Graphics_r1", "Models", "InputData", "PileSection.cs");
+            string src = TestSource.Read("Graphics_r1", "Models", "InputData", "PileSection.MomentCurvature.cs");
             string body = TestSource.MethodBody(src, "string GetMPhiCacheKey(double");
 
             // 文字列補間の {Xxx} を拾う。軸力とオプション署名は断面の諸元ではない
