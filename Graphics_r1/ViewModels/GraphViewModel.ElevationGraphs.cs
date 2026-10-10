@@ -38,6 +38,8 @@ namespace PileDesign.ViewModels
             // 限界状態表示が有効かどうか
             bool showLimitState = SelectedLimitState != "なし" &&
                 (forceType == "M" || forceType == "My" || forceType == "Mz" || forceType == "F" || forceType == "Fy" || forceType == "Fz");
+            // せん断の限界線の M/(Q·d) は検定と同じく、杭・荷重ケースごとの最大断面力から求める (描くときに 1 度だけ集める)
+            Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)>? maxForcesByPileCase = null;
 
             foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
             {
@@ -143,13 +145,14 @@ namespace PileDesign.ViewModels
                                     var result = beam.GetBeamResult(AnaModel, loadCase, loadCombination, isLiquefaction);
                                     if (result?.CumulativeForce == null) continue;
 
-                                    // 限界状態は設計軸力 (ケース別の入力地震時軸力) で評価する。
+                                    // 限界状態は検定と同じ軸力で評価する (EvaluationService.ResolveCheckAxialForce。
+                                    // 「入力値＋応力解析結果」では杭頭の要素の軸力を足す)。
                                     // 以前は要素端力の平均 (Fxi + Fxj)/2 を使っていたが、梁要素の端力は
                                     // 軸方向で逆対称 (Fxj = -Fxi) なので恒等的に 0 になり、常に N=0 の
-                                    // 耐力で限界線を描いていた。断面照査 (EvaluationWindowViewModel) と
-                                    // 同じ軸力を使い、グラフと判定が食い違わないようにする。
-                                    double axialForceN = pileLayoutDataItem.GetDesignAxialForce(
-                                        loadCase.No, loadCase.Level);
+                                    // 耐力で限界線を描いていた。その後は入力の軸力だけを使っており、
+                                    // 「入力値＋応力解析結果」で検定と食い違っていた。
+                                    double axialForceN = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level,
+                                        EvaluationService.PileHeadBeam(pileLayoutDataItem)?.GetBeamResult(AnaModel, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi).N;
 
                                     // 杭断面を取得（SoilPile.PileBodySegmentsを使用）
                                     int segmentIndex = beam.SegmentIndex ?? 0;
@@ -162,15 +165,23 @@ namespace PileDesign.ViewModels
                                     double limitValue;
                                     if (forceType == "M" || forceType == "My" || forceType == "Mz")
                                     {
-                                        var (nValues, mValues) = GetLimitStateNMCurve(pileSection, SelectedLimitState);
+                                        var (nValues, mValues) = GetLimitStateNMCurve(pileSection, SelectedLimitState, loadCase.Level);
                                         if (nValues == null || mValues == null || nValues.Count == 0) continue;
                                         limitValue = InterpolateLimitValue(nValues, mValues, axialForceN);
                                     }
                                     else // F, Fy, Fz
                                     {
-                                        var (nValues, qValues) = GetLimitStateNQCurve(pileSection, SelectedLimitState);
+                                        // M/(Q·d) と設計用せん断力の割増は検定と同じ (EvaluationService.EvaluatePileSectionShear)。
+                                        // 以前は画面のスライダーの M/(Q·d) で描き、割増も見ていなかった。
+                                        // 割増は検定では応答に掛けるので、図では限界値を割増で割って描く (比は検定と同じ)
+                                        maxForcesByPileCase ??= EvaluationService.BuildMaxForcesByPileCase(InputModel);
+                                        var (monQd, _) = EvaluationService.ResolveMonQd(
+                                            pileLayoutDataItem, EvaluationService.CaseKeyOf(loadCase), pileSection, maxForcesByPileCase);
+                                        var (nValues, qValues) = GetLimitStateNQCurve(pileSection, SelectedLimitState, loadCase.Level, Math.Round(monQd, 3));
                                         if (nValues == null || qValues == null || nValues.Count == 0) continue;
-                                        limitValue = InterpolateLimitValue(nValues, qValues, axialForceN);
+                                        double magnification = SelectedLimitState.Contains("損傷限界", StringComparison.Ordinal)
+                                            ? pileSection.ShearDesignMagnification : 1.0;
+                                        limitValue = InterpolateLimitValue(nValues, qValues, axialForceN) / magnification;
                                     }
 
                                     if (double.IsNaN(limitValue) || limitValue <= 0) continue;

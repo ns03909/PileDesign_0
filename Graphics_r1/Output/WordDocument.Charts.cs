@@ -1277,10 +1277,12 @@ namespace PileDesign.Output
                 var pileSection = soilPile.PileBodySegments[segIdx].PileSection;
                 if (pileSection == null) continue;
 
-                // 限界状態は設計軸力 (ケース別の入力地震時軸力) で評価する。
-                // 以前は要素端力の平均 (Fxi + Fxj)/2 を使っていたが、梁要素の端力は軸方向で
+                // 限界状態は検定と同じ軸力で評価する (EvaluationService.ResolveCheckAxialForce。
+                // 「入力値＋応力解析結果」では杭頭の要素の軸力を足す。以前は入力の軸力だけで、このモードでは検定と食い違った)。
+                // さらに以前は要素端力の平均 (Fxi + Fxj)/2 を使っていたが、梁要素の端力は軸方向で
                 // 逆対称 (Fxj = -Fxi) なので恒等的に 0 になり、常に N=0 の耐力を出力していた。
-                double axialN = pli.GetDesignAxialForce(lc.No, lc.Level);
+                double axialN = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, lc.No, lc.Level,
+                    ViewModels.EvaluationService.PileHeadBeam(pli) is { } head ? GetBeamResultCached(head, lc, comb, isLiq)?.CumulativeForce?.Fxi : null).N;
 
                 // モーメント限界。損傷限界はその荷重レベルの曲線を使う
                 // (レベル1 は β2 を乗じない)。従来はレベル2 固定で、レベル1 の重ね線が

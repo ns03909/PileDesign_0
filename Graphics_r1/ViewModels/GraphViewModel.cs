@@ -1290,7 +1290,10 @@ namespace PileDesign.ViewModels
                                         }
                                     }
 
-                                    // 入力値＋応力解析結果モード: Fxi（圧縮負）を符号反転して加算
+                                    // 結果を持つ要素が 1 本も無ければ点を打たない。以前は M = double.MinValue の点が入り、軸が壊れた
+                                    // (計算書の図・杭頭の図は以前から飛ばしている)
+                                    if (moment == double.MinValue) continue;
+
                                     // 点の軸力は検定と同じ (入力値＋応力解析結果では解析と同じく杭頭の要素の軸力を足す。以前は最大モーメントの要素の Fxi だった)
                                     double plotAxialForce = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level,
                                         EvaluationService.PileHeadBeam(pileLayoutDataItem)?.GetBeamResult(AnaModel, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi).N;
@@ -1644,6 +1647,9 @@ namespace PileDesign.ViewModels
                                             }
                                         }
                                     }
+
+                                    // 結果を持つ要素が 1 本も無ければ点を打たない (N-M 図と同じ。以前は Q = double.MinValue の点が入った)
+                                    if (shear == double.MinValue) continue;
 
                                     // 横軸は NMINT と同じ扱いにする。同じ杭・同じケースなのに
                                     // 図によって軸力が違うと、2 つの図を並べて読めない。
@@ -2066,12 +2072,12 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 選択された限界状態に対応するNM曲線を取得
         /// </summary>
-        private (List<double> N, List<double> M) GetLimitStateNMCurve(PileSection pileSection, string limitState)
+        /// <param name="level">描く荷重ケースの地震動レベル。損傷限界は検定・計算書と同じく、そのレベルの曲線を使う
+        /// (以前は耐震グレードから決めており、グレード S でレベル1 のケースにレベル2 の曲線を描いていた)。</param>
+        private static (List<double> N, List<double> M) GetLimitStateNMCurve(PileSection pileSection, string limitState, int level)
         {
-            // 損傷限界はレベルで低減係数が変わる。グレードA は損傷限界をレベル1 で、
-            // グレードS はレベル2 で照査するので、描く曲線もそのレベルに合わせる
-            // (計算書・検定と同じ規則)。
-            var factoredDamage = pileSection.GetFactoredDamageNM(DamageLevelForGrade);
+            // 損傷限界はレベルで低減係数が変わる (レベル1 は β2 を乗じない)
+            var factoredDamage = pileSection.GetFactoredDamageNM(level == 1 ? 1 : 2);
             return limitState switch
             {
                 "低減前使用限界状態" => (pileSection.UnfactoredServiceNM.N, pileSection.UnfactoredServiceNM.M),
@@ -2085,17 +2091,11 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 損傷限界を照査する地震動レベル。グレードA はレベル1、グレードS はレベル2。
-        /// 限界曲線を選ぶすべての場所で同じ規則を使う。
-        /// </summary>
-        private int DamageLevelForGrade => SelectedSeismicGrade == "S" ? 2 : 1;
-
-        /// <summary>
         /// 選択された限界状態に対応するNQ曲線を取得
         /// </summary>
-        private (List<double> N, List<double> Q) GetLimitStateNQCurve(PileSection pileSection, string limitState)
+        private static (List<double> N, List<double> Q) GetLimitStateNQCurve(PileSection pileSection, string limitState, int level, double monQd)
         {
-            var qn = pileSection.GetQNCurvesForLevel(DamageLevelForGrade, MonQd);
+            var qn = pileSection.GetQNCurvesForLevel(level == 1 ? 1 : 2, monQd);
             return limitState switch
             {
                 "低減前使用限界状態" => (qn.UnfactoredService.N, qn.UnfactoredService.Q),

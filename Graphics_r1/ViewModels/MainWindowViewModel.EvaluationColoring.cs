@@ -59,7 +59,7 @@ namespace PileDesign.ViewModels
         public int InputEditVersion { get; private set; }
 
         private PileEvaluationSummary? _evaluationSummaryCache;
-        private (object? Model, object? Input, DateTime? Time, bool Done, int Edit, object? Current, long Options) _evaluationSummaryKey;
+        private (object? Model, object? Input, DateTime? Time, bool Done, int Edit, object? Current, long Options, object? Settlement, object? CurrentSettlement) _evaluationSummaryKey;
 
         /// <summary>
         /// 検定サマリーを返す。
@@ -79,7 +79,12 @@ namespace PileDesign.ViewModels
                 // 耐力に効くが入力の編集として数えない。以前はこの 2 つを鍵に入れておらず、解析前の色分け (支持力) が
                 // Undo のあとも古い比のまま残った
                 (object?)CurrentInputModel,
-                (long)PileDesign.Models.InputData.ConcreteModelOptions.Version);
+                (long)PileDesign.Models.InputData.ConcreteModelOptions.Version,
+                // 群杭沈下の結果は実行・確定・記録の削除のたびに新しい実体へ差し替わる (GroupSettlementResult)。
+                // 解析完了の時刻は「未実行→実行済み」のときしか進まないので、以前は 2 回目以降の群杭沈下で
+                // 色分け (沈下量・変形角) が前の結果のまま残り、作り直すダッシュボードと食い違った
+                (object?)ResultInputModel?.PileGroupSettlement?.Result,
+                (object?)CurrentInputModel?.PileGroupSettlement?.Result);
 
             if (!force && _evaluationSummaryCache != null && _evaluationSummaryKey.Equals(key))
                 return _evaluationSummaryCache;

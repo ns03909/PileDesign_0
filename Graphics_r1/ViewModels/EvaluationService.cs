@@ -1469,12 +1469,15 @@ namespace PileDesign.ViewModels
                 if (section == null) { perItem[idx] = found; return; }
 
                 // 軸力は FT-Pile の θa (軸力依存) に要る。杭が特定できないときは 0 のまま。
+                // 曲げ・せん断と同じ規則 (ResolveCheckAxialForce)。以前は入力の軸力だけを使い、
+                // 「入力値＋応力解析結果」で同じ杭の曲げの行と回転角の行の軸力が食い違っていた
                 pileBySpring.TryGetValue(rs, out var pileItem);
                 double axialN_kN = 0.0;
                 if (pileItem != null)
                 {
                     int lcNo = stepResult.LoadCase?.No ?? 0;
-                    axialN_kN = pileItem.GetDesignAxialForce(lcNo, level);
+                    axialN_kN = ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, lcNo, level,
+                        HeadFxi(pileItem, stepResult)).N;
                 }
 
                 var criterion = ResolveRotationCriterion(

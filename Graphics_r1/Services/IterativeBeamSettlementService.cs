@@ -326,6 +326,18 @@ namespace PileDesign.Services
                 }
 
                 // 6. 収束判定 (max|ΔS| / max|S|)
+                // 沈下が有限でない杭があれば判定しない。Max は NaN を無視し、比較 (d > maxDiff) も NaN では偽になるので、
+                // 以前は全杭が NaN だと残差 0 で「収束」、一部が NaN だとその杭を抜いて収束を判定し得た
+                var nonFinite = S1.Where(kv => !double.IsFinite(kv.Value)).Select(kv => kv.Key)
+                    .Concat(S2.Where(kv => !double.IsFinite(kv.Value)).Select(kv => kv.Key))
+                    .Distinct().OrderBy(n => n).ToList();
+                if (nonFinite.Count > 0)
+                {
+                    residual = double.NaN;
+                    result.Log.Add($"  iter {iter,3}: [ERROR] 沈下が数値になりませんでした (杭No.{string.Join(", ", nonFinite)})。"
+                        + "収束を判定できません。");
+                    break;
+                }
                 double maxS1 = S1.Values.DefaultIfEmpty(0).Max(s => Math.Abs(s));
                 double maxS2 = S2.Values.DefaultIfEmpty(0).Max(s => Math.Abs(s));
                 double maxAbs = Math.Max(maxS1, maxS2);
