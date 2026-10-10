@@ -16,9 +16,9 @@ namespace PileDesign.Common
         public static void DrawEmbedmentElevation(
             Canvas canvas,
             DoatsuGoryokuBane doatsuGoryokuBane,
-            GroundInput groundInput,
+            GroundInput? groundInput,
             string direction = "X",
-            List<double> zs = null,
+            List<double>? zs = null,
             double? selectedZ = null)
         {
             if (canvas == null || canvas.ActualWidth == 0 || canvas.ActualHeight == 0) return;
@@ -54,7 +54,8 @@ namespace PileDesign.Common
             // 選択されたZラインの描画
             if (selectedZ != null)
             {
-                DrawSelectedZLine(canvas, zs[0], selectedZ, doatsuGoryokuBane, midValue, direction, ratio, topMargin);
+                // 選択した Z を渡す呼び出し (要素分割の画面) は分割点も必ず渡す
+                DrawSelectedZLine(canvas, zs![0], selectedZ, doatsuGoryokuBane, midValue, direction, ratio, topMargin);
             }
             // 水平メモリ
             DrawHorizontalTicks(canvas, groundInput, ratio, topMargin, direction, midValue);
@@ -137,7 +138,7 @@ namespace PileDesign.Common
         }
 
         // 水平メモリ
-        private static void DrawHorizontalTicks(Canvas canvas, GroundInput groundInput, double ratio, double topMargin, string direction, double midValue)
+        private static void DrawHorizontalTicks(Canvas canvas, GroundInput? groundInput, double ratio, double topMargin, string direction, double midValue)
         {
             double canvasWidth = canvas.ActualWidth;
             double canvasHeight = canvas.ActualHeight;
@@ -236,7 +237,7 @@ namespace PileDesign.Common
         }
 
         // 長円（カプセル型）の描画
-        private static void DrawCapsule(Canvas canvas, double cx, double cy, double length, double radius, Brush stroke, Brush fill, double thickness = 1)
+        private static void DrawCapsule(Canvas canvas, double cx, double cy, double length, double radius, Brush stroke, Brush? fill, double thickness = 1)
         {
             // 左端・右端の中心
             double x1 = cx - length / 2;

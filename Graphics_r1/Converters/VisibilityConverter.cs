@@ -12,9 +12,9 @@ namespace PileDesign.Converters
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             // パラメーターを区切り文字で分割
-            string[] targetValues = (parameter as string)?.Split(',');
+            string[]? targetValues = (parameter as string)?.Split(',');
 
-            string currentValue = value as string;
+            string? currentValue = value as string;
 
             // 分割された各値を確認し、現在の値と一致するかどうかをチェック
             if (targetValues != null && targetValues.Contains(currentValue))
@@ -75,7 +75,7 @@ namespace PileDesign.Converters
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             bool boolValue = value is bool b && b;
-            string param = parameter as string;
+            string? param = parameter as string;
             bool inverse = !string.IsNullOrEmpty(param) &&
                            (param.Equals("Inverse", StringComparison.OrdinalIgnoreCase) || param == "!");
             bool visible = inverse ? !boolValue : boolValue;

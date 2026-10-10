@@ -18,7 +18,7 @@ namespace PileDesign.Converters
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if ((bool)value && parameter != null)
-                return Enum.Parse(targetType, parameter.ToString());
+                return Enum.Parse(targetType, parameter.ToString() ?? string.Empty);
             return Binding.DoNothing;
         }
     }

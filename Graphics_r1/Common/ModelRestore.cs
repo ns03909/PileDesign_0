@@ -48,7 +48,7 @@ namespace PileDesign.Common
             // 型が違うものを写すと、同名フィールドだけが混ざった状態になる。何もしない。
             if (!type.IsInstanceOfType(source)) return;
 
-            for (Type t = type; t != null && t != typeof(object); t = t.BaseType)
+            for (Type? t = type; t != null && t != typeof(object); t = t.BaseType)
             {
                 foreach (var f in t.GetFields(
                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic

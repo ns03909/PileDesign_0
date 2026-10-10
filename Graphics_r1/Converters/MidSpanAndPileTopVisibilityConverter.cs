@@ -17,7 +17,7 @@ namespace PileDesign.Converters
             return (isResultValueVisible && !isPileTopResultValueVisibleOnly) ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        public object[]? ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
         {
             return null;
         }

@@ -5,10 +5,11 @@ namespace PileDesign.Common
 {
     public class LastItemTemplateSelector : DataTemplateSelector
     {
-        public DataTemplate DefaultTemplate { get; set; }
-        public DataTemplate LastItemTemplate { get; set; }
+        // XAML で設定する。設定しなければ null を返す (WPF の既定のテンプレートになる)
+        public DataTemplate? DefaultTemplate { get; set; }
+        public DataTemplate? LastItemTemplate { get; set; }
 
-        public override DataTemplate SelectTemplate(object item, DependencyObject container)
+        public override DataTemplate? SelectTemplate(object item, DependencyObject container)
         {
             var itemsControl = ItemsControl.ItemsControlFromItemContainer(container);
             if (itemsControl != null && item != null)

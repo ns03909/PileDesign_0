@@ -26,7 +26,7 @@ namespace PileDesign.Converters
             return inputModel.GetNodeReferenceDisplayString(type, id);
         }
 
-        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        public object[]? ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
         {
             return null;
         }

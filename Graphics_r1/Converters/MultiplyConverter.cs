@@ -15,7 +15,7 @@ namespace PileDesign.Converters
 
             // パラメータ: "factor" or "factor|format"
             double factor = 1.0;
-            string format = null;
+            string? format = null;
             if (parameter != null)
             {
                 string paramStr = System.Convert.ToString(parameter, culture) ?? "";

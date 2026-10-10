@@ -22,7 +22,7 @@ namespace PileDesign.Common
     public class EnhancedDataGrid : DataGrid
     {
         /// <summary>ペースト完了時に発火するイベント</summary>
-        public event EventHandler PasteCompleted;
+        public event EventHandler? PasteCompleted;
 
         /// <summary>
         /// 一括ペースト (塗り潰し / 複数セル) の書込ループ実行中だけ true。
@@ -531,7 +531,7 @@ namespace PileDesign.Common
         /// セル内を Visual Tree でたどり、最初に見つかった IsEnabled な CheckBox / Button / ComboBox を返す。
         /// 入れ子の StackPanel / Border などは透過してたどる。
         /// </summary>
-        private static Control FindInteractiveChild(DependencyObject root)
+        private static Control? FindInteractiveChild(DependencyObject root)
         {
             if (root == null) return null;
             int count = VisualTreeHelper.GetChildrenCount(root);
@@ -582,7 +582,7 @@ namespace PileDesign.Common
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
-        private DataGridCell TryFindDataGridCell(DataGridCellInfo info)
+        private DataGridCell? TryFindDataGridCell(DataGridCellInfo info)
         {
             if (info.Column == null || info.Item == null) return null;
             var row = ItemContainerGenerator.ContainerFromItem(info.Item) as DataGridRow;

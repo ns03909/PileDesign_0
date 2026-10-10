@@ -139,11 +139,12 @@ namespace PileDesign.Common
 
         /// <summary>
         /// コレクション全体を per-item JSON で deep clone し、ObservableCollection に詰めて返す。
-        /// 個々の item が CloneJson に失敗 (null 返却) した場合は除外する。
+        /// 複製できない要素があれば例外を投げる (欠けた写しを返さない)。null の要素は null のまま写す。
         /// source が null のとき、null を返す。
         /// </summary>
-        public static System.Collections.ObjectModel.ObservableCollection<T> CloneCollectionViaJsonOrThrow<T>(
-            System.Collections.Generic.IEnumerable<T> source) where T : class
+        [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(source))]
+        public static System.Collections.ObjectModel.ObservableCollection<T>? CloneCollectionViaJsonOrThrow<T>(
+            System.Collections.Generic.IEnumerable<T>? source) where T : class
         {
             if (source is null) return null;
             var result = new System.Collections.ObjectModel.ObservableCollection<T>();
@@ -161,8 +162,9 @@ namespace PileDesign.Common
         /// <see cref="CloneCollectionViaJsonOrThrow{T}"/> と違い、複製できなかった要素を<b>黙って除く</b>。
         /// 欠けてよい用途 (表示用の一時的な写しなど) だけに使う。履歴・解析結果の控えには使わないこと。
         /// </summary>
-        public static System.Collections.ObjectModel.ObservableCollection<T> CloneCollectionViaJson<T>(
-            System.Collections.Generic.IEnumerable<T> source) where T : class
+        [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(source))]
+        public static System.Collections.ObjectModel.ObservableCollection<T>? CloneCollectionViaJson<T>(
+            System.Collections.Generic.IEnumerable<T>? source) where T : class
         {
             if (source is null) return null;
             var result = new System.Collections.ObjectModel.ObservableCollection<T>();

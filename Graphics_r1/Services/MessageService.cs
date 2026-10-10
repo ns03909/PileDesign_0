@@ -212,19 +212,19 @@ namespace PileDesign.Services
         }
 
         // Owner を明示的に指定したい場合のフォールバック (子ウィンドウから自身を owner にしたい等)。
-        public static MessageBoxResult Show(Window owner, string messageBoxText)
+        public static MessageBoxResult Show(Window? owner, string messageBoxText)
             => IsUnattended ? UnattendedResult(messageBoxText, "", MessageBoxButton.OK)
                             : MessageBox.Show(owner, messageBoxText);
-        public static MessageBoxResult Show(Window owner, string messageBoxText, string caption)
+        public static MessageBoxResult Show(Window? owner, string messageBoxText, string caption)
             => IsUnattended ? UnattendedResult(messageBoxText, caption, MessageBoxButton.OK)
                             : MessageBox.Show(owner, messageBoxText, caption);
-        public static MessageBoxResult Show(Window owner, string messageBoxText, string caption, MessageBoxButton button)
+        public static MessageBoxResult Show(Window? owner, string messageBoxText, string caption, MessageBoxButton button)
             => IsUnattended ? UnattendedResult(messageBoxText, caption, button)
                             : MessageBox.Show(owner, messageBoxText, caption, button);
-        public static MessageBoxResult Show(Window owner, string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon)
+        public static MessageBoxResult Show(Window? owner, string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon)
             => IsUnattended ? UnattendedResult(messageBoxText, caption, button)
                             : MessageBox.Show(owner, messageBoxText, caption, button, icon);
-        public static MessageBoxResult Show(Window owner, string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon, MessageBoxResult defaultResult)
+        public static MessageBoxResult Show(Window? owner, string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon, MessageBoxResult defaultResult)
             => IsUnattended ? UnattendedResult(messageBoxText, caption, button)
                             : MessageBox.Show(owner, messageBoxText, caption, button, icon, defaultResult);
 

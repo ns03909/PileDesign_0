@@ -12,10 +12,10 @@
 //        public event PropertyChangedEventHandler PropertyChanged;
 
 //        // プロパティ名によって自動的にセットされる
-//        public virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
+//        public virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
 //            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-//        protected bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
+//        protected bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
 //        {
 //            if (EqualityComparer<T>.Default.Equals(storage, value))
 //            {
@@ -58,10 +58,10 @@ namespace PileDesign.Common
             return copy;
         }
 
-        public virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
+        public virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        protected bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
+        protected bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
         {
             if (EqualityComparer<T>.Default.Equals(storage, value))
                 return false;
@@ -76,7 +76,7 @@ namespace PileDesign.Common
             ref double storage,
             double value,
             double fallback = 0.0,
-            [CallerMemberName] string propertyName = null)
+            [CallerMemberName] string? propertyName = null)
         {
             if (double.IsNaN(value) || double.IsInfinity(value))
                 value = fallback;
@@ -89,7 +89,7 @@ namespace PileDesign.Common
             double min = double.NegativeInfinity,
             double max = double.PositiveInfinity,
             double fallback = 0.0,
-            [CallerMemberName] string propertyName = null)
+            [CallerMemberName] string? propertyName = null)
         {
             if (double.IsNaN(value) || double.IsInfinity(value))
             {

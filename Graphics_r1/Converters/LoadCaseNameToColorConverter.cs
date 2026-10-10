@@ -61,7 +61,7 @@ namespace PileDesign.Converters
             return DefaultBrush;
         }
 
-        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        public object[]? ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
             => null;
     }
 }

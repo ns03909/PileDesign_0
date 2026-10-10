@@ -40,11 +40,11 @@ namespace PileDesign.Common
         }
 
         // ObservableObject の OnPropertyChanged を呼び出す
-        public new virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
+        public new virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
             base.OnPropertyChanged(propertyName);
 
         // SetProperty は自前で保持しつつ、通知は base.OnPropertyChanged に委譲
-        protected new bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+        protected new bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
         {
             if (EqualityComparer<T>.Default.Equals(field, value)) return false;
             field = value;
@@ -58,7 +58,7 @@ namespace PileDesign.Common
             ref double field,
             double value,
             double fallback = 0.0,
-            [CallerMemberName] string propertyName = null)
+            [CallerMemberName] string? propertyName = null)
         {
             if (double.IsNaN(value) || double.IsInfinity(value))
                 value = fallback;
@@ -71,7 +71,7 @@ namespace PileDesign.Common
             double min = double.NegativeInfinity,
             double max = double.PositiveInfinity,
             double fallback = 0.0,
-            [CallerMemberName] string propertyName = null)
+            [CallerMemberName] string? propertyName = null)
         {
             if (double.IsNaN(value) || double.IsInfinity(value))
             {

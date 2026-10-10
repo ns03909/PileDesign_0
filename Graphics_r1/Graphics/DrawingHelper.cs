@@ -31,7 +31,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 2D線分を描画
         /// </summary>
-        public void AddLine(Point start, Point end, DrawingStyle style = null)
+        public void AddLine(Point start, Point end, DrawingStyle? style = null)
         {
             _target.DrawLine(start, end, style ?? DrawingStyle.Default);
         }
@@ -39,7 +39,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 2D楕円を描画
         /// </summary>
-        public void AddEllipse(Point center, double radiusX, double radiusY, DrawingStyle style = null)
+        public void AddEllipse(Point center, double radiusX, double radiusY, DrawingStyle? style = null)
         {
             _target.DrawEllipse(center, radiusX, radiusY, style ?? DrawingStyle.Default);
         }
@@ -47,7 +47,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 2D円を描画
         /// </summary>
-        public void AddCircle(Point center, double radius, DrawingStyle style = null)
+        public void AddCircle(Point center, double radius, DrawingStyle? style = null)
         {
             _target.DrawCircle(center, radius, style ?? DrawingStyle.Default);
         }
@@ -55,7 +55,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 2Dポリラインを描画
         /// </summary>
-        public void AddPolyLine(IEnumerable<Point> points, bool isClosed, DrawingStyle style = null)
+        public void AddPolyLine(IEnumerable<Point> points, bool isClosed, DrawingStyle? style = null)
         {
             _target.DrawPolyLine(points, isClosed, style ?? DrawingStyle.Default);
         }
@@ -71,7 +71,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 2Dテキストを描画
         /// </summary>
-        public void AddText(string text, Point position, TextStyle style = null)
+        public void AddText(string text, Point position, TextStyle? style = null)
         {
             _target.DrawText(text, position, style ?? TextStyle.Default);
         }
@@ -79,7 +79,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 2D矩形を描画
         /// </summary>
-        public void AddRectangle(Rect rect, DrawingStyle style = null)
+        public void AddRectangle(Rect rect, DrawingStyle? style = null)
         {
             _target.DrawRectangle(rect, style ?? DrawingStyle.Default);
         }
@@ -91,7 +91,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 3D線分を描画（自動2D変換）
         /// </summary>
-        public void AddLine3D(Point3D start, Point3D end, DrawingStyle style = null)
+        public void AddLine3D(Point3D start, Point3D end, DrawingStyle? style = null)
         {
             var start2D = _transform.Transform(start);
             var end2D = _transform.Transform(end);
@@ -101,7 +101,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 3D楕円を描画（透視変換による潰しを適用）
         /// </summary>
-        public void AddEllipse3D(Point3D center, double radius, DrawingStyle style = null)
+        public void AddEllipse3D(Point3D center, double radius, DrawingStyle? style = null)
         {
             var center2D = _transform.Transform(center);
             double radiusX = radius * _transform.Scale;
@@ -112,7 +112,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 3D位置にテキストを描画
         /// </summary>
-        public void AddText3D(string text, Point3D position, TextStyle style = null)
+        public void AddText3D(string text, Point3D position, TextStyle? style = null)
         {
             var pos2D = _transform.Transform(position);
             _target.DrawText(text, pos2D, style ?? TextStyle.Default);
@@ -121,7 +121,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 3Dポリラインを描画（自動2D変換）
         /// </summary>
-        public void AddPolyLine3D(IEnumerable<Point3D> points, bool isClosed, DrawingStyle style = null)
+        public void AddPolyLine3D(IEnumerable<Point3D> points, bool isClosed, DrawingStyle? style = null)
         {
             var points2D = points.Select(p => _transform.Transform(p));
             _target.DrawPolyLine(points2D, isClosed, style ?? DrawingStyle.Default);
@@ -134,7 +134,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 杭断面を描画（上下の楕円と側面線）
         /// </summary>
-        public void DrawPileSection(Point3D top, Point3D bottom, double diameter, DrawingStyle style = null)
+        public void DrawPileSection(Point3D top, Point3D bottom, double diameter, DrawingStyle? style = null)
         {
             var top2D = _transform.Transform(top);
             var bottom2D = _transform.Transform(bottom);
@@ -160,7 +160,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 節点マーカーを描画
         /// </summary>
-        public void DrawNodeMarker(Point3D position, double diameter, DrawingStyle style = null)
+        public void DrawNodeMarker(Point3D position, double diameter, DrawingStyle? style = null)
         {
             var pos2D = _transform.Transform(position);
             double radius = diameter * 0.5;
@@ -170,7 +170,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 節点マーカーを描画（2D）
         /// </summary>
-        public void DrawNodeMarker(Point position, double diameter, DrawingStyle style = null)
+        public void DrawNodeMarker(Point position, double diameter, DrawingStyle? style = null)
         {
             double radius = diameter * 0.5;
             _target.DrawEllipse(position, radius, radius, style ?? DrawingStyle.Default);
@@ -183,8 +183,8 @@ namespace PileDesign.Graphics
             IEnumerable<Point> points,
             bool isClosed,
             double markerDiameter,
-            DrawingStyle lineStyle = null,
-            DrawingStyle markerStyle = null,
+            DrawingStyle? lineStyle = null,
+            DrawingStyle? markerStyle = null,
             bool markEndPointsOnly = false)
         {
             var pointList = points?.ToList();
@@ -210,7 +210,7 @@ namespace PileDesign.Graphics
         /// <summary>
         /// 地盤層を描画（上下の楕円と側面線）
         /// </summary>
-        public void DrawSoilLayer(Point3D top, Point3D bottom, double diameter, DrawingStyle style = null)
+        public void DrawSoilLayer(Point3D top, Point3D bottom, double diameter, DrawingStyle? style = null)
         {
             var top2D = _transform.Transform(top);
             var bottom2D = _transform.Transform(bottom);
@@ -244,8 +244,8 @@ namespace PileDesign.Graphics
             double x, double y,
             double barWidth, double barHeight,
             IReadOnlyList<(double Value, Color Color)> colorBands,
-            string title = null,
-            string unit = null,
+            string? title = null,
+            string? unit = null,
             double fontSize = 10,
             int decimalPlaces = 2)
         {
@@ -330,7 +330,7 @@ namespace PileDesign.Graphics
             double minY, double maxY,
             double z,
             double stepX, double stepY,
-            DrawingStyle style = null)
+            DrawingStyle? style = null)
         {
             var effectiveStyle = style ?? DrawingStyle.Dashed(Colors.LightGray, 0.5);
 

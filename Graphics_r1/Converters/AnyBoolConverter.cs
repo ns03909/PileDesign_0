@@ -16,7 +16,7 @@ namespace PileDesign.Converters
             return false;
         }
 
-        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        public object[]? ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
             => null;
     }
 }

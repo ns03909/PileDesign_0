@@ -21,13 +21,13 @@ namespace PileDesign.Converters
             if (values == null || values.Length < 1) return Array.Empty<NodeReferenceOption>();
             if (values[0] is not IEnumerable<NodeReferenceOption> all) return Array.Empty<NodeReferenceOption>();
 
-            string excludeKey = values.Length >= 2 ? values[1] as string : null;
+            string? excludeKey = values.Length >= 2 ? values[1] as string : null;
             if (string.IsNullOrEmpty(excludeKey)) return all.ToList();
 
             return all.Where(o => o.Key != excludeKey).ToList();
         }
 
-        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        public object[]? ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
             => null;
     }
 }
