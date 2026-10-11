@@ -250,6 +250,8 @@ namespace PileDesign.Services
                     .. PileSettlementEvaluator.Evaluate(inputModel),
                     // 沈下による杭頭変形角も沈下の結果だけで決まる (以前は水平解析の検定の中にあった)
                     .. SettlementDeformationAngleEvaluator.Evaluate(inputModel),
+                    // 基礎梁の傾斜角も同じ (以前は水平解析の検定の中にあり、水平解析を済ませないと出なかった)
+                    .. FoundationBeamInclinationEvaluator.Evaluate(inputModel),
                 ]), BearingPart, failures)
                 ?? new EvaluationResult([]);
 

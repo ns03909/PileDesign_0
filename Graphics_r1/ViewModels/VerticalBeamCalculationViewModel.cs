@@ -47,10 +47,24 @@ namespace PileDesign.ViewModels
 
         private void DiscardAndClose()
         {
+            CancelRunningAnalysis();
             CaseResults.Clear();
             IsSaved = false;
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
+
+        /// <summary>
+        /// 閉じる (保存しない・× ボタン) ときに、走っている解析を止める。以前は止めておらず、閉じたあとも計算が回り続けて
+        /// 編集中の入力を読み、失敗すると閉じた画面のエラーが出た。
+        /// </summary>
+        internal void CancelRunningAnalysis()
+        {
+            IsClosed = true;
+            _cancellationTokenSource?.Cancel();
+        }
+
+        /// <summary>画面を閉じたか。閉じたあとの解析の失敗は知らせない (ログにだけ残す)。</summary>
+        internal bool IsClosed { get; private set; }
 
         // ── 解析パラメータ ──
 
@@ -252,6 +266,7 @@ namespace PileDesign.ViewModels
             CaseResults.Clear();
             CalculationLog.Clear();
             _cancellationTokenSource = new CancellationTokenSource();
+            var token = _cancellationTokenSource.Token;
             // 条件は解析を始めるときに取る (記録するのは解析に使った値)
             var runSettings = CaptureRunSettings();
 
@@ -259,8 +274,11 @@ namespace PileDesign.ViewModels
             {
                 await Task.Run(async () =>
                 {
-                    await RunAsync(_cancellationTokenSource.Token);
+                    await RunAsync(token);
                 });
+                // 取り消しは反復の始めにしか見ていないので、最後の反復の途中で取り消すと解析が最後まで終わる。
+                // その結果を完了として扱わない (以前は「解析完了」にして保存できた)
+                token.ThrowIfCancellationRequested();
                 IsAnalysisExecuted = true;
                 // メイン側の「解析済み・沈下結果は最新」の印は、保存して閉じたときにメイン側が付ける (LastRunSettings を使う)。
                 // 以前はここで付けており、保存せずに閉じても古い結果が「最新」と記録され、陳腐化の警告が消えた
@@ -281,7 +299,8 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 await AddLogAsync($"解析中にエラーが発生しました: {ex.Message}");
-                Application.Current?.Dispatcher.Invoke(() =>
+                if (IsClosed) Serilog.Log.Error(ex, "単杭沈下解析（基礎梁考慮）に失敗しました (画面を閉じたあと)");
+                else Application.Current?.Dispatcher.Invoke(() =>
                 {
                     MessageService.ShowError($"解析エラー", ex, "エラー");
                 });

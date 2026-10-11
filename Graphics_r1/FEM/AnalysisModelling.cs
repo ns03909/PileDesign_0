@@ -951,18 +951,25 @@ namespace PileDesign.FEM
         }
 
         // Type+GuidからFEM節点名を生成
-        private string? GetFemNodeName(NodeReferenceType type, Guid id)
+        private string? GetFemNodeName(NodeReferenceType type, Guid id) => FemNodeNameOf(InputModel, type, id);
+
+        /// <summary>
+        /// 節点の参照 (種類 + Guid) から FEM 節点名を作る。水平解析・鉛直梁 (沈下) の解析モデルと、
+        /// 基礎梁の傾斜角の検定 (解析結果の節点名を引く) が共有する。以前は同じ関数の写しが 3 つあった。
+        /// 見つからなければ null。
+        /// </summary>
+        internal static string? FemNodeNameOf(InputModel? inputModel, NodeReferenceType type, Guid id)
         {
             switch (type)
             {
                 case NodeReferenceType.FoundationNode:
-                    var fnode = InputModel.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n.Id == id);
+                    var fnode = inputModel?.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n.Id == id);
                     return fnode != null ? $"FoundationNode-{fnode.No}" : null;
                 case NodeReferenceType.PileLayout:
-                    var pile = InputModel.PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
+                    var pile = inputModel?.PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
                     return pile != null ? $"FoundationNode-P{pile.No}" : null;
                 case NodeReferenceType.GeneralNode:
-                    var gnode = InputModel.InputNodes?.FirstOrDefault(n => n.UniqueId == id);
+                    var gnode = inputModel?.InputNodes?.FirstOrDefault(n => n.UniqueId == id);
                     return gnode != null ? $"InputNode-{gnode.No}" : null;
                 default:
                     return null;

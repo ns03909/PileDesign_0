@@ -51,7 +51,8 @@ namespace PileDesign.Services
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
             PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
             bool inputChangedSinceAnalysis = false, string? sourceFilePath = null,
-            IReadOnlyList<Models.AnalysisRunMetadata>? analysisRunRecords = null)
+            IReadOnlyList<Models.AnalysisRunMetadata>? analysisRunRecords = null,
+            IReadOnlyList<string>? staleSettlementResults = null, string? horizontalAnalysisSummaryText = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -66,7 +67,8 @@ namespace PileDesign.Services
             //  どのフィールドかを伝えることを見ている)
             var prepared = PrepareSave(inputModel, anaModel, verticalBeamCaseResults, resultInputSnapshot,
                 resultCapturedAt, pileFemLinks, isElementSplit, inputChangedSinceAnalysis, sourceFilePath,
-                validateFinite: true, analysisRunRecords: analysisRunRecords);
+                validateFinite: true, analysisRunRecords: analysisRunRecords,
+                staleSettlementResults: staleSettlementResults, horizontalAnalysisSummaryText: horizontalAnalysisSummaryText);
             WritePrepared(filePath, prepared);
         }
 
@@ -118,7 +120,8 @@ namespace PileDesign.Services
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
             PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
             bool inputChangedSinceAnalysis = false, string? sourceFilePath = null, string? autoSaveSessionId = null,
-            bool validateFinite = false, IReadOnlyList<Models.AnalysisRunMetadata>? analysisRunRecords = null)
+            bool validateFinite = false, IReadOnlyList<Models.AnalysisRunMetadata>? analysisRunRecords = null,
+            IReadOnlyList<string>? staleSettlementResults = null, string? horizontalAnalysisSummaryText = null)
         {
             // 編集できるコレクションだけ写した器を先に作る (理由は SnapshotForSaving)。
             // 自動保存では呼び出し側がすでに写していることがあり、二重になるが、
@@ -176,6 +179,11 @@ namespace PileDesign.Services
                 ResultInputSnapshot = savesAnyResult ? resultInputSnapshot : null,
                 ResultCapturedAt = savesAnyResult ? resultCapturedAt : null,
                 InputChangedSinceAnalysis = savesAnyResult ? inputChangedSinceAnalysis : null,
+                // 沈下系の解析ごとの陳腐化 (どれが入力変更前の結果か)。結果を保存するときだけ
+                StaleSettlementResults = savesAnyResult && staleSettlementResults != null ? [.. staleSettlementResults] : null,
+                // 水平解析のサマリーは水平解析のモデルを保存するときだけ (モデルが無いと開いたときに水平解析の結果が無い)
+                HorizontalAnalysisSummaryText = anaModel != null && !string.IsNullOrEmpty(horizontalAnalysisSummaryText)
+                    ? horizontalAnalysisSummaryText : null,
                 AnalysisRunRecords = savesAnyResult && analysisRunRecords is { Count: > 0 } ? [.. analysisRunRecords] : null,
                 // 杭と FEM 要素の対応表は水平解析のモデルの要素番号なので、モデルを保存するときだけ
                 PileFemLinks = anaModel != null ? pileFemLinks : null,
@@ -401,7 +409,8 @@ namespace PileDesign.Services
             InputModel? resultInputSnapshot = null, DateTime? resultCapturedAt = null,
             PileFemLinkTable? pileFemLinks = null, bool? isElementSplit = null,
             bool inputChangedSinceAnalysis = false, string? sourceFilePath = null,
-            IReadOnlyList<Models.AnalysisRunMetadata>? analysisRunRecords = null)
+            IReadOnlyList<Models.AnalysisRunMetadata>? analysisRunRecords = null,
+            IReadOnlyList<string>? staleSettlementResults = null, string? horizontalAnalysisSummaryText = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -413,7 +422,8 @@ namespace PileDesign.Services
             var swSer = Stopwatch.StartNew();
             var prepared = PrepareSave(inputModel, anaModel, verticalBeamCaseResults, resultInputSnapshot,
                 resultCapturedAt, pileFemLinks, isElementSplit, inputChangedSinceAnalysis, sourceFilePath,
-                validateFinite: ValidateFiniteBeforeSave, analysisRunRecords: analysisRunRecords);
+                validateFinite: ValidateFiniteBeforeSave, analysisRunRecords: analysisRunRecords,
+                staleSettlementResults: staleSettlementResults, horizontalAnalysisSummaryText: horizontalAnalysisSummaryText);
             swSer.Stop();
             long tSerialize = swSer.ElapsedMilliseconds;
 

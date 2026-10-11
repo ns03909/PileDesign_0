@@ -478,10 +478,10 @@ namespace TestProject1
         {
             var f = new FundamentalInput { ServiceDeformationAngleLimit = 0.002, DamageDeformationAngleLimit = 0.004, UltimateDeformationAngleLimit = 0.008 };
             PileDesign.Models.Results.GroupSettlementCaseRecord Rec(string name) => new() { LoadCaseName = name, IsBeamAware = true };
-            Assert.AreEqual((0, "使用限界", 0.002), PileDesign.ViewModels.EvaluationService.InclinationLimitFor(Rec("杭軸力 VL"), f));
-            Assert.AreEqual((1, "損傷限界", 0.004), PileDesign.ViewModels.EvaluationService.InclinationLimitFor(Rec("L1-1: 杭軸力"), f));
-            Assert.AreEqual((2, "安全限界", 0.008), PileDesign.ViewModels.EvaluationService.InclinationLimitFor(Rec("L2-3: 杭軸力"), f));
-            Assert.IsFalse(TestSource.Read("Graphics_r1", "ViewModels", "EvaluationService.cs").Contains("1.0 / 300.0", StringComparison.Ordinal),
+            Assert.AreEqual((0, "使用限界", 0.002), PileDesign.Services.FoundationBeamInclinationEvaluator.InclinationLimitFor(Rec("杭軸力 VL"), f));
+            Assert.AreEqual((1, "損傷限界", 0.004), PileDesign.Services.FoundationBeamInclinationEvaluator.InclinationLimitFor(Rec("L1-1: 杭軸力"), f));
+            Assert.AreEqual((2, "安全限界", 0.008), PileDesign.Services.FoundationBeamInclinationEvaluator.InclinationLimitFor(Rec("L2-3: 杭軸力"), f));
+            Assert.IsFalse(TestSource.Read("Graphics_r1", "Services", "FoundationBeamInclinationEvaluator.cs").Contains("1.0 / 300.0", StringComparison.Ordinal),
                 "固定の 1/300 が残っています");
         }
 

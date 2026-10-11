@@ -64,7 +64,7 @@ namespace TestProject1
             vm.IsElementSplit = true;
             vm.IsVerticalAnalysisDone = true;
             vm.CaptureAnalysisResultSet();
-            vm.MarkSettlementResultsCurrent();
+            vm.MarkSettlementResultsCurrent(SettlementAnalyses.All);
             vm.MarkProjectReplaced();
             Assert.IsNotNull(vm.CurrentResultSet, "(前提) 解析結果の控えが取れていません");
             Assert.IsFalse(vm.InputChangedSinceAnalysis, "(前提) 解析した直後なのに「再解析が必要」です");

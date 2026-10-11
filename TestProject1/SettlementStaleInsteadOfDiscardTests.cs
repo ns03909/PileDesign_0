@@ -93,7 +93,7 @@ namespace TestProject1
             vm.MarkInputChangedSinceAnalysis();
             Assert.IsTrue(vm.SettlementResultsAreStale);
 
-            vm.MarkSettlementResultsCurrent();
+            vm.MarkSettlementResultsCurrent(SettlementAnalyses.All);
 
             Assert.IsFalse(vm.SettlementResultsAreStale, "沈下解析をやり直しても印が残っている");
         }

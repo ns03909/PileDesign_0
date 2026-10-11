@@ -39,6 +39,17 @@ public sealed class AnalysisRunMetadata
     [JsonConverter(typeof(JsonStringEnumConverter<AnalysisKind>))]
     public AnalysisKind Kind { get; set; } = AnalysisKind.Horizontal;
 
+    /// <summary>
+    /// 同じ種類の中の解析の別 (空 = 別なし)。群杭沈下の基礎梁あり (<see cref="GroupWithBeamVariant"/>) は、基礎梁なしと
+    /// 結果が並んで残るので、記録も別に持つ (種類と別の組で 1 件)。
+    /// 種類を増やさずに別で分けるのは、旧版のアプリが知らない種類の名前を読めず、ファイルごと開けなくなるため
+    /// (知らないプロパティは読み飛ばすので、この項目は旧版でも開ける)。
+    /// </summary>
+    public string Variant { get; set; } = "";
+
+    /// <summary>群杭沈下解析（基礎梁あり）の記録の別。</summary>
+    public const string GroupWithBeamVariant = "基礎梁あり";
+
     /// <summary>解析を実行した時刻。</summary>
     public DateTime? ExecutedAt { get; set; }
 
@@ -67,9 +78,12 @@ public sealed class AnalysisRunMetadata
         _ => kind.ToString(),
     };
 
+    /// <summary>この記録の解析の呼び名 (別があれば添える: 「群杭沈下解析（基礎梁あり）」)。</summary>
+    public string Label() => string.IsNullOrEmpty(Variant) ? KindLabel(Kind) : $"{KindLabel(Kind)}（{Variant}）";
+
     /// <summary>表の見出し (「水平解析（2026/09/30 10:00 実行）」)。</summary>
     public string Heading()
-        => ExecutedAt is { } t ? $"{KindLabel(Kind)}（{t:yyyy/MM/dd HH:mm} 実行）" : KindLabel(Kind);
+        => ExecutedAt is { } t ? $"{Label()}（{t:yyyy/MM/dd HH:mm} 実行）" : Label();
 
     /// <summary>
     /// 条件を項目と値の組で並べる (計算書の「解析の実行条件」の表の行)。記録の無い項目は出さない。
@@ -104,17 +118,18 @@ public sealed class AnalysisRunMetadata
         => string.Join("、", (Cases ?? []).Select(c => c.Describe()).Where(s => s.Length > 0));
 
     /// <summary>
-    /// 記録を 1 件差し替える。同じ種類の前の記録は捨て、ほかの種類の記録は結果が残っている限り引き継ぐ
-    /// (<paramref name="stillHasResult"/> が false の種類は結果が消えているので記録も捨てる)。種類の順に並べる。
+    /// 記録を 1 件差し替える。同じ種類・同じ別 (<see cref="Variant"/>) の前の記録は捨て、ほかの記録は結果が残っている限り引き継ぐ
+    /// (<paramref name="stillHasResult"/> が false の記録は結果が消えているので記録も捨てる)。種類・別の順に並べる。
     /// </summary>
     public static List<AnalysisRunMetadata> Merge(
-        IEnumerable<AnalysisRunMetadata>? previous, AnalysisRunMetadata? latest, Func<AnalysisKind, bool> stillHasResult)
+        IEnumerable<AnalysisRunMetadata>? previous, AnalysisRunMetadata? latest, Func<AnalysisRunMetadata, bool> stillHasResult)
     {
         var merged = (previous ?? [])
-            .Where(r => r != null && (latest == null || r.Kind != latest.Kind) && stillHasResult(r.Kind))
+            .Where(r => r != null && (latest == null || r.Kind != latest.Kind || (r.Variant ?? "") != (latest.Variant ?? ""))
+                        && stillHasResult(r))
             .ToList();
         if (latest != null) merged.Add(latest);
-        return merged.OrderBy(r => r.Kind).ToList();
+        return merged.OrderBy(r => r.Kind).ThenBy(r => r.Variant ?? "", StringComparer.Ordinal).ToList();
     }
 }
 

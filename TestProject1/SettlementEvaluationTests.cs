@@ -45,7 +45,11 @@ namespace TestProject1
                 foreach (var p in input.PileLayoutItems) p.SoilPileAltNo = 1;
             }
 
-            if (group_mm != 0.0)
+            // 群杭沈下の記録を持たせないときは、沈下検討の対象を「単杭沈下」にする。「単杭＋群杭沈下」(既定) のまま
+            // 群杭沈下の結果が無いと、沈下量は検定不能になる (TheGroupBasisWithoutAGroupResultIsNotJudged)
+            if (group_mm == 0.0)
+                input.FundamentalInput.SettlementDesignIncludesGroup = false;
+            else
             {
                 input.PileGroupSettlement ??= new PileGroupSettlement();
                 input.PileGroupSettlement.CaseRecords ??= [];
@@ -134,20 +138,48 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 応答値は単杭沈下 + 群杭沈下。群杭沈下を実行していなければ単杭だけになる。
+        /// 応答値は単杭沈下 + 群杭沈下。沈下検討の対象が「単杭沈下」なら単杭だけになる。
         /// </summary>
         [TestMethod]
         public void TheResponseAddsTheGroupSettlement()
         {
-            var withoutGroup = Build(0.010, 0.010);
-            Enable(withoutGroup, allowable_mm: 20.0);
-            Assert.AreEqual(10.0, PileSettlementEvaluator.Evaluate(withoutGroup)[0].Response, 1e-9,
-                "群杭沈下が無いのに足されている");
+            var singleOnly = Build(0.010, 0.010);
+            Enable(singleOnly, allowable_mm: 20.0);
+            Assert.IsFalse(singleOnly.FundamentalInput.SettlementDesignIncludesGroup);
+            Assert.AreEqual(10.0, PileSettlementEvaluator.Evaluate(singleOnly)[0].Response, 1e-9,
+                "沈下検討の対象が単杭沈下なのに足されている");
 
             var withGroup = Build(0.010, 0.010, group_mm: 5.0);
             Enable(withGroup, allowable_mm: 20.0);
+            Assert.IsTrue(withGroup.FundamentalInput.SettlementDesignIncludesGroup);
             Assert.AreEqual(15.0, PileSettlementEvaluator.Evaluate(withGroup)[0].Response, 1e-9,
                 "群杭沈下を足していない");
+        }
+
+        /// <summary>
+        /// 沈下検討の対象が「単杭＋群杭沈下」なのに群杭沈下 (常時) の結果が無ければ、杭ごとに検定不能にする。
+        /// 以前は群杭ぶんを 0 として単杭沈下だけで判定 (OK) しており、同じ状態で杭頭変形角
+        /// (<see cref="SettlementDeformationAngleEvaluator"/>) は「群杭沈下の結果がありません」で検定不能だった。
+        /// </summary>
+        [TestMethod]
+        public void TheGroupBasisWithoutAGroupResultIsNotJudged()
+        {
+            var input = Build(0.010, 0.010);
+            input.FundamentalInput.SettlementDesignIncludesGroup = true;
+            Enable(input, allowable_mm: 20.0);
+
+            var items = PileSettlementEvaluator.Evaluate(input);
+            Assert.AreEqual(2, items.Count, "杭ごとに 1 件ずつ出すこと");
+            foreach (var item in items)
+            {
+                Assert.IsTrue(item.IsUnavailable && !item.IsJudged, $"杭No.{item.PileNo}: 群杭沈下を 0 として判定しています");
+                Assert.AreEqual(SettlementDeformationAngleEvaluator.NoGroupResultReason, item.UnavailableReason);
+            }
+
+            // 杭頭変形角も同じ理由で検定不能 (2 つの検定が食い違わない)
+            var angle = SettlementDeformationAngleEvaluator.Evaluate(input);
+            Assert.IsTrue(angle.Count > 0 && angle.All(i => i.IsUnavailable));
+            Assert.AreEqual(SettlementDeformationAngleEvaluator.NoGroupResultReason, angle[0].UnavailableReason);
         }
 
         /// <summary>

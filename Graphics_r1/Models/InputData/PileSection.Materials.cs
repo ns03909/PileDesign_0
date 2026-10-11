@@ -100,11 +100,19 @@ namespace PileDesign.Models.InputData
         }
         private double _concreteE;
 
-        // コンクリートのヤング係数の計算メソッド
-        public void RecalculateConcreteE()
+        // コンクリートのヤング係数の計算メソッド (いまの材料モデル化オプションで)
+        public void RecalculateConcreteE() => RecalculateConcreteE(ConcreteModelOptions.UseUnitGsiForConcreteE);
+
+        /// <summary>
+        /// コンクリートのヤング係数を、指定した「Ec の算定に ξ = 1.0 を使うか」で求め直す。
+        /// オプションは静的 (<see cref="ConcreteModelOptions"/>) で今の入力の設定を持つので、別の設定を持つ入力
+        /// (読み込んだ解析結果の控え) の断面は、その入力の基本設定の値を渡して求め直す
+        /// (<see cref="InputModel.RecalculateConcreteEWithOwnOptions"/>)。
+        /// </summary>
+        public void RecalculateConcreteE(bool useUnitGsiForConcreteE)
         {
             // Ec 算定用 ξ: オプション時は 1.0（強度側 Gsi·Fc 等は実 Gsi のまま）
-            double gsiForEc = ConcreteModelOptions.UseUnitGsiForConcreteE ? 1.0 : ConcreteGsi;
+            double gsiForEc = useUnitGsiForConcreteE ? 1.0 : ConcreteGsi;
             double e = 3.35 * Math.Pow(10, 4) * Math.Pow(ConcreteGamma / 24.0, 2.0) * Math.Pow(gsiForEc * ConcreteFc / 60.0, 1.0 / 3.0);
             // 既製杭の製品を選んでいれば、カタログの Ec (例 40,000) を使う。
             // 以前は製品を選んだときだけカタログの値が入り、保存して開き直すと (読込の仕上げでここを通るので)

@@ -123,15 +123,19 @@ namespace TestProject1
         /// <summary>
         /// 引抜き抵抗を求めていない杭 (限界値 0) は検定できない。
         /// 0 で割って比が ∞ になったり、常に NG と出したりしてはいけない。
+        /// 黙って項目を消してもいけない (2026-10-11 まで消しており、その杭が抜けたまま「支持力はすべて OK」と出ていた)。
+        /// 「検定不能」として理由を添えて出す。
         /// </summary>
         [TestMethod]
-        public void ZeroLimit_IsSkippedInsteadOfReportedAsNg()
+        public void ZeroLimit_IsReportedAsUnavailable_NotNgNorSkipped()
         {
             var noUplift = new SoilPile { Rfu = Ru };   // Rt_* は 0 のまま
 
             var items = Evaluate(axialForceVL: -300.0, ground: noUplift);
 
-            Assert.AreEqual(0, items.Count, "引抜き抵抗が 0 の杭を検定してしまっている");
+            Assert.IsTrue(items.Count > 0, "引抜き抵抗が 0 の杭の項目を黙って消しています");
+            Assert.IsTrue(items.All(i => i.IsUnavailable && !i.IsJudged), "引抜き抵抗が 0 の杭を検定 (OK / NG) しています");
+            StringAssert.Contains(items[0].UnavailableReason, "計算していません");
         }
 
         // ── 判定 ───────────────────────────────────────────

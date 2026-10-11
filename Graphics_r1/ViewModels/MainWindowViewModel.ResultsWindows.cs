@@ -314,6 +314,7 @@ namespace PileDesign.ViewModels
             AddBearingTable(tables, columns);
             AddSettlementEvaluationTable(tables, columns);
             AddSettlementDeformationAngleTable(tables, columns);
+            AddFoundationBeamInclinationTable(tables, columns);
 
             if (CurrentModel == null || !IsHorizontalAnalysisDone) return tables;
 
@@ -408,6 +409,34 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 Serilog.Log.Warning(ex, "沈下による杭頭変形角の検定テーブルの生成に失敗");
+            }
+        }
+
+        /// <summary>
+        /// 群杭沈下解析（基礎梁あり）の結果による基礎梁の傾斜角の検定を 1 枚の表にする。記録が無ければ出ない。
+        ///
+        /// 以前は水平解析の検定の中にあり、水平解析を済ませないと出ず、低減前・低減後の 2 枚に同じ行が並んでいた。
+        /// 沈下の結果だけで決まるので、沈下による杭頭変形角と同じく水平解析が済んでいなくても出す。
+        /// </summary>
+        private void AddFoundationBeamInclinationTable(List<ResultTable> tables, ResultColumnDescriptor[] columns)
+        {
+            try
+            {
+                var result = new EvaluationResult(FoundationBeamInclinationEvaluator.Evaluate(ResultInputModel ?? CurrentInputModel));
+                if (result.IsEmpty) return;   // 群杭沈下解析（基礎梁あり）をしていない、または基礎梁が無い
+
+                tables.Add(new ResultTable
+                {
+                    Name = "検定結果（基礎梁の傾斜角）",
+                    Category = "検定",
+                    Columns = columns,
+                    Rows = result.ByRatioDescending.Cast<object>().ToList(),
+                    SpansAllConditions = true,
+                });
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Warning(ex, "基礎梁の傾斜角の検定テーブルの生成に失敗");
             }
         }
 

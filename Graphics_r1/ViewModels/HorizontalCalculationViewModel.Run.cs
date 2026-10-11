@@ -27,6 +27,28 @@ namespace PileDesign.ViewModels
     {
         internal const double BaseConvergenceTolerance = 1e-6;
         internal const double RelaxedResidualTolerance = 1e-5;
+
+        /// <summary>
+        /// 収束基準を緩めてよい残差の上限 (‖R‖²/‖基準‖²。力の比に直すと 0.1)。停滞・振動・未改善を検出して
+        /// 基準を「現在の残差 ×1.1」などへ緩める判定は、<b>現在の残差がこれ以下のときだけ</b>働く。
+        /// </summary>
+        /// <remarks>
+        /// <para>2026-10-11 まで、この上限を持っていたのは改善率不足の判定 (SLOW_IMPROVEMENT_RELAX_CAP、
+        /// 「発散領域なので」) だけで、長期未改善・緩やかな発散・長期停滞の 3 つは上限なしに緩めていた。
+        /// 残差 0.3 (力の比で 0.55) のまま「緩和収束」になり得て、最終の再試行ではそのまま受理されていた
+        /// (それより前の試行では RELAX_ACCEPT_THRESHOLD = 1e-2 を超えた緩和を再試行に回していたので、
+        /// 受理してよい上限は元から 1e-2 という扱いだった。StepStatus.ConvergedRelaxed の説明も「最大 1e-2」)。</para>
+        /// <para>上限を超えたステップは緩めずに反復を続け、収束しなければ未収束として、既存の再試行
+        /// (ステップ数を増やしてやり直す) に回る。最後まで収束しなければ未収束として記録する。</para>
+        /// </remarks>
+        internal const double RelaxedAcceptanceCap = 1e-2;
+
+        /// <summary>
+        /// 物理的未収束 (耐力超過の可能性) とみなす残差。既に 1 回以上ステップ数を増やしてやり直したケースで、
+        /// 未収束で終わったステップの残差がこれを超えたら、それ以上やり直さずに打ち切る。
+        /// </summary>
+        private const double PHYSICALLY_UNCONVERGEABLE_THRESHOLD = 10.0;
+
         internal const int MaximumNewtonIterations = 100;
 
         // v21 Phase 3 prep: ばね剛性 min/max はインスタンスフィールドを廃し、
@@ -684,7 +706,7 @@ namespace PileDesign.ViewModels
                 // SLOW_IMPROVEMENT_THRESHOLD 未満なら「実質停滞」とみなして緩和を発火する。
                 const int SLOW_IMPROVEMENT_WINDOW = 30;       // 比較ウィンドウ
                 const double SLOW_IMPROVEMENT_THRESHOLD = 0.10; // 30 反復で 10% 未満の減少なら停滞
-                const double SLOW_IMPROVEMENT_RELAX_CAP = 1e-2; // この残差を超えていたら緩和しない (発散領域なので)
+                const double SLOW_IMPROVEMENT_RELAX_CAP = RelaxedAcceptanceCap; // この残差を超えていたら緩和しない (発散領域なので)
                 var residualHistory = new Queue<double>();
                 // 未収束の手掛かり用に、このステップの残差の推移を全部残す (residualHistory は緩和で消える)
                 var residualTrend = new List<double>();
@@ -1292,12 +1314,10 @@ namespace PileDesign.ViewModels
                     // どちらも triggers しない場合に最後のセーフティネットとして働く
                     // 緩和値は「現在残差 × 1.1」「最小残差 × 1.2」の大きい方を採用し、
                     // 今この反復でループが確実に抜けられるようにする（振動残差では minSeen*1.2 が不十分）
+                    // 現在の残差が RelaxedAcceptanceCap を超えていたら緩めない (2026-10-11 まで上限なし。RelaxOnNoImprovement 参照)
                     if (iterationsSinceMinUpdated >= NO_IMPROVEMENT_LIMIT && !SkipIteration)
                     {
-                        double relaxed = Math.Max(
-                            Math.Max(minResidualSeen * 1.2, currentResidual * 1.1),
-                            RELAXED_ALPHA);
-                        if (relaxed > effectiveAlpha)
+                        if (RelaxOnNoImprovement(currentResidual, minResidualSeen, effectiveAlpha, RELAXED_ALPHA) is double relaxed)
                         {
                             effectiveAlpha = relaxed;
                             await AddLogAsync($"  ⚠ 長期未改善検出: {NO_IMPROVEMENT_LIMIT}反復で最小残差 {minResidualSeen:E2} が更新されません。収束基準を緩和します ({alpha:E2}→{effectiveAlpha:E2})");
@@ -1357,11 +1377,11 @@ namespace PileDesign.ViewModels
                             // すでにライン探索を使用している場合は、収束基準を緩和
                             if (effectiveUseLineSearch)
                             {
-                                // 最小残差から5%以内なら収束とみなす
-                                double relaxedTarget = minResidualSeen * 1.05;
-                                if (currentResidual <= relaxedTarget && relaxedTarget > effectiveAlpha)
+                                // 最小残差から5%以内なら収束とみなす。
+                                // ただし現在の残差が RelaxedAcceptanceCap を超えていたら緩めない (2026-10-11 まで上限なし。RelaxOnSlowDivergence 参照)
+                                if (RelaxOnSlowDivergence(currentResidual, minResidualSeen, effectiveAlpha) is double relaxed)
                                 {
-                                    effectiveAlpha = Math.Max(currentResidual * 1.1, relaxedTarget);
+                                    effectiveAlpha = relaxed;
                                     await AddLogAsync($"  → 収束基準を緩和します ({alpha:E2}→{effectiveAlpha:E2})");
                                 }
                             }
@@ -1394,7 +1414,8 @@ namespace PileDesign.ViewModels
                     // 規則は UpdateStagnationRelaxation (StagnationRelaxationTests で固定)。
                     {
                         var stagnation = UpdateStagnationRelaxation(
-                            currentResidual, prevResidual, stagnationCount, effectiveAlpha, alpha, RELAXED_ALPHA);
+                            currentResidual, prevResidual, stagnationCount, effectiveAlpha, alpha, RELAXED_ALPHA,
+                            RelaxedAcceptanceCap);
                         stagnationCount = stagnation.StagnationCount;
                         effectiveAlpha = stagnation.EffectiveAlpha;
                         if (stagnation.Log != null)
@@ -1419,20 +1440,35 @@ namespace PileDesign.ViewModels
                 // 抜けた時点の残差で決める (JudgeStepConvergence のコメント参照)。
                 string dispInfo = !double.IsNaN(dispMaxAbs) ? $", max|d|={dispMaxAbs:E3}m" : "";
                 var stepJudge = JudgeStepConvergence(
-                    caseModel.NormsROnNormsFint, effectiveAlpha, n_iteration, maxIterations);
+                    caseModel.NormsROnNormsFint, effectiveAlpha, n_iteration, maxIterations,
+                    caseModel.MaxForcedDispShortfall());
                 bool converged = stepJudge.Converged;
                 if (!converged)
                 {
                     double finalResidual = caseModel.NormsROnNormsFint;
                     await AddLogAsync($"  → 未収束: {stepJudge.UnconvergedReason}。残差ノルム={finalResidual:E3} (許容値={effectiveAlpha:E3}){dispInfo}");
 
+                    // v20 Phase 2: 物理的未収束の判定
+                    // 残差が極端に大きい（>10）かつ bisectionAttempt>=1 (既に 1 度倍増している)なら
+                    // これ以上倍増しても収束する見込みなし → 中止（「耐力超過の可能性」として記録）
+                    //
+                    // 2026-10-11 まで、この判定は「緩和基準が 10 を超えたまま収束扱いになったステップ」で行っていた。
+                    // 緩和に上限 (RelaxedAcceptanceCap) を置いたので、そうしたステップは収束扱いにならずここへ来る。
+                    // 判定の値は緩和基準ではなく、未収束で終わった時点の残差で見る (以前も緩和基準 ≒ 現在残差 ×1.1 だった)。
+                    if (finalResidual > PHYSICALLY_UNCONVERGEABLE_THRESHOLD && bisectionAttempt >= 1)
+                    {
+                        await AddLogAsync($"    ⛔ 残差 {finalResidual:E2} が物理的未収束閾値 {PHYSICALLY_UNCONVERGEABLE_THRESHOLD:E2} を超過。耐力超過の可能性があり、これ以上の倍増は無効と判断");
+                        await AddLogAsync($"    → このケースは物理的未収束として記録します（解析は続行）");
+                        physicallyUnconvergeable = true;
+                        caseFailedThisAttempt = false;  // 再試行しない
+                    }
                     // Phase 3 step-level cut-back: 直近成功ステップに巻き戻して、失敗ステップだけ 1/M に分割して再試行。
                     // 条件: フラグ on, checkpoint 取得済 (= step >= 1 で前ステップ収束), cut-back 上限未達。
                     //
                     // インデックスは「連番」を採用。step は常に +1 ずつ進む (cut-back でジャンプしない)。
                     // 結果リストの Step 番号も連番で隙間なく埋まる (下流コンシューマ互換のため)。
                     // 内部の「ロード増分分母」は effectiveDenom が別途管理し cut-back で ×M される。
-                    if (_useStepLevelCutback
+                    else if (_useStepLevelCutback
                         && lastSuccessCheckpoint != null
                         && cutbackCount < MAX_CUTBACKS_PER_ATTEMPT)
                     {
@@ -1491,7 +1527,9 @@ namespace PileDesign.ViewModels
                         continue;  // step++ → 次イテレーションで substep 開始
                     }
 
-                    caseFailedThisAttempt = true;
+                    // 物理的未収束は再試行しない
+                    if (!physicallyUnconvergeable)
+                        caseFailedThisAttempt = true;
                 }
                 else
                 {
@@ -1533,18 +1571,9 @@ namespace PileDesign.ViewModels
                     // ただし最終試行でない場合に限る（最終試行では緩和収束を受け入れる）
                     const double RELAX_ACCEPT_THRESHOLD = 1e-2;  // 残差 1% 未満なら緩和収束を受け入れる
 
-                    // v20 Phase 2: 物理的未収束の判定
-                    // 緩和基準が極端に大きい（>10）かつ bisectionAttempt>=1 (既に 1 度倍増している)なら
-                    // これ以上倍増しても収束する見込みなし → 中止（「耐力超過の可能性」として記録）
-                    const double PHYSICALLY_UNCONVERGEABLE_THRESHOLD = 10.0;
-                    if (effectiveAlpha > PHYSICALLY_UNCONVERGEABLE_THRESHOLD && bisectionAttempt >= 1)
-                    {
-                        await AddLogAsync($"    ⛔ 緩和基準 {effectiveAlpha:E2} が物理的未収束閾値 {PHYSICALLY_UNCONVERGEABLE_THRESHOLD:E2} を超過。耐力超過の可能性があり、これ以上の倍増は無効と判断");
-                        await AddLogAsync($"    → このケースは物理的未収束として記録します（解析は続行）");
-                        physicallyUnconvergeable = true;
-                        caseFailedThisAttempt = false;  // 再試行しない
-                    }
-                    else if (effectiveAlpha > RELAX_ACCEPT_THRESHOLD && bisectionAttempt < MAX_STEP_BISECTIONS && !retryGateDisabled)
+                    // (物理的未収束の判定は未収束の側へ移した。緩和基準は RelaxedAcceptanceCap より上には緩めないので、
+                    //  収束扱いのステップで 10 を超えることはない)
+                    if (effectiveAlpha > RELAX_ACCEPT_THRESHOLD && bisectionAttempt < MAX_STEP_BISECTIONS && !retryGateDisabled)
                     {
                         await AddLogAsync($"    → 緩和基準 {effectiveAlpha:E2} が許容水準 {RELAX_ACCEPT_THRESHOLD:E2} を超過。ステップ分割を増やして再試行対象とします");
                         caseFailedThisAttempt = true;
@@ -1567,8 +1596,8 @@ namespace PileDesign.ViewModels
                     caseModel.CommitInternalFluxNorm();
 
                 // 緩めた基準 (RELAXED_ALPHA より大きい許容値) で受理したステップは区別する
-                StepStatus stepStatus = !converged ? StepStatus.Unconverged
-                    : (physicallyUnconvergeable ? StepStatus.PhysicallyUnconverged
+                StepStatus stepStatus = physicallyUnconvergeable ? StepStatus.PhysicallyUnconverged
+                    : (!converged ? StepStatus.Unconverged
                         : (effectiveAlpha > RELAXED_ALPHA ? StepStatus.ConvergedRelaxed
                             : StepStatus.Converged));
 
@@ -1579,9 +1608,9 @@ namespace PileDesign.ViewModels
                 {
                     double finalResidual = caseModel.NormsROnNormsFint;
                     if (residualTrend.Count == 0 || residualTrend[^1] != finalResidual) residualTrend.Add(finalResidual);
-                    string reason = !converged
-                        ? stepJudge.UnconvergedReason ?? "収束しなかった"
-                        : $"緩めた基準 {effectiveAlpha:E2} でも、物理的未収束の目安を超えた (耐力超過の可能性)";
+                    string reason = physicallyUnconvergeable
+                        ? $"残差 {finalResidual:E2} が物理的未収束の目安 {PHYSICALLY_UNCONVERGEABLE_THRESHOLD:E2} を超えた (耐力超過の可能性)"
+                        : stepJudge.UnconvergedReason ?? "収束しなかった";
                     diagnosis = UnconvergedDiagnosis.Build(reason, residualTrend, ResidualHotspots.Top(caseModel, UnconvergedDiagnosis.HotspotCount));
                     if (diagnosis.Hotspots.Count > 0)
                         await AddLogAsync($"    残差の推移の傾向: {diagnosis.TrendLabel}。残差の最も大きい箇所: {diagnosis.Hotspots[0].Describe()}");
@@ -1870,8 +1899,49 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 長期未改善 (最小残差が NO_IMPROVEMENT_LIMIT 反復更新されない) による収束基準の緩和。
+        /// 緩める値は「最小残差 ×1.2」「現在残差 ×1.1」「緩和基準」の最大。今より緩くなるときだけその値を返し、
+        /// 動かさないときは null。
+        /// </summary>
+        /// <remarks>
+        /// 現在の残差が <paramref name="relaxCap"/> を超えていたら緩めない。2026-10-11 まで上限が無く、
+        /// 残差が 0.3 のまま 30 反復振動しただけで基準 0.33 の「緩和収束」になり、最終の再試行ではそのまま受理していた
+        /// (<see cref="RelaxedAcceptanceCap"/> 参照)。
+        /// </remarks>
+        internal static double? RelaxOnNoImprovement(
+            double currentResidual, double minResidualSeen, double effectiveAlpha, double relaxedAlpha,
+            double relaxCap = RelaxedAcceptanceCap)
+        {
+            if (!(currentResidual <= relaxCap)) return null;   // NaN も緩めない
+            double relaxed = Math.Max(
+                Math.Max(minResidualSeen * 1.2, currentResidual * 1.1),
+                relaxedAlpha);
+            return relaxed > effectiveAlpha ? relaxed : null;
+        }
+
+        /// <summary>
+        /// 緩やかな発散 (ラインサーチ使用中に残差が続けて増えた) による収束基準の緩和。現在の残差が最小残差の
+        /// 1.05 倍以内なら「最小残差 ×1.05」と「現在残差 ×1.1」の大きい方へ緩める。動かさないときは null。
+        /// </summary>
+        /// <remarks>
+        /// 現在の残差が <paramref name="relaxCap"/> を超えていたら緩めない (2026-10-11 まで上限なし。
+        /// <see cref="RelaxedAcceptanceCap"/> 参照)。
+        /// </remarks>
+        internal static double? RelaxOnSlowDivergence(
+            double currentResidual, double minResidualSeen, double effectiveAlpha,
+            double relaxCap = RelaxedAcceptanceCap)
+        {
+            double relaxedTarget = minResidualSeen * 1.05;
+            if (currentResidual <= relaxedTarget && relaxedTarget > effectiveAlpha
+                && currentResidual <= relaxCap)
+                return Math.Max(currentResidual * 1.1, relaxedTarget);
+            return null;
+        }
+
+        /// <summary>
         /// 停滞検出と、それによる収束基準の緩和。残差比 (今回/前回) がほぼ 1 の反復を数え、
         /// 15 回続いて残差が緩和基準以下なら基準を緩和基準まで、30 回続いたら現在残差 ×1.1 まで緩める。
+        /// 後者は現在の残差が <paramref name="relaxCap"/> 以下のときだけ (<see cref="RelaxedAcceptanceCap"/> 参照)。
         /// </summary>
         /// <remarks>
         /// <para>残差比が 0.98 未満 (= 改善した) ならカウントを 0 に戻す。1.05 を超える増加は
@@ -1882,9 +1952,14 @@ namespace PileDesign.ViewModels
         /// 緩めて抜けるつもりだったステップが抜けられずに再試行へ回る。他の 4 つの緩和判定は
         /// 元から「今より緩いときだけ動かす」形をしていて、ここだけが代入だった。</para>
         /// </remarks>
+        /// <param name="relaxCap">
+        /// 長期停滞で「現在残差 ×1.1」まで緩めてよい現在残差の上限。2026-10-11 まで上限が無く、
+        /// 残差 0.3 で 30 回停滞すれば基準 0.33 で受理していた。停滞しているだけで釣り合ってはいないので、
+        /// 上限を超えたら緩めず、未収束として再試行に回す。
+        /// </param>
         internal static (int StagnationCount, double EffectiveAlpha, string? Log) UpdateStagnationRelaxation(
             double currentResidual, double prevResidual, int stagnationCount,
-            double effectiveAlpha, double alpha, double relaxedAlpha)
+            double effectiveAlpha, double alpha, double relaxedAlpha, double relaxCap = RelaxedAcceptanceCap)
         {
             const int STAGNATION_LIMIT = 15;      // 停滞判定の閾値回数
             const double STAGNATION_RATIO = 0.98; // 残差比がこれ以上なら停滞とみなす
@@ -1901,7 +1976,7 @@ namespace PileDesign.ViewModels
                         return (stagnationCount, relaxedAlpha,
                             $"  ⚠ 停滞検出: {stagnationCount}回連続で残差が改善しません。収束基準を緩和します ({alpha:E2}→{relaxedAlpha:E2})");
                 }
-                else if (stagnationCount >= STAGNATION_LIMIT * 2)
+                else if (stagnationCount >= STAGNATION_LIMIT * 2 && currentResidual <= relaxCap)
                 {
                     // 長期停滞の場合は収束基準を現在の残差に合わせて緩和
                     double relaxed = Math.Max(currentResidual * 1.1, relaxedAlpha);
@@ -1935,11 +2010,27 @@ namespace PileDesign.ViewModels
         /// ので、反復ループは「基準を満たした」ように抜け、収束として記録されていた。残差で決めれば
         /// NaN は収束にならない (NaN &lt; 基準 も false)。</para>
         /// </remarks>
+        /// <param name="forcedDispShortfall">
+        /// 強制変位 (地盤変位) の目標までの残りの最大値 [m] (<see cref="AnaModel.MaxForcedDispShortfall"/>)。
+        /// 残差は強制変位の自由度を 0 と置いて見るので、地盤変位を与えきったかは残差に現れない。
+        /// 2026-10-11 まで変位増分の頭打ち・線探索の α が地盤変位まで縮めており、一部しか与えていない
+        /// ステップが収束として受理され得た。縮めない形に直したうえで、ここでも確かめる。
+        /// </param>
         internal static (bool Converged, string? UnconvergedReason) JudgeStepConvergence(
-            double finalResidual, double effectiveAlpha, int nIteration, int maxIterations)
+            double finalResidual, double effectiveAlpha, int nIteration, int maxIterations,
+            double forcedDispShortfall = 0.0)
         {
-            if (finalResidual < effectiveAlpha)
+            // 強制変位の残りは、丸めの誤差を超えたら (または数値でなければ) 収束にしない
+            const double FORCED_DISP_SHORTFALL_TOLERANCE = 1e-9; // [m]
+            bool forcedReached = forcedDispShortfall <= FORCED_DISP_SHORTFALL_TOLERANCE;
+
+            if (finalResidual < effectiveAlpha && forcedReached)
                 return (true, null);
+
+            if (finalResidual < effectiveAlpha)
+                return (false, double.IsFinite(forcedDispShortfall)
+                    ? $"地盤変位を与えきれていません (残り {forcedDispShortfall:E2} m)"
+                    : "地盤変位の残りが数値でなくなりました");
 
             if (!double.IsFinite(finalResidual))
                 return (false, "残差が数値でなくなりました");

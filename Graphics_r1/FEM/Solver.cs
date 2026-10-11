@@ -1,5 +1,6 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
 using System;
+using System.Collections.Generic;
 
 namespace PileDesign.FEM
 {
@@ -17,6 +18,52 @@ namespace PileDesign.FEM
         /// 群杭沈下 (基礎梁あり) は毎回初期状態から 1 回で解くのに頭打ちが掛かっており、沈下が 50 mm を超える荷重で
         /// 変位が 50 mm で止まり、外力と杭反力が釣り合わないまま「収束」していた (2026-10-11 外部レビュー)。
         /// </param>
+        /// <summary>変位増分の頭打ち [m または rad] (<see cref="LimitIncrementKeepingForcedDofs"/>)。</summary>
+        public const double MaxDispIncrement = 0.05;
+
+        /// <summary>
+        /// 変位増分 <paramref name="increment"/> を <paramref name="scale"/> 倍に縮める。ただし強制変位の自由度
+        /// (<paramref name="forcedEqs"/>) は縮めずにそのまま残す。
+        /// </summary>
+        /// <remarks>
+        /// <para>強制変位の自由度は、係数行列では対角 1・右辺 = 目標までの残り に置き換えてあるので、解の成分は
+        /// 「地盤変位の残り」そのものになる。2026-10-11 まで、頭打ち (0.05) ・緩和係数・線探索の α を増分全体に
+        /// 掛けていたため、地盤変位も同じ割合で縮んでいた。一方、収束判定の残差は強制変位の自由度を 0 と置いて
+        /// 自由な自由度だけで見る (<see cref="AnaModel.FindR"/>)。線形に近い区間では、縮んだ地盤変位に
+        /// 釣り合った状態がそのまま「残差 0」になるので、<b>地盤変位を一部しか与えていないステップが
+        /// 収束として受理され得た</b>。</para>
+        /// <para>強制変位の自由度は目標を与えるだけの成分で、発散止めの対象ではない。そこで自由な自由度だけを縮め、
+        /// 強制変位は毎回目標まで与えきる。自由な自由度は次の反復で釣合いへ近づく (縮めた分は残差に残る)。</para>
+        /// </remarks>
+        public static Vector<double> ScaleKeepingForcedDofs(Vector<double> increment, double scale, ICollection<int> forcedEqs)
+        {
+            var scaled = increment * scale;
+            foreach (int eq in forcedEqs)
+            {
+                if (eq >= 0 && eq < scaled.Count)
+                    scaled[eq] = increment[eq];
+            }
+            return scaled;
+        }
+
+        /// <summary>
+        /// 変位増分の頭打ち。自由な自由度の最大の絶対値が <see cref="MaxDispIncrement"/> を超えたら、自由な自由度だけを
+        /// 同じ倍率で縮める。強制変位の自由度は縮めず、最大値の算定にも含めない (<see cref="ScaleKeepingForcedDofs"/> 参照)。
+        /// </summary>
+        public static Vector<double> LimitIncrementKeepingForcedDofs(Vector<double> increment, ICollection<int> forcedEqs)
+        {
+            double maxAbsFree = 0.0;
+            for (int i = 0; i < increment.Count; i++)
+            {
+                if (forcedEqs.Contains(i)) continue;
+                double a = Math.Abs(increment[i]);
+                // NaN は比較が偽になり頭打ちを素通りするので、従来 (AbsoluteMaximum) と同じく倍率の算定から外れる
+                if (a > maxAbsFree) maxAbsFree = a;
+            }
+            if (maxAbsFree <= MaxDispIncrement) return increment;
+            return ScaleKeepingForcedDofs(increment, MaxDispIncrement / maxAbsFree, forcedEqs);
+        }
+
         public static void SolveDisp(AnaModel anaModel, double relaxationFactor = 1.0, bool limitIncrement = true)
         {
             anaModel.SetForcedDispOnLoadVectorAndStiffnessMatrix(true); // KAA_tanとVectorRを取得
@@ -55,10 +102,13 @@ namespace PileDesign.FEM
                 }
             }
 
+            // 増分を縮める (緩和係数・下の頭打ち) ときに、強制変位の自由度は縮めない (ScaleKeepingForcedDofs 参照)
+            var forcedEqs = anaModel.GetForcedDofEquations();
+
             // 緩和係数を適用（1.0未満で収束を安定化）
             if (relaxationFactor < 1.0 && relaxationFactor > 0.0)
             {
-                incrementalDispVector = incrementalDispVector * relaxationFactor;
+                incrementalDispVector = ScaleKeepingForcedDofs(incrementalDispVector, relaxationFactor, forcedEqs);
             }
 
             // ソルバ出力に NaN / ∞ が出ていないかを見る (特異行列や数値不安定で起こりうる)。
@@ -90,13 +140,8 @@ namespace PileDesign.FEM
             // 変位増分制限（発散防止のためのライン検索簡易版）
             // 増分変位が大きすぎる場合はスケールダウン
             // 注意：制限が厳しすぎると収束を妨げる可能性あり
-            const double maxDispIncrement = 0.05; // 最大増分 50mm = 0.05m に緩和
-            double maxAbsIncrement = incrementalDispVector.AbsoluteMaximum();
-            if (limitIncrement && maxAbsIncrement > maxDispIncrement)
-            {
-                double scaleFactor = maxDispIncrement / maxAbsIncrement;
-                incrementalDispVector = incrementalDispVector * scaleFactor;
-            }
+            if (limitIncrement)
+                incrementalDispVector = LimitIncrementKeepingForcedDofs(incrementalDispVector, forcedEqs);
 
             anaModel.SetDispVector(incrementalDispVector);
 

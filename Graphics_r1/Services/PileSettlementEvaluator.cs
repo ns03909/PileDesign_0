@@ -13,9 +13,10 @@ namespace PileDesign.Services
     /// 構造種別に応じて定めるとする)。プログラムが勝手に値を置いて合否を出すと、
     /// 根拠の無い判定が計算書に残る。基本設定で明示的に有効にしたときだけ検定する。</para>
     ///
-    /// <para>応答値は<b>単杭沈下 + 群杭沈下 (常時 VL の記録)</b>の合計。画面のグラフ「沈下 単杭＋群杭（基礎梁なし）」と同じ組み方で、
-    /// 群杭沈下を実行していなければ群杭ぶんは 0 になる (単杭だけの沈下量と等しい)。基本設定の「沈下検討の対象」が
-    /// 単杭沈下だけなら群杭ぶんは足さない。常時の記録が基礎梁なし・ありの 2 つあれば、それぞれについて項目を作る。</para>
+    /// <para>応答値は<b>単杭沈下 + 群杭沈下 (常時 VL の記録)</b>の合計。画面のグラフ「沈下 単杭＋群杭（基礎梁なし）」と同じ組み方。
+    /// 基本設定の「沈下検討の対象」が単杭沈下だけなら群杭ぶんは足さない。「単杭＋群杭沈下」なのに群杭沈下 (常時) の
+    /// 記録が無ければ、杭ごとに検定不能にする (杭頭変形角の検定と同じ扱い。以前は群杭ぶんを 0 として判定していた)。
+    /// 常時の記録が基礎梁なし・ありの 2 つあれば、それぞれについて項目を作る。</para>
     ///
     /// <para>対象は<b>長期 (VL) だけ</b>。許容沈下量は常時の沈下に対して定める量で、
     /// 地震時の沈下量と比べる根拠が無い。地震動レベルは 0 で持つ
@@ -72,7 +73,12 @@ namespace PileDesign.Services
             var vlRecords = includesGroup
                 ? (pgs?.CaseRecords ?? []).Where(r => r?.PileSettlements_mm is { Count: > 0 } && r.IsLongTerm).ToList()
                 : [];
-            // 群杭沈下を実行していなければ、群杭ぶんは 0 (単杭だけの沈下量)。以前からの扱い
+            // 「単杭＋群杭沈下」なのに群杭沈下 (常時) の記録が無ければ、杭ごとに検定不能にする。
+            // 以前は群杭ぶんを 0 として単杭沈下だけで OK / NG を出しており、同じ状態で杭頭変形角
+            // (SettlementDeformationAngleEvaluator) は「群杭沈下の結果がありません」と検定不能にしていた。
+            // 足すべき群杭沈下を足さない値は、選んだ基準の沈下量ではない
+            string? noGroupReason = includesGroup && vlRecords.Count == 0
+                ? SettlementDeformationAngleEvaluator.NoGroupResultReason : null;
             var groupCases = vlRecords.Count > 0
                 ? vlRecords.Select(r => (Record: (GroupSettlementCaseRecord?)r,
                     Suffix: vlRecords.Count > 1 ? $"（{(r.IsBeamAware ? "群杭 基礎梁あり" : "群杭 基礎梁なし")}）" : "")).ToList()
@@ -109,7 +115,7 @@ namespace PileDesign.Services
                 foreach (var (rec, suffix) in groupCases)
                 {
                     double group_mm = 0.0;
-                    string? groupProblem = null;
+                    string? groupProblem = noGroupReason;
                     if (rec != null)
                     {
                         if (rec.IsConvergenceUnknown)

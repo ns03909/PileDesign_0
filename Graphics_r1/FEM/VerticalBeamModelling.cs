@@ -302,23 +302,7 @@ namespace PileDesign.FEM
             return null;
         }
 
-        private string? GetFemNodeName(NodeReferenceType type, Guid id)
-        {
-            switch (type)
-            {
-                case NodeReferenceType.FoundationNode:
-                    var fnode = _inputModel.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n.Id == id);
-                    return fnode != null ? $"FoundationNode-{fnode.No}" : null;
-                case NodeReferenceType.PileLayout:
-                    var pile = _inputModel.PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
-                    return pile != null ? $"FoundationNode-P{pile.No}" : null;
-                case NodeReferenceType.GeneralNode:
-                    var gnode = _inputModel.InputNodes?.FirstOrDefault(n => n.UniqueId == id);
-                    return gnode != null ? $"InputNode-{gnode.No}" : null;
-                default:
-                    return null;
-            }
-        }
+        private string? GetFemNodeName(NodeReferenceType type, Guid id) => AnalysisModelling.FemNodeNameOf(_inputModel, type, id);
 
         private Node? FindClosestNode(double x, double y, double z)
         {

@@ -13,6 +13,8 @@ namespace PileDesign.Views
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
             PreviewKeyDown += Window_PreviewKeyDown;
+            // × ボタンで閉じたときも解析を止める (保存しないボタン・Esc は CancelCommand が止める)
+            Closing += (_, _) => (DataContext as ViewModels.GroupSettlementWithBeamCalculationViewModel)?.CancelRunningAnalysis();
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)

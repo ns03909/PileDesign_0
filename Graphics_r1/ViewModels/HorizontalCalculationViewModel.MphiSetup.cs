@@ -432,11 +432,11 @@ namespace PileDesign.ViewModels
         // useRelaxation=false: Full NR（正確なヤコビアンで2次収束）
         // useRelaxation=true:  Modified NR の初期反復（安定化のためダンピング）
         // biaxialCoupling=true: 合成 M–φ の接線の非対角項 (二方向曲げの連成) も剛性に入れる (Beam.EIyzTan 参照)
-        private static void UpdateBeamMPhiTangent(AnaModel model, bool useRelaxation = false, bool biaxialCoupling = false)
+        internal static void UpdateBeamMPhiTangent(AnaModel model, bool useRelaxation = false, bool biaxialCoupling = false)
             => UpdateBeamMPhi(model, isTangent: true, useRelaxation: useRelaxation, biaxialCoupling: biaxialCoupling);
 
         // 割線剛性用（必要なら接線と同手順でKsecも更新）
-        private static void UpdateBeamMPhiSecant(AnaModel model) => UpdateBeamMPhi(model, isTangent: false);
+        internal static void UpdateBeamMPhiSecant(AnaModel model) => UpdateBeamMPhi(model, isTangent: false);
 
         // 統合されたM-φ更新メソッド: 接線剛性と割線剛性の両方に対応
         private static void UpdateBeamMPhi(AnaModel model, bool isTangent, bool useRelaxation = false, bool biaxialCoupling = false)
@@ -483,7 +483,7 @@ namespace PileDesign.ViewModels
                 bool useCurveBase = (EI_base > 1e-6);
 
                 // 倍率に変換（数値安定化のため上下限）
-                // v10: 下限を 0.05 (5%) に設定して数値安定性を確保
+                // v10: 下限を 0.05 (5%) に設定して数値安定性を確保 (接線のみ。割線は下の説明を参照)
                 // 長い杭・多要素の場合に剛性が低すぎると振動の原因になる
                 const double RATIO_MIN = 0.05;
                 double ratioY, ratioZ;
@@ -496,8 +496,18 @@ namespace PileDesign.ViewModels
                 // v10: 常にE*Iを基準にしてratioを計算
                 // SetKeでは EI_used = E*I * ratio なので、
                 // ratio = EI_sec / E*I とすることで EI_used = EI_sec となる
-                ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI0y, RATIO_MIN, 1.0);
-                ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, RATIO_MIN, 1.0);
+                //
+                // 下限 RATIO_MIN を掛けるのは<b>接線 (Newton の係数行列) だけ</b>。割線は内力 (KeSec·d) を決めるので、
+                // M-φ 曲線の M/φ そのものを使う。2026-10-11 まで割線にも同じ下限を掛けていたため、曲率が進んで
+                // 真の M/φ が EI の 5% を下回ると、要素は曲線より大きな曲げモーメントを負担していた
+                // (例: M/φ = 2%·EI の点で 2.5 倍)。FindT・FindR もこの内力で残差を組むので、曲線から外れたまま
+                // 「収束」し、結果の曲げモーメントが終局モーメントを超えて出ていた。
+                // 割線を曲線どおりにしても係数行列は接線側の下限で正定値に保たれる (修正 Newton と同じで、
+                // 収束が遅くなることはあっても釣合いの判定は曲線に対して行われる)。
+                ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0
+                    : (isTangent ? Math.Clamp(EIy_eff / EI0y, RATIO_MIN, 1.0) : Math.Clamp(EIy_eff / EI0y, 0.0, 1.0));
+                ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0
+                    : (isTangent ? Math.Clamp(EIz_eff / EI0z, RATIO_MIN, 1.0) : Math.Clamp(EIz_eff / EI0z, 0.0, 1.0));
 
                 // 要素中央の曲率を保存（合成値）- 接線/割線の両方で更新
                 double phiRes = PileDesign.Common.StableNumerics.Norm(phiY, phiZ);

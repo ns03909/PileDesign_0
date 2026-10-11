@@ -71,6 +71,7 @@ namespace PileDesign.ViewModels
     /// <item><term>.ResultsWindows.cs</term><description>結果を見るウィンドウ</description></item>
     /// <item><term>.ToolWindowsAndMoveCopy.cs</term><description>道具のウィンドウと移動・複写</description></item>
     /// <item><term>.ResultSet.cs</term><description>解析結果の入れ物と、再解析が必要かの判断</description></item>
+    /// <item><term>.SettlementStaleness.cs</term><description>沈下系の解析 (単杭・基礎梁考慮・群杭 2 種) ごとの「入力変更前の結果」の印と、解析どうしの依存</description></item>
     /// <item><term>.Workflow.cs</term><description>工程の帯 (入力 → 杭要素分割 → 解析 → 検定 → 計算書)</description></item>
     /// <item><term>.EvaluationColoring.cs</term><description>検定結果の色分け</description></item>
     /// <item><term>.CameraViews.cs</term><description>視点の切り替え</description></item>
@@ -1028,6 +1029,14 @@ namespace PileDesign.ViewModels
                 Owner = Application.Current?.MainWindow
             };
             win.ShowDialog();
+            // この画面で解析して保存したときだけ、結果を最新として記録し、解析結果の控えを取り直す (条件も記録する)。
+            // 以前はどちらもしておらず、群杭沈下（基礎梁あり）だけを解き直しても「再解析が必要」が残り
+            // (または別の解析の実行で消え)、計算書の「解析の実行条件」にも載らなかった。単杭沈下解析（基礎梁考慮）と同じ扱い
+            if (vm.IsSaved)
+            {
+                MarkSettlementResultsCurrent(SettlementAnalyses.GroupWithBeam);
+                CaptureAnalysisResultSet(vm.LastRunSettings);
+            }
             // 保存して閉じた場合は VM 内で InputModel.PileGroupSettlement.CaseRecords が更新済み
             // ケース選択 ComboBox とバッジを再評価するため PropertyChanged を発火
             OnPropertyChanged(nameof(HasGroupSettlementCaseRecords));
@@ -1838,7 +1847,7 @@ namespace PileDesign.ViewModels
                 }
             }
             // 杭頭ばねは単杭沈下の荷重-沈下曲線から作る。曲線が入力の変更より前のものなら、使うか尋ねる
-            if (!anyMissing && !ConfirmUsingStaleSettlementResults("単杭沈下解析（基礎梁考慮）", "杭頭ばね"))
+            if (!anyMissing && !ConfirmUsingStaleSettlementResults("単杭沈下解析（基礎梁考慮）", "杭頭ばね", SettlementAnalyses.SinglePile))
                 return;
             if (anyMissing)
             {
@@ -1865,8 +1874,9 @@ namespace PileDesign.ViewModels
                 {
                     VerticalBeamCaseResults = new ObservableCollection<FEM.VerticalBeamCaseResult>(viewModel.CaseResults);
                     IsVerticalBeamAnalysisDone = true;
-                    // 受け取った結果だけを「最新」とする (保存せずに閉じたときは、前の結果の印を変えない)
-                    MarkSettlementResultsCurrent();
+                    // 受け取った結果だけを「最新」とする (保存せずに閉じたときは、前の結果の印を変えない)。
+                    // 印を降ろすのはこの解析の分だけ。以前は沈下系の 4 つの解析の印をまとめて降ろしていた
+                    MarkSettlementResultsCurrent(SettlementAnalyses.VerticalBeam);
                     CaptureAnalysisResultSet(viewModel.LastRunSettings);
 
                     // 計算ログを別途保存

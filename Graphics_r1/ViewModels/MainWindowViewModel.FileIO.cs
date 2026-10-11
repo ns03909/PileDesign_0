@@ -114,7 +114,9 @@ namespace PileDesign.ViewModels
                     Models.PileFemLinkTable.Build(CurrentResultSet?.InputSnapshot, CurrentResultSet?.AnaModel),
                     IsElementSplit,
                     InputChangedSinceAnalysis,
-                    analysisRunRecords: CurrentResultSet?.RunRecords);
+                    analysisRunRecords: CurrentResultSet?.RunRecords,
+                    staleSettlementResults: SettlementAnalysisKeys(_staleSettlementAnalyses),
+                    horizontalAnalysisSummaryText: DocxOutput?.LastAnalysisSummaryText);
                 if (ProjectReplacedDuringSave(projectAtSaveStart, path))
                     return false;
                 CurrentFilePath = path;
@@ -247,7 +249,7 @@ namespace PileDesign.ViewModels
             // 閉じる・開き直すだけで「現在のデータを保存しますか？」と聞いていた
             MarkProjectReplaced();
             RestoreInputChangedSinceAnalysis(false);
-            RestoreSettlementInputChanged(false);
+            RestoreSettlementStale(SettlementAnalyses.None);
 
             UpdateWindowImmediate();
         }
@@ -380,10 +382,10 @@ namespace PileDesign.ViewModels
                 ElementSplit: IsElementSplit, Horizontal: IsHorizontalAnalysisDone, Vertical: IsVerticalAnalysisDone,
                 Group: IsGroupPileSettlementAnalysisDone, VerticalBeam: IsVerticalBeamAnalysisDone,
                 VerticalBeamResults: VerticalBeamCaseResults,
-                Changed: InputChangedSinceAnalysis, HorizontalChanged: HorizontalInputChanged, SettlementChanged: SettlementInputChanged,
-                HorizontalEdits: _editsSinceHorizontal.ToList(), SettlementEdits: _editsSinceSettlement.ToList(),
+                Changed: InputChangedSinceAnalysis, HorizontalChanged: HorizontalInputChanged, Settlement: CaptureSettlementStale(),
+                HorizontalEdits: _editsSinceHorizontal.ToList(),
                 AnalysisSignature: _analysisInputSignature, HorizontalSignature: _horizontalInputSignature,
-                SettlementSignature: _settlementInputSignature);
+                SummaryText: DocxOutput?.LastAnalysisSummaryText);
 
             try
             {
@@ -408,12 +410,11 @@ namespace PileDesign.ViewModels
                 VerticalBeamCaseResults = s.VerticalBeamResults;
                 InputChangedSinceAnalysis = s.Changed;
                 HorizontalInputChanged = s.HorizontalChanged;
-                SettlementInputChanged = s.SettlementChanged;
+                RestoreSettlementStale(s.Settlement);
                 _editsSinceHorizontal.Clear(); _editsSinceHorizontal.AddRange(s.HorizontalEdits);
-                _editsSinceSettlement.Clear(); _editsSinceSettlement.AddRange(s.SettlementEdits);
                 _analysisInputSignature = s.AnalysisSignature;
                 _horizontalInputSignature = s.HorizontalSignature;
-                _settlementInputSignature = s.SettlementSignature;
+                if (DocxOutput != null) DocxOutput.LastAnalysisSummaryText = s.SummaryText;
                 if (previousInput != null)
                 {
                     // 静的な材料オプションと軸力モードは InputModel の外にあるので、明示的に戻す。
@@ -438,8 +439,10 @@ namespace PileDesign.ViewModels
             if (CurrentInputModel.InputNodes == null) compat.Add(PileDesign.Services.CompatibilityKind.Filled, "一般節点の一覧が無かったので、空の一覧で補いました。");
             if (CurrentInputModel.GridXItems == null) compat.Add(PileDesign.Services.CompatibilityKind.Filled, "通り心 (X) の一覧が無かったので、空の一覧で補いました。");
             if (CurrentInputModel.GridYItems == null) compat.Add(PileDesign.Services.CompatibilityKind.Filled, "通り心 (Y) の一覧が無かったので、空の一覧で補いました。");
-            // 前のファイルの水平解析のサマリーを、開いたファイルの計算書に載せない
-            DocxOutput.LastAnalysisSummaryText = null;
+            // 水平解析のサマリーは、開いたファイルに保存されていればそれを使う (水平解析のモデルと一緒に保存する)。
+            // 以前は保存しておらず、ここで消すだけだったので、開き直すと水平解析の結果があるのに計算書からサマリーが消えた。
+            // 前のファイルのサマリーを開いたファイルの計算書に載せないことは変わらない
+            DocxOutput.LastAnalysisSummaryText = projectData?.AnaModel != null ? projectData.HorizontalAnalysisSummaryText : null;
 
             // 解析したときの入力の控え (別の実体のとき)。結果表示・計算書・検定はこちらを読むので、
             // 今の版の形に整える処理は現在の入力と<b>同じものを</b>かける。以前は現在の入力にだけかけていて、
@@ -617,7 +620,8 @@ namespace PileDesign.ViewModels
             bool changedSinceAnalysisOnLoad = InputChangedSinceAnalysis;
             // 沈下の記録も同じく控えて戻す。以前は水平解析の印だけを戻していたので、沈下の結果を持つファイルを
             // 開いただけで「沈下解析の結果は入力変更前のもの」と出て、変更した項目に読込の処理の名前まで並んでいた
-            bool settlementChangedOnLoad = SettlementInputChanged;
+            // 沈下系は解析ごとに持つ (どれが古いか)
+            var settlementStaleOnLoad = _staleSettlementAnalyses;
             // 番号を振り直したら、読み込んだ解析結果は別のケースの軸力で解いた恐れがある。再解析を促す
             if (renumbered.Count > 0 && CurrentModel != null)
                 changedSinceAnalysisOnLoad = true;
@@ -628,7 +632,7 @@ namespace PileDesign.ViewModels
             // (直前の SaveUndoState で編集扱いになるため、その後に戻す)
             MarkProjectReplaced();
             RestoreInputChangedSinceAnalysis(changedSinceAnalysisOnLoad);
-            RestoreSettlementInputChanged(settlementChangedOnLoad);
+            RestoreSettlementStale(settlementStaleOnLoad);
             // 元に戻したときに比べる相手 (解析したときの入力の署名)。荷重ケースの番号・名前を揃えたあとに取る
             CaptureInputSignaturesAfterLoad();
 
@@ -1033,6 +1037,10 @@ namespace PileDesign.ViewModels
                 snapshot.AttachViewModel(this);
                 snapshot.UpdateCountLists();
 
+                // 杭断面の Ec は読込の時点の (前の作業の) 材料モデル化オプションで導かれている。
+                // 控えは控え自身の基本設定で求め直す (今の入力は ApplyConcreteModelOptions が合わせる。控えには届かない)
+                snapshot.RecalculateConcreteEWithOwnOptions();
+
                 // 単杭沈下の曲線は入力の節に書き出さないので、スナップショットの
                 // 土層-杭セットには入っていない。結果表示はスナップショットを読むため写す。
                 Models.Results.SinglePileSettlementResult.CopyCurves(CurrentInputModel, snapshot);
@@ -1072,8 +1080,12 @@ namespace PileDesign.ViewModels
             // 従来の判定 (スナップショットが別インスタンスか) に落とす。
             // この判定は「常に true」になる誤りだったが、旧ファイルでは
             // 編集済みを見落とすより出しすぎる側に倒しておく。
+            // 沈下系の解析ごとの陳腐化は、記録のあるファイル (2026-10-11 以降) ならそれを使う。
+            // 旧ファイルは「解析後に編集した」だけなので、編集済みなら沈下系はすべて古いとする (以前と同じ扱い)
             SetRestoredResultSet(set,
-                changedSinceAnalysis: projectData.InputChangedSinceAnalysis ?? snapshotIsSeparate);
+                changedSinceAnalysis: projectData.InputChangedSinceAnalysis ?? snapshotIsSeparate,
+                staleSettlement: projectData.StaleSettlementResults is { } staleKeys
+                    ? ParseSettlementAnalysisKeys(staleKeys) : null);
         }
 
         // docx 出力設定（Include* フラグ・一括選択/解除・出力前検証）は

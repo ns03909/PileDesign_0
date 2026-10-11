@@ -461,7 +461,38 @@ namespace PileDesign.Output
             /// <summary>いずれかの列に結果の無いセルがあるか (表に注記するため)。</summary>
             internal bool HasMissing(int level)
                 => Dmax[level] == null || Qmax[level] == null || Mmax[level] == null || NMax[level] == null || NMin[level] == null;
+
+            /// <summary>
+            /// 解析した荷重条件 (荷重ケース・組合せ・液状化) のうち、この区間の要素の結果 (断面力・節点の変位) を引けた数と、
+            /// 引けなかった数 (レベルごと)。解析していない荷重条件は数えない。
+            /// </summary>
+            internal int[] FoundResults { get; } = new int[2];
+            internal int[] MissingResults { get; } = new int[2];
+
+            /// <summary>要素を辿れない杭 (土層-杭セット・要素が無い) があったか (レベルによらない)。</summary>
+            internal bool HasUnresolvedPile { get; set; }
+
+            /// <summary>最大値の候補に入れた結果のうち、水平解析が収束しなかった荷重条件の名前 (レベルごと)。</summary>
+            internal SortedSet<string>[] UnconvergedCases { get; } = [new(StringComparer.Ordinal), new(StringComparer.Ordinal)];
+
+            /// <summary>
+            /// 一部の杭・荷重条件の結果が欠けたまま、得られた結果だけで最大値を求めたか。値はそのまま出し、表に印を付ける。
+            /// 全部欠けたとき (値が無い) は「—」で分かるので含めない。
+            /// </summary>
+            internal bool IsPartial(int level)
+                => FoundResults[level] > 0 && (MissingResults[level] > 0 || HasUnresolvedPile);
+
+            /// <summary>収束しなかった荷重条件の結果を最大値の候補に含むか。</summary>
+            internal bool HasUnconverged(int level) => UnconvergedCases[level].Count > 0;
         }
+
+        /// <summary>まとめ一覧の行に付ける印 (※1 = 一部の結果が欠けている、※2 = 収束しなかった荷重条件を含む)。</summary>
+        internal static string SummaryRowMarker(PileForceSummaryRow row, int level)
+            => (row.IsPartial(level) ? PartialMarker : "") + (row.HasUnconverged(level) ? UnconvergedMarker : "");
+
+        // 表の中の印 (注記の本文は表の下に AddTableNote で書く)
+        private const string PartialMarker = "\u203B1";      // ※1
+        private const string UnconvergedMarker = "\u203B2";  // ※2
 
         /// <summary>
         /// 杭体の区間ごとに、全杭・全荷重ケース・全組合せ・選択した液状化の有無にわたる最大値を集める。
@@ -500,6 +531,10 @@ namespace PileDesign.Output
             if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
             if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
             var soilPiles = inputModel.ElementDivision?.SoilPiles;
+            // 解析した荷重条件とその収束状態。解析した条件で結果が引けなければ「欠けた」と数える
+            // (以前は黙って飛ばし、得られた結果だけの最大値を、欠けも未収束も示さずに載せていた)
+            var convergence = anaModel?.BuildCaseConvergenceMap()
+                ?? new Dictionary<(int Level, int LoadCaseNo, int LoadCombinationNo, bool IsLiquefaction), StepStatus>();
 
             for (int pileBodyNo = 1; pileBodyNo <= inputModel.PileBodies.Count; pileBodyNo++)
             {
@@ -541,9 +576,15 @@ namespace PileDesign.Output
                     }
 
                     int soilIndex = pile.SoilPileAltNo - 1;
-                    if (soilPiles == null || soilIndex < 0 || soilIndex >= soilPiles.Count) continue;
-                    var divided = soilPiles[soilIndex]?.PileBodySegments;
-                    if (divided == null || pile.Beams == null) continue;
+                    var divided = soilPiles != null && soilIndex >= 0 && soilIndex < soilPiles.Count
+                        ? soilPiles[soilIndex]?.PileBodySegments : null;
+                    if (divided == null || pile.Beams == null || pile.Beams.Count == 0)
+                    {
+                        // この杭の要素を辿れない。どの区間の値にも入らないので、解析結果があるなら全区間に印を付ける
+                        if (convergence.Count > 0)
+                            foreach (var r in rowBySegment.Values) r.HasUnresolvedPile = true;
+                        continue;
+                    }
 
                     for (int b = 0; b < pile.Beams.Count; b++)
                     {
@@ -551,8 +592,14 @@ namespace PileDesign.Output
                         if (beam == null) continue;
                         // 梁の要素番号 → 分割後の区間 → 元の区間番号
                         int element = beam.SegmentIndex ?? b;
-                        if (element < 0 || element >= divided.Count || divided[element] == null) continue;
-                        if (!rowBySegment.TryGetValue(divided[element].No, out var row)) continue;
+                        if (element < 0 || element >= divided.Count || divided[element] == null
+                            || !rowBySegment.TryGetValue(divided[element].No, out var row))
+                        {
+                            // 区間に割り当てられない要素。この杭体の全区間に「欠けあり」の印を付ける
+                            if (convergence.Count > 0)
+                                foreach (var r in rowBySegment.Values) r.HasUnresolvedPile = true;
+                            continue;
+                        }
 
                         foreach (LoadCase loadCase in inputModel.LoadCasesInput.AllSeismicLoadCases)
                         {
@@ -563,8 +610,19 @@ namespace PileDesign.Output
                             {
                                 foreach (var isLiquefaction in liqPatterns)
                                 {
+                                    // 解析した荷重条件か (していない条件は、結果が無くても欠けではない)
+                                    bool analyzed = convergence.TryGetValue(
+                                        AnaModel.CaseConvergenceKey(loadCase, loadCombination, isLiquefaction), out var status);
                                     var force = GetBeamResultCached(beam, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
-                                    if (force == null) continue;
+                                    if (force == null)
+                                    {
+                                        if (analyzed) row.MissingResults[k]++;
+                                        continue;
+                                    }
+                                    row.FoundResults[k]++;
+                                    if (analyzed && status >= StepStatus.Unconverged)
+                                        row.UnconvergedCases[k].Add(
+                                            $"{loadCase.LoadName} {loadCombination.Name}{(isLiquefaction ? "（液状化）" : "")}");
                                     row.Qmax[k] = Max(row.Qmax[k], force.FabsMax);
                                     row.Mmax[k] = Max(row.Mmax[k], force.MabsMax);
 
@@ -573,6 +631,7 @@ namespace PileDesign.Output
                                         if (node == null) continue;
                                         var disp = GetNodeResultCached(node, loadCase, loadCombination, isLiquefaction)?.CumulativeDisp;
                                         if (disp != null) row.Dmax[k] = Max(row.Dmax[k], disp.Uh);
+                                        else if (analyzed) row.MissingResults[k]++;
                                     }
                                 }
                             }
@@ -641,7 +700,8 @@ namespace PileDesign.Output
                         {
                             var r = rows[rowIdx - 2];
                             if (colIdx == 1) SetTableCellWithVerticalAlign(cell, GetParagraph($"{r.PileBodyRef}", "center", 8), "center");
-                            else if (colIdx == 2) SetTableCellWithVerticalAlign(cell, GetParagraph($"{r.SegmentNo}", "center", 8), "center");
+                            // 一部の結果が欠けている・収束しなかった荷重条件を含む行に印を付ける (値は変えない。表の下に注記)
+                            else if (colIdx == 2) SetTableCellWithVerticalAlign(cell, GetParagraph($"{r.SegmentNo}{SummaryRowMarker(r, k)}", "center", 8), "center");
                             else if (colIdx == 3) SetTableCellWithVerticalAlign(cell, GetParagraph($"{r.Top:N3}", "center", 8), "center");
                             else if (colIdx == 4) SetTableCellWithVerticalAlign(cell, GetParagraph($"{r.Bottom:N3}", "center", 8), "center");
                             else if (colIdx == 5) SetTableCellWithVerticalAlign(cell, GetParagraph(Value(r.Dmax[k], "N3"), "center", 8), "center");
@@ -673,6 +733,13 @@ namespace PileDesign.Output
                 body.Append(table);
                 if (rows.Any(r => r.HasMissing(k)))
                     AddTableNote(body, "※「—」は、その区間・レベルの解析結果 (軸力は入力値) が無いことを示す。");
+                if (rows.Any(r => r.IsPartial(k)))
+                    AddTableNote(body, "※1 一部の杭・荷重ケース・荷重組合せの解析結果が得られておらず、得られた結果だけから求めた最大値である"
+                        + "（欠けた結果の分だけ、実際の最大値はこれより大きい可能性がある）。");
+                var unconvergedCases = rows.SelectMany(r => r.UnconvergedCases[k]).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
+                if (unconvergedCases.Count > 0)
+                    AddTableNote(body, "※2 水平解析が収束しなかった荷重ケースの結果を含む（その応答値は釣り合いを満たしていない）。該当: "
+                        + string.Join(" / ", unconvergedCases.Take(10)) + (unconvergedCases.Count > 10 ? $" ほか {unconvergedCases.Count - 10} 件" : ""));
             }
         }
 
@@ -1163,10 +1230,15 @@ namespace PileDesign.Output
 
             int longTermCount = result.Items.Count(IsLongTermSectionCheck);
             bool includeLongTerm = mainWindowViewModel.DocxOutput.IncludeHorizontal_LongTermEvaluation;
-            if (!includeLongTerm && longTermCount > 0)
+            // 落とすのは<b>判定して OK だった</b>長期の項目だけ。NG・未収束・検定不能の長期の項目は残して数える。
+            // 以前は長期の項目をまとめて落としてから「すべての検定項目が限界値を下回っている（NG 項目なし）」と書いており、
+            // 画面の総括は NG 1 件なのに計算書は NG なしになることがあった
+            static bool IsOmittedLongTerm(Models.Results.EvaluationItem i) => IsLongTermSectionCheck(i) && i.IsJudged && i.IsOk;
+            int omittedLongTerm = includeLongTerm ? 0 : result.Items.Count(IsOmittedLongTerm);
+            if (omittedLongTerm > 0)
             {
                 result = new Models.Results.EvaluationResult(
-                    result.Items.Where(i => !IsLongTermSectionCheck(i)).ToList());
+                    result.Items.Where(i => !IsOmittedLongTerm(i)).ToList());
                 if (result.IsEmpty) return;
             }
 
@@ -1267,10 +1339,12 @@ namespace PileDesign.Output
                     + "杭頭付近の要素分割を変えて結果の幅を確かめたうえで判断すること。");
             }
 
-            if (!includeLongTerm && longTermCount > 0)
+            if (omittedLongTerm > 0)
             {
+                int kept = longTermCount - omittedLongTerm;
                 AddTableNote(body,
-                    $"※ 長期（常時）の曲げ・せん断の検定 {longTermCount} 件は、出力しない設定のため件数に含めていない。");
+                    $"※ 長期（常時）の曲げ・せん断の検定のうち OK の {omittedLongTerm} 件は、出力しない設定のため件数に含めていない。"
+                    + (kept > 0 ? $"NG・判定できなかった長期の {kept} 件は含めている。" : ""));
             }
             else if (includeLongTerm && longTermCount > 0)
             {
@@ -1540,6 +1614,66 @@ namespace PileDesign.Output
             body.Append(table);
         }
 
+        /// <summary>
+        /// 群杭沈下解析（基礎梁あり）の結果による基礎梁の傾斜角の検定。記録が無ければ出さない。
+        ///
+        /// <para>以前は水平解析の検定の章 (低減前・低減後) の中にあり、水平解析を済ませないと載らず、
+        /// 2 つの章に同じ項目が並んでいた。沈下の結果だけで決まるので沈下の検定として独立させた。</para>
+        /// </summary>
+        private void AddFoundationBeamInclinationReport(Body body)
+        {
+            if (inputModel == null) return;
+
+            List<Models.Results.EvaluationItem> items;
+            try
+            {
+                items = Services.FoundationBeamInclinationEvaluator.Evaluate(inputModel);
+            }
+            catch (Exception ex)
+            {
+                NoteOmitted(body, "基礎梁の傾斜角の検定結果", ex);
+                return;
+            }
+            if (items == null || items.Count == 0) return;   // 群杭沈下解析（基礎梁あり）をしていない、または基礎梁が無い
+
+            AddPageBreak(body);
+            AddHeader1(body, "基礎梁の傾斜角 検定", 1);
+
+            var judged = items.Where(i => i.IsJudged).ToList();
+            int ng = judged.Count(i => !i.IsOk);
+            AddText(body,
+                $"検定項目 {items.Count} 件（OK {judged.Count - ng} 件 / NG {ng} 件{UnjudgedNote(items.Count - judged.Count)}）。"
+                + "応答値は群杭沈下解析（基礎梁あり）が求めた基礎梁両端の沈下量の差 |ΔUz| / 梁の長さ、"
+                + "限界値は基本設定の杭頭 2 点間の変形角の限界値（常時 = 使用限界、レベル1 = 損傷限界、レベル2 = 安全限界）である。");
+            var unconverged = items.Where(i => i.IsFromUnconvergedCase).Select(i => i.LoadCaseName).Distinct().ToList();
+            if (unconverged.Count > 0)
+                AddText(body, "反復が収束しなかった荷重ケースは判定していない: " + string.Join(" / ", unconverged));
+            foreach (var g in items.Where(i => i.IsUnavailable).GroupBy(i => (i.LoadCaseName, i.UnavailableReason)))
+                AddText(body, $"{g.Key.LoadCaseName}: 検定できなかった（{g.Key.UnavailableReason}）{(g.Count() > 1 ? $" … {g.Count()} 件" : "")}。");
+
+            AddTableCaption(body, "検定結果（基礎梁の傾斜角）");
+            const double fontSize = 8.0;
+            var table = CreateTableWithBorders();
+            table.Append(CreateHeaderRow(
+                CreateTableCell(["荷重ケース"], fontSize, "center"),
+                CreateTableCell(["対象"], fontSize, "center"),
+                CreateTableCell(["傾斜角", "[rad]"], fontSize, "center"),
+                CreateTableCell(["限界値", "[rad]"], fontSize, "center"),
+                CreateTableCell(["検定比"], fontSize, "center"),
+                CreateTableCell(["判定"], fontSize, "center")));
+            foreach (var i in items)
+            {
+                table.Append(new TableRow(
+                    CreateTableCell([i.LoadCaseName], fontSize, "center"),
+                    CreateTableCell([i.TargetDescription], fontSize, "center"),
+                    CreateTableCell([i.ResponseText], fontSize, "right"),
+                    CreateTableCell([i.LimitText], fontSize, "right"),
+                    CreateTableCell([double.IsFinite(i.Ratio) ? i.Ratio.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "—"], fontSize, "right"),
+                    CreateTableCell([i.StatusLabel], fontSize, "center")));
+            }
+            body.Append(table);
+        }
+
         private void AddPileSettlementEvaluationReport(Body body)
         {
             if (inputModel == null) return;
@@ -1570,7 +1704,9 @@ namespace PileDesign.Output
                 "許容沈下量は、上部構造が許せる変形から設計者が定める値である"
                 + "（建築基礎構造設計指針は構造種別に応じて定めるとしており、一意の値を与えない）。"
                 + "したがってこの検定は既定では行わず、基本設定で有効にした場合にのみ出力する。"
-                + "群杭沈下解析を実行していない場合、応答値は単杭沈下量に等しい。");
+                + (inputModel.FundamentalInput?.SettlementDesignIncludesGroup ?? true
+                    ? "群杭沈下解析（長期）の結果がない杭は、群杭沈下を足せないため検定不能とした。"
+                    : ""));
 
             AddTableCaption(body, "検定結果（杭の沈下量）");
 

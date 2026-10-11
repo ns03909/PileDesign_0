@@ -682,6 +682,7 @@ namespace PileDesign.Output
             // 支持力と同じく低減の有無で値が変わらないので、別の節にする。
             Time("PileSettlementEvaluation (沈下量の検定)", () => AddPileSettlementEvaluationReport(body));
             Time("SettlementDeformationAngle (沈下による杭頭変形角の検定)", () => AddSettlementDeformationAngleReport(body));
+            Time("FoundationBeamInclination (基礎梁の傾斜角の検定)", () => AddFoundationBeamInclinationReport(body));
 
             if (mainWindowViewModel.DocxOutput.IncludeHorizontal)
             {

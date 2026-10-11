@@ -40,7 +40,26 @@ namespace PileDesign.Services
             foreach (var pile in inputModel.PileLayoutItems)
             {
                 var soilPile = SoilPileFor(inputModel, pile);
-                if (soilPile == null) continue;
+                if (soilPile == null)
+                {
+                    // 杭を黙って除かない (以前は除いており、ほかの杭が OK なら「支持力はすべて OK」と出ていた)
+                    items.Add(new EvaluationItem
+                    {
+                        Kind = EvaluationKind.PileBearingCompression,
+                        Level = 0,
+                        Category = "押込み支持力 (使用限界)",
+                        LimitName = "使用限界",
+                        TargetName = $"Pile-{pile.PileNo}",
+                        PileNo = pile.PileNo,
+                        PileBodyNo = pile.PileBodyNo,
+                        LoadCaseName = "VL",
+                        Response = double.NaN,
+                        Limit = double.NaN,
+                        Unit = Unit,
+                        UnavailableReason = "この杭の土層-杭セットがありません (要素分割をやり直してください)。支持力を求められません",
+                    });
+                    continue;
+                }
 
                 AddPileItems(items, pile, soilPile, level1Cases, level2Cases, level2UsesDamageLimit);
             }
@@ -117,7 +136,7 @@ namespace PileDesign.Services
         ///
         /// 押込みの限界値は<b>正値</b>、引抜き抵抗は<b>負値</b>で保持されている
         /// (<see cref="SoilPile.CalculateResistances"/> 参照) ので、符号を確かめてから大きさで比べる。
-        /// 限界値が 0 のときは検定できない (引抜き抵抗を計算していない杭など) ので出さない。
+        /// 限界値が 0 のとき (引抜き抵抗を計算していない杭など) は「検定不能」として出す (以前は出さなかった)。
         /// 限界値が数でない・無限大・符号が逆のときは「検定不能」として出す。以前は大きさを取ってから
         /// 0 より大きければ採用したので、無限大の限界値では有限の軸力がすべて合格になり、
         /// 符号の逆な限界値もそのまま使われた。
@@ -126,14 +145,15 @@ namespace PileDesign.Services
             int level, string limitName, string loadCaseName,
             double axialForce, double compressionLimit, double upliftLimit)
         {
-            if (!double.IsFinite(axialForce)) return;
-
-            bool isCompression = axialForce >= 0;
+            // 軸力が数でない・限界値が 0 (引抜き抵抗を計算していない杭など) のときも、項目を消さずに「検定不能」として出す。
+            // 以前は出さずに進め、その杭・ケースが抜けたまま「支持力はすべて OK」と表示されることがあった
+            bool isCompression = !(axialForce < 0);
 
             double response = Math.Abs(axialForce);
             double signedLimit = isCompression ? compressionLimit : upliftLimit;
-            if (signedLimit == 0) return;
-            string? unavailable = DescribeInvalidLimit(signedLimit, isCompression);
+            string? unavailable = !double.IsFinite(axialForce)
+                ? $"軸力が数値として求まっていません ({axialForce})。杭配置の軸力を確認してください"
+                : DescribeInvalidLimit(signedLimit, isCompression);
             double limit = unavailable == null ? Math.Abs(signedLimit) : double.NaN;
 
             items.Add(new EvaluationItem
@@ -167,6 +187,8 @@ namespace PileDesign.Services
         internal static string? DescribeInvalidLimit(double signedLimit, bool isCompression)
         {
             string what = isCompression ? "押込みの支持力" : "引抜き抵抗";
+            if (signedLimit == 0)
+                return $"{what}を計算していません (土層-杭セットの杭周の諸量がありません)。要素分割をやり直してください";
             if (!double.IsFinite(signedLimit))
                 return $"{what}が数値として求まっていません ({signedLimit})。地盤・杭体の入力を確認してください";
             if (isCompression ? signedLimit < 0 : signedLimit > 0)

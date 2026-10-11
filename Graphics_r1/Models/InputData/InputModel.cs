@@ -1889,6 +1889,32 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 杭断面のコンクリートのヤング係数 Ec を、<b>この入力の</b>基本設定 (Ec の算定に ξ = 1.0 を使うか) で求め直す。
+        ///
+        /// <para>Ec は保存しない派生値で、読込の仕上げ (PileSection の OnDeserialized) で静的な材料モデル化オプションから
+        /// 導き直す。読込の時点のオプションは<b>前に開いていた作業</b>のもので、そのあと今の入力の設定へ合わせ直すが
+        /// (MainWindowViewModel.ApplyConcreteModelOptions)、解析結果の控え (解析したときの入力) の断面には届かない。
+        /// 以前は控えの断面が前の作業の設定の Ec のままになり、結果の表示・計算書・検定の EA・EI と曲線が、
+        /// 解析したときと違う Ec で引かれることがあった。</para>
+        /// </summary>
+        internal void RecalculateConcreteEWithOwnOptions()
+        {
+            bool useUnitGsi = FundamentalInput?.UseUnitGsiForConcreteE ?? false;
+            foreach (var pb in PileBodies ?? [])
+            {
+                if (pb?.PileBodySegments == null) continue;
+                foreach (var seg in pb.PileBodySegments)
+                {
+                    var sec = seg?.PileSection;
+                    if (sec == null) continue;
+                    // 既製杭で製品を選んでいればカタログの Ec を使う (RecalculateConcreteE の中で)。オプションは効かない
+                    sec.RecalculateConcreteE(useUnitGsi);
+                    sec.SetSpecs();
+                }
+            }
+        }
+
+        /// <summary>
         /// 求めた座屈長を、その杭体の全断面へ配る。
         ///
         /// 座屈長は断面そのものの性質ではなく<b>その杭が置かれた地盤</b>で決まるが、

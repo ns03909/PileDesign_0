@@ -153,12 +153,12 @@ namespace TestProject1
         public void ResultsAreMarkedCurrentOnlyWhenAccepted_AndBeamMaterialEditsDoNotDiscardResults()
         {
             string vb = TestSource.Read("Graphics_r1", "ViewModels", "VerticalBeamCalculationViewModel.cs");
-            Assert.IsFalse(vb.Contains("_mainWindowViewModel.MarkSettlementResultsCurrent()")
+            Assert.IsFalse(vb.Contains("_mainWindowViewModel.MarkSettlementResultsCurrent(")
                            || vb.Contains("_mainWindowViewModel.IsVerticalBeamAnalysisDone = true"),
                 "解析の画面が、保存の前にメイン側の結果を「最新」にしています");
             string main = TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.cs");
             int saved = main.IndexOf("if (viewModel.IsSaved && viewModel.CaseResults.Count > 0)");
-            Assert.IsTrue(saved > 0 && main.IndexOf("MarkSettlementResultsCurrent();", saved) > saved);
+            Assert.IsTrue(saved > 0 && main.IndexOf("MarkSettlementResultsCurrent(SettlementAnalyses.VerticalBeam);", saved) > saved);
 
             string grid = TestSource.Read("Graphics_r1", "Views", "MainWindow.DataGridHandlers.cs");
             int start = grid.IndexOf("private void DataGridBeamMaterialsOrSections_CellEditEnding(");

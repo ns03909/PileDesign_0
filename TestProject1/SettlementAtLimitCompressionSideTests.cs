@@ -84,7 +84,8 @@ namespace TestProject1
             };
             var input = new InputModel
             {
-                FundamentalInput = new FundamentalInput { EvaluateSettlement = true, AllowableSettlement_mm = 20 },
+                // 沈下検討の対象は単杭沈下 (群杭沈下の結果が無いと「単杭＋群杭沈下」では検定不能になる)
+                FundamentalInput = new FundamentalInput { EvaluateSettlement = true, AllowableSettlement_mm = 20, SettlementDesignIncludesGroup = false },
                 PileLayoutItems = [Pile(1, 0.010, beyond: true), Pile(2, 0.030, beyond: true), Pile(3, 0.010, beyond: false)],
                 ElementDivision = new ElementDivision { SoilPiles = [PileWithTwoSidedCurve()] },
             };

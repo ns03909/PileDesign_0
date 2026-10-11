@@ -79,6 +79,24 @@ namespace PileDesign.Models
         public bool? InputChangedSinceAnalysis { get; set; }
 
         /// <summary>
+        /// 保存した時点で入力変更前の結果になっていた沈下系の解析 (解析の名前: "SinglePile" / "VerticalBeam" /
+        /// "Group" / "GroupWithBeam")。沈下系は解析ごとに古くなる (単杭沈下だけ古く、群杭沈下は最新、など)。
+        ///
+        /// 省略可能。旧ファイルには無いので null で、そのときは <see cref="InputChangedSinceAnalysis"/> だけから
+        /// 「編集済みなら沈下系はすべて古い」とする (以前と同じ扱い)。知らない名前は読込で無視する。
+        /// 旧版のアプリは知らないプロパティを読み飛ばす (System.Text.Json の既定) ので、このファイルも開ける。
+        /// </summary>
+        public List<string>? StaleSettlementResults { get; set; }
+
+        /// <summary>
+        /// 水平解析のサマリー (計算書の「解析結果のサマリー」に載せる文)。水平解析のモデルを保存するときだけ書く。
+        ///
+        /// 以前は保存せず、読込で消していた。ファイルを開き直すと、水平解析の結果はあるのに計算書から
+        /// サマリーの表が消えた (解析し直すまで戻らない)。省略可能なので旧ファイルは null (従来どおり載らない)。
+        /// </summary>
+        public string? HorizontalAnalysisSummaryText { get; set; }
+
+        /// <summary>
         /// 杭 → FEM 要素 (梁・節点・地盤ばね・杭頭回転ばね) の対応表。
         ///
         /// これらの関連は解析ランタイム状態として [JsonIgnore] であり、

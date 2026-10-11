@@ -241,14 +241,20 @@ namespace PileDesign.ViewModels
         /// </summary>
         /// <param name="what">尋ねる解析の名前 (「水平解析」など)。</param>
         /// <param name="uses">古い結果を何に使うか (「杭先端の P-S ばね」など)。</param>
+        /// <param name="dependsOn">
+        /// 使う結果の解析。その解析の結果が古いときだけ尋ねる。以前は沈下系の印が 1 つで、使わない解析
+        /// (群杭沈下など) の結果が古いだけでも尋ね、逆に使う解析の結果が古くても、別の沈下解析を実行したあとは尋ねなかった。
+        /// </param>
         /// <returns>続けてよいなら true。</returns>
-        public bool ConfirmUsingStaleSettlementResults(string what, string uses)
+        public bool ConfirmUsingStaleSettlementResults(string what, string uses, SettlementAnalyses dependsOn = SettlementAnalyses.SinglePile)
         {
-            if (!SettlementResultsAreStale) return true;
+            var stale = StaleSettlementAnalyses & dependsOn;
+            if (stale == SettlementAnalyses.None) return true;
 
-            string msg = $"沈下解析の結果が入力変更前のものです。\n"
+            string names = string.Join("・", SettlementAnalysisNames(stale));
+            string msg = $"{names}の結果が入力変更前のものです。\n"
                        + $"{what}は{uses}にこの結果を使います。\n\n"
-                       + "先に沈下解析を再実行することをおすすめします。\n"
+                       + $"先に{names}を再実行することをおすすめします。\n"
                        + "このまま続けますか？";
             return MessageService.Show(msg, "確認", MessageBoxButton.YesNo, MessageBoxImage.Warning)
                 == MessageBoxResult.Yes;

@@ -321,7 +321,7 @@ public class ReferenceIntegrityTests
 
         vm.RestoreInputChangedSinceAnalysis(false);   // 解析をやり直した (水平解析が最新)
         Assert.AreEqual(0, vm.EditsSinceHorizontal.Count);
-        vm.MarkSettlementResultsCurrent();
+        vm.MarkSettlementResultsCurrent(SettlementAnalyses.All);
         Assert.AreEqual(0, vm.EditsSinceSettlement.Count);
     }
 

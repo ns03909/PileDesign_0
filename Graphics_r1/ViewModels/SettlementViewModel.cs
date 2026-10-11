@@ -245,6 +245,8 @@ namespace PileDesign.ViewModels
                 Mouse.OverrideCursor = Cursors.Wait;
                 var warnings = new List<string>();
 
+                // 途中のセットで解析が失敗しても、残りのセットを確定させない (元に戻す操作のあとの解き直しもここを通る)
+                foreach (var sp in SoilPiles) _session.MarkStale(sp);
                 for (int i = 0; i < SoilPiles.Count; i++)
                     _session.AnalyzeAt(i, warnings);
 
@@ -533,11 +535,14 @@ namespace PileDesign.ViewModels
                 // 入力の編集として記録する (杭体の α・n・沈下検討用の杭先端径などを変えている)。
                 // 以前は記録しておらず、Undo に載らないうえ、杭先端 P-S ばねを使う水平解析の結果が古いばねのまま
                 // 「最新」の入力と組にされていた。P-S ばねを使うなら水平解析にも「再解析が必要」を立てる
+                // 単杭沈下の入力だけなら印は単杭沈下 (と、その曲線を使う単杭沈下解析（基礎梁考慮）) にだけ立てる
                 mainWindowViewModel.SaveUndoState(
-                    InputModel.UsePsSpringAtPileTip ? MainWindowViewModel.AnalysisInputScope.All : MainWindowViewModel.AnalysisInputScope.Settlement,
+                    InputModel.UsePsSpringAtPileTip ? MainWindowViewModel.AnalysisInputScope.All : MainWindowViewModel.AnalysisInputScope.SinglePileSettlement,
                     "単杭沈下 編集");
                 mainWindowViewModel.IsVerticalAnalysisDone = true;
-                mainWindowViewModel.MarkSettlementResultsCurrent();
+                // 降ろすのは単杭沈下の印だけ。曲線が変わったので、その曲線で解いた基礎梁考慮の結果は古くなる
+                // (以前は沈下系の 4 つの印をまとめて降ろし、基礎梁考慮の結果が古い曲線のまま「最新」になった)
+                mainWindowViewModel.MarkSettlementResultsCurrent(SettlementAnalyses.SinglePile);
                 mainWindowViewModel.CaptureAnalysisResultSet(DescribeRun(InputModel.ElementDivision.SoilPiles));
             }
             RequestClose?.Invoke(this, EventArgs.Empty);

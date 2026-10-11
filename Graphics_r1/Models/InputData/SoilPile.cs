@@ -671,7 +671,8 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // 全節点変位・反力（各荷重ステップ）— DeepCopy/JSON保存から除外
+        // 全節点変位・反力（各荷重ステップ）— 入力の JSON には書かない。保存ファイルには単杭沈下の結果の節
+        // (SinglePileSettlementResult.Entry) に曲線と一緒に書き、読込で戻す (2026-10-11 から。以前は保存しなかった)
         [JsonIgnore]
         public List<Vector<double>>? NodeDisplacements { get; set; }   // 単杭沈下解析のあとに入る
 
@@ -1411,6 +1412,9 @@ namespace PileDesign.Models.InputData
                 copy.Rtr = this.Rtr;
                 copy.Rty = this.Rty;
                 copy.GroupPileLoadDia = this.GroupPileLoadDia;
+                // 既定のプリセット (α・n) を当て終えたか。写し忘れていたので、単杭沈下の画面を開くたびに (画面は写しを
+                // 編集し、OK で写しを返す) 印が消え、利用者が入れた α・n が既定のプリセットで上書きされていた
+                copy.IsSettlementPresetInitialized = this.IsSettlementPresetInitialized;
 
                 // 解析結果（荷重-沈下曲線）
                 copy.LoadDisplacements = this.LoadDisplacements;

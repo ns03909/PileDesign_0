@@ -40,7 +40,7 @@ public class GeometryToleranceAndFailureTests
             ("Services", "ModelConnectivityCheck.cs"),
             ("FEM", "AnalysisModelling.cs"),
             ("ViewModels", "MainWindowViewModel.ModelEditing.cs"),
-            ("ViewModels", "EvaluationService.cs"),
+            ("Services", "FoundationBeamInclinationEvaluator.cs"),   // 基礎梁の傾斜角 (2026-10-11 に EvaluationService から移した)
             ("Services", "PileHeadDeformationAngle.cs"),
             ("ViewModels", "MainWindowViewModel.IntersectionSearch.cs"),
         };

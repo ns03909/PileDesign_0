@@ -1523,7 +1523,9 @@ namespace PileDesign.ViewModels
 
             IsGroupPileGridDeformationVisible = true;
             IsGroupPileSettlementAnalysisDone = true;
-            MarkSettlementResultsCurrent();
+            // 印を降ろすのは群杭沈下（基礎梁なし）の分だけ。以前は単杭沈下・基礎梁考慮の印まで降ろし、
+            // 軸力を変えてこれだけをやり直すと、古い曲線が「最新」になって次の解析に入った
+            MarkSettlementResultsCurrent(SettlementAnalyses.Group);
             CaptureAnalysisResultSet(DescribeGroupSettlementRun(pgs));
             //IsAnalysisResultVisible = true;
             IsBubbleVisible = true;

@@ -27,6 +27,13 @@ namespace PileDesign.Services
     public static class SettlementDeformationAngleEvaluator
     {
         /// <summary>
+        /// 沈下検討の対象が「単杭＋群杭沈下」なのに、群杭沈下 (常時) の記録が無いときの理由。
+        /// 沈下量の検定 (<see cref="PileSettlementEvaluator"/>) も同じ文で検定不能にする。
+        /// </summary>
+        internal const string NoGroupResultReason =
+            "群杭沈下の結果がありません (群杭沈下解析を実行するか、基本設定で沈下検討の対象を「単杭沈下」にしてください)";
+
+        /// <summary>
         /// 検定項目を作る。沈下解析を何も実行していなければ空 (対象外)。
         /// 検定の対象なのに必要な結果が欠けているときは「検定不能」の項目を 1 件返す。
         /// </summary>
@@ -80,8 +87,7 @@ namespace PileDesign.Services
 
             if (groupRecords.Count == 0)
             {
-                items.Add(Unavailable("VL",
-                    "群杭沈下の結果がありません (群杭沈下解析を実行するか、基本設定で沈下検討の対象を「単杭沈下」にしてください)"));
+                items.Add(Unavailable("VL", NoGroupResultReason));
                 return items;
             }
 

@@ -47,14 +47,8 @@ namespace PileDesign.ViewModels
                 newtonDirection = targetModel.KAA_tan.Solve(targetModel.VectorR);
             }
 
-            // 変位増分制限（発散防止）
-            const double maxDispIncrement = 0.05; // 最大増分 50mm
-            double maxAbsIncrement = newtonDirection.AbsoluteMaximum();
-            if (maxAbsIncrement > maxDispIncrement)
-            {
-                double scaleFactor = maxDispIncrement / maxAbsIncrement;
-                newtonDirection *= scaleFactor;
-            }
+            // 変位増分制限（発散防止）。強制変位 (地盤変位) の自由度は縮めない (Solver.ScaleKeepingForcedDofs 参照)
+            newtonDirection = Solver.LimitIncrementKeepingForcedDofs(newtonDirection, targetModel.GetForcedDofEquations());
 
             return newtonDirection;
         }
@@ -79,8 +73,10 @@ namespace PileDesign.ViewModels
             bool isPileNonLinear,
             bool isLightweight = false)
         {
-            // αを適用した増分変位
-            var incrementalDisp = newtonDirection * alpha;
+            // αを適用した増分変位。α を掛けるのは自由な自由度だけで、強制変位 (地盤変位) の自由度は毎回目標まで
+            // 与えきる。2026-10-11 まで地盤変位にも α を掛けていたため、α < 1 で受理した反復は地盤変位を一部しか
+            // 与えておらず、残差 (強制変位の自由度は 0 と置く) にはそれが現れなかった (Solver.ScaleKeepingForcedDofs 参照)
+            var incrementalDisp = Solver.ScaleKeepingForcedDofs(newtonDirection, alpha, targetModel.GetForcedDofEquations());
 
             // 累積変位を更新（ラインサーチ用メソッドで直接設定）
             targetModel.SetDispVectorDirect(savedVectorD + incrementalDisp, incrementalDisp);

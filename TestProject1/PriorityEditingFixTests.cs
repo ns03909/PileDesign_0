@@ -29,6 +29,9 @@ public class PriorityEditingFixTests
         .GetField("_undoManager", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(vm)!;
     private static bool Flag(MainWindowViewModel vm, string name) => (bool)typeof(MainWindowViewModel)
         .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(vm)!;
+    // 沈下系の印は解析ごとに持つ (2026-10-11 から。以前は bool の _settlementInputChanged 1 つ)。どれか 1 つでも立っているか
+    private static bool SettlementFlag(MainWindowViewModel vm) => (SettlementAnalyses)typeof(MainWindowViewModel)
+        .GetField("_staleSettlementAnalyses", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(vm)! != SettlementAnalyses.None;
 
     [DataTestMethod] [DataRow("SortPileLayoutXFirst")] [DataRow("SortPileLayoutYFirst")]
     public void SortingKeepsLoadsAndNodesLinkedToSamePileAndSupportsUndo(string command)
@@ -126,7 +129,7 @@ public class PriorityEditingFixTests
         Run(vm,"SwapBeamIJ");
         Assert.AreEqual(j,input.FoundationBeamInput.Beams[0].NodeI_Id); Assert.AreEqual(150.0,input.FoundationBeamInput.Beams[0].AngleBeta);
         Assert.AreEqual(12.0,input.FoundationBeamInput.Beams[1].AngleBeta);
-        Assert.IsTrue(vm.HasUnsavedWork); Assert.AreEqual(version+1,vm.InputEditVersion); Assert.IsTrue(Flag(vm,"_settlementInputChanged"));
+        Assert.IsTrue(vm.HasUnsavedWork); Assert.AreEqual(version+1,vm.InputEditVersion); Assert.IsTrue(SettlementFlag(vm));
         vm.UndoCommand.Execute(null); Assert.AreEqual(i,vm.CurrentInputModel!.FoundationBeamInput.Beams[0].NodeI_Id);
         Assert.AreEqual(30.0,vm.CurrentInputModel!.FoundationBeamInput.Beams[0].AngleBeta);
         vm.RedoCommand.Execute(null); Assert.AreEqual(j,vm.CurrentInputModel!.FoundationBeamInput.Beams[0].NodeI_Id);
@@ -136,9 +139,9 @@ public class PriorityEditingFixTests
     {
         using var vm=Create(); vm.IsElementSplit=true;
         int version=vm.InputEditVersion, history=History(vm).History.Count;
-        Assert.IsFalse(Flag(vm,"_settlementInputChanged"));
+        Assert.IsFalse(SettlementFlag(vm));
         Assert.AreEqual(false,Run(vm,"CheckAndResetAnalysisResults"));
-        Assert.IsFalse(Flag(vm,"_settlementInputChanged")); Assert.IsFalse(Flag(vm,"_horizontalInputChanged"));
+        Assert.IsFalse(SettlementFlag(vm)); Assert.IsFalse(Flag(vm,"_horizontalInputChanged"));
         Assert.IsTrue(vm.IsElementSplit); Assert.IsFalse(vm.HasUnsavedWork);
         Assert.AreEqual(version,vm.InputEditVersion); Assert.AreEqual(history,History(vm).History.Count);
     }

@@ -36,9 +36,10 @@ namespace PileDesign.ViewModels
         public GroupSettlementWithBeamCalculationViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel;
-            // 保存ボタンの有効/無効は Visibility (IsAnalysisExecuted) で制御するため CanExecute は常に true。
-            // 荷重がすべて 0 kN でも (=ケース自体が空でも) 保存できる。
-            OkCommand = new PileDesign.ViewModels.RelayCommand(_ => SaveAndClose());
+            // 保存できるのは解析を終えた (または前回の結果を読み込んだ) ときだけ。荷重がすべて 0 kN でも (=ケース自体が空でも) 保存できる。
+            // 以前は保存ボタンを隠すだけで CanExecute が常に true だったので、Ctrl+Enter で解析中・取り消し・失敗のあとにも
+            // 確定でき、途中までのケースだけを保存して前回の完全な結果を消していた
+            OkCommand = new PileDesign.ViewModels.RelayCommand(_ => SaveAndClose(), _ => CanSave);
             CancelCommand = new PileDesign.ViewModels.RelayCommand(_ => DiscardAndClose());
             ExecuteAnalysisCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(ExecuteAnalysisAsync);
             CancelAnalysisCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(CancelAnalysis);
@@ -104,8 +105,65 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>保存して閉じられるか (解析を終えていて、解析中でない)。</summary>
+        internal bool CanSave => IsAnalysisExecuted && !IsAnalysisRunning;
+
+        /// <summary>
+        /// この画面で解析を実行し、終えた結果を持っているか。前回の結果を読み込んだだけなら false。
+        /// </summary>
+        internal bool HasFreshResults { get; private set; }
+
+        /// <summary>直近に終えた解析の条件 (保存して閉じたときにメイン側が記録する)。終えていなければ null。</summary>
+        internal Models.AnalysisRunMetadata? LastRunSettings { get; private set; }
+
+        /// <summary>解析の条件 (結果と一緒に保存し、計算書の「解析の実行条件」に書く)。</summary>
+        internal Models.AnalysisRunMetadata CaptureRunSettings()
+        {
+            var cases = new List<string>();
+            if (LoadSource == SourceRectLoads) cases.Add("VL");
+            else
+            {
+                if (AnalyzeVL) cases.Add("VL");
+                if (AnalyzeLevel1) cases.Add("L1");
+                if (AnalyzeLevel2) cases.Add("L2");
+            }
+            var pgs = InputModel?.PileGroupSettlement;
+            var m = _mainWindowViewModel;
+            return new Models.AnalysisRunMetadata
+            {
+                Kind = Models.AnalysisKind.GroupSettlement,
+                Variant = Models.AnalysisRunMetadata.GroupWithBeamVariant,
+                ExecutedAt = DateTime.Now,
+                ApplicationVersion = MainWindowViewModel.AppVersion,
+                MaximumIterations = MaxIterations,
+                BaseResidualTolerance = ConvergenceTolerance,
+                Conditions =
+                [
+                    new("荷重の出所", LoadSource),
+                    new("荷重", cases.Count > 0 ? string.Join("・", cases) : "なし"),
+                    new("ばねの範囲", $"{KMin:G} 〜 {KMax:G} kN/m"),
+                    new("荷重面の標高", $"{pgs?.LoadingPlaneAltitude:0.###} m"),
+                    new("土層", $"{pgs?.SettlementSoilLayers?.Count ?? 0} 層"),
+                    new("格子の間隔", $"X {m.GroupPileSettlementXSpacing:0.###} m・Y {m.GroupPileSettlementYSpacing:0.###} m"),
+                ],
+            };
+        }
+
         private void SaveAndClose()
         {
+            if (!CanSave) return;
+
+            // 前回の結果を読み込んで見ただけ (この画面で解析していない) なら、記録には触らずに閉じる。
+            // 以前はここで記録を作り直し、コンタ図を<b>今の</b>沈下用土層・格子で計算し直していた。杭の沈下・反力は
+            // 前回の解析のまま、コンタだけが今の入力という混ざった結果を「保存」していた。入力が変わっていれば、
+            // 結果は群杭沈下解析（基礎梁あり）の「再実行が必要」として表示される (解析し直せば最新になる)
+            if (!HasFreshResults)
+            {
+                IsSaved = false;
+                RequestClose?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+
             // 杭の結果が欠けたケースは確定しない。欠けた値を 0 kN・0 mm として保存すると、本当に 0 の結果と区別できない
             var incomplete = CaseResults.Where(c => c.MissingPileNos.Count > 0).ToList();
             if (incomplete.Count > 0)
@@ -269,9 +327,23 @@ namespace PileDesign.ViewModels
 
         private void DiscardAndClose()
         {
+            CancelRunningAnalysis();
             IsSaved = false;
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
+
+        /// <summary>
+        /// 閉じる (保存しない・× ボタン) ときに、走っている解析を止める。以前は止めておらず、閉じたあとも計算が回り続けて
+        /// 編集中の入力を読み、失敗すると閉じた画面のエラーが出た。
+        /// </summary>
+        internal void CancelRunningAnalysis()
+        {
+            IsClosed = true;
+            _cancellationTokenSource?.Cancel();
+        }
+
+        /// <summary>画面を閉じたか。閉じたあとの解析の失敗は知らせない (ログにだけ残す)。</summary>
+        internal bool IsClosed { get; private set; }
 
         // ── 解析パラメータ ──
 
@@ -368,6 +440,10 @@ namespace PileDesign.ViewModels
 
             IsAnalysisRunning = true;
             IsAnalysisExecuted = false;
+            HasFreshResults = false;
+            LastRunSettings = null;
+            // 条件は解析を始めるときに取る (記録するのは解析に使った値)
+            var runSettings = CaptureRunSettings();
             CurrentProgress = 0;
             CaseResults.Clear();
             CalculationLog.Clear();
@@ -412,6 +488,9 @@ namespace PileDesign.ViewModels
 
                 token.ThrowIfCancellationRequested();
                 IsAnalysisExecuted = true;
+                HasFreshResults = true;
+                // メイン側の「沈下結果は最新」の印と実行条件の記録は、保存して閉じたときにメイン側が付ける
+                LastRunSettings = runSettings;
                 StatusText = "解析完了";
                 Application.Current?.Dispatcher.Invoke(() =>
                 {
@@ -426,7 +505,8 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 AddLog($"[ERROR] 解析中に例外: {ex.Message}");
-                MessageService.ShowError($"解析エラー", ex, "エラー");
+                if (IsClosed) Serilog.Log.Error(ex, "群杭沈下解析（基礎梁あり）に失敗しました (画面を閉じたあと)");
+                else MessageService.ShowError($"解析エラー", ex, "エラー");
                 StatusText = "エラー";
             }
             finally

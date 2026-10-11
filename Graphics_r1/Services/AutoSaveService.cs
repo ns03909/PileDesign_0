@@ -302,7 +302,9 @@ namespace PileDesign.Services
                 inputChangedSinceAnalysis: context?.InputChangedSinceAnalysis ?? false,
                 sourceFilePath: filePath,
                 autoSaveSessionId: SessionId, validateFinite: true,
-                analysisRunRecords: context?.AnalysisRunRecords);
+                analysisRunRecords: context?.AnalysisRunRecords,
+                staleSettlementResults: context?.StaleSettlementResults,
+                horizontalAnalysisSummaryText: context?.HorizontalAnalysisSummaryText);
             return new PreparedState(save, filePath);
         }
 
@@ -966,5 +968,7 @@ namespace PileDesign.Services
         PileDesign.Models.PileFemLinkTable? PileFemLinks,
         bool? IsElementSplit,
         bool InputChangedSinceAnalysis,
-        IReadOnlyList<PileDesign.Models.AnalysisRunMetadata>? AnalysisRunRecords);
+        IReadOnlyList<PileDesign.Models.AnalysisRunMetadata>? AnalysisRunRecords,
+        IReadOnlyList<string>? StaleSettlementResults = null,
+        string? HorizontalAnalysisSummaryText = null);
 }

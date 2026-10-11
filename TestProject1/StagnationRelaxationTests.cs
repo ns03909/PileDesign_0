@@ -11,6 +11,13 @@ namespace TestProject1
     /// 緩和基準まで、30 回続いたら現在残差 ×1.1 まで緩める。反復回数にそのまま効くので、
     /// 規則を書き換えると収束スナップショットが動く。</para>
     ///
+    /// <para><b>30 回の枝は、現在残差が上限 (<see cref="HorizontalCalculationViewModel.RelaxedAcceptanceCap"/> = 1e-2)
+    /// 以下のときだけ緩める。</b> 2026-10-11 まで上限が無く、このテストも「30 回続けば残差の大きさによらず
+    /// 現在残差 ×1.1」という規則を前提にしていた。残差 0.3 (力の比で 0.55) で停滞しても基準 0.33 で抜け、
+    /// 最終の再試行ではそのまま「緩和収束」として受理されていた。停滞は釣り合ったことを意味しないので、
+    /// 上限を超えたら緩めずに未収束として再試行へ回す (<see cref="AboveTheCapLongStagnationDoesNotRelax"/>)。
+    /// 上限以下の値 (下の 1e-3・1e-4) で書いたテストの期待は変わらない。</para>
+    ///
     /// <para><b>緩和は緩める方向にしか動かさない。</b> 2026-09-19 まで代入だったため、先に他の判定
     /// (長期未改善・改善率不足) が大きく緩めた基準を引き戻し得た。引き戻すと、緩めて抜けるつもりだった
     /// ステップが抜けられずに再試行へ回る。他の 4 つの緩和判定は元から「今より緩いときだけ動かす」形で、
@@ -79,6 +86,23 @@ namespace TestProject1
             Assert.AreEqual(30, count);
             Assert.AreEqual(1.1e-3, effectiveAlpha, 1e-15);
             StringAssert.Contains(log, "長期停滞検出");
+        }
+
+        /// <summary>
+        /// 現在残差が上限 (1e-2) を超えていたら、30 回停滞しても緩めない。カウントは進める
+        /// (残差が上限まで下がれば、その反復で緩められる)。
+        /// </summary>
+        [TestMethod]
+        public void AboveTheCapLongStagnationDoesNotRelax()
+        {
+            var (count, effectiveAlpha, log) = Step(0.3, 0.3, 29);
+            Assert.AreEqual(30, count);
+            Assert.AreEqual(Alpha, effectiveAlpha, 1e-30, "残差 0.3 で停滞しても緩めてはいけない (以前は 0.33)");
+            Assert.IsNull(log);
+
+            // 上限ちょうどは緩める (改善率不足の判定と同じ「以下」)
+            double cap = HorizontalCalculationViewModel.RelaxedAcceptanceCap;
+            Assert.AreEqual(cap * 1.1, Step(cap, cap, 29).EffectiveAlpha, 1e-15);
         }
 
         /// <summary>

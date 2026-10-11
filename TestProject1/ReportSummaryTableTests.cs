@@ -130,6 +130,57 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// 一部の杭・荷重条件の結果が欠けた区間と、収束しなかった荷重条件の結果を含む区間に印を付ける (値は変えない)。
+        /// 以前は欠けた結果を黙って飛ばして得られた結果だけの最大値を載せ、未収束のケースも区別しなかった
+        /// (注記はセルが丸ごと空のときの「—」だけだった)。
+        /// </summary>
+        [TestMethod]
+        public void PartialAndUnconvergedContributionsAreMarked()
+        {
+            var vm = Analyzed();
+            var input = vm.ResultInputModel;
+            var model = vm.CurrentModel!;
+            var baseline = Doc(vm).CollectPileForceSummary();
+            Assert.IsFalse(baseline.Any(r => r.IsPartial(0) || r.IsPartial(1)), "(前提) 結果がそろっているのに欠けの印が付いています");
+            Assert.IsFalse(baseline.Any(r => r.HasUnconverged(0) || r.HasUnconverged(1)), "(前提) 収束しているのに未収束の印が付いています");
+
+            // 杭体 1 の区間 1 の要素のうち 1 つだけ、結果を外す (残りの要素の結果はある)
+            var pile = input.PileLayoutItems!.First(p => p.PileBodyNo == 1);
+            var divided = input.ElementDivision!.SoilPiles[pile.SoilPileAltNo - 1].PileBodySegments;
+            var beam = pile.Beams.First(b => divided[b.SegmentIndex!.Value].No == 1);
+            var removed = beam.BeamResults.ToList();
+            beam.BeamResults.Clear();
+            // レベル1 の荷重条件を 1 つ未収束にする
+            var step = model.AnalysisStepResults.First(r => r.LoadCase?.Level == 1);
+            var statusBefore = step.Status;
+            step.Status = StepStatus.Unconverged;
+            try
+            {
+                var rows = Doc(vm).CollectPileForceSummary();
+                var first = rows.First(r => r.PileBodyRef == input.PileBodies[0].PileBodyRef && r.SegmentNo == 1);
+                Assert.IsTrue(first.IsPartial(0) && first.IsPartial(1), "一部の要素の結果が欠けた区間に印が付きません");
+                Assert.IsNotNull(first.Mmax[0], "(前提) 残りの要素の結果で値が出ること");
+                Assert.AreEqual("※1※2", WordDocument.SummaryRowMarker(first, 0));
+                Assert.IsTrue(rows.Where(r => r.FoundResults[0] > 0).All(r => r.HasUnconverged(0)), "未収束の荷重条件の結果を含む区間に印が付きません");
+                Assert.IsFalse(rows.Any(r => r.HasUnconverged(1)), "レベル2 に未収束の印が付いています");
+                // 値そのものは変えない (印を付けるだけ)
+                foreach (var row in rows.Where(r => r != first))
+                {
+                    var b = baseline.First(x => x.PileBodyRef == row.PileBodyRef && x.SegmentNo == row.SegmentNo);
+                    Assert.AreEqual(b.Mmax[0], row.Mmax[0]);
+                    Assert.AreEqual(b.Qmax[1], row.Qmax[1]);
+                }
+                StringAssert.Contains(TestSource.Read("Graphics_r1", "Output", "WordDocument.SummaryTables.cs"), "SummaryRowMarker(r, k)",
+                    "まとめ一覧の表に印を出していません");
+            }
+            finally
+            {
+                beam.BeamResults.AddRange(removed);
+                step.Status = statusBefore;
+            }
+        }
+
         /// <summary>水平反力の合計で、結果の無いばねを数え、欠けたときは表で示すこと。</summary>
         [TestMethod]
         public void MissingSpringResultsAreCountedInTheReactionTotal()

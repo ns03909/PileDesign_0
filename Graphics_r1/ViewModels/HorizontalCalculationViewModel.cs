@@ -1080,7 +1080,7 @@ namespace PileDesign.ViewModels
                 // 入力編集で沈下の結果は残るようになったので、古いまま使わないか入口で尋ねる。
                 if (InputModel.UsePsSpringAtPileTip
                     && _mainWindowViewModel?.ConfirmUsingStaleSettlementResults(
-                        "水平解析", "杭先端の P-S ばね") == false)
+                        "水平解析", "杭先端の P-S ばね", SettlementAnalyses.SinglePile) == false)
                 {
                     RequestClose?.Invoke(this, EventArgs.Empty);
                     return;
@@ -1396,6 +1396,14 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnOk()
         {
+            // 解析中は確定しない。追加実行は実行済みの印を立てたまま走るので、以前は途中で OK (Enter・Ctrl+Enter) を押すと、
+            // 計算がケースを書き足している最中のモデルをメイン画面へ渡し、解析済みにして結果の控えまで取っていた
+            if (IsAnalysisRunning)
+            {
+                MessageService.Show("解析中です。解析が終わってから保存してください (中止してから閉じることもできます)。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             // 解析が未実行の場合は警告を表示して終了
             if (!IsAnalysisExecuted)
             {
@@ -3287,7 +3295,8 @@ namespace PileDesign.ViewModels
         internal static string? HorizontalInputSignature(InputModel? input)
             => MainWindowViewModel.InputSignature(input,
                 alsoIgnore: ["IsAnalysisTarget", "IsApplicable", "PileGroupSettlement"],
-                extra: Models.Results.SinglePileSettlementResult.Capture(input));
+                // 節点の履歴は曲線と同じ解析の産物で、曲線が同じなら同じ。署名には曲線だけを入れる (重くしない)
+                extra: Models.Results.SinglePileSettlementResult.Capture(input, includeNodeHistories: false));
 
         /// <summary>
         /// LiquefactionOption に応じたフラグ列挙。三重ループと CountPendingCases で共通利用。

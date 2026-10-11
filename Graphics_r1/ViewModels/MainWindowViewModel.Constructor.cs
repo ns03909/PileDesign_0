@@ -258,7 +258,9 @@ namespace PileDesign.ViewModels
                     : null,
                 IsElementSplit,
                 InputChangedSinceAnalysis,
-                CurrentResultSet?.RunRecords);
+                CurrentResultSet?.RunRecords,
+                SettlementAnalysisKeys(_staleSettlementAnalyses),
+                IsSaveAnalysisResultsAutoSave ? DocxOutput?.LastAnalysisSummaryText : null);
 
             // 自動保存イベントの購読
             _autoSaveService.AutoSaveCompleted += OnAutoSaveCompleted;

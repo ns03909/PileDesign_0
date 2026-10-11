@@ -842,19 +842,33 @@ namespace PileDesign.FEM
 
             do
             {
-                // 収束失敗時のバックアップ用に状態を保存
+                // 収束失敗時のバックアップ用に状態を保存。荷重段階の適用 (ApplyLoadIncrements) と収束計算が
+                // 書き換えるものはすべて控える: 変位 X・荷重 F・残差 R・限界値の到達の印・限界値の直前の荷重 prevF0。
+                // 2026-10-11 まで X と F しか戻しておらず、
+                //  ・印が残る: 限界値 (例 R_ULS) へ合わせた段階が失敗すると「到達済み・丁度」の印が立ったまま
+                //    半分の刻みで再試行し、R_ULS ではない荷重の行を極限 (***) として記録して打ち切っていた。
+                //    使用限界 (R_SLS) で失敗すると「到達済み」の印のせいで R_SLS の行そのものを飛ばしていた
+                //  ・R が残る: 再試行の 1 回目の反復が、失敗した反復の残差 (戻した X と食い違う) から始まっていた
                 var backupVectorX = VectorX.Clone();
                 var backupVectorF = VectorF.Clone();
+                var backupVectorR = VectorR.Clone();
+                var backupFlags = limitFlags.Clone();
+                double backupPrevF0 = prevF0;
 
                 ApplyLoadIncrements(pn, limitFlags);
 
                 bool converged = TryConvergenceCalculation(state);
+                if (converged && FailLoadStepForTesting?.Invoke(limitFlags.JustReachedLimitName) == true)
+                    converged = false;
 
                 if (!converged)
                 {
                     // 収束失敗：状態を復元してステップを半分に
                     VectorX = backupVectorX;
                     VectorF = backupVectorF;
+                    VectorR = backupVectorR;
+                    limitFlags = backupFlags;
+                    prevF0 = backupPrevF0;
 
                     double currentStep = Math.Abs(VectorDF[0]);
                     if (currentStep <= minStep)
@@ -1058,7 +1072,24 @@ namespace PileDesign.FEM
             public bool IsRt_SLS, IsJustRt_SLS, IsRt_DLS, IsJustRt_DLS, IsRt_ULS, IsJustRt_ULS;
             public bool IsAnyJustLimit => IsJustR_SLS || IsJustR_DLS || IsJustR_ULS || IsJustRt_SLS || IsJustRt_DLS || IsJustRt_ULS;
             public bool IsAnyJustULS => IsJustR_ULS || IsJustRt_ULS;
+
+            /// <summary>この段階で丁度合わせた限界値の名前 (無ければ null)。</summary>
+            public string? JustReachedLimitName =>
+                IsJustR_SLS ? "R_SLS" : IsJustR_DLS ? "R_DLS" : IsJustR_ULS ? "R_ULS"
+                : IsJustRt_SLS ? "Rt_SLS" : IsJustRt_DLS ? "Rt_DLS" : IsJustRt_ULS ? "Rt_ULS" : null;
+
+            /// <summary>荷重段階が失敗したときに戻すための写し (bool だけなので浅い写しで足りる)。</summary>
+            public LimitFlags Clone() => (LimitFlags)MemberwiseClone();
         }
+
+        /// <summary>
+        /// テスト用: 収束した荷重段階を、失敗したものとして扱わせる。引数はその段階で丁度合わせた限界値の名前
+        /// ("R_SLS" など。無ければ null)。true を返すと、その段階は収束しなかった扱いになり、状態を戻して刻みを半分にする。
+        /// 収束計算を実際に失敗させる入力を作るのは難しいので、失敗後の巻き戻しをこの入口で確かめる。
+        /// 解析はコンストラクタの中で走るので、スレッドごとの静的な入口にしている。
+        /// </summary>
+        [ThreadStatic]
+        internal static Func<string?, bool>? FailLoadStepForTesting;
 
 
         // 収束ループ（例外なしで結果を返す版）

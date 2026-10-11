@@ -89,7 +89,10 @@ namespace PileDesign.ViewModels
         internal static string? HorizontalOnlyInputSignature(InputModel? input)
             => InputSignature(input, alsoIgnore: HorizontalSignatureIgnoredNames);
 
-        /// <summary>沈下解析をしたときの入力の署名。沈下の結果は水平解析と別に陳腐化するので別に持つ。</summary>
+        /// <summary>
+        /// 最後に沈下系の解析をしたときの入力の署名 (表示中の沈下が水平解析と別の時点の入力で解いたものかを見る)。
+        /// 印を決め直すのに使う署名は解析ごとに持つ (<c>_settlementSignatureByKind</c>)。
+        /// </summary>
         private string? _settlementInputSignature;
 
         private static readonly System.Text.Json.JsonSerializerOptions SignatureOptions = new()
@@ -159,16 +162,15 @@ namespace PileDesign.ViewModels
         {
             bool holdsResults = _currentResultSet != null || ResultSnapshotFailed;
             bool checkHorizontal = holdsResults && _horizontalInputSignature != null;
-            bool checkSettlement = _settlementInputSignature != null && HasSettlementResults();
-            if (!checkHorizontal && !checkSettlement) return;
+            if (!checkHorizontal && !CanRecheckSettlement()) return;
 
             // 水平解析は群杭沈下の入力を除いた署名で比べる (理由は _horizontalInputSignature)
             string? currentHorizontal = checkHorizontal ? HorizontalOnlyInputSignature(CurrentInputModel) : null;
-            string? current = checkSettlement ? InputSignature(CurrentInputModel) : null;
-            if ((checkHorizontal && currentHorizontal == null) || (checkSettlement && current == null)) return;
+            if (checkHorizontal && currentHorizontal == null) return;
+            // 沈下系は解析ごとに、その解析をしたときの入力と比べる (以前は 4 つの解析で 1 つの署名・印だった)
+            if (!RecheckSettlementAgainstAnalysis()) return;
 
             bool horizontalChanged = checkHorizontal ? currentHorizontal != _horizontalInputSignature : HorizontalInputChanged;
-            if (checkSettlement) SettlementInputChanged = current != _settlementInputSignature;
 
             bool stale = (holdsResults && horizontalChanged) || SettlementResultsAreStale;
             InputChangedSinceAnalysis = stale;          // false なら水平の印もここで降りる
@@ -187,7 +189,7 @@ namespace PileDesign.ViewModels
                 string? current = InputSignature(CurrentInputModel);
                 _analysisInputSignature = HasAnalysisResultSet ? current : null;
                 _horizontalInputSignature = HasAnalysisResultSet ? HorizontalOnlyInputSignature(CurrentInputModel) : null;
-                _settlementInputSignature = SettlementInputChanged ? null : current;
+                CaptureSettlementSignaturesAfterLoad(inputIsTheAnalyzedOne: true);
             }
             else
             {
@@ -195,7 +197,7 @@ namespace PileDesign.ViewModels
                 bool separate = snapshot != null && !ReferenceEquals(snapshot, CurrentInputModel);
                 _analysisInputSignature = separate ? InputSignature(snapshot) : null;
                 _horizontalInputSignature = separate ? HorizontalOnlyInputSignature(snapshot) : null;
-                _settlementInputSignature = null;
+                CaptureSettlementSignaturesAfterLoad(inputIsTheAnalyzedOne: false);
             }
         }
 
@@ -350,7 +352,12 @@ namespace PileDesign.ViewModels
             Model = 1,
             /// <summary>群杭沈下だけに効く入力。</summary>
             Settlement = 2,
-            All = Model | Settlement,
+            /// <summary>
+            /// 単杭沈下だけに効く入力 (単杭沈下の画面の α・n・沈下検討用の杭先端径など)。
+            /// 以前は <see cref="Settlement"/> で代用しており、沈下の印が 1 つだったので区別が要らなかった。
+            /// </summary>
+            SinglePileSettlement = 4,
+            All = Model | Settlement | SinglePileSettlement,
         }
 
         /// <summary>水平解析の結果が陳腐化しているか (モデル側の入力が編集された)。降ろすと編集した項目の控えも消す。</summary>
@@ -369,14 +376,11 @@ namespace PileDesign.ViewModels
         // ── 解析のあとに編集した項目 (履歴の呼び名。出た順・重複なし) ──
         // どの解析のやり直しが要るかを、何を編集したからかと一緒に状態表示に出す。
         // 効く範囲 (AnalysisInputScope) は編集の入口が申告したものをそのまま使う (項目ごとの表を別に持たない)。
+        // 沈下系の解析の分は解析ごとに持つ (MainWindowViewModel.SettlementStaleness.cs)
         private readonly List<string> _editsSinceHorizontal = [];
-        private readonly List<string> _editsSinceSettlement = [];
 
         /// <summary>水平解析のあとに編集した、水平解析に効く項目。</summary>
         internal IReadOnlyList<string> EditsSinceHorizontal => _editsSinceHorizontal;
-
-        /// <summary>沈下解析のあとに編集した、沈下に効く項目。</summary>
-        internal IReadOnlyList<string> EditsSinceSettlement => _editsSinceSettlement;
 
         private static void AddEdit(List<string> edits, string? item)
         {
@@ -384,47 +388,16 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 沈下の結果が陳腐化しているか (沈下解析のあとに入力が編集された)。
+        /// 表示・出力に使える沈下の結果があり、どれか 1 つの解析でも入力変更前のものか。
+        /// 解析ごとの陳腐化は <see cref="StaleSettlementAnalyses"/> (MainWindowViewModel.SettlementStaleness.cs)。
         ///
         /// <para><b>水平解析とは別に持つ。</b> 沈下の結果は表示されるだけでなく、
         /// <b>次の解析の入力でもある</b> — 単杭沈下の荷重-沈下曲線を、水平解析の杭先端
         /// P-S ばねと基礎梁考慮沈下の杭頭ばねが読む。印を 1 つで兼ねると、水平解析を
         /// やり直した時点で沈下の陳腐化まで消え、入力変更前の曲線が「最新」の顔で
         /// 次の解析に入る。</para>
-        ///
-        /// <para>解析を実行したときではなく、<b>沈下解析を実行したとき</b>に降ろす
-        /// (<see cref="MarkSettlementResultsCurrent"/>)。</para>
         /// </summary>
-        private bool SettlementInputChanged
-        {
-            get => _settlementInputChanged;
-            set
-            {
-                _settlementInputChanged = value;
-                if (!value) _editsSinceSettlement.Clear();
-            }
-        }
-        // テスト (PriorityEditingFixTests) がリフレクションでこの名前のフィールドを読む。名前を変えないこと
-        private bool _settlementInputChanged;
-
-        /// <summary>
-        /// 表示・出力に使える沈下の結果があり、それが入力変更前のものか。
-        /// 解析の入口で「古い沈下の結果を入力として使ってよいか」を尋ねるのに使う。
-        /// </summary>
-        public bool SettlementResultsAreStale => SettlementInputChanged && HasSettlementResults();
-
-        /// <summary>
-        /// 沈下解析が終わった (または読み込んだ結果が入力と整合している) ことを記録する。
-        /// 沈下の陳腐化の印だけを降ろす。水平解析の印には触らない。
-        /// </summary>
-        public void MarkSettlementResultsCurrent()
-        {
-            // 沈下解析をしたときの入力 (元に戻したときに比べる相手)
-            _settlementInputSignature = InputSignature(CurrentInputModel);
-            if (!SettlementInputChanged) return;
-            SettlementInputChanged = false;
-            OnPropertyChanged(nameof(ResultSetStatusText));
-        }
+        public bool SettlementResultsAreStale => StaleSettlementAnalyses != SettlementAnalyses.None;
 
         /// <summary>
         /// 材料モデル化オプションが、表示中の解析結果を出したときから変わっているか。
@@ -467,7 +440,7 @@ namespace PileDesign.ViewModels
                 return BuildResultStaleNotice(
                     IsHorizontalResultStale, Executed(AnalysisKind.Horizontal) ?? _currentResultSet.CapturedAt, _editsSinceHorizontal,
                     SettlementResultsAreStale, Executed(AnalysisKind.SingleSettlement, AnalysisKind.VerticalBeam, AnalysisKind.GroupSettlement),
-                    _editsSinceSettlement);
+                    EditsSinceSettlement, StaleSettlementAnalysisNames);
             }
         }
 
@@ -477,19 +450,23 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 帯の文を組む (純粋関数)。古くなった結果だけを名指しし、いつ解析したものか・何を変えたかを書く。
         /// </summary>
+        /// <param name="staleSettlementNames">古くなった沈下系の解析の呼び名 (分かるとき。どの解析かを名指しする)。</param>
         internal static string? BuildResultStaleNotice(
             bool horizontalStale, DateTime? horizontalAt, IReadOnlyList<string> horizontalEdits,
-            bool settlementStale, DateTime? settlementAt, IReadOnlyList<string> settlementEdits)
+            bool settlementStale, DateTime? settlementAt, IReadOnlyList<string> settlementEdits,
+            IReadOnlyList<string>? staleSettlementNames = null)
         {
             static string When(DateTime? at) => at is DateTime t ? $" ({t:yyyy/MM/dd HH:mm} に解析)" : "";
             static string What(IReadOnlyList<string> edits)
                 => edits.Count == 0 ? "" : "（" + string.Join("・", edits.Take(3)) + (edits.Count > 3 ? $" ほか {edits.Count - 3} 件" : "") + "）";
+            static string Which(IReadOnlyList<string>? names)
+                => names == null || names.Count == 0 ? "" : "（" + string.Join("・", names) + "）";
 
             var lines = new List<string>();
             if (horizontalStale)
                 lines.Add($"表示中の水平解析の結果{When(horizontalAt)}は、そのあとに変更された入力{What(horizontalEdits)}の前のものです。いまの入力に対する結果ではありません。");
             if (settlementStale)
-                lines.Add($"表示中の沈下の結果{When(settlementAt)}は、そのあとに変更された入力{What(settlementEdits)}の前のものです。");
+                lines.Add($"表示中の沈下の結果{Which(staleSettlementNames)}{When(settlementAt)}は、そのあとに変更された入力{What(settlementEdits)}の前のものです。");
             return lines.Count == 0 ? null : string.Join("\n", lines);
         }
 
@@ -527,7 +504,8 @@ namespace PileDesign.ViewModels
                     materialOptionsChanged: MaterialOptionsChangedSinceAnalysis,
                     settlementFromOtherInput: SettlementSolvedFromOtherInput,
                     horizontalEdits: _editsSinceHorizontal,
-                    settlementEdits: _editsSinceSettlement);
+                    settlementEdits: EditsSinceSettlement,
+                    staleSettlementNames: StaleSettlementAnalysisNames);
             }
         }
 
@@ -552,15 +530,18 @@ namespace PileDesign.ViewModels
         internal static string BuildResultSetStatusText(
             string stamp, bool horizontalStale, bool settlementStale, bool materialOptionsChanged,
             bool settlementFromOtherInput = false,
-            IReadOnlyList<string>? horizontalEdits = null, IReadOnlyList<string>? settlementEdits = null)
+            IReadOnlyList<string>? horizontalEdits = null, IReadOnlyList<string>? settlementEdits = null,
+            IReadOnlyList<string>? staleSettlementNames = null)
         {
+            // どの沈下解析をやり直すのかを名指しする (解析ごとに古くなるので、「沈下解析」だけでは分からない)
+            string which = staleSettlementNames is { Count: > 0 } ? ": " + string.Join("・", staleSettlementNames) : "";
             string baseText =
                 horizontalStale && settlementStale
-                    ? $"表示中の解析結果は {stamp} 実行時の入力によるものです（入力が変更されています。水平解析と沈下解析の再実行が必要です）"
+                    ? $"表示中の解析結果は {stamp} 実行時の入力によるものです（入力が変更されています。水平解析と沈下解析の再実行が必要です{which}）"
                 : horizontalStale
                     ? $"表示中の解析結果は {stamp} 実行時の入力によるものです（入力が変更されています。再解析が必要です）"
                 : settlementStale
-                    ? $"解析結果: {stamp} 実行／沈下解析の結果は入力変更前のものです（沈下解析の再実行が必要です）"
+                    ? $"解析結果: {stamp} 実行／沈下解析の結果は入力変更前のものです（沈下解析の再実行が必要です{which}）"
                     : $"解析結果: {stamp} 実行";
 
             // 何を編集したから、どの解析をやり直すのか (項目は履歴の呼び名)
@@ -622,24 +603,6 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 読込の仕上げで、沈下の「編集された」記録をファイルから復元した値 (<paramref name="settlementChanged"/>) へ戻す。
-        /// <see cref="RestoreInputChangedSinceAnalysis"/> のあとに呼ぶ。
-        ///
-        /// <para>読込の最後の <c>SaveUndoState</c> は沈下の印も立て、変更した項目として読込の処理の名前
-        /// (ApplyPostLoadProtocol) を記録する。以前は水平解析の印だけを戻していたので、沈下の結果を持つ
-        /// ファイルを開いただけで「沈下解析の結果は入力変更前のもの」と出て、その名前が変更した項目として並んでいた。
-        /// ファイルには変更した項目を保存していないので、項目の記録はどちらも空に戻す。</para>
-        /// </summary>
-        internal void RestoreSettlementInputChanged(bool settlementChanged)
-        {
-            _editsSinceHorizontal.Clear();
-            SettlementInputChanged = false;   // 項目の記録も空になる
-            SettlementInputChanged = settlementChanged;
-            if (SettlementResultsAreStale) InputChangedSinceAnalysis = true;
-            OnPropertyChanged(nameof(ResultSetStatusText));
-        }
-
-        /// <summary>
         /// 入力が編集されたことを記録する。結果は破棄しない。
         /// 入力を変更するコマンド／編集ハンドラから呼ぶ。
         /// </summary>
@@ -658,7 +621,7 @@ namespace PileDesign.ViewModels
             if (scope == AnalysisInputScope.None) return;
 
             // 沈下の結果は、モデル側の入力でも沈下側の入力でも陳腐化する
-            // (地盤・杭配置が変われば曲線も沈下量も合わなくなる)。
+            // (地盤・杭配置が変われば曲線も沈下量も合わなくなる)。印は効く解析 (と、その結果を使う下流の解析) にだけ立てる。
             //
             // 下の 2 つの早期 return より前に置く。
             // ・結果セットの有無に縛らない: 沈下の結果は結果セットと独立に存在しうる
@@ -666,8 +629,7 @@ namespace PileDesign.ViewModels
             //   縛ると、その状態で入力を編集しても印が立たず、次の解析が古い曲線を黙って使う。
             // ・沈下の結果がまだ無い段階でも印だけ立てておき、沈下解析が終わったときに降ろす。
             //   実際に効くのは SettlementResultsAreStale (結果を持っているときだけ真)。
-            SettlementInputChanged = true;
-            AddEdit(_editsSinceSettlement, editedItem);
+            MarkSettlementStale(SettlementAnalysesAffectedBy(scope), editedItem);
 
             // 控えを作れなかった結果は、編集中の入力を解析時の入力の代わりに見ている。
             // 編集した時点で結果と入力が混ざるので、そのことを記録する (結果セットが無くても)
@@ -688,9 +650,9 @@ namespace PileDesign.ViewModels
                 AddEdit(_editsSinceHorizontal, editedItem);
             }
 
-            else if (!IsGroupPileSettlementAnalysisDone)
+            else if (!IsSettlementResultStale(SettlementAnalysesAffectedBy(scope)))
             {
-                // 沈下の入力しか触っておらず、群杭沈下の結果もまだ無い。
+                // 沈下の入力しか触っておらず、その入力を使う沈下解析の結果もまだ無い。
                 // 陳腐化するものが無いので何も言わない。水平解析だけ済ませて
                 // 沈下の入力を用意している最中に「沈下解析の再実行が必要です」と
                 // 出るのは意味を成さない。
@@ -798,13 +760,16 @@ namespace PileDesign.ViewModels
             _horizontalInputSignature = HorizontalOnlyInputSignature(CurrentInputModel);
         }
 
-        /// <summary>その種類の解析の結果がいまあるか (実行条件の記録を引き継ぐかの判定)。</summary>
-        private bool HasResultOf(AnalysisKind kind) => kind switch
+        /// <summary>その記録の解析の結果がいまあるか (実行条件の記録を引き継ぐかの判定)。</summary>
+        private bool HasResultOf(AnalysisRunMetadata record) => record.Kind switch
         {
             AnalysisKind.Horizontal => IsHorizontalAnalysisDone,
             AnalysisKind.SingleSettlement => IsVerticalAnalysisDone,
             AnalysisKind.VerticalBeam => IsVerticalBeamAnalysisDone,
-            AnalysisKind.GroupSettlement => IsGroupPileSettlementAnalysisDone,
+            // 群杭沈下は基礎梁なし・ありで結果が別に残る (基礎梁ありは IsGroupPileSettlementAnalysisDone を立てない)
+            AnalysisKind.GroupSettlement => record.Variant == AnalysisRunMetadata.GroupWithBeamVariant
+                ? HasSettlementResultOf(SettlementAnalyses.GroupWithBeam)
+                : HasSettlementResultOf(SettlementAnalyses.Group),
             _ => false,
         };
 
@@ -852,14 +817,19 @@ namespace PileDesign.ViewModels
         /// ファイルから復元した結果セットを設定する。
         /// 保存時点で入力が編集済みだった場合は「変更あり」の状態も引き継ぐ。
         /// </summary>
-        internal void SetRestoredResultSet(AnalysisResultSet? set, bool changedSinceAnalysis)
+        /// <param name="staleSettlement">
+        /// 保存されていた沈下系の解析ごとの陳腐化。旧ファイル (記録が無い) は null で、編集済みならすべて古いとする (安全側)。
+        /// </param>
+        internal void SetRestoredResultSet(AnalysisResultSet? set, bool changedSinceAnalysis, SettlementAnalyses? staleSettlement = null)
         {
             CurrentResultSet = set;
             ResultSnapshotFailed = false;
             bool changed = set != null && changedSinceAnalysis;
             InputChangedSinceAnalysis = changed;
             HorizontalInputChanged = changed;   // 範囲は保存していないので安全側
-            SettlementInputChanged = changed;
+            ClearSettlementStale(SettlementAnalyses.All);
+            _staleSettlementAnalyses = set == null ? SettlementAnalyses.None
+                : staleSettlement ?? (changed ? SettlementAnalyses.All : SettlementAnalyses.None);
         }
 
         /// <summary>

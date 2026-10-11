@@ -884,17 +884,8 @@ namespace PileDesign.FEM
 
             // 強制変位 DOF を収集 (eq → u_forced)
             var forcedUByEq = new Dictionary<int, double>();
-            foreach (var node in Nodes)
-            {
-                if (!node.IsForcedDisped) continue;
-                NodeDisp forcedDisp = node.CumulativeForcedDisp - node.CumulativeDisp;
-                for (int k = 0; k < 2; k++)
-                {
-                    int eq = node.EquationNumber[k];
-                    if (eq >= 0 && eq < CountFree)
-                        forcedUByEq[eq] = forcedDisp.GetByIndex(k);
-                }
-            }
+            foreach (var (eq, remaining) in EnumerateForcedDofs())
+                forcedUByEq[eq] = remaining;
 
             // 強制変位なし → K は clone だけで良い (fast path)
             if (forcedUByEq.Count == 0)
@@ -965,6 +956,47 @@ namespace PileDesign.FEM
             }
 
             return (newK, vectorR);
+        }
+
+        /// <summary>
+        /// 強制変位を与える自由度 (地盤変位を与える節点の Ux・Uy) と、目標までの残り (目標 − 現在の累積変位)。
+        /// 係数行列で対角 1・右辺 = 残り に置き換える自由度 (<see cref="GetForcedDispOnLoadVectorAndStiffnessMatrix"/>) と、
+        /// 変位増分を縮めるときに縮めずに残す自由度 (<see cref="Solver.ScaleKeepingForcedDofs"/>) は、ここで同じ集め方をする。
+        /// </summary>
+        private IEnumerable<(int Eq, double Remaining)> EnumerateForcedDofs()
+        {
+            foreach (var node in Nodes)
+            {
+                if (!node.IsForcedDisped) continue;
+                NodeDisp forcedDisp = node.CumulativeForcedDisp - node.CumulativeDisp;
+                for (int k = 0; k < 2; k++)
+                {
+                    int eq = node.EquationNumber[k];
+                    if (eq >= 0 && eq < CountFree)
+                        yield return (eq, forcedDisp.GetByIndex(k));
+                }
+            }
+        }
+
+        /// <summary>強制変位を与える自由度の方程式番号 (<see cref="EnumerateForcedDofs"/> と同じ集め方)。</summary>
+        public HashSet<int> GetForcedDofEquations()
+        {
+            var set = new HashSet<int>();
+            foreach (var (eq, _) in EnumerateForcedDofs()) set.Add(eq);
+            return set;
+        }
+
+        /// <summary>
+        /// 強制変位を与える自由度のうち、目標からの残りが最も大きいものの絶対値 [m]。
+        /// 強制変位の自由度は残差 (<see cref="FindR"/>) では 0 と置くので、残差だけでは
+        /// 「地盤変位を与えきったか」が分からない。テストと診断はこちらで見る。
+        /// </summary>
+        public double MaxForcedDispShortfall()
+        {
+            double max = 0.0;
+            foreach (var (_, remaining) in EnumerateForcedDofs())
+                max = Math.Max(max, Math.Abs(remaining));
+            return max;
         }
 
         // 残余力の初期値を得るメソッド
@@ -1160,6 +1192,15 @@ namespace PileDesign.FEM
             ResidualReferenceMode mode, double normsqR, double normsqF,
             double normsqForcedReaction, double internalFluxNorm)
         {
+            // NaN・∞ が混じったら「収束していない」にする。Math.Max(x, NaN) は NaN を返し、下の比較 (> 1e-30) はどちらも
+            // 偽になるので、以前は 0 (= 収束) を返していた。変位増分に NaN が出ても (Solver は記録だけして止めない)
+            // そのステップを収束扱いにし、刻みを細かくしてやり直す処理も通らなかった。
+            // NaN ではなく大きな値を返すのは、呼び出し側の反復の条件 (残差 >= 許容値) を真のまま保つため
+            // (NaN との比較は偽になり、反復が「収束した」として抜ける)
+            if (!double.IsFinite(normsqR) || !double.IsFinite(normsqF) || !double.IsFinite(normsqForcedReaction)
+                || (mode == ResidualReferenceMode.InternalForce && !double.IsFinite(internalFluxNorm)))
+                return 1e30;
+
             double normsqRef = mode switch
             {
                 ResidualReferenceMode.ExternalForceOrReaction

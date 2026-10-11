@@ -810,6 +810,10 @@ namespace PileDesign.Models.InputData
             set
             {
                 if (value <= 0) return;
+                // 今の幅と同じなら何もしない。DX は保存されるので、読込・入力の写し・解析結果の控え (どれも JSON の往復) の
+                // たびにここを通り、中心から引き直した X1/X2 が丸めで 1 ulp ずれていた (0.1 → 0.09999999999999998)。
+                // 同じ入力でも「再解析が必要」が立ち、保存のたびにファイルが変わった
+                if (value == X2 - X1) return;
                 double cx = CenterX;
                 double half = value * 0.5;
                 X1 = cx - half;
@@ -824,6 +828,7 @@ namespace PileDesign.Models.InputData
             set
             {
                 if (value <= 0) return;
+                if (value == Y2 - Y1) return;   // 今の奥行と同じなら何もしない (DX と同じ理由)
                 double cy = CenterY;
                 double half = value * 0.5;
                 Y1 = cy - half;
