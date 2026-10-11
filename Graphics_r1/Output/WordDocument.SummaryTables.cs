@@ -1644,7 +1644,7 @@ namespace PileDesign.Output
             AddText(body,
                 $"検定項目 {items.Count} 件（OK {judged.Count - ng} 件 / NG {ng} 件{UnjudgedNote(items.Count - judged.Count)}）。"
                 + "応答値は群杭沈下解析（基礎梁あり）が求めた基礎梁両端の沈下量の差 |ΔUz| / 梁の長さ、"
-                + "限界値は基本設定の杭頭 2 点間の変形角の限界値（常時 = 使用限界、レベル1 = 損傷限界、レベル2 = 安全限界）である。");
+                + "限界値は基本設定の杭頭 2 点間の変形角の限界値（常時 = 使用限界、レベル1 = 損傷限界、レベル2 = 安全限界。性能グレード S ではレベル2 も損傷限界）である。");
             var unconverged = items.Where(i => i.IsFromUnconvergedCase).Select(i => i.LoadCaseName).Distinct().ToList();
             if (unconverged.Count > 0)
                 AddText(body, "反復が収束しなかった荷重ケースは判定していない: " + string.Join(" / ", unconverged));

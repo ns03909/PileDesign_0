@@ -106,7 +106,7 @@ namespace TestProject1
 
             // ステップ 1: 解析軸力 Fxi = -10 kN (圧縮) → 入力軸力 + 10
             headBeam.CumulativeForce.Fxi = -10.0;
-            vm.UpdateAxialForceFromAnalysis(model);
+            vm.UpdateAxialForceFromAnalysis(model, inputModel.UsePsSpringAtPileTip);
             Assert.AreEqual(baseAxial + 10.0, model.GetAxialForce(pile), 1e-6,
                 "1 回目の解析軸力の反映が正しくない");
 
@@ -114,13 +114,13 @@ namespace TestProject1
             // 以前は前ステップの -10 を打ち消さずに引き続けており、+35 になっていた
             // (過大係数はおよそ (nStep+1)/2 倍)。
             headBeam.CumulativeForce.Fxi = -25.0;
-            vm.UpdateAxialForceFromAnalysis(model);
+            vm.UpdateAxialForceFromAnalysis(model, inputModel.UsePsSpringAtPileTip);
             Assert.AreEqual(baseAxial + 25.0, model.GetAxialForce(pile), 1e-6,
                 "解析軸力が累積している (前ステップ分が打ち消されていない)");
 
             // ステップ 3: 解析軸力が戻れば軸力も戻る (単調に積み上がらない)
             headBeam.CumulativeForce.Fxi = -5.0;
-            vm.UpdateAxialForceFromAnalysis(model);
+            vm.UpdateAxialForceFromAnalysis(model, inputModel.UsePsSpringAtPileTip);
             Assert.AreEqual(baseAxial + 5.0, model.GetAxialForce(pile), 1e-6,
                 "解析軸力の減少が反映されていない");
         }

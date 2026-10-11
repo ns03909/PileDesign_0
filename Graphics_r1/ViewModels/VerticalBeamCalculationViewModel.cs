@@ -99,28 +99,55 @@ namespace PileDesign.ViewModels
         /// <summary>最後に解き終えた解析の条件。保存して閉じたとき、メイン側が結果と一緒に記録する。</summary>
         internal Models.AnalysisRunMetadata? LastRunSettings { get; private set; }
 
+        /// <summary>
+        /// 解析の設定の写し。解析を始めるときに 1 回だけ取り、解析中はこれだけを読む。
+        /// 記録する解析の条件 (<see cref="LastRunSettings"/>) も同じ写しから作る。
+        /// </summary>
+        /// <remarks>
+        /// 2026-10-11 まで、解析は画面の値をその場で読んでいた。荷重の増分はケースの始めに
+        /// 「荷重 ÷ ステップ数」で決めるのに、ステップのループは毎回ステップ数を読み直し、
+        /// 収束の基準・反復の上限・緩和係数も反復ごとに読んでいた。入力欄は実行中も触れ、
+        /// 文字を打つたびに値が入る (UpdateSourceTrigger=PropertyChanged) ので、途中でステップ数を変えると
+        /// 増分とステップの数が合わず、ケースの荷重が全部は載らない (または載せすぎる) まま「完了」になった。
+        /// 記録する条件は開始時の値だったので、記録と実際に使った値も食い違った。
+        /// </remarks>
+        internal sealed record VerticalBeamRunSettings(
+            int LoadStepsCount, double ConvergenceTolerance, int MaxIterations, double RelaxationFactor,
+            bool AnalyzeVL, bool AnalyzeLevel1, bool AnalyzeLevel2);
+
+        /// <summary>いまの画面の設定から解析の設定の写しを取る。</summary>
+        internal VerticalBeamRunSettings CaptureSettings() => new(
+            LoadStepsCount, ConvergenceTolerance, MaxIterations, RelaxationFactor,
+            AnalyzeVL, AnalyzeLevel1, AnalyzeLevel2);
+
         /// <summary>解析の条件 (結果と一緒に保存し、計算書の表紙に書く)。</summary>
-        internal Models.AnalysisRunMetadata CaptureRunSettings()
+        internal Models.AnalysisRunMetadata CaptureRunSettings() => CaptureRunSettings(CaptureSettings());
+
+        /// <summary>解析の設定の写し <paramref name="s"/> から、記録する解析の条件を作る。</summary>
+        internal static Models.AnalysisRunMetadata CaptureRunSettings(VerticalBeamRunSettings s)
         {
             var cases = new List<string>();
-            if (AnalyzeVL) cases.Add("VL");
-            if (AnalyzeLevel1) cases.Add("L1");
-            if (AnalyzeLevel2) cases.Add("L2");
+            if (s.AnalyzeVL) cases.Add("VL");
+            if (s.AnalyzeLevel1) cases.Add("L1");
+            if (s.AnalyzeLevel2) cases.Add("L2");
             return new Models.AnalysisRunMetadata
             {
                 Kind = Models.AnalysisKind.VerticalBeam,
                 ExecutedAt = DateTime.Now,
                 ApplicationVersion = MainWindowViewModel.AppVersion,
-                MaximumIterations = MaxIterations,
-                BaseResidualTolerance = ConvergenceTolerance,
-                InitialRelaxationFactor = RelaxationFactor,
+                MaximumIterations = s.MaxIterations,
+                BaseResidualTolerance = s.ConvergenceTolerance,
+                InitialRelaxationFactor = s.RelaxationFactor,
                 Conditions =
                 [
-                    new("荷重ステップ数", LoadStepsCount.ToString()),
+                    new("荷重ステップ数", s.LoadStepsCount.ToString()),
                     new("荷重", cases.Count > 0 ? string.Join("・", cases) : "なし"),
                 ],
             };
         }
+
+        /// <summary>テスト用: 荷重ステップを始める直前に呼ぶ (実行中に画面の設定を変える操作を再現する)。画面からは設定しない。</summary>
+        internal Action<VerticalBeamCalculationViewModel>? BeforeEachStepForTesting { get; set; }
 
         // ── 荷重ケース選択 ──
 
@@ -267,14 +294,16 @@ namespace PileDesign.ViewModels
             CalculationLog.Clear();
             _cancellationTokenSource = new CancellationTokenSource();
             var token = _cancellationTokenSource.Token;
-            // 条件は解析を始めるときに取る (記録するのは解析に使った値)
-            var runSettings = CaptureRunSettings();
+            // 条件は解析を始めるときに取る (記録するのは解析に使った値)。
+            // 解析も同じ写しだけを読む (実行中に画面の値を変えても、解析と記録は変わらない)
+            var settings = CaptureSettings();
+            var runSettings = CaptureRunSettings(settings);
 
             try
             {
                 await Task.Run(async () =>
                 {
-                    await RunAsync(token);
+                    await RunAsync(settings, token);
                 });
                 // 取り消しは反復の始めにしか見ていないので、最後の反復の途中で取り消すと解析が最後まで終わる。
                 // その結果を完了として扱わない (以前は「解析完了」にして保存できた)
@@ -365,7 +394,7 @@ namespace PileDesign.ViewModels
         //  メイン解析ループ
         // ══════════════════════════════════════════════════════
 
-        private async Task RunAsync(CancellationToken token)
+        private async Task RunAsync(VerticalBeamRunSettings settings, CancellationToken token)
         {
             await AddLogAsync("単杭沈下解析（基礎梁考慮）を開始します...");
 
@@ -383,17 +412,17 @@ namespace PileDesign.ViewModels
 
             // 解析対象ケース数を計算（進捗計算用）
             int totalCases = 0;
-            if (AnalyzeVL) totalCases++;
-            if (AnalyzeLevel1) totalCases += InputModel.LoadCasesInput.LoadCasesLevel1.Count;
-            if (AnalyzeLevel2) totalCases += InputModel.LoadCasesInput.LoadCasesLevel2.Count;
+            if (settings.AnalyzeVL) totalCases++;
+            if (settings.AnalyzeLevel1) totalCases += InputModel.LoadCasesInput.LoadCasesLevel1.Count;
+            if (settings.AnalyzeLevel2) totalCases += InputModel.LoadCasesInput.LoadCasesLevel2.Count;
             int caseIndex = 0;
 
             // ─── Phase 1: VL ベースケース ───
             // VLは常に最初に解析（地震時ケースの初期状態として使用）
-            bool needVLBase = AnalyzeLevel1 || AnalyzeLevel2;
+            bool needVLBase = settings.AnalyzeLevel1 || settings.AnalyzeLevel2;
             AnalysisStateSnapshot vlSnapshot = null;
 
-            if (AnalyzeVL || needVLBase)
+            if (settings.AnalyzeVL || needVLBase)
             {
                 caseIndex++;
                 string caseName = "VL (常時+追加)";
@@ -404,7 +433,7 @@ namespace PileDesign.ViewModels
                 anaModel.InitializeStates();
 
                 // VL荷重設定
-                double totalLoad = SetIncrementalLoads(modelling, anaModel, p => p.AxialForceVL);
+                double totalLoad = SetIncrementalLoads(modelling, anaModel, settings.LoadStepsCount, p => p.AxialForceVL);
                 anaModel.MapOnVectorDF();
                 await AddLogAsync($"  合計荷重: {totalLoad:F1} kN");
 
@@ -413,13 +442,13 @@ namespace PileDesign.ViewModels
 
                 // 荷重ステップ解析
                 var caseResult = await RunLoadSteps(
-                    modelling, anaModel, caseName, caseIndex, totalCases, token);
+                    modelling, anaModel, settings, caseName, caseIndex, totalCases, token);
 
                 // 結果収集
                 CollectResults(modelling, anaModel, caseResult, p => p.AxialForceVL);
                 await LogPileResultSummary(caseResult, totalLoad);
 
-                if (AnalyzeVL)
+                if (settings.AnalyzeVL)
                 {
                     Application.Current?.Dispatcher.Invoke(() => CaseResults.Add(caseResult));
                 }
@@ -434,7 +463,7 @@ namespace PileDesign.ViewModels
 
             // ─── Phase 2: 地震時ケース（VL状態から差分増分） ───
 
-            if (AnalyzeLevel1 && vlSnapshot != null)
+            if (settings.AnalyzeLevel1 && vlSnapshot != null)
             {
                 var level1Cases = InputModel.LoadCasesInput.LoadCasesLevel1;
                 for (int i = 0; i < level1Cases.Count; i++)
@@ -451,7 +480,7 @@ namespace PileDesign.ViewModels
 
                     // 差分荷重設定: delta = AxialForceLevel1s[i] - AxialForceVL
                     int idx = i;
-                    double totalDelta = SetIncrementalLoads(modelling, anaModel,
+                    double totalDelta = SetIncrementalLoads(modelling, anaModel, settings.LoadStepsCount,
                         p => (p.AxialForceLevel1s != null && idx < p.AxialForceLevel1s.Count
                             ? p.AxialForceLevel1s[idx] : p.AxialForceVL) - p.AxialForceVL);
                     anaModel.MapOnVectorDF();
@@ -463,7 +492,7 @@ namespace PileDesign.ViewModels
 
                     // 荷重ステップ解析
                     var caseResult = await RunLoadSteps(
-                        modelling, anaModel, caseName, caseIndex, totalCases, token);
+                        modelling, anaModel, settings, caseName, caseIndex, totalCases, token);
 
                     // 結果収集（最終状態 = VL + delta）
                     CollectResults(modelling, anaModel, caseResult,
@@ -477,7 +506,7 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            if (AnalyzeLevel2 && vlSnapshot != null)
+            if (settings.AnalyzeLevel2 && vlSnapshot != null)
             {
                 var level2Cases = InputModel.LoadCasesInput.LoadCasesLevel2;
                 for (int i = 0; i < level2Cases.Count; i++)
@@ -494,7 +523,7 @@ namespace PileDesign.ViewModels
 
                     // 差分荷重設定: delta = AxialForceLevel2s[i] - AxialForceVL
                     int idx = i;
-                    double totalDelta = SetIncrementalLoads(modelling, anaModel,
+                    double totalDelta = SetIncrementalLoads(modelling, anaModel, settings.LoadStepsCount,
                         p => (p.AxialForceLevel2s != null && idx < p.AxialForceLevel2s.Count
                             ? p.AxialForceLevel2s[idx] : p.AxialForceVL) - p.AxialForceVL);
                     anaModel.MapOnVectorDF();
@@ -506,7 +535,7 @@ namespace PileDesign.ViewModels
 
                     // 荷重ステップ解析
                     var caseResult = await RunLoadSteps(
-                        modelling, anaModel, caseName, caseIndex, totalCases, token);
+                        modelling, anaModel, settings, caseName, caseIndex, totalCases, token);
 
                     // 結果収集
                     CollectResults(modelling, anaModel, caseResult,
@@ -531,11 +560,15 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// 各杭の接合節点に増分荷重を設定する。
-        /// getLoad で各杭の荷重を取得し、LoadStepsCount で分割した増分を設定。
+        /// getLoad で各杭の荷重を取得し、<paramref name="loadStepsCount"/> で分割した増分を設定。
         /// 戻り値は合計荷重。
         /// </summary>
-        private double SetIncrementalLoads(
-            VerticalBeamModelling modelling, AnaModel anaModel,
+        /// <param name="loadStepsCount">
+        /// 解析の設定の写しのステップ数。ステップのループ (<see cref="RunLoadSteps"/>) と同じ値を渡すこと
+        /// (別々に読むと、増分 × ステップ数がケースの荷重と合わなくなる)。
+        /// </param>
+        internal double SetIncrementalLoads(
+            VerticalBeamModelling modelling, AnaModel anaModel, int loadStepsCount,
             Func<PileLayoutDataItem, double> getLoad)
         {
             double totalLoad = 0;
@@ -545,7 +578,7 @@ namespace PileDesign.ViewModels
                     continue;
 
                 double load = getLoad(pile);
-                double incrementalLoad = load / LoadStepsCount;
+                double incrementalLoad = load / loadStepsCount;
                 totalLoad += load;
 
                 connNode.SetIncrementalLoad(new NodeLoad(0, 0, -incrementalLoad, 0, 0, 0));
@@ -573,22 +606,31 @@ namespace PileDesign.ViewModels
         //  荷重ステップ + Newton-Raphson ループ
         // ══════════════════════════════════════════════════════
 
-        private async Task<VerticalBeamCaseResult> RunLoadSteps(
-            VerticalBeamModelling modelling, AnaModel anaModel,
+        /// <param name="settings">
+        /// 解析の設定の写し。ステップ数・収束の基準・反復の上限・緩和係数はここからだけ読む
+        /// (以前は画面のプロパティをステップごと・反復ごとに読み直していた。<see cref="VerticalBeamRunSettings"/> 参照)。
+        /// </param>
+        internal async Task<VerticalBeamCaseResult> RunLoadSteps(
+            VerticalBeamModelling modelling, AnaModel anaModel, VerticalBeamRunSettings settings,
             string caseName, int caseIndex, int totalCases,
             CancellationToken token)
         {
             var caseResult = new VerticalBeamCaseResult { LoadCaseName = caseName };
             bool caseConverged = true;
+            int loadStepsCount = settings.LoadStepsCount;
+            double tolerance = settings.ConvergenceTolerance;
+            int maxIterations = settings.MaxIterations;
+            double relaxationFactor = settings.RelaxationFactor;
 
-            for (int step = 0; step < LoadStepsCount; step++)
+            for (int step = 0; step < loadStepsCount; step++)
             {
                 token.ThrowIfCancellationRequested();
+                BeforeEachStepForTesting?.Invoke(this);
 
-                CurrentProgress = (caseIndex - 1.0 + (step + 1.0) / LoadStepsCount) / totalCases * 100;
-                StatusText = $"{caseName} ステップ {step + 1}/{LoadStepsCount}";
+                CurrentProgress = (caseIndex - 1.0 + (step + 1.0) / loadStepsCount) / totalCases * 100;
+                StatusText = $"{caseName} ステップ {step + 1}/{loadStepsCount}";
 
-                await AddLogAsync($"\n  ── ステップ {step + 1}/{LoadStepsCount} ──");
+                await AddLogAsync($"\n  ── ステップ {step + 1}/{loadStepsCount} ──");
 
                 // 累積荷重を更新
                 foreach (var node in anaModel.Nodes)
@@ -607,7 +649,7 @@ namespace PileDesign.ViewModels
                 double residual = anaModel.NormsROnNormsFint;
 
                 // Newton-Raphson 反復
-                while (residual >= ConvergenceTolerance && iteration < MaxIterations)
+                while (residual >= tolerance && iteration < maxIterations)
                 {
                     iteration++;
 
@@ -617,7 +659,7 @@ namespace PileDesign.ViewModels
 
                         UpdateSpringTangentStiffness(modelling, anaModel);
                         anaModel.MapOnKtanMat();
-                        Solver.SolveDisp(anaModel, RelaxationFactor);
+                        Solver.SolveDisp(anaModel, relaxationFactor);
                         UpdateSpringSecantStiffness(modelling, anaModel);
 
                         foreach (var beam in anaModel.Beams)
@@ -632,11 +674,11 @@ namespace PileDesign.ViewModels
 
                     residual = anaModel.NormsROnNormsFint;
 
-                    string convSymbol = residual < ConvergenceTolerance ? "≦" : "＞";
-                    await AddLogAsync($"    iter {iteration}: ||R||²/||F||² = {residual:E2} {convSymbol} {ConvergenceTolerance:E2}");
+                    string convSymbol = residual < tolerance ? "≦" : "＞";
+                    await AddLogAsync($"    iter {iteration}: ||R||²/||F||² = {residual:E2} {convSymbol} {tolerance:E2}");
                 }
 
-                var judge = JudgeStep(residual, ConvergenceTolerance, MaxIterations);
+                var judge = JudgeStep(residual, tolerance, maxIterations);
                 bool stepConverged = judge.Converged;
                 if (!stepConverged)
                 {
@@ -645,7 +687,7 @@ namespace PileDesign.ViewModels
                     {
                         // 基準の 1000 倍以内なので受理する。黙って受理するとケースが「収束」と
                         // 出たまま精度の落ちたステップが混じるので、受理したことを残す
-                        await AddLogAsync($"      → 残差は基準 {ConvergenceTolerance:E2} の 1000 倍以内。このステップを受理し、ケースは収束として扱います");
+                        await AddLogAsync($"      → 残差は基準 {tolerance:E2} の 1000 倍以内。このステップを受理し、ケースは収束として扱います");
                     }
                     else
                     {

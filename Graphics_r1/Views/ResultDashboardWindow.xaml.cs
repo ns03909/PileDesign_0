@@ -173,7 +173,7 @@ namespace PileDesign.Views
                 }
             }
 
-            // 杭の鉛直支持力
+            // 杭の鉛直支持力と沈下 (PileEvaluationSummary.Bearing は支持力・沈下量・沈下による杭頭変形角・基礎梁の傾斜角をまとめて持つ)
             if (summary.BearingFailed)
             {
                 SetWarn(BearingCountsText, "検定を組めませんでした (OK / NG を判定できません)");
@@ -277,8 +277,8 @@ namespace PileDesign.Views
                     + "解析結果テーブルの検定の表で、判定が「検定不能」の行の理由を確認してください。");
 
             if (!horizontalDone)
-                return new Verdict("支持力 OK", VerdictKind.Ok,
-                    "杭の鉛直支持力はすべて OK です。水平解析は未実施です。");
+                return new Verdict("支持力・沈下 OK", VerdictKind.Ok,
+                    "杭の鉛直支持力と沈下の検定はすべて OK です。水平解析は未実施です。");
 
             double max = Math.Max(h?.MaxRatio ?? 0, b.MaxRatio ?? 0);
             return new Verdict("すべて OK", VerdictKind.Ok,

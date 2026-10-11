@@ -487,7 +487,11 @@ namespace PileDesign.ViewModels
         private static void ResetIncrementalLoad(FEM.Node? node)
             => node?.SetIncrementalLoad(new FEM.NodeLoad(0, 0, 0, 0, 0, 0));
 
-        private void SetVectorDF(AnaModel targetModel, LoadCase loadCase, LoadCombination loadCombination, int level, int iLC, double nStep, bool resetCumulative = true) // PileDesign
+        // usePsSpringAtPileTip: 実行開始時の写し (HorizontalRunSettings) の値。以前は入力 (InputModel) から
+        // その場で読んでいたので、実行中に画面で「鉛直方向境界条件」を切り替えると、再試行・細分化で
+        // 呼び直したときだけ杭軸力の外力の入れ方が変わった。
+
+        private void SetVectorDF(AnaModel targetModel, LoadCase loadCase, LoadCombination loadCombination, int level, int iLC, double nStep, bool usePsSpringAtPileTip, bool resetCumulative = true) // PileDesign
         {
             double loadAngle = loadCase.LoadAngle;
             double beta1 = loadCombination.Beta1; // 荷重組合せ上部構造慣性力の荷重係数β1
@@ -510,7 +514,7 @@ namespace PileDesign.ViewModels
             // 正しく AP に荷重 + モーメント (arm × Fz の Mx/My 両成分) を伝達できる。
             // 各杭ごとに独立した N0_i を与えるため、AP が並進+回転して各杭が arm に応じた異なる Z 変位を持ち、
             // 杭ごとに異なる軸力が FEM Fxi に現れる (前後方杭の差を再現)。
-            if (InputModel.UsePsSpringAtPileTip)
+            if (usePsSpringAtPileTip)
             {
                 // このあとの 2 つのループ (杭軸力・杭体自重) は、同じ節点の Z に<b>足し込む</b>。
                 // 1 回の呼び出しの中では意図どおりだが、増分荷重を先に 0 に戻しておかないと
@@ -606,7 +610,7 @@ namespace PileDesign.ViewModels
             if (resetCumulative)
             {
                 targetModel.Nodes[0].SetCumulativeLoad(new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)); // 荷重ベクトル [kN]
-                if (InputModel.UsePsSpringAtPileTip)
+                if (usePsSpringAtPileTip)
                 {
                     foreach (var pli in InputModel.PileLayoutItems)
                     {

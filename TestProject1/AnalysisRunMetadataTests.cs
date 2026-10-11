@@ -19,7 +19,7 @@ public class AnalysisRunMetadataTests
     public void TheSettingsAreTakenWhenTheAnalysisRuns()
     {
         string run = TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.Run.cs");
-        StringAssert.Contains(TestSource.MethodBody(run, "private async Task FinishRunAsync("), "_settingsAtLastRun = CaptureRunSettings();");
+        StringAssert.Contains(TestSource.MethodBody(run, "private async Task FinishRunAsync("), "_settingsAtLastRun = CaptureRunSettings(ctx.Settings);");
         string vm = TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.cs");
         StringAssert.Contains(vm, "var runMetadata = _settingsAtLastRun ?? CaptureRunSettings();");
         StringAssert.Contains(vm, "runMetadata.Cases = CasesOf(this.CurrentModel);");
@@ -32,7 +32,7 @@ public class AnalysisRunMetadataTests
         string run = TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.Run.cs");
         StringAssert.Contains(run, "const double alpha = BaseConvergenceTolerance;");
         StringAssert.Contains(run, "const double RELAXED_ALPHA = RelaxedResidualTolerance;");
-        StringAssert.Contains(run, "maxIterations = SkipIteration ? 1 : MaximumNewtonIterations;");
+        StringAssert.Contains(run, "maxIterations = runSettings.SkipIteration ? 1 : MaximumNewtonIterations;");
         Assert.AreEqual(1e-6, HorizontalCalculationViewModel.BaseConvergenceTolerance);
         Assert.AreEqual(100, HorizontalCalculationViewModel.MaximumNewtonIterations);
     }

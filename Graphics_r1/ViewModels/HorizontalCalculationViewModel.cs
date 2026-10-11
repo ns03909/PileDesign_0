@@ -2100,6 +2100,9 @@ namespace PileDesign.ViewModels
             }
 
             IsAnalysisRunning = true;
+            // 実行設定の写しは、設定の欄を触れなくしたのと同じ時点 (UI スレッド) で取る。
+            // 解析はこの写しだけを読み、実行の記録 (LastRunConfig・計算書の実行条件) もこれから作る。
+            var runSettings = CaptureHorizontalRunSettings();
             // 新規実行時のみ「未実行」状態に戻す (追加実行は実行済み状態を維持)
             if (!additive) IsAnalysisExecuted = false;
             _cancellationTokenSource = new CancellationTokenSource();
@@ -2118,7 +2121,7 @@ namespace PileDesign.ViewModels
             {
                 // 解析実行を非同期で行う
                 await Task.Run(async () => {
-                    await RunAsync(_cancellationTokenSource.Token, progress, additive: isAdditive);
+                    await RunAsync(_cancellationTokenSource.Token, progress, additive: isAdditive, settings: runSettings);
                 });
 
                 IsAnalysisExecuted = true; // 解析実行済みフラグをセット
@@ -2769,7 +2772,7 @@ namespace PileDesign.ViewModels
         }
 
         // 荷重ベクトルの更新メソッド　F = F + dF
-        private void UpdateF(AnaModel targetModel)
+        private void UpdateF(AnaModel targetModel, bool usePsSpringAtPileTip)
         {
 
             //AnaModel.MapOnVectorF();  // node.load, による F 更新
@@ -2779,7 +2782,7 @@ namespace PileDesign.ViewModels
             // それらの IncrementalLoad も CumulativeLoad に反映する必要がある。
             // (これをしないと VectorF が cap Z 荷重を欠落させ、残差計算が破綻して 1e30 を返す)
             // 杭体自重も各杭節点に分布外力として与えているため、同様に累積反映する。
-            if (InputModel.UsePsSpringAtPileTip && InputModel.PileLayoutItems != null)
+            if (usePsSpringAtPileTip && InputModel.PileLayoutItems != null)
             {
                 foreach (var pli in InputModel.PileLayoutItems)
                 {
@@ -2819,7 +2822,9 @@ namespace PileDesign.ViewModels
         /// 入力値は圧縮が正、解析値Fxiは圧縮が負なので、符号を反転して加算
         /// </summary>
         // internal はテスト用 (AxialForceSourceAuditTests が「解析軸力を毎ステップ累積しない」ことを検証)
-        internal void UpdateAxialForceFromAnalysis(AnaModel targetModel)
+        // usePsSpringAtPileTip は実行開始時の写し (HorizontalRunSettings) の値。UpdateF も同じ。
+        // 以前は入力 (InputModel) からステップごとに読んでいたので、実行中に画面で切り替えると途中のステップから式が変わった。
+        internal void UpdateAxialForceFromAnalysis(AnaModel targetModel, bool usePsSpringAtPileTip)
         {
             if (targetModel.Beams == null || InputModel.PileLayoutItems == null) return;
 
@@ -2837,7 +2842,7 @@ namespace PileDesign.ViewModels
                 // Fxi: ローカル座標系の軸力（圧縮が負）
                 double fxiAnalysis = topBeam.CumulativeForce.Fxi; // kN（ローカル軸方向）
 
-                if (InputModel.UsePsSpringAtPileTip)
+                if (usePsSpringAtPileTip)
                 {
                     // 案 Z モード: 杭軸力 N0 は SetVectorDF で AP に外力として与えられているため、
                     // FEM Fxi は (N0 + ΔN_seis) を含む合計軸力を表す (compression negative)。
@@ -3210,21 +3215,22 @@ namespace PileDesign.ViewModels
         /// 解析完了時に呼び、AnaModel.LastRunConfig として保存。
         /// 次回 ValidateIncrementalCompatibility で前回値と比較する。
         /// </summary>
-        private FEM.AnalysisRunSnapshot CaptureCurrentRunSnapshot()
+        /// <param name="s">実行を始めたときの設定の写し (実行中に画面で変えた値を記録しない)</param>
+        private FEM.AnalysisRunSnapshot CaptureCurrentRunSnapshot(HorizontalRunSettings s)
         {
             return new FEM.AnalysisRunSnapshot
             {
-                LiquefactionOption = LiquefactionOption.ToString(),
-                Level1StepsCount = Level1CalculationStepsCount,
-                Level2StepsCount = Level2CalculationStepsCount,
-                UseModifiedNewtonRaphson = UseModifiedNewtonRaphson,
-                FullNRIterations = FullNRIterations,
-                SkipIteration = SkipIteration,
-                UseLineSearch = UseLineSearch,
-                RelaxationFactor = RelaxationFactor,
-                UseAnalysisAxialForce = UseAnalysisAxialForce,
-                ConnectionMode = ConnectionMode.ToString(),
-                RestrainFoundationTorsion = RestrainFoundationTorsion,
+                LiquefactionOption = s.LiquefactionOption.ToString(),
+                Level1StepsCount = s.Level1Steps,
+                Level2StepsCount = s.Level2Steps,
+                UseModifiedNewtonRaphson = s.UseModifiedNewtonRaphson,
+                FullNRIterations = s.FullNRIterations,
+                SkipIteration = s.SkipIteration,
+                UseLineSearch = s.UseLineSearch,
+                RelaxationFactor = s.RelaxationFactor,
+                UseAnalysisAxialForce = s.UseAnalysisAxialForce,
+                ConnectionMode = s.ConnectionMode.ToString(),
+                RestrainFoundationTorsion = s.RestrainFoundationTorsion,
                 ExecutedCaseKeys = new List<FEM.AnalysisRunSnapshot.CaseKey>(),
                 InputModelHash = HorizontalInputSignature(InputModel),
                 AppVersion = MainWindowViewModel.AppVersion,
@@ -3233,31 +3239,6 @@ namespace PileDesign.ViewModels
 
         /// <summary>直近の解析を実行したときの条件 (解析を終えたときに取る。登録のときに結果と組にする)。</summary>
         private Models.AnalysisRunMetadata? _settingsAtLastRun;
-
-        /// <summary>
-        /// いまの解析の条件 (版・収束の手法・ステップ数・並列数・収束の基準・反復の上限)。ケースの一覧は入れない。
-        /// 同じ入力で結果が変わったときに、条件の差かプログラムの差かを切り分けるために結果と一緒に残す。
-        /// </summary>
-        internal Models.AnalysisRunMetadata CaptureRunSettings() => new()
-        {
-            Kind = Models.AnalysisKind.Horizontal,
-            ExecutedAt = DateTime.Now,
-            ApplicationVersion = MainWindowViewModel.AppVersion,
-            ConvergenceMethod = SelectedConvergenceMethod switch
-            {
-                ConvergenceMethod.FixedRelaxation => "固定緩和",
-                ConvergenceMethod.AdaptiveRelaxation => "適応的緩和",
-                _ => "ラインサーチ",
-            },
-            Level1Steps = Level1CalculationStepsCount,
-            Level2Steps = Level2CalculationStepsCount,
-            CaseParallelism = MaxCaseDegreeOfParallelism,
-            InitialRelaxationFactor = RelaxationFactor,
-            BaseResidualTolerance = BaseConvergenceTolerance,
-            RelaxedResidualTolerance = RelaxedResidualTolerance,
-            MaximumIterations = SkipIteration ? 1 : MaximumNewtonIterations,
-            LinearSolverResidualTolerance = CsparseLinearSolver.ResidualTolerance,
-        };
 
         /// <summary>結果にあるケースと、それぞれの最も悪いステップの状態 (荷重レベル・ケース・組合せ・液状化の順)。</summary>
         internal static List<Models.AnalysisCaseMetadata> CasesOf(AnaModel? model)
@@ -3301,14 +3282,7 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// LiquefactionOption に応じたフラグ列挙。三重ループと CountPendingCases で共通利用。
         /// </summary>
-        private IEnumerable<bool> EnumerateLiquefactionCases() =>
-            LiquefactionOption switch
-            {
-                LiquefactionOptionType.Both => new[] { true, false },
-                LiquefactionOptionType.Yes => new[] { true },
-                LiquefactionOptionType.None => new[] { false },
-                _ => new[] { false }
-            };
+        private IEnumerable<bool> EnumerateLiquefactionCases() => LiquefactionCasesOf(LiquefactionOption);
 
         /// <summary>
         /// これから解く (荷重レベル, 液状化の別)。解析対象の地震時荷重ケースのレベルと、液状化の選択の組。

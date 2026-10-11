@@ -537,7 +537,7 @@ namespace PileDesign.Models.InputData
                     {
                         hasWarning = true;
                         warningMessage += $"- 土質点番号 {groundMassData.No}: 有効上載圧 σz' が負か数値ではありません ({groundMassData.SigmaZPrime:0.##})。"
-                            + "地下水位と単位体積重量 (水中重量ではなく全重量) を確認してください。液状化の判定と地盤ばねが正しく求まりません。\n";
+                            + "地下水位と単位体積重量 (水中重量ではなく全重量) を確認してください。液状化の判定が正しく求まらず、この深さが砂質土・礫質土なら水平地盤ばねが 0 になります (塑性水平地盤反力 py が 0 以下になるため)。\n";
                     }
                     if (groundMassData.NValue < 0)
                     {

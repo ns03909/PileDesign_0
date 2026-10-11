@@ -163,7 +163,7 @@ namespace TestProject1
             StringAssert.Contains(TestSource.MethodBody(vb, "private void DiscardAndClose()"), "CancelRunningAnalysis();");
             int done = vb.IndexOf("IsAnalysisExecuted = true;", StringComparison.Ordinal);
             int check = vb.LastIndexOf("token.ThrowIfCancellationRequested();", done, StringComparison.Ordinal);
-            int run = vb.LastIndexOf("await RunAsync(token);", done, StringComparison.Ordinal);
+            int run = vb.LastIndexOf("await RunAsync(settings, token);", done, StringComparison.Ordinal);
             Assert.IsTrue(run > 0 && check > run, "単杭沈下 (基礎梁考慮) で、最後の反復の途中で取り消しても完了にしています");
 
             foreach (var (file, vm) in new[] { ("VerticalBeamCalculationWindow.xaml.cs", "VerticalBeamCalculationViewModel"),

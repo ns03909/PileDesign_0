@@ -74,6 +74,14 @@ namespace TestProject1.ConvergenceRegression
             return mainVm;
         }
 
+        /// <summary>
+        /// 例題をロードして水平解析を実行し、解析を終えた <see cref="HorizontalCalculationViewModel"/> を返す。
+        /// 実行の記録 (LastRunConfig・実行条件) やステップの収束の記録を、解析の窓の側で見る検査で使う。
+        /// </summary>
+        public static HorizontalCalculationViewModel RunExampleForHcvm(
+            string groundExampleName, string pileExampleName, RunOptions options)
+            => Run(groundExampleName, pileExampleName, options).Hcvm;
+
         /// <summary>例題ロード → VM 構築 → 解析実行までの共通部分。</summary>
         private static (MainWindowViewModel MainVm, HorizontalCalculationViewModel Hcvm) Run(
             string groundExampleName, string pileExampleName, RunOptions options)

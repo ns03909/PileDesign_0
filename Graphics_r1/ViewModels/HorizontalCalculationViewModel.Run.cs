@@ -54,15 +54,22 @@ namespace PileDesign.ViewModels
         // v21 Phase 3 prep: ばね剛性 min/max はインスタンスフィールドを廃し、
         // FindK / PrepareKmat の戻り値（out パラメータ）で局所管理する。
 
-        public async Task RunAsync(CancellationToken token, IProgress<Models.AnalysisProgress>? progress = null, bool additive = false)
+        /// <param name="settings">
+        /// 実行を始めたときの設定の写し。画面から実行するときは、欄を触れなくしたのと同じ時点 (UI スレッド) で取って渡す。
+        /// 省略したらここで取る。
+        /// </param>
+        public async Task RunAsync(CancellationToken token, IProgress<Models.AnalysisProgress>? progress = null, bool additive = false,
+            HorizontalRunSettings? settings = null)
         {
+            // 実行中に画面の設定を変えても解析が変わらないよう、ここから先は写しだけを読む (HorizontalRunSettings 参照)
+            settings ??= CaptureHorizontalRunSettings();
             // additive=true: 既存結果を保持し、未計算ケースのみを実行 (段階追加再解析)
             // additive=false: 通常実行 (既存結果を明示クリアして全ケース計算)
             await Task.Yield();
             // 前処理 (結果の保持/クリア・ログとモニタの初期化・並列度の設定) は
             // PrepareRunAsync に集約してある。null が返るのは計算モデルが無いときだけで、
             // 理由は既にログへ出している。
-            var ctx = await PrepareRunAsync(progress, additive);
+            var ctx = await PrepareRunAsync(progress, additive, settings);
             if (ctx == null) return;
 
             // 解析の開始時刻 (止まったときのログに、モデルの識別子と一緒に残す)
@@ -93,7 +100,7 @@ namespace PileDesign.ViewModels
 
             try
             {
-            var casesToRun = BuildCasesToRun();
+            var casesToRun = BuildCasesToRun(ctx.Settings);
 
             foreach (var loadCaseItem in casesToRun)
             {
@@ -114,10 +121,13 @@ namespace PileDesign.ViewModels
 
                 // VL ケースは水平荷重 0 のため、組合せ係数 (β1/β2/α1) は結果に影響しない。
                 // 結果重複を避けるため、VL は組合せ・液状化ループを 1 回のみ実行する。
+                // 組合せは開始時に取った一覧から (以前はケースごとに入力から読み直していたので、
+                // 実行中に組合せの適用を外すと以降のケースだけその組合せが抜けた)
                 IEnumerable<LoadCombination> combosToRun = isVLCase
-                    ? new[] { InputModel.LoadCasesInput.AllLoadCombinations.FirstOrDefault() }
+                    ? new[] { ctx.Combinations.FirstOrDefault() }
                         .Where(c => c != null)
-                    : InputModel.LoadCasesInput.AllLoadCombinations;
+                        .Select(c => c!)
+                    : ctx.Combinations;
 
                 foreach (var loadCombination in combosToRun)
                 {
@@ -132,13 +142,7 @@ namespace PileDesign.ViewModels
 
                     IEnumerable<bool> liquefactionCases = isVLCase
                         ? new[] { false }
-                        : LiquefactionOption switch
-                    {
-                        LiquefactionOptionType.Both => [true, false],
-                        LiquefactionOptionType.Yes => [true],
-                        LiquefactionOptionType.None => [false],
-                        _ => new[] { false }
-                    };
+                        : ctx.Settings.LiquefactionCases;
 
                     foreach (bool isLiquefaction in liquefactionCases)
                     {
@@ -278,6 +282,9 @@ namespace PileDesign.ViewModels
             var startTime = ctx.StartTime;
             var calcNoBox = ctx.CalcNoBox;
             int _caseMDOP = ctx.CaseMdop;
+            // 実行設定は開始時の写しから読む (画面のプロパティは実行中に変わりうる。HorizontalRunSettings 参照)
+            var runSettings = ctx.Settings;
+            BeforeEachCaseForTesting?.Invoke(this);
 
             // 収束判定の基準。切り出す前は RunAsync の局所定数で、使うのはこのケース本体だけ。
             const double alpha = BaseConvergenceTolerance;
@@ -399,10 +406,7 @@ namespace PileDesign.ViewModels
             int configuredNStep = (!isSoilNonLinear && !loadCase.IsPileNonLinear && !isHeadNonLinear) ? 1 :
                 // VL は Level=0 (常時) だが、鉛直軸力を段階的に載せるので
                 // 1 ステップでは収束しない。レベル1 と同じ分割数を使う。
-                isVLCase ? Level1CalculationStepsCount :
-                loadCase.Level == 1 ? Level1CalculationStepsCount :
-                loadCase.Level == 2 ? Level2CalculationStepsCount :
-                1;
+                runSettings.ConfiguredSteps(loadCase.Level, isVLCase);
             var loadDirection = ClassifyLoadCombinationDirection(loadCase, loadCombination, isLiquefaction);
             int baseNStep = configuredNStep;
             int MAX_STEP_BISECTIONS = 3;
@@ -490,7 +494,7 @@ namespace PileDesign.ViewModels
                 // ・effectiveDenom: SetVectorDF / InitializeSoilDisp に渡す増分分母 (cut-back で ×M)
                 // フラグ off ではどちらも nStep のまま動作 (= 従来挙動)。
                 int effectiveDenom = nStep;
-                SetVectorDF(caseModel, loadCase, loadCombination, level, iLC, effectiveDenom);
+                SetVectorDF(caseModel, loadCase, loadCombination, level, iLC, effectiveDenom, runSettings.UsePsSpringAtPileTip);
                 caseModel.MapOnVectorDF();
                 InitializeSoilDisplacementIncrement(caseModel, loadCase, loadCombination, level, isLiquefaction, effectiveDenom);
 
@@ -576,7 +580,7 @@ namespace PileDesign.ViewModels
                     ", βU:" + $"{loadCombination.Beta1:N2}" +
                     ", βL:" + $"{loadCombination.Beta2:N2}" +
                     ",　荷重ステップ" + (step + 1) + "/" + nStep +
-                    (RelaxationFactor < 1.0 ? $", 緩和係数={RelaxationFactor:N2}" : ""));
+                    (runSettings.RelaxationFactor < 1.0 ? $", 緩和係数={runSettings.RelaxationFactor:N2}" : ""));
 
                 // v15/v23: 予測ステップ（前ステップの変位増分があれば適用）
                 if (step > 0 && prevStepDispIncrement != null && caseModel.VectorD != null)
@@ -629,12 +633,12 @@ namespace PileDesign.ViewModels
                 long largeResidualAtStepStart = caseModel.SolverCache.LargeResidualCount;
 
                 UpdateSoilDisp(caseModel);
-                UpdateF(caseModel);
+                UpdateF(caseModel, runSettings.UsePsSpringAtPileTip);
 
                 // 入力値＋応力解析結果モード: 前ステップのFxiを入力軸力に加算
-                if (UseAnalysisAxialForce && step > 0)
+                if (runSettings.UseAnalysisAxialForce && step > 0)
                 {
-                    UpdateAxialForceFromAnalysis(caseModel);
+                    UpdateAxialForceFromAnalysis(caseModel, runSettings.UsePsSpringAtPileTip);
                 }
 
                 // 引張定着筋なし半剛接合 (キャプテン/F.T.Pile/キャプリング) で軸力モードに応じた
@@ -660,10 +664,10 @@ namespace PileDesign.ViewModels
                 caseModel.SetR();
 
                 // 反復なし簡易法の場合は1回で終了
-                int maxIterations = SkipIteration ? 1 : MaximumNewtonIterations;
+                int maxIterations = runSettings.SkipIteration ? 1 : MaximumNewtonIterations;
                 if (MaximumIterationsForTesting is int forcedMax) maxIterations = forcedMax;
                 // 適応的緩和係数の初期化
-                double currentRelaxFactor = SkipIteration ? 1.0 : RelaxationFactor; // 簡易法は緩和なし
+                double currentRelaxFactor = runSettings.SkipIteration ? 1.0 : runSettings.RelaxationFactor; // 簡易法は緩和なし
                 double prevResidual = caseModel.NormsROnNormsFint;
                 int consecutiveDecrease = 0; // 連続減少カウント
 
@@ -784,7 +788,7 @@ namespace PileDesign.ViewModels
                     // v21 Phase 3 prep: 効果的ライン探索フラグを「ユーザー設定 ∪ 自動切替」の union として毎反復評価
                     // （旧コード: auto-switch 時に _useLineSearch フィールドを true に書換 → UseLineSearch プロパティが true になる
                     //   を field 書換なしで再現。インスタンスフィールドを汚さないため並列化への準備になる）
-                    bool effectiveUseLineSearch = UseLineSearch || autoSwitchedToLineSearch;
+                    bool effectiveUseLineSearch = runSettings.UseLineSearch || autoSwitchedToLineSearch;
                     double usedRelaxFactor = currentRelaxFactor; // このステップで使う値を保存
 
                     // 2026-05-06: NR モード追跡用フラグ。RunWork 内で更新、ログ出力 (RunWork 外) で参照。
@@ -814,7 +818,7 @@ namespace PileDesign.ViewModels
                         // - Full NR: 常に毎反復で接線剛性+Kマトリクス更新
                         // - Modified NR: 最初の FullNRIterations 回は Full NR、以降は K 再利用
                         // v29: 直前反復で M-φ セグメント変化 / p-y 降伏変化を検知した場合は強制 Full NR
-                        bool useFullNR = !UseModifiedNewtonRaphson || n_iteration <= FullNRIterations || forceFullNRNextIter
+                        bool useFullNR = !runSettings.UseModifiedNewtonRaphson || n_iteration <= runSettings.FullNRIterations || forceFullNRNextIter
                             || caseModel.NormsROnNormsFint > FullNRAboveResidualRatio; // 混成則 (FullNRAboveResidualRatio の説明を参照)
                         forceFullNRNextIter = false; // フラグ消費
 
@@ -822,8 +826,8 @@ namespace PileDesign.ViewModels
                         {
                             // Full NR: ダンピングなし（正確なヤコビアンで2次収束）
                             // Modified NR の初期反復: ダンピングあり（安定化）
-                            bool relaxTangent = UseModifiedNewtonRaphson;
-                            UpdateBeamMPhiTangent(caseModel, useRelaxation: relaxTangent, biaxialCoupling: UseBiaxialTangentCoupling);
+                            bool relaxTangent = runSettings.UseModifiedNewtonRaphson;
+                            UpdateBeamMPhiTangent(caseModel, useRelaxation: relaxTangent, biaxialCoupling: runSettings.UseBiaxialTangentCoupling);
                         }
 
                         // KTan 組立（戻り値で springK の min/max を受け取る）
@@ -1079,7 +1083,7 @@ namespace PileDesign.ViewModels
                     }
 
                     // v29: 状態変化を検知したら次反復で K を強制再構築 (Modified NR の K 再利用を一時停止)
-                    if (UseModifiedNewtonRaphson && !isFirstIterSnapshot &&
+                    if (runSettings.UseModifiedNewtonRaphson && !isFirstIterSnapshot &&
                         (mphiChanges.Count > 0 || newlyYieldedSoilSprings.Count > 0 || newlyUnyieldedSoilSprings.Count > 0))
                     {
                         forceFullNRNextIter = true;
@@ -1091,7 +1095,7 @@ namespace PileDesign.ViewModels
                     //   - MNR が MNR_PLATEAU_CHECK_INTERVAL 反復経過した時点で
                     //     残差比率が MNR_PLATEAU_RATIO を超えていれば「プラトー」と判定し
                     //     forceFullNRNextIter を立てて K を再構築させる。
-                    if (UseModifiedNewtonRaphson && !forceFullNRNextIter)
+                    if (runSettings.UseModifiedNewtonRaphson && !forceFullNRNextIter)
                     {
                         if (kRebuiltThisIter)
                         {
@@ -1125,13 +1129,13 @@ namespace PileDesign.ViewModels
                     // 方向ロック + ヒステリシス (CrackNx/CrackNy/ThetaProjMax) で根本解決したため、
                     // Newton は通常のライン探索 + adaptive relaxation で安定動作する。
 
-                    if (StopONMaxDisplacement && !double.IsNaN(dispMaxAbs) && Math.Abs(dispMaxAbs) > MaxAllowedDisplacement)
+                    if (runSettings.StopOnMaxDisplacement && !double.IsNaN(dispMaxAbs) && Math.Abs(dispMaxAbs) > runSettings.MaxAllowedDisplacement)
                     {
                         // ログに残す
-                        await AddLogAsync($"解析中止: 代表変位が閾値を超えました max|d|={dispMaxAbs:E3} > threshold={MaxAllowedDisplacement:E3}");
+                        await AddLogAsync($"解析中止: 代表変位が閾値を超えました max|d|={dispMaxAbs:E3} > threshold={runSettings.MaxAllowedDisplacement:E3}");
 
                         // View に警告表示を依頼（UI スレッドでイベントを発火、BeginInvoke で worker をブロックしない）
-                        string warnMsg = $"解析を中止しました。\n代表変位が閾値 {MaxAllowedDisplacement} m を超えました（{dispMaxAbs:E3}）。";
+                        string warnMsg = $"解析を中止しました。\n代表変位が閾値 {runSettings.MaxAllowedDisplacement} m を超えました（{dispMaxAbs:E3}）。";
                         Application.Current?.Dispatcher.BeginInvoke(() => RequestShowWarning?.Invoke(warnMsg));
 
                         // キャンセルを発行して呼び出し側で OperationCanceledException を処理させる
@@ -1195,7 +1199,7 @@ namespace PileDesign.ViewModels
                     // 案 C (2026-05-05): 並列実行時 (MDOP > 1) は iter ログを間引いて UI 負荷を軽減。
                     //   常時ログ: 最初 3 反復、収束時、flip 検出時、5 の倍数反復
                     //   それ以外は省略 (詳細トレースは MDOP=1 で逐次実行時に取得する)
-                    bool isParallelMode = MaxCaseDegreeOfParallelism > 1;
+                    bool isParallelMode = _caseMDOP > 1;
                     bool isFlipDetected = !string.IsNullOrEmpty(dominantStr) && dominantStr.Contains("⚠flip");
                     bool shouldLogIter = !isParallelMode
                         || isConverged
@@ -1292,7 +1296,7 @@ namespace PileDesign.ViewModels
 
                     // 適応的緩和係数の更新（UseAdaptiveRelaxation=trueの場合のみ）
                     double currentResidual = caseModel.NormsROnNormsFint;
-                    if (UseAdaptiveRelaxation)
+                    if (runSettings.UseAdaptiveRelaxation)
                     {
                         (currentRelaxFactor, consecutiveDecrease) = UpdateAdaptiveRelaxation(
                             currentResidual, prevResidual, currentRelaxFactor, consecutiveDecrease);
@@ -1315,7 +1319,7 @@ namespace PileDesign.ViewModels
                     // 緩和値は「現在残差 × 1.1」「最小残差 × 1.2」の大きい方を採用し、
                     // 今この反復でループが確実に抜けられるようにする（振動残差では minSeen*1.2 が不十分）
                     // 現在の残差が RelaxedAcceptanceCap を超えていたら緩めない (2026-10-11 まで上限なし。RelaxOnNoImprovement 参照)
-                    if (iterationsSinceMinUpdated >= NO_IMPROVEMENT_LIMIT && !SkipIteration)
+                    if (iterationsSinceMinUpdated >= NO_IMPROVEMENT_LIMIT && !runSettings.SkipIteration)
                     {
                         if (RelaxOnNoImprovement(currentResidual, minResidualSeen, effectiveAlpha, RELAXED_ALPHA) is double relaxed)
                         {
@@ -1333,7 +1337,7 @@ namespace PileDesign.ViewModels
                     if (residualHistory.Count > SLOW_IMPROVEMENT_WINDOW)
                     {
                         double residualPast = residualHistory.Dequeue();
-                        if (!SkipIteration
+                        if (!runSettings.SkipIteration
                             && currentResidual > effectiveAlpha
                             && currentResidual <= SLOW_IMPROVEMENT_RELAX_CAP
                             && residualPast > 1e-30)
@@ -1370,7 +1374,7 @@ namespace PileDesign.ViewModels
                     if (currentResidual > prevResidual * 1.001)  // 0.1%以上の増加
                     {
                         slowDivergenceCount++;
-                        if (slowDivergenceCount >= SLOW_DIVERGENCE_LIMIT && !SkipIteration)
+                        if (slowDivergenceCount >= SLOW_DIVERGENCE_LIMIT && !runSettings.SkipIteration)
                         {
                             await AddLogAsync($"  ⚠ 緩やかな発散検出: {slowDivergenceCount}回連続で残差が増加しています (最小:{minResidualSeen:E2} → 現在:{currentResidual:E2})");
 
@@ -1393,7 +1397,7 @@ namespace PileDesign.ViewModels
                         slowDivergenceCount = 0;  // 改善があればリセット
                     }
 
-                    if (isDiverging && !autoSwitchedToLineSearch && !effectiveUseLineSearch && !SkipIteration)
+                    if (isDiverging && !autoSwitchedToLineSearch && !effectiveUseLineSearch && !runSettings.SkipIteration)
                     {
                         divergenceCount++;
                         if (divergenceCount >= 2)  // 2回連続で発散検出
@@ -1507,7 +1511,7 @@ namespace PileDesign.ViewModels
                         nStep = curNStep + addedSteps;
 
                         // ④ 増分を新分母で書換 (累積側は保持)
-                        SetVectorDF(caseModel, loadCase, loadCombination, level, iLC, effectiveDenom, resetCumulative: false);
+                        SetVectorDF(caseModel, loadCase, loadCombination, level, iLC, effectiveDenom, runSettings.UsePsSpringAtPileTip, resetCumulative: false);
                         caseModel.MapOnVectorDF();
                         InitializeSoilDisplacementIncrement(caseModel, loadCase, loadCombination, level, isLiquefaction, effectiveDenom, resetCumulative: false);
 
@@ -2061,7 +2065,9 @@ namespace PileDesign.ViewModels
             {
                 lock (_caseMergeLock)
                 {
-                    var snap = CaptureCurrentRunSnapshot();
+                    // 記録するのは実行に使った設定 (開始時の写し)。以前はここで画面の値を読み直していたので、
+                    // 実行中に設定を変えると、使っていない設定が「前回の実行条件」として残った
+                    var snap = CaptureCurrentRunSnapshot(ctx.Settings);
                     // 実行済み = 前回までに最後まで解けたケース (追加実行のとき) + 今回最後まで解けたケース。
                     // 以前は結果が 1 ステップでもあるケースをすべて入れていたので、途中まで・未収束のケースも
                     // 追加実行で「済」として飛ばされた
@@ -2070,8 +2076,9 @@ namespace PileDesign.ViewModels
                     snap.ExecutedCaseKeys = executed.ToList();
                     preTargetModel.LastRunConfig = snap;
                 }
-                // 結果と組にして残す解析の条件は、実行したときのもの (登録するまでに画面の設定を変えても変わらない)
-                _settingsAtLastRun = CaptureRunSettings();
+                // 結果と組にして残す解析の条件は、実行したときのもの (登録するまでに画面の設定を変えても変わらない)。
+                // 実行中に変えた場合も同じで、開始時の写しから作る
+                _settingsAtLastRun = CaptureRunSettings(ctx.Settings);
                 RefreshCompletedCaseKeys();
             }
 
@@ -2193,14 +2200,137 @@ namespace PileDesign.ViewModels
             public List<System.Threading.Tasks.Task> CaseTasks = new();
             /// <summary>同時実行数の制限 (MDOP=1 では null)</summary>
             public System.Threading.SemaphoreSlim? CaseSemaphore;
+            /// <summary>実行を始めたときの解析の設定 (<see cref="HorizontalRunSettings"/>)。実行中はこれだけを読む</summary>
+            public HorizontalRunSettings Settings = null!;
+            /// <summary>実行を始めたときに適用されていた荷重組合せ (画面のチェックを実行中に外しても変わらない)</summary>
+            public IReadOnlyList<LoadCombination> Combinations = [];
         }
+
+        /// <summary>
+        /// 水平解析の実行設定の写し。実行を始めるときに 1 回だけ取り、実行中はこの値だけを読む。
+        /// 実行後に残す記録 (LastRunConfig・計算書の「実行条件」) も同じ写しから作る。
+        /// </summary>
+        /// <remarks>
+        /// 2026-10-11 まで、解析は画面の設定 (液状化の選択・ステップ数・反復なし・緩和係数・ラインサーチ・
+        /// 修正 NR・杭軸力モード・杭先端の P-S ばね ほか) をケースごと・ステップごと・反復ごとにその場で読んでいた。
+        /// 実行中も設定の欄は触れたので、途中で変えると以降のケースやステップだけが別の設定で解かれ、
+        /// しかも実行の記録 (LastRunConfig と計算書の実行条件) は<b>終わったときの</b>値で取っていたので、
+        /// 実際に使った設定と記録が食い違った。杭軸力モードと P-S ばねは入力 (InputModel) に書き込む設定で、
+        /// 解析の途中の処理 (荷重の設定・軸力の更新) も入力から直に読んでいた。
+        /// 実行中は欄を触れなくした (第一の守り) うえで、解析はこの写しだけを読む (第二の守り)。
+        /// 誰も途中で触らなければ、読む値は以前と同じなので結果は変わらない。
+        /// </remarks>
+        public sealed record HorizontalRunSettings
+        {
+            public LiquefactionOptionType LiquefactionOption { get; init; }
+            public int Level1Steps { get; init; }
+            public int Level2Steps { get; init; }
+            public bool UseAnalysisAxialForce { get; init; }
+            public bool UsePsSpringAtPileTip { get; init; }
+            public bool IsVLAnalysisEnabled { get; init; }
+            public bool SkipIteration { get; init; }
+            public double RelaxationFactor { get; init; }
+            public ConvergenceMethod SelectedConvergenceMethod { get; init; }
+            public bool UseLineSearch { get; init; }
+            public bool UseAdaptiveRelaxation { get; init; }
+            public bool UseModifiedNewtonRaphson { get; init; }
+            public int FullNRIterations { get; init; }
+            public bool UseBiaxialTangentCoupling { get; init; }
+            public bool StopOnMaxDisplacement { get; init; }
+            public double MaxAllowedDisplacement { get; init; }
+            public int CaseParallelism { get; init; }
+            public FoundationBeamConnectionMode ConnectionMode { get; init; }
+            public bool RestrainFoundationTorsion { get; init; }
+
+            /// <summary>液状化の選択に応じた「液状化を考慮するか」の並び (両方なら 考慮 → 非考慮)。</summary>
+            public bool[] LiquefactionCases => LiquefactionCasesOf(LiquefactionOption);
+
+            /// <summary>荷重レベルに応じた初期の荷重ステップ数 (VL はレベル1 と同じ。それ以外のレベルは 1)。</summary>
+            public int ConfiguredSteps(int level, bool isVLCase) =>
+                isVLCase ? Level1Steps :
+                level == 1 ? Level1Steps :
+                level == 2 ? Level2Steps :
+                1;
+        }
+
+        /// <summary>液状化の選択に応じた「液状化を考慮するか」の並び。三重ループと件数の数え方で共通に使う。</summary>
+        internal static bool[] LiquefactionCasesOf(LiquefactionOptionType option) => option switch
+        {
+            LiquefactionOptionType.Both => [true, false],
+            LiquefactionOptionType.Yes => [true],
+            LiquefactionOptionType.None => [false],
+            _ => [false]
+        };
+
+        /// <summary>いまの画面の設定から実行設定の写しを取る (実行の開始時に 1 回だけ呼ぶ)。</summary>
+        internal HorizontalRunSettings CaptureHorizontalRunSettings() => new()
+        {
+            LiquefactionOption = LiquefactionOption,
+            Level1Steps = Level1CalculationStepsCount,
+            Level2Steps = Level2CalculationStepsCount,
+            UseAnalysisAxialForce = UseAnalysisAxialForce,
+            UsePsSpringAtPileTip = InputModel?.UsePsSpringAtPileTip ?? false,
+            IsVLAnalysisEnabled = InputModel?.IsVLAnalysisEnabled ?? false,
+            SkipIteration = SkipIteration,
+            RelaxationFactor = RelaxationFactor,
+            SelectedConvergenceMethod = SelectedConvergenceMethod,
+            UseLineSearch = UseLineSearch,
+            UseAdaptiveRelaxation = UseAdaptiveRelaxation,
+            UseModifiedNewtonRaphson = UseModifiedNewtonRaphson,
+            FullNRIterations = FullNRIterations,
+            UseBiaxialTangentCoupling = UseBiaxialTangentCoupling,
+            StopOnMaxDisplacement = StopONMaxDisplacement,
+            MaxAllowedDisplacement = MaxAllowedDisplacement,
+            CaseParallelism = MaxCaseDegreeOfParallelism,
+            ConnectionMode = ConnectionMode,
+            RestrainFoundationTorsion = RestrainFoundationTorsion,
+        };
+
+        /// <summary>テスト用: 直近の解析を実行したときの条件 (計算書の「解析の実行条件」に書くもの)。</summary>
+        internal Models.AnalysisRunMetadata? SettingsAtLastRunForTesting => _settingsAtLastRun;
+
+        /// <summary>
+        /// いまの解析の条件 (版・収束の手法・ステップ数・並列数・収束の基準・反復の上限)。ケースの一覧は入れない。
+        /// 同じ入力で結果が変わったときに、条件の差かプログラムの差かを切り分けるために結果と一緒に残す。
+        /// </summary>
+        internal Models.AnalysisRunMetadata CaptureRunSettings() => CaptureRunSettings(CaptureHorizontalRunSettings());
+
+        /// <summary>
+        /// 実行設定の写し <paramref name="s"/> から解析の条件を作る。解析を終えたときは、実行に使った写しを渡す
+        /// (以前は終えたときの画面の値を読んでいたので、実行中に変えると計算書の「実行条件」が使っていない値になった)。
+        /// </summary>
+        internal Models.AnalysisRunMetadata CaptureRunSettings(HorizontalRunSettings s) => new()
+        {
+            Kind = Models.AnalysisKind.Horizontal,
+            ExecutedAt = DateTime.Now,
+            ApplicationVersion = MainWindowViewModel.AppVersion,
+            ConvergenceMethod = s.SelectedConvergenceMethod switch
+            {
+                ConvergenceMethod.FixedRelaxation => "固定緩和",
+                ConvergenceMethod.AdaptiveRelaxation => "適応的緩和",
+                _ => "ラインサーチ",
+            },
+            Level1Steps = s.Level1Steps,
+            Level2Steps = s.Level2Steps,
+            CaseParallelism = s.CaseParallelism,
+            InitialRelaxationFactor = s.RelaxationFactor,
+            BaseResidualTolerance = BaseConvergenceTolerance,
+            RelaxedResidualTolerance = RelaxedResidualTolerance,
+            MaximumIterations = s.SkipIteration ? 1 : MaximumNewtonIterations,
+            LinearSolverResidualTolerance = CsparseLinearSolver.ResidualTolerance,
+        };
+
+        /// <summary>
+        /// テスト用: 各ケースを解き始める直前に呼ぶ (実行中に画面の設定を変える操作を再現する)。画面からは設定しない。
+        /// </summary>
+        internal Action<HorizontalCalculationViewModel>? BeforeEachCaseForTesting { get; set; }
 
         /// <summary>
         /// 解析の前処理。既存結果の保持/クリア、ログ・進捗・並列モニタの初期化、
         /// MathNet と MKL/OMP の並列度クランプまでを行う。
         /// 計算モデルが無いときは理由をログに出して null を返す (呼び出し側はそのまま戻る)。
         /// </summary>
-        private async Task<RunContext?> PrepareRunAsync(IProgress<Models.AnalysisProgress>? progress, bool additive)
+        private async Task<RunContext?> PrepareRunAsync(IProgress<Models.AnalysisProgress>? progress, bool additive, HorizontalRunSettings settings)
         {
             _caseNotices.Clear();
             _caseStages.Clear();
@@ -2273,7 +2403,7 @@ namespace PileDesign.ViewModels
             });
 
             // MDOP>=2 ならモニタを表示
-            bool showMonitor = MaxCaseDegreeOfParallelism > 1;
+            bool showMonitor = settings.CaseParallelism > 1;
             if (showMonitor)
             {
                 System.Windows.Application.Current?.Dispatcher.Invoke(() => RequestShowParallelMonitor?.Invoke());
@@ -2333,7 +2463,7 @@ namespace PileDesign.ViewModels
 
             // E3c-3 (2026-04-23): ケース並列化中は MathNet 内部並列度を 1 に clamp。
             // 並列ケース × 並列 MathNet の掛け算でスレッド過剰を防ぐ。MDOP=1 (逐次) では clamp 不要。
-            int _caseMDOP = Math.Max(1, MaxCaseDegreeOfParallelism);
+            int _caseMDOP = Math.Max(1, settings.CaseParallelism);
             int _origMathNetMDOP = MathNet.Numerics.Control.MaxDegreeOfParallelism;
             // 元の MKL/OMP 環境変数を退避 (try/finally で復元)
             string? _origMklNumThreads = Environment.GetEnvironmentVariable("MKL_NUM_THREADS");
@@ -2366,13 +2496,15 @@ namespace PileDesign.ViewModels
                 OriginalOmpNumThreads = _origOmpNumThreads,
                 CaseTasks = _caseTasks,
                 CaseSemaphore = _caseSemaphore,
+                Settings = settings,
+                Combinations = InputModel.LoadCasesInput.AllLoadCombinations.ToList(),
             };
         }
 
         /// <summary>
         /// 実行するケースの一覧を組み立てる。P-S ばね + VL 単独解析が有効なら VL 仮想ケースが先頭に入る。
         /// </summary>
-        private List<LoadCase> BuildCasesToRun()
+        private List<LoadCase> BuildCasesToRun(HorizontalRunSettings settings)
         {
             // P-S 非線形ばね + VL 単独解析が有効な場合: VL 仮想ケースを先頭に挿入
             // VL ケース: 水平荷重 0、各杭頭に AxialForceVL を外力として与える
@@ -2381,7 +2513,7 @@ namespace PileDesign.ViewModels
             // Level1CalculationStepsCount に基づく段階適用 (nStep > 1) を有効化する目的。
             // (configuredNStep の決定で両者が false だと nStep=1 となり 1 ステップで全 N0 適用 → 発散)
             var casesToRun = new List<LoadCase>();
-            if (InputModel.UsePsSpringAtPileTip && InputModel.IsVLAnalysisEnabled)
+            if (settings.UsePsSpringAtPileTip && settings.IsVLAnalysisEnabled)
             {
                 casesToRun.Add(new LoadCase
                 {

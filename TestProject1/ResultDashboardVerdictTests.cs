@@ -117,7 +117,44 @@ namespace TestProject1
             StringAssert.Contains(v.Note, "試験用の失敗");
         }
 
-        /// <summary>まとめ全体が組めなかったときは、水平解析をしていなくても「未実施」「支持力 OK」にしないこと。</summary>
+        /// <summary>
+        /// 水平解析の前の判定は、鉛直系の入れ物 (支持力・沈下量・沈下による杭頭変形角・基礎梁の傾斜角) の名前で出すこと。
+        /// 以前は「支持力 OK」「杭の鉛直支持力はすべて OK」と出しており、沈下の検定まで含めて OK と言っていることが読めなかった。
+        /// </summary>
+        [TestMethod]
+        public void VerdictBeforeHorizontal_NamesBearingAndSettlement()
+        {
+            var settlement = new EvaluationItem
+            {
+                Kind = EvaluationKind.PileSettlement,
+                Level = 0,
+                Category = "杭の沈下量",
+                PileNo = 1,
+                LoadCaseName = "VL",
+                Response = 10,
+                Limit = 20,
+                IsOk = true,
+                Unit = "mm",
+            };
+            var bearing = new EvaluationResult([.. Bearing().Items, settlement]);
+            var v = DecideVerdict(PileEvaluationSummary.FromResults(null, null, bearing, "A"), horizontalDone: false);
+
+            Assert.AreEqual(VerdictKind.Ok, v.Kind);
+            Assert.AreEqual("支持力・沈下 OK", v.Text);
+            StringAssert.Contains(v.Note, "沈下");
+        }
+
+        /// <summary>ダッシュボードの行名が、入れ物の中身 (支持力と沈下) と合っていること。</summary>
+        [TestMethod]
+        public void DashboardRowLabel_CoversSettlement()
+        {
+            string xaml = TestSource.Read("Graphics_r1", "Views", "ResultDashboardWindow.xaml");
+            StringAssert.Contains(xaml, "Text=\"鉛直支持力・沈下\"");
+            Assert.IsFalse(xaml.Contains("Text=\"杭の鉛直支持力\""),
+                "ダッシュボードの行名が「杭の鉛直支持力」のままです (沈下量・沈下による杭頭変形角・基礎梁の傾斜角も同じ行に数えています)");
+        }
+
+        /// <summary>まとめ全体が組めなかったときは、水平解析をしていなくても「未実施」「支持力・沈下 OK」にしないこと。</summary>
         [TestMethod]
         public void AWholeFailure_CannotBeJudged()
         {

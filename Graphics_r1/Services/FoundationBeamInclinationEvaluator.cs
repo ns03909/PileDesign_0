@@ -141,7 +141,8 @@ namespace PileDesign.Services
 
         /// <summary>
         /// 基礎梁の傾斜角の記録のレベルと限界値。常時 (VL) は使用限界、レベル1 (「L1-…」) は損傷限界、
-        /// レベル2 (「L2-…」) は安全限界 (基本設定「杭頭 2 点間の変形角の限界値」)。
+        /// レベル2 (「L2-…」) は安全限界 (基本設定「杭頭 2 点間の変形角の限界値」)。<b>性能グレード S ではレベル2 も損傷限界</b>
+        /// (基本設定の説明・水平解析の杭頭変形角と同じ。2026-10-11 まではグレードを見ず、レベル2 を常に安全限界で照査していた)。
         /// 以前は全記録 (地震時も) を固定の 1/300 で、常時として判定していた (出典を確かめられない値だった)。
         /// </summary>
         internal static (int Level, string LimitName, double Limit) InclinationLimitFor(
@@ -149,7 +150,9 @@ namespace PileDesign.Services
         {
             string name = rec.LoadCaseName ?? "";
             if (name.StartsWith("L2-", StringComparison.Ordinal))
-                return (2, "安全限界", PileHeadDeformationAngle.UltimateLimit(fundamental));
+                return (fundamental?.SeismicGrade ?? "A") == "S"
+                    ? (2, "損傷限界", PileHeadDeformationAngle.DamageLimit(fundamental))
+                    : (2, "安全限界", PileHeadDeformationAngle.UltimateLimit(fundamental));
             if (name.StartsWith("L1-", StringComparison.Ordinal))
                 return (1, "損傷限界", PileHeadDeformationAngle.DamageLimit(fundamental));
             return (0, "使用限界", PileHeadDeformationAngle.ServiceLimit(fundamental));

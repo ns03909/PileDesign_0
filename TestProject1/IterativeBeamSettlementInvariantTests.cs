@@ -320,7 +320,7 @@ namespace TestProject1
 
             string vm = TestSource.Read("Graphics_r1", "ViewModels", "GroupSettlementWithBeamCalculationViewModel.cs");
             string body = TestSource.MethodBody(vm, "private async Task ExecuteAnalysisAsync()");
-            StringAssert.Contains(body, "KMin, KMax, token)", "取り消しを計算へ渡していません");
+            StringAssert.Contains(body, "runParameters.KMin, runParameters.KMax, token)", "取り消しを計算へ渡していません");
             int awaited = body.IndexOf("await Task.Run(", StringComparison.Ordinal);
             int checkAfter = body.IndexOf("token.ThrowIfCancellationRequested();", awaited, StringComparison.Ordinal);
             int add = body.IndexOf("CaseResults.Add(", awaited, StringComparison.Ordinal);

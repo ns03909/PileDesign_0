@@ -481,6 +481,11 @@ namespace TestProject1
             Assert.AreEqual((0, "使用限界", 0.002), PileDesign.Services.FoundationBeamInclinationEvaluator.InclinationLimitFor(Rec("杭軸力 VL"), f));
             Assert.AreEqual((1, "損傷限界", 0.004), PileDesign.Services.FoundationBeamInclinationEvaluator.InclinationLimitFor(Rec("L1-1: 杭軸力"), f));
             Assert.AreEqual((2, "安全限界", 0.008), PileDesign.Services.FoundationBeamInclinationEvaluator.InclinationLimitFor(Rec("L2-3: 杭軸力"), f));
+            // 性能グレード S ではレベル2 も損傷限界 (基本設定の説明・水平解析の杭頭変形角と同じ。以前はグレードを見ていなかった)
+            f.SeismicGrade = "S";
+            Assert.AreEqual((2, "損傷限界", 0.004), PileDesign.Services.FoundationBeamInclinationEvaluator.InclinationLimitFor(Rec("L2-3: 杭軸力"), f),
+                "性能グレード S なのに、レベル2 の傾斜角を安全限界で照査しています");
+            Assert.AreEqual((1, "損傷限界", 0.004), PileDesign.Services.FoundationBeamInclinationEvaluator.InclinationLimitFor(Rec("L1-1: 杭軸力"), f));
             Assert.IsFalse(TestSource.Read("Graphics_r1", "Services", "FoundationBeamInclinationEvaluator.cs").Contains("1.0 / 300.0", StringComparison.Ordinal),
                 "固定の 1/300 が残っています");
         }

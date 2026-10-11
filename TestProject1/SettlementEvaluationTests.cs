@@ -183,6 +183,36 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 基本設定の説明が、上の扱い (群杭沈下の結果が無ければ検定不能) と合っていること。
+        /// 2026-10-11 まで「沈下検討の対象」の説明は「群杭分が 0 なので、どちらを選んでも単杭沈下と同じ」、
+        /// 「沈下量を検定する」のツールチップは「応答値は単杭沈下量に等しくなります」と、群杭ぶんを 0 として
+        /// 判定していた頃の説明のまま残っていた。
+        /// </summary>
+        [TestMethod]
+        public void TheFundamentalWindowDoesNotSayAMissingGroupResultCountsAsZero()
+        {
+            string xaml = TestSource.Read("Graphics_r1", "Views", "FundamentalWindow.xaml");
+            foreach (var stale in new[] { "群杭分が 0 なので", "単杭沈下と同じになります", "応答値は単杭沈下量に等しくなります" })
+                Assert.IsFalse(xaml.Contains(stale), $"基本設定に、群杭沈下の結果が無いときの古い説明「{stale}」が残っています");
+            StringAssert.Contains(xaml, "検定不能になります",
+                "基本設定に、群杭沈下の結果が無いときは検定不能になることが書かれていません");
+        }
+
+        /// <summary>
+        /// ヘルプが基礎梁の傾斜角の限界状態の割り当て (性能グレード S ではレベル2 も損傷限界) を書いていること。
+        /// 実装 (FoundationBeamInclinationEvaluator.InclinationLimitFor) は 2026-10-11 にグレードを見るようにした。
+        /// </summary>
+        [TestMethod]
+        public void TheHelpStatesTheBeamInclinationLimitStates()
+        {
+            string help = TestSource.Read("Graphics_r1", "Help", "help.html");
+            // 沈下量の検定の項の「不同沈下」の箇条に書いてある (項の頭から数千字の範囲)
+            string section = TestSource.Region(help, "id=\"fund-opt-settlement-evaluation\"", 4000);
+            StringAssert.Contains(section, "常時は使用限界、レベル1 は損傷限界、レベル2 は安全限界");
+            StringAssert.Contains(section, "性能グレード S ではレベル2 も損傷限界");
+        }
+
+        /// <summary>
         /// 許容値が正の有限の数でなければ判定しない。検定を有効にしているので黙って省かず、入力箇所を示す項目を 1 件出す。
         /// 以前は「0 より大きい」だけを見ていたので、無限大が通って有限の沈下量がすべて OK になった。
         /// </summary>

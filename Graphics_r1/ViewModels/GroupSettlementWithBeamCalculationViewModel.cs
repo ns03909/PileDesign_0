@@ -116,8 +116,30 @@ namespace PileDesign.ViewModels
         /// <summary>直近に終えた解析の条件 (保存して閉じたときにメイン側が記録する)。終えていなければ null。</summary>
         internal Models.AnalysisRunMetadata? LastRunSettings { get; private set; }
 
+        /// <summary>
+        /// 反復の設定の写し (最大反復回数・収束許容誤差・ばねの下限と上限)。解析を始めるときに、入力の検査を通した直後に 1 回だけ取り、
+        /// 全ケースにこれを渡す。記録する解析の条件 (<see cref="LastRunSettings"/>) も同じ写しから作る。
+        /// </summary>
+        /// <remarks>
+        /// 2026-10-11 まで、ケースのループの中で画面のプロパティをケースごとに読み直していた。入力欄は実行中も触れ、
+        /// 文字を打つたびに値が入るので、途中で変えると以降のケースだけ別の設定で解かれた。
+        /// 入力の検査 (ValidateInput) を通したのは開始時の値なので、検査していない値 (0 や下限 &gt; 上限) で解くこともあり得た。
+        /// </remarks>
+        internal sealed record GroupBeamRunParameters(int MaxIterations, double ConvergenceTolerance, double KMin, double KMax);
+
+        /// <summary>いまの画面の値から反復の設定の写しを取る。</summary>
+        internal GroupBeamRunParameters CaptureRunParameters() => new(MaxIterations, ConvergenceTolerance, KMin, KMax);
+
+        /// <summary>
+        /// テスト用: 1 ケース分の反復解析の代わりに呼ぶ (ケース名・荷重・反復の設定を受け取る)。画面からは設定しない。
+        /// </summary>
+        internal Func<string, Dictionary<int, double>, GroupBeamRunParameters, IterativeBeamSettlementResult>? CaseRunnerForTesting { get; set; }
+
         /// <summary>解析の条件 (結果と一緒に保存し、計算書の「解析の実行条件」に書く)。</summary>
-        internal Models.AnalysisRunMetadata CaptureRunSettings()
+        internal Models.AnalysisRunMetadata CaptureRunSettings() => CaptureRunSettings(CaptureRunParameters());
+
+        /// <summary>反復の設定の写し <paramref name="p"/> を使って、記録する解析の条件を作る。</summary>
+        internal Models.AnalysisRunMetadata CaptureRunSettings(GroupBeamRunParameters p)
         {
             var cases = new List<string>();
             if (LoadSource == SourceRectLoads) cases.Add("VL");
@@ -135,13 +157,13 @@ namespace PileDesign.ViewModels
                 Variant = Models.AnalysisRunMetadata.GroupWithBeamVariant,
                 ExecutedAt = DateTime.Now,
                 ApplicationVersion = MainWindowViewModel.AppVersion,
-                MaximumIterations = MaxIterations,
-                BaseResidualTolerance = ConvergenceTolerance,
+                MaximumIterations = p.MaxIterations,
+                BaseResidualTolerance = p.ConvergenceTolerance,
                 Conditions =
                 [
                     new("荷重の出所", LoadSource),
                     new("荷重", cases.Count > 0 ? string.Join("・", cases) : "なし"),
-                    new("ばねの範囲", $"{KMin:G} 〜 {KMax:G} kN/m"),
+                    new("ばねの範囲", $"{p.KMin:G} 〜 {p.KMax:G} kN/m"),
                     new("荷重面の標高", $"{pgs?.LoadingPlaneAltitude:0.###} m"),
                     new("土層", $"{pgs?.SettlementSoilLayers?.Count ?? 0} 層"),
                     new("格子の間隔", $"X {m.GroupPileSettlementXSpacing:0.###} m・Y {m.GroupPileSettlementYSpacing:0.###} m"),
@@ -442,8 +464,10 @@ namespace PileDesign.ViewModels
             IsAnalysisExecuted = false;
             HasFreshResults = false;
             LastRunSettings = null;
-            // 条件は解析を始めるときに取る (記録するのは解析に使った値)
-            var runSettings = CaptureRunSettings();
+            // 反復の設定は、検査を通した値を解析を始めるときに 1 回だけ取り、全ケースにこれを渡す。
+            // 記録する条件も同じ写しから作る (記録するのは解析に使った値)
+            var runParameters = CaptureRunParameters();
+            var runSettings = CaptureRunSettings(runParameters);
             CurrentProgress = 0;
             CaseResults.Clear();
             CalculationLog.Clear();
@@ -470,9 +494,11 @@ namespace PileDesign.ViewModels
                     // 取り消しは計算の中 (反復ごと) まで渡す。取り消されたあとに終わった計算の結果は載せない
                     // (以前は渡しておらず、最後のケースの計算中に取り消すと、その結果を載せて「解析完了」にしていた)
                     var serviceResult = await Task.Run(() =>
-                        IterativeBeamSettlementService.Run(
+                        CaseRunnerForTesting?.Invoke(label, ppi, runParameters)
+                        ?? IterativeBeamSettlementService.Run(
                             InputModel, ppi, label,
-                            MaxIterations, ConvergenceTolerance, KMin, KMax, token),
+                            runParameters.MaxIterations, runParameters.ConvergenceTolerance,
+                            runParameters.KMin, runParameters.KMax, token),
                         token);
                     token.ThrowIfCancellationRequested();
 

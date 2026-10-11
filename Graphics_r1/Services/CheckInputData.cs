@@ -18,7 +18,7 @@ namespace PileDesign.Services
     /// Models/ に置いたままだと「下の層は画面を触らない」という決まりの例外になり、
     /// 本当に直すべき違反 (解析の途中からダイアログを出すもの) が見つけにくくなる。
     /// </summary>
-    class CheckInputData
+    partial class CheckInputData
     {
         /// <summary>
         /// 解析実行は止めないがユーザーに確認させたい「注意レベル」の入力警告を収集する (文だけ)。
@@ -148,6 +148,10 @@ namespace PileDesign.Services
             foreach (var w in ModelConnectivityCheck.CollectWarnings(inputModel))
                 warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.Nowhere, w, "杭配置・基礎梁の配置を確かめる"));
 
+            // 値としては受け付けるが、単位の取り違え・名前の重なりなどで、もっともらしい誤った結果になりうるもの
+            // (取り残された kh0 の手入力・杭先端の平均 N 値が 0・有効上載圧が負・地表面加速度・γ・Es の桁・R/B と杭配置の食い違い)
+            warnings.AddRange(CollectPlausibilityNotices(inputModel));
+
             return warnings;
         }
 
@@ -184,6 +188,8 @@ namespace PileDesign.Services
             problems.AddRange(CollectGroupPileFactorProblems(inputModel));
             problems.AddRange(CollectLoadCombinationProblems(inputModel));
             problems.AddRange(CollectFoundationBeamPropertyProblems(inputModel));
+            // kh0 の手入力が当たる土層が決まらない・杭間隔比が 1 未満 (CheckInputData.Plausibility.cs)
+            problems.AddRange(CollectPlausibilityBlockers(inputModel));
 
             // モデルの「つながり」。剛性行列を組んでから初めて分かる不安定は、
             // 利用者に原因が読み取れない (「対角成分がゼロ」としか出ない)。

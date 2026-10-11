@@ -148,7 +148,7 @@ namespace TestProject1
             string help = Help();
 
             // 反復の上限は名前つきの定数。反復なし簡易法のときだけ 1 回にする
-            StringAssert.Contains(src, "maxIterations = SkipIteration ? 1 : MaximumNewtonIterations;",
+            StringAssert.Contains(src, "maxIterations = runSettings.SkipIteration ? 1 : MaximumNewtonIterations;",
                 "最大反復回数の決め方が実装に見つかりません (書き方が変わった?)");
             int max = Count(src, "MaximumNewtonIterations");
 
@@ -222,6 +222,89 @@ namespace TestProject1
                 if (status == "PhysicallyUnconverged")
                     StringAssert.Contains(physical, label, "物理的未収束の節にある状態ラベルが実装と違います");
             }
+        }
+
+        /// <summary>
+        /// 収束対策のまとめ表の「物理的未収束判定」の行が、本文 (6.) と実装に合っていること。
+        /// 2026-10-11 まで、表だけが「緩和許容 &gt; 1.0E-1 + 改善なし」「結果なし (保存されない)」のままだった。
+        /// 実装は「未収束で終わったステップの残差 &gt; 10 かつ 1 回以上やり直した」で、打ち切った時点までのステップを残す。
+        /// </summary>
+        [TestMethod]
+        public void TheSummaryTableRowOnPhysicalUnconvergence()
+        {
+            double abort = Const(Run(), "PHYSICALLY_UNCONVERGEABLE_THRESHOLD");
+            string table = Section(Help(), "convergence-summary-table");
+            int row = table.IndexOf("<td>物理的未収束判定</td>", StringComparison.Ordinal);
+            Assert.IsTrue(row >= 0, "まとめ表に物理的未収束判定の行がありません");
+            string rowText = table[row..table.IndexOf("</tr>", row, StringComparison.Ordinal)];
+
+            StringAssert.Contains(rowText, "&gt; " + abort.ToString("0.##", Inv),
+                $"まとめ表の物理的未収束の閾値が、実装の {abort} と違います");
+            foreach (var stale in new[] { "1.0E-1", "保存されない", "結果なし" })
+                Assert.IsFalse(rowText.Contains(stale), $"まとめ表の物理的未収束の行に、古い説明「{stale}」が残っています");
+        }
+
+        /// <summary>
+        /// 残差比の分母の書き方が、実装の既定 (外力と強制変位の反力の大きい方) と合っていること。
+        /// 2026-10-11 まで、用語集は「‖R‖²/‖F‖²」「外力の 10⁻⁶ 倍」、ログの凡例と全体の流れは「‖F_int‖²」と書いていた。
+        /// 10⁻⁶ は 2 乗どうしの比で、力の比に直すと 10⁻³。
+        /// </summary>
+        [TestMethod]
+        public void TheResidualRatioIsDescribedWithTheDefaultReference()
+        {
+            string mode = TestSource.Read("Graphics_r1", "Models", "InputData", "ResidualReferenceMode.cs");
+            StringAssert.Contains(mode, "Default = ResidualReferenceMode.ExternalForceOrReaction",
+                "収束判定の基準値の既定が変わりました。ヘルプの残差比の説明 (用語集・ログの凡例・全体の流れ) を見直してください");
+
+            string help = Help();
+            foreach (var stale in new[] { @"\|R\|^2 / \|F_{int}\|^2", @"\|\mathbf{R}\|^2/\|\mathbf{F}_{int}\|^2", "外力の $10^{-6}$ 倍",
+                                          @"\frac{\|\mathbf{R}\|^2}{\|\mathbf{F}\|^2}" })
+                Assert.IsFalse(help.Contains(stale), $"ヘルプに古い残差比の書き方「{stale}」が残っています");
+
+            int glossary = help.IndexOf("<dt><strong>収束判定</strong></dt>", StringComparison.Ordinal);
+            Assert.IsTrue(glossary >= 0, "用語集に「収束判定」がありません");
+            string entry = help[glossary..help.IndexOf("</dd>", glossary, StringComparison.Ordinal)];
+            StringAssert.Contains(entry, @"\max(\|\mathbf{F}\|^2,\ \|\mathbf{T}_\text{強制変位}\|^2)",
+                "用語集の「収束判定」に、既定の基準値 (外力と強制変位の反力の大きい方) が書かれていません");
+            StringAssert.Contains(entry, "$10^{-3}$", "用語集の「収束判定」に、10⁻⁶ が 2 乗の比 (力の比で 10⁻³) であることが書かれていません");
+            StringAssert.Contains(entry, "地盤変位", "用語集の「収束判定」に、地盤変位を与えきることが収束の条件であることが書かれていません");
+        }
+
+        /// <summary>
+        /// 地盤変位を与えきれていないことによる未収束の理由が、ログの凡例に載っていること。
+        /// 理由の文は実装 (JudgeStepConvergence) から読む。
+        /// </summary>
+        [TestMethod]
+        public void TheForcedDisplacementShortfallReasonIsInTheLegend()
+        {
+            string body = TestSource.MethodBody(Run(), "UnconvergedReason) JudgeStepConvergence(");
+            var m = Regex.Match(body, @"\$""(地盤変位を[^(""]+)\(残り");
+            Assert.IsTrue(m.Success, "地盤変位を与えきれていないときの理由の文が実装に見つかりません (書き方が変わった?)");
+            string reason = m.Groups[1].Value.Trim();
+            StringAssert.Contains(Help(), "→ 未収束: " + reason, $"ヘルプのログ例に「{reason}」の未収束の行がありません");
+            StringAssert.Contains(Help(), "<strong>" + reason, $"ヘルプのログの凡例に「{reason}」の説明がありません");
+        }
+
+        /// <summary>
+        /// M-φ の剛性低減率の下限と緩和が、実装と合っていること。下限は接線だけ・割線は下限も緩和も無し・
+        /// 接線の緩和率。2026-10-11 まで、ヘルプは両方に下限 0.05、割線に緩和 0.5 と書いていた。
+        /// </summary>
+        [TestMethod]
+        public void TheMPhiStiffnessRatioLimitsAndRelaxation()
+        {
+            string src = TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.MphiSetup.cs");
+            double ratioMin = Const(src, "RATIO_MIN");
+            double relax = Const(src, "RELAXATION");
+            StringAssert.Contains(src, "Math.Clamp(EIy_eff / EI0y, 0.0, 1.0)",
+                "割線剛性の低減率の上下限が変わりました。ヘルプの「剛性低減率」を見直してください");
+
+            string help = Help();
+            StringAssert.Contains(help, $"({ratioMin.ToString("0.##", Inv)} \\leq k_{{tan}} \\leq 1.0)",
+                $"ヘルプの接線剛性の低減率の下限が、実装の {ratioMin} と違います");
+            StringAssert.Contains(help, "(0 \\leq k_{sec} \\leq 1.0)", "ヘルプの割線剛性の低減率に、実装に無い下限が書かれています");
+            StringAssert.Contains(help, $"$\\lambda = {relax.ToString("0.##", Inv)}$",
+                $"ヘルプの接線剛性の緩和率が、実装の {relax} と違います");
+            Assert.IsFalse(help.Contains("\\lambda_{sec}"), "ヘルプに、実装に無い割線剛性の緩和率が残っています");
         }
 
         /// <summary><c>id</c> の見出しから次の見出しまで。</summary>

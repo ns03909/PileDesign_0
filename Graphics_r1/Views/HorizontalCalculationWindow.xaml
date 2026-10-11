@@ -130,7 +130,12 @@
                 <TabItem Header="荷重">
                     <ScrollViewer x:Name="LeftPaneScrollViewerLoad"
                                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <StackPanel Orientation="Vertical" Margin="2">
+                        <!-- 解析の実行中は設定を触れなくする (タブの中身ごと)。
+                             2026-10-11 まで実行中も触れ、解析は液状化の選択・ステップ数・杭軸力モード・P-S ばね・
+                             組合せの適用をケースやステップごとにその場で読んでいたので、途中で変えると
+                             以降のケースだけ別の設定で解かれた。解析側も開始時の写し (HorizontalRunSettings) だけを読む。 -->
+                        <StackPanel x:Name="LoadSettingsPanel" Orientation="Vertical" Margin="2"
+                                    IsEnabled="{Binding IsAnalysisRunning, Converter={StaticResource BooleanNegationConverter}}">
 
             <!-- ========== モデル情報 ========== -->
             <TextBlock Text="■ モデル情報" Style="{StaticResource SectionHeader}"/>
@@ -471,7 +476,9 @@
                 <TabItem Header="収束・並列">
                     <ScrollViewer x:Name="LeftPaneScrollViewerConv"
                                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <StackPanel Orientation="Vertical" Margin="2">
+                        <!-- 実行中は触れなくする (荷重タブと同じ理由。反復なし・緩和係数・ラインサーチ・修正 NR は反復ごとに読まれていた) -->
+                        <StackPanel x:Name="ConvergenceSettingsPanel" Orientation="Vertical" Margin="2"
+                                    IsEnabled="{Binding IsAnalysisRunning, Converter={StaticResource BooleanNegationConverter}}">
 
             <!-- ========== 収束計算 ========== -->
             <TextBlock Text="■ 収束計算" Style="{StaticResource SectionHeader}"/>

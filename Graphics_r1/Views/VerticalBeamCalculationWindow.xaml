@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:conv="clr-namespace:PileDesign.Converters"
         mc:Ignorable="d"
         Title="単杭沈下解析（基礎梁考慮）" Height="700" Width="1100"
         WindowStartupLocation="CenterOwner"
@@ -11,6 +12,7 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+        <conv:BooleanNegationConverter x:Key="BooleanNegationConverter"/>
     </Window.Resources>
 
     <Grid>
@@ -26,6 +28,11 @@
         <!-- ═══ 左パネル: 設定 ═══ -->
         <ScrollViewer Grid.Row="0" Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="8">
             <StackPanel>
+                <!-- 解析の実行中は設定を触れなくする。2026-10-11 まで実行中も触れ、入力欄は文字を打つたびに値が入るので、
+                     解析が途中からその値を読んだ (ステップ数を変えると、増分とステップの数が合わずに荷重が全部は載らなかった)。
+                     解析側も開始時の写し (VerticalBeamRunSettings) だけを読む。 -->
+                <StackPanel x:Name="RunSettingsPanel"
+                            IsEnabled="{Binding IsAnalysisRunning, Converter={StaticResource BooleanNegationConverter}}">
                 <!-- 荷重ケース選択 -->
                 <GroupBox Header="荷重ケース" Margin="0,0,0,8">
                     <StackPanel Margin="4">
@@ -77,6 +84,7 @@
                                  common:NumericInput.Min="0.1" common:NumericInput.Max="1.0"/>
                     </Grid>
                 </GroupBox>
+                </StackPanel>
 
                 <!-- 実行ボタン -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8">

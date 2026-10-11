@@ -150,7 +150,8 @@
                             <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="　低減前 (参考)"/>
                             <TextBlock Grid.Row="4" Grid.Column="1" x:Name="UnfactoredText" Style="{StaticResource DashValueStyle}" FontWeight="Normal"/>
 
-                            <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="杭の鉛直支持力"/>
+                            <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="鉛直支持力・沈下"
+                                       ToolTip="杭の鉛直支持力（押込み・引抜き）と、沈下の検定（杭の沈下量・沈下による杭頭変形角・基礎梁の傾斜角）をまとめた件数です。"/>
                             <TextBlock Grid.Row="5" Grid.Column="1" x:Name="BearingCountsText" Style="{StaticResource DashValueStyle}"/>
 
                             <TextBlock Grid.Row="6" Grid.Column="0" Style="{StaticResource DashLabelStyle}" Text="　最大検定比"/>

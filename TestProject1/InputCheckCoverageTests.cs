@@ -77,7 +77,27 @@ namespace TestProject1
                 return Rejected(() => l.Cohesive, () => l.Cohesive = 0, 0);
             }, Stage.Warn | Stage.Report),
             new("地盤", "土層の変形係数 Es", "0", m => Rejected(() => m.GroundsInput[0].GroundLayers[0].Es, () => m.GroundsInput[0].GroundLayers[0].Es = 0, 0), Stage.Warn | Stage.Report),
-            new("地盤", "地表面の加速度 (レベル1)", "200", m => Rejected(() => m.GroundsInput[0].GroundAcceleration1, () => m.GroundsInput[0].GroundAcceleration1 = 200, 200), Stage.Screen),
+            // 画面は 0〜100 m/s² に丸めて受け付ける。丸めた 100 m/s² も m/s² としてはありえないので注意する (gal で入れた疑い)
+            new("地盤", "地表面の加速度 (レベル1)", "200", m => Rejected(() => m.GroundsInput[0].GroundAcceleration1, () => m.GroundsInput[0].GroundAcceleration1 = 200, 200), Stage.Screen | Stage.Warn | Stage.Report),
+            new("地盤", "地表面の加速度 (レベル1)", "0.35 (g のつもり)", m => Rejected(() => m.GroundsInput[0].GroundAcceleration1, () => m.GroundsInput[0].GroundAcceleration1 = 0.35, 0.35), Stage.Warn | Stage.Report),
+            new("地盤", "土層の単位体積重量 γ", "1.8 (t/m³ のつもり)", m =>
+            {
+                // 地下水位より上の層にする (下の層だと有効上載圧が負になる注意も同時に出る。段階は同じ)
+                var l = m.GroundsInput[0].GroundLayers[0];
+                return Rejected(() => l.Density, () => l.Density = 1.8, 1.8);
+            }, Stage.Warn | Stage.Report),
+            new("地盤", "土層の変形係数 Es", "N/mm² のつもり (700N の 1/1000)", m =>
+            {
+                var l = m.GroundsInput[0].GroundLayers.First(x => x.NValue > 0);
+                double bad = 0.7 * l.NValue;
+                return Rejected(() => l.Es, () => l.Es = bad, bad);
+            }, Stage.Warn | Stage.Report),
+            new("地盤", "杭先端付近の土質点", "杭先端 ±D に無い", m =>
+            {
+                var sp = m.ElementDivision.SoilPiles[0];
+                foreach (var p in sp.PileToeNValuePoints()) sp.GroundInput.GroundMassesData.Remove(p);
+                return false;
+            }, Stage.Warn | Stage.Report),
 
             // ── 杭配置 ──
             new("杭配置", "杭体の番号", "99 (無い杭体)", m => Rejected(() => m.PileLayoutItems[0].PileBodyNo, () => m.PileLayoutItems[0].PileBodyNo = 99, 99), Stage.Block),
@@ -85,6 +105,8 @@ namespace TestProject1
             new("杭配置", "群杭係数 ξ", "0", m => Rejected(() => m.PileLayoutItems[0].GroupPileFactor, () => m.PileLayoutItems[0].GroupPileFactor = 0, 0), Stage.Block),
             new("杭配置", "群杭係数 ξ", "1.5", m => Rejected(() => m.PileLayoutItems[0].GroupPileFactor, () => m.PileLayoutItems[0].GroupPileFactor = 1.5, 1.5), Stage.Warn | Stage.Report),
             new("杭配置", "杭間隔比 R/B", "0 (未入力)", m => Rejected(() => m.PileLayoutItems[0].PileSpacingFactor, () => m.PileLayoutItems[0].PileSpacingFactor = 0, 0), Stage.Warn | Stage.Report),
+            new("杭配置", "杭間隔比 R/B", "0.5 (杭が重なる)", m => Rejected(() => m.PileLayoutItems[0].PileSpacingFactor, () => m.PileLayoutItems[0].PileSpacingFactor = 0.5, 0.5), Stage.Block),
+            new("杭配置", "杭間隔比 R/B", "100 (杭配置の中心間隔 ÷ 杭径と大きく違う)", m => Rejected(() => m.PileLayoutItems[0].PileSpacingFactor, () => m.PileLayoutItems[0].PileSpacingFactor = 100, 100), Stage.Warn | Stage.Report),
             new("杭配置", "杭の位置", "隣の杭と同じ", m =>
             {
                 var (a, b) = (m.PileLayoutItems[0], m.PileLayoutItems[1]);
@@ -98,6 +120,23 @@ namespace TestProject1
             new("杭体", "コンクリートの設計基準強度 Fc", "0", m => Rejected(() => Section(m).ConcreteFc, () => Section(m).ConcreteFc = 0, 0), Stage.Screen),
             new("杭体", "コンクリートのヤング係数 Ec", "5,000 N/mm²", m => Rejected(() => Section(m).ConcreteE, () => Section(m).ConcreteE = 5000, 5000), Stage.Warn | Stage.Report),
             new("杭体", "コンクリートのヤング係数 Ec", "500 N/mm²", m => Rejected(() => Section(m).ConcreteE, () => Section(m).ConcreteE = 500, 500), Stage.Block),
+
+            // ── 杭要素分割 ──
+            // kh0 の手入力は土層名で引く。同じ名前の層が 2 つあると、どの層の値か決まらない
+            new("杭要素分割", "kh0 の手入力", "同じ土層名の層が 2 つ", m =>
+            {
+                var sp = m.ElementDivision.SoilPiles[0];
+                var layers = m.GroundAt(sp.GroundNo)!.GroundLayers;
+                layers[0].Name = layers[1].Name;
+                sp.Kh0LayerOverrides.Add(new Kh0LayerOverride { LayerName = layers[1].Name, Kh0 = 10000 });
+                return false;
+            }, Stage.Block),
+            new("杭要素分割", "kh0 の手入力", "土層名を変えて取り残された", m =>
+            {
+                var sp = m.ElementDivision.SoilPiles[0];
+                sp.Kh0LayerOverrides.Add(new Kh0LayerOverride { LayerName = "名前を変える前の層", Kh0 = 10000 });
+                return false;
+            }, Stage.Warn | Stage.Report),
 
             // ── 荷重 ──
             // 収束判定の基準が既定 (外力または反力) なら慣性力 0 でも解けるので止めない。外力だけを基準にしたときに止める

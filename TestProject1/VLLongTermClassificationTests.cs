@@ -113,8 +113,14 @@ namespace TestProject1
                 ReadSource("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.Run.cs"),
                 "int configuredNStep =", 800);
 
-            StringAssert.Contains(body, "isVLCase ? Level1CalculationStepsCount",
+            // 分割数は実行開始時の設定の写し (HorizontalRunSettings.ConfiguredSteps) から読む
+            StringAssert.Contains(body, "runSettings.ConfiguredSteps(loadCase.Level, isVLCase)",
+                "荷重分割数を設定の写しから決めていない");
+            var steps = new PileDesign.ViewModels.HorizontalCalculationViewModel.HorizontalRunSettings { Level1Steps = 6, Level2Steps = 9 };
+            Assert.AreEqual(6, steps.ConfiguredSteps(0, isVLCase: true),
                 "VL の荷重分割数がレベル1 と揃っていない。Level=0 だと 1 ステップになり収束しない");
+            Assert.AreEqual(6, steps.ConfiguredSteps(1, isVLCase: false));
+            Assert.AreEqual(9, steps.ConfiguredSteps(2, isVLCase: false));
         }
 
         // ── ソース走査の道具 ──

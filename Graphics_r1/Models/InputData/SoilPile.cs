@@ -278,16 +278,24 @@ namespace PileDesign.Models.InputData
                 if (IsSmartMagnum) return SmartMagnumPileToeNValue;
                 if (IsHybridKneading) return HybridToeNValue;
 
-                var groundMassesData = GroundInput.GroundMassesData;
-                var relevantMasses = groundMassesData
-                    .Where(data => data.AltitudeDepth <= PileToeNValueAverageRangeUpperAltitude &&
-                                   data.AltitudeDepth >= PileToeNValueAverageRangeLowerAltitude)
-                    .ToList();
+                var relevantMasses = PileToeNValuePoints();
 
+                // 範囲に土質点が 1 つも無いと 0 になり、先端支持力が 0 のまま計算が進む。
+                // 値はこのまま (0) とし、解析前の検査 (CheckInputData) が注意として知らせる
                 if (relevantMasses.Count == 0) return 0;
                 return Math.Min(relevantMasses.Average(data => Math.Min(data.NValue, 100)), 60);
             }
         }
+
+        /// <summary>
+        /// 一般式の杭先端平均 N 値に入る土質点 (標高が <see cref="PileToeNValueAverageRangeLowerAltitude"/> 〜
+        /// <see cref="PileToeNValueAverageRangeUpperAltitude"/> にあるもの)。<see cref="PileToeNValue"/> と解析前の検査が同じものを使う。
+        /// </summary>
+        internal List<GroundMassDataInput> PileToeNValuePoints()
+            => (GroundInput?.GroundMassesData ?? [])
+                .Where(data => data.AltitudeDepth <= PileToeNValueAverageRangeUpperAltitude &&
+                               data.AltitudeDepth >= PileToeNValueAverageRangeLowerAltitude)
+                .ToList();
 
         // 杭先端平均N値用N値
         // get だけの計算プロパティ (表示用の文字列)。書き出さない。

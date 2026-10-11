@@ -91,7 +91,7 @@ namespace TestProject1.ConvergenceRegression
             StringAssert.Contains(body, "HorizontalInputSignature(InputModel)", "追加実行の前に入力を照合していません");
 
             string snapshot = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.cs"),
-                "private FEM.AnalysisRunSnapshot CaptureCurrentRunSnapshot()");
+                "private FEM.AnalysisRunSnapshot CaptureCurrentRunSnapshot(");
             StringAssert.Contains(snapshot, "InputModelHash = HorizontalInputSignature(InputModel)", "解析したときの入力の署名を残していません");
         }
 
