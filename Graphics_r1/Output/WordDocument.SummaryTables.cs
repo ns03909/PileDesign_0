@@ -505,8 +505,8 @@ namespace PileDesign.Output
         /// 杭検討結果まとめの N_Max / N_Min に入れる軸力 (入力値)。計算書に載せる地震時ケースだけを、
         /// ケース番号で引いて返す。値は検定の設計軸力 (<see cref="PileLayoutDataItem.ResolveDesignAxialForce"/>) と
         /// 同じ決め方で、地震時軸力が未入力 (0) か欄が無いケースは常時軸力とする。
-        /// ResolveDesignAxialForce を直に呼ばないのは、欄の無いケースを代替の記録 (CalcFallbackTracker) に
-        /// 数え直さないため (検定の側で既に数えている)。
+        /// 欄の無いケースは代替の記録 (CalcFallbackTracker) に数え直さない (検定の側で既に数えている)。
+        /// 以前は同じ決め方をここに書き写していた (写しは直すと取り残されるので、ResolveDesignAxialForce を呼ぶ)。
         /// </summary>
         internal static IEnumerable<(int Level, double N)> ReportedSeismicAxialForces(
             PileLayoutDataItem pile, IEnumerable<LoadCase>? seismicCases)
@@ -516,11 +516,7 @@ namespace PileDesign.Output
             {
                 if (loadCase == null || !loadCase.IsReported) continue;
                 if (loadCase.Level is not (1 or 2)) continue;
-                double n;
-                try { n = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level); }
-                catch (ArgumentOutOfRangeException) { n = pile.AxialForceVL; }
-                if (!double.IsFinite(n) || n == 0.0) n = pile.AxialForceVL;
-                yield return (loadCase.Level, n);
+                yield return (loadCase.Level, pile.ResolveDesignAxialForce(loadCase.No, loadCase.Level, reportFallback: false).N);
             }
         }
 

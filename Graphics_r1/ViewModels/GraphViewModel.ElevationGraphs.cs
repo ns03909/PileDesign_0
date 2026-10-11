@@ -179,7 +179,9 @@ namespace PileDesign.ViewModels
                                             pileLayoutDataItem, EvaluationService.MaxForceKeyOf(loadCase, isLiquefaction), pileSection, maxForcesByPileCase);
                                         var (nValues, qValues) = GetLimitStateNQCurve(pileSection, SelectedLimitState, loadCase.Level, Math.Round(monQd, 3));
                                         if (nValues == null || qValues == null || nValues.Count == 0) continue;
-                                        double magnification = SelectedLimitState.Contains("損傷限界", StringComparison.Ordinal)
+                                        // 選択肢の文字列から限界状態を読むのは LimitStateRule だけ
+                                        double magnification = LimitStateRule.TryParseCurveOption(SelectedLimitState, out _, out var selectedLimit)
+                                            && selectedLimit == SectionLimitState.Damage
                                             ? pileSection.ShearDesignMagnification : 1.0;
                                         limitValue = InterpolateLimitValue(nValues, qValues, axialForceN) / magnification;
                                     }

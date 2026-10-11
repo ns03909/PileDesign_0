@@ -927,8 +927,14 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// <see cref="GetDesignAxialForce"/> の値と、それがどの入力か (検定の根拠に書く)。判定はここ 1 か所。
+        ///
+        /// 図・計算書の軸力もここ (またはこれを包む <c>EvaluationService.ResolveCheckAxialForce</c>) を通す。
+        /// 解析中に書き換わる <see cref="AxialForce"/> (直前に解いたケースの値が残る) に落とす写しが
+        /// 7 か所あり、どのケースを最後に解いたかで図の軸力が変わっていた。
         /// </summary>
-        public (double N, string Source) ResolveDesignAxialForce(int loadCaseNo, int level)
+        /// <param name="reportFallback">欄の無いケースを代替の記録 (CalcFallbackTracker) に数えるか。
+        /// 同じケースを検定の側で既に数えている表 (杭検討結果まとめ) は false にして二重に数えない。</param>
+        public (double N, string Source) ResolveDesignAxialForce(int loadCaseNo, int level, bool reportFallback = true)
         {
             // 長期 (常時) は常時軸力 (GetSeismicAxialForce もレベル 0 では常時軸力を返す)
             if (level == 0) return (AxialForceVL, "杭配置の常時軸力 (長期)");
@@ -944,9 +950,10 @@ namespace PileDesign.Models.InputData
                 // ここは耐力に直に効く (以前この経路の取り違えで、場所打ちRC 1200φ の
                 // 安全 M が 39% 過小、鋼管の充填鋼管部で 61% 過大になった)。
                 // 黙って落ちると気づけないので記録する。
-                PileDesign.Common.CalcFallbackTracker.Report(
-                    "設計軸力（常時軸力で継続）", ex,
-                    $"荷重ケース={loadCaseNo}, レベル={level}");
+                if (reportFallback)
+                    PileDesign.Common.CalcFallbackTracker.Report(
+                        "設計軸力（常時軸力で継続）", ex,
+                        $"荷重ケース={loadCaseNo}, レベル={level}");
                 return (AxialForceVL, "杭配置の常時軸力 (その荷重ケースの地震時軸力の欄がないため)");
             }
             return (AxialForceVL, "杭配置の常時軸力 (地震時軸力が未入力のため)");

@@ -100,8 +100,10 @@ namespace TestProject1
                 "画面で検定と同じ軸力を使っていない図があります (NMINT / QNINT / 杭頭)");
             Assert.IsFalse(screen.Contains("axialForce - analysisFxi"), "画面に図ごとの軸力の式が残っています");
 
-            Assert.AreEqual(3, Regex.Matches(docx, Regex.Escape("EvaluationService.ResolveCheckAxialForce(")).Count,
-                "計算書で検定と同じ軸力を使っていない図があります (N-M・Q-N の点と、深さ分布図の限界線の 3 つのはず)");
+            // M-φ・M-θ 図の曲線の軸力も同じ関数を通す (2026-10-12。以前は地震時軸力が未入力だと
+            // 解析中に書き換わる杭配置の AxialForce に落ちていた。LimitStateRuleTests.AxialForceForPlots_GoesThroughOneResolver)
+            Assert.AreEqual(5, Regex.Matches(docx, Regex.Escape("EvaluationService.ResolveCheckAxialForce(")).Count,
+                "計算書で検定と同じ軸力を使っていない図があります (N-M・Q-N の点、深さ分布図の限界線、M-φ・M-θ の曲線の 5 つのはず)");
 
             // 生の axialForce を直接積んでいる箇所が残っていないこと
             foreach (Match m in Regex.Matches(docx, @"axialForceResultsLevel[12]\.Add\(([^)]*)\);"))

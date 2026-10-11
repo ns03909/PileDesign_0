@@ -473,6 +473,8 @@ namespace PileDesign.ViewModels
         public GraphViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel;
+            // N-M・Q-N 図の性能グレードの既定は、検定と同じく基本設定のグレード (未設定なら A)
+            _selectedSeismicGrade = LimitStateRule.GradeOf(InputModel?.FundamentalInput);
             IsHorizontalAnalysisDone = _mainWindowViewModel.IsHorizontalAnalysisDone;
             IsVerticalAnalysisDone = _mainWindowViewModel.IsVerticalAnalysisDone;
             IsGroupPileSettlementAnalysisDone = _mainWindowViewModel.IsGroupPileSettlementAnalysisDone;
@@ -1141,54 +1143,36 @@ namespace PileDesign.ViewModels
                     $"杭径 D: {pileSection.PileDiameter:F0} mm\n" +
                     $"杭断面: {pileSection.PileDescription}";
 
-                // 性能グレードに応じた限界曲線の選択:
+                // 性能グレードに応じた限界曲線の選択 (LimitStateRule。検定・計算書と同じ規則):
                 //   グレードA: レベル1 損傷限界 (NikkenGreen) + レベル2 安全限界 (NikkenPaleRed)
-                //   グレードS: レベル2 損傷限界 (NikkenGreen)
+                //   グレードS: レベル1 損傷限界 (NikkenGreen) + レベル2 損傷限界 (NikkenPaleRed)
+                // 曲線の色はそれを照査に使うレベルの点の色にそろえる (レベル1 = 緑、レベル2 = 赤)。
+                // 以前はグレードS でレベル2 の損傷限界だけを描いていて、レベル1 の点を検定 (レベル1 の曲線) と
+                // 違う曲線と見比べることになっていた。
                 var damageColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x23 << 16) | (0x89 << 8) | 0x66))); // NikkenGreen #238966
                 var ultimateColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0xE9 << 16) | (0x55 << 8) | 0x41))); // NikkenPaleRed #E95541
 
-                bool isGradeA = SelectedSeismicGrade == "A";
-                int damageLevel = isGradeA ? 1 : 2;
-                string damageLabel = ConcreteModelOptions.MapLimitStateText(isGradeA ? "レベル1 損傷限界" : "レベル2 損傷限界");
-
-                var (factoredDmgN, factoredDmgM) = pileSection.GetFactoredDamageNM(damageLevel);
-                if (factoredDmgN?.Count > 0 && factoredDmgM?.Count > 0)
+                var drawnNM = new List<(bool Dashed, List<double> N, List<double> M)>();
+                void DrawNMCurve((List<double> N, List<double> M) curve, string legend, ScottPlot.Color color, bool dashed)
                 {
-                    var scatterFaDamage = WpfPlot.Plot.Add.ScatterLine(factoredDmgN.ToArray(), factoredDmgM.ToArray());
-                    scatterFaDamage.LegendText = $"低減後{damageLabel}";
-                    scatterFaDamage.LineStyle.Color = damageColor;
-                    _graphHoverMap[scatterFaDamage] = $"低減後{damageLabel}\n" + nmSectionDetails;
-                }
-                if (pileSection.UnfactoredDamageNM.N?.Count > 0 && pileSection.UnfactoredDamageNM.M?.Count > 0)
-                {
-                    var scatterUnDamage = WpfPlot.Plot.Add.ScatterLine(
-                        pileSection.UnfactoredDamageNM.N.ToArray(), pileSection.UnfactoredDamageNM.M.ToArray());
-                    scatterUnDamage.LegendText = $"低減前{damageLabel}";
-                    scatterUnDamage.LineStyle.Pattern = LinePattern.Dashed;
-                    scatterUnDamage.LineStyle.Color = damageColor;
-                    _graphHoverMap[scatterUnDamage] = $"低減前{damageLabel}\n" + nmSectionDetails;
+                    if (!(curve.N?.Count > 0) || !(curve.M?.Count > 0)) return;
+                    // 同じ曲線を 2 度描かない (低減前の損傷限界はレベルに依らない)
+                    if (drawnNM.Any(d => d.Dashed == dashed && d.N.SequenceEqual(curve.N) && d.M.SequenceEqual(curve.M))) return;
+                    drawnNM.Add((dashed, curve.N, curve.M));
+                    var sc = WpfPlot.Plot.Add.ScatterLine(curve.N.ToArray(), curve.M.ToArray());
+                    sc.LegendText = legend;
+                    sc.LineStyle.Color = color;
+                    if (dashed) sc.LineStyle.Pattern = LinePattern.Dashed;
+                    _graphHoverMap[sc] = legend + "\n" + nmSectionDetails;
                 }
 
-                // グレードAのみ安全限界（レベル2用）を描画
-                if (isGradeA)
+                foreach (int curveLevel in new[] { 1, 2 })
                 {
-                    if (pileSection.FactoredUltimateNM.N?.Count > 0 && pileSection.FactoredUltimateNM.M?.Count > 0)
-                    {
-                        var scatterFaUltimate = WpfPlot.Plot.Add.ScatterLine(
-                            pileSection.FactoredUltimateNM.N.ToArray(), pileSection.FactoredUltimateNM.M.ToArray());
-                        scatterFaUltimate.LegendText = "低減後レベル2 安全限界";
-                        scatterFaUltimate.LineStyle.Color = ultimateColor;
-                        _graphHoverMap[scatterFaUltimate] = "低減後レベル2 安全限界\n" + nmSectionDetails;
-                    }
-                    if (pileSection.UnfactoredUltimateNM.N?.Count > 0 && pileSection.UnfactoredUltimateNM.M?.Count > 0)
-                    {
-                        var scatterUnUltimate = WpfPlot.Plot.Add.ScatterLine(
-                            pileSection.UnfactoredUltimateNM.N.ToArray(), pileSection.UnfactoredUltimateNM.M.ToArray());
-                        scatterUnUltimate.LegendText = "低減前レベル2 安全限界";
-                        scatterUnUltimate.LineStyle.Pattern = LinePattern.Dashed;
-                        scatterUnUltimate.LineStyle.Color = ultimateColor;
-                        _graphHoverMap[scatterUnUltimate] = "低減前レベル2 安全限界\n" + nmSectionDetails;
-                    }
+                    var assignment = LimitStateRule.For(SelectedSeismicGrade, curveLevel);
+                    string label = ConcreteModelOptions.MapLimitStateText($"レベル{curveLevel} {LimitStateRule.Name(assignment.Limit)}");
+                    var color = curveLevel == 1 ? damageColor : ultimateColor;
+                    DrawNMCurve(pileSection.GetLimitNMCurve(true, assignment.Limit, assignment.DamageLevel), $"低減後{label}", color, dashed: false);
+                    DrawNMCurve(pileSection.GetLimitNMCurve(false, assignment.Limit, assignment.DamageLevel), $"低減前{label}", color, dashed: true);
                 }
 
                 List<double> axialForceResultsVL = [];
@@ -1506,41 +1490,35 @@ namespace PileDesign.ViewModels
                     $"杭断面: {pileSection.PileDescription}\n" +
                     $"M/(Q·d): {MonQd:N2}";
 
-                // 性能グレードに応じた限界曲線の選択（NMINT と同じ規則）
-                bool isGradeAQ = SelectedSeismicGrade == "A";
-                int qDamageLevel = isGradeAQ ? 1 : 2;
-                string qDamageLabel = ConcreteModelOptions.MapLimitStateText(isGradeAQ ? "レベル1 損傷限界" : "レベル2 損傷限界");
-
-                // 損傷限界はレベル別に再計算
-                // 曲線の取り出しは PileSection.GetQNCurvesForLevel に一本化してある
+                // 性能グレードに応じた限界曲線の選択（NMINT と同じ規則: LimitStateRule）
+                // 損傷限界はレベル別に再計算。曲線の取り出しは PileSection.GetLimitNQCurve に一本化してある
                 // (鋼管杭のように MonQd 別の再計算ができない断面へのフォールバックも中にある)。
-                var qnCurves = pileSection.GetQNCurvesForLevel(qDamageLevel, MonQd);
 
                 // 限界ごとの色: 損傷=NikkenGreen, 安全=NikkenPaleRed
                 var qnDamageColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x23 << 16) | (0x89 << 8) | 0x66))); // NikkenGreen #238966
                 var qnUltimateColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0xE9 << 16) | (0x55 << 8) | 0x41))); // NikkenPaleRed #E95541
 
+                var drawnQN = new List<(bool Dashed, List<double> N, List<double> Q)>();
+                void DrawQNCurve((List<double> N, List<double> Q) curve, string legend, ScottPlot.Color color, bool dashed)
+                {
+                    if (!(curve.N?.Count > 0) || !(curve.Q?.Count > 0)) return;
+                    // 同じ曲線を 2 度描かない (低減前の損傷限界はレベルに依らない)
+                    if (drawnQN.Any(d => d.Dashed == dashed && d.N.SequenceEqual(curve.N) && d.Q.SequenceEqual(curve.Q))) return;
+                    drawnQN.Add((dashed, curve.N, curve.Q));
+                    var sc = WpfPlot.Plot.Add.ScatterLine(curve.N.ToArray(), curve.Q.ToArray());
+                    sc.LegendText = legend;
+                    if (dashed) sc.LineStyle.Pattern = LinePattern.Dashed;
+                    sc.LineStyle.Color = color;
+                    _graphHoverMap[sc] = legend + "\n" + qnSectionDetails;
+                }
                 void DrawQNCurvePair(
                     (List<double> N, List<double> Q) factored,
                     (List<double> N, List<double> Q) unfactored,
                     string label,
                     ScottPlot.Color color)
                 {
-                    if (factored.N?.Count > 0 && factored.Q?.Count > 0)
-                    {
-                        var sc = WpfPlot.Plot.Add.ScatterLine(factored.N.ToArray(), factored.Q.ToArray());
-                        sc.LegendText = $"低減後{label}";
-                        sc.LineStyle.Color = color;
-                        _graphHoverMap[sc] = $"低減後{label}\n" + qnSectionDetails;
-                    }
-                    if (unfactored.N?.Count > 0 && unfactored.Q?.Count > 0)
-                    {
-                        var sc = WpfPlot.Plot.Add.ScatterLine(unfactored.N.ToArray(), unfactored.Q.ToArray());
-                        sc.LegendText = $"低減前{label}";
-                        sc.LineStyle.Pattern = LinePattern.Dashed;
-                        sc.LineStyle.Color = color;
-                        _graphHoverMap[sc] = $"低減前{label}\n" + qnSectionDetails;
-                    }
+                    DrawQNCurve(factored, $"低減後{label}", color, dashed: false);
+                    DrawQNCurve(unfactored, $"低減前{label}", color, dashed: true);
                 }
 
                 // PHC・PRC のせん断耐力は「斜めひび割れ」と「縦ひび割れ」の 2 式の小さい方で決まる。
@@ -1563,14 +1541,22 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                // 損傷限界（指定レベル）を描画
-                DrawQNCurvePair(qnCurves.FactoredDamage, qnCurves.UnfactoredDamage, qDamageLabel, qnDamageColor);
-                DrawQNShearComponents("損傷限界", qnDamageColor);
-                // グレードAのみ安全限界を描画
-                if (isGradeAQ)
+                // レベル1・2 それぞれで照査する限界状態の曲線を描く (グレードA: レベル1 損傷 + レベル2 安全、
+                // グレードS: レベル1 損傷 + レベル2 損傷)。色は照査に使うレベルの点の色 (レベル1 = 緑、レベル2 = 赤)。
+                // 以前はグレードS でレベル2 の損傷限界だけを描き、レベル1 の点を検定と違う曲線と見比べることになっていた
+                var drawnComponentLimits = new HashSet<SectionLimitState>();
+                foreach (int curveLevel in new[] { 1, 2 })
                 {
-                    DrawQNCurvePair(qnCurves.FactoredUltimate, qnCurves.UnfactoredUltimate, "レベル2 安全限界", qnUltimateColor);
-                    DrawQNShearComponents("安全限界", qnUltimateColor);
+                    var assignment = LimitStateRule.For(SelectedSeismicGrade, curveLevel);
+                    string label = ConcreteModelOptions.MapLimitStateText($"レベル{curveLevel} {LimitStateRule.Name(assignment.Limit)}");
+                    var color = curveLevel == 1 ? qnDamageColor : qnUltimateColor;
+                    DrawQNCurvePair(
+                        pileSection.GetLimitNQCurve(true, assignment.Limit, assignment.DamageLevel, MonQd),
+                        pileSection.GetLimitNQCurve(false, assignment.Limit, assignment.DamageLevel, MonQd),
+                        label, color);
+                    // 内訳 (低減前) はレベルに依らないので限界状態ごとに 1 度だけ
+                    if (drawnComponentLimits.Add(assignment.Limit))
+                        DrawQNShearComponents(LimitStateRule.Name(assignment.Limit), color);
                 }
 
                 // 解析結果プロット
@@ -2074,38 +2060,23 @@ namespace PileDesign.ViewModels
         /// </summary>
         /// <param name="level">描く荷重ケースの地震動レベル。損傷限界は検定・計算書と同じく、そのレベルの曲線を使う
         /// (以前は耐震グレードから決めており、グレード S でレベル1 のケースにレベル2 の曲線を描いていた)。</param>
-        private static (List<double> N, List<double> M) GetLimitStateNMCurve(PileSection pileSection, string limitState, int level)
+        internal static (List<double> N, List<double> M) GetLimitStateNMCurve(PileSection pileSection, string limitState, int level)
         {
-            // 損傷限界はレベルで低減係数が変わる (レベル1 は β2 を乗じない)
-            var factoredDamage = pileSection.GetFactoredDamageNM(level == 1 ? 1 : 2);
-            return limitState switch
-            {
-                "低減前使用限界状態" => (pileSection.UnfactoredServiceNM.N, pileSection.UnfactoredServiceNM.M),
-                "低減後使用限界状態" => (pileSection.FactoredServiceNM.N, pileSection.FactoredServiceNM.M),
-                "低減前損傷限界状態" => (pileSection.UnfactoredDamageNM.N, pileSection.UnfactoredDamageNM.M),
-                "低減後損傷限界状態" => (factoredDamage.N, factoredDamage.M),
-                "低減前安全限界状態" => (pileSection.UnfactoredUltimateNM.N, pileSection.UnfactoredUltimateNM.M),
-                "低減後安全限界状態" => (pileSection.FactoredUltimateNM.N, pileSection.FactoredUltimateNM.M),
-                _ => (null, null)
-            };
+            // 選択肢の文字列 → 限界状態は LimitStateRule、曲線は PileSection.GetLimitNMCurve (検定と同じ選び方)。
+            // 損傷限界はレベルで低減係数が変わる (レベル1 は β2 を乗じない)。
+            // 以前はここに曲線の選び方を書き写していて、長期 (レベル0) のケースにレベル2 の損傷限界を描いていた
+            // (検定の損傷限界の曲線はレベル1 と同じ)。
+            if (!LimitStateRule.TryParseCurveOption(limitState, out bool factored, out var limit)) return (null, null);
+            return pileSection.GetLimitNMCurve(factored, limit, LimitStateRule.DamageCurveLevel(level));
         }
 
         /// <summary>
         /// 選択された限界状態に対応するNQ曲線を取得
         /// </summary>
-        private static (List<double> N, List<double> Q) GetLimitStateNQCurve(PileSection pileSection, string limitState, int level, double monQd)
+        internal static (List<double> N, List<double> Q) GetLimitStateNQCurve(PileSection pileSection, string limitState, int level, double monQd)
         {
-            var qn = pileSection.GetQNCurvesForLevel(level == 1 ? 1 : 2, monQd);
-            return limitState switch
-            {
-                "低減前使用限界状態" => (qn.UnfactoredService.N, qn.UnfactoredService.Q),
-                "低減後使用限界状態" => (qn.FactoredService.N, qn.FactoredService.Q),
-                "低減前損傷限界状態" => (qn.UnfactoredDamage.N, qn.UnfactoredDamage.Q),
-                "低減後損傷限界状態" => (qn.FactoredDamage.N, qn.FactoredDamage.Q),
-                "低減前安全限界状態" => (qn.UnfactoredUltimate.N, qn.UnfactoredUltimate.Q),
-                "低減後安全限界状態" => (qn.FactoredUltimate.N, qn.FactoredUltimate.Q),
-                _ => (null, null)
-            };
+            if (!LimitStateRule.TryParseCurveOption(limitState, out bool factored, out var limit)) return (null, null);
+            return pileSection.GetLimitNQCurve(factored, limit, LimitStateRule.DamageCurveLevel(level), monQd);
         }
 
     }

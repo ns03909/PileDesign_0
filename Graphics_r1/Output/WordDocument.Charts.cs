@@ -18,14 +18,29 @@ namespace PileDesign.Output
     {
 
         /// <summary>
-        /// 計算書に描く<b>損傷限界</b>のレベル。耐震性能グレードで決まる。
-        /// グレードA は損傷限界をレベル1 で、グレードS はレベル2 で照査するので、
-        /// 図に描く曲線もそのレベルのものにする（画面のグラフ・検定と同じ規則）。
+        /// 計算書の図に使う耐震性能グレード (規則で使う形 "S" / "A"。未設定なら A)。
+        /// 限界状態と損傷限界のレベルは <see cref="Services.LimitStateRule"/> で決める (画面のグラフ・検定と同じ規則)。
         /// 損傷限界はレベル1 では β2 を乗じないため、レベルを取り違えると
         /// 同じ「低減後損傷限界」でも別の曲線になる。
         /// </summary>
-        private int DocxDamageLevel =>
-            (inputModel?.FundamentalInput?.SeismicGrade ?? "A") == "S" ? 2 : 1;
+        private string DocxGrade => Services.LimitStateRule.GradeOf(inputModel?.FundamentalInput);
+
+        /// <summary>
+        /// N-M・Q-N 図に<b>書き足す</b>損傷限界の曲線のレベル。主に描く曲線 (<see cref="Services.LimitStateRule.PrimaryDamageLevel"/>) 以外で、
+        /// 損傷限界で照査するレベル。グレードS ではレベル1 (レベル1 の点はレベル1 の曲線で照査している)。
+        /// 以前はグレードS の図にレベル2 の曲線しか無く、レベル1 の点を検定と違う曲線と見比べることになっていた。
+        /// </summary>
+        private List<int> DocxExtraDamageLevels =>
+            Services.LimitStateRule.DamageCheckedLevels(DocxGrade)
+                .Where(lv => lv != Services.LimitStateRule.PrimaryDamageLevel(DocxGrade)).ToList();
+
+        /// <summary>主の損傷限界 (低減後) の曲線の凡例。書き足す曲線があるときだけレベルを添える (グレードA の図は従来どおり)。</summary>
+        private string DocxPrimaryDamageLegend => "低減後損傷限界"
+            + (DocxExtraDamageLevels.Count > 0 ? $"（レベル{Services.LimitStateRule.PrimaryDamageLevel(DocxGrade)}）" : "");
+
+        /// <summary>書き足す損傷限界の曲線の線種 (緑の太い点線。主の曲線と見分ける)。</summary>
+        private static (LinePattern Pattern, ScottPlot.Color Color, float Width) ExtraDamageCurveStyle
+            => (LinePattern.Dotted, ScottPlot.Color.FromSKColor(NikkenSKColor.Green), 2f);
         private void AddNMinT(MainDocumentPart mainPart, Body body)
         {
             if (inputModel?.PileBodies == null || inputModel.PileBodies.Count == 0)
@@ -75,13 +90,15 @@ namespace PileDesign.Output
                         lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減前損傷限界"));
 
                         // 損傷限界はレベルで低減係数が変わる (レベル1: β2 なし / レベル2: β1×β2)。
-                        // グレードA は損傷限界をレベル1 で、グレードS はレベル2 で照査するので、
-                        // 描く曲線もそれに合わせる (画面のグラフ・検定と同じ規則)。
+                        // グレードA は損傷限界をレベル1 で、グレードS はレベル2 (とレベル1) で照査するので、
+                        // 描く曲線もそれに合わせる (LimitStateRule。画面のグラフ・検定と同じ規則)。
                         // 従来はレベル2 固定で、グレードA では画面と違う曲線が計算書に載っていた。
-                        var nmFDmg = pileSection.GetFactoredDamageNM(DocxDamageLevel);
+                        // グレードS のレベル1 の曲線は、下で書き足す (DocxExtraDamageLevels)。
+                        var nmFDmg = pileSection.GetLimitNMCurve(true, SectionLimitState.Damage,
+                            Services.LimitStateRule.PrimaryDamageLevel(DocxGrade));
                         lineListsX.Add(ToList(nmFDmg.N));
                         lineListsY.Add(ToList(nmFDmg.M));
-                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後損傷限界"));
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText(DocxPrimaryDamageLegend));
 
                         var nmUSvc = pileSection.UnfactoredServiceNM;
                         lineListsX.Add(ToList(nmUSvc.N));
@@ -92,6 +109,26 @@ namespace PileDesign.Output
                         lineListsX.Add(ToList(nmFSvc.N));
                         lineListsY.Add(ToList(nmFSvc.M));
                         lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後使用限界"));
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug($"[WordDoc] NM曲線取得失敗 (杭体:{pileBody.PileBodyRef}, 区間:{segment.No}): {ex.Message}");
+                    }
+
+                    // 上の 6 本は体裁を既定 (並び順の偶奇) に任せるので null を並べ、書き足す曲線だけ線種を指定する
+                    var nmLineStyles = new List<(LinePattern Pattern, ScottPlot.Color Color, float Width)?>(
+                        Enumerable.Repeat<(LinePattern, ScottPlot.Color, float)?>(null, lineListsX.Count));
+                    try
+                    {
+                        foreach (int lv in DocxExtraDamageLevels)
+                        {
+                            var extra = pileSection.GetLimitNMCurve(true, SectionLimitState.Damage, lv);
+                            if (!(extra.N?.Count > 0) || !(extra.M?.Count > 0)) continue;
+                            lineListsX.Add(ToList(extra.N));
+                            lineListsY.Add(ToList(extra.M));
+                            lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText($"低減後損傷限界（レベル{lv}）"));
+                            nmLineStyles.Add(ExtraDamageCurveStyle);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -237,7 +274,7 @@ namespace PileDesign.Output
                         lineListsX, lineListsY, lineListsLegend,
                         xsLists, ysLists, legends,
                         "", "軸力[kN]", "曲げモーメント[kNm]",
-                        150, 150);
+                        150, 150, lineStyles: nmLineStyles);
 
                     AddAutoFigureCaption(body,
                         $"軸力-モーメント関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
@@ -354,7 +391,8 @@ namespace PileDesign.Output
                         // 曲線の取り出しは PileSection に一本化してある。損傷限界はレベルで
                         // 低減係数が変わるため、キャッシュ済みプロパティを直に読むと
                         // 画面のグラフ・検定と違う曲線が計算書に載る (従来そうなっていた)。
-                        var qn = pileSection.GetQNCurvesForLevel(DocxDamageLevel);
+                        // 損傷限界のレベルは LimitStateRule で決める (グレードS のレベル1 の曲線は下で書き足す)。
+                        var qn = pileSection.GetQNCurvesForLevel(Services.LimitStateRule.PrimaryDamageLevel(DocxGrade));
 
                         lineListsX.Add(ToList(qn.UnfactoredUltimate.N));
                         lineListsY.Add(ToList(qn.UnfactoredUltimate.Q));
@@ -370,7 +408,7 @@ namespace PileDesign.Output
 
                         lineListsX.Add(ToList(qn.FactoredDamage.N));
                         lineListsY.Add(ToList(qn.FactoredDamage.Q));
-                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText("低減後損傷限界"));
+                        lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText(DocxPrimaryDamageLegend));
 
                         lineListsX.Add(ToList(qn.UnfactoredService.N));
                         lineListsY.Add(ToList(qn.UnfactoredService.Q));
@@ -392,6 +430,23 @@ namespace PileDesign.Output
                     var nqLineStyles =
                         new List<(LinePattern Pattern, ScottPlot.Color Color, float Width)?>(
                             Enumerable.Repeat<(LinePattern, ScottPlot.Color, float)?>(null, lineListsX.Count));
+                    try
+                    {
+                        // 損傷限界で照査する他のレベルの曲線 (グレードS のレベル1) を書き足す (N-M 図と同じ)
+                        foreach (int lv in DocxExtraDamageLevels)
+                        {
+                            var extra = pileSection.GetLimitNQCurve(true, SectionLimitState.Damage, lv);
+                            if (!(extra.N?.Count > 0) || !(extra.Q?.Count > 0)) continue;
+                            lineListsX.Add(ToList(extra.N));
+                            lineListsY.Add(ToList(extra.Q));
+                            lineListsLegend.Add(ConcreteModelOptions.MapLimitStateText($"低減後損傷限界（レベル{lv}）"));
+                            nqLineStyles.Add(ExtraDamageCurveStyle);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug($"[WordDoc] NQ曲線取得失敗 (杭体:{pileBody.PileBodyRef}, 区間:{segment.No}): {ex.Message}");
+                    }
                     try
                     {
                         var componentColors = new Dictionary<string, ScottPlot.Color>
@@ -628,16 +683,11 @@ namespace PileDesign.Output
 
                                     foreach (var isLiquefaction in liqPatterns)
                                     {
-                                        // 軸力推定（GraphWindow と同一ロジック）
-                                        double axialN = 0.0;
-                                        try
-                                        {
-                                            double nSeis = pli.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-                                            if (double.IsFinite(nSeis) && nSeis != 0.0) axialN = nSeis;
-                                        }
-                                        catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
-                                        if (axialN == 0.0 && double.IsFinite(pli.AxialForce))
-                                            axialN = pli.AxialForce;
+                                        // 曲線の軸力は検定と同じ規則 (EvaluationService.ResolveCheckAxialForce。GraphWindow と同じ)。
+                                        // 以前は地震時軸力が未入力 (0) だと杭配置の AxialForce (直前に解いたケースの解析が残した値) に
+                                        // 落ちていて、どのケースを最後に解いたかで凡例・キャプションの軸力と代わりの曲線が変わった。
+                                        double axialN = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, loadCase.No, loadCase.Level,
+                                            ViewModels.EvaluationService.PileHeadBeam(pli) is { } mphiHead ? GetBeamResultCached(mphiHead, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi : null).N;
 
                                         // M-φ曲線取得（GraphWindow と同一優先順位）
                                         List<double>? phis = null;
@@ -830,15 +880,10 @@ namespace PileDesign.Output
 
                             foreach (var isLiquefaction in liqPatterns)
                             {
-                                double axialN = 0.0;
-                                try
-                                {
-                                    double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-                                    if (double.IsFinite(nSeis) && nSeis != 0.0) axialN = nSeis;
-                                }
-                                catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
-                                if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
-                                    axialN = pileLayout.AxialForce;
+                                // 軸力は杭頭回転角の検定と同じ規則 (EvaluationService.ResolveCheckAxialForce)。
+                                // 以前は地震時軸力が未入力 (0) だと杭配置の AxialForce (直前に解いたケースの解析が残した値) に落ちていた
+                                double axialN = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pileLayout, loadCase.No, loadCase.Level,
+                                    ViewModels.EvaluationService.PileHeadBeam(pileLayout) is { } mthetaHead ? GetBeamResultCached(mthetaHead, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi : null).N;
 
                                 // 曲線はグラフ画面 (GraphViewModel.CurveGraphs) と同じく、解析中に取ったこのケースの控え
                                 // (CaseMThetaSnapshots) だけから取る:
@@ -1243,7 +1288,8 @@ namespace PileDesign.Output
         /// 値はすべて FACTORED (低減後)。
         /// 戻り値: (せん断 X, せん断 Z, モーメント X, モーメント Z, 凡例ラベル)
         /// </summary>
-        private (List<double>, List<double>, List<double>, List<double>, string) BuildPileLimitStateStepLines(
+        // internal はテスト用 (LimitStateRuleTests: 計算書の限界線が検定と同じ曲線か)
+        internal (List<double>, List<double>, List<double>, List<double>, string) BuildPileLimitStateStepLines(
             PileLayoutDataItem pli, LoadCase lc, LoadCombination comb, bool isLiq)
         {
             var shearXs = new List<double>();
@@ -1253,12 +1299,10 @@ namespace PileDesign.Output
 
             if (anaModel == null || pli?.Beams == null) return (shearXs, shearZs, momentXs, momentZs, "限界状態");
 
-            string seismicGrade = inputModel.FundamentalInput?.SeismicGrade ?? "A";
-            // 常時 (VL, Level=0) は使用限界で見る。検定 (EvaluationService.EvaluateLongTerm) と同じ。
-            bool isLongTerm = lc.Level == 0;
-            bool useDamage = lc.Level == 1 || (lc.Level == 2 && seismicGrade == "S");
+            // 限界状態と損傷限界のレベルは検定と同じ規則 (LimitStateRule)。常時 (VL, Level=0) は使用限界
+            var assignment = Services.LimitStateRule.For(inputModel.FundamentalInput, lc.Level);
             string limitName = ConcreteModelOptions.MapLimitStateText(
-                isLongTerm ? "使用限界 (低減後)" : useDamage ? "損傷限界 (低減後)" : "安全限界 (低減後)");
+                $"{Services.LimitStateRule.Name(assignment.Limit)} (低減後)");
 
             var soilPile = pli.SoilPile;
             if (soilPile?.PileBodySegments == null) return (shearXs, shearZs, momentXs, momentZs, limitName);
@@ -1286,13 +1330,8 @@ namespace PileDesign.Output
 
                 // モーメント限界。損傷限界はその荷重レベルの曲線を使う
                 // (レベル1 は β2 を乗じない)。従来はレベル2 固定で、レベル1 の重ね線が
-                // 検定より小さい限界を描いていた。
-                var damageNM = pileSection.GetFactoredDamageNM(lc.Level == 1 ? 1 : 2);
-                var (nMs, mVals) = isLongTerm
-                    ? (pileSection.FactoredServiceNM.N, pileSection.FactoredServiceNM.M)
-                    : useDamage
-                        ? (damageNM.N, damageNM.M)
-                        : (pileSection.FactoredUltimateNM.N, pileSection.FactoredUltimateNM.M);
+                // 検定より小さい限界を描いていた。曲線の選び方は検定と同じ PileSection.GetLimitNMCurve
+                var (nMs, mVals) = pileSection.GetLimitNMCurve(true, assignment.Limit, assignment.DamageLevel);
                 double mLim = InterpolateLimitFromNCurve(nMs, mVals, axialN);
                 if (!double.IsNaN(mLim) && mLim > 0)
                 {
@@ -1307,13 +1346,8 @@ namespace PileDesign.Output
                 _maxForcesByPileCase ??= ViewModels.EvaluationService.BuildMaxForcesByPileCase(inputModel);
                 var (monQdRaw, _) = ViewModels.EvaluationService.ResolveMonQd(
                     pli, ViewModels.EvaluationService.MaxForceKeyOf(lc, isLiq), pileSection, _maxForcesByPileCase);
-                var qnLevel = pileSection.GetQNCurvesForLevel(lc.Level == 1 ? 1 : 2, Math.Round(monQdRaw, 3));
-                var (nQs, qVals) = isLongTerm
-                    ? (qnLevel.FactoredService.N, qnLevel.FactoredService.Q)
-                    : useDamage
-                        ? (qnLevel.FactoredDamage.N, qnLevel.FactoredDamage.Q)
-                        : (qnLevel.FactoredUltimate.N, qnLevel.FactoredUltimate.Q);
-                double magnification = !isLongTerm && useDamage ? pileSection.ShearDesignMagnification : 1.0;
+                var (nQs, qVals) = pileSection.GetLimitNQCurve(true, assignment.Limit, assignment.DamageLevel, Math.Round(monQdRaw, 3));
+                double magnification = assignment.Limit == SectionLimitState.Damage ? pileSection.ShearDesignMagnification : 1.0;
                 if (magnification != 1.0) shearMagnified = true;
                 double qLim = InterpolateLimitFromNCurve(nQs, qVals, axialN) / magnification;
                 if (!double.IsNaN(qLim) && qLim > 0)

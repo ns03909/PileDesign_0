@@ -176,11 +176,11 @@ namespace PileDesign.ViewModels
             // ── 検定を実行して項目を集める (テキストはこの後で組む) ──
             var longTermItems = longTermResults.Count > 0
                 ? EvaluateLongTerm(model, soilPileByPileBodyNo, pileByPileBodyNo, pileByBeam,
-                    maxForcesByPileCase, nmCache, nqCache, longTermResults, factored)
+                    maxForcesByPileCase, nmCache, nqCache, longTermResults, factored, seismicGrade)
                 : [];
             var level1Items = level1Results.Count > 0
                 ? EvaluateLevel1(model, soilPileByPileBodyNo, pileByPileBodyNo, pileByBeam,
-                    maxForcesByPileCase, nmCache, nqCache, level1Results, factored)
+                    maxForcesByPileCase, nmCache, nqCache, level1Results, factored, seismicGrade)
                 : [];
             var level2Items = level2Results.Count > 0
                 ? EvaluateLevel2(model, soilPileByPileBodyNo, pileByPileBodyNo, pileByBeam,
@@ -374,9 +374,12 @@ namespace PileDesign.ViewModels
             Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)> maxForcesByPileCase,
             ConcurrentDictionary<(int, int, bool, LimitState, int), (List<double> Ns, List<double> Ms)> nmCache,
             ConcurrentDictionary<(int, int, bool, LimitState, int, double), (List<double> Ns, List<double> Qs)> nqCache,
-            List<AnalysisStepResult> results, bool factored)
+            List<AnalysisStepResult> results, bool factored, string seismicGrade)
         {
             var items = new List<EvaluationItem>();
+            // 限界状態は LimitStateRule で決める (長期は使用限界)
+            var limit = FromSectionLimit(LimitStateRule.For(seismicGrade, 0).Limit);
+            var angleLimit = FromSectionLimit(LimitStateRule.For(seismicGrade, 0, LimitCheckKind.DeformationAngle).Limit);
 
             foreach (var stepResult in results)
             {
@@ -386,18 +389,18 @@ namespace PileDesign.ViewModels
                 // 曲げチェック: 使用限界
                 items.AddRange(CheckMPhiLimitForBeams(model, soilPileByPileBodyNo,
                     pileByPileBodyNo, pileByBeam, nmCache,
-                    stepResult, factored, LimitState.Service,
+                    stepResult, factored, limit,
                     lcName, combName));
 
                 // せん断チェック: 使用限界
                 items.AddRange(CheckShearLimitForBeams(model, soilPileByPileBodyNo,
                     pileByPileBodyNo, pileByBeam, maxForcesByPileCase, nqCache,
-                    stepResult, factored, LimitState.Service,
+                    stepResult, factored, limit,
                     lcName, combName));
 
                 // 杭頭 2 点間の変形角: 使用限界
                 items.AddRange(CheckPileHeadDeformationAngle(
-                    stepResult, LimitState.Service, lcName, combName));
+                    stepResult, angleLimit, lcName, combName));
             }
 
             return items;
@@ -416,9 +419,12 @@ namespace PileDesign.ViewModels
             Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)> maxForcesByPileCase,
             ConcurrentDictionary<(int, int, bool, LimitState, int), (List<double> Ns, List<double> Ms)> nmCache,
             ConcurrentDictionary<(int, int, bool, LimitState, int, double), (List<double> Ns, List<double> Qs)> nqCache,
-            List<AnalysisStepResult> results, bool factored)
+            List<AnalysisStepResult> results, bool factored, string seismicGrade)
         {
             var items = new List<EvaluationItem>();
+            // 限界状態は LimitStateRule で決める (レベル1 は損傷限界)
+            var limit = FromSectionLimit(LimitStateRule.For(seismicGrade, 1).Limit);
+            var angleLimit = FromSectionLimit(LimitStateRule.For(seismicGrade, 1, LimitCheckKind.DeformationAngle).Limit);
 
             foreach (var stepResult in results)
             {
@@ -428,18 +434,18 @@ namespace PileDesign.ViewModels
                 // M-φ チェック: 損傷限界
                 items.AddRange(CheckMPhiLimitForBeams(model, soilPileByPileBodyNo,
                     pileByPileBodyNo, pileByBeam, nmCache,
-                    stepResult, factored, LimitState.Damage,
+                    stepResult, factored, limit,
                     lcName, combName));
 
                 // せん断チェック: 損傷限界
                 items.AddRange(CheckShearLimitForBeams(model, soilPileByPileBodyNo,
                     pileByPileBodyNo, pileByBeam, maxForcesByPileCase, nqCache,
-                    stepResult, factored, LimitState.Damage,
+                    stepResult, factored, limit,
                     lcName, combName));
 
                 // 杭頭 2 点間の変形角: 損傷限界
                 items.AddRange(CheckPileHeadDeformationAngle(
-                    stepResult, LimitState.Damage, lcName, combName));
+                    stepResult, angleLimit, lcName, combName));
 
                 // θ チェック: 場所打ちRC杭で 1/100rad
                 items.AddRange(CheckThetaLimit(model, soilPileByPileBodyNo,
@@ -464,7 +470,9 @@ namespace PileDesign.ViewModels
             List<AnalysisStepResult> results, bool factored, string seismicGrade)
         {
             var items = new List<EvaluationItem>();
-            bool isDamageLimit = seismicGrade == "S"; // S→損傷限界、A→安全限界
+            // グレードS→損傷限界、A (未設定・想定外の値も) →安全限界。規則は LimitStateRule の 1 か所
+            var limit = FromSectionLimit(LimitStateRule.For(seismicGrade, 2).Limit);
+            var angleLimit = FromSectionLimit(LimitStateRule.For(seismicGrade, 2, LimitCheckKind.DeformationAngle).Limit);
 
             foreach (var stepResult in results)
             {
@@ -473,21 +481,18 @@ namespace PileDesign.ViewModels
 
                 items.AddRange(CheckMPhiLimitForBeams(model, soilPileByPileBodyNo,
                     pileByPileBodyNo, pileByBeam, nmCache,
-                    stepResult, factored,
-                    isDamageLimit ? LimitState.Damage : LimitState.Ultimate,
+                    stepResult, factored, limit,
                     lcName, combName));
 
                 // せん断も曲げと同じ限界状態に揃える (グレードS→損傷限界、A→安全限界)
                 items.AddRange(CheckShearLimitForBeams(model, soilPileByPileBodyNo,
                     pileByPileBodyNo, pileByBeam, maxForcesByPileCase, nqCache,
-                    stepResult, factored,
-                    isDamageLimit ? LimitState.Damage : LimitState.Ultimate,
+                    stepResult, factored, limit,
                     lcName, combName));
 
                 // 杭頭 2 点間の変形角も同じ限界状態に揃える
                 items.AddRange(CheckPileHeadDeformationAngle(
-                    stepResult,
-                    isDamageLimit ? LimitState.Damage : LimitState.Ultimate,
+                    stepResult, angleLimit,
                     lcName, combName));
 
                 items.AddRange(CheckThetaLimit(model, soilPileByPileBodyNo,
@@ -740,6 +745,13 @@ namespace PileDesign.ViewModels
             _ => SectionLimitState.Ultimate,
         };
 
+        private static LimitState FromSectionLimit(SectionLimitState limit) => limit switch
+        {
+            SectionLimitState.Service => LimitState.Service,
+            SectionLimitState.Damage => LimitState.Damage,
+            _ => LimitState.Ultimate,
+        };
+
         // ── 検定できなかった項目 ─────────────────────────────
 
         /// <summary>その荷重条件の解析結果が見つからないときの理由。</summary>
@@ -943,8 +955,8 @@ namespace PileDesign.ViewModels
                     : (0.0, "杭を特定できないため 0");
 
                 // 損傷限界はレベルで低減係数が変わる (レベル1: β2 なし / レベル2: β1×β2)。
-                // グラフ・計算書と同じ規則で曲線を選ぶ。
-                int damageLevel = shearLimit == LimitState.Damage ? Math.Max(level, 1) : 2;
+                // グラフ・計算書と同じ規則 (LimitStateRule) で曲線を選ぶ。損傷限界以外では曲線に効かない (2 のまま)
+                int damageLevel = shearLimit == LimitState.Damage ? LimitStateRule.DamageCurveLevel(level) : 2;
 
                 // せん断耐力は M/(Q·d) に依存するので、解析した断面力から求めた値を使う。
                 //
@@ -1071,19 +1083,10 @@ namespace PileDesign.ViewModels
         {
             try
             {
-                // 曲線の取り出しは PileSection.GetQNCurvesForLevel に一本化してある。
+                // 曲線の取り出しは PileSection.GetLimitNQCurve に一本化してある (画面のグラフ・計算書の図も同じ)。
                 // キャッシュ済みプロパティを直に読むと損傷限界のレベルと帯筋が反映されず、
                 // グラフ・計算書と違う曲線で検定することになる。
-                var curves = section.GetQNCurvesForLevel(damageLevel, monQd);
-                var nq = (factored, limit) switch
-                {
-                    (false, LimitState.Service) => curves.UnfactoredService,
-                    (false, LimitState.Damage) => curves.UnfactoredDamage,
-                    (false, _) => curves.UnfactoredUltimate,
-                    (true, LimitState.Service) => curves.FactoredService,
-                    (true, LimitState.Damage) => curves.FactoredDamage,
-                    (true, _) => curves.FactoredUltimate,
-                };
+                var nq = section.GetLimitNQCurve(factored, ToSectionLimit(limit), damageLevel, monQd);
                 return (nq.N, nq.Q);
             }
             catch (Exception ex)
@@ -1267,6 +1270,9 @@ namespace PileDesign.ViewModels
         {
             string top = pileBody?.PileTopType ?? "";
             bool applyToLevel2 = fundamental?.ApplyLevel1RotationLimitToLevel2 ?? true;
+            // 杭頭回転角の限界状態の名乗りは工法の規定どおり、耐震グレードに依らない
+            // (レベル1 = 損傷限界、レベル2 = 安全限界。LimitStateRule の PileHeadRotation)
+            string rotationLimitName = LimitStateRule.Name(LimitStateRule.For(fundamental, level, LimitCheckKind.PileHeadRotation).Limit);
 
             // ── 杭頭半固定 (工法ごとの限界回転角) ──
             if (top.Contains("キャプテンパイル工法"))
@@ -1282,7 +1288,7 @@ namespace PileDesign.ViewModels
                 if (level == 2 && !applyToLevel2) return null;
                 return new RotationCriterion(
                     CapringPile.ThetaU,
-                    level == 2 ? "安全限界" : "損傷限界",
+                    rotationLimitName,
                     "キャプリングパイル工法");
             }
 
@@ -1292,7 +1298,7 @@ namespace PileDesign.ViewModels
 
                 // θa は軸力で変わる (θac に圧縮合力による軸応力度が入る)。
                 // FTPile は軸力を N で受け取る (σN = N / Ap、Ap は mm²)。以前は kN のまま渡し、軸応力度が 1/1000 になっていた
-                string limitName = level == 2 ? "安全限界" : "損傷限界";
+                string limitName = rotationLimitName;
                 // 限界値を決められないときも項目を消さない (検定不能として出す)。以前は null (= 規定なし) を返して項目ごと消え、
                 // FT キャップが圧縮で耐力を超える (θa = 0.03 − 0.05·σN/(φc·Fc) ≦ 0、つまり N ≧ 0.6·φc·Fc·Ap) ときに限って
                 // 回転角の検定が出ず、曲げ・せん断が OK なら杭は OK と表示されていた
@@ -1308,7 +1314,7 @@ namespace PileDesign.ViewModels
 
                 return new RotationCriterion(
                     thetaA,
-                    level == 2 ? "安全限界" : "損傷限界",
+                    rotationLimitName,
                     "FT-Pile構法");
             }
 
@@ -1487,17 +1493,9 @@ namespace PileDesign.ViewModels
         {
             try
             {
-                var nm = (factored, limit) switch
-                {
-                    // 損傷限界はレベル依存（L1: β2 なし、L2: β1×β2）
-                    (true, LimitState.Damage) => section.GetFactoredDamageNM(level),
-                    (true, LimitState.Service) => section.FactoredServiceNM,
-                    (true, _) => section.FactoredUltimateNM,
-                    (false, LimitState.Damage) => section.UnfactoredDamageNM,
-                    (false, LimitState.Service) => section.UnfactoredServiceNM,
-                    (false, _) => section.UnfactoredUltimateNM,
-                };
-
+                // 曲線の取り出しは PileSection.GetLimitNMCurve に一本化してある (画面のグラフ・計算書の図も同じ)。
+                // 損傷限界はレベル依存（L1: β2 なし、L2: β1×β2）
+                var nm = section.GetLimitNMCurve(factored, ToSectionLimit(limit), LimitStateRule.DamageCurveLevel(level));
                 return (nm.N, nm.M);
             }
             catch

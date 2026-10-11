@@ -298,13 +298,18 @@ namespace PileDesign.Services
 
                     beamPileInfo.TryGetValue(beam, out var pileInfo);
 
-                    // 入力値軸力を取得（杭配置のAxialForce: 圧縮正 kN）
+                    // 入力値軸力（圧縮正 kN）: この表の荷重ケースの設計軸力 (地震時軸力、未入力なら常時軸力。
+                    // 検定・図と同じ PileLayoutDataItem.ResolveDesignAxialForce)。
+                    // 以前は杭配置の AxialForce (解析中に書き換わり、直前に解いたケースの値が残る) を載せていて、
+                    // どの荷重ケースの表でも最後に解いたケースの軸力が出ていた
                     double inputAxialN = 0;
                     if (pileInfo.pileNo > 0 && inputModel?.PileLayoutItems != null)
                     {
                         var pile = inputModel.PileLayoutItems.FirstOrDefault(p => p.No == pileInfo.pileNo);
                         if (pile != null)
-                            inputAxialN = pile.AxialForce; // 最終ステップの入力値軸力（kN）
+                            inputAxialN = loadCase != null
+                                ? pile.ResolveDesignAxialForce(loadCase.No, loadCase.Level, reportFallback: false).N
+                                : pile.AxialForceVL;
                     }
 
                     for (int j = 0; j < phis.Count; j++)

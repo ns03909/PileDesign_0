@@ -850,6 +850,43 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 限界状態の N-M 曲線 (N [kN], M [kN·m]) を 1 本選ぶ。<b>検定・画面のグラフ・計算書の図はすべてここを通す。</b>
+        /// 限界状態と損傷限界のレベルは <see cref="Services.LimitStateRule"/> で決める。
+        ///
+        /// 以前は同じ選び方が検定 (列挙型で)・画面 (「低減後損傷限界状態」などの文字列で)・計算書 (それぞれの図で) の
+        /// 3 系統に書き写されていて、損傷限界のレベルの取り方が写しごとに違った。
+        /// </summary>
+        /// <param name="damageLevel">損傷限界の曲線のレベル (1: β2 を乗じない / 2: β1×β2)。損傷限界の低減後にだけ効く。</param>
+        public (List<double> N, List<double> M) GetLimitNMCurve(bool factored, SectionLimitState limit, int damageLevel)
+            => (factored, limit) switch
+            {
+                (true, SectionLimitState.Damage) => GetFactoredDamageNM(damageLevel),
+                (true, SectionLimitState.Service) => FactoredServiceNM,
+                (true, _) => FactoredUltimateNM,
+                (false, SectionLimitState.Damage) => UnfactoredDamageNM,
+                (false, SectionLimitState.Service) => UnfactoredServiceNM,
+                (false, _) => UnfactoredUltimateNM,
+            };
+
+        /// <summary>
+        /// 限界状態の Q-N 曲線 (N [kN], Q [kN]) を 1 本選ぶ。<see cref="GetLimitNMCurve"/> と対。
+        /// 曲線は <see cref="GetQNCurvesForLevel"/> から取る (損傷限界のレベルと M/(Q·d) が反映される)。
+        /// </summary>
+        public (List<double> N, List<double> Q) GetLimitNQCurve(bool factored, SectionLimitState limit, int damageLevel, double monQd = DefaultMonQd)
+        {
+            var curves = GetQNCurvesForLevel(damageLevel, monQd);
+            return (factored, limit) switch
+            {
+                (false, SectionLimitState.Service) => curves.UnfactoredService,
+                (false, SectionLimitState.Damage) => curves.UnfactoredDamage,
+                (false, _) => curves.UnfactoredUltimate,
+                (true, SectionLimitState.Service) => curves.FactoredService,
+                (true, SectionLimitState.Damage) => curves.FactoredDamage,
+                (true, _) => curves.FactoredUltimate,
+            };
+        }
+
+        /// <summary>
         /// 指定したM/Qdで全6種のQN曲線を再計算して返す（kN単位）
         /// </summary>
         public (

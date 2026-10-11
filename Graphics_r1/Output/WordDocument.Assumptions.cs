@@ -441,9 +441,8 @@ namespace PileDesign.Output
             string grade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
             rows.Add(("耐震性能グレード", grade,
                 ConcreteModelOptions.MapLimitStateText(
-                    grade == "S"
-                        ? "レベル2荷重時に基礎部材が損傷限界状態を超えないことを確認する"
-                        : "レベル2荷重時に基礎部材が安全限界状態を超えないことを確認する")));
+                    // レベル2 の限界状態は検定と同じ規則 (LimitStateRule) で決める
+                    $"レベル2荷重時に基礎部材が{Services.LimitStateRule.Name(Services.LimitStateRule.For(grade, 2).Limit)}状態を超えないことを確認する")));
 
             var mode = inputModel?.FoundationBeamInput?.ConnectionMode ?? FoundationBeamConnectionMode.RigidBody;
             rows.Add(("杭頭の接続仮定",

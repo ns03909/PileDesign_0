@@ -282,19 +282,14 @@ namespace PileDesign.ViewModels
                                 : -1;
                             if (lastStepForSet < 0 && ShowAnalysisOverlay) continue;
 
-                            // 軸力推定: 荷重ケースの地震時軸力、取れなければ杭配置の軸力。
-                            // (以前はこの手前に LoadCase.NonlinearAxialForceN を反射で探す分岐があったが、
-                            //  LoadCase にその名前のプロパティは無く、必ずこちらへ来ていた)
-                            double axialN = 0.0;
-                            try
-                            {
-                                double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-                                if (double.IsFinite(nSeis) && nSeis != 0.0)
-                                    axialN = nSeis;
-                            }
-                            catch (Exception ex) { Log.Warning(ex, "[GraphVM] GetSeismicAxialForce"); }
-                            if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
-                                axialN = pileLayout.AxialForce;
+                            // 軸力は検定と同じ規則 (EvaluationService.ResolveCheckAxialForce: 地震時軸力、未入力なら常時軸力。
+                            // 「入力値＋応力解析結果」では杭頭の要素の軸力を足す)。凡例と、解析の曲線が無いときに作り直す曲線に使う。
+                            // 以前は地震時軸力が未入力 (0) だと杭配置の AxialForce (直前に解いたケースの解析が残した値) に落ちていて、
+                            // どのケースを最後に解いたかで図の軸力が変わった (計算書の M-φ 図も同じ写しを持っていた)
+                            double axialN = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level,
+                                model != null
+                                    ? EvaluationService.PileHeadBeam(pileLayout)?.GetBeamResult(model, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi
+                                    : null).N;
 
                             // M-φ曲線取得（解析で使用したものを優先）
                             List<double> phis = null;
@@ -516,40 +511,63 @@ namespace PileDesign.ViewModels
                 var pileTop = pileBody.PileTop;
                 if (pileTop == null) continue;
 
-                // 各荷重ケースごとに、その杭の軸力に応じた1本のM-θ曲線を描画
+                // 各荷重ケースごとに、その杭の軸力に応じたM-θ曲線を描画
                 foreach (var loadCase in selectedLoadCases)
                 {
-                    // この杭・荷重ケースの軸力を取得（kN）
-                    double axialN_kN;
-                    try { axialN_kN = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level); }
-                    catch { axialN_kN = pileLayout.AxialForce; }
-                    double axialN_N = axialN_kN * 1000.0; // kN → N
-
-                    // その軸力に対応するM-θ曲線を1本取得
-                    ObservableCollection<double> thetas = null;
-                    ObservableCollection<double> ms = null;
-
-                    if (isFTPile && pileTop.FTPile != null)
+                    // この杭・荷重ケースの軸力（kN）。杭頭回転角の検定と同じ規則 (EvaluationService.ResolveCheckAxialForce:
+                    // 地震時軸力、未入力なら常時軸力。「入力値＋応力解析結果」では杭頭の要素の軸力を足す)。
+                    // 「入力値＋応力解析結果」では組合せ・液状化ごとに軸力が違うので、違う軸力ごとに 1 本ずつ描く
+                    // (入力値だけなら従来どおり 1 本)。
+                    // 以前は地震時軸力の欄が無いと杭配置の AxialForce (直前に解いたケースの解析が残した値) に落ち、
+                    // 未入力 (0) だと N = 0 の曲線を描いていて、FT-Pile の θa (軸力で変わる) を検定と違う軸力で見せていた。
+                    var axialForcesKN = new List<double>();
+                    var headBeam = EvaluationService.PileHeadBeam(pileLayout);
+                    foreach (var loadCombination in selectedCombinations)
                     {
-                        var result = pileTop.FTPile.GetMThetaRelationship(axialN_N);
-                        thetas = result.Item1;
-                        ms = result.Item2;
+                        foreach (var isLiq in SelectedLiquefactionCases)
+                        {
+                            if (model.GetAnalysisLastStep(loadCase, loadCombination, isLiq) < 0) continue;
+                            double n = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level,
+                                headBeam?.GetBeamResult(model, loadCase, loadCombination, isLiq)?.CumulativeForce?.Fxi).N;
+                            if (!axialForcesKN.Any(x => Math.Abs(x - n) < 0.5)) axialForcesKN.Add(n);
+                        }
                     }
-                    else if (!isFTPile && pileTop.CaptainPile != null)
+                    if (axialForcesKN.Count == 0)
+                        axialForcesKN.Add(EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level, null).N);
+
+                    bool anyCurve = false;
+                    foreach (double axialN_kN in axialForcesKN)
                     {
-                        var result = pileTop.CaptainPile.GetMThetaRelationship(axialN_N);
-                        thetas = result.Item1;
-                        ms = result.Item2;
+                        double axialN_N = axialN_kN * 1000.0; // kN → N
+
+                        // その軸力に対応するM-θ曲線を1本取得
+                        ObservableCollection<double> thetas = null;
+                        ObservableCollection<double> ms = null;
+
+                        if (isFTPile && pileTop.FTPile != null)
+                        {
+                            var result = pileTop.FTPile.GetMThetaRelationship(axialN_N);
+                            thetas = result.Item1;
+                            ms = result.Item2;
+                        }
+                        else if (!isFTPile && pileTop.CaptainPile != null)
+                        {
+                            var result = pileTop.CaptainPile.GetMThetaRelationship(axialN_N);
+                            thetas = result.Item1;
+                            ms = result.Item2;
+                        }
+
+                        if (thetas == null || ms == null || thetas.Count < 2) continue;
+                        anyCurve = true;
+
+                        // 曲線描画（N·mm → kN·m: 1 kN·m = 1e6 N·mm、マーカーなしライン）
+                        var scatter = wpfPlot.Plot.Add.Scatter(
+                            thetas.Select(t => (double)t).ToArray(),
+                            ms.Select(m => m / 1e6).ToArray());
+                        scatter.MarkerSize = 0;
+                        scatter.LegendText = $"杭{pileLayout.No} {loadCase.LoadName} N={axialN_kN:N0}kN";
                     }
-
-                    if (thetas == null || ms == null || thetas.Count < 2) continue;
-
-                    // 曲線描画（N·mm → kN·m: 1 kN·m = 1e6 N·mm、マーカーなしライン）
-                    var scatter = wpfPlot.Plot.Add.Scatter(
-                        thetas.Select(t => (double)t).ToArray(),
-                        ms.Select(m => m / 1e6).ToArray());
-                    scatter.MarkerSize = 0;
-                    scatter.LegendText = $"杭{pileLayout.No} {loadCase.LoadName} N={axialN_kN:N0}kN";
+                    if (!anyCurve) continue;
 
                     // 最終ステップマーカー
                     foreach (var loadCombination in selectedCombinations)
@@ -650,19 +668,10 @@ namespace PileDesign.ViewModels
                             }
                             if (SelectedPileOption != UiText.All && !targetPileNos.Contains(pileLayout.No)) continue;
 
-                            // 軸力推定: 荷重ケースの地震時軸力、取れなければ杭配置の軸力。
-                            // (以前はこの手前に LoadCase.NonlinearAxialForceN を反射で探す分岐があったが、
-                            //  LoadCase にその名前のプロパティは無く、必ずこちらへ来ていた)
-                            double axialN = 0.0;
-                            try
-                            {
-                                double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
-                                if (double.IsFinite(nSeis) && nSeis != 0.0)
-                                    axialN = nSeis;
-                            }
-                            catch (Exception ex) { Log.Warning(ex, "[GraphVM] GetSeismicAxialForce"); }
-                            if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
-                                axialN = pileLayout.AxialForce;
+                            // 凡例・ホバーの軸力は杭頭回転角の検定と同じ規則 (EvaluationService.ResolveCheckAxialForce)。
+                            // 以前は地震時軸力が未入力 (0) だと杭配置の AxialForce (直前に解いたケースの解析が残した値) に落ちていた
+                            double axialN = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level,
+                                EvaluationService.PileHeadBeam(pileLayout)?.GetBeamResult(model, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi).N;
 
                             // Y 案: 表示中ケースに対応するスナップショットから曲線取得 (解析実体と整合)
                             // 無ければ rs 直接 (旧経路、後方互換)、それも無ければ K·θ 線形外挿。

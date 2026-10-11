@@ -403,10 +403,12 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _isLimitStateOptionVisible, value);
         }
 
-        // 性能グレード（NMINT/QNINT グラフで限界曲線の選択に使用）
+        // 性能グレード（NMINT/QNINT グラフで限界曲線の選択に使用。規則は LimitStateRule）
         // "A": レベル1 損傷限界 + レベル2 安全限界
-        // "S": レベル2 損傷限界（安全限界は描画しない）
-        private string _selectedSeismicGrade = "A";
+        // "S": レベル1 損傷限界 + レベル2 損傷限界（安全限界は描画しない）
+        // 初期値は基本設定のグレード (コンストラクタで入れる)。以前は入力に依らず "A" で、
+        // グレードS の検定と違う曲線 (安全限界) が既定で描かれていた。
+        private string _selectedSeismicGrade = LimitStateRule.DefaultGrade;
         public string SelectedSeismicGrade
         {
             get => _selectedSeismicGrade;
@@ -423,12 +425,12 @@ namespace PileDesign.ViewModels
         // RadioButton 用ヘルパー
         public bool IsSeismicGradeA
         {
-            get => SelectedSeismicGrade == "A";
+            get => !LimitStateRule.IsGradeS(SelectedSeismicGrade);
             set { if (value) SelectedSeismicGrade = "A"; }
         }
         public bool IsSeismicGradeS
         {
-            get => SelectedSeismicGrade == "S";
+            get => LimitStateRule.IsGradeS(SelectedSeismicGrade);
             set { if (value) SelectedSeismicGrade = "S"; }
         }
 

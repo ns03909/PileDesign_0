@@ -43,16 +43,18 @@ namespace PileDesign.Services
             var piles = inputModel?.PileLayoutItems?.Where(p => p != null).ToList();
             if (piles == null || piles.Count < 2) return items;   // 杭が 1 本なら変形角は無い
 
-            bool includesGroup = inputModel!.FundamentalInput?.SettlementDesignIncludesGroup ?? true;
-            string basisName = inputModel.FundamentalInput?.SettlementDesignBasisName ?? "単杭＋群杭沈下";
+            bool includesGroup = PileSettlementComposition.IncludesGroup(inputModel);
+            string basisName = inputModel!.FundamentalInput?.SettlementDesignBasisName ?? "単杭＋群杭沈下";
             string category = $"杭頭変形角 ({basisName}・使用限界)";
             double limit = PileHeadDeformationAngle.ServiceLimit(inputModel.FundamentalInput);
 
-            // 単杭沈下 (常時) は杭ごとに 1 つ [m]。単杭沈下解析をしていない杭は持たない
+            // 単杭沈下 (常時) は杭ごとに 1 つ [m]。単杭沈下解析をしていない杭は持たない。
+            // 単杭沈下と群杭沈下の組み方は PileSettlementComposition に 1 つにまとめた (沈下量の検定・計算書の一覧表と同じ)
+            var singleOnly = piles.Select(p => PileSettlementComposition.Compose(inputModel, p, null, includeGroup: false)).ToList();
             var singleByPileNo = new Dictionary<int, double>();
-            foreach (var pile in piles)
-                if (HasSinglePileSettlement(inputModel, pile))
-                    singleByPileNo[pile.PileNo] = pile.SinglePileSettlementVL;
+            foreach (var s in singleOnly)
+                if (s.HasSingle)
+                    singleByPileNo[s.PileNo] = s.Single_m;
 
             // 単杭沈下量が荷重-沈下曲線の範囲外 (下限) の杭。変形角は 2 点の差なので、下限では上にも下にも抑えられない
             var beyondCurve = piles.Where(p => singleByPileNo.ContainsKey(p.PileNo) && p.SinglePileSettlementVLBeyondCurve)
@@ -62,8 +64,7 @@ namespace PileDesign.Services
 
             // 常時 (VL) の記録だけを使う (沈下量の検定 PileSettlementEvaluator と同じ)。この検定は常時・使用限界。
             // 以前は基礎梁ありで L1/L2 も解いた記録 ("L1-1: …") まで常時の限界で判定し、根拠のない NG を出していた
-            var groupRecords = inputModel.PileGroupSettlement?.CaseRecords?
-                .Where(r => r?.PileSettlements_mm != null && r.PileSettlements_mm.Count > 0 && r.IsLongTerm).ToList() ?? [];
+            var groupRecords = PileSettlementComposition.LongTermRecords(inputModel);
 
             // 沈下解析を何も実行していなければ対象外 (未実施)
             if (singleByPileNo.Count == 0 && groupRecords.Count == 0) return items;
@@ -80,7 +81,7 @@ namespace PileDesign.Services
                     items.Add(Unavailable("VL", singleMissing));
                     return items;
                 }
-                var heads = piles.Select(p => (p.PileNo, p.Point3D.X, p.Point3D.Y, Uz: singleByPileNo[p.PileNo])).ToList();
+                var heads = piles.Zip(singleOnly, (p, s) => (p.PileNo, p.Point3D.X, p.Point3D.Y, Uz: s.Sum_m)).ToList();
                 AddItem(heads, "VL", "", MissingPiles(piles, singleByPileNo.Keys, "単杭沈下"));
                 return items;
             }
@@ -104,15 +105,15 @@ namespace PileDesign.Services
                     items.Add(Unavailable(caseName, singleMissing));
                     continue;
                 }
-                var groupMissing = piles.Where(p => !rec.PileSettlements_mm!.ContainsKey(p.PileNo)).ToList();
-                if (groupMissing.Count > 0)
+                var parts = piles.Select(p => PileSettlementComposition.Compose(inputModel, p, rec, includeGroup: true)).ToList();
+                var withGroup = parts.Where(x => x.HasGroup).Select(x => x.PileNo).ToList();
+                if (parts.Any(x => !x.HasGroup))
                 {
                     items.Add(Unavailable(caseName,
-                        MissingPiles(piles, rec.PileSettlements_mm!.Keys, "群杭沈下") + "。群杭沈下解析をやり直してください"));
+                        MissingPiles(piles, withGroup, "群杭沈下") + "。群杭沈下解析をやり直してください"));
                     continue;
                 }
-                var heads = piles.Select(pile => (pile.PileNo, pile.Point3D.X, pile.Point3D.Y,
-                    Uz: singleByPileNo[pile.PileNo] + rec.PileSettlements_mm![pile.PileNo] * 1e-3)).ToList();
+                var heads = piles.Zip(parts, (pile, x) => (pile.PileNo, pile.Point3D.X, pile.Point3D.Y, Uz: x.Sum_m)).ToList();
                 string typeName = string.IsNullOrEmpty(rec.LoadingType) ? "" : $"（{PileGroupSettlement.LoadingTypeDisplayName(rec.LoadingType)}）";
                 // 旧形式から復元した結果は、どの解析で得た値か確かめられない。収束した結果と同じには判定しない
                 if (rec.IsConvergenceUnknown)
@@ -121,9 +122,9 @@ namespace PileDesign.Services
                     continue;
                 }
                 int before = items.Count;
-                AddItem(heads, caseName, typeName, MissingPiles(piles, rec.PileSettlements_mm.Keys, "群杭沈下"));
+                AddItem(heads, caseName, typeName, MissingPiles(piles, withGroup, "群杭沈下"));
                 // 基礎梁を考慮した反復が収束しなかったケースは判定しない (反復しない解析の記録は IsConverged を持たないので対象外) (釣り合っていない沈下の変形角なので「未収束」)
-                if (rec.IsBeamAware && !rec.IsConverged)
+                if (parts.Any(x => x.GroupUnconverged))
                     for (int i = before; i < items.Count; i++)
                         items[i] = items[i] with { CaseConvergence = PileDesign.FEM.StepStatus.Unconverged };
             }

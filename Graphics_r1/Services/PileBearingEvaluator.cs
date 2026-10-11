@@ -35,7 +35,9 @@ namespace PileDesign.Services
 
             var level1Cases = SeismicCases(inputModel, level: 1);
             var level2Cases = SeismicCases(inputModel, level: 2);
-            bool level2UsesDamageLimit = seismicGrade == "S";
+            // グレード × レベル → 限界状態は LimitStateRule の 1 か所 (杭体断面の検定と同じ規則)
+            bool level2UsesDamageLimit =
+                LimitStateRule.For(seismicGrade, 2, LimitCheckKind.Bearing).Limit == SectionLimitState.Damage;
 
             foreach (var pile in inputModel.PileLayoutItems)
             {

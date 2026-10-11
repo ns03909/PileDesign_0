@@ -149,13 +149,18 @@ namespace PileDesign.Services
             GroupSettlementCaseRecord rec, FundamentalInput? fundamental)
         {
             string name = rec.LoadCaseName ?? "";
-            if (name.StartsWith("L2-", StringComparison.Ordinal))
-                return (fundamental?.SeismicGrade ?? "A") == "S"
-                    ? (2, "損傷限界", PileHeadDeformationAngle.DamageLimit(fundamental))
-                    : (2, "安全限界", PileHeadDeformationAngle.UltimateLimit(fundamental));
-            if (name.StartsWith("L1-", StringComparison.Ordinal))
-                return (1, "損傷限界", PileHeadDeformationAngle.DamageLimit(fundamental));
-            return (0, "使用限界", PileHeadDeformationAngle.ServiceLimit(fundamental));
+            int level = name.StartsWith("L2-", StringComparison.Ordinal) ? 2
+                : name.StartsWith("L1-", StringComparison.Ordinal) ? 1
+                : 0;
+            // グレード × レベル → 限界状態は LimitStateRule の 1 か所 (グレードが未設定なら A)
+            var limit = LimitStateRule.For(fundamental, level, LimitCheckKind.FoundationBeamInclination).Limit;
+            double value = limit switch
+            {
+                SectionLimitState.Service => PileHeadDeformationAngle.ServiceLimit(fundamental),
+                SectionLimitState.Damage => PileHeadDeformationAngle.DamageLimit(fundamental),
+                _ => PileHeadDeformationAngle.UltimateLimit(fundamental),
+            };
+            return (level, LimitStateRule.Name(limit), value);
         }
     }
 }

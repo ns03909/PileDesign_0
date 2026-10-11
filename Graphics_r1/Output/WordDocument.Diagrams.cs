@@ -644,16 +644,53 @@ diameterSelector,
         }
 
         /// <summary>
-        /// 各杭位置の沈下量一覧表をWord文書に挿入
+        /// 各杭位置の沈下量一覧表をWord文書に挿入。
+        ///
+        /// <para>群杭沈下は<b>常時 (VL) の記録</b>を使い、沈下量の検定・杭頭変形角の検定と同じ値を出す
+        /// (組み方は <see cref="PileDesign.Services.PileSettlementComposition"/>)。常時の記録が基礎梁なし・ありの 2 つあれば表も 2 つ。</para>
+        ///
+        /// <para>以前は画面で表示中のケース (<c>ActiveRecord</c>) の群杭沈下を足していた。表示を地震時のケースにしたまま
+        /// 計算書を出すと、地震時の群杭沈下に常時の単杭沈下を足した合計沈下量が並び、同じ計算書の沈下量の検定
+        /// (常時の記録で判定) と値が食い違った。表示中のケースが常時でないときは、そのことを注記する
+        /// (上のコンタ図は表示中のケースで描く)。</para>
         /// </summary>
-        private void AddPileSettlementTable(Body body)
+        internal void AddPileSettlementTable(Body body)
         {
             if (inputModel?.PileLayoutItems is not { Count: > 0 } pileLayoutItems) return;
 
+            var longTerm = PileDesign.Services.PileSettlementComposition.LongTermRecords(inputModel);
+            var records = longTerm.Count > 0 ? longTerm.Select(r => (Models.Results.GroupSettlementCaseRecord?)r).ToList() : [null];
+            foreach (var rec in records)
+                AddPileSettlementTableFor(body, pileLayoutItems, rec);
+
+            // どの列を設計値として扱うかは基本設定で決まる。表に 3 列並ぶだけでは読み手が判断できない。
+            bool includesGroup = PileDesign.Services.PileSettlementComposition.IncludesGroup(inputModel);
+            AddTableNote(body,
+                "※ 沈下検討の対象は基本設定で「"
+                + (inputModel.FundamentalInput?.SettlementDesignBasisName ?? "単杭＋群杭沈下")
+                + "」に設定されている。設計値は"
+                + (includesGroup ? "合計沈下量" : "単杭沈下量")
+                + "の列。沈下量の検定・杭頭変形角の検定もこの値で求めている。");
+            if (includesGroup && longTerm.Count == 0)
+                AddTableNote(body, "※ " + PileDesign.Services.SettlementDeformationAngleEvaluator.NoGroupResultReason + "。");
+
+            // 表示中のケースが常時の記録でなければ、表の値に混ぜず、そのことを書く
+            var displayed = PileDesign.Services.PileSettlementComposition.DisplayedGroupRecord(inputModel);
+            if (displayed != null && !longTerm.Contains(displayed))
+                AddTableNote(body,
+                    "※ 群杭沈下のコンタ図は画面で表示中のケース"
+                    + PileDesign.Services.GroupSettlementCaseLabel.Describe(displayed)
+                    + "で描いている。この表の群杭沈下量は常時 (VL) の記録の値で、表示中のケースの値は含めていない。");
+        }
+
+        /// <summary>群杭沈下の記録 1 つ (常時) についての各杭位置の沈下量一覧。<paramref name="rec"/> が null なら群杭沈下の列は「—」。</summary>
+        private void AddPileSettlementTableFor(Body body, IList<PileLayoutDataItem> pileLayoutItems, Models.Results.GroupSettlementCaseRecord? rec)
+        {
             AddLineBreak(body);
             AddAutoFigureCaption(body,
-                "各杭位置の沈下量一覧" + PileDesign.Services.GroupSettlementCaseLabel.Describe(
-                    inputModel.PileGroupSettlement?.ActiveRecord), "表");
+                "各杭位置の沈下量一覧" + (rec != null
+                    ? PileDesign.Services.GroupSettlementCaseLabel.Describe(rec)
+                    : "（群杭沈下: 常時の結果なし）"), "表");
 
             double fontSize = 8;
             Table table = CreateTableWithBorders();
@@ -664,46 +701,43 @@ diameterSelector,
                 CreateTableCell(["X", "[m]"], fontSize, "center"),
                 CreateTableCell(["Y", "[m]"], fontSize, "center"),
                 CreateTableCell(["単杭沈下量", "(常時)", "[mm]"], fontSize, "center"),
-                CreateTableCell(["群杭沈下量", "[mm]"], fontSize, "center"),
+                CreateTableCell(["群杭沈下量", "(常時)", "[mm]"], fontSize, "center"),
                 CreateTableCell(["合計沈下量", "[mm]"], fontSize, "center")
             );
             table.Append(headerRow);
 
+            static string Display(double? value) => value.HasValue ? value.Value.ToString("N3") : "—";
+            var beyond = new List<int>();
+
             // データ行
             foreach (var pli in pileLayoutItems)
             {
-                bool hasSingle = PileDesign.Services.SettlementDeformationAngleEvaluator.HasSinglePileSettlement(inputModel, pli);
-                var groupValues = inputModel.PileGroupSettlement?.ActiveRecord?.PileSettlements_mm;
-                double groupMm = 0;
-                bool hasGroup = groupValues?.TryGetValue(pli.PileNo, out groupMm) == true;
-                var values = PileDesign.Services.PileSettlementTableValues.Build(
-                    hasSingle, pli.SinglePileSettlementVL, hasGroup, groupMm);
-                static string Display(double? value) => value.HasValue ? value.Value.ToString("N3") : "—";
+                // 群杭沈下の列は「沈下検討の対象」に関わらず出す (単杭沈下だけが対象なら参考値。設計値の列は注記で示す)
+                var parts = PileDesign.Services.PileSettlementComposition.Compose(inputModel, pli, rec, includeGroup: true);
+                if (parts.HasSingle && parts.SingleBeyondCurve) beyond.Add(pli.PileNo);
 
                 TableRow dataRow = new();
                 dataRow.Append(CreateTableCell([$"{pli.PileNo}"], fontSize, "center"));
                 dataRow.Append(CreateTableCell([$"{pli.Point3D.X:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pli.Point3D.Y:N3}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([Display(values.SingleMm)], fontSize, "right"));
-                dataRow.Append(CreateTableCell([Display(values.GroupMm)], fontSize, "right"));
-                dataRow.Append(CreateTableCell([Display(values.TotalMm)], fontSize, "right"));
+                dataRow.Append(CreateTableCell([Display(parts.SingleOrNull_mm)], fontSize, "right"));
+                dataRow.Append(CreateTableCell([Display(parts.GroupOrNull_mm)], fontSize, "right"));
+                dataRow.Append(CreateTableCell([Display(parts.Total_mm)], fontSize, "right"));
                 table.Append(dataRow);
             }
 
             body.Append(table);
             AddTableNote(body, "※ — は未計算または結果なし。単杭・群杭の両結果がある場合だけ合計を表示する。");
 
-            // どの列を設計値として扱うかは基本設定で決まる。表に 3 列並ぶだけでは読み手が判断できない。
-            bool includesGroup = inputModel.FundamentalInput?.SettlementDesignIncludesGroup ?? true;
-            AddTableNote(body,
-                "※ 沈下検討の対象は基本設定で「"
-                + (inputModel.FundamentalInput?.SettlementDesignBasisName ?? "単杭＋群杭沈下")
-                + "」に設定されている。設計値は"
-                + (includesGroup ? "合計沈下量" : "単杭沈下量")
-                + "の列。杭頭変形角の検定もこの値の差で求めている。");
-
+            // 単杭沈下量が曲線の範囲外 (下限) の杭。沈下量の検定は、下限で許容値以下なら判定しない
+            if (beyond.Count > 0)
+                AddTableNote(body, "※ 杭No." + string.Join(", ", beyond)
+                    + " の単杭沈下量は、常時軸力が荷重-沈下曲線の範囲を超えているため曲線の端の値 (下限) である。");
+            // 基礎梁を考慮した反復が収束しなかった記録の沈下は、釣り合っていない値
+            if (rec is { IsBeamAware: true, IsConverged: false, IsConvergenceUnknown: false })
+                AddTableNote(body, "※ この群杭沈下は基礎梁を考慮した反復が収束していない結果 (釣り合っていない値) である。");
             // 旧形式から復元した群杭沈下量は、計算して得た値と区別して書く
-            if (inputModel.PileGroupSettlement?.ActiveRecord?.IsConvergenceUnknown == true)
+            if (rec?.IsConvergenceUnknown == true)
                 AddTableNote(body, "※ " + PileDesign.Services.LegacySettlementMigration.UnknownConvergenceReason + "。");
         }
 
