@@ -78,8 +78,12 @@ namespace TestProject1
         [TestMethod]
         public void ToeNValueWithoutSoilPoints_IsWarned_AndTheValueIsUnchanged()
         {
-            var (m, error) = IntegrationTests.BuildExampleInputModel("ExampleCPT2018", "PileExampleCPT2018");
-            if (m == null) { Assert.Inconclusive(error); return; }
+            // 杭先端の上下 D から土質点を取り除いて、点の無い状態を作る (同梱のキャプテンパイルの例題は 2026-10-12 まで
+            // 土質点が無くこの状態だったが、層の N 値から土質点を作って直した)
+            var m = Example9();
+            var sp0 = m.ElementDivision!.SoilPiles[0];
+            var ground = m.GroundsInput[sp0.GroundNo - 1];
+            foreach (var mass in sp0.PileToeNValuePoints().ToList()) ground.GroundMassesData.Remove(mass);
             var sp = m.ElementDivision!.SoilPiles.First(s => s.PileToeNValuePoints().Count == 0);
             Assert.AreEqual(0.0, sp.PileToeNValue, "平均 N 値の値は変えない (0 のまま)");
             var warnings = Warnings(m);

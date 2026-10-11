@@ -271,8 +271,10 @@ namespace PileDesign.Models.InputData
         [JsonPropertyName("groupPileFactor")]
         public double GroupPileFactor { get; set; } = 1.0;
 
+        // 書かれていなければ 0 (群杭の影響を考えない)。以前の既定 10 は、密な砂 (φ が約 33° を超える層) では
+        // 後方杭の κ が上限 3 に届かず、わずかに低減が掛かっていた
         [JsonPropertyName("pileSpacingFactor")]
-        public double PileSpacingFactor { get; set; } = 10;
+        public double PileSpacingFactor { get; set; } = 0;
 
         [JsonPropertyName("x")]
         public double X { get; set; }

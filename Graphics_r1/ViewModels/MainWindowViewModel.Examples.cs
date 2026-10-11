@@ -487,6 +487,9 @@ namespace PileDesign.ViewModels
         }
 
         // キャプテンパイル工法 (AIJ2018 学術講演梗概集)
+        // 地盤 (ExampleCPT2018.json) の土質点 (N 値の一覧) は、出典に一覧が無いため、各層の N 値・単位体積重量・Vs を
+        // GL-1 m から 1 m 間隔の点に写したもの (細粒分含有率は粘性土 80%・砂質土 10% の代表値)。2026-10-12 まで土質点が無く
+        // (既定の 1 点だけ)、杭先端の平均 N 値が 0 = 先端支持力 0 で計算されていた
         [RelayCommand]
         private async Task ExampleCPT2018()
         {
