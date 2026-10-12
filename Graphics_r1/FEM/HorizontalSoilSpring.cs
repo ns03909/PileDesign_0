@@ -158,6 +158,12 @@ namespace PileDesign.FEM
 
         public List<HorizontalSpringResult> HorizontalSpringResults { get; set; } = [];
 
+        private ResultLookup<HorizontalSpringResult>? _resultLookup;
+        /// <summary><see cref="HorizontalSpringResults"/> を荷重条件とステップで引く索引 (<see cref="ResultLookup{T}"/>)。保存しない。</summary>
+        [JsonIgnore]
+        public ResultLookup<HorizontalSpringResult> ResultLookup
+            => System.Threading.LazyInitializer.EnsureInitialized(ref _resultLookup, () => new ResultLookup<HorizontalSpringResult>(() => HorizontalSpringResults));
+
         // v28 問題 A 診断: p-y 降伏状態を反復ごとに追跡。
         // true = 降伏後 (|y| >= yy, K_tan = post-yield 定数), false = 弾性。
         // 反復間の状態変化を検出してログ出力する。

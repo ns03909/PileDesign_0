@@ -43,27 +43,15 @@ namespace PileDesign.Services
 
             // 結果検索用のヘルパー: BeamResultsから該当する結果を取得
             BeamResult? FindBeamResult(Beam beam) =>
-                beam.BeamResults?.FirstOrDefault(r =>
-                    r.IsLiquefaction == isLiquefaction &&
-                    r.Step == step &&
-                    (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                    (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
+                beam.ResultLookup.Matching(loadCase, loadCombination, isLiquefaction, step);
 
             // 結果検索用のヘルパー: RotationalSpringResultsから該当する結果を取得
             RotationalSpringResult? FindRotSpringResult(RotationalSpring rs) =>
-                rs.RotationalSpringResults?.FirstOrDefault(r =>
-                    r.IsLiquefaction == isLiquefaction &&
-                    r.Step == step &&
-                    (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                    (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
+                rs.ResultLookup.Matching(loadCase, loadCombination, isLiquefaction, step);
 
             // 結果検索用のヘルパー: NodeResultsから該当する結果を取得
             NodeResult? FindNodeResult(PileDesign.FEM.Node node) =>
-                node.NodeResults?.FirstOrDefault(r =>
-                    r.IsLiquefaction == isLiquefaction &&
-                    r.Step == step &&
-                    (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                    (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
+                node.ResultLookup.Matching(loadCase, loadCombination, isLiquefaction, step);
 
             // 表示する荷重条件の結果が無い要素・節点・ばねは行を省き、省いた数を表の名前に添える。
             // 以前は要素・節点・ばね本体の CumulativeForce / CumulativeDisp (最後に解いた状態) を出していたので、
@@ -223,11 +211,7 @@ namespace PileDesign.Services
             if (soilSprings.Count > 0)
             {
                 HorizontalSpringResult? FindSoilSpringResult(HorizontalSoilSpring hss) =>
-                    hss.HorizontalSpringResults?.FirstOrDefault(r =>
-                        r.IsLiquefaction == isLiquefaction &&
-                        r.Step == step &&
-                        (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                        (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
+                    hss.ResultLookup.Matching(loadCase, loadCombination, isLiquefaction, step);
 
                 var soilSpringRows = new List<object>();
                 int omitted = 0;
@@ -527,10 +511,7 @@ namespace PileDesign.Services
                 if (nodes.Count > 0)
                 {
                     var ap = nodes[0];
-                    var apResult = ap.NodeResults?.FirstOrDefault(r =>
-                        r.IsLiquefaction == isLiquefaction && r.Step == step &&
-                        (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                        (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)));
+                    var apResult = ap.ResultLookup.Matching(loadCase, loadCombination, isLiquefaction, step);
                     var apLoad = apResult?.CumulativedLoad;
                     if (apLoad == null) summaryOmitted++;
                     else
@@ -551,10 +532,7 @@ namespace PileDesign.Services
                 void AddSpringSum(string item, List<HorizontalSoilSpring> springs)
                 {
                     if (springs.Count == 0) return;
-                    var forces = springs.Select(spring => spring.HorizontalSpringResults?.FirstOrDefault(r =>
-                            r.IsLiquefaction == isLiquefaction && r.Step == step &&
-                            (loadCase == null || LoadCase.IsSameCase(r.LoadCase, loadCase)) &&
-                            (loadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)))
+                    var forces = springs.Select(spring => spring.ResultLookup.Matching(loadCase, loadCombination, isLiquefaction, step)
                             ?.CumulativeForce is { } bf
                         ? ((double Fx, double Fy, double Fz)?)(bf.Fxi, bf.Fyi, bf.Fzi)
                         : null).ToList();

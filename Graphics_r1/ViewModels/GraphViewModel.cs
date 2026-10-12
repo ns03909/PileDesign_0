@@ -965,11 +965,7 @@ namespace PileDesign.ViewModels
                                 double pileSumFx = 0, pileSumFy = 0;
                                 foreach (var spring in pileSoilSprings)
                                 {
-                                    var result = spring.HorizontalSpringResults?
-                                        .FirstOrDefault(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
-                                                          && r.LoadCombination?.No == loadCombination.No
-                                                          && r.IsLiquefaction == isLiquefaction
-                                                          && r.Step == step);
+                                    var result = spring.ResultLookup.At(loadCase, loadCombination, isLiquefaction, step);
                                     if (result?.CumulativeForce != null)
                                     {
                                         pileSumFx += result.CumulativeForce.Fxi;
@@ -986,11 +982,7 @@ namespace PileDesign.ViewModels
                                 double doatsuSumFx = 0, doatsuSumFy = 0;
                                 foreach (var spring in doatsuSoilSprings)
                                 {
-                                    var result = spring.HorizontalSpringResults?
-                                        .FirstOrDefault(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
-                                                          && r.LoadCombination?.No == loadCombination.No
-                                                          && r.IsLiquefaction == isLiquefaction
-                                                          && r.Step == step);
+                                    var result = spring.ResultLookup.At(loadCase, loadCombination, isLiquefaction, step);
                                     if (result?.CumulativeForce != null)
                                     {
                                         doatsuSumFx += result.CumulativeForce.Fxi;

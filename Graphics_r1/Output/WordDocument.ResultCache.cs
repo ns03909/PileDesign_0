@@ -1,126 +1,44 @@
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
-using System.Collections.Generic;
 
 namespace PileDesign.Output
 {
-    // docx 出力中のみ使用するローカル結果検索キャッシュ。
-    // Beam.GetBeamResult / Node.GetNodeResult / AnaModel.GetAnalysisLastStep は
-    // いずれも List を線形走査 + 文字列比較で対応する結果を探すため、
-    // ホットループから多数回呼ぶと N×M 級のコストになる。
-    // 出力中は解析結果が不変であることを利用し、開始時に Dictionary を 1 回構築して O(1) 検索する。
+    // 計算書の出力で結果を引く入口。
+    //
+    // 以前はここに計算書専用の Dictionary (荷重ケースを "L{レベル}-{番号}" の文字列にした鍵) を持っていた。
+    // 画面の Beam.GetBeamResult などとは別の書き方で、しかも指定した液状化の状態に結果が無いと
+    // 逆の状態の結果を返していた ([液] の行に非液状化の値が出得た)。
+    // 結果の索引は FEM の ResultLookup に 1 つにまとめたので、ここはそれを呼ぶだけにする。
     internal partial class WordDocument
     {
-        // (荷重ケースのレベル-番号, 荷重組合せの番号, IsLiquefaction) → 最大 step
-        private Dictionary<(string?, string?, bool), int>? _lastStepCache;
-
-        // (Beam, 荷重ケースのレベル-番号, 荷重組合せの番号, IsLiquefaction, step) → BeamResult
-        private Dictionary<(Beam, string?, string?, bool, int), BeamResult>? _beamResultCache;
-
-        // (Node, 荷重ケースのレベル-番号, 荷重組合せの番号, IsLiquefaction, step) → NodeResult
-        private Dictionary<(Node, string?, string?, bool, int), NodeResult>? _nodeResultCache;
-
+        /// <summary>
+        /// 出力の前に索引を作っておく。グラフ・表は Parallel.For から引くので、
+        /// 各スレッドが同時に同じ索引を作り始めないよう先に作る (作り直しが重なっても結果は同じ)。
+        /// </summary>
         private void BuildResultLookupCaches()
         {
             if (anaModel == null) return;
-
-            _lastStepCache = new Dictionary<(string?, string?, bool), int>();
-            foreach (var r in anaModel.AnalysisStepResults)
-            {
-                var key = (CaseKeyOf(r.LoadCase), r.LoadCombination?.No.ToString(), r.IsLiquefaction);
-                if (_lastStepCache.TryGetValue(key, out int existing))
-                {
-                    if (r.Step > existing) _lastStepCache[key] = r.Step;
-                }
-                else
-                {
-                    _lastStepCache[key] = r.Step;
-                }
-            }
-
-            _beamResultCache = new Dictionary<(Beam, string?, string?, bool, int), BeamResult>();
-            if (anaModel.Beams != null)
-            {
-                foreach (var beam in anaModel.Beams)
-                {
-                    if (beam?.BeamResults == null) continue;
-                    foreach (var br in beam.BeamResults)
-                    {
-                        var key = (beam, CaseKeyOf(br.LoadCase), br.LoadCombination?.No.ToString(), br.IsLiquefaction, br.Step);
-                        _beamResultCache[key] = br;
-                    }
-                }
-            }
-
-            _nodeResultCache = new Dictionary<(Node, string?, string?, bool, int), NodeResult>();
-            if (anaModel.Nodes != null)
-            {
-                foreach (var node in anaModel.Nodes)
-                {
-                    if (node?.NodeResults == null) continue;
-                    foreach (var nr in node.NodeResults)
-                    {
-                        var key = (node, CaseKeyOf(nr.LoadCase), nr.LoadCombination?.No.ToString(), nr.IsLiquefaction, nr.Step);
-                        _nodeResultCache[key] = nr;
-                    }
-                }
-            }
+            anaModel.StepIndex.EnsureBuilt();
+            if (anaModel.Beams != null) foreach (var beam in anaModel.Beams) beam?.ResultLookup.EnsureBuilt();
+            if (anaModel.Nodes != null) foreach (var node in anaModel.Nodes) node?.ResultLookup.EnsureBuilt();
         }
 
-        /// <summary>
-        /// 索引の鍵にする荷重ケースの識別 (レベル-番号)。以前は名前を鍵にしていたので、名前が空欄・重複だと
-        /// レベル1 とレベル2 の結果が同じ鍵に入り、計算書のレベル1 の図にレベル2 の値が出た。
-        /// </summary>
-        private static string CaseKeyOf(LoadCase? lc) => lc == null ? "" : $"L{lc.Level}-{lc.No}";
-
+        /// <summary>指定した荷重条件の最終ステップ。結果が無ければ -1。</summary>
         private int GetLastStepCached(LoadCase? lc, LoadCombination? comb, bool isLiq)
-        {
-            if (_lastStepCache == null)
-                return anaModel?.GetAnalysisLastStep(lc!, comb!, isLiq) ?? -1;
-
-            if (_lastStepCache.TryGetValue((CaseKeyOf(lc), comb?.No.ToString(), isLiq), out int step))
-                return step;
-            if (_lastStepCache.TryGetValue((CaseKeyOf(lc), comb?.No.ToString(), !isLiq), out int fallback))
-                return fallback;
-            return -1;
-        }
+            => anaModel?.StepIndex.Latest(lc, comb, isLiq)?.Step ?? -1;
 
         private BeamResult? GetBeamResultCached(Beam beam, LoadCase? lc, LoadCombination? comb, bool isLiq, int step = -1)
         {
-            if (_beamResultCache == null || _lastStepCache == null)
-                return beam.GetBeamResult(anaModel!, lc!, comb!, isLiq, step);
-
-            if (step == -1)
-                step = GetLastStepCached(lc, comb, isLiq);
+            if (step == -1) step = GetLastStepCached(lc, comb, isLiq);
             if (step < 0) return null;
-
-            if (_beamResultCache.TryGetValue((beam, CaseKeyOf(lc), comb?.No.ToString(), isLiq, step), out var br))
-                return br;
-
-            int fallbackStep = GetLastStepCached(lc, comb, !isLiq);
-            if (fallbackStep < 0) return null;
-            if (_beamResultCache.TryGetValue((beam, CaseKeyOf(lc), comb?.No.ToString(), !isLiq, fallbackStep), out var br2))
-                return br2;
-            return null;
+            return beam.ResultLookup.At(lc, comb, isLiq, step);
         }
 
         private NodeResult? GetNodeResultCached(Node node, LoadCase? lc, LoadCombination? comb, bool isLiq, int step = -1)
         {
-            if (_nodeResultCache == null || _lastStepCache == null)
-                return node.GetNodeResult(anaModel!, lc!, comb!, isLiq, step);
-
-            if (step == -1)
-                step = GetLastStepCached(lc, comb, isLiq);
+            if (step == -1) step = GetLastStepCached(lc, comb, isLiq);
             if (step < 0) return null;
-
-            if (_nodeResultCache.TryGetValue((node, CaseKeyOf(lc), comb?.No.ToString(), isLiq, step), out var nr))
-                return nr;
-
-            int fallbackStep = GetLastStepCached(lc, comb, !isLiq);
-            if (fallbackStep < 0) return null;
-            if (_nodeResultCache.TryGetValue((node, CaseKeyOf(lc), comb?.No.ToString(), !isLiq, fallbackStep), out var nr2))
-                return nr2;
-            return null;
+            return node.ResultLookup.At(lc, comb, isLiq, step);
         }
     }
 }

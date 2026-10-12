@@ -1273,6 +1273,9 @@ namespace PileDesign.ViewModels
                     foreach (var rr in src) editModel.RotationalSprings[i].RotationalSpringResults.Add(rr);
                 }
             }
+
+            // 結果の一覧を中身ごと入れ替えたので索引を捨てる (FEM.ResultLookup の約束)
+            editModel.InvalidateResultIndex();
         }
 
         // コレクション変更時のハンドラ

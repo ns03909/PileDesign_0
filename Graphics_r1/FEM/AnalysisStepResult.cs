@@ -38,7 +38,7 @@ namespace PileDesign.FEM
         PhysicallyUnconverged,
     }
 
-    public class AnalysisStepResult
+    public class AnalysisStepResult : ICaseStepResult
     {
         public LoadCase LoadCase { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
         public LoadCombination LoadCombination { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る

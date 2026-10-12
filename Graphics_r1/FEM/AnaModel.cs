@@ -178,6 +178,29 @@ namespace PileDesign.FEM
         public List<HorizontalSoilSpring> PenaltySprings { get; set; } = [];  // ConnectionNode↔CapNodeペナルティばね
         public List<AnalysisStepResult> AnalysisStepResults { get; set; } = []; // 解析ステップ結果のリスト
 
+        private ResultLookup<AnalysisStepResult>? _stepIndex;
+        /// <summary>
+        /// <see cref="AnalysisStepResults"/> を荷重条件とステップで引く索引。最終ステップの問い合わせに使う。保存しない。
+        /// 梁・節点・ばねの結果は、それぞれの <c>ResultLookup</c> が持つ (<see cref="ResultLookup{T}"/> に約束を書いてある)。
+        /// </summary>
+        [JsonIgnore]
+        public ResultLookup<AnalysisStepResult> StepIndex
+            => System.Threading.LazyInitializer.EnsureInitialized(ref _stepIndex, () => new ResultLookup<AnalysisStepResult>(() => AnalysisStepResults));
+
+        /// <summary>
+        /// 結果の索引 (ステップ・節点・梁・ばね) をすべて捨てる。結果の一覧を書き換えたら呼ぶ。
+        /// 索引は一覧のインスタンス・件数・先頭と末尾の行も照合するので、呼び忘れても古い索引は使われにくいが、
+        /// 書き換える側がはっきり捨てておく。<b>結果の一覧を書き換えている最中に、他のスレッドから結果を引かないこと。</b>
+        /// </summary>
+        public void InvalidateResultIndex()
+        {
+            _stepIndex?.Invalidate();
+            if (Nodes != null) foreach (var n in Nodes) n?.ResultLookup.Invalidate();
+            if (Beams != null) foreach (var b in Beams) b?.ResultLookup.Invalidate();
+            if (HorizontalSoilSprings != null) foreach (var h in HorizontalSoilSprings) h?.ResultLookup.Invalidate();
+            if (RotationalSprings != null) foreach (var r in RotationalSprings) r?.ResultLookup.Invalidate();
+        }
+
         /// <summary>
         /// 前回の水平解析実行設定スナップショット。「追加実行」(段階追加) の互換性検証に使用。
         /// 旧 JSON との後方互換のため null 許容 (null = 「前回情報なし、追加実行不可」)。
@@ -1543,7 +1566,11 @@ namespace PileDesign.FEM
         /// <summary>荷重条件の識別 (レベル, 荷重ケース番号, 荷重組合せ番号, 液状化)。名前は空欄・重複がありうるので使わない。</summary>
         public static (int Level, int LoadCaseNo, int LoadCombinationNo, bool IsLiquefaction) CaseConvergenceKey(
             LoadCase? loadCase, LoadCombination? loadCombination, bool isLiquefaction)
-            => (loadCase?.Level ?? -1, loadCase?.No ?? -1, loadCombination?.No ?? -1, isLiquefaction);
+        {
+            // 鍵の作り方は結果の索引 (ResultCaseKey) と同じものを使う
+            var k = ResultCaseKey.Of(loadCase, loadCombination, isLiquefaction);
+            return (k.Level, k.LoadCaseNo, k.LoadCombinationNo, k.IsLiquefaction);
+        }
 
         /// <summary>収束していないステップを含む解析結果があるか (緩めた基準で受理したステップは含めない)。</summary>
         public bool HasUnconvergedSteps()
@@ -1553,25 +1580,28 @@ namespace PileDesign.FEM
         public bool HasRelaxedSteps()
             => AnalysisStepResults?.Any(r => r.Status == StepStatus.ConvergedRelaxed) == true;
 
+        /// <summary>
+        /// 指定した荷重条件の最終ステップの結果。無ければ null。
+        /// 指定した液状化の状態の結果だけを見る。以前は無ければ逆の状態のものを黙って返していた
+        /// (<see cref="Beam.GetBeamResult"/> 参照)。逆の状態を見せたい画面は <see cref="ResolveLiquefactionWithResults"/> を使う。
+        /// </summary>
         public AnalysisStepResult? GetAnalysisLastStepResult(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
+            => StepIndex.Latest(loadCase, loadCombination, isLiquefaction);
+
+        /// <summary>
+        /// 結果のある液状化の状態を選ぶ。指定した状態に結果があればそのまま、無くて逆の状態にあれば逆の状態を返し
+        /// <c>Switched</c> を立てる。どちらにも無ければ指定した状態のまま。
+        /// 荷重組合せが null なら、どの組合せの結果でもよい。
+        ///
+        /// 結果を引く関数は逆の状態を黙って返さない。逆の状態を見せたい画面はこれで状態を決め、
+        /// <b>切り替えたことを画面に表示すること</b> (メイン画面は液状化の切替そのものを動かす)。
+        /// </summary>
+        public (bool IsLiquefaction, bool Switched) ResolveLiquefactionWithResults(
+            LoadCase? loadCase, LoadCombination? loadCombination, bool requestedLiquefaction)
         {
-            // 荷重ケースはレベルと番号で比べる (名前は空欄・重複がありうる。LoadCase.IsSameCase 参照)
-            var result = AnalysisStepResults
-                .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                            PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
-                            r.IsLiquefaction == isLiquefaction)
-                .OrderByDescending(r => r.Step)
-                .FirstOrDefault();
-
-            if (result != null) return result;
-
-            // フォールバック: 逆の液状化状態で検索
-            return AnalysisStepResults
-                .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                            PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
-                            r.IsLiquefaction == !isLiquefaction)
-                .OrderByDescending(r => r.Step)
-                .FirstOrDefault();
+            if (StepIndex.Any(loadCase, loadCombination, requestedLiquefaction)) return (requestedLiquefaction, false);
+            if (StepIndex.Any(loadCase, loadCombination, !requestedLiquefaction)) return (!requestedLiquefaction, true);
+            return (requestedLiquefaction, false);
         }
 
         /// <summary>
@@ -1580,40 +1610,27 @@ namespace PileDesign.FEM
         /// </summary>
         public void RemoveCaseResults(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {
-            bool Same(LoadCase? lc, LoadCombination? comb, bool liq) =>
-                liq == isLiquefaction && LoadCase.IsSameCase(lc, loadCase)
-                && PileDesign.Models.InputData.LoadCombination.IsSameCombination(comb, loadCombination);
+            // 照合は結果の索引と同じ鍵で行う (荷重ケース・組合せが無ければ一致するものは無い)
+            if (!ResultCaseKey.TryOf(loadCase, loadCombination, isLiquefaction, out var key)) return;
 
-            AnalysisStepResults?.RemoveAll(r => Same(r.LoadCase, r.LoadCombination, r.IsLiquefaction));
-            foreach (var n in Nodes ?? []) n?.NodeResults?.RemoveAll(r => Same(r.LoadCase, r.LoadCombination, r.IsLiquefaction));
-            foreach (var b in Beams ?? []) b?.BeamResults?.RemoveAll(r => Same(r.LoadCase, r.LoadCombination, r.IsLiquefaction));
-            foreach (var s in HorizontalSoilSprings ?? []) s?.HorizontalSpringResults?.RemoveAll(r => Same(r.LoadCase, r.LoadCombination, r.IsLiquefaction));
-            foreach (var r in RotationalSprings ?? []) r?.RotationalSpringResults?.RemoveAll(x => Same(x.LoadCase, x.LoadCombination, x.IsLiquefaction));
+            AnalysisStepResults?.RemoveAll(key.Matches);
+            foreach (var n in Nodes ?? []) n?.NodeResults?.RemoveAll(key.Matches);
+            foreach (var b in Beams ?? []) b?.BeamResults?.RemoveAll(key.Matches);
+            foreach (var s in HorizontalSoilSprings ?? []) s?.HorizontalSpringResults?.RemoveAll(key.Matches);
+            foreach (var r in RotationalSprings ?? []) r?.RotationalSpringResults?.RemoveAll(key.Matches);
+            InvalidateResultIndex();
         }
 
+        /// <summary>結果が無いときの <see cref="GetAnalysisLastStep"/> の値。</summary>
+        public const int NoAnalysisStep = -999;
+
+        /// <summary>
+        /// 指定した荷重条件の最終ステップ。結果が無ければ <see cref="NoAnalysisStep"/> (負)。
+        /// 指定した液状化の状態の結果だけを見る (以前は無ければ逆の状態の最終ステップを返していた)。
+        /// 以前は呼ぶたびに全ステップの結果を走査していたので、キャンバスの再描画で梁・節点の数だけ繰り返していた。
+        /// </summary>
         public int GetAnalysisLastStep(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
-        {
-            // 荷重ケースはレベルと番号で比べる (名前は空欄・重複がありうる。LoadCase.IsSameCase 参照)
-            var results = AnalysisStepResults
-                .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                            PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
-                            r.IsLiquefaction == isLiquefaction)
-                .Select(r => r.Step)
-                .ToList();
-
-            if (results.Count > 0)
-                return results.Max();
-
-            // フォールバック: 逆の液状化状態で検索
-            var fallback = AnalysisStepResults
-                .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                            PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
-                            r.IsLiquefaction == !isLiquefaction)
-                .Select(r => r.Step)
-                .ToList();
-
-            return fallback.DefaultIfEmpty(-999).Max();
-        }
+            => StepIndex.Latest(loadCase, loadCombination, isLiquefaction)?.Step ?? NoAnalysisStep;
 
         // 荷重ベクトルの更新メソッド
         public void UpdateVectorF()
@@ -2136,6 +2153,7 @@ namespace PileDesign.FEM
             if (RotationalSprings != null)
                 foreach (var rs in RotationalSprings) rs.RotationalSpringResults?.Clear();
             LastRunConfig = null;
+            InvalidateResultIndex();
         }
 
         /// E2 (2026-04-23): ケース並列化 E3 で使用する結果マージ。
@@ -2216,6 +2234,10 @@ namespace PileDesign.FEM
                     for (int i = snap; i < src.Count; i++) dst.Add(src[i]);
                 }
             }
+
+            // 移し終えてから索引を捨てる。呼び出し側は _caseMergeLock の中で呼ぶので、
+            // 移している最中に別のワーカーが主モデルの索引を作ることはない
+            main.InvalidateResultIndex();
         }
     }
 }

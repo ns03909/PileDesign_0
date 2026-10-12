@@ -303,6 +303,12 @@ namespace PileDesign.FEM
         public HorizontalSoilReactionItem? HorizontalSoilReactionItem { get; set; }
         public System.Collections.Generic.List<BeamResult> BeamResults { get; set; } = [];
 
+        private ResultLookup<BeamResult>? _resultLookup;
+        /// <summary><see cref="BeamResults"/> を荷重条件とステップで引く索引 (<see cref="ResultLookup{T}"/>)。保存しない。</summary>
+        [JsonIgnore]
+        public ResultLookup<BeamResult> ResultLookup
+            => System.Threading.LazyInitializer.EnsureInitialized(ref _resultLookup, () => new ResultLookup<BeamResult>(() => BeamResults));
+
         /// <summary>
         /// 曲げにせん断変形を含める (Timoshenko 梁。せん断断面積 AY・AZ とせん断弾性係数 G を使う)。
         /// 基礎梁で、基本設定の「基礎梁のせん断変形」が「含める」のとき立てる (<see cref="EnableShearDeformation"/>)。
@@ -672,40 +678,17 @@ namespace PileDesign.FEM
             CumulativeDisp = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
 
-        // 梁要素の解析結果を取得する
+        /// <summary>
+        /// 梁要素の解析結果を取得する。<paramref name="step"/> が -1 なら、その荷重条件の最終ステップ。
+        /// 指定した液状化の状態の結果が無ければ null。
+        /// 以前は逆の液状化の状態の結果を黙って返していたので、画面の切替が「液状化」のまま非液状化の値が出た
+        /// (検定・計算書は同じ条件を「結果なし」としていて食い違った)。
+        /// </summary>
         public BeamResult? GetBeamResult(AnaModel anaModel, LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step = -1)
         {
             if (step == -1)
-            {
                 step = anaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
-            }
-
-            foreach (BeamResult beamResult in BeamResults)
-            {
-                // 名前ベースで比較（参照比較の代わりに）
-                bool loadCaseMatch = PileDesign.Models.InputData.LoadCase.IsSameCase(loadCase, beamResult.LoadCase);
-                bool loadCombMatch = PileDesign.Models.InputData.LoadCombination.IsSameCombination(loadCombination, beamResult.LoadCombination);
-                bool isLiqMatch = isLiquefaction == beamResult.IsLiquefaction;
-                bool stepMatch = step == beamResult.Step;
-
-                if (loadCaseMatch && loadCombMatch && isLiqMatch && stepMatch)
-                { return beamResult; }
-            }
-
-            // フォールバック: 逆の液状化状態で検索（液状化トグルの状態と解析結果が異なる場合の救済）
-            int fallbackStep = anaModel.GetAnalysisLastStep(loadCase, loadCombination, !isLiquefaction);
-            foreach (BeamResult beamResult in BeamResults)
-            {
-                bool loadCaseMatch = PileDesign.Models.InputData.LoadCase.IsSameCase(loadCase, beamResult.LoadCase);
-                bool loadCombMatch = PileDesign.Models.InputData.LoadCombination.IsSameCombination(loadCombination, beamResult.LoadCombination);
-                bool isLiqMatch = !isLiquefaction == beamResult.IsLiquefaction;
-                bool stepMatch = fallbackStep == beamResult.Step;
-
-                if (loadCaseMatch && loadCombMatch && isLiqMatch && stepMatch)
-                { return beamResult; }
-            }
-
-            return null;
+            return ResultLookup.At(loadCase, loadCombination, isLiquefaction, step);
         }
 
         // 杭先端接続フラグをセットする

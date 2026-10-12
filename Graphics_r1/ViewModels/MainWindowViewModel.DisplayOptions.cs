@@ -54,7 +54,18 @@ namespace PileDesign.ViewModels
         public AnaModel CurrentModel
         {
             get => _currentModel;
-            set => SetProperty(ref _currentModel, value);
+            set
+            {
+                if (SetProperty(ref _currentModel, value))
+                {
+                    // 結果が差し替わったら、選んでいる液状化の状態に結果があるかを見直す。
+                    // 結果を引く関数は逆の状態の結果を黙って返さなくなったので (FEM.ResultLookup)、
+                    // 荷重ケースの選択が変わらないまま再解析で片方の状態だけになると、切替が結果の無い側に残って何も描かれない
+                    AutoDetectLiquefactionState();
+                    OnPropertyChanged(nameof(IsCurrentNonLiquefactionAnalyzed));
+                    OnPropertyChanged(nameof(IsCurrentLiquefactionAnalyzed));
+                }
+            }
         }
 
         private Brush _statusMessageColor = Brushes.Black;
@@ -632,34 +643,23 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // 選択されたLoadCaseとLoadCombinationに対応する結果を検索
-            var results = CurrentModel.AnalysisStepResults
-                .Where(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, selectedLoadCase));
-
-            // 荷重組合せが選択されている場合はさらに絞る。選択肢の文字列は表示名 (重なるときは番号付き) なので、
+            // 荷重組合せが選択されている場合はその組合せの結果だけを見る。選択肢の文字列は表示名 (重なるときは番号付き) なので、
             // 組合せに解いてから番号で比べる (表示名で比べると、表示名の同じ別の組合せの結果を拾う)
+            LoadCombination? selectedCombination = null;
             if (!string.IsNullOrEmpty(SelectedLoadCombinationName))
             {
-                var selectedCombination = LoadCombinations.GetLoadCombination(
+                selectedCombination = LoadCombinations.GetLoadCombination(
                     CurrentInputModel?.LoadCasesInput?.LoadCombinations, SelectedLoadCombinationName);
-                results = results.Where(r => LoadCombination.IsSameCombination(r.LoadCombination, selectedCombination));
+                if (selectedCombination == null) return;   // 選択を組合せに解けない (結果は引けない)
             }
 
-            var resultList = results.ToList();
-            bool hasLiquefactionResults = resultList.Any(r => r.IsLiquefaction);
-            bool hasNonLiquefactionResults = resultList.Any(r => !r.IsLiquefaction);
-
-            // 液状化結果のみがある場合は自動的にtrueに設定
-            if (hasLiquefactionResults && !hasNonLiquefactionResults)
-            {
-                IsLiquefaction = true;
-            }
-            // 非液状化結果のみがある場合は自動的にfalseに設定
-            else if (!hasLiquefactionResults && hasNonLiquefactionResults)
-            {
-                IsLiquefaction = false;
-            }
-            // 両方の結果がある場合は現在の設定を維持（ユーザーが選択）
+            // 選んでいる液状化の状態に結果が無く、逆の状態にだけあれば切替を動かす。
+            // 結果を引く関数 (Beam.GetBeamResult など) は逆の状態を黙って返さないので、
+            // 逆の状態を見せるのはここだけで、そのときは切替の表示も変わる。
+            // 両方ある・どちらも無いときは利用者の選択のまま
+            var (liquefaction, switched) = CurrentModel.ResolveLiquefactionWithResults(
+                selectedLoadCase, selectedCombination, IsLiquefaction);
+            if (switched) IsLiquefaction = liquefaction;
         }
 
         private void UpdateDirectionOption()

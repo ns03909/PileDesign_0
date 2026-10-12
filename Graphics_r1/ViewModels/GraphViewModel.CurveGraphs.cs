@@ -59,11 +59,7 @@ namespace PileDesign.ViewModels
                             double sumFx = 0, sumFy = 0;
                             foreach (var spring in doatsuSprings)
                             {
-                                var result = spring.HorizontalSpringResults?
-                                    .FirstOrDefault(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
-                                                      && r.LoadCombination?.No == loadCombination.No
-                                                      && r.IsLiquefaction == isLiquefaction
-                                                      && r.Step == step);
+                                var result = spring.ResultLookup.At(loadCase, loadCombination, isLiquefaction, step);
                                 if (result?.CumulativeForce != null)
                                 {
                                     sumFx += result.CumulativeForce.Fxi;
@@ -86,11 +82,7 @@ namespace PileDesign.ViewModels
                             totalForcesBtm.Add(totalForce);
 
                             // 最上点の相対変位
-                            var topResult = topSpring.HorizontalSpringResults?
-                                .FirstOrDefault(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
-                                                  && r.LoadCombination?.No == loadCombination.No
-                                                  && r.IsLiquefaction == isLiquefaction
-                                                  && r.Step == step);
+                            var topResult = topSpring.ResultLookup.At(loadCase, loadCombination, isLiquefaction, step);
                             if (topResult?.CumulativeDisp != null)
                             {
                                 double dx = topResult.CumulativeDisp.Dxi - topResult.CumulativeDisp.Dxj;
@@ -100,11 +92,7 @@ namespace PileDesign.ViewModels
                             else topRelDisps.Add(0);
 
                             // 最下点の相対変位
-                            var btmResult = btmSpring.HorizontalSpringResults?
-                                .FirstOrDefault(r => PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, loadCase)
-                                                  && r.LoadCombination?.No == loadCombination.No
-                                                  && r.IsLiquefaction == isLiquefaction
-                                                  && r.Step == step);
+                            var btmResult = btmSpring.ResultLookup.At(loadCase, loadCombination, isLiquefaction, step);
                             if (btmResult?.CumulativeDisp != null)
                             {
                                 double dx = btmResult.CumulativeDisp.Dxi - btmResult.CumulativeDisp.Dxj;
@@ -581,12 +569,7 @@ namespace PileDesign.ViewModels
                                 r.Name == $"RθXY-{pileLayout.No}");
                             if (rs == null) continue;
 
-                            var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
-                                // 荷重ケースはレベルと番号で見分ける (番号だけだとレベル 1 と 2 の同じ番号を取り違える)
-                                LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                                LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
-                                r.IsLiquefaction == isLiq &&
-                                r.Step == lastStep);
+                            var rsResult = rs.ResultLookup.At(loadCase, loadCombination, isLiq, lastStep);
                             if (rsResult?.CumulativeDisp == null || rsResult.CumulativeForce == null) continue;
 
                             double dRx = rsResult.CumulativeDisp.Rxj - rsResult.CumulativeDisp.Rxi;
@@ -781,12 +764,7 @@ namespace PileDesign.ViewModels
                             if (lastStep >= 0)
                             {
                                 // RotationalSpringResultから該当する結果を取得（Beam.GetBeamResultと同様のパターン）
-                                var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
-                                    // 荷重ケースはレベルと番号で見分ける (番号だけだとレベル 1 と 2 の同じ番号を取り違える)
-                                    LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                                    LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
-                                    r.IsLiquefaction == isLiquefaction &&
-                                    r.Step == lastStep);
+                                var rsResult = rs.ResultLookup.At(loadCase, loadCombination, isLiquefaction, lastStep);
 
                                 if (rsResult?.CumulativeDisp != null && rsResult.CumulativeForce != null)
                                 {

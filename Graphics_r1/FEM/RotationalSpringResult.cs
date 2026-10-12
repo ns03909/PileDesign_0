@@ -2,7 +2,7 @@
 
 namespace PileDesign.FEM
 {
-    public class RotationalSpringResult
+    public class RotationalSpringResult : ICaseStepResult
     {
         public LoadCase LoadCase { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る
         public LoadCombination LoadCombination { get; set; } = null!; // 読込 (JSON) と生成用コンストラクタで入る

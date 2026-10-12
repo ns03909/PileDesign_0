@@ -950,11 +950,7 @@ namespace PileDesign.Output
                                 if (lastStep >= 0)
                                 {
                                     // 荷重ケースはレベルと番号で見分ける。番号だけだとレベル 1 と 2 の同じ番号のケースを取り違える
-                                    var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
-                                        LoadCase.IsSameCase(r.LoadCase, loadCase) &&
-                                        LoadCombination.IsSameCombination(r.LoadCombination, loadCombination) &&
-                                        r.IsLiquefaction == isLiquefaction &&
-                                        r.Step == lastStep);
+                                    var rsResult = rs.ResultLookup.At(loadCase, loadCombination, isLiquefaction, lastStep);
 
                                     if (rsResult?.CumulativeDisp != null && rsResult.CumulativeForce != null)
                                     {

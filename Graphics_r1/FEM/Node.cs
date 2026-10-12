@@ -121,42 +121,21 @@ namespace PileDesign.FEM
 
         public System.Collections.Generic.List<NodeResult> NodeResults { get; set; } = [];
 
-        // 
+        private ResultLookup<NodeResult>? _resultLookup;
+        /// <summary><see cref="NodeResults"/> を荷重条件とステップで引く索引 (<see cref="ResultLookup{T}"/>)。保存しない。</summary>
+        [JsonIgnore]
+        public ResultLookup<NodeResult> ResultLookup
+            => System.Threading.LazyInitializer.EnsureInitialized(ref _resultLookup, () => new ResultLookup<NodeResult>(() => NodeResults));
+
+        /// <summary>
+        /// 節点の解析結果を取得する。<paramref name="step"/> が -1 なら、その荷重条件の最終ステップ。
+        /// 指定した液状化の状態の結果が無ければ null (以前は逆の状態の結果を黙って返していた。<see cref="Beam.GetBeamResult"/> 参照)。
+        /// </summary>
         public NodeResult? GetNodeResult(AnaModel anaModel, LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step = -1)
         {
             if (step == -1)
-            {
                 step = anaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
-            }
-
-            // 名前ベースで比較（参照比較ではなく、Beam.GetBeamResultと同じ方式）
-            foreach (NodeResult nodeResult in NodeResults)
-            {
-                bool loadCaseMatch = PileDesign.Models.InputData.LoadCase.IsSameCase(loadCase, nodeResult.LoadCase);
-                bool loadCombMatch = PileDesign.Models.InputData.LoadCombination.IsSameCombination(loadCombination, nodeResult.LoadCombination);
-                if (loadCaseMatch && loadCombMatch &&
-                    isLiquefaction == nodeResult.IsLiquefaction &&
-                    step == nodeResult.Step)
-                {
-                    return nodeResult;
-                }
-            }
-
-            // フォールバック: 逆の液状化状態で検索（液状化トグルの状態と解析結果が異なる場合の救済）
-            int fallbackStep = anaModel.GetAnalysisLastStep(loadCase, loadCombination, !isLiquefaction);
-            foreach (NodeResult nodeResult in NodeResults)
-            {
-                bool loadCaseMatch = PileDesign.Models.InputData.LoadCase.IsSameCase(loadCase, nodeResult.LoadCase);
-                bool loadCombMatch = PileDesign.Models.InputData.LoadCombination.IsSameCombination(loadCombination, nodeResult.LoadCombination);
-                if (loadCaseMatch && loadCombMatch &&
-                    !isLiquefaction == nodeResult.IsLiquefaction &&
-                    fallbackStep == nodeResult.Step)
-                {
-                    return nodeResult;
-                }
-            }
-
-            return null;
+            return ResultLookup.At(loadCase, loadCombination, isLiquefaction, step);
         }
 
         // initializer

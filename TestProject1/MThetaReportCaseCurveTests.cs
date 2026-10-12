@@ -34,7 +34,9 @@ namespace TestProject1
         public void ResultPointsAreMatchedByLevelAndNumber()
         {
             string body = AddMThetaCurves();
-            StringAssert.Contains(body, "LoadCase.IsSameCase(r.LoadCase, loadCase)");
+            // 照合は結果の索引 (FEM.ResultLookup) に集めた。索引はレベルと番号で見分ける
+            // (ResultCaseKey。同じ結果を返すことは ResultIndexTests が全件で確かめる)
+            StringAssert.Contains(body, "rs.ResultLookup.At(loadCase, loadCombination, isLiquefaction, lastStep)");
 
             // 回転ばねの結果を荷重ケースの番号だけで探す箇所が、計算書にもグラフにも残っていないこと
             var sources = new[]

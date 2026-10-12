@@ -367,10 +367,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         internal static HorizontalSpringResult? FinalSpringResult(HorizontalSoilSpring? spring,
             LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int lastStep)
-            => spring?.HorizontalSpringResults?.FirstOrDefault(r => r.Step == lastStep
-                && LoadCase.IsSameCase(r.LoadCase, loadCase)
-                && LoadCombination.IsSameCombination(r.LoadCombination, loadCombination)
-                && r.IsLiquefaction == isLiquefaction);
+            => spring?.ResultLookup.At(loadCase, loadCombination, isLiquefaction, lastStep);
 
         /// <summary>
         /// 長方形分布の点列。要素 j の上半分は節点 j、下半分は節点 j+1 の値で描く。

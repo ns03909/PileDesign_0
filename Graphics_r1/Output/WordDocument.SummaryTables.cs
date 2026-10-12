@@ -1167,10 +1167,7 @@ namespace PileDesign.Output
             int found = 0;
             foreach (var spring in springs)
             {
-                var r = spring?.HorizontalSpringResults?.FirstOrDefault(rr =>
-                    rr.IsLiquefaction == isLiquefaction && rr.Step == step &&
-                    PileDesign.Models.InputData.LoadCase.IsSameCase(rr.LoadCase, loadCase) &&
-                    PileDesign.Models.InputData.LoadCombination.IsSameCombination(rr.LoadCombination, loadCombination));
+                var r = spring?.ResultLookup.At(loadCase, loadCombination, isLiquefaction, step);
                 if (r?.CumulativeForce == null) continue;
                 sumFx += r.CumulativeForce.Fxi;
                 sumFy += r.CumulativeForce.Fyi;

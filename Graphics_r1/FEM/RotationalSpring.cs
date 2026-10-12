@@ -275,6 +275,12 @@ namespace PileDesign.FEM
 
         public List<RotationalSpringResult> RotationalSpringResults { get; set; } = [];
 
+        private ResultLookup<RotationalSpringResult>? _resultLookup;
+        /// <summary><see cref="RotationalSpringResults"/> を荷重条件とステップで引く索引 (<see cref="ResultLookup{T}"/>)。保存しない。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ResultLookup<RotationalSpringResult> ResultLookup
+            => System.Threading.LazyInitializer.EnsureInitialized(ref _resultLookup, () => new ResultLookup<RotationalSpringResult>(() => RotationalSpringResults));
+
         public BeamDisp IncrementalDisp { get; set; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         public BeamDisp CumulativeDisp { get; set; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         public BeamForce IncrementalForce { get; set; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);

@@ -265,13 +265,7 @@ namespace PileDesign.Views
             {
                 if (spring.HorizontalSpringResults == null || selectedLoadCase == null || selectedLoadCombination == null)
                     return null;
-                return spring.HorizontalSpringResults
-                    .Where(r =>
-                        PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, selectedLoadCase) &&
-                        PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, selectedLoadCombination) &&
-                        r.IsLiquefaction == viewModel.IsLiquefaction)
-                    .OrderByDescending(r => r.Step)
-                    .FirstOrDefault();
+                return spring.ResultLookup.Latest(selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
             }
 
             // 選択されたタイプを取得
@@ -712,13 +706,7 @@ namespace PileDesign.Views
             {
                 if (spring.HorizontalSpringResults == null || selectedLoadCase == null || selectedLoadCombination == null)
                     return null;
-                return spring.HorizontalSpringResults
-                    .Where(r =>
-                        PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, selectedLoadCase) &&
-                        PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, selectedLoadCombination) &&
-                        r.IsLiquefaction == viewModel.IsLiquefaction)
-                    .OrderByDescending(r => r.Step)
-                    .FirstOrDefault();
+                return spring.ResultLookup.Latest(selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
             }
 
             // 並進タイプのみサポート。モーメント系が選択されている場合は RH にフォールバック。

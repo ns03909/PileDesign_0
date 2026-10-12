@@ -555,11 +555,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // BeamResultを検索
-                var result = beam.BeamResults?.FirstOrDefault(r =>
-                    r.IsLiquefaction == stepResult.IsLiquefaction &&
-                    r.Step == stepResult.Step &&
-                    (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
-                    (stepResult.LoadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, stepResult.LoadCombination)));
+                var result = beam.ResultLookup.AtStepOf(stepResult);
 
                 if (result?.CumulativeForce == null) { Unavailable(NoResultReason); return; }
 
@@ -837,20 +833,17 @@ namespace PileDesign.ViewModels
         {
             if (pile == null) return null;
             var head = PileHeadBeam(pile);
-            var r = head?.BeamResults?.FirstOrDefault(x =>
-                x.IsLiquefaction == stepResult.IsLiquefaction &&
-                x.Step == stepResult.Step &&
-                (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(x.LoadCase, stepResult.LoadCase)) &&
-                (stepResult.LoadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(x.LoadCombination, stepResult.LoadCombination)));
+            var r = head?.ResultLookup.AtStepOf(stepResult);
             return r?.CumulativeForce?.Fxi;
         }
 
-        /// <summary>最大断面力の表の鍵にする荷重ケースの識別 (レベル-番号)。</summary>
-        internal static string CaseKeyOf(LoadCase? loadCase) => loadCase == null ? "" : $"L{loadCase.Level}-{loadCase.No}";
-
-        /// <summary>最大断面力の表 (<see cref="BuildMaxForcesByPileCase"/>) の鍵: 荷重ケース (レベル-番号) と液状化の考慮/非考慮。</summary>
+        /// <summary>
+        /// 最大断面力の表 (<see cref="BuildMaxForcesByPileCase"/>) の鍵: 荷重ケース (レベル-番号) と液状化の考慮/非考慮。
+        /// 荷重組合せはまたぐので、結果の索引の鍵 (FEM.ResultCaseKey) とは別。
+        /// (以前は同じ "L{レベル}-{番号}" を作る関数が計算書の索引にもう 1 つあった。そちらは索引ごと FEM に寄せた)
+        /// </summary>
         internal static string MaxForceKeyOf(LoadCase? loadCase, bool isLiquefaction)
-            => $"{CaseKeyOf(loadCase)}|{(isLiquefaction ? "液状化考慮" : "液状化非考慮")}";
+            => $"{(loadCase == null ? "" : $"L{loadCase.Level}-{loadCase.No}")}|{(isLiquefaction ? "液状化考慮" : "液状化非考慮")}";
 
         /// <summary>
         /// 梁が属する杭を返す。
@@ -928,11 +921,7 @@ namespace PileDesign.ViewModels
                     perBeamResults[idx] = found;
                 }
 
-                var result = beam.BeamResults?.FirstOrDefault(r =>
-                    r.IsLiquefaction == stepResult.IsLiquefaction &&
-                    r.Step == stepResult.Step &&
-                    (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
-                    (stepResult.LoadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, stepResult.LoadCombination)));
+                var result = beam.ResultLookup.AtStepOf(stepResult);
 
                 if (result?.CumulativeForce == null) { Unavailable(NoResultReason); return; }
 
@@ -1160,11 +1149,7 @@ namespace PileDesign.ViewModels
                 var head = ResolvePileHeadNode(pile);
                 if (head == null) { missing.Add(pile.PileNo); continue; }
 
-                var nr = head.NodeResults?.FirstOrDefault(r =>
-                    r.IsLiquefaction == stepResult.IsLiquefaction &&
-                    r.Step == stepResult.Step &&
-                    (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
-                    (stepResult.LoadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, stepResult.LoadCombination)));
+                var nr = head.ResultLookup.AtStepOf(stepResult);
 
                 if (nr?.CumulativeDisp == null) { missing.Add(pile.PileNo); continue; }
                 // NodeDisp は m 単位、杭の座標も m なので、そのまま割れば rad になる
@@ -1393,11 +1378,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // RotationalSpringResultを検索
-                var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
-                    r.IsLiquefaction == stepResult.IsLiquefaction &&
-                    r.Step == stepResult.Step &&
-                    (stepResult.LoadCase == null || PileDesign.Models.InputData.LoadCase.IsSameCase(r.LoadCase, stepResult.LoadCase)) &&
-                    (stepResult.LoadCombination == null || PileDesign.Models.InputData.LoadCombination.IsSameCombination(r.LoadCombination, stepResult.LoadCombination)));
+                var rsResult = rs.ResultLookup.AtStepOf(stepResult);
 
                 if (rsResult?.CumulativeDisp == null)
                 {
