@@ -1,11 +1,10 @@
 ﻿{
-    "Figures":  91,
+    "Figures":  65,
     "Tables":  45,
     "PagesByEnvironment":  {
-                               "GALLERIA / Word 16.0.20326":  91
+                               "GALLERIA / Word 16.0.20430":  75
                            },
     "Fonts":  [
-                  "Consolas",
                   "ＭＳ ゴシック",
                   "游ゴシック",
                   "游ゴシック Medium",
