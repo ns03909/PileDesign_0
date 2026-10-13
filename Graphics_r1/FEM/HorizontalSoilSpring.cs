@@ -18,7 +18,7 @@ namespace PileDesign.FEM
         [JsonIgnore]
         public new Matrix<double> KeSec => base.KeSec;
 
-        public List<HorizontalSpringResult> HorizontalSpringResults { get; set; } = [];
+        public ResultList<HorizontalSpringResult> HorizontalSpringResults { get; set; } = [];
 
         private ResultLookup<HorizontalSpringResult>? _resultLookup;
         /// <summary><see cref="HorizontalSpringResults"/> を荷重条件とステップで引く索引 (<see cref="ResultLookup{T}"/>)。保存しない。</summary>
@@ -66,7 +66,7 @@ namespace PileDesign.FEM
             if (this.KeSec != null) copy.SetKeFromMatrix(this.KeSec, isTan: false);
 
             // 結果コピー
-            copy.HorizontalSpringResults = new List<HorizontalSpringResult>(
+            copy.HorizontalSpringResults = new ResultList<HorizontalSpringResult>(
                 this.HorizontalSpringResults.Select(r => r.DeepCopy()));
 
             return copy;

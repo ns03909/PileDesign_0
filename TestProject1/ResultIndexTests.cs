@@ -56,13 +56,13 @@ namespace TestProject1
         private static bool Same(ICaseStepResult r, LoadCase? lc, LoadCombination? comb, bool liq)
             => LoadCase.IsSameCase(lc, r.LoadCase) && LoadCombination.IsSameCombination(comb, r.LoadCombination) && r.IsLiquefaction == liq;
 
-        private static T? LinearAt<T>(List<T>? list, LoadCase? lc, LoadCombination? comb, bool liq, int step) where T : class, ICaseStepResult
+        private static T? LinearAt<T>(IList<T>? list, LoadCase? lc, LoadCombination? comb, bool liq, int step) where T : class, ICaseStepResult
             => list?.FirstOrDefault(r => Same(r, lc, comb, liq) && r.Step == step);
 
-        private static T? LinearLatest<T>(List<T>? list, LoadCase? lc, LoadCombination? comb, bool liq) where T : class, ICaseStepResult
+        private static T? LinearLatest<T>(IList<T>? list, LoadCase? lc, LoadCombination? comb, bool liq) where T : class, ICaseStepResult
             => list?.Where(r => Same(r, lc, comb, liq)).OrderByDescending(r => r.Step).FirstOrDefault();
 
-        private static T? LinearMatching<T>(List<T>? list, LoadCase? lc, LoadCombination? comb, bool liq, int step) where T : class, ICaseStepResult
+        private static T? LinearMatching<T>(IList<T>? list, LoadCase? lc, LoadCombination? comb, bool liq, int step) where T : class, ICaseStepResult
             => list?.FirstOrDefault(r => r.IsLiquefaction == liq && r.Step == step
                 && (lc == null || LoadCase.IsSameCase(r.LoadCase, lc))
                 && (comb == null || LoadCombination.IsSameCombination(r.LoadCombination, comb)));
@@ -99,7 +99,7 @@ namespace TestProject1
             int maxStep = m.AnalysisStepResults.Max(r => r.Step);
             int compared = 0;
 
-            void Check<T>(string what, List<T>? list, ResultLookup<T> lookup) where T : class, ICaseStepResult
+            void Check<T>(string what, IList<T>? list, ResultLookup<T> lookup) where T : class, ICaseStepResult
             {
                 foreach (var (lc, comb, liq) in conditions)
                 {
@@ -171,6 +171,38 @@ namespace TestProject1
             Assert.AreSame(beam.GetBeamResult(m, lc, comb, false), beam.GetBeamResult(m, lc, comb, liq));
             Assert.AreEqual((false, false), m.ResolveLiquefactionWithResults(lc, comb, false), "結果のある状態を指定したら切り替えない");
             Assert.AreEqual((false, true), m.ResolveLiquefactionWithResults(lc, null, true), "組合せ=すべて でも同じ");
+        }
+
+        /// <summary>
+        /// 一覧の中ほどの行を差し替えても (件数・先頭・末尾は同じ)、次に引いたときに新しい行が見えること。
+        /// 以前の索引は (件数, 先頭, 末尾) だけを照合していたので、差し替える前の行を返した (2026-10-14 のレビュー)。
+        /// いまは一覧 (<see cref="ResultList{T}"/>) の変更が版を上げ、索引は版で作り直す。索引を捨てる呼び出しは要らない。
+        /// </summary>
+        [TestMethod]
+        public void ReplacingAMiddleRow_IsSeenWithoutInvalidating()
+        {
+            var lc = new LoadCase { Level = 1, No = 1 };
+            var comb = new LoadCombination(1, 1, 1, 1);
+            var node = new Node();
+            for (int step = 0; step < 3; step++)
+                node.NodeResults.Add(new NodeResult { LoadCase = lc, LoadCombination = comb, Step = step });
+            var before = node.ResultLookup.At(lc, comb, false, 1);
+            Assert.AreSame(node.NodeResults[1], before, "(前提) 索引を作った");
+
+            var replacement = new NodeResult { LoadCase = lc, LoadCombination = comb, Step = 1 };
+            node.NodeResults[1] = replacement;   // 件数・先頭・末尾はそのまま
+            Assert.AreSame(replacement, node.ResultLookup.At(lc, comb, false, 1), "中ほどで差し替えた行が見えず、差し替える前の行を返しています");
+
+            node.NodeResults.Insert(1, new NodeResult { LoadCase = lc, LoadCombination = comb, Step = 5 });
+            Assert.AreEqual(5, node.ResultLookup.Latest(lc, comb, false)!.Step, "中ほどに足した行が見えません");
+            node.NodeResults.RemoveAll(r => r.Step == 5);
+            Assert.AreEqual(2, node.ResultLookup.Latest(lc, comb, false)!.Step, "消した行が残っています");
+
+            // 保存の形 (配列) は変わらない
+            string json = System.Text.Json.JsonSerializer.Serialize(node.NodeResults);
+            StringAssert.StartsWith(json, "[", "結果の一覧が配列として保存されません");
+            var back = System.Text.Json.JsonSerializer.Deserialize<ResultList<NodeResult>>(json)!;
+            Assert.AreEqual(node.NodeResults.Count, back.Count);
         }
 
         /// <summary>結果を足す・消す・差し替えると、次に引いたときに索引が作り直されること。</summary>

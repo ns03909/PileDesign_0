@@ -119,7 +119,7 @@ namespace PileDesign.FEM
         [JsonIgnore]
         public DofTerm[][]? ResolvedDofMap { get; set; }
 
-        public System.Collections.Generic.List<NodeResult> NodeResults { get; set; } = [];
+        public ResultList<NodeResult> NodeResults { get; set; } = [];
 
         private ResultLookup<NodeResult>? _resultLookup;
         /// <summary><see cref="NodeResults"/> を荷重条件とステップで引く索引 (<see cref="ResultLookup{T}"/>)。保存しない。</summary>
@@ -436,7 +436,7 @@ namespace PileDesign.FEM
 
                 TransferMatrix = this.TransferMatrix.Clone(),
                 //NodeResults = new ObservableCollection<NodeResult>(this.NodeResults.Select(r => r.DeepCopy()))
-                NodeResults = this.NodeResults.Select(r => r.DeepCopy()).ToList()
+                NodeResults = new ResultList<NodeResult>(this.NodeResults.Select(r => r.DeepCopy()))
             };
             return copy;
 

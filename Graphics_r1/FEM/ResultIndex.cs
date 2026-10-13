@@ -1,6 +1,7 @@
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading;
 
 namespace PileDesign.FEM
@@ -51,6 +52,54 @@ namespace PileDesign.FEM
     }
 
     /// <summary>
+    /// 結果の行の一覧。追加・削除・差し替え・全消去のたびに <see cref="Version"/> が上がる。
+    ///
+    /// <para>結果の索引 (<see cref="ResultLookup{T}"/>) は、作ったときの版と今の版を比べて作り直す。
+    /// 以前の一覧は List で、索引は (インスタンス, 件数, 先頭, 末尾) だけを照合していたので、中ほどの行を
+    /// 差し替えると見逃して、差し替える前の行を返した。書き換える処理が索引を捨てる (<c>Invalidate</c>) のを
+    /// 忘れないよう注意するしかなかったが、いまは一覧の変更そのものが版を上げるので、呼び忘れても古い索引を使わない。</para>
+    ///
+    /// <para>行の中身 (行のプロパティ) を書き換えても版は上がらない。結果の行の荷重条件・ステップは解析後に変えないこと
+    /// (<see cref="ResultLookup{T}"/> の約束)。保存 (JSON) は今までの List と同じ形 (配列) で読み書きする。</para>
+    /// </summary>
+    public sealed class ResultList<T> : Collection<T>
+    {
+        private int _version;
+
+        public ResultList() { }
+
+        public ResultList(IEnumerable<T> items)
+        {
+            foreach (var item in items) Items.Add(item);
+        }
+
+        /// <summary>変更の版 (追加・削除・差し替え・全消去で上がる)。</summary>
+        public int Version => Volatile.Read(ref _version);
+
+        /// <summary>まとめて足す (版は 1 回だけ上がる)。</summary>
+        public void AddRange(IEnumerable<T> items)
+        {
+            foreach (var item in items) Items.Add(item);
+            Bump();
+        }
+
+        /// <summary>条件に合う行をすべて消す。消した数を返す。</summary>
+        public int RemoveAll(Predicate<T> match)
+        {
+            int removed = ((List<T>)Items).RemoveAll(match);
+            if (removed > 0) Bump();
+            return removed;
+        }
+
+        private void Bump() => Interlocked.Increment(ref _version);
+
+        protected override void InsertItem(int index, T item) { base.InsertItem(index, item); Bump(); }
+        protected override void SetItem(int index, T item) { base.SetItem(index, item); Bump(); }
+        protected override void RemoveItem(int index) { base.RemoveItem(index); Bump(); }
+        protected override void ClearItems() { base.ClearItems(); Bump(); }
+    }
+
+    /// <summary>
     /// 1 つの持ち主 (梁・節点・ばね・解析モデルのステップ一覧) の結果を、荷重条件とステップで引く索引。
     ///
     /// <para><b>なぜあるか</b>: 結果の照合は以前 4 通りに書かれていた
@@ -64,10 +113,10 @@ namespace PileDesign.FEM
     /// <para><b>液状化の扱い</b>: 指定した状態の結果だけを返す。逆の状態の結果を出したい画面は
     /// <see cref="AnaModel.ResolveLiquefactionWithResults"/> で状態を明示的に切り替え、切り替えたことを表示すること。</para>
     ///
-    /// <para><b>索引の作り直し</b>: 索引は初めて引いたときに作り、結果の一覧の
-    /// (インスタンス, 件数, 先頭の行, 末尾の行) を控えておく。引くたびにこれを照合し、変わっていれば作り直す
-    /// (追加・削除・差し替え・1 件消して 1 件足す、のいずれでも末尾か件数が変わる)。
-    /// 結果を書き換える処理 (解析の取り込み・削除・読込) は <see cref="AnaModel.InvalidateResultIndex"/> も呼ぶ。</para>
+    /// <para><b>索引の作り直し</b>: 索引は初めて引いたときに作り、結果の一覧の (インスタンス, 版 (<see cref="ResultList{T}.Version"/>)) を
+    /// 控えておく。引くたびにこれを照合し、一覧が差し替わったか、行の追加・削除・差し替えがあれば作り直す
+    /// (以前は件数と先頭・末尾の行だけを見ていて、中ほどの差し替えを見逃した)。
+    /// <see cref="AnaModel.InvalidateResultIndex"/> は今も呼んでよい (捨てるだけ)。</para>
     ///
     /// <para><b>スレッドの約束</b>: 引く処理は複数のスレッドから同時に呼んでよい (検定・計算書は Parallel.For から引く)。
     /// 索引はでき上がってから差し替えるので、読み手が作りかけを見ることはない。
@@ -81,10 +130,10 @@ namespace PileDesign.FEM
     /// </summary>
     public sealed class ResultLookup<T> where T : class, ICaseStepResult
     {
-        private readonly Func<List<T>?> _source;
+        private readonly Func<ResultList<T>?> _source;
         private Table? _table;
 
-        public ResultLookup(Func<List<T>?> source)
+        public ResultLookup(Func<ResultList<T>?> source)
         {
             _source = source ?? throw new ArgumentNullException(nameof(source));
         }
@@ -99,21 +148,13 @@ namespace PileDesign.FEM
 
         private sealed class Table
         {
-            public List<T>? List;
-            public int Count;
-            public T? First;
-            public T? Last;
+            public ResultList<T>? List;
+            public int Version;
             public Dictionary<ResultCaseKey, CaseEntry> Cases = [];
             public List<T>? Overflow;     // ステップの番号が飛びすぎて配列にしなかった荷重条件の行 (一覧の順)
 
-            public bool IsFor(List<T>? list)
-            {
-                if (!ReferenceEquals(List, list)) return false;
-                if (list == null) return true;
-                int n = list.Count;
-                if (n != Count) return false;
-                return n == 0 || (ReferenceEquals(First, list[0]) && ReferenceEquals(Last, list[n - 1]));
-            }
+            public bool IsFor(ResultList<T>? list)
+                => ReferenceEquals(List, list) && (list == null || list.Version == Version);
         }
 
         /// <summary>索引を捨てる。次に引いたときに作り直す。</summary>
@@ -133,14 +174,11 @@ namespace PileDesign.FEM
             return table;
         }
 
-        private static Table Build(List<T>? list)
+        private static Table Build(ResultList<T>? list)
         {
-            var table = new Table { List = list };
+            // 版は読む前に控える (作っている間に変わったら、次に引いたときに作り直す)
+            var table = new Table { List = list, Version = list?.Version ?? 0 };
             if (list == null || list.Count == 0) return table;
-
-            table.Count = list.Count;
-            table.First = list[0];
-            table.Last = list[^1];
 
             // 1 回目: 荷重条件ごとにステップの範囲を求める
             var ranges = new Dictionary<ResultCaseKey, (int Min, int Max)>();

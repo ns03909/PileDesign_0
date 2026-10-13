@@ -191,7 +191,7 @@ namespace TestProject1
                 .GetUninitializedObject(typeof(AnaModel));
             // ClearAllAnalysisResults が触る全てのコレクションを初期化
             typeof(AnaModel).GetProperty(nameof(AnaModel.AnalysisStepResults))!
-                .SetValue(model, new List<AnalysisStepResult>());
+                .SetValue(model, new ResultList<AnalysisStepResult>());
             typeof(AnaModel).GetProperty(nameof(AnaModel.Nodes))!
                 .SetValue(model, new List<Node>());
             typeof(AnaModel).GetProperty(nameof(AnaModel.Beams))!

@@ -301,7 +301,7 @@ namespace PileDesign.FEM
 
         // 地盤の水平反力を持つ杭の要素だけが持つ。それ以外は null
         public HorizontalSoilReactionItem? HorizontalSoilReactionItem { get; set; }
-        public System.Collections.Generic.List<BeamResult> BeamResults { get; set; } = [];
+        public ResultList<BeamResult> BeamResults { get; set; } = [];
 
         private ResultLookup<BeamResult>? _resultLookup;
         /// <summary><see cref="BeamResults"/> を荷重条件とステップで引く索引 (<see cref="ResultLookup{T}"/>)。保存しない。</summary>

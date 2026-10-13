@@ -273,7 +273,7 @@ namespace PileDesign.FEM
     public class RotationalSpring : TwoNodeSpringElement
     {
 
-        public List<RotationalSpringResult> RotationalSpringResults { get; set; } = [];
+        public ResultList<RotationalSpringResult> RotationalSpringResults { get; set; } = [];
 
         private ResultLookup<RotationalSpringResult>? _resultLookup;
         /// <summary><see cref="RotationalSpringResults"/> を荷重条件とステップで引く索引 (<see cref="ResultLookup{T}"/>)。保存しない。</summary>
@@ -801,7 +801,7 @@ namespace PileDesign.FEM
             // <b>1 件も回らない</b>。杭頭回転ばねの結果が main に入らず、
             // EvaluationService.CheckThetaLimit は結果が無いと検定項目を作らないため、
             // 最初のケース以外の杭頭回転角の検定が黙って消えていた。
-            copy.RotationalSpringResults = new List<RotationalSpringResult>(
+            copy.RotationalSpringResults = new ResultList<RotationalSpringResult>(
                 this.RotationalSpringResults.Select(r => r.DeepCopy()));
 
             return copy;

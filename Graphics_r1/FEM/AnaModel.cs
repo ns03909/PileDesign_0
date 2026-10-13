@@ -176,7 +176,7 @@ namespace PileDesign.FEM
         public List<HorizontalSoilSpring> HorizontalSoilSprings { get; set; } = null!;
         public List<RotationalSpring> RotationalSprings { get; set; } = null!;
         public List<HorizontalSoilSpring> PenaltySprings { get; set; } = [];  // ConnectionNode↔CapNodeペナルティばね
-        public List<AnalysisStepResult> AnalysisStepResults { get; set; } = []; // 解析ステップ結果のリスト
+        public ResultList<AnalysisStepResult> AnalysisStepResults { get; set; } = []; // 解析ステップ結果のリスト
 
         private ResultLookup<AnalysisStepResult>? _stepIndex;
         /// <summary>
