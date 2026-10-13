@@ -406,7 +406,7 @@
                         VerticalAlignment="Center"
                         ItemsSource="{Binding LoadCombinations}" 
                         CellStyle="{StaticResource CustomDataGridCellStyle}"
-                        CellEditEnding="DataGridLoadCombination_CellEditEnding"
+                        CellEditEnding="DataGridLoadCombination_CellEditEnding" PasteCompleted="DataGrid_PasteCompleted"
                         Margin="50,10,50,10">
 
                         <i:Interaction.Behaviors>
@@ -513,7 +513,7 @@
                                 ScrollViewer.VerticalScrollBarVisibility="Visible"
                                 LoadingRow="DataGrid_LoadingRow_Numbering"
                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                CellEditEnding="DataGridCommonLoadCase1_CellEditEnding"
+                                CellEditEnding="DataGridCommonLoadCase1_CellEditEnding" PasteCompleted="DataGrid_PasteCompleted"
                                 Grid.Row="1" Grid.Column="0">
 
                                 <common:EnhancedDataGrid.AlternatingRowBackground>
@@ -728,7 +728,7 @@
                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
                                     LoadingRow="DataGrid_LoadingRow_Numbering"
                                     CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                    CellEditEnding="DataGridLoadCasesLevel1_CellEditEnding"
+                                    CellEditEnding="DataGridLoadCasesLevel1_CellEditEnding" PasteCompleted="DataGrid_PasteCompleted"
                                     Grid.Row="3" Grid.Column="0"
                                     >
                                 <i:Interaction.Behaviors>
@@ -1175,7 +1175,7 @@
                                 ScrollViewer.VerticalScrollBarVisibility="Visible"
                                 LoadingRow="DataGrid_LoadingRow_Numbering"
                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                CellEditEnding="DataGridCommonLoadCase2_CellEditEnding"
+                                CellEditEnding="DataGridCommonLoadCase2_CellEditEnding" PasteCompleted="DataGrid_PasteCompleted"
                                 Grid.Row="1" Grid.Column="0">
 
                                 <common:EnhancedDataGrid.AlternatingRowBackground>
@@ -1396,7 +1396,7 @@
                               ScrollViewer.VerticalScrollBarVisibility="Visible"
                               LoadingRow="DataGrid_LoadingRow_Numbering"
                               CellStyle="{StaticResource CustomDataGridCellStyle}"
-                              CellEditEnding="DataGridLoadCasesLevel2_CellEditEnding" Grid.Row="3" Grid.Column="0"
+                              CellEditEnding="DataGridLoadCasesLevel2_CellEditEnding" PasteCompleted="DataGrid_PasteCompleted" Grid.Row="3" Grid.Column="0"
                               >
                                 <i:Interaction.Behaviors>
                                     <common:DataGridSingleClickEditBehavior />

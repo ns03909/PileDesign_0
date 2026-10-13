@@ -196,7 +196,9 @@ namespace TestProject1
         public void TheElementDivisionWindowUsesTheSharedReactionBuilder()
         {
             string vmSource = TestSource.Read("Graphics_r1", "ViewModels", "ElementDivisionViewModel.cs");
-            string vmBody = StripComments(TestSource.MethodBody(vmSource, "void SetHorizontalSoilReaction()"));
+            // 表の行は BuildHorizontalSoilReactionRows で組む (貼り付けの kh0 の照合と同じ組み立てを使うため、2026-10-14 に分けた)
+            StringAssert.Contains(TestSource.MethodBody(vmSource, "void SetHorizontalSoilReaction()"), "BuildHorizontalSoilReactionRows()");
+            string vmBody = StripComments(TestSource.MethodBody(vmSource, "List<HorizontalSoilReactionItem> BuildHorizontalSoilReactionRows()"));
 
             Assert.IsTrue(vmBody.Contains("SoilPile.BuildReaction(", StringComparison.Ordinal),
                 "杭要素分割ウィンドウが共通の組み立て (SoilPile.BuildReaction) を使っていません");

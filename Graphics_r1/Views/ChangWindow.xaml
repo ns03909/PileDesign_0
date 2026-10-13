@@ -209,6 +209,7 @@
                                                                  LoadingRow="DataGrid_LoadingRow"
                                                                  Grid.Row="1"
                                                                  PreparingCellForEdit="DataGrid_PreparingCellForEdit"
+                                                                 PasteCompleted="DataGrid_PasteCompleted"
                                                                                                                                      CellEditEnding="DataGrid_CellEditEnding">
                                             <DataGrid.AlternatingRowBackground>
                                                 <ImageBrush/>
@@ -668,6 +669,7 @@
                                                                  LoadingRow="DataGrid_LoadingRow"
                                                                  Grid.Row="1"
                                                                  PreparingCellForEdit="DataGrid_PreparingCellForEdit"
+                                                                 PasteCompleted="DataGrid_PasteCompleted"
                                                                 CellEditEnding="DataGrid_CellEditEnding">
                                             <DataGrid.AlternatingRowBackground>
                                                 <ImageBrush/>

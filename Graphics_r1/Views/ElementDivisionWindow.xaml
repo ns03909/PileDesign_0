@@ -377,6 +377,7 @@
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}"
                                                         Grid.Row="2"
                                                         CellEditEnding="Horizon_CellEditEnding"
+                                                        PasteCompleted="Horizon_PasteCompleted"
                                                                                                                 SelectedCellsChanged="Horizon_SelectedCellsChanged"
                                                         CurrentCellChanged="Horizon_CurrentCellChanged">
 

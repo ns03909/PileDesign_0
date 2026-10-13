@@ -60,6 +60,184 @@ namespace TestProject1
             finally { MessageService.IsUnattended = unattended; }
         }
 
+        /// <summary>変動軸力の表と同じ形: 絶対値の列と変動の列が交互に並び、モードで片方を隠す。</summary>
+        public sealed class AxialRow
+        {
+            public double Vl { get; set; } = 100;
+            public double Abs1 { get; set; }
+            public double Var1 { get => Abs1 - Vl; set => Abs1 = Vl + value; }
+            public double Abs2 { get; set; }
+            public double Var2 { get => Abs2 - Vl; set => Abs2 = Vl + value; }
+        }
+
+        private static EnhancedDataGrid AxialGrid(ObservableCollection<AxialRow> rows, bool variationMode)
+        {
+            var grid = new EnhancedDataGrid
+            {
+                AutoGenerateColumns = false,
+                SelectionUnit = DataGridSelectionUnit.Cell,
+                SelectionMode = DataGridSelectionMode.Extended,
+            };
+            var hiddenAbs = variationMode ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+            var hiddenVar = variationMode ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            grid.Columns.Add(new DataGridTextColumn { Header = "L1-1", Binding = new Binding(nameof(AxialRow.Abs1)), Visibility = hiddenAbs });
+            grid.Columns.Add(new DataGridTextColumn { Header = "ΔL1-1", Binding = new Binding(nameof(AxialRow.Var1)), Visibility = hiddenVar });
+            grid.Columns.Add(new DataGridTextColumn { Header = "L1-2", Binding = new Binding(nameof(AxialRow.Abs2)), Visibility = hiddenAbs });
+            grid.Columns.Add(new DataGridTextColumn { Header = "ΔL1-2", Binding = new Binding(nameof(AxialRow.Var2)), Visibility = hiddenVar });
+            grid.ItemsSource = rows;
+            for (int i = 0; i < grid.Columns.Count; i++) grid.Columns[i].DisplayIndex = i;
+            grid.SelectedCells.Add(new DataGridCellInfo(rows[0], grid.Columns[variationMode ? 1 : 0]));
+            return grid;
+        }
+
+        /// <summary>
+        /// 隠れた列のある表へ複数列を貼ると、見えている列へ順に入る。以前は隠れた列も数えたので、絶対値の表示で 2 列貼ると
+        /// 2 列目の値が隠れた変動の列へ入って 1 列目を VL + 値で上書きし、2 列目は変わらなかった (2026-10-13 利用者の報告)。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "絶対値の表示")]
+        [DataRow(true, DisplayName = "変動の表示")]
+        public void MultipleColumns_GoToTheVisibleColumns_SkippingHiddenOnes(bool variationMode)
+        {
+            OnSta(() =>
+            {
+                var rows = new ObservableCollection<AxialRow> { new(), new() };
+                Assert.IsTrue(Paste(AxialGrid(rows, variationMode), "10\t20\n30\t40"));
+                double[] first = variationMode ? [rows[0].Var1, rows[0].Var2] : [rows[0].Abs1, rows[0].Abs2];
+                double[] second = variationMode ? [rows[1].Var1, rows[1].Var2] : [rows[1].Abs1, rows[1].Abs2];
+                CollectionAssert.AreEqual(new[] { 10.0, 20.0 }, first, "1 行目の 2 列が、見えている 2 列へ入っていません");
+                CollectionAssert.AreEqual(new[] { 30.0, 40.0 }, second, "2 行目の 2 列が、見えている 2 列へ入っていません");
+            });
+        }
+
+        /// <summary>
+        /// 画面の変動軸力の表と同じ列 (杭配置の絶対値 AxialForceLevel1s[i] と変動 AxialForceVariationLevel1s[i] の添字付きバインディング、
+        /// モードで片方を隠す) を、実際の杭配置 (<see cref="PileDesign.Models.InputData.PileLayoutDataItem"/>) に組む。
+        /// </summary>
+        private static EnhancedDataGrid PileAxialGrid(ObservableCollection<PileDesign.Models.InputData.PileLayoutDataItem> piles,
+            bool variationMode, int startRow = 0, int startCase = 0)
+        {
+            var grid = new EnhancedDataGrid
+            {
+                AutoGenerateColumns = false,
+                SelectionUnit = DataGridSelectionUnit.Cell,
+                SelectionMode = DataGridSelectionMode.Extended,
+            };
+            var absVis = variationMode ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+            var varVis = variationMode ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            for (int i = 0; i < 4; i++)
+            {
+                grid.Columns.Add(new DataGridTextColumn { Header = $"L1-{i + 1}", Binding = new Binding($"AxialForceLevel1s[{i}]"), Visibility = absVis });
+                grid.Columns.Add(new DataGridTextColumn { Header = $"ΔL1-{i + 1}", Binding = new Binding($"AxialForceVariationLevel1s[{i}]"), Visibility = varVis });
+            }
+            grid.ItemsSource = piles;
+            for (int i = 0; i < grid.Columns.Count; i++) grid.Columns[i].DisplayIndex = i;
+            grid.SelectedCells.Add(new DataGridCellInfo(piles[startRow], grid.Columns[2 * startCase + (variationMode ? 1 : 0)]));
+            return grid;
+        }
+
+        private static ObservableCollection<PileDesign.Models.InputData.PileLayoutDataItem> Piles(int count, double vl)
+        {
+            var piles = new ObservableCollection<PileDesign.Models.InputData.PileLayoutDataItem>();
+            for (int i = 0; i < count; i++)
+            {
+                var p = new PileDesign.Models.InputData.PileLayoutDataItem { No = i + 1, PileNo = i + 1 };
+                p.AxialForceVL0 = vl;
+                for (int c = 0; c < 4; c++) p.AxialForceLevel1s[c] = vl + 1000 * (i + 1) + c;   // 区別できる値
+                piles.Add(p);
+            }
+            return piles;
+        }
+
+        /// <summary>
+        /// 実際の杭配置と添字付きバインディングで、貼った値が絶対値と変動の両方にそろって入る (変動 = 絶対値 − VL)。
+        /// 変動の表示に貼れば絶対値は VL + 値、絶対値の表示に貼れば変動は値 − VL。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "絶対値の表示")]
+        [DataRow(true, DisplayName = "変動の表示")]
+        public void RealPileRows_KeepAbsoluteAndVariationInStep(bool variationMode)
+        {
+            OnSta(() =>
+            {
+                const double vl = 500;
+                var piles = Piles(2, vl);
+                Assert.IsTrue(Paste(PileAxialGrid(piles, variationMode), "10\t20\n30\t40"));
+                double[][] pasted = [[10, 20], [30, 40]];
+                for (int r = 0; r < 2; r++)
+                    for (int c = 0; c < 2; c++)
+                    {
+                        double abs = piles[r].AxialForceLevel1s[c], dv = piles[r].AxialForceVariationLevel1s[c];
+                        Assert.AreEqual(variationMode ? vl + pasted[r][c] : pasted[r][c], abs, 1e-9, $"杭 {r + 1} の L1-{c + 1} の絶対値");
+                        Assert.AreEqual(abs - vl, dv, 1e-9, $"杭 {r + 1} の L1-{c + 1}: 変動が絶対値 − VL になっていません");
+                    }
+            });
+        }
+
+        /// <summary>
+        /// 途中の列 (L1-2)・途中の行から貼ると、その範囲のセルだけが変わり、範囲の外 (左の列・右の列・上下の行) は変わらない。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "絶対値の表示")]
+        [DataRow(true, DisplayName = "変動の表示")]
+        public void PastingFromTheMiddle_LeavesCellsOutsideTheRangeAlone(bool variationMode)
+        {
+            OnSta(() =>
+            {
+                const double vl = 500;
+                var piles = Piles(4, vl);
+                var before = piles.Select(p => p.AxialForceLevel1s.ToArray()).ToArray();
+                Assert.IsTrue(Paste(PileAxialGrid(piles, variationMode, startRow: 1, startCase: 1), "7\t8\n9\t10"));
+                for (int r = 0; r < 4; r++)
+                    for (int c = 0; c < 4; c++)
+                    {
+                        bool inside = r is 1 or 2 && c is 1 or 2;
+                        double expected = inside
+                            ? (variationMode ? vl : 0) + new[] { 7.0, 8.0, 9.0, 10.0 }[(r - 1) * 2 + (c - 1)]
+                            : before[r][c];
+                        Assert.AreEqual(expected, piles[r].AxialForceLevel1s[c], 1e-9,
+                            $"杭 {r + 1} の L1-{c + 1} ({(inside ? "貼った範囲" : "範囲の外")}) の値が違います");
+                    }
+            });
+        }
+
+        /// <summary>
+        /// 複数のセルへの貼り付けは、元に戻す 1 回で全体が戻る。画面の軸力の表は貼り付けの完了
+        /// (DataGridPileAxialForce_PasteCompleted) で 1 つの控えを積む。ここでは同じ順 (貼る → 控えを積む) をビューモデルで再現する。
+        /// </summary>
+        [TestMethod]
+        public void OneUndo_RestoresTheWholePaste()
+        {
+            OnSta(() =>
+            {
+                bool unattended = MessageService.IsUnattended;
+                MessageService.IsUnattended = true;
+                try
+                {
+                    using var vm = new PileDesign.ViewModels.MainWindowViewModel();
+                    var m = vm.CurrentInputModel!;
+                    m.PileLayoutItems = Piles(3, 500);
+                    vm.SaveUndoState("読込");   // 読込と同じく、今の入力を元に戻す起点にする
+                    vm.MarkProjectReplaced();
+                    var before = m.PileLayoutItems.Select(p => p.AxialForceLevel1s.ToArray()).ToArray();
+
+                    Assert.IsTrue(Paste(PileAxialGrid(m.PileLayoutItems, variationMode: false), "1\t2\t3\n4\t5\t6\n7\t8\t9"));
+                    vm.SaveUndoState("杭軸力 貼り付け");   // 画面の貼り付け完了と同じ
+                    Assert.AreEqual(9.0, m.PileLayoutItems[2].AxialForceLevel1s[2], "(前提) 貼り付けた");
+
+                    vm.UndoCommand.Execute(null);
+                    var after = vm.CurrentInputModel!.PileLayoutItems.Select(p => p.AxialForceLevel1s.ToArray()).ToArray();
+                    for (int r = 0; r < 3; r++)
+                        CollectionAssert.AreEqual(before[r], after[r], $"元に戻す 1 回で杭 {r + 1} の軸力が戻っていません");
+                }
+                finally { MessageService.IsUnattended = unattended; }
+            });
+            string handler = TestSource.MethodBody(TestSource.Read("Graphics_r1", "Views", "MainWindow.DataGridHandlers.cs"),
+                "private void DataGridPileAxialForce_PasteCompleted(");
+            StringAssert.Contains(handler, "vm.SaveUndoState(", "軸力の表の貼り付け完了で控えを積んでいません (貼り付けを 1 回で戻せません)");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Views", "MainWindow.xaml"), "PasteCompleted=\"DataGridPileAxialForce_PasteCompleted\"");
+        }
+
         [TestMethod]
         public void TextOnlyFirstRowIsData()
         {

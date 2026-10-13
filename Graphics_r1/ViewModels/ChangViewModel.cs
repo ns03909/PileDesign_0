@@ -427,6 +427,23 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void Redo() => UndoStack.Redo();
 
+        /// <summary>
+        /// 表への貼り付け・Delete でのクリアを、元に戻す 1 回で戻せる 1 つの操作として積む。
+        /// 以前は元に戻すをセルの編集の確定 (CellEditEnding) でしか積んでおらず、貼り付けは編集を経ないので記録されなかった。
+        /// 貼り付けで足した行は、値を戻したあとに取り除く (積む順の逆に戻る)。
+        /// </summary>
+        public void PushPasteUndo(System.Collections.IList? addedTo, IReadOnlyList<object> addedRows,
+            IReadOnlyList<PileDesign.Common.EnhancedDataGrid.CellChange> changes)
+        {
+            var composite = new CompositeUndoAction("貼り付け");
+            if (addedTo != null)
+                foreach (var row in addedRows)
+                    composite.Add(new ActionUndoAction(() => addedTo.Remove(row), () => addedTo.Add(row)));
+            foreach (var change in changes)
+                if (!Equals(change.OldValue, change.NewValue)) composite.Add(change);
+            if (composite.Count > 0) UndoStack.Push(composite);
+        }
+
         [RelayCommand]
         private void DeleteChang(Chang? item)
         {

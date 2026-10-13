@@ -449,6 +449,13 @@ namespace PileDesign.Views
             }
         }
 
+        // 貼り付け・Delete でのクリアは編集の確定 (CellEditEnding) を通らないので、ここで 1 つの操作として積む
+        private void DataGrid_PasteCompleted(object? sender, EventArgs e)
+        {
+            if (sender is PileDesign.Common.EnhancedDataGrid grid && DataContext is PileDesign.ViewModels.ChangViewModel vm)
+                vm.PushPasteUndo(grid.LastAddedTo, grid.LastAddedRows, grid.LastChanges);
+        }
+
         // CellEditEnding で差分があればこのウィンドウの Undo スタックに積む
         private void DataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {

@@ -393,6 +393,14 @@ namespace PileDesign.Views
                 System.Windows.Threading.DispatcherPriority.Background);
         }
 
+        // horizon への貼り付け・Delete でのクリア。セルの編集 (上) を通らないので、kh0 を土層単位の手入力に入れ直す
+        private void Horizon_PasteCompleted(object? sender, EventArgs e)
+        {
+            if (DataContext is not ElementDivisionViewModel vm) return;
+            // 貼り付けの直後に表の一覧を作り直すと、表の更新の途中に重なるので、確定後に遅延実行する (セルの編集と同じ)
+            Dispatcher.BeginInvoke(new Action(vm.ApplyKh0FromTable), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
         // horizon の SelectedCellsChanged（セル選択 → VM へ反映）
         private void Horizon_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
         {

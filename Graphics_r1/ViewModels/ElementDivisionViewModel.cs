@@ -741,7 +741,14 @@ namespace PileDesign.ViewModels
 
 
             SelectedHorizontalSoilReactions.Clear();
+            foreach (var item in BuildHorizontalSoilReactionRows()) SelectedHorizontalSoilReactions.Add(item);
+            DrawHorizontalSoilReacitonGraph();
+        }
 
+        /// <summary>表に出す水平地盤反力の行 (今の土層-杭セットの値から作る)。</summary>
+        private List<HorizontalSoilReactionItem> BuildHorizontalSoilReactionRows()
+        {
+            var rows = new List<HorizontalSoilReactionItem>();
             var soilPile = CurrentSoilPile!;
             GroundInput groundInput = InputModel.RequireGround(soilPile);
             PileBodyInput pileBody = InputModel.RequirePileBody(soilPile);
@@ -753,12 +760,58 @@ namespace PileDesign.ViewModels
             double zTop = SelectedZDataItems[0].Z;
             for (int i = 0; i < SelectedZDataItems.Count - 1; i++)
             {
-                SelectedHorizontalSoilReactions.Add(SoilPile.BuildReaction(
+                rows.Add(SoilPile.BuildReaction(
                     groundInput, pileBody, soilPile.GroundLayers ?? groundInput.GroundLayers, zTop,
                     SelectedZDataItems[i].Z, SelectedZDataItems[i + 1].Z,
                     Xi, ROnB, soilPile.GetKh0Override, i));
             }
-            DrawHorizontalSoilReacitonGraph();
+            return rows;
+        }
+
+        /// <summary>
+        /// 水平地盤反力の表へ貼り付けた (Delete でクリアした) kh0 を、セルの編集 (<see cref="ApplyKh0Edit"/>) と同じく
+        /// 土層単位の手入力として土層-杭セットに入れる。元に戻すの控えは 1 回だけ取る。
+        ///
+        /// 以前は貼り付けが表示用の行の kh0 を書き換えるだけで、解析が読む土層-杭セットの手入力には入らなかった。
+        /// 表示用の行は土層-杭セットから作り直すので、表を作り直すと貼った値が消え、解析には最初から届いていなかった
+        /// (同じ土層のほかの要素への適用・正の値の確かめ・元に戻すの控えも抜けていた)。
+        /// 正でない値や、同じ土層の要素に違う値を貼ったときは、理由を示して何も変えない (表を元の値に戻す)。
+        /// </summary>
+        public void ApplyKh0FromTable()
+        {
+            if (SoilPiles == null || SelectedSoilPileNo < 1 || SelectedSoilPileNo > SoilPiles.Count) return;
+            if (SelectedZDataItems == null || SelectedZDataItems.Count < 2) return;
+            var current = BuildHorizontalSoilReactionRows();
+            var shown = SelectedHorizontalSoilReactions;
+            if (current.Count != shown.Count) { SetHorizontalSoilReaction(); return; }
+
+            var changes = new Dictionary<string, double>();
+            string? problem = null;
+            for (int i = 0; i < shown.Count && problem == null; i++)
+            {
+                double value = shown[i].Kh0;
+                if (value == current[i].Kh0) continue;
+                string name = current[i].Name ?? "";
+                if (string.IsNullOrEmpty(name))
+                    problem = $"{i + 1} 行目は土層が決まっていないため、kh0 を入力できません。";
+                else if (!double.IsFinite(value) || value <= 0)
+                    problem = $"土層「{name}」の kh0 は正の数を入力してください (貼り付けた値: {value})。";
+                else if (changes.TryGetValue(name, out double other) && other != value)
+                    problem = $"土層「{name}」の要素に違う kh0 ({other} と {value}) が貼り付けられました。kh0 は土層ごとに 1 つです。";
+                else
+                    changes[name] = value;
+            }
+            if (problem != null)
+            {
+                MessageService.Show(problem, "kh0 の貼り付け", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                SetHorizontalSoilReaction();   // 表を土層-杭セットの値に戻す
+                return;
+            }
+            if (changes.Count == 0) return;
+
+            SaveUndoSnapshot();
+            foreach (var (name, value) in changes) CurrentSoilPile!.SetKh0Override(name, value);
+            SetHorizontalSoilReaction();
         }
 
         /// <summary>

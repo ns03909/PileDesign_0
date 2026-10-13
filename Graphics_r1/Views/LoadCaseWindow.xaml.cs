@@ -173,6 +173,15 @@ namespace PileDesign.Views
             }
         }
 
+        /// <summary>
+        /// 貼り付け・Delete でのクリアを元に戻す履歴に積む (値は書き終わっている)。
+        /// 以前はセルの編集の確定 (CellEditEnding) でしか積んでおらず、貼り付けは編集を経ないので記録されなかった。
+        /// </summary>
+        private void DataGrid_PasteCompleted(object? sender, EventArgs e)
+        {
+            if (DataContext is LoadCaseViewModel vm) vm.PushUndoState();
+        }
+
         private void DataGridLoadCombination_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             if (DataContext is LoadCaseViewModel vm)

@@ -21,8 +21,54 @@ namespace PileDesign.Common
 {
     public class EnhancedDataGrid : DataGrid
     {
-        /// <summary>ペースト完了時に発火するイベント</summary>
+        /// <summary>ペースト完了時に発火するイベント (Delete キーでのクリアの後にも発火する)</summary>
         public event EventHandler? PasteCompleted;
+
+        /// <summary>
+        /// 貼り付け・クリアで書き換えた 1 つのセル (書く前の値と、書いたあとに読み直した値)。
+        /// 元に戻す操作としても使える (書く前の値・書いたあとの値を、同じパスへ書き戻す)。
+        /// </summary>
+        public sealed class CellChange(object item, string path, object? oldValue, object? newValue) : Undo.IUndoAction
+        {
+            public object Item { get; } = item;
+            public string Path { get; } = path;
+            public object? OldValue { get; } = oldValue;
+            public object? NewValue { get; } = newValue;
+            public string? Description => $"貼り付け ({Path})";
+            public void Undo() => Write(OldValue);
+            public void Redo() => Write(NewValue);
+            private void Write(object? value)
+            {
+                // 書けなければ例外にする (UndoManager が履歴の位置を動かさずに知らせる。黙って値と履歴を食い違わせない)
+                if (!TrySetValueByPath(Item, Path, value))
+                    throw new InvalidOperationException($"「{Path}」の値を書き戻せませんでした。");
+            }
+        }
+
+        private List<CellChange> _lastChanges = [];
+
+        /// <summary>直前の貼り付けで表の一覧に足した行 (<see cref="LastAddedTo"/> に足した順)。</summary>
+        public IReadOnlyList<object> LastAddedRows { get; private set; } = [];
+
+        /// <summary>直前の貼り付けで行を足した一覧 (足していなければ null)。</summary>
+        public System.Collections.IList? LastAddedTo { get; private set; }
+
+        /// <summary>
+        /// 直前の貼り付け・クリア (<see cref="PasteCompleted"/> の元になった操作) で書き換えたセル。
+        /// 元に戻すを「セルの値の変更」で持つ画面 (Chang) は、これを 1 つの操作として積む。
+        /// 以前は書き換えたセルを知らせておらず、そうした画面では貼り付けを元に戻せなかった。
+        /// </summary>
+        public IReadOnlyList<CellChange> LastChanges => _lastChanges;
+
+        /// <summary>セルに書き、書く前と書いたあとの値を <see cref="LastChanges"/> に残す。</summary>
+        private bool WriteCell(object item, string path, object? value)
+        {
+            TryGetValueByPath(item, path, out var old);
+            if (!TrySetValueByPath(item, path, value)) return false;
+            TryGetValueByPath(item, path, out var now);
+            _lastChanges.Add(new CellChange(item, path, old, now));
+            return true;
+        }
 
         /// <summary>
         /// 一括ペースト (塗り潰し / 複数セル) の書込ループ実行中だけ true。
@@ -749,14 +795,25 @@ namespace PileDesign.Common
                     return false;
                 }
 
-                var displayOrderedCols = Columns.OrderBy(c => c.DisplayIndex).ToList();
+                // 貼り付け先の列は<b>見えている列だけ</b>を表示順に並べて数える (矢印キーの移動と同じ)。
+                // 以前は隠れた列も数えていたので、列を隠す表 (変動軸力の表は絶対値の列と変動の列を交互に並べ、
+                // モードで片方を隠す) では 2 列目以降の値が隣の隠れた列へ入った。絶対値の表示で L1-1 から 2 列貼ると、
+                // 2 列目の値が隠れた ΔL1-1 へ入って L1-1 を VL + 値で上書きし、L1-2 は変わらなかった
+                var displayOrderedCols = Columns.Where(c => c.Visibility == Visibility.Visible)
+                                                .OrderBy(c => c.DisplayIndex).ToList();
+                int startColumnPosition = displayOrderedCols.FindIndex(c => c.DisplayIndex == startDisplayIndex);
+                if (startColumnPosition < 0)
+                {
+                    MessageService.Show(OwnerWindow, "貼り付け開始セルを特定できません。セルを選択してから実行してください。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
 
                 // 先頭行が貼り付け先の列の見出しと同じなら、見出しとして読み飛ばす
                 // (この表を見出しごと「全体コピー」して貼り戻す場合)。
                 //
                 // 以前は「先頭行のセルがすべて数値に読めない」だけで見出しとみなしていた。
                 // 荷重ケース名のような文字の列に「CASE-A / CASE-B」を貼ると、CASE-A が黙って捨てられた。
-                if (rows.Length > 1 && IsHeaderRowOf(rows[0], displayOrderedCols, startDisplayIndex))
+                if (rows.Length > 1 && IsHeaderRowOf(rows[0], displayOrderedCols, startColumnPosition))
                     rows = rows.Skip(1).ToArray();
 
                 int pasteRowCount = rows.Length;
@@ -769,7 +826,7 @@ namespace PileDesign.Common
                     return TryFillSelectedCells(rows[0][0]);
                 }
 
-                if (startDisplayIndex + pasteColCount > displayOrderedCols.Count)
+                if (startColumnPosition + pasteColCount > displayOrderedCols.Count)
                 {
                     MessageService.Show(OwnerWindow, "貼り付け範囲が列数を超えています。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return false;
@@ -824,7 +881,7 @@ namespace PileDesign.Common
                     {
                         string cellText = c < rows[r].Length ? rows[r][c] : string.Empty;
 
-                        var col = displayOrderedCols[startDisplayIndex + c];
+                        var col = displayOrderedCols[startColumnPosition + c];
                         if (col.IsReadOnly)
                             return FailFormat(r, c, "この列は読み取り専用です (計算で決まる値など)。", col);
                         if (CellReadOnlyReason(item, col) is { Length: > 0 } rowReason)
@@ -851,6 +908,9 @@ namespace PileDesign.Common
                     targetList!.Add(row);
 
                 bool written = false;
+                _lastChanges = [];
+                LastAddedRows = pendingRows.Count > 0 ? pendingRows.ToList() : [];
+                LastAddedTo = pendingRows.Count > 0 ? targetList : null;
                 IsBulkEditing = true;
                 try
                 {
@@ -861,12 +921,12 @@ namespace PileDesign.Common
                         {
                             string cellText = c < rows[r].Length ? rows[r][c] : string.Empty;
 
-                            var col = displayOrderedCols[startDisplayIndex + c];
+                            var col = displayOrderedCols[startColumnPosition + c];
                             TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind);
 
                             object? converted = ConvertValue(cellText, targetType, columnKind);
 
-                            if (!TrySetValueByPath(item, path, converted))
+                            if (!WriteCell(item, path, converted))
                                 return FailFormat(r, c, "値を書き込めませんでした。", col);
                         }
                     }
@@ -971,14 +1031,16 @@ namespace PileDesign.Common
         /// (多段の見出しは「層厚 (m)」のように空白で繋いで書き出しているため)。
         /// 見出しが空の列だけに当たるときは、見出しとは判定しない。
         /// </summary>
-        internal static bool IsHeaderRowOf(IReadOnlyList<string> firstRow, IReadOnlyList<DataGridColumn> displayOrderedCols, int startDisplayIndex)
+        /// <param name="displayOrderedCols">貼り付け先の列 (見えている列を表示順に並べたもの)。</param>
+        /// <param name="startPosition">貼り付けを始める列の、<paramref name="displayOrderedCols"/> の中の位置。</param>
+        internal static bool IsHeaderRowOf(IReadOnlyList<string> firstRow, IReadOnlyList<DataGridColumn> displayOrderedCols, int startPosition)
         {
             static string Normalize(string s) => new(s.Where(ch => !char.IsWhiteSpace(ch)).ToArray());
 
             bool anyHeader = false;
             for (int c = 0; c < firstRow.Count; c++)
             {
-                int index = startDisplayIndex + c;
+                int index = startPosition + c;
                 if (index >= displayOrderedCols.Count) return false;
 
                 string header = Normalize(DataGridHeaderText.From(displayOrderedCols[index]));
@@ -1038,6 +1100,8 @@ namespace PileDesign.Common
                 }
 
                 // 2) 反映 (一括書込中は派生プロパティの重い同期再評価を抑制)
+                _lastChanges = [];
+                LastAddedRows = []; LastAddedTo = null;
                 IsBulkEditing = true;
                 try
                 {
@@ -1046,7 +1110,7 @@ namespace PileDesign.Common
                         if (CellReadOnlyReason(item, col) != null) continue;
                         if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind)) continue;
                         object? converted = ConvertValue(cellText, targetType, columnKind);
-                        TrySetValueByPath(item, path, converted);
+                        WriteCell(item, path, converted);
                     }
                 }
                 finally { IsBulkEditing = false; }
@@ -1090,6 +1154,8 @@ namespace PileDesign.Common
                 CommitEdit(DataGridEditingUnit.Row, true);
 
                 bool anyCleared = false;
+                _lastChanges = [];
+                LastAddedRows = []; LastAddedTo = null;
                 IsBulkEditing = true;
                 try
                 {
@@ -1102,7 +1168,7 @@ namespace PileDesign.Common
                         if (!TryNavigateForSet(item, path, out _, out _, out _)) continue;
 
                         object? cleared = ClearedValueFor(targetType, columnKind);
-                        if (TrySetValueByPath(item, path, cleared)) anyCleared = true;
+                        if (WriteCell(item, path, cleared)) anyCleared = true;
                     }
                 }
                 finally { IsBulkEditing = false; }
@@ -1393,6 +1459,25 @@ namespace PileDesign.Common
         }
 
         private static bool IsNullable(Type t) => !t.IsValueType || (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Nullable<>));
+
+        /// <summary>バインディングのパスで値を読む (<see cref="TrySetValueByPath"/> と同じ辿り方)。読めなければ false。</summary>
+        private static bool TryGetValueByPath(object root, string path, out object? value)
+        {
+            value = null;
+            try
+            {
+                if (!TryNavigateForSet(root, path, out object? target, out PropertyInfo? prop, out int? index) || target == null) return false;
+                if (prop != null)
+                {
+                    var v = prop.GetValue(target);
+                    value = index == null ? v : GetCollectionElement(v, index.Value);
+                    return true;
+                }
+                if (index != null) { value = GetCollectionElement(target, index.Value); return true; }
+                return false;
+            }
+            catch (Exception) { return false; }   // 読めないだけ (書き込みは別に確かめる)
+        }
 
         private static bool TrySetValueByPath(object root, string path, object? value)
         {
