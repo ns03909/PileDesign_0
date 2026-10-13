@@ -8736,6 +8736,22 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
             <h3 id="h-最近の更新">最近の更新</h3>
 
+            <h4 id="h-1-0-36-beta">1.0.36-beta（2026-10-14）</h4>
+            <ul>
+                <li><span style="background:#FFF3E0; border:1px solid #FFB300; padding:0 4px;">結果が変わります</span> 杭体の曲げ・せん断・杭頭回転角の検定と、N-M・N-Q 図の点の軸力を、解析と同じ設計軸力にそろえました（杭軸力「入力値＋応力解析結果」を含む）。</li>
+                <li><span style="background:#FFF3E0; border:1px solid #FFB300; padding:0 4px;">結果が変わります</span> 前方杭・後方杭の判定をレベル1・レベル2 で別々に持ち、慣性力の中心（作用点）を荷重ケースごとに置くようにしました。基礎梁の角度β を解析に渡し、ねじり定数 J の長辺・短辺の取り違えを直しました。</li>
+                <li><span style="background:#FFF3E0; border:1px solid #FFB300; padding:0 4px;">結果が変わります</span> 鋼管杭の鋼管部に存在しないコンクリートを数えていたのと、コンクリート充填鋼管部・SC 杭・PHC 杭の M-φ を直しました。F.T.Pile 構法の Me・許容回転角、キャプテンパイル工法の引張定着筋の本数も直しました。</li>
+                <li><span style="background:#FFF3E0; border:1px solid #FFB300; padding:0 4px;">結果が変わります</span> 土圧合力ばねの土圧を、区間の厚さではなく深さで求めるようにしました。</li>
+                <li><span style="background:#FFF3E0; border:1px solid #FFB300; padding:0 4px;">結果が変わります</span> 収束を助ける近道のうち、結果を信用できなくしていた 4 つ（M-φ の割線の下限、地盤変位まで頭打ちにしていたこと、収束基準の緩めすぎなど）をやめました。</li>
+                <li><span style="background:#FFF3E0; border:1px solid #FFB300; padding:0 4px;">結果が変わります</span> 群杭沈下（基礎梁あり）で、沈下が 50 mm を超える荷重のとき力が釣り合わないまま「収束」としていたのを直しました。荷重面等価径の既定を杭先端径にしました。</li>
+                <li><span style="background:#FFF3E0; border:1px solid #FFB300; padding:0 4px;">結果が変わります</span> 計算例のデータを直しました（キャプテンパイル工法の土質点、杭間隔比 R/B = 10 を 0 に）。</li>
+                <li><span style="background:#FFF3E0; border:1px solid #FFB300; padding:0 4px;">結果が変わります</span> 収束状態の記録が無い古い保存ファイルの水平解析の結果は、検定で「収束不明」として判定しません（再解析すると判定されます）。</li>
+                <li>杭配置の表で、杭の並びを好きな順に変えられるようにしました（上へ・下へのボタン、Alt+↑／↓、行見出しのドラッグ）。</li>
+                <li>表への貼り付けで、隠れた列に値が入っていた（変動軸力の表）のと、kh0 の貼り付けが解析に入っていなかったのを直しました。荷重ケースと Chang の表の貼り付けも元に戻せます。</li>
+                <li>MGT 出力（midas Gen）のばね・荷重を解析モデルと同じにしました。1 つのモデルに書けないものは、出力前に示します。</li>
+                <li>群杭沈下ウィンドウを「荷重条件」と「解析」に分け、2 つの解析を「基礎梁なし／基礎梁あり」と呼ぶようにしました。基本設定に「場所打ち杭・鋼管杭の杭頭回転角」、基礎梁の傾斜角の限界値を足しました。</li>
+            </ul>
+
             <h4 id="h-1-0-35-beta">1.0.35-beta（2026-10-05）</h4>
             <ul>
                 <li><span style="background:#FFF3E0; border:1px solid #FFB300; padding:0 4px;">結果が変わります</span> 杭頭の回転ばね（場所打ち RC 杭の杭頭固定）の答えが、要素分割や荷重の刻みで変わっていたのを直しました。降伏後の枝にあるときは杭頭回転角の欄に示します。</li>

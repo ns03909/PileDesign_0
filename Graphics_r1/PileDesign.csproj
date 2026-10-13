@@ -28,10 +28,10 @@
     <ApplicationIcon>Icons\ApplicationIcon\ApplicationIcon.ico</ApplicationIcon>
 
     <!-- バージョン管理 -->
-    <Version>1.0.35-beta</Version>
-    <AssemblyVersion>1.0.35.0</AssemblyVersion>
-    <FileVersion>1.0.35.0</FileVersion>
-    <InformationalVersion>1.0.35-beta</InformationalVersion>
+    <Version>1.0.36-beta</Version>
+    <AssemblyVersion>1.0.36.0</AssemblyVersion>
+    <FileVersion>1.0.36.0</FileVersion>
+    <InformationalVersion>1.0.36-beta</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
