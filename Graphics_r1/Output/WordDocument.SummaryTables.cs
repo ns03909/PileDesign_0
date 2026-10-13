@@ -986,10 +986,26 @@ namespace PileDesign.Output
 
             // 収束しなかったケースがあれば、判定より先に書く。
             // 「OK n 件」だけを読んで安心されると、解けていないケースが検討済みとして通ってしまう。
-            if (result.UnconvergedCount > 0)
+            int unknownCount = result.Items.Count(i => i.IsFromUnknownConvergenceCase);
+            if (unknownCount > 0)
+            {
+                var unknownCases = result.Items
+                    .Where(i => i.IsFromUnknownConvergenceCase)
+                    .Select(i => string.IsNullOrEmpty(i.LiquefactionLabel)
+                        ? $"{i.LoadCaseName} {i.LoadCombinationName}"
+                        : $"{i.LoadCaseName} {i.LoadCombinationName}（{i.LiquefactionLabel}）")
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToList();
+                AddText(body,
+                    $"このうち {unknownCount} 件は、収束状態が記録されていない古い保存ファイルの解析結果である。"
+                    + "収束したかどうかが分からないため、OK / NG のいずれにも数えていない。再解析すること。");
+                AddText(body, "収束状態が不明な荷重ケース: " + string.Join(" / ", unknownCases));
+            }
+            if (result.UnconvergedCount - unknownCount > 0)
             {
                 var unconvergedCases = result.Items
-                    .Where(i => i.IsFromUnconvergedCase)
+                    .Where(i => i.IsFromUnconvergedCase && !i.IsFromUnknownConvergenceCase)
                     .Select(i => string.IsNullOrEmpty(i.LiquefactionLabel)
                         ? $"{i.LoadCaseName} {i.LoadCombinationName}"
                         : $"{i.LoadCaseName} {i.LoadCombinationName}（{i.LiquefactionLabel}）")
@@ -998,7 +1014,7 @@ namespace PileDesign.Output
                     .ToList();
 
                 AddText(body,
-                    $"このうち {result.UnconvergedCount} 件は、水平解析が収束しなかった荷重ケースの結果である。"
+                    $"このうち {result.UnconvergedCount - unknownCount} 件は、水平解析が収束しなかった荷重ケースの結果である。"
                     + "収束していない状態の応答値は釣り合いを満たしておらず、限界値と比べても意味を持たないため、"
                     + "OK / NG のいずれにも数えていない。"
                     + "計算ステップ数を増やして再解析するか、耐力が足りているかを確認すること。");

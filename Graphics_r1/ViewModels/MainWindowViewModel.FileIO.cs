@@ -523,6 +523,12 @@ namespace PileDesign.ViewModels
                 notifiedSeparately.Add(legacySettlement);
             }
 
+            // 収束状態の記録が無い水平解析の結果 (古い保存ファイル)。以前は収束したものとして検定していた
+            if (CurrentModel?.AnalysisStepResults?.Any(r => r?.Status == FEM.StepStatus.Unknown) == true)
+                compat.Add(PileDesign.Services.CompatibilityKind.Filled,
+                    "水平解析の結果に収束状態の記録がありませんでした (古い保存ファイル)。数値は見られますが、検定は「収束不明」として "
+                    + "OK / NG に数えません。判定するには水平解析をやり直してください。");
+
             // 梁要素 ComboBox 用の節点候補リストを再構築 (deserialize 直後は空のため)
             CurrentInputModel.RefreshAvailableNodeReferenceOptions();
 

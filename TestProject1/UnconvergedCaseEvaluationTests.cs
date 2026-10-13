@@ -185,11 +185,26 @@ namespace TestProject1
             Assert.IsFalse(model.HasUnconvergedSteps());
         }
 
+        /// <summary>
+        /// 収束状態を記録していない古い保存ファイルの結果は「収束不明」。収束した証拠が無いので、検定は OK / NG に数えない
+        /// (数値は見られる)。以前は既定の「収束」として読み、残差が 0.5 でも収束したケースと区別できなかった (2026-10-14)。
+        /// 解析が作る結果 (状態を渡すコンストラクタ) は今までどおり。
+        /// </summary>
         [TestMethod]
-        public void OldFilesWithoutTheField_ReadAsConverged()
+        public void OldFilesWithoutTheField_ReadAsUnknown_AndAreNotJudged()
         {
-            // 収束状態を記録していない古い保存ファイルは、従来どおり (収束したものとして) 扱う。
-            Assert.AreEqual(StepStatus.Converged, new AnalysisStepResult().Status);
+            var read = System.Text.Json.JsonSerializer.Deserialize<AnalysisStepResult>(
+                "{\"IsLiquefaction\":false,\"Step\":3,\"Iteration\":50,\"ResidualValue\":0.5}")!;
+            Assert.AreEqual(StepStatus.Unknown, read.Status, "収束状態の無い結果を収束したものとして読んでいます");
+            Assert.AreEqual(StepStatus.Converged, new AnalysisStepResult(null!, null!, false, 1, 1, 0).Status, "解析が作る結果の既定が変わりました");
+
+            var item = Moment(StepStatus.Unknown, response: 100, limit: 200);
+            Assert.IsFalse(item.IsJudged, "収束状態の分からない結果を判定しています");
+            Assert.AreEqual("収束不明", item.StatusLabel);
+
+            var model = new AnaModel();
+            model.AnalysisStepResults.Add(Step(1, StepStatus.Unknown));
+            Assert.AreEqual(StepStatus.Unknown, model.BuildCaseConvergenceMap().Values.Single(), "ケースの状態が収束不明になっていません");
         }
 
         [TestMethod]

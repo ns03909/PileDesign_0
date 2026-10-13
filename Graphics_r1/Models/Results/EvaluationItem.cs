@@ -145,8 +145,14 @@ namespace PileDesign.Models.Results
         /// </summary>
         public FEM.StepStatus CaseConvergence { get; init; } = FEM.StepStatus.Converged;
 
-        /// <summary>収束していないケースか (緩めた基準で受理したケースは含めない)。</summary>
+        /// <summary>
+        /// 収束していないケースか (緩めた基準で受理したケースは含めない)。収束状態の記録が無いケース
+        /// (<see cref="IsFromUnknownConvergenceCase"/>) も含める (収束した証拠が無いので判定しない)。
+        /// </summary>
         public bool IsFromUnconvergedCase => CaseConvergence >= FEM.StepStatus.Unconverged;
+
+        /// <summary>収束状態の記録が無い古い保存ファイルの結果か (判定せず「収束不明」と出す)。</summary>
+        public bool IsFromUnknownConvergenceCase => CaseConvergence == FEM.StepStatus.Unknown;
 
         /// <summary>緩めた基準 (残差 1e-6 に届かず最大 1e-2) で受理したケースか。</summary>
         public bool IsFromRelaxedCase => CaseConvergence == FEM.StepStatus.ConvergedRelaxed;
@@ -317,8 +323,9 @@ namespace PileDesign.Models.Results
         /// 画面の一覧・計算書の検定表・結果ダッシュボードには素の「OK」「NG」が出ていた。
         /// ヘルプは「判定に OK(緩和受理) のように明記します」と書いてあり、実装が追いついていなかった。</para>
         /// </summary>
-        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG。解析が収束しなかったケースは「未収束」、算定式 (工法) の適用範囲の外は「適用範囲外」、検定に要るデータが欠けていたものは「検定不能」、緩めた基準で受理したケースは「(緩和受理)」を付ける")]
+        [ResultColumn("判定", 1, tooltip: "限界値を超えていれば NG。解析が収束しなかったケースは「未収束」、収束状態の記録が無い古い保存ファイルの結果は「収束不明」(再解析で判定できます)、算定式 (工法) の適用範囲の外は「適用範囲外」、検定に要るデータが欠けていたものは「検定不能」、緩めた基準で受理したケースは「(緩和受理)」を付ける")]
         public string StatusLabel => IsUnavailable ? "検定不能"
+            : IsFromUnknownConvergenceCase ? "収束不明"
             : IsFromUnconvergedCase ? "未収束"
             : IsOutOfScope ? "適用範囲外"
             : IsFromRelaxedCase ? (IsOk ? "OK(緩和受理)" : "NG(緩和受理)")

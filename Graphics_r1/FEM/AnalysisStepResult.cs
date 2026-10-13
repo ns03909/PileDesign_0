@@ -36,6 +36,14 @@ namespace PileDesign.FEM
         /// 耐力を超えている (解が存在しない) 可能性がある。
         /// </summary>
         PhysicallyUnconverged,
+
+        /// <summary>
+        /// 収束状態の記録が無い (この項目を持たない古い保存ファイルの結果)。収束した証拠が無いので、
+        /// 数値は見られるが、検定は「収束不明」として OK / NG に数えない (未収束と同じ扱い)。再解析すれば正しい値が入る。
+        /// 以前は既定の「収束」として扱い、残差が大きくても収束したケースと区別できなかった (2026-10-14)。
+        /// 値は保存ファイルの数値と重ならないよう末尾に置く (並びは「悪いほど大きい」の順で、未収束より後ろ)。
+        /// </summary>
+        Unknown,
     }
 
     public class AnalysisStepResult : ICaseStepResult
@@ -50,11 +58,10 @@ namespace PileDesign.FEM
         /// <summary>
         /// このステップの収束状態。
         ///
-        /// 既定は <see cref="StepStatus.Converged"/>。この項目を持たない古い保存ファイルは
-        /// 収束状態が分からないので、従来どおり (収束したものとして) 扱う。
-        /// 新しく解析すれば正しい値が入る。
+        /// 読込 (引数なしのコンストラクタ) の既定は <see cref="StepStatus.Unknown"/>。この項目を持たない古い保存ファイルは
+        /// 収束状態が分からないので、収束したものとしては扱わない。解析が作る結果は必ず状態を入れる (下のコンストラクタ)。
         /// </summary>
-        public StepStatus Status { get; set; } = StepStatus.Converged;
+        public StepStatus Status { get; set; } = StepStatus.Unknown;
 
         // デフォルトコンストラクタ（デシリアライズ用）
         public AnalysisStepResult() { }
