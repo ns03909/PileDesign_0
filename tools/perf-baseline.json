@@ -1,31 +1,31 @@
 {
   "Machine": "GALLERIA",
   "ProcessorCount": 16,
-  "Recorded": "2026-10-02 01:01",
+  "Recorded": "2026-10-14 02:43",
   "Cases": {
     "保存 設計例集3.8 (解析結果込み)": {
       "Seconds": 0.39,
-      "PeakWorkingSetMb": 324
+      "PeakWorkingSetMb": 337
     },
     "水平解析 合成 (計算例9 の杭を 4 組・杭72本)": {
-      "Seconds": 13.87,
-      "PeakWorkingSetMb": 429
+      "Seconds": 13.07,
+      "PeakWorkingSetMb": 394
     },
     "水平解析 合成 (計算例9 の杭を 8 組・杭144本)": {
-      "Seconds": 51.38,
-      "PeakWorkingSetMb": 509
+      "Seconds": 38.73,
+      "PeakWorkingSetMb": 544
     },
     "水平解析 計算例10 (L2 16ステップ)": {
-      "Seconds": 5.51,
-      "PeakWorkingSetMb": 334
+      "Seconds": 10.88,
+      "PeakWorkingSetMb": 322
     },
     "水平解析 設計例集3.8 (杭42本)": {
-      "Seconds": 29.82,
-      "PeakWorkingSetMb": 214
+      "Seconds": 30.7,
+      "PeakWorkingSetMb": 210
     },
     "計算書の出力 設計例集3.8 (全章)": {
-      "Seconds": 17.2,
-      "PeakWorkingSetMb": 681
+      "Seconds": 15.96,
+      "PeakWorkingSetMb": 357
     }
   }
 }
