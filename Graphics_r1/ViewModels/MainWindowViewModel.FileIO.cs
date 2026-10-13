@@ -1319,6 +1319,26 @@ namespace PileDesign.ViewModels
                 return;
             }
 
+            // MGT は荷重ケースの区別が無い 1 つのモデルなので、荷重ケースで変わるばね (液状化・前方杭/後方杭・杭頭の M-θ など) は
+            // 1 組で書く。解析と違うところを保存の前に示す (同じ内容をファイルの先頭にも書く)。書けないものがあればここで止める。
+            Output.MgtExporter exporter;
+            try
+            {
+                exporter = new Output.MgtExporter(BuildExportModelFromCurrentInput());
+                var notes = exporter.DescribeApproximations();
+                if (notes.Count > 0 && MessageService.Show(
+                        "MGT のモデルは、次の点で PileDesign の解析と違います。\n\n"
+                        + string.Join("\n", notes.Select(n => "・" + n))
+                        + "\n\nこのまま出力しますか？",
+                        "MGT 出力", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
+                    return;
+            }
+            catch (Exception ex)
+            {
+                MessageService.ShowSaveFailed("MGT", ex);
+                return;
+            }
+
             Microsoft.Win32.SaveFileDialog saveFileDialog = new()
             {
                 Filter = "midas Gen MGT (*.mgt)|*.mgt|All files (*.*)|*.*",
@@ -1330,8 +1350,6 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
-                    var exportModel = BuildExportModelFromCurrentInput();
-                    var exporter = new Output.MgtExporter(exportModel);
                     exporter.Export(saveFileDialog.FileName);
                     ShowToast($"MGT ファイルを作成しました");
                     // 出力先は後から参照したくなるのでステータスバーにも残す

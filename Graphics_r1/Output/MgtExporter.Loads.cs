@@ -15,6 +15,10 @@ namespace PileDesign.Output
         private static string FFName(LoadCase lc) => $"FF_L{lc.Level}_{lc.No}";          // 基礎構造慣性力
         private static string GDName(LoadCase lc, bool isLiq) => $"GD_L{lc.Level}_{lc.No}{(isLiq ? "_L" : "")}"; // 地盤変位
         private static string CombName(LoadCase lc, LoadCombination comb, bool isLiq) => $"C_L{lc.Level}_{lc.No}_{comb.No}{(isLiq ? "_L" : "")}";
+        private static string AXName(LoadCase lc) => $"AX_L{lc.Level}_{lc.No}";          // 杭の軸力と自重 (鉛直ばねを使うとき)
+
+        /// <summary>常時 (VL) のケース。解析は地盤変位を与えず、杭の軸力は常時軸力を使う。</summary>
+        private static bool IsVL(LoadCase lc) => lc.LoadName == "VL";
 
         // 説明文のサニタイズ（カンマは区切り文字と誤認されるため除去）
         /// <summary>
@@ -151,30 +155,19 @@ namespace PileDesign.Output
                 .Select(g => (LC: g.First().LoadCase, Comb: g.First().LoadCombination, IsLiq: g.Key.IsLiquefaction))
                 .ToList();
 
-            // 杭配置の地盤節点 → ZDataItem（地盤変位情報）マップ
-            var soilDispMap = new Dictionary<Node, ZDataItem>(ReferenceEqualityComparer.Instance);
-            if (inputModel.PileLayoutItems != null && inputModel.ElementDivision?.SoilPiles != null)
-            {
-                var soilPiles = inputModel.ElementDivision.SoilPiles;
-                foreach (var pItem in inputModel.PileLayoutItems)
-                {
-                    if (pItem.SoilNodes == null || pItem.SoilPileAltNo <= 0) continue;
-                    int idx = pItem.SoilPileAltNo - 1;
-                    if (idx >= soilPiles.Count) continue;
-                    var soilPile = soilPiles[idx];
-                    if (soilPile?.ZDataItems == null) continue;
-                    int count = Math.Min(pItem.SoilNodes.Count, soilPile.ZDataItems.Count);
-                    for (int i = 0; i < count; i++)
-                    {
-                        if (pItem.SoilNodes[i] == null) continue;
-                        soilDispMap[pItem.SoilNodes[i]] = soilPile.ZDataItems[i];
-                    }
-                }
-            }
+            // 地盤変位を与える節点 (地盤ばねの地盤側)。X 方向のばねは地盤節点に X 成分、Y 方向のばねは仮想節点に Y 成分を与える。
+            // 以前は杭周の地盤節点に X・Y 両方を与えていたが、Y 方向のばねはその節点につながっていないので Y 成分が効かず、
+            // 根入部 (土圧合力ばね) の地盤節点には何も与えていなかった (解析はどちらにも与える)。
+            var groundLinks = ctx.Links.SoilLinks
+                .Where(l => l.GroundDisplacement != null && l.Direction != LinkDirection.Z)
+                .GroupBy(l => l.GroundNodeId).Select(g => g.First()).ToList();
 
-            // 代表節点（慣性力の作用点）= 解析モデル先頭節点
+            // 代表節点 (慣性力の作用点) = 解析モデルの先頭節点。解析モデルはレベル1 の最初の荷重ケースの作用点に置いている
             var masterNode = _anaModel.Nodes.FirstOrDefault();
             int masterId = (masterNode != null && nodeIdMap.TryGetValue(masterNode, out int mid)) ? mid : -1;
+
+            // 杭の鉛直ばねを使うときは、解析と同じく杭の軸力と杭体の自重を節点荷重で与える
+            bool writeAxial = ctx.Links.PilesWithVerticalSprings.Count > 0;
 
             // === STLDCASE 定義 ===
             writer.WriteLine("*STLDCASE    ; Static Load Cases");
@@ -191,47 +184,14 @@ namespace PileDesign.Output
             {
                 writer.WriteLine($"   {GDName(lc, isLiq),-14}, USER, L{lc.Level} {SanitizeDesc(lc.LoadName)} Ground Disp ({lc.LoadAngle}deg{(isLiq ? " liq" : "")})");
             }
+            if (writeAxial)
+                foreach (var lc in analyzedLCs)
+                    writer.WriteLine($"   {AXName(lc),-14}, USER, L{lc.Level} {SanitizeDesc(lc.LoadName)} Pile Axial Force and Weight");
             writer.WriteLine();
 
-            // === 上部構造慣性力 ===
-            foreach (var lc in analyzedLCs)
-            {
-                double rad = lc.LoadAngle * Math.PI / 180.0;
-                double fx = lc.UpperMassForce * Math.Cos(rad);
-                double fy = lc.UpperMassForce * Math.Sin(rad);
-
-                writer.WriteLine($"*USE-STLD, {UFName(lc)}");
-                writer.WriteLine();
-                if (masterId > 0 && Math.Abs(lc.UpperMassForce) > 1e-9)
-                {
-                    writer.WriteLine("*CONLOAD    ; Nodal Loads");
-                    writer.WriteLine("; NODE_LIST, FX, FY, FZ, MX, MY, MZ, GROUP");
-                    writer.WriteLine($"   {masterId}, {fx:F4}, {fy:F4}, 0, 0, 0, 0, ,");
-                    writer.WriteLine();
-                }
-                writer.WriteLine($"; End of data for load case [{UFName(lc)}] -------------------------");
-                writer.WriteLine();
-            }
-
-            // === 基礎構造慣性力 ===
-            foreach (var lc in analyzedLCs)
-            {
-                double rad = lc.LoadAngle * Math.PI / 180.0;
-                double fx = lc.FoundationMassForce * Math.Cos(rad);
-                double fy = lc.FoundationMassForce * Math.Sin(rad);
-
-                writer.WriteLine($"*USE-STLD, {FFName(lc)}");
-                writer.WriteLine();
-                if (masterId > 0 && Math.Abs(lc.FoundationMassForce) > 1e-9)
-                {
-                    writer.WriteLine("*CONLOAD    ; Nodal Loads");
-                    writer.WriteLine("; NODE_LIST, FX, FY, FZ, MX, MY, MZ, GROUP");
-                    writer.WriteLine($"   {masterId}, {fx:F4}, {fy:F4}, 0, 0, 0, 0, ,");
-                    writer.WriteLine();
-                }
-                writer.WriteLine($"; End of data for load case [{FFName(lc)}] -------------------------");
-                writer.WriteLine();
-            }
+            // === 上部構造慣性力・基礎構造慣性力 ===
+            foreach (var lc in analyzedLCs) WriteInertiaForce(writer, lc, UFName(lc), lc.UpperMassForce, masterNode, masterId);
+            foreach (var lc in analyzedLCs) WriteInertiaForce(writer, lc, FFName(lc), lc.FoundationMassForce, masterNode, masterId);
 
             // === 地盤強制変位 ===
             foreach (var (lc, isLiq) in analyzedLCLiqs)
@@ -240,32 +200,39 @@ namespace PileDesign.Output
 
                 writer.WriteLine($"*USE-STLD, {GDName(lc, isLiq)}");
                 writer.WriteLine();
-                if (soilDispMap.Count > 0)
+                // 常時 (VL) のケースは地盤変位を与えない (解析と同じ)
+                if (groundLinks.Count > 0 && !IsVL(lc))
                 {
-                    writer.WriteLine("*SPDISP    ; Specified Displacement of Supports");
-                    writer.WriteLine("; NODE_LIST, FLAG, Dx, Dy, Dz, Rx, Ry, Rz, GROUP");
-                    foreach (var (node, zData) in soilDispMap)
+                    var lines = new List<string>();
+                    foreach (var link in groundLinks)
                     {
-                        if (!nodeIdMap.TryGetValue(node, out int nodeId)) continue;
-
+                        var zData = link.GroundDisplacement!;
                         double dispMm = lc.Level == 1
                             ? (isLiq ? zData.GroundDisp1L : zData.GroundDisp1)
                             : (isLiq ? zData.GroundDisp2L : zData.GroundDisp2);
-
                         double disp = dispMm / 1000.0; // mm → m
-                        double dx = disp * Math.Cos(rad);
-                        double dy = disp * Math.Sin(rad);
-
-                        if (Math.Abs(dx) > 1e-9 || Math.Abs(dy) > 1e-9)
-                        {
-                            writer.WriteLine($"   {nodeId}, 110000, {dx:E4}, {dy:E4}, 0, 0, 0, 0, ");
-                        }
+                        bool isX = link.Direction == LinkDirection.X;
+                        double d = isX ? disp * Math.Cos(rad) : disp * Math.Sin(rad);
+                        if (Math.Abs(d) <= 1e-9) continue;
+                        lines.Add(isX
+                            ? $"   {link.GroundNodeId}, 100000, {d:E4}, 0, 0, 0, 0, 0, "
+                            : $"   {link.GroundNodeId}, 010000, 0, {d:E4}, 0, 0, 0, 0, ");
                     }
-                    writer.WriteLine();
+                    if (lines.Count > 0)
+                    {
+                        writer.WriteLine("*SPDISP    ; Specified Displacement of Supports");
+                        writer.WriteLine("; NODE_LIST, FLAG, Dx, Dy, Dz, Rx, Ry, Rz, GROUP");
+                        foreach (var line in lines) writer.WriteLine(line);
+                        writer.WriteLine();
+                    }
                 }
                 writer.WriteLine($"; End of data for load case [{GDName(lc, isLiq)}] -------------------------");
                 writer.WriteLine();
             }
+
+            // === 杭の軸力と自重 (杭の鉛直ばねを使うとき) ===
+            if (writeAxial)
+                foreach (var lc in analyzedLCs) WriteAxialLoads(writer, lc, nodeIdMap, ctx.Links.PilesWithVerticalSprings);
 
             // === LOADCOMB（荷重組合せ） ===
             if (analyzedCombos.Count > 0)
@@ -278,10 +245,91 @@ namespace PileDesign.Output
                     string name = CombName(lc, comb, isLiq);
                     string desc = $"L{lc.Level} {SanitizeDesc(lc.LoadName)} Comb{comb.No}{(isLiq ? " liq" : "")} b1={comb.Beta1} b2={comb.Beta2} a1={comb.Alpha1}";
                     writer.WriteLine($"   NAME={name}, GEN, ACTIVE, 0, 0, {desc}");
-                    writer.WriteLine($"        ST, {UFName(lc),-14}, {comb.Beta1:F4}, ST, {FFName(lc),-14}, {comb.Beta2:F4}, ST, {GDName(lc, isLiq),-14}, {comb.Alpha1:F4}");
+                    writer.WriteLine($"        ST, {UFName(lc),-14}, {comb.Beta1:F4}, ST, {FFName(lc),-14}, {comb.Beta2:F4}, ST, {GDName(lc, isLiq),-14}, {comb.Alpha1:F4}"
+                                     // 杭の軸力は組合せの係数によらず全量を与える (解析と同じ)
+                                     + (writeAxial ? $", ST, {AXName(lc),-14}, 1.0000" : ""));
                 }
                 writer.WriteLine();
             }
+        }
+            /// <summary>
+        /// 慣性力を代表節点に書く。荷重ケースの作用点 (慣性力中心) が代表節点と違えば、位置の差から生じるモーメント (r × F) も足す。
+        ///
+        /// 解析は荷重ケースごとに作用点を慣性力中心へ動かして解く (<see cref="AnaModel.RelocateActionPoint"/>)。
+        /// 作用点は剛体連結の親なので、「作用点 P に力 F」は「代表節点 M に力 F とモーメント (P − M) × F」と同じ。
+        /// 以前は全ケースを代表節点の位置で書き、モーメントを 0 にしていたので、偏心のねじれ・転倒の効果が消えていた。
+        /// </summary>
+        private static void WriteInertiaForce(StreamWriter writer, LoadCase lc, string name, double force, Node? master, int masterId)
+        {
+            writer.WriteLine($"*USE-STLD, {name}");
+            writer.WriteLine();
+            if (master != null && masterId > 0 && Math.Abs(force) > 1e-9)
+            {
+                var (fx, fy, mx, my, mz) = InertiaLoadAtMaster(lc, force, master.Coord);
+                writer.WriteLine("*CONLOAD    ; Nodal Loads");
+                writer.WriteLine("; NODE_LIST, FX, FY, FZ, MX, MY, MZ, GROUP");
+                writer.WriteLine($"   {masterId}, {fx:F4}, {fy:F4}, 0, {mx:F4}, {my:F4}, {mz:F4}, ,");
+                writer.WriteLine();
+            }
+            writer.WriteLine($"; End of data for load case [{name}] -------------------------");
+            writer.WriteLine();
+        }
+
+        /// <summary>荷重ケースの作用点に掛かる水平力を、代表節点 (座標 <paramref name="master"/>) の力とモーメントに置き換える。</summary>
+        internal static (double Fx, double Fy, double Mx, double My, double Mz) InertiaLoadAtMaster(
+            LoadCase lc, double force, System.Windows.Media.Media3D.Point3D master)
+        {
+            double rad = lc.LoadAngle * Math.PI / 180.0;
+            double fx = force * Math.Cos(rad), fy = force * Math.Sin(rad);
+            double rx = lc.ForceActionPointX - master.X, ry = lc.ForceActionPointY - master.Y, rz = lc.ForceActionPointAltitude - master.Z;
+            if (!double.IsFinite(rx) || !double.IsFinite(ry) || !double.IsFinite(rz)) rx = ry = rz = 0;
+            // M = r × F (F の Z 成分は 0)
+            return (fx, fy, -rz * fy, rz * fx, rx * fy - ry * fx);
+        }
+
+        /// <summary>
+        /// 杭の軸力と杭体の自重 (杭の鉛直ばねを使うとき)。解析 (HorizontalCalculationViewModel.SetVectorDF) と同じく、
+        /// 軸力は杭の接合節点に下向き、自重は各杭節点に下向き (杭頭の分は接合節点) に与える。
+        /// </summary>
+        private void WriteAxialLoads(StreamWriter writer, LoadCase lc, Dictionary<Node, int> nodeIdMap, List<PileLayoutDataItem> piles)
+        {
+            writer.WriteLine($"*USE-STLD, {AXName(lc)}");
+            writer.WriteLine();
+            var loads = new Dictionary<int, double>();
+            var problems = new List<string>();
+            void Add(Node? node, double fz, PileLayoutDataItem pile)
+            {
+                if (node == null || !nodeIdMap.TryGetValue(node, out int id)) { problems.Add($"・杭 No.{pile.No}: 軸力を与える節点がありません"); return; }
+                loads[id] = loads.TryGetValue(id, out double v) ? v + fz : fz;
+            }
+            foreach (var pile in piles)
+            {
+                int iLC = lc.No - 1;
+                double n = IsVL(lc) ? pile.AxialForceVL
+                    : lc.Level == 1 ? (pile.AxialForceLevel1s != null && iLC >= 0 && iLC < pile.AxialForceLevel1s.Count ? pile.AxialForceLevel1s[iLC] : pile.AxialForceVL)
+                    : (pile.AxialForceLevel2s != null && iLC >= 0 && iLC < pile.AxialForceLevel2s.Count ? pile.AxialForceLevel2s[iLC] : pile.AxialForceVL);
+                var joint = _anaModel.PileJointNodeOf(pile.No);
+                if (double.IsFinite(n) && Math.Abs(n) >= 1e-12) Add(joint, -n, pile);
+                var models = pile.VerticalNodeSpringModels;
+                int nw = Math.Min(pile.PileNodes.Count, models.Count);
+                for (int k = 0; k < nw; k++)
+                {
+                    var md = models[k];
+                    if (md == null || md.Weight <= 0.0) continue;
+                    Add(k == 0 ? joint : pile.PileNodes[k], -md.Weight, pile);
+                }
+            }
+            ThrowIfCannotWrite("杭の軸力", "件", problems, "杭の軸力が欠けたモデルになります");
+            if (loads.Count > 0)
+            {
+                writer.WriteLine("*CONLOAD    ; Nodal Loads");
+                writer.WriteLine("; NODE_LIST, FX, FY, FZ, MX, MY, MZ, GROUP");
+                foreach (var (id, fz) in loads.OrderBy(kv => kv.Key))
+                    writer.WriteLine($"   {id}, 0, 0, {fz:F4}, 0, 0, 0, ,");
+                writer.WriteLine();
+            }
+            writer.WriteLine($"; End of data for load case [{AXName(lc)}] -------------------------");
+            writer.WriteLine();
         }
     }
 }

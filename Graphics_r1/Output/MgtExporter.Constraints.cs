@@ -26,10 +26,10 @@ namespace PileDesign.Output
                 writer.WriteLine($"   {id}, 111111, ");
             }
 
-            // Y方向仮想地盤節点を全DOF固定
-            foreach (var (spring, yId) in ctx.SpringYNodeIds)
+            // ばねの地盤側の仮想節点を全DOF固定 (Y 方向の地盤変位は SPDISP で与える)
+            foreach (var v in ctx.Links.VirtualNodes)
             {
-                writer.WriteLine($"   {yId}, 111111, ");
+                writer.WriteLine($"   {v.Id}, 111111, ");
             }
 
             // それ以外の節点はGetBoundary/MasterNodesに基づく

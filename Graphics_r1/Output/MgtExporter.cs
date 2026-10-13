@@ -25,6 +25,7 @@ namespace PileDesign.Output
         // 地盤境界節点のオフセット量（長さゼロのElasticLink回避のため）
         private const double SoilNodeOffsetX = 1.0;
         private const double SoilNodeOffsetY = 1.0;
+        private const double SoilNodeOffsetZ = 1.0;
 
         /// <summary>
         /// MGTエクスポート時の ID マッピング・節点分類等を保持するコンテキスト。
@@ -36,8 +37,8 @@ namespace PileDesign.Output
             public required Dictionary<Material, int> MaterialIdMap { get; init; }
             public required Dictionary<Section, int> SectionIdMap { get; init; }
             public required HashSet<Node> SoilBoundaryNodes { get; init; }
-            public required Dictionary<HorizontalSoilSpring, int> SpringFunctionIds { get; init; }
-            public required Dictionary<HorizontalSoilSpring, int> SpringYNodeIds { get; init; }
+            /// <summary>ばね (地盤ばね・杭頭の回転ばね)・仮想節点・荷重-変形関数・解析と違うところ。</summary>
+            public required LinkPlan Links { get; init; }
         }
 
         private ExportContext BuildContext()
@@ -93,28 +94,8 @@ namespace PileDesign.Output
                 foreach (var s in _anaModel.HorizontalSoilSprings)
                     if (s.NodeJ != null && !protectedNodes.Contains(s.NodeJ)) soilBoundaryNodes.Add(s.NodeJ);
 
-            // 各水平地盤ばねに対してFUNCTION IDを割り当て（MULTI LINEAR用）
-            var springFunctionIds = new Dictionary<HorizontalSoilSpring, int>(ReferenceEqualityComparer.Instance);
-            int nextFuncId = 1;
-            if (_anaModel.HorizontalSoilSprings != null)
-            {
-                foreach (var spring in _anaModel.HorizontalSoilSprings)
-                {
-                    if (spring.NodeI == null || spring.NodeJ == null) continue;
-                    springFunctionIds[spring] = nextFuncId++;
-                }
-            }
-
-            // Y方向用の仮想地盤節点（Y方向解析が完了している場合のみ）
-            var springYNodeIds = new Dictionary<HorizontalSoilSpring, int>(ReferenceEqualityComparer.Instance);
-            if (HasYDirectionAnalysis() && _anaModel.HorizontalSoilSprings != null)
-            {
-                foreach (var spring in _anaModel.HorizontalSoilSprings)
-                {
-                    if (spring.NodeI == null || spring.NodeJ == null) continue;
-                    springYNodeIds[spring] = nodeId++;
-                }
-            }
+            // ばねを種類ごとに組む (書けないばねがあればここで出力を止める)。仮想節点は解析モデルの節点の後ろに番号を振る
+            var links = BuildLinkPlan(nodeIdMap, ref nodeId);
 
             return new ExportContext
             {
@@ -122,10 +103,15 @@ namespace PileDesign.Output
                 MaterialIdMap = materialIdMap,
                 SectionIdMap = sectionIdMap,
                 SoilBoundaryNodes = soilBoundaryNodes,
-                SpringFunctionIds = springFunctionIds,
-                SpringYNodeIds = springYNodeIds,
+                Links = links,
             };
         }
+
+        /// <summary>
+        /// MGT のモデルが解析と違うところ (荷重ケースごとに変わるばねを 1 組で書く、など)。出力の前に利用者へ示す。
+        /// 書けないものがあれば <see cref="InvalidOperationException"/> (出力と同じ)。
+        /// </summary>
+        public IReadOnlyList<string> DescribeApproximations() => WithInvariantCulture(() => BuildContext().Links.Approximations);
 
         public void Export(string filePath)
         {
@@ -140,11 +126,16 @@ namespace PileDesign.Output
             EnsureLoadCaseNumbersAreUnique(_anaModel.AnalysisStepResults);
             EnsureLoadCombinationNumbersAreUnique(_anaModel.AnalysisStepResults);
 
+            WithInvariantCulture(() => { ExportCore(filePath); return 0; });
+        }
+
+        private static T WithInvariantCulture<T>(Func<T> action)
+        {
             var previousCulture = System.Globalization.CultureInfo.CurrentCulture;
             System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
             try
             {
-                ExportCore(filePath);
+                return action();
             }
             finally
             {
@@ -173,6 +164,7 @@ namespace PileDesign.Output
         private void WriteAll(StreamWriter writer, ExportContext ctx)
         {
             WriteHeader(writer);
+            WriteApproximations(writer, ctx.Links.Approximations);
             WriteUnit(writer);
             WriteNodes(writer, ctx);
             WriteMaterials(writer, ctx);
@@ -196,6 +188,16 @@ namespace PileDesign.Output
             writer.WriteLine();
             writer.WriteLine("*VERSION");
             writer.WriteLine("   9.4.5");
+            writer.WriteLine();
+        }
+
+        /// <summary>解析と違うところを、ファイルの先頭に注記として残す (ファイルだけを受け取った人にも分かるように)。</summary>
+        private static void WriteApproximations(StreamWriter writer, IReadOnlyList<string> notes)
+        {
+            if (notes.Count == 0) return;
+            writer.WriteLine(";  PileDesign の解析モデルと違うところ:");
+            foreach (var note in notes) writer.WriteLine($";   - {SanitizeDesc(note)}");
+            writer.WriteLine(";---------------------------------------------------------------------------");
             writer.WriteLine();
         }
 

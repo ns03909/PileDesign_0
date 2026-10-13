@@ -394,13 +394,25 @@ namespace TestProject1
             }
         }
 
+        /// <summary>ばねを杭の水平地盤ばねにする (MGT は持ち主の杭からばねの種類を決める。持ち主の無いばねは書かない)。</summary>
+        private static void OwnedByAPile(InputModel input, Node pileNode, HorizontalSoilSpring spring)
+        {
+            var pile = new PileLayoutDataItem { No = 1 };
+            pile.PileNodes.Add(pileNode);
+            pile.HorizontalSoilSprings.Add(spring);
+            input.PileLayoutItems = [pile];
+        }
+
         /// <summary>(前提) 参照の揃ったばね・剛体連結はそのまま書けること。</summary>
         [TestMethod]
         public void SpringsAndRigidLinksWithValidReferencesAreWritten()
         {
-            var model = BuildModel(new InputModel());
+            var input = new InputModel();
+            var model = BuildModel(input);
             var nI = model.Nodes[0]; var nJ = model.Nodes[1];
-            model.HorizontalSoilSprings = [new HorizontalSoilSpring("S1", nJ, nI)];
+            var s1 = new HorizontalSoilSpring("S1", nJ, nI);
+            model.HorizontalSoilSprings = [s1];
+            OwnedByAPile(input, nJ, s1);
             model.PenaltySprings = [new HorizontalSoilSpring("P1", nI, nJ)];
             nJ.MasterNodes[0] = nI;
             string mgt = Export(model);
@@ -416,9 +428,12 @@ namespace TestProject1
         [TestMethod]
         public void SpringWithMissingNodeStopsTheExport()
         {
-            var model = BuildModel(new InputModel());
+            var input = new InputModel();
+            var model = BuildModel(input);
             var nI = model.Nodes[0];
-            model.HorizontalSoilSprings = [new HorizontalSoilSpring("S1", nI, Orphan("地盤X"))];
+            var s1 = new HorizontalSoilSpring("S1", nI, Orphan("地盤X"));
+            model.HorizontalSoilSprings = [s1];
+            OwnedByAPile(input, nI, s1);
             var ex = ExportFails(model);
             StringAssert.Contains(ex.Message, "水平地盤ばね「S1」");
             StringAssert.Contains(ex.Message, "地盤側の節点 (節点「地盤X」) が解析モデルの節点にありません");

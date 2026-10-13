@@ -26,15 +26,9 @@ namespace PileDesign.Output
                 }
                 writer.WriteLine($"   {id,5}, {x}, {y}, {z}");
             }
-            // Y方向用の仮想地盤節点（杭節点からY方向に+1m）
-            foreach (var (spring, yId) in ctx.SpringYNodeIds)
-            {
-                if (spring.NodeI == null) continue;
-                double x = spring.NodeI.Coord.X;
-                double y = spring.NodeI.Coord.Y + SoilNodeOffsetY;
-                double z = spring.NodeI.Coord.Z;
-                writer.WriteLine($"   {yId,5}, {x}, {y}, {z}");
-            }
+            // ばねの地盤側の仮想節点 (Y 方向の地盤ばね: 杭節点から Y に +1 m、杭の鉛直ばね: Z に +1 m)
+            foreach (var v in ctx.Links.VirtualNodes)
+                writer.WriteLine($"   {v.Id,5}, {v.X}, {v.Y}, {v.Z}");
             writer.WriteLine();
         }
 
