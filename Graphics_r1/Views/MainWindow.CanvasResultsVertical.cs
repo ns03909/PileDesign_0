@@ -685,16 +685,17 @@ namespace PileDesign.Views
                 {
                     // VBのPileResult沈下量に群杭沈下量を加算した値で杭位置のバブルを追加
                     // v2 セマンティクス: pile.Z は接合節点 Z
+                    // どちらかの値が無い杭は描かない (足し方は PileSettlementComposition に 1 つ。以前はここで無い値を 0 として足していた)
+                    var groupRecord = PileDesign.Services.PileSettlementComposition.DisplayedGroupRecord(viewModel.ResultInputModel);
                     foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         if (!IsPileVisibleForResult(viewModel, pile)) continue;
                         var pr = caseResult.PileResults?.FirstOrDefault(p => p.PileNo == pile.No);
-                        double vbSettlement = pr?.Settlement_mm ?? 0;
-                        double combined = Math.Abs(vbSettlement
-                            + viewModel.ResultInputModel.PileGroupSettlement.SettlementOf(pile.PileNo)); // 両方mm
+                        if (PileDesign.Services.PileSettlementComposition.VerticalBeamPlusGroup_mm(
+                                pr?.Settlement_mm, groupRecord, pile.PileNo) is not double combined) continue;   // 両方mm
                         double connectionZ = pile.Z;
                         points.Add(new Point3D(pile.X, pile.Y, connectionZ));
-                        values.Add(combined);
+                        values.Add(Math.Abs(combined));
                     }
                 }
             }

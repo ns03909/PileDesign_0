@@ -111,6 +111,15 @@ namespace PileDesign.Services
             => groupRecord?.PileSettlements_mm != null && groupRecord.PileSettlements_mm.TryGetValue(pileNo, out double v)
                 ? v : null;
 
+        /// <summary>
+        /// 基礎梁を考慮した単杭沈下 [mm] と群杭沈下 [mm] の和。どちらかが無い杭は null (0 として足さない)。
+        /// 画面の「基礎梁考慮+群杭沈下」の吹き出しが使う。以前は杭頭の沈下 (基礎梁考慮) が無い杭を 0、
+        /// 群杭沈下の値が無い杭も 0 (SettlementOf) として足し、値の無い杭に小さな沈下量を描いていた。
+        /// </summary>
+        public static double? VerticalBeamPlusGroup_mm(double? verticalBeam_mm, GroupSettlementCaseRecord? groupRecord, int pileNo)
+            => verticalBeam_mm is double vb && double.IsFinite(vb) && GroupOnly_mm(groupRecord, pileNo) is double g
+                ? vb + g : null;
+
         /// <summary>記録の呼び名 (常時の記録は「常時」)。理由の文に使う。</summary>
         private static string CaseNameOf(GroupSettlementCaseRecord record)
             => record.IsLongTerm ? "常時"

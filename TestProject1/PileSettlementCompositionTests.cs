@@ -265,6 +265,26 @@ namespace TestProject1
         /// ほかの場所が自前で足し始めると、記録の選び方・欠けたときの扱いがまたずれる。
         /// 単杭＋群杭が要るなら <c>PileSettlementComposition.Compose</c> を使うこと。
         /// </summary>
+        /// <summary>
+        /// 画面の「基礎梁考慮+群杭沈下」の吹き出し: 基礎梁を考慮した沈下か群杭沈下のどちらかが無い杭は描かない (0 として足さない)。
+        /// 以前は杭頭の沈下 (基礎梁考慮) が無い杭を 0、群杭沈下の値が無い杭も 0 (SettlementOf) として足していた。
+        /// </summary>
+        [TestMethod]
+        public void VerticalBeamPlusGroup_DoesNotAddMissingValuesAsZero()
+        {
+            var rec = new GroupSettlementCaseRecord { LoadCaseName = "VL", PileSettlements_mm = new() { [1] = 5.0 } };
+            Assert.AreEqual(12.0, PileSettlementComposition.VerticalBeamPlusGroup_mm(7.0, rec, 1));
+            Assert.IsNull(PileSettlementComposition.VerticalBeamPlusGroup_mm(7.0, rec, 2), "群杭沈下の値が無い杭を 0 として足しています");
+            Assert.IsNull(PileSettlementComposition.VerticalBeamPlusGroup_mm(null, rec, 1), "基礎梁考慮の沈下が無い杭を 0 として足しています");
+            Assert.IsNull(PileSettlementComposition.VerticalBeamPlusGroup_mm(7.0, null, 1), "群杭沈下の記録が無いのに足しています");
+            Assert.IsNull(PileSettlementComposition.VerticalBeamPlusGroup_mm(double.NaN, rec, 1));
+
+            // 吹き出しはこの足し方を通し、群杭沈下を SettlementOf (無いと 0) で引かない
+            string canvas = TestSource.Read("Graphics_r1", "Views", "MainWindow.CanvasResultsVertical.cs");
+            StringAssert.Contains(canvas, "PileSettlementComposition.VerticalBeamPlusGroup_mm(", "吹き出しが共通の足し方を通していません");
+            Assert.IsFalse(canvas.Contains(".SettlementOf(", StringComparison.Ordinal), "吹き出しが群杭沈下を SettlementOf (値が無いと 0) で引いています");
+        }
+
         [TestMethod]
         public void OnlyTheCompositionServiceCombinesSingleAndGroupSettlements()
         {
