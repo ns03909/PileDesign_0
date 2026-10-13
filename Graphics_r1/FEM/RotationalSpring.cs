@@ -698,56 +698,6 @@ namespace PileDesign.FEM
             return K;
         }
 
-        /// <summary>
-        /// PileNode.Uz(free) と AP.Rx/Ry の間接結合を K 行列に追加。
-        /// ペナルティ→CapNode→RigidLink→AP チェーンの剛リンク近似。
-        /// </summary>
-        private void AddUzIndirectCouplingToK(Matrix<double> K, bool isTan)
-        {
-            // PileNode (NodeJ) の Uz が free (master 未設定) の場合のみ
-            // NOTE: このクラスには `Dof` という名のプロパティ（RotationalDof 型）があるため、
-            // Node 側の DOF 列挙子を参照するときは完全修飾 PileDesign.FEM.Dof を使う
-            if (NodeJ.HasMasterAt(PileDesign.FEM.Dof.Uz)) return;
-
-            // AP ノードを Ux/Uy/Rz いずれかの master から取得
-            Node? ap = NodeJ.GetMaster(PileDesign.FEM.Dof.Ux)
-                       ?? NodeJ.GetMaster(PileDesign.FEM.Dof.Uy)
-                       ?? NodeJ.GetMaster(PileDesign.FEM.Dof.Rz);
-            if (ap == null) return;
-
-            var ke = isTan ? KeTan : KeSec;
-            if (ke == null) return;
-            double kz = ke[8, 8]; // Uz ペナルティ剛性
-            if (kz == 0.0) return;
-
-            double dY = NodeJ.SlaveArm.Y;
-            double dX = NodeJ.SlaveArm.X;
-            if (Math.Abs(dX) < 1e-10 && Math.Abs(dY) < 1e-10) return;
-
-            int eqPileUz = NodeJ.EquationNumber[2]; // PileNode.Uz (free DOF)
-            int eqApRx = ap.EquationNumber[3];
-            int eqApRy = ap.EquationNumber[4];
-
-            void AddSym(int r, int c, double v)
-            {
-                if (r >= 0 && c >= 0 && v != 0.0)
-                {
-                    K[r, c] += v;
-                    if (r != c) K[c, r] += v;
-                }
-            }
-
-            // d(f[PileNode.Uz])/d(AP.Rx) = -kz × ΔY
-            AddSym(eqPileUz, eqApRx, -kz * dY);
-            // d(f[PileNode.Uz])/d(AP.Ry) = kz × ΔX
-            AddSym(eqPileUz, eqApRy, kz * dX);
-
-            // AP.Rx/Ry 対角: d(f[AP.Rx])/d(AP.Rx) from penalty chain
-            if (eqApRx >= 0) K[eqApRx, eqApRx] += kz * dY * dY;
-            if (eqApRy >= 0) K[eqApRy, eqApRy] += kz * dX * dX;
-            AddSym(eqApRx, eqApRy, -kz * dX * dY);
-        }
-
 
 
         /// <summary>

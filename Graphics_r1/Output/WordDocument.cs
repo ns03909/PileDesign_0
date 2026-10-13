@@ -807,7 +807,7 @@ namespace PileDesign.Output
                 && _source.IsHorizontalAnalysisDone
                 && anaModel != null)
             {
-                Time("HorizontalEvaluationReport (NG)", () => AddHorizontalEvaluationReport(body, factored: true));
+                Time("HorizontalEvaluationReport (NG)", () => AddHorizontalEvaluationReport(body));
             }
             if (mainWindowViewModel.DocxOutput.IncludeSettlement)
             {
@@ -1349,127 +1349,6 @@ namespace PileDesign.Output
             numberingPart.Numbering.Save();
         }
 
-        // 汎用番号付きリスト(レベル0)の Numbering 定義を用意
-        public static void EnsureListNumberingSafe(MainDocumentPart mainPart, int abstractNumId = 90, int numberId = 90)
-        {
-            if (mainPart == null) return;
-
-            var numberingPart = mainPart.NumberingDefinitionsPart ?? mainPart.AddNewPart<NumberingDefinitionsPart>();
-            numberingPart.Numbering ??= new Numbering();
-
-            // 既存定義があれば何もしない（再生成しない）
-            if (numberingPart.Numbering.Elements<NumberingInstance>()
-                .Any(n => n.NumberID?.Value == numberId))
-                return;
-
-            // AbstractNum が未定義なら追加
-            var abstractNum = numberingPart.Numbering.Elements<AbstractNum>()
-                .FirstOrDefault(a => a.AbstractNumberId?.Value == abstractNumId);
-            if (abstractNum == null)
-            {
-                abstractNum = new AbstractNum(
-                    // 番号の定義の識別は定義の番号から決める (乱数だと、同じ結果から出しても計算書の中身が毎回変わる)
-                    new Nsid { Val = (0x5D000000 + abstractNumId).ToString("X8") },
-                    new MultiLevelType { Val = MultiLevelValues.SingleLevel },
-                    new TemplateCode { Val = "0409001D" },
-                    new Level(
-                        new StartNumberingValue { Val = 1 },
-                        new NumberingFormat { Val = NumberFormatValues.Decimal },
-                        new LevelText { Val = "%1." },
-                        new LevelJustification { Val = LevelJustificationValues.Left },
-                        new PreviousParagraphProperties(
-                            new Indentation { Left = "360", Hanging = "360" }
-                        )
-                    )
-                    { LevelIndex = 0 }
-                )
-                {
-                    AbstractNumberId = abstractNumId
-                };
-                numberingPart.Numbering.Append(abstractNum);
-            }
-
-            // NumberingInstance を追加
-            numberingPart.Numbering.Append(
-                new NumberingInstance(
-                    new AbstractNumId { Val = abstractNumId }
-                )
-                {
-                    NumberID = numberId
-                });
-
-            numberingPart.Numbering.Save();
-        }
-
-
-        // 箇条書き(Bullet)用 Numbering 定義を安全生成
-        private static void EnsureBulletListNumberingSafe(
-            MainDocumentPart mainPart,
-            int abstractNumId = 200,
-            int numberId = 200,
-            string bullet = "•")
-        {
-            if (mainPart == null) return;
-
-            var numberingPart = mainPart.NumberingDefinitionsPart ?? mainPart.AddNewPart<NumberingDefinitionsPart>();
-            numberingPart.Numbering ??= new Numbering();
-
-            // 既に同じ numberId が存在すれば終了
-            if (numberingPart.Numbering.Elements<NumberingInstance>().Any(n => n.NumberID?.Value == numberId))
-                return;
-
-            // AbstractNum 存在チェック
-            var abstractNum = numberingPart.Numbering.Elements<AbstractNum>()
-                .FirstOrDefault(a => a.AbstractNumberId?.Value == abstractNumId);
-
-            if (abstractNum == null)
-            {
-                // 箇条書きレベル0のみ（必要になれば拡張）
-                abstractNum = new AbstractNum
-                {
-                    AbstractNumberId = abstractNumId
-                };
-
-                var level = new Level(
-                    new StartNumberingValue { Val = 1 },
-                    new NumberingFormat { Val = NumberFormatValues.Bullet },
-                    new LevelText { Val = bullet }, // 実際に表示される記号
-                    new LevelJustification { Val = LevelJustificationValues.Left }
-                )
-                {
-                    LevelIndex = 0
-                };
-
-                // 記号フォント（一般的な黒丸は "Symbol" でなくても表示されるが安全側で設定）
-                level.Append(new NumberingSymbolRunProperties(
-                    new RunFonts
-                    {
-                        Ascii = "Symbol",
-                        HighAnsi = "Symbol",
-                        EastAsia = "ＭＳ ゴシック",
-                        Hint = FontTypeHintValues.Default
-                    })
-                );
-
-                level.Append(new PreviousParagraphProperties(
-                    new Indentation { Left = "360", Hanging = "360" }
-                ));
-
-                abstractNum.Append(level);
-                numberingPart.Numbering.Append(abstractNum);
-            }
-
-            // NumberingInstance 追加
-            numberingPart.Numbering.Append(
-                new NumberingInstance(
-                    new AbstractNumId { Val = abstractNumId }
-                )
-                {
-                    NumberID = numberId
-                });
-
-            numberingPart.Numbering.Save();
-        }
 
 
         // 図表番号付きタイトルの挿入メソッド
@@ -1751,46 +1630,6 @@ namespace PileDesign.Output
             }
         }
 
-        // スコットプロット挿入メソッド
-        public static void AddScottPlotGraphToBody(
-            MainDocumentPart mainPart, Body body,
-            List<double> xsList, List<double> ysList,
-            string title, string xLabel, string yLabel,
-            double widthMm = 150, double heightMm = 150)
-        {
-            try
-            {
-                var pngBytes = DiagramRenderer.RenderScottPlotToPngBytes(wpf =>
-                {
-                    double[] xs = xsList?.ToArray() ?? [];
-                    double[] ys = ysList?.ToArray() ?? [];
-                    if (xs.Length > 0 && ys.Length > 0)
-                        wpf.Plot.Add.ScatterLine(xs, ys);
-
-                    // X=0, Y=0 の補助線
-                    var grayColor = new ScottPlot.Color(128, 128, 128, 255);
-                    wpf.Plot.Add.VerticalLine(0, 1, grayColor);
-                    wpf.Plot.Add.HorizontalLine(0, 1, grayColor);
-
-                    wpf.Plot.Axes.Title.Label.Text = title ?? string.Empty;
-                    wpf.Plot.Axes.Bottom.Label.Text = xLabel ?? string.Empty;
-                    wpf.Plot.Axes.Left.Label.Text = yLabel ?? string.Empty;
-
-                    // ScottPlot.Fonts.Detect() を使用して日本語対応フォントを検出
-                    wpf.Plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(title ?? "メイリオ");
-                    wpf.Plot.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabel ?? "メイリオ");
-                    wpf.Plot.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabel ?? "メイリオ");
-                }, widthMm, heightMm, dpi: Layout.BaseDpi, scale: Layout.HiResScale);
-
-                if (pngBytes != null && pngBytes.Length > 0)
-                    WordDrawingBuilder.AddPngBytesToBody(mainPart, body, pngBytes, widthMm, heightMm);
-            }
-            catch (Exception ex)
-            {
-                NoteOmitted(body, $"グラフ「{title}」", ex);
-            }
-        }
-
         public static void AddNMinTScottPlotGraphToBody(
     MainDocumentPart mainPart, Body body,
     List<List<double>> xsLineLists, List<List<double>> ysLineLists, List<string> lineLegends,
@@ -1931,55 +1770,6 @@ namespace PileDesign.Output
             List<List<double>> xsLists, List<List<double>> ysLists, List<string> legends,
             string title, string xLabel, string yLabel,
             double widthMm = 150, double heightMm = 150)
-        //{
-        //    // 1. ScottPlotでグラフ作成
-        //    WpfPlot wpf = new();
-        //    if (xsLists.Count != ysLists.Count || xsLists.Count != legends.Count)
-        //    {
-        //        return;
-        //    }
-
-        //    for (int i = 0; i < xsLists.Count; i++)
-        //    {
-        //        var xsList = xsLists[i];
-        //        var ysList = ysLists[i];
-        //        var legend = legends[i];
-
-        //        double[] xsArray = [.. xsList];
-        //        double[] ysArray = [.. ysList];
-        //        var scatterTemp = wpf.Plot.Add.ScatterLine(xsArray, ysArray);
-        //        scatterTemp.LegendText = legend;
-        //    }
-
-        //    //string title = "ScottPlotサンプルグラフ";
-        //    wpf.Plot.Axes.Title.Label.Text = title;
-        //    wpf.Plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(title);
-
-        //    //string xLabel = "X軸";
-        //    wpf.Plot.Axes.Bottom.Label.Text = xLabel;
-        //    wpf.Plot.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabel);
-
-        //    //string yLabel = "Y軸";
-        //    wpf.Plot.Axes.Left.Label.Text = yLabel;
-        //    wpf.Plot.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabel);
-
-        //    // Legend
-        //    wpf.Plot.Legend.FontName = ScottPlot.Fonts.Detect(yLabel);
-
-        //    // 2. 一時画像ファイルとして保存
-        //    string tempFile = Path.GetTempFileName() + ".png";
-        //    //int widthPx = (int)(widthMm / 25.4 * 96 * 2);
-        //    //int heightPx = (int)(heightMm / 25.4 * 96 * 2);
-        //    int widthPx = MmToPx(widthMm, Dpi, 2.0);
-        //    int heightPx = MmToPx(heightMm, Dpi, 2.0);
-        //    wpf.Plot.SavePng(tempFile, widthPx, heightPx);
-
-        //    // 3. Word文書のbodyに画像挿入
-        //    WordDocumentUtils.AddImageToBodyByMm(mainPart, body, tempFile, widthMm, heightMm);
-
-        //    // 4. 一時ファイル削除
-        //    if (File.Exists(tempFile)) File.Delete(tempFile);
-        //}
         {
             try
             {

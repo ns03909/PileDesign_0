@@ -222,18 +222,6 @@ namespace PileDesign.Views
             }
         }
 
-        // 公開ヘルパー（ViewModel の呼び出しに対応）
-        public void OpenSoilPileTab(int pileIndex)
-        {
-            MainTabControl.SelectedIndex = 0;
-            ComboBoxSoilPile.SelectedItem = (DataContext as ElementDivisionViewModel)?.SelectedSoilPileNo;
-        }
-
-        public void OpenEmbedmentTab()
-        {
-            MainTabControl.SelectedIndex = 1;
-        }
-
         // 追加: Canvas サイズ変更ハンドラ（ElementDivisionWindow クラス内に挿入）
         private void Canvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {
@@ -429,44 +417,6 @@ namespace PileDesign.Views
                 if (itemObj is HorizontalSoilReactionItem item)
                 {
                     vm.SelectedLayeronDataGrid = item;
-                }
-            }
-        }
-
-        // Embedment DataGrid の SelectedCellsChanged（セル選択 → VM へ反映）
-        private void Embedment_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
-        {
-            if (DataContext is ElementDivisionViewModel vm && sender is DataGrid dg)
-            {
-                if (dg.SelectedCells != null && dg.SelectedCells.Count > 0)
-                {
-                    var cellInfo = dg.SelectedCells[0];
-                    var item = cellInfo.Item as EmbedmentZDataItem;
-                    if (item != null)
-                    {
-                        // 一致する VM 内インスタンスを探して設定（同一インスタンスでない場合に備える）
-                        const double eps = 1e-6;
-                        var matched = vm.EmbedmentZsCollection?.FirstOrDefault(z => Math.Abs(z.Z - item.Z) <= eps);
-                        vm.SelectedEmbedmentZ = matched ?? item;
-                    }
-                }
-            }
-        }
-
-        // Embedment の CurrentCellChanged
-        private void Embedment_CurrentCellChanged(object sender, EventArgs e)
-        {
-            if (DataContext is ElementDivisionViewModel vm && sender is DataGrid dg)
-            {
-                // 同様に CurrentCell?.Item を避ける
-                var cell = dg.CurrentCell;
-                var itemObj = cell.Item;
-                if (itemObj is EmbedmentZDataItem item)
-                {
-                    const double eps = 1e-5;
-                    var matched = vm.EmbedmentZsCollection?
-                        .FirstOrDefault(z => Math.Abs(z.Z - item.Z) <= eps);
-                    vm.SelectedEmbedmentZ = matched ?? item;
                 }
             }
         }

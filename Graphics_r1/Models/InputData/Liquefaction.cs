@@ -52,62 +52,6 @@ namespace PileDesign.Models.InputData
             double Na_2040 = Utils.Interpolate(TauDonSigmaZPrimeSet, NaSet_2040, tauDonSigmaZPrime);
             double Na_4080 = Utils.Interpolate(TauDonSigmaZPrimeSet, NaSet_4080, tauDonSigmaZPrime);
 
-
-            //double _Na_0005 = 0.0;
-            //double _Na_0510 = 0.0;
-            //double _Na_1020 = 0.0;
-            //double _Na_2040 = 0.0;
-            //double _Na_4080 = 0.0;
-            //if (_TauDonSigmaZPrime < _TauDonSigmaZPrimeSet[0])
-            //{
-            //    _gammaCy = 0.0;
-            //}
-            //else
-            //{
-            //    for (int i = 0; i < _TauDonSigmaZPrimeSet.Length; i++)
-            //    {
-            //        if (i == _TauDonSigmaZPrimeSet.Length - 1)
-            //        {
-            //            _Na_0005 = _NaSet_0005[i];
-            //            _Na_0510 = _NaSet_0510[i];
-            //            _Na_1020 = _NaSet_1020[i];
-            //            _Na_2040 = _NaSet_2040[i];
-            //            _Na_4080 = _NaSet_4080[i];
-            //            break;
-            //        }
-
-            //        else if (_TauDonSigmaZPrimeSet[i] <= _TauDonSigmaZPrime && _TauDonSigmaZPrime < _TauDonSigmaZPrimeSet[i + 1])
-            //        {
-            //            _Na_0005 = (_NaSet_0005[i + 1] * (_TauDonSigmaZPrime - _TauDonSigmaZPrimeSet[i])
-            //                + _NaSet_0005[i] * (-_TauDonSigmaZPrime + _TauDonSigmaZPrimeSet[i + 1]))
-            //                / (_TauDonSigmaZPrimeSet[i + 1] - _TauDonSigmaZPrimeSet[i]);
-
-            //            _Na_0510 = (_NaSet_0510[i + 1] * (_TauDonSigmaZPrime - _TauDonSigmaZPrimeSet[i])
-            //                + _NaSet_0510[i] * (-_TauDonSigmaZPrime + _TauDonSigmaZPrimeSet[i + 1]))
-            //                / (_TauDonSigmaZPrimeSet[i + 1] - _TauDonSigmaZPrimeSet[i]);
-
-            //            _Na_1020 = (_NaSet_1020[i + 1] * (_TauDonSigmaZPrime - _TauDonSigmaZPrimeSet[i])
-            //                + _NaSet_1020[i] * (-_TauDonSigmaZPrime + _TauDonSigmaZPrimeSet[i + 1]))
-            //                / (_TauDonSigmaZPrimeSet[i + 1] - _TauDonSigmaZPrimeSet[i]);
-
-            //            _Na_2040 = (_NaSet_2040[i + 1] * (_TauDonSigmaZPrime - _TauDonSigmaZPrimeSet[i])
-            //                + _NaSet_2040[i] * (-_TauDonSigmaZPrime + _TauDonSigmaZPrimeSet[i + 1]))
-            //                / (_TauDonSigmaZPrimeSet[i + 1] - _TauDonSigmaZPrimeSet[i]);
-
-            //            _Na_4080 = (_NaSet_4080[i + 1] * (_TauDonSigmaZPrime - _TauDonSigmaZPrimeSet[i])
-            //                + _NaSet_4080[i] * (-_TauDonSigmaZPrime + _TauDonSigmaZPrimeSet[i + 1]))
-            //                / (_TauDonSigmaZPrimeSet[i + 1] - _TauDonSigmaZPrimeSet[i]);
-
-            //            break;
-            //        }
-            //    }
-            //}
-            //if (_Na_0005 <= _Na) { _gammaCy = 0.0; }
-            //else if (_Na_0510 <= _Na) { _gammaCy = 0.5; }
-            //else if (_Na_1020 <= _Na) { _gammaCy = 1.0; }
-            //else if (_Na_2040 <= _Na) { _gammaCy = 2.0; }
-            //else if (_Na_4080 <= _Na) { _gammaCy = 4.0; }
-            //else { _gammaCy = 8.0; }
             gammaCy = Na switch
             {
                 var na when na >= Na_0005 => 0.0,
@@ -132,44 +76,6 @@ namespace PileDesign.Models.InputData
                 return Utils.Interpolate(Na0010, betaLSet, Na);
             else
                 return Utils.Interpolate(Na1020, betaLSet, Na);
-            //double _betaL = 1.0;
-            //if (-10 < _z && _z <= 0)
-            //{
-            //    for (int i = 0; i < _betaLSet.Length; ++i)
-            //    {
-            //        if (i == _betaLSet.Length - 1)
-            //        {
-            //            _betaL = 1.0;
-            //            break;
-            //        }
-            //        else if (_Na0010[i] <= _Na && _Na < _Na0010[i + 1])
-            //        {
-            //            _betaL = (_betaLSet[i + 1] * (_Na - _Na0010[i])
-            //                + _betaLSet[i] * (-_Na + _Na0010[i + 1]))
-            //                / (_Na0010[i + 1] - _Na0010[i]);
-            //            break;
-            //        }
-            //    }
-            //}
-            //else
-            //{
-            //    for (int i = 0; i < _betaLSet.Length; ++i)
-            //    {
-            //        if (i == _betaLSet.Length - 1)
-            //        {
-            //            _betaL = 1.0;
-            //            break;
-            //        }
-            //        else if (_Na1020[i] <= _Na && _Na < _Na1020[i + 1])
-            //        {
-            //            _betaL = (_betaLSet[i + 1] * (_Na - _Na1020[i])
-            //                + _betaLSet[i] * (-_Na + _Na1020[i + 1]))
-            //                / (_Na1020[i + 1] - _Na1020[i]);
-            //            break;
-            //        }
-            //    }
-            //}
-            //return _betaL;
         }
     }
 

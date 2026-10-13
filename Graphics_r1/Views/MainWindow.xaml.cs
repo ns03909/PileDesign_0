@@ -778,12 +778,6 @@ namespace PileDesign.Views
 
 
 
-        private void ComboBoxLabelSize_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var viewModel = DataContext as MainWindowViewModel;
-            viewModel?.ComboBoxLabelSize_OnSelectionChangedCommand.Execute(e);
-        }
-
         private void DataGridPileLayout_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
         {
             if (e.PropertyName == "AxialForceEX" || e.PropertyName == "AxialForceEY" ||
@@ -1320,11 +1314,6 @@ namespace PileDesign.Views
             UpdateWindow();
         }
 
-        private void CheckBoxAnalysisResult_Unchecked(object sender, RoutedEventArgs e)
-        {
-            UpdateWindow();
-        }
-
         private void ShowAllNodesButton_Click(object sender, RoutedEventArgs e)
         {
             ShowAllNodes();
@@ -1570,23 +1559,6 @@ namespace PileDesign.Views
             UpdateWindow();
         }
 
-        private void MergeElementsButton_click(object sender, RoutedEventArgs e)
-        {
-            var viewModel = DataContext as MainWindowViewModel;
-            MainWindowViewModel.DeleteDuplicatedElements();
-        }
-
-        private void MergeNodesButton_click(object sender, RoutedEventArgs e)
-        {
-            var viewModel = DataContext as MainWindowViewModel;
-            viewModel.DeleteDuplicatedPiles();
-        }
-
-        private void ZoomFitButton_Click(object sender, RoutedEventArgs e)
-        {
-            ZoomFit();
-        }
-
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             UpdateCanvas3D();
@@ -1641,56 +1613,6 @@ namespace PileDesign.Views
 
         private void DataGridPileAxialForce_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
         {
-            //var dataGrid = sender as DataGrid;
-            //if (dataGrid == null || dataGrid.SelectedCells.Count == 0) return;
-
-            //// 最初の選択セルの列を取得
-            //var cell = dataGrid.SelectedCells[0];
-            //var column = cell.Column as DataGridColumn;
-            //if (column == null) return;
-
-            //// 列ヘッダーやバインディング名で判定
-            //string header = column.Header?.ToString() ?? "";
-            //string bindingPath = "";
-            //if (column is DataGridTextColumn textColumn && textColumn.Binding is Binding binding)
-            //{
-            //    bindingPath = binding.Path.Path;
-            //}
-
-            //// 荷重ケース名を判定（例: VL0, VLadd, 1-1, 1-2, ...）
-            //string loadCaseName = null;
-            //if (header.Contains("VL0") || bindingPath.Contains("AxialForceVL0"))
-            //    loadCaseName = "VL0";
-            //else if (header.Contains("VLadd") || bindingPath.Contains("AxialForceVLAdditional"))
-            //    loadCaseName = "VLadd";
-            //else if (header.Contains("1-1") || bindingPath.Contains("AxialForceLevel1s[0]"))
-            //    loadCaseName = "1-1";
-            //else if (header.Contains("1-2") || bindingPath.Contains("AxialForceLevel1s[1]"))
-            //    loadCaseName = "1-2";
-            //else if (header.Contains("1-3") || bindingPath.Contains("AxialForceLevel1s[2]"))
-            //    loadCaseName = "1-3";
-            //else if (header.Contains("1-4") || bindingPath.Contains("AxialForceLevel1s[3]"))
-            //    loadCaseName = "1-4";
-            //else if (header.Contains("2-1") || bindingPath.Contains("AxialForceLevel2s[0]"))
-            //    loadCaseName = "2-1";
-            //else if (header.Contains("1-2") || bindingPath.Contains("AxialForceLevel2s[1]"))
-            //    loadCaseName = "2-2";
-            //else if (header.Contains("1-3") || bindingPath.Contains("AxialForceLevel2s[2]"))
-            //    loadCaseName = "2-3";
-            //else if (header.Contains("1-4") || bindingPath.Contains("AxialForceLevel2s[3]"))
-            //    loadCaseName = "2-4";
-
-            //if (loadCaseName != null)
-            //{
-            //    // ViewModelのSelectedLoadCaseNameを変更
-            //    var vm = this.DataContext as PileDesign.ViewModels.MainWindowViewModel;
-            //    if (vm != null && vm.LoadCaseNameOption.Contains(loadCaseName))
-            //    {
-            //        vm.IsAxialForceLabelVisible = true;
-            //        vm.SelectedLoadCaseName = loadCaseName;
-            //    }
-
-            //}
         }
 
 

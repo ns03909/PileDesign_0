@@ -88,23 +88,5 @@ namespace PileDesign.Views
             finally { _updatingRatio = false; }
         }
 
-        // 群杭係数を入力した場合のメソッド
-        private void TextBoxPileGroupFactorTextChanged(object sender, TextChangedEventArgs e)
-        {
-            //GroupPileFactorViewModel viewModel = DataContext as GroupPileFactorViewModel;
-            //if (viewModel.PileSpacingDiaRatio != viewModel.PileSpacing / viewModel.PileDia)
-            //{
-            //    TextBoxPileDia.Text = null;
-            //    TextBoxPileSpacing.Text = null;
-            //}
-
-
-            //if (viewModel.PileSpacingDiaRatio.HasValue && viewModel.PileSpacingDiaRatio > 0)
-            //{
-            //    viewModel.ChartUpdate();
-            //    //ForceChartRedraw(); // 追加
-            //}
-
-        }
     }
 }

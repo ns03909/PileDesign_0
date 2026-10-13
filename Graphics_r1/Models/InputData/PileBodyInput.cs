@@ -963,60 +963,6 @@ namespace PileDesign.Models.InputData
 
         // 深いコピーを作成するメソッド
         public PileBodyInput DeepCopy()
-        //{
-        //    //var copy = (PileBodyInput)this.MemberwiseClone();
-        //    //copy.PileBodySegments = new ObservableCollection<PileBodySegment>(this.PileBodySegments.Select(segment => segment.DeepCopy()));
-        //    //copy.PileTop = this.PileTop.DeepCopy();
-        //    //return copy;
-
-        //    // shallow copy
-        //    var copy = (PileBodyInput)this.MemberwiseClone();
-
-        //    // まず PileBodyType を明示的に反映（プロパティ経由で）
-        //    // これにより後続の PileBodySegments セッターが正しい親タイプを参照できます
-        //    copy.PileBodyType = this.PileBodyType;
-
-        //    // 深いコピー：セグメント／杭頭を新しいコレクション／インスタンスで作成
-        //    copy.PileBodySegments = new ObservableCollection<PileBodySegment>(
-        //        this.PileBodySegments.Select(segment => segment.DeepCopy())
-        //    );
-
-        //    copy.PileTop = this.PileTop?.DeepCopy();
-
-        //    // 必要ならプリセット名コレクションもコピー（安全措置）
-        //    if (this.PileTipSettlementPresetParameterNames != null)
-        //        copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);
-        //    else
-        //        copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>();
-
-        //    // 他の参照型フィールドも必要に応じてコピーしてください
-
-        //    return copy;
-        //}
-        //{
-        //    // shallow copy
-        //    var copy = (PileBodyInput)this.MemberwiseClone();
-
-        //    // まず PileBodyType を明示的に反映（プロパティ経由で）
-        //    copy.PileBodyType = this.PileBodyType;
-
-        //    // 深いコピー：セグメント／杭頭を新しいコレクション／インスタンスで作成
-        //    // セグションの ResetSectionProperties 呼び出しを抑止して割り当てる
-        //    copy._suppressSectionReset = true;
-        //    copy.PileBodySegments = new ObservableCollection<PileBodySegment>(
-        //        this.PileBodySegments.Select(segment => segment.DeepCopy())
-        //    );
-        //    copy._suppressSectionReset = false;
-
-        //    copy.PileTop = this.PileTop?.DeepCopy();
-
-        //    if (this.PileTipSettlementPresetParameterNames != null)
-        //        copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);
-        //    else
-        //        copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>();
-
-        //    return copy;
-        //}
         {
             // 複製できなければ例外のまま知らせる (欠けた写しを返さない)。以前は例外を握り潰して null を返しており、
             // 呼び出し側 (元に戻す操作の控え・履歴の写し・単杭沈下の画面の控え) はそれを杭体の一覧へそのまま入れるので、

@@ -346,14 +346,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private void LoadCasesInput_PropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(LoadCasesInput.LoadCombinations))
-            {
-                UpdateLoadCombinationOption();
-            }
-        }
-
         public void UpdateSumAndOTM()
         {
             // 集計値、OTM、重心、外接範囲を一括通知（配列ループで効率化）

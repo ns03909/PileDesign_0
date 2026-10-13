@@ -417,12 +417,6 @@ namespace PileDesign.Views
         }
 
 
-        private void ComvoBox_DropDownOpened(object sender, EventArgs e)
-        {
-            var viewModel = (PileSectionViewModel)DataContext;
-            viewModel._undoManager.SaveState(viewModel.PileSection.DeepCopy());
-        }
-
         private void TextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             var viewModel = (PileSectionViewModel)DataContext;

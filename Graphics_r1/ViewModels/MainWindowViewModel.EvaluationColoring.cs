@@ -61,10 +61,25 @@ namespace PileDesign.ViewModels
         private PileEvaluationSummary? _evaluationSummaryCache;
         private (object? Model, object? Input, DateTime? Time, bool Done, int Edit, object? Current, long Options, object? Settlement, object? CurrentSettlement) _evaluationSummaryKey;
 
+        // 水平解析の検定 (低減後・低減前) の控え。まとめ全体の控えとは別に持つ。
+        //
+        // 以前はまとめ全体を 1 つの鍵 (入力の編集番号を含む) で控えていたので、色分けを出している間は
+        // 入力を 1 か所編集するたびに、キャンバスの再描画で水平解析の検定 (数百件の N-M 補間) を
+        // 低減後・低減前の 2 回、UI スレッドで組み直していた。水平解析の検定が読むのは解析結果
+        // (CurrentModel) と解析時の入力の控え (ResultInputModel) と材料のオプションだけで、
+        // 編集中の入力は読まない。入力の編集で変わるのは鉛直系 (支持力・沈下量・傾斜角) だけなので、
+        // 水平解析の部分はそれ用の鍵で使い回し、鉛直系だけを組み直す。
+        private PileEvaluationSummary.HorizontalParts? _horizontalEvaluationCache;
+        private (object? Model, object? ResultSet, object? Input, DateTime? Time, bool Done, long Options, bool ReadsLiveInput, int Edit, object? Current, bool HorizontalChanged) _horizontalEvaluationKey;
+
+        /// <summary>水平解析の検定を組んだ回数 (控えが効いているかをテストで確かめる)。</summary>
+        internal int HorizontalEvaluationBuildCount { get; private set; }
+
         /// <summary>
         /// 検定サマリーを返す。
         /// キャンバスは回転・ズームのたびに描き直すので、検定 (数百件の N-M 補間) を
         /// 毎回やり直さないよう、解析結果と入力が同じ間は前回の値を返す。
+        /// 入力だけが編集されたときは、水平解析の検定は使い回して鉛直系だけを組み直す。
         /// </summary>
         /// <param name="force">true なら必ず作り直す (ダッシュボードの再計算)。</param>
         public PileEvaluationSummary GetEvaluationSummary(bool force = false)
@@ -89,9 +104,50 @@ namespace PileDesign.ViewModels
             if (!force && _evaluationSummaryCache != null && _evaluationSummaryKey.Equals(key))
                 return _evaluationSummaryCache;
 
-            AdoptEvaluationSummary(PileEvaluationSummary.Build(this));
+            var horizontal = GetHorizontalEvaluation(force);
+            AdoptEvaluationSummary(PileEvaluationSummary.Build(this, horizontal));
             _evaluationSummaryKey = key;
             return _evaluationSummaryCache!;
+        }
+
+        /// <summary>
+        /// 水平解析の検定 (低減後・低減前) を返す。解析結果・解析時の入力の控え・材料のオプションが同じ間は前回の値。
+        ///
+        /// <para>控えが無いとき (控えを持たない古いファイル・控えの失敗) や、表示中の解析モデルが控えのものでないときは、
+        /// 検定が<b>編集中の入力</b>を読む (<see cref="ResultInputModel"/> が編集中の入力を返す、または解析モデルの
+        /// 断面が編集中の入力のもの)。そのときだけ入力の編集番号と入力の実体も鍵に入れ、編集のたびに組み直す。
+        /// 組になっているかの判定 (<see cref="DescribeEvaluationPairingProblem"/>) も控えが無いときは
+        /// 「解析のあとの編集」(<see cref="HorizontalInputChanged"/>) を見るので、それも鍵に入れる。</para>
+        /// </summary>
+        private PileEvaluationSummary.HorizontalParts GetHorizontalEvaluation(bool force)
+        {
+            var set = CurrentResultSet;
+            var resultInput = ResultInputModel;
+            bool readsLiveInput = set == null
+                || !ReferenceEquals(set.AnaModel, CurrentModel)
+                || ReferenceEquals(resultInput, CurrentInputModel);
+
+            var key = (
+                (object?)CurrentModel,
+                (object?)set,
+                (object?)resultInput,
+                LastAnalysisTime,
+                IsHorizontalAnalysisDone,
+                (long)PileDesign.Models.InputData.ConcreteModelOptions.Version,
+                readsLiveInput,
+                readsLiveInput ? InputEditVersion : 0,
+                readsLiveInput ? (object?)CurrentInputModel : null,
+                readsLiveInput && HorizontalInputChanged);
+
+            if (!force && _horizontalEvaluationCache != null && _horizontalEvaluationKey.Equals(key))
+                return _horizontalEvaluationCache;
+
+            var parts = PileEvaluationSummary.BuildHorizontal(this);
+            if (!ReferenceEquals(parts, PileEvaluationSummary.HorizontalParts.None))
+                HorizontalEvaluationBuildCount++;
+            _horizontalEvaluationCache = parts;
+            _horizontalEvaluationKey = key;
+            return parts;
         }
 
         /// <summary>
@@ -144,8 +200,5 @@ namespace PileDesign.ViewModels
             return $"{parts}の検定を組めませんでした。色に入っていないので、色の無い所も OK ではありません"
                    + "（解析結果ダッシュボードで確認してください）。";
         }
-
-        /// <summary>解析結果を捨てたときなど、次回は必ず作り直させる。</summary>
-        public void InvalidateEvaluationSummary() => _evaluationSummaryCache = null;
     }
 }

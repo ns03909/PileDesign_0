@@ -178,9 +178,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-        /// <summary>その解析のあとに編集した項目。</summary>
-        internal IReadOnlyList<string> EditsSinceSettlementOf(SettlementAnalyses kind) => _editsSinceSettlementByKind[kind];
-
         /// <summary>入力の編集の範囲から、印を立てる沈下系の解析を決める (下流も含む)。</summary>
         internal SettlementAnalyses SettlementAnalysesAffectedBy(AnalysisInputScope scope)
         {

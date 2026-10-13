@@ -88,7 +88,7 @@ namespace TestProject1
             string body = TestSource.MethodBody(
                 TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.EvaluationColoring.cs"),
                 "public PileEvaluationSummary GetEvaluationSummary(bool force = false)");
-            StringAssert.Contains(body, "AdoptEvaluationSummary(PileEvaluationSummary.Build(this));");
+            StringAssert.Contains(body, "AdoptEvaluationSummary(PileEvaluationSummary.Build(this, horizontal));");
             Assert.IsFalse(body.Contains("_evaluationSummaryCache = ", StringComparison.Ordinal),
                 "まとめを直接差し替えています (凡例の注意書きが更新されない)");
 

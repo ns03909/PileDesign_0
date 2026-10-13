@@ -521,20 +521,6 @@ namespace PileDesign.Common
             }
         }
 
-        // 杭頭変位
-        public double GetPileHeadDisplacement()
-        {
-            if (H == 0)
-            {
-                return HorizontalLoad / (4 * EI * Beta * Beta * Beta) * (2 - Ar);
-            }
-
-            else
-            {
-                return HorizontalLoad / (12 * EI * Beta * Beta * Beta) * (Math.Pow(1 + Beta * H, 3) * (4 - 3 * Ar) + 2);
-            }
-        }
-
         // 杭各部の曲げモーメント
         public double GetBendingMoment(double x)
         {

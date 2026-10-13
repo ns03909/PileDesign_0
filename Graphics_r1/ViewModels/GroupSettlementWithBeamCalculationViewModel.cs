@@ -333,20 +333,6 @@ namespace PileDesign.ViewModels
         }
 
 
-        /// <summary>
-        /// canonical な RectLoad ソースを選ぶ。優先順位:
-        ///   1. ラベルに "VL" を含むケース
-        ///   2. SelectedCaseResult
-        ///   3. CaseResults の先頭
-        /// </summary>
-        private GroupSettlementWithBeamCaseResult PickCanonicalCase()
-        {
-            if (CaseResults == null || CaseResults.Count == 0) return null;
-            var vl = CaseResults.FirstOrDefault(c => c.LoadCaseName.Contains("VL"));
-            if (vl != null) return vl;
-            return SelectedCaseResult ?? CaseResults[0];
-        }
-
         private void DiscardAndClose()
         {
             CancelRunningAnalysis();

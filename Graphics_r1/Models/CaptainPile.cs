@@ -997,49 +997,6 @@ namespace PileDesign.Models
         }
 
         // 使用損傷限界MNインタラクション取得メソッド
-        //internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetAllowableMNInterection(double maxCurvature)
-        //{
-        //    ObservableCollection<double> axialForces = [];
-        //    ObservableCollection<double> bendingMoments = [];
-        //    ObservableCollection<double> epsilonCs = [];
-        //    ObservableCollection<double> curvatures = [];
-        //    double epsilon0;
-        //    double curvature;
-        //    double epsilonC;
-
-        //    for (int i = 0; i <= DivisionNum; i++)
-        //    {
-        //        curvature = maxCurvature * i / DivisionNum;
-        //        if (CTPTensionRebars.HasTensionRebars == true)
-        //        {
-        //            epsilonC = GetEpsilonC(curvature, CTPTensionRebars.TDorTB * 0.5, -CTPTensionRebars.EpsilonY);
-        //            epsilon0 = GetEpsilon0(curvature, CTPTensionRebars.TDorTB * 0.5, -CTPTensionRebars.EpsilonY);
-        //        }
-        //        else
-        //        {
-        //            epsilonC = GetEpsilonC(curvature, -CTPConcrete.D * 0.5, 0.0);
-        //            epsilon0 = GetEpsilon0(curvature, -CTPConcrete.D * 0.5, 0.0);
-        //        }
-        //        var result = GetForceAndMoment(epsilon0, curvature); // 引張側 純引張～
-        //        axialForces.Add(result.Item1);
-        //        bendingMoments.Add(result.Item2);
-        //        epsilonCs.Add(epsilonC);
-        //        curvatures.Add(curvature);
-        //    }
-
-        //    for (int i = DivisionNum; i >= 0; i--)
-        //    {
-        //        curvature = maxCurvature * i / DivisionNum;
-        //        epsilonC = CTPConcrete.Epsilon085;
-        //        epsilon0 = CTPConcrete.Epsilon085 - curvature * CTPConcrete.D * 0.5 * CTPConcrete.Nu;
-        //        var result = GetForceAndMoment(epsilon0, curvature); // 圧縮側 ～純圧縮
-        //        axialForces.Add(result.Item1);
-        //        bendingMoments.Add(result.Item2);
-        //        epsilonCs.Add(epsilonC);
-        //        curvatures.Add(curvature);
-        //    }
-        //    return (axialForces, bendingMoments, epsilonCs, curvatures);
-        //}
                 internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetAllowableMNInteraction(double maxCurvature)
         {
             int n = DivisionNum + 1;
@@ -1114,56 +1071,6 @@ namespace PileDesign.Models
         }
 
         // 安全限界MN インタラクション取得メソッド
-        //internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetUltimateMNInteraction(double maxEpsilonC)
-        //{
-        //    ObservableCollection<double> axialForces = [];
-        //    ObservableCollection<double> bendingMoments = [];
-        //    ObservableCollection<double> epsilonCs = [];
-        //    ObservableCollection<double> curvatures = [];
-        //    double epsilonC;
-        //    double epsilon0;
-        //    double curvature;
-        //    double maxCurvature;
-
-        //    if (PCRing.D != 0)　// 0除算回避
-        //    {
-        //        maxCurvature = (0.003 + 0.0025) * 20.0 / (PCRing.D * Nu);
-        //    }
-        //    else
-        //    {
-        //        maxCurvature = 0;
-        //    }
-
-        //    for (int i = 0; i <= DivisionNum * 2; i++)
-        //    {
-        //        if (i == 0) // 純引張
-        //        {
-        //            epsilon0 = -0.006;
-        //            epsilonC = -0.006;
-        //            curvature = 0.0;
-        //        }
-        //        else if (i != DivisionNum * 2)
-        //        {
-        //            curvature = maxCurvature * (DivisionNum * 2 - i) / (DivisionNum * 2);
-        //            epsilon0 = maxEpsilonC - curvature * CTPConcrete.D * 0.5 * CTPConcrete.Nu;
-
-        //            epsilonC = maxEpsilonC;
-        //        }
-        //        else // i = = DivisionNum * 2 // 純圧縮
-        //        {
-        //            epsilon0 = maxEpsilonC;
-        //            epsilonC = maxEpsilonC;
-        //            curvature = 0.0;
-        //        }
-
-        //        var result = GetForceAndMoment(epsilon0, curvature); // 引張側 純引張～
-        //        axialForces.Add(result.Item1);
-        //        bendingMoments.Add(result.Item2);
-        //        epsilonCs.Add(epsilonC);
-        //        curvatures.Add(curvature);
-        //    }
-        //    return (axialForces, bendingMoments, epsilonCs, curvatures);
-        //}
         internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetUltimateMNInteraction(double maxEpsilonC)
         {
             int n = DivisionNum * 2 + 1;
@@ -1512,36 +1419,6 @@ namespace PileDesign.Models
             return (axialForce, bendingMoment);
         }
     }
-    //    {
-    //        Dia = diameter;
-    //    }
-
-    //    // 軸力、曲げモーメント取得メソッド
-    //    internal (double, double) GetForceAndMoment(CTPMaterial material, double epsilon0, double curvature, int division = 100)
-    //    {
-    //        double z;
-    //        double dz = Dia / division;
-    //        double epsilon;
-    //        double sigma;
-    //        double width;
-
-    //        double axialForce = 0.0;
-    //        double bendingMoment = 0.0;
-
-    //        // 圧縮縁ひずみ度 epsilonC
-    //        // 中心ひずみ度 epsilon0
-    //        for (int i = 0; i < division; i++)
-    //        {
-    //            z = -Dia * 0.5 + (0.5 + i) * dz;
-    //            width = 2.0 * Math.Sqrt(Math.Pow(Dia * 0.5, 2) - Math.Pow(z, 2));
-    //            epsilon = epsilon0 - curvature * z;
-    //            sigma = material.GetStress(epsilon);
-    //            axialForce += width * sigma * dz;
-    //            bendingMoment += width * sigma * dz * -z;
-    //        }
-    //        return (axialForce, bendingMoment);
-    //    }
-    //}
 
     // 正方形配置　点断面クラス
     class CTPSquareDotSection(double _TB, int numDot, double area) : CTPSection

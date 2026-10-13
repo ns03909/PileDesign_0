@@ -664,22 +664,6 @@ namespace PileDesign.FEM
             return matrix;
         }
 
-        // 内力取得算定メソッド
-        private Vector<double> GetVectorT(
-            List<double> beamStiffnesses, List<double> soilStiffnesses, Vector<double> vectorX)
-        {
-            Matrix<double> stiffnessMatrix = GenerateStiffnessMatrix(beamStiffnesses, soilStiffnesses);
-            List<double> forcedDispList = [];
-            for (int i = 0; i < ForcedSoilDispList.Count; i++)
-            {
-                forcedDispList.Add(ForcedSoilDispList[i]);
-            }
-            var zeroVector = Vector<double>.Build.Dense(vectorX.Count, 0.0);
-            ForcedDispTransfer(stiffnessMatrix, zeroVector, forcedDispList);
-
-            return stiffnessMatrix * vectorX - zeroVector;
-        }
-
         // 解法メソッド
         public Vector<double> SolveDisp(
             List<double> beamStiffnesses, List<double> soilStiffnesses, Vector<double> forceVector, Vector<double> vectorX)

@@ -191,32 +191,6 @@ namespace PileDesign.Views
         }
 
 
-        // 共通: CellEditEnding（Layer/Mass 両方から使用）
-        private void DataGrid_Common_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
-        {
-            if (e.EditAction != DataGridEditAction.Commit) return;
-
-            // 編集中 TextBox のバインディングを明示的にソース更新
-            if (e.EditingElement is TextBox tb)
-            {
-                var be = BindingOperations.GetBindingExpression(tb, TextBox.TextProperty);
-                be?.UpdateSource();
-            }
-
-            if (sender is DataGrid grid)
-            {
-                // セル/行コミット完了後にデバウンス付きUpdate
-                grid.Dispatcher.InvokeAsync(() =>
-                {
-                    grid.CommitEdit(DataGridEditingUnit.Cell, true);
-                    grid.CommitEdit(DataGridEditingUnit.Row, true);
-
-                    if (DataContext is GroundLayerViewModel vm)
-                        vm.ScheduleUpdate();
-                }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-            }
-        }
-
         // 行編集終了でも保険として再計算（行コミット後）
         private void DataGridGroundLayer_RowEditEnding(object sender, DataGridRowEditEndingEventArgs e)
         {
@@ -225,16 +199,6 @@ namespace PileDesign.Views
             var grid = (DataGrid)sender;
             // ★ 修正: 行編集終了時に保留中の更新を処理
             // 行編集が終わった時点で IME/TextStore は解放されているはず
-            _pendingUpdate = true;
-            SchedulePendingUpdate();
-        }
-
-        private void DataGridGroundMass_RowEditEnding(object sender, DataGridRowEditEndingEventArgs e)
-        {
-            if (e.EditAction != DataGridEditAction.Commit) return;
-
-            var grid = (DataGrid)sender;
-            // ★ 修正: 行編集終了時に保留中の更新を処理
             _pendingUpdate = true;
             SchedulePendingUpdate();
         }
@@ -566,80 +530,6 @@ namespace PileDesign.Views
 
             vm.ScheduleUpdate();
             vm.ValidateCustomDisplacementProfiles();
-        }
-
-        // 基礎指針'19 4.5 自動計算結果 (DmaxU* / DmaxU*+ΣγcyH) を、選択中ケースのプロファイルへコピー
-        // ケース対応: 0=L1非液状化(DmaxUStar[0]), 1=L1液状化(DmaxUStarSigmaGammaCyH[0]),
-        //             2=L2非液状化(DmaxUStar[1]), 3=L2液状化(DmaxUStarSigmaGammaCyH[1])
-        private void CustomDispCopyAuto_Click(object sender, RoutedEventArgs e)
-        {
-            if (DataContext is not GroundLayerViewModel vm) return;
-            var ground = vm.GroundInput;
-            if (ground == null) return;
-            var masses = ground.GroundMassesData;
-            if (masses == null || masses.Count == 0)
-            {
-                MessageService.Show("土質点データが空です。先に「土質点入力」で土質点を入力してください。",
-                    "コピー不可", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            var profile = vm.SelectedCustomDispProfile;
-            if (profile == null) return;
-
-            int caseIndex = vm.SelectedCustomDispCaseIndex;
-            int level = caseIndex / 2;            // 0=L1, 1=L2
-            bool withLiq = (caseIndex % 2) == 1;  // 1,3 が液状化あり (ΣγcyH 加算)
-
-            // 既存データがあれば確認
-            if (profile.Count > 0)
-            {
-                var ans = MessageService.Show(
-                    $"現在「{vm.CustomDispCaseOptions[caseIndex]}」に {profile.Count} 件のデータがあります。\nこれらを破棄して自動計算値で置き換えますか?",
-                    "上書き確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (ans != MessageBoxResult.Yes) return;
-            }
-
-            // 各土質点について Z (標高) と変位を算出
-            double[] tops = ground.MassTopAltitudes();   // 土質点の変位の位置 = 層の上端 (解析と同じ)
-            var newPoints = new List<DisplacementPoint>(masses.Count);
-            int skipped = 0;
-            for (int i = 0; i < masses.Count; i++)
-            {
-                var data = masses[i];
-                double Z = tops[i];
-
-                double disp;
-                var src = withLiq ? data.DmaxUStarSigmaGammaCyH : data.DmaxUStar;
-                if (src == null || src.Count <= level)
-                {
-                    skipped++;
-                    continue;
-                }
-                disp = src[level];
-                if (double.IsNaN(disp))
-                {
-                    skipped++;
-                    continue;
-                }
-                newPoints.Add(new DisplacementPoint(Z, disp));
-            }
-
-            if (newPoints.Count == 0)
-            {
-                MessageService.Show("自動計算値がすべて空または NaN でした。「液状化」タブで先に計算を実行してください。",
-                    "コピー不可", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            profile.Clear();
-            foreach (var p in newPoints) profile.Add(p);
-
-            vm.ScheduleUpdate();
-            vm.ValidateCustomDisplacementProfiles();
-
-            string msg = $"{newPoints.Count} 件のデータをコピーしました。";
-            if (skipped > 0) msg += $" ({skipped} 件は計算値なしでスキップ)";
-            MessageService.Show(msg, "コピー完了", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // 基礎指針'19 4.5 自動計算結果を 4 ケース全てに一括コピー
@@ -1058,44 +948,6 @@ namespace PileDesign.Views
             }
         }
 
-        private void SliderEngineeringBedrock_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            if (DataContext is GroundLayerViewModel viewModel)
-            {
-                int value = (int)SliderEngineeringBedrock.Value;
-                int n = viewModel.GroundInput.GroundLayers.Count;
-
-                // i行のチェックボックスの状態が変更されたとき、1～i-1行のチェックボックスを有効化、i+1行目以降のチェックボックスを無効化
-                for (int i = 0; i < n; i++)
-                {
-                    if (n - 1 - i < value)
-                    {
-                        viewModel.GroundInput.GroundLayers[i].IsEngineeringBedrock = true;
-                    }
-                    else
-                    {
-                        viewModel.GroundInput.GroundLayers[i].IsEngineeringBedrock = false;
-                    }
-                }
-                viewModel.Update();
-            }
-        }
-
-        private void GroundLayerCollection_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            if (e.Action == NotifyCollectionChangedAction.Remove)
-            {
-                // 行が削除された場合、すべての行番号を再計算する
-                for (int i = 0; i < DataGridGroundLayer.Items.Count; i++)
-                {
-                    if (DataGridGroundLayer.ItemContainerGenerator.ContainerFromIndex(i) is DataGridRow row)
-                    {
-                        row.Header = (i + 1).ToString();
-                    }
-                }
-            }
-        }
-
 
         private void ComboBoxGroundNo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -1127,58 +979,6 @@ namespace PileDesign.Views
             {
                 viewModel.GetType().GetMethod("OnCancel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)
                     ?.Invoke(viewModel, null);
-            }
-        }
-
-        // LevelのComboBoxの選択が変更されたときの処理
-        private void ComboBoxLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var viewModel = (GroundLayerViewModel)DataContext;
-            viewModel?.Update();
-        }
-
-        private void ButtonDeleteGroundMass_Click(object sender, RoutedEventArgs e)
-        {
-            var viewModel = (GroundLayerViewModel)DataContext;
-            InputModel InputModel = viewModel.InputModel;
-            if (DataGridGroundMass.SelectedItem != null)
-            {
-                // 選択されたアイテムが正しい型であることを確認する
-                if (DataGridGroundMass.SelectedItem is GroundMassDataInput selectedItem)
-                {
-                    InputModel.GroundAt(viewModel.GroundNo)?.GroundMassesData.Remove(selectedItem);
-                }
-                else
-                {
-                    // キャストに失敗した場合はエラーを処理するか、適切な処理を行う
-                    // ここに来るのは実装の不具合。利用者に内部の型の話をしても操作は決まらないので、
-                // ダイアログは出さずログに残す。
-                Serilog.Log.Warning("選択項目の型が想定と異なるため処理をスキップしました");
-                }
-                DataGridGroundMass.Items.Refresh();
-            }
-        }
-
-        private void ButtonDeleteGroundLayer_Click(object sender, RoutedEventArgs e)
-        {
-            var viewModel = (GroundLayerViewModel)DataContext;
-            InputModel InputModel = viewModel.InputModel;
-            if (DataGridGroundLayer.SelectedItem != null)
-            {
-                // 選択されたアイテムが正しい型であることを確認する
-                if (DataGridGroundLayer.SelectedItem is GroundLayerInput selectedItem)
-                {
-                    InputModel.GroundAt(viewModel.GroundNo)?.GroundLayers.Remove(selectedItem);
-                }
-                else
-                {
-                    // キャストに失敗した場合はエラーを処理するか、適切な処理を行う
-                    // ここに来るのは実装の不具合。利用者に内部の型の話をしても操作は決まらないので、
-                // ダイアログは出さずログに残す。
-                Serilog.Log.Warning("選択項目の型が想定と異なるため処理をスキップしました");
-                }
-                DataGridGroundLayer.Items.Refresh();
-                viewModel.Update();
             }
         }
 

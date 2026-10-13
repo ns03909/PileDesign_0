@@ -233,14 +233,6 @@ namespace PileDesign.ViewModels
         }
         // 根入れ段数の選択の反映は入力側のセッターで行う (旧 ComboBoxEmbedmentNums_OnSelectionChanged は参照が無かったので 2026-09-19 に撤去)。
 
-        [RelayCommand]
-        private void TextBoxAltitude_OnTextChanged(TextChangedEventArgs e)
-        {
-            UpdateEmbedment();
-            // 変更後（以下の箇所で適用）
-            RequestUpdateWindow();
-        }
-
 
         private EmbedmentDataItem CreateNewEmbedmentDataItem(int index, int currentCollectionSize)
         {

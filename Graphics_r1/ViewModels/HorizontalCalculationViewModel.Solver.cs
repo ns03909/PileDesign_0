@@ -414,7 +414,7 @@ namespace PileDesign.ViewModels
                     for (int i = 0; i < InputModel.ElementDivision.SoilEmbedment.ZDataItems.Count; i++)
                     {
                         var zDataItem = InputModel.ElementDivision.SoilEmbedment.ZDataItems[i];
-                        var soilNode = targetModel.FindNode("根入部地盤節点", null, null, zDataItem.Z);
+                        var soilNode = targetModel.FindNode(FEM.FemNodeNaming.EmbedmentSoil, null, null, zDataItem.Z);
                         if (soilNode == null) continue;
                         soilNode.SetIncrementalForcedDisp(zero);
                         if (resetCumulative) soilNode.SetCumulativeForcedDisp(zero);
@@ -470,7 +470,7 @@ namespace PileDesign.ViewModels
                     double groundDisp1 = isLiquefaction ? zDataItem.GroundDisp1L : zDataItem.GroundDisp1;
                     double groundDisp2 = isLiquefaction ? zDataItem.GroundDisp2L : zDataItem.GroundDisp2;
                     NodeDisp dd = CalcDisplacement(groundDisp1, groundDisp2, level, alpha1, nStep, loadAngle);
-                    FEM.Node soilNode = targetModel.FindNode("根入部地盤節点", null, null, z);
+                    FEM.Node soilNode = targetModel.FindNode(FEM.FemNodeNaming.EmbedmentSoil, null, null, z);
                     soilNode.SetIncrementalForcedDisp(dd);
                     if (resetCumulative)
                         soilNode.SetCumulativeForcedDisp(initialCumulativeSoilDisplacement);
@@ -586,7 +586,7 @@ namespace PileDesign.ViewModels
                         double dWz = md.Weight / nStep; // 1 ステップ当たりの自重増分
 
                         // k=0 の自重は CapNode (= jointNode) に加算。slave 1 段だけなので安全に AP へ伝達。
-                        FEM.Node target;
+                        FEM.Node? target;
                         if (k == 0)
                         {
                             target = jointNodeForWeight;
@@ -1250,7 +1250,6 @@ namespace PileDesign.ViewModels
         //    => (double.IsFinite(v) && v > 0.0) ? v : 0.0;
 
         // 変更: ラッパーに model 引数を追加
-        private void PrepareKTanMat(int iLC, AnaModel model) => PrepareKmat(iLC, true, model, out _, out _);
         private void PrepareKSecMat(int iLC, AnaModel model) => PrepareKmat(iLC, false, model, out _, out _);
 
         // 既存: K組立本体（model を受け取る版）

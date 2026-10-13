@@ -577,41 +577,6 @@ namespace PileDesign.ViewModels
             return double.IsFinite(eiyz) && EI0y > 0 && EI0z > 0 ? eiyz : 0.0;
         }
 
-        //private static (IList<double> Phis, IList<double> Moments)? TryCallMPhiRelationship(object pileSection, double axialN)
-        //{
-        //    if (pileSection == null) return null;
-        //    var t = pileSection.GetType();
-        //    var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
-        //    // 修正: 小文字p→大文字P の順でフォールバック
-        //    var mi = t.GetMethod("GetMPhiRelationship", flags)
-        //          ?? t.GetMethod("GetMPhiRelationship", flags);
-        //    if (mi == null) return null;
-
-        //    object? ret;
-        //    try
-        //    {
-        //        ret = mi.GetParameters().Length switch
-        //        {
-        //            1 => mi.Invoke(pileSection, new object[] { axialN }),
-        //            2 => mi.Invoke(pileSection, new object[] { axialN, 1.0 }),
-        //            _ => null
-        //        };
-        //    }
-        //    catch { return null; }
-        //    if (ret == null) return null;
-
-        //    var rt = ret.GetType();
-        //    var item1 = rt.GetProperty("Item1")?.GetValue(ret) as System.Collections.IEnumerable;
-        //    var item2 = rt.GetProperty("Item2")?.GetValue(ret) as System.Collections.IEnumerable;
-        //    if (item1 == null || item2 == null) return null;
-
-        //    var phis = item1.Cast<object>().Select(Convert.ToDouble).ToList();
-        //    var ms = item2.Cast<object>().Select(Convert.ToDouble).ToList();
-        //    if (phis.Count >= 2 && phis.Count == ms.Count) return (phis, ms);
-        //    return null;
-        //}
-
         // 現ステップの「各杭の軸力」を用いて、対応する全梁の M–φ（合成）を解決してセット
         private void SetupMPhiByCurrentAxialForMiddleBeam(AnaModel model)
         {

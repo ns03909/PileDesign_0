@@ -819,38 +819,6 @@ namespace PileDesign.Views
             }
 
             // 辺（すべて追加、可視性フラグを付与）
-            //for (int i = 0; i < cubePoints.Length; i++)
-            //{
-            //    for (int j = i + 1; j < cubePoints.Length; j++)
-            //    {
-            //        if (!IsEdge(cubePoints[i], cubePoints[j])) continue;
-
-            //        var p3a = cubePoints[i];
-            //        var p3b = cubePoints[j];
-            //        var p2a = transformedPoints[i];
-            //        var p2b = transformedPoints[j];
-
-            //        var center = new Point3D((p3a.X + p3b.X) * 0.5, (p3a.Y + p3b.Y) * 0.5, (p3a.Z + p3b.Z) * 0.5);
-            //        var cvec = new Vector3D(center.X, center.Y, center.Z);
-
-            //        // 可視性判定（描画ロジックと合わせること）
-            //        bool isHidden = Vector3D.DotProduct(viewVector, cvec) < 0;
-
-            //        var dir = cvec;
-            //        if (dir.Length > 0) dir.Normalize();
-
-            //        _cubeHitItems.Add(new CubeItem
-            //        {
-            //            Type = CubePartType.Edge,
-            //            Index = _cubeHitItems.Count,
-            //            Points2D = [p2a, p2b],
-            //            Points3D = [p3a, p3b],
-            //            Direction = dir,
-            //            Depth = Vector3D.DotProduct(viewVector, cvec),
-            //            IsHidden = isHidden
-            //        });
-            //    }
-            //}
             for (int i = 0; i < cubePoints.Length; i++)
             {
                 for (int j = i + 1; j < cubePoints.Length; j++)
@@ -882,40 +850,6 @@ namespace PileDesign.Views
                 }
             }
             // 頂点（少なくとも1本が実線なら選択可能）
-            //for (int i = 0; i < cubePoints.Length; i++)
-            //{
-            //    var p3 = cubePoints[i];
-            //    var p2 = transformedPoints[i];
-            //    var v = new Vector3D(p3.X, p3.Y, p3.Z);
-
-            //    int visibleEdgeCount = 0;
-            //    for (int j = 0; j < cubePoints.Length; j++)
-            //    {
-            //        if (i == j) continue;
-            //        if (!IsEdge(cubePoints[i], cubePoints[j])) continue;
-
-            //        var center = new Point3D((p3.X + cubePoints[j].X) * 0.5, (p3.Y + cubePoints[j].Y) * 0.5, (p3.Z + cubePoints[j].Z) * 0.5);
-            //        var cvec = new Vector3D(center.X, center.Y, center.Z);
-            //        bool isHidden = Vector3D.DotProduct(viewVector, cvec) < 0;
-            //        if (!isHidden) visibleEdgeCount++;
-            //    }
-            //    // 少なくとも1本が実線なら選択可能
-            //    bool isHiddenVertex = (visibleEdgeCount == 0);
-
-            //    var dir = v;
-            //    if (dir.Length > 0) dir.Normalize();
-
-            //    _cubeHitItems.Add(new CubeItem
-            //    {
-            //        Type = CubePartType.Vertex,
-            //        Index = i,
-            //        Points2D = [p2],
-            //        Points3D = [p3],
-            //        Direction = dir,
-            //        Depth = Vector3D.DotProduct(viewVector, v),
-            //        IsHidden = isHiddenVertex
-            //    });
-            //}
             for (int i = 0; i < cubePoints.Length; i++)
             {
                 var p3 = cubePoints[i];

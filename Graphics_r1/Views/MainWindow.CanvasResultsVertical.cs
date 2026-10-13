@@ -94,8 +94,8 @@ namespace PileDesign.Views
                     var coordsJ = inputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
                     if (coordsI == null || coordsJ == null) continue;
 
-                    string nameI = ResolveVBFemNodeName(inputModel, fbBeam.NodeI_Type, fbBeam.NodeI_Id);
-                    string nameJ = ResolveVBFemNodeName(inputModel, fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
+                    string? nameI = ResolveVBFemNodeName(inputModel, fbBeam.NodeI_Type, fbBeam.NodeI_Id);
+                    string? nameJ = ResolveVBFemNodeName(inputModel, fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
 
                     (double Uz, double Rx, double Ry) defaultD = (0.0, 0.0, 0.0);
                     var dI = nameI != null && nodeDispMap.TryGetValue(nameI, out var ri) ? ri : defaultD;
@@ -135,7 +135,7 @@ namespace PileDesign.Views
             {
                 // 接合節点 → 杭頭（剛体リンク部分）の区間を rigid で描く
                 // v2 セマンティクス: pile.Z は接合節点 Z
-                string connName = $"FoundationNode-P{pile.No}";
+                string connName = FemNodeNaming.PileJoint(pile.No);
                 double uzTopVb = nodeDispMap.TryGetValue(connName, out var r) ? r.Uz : 0; // VB 規約: 負=下向き
                 double connectionZ = pile.Z;
                 Point3D connPt3D = new(pile.X, pile.Y, connectionZ + uzTopVb * dispScale);
@@ -264,8 +264,8 @@ namespace PileDesign.Views
                 var coordsJ = inputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
                 if (coordsI == null || coordsJ == null) continue;
 
-                string nameI = ResolveVBFemNodeName(inputModel, fbBeam.NodeI_Type, fbBeam.NodeI_Id);
-                string nameJ = ResolveVBFemNodeName(inputModel, fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
+                string? nameI = ResolveVBFemNodeName(inputModel, fbBeam.NodeI_Type, fbBeam.NodeI_Id);
+                string? nameJ = ResolveVBFemNodeName(inputModel, fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
 
                 (double Uz, double Rx, double Ry) defaultD = (0.0, 0.0, 0.0);
                 var dI = nameI != null && nodeDispMap.TryGetValue(nameI, out var ri) ? ri : defaultD;
@@ -589,25 +589,12 @@ namespace PileDesign.Views
         }
 
         /// <summary>
-        /// VB解析のFEM節点名を解決する（VerticalBeamModelling.GetFemNodeNameと同じ命名規則）
+        /// VB解析のFEM節点名を解決する。解析モデル側 (<see cref="AnalysisModelling.FemNodeNameOf"/>) をそのまま使う。
+        /// 以前はここに同じ関数の行単位の写しがあり、名前の付け方を変えると画面だけが取り残されて
+        /// 基礎梁の線が黙って描かれなくなるおそれがあった。
         /// </summary>
-        private static string ResolveVBFemNodeName(InputModel inputModel, NodeReferenceType type, Guid id)
-        {
-            switch (type)
-            {
-                case NodeReferenceType.FoundationNode:
-                    var fnode = inputModel.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n.Id == id);
-                    return fnode != null ? $"FoundationNode-{fnode.No}" : null;
-                case NodeReferenceType.PileLayout:
-                    var pile = inputModel.PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
-                    return pile != null ? $"FoundationNode-P{pile.No}" : null;
-                case NodeReferenceType.GeneralNode:
-                    var gnode = inputModel.InputNodes?.FirstOrDefault(n => n.UniqueId == id);
-                    return gnode != null ? $"InputNode-{gnode.No}" : null;
-                default:
-                    return null;
-            }
-        }
+        private static string? ResolveVBFemNodeName(InputModel inputModel, NodeReferenceType type, Guid id)
+            => AnalysisModelling.FemNodeNameOf(inputModel, type, id);
 
         /// <summary>
         /// 基礎梁考慮沈下梁応力 / 基礎梁考慮沈下 / 基礎梁考慮反力 を描画

@@ -441,32 +441,6 @@ namespace PileDesign.Models
             return thetaA;
         }
 
-        // コンクリートの圧縮合力を返すメソッド
-        private double GetNc(double N, double M)
-        {
-            double Nc;
-            if (FTPileTensionBars.IsTensionType)
-            {
-                Nc = N;
-            }
-            else
-            {
-                if (N <= 0 && Math.Abs(N * 0.5) > Math.Abs(M / FTPileTensionBars.Ds))
-                {
-                    Nc = 0;
-                }
-                else if (Math.Abs(N * 0.5) < Math.Abs(M / FTPileTensionBars.Ds))
-                {
-                    Nc = Math.Abs(M / FTPileTensionBars.Ds) + N * 0.5;
-                }
-                else
-                {
-                    Nc = N;
-                }
-            }
-            return Nc;
-        }
-
         // 浮き上がり回転角を返すメソッド
         private double GetThetaC(double N)
         {

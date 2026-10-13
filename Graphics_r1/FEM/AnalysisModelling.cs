@@ -167,7 +167,7 @@ namespace PileDesign.FEM
 
             var loadCase = InputModel.LoadCasesInput.LoadCasesLevel1[0];
             Node actionNode = new();
-            actionNode.SetNodeInfo("ActionPoint", loadCase.ForceActionPointX, loadCase.ForceActionPointY, loadCase.ForceActionPointAltitude);
+            actionNode.SetNodeInfo(FemNodeNaming.ActionPoint, loadCase.ForceActionPointX, loadCase.ForceActionPointY, loadCase.ForceActionPointAltitude);
             Nodes.Add(actionNode);
 
             Nodes[^1].IsLoaded = true;
@@ -214,9 +214,9 @@ namespace PileDesign.FEM
             (Node embedmentNode, Node soilNode, HorizontalSoilSpring spring) CreateDGBNodesAndSpring(double x, double y, double z)
             {
                 var embedmentNode = new Node();
-                embedmentNode.SetNodeInfo("根入部節点", x, y, z);
+                embedmentNode.SetNodeInfo(FemNodeNaming.Embedment, x, y, z);
                 var soilNode = new Node();
-                soilNode.SetNodeInfo("根入部地盤節点", x, y, z);
+                soilNode.SetNodeInfo(FemNodeNaming.EmbedmentSoil, x, y, z);
                 soilNode.SetIsForcedDisped(true);
                 soilNode.SetBoundary(new(false, false, true, true, true, true));
                 var spring = new HorizontalSoilSpring("土圧合力ばね", embedmentNode, soilNode);
@@ -638,7 +638,7 @@ namespace PileDesign.FEM
             // Cap Node
             double z0 = soilPile.ZDataItems[0].Z;
             var capNode = new Node();
-            capNode.SetNodeInfo($"CapNode-{pile.No}", x, y, z0);
+            capNode.SetNodeInfo(FemNodeNaming.Cap(pile.No), x, y, z0);
             // CapNodeはマスター節点として機能するため、自由度を解放しておく
             capNode.SetBoundary(new Boundary(false, false, false, false, false, false));
             result.CapNode = capNode;
@@ -682,7 +682,7 @@ namespace PileDesign.FEM
 
                 // Pile Node
                 var pileNode = new Node();
-                pileNode.SetNodeInfo($"杭節点-{pile.No}-{i}", x, y, z);
+                pileNode.SetNodeInfo(FemNodeNaming.Pile(pile.No, i), x, y, z);
                 result.PileNodes.Add(pileNode);
 
                 if (prevPileNode == null)
@@ -736,7 +736,7 @@ namespace PileDesign.FEM
 
                 // Soil Node
                 var soilNode = new Node();
-                soilNode.SetNodeInfo($"杭地盤節点-{pile.No}-{i}", x, y, z);
+                soilNode.SetNodeInfo(FemNodeNaming.PileSoil(pile.No, i), x, y, z);
                 soilNode.SetIsForcedDisped(true);
                 soilNode.SetBoundary(SoilNodeBoundary);
                 result.SoilNodes.Add(soilNode);
@@ -878,7 +878,7 @@ namespace PileDesign.FEM
             if (skip.Count > 0)
             {
                 Log.Information("[AnalysisModelling] つながっていない一般節点 {Count} 個を解析モデルから除外しました: {Names}",
-                    skip.Count, string.Join(", ", unconnected.Select(n => $"InputNode-{n.No}")));
+                    skip.Count, string.Join(", ", unconnected.Select(n => FemNodeNaming.Input(n.No))));
             }
 
             foreach (var inputNode in InputModel.InputNodes)
@@ -891,7 +891,7 @@ namespace PileDesign.FEM
                 if (inputNode.Type == NodeType.General)
                 {
                     var node = new Node();
-                    node.SetNodeInfo($"InputNode-{inputNode.No}", inputNode.X, inputNode.Y, inputNode.Z);
+                    node.SetNodeInfo(FemNodeNaming.Input(inputNode.No), inputNode.X, inputNode.Y, inputNode.Z);
                     // 一般節点は自由（境界条件なし）
                     node.SetBoundary(new Boundary(false, false, false, false, false, false));
                     Nodes.Add(node);
@@ -916,11 +916,11 @@ namespace PileDesign.FEM
             {
                 foreach (var fbNode in InputModel.FoundationBeamInput.Nodes)
                 {
-                    if (Nodes.Any(n => n.Name == $"FoundationNode-{fbNode.No}"))
+                    if (Nodes.Any(n => n.Name == FemNodeNaming.FoundationBeam(fbNode.No)))
                         continue;
 
                     var node = new Node();
-                    node.SetNodeInfo($"FoundationNode-{fbNode.No}", fbNode.X, fbNode.Y, fbNode.Z);
+                    node.SetNodeInfo(FemNodeNaming.FoundationBeam(fbNode.No), fbNode.X, fbNode.Y, fbNode.Z);
                     node.SetBoundary(new Boundary(false, false, false, false, false, false));
                     Nodes.Add(node);
                 }
@@ -932,7 +932,7 @@ namespace PileDesign.FEM
             {
                 foreach (var pile in InputModel.PileLayoutItems)
                 {
-                    string name = $"FoundationNode-P{pile.No}";
+                    string name = FemNodeNaming.PileJoint(pile.No);
 
                     // Guid→FEM名の辞書に登録（ResolveFemNodeで使用）
                     if (pile.UniqueId != Guid.Empty)
@@ -964,13 +964,13 @@ namespace PileDesign.FEM
             {
                 case NodeReferenceType.FoundationNode:
                     var fnode = inputModel?.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n.Id == id);
-                    return fnode != null ? $"FoundationNode-{fnode.No}" : null;
+                    return fnode != null ? FemNodeNaming.FoundationBeam(fnode.No) : null;
                 case NodeReferenceType.PileLayout:
                     var pile = inputModel?.PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
-                    return pile != null ? $"FoundationNode-P{pile.No}" : null;
+                    return pile != null ? FemNodeNaming.PileJoint(pile.No) : null;
                 case NodeReferenceType.GeneralNode:
                     var gnode = inputModel?.InputNodes?.FirstOrDefault(n => n.UniqueId == id);
-                    return gnode != null ? $"InputNode-{gnode.No}" : null;
+                    return gnode != null ? FemNodeNaming.Input(gnode.No) : null;
                 default:
                     return null;
             }
@@ -1058,7 +1058,7 @@ namespace PileDesign.FEM
 
             foreach (var node in Nodes)
             {
-                if (!node.Name.StartsWith("FoundationNode-") && !node.Name.StartsWith("InputNode-"))
+                if (!FemNodeNaming.IsFoundationOrInput(node.Name))
                     continue;
 
                 double dx = node.Coord.X - x;
@@ -1150,7 +1150,7 @@ namespace PileDesign.FEM
                 {
                     foreach (var pile in InputModel.PileLayoutItems)
                     {
-                        var capNode = Nodes.FirstOrDefault(n => n.Name == $"CapNode-{pile.No}");
+                        var capNode = Nodes.FirstOrDefault(n => n.Name == FemNodeNaming.Cap(pile.No));
                         if (capNode != null)
                             SetPileHeadMasterSlave(pile, capNode);
                     }
@@ -1209,10 +1209,10 @@ namespace PileDesign.FEM
 
             foreach (var pile in InputModel.PileLayoutItems)
             {
-                var capNode = Nodes.FirstOrDefault(n => n.Name == $"CapNode-{pile.No}");
+                var capNode = Nodes.FirstOrDefault(n => n.Name == FemNodeNaming.Cap(pile.No));
                 if (capNode == null) continue;
 
-                var connectionNode = Nodes.FirstOrDefault(n => n.Name == $"FoundationNode-P{pile.No}");
+                var connectionNode = Nodes.FirstOrDefault(n => n.Name == FemNodeNaming.PileJoint(pile.No));
                 if (connectionNode == null)
                 {
                     // ConnectionNodeがない場合はCapNodeを直接RigidBodyのslaveに
@@ -1276,7 +1276,7 @@ namespace PileDesign.FEM
             log.AppendLine("=== ConnectCapsFlexibleBeam 診断 v4 (剛床slave + ペナルティばね) ===");
 
             var actionPoint = Nodes[0]; // ActionPoint
-            log.AppendLine($"ActionPoint: ({actionPoint.Coord.X:F3}, {actionPoint.Coord.Y:F3}, {actionPoint.Coord.Z:F3})");
+            log.AppendLine($"{FemNodeNaming.ActionPoint}: ({actionPoint.Coord.X:F3}, {actionPoint.Coord.Y:F3}, {actionPoint.Coord.Z:F3})");
 
             // 剛床モードではActionPointは面内（Ux, Uy, Rz）のみ荷重を受け持つ。
             // Uz, Rx, Ry は固定。
@@ -1289,7 +1289,7 @@ namespace PileDesign.FEM
                 true,      // Ry: 固定
                 apBnd.Rz   // Rz: 維持（面内：剛床回転）
             ));
-            log.AppendLine($"ActionPoint boundary updated: Uz=fixed, Rx=fixed, Ry=fixed (rigid floor mode)");
+            log.AppendLine($"{FemNodeNaming.ActionPoint} boundary updated: Uz=fixed, Rx=fixed, Ry=fixed (rigid floor mode)");
 
             // 2026-05-06 (改): DOF 別 Kbig — 並進 1e7 kN/m / 回転 1e8 kN·m/rad
             // (上記 ConnectCapsRigidBody と同方針)。
@@ -1302,10 +1302,10 @@ namespace PileDesign.FEM
             int penaltyCount = 0;
             foreach (var pile in InputModel.PileLayoutItems)
             {
-                var capNode = Nodes.FirstOrDefault(n => n.Name == $"CapNode-{pile.No}");
+                var capNode = Nodes.FirstOrDefault(n => n.Name == FemNodeNaming.Cap(pile.No));
                 if (capNode == null) continue;
 
-                var connectionNode = Nodes.FirstOrDefault(n => n.Name == $"FoundationNode-P{pile.No}");
+                var connectionNode = Nodes.FirstOrDefault(n => n.Name == FemNodeNaming.PileJoint(pile.No));
                 if (connectionNode == null) continue;
 
                 // CapNodeを自由節点に設定（PileNode-0のmasterとなるため、slave不可）
@@ -1368,7 +1368,7 @@ namespace PileDesign.FEM
             int additionalSlaveCount = 0;
             var alreadySlavedNames = new HashSet<string>();
             foreach (var pile in InputModel.PileLayoutItems)
-                alreadySlavedNames.Add($"FoundationNode-P{pile.No}");
+                alreadySlavedNames.Add(FemNodeNaming.PileJoint(pile.No));
 
             foreach (var node in Nodes)
             {
@@ -1377,9 +1377,7 @@ namespace PileDesign.FEM
                 if (alreadySlavedNames.Contains(node.Name)) continue; // 既にslave化済み
 
                 // InputNode-* または FoundationNode-{数字} が剛床slave対象
-                bool isInputNode = node.Name.StartsWith("InputNode-");
-                bool isFoundationNode = node.Name.StartsWith("FoundationNode-") && !node.Name.StartsWith("FoundationNode-P");
-                if (!isInputNode && !isFoundationNode) continue;
+                if (!FemNodeNaming.IsSlabNode(node.Name)) continue;
 
                 // 既にmaster-slave関係がある場合はスキップ（安全ガード）
                 if (node.HasMasterAt(Dof.Ux) || node.HasMasterAt(Dof.Uy) || node.HasMasterAt(Dof.Rz))
@@ -1411,7 +1409,7 @@ namespace PileDesign.FEM
             // ── 3. ConnectionNodeの基礎梁接続状況を確認 ──
             var connNodeNames = new HashSet<string>();
             foreach (var pile in InputModel.PileLayoutItems)
-                connNodeNames.Add($"FoundationNode-P{pile.No}");
+                connNodeNames.Add(FemNodeNaming.PileJoint(pile.No));
 
             var connectedByBeam = new HashSet<string>();
             foreach (var beam in Beams)
@@ -1473,7 +1471,7 @@ namespace PileDesign.FEM
         /// </summary>
         private void SetPileHeadMasterSlave(PileLayoutDataItem pile, Node capNode)
         {
-            var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"杭節点-{pile.No}-0");
+            var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == FemNodeNaming.PileHead(pile.No));
             if (pileHeadNode == null) return;
 
             var actionPoint = RigidBodies[0].MasterNode;
@@ -1505,7 +1503,7 @@ namespace PileDesign.FEM
         /// </summary>
         private void SetPileHeadMasterSlaveFlexible(PileLayoutDataItem pile, Node capNode)
         {
-            var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"杭節点-{pile.No}-0");
+            var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == FemNodeNaming.PileHead(pile.No));
             if (pileHeadNode == null) return;
 
             // PileNode-0 → CapNode: Ux, Uy, Uz, Rz をslave

@@ -176,8 +176,14 @@ namespace TestProject1
                 "private static EvaluationResult? TryBuild(Func<EvaluationResult> build, string part, List<BuildFailure> failures)");
             StringAssert.Contains(tryBuild, "failures.Add(", "検定の組み立ての失敗を記録していません (画面が「検定なし」と区別できない)");
 
-            string build = TestSource.MethodBody(src, "public static PileEvaluationSummary Build(MainWindowViewModel vm)");
-            StringAssert.Contains(build, "FromResults(horizontal, unfactored, bearing, seismicGrade, failures)",
+            // 水平解析の検定は使い回せるよう別に組む (BuildHorizontal)。そこで記録した失敗も、鉛直系の失敗と一緒にまとめへ渡す
+            string horizontal = TestSource.MethodBody(src, "public static HorizontalParts BuildHorizontal(MainWindowViewModel vm)");
+            StringAssert.Contains(horizontal, "new HorizontalParts(horizontal, unfactored, failures)",
+                "水平解析の検定で記録した失敗を返していません");
+            string build = TestSource.MethodBody(src, "public static PileEvaluationSummary Build(MainWindowViewModel vm, HorizontalParts horizontalParts)");
+            StringAssert.Contains(build, "new List<BuildFailure>(horizontalParts.Failures)",
+                "水平解析の検定で記録した失敗を、まとめに引き継いでいません");
+            StringAssert.Contains(build, "FromResults(horizontalParts.Horizontal, horizontalParts.HorizontalUnfactored, bearing, seismicGrade, failures)",
                 "記録した失敗を、まとめに渡していません");
 
             string dashboard = TestSource.Read("Graphics_r1", "Views", "ResultDashboardWindow.xaml.cs");

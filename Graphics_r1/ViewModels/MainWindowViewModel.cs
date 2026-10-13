@@ -350,23 +350,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-        /// <summary>
-        /// SettlementSoilLayerのThickness（層厚）を計算
-        /// </summary>
-        /// <param name="layers">沈下土層のリスト</param>
-        /// <param name="loadingPlaneAltitude">載荷面標高</param>
-        private static void CalculateLayerThicknesses(
-            ObservableCollection<SettlementSoilLayer> layers,
-            double loadingPlaneAltitude)
-        {
-            for (int i = 0; i < layers.Count; i++)
-            {
-                layers[i].Thickness = i == 0
-                    ? loadingPlaneAltitude - layers[i].BottomAltitude
-                    : layers[i - 1].BottomAltitude - layers[i].BottomAltitude;
-            }
-        }
-
         // JsonSerializerOptions をキャッシュ
         // WriteIndented=false でシリアライズ時間 約 1/3、ファイルサイズ 約 50% 縮小
         // (デシリアライズ側はインデント有無に依存しないため、旧 indented ファイルもそのまま読込可能)
@@ -909,34 +892,6 @@ namespace PileDesign.ViewModels
             if (!ApplyCurrentUndoSnapshot()) _undoManager.UndoSnapshot();
         }
 
-        public void DeleteDuplicatedPiles()
-        {
-            var uniquePileLayoutDataItems = new ObservableCollection<PileLayoutDataItem>();
-
-            foreach (var pileLayoutItem in CurrentInputModel.PileLayoutItems)
-            {
-                bool isDuplicate = uniquePileLayoutDataItems.Any(existingItem =>
-                    existingItem.X == pileLayoutItem.X &&
-                    existingItem.Y == pileLayoutItem.Y &&
-                    existingItem.Z == pileLayoutItem.Z);
-
-                if (!isDuplicate)
-                    uniquePileLayoutDataItems.Add(pileLayoutItem);
-            }
-
-            CurrentInputModel.PileLayoutItems = uniquePileLayoutDataItems;
-            CurrentInputModel.PileLayoutItems.CollectionChanged -= PileLayoutItems_CollectionChanged;
-            CurrentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
-            OnPropertyChanged(nameof(PileCountText));
-            // 変更: ダイアログ後は即時実行
-            UpdateWindowImmediate();
-        }
-
-        public static void DeleteDuplicatedElements()
-        {
-            // 重複要素の削除ロジック
-        }
-
         // ウィンドウを開くメソッド
         private TViewModel OpenDialogWindow<TViewModel, TWindow>(MainWindowViewModel mainWindowViewModel)
             where TViewModel : ObservableObject
@@ -1382,13 +1337,14 @@ namespace PileDesign.ViewModels
         }
 
         // 杭要素分割ウィンドウの再入ガード
-        // F4 連打や Ctrl+D 連打で await Task.Run(DeepCopy) 中に次の呼出しが入ると、
-        // 1 本目の ShowDialog 終了後に 2 本目が開いてしまうのを防ぐ
+        // 以前は変更前の写しを await Task.Run で取っており、その間に F4・Ctrl+D の連打で次の呼出しが入ると
+        // 1 本目の ShowDialog 終了後に 2 本目が開いた。写しは UI スレッドで取るようにしたが、
+        // ShowDialog の入れ子のメッセージループから入り直されても 2 本目を開かないよう残す
         private bool _isElementDivisionWindowOpening;
 
-        // 杭要素分割ウィンドウを開くメソッド
+        // 杭要素分割ウィンドウを開くメソッド (コマンド名は OpenElementDivisionWindowCommand)
         [RelayCommand]
-        public async Task OpenElementDivisionWindowAsync()
+        public void OpenElementDivisionWindow()
         {
             if (_isElementDivisionWindowOpening) return;
             _isElementDivisionWindowOpening = true;
@@ -1409,16 +1365,15 @@ namespace PileDesign.ViewModels
                         return;
                     }
 
-                    // Undo用DeepCopyをダイアログ表示前に完了させる (変更前の写し)。
-                    // 写しを作れなければ、分割は行えるが履歴には積まない (欠けた写しを積まない)
-                    var sourceForUndo = CurrentInputModel;
-                    InputModel? undoCopy;
-                    try { undoCopy = await Task.Run(() => sourceForUndo.CopyForHistory()); }
-                    catch (Exception ex)
-                    {
-                        Serilog.Log.Error(ex, "杭要素分割: 変更前の入力の写しを作れませんでした");
-                        undoCopy = null;
-                    }
+                    // 変更前の写し (元に戻す用) をダイアログ表示前に、UI スレッドで取る。
+                    // 写しを作れなければ、分割は行えるが履歴には積まない (欠けた写しを積まない)。
+                    //
+                    // 以前は Task.Run で裏で取っていた。その間もメイン画面は操作できるので、写しの途中で
+                    // 入力を編集する・Ctrl+Z で入力が差し替わると、途中まで古く途中から新しい写し、または
+                    // 差し替え前の入力の写しが「分割の前」として履歴に積まれ、元に戻すとその入力が復元された。
+                    // 写しは最大の計算例 (杭 108 本・39 本) でも数 ms で、編集のたびに UI スレッドで取っている
+                    // 写し (SaveUndoState) と同じ重さなので、ここも UI スレッドで取る (入力が途中で変わりえない)。
+                    InputModel? undoCopy = CopyBeforeElementDivision(CurrentInputModel);
                     bool splitBefore = IsElementSplit;
 
                     // ウィンドウを即座に表示（重い初期化はContentRenderedイベントで実行）
@@ -1453,6 +1408,21 @@ namespace PileDesign.ViewModels
             finally
             {
                 _isElementDivisionWindowOpening = false;
+            }
+        }
+
+        /// <summary>
+        /// 杭要素分割の変更前の写し (元に戻す用)。作れなければ null (分割は行えるが履歴には積まない)。
+        /// 呼び出し元の UI スレッドで、その場で取る (裏で取ると、写しの途中で入力が編集・差し替えされうる)。
+        /// </summary>
+        internal static InputModel? CopyBeforeElementDivision(InputModel? source)
+        {
+            if (source == null) return null;
+            try { return source.CopyForHistory(); }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "杭要素分割: 変更前の入力の写しを作れませんでした");
+                return null;
             }
         }
 
@@ -2049,28 +2019,6 @@ namespace PileDesign.ViewModels
         /// 「VL を加算」を誤適用した場合の取り消しや、「VL + 地震時」を「地震時 ΔN」へ戻す変換に使用。
         /// </summary>
         // (上の注記を参照)
-
-        /// <summary>
-        /// 全杭の L1/L2 軸力配列に sign × AxialForceVL を加算する内部ヘルパ。
-        /// sign=+1 で加算、-1 で減算。
-        /// </summary>
-        private void ApplyVLOffsetToL1L2(double sign)
-        {
-            foreach (var pile in CurrentInputModel.PileLayoutItems)
-            {
-                double vl = pile.AxialForceVL;
-                if (pile.AxialForceLevel1s != null)
-                {
-                    for (int i = 0; i < pile.AxialForceLevel1s.Count; i++)
-                        pile.AxialForceLevel1s[i] += sign * vl;
-                }
-                if (pile.AxialForceLevel2s != null)
-                {
-                    for (int i = 0; i < pile.AxialForceLevel2s.Count; i++)
-                        pile.AxialForceLevel2s[i] += sign * vl;
-                }
-            }
-        }
 
         /// <summary>
         /// 選択された杭を削除するコマンド

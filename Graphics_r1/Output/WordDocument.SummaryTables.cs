@@ -116,223 +116,10 @@ namespace PileDesign.Output
 
             }
 
-            //    {
-            //        AddLineBreak(body);
-            //        AddAutoFigureCaption(body, $"場所打ちコンクリート杭明細", "表");
-            //        // 1. Table, TableRow, TableCellを作成
-            //        var table = new Table();
-
-            //        // 黒線の罫線プロパティを追加
-            //        var borders = new TableBorders(
-            //            new TopBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-            //            new BottomBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-            //            new LeftBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-            //            new RightBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-            //            new InsideHorizontalBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-            //            new InsideVerticalBorder { Val = BorderValues.Single, Color = "000000", Size = 4 }
-            //        );
-            //        table.AppendChild(new TableProperties(borders));
-
-            //        // テーブルの行を作成
-            //        for (int rowIdx = 1; rowIdx <= selectedPileBodies.Count + 1; rowIdx++)
-            //        {
-            //            TableRow row = new();
-
-            //            for (int colIdx = 1; colIdx <= 9; colIdx++)
-            //            {
-            //                TableCell cell = new();
-
-            //                if (rowIdx == 1)
-            //                {
-            //                    if (colIdx == 1)
-            //                    {
-            //                        var para = GetParagraph("杭符号", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 2)
-            //                    {
-            //                        var para = GetParagraph("区間No", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 3)
-            //                    {
-            //                        var para = GetParagraph("上端深さ\n[m]", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 4)
-            //                    {
-            //                        var para = GetParagraph("下端深さ\n[m]", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 5)
-            //                    {
-            //                        var para = GetParagraph("杭断面タイプ", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 6)
-            //                    {
-            //                        var para = GetParagraph("杭径\n[mm]", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 7)
-            //                    {
-            //                        var para = GetParagraph("鋼管", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 8)
-            //                    {
-            //                        var para = GetParagraph("コンクリート\nFc|E|γ|ξ", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 9)
-            //                    {
-            //                        var para = GetParagraph("主筋", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 10)
-            //                    {
-            //                        var para = GetParagraph("フープ筋", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                }
-            //                else
-            //                {
-            //                    int i = rowIdx - 2;
-
-            //                    if (colIdx == 1)
-            //                    {
-            //                        var para = GetParagraph($"{selectedPileBodies[i]}", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 2)
-            //                    {
-            //                        var para = GetParagraph($"{selectedSegment[i]}", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 3)
-            //                    {
-            //                        var para = GetParagraph($"{selectedSegmentTop[i]}", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 4)
-            //                    {
-            //                        var para = GetParagraph($"{selectedSegmentBtm[i]}", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 5)
-            //                    {
-            //                        var para = GetParagraph($"{sectionTypes[i]}", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 6)
-            //                    {
-            //                        var para = GetParagraph($"{pileDias[i]}", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 7)
-            //                    {
-            //                        var para = GetParagraph($"{pipeDescription[i]}", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 8)
-            //                    {
-            //                        var para = GetParagraph($"{concreteFcDescription[i]}|{concreteEcDescription[i]}|{concreteGammaDescription[i]}|{concreteGsiDescription[i]}", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 9)
-            //                    {
-            //                        var para = GetParagraph($"{mainBarDescription[i]}", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    else if (colIdx == 10)
-            //                    {
-            //                        var para = GetParagraph($"{hoopDescription[i]}", "center", 8);
-            //                        SetTableCellWithVerticalAlign(cell, para, "center");
-            //                    }
-            //                    //cell.Append(new Paragraph(new Run(new Text("")))); // 空セル
-            //                }
-
-            //                row.Append(cell);
-            //            }
-            //            table.Append(row);
-            //        }
-            //        // 8. bodyにTableを追加
-            //        body.Append(table);
-            //    }
-            //}
             {
                 AddLineBreak(body);
                 AddAutoFigureCaption(body, $"杭体明細", "表");
-                //var table = new Table();
                 var table = BuildPileDescriptionTable(inputModel);
-                //var borders = new TableBorders(
-                //    new TopBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-                //    new BottomBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-                //    new LeftBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-                //    new RightBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-                //    new InsideHorizontalBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-                //    new InsideVerticalBorder { Val = BorderValues.Single, Color = "000000", Size = 4 }
-                //);
-                //table.AppendChild(new TableProperties(borders));
-
-                //for (int rowIdx = 1; rowIdx <= selectedPileBodies.Count + 1; rowIdx++)
-                //{
-                //    TableRow row = new();
-
-                //    for (int colIdx = 1; colIdx <= 10; colIdx++)
-                //    {
-                //        TableCell cell = new();
-                //        if (rowIdx == 1)
-                //        {
-                //            switch (colIdx)
-                //            {
-                //                case 1: SetTableCellWithVerticalAlign(cell, GetParagraph("杭符号", "center", 8), "center"); break;
-                //                case 2: SetTableCellWithVerticalAlign(cell, GetParagraph("区間No", "center", 8), "center"); break;
-                //                case 3: SetTableCellWithVerticalAlign(cell, GetParagraph("上端深さ\n[m]", "center", 8), "center"); break;
-                //                case 4: SetTableCellWithVerticalAlign(cell, GetParagraph("下端深さ\n[m]", "center", 8), "center"); break;
-                //                case 5: SetTableCellWithVerticalAlign(cell, GetParagraph("杭断面タイプ", "center", 8), "center"); break;
-                //                case 6: SetTableCellWithVerticalAlign(cell, GetParagraph("杭径\n[mm]", "center", 8), "center"); break;
-                //                case 7: SetTableCellWithVerticalAlign(cell, GetParagraph("鋼管", "center", 8), "center"); break;
-                //                case 8: SetTableCellWithVerticalAlign(cell, GetParagraph("コンクリート\nFc|E|γ|ξ", "center", 8), "center"); break;
-                //                case 9: SetTableCellWithVerticalAlign(cell, GetParagraph("主筋", "center", 8), "center"); break;
-                //                case 10: SetTableCellWithVerticalAlign(cell, GetParagraph("フープ筋", "center", 8), "center"); break;
-                //            }
-                //        }
-                //        else
-                //        {
-                //            int i = rowIdx - 2;
-                //            switch (colIdx)
-                //            {
-                //                case 1: SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedPileBodies[i]}", "center", 8), "center"); break;
-                //                case 2: SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegment[i]}", "center", 8), "center"); break;
-                //                case 3: SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegmentTop[i]}", "center", 8), "center"); break;
-                //                case 4: SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegmentBtm[i]}", "center", 8), "center"); break;
-                //                case 5: SetTableCellWithVerticalAlign(cell, GetParagraph($"{sectionTypes[i]}", "center", 8), "center"); break;
-                //                case 6: SetTableCellWithVerticalAlign(cell, GetParagraph($"{pileDias[i]}", "center", 8), "center"); break;
-                //                case 7: SetTableCellWithVerticalAlign(cell, GetParagraph($"{pipeDescription[i]}", "center", 8), "center"); break;
-                //                case 8: SetTableCellWithVerticalAlign(cell, GetParagraph($"{concreteFcDescription[i]}|{concreteEcDescription[i]}|{concreteGammaDescription[i]}|{concreteGsiDescription[i]}", "center", 8), "center"); break;
-                //                case 9: SetTableCellWithVerticalAlign(cell, GetParagraph($"{mainBarDescription[i]}", "center", 8), "center"); break;
-                //                case 10: SetTableCellWithVerticalAlign(cell, GetParagraph($"{hoopDescription[i]}", "center", 8), "center"); break;
-                //            }
-                //        }
-                //        row.Append(cell);
-                //    }
-
-                //    // 追加: 1行目を繰返しヘッダー行に設定
-                //    if (rowIdx == 1)
-                //    {
-                //        var trPr = row.GetFirstChild<TableRowProperties>();
-                //        if (trPr == null)
-                //        {
-                //            trPr = new TableRowProperties();
-                //            row.PrependChild(trPr);
-                //        }
-                //        if (!trPr.Elements<TableHeader>().Any())
-                //            trPr.Append(new TableHeader());
-                //    }
-
-                //    table.Append(row);
-                //}
 
                 body.Append(table);
             }
@@ -980,55 +767,6 @@ namespace PileDesign.Output
                             SetTableCellWithVerticalAlign(cell, para, "center");
                         }
                     }
-                    //else if (rowIdx == 10)
-                    //{
-                    //    if (colIdx == 1)
-                    //    {
-                    //        var para = GetParagraph("レベル2\n基礎部\n慣性力\nP<_f>", "center", 8);
-                    //        SetTableCellWithVerticalAlign(cell, para, "center");
-                    //    }
-
-                    //    else if (colIdx >= 2 && (colIdx - 2) < loadCasesInput.LoadCombinations.Count)
-                    //    {
-                    //        string pf = string.Empty;
-                    //        for (int i = 0; i < loadCasesInput.LoadCasesLevel2.Count; i++)
-                    //        {
-                    //            pf += $"{loadCasesInput.LoadCasesLevel2[i].LoadName}: ";
-                    //            pf += $"{loadCasesInput.LoadCasesLevel2[i].FoundationMassForce:N1}";
-                    //            pf += i < loadCasesInput.LoadCasesLevel2.Count - 1 ? "\n" : string.Empty;
-                    //        }
-                    //        var para = GetParagraph(pf, "right", 8);
-                    //        SetTableCellWithVerticalAlign(cell, para, "center");
-                    //    }
-                    //}
-
-                    //else if (rowIdx == 11)
-                    //{
-                    //    if (colIdx == 1)
-                    //    {
-                    //        var para = GetParagraph("レベル2\nβ<_U>・P<_s>＋β<_L>・P<_f>", "center", 8);
-                    //        SetTableCellWithVerticalAlign(cell, para, "center");
-                    //    }
-                    //    else if (colIdx >= 2 && (colIdx - 2) < loadCasesInput.LoadCombinations.Count)
-                    //    {
-                    //        string p = string.Empty;
-                    //        for (int i = 0; i < loadCasesInput.LoadCasesLevel2.Count; i++)
-                    //        {
-                    //            p += $"{loadCasesInput.LoadCasesLevel2[i].LoadName}: ";
-                    //            int loadCombinationNo = colIdx - 2;
-                    //            double force =
-                    //                loadCasesInput.LoadCasesLevel2[i].UpperMassForce *
-                    //                loadCasesInput.LoadCombinations[loadCombinationNo].Beta1 +
-                    //                loadCasesInput.LoadCasesLevel2[i].FoundationMassForce *
-                    //                loadCasesInput.LoadCombinations[loadCombinationNo].Beta2;
-                    //            p += $"{force:N1}";
-                    //            p += i < loadCasesInput.LoadCasesLevel2.Count - 1 ? "\n" : string.Empty;
-
-                    //        }
-                    //        var para = GetParagraph(p, "right", 8);
-                    //        SetTableCellWithVerticalAlign(cell, para, "center");
-                    //    }
-                    //}
                     else
                     {
                         cell.Append(new Paragraph(new Run(new Text("")))); // 空セル
@@ -1183,9 +921,10 @@ namespace PileDesign.Output
              : $"{label}: {fh:N1}";
 
         /// <summary>
-        /// 水平解析の検定結果（NG のみ）を DOCX に追記する。
+        /// 水平解析の検定結果（低減後・NG のみ）を DOCX に追記する。
+        /// 低減前の版は呼び出し元が無く、出力の途中で画面の状態から検定し直す経路だったので外した。
         /// </summary>
-        private void AddHorizontalEvaluationReport(Body body, bool factored)
+        private void AddHorizontalEvaluationReport(Body body)
         {
             if (mainWindowViewModel == null) return;
 
@@ -1197,15 +936,13 @@ namespace PileDesign.Output
             try
             {
                 // 出力の開始時に求めていなければ黙って省かず、省いたことを記す
-                result = factored
-                    ? _source.FactoredEvaluation ?? throw (_source.FactoredEvaluationError is { } error
-                        ? new InvalidOperationException(error.Message, error)
-                        : new InvalidOperationException("検定の結果を出力の開始時に求めていません。"))
-                    : ViewModels.EvaluationService.BuildEvaluationResult(mainWindowViewModel, factored);
+                result = _source.FactoredEvaluation ?? throw (_source.FactoredEvaluationError is { } error
+                    ? new InvalidOperationException(error.Message, error)
+                    : new InvalidOperationException("検定の結果を出力の開始時に求めていません。"));
             }
             catch (Exception ex)
             {
-                NoteOmitted(body, factored ? "水平解析の検定結果 (低減後)" : "水平解析の検定結果 (低減前)", ex);
+                NoteOmitted(body, "水平解析の検定結果 (低減後)", ex);
                 return;
             }
             if (result == null || result.IsEmpty) return;
@@ -1237,7 +974,7 @@ namespace PileDesign.Output
 
             AddPageBreak(body);
             // H1 に昇格 (旧: H2 で親 H1 がなく、直前の無関係な H1 の子として番号付けされていた)
-            AddHeader1(body, factored ? "水平解析 検定（低減後）" : "水平解析 検定（低減前）", 1);
+            AddHeader1(body, "水平解析 検定（低減後）", 1);
 
             string grade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
             string governing = result.Governing is { } g
@@ -1355,7 +1092,7 @@ namespace PileDesign.Output
                 return;
             }
 
-            AddTableCaption(body, factored ? "検定 NG 項目（低減後）" : "検定 NG 項目（低減前）");
+            AddTableCaption(body, "検定 NG 項目（低減後）");
 
             const double fontSize = 8.0;
             var table = CreateTableWithBorders();

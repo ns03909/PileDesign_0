@@ -57,50 +57,6 @@ namespace PileDesign.Models.PileLibrary
 
     public class PCRingLoader
     {
-        //public static ObservableCollection<PCRing> LoadFromCsv(string filePath)
-        //{
-        //    var _PCRings = new ObservableCollection<PCRing>();
-
-        //    using (var reader = new StreamReader(filePath))
-        //    using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-        //    {
-        //        reader.ReadLine();
-        //        try
-        //        {
-        //            while (csv.Read())
-        //            {
-        //                var _PCRing = new PCRing
-        //                {
-        //                    D = csv.GetField<double>(0),
-        //                    RD1 = csv.GetField<double>(1),
-        //                    Tc = csv.GetField<double>(2),
-        //                    RD2 = csv.GetField<double>(1) + 2 * csv.GetField<double>(2) + 2 * csv.GetField<double>(9),
-        //                    Hr = csv.GetField<double>(3),
-        //                    BarNum = csv.GetField<int>(4),
-        //                    BarSize = csv.GetField<string>(5),
-        //                    L1 = csv.GetField<double>(6), // 
-        //                    L2 = csv.GetField<double>(7), // 
-        //                    Name = csv.GetField<string>(8), // 
-        //                    RingSteelTs = csv.GetField<double>(9),
-        //                    RingSteelGrade = csv.GetField<string>(10),
-        //                    SpiralDia = csv.GetField<string>(11), // プレストレス
-        //                    SpiralNum = csv.GetField<int>(12), // コンクリート縦弾性係数
-
-        //                };
-
-        //                _PCRings.Add(_PCRing);
-        //            }
-        //        }
-        //        catch (CsvHelper.TypeConversion.TypeConverterException ex)
-        //        {
-        //            // フィールドの読み取りに失敗した場合の処理
-        //            // 例外を適切にハンドリングする
-        //            Console.WriteLine("CSVファイルの形式が正しくありません。");
-        //            Console.WriteLine(ex.Message);
-        //        }
-        //    }
-        //    return _PCRings;
-        //}
         public static ObservableCollection<PCRing> LoadFromCsv(string filePath)
         {
             var _PCRings = new ObservableCollection<PCRing>();

@@ -61,33 +61,6 @@ namespace PileDesign.Views
         // モデル化オプション各項目の「ヘルプ」リンクは MaterialOptionRadioPair コントロール側で処理する
         // （HelpAnchor プロパティ → MainWindowViewModel.OpenHelpWindowAt）。
 
-        private static void RestorePreviousPropertyValues(FundamentalViewModel viewModel)
-        {
-            // 全てのプロパティを前回の値に戻す
-            // 未実装: 以前のプロパティ値の復元
-        }
-
-        private void TextBoxLoadCombinationFactor_TextInput(object sender, TextCompositionEventArgs e)
-        {
-            TextBox textBox = (TextBox)sender;
-
-            // 現在のテキストボックスの内容と新しい入力を結合して、数値に変換できるか確認
-            string newText = textBox.Text + e.Text;
-            if (PileDesign.Common.NumericText.TryParse(newText, out double result))
-            {
-                // 数値が 0.0 以上 1.0 以下の範囲内でない場合、処理済みにする
-                if (result < 0.5 || result > 1.0)
-                {
-                    e.Handled = false;
-                }
-            }
-            else
-            {
-                // 数値に変換できない場合も処理済みにする
-                e.Handled = true;
-            }
-        }
-
         private void DataGrid_Loaded(object sender, RoutedEventArgs e)
         {
             // DataGridの高さを行数に合わせて調整する

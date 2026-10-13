@@ -437,11 +437,6 @@ namespace PileDesign.Views
             Recalculate();
         }
 
-        private void ComboBoxPCRing_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            Recalculate();
-        }
-
         private void TextBoxFTTensionNumChanged(object sender, TextChangedEventArgs e)
         {
             Recalculate();

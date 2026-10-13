@@ -304,19 +304,6 @@ namespace PileDesign.Models.InputData
             _mainWindowViewModel = mainWindowViewModel;
         }
 
-        // 重複チェック
-        private bool IsDuplicateLoadName(string value)
-        {
-            var allLoadCases = InputModel?.LoadCasesInput.AllLoadCases;
-            if (allLoadCases == null) return false;
-            foreach (var loadCase in allLoadCases)
-            {
-                if (loadCase != this && loadCase.LoadName == value)
-                    return true;
-            }
-            return false;
-        }
-
         public string GetLoadName() => LoadName;
 
         /// <summary>杭軸力の合計 ΣV (kN) — 全杭配置の地震時軸力を合算</summary>

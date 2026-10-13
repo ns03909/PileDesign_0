@@ -426,22 +426,6 @@ namespace PileDesign.Services
         }
 
         /// <summary>
-        /// DTO の節点参照を実際の InputNode/PileLayoutDataItem インスタンスに解決する
-        /// </summary>
-        private static InputNode? ResolveNodeReference(
-            ElementNodeRefDto nodeRef,
-            ObservableCollection<PileLayoutDataItem> piles,
-            ObservableCollection<InputNode> nodes)
-        {
-            return nodeRef.NodeType?.ToLowerInvariant() switch
-            {
-                "pile" => piles?.FirstOrDefault(p => p.PileNo == nodeRef.NodeNo),
-                "general" => nodes?.FirstOrDefault(n => n.No == nodeRef.NodeNo),
-                _ => null
-            };
-        }
-
-        /// <summary>
         /// 梁要素の節点参照（type + no）を NodeReferenceType + Guid に変換する
         /// </summary>
         private static void ResolveBeamNodeReference(

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.Windows.Media.Media3D;
 
@@ -21,10 +20,18 @@ namespace PileDesign.Models.InputData
     /// </summary>
     public class InputNode : BaseDataItem
     {
-        private static int _nextId = 1; // 次のIDを保持する静的フィールド
-        private static List<int> _availableIds = []; // 利用可能なIDのリスト
+        // 最後に振った番号。Interlocked.Increment で進める (振るたびに 1 増える、1 始まり)。
+        //
+        // 以前は、ファイナライザ (~InputNode) が回収した番号をロックの無い static List に戻し、
+        // コンストラクタがそこから使い回していた。ファイナライザはファイナライザのスレッドで、
+        // コンストラクタは読込・履歴の複製 (Task.Run) などのワーカースレッドでも動くので、List を同時に触り、
+        // 同じ番号を 2 つの節点に振る・番号を取りこぼす・RemoveAt が範囲外の例外を投げる、が起こり得た。
+        // また、ファイナライザがあるだけで全節点 (杭配置の行も) がファイナライズの対象になり、GC の負担になっていた。
+        // 番号は実行中だけの表示用で (保存・読込では振り直す。永続の識別は UniqueId)、
+        // 小さい番号を使い回す必要は無いので、ただ増やすだけにした。
+        private static int _lastId;
 
-        // IDプロパティ（既存の整数ID）
+        // IDプロパティ（実行中だけの整数ID。永続の識別子は UniqueId）
         public int Id { get; private set; }
 
         // ユニークID（削除・挿入に影響されない内部識別子）
@@ -135,23 +142,9 @@ namespace PileDesign.Models.InputData
         // コンストラクタ
         public InputNode()
         {
-            if (_availableIds.Count > 0)
-            {
-                Id = _availableIds[0];
-                _availableIds.RemoveAt(0);
-            }
-            else
-            {
-                Id = _nextId++;
-            }
+            Id = System.Threading.Interlocked.Increment(ref _lastId);
 
             IsVisible = true;
-        }
-
-        // デストラクタ
-        ~InputNode()
-        {
-            _availableIds.Add(Id);
         }
     }
 }

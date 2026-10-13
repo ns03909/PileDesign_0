@@ -2095,17 +2095,6 @@ namespace PileDesign.ViewModels
             // 並列モニタを閉じる (開いていれば)
             System.Windows.Application.Current?.Dispatcher.Invoke(() => RequestHideParallelMonitor?.Invoke());
 
-            // 検定比の計算（解析完了後に一括処理）- 未完成のため一時無効化
-            try
-            {
-                //ComputeCapacityRatiosForAllResults(targetModel);
-                //await AddLogAsync("検定比の計算完了");
-            }
-            catch (Exception ex)
-            {
-                await AddLogAsync($"検定比の計算でエラー: {ex.Message}");
-            }
-
             // ペナルティばねの精度検証
             await VerifyPenaltySpringAccuracy(targetModel);
 

@@ -312,7 +312,7 @@ namespace TestProject1
 
             var svc = new FileOperationService(MakeOptions());
             var (raw2, raw3) = TwoCycleSaveLoad(svc, inputModel, new AnaModel(), null);
-            // InputNode.Id はロード時に static _nextId カウンタで再採番される runtime ID。
+            // InputNode.Id はロード時に static のカウンタで再採番される runtime ID。
             // 永続識別子は UniqueId (Guid)。比較は Id を正規化して行う。
             var n2 = NormalizeRuntimeIds(raw2);
             var n3 = NormalizeRuntimeIds(raw3);

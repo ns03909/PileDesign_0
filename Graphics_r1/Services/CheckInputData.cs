@@ -307,18 +307,6 @@ namespace PileDesign.Services
         }
 
         /// <summary>
-        /// 群杭係数 ξ の検査。
-        ///
-        /// ξ は基準水平地盤反力係数 kh0 に掛かる (基礎指針'19 (6.6.12)) ので、0 以下だと
-        /// <b>その杭の水平地盤ばねが全深さで消える</b>。剛性行列が特異になって解析が解けないか、
-        /// 解けても意味のない結果になるため、ここで名指しして止める。
-        /// 1 を超える値は物理的にありえないが計算は成り立つので、警告
-        /// (<see cref="CollectInputWarnings"/>) にとどめる。
-        /// </summary>
-        public static string CheckGroupPileFactor(InputModel inputModel, string message)
-            => message + Lines(CollectGroupPileFactorProblems(inputModel));
-
-        /// <summary>
         /// 基礎梁の材料・断面の値の検査 (解析が使う値: 材料・断面の表。表に無い番号なら梁の旧い値)。
         /// ヤング係数・断面積・断面二次モーメント・ねじり定数は正の有限の数、ポアソン比は 0〜0.5。
         /// 以前は端点と長さしか見ておらず、幅や E が 0 だと剛性行列の段階で「対角成分がゼロ」としか出なかった。

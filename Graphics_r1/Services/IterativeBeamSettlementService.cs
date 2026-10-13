@@ -451,7 +451,7 @@ namespace PileDesign.Services
             // 節点変位 (GroundNode-* は除外)
             foreach (var node in anaModel.Nodes)
             {
-                if (node.Name.StartsWith("GroundNode-")) continue;
+                if (FEM.FemNodeNaming.IsGround(node.Name)) continue;
                 result.NodeResults.Add(new FEM.VerticalBeamNodeResult(
                     node.Name, node.Coord.X, node.Coord.Y, node.Coord.Z,
                     node.CumulativeDisp.Uz * 1000.0,

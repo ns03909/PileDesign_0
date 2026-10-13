@@ -257,8 +257,5 @@ namespace PileDesign.Models.InputData
             return copy;
         }
 
-        public static void DebugDumpProperties()
-        {
-        }
     }
 }

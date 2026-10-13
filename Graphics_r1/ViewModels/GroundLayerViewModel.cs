@@ -488,43 +488,11 @@ namespace PileDesign.ViewModels
         }
 
 
-        // すべての行の番号を更新
-        private static void UpdateAllRowNumbers(DataGrid dataGrid)
-        {
-            for (int i = 0; i < dataGrid.Items.Count; i++)
-            {
-                if (dataGrid.ItemContainerGenerator.ContainerFromIndex(i) is DataGridRow row)
-                {
-                    row.Header = (i + 1).ToString();
-                }
-            }
-        }
-
         // Viewを閉じるためのイベント
         public event EventHandler RequestClose;
         private readonly ObservableCollection<GroundInput> PrevGroundsInput;
         private readonly Dictionary<string, object> previousPropertyValues = [];
 
-
-        public void ShowGroundInputErrorAlert()
-        {
-            var gi = GroundInput;
-            if (gi == null) return;
-            var errors = new List<string>();
-            if (gi.IsErrorGroundWaterTableAltitude)
-                errors.Add("地下水位Zは孔口標高Z以下にしてください。");
-            if (gi.IsErrorStressAltitude)
-                errors.Add("地中応力計算用Zは孔口標高Z以下にしてください。");
-            if (gi.IsErrorGroundWaterGLDepth)
-                errors.Add("地下水位深度は0以下にしてください。");
-            if (gi.IsErrorStressGLDepth)
-                errors.Add("地中応力計算用深度は0以下にしてください。");
-
-            if (errors.Count > 0)
-            {
-                MessageService.Show(string.Join("\n", errors), "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-        }
 
         [RelayCommand]
         public void GroundDelete()
@@ -1135,14 +1103,6 @@ namespace PileDesign.ViewModels
             e.Row.Header = (e.Row.GetIndex() + 1).ToString(); // 行番号を設定
         }
 
-
-        private void DataGridGroundLayer_Loaded(object sender, RoutedEventArgs e)
-        {
-            //if (DataGridGroundLayer.ItemsSource is ObservableCollection<GroundLayerDataItem> observableCollection)
-            //{
-            //    observableCollection.CollectionChanged += GroundLayerCollection_CollectionChanged;
-            //}
-        }
 
         public void GroundTextBox_LostFocus()
         {

@@ -544,14 +544,14 @@ namespace PileDesign.Services
                 // 2. 杭周地盤水平反力の合計（HorizontalSoilSpring: NodeJ名が杭地盤節点-で始まるもの）
                 {
                     var pileSoilSprings = model.HorizontalSoilSprings?.Where(s =>
-                        s.NodeJ?.Name.StartsWith("杭地盤節点-") == true).ToList() ?? [];
+                        FemNodeNaming.IsPileSoil(s.NodeJ?.Name)).ToList() ?? [];
                     AddSpringSum("杭周地盤反力合計", pileSoilSprings);
                 }
 
                 // 4. 土圧合力ばね水平反力の合計（NodeI名が根入部節点のばね）
                 {
                     var dgbSprings = model.HorizontalSoilSprings?.Where(s =>
-                        s.NodeI?.Name == "根入部節点").ToList() ?? [];
+                        s.NodeI?.Name == FemNodeNaming.Embedment).ToList() ?? [];
                     AddSpringSum("土圧合力ばね反力合計", dgbSprings);
                 }
 
@@ -620,7 +620,7 @@ namespace PileDesign.Services
         /// 杭節点 (名前 <c>杭節点-{杭番号}-{節点順}</c>、<see cref="AnalysisModelling"/> が付ける) の杭番号。杭節点でなければ null。
         /// 杭番号は解析モデルを組んだときの杭配置の番号 (解析の前に 1 から連番に揃えている)。
         /// </summary>
-        internal static int? PileNoOfPileNode(Node? node) => PileNodeNaming.PileNoOf(node?.Name);
+        internal static int? PileNoOfPileNode(Node? node) => FemNodeNaming.PileNoOf(node?.Name);
 
         /// <summary>隣接点間の傾きを計算</summary>
         private static double CalcSegmentSlope(List<double> xs, List<double> ys, int j)

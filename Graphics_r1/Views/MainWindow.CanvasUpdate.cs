@@ -848,41 +848,6 @@ namespace PileDesign.Views
             }
         }
 
-        // 節点と接続ロッドを作成するメソッド
-        private void CreateNeireNodesAndConnectingRod(int i, double x1, double x2, double y1, double y2, double z1, double z2)
-        {
-            if (DataContext is not MainWindowViewModel viewModel) return;
-            Point coordinate0 = viewModel.CanvasThreeDView.Transformation
-                        (new Point3D((x1 + x2) * 0.5, (y1 + y2) * 0.5, (z1 + z2) * 0.5));
-
-            Point coordinate001 = viewModel.CanvasThreeDView.Transformation
-                (new Point3D((x1 + x2) * 0.5, (y1 + y2) * 0.5, z1));
-
-            Point coordinate002 = viewModel.CanvasThreeDView.Transformation
-                (new Point3D((x1 + x2) * 0.5, (y1 + y2) * 0.5, z2));
-
-            DrawLine3D(coordinate001, coordinate002, true);
-
-            AddText3D(Brushes.Black, $"{i + 1}", coordinate0.X, coordinate0.Y, "L", "C", 0.0);
-
-            // 節点
-            if (viewModel.IsNodeVisible)
-            {
-                EllipseGeometry ellipse1 = new(coordinate001, actualNodeSize * 0.5, actualNodeSize * 0.5);
-                EllipseGeometry ellipse2 = new(coordinate002, actualNodeSize * 0.5, actualNodeSize * 0.5);
-                if (viewModel.IsElementSplit)
-                {
-                    viewModel.CanvasGeometry.PathGeoDividedEmbedmentDiagonals.AddGeometry(ellipse1);
-                    viewModel.CanvasGeometry.PathGeoDividedEmbedmentDiagonals.AddGeometry(ellipse2);
-                }
-                else
-                {
-                    viewModel.CanvasGeometry.PathGeoEmbedmentDiagonals.AddGeometry(ellipse1);
-                    viewModel.CanvasGeometry.PathGeoEmbedmentDiagonals.AddGeometry(ellipse2);
-                }
-            }
-        }
-
         // 線分ジオメトリの追加メソッド
         private static void AddLineGeometry(Point start, Point end, PathGeometry pathGeometry)
         {
@@ -2147,16 +2112,5 @@ namespace PileDesign.Views
             viewModel.CanvasGeometry.PathGeoHoverElement.Figures.Clear();
         }
 
-        private void DataGridPileLayout_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.RightButton == MouseButtonState.Pressed)
-            {
-                if (FindResource("NodeContextMenu") is ContextMenu cm)
-                {
-                    cm.PlacementTarget = sender as UIElement;
-                    cm.IsOpen = true;
-                }
-            }
-        }
     }
 }

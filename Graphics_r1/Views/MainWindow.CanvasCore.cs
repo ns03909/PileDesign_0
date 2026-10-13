@@ -34,20 +34,6 @@ namespace PileDesign.Views
         private bool _isViewInteracting = false;
 
 
-        // 追加: 操作開始/終了ヘルパ
-        private void BeginViewInteraction()
-        {
-            _isViewInteracting = true;
-            isLightweightDrawing = true; // 操作中は軽量描画
-            // 既存のラベル画像を即時消す
-            if (_textLayerImage != null) _textLayerImage.Source = null;
-            TextBlockInfos.Clear();
-            // EdgeMode.Aliased: 操作中はアンチエイリアスを切ってラスタライズ高速化
-            // (回転/ズーム時の描画 fps 向上、操作終了で Unspecified に戻して鮮明化)
-            if (Canvas3DLayout != null)
-                System.Windows.Media.RenderOptions.SetEdgeMode(Canvas3DLayout, System.Windows.Media.EdgeMode.Aliased);
-        }
-
         private void EndViewInteraction()
         {
             _isViewInteracting = false;
@@ -143,26 +129,6 @@ namespace PileDesign.Views
         // 公開ヘルパ（軽量描画ONでの一括更新）
         private IDisposable DeferRender(bool forceLightweight = true) => new RenderScope(this, forceLightweight);
 
-
-        // MainWindow 内に追加（コマンドやメニューから呼び出し）
-        private void DeleteSelectedPiles_Batched()
-        {
-            if (DataContext is not MainWindowViewModel vm) return;
-            var targets = vm.CurrentInputModel.PileLayoutItems
-                .Where(p => p.IsVisible && p.IsSelected).ToList();
-            if (targets.Count == 0) return;
-
-            using (DeferRender(forceLightweight: true))
-            {
-                // DataGrid の選択同期や描画は抑止されたまま
-                foreach (var p in targets)
-                    vm.CurrentInputModel.PileLayoutItems.Remove(p);
-
-                // 付随データのクリーンアップ等があればここでまとめて実施
-                vm.CanvasGeometry.Clear();
-                TextBlockInfos.Clear();
-            }
-        }
 
         public void UpdateCanvas3D()
         {

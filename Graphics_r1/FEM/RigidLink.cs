@@ -48,21 +48,5 @@ namespace PileDesign.FEM
             AdapterSpring = new HorizontalSoilSpring(name, nodeI, nodeJ);
         }
 
-        // 剛結成分は常に Kbig、Rx/Ry は引数で上書き（nullなら 0）
-        public void ApplyKe(bool isTan, double? kRx = null, double? kRy = null)
-        {
-            double kx = TieUx ? Kbig : 0.0;
-            double ky = TieUy ? Kbig : 0.0;
-            double kz = TieUz ? Kbig : 0.0;
-
-            // Rx/Ry は「タイ」にしない前提（M-θで可変）。Tie=true にする設計なら Kbig を優先。
-            double krx = TieRx ? Kbig : (kRx ?? 0.0);
-            double kry = TieRy ? Kbig : (kRy ?? 0.0);
-
-            double krz = TieRz ? Kbig : 0.0;
-
-            // 既存の spring 要素経由で全 DOF を一括セット
-            AdapterSpring.SetKe(kx, ky, kz, krx, kry, krz, isTan);
-        }
     }
 }

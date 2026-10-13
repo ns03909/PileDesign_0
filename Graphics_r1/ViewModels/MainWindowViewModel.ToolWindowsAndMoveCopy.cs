@@ -634,12 +634,6 @@ namespace PileDesign.ViewModels
             return (NodeReferenceType.GeneralNode, newNode.UniqueId);
         }
 
-        private static double Distance3D(double x1, double y1, double z1, double x2, double y2, double z2)
-        {
-            double dx = x1 - x2, dy = y1 - y2, dz = z1 - z2;
-            return PileDesign.Common.StableNumerics.Norm(dx, dy, dz);
-        }
-
         private async Task CopyNodesAsync(double dX, double dY, double dZ, int repetitionNumber, bool isInputNodesIncluded, bool isPileLayoutIncluded)
         {
             // 変更を行う前に、選択されたアイテムのリストを作成
@@ -749,23 +743,6 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
-        }
-
-        // コピーを作成して操作を行う
-        private void CopyNodes(double dX, double dY, int repetitionNumber)
-        {
-            CurrentInputModel.PileLayoutItems = _pileLayoutService.CopySelectedPiles(
-                CurrentInputModel.PileLayoutItems,
-                dX,
-                dY,
-                0,
-                repetitionNumber,
-                item => item.SetMainWindowViewModel(this));
-            CurrentInputModel.PileLayoutItems.CollectionChanged -= PileLayoutItems_CollectionChanged;
-            CurrentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
-            OnPropertyChanged(nameof(PileCountText));
-
-            UpdatePileLayoutNo();
         }
 
         // 杭配置の編集・追加コマンド

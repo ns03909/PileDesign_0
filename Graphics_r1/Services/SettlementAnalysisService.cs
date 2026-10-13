@@ -187,18 +187,6 @@ namespace PileDesign.Services
             return GenerateRectLoadsInternal(pileGroupSettlement, pileLayoutItems, soilPiles, verticalBeamCaseResults, notes);
         }
 
-        /// <summary>
-        /// 荷重タイプに応じて矩形荷重を生成
-        /// </summary>
-        private ObservableCollection<RectLoad> GenerateRectLoads(
-            PileGroupSettlement pileGroupSettlement,
-            ObservableCollection<PileLayoutDataItem> pileLayoutItems,
-            ObservableCollection<SoilPile> soilPiles,
-            ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults)
-        {
-            return GenerateRectLoadsInternal(pileGroupSettlement, pileLayoutItems, soilPiles, verticalBeamCaseResults);
-        }
-
         /// <summary>「個別十字（基礎梁反力）」の荷重タイプ名。</summary>
         private const string BeamReactionLoadingType = "個別十字（基礎梁反力）";
 

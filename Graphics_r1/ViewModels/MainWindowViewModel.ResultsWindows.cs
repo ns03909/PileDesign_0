@@ -214,30 +214,6 @@ namespace PileDesign.ViewModels
             OpenLogWindowCommand?.NotifyCanExecuteChanged();
         }
 
-        // 解析完了後 (既存処理内末尾に追加)
-        private void OnAnalysisFinished(AnalysisStepResult result)
-        {
-            // AnaModel が未セットなら結果テーブル生成をスキップ
-            if (CurrentModel == null)
-            {
-                LatestResultTables = [];
-                OnPropertyChanged(nameof(LatestResultTables));
-                RaiseResultCommandsCanExecute();
-                return;
-            }
-
-            LatestResultTables = _tableService.BuildTables(
-                CurrentModel,
-                result.LoadCase,
-                result.LoadCombination,
-                result.IsLiquefaction,
-                result.Step,
-                CurrentInputModel);
-
-            OnPropertyChanged(nameof(LatestResultTables));
-            RaiseResultCommandsCanExecute();
-        }
-
         public ICommand OpenTableWindowCommand { get; private set; }
 
         private void OpenTableWindow() => OpenTableWindow(pileNoFilter: null);

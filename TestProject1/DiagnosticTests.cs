@@ -324,8 +324,8 @@ public class DiagnosticTests
     public void TheStabilityCheck_CarriesThePiles()
     {
         StringAssert.Contains(TestSource.Read("Graphics_r1", "FEM", "AnaModel.cs"), "throw new PileDesign.Common.DiagnosticException(msg, [problem]);");
-        Assert.AreEqual(12, PileDesign.FEM.PileNodeNaming.PileNoOf("杭節点-12-3:Ux"));
-        Assert.IsNull(PileDesign.FEM.PileNodeNaming.PileNoOf("ActionPoint:Uz"));
+        Assert.AreEqual(12, PileDesign.FEM.FemNodeNaming.PileNoOf("杭節点-12-3:Ux"));
+        Assert.IsNull(PileDesign.FEM.FemNodeNaming.PileNoOf("ActionPoint:Uz"));
     }
 
     /// <summary>解析の知らせ・入力の検査は、文を正規表現で解いて場所を拾わない (書き方を変えると黙って外れる)。</summary>

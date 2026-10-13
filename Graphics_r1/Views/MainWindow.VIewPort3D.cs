@@ -868,11 +868,6 @@ namespace PileDesign.Views
         //    }
         //}
 
-        private void HelixViewport_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-
-        }
-
         /////
         ///
 

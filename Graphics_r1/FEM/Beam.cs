@@ -657,13 +657,6 @@ namespace PileDesign.FEM
             CumulativeForce.SetVector(f);
         }
 
-        // 断面力をセットする
-        public void SetForce(Vector<double> df)
-        {
-            IncrementalForce.SetVector(df);
-            CumulativeForce += IncrementalForce;
-        }
-
         // 初期断面力のセット
         public void InitializeForce()
         {

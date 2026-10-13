@@ -220,6 +220,18 @@ namespace PileDesign.Services
         }
 
         /// <summary>
+        /// 水平解析の検定 (低減後・低減前) と、その組み立てで失敗した部分。
+        /// 水平解析の検定は解析結果と解析時の入力の控えだけから決まるので、入力の編集では変わらない。
+        /// まとめ (<see cref="Build(MainWindowViewModel, HorizontalParts)"/>) とは別に持ち回せるよう 1 組にする。
+        /// </summary>
+        public sealed record HorizontalParts(
+            EvaluationResult? Horizontal, EvaluationResult? HorizontalUnfactored, IReadOnlyList<BuildFailure> Failures)
+        {
+            /// <summary>水平解析をしていないとき (検定を組もうとしていない)。</summary>
+            public static HorizontalParts None { get; } = new(null, null, []);
+        }
+
+        /// <summary>
         /// 現在の解析結果からまとめを作る。
         /// 水平解析が済んでいなければ支持力だけ、杭要素分割も済んでいなければ空。
         /// 検定が組めない (古いモデルなど) ときも例外にせず、組めた分だけ返す。
@@ -227,18 +239,39 @@ namespace PileDesign.Services
         public static PileEvaluationSummary Build(MainWindowViewModel vm)
         {
             ArgumentNullException.ThrowIfNull(vm);
+            return Build(vm, BuildHorizontal(vm));
+        }
+
+        /// <summary>
+        /// 水平解析の検定 (低減後・低減前) だけを組む。水平解析が済んでいなければ <see cref="HorizontalParts.None"/>。
+        /// 数百件の N-M 補間を 2 回 (低減後・低減前) 行う重い処理なので、画面は結果が同じ間これを使い回す
+        /// (<see cref="MainWindowViewModel.GetEvaluationSummary"/>)。
+        /// </summary>
+        public static HorizontalParts BuildHorizontal(MainWindowViewModel vm)
+        {
+            ArgumentNullException.ThrowIfNull(vm);
+            if (vm.CurrentModel == null || !vm.IsHorizontalAnalysisDone) return HorizontalParts.None;
+
+            var failures = new List<BuildFailure>();
+            var horizontal = TryBuild(() => EvaluationService.BuildEvaluationResult(vm, factored: true), HorizontalPart, failures);
+            var unfactored = TryBuild(() => EvaluationService.BuildEvaluationResult(vm, factored: false), HorizontalUnfactoredPart, failures);
+            return new HorizontalParts(horizontal, unfactored, failures);
+        }
+
+        /// <summary>
+        /// 組み済みの水平解析の検定 (<paramref name="horizontalParts"/>) に、鉛直系の検定 (支持力・沈下量・傾斜角) を
+        /// いまの入力から組み足してまとめを作る。鉛直系は入力の編集で変わるので毎回組む (軽い)。
+        /// </summary>
+        public static PileEvaluationSummary Build(MainWindowViewModel vm, HorizontalParts horizontalParts)
+        {
+            ArgumentNullException.ThrowIfNull(vm);
+            ArgumentNullException.ThrowIfNull(horizontalParts);
 
             var inputModel = vm.ResultInputModel ?? vm.CurrentInputModel;
             string seismicGrade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
 
-            var failures = new List<BuildFailure>();
-            EvaluationResult? horizontal = null;
-            EvaluationResult? unfactored = null;
-            if (vm.CurrentModel != null && vm.IsHorizontalAnalysisDone)
-            {
-                horizontal = TryBuild(() => EvaluationService.BuildEvaluationResult(vm, factored: true), HorizontalPart, failures);
-                unfactored = TryBuild(() => EvaluationService.BuildEvaluationResult(vm, factored: false), HorizontalUnfactoredPart, failures);
-            }
+            // 失敗の並びは従来どおり水平解析 (低減後・低減前) → 支持力・沈下量
+            var failures = new List<BuildFailure>(horizontalParts.Failures);
 
             // 鉛直系の検定 (支持力 + 沈下量)。沈下量は基本設定で有効にしたときだけ項目が出る。
             // 同じ入れ物に入れるのは、杭ごとに畳む処理 (Fold) が 1 回で済み、
@@ -255,7 +288,7 @@ namespace PileDesign.Services
                 ]), BearingPart, failures)
                 ?? new EvaluationResult([]);
 
-            return FromResults(horizontal, unfactored, bearing, seismicGrade, failures);
+            return FromResults(horizontalParts.Horizontal, horizontalParts.HorizontalUnfactored, bearing, seismicGrade, failures);
         }
 
         /// <summary>検定結果からまとめを作る (テストと、結果が手元にあるときの入口)。</summary>

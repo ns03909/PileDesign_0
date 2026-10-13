@@ -623,14 +623,6 @@ namespace PileDesign.ViewModels
             UpdateTemporarySoilPile();
         }
 
-        private static void UpdateViewModelCollection<T>(ObservableCollection<T> collection, int index, T value)
-        {
-            if (index >= 0 && index < collection.Count)
-            {
-                collection[index] = value;
-            }
-        }
-
         [RelayCommand]
         public static void OnTextBoxGotFocus(object parameter)
         {
@@ -638,12 +630,6 @@ namespace PileDesign.ViewModels
             {
                 textBox.SelectAll();
             }
-        }
-
-        private void TextBoxPileBodyRef_LostFocus(object sender, RoutedEventArgs e)
-        {
-            var binding = ((TextBox)sender).GetBindingExpression(TextBox.TextProperty);
-            binding?.UpdateSource(); // ViewModelのプロパティに値を反映
         }
 
         // 入力欄のフォーカスが外れたときの処理は code-behind の LostFocus ハンドラが持つ。

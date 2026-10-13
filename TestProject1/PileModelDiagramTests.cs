@@ -133,11 +133,11 @@ namespace TestProject1
         public void TheSoilLayerBackgroundStartsAtTheGroundSurface()
         {
             string code = OutputFile("DiagramRenderer.cs");
-            int start = code.IndexOf("private static void DrawSoilLayerBackground", StringComparison.Ordinal);
-            Assert.IsTrue(start >= 0, "DrawSoilLayerBackground が見つかりません");
-
-            int next = code.IndexOf("\n        // Example:", start, StringComparison.Ordinal);
-            string body = next < 0 ? code[start..] : code[start..next];
+            Assert.IsTrue(code.Contains("private static void DrawSoilLayerBackground", StringComparison.Ordinal),
+                "DrawSoilLayerBackground が見つかりません");
+            // 本体の範囲は括弧の対応で切り出す (以前は直後のコメントを終端の目印にしており、
+            // 後続のメソッドを消すと範囲がファイル末尾まで伸びて誤検出した)
+            string body = TestSource.MethodBody(code, "private static void DrawSoilLayerBackground");
 
             StringAssert.Contains(body, "GroundTopAltitude", "色帯の上端が地表面標高になっていません");
             Assert.IsFalse(body.Contains("soilPile", StringComparison.OrdinalIgnoreCase),

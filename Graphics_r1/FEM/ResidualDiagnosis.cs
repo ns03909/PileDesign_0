@@ -95,28 +95,22 @@ namespace PileDesign.FEM
         /// </summary>
         public static string Label(string nodeName)
         {
-            if (PileNodeNaming.PileNoOf(nodeName) is int no) return $"杭 No.{no}";
-            if (nodeName == "ActionPoint") return "荷重の作用点 (基礎)";
-            if (TrySuffix(nodeName, "CapNode-", out var cap)) return $"杭 No.{cap} の杭頭 (基礎側)";
-            if (TrySuffix(nodeName, "FoundationNode-P", out var joint)) return $"杭 No.{joint} の接合節点";
-            if (TrySuffix(nodeName, "FoundationNode-", out var fb)) return $"基礎梁の節点 {fb}";
-            if (TrySuffix(nodeName, "InputNode-", out var input)) return $"節点 {input}";
+            if (FemNodeNaming.PileNoOf(nodeName) is int no) return $"杭 No.{no}";
+            if (nodeName == FemNodeNaming.ActionPoint) return "荷重の作用点 (基礎)";
+            if (FemNodeNaming.TrySuffix(nodeName, FemNodeKind.Cap, out var cap)) return $"杭 No.{cap} の杭頭 (基礎側)";
+            if (FemNodeNaming.TrySuffix(nodeName, FemNodeKind.PileJoint, out var joint)) return $"杭 No.{joint} の接合節点";
+            if (FemNodeNaming.TrySuffix(nodeName, FemNodeKind.FoundationBeam, out var fb)) return $"基礎梁の節点 {fb}";
+            if (FemNodeNaming.TrySuffix(nodeName, FemNodeKind.Input, out var input)) return $"節点 {input}";
             return nodeName;
         }
 
         /// <summary>杭にかかわる節点 (杭節点・杭頭・接合節点) なら杭番号。</summary>
         public static int? PileNoOf(string nodeName)
         {
-            if (PileNodeNaming.PileNoOf(nodeName) is int no) return no;
-            if (TrySuffix(nodeName, "CapNode-", out var cap) && int.TryParse(cap, out int c)) return c;
-            if (TrySuffix(nodeName, "FoundationNode-P", out var joint) && int.TryParse(joint, out int j)) return j;
+            if (FemNodeNaming.PileNoOf(nodeName) is int no) return no;
+            if (FemNodeNaming.CapPileNoOf(nodeName) is int c) return c;
+            if (FemNodeNaming.PileJointNoOf(nodeName) is int j) return j;
             return null;
-        }
-
-        private static bool TrySuffix(string name, string prefix, out string suffix)
-        {
-            suffix = name.StartsWith(prefix, StringComparison.Ordinal) ? name[prefix.Length..] : "";
-            return suffix.Length > 0;
         }
 
         /// <summary>

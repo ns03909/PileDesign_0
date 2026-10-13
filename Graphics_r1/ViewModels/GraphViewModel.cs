@@ -549,7 +549,7 @@ namespace PileDesign.ViewModels
                 GraphOptions.Add("杭周地盤変位反力");
                 GraphOptions.Add("水平地盤反力度p-y");
                 // 土圧合力ばねが存在する場合のみ追加
-                if (AnaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == "根入部節点"))
+                if (AnaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == FEM.FemNodeNaming.Embedment))
                     GraphOptions.Add("土圧合力ばね");
 
                 // FT-Pile / キャプテンパイル M-θ グラフ（該当する杭頭タイプが存在する場合のみ）
@@ -926,7 +926,7 @@ namespace PileDesign.ViewModels
                 var pileSoilSprings = AnaModel.HorizontalSoilSprings
                     .Where(s => s.Name.StartsWith("杭地盤ばね")).ToList();
                 var doatsuSoilSprings = AnaModel.HorizontalSoilSprings
-                    .Where(s => s.NodeI?.Name == "根入部節点").ToList();
+                    .Where(s => s.NodeI?.Name == FEM.FemNodeNaming.Embedment).ToList();
 
                 // 重複描画防止: 同一 (LoadName, Angle, Combination.Name, IsLiq) を二重にプロットしない
                 var plottedKeys = new HashSet<string>();

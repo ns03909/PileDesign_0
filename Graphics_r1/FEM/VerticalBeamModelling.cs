@@ -104,7 +104,7 @@ namespace PileDesign.FEM
 
             foreach (var fbNode in _inputModel.FoundationBeamInput.Nodes)
             {
-                string name = $"FoundationNode-{fbNode.No}";
+                string name = FemNodeNaming.FoundationBeam(fbNode.No);
                 if (Nodes.Any(n => n.Name == name))
                     continue;
 
@@ -135,7 +135,7 @@ namespace PileDesign.FEM
                 if (skip.Contains(inputNode.UniqueId)) continue;
 
                 var node = new Node();
-                node.SetNodeInfo($"InputNode-{inputNode.No}", inputNode.X, inputNode.Y, inputNode.Z);
+                node.SetNodeInfo(FemNodeNaming.Input(inputNode.No), inputNode.X, inputNode.Y, inputNode.Z);
                 node.SetBoundary(VerticalFreeBoundary);
                 Nodes.Add(node);
             }
@@ -154,8 +154,8 @@ namespace PileDesign.FEM
 
             foreach (var pile in _inputModel.PileLayoutItems)
             {
-                string connName = $"FoundationNode-P{pile.No}";
-                string groundName = $"GroundNode-P{pile.No}";
+                string connName = FemNodeNaming.PileJoint(pile.No);
+                string groundName = FemNodeNaming.Ground(pile.No);
 
                 // Guid→FEM名辞書に登録
                 if (pile.UniqueId != Guid.Empty)
@@ -237,7 +237,7 @@ namespace PileDesign.FEM
                 if (!ConnectionNodes.TryGetValue(pile.No, out var connNode))
                     continue;
 
-                var groundNode = Nodes.FirstOrDefault(n => n.Name == $"GroundNode-P{pile.No}");
+                var groundNode = Nodes.FirstOrDefault(n => n.Name == FemNodeNaming.Ground(pile.No));
                 if (groundNode == null) continue;
 
                 // 杭ばねの作成
@@ -312,7 +312,7 @@ namespace PileDesign.FEM
 
             foreach (var node in Nodes)
             {
-                if (!node.Name.StartsWith("FoundationNode-") && !node.Name.StartsWith("InputNode-"))
+                if (!FemNodeNaming.IsFoundationOrInput(node.Name))
                     continue;
 
                 double dx = node.Coord.X - x;

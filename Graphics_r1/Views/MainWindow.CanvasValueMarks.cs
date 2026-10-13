@@ -53,117 +53,6 @@ namespace PileDesign.Views
                 }
             }
         }
-        //public void UpdateValueBubbles(
-        //    ObservableCollection<Point3D> points,
-        //    ObservableCollection<double> values,
-        //    List<ColorBaredGeometry> colorBarGeometries
-        //    )
-        //{
-        //    MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-
-        //    if (viewModel == null || values.Count == 0)
-        //    { return; }
-        //    double maxBubbleDia2D/* = viewModel.BubbleDia*/;
-
-        //    double flattening = viewModel.CanvasThreeDView.Flattening;
-
-        //    double absMaxValue = Math.Max(Math.Abs(values.Max()), Math.Abs(values.Min()));
-
-        //    for (int i = 0; i < points.Count; i++)
-        //    {
-        //        double value = values[i];
-        //        double bubbleDia2D;
-        //        if (absMaxValue == 0)
-        //        {
-        //            bubbleDia2D = 0;
-        //        }
-        //        else
-        //        {
-        //            bubbleDia2D = Math.Abs(value) * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
-        //        }
-
-        //        Point center2D = viewModel.CanvasThreeDView.Transformation(points[i]);
-
-        //        EllipseGeometry ellipse = new(center2D, bubbleDia2D * 0.5, bubbleDia2D * 0.5 * flattening);
-
-        //        foreach (ColorBaredGeometry colorBaredGeometry in colorBarGeometries)
-        //        {
-        //            if (colorBaredGeometry.BottomRange <= value && value <= colorBaredGeometry.TopRange)
-        //            {
-        //                colorBaredGeometry.PathGeometry.AddGeometry(ellipse);
-        //                break;
-        //            }
-        //        }
-        //    }
-        //}
-
-
-        //public void UpdateValueArrows(
-        //    ObservableCollection<Point3D> points,
-        //    ObservableCollection<double> values,
-        //    List<ColorBaredGeometry> colorBaredGeometries
-        //    )
-        //{
-        //    MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-        //    /*double maxArrowLength2D*//* = viewModel.ArrowLength*/
-        //    ;
-        //    double arrowHeadLength2D = viewModel.ArrowHeadLength;
-        //    double arrowHeadDia2D = viewModel.ArrowHeadDia;
-        //    if (viewModel == null || values.Count == 0)
-        //    { return; }
-
-        //    double flattening = viewModel.CanvasThreeDView.Flattening;
-        //    double flattening0 = Math.Sqrt(1 - Math.Pow(flattening, 2));
-        //    //double absMaxValue = Math.Max(Math.Abs(values.Max()), Math.Abs(values.Min()));
-
-        //    for (int i = 0; i < points.Count; i++)
-        //    {
-        //        foreach (ColorBaredGeometry colorBaredGeometry in colorBaredGeometries)
-        //        {
-        //            double value = values[i];
-        //            if (colorBaredGeometry.BottomRange <= value && value <= colorBaredGeometry.TopRange)
-        //            {
-        //                // 尾
-        //                double tailLength2D = value * 0.01 * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
-
-        //                // 頂点
-        //                Point arrowEnd2D = viewModel.CanvasThreeDView.Transformation(points[i]);
-        //                // 頂点
-        //                Point arrowHead2D = viewModel.CanvasThreeDView.Transformation(points[i] - new Vector3D(0, 0, tailLength2D));
-        //                // LineGeometryの作成
-        //                LineGeometry lineTale = new(arrowEnd2D, arrowHead2D);
-
-        //                colorBaredGeometry.PathGeometry.AddGeometry(lineTale);
-
-        //                //楕円中心位置
-        //                Point center2D = new(arrowHead2D.X, arrowHead2D.Y - arrowHeadLength2D * flattening0);
-
-        //                //楕円
-        //                EllipseGeometry ellipse1 = new(center2D, arrowHeadDia2D * 0.5, arrowHeadDia2D * 0.5 * flattening);
-        //                colorBaredGeometry.PathGeometry.AddGeometry(ellipse1);
-
-        //                //母線
-        //                List<LineGeometry> lineGeometries =
-        //                GetConeGeneratrixes(center2D, arrowHeadDia2D * 0.5, 0, -arrowHeadLength2D * flattening0, flattening);
-
-        //                foreach (LineGeometry lineGeometry in lineGeometries)
-        //                {
-        //                    colorBaredGeometry.PathGeometry.AddGeometry(lineGeometry);
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    // 描画する要素に対して、IsHitTestVisibleをfalseに設定
-        //    //foreach (UIElement element in Canvas3DLayout.Children)
-        //    //{
-        //    //    element.IsHitTestVisible = false;
-        //    //}
-
-        //    //// ZIndexを調整して他のUI要素の背面に配置
-        //    //Panel.SetZIndex(Canvas3DLayout, -1);
-        //}
-
 
         // 矢印描画メソッド
         // 矢印（値は mm 前提）
@@ -328,12 +217,6 @@ namespace PileDesign.Views
             return Math.Round(value / scale) * scale;
         }
 
-        // a の倍数で b を超える最小の値を返すメソッド
-        public static double GetSmallestMultipleGreaterThan(double a, double b)
-        {
-            return Math.Ceiling(b / a) * a;
-        }
-
         // a の倍数で b より小さい最大の値を返すメソッド
         public static double GetLargestMultipleLessThan(double a, double b)
         {
@@ -474,44 +357,5 @@ namespace PileDesign.Views
                 viewModel.LabelSize
             );
         }
-        //private void DrawBubbleAndArrow(ObservableCollection<Point3D> points, ObservableCollection<double> values, string title, string unit)
-        //{
-        //    if (DataContext is not MainWindowViewModel viewModel) return;
-        //    if (values.Count == 0) return;
-
-        //    List<ColorBaredGeometry> colorBaredGeometries = GetColorBarGeometries(values); // カラーバージオメトリ取得
-
-        //    if (viewModel.IsBubbleVisible) // バブル
-        //    { UpdateValueBubbles(points, values, colorBaredGeometries); }
-
-        //    if (viewModel.IsArrowVisible) // 矢印
-        //    {
-        //        // 平面図（上から見下ろし）の場合はZ方向矢印が投影で消えるためスキップ
-        //        bool isPlanView = Math.Abs(viewModel.CanvasThreeDView.Phi - 90.0) < 0.5 && !viewModel.CanvasThreeDView.IsPerspective;
-        //        if (!isPlanView)
-        //        {
-        //            UpdateValueArrows(points, values, colorBaredGeometries);
-        //        }
-        //    }
-
-        //    if (viewModel.IsDeformedElementVisible) // 変形後形状
-        //    { UpdateDeformedGeneralelement3D(values); }
-
-        //    UpdateValueTexts(points, values, colorBaredGeometries); // テキスト
-
-        //    foreach (ColorBaredGeometry colorBaredGeometry in colorBaredGeometries)
-        //    { colorBaredGeometry.DrawPathes(Canvas3DLayout); }
-
-        //    ColorBar.DrawStepColorBar(
-        //        ColorBarCanvas,
-        //        colorBaredGeometries,
-        //        title,
-        //        unit,
-        //        values.Min(),
-        //        values.Max(),
-        //        "{0:N" + viewModel.DecimalPlaces + "}",
-        //        viewModel.LabelSize
-        //    );
-        //}
     }
 }

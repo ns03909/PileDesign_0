@@ -302,7 +302,7 @@ namespace PileDesign.FEM
         /// </summary>
         public bool RelocateActionPoint(double x, double y, double z)
         {
-            var actionNode = Nodes?.FirstOrDefault(n => n.Name == "ActionPoint");
+            var actionNode = Nodes?.FirstOrDefault(n => n.Name == FemNodeNaming.ActionPoint);
             if (actionNode == null) return false;
             if (!double.IsFinite(x) || !double.IsFinite(y) || !double.IsFinite(z)) return false;
             var c = actionNode.Coord;
@@ -401,7 +401,7 @@ namespace PileDesign.FEM
             int releasedCount = 0;
             foreach (var pileNo in pileNoSet)
             {
-                var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"杭節点-{pileNo}-0");
+                var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == FemNodeNaming.PileHead(pileNo));
                 if (pileHeadNode == null) continue;
 
                 // Uz の master-slave を解放 (PileNode.Uz → AP の連鎖を切る)
@@ -804,7 +804,7 @@ namespace PileDesign.FEM
         {
             // 1. 対角チェック（MapOnKmat で既に計算済み）
             // ActionPointのUz/Rx/Ryは水平解析では常にゼロ剛性（正常）なので除外
-            var expectedZeroDofs = new HashSet<string> { "ActionPoint:Uz", "ActionPoint:Rx", "ActionPoint:Ry" };
+            var expectedZeroDofs = new HashSet<string> { FemNodeNaming.DofKey(FemNodeNaming.ActionPoint, "Uz"), FemNodeNaming.DofKey(FemNodeNaming.ActionPoint, "Rx"), FemNodeNaming.DofKey(FemNodeNaming.ActionPoint, "Ry") };
             var problematicDofs = ZeroDiagDofs
                 .Where(d => !expectedZeroDofs.Contains(d.nodeName))
                 .ToList();
@@ -820,7 +820,7 @@ namespace PileDesign.FEM
                 if (problematicDofs.Count > 20)
                     msg += $"\n  ...他{problematicDofs.Count - 20}件";
                 // 杭節点なら杭を場所として持たせる (受け取った側が文を解かずに杭を選べるように)
-                var piles = problematicDofs.Select(d => PileNodeNaming.PileNoOf(d.nodeName))
+                var piles = problematicDofs.Select(d => FemNodeNaming.PileNoOf(d.nodeName))
                     .Where(no => no.HasValue).Select(no => PileDesign.Common.DiagnosticTarget.Pile(no!.Value)).Distinct().ToList();
                 var problem = new PileDesign.Common.Diagnostic(PileDesign.Common.DiagnosticOrigin.Analysis,
                     piles.Count > 0 ? piles[0] : PileDesign.Common.DiagnosticTarget.Nowhere,
@@ -1904,6 +1904,87 @@ namespace PileDesign.FEM
             if (CaseLocalState != null && CaseLocalState.SoilNodes.TryGetValue(item, out var list))
                 return list;
             return item.SoilNodes;
+        }
+
+        // ---- 杭番号 → 接合節点 の索引 ----
+
+        /// <summary>
+        /// 索引を作ったときの節点の一覧と、杭番号ごとの節点 (一覧の中の位置つき)。
+        /// 丸ごと差し替えるだけで、作ったあとは書き換えない。
+        /// </summary>
+        private sealed class PileJointIndex
+        {
+            public required List<Node> Source { get; init; }
+            public required int Count { get; init; }
+            public required Dictionary<int, (Node Node, int Position)> Joints { get; init; }
+            public required Dictionary<int, (Node Node, int Position)> Caps { get; init; }
+        }
+
+        // 複製 (DeepCopy) は新しい AnaModel を作るので引き継がない (複製の節点で作り直す)。保存もしない。
+        private PileJointIndex? _pileJointIndex;
+
+        /// <summary>
+        /// 杭の接合節点 (杭軸力を外力として載せ・累積する節点)。
+        /// 接合節点 <c>FoundationNode-P{No}</c> (基礎梁あり) を優先し、無ければ杭頭 <c>CapNode-{No}</c>。
+        /// どちらも無ければ null。<b>このモデルの節点</b>を返す (ケースごとの複製なら複製の節点)。
+        ///
+        /// <para>以前は呼ぶたびに名前の文字列を組み立てて <see cref="Nodes"/> を先頭から探していた
+        /// (基礎梁なしでは 2 回)。荷重ベクトルの組み立てで杭ごとに最大 4 回、荷重の更新で杭ごとに 1 回、
+        /// それが荷重ステップ・ケースごとに繰り返され、杭数² × 節点数 の文字列比較と割り当てになっていた。
+        /// 索引は一度だけ作り、探し方 (同じ名前なら一覧の先頭に近いもの、接合節点 → 杭頭の順) は以前と同じ。</para>
+        ///
+        /// <para>節点の一覧が差し替わった・数が変わった・覚えていた位置に同じ節点がない、のどれかなら作り直す
+        /// (モデルを組む途中で呼ばれても古い索引を返さない)。</para>
+        /// </summary>
+        public Node? PileJointNodeOf(int pileNo)
+        {
+            var index = _pileJointIndex;
+            if (index == null || !ReferenceEquals(index.Source, Nodes) || index.Count != Nodes.Count)
+                index = _pileJointIndex = BuildPileJointIndex();
+
+            var found = Lookup(index, pileNo);
+            if (found.Stale)
+            {
+                index = _pileJointIndex = BuildPileJointIndex();
+                found = Lookup(index, pileNo);
+            }
+            return found.Node;
+
+            static (Node? Node, bool Stale) Lookup(PileJointIndex ix, int no)
+            {
+                if (ix.Joints.TryGetValue(no, out var j))
+                    return (j.Node, !IsStillAt(ix, j));
+                if (ix.Caps.TryGetValue(no, out var c))
+                    return (c.Node, !IsStillAt(ix, c));
+                return (null, false);
+            }
+
+            static bool IsStillAt(PileJointIndex ix, (Node Node, int Position) e)
+                => e.Position < ix.Source.Count && ReferenceEquals(ix.Source[e.Position], e.Node);
+        }
+
+        private PileJointIndex BuildPileJointIndex()
+        {
+            var nodes = Nodes;
+            var joints = new Dictionary<int, (Node, int)>();
+            var caps = new Dictionary<int, (Node, int)>();
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                var n = nodes[i];
+                if (n == null) continue;
+                switch (FemNodeNaming.Parse(n.Name, out int no, out _))
+                {
+                    // 名前がそのまま付け方と一致するものだけ (番号の前の 0 などで別の名前を同じ杭と読まない)。
+                    // 同じ名前が 2 つあれば一覧の先頭に近い方 (以前の FirstOrDefault と同じ)。
+                    case FemNodeKind.PileJoint when n.Name == FemNodeNaming.PileJoint(no):
+                        joints.TryAdd(no, (n, i));
+                        break;
+                    case FemNodeKind.Cap when n.Name == FemNodeNaming.Cap(no):
+                        caps.TryAdd(no, (n, i));
+                        break;
+                }
+            }
+            return new PileJointIndex { Source = nodes, Count = nodes.Count, Joints = joints, Caps = caps };
         }
 
         /// <summary>ケース固有の AxialForce を取得。</summary>

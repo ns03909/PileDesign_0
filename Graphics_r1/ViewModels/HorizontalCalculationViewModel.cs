@@ -2503,128 +2503,6 @@ namespace PileDesign.ViewModels
             return result == MessageBoxResult.OK;
         }
 
-
-        // RunAsync 内の荷重ケース処理の先頭に以下ヘルパを呼ぶか、そのまま挿入してください。
-        // 杭頭回転角helper を別メソッドとして定義する例を示します。
-        /// <summary>
-        /// 解析完了後に全BeamResultの検定比を一括計算する
-        /// </summary>
-        /*
-        private void ComputeCapacityRatiosForAllResults(AnaModel targetModel)
-        {
-            // SoilPile（杭要素分割後）をPileBodyNoで検索するための辞書
-            var soilPileDict = new Dictionary<int, Models.InputData.SoilPile>();
-            if (InputModel.ElementDivision?.SoilPiles != null)
-            {
-                foreach (var sp in InputModel.ElementDivision.SoilPiles)
-                {
-                    if (sp.PileBodyNo > 0 && !soilPileDict.ContainsKey(sp.PileBodyNo))
-                        soilPileDict[sp.PileBodyNo] = sp;
-                }
-            }
-
-            // beam → PileLayoutDataItem のマッピング
-            var beamToPile = new Dictionary<Beam, Models.InputData.PileLayoutDataItem>();
-            if (InputModel.PileLayoutItems != null)
-            {
-                foreach (var pile in InputModel.PileLayoutItems)
-                {
-                    if (pile.Beams == null) continue;
-                    foreach (var b in pile.Beams)
-                        beamToPile[b] = pile;
-                }
-            }
-
-            // 第1パス: 杭ごと・荷重ケースごとの maxM, maxQ を集計
-            // キー: (PileLayoutDataItem, LoadCase) → (maxM [kNm], maxQ [kN])
-            var maxForces = new Dictionary<(Models.InputData.PileLayoutDataItem pile, LoadCase lc), (double maxM, double maxQ)>();
-
-            foreach (var pile in InputModel.PileLayoutItems ?? [])
-            {
-                if (pile.Beams == null) continue;
-                foreach (var beam in pile.Beams)
-                {
-                    foreach (var result in beam.BeamResults)
-                    {
-                        var force = result.CumulativeForce;
-                        if (force == null || result.LoadCase == null) continue;
-                        var key = (pile, result.LoadCase);
-                        double m = force.MabsMax; // max(Mi, Mj)
-                        double q = force.FabsMax; // max(Fi, Fj)
-                        if (maxForces.TryGetValue(key, out var prev))
-                            maxForces[key] = (Math.Max(prev.maxM, m), Math.Max(prev.maxQ, q));
-                        else
-                            maxForces[key] = (m, q);
-                    }
-                }
-            }
-
-            // 第2パス: 検定比計算（MonQdを反映したQN曲線を使用）
-            foreach (var beam in targetModel.Beams)
-            {
-                if (beam.PileBodyNo is not int pb || beam.SegmentIndex is not int seg)
-                    continue;
-                if (!soilPileDict.TryGetValue(pb, out var soilPile))
-                    continue;
-                if (seg < 0 || seg >= soilPile.PileBodySegments.Count)
-                    continue;
-                var pileSection = soilPile.PileBodySegments[seg].PileSection;
-                if (pileSection == null) continue;
-
-                beamToPile.TryGetValue(beam, out var pileItem);
-
-                foreach (var result in beam.BeamResults)
-                {
-                    var force = result.CumulativeForce;
-                    if (force == null) continue;
-
-                    int lcLevel = result.LoadCase?.Level ?? 0;
-                    int lcNo = result.LoadCase?.No ?? 0;
-                    if (lcLevel < 1 || lcLevel > 2 || lcNo < 1) continue;
-
-                    // 軸力
-                    double axialN_kN = 0.0;
-                    if (pileItem != null)
-                    {
-                        try { axialN_kN = pileItem.GetSeismicAxialForce(lcNo, lcLevel); }
-                        catch { axialN_kN = pileItem.AxialForce; }
-                    }
-
-                    // MonQd = maxM / (maxQ × d)
-                    double monQd = 3.0; // フォールバック
-                    double d = pileSection.EffectiveDepth; // [mm]
-                    if (pileItem != null && result.LoadCase != null && d > 0)
-                    {
-                        var key = (pileItem, result.LoadCase);
-                        if (maxForces.TryGetValue(key, out var mf) && mf.maxQ > 0)
-                        {
-                            // maxM [kNm] → [Nmm] = ×1e6, maxQ [kN] → [N] = ×1e3, d [mm]
-                            monQd = (mf.maxM * 1e6) / (mf.maxQ * 1e3 * d);
-                        }
-                    }
-
-                    // MonQd で QN 曲線を再計算する。損傷限界はレベルで低減係数が変わるので
-                    // レベルも渡す (曲線の取り出しは PileSection 側に一本化してある)。
-                    var qnCurves = pileSection.GetQNCurvesForLevel(lcLevel == 1 ? 1 : 2, monQd);
-                    var unfNQ = lcLevel == 1 ? qnCurves.UnfactoredDamage : qnCurves.UnfactoredUltimate;
-                    var facNQ = lcLevel == 1 ? qnCurves.FactoredDamage : qnCurves.FactoredUltimate;
-
-                    var ratios = FEM.Utils.ComputeCapacityRatios(force, pileSection, lcLevel, axialN_kN, unfNQ, facNQ);
-                    result.AxialForceForRatio = axialN_kN;
-                    result.MonQdForRatio = d > 0 ? monQd : -1;
-                    result.UnfactoredMiRatio = ratios.UnfactoredMiRatio;
-                    result.FactoredMiRatio = ratios.FactoredMiRatio;
-                    result.UnfactoredQiRatio = ratios.UnfactoredQiRatio;
-                    result.FactoredQiRatio = ratios.FactoredQiRatio;
-                    result.UnfactoredMjRatio = ratios.UnfactoredMjRatio;
-                    result.FactoredMjRatio = ratios.FactoredMjRatio;
-                    result.UnfactoredQjRatio = ratios.UnfactoredQjRatio;
-                    result.FactoredQjRatio = ratios.FactoredQjRatio;
-                }
-            }
-        }
-        */
-
         private void ApplyPileHeadRigidBindingForLoadCase(AnaModel targetModel, LoadCase _loadCase)
         {
             // PileNode-0 には境界条件を設定しない。
@@ -2767,12 +2645,13 @@ namespace PileDesign.ViewModels
         // 杭接合節点の解決 (案 Z: P-S 非線形ばねモード時に Z 外力を載せる/累積する節点)
         // 優先順位: ConnectionNode "FoundationNode-P{No}" (基礎梁設定時) → CapNode "CapNode-{No}" (フォールバック)
         // SetVectorDF と UpdateF で同じ resolution を使うために共通化。
-        private static FEM.Node ResolvePileJointNodeInModel(AnaModel targetModel, int pileNo)
-        {
-            var conn = targetModel.Nodes.FirstOrDefault(n => n != null && n.Name == $"FoundationNode-P{pileNo}");
-            if (conn != null) return conn;
-            return targetModel.Nodes.FirstOrDefault(n => n != null && n.Name == $"CapNode-{pileNo}");
-        }
+        //
+        // 以前はここで名前を組み立てて節点の一覧を先頭から探していた (基礎梁なしでは 2 回)。
+        // 荷重ステップ・ケースごとに杭数 × 最大 5 回呼ばれるので、杭数² × 節点数 の文字列比較になっていた。
+        // いまはモデルごとに一度作る索引 (AnaModel.PileJointNodeOf) を引く。探し方と返す節点は以前と同じで、
+        // ケースごとの複製 (DeepCopy) を渡せば複製の節点が返る。
+        internal static FEM.Node? ResolvePileJointNodeInModel(AnaModel targetModel, int pileNo)
+            => targetModel.PileJointNodeOf(pileNo);
 
         // 荷重ベクトルの更新メソッド　F = F + dF
         private void UpdateF(AnaModel targetModel, bool usePsSpringAtPileTip)

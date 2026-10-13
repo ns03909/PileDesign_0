@@ -1064,89 +1064,6 @@ namespace PileDesign.Models.InputData
             // Phase 2: デバウンスタイマーは遅延初期化（RegenerateSoilPilesAndNotifyDebounced() 内で）
         }
 
-
-        //public void SetMainWindowViewModel(MainWindowViewModel mainWindowViewModel)
-        //{
-        //    _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
-
-        //    if (PileLayoutItems != null)
-        //    {
-        //        foreach (var item in PileLayoutItems)
-        //        {
-        //            item.SetMainWindowViewModel(mainWindowViewModel);
-        //        }
-        //    }
-
-        //    // Elements内のNodesにもViewModelを再セット
-        //    if (Elements != null)
-        //    {
-        //        foreach (var element in Elements)
-        //        {
-        //            if (element.Nodes != null)
-        //            {
-        //                foreach (var node in element.Nodes.OfType<PileLayoutDataItem>())
-        //                {
-        //                    node.SetMainWindowViewModel(mainWindowViewModel);
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    Reset();
-        //}
-
-        //// 追加: 復元・読込時などに使う「Reset しない」軽量版
-        //public void AttachViewModel(MainWindowViewModel mainWindowViewModel)
-        //{
-        //    _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
-
-        //    if (PileLayoutItems != null)
-        //    {
-        //        foreach (var item in PileLayoutItems)
-        //        {
-        //            item.SetMainWindowViewModel(mainWindowViewModel);
-        //        }
-        //    }
-
-        //    if (Elements != null)
-        //    {
-        //        foreach (var element in Elements)
-        //        {
-        //            if (element.Nodes != null)
-        //            {
-        //                foreach (var node in element.Nodes.OfType<PileLayoutDataItem>())
-        //                {
-        //                    node.SetMainWindowViewModel(mainWindowViewModel);
-        //                }
-        //            }
-        //        }
-        //    }
-        //    // 重要: DeepCopy 後に null になり得るコレクションを補正
-        //    GridXItems ??= [];
-        //    GridYItems ??= [];
-        //}
-
-        // 
-        //public void Reset()
-        //{
-        //    FundamentalInput = new FundamentalInput();
-        //    LoadCasesInput = new LoadCasesInput();
-        //    LoadCasesInput.SetMainWindowViewModel(_mainWindowViewModel);
-        //    GroundsInput = [new GroundInput()];
-        //    PileBodies = [new PileBodyInput()];
-        //    PileLayoutItems = [];
-        //    EmbedmentInput = new EmbedmentInput();
-        //    ElementDivision = new ElementDivision()
-        //    {
-        //        SoilPiles = [],
-        //        SoilEmbedment = new SoilEmbedment(1, 0.0, [])
-        //    };
-        //    PileGroupSettlement = new PileGroupSettlement();
-        //    Elements = [];
-        //    GridXItems = [];
-        //    GridYItems = [];
-        //}
-
         public double GetSumVL()
         {
             if (PileLayoutItems == null) return 0.0;
@@ -1236,23 +1153,6 @@ namespace PileDesign.Models.InputData
                     "杭群の重心（原点で継続）", ex);
                 return new Point3D(0, 0, 0);
             }
-        }
-
-        // 軸力の合計を返すメソッド
-        public double GetSum(int level, int index)
-        {
-            double sumLoads = 0;
-
-            if (level == 1)
-            {
-                sumLoads += PileLayoutItems.Sum(item => item.AxialForceLevel1s[index]);
-            }
-            else if (level == 2)
-            {
-                sumLoads += PileLayoutItems.Sum(item => item.AxialForceLevel2s[index]);
-            }
-
-            return sumLoads;
         }
 
         // 転倒モーメント(MNm)を返すメソッド

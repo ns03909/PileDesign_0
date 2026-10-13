@@ -796,7 +796,7 @@ namespace PileDesign.ViewModels
 
             foreach (var node in anaModel.Nodes)
             {
-                if (node.Name.StartsWith("GroundNode-")) continue;
+                if (FEM.FemNodeNaming.IsGround(node.Name)) continue;
 
                 caseResult.NodeResults.Add(new VerticalBeamNodeResult(
                     node.Name, node.Coord.X, node.Coord.Y, node.Coord.Z,

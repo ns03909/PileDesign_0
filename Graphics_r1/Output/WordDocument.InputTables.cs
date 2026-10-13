@@ -554,17 +554,6 @@ namespace PileDesign.Output
             }
         }
 
-        // 荷重条件の表を追加するメソッド
-        public static void AddLoadCasesTable(Body body, LoadCasesInput loadCasesInput, FundamentalInput fundamentalInput)
-        {
-            // レベル1の表を追加
-            AddLoadCaseTable(body, loadCasesInput.LoadCasesLevel1, fundamentalInput);
-            AddText(body, "");
-            // レベル2の表を追加
-            AddLoadCaseTable(body, loadCasesInput.LoadCasesLevel2, fundamentalInput);
-
-        }
-
         // 杭体の表を追加するメソッド
         public void AddPileBodiesTables(Body body, ObservableCollection<PileBodyInput> pileBodies)
         {
@@ -639,31 +628,6 @@ namespace PileDesign.Output
             AddLineBreak(body);
         }
 
-        // 杭先端沈下の表を追加するメソッド
-        public static void AddPileTipTable(Body body, PileBodyInput pileBodyInput)
-        {
-            Table table = CreateTableWithBorders();
-            double fontSize = 8;
-            // 1行目: 表題
-            TableRow headerRow = CreateHeaderRow(
-            CreateTableCell(["杭体番号"], fontSize, "center"),
-            CreateTableCell(["杭先端沈下α"], fontSize, "center"),
-            CreateTableCell(["杭先端沈下n"], fontSize, "center")
-            );
-
-            table.Append(headerRow);
-
-            // 2行目: データ
-            TableRow dataRow = new();
-            dataRow.Append(CreateTableCell([pileBodyInput.PileBodyRef], fontSize, "left"));
-            dataRow.Append(CreateTableCell([pileBodyInput.SettleAlpha.ToString()], fontSize, "left"));
-            dataRow.Append(CreateTableCell([pileBodyInput.SettleN.ToString()], fontSize, "left"));
-
-            table.Append(dataRow);
-
-            body.Append(table);
-        }
-
         // 杭の基本情報の表を追加するメソッド
         public static void AddPileBodySegmentTable(Body body, PileBodyInput pileBodyInput)
         {
@@ -696,40 +660,6 @@ namespace PileDesign.Output
                 table.Append(dataRow);
             }
             body.Append(table);
-        }
-
-        // 杭区間の表を追加するメソッド
-        public static void AddPileSectionTable(Body body, PileBodyInput pileBodyInput)
-        {
-
-            // データ行を追加
-            foreach (PileBodySegment pileBodySegment in pileBodyInput.PileBodySegments)
-            {
-                double fontSize = 8;
-                Table table = CreateTableWithBorders();
-
-                TableRow headerRow = CreateHeaderRow(
-                CreateTableCell(["項目"], fontSize, "center"),
-                CreateTableCell(["値"], fontSize, "center")
-                );
-
-                table.Append(headerRow);
-
-                TableRow dataRow1 = new();
-                dataRow1.Append(CreateTableCell(["断面タイプ"], fontSize, "left"));
-                dataRow1.Append(CreateTableCell([pileBodySegment.PileSection.PileSectionType], fontSize, "left"));
-
-                table.Append(dataRow1);
-
-                TableRow dataRow2 = new();
-                dataRow2.Append(CreateTableCell(["杭径"], fontSize, "left"));
-                // 杭径は腐食代を見込まない公称外径で表示
-                dataRow2.Append(CreateTableCell([pileBodySegment.PileSection.NominalPileDiameter.ToString()], fontSize, "left"));
-
-                table.Append(dataRow2);
-
-                body.Append(table);
-            }
         }
 
         // 杭配置の表を追加するメソッド

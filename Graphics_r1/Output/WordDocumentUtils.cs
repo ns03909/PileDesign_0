@@ -156,58 +156,6 @@ namespace PileDesign.Output
         /// <param name="brush">文字色</param>
         /// <param name="typeface">フォント</param>
         /// <param name="alignment">"left" "center" "right"</param>
-        //public static void DrawTextWithAlignment_origin(
-        //    DrawingContext dc,
-        //    string text,
-        //    System.Windows.Point origin,
-        //    double fontSize = 16,
-        //    Brush? brush = null,
-        //    Typeface? typeface = null,
-        //    string alignment = "left")
-        //{
-        //    brush ??= Brushes.Black;
-        //    typeface ??= new Typeface("Meiryo");
-
-        //    var lines = text.Replace("\r\n", "\n").Split('\n');
-        //    double y = origin.Y;
-
-        //    foreach (var line in lines)
-        //    {
-        //        var formattedText = new FormattedText(
-        //            line,
-        //            System.Globalization.CultureInfo.CurrentCulture,
-        //            FlowDirection.LeftToRight,
-        //            typeface,
-        //            fontSize,
-        //            brush,
-        //            VisualTreeHelper.GetDpi(Application.Current.MainWindow).PixelsPerDip
-        //        );
-
-        //        double x = origin.X;
-        //        if (alignment.ToLower() == "center")
-        //        {
-        //            x -= formattedText.Width / 2;
-        //        }
-        //        else if (alignment.ToLower() == "right")
-        //        {
-        //            x -= formattedText.Width;
-        //        }
-
-        //        dc.DrawText(formattedText, new System.Windows.Point(x, y));
-        //        y += formattedText.Height;
-        //    }
-        //}
-
-        /// <summary>
-        /// DrawingContextにテキストを描画（中央・右揃え、複数行対応）
-        /// </summary>
-        /// <param name="dc">DrawingContext</param>
-        /// <param name="text">描画するテキスト（\nで複数行可）</param>
-        /// <param name="origin">基準位置（左上）</param>
-        /// <param name="fontSize">フォントサイズ</param>
-        /// <param name="brush">文字色</param>
-        /// <param name="typeface">フォント</param>
-        /// <param name="alignment">"left" "center" "right"</param>
         public static void DrawTextWithAlignment(
             DrawingContext dc,
             string text,
@@ -288,50 +236,5 @@ namespace PileDesign.Output
                 y += ft.Height;
             }
         }
-
-
-
-
-        //// Y座標の調整
-        //double y = origin.Y;
-        //    if (verticalAlignment.ToLower() == "center")
-        //    {
-        //        y -= totalHeight / 2;
-        //    }
-        //    else if (verticalAlignment.ToLower() == "bottom")
-        //    {
-        //        y -= totalHeight;
-        //    }
-        //    // "top" の場合はそのまま
-
-        //    // 各行を描画
-        //    foreach (var ft in formattedLines)
-        //    {
-        //        double x = origin.X;
-        //        if (alignment.ToLower() == "center")
-        //        {
-        //            x -= ft.Width / 2;
-        //        }
-        //        else if (alignment.ToLower() == "right")
-        //        {
-        //            x -= ft.Width;
-        //        }
-
-        //        if (Math.Abs(angle) > 1e-6)
-        //        {
-        //            // (x, y) を中心に回転
-        //            dc.PushTransform(new RotateTransform(angle, x, y));
-        //            dc.DrawText(ft, new System.Windows.Point(x, y));
-        //            dc.Pop();
-        //        }
-        //        else
-        //        {
-        //            dc.DrawText(ft, new System.Windows.Point(x, y));
-        //        }
-        //        y += ft.Height;
-        //        //dc.DrawText(ft, new System.Windows.Point(x, y));
-        //        //y += ft.Height;
-        //    }
-        //}
     }
 }

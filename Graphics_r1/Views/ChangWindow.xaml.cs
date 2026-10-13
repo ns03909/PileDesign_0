@@ -130,12 +130,6 @@ namespace PileDesign.Views
             vm.RefreshPlots();
         }
 
-        private void MainTab_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-        {
-            if (DataContext is ChangViewModel vm)
-                Dispatcher.Invoke(() => vm.RefreshPlots());
-        }
-
         private void HelpButton_Click(object sender, RoutedEventArgs e)
         {
             // 共通の開き口を通す。ここだけ ShowDialog にすると、

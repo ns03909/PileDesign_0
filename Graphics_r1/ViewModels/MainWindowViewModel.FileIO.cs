@@ -1369,29 +1369,5 @@ namespace PileDesign.ViewModels
             return model;
         }
 
-        // プロパティのコピー
-        private static void CopyProperties(object source, object destination)
-        {
-            if (source == null || destination == null)
-            {
-                throw new ArgumentNullException(nameof(source), "Source or destination cannot be null.");
-            }
-
-            Type sourceType = source.GetType();
-            Type destinationType = destination.GetType();
-
-            PropertyInfo[] properties = sourceType.GetProperties();
-
-            foreach (PropertyInfo property in properties)
-            {
-                PropertyInfo destinationProperty = destinationType.GetProperty(property.Name);
-                if (destinationProperty != null && property.CanRead && destinationProperty.CanWrite)
-                {
-                    object value = property.GetValue(source);
-                    destinationProperty.SetValue(destination, value);
-                }
-            }
-        }
-
     }
 }

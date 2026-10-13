@@ -26,7 +26,7 @@ namespace PileDesign.ViewModels
             wpfPlot.Plot.Clear();
 
             var doatsuSprings = AnaModel.HorizontalSoilSprings
-                .Where(s => s.NodeI?.Name == "根入部節点").ToList();
+                .Where(s => s.NodeI?.Name == FEM.FemNodeNaming.Embedment).ToList();
             if (doatsuSprings.Count == 0) return;
 
             // 最上点・最下点のばねを特定（Z座標で判定）

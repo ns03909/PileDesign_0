@@ -1796,25 +1796,6 @@ namespace PileDesign.ViewModels
             UpdateViewCommand?.Execute(null);
         }
 
-        // 既存フラグから初期値を推定（任意）
-        public void InitializeSoilMassParamDisplayFromLegacyFlags()
-        {
-            if (IsNValueVisible || IsVS0Visible || IsFcVisible)
-            {
-                IsSoilMassParamDisplayEnabled = true;
-                if (IsNValueVisible) SelectedSoilParamDisplay = "N値";
-                else if (IsVS0Visible) SelectedSoilParamDisplay = "Vs0";
-                else if (IsFcVisible) SelectedSoilParamDisplay = "Fc";
-            }
-            else
-            {
-                IsSoilMassParamDisplayEnabled = false;
-                SelectedSoilMassParamDisplay = SoilMassParamDisplayOptions.First();
-            }
-
-            ApplySoilMassParamDisplay();
-        }
-
 
         private bool _isSoilLayerParamDisplayEnabled;
         public bool IsSoilLayerParamDisplayEnabled
@@ -1879,27 +1860,6 @@ namespace PileDesign.ViewModels
 
             // 画面更新が必要な場合
             UpdateViewCommand?.Execute(null);
-        }
-
-        // 既存フラグから初期値を推定（任意）
-        public void InitializeSoilParamDisplayFromLegacyFlags()
-        {
-            if (IsDensityVisible || IsCohesiveVisible || IsVsVisible || IsEsVisible || IsLayerNValueVisible)
-            {
-                IsSoilLayerParamDisplayEnabled = true;
-                if (IsDensityVisible) SelectedSoilParamDisplay = "密度";
-                else if (IsCohesiveVisible) SelectedSoilParamDisplay = "粘着力";
-                else if (IsVsVisible) SelectedSoilParamDisplay = "Vs";
-                else if (IsEsVisible) SelectedSoilParamDisplay = "Es";
-                else if (IsLayerNValueVisible) SelectedSoilParamDisplay = "平均N値";
-            }
-            else
-            {
-                IsSoilLayerParamDisplayEnabled = false;
-                SelectedSoilParamDisplay = SoilParamDisplayOptions.First();
-            }
-
-            ApplySoilLayerParamDisplay();
         }
 
         // 密度描画
@@ -2348,9 +2308,6 @@ namespace PileDesign.ViewModels
             if (list.Count > 0 && !list.Contains(AnalysisResultSettlementType))
                 AnalysisResultSettlementType = list[0];
         }
-
-        /// <summary>テスト用フック (一覧の組み立てをそのまま検証する)。</summary>
-        internal void RebuildSettlementTypeOptionsForTest() => RebuildSettlementTypeOptions();
 
         // 鉛直解析済か否か
         private bool _isGroupPileSettlementAnalysisDone;

@@ -200,17 +200,9 @@ namespace PileDesign.Views
             {
                 if (visiblePileNos == null) return true;  // 全杭可視
                 if (node == null) return true;
-                string name = node.Name ?? "";
-                string prefixCap = "CapNode-";
-                string prefixFn = "FoundationNode-P";
-                if (name.StartsWith(prefixCap, StringComparison.Ordinal))
-                {
-                    if (int.TryParse(name.Substring(prefixCap.Length), out int no)) return visiblePileNos.Contains(no);
-                }
-                else if (name.StartsWith(prefixFn, StringComparison.Ordinal))
-                {
-                    if (int.TryParse(name.Substring(prefixFn.Length), out int no)) return visiblePileNos.Contains(no);
-                }
+                // 名前の読み方は FemNodeNaming に 1 つだけ置く (以前はここに自前の接頭辞の読み分けがあった)
+                var kind = FemNodeNaming.Parse(node.Name, out int no, out _);
+                if (kind == FemNodeKind.Cap || kind == FemNodeKind.PileJoint) return visiblePileNos.Contains(no);
                 // 杭体ノードは visibleFemNodes 側で扱われる。それ以外 (一般節点等) は常に表示。
                 return true;
             }
@@ -237,7 +229,7 @@ namespace PileDesign.Views
                     foreach (var pile in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         // v2 セマンティクス: pile.Z は接合節点 Z (= JointZ)
-                        capNodeToJointZ[$"CapNode-{pile.No}"] = pile.Z;
+                        capNodeToJointZ[FemNodeNaming.Cap(pile.No)] = pile.Z;
                     }
                 }
 
@@ -250,7 +242,7 @@ namespace PileDesign.Views
                         if (!IsPileNodeOfVisiblePile(slave)) continue;
 
                         PathGeometry target = ResolvePath(rb.MasterNode, slave);
-                        if (slave.Name.StartsWith("CapNode-") &&
+                        if (FemNodeNaming.KindOf(slave.Name) == FemNodeKind.Cap &&
                             capNodeToJointZ.TryGetValue(slave.Name, out double jointZ) &&
                             Math.Abs(slave.Coord.Z - jointZ) > 0.001)
                         {

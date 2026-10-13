@@ -940,31 +940,6 @@ namespace PileDesign.Models.InputData
             return (axialForces, bendingMoments, epsilonCs, curvatures);
         }
 
-        /// <summary>
-        /// NM曲線上に指定軸力Nの補間点を挿入する
-        /// </summary>
-        private static void InsertInterpolatedPoint(
-            List<double> ns, List<double> ms, List<double> ecs, List<double> ks, double nTarget)
-        {
-            for (int i = 0; i < ns.Count - 1; i++)
-            {
-                double n0 = ns[i], n1 = ns[i + 1];
-                if ((n0 - nTarget) * (n1 - nTarget) <= 0 && Math.Abs(n1 - n0) > 1e-10)
-                {
-                    double t = (nTarget - n0) / (n1 - n0);
-                    double mInterp = ms[i] + t * (ms[i + 1] - ms[i]);
-                    double ecInterp = ecs[i] + t * (ecs[i + 1] - ecs[i]);
-                    double kInterp = ks[i] + t * (ks[i + 1] - ks[i]);
-
-                    ns.Insert(i + 1, nTarget);
-                    ms.Insert(i + 1, mInterp);
-                    ecs.Insert(i + 1, ecInterp);
-                    ks.Insert(i + 1, kInterp);
-                    return; // 最初にヒットした区間のみ
-                }
-            }
-        }
-
         // 軸力制限の組み込みメソッド
         internal static (List<double>, List<double>, List<double>, List<double>)
             GetFactoredMNInteraction(
