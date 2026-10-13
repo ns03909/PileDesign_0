@@ -297,19 +297,22 @@ namespace PileDesign.Views
 
         private void DataGridIsFrontPile_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (isSelectionChanging) return;
+            if (isSelectionChanging || IsReorderingPiles) return;
             UpdateSelectedPileLayoutItems(DataGridIsFrontPile);
         }
 
         private void DataGridPileAxialForce_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (isSelectionChanging) return;
+            if (isSelectionChanging || IsReorderingPiles) return;
             UpdateSelectedPileLayoutItems(DataGridPileAxialForce);
         }
 
+        /// <summary>杭配置の並べ替えの途中か。表の選択は並べ替えのあとに 1 回だけ合わせるので、途中の選択の変化は無視する。</summary>
+        private bool IsReorderingPiles => _mainWindowViewModel?.IsReorderingPileLayout == true;
+
         private void DataGridPileLayout_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (isSelectionChanging) return;
+            if (isSelectionChanging || IsReorderingPiles) return;
             // 分割前は選ぶたびに土層-杭セットを作り直す (下)。杭が多いと重いので測る
             using var perf = PileDesign.Common.PerfLog.Measure("選択 (杭配置の表)", DataGridPileLayout.Items.Count, "行");
             UpdateSelectedPileLayoutItems(DataGridPileLayout);

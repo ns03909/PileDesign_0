@@ -166,6 +166,8 @@ namespace PileDesign.Views
             DataGridPileLayout.SelectionChanged += DataGridPileLayout_SelectionChanged;
             DataGridPileAxialForce.SelectionChanged += DataGridPileAxialForce_SelectionChanged;
             DataGridIsFrontPile.SelectionChanged += DataGridIsFrontPile_SelectionChanged;
+            // 並べ替えは終わってから 1 回だけ選択・見出し・描画を合わせる (MainWindow.PileLayoutReorder.cs)
+            viewModel.PileLayoutReordered += OnPileLayoutReordered;
 
 
             // Window の KeyDown イベントを設定
@@ -192,6 +194,15 @@ namespace PileDesign.Views
         }
 
         private void SelectedPileLayoutItems_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            // 並べ替えの途中 (Move の繰り返し) は合わせない。終わったら OnPileLayoutReordered が 1 回だけ合わせる
+            if (_mainWindowViewModel?.IsReorderingPileLayout == true) return;
+            RenumberPileRowHeadersLater();
+            SyncPileGridsSelectionFromModel();
+        }
+
+        /// <summary>杭配置の一覧を表示している 3 つの表の選択を、杭の選択 (IsSelected) に合わせて描き直す。</summary>
+        private void SyncPileGridsSelectionFromModel()
         {
             {
                 if (isUpdatingSelection) return;

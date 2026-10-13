@@ -91,9 +91,60 @@ namespace PileDesign.ViewModels
         {
             var col = CurrentInputModel.PileLayoutItems;
             if (col.Count == 0) return;
+            ReorderPileLayout(orderFunc(col).ToList());
+        }
+
+        /// <summary>選択した杭を 1 行上へ (Alt+↑)。</summary>
+        [RelayCommand]
+        private void MovePileLayoutUp() => MoveSelectedPiles(-1);
+
+        /// <summary>選択した杭を 1 行下へ (Alt+↓)。</summary>
+        [RelayCommand]
+        private void MovePileLayoutDown() => MoveSelectedPiles(+1);
+
+        private void MoveSelectedPiles(int direction)
+        {
+            var col = CurrentInputModel.PileLayoutItems;
+            if (!col.Any(p => p.IsSelected))
+            {
+                StatusMessage = "並べ替える杭を表で選んでください。";
+                return;
+            }
+            var order = PileLayoutOrder.MoveSelectedBy(col, p => p.IsSelected, direction);
+            if (col.SequenceEqual(order))
+            {
+                StatusMessage = direction < 0 ? "選択した杭はすでに先頭です。" : "選択した杭はすでに末尾です。";
+                return;
+            }
+            ReorderPileLayout(order);
+        }
+
+        /// <summary>
+        /// 選択した杭を、表の <paramref name="insertIndex"/> 行目 (0 始まり。並べ替える前の位置。杭の数なら末尾) の前へまとめて動かす。
+        /// 行のドラッグから呼ぶ。
+        /// </summary>
+        public void MoveSelectedPilesTo(int insertIndex)
+        {
+            var col = CurrentInputModel.PileLayoutItems;
+            if (!col.Any(p => p.IsSelected)) return;
+            ReorderPileLayout(PileLayoutOrder.MoveSelectedTo(col, p => p.IsSelected, insertIndex));
+        }
+
+        /// <summary>
+        /// 杭配置を <paramref name="newOrder"/> の順に並べ替える。杭 No. は表の並び順なので振り直し、杭 No. で杭を指している
+        /// 入力 (一般節点・群杭沈下の矩形荷重の「対応する杭」) を新しい番号に付け直す。
+        /// 杭 No. で結果を引くもの (群杭沈下の杭ごとの沈下量・節点名・検定) があるので、要素分割を取り消し、解析結果は
+        /// 再解析が必要な扱いにする (ほかの入力の編集と同じ)。元に戻せる。
+        /// </summary>
+        internal void ReorderPileLayout(IReadOnlyList<PileLayoutDataItem> newOrder)
+        {
+            var col = CurrentInputModel.PileLayoutItems;
+            if (col.Count == 0) return;
 
             // 旧No→新Noマッピングを構築
-            var sorted = orderFunc(col).ToList();
+            var sorted = newOrder.ToList();
+            if (sorted.Count != col.Count || sorted.Distinct().Count() != col.Count || sorted.Any(p => !col.Contains(p)))
+                throw new ArgumentException("並べ替えの順に、杭配置の杭がちょうど 1 回ずつ並んでいません。", nameof(newOrder));
             if (col.SequenceEqual(sorted)) return;
             if (!ConfirmDiscardInvalidatedByInputChange(true)) return;
             var before = CaptureInputEdit();
@@ -105,13 +156,19 @@ namespace PileDesign.ViewModels
                 oldPileToNewNo[sorted[i].PileNo] = i + 1;
             }
 
-            // Move方式: Clear+Addの大量イベント発火を回避
-            for (int i = 0; i < sorted.Count; i++)
+            // Move方式: Clear+Addの大量イベント発火を回避。
+            // 途中は画面の選択・描画を合わせない (IsReorderingPileLayout)。終わったら PileLayoutReordered で 1 回だけ合わせる
+            IsReorderingPileLayout = true;
+            try
             {
-                int currentIndex = col.IndexOf(sorted[i]);
-                if (currentIndex != i)
-                    col.Move(currentIndex, i);
+                for (int i = 0; i < sorted.Count; i++)
+                {
+                    int currentIndex = col.IndexOf(sorted[i]);
+                    if (currentIndex != i)
+                        col.Move(currentIndex, i);
+                }
             }
+            finally { IsReorderingPileLayout = false; }
 
             UpdatePileLayoutNo();
 
@@ -128,7 +185,66 @@ namespace PileDesign.ViewModels
             foreach (var load in CurrentInputModel.PileGroupSettlement?.RectLoads ?? [])
                 if (load.LinkedPileNo > 0 && oldPileToNewNo.TryGetValue(load.LinkedPileNo, out int newPileNo))
                     load.LinkedPileNo = newPileNo;
+
+            // 杭要素分割の前は、土層-杭セットを杭配置から作り直す (以前は Move のたびに表の選択の変化から作り直していた。
+            // 並べ替えの途中では作らず、ここで 1 回だけ)
+            RequestGenerateSoilPiles();   // 杭の追加と同じ (分割済みなら何もしない・少し遅らせて 1 回)
+            PileLayoutReordered?.Invoke(this, EventArgs.Empty);
             CompleteInputEdit(before);
+        }
+
+        /// <summary>杭配置を並べ替えている途中 (一覧の Move を繰り返している間) か。画面はこの間の選択・描画の更新を止める。</summary>
+        public bool IsReorderingPileLayout { get; private set; }
+
+        /// <summary>杭配置の並べ替えが終わった (画面は表の選択・行見出しの番号・描画を 1 回だけ合わせる)。</summary>
+        public event EventHandler? PileLayoutReordered;
+
+        /// <summary>
+        /// 杭配置の並べ替えの順を作る (画面に依存しない部分)。
+        /// </summary>
+        internal static class PileLayoutOrder
+        {
+            /// <summary>
+            /// 選択した行を 1 行ずつ上 (<paramref name="direction"/> &lt; 0) か下へ動かす。離れた行もそれぞれ 1 行動き、
+            /// 端に着いた行はそこで止まる (追い越さないので、選択した行どうしの順は変わらない)。
+            /// </summary>
+            public static List<T> MoveSelectedBy<T>(IReadOnlyList<T> items, Func<T, bool> isSelected, int direction)
+            {
+                var order = items.ToList();
+                if (direction < 0)
+                {
+                    for (int i = 1; i < order.Count; i++)
+                        if (isSelected(order[i]) && !isSelected(order[i - 1]))
+                            (order[i - 1], order[i]) = (order[i], order[i - 1]);
+                }
+                else if (direction > 0)
+                {
+                    for (int i = order.Count - 2; i >= 0; i--)
+                        if (isSelected(order[i]) && !isSelected(order[i + 1]))
+                            (order[i], order[i + 1]) = (order[i + 1], order[i]);
+                }
+                return order;
+            }
+
+            /// <summary>
+            /// 選択した行を元の順のまま 1 かたまりにして、<paramref name="insertIndex"/> 行目 (並べ替える前の位置) の前へ入れる。
+            /// その行自体が選択されていれば、その次の選択していない行の前へ入れる。範囲外は端に寄せる。
+            /// </summary>
+            public static List<T> MoveSelectedTo<T>(IReadOnlyList<T> items, Func<T, bool> isSelected, int insertIndex)
+            {
+                insertIndex = Math.Clamp(insertIndex, 0, items.Count);
+                var moving = items.Where(isSelected).ToList();
+                var rest = new List<T>();
+                int at = -1;
+                for (int i = 0; i < items.Count; i++)
+                {
+                    if (at < 0 && i >= insertIndex && !isSelected(items[i])) at = rest.Count;
+                    if (!isSelected(items[i])) rest.Add(items[i]);
+                }
+                if (at < 0) at = rest.Count;
+                rest.InsertRange(at, moving);
+                return rest;
+            }
         }
 
         /// <summary>一般節点: X優先整列</summary>

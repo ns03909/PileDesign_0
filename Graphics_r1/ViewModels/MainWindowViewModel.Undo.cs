@@ -322,7 +322,7 @@ namespace PileDesign.ViewModels
                 "DeletePiles" or "DeletePile" => "杭 削除",
                 "EditAddPiles" or "EditPiles" => "杭 プロパティ変更",
                 "MoveCopyPiles" => "杭 移動・コピー",
-                "SortPileLayoutCore" => "杭配置 並べ替え",
+                "ReorderPileLayout" => "杭配置 並べ替え",
 
                 // 一般節点
                 "AddInputNode" or "AddInputNodeFromCanvas" => "一般節点 追加",

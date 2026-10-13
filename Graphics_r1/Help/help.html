@@ -4535,6 +4535,8 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             <p><img class="button-icon" src="icons/GroupPileGraph.svg" alt="">「群杭係数グラフ確認」ボタンをクリックすると、基礎指針'19 に基づく群杭係数 / 杭間隔比のグラフを参照ウィンドウで表示します。前後方杭の選別や群杭係数の入力時に参考にできます。</p>
             <p><img class="button-icon" src="icons/SortXY.svg" alt="">「X優先整列」ボタンをクリックすると、杭配置を X 座標昇順、X 同値の場合は Y 昇順、で並べ替えて杭配置番号を再採番します。</p>
             <p><img class="button-icon" src="icons/SortYX.svg" alt="">「Y優先整列」ボタンをクリックすると、杭配置を Y 座標昇順、Y 同値の場合は X 昇順、で並べ替えて杭配置番号を再採番します。</p>
+            <p><img class="button-icon" src="icons/MoveRowUp.svg" alt=""><img class="button-icon" src="icons/MoveRowDown.svg" alt="">「選択した杭を 1 行上へ」「選択した杭を 1 行下へ」ボタン（表の中では <kbd>Alt</kbd>+<kbd>↑</kbd>／<kbd>Alt</kbd>+<kbd>↓</kbd>）で、表で選んだ杭を 1 行ずつ動かします。離れた行を選んでいれば、それぞれが 1 行ずつ動きます。行見出し（左端の番号）をドラッグして、落とした位置へまとめて動かすこともできます。</p>
+            <p>杭配置番号は表の上からの順番です。並べ替えると番号を付け直し、杭配置番号で杭を指している一般節点・群杭沈下の矩形荷重も新しい番号に付け直します。杭要素分割は取り消され、解析結果は再解析が必要な扱いになります（ほかの入力の編集と同じ）。並べ替えは元に戻せます。「軸力」「前後方杭」タブの表も同じ順に並びます。</p>
             <p><img class="button-icon" src="icons/AddPileLoc.svg" alt="">「杭配置追加」ボタン下のデータグリッドには、すべての杭配置のリストが表示されます。</p>
 
             <table class="table-doc">

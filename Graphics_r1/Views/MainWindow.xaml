@@ -2863,6 +2863,26 @@
                                                                 VerticalAlignment="Top" AutomationProperties.Name="Y優先整列（Y昇順→X昇順）">
                                                             <svgc:SvgViewbox Source="/Icons/SortYX.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                         </Button>
+                                                        <Button Click="MovePileRowUp_Click"
+                                                                VerticalAlignment="Top" AutomationProperties.Name="選択した杭を 1 行上へ（Alt+↑）">
+                                                            <svgc:SvgViewbox Source="/Icons/MoveRowUp.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                            <Button.ToolTip>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="選択した杭を 1 行上へ（Alt+↑）" />
+                                                                    <TextBlock Text="杭 No. は表の並び順なので、番号も付け直します。行見出しをドラッグしても動かせます。"/>
+                                                                </StackPanel>
+                                                            </Button.ToolTip>
+                                                        </Button>
+                                                        <Button Click="MovePileRowDown_Click"
+                                                                VerticalAlignment="Top" AutomationProperties.Name="選択した杭を 1 行下へ（Alt+↓）">
+                                                            <svgc:SvgViewbox Source="/Icons/MoveRowDown.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                            <Button.ToolTip>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="選択した杭を 1 行下へ（Alt+↓）" />
+                                                                    <TextBlock Text="杭 No. は表の並び順なので、番号も付け直します。行見出しをドラッグしても動かせます。"/>
+                                                                </StackPanel>
+                                                            </Button.ToolTip>
+                                                        </Button>
                                                     </StackPanel>
                                                 </Grid>
 
@@ -2938,6 +2958,14 @@
                                                     VerticalScrollBarVisibility="Auto"
                                                     HorizontalScrollBarVisibility="Auto"
                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
+                                                    PreviewKeyDown="DataGridPileLayout_ReorderKeyDown"
+                                                    PreviewMouseLeftButtonDown="DataGridPileLayout_ReorderMouseDown"
+                                                    PreviewMouseLeftButtonUp="DataGridPileLayout_ReorderMouseUp"
+                                                    PreviewMouseMove="DataGridPileLayout_ReorderMouseMove"
+                                                    DragEnter="DataGridPileLayout_ReorderDragOver"
+                                                    DragOver="DataGridPileLayout_ReorderDragOver"
+                                                    DragLeave="DataGridPileLayout_ReorderDragLeave"
+                                                    Drop="DataGridPileLayout_ReorderDrop"
                                                     CellEditEnding="DataGridPileLayout_CellEditEnding"
                                                     BeginningEdit="DataGridPileLayout_BeginningEdit"
                                                     PasteCompleted="DataGridPileLayout_PasteCompleted"
