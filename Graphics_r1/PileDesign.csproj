@@ -1,6 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+	<!-- 発行 (Properties/PublishProfiles/FolderProfile.pubxml) の RuntimeIdentifier win-x64 を、どの復元でも
+	     project.assets.json に入れておく (複数形の RuntimeIdentifiers は復元だけに効き、普段のビルドの出力は変わらない)。
+	     入れていないと、RID なしの復元 (dotnet build・テスト) のあとの Visual Studio の発行が、win-x64 の対象が無くて
+	     「発行でエラーが発生しました」で止まる (2026-10-14)。 -->
+	<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
 	<Nullable>enable</Nullable>
 
 	<!-- 警告ベースライン: 既存の C# 警告は段階的に解消するため「警告のまま」許容するが、
