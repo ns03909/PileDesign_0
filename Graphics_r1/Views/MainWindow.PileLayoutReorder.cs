@@ -154,6 +154,49 @@ namespace PileDesign.Views
             return -1;
         }
 
+        /// <summary>
+        /// 表の下の余白 (表を入れている枠のうち、最後の行より下) にも落とせるようにする。落とすと末尾。
+        /// 杭配置の表は行の数だけの高さ (VerticalAlignment=Top) なので、その下の余白は表の外にあり、表のドラッグの受け口に
+        /// 届かなかった (2026-10-14 の実機確認。ヘルプの「行の下の余白に落とすと末尾」のとおりに動かなかった)。
+        /// 枠の背景が無いとドラッグを受けないので、透明の背景を付ける。
+        /// </summary>
+        private void HookPileRowDropBelowTable()
+        {
+            if (DataGridPileLayout.Parent is not Panel frame) return;
+            frame.Background ??= Brushes.Transparent;
+            frame.AllowDrop = true;
+            frame.DragEnter += PileLayoutFrame_DragOver;
+            frame.DragOver += PileLayoutFrame_DragOver;
+            frame.DragLeave += DataGridPileLayout_ReorderDragLeave;
+            frame.Drop += PileLayoutFrame_Drop;
+        }
+
+        /// <summary>表の下の余白か (表の横幅の中で、表の下端より下)。表の上のドラッグは表の受け口が先に処理する。</summary>
+        private bool IsBelowPileTable(DragEventArgs e)
+        {
+            var p = e.GetPosition(DataGridPileLayout);
+            return p.Y >= DataGridPileLayout.ActualHeight && p.X >= 0 && p.X <= DataGridPileLayout.ActualWidth;
+        }
+
+        private void PileLayoutFrame_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Handled || !e.Data.GetDataPresent(PileRowsDragFormat)) return;
+            bool below = IsBelowPileTable(e);
+            e.Effects = below ? DragDropEffects.Move : DragDropEffects.None;
+            ShowPileRowInsertion(below ? DataGridPileLayout.Items.Count : -1);
+            e.Handled = true;
+        }
+
+        private void PileLayoutFrame_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Handled || !e.Data.GetDataPresent(PileRowsDragFormat)) return;
+            e.Handled = true;
+            HidePileRowInsertion();
+            if (!IsBelowPileTable(e) || DataContext is not MainWindowViewModel vm) return;
+            vm.MoveSelectedPilesTo(DataGridPileLayout.Items.Count);
+            BringSelectedPileRowIntoView();
+        }
+
         /// <summary>挿入位置 (<paramref name="index"/> 行目の上端、末尾なら最後の行の下端) に線を出す。-1 なら消す。</summary>
         private void ShowPileRowInsertion(int index)
         {

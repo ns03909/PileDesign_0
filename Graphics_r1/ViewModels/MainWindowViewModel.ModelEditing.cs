@@ -191,6 +191,8 @@ namespace PileDesign.ViewModels
             RequestGenerateSoilPiles();   // 杭の追加と同じ (分割済みなら何もしない・少し遅らせて 1 回)
             PileLayoutReordered?.Invoke(this, EventArgs.Empty);
             CompleteInputEdit(before);
+            // 並べ替えられなかったときの知らせ (「選んでください」「すでに先頭です」) が残らないよう、成功したことに書き換える
+            StatusMessage = "杭の並びを変え、杭 No. を表の順に付け直しました。";
         }
 
         /// <summary>杭配置を並べ替えている途中 (一覧の Move を繰り返している間) か。画面はこの間の選択・描画の更新を止める。</summary>

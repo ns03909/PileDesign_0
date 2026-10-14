@@ -168,6 +168,7 @@ namespace PileDesign.Views
             DataGridIsFrontPile.SelectionChanged += DataGridIsFrontPile_SelectionChanged;
             // 並べ替えは終わってから 1 回だけ選択・見出し・描画を合わせる (MainWindow.PileLayoutReorder.cs)
             viewModel.PileLayoutReordered += OnPileLayoutReordered;
+            HookPileRowDropBelowTable();
 
 
             // Window の KeyDown イベントを設定

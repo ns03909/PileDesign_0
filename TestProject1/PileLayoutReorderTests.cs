@@ -1,3 +1,4 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
@@ -166,6 +167,13 @@ namespace TestProject1
             StringAssert.Contains(drop, "ScrollBar", "スクロールバーへのドロップを断っていません");
             StringAssert.Contains(drop, "return -1;");
             StringAssert.Contains(TestSource.MethodBody(code, "private void DataGridPileLayout_ReorderDrop("), "if (index < 0");
+
+            // 表の下の余白 (表は行の数だけの高さなので、余白は表の外) に落とすと末尾。表を入れた枠で受ける
+            string hook = TestSource.MethodBody(code, "private void HookPileRowDropBelowTable(");
+            StringAssert.Contains(hook, "frame.Drop += PileLayoutFrame_Drop;", "表の下の余白への落としを受けていません");
+            StringAssert.Contains(hook, "Brushes.Transparent", "枠に背景が無いと余白でドラッグを受けません");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Views", "MainWindow.xaml.cs"), "HookPileRowDropBelowTable();");
+            StringAssert.Contains(TestSource.MethodBody(code, "private void PileLayoutFrame_Drop("), "vm.MoveSelectedPilesTo(DataGridPileLayout.Items.Count);");
         }
 
         [TestMethod]
@@ -184,6 +192,14 @@ namespace TestProject1
             StringAssert.Contains(vm.StatusMessage, "末尾");
             Assert.AreEqual(version, vm.InputEditVersion, "何も動かないのに編集として数えています");
             CollectionAssert.AreEqual(new[] { 1.0, 2.0 }, m.PileLayoutItems.Select(p => p.X).ToArray());
+
+            // そのあと並べ替えに成功したら、並べ替えられなかったときの知らせを残さない (2026-10-14 の実機確認で残っていた)
+            m.PileLayoutItems[1].IsSelected = true;
+            vm.MovePileLayoutUpCommand.Execute(null);
+            CollectionAssert.AreEqual(new[] { 2.0, 1.0 }, m.PileLayoutItems.Select(p => p.X).ToArray(), "(前提) 並べ替えた");
+            Assert.IsFalse(vm.StatusMessage.Contains("末尾", StringComparison.Ordinal) || vm.StatusMessage.Contains("選んで", StringComparison.Ordinal),
+                $"並べ替えに成功したのに、前の知らせが残っています: {vm.StatusMessage}");
+            StringAssert.Contains(vm.StatusMessage, "並びを変え");
         }
     }
 }
