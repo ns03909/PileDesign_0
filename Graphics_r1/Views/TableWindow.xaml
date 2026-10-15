@@ -228,6 +228,7 @@
                       ShowsPreview="False"/>
 
         <common:EnhancedDataGrid x:Name="ResultGrid"
+                  RemembersColumnLayout="False"
                   Grid.Column="2"
                   Margin="6"
                   AutoGenerateColumns="False"

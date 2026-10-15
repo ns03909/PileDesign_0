@@ -135,6 +135,10 @@ namespace PileDesign
                     Log.Warning(assocEx, "[FileAssociation] Auto-refresh failed (non-fatal)");
                 }
 
+                // 表の列の幅と並びを覚える (起動の確認では利用者の設定に触れない)
+                if (!IsSelfCheck)
+                    PileDesign.Common.EnhancedDataGrid.ColumnLayoutStore = new PileDesign.Services.LayoutService();
+
                 var mainWindow = new MainWindow();
                 this.MainWindow = mainWindow;
                 mainWindow.Show();

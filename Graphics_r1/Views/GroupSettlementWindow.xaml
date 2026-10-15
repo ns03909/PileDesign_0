@@ -194,7 +194,7 @@
                                                     </StackPanel>
 
 
-                                                    <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.SettlementSoilLayers, Mode=TwoWay,
+                                                    <common:EnhancedDataGrid x:Name="DataGridSettlementSoilLayers" ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.SettlementSoilLayers, Mode=TwoWay,
                                                             UpdateSourceTrigger=LostFocus}"
                                                             HorizontalAlignment="Stretch"
                                                             AutoGenerateColumns="False"
@@ -622,7 +622,7 @@
                                                                    Text="杭に紐付く矩形は杭の位置が中心です (位置は変えられません。寸法 DX・DY は変えられます)。荷重は、既定で杭の VL 時の軸力から決めます (出所「軸力」)。表で入れた荷重は「手入力」とし、解析で軸力に戻しません。&#x0A;基礎梁ありの解析は、この荷重を初期値として杭の荷重を再配分します。収束した荷重は解析結果として別に保存し、この表の値は変えません。"/>
                                                     </StackPanel>
 
-                                                    <common:EnhancedDataGrid Grid.Row="2" ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.RectLoads, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
+                                                    <common:EnhancedDataGrid x:Name="DataGridRectLoads" Grid.Row="2" ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.RectLoads, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
                                                         AutoGenerateColumns="False"
                                                         CanUserAddRows="False"
                                                         CanUserSortColumns="True"
@@ -815,7 +815,7 @@
                                                         </Style>
                                                     </StackPanel.Style>
 
-                                                    <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.ElementDivision.SoilPiles}"
+                                                    <common:EnhancedDataGrid x:Name="DataGridGroupSoilPiles" ItemsSource="{Binding CurrentInputModel.ElementDivision.SoilPiles}"
                                                             AutoGenerateColumns="False"
                                                             CanUserAddRows="False"
                                                             CanUserSortColumns="True"

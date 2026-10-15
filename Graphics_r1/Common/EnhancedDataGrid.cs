@@ -19,7 +19,7 @@ using PileDesign.Services;
 
 namespace PileDesign.Common
 {
-    public class EnhancedDataGrid : DataGrid
+    public partial class EnhancedDataGrid : DataGrid
     {
         /// <summary>ペースト完了時に発火するイベント (Delete キーでのクリアの後にも発火する)</summary>
         public event EventHandler? PasteCompleted;
@@ -105,6 +105,7 @@ namespace PileDesign.Common
         {
             FixColumnHeaderHeight();
             var window = Window.GetWindow(this);
+            RestoreColumnLayoutOnce(window?.GetType());
             if (!ReferenceEquals(window, _hostWindow))
             {
                 if (_hostWindow != null) _hostWindow.Closed -= OnHostWindowClosed;
@@ -120,6 +121,7 @@ namespace PileDesign.Common
             if (_hostWindow != null) _hostWindow.Closed -= OnHostWindowClosed;
             _hostWindow = null;
             EndPendingRowEdit();
+            SaveColumnLayout();
         }
 
         /// <summary>

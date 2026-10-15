@@ -12,7 +12,10 @@ namespace PileDesign.Services
     ///
     /// 機能:
     /// - DataGrid列設定（幅、並び順）の保存/復元
-    /// - ウィンドウサイズ・位置の保存/復元
+    ///
+    /// 表の側 (<see cref="PileDesign.Common.EnhancedDataGrid"/>) が、開いたときに復元し、
+    /// ウィンドウを閉じたときに保存する。ファイルは最初に読んだあと手元に持ち、保存のたびに書き切る
+    /// (ウィンドウを開くたびに表の数だけ読み直さない)。
     ///
     /// AvalonDock のドッキングレイアウトの保存/復元は持たない。
     /// 復元は呼び出し側でコメントアウトされていて到達不能な状態が続いており、
@@ -23,14 +26,29 @@ namespace PileDesign.Services
     public class LayoutService
     {
         private readonly string _dataGridSettingsFilePath;
+        private Dictionary<string, List<DataGridColumnSetting>>? _cache;
 
         public LayoutService()
+            : this(Path.Combine(PileDesign.Common.AppDataPaths.Root, "datagrid_settings.json"))
         {
-            // レイアウトファイルのパスを設定
-            var appFolder = PileDesign.Common.AppDataPaths.Root;
-            Directory.CreateDirectory(appFolder);
+        }
 
-            _dataGridSettingsFilePath = Path.Combine(appFolder, "datagrid_settings.json");
+        /// <summary>保存先を指定する (テスト用。利用者の設定ファイルに触れない)。</summary>
+        internal LayoutService(string filePath)
+        {
+            _dataGridSettingsFilePath = filePath;
+            var folder = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
+        }
+
+        /// <summary>この名前の列設定を持っているか。</summary>
+        internal bool HasDataGridSettings(string dataGridName) => LoadAllDataGridSettings().ContainsKey(dataGridName);
+
+        /// <summary>この名前の列設定を消す (既定に戻した表)。持っていなければ何もしない。</summary>
+        internal void RemoveDataGridSettings(string dataGridName)
+        {
+            var allSettings = LoadAllDataGridSettings();
+            if (allSettings.Remove(dataGridName)) WriteAll(allSettings);
         }
 
 
@@ -64,10 +82,20 @@ namespace PileDesign.Services
                     });
                 }
 
-                // 設定を更新
+                // 設定を更新して保存
                 allSettings[dataGridName] = columnSettings;
+                WriteAll(allSettings);
+            }
+            catch
+            {
+                // 保存失敗は無視
+            }
+        }
 
-                // 保存
+        private void WriteAll(Dictionary<string, List<DataGridColumnSetting>> allSettings)
+        {
+            try
+            {
                 var json = JsonSerializer.Serialize(allSettings, new JsonSerializerOptions
                 {
                     WriteIndented = true
@@ -75,9 +103,10 @@ namespace PileDesign.Services
                 // 一時ファイルに書き切ってから差し替える (途中で終了しても前の設定を壊さない)
                 FileOperationService.WriteAtomically(_dataGridSettingsFilePath, stream => stream.Write(System.Text.Encoding.UTF8.GetBytes(json)));
             }
-            catch
+            catch (Exception ex)
             {
-                // 保存失敗は無視
+                // 保存失敗は無視 (列の幅を覚えられないだけ)
+                Serilog.Log.Warning(ex, "表の列の幅を保存できませんでした");
             }
         }
 
@@ -154,21 +183,21 @@ namespace PileDesign.Services
         /// </summary>
         private Dictionary<string, List<DataGridColumnSetting>> LoadAllDataGridSettings()
         {
+            if (_cache != null) return _cache;
             try
             {
                 if (File.Exists(_dataGridSettingsFilePath))
                 {
                     var json = File.ReadAllText(_dataGridSettingsFilePath);
-                    var settings = JsonSerializer.Deserialize<Dictionary<string, List<DataGridColumnSetting>>>(json);
-                    return settings ?? new Dictionary<string, List<DataGridColumnSetting>>();
+                    _cache = JsonSerializer.Deserialize<Dictionary<string, List<DataGridColumnSetting>>>(json);
                 }
             }
             catch
             {
-                // 読み込み失敗
+                // 読み込み失敗 (壊れたファイルは無いものとして扱い、次の保存で書き直す)
             }
 
-            return new Dictionary<string, List<DataGridColumnSetting>>();
+            return _cache ??= new Dictionary<string, List<DataGridColumnSetting>>();
         }
 
         /// <summary>
@@ -176,6 +205,7 @@ namespace PileDesign.Services
         /// </summary>
         public void ClearAllSettings()
         {
+            _cache = null;
             try
             {
                 if (File.Exists(_dataGridSettingsFilePath))

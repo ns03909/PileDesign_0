@@ -90,7 +90,6 @@ namespace PileDesign.Views
         public CanvasThreeDView CanvasThreeDViewModel { get; set; }
 
         private bool _startupQuickHintShown = false;
-        private readonly Services.LayoutService _layoutService = new();
 
         // MainWindowクラスコンストラクタ
         public MainWindow()
