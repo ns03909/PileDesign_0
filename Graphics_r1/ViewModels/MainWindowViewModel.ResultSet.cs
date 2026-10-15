@@ -487,6 +487,9 @@ namespace PileDesign.ViewModels
             if (e.PropertyName is nameof(ResultSetStatusText) or nameof(IsHorizontalAnalysisDone) or nameof(CurrentResultSet)
                 or nameof(IsElementSplit) or nameof(CurrentInputModel) or nameof(PileCountText))
                 base.OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(WorkflowSteps)));
+            // 入力が差し替わったら (読込・新規・計算例)、入力の検査を数え直す
+            if (e.PropertyName is nameof(CurrentInputModel) or nameof(PileCountText))
+                RequestWorkflowInputCheck();
         }
 
         /// <summary>結果セットの状態表示（ステータスバー等）。</summary>

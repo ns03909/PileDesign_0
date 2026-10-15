@@ -56,6 +56,61 @@ namespace TestProject1
             Assert.AreEqual("解析後", fresh[4].StateText);
         }
 
+        /// <summary>
+        /// 「入力」は、解析を止める入力 (「入力の診断」と同じ検査) が残っていれば済みにせず「!」で件数を示す。
+        /// 注意だけなら済みにして件数を添える。以前は杭が 1 本でもあれば済みにしていた (2026-10-15 のレビュー)。
+        /// </summary>
+        [TestMethod]
+        public void InputStep_ReflectsTheInputCheck()
+        {
+            var blocked = MainWindowViewModel.BuildWorkflowSteps(12, false, false, false, null, null, null, null, null, new InputCheckCounts(2, 3));
+            Assert.AreEqual(WorkflowStepStatus.NeedsRedo, blocked[0].Status, "解析を止める入力があるのに済みにしています");
+            Assert.AreEqual("杭 12 本・解析を止める 2 件", blocked[0].StateText);
+            StringAssert.Contains(blocked[0].ToolTip, "解析を止める入力が 2 件");
+            Assert.AreEqual(WorkflowStepStatus.NotYet, blocked[1].Status, "入力が済んでいないのに杭要素分割を次にしています");
+
+            var warned = MainWindowViewModel.BuildWorkflowSteps(12, false, false, false, null, null, null, null, null, new InputCheckCounts(0, 3));
+            Assert.AreEqual(WorkflowStepStatus.Done, warned[0].Status);
+            Assert.AreEqual("杭 12 本・注意 3 件", warned[0].StateText);
+            Assert.AreEqual(WorkflowStepStatus.Next, warned[1].Status);
+
+            var clean = MainWindowViewModel.BuildWorkflowSteps(12, false, false, false, null, null, null, null, null, new InputCheckCounts(0, 0));
+            Assert.AreEqual("杭 12 本", clean[0].StateText);
+            // 杭が無ければ件数は出さない (杭が無いことが先)
+            var none = MainWindowViewModel.BuildWorkflowSteps(0, false, false, false, null, null, null, null, null, new InputCheckCounts(5, 1));
+            Assert.AreEqual("杭が未入力", none[0].StateText);
+            Assert.AreEqual(WorkflowStepStatus.Next, none[0].Status);
+        }
+
+        /// <summary>実際の入力で数え直す: 杭間隔比 R/B を 1 未満にすると解析を止める 1 件が出て、戻すと消える。数え直しは速い。</summary>
+        [TestMethod]
+        public void InputCheck_CountsTheRealInput()
+        {
+            var (input, error) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+            if (input == null) { Assert.Inconclusive(error); return; }
+            using var vm = new MainWindowViewModel { CurrentInputModel = input };
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            vm.RunWorkflowInputCheck();
+            sw.Stop();
+            Assert.AreEqual(WorkflowStepStatus.Done, vm.WorkflowSteps[0].Status, $"(前提) 計算例10 は解析を止める入力が無い: {vm.WorkflowSteps[0].StateText}");
+            Assert.IsTrue(sw.ElapsedMilliseconds < 2000, $"入力の検査の数え直しに {sw.ElapsedMilliseconds} ms かかっています (編集のたびに走る)");
+
+            var raised = new List<string?>();
+            ((INotifyPropertyChanged)vm).PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+            double original = input.PileLayoutItems[0].PileSpacingFactor;
+            input.PileLayoutItems[0].PileSpacingFactor = 0.5;
+            vm.RunWorkflowInputCheck();
+            Assert.AreEqual(WorkflowStepStatus.NeedsRedo, vm.WorkflowSteps[0].Status, vm.WorkflowSteps[0].StateText);
+            StringAssert.Contains(vm.WorkflowSteps[0].StateText, "解析を止める 1 件");
+            CollectionAssert.Contains(raised, nameof(MainWindowViewModel.WorkflowSteps), "件数が変わったのに帯へ知らせていません");
+
+            input.PileLayoutItems[0].PileSpacingFactor = original;
+            vm.RunWorkflowInputCheck();
+            Assert.AreEqual(WorkflowStepStatus.Done, vm.WorkflowSteps[0].Status);
+            // 編集の番号が進むたびに数え直しを頼む (待ってから 1 回)
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.EvaluationColoring.cs"), "RequestWorkflowInputCheck();");
+        }
+
         /// <summary>各工程を押すと、その工程の画面を開くコマンドにつながっている。</summary>
         [TestMethod]
         public void EachStep_OpensItsWindow()

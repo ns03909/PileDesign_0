@@ -56,7 +56,16 @@ namespace PileDesign.ViewModels
         /// 支持力の検定は入力 (杭軸力・杭体) だけから決まるので、解析結果が変わらなくても
         /// 編集があれば検定サマリーを作り直す必要がある。その検知に使う。
         /// </summary>
-        public int InputEditVersion { get; private set; }
+        public int InputEditVersion
+        {
+            get => _inputEditVersion;
+            private set
+            {
+                _inputEditVersion = value;
+                RequestWorkflowInputCheck();   // 工程の帯の「入力」の件数を数え直す (少し待ってから)
+            }
+        }
+        private int _inputEditVersion;
 
         private PileEvaluationSummary? _evaluationSummaryCache;
         private (object? Model, object? Input, DateTime? Time, bool Done, int Edit, object? Current, long Options, object? Settlement, object? CurrentSettlement) _evaluationSummaryKey;
