@@ -1564,12 +1564,16 @@ namespace PileDesign.ViewModels
 
         // 結果描画
         private bool _isAnalysisResultVisible = false;
+        /// <summary>出せる解析結果が 1 つでもあるか (無いと「解析結果表示」は ON にできない)。</summary>
+        internal bool HasAnyAnalysisResultToShow =>
+            IsVerticalAnalysisDone || IsHorizontalAnalysisDone || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone || HasGroupSettlementBeamAwareCases;
+
         public bool IsAnalysisResultVisible
         {
             get => _isAnalysisResultVisible;
             set
             {
-                if (value && !IsVerticalAnalysisDone && !IsHorizontalAnalysisDone && !IsGroupPileSettlementAnalysisDone && !IsVerticalBeamAnalysisDone && !HasGroupSettlementBeamAwareCases)
+                if (value && !HasAnyAnalysisResultToShow)
                 {
                     MessageService.Show("解析結果がまだありません。\nリボン「解析条件/解析」で水平解析・単杭沈下解析・群杭沈下解析のいずれかを実行してください。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                     SetProperty(ref _isAnalysisResultVisible, false); // 明示的に戻す

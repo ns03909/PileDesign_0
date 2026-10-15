@@ -1,5 +1,6 @@
 using Serilog;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
@@ -32,6 +33,19 @@ namespace PileDesign.Services
         /// 手動保存とは既定を変えている。
         /// </summary>
         public bool IsSaveAnalysisResultsAutoSave { get; set; }
+
+        /// <summary>
+        /// 利用者が保存した表示の組 (リボン「表示」タブの「表示の組」)。
+        /// 項目の名前はビューモデルのプロパティ名。いまは無い名前は当てるときに飛ばす。
+        /// </summary>
+        public List<DisplayPreset> DisplayPresets { get; set; } = new();
+    }
+
+    /// <summary>保存した表示の組 1 つ。</summary>
+    public class DisplayPreset
+    {
+        public string Name { get; set; } = "";
+        public Dictionary<string, bool> Toggles { get; set; } = new();
     }
 
     /// <summary>

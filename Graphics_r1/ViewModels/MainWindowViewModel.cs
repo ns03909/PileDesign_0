@@ -74,6 +74,7 @@ namespace PileDesign.ViewModels
     /// <item><term>.SettlementStaleness.cs</term><description>沈下系の解析 (単杭・基礎梁考慮・群杭 2 種) ごとの「入力変更前の結果」の印と、解析どうしの依存</description></item>
     /// <item><term>.Workflow.cs</term><description>工程の帯 (入力 → 杭要素分割 → 解析 → 検定 → 計算書)</description></item>
     /// <item><term>.EvaluationColoring.cs</term><description>検定結果の色分け</description></item>
+    /// <item><term>.DisplayPresets.cs</term><description>表示の組 (表示の項目をまとめて切り替え・保存)</description></item>
     /// <item><term>.CameraViews.cs</term><description>視点の切り替え</description></item>
     /// <item><term>.SettlementGridCache.cs</term><description>沈下グリッドの描画キャッシュ</description></item>
     /// <item><term>.ConfirmDeleteAnalysisModel.cs</term><description>解析モデルを捨てる前の確認</description></item>
@@ -97,7 +98,7 @@ namespace PileDesign.ViewModels
         // アプリ全体のユーザー設定 (LocalAppData の PileDesign フォルダ内 user_settings.json)。
         // 下の保存オプションのプロパティが getter/setter で直接読み書きするため、
         // コンストラクタを待たずフィールド初期化子で生成する。
-        private readonly UserSettingsService _userSettingsService = new();
+        private UserSettingsService _userSettingsService = new();
 
         private System.Windows.Threading.DispatcherTimer? _generateSoilPilesDebounceTimer;
         private bool _soilPilesGenerationPending = false;

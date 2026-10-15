@@ -211,6 +211,8 @@ namespace PileDesign.ViewModels
 
         public MainWindowViewModel()
         {
+            // 表示の組の「既定」は、ここまでの (フィールドの初期値の) 表示
+            InitializeDisplayPresets();
             _requeryGroupSettlement = (_, _) => RefreshGroupSettlementGuard();
             System.Windows.Input.CommandManager.RequerySuggested += _requeryGroupSettlement;
 

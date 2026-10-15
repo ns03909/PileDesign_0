@@ -490,6 +490,8 @@ namespace PileDesign.ViewModels
             // 入力が差し替わったら (読込・新規・計算例)、入力の検査を数え直す
             if (e.PropertyName is nameof(CurrentInputModel) or nameof(PileCountText))
                 RequestWorkflowInputCheck();
+            // 表示の組を当てたあとに手で表示を変えたら、組の選択を外す (MainWindowViewModel.DisplayPresets.cs)
+            OnDisplayToggleChanged(e.PropertyName);
         }
 
         /// <summary>結果セットの状態表示（ステータスバー等）。</summary>
