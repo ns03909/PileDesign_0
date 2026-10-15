@@ -3,7 +3,7 @@ using PileDesign.FEM;
 using PileDesign.Models.Results;
 using PileDesign.Services;
 using System;
-using static PileDesign.Views.ResultDashboardWindow;
+using static PileDesign.Views.ResultDashboardView;
 
 namespace TestProject1
 {
@@ -148,7 +148,7 @@ namespace TestProject1
         [TestMethod]
         public void DashboardRowLabel_CoversSettlement()
         {
-            string xaml = TestSource.Read("Graphics_r1", "Views", "ResultDashboardWindow.xaml");
+            string xaml = TestSource.Read("Graphics_r1", "Views", "ResultDashboardView.xaml");
             StringAssert.Contains(xaml, "Text=\"鉛直支持力・沈下\"");
             Assert.IsFalse(xaml.Contains("Text=\"杭の鉛直支持力\""),
                 "ダッシュボードの行名が「杭の鉛直支持力」のままです (沈下量・沈下による杭頭変形角・基礎梁の傾斜角も同じ行に数えています)");
@@ -186,7 +186,7 @@ namespace TestProject1
             StringAssert.Contains(build, "FromResults(horizontalParts.Horizontal, horizontalParts.HorizontalUnfactored, bearing, seismicGrade, failures)",
                 "記録した失敗を、まとめに渡していません");
 
-            string dashboard = TestSource.Read("Graphics_r1", "Views", "ResultDashboardWindow.xaml.cs");
+            string dashboard = TestSource.Read("Graphics_r1", "Views", "ResultDashboardView.xaml.cs");
             StringAssert.Contains(dashboard, "PileEvaluationSummary.WholePart",
                 "ダッシュボードがまとめを組めなかったとき、失敗を「検定なし」として扱っています");
         }
@@ -198,8 +198,8 @@ namespace TestProject1
         [TestMethod]
         public void TheRefreshButton_SaysItOnlyRefreshesTheView()
         {
-            string xaml = TestSource.Read("Graphics_r1", "Views", "ResultDashboardWindow.xaml");
-            string code = TestSource.Read("Graphics_r1", "Views", "ResultDashboardWindow.xaml.cs");
+            string xaml = TestSource.Read("Graphics_r1", "Views", "ResultDashboardView.xaml");
+            string code = TestSource.Read("Graphics_r1", "Views", "ResultDashboardView.xaml.cs");
             StringAssert.Contains(xaml, "Content=\"表示を更新(_R)\" Click=\"RefreshButton_Click\"");
             Assert.IsFalse(xaml.Contains("再計算", StringComparison.Ordinal) || code.Contains("再計算", StringComparison.Ordinal),
                 "ダッシュボードに「再計算」が残っています (表示を作り直すだけの操作を、解析のやり直しと取り違えます)");

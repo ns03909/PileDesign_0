@@ -1755,27 +1755,64 @@ namespace PileDesign.Views
 
         // ---- E.18 / C.9 Dashboard / Command Palette ハンドラ ----------------
 
-        private ResultDashboardWindow? _resultDashboard;
+        private ResultDashboardView? _resultDashboard;
+        private LayoutAnchorable? _resultDashboardAnchorable;
+
+        /// <summary>ダッシュボードをドッキングしたときの右側の列の幅 (これより狭ければ広げる)。</summary>
+        internal const double ResultDashboardDockWidth = 480;
+
+        private void OpenResultDashboard_Click(object sender, RoutedEventArgs e) => ShowResultDashboard();
 
         /// <summary>
-        /// ダッシュボードはモードレスで開く。
-        /// 「杭配置を色分け」をダッシュボードから切り替えて、メインビューの色を見ながら
-        /// 一覧を読むためで、モーダルだとメインビューを回転もできない。
-        /// 二重に開かず、既に開いていれば前面に出す。
+        /// ダッシュボードを、メイン画面の右側 (モデル図とプロパティ欄の間) に高さいっぱいの列としてドッキングして開く。
+        /// モデル図と並べて、問題の杭と判定を同時に見るため。以前は別ウィンドウで、メイン画面の中央に開いてモデル図を覆っていた。
+        /// タブを引き出せば別ウィンドウにもできる (AvalonDock のフローティング)。
+        /// 二重に開かず、既に開いていれば表示を作り直してそのタブを前に出す。
         /// </summary>
-        private void OpenResultDashboard_Click(object sender, RoutedEventArgs e)
+        internal void ShowResultDashboard()
         {
             if (DataContext is not MainWindowViewModel vm) return;
-            if (_resultDashboard is { IsLoaded: true })
+            if (_resultDashboardAnchorable is { } open && _resultDashboard != null)
             {
                 _resultDashboard.RefreshNow();
-                _resultDashboard.Activate();
+                open.IsSelected = true;
+                open.IsActive = true;
                 return;
             }
-            var w = new ResultDashboardWindow(vm) { Owner = this };
-            w.Closed += (_, __) => _resultDashboard = null;
-            _resultDashboard = w;
-            w.Show();
+
+            var view = new ResultDashboardView(vm);
+            var anchorable = new LayoutAnchorable
+            {
+                Title = "解析結果ダッシュボード",
+                ContentId = "ResultDashboard",
+                Content = view,
+                CanClose = true,
+                CanHide = false,
+                FloatingWidth = 560,
+                FloatingHeight = 720,
+            };
+            view.CloseRequested += (_, _) => anchorable.Close();
+            anchorable.Closed += (_, _) =>
+            {
+                view.Detach();
+                _resultDashboard = null;
+                _resultDashboardAnchorable = null;
+            };
+
+            // 右側に、高さいっぱいの列として足す (モデル図とプロパティ欄の間)。プロパティ欄の列はミニマップと縦に分けて
+            // いるので、そこにタブで足すと総括が窮屈でスクロールが要った (2026-10-15 の実機確認)。閉じると列ごと消える
+            var root = dockingManager.Layout.RootPanel;
+            var column = new LayoutAnchorablePaneGroup(new LayoutAnchorablePane(anchorable))
+            {
+                DockWidth = new GridLength(ResultDashboardDockWidth),
+            };
+            int at = propertiesAnchorable.Parent?.Parent is LayoutAnchorablePaneGroup propertiesColumn && root.Children.Contains(propertiesColumn)
+                ? root.IndexOfChild(propertiesColumn) : root.ChildrenCount;
+            root.InsertChildAt(at, column);
+            _resultDashboard = view;
+            _resultDashboardAnchorable = anchorable;
+            anchorable.IsSelected = true;
+            anchorable.IsActive = true;
         }
 
         private void OpenCommandPalette_Click(object sender, RoutedEventArgs e) => OpenCommandPalette();

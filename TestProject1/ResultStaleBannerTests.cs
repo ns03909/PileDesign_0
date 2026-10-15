@@ -74,7 +74,7 @@ namespace TestProject1
         [DataTestMethod]
         [DataRow("GraphWindow.xaml", "DataContext=\"{Binding MainVm}\"")]
         [DataRow("TableWindow.xaml", "DataContext=\"{Binding MainVm}\"")]
-        [DataRow("ResultDashboardWindow.xaml", "")]
+        [DataRow("ResultDashboardView.xaml", "")]
         public void ResultWindows_ShowTheBanner(string file, string binding)
         {
             string xaml = TestSource.Read("Graphics_r1", "Views", file);

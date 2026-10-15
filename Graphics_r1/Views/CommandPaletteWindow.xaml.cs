@@ -224,11 +224,7 @@ namespace PileDesign.Views
 
             // ── ダッシュボード / ヘルプ ──────────────────────────────
             Add(list, "解析結果 ダッシュボード", "解析モデル / 統計をカード表示", null, "dashboard summary 結果 ダッシュボード",
-                () =>
-                {
-                    var w = new ResultDashboardWindow(vm) { Owner = mainWindow };
-                    w.ShowDialog();
-                });
+                vm.OpenResultDashboardCommand);   // メイン画面の右側にドッキングして開く (以前はモーダルの別ウィンドウ)
             Add(list, "ショートカット一覧", "キーボードショートカット表", null, "shortcut keyboard ショートカット",
                 vm.OpenShortcutKeysWindowCommand);
             Add(list, "ヘルプを開く", "アプリのヘルプ HTML", null, "help ヘルプ",

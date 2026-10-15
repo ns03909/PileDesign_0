@@ -265,7 +265,7 @@ namespace TestProject1
             var unavailable = ok with { Response = double.NaN, UnavailableReason = EvaluationService.NoResultReason };
             var summary = PileEvaluationSummary.FromResults(new EvaluationResult([ok, unavailable]), null, new EvaluationResult([]), "A");
 
-            var verdict = PileDesign.Views.ResultDashboardWindow.DecideVerdict(summary, horizontalDone: true);
+            var verdict = PileDesign.Views.ResultDashboardView.DecideVerdict(summary, horizontalDone: true);
             StringAssert.StartsWith(verdict.Text, "検定不能 1 件", "検定できなかった項目があるのに総合判定が「すべて OK」になっています");
         }
 

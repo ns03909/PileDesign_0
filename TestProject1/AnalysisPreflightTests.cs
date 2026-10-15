@@ -109,8 +109,8 @@ namespace TestProject1
         {
             var analyzed = new DateTime(2026, 10, 4, 14, 30, 0);
             var refreshed = new DateTime(2026, 10, 4, 15, 2, 11);
-            Assert.AreEqual("解析: 2026/10/04 14:30　／　表示の更新: 15:02:11", ResultDashboardWindow.FormatTimes(analyzed, refreshed));
-            Assert.AreEqual("解析: 未実施　／　表示の更新: 15:02:11", ResultDashboardWindow.FormatTimes(null, refreshed));
+            Assert.AreEqual("解析: 2026/10/04 14:30　／　表示の更新: 15:02:11", ResultDashboardView.FormatTimes(analyzed, refreshed));
+            Assert.AreEqual("解析: 未実施　／　表示の更新: 15:02:11", ResultDashboardView.FormatTimes(null, refreshed));
         }
 
         /// <summary>起動画面のリンクは、Tab で選んだときもマウスを合わせたときと同じく強調する。</summary>

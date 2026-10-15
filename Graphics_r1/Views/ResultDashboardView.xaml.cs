@@ -22,15 +22,25 @@ namespace PileDesign.Views
     ///
     /// 解析中の数値ではなく、解析完了後に呼び出す前提のスナップショット表示。
     /// 「表示を更新」ボタンで開いたまま現在の状態を再読込できる (解析はやり直さない)。
+    ///
+    /// メイン画面の右側 (モデル図とプロパティ欄の間) にドッキングして開く (MainWindow.ShowResultDashboard)。以前は別ウィンドウ
+    /// (ResultDashboardWindow) で、メイン画面の中央に開いてモデル図を覆い、問題の杭と判定を同時に見られなかった。
+    /// タブを引き出せば別ウィンドウにもできる。
     /// </summary>
-    public partial class ResultDashboardWindow : Window
+    public partial class ResultDashboardView : UserControl
     {
         private readonly MainWindowViewModel _vm;
 
-        /// <summary>杭ごとの一覧の 1 行。</summary>
-        private sealed record PileRow(int PileNo, string Status, string RatioText, string Category, string ValuesText, string Condition);
+        /// <summary>
+        /// 杭ごとの一覧の 1 行。一覧に出すのは杭・判定・検定比・検定項目で、対象・応答値・限界値・荷重条件は選んだ行の詳細に出す。
+        /// </summary>
+        internal sealed record PileRow(int PileNo, string Status, string RatioText, string Category,
+            string Target, string Response, string Limit, string Condition);
 
-        public ResultDashboardWindow(MainWindowViewModel vm)
+        /// <summary>「閉じる」を押した (持ち主がドッキングの欄を閉じる)。</summary>
+        public event EventHandler? CloseRequested;
+
+        public ResultDashboardView(MainWindowViewModel vm)
         {
             _vm = vm ?? throw new ArgumentNullException(nameof(vm));
             InitializeComponent();
@@ -38,11 +48,15 @@ namespace PileDesign.Views
             DataContext = _vm;
             Loaded += (_, __) => Refresh();
 
-            // モードレスなので、開いたまま解析を実行・保存されることがある。
+            // 開いたまま解析を実行・保存されることがある。
             // 解析の完了や杭要素分割の切替を拾って作り直し、古い総括を見せ続けない。
             _vm.PropertyChanged += OnViewModelPropertyChanged;
-            Closed += (_, __) => _vm.PropertyChanged -= OnViewModelPropertyChanged;
         }
+
+        /// <summary>閉じるときに持ち主が呼ぶ (ViewModel の購読を外す)。</summary>
+        public void Detach() => _vm.PropertyChanged -= OnViewModelPropertyChanged;
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e) => CloseRequested?.Invoke(this, EventArgs.Empty);
 
         private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
@@ -330,6 +344,7 @@ namespace PileDesign.Views
             {
                 SetMuted(PileBandCountsText, "検定した杭はありません。");
                 PileRatioGrid.ItemsSource = null;
+                ShowDetail(null);
                 return;
             }
 
@@ -347,7 +362,20 @@ namespace PileDesign.Views
             PileBandCountsText.Style = ng > 0 ? StyleResource("DashWarnStyle") : StyleResource("DashValueStyle");
             PileBandCountsText.FontWeight = FontWeights.Normal;
 
-            PileRatioGrid.ItemsSource = piles.Select(ToRow).ToList();
+            var rows = piles.Select(ToRow).ToList();
+            PileRatioGrid.ItemsSource = rows;
+            // 最も厳しい杭 (一覧の先頭) を選んでおき、詳細欄にその応答値・限界値・荷重条件を出す
+            PileRatioGrid.SelectedIndex = rows.Count > 0 ? 0 : -1;
+            ShowDetail(PileRatioGrid.SelectedItem as PileRow);
+        }
+
+        /// <summary>選んだ行の詳細 (対象・応答値・限界値・荷重条件)。行が無ければ「—」。</summary>
+        private void ShowDetail(PileRow? row)
+        {
+            DetailTargetText.Text = row == null ? "—" : row.Target.Length > 0 ? row.Target : $"杭 No.{row.PileNo}";
+            DetailResponseText.Text = row is { Response.Length: > 0 } ? row.Response : "—";
+            DetailLimitText.Text = row is { Limit.Length: > 0 } ? row.Limit : "—";
+            DetailConditionText.Text = row is { Condition.Length: > 0 } ? row.Condition : "—";
         }
 
         // ---- 杭の行から移る ------------------------------------------------
@@ -361,6 +389,7 @@ namespace PileDesign.Views
             bool any = SelectedPileNo != null;
             ShowPileButton.IsEnabled = any;
             OpenPileEvaluationButton.IsEnabled = any;
+            ShowDetail(PileRatioGrid.SelectedItem as PileRow);
         }
 
         private void PileRatioGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -378,7 +407,9 @@ namespace PileDesign.Views
                 MessageService.ShowInfo($"杭 No.{no} が杭配置に見つかりません (解析のあとに杭を消したか、番号を変えた可能性があります)。");
                 return;
             }
-            Owner?.Activate();
+            // 別ウィンドウに引き出しているときは、平面図のあるメイン画面を前に出す
+            if (Window.GetWindow(this) is { } host && !ReferenceEquals(host, Application.Current?.MainWindow))
+                Application.Current?.MainWindow?.Activate();
         }
 
         private void OpenPileEvaluationButton_Click(object sender, RoutedEventArgs e)
@@ -386,16 +417,16 @@ namespace PileDesign.Views
             if (SelectedPileNo is int no) _vm.OpenEvaluationForPile(no);
         }
 
-        private static PileRow ToRow(PileEvaluationEntry e)
+        internal static PileRow ToRow(PileEvaluationEntry e)
         {
             var g = e.Governing;
             string ratio = double.IsNaN(e.MaxRatio) ? "—" : e.MaxRatio.ToString("F2", CultureInfo.InvariantCulture);
             string category = g?.Category
                 ?? (e.HasUnconverged ? "(未収束のケースのみ)" : e.HasOutOfScope ? "(適用範囲外の項目のみ)"
                     : e.HasUnavailable ? "(検定不能の項目のみ)" : "");
-            string values = g == null ? "" : $"{g.ResponseText} / {g.LimitText} {g.Unit}".TrimEnd();
-            string condition = g?.ConditionDescription ?? "";
-            return new PileRow(e.PileNo, e.StatusLabel, ratio, category, values, condition);
+            string response = g == null ? "" : $"{g.ResponseText} {g.Unit}".TrimEnd();
+            string limit = g == null ? "" : $"{g.LimitText} {g.Unit}".TrimEnd();
+            return new PileRow(e.PileNo, e.StatusLabel, ratio, category, g?.TargetDescription ?? "", response, limit, g?.ConditionDescription ?? "");
         }
 
         // ---- 解析の状態 ----------------------------------------------------

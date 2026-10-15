@@ -75,18 +75,19 @@ namespace TestProject1
         /// 解析していない状態で「未実施」の分岐を通す。
         /// </summary>
         [TestMethod]
-        public void ResultDashboardWindow_XamlParses_AndRefreshesWithoutAnalysis()
+        public void ResultDashboardView_XamlParses_AndRefreshesWithoutAnalysis()
         {
             var (inputModel, _) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
             if (inputModel == null) { Assert.Inconclusive("例題ファイルなし"); return; }
 
-            AssertWindowParses("ResultDashboardWindow", () =>
+            // ダッシュボードはメイン画面にドッキングする部品 (UserControl)。ウィンドウに載せてパースと再計算を踏む
+            AssertWindowParses("ResultDashboardView", () =>
             {
                 var mainVm = new PileDesign.ViewModels.MainWindowViewModel { CurrentInputModel = inputModel };
                 inputModel.AttachViewModel(mainVm);
-                var window = new PileDesign.Views.ResultDashboardWindow(mainVm);
-                window.RefreshNow();
-                return window;
+                var view = new PileDesign.Views.ResultDashboardView(mainVm);
+                view.RefreshNow();
+                return new System.Windows.Window { Content = view };
             });
         }
 

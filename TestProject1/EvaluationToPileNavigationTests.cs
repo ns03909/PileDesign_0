@@ -79,8 +79,8 @@ namespace TestProject1
         [TestMethod]
         public void TheDashboard_OffersBothWaysFromThePileRow()
         {
-            string xaml = TestSource.Read("Graphics_r1", "Views", "ResultDashboardWindow.xaml");
-            string code = TestSource.Read("Graphics_r1", "Views", "ResultDashboardWindow.xaml.cs");
+            string xaml = TestSource.Read("Graphics_r1", "Views", "ResultDashboardView.xaml");
+            string code = TestSource.Read("Graphics_r1", "Views", "ResultDashboardView.xaml.cs");
             StringAssert.Contains(xaml, "Click=\"ShowPileButton_Click\"");
             StringAssert.Contains(xaml, "Click=\"OpenPileEvaluationButton_Click\"");
             StringAssert.Contains(xaml, "MouseDoubleClick=\"PileRatioGrid_MouseDoubleClick\"");
