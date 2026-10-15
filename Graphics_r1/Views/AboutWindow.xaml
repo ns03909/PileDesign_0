@@ -88,8 +88,7 @@
                         Height="30" MinWidth="170" Margin="0,0,8,0"
                         ToolTip="直近 2 日のログを 1 つのファイルにまとめます。ユーザー名・PC 名・フォルダの場所は伏せ、診断・版・モデルの規模は残します。問い合わせのときに添えてください。"
                         Click="ButtonExportShareableLog_Click"/>
-                <Button x:Name="ButtonClose" Content="閉じる(_C)"
-                        Height="30" MinWidth="100"
+                <Button x:Name="ButtonClose" Content="閉じる(_C)" Style="{StaticResource DialogCancelButtonStyle}"
                         IsDefault="True" IsCancel="True"
                         Click="ButtonClose_Click"/>
             </StackPanel>

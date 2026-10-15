@@ -344,7 +344,7 @@
                     ToolTip="解析結果テーブルを開きます。「検定」カテゴリに全件が検定比の降順で並びます (Alt+T)"/>
             <Button Grid.Column="2" Content="表示を更新(_R)" Click="RefreshButton_Click" Padding="12,4" Margin="0,0,8,0"
                     ToolTip="いまの解析結果と検定から、ダッシュボードの表示を作り直します (Alt+R)。&#x0a;解析はやり直しません。入力を変えたあとは、水平解析を実行し直してください"/>
-            <Button Grid.Column="3" Content="閉じる(_C)" Click="CloseButton_Click" Padding="12,4"
+            <Button Grid.Column="3" Content="閉じる(_C)" Style="{StaticResource DialogCancelButtonStyle}" Click="CloseButton_Click"
                     ToolTip="ダッシュボードを閉じます (Alt+C)"/>
         </Grid>
     </Grid>

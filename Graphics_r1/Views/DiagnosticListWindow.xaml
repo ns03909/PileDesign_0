@@ -54,7 +54,7 @@
                         ToolTip="関係する杭をメイン画面で選び、直す入力画面を開きます。閉じると検査し直します。"/>
                 <Button Content="再検査(_R)" Command="{Binding RecheckCommand}" MinWidth="100" Margin="0,0,8,0"
                         ToolTip="いまの入力で検査し直し、解消した指摘を一覧から除きます。"/>
-                <Button Content="閉じる" IsCancel="True" MinWidth="80" Click="Close_Click"/>
+                <Button Content="閉じる" Style="{StaticResource DialogCancelButtonStyle}" IsCancel="True" Click="Close_Click"/>
             </StackPanel>
         </Grid>
     </Border>

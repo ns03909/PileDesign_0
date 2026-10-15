@@ -1578,16 +1578,16 @@
                                      Text="このウィンドウのヘルプ" Margin="0,0,16,0"
                                      VerticalAlignment="Center"/>
                 <Button x:Name="ButtonOk"
-                        Content="保存(_S)"
+                        Content="保存(_S)" Style="{StaticResource PrimaryDialogButtonStyle}"
                         HorizontalAlignment="Center"
-                        VerticalAlignment="Center" Height="30" Width="150"
+                        VerticalAlignment="Center"
                         Command="{Binding OkCommand}"
                         IsDefault="True"
                         ToolTip="変更を保存して閉じます (Enter / Ctrl+Enter / Alt+S)" />
                 <Button x:Name="ButtonCancel"
-                        Content="キャンセル(_C)"
+                        Content="キャンセル(_C)" Style="{StaticResource DialogCancelButtonStyle}"
                         HorizontalAlignment="Center"
-                        VerticalAlignment="Center" Height="30" Width="150"
+                        VerticalAlignment="Center"
                         Command="{Binding CancelCommand}"
                         IsCancel="True"
                         ToolTip="変更を破棄して閉じます (Esc / Alt+C)" />

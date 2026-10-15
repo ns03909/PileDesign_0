@@ -57,10 +57,8 @@
         <!-- キャンセルボタン -->
         <!-- Esc でも同じ (止めるかを訊く)。Esc でウィンドウを閉じる共通の動き (EscapeKeyBehavior) は切ってある -->
         <Button Grid.Row="6"
-                Content="キャンセル"
+                Content="キャンセル" Style="{StaticResource DialogCancelButtonStyle}"
                 IsCancel="True"
-                Width="100"
-                Height="30"
                 HorizontalAlignment="Right"
                 Click="CancelButton_Click"
                 IsEnabled="{Binding CanCancel}"/>

@@ -45,7 +45,6 @@ namespace TestProject1
         /// </summary>
         private static readonly HashSet<string> KnownUnused =
         [
-            "DialogSecondaryButtonStyle",
             "ErrorTextStyle",
             "FadeInBorderStyle",
             "FormLabelStyle",

@@ -293,13 +293,11 @@
         <!-- ═══ 下部ボタン ═══ -->
         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                     Orientation="Horizontal" HorizontalAlignment="Right" Margin="8">
-            <Button Content="保存(_S)" Command="{Binding OkCommand}"
-                    Width="180" Height="28" Margin="0,4,8,4"
+            <Button Content="保存(_S)" Style="{StaticResource PrimaryDialogButtonStyle}" Command="{Binding OkCommand}" Margin="0,4,8,4"
                     IsDefault="True"
                     ToolTip="変更を保存して閉じます (Enter / Ctrl+Enter / Alt+S)"
                     Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BoolToVisConverter}}"/>
-            <Button Content="キャンセル(_C)" Command="{Binding CancelCommand}"
-                    Width="150" Height="28" Margin="0,4,8,4"
+            <Button Content="キャンセル(_C)" Style="{StaticResource DialogCancelButtonStyle}" Command="{Binding CancelCommand}" Margin="0,4,8,4"
                     IsCancel="True"
                     ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
         </StackPanel>

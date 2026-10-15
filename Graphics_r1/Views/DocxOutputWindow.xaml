@@ -293,11 +293,10 @@ WindowStartupLocation="CenterOwner">
                         ToolTip="出力項目・荷重ケースをすべて解除します"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="OkButton" Content="計算書作成(_O)" Width="120" Click="OkButton_Click"
-                        Padding="8,4" Margin="0,0,8,0"
+                <Button x:Name="OkButton" Content="計算書作成(_O)" Style="{StaticResource PrimaryDialogButtonStyle}" Click="OkButton_Click"
                         IsDefault="True"
                         ToolTip="選択した項目で計算書を出力します (Enter / Alt+O)"/>
-                <Button Content="キャンセル(_C)" Width="120" Click="CancelButton_Click" Padding="8,4"
+                <Button Content="キャンセル(_C)" Style="{StaticResource DialogCancelButtonStyle}" Click="CancelButton_Click"
                         IsCancel="True"
                         ToolTip="出力せずに閉じます (Esc / Alt+C)"/>
             </StackPanel>

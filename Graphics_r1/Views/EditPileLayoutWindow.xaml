@@ -198,8 +198,8 @@
         </StackPanel>
         
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="1">
-            <Button Content="OK" Width="60" Click="OkButton_Click" />
-            <Button Content="キャンセル (Esc)" Width="100" Click="CancelButton_Click" />
+            <Button Content="OK(_O)" Style="{StaticResource PrimaryDialogButtonStyle}" Click="OkButton_Click" IsDefault="True" />
+            <Button Content="キャンセル (Esc)" Style="{StaticResource DialogCancelButtonStyle}" Click="CancelButton_Click" />
         </StackPanel>
 
     </Grid>

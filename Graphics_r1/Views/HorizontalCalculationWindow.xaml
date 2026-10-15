@@ -667,13 +667,13 @@
             <ctrl:HelpLinkButton Anchor="section-lateral-analysis" ScrollToTitle="「水平解析」（F5）"
                                  Text="このウィンドウのヘルプ" Margin="0,0,16,0"
                                  VerticalAlignment="Center"/>
-            <Button x:Name="ButtonOk" Content="保存(_S)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
+            <Button x:Name="ButtonOk" Content="保存(_S)" Style="{StaticResource PrimaryDialogButtonStyle}" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Command="{Binding OkCommand}"
                     IsDefault="True"
                     ToolTip="解析結果を保存して閉じます (Enter / Ctrl+Enter / Alt+S)"
                     Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-            <Button x:Name="ButtonCancel" Content="キャンセル(_C)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"
+            <Button x:Name="ButtonCancel" Content="キャンセル(_C)" Style="{StaticResource DialogCancelButtonStyle}" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Command="{Binding CancelCommand}"
                     IsCancel="True"
                     ToolTip="変更を破棄して閉じます (Esc / Alt+C)"/>
         </StackPanel>

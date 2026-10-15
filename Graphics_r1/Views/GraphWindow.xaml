@@ -353,8 +353,7 @@
             </TextBlock>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="1" HorizontalAlignment="Right">
-            <Button x:Name="ButtonOk" Content="閉じる (Esc)" Height="30" VerticalAlignment="Top"
-                    Width="100" Command="{Binding CloseCommand}"/>
+            <Button x:Name="ButtonOk" Content="閉じる (Esc)" Style="{StaticResource DialogCancelButtonStyle}" VerticalAlignment="Top" Command="{Binding CloseCommand}"/>
         </StackPanel>
     </Grid>
     </DockPanel>
