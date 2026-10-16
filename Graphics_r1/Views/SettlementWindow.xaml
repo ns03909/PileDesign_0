@@ -574,7 +574,7 @@
                             </common:EnhancedDataGrid.ContextMenu>
                             
                             <common:EnhancedDataGrid.Columns>
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding Top, StringFormat=N3}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -585,7 +585,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding Bottom, StringFormat=N3}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -597,7 +597,7 @@
                                 </DataGridTextColumn>
 
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding L, StringFormat=N3}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -611,7 +611,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding Psi, StringFormat=N3}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -625,7 +625,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding PsiL, StringFormat=N3}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -638,7 +638,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="1.8*" MinWidth="90"
+                                <DataGridTextColumn Width="90" MinWidth="90"
                                 Binding="{Binding GroundLayer.Name}">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
@@ -656,7 +656,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTemplateColumn Width="*" MinWidth="50">
+                                <DataGridTemplateColumn Width="50" MinWidth="50">
                                     <DataGridTemplateColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
                                             <TextBlock Text="押込み" TextAlignment="Center"/>
@@ -675,7 +675,7 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTemplateColumn Width="*" MinWidth="50">
+                                <DataGridTemplateColumn Width="50" MinWidth="50">
                                     <DataGridTemplateColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
                                             <TextBlock Text="引抜き" TextAlignment="Center"/>
@@ -694,7 +694,7 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding S1, StringFormat=N1}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -707,7 +707,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding S2, StringFormat=N1}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -720,7 +720,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding Tau1, StringFormat=N1}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -731,7 +731,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding Tau2, StringFormat=N1}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -742,7 +742,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding TauT, StringFormat=N1}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -754,7 +754,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                 Binding="{Binding Rf, StringFormat=N1}"
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
@@ -838,7 +838,7 @@
                             </common:EnhancedDataGrid.ContextMenu>
                             
                             <common:EnhancedDataGrid.Columns>
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                         Binding="{Binding PileTopLoad, StringFormat=N0, Mode=TwoWay}"
                                         MinWidth="50"
                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}"
@@ -853,7 +853,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                         Binding="{Binding RzToe, StringFormat=N0, Mode=TwoWay}"
                                         MinWidth="50"
                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}"
@@ -868,7 +868,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                         Binding="{Binding RzCircum, StringFormat=N0, Mode=TwoWay}"
                                         MinWidth="50"
                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}"
@@ -883,7 +883,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                         Binding="{Binding Weight, StringFormat=N0, Mode=TwoWay}"
                                         MinWidth="50"
                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}"
@@ -898,7 +898,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                         Binding="{Binding DD0s, StringFormat=N2, Mode=TwoWay}"
                                         MinWidth="50"
                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}">
@@ -912,7 +912,7 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
+                                <DataGridTextColumn Width="50"
                                         Binding="{Binding DDns, StringFormat=N2, Mode=TwoWay}"
                                         MinWidth="50"
                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}">

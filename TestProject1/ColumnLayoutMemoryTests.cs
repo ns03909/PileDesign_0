@@ -95,62 +95,91 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 杭配置・軸力の表は列を固定幅にする (2026-10-16)。比率指定 (Width="*") の列は、
-        /// 見出しの境目をドラッグしても幅が変わらない (素の WPF DataGrid でも同じ)。
-        /// 以前は全列が比率指定で、利用者は列を広げられなかった (覚える仕組みも働かなかった)。
+        /// 既定の大きさで比率指定 (Width="*") の列がすべて最小幅まで詰められていた表は、列を固定幅にする (2026-10-16/17)。
+        /// 列が多く欄に収まらないため、見出しの境目をドラッグしても幅が変わらなかった (周りの比率指定の列から幅を取れない)。
+        /// 覚える仕組みも働かなかった。幅は詰められて実際に表示されていた最小幅と同じにしてあり、見た目は変えていない。
+        /// 欄に余裕のある表 (一般節点・梁材料・荷重・群杭沈下・杭体など) は比率指定のままでドラッグできるので変えていない。
         /// </summary>
         [TestMethod]
-        public void PileTables_HaveNoStarWidthColumns()
+        public void SqueezedTables_HaveNoStarWidthColumns()
         {
-            string xaml = TestSource.Read("Graphics_r1", "Views", "MainWindow.xaml");
-            foreach (var name in new[] { "DataGridPileLayout", "DataGridPileAxialForce" })
+            var tables = new[]
             {
+                ("MainWindow.xaml", "DataGridPileLayout"), ("MainWindow.xaml", "DataGridPileAxialForce"),
+                ("MainWindow.xaml", "DataGridEmbedment"), ("MainWindow.xaml", "DataGridGridX"), ("MainWindow.xaml", "DataGridGridY"),
+                ("MainWindow.xaml", "DataGridFoundationBeams"),
+                ("SettlementWindow.xaml", "DataGridCircum"), ("SettlementWindow.xaml", "DataGridLoadDisplacement"),
+            };
+            foreach (var (file, name) in tables)
+            {
+                string xaml = TestSource.Read("Graphics_r1", "Views", file);
                 var grid = Regex.Match(xaml, $@"<common:EnhancedDataGrid x:Name=""{name}"".*?</common:EnhancedDataGrid>", RegexOptions.Singleline).Value;
                 var columns = Regex.Matches(grid, @"<DataGrid(?:Text|Template|CheckBox|ComboBox)Column\b[^>]*>").Select(m => m.Value).ToArray();
-                TestSource.AssertScanned(columns.Length, 10, $"{name} の列");
+                TestSource.AssertScanned(columns.Length, 4, $"{name} の列");
                 var star = columns.Where(c => Regex.IsMatch(c, @"(?<![A-Za-z])Width=""[\d.]*\*""")).ToArray();
-                Assert.AreEqual(0, star.Length, $"{name} に比率指定の列があります (ドラッグで広げられません): " + string.Join(" / ", star));
+                Assert.AreEqual(0, star.Length, $"{name} に比率指定の列があります (欄に収まらないと最小幅に詰められ、ドラッグで広げられません): " + string.Join(" / ", star));
             }
         }
 
-        /// <summary>比率指定の列は見出しのグリップをドラッグしても広がらず、固定幅の列は広がる (上のテストの前提)。</summary>
+        /// <summary>
+        /// 上のテストの前提。比率指定の列は、欄に余裕があればドラッグで広がる (右の比率指定の列が縮む) が、
+        /// 欄に収まらず最小幅まで詰められていると広がらない。固定幅の列は、欄に収まらなくても広がる。
+        /// </summary>
         [TestMethod]
-        public void DraggingTheGripper_WidensPixelColumns_ButNotStarColumns()
+        public void DraggingTheGripper_StarColumnsWidenOnlyWithRoom_PixelColumnsAlways()
         {
-            string? star = null, pixel = null;
+            int[]? starRoom = null, starSqueezed = null, pixelSqueezed = null;
             OnSta(() =>
             {
                 XamlSmokeTestSupport.EnsureApplicationResources();
-                star = DragFirstColumn(new DataGridLength(1, DataGridLengthUnitType.Star));
-                pixel = DragFirstColumn(new DataGridLength(65));
+                var star = new DataGridLength(1, DataGridLengthUnitType.Star);
+                starRoom = DragFirstColumn(star, columns: 4, windowWidth: 600);
+                starSqueezed = DragFirstColumn(star, columns: 10, windowWidth: 320);
+                pixelSqueezed = DragFirstColumn(new DataGridLength(50), columns: 10, windowWidth: 320);
             });
-            Assert.AreEqual("50→50", star, "(前提) 比率指定の列がドラッグで広がるようになったなら、固定幅にした理由を見直す");
-            Assert.AreEqual("65→145", pixel, "固定幅の列がドラッグで広がっていません");
+            Assert.IsTrue(starRoom![1] > starRoom[0] + 30, $"(前提) 余裕のある比率指定の列が広がりません: {starRoom[0]}→{starRoom[1]}");
+            Assert.AreEqual(50, starSqueezed![0], "(前提) 比率指定の列が最小幅まで詰められていません");
+            Assert.AreEqual(starSqueezed[0], starSqueezed[1], "(前提) 詰められた比率指定の列がドラッグで広がるようになったなら、固定幅にした理由を見直す");
+            Assert.AreEqual(130, pixelSqueezed![1], "固定幅の列がドラッグで広がっていません");
         }
 
-        private static string DragFirstColumn(DataGridLength width)
+        /// <summary>先頭の列の右の境目を 80 ドラッグし、前後の実際の幅を返す。</summary>
+        private static int[] DragFirstColumn(DataGridLength width, int columns, double windowWidth)
         {
             var grid = new EnhancedDataGrid { AutoGenerateColumns = false };
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < columns; i++)
                 grid.Columns.Add(new DataGridTextColumn { Header = "C" + i, Width = width, MinWidth = 50 });
             var window = new System.Windows.Window
             {
-                Width = 320, Height = 200, Content = grid, Left = -3000, Top = -3000,
+                Width = windowWidth, Height = 200, Content = grid, Left = -3000, Top = -3000,
                 ShowActivated = false, ShowInTaskbar = false, WindowStyle = System.Windows.WindowStyle.ToolWindow,
             };
             try
             {
-                window.Show(); window.UpdateLayout();
+                window.Show(); Settle(window);
                 int before = (int)grid.Columns[0].ActualWidth;
                 var header = Descendants<System.Windows.Controls.Primitives.DataGridColumnHeader>(grid).First(h => h.Column == grid.Columns[0]);
                 var grip = (System.Windows.Controls.Primitives.Thumb)header.Template.FindName("PART_RightHeaderGripper", header);
                 grip.RaiseEvent(new System.Windows.Controls.Primitives.DragStartedEventArgs(0, 0));
                 grip.RaiseEvent(new System.Windows.Controls.Primitives.DragDeltaEventArgs(80, 0));
                 grip.RaiseEvent(new System.Windows.Controls.Primitives.DragCompletedEventArgs(80, 0, false));
-                window.UpdateLayout();
-                return $"{before}→{(int)grid.Columns[0].ActualWidth}";
+                Settle(window);
+                return new[] { before, (int)grid.Columns[0].ActualWidth };
             }
             finally { window.Close(); }
+        }
+
+        /// <summary>
+        /// 描画が落ち着くまで待つ。比率指定の列は、最初の配置では最小幅のままで、欄の幅に合わせて広がるのは
+        /// そのあと (待たずに測ると、比率指定の列は常に最小幅で、ドラッグしても広がらないように見える)。
+        /// </summary>
+        private static void Settle(System.Windows.Window window)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                window.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                window.UpdateLayout();
+            }
         }
 
         private static System.Collections.Generic.IEnumerable<T> Descendants<T>(System.Windows.DependencyObject d) where T : System.Windows.DependencyObject
