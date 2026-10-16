@@ -94,6 +94,75 @@ namespace TestProject1
             StringAssert.Contains(tag, @"RemembersColumnLayout=""False""");
         }
 
+        /// <summary>
+        /// 杭配置・軸力の表は列を固定幅にする (2026-10-16)。比率指定 (Width="*") の列は、
+        /// 見出しの境目をドラッグしても幅が変わらない (素の WPF DataGrid でも同じ)。
+        /// 以前は全列が比率指定で、利用者は列を広げられなかった (覚える仕組みも働かなかった)。
+        /// </summary>
+        [TestMethod]
+        public void PileTables_HaveNoStarWidthColumns()
+        {
+            string xaml = TestSource.Read("Graphics_r1", "Views", "MainWindow.xaml");
+            foreach (var name in new[] { "DataGridPileLayout", "DataGridPileAxialForce" })
+            {
+                var grid = Regex.Match(xaml, $@"<common:EnhancedDataGrid x:Name=""{name}"".*?</common:EnhancedDataGrid>", RegexOptions.Singleline).Value;
+                var columns = Regex.Matches(grid, @"<DataGrid(?:Text|Template|CheckBox|ComboBox)Column\b[^>]*>").Select(m => m.Value).ToArray();
+                TestSource.AssertScanned(columns.Length, 10, $"{name} の列");
+                var star = columns.Where(c => Regex.IsMatch(c, @"(?<![A-Za-z])Width=""[\d.]*\*""")).ToArray();
+                Assert.AreEqual(0, star.Length, $"{name} に比率指定の列があります (ドラッグで広げられません): " + string.Join(" / ", star));
+            }
+        }
+
+        /// <summary>比率指定の列は見出しのグリップをドラッグしても広がらず、固定幅の列は広がる (上のテストの前提)。</summary>
+        [TestMethod]
+        public void DraggingTheGripper_WidensPixelColumns_ButNotStarColumns()
+        {
+            string? star = null, pixel = null;
+            OnSta(() =>
+            {
+                XamlSmokeTestSupport.EnsureApplicationResources();
+                star = DragFirstColumn(new DataGridLength(1, DataGridLengthUnitType.Star));
+                pixel = DragFirstColumn(new DataGridLength(65));
+            });
+            Assert.AreEqual("50→50", star, "(前提) 比率指定の列がドラッグで広がるようになったなら、固定幅にした理由を見直す");
+            Assert.AreEqual("65→145", pixel, "固定幅の列がドラッグで広がっていません");
+        }
+
+        private static string DragFirstColumn(DataGridLength width)
+        {
+            var grid = new EnhancedDataGrid { AutoGenerateColumns = false };
+            for (int i = 0; i < 4; i++)
+                grid.Columns.Add(new DataGridTextColumn { Header = "C" + i, Width = width, MinWidth = 50 });
+            var window = new System.Windows.Window
+            {
+                Width = 320, Height = 200, Content = grid, Left = -3000, Top = -3000,
+                ShowActivated = false, ShowInTaskbar = false, WindowStyle = System.Windows.WindowStyle.ToolWindow,
+            };
+            try
+            {
+                window.Show(); window.UpdateLayout();
+                int before = (int)grid.Columns[0].ActualWidth;
+                var header = Descendants<System.Windows.Controls.Primitives.DataGridColumnHeader>(grid).First(h => h.Column == grid.Columns[0]);
+                var grip = (System.Windows.Controls.Primitives.Thumb)header.Template.FindName("PART_RightHeaderGripper", header);
+                grip.RaiseEvent(new System.Windows.Controls.Primitives.DragStartedEventArgs(0, 0));
+                grip.RaiseEvent(new System.Windows.Controls.Primitives.DragDeltaEventArgs(80, 0));
+                grip.RaiseEvent(new System.Windows.Controls.Primitives.DragCompletedEventArgs(80, 0, false));
+                window.UpdateLayout();
+                return $"{before}→{(int)grid.Columns[0].ActualWidth}";
+            }
+            finally { window.Close(); }
+        }
+
+        private static System.Collections.Generic.IEnumerable<T> Descendants<T>(System.Windows.DependencyObject d) where T : System.Windows.DependencyObject
+        {
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(d); i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(d, i);
+                if (child is T t) yield return t;
+                foreach (var x in Descendants<T>(child)) yield return x;
+            }
+        }
+
         private static EnhancedDataGrid Grid()
         {
             var grid = new EnhancedDataGrid { Name = "G" };

@@ -3015,7 +3015,7 @@
                                                 </DataGrid.ColumnHeaderStyle>
 
                                                 <DataGrid.Columns>
-                                                    <DataGridTextColumn Width="*" Binding="{Binding X, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" MinWidth="50">
+                                                    <DataGridTextColumn Width="50" Binding="{Binding X, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" MinWidth="50">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="X"
@@ -3027,7 +3027,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*"
+                                                    <DataGridTextColumn Width="50"
                                                                 Binding="{Binding Y, StringFormat=N3, Mode=TwoWay}"
                                                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
                                                                 EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" MinWidth="50">
@@ -3042,7 +3042,7 @@
                                                     </DataGridTextColumn>
 
                                                     <DataGridTextColumn Binding="{Binding Z, StringFormat={}{0:+0.00;-0.00;+0.00}, Mode=TwoWay}"
-                                                            Width="*"
+                                                            Width="50"
                                                             ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
                                                             EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}"
                                                             MinWidth="50">
@@ -3058,7 +3058,7 @@
                                                     </DataGridTextColumn>
 
                                                     <DataGridTextColumn Binding="{Binding FoundationBeamDeltaZc, StringFormat=N3, Mode=TwoWay}"
-                                                            Width="*"
+                                                            Width="50"
                                                             ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
                                                             EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}"
                                                             MinWidth="50">
@@ -3076,7 +3076,7 @@
                                                     </DataGridTextColumn>
 
                                                     <DataGridTextColumn Binding="{Binding PileHeadZ, StringFormat={}{0:+0.00;-0.00;+0.00}}"
-                                                            Width="*"
+                                                            Width="50"
                                                             IsReadOnly="True"
                                                             MinWidth="50">
                                                         <DataGridTextColumn.ElementStyle>
@@ -3097,7 +3097,7 @@
 
                                                     <!-- 杭体番号: 常時 ComboBox 表示 (DataGridTemplateColumn パターン)
                                                          旧 DataGridComboBoxColumn は IsSelected 時に EditingElement へ切替って空に見える問題があった -->
-                                                    <DataGridTemplateColumn Width="*" x:Name="ColumnPileBodyNo" MinWidth="50"
+                                                    <DataGridTemplateColumn Width="50" x:Name="ColumnPileBodyNo" MinWidth="50"
                                                                             CellStyle="{StaticResource ComboBoxDataGridCellStyle}">
                                                         <DataGridTemplateColumn.Header>
                                                             <StackPanel>
@@ -3120,7 +3120,7 @@
                                                     </DataGridTemplateColumn>
 
                                                     <!-- 地盤番号: 常時 ComboBox 表示 (同上) -->
-                                                    <DataGridTemplateColumn Width="*" x:Name="ColumnGroundNo" MinWidth="50"
+                                                    <DataGridTemplateColumn Width="50" x:Name="ColumnGroundNo" MinWidth="50"
                                                                             CellStyle="{StaticResource ComboBoxDataGridCellStyle}">
                                                         <DataGridTemplateColumn.Header>
                                                             <StackPanel>
@@ -3142,7 +3142,7 @@
                                                         </DataGridTemplateColumn.CellTemplate>
                                                     </DataGridTemplateColumn>
 
-                                                    <DataGridTextColumn Binding="{Binding SoilPileAltNo, StringFormat=N0}" Width="*"
+                                                    <DataGridTextColumn Binding="{Binding SoilPileAltNo, StringFormat=N0}" Width="70"
                                                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
                                                                 MinWidth="70" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" >
                                                         <DataGridTextColumn.Header>
@@ -3156,7 +3156,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Binding="{Binding GroupPileFactor, StringFormat=N3}" Width="*"  MinWidth="50">
+                                                    <DataGridTextColumn Binding="{Binding GroupPileFactor, StringFormat=N3}" Width="50"  MinWidth="50">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="群杭" TextAlignment="Center"/>
@@ -3172,7 +3172,7 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Binding="{Binding PileSpacingFactor, StringFormat=N3}" Width="*"  MinWidth="50">
+                                                    <DataGridTextColumn Binding="{Binding PileSpacingFactor, StringFormat=N3}" Width="50"  MinWidth="50">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="杭間隔" TextAlignment="Center"/>
@@ -3189,9 +3189,9 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridCheckBoxColumn Width="*" Header="選択" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" MinWidth="50"/>
+                                                    <DataGridCheckBoxColumn Width="50" Header="選択" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" MinWidth="50"/>
 
-                                                    <DataGridTemplateColumn Width="*" Header="削除"
+                                                    <DataGridTemplateColumn Width="50" Header="削除"
                                                                     MinWidth="50">
                                                         <DataGridTemplateColumn.CellTemplate>
                                                             <DataTemplate>
@@ -3559,7 +3559,7 @@
                                                 </DataGrid.ColumnHeaderStyle>
                                                 <DataGrid.Columns>
 
-                                                    <DataGridTextColumn Width="*" IsReadOnly="True"
+                                                    <DataGridTextColumn Width="50" IsReadOnly="True"
                                                         Binding="{Binding Point3D.X, StringFormat=N3}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Foreground="Gray" MinWidth="50">
                                                         <DataGridTextColumn.Header>
@@ -3571,7 +3571,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn  Width="*" IsReadOnly="True"
+                                                    <DataGridTextColumn  Width="50" IsReadOnly="True"
                                                         Binding="{Binding Point3D.Y, StringFormat=N3}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Foreground="Gray" MinWidth="50">
                                                         <DataGridTextColumn.Header>
@@ -3583,7 +3583,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVL0, StringFormat=N1}"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceVL0, StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
@@ -3606,7 +3606,7 @@
                                                     </DataGridTextColumn>
 
                                                     <DataGridTextColumn Binding="{Binding AxialForceVL, StringFormat=N1}"
-                                                            IsReadOnly="True" MinWidth="50" Width="*"
+                                                            IsReadOnly="True" MinWidth="50" Width="50"
                                                             HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
@@ -3633,7 +3633,7 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[0], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel1s[0], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
@@ -3661,7 +3661,7 @@
                                                     </DataGridTextColumn>
 
                                                     <!-- 変動モード用: Δ1-1 (= AxialForceLevel1s[0] - VL) -->
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel1s[0], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel1s[0], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
@@ -3673,7 +3673,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[1], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel1s[1], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
@@ -3700,7 +3700,7 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel1s[1], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel1s[1], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
@@ -3712,7 +3712,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[2], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel1s[2], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
@@ -3739,7 +3739,7 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel1s[2], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel1s[2], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
@@ -3751,7 +3751,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[3], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel1s[3], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
@@ -3778,7 +3778,7 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel1s[3], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel1s[3], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
@@ -3790,7 +3790,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[0], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel2s[0], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
@@ -3817,7 +3817,7 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel2s[0], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel2s[0], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
@@ -3829,7 +3829,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[1], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel2s[1], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
@@ -3856,7 +3856,7 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel2s[1], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel2s[1], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
@@ -3868,7 +3868,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[2], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel2s[2], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
@@ -3895,7 +3895,7 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel2s[2], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel2s[2], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
@@ -3907,7 +3907,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[3], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel2s[3], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
@@ -3934,7 +3934,7 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel2s[3], StringFormat=N1}" MinWidth="50"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel2s[3], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
@@ -3946,7 +3946,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding SoilPile.R_SLS, StringFormat=N1}"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding SoilPile.R_SLS, StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50" IsReadOnly="True"
                                                         Foreground="Gray" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                         <DataGridTextColumn.Header>
@@ -3960,7 +3960,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding SoilPile.Rt_SLS, StringFormat=N1}"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding SoilPile.Rt_SLS, StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50" IsReadOnly="True"
                                                         Foreground="Gray" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                         <DataGridTextColumn.Header>
@@ -3975,7 +3975,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding SoilPile.R_DLS, StringFormat=N1}"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding SoilPile.R_DLS, StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50" IsReadOnly="True"
                                                         Foreground="Gray" HeaderStyle="{StaticResource GreenHeaderStyle}">
                                                         <DataGridTextColumn.Header>
@@ -3990,7 +3990,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding SoilPile.Rt_DLS, StringFormat=N1}"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding SoilPile.Rt_DLS, StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50" IsReadOnly="True"
                                                         Foreground="Gray" HeaderStyle="{StaticResource GreenHeaderStyle}">
                                                         <DataGridTextColumn.Header>
@@ -4005,7 +4005,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding SoilPile.R_ULS, StringFormat=N1}"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding SoilPile.R_ULS, StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50" IsReadOnly="True"
                                                         Foreground="Gray" HeaderStyle="{StaticResource PaleRedHeaderStyle}">
                                                         <DataGridTextColumn.Header>
@@ -4020,7 +4020,7 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <DataGridTextColumn Width="*" Binding="{Binding SoilPile.Rt_ULS, StringFormat=N1}"
+                                                    <DataGridTextColumn Width="50" Binding="{Binding SoilPile.Rt_ULS, StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50" IsReadOnly="True"
                                                         Foreground="Gray" HeaderStyle="{StaticResource PaleRedHeaderStyle}">
                                                         <DataGridTextColumn.Header>
