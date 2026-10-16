@@ -9,7 +9,7 @@ using System.Linq;
 namespace TestProject1
 {
     /// <summary>
-    /// 表示の組 (2026-10-16 のレビュー)。リボン「表示」タブの項目をまとめて切り替え、名前を付けて保存する。
+    /// 表示プリセット (2026-10-16 のレビュー)。リボン「表示」タブの項目をまとめて切り替え、名前を付けて保存する。
     /// </summary>
     [TestClass]
     public class DisplayPresetTests
@@ -21,19 +21,19 @@ namespace TestProject1
             TestSource.AssertScanned(names.Count, 50, "表示のトグル");
             foreach (var expected in new[] { nameof(MainWindowViewModel.IsLabelVisible), nameof(MainWindowViewModel.IsEvaluationColoringVisible),
                                              nameof(MainWindowViewModel.IsMidSpanResultValueVisibleOnly) })
-                Assert.IsTrue(names.Contains(expected), $"{expected} が組の対象に入っていません");
+                Assert.IsTrue(names.Contains(expected), $"{expected} がプリセットの対象に入っていません");
             foreach (var chrome in MainWindowViewModel.WindowChromeToggles)
-                Assert.IsFalse(names.Contains(chrome), $"ウィンドウの部品 {chrome} を組の対象にしています");
+                Assert.IsFalse(names.Contains(chrome), $"ウィンドウの部品 {chrome} をプリセットの対象にしています");
         }
 
-        /// <summary>用意した組の項目名がすべて実在する (書き誤りは当てるときに黙って飛ばされる)。</summary>
+        /// <summary>用意したプリセットの項目名がすべて実在する (書き誤りは当てるときに黙って飛ばされる)。</summary>
         [TestMethod]
         public void BuiltInPresets_NameOnlyExistingToggles()
         {
             var names = MainWindowViewModel.DisplayToggleProperties.Select(p => p.Name).ToHashSet();
             foreach (var (preset, toggles) in MainWindowViewModel.BuiltInDisplayPresets)
                 foreach (var key in toggles.Keys)
-                    Assert.IsTrue(names.Contains(key), $"組「{preset}」の {key} は表示のトグルではありません");
+                    Assert.IsTrue(names.Contains(key), $"プリセット「{preset}」の {key} は表示のトグルではありません");
         }
 
         [TestMethod]
@@ -48,35 +48,35 @@ namespace TestProject1
 
                 vm.IsLabelVisible = !labelDefault;
                 vm.IsNodeNoVisible = !nodeNoDefault;
-                Assert.IsTrue(vm.SaveDisplayPreset("  私の組  "));
-                Assert.AreEqual("私の組", vm.SelectedDisplayPreset, "保存した組を選んだ状態にしていません");
-                CollectionAssert.Contains(vm.DisplayPresetNames, "私の組");
-                Assert.IsTrue(vm.DeleteSelectedDisplayPresetCommand.CanExecute(null), "保存した組を削除できません");
+                Assert.IsTrue(vm.SaveDisplayPreset("  私のプリセット  "));
+                Assert.AreEqual("私のプリセット", vm.SelectedDisplayPreset, "保存したプリセットを選んだ状態にしていません");
+                CollectionAssert.Contains(vm.DisplayPresetNames, "私のプリセット");
+                Assert.IsTrue(vm.DeleteSelectedDisplayPresetCommand.CanExecute(null), "保存したプリセットを削除できません");
 
-                // 手で変えると組の選択が外れる
+                // 手で変えるとプリセットの選択が外れる
                 vm.IsTickMarkVisible = !vm.IsTickMarkVisible;
-                Assert.IsNull(vm.SelectedDisplayPreset, "組と違う表示になったのに組を選んだままです");
+                Assert.IsNull(vm.SelectedDisplayPreset, "プリセットと違う表示になったのにプリセットを選んだままです");
 
                 vm.SelectedDisplayPreset = MainWindowViewModel.DefaultDisplayPresetName;
                 Assert.AreEqual(labelDefault, vm.IsLabelVisible, "「既定」で起動時の表示に戻っていません");
                 Assert.AreEqual(nodeNoDefault, vm.IsNodeNoVisible);
-                Assert.IsFalse(vm.DeleteSelectedDisplayPresetCommand.CanExecute(null), "用意した組を削除できる状態です");
+                Assert.IsFalse(vm.DeleteSelectedDisplayPresetCommand.CanExecute(null), "用意したプリセットを削除できる状態です");
 
-                vm.SelectedDisplayPreset = "私の組";
-                Assert.AreEqual(!labelDefault, vm.IsLabelVisible, "保存した組の表示になっていません");
+                vm.SelectedDisplayPreset = "私のプリセット";
+                Assert.AreEqual(!labelDefault, vm.IsLabelVisible, "保存したプリセットの表示になっていません");
                 Assert.AreEqual(!nodeNoDefault, vm.IsNodeNoVisible);
-                Assert.AreEqual("私の組", vm.SelectedDisplayPreset, "組を当てた変更で、組の選択が外れています");
+                Assert.AreEqual("私のプリセット", vm.SelectedDisplayPreset, "プリセットを当てた変更で、プリセットの選択が外れています");
 
                 // 次の起動でも読める
                 var reread = new UserSettingsService(file).Settings.DisplayPresets.Single();
-                Assert.AreEqual("私の組", reread.Name);
+                Assert.AreEqual("私のプリセット", reread.Name);
                 Assert.AreEqual(!labelDefault, reread.Toggles[nameof(MainWindowViewModel.IsLabelVisible)]);
 
-                Assert.IsFalse(vm.SaveDisplayPreset(MainWindowViewModel.DefaultDisplayPresetName), "用意した組の名前で保存できています");
-                Assert.IsFalse(vm.DeleteDisplayPreset("入力の確認"), "用意した組を削除できています");
-                Assert.IsTrue(vm.DeleteDisplayPreset("私の組"));
+                Assert.IsFalse(vm.SaveDisplayPreset(MainWindowViewModel.DefaultDisplayPresetName), "用意したプリセットの名前で保存できています");
+                Assert.IsFalse(vm.DeleteDisplayPreset("入力の確認"), "用意したプリセットを削除できています");
+                Assert.IsTrue(vm.DeleteDisplayPreset("私のプリセット"));
                 Assert.IsNull(vm.SelectedDisplayPreset);
-                CollectionAssert.DoesNotContain(vm.DisplayPresetNames, "私の組");
+                CollectionAssert.DoesNotContain(vm.DisplayPresetNames, "私のプリセット");
                 Assert.AreEqual(0, new UserSettingsService(file).Settings.DisplayPresets.Count, "削除が保存されていません");
             }
             finally
@@ -86,7 +86,7 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 用意した組は挙げた項目だけを切り替え、ほかは今のまま。3D の描き直しは 1 回にまとめる。
+        /// 用意したプリセットは挙げた項目だけを切り替え、ほかは今のまま。3D の描き直しは 1 回にまとめる。
         /// 解析結果が無いときは「解析結果表示」を ON にせず、警告も出さない。
         /// </summary>
         [TestMethod]
@@ -107,15 +107,15 @@ namespace TestProject1
             try { vm.SelectedDisplayPreset = "結果の確認"; }
             finally { MessageService.IsUnattended = unattended; MessageService.UnattendedAnswer = answer; }
 
-            Assert.AreEqual(0, messages, "組を選んだだけで警告を出しています");
+            Assert.AreEqual(0, messages, "プリセットを選んだだけで警告を出しています");
             Assert.IsFalse(vm.IsAnalysisResultVisible, "解析結果が無いのに解析結果表示を ON にしています");
             Assert.IsTrue(vm.IsEvaluationColoringVisible);
             Assert.IsFalse(vm.IsMassLoadingVisible);
-            Assert.AreEqual(tick, vm.IsTickMarkVisible, "組に無い項目まで切り替えています");
+            Assert.AreEqual(tick, vm.IsTickMarkVisible, "プリセットに無い項目まで切り替えています");
             Assert.AreEqual(1, redraws, "3D の描き直しを項目ごとに行っています");
         }
 
-        /// <summary>相互排他の項目 (「…のみ」) は、false を先に当てるので組のとおりになる。知らない項目名は飛ばす。</summary>
+        /// <summary>相互排他の項目 (「…のみ」) は、false を先に当てるのでプリセットのとおりになる。知らない項目名は飛ばす。</summary>
         [TestMethod]
         public void MutuallyExclusiveToggles_EndAsThePresetSays()
         {
@@ -140,7 +140,7 @@ namespace TestProject1
             string? prompt = null, answer = null;
             var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
             {
-                var window = new PileDesign.Views.TextPromptWindow("表示の組を保存", "名前", "初期値");
+                var window = new PileDesign.Views.TextPromptWindow("表示プリセットを保存", "名前", "初期値");
                 try
                 {
                     prompt = window.PromptText.Text;

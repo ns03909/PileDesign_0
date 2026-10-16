@@ -9,24 +9,24 @@ using PileDesign.Services;
 namespace PileDesign.ViewModels
 {
     /// <summary>
-    /// 表示の組 (2026-10-16 のレビュー)。リボン「表示」タブの 50 近いトグルを、用途ごとにまとめて切り替える。
+    /// 表示プリセット (2026-10-16 のレビュー)。リボン「表示」タブの 50 近いトグルを、用途ごとにまとめて切り替える。
     ///
-    /// <para>組は 2 種類。</para>
+    /// <para>プリセットは 2 種類。</para>
     /// <list type="bullet">
-    /// <item>用意した組 (<see cref="BuiltInDisplayPresets"/>): 「既定」は起動時の表示にすべて戻す。
+    /// <item>用意したプリセット (<see cref="BuiltInDisplayPresets"/>): 「既定」は起動時の表示にすべて戻す。
     /// ほかは<b>挙げた項目だけ</b>を切り替え、挙げていない項目は今のまま (利用者の好みを消さない)。</item>
-    /// <item>保存した組: 「今の表示を保存」で、その時点のすべての項目を名前を付けて保存する
+    /// <item>保存したプリセット: 「今の表示を保存」で、その時点のすべての項目を名前を付けて保存する
     /// (この PC の利用者設定 user_settings.json。プロジェクトファイルには入れない)。</item>
     /// </list>
     ///
     /// <para>対象は Is…Visible / Is…VisibleOnly の bool のうち、ウィンドウの部品 (<see cref="WindowChromeToggles"/>) を除いたもの。
-    /// 一覧を手で並べず型から引くので、表示のトグルを足せば組の対象にも自動で入る。</para>
+    /// 一覧を手で並べず型から引くので、表示のトグルを足せばプリセットの対象にも自動で入る。</para>
     ///
-    /// <para>組を当てたあとに表示を手で変えると、選んでいた組の表示を外す (組と違う表示になったため)。</para>
+    /// <para>プリセットを当てたあとに表示を手で変えると、選んでいたプリセットの表示を外す (プリセットと違う表示になったため)。</para>
     /// </summary>
     public partial class MainWindowViewModel
     {
-        /// <summary>組に含めない、ウィンドウの部品の表示 (リボン・ミニマップなど。モデル図の中身ではない)。</summary>
+        /// <summary>プリセットに含めない、ウィンドウの部品の表示 (リボン・ミニマップなど。モデル図の中身ではない)。</summary>
         internal static readonly string[] WindowChromeToggles =
         {
             nameof(IsRibbonVisible), nameof(IsInputVisualizerVisible), nameof(IsMinimapVisible),
@@ -36,7 +36,7 @@ namespace PileDesign.ViewModels
 
         private static PropertyInfo[]? _displayToggleProperties;
 
-        /// <summary>組の対象になる表示のトグル。</summary>
+        /// <summary>プリセットの対象になる表示のトグル。</summary>
         internal static IReadOnlyList<PropertyInfo> DisplayToggleProperties => _displayToggleProperties ??= typeof(MainWindowViewModel)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.PropertyType == typeof(bool) && p.CanRead && p.SetMethod?.IsPublic == true
@@ -48,7 +48,7 @@ namespace PileDesign.ViewModels
 
         internal const string DefaultDisplayPresetName = "既定";
 
-        /// <summary>用意した組。「既定」以外は挙げた項目だけを切り替える。</summary>
+        /// <summary>用意したプリセット。「既定」以外は挙げた項目だけを切り替える。</summary>
         internal static readonly IReadOnlyList<(string Name, IReadOnlyDictionary<string, bool> Toggles)> BuiltInDisplayPresets = new[]
         {
             ("入力の確認", (IReadOnlyDictionary<string, bool>)new Dictionary<string, bool>
@@ -96,11 +96,11 @@ namespace PileDesign.ViewModels
         private bool _isApplyingDisplayPreset;
         private string? _selectedDisplayPreset;
 
-        /// <summary>リボンの「表示の組」に並べる名前 (用意した組 → 保存した組)。</summary>
+        /// <summary>リボンの「表示プリセット」に並べる名前 (用意したプリセット → 保存したプリセット)。</summary>
         public ObservableCollection<string> DisplayPresetNames { get; } = new();
 
         /// <summary>
-        /// 選んでいる組。選ぶとその組を当てる。組を当てたあとに表示を手で変えると null に戻る。
+        /// 選んでいるプリセット。選ぶとそのプリセットを当てる。プリセットを当てたあとに表示を手で変えると null に戻る。
         /// </summary>
         public string? SelectedDisplayPreset
         {
@@ -118,13 +118,13 @@ namespace PileDesign.ViewModels
             DisplayToggleProperties.ToDictionary(p => p.Name, p => (bool)p.GetValue(this)!, StringComparer.Ordinal);
 
         /// <summary>
-        /// 表示を当てる。知らない名前 (古い版で保存した組の、いまは無い項目) は飛ばす。
+        /// 表示を当てる。知らない名前 (古い版で保存したプリセットの、いまは無い項目) は飛ばす。
         ///
         /// <para>false を先に、true をあとに当てる (「要素中間のみ」「杭頭のみ」などの相互排他は、true にした側が他を落とすため)。
         /// 項目ごとの 3D の描き直しは止め、最後に 1 回だけ描き直す。</para>
         ///
         /// <para>解析結果が無いときは「解析結果表示」を ON にしない (手で押したときの「解析結果がまだありません」の警告を、
-        /// 組を選んだだけで出さないため)。</para>
+        /// プリセットを選んだだけで出さないため)。</para>
         /// </summary>
         internal void ApplyDisplayToggles(IReadOnlyDictionary<string, bool> toggles)
         {
@@ -151,7 +151,7 @@ namespace PileDesign.ViewModels
             RequestUpdateWindow();
         }
 
-        /// <summary>名前の組を当てる。見つからなければ何もしない。</summary>
+        /// <summary>名前のプリセットを当てる。見つからなければ何もしない。</summary>
         internal void ApplyDisplayPreset(string name)
         {
             if (name == DefaultDisplayPresetName)
@@ -165,7 +165,7 @@ namespace PileDesign.ViewModels
             if (saved != null) ApplyDisplayToggles(saved.Toggles);
         }
 
-        /// <summary>手で表示を変えたら、選んでいた組の表示を外す (OnPropertyChanged から)。</summary>
+        /// <summary>手で表示を変えたら、選んでいたプリセットの表示を外す (OnPropertyChanged から)。</summary>
         private void OnDisplayToggleChanged(string? propertyName)
         {
             if (_isApplyingDisplayPreset || _selectedDisplayPreset == null || propertyName == null) return;
@@ -196,12 +196,12 @@ namespace PileDesign.ViewModels
             }
         }
 
-        /// <summary>用意した組の名前か (保存した組で上書き・削除できない)。</summary>
+        /// <summary>用意したプリセットの名前か (保存したプリセットで上書き・削除できない)。</summary>
         internal static bool IsBuiltInDisplayPresetName(string name) =>
             name == DefaultDisplayPresetName || BuiltInDisplayPresets.Any(b => b.Name == name);
 
         /// <summary>
-        /// 今の表示を名前を付けて保存する。同じ名前の保存した組は置き換える。用意した組の名前は使えない (false)。
+        /// 今の表示を名前を付けて保存する。同じ名前の保存したプリセットは置き換える。用意したプリセットの名前は使えない (false)。
         /// </summary>
         internal bool SaveDisplayPreset(string name)
         {
@@ -219,7 +219,7 @@ namespace PileDesign.ViewModels
             return true;
         }
 
-        /// <summary>保存した組を消す。用意した組は消せない。</summary>
+        /// <summary>保存したプリセットを消す。用意したプリセットは消せない。</summary>
         internal bool DeleteDisplayPreset(string name)
         {
             if (IsBuiltInDisplayPresetName(name)) return false;
@@ -242,21 +242,21 @@ namespace PileDesign.ViewModels
             string? name = AskDisplayPresetName?.Invoke(_selectedDisplayPreset is { } s && !IsBuiltInDisplayPresetName(s) ? s : "");
             if (string.IsNullOrWhiteSpace(name)) return;
             if (!SaveDisplayPreset(name))
-                MessageService.ShowWarning($"「{name.Trim()}」は用意した組の名前なので使えません。別の名前にしてください。", "表示の組");
+                MessageService.ShowWarning($"「{name.Trim()}」は用意したプリセットの名前なので使えません。別の名前にしてください。", "表示プリセット");
         }
 
-        /// <summary>選んでいる保存した組を消す。</summary>
+        /// <summary>選んでいる保存したプリセットを消す。</summary>
         [RelayCommand(CanExecute = nameof(CanDeleteDisplayPreset))]
         private void DeleteSelectedDisplayPreset()
         {
             if (_selectedDisplayPreset is { } name &&
-                MessageService.Confirm($"表示の組「{name}」を削除しますか。", "表示の組"))
+                MessageService.Confirm($"表示プリセット「{name}」を削除しますか。", "表示プリセット"))
                 DeleteDisplayPreset(name);
         }
 
         private bool CanDeleteDisplayPreset() => _selectedDisplayPreset is { } name && !IsBuiltInDisplayPresetName(name);
 
-        /// <summary>保存する組の名前を聞く (画面側が立てる。キャンセルは null)。引数は初期値。</summary>
+        /// <summary>保存するプリセットの名前を聞く (画面側が立てる。キャンセルは null)。引数は初期値。</summary>
         public Func<string, string?>? AskDisplayPresetName { get; set; }
 
         /// <summary>テスト用: 利用者の設定ファイルに触れない保存先に差し替える。</summary>

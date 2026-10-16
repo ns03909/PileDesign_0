@@ -868,21 +868,21 @@
                                      ToolTip="群杭沈下の 基礎梁なし / 基礎梁あり を切り替えます (荷重面の描画と解析結果の両方に効きます)"/>
                 </Fluent:RibbonGroupBox>
 
-                <!-- 表示の組: 下の項目をまとめて切り替える (MainWindowViewModel.DisplayPresets.cs) -->
-                <Fluent:RibbonGroupBox Header="表示の組" ToolTip="表示の組" Icon="pack://application:,,,/Icons/Display.png">
-                    <Fluent:ComboBox Header="組" Width="130" IsEditable="False"
+                <!-- 表示プリセット: 下の項目をまとめて切り替える (MainWindowViewModel.DisplayPresets.cs) -->
+                <Fluent:RibbonGroupBox Header="表示プリセット" ToolTip="表示プリセット" Icon="pack://application:,,,/Icons/Display.png">
+                    <Fluent:ComboBox Header="プリセット" Width="130" IsEditable="False"
                           ItemsSource="{Binding DisplayPresetNames}"
                           SelectedItem="{Binding SelectedDisplayPreset}"
-                          AutomationProperties.Name="表示の組"
-                          ToolTip="このタブの表示の項目をまとめて切り替えます。「既定」は起動時の表示に戻します。「入力の確認」「結果の確認」は関係する項目だけを切り替え、ほかは今のままにします。保存した組はすべての項目を保存したときの表示にします。"/>
+                          AutomationProperties.Name="表示プリセット"
+                          ToolTip="このタブの表示の項目をまとめて切り替えます。「既定」は起動時の表示に戻します。「入力の確認」「結果の確認」は関係する項目だけを切り替え、ほかは今のままにします。保存したプリセットはすべての項目を保存したときの表示にします。"/>
                     <Fluent:Button Header="今の表示を保存" Command="{Binding SaveDisplayPresetAsCommand}"
                           AutomationProperties.Name="今の表示を保存" ToolTipService.ShowOnDisabled="True"
                           Icon="pack://application:,,,/Icons/SaveFileAs.png" SizeDefinition="Middle, Middle, Middle"
-                          ToolTip="今の表示 (このタブの項目すべて) に名前を付けて保存します。保存した組は「組」の一覧に並び、次の起動でも使えます。"/>
-                    <Fluent:Button Header="組を削除" Command="{Binding DeleteSelectedDisplayPresetCommand}"
-                          AutomationProperties.Name="組を削除" ToolTipService.ShowOnDisabled="True"
+                          ToolTip="今の表示 (このタブの項目すべて) に名前を付けて保存します。保存したプリセットは「プリセット」の一覧に並び、次の起動でも使えます。"/>
+                    <Fluent:Button Header="プリセットを削除" Command="{Binding DeleteSelectedDisplayPresetCommand}"
+                          AutomationProperties.Name="プリセットを削除" ToolTipService.ShowOnDisabled="True"
                           SizeDefinition="Middle, Middle, Middle"
-                          ToolTip="選んでいる保存した組を削除します (用意した組は削除できません)。"/>
+                          ToolTip="選んでいる保存したプリセットを削除します (用意したプリセットは削除できません)。"/>
                 </Fluent:RibbonGroupBox>
 
                 <!-- 目盛・通り心 -->

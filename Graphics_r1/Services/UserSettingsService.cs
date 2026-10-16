@@ -35,13 +35,13 @@ namespace PileDesign.Services
         public bool IsSaveAnalysisResultsAutoSave { get; set; }
 
         /// <summary>
-        /// 利用者が保存した表示の組 (リボン「表示」タブの「表示の組」)。
+        /// 利用者が保存した表示プリセット (リボン「表示」タブの「表示プリセット」)。
         /// 項目の名前はビューモデルのプロパティ名。いまは無い名前は当てるときに飛ばす。
         /// </summary>
         public List<DisplayPreset> DisplayPresets { get; set; } = new();
     }
 
-    /// <summary>保存した表示の組 1 つ。</summary>
+    /// <summary>保存した表示プリセット 1 つ。</summary>
     public class DisplayPreset
     {
         public string Name { get; set; } = "";

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="名前を付けて保存" SizeToContent="Height" Width="380"
         ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
-    <!-- 名前を 1 つ聞くだけの小さなダイアログ (表示の組の保存など) -->
+    <!-- 名前を 1 つ聞くだけの小さなダイアログ (表示プリセットの保存など) -->
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

@@ -155,8 +155,8 @@ namespace PileDesign.Views
 
             // デリゲートの設定
             viewModel.UpdateCanvas3DAction = UpdateCanvas3D;
-            viewModel.AskDisplayPresetName = initial => TextPromptWindow.Ask(this, "表示の組を保存",
-                "今の表示 (リボン「表示」タブの項目すべて) を、この名前で保存します。同じ名前の組があれば置き換えます。", initial);
+            viewModel.AskDisplayPresetName = initial => TextPromptWindow.Ask(this, "表示プリセットを保存",
+                "今の表示 (リボン「表示」タブの項目すべて) を、この名前で保存します。同じ名前のプリセットがあれば置き換えます。", initial);
             viewModel.HideTransientOverlaysAction = HideBeamResultTooltip;
             viewModel.ShowToastAction = (msg, type) => ShowToast(msg, (ToastType)type);
 
