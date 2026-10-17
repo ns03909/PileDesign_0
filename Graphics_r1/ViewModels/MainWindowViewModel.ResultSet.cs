@@ -484,8 +484,11 @@ namespace PileDesign.ViewModels
                 base.OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(HasResultStaleNotice)));
             }
             // 工程の帯 (MainWindowViewModel.Workflow.cs) も同じ印から決まる。杭の本数は PileCountText の通知で知る
+            // 沈下の解析の済み・古さと、基本設定の「沈下検討の対象」(入力の編集として InputEditVersion で知る) も帯に出る
             if (e.PropertyName is nameof(ResultSetStatusText) or nameof(IsHorizontalAnalysisDone) or nameof(CurrentResultSet)
-                or nameof(IsElementSplit) or nameof(CurrentInputModel) or nameof(PileCountText))
+                or nameof(IsElementSplit) or nameof(CurrentInputModel) or nameof(PileCountText)
+                or nameof(IsVerticalAnalysisDone) or nameof(IsVerticalBeamAnalysisDone) or nameof(IsGroupPileSettlementAnalysisDone)
+                or nameof(HasGroupSettlementBeamAwareCases) or nameof(InputEditVersion))
                 base.OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(WorkflowSteps)));
             // 入力が差し替わったら (読込・新規・計算例)、入力の検査を数え直す
             if (e.PropertyName is nameof(CurrentInputModel) or nameof(PileCountText))

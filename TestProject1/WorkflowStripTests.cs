@@ -141,7 +141,7 @@ namespace TestProject1
             var built = AnalysisInputScopeTests.BuildAnalyzed();
             if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
             var vm = built.Value.vm;
-            Assert.AreEqual(WorkflowStepStatus.Done, vm.WorkflowSteps[2].Status, "前提: 解析済み");
+            Assert.IsTrue(vm.RequiredAnalyses[0] is { Name: "水平", Done: true, Stale: false }, "前提: 水平解析済み");
 
             var raised = new List<string?>();
             ((INotifyPropertyChanged)vm).PropertyChanged += (_, e) => raised.Add(e.PropertyName);
@@ -152,6 +152,63 @@ namespace TestProject1
             raised.Clear();
             vm.IsElementSplit = !vm.IsElementSplit;
             CollectionAssert.Contains(raised, nameof(MainWindowViewModel.WorkflowSteps), "杭要素分割の切り替えで知らせていません");
+        }
+
+        // ── 沈下の解析も帯に出す (2026-10-17 のレビュー) ──────────────────────────────
+
+        private static IReadOnlyList<WorkflowStep> Steps(params RequiredAnalysisState[] analyses) =>
+            MainWindowViewModel.BuildWorkflowSteps(12, true, analyses[0].Done, analyses[0].Stale, null, null, null, null, null,
+                new InputCheckCounts(0, 0), analyses, "単杭＋群杭沈下");
+
+        /// <summary>
+        /// 「解析」は検討に要る解析ごとの状態を出し、色は一番悪いもの。検定・計算書も同じ材料で決める。
+        /// 以前は水平解析だけを見ており、沈下の解析が未実施でも「解析 済み」「計算書 出力できます」と出ていた。
+        /// </summary>
+        [TestMethod]
+        public void AnalysisStep_ShowsEachRequiredAnalysis()
+        {
+            var all = Steps(new("水平", true, false), new("単杭沈下", true, false), new("群杭沈下", true, false));
+            Assert.AreEqual("水平 済み・単杭沈下 済み・群杭沈下 済み", all[2].StateText);
+            Assert.AreEqual(WorkflowStepStatus.Done, all[2].Status);
+            Assert.AreEqual("結果あり", all[3].StateText);
+            Assert.AreEqual(WorkflowStepStatus.Done, all[3].Status);
+            Assert.AreEqual("出力できます", all[4].StateText);
+            StringAssert.Contains(all[2].ToolTip, "沈下検討の対象は「単杭＋群杭沈下」", "検討対象を説明していません");
+
+            var partial = Steps(new("水平", true, false), new("単杭沈下", false, false), new("群杭沈下", false, false));
+            Assert.AreEqual("水平 済み・単杭沈下 未・群杭沈下 未", partial[2].StateText);
+            Assert.AreEqual(WorkflowStepStatus.Next, partial[2].Status, "沈下の解析が未実施なのに解析を済みにしています");
+            Assert.AreEqual("一部の解析のみ", partial[3].StateText);
+            Assert.AreEqual("未実施の解析あり", partial[4].StateText);
+
+            var stale = Steps(new("水平", true, false), new("単杭沈下", true, true), new("群杭沈下", true, false));
+            Assert.AreEqual("水平 済み・単杭沈下 やり直し・群杭沈下 済み", stale[2].StateText);
+            Assert.AreEqual(WorkflowStepStatus.NeedsRedo, stale[2].Status, "沈下の結果が古いのにやり直しにしていません");
+            Assert.AreEqual(WorkflowStepStatus.NeedsRedo, stale[3].Status);
+            Assert.AreEqual(WorkflowStepStatus.NeedsRedo, stale[4].Status);
+
+            var none = Steps(new("水平", false, false), new("単杭沈下", false, false));
+            Assert.AreEqual(WorkflowStepStatus.NotYet, none[3].Status);
+            Assert.AreEqual("解析後", none[4].StateText);
+        }
+
+        /// <summary>群杭沈下は「沈下検討の対象」が「単杭＋群杭沈下」のときだけ要る。単杭沈下は基礎梁考慮の解析でも済み。</summary>
+        [TestMethod]
+        public void RequiredAnalyses_FollowTheSettlementBasis()
+        {
+            var vm = new MainWindowViewModel();
+            vm.CurrentInputModel!.FundamentalInput.SettlementDesignIncludesGroup = true;
+            CollectionAssert.AreEqual(new[] { "水平", "単杭沈下", "群杭沈下" }, vm.RequiredAnalyses.Select(a => a.Name).ToArray());
+            vm.CurrentInputModel.FundamentalInput.SettlementDesignIncludesGroup = false;
+            CollectionAssert.AreEqual(new[] { "水平", "単杭沈下" }, vm.RequiredAnalyses.Select(a => a.Name).ToArray(),
+                "「単杭沈下」だけを検討するのに群杭沈下を求めています");
+
+            Assert.IsFalse(vm.RequiredAnalyses[1].Done);
+            var raised = new List<string?>();
+            ((INotifyPropertyChanged)vm).PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+            vm.IsVerticalBeamAnalysisDone = true;
+            Assert.IsTrue(vm.RequiredAnalyses[1].Done, "単杭沈下 (基礎梁考慮) の結果で単杭沈下を済みにしていません");
+            CollectionAssert.Contains(raised, nameof(MainWindowViewModel.WorkflowSteps), "沈下の解析が済んでも帯を描き直していません");
         }
     }
 }

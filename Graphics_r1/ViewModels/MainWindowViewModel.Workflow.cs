@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Input;
 
 namespace PileDesign.ViewModels
@@ -34,6 +35,15 @@ namespace PileDesign.ViewModels
     public readonly record struct InputCheckCounts(int Blockers, int Warnings);
 
     /// <summary>
+    /// 検討に要る解析 1 つの状態 (工程の帯の「解析」)。<c>Done</c> は結果を持っているか、
+    /// <c>Stale</c> はその結果が入力の変更前のものか。
+    /// </summary>
+    public readonly record struct RequiredAnalysisState(string Name, bool Done, bool Stale)
+    {
+        public string StateText => !Done ? "未" : Stale ? "やり直し" : "済み";
+    }
+
+    /// <summary>
     /// MainWindowViewModel partial: 工程の帯 (入力 → 杭要素分割 → 解析 → 検定 → 計算書)。
     ///
     /// 初めて使うときに「次に何をすればよいか」が分からないので、工程と完了の状態を 1 本の帯で見せ、
@@ -51,7 +61,31 @@ namespace PileDesign.ViewModels
         public IReadOnlyList<WorkflowStep> WorkflowSteps => BuildWorkflowSteps(
             CurrentInputModel?.PileLayoutItems?.Count ?? 0, IsElementSplit, IsHorizontalAnalysisDone, IsHorizontalResultStale,
             OpenDiagnosticListCommand, OpenElementDivisionWindowCommand, OpenLateralLoadAnalysisWindowCommand,
-            OpenResultDashboardCommand, OpenDocxOutputWindowCommand, _workflowInputCheck);
+            OpenResultDashboardCommand, OpenDocxOutputWindowCommand, _workflowInputCheck,
+            RequiredAnalyses, CurrentInputModel?.FundamentalInput?.SettlementDesignBasisName);
+
+        /// <summary>
+        /// 検討に要る解析とその状態 (工程の帯の「解析」)。水平解析と単杭沈下解析は常に、群杭沈下解析は
+        /// 基本設定の「沈下検討の対象」が「単杭＋群杭沈下」のときだけ。
+        /// 単杭沈下は基礎梁考慮の解析でも済み、群杭沈下は基礎梁なし・ありのどちらかで済み。
+        /// 以前の帯は水平解析だけを見ており、沈下の解析が未実施・入力の変更前でも「解析 済み」と出ていた。
+        /// </summary>
+        internal IReadOnlyList<RequiredAnalysisState> RequiredAnalyses
+        {
+            get
+            {
+                var list = new List<RequiredAnalysisState>
+                {
+                    new("水平", IsHorizontalAnalysisDone, IsHorizontalResultStale),
+                    new("単杭沈下", IsVerticalAnalysisDone || IsVerticalBeamAnalysisDone,
+                        IsSettlementResultStale(SettlementAnalyses.SinglePile | SettlementAnalyses.VerticalBeam)),
+                };
+                if (CurrentInputModel?.FundamentalInput?.SettlementDesignIncludesGroup ?? true)
+                    list.Add(new("群杭沈下", IsGroupPileSettlementAnalysisDone || HasGroupSettlementBeamAwareCases,
+                        IsSettlementResultStale(SettlementAnalyses.Group | SettlementAnalyses.GroupWithBeam)));
+                return list;
+            }
+        }
 
         // ── 入力の検査の件数 (工程の帯の「入力」) ─────────────────────────────
 
@@ -100,7 +134,7 @@ namespace PileDesign.ViewModels
         internal static IReadOnlyList<WorkflowStep> BuildWorkflowSteps(
             int pileCount, bool elementSplit, bool analyzed, bool analysisStale,
             ICommand? input, ICommand? split, ICommand? analysis, ICommand? evaluation, ICommand? report,
-            InputCheckCounts? inputCheck = null)
+            InputCheckCounts? inputCheck = null, IReadOnlyList<RequiredAnalysisState>? analyses = null, string? settlementBasis = null)
         {
             int blockers = pileCount > 0 ? inputCheck?.Blockers ?? 0 : 0;
             int warnings = pileCount > 0 ? inputCheck?.Warnings ?? 0 : 0;
@@ -120,19 +154,54 @@ namespace PileDesign.ViewModels
                 new("杭要素分割", elementSplit ? "済み" : "未",
                     elementSplit ? WorkflowStepStatus.Done : inputDone ? WorkflowStepStatus.Next : WorkflowStepStatus.NotYet,
                     "杭を解析の要素に分けます (F4)。押すと杭要素分割の画面を開きます", split),
-                new("解析", !analyzed ? "未" : analysisStale ? "やり直しが必要" : "済み",
+            };
+            if (analyses == null)
+            {
+                // 水平解析だけで決める (以前の帯。解析の一覧を渡さない呼び出し)
+                steps.Add(new("解析", !analyzed ? "未" : analysisStale ? "やり直しが必要" : "済み",
                     !analyzed ? (elementSplit ? WorkflowStepStatus.Next : WorkflowStepStatus.NotYet)
                         : analysisStale ? WorkflowStepStatus.NeedsRedo : WorkflowStepStatus.Done,
                     analysisStale
                         ? "解析のあとに入力が変更されています。押すと水平解析の画面を開きます (F5)"
-                        : "水平解析を実行します。押すと水平解析の画面を開きます (F5)", analysis),
-                new("検定", analyzed ? (analysisStale ? "入力変更前の結果" : "結果あり") : "解析後",
+                        : "水平解析を実行します。押すと水平解析の画面を開きます (F5)", analysis));
+                steps.Add(new("検定", analyzed ? (analysisStale ? "入力変更前の結果" : "結果あり") : "解析後",
                     !analyzed ? WorkflowStepStatus.NotYet : analysisStale ? WorkflowStepStatus.NeedsRedo : WorkflowStepStatus.Done,
-                    "検定の結果 (OK / NG・支配ケース・杭ごとの検定比) を確かめます。押すとダッシュボードを開きます", evaluation),
-                new("計算書", analyzed ? (analysisStale ? "入力変更前の結果" : "出力できます") : "解析後",
+                    "検定の結果 (OK / NG・支配ケース・杭ごとの検定比) を確かめます。押すとダッシュボードを開きます", evaluation));
+                steps.Add(new("計算書", analyzed ? (analysisStale ? "入力変更前の結果" : "出力できます") : "解析後",
                     !analyzed ? WorkflowStepStatus.NotYet : analysisStale ? WorkflowStepStatus.NeedsRedo : WorkflowStepStatus.Next,
-                    "計算書 (Word) を出力します。押すと計算書の出力の画面を開きます", report),
-            };
+                    "計算書 (Word) を出力します。押すと計算書の出力の画面を開きます", report));
+                return steps;
+            }
+
+            // 検討に要る解析ごとに状態を出す。帯の色は一番悪いもの (やり直し > 未 > 済み)
+            bool anyDone = false, allDone = true, anyStale = false;
+            foreach (var a in analyses)
+            {
+                anyDone |= a.Done;
+                allDone &= a.Done;
+                anyStale |= a.Done && a.Stale;
+            }
+            string analysisText = string.Join("・", analyses.Select(a => $"{a.Name} {a.StateText}"));
+            string basis = string.IsNullOrEmpty(settlementBasis) ? "" : $"沈下検討の対象は「{settlementBasis}」です (基本設定)。";
+            string analysisTip = "検討に要る解析: " + string.Join("、", analyses.Select(a => $"{a.Name}解析 {a.StateText}")) + "。" + basis
+                + (anyStale ? "「やり直し」の解析は、そのあとに入力が変更されています。" : "")
+                + "押すと水平解析の画面を開きます (F5)。沈下の解析はリボン「解析条件/解析」から実行します";
+            steps.Add(new("解析", analysisText,
+                anyStale ? WorkflowStepStatus.NeedsRedo
+                    : allDone ? WorkflowStepStatus.Done
+                    : elementSplit ? WorkflowStepStatus.Next : WorkflowStepStatus.NotYet,
+                analysisTip, analysis));
+            steps.Add(new("検定",
+                !anyDone ? "解析後" : anyStale ? "入力変更前の結果あり" : allDone ? "結果あり" : "一部の解析のみ",
+                !anyDone ? WorkflowStepStatus.NotYet : anyStale ? WorkflowStepStatus.NeedsRedo
+                    : allDone ? WorkflowStepStatus.Done : WorkflowStepStatus.Next,
+                "検定の結果 (OK / NG・支配ケース・杭ごとの検定比) を確かめます。押すとダッシュボードを開きます"
+                    + (anyDone && !allDone ? "。未実施の解析の検定は、検定できない項目として出ます" : ""), evaluation));
+            steps.Add(new("計算書",
+                !anyDone ? "解析後" : anyStale ? "入力変更前の結果あり" : allDone ? "出力できます" : "未実施の解析あり",
+                !anyDone ? WorkflowStepStatus.NotYet : anyStale ? WorkflowStepStatus.NeedsRedo : WorkflowStepStatus.Next,
+                "計算書 (Word) を出力します。押すと計算書の出力の画面を開きます"
+                    + (anyDone && !allDone ? "。未実施の解析の章は省かれます" : ""), report));
             return steps;
         }
     }
