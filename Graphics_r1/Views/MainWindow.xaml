@@ -874,11 +874,11 @@
                           ItemsSource="{Binding DisplayPresetNames}"
                           SelectedItem="{Binding SelectedDisplayPreset}"
                           AutomationProperties.Name="表示プリセット"
-                          ToolTip="このタブの表示の項目をまとめて切り替えます。「既定」は起動時の表示に戻します。「入力の確認」「結果の確認」は関係する項目だけを切り替え、ほかは今のままにします。保存したプリセットはすべての項目を保存したときの表示にします。"/>
+                          ToolTip="このタブの表示の項目をまとめて切り替えます。「既定」は起動時の表示に戻します。「入力の確認」「結果の確認」は関係する項目だけを切り替え、ほかは今のままにします (「結果の確認」は解析結果ダッシュボードを開き、「入力の確認」は閉じます)。保存したプリセットはすべての項目と欄の並びを保存したときのものにします。"/>
                     <Fluent:Button Header="今の表示を保存" Command="{Binding SaveDisplayPresetAsCommand}"
                           AutomationProperties.Name="今の表示を保存" ToolTipService.ShowOnDisabled="True"
                           Icon="pack://application:,,,/Icons/SaveFileAs.png" SizeDefinition="Middle, Middle, Middle"
-                          ToolTip="今の表示 (このタブの項目すべて) に名前を付けて保存します。保存したプリセットは「プリセット」の一覧に並び、次の起動でも使えます。"/>
+                          ToolTip="今の表示 (このタブの項目すべて) と欄の並び (ダッシュボード・プロパティ欄・ミニマップ欄) に名前を付けて保存します。保存したプリセットは「プリセット」の一覧に並び、次の起動でも使えます。"/>
                     <Fluent:Button Header="プリセットを削除" Command="{Binding DeleteSelectedDisplayPresetCommand}"
                           AutomationProperties.Name="プリセットを削除" ToolTipService.ShowOnDisabled="True"
                           SizeDefinition="Middle, Middle, Middle"

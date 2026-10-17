@@ -155,6 +155,10 @@ namespace PileDesign.Views
 
             // デリゲートの設定
             viewModel.UpdateCanvas3DAction = UpdateCanvas3D;
+            // 表示プリセットの欄の並び (ダッシュボード・プロパティ欄・ミニマップ欄)
+            viewModel.CapturePanelLayout = () => new PanelLayout(
+                _resultDashboardAnchorable != null, propertiesAnchorable.IsVisible, minimapAnchorable.IsVisible);
+            viewModel.ApplyPanelLayout = ApplyPanelLayout;
             // 計算書を作る前の確認。持ち主は前面の窓 (計算書の出力の画面から呼ばれる)
             viewModel.AskReportPreflight = items => ReportPreflightDialog.Ask(
                 Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive) ?? this, items);
@@ -1773,6 +1777,24 @@ namespace PileDesign.Views
         /// タブを引き出せば別ウィンドウにもできる (AvalonDock のフローティング)。
         /// 二重に開かず、既に開いていれば表示を作り直してそのタブを前に出す。
         /// </summary>
+        /// <summary>
+        /// 表示プリセットの欄の並びを当てる (null は触らない)。リボンの「プロパティ」「ミニ マップ」の押下状態は
+        /// 欄の IsVisibleChanged で追従する (InitializePanelToggleSync)。
+        /// </summary>
+        private void ApplyPanelLayout(PanelLayout layout)
+        {
+            if (layout.Dashboard == true && _resultDashboardAnchorable == null) ShowResultDashboard();
+            else if (layout.Dashboard == false) _resultDashboardAnchorable?.Close();
+            if (layout.Properties is bool properties && properties != propertiesAnchorable.IsVisible)
+            {
+                if (properties) propertiesAnchorable.Show(); else propertiesAnchorable.Hide();
+            }
+            if (layout.Minimap is bool minimap && minimap != minimapAnchorable.IsVisible)
+            {
+                if (minimap) { minimapAnchorable.Show(); UpdateMinimap(); } else minimapAnchorable.Hide();
+            }
+        }
+
         internal void ShowResultDashboard()
         {
             if (DataContext is not MainWindowViewModel vm) return;

@@ -133,6 +133,55 @@ namespace TestProject1
             Assert.IsFalse(vm.IsPileMaxMinResultValueVisibleOnly);
         }
 
+        /// <summary>
+        /// 表示プリセットは欄の並びも切り替える (2026-10-17 のレビュー)。「結果の確認」はダッシュボードを開き、「入力の確認」は閉じ、
+        /// 「既定」は起動時の並びに戻す。保存したプリセットは保存したときの並びを持つ。これより前に保存したプリセット (並びを持たない) は欄を触らない。
+        /// </summary>
+        [TestMethod]
+        public void Presets_AlsoArrangeThePanels()
+        {
+            string file = Path.Combine(Path.GetTempPath(), $"pd_presets_{Guid.NewGuid():N}.json");
+            try
+            {
+                var vm = new MainWindowViewModel();
+                vm.UseUserSettingsForTests(new UserSettingsService(file));
+                var applied = new List<PanelLayout>();
+                vm.ApplyPanelLayout = applied.Add;
+                vm.CapturePanelLayout = () => new PanelLayout(true, false, true);
+
+                vm.SelectedDisplayPreset = "結果の確認";
+                Assert.AreEqual(new PanelLayout(true, null, null), applied.Last(), "「結果の確認」でダッシュボードを開いていません");
+                vm.SelectedDisplayPreset = "入力の確認";
+                Assert.AreEqual(new PanelLayout(false, null, null), applied.Last(), "「入力の確認」でダッシュボードを閉じていません");
+                vm.SelectedDisplayPreset = MainWindowViewModel.DefaultDisplayPresetName;
+                Assert.AreEqual(new PanelLayout(false, true, true), applied.Last(), "「既定」で起動時の並びに戻していません");
+
+                Assert.IsTrue(vm.SaveDisplayPreset("並びつき"));
+                var saved = new UserSettingsService(file).Settings.DisplayPresets.Single();
+                Assert.AreEqual(true, saved.DashboardOpen, "保存したときの並びを持っていません");
+                Assert.AreEqual(false, saved.PropertiesVisible);
+                Assert.AreEqual(true, saved.MinimapVisible);
+                applied.Clear();
+                vm.SelectedDisplayPreset = MainWindowViewModel.DefaultDisplayPresetName;
+                vm.SelectedDisplayPreset = "並びつき";
+                Assert.AreEqual(new PanelLayout(true, false, true), applied.Last(), "保存したプリセットで、保存したときの並びに戻していません");
+
+                // これより前に保存したプリセット (並びを持たない) は欄を触らない
+                var settings = new UserSettingsService(file);
+                settings.Settings.DisplayPresets.Add(new DisplayPreset { Name = "古い", Toggles = vm.CaptureDisplayToggles() });
+                settings.Save();
+                vm.UseUserSettingsForTests(new UserSettingsService(file));
+                applied.Clear();
+                vm.SelectedDisplayPreset = "古い";
+                Assert.AreEqual(0, applied.Count, "並びを持たない (古い) プリセットで欄を動かしています");
+            }
+            finally { File.Delete(file); }
+
+            string main = TestSource.Read("Graphics_r1", "Views", "MainWindow.xaml.cs");
+            StringAssert.Contains(main, "viewModel.CapturePanelLayout = ", "欄の並びを取る道がメイン画面につながっていません");
+            StringAssert.Contains(main, "viewModel.ApplyPanelLayout = ApplyPanelLayout;", "欄の並びを当てる道がメイン画面につながっていません");
+        }
+
         /// <summary>名前を聞くダイアログの XAML (StaticResource のキー誤りはビルドを通る)。</summary>
         [TestMethod]
         public void TextPromptWindow_XamlParses()

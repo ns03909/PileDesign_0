@@ -46,6 +46,11 @@ namespace PileDesign.Services
     {
         public string Name { get; set; } = "";
         public Dictionary<string, bool> Toggles { get; set; } = new();
+
+        // 欄の並び (2026-10-17)。null は「触らない」(これより前に保存した組は欄を変えない)
+        public bool? DashboardOpen { get; set; }
+        public bool? PropertiesVisible { get; set; }
+        public bool? MinimapVisible { get; set; }
     }
 
     /// <summary>

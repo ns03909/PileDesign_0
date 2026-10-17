@@ -24,8 +24,41 @@ namespace PileDesign.ViewModels
     ///
     /// <para>プリセットを当てたあとに表示を手で変えると、選んでいたプリセットの表示を外す (プリセットと違う表示になったため)。</para>
     /// </summary>
+    /// <summary>
+    /// 欄の並び (表示プリセットの一部)。解析結果ダッシュボードを開いているか・プロパティ欄・ミニマップ欄を出しているか。
+    /// null は「触らない」。
+    /// </summary>
+    public readonly record struct PanelLayout(bool? Dashboard, bool? Properties, bool? Minimap)
+    {
+        public bool IsEmpty => Dashboard == null && Properties == null && Minimap == null;
+    }
+
     public partial class MainWindowViewModel
     {
+        /// <summary>
+        /// 用意したプリセットの欄の並び (2026-10-17 のレビュー)。「結果の確認」はダッシュボードを開き、「入力の確認」は閉じる。
+        /// 「既定」は起動時の並び (ダッシュボードは閉じ、プロパティ欄・ミニマップ欄は出す)。
+        /// </summary>
+        internal static readonly IReadOnlyDictionary<string, PanelLayout> BuiltInPanelLayouts = new Dictionary<string, PanelLayout>
+        {
+            [DefaultDisplayPresetName] = new(false, true, true),
+            ["入力の確認"] = new(false, null, null),
+            ["結果の確認"] = new(true, null, null),
+        };
+
+        /// <summary>今の欄の並びを取る (メイン画面が設定する。欄はメイン画面が持つ)。</summary>
+        public Func<PanelLayout>? CapturePanelLayout { get; set; }
+
+        /// <summary>欄の並びを当てる (メイン画面が設定する)。</summary>
+        public Action<PanelLayout>? ApplyPanelLayout { get; set; }
+
+        private void ApplyPanels(PanelLayout layout)
+        {
+            if (layout.IsEmpty) return;
+            try { ApplyPanelLayout?.Invoke(layout); }
+            catch (Exception ex) { Serilog.Log.Warning(ex, "[表示プリセット] 欄の並びを当てられませんでした"); }
+        }
+
         /// <summary>プリセットに含めない、ウィンドウの部品の表示 (リボン・ミニマップなど。モデル図の中身ではない)。</summary>
         internal static readonly string[] WindowChromeToggles =
         {
@@ -157,12 +190,22 @@ namespace PileDesign.ViewModels
             if (name == DefaultDisplayPresetName)
             {
                 if (_defaultDisplayToggles != null) ApplyDisplayToggles(_defaultDisplayToggles);
+                ApplyPanels(BuiltInPanelLayouts[DefaultDisplayPresetName]);
                 return;
             }
             var builtIn = BuiltInDisplayPresets.FirstOrDefault(b => b.Name == name);
-            if (builtIn.Toggles != null) { ApplyDisplayToggles(builtIn.Toggles); return; }
+            if (builtIn.Toggles != null)
+            {
+                ApplyDisplayToggles(builtIn.Toggles);
+                if (BuiltInPanelLayouts.TryGetValue(name, out var panels)) ApplyPanels(panels);
+                return;
+            }
             var saved = _userSettingsService.Settings.DisplayPresets.FirstOrDefault(p => p.Name == name);
-            if (saved != null) ApplyDisplayToggles(saved.Toggles);
+            if (saved != null)
+            {
+                ApplyDisplayToggles(saved.Toggles);
+                ApplyPanels(new PanelLayout(saved.DashboardOpen, saved.PropertiesVisible, saved.MinimapVisible));
+            }
         }
 
         /// <summary>手で表示を変えたら、選んでいたプリセットの表示を外す (OnPropertyChanged から)。</summary>
@@ -208,7 +251,15 @@ namespace PileDesign.ViewModels
             name = name.Trim();
             if (name.Length == 0 || IsBuiltInDisplayPresetName(name)) return false;
             var presets = _userSettingsService.Settings.DisplayPresets;
-            var preset = new DisplayPreset { Name = name, Toggles = CaptureDisplayToggles() };
+            var panels = CapturePanelLayout?.Invoke() ?? default;
+            var preset = new DisplayPreset
+            {
+                Name = name,
+                Toggles = CaptureDisplayToggles(),
+                DashboardOpen = panels.Dashboard,
+                PropertiesVisible = panels.Properties,
+                MinimapVisible = panels.Minimap,
+            };
             int at = presets.FindIndex(p => p.Name == name);
             if (at >= 0) presets[at] = preset; else presets.Add(preset);
             _userSettingsService.Save();
