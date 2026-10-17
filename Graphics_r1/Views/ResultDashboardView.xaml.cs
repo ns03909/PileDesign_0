@@ -64,7 +64,10 @@ namespace PileDesign.Views
                 or nameof(MainWindowViewModel.IsHorizontalAnalysisDone)
                 or nameof(MainWindowViewModel.IsVerticalAnalysisDone)
                 or nameof(MainWindowViewModel.IsVerticalBeamAnalysisDone)
-                or nameof(MainWindowViewModel.IsElementSplit))
+                or nameof(MainWindowViewModel.IsElementSplit)
+                // 群杭沈下が済んだときも作り直す (沈下の検定が変わる)。結果の古さ (状態表示) は編集のたびに変わり、
+                // そのたびに検定を組み直すと重いので拾わない (古さは検定の値を変えない)
+                or nameof(MainWindowViewModel.IsGroupPileSettlementAnalysisDone))
             {
                 if (IsLoaded) Dispatcher.BeginInvoke(Refresh);
             }
@@ -335,8 +338,56 @@ namespace PileDesign.Views
         };
 
         // ---- 杭ごとの最大検定比 --------------------------------------------
+
+        /// <summary>一覧の絞り込み (2026-10-17)。</summary>
+        internal enum PileFilter { All, NgOnly, NotEvaluable, AtOrAboveThreshold }
+
+        /// <summary>
+        /// 一覧に出す杭を絞る (純粋関数)。「検定できない項目あり」は未収束・適用範囲外・検定不能の項目がある杭
+        /// (最大の検定比が NG でも、検定できない項目を持っていれば出す)。しきい値は検定比が数のときだけ比べる。
+        /// </summary>
+        internal static IReadOnlyList<PileEvaluationEntry> FilterPiles(IReadOnlyList<PileEvaluationEntry> piles, PileFilter filter, double threshold) =>
+            filter switch
+            {
+                PileFilter.NgOnly => piles.Where(e => e.Band == PileRatioBand.Ng).ToList(),
+                PileFilter.NotEvaluable => piles.Where(e => e.HasUnconverged || e.HasOutOfScope || e.HasUnavailable).ToList(),
+                PileFilter.AtOrAboveThreshold => piles.Where(e => !double.IsNaN(e.MaxRatio) && e.MaxRatio >= threshold).ToList(),
+                _ => piles,
+            };
+
+        private PileEvaluationSummary? _lastSummary;
+
+        private PileFilter CurrentFilter => (PileFilter)Math.Max(0, PileFilterBox.SelectedIndex);
+
+        /// <summary>しきい値の欄を読む。読めなければ既定の 0.8 (欄も直す)。</summary>
+        private double CurrentThreshold()
+        {
+            if (double.TryParse(PileThresholdBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double v) && double.IsFinite(v) && v >= 0)
+                return v;
+            PileThresholdBox.Text = "0.80";
+            return PileEvaluationSummary.TightThreshold;
+        }
+
+        private void PileFilter_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (PileThresholdBox == null) return;   // 組み立ての途中
+            PileThresholdBox.IsEnabled = CurrentFilter == PileFilter.AtOrAboveThreshold;
+            if (_lastSummary != null) UpdatePileListSection(_lastSummary);
+        }
+
+        private void PileThreshold_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_lastSummary != null && CurrentFilter == PileFilter.AtOrAboveThreshold) UpdatePileListSection(_lastSummary);
+        }
+
+        private void PileThresholdBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter) PileThreshold_Changed(sender, e);
+        }
+
         private void UpdatePileListSection(PileEvaluationSummary summary)
         {
+            _lastSummary = summary;
             var piles = summary.ByRatioDescending;
             int total = (_vm.ResultInputModel ?? _vm.CurrentInputModel)?.PileLayoutItems?.Count ?? 0;
 
@@ -362,11 +413,27 @@ namespace PileDesign.Views
             PileBandCountsText.Style = ng > 0 ? StyleResource("DashWarnStyle") : StyleResource("DashValueStyle");
             PileBandCountsText.FontWeight = FontWeights.Normal;
 
-            var rows = piles.Select(ToRow).ToList();
+            var shown = FilterPiles(piles, CurrentFilter, CurrentThreshold());
+            PileFilterCountText.Text = CurrentFilter == PileFilter.All ? "" : $"{shown.Count} 本を表示";
+            var rows = shown.Select(ToRow).ToList();
+            // 確かめていた杭は、表示を更新しても (解析の完了・絞り込みの変更でも) 選んだままにする。
+            // 以前は更新のたびに先頭へ戻り、確認の途中で見ていた杭を見失った
+            int? keep = SelectedPileNo;
             PileRatioGrid.ItemsSource = rows;
-            // 最も厳しい杭 (一覧の先頭) を選んでおき、詳細欄にその応答値・限界値・荷重条件を出す
-            PileRatioGrid.SelectedIndex = rows.Count > 0 ? 0 : -1;
+            PileRatioGrid.SelectedIndex = SelectionAfterRefresh(rows, keep);
             ShowDetail(PileRatioGrid.SelectedItem as PileRow);
+        }
+
+        /// <summary>
+        /// 更新のあとに選ぶ行 (純粋関数)。前に選んでいた杭が一覧に残っていればその行、無ければ先頭 (最も厳しい杭)、行が無ければ -1。
+        /// </summary>
+        internal static int SelectionAfterRefresh(IReadOnlyList<PileRow> rows, int? previousPileNo)
+        {
+            if (rows.Count == 0) return -1;
+            if (previousPileNo is int no)
+                for (int i = 0; i < rows.Count; i++)
+                    if (rows[i].PileNo == no) return i;
+            return 0;
         }
 
         /// <summary>選んだ行の詳細 (対象・応答値・限界値・荷重条件)。行が無ければ「—」。</summary>

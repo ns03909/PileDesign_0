@@ -174,6 +174,26 @@
                                       ToolTip="メインビューの杭を杭ごとの最大検定比で色分けします (緑: 0.8 以下 / 黄: 1.0 以下 / 赤: NG / 灰: 未収束)。杭要素分割後に使えます"/>
                         </Grid>
                         <TextBlock x:Name="PileBandCountsText" Style="{StaticResource DashValueStyle}" FontWeight="Normal" Margin="0,0,0,6"/>
+                        <!-- 絞り込み (2026-10-17): 杭が多いと NG や検定できない杭を探すのに手間取るので、一覧を絞る -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="表示する杭" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ComboBox x:Name="PileFilterBox" Width="190" SelectedIndex="0"
+                                      SelectionChanged="PileFilter_Changed" AutomationProperties.Name="表示する杭"
+                                      ToolTip="一覧に出す杭を絞ります。件数の行はいつもすべての杭の数です">
+                                <ComboBoxItem Content="すべて"/>
+                                <ComboBoxItem Content="NG のみ"/>
+                                <ComboBoxItem Content="検定できない項目あり"
+                                              ToolTip="未収束・適用範囲外・検定不能の項目がある杭"/>
+                                <ComboBoxItem Content="検定比がしきい値以上"/>
+                            </ComboBox>
+                            <TextBox x:Name="PileThresholdBox" Width="50" Margin="6,0,0,0" Text="0.80"
+                                     VerticalContentAlignment="Center" HorizontalContentAlignment="Right"
+                                     IsEnabled="False" ToolTipService.ShowOnDisabled="True"
+                                     LostFocus="PileThreshold_Changed" KeyDown="PileThresholdBox_KeyDown"
+                                     AutomationProperties.Name="検定比のしきい値"
+                                     ToolTip="「検定比がしきい値以上」で使うしきい値 (例 0.80)。Enter かほかへ移ると反映します"/>
+                            <TextBlock x:Name="PileFilterCountText" VerticalAlignment="Center" Margin="8,0,0,0" Foreground="#666"/>
+                        </StackPanel>
                         <DataGrid x:Name="PileRatioGrid" AutoGenerateColumns="False" IsReadOnly="True"
                                   HeadersVisibility="Column" CanUserSortColumns="True" CanUserResizeRows="False"
                                   GridLinesVisibility="Horizontal" MaxHeight="260" FontSize="12"

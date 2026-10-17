@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.Services;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -61,6 +62,81 @@ namespace TestProject1
             Assert.AreNotEqual("—", response, "詳細欄に応答値が出ていません");
             Assert.AreNotEqual("—", limit, "詳細欄に限界値が出ていません");
             Assert.AreNotEqual("—", condition, "詳細欄に荷重条件が出ていません");
+        }
+
+        /// <summary>
+        /// 一覧の絞り込み (2026-10-17 のレビュー): NG のみ・検定できない項目あり・検定比がしきい値以上。
+        /// 杭が多いと NG や検定できない杭を探すのに手間取った。
+        /// </summary>
+        [TestMethod]
+        public void TheFilter_NarrowsThePileList()
+        {
+            PileEvaluationEntry E(int no, double ratio, PileRatioBand band, bool unconverged = false, bool unavailable = false) =>
+                new() { PileNo = no, MaxRatio = ratio, Band = band, HasUnconverged = unconverged, HasUnavailable = unavailable };
+            var piles = new List<PileEvaluationEntry>
+            {
+                E(1, 1.20, PileRatioBand.Ng),
+                E(2, 0.95, PileRatioBand.Tight, unavailable: true),
+                E(3, 0.85, PileRatioBand.Tight),
+                E(4, double.NaN, PileRatioBand.Unconverged, unconverged: true),
+                E(5, 0.40, PileRatioBand.Safe),
+            };
+            int[] Nos(PileDesign.Views.ResultDashboardView.PileFilter f, double t = 0.8) =>
+                PileDesign.Views.ResultDashboardView.FilterPiles(piles, f, t).Select(e => e.PileNo).ToArray();
+
+            CollectionAssert.AreEqual(new[] { 1, 2, 3, 4, 5 }, Nos(PileDesign.Views.ResultDashboardView.PileFilter.All));
+            CollectionAssert.AreEqual(new[] { 1 }, Nos(PileDesign.Views.ResultDashboardView.PileFilter.NgOnly));
+            CollectionAssert.AreEqual(new[] { 2, 4 }, Nos(PileDesign.Views.ResultDashboardView.PileFilter.NotEvaluable),
+                "検定比が数の杭でも、検定できない項目があれば出す");
+            CollectionAssert.AreEqual(new[] { 1, 2, 3 }, Nos(PileDesign.Views.ResultDashboardView.PileFilter.AtOrAboveThreshold, 0.85),
+                "しきい値ちょうどは含め、検定比の無い (未収束だけの) 杭は含めない");
+
+            string xaml = TestSource.Read("Graphics_r1", "Views", "ResultDashboardView.xaml");
+            StringAssert.Contains(xaml, "x:Name=\"PileFilterBox\"");
+            StringAssert.Contains(xaml, "x:Name=\"PileThresholdBox\"");
+        }
+
+        /// <summary>表示を更新しても (解析の完了・絞り込みの変更でも)、確かめていた杭を選んだままにする。以前は毎回先頭へ戻った。</summary>
+        [TestMethod]
+        public void TheSelectedPile_SurvivesARefresh()
+        {
+            var rows = new List<PileDesign.Views.ResultDashboardView.PileRow>
+            {
+                new(7, "NG", "1.20", "", "", "", "", ""),
+                new(3, "OK", "0.90", "", "", "", "", ""),
+                new(5, "OK", "0.50", "", "", "", "", ""),
+            };
+            Assert.AreEqual(1, PileDesign.Views.ResultDashboardView.SelectionAfterRefresh(rows, 3), "前に選んでいた杭を選び直していません");
+            Assert.AreEqual(0, PileDesign.Views.ResultDashboardView.SelectionAfterRefresh(rows, 9), "前の杭が無ければ先頭 (最も厳しい杭)");
+            Assert.AreEqual(0, PileDesign.Views.ResultDashboardView.SelectionAfterRefresh(rows, null));
+            Assert.AreEqual(-1, PileDesign.Views.ResultDashboardView.SelectionAfterRefresh([], 3));
+
+            var built = AnalysisInputScopeTests.BuildAnalyzed();
+            if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            var vm = built.Value.vm;
+            int? before = null, after = null; int count = 0;
+            var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
+            {
+                bool unattended = MessageService.IsUnattended;
+                MessageService.IsUnattended = true;
+                var view = new PileDesign.Views.ResultDashboardView(vm);
+                var window = new System.Windows.Window { Content = view };
+                try
+                {
+                    view.RefreshNow();
+                    count = view.PileRatioGrid.Items.Count;
+                    if (count < 2) return;
+                    view.PileRatioGrid.SelectedIndex = 1;
+                    before = ((PileDesign.Views.ResultDashboardView.PileRow)view.PileRatioGrid.SelectedItem).PileNo;
+                    view.RefreshNow();
+                    after = (view.PileRatioGrid.SelectedItem as PileDesign.Views.ResultDashboardView.PileRow)?.PileNo;
+                }
+                finally { view.Detach(); window.Close(); MessageService.IsUnattended = unattended; }
+            }, out bool timedOut);
+            if (timedOut) { Assert.Inconclusive("STA スレッドが時間内に終わりませんでした"); return; }
+            if (captured != null) throw new AssertFailedException(captured.ToString());
+            if (count < 2) { Assert.Inconclusive("(前提) 検定した杭が 2 本以上あること"); return; }
+            Assert.AreEqual(before, after, "表示を更新したら、選んでいた杭から先頭へ戻りました");
         }
 
         /// <summary>
