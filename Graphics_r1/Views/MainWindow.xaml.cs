@@ -155,6 +155,9 @@ namespace PileDesign.Views
 
             // デリゲートの設定
             viewModel.UpdateCanvas3DAction = UpdateCanvas3D;
+            // 計算書を作る前の確認。持ち主は前面の窓 (計算書の出力の画面から呼ばれる)
+            viewModel.AskReportPreflight = items => ReportPreflightDialog.Ask(
+                Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive) ?? this, items);
             viewModel.AskDisplayPresetName = initial => TextPromptWindow.Ask(this, "表示プリセットを保存",
                 "今の表示 (リボン「表示」タブの項目すべて) を、この名前で保存します。同じ名前のプリセットがあれば置き換えます。", initial);
             viewModel.HideTransientOverlaysAction = HideBeamResultTooltip;

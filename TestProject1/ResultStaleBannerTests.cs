@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace TestProject1
 {
@@ -36,7 +37,7 @@ namespace TestProject1
 
         /// <summary>
         /// どの解析をやり直せばよいかも書く (2026-10-17 のレビュー)。沈下は古くなった解析を名指しする。
-        /// 計算書を出すときの確認も、画面の帯と同じ文を添える (以前は「入力が編集されています」だけだった)。
+        /// 計算書を作る前の確認にも、画面の帯と同じ文を出す (以前は「入力が編集されています」だけだった)。
         /// </summary>
         [TestMethod]
         public void TheNotice_SaysWhatToRerun_AndTheReportConfirmationRepeatsIt()
@@ -48,13 +49,11 @@ namespace TestProject1
             StringAssert.Contains(settlement, "単杭沈下解析・群杭沈下解析（基礎梁なし）をやり直してください");
             Assert.IsFalse(settlement!.Contains("水平解析をやり直"), "古くなっていない水平解析のやり直しを求めています");
 
-            string confirmation = MainWindowViewModel.BuildReportStaleConfirmation(horizontal);
-            StringAssert.Contains(confirmation, horizontal!, "計算書の確認に、どの結果が古いか・何をやり直すかが出ていません");
-            StringAssert.Contains(confirmation, "上の解析をやり直してください");
-            StringAssert.Contains(MainWindowViewModel.BuildReportStaleConfirmation(null), "再解析してください",
-                "帯の文が無いときの確認が欠けています");
-            StringAssert.Contains(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs"),
-                "BuildReportStaleConfirmation(ResultStaleNotice)", "計算書を出すときに帯の文を使っていません");
+            // 計算書を作る前の確認 (ReportPreflightTests) にも、帯の文がそのまま 1 行ずつ出る
+            var items = MainWindowViewModel.BuildReportPreflight(
+                [new("水平", true, true)], horizontal, inputEditedSinceAnalysis: true, counts: null);
+            Assert.IsTrue(items.Any(i => i.Text == horizontal), "計算書の確認に、どの結果が古いか・何をやり直すかが出ていません");
+            Assert.IsTrue(items.Any(i => i.Text.Contains("解析を実行した時点の入力で作成します")), "解析時の入力で作ることを断っていません");
         }
 
         [TestMethod]

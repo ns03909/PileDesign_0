@@ -74,6 +74,7 @@ namespace PileDesign.ViewModels
     /// <item><term>.SettlementStaleness.cs</term><description>沈下系の解析 (単杭・基礎梁考慮・群杭 2 種) ごとの「入力変更前の結果」の印と、解析どうしの依存</description></item>
     /// <item><term>.Workflow.cs</term><description>工程の帯 (入力 → 杭要素分割 → 解析 → 検定 → 計算書)</description></item>
     /// <item><term>.EvaluationColoring.cs</term><description>検定結果の色分け</description></item>
+    /// <item><term>.ReportPreflight.cs</term><description>計算書を作る前の確認 (未実施の解析・古い結果・NG・判定できない項目)</description></item>
     /// <item><term>.DisplayPresets.cs</term><description>表示プリセット (表示の項目をまとめて切り替え・保存)</description></item>
     /// <item><term>.CameraViews.cs</term><description>視点の切り替え</description></item>
     /// <item><term>.SettlementGridCache.cs</term><description>沈下グリッドの描画キャッシュ</description></item>
