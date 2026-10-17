@@ -64,6 +64,50 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 選んだ行 (開いたときは先頭の最も厳しい杭) でも、検定比は右寄せのまま、判定は色付きのまま。
+        /// 共通の DataGridCell スタイルは選んだセルを編集中にするので、この表だけ選んでも編集に切り替えない (2026-10-17)。
+        /// 以前は先頭の行だけ編集用の部品になり、検定比が左に寄り「OK」の緑が外れていた (利用者の指摘)。
+        /// </summary>
+        [TestMethod]
+        public void TheSelectedRow_IsNotSwitchedToEditing()
+        {
+            var built = AnalysisInputScopeTests.BuildAnalyzed();
+            if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            var vm = built.Value.vm;
+            bool? editing = null; System.Windows.HorizontalAlignment? ratioAlignment = null; int selected = -2;
+            var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
+            {
+                bool unattended = MessageService.IsUnattended;
+                MessageService.IsUnattended = true;
+                var view = new PileDesign.Views.ResultDashboardView(vm);
+                var window = new System.Windows.Window
+                {
+                    Content = view, Width = 600, Height = 900, Left = -3000, Top = -3000, ShowActivated = false, ShowInTaskbar = false,
+                };
+                try
+                {
+                    window.Show();
+                    view.RefreshNow();
+                    for (int i = 0; i < 4; i++) { window.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle); window.UpdateLayout(); }
+                    selected = view.PileRatioGrid.SelectedIndex;
+                    var row = (System.Windows.Controls.DataGridRow)view.PileRatioGrid.ItemContainerGenerator.ContainerFromIndex(0);
+                    var ratioColumn = view.PileRatioGrid.Columns.First(c => (string)c.Header == "検定比");
+                    var content = ratioColumn.GetCellContent(row);
+                    var cell = content?.Parent as System.Windows.Controls.DataGridCell;
+                    editing = cell?.IsEditing;
+                    ratioAlignment = (content as System.Windows.Controls.TextBlock)?.HorizontalAlignment;
+                }
+                finally { view.Detach(); window.Close(); MessageService.IsUnattended = unattended; }
+            }, out bool timedOut);
+            if (timedOut) { Assert.Inconclusive("STA スレッドが時間内に終わりませんでした"); return; }
+            if (captured != null) throw new AssertFailedException(captured.ToString());
+
+            Assert.AreEqual(0, selected, "(前提) 先頭の行を選んでいること");
+            Assert.AreEqual(false, editing, "選んだ行のセルが編集中になっています (検定比が左に寄り、判定の色が外れます)");
+            Assert.AreEqual(System.Windows.HorizontalAlignment.Right, ratioAlignment, "選んだ行の検定比が右寄せではありません");
+        }
+
+        /// <summary>
         /// メイン画面の右側 (モデル図とプロパティ欄の間) に、高さいっぱいの列としてドッキングする。二重には開かない。
         /// プロパティ欄の列 (ミニマップと縦に分けている) にタブで足すと、総括が窮屈でスクロールが要った (実機確認)。
         /// </summary>

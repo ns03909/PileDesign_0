@@ -181,6 +181,20 @@
                                   MouseDoubleClick="PileRatioGrid_MouseDoubleClick"
                                   SelectionChanged="PileRatioGrid_SelectionChanged"
                                   ToolTip="行をダブルクリックすると、平面図でその杭を表示します">
+                            <!-- 共通の DataGridCell スタイルは、選んだセルを編集中 (IsEditing) にする (入力表ですぐ打ち込めるように)。
+                                 読み取り専用のこの表でも、選んだ行だけ編集用の部品に切り替わり、検定比の右寄せと判定の色が外れていた。
+                                 選んでも編集に切り替えず、選んだ行は薄いアクセント色にする (文字の色はそのまま)。 -->
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell">
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource PrimaryAccentMediumBrush}"/>
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.CellStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="杭No." Binding="{Binding PileNo}" Width="55"/>
                                 <DataGridTextColumn Header="判定" Binding="{Binding Status}" Width="60">
