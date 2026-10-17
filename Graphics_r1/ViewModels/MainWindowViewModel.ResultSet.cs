@@ -448,7 +448,8 @@ namespace PileDesign.ViewModels
         public bool HasResultStaleNotice => ResultStaleNotice != null;
 
         /// <summary>
-        /// 帯の文を組む (純粋関数)。古くなった結果だけを名指しし、いつ解析したものか・何を変えたかを書く。
+        /// 帯の文を組む (純粋関数)。古くなった結果だけを名指しし、いつ解析したものか・何を変えたかと、
+        /// どの解析をやり直せばよいか (2026-10-17) を書く。
         /// </summary>
         /// <param name="staleSettlementNames">古くなった沈下系の解析の呼び名 (分かるとき。どの解析かを名指しする)。</param>
         internal static string? BuildResultStaleNotice(
@@ -464,9 +465,11 @@ namespace PileDesign.ViewModels
 
             var lines = new List<string>();
             if (horizontalStale)
-                lines.Add($"表示中の水平解析の結果{When(horizontalAt)}は、そのあとに変更された入力{What(horizontalEdits)}の前のものです。いまの入力に対する結果ではありません。");
+                lines.Add($"表示中の水平解析の結果{When(horizontalAt)}は、そのあとに変更された入力{What(horizontalEdits)}の前のものです。いまの入力に対する結果ではありません。"
+                    + "水平解析をやり直してください (F5)。");
             if (settlementStale)
-                lines.Add($"表示中の沈下の結果{Which(staleSettlementNames)}{When(settlementAt)}は、そのあとに変更された入力{What(settlementEdits)}の前のものです。");
+                lines.Add($"表示中の沈下の結果{Which(staleSettlementNames)}{When(settlementAt)}は、そのあとに変更された入力{What(settlementEdits)}の前のものです。"
+                    + $"{(staleSettlementNames is { Count: > 0 } names ? string.Join("・", names) : "沈下の解析")}をやり直してください (リボン「解析条件/解析」)。");
             return lines.Count == 0 ? null : string.Join("\n", lines);
         }
 

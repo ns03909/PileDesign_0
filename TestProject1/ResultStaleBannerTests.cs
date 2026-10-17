@@ -34,6 +34,29 @@ namespace TestProject1
             Assert.AreEqual(2, both!.Split('\n').Length, "両方が古いときは 1 行ずつ書く");
         }
 
+        /// <summary>
+        /// どの解析をやり直せばよいかも書く (2026-10-17 のレビュー)。沈下は古くなった解析を名指しする。
+        /// 計算書を出すときの確認も、画面の帯と同じ文を添える (以前は「入力が編集されています」だけだった)。
+        /// </summary>
+        [TestMethod]
+        public void TheNotice_SaysWhatToRerun_AndTheReportConfirmationRepeatsIt()
+        {
+            string? horizontal = MainWindowViewModel.BuildResultStaleNotice(true, At, ["杭配置"], false, null, []);
+            StringAssert.Contains(horizontal, "水平解析をやり直してください (F5)");
+
+            string? settlement = MainWindowViewModel.BuildResultStaleNotice(false, At, [], true, At, ["地盤"], ["単杭沈下解析", "群杭沈下解析（基礎梁なし）"]);
+            StringAssert.Contains(settlement, "単杭沈下解析・群杭沈下解析（基礎梁なし）をやり直してください");
+            Assert.IsFalse(settlement!.Contains("水平解析をやり直"), "古くなっていない水平解析のやり直しを求めています");
+
+            string confirmation = MainWindowViewModel.BuildReportStaleConfirmation(horizontal);
+            StringAssert.Contains(confirmation, horizontal!, "計算書の確認に、どの結果が古いか・何をやり直すかが出ていません");
+            StringAssert.Contains(confirmation, "上の解析をやり直してください");
+            StringAssert.Contains(MainWindowViewModel.BuildReportStaleConfirmation(null), "再解析してください",
+                "帯の文が無いときの確認が欠けています");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs"),
+                "BuildReportStaleConfirmation(ResultStaleNotice)", "計算書を出すときに帯の文を使っていません");
+        }
+
         [TestMethod]
         public void ManyEdits_AreShortened()
         {

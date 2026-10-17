@@ -1100,6 +1100,20 @@ namespace PileDesign.ViewModels
         // Word ファイルに保存するメソッド
         // 出力前チェック（未選択の確認）は OK ボタン（DocxOutputWindow.OkButton_Click）で行う。
         // コマンドとしては使っていない (計算書出力ウィンドウの code-behind から直接呼ぶ)。2026-09-19 に属性を外した。
+        /// <summary>
+        /// 解析のあとに入力を編集してから計算書を出すときの確認の文 (純粋関数)。
+        /// どの結果が古いか・何を変えたか・どの解析をやり直すかを、画面上の帯 (<see cref="ResultStaleNotice"/>) と同じ文で添える
+        /// (2026-10-17)。以前は「入力が編集されています」だけで、どの解析をやり直せばよいか分からなかった。
+        /// </summary>
+        internal static string BuildReportStaleConfirmation(string? staleNotice) =>
+            "解析のあとに入力が編集されています。\n\n" +
+            (string.IsNullOrEmpty(staleNotice) ? "" : staleNotice + "\n\n") +
+            "計算書は解析結果と整合させるため、解析を実行した時点の入力で作成します。\n" +
+            (string.IsNullOrEmpty(staleNotice)
+                ? "編集後の入力で作成するには、再解析してください。\n\n"
+                : "編集後の入力で作成するには、上の解析をやり直してください。\n\n") +
+            "このまま作成しますか？";
+
         public void OutputWordFile()
         {
             // ファイル名: (yyMMdd)_(HHmm)_構造計算書_(本体ファイル名).docx
@@ -1132,11 +1146,7 @@ namespace PileDesign.ViewModels
             if (InputChangedSinceAnalysis)
             {
                 var answer = MessageService.Show(
-                    "解析のあとに入力が編集されています。\n\n" +
-                    "計算書は解析結果と整合させるため、" +
-                    "解析を実行した時点の入力で作成します。\n" +
-                    "編集後の入力で作成するには、再解析してください。\n\n" +
-                    "このまま作成しますか？",
+                    BuildReportStaleConfirmation(ResultStaleNotice),
                     "確認",
                     MessageBoxButton.OKCancel,
                     MessageBoxImage.Information);
