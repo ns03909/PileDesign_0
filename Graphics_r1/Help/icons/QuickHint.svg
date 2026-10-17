@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <!-- 2026-10-17: 電球を少し小さくして右へ寄せ、左に横線 (疾走線) を 3 本入れて「クイック」を表す -->
+    <g style="fill:none;stroke:rgb(240,170,30);stroke-width:8px;stroke-linecap:round;">
+        <path d="M6,40L34,40" style="stroke-opacity:0.55;"/>
+        <path d="M0,62L38,62" style="stroke-opacity:0.8;"/>
+        <path d="M10,84L34,84" style="stroke-opacity:0.55;"/>
+    </g>
+    <g transform="matrix(0.84,0,0,0.84,26,10)">
     <g transform="matrix(1,0,0,1,-1602,-1068)">
         <g id="QuickHint" transform="matrix(1,0,0,1,1246,1068)">
             <rect x="356" y="0" width="128" height="128" style="fill:none;"/>
@@ -26,6 +33,7 @@
                 <path d="M598,278.42L598,239.673C598,227.243 604.601,228.551 604.601,239.673C604.601,250.794 611.579,251.23 611.579,239.673C611.579,228.115 617.546,228.988 617.546,239.673C617.546,250.357 624.009,251.448 624.009,239.673C624.009,227.897 631.205,228.333 631.205,239.673L631.205,278.42" style="fill:none;stroke:white;stroke-width:5.31px;"/>
             </g>
         </g>
+    </g>
     </g>
     <defs>
         <radialGradient id="_Radial1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1.645777,-46.848868,46.848868,-1.645777,597.999928,232.933954)"><stop offset="0" style="stop-color:rgb(242,255,255);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(255,245,77);stop-opacity:1"/></radialGradient>

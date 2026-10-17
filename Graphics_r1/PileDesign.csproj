@@ -445,6 +445,8 @@
     <None Remove="Icons\PropertyVisible.svg" />
     <None Remove="Icons\QuickHint.png" />
     <None Remove="Icons\QuickHint.svg" />
+    <None Remove="Icons\QuickStart.png" />
+    <None Remove="Icons\QuickStart.svg" />
     <None Remove="Icons\RecentFiles.png" />
     <None Remove="Icons\RecentFiles.svg" />
     <None Remove="Icons\Redo.png" />
@@ -1741,6 +1743,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\QuickHint.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\QuickStart.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\QuickStart.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\RecentFiles.png">

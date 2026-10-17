@@ -2149,8 +2149,8 @@
                                  ToolTipService.ShowOnDisabled="True"
                                  ToolTip="入力から解析までの流れを、順を追って説明します。はじめての方はここから。"
                                  Command="{Binding OpenQuickStartHelpCommand}"
-                                 LargeIcon="pack://application:,,,/Icons/Help.png"
-                                 Icon="pack://application:,,,/Icons/Help.png"
+                                 LargeIcon="pack://application:,,,/Icons/QuickStart.png"
+                                 Icon="pack://application:,,,/Icons/QuickStart.png"
                                  KeyTip="K" AutomationProperties.Name="クイック スタート"/>
                     <Fluent:Button x:Name="RibbonButtonHelp"
                                  Header="ヘルプ"

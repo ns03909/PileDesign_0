@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- クイックスタート: ヘルプ (Help.svg) と同じ青の「?」を右へ寄せて前に傾け、左に横線 (疾走線) を 3 本入れて「すばやく始める」を表す -->
+<svg width="128" height="128" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;">
+    <g id="QuickStart">
+        <rect x="0" y="0" width="128" height="128" style="fill:none;"/>
+        <g style="fill:none;stroke:rgb(98,176,226);stroke-width:8px;">
+            <path d="M8,40L40,40" style="stroke-opacity:0.55;"/>
+            <path d="M2,64L44,64" style="stroke-opacity:0.8;"/>
+            <path d="M14,88L40,88" style="stroke-opacity:0.55;"/>
+        </g>
+        <g transform="matrix(1,0,-0.18,1,16,0)">
+            <text x="42px" y="118px" style="font-family:'Verdana-Bold', 'Verdana', sans-serif;font-weight:700;font-size:132px;fill:rgb(98,176,226);">?</text>
+        </g>
+    </g>
+</svg>
