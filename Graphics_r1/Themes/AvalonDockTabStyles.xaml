@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock">
+                    xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
+                    xmlns:common="clr-namespace:PileDesign.Common">
 
     <!--
         AvalonDock のタブを内側 TabItem (Styles.xaml の <Style TargetType="TabItem">) と
@@ -82,6 +83,30 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!--
+        欄の見出しの ▾ (と右クリック) で開くメニュー (2026-10-17)。
+        AvalonDock 5.0 は既定のメニューを持たず (以前は既定のテーマが持っていた)、テーマを当てないこのアプリでは
+        ▾ を押しても何も開かなかった (メイン画面・杭体・杭頭・杭断面・杭要素分割・地盤・Chang のすべて)。
+        ここで全画面の DockingManager に配る。項目の名前は AvalonDock 自身の日本語 (見出しのボタンのヒントと同じ言葉)。
+        DataContext は AvalonDock が開くときに欄 (LayoutAnchorableItem) にする。
+        「タブ付きドキュメントとしてドッキング」は欄を文書タブの並びへ入れてしまうので出さない。
+        「ドッキング」は DockPaneCommands.Dock。AvalonDock の DockCommand は浮かせた欄を元の位置に戻せない
+        (手近な欄のタブになるか、何も起きない) ので、元の位置を自分で覚えて戻す。列ごと無くなっていれば右端に新しい列で戻す。
+        x:Shared="False" + DynamicResource で、DockingManager ごとに別のメニューにする。
+    -->
+    <ContextMenu x:Key="DockPaneMenu" x:Shared="False">
+        <MenuItem Header="フローティング" Command="{Binding FloatCommand}"/>
+        <MenuItem Header="ドッキング" Command="{x:Static common:DockPaneCommands.Dock}" CommandParameter="{Binding}"/>
+        <MenuItem Header="自動的に隠す" Command="{Binding AutoHideCommand}"/>
+        <MenuItem Header="非表示" Command="{Binding HideCommand}"/>
+    </ContextMenu>
+
+    <Style TargetType="{x:Type avalonDock:DockingManager}">
+        <Setter Property="AnchorableContextMenu" Value="{DynamicResource DockPaneMenu}"/>
+        <!-- 「ドッキング」で戻す先を覚えさせる (DockPaneCommands) -->
+        <Setter Property="common:DockPaneCommands.RemembersPlaces" Value="True"/>
     </Style>
 
 </ResourceDictionary>
