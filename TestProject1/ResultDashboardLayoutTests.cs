@@ -96,6 +96,46 @@ namespace TestProject1
             StringAssert.Contains(xaml, "x:Name=\"PileThresholdBox\"");
         }
 
+        /// <summary>
+        /// 続けて来た通知 (解析の完了では完了時刻・解析済み・杭要素分割などが続く) は、作り直し 1 回にまとめる (2026-10-17 のレビュー)。
+        /// 以前は通知ごとに予約し、そのたびに検定のまとめを作り直していた (杭の多いモデルで重い)。
+        /// </summary>
+        [TestMethod]
+        public void BurstsOfNotifications_RefreshOnce()
+        {
+            var built = AnalysisInputScopeTests.BuildAnalyzed();
+            if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            var vm = built.Value.vm;
+            int before = -1, after = -1;
+            var captured = XamlSmokeTestSupport.RunOnStaThread(() =>
+            {
+                bool unattended = MessageService.IsUnattended;
+                MessageService.IsUnattended = true;
+                var view = new PileDesign.Views.ResultDashboardView(vm);
+                var window = new System.Windows.Window
+                {
+                    Content = view, Width = 600, Height = 900, Left = -3000, Top = -3000, ShowActivated = false, ShowInTaskbar = false,
+                };
+                void Settle() { for (int i = 0; i < 4; i++) { window.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle); window.UpdateLayout(); } }
+                try
+                {
+                    window.Show(); Settle();
+                    before = view.RefreshCount;
+                    bool split = vm.IsElementSplit;
+                    vm.IsElementSplit = !split;   // 通知が続く (杭要素分割・状態表示ほか)
+                    vm.IsElementSplit = split;
+                    view.RequestRefresh();
+                    Settle();
+                    after = view.RefreshCount;
+                }
+                finally { view.Detach(); window.Close(); MessageService.IsUnattended = unattended; }
+            }, out bool timedOut);
+            if (timedOut) { Assert.Inconclusive("STA スレッドが時間内に終わりませんでした"); return; }
+            if (captured != null) throw new AssertFailedException(captured.ToString());
+            Assert.IsTrue(before >= 1, "(前提) 開いたときに作っていること");
+            Assert.AreEqual(1, after - before, "続けて来た通知で、作り直しを何度もしています");
+        }
+
         /// <summary>表示を更新しても (解析の完了・絞り込みの変更でも)、確かめていた杭を選んだままにする。以前は毎回先頭へ戻った。</summary>
         [TestMethod]
         public void TheSelectedPile_SurvivesARefresh()

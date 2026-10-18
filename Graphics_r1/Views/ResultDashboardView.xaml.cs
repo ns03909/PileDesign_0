@@ -69,8 +69,29 @@ namespace PileDesign.Views
                 // そのたびに検定を組み直すと重いので拾わない (古さは検定の値を変えない)
                 or nameof(MainWindowViewModel.IsGroupPileSettlementAnalysisDone))
             {
-                if (IsLoaded) Dispatcher.BeginInvoke(Refresh);
+                if (IsLoaded) RequestRefresh();
             }
+        }
+
+        private bool _refreshQueued;
+
+        /// <summary>何度更新を作り直したか (テスト用)。</summary>
+        internal int RefreshCount { get; private set; }
+
+        /// <summary>
+        /// 作り直しを 1 回に予約する (2026-10-17 のレビュー)。解析の完了では通知がいくつも続く (完了時刻・水平解析済み・
+        /// 杭要素分割など)。以前は通知ごとに予約し、そのたびに検定のまとめを作り直していた (杭の多いモデルで重い)。
+        /// 予約が残っているあいだに来た通知は、その 1 回にまとめる。
+        /// </summary>
+        internal void RequestRefresh()
+        {
+            if (_refreshQueued) return;
+            _refreshQueued = true;
+            Dispatcher.BeginInvoke(() =>
+            {
+                _refreshQueued = false;
+                Refresh();
+            });
         }
 
         private void RefreshButton_Click(object sender, RoutedEventArgs e) => Refresh();
@@ -90,6 +111,7 @@ namespace PileDesign.Views
 
         private void Refresh()
         {
+            RefreshCount++;
             LastUpdateText.Text = FormatTimes(_vm.HorizontalAnalyzedAt, DateTime.Now);
 
             PileEvaluationSummary summary;
