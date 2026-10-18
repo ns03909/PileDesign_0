@@ -274,7 +274,9 @@ namespace PileDesign.ViewModels
             DisplayPresetNames.Clear();
             DisplayPresetNames.Add(DefaultDisplayPresetName);
             foreach (var b in BuiltInDisplayPresets) DisplayPresetNames.Add(b.Name);
-            foreach (var p in _userSettingsService.Settings.DisplayPresets) DisplayPresetNames.Add(p.Name);
+            // 用意したプリセットと同じ名前は並べない (2 つ並び、選ぶと用意した方が当たる)。設定の中身は読込で直してある
+            foreach (var p in _userSettingsService.Settings.DisplayPresets)
+                if (!IsBuiltInDisplayPresetName(p.Name) && !DisplayPresetNames.Contains(p.Name)) DisplayPresetNames.Add(p.Name);
             // 一覧を作り直すと ComboBox が選択を外すことがあるので戻す (当て直しはしない)
             if (keep != null && DisplayPresetNames.Contains(keep) && _selectedDisplayPreset != keep)
             {

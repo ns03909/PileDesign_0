@@ -90,13 +90,48 @@ namespace PileDesign.Services
 
                 var json = File.ReadAllText(_filePath);
                 var loaded = JsonSerializer.Deserialize<UserSettings>(json);
-                if (loaded != null) Settings = loaded;
+                if (loaded == null) return;
+                var fixes = Normalize(loaded);
+                if (fixes.Count > 0)
+                    Log.Warning("[UserSettingsService] 設定の中身を補正しました ({Path}): {Fixes}", _filePath, string.Join(" / ", fixes));
+                Settings = loaded;
             }
             catch (Exception ex)
             {
                 // 壊れた設定ファイルで起動不能にはしない。既定値で続行する
                 Log.Warning(ex, "[UserSettingsService] 設定の読込に失敗しました: {Path}", _filePath);
             }
+        }
+
+        /// <summary>
+        /// 読み込んだ設定の中身を、使える形に直す (2026-10-18 のレビュー)。直したことを返す。ファイルは書き直さない
+        /// (次に保存したとき、直した中身で書く)。
+        ///
+        /// <para>JSON として正しくても、中身が使えないことがある。以前は <c>"DisplayPresets": null</c> を
+        /// そのまま受け取り、画面の準備 (MainWindowViewModel のコンストラクター) が一覧を列挙して例外になった。
+        /// 設定ファイルは残るので、起動するたびに落ちた。</para>
+        /// </summary>
+        internal static List<string> Normalize(UserSettings settings)
+        {
+            var fixes = new List<string>();
+            if (settings.DisplayPresets == null)
+            {
+                settings.DisplayPresets = new();
+                fixes.Add("表示プリセットの一覧が null");
+                return fixes;
+            }
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var kept = new List<DisplayPreset>();
+            foreach (var p in settings.DisplayPresets)
+            {
+                if (p == null) { fixes.Add("表示プリセットの null の項目を除外"); continue; }
+                if (string.IsNullOrWhiteSpace(p.Name)) { fixes.Add("名前の無い表示プリセットを除外"); continue; }
+                if (!seen.Add(p.Name)) { fixes.Add($"同じ名前の表示プリセット「{p.Name}」の 2 つ目以降を除外"); continue; }
+                if (p.Toggles == null) { p.Toggles = new(); fixes.Add($"表示プリセット「{p.Name}」の表示の項目が null"); }
+                kept.Add(p);
+            }
+            if (kept.Count != settings.DisplayPresets.Count) settings.DisplayPresets = kept;
+            return fixes;
         }
 
         public void Save()
