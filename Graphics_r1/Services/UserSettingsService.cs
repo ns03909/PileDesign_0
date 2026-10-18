@@ -59,6 +59,7 @@ namespace PileDesign.Services
     /// 起動時に一度読み込み、値が変わるたびに保存する。
     /// 読み書きの失敗はアプリの動作を止める理由にならないので、
     /// ログに残して既定値で続行する（MruService と同じ方針）。
+    /// 保存の失敗は呼び出し元へ返す (<see cref="Save"/>)。画面は「次回の起動には残らない」と知らせる。
     /// </summary>
     public class UserSettingsService
     {
@@ -134,7 +135,8 @@ namespace PileDesign.Services
             return fixes;
         }
 
-        public void Save()
+        /// <summary>保存する。書き込めなければ false (理由はログに残す。画面の状態はそのまま使える)。</summary>
+        public bool Save()
         {
             try
             {
@@ -143,11 +145,21 @@ namespace PileDesign.Services
                 // 次の起動で読めずに設定が既定値へ戻った。中身は従来と同じ (BOM なし UTF-8)。
                 byte[] json = JsonSerializer.SerializeToUtf8Bytes(Settings, new JsonSerializerOptions { WriteIndented = true });
                 FileOperationService.WriteAtomically(_filePath, stream => stream.Write(json));
+                return true;
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "[UserSettingsService] 設定の保存に失敗しました: {Path}", _filePath);
+                return false;
             }
         }
+
+        /// <summary>
+        /// 保存に失敗したときの知らせ。<paramref name="change"/> は「表示プリセット「A」を保存しました」のような、したことの文。
+        /// <paramref name="nextLaunch"/> は次回の起動でどうなるか。
+        /// </summary>
+        internal static string DescribeSaveFailed(string change, string nextLaunch = "次回の起動には残りません") =>
+            $"{change}が、設定ファイルに書き込めませんでした (理由はログに記録しています)。\n\n"
+            + $"このまま使えますが、{nextLaunch}。";
     }
 }

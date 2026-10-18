@@ -308,7 +308,8 @@ namespace PileDesign.ViewModels
             };
             int at = presets.FindIndex(p => p.Name == name);
             if (at >= 0) presets[at] = preset; else presets.Add(preset);
-            _userSettingsService.Save();
+            if (!_userSettingsService.Save())
+                ReportUserSettingsSaveFailed($"表示プリセット「{name}」を保存しました");
             RefreshDisplayPresetNames();
             _selectedDisplayPreset = name;
             OnPropertyChanged(nameof(SelectedDisplayPreset));
@@ -321,7 +322,8 @@ namespace PileDesign.ViewModels
         {
             if (IsBuiltInDisplayPresetName(name)) return false;
             if (_userSettingsService.Settings.DisplayPresets.RemoveAll(p => p.Name == name) == 0) return false;
-            _userSettingsService.Save();
+            if (!_userSettingsService.Save())
+                ReportUserSettingsSaveFailed($"表示プリセット「{name}」を削除しました", "次回の起動では元に戻ります");
             if (_selectedDisplayPreset == name)
             {
                 _selectedDisplayPreset = null;
@@ -331,6 +333,20 @@ namespace PileDesign.ViewModels
             DeleteSelectedDisplayPresetCommand.NotifyCanExecuteChanged();
             return true;
         }
+
+        /// <summary>
+        /// 利用者の設定を書き込めなかったことを知らせる (2026-10-18 のレビュー)。以前はログに残すだけで、画面では
+        /// 保存・削除できたように見え、次の起動で保存したプリセットが消えたり、削除したものが戻ったりした。
+        /// 画面の状態は変えたままにする (このまま使える)。
+        /// </summary>
+        internal void ReportUserSettingsSaveFailed(string change, string nextLaunch = "次回の起動には残りません")
+        {
+            UserSettingsSaveFailures++;
+            MessageService.ShowWarning(UserSettingsService.DescribeSaveFailed(change, nextLaunch), "設定の保存");
+        }
+
+        /// <summary>設定を書き込めなかった回数 (テスト用)。</summary>
+        internal int UserSettingsSaveFailures { get; private set; }
 
         /// <summary>今の表示を保存する。名前は画面側 (<see cref="AskDisplayPresetName"/>) で聞く。</summary>
         [RelayCommand]

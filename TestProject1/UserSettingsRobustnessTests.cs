@@ -12,6 +12,8 @@ namespace TestProject1
     /// <list type="bullet">
     /// <item>JSON として正しくても中身が使えない設定を、読込で直す。以前は <c>"DisplayPresets": null</c> を受け取り、
     /// 画面の準備 (MainWindowViewModel のコンストラクター) が一覧を列挙して例外になった。ファイルは残るので、起動するたびに落ちた。</item>
+    /// <item>保存に失敗したら呼び出し元へ返し、画面は「次回の起動には残らない」と知らせる。以前はログに残すだけで、
+    /// 保存したプリセットが次の起動で消えたり、削除したものが戻ったりした。</item>
     /// </list>
     /// </summary>
     [TestClass]
@@ -79,6 +81,35 @@ namespace TestProject1
 
             var clean = new UserSettings();
             Assert.AreEqual(0, UserSettingsService.Normalize(clean).Count, "直すことが無いのに直したと言っています");
+        }
+
+        /// <summary>書き込めない保存先 (無いフォルダ) で、保存は false を返し、画面は知らせる。画面の状態は変えたまま。</summary>
+        [TestMethod]
+        public void AFailedSave_IsReported_AndTheChangeStaysForThisSession()
+        {
+            string file = Path.Combine(Path.GetTempPath(), $"pd_missing_{Guid.NewGuid():N}", "user_settings.json");
+            var service = new UserSettingsService(file);
+            Assert.IsFalse(service.Save(), "書き込めないのに保存できたと返しています");
+
+            var vm = new MainWindowViewModel();
+            vm.UseUserSettingsForTests(service);
+            Assert.IsTrue(vm.SaveDisplayPreset("保存できない"));
+            Assert.AreEqual(1, vm.UserSettingsSaveFailures, "プリセットを書き込めなかったことを知らせていません");
+            CollectionAssert.Contains(vm.DisplayPresetNames, "保存できない", "このセッションでは使えるはずです");
+
+            Assert.IsTrue(vm.DeleteDisplayPreset("保存できない"));
+            Assert.AreEqual(2, vm.UserSettingsSaveFailures, "削除を書き込めなかったことを知らせていません");
+
+            vm.IsSaveAnalysisResultsAutoSave = !vm.IsSaveAnalysisResultsAutoSave;
+            vm.IsSaveAnalysisResultsManual = !vm.IsSaveAnalysisResultsManual;
+            Assert.AreEqual(4, vm.UserSettingsSaveFailures, "保存オプションを書き込めなかったことを知らせていません");
+
+            string saved = UserSettingsService.DescribeSaveFailed("表示プリセット「X」を保存しました");
+            StringAssert.Contains(saved, "次回の起動には残りません");
+            StringAssert.Contains(saved, "このまま使えます");
+            StringAssert.Contains(UserSettingsService.DescribeSaveFailed("表示プリセット「X」を削除しました", "次回の起動では元に戻ります"),
+                "次回の起動では元に戻ります");
+            Assert.IsFalse(Directory.Exists(Path.GetDirectoryName(file)), "テストが保存先のフォルダを作っています");
         }
     }
 }

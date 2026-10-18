@@ -37,7 +37,7 @@ namespace TestProject1
             }
 
             string src = TestSource.Read("Graphics_r1", "Services", "UserSettingsService.cs");
-            StringAssert.Contains(TestSource.MethodBody(src, "public void Save()"), "WriteAtomically(",
+            StringAssert.Contains(TestSource.MethodBody(src, "public bool Save()"), "WriteAtomically(",
                 "設定を一時ファイル経由で保存していません");
         }
 

@@ -381,7 +381,8 @@ namespace PileDesign.ViewModels
             {
                 if (_userSettingsService.Settings.IsSaveAnalysisResultsManual == value) return;
                 _userSettingsService.Settings.IsSaveAnalysisResultsManual = value;
-                _userSettingsService.Save();
+                if (!_userSettingsService.Save())
+                    ReportUserSettingsSaveFailed("「手動保存に解析結果も含める」を変更しました");
                 OnPropertyChanged();
             }
         }
@@ -394,7 +395,8 @@ namespace PileDesign.ViewModels
             {
                 if (_userSettingsService.Settings.IsSaveAnalysisResultsAutoSave == value) return;
                 _userSettingsService.Settings.IsSaveAnalysisResultsAutoSave = value;
-                _userSettingsService.Save();
+                if (!_userSettingsService.Save())
+                    ReportUserSettingsSaveFailed("「自動保存に解析結果も含める」を変更しました");
                 OnPropertyChanged();
             }
         }
