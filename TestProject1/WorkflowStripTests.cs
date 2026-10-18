@@ -269,8 +269,39 @@ namespace TestProject1
             var raised = new List<string?>();
             ((INotifyPropertyChanged)vm).PropertyChanged += (_, e) => raised.Add(e.PropertyName);
             vm.IsVerticalBeamAnalysisDone = true;
-            Assert.IsTrue(vm.RequiredAnalyses[1].Done, "単杭沈下 (基礎梁考慮) の結果で単杭沈下を済みにしていません");
             CollectionAssert.Contains(raised, nameof(MainWindowViewModel.WorkflowSteps), "沈下の解析が済んでも帯を描き直していません");
+            // 沈下量の検定が使うのは単杭沈下 (通常) の結果だけ。基礎梁考慮の結果だけでは単杭沈下を済みにしない (2026-10-18)
+            Assert.IsFalse(vm.RequiredAnalyses[1].Done, "基礎梁考慮の結果だけで、検定が使う単杭沈下を済みにしています");
+            Assert.IsTrue(vm.RequiredAnalyses.Any(a => a is { Name: "単杭沈下（基礎梁考慮）", Done: true }),
+                "基礎梁考慮の結果があるのに、別に並べていません");
+        }
+
+        /// <summary>
+        /// 済み・古さは検定が実際に使う結果で決める (2026-10-18 のレビュー)。通常の単杭沈下を解き直したあと、残した基礎梁考慮の
+        /// 結果だけが古いときは、基礎梁考慮だけを「やり直し」にし、単杭沈下は済みのまま。基礎梁考慮の結果が無ければ並べない。
+        /// 群杭沈下は、基礎梁なし・ありの両方を検定に使うので、どちらかが古ければやり直しのまま。
+        /// </summary>
+        [TestMethod]
+        public void SettlementStates_FollowTheResultsTheEvaluationUses()
+        {
+            var vm = new MainWindowViewModel();
+            vm.CurrentInputModel!.FundamentalInput.SettlementDesignIncludesGroup = false;
+            vm.IsVerticalAnalysisDone = true;
+            Assert.IsFalse(vm.RequiredAnalyses.Any(a => a.Name.Contains("基礎梁考慮")), "基礎梁考慮の結果が無いのに「未」として並べています");
+
+            vm.IsVerticalBeamAnalysisDone = true;
+            vm.RestoreSettlementStale(SettlementAnalyses.VerticalBeam);
+            var single = vm.RequiredAnalyses.Single(a => a.Name == "単杭沈下");
+            var beam = vm.RequiredAnalyses.Single(a => a.Name == "単杭沈下（基礎梁考慮）");
+            Assert.IsFalse(single.Stale, "検定が使わない基礎梁考慮の古い結果で、単杭沈下をやり直しにしています");
+            Assert.IsTrue(beam.Stale, "古い基礎梁考慮の結果を、やり直しとして示していません");
+            StringAssert.Contains(vm.WorkflowSteps[2].StateText, "単杭沈下 済み・単杭沈下（基礎梁考慮） やり直し");
+
+            // 群杭沈下: 基礎梁なしの結果が古ければ (ありが新しくても) やり直し
+            vm.CurrentInputModel.FundamentalInput.SettlementDesignIncludesGroup = true;
+            vm.IsGroupPileSettlementAnalysisDone = true;
+            vm.RestoreSettlementStale(SettlementAnalyses.Group);
+            Assert.IsTrue(vm.RequiredAnalyses.Single(a => a.Name == "群杭沈下").Stale);
         }
     }
 }

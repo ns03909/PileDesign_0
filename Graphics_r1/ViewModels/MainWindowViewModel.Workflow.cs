@@ -89,8 +89,17 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 検討に要る解析とその状態 (工程の帯の「解析」)。水平解析と単杭沈下解析は常に、群杭沈下解析は
         /// 基本設定の「沈下検討の対象」が「単杭＋群杭沈下」のときだけ。
-        /// 単杭沈下は基礎梁考慮の解析でも済み、群杭沈下は基礎梁なし・ありのどちらかで済み。
         /// 以前の帯は水平解析だけを見ており、沈下の解析が未実施・入力の変更前でも「解析 済み」と出ていた。
+        ///
+        /// <para>済み・古さは、検定が実際に使う結果で決める (2026-10-18 のレビュー)。
+        /// <list type="bullet">
+        /// <item>単杭沈下: 沈下量の検定が使うのは単杭沈下解析 (通常) の結果だけ。基礎梁考慮の結果は画面の表示と計算書の章で使う。
+        ///   以前は「どちらかで済み・どちらかが古ければやり直し」で、通常を解き直しても、残した基礎梁考慮の古い結果で
+        ///   「単杭沈下 やり直し」と出ていた (逆に、基礎梁考慮だけで通常が未実施でも済みと出ていた)。
+        ///   基礎梁考慮は、結果があるときだけ別に並べる (検定には要らないので「未」は出さない)。</item>
+        /// <item>群杭沈下: 基礎梁なし・ありの結果が両方あれば、沈下量の検定は両方を使う (結果ごとに 1 項目)。
+        ///   なのでどちらかで済み、どちらかが古ければやり直し (古い結果を検定に使っているため) のままにする。</item>
+        /// </list></para>
         /// </summary>
         internal IReadOnlyList<RequiredAnalysisState> RequiredAnalyses
         {
@@ -99,9 +108,10 @@ namespace PileDesign.ViewModels
                 var list = new List<RequiredAnalysisState>
                 {
                     new("水平", IsHorizontalAnalysisDone, IsHorizontalResultStale),
-                    new("単杭沈下", IsVerticalAnalysisDone || IsVerticalBeamAnalysisDone,
-                        IsSettlementResultStale(SettlementAnalyses.SinglePile | SettlementAnalyses.VerticalBeam)),
+                    new("単杭沈下", IsVerticalAnalysisDone, IsSettlementResultStale(SettlementAnalyses.SinglePile)),
                 };
+                if (IsVerticalBeamAnalysisDone)
+                    list.Add(new("単杭沈下（基礎梁考慮）", true, IsSettlementResultStale(SettlementAnalyses.VerticalBeam)));
                 if (CurrentInputModel?.FundamentalInput?.SettlementDesignIncludesGroup ?? true)
                     list.Add(new("群杭沈下", IsGroupPileSettlementAnalysisDone || HasGroupSettlementBeamAwareCases,
                         IsSettlementResultStale(SettlementAnalyses.Group | SettlementAnalyses.GroupWithBeam)));
