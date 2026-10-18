@@ -574,10 +574,14 @@ namespace PileDesign.Services
         /// 以前は作成日時で判定していた。一方、復元候補の選択 (<see cref="FindRestoreCandidate"/>) は最終更新日時で決める。
         /// 作られたのは古いがあとで書き直されたファイル (同じ名前で作り直すと、Windows は元の作成日時を引き継ぐことがある) は、
         /// 復元の候補になる新しい内容なのに消えた。どちらも最終更新日時で揃える。
+        ///
+        /// <para>消せないファイル (ロック中・アクセス拒否・読み取り専用) は飛ばして残りを続ける (2026-10-18 のレビュー)。
+        /// 以前はループ全体を 1 つの try で囲んでいたので、1 件で止まり、それ以降の期限切れも残った。並び順はほぼ毎回同じなので、
+        /// そのファイルが消せない限り毎回同じところで止まっていた。読み取り専用の属性は外さない (利用者が残したものかもしれない)。</para>
         /// </summary>
         internal static int CleanupOldAutoSaveFiles(string folder, DateTime now, int retentionDays)
         {
-            int deleted = 0;
+            int deleted = 0, failed = 0;
             try
             {
                 var cutoffUtc = now.ToUniversalTime().AddDays(-retentionDays);
@@ -590,12 +594,23 @@ namespace PileDesign.Services
 
                 foreach (var file in autoSaveFiles)
                 {
-                    if (File.GetLastWriteTimeUtc(file) < cutoffUtc)
+                    try
                     {
-                        File.Delete(file);
-                        deleted++;
+                        // 更新日時を読むのも中に入れる (列挙したあとに別の起動が消すと、ここで例外になる)
+                        if (File.GetLastWriteTimeUtc(file) < cutoffUtc)
+                        {
+                            File.Delete(file);
+                            deleted++;
+                        }
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        failed++;
+                        Log.Warning(ex, "[AutoSave] 古い自動保存ファイルを消せませんでした (次回また試します): {File}", file);
                     }
                 }
+                if (failed > 0)
+                    Log.Warning("[AutoSave] 古い自動保存ファイル {Failed} 件を消せませんでした。ほかの {Deleted} 件は消しました", failed, deleted);
             }
             catch (Exception ex)
             {

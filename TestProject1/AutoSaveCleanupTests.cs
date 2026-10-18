@@ -58,6 +58,34 @@ namespace TestProject1
             Assert.AreEqual(2, deleted);
         }
 
+        /// <summary>
+        /// 消せないファイルがあっても、残りの期限切れは消す (2026-10-18 のレビュー)。以前はループ全体を 1 つの try で
+        /// 囲んでいたので、1 件で止まり、それ以降の期限切れが残った。列挙の順に左右されないよう、前後に期限切れを置く。
+        /// </summary>
+        [TestMethod]
+        public void ALockedFile_DoesNotStopTheRest()
+        {
+            var stale = new[] { "A", "B", "D", "E" }
+                .Select(n => Write($"{n}_autosave_20260910_100000.pdj", created: Now.AddDays(-20), written: Now.AddDays(-10)))
+                .ToArray();
+            string locked = Write("C_autosave_20260910_100000.pdj", created: Now.AddDays(-20), written: Now.AddDays(-10));
+            string readOnly = Write("F_emergency_20260910_100000.pdj", created: Now.AddDays(-20), written: Now.AddDays(-10));
+            File.SetAttributes(readOnly, FileAttributes.ReadOnly);
+            try
+            {
+                int deleted;
+                using (new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.None))
+                    deleted = AutoSaveService.CleanupOldAutoSaveFiles(_dir, Now, retentionDays: 7);
+
+                foreach (var f in stale)
+                    Assert.IsFalse(File.Exists(f), $"消せないファイルがあると、ほかの期限切れ ({Path.GetFileName(f)}) が残ります");
+                Assert.IsTrue(File.Exists(locked), "ロック中のファイルが消えています (テストの前提が崩れている)");
+                Assert.IsTrue(File.Exists(readOnly), "読み取り専用の属性を外して消しています");
+                Assert.AreEqual(stale.Length, deleted, "消した数が合いません");
+            }
+            finally { File.SetAttributes(readOnly, FileAttributes.Normal); }
+        }
+
         /// <summary>コメント行を除く (説明の中の「await」に当たらないように)。</summary>
         private static string CodeOnly(string source)
             => string.Join("\n", source.Split('\n').Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)));
