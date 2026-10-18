@@ -49,6 +49,25 @@ namespace TestProject1
             Assert.IsTrue(items.Any(i => i.Text.Contains("「支持力・沈下量」の検定を組み立てられませんでした")));
         }
 
+        /// <summary>
+        /// 検定のまとめそのものが取れなかった (例外) ときは、それを確認の項目にする (2026-10-18 のレビュー)。
+        /// 以前はログに残すだけで、ほかに項目が無ければ確認の画面も出さず、「確かめることが無い」と同じに作っていた。
+        /// </summary>
+        [TestMethod]
+        public void AnUnavailableEvaluation_IsAnItem_NotSilence()
+        {
+            var items = MainWindowViewModel.BuildReportPreflight(AllDone, null, false, counts: null, evaluationUnavailable: true);
+            Assert.AreEqual(1, items.Count, "検定の状態が分からないのに確認を出しません");
+            StringAssert.Contains(items[0].Text, "検定の状態を確認できませんでした");
+            Assert.AreEqual(ReportPreflightSeverity.Warning, items[0].Severity);
+            Assert.AreEqual(ReportPreflightTarget.Dashboard, items[0].Target);
+
+            string code = TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.ReportPreflight.cs");
+            string confirm = TestSource.MethodBody(code, "internal bool ConfirmReportPreflight(");
+            StringAssert.Contains(confirm, "unavailable = true;", "例外のときに印を立てていません");
+            StringAssert.Contains(confirm, "counts, failures, unavailable);", "印を確認の項目に渡していません");
+        }
+
         /// <summary>確認の画面で選んだことに従う。画面の無い実行 (テスト・起動の確認) では出さずに作る。</summary>
         [TestMethod]
         public void TheChoice_DecidesWhetherToCreate_AndUnattendedRunsDoNotAsk()

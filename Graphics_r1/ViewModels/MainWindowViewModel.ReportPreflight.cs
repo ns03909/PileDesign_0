@@ -91,7 +91,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         internal static IReadOnlyList<ReportPreflightItem> BuildReportPreflight(
             IReadOnlyList<RequiredAnalysisState> analyses, string? staleNotice, bool inputEditedSinceAnalysis,
-            ReportEvaluationCounts? counts, IReadOnlyList<string>? evaluationFailures = null)
+            ReportEvaluationCounts? counts, IReadOnlyList<string>? evaluationFailures = null, bool evaluationUnavailable = false)
         {
             var items = new List<ReportPreflightItem>();
             foreach (var a in analyses.Where(a => !a.Done))
@@ -106,6 +106,12 @@ namespace PileDesign.ViewModels
             if (inputEditedSinceAnalysis)
                 items.Add(new("計算書は、解析結果と整合させるため、解析を実行した時点の入力で作成します (編集後の入力では作りません)。",
                     ReportPreflightSeverity.Info));
+
+            // 検定のまとめそのものが取れなかった (例外)。件数が無いことを「確かめることが無い」と同じに扱わない (2026-10-18)。
+            // 以前はログに残すだけで、ほかに項目が無ければ確認の画面も出さずに作っていた
+            if (evaluationUnavailable)
+                items.Add(new("検定の状態を確認できませんでした (理由はログに記録しています)。NG や判定できない項目があるかは分かりません。",
+                    ReportPreflightSeverity.Warning, ReportPreflightTarget.Dashboard));
 
             foreach (var part in evaluationFailures ?? [])
                 items.Add(new($"「{part}」の検定を組み立てられませんでした。計算書のその部分の検定は判定できません。",
@@ -137,6 +143,7 @@ namespace PileDesign.ViewModels
         {
             ReportEvaluationCounts? counts = null;
             IReadOnlyList<string>? failures = null;
+            bool unavailable = false;
             try
             {
                 var summary = GetEvaluationSummary(force: true);
@@ -145,11 +152,12 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                // 件数が取れなくても確認は出す (解析の状態だけで)。計算書の作成は止めない
+                // 件数が取れなかったことを確認の項目にする (作るかどうかは利用者が決める)
                 Serilog.Log.Warning(ex, "[計算書] 作る前の確認で検定の件数を取れませんでした");
+                unavailable = true;
             }
 
-            var items = BuildReportPreflight(RequiredAnalyses, ResultStaleNotice, InputChangedSinceAnalysis, counts, failures);
+            var items = BuildReportPreflight(RequiredAnalyses, ResultStaleNotice, InputChangedSinceAnalysis, counts, failures, unavailable);
             if (items.Count == 0) return true;
             if (MessageService.IsUnattended || AskReportPreflight == null)
             {
