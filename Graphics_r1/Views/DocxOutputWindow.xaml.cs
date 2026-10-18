@@ -21,7 +21,8 @@ namespace PileDesign.Views
             if (DataContext is PileDesign.ViewModels.MainWindowViewModel vm)
             {
                 if (!vm.DocxOutput.ValidateDocxSelectionOrConfirm()) return;
-                vm.OutputWordFile();
+                // キャンセル・失敗のときは開いたまま (選び直して、そのままやり直せる)。以前は結末によらず閉じていた
+                if (!MainWindowViewModel.ShouldCloseReportOptions(vm.OutputWordFile())) return;
             }
             Close();
         }

@@ -63,7 +63,7 @@ namespace TestProject1
             Assert.AreEqual(ReportPreflightTarget.Dashboard, items[0].Target);
 
             string code = TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.ReportPreflight.cs");
-            string confirm = TestSource.MethodBody(code, "internal bool ConfirmReportPreflight(");
+            string confirm = TestSource.MethodBody(code, "internal ReportPreflightChoice ConfirmReportPreflight(");
             StringAssert.Contains(confirm, "unavailable = true;", "例外のときに印を立てていません");
             StringAssert.Contains(confirm, "counts, failures, unavailable);", "印を確認の項目に渡していません");
         }
@@ -81,28 +81,71 @@ namespace TestProject1
             {
                 MessageService.IsUnattended = false;
                 vm.AskReportPreflight = items => { asked = items; return (ReportPreflightChoice.Cancel, ReportPreflightTarget.None); };
-                Assert.IsFalse(vm.ConfirmReportPreflight(), "キャンセルしたのに作ります");
+                Assert.AreEqual(ReportPreflightChoice.Cancel, vm.ConfirmReportPreflight(), "キャンセルしたのに作ります");
                 Assert.IsNotNull(asked, "確かめることがあるのに確認を出していません");
                 Assert.IsTrue(asked!.Any(i => i.Text.StartsWith("単杭沈下解析が未実施")));
 
                 vm.AskReportPreflight = _ => (ReportPreflightChoice.Proceed, ReportPreflightTarget.None);
-                Assert.IsTrue(vm.ConfirmReportPreflight(), "「このまま作成」なのに作りません");
+                Assert.AreEqual(ReportPreflightChoice.Proceed, vm.ConfirmReportPreflight(), "「このまま作成」なのに作りません");
 
                 vm.AskReportPreflight = _ => (ReportPreflightChoice.Navigate, ReportPreflightTarget.Dashboard);
-                Assert.IsFalse(vm.ConfirmReportPreflight(), "確認先へ移ると選んだのに作ります");
+                Assert.AreEqual(ReportPreflightChoice.Navigate, vm.ConfirmReportPreflight(), "確認先へ移ると選んだのに作ります");
 
                 MessageService.IsUnattended = true;
                 asked = null;
                 vm.AskReportPreflight = items => { asked = items; return (ReportPreflightChoice.Cancel, ReportPreflightTarget.None); };
-                Assert.IsTrue(vm.ConfirmReportPreflight(), "画面の無い実行で止まりました");
+                Assert.AreEqual(ReportPreflightChoice.Proceed, vm.ConfirmReportPreflight(), "画面の無い実行で止まりました");
                 Assert.IsNull(asked, "画面の無い実行で確認を出しています");
             }
             finally { MessageService.IsUnattended = unattended; }
 
             StringAssert.Contains(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs"),
-                "if (!ConfirmReportPreflight()) return;", "計算書を作る前に確かめていません");
+                "var preflight = ConfirmReportPreflight();", "計算書を作る前に確かめていません");
             StringAssert.Contains(TestSource.Read("Graphics_r1", "Views", "MainWindow.xaml.cs"),
                 "viewModel.AskReportPreflight = ", "確認の画面がメイン画面につながっていません");
+        }
+
+        /// <summary>
+        /// 出力設定の画面は、出力の結末を見て閉じる (2026-10-18 のレビュー)。以前は結末によらず閉じたので、
+        /// 保存先の選択をキャンセルしても、保存に失敗しても、設定をし直す必要があった。
+        /// </summary>
+        [TestMethod]
+        public void TheOptionsWindow_StaysOpen_OnCancelAndFailure()
+        {
+            Assert.IsTrue(MainWindowViewModel.ShouldCloseReportOptions(ReportOutputResult.Completed));
+            Assert.IsFalse(MainWindowViewModel.ShouldCloseReportOptions(ReportOutputResult.Cancelled), "キャンセルで設定画面を閉じています");
+            Assert.IsFalse(MainWindowViewModel.ShouldCloseReportOptions(ReportOutputResult.Failed), "失敗で設定画面を閉じています (やり直せない)");
+            Assert.IsTrue(MainWindowViewModel.ShouldCloseReportOptions(ReportOutputResult.Navigated), "モーダルのままでは移った先を操作できません");
+            Assert.IsTrue(MainWindowViewModel.ShouldCloseReportOptions(ReportOutputResult.Refused), "再解析が要るのに設定画面を残しています");
+
+            string window = TestSource.Read("Graphics_r1", "Views", "DocxOutputWindow.xaml.cs");
+            StringAssert.Contains(window, "ShouldCloseReportOptions(vm.OutputWordFile())", "設定画面が出力の結末を見ていません");
+            string output = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs"),
+                "public ReportOutputResult OutputWordFile()");
+            StringAssert.Contains(output, "if (preflight == ReportPreflightChoice.Navigate) return ReportOutputResult.Navigated;");
+            StringAssert.Contains(output, "return ReportOutputResult.Failed;");
+        }
+
+        /// <summary>
+        /// 作成した計算書を開く処理は、作成の失敗とは別に扱う (2026-10-18 のレビュー)。以前は同じ try の中にあり、
+        /// 関連付けが無いなどで開けないと、作成済みなのに「保存失敗」と出た。完了後のステータスバーの案内も
+        /// finally で消していた。
+        /// </summary>
+        [TestMethod]
+        public void OpeningTheReport_IsNotPartOfCreatingIt()
+        {
+            string output = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs"),
+                "public ReportOutputResult OutputWordFile()");
+            int saveFailed = output.IndexOf("MessageService.ShowSaveFailed(", System.StringComparison.Ordinal);
+            int open = output.IndexOf("System.Diagnostics.Process.Start(", System.StringComparison.Ordinal);
+            Assert.IsTrue(saveFailed >= 0 && open >= 0, "作成の失敗の知らせか、開く処理が見つかりません");
+            Assert.IsTrue(open > saveFailed, "開く処理が作成の try の中にあります (開けないと「保存失敗」と出る)");
+            StringAssert.Contains(output, "DescribeReportOpenFailed(saveFileDialog.FileName)", "開けなかったことを保存先とともに知らせていません");
+            StringAssert.Contains(output, "if (!created) StatusMessage = \"準備完了\";", "完了後のステータスバーの案内を消しています");
+
+            string message = MainWindowViewModel.DescribeReportOpenFailed(@"C:\work\計算書.docx");
+            StringAssert.Contains(message, "作成済み");
+            StringAssert.Contains(message, @"C:\work\計算書.docx", "保存先を示していません");
         }
 
         /// <summary>確認の画面の XAML (StaticResource のキー誤りはビルドを通る)。</summary>

@@ -57,6 +57,24 @@ namespace PileDesign.ViewModels
         Navigate,
     }
 
+    /// <summary>
+    /// 計算書の出力の結末 (2026-10-18 のレビュー)。出力設定の画面は、これを見て閉じるかどうかを決める。
+    /// 以前は結末によらず閉じたので、保存先の選択をキャンセルしても、保存に失敗しても、設定をし直す必要があった。
+    /// </summary>
+    public enum ReportOutputResult
+    {
+        /// <summary>作成した (自動で開けなかったときも含む)。</summary>
+        Completed,
+        /// <summary>作らなかった (保存先の選択・作る前の確認でキャンセル、作成中に中止)。</summary>
+        Cancelled,
+        /// <summary>作成に失敗した。</summary>
+        Failed,
+        /// <summary>作る前の確認から、確認先へ移る。</summary>
+        Navigated,
+        /// <summary>出せない状態だった (解析結果と編集後の入力が混ざっている。再解析が要る)。</summary>
+        Refused,
+    }
+
     /// <summary>杭ごとの検定の件数 (確認に使う分)。</summary>
     public readonly record struct ReportEvaluationCounts(int Evaluated, int Ng, int Unconverged, int OutOfScope, int Unavailable)
     {
@@ -136,10 +154,18 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 計算書を作る前に確かめる。作ってよければ true。確認先へ移ると選んだときは、出力の画面が閉じてから移る。
+        /// 出力設定の画面を閉じるか。キャンセルと失敗は開いたまま (選び直して、そのままやり直せる)。
+        /// 確認先へ移るときは閉じる (モーダルなので、閉じないと移った先を操作できない)。
+        /// 出せない状態のときも閉じる (再解析が要り、ここでやり直す意味が無い)。
+        /// </summary>
+        internal static bool ShouldCloseReportOptions(ReportOutputResult result) =>
+            result is ReportOutputResult.Completed or ReportOutputResult.Navigated or ReportOutputResult.Refused;
+
+        /// <summary>
+        /// 計算書を作る前に確かめる。作ってよければ Proceed。確認先へ移ると選んだとき (Navigate) は、出力の画面が閉じてから移る。
         /// 画面の無い実行 (テスト・起動の確認) では確かめずに作る。
         /// </summary>
-        internal bool ConfirmReportPreflight()
+        internal ReportPreflightChoice ConfirmReportPreflight()
         {
             ReportEvaluationCounts? counts = null;
             IReadOnlyList<string>? failures = null;
@@ -158,15 +184,15 @@ namespace PileDesign.ViewModels
             }
 
             var items = BuildReportPreflight(RequiredAnalyses, ResultStaleNotice, InputChangedSinceAnalysis, counts, failures, unavailable);
-            if (items.Count == 0) return true;
+            if (items.Count == 0) return ReportPreflightChoice.Proceed;
             if (MessageService.IsUnattended || AskReportPreflight == null)
             {
                 Serilog.Log.Information("[計算書] 作る前の確認 ({Count} 件) を出さずに作ります: {Items}", items.Count, string.Join(" / ", items.Select(i => i.Text)));
-                return true;
+                return ReportPreflightChoice.Proceed;
             }
 
             var (choice, target) = AskReportPreflight(items);
-            if (choice == ReportPreflightChoice.Proceed) return true;
+            if (choice == ReportPreflightChoice.Proceed) return choice;
             if (choice == ReportPreflightChoice.Navigate)
             {
                 // 出力の画面 (モーダル) が閉じてから移る (開いたままだと、移った先がその後ろに隠れる)
@@ -176,7 +202,7 @@ namespace PileDesign.ViewModels
                     else if (target == ReportPreflightTarget.HorizontalAnalysis) OpenLateralLoadAnalysisWindowCommand.Execute(null);
                 }));
             }
-            return false;
+            return choice;
         }
     }
 }

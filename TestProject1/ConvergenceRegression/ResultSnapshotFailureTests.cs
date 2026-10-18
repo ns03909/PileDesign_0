@@ -84,7 +84,7 @@ namespace TestProject1.ConvergenceRegression
         public void TheReportIsNotProducedFromMixedResults()
         {
             string output = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs"),
-                "public void OutputWordFile()");
+                "public ReportOutputResult OutputWordFile()");
             int gate = output.IndexOf("if (ResultsMixedWithEditedInput)", StringComparison.Ordinal);
             int dialog = output.IndexOf("saveFileDialog.ShowDialog()", StringComparison.Ordinal);
             Assert.IsTrue(gate >= 0, "計算書の出力が、結果と入力の混ざった状態を止めていません");

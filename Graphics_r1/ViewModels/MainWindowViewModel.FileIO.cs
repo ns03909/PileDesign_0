@@ -1100,7 +1100,8 @@ namespace PileDesign.ViewModels
         // Word ファイルに保存するメソッド
         // 出力前チェック（未選択の確認）は OK ボタン（DocxOutputWindow.OkButton_Click）で行う。
         // コマンドとしては使っていない (計算書出力ウィンドウの code-behind から直接呼ぶ)。2026-09-19 に属性を外した。
-        public void OutputWordFile()
+        // 結末を返す。出力設定の画面はそれを見て閉じるかどうかを決める (ShouldCloseReportOptions)。
+        public ReportOutputResult OutputWordFile()
         {
             // ファイル名: (yyMMdd)_(HHmm)_構造計算書_(本体ファイル名).docx
             // 本体ファイル名がない (未保存) 場合は「Untitled」をフォールバック。
@@ -1123,17 +1124,20 @@ namespace PileDesign.ViewModels
                     "解析結果の控え（解析したときの入力の写し）が無いまま入力が編集されたため、" +
                     "解析結果と整合する計算書を作れません。\n\n再解析してから出力してください。",
                     "計算書", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                return ReportOutputResult.Refused;
             }
 
             // 作る前の確認 (MainWindowViewModel.ReportPreflight.cs): 未実施の解析・入力変更前の結果・NG・判定できない項目を
             // まとめて見せ、確認先へ移れるようにする。計算書は「解析を実行した時点の入力」で作る (結果と整合するのはそれだけ)
             // ことも、入力を編集していればここで断る。確かめることが無ければ画面は出さない
-            if (!ConfirmReportPreflight()) return;
+            var preflight = ConfirmReportPreflight();
+            if (preflight == ReportPreflightChoice.Navigate) return ReportOutputResult.Navigated;
+            if (preflight != ReportPreflightChoice.Proceed) return ReportOutputResult.Cancelled;
 
             Serilog.Log.Information("[Docx] 保存ダイアログ表示");
             if (saveFileDialog.ShowDialog() == true)
             {
+                bool created = false;
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
@@ -1165,9 +1169,10 @@ namespace PileDesign.ViewModels
                         sw.Stop();
                         Serilog.Log.Information("[Docx] 中止 ({Elapsed:N1}秒経過時点)", sw.Elapsed.TotalSeconds);
                         ShowToast("計算書の作成を中止しました。ファイルは作成・変更していません。");
-                        return;
+                        return ReportOutputResult.Cancelled;
                     }
 
+                    created = true;
                     sw.Stop();
                     Serilog.Log.Information("[Docx] 完了: {Elapsed:N1} 秒, ファイル: {File}",
                         sw.Elapsed.TotalSeconds, System.IO.Path.GetFileName(saveFileDialog.FileName));
@@ -1189,7 +1194,24 @@ namespace PileDesign.ViewModels
                     StatusMessage = $"計算書を作成しました: {saveFileDialog.FileName}"
                                   + "　／　Word で開き、目次の上をクリック → F9 でフィールドを更新してください";
 
-                    // 作成したdocxファイルを自動的に開く
+                }
+                catch (Exception ex)
+                {
+                    sw.Stop();
+                    Serilog.Log.Warning(ex, "[Docx] 失敗 ({Elapsed:N1}秒経過時点)", sw.Elapsed.TotalSeconds);
+                    MessageService.ShowSaveFailed("計算書 (Word)", ex);
+                    return ReportOutputResult.Failed;
+                }
+                finally
+                {
+                    // 作成できたときは、上で出した保存先と F9 の案内を残す (以前はここで無条件に消していた)
+                    if (!created) StatusMessage = "準備完了";
+                }
+
+                // 作成したdocxファイルを自動的に開く。作成とは別に扱う (2026-10-18 のレビュー)。
+                // 以前は作成と同じ try の中にあり、関連付けが無いなどで開けないと、作成済みなのに「保存失敗」と出た
+                try
+                {
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                     {
                         FileName = saveFileDialog.FileName,
@@ -1198,16 +1220,21 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    sw.Stop();
-                    Serilog.Log.Warning(ex, "[Docx] 失敗 ({Elapsed:N1}秒経過時点)", sw.Elapsed.TotalSeconds);
-                    MessageService.ShowSaveFailed("計算書 (Word)", ex);
+                    Serilog.Log.Warning(ex, "[Docx] 作成した計算書を自動で開けませんでした: {File}", saveFileDialog.FileName);
+                    MessageService.Show(DescribeReportOpenFailed(saveFileDialog.FileName),
+                        "計算書の作成 (自動で開けませんでした)", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
-                finally
-                {
-                    StatusMessage = "準備完了";
-                }
+                return ReportOutputResult.Completed;
             }
+            return ReportOutputResult.Cancelled;
         }
+
+        /// <summary>作成した計算書を自動で開けなかったときの知らせ。作成はできているので、保存先を示す。</summary>
+        internal static string DescribeReportOpenFailed(string path) =>
+            "計算書は作成済みですが、自動で開けませんでした。\n\n"
+            + $"保存先: {path}\n\n"
+            + "エクスプローラーでこのファイルを開いてください (.docx を開くアプリが設定されていない可能性があります)。";
+
 
         // Rhino 3D (.3dm) ファイルにエクスポートするメソッド
         [RelayCommand]
