@@ -182,6 +182,65 @@ namespace TestProject1
             StringAssert.Contains(main, "viewModel.ApplyPanelLayout = ApplyPanelLayout;", "欄の並びを当てる道がメイン画面につながっていません");
         }
 
+        /// <summary>
+        /// 欄を手で開閉して、選んでいるプリセットの並びと食い違ったら、選択を外す (2026-10-18 のレビュー)。以前は
+        /// モデル図の表示項目しか見ておらず、「結果の確認」でダッシュボードを閉じても「結果の確認」のままで、
+        /// 選び直しても (値が同じなので) 当て直されず、ダッシュボードを戻せなかった。
+        /// プリセットが指定していない欄の開閉では外さない。当てている途中・当てたあとに遅れて来た通知でも外さない。
+        /// </summary>
+        [TestMethod]
+        public void ClosingAPanelByHand_ClearsThePreset_SoItCanBeChosenAgain()
+        {
+            var expected = new PanelLayout(true, null, null);
+            Assert.IsTrue(MainWindowViewModel.PanelLayoutMatches(expected, new PanelLayout(true, false, false)), "指定していない欄まで比べています");
+            Assert.IsFalse(MainWindowViewModel.PanelLayoutMatches(expected, new PanelLayout(false, true, true)));
+            Assert.IsFalse(MainWindowViewModel.PanelLayoutMatches(new PanelLayout(false, true, true), new PanelLayout(false, false, true)));
+
+            string file = Path.Combine(Path.GetTempPath(), $"pd_presets_{Guid.NewGuid():N}.json");
+            try
+            {
+                var vm = new MainWindowViewModel();
+                vm.UseUserSettingsForTests(new UserSettingsService(file));
+                // 画面の代わり: 欄の並びを持ち、開閉のたびに (当てている最中も) 知らせる
+                var screen = new PanelLayout(false, true, true);
+                vm.CapturePanelLayout = () => screen;
+                vm.ApplyPanelLayout = layout =>
+                {
+                    if (layout.Dashboard is bool d) { screen = screen with { Dashboard = d }; vm.OnPanelLayoutChanged(); }
+                    if (layout.Properties is bool pr) { screen = screen with { Properties = pr }; vm.OnPanelLayoutChanged(); }
+                    if (layout.Minimap is bool m) { screen = screen with { Minimap = m }; vm.OnPanelLayoutChanged(); }
+                };
+
+                vm.SelectedDisplayPreset = "結果の確認";
+                Assert.AreEqual(true, screen.Dashboard);
+                vm.OnPanelLayoutChanged();   // 当てたあとに遅れて届いた通知
+                Assert.AreEqual("結果の確認", vm.SelectedDisplayPreset, "プリセットを当てた開閉で、選択を外しています");
+
+                screen = screen with { Properties = false }; vm.OnPanelLayoutChanged();
+                Assert.AreEqual("結果の確認", vm.SelectedDisplayPreset, "プリセットが指定していない欄の開閉で、選択を外しています");
+
+                screen = screen with { Dashboard = false }; vm.OnPanelLayoutChanged();   // ダッシュボードを × で閉じた
+                Assert.IsNull(vm.SelectedDisplayPreset, "ダッシュボードを閉じても「結果の確認」のままです");
+                vm.SelectedDisplayPreset = "結果の確認";
+                Assert.AreEqual(true, screen.Dashboard, "選び直しても、ダッシュボードが開き直りません");
+
+                // 「既定」(すべての欄を指定) はプロパティ欄の開閉でも外れる
+                vm.SelectedDisplayPreset = MainWindowViewModel.DefaultDisplayPresetName;
+                Assert.AreEqual(new PanelLayout(false, true, true), screen);
+                Assert.AreEqual(MainWindowViewModel.DefaultDisplayPresetName, vm.SelectedDisplayPreset);
+                screen = screen with { Properties = false }; vm.OnPanelLayoutChanged();
+                Assert.IsNull(vm.SelectedDisplayPreset, "「既定」の並びと違うのに選んだままです");
+            }
+            finally { File.Delete(file); }
+
+            // 画面は 3 つの欄の開閉を知らせる
+            string main = TestSource.Read("Graphics_r1", "Views", "MainWindow.xaml.cs");
+            string show = TestSource.MethodBody(main, "internal void ShowResultDashboard(");
+            Assert.AreEqual(2, show.Split("vm.OnPanelLayoutChanged();").Length - 1, "ダッシュボードの開く・閉じるの両方を知らせていません");
+            string sync = TestSource.MethodBody(TestSource.Read("Graphics_r1", "Views", "MainWindow.CanvasCore.cs"), "internal void InitializePanelToggleSync(");
+            Assert.AreEqual(2, sync.Split("?.OnPanelLayoutChanged();").Length - 1, "プロパティ欄・ミニマップ欄の開閉を知らせていません");
+        }
+
         /// <summary>名前を聞くダイアログの XAML (StaticResource のキー誤りはビルドを通る)。</summary>
         [TestMethod]
         public void TextPromptWindow_XamlParses()

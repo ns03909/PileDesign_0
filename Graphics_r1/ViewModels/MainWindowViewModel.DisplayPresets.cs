@@ -55,8 +55,46 @@ namespace PileDesign.ViewModels
         private void ApplyPanels(PanelLayout layout)
         {
             if (layout.IsEmpty) return;
+            // 当てている途中の欄の開閉で、選んだプリセットを外さない (OnPanelLayoutChanged)
+            bool wasApplying = _isApplyingDisplayPreset;
+            _isApplyingDisplayPreset = true;
             try { ApplyPanelLayout?.Invoke(layout); }
             catch (Exception ex) { Serilog.Log.Warning(ex, "[表示プリセット] 欄の並びを当てられませんでした"); }
+            finally { _isApplyingDisplayPreset = wasApplying; }
+        }
+
+        /// <summary>プリセットの欄の並び。欄を指定していないプリセット・知らない名前は空 (何も触らない)。</summary>
+        internal PanelLayout PanelLayoutOfPreset(string name)
+        {
+            if (BuiltInPanelLayouts.TryGetValue(name, out var builtIn)) return builtIn;
+            var saved = _userSettingsService.Settings.DisplayPresets.FirstOrDefault(p => p.Name == name);
+            return saved == null ? default : new PanelLayout(saved.DashboardOpen, saved.PropertiesVisible, saved.MinimapVisible);
+        }
+
+        /// <summary>今の欄の並びが、プリセットの指定した欄 (null 以外) とすべて合っているか。指定していない欄は見ない。</summary>
+        internal static bool PanelLayoutMatches(PanelLayout preset, PanelLayout actual) =>
+            (preset.Dashboard == null || preset.Dashboard == actual.Dashboard)
+            && (preset.Properties == null || preset.Properties == actual.Properties)
+            && (preset.Minimap == null || preset.Minimap == actual.Minimap);
+
+        /// <summary>
+        /// 欄 (ダッシュボード・プロパティ欄・ミニマップ欄) が開閉した (メイン画面から)。選んでいるプリセットの欄の並びと
+        /// 食い違ったら、選択を外す (2026-10-18 のレビュー)。以前はモデル図の表示項目しか見ておらず、「結果の確認」を選んで
+        /// ダッシュボードを閉じても「結果の確認」のままで、選び直しても (値が同じなので) 当て直されず、ダッシュボードを戻せなかった。
+        ///
+        /// <para>「当てている最中か」だけで手の操作を見分けず、並びを比べる。AvalonDock の IsVisibleChanged は
+        /// Show/Hide のあと、レイアウトの更新で遅れて来ることがあり、印を下ろしたあとに届いても、比べれば合っているので外さない。</para>
+        /// </summary>
+        internal void OnPanelLayoutChanged()
+        {
+            if (_isApplyingDisplayPreset || _selectedDisplayPreset == null || CapturePanelLayout == null) return;
+            var preset = PanelLayoutOfPreset(_selectedDisplayPreset);
+            if (preset.IsEmpty) return;
+            PanelLayout actual;
+            try { actual = CapturePanelLayout(); }
+            catch (Exception ex) { Serilog.Log.Warning(ex, "[表示プリセット] 欄の並びを取れませんでした"); return; }
+            if (PanelLayoutMatches(preset, actual)) return;
+            ClearSelectedDisplayPreset();
         }
 
         /// <summary>プリセットに含めない、ウィンドウの部品の表示 (リボン・ミニマップなど。モデル図の中身ではない)。</summary>
@@ -213,6 +251,12 @@ namespace PileDesign.ViewModels
         {
             if (_isApplyingDisplayPreset || _selectedDisplayPreset == null || propertyName == null) return;
             if (!DisplayToggleProperties.Any(p => p.Name == propertyName)) return;
+            ClearSelectedDisplayPreset();
+        }
+
+        /// <summary>選んでいたプリセットの表示を外す (当て直しはしない)。外したあとは、同じプリセットを選ぶと当て直る。</summary>
+        private void ClearSelectedDisplayPreset()
+        {
             _selectedDisplayPreset = null;
             OnPropertyChanged(nameof(SelectedDisplayPreset));
             DeleteSelectedDisplayPresetCommand.NotifyCanExecuteChanged();

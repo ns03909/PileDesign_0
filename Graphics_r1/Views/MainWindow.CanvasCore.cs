@@ -667,10 +667,17 @@ namespace PileDesign.Views
         /// </summary>
         internal void InitializePanelToggleSync()
         {
+            // 欄の開閉は表示プリセットにも知らせる (並びがプリセットと食い違ったら選択を外す)
             propertiesAnchorable.IsVisibleChanged += (s, e) =>
+            {
                 PropertiesPanelToggle.IsChecked = propertiesAnchorable.IsVisible;
+                (DataContext as MainWindowViewModel)?.OnPanelLayoutChanged();
+            };
             minimapAnchorable.IsVisibleChanged += (s, e) =>
+            {
                 MinimapPanelToggle.IsChecked = minimapAnchorable.IsVisible;
+                (DataContext as MainWindowViewModel)?.OnPanelLayoutChanged();
+            };
         }
     }
 }

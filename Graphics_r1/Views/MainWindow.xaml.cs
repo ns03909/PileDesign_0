@@ -1823,6 +1823,8 @@ namespace PileDesign.Views
                 view.Detach();
                 _resultDashboard = null;
                 _resultDashboardAnchorable = null;
+                // 手で閉じたら、ダッシュボードを開くプリセットの選択を外す (同じプリセットを選び直せば開き直る)
+                vm.OnPanelLayoutChanged();
             };
 
             // 右側に、高さいっぱいの列として足す (モデル図とプロパティ欄の間)。プロパティ欄の列はミニマップと縦に分けて
@@ -1839,6 +1841,7 @@ namespace PileDesign.Views
             _resultDashboardAnchorable = anchorable;
             anchorable.IsSelected = true;
             anchorable.IsActive = true;
+            vm.OnPanelLayoutChanged();
         }
 
         private void OpenCommandPalette_Click(object sender, RoutedEventArgs e) => OpenCommandPalette();
