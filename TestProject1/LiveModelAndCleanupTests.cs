@@ -5,7 +5,6 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 
 namespace TestProject1
 {
@@ -139,37 +138,36 @@ namespace TestProject1
         /// <summary>
         /// 復元確認を見送ったファイルは、自動保存でも緊急保存でも印が付くこと。
         ///
-        /// 置換の形をそのまま検証する。以前は "_autosave_" だけを見ていたので、
-        /// 緊急保存のファイル名は 1 文字も変わらなかった。
+        /// 以前は "_autosave_" だけを見ていたので、緊急保存のファイル名は 1 文字も変わらなかった。
+        /// 印の付け方は実際の処理 (<see cref="PileDesign.Services.AutoSaveService.DismissedName"/>) で確かめる
+        /// (以前はテストの中に置換の写しを持ち、本体のソースに同じ文字列があることだけを見ていた)。
         /// </summary>
         [TestMethod]
         public void DismissingARestore_MarksBothKindsOfFile()
         {
-            const string pattern = "_(autosave|emergency)_";
-            const string replacement = "_$1_dismissed_";
-
             foreach (var (original, expected) in new[]
             {
-                (@"C:\A\Foo_autosave_20260909_101112.pdj",  @"C:\A\Foo_autosave_dismissed_20260909_101112.pdj"),
-                (@"C:\A\Foo_emergency_20260909_101112.pdj", @"C:\A\Foo_emergency_dismissed_20260909_101112.pdj"),
+                ("Foo_autosave_20260909_101112.pdj",  "Foo_autosave_dismissed_20260909_101112.pdj"),
+                ("Foo_emergency_20260909_101112.pdj", "Foo_emergency_dismissed_20260909_101112.pdj"),
             })
             {
-                var renamed = Regex.Replace(original, pattern, replacement);
+                var renamed = PileDesign.Services.AutoSaveService.DismissedName(original);
 
                 Assert.AreEqual(expected, renamed, $"{original} の印の付け方が違う");
-                StringAssert.Contains(renamed, "_dismissed_",
+                Assert.IsTrue(PileDesign.Services.AutoSaveService.IsDismissedName(renamed),
                     "印が付かない。候補を探す側が拾い続け、起動のたびに同じ確認が出る");
             }
         }
 
-        /// <summary>実際の復元処理が、その置換を使っていること。</summary>
+        /// <summary>実際の見送りの処理が、その印の付け方を使っていること。</summary>
         [TestMethod]
         public void TheRestorePrompt_UsesThatReplacement()
         {
             var source = ReadSource("Graphics_r1", "Services", "AutoSaveService.cs");
-
-            StringAssert.Contains(source, "\"_(autosave|emergency)_\"",
-                "復元の見送りが自動保存の名前しか置換していない。緊急保存が消えない");
+            int at = source.IndexOf("private static void MarkDismissed(", StringComparison.Ordinal);
+            Assert.IsTrue(at >= 0, "見送りの処理が見つからない");
+            StringAssert.Contains(source[at..], "DismissedName(name)",
+                "見送りの処理が、印の付け方 (DismissedName) を使っていない");
         }
 
         // ── ソース走査の道具 ──

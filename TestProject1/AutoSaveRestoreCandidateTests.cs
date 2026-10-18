@@ -234,6 +234,53 @@ namespace TestProject1
         /// 復元に失敗した候補は、その 1 件だけを見送り、同じ作業の古い候補を残すこと。
         /// まとめて見送ると、最新が壊れているだけで読める古い自動保存まで二度と案内されない。
         /// </summary>
+        /// <summary>
+        /// 見送りの印は、アプリが付けた部分 (種別の直後) だけで読み書きする (2026-10-19 のレビュー)。以前は名前のどこかに
+        /// <c>_dismissed_</c> があれば見送り済みとし、印を付けるときはパス全体の <c>_autosave_</c> / <c>_emergency_</c> を
+        /// すべて置き換えていた。<c>案_dismissed_比較</c> というプロジェクトの自動保存は、見送っていないのに候補に出なかった。
+        /// </summary>
+        [TestMethod]
+        public void ProjectNamesContainingTheMarks_DoNotConfuseDismissal()
+        {
+            string marked = WriteAutoSave("案_dismissed_比較_autosave_20260924_115000.pdj", Now.AddMinutes(-10), source: null);
+            var candidate = AutoSaveService.FindRestoreCandidate(_autoSave, Now);
+            Assert.AreEqual(marked, candidate?.FilePath, "元の名前に _dismissed_ を含むプロジェクトの自動保存を、見送り済みとして飛ばしています");
+            AutoSaveService.DismissRestoreCandidatesUpTo(_autoSave, candidate!);
+            Assert.IsTrue(File.Exists(Path.Combine(_autoSave, "案_dismissed_比較_autosave_dismissed_20260924_115000.pdj")),
+                "見送りの印を、種別の直後に付けていません");
+            Assert.IsNull(AutoSaveService.FindRestoreCandidate(_autoSave, Now), "見送ったのに、また勧めています");
+
+            string tagged = WriteAutoSave("x_autosave_y_emergency_20260924_115500.pdj", Now.AddMinutes(-5), source: null);
+            Assert.AreEqual(tagged, AutoSaveService.FindRestoreCandidate(_autoSave, Now)?.FilePath);
+            AutoSaveService.DismissRestoreCandidatesUpTo(_autoSave, AutoSaveService.FindRestoreCandidate(_autoSave, Now)!);
+            Assert.IsTrue(File.Exists(Path.Combine(_autoSave, "x_autosave_y_emergency_dismissed_20260924_115500.pdj")),
+                "元の名前の部分 (x_autosave_y) まで書き換えています");
+        }
+
+        [TestMethod]
+        public void TheFileName_IsReadFromItsEnd()
+        {
+            var plain = AutoSaveService.ParseAutoSaveFileName("Foo_autosave_20260924_120000.pdj");
+            Assert.AreEqual(("Foo", "autosave", false), (plain?.Original, plain?.Kind, plain?.Dismissed));
+            var numbered = AutoSaveService.ParseAutoSaveFileName("Foo_emergency_dismissed_20260924_120000_3.json");
+            Assert.AreEqual(("Foo", "emergency", true), (numbered?.Original, numbered?.Kind, numbered?.Dismissed), "連番付き・旧形式・見送り済みを読めません");
+            var tricky = AutoSaveService.ParseAutoSaveFileName("案_dismissed_比較_autosave_20260924_120000.pdj");
+            Assert.AreEqual(("案_dismissed_比較", false), (tricky?.Original, tricky?.Dismissed), "元の名前の中の _dismissed_ を印と取り違えています");
+            Assert.IsFalse(AutoSaveService.IsDismissedName("案_dismissed_比較_autosave_20260924_120000.pdj"));
+
+            Assert.AreEqual("x_autosave_y_autosave_dismissed_20260924_120000.pdj",
+                AutoSaveService.DismissedName("x_autosave_y_autosave_20260924_120000.pdj"), "元の名前の部分まで書き換えています");
+            Assert.AreEqual("Foo_autosave_dismissed_20260924_120000.pdj",
+                AutoSaveService.DismissedName("Foo_autosave_dismissed_20260924_120000.pdj"), "見送り済みに、もう一度印を付けています");
+
+            // 型に合わない名前 (手で名前を変えた等) は従来どおり
+            Assert.IsNull(AutoSaveService.ParseAutoSaveFileName("renamed_autosave_copy.pdj"));
+            Assert.IsFalse(AutoSaveService.IsDismissedName("renamed_autosave_copy.pdj"));
+            Assert.IsTrue(AutoSaveService.IsDismissedName("renamed_autosave_dismissed_copy.pdj"));
+            Assert.AreEqual("renamed_autosave_dismissed_copy.pdj", AutoSaveService.DismissedName("renamed_autosave_copy.pdj"));
+            Assert.AreEqual("renamed_autosave_dismissed_copy.pdj", AutoSaveService.DismissedName("renamed_autosave_dismissed_copy.pdj"));
+        }
+
         [TestMethod]
         public void AFailedRestore_DismissesOnlyThatFile()
         {

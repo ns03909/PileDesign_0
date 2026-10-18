@@ -696,8 +696,50 @@ namespace PileDesign.Services
                 .Concat(Directory.GetFiles(folder, "*_emergency_*.pdj"))
                 .Concat(Directory.GetFiles(folder, "*_autosave_*.json"))
                 .Concat(Directory.GetFiles(folder, "*_emergency_*.json"))
-                .Where(f => !Path.GetFileName(f).Contains("_dismissed_"))
+                .Where(f => !IsDismissedName(Path.GetFileName(f)))
                 .Select(f => new FileInfo(f));
+        }
+
+        /// <summary>
+        /// 自動保存ファイルの名前の型。どの版でも <c>元の名前_種別_yyyyMMdd_HHmmss[_n].pdj</c> (旧形式は .json)、
+        /// 見送ると種別の直後に <c>dismissed_</c> が入る。<b>末尾から</b>当てる (元の名前は貪欲に取る) ので、
+        /// 元の名前に <c>_dismissed_</c> や <c>_autosave_</c> が含まれていても、アプリが付けた部分だけを読む。
+        /// </summary>
+        private static readonly System.Text.RegularExpressions.Regex AutoSaveNamePattern = new(
+            @"^(?<name>.*)_(?<kind>autosave|emergency)_(?<dismissed>dismissed_)?(?<stamp>\d{8}_\d{6}(?:_\d+)?)(?<ext>\.(?:pdj|json))$");
+
+        /// <summary>自動保存ファイルの名前を読んだもの。<paramref name="Original"/> は元の名前、<paramref name="Kind"/> は autosave / emergency。</summary>
+        internal readonly record struct AutoSaveFileName(string Original, string Kind, bool Dismissed, string Stamp, string Extension);
+
+        /// <summary>自動保存ファイルの名前を読む。型に合わない (手で名前を変えた等) なら null。</summary>
+        internal static AutoSaveFileName? ParseAutoSaveFileName(string fileName)
+        {
+            var m = AutoSaveNamePattern.Match(fileName);
+            if (!m.Success) return null;
+            return new AutoSaveFileName(m.Groups["name"].Value, m.Groups["kind"].Value, m.Groups["dismissed"].Success,
+                m.Groups["stamp"].Value, m.Groups["ext"].Value);
+        }
+
+        /// <summary>
+        /// 見送り済みの名前か (2026-10-19 のレビュー)。以前は名前のどこかに <c>_dismissed_</c> があれば見送り済みとしていたので、
+        /// <c>案_dismissed_比較.pdj</c> のようなプロジェクトの自動保存は、見送っていないのに起動時の復元候補に出なかった。
+        /// 型に合わない名前は従来どおり部分一致で見る。
+        /// </summary>
+        internal static bool IsDismissedName(string fileName)
+            => ParseAutoSaveFileName(fileName) is { } parsed ? parsed.Dismissed : fileName.Contains("_dismissed_");
+
+        /// <summary>
+        /// 見送り済みの印を付けた名前。既に付いていればそのまま。印は<b>アプリが付けた種別の直後</b>にだけ入れる。
+        /// 以前はパス全体の <c>_autosave_</c> / <c>_emergency_</c> をすべて置き換えていたので、元の名前にそれを含む
+        /// プロジェクトでは元の名前の部分まで書き換わった。型に合わない名前は、最後の種別の直後に入れる。
+        /// </summary>
+        internal static string DismissedName(string fileName)
+        {
+            if (ParseAutoSaveFileName(fileName) is { } p)
+                return p.Dismissed ? fileName : $"{p.Original}_{p.Kind}_dismissed_{p.Stamp}{p.Extension}";
+            var m = System.Text.RegularExpressions.Regex.Match(fileName, "^.*_(autosave|emergency)_");
+            if (!m.Success || fileName.AsSpan(m.Length).StartsWith("dismissed_", StringComparison.Ordinal)) return fileName;
+            return fileName.Insert(m.Length, "dismissed_");
         }
 
         /// <summary>
@@ -899,6 +941,7 @@ namespace PileDesign.Services
         private static string NamePrefix(string file)
         {
             string name = Path.GetFileName(file);
+            if (ParseAutoSaveFileName(name) is { } parsed) return parsed.Original;
             var m = System.Text.RegularExpressions.Regex.Match(name, "^(.*)_(autosave|emergency)_");
             return m.Success ? m.Groups[1].Value : name;
         }
@@ -909,10 +952,11 @@ namespace PileDesign.Services
             try
             {
                 if (!File.Exists(path)) return;
-                var dismissed = System.Text.RegularExpressions.Regex.Replace(
-                    path, "_(autosave|emergency)_", "_$1_dismissed_");
-                if (dismissed != path)
-                    File.Move(path, dismissed);
+                // 名前だけを変える (以前はフォルダを含むパス全体を置き換えていた)
+                string name = Path.GetFileName(path);
+                string dismissedName = DismissedName(name);
+                if (dismissedName != name)
+                    File.Move(path, Path.Combine(Path.GetDirectoryName(path) ?? "", dismissedName));
             }
             catch (Exception ex) { Log.Warning(ex, "[AutoSave] リネーム失敗: {File}", Path.GetFileName(path)); }
         }
