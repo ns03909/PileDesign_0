@@ -154,6 +154,68 @@ namespace TestProject1
             CollectionAssert.Contains(raised, nameof(MainWindowViewModel.WorkflowSteps), "杭要素分割の切り替えで知らせていません");
         }
 
+        // ── 入力の検査の状態 (2026-10-17 のレビュー) ──────────────────────────────
+
+        private static WorkflowStep InputStep(InputCheckStatus status) =>
+            MainWindowViewModel.BuildWorkflowSteps(12, false, false, false, null, null, null, null, null, status)[0];
+
+        /// <summary>
+        /// まだ数えていない・失敗した・数え直し中を、数えて不備 0 件と区別する。
+        /// 以前は件数が無いことを「不備 0 件」と同じに扱い、検査に失敗しても開いた直後でも「入力」が ✓ に見えた。
+        /// </summary>
+        [TestMethod]
+        public void InputStep_DistinguishesNotCheckedFailedAndRefreshing()
+        {
+            var notChecked = InputStep(new InputCheckStatus(InputCheckState.NotChecked));
+            Assert.AreEqual("杭 12 本・点検待ち", notChecked.StateText);
+            Assert.AreEqual(WorkflowStepStatus.Next, notChecked.Status, "数えていないのに済みにしています");
+
+            var failed = InputStep(new InputCheckStatus(InputCheckState.Failed));
+            Assert.AreEqual("杭 12 本・点検できませんでした", failed.StateText);
+            Assert.AreEqual(WorkflowStepStatus.NeedsRedo, failed.Status, "検査に失敗したのに済みにしています");
+            StringAssert.Contains(failed.ToolTip, "「入力の診断」で確かめてください");
+
+            var refreshingClean = InputStep(new InputCheckStatus(InputCheckState.Checked, new InputCheckCounts(0, 1), Refreshing: true));
+            Assert.AreEqual("杭 12 本・注意 1 件（点検中）", refreshingClean.StateText);
+            Assert.AreEqual(WorkflowStepStatus.Done, refreshingClean.Status, "数え直し中に色を変えています (打つたびにちらつく)");
+            var refreshingBlocked = InputStep(new InputCheckStatus(InputCheckState.Checked, new InputCheckCounts(2, 0), Refreshing: true));
+            Assert.AreEqual(WorkflowStepStatus.NeedsRedo, refreshingBlocked.Status);
+            StringAssert.Contains(refreshingBlocked.StateText, "（点検中）");
+
+            // 杭要素分割は、止める入力が無いと分かったときと、まだ分からない (点検待ち) ときに次へ進める
+            var steps = MainWindowViewModel.BuildWorkflowSteps(12, false, false, false, null, null, null, null, null, new InputCheckStatus(InputCheckState.Failed));
+            Assert.AreEqual(WorkflowStepStatus.NotYet, steps[1].Status, "検査に失敗したのに杭要素分割を次にしています");
+        }
+
+        /// <summary>モデルを差し替えたら前のモデルの件数を捨てて「点検待ち」、編集なら件数を残して「点検中」。数え終われば件数。</summary>
+        [TestMethod]
+        public void InputCheckStatus_FollowsModelReplacementAndEdits()
+        {
+            var built = AnalysisInputScopeTests.BuildAnalyzed();
+            if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            var vm = built.Value.vm;
+            vm.RunWorkflowInputCheck();
+            Assert.AreEqual(InputCheckState.Checked, vm.WorkflowInputCheckStatus.State);
+            Assert.IsFalse(vm.WorkflowInputCheckStatus.Refreshing);
+
+            vm.SaveUndoState("杭配置");   // 編集 (InputEditVersion が進む)
+            Assert.IsTrue(vm.WorkflowInputCheckStatus.Refreshing, "編集のあと、数え直し中であることを示していません");
+            Assert.IsNotNull(vm.WorkflowInputCheckStatus.Counts, "編集のたびに件数を捨てています (帯がちらつく)");
+            StringAssert.Contains(vm.WorkflowSteps[0].StateText, "（点検中）");
+            vm.RunWorkflowInputCheck();
+            Assert.IsFalse(vm.WorkflowInputCheckStatus.Refreshing);
+
+            var other = AnalysisInputScopeTests.BuildAnalyzed()!.Value.input;
+            vm.CurrentInputModel = other;
+            Assert.AreEqual(InputCheckState.NotChecked, vm.WorkflowInputCheckStatus.State, "別のモデルを開いたのに前のモデルの件数を出しています");
+            StringAssert.Contains(vm.WorkflowSteps[0].StateText, "点検待ち");
+
+            // 検査の例外は「点検できませんでした」にする (件数を捨てて不備 0 件に見せない)
+            string code = TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.Workflow.cs");
+            string run = TestSource.MethodBody(code, "internal void RunWorkflowInputCheck(");
+            StringAssert.Contains(run, "status = new InputCheckStatus(InputCheckState.Failed);");
+        }
+
         // ── 沈下の解析も帯に出す (2026-10-17 のレビュー) ──────────────────────────────
 
         private static IReadOnlyList<WorkflowStep> Steps(params RequiredAnalysisState[] analyses) =>

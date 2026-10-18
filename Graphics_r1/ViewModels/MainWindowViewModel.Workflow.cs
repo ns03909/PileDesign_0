@@ -34,6 +34,28 @@ namespace PileDesign.ViewModels
     /// <summary>入力の検査の件数 (「入力の診断」と同じ検査)。解析を止めるものと、注意 (結果に影響しうる) の数。</summary>
     public readonly record struct InputCheckCounts(int Blockers, int Warnings);
 
+    /// <summary>入力の検査の状態 (工程の帯の「入力」)。</summary>
+    public enum InputCheckState
+    {
+        /// <summary>この入力 (開いたモデル) をまだ数えていない。</summary>
+        NotChecked,
+        /// <summary>数えた (件数がある)。</summary>
+        Checked,
+        /// <summary>検査が例外で終わった (件数が分からない)。</summary>
+        Failed,
+    }
+
+    /// <summary>
+    /// 入力の検査の結果 (2026-10-17 のレビュー)。以前は件数だけを持ち、数えていない・失敗したを「不備 0 件」と
+    /// 同じに扱っていたので、検査に失敗しても開いた直後でも「入力」が済み (✓) に見えた。
+    /// <c>Refreshing</c> は、入力を変えて数え直しを待っている (件数は変更前のもの)。
+    /// </summary>
+    public readonly record struct InputCheckStatus(InputCheckState State, InputCheckCounts? Counts = null, bool Refreshing = false)
+    {
+        /// <summary>件数だけを渡す呼び出し (数えた結果) からの変換。</summary>
+        public static implicit operator InputCheckStatus(InputCheckCounts counts) => new(InputCheckState.Checked, counts);
+    }
+
     /// <summary>
     /// 検討に要る解析 1 つの状態 (工程の帯の「解析」)。<c>Done</c> は結果を持っているか、
     /// <c>Stale</c> はその結果が入力の変更前のものか。
@@ -61,7 +83,7 @@ namespace PileDesign.ViewModels
         public IReadOnlyList<WorkflowStep> WorkflowSteps => BuildWorkflowSteps(
             CurrentInputModel?.PileLayoutItems?.Count ?? 0, IsElementSplit, IsHorizontalAnalysisDone, IsHorizontalResultStale,
             OpenDiagnosticListCommand, OpenElementDivisionWindowCommand, OpenLateralLoadAnalysisWindowCommand,
-            OpenResultDashboardCommand, OpenDocxOutputWindowCommand, _workflowInputCheck,
+            OpenResultDashboardCommand, OpenDocxOutputWindowCommand, _workflowInputCheckStatus,
             RequiredAnalyses, CurrentInputModel?.FundamentalInput?.SettlementDesignBasisName);
 
         /// <summary>
@@ -89,41 +111,60 @@ namespace PileDesign.ViewModels
 
         // ── 入力の検査の件数 (工程の帯の「入力」) ─────────────────────────────
 
-        private InputCheckCounts? _workflowInputCheck;
+        private InputCheckStatus _workflowInputCheckStatus = new(InputCheckState.NotChecked);
         private System.Windows.Threading.DispatcherTimer? _workflowInputCheckTimer;
+
+        /// <summary>入力の検査の状態 (工程の帯の「入力」)。</summary>
+        internal InputCheckStatus WorkflowInputCheckStatus => _workflowInputCheckStatus;
 
         /// <summary>
         /// 入力を編集したら、少し待ってから入力の検査を数え直す (打つたびに検査を回さない)。
         /// 以前の帯は杭が 1 本でもあれば「入力」を済みにしており、地盤・荷重などが足りなくても次の工程へ進むように見えた。
+        ///
+        /// <para>待っているあいだも帯は今の状態を示す (2026-10-17 のレビュー): モデルを差し替えた (開いた・新規・計算例) ときは
+        /// 前のモデルの件数を捨てて「点検待ち」に、編集のときは件数を残して「(点検中)」を添える
+        /// (打つたびに「点検待ち」へ切り替えると帯がちらつく)。</para>
         /// </summary>
-        internal void RequestWorkflowInputCheck()
+        internal void RequestWorkflowInputCheck(bool modelReplaced = false)
         {
+            var next = modelReplaced || _workflowInputCheckStatus.State != InputCheckState.Checked
+                ? new InputCheckStatus(InputCheckState.NotChecked)
+                : _workflowInputCheckStatus with { Refreshing = true };
+            SetWorkflowInputCheckStatus(next);
             if (System.Windows.Application.Current == null) return;   // 画面の無い実行 (テスト) では数えない
             Debounce(ref _workflowInputCheckTimer, 500, RunWorkflowInputCheck);
         }
 
-        /// <summary>入力の検査 (「入力の診断」と同じ) を数え、工程の帯を作り直す。</summary>
+        private void SetWorkflowInputCheckStatus(InputCheckStatus status)
+        {
+            if (_workflowInputCheckStatus == status) return;
+            _workflowInputCheckStatus = status;
+            OnPropertyChanged(nameof(WorkflowSteps));
+        }
+
+        /// <summary>入力の検査 (「入力の診断」と同じ) を数え、工程の帯を作り直す。例外で終われば「点検できませんでした」にする。</summary>
         internal void RunWorkflowInputCheck()
         {
             var input = CurrentInputModel;
-            InputCheckCounts? counts = null;
-            if (input != null && (input.PileLayoutItems?.Count ?? 0) > 0)
+            InputCheckStatus status;
+            if (input == null || (input.PileLayoutItems?.Count ?? 0) == 0)
+                status = new InputCheckStatus(InputCheckState.Checked, new InputCheckCounts(0, 0));
+            else
             {
                 try
                 {
                     int blockers = Services.CheckInputData.CollectAnalysisBlockers(input).Count;
                     int warnings = Services.CheckInputData.CollectInputWarningDiagnostics(input).Count;
-                    counts = new InputCheckCounts(blockers, warnings);
+                    status = new InputCheckStatus(InputCheckState.Checked, new InputCheckCounts(blockers, warnings));
                 }
                 catch (Exception ex)
                 {
-                    // 数えられなければ件数を出さない (帯は杭の本数だけで決める。以前と同じ)
+                    // 件数が分からないことを示す (以前は件数を捨てて「不備 0 件」と同じに見せていた)
                     Serilog.Log.Warning(ex, "[工程の帯] 入力の検査を数えられませんでした");
+                    status = new InputCheckStatus(InputCheckState.Failed);
                 }
             }
-            if (_workflowInputCheck == counts) return;
-            _workflowInputCheck = counts;
-            OnPropertyChanged(nameof(WorkflowSteps));
+            SetWorkflowInputCheckStatus(status);
         }
 
         /// <summary>
@@ -134,25 +175,57 @@ namespace PileDesign.ViewModels
         internal static IReadOnlyList<WorkflowStep> BuildWorkflowSteps(
             int pileCount, bool elementSplit, bool analyzed, bool analysisStale,
             ICommand? input, ICommand? split, ICommand? analysis, ICommand? evaluation, ICommand? report,
-            InputCheckCounts? inputCheck = null, IReadOnlyList<RequiredAnalysisState>? analyses = null, string? settlementBasis = null)
+            InputCheckStatus? inputCheck = null, IReadOnlyList<RequiredAnalysisState>? analyses = null, string? settlementBasis = null)
         {
-            int blockers = pileCount > 0 ? inputCheck?.Blockers ?? 0 : 0;
-            int warnings = pileCount > 0 ? inputCheck?.Warnings ?? 0 : 0;
-            bool inputDone = pileCount > 0 && blockers == 0;
-            string inputState = pileCount == 0 ? "杭が未入力"
-                : blockers > 0 ? $"杭 {pileCount} 本・解析を止める {blockers} 件"
-                : warnings > 0 ? $"杭 {pileCount} 本・注意 {warnings} 件"
-                : $"杭 {pileCount} 本";
+            // inputCheck が null の呼び出し (検査の状態を渡さない) は、件数 0 として杭の本数だけで決める (以前の帯)
+            var state = inputCheck?.State ?? InputCheckState.Checked;
+            var counts = inputCheck?.Counts ?? new InputCheckCounts(0, 0);
+            int blockers = pileCount > 0 && state == InputCheckState.Checked ? counts.Blockers : 0;
+            int warnings = pileCount > 0 && state == InputCheckState.Checked ? counts.Warnings : 0;
+            bool refreshing = pileCount > 0 && state == InputCheckState.Checked && (inputCheck?.Refreshing ?? false);
+            bool inputDone = pileCount > 0 && state == InputCheckState.Checked && blockers == 0;
             string inputTip = "地盤・杭体・杭配置・荷重を入力します。押すと「入力の診断」を開き、足りない・おかしい入力を一覧します";
-            if (blockers > 0) inputTip = $"解析を止める入力が {blockers} 件あります。" + inputTip;
-            else if (warnings > 0) inputTip = $"結果に影響しうる注意が {warnings} 件あります。" + inputTip;
+            string inputState;
+            WorkflowStepStatus inputStatus;
+            if (pileCount == 0)
+            {
+                inputState = "杭が未入力";
+                inputStatus = WorkflowStepStatus.Next;
+            }
+            else if (state == InputCheckState.NotChecked)
+            {
+                inputState = $"杭 {pileCount} 本・点検待ち";
+                inputStatus = WorkflowStepStatus.Next;
+                inputTip = "入力の検査をまだしていません (少し待つと数えます)。" + inputTip;
+            }
+            else if (state == InputCheckState.Failed)
+            {
+                inputState = $"杭 {pileCount} 本・点検できませんでした";
+                inputStatus = WorkflowStepStatus.NeedsRedo;
+                inputTip = "入力の検査を最後まで行えませんでした (件数が分かりません)。押して「入力の診断」で確かめてください。" + inputTip;
+            }
+            else
+            {
+                inputState = blockers > 0 ? $"杭 {pileCount} 本・解析を止める {blockers} 件"
+                    : warnings > 0 ? $"杭 {pileCount} 本・注意 {warnings} 件"
+                    : $"杭 {pileCount} 本";
+                inputStatus = inputDone ? WorkflowStepStatus.Done : WorkflowStepStatus.NeedsRedo;
+                if (blockers > 0) inputTip = $"解析を止める入力が {blockers} 件あります。" + inputTip;
+                else if (warnings > 0) inputTip = $"結果に影響しうる注意が {warnings} 件あります。" + inputTip;
+                if (refreshing)
+                {
+                    // 件数は変更前のもの。色は変えず、数え直していることを添える (打つたびにちらつかせない)
+                    inputState += "（点検中）";
+                    inputTip = "入力の変更を受けて数え直しています (件数は変更前のもの)。" + inputTip;
+                }
+            }
+            // 杭要素分割へ進めるか: 数えた結果で止める入力が無いか、まだ分からない (点検待ち) とき
+            bool splitReady = pileCount > 0 && (state == InputCheckState.NotChecked || inputDone);
             var steps = new List<WorkflowStep>
             {
-                new("入力", inputState,
-                    inputDone ? WorkflowStepStatus.Done : pileCount > 0 ? WorkflowStepStatus.NeedsRedo : WorkflowStepStatus.Next,
-                    inputTip, input),
+                new("入力", inputState, inputStatus, inputTip, input),
                 new("杭要素分割", elementSplit ? "済み" : "未",
-                    elementSplit ? WorkflowStepStatus.Done : inputDone ? WorkflowStepStatus.Next : WorkflowStepStatus.NotYet,
+                    elementSplit ? WorkflowStepStatus.Done : splitReady ? WorkflowStepStatus.Next : WorkflowStepStatus.NotYet,
                     "杭を解析の要素に分けます (F4)。押すと杭要素分割の画面を開きます", split),
             };
             if (analyses == null)

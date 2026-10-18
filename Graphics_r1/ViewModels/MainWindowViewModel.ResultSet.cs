@@ -494,7 +494,10 @@ namespace PileDesign.ViewModels
                 or nameof(HasGroupSettlementBeamAwareCases) or nameof(InputEditVersion))
                 base.OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(WorkflowSteps)));
             // 入力が差し替わったら (読込・新規・計算例)、入力の検査を数え直す
-            if (e.PropertyName is nameof(CurrentInputModel) or nameof(PileCountText))
+            // モデルの差し替えは前のモデルの件数を捨てて「点検待ち」に、杭の本数の変化 (編集) は件数を残して「点検中」に
+            if (e.PropertyName is nameof(CurrentInputModel))
+                RequestWorkflowInputCheck(modelReplaced: true);
+            else if (e.PropertyName is nameof(PileCountText))
                 RequestWorkflowInputCheck();
             // 表示プリセットを当てたあとに手で表示を変えたら、プリセットの選択を外す (MainWindowViewModel.DisplayPresets.cs)
             OnDisplayToggleChanged(e.PropertyName);
