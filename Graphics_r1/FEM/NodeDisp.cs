@@ -12,8 +12,10 @@ namespace PileDesign.FEM
         public double Ry { get; set; } = ry;
         public double Rz { get; set; } = rz;
 
-        public double Uh => PileDesign.Common.StableNumerics.Norm(Ux, Uy);
-        public double Th => PileDesign.Common.StableNumerics.Norm(Rx, Ry);
+        // 以下は他の値から求める読み出し専用の値。保存しない (2026-10-24)。以前は書き出していて、
+        // 解析結果入りのファイルの 18% (689 MB 中 127 MB) を占めていた。読むときは使っていなかった
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Uh => PileDesign.Common.StableNumerics.Norm(Ux, Uy);
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Th => PileDesign.Common.StableNumerics.Norm(Rx, Ry);
 
         public double GetByIndex(int index) => index switch
         {

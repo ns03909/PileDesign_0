@@ -1274,7 +1274,8 @@ namespace PileDesign.Models.InputData
             if (!File.Exists(filePath))
                 throw new FileNotFoundException("指定されたファイルが存在しません。", filePath);
 
-            string json = File.ReadAllText(filePath);
+            // 圧縮した保存ファイル (2026-10-24 から) を渡されても読めるように、展開してから読む
+            string json = PileDesign.Services.FileOperationService.ReadSaveFileText(filePath);
 
             // まず System.Text.Json で試行（既定設定）
             try
@@ -1342,7 +1343,7 @@ namespace PileDesign.Models.InputData
             if (!File.Exists(filePath))
                 throw new FileNotFoundException("指定されたファイルが存在しません。", filePath);
 
-            string json = File.ReadAllText(filePath);
+            string json = PileDesign.Services.FileOperationService.ReadSaveFileText(filePath);
 
             InputModel? loaded = null;
             try

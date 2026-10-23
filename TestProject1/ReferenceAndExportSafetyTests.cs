@@ -296,7 +296,7 @@ public class ReferenceAndExportSafetyTests
             CollectionAssert.AreEqual(Array.Empty<string>(), service.CompareInputProperties(clean, clean.InputModel).Missing.ToArray(),
                 "今の版で保存したファイルで、既定値で補った項目があると言っています");
 
-            string json = File.ReadAllText(path);
+            string json = PileDesign.Services.FileOperationService.ReadSaveFileText(path);
             var m = Regex.Match(json, @"""InputModel"":\{""\$id"":""\d+"",");
             Assert.IsTrue(m.Success, "(前提) 入力の節が見つかりません");
             File.WriteAllText(path, json.Insert(m.Index + m.Length, @"""ObsoleteSetting"":1,"));
@@ -347,7 +347,7 @@ public class ReferenceAndExportSafetyTests
         try
         {
             service.SaveProjectData(path, input, null);
-            string json = File.ReadAllText(path);
+            string json = PileDesign.Services.FileOperationService.ReadSaveFileText(path);
             Assert.IsTrue(LoadCompatibilityReport.CollectPropertyNames(json, "InputModel").Contains("PileLayoutItems[].No"),
                 "(前提) 杭配置に No がある");
             var m = Regex.Match(json, @"""InputModel"":\{""\$id"":""\d+"",");

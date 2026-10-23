@@ -13,8 +13,9 @@ namespace PileDesign.FEM
         public double My { get; set; } = my;
         public double Mz { get; set; } = mz;
 
-        public double Fh => PileDesign.Common.StableNumerics.Norm(Fx, Fy);
-        public double Mh => PileDesign.Common.StableNumerics.Norm(Mx, My);
+        // 他の値から求める読み出し専用の値。保存しない (2026-10-24。BeamForce と同じ)
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Fh => PileDesign.Common.StableNumerics.Norm(Fx, Fy);
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Mh => PileDesign.Common.StableNumerics.Norm(Mx, My);
 
         public Vector<double> GetVector()
         {

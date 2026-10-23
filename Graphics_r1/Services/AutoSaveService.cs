@@ -764,14 +764,39 @@ namespace PileDesign.Services
             {
                 byte[] head;
                 bool whole;
+                bool compressed;
                 using (var stream = new FileStream(autoSaveFile, FileMode.Open, FileAccess.Read,
                            FileShare.ReadWrite | FileShare.Delete, bufferSize: 1, FileOptions.SequentialScan))
                 {
-                    int length = (int)Math.Min(OriginHeadBytes, stream.Length);
-                    head = new byte[length];
-                    stream.ReadExactly(head, 0, length);
-                    whole = length == stream.Length;
+                    Span<byte> magic = stackalloc byte[2];
+                    int got = stream.Read(magic);
+                    stream.Position = 0;
+                    compressed = FileOperationService.IsCompressed(magic[..got]);
+                    if (compressed)
+                    {
+                        // 圧縮した保存 (2026-10-24 から)。頭だけを展開する
+                        using var gzip = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);
+                        var buffer = new byte[OriginHeadBytes];
+                        int read = 0;
+                        while (read < buffer.Length)
+                        {
+                            int n = gzip.Read(buffer, read, buffer.Length - read);
+                            if (n == 0) break;
+                            read += n;
+                        }
+                        whole = read < buffer.Length;
+                        head = buffer[..read];
+                    }
+                    else
+                    {
+                        int length = (int)Math.Min(OriginHeadBytes, stream.Length);
+                        head = new byte[length];
+                        stream.ReadExactly(head, 0, length);
+                        whole = length == stream.Length;
+                    }
                 }
+                ReadOnlySpan<byte> bom = [0xEF, 0xBB, 0xBF];
+                if (head.AsSpan().StartsWith(bom)) head = head[3..];
 
                 var reader = new System.Text.Json.Utf8JsonReader(head, isFinalBlock: whole, state: default);
                 if (!reader.Read() || reader.TokenType != System.Text.Json.JsonTokenType.StartObject)
@@ -799,8 +824,8 @@ namespace PileDesign.Services
                     reader.Skip();
                 }
 
-                // 頭に無く、頭に収まらないファイル = 旧形式。末尾を読む
-                if (!whole && source == null && session == null)
+                // 頭に無く、頭に収まらないファイル = 旧形式。末尾を読む (圧縮したファイルは新しい形なので頭にある)
+                if (!whole && !compressed && source == null && session == null)
                     (source, session) = FindOriginInTail(autoSaveFile);
                 return (source, session);
             }

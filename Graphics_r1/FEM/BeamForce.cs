@@ -20,13 +20,15 @@ namespace PileDesign.FEM
         public double Myj { get; set; } = myj;
         public double Mzj { get; set; } = mzj;
 
-        public double Fi => PileDesign.Common.StableNumerics.Norm(Fyi, Fzi);
-        public double Mi => PileDesign.Common.StableNumerics.Norm(Myi, Mzi);
-        public double Fj => PileDesign.Common.StableNumerics.Norm(Fyj, Fzj);
-        public double Mj => PileDesign.Common.StableNumerics.Norm(Myj, Mzj);
+        // 以下は他の値から求める読み出し専用の値。保存しない (2026-10-24)。以前は書き出していて、
+        // 解析結果入りのファイルの 18% (689 MB 中 127 MB) を占めていた。読むときは使っていなかった
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Fi => PileDesign.Common.StableNumerics.Norm(Fyi, Fzi);
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Mi => PileDesign.Common.StableNumerics.Norm(Myi, Mzi);
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Fj => PileDesign.Common.StableNumerics.Norm(Fyj, Fzj);
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Mj => PileDesign.Common.StableNumerics.Norm(Myj, Mzj);
 
-        public double FabsMax => Math.Max(Fi, Fj);
-        public double MabsMax => Math.Max(Mi, Mj);
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double FabsMax => Math.Max(Fi, Fj);
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double MabsMax => Math.Max(Mi, Mj);
 
         public Vector<double> GetVector()
         {

@@ -20,10 +20,12 @@ namespace PileDesign.FEM
         public double Ryj { get; set; } = ryj;
         public double Rzj { get; set; } = rzj;
 
-        public double Di => PileDesign.Common.StableNumerics.Norm(Dyi, Dzi);
-        public double Ri => PileDesign.Common.StableNumerics.Norm(Ryi, Rzi);
-        public double Dj => PileDesign.Common.StableNumerics.Norm(Dyj, Dzj);
-        public double Rj => PileDesign.Common.StableNumerics.Norm(Ryj, Rzj);
+        // 以下は他の値から求める読み出し専用の値。保存しない (2026-10-24)。以前は書き出していて、
+        // 解析結果入りのファイルの 18% (689 MB 中 127 MB) を占めていた。読むときは使っていなかった
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Di => PileDesign.Common.StableNumerics.Norm(Dyi, Dzi);
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Ri => PileDesign.Common.StableNumerics.Norm(Ryi, Rzi);
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Dj => PileDesign.Common.StableNumerics.Norm(Dyj, Dzj);
+        [System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonIgnore] public double Rj => PileDesign.Common.StableNumerics.Norm(Ryj, Rzj);
 
         public Vector<double> GetVector()
         {

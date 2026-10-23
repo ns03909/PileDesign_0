@@ -140,7 +140,7 @@ namespace TestProject1
             {
                 new FileOperationService(Options).SaveProjectData(path, live, anaModel: null);
 
-                var loaded = JsonSerializer.Deserialize<ProjectData>(File.ReadAllText(path), Options)!;
+                var loaded = JsonSerializer.Deserialize<ProjectData>(PileDesign.Services.FileOperationService.ReadSaveFileText(path), Options)!;
                 Assert.IsNotNull(loaded.GroupSettlementResult,
                     "沈下の結果が保存されていない (自動保存から復元すると沈下が消える)");
                 Assert.AreEqual(1, loaded.GroupSettlementResult!.CaseRecords.Count);

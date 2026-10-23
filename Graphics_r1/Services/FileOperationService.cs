@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -220,7 +221,75 @@ namespace PileDesign.Services
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
 
             ThrowIfPrepareFailed(prepared);
-            WriteAtomically(filePath, stream => stream.Write(prepared.Payload!));
+            WriteAtomically(filePath, stream => WriteCompressed(stream, prepared.Payload!));
+        }
+
+        // ── 保存ファイルの圧縮 (2026-10-24) ──
+        //
+        // 保存ファイルは gzip で圧縮した JSON。解析結果入りのファイルが数百 MB になっていた
+        // (例: 杭 45 本・304 ステップで 689 MB。結果は全ステップ分の数値の並び)。圧縮すると 1/5〜1/7 になる。
+        // 読むときは先頭の 2 バイトで判断するので、圧縮していない今までのファイルもそのまま開ける。
+        // 古い版のアプリは圧縮したファイルを開けない (全員が新しい版を使う前提。2026-10-24 の利用者の判断)。
+
+        /// <summary>保存ファイルの圧縮の強さ。標準 (689 MB の結果入りファイルで約 5 秒・1/7)。</summary>
+        internal const CompressionLevel SaveCompressionLevel = CompressionLevel.Optimal;
+
+        /// <summary>gzip の先頭 2 バイト (1F 8B) か。</summary>
+        internal static bool IsCompressed(ReadOnlySpan<byte> head) => head.Length >= 2 && head[0] == 0x1F && head[1] == 0x8B;
+
+        /// <summary>保存の中身 (JSON の UTF-8) を圧縮して書く。</summary>
+        internal static void WriteCompressed(Stream stream, byte[] payload)
+        {
+            using var gzip = new GZipStream(stream, SaveCompressionLevel, leaveOpen: true);
+            gzip.Write(payload);
+        }
+
+        /// <summary>
+        /// 保存ファイルの中身を JSON の UTF-8 のバイト列で返す (圧縮していれば展開し、BOM は除く)。
+        ///
+        /// <para>以前は文字列 (<see cref="File.ReadAllText(string)"/>) で読んでいた。.NET の文字列は 1 文字 2 バイトなので、
+        /// 689 MB のファイルで約 1.4 GB を使い、続く復元と合わせてメモリが足りなくなることがあった。</para>
+        /// </summary>
+        internal static byte[] ReadSaveFileBytes(string filePath)
+        {
+            byte[] raw = File.ReadAllBytes(filePath);
+            byte[] json = IsCompressed(raw) ? Decompress(raw) : raw;
+            ReadOnlySpan<byte> bom = [0xEF, 0xBB, 0xBF];
+            return json.AsSpan().StartsWith(bom) ? json[3..] : json;
+        }
+
+        /// <summary>保存ファイルの中身を文字列で返す (圧縮していれば展開する)。小さなファイル・旧い入力ファイル用。</summary>
+        internal static string ReadSaveFileText(string filePath)
+            => System.Text.Encoding.UTF8.GetString(ReadSaveFileBytes(filePath));
+
+        /// <summary>
+        /// gzip を展開する。末尾の 4 バイト (展開後の大きさ。4 GB 未満なら正確) で配列を一度で確保し、
+        /// 合わなければ伸ばしながら読む (2 倍のメモリを一時に使わないため)。
+        /// </summary>
+        private static byte[] Decompress(byte[] compressed)
+        {
+            int expected = compressed.Length >= 4 ? BitConverter.ToInt32(compressed, compressed.Length - 4) : 0;
+            using var gzip = new GZipStream(new MemoryStream(compressed, writable: false), CompressionMode.Decompress);
+            if (expected > 0)
+            {
+                var buffer = new byte[expected];
+                int read = 0;
+                while (read < buffer.Length)
+                {
+                    int n = gzip.Read(buffer, read, buffer.Length - read);
+                    if (n == 0) break;
+                    read += n;
+                }
+                if (read == buffer.Length && gzip.ReadByte() < 0) return buffer;
+                // 大きさの記録と合わない (4 GB 以上・複数の圧縮の連結): 読んだ分に続けて読む
+                using var rest = new MemoryStream();
+                rest.Write(buffer, 0, read);
+                gzip.CopyTo(rest);
+                return rest.ToArray();
+            }
+            using var all = new MemoryStream();
+            gzip.CopyTo(all);
+            return all.ToArray();
         }
 
         /// <summary>検査・直列化で出た例外を、型とスタックを保ったまま投げ直す。</summary>
@@ -452,7 +521,8 @@ namespace PileDesign.Services
                         bufferSize,
                         FileOptions.Asynchronous | FileOptions.SequentialScan))
                     {
-                        await stream.WriteAsync(prepared.Payload!);
+                        await using (var gzip = new GZipStream(stream, SaveCompressionLevel, leaveOpen: true))
+                            await gzip.WriteAsync(prepared.Payload!);
                         await stream.FlushAsync();
                         fileSize = stream.Length;
                     }
@@ -619,10 +689,15 @@ namespace PileDesign.Services
             if (!File.Exists(filePath))
                 throw new FileNotFoundException("ファイルが見つかりません。", filePath);
 
-            string json;
+            byte[] json;
             try
             {
-                json = File.ReadAllText(filePath);
+                json = ReadSaveFileBytes(filePath);
+            }
+            catch (InvalidDataException ex)
+            {
+                throw new InvalidOperationException(
+                    $"圧縮したファイルを展開できませんでした。ファイルが破損している可能性があります。\n{filePath}", ex);
             }
             catch (IOException ex)
             {
@@ -647,8 +722,9 @@ namespace PileDesign.Services
             if (projectData == null)
                 throw new InvalidOperationException("ファイル形式が不正です。");
 
-            // 今の版で読み込みに使わなかった項目を、あとで見つけるために控える (入力の節だけ)
-            try { projectData.InputPropertyNamesInFile = LoadCompatibilityReport.CollectPropertyNames(json, "InputModel"); }
+            // 今の版で読み込みに使わなかった項目を、あとで見つけるために控える (入力の節だけ)。
+            // 文書全体を木にすると解析結果の分まで作るので、入力の節までの頭だけを読む (InputSectionDocument)
+            try { projectData.InputPropertyNamesInFile = LoadCompatibilityReport.CollectPropertyNames(InputSectionDocument(json), "InputModel"); }
             catch (System.Text.Json.JsonException ex) { Serilog.Log.Debug(ex, "[読込] 項目名を集められませんでした"); }
 
             // 先読みで版を読めなかったとき (版の欄が数でないなど) のために、復元したあとにも見る
@@ -677,11 +753,14 @@ namespace PileDesign.Services
         /// 保存ファイルの先頭の階層から形式の版 (FormatVersion) だけを読む。モデルは復元しない (ほかの項目は読み飛ばす)。
         /// 読めなければ (JSON でない・版の欄が無い・数でない) null。そのときは続く復元がそれぞれの理由で知らせる。
         /// </summary>
-        internal static int? PeekFormatVersion(string json)
+        internal static int? PeekFormatVersion(string json) => PeekFormatVersion(System.Text.Encoding.UTF8.GetBytes(json));
+
+        /// <inheritdoc cref="PeekFormatVersion(string)"/>
+        internal static int? PeekFormatVersion(ReadOnlySpan<byte> json)
         {
             try
             {
-                var reader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(json),
+                var reader = new Utf8JsonReader(json,
                     new JsonReaderOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
                 if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject) return null;
                 while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
@@ -695,6 +774,31 @@ namespace PileDesign.Services
             }
             catch (JsonException) { }
             return null;
+        }
+
+        /// <summary>
+        /// 保存ファイルの、先頭から入力の節 (InputModel) の終わりまでを、閉じた JSON の文字列にして返す。
+        /// 入力の節が無ければ "{}"。入力の節の中の参照 ($ref) の先は、書く順の都合で必ずそれより前にある
+        /// (参照の保存は、最初に出てきたところで中身を書き、あとは $ref にする) ので、頭だけで足りる。
+        /// </summary>
+        internal static string InputSectionDocument(ReadOnlySpan<byte> json)
+        {
+            try
+            {
+                var reader = new Utf8JsonReader(json,
+                    new JsonReaderOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
+                if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject) return "{}";
+                while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    bool isInput = reader.ValueTextEquals("InputModel");
+                    if (!reader.Read()) return "{}";
+                    reader.Skip();
+                    if (isInput)
+                        return System.Text.Encoding.UTF8.GetString(json[..(int)reader.BytesConsumed]) + "}";
+                }
+            }
+            catch (JsonException) { }
+            return "{}";
         }
 
         /// <summary>

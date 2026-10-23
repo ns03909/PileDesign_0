@@ -115,7 +115,7 @@ namespace TestProject1
             Assert.AreEqual(settlement.ExecutedAt, loadedSettlement.ExecutedAt);
             Assert.AreEqual("群杭沈下解析（2026/09/30 10:15 実行）", loadedSettlement.Heading());
             Assert.AreEqual("荷重の置き方 全体矩形", loadedSettlement.DescribeSettings());
-            StringAssert.Matches(File.ReadAllText(file), new System.Text.RegularExpressions.Regex("\"Kind\":\\s*\"GroupSettlement\""),
+            StringAssert.Matches(PileDesign.Services.FileOperationService.ReadSaveFileText(file), new System.Text.RegularExpressions.Regex("\"Kind\":\\s*\"GroupSettlement\""),
                 "種類は名前で書く (番号だと並びを変えたときに別の種類として読まれる)");
             Assert.AreEqual(metadata.ApplicationVersion, loaded.ApplicationVersion);
             Assert.AreEqual(metadata.ConvergenceMethod, loaded.ConvergenceMethod);
@@ -176,7 +176,7 @@ namespace TestProject1
                 var svc = new FileOperationService(MakeOptions());
 
                 svc.SaveProjectData(file, input, new AnaModel());
-                var json = File.ReadAllText(file);
+                var json = PileDesign.Services.FileOperationService.ReadSaveFileText(file);
                 var loaded = svc.LoadProjectData(file);
 
                 StringAssert.Contains(json, "1.5", "JSON の数値を de-DE の小数点カンマで書いています。");

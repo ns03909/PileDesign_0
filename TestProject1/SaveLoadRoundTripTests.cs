@@ -785,7 +785,7 @@ namespace TestProject1
             var f3 = Path.Combine(_tempDir, "cycle3.json");
             svc.SaveProjectData(f3, p3.InputModel, p3.AnaModel, p3.VerticalBeamCaseResults!);
 
-            return (File.ReadAllText(f2), File.ReadAllText(f3));
+            return (PileDesign.Services.FileOperationService.ReadSaveFileText(f2), PileDesign.Services.FileOperationService.ReadSaveFileText(f3));
         }
 
         /// <summary>

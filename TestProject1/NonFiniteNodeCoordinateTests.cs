@@ -76,7 +76,7 @@ namespace TestProject1
                 };
                 svc.SaveProjectData(file, input, new AnaModel());
 
-                string json = File.ReadAllText(file);
+                string json = PileDesign.Services.FileOperationService.ReadSaveFileText(file);
                 string broken = Regex.Replace(json, @"""X"":\s*1\.25", @"""X"": ""NaN""");
                 Assert.AreNotEqual(json, broken, "保存ファイルに節点の X が見つかりません (形式が変わった?)");
                 File.WriteAllText(file, broken);

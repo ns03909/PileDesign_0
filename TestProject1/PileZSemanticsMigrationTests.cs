@@ -113,7 +113,7 @@ namespace TestProject1
             var file = Path.Combine(_tempDir, "fv2.json");
             svc.SaveProjectData(file, new InputModel(), new AnaModel(), null);
 
-            var raw = File.ReadAllText(file);
+            var raw = PileDesign.Services.FileOperationService.ReadSaveFileText(file);
             StringAssert.Contains(raw, "\"FormatVersion\": 2",
                 "Save 後の JSON に FormatVersion=2 が含まれていること");
         }
@@ -125,7 +125,7 @@ namespace TestProject1
             var file = Path.Combine(_tempDir, "fv2_async.json");
             await svc.SaveProjectDataAsync(file, new InputModel(), new AnaModel(), null);
 
-            var raw = File.ReadAllText(file);
+            var raw = PileDesign.Services.FileOperationService.ReadSaveFileText(file);
             StringAssert.Contains(raw, "\"FormatVersion\": 2");
         }
 

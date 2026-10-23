@@ -83,7 +83,7 @@ namespace TestProject1
             svc.SaveProjectData(straight, inputModel, new AnaModel(), null!);
 
             var reversed = Path.Combine(_tempDir, "reversed.json");
-            var root = JsonNode.Parse(File.ReadAllText(straight))!;
+            var root = JsonNode.Parse(PileDesign.Services.FileOperationService.ReadSaveFileText(straight))!;
             File.WriteAllText(reversed,
                 SaveLoadKeyOrderTests.ReverseScalarKeys(root)
                     .ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
@@ -96,8 +96,8 @@ namespace TestProject1
             svc.SaveProjectData(outA, a.InputModel, a.AnaModel, a.VerticalBeamCaseResults!);
             svc.SaveProjectData(outB, b.InputModel, b.AnaModel, b.VerticalBeamCaseResults!);
 
-            string na = Normalize(File.ReadAllText(outA));
-            string nb = Normalize(File.ReadAllText(outB));
+            string na = Normalize(PileDesign.Services.FileOperationService.ReadSaveFileText(outA));
+            string nb = Normalize(PileDesign.Services.FileOperationService.ReadSaveFileText(outB));
 
             if (na != nb)
             {

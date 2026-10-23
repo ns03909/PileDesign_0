@@ -99,8 +99,8 @@ namespace TestProject1
             var f2 = Path.Combine(_tempDir, "p2.json");
             svc.SaveProjectData(f2, loaded.InputModel, loaded.AnaModel, loaded.VerticalBeamCaseResults!);
 
-            string n1 = Normalize(File.ReadAllText(f1));
-            string n2 = Normalize(File.ReadAllText(f2));
+            string n1 = Normalize(PileDesign.Services.FileOperationService.ReadSaveFileText(f1));
+            string n2 = Normalize(PileDesign.Services.FileOperationService.ReadSaveFileText(f2));
 
             if (n1 != n2)
             {

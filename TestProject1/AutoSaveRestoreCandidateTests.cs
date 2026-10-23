@@ -384,7 +384,7 @@ namespace TestProject1
         public void TheOriginIsWrittenAtTheHeadOfTheFile()
         {
             string path = WriteAutoSave("A_autosave_20260924_110000.pdj", Now, @"C:\作業\基礎.pdj", "run1");
-            string text = File.ReadAllText(path);
+            string text = PileDesign.Services.FileOperationService.ReadSaveFileText(path);
 
             int source = text.IndexOf("\"SourceFilePath\"", StringComparison.Ordinal);
             int session = text.IndexOf("\"AutoSaveSessionId\"", StringComparison.Ordinal);
