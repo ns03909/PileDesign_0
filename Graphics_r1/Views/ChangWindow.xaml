@@ -65,11 +65,18 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- 概算であることの明示 (2026-10-24)。本体の解析・計算書とは別の計算で、地盤の入力を使わない -->
+        <Border Grid.Row="0" Background="#FFF8E1" BorderBrush="#E0B000" BorderThickness="0,0,0,1" Padding="8,4">
+            <TextBlock TextWrapping="Wrap" Foreground="#5D4037"
+                       Text="概算用のサブプログラムです。一様地盤として計算し、基準水平地盤反力係数 kh0 は「杭地盤セット定義」の α・E0 から求めます（地盤の入力・杭要素分割の値は使いません）。本体の水平解析・計算書の値ではありません。"/>
+        </Border>
+
         <!-- 上部: タイトル＋入力エリア（左右2カラム） -->
-        <Border Grid.Row="0" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="8,4,8,8">
+        <Border Grid.Row="1" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="8,4,8,8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -160,7 +167,7 @@
         </Border>
 
         <!-- AvalonDock レイアウト -->
-        <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="1">
+        <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="2">
             <avalonDock:LayoutRoot>
                 <!-- 横方向: 左 75% に上/下（定義/配置）、右 25% にグラフ -->
                 <avalonDock:LayoutPanel Orientation="Horizontal">

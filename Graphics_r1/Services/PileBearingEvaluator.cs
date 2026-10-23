@@ -108,15 +108,16 @@ namespace PileDesign.Services
         }
 
         /// <summary>
-        /// この杭の地盤条件の土層-杭セット。(地盤No, 杭体No, 杭頭Z) で引く (<see cref="PileLayoutDataItem.SoilPile"/> と同じ対応)。
+        /// この杭の土層-杭セット。(地盤No, 杭体No, 杭頭Z) で、検定する入力 (<paramref name="inputModel"/>) の要素分割から引く
+        /// (解析が使う番号 <see cref="PileLayoutDataItem.SoilPileAltNo"/> も同じキーで付けている)。無ければ null (判定できない項目にする)。
         ///
         /// 支持力は地盤と杭頭の高さで決まる。以前は杭体 No だけで引き、同じ杭体 No のセットが複数あると
         /// 最初の 1 つを使ったので、地盤や杭頭の高さが違う杭に別の杭の支持力を当てていた。
-        /// 検定する入力 (<paramref name="inputModel"/>) の要素分割から引き、無ければ杭自身の条件で組み立てたものを使う
-        /// (<see cref="PileLayoutDataItem.SoilPile"/> の既定の動き)。
+        /// その後 (地盤No, 杭体No, 杭頭Z) で引き、見つからなければ杭自身の条件で組み立て直したもので判定していたので、
+        /// 解析が使っていない土層-杭セットで「判定できた」ことになっていた (2026-10-24)。
         /// </summary>
         internal static SoilPile? SoilPileFor(InputModel inputModel, PileLayoutDataItem pile)
-            => inputModel.LookupSoilPile(pile.GroundNo, pile.PileBodyNo, pile.PileHeadZ) ?? pile.SoilPile;
+            => inputModel.LookupSoilPile(pile.GroundNo, pile.PileBodyNo, pile.PileHeadZ);
 
         /// <summary>解析対象の地震時荷重ケース (表示名, ケース番号)。</summary>
         private static IReadOnlyList<(string Name, int No)> SeismicCases(InputModel inputModel, int level)

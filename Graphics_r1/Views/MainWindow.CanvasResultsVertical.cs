@@ -728,23 +728,31 @@ namespace PileDesign.Views
         /// <summary>
         /// 選択中の荷重ケースに対応する杭頭作用軸力を取得する。
         /// VL: AxialForceVL0 + AxialForceVLAdditional,
-        /// Level1/Level2: 各 LoadCase の LoadName と一致する index の値。
+        /// Level1/Level2: 選んだ荷重ケースと同じケース (<see cref="LoadCase.IsSameCase"/>) の index の値。
+        ///
+        /// 荷重の矢印 (<c>GetForceZ</c>) と同じ引き方にそろえた (2026-10-24)。以前は名前の一致で引き、同じ名前のケースが
+        /// 2 つあると最初のケースの軸力を使い、VL0・VLadd を選ぶと何も描かなかった。
         /// </summary>
         private static double? GetSelectedCaseAxialForce(PileLayoutDataItem pile, MainWindowViewModel vm)
         {
             string caseName = vm.SelectedLoadCaseName;
-            if (caseName == "VL")
-                return pile.AxialForceVL0 + pile.AxialForceVLAdditional;
+            switch (caseName)
+            {
+                case "VL0": return pile.AxialForceVL0;
+                case "VLadd": return pile.AxialForceVLAdditional;
+                case "VL": return pile.AxialForceVL0 + pile.AxialForceVLAdditional;
+            }
 
             var lcs = vm.ResultInputModel?.LoadCasesInput;
             if (lcs == null) return null;
+            var selected = LoadCases.GetLoadCase(lcs.AllLoadCases, caseName);
+            if (selected == null) return null;
 
-            for (int i = 0; i < lcs.LoadCasesLevel1.Count; i++)
-                if (lcs.LoadCasesLevel1[i].LoadName == caseName && i < pile.AxialForceLevel1s.Count)
-                    return pile.AxialForceLevel1s[i];
-            for (int i = 0; i < lcs.LoadCasesLevel2.Count; i++)
-                if (lcs.LoadCasesLevel2[i].LoadName == caseName && i < pile.AxialForceLevel2s.Count)
-                    return pile.AxialForceLevel2s[i];
+            var cases = selected.Level == 1 ? lcs.LoadCasesLevel1 : lcs.LoadCasesLevel2;
+            var forces = selected.Level == 1 ? pile.AxialForceLevel1s : pile.AxialForceLevel2s;
+            for (int i = 0; i < cases.Count; i++)
+                if (LoadCase.IsSameCase(selected, cases[i]) && i < forces.Count)
+                    return forces[i];
             return null;
         }
 

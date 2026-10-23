@@ -1912,6 +1912,23 @@ namespace PileDesign.Models.InputData
                         i + 1, lk);
                 }
             }
+
+            // 土層-杭セットの断面にも同じ値を入れる (2026-10-24)。セットは杭体の断面を<b>複写して</b>持ち、検定と解析は
+            // その複写を読む。以前は杭体の断面にだけ書いていたので、セットを作った直後は複写が前の値 (初回は 0) のままで、
+            // 柱座屈による許容応力度の低減が入らない、または古い座屈長で検定していた (設計例集3.5 で杭体 5.13 m・複写 0 m)。
+            // 計算書の N-M 図は杭体の断面から描くので、同じ値 (杭体ごとの最も長いもの) にそろえる
+            foreach (var soilPile in ElementDivision?.SoilPiles ?? [])
+            {
+                if (soilPile?.PileBodySegments == null) continue;
+                if (PileBodyAt(soilPile.PileBodyNo)?.PileBodyType != PileTypeNames.SteelPipe) continue;
+                double lk = bucklingLengthByPileBody.GetValueOrDefault(soilPile.PileBodyNo);
+                foreach (var segment in soilPile.PileBodySegments)
+                {
+                    var section = segment?.PileSection;
+                    if (section != null && Math.Abs(section.BucklingLength - lk) > 1e-9)
+                        section.BucklingLength = lk;
+                }
+            }
         }
 
         // 地盤根入れ生成メソッド

@@ -611,8 +611,10 @@ namespace PileDesign.ViewModels
 
                     if (ChangSoilPiles != null && ChangSoilPiles.Count >= 1)
                     {
-                        newChang.SelectedSoilPileIndex = 1;
-                        newChang.AssignedSoilPile = ChangSoilPiles[0];
+                        // その杭の杭体の組を当てる (組は杭体の並びで作っている)。以前はどの杭にも杭体 1 の組を当てていた (2026-10-24)
+                        int body = pile.PileBodyNo >= 1 && pile.PileBodyNo <= ChangSoilPiles.Count ? pile.PileBodyNo : 1;
+                        newChang.SelectedSoilPileIndex = body;
+                        newChang.AssignedSoilPile = ChangSoilPiles[body - 1];
                     }
                     else
                     {

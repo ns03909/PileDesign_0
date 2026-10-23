@@ -82,7 +82,7 @@ namespace PileDesign.Output
                     WordDrawingBuilder.AddPngBytesToBody(mainPart, body, pngBytes,
                         PileElevationDocxWidthMm + PileElevationRightLabelMarginMm, PileElevationDocxHeightMm);
 
-                    string caption = $"杭姿図 — 杭体 {soilPile.PileBodyNo} × 地盤 {soilPile.GroundNo}";
+                    string caption = $"杭姿図 — 杭体 {soilPile.PileBodyNo} × 地盤 {soilPile.GroundNo}{PileHeadSuffix(soilPiles, soilPile)}";
                     AddAutoFigureCaption(body, caption, "図");
                 }
                 catch (Exception ex)

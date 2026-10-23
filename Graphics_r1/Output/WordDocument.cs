@@ -1374,8 +1374,34 @@ namespace PileDesign.Output
             if (!string.IsNullOrWhiteSpace(ground)) parts.Add($"地盤 {ground}");
             if (!string.IsNullOrWhiteSpace(pileBody)) parts.Add($"杭体 {pileBody}");
             if (parts.Count == 0) parts.Add($"No.{soilPile?.No}");
+            if (soilPile != null && PileHeadLabel(soilPiles, soilPile) is { Length: > 0 } head) parts.Add(head);
             return $"（{string.Join(" / ", parts)}）";
         }
+
+        /// <summary>
+        /// 杭頭レベルが複数あるとき (土層-杭セットの杭頭Z が 2 つ以上)、どのレベルのセットかを示す「杭頭Z ±0.000」。1 つなら空。
+        ///
+        /// <para>杭頭レベルが複数あると、同じ杭体・地盤の土層-杭セットが杭頭Z ごとに並ぶ。以前は表や図の題を杭体・地盤だけで
+        /// 付けていたので、同じ見出しの行・図が並び、どの杭の値かを読み違えるおそれがあった (2026-10-24)。
+        /// 1 つのレベルのモデルでは付けない (見出しを変えない)。</para>
+        /// </summary>
+        internal static string PileHeadLabel(IEnumerable<PileDesign.Models.InputData.SoilPile>? allSoilPiles, PileDesign.Models.InputData.SoilPile soilPile)
+            => HasSeveralPileHeadLevels(allSoilPiles) ? $"杭頭Z {soilPile.Z:+0.000;-0.000;+0.000}" : string.Empty;
+
+        /// <summary>土層-杭セットの杭頭Z が 2 つ以上あるか。</summary>
+        internal static bool HasSeveralPileHeadLevels(IEnumerable<PileDesign.Models.InputData.SoilPile>? allSoilPiles)
+            => (allSoilPiles ?? [])
+                .Where(s => s != null)
+                .Select(s => Math.Round(s.Z / PileDesign.Constants.NumericalConstants.COORDINATE_TOLERANCE))
+                .Distinct().Count() > 1;
+
+        /// <summary>表の杭体番号の欄。杭頭レベルが複数あれば 2 行目に杭頭Z を添える。</summary>
+        private static List<object> PileBodyCellLines(IEnumerable<PileDesign.Models.InputData.SoilPile>? allSoilPiles, PileDesign.Models.InputData.SoilPile soilPile)
+            => PileHeadLabel(allSoilPiles, soilPile) is { Length: > 0 } head ? [$"{soilPile.PileBodyNo}", head] : [$"{soilPile.PileBodyNo}"];
+
+        /// <summary>見出しの後ろに付ける「（杭頭Z ±0.000）」。杭頭レベルが 1 つなら空。</summary>
+        private static string PileHeadSuffix(IEnumerable<PileDesign.Models.InputData.SoilPile>? allSoilPiles, PileDesign.Models.InputData.SoilPile soilPile)
+            => PileHeadLabel(allSoilPiles, soilPile) is { Length: > 0 } head ? $"（{head}）" : string.Empty;
 
         public void AddAutoFigureCaption(Body body, string captionText, string label = "図", double fontSize = 10.5)
         {

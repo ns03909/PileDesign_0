@@ -365,7 +365,7 @@ namespace PileDesign.ViewModels
 
             foreach (var pile in InputModel.PileLayoutItems)
             {
-                var soilPile = pile.SoilPile;
+                var soilPile = pile.SoilPileAt(InputModel);
                 if (soilPile?.LoadDisplacements == null || soilPile.LoadDisplacements.Count == 0)
                     return "沈下解析が未実行の杭があります。先に沈下解析を実行してください。";
             }

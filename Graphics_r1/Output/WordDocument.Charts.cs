@@ -1300,7 +1300,8 @@ namespace PileDesign.Output
             string limitName = ConcreteModelOptions.MapLimitStateText(
                 $"{Services.LimitStateRule.Name(assignment.Limit)} (低減後)");
 
-            var soilPile = pli.SoilPile;
+            // 解析と同じセット (杭に対応付けた番号)。代わりの組み立てでは要素番号がずれる (GraphViewModel.ElevationGraphs と同じ)
+            var soilPile = pli.SoilPileAt(inputModel);
             if (soilPile?.PileBodySegments == null) return (shearXs, shearZs, momentXs, momentZs, limitName);
             bool shearMagnified = false;
 

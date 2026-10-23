@@ -182,7 +182,8 @@ namespace PileDesign.FEM
                 Nodes.Add(groundNode);
 
                 // 杭ばね曲線の構築（LoadDisplacementsが存在する場合のみ）
-                var soilPile = pile.SoilPile;
+                // 解析と同じ引き方 (杭に対応付けた番号)。組み立て直した代わりのセットには単杭沈下の曲線が無い
+                var soilPile = pile.SoilPileAt(_inputModel);
                 if (soilPile?.LoadDisplacements != null && soilPile.LoadDisplacements.Count > 0)
                 {
                     SpringCurves[pile.No] = new VerticalPileSpringCurve(soilPile.LoadDisplacements);

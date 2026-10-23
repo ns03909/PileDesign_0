@@ -889,7 +889,7 @@ namespace PileDesign.Output
 
                 foreach (SoilPile soilPile in soilPiles)
                 {
-                    string pileRef = soilPile.PileBodyInput?.PileBodyRef ?? "不明";
+                    string pileRef = (soilPile.PileBodyInput?.PileBodyRef ?? "不明") + PileHeadSuffix(soilPiles, soilPile);
                     string toeDia = soilPile.PileBodyInput?.PileBodySegments?.Count > 0
                         ? $"{soilPile.PileBodyInput.PileToeDia:N0}" : "不明";
                     bool hasSeg = soilPile.PileBodyInput?.PileBodySegments?.Count > 0;
@@ -959,7 +959,7 @@ namespace PileDesign.Output
                 i += 1;
                 TableRow dataRow = new();
                 dataRow.Append(CreateTableCell([$"{i}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{soilPile.PileBodyNo}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell(PileBodyCellLines(soilPiles, soilPile), fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.GroundNo}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileConstructionType}"], fontSize, "right"));
                 // 杭頭径も腐食代を見込まない公称外径で表示（区間表・杭体表と統一）
@@ -1018,7 +1018,7 @@ namespace PileDesign.Output
                 i += 1;
                 TableRow row = new();
                 row.Append(CreateTableCell([$"{i}"], fontSize, "right"));
-                row.Append(CreateTableCell([$"{sp.PileBodyNo}"], fontSize, "right"));
+                row.Append(CreateTableCell(PileBodyCellLines(soilPiles, sp), fontSize, "right"));
                 row.Append(CreateTableCell([$"{sp.GroundNo}"], fontSize, "right"));
                 row.Append(CreateTableCell(
                     [sp.PileBodyInput.SmartMagnumIsReinforcedCircum ? "周面強化型" : "標準型"], fontSize, "center"));
@@ -1078,7 +1078,7 @@ namespace PileDesign.Output
                 i += 1;
                 TableRow row = new();
                 row.Append(CreateTableCell([$"{i}"], fontSize, "right"));
-                row.Append(CreateTableCell([$"{sp.PileBodyNo}"], fontSize, "right"));
+                row.Append(CreateTableCell(PileBodyCellLines(soilPiles, sp), fontSize, "right"));
                 row.Append(CreateTableCell([$"{sp.GroundNo}"], fontSize, "right"));
                 row.Append(CreateTableCell(
                     [sp.PileBodyInput.HybridIsFrictionEnhanced ? "摩擦強化型" : "標準型"], fontSize, "center"));

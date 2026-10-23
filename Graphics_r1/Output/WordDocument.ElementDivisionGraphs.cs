@@ -72,7 +72,7 @@ namespace PileDesign.Output
                     WordDrawingBuilder.AddPngBytesToBody(mainPart, body, pngBytes,
                         ElemDivPileShapeWidthMm + ElemDivPileShapeRightLabelMarginMm, ElemDivPileShapeHeightMm);
 
-                    string caption = $"要素分割杭姿図 — 杭体 {soilPile.PileBodyNo} × 地盤 {soilPile.GroundNo}";
+                    string caption = $"要素分割杭姿図 — 杭体 {soilPile.PileBodyNo} × 地盤 {soilPile.GroundNo}{PileHeadSuffix(inputModel.ElementDivision?.SoilPiles, soilPile)}";
                     AddAutoFigureCaption(body, caption, "図");
                 }
                 catch (Exception ex)
@@ -201,7 +201,7 @@ namespace PileDesign.Output
             plot.Add.VerticalLine(0, 1, grayColor);
             plot.Add.HorizontalLine(0, 1, grayColor);
 
-            string title = $"基準水平地盤反力係数分布 — 杭体 {soilPile.PileBodyNo} × 地盤 {soilPile.GroundNo}";
+            string title = $"基準水平地盤反力係数分布 — 杭体 {soilPile.PileBodyNo} × 地盤 {soilPile.GroundNo}{PileHeadSuffix(inputModel.ElementDivision?.SoilPiles, soilPile)}";
             plot.Axes.Title.Label.Text = title;
             plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(title);
             string xLabel = "基準水平地盤反力係数 kₕ₀ (kN/m³)";
@@ -215,7 +215,7 @@ namespace PileDesign.Output
             plot.Axes.Bottom.Min = 0;
 
             SavePlotAndAddToBody(mainPart, body, plot,
-                $"水平地盤反力 ({soilPile.PileBodyNo}-{soilPile.GroundNo})",
+                $"水平地盤反力 ({soilPile.PileBodyNo}-{soilPile.GroundNo}){PileHeadSuffix(inputModel.ElementDivision?.SoilPiles, soilPile)}",
                 ElemDivGraphWidthMm, ElemDivGraphHeightMm);
         }
 

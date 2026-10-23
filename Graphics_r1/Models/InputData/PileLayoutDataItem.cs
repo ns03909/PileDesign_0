@@ -66,41 +66,13 @@ namespace PileDesign.Models.InputData
             var ground = input.GroundsInput[groundIndex];
 
             pileBody.PileBodySegmentsUpdate();
-            var segments = pileBody.PileBodySegments;
-            var layers = ground.GroundLayers;
 
             // SoilPile は杭頭 Z 基準で構築する。v2 セマンティクスでは pile.Z は接合節点 Z なので、
             // 杭頭は PileHeadZ (= pile.Z - ΔZc) を起点にする。
+            // 節点は解析の土層-杭セットと同じ組み立て (InputModel.SoilPileNodeAltitudes) で作る (2026-10-24)。
+            // 以前はここに写しがあり、杭頭部の境 (場所打ち鋼管コンクリート杭の 0.5D・鋼管杭の D) を入れていなかった
             double pileTopZ = this.PileHeadZ;
-            var zs = new ObservableCollection<double> { pileTopZ };
-            foreach (var seg in segments)
-                zs.Add(pileTopZ - seg.SegmentDepth);
-
-            double bottomZ = zs[^1];
-
-            foreach (var gl in layers)
-            {
-                if (pileTopZ > gl.BottomAltitude && gl.BottomAltitude > bottomZ)
-                {
-                    for (int i = zs.Count - 1; i >= 0; i--)
-                    {
-                        if (zs[i] < gl.BottomAltitude)
-                        {
-                            zs.Insert(i, gl.BottomAltitude);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // トレランス付き重複除去（杭区間境界と地層境界が微小差で重複するケースを防止）
-            var tempZs = zs.OrderByDescending(v => v).ToList();
-            var sortedZs = new List<double>(tempZs.Count);
-            foreach (var v in tempZs)
-            {
-                if (sortedZs.Count == 0 || Math.Abs(sortedZs[^1] - v) > NumericalConstants.COORDINATE_TOLERANCE)
-                    sortedZs.Add(v);
-            }
+            var sortedZs = InputModel.SoilPileNodeAltitudes(pileBody, ground.GroundLayers, pileTopZ);
             var zItems = new ObservableCollection<PileZDataItem>();
             foreach (var z in sortedZs)
             {

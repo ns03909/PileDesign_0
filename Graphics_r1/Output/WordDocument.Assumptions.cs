@@ -625,7 +625,7 @@ namespace PileDesign.Output
             {
                 foreach (var o in soilPile.Kh0LayerOverrides ?? [])
                 {
-                    entries.Add($"杭体{soilPile.PileBodyNo}×地盤{soilPile.GroundNo} {o.LayerName}: kh0 = {o.Kh0:N0} kN/m³");
+                    entries.Add($"杭体{soilPile.PileBodyNo}×地盤{soilPile.GroundNo}{PileHeadSuffix(inputModel?.ElementDivision?.SoilPiles, soilPile)} {o.LayerName}: kh0 = {o.Kh0:N0} kN/m³");
                 }
             }
 
