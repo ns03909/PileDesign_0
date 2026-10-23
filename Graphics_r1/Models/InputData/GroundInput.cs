@@ -59,6 +59,25 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 杭の有効応力 (水平地盤反力の塑性地盤反力 py・内部摩擦角) を、杭ごとの基礎底 (杭頭の高さ) から数えるか (2026-10-24)。
+        /// false (既定) は入力した地中応力計算用標高 (<see cref="StressAltitude"/>) から数える。
+        ///
+        /// <para>杭頭レベルが複数ある (地下の深さが場所で違う) モデルでは、応力計算面が地盤ごとに 1 つだと、
+        /// 深い段の杭にも浅い段の基礎底より上の土被りが掛かる (掘削した土を数える)。これを選ぶと、土層-杭セットごとに
+        /// その杭頭の高さから下の土被りで数える。地表より上にはしない。地盤の計算 (σ'・FL) は今までどおり入力した値を使う。</para>
+        /// </summary>
+        private bool _isStressFromPileFoundationBottom;
+        public bool IsStressFromPileFoundationBottom
+        {
+            get => _isStressFromPileFoundationBottom;
+            set => SetProperty(ref _isStressFromPileFoundationBottom, value);
+        }
+
+        /// <summary>杭頭が <paramref name="pileHeadZ"/> の杭の有効応力を数える面 (<see cref="IsStressFromPileFoundationBottom"/>)。</summary>
+        internal double StressTopLevelForPile(double pileHeadZ)
+            => IsStressFromPileFoundationBottom ? Math.Min(pileHeadZ, GroundTopAltitude) : StressAltitude;
+
         // 応力Z (有限値必須)
         private double _stressAltitude;
         public double StressAltitude
@@ -251,14 +270,28 @@ namespace PileDesign.Models.InputData
                 fixes.Add($"応力計算用の面 (標高 {StressAltitude:F3} → {StressGLDepth + top:F3})");
                 StressAltitude = StressGLDepth + top;
             }
-            int layers = 0;
+            int layers = 0, thicknesses = 0;
+            double previousBottomGL = 0.0;   // 1 層目の上端は孔口 (GL 0)
             foreach (var layer in GroundLayers ?? [])
             {
-                if (layer == null || !Differs(layer.BottomAltitude, layer.BottomGLDepth)) continue;
-                layer.BottomAltitude = layer.BottomGLDepth + top;
-                layers++;
+                if (layer == null) continue;
+                if (Differs(layer.BottomAltitude, layer.BottomGLDepth))
+                {
+                    layer.BottomAltitude = layer.BottomGLDepth + top;
+                    layers++;
+                }
+                // 層厚も GL 深さ (上の層の下端との差) から決める。有効応力は「下端 + 層厚」を上端として数えるので、
+                // 食い違うと土被りを二重に数えたり抜かしたりした (2026-10-24 のレビュー)。逆順 (負) の層厚は直さず、検査で止める
+                double thickness = previousBottomGL - layer.BottomGLDepth;
+                if (thickness > 0 && !(Math.Abs(layer.LayerThickness - thickness) <= tol))
+                {
+                    layer.LayerThickness = thickness;
+                    thicknesses++;
+                }
+                previousBottomGL = layer.BottomGLDepth;
             }
             if (layers > 0) fixes.Add($"土層の下端 {layers} 層");
+            if (thicknesses > 0) fixes.Add($"土層の層厚 {thicknesses} 層");
             int masses = 0;
             foreach (var mass in GroundMassesData ?? [])
             {

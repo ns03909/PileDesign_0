@@ -747,6 +747,16 @@ namespace PileDesign.Services
                         problems.Add(Diagnostic.InputAt(at, $"層厚が 0 以下か数値ではありません ({layer.LayerThickness})."));
                     if (!double.IsFinite(layer.BottomAltitude))
                         problems.Add(Diagnostic.InputAt(at, $"層の下端の標高が数値ではありません ({layer.BottomAltitude})."));
+                    // 層の上端 (下端 + 層厚) が、上の層の下端 (1 層目は孔口) と合っているか (2026-10-24 のレビュー)。
+                    // 有効応力・地層の対応は「下端 + 層厚」を上端として使うので、隙間・重なり・逆順があると土被りを
+                    // 抜かしたり二重に数えたりする。画面で入力すれば揃うが、ファイルや直接作った入力では食い違いうる
+                    double expectedTop = li == 0 ? gi.GroundTopAltitude : gi.GroundLayers[li - 1]?.BottomAltitude ?? double.NaN;
+                    double top = layer.BottomAltitude + layer.LayerThickness;
+                    if (double.IsFinite(expectedTop) && double.IsFinite(top) && Math.Abs(top - expectedTop) > 1e-3)
+                        problems.Add(Diagnostic.InputAt(at,
+                            $"層の上端 (下端 {layer.BottomAltitude:F3} + 層厚 {layer.LayerThickness:F3} = {top:F3}) が、"
+                            + (li == 0 ? $"孔口 ({expectedTop:F3})" : $"上の層の下端 ({expectedTop:F3})")
+                            + " と合っていません (層の" + (top > expectedTop ? "重なり" : "隙間") + ")。地盤ウィンドウで層の深さと層厚を確かめてください。"));
                     // 物性値の欄は入力の範囲を持たず、負の値もそのまま解析に入っていた。
                     // 0 は「未入力」として既存の注意 (変形係数 0 など) に任せ、ここでは負と範囲外だけを止める
                     problems.AddRange(CollectSoilPropertyProblems(layer, at));

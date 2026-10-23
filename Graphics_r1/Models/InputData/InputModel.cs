@@ -939,6 +939,16 @@ namespace PileDesign.Models.InputData
                             mass.AltitudeDepth = mass.GLDepth + ground.GroundTopAltitude;
                         }
                     }
+
+                    // 任意入力の地盤変位の点も同じだけ動かす (4 ケースとも。使っていないケースも)。
+                    // 点は Z で持ち、解析はその Z で補間する。以前は動かさなかったので、基準標高を変えると
+                    // 同じ深さの地盤変位が変わった (地表 Z=0→2 で GL-5 m の変位が 50→70 mm。2026-10-24 のレビュー)
+                    if (ground.CustomDisplacementProfile is { } profile)
+                    {
+                        foreach (var points in new[] { profile.Level1NonLiq, profile.Level1Liq, profile.Level2NonLiq, profile.Level2Liq })
+                            foreach (var point in points ?? [])
+                                if (point != null) point.Z += deltaZ;
+                    }
                 }
             }
             finally

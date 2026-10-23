@@ -199,6 +199,8 @@ namespace PileDesign.Output
                 table.Append(row3);
 
                 body.Append(table);
+                if (ground.IsStressFromPileFoundationBottom)
+                    AddTableNote(body, "杭の有効応力は、杭ごとの基礎底（杭頭の高さ）から数える。上の地中応力検討用レベルは地盤の計算に使う。");
 
                 body.Append(new Paragraph());
 

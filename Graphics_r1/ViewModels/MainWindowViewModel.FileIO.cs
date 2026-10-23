@@ -435,26 +435,57 @@ namespace PileDesign.ViewModels
             var result = new List<string>();
             if (model?.GroundsInput == null) return result;
             var changedGrounds = new HashSet<GroundInput>(ReferenceEqualityComparer.Instance);
-            for (int i = 0; i < model.GroundsInput.Count; i++)
+
+            // 地盤の値を書き換えると、地盤の変更の監視が土層-杭セットの作り直しを予約し、保存していた要素分割 (利用者が
+            // 足した分割点) を捨てた (2026-10-24 のレビュー)。直すあいだは通知を止め、作り直しは予約しない。
+            // 代わりに下で、今の節点に直した地層の境を足して組み直す
+            model.SuppressNotifications();
+            try
             {
-                var ground = model.GroundsInput[i];
-                var fixes = ground?.SyncAltitudesFromGLDepths() ?? [];
-                if (fixes.Count == 0) continue;
-                changedGrounds.Add(ground!);
-                result.Add($"地盤No.{i + 1}: {string.Join("・", fixes)}");
+                for (int i = 0; i < model.GroundsInput.Count; i++)
+                {
+                    var ground = model.GroundsInput[i];
+                    var fixes = ground?.SyncAltitudesFromGLDepths() ?? [];
+                    if (fixes.Count == 0) continue;
+                    changedGrounds.Add(ground!);
+                    result.Add($"地盤No.{i + 1}: {string.Join("・", fixes)}");
+                }
+                if (changedGrounds.Count == 0) return result;
+                foreach (var sp in model.ElementDivision?.SoilPiles ?? [])
+                {
+                    if (sp?.GroundInput == null || sp.ZDataItems == null || sp.PileBodyInput == null) continue;
+                    // 杭の土層-杭セットは地盤の実体を共有している (読込で $ref が解かれる)。共有していなくても番号で引き直す
+                    var ground = model.GroundAt(sp.GroundNo) ?? sp.GroundInput;
+                    if (!changedGrounds.Contains(ground) && !changedGrounds.Contains(sp.GroundInput)) continue;
+                    sp.GroundInput = ground;
+                    sp.OnZDataItemsChanged(KeepDivisionAndAddLayerBoundaries(sp, ground));
+                }
             }
-            if (changedGrounds.Count == 0) return result;
-            foreach (var sp in model.ElementDivision?.SoilPiles ?? [])
+            finally
             {
-                if (sp?.GroundInput == null || sp.ZDataItems == null || sp.PileBodyInput == null) continue;
-                // 杭の土層-杭セットは地盤の実体を共有している (読込で $ref が解かれる)。共有していなくても番号で引き直す
-                var ground = model.GroundAt(sp.GroundNo) ?? sp.GroundInput;
-                if (!changedGrounds.Contains(ground) && !changedGrounds.Contains(sp.GroundInput)) continue;
-                foreach (var z in sp.ZDataItems) if (z != null) z.GroundInput = ground;
-                sp.GroundInput = ground;
-                sp.UpdateProperties();
+                model.ResumeNotificationsQuiet();
             }
             return result;
+        }
+
+        /// <summary>
+        /// 土層-杭セットの今の節点 (保存していた要素分割) に、解析の組み立てが要る節点 (直した地層の境・杭頭部の境) を足して
+        /// 並べ直す。地層の境が動いても要素が境をまたがないようにし、利用者が足した分割点は残す。
+        /// </summary>
+        internal static System.Collections.ObjectModel.ObservableCollection<PileZDataItem> KeepDivisionAndAddLayerBoundaries(SoilPile soilPile, GroundInput ground)
+        {
+            const double tol = PileDesign.Constants.NumericalConstants.COORDINATE_TOLERANCE;
+            soilPile.PileBodyInput.PileBodySegmentsUpdate();
+            var required = InputModel.SoilPileNodeAltitudes(soilPile.PileBodyInput, ground.GroundLayers, soilPile.Z);
+            var zs = soilPile.ZDataItems.Where(z => z != null).Select(z => z.Z).Concat(required)
+                .OrderByDescending(z => z).ToList();
+            var merged = new System.Collections.ObjectModel.ObservableCollection<PileZDataItem>();
+            foreach (var z in zs)
+            {
+                if (merged.Count > 0 && Math.Abs(merged[^1].Z - z) <= tol) continue;
+                merged.Add(new PileZDataItem { Z = z, GroundInput = ground });
+            }
+            return merged;
         }
 
         private void ApplyPostLoadProtocol(Models.ProjectData? projectData, string? filePath, string successMessage)

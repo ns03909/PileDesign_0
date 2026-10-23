@@ -292,10 +292,25 @@ namespace PileDesign.Models.InputData
         /// <see cref="PileToeNValueAverageRangeUpperAltitude"/> にあるもの)。<see cref="PileToeNValue"/> と解析前の検査が同じものを使う。
         /// </summary>
         internal List<GroundMassDataInput> PileToeNValuePoints()
-            => (GroundInput?.GroundMassesData ?? [])
-                .Where(data => data.AltitudeDepth <= PileToeNValueAverageRangeUpperAltitude &&
-                               data.AltitudeDepth >= PileToeNValueAverageRangeLowerAltitude)
+            => MassesInAltitudeRange(GroundInput, PileToeNValueAverageRangeLowerAltitude, PileToeNValueAverageRangeUpperAltitude);
+
+        /// <summary>
+        /// 標高が <paramref name="lowerAltitude"/>〜<paramref name="upperAltitude"/> にある土質点。端は含み、
+        /// 座標の許容差 (<see cref="NumericalConstants.COORDINATE_TOLERANCE"/>) の内なら端にあるとみなす。
+        ///
+        /// <para>平均 N 値の範囲を決める唯一の実装 (一般式の杭先端・Smart-MAGNUM・内訳の表示・解析前の検査)。
+        /// 以前は許容差なしで比べていたので、範囲の端にちょうどある土質点が、杭と地盤をそろって動かしただけ (浮動小数点の
+        /// 差) で範囲に入ったり外れたりし、先端支持力度が 40% 変わることがあった (2026-10-24 のレビュー)。</para>
+        /// </summary>
+        internal static List<GroundMassDataInput> MassesInAltitudeRange(GroundInput? groundInput, double lowerAltitude, double upperAltitude)
+        {
+            const double tol = NumericalConstants.COORDINATE_TOLERANCE;
+            return (groundInput?.GroundMassesData ?? [])
+                .Where(data => data != null
+                               && data.AltitudeDepth <= upperAltitude + tol
+                               && data.AltitudeDepth >= lowerAltitude - tol)
                 .ToList();
+        }
 
         // 杭先端平均N値用N値
         // get だけの計算プロパティ (表示用の文字列)。書き出さない。
@@ -321,10 +336,8 @@ namespace PileDesign.Models.InputData
             //}
             get
             {
-                var groundMassesData = GroundInput.GroundMassesData;
-                var relevantMasses = groundMassesData
-                    .Where(data => data.AltitudeDepth <= PileToeNValueAverageRangeUpperAltitude &&
-                                   data.AltitudeDepth >= PileToeNValueAverageRangeLowerAltitude)
+                // 平均に入る土質点は計算と同じもの (以前はここに範囲の比較の写しがあった)
+                var relevantMasses = PileToeNValuePoints()
                     .Select(data => Math.Min(data.NValue, 100))
                     .ToArray();
 
@@ -1263,8 +1276,10 @@ namespace PileDesign.Models.InputData
                 cohesive = layer.Cohesive;
                 nValue = layer.NValue;
                 gamma = layer.Density;
-                stressTop = GetEffectiveStress(groundInput, zTop);
-                stressBtm = GetEffectiveStress(groundInput, zBtm);
+                // 応力計算面は地盤の設定による (入力した標高、または杭ごとの基礎底 = この杭の杭頭)
+                double stressLevel = groundInput.StressTopLevelForPile(zPileTop);
+                stressTop = GetEffectiveStress(groundInput, zTop, stressLevel);
+                stressBtm = GetEffectiveStress(groundInput, zBtm, stressLevel);
                 phi = groundInput.GetFrictionAngle(nValue, (stressTop + stressBtm) * 0.5);
                 soilType = layer.GranularityClass;
                 e0 = layer.Es;

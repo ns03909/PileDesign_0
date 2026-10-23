@@ -116,6 +116,48 @@ namespace TestProject1
             Assert.IsFalse(xaml.Contains("-0.00;"), "負の値だけ小数 2 桁で出す書式が残っています");
         }
 
+        /// <summary>
+        /// 杭の有効応力を杭ごとの基礎底 (杭頭の高さ) から数える選択 (2026-10-24)。選ぶと、杭頭レベルの違う土層-杭セットは
+        /// 同じ標高でも違う有効応力 (塑性地盤反力 py) になり、深い段の杭の杭頭では土被りが 0 から始まる。選ばなければ今までどおり。
+        /// </summary>
+        [TestMethod]
+        public void TheStressPlane_CanFollowEachPileHead()
+        {
+            var (input, err) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+            if (input == null) { Assert.Inconclusive("例題ファイルなし: " + err); return; }
+            input.GroundsInput[0] = input.GroundsInput[0].DeepCopy();   // 地盤ウィンドウの VM が見ていない実体にする
+            TwoPileHeadLevels(input);
+            var ground = input.GroundAt(1)!;
+
+            double PyAt(double z, bool deep)
+            {
+                var sp = input.ElementDivision.SoilPiles.Single(s => deep ? s.Z < -3 : s.Z > -3);
+                int i = sp.ZDataItems.Select(d => d.Z).ToList().FindIndex(v => Math.Abs(v - z) < 1e-6);
+                Assert.IsTrue(i >= 0, $"(前提) 標高 {z} の節点がありません");
+                return sp.HorizontalSoilReactions[i].PyFrontTop;
+            }
+            // 砂質土 (シルト混じり砂2、-2.8〜-7.5) の下端。粘性土の py は有効応力によらないので砂で比べる
+            double PySandBottom(bool deep)
+            {
+                var sp = input.ElementDivision.SoilPiles.Single(s => deep ? s.Z < -3 : s.Z > -3);
+                int i = sp.ZDataItems.Select(d => d.Z).ToList().FindIndex(v => Math.Abs(v - (-7.5)) < 1e-6) - 1;
+                Assert.IsTrue(i >= 0 && sp.HorizontalSoilReactions[i].SoilType == "砂質土", "(前提) -7.5 で終わる砂質土の要素がありません");
+                return sp.HorizontalSoilReactions[i].PyFrontBtm;
+            }
+
+            Assert.IsFalse(ground.IsStressFromPileFoundationBottom, "既定は入力した地中応力計算用標高");
+            Assert.AreEqual(PySandBottom(deep: false), PySandBottom(deep: true), 1e-9, "選ばないときは、同じ標高の py が杭頭レベルによらず同じ");
+            double deepTopOff = PyAt(-3.5, deep: true);
+
+            ground.IsStressFromPileFoundationBottom = true;
+            input.GenerateSoilPiles();
+            Assert.AreEqual(ground.StressTopLevelForPile(-3.5), -3.5, 1e-12);
+            Assert.IsTrue(PySandBottom(deep: true) < PySandBottom(deep: false), "杭頭の高さから数えると、深い段の杭は同じ標高でも土被りが小さいはず");
+            Assert.IsTrue(PyAt(-3.5, deep: true) < deepTopOff, "深い段の杭頭で、掘削した土の土被りを数えています");
+
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Views", "GroundWindow.xaml"), "GroundInput.IsStressFromPileFoundationBottom");
+        }
+
         [TestMethod]
         public void GroundAltitudes_FollowTheirGLDepths()
         {

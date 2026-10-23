@@ -625,6 +625,12 @@
                                 </TextBox>
                             </StackPanel>
 
+                            <!-- 杭の有効応力を数える面 (2026-10-24)。杭頭レベルが複数あるモデル用 -->
+                            <CheckBox Content="杭の有効応力は杭ごとの基礎底（杭頭の高さ）から数える"
+                                      IsChecked="{Binding GroundInput.IsStressFromPileFoundationBottom, Mode=TwoWay}"
+                                      Margin="0,2,0,4" VerticalAlignment="Center"
+                                      ToolTip="杭の水平地盤反力（塑性地盤反力 py・内部摩擦角）に使う有効応力を、上の地中応力計算用標高ではなく、土層-杭セットごとにその杭頭の高さから下の土被りで数えます。地下の深さが場所で違う（杭頭レベルが複数ある）モデルで、深い段の杭に掘削した土の土被りを掛けないために使います。地盤の計算（σ'・FL）は上の標高のままです。"/>
+
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="孔口深度" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="100"/>
                                 <TextBox Text="GL" Width="50" IsEnabled="False" HorizontalContentAlignment="Right" VerticalAlignment="Center" Height="25" />

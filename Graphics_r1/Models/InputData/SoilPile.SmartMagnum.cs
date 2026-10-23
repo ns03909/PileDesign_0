@@ -160,11 +160,8 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private double AverageNValueInAltitudeRange(double lowerAltitude, double upperAltitude)
         {
-            var masses = GroundInput?.GroundMassesData;
-            if (masses == null) return 0;
-
-            var relevant = masses
-                .Where(data => data.AltitudeDepth <= upperAltitude && data.AltitudeDepth >= lowerAltitude)
+            // 範囲の端は一般式と同じ規則 (許容差の内なら含む。SoilPile.MassesInAltitudeRange)
+            var relevant = MassesInAltitudeRange(GroundInput, lowerAltitude, upperAltitude)
                 .Select(data => Math.Min(data.NValue, 100))
                 .ToList();
 
