@@ -396,14 +396,10 @@ namespace TestProject1
             if (groundInput == null)
                 return (null, $"Ground deserialization failed: {name}");
 
-            if (groundInput.GroundMassesData != null)
-            {
-                foreach (var mass in groundInput.GroundMassesData)
-                {
-                    if (mass == null) continue;
-                    mass.AltitudeDepth = mass.GLDepth + groundInput.GroundTopAltitude;
-                }
-            }
+            // 標高を GL 深さから決める (土質点・地下水位・応力計算用の面・土層)。実機の例題は地盤ウィンドウが同期させる。
+            // 以前は土質点だけを直していたので、地下水位・応力計算用の面の標高が 0 (地表) のまま残り、杭の地盤ばねだけが
+            // 地表に水位があるとして計算されていた (回帰のスナップショットと検定の golden はその状態で取られていた。2026-10-23)
+            groundInput.SyncAltitudesFromGLDepths();
 
             // 地盤の計算 (層厚・有効応力・FL・βL・γcy・質量・VSE・地盤変位) を通す。
             // 以前は JSON を読むだけで、DmaxUStar が 0 のまま解析していた。そのため収束の回帰

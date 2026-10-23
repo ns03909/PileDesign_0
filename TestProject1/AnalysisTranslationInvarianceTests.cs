@@ -127,5 +127,57 @@ namespace TestProject1
                 $"[{ground}] モデルを平面で ({Dx}, {Dy}) m ずらすと検定の結果が変わりました ({problems.Count} 件):\n  "
                 + string.Join("\n  ", problems.Take(20)));
         }
+
+        /// <summary>
+        /// 鉛直の座標を持つ入力をすべてずらす。地盤は「標高 = GL 深さ + 孔口Z」で動かす (<see cref="InputModel.ShiftGroundZByDelta"/>)。
+        /// 杭配置・節点・基礎梁の節点・荷重の作用点・根入部・土圧合力ばねの範囲もいっしょに動かし、土層-杭セットを作り直す。
+        /// </summary>
+        internal static void TranslateVertically(InputModel model, double dz)
+        {
+            var moved = new HashSet<object>(ReferenceEqualityComparer.Instance);
+            model.ShiftGroundZByDelta(dz);
+            foreach (var n in model.InputNodes ?? []) if (moved.Add(n)) n.Z += dz;
+            foreach (var p in model.PileLayoutItems ?? []) if (moved.Add(p)) p.Z += dz;
+            foreach (var f in model.FoundationBeamInput?.Nodes ?? []) if (moved.Add(f)) f.Z += dz;
+            foreach (var lc in model.LoadCasesInput?.AllLoadCases ?? []) if (moved.Add(lc)) lc.ForceActionPointAltitude += dz;
+            foreach (var common in new[] { model.LoadCasesInput?.LoadCaseLevel1Common, model.LoadCasesInput?.LoadCaseLevel2Common })
+                if (common != null && moved.Add(common)) common.ForceActionPointAltitude += dz;
+            if (model.EmbedmentInput is { } embedment)
+            {
+                embedment.BottomAltitude += dz;
+                foreach (var e in embedment.EmbedmentLayers ?? []) if (moved.Add(e)) { e.TopAltitude += dz; e.BottomAltitude += dz; }
+            }
+            foreach (var d in model.ElementDivision?.DoatsuGoryokuBane?.Items ?? []) if (moved.Add(d)) { d.ZTop += dz; d.ZBtm += dz; }
+            TestSource.AssertScanned(moved.Count, 2, "ずらした座標");
+            model.GenerateSoilPiles();
+        }
+
+        /// <summary>
+        /// 杭頭レベルが 2 つのモデルを鉛直にずらしても、検定の結果は変わらない (2026-10-23 の指摘「杭頭レベルが複数あると、
+        /// 地盤と杭頭のレベル関係が適切でない」の確認)。杭頭・地盤・作用点の高さの関係を、どこかが絶対の高さで取り違えていれば
+        /// ここで差が出る。調べたときは、テストが読む例題の地下水位の標高が地表 0 のまま (GL 深さは −3 m) だったので、
+        /// ずらすと地下水位だけが正しい位置へ動いて差が出た (その食い違いは GroundInput.SyncAltitudesFromGLDepths で直した)。
+        /// </summary>
+        [TestMethod]
+        public void ShiftingTheModelVertically_WithTwoPileHeadLevels_DoesNotChangeTheEvaluation()
+        {
+            var original = Evaluate("Example10", "PileExample10", PileHeadLevelTests.TwoPileHeadLevels);
+            var moved = Evaluate("Example10", "PileExample10", m => { PileHeadLevelTests.TwoPileHeadLevels(m); TranslateVertically(m, -0.75); });
+
+            var before = original.Items.Where(i => i.IsJudged).ToDictionary(Identity, i => i.Ratio);
+            var after = moved.Items.Where(i => i.IsJudged).ToDictionary(Identity, i => i.Ratio);
+            TestSource.AssertScanned(before.Count, 100, "検定の項目");
+            var problems = new List<string>();
+            if (before.Count != after.Count) problems.Add($"検定の項目の数: {before.Count} → {after.Count}");
+            foreach (var (key, ratio) in before)
+            {
+                if (!after.TryGetValue(key, out var r)) { problems.Add($"鉛直にずらすと無くなった: {key}"); continue; }
+                if (!(Math.Abs(r - ratio) <= Tol * Math.Max(Math.Abs(ratio), 1e-3)))
+                    problems.Add($"{key}: 検定比 {ratio:F6} → {r:F6}");
+            }
+            Assert.AreEqual(0, problems.Count,
+                $"杭頭レベル 2 つのモデルを鉛直に 0.75 m ずらすと検定の結果が変わりました ({problems.Count} 件):\n  "
+                + string.Join("\n  ", problems.Take(20)));
+        }
     }
 }

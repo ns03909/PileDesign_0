@@ -2,7 +2,7 @@
   "exampleName": "Example3_8_1",
   "exampleDisplayName": "設計例集3.8_地盤1",
   "schemaVersion": 1,
-  "capturedAt": "2026-10-09",
+  "capturedAt": "2026-10-23",
   "options": {
     "level1Steps": 4,
     "level2Steps": 8,
@@ -41,26 +41,26 @@
       "isLiquefaction": true,
       "converged": true,
       "relaxedSteps": 0,
-      "totalIterations": 83,
+      "totalIterations": 81,
       "totalSteps": 8,
       "bisectionRetries": 0,
-      "finalResidual": 3.1643520263921024E-07,
-      "apUx": 0.02080010523723987,
-      "apUy": -0.0005112607351191981,
-      "apUz": 0.00013934849784620731,
-      "apRx": -1.6787409740178548E-08,
-      "apRy": 5.571109278663559E-06,
-      "apRz": 1.787691219456512E-05,
-      "maxAbsHorizDisp": 0.08678496379677318,
-      "maxAbsHorizSpringReaction": 1351.9641461514072,
-      "maxAbsPileMoment": 17022.85334296592
+      "finalResidual": 6.557986282545407E-07,
+      "apUx": 0.02090088858294539,
+      "apUy": -0.0005109179207696588,
+      "apUz": 0.00014053774940306072,
+      "apRx": -1.6240482903189822E-08,
+      "apRy": 5.6192110381170565E-06,
+      "apRz": 1.7837209144694333E-05,
+      "maxAbsHorizDisp": 0.08678496379677317,
+      "maxAbsHorizSpringReaction": 1356.4225976987311,
+      "maxAbsPileMoment": 17109.811451251528
     }
   ],
   "summary": {
     "totalCases": 2,
     "convergedCases": 2,
-    "totalIterations": 101,
+    "totalIterations": 99,
     "totalSteps": 12,
-    "maxResidualOverAllCases": 3.1643520263921024E-07
+    "maxResidualOverAllCases": 6.557986282545407E-07
   }
 }

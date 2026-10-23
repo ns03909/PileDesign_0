@@ -171,5 +171,21 @@ namespace TestProject1
             StringAssert.Contains(load, "if (CurrentModel != null) changedSinceAnalysisOnLoad = true;", "直したのに再解析を促していません");
         }
 
+        /// <summary>例題は GL 深さだけを持つ。地盤ウィンドウを通さずに読んでも標高が揃う (実機・テストとも)。</summary>
+        [TestMethod]
+        public void ExampleGrounds_HaveAltitudesThatMatchTheirGLDepths()
+        {
+            var data = GroundExampleLoader.LoadFromFile("Example10");
+            var g = new GroundInput();
+            GroundExampleLoader.ApplyToGroundInput(g, data);
+            Assert.AreEqual(g.GroundWaterGLDepth + g.GroundTopAltitude, g.GroundWaterTableAltitude, 1e-12, "地下水位の標高が GL 深さと違います");
+            Assert.AreEqual(0, g.SyncAltitudesFromGLDepths().Count, "例題を読んだ直後に食い違いが残っています");
+
+            var (input, err) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+            if (input == null) { Assert.Inconclusive("例題ファイルなし: " + err); return; }
+            var tested = input.GroundAt(1)!;
+            Assert.AreEqual(tested.GroundWaterGLDepth + tested.GroundTopAltitude, tested.GroundWaterTableAltitude, 1e-12,
+                "テストが読む例題の地下水位の標高が GL 深さと違います (回帰の基準が実機と違う条件になる)");
+        }
     }
 }
